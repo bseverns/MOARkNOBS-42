@@ -15,8 +15,9 @@ private:
     int readEnvelopeLevel();     // Helper to read and calculate the envelope level from audio input
 
 public:
+    // Constructor with reordered initializer list
     EnvelopeFollower(int pin, PotentiometerManager* pm)
-        : audioInputPin(pin), potManager(pm), currentEnvelopeLevel(0), modulationTargetCC(-1), isActive(false) {}
+        : audioInputPin(pin), currentEnvelopeLevel(0), modulationTargetCC(-1), isActive(false), potManager(pm) {}
 
     void setModulationTarget(int cc);  // Set the MIDI CC target
     void toggleActive();               // Toggle active state of the envelope follower
