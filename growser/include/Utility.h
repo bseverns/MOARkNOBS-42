@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+void rebootTeensy();
+
 class Utility {
 public:
     static uint8_t mapToMidiValue(int analogValue, int minValue = 0, int maxValue = 1023);

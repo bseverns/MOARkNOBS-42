@@ -1,58 +1,45 @@
 #include "DisplayManager.h"
 
-DisplayManager::DisplayManager(uint8_t clkPin, uint8_t dioPin)
-    : _display(clkPin, dioPin) {}
+DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t width, uint16_t height)
+    : _display(width, height, &Wire, -1), _i2cAddress(i2cAddress) {}
 
 void DisplayManager::begin() {
-    _display.setBrightness(0x0F); // Maximum brightness
-    clear();
+    if (!_display.begin(_i2cAddress)) {
+        Serial.println(F("SSD1306 allocation failed"));
+        for (;;); // Halt if the display fails to initialize
+    }
+    _display.clearDisplay();
+    _display.display();
 }
 
 void DisplayManager::showText(const char *text) {
-    uint8_t segments[2] = {0, 0}; // Array to hold the segment encoding for 2 characters
-
-    // Encode each character into 7-segment format
-    for (int i = 0; i < 2 && text[i] != '\0'; i++) {
-        segments[i] = encodeCharToSegments(text[i]);
-    }
-
-    // Display the encoded segments
-    _display.setSegments(segments, 2, 0);
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(0, 0);
+    _display.print(text);
+    _display.display();
 }
 
 void DisplayManager::showValue(uint8_t value) {
-    // Display a numeric value
-    _display.showNumberDec(value, true); // Show value with leading zeros if needed
+    _display.clearDisplay();
+    _display.setTextSize(2);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(0, 0);
+    _display.print(value);
+    _display.display();
 }
 
 void DisplayManager::showMode(const char *mode) {
-    // Display current mode (e.g., "EF" for envelope follower)
-    showText(mode);
+    _display.clearDisplay();
+    _display.setTextSize(2);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(0, 0);
+    _display.print(mode);
+    _display.display();
 }
 
 void DisplayManager::clear() {
-    _display.clear();
-}
-
-// Helper function to encode characters into 7-segment display format
-uint8_t DisplayManager::encodeCharToSegments(char c) {
-    switch (c) {
-        case '0': return 0b00111111;
-        case '1': return 0b00000110;
-        case '2': return 0b01011011;
-        case '3': return 0b01001111;
-        case '4': return 0b01100110;
-        case '5': return 0b01101101;
-        case '6': return 0b01111101;
-        case '7': return 0b00000111;
-        case '8': return 0b01111111;
-        case '9': return 0b01101111;
-        case 'A': return 0b01110111;
-        case 'b': return 0b01111100;
-        case 'C': return 0b00111001;
-        case 'd': return 0b01011110;
-        case 'E': return 0b01111001;
-        case 'F': return 0b01110001;
-        default:  return 0b00000000; // Blank for unsupported characters
-    }
+    _display.clearDisplay();
+    _display.display();
 }

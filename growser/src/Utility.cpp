@@ -20,3 +20,8 @@ bool Utility::debounceButton(uint8_t pin, unsigned long debounceDelay) {
     }
     return false;
 }
+
+void rebootTeensy() {
+    SCB_AIRCR = 0x05FA0004; // Trigger a system reset for ARM Cortex-M
+    while (1);              // Halt to ensure reset happens
+}

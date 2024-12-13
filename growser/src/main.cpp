@@ -14,12 +14,15 @@
 #define DISPLAY_DIO_PIN 4
 #define NUM_BUTTONS 6
 const uint8_t BUTTON_PINS[NUM_BUTTONS] = {2, 3, 8, 9, 10, 11};
+#define OLED_I2C_ADDRESS 0x3C
+#define OLED_WIDTH 128
+#define OLED_HEIGHT 64
 
 // Global objects
 MIDIHandler midiHandler;
 ConfigManager configManager(sizeof(uint8_t) * NUM_POTS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
-DisplayManager displayManager(DISPLAY_CLK_PIN, DISPLAY_DIO_PIN);
+DisplayManager displayManager(OLED_I2C_ADDRESS);
 ButtonManager buttonManager;
 PotentiometerManager potentiometerManager;
 EnvelopeFollower envelopeFollower(A0, &potentiometerManager); // Replace A0 with the actual pin for envelope input
@@ -38,12 +41,14 @@ void setup() {
     // Initialize LEDs and Display
     ledManager.begin();
     displayManager.begin();
+    displayManager.showText("Initializing...");
 
     // Load configuration from EEPROM
     potentiometerManager.loadFromEEPROM();
 
     // Initialize buttons
     buttonManager.initButtons(BUTTON_PINS, NUM_BUTTONS);
+    delay(1000);//just hang for a moment so that we're sure we've settled
 }
 
 void loop() {
