@@ -10,22 +10,24 @@
 // Constants
 #define LED_PIN 6
 #define NUM_LEDS 42
-#define DISPLAY_CLK_PIN 5
-#define DISPLAY_DIO_PIN 4
 #define NUM_BUTTONS 6
 const uint8_t BUTTON_PINS[NUM_BUTTONS] = {2, 3, 8, 9, 10, 11};
 #define OLED_I2C_ADDRESS 0x3C
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
+// pin assignments for primary and secondary mux layers
+const uint8_t primaryMuxPins[] = {7, 8, 9};  // pins for primary mux
+const uint8_t secondaryMuxPins[] = {10, 11, 12}; // pins for secondary mux
+uint8_t analogPin = A8; // Pin to read the mux output
 
 // Global objects
 MIDIHandler midiHandler;
 ConfigManager configManager(sizeof(uint8_t) * NUM_POTS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
 DisplayManager displayManager(OLED_I2C_ADDRESS);
-ButtonManager buttonManager;
-PotentiometerManager potentiometerManager;
-EnvelopeFollower envelopeFollower(A0, &potentiometerManager); // Replace A0 with the actual pin for envelope input
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin);
+PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
+EnvelopeFollower envelopeFollower(A0, &potentiometerManager); // A0 is the audio input pin
 
 // Hardware states
 uint8_t potChannels[NUM_POTS];
@@ -47,8 +49,10 @@ void setup() {
     potentiometerManager.loadFromEEPROM();
 
     // Initialize buttons
-    buttonManager.initButtons(BUTTON_PINS, NUM_BUTTONS);
-    delay(1000);//just hang for a moment so that we're sure we've settled
+    buttonManager.initButtons();
+    delay(1000); // Just hang for a moment so that we're sure we've settled
+    displayManager.clear();
+    displayManager.showText("BENZ");
 }
 
 void loop() {
@@ -56,16 +60,17 @@ void loop() {
     midiHandler.processIncomingMIDI();
 
     // Process button presses
-    buttonManager.processButtons(
-        potChannels,
-        activePot,
-        activeChannel,
-        envelopeFollowMode,
-        configManager,
-        ledManager,
-        displayManager,
-        envelopeFollower
-    );
+  buttonManager.processButtons(
+    potChannels,
+    activePot,
+    activeChannel,
+    envelopeFollowMode,
+    configManager,
+    ledManager,
+    displayManager,
+    envelopeFollower
+);
+
 
     // Apply envelope modulation to active pot
     uint8_t ccValue = potentiometerManager.getCCNumber(activePot);
@@ -73,8 +78,8 @@ void loop() {
 
     // Send modulated CC value
     midiHandler.sendControlChange(
-        potentiometerManager.getCCNumber(activePot), 
-        ccValue, 
+        potentiometerManager.getCCNumber(activePot),
+        ccValue,
         potentiometerManager.getChannel(activePot)
     );
 

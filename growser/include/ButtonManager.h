@@ -6,28 +6,45 @@
 #include "LEDManager.h"
 #include "DisplayManager.h"
 #include "EnvelopeFollower.h"
-#include "PotentiometerManager.h"
+#include "Utility.h"
 
+// Constants
 #define NUM_BUTTONS 6
 
 class ButtonManager {
+public:
+    ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secondaryMuxPins, uint8_t analogPin);
+    void initButtons();
+    void processButtons(
+        uint8_t* potChannels,
+        uint8_t& activePot,
+        uint8_t& activeChannel,
+        bool& envelopeFollowMode,
+        ConfigManager& configManager,
+        LEDManager& ledManager,
+        DisplayManager& displayManager,
+        EnvelopeFollower& envelopeFollower
+    );
+
 private:
-    uint8_t buttonPins[NUM_BUTTONS];
+    const uint8_t* _primaryMuxPins;
+    const uint8_t* _secondaryMuxPins;
+    uint8_t _analogPin;
     bool buttonStates[NUM_BUTTONS];
 
-public:
-    ButtonManager();
-    void initButtons(const uint8_t pins[], uint8_t numButtons);
-    void processButtons(
-        uint8_t potChannels[],
-        uint8_t &activePot,
-        uint8_t &activeChannel,
-        bool &envelopeFollowMode,
-        ConfigManager &configManager,
-        LEDManager &ledManager,
-        DisplayManager &displayManager,
-        EnvelopeFollower &envelopeFollower
+    void selectMux(uint8_t primary, uint8_t secondary);
+    uint8_t readButton(uint8_t buttonIndex);
+    void handleSingleButtonPress(
+        uint8_t buttonIndex,
+        uint8_t* potChannels,
+        uint8_t& activePot,
+        uint8_t& activeChannel,
+        bool& envelopeFollowMode,
+        ConfigManager& configManager,
+        LEDManager& ledManager,
+        DisplayManager& displayManager
     );
+    void handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager);
 };
 
 #endif // BUTTON_MANAGER_H

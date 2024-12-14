@@ -1,85 +1,126 @@
 #include "ButtonManager.h"
-#include "Utility.h"
 
-ButtonManager::ButtonManager() {
-    // Initialize button states
+ButtonManager::ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secondaryMuxPins, uint8_t analogPin)
+    : _primaryMuxPins(primaryMuxPins), _secondaryMuxPins(secondaryMuxPins), _analogPin(analogPin) {
     for (int i = 0; i < NUM_BUTTONS; i++) {
         buttonStates[i] = false;
     }
 }
 
-void ButtonManager::initButtons(const uint8_t pins[], uint8_t numButtons) {
-    for (int i = 0; i < numButtons && i < NUM_BUTTONS; i++) {
-        buttonPins[i] = pins[i];
-        pinMode(buttonPins[i], INPUT_PULLUP);
+void ButtonManager::initButtons() {
+    for (int i = 0; i < 3; i++) {
+        pinMode(_primaryMuxPins[i], OUTPUT);
+        pinMode(_secondaryMuxPins[i], OUTPUT);
+    }
+    pinMode(_analogPin, INPUT);
+}
+
+void ButtonManager::selectMux(uint8_t primary, uint8_t secondary) {
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(_primaryMuxPins[i], (primary >> i) & 1);
+        digitalWrite(_secondaryMuxPins[i], (secondary >> i) & 1);
     }
 }
 
+uint8_t ButtonManager::readButton(uint8_t buttonIndex) {
+    uint8_t primary = buttonIndex / 8;
+    uint8_t secondary = buttonIndex % 8;
+    selectMux(primary, secondary);
+
+    int value = analogRead(_analogPin);
+    return value < 512 ? HIGH : LOW;
+}
+
 void ButtonManager::processButtons(
-    uint8_t potChannels[],
-    uint8_t &activePot,
-    uint8_t &activeChannel,
-    bool &envelopeFollowMode,
-    ConfigManager &configManager,
-    LEDManager &ledManager,
-    DisplayManager &displayManager,
-    EnvelopeFollower &envelopeFollower
+    uint8_t* potChannels,
+    uint8_t& activePot,
+    uint8_t& activeChannel,
+    bool& envelopeFollowMode,
+    ConfigManager& configManager,
+    LEDManager& ledManager,
+    DisplayManager& displayManager,
+    EnvelopeFollower& envelopeFollower
 ) {
-    // Read button states
+    uint8_t pressedButtons = 0;
+
     for (int i = 0; i < NUM_BUTTONS; i++) {
-        bool currentState = !digitalRead(buttonPins[i]); // Active LOW
+        bool currentState = readButton(i);
         if (currentState && !buttonStates[i]) {
-            // Button pressed
             buttonStates[i] = true;
+            pressedButtons |= (1 << i);
+            handleSingleButtonPress(
+                i,
+                potChannels,
+                activePot,
+                activeChannel,
+                envelopeFollowMode,
+                configManager,
+                ledManager,
+                displayManager
+            );
         } else if (!currentState && buttonStates[i]) {
-            // Button released
             buttonStates[i] = false;
         }
     }
 
-    // Check combinations or single presses
-    if (buttonStates[0] && buttonStates[5]) {
-        // Example: Reboot on simultaneous press of buttons 0 and 5
-        displayManager.showText("RB"); // Show "Reboot"
-        delay(500);                    // Optional debounce delay
-        rebootTeensy();                // Call the reboot function
-    }
+    handleMultiButtonPress(pressedButtons, displayManager);
+}
 
-    if (buttonStates[0]) {
-        // Toggle envelope follow mode
-        envelopeFollowMode = !envelopeFollowMode;
-        ledManager.indicateEnvelopeMode(envelopeFollowMode);
-        displayManager.showText(envelopeFollowMode ? "EF" : "OF");
-    }
+void ButtonManager::handleSingleButtonPress(
+    uint8_t buttonIndex,
+    uint8_t* potChannels,
+    uint8_t& activePot,
+    uint8_t& activeChannel,
+    bool& envelopeFollowMode,
+    ConfigManager& configManager,
+    LEDManager& ledManager,
+    DisplayManager& displayManager
+) {
+    switch (buttonIndex) {
+        case 0:
+            envelopeFollowMode = !envelopeFollowMode;
+            ledManager.indicateEnvelopeMode(envelopeFollowMode);
+            displayManager.showText(envelopeFollowMode ? "EF" : "OF");
+            break;
 
-    if (buttonStates[1]) {
-        // Increment active MIDI channel
-        activeChannel = (activeChannel % 16) + 1;
-        displayManager.showValue(activeChannel);
-    }
+        case 1:
+            activeChannel = (activeChannel % 16) + 1;
+            displayManager.showValue(activeChannel);
+            break;
 
-    if (buttonStates[2]) {
-        // Decrement active MIDI channel
-        activeChannel = (activeChannel == 1) ? 16 : activeChannel - 1;
-        displayManager.showValue(activeChannel);
-    }
+        case 2:
+            activeChannel = (activeChannel == 1) ? 16 : activeChannel - 1;
+            displayManager.showValue(activeChannel);
+            break;
 
-    if (buttonStates[3]) {
-        // Save configuration
-        configManager.saveConfig(potChannels);
-        displayManager.showText("SV"); // Save
-    }
+        case 3:
+            configManager.saveConfig(potChannels);
+            displayManager.showText("SV");
+            break;
 
-    if (buttonStates[4]) {
-        // Reset configuration
-        configManager.loadConfig(potChannels);
-        displayManager.showText("RS"); // Reset
-    }
+        case 4:
+            configManager.loadConfig(potChannels);
+            displayManager.showText("RS");
+            break;
 
-    if (buttonStates[5]) {
-        // Increment active potentiometer
-        activePot = (activePot + 1) % NUM_POTS;
-        displayManager.showValue(activePot);
-        ledManager.setActivePot(activePot);
+        case 5:
+            activePot = (activePot + 1) % NUM_POTS;
+            displayManager.showValue(activePot);
+            ledManager.setActivePot(activePot);
+            break;
+
+        default:
+            Serial.println("Unknown Button Pressed");
+            break;
+    }
+}
+
+void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager) {
+    if ((pressedButtons & (1 << 0)) && (pressedButtons & (1 << 5))) {
+        Serial.println("Rebooting Teensy...");
+        rebootTeensy();
+    } else if ((pressedButtons & (1 << 1)) && (pressedButtons & (1 << 2))) {
+        Serial.println("Special MIDI channel adjustment");
+        displayManager.showText("MD");
     }
 }

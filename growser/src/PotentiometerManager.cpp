@@ -1,12 +1,38 @@
-#include "PotentiometerManager.h"
+#include <PotentiometerManager.h>
 #include <Arduino.h>
+#include <EEPROM.h>
 
-PotentiometerManager::PotentiometerManager() {
-    // Initialize with defaults
+PotentiometerManager::PotentiometerManager(uint8_t primaryPins[], uint8_t secondaryPins[], uint8_t analogPin)
+    : analogPin(analogPin) {
+    // Initialize mux control pins
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
+        primaryMuxPins[i] = primaryPins[i];
+        pinMode(primaryMuxPins[i], OUTPUT);
+        digitalWrite(primaryMuxPins[i], LOW);
+    }
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
+        secondaryMuxPins[i] = secondaryPins[i];
+        pinMode(secondaryMuxPins[i], OUTPUT);
+        digitalWrite(secondaryMuxPins[i], LOW);
+    }
+
+    // Initialize pots
     for (int i = 0; i < NUM_POTS; i++) {
-        potChannels[i] = 1; // Default channel
-        potCCNumbers[i] = i; // Default CC number
-        potLastValues[i] = -1; // Set to -1 to ensure all pots send their first values
+        potChannels[i] = 1; // Default to channel 1
+        potCCNumbers[i] = i; // Default to sequential CC numbers
+        potLastValues[i] = -1; // Ensure the first read sends values
+    }
+}
+
+void PotentiometerManager::selectMuxBank(uint8_t bank) {
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
+        digitalWrite(primaryMuxPins[i], (bank >> i) & 0x01);
+    }
+}
+
+void PotentiometerManager::selectPotBank(uint8_t pot) {
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
+        digitalWrite(secondaryMuxPins[i], (pot >> i) & 0x01);
     }
 }
 
@@ -24,7 +50,6 @@ void PotentiometerManager::saveToEEPROM() {
         EEPROM.write(address, potChannels[i]);
         EEPROM.write(address + 1, potCCNumbers[i]);
     }
-    // Removed EEPROM.commit();
 }
 
 void PotentiometerManager::resetEEPROM() {
@@ -52,20 +77,30 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 }
 
 void PotentiometerManager::processPots(MIDIHandler &midiHandler, LEDManager &ledManager) {
-    for (int i = 0; i < NUM_POTS; i++) {
-        int currentValue = analogRead(i) >> 3; // Read and scale to 7-bit MIDI range (0–127)
+    int potIndex = 0;
 
-        // Check if the value has changed significantly (debouncing threshold)
-        if (abs(currentValue - potLastValues[i]) > 2) {
-            potLastValues[i] = currentValue; // Update last value
+    for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
+        selectMuxBank(primaryBank);
+        for (uint8_t potBank = 0; potBank < (1 << SECONDARY_MUX_PINS); potBank++) {
+            selectPotBank(potBank);
 
-            // Send MIDI CC message
-            midiHandler.sendControlChange(
-                potCCNumbers[i], currentValue, potChannels[i]
-            );
+            if (potIndex >= NUM_POTS) return; // Avoid overflow
 
-            // Update corresponding LED
-            ledManager.setPotValue(i, currentValue);
+            int currentValue = analogRead(analogPin) >> 3; // Scale to MIDI range (0–127)
+
+            if (abs(currentValue - potLastValues[potIndex]) > 2) { // Threshold to avoid jitter
+                potLastValues[potIndex] = currentValue;
+
+                // Send MIDI CC message
+                midiHandler.sendControlChange(
+                    potCCNumbers[potIndex], currentValue, potChannels[potIndex]
+                );
+
+                // Update corresponding LED
+                ledManager.setPotValue(potIndex, currentValue);
+            }
+
+            potIndex++;
         }
     }
 }
