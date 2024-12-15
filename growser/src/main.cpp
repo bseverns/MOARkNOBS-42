@@ -57,6 +57,19 @@ void setup() {
 void loop() {
     // Process incoming MIDI messages
     midiHandler.processIncomingMIDI();
+ 
+    // Update MIDI clock position
+    static uint8_t midiBeatPosition = 0;
+    if (midiHandler.isClockTick()) {
+        midiBeatPosition = (midiBeatPosition + 1) % 8; // 8 clock ticks per beat
+    }
+
+    // Get the envelope level
+    envelopeFollower.update();
+    uint8_t envelopeLevel = envelopeFollower.getEnvelopeLevel();
+
+    // Update display with MIDI clock, envelope level, and digital snow
+    displayManager.updateDisplay(midiBeatPosition, envelopeLevel);
 
     // Process button presses
   buttonManager.processButtons(
@@ -80,6 +93,9 @@ void loop() {
         ccValue,
         potentiometerManager.getChannel(activePot)
     );
+ 
+    //update display
+    displayManager.updateDisplay(midiBeatPosition, envelopeLevel);
 
     // Process potentiometer values
     potentiometerManager.processPots(midiHandler, ledManager);

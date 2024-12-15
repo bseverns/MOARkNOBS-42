@@ -7,6 +7,10 @@ int EnvelopeFollower::readEnvelopeLevel() {
     return map(rawValue, 0, 1023, 0, 127);
 }
 
+int EnvelopeFollower::getEnvelopeLevel() const {
+    return currentEnvelopeLevel;
+}
+
 void EnvelopeFollower::setModulationTarget(int cc) {
     modulationTargetCC = cc;
 }
@@ -32,3 +36,4 @@ void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
         ccValue = constrain(modulatedValue, 0, 127); // Ensure the value stays within the MIDI range
     }
 }
+

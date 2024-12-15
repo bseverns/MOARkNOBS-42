@@ -50,3 +50,7 @@ void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) 
 void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     // Custom logic for handling incoming Note Off messages
 }
+
+bool MIDIHandler::isClockTick() {
+    return MIDI.getType() == midi::Clock;
+}

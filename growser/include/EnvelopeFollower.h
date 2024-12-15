@@ -15,7 +15,6 @@ private:
     int readEnvelopeLevel();     // Helper to read and calculate the envelope level from audio input
 
 public:
-    // Constructor with reordered initializer list
     EnvelopeFollower(int pin, PotentiometerManager* pm)
         : audioInputPin(pin), currentEnvelopeLevel(0), modulationTargetCC(-1), isActive(false), potManager(pm) {}
 
@@ -25,6 +24,7 @@ public:
 
     void update();                     // Update the envelope level
     void applyToCC(int potIndex, uint8_t& ccValue);  // Apply modulation to a specific CC value
+    int getEnvelopeLevel() const;      // <-- New method to retrieve the current envelope level
 };
 
 #endif // ENVELOPE_FOLLOWER_H

@@ -83,37 +83,37 @@ void ButtonManager::handleSingleButtonPress(
         case 0:
             envelopeFollowMode = !envelopeFollowMode;
             ledManager.indicateEnvelopeMode(envelopeFollowMode);
-            displayManager.showText(envelopeFollowMode ? "EF" : "OF", true);
+            displayManager.displayStatus(envelopeFollowMode ? "EF ON" : "EF OFF", 2000); // Display for 2 seconds
             break;
 
         case 1:
             activeChannel = (activeChannel % 16) + 1;
-            displayManager.showValue(activeChannel, true);
+            displayManager.displayStatus(("CHAN+" + String(activeChannel)).c_str(), 1500);
             break;
 
         case 2:
             activeChannel = (activeChannel == 1) ? 16 : activeChannel - 1;
-            displayManager.showValue(activeChannel, true);
+            displayManager.displayStatus(("CH-" + String(activeChannel)).c_str(), 1500);
             break;
 
         case 3:
             configManager.saveConfig(potChannels);
-            displayManager.showText("SV", true);
+            displayManager.displayStatus("SAVED", 2000);
             break;
 
         case 4:
             configManager.loadConfig(potChannels);
-            displayManager.showText("RS", true);
+            displayManager.displayStatus("LOADED", 2000);
             break;
 
         case 5:
             activePot = (activePot + 1) % NUM_POTS;
-            displayManager.showValue(activePot, true);
+            displayManager.displayStatus(("POT " + String(activePot)).c_str(), 1500);
             ledManager.setActivePot(activePot);
             break;
 
         default:
-            Serial.println("Unknown Button Pressed");
+            displayManager.displayStatus("UNKNOWN", 1000);
             break;
     }
 }
@@ -121,12 +121,12 @@ void ButtonManager::handleSingleButtonPress(
 void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager) {
     if ((pressedButtons & (1 << 0)) && (pressedButtons & (1 << 5))) { //buttons 1 & 6
         Serial.println("Rebooting Teensy...");
-        displayManager.showText("RESET", false);
+        displayManager.displayStatus("RESET", 1000);
         rebootTeensy();
     } else if ((pressedButtons & (1 << 1)) && (pressedButtons & (1 << 4))) { //buttons 2 & 5
         Serial.println("Special MIDI channel adjustment");
         displayManager.showText("MD", true);
     } else if ((pressedButtons & (1 << 2)) && (pressedButtons & (1 << 3))) { //buttons 3 & 4
-        displayManager.showText("SEQ", true); //sequencer mode? 42 step, tempo set by external midi clock
+        displayManager.displayStatus("SEQ", 2000); //sequencer mode? 42 step, tempo set by external midi clock
     }
 }
