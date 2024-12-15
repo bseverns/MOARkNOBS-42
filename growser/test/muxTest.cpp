@@ -25,6 +25,14 @@ void setup() {
     Serial.println("Multiplexer test initialized!");
 }
 
+
+// Function to set the mux selection pins
+void selectMuxBank(const uint8_t muxPins[], uint8_t bank) {
+    for (uint8_t i = 0; i < sizeof(primaryMuxPins) / sizeof(primaryMuxPins[0]); i++) {
+        digitalWrite(muxPins[i], (bank >> i) & 0x01); // Set each pin HIGH or LOW based on the bank
+    }
+}
+
 void loop() {
     for (uint8_t primaryBank = 0; primaryBank < NUM_PRIMARY_BANKS; primaryBank++) {
         selectMuxBank(primaryMuxPins, primaryBank); // Select the primary bank
@@ -44,11 +52,4 @@ void loop() {
     }
 
     delay(100); // Add a small delay to make Serial output readable
-}
-
-// Function to set the mux selection pins
-void selectMuxBank(const uint8_t muxPins[], uint8_t bank) {
-    for (uint8_t i = 0; i < sizeof(primaryMuxPins) / sizeof(primaryMuxPins[0]); i++) {
-        digitalWrite(muxPins[i], (bank >> i) & 0x01); // Set each pin HIGH or LOW based on the bank
-    }
 }
