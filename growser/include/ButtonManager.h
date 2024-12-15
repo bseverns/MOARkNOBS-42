@@ -2,14 +2,14 @@
 #define BUTTON_MANAGER_H
 
 #include <Arduino.h>
+#include "Utility.h"
 #include "ConfigManager.h"
 #include "LEDManager.h"
 #include "DisplayManager.h"
 #include "EnvelopeFollower.h"
-#include "Utility.h"
 
-// Constants
 #define NUM_BUTTONS 6
+#define DEBOUNCE_DELAY 50 // 50 milliseconds debounce delay
 
 class ButtonManager {
 public:
@@ -31,6 +31,7 @@ private:
     const uint8_t* _secondaryMuxPins;
     uint8_t _analogPin;
     bool buttonStates[NUM_BUTTONS];
+    unsigned long lastDebounceTimes[NUM_BUTTONS]; // Track last debounce time for each button
 
     void selectMux(uint8_t primary, uint8_t secondary);
     uint8_t readButton(uint8_t buttonIndex);

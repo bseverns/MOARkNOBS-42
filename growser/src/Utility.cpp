@@ -25,3 +25,17 @@ void rebootTeensy() {
     SCB_AIRCR = 0x05FA0004; // Trigger a system reset for ARM Cortex-M
     while (1);              // Halt to ensure reset happens
 }
+
+bool Utility::debounce(bool &previousState, bool currentState, unsigned long &lastDebounceTime, unsigned long currentTime, unsigned long debounceDelay) {
+    if (currentState != previousState) {
+        lastDebounceTime = currentTime; // Update the debounce time
+    }
+
+    if ((currentTime - lastDebounceTime) > debounceDelay) {
+        // State has stabilized
+        previousState = currentState;
+        return true;
+    }
+
+    return false; // No stable state change yet
+}

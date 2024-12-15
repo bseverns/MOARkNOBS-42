@@ -1,40 +1,28 @@
 #include <PotentiometerManager.h>
-#include <Arduino.h>
 #include <EEPROM.h>
 
-PotentiometerManager::PotentiometerManager(uint8_t primaryPins[], uint8_t secondaryPins[], uint8_t analogPin)
-    : analogPin(analogPin) {
-    // Initialize mux control pins
-    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
-        primaryMuxPins[i] = primaryPins[i];
-        pinMode(primaryMuxPins[i], OUTPUT);
-        digitalWrite(primaryMuxPins[i], LOW);
-    }
-    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
-        secondaryMuxPins[i] = secondaryPins[i];
-        pinMode(secondaryMuxPins[i], OUTPUT);
-        digitalWrite(secondaryMuxPins[i], LOW);
-    }
-
-    // Initialize pots
+PotentiometerManager::PotentiometerManager(const uint8_t* primaryPins, const uint8_t* secondaryPins, uint8_t analogPin)
+    : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins), analogPin(analogPin) {
+    // Initialize pots and their properties
     for (int i = 0; i < NUM_POTS; i++) {
-        potChannels[i] = 1; // Default to channel 1
-        potCCNumbers[i] = i; // Default to sequential CC numbers
-        potLastValues[i] = -1; // Ensure the first read sends values
+        potChannels[i] = 1;       // Default MIDI channel
+        potCCNumbers[i] = i;      // Default MIDI CC number
+        potLastValues[i] = -1;    // Default last value to ensure initial update
     }
 }
 
 void PotentiometerManager::selectMuxBank(uint8_t bank) {
     for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
-        digitalWrite(primaryMuxPins[i], (bank >> i) & 0x01);
+        digitalWrite(primaryMuxPins[i], (bank >> i) & 1);
     }
 }
 
 void PotentiometerManager::selectPotBank(uint8_t pot) {
     for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
-        digitalWrite(secondaryMuxPins[i], (pot >> i) & 0x01);
+        digitalWrite(secondaryMuxPins[i], (pot >> i) & 1);
     }
 }
+
 
 void PotentiometerManager::loadFromEEPROM() {
     for (int i = 0; i < NUM_POTS; i++) {

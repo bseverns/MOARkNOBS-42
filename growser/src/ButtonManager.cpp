@@ -4,6 +4,7 @@ ButtonManager::ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secon
     : _primaryMuxPins(primaryMuxPins), _secondaryMuxPins(secondaryMuxPins), _analogPin(analogPin) {
     for (int i = 0; i < NUM_BUTTONS; i++) {
         buttonStates[i] = false;
+        lastDebounceTimes[i] = 0;
     }
 }
 
@@ -42,24 +43,26 @@ void ButtonManager::processButtons(
     EnvelopeFollower& envelopeFollower
 ) {
     uint8_t pressedButtons = 0;
+    unsigned long currentTime = millis();
 
     for (int i = 0; i < NUM_BUTTONS; i++) {
-        bool currentState = readButton(i);
-        if (currentState && !buttonStates[i]) {
-            buttonStates[i] = true;
-            pressedButtons |= (1 << i);
-            handleSingleButtonPress(
-                i,
-                potChannels,
-                activePot,
-                activeChannel,
-                envelopeFollowMode,
-                configManager,
-                ledManager,
-                displayManager
-            );
-        } else if (!currentState && buttonStates[i]) {
-            buttonStates[i] = false;
+        uint8_t currentState = readButton(i);
+        if (Utility::debounce(buttonStates[i], currentState, lastDebounceTimes[i], currentTime, DEBOUNCE_DELAY)) {
+            // Button state has changed
+            if (buttonStates[i]) {
+                // Button pressed
+                pressedButtons |= (1 << i);
+                handleSingleButtonPress(
+                    i,
+                    potChannels,
+                    activePot,
+                    activeChannel,
+                    envelopeFollowMode,
+                    configManager,
+                    ledManager,
+                    displayManager
+                );
+            }
         }
     }
 

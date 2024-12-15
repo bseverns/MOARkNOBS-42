@@ -11,14 +11,13 @@
 #define LED_PIN 6
 #define NUM_LEDS 42
 #define NUM_BUTTONS 6
-const uint8_t BUTTON_PINS[NUM_BUTTONS] = {2, 3, 8, 9, 10, 11};
 #define OLED_I2C_ADDRESS 0x3C
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
 // pin assignments for primary and secondary mux layers
 const uint8_t primaryMuxPins[] = {7, 8, 9};  // pins for primary mux
 const uint8_t secondaryMuxPins[] = {10, 11, 12}; // pins for secondary mux
-uint8_t analogPin = A8; // Pin to read the mux output
+const uint8_t analogPin = 22; // Pin to read the mux output
 
 // Global objects
 MIDIHandler midiHandler;
@@ -70,7 +69,6 @@ void loop() {
     displayManager,
     envelopeFollower
 );
-
 
     // Apply envelope modulation to active pot
     uint8_t ccValue = potentiometerManager.getCCNumber(activePot);
