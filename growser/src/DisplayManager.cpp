@@ -12,8 +12,12 @@ void DisplayManager::begin() {
     _display.display();
 }
 
-void DisplayManager::showText(const char *text) {
+void DisplayManager::showText(const char *text, bool drawBorder) {
     _display.clearDisplay();
+    if (drawBorder) {
+        _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_WHITE);
+    }
+
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
@@ -21,8 +25,13 @@ void DisplayManager::showText(const char *text) {
     _display.display();
 }
 
-void DisplayManager::showValue(uint8_t value) {
+void DisplayManager::showValue(uint8_t value, bool drawBorder) {
     _display.clearDisplay();
+
+    if (drawBorder) {
+        _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_WHITE);
+    }
+
     _display.setTextSize(2);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
@@ -30,8 +39,13 @@ void DisplayManager::showValue(uint8_t value) {
     _display.display();
 }
 
-void DisplayManager::showMode(const char *mode) {
+void DisplayManager::showMode(const char *mode, bool drawBorder) {
     _display.clearDisplay();
+
+    if (drawBorder) {
+        _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_WHITE);
+    }
+
     _display.setTextSize(2);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);

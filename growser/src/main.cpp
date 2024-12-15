@@ -42,7 +42,7 @@ void setup() {
     // Initialize LEDs and Display
     ledManager.begin();
     displayManager.begin();
-    displayManager.showText("Initializing...");
+    displayManager.showText("Initializing...", true);
 
     // Load configuration from EEPROM
     potentiometerManager.loadFromEEPROM();
@@ -51,7 +51,7 @@ void setup() {
     buttonManager.initButtons();
     delay(1000); // Just hang for a moment so that we're sure we've settled
     displayManager.clear();
-    displayManager.showText("BENZ");
+    displayManager.showText("BENZ", true);
 }
 
 void loop() {

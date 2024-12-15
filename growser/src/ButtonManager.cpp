@@ -83,32 +83,32 @@ void ButtonManager::handleSingleButtonPress(
         case 0:
             envelopeFollowMode = !envelopeFollowMode;
             ledManager.indicateEnvelopeMode(envelopeFollowMode);
-            displayManager.showText(envelopeFollowMode ? "EF" : "OF");
+            displayManager.showText(envelopeFollowMode ? "EF" : "OF", true);
             break;
 
         case 1:
             activeChannel = (activeChannel % 16) + 1;
-            displayManager.showValue(activeChannel);
+            displayManager.showValue(activeChannel, true);
             break;
 
         case 2:
             activeChannel = (activeChannel == 1) ? 16 : activeChannel - 1;
-            displayManager.showValue(activeChannel);
+            displayManager.showValue(activeChannel, true);
             break;
 
         case 3:
             configManager.saveConfig(potChannels);
-            displayManager.showText("SV");
+            displayManager.showText("SV", true);
             break;
 
         case 4:
             configManager.loadConfig(potChannels);
-            displayManager.showText("RS");
+            displayManager.showText("RS", true);
             break;
 
         case 5:
             activePot = (activePot + 1) % NUM_POTS;
-            displayManager.showValue(activePot);
+            displayManager.showValue(activePot, true);
             ledManager.setActivePot(activePot);
             break;
 
@@ -119,11 +119,14 @@ void ButtonManager::handleSingleButtonPress(
 }
 
 void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager) {
-    if ((pressedButtons & (1 << 0)) && (pressedButtons & (1 << 5))) {
+    if ((pressedButtons & (1 << 0)) && (pressedButtons & (1 << 5))) { //buttons 1 & 6
         Serial.println("Rebooting Teensy...");
+        displayManager.showText("RESET", false);
         rebootTeensy();
-    } else if ((pressedButtons & (1 << 1)) && (pressedButtons & (1 << 2))) {
+    } else if ((pressedButtons & (1 << 1)) && (pressedButtons & (1 << 4))) { //buttons 2 & 5
         Serial.println("Special MIDI channel adjustment");
-        displayManager.showText("MD");
+        displayManager.showText("MD", true);
+    } else if ((pressedButtons & (1 << 2)) && (pressedButtons & (1 << 3))) { //buttons 3 & 4
+        displayManager.showText("SEQ", true); //sequencer mode? 42 step, tempo set by external midi clock
     }
 }
