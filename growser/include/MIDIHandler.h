@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <MIDI.h>
+#include <SequenceManager.h>
 
 class MIDIHandler {
 public:
@@ -13,6 +14,7 @@ public:
     void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
     void processIncomingMIDI();
     bool isClockTick();
+    void handleClockMessage();
 private:
     void handleControlChange(uint8_t channel, uint8_t control, uint8_t value);
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);

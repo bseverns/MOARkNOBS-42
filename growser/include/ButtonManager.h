@@ -7,6 +7,7 @@
 #include "LEDManager.h"
 #include "DisplayManager.h"
 #include "EnvelopeFollower.h"
+#include "SequenceManager.h"
 
 #define NUM_BUTTONS 6
 #define DEBOUNCE_DELAY 50 // 50 milliseconds debounce delay

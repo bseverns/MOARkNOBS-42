@@ -40,7 +40,8 @@ void ButtonManager::processButtons(
     ConfigManager& configManager,
     LEDManager& ledManager,
     DisplayManager& displayManager,
-    EnvelopeFollower& envelopeFollower
+    EnvelopeFollower& envelopeFollower,
+    Sequencer& sequencer
 ) {
     uint8_t pressedButtons = 0;
     unsigned long currentTime = millis();
@@ -77,7 +78,7 @@ void ButtonManager::handleSingleButtonPress(
     bool& envelopeFollowMode,
     ConfigManager& configManager,
     LEDManager& ledManager,
-    DisplayManager& displayManager
+    DisplayManager& displayManager,
 ) {
     switch (buttonIndex) {
         case 0:
@@ -118,7 +119,7 @@ void ButtonManager::handleSingleButtonPress(
     }
 }
 
-void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager) {
+void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager, Sequencer& sequencer) {
     if ((pressedButtons & (1 << 0)) && (pressedButtons & (1 << 5))) { //buttons 1 & 6
         Serial.println("Rebooting Teensy...");
         displayManager.displayStatus("RESET", 1000);
@@ -128,5 +129,6 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, DisplayManage
         displayManager.showText("MD", true);
     } else if ((pressedButtons & (1 << 2)) && (pressedButtons & (1 << 3))) { //buttons 3 & 4
         displayManager.displayStatus("SEQ", 2000); //sequencer mode? 42 step, tempo set by external midi clock
+        sequencer.resetSequencer();
     }
 }

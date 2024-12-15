@@ -80,7 +80,8 @@ void loop() {
     configManager,
     ledManager,
     displayManager,
-    envelopeFollower
+    envelopeFollower,
+    Sequencer
 );
 
     // Apply envelope modulation to active pot
@@ -99,6 +100,19 @@ void loop() {
 
     // Process potentiometer values
     potentiometerManager.processPots(midiHandler, ledManager);
+
+    if (sequencer.isActive()) {
+        uint8_t stepValue = sequencer.getStepValue(activePot);
+        envelopeFollower.applyToCC(activePot, stepValue);
+        midiHandler.sendControlChange(
+            potentiometerManager.getCCNumber(activePot),
+            stepValue,
+            potentiometerManager.getChannel(activePot)
+        );
+
+        ledManager.setPotValue(activePot, stepValue);
+        sequencer.advanceStep();
+    }
 
     // Update LEDs
     ledManager.update();
