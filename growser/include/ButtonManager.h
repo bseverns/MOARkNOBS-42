@@ -45,9 +45,10 @@ private:
         bool& envelopeFollowMode,
         ConfigManager& configManager,
         LEDManager& ledManager,
-        DisplayManager& displayManager
+        DisplayManager& displayManager,
+        Sequencer& sequencer
     );
-    void handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager);
+    void handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager, Sequencer& sequencer);
 };
 
 #endif // BUTTON_MANAGER_H

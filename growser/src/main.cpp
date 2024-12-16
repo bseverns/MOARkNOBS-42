@@ -6,6 +6,7 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
+#include "SequenceManager.h" // Ensure this is correct
 
 // Constants
 #define LED_PIN 6
@@ -27,6 +28,7 @@ DisplayManager displayManager(OLED_I2C_ADDRESS);
 ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin);
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
 EnvelopeFollower envelopeFollower(A0, &potentiometerManager); // A0 is the audio input pin
+Sequencer sequencer; // Corrected class name
 
 // Hardware states
 uint8_t potChannels[NUM_POTS];
@@ -72,17 +74,17 @@ void loop() {
     displayManager.updateDisplay(midiBeatPosition, envelopeLevel);
 
     // Process button presses
-  buttonManager.processButtons(
-    potChannels,
-    activePot,
-    activeChannel,
-    envelopeFollowMode,
-    configManager,
-    ledManager,
-    displayManager,
-    envelopeFollower,
-    sequencer
-);
+    buttonManager.processButtons(
+        potChannels,
+        activePot,
+        activeChannel,
+        envelopeFollowMode,
+        configManager,
+        ledManager,
+        displayManager,
+        envelopeFollower,
+        sequencer // Use the corrected name
+    );
 
     // Apply envelope modulation to active pot
     uint8_t ccValue = potentiometerManager.getCCNumber(activePot);
@@ -95,11 +97,15 @@ void loop() {
         potentiometerManager.getChannel(activePot)
     );
  
-    //update display
+    // Update display
     displayManager.updateDisplay(midiBeatPosition, envelopeLevel);
 
     // Process potentiometer values
-    potentiometerManager.processPots(midiHandler, ledManager);
+PotentiometerManager potManager(primaryMuxPins, secondaryMuxPins, analogPin);
+
+potManager.setMidiCallback([](uint8_t cc, uint8_t value, uint8_t channel) {
+    midiHandler.sendControlChange(cc, value, channel); // Use your MIDIHandler instance
+});
 
     if (sequencer.isActive()) {
         uint8_t stepValue = sequencer.getStepValue(activePot);

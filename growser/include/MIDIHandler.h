@@ -5,6 +5,7 @@
 #include <MIDI.h>
 #include <SequenceManager.h>
 
+class Sequencer;
 class MIDIHandler {
 public:
     MIDIHandler();
@@ -14,7 +15,7 @@ public:
     void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
     void processIncomingMIDI();
     bool isClockTick();
-    void handleClockMessage();
+    void handleClockMessage(Sequencer &sequencer); // Declare the method here
 private:
     void handleControlChange(uint8_t channel, uint8_t control, uint8_t value);
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);

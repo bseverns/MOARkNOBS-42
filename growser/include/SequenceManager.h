@@ -2,7 +2,8 @@
 #define SEQUENCER_H
 
 #include <Arduino.h>
-#include <PotentiometerManager.h>
+
+class PotentiometerManager;
 
 #define MAX_STEPS 128
 #define ACTIVE_TIMEOUT 3000  // 3 seconds of activity timeout
