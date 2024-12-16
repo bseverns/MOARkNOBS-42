@@ -16,7 +16,7 @@ private:
     unsigned long lastInteractionTime; // Timestamp of the last interaction
 
 public:
-        Sequencer();
+    Sequencer();
     void setStepValue(uint8_t potIndex, uint8_t stepIndex, uint8_t value);
     uint8_t getStepValue(uint8_t potIndex) const;
     void advanceStep();

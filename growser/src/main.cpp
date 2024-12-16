@@ -81,7 +81,7 @@ void loop() {
     ledManager,
     displayManager,
     envelopeFollower,
-    Sequencer
+    sequencer
 );
 
     // Apply envelope modulation to active pot
