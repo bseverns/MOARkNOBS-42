@@ -24,7 +24,8 @@ public:
         ConfigManager& configManager,
         LEDManager& ledManager,
         DisplayManager& displayManager,
-        EnvelopeFollower& envelopeFollower
+        EnvelopeFollower& envelopeFollower,
+        Sequencer& sequencer
     );
 
 private:
