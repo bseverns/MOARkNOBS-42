@@ -58,5 +58,3 @@ void MIDIHandler::handleClockMessage(Sequencer &sequencer) {
 bool MIDIHandler::isClockTick() {
     return MIDI.getType() == midi::Clock;
 }
-
-

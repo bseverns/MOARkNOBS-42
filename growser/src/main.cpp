@@ -83,7 +83,7 @@ void loop() {
         ledManager,
         displayManager,
         envelopeFollower,
-        sequencer // Use the corrected name
+        sequencer 
     );
 
     // Apply envelope modulation to active pot
@@ -104,7 +104,7 @@ void loop() {
 PotentiometerManager potManager(primaryMuxPins, secondaryMuxPins, analogPin);
 
 potManager.setMidiCallback([](uint8_t cc, uint8_t value, uint8_t channel) {
-    midiHandler.sendControlChange(cc, value, channel); // Use your MIDIHandler instance
+    midiHandler.sendControlChange(cc, value, channel); // Use MIDIHandler instance
 });
 
     if (sequencer.isActive()) {
