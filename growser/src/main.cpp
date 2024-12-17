@@ -6,8 +6,7 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
-#include "SequenceManager.h" // Ensure this is correct
-
+#include "SequenceManager.h"
 // Constants
 #define LED_PIN 6
 #define NUM_LEDS 42
@@ -43,6 +42,7 @@ void setup() {
 
     // Initialize LEDs and Display
     ledManager.begin();
+    //startup light function
     displayManager.begin();
     displayManager.showText("Initializing...", true);
 
