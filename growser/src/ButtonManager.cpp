@@ -1,7 +1,7 @@
 #include "ButtonManager.h"
 
 ButtonManager::ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secondaryMuxPins, uint8_t analogPin)
-    : _primaryMuxPins(primaryMuxPins), _secondaryMuxPins(secondaryMuxPins), _analogPin(analogPin) {
+    : _primaryMuxPins(primaryMuxPins), _secondaryMuxPins(secondaryMuxPins), _analogPin(analogPin), activeEnvelopeIndex(0) {
     for (int i = 0; i < NUM_BUTTONS; i++) {
         buttonStates[i] = false;
         lastDebounceTimes[i] = 0;
@@ -81,10 +81,19 @@ void ButtonManager::handleSingleButtonPress(
     Sequencer& sequencer
 ) {
     switch (buttonIndex) {
-        case 0:
-            envelopeFollowMode = !envelopeFollowMode;
-            ledManager.indicateEnvelopeMode(envelopeFollowMode);
-            displayManager.displayStatus(envelopeFollowMode ? "EF ON" : "EF OFF", 2000);
+        case 0: // Envelope button
+            if (envelopes && !envelopes->empty()) {
+                activeEnvelopeIndex = (activeEnvelopeIndex + 1) % (envelopes->size() + 1); // Cycle through envelopes + MIDI
+                if (activeEnvelopeIndex < envelopes->size()) {
+                    envelopes->at(activeEnvelopeIndex).toggleActive();
+                    displayManager.displayStatus(
+                        ("ENV " + String(activeEnvelopeIndex + 1)).c_str(), 2000);
+                } else {
+                    envelopeFollowMode = false; // Exit envelope mode and return to MIDI
+                    displayManager.displayStatus("MIDI", 2000);
+                }
+                ledManager.indicateEnvelopeMode(activeEnvelopeIndex < envelopes->size());
+            }
             break;
 
         case 1:

@@ -35,6 +35,12 @@ uint8_t activePot = 0xFF;    // Currently active pot
 uint8_t activeChannel = 1;   // Default active MIDI channel
 bool envelopeFollowMode = false; // Envelope follow mode status
 
+std::vector<EnvelopeFollower> envelopeFollowers = {
+    EnvelopeFollower(A0, &potentiometerManager),
+    EnvelopeFollower(A1, &potentiometerManager), // Another audio input pin
+    EnvelopeFollower(A2, &potentiometerManager)  // Add as needed
+};
+
 void setup() {
     // Initialize serial for MIDI
     Serial.begin(31250);
@@ -49,11 +55,18 @@ void setup() {
     // Load configuration from EEPROM
     potentiometerManager.loadFromEEPROM();
 
+       for (auto& envelope : envelopeFollowers) {
+        envelope.toggleActive(); // Activate them by default if needed
+    }
+
+
     // Initialize buttons
     buttonManager.initButtons();
     delay(1000); // Just hang for a moment so that we're sure we've settled
     displayManager.clear();
     displayManager.showText("BENZ", true);
+
+    
 }
 
 void loop() {
@@ -86,10 +99,20 @@ void loop() {
         sequencer 
     );
 
-    // Apply envelope modulation to active pot
-    uint8_t ccValue = potentiometerManager.getCCNumber(activePot);
-    envelopeFollower.applyToCC(activePot, ccValue);
+   for (auto& envelope : envelopeFollowers) {
+        envelope.update(); // Update each envelope
+    }
 
+    // Apply envelopes to their respective pots
+    for (int i = 0; i < envelopeFollowers.size(); ++i) {
+        uint8_t ccValue = potentiometerManager.getCCNumber(i); // Assuming a 1-to-1 mapping
+        envelopeFollowers[i].applyToCC(i, ccValue);
+        midiHandler.sendControlChange(
+            potentiometerManager.getCCNumber(i),
+            ccValue,
+            potentiometerManager.getChannel(i)
+        );
+    }
     // Send modulated CC value
     midiHandler.sendControlChange(
         potentiometerManager.getCCNumber(activePot),

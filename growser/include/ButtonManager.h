@@ -27,6 +27,8 @@ public:
         EnvelopeFollower& envelopeFollower,
         Sequencer& sequencer
     );
+     void setEnvelopes(std::vector<EnvelopeFollower>* envs) { envelopes = envs; }
+
 
 private:
     const uint8_t* _primaryMuxPins;
@@ -49,6 +51,8 @@ private:
         Sequencer& sequencer
     );
     void handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager, Sequencer& sequencer);
+     uint8_t activeEnvelopeIndex; // Tracks the current envelope being cycled
+    std::vector<EnvelopeFollower>* envelopes; // Pointer to the envelope list
 };
 
 #endif // BUTTON_MANAGER_H
