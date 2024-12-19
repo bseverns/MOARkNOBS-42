@@ -1,4 +1,5 @@
 #include "PotentiometerManager.h"
+#include "EnvelopeFollower.h" // Include full definition here
 #include <EEPROM.h>
 
 PotentiometerManager::PotentiometerManager(
@@ -74,7 +75,8 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
-void PotentiometerManager::processPots(LEDManager &ledManager) {
+
+void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
     int potIndex = 0;
 
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
@@ -84,8 +86,22 @@ void PotentiometerManager::processPots(LEDManager &ledManager) {
 
             if (potIndex >= NUM_POTS) return;
 
-            int currentValue = analogRead(analogPin) >> 3; // Scale to MIDI range (0–127)
+            // Check if this pot is controlled by an active envelope
+            bool isControlledByEnvelope = false;
+            for (auto& envelope : envelopes) {
+                if (envelope.getActiveState() && envelope.getAssignedPot() == potIndex) {
+                    isControlledByEnvelope = true;
+                    break;
+                }
+            }
 
+            if (isControlledByEnvelope) {
+                potIndex++;
+                continue; // Skip manual processing for pots controlled by envelopes
+            }
+
+            // Process pot as usual
+            int currentValue = analogRead(analogPin) >> 3; // Scale to MIDI range (0–127)
             if (abs(currentValue - potLastValues[potIndex]) > 2) { // Threshold to avoid jitter
                 potLastValues[potIndex] = currentValue;
 

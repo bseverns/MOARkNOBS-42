@@ -3,7 +3,11 @@
 
 #include <Arduino.h>
 #include <functional>
+#include <vector> // For std::vector
 #include "LEDManager.h"
+
+// Forward declaration to avoid circular dependency
+class EnvelopeFollower;
 
 #define NUM_POTS 42
 #define PRIMARY_MUX_PINS 3
@@ -42,7 +46,8 @@ public:
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);
 
-    void processPots(LEDManager &ledManager);
+    // Updated to accept envelopes
+    void processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes);
 };
 
 #endif // POTENTIOMETER_MANAGER_H
