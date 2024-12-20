@@ -48,7 +48,9 @@ private:
         ConfigManager& configManager,
         LEDManager& ledManager,
         DisplayManager& displayManager,
-        Sequencer& sequencer
+        Sequencer& sequencer,
+        std::map<int, int>& potToEnvelopeMap,   // Add the mapping
+        std::vector<EnvelopeFollower>& envelopes // Pass the envelopes vector
     );
     void handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager, Sequencer& sequencer);
      uint8_t activeEnvelopeIndex; // Tracks the current envelope being cycled

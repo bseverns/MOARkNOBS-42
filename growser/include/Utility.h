@@ -2,6 +2,9 @@
 #define UTILITY_H
 
 #include <Arduino.h>
+#include "LEDManager.h"
+#include "DisplayManager.h"
+#include "EnvelopeFollower.h"
 
 void rebootTeensy();
 
@@ -17,6 +20,15 @@ public:
         unsigned long currentTime,       // Current system time (millis)
         unsigned long debounceDelay      // Minimum time required for a stable state
     );
+    static void updateVisuals(
+    uint8_t midiBeatPosition,
+    const std::vector<EnvelopeFollower>& envelopeFollowers,
+    const char* statusMessage,
+    uint8_t activePot,
+    uint8_t activeChannel,
+    LEDManager& ledManager,
+    DisplayManager& displayManager
+    ); 
 };
 
 #endif

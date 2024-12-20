@@ -1,5 +1,9 @@
 #include "EnvelopeFollower.h"
 
+EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
+    : audioInputPin(pin), currentEnvelopeLevel(0), modulationTargetCC(-1),
+      isActive(false), potManager(pm) {} // Removed assignedPot initialization
+
 int EnvelopeFollower::readEnvelopeLevel() {
     // Read and process the envelope from the audio input pin
     int rawValue = analogRead(audioInputPin);
@@ -15,14 +19,6 @@ void EnvelopeFollower::setModulationTarget(int cc) {
     modulationTargetCC = cc;
 }
 
-void EnvelopeFollower::toggleActive() {
-    isActive = !isActive;
-}
-
-bool EnvelopeFollower::getActiveState() const {
-    return isActive;
-}
-
 void EnvelopeFollower::update() {
     if (isActive) {
         currentEnvelopeLevel = readEnvelopeLevel();
@@ -36,4 +32,15 @@ void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
         ccValue = constrain(modulatedValue, 0, 127); // Ensure the value stays within the MIDI range
     }
 }
+
+void EnvelopeFollower::toggleActive(bool state) {
+    if (isActive != state) { // Only update if there's a change
+        isActive = state;
+    }
+}
+
+bool EnvelopeFollower::getActiveState() const {
+    return isActive; // Return the current active state
+}
+
 

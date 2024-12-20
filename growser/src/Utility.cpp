@@ -1,5 +1,6 @@
 #include "Utility.h"
 
+
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
 }
@@ -38,4 +39,26 @@ bool Utility::debounce(bool &previousState, bool currentState, unsigned long &la
     }
 
     return false; // No stable state change yet
+}
+
+void Utility::updateVisuals(
+    uint8_t midiBeatPosition,
+    const std::vector<EnvelopeFollower>& envelopeFollowers,
+    const char* statusMessage,
+    uint8_t activePot,
+    uint8_t activeChannel,
+    LEDManager& ledManager,
+    DisplayManager& displayManager
+) {
+    // Update LEDs
+    ledManager.update();
+
+    // Collect envelope levels
+    std::vector<uint8_t> envelopeLevels;
+    for (const auto& follower : envelopeFollowers) {
+        envelopeLevels.push_back(follower.getEnvelopeLevel());
+    }
+
+    // Update the display with all information
+    displayManager.updateDisplay(midiBeatPosition, envelopeLevels, statusMessage, activePot, activeChannel);
 }

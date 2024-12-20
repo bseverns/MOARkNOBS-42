@@ -16,7 +16,7 @@ public:
     void showMIDIClock(uint8_t beatPosition);
     void showEnvelopeLevel(uint8_t level);
     void showDigitalSnow();
-    void updateDisplay(uint8_t beatPosition, uint8_t envelopeLevel);
+    void updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel);
     void displayStatus(const char *status, unsigned long duration);
    
 private:
