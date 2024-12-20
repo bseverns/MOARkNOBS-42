@@ -90,17 +90,18 @@ void loop() {
         displayManager
     );
 
-    buttonManager.processButtons(
-        potChannels,
-        activePot,
-        activeChannel,
-        envelopeFollowMode,
-        configManager,
-        ledManager,
-        displayManager,
-        envelopeFollowers[0], // First envelope as reference
-        sequencer
-    );
+  buttonManager.processButtons(
+    potChannels,
+    activePot,
+    activeChannel,
+    envelopeFollowMode,
+    configManager,
+    ledManager,
+    displayManager,
+    envelopeFollowers,          // Pass the envelopes
+    sequencer,
+    potToEnvelopeMap            // Pass the mapping
+);
 
     // Process envelope followers
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {

@@ -2,6 +2,8 @@
 #define BUTTON_MANAGER_H
 
 #include <Arduino.h>
+#include <map>
+#include <vector> // Include for std::vector
 #include "Utility.h"
 #include "ConfigManager.h"
 #include "LEDManager.h"
@@ -39,7 +41,7 @@ private:
 
     void selectMux(uint8_t primary, uint8_t secondary);
     uint8_t readButton(uint8_t buttonIndex);
-    void handleSingleButtonPress(
+     void handleSingleButtonPress(
         uint8_t buttonIndex,
         uint8_t* potChannels,
         uint8_t& activePot,
