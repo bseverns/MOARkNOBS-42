@@ -2,7 +2,7 @@
 
 EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
     : audioInputPin(pin), currentEnvelopeLevel(0), modulationTargetCC(-1),
-      isActive(false), potManager(pm) {} // Removed assignedPot initialization
+      isActive(false), filterType(LINEAR), potManager(pm) {}
 
 int EnvelopeFollower::readEnvelopeLevel() {
     // Read and process the envelope from the audio input pin
@@ -11,17 +11,25 @@ int EnvelopeFollower::readEnvelopeLevel() {
     return map(rawValue, 0, 1023, 0, 127);
 }
 
-int EnvelopeFollower::getEnvelopeLevel() const {
-    return currentEnvelopeLevel;
-}
-
-void EnvelopeFollower::setModulationTarget(int cc) {
-    modulationTargetCC = cc;
+int EnvelopeFollower::processEnvelopeLevel(int level) {
+    switch (filterType) {
+        case LINEAR:
+            return level; // No changes for linear
+        case OPPOSITE_LINEAR:
+            return 127 - level; // Invert the value
+        case EXPONENTIAL:
+            return pow(level / 127.0, 2) * 127; // Quadratic scaling
+        case RANDOM:
+            return random(0, 127); // Random envelope level
+        default:
+            return level;
+    }
 }
 
 void EnvelopeFollower::update() {
     if (isActive) {
-        currentEnvelopeLevel = readEnvelopeLevel();
+        int rawLevel = readEnvelopeLevel();
+        currentEnvelopeLevel = processEnvelopeLevel(rawLevel);
     }
 }
 
@@ -34,13 +42,27 @@ void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
 }
 
 void EnvelopeFollower::toggleActive(bool state) {
-    if (isActive != state) { // Only update if there's a change
+    if (isActive != state) {
         isActive = state;
     }
 }
 
 bool EnvelopeFollower::getActiveState() const {
-    return isActive; // Return the current active state
+    return isActive;
 }
 
+void EnvelopeFollower::setModulationTarget(int cc) {
+    modulationTargetCC = cc;
+}
 
+void EnvelopeFollower::setFilterType(FilterType type) {
+    filterType = type;
+}
+
+EnvelopeFollower::FilterType EnvelopeFollower::getFilterType() const {
+    return filterType;
+}
+
+int EnvelopeFollower::getEnvelopeLevel() const {
+    return currentEnvelopeLevel;
+}

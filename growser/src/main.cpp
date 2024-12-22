@@ -6,7 +6,6 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
-#include "SequenceManager.h"
 #include <map> // For tracking pot-to-envelope associations
 
 // Constants
@@ -26,12 +25,13 @@ const uint8_t analogPin = 22; //mux reader
 MIDIHandler midiHandler;
 ConfigManager configManager(sizeof(uint8_t) * NUM_POTS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
-DisplayManager displayManager(OLED_I2C_ADDRESS); //check documentation
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin);
-PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
-Sequencer sequencer;
+DisplayManager displayManager(OLED_I2C_ADDRESS);
 
-// envelope followers - assign to analog inputs
+// Declare PotentiometerManager before ButtonManager
+PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin, &potentiometerManager);
+
+// Envelope followers - assign to analog inputs
 std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A0, &potentiometerManager),
     EnvelopeFollower(A1, &potentiometerManager),
@@ -48,6 +48,19 @@ uint8_t activePot = 0xFF;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
 
+// ButtonManagerContext
+ButtonManagerContext buttonContext = {
+    potChannels,
+    activePot,
+    activeChannel,
+    envelopeFollowMode,
+    configManager,
+    ledManager,
+    displayManager,
+    envelopeFollowers,
+    potToEnvelopeMap
+};
+
 void setup() {
     Serial.begin(31250);
     midiHandler.begin();
@@ -63,7 +76,7 @@ void setup() {
     potToEnvelopeMap[3] = 3; // Pot 3 controls Envelope 3
 
     for (auto& envelope : envelopeFollowers) {
-    envelope.toggleActive(true); // Ensure all envelopes are activated
+        envelope.toggleActive(true); // Ensure all envelopes are activated
     }
 
     buttonManager.initButtons();
@@ -90,28 +103,15 @@ void loop() {
         displayManager
     );
 
-  buttonManager.processButtons(
-    potChannels,
-    activePot,
-    activeChannel,
-    envelopeFollowMode,
-    configManager,
-    ledManager,
-    displayManager,
-    envelopeFollowers,          // Pass the envelopes
-    sequencer,
-    potToEnvelopeMap            // Pass the mapping
-);
+    buttonManager.processButtons(buttonContext); // Pass context to processButtons
 
     // Process envelope followers
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
-    if (envelopeIndex < static_cast<int>(envelopeFollowers.size())) { // Fix signedness comparison
-        EnvelopeFollower& envelope = envelopeFollowers[envelopeIndex];
-        envelope.update();
-
-            if (envelope.getActiveState()) {
+        if (envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
+            EnvelopeFollower* envelope = &envelopeFollowers[envelopeIndex];
+            if (envelope->getActiveState()) {
                 uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
-                envelope.applyToCC(potIndex, ccValue);
+                envelope->applyToCC(potIndex, ccValue);
                 midiHandler.sendControlChange(
                     potentiometerManager.getCCNumber(potIndex),
                     ccValue,
@@ -122,18 +122,5 @@ void loop() {
         }
     }
 
-
     potentiometerManager.processPots(ledManager, envelopeFollowers);
-
-    if (sequencer.isActive()) {
-        uint8_t stepValue = sequencer.getStepValue(activePot);
-        envelopeFollowers[0].applyToCC(activePot, stepValue);
-        midiHandler.sendControlChange(
-            potentiometerManager.getCCNumber(activePot),
-            stepValue,
-            potentiometerManager.getChannel(activePot)
-        );
-        ledManager.setPotValue(activePot, stepValue);
-        sequencer.advanceStep();
-    }
 }

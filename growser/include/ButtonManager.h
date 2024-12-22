@@ -3,60 +3,50 @@
 
 #include <Arduino.h>
 #include <map>
-#include <vector> // Include for std::vector
-#include "Utility.h"
+#include <vector>
 #include "ConfigManager.h"
 #include "LEDManager.h"
 #include "DisplayManager.h"
 #include "EnvelopeFollower.h"
-#include "SequenceManager.h"
+#include "Utility.h"
+#include "PotentiometerManager.h"
 
 #define NUM_BUTTONS 6
-#define DEBOUNCE_DELAY 50 // 50 milliseconds debounce delay
+#define FUNCTION_BUTTON_PIN 8 // to be changed/confirmed
+#define DEBOUNCE_DELAY 50 // Debounce delay in milliseconds
+
+// Forward declaration
+class ButtonManager;
+
+struct ButtonManagerContext {
+    uint8_t* potChannels;
+    uint8_t& activePot;
+    uint8_t& activeChannel;
+    bool& envelopeFollowMode;
+    ConfigManager& configManager;
+    LEDManager& ledManager;
+    DisplayManager& displayManager;
+    std::vector<EnvelopeFollower>& envelopes;
+    std::map<int, int>& potToEnvelopeMap;
+};
 
 class ButtonManager {
 public:
-    ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secondaryMuxPins, uint8_t analogPin);
+    ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secondaryMuxPins, uint8_t analogPin, PotentiometerManager* potentiometerManager);
     void initButtons();
-    void processButtons(
-        uint8_t* potChannels,
-        uint8_t& activePot,
-        uint8_t& activeChannel,
-        bool& envelopeFollowMode,
-        ConfigManager& configManager,
-        LEDManager& ledManager,
-        DisplayManager& displayManager,
-        EnvelopeFollower& envelopeFollower,
-        Sequencer& sequencer
-    );
-     void setEnvelopes(std::vector<EnvelopeFollower>* envs) { envelopes = envs; }
-
-
+    void processButtons(ButtonManagerContext& context);
 private:
+    void selectMux(uint8_t primary, uint8_t secondary);
+    uint8_t readButton(uint8_t buttonIndex);
+    void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context);
+    void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context);
     const uint8_t* _primaryMuxPins;
     const uint8_t* _secondaryMuxPins;
     uint8_t _analogPin;
+    PotentiometerManager* _potentiometerManager;
     bool buttonStates[NUM_BUTTONS];
-    unsigned long lastDebounceTimes[NUM_BUTTONS]; // Track last debounce time for each button
-
-    void selectMux(uint8_t primary, uint8_t secondary);
-    uint8_t readButton(uint8_t buttonIndex);
-     void handleSingleButtonPress(
-        uint8_t buttonIndex,
-        uint8_t* potChannels,
-        uint8_t& activePot,
-        uint8_t& activeChannel,
-        bool& envelopeFollowMode,
-        ConfigManager& configManager,
-        LEDManager& ledManager,
-        DisplayManager& displayManager,
-        Sequencer& sequencer,
-        std::map<int, int>& potToEnvelopeMap,   // Add the mapping
-        std::vector<EnvelopeFollower>& envelopes // Pass the envelopes vector
-    );
-    void handleMultiButtonPress(uint8_t pressedButtons, DisplayManager& displayManager, Sequencer& sequencer);
-     uint8_t activeEnvelopeIndex; // Tracks the current envelope being cycled
-    std::vector<EnvelopeFollower>* envelopes; // Pointer to the envelope list
+    unsigned long lastDebounceTimes[NUM_BUTTONS];
+    uint8_t activeEnvelopeIndex;
 };
 
 #endif // BUTTON_MANAGER_H

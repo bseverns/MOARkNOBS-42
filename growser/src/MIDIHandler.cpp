@@ -51,10 +51,6 @@ void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
     // Custom logic for handling incoming Note Off messages
 }
 
-void MIDIHandler::handleClockMessage(Sequencer &sequencer) {
-    sequencer.advanceStep();
-}
-
 bool MIDIHandler::isClockTick() {
     return MIDI.getType() == midi::Clock;
 }
