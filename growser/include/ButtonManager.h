@@ -12,7 +12,7 @@
 #include "PotentiometerManager.h"
 
 #define NUM_BUTTONS 6
-#define FUNCTION_BUTTON_PIN 8 // to be changed/confirmed
+#define FUNCTION_BUTTON_PIN 8 // to be changed in assembly
 #define DEBOUNCE_DELAY 50 // Debounce delay in milliseconds
 
 // Forward declaration
