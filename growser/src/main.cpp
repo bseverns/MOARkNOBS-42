@@ -86,6 +86,11 @@ void setup() {
 }
 
 void loop() {
+if (Serial.available()) {
+        String command = Serial.readStringUntil('\n');
+        Utility::processBulkUpdate(command, NUM_POTS); // Delegate to Utility class
+    }
+
     midiHandler.processIncomingMIDI();
 
     static uint8_t midiBeatPosition = 0;

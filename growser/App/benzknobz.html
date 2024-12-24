@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benz EEPROM Settings Manager</title>
+  <style>
+    .pot-row {
+      margin-bottom: 10px;
+    }
+    .pot-row label {
+      display: inline-block;
+      width: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Benz EEPROM Settings Manager</h1>
+  <button id="connect">Connect to Device</button>
+  <p id="status">Status: Not connected</p>
+
+  <h2>Bulk Update Settings</h2>
+  <form id="bulk-update-form">
+    <div id="pot-controls">
+      <!-- Dynamically generate inputs for 42 pots -->
+      <script>
+        for (let i = 0; i < 42; i++) {
+          document.write(`
+            <div class="pot-row">
+              <label>Pot ${i + 1}:</label>
+              <input type="number" id="cc-${i}" placeholder="CC (0–127)" min="0" max="127" required>
+              <input type="number" id="channel-${i}" placeholder="Channel (1–16)" min="1" max="16" required>
+            </div>
+          `);
+        }
+      </script>
+    </div>
+    <button type="button" id="update-all">Update All Pots</button>
+  </form>
+
+  <script>
+    let port;
+    let writer;
+
+    // Connect to the device
+    document.getElementById('connect').addEventListener('click', async () => {
+      try {
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+        writer = port.writable.getWriter();
+        document.getElementById('status').textContent = 'Status: Connected';
+      } catch (err) {
+        console.error('Error connecting to device:', err);
+        document.getElementById('status').textContent = 'Status: Connection failed';
+      }
+    });
+
+    // Handle bulk update
+    document.getElementById('update-all').addEventListener('click', async () => {
+      if (!port || !port.writable) {
+        alert('Please connect to the device first.');
+        return;
+      }
+
+      let command = "SET_ALL ";
+      for (let i = 0; i < 42; i++) {
+        const cc = document.getElementById(`cc-${i}`).value || 0;
+        const channel = document.getElementById(`channel-${i}`).value || 1;
+        command += `${cc},${channel};`;
+      }
+      command += "\n";
+
+      try {
+        const encoder = new TextEncoder();
+        await writer.write(encoder.encode(command));
+        alert('All pots updated successfully!');
+      } catch (err) {
+        console.error('Error sending data to device:', err);
+        alert('Failed to send data to device.');
+      }
+    });
+
+    // Handle disconnect
+    window.addEventListener('beforeunload', async () => {
+      if (writer) await writer.releaseLock();
+      if (port) await port.close();
+    });
+  </script>
+</body>
+</html>

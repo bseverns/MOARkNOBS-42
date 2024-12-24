@@ -5,6 +5,7 @@
 #include "LEDManager.h"
 #include "DisplayManager.h"
 #include "EnvelopeFollower.h"
+#include "EEPROM.h"
 
 void rebootTeensy();
 
@@ -29,6 +30,7 @@ public:
     LEDManager& ledManager,
     DisplayManager& displayManager
     ); 
+    static void processBulkUpdate(const String& command, uint8_t numPots);
 };
 
 #endif

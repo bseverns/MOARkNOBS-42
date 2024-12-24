@@ -22,6 +22,50 @@ bool Utility::debounceButton(uint8_t pin, unsigned long debounceDelay) {
     return false;
 }
 
+void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
+    if (!command.startsWith("SET_ALL")) {
+        Serial.println("Unknown command");
+        return;
+    }
+
+    int startIdx = 8; // Skip "SET_ALL "
+    int currentPot = 0;
+
+    while (startIdx < command.length() && currentPot < numPots) {
+        int ccEnd = command.indexOf(',', startIdx);
+        int channelEnd = command.indexOf(';', startIdx);
+
+        if (ccEnd == -1 || channelEnd == -1 || ccEnd >= channelEnd) {
+            Serial.println("Error: Malformed command");
+            return;
+        }
+
+        int ccNumber = command.substring(startIdx, ccEnd).toInt();
+        int channel = command.substring(ccEnd + 1, channelEnd).toInt();
+
+        // Validate CC number and channel
+        if (ccNumber < 0 || ccNumber > 127 || channel < 1 || channel > 16) {
+            Serial.println("Error: Invalid CC number or channel");
+            return;
+        }
+
+        // Update EEPROM
+        int address = currentPot * 2; // Assuming 2 bytes per pot (channel and CC number)
+        EEPROM.update(address, channel);
+        EEPROM.update(address + 1, ccNumber);
+
+        // Move to the next pot
+        currentPot++;
+        startIdx = channelEnd + 1;
+    }
+
+    if (currentPot == numPots) {
+        Serial.println("Bulk update successful");
+    } else {
+        Serial.println("Error: Insufficient data for all pots");
+    }
+}
+
 void rebootTeensy() {
     SCB_AIRCR = 0x05FA0004; // Trigger a system reset for ARM Cortex-M
     while (1);              // Halt to ensure reset happens
