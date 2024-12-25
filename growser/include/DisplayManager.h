@@ -2,29 +2,25 @@
 #define DISPLAYMANAGER_H
 
 #include <Arduino.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <LiquidCrystal_I2C.h>
 
 class DisplayManager {
 public:
-    DisplayManager(uint8_t i2cAddress, uint16_t width = 128, uint16_t height = 64);
+    DisplayManager(uint8_t i2cAddress, uint8_t cols = 16, uint8_t rows = 2);
     void begin();
-    void showText(const char *text, bool drawBorder = false);
-    void showValue(uint8_t value, bool drawBorder = false);
-    void showMode(const char *mode, bool drawBorder = false);
+    void showText(const char *text, bool clearDisplay = true);
+    void showValue(uint8_t value, bool clearDisplay = true);
+    void showMode(const char *mode, bool clearDisplay = true);
     void clear();
-    void showMIDIClock(uint8_t beatPosition);
-    void showEnvelopeLevel(uint8_t level);
-    void showDigitalSnow();
     void updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel);
     void displayStatus(const char *status, unsigned long duration);
-   
-private:
-    Adafruit_SSD1306 _display;
-    uint8_t _i2cAddress;
 
-    String _statusMessage;
+private:
+    LiquidCrystal_I2C _lcd;
+    uint8_t _cols;
+    uint8_t _rows;
     unsigned long _statusTimeout;
+    String _statusMessage;
 };
 
 #endif // DISPLAYMANAGER_H

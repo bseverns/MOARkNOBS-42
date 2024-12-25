@@ -24,14 +24,16 @@ bool Utility::debounceButton(uint8_t pin, unsigned long debounceDelay) {
 
 void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     if (!command.startsWith("SET_ALL")) {
-        Serial.println("Unknown command");
+        Serial.println("Error: Command must start with 'SET_ALL'");
         return;
     }
 
     int startIdx = 8; // Skip "SET_ALL "
-    int currentPot = 0;
+    unsigned int currentPot = 0; // Use unsigned int for consistency
 
-    while (startIdx < command.length() && currentPot < numPots) {
+    // Compare startIdx with command.length() explicitly cast to unsigned
+    while (static_cast<unsigned int>(startIdx) < static_cast<unsigned int>(command.length()) &&
+           currentPot < static_cast<unsigned int>(numPots)) {
         int ccEnd = command.indexOf(',', startIdx);
         int channelEnd = command.indexOf(';', startIdx);
 
@@ -50,16 +52,15 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         }
 
         // Update EEPROM
-        int address = currentPot * 2; // Assuming 2 bytes per pot (channel and CC number)
+        int address = currentPot * 2; // Assuming 2 bytes per pot (channel + CC number)
         EEPROM.update(address, channel);
         EEPROM.update(address + 1, ccNumber);
 
-        // Move to the next pot
         currentPot++;
         startIdx = channelEnd + 1;
     }
 
-    if (currentPot == numPots) {
+    if (currentPot == static_cast<unsigned int>(numPots)) {
         Serial.println("Bulk update successful");
     } else {
         Serial.println("Error: Insufficient data for all pots");

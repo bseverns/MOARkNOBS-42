@@ -5,12 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Benz EEPROM Settings Manager</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    #pot-controls {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr); /* 6 columns */
+      gap: 20px; /* Space between columns and rows */
+      justify-items: center; /* Center items in each grid cell */
+      align-items: start; /* Align items at the top */
+      margin-top: 20px;
+    }
     .pot-row {
-      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      background-color: #f9f9f9;
     }
     .pot-row label {
-      display: inline-block;
-      width: 100px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .pot-row input {
+      width: 50px;
+      text-align: center;
+      margin-bottom: 5px;
+    }
+    #update-all {
+      display: block;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #007BFF;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    #update-all:hover {
+      background-color: #0056b3;
+    }
+    #status {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
     }
   </style>
 </head>
@@ -19,7 +67,7 @@
   <button id="connect">Connect to Device</button>
   <p id="status">Status: Not connected</p>
 
-  <h2>Bulk Update Settings</h2>
+  <h2>Settings Update Manager</h2>
   <form id="bulk-update-form">
     <div id="pot-controls">
       <!-- Dynamically generate inputs for 42 pots -->
