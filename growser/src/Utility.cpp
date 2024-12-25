@@ -1,6 +1,5 @@
 #include "Utility.h"
 
-
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
 }

@@ -6,13 +6,14 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
+#include "name.c"
 #include <map> // For tracking pot-to-envelope associations
 
 // Constants
 #define LED_PIN 6
 #define NUM_LEDS 42
 #define NUM_BUTTONS 6
-#define OLED_I2C_ADDRESS 0x3C
+#define LCD_I2C_ADDRESS 0x3C
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
 
@@ -25,7 +26,7 @@ const uint8_t analogPin = 22; //mux reader
 MIDIHandler midiHandler;
 ConfigManager configManager(sizeof(uint8_t) * NUM_POTS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
-DisplayManager displayManager(OLED_I2C_ADDRESS);
+DisplayManager displayManager(LCD_I2C_ADDRESS);
 
 // Declare PotentiometerManager before ButtonManager
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);

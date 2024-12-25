@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include <MIDI.h>
 
-class Sequencer;
+#define IS_USB_CONNECTED() (usbMIDI.connected())
+
 class MIDIHandler {
 public:
     MIDIHandler();
