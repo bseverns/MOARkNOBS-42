@@ -15,10 +15,14 @@ public:
     void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
     void processIncomingMIDI();
     bool isClockTick();
+    void clearClockTick(); // New method to reset the clock flag
+
 private:
     void handleControlChange(uint8_t channel, uint8_t control, uint8_t value);
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
     void handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity);
+
+    bool clockTick; // New flag to track clock state
 };
 
 #endif

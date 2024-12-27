@@ -40,7 +40,7 @@ public:
     void loadFromEEPROM();
     void saveToEEPROM();
     void resetEEPROM();
-
+    int getLastValue(int potIndex) const;
     void setChannel(int potIndex, uint8_t channel);
     void setCCNumber(int potIndex, uint8_t ccNumber);
     uint8_t getChannel(int potIndex);

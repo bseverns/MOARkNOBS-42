@@ -82,6 +82,8 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             break;
         }
         case 5: {
+            context.displayManager.displayStatus("CONFIRM CLEAR?", 3000);
+            delay(3000); // Wait for user reaction or button confirmation
             context.potToEnvelopeMap.clear();
             _potentiometerManager->resetEEPROM();
             context.displayManager.displayStatus("CLEARED", 2000);

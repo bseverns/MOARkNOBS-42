@@ -30,7 +30,8 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
 
 void MIDIHandler::processIncomingMIDI() {
     // Process Serial MIDI
-    if (MIDI.read()) {
+    while (MIDI.read()) {
+        Serial.println("Serial MIDI Message Received");
         switch (MIDI.getType()) {
             case midi::ControlChange:
                 handleControlChange(MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
@@ -48,6 +49,7 @@ void MIDIHandler::processIncomingMIDI() {
 
     // Process USB MIDI only if connected
     while (usbMIDI.read()) {
+        Serial.println("USB MIDI Message Received");
         switch (usbMIDI.getType()) {
             case usbMIDI.ControlChange:
                 handleControlChange(usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
@@ -65,17 +67,28 @@ void MIDIHandler::processIncomingMIDI() {
 }
 
 void MIDIHandler::handleControlChange(uint8_t channel, uint8_t control, uint8_t value) {
-    // Custom logic for handling incoming CC messages
+    MIDI.sendControlChange(control, value, channel);
+    usbMIDI.sendControlChange(control, value, channel); 
 }
 
 void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
-    // Custom logic for handling incoming Note On messages
+    MIDI.sendNoteOn(note, velocity, channel);
+    usbMIDI.sendNoteOn(note, velocity, channel);
 }
 
 void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
-    // Custom logic for handling incoming Note Off messages
+    MIDI.sendNoteOff(note, velocity, channel);
+    usbMIDI.sendNoteOff(note, velocity, channel);
 }
 
 bool MIDIHandler::isClockTick() {
-    return MIDI.getType() == midi::Clock;
+    static bool clockTick = false;
+    if (MIDI.getType() == midi::Clock) {
+        clockTick = true;
+    }
+    return clockTick;
+}
+
+void MIDIHandler::clearClockTick() {
+    clockTick = false;
 }

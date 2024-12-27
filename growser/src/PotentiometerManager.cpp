@@ -61,6 +61,14 @@ void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
     }
 }
 
+int PotentiometerManager::getLastValue(int potIndex) const {
+    if (potIndex >= 0 && potIndex < NUM_POTS) {
+        return potLastValues[potIndex];
+    } else {
+        return -1; // Return a sentinel value for invalid index
+    }
+}
+
 void PotentiometerManager::setCCNumber(int potIndex, uint8_t ccNumber) {
     if (potIndex < NUM_POTS) {
         potCCNumbers[potIndex] = ccNumber;

@@ -8,7 +8,10 @@ class ConfigManager {
 public:
     ConfigManager(size_t configSize);
     void saveConfig(const void* data);
-    void loadConfig(void* data);
+    bool loadConfig(void* data); // Now returns success or failure
+    uint16_t getEEPROMOffset();
+    void setEEPROMOffset(uint16_t offset);
+
 private:
     size_t _configSize;
 };

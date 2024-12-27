@@ -64,6 +64,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     } else {
         Serial.println("Error: Insufficient data for all pots");
     }
+    
 }
 
 void rebootTeensy() {
