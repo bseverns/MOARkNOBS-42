@@ -2,6 +2,8 @@
 #include "EnvelopeFollower.h" // Include full definition here
 #include <EEPROM.h>
 
+bool dirtyFlags[NUM_POTS] = {false};
+
 PotentiometerManager::PotentiometerManager(
     const uint8_t* primaryPins, 
     const uint8_t* secondaryPins, 
@@ -85,44 +87,14 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 
 
 void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
-    int potIndex = 0;
+    for (int i = 0; i < NUM_POTS; i++) {
+        int currentValue = analogRead(analogPin); // Simulated pot value
+        if (abs(currentValue - potLastValues[i]) > 2) { // Threshold to avoid jitter
+            potLastValues[i] = currentValue;
+            dirtyFlags[i] = true;
 
-    for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
-        selectMuxBank(primaryBank);
-        for (uint8_t potBank = 0; potBank < (1 << SECONDARY_MUX_PINS); potBank++) {
-            selectPotBank(potBank);
-
-            if (potIndex >= NUM_POTS) return;
-
-            // Check if this pot is controlled by an active envelope
-            bool isControlledByEnvelope = false;
-            for (auto& envelope : envelopes) {
-                if (envelope.getActiveState() && envelope.getAssignedPot() == potIndex) {
-                    isControlledByEnvelope = true;
-                    break;
-                }
-            }
-
-            if (isControlledByEnvelope) {
-                potIndex++;
-                continue; // Skip manual processing for pots controlled by envelopes
-            }
-
-            // Process pot as usual
-            int currentValue = analogRead(analogPin) >> 3; // Scale to MIDI range (0–127)
-            if (abs(currentValue - potLastValues[potIndex]) > 2) { // Threshold to avoid jitter
-                potLastValues[potIndex] = currentValue;
-
-                // Send MIDI CC message via callback
-                if (midiCallback) {
-                    midiCallback(potCCNumbers[potIndex], currentValue, potChannels[potIndex]);
-                }
-
-                // Update corresponding LED
-                ledManager.setPotValue(potIndex, currentValue);
-            }
-
-            potIndex++;
+            // Update LEDs if dirty
+            ledManager.setPotValue(i, currentValue);
         }
     }
 }

@@ -111,22 +111,14 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
 }
 
 void ButtonManager::processButtons(ButtonManagerContext& context) {
-    uint8_t pressedButtons = 0;
     unsigned long currentTime = millis();
 
     for (int i = 0; i < NUM_BUTTONS; i++) {
         uint8_t currentState = readButton(i);
         if (Utility::debounce(buttonStates[i], currentState, lastDebounceTimes[i], currentTime, DEBOUNCE_DELAY)) {
             if (buttonStates[i]) {
-                pressedButtons |= (1 << i);
                 handleSingleButtonPress(i, context);
             }
         }
-    }
-
-    if (pressedButtons > 1) {
-        // Multi-button presses can be handled here.
-        handleMultiButtonPress(pressedButtons, context);
-
     }
 }

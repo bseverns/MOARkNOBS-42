@@ -22,7 +22,7 @@ bool Utility::debounceButton(uint8_t pin, unsigned long debounceDelay) {
 }
 
 void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
-    if (!command.startsWith("SET_ALL")) {
+      if (!command.startsWith("SET_ALL")) {
         Serial.println("Error: Command must start with 'SET_ALL'");
         return;
     }
@@ -64,7 +64,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     } else {
         Serial.println("Error: Insufficient data for all pots");
     }
-    
+    Serial.println("Bulk update successful");
 }
 
 void rebootTeensy() {

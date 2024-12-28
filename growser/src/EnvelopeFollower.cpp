@@ -28,16 +28,15 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
 
 void EnvelopeFollower::update() {
     if (isActive) {
-        int rawLevel = readEnvelopeLevel();
-        currentEnvelopeLevel = processEnvelopeLevel(rawLevel);
+        int rawLevel = readEnvelopeLevel(); // Read raw analog input
+        currentEnvelopeLevel = processEnvelopeLevel(rawLevel); // Apply filter
     }
 }
 
 void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
     if (isActive && modulationTargetCC >= 0) {
-        // Use the current envelope level to modulate the given CC value
         int modulatedValue = ccValue + currentEnvelopeLevel;
-        ccValue = constrain(modulatedValue, 0, 127); // Ensure the value stays within the MIDI range
+        ccValue = constrain(modulatedValue, 0, 127); // Ensure within MIDI range
     }
 }
 

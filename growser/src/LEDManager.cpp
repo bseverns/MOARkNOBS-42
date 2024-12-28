@@ -1,9 +1,16 @@
 #include "LEDManager.h"
 
-LEDManager::LEDManager(uint8_t pin, uint16_t numLEDs) 
-    : pin(pin), numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false) {
-    leds = new CRGB[numLEDs];  // Make sure this matches the constructor
+LEDManager::~LEDManager() {
+    delete[] leds;       // Clean up allocated memory
+    delete[] dirtyFlags; // Clean up dirty flags
 }
+
+LEDManager::LEDManager(uint8_t pin, uint16_t numLEDs)
+    : pin(pin), numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false) {
+    leds = new CRGB[numLEDs];           // Allocate LED array
+    dirtyFlags = new bool[numLEDs]();  // Allocate dirty flags
+}
+
 void LEDManager::begin() {
     FastLED.addLeds<WS2812, 6, GRB>(leds, numLEDs).setCorrection(TypicalLEDStrip);
     FastLED.clear();
@@ -45,6 +52,23 @@ void LEDManager::indicateEnvelopeMode(bool isActive) {
     }
 }
 
+void LEDManager::markDirty(uint8_t index) {
+    if (index < numLEDs) {
+        dirtyFlags[index] = true;
+    }
+}
+
 void LEDManager::update() {
-    FastLED.show(); // Update the LEDs
+    bool needsUpdate = false;
+
+    for (int i = 0; i < numLEDs; i++) {
+        if (dirtyFlags[i]) {
+            needsUpdate = true;
+            dirtyFlags[i] = false; // Clear the dirty flag
+        }
+    }
+
+    if (needsUpdate) {
+        FastLED.show(); // Update LEDs only if needed
+    }
 }
