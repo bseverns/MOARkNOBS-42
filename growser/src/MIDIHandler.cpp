@@ -12,16 +12,25 @@ void MIDIHandler::begin() {
 void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
     MIDI.sendControlChange(control, value, channel);
     usbMIDI.sendControlChange(control, value, channel);  // USB MIDI
+    if (control > 127 || value > 127 || channel < 1 || channel > 16) {
+    return; // Ignore invalid message
+    }
 }
 
 void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     MIDI.sendNoteOn(note, velocity, channel);
     usbMIDI.sendNoteOn(note, velocity, channel);  // USB MIDI
+    if (note > 127 || velocity > 127 || channel < 1 || channel > 16) {
+    return; // Ignore invalid message
+    }
 }
 
 void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     MIDI.sendNoteOff(note, velocity, channel);
     usbMIDI.sendNoteOff(note, velocity, channel);  // USB MIDI
+    if (note > 127 || velocity > 127 || channel < 1 || channel > 16) {
+    return; // Ignore invalid message
+    }
 }
 
 void MIDIHandler::processIncomingMIDI() {

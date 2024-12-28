@@ -3,6 +3,8 @@
 #include <EEPROM.h>
 
 bool dirtyFlags[NUM_POTS] = {false};
+const float alpha = 0.1; // Smoothing factor
+static int smoothedValue[NUM_POTS] = {0};
 
 PotentiometerManager::PotentiometerManager(
     const uint8_t* primaryPins, 
@@ -88,13 +90,28 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 
 void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
     for (int i = 0; i < NUM_POTS; i++) {
-        int currentValue = analogRead(analogPin); // Simulated pot value
-        if (abs(currentValue - potLastValues[i]) > 2) { // Threshold to avoid jitter
-            potLastValues[i] = currentValue;
+        // Read the current raw value from the analog pin
+        int rawValue = analogRead(analogPin);
+
+        // Apply EWMA smoothing
+        smoothedValue[i] = alpha * rawValue + (1 - alpha) * smoothedValue[i];
+
+        // Check if the smoothed value has changed significantly
+        if (abs(smoothedValue[i] - potLastValues[i]) > 2) { // Threshold to avoid jitter
+            potLastValues[i] = smoothedValue[i]; // Update the last known value
             dirtyFlags[i] = true;
 
-            // Update LEDs if dirty
-            ledManager.setPotValue(i, currentValue);
+            // Update LEDs to reflect the new value
+            ledManager.setPotValue(i, smoothedValue[i]);
+
+            // Send the MIDI update if a callback is set
+            if (midiCallback) {
+                midiCallback(
+                    potCCNumbers[i],               // CC number for this pot
+                    Utility::mapToMidiValue(smoothedValue[i]), // Map value to MIDI range
+                    potChannels[i]                // Channel for this pot
+                );
+            }
         }
     }
 }

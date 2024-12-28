@@ -1,4 +1,7 @@
 #include "Utility.h"
+#include "EnvelopeFollower.h"
+#include "LEDManager.h"
+#include "DisplayManager.h"
 
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);

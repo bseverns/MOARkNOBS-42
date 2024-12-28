@@ -2,10 +2,13 @@
 #define UTILITY_H
 
 #include <Arduino.h>
-#include "LEDManager.h"
-#include "DisplayManager.h"
-#include "EnvelopeFollower.h"
-#include "EEPROM.h"
+#include <vector> // Include for std::vector
+#include <EEPROM.h>
+
+// Forward declaration
+class EnvelopeFollower;
+class LEDManager;
+class DisplayManager;
 
 void rebootTeensy();
 
@@ -13,24 +16,23 @@ class Utility {
 public:
     static uint8_t mapToMidiValue(int analogValue, int minValue = 0, int maxValue = 1023);
     static bool debounceButton(uint8_t pin, unsigned long debounceDelay = 50);
-    // Debounce function
     static bool debounce(
-        bool &previousState,       // Reference to the previous stable state
-        bool currentState,         // Current raw state
-        unsigned long &lastDebounceTime, // Reference to the last debounce time
-        unsigned long currentTime,       // Current system time (millis)
-        unsigned long debounceDelay      // Minimum time required for a stable state
+        bool &previousState,
+        bool currentState,
+        unsigned long &lastDebounceTime,
+        unsigned long currentTime,
+        unsigned long debounceDelay
     );
     static void updateVisuals(
-    uint8_t midiBeatPosition,
-    const std::vector<EnvelopeFollower>& envelopeFollowers,
-    const char* statusMessage,
-    uint8_t activePot,
-    uint8_t activeChannel,
-    LEDManager& ledManager,
-    DisplayManager& displayManager
-    ); 
+        uint8_t midiBeatPosition,
+        const std::vector<EnvelopeFollower>& envelopeFollowers,
+        const char* statusMessage,
+        uint8_t activePot,
+        uint8_t activeChannel,
+        LEDManager& ledManager,
+        DisplayManager& displayManager
+    );
     static void processBulkUpdate(const String& command, uint8_t numPots);
 };
 
-#endif
+#endif // UTILITY_H

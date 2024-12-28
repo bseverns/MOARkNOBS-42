@@ -5,6 +5,7 @@
 #include <functional>
 #include <vector> // For std::vector
 #include "LEDManager.h"
+#include "Utility.h"
 
 // Forward declaration to avoid circular dependency
 class EnvelopeFollower;

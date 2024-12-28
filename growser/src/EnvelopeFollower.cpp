@@ -12,6 +12,7 @@ int EnvelopeFollower::readEnvelopeLevel() {
 }
 
 int EnvelopeFollower::processEnvelopeLevel(int level) {
+    level = constrain(level, 0, 127); // Clamp to MIDI range
     switch (filterType) {
         case LINEAR:
             return level; // No changes for linear

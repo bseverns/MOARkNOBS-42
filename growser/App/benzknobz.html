@@ -92,47 +92,88 @@
 
     // Connect to the device
     document.getElementById('connect').addEventListener('click', async () => {
-      try {
-        port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 9600 });
-        writer = port.writable.getWriter();
-        document.getElementById('status').textContent = 'Status: Connected';
-      } catch (err) {
-        console.error('Error connecting to device:', err);
-        document.getElementById('status').textContent = 'Status: Connection failed';
-      }
+        try {
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+            writer = port.writable.getWriter();
+            document.getElementById('status').textContent = 'Status: Connected';
+        } catch (err) {
+            console.error('Error connecting to device:', err);
+            document.getElementById('status').textContent = 'Status: Connection failed';
+        }
     });
+
+    // Validate inputs dynamically
+    function validateInputs() {
+        let isValid = true;
+
+        for (let i = 0; i < 42; i++) {
+            const ccInput = document.getElementById(`cc-${i}`);
+            const channelInput = document.getElementById(`channel-${i}`);
+
+            const ccValue = parseInt(ccInput.value);
+            const channelValue = parseInt(channelInput.value);
+
+            if (isNaN(ccValue) || ccValue < 0 || ccValue > 127) {
+                ccInput.style.borderColor = 'red';
+                isValid = false;
+            } else {
+                ccInput.style.borderColor = '';
+            }
+
+            if (isNaN(channelValue) || channelValue < 1 || channelValue > 16) {
+                channelInput.style.borderColor = 'red';
+                isValid = false;
+            } else {
+                channelInput.style.borderColor = '';
+            }
+        }
+
+        return isValid;
+    }
 
     // Handle bulk update
     document.getElementById('update-all').addEventListener('click', async () => {
-      if (!port || !port.writable) {
-        alert('Please connect to the device first.');
-        return;
-      }
+        if (!port || !port.writable) {
+            alert('Please connect to the device first.');
+            return;
+        }
 
-      let command = "SET_ALL ";
-      for (let i = 0; i < 42; i++) {
-        const cc = document.getElementById(`cc-${i}`).value || 0;
-        const channel = document.getElementById(`channel-${i}`).value || 1;
-        command += `${cc},${channel};`;
-      }
-      command += "\n";
+        // Validate inputs before sending
+        if (!validateInputs()) {
+            alert('Please fix the highlighted fields.');
+            return;
+        }
 
-      try {
-        const encoder = new TextEncoder();
-        await writer.write(encoder.encode(command));
-        alert('All pots updated successfully!');
-      } catch (err) {
-        console.error('Error sending data to device:', err);
-        alert('Failed to send data to device.');
-      }
+        let command = "SET_ALL ";
+        for (let i = 0; i < 42; i++) {
+            const cc = document.getElementById(`cc-${i}`).value || 0;
+            const channel = document.getElementById(`channel-${i}`).value || 1;
+            command += `${cc},${channel};`;
+        }
+        command += "\n";
+
+        try {
+            const encoder = new TextEncoder();
+            await writer.write(encoder.encode(command));
+            alert('All pots updated successfully!');
+        } catch (err) {
+            console.error('Error sending data to device:', err);
+            alert('Failed to send data to device.');
+        }
     });
 
     // Handle disconnect
     window.addEventListener('beforeunload', async () => {
-      if (writer) await writer.releaseLock();
-      if (port) await port.close();
+        if (writer) await writer.releaseLock();
+        if (port) await port.close();
     });
-  </script>
+
+    // Add real-time input validation on change
+    for (let i = 0; i < 42; i++) {
+        document.getElementById(`cc-${i}`).addEventListener('input', validateInputs);
+        document.getElementById(`channel-${i}`).addEventListener('input', validateInputs);
+    }
+</script>
 </body>
 </html>
