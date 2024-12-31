@@ -18,6 +18,7 @@
 #define LCD_I2C_ADDRESS 0x3C
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
+#define OLED_I2C_ADDRESS 0x3C // Replace with your actual I2C address
 #define SERIAL_BUFFER_SIZE 128
 #define MIDI_TASK_INTERVAL 1      // 1ms for MIDI processing
 #define SERIAL_TASK_INTERVAL 10   // 10ms for Serial processing
@@ -36,7 +37,7 @@ const uint8_t analogPin = 22; //mux reader
 MIDIHandler midiHandler;
 ConfigManager configManager(sizeof(uint8_t) * NUM_POTS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
-DisplayManager displayManager(LCD_I2C_ADDRESS);
+DisplayManager displayManager(OLED_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
 
 // Declare PotentiometerManager before ButtonManager
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);

@@ -2,11 +2,12 @@
 #define DISPLAYMANAGER_H
 
 #include <Arduino.h>
-#include <LiquidCrystal_I2C.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 class DisplayManager {
 public:
-    DisplayManager(uint8_t i2cAddress, uint8_t cols = 16, uint8_t rows = 2);
+    DisplayManager(uint8_t i2cAddress, uint16_t width = 128, uint16_t height = 64);
     void begin();
     void showText(const char *text, bool clearDisplay = true);
     void showValue(uint8_t value, bool clearDisplay = true);
@@ -16,11 +17,11 @@ public:
     void displayStatus(const char *status, unsigned long duration);
 
 private:
-    LiquidCrystal_I2C _lcd;
-    uint8_t _cols;
-    uint8_t _rows;
-    unsigned long _statusTimeout;
+    Adafruit_SSD1306 _display;
+    uint8_t _i2cAddress;
     String _statusMessage;
+    unsigned long _statusTimeout;
+    
 };
 
 #endif // DISPLAYMANAGER_H
