@@ -48,7 +48,9 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A0, &potentiometerManager),
     EnvelopeFollower(A1, &potentiometerManager),
     EnvelopeFollower(A2, &potentiometerManager),
-    EnvelopeFollower(A3, &potentiometerManager)
+    EnvelopeFollower(A3, &potentiometerManager),
+    EnvelopeFollower(A6, &potentiometerManager),
+    EnvelopeFollower(A7, &potentiometerManager),
 };
 
 std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
