@@ -13,7 +13,7 @@ public:
     void showValue(uint8_t value, bool clearDisplay = true);
     void showMode(const char *mode, bool clearDisplay = true);
     void clear();
-    void updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel);
+    void updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode);
     void displayStatus(const char *status, unsigned long duration);
 
 private:
@@ -21,7 +21,7 @@ private:
     uint8_t _i2cAddress;
     String _statusMessage;
     unsigned long _statusTimeout;
-    
+
 };
 
 #endif // DISPLAYMANAGER_H

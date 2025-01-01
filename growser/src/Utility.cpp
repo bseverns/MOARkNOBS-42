@@ -96,7 +96,8 @@ void Utility::updateVisuals(
     uint8_t activePot,
     uint8_t activeChannel,
     LEDManager& ledManager,
-    DisplayManager& displayManager
+    DisplayManager& displayManager,
+    const char* envelopeMode
 ) {
     // Update LEDs
     ledManager.update();
@@ -108,5 +109,5 @@ void Utility::updateVisuals(
     }
 
     // Update the display with all information
-    displayManager.updateDisplay(midiBeatPosition, envelopeLevels, statusMessage, activePot, activeChannel);
+    displayManager.updateDisplay(midiBeatPosition, envelopeLevels, statusMessage, activePot, activeChannel, envelopeMode);
 }

@@ -55,7 +55,7 @@ void DisplayManager::clear() {
     _display.display();
 }
 
-void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel) {
+void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode) {
     clear();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
@@ -67,8 +67,12 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
     _display.print(activePot);
     _display.print(" Ch: ");
     _display.println(activeChannel);
+    _display.setCursor(0, 20);
+    _display.print("Mode: ");
+    _display.println(envelopeMode);
     _display.display();
 }
+
 
 void DisplayManager::displayStatus(const char *status, unsigned long duration) {
     _statusMessage = status;

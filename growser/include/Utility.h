@@ -30,7 +30,8 @@ public:
         uint8_t activePot,
         uint8_t activeChannel,
         LEDManager& ledManager,
-        DisplayManager& displayManager
+        DisplayManager& displayManager,
+        const char* envelopeMode
     );
     static void processBulkUpdate(const String& command, uint8_t numPots);
 };

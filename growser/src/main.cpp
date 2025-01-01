@@ -18,7 +18,7 @@
 #define LCD_I2C_ADDRESS 0x3C
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
-#define OLED_I2C_ADDRESS 0x3C // Replace with your actual I2C address
+#define OLED_I2C_ADDRESS 0x3C
 #define SERIAL_BUFFER_SIZE 128
 #define MIDI_TASK_INTERVAL 1      // 1ms for MIDI processing
 #define SERIAL_TASK_INTERVAL 10   // 10ms for Serial processing
@@ -61,6 +61,7 @@ uint8_t potChannels[NUM_POTS];
 uint8_t activePot = 0xFF;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
+const char* envelopeMode = "LINEAR"; // Default envelope mode
 
 // Timers for processing
 unsigned long lastMIDIProcess = 0;
@@ -89,13 +90,14 @@ void processMIDI() {
 
         // Perform clock-tied updates
         Utility::updateVisuals(
-            midiBeatPosition,
+             midiBeatPosition,
             envelopeFollowers,
-            envelopeFollowMode ? "EF ON" : "EF OFF",
+            envelopeFollowMode ? "EF ON" : "EF OFF", // This sets the statusMessage
             activePot,
             activeChannel,
             ledManager,
-            displayManager
+            displayManager,
+            envelopeMode
         );
 
         midiHandler.clearClockTick(); // Reset the clock signal flag

@@ -26,7 +26,7 @@ void ButtonManager::selectMux(uint8_t primary, uint8_t secondary) {
 
 uint8_t ButtonManager::readButton(uint8_t buttonIndex) {
     uint8_t primary = buttonIndex / 8;
-    uint8_t secondary = buttonIndex % 8;
+    uint8_t secondary = 8;
     selectMux(primary, secondary);
 
     int value = analogRead(_analogPin);
@@ -114,6 +114,8 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
     unsigned long currentTime = millis();
 
     for (int i = 0; i < NUM_BUTTONS; i++) {
+        if ((i % 8) != 7) continue; // Skip all buttons except those mapped to pin 8
+        
         uint8_t currentState = readButton(i);
         if (Utility::debounce(buttonStates[i], currentState, lastDebounceTimes[i], currentTime, DEBOUNCE_DELAY)) {
             if (buttonStates[i]) {
