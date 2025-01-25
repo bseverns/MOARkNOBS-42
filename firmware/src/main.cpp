@@ -15,7 +15,6 @@
 #define LED_PIN 6
 #define NUM_LEDS 42
 #define NUM_BUTTONS 6
-#define LCD_I2C_ADDRESS 0x3C
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
 #define OLED_I2C_ADDRESS 0x3C
@@ -24,6 +23,7 @@
 #define SERIAL_TASK_INTERVAL 10   // 10ms for Serial processing
 #define LED_TASK_INTERVAL 50      // 50ms for LED updates
 #define ENVELOPE_TASK_INTERVAL 5  // 5ms for Envelope processing
+
 uint8_t midiBeatPosition = 0;
 char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
@@ -207,7 +207,7 @@ void setup() {
     buttonManager.initButtons();
     delay(1000);
     displayManager.clear();
-    displayManager.showText("BENZ", true);
+    displayManager.showText("MOARBENZ", true);
 }
 
 void loop() {

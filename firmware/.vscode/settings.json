@@ -1,7 +1,8 @@
 {
     "cSpell.words": [
         "EWMA",
-        "MIDIHANDLER"
+        "MIDIHANDLER",
+        "MOARBENZ"
     ],
     "files.associations": {
         "array": "cpp",

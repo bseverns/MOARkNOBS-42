@@ -1,5 +1,10 @@
 #include "ButtonManager.h"
 
+// Add new member variables for tracking double-press state
+static uint8_t lastPressedButton = 255;  // Invalid button index initially
+static unsigned long lastPressTime = 0;  // Time of the last button press
+const unsigned long doublePressThreshold = 400; // Max time (ms) between presses for a double-press
+
 // Constructor
 ButtonManager::ButtonManager(const uint8_t* primaryMuxPins, const uint8_t* secondaryMuxPins, uint8_t analogPin, PotentiometerManager* potentiometerManager)
     : _primaryMuxPins(primaryMuxPins), _secondaryMuxPins(secondaryMuxPins), _analogPin(analogPin), _potentiometerManager(potentiometerManager), activeEnvelopeIndex(0) {
@@ -35,24 +40,40 @@ uint8_t ButtonManager::readButton(uint8_t buttonIndex) {
 
 void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context) {
     static uint8_t filterTypeIndex = 0;
+    unsigned long currentTime = millis();
+
+    // Restrict double-press to button 0
+    if (buttonIndex == 0) {
+        // Check if this is a double-press
+        if (buttonIndex == lastPressedButton && (currentTime - lastPressTime <= doublePressThreshold)) {
+            // Double-press detected for button 0
+            lastPressedButton = 255; // Reset the last pressed button
+            lastPressTime = 0;
+
+            // Perform the shift-key functionality on double-press
+            filterTypeIndex = (filterTypeIndex + 1) % 4;
+            const char* filterTypes[] = {"LINEAR", "OPPOSITE", "EXP", "RAND"};
+            for (auto& envelope : context.envelopes) {
+                envelope.setFilterType(static_cast<EnvelopeFollower::FilterType>(filterTypeIndex));
+            }
+            context.displayManager.displayStatus(filterTypes[filterTypeIndex], 2000);
+
+            return; // Exit to avoid single-press logic
+        }
+    }
+
+    // Single-press logic (applies to all buttons)
+    lastPressedButton = buttonIndex;
+    lastPressTime = currentTime;
 
     switch (buttonIndex) {
         case 0: {
-            if (digitalRead(FUNCTION_BUTTON_PIN) == HIGH) {
-                filterTypeIndex = (filterTypeIndex + 1) % 4;
-                const char* filterTypes[] = {"LINEAR", "OPPOSITE", "EXP", "RAND"};
-                for (auto& envelope : context.envelopes) {
-                    envelope.setFilterType(static_cast<EnvelopeFollower::FilterType>(filterTypeIndex));
-                }
-                context.displayManager.displayStatus(filterTypes[filterTypeIndex], 2000);
-            } else {
-                context.envelopeFollowMode = !context.envelopeFollowMode;
-                for (auto& envelope : context.envelopes) {
-                    envelope.toggleActive(context.envelopeFollowMode);
-                }
-                context.displayManager.displayStatus(context.envelopeFollowMode ? "EF ON" : "EF OFF", 2000);
-                context.ledManager.indicateEnvelopeMode(context.envelopeFollowMode);
+            context.envelopeFollowMode = !context.envelopeFollowMode;
+            for (auto& envelope : context.envelopes) {
+                envelope.toggleActive(context.envelopeFollowMode);
             }
+            context.displayManager.displayStatus(context.envelopeFollowMode ? "EF ON" : "EF OFF", 2000);
+            context.ledManager.indicateEnvelopeMode(context.envelopeFollowMode);
             break;
         }
         case 1: {
