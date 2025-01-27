@@ -21,7 +21,7 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
         case EXPONENTIAL:
             return pow(level / 127.0, 2) * 127; // Quadratic scaling
         case RANDOM:
-            return random(0, 127); // Random envelope level
+            return random(level); // Random envelope level
         default:
             return level;
     }

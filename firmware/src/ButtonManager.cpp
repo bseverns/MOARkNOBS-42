@@ -62,6 +62,35 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
     }
 
+    if (buttonIndex == 1) { // Button 2: Double-press to switch envelope assignment
+        if (buttonIndex == lastPressedButton && (currentTime - lastPressTime <= doublePressThreshold)) {
+            // Double-press detected on button 2
+            lastPressTime = 0; // Reset timing
+            lastPressedButton = 255;
+
+            // Cycle through envelope assignments for the active potentiometer
+            if (context.activePot < NUM_POTS) {
+                int currentEnvelope = context.potToEnvelopeMap[context.activePot];
+
+                // Cycle: -1 for MIDI, then 0 to (number of envelopes - 1)
+                currentEnvelope = (currentEnvelope + 2) % (context.envelopes.size() + 1) - 1;
+
+                context.potToEnvelopeMap[context.activePot] = currentEnvelope;
+
+                // Update the display to show the new assignment
+                if (currentEnvelope == -1) {
+                    context.displayManager.displayStatus("MIDI", 2000);
+                } else {
+                    context.displayManager.displayStatus(
+                        ("POT " + String(context.activePot) + " -> ENV" + String(currentEnvelope + 1)).c_str(), 
+                        2000
+                    );
+                }
+            }
+            return;
+        }
+    }
+
     // Single-press logic (applies to all buttons)
     lastPressedButton = buttonIndex;
     lastPressTime = currentTime;
