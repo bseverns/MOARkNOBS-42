@@ -151,7 +151,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.configManager.saveConfig(context.potChannels);
     } else if ((pressedButtons & (1 << 1)) && (pressedButtons & (1 << 4))) {
         context.displayManager.displayStatus("REBOOTING", 2000);
-        rebootTeensy(); // Ensure this is implemented
+        Utility::rebootTeensy(); // Ensure this is implemented
     } else if ((pressedButtons & (1 << 2)) && (pressedButtons & (1 << 3))) {
         context.displayManager.displayStatus("CONFIG LOADED", 2000);
         context.configManager.loadConfig(context.potChannels);
@@ -169,7 +169,7 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
         uint8_t currentState = readButton(i);
         if (Utility::debounce(buttonStates[i], currentState, lastDebounceTimes[i], currentTime, DEBOUNCE_DELAY)) {
             if (buttonStates[i]) {
-                handleSingleButtonPress(i, context);
+             handleSingleButtonPress(i, context);
             }
         }
     }

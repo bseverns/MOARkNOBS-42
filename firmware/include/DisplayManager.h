@@ -15,6 +15,9 @@ public:
     void clear();
     void updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode);
     void displayStatus(const char *status, unsigned long duration);
+    Adafruit_SSD1306& getDisplay() {
+    return _display;
+}
 
 private:
     Adafruit_SSD1306 _display;

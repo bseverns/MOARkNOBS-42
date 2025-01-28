@@ -7,6 +7,7 @@
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
 #include "name.c"
+#include "Globals.h"
 #include <TimerOne.h>
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
@@ -35,9 +36,9 @@ const uint8_t analogPin = 22; //mux reader
 
 // Global objects
 MIDIHandler midiHandler;
-ConfigManager configManager(sizeof(uint8_t) * NUM_POTS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
 DisplayManager displayManager(OLED_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
+ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 
 // Declare PotentiometerManager before ButtonManager
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
@@ -57,7 +58,7 @@ std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
 std::queue<String> commandQueue; // Queue to store incoming commands
 
 // Hardware states
-uint8_t potChannels[NUM_POTS];
+uint8_t potChannels[configManager.getNumPots()];
 uint8_t activePot = 0xFF;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
@@ -89,14 +90,13 @@ void processMIDI() {
         midiBeatPosition = (midiBeatPosition + 1) % 8;
 
         // Perform clock-tied updates
-        Utility::updateVisuals(
-             midiBeatPosition,
-            envelopeFollowers,
-            envelopeFollowMode ? "EF ON" : "EF OFF", // This sets the statusMessage
+        Utility::updateDisplay(
+            displayManager.getDisplay(),       // Access the display object
+            midiBeatPosition,
+            envelopeFollowers,                 // Pass the vector of EnvelopeFollowers
+            envelopeFollowMode ? "EF ON" : "EF OFF",
             activePot,
             activeChannel,
-            ledManager,
-            displayManager,
             envelopeMode
         );
 
@@ -111,7 +111,7 @@ void processSerial() {
         // End of command or buffer overflow
         if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
             serialBuffer[serialBufferIndex] = '\0'; // Null-terminate the command
-            commandQueue.push(String(serialBuffer)); // Add to queue
+            commandQueue.push(String(serialBuffer)); // Add the full command to the queue
             serialBufferIndex = 0; // Reset buffer index
         } else {
             serialBuffer[serialBufferIndex++] = received;
@@ -129,8 +129,24 @@ void processSerial() {
         String command = commandQueue.front(); // Get the front command
         commandQueue.pop(); // Remove it from the queue
 
-        // Process the command (example: Utility::processBulkUpdate)
-        Utility::processBulkUpdate(command, NUM_POTS);
+        // Handle specific commands
+        if (command.startsWith("SET_POT")) {
+            // Parse the "SET_POT" command
+            int potIndex = command.substring(8, command.indexOf(',')).toInt();
+            int channel = command.substring(command.indexOf(',') + 1, command.lastIndexOf(',')).toInt();
+            int ccNumber = command.substring(command.lastIndexOf(',') + 1).toInt();
+
+            configManager.setPotChannel(potIndex, channel);
+            configManager.setPotCCNumber(potIndex, ccNumber);
+            configManager.saveConfiguration();
+
+            Serial.println("Pot configuration updated!");
+        } else if (command.startsWith("SET_ALL")) {
+            // Bulk update handled by Utility::processBulkUpdate
+            Utility::processBulkUpdate(command, configManager.getNumPots());
+        } else {
+            Serial.println("Unknown command: " + command);
+        }
     }
 }
 
@@ -173,6 +189,7 @@ void monitorSystemLoad() {
 
 void setup() {
     Serial.begin(31250);
+    configManager.begin();
     midiHandler.begin();
     ledManager.begin();
     displayManager.begin();
@@ -186,6 +203,8 @@ void setup() {
     potToEnvelopeMap[1] = 1; // Pot 1 controls Envelope 1
     potToEnvelopeMap[2] = 2; // Pot 2 controls Envelope 2
     potToEnvelopeMap[3] = 3; // Pot 3 controls Envelope 3
+    potToEnvelopeMap[4] = 4;
+    potToEnvelopeMap[5] = 5;
 
     for (auto& envelope : envelopeFollowers) {
         envelope.toggleActive(true); // Ensure all envelopes are activated
@@ -207,7 +226,7 @@ void setup() {
     buttonManager.initButtons();
     delay(1000);
     displayManager.clear();
-    displayManager.showText("MOARBENZ", true);
+    displayManager.showText("MOAR", true);
 }
 
 void loop() {

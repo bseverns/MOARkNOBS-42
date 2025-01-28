@@ -6,6 +6,7 @@
 #include <vector> // For std::vector
 #include "LEDManager.h"
 #include "Utility.h"
+#include "ConfigManager.h"
 
 // Forward declaration to avoid circular dependency
 class EnvelopeFollower;
@@ -28,6 +29,9 @@ private:
 
     // Callback for sending MIDI messages
     std::function<void(uint8_t, uint8_t, uint8_t)> midiCallback;
+
+    // Helper for filtered analog reads
+    int readAnalogFiltered(uint8_t pin); // New function for analog filtering
 
 public:
     PotentiometerManager(

@@ -1,10 +1,12 @@
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h" // Include full definition here
 #include <EEPROM.h>
+#include "ConfigManager.h"
 
-bool dirtyFlags[NUM_POTS] = {false};
+bool dirtyFlags[configManager.getNumPots()] = {false};
 const float alpha = 0.1; // Smoothing factor
-static int smoothedValue[NUM_POTS] = {0};
+static int smoothedValue[configManager.getNumPots()] = {0};
+#define CHANGE_THRESHOLD 2  // Adjust based on your noise tolerance
 
 PotentiometerManager::PotentiometerManager(
     const uint8_t* primaryPins, 
@@ -24,43 +26,39 @@ void PotentiometerManager::setMidiCallback(std::function<void(uint8_t, uint8_t, 
 }
 
 void PotentiometerManager::selectMuxBank(uint8_t bank) {
-    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
-        digitalWrite(primaryMuxPins[i], (bank >> i) & 1);
+    static uint8_t lastBank = 255; // Track the last selected bank
+    if (bank != lastBank) {
+        for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
+            digitalWrite(primaryMuxPins[i], (bank >> i) & 1);
+        }
+        lastBank = bank;
     }
 }
 
 void PotentiometerManager::selectPotBank(uint8_t pot) {
-    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
-        digitalWrite(secondaryMuxPins[i], (pot >> i) & 1);
+    static uint8_t lastPot = 255; // Track the last selected pot
+    if (pot != lastPot) {
+        for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
+            digitalWrite(secondaryMuxPins[i], (pot >> i) & 1);
+        }
+        lastPot = pot;
     }
 }
 
-void PotentiometerManager::loadFromEEPROM() {
-    for (int i = 0; i < NUM_POTS; i++) {
-        int address = i * 2;
-        potChannels[i] = EEPROM.read(address);
-        potCCNumbers[i] = EEPROM.read(address + 1);
-    }
-}
+int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
+    int total = 0;
+    const int numSamples = 4; // Number of samples for averaging
 
-void PotentiometerManager::saveToEEPROM() {
-    for (int i = 0; i < NUM_POTS; i++) {
-        int address = i * 2;
-        EEPROM.update(address, potChannels[i]);
-        EEPROM.update(address + 1, potCCNumbers[i]);
+    for (int i = 0; i < numSamples; i++) {
+        total += analogRead(pin); // Read analog value
+        delayMicroseconds(10);    // Small delay for stability
     }
-}
 
-void PotentiometerManager::resetEEPROM() {
-    for (int i = 0; i < NUM_POTS; i++) {
-        potChannels[i] = 1;
-        potCCNumbers[i] = i;
-    }
-    saveToEEPROM();
+    return total / numSamples; // Return the averaged value
 }
 
 void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
-    if (potIndex < NUM_POTS) {
+    if (potIndex < configManager.getNumPots()) {
         potChannels[potIndex] = channel;
     }
 }
@@ -89,28 +87,38 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 
 
 void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
-    for (int i = 0; i < NUM_POTS; i++) {
-        // Read the current raw value from the analog pin
-        int rawValue = analogRead(analogPin);
+    for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
+        selectMuxBank(primaryBank);
 
-        // Apply EWMA smoothing
-        smoothedValue[i] = alpha * rawValue + (1 - alpha) * smoothedValue[i];
+        for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS); secondaryBank++) {
+            selectPotBank(secondaryBank);
 
-        // Check if the smoothed value has changed significantly
-        if (abs(smoothedValue[i] - potLastValues[i]) > 2) { // Threshold to avoid jitter
-            potLastValues[i] = smoothedValue[i]; // Update the last known value
-            dirtyFlags[i] = true;
+            uint8_t potIndex = (primaryBank << SECONDARY_MUX_PINS) | secondaryBank;
 
-            // Update LEDs to reflect the new value
-            ledManager.setPotValue(i, smoothedValue[i]);
+            if (potIndex >= NUM_POTS) break;
 
-            // Send the MIDI update if a callback is set
-            if (midiCallback) {
-                midiCallback(
-                    potCCNumbers[i],               // CC number for this pot
-                    Utility::mapToMidiValue(smoothedValue[i]), // Map value to MIDI range
-                    potChannels[i]                // Channel for this pot
-                );
+            // Use filtered analog read
+            int rawValue = readAnalogFiltered(analogPin);
+
+            // Apply EWMA smoothing
+           smoothedValue[potIndex] = Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], alpha);
+
+            // Smarter change detection
+            if (abs(smoothedValue[potIndex] - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
+                potLastValues[potIndex] = smoothedValue[potIndex]; // Update last known value
+                dirtyFlags[potIndex] = true;
+
+                // Update LEDs to reflect the new value
+                ledManager.setPotValue(potIndex, smoothedValue[potIndex]);
+
+                // Send the MIDI update if a callback is set
+                if (midiCallback) {
+                    midiCallback(
+                        potCCNumbers[potIndex],               // CC number for this pot
+                        Utility::mapToMidiValue(smoothedValue[potIndex]), // Map value to MIDI range
+                        potChannels[potIndex]                // Channel for this pot
+                    );
+                }
             }
         }
     }

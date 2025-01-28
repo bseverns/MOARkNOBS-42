@@ -1,19 +1,46 @@
-#ifndef CONFIGMANAGER_H
-#define CONFIGMANAGER_H
+#ifndef CONFIGURATION_MANAGER_H
+#define CONFIGURATION_MANAGER_H
 
-#include <EEPROM.h>
 #include <Arduino.h>
+#include <EEPROM.h>
+#include <map>
+#include <string>
 
 class ConfigManager {
 public:
-    ConfigManager(size_t configSize);
-    void saveConfig(const void* data);
-    bool loadConfig(void* data); // Now returns success or failure
-    uint16_t getEEPROMOffset();
-    void setEEPROMOffset(uint16_t offset);
+    ConfigManager(uint8_t numPots, uint8_t numButtons);
+
+    // Initialize configuration (e.g., load from EEPROM)
+    void begin();
+
+    // Accessor methods for key configurations
+    uint8_t getPotChannel(uint8_t potIndex) const;
+    uint8_t getPotCCNumber(uint8_t potIndex) const;
+    void setPotChannel(uint8_t potIndex, uint8_t channel);
+    void setPotCCNumber(uint8_t potIndex, uint8_t ccNumber);
+
+    // Save and load configurations from EEPROM
+    void saveConfiguration();
+    void loadConfiguration();
+
+    // Reset configuration to defaults
+    void resetConfiguration();
+
+    // Utility method to get global constants
+    uint8_t getNumPots() const { return _numPots; }
+    uint8_t getNumButtons() const { return _numButtons; }
 
 private:
-    size_t _configSize;
+    uint8_t _numPots;
+    uint8_t _numButtons;
+
+    // Configuration data (stored in RAM)
+    std::map<uint8_t, uint8_t> _potChannels;   // Potentiometer index -> MIDI Channel
+    std::map<uint8_t, uint8_t> _potCCNumbers; // Potentiometer index -> MIDI CC Number
+
+    // Internal helper methods for EEPROM operations
+    void readEEPROM();
+    void writeEEPROM();
 };
 
-#endif
+#endif // CONFIGURATION_MANAGER_H
