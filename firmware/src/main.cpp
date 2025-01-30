@@ -16,13 +16,10 @@ uint8_t midiBeatPosition = 0;
 char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
 
-// Pin assignments for primary and secondary mux layers
-const uint8_t primaryMuxPins[] = {7, 8, 9};
-const uint8_t secondaryMuxPins[] = {10, 11, 12};
-const uint8_t analogPin = 22; //mux reader
-
 // Global objects
 std::vector<uint8_t> potChannels;
+std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
+std::queue<String> commandQueue; // Queue to store incoming commands
 MIDIHandler midiHandler;
 LEDManager ledManager(LED_PIN, NUM_LEDS);
 DisplayManager displayManager(OLED_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
@@ -41,9 +38,6 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A6, &potentiometerManager),
     EnvelopeFollower(A7, &potentiometerManager),
 };
-
-std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
-std::queue<String> commandQueue; // Queue to store incoming commands
 
 // Hardware states
 uint8_t activePot = 0xFF;

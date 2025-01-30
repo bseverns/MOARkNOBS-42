@@ -20,6 +20,11 @@
 // Define NUM_POTS globally
 #define NUM_POTS 42
 
+// Pin assignments for primary and secondary mux layers
+const uint8_t primaryMuxPins[] = {7, 8, 9};
+const uint8_t secondaryMuxPins[] = {10, 11, 12};
+const uint8_t analogPin = 22; //mux reader
+
 // Declare global variables
 extern ConfigManager configManager;
 
