@@ -19,7 +19,7 @@
 class ButtonManager;
 
 struct ButtonManagerContext {
-    uint8_t* potChannels;
+    std::vector<uint8_t>& potChannels; // Use reference to vector instead of raw pointer
     uint8_t& activePot;
     uint8_t& activeChannel;
     bool& envelopeFollowMode;

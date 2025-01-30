@@ -119,7 +119,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             break;
         }
         case 3: {
-            context.configManager.saveConfig(context.potChannels);
+            context.configManager.saveConfiguration();
             context.displayManager.displayStatus("SAVED", 2000);
             break;
         }
@@ -148,13 +148,13 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
 void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context) {
     if ((pressedButtons & (1 << 0)) && (pressedButtons & (1 << 5))) {
         context.displayManager.displayStatus("EEPROM SAVED", 2000);
-        context.configManager.saveConfig(context.potChannels);
+        context.configManager.saveConfiguration();
     } else if ((pressedButtons & (1 << 1)) && (pressedButtons & (1 << 4))) {
         context.displayManager.displayStatus("REBOOTING", 2000);
         Utility::rebootTeensy(); // Ensure this is implemented
     } else if ((pressedButtons & (1 << 2)) && (pressedButtons & (1 << 3))) {
         context.displayManager.displayStatus("CONFIG LOADED", 2000);
-        context.configManager.loadConfig(context.potChannels);
+        context.configManager.loadConfiguration(context.potChannels);
     } else {
         context.displayManager.displayStatus("NO ACTION", 2000);
     }

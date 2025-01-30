@@ -12,19 +12,6 @@
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
 
-// Constants
-#define LED_PIN 6
-#define NUM_LEDS 42
-#define NUM_BUTTONS 6
-#define OLED_WIDTH 128
-#define OLED_HEIGHT 64
-#define OLED_I2C_ADDRESS 0x3C
-#define SERIAL_BUFFER_SIZE 128
-#define MIDI_TASK_INTERVAL 1      // 1ms for MIDI processing
-#define SERIAL_TASK_INTERVAL 10   // 10ms for Serial processing
-#define LED_TASK_INTERVAL 50      // 50ms for LED updates
-#define ENVELOPE_TASK_INTERVAL 5  // 5ms for Envelope processing
-
 uint8_t midiBeatPosition = 0;
 char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
@@ -35,6 +22,7 @@ const uint8_t secondaryMuxPins[] = {10, 11, 12};
 const uint8_t analogPin = 22; //mux reader
 
 // Global objects
+std::vector<uint8_t> potChannels;
 MIDIHandler midiHandler;
 LEDManager ledManager(LED_PIN, NUM_LEDS);
 DisplayManager displayManager(OLED_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
@@ -58,7 +46,6 @@ std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
 std::queue<String> commandQueue; // Queue to store incoming commands
 
 // Hardware states
-uint8_t potChannels[configManager.getNumPots()];
 uint8_t activePot = 0xFF;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
@@ -189,7 +176,7 @@ void monitorSystemLoad() {
 
 void setup() {
     Serial.begin(31250);
-    configManager.begin();
+    configManager.begin(potChannels);
     midiHandler.begin();
     ledManager.begin();
     displayManager.begin();
@@ -219,14 +206,25 @@ void setup() {
             potentiometerManager.setCCNumber(i, i % 128); // Limit CC to valid range
         }
     }
-    if (!configManager.loadConfig(potChannels)) {
-        Serial.println("EEPROM data corrupted, resetting to defaults.");
-        potentiometerManager.resetEEPROM();
+    if (!configManager.loadConfiguration(potChannels)) {
+    Serial.println("EEPROM data corrupted, resetting to defaults.");
+    configManager.resetConfiguration(potChannels);
+    potentiometerManager.resetEEPROM();
     }
     buttonManager.initButtons();
     delay(1000);
     displayManager.clear();
     displayManager.showText("MOAR", true);
+
+    // Print loaded configuration for debugging
+    Serial.println("Verifying loaded pot channels:");
+    for (int i = 0; i < NUM_POTS; i++) {
+        Serial.print("Pot ");
+        Serial.print(i);
+        Serial.print(": CC=");
+        Serial.println(potChannels[i]);
+    }
+    Serial.println("Setup complete!");
 }
 
 void loop() {

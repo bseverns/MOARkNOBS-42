@@ -11,7 +11,7 @@ public:
     ConfigManager(uint8_t numPots, uint8_t numButtons);
 
     // Initialize configuration (e.g., load from EEPROM)
-    void begin();
+    void begin(std::vector<uint8_t>& potChannels);
 
     // Accessor methods for key configurations
     uint8_t getPotChannel(uint8_t potIndex) const;
@@ -21,10 +21,11 @@ public:
 
     // Save and load configurations from EEPROM
     void saveConfiguration();
-    void loadConfiguration();
+    bool loadConfiguration(std::vector<uint8_t>& potChannels);
+
 
     // Reset configuration to defaults
-    void resetConfiguration();
+    void resetConfiguration(std::vector<uint8_t>& potChannels);
 
     // Utility method to get global constants
     uint8_t getNumPots() const { return _numPots; }

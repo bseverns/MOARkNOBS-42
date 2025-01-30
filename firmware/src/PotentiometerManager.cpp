@@ -1,11 +1,11 @@
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h" // Include full definition here
 #include <EEPROM.h>
-#include "ConfigManager.h"
+#include "Globals.h"
 
-bool dirtyFlags[configManager.getNumPots()] = {false};
+bool dirtyFlags[NUM_POTS] = {false};
 const float alpha = 0.1; // Smoothing factor
-static int smoothedValue[configManager.getNumPots()] = {0};
+static int smoothedValue[NUM_POTS] = {0};
 #define CHANGE_THRESHOLD 2  // Adjust based on your noise tolerance
 
 PotentiometerManager::PotentiometerManager(
@@ -58,7 +58,7 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
 }
 
 void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
-    if (potIndex < configManager.getNumPots()) {
+    if (potIndex < NUM_POTS) {
         potChannels[potIndex] = channel;
     }
 }
@@ -121,5 +121,24 @@ void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<Envel
                 }
             }
         }
+    }
+}
+
+void PotentiometerManager::loadFromEEPROM() {
+    Serial.println("Loading potentiometer settings from EEPROM...");
+    for (uint8_t i = 0; i < NUM_POTS; i++) {
+        int address = i * 2;
+        potChannels[i] = EEPROM.read(address);
+        potCCNumbers[i] = EEPROM.read(address + 1);
+    }
+}
+
+void PotentiometerManager::resetEEPROM() {
+    Serial.println("Resetting EEPROM settings for potentiometers...");
+    for (uint8_t i = 0; i < NUM_POTS; i++) {
+        potChannels[i] = 1;  // Default MIDI channel
+        potCCNumbers[i] = i;  // Default CC number
+        EEPROM.update(i * 2, potChannels[i]);
+        EEPROM.update(i * 2 + 1, potCCNumbers[i]);
     }
 }
