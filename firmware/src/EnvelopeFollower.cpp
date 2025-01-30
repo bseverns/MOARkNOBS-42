@@ -38,6 +38,12 @@ void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
     if (isActive && modulationTargetCC >= 0) {
         int modulatedValue = ccValue + currentEnvelopeLevel;
         ccValue = constrain(modulatedValue, 0, 127); // Ensure within MIDI range
+    
+    // Prevent redundant MIDI messages
+        if (ccValue != lastSentCC[potIndex]) {
+            lastSentCC[potIndex] = ccValue; // Update last sent value
+            midiHandler.sendControlChange(modulationTargetCC, ccValue, potManager->getChannel(potIndex));
+        }
     }
 }
 

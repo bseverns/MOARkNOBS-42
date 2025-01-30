@@ -123,9 +123,19 @@ void processSerial() {
 
             Serial.println("Pot configuration updated!");
         } else if (command.startsWith("SET_ALL")) {
-            // Bulk update handled by Utility::processBulkUpdate
             Utility::processBulkUpdate(command, configManager.getNumPots());
-        } else {
+
+        } else if (command.startsWith("GET_ALL")) {
+            // Send all pot settings
+            Serial.print("POTS:");
+            for (int i = 0; i < NUM_POTS; i++) {
+                Serial.printf("%d,%d,%d;", configManager.getPotCCNumber(i), configManager.getPotChannel(i), potToEnvelopeMap[i]);
+            }
+
+            // Send LED settings
+            Serial.printf(" LED:%d,%d,%d,%d\n", ledManager.getBrightness(), ledManager.getColor().r, ledManager.getColor().g, ledManager.getColor().b);
+        }
+    } else {
             Serial.println("Unknown command: " + command);
         }
     }
@@ -170,9 +180,19 @@ void monitorSystemLoad() {
 
 void setup() {
     Serial.begin(31250);
+    // Load stored settings from EEPROM
     configManager.begin(potChannels);
+    configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     midiHandler.begin();
+
     ledManager.begin();
+    uint8_t ledBrightness;
+    CRGB ledColor;
+    configManager.loadLEDSettings(ledBrightness, ledColor);
+    // Apply stored settings
+    ledManager.setBrightness(ledBrightness);
+    ledManager.setColor(ledColor);
+
     displayManager.begin();
     displayManager.showText("Initializing...", true);
     potentiometerManager.loadFromEEPROM();
@@ -202,7 +222,7 @@ void setup() {
     }
     if (!configManager.loadConfiguration(potChannels)) {
     Serial.println("EEPROM data corrupted, resetting to defaults.");
-    configManager.resetConfiguration(potChannels);
+    //configManager.resetConfiguration(potChannels);
     potentiometerManager.resetEEPROM();
     }
     buttonManager.initButtons();

@@ -72,3 +72,15 @@ void LEDManager::update() {
         FastLED.show(); // Update LEDs only if needed
     }
 }
+
+void LEDManager::setBrightness(uint8_t brightness) {
+    FastLED.setBrightness(brightness);
+    FastLED.show();
+}
+
+void LEDManager::setColor(CRGB color) {
+    for (int i = 0; i < numLEDs; i++) {
+        leds[i] = color;
+    }
+    FastLED.show();
+}

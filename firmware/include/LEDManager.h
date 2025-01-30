@@ -14,6 +14,8 @@ public:
     void indicateEnvelopeMode(bool isActive);
     void markDirty(uint8_t index);
     void update();
+    void setBrightness(uint8_t brightness);
+    void setColor(CRGB color);
 
 private:
     uint8_t pin;

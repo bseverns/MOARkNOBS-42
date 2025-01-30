@@ -83,3 +83,42 @@ void ConfigManager::writeEEPROM() {
         EEPROM.update(address + 1, _potCCNumbers[i]);
     }
 }
+
+void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
+    EEPROM.update(EEPROM_LED_BRIGHTNESS, brightness);
+    EEPROM.update(EEPROM_LED_COLOR, color.r);
+    EEPROM.update(EEPROM_LED_COLOR + 1, color.g);
+    EEPROM.update(EEPROM_LED_COLOR + 2, color.b);
+}
+
+void ConfigManager::loadLEDSettings(uint8_t& brightness, CRGB& color) {
+    brightness = EEPROM.read(EEPROM_LED_BRIGHTNESS);
+    color.r = EEPROM.read(EEPROM_LED_COLOR);
+    color.g = EEPROM.read(EEPROM_LED_COLOR + 1);
+    color.b = EEPROM.read(EEPROM_LED_COLOR + 2);
+}
+
+void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes) {
+    // Save pot-to-envelope assignments
+    for (int i = 0; i < NUM_POTS; i++) {
+        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + i, potToEnvelopeMap.count(i) ? potToEnvelopeMap.at(i) : 255);
+    }
+    
+    // Save envelope filter types
+    for (int i = 0; i < envelopes.size(); i++) {
+        EEPROM.update(EEPROM_ENVELOPE_TYPES + i, static_cast<uint8_t>(envelopes[i].getFilterType()));
+    }
+}
+
+void ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes) {
+    for (int i = 0; i < NUM_POTS; i++) {
+        uint8_t storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
+        if (storedValue != 255) {
+            potToEnvelopeMap[i] = storedValue;
+        }
+    }
+
+    for (int i = 0; i < envelopes.size(); i++) {
+        envelopes[i].setFilterType(static_cast<EnvelopeFollower::FilterType>(EEPROM.read(EEPROM_ENVELOPE_TYPES + i)));
+    }
+}
