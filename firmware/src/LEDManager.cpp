@@ -73,7 +73,8 @@ void LEDManager::update() {
     }
 }
 
-void LEDManager::setBrightness(uint8_t brightness) {
+void LEDManager::setBrightness(uint8_t b) {
+    brightness = b;
     FastLED.setBrightness(brightness);
     FastLED.show();
 }
@@ -83,4 +84,12 @@ void LEDManager::setColor(CRGB color) {
         leds[i] = color;
     }
     FastLED.show();
+}
+
+uint8_t LEDManager::getBrightness() const {
+    return brightness;
+}
+
+CRGB LEDManager::getColor() const {
+    return leds[0];  // Assume all LEDs share the same color
 }

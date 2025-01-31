@@ -9,6 +9,8 @@
 #include <EnvelopeFollower.h>
 #include "EEPROM.h"
 
+class EnvelopeFollower;
+
 class Utility {
 public:
     // Mapping and Value Transformations

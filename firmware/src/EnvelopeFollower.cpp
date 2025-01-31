@@ -1,4 +1,7 @@
 #include "EnvelopeFollower.h"
+#include "MIDIHandler.h"
+
+extern MIDIHandler midiHandler;
 
 EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
     : audioInputPin(pin), currentEnvelopeLevel(0), modulationTargetCC(-1),
@@ -21,7 +24,7 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
         case EXPONENTIAL:
             return pow(level / 127.0, 2) * 127; // Quadratic scaling
         case RANDOM:
-            return random(level); // Random envelope level
+            return random(level); // Random envelope seeded level
         default:
             return level;
     }
@@ -35,11 +38,13 @@ void EnvelopeFollower::update() {
 }
 
 void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
+    static uint8_t lastSentCC[NUM_POTS] = {255}; // Initialize all to 255 (invalid MIDI value)
+
     if (isActive && modulationTargetCC >= 0) {
         int modulatedValue = ccValue + currentEnvelopeLevel;
         ccValue = constrain(modulatedValue, 0, 127); // Ensure within MIDI range
-    
-    // Prevent redundant MIDI messages
+
+        // Prevent redundant MIDI messages
         if (ccValue != lastSentCC[potIndex]) {
             lastSentCC[potIndex] = ccValue; // Update last sent value
             midiHandler.sendControlChange(modulationTargetCC, ccValue, potManager->getChannel(potIndex));

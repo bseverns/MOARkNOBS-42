@@ -2,6 +2,8 @@
 #define ENVELOPE_FOLLOWER_H
 
 #include <Arduino.h>
+#include <MIDIHandler.h>
+#include <PotentiometerManager.h>
 
 // Forward declare PotentiometerManager
 class PotentiometerManager;

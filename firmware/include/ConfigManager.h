@@ -3,8 +3,11 @@
 
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <Globals.h>
 #include <map>
 #include <string>
+#include <FastLED.h>
+#include <EnvelopeFollower.h>
 
 #define EEPROM_LED_BRIGHTNESS (EEPROM_ENVELOPE_TYPES + NUM_POTS)
 #define EEPROM_LED_COLOR (EEPROM_LED_BRIGHTNESS + 1)
@@ -13,6 +16,8 @@
 #define EEPROM_POT_CC (EEPROM_POT_CHANNELS + NUM_POTS)  // Offset after channels
 #define EEPROM_ENVELOPE_ASSIGNMENTS (EEPROM_POT_CC + NUM_POTS)
 #define EEPROM_ENVELOPE_TYPES (EEPROM_ENVELOPE_ASSIGNMENTS + NUM_POTS)
+
+class EnvelopeFollower;
 
 class ConfigManager {
 public:

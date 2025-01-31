@@ -105,7 +105,7 @@ void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelope
     }
     
     // Save envelope filter types
-    for (int i = 0; i < envelopes.size(); i++) {
+    for (size_t i = 0; i < envelopes.size(); i++) {  //Use size_t instead of int
         EEPROM.update(EEPROM_ENVELOPE_TYPES + i, static_cast<uint8_t>(envelopes[i].getFilterType()));
     }
 }
@@ -118,7 +118,7 @@ void ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, s
         }
     }
 
-    for (int i = 0; i < envelopes.size(); i++) {
+    for (size_t i = 0; i < envelopes.size(); i++) {
         envelopes[i].setFilterType(static_cast<EnvelopeFollower::FilterType>(EEPROM.read(EEPROM_ENVELOPE_TYPES + i)));
     }
 }

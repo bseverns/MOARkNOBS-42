@@ -110,18 +110,29 @@ void processSerial() {
         String command = commandQueue.front(); // Get the front command
         commandQueue.pop(); // Remove it from the queue
 
-        // Handle specific commands
         if (command.startsWith("SET_POT")) {
-            // Parse the "SET_POT" command
-            int potIndex = command.substring(8, command.indexOf(',')).toInt();
-            int channel = command.substring(command.indexOf(',') + 1, command.lastIndexOf(',')).toInt();
-            int ccNumber = command.substring(command.lastIndexOf(',') + 1).toInt();
+            // Parse "SET_POT" command
+            int firstComma = command.indexOf(',');
+            int lastComma = command.lastIndexOf(',');
 
-            configManager.setPotChannel(potIndex, channel);
-            configManager.setPotCCNumber(potIndex, ccNumber);
-            configManager.saveConfiguration();
+            if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
+                Serial.println("Error: Malformed SET_POT command");
+                continue; // Skip invalid command
+            }
 
-            Serial.println("Pot configuration updated!");
+            int potIndex = command.substring(8, firstComma).toInt();
+            int channel = command.substring(firstComma + 1, lastComma).toInt();
+            int ccNumber = command.substring(lastComma + 1).toInt();
+
+            if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 && ccNumber >= 0 && ccNumber <= 127) {
+                configManager.setPotChannel(potIndex, channel);
+                configManager.setPotCCNumber(potIndex, ccNumber);
+                configManager.saveConfiguration();
+                Serial.println("Pot configuration updated!");
+            } else {
+                Serial.println("Error: Invalid values for SET_POT");
+            }
+
         } else if (command.startsWith("SET_ALL")) {
             Utility::processBulkUpdate(command, configManager.getNumPots());
 
@@ -129,17 +140,32 @@ void processSerial() {
             // Send all pot settings
             Serial.print("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
-                Serial.printf("%d,%d,%d;", configManager.getPotCCNumber(i), configManager.getPotChannel(i), potToEnvelopeMap[i]);
+                int envelopeValue = (potToEnvelopeMap.count(i)) ? potToEnvelopeMap[i] : -1;
+                Serial.print(configManager.getPotCCNumber(i));
+                Serial.print(",");
+                Serial.print(configManager.getPotChannel(i));
+                Serial.print(",");
+                Serial.print(envelopeValue);
+                Serial.print(";");
             }
 
             // Send LED settings
-            Serial.printf(" LED:%d,%d,%d,%d\n", ledManager.getBrightness(), ledManager.getColor().r, ledManager.getColor().g, ledManager.getColor().b);
-        }
-    } else {
+            CRGB ledColor = ledManager.getColor();
+            Serial.print(" LED:");
+            Serial.print(ledManager.getBrightness());
+            Serial.print(",");
+            Serial.print(ledColor.r);
+            Serial.print(",");
+            Serial.print(ledColor.g);
+            Serial.print(",");
+            Serial.println(ledColor.b); // `println` ensures newline
+        } 
+        else {
             Serial.println("Unknown command: " + command);
         }
     }
 }
+
 
 void processEnvelopes() {
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {

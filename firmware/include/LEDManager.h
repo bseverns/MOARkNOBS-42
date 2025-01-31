@@ -16,6 +16,8 @@ public:
     void update();
     void setBrightness(uint8_t brightness);
     void setColor(CRGB color);
+    uint8_t getBrightness() const;
+    CRGB getColor() const;
 
 private:
     uint8_t pin;
@@ -25,6 +27,7 @@ private:
     uint8_t modeDisplay;
     uint8_t activePot;
     bool envelopeModeActive;
+    uint8_t brightness = 128;
 };
 
 #endif // LEDMANAGER_H
