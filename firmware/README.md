@@ -23,7 +23,7 @@ BenzKnobz is a feature-rich MIDI controller designed for dynamic performance and
 2.1 Unboxing and Setup
 
 Connect the MN42 controller to your computer via USB.
-If using external power, ensure a stable 5V power source.
+If using external power, ensure a stable 5V 2A power source.
 Install your required MIDI software/hardware (DAW, synths, etc.).
 Ensure your system recognizes the device as "MOARkNOBZ".
 
@@ -45,16 +45,12 @@ Use the Benz EEPROM Settings Manager (HTML interface) or serial commands to reco
 3.1 Potentiometers
 
 Adjust MIDI CC values in real-time.
-Each pot’s assigned CC and channel can be customized.
-LED feedback reflects the current control value.
+Each pot’s assigned CC and channel can be customized via user settings or the HTML firmware editor.
+LED feedback reflects the current control value and status.
 
 3.2 Buttons
 
 Single Press Functions:
-
-Button
-
-Function
 
 B0 - Toggle Envelope Follower
 B1 - Assign active pot to envelope
@@ -70,9 +66,9 @@ B1: Swap envelope assignments for the active pot
 
 3.3 OLED Display
 
-Displays active pot, channel, and mode.
-Provides real-time envelope visualization.
-Status messages for button actions.
+-Displays active pot, channel, and mode.
+-Provides real-time envelope visualization.
+-Status messages for button actions.
 
 3.4 LED Indicators
 
@@ -80,14 +76,13 @@ Red: Active potentiometer
 Blue: Mode selection
 Green: Envelope mode active
 
-Brightness and color customizable via EEPROM settings
+Brightness and color customizable via firmware editor.
 
 4. Advanced Features
 
 4.1 Envelope Follower
 
-Converts audio amplitude to MIDI CC modulation.
-Configurable filter types:
+Converts audio amplitude to MIDI CC modulation with configurable filter types:
 Linear: Direct mapping
 Opposite Linear: Inverted response
 Exponential: Nonlinear mapping for subtle changes
