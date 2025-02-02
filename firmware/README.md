@@ -1,7 +1,7 @@
 # The MOARkNOBZ - 42
 This project is inspired by the Bastl Instruments '60 Knobs' controller and is my first serious experiment in hardware MIDI.
 
-BenzKnobz MIDI Controller User Manual
+BS - MOARkNOBS MN42 MIDI Controller User Manual
 
 Introduction
 
@@ -9,14 +9,14 @@ BenzKnobz is a feature-rich MIDI controller designed for dynamic performance and
 
 1. Features Overview
 
-42 potentiometers for MIDI control
-6 momentary buttons with multiple functions
-Envelope Follower for dynamic parameter modulation
-OLED display for visual feedback
-Addressable LEDs for mode and status indication
-MIDI over USB and hardware serial
-EEPROM storage for saving settings
-Configurable via serial interface
+-42 potentiometers for MIDI control
+-6 momentary buttons with multiple functions
+-Envelope Follower for dynamic parameter modulation
+-OLED display for visual feedback
+-Addressable LEDs for mode and status indication
+-MIDI over USB and hardware serial
+-EEPROM storage for saving settings
+-Configurable via USB serial interface
 
 2. Getting Started
 
@@ -24,7 +24,7 @@ Configurable via serial interface
 
 Connect the MN42 controller to your computer via USB.
 If using external power, ensure a stable 5V power source.
-Install required MIDI software (DAW, synths, etc.).
+Install your required MIDI software/hardware (DAW, synths, etc.).
 Ensure your system recognizes the device as "MOARkNOBZ".
 
 2.2 Powering On
@@ -34,7 +34,7 @@ LEDs indicate envelope mode (green), active pot (red), and MIDI mode.
 
 2.3 Configuring MIDI Channels and CCs
 
-Default settings:
+Default EEPROM settings:
 All pots mapped to Channel 1
 CC numbers assigned sequentially (0–41)
 Envelope mapping defaults stored in EEPROM
@@ -57,21 +57,15 @@ Button
 Function
 
 B0 - Toggle Envelope Follower
-
 B1 - Assign active pot to envelope
-
 B2 - Cycle through MIDI channels (1–16)
-
 B3 - Save configuration to EEPROM
-
 B4 - Randomize all MIDI CC assignments
-
 B5 - Factory reset (confirmation required)
 
 Double Press Functions:
 
 B0: Cycle envelope filter modes (Linear, Opposite, Exponential, Random)
-
 B1: Swap envelope assignments for the active pot
 
 3.3 OLED Display
