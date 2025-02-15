@@ -1,7 +1,7 @@
 #include "DisplayManager.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
+#include "ButtonManager.h"
 
 DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t width, uint16_t height)
     : _display(width, height, &Wire), _i2cAddress(i2cAddress), _statusTimeout(0) {}
@@ -15,21 +15,35 @@ void DisplayManager::begin() {
     _display.display();
 }
 
-void DisplayManager::showText(const char *text, bool clearDisplay) {
-    if (clearDisplay) {
-        clear();
+void DisplayManager::showText(const char* line1, const char* line2, const char* line3) {
+    clear();
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_WHITE);
+
+    // Line 1
+    _display.setCursor(0, 0);
+    _display.println(line1);
+
+    // Line 2 (if provided)
+    if (line2 && line2[0] != '\0') {
+        _display.setCursor(0, 10);
+        _display.println(line2);
     }
-    _display.setTextSize(1);         // Normal 1:1 pixel scale
-    _display.setTextColor(SSD1306_WHITE); // Draw white text
-    _display.setCursor(0, 0);        // Start at top-left corner
-    _display.println(text);
+
+    // Line 3 (if provided)
+    if (line3 && line3[0] != '\0') {
+        _display.setCursor(0, 20);
+        _display.println(line3);
+    }
+
     _display.display();
 }
 
+
 void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
     if (clearDisplay) {
-        clear();
-    }
+        _display.clearDisplay();
+        }
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
@@ -40,7 +54,7 @@ void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
 
 void DisplayManager::showMode(const char *mode, bool clearDisplay) {
     if (clearDisplay) {
-        clear();
+        _display.clearDisplay();
     }
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
@@ -56,7 +70,7 @@ void DisplayManager::clear() {
 }
 
 void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode) {
-    clear();
+    _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
@@ -77,10 +91,36 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
 void DisplayManager::displayStatus(const char *status, unsigned long duration) {
     _statusMessage = status;
     _statusTimeout = millis() + duration;
-    clear();
+    _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
     _display.println(status);
+    _display.display();
+}
+
+void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
+    _display.clearDisplay();
+
+    // Line 1: Active button and MIDI channel
+    _display.setCursor(0, 0);
+    _display.print("BTN: ");
+    _display.print(context.activePot);
+    _display.print(" CH: ");
+    _display.println(context.activeChannel);
+
+    // Line 2: Envelope mode
+    _display.setCursor(0, 10);
+    _display.print("EF: ");
+    _display.println(context.envelopeFollowMode ? "ON" : "OFF");
+
+    // Line 3: Display current envelope assignment if applicable
+    if (context.potToEnvelopeMap.count(context.activePot)) {
+        int envelopeIndex = context.potToEnvelopeMap.at(context.activePot);
+        _display.setCursor(0, 20);
+        _display.print("ENV->POT: ");
+        _display.println(envelopeIndex);
+    }
+
     _display.display();
 }

@@ -1,96 +1,75 @@
 #include "ConfigManager.h"
 
+// Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
     : _numPots(numPots), _numButtons(numButtons) {}
 
-void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
-    if (!loadConfiguration(potChannels)) {
-        Serial.println("EEPROM data corrupted, resetting to defaults.");
-        resetConfiguration(potChannels);
-    } else {
-        Serial.println("Configuration loaded successfully!");
+// Save the configuration to persistent storage (e.g., EEPROM)
+void ConfigManager::saveConfiguration() {
+    for (uint8_t i = 0; i < _numPots; i++) {
+        EEPROM.update(EEPROM_POT_CHANNELS + i, _potChannels[i]);
+        EEPROM.update(EEPROM_POT_CC + i, _potCCNumbers[i]);
     }
 }
 
+// Load the configuration from persistent storage
+bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels) {
+    potChannels.clear();
+    for (uint8_t i = 0; i < _numPots; i++) {
+        uint8_t channel = EEPROM.read(EEPROM_POT_CHANNELS + i);
+        uint8_t ccNumber = EEPROM.read(EEPROM_POT_CC + i);
+        _potChannels[i] = channel;
+        _potCCNumbers[i] = ccNumber;
+        potChannels.push_back(channel);
+    }
+    return true; // Indicate successful load
+}
+
+// Initialize the configuration
+void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
+    loadConfiguration(potChannels); // Load settings from EEPROM
+}
+
+// Set the MIDI channel for a specific pot
+void ConfigManager::setPotChannel(uint8_t potIndex, uint8_t channel) {
+    if (potIndex < _numPots) {
+        _potChannels[potIndex] = channel;
+    }
+}
+
+// Set the MIDI CC number for a specific pot
+void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
+    if (potIndex < _numPots) {
+        _potCCNumbers[potIndex] = ccNumber;
+    }
+}
+
+// Get the MIDI channel for a specific pot
 uint8_t ConfigManager::getPotChannel(uint8_t potIndex) const {
     return _potChannels.at(potIndex);
 }
 
+// Get the MIDI CC number for a specific pot
 uint8_t ConfigManager::getPotCCNumber(uint8_t potIndex) const {
     return _potCCNumbers.at(potIndex);
 }
 
-void ConfigManager::setPotChannel(uint8_t potIndex, uint8_t channel) {
-    _potChannels[potIndex] = channel;
-}
-
-void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
-    _potCCNumbers[potIndex] = ccNumber;
-}
-
-void ConfigManager::saveConfiguration() {
-    writeEEPROM();
-}
-
-bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels) {
-    Serial.println("Loading configuration from EEPROM...");
-
-    if (EEPROM.read(0) != 0xAA) { // Check if EEPROM is initialized
-        Serial.println("EEPROM is uninitialized or corrupted.");
-        return false;
-    }
-
-    for (uint8_t i = 0; i < _numPots; i++) {
-        int address = i * 2;
-        _potChannels[i] = EEPROM.read(address);
-        potChannels[i] = _potChannels[i];  // Sync with external vector
-
-        Serial.print("Pot ");
-        Serial.print(i);
-        Serial.print(": CC=");
-        Serial.println(potChannels[i]);
-    }
-
-    Serial.println("Configuration loaded successfully.");
-    return true;
-}
-
-
-void ConfigManager::resetConfiguration(std::vector<uint8_t>& potChannels) {
-    Serial.println("Resetting EEPROM to default values...");
-    
-    for (uint8_t i = 0; i < _numPots; ++i) {
-        _potChannels[i] = 1;  // Default to channel 1
-        _potCCNumbers[i] = i; // Default to CC number matching the pot index
-        potChannels[i] = i;   // Also reset `potChannels` passed from main
-    }
-    
-    saveConfiguration();
-}
-
-void ConfigManager::readEEPROM() {
-    for (uint8_t i = 0; i < _numPots; ++i) {
-        int address = i * 2;
-        _potChannels[i] = EEPROM.read(address);
-        _potCCNumbers[i] = EEPROM.read(address + 1);
+// Load Envelope Follower settings
+void ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopeFollowers) {
+    for (size_t i = 0; i < envelopeFollowers.size(); i++) {
+        int envelopeIndex = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
+        potToEnvelopeMap[i] = envelopeIndex;
     }
 }
 
-void ConfigManager::writeEEPROM() {
-    for (uint8_t i = 0; i < _numPots; ++i) {
-        int address = i * 2;
-        EEPROM.update(address, _potChannels[i]);
-        EEPROM.update(address + 1, _potCCNumbers[i]);
+// Save Envelope Follower settings
+void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes) {
+    for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
+        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
     }
 }
 
-void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
-    EEPROM.update(EEPROM_LED_BRIGHTNESS, brightness);
-    EEPROM.update(EEPROM_LED_COLOR, color.r);
-    EEPROM.update(EEPROM_LED_COLOR + 1, color.g);
-    EEPROM.update(EEPROM_LED_COLOR + 2, color.b);
-}
-
+// Load LED settings
 void ConfigManager::loadLEDSettings(uint8_t& brightness, CRGB& color) {
     brightness = EEPROM.read(EEPROM_LED_BRIGHTNESS);
     color.r = EEPROM.read(EEPROM_LED_COLOR);
@@ -98,27 +77,20 @@ void ConfigManager::loadLEDSettings(uint8_t& brightness, CRGB& color) {
     color.b = EEPROM.read(EEPROM_LED_COLOR + 2);
 }
 
-void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes) {
-    // Save pot-to-envelope assignments
-    for (int i = 0; i < NUM_POTS; i++) {
-        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + i, potToEnvelopeMap.count(i) ? potToEnvelopeMap.at(i) : 255);
-    }
-    
-    // Save envelope filter types
-    for (size_t i = 0; i < envelopes.size(); i++) {  //Use size_t instead of int
-        EEPROM.update(EEPROM_ENVELOPE_TYPES + i, static_cast<uint8_t>(envelopes[i].getFilterType()));
-    }
+// Save LED settings
+void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
+    EEPROM.update(EEPROM_LED_BRIGHTNESS, brightness);
+    EEPROM.update(EEPROM_LED_COLOR, color.r);
+    EEPROM.update(EEPROM_LED_COLOR + 1, color.g);
+    EEPROM.update(EEPROM_LED_COLOR + 2, color.b);
 }
 
-void ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes) {
-    for (int i = 0; i < NUM_POTS; i++) {
-        uint8_t storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
-        if (storedValue != 255) {
-            potToEnvelopeMap[i] = storedValue;
-        }
+// Reset configuration to defaults
+void ConfigManager::resetConfiguration(std::vector<uint8_t>& potChannels) {
+    potChannels.clear();
+    for (uint8_t i = 0; i < _numPots; i++) {
+        setPotChannel(i, 1); // Default to channel 1
+        setPotCCNumber(i, 0); // Default to CC 0
     }
-
-    for (size_t i = 0; i < envelopes.size(); i++) {
-        envelopes[i].setFilterType(static_cast<EnvelopeFollower::FilterType>(EEPROM.read(EEPROM_ENVELOPE_TYPES + i)));
-    }
+    saveConfiguration();
 }

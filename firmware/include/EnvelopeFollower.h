@@ -2,10 +2,10 @@
 #define ENVELOPE_FOLLOWER_H
 
 #include <Arduino.h>
-#include <MIDIHandler.h>
-#include <PotentiometerManager.h>
+#include "PotentiometerManager.h"
+#include "BiquadFilter.h"
 
-// Forward declare PotentiometerManager
+// Forward declaration
 class PotentiometerManager;
 
 class EnvelopeFollower {
@@ -14,7 +14,10 @@ public:
         LINEAR,
         OPPOSITE_LINEAR,
         EXPONENTIAL,
-        RANDOM
+        RANDOM,
+        LOWPASS,
+        HIGHPASS,
+        BANDPASS
     };
 
 private:
@@ -24,7 +27,7 @@ private:
     bool isActive;               // Is the envelope follower active?
     FilterType filterType;       // Current filter type
     PotentiometerManager* potManager; // Pointer to PotentiometerManager
-    int assignedPot;             // Index of the associated potentiometer
+    BiquadFilter filter;         // Custom filter for processing
 
     int readEnvelopeLevel();     // Helper to read and calculate the envelope level from audio input
     int processEnvelopeLevel(int level); // Process the envelope level based on filter type
@@ -35,9 +38,8 @@ public:
     void setModulationTarget(int cc);
     void toggleActive(bool state);
     bool getActiveState() const;
-    void setAssignedPot(int pot) { assignedPot = pot; }
-    int getAssignedPot() const { return assignedPot; }
-    void setFilterType(FilterType type);
+    void setFilterType(FilterType type); // Only sets the type of filter
+    void configureFilter(float frequency, float q); // Configures frequency and Q factor
     FilterType getFilterType() const;
     void update();
     void applyToCC(int potIndex, uint8_t& ccValue);

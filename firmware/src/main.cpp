@@ -8,6 +8,7 @@
 #include "PotentiometerManager.h"
 #include "name.c"
 #include "Globals.h"
+#include "BiquadFilter.h"
 #include <TimerOne.h>
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
@@ -22,12 +23,14 @@ std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
 std::queue<String> commandQueue; // Queue to store incoming commands
 MIDIHandler midiHandler;
 LEDManager ledManager(LED_PIN, NUM_LEDS);
-DisplayManager displayManager(OLED_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
+DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
+BiquadFilter filter;
 
 // Declare PotentiometerManager before ButtonManager
+const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {2, 3, 4, 5, 6, 13}; // Add actual GPIO pins
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin, &potentiometerManager);
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin, controlPins, &potentiometerManager);
 
 // Envelope followers - assign to analog inputs
 std::vector<EnvelopeFollower> envelopeFollowers = {
@@ -50,6 +53,7 @@ unsigned long lastMIDIProcess = 0;
 unsigned long lastSerialProcess = 0;
 unsigned long lastLEDUpdate = 0;
 unsigned long lastEnvelopeProcess = 0;
+unsigned long lastDisplayUpdate = 0;
 
 // ButtonManagerContext
 ButtonManagerContext buttonContext = {
@@ -64,6 +68,7 @@ ButtonManagerContext buttonContext = {
     potToEnvelopeMap
 };
 
+
 void processMIDI() {
     midiHandler.processIncomingMIDI();
 
@@ -71,10 +76,9 @@ void processMIDI() {
         midiBeatPosition = (midiBeatPosition + 1) % 8;
 
         // Perform clock-tied updates
-        Utility::updateDisplay(
-            displayManager.getDisplay(),       // Access the display object
+        displayManager.updateDisplay(
             midiBeatPosition,
-            envelopeFollowers,                 // Pass the vector of EnvelopeFollowers
+            std::vector<uint8_t>(), // Pass envelope levels if applicable
             envelopeFollowMode ? "EF ON" : "EF OFF",
             activePot,
             activeChannel,
@@ -206,7 +210,6 @@ void monitorSystemLoad() {
 
 void setup() {
     Serial.begin(31250);
-    // Load stored settings from EEPROM
     configManager.begin(potChannels);
     configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     midiHandler.begin();
@@ -215,30 +218,22 @@ void setup() {
     uint8_t ledBrightness;
     CRGB ledColor;
     configManager.loadLEDSettings(ledBrightness, ledColor);
-    // Apply stored settings
     ledManager.setBrightness(ledBrightness);
     ledManager.setColor(ledColor);
 
     displayManager.begin();
-    displayManager.showText("Initializing...", true);
+    displayManager.showText("Initializing...");
     potentiometerManager.loadFromEEPROM();
     Timer1.initialize(1000); // 1ms interrupt
     Timer1.attachInterrupt(processMIDI);
-
-    // Initialize the pot-to-envelope map
-    potToEnvelopeMap[0] = 0; // Pot 0 controls Envelope 0
-    potToEnvelopeMap[1] = 1; // Pot 1 controls Envelope 1
-    potToEnvelopeMap[2] = 2; // Pot 2 controls Envelope 2
-    potToEnvelopeMap[3] = 3; // Pot 3 controls Envelope 3
-    potToEnvelopeMap[4] = 4;
-    potToEnvelopeMap[5] = 5;
+    filter.configure(BiquadFilter::LOWPASS, 1000, 44100); // Configure as 1kHz low-pass filter
 
     for (auto& envelope : envelopeFollowers) {
-        envelope.toggleActive(true); // Ensure all envelopes are activated
+        envelope.toggleActive(true);
     }
-    // Check for EEPROM load errors (e.g., invalid data)
+
     potentiometerManager.loadFromEEPROM();
-        for (int i = 0; i < NUM_POTS; i++) {
+    for (int i = 0; i < NUM_POTS; i++) {
         if (potentiometerManager.getChannel(i) == 0) {
             potentiometerManager.setChannel(i, 1); // Default to channel 1
         }
@@ -246,15 +241,16 @@ void setup() {
             potentiometerManager.setCCNumber(i, i % 128); // Limit CC to valid range
         }
     }
+
     if (!configManager.loadConfiguration(potChannels)) {
-    Serial.println("EEPROM data corrupted, resetting to defaults.");
-    //configManager.resetConfiguration(potChannels);
-    potentiometerManager.resetEEPROM();
+        Serial.println("EEPROM data corrupted, resetting to defaults.");
+        potentiometerManager.resetEEPROM();
     }
+
     buttonManager.initButtons();
     delay(1000);
     displayManager.clear();
-    displayManager.showText("MOAR", true);
+    displayManager.showText("MOAR");
 
     // Print loaded configuration for debugging
     Serial.println("Verifying loaded pot channels:");
@@ -294,7 +290,13 @@ void loop() {
         lastEnvelopeProcess = currentMillis;
     }
 
-    // Process buttons and potentiometers (non-blocking)
+    // Process Display every 100ms
+    if (millis() - lastDisplayUpdate > 100) {
+        lastDisplayUpdate = millis();
+        displayManager.updateFromContext(buttonContext);
+    }
+
+    // Process buttons and potentiometers
     buttonManager.processButtons(buttonContext);
     potentiometerManager.processPots(ledManager, envelopeFollowers);
     monitorSystemLoad(); // Track and log task execution

@@ -5,7 +5,7 @@
 #include <EEPROM.h>
 #include <Globals.h>
 #include <map>
-#include <string>
+#include <vector>
 #include <FastLED.h>
 #include <EnvelopeFollower.h>
 
@@ -36,20 +36,20 @@ public:
     void saveConfiguration();
     bool loadConfiguration(std::vector<uint8_t>& potChannels);
 
-    //LED EEPROM
+    // LED EEPROM management
     void saveLEDSettings(uint8_t brightness, CRGB color);
     void loadLEDSettings(uint8_t& brightness, CRGB& color);
 
     // Reset configuration to defaults
     void resetConfiguration(std::vector<uint8_t>& potChannels);
 
-    // Utility method to get global constants
-    uint8_t getNumPots() const { return _numPots; }
-    uint8_t getNumButtons() const { return _numButtons; }
-
+    // Envelope Follower configuration
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
     void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
+    // Utility method to get global constants
+    uint8_t getNumPots() const { return _numPots; }
+    uint8_t getNumButtons() const { return _numButtons; }
 
 private:
     uint8_t _numPots;

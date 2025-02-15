@@ -17,7 +17,7 @@ extern ConfigManager configManager;
 #define NUM_BUTTONS 6
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
-#define OLED_I2C_ADDRESS 0x3C
+#define SSD1306_I2C_ADDRESS 0x3C
 #define SERIAL_BUFFER_SIZE 128
 #define MIDI_TASK_INTERVAL 1      // 1ms for MIDI processing
 #define SERIAL_TASK_INTERVAL 10   // 10ms for Serial processing
