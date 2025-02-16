@@ -1,51 +1,35 @@
 #include <Arduino.h>
+#include "ButtonManager.h"
 
-// Constants for MUX control
-const uint8_t primaryMuxPins[] = {7, 8, 9};  // Pins for the primary mux
-const uint8_t secondaryMuxPins[] = {10, 11, 12}; // Pins for the secondary mux
-const uint8_t analogPin = A8;                // Analog pin to read the mux output
+const uint8_t primaryMuxPins[] = {7, 8, 9};
+const uint8_t secondaryMuxPins[] = {10, 11, 12};
+const uint8_t controlPins[] = {2, 3, 4, 5, 6, 13}; // Example
+const uint8_t analogPin = A0;
 
-#define NUM_BUTTONS 6                        // Number of buttons connected to the 6th secondary mux bank
-
-void selectMux(uint8_t primaryBank, uint8_t secondaryBank) {
-    // Set the primary mux pins
-    for (int i = 0; i < 3; i++) {
-        digitalWrite(primaryMuxPins[i], (primaryBank >> i) & 1);
-    }
-    // Set the secondary mux pins
-    for (int i = 0; i < 3; i++) {
-        digitalWrite(secondaryMuxPins[i], (secondaryBank >> i) & 1);
-    }
-}
-
-bool readButton(uint8_t buttonIndex) {
-    // Map button index to the correct pin in the 6th secondary mux bank
-    selectMux(6, buttonIndex);  // Primary mux bank 6
-    int value = analogRead(analogPin);
-    return value < 512;  // Adjust threshold if necessary (LOW if pressed)
-}
+PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin, controlPins, &potentiometerManager);
 
 void setup() {
     Serial.begin(9600);
-
-    // Initialize mux pins as output
-    for (int i = 0; i < 3; i++) {
-        pinMode(primaryMuxPins[i], OUTPUT);
-        pinMode(secondaryMuxPins[i], OUTPUT);
-    }
-
-    pinMode(analogPin, INPUT);
-
-    Serial.println("MUX Button Test: Press buttons to see their states.");
+    buttonManager.initButtons();
+    Serial.println("Button Test Starting");
 }
 
 void loop() {
-    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
-        if (readButton(i)) {
+    for (int i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; i++) {
+        if (i < NUM_VIRTUAL_BUTTONS) {
+            uint8_t state = buttonManager.readMuxButton(i);
             Serial.print("Button ");
-            Serial.print(i + 1);
-            Serial.println(" is pressed.");
+            Serial.print(i);
+            Serial.print(": ");
+            Serial.println(state ? "PRESSED" : "RELEASED");
+        } else {
+            uint8_t state = buttonManager.readControlButton(i - NUM_VIRTUAL_BUTTONS);
+            Serial.print("Control Button ");
+            Serial.print(i - NUM_VIRTUAL_BUTTONS);
+            Serial.print(": ");
+            Serial.println(state ? "PRESSED" : "RELEASED");
         }
+        delay(100);
     }
-    delay(100); // Debouncing delay
 }
