@@ -142,3 +142,13 @@ void PotentiometerManager::resetEEPROM() {
         EEPROM.update(i * 2 + 1, potCCNumbers[i]);
     }
 }
+
+void PotentiometerManager::setArgEnvelopePair(int a, int b) {
+    argEnvA = a;
+    argEnvB = b;
+}
+
+void PotentiometerManager::getArgEnvelopePair(int &a, int &b) const {
+    a = argEnvA;
+    b = argEnvB;
+}

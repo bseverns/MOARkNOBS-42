@@ -60,6 +60,10 @@ void ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, s
         int envelopeIndex = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
         potToEnvelopeMap[i] = envelopeIndex;
     }
+    for (size_t i = 0; i < envelopeFollowers.size(); i++) {
+        EnvelopeFollower::Mode storedMode = loadEnvelopeType(i);
+        envelopeFollowers[i].setMode(storedMode);
+    }
 }
 
 // Save Envelope Follower settings
@@ -67,6 +71,19 @@ void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelope
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
     }
+}
+
+void ConfigManager::saveEnvelopeType(uint8_t envelopeIndex, EnvelopeFollower::Mode mode) {
+    // e.g. store at EEPROM_ENVELOPE_TYPES + envelopeIndex
+    EEPROM.update(EEPROM_ENVELOPE_TYPES + envelopeIndex, static_cast<uint8_t>(mode));
+}
+
+EnvelopeFollower::Mode ConfigManager::loadEnvelopeType(uint8_t envelopeIndex, EnvelopeFollower::Mode mode) {
+    // read back from EEPROM
+    uint8_t rawMode = EEPROM.read(EEPROM_ENVELOPE_TYPES + envelopeIndex);
+    // clamp or check bounds if you like
+    if (rawMode > 1) rawMode = 0; // fallback to SEF
+    return static_cast<EnvelopeFollower::Mode>(rawMode);
 }
 
 // Load LED settings
@@ -93,4 +110,34 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t>& potChannels) {
         setPotCCNumber(i, 0); // Default to CC 0
     }
     saveConfiguration();
+}
+
+void ConfigManager::setMode(uint8_t mode) {
+    // Save to EEPROM
+    EEPROM.update(EEPROM_ARG_MODE, mode);
+}
+
+uint8_t ConfigManager::getMode() const {
+    return EEPROM.read(EEPROM_ARG_MODE);
+}
+
+void ConfigManager::setARGMethod(uint8_t method) {
+    EEPROM.update(EEPROM_ARG_METHOD, method);
+}
+
+uint8_t ConfigManager::getARGMethod() const {
+    return EEPROM.read(EEPROM_ARG_METHOD);
+}
+
+void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
+    EEPROM.update(EEPROM_ARG_ENV_A, envA);
+    EEPROM.update(EEPROM_ARG_ENV_B, envB);
+}
+
+uint8_t ConfigManager::getEnvelopeA() const {
+    return EEPROM.read(EEPROM_ARG_ENV_A);
+}
+
+uint8_t ConfigManager::getEnvelopeB() const {
+    return EEPROM.read(EEPROM_ARG_ENV_B);
 }

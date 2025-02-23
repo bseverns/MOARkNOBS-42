@@ -178,7 +178,6 @@ void processEnvelopes() {
 
             if (envelope->getActiveState()) { // Process only active envelopes
                 envelope->update(); // Update envelope values
-
                 uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
                 envelope->applyToCC(potIndex, ccValue); // Modulate CC value
 

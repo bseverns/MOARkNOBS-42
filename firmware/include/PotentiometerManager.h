@@ -33,6 +33,9 @@ private:
     // Helper for filtered analog reads
     int readAnalogFiltered(uint8_t pin); // New function for analog filtering
 
+    int argEnvA;
+    int argEnvB;
+
 public:
     PotentiometerManager(
         const uint8_t* primaryPins, 
@@ -53,6 +56,9 @@ public:
 
     // Updated to accept envelopes
     void processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes);
+
+    void setArgEnvelopePair(int a, int b);
+    void getArgEnvelopePair(int &a, int &b) const;
 };
 
 #endif // POTENTIOMETER_MANAGER_H

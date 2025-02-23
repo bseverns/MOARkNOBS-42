@@ -124,3 +124,31 @@ void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
 
     _display.display();
 }
+
+void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
+    // Use your existing style for fonts, clearing, etc.
+    // We'll keep it simple by showing three lines
+    clear();  // or optionally do partial clears if you'd rather not wipe everything
+
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_WHITE);
+
+    // First line: indicate ARG mode
+    _display.setCursor(0, 0);
+    _display.print("MODE: ARG");
+
+    // Second line: show the method name (PLUS, MIN, etc.)
+    _display.setCursor(0, 10);
+    _display.print("Method: ");
+    _display.println(methodName);
+
+    // Third line: which envelopes are being used for A & B
+    _display.setCursor(0, 20);
+    _display.print("Envs: A=");
+    _display.print(envA);
+    _display.print(" B=");
+    _display.println(envB);
+
+    // Wrap up
+    _display.display();
+}
