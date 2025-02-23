@@ -51,9 +51,6 @@ public:
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
     void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
-    void saveEnvelopeType(uint8_t envelopeIndex, EnvelopeFollower::Mode mode);
-    void loadEnvelopeType(uint8_t envelopeIndex, EnvelopeFollower::Mode mode);
-
     // Utility method to get global constants
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
@@ -82,8 +79,6 @@ private:
     // Internal helper methods for EEPROM operations
     void readEEPROM();
     void writeEEPROM();
-
-    
 };
 
 #endif // CONFIGURATION_MANAGER_H

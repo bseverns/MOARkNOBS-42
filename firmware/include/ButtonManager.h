@@ -132,7 +132,7 @@ private:
      * Called to handle multi-button combos (or we can adapt it for SHIFT combos).
      * You can keep or remove this as suits your system.
      */
-    void handleMultiButtonPress(uint8_t pressedButtons);
+    void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context);
 
     /**
      * State machine update for each button

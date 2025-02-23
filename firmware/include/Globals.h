@@ -8,7 +8,6 @@
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
 
-// ✅ Forward declare ConfigManager
 class ConfigManager;
 extern ConfigManager configManager;
 
@@ -30,5 +29,24 @@ extern ConfigManager configManager;
 const uint8_t primaryMuxPins[] = {7, 8, 9};
 const uint8_t secondaryMuxPins[] = {10, 11, 12};
 const uint8_t analogPin = 22; //mux reader
+
+// Near the top of ButtonManager.cpp (or a suitable place):
+static const std::pair<int,int> ARG_PAIRS[] = {
+    // Starting with A1 & A2
+    {A1, A2},
+    {A1, A3},
+    {A1, A6},
+    {A1, A7},
+    // Then A2 combos
+    {A2, A3},
+    {A2, A6},
+    {A2, A7},
+    // Then A3 combos
+    {A3, A6},
+    {A3, A7},
+    // Finally A6,A7
+    {A6, A7},
+};
+
 
 #endif // GLOBALS_H
