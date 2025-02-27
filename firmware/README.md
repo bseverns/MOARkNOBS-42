@@ -1,136 +1,144 @@
-# The MOARkNOBZ - 42
-BS - MOARkNOBS MN42 MIDI Controller User Manual
+MOARkNOBZ MN42 MIDI Controller
 
 Introduction
+The MOARkNOBZ MN42 is a flexible, dynamic MIDI controller designed for real-time performance and parameter modulation. The original design featured 42 physical potentiometers, but your current hardware configuration substitutes those 42 pots with:
 
-The MOARkNOBS-42 is a feature-rich MIDI controller designed for dynamic performance and parameter modulation. Equipped with potentiometers, buttons, an 3x20 display, and LED indicators, it provides real-time MIDI control with envelope following and customizable settings.
+A single physical pot for continuous control.
+A set of buttons to select or modify which “virtual CC slot” (among 42) the single pot is controlling.
+Under the hood, the firmware still supports 42 “virtual pots” (or CC slots) that can each be configured with a MIDI Channel, CC number, and optional Envelope Follower modulation. The physical pot controls whichever “virtual slot” is currently active, and the ButtonManager handles button-based input for everything from slot selection to toggling the Envelope Follower.
 
 1. Features Overview
+42 Virtual CC Slots
+Internally, the firmware can manage 42 CC “slots,” each mapped to a MIDI Channel/CC. Though you see only 1 physical pot, you can assign it to any of these 42 slots.
 
--42 potentiometers for MIDI control
--6 momentary buttons with multiple functions
--Envelope Follower for dynamic parameter modulation
--LED display for visual feedback
--Addressable LEDs for mode and status indication
--MIDI over USB and hardware serial
--EEPROM storage for saving settings
--Configurable via USB serial interface
+Single Physical Pot
+Adjust MIDI CC values in real-time. The pot’s assignment can be changed (e.g., you might set it to CC Slot #0, then switch it to #15, etc.).
+
+Multiple Momentary Buttons
+
+Used to change the “active slot” the pot controls, toggle Envelope Follower modes, trigger saving/loading, etc.
+Support for short press, long press, double press, and multi-button combos (all managed by the ButtonManager).
+Envelope Follower
+Dynamically modulate CC values based on incoming audio amplitude. Choose from standard or combined “ARG” modes, with optional filter types (Lowpass, Highpass, Bandpass, etc.).
+
+OLED Display
+Shows the active slot, envelope status, channel/CC info, plus short status messages for button actions.
+
+Addressable LEDs
+Provide color-coded feedback for active slot, envelope activity, mode selection, etc.
+
+MIDI over USB and DIN (hardware serial)
+Connect to computers, DAWs, synth modules, or other MIDI-capable gear.
+
+EEPROM Storage
+Remembers your assignments (slot → channel/CC), Envelope Follower settings, and LED brightness on reboot.
+
+Configurable via USB serial interface & planned HTML editor
+Quickly reassign all 42 CC slots, save custom configurations, etc.
 
 2. Getting Started
-
 2.1 Unboxing and Setup
-
-Connect the MN42 controller to your computer via USB.
-If using external power, ensure a stable 5V 2A power source.
-Install your required MIDI software/hardware (DAW, synths, etc.).
-Ensure your system recognizes the device as "MOARkNOBZ".
+Connect the MN42 to your computer via USB.
+For external power (if required), use a stable 5V 2A supply.
+Ensure your operating system or DAW detects the device as “MOARkNOBZ.”
+(Optional) If you have external MIDI hardware, connect MIDI cables to the DIN ports (IN/OUT).
 
 2.2 Powering On
-
-Upon power-up, the OLED displays "MOAR" and initializes settings.
-LEDs indicate envelope mode (green), active pot (red), and MIDI mode.
+On boot, the OLED typically displays “MOAR” or a brief splash screen.
+The firmware loads any saved settings from EEPROM (slot assignments, envelope states, etc.).
+The LEDs may flash or show default indications (e.g., active slot in red, envelope mode in green if active).
 
 2.3 Configuring MIDI Channels and CCs
-
-Default EEPROM settings:
-All pots mapped to Channel 1
-CC numbers assigned sequentially (0–41)
-Envelope mapping defaults stored in EEPROM
-Use the Benz EEPROM Settings Manager (HTML interface) or serial commands to reconfigure.
+By default, the system might assign all 42 slots to Channel 1, with CC numbers 0–41.
+Button-based: Use short/long/double presses to move between slots, set channels, or map the Envelope Follower.
+Serial/HTML Editor: If you prefer bulk edits, connect via USB serial or the upcoming firmware editor website to reassign channels/CCs quickly.
 
 3. Using the Controls
+3.1 Physical Pot
+Single Pot: Turning this pot sends MIDI CC messages for whichever virtual slot is currently active.
+The LED feedback and display will update to reflect the pot’s current value or “slot-based” color coding.
+You can switch the pot’s assignment to a different slot at any time (see the ButtonManager details below).
 
-3.1 Potentiometers
-Adjust MIDI CC values in real-time.
-Each pot’s assigned CC and channel can be customized via user settings or the HTML firmware editor.
-LED feedback reflects the current control value and status.
+3.2 Buttons & ButtonManager
+Your device has multiple momentary buttons—some may be dedicated to system-level controls (like toggling Envelope Follow mode), while others might serve to select the active slot. These button presses are handled by the ButtonManager class, which:
 
-3.2 Buttons
+Reads & Debounces each button (either direct pins or via a multiplexer).
+Maintains a state machine per button to detect short press, long press, double press, or simultaneous multi-button presses.
+Calls the appropriate action—e.g. toggle Envelope Follower, save to EEPROM, select next CC slot.
+Common Button Press Actions (adapt these to your actual build):
 
-Single Press Functions:
+Short Press (Control Button #0): Toggle Envelope Follower On/Off.
+Short Press (Control Button #1): Select the next slot for the pot (Slot #0 → Slot #1, etc.).
+Short Press (Control Button #2): Cycle the pot’s MIDI channel from 1..16.
 
-B0 - Toggle Envelope Follower
-B1 - Assign active pot to envelope
-B2 - Cycle through MIDI channels (1–16)
-B3 - Save configuration to EEPROM
-B4 - Randomize all MIDI CC assignments
-B5 - Factory reset (confirmation required)
+Long Press (Slot Button): Assign the selected slot to an Envelope Follower or cycle which Envelope Follower is assigned.
+Double Press (some buttons): Cycle an Envelope Follower’s filter type (Linear, Opposite, Exponential, etc.).
 
-Double Press Functions:
+Multi-Button: Holding Button #0 and Button #1 simultaneously might cycle the Envelope Follower’s ARG method (PLUS, MIN, etc.), or other advanced combos.
 
-B0: Cycle envelope filter modes (Linear, Opposite, Exponential, Random)
-B1: Swap envelope assignments for the active pot
+Note: The actual mapping of these press types to your buttons can differ depending on how you coded handleSingleButtonPress(), onLongPress(), etc. in ButtonManager. Check your firmware’s ButtonManager.cpp for exact references.
 
 3.3 OLED Display
-
--Displays active pot, channel, and mode.
--Provides real-time envelope visualization.
--Status messages for button actions.
+Shows the active slot number and the pot’s assigned CC/channel.
+Briefly displays messages like “EF ON,” “Slot → EF 2,” or “Saved!” after certain button actions.
+May present advanced info: envelope levels, beat position, or other system statuses.
 
 3.4 LED Indicators
-
-Red: Active potentiometer
-Blue: Mode selection
-Green: Envelope mode active
-Brightness and color customizable via firmware editor.
+Red: Often used to mark the active slot (the one the pot is currently controlling).
+Green: Envelope mode enabled (global or per-slot).
+Blue: Some modes might use blue for special states.
+All LED colors and brightness are customizable in code or via configuration.
 
 4. Advanced Features
-
 4.1 Envelope Follower
+Standard Envelope Follower (SEF): Tracks input amplitude (e.g., from an audio pin) and maps it to 0–127.
+ARG Mode: Combines two audio signals (A & B) using plus/minus/exponential functions.
+You can assign any of the 42 slots to be modulated by an Envelope Follower. When assigned, the slot’s MIDI output reflects potValue ± envelopeValue (or other combos).
+Filter Types: Lowpass, Highpass, Bandpass, or special curves (Opposite, Exponential, etc.).
+Button-based: Typically, you hold a button to cycle the assignment or filter type, or to toggle the Envelope Follower’s active state.
 
-Converts audio amplitude to MIDI CC modulation with configurable filter types:
-Linear: Direct mapping
-Opposite Linear: Inverted response
-Exponential: Nonlinear mapping for subtle changes
-Random: Introduces randomness to the modulation
-Assign pots to envelopes using Button B1.
+4.2 Serial Commands & Bulk Updates
+Over a USB serial terminal (e.g., Arduino Serial Monitor), you can type:
 
-4.2 Serial Commands
-
-SET_POT,x,y,z → Assign Pot x to Channel y, CC z
-GET_ALL → Retrieve all pot assignments
-SET_ALL ... → Bulk update settings
-SAVE → Store current settings in EEPROM
+SET_POT <slotIndex>,<channel>,<ccNumber> – Assign a specific slot to a channel/CC.
+GET_ALL – Print all slot settings.
+SET_ALL ... – Bulk update multiple slots in a single command.
+SAVE – Immediately store the current configuration in EEPROM.
 
 4.3 EEPROM Storage
-
-MIDI mappings, envelope settings, and LED configurations persist after power cycles.
-Reset EEPROM with Button B5.
+All slot mappings, Envelope Follower settings, and LED preferences are retained on power-down.
+A “factory reset” button combo or command can wipe the EEPROM back to defaults (Channel 1, sequential CCs, etc.).
 
 5. Troubleshooting
-
-Issue - Device not recognized
-Solution - Check USB cable and port. Restart your DAW.
-
-Issue - No MIDI output
-Solution - Verify MIDI channels and CC numbers. Test with another software.
-
-Issue - Envelope not responding
-Solution - Ensure Envelope Follower is active and assigned correctly.
-
-Issue - LEDs not updating
-Solution - Check LED brightness setting and dirty flag updates.
-
-Issue - Buttons unresponsive
-Solution - Check debounce logic and ensure proper grounding.
+Symptom	Potential Causes        /       Solutions
+Device not recognized	        - Check USB cable/port.
+                                - Restart or re-scan in your DAW.
+No MIDI output	                - Verify the active slot’s channel/CC matches your synth’s channel.
+                                - Double-check pot assignment.
+Envelope not responding	        - Make sure Envelope Follow is globally ON.
+                                - Confirm audio is fed into the correct analog pins.
+LEDs not updating	            - Verify LED brightness in code.
+                                - Ensure ledManager.update() is called regularly and your dirtyFlags are cleared properly.
+Buttons unresponsive	        - Check wiring (if direct) or multiplexer (if virtual).
+                                - Verify state machine timing (debounce, long-press delay, etc.).
+EEPROM changes not persisting	- Confirm you have saved changes (e.g., SAVE command or dedicated save button).
+                                - Check if EEPROM writes are disabled or broken.
 
 6. Future Updates & Customization
-
-Firmware updates may introduce additional MIDI modes and features.
-Open-source architecture allows user modification.
-External sensors can be integrated via available analog inputs.
+HTML Firmware Editor: A web-based GUI tool that lets you reassign CC slots, LED colors, and Envelope Follower details visually. Available very soon.
 
 7. Technical Specifications
-
-MCU: Teensy 4.1
-MIDI Protocol: USB & Serial
-Potentiometers: 42, multiplexed
-Buttons: 6, multiplexed
-LEDs: WS2812 (Addressable)
-Display: SSD1306 OLED (128x64)
-Power: USB 5V
+MCU: Teensy 4.1 (or similar)
+MIDI Protocol: USB + Serial (DIN)
+Potentiometers: Now replaced by 1 physical pot + 42 “virtual” pot slots in firmware
+Buttons: Multiple momentary, read via direct pins or multiplexer
+LEDs: WS2812 addressable
+Display: SSD1306 OLED (128×64) – originally described as 3×20 in older docs, but actual usage may vary
+Power: 5V via USB or external supply
+EEPROM: Onboard, used to store settings
 
 8. Contact & Support
+For firmware updates, detailed documentation, or to file issues, see our GitHub repository or contact support@bseverns.me.
+We welcome suggestions for expansions or modifications to match your performance style.
 
-For firmware updates and documentation, visit: the MN42 GitHub Repository or email support@bseverns.me.
-Enjoy your MOARkNOBZ MIDI Controller!
+Enjoy the new, streamlined MOARkNOBZ experience! With just one physical pot, you have the power of 42 virtual CC slots at your fingertips— wild modulation opportunities from Envelope Followers, LED feedback, and more. Happy music-making!

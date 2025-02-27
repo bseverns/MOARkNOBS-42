@@ -53,6 +53,15 @@ void MIDIHandler::processIncomingMIDI() {
             usbMIDI.getData2()     // Data2 (e.g., velocity or value)
         );
     }
+
+    while (usbMIDI.read()) {
+        handleMIDI(
+            usbMIDI.getType(),
+            usbMIDI.getChannel(),
+            usbMIDI.getData1(),
+            usbMIDI.getData2()
+        );
+    }
 }
 
 void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2) {

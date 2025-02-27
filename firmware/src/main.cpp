@@ -224,7 +224,7 @@ void setup() {
     displayManager.showText("Initializing...");
     potentiometerManager.loadFromEEPROM();
     Timer1.initialize(1000); // 1ms interrupt
-    Timer1.attachInterrupt(processMIDI);
+    //Timer1.attachInterrupt(processMIDI);
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100); // Configure as 1kHz low-pass filter
 
     for (auto& envelope : envelopeFollowers) {

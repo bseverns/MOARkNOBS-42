@@ -30,23 +30,31 @@ const uint8_t primaryMuxPins[] = {7, 8, 9};
 const uint8_t secondaryMuxPins[] = {10, 11, 12};
 const uint8_t analogPin = 22; //mux reader
 
-// Near the top of ButtonManager.cpp (or a suitable place):
 static const std::pair<int,int> ARG_PAIRS[] = {
-    // Starting with A1 & A2
+    // All pairs beginning with A0
+    {A0, A1},
+    {A0, A2},
+    {A0, A3},
+    {A0, A6},
+    {A0, A7},
+
+    // Then pairs beginning with A1
     {A1, A2},
     {A1, A3},
     {A1, A6},
     {A1, A7},
-    // Then A2 combos
+
+    // Then pairs beginning with A2
     {A2, A3},
     {A2, A6},
     {A2, A7},
-    // Then A3 combos
+
+    // Then pairs beginning with A3
     {A3, A6},
     {A3, A7},
-    // Finally A6,A7
-    {A6, A7},
-};
 
+    // Finally the one pair from A6
+    {A6, A7}
+};
 
 #endif // GLOBALS_H
