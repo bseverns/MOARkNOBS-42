@@ -26,9 +26,6 @@ static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
 static const int NUM_ARG_PAIRS = sizeof(ARG_PAIRS) / sizeof(ARG_PAIRS[0]);
 
-// For each EnvelopeFollower index (0..5), we store the current (A,B) pair offset
-static int argPairIndexForEF[6] = {0, 0, 0, 0, 0, 0};
-
 // We also need a quick reference to the analog pins used by each EF index:
 static const int EF_PINS[6] = { A0, A1, A2, A3, A6, A7 };
 
@@ -183,44 +180,30 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
 /**
  * Called as soon as we confirm a long press.
  */
-void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
-    // Detect if this is one of the 42 virtual pot buttons
+void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context)
+{
     if (index < NUM_VIRTUAL_BUTTONS) {
-        // If envelope follow mode isn't on globally, turn it on
-        if (!context.envelopeFollowMode) {
-            context.envelopeFollowMode = true;
-            context.displayManager.displayStatus("EF: GLOBAL ON", 1500);
-        }
-
-        // Look up if this pot is already assigned to an EF
+        // Long Press (Slot Button): Assign the selected slot to an EF, or cycle which EF is assigned
         auto it = context.potToEnvelopeMap.find(index);
-
         if (it == context.potToEnvelopeMap.end()) {
-            // Not assigned to any EF yet, pick the first EF
-            context.potToEnvelopeMap[index] = 0; // EF0
+            context.potToEnvelopeMap[index] = 0; // Assign EF0
         } else {
-            // Already assigned: cycle to the next EF in the vector
             int currentEF = it->second;
             int nextEF = (currentEF + 1) % context.envelopes.size();
-            context.potToEnvelopeMap[index] = nextEF;
+            it->second = nextEF;
         }
+        int assigned = context.potToEnvelopeMap[index];
+        context.envelopes[assigned].toggleActive(true);
 
-        int assignedEF = context.potToEnvelopeMap[index];
-
-        // Optionally ensure the chosen EF is toggled active
-        context.envelopes[assignedEF].toggleActive(true);
-
-        // Optionally set the pot's CC as that EF's modulation target
-        // or let your existing logic do it. Example:
-        //   int potCC = context.configManager.getPotCCNumber(index);
-        //   context.envelopes[assignedEF].setModulationTarget(potCC);
-
-        // Show updated assignment on display
         char buf[32];
-        sprintf(buf, "POT %d -> EF %d", index, assignedEF);
-        context.displayManager.displayStatus(buf, 2000);
+        sprintf(buf, "Long: Slot %d->EF %d", index, assigned);
+        context.displayManager.displayStatus(buf, 1500);
     }
     else {
+        // Could do something else if a control button is long-pressed
+        char msg[32];
+        sprintf(msg, "LongPress Ctrl %d", index - NUM_VIRTUAL_BUTTONS);
+        context.displayManager.displayStatus(msg, 1000);
     }
 }
 
@@ -258,11 +241,99 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext& contex
 /**
  * Double press logic
  */
-void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& context) {
-    BM_DBG_PRINTLN("Double Press on button " + String(index));
+void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& context)
+{
+    // If user double-pressed a slot button (0..41)
+    if (index < NUM_VIRTUAL_BUTTONS) {
+        auto it = context.potToEnvelopeMap.find(index);
+        if (it == context.potToEnvelopeMap.end()) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return;
+        }
+        int efIndex = it->second;
 
-    // e.g. a switch (index) { ... } for double-press actions, 
-    // or call your existing multi-press logic
+        // Move to next filter index for that EF
+        filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
+
+        // Retrieve the new filter type
+        EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
+        // Apply it
+        context.envelopes[efIndex].setFilterType(newType);
+
+        // Feedback
+        const char* filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+        char msg[32];
+        sprintf(msg, "Slot %d => %s", index, filterName);
+        context.displayManager.displayStatus(msg, 1500);
+    }
+    else {
+        // Double-press on a control button
+        uint8_t cIndex = index - NUM_VIRTUAL_BUTTONS;
+        switch (cIndex) {
+            case 0: {
+                // Double Press (Ctrl #0): Cycle EF filter forward
+                auto it = context.potToEnvelopeMap.find(context.activePot);
+                if (it == context.potToEnvelopeMap.end()) {
+                    context.displayManager.displayStatus("No EF assigned", 1000);
+                    return;
+                }
+                int efIndex = it->second;
+                filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
+            
+                EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
+                context.envelopes[efIndex].setFilterType(newType);
+            
+                const char* name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+                char msg[32];
+                sprintf(msg, "Slot %d => %s", context.activePot, name);
+                context.displayManager.displayStatus(msg, 1500);
+                break;
+            }
+
+            case 1: {
+                // Double Press (Ctrl #1): Cycle EF filter backward
+                // [CHANGED] => use activePot instead of 'index', and properly wrap negative
+                auto it = context.potToEnvelopeMap.find(context.activePot);
+                if (it == context.potToEnvelopeMap.end()) {
+                    context.displayManager.displayStatus("No EF assigned", 1000);
+                    return;
+                }
+                int efIndex = it->second;
+            
+                // Safely move backward by adding NUM_FILTER_TYPES - 1
+                filterTypeIndexForEF[efIndex] =
+                    (filterTypeIndexForEF[efIndex] + NUM_FILTER_TYPES - 1) % NUM_FILTER_TYPES;
+            
+                EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
+                context.envelopes[efIndex].setFilterType(newType);
+            
+                const char* name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+                char msg[32];
+                sprintf(msg, "Slot %d => %s", context.activePot, name);
+                context.displayManager.displayStatus(msg, 1500);
+                break; // <--- ensure we break out of case 1
+            }
+
+            case 4: {
+                // Double Press (Ctrl #4): Undo unsaved changes (reset EEPROM)
+                context.configManager.loadConfiguration(context.potChannels);
+                context.displayManager.displayStatus("EEPROM Reset!", 1500);
+                break;
+            }
+
+            case 5: {
+                // Double Press (Ctrl #5): Save configuration
+                context.configManager.saveConfiguration();
+                context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+                context.displayManager.displayStatus("Config Saved!", 1500);
+                break;
+            }
+
+            default:
+                context.displayManager.displayStatus("DoublePress ???", 1000);
+                break;
+        }
+    }
 }
 
 /**
@@ -275,209 +346,184 @@ void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext& con
     handleSingleButtonPress(index, context);
 }
 
-void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context) {
-    // If this used to do the switch-case for pot vs. control button:
+void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context)
+{
+    // If it's a virtual "slot" button (0..41)
     if (buttonIndex < NUM_VIRTUAL_BUTTONS) {
-        // old logic
+        // Make that pot (slot) the “active slot.”
         context.activePot = buttonIndex;
-        context.displayManager.showText(
-            ("Active BTN: " + String(buttonIndex)).c_str(),
-            "Adjust w/ Master Pot",
-            ""
-        );
+        context.displayManager.displayStatus(("Active Slot=" + String(buttonIndex)).c_str(), 1000);
         return;
     }
 
-    // If it's a control button
+    // Otherwise, it's a control button
     uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
     switch (controlIndex) {
-        case 0: 
-            // toggle EF
+        case 0:
+            // Short Press (Control Button #0): Toggle EF On/Off
             context.envelopeFollowMode = !context.envelopeFollowMode;
-            context.displayManager.displayStatus(context.envelopeFollowMode ? "EF ON" : "EF OFF", 2000);
+            context.displayManager.displayStatus(
+                context.envelopeFollowMode ? "EF: ON" : "EF: OFF",
+                1500
+            );
             break;
-        case 1:{
-            // MIDI increment channel
-            context.activeChannel = (context.activeChannel % 16) + 1;
-            context.displayManager.displayStatus(("CHAN+ " + String(context.activeChannel)).c_str(), 2000);
+
+        case 1: {
+            // Short Press (Control Button #1): Select next slot
+            context.activePot = (context.activePot + 1) % NUM_POTS;
+            context.displayManager.displayStatus(
+                ("Next Slot=" + String(context.activePot)).c_str(), 1500);
+        }
             break;
+
+        case 2: {
+            // Short Press (Control Button #2): Cycle Envelope to follow [if EF on]
+            if (!context.envelopeFollowMode) {
+                context.displayManager.displayStatus("EF is OFF", 1000);
+                break;
             }
-        case 2:{ 
-            //EF<->ARG
-        auto it = context.potToEnvelopeMap.find(context.activePot);
+
+            // If EF is on, cycle to the next EF for the active slot
+            auto it = context.potToEnvelopeMap.find(context.activePot);
             if (it == context.potToEnvelopeMap.end()) {
-                // no envelope assigned to this pot
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                break;
+                // not assigned yet => assign EF0
+                context.potToEnvelopeMap[context.activePot] = 0;
+            } else {
+                int currentEF = it->second;
+                int nextEF = (currentEF + 1) % context.envelopes.size();
+                it->second = nextEF;
             }
-            int envIndex = it->second;
-            EnvelopeFollower &env = context.envelopes[envIndex];
+            int assigned = context.potToEnvelopeMap[context.activePot];
+            context.envelopes[assigned].toggleActive(true);
 
-            // b) read the current mode, toggle it
-            EnvelopeFollower::Mode oldMode = env.getMode();
-            EnvelopeFollower::Mode newMode =
-                (oldMode == EnvelopeFollower::SEF) ? EnvelopeFollower::ARG : EnvelopeFollower::SEF;
-            env.setMode(newMode);
+            char buf[32];
+            sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
+            context.displayManager.displayStatus(buf, 1500);
+        }
+        break;
 
-            // c) user feedback
-            const char* modeString = (newMode == EnvelopeFollower::SEF) ? "SEF" : "ARG";
-            char msg[32];
-            sprintf(msg, "EF %d => %s", envIndex, modeString);
-            context.displayManager.displayStatus(msg, 1500);
-            break;
-            } 
-            case 3:{ 
-                //ARG pair selection
-                // 1) Find which EF is assigned to the active pot:
-                auto it = context.potToEnvelopeMap.find(context.activePot);
-                if (it == context.potToEnvelopeMap.end()) {
-                    context.displayManager.displayStatus("No EF assigned", 1000);
-                    break;
-                }
-                int envIndex = it->second;
-                EnvelopeFollower &env = context.envelopes[envIndex];
-            
-                // 2) Check that EF is in ARG mode
-                if (env.getMode() != EnvelopeFollower::ARG) {
-                    context.displayManager.displayStatus("EF not in ARG mode!", 1000);
-                    break;
-                }
-            
-                // 3) Cycle the pair index for that EF
-                argPairIndexForEF[envIndex] = (argPairIndexForEF[envIndex] + 1) % NUM_ARG_PAIRS;
-            
-                // 4) Apply the new pair to this EnvelopeFollower
-                auto newPair = ARG_PAIRS[argPairIndexForEF[envIndex]];
-                env.setEnvelopePair(newPair.first, newPair.second);
-            
-                // 5) Provide some feedback
-                char msg[32];
-                // e.g. "EF 2 => A=A1, B=A3" if envIndex=2 and new pair is (A1,A3)
-                snprintf(msg, sizeof(msg),
-                         "EF %d => A=%d, B=%d", envIndex, newPair.first, newPair.second);
-                context.displayManager.displayStatus(msg, 1500);
-                break;
-    }
-        case 4:{
-            // Save all pot + EF settings to EEPROM
-            context.configManager.saveConfiguration();
-            context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+        case 3: {
+            // Short Press (Control Button #3): Cycle the active slot’s MIDI channel 1..16
+            uint8_t oldChan = context.configManager.getPotChannel(context.activePot);
+            uint8_t newChan = (oldChan % 16) + 1;  // cycles 1..16
+            context.configManager.setPotChannel(context.activePot, newChan);
 
-            context.displayManager.displayStatus("All settings saved!", 1500);
-            break;
+            char buf[32];
+            sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
+            context.displayManager.displayStatus(buf, 1500);
+        }
+        break;
+
+        case 4: {
+            // Short Press (Control Button #4): Cycle the active slot’s CC number
+            uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
+            uint8_t newCC = (oldCC + 1) % 128; // 0..127
+            context.configManager.setPotCCNumber(context.activePot, newCC);
+
+            char buf[32];
+            sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
+            context.displayManager.displayStatus(buf, 1500);
+        }
+        break;
+
+        case 5: {
+            // Short Press (Control Button #5): Tapped BPM
+            static unsigned long lastTap = 0;
+            unsigned long now = millis();
+            if (lastTap != 0) {
+                float intervalMs = (float)(now - lastTap);
+                float newBPM = 60000.0f / intervalMs; 
+                char buf[32];
+                snprintf(buf, sizeof(buf), "Tapped BPM=%.1f", newBPM);
+                context.displayManager.displayStatus(buf, 1500);
             }
-            case 5: {
-                //tap tempo
-                static unsigned long lastTap = 0;
-                unsigned long now = millis();
-                if (lastTap != 0) {
-                    float intervalMs = (float)(now - lastTap);
-                    float newBPM = 60000.0 / intervalMs; // BPM = 60,000ms / beat-length
-                    // set globalBPM = newBPM, or send a MIDI tempo
-                    // ...
-                    char buf[32];
-                    snprintf(buf, sizeof(buf), "Tapped BPM=%.1f", newBPM);
-                    context.displayManager.displayStatus(buf, 1500);
-                }
-                lastTap = now;
-                break;
-            }
+            lastTap = now;
+        }
+        break;
+
         default:
-            context.displayManager.displayStatus("UNKNOWN BTN", 1000);
+            context.displayManager.displayStatus("UNKNOWN CTRL BTN", 1000);
             break;
     }
 }
 
-/**
- * Also keep your multi-button combos
- */
-void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context) {
-    // The array indices for control buttons #0 and #1
-    uint8_t c0Index = NUM_VIRTUAL_BUTTONS + 0; // 42
-    uint8_t c1Index = NUM_VIRTUAL_BUTTONS + 1; // 43
-    uint8_t c2Index = NUM_VIRTUAL_BUTTONS + 2; // 43
-    uint8_t c3Index = NUM_VIRTUAL_BUTTONS + 3; // 43
+void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context)
+{
+    // Indices for control buttons in the combined array
+    uint8_t c0 = NUM_VIRTUAL_BUTTONS + 0; 
+    uint8_t c1 = NUM_VIRTUAL_BUTTONS + 1;
+    uint8_t c2 = NUM_VIRTUAL_BUTTONS + 2;
+    uint8_t c3 = NUM_VIRTUAL_BUTTONS + 3;
+    uint8_t c4 = NUM_VIRTUAL_BUTTONS + 4;
+    uint8_t c5 = NUM_VIRTUAL_BUTTONS + 5;
 
-    bool c0Pressed = (pressedButtons & (1 << c0Index)) != 0;
-    bool c1Pressed = (pressedButtons & (1 << c1Index)) != 0;
-    bool c2Pressed = (pressedButtons & (1 << c2Index)) != 0;
-    bool c3Pressed = (pressedButtons & (1 << c3Index)) != 0;
+    bool c0Pressed = (pressedButtons & (1 << c0)) != 0;
+    bool c1Pressed = (pressedButtons & (1 << c1)) != 0;
+    bool c2Pressed = (pressedButtons & (1 << c2)) != 0;
+    bool c3Pressed = (pressedButtons & (1 << c3)) != 0;
+    bool c4Pressed = (pressedButtons & (1 << c4)) != 0;
+    bool c5Pressed = (pressedButtons & (1 << c5)) != 0;
 
-
+    // (1) Pressing Button #0 + Button #1 => cycle EF’s ARG method if ARG
     if (c0Pressed && c1Pressed) {
-        // Both control #0 and control #1 are pressed.
-        // Let's cycle the ARG method for the EF assigned to the currently active pot.
-
-        // 1) See if there's an EF assigned to the active pot
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it == context.potToEnvelopeMap.end()) {
             context.displayManager.displayStatus("No EF assigned", 1000);
             return;
         }
-        int envIndex = it->second;
-        EnvelopeFollower &env = context.envelopes[envIndex];
+        int efIndex = it->second;
+        EnvelopeFollower &env = context.envelopes[efIndex];
 
-        // 2) Check if that EF is in ARG mode
+        // Must be in ARG
         if (env.getMode() != EnvelopeFollower::ARG) {
-            context.displayManager.displayStatus("Not in ARG mode!", 1000);
+            context.displayManager.displayStatus("Not in ARG mode", 1000);
             return;
         }
 
-        // 3) Cycle to the next ARG method
-        static const EnvelopeFollower::ARG_Method ALL_METHODS[] = {
+        static EnvelopeFollower::ARG_Method ALL_METHODS[] = {
             EnvelopeFollower::PLUS, EnvelopeFollower::MIN,
             EnvelopeFollower::PECK, EnvelopeFollower::SHAV,
             EnvelopeFollower::SQAR, EnvelopeFollower::BABS,
             EnvelopeFollower::TABS
         };
-        static const char* METHOD_NAMES[] = {
-            "PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"
-        };
-        static const int NUM_METHODS = sizeof(ALL_METHODS) / sizeof(ALL_METHODS[0]);
+        static const char* NAMES[] = {"PLUS","MIN","PECK","SHAV","SQAR","BABS","TABS"};
+        static int argMethodPos[6] = {0,0,0,0,0,0};
 
-        // We'll track each EF's current index in a small static array:
-        static int argMethodIndexForEF[6] = {0,0,0,0,0,0};
-        // (assuming you have 6 EnvelopeFollowers total)
+        argMethodPos[efIndex] = (argMethodPos[efIndex] + 1) 
+                                % (sizeof(ALL_METHODS)/sizeof(ALL_METHODS[0]));
+        env.setARGMethod(ALL_METHODS[argMethodPos[efIndex]]);
 
-        // Move to next
-        argMethodIndexForEF[envIndex] = (argMethodIndexForEF[envIndex] + 1) % NUM_METHODS;
-        EnvelopeFollower::ARG_Method newMethod = ALL_METHODS[argMethodIndexForEF[envIndex]];
-        env.setARGMethod(newMethod);
-
-        // 4) Show feedback
         char msg[32];
-        snprintf(msg, sizeof(msg), "EF %d => %s", envIndex, METHOD_NAMES[argMethodIndexForEF[envIndex]]);
+        sprintf(msg, "EF %d=>%s", efIndex, NAMES[argMethodPos[efIndex]]);
         context.displayManager.displayStatus(msg, 1500);
     }
-    else if (c2Pressed && c3Pressed) {
-        // 1) Find the EF assigned to the currently active pot
-        auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
-            // No EF assigned to this pot
-            context.displayManager.displayStatus("No EF assigned", 1000);
-            return;
+
+    // (2) Pressing Button #2 + Button #3 => cycle light modes
+    if (c2Pressed && c3Pressed) {
+        static uint8_t currentLightMode = 0;
+        currentLightMode = (currentLightMode + 1) % 4;
+        context.ledManager.setModeDisplay(currentLightMode);
+
+        char buf[32];
+        sprintf(buf, "LightMode=%d", currentLightMode);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+
+    // (3) Pressing Button #4 + Button #5 => Turn EF on [if not already], then randomly assign envelope
+    if (c4Pressed && c5Pressed) {
+        if (!context.envelopeFollowMode) {
+            context.envelopeFollowMode = true;
+            context.displayManager.displayStatus("EF turned ON", 1000);
         }
-        int envIndex = it->second;
-        EnvelopeFollower &env = context.envelopes[envIndex];
 
-        // (Optional) If you only want to allow filter cycling in SEF mode:
-        // if (env.getMode() != EnvelopeFollower::SEF) {
-        //     context.displayManager.displayStatus("Not in SEF mode!", 1000);
-        //     return;
-        // }
+        // For the active pot, assign a random EF
+        int randomEF = random(context.envelopes.size());
+        context.potToEnvelopeMap[context.activePot] = randomEF;
+        context.envelopes[randomEF].toggleActive(true);
 
-        // 2) Advance the filterType index for that EF
-        filterTypeIndexForEF[envIndex] = (filterTypeIndexForEF[envIndex] + 1) % NUM_FILTER_TYPES;
-        auto newFilterType = ALL_FILTERS[filterTypeIndexForEF[envIndex]];
-
-        // 3) Apply the new filter type
-        env.setFilterType(newFilterType);
-
-        // 4) Provide some feedback
-        const char* filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[envIndex]];
-        char msg[32];
-        snprintf(msg, sizeof(msg), "EF %d => %s", envIndex, filterName);
-        context.displayManager.displayStatus(msg, 1500);
+        char buf[32];
+        sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
+        context.displayManager.displayStatus(buf, 1500);
     }
 }
 
@@ -499,9 +545,6 @@ bool ButtonManager::readControlButton(uint8_t buttonIndex) {
     return (digitalRead(_controlPins[buttonIndex]) == LOW);
 }
 
-/**
- * If you had them originally
- */
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
     for (int i = 0; i < 3; i++) {
         digitalWrite(_primaryMuxPins[i], (row >> i) & 1);

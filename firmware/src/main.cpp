@@ -207,6 +207,39 @@ void monitorSystemLoad() {
     }
 }
 
+void updateFilterTuning(ButtonManagerContext& context) {
+    // 1. Read raw ADC from freq pot
+    int rawFreq = analogRead(FILTER_FREQ_POT_PIN);  // 0..1023
+    // 2. Read raw ADC from Q pot
+    int rawQ = analogRead(FILTER_RES_POT_PIN);        // 0..1023
+
+    // 3. Map rawFreq => 20..5000 Hz (pick a range that feels good)
+    float freq = map(rawFreq, 0, 1023, 20, 5000);
+
+    // 4. Map rawQ => 0.5..4.0 (a typical resonance range)
+    //    - For instance, map from 0..1023 => 50..400, then /100
+    float q = map(rawQ, 0, 1023, 50, 400) / 100.0f; // => 0.50..4.00
+
+    // 5. Which EF are we tuning? 
+    //    We'll tune the EF assigned to the “activePot” in the context
+    auto it = context.potToEnvelopeMap.find(context.activePot);
+    if (it == context.potToEnvelopeMap.end()) {
+        // If no EF assigned to active pot, do nothing
+        return;
+    }
+    int efIndex = it->second; // e.g. 0..5 if you have 6 EFs total
+
+    // 6. Actually set that EF’s filter freq/Q
+    //    BUT remember, it only affects EFs whose filterType is 
+    //    LOWPASS, HIGHPASS, or BANDPASS. 
+    context.envelopes[efIndex].configureFilter(freq, q);
+    EEPROM.put(EEPROM_FILTER_FREQ, freq);
+    EEPROM.put(EEPROM_FILTER_Q, q);
+
+    // Optionally display or debug-print
+    // Serial.printf("EF %d => freq=%.1f Q=%.2f\n", efIndex, freq, q);
+}
+
 void setup() {
     Serial.begin(31250);
     configManager.begin(potChannels);
@@ -225,10 +258,25 @@ void setup() {
     potentiometerManager.loadFromEEPROM();
     Timer1.initialize(1000); // 1ms interrupt
     //Timer1.attachInterrupt(processMIDI);
+    pinMode(FILTER_FREQ_POT_PIN, INPUT);
+    pinMode(FILTER_RES_POT_PIN, INPUT);
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100); // Configure as 1kHz low-pass filter
 
     for (auto& envelope : envelopeFollowers) {
         envelope.toggleActive(true);
+    }
+
+    float savedFreq, savedQ;
+    EEPROM.get(EEPROM_FILTER_FREQ, savedFreq);
+    EEPROM.get(EEPROM_FILTER_Q, savedQ);
+
+    // Validate or clamp them to e.g. 20..5000 and 0.5..4.0
+    savedFreq = constrain(savedFreq, 20.0f, 5000.0f);
+    savedQ    = constrain(savedQ, 0.5f, 4.0f);
+
+    // Then apply them to your EF or EFs
+    for (auto& ef : envelopeFollowers) {
+        ef.configureFilter(savedFreq, savedQ);
     }
 
     potentiometerManager.loadFromEEPROM();
@@ -277,9 +325,10 @@ void loop() {
         lastSerialProcess = currentMillis;
     }
 
-    // Update LEDs every 50ms
+    // Update LEDs & filter tuning every 50ms
     if (currentMillis - lastLEDUpdate >= LED_TASK_INTERVAL) {
         ledManager.update();
+        updateFilterTuning(buttonContext);
         lastLEDUpdate = currentMillis;
     }
 

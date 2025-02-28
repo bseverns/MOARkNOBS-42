@@ -65,16 +65,29 @@ Your device has multiple momentary buttons—some may be dedicated to system-lev
 Reads & Debounces each button (either direct pins or via a multiplexer).
 Maintains a state machine per button to detect short press, long press, double press, or simultaneous multi-button presses.
 Calls the appropriate action—e.g. toggle Envelope Follower, save to EEPROM, select next CC slot.
-Common Button Press Actions (adapt these to your actual build):
+
+Common Button Press Actions:
 
 Short Press (Control Button #0): Toggle Envelope Follower On/Off.
 Short Press (Control Button #1): Select the next slot for the pot (Slot #0 → Slot #1, etc.).
-Short Press (Control Button #2): Cycle the pot’s MIDI channel from 1..16.
+Short Press (Control Button #2): Cycle Envelope to follow [if EF on]
+Short Press (Control Button #3): Cycle the active slot’s out MIDI channel from 1-16.
+Short Press (Control Button #4): Cycle the active slot's CC number
+Short Press (Control Button #5): Tapped BPM
 
 Long Press (Slot Button): Assign the selected slot to an Envelope Follower or cycle which Envelope Follower is assigned.
-Double Press (some buttons): Cycle an Envelope Follower’s filter type (Linear, Opposite, Exponential, etc.).
 
-Multi-Button: Holding Button #0 and Button #1 simultaneously might cycle the Envelope Follower’s ARG method (PLUS, MIN, etc.), or other advanced combos.
+Double Press (active slot):
+Double Press (Control Button #0): Cycle an Envelope Follower’s filter type forward through the list (Linear, Opposite, Exponential, Random).
+Double Press (Control Button #1): Cycle an Envelope Follower’s filter type backward through the list (Random, Exponential, Opposite, Linear).
+Double Press (Control Button #4): Undo unsaved changes (reset EEPROM)
+Double Press (Control Button #5): Save configuration
+
+Multi-Button: 
+Pressing Button #0 and Button #1 simultaneously will cycle the Envelope Follower’s ARG method (PLUS, MIN, etc.) if ARG.
+Pressing Button #2 and Button #3 will cycle light modes
+Pressing Button #4 and Button #5 will Turn EF on [if not already on] and randomly assign envelope.
+
 
 Note: The actual mapping of these press types to your buttons can differ depending on how you coded handleSingleButtonPress(), onLongPress(), etc. in ButtonManager. Check your firmware’s ButtonManager.cpp for exact references.
 
