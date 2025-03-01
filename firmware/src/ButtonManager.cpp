@@ -448,7 +448,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
 }
 
 void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context) {
-    // Define bit masks for the control buttons (indices offset by NUM_VIRTUAL_BUTTONS)
+    // Define bit masks for the control buttons
     const uint8_t maskCtrl0 = 1 << 0;
     const uint8_t maskCtrl1 = 1 << 1;
     const uint8_t maskCtrl2 = 1 << 2;
