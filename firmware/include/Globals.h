@@ -27,6 +27,10 @@ extern ConfigManager configManager;
 
 #define NUM_POTS 42
 
+//clock
+constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
+extern float g_tappedBPM;
+
 const uint8_t FILTER_FREQ_POT_PIN = 22;
 const uint8_t FILTER_RES_POT_PIN = 23;
 

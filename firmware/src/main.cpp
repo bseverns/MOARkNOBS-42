@@ -27,6 +27,10 @@ DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // 128x64 for SSD13
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 BiquadFilter filter;
 
+//tempo
+unsigned long lastClockTime = 0;
+float g_tappedBPM = 120.0f; // Default to 120 BPM
+
 // Declare PotentiometerManager before ButtonManager
 const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {2, 3, 4, 5, 6, 13}; // Add actual GPIO pins
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
@@ -68,11 +72,41 @@ ButtonManagerContext buttonContext = {
     potToEnvelopeMap
 };
 
+void processInternalClock() {
+    // For 24 PPQN (like MIDI clock), you multiply BPM * 24 = pulses per minute
+    // So each pulse is 60000 / (BPM*24) milliseconds
+    static unsigned long lastTick = 0;
+    static float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
+
+    unsigned long now = millis();
+    msPerTick = 60000.0f / (g_tappedBPM * 24.0f); // recalc in case BPM changed
+
+    if (now - lastTick >= msPerTick) {
+        lastTick += msPerTick; // schedule the next tick
+
+        // do the same code you do on external MIDI Clock:
+        midiBeatPosition = (midiBeatPosition + 1) % 8;
+
+        // Optionally call display update or other “beat-based” logic:
+        displayManager.updateDisplay(
+            midiBeatPosition,
+            std::vector<uint8_t>(), // envelope levels if desired
+            envelopeFollowMode ? "EF ON" : "EF OFF",
+            activePot,
+            activeChannel,
+            envelopeMode
+        );
+    }
+}
 
 void processMIDI() {
-    midiHandler.processIncomingMIDI();
+    midiHandler.processIncomingMIDI(); 
 
     if (midiHandler.isClockTick()) {
+        // Record the time we received an external clock
+        lastClockTime = millis();
+
+        // Advance beat
         midiBeatPosition = (midiBeatPosition + 1) % 8;
 
         // Perform clock-tied updates
@@ -85,9 +119,11 @@ void processMIDI() {
             envelopeMode
         );
 
-        midiHandler.clearClockTick(); // Reset the clock signal flag
+        // Clear the clock flag
+        midiHandler.clearClockTick();
     }
 }
+
 
 void processSerial() {
     while (Serial.available()) {
@@ -317,6 +353,10 @@ void loop() {
     if (currentMillis - lastMIDIProcess >= MIDI_TASK_INTERVAL) {
         processMIDI();
         lastMIDIProcess = currentMillis;
+    }
+    // If no USB MIDI clock, run our internal clock
+    if (currentMillis - lastClockTime > CLOCK_TIMEOUT_MS) {
+    processInternalClock();
     }
 
     // Process Serial commands every 10ms

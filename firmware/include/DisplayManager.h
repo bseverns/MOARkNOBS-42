@@ -9,6 +9,17 @@
 // Forward declaration of ButtonManagerContext to avoid circular dependency
 struct ButtonManagerContext;
 
+#define SHORT_DISPLAY_TIME 1000  // 1s for quick updates
+#define NORMAL_DISPLAY_TIME 1500 // 1.5s for status changes
+#define LONG_DISPLAY_TIME 3000   // 3s for confirmations
+
+struct DisplayState {
+    uint8_t lastCC;
+    uint8_t lastCCValue;
+};
+
+extern DisplayState lastDisplay;
+
 class DisplayManager {
 public:
     /**
@@ -54,6 +65,8 @@ public:
      */
     void updateFromContext(const ButtonManagerContext& context);
 
+    void setTemporaryMessage(const char* message, unsigned long duration = NORMAL_DISPLAY_TIME);
+
     /**
      * Clear the display (both memory buffer and actual screen).
      */
@@ -78,6 +91,9 @@ public:
      * NEW: A helper method for showing ARG info (method + envelope pair).
      */
     void showARGInfo(const char* methodName, int envA, int envB);
+    void showEnvelopeAssignment(int potIndex, int efIndex, const char* mode = nullptr, const char* argMethod = nullptr);
+    void showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel);
+    void updateBeat(uint8_t beatPosition, bool clockRunning); 
 
 private:
     // The Adafruit SSD1306 display object

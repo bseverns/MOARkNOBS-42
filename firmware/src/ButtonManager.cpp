@@ -447,25 +447,17 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
     }
 }
 
-void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context)
-{
-    // Indices for control buttons in the combined array
-    uint8_t c0 = NUM_VIRTUAL_BUTTONS + 0; 
-    uint8_t c1 = NUM_VIRTUAL_BUTTONS + 1;
-    uint8_t c2 = NUM_VIRTUAL_BUTTONS + 2;
-    uint8_t c3 = NUM_VIRTUAL_BUTTONS + 3;
-    uint8_t c4 = NUM_VIRTUAL_BUTTONS + 4;
-    uint8_t c5 = NUM_VIRTUAL_BUTTONS + 5;
+void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context) {
+    // Define bit masks for the control buttons (indices offset by NUM_VIRTUAL_BUTTONS)
+    const uint8_t maskCtrl0 = 1 << 0;
+    const uint8_t maskCtrl1 = 1 << 1;
+    const uint8_t maskCtrl2 = 1 << 2;
+    const uint8_t maskCtrl3 = 1 << 3;
+    const uint8_t maskCtrl4 = 1 << 4;
+    const uint8_t maskCtrl5 = 1 << 5;
 
-    bool c0Pressed = (pressedButtons & (1 << c0)) != 0;
-    bool c1Pressed = (pressedButtons & (1 << c1)) != 0;
-    bool c2Pressed = (pressedButtons & (1 << c2)) != 0;
-    bool c3Pressed = (pressedButtons & (1 << c3)) != 0;
-    bool c4Pressed = (pressedButtons & (1 << c4)) != 0;
-    bool c5Pressed = (pressedButtons & (1 << c5)) != 0;
-
-    // (1) Pressing Button #0 + Button #1 => cycle EF’s ARG method if ARG
-    if (c0Pressed && c1Pressed) {
+    // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
+    if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it == context.potToEnvelopeMap.end()) {
             context.displayManager.displayStatus("No EF assigned", 1000);
@@ -473,54 +465,44 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         }
         int efIndex = it->second;
         EnvelopeFollower &env = context.envelopes[efIndex];
-
-        // Must be in ARG
         if (env.getMode() != EnvelopeFollower::ARG) {
             context.displayManager.displayStatus("Not in ARG mode", 1000);
             return;
         }
-
+        // Cycle through ARG methods (using similar logic as before)
         static EnvelopeFollower::ARG_Method ALL_METHODS[] = {
             EnvelopeFollower::PLUS, EnvelopeFollower::MIN,
             EnvelopeFollower::PECK, EnvelopeFollower::SHAV,
             EnvelopeFollower::SQAR, EnvelopeFollower::BABS,
             EnvelopeFollower::TABS
         };
-        static const char* NAMES[] = {"PLUS","MIN","PECK","SHAV","SQAR","BABS","TABS"};
+        static const char* NAMES[] = {"PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"};
         static int argMethodPos[6] = {0,0,0,0,0,0};
 
-        argMethodPos[efIndex] = (argMethodPos[efIndex] + 1) 
-                                % (sizeof(ALL_METHODS)/sizeof(ALL_METHODS[0]));
+        argMethodPos[efIndex] = (argMethodPos[efIndex] + 1) % (sizeof(ALL_METHODS)/sizeof(ALL_METHODS[0]));
         env.setARGMethod(ALL_METHODS[argMethodPos[efIndex]]);
-
         char msg[32];
         sprintf(msg, "EF %d=>%s", efIndex, NAMES[argMethodPos[efIndex]]);
         context.displayManager.displayStatus(msg, 1500);
     }
-
-    // (2) Pressing Button #2 + Button #3 => cycle light modes
-    if (c2Pressed && c3Pressed) {
+    // (2) Ctrl2 + Ctrl3: Cycle light modes (unchanged)
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl3)) == (maskCtrl2 | maskCtrl3)) {
         static uint8_t currentLightMode = 0;
         currentLightMode = (currentLightMode + 1) % 4;
         context.ledManager.setModeDisplay(currentLightMode);
-
         char buf[32];
         sprintf(buf, "LightMode=%d", currentLightMode);
         context.displayManager.displayStatus(buf, 1500);
     }
-
-    // (3) Pressing Button #4 + Button #5 => Turn EF on [if not already], then randomly assign envelope
-    if (c4Pressed && c5Pressed) {
+    // (3) Ctrl4 + Ctrl5: Toggle EF on and randomly assign envelope
+    else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
         if (!context.envelopeFollowMode) {
             context.envelopeFollowMode = true;
             context.displayManager.displayStatus("EF turned ON", 1000);
         }
-
-        // For the active pot, assign a random EF
         int randomEF = random(context.envelopes.size());
         context.potToEnvelopeMap[context.activePot] = randomEF;
         context.envelopes[randomEF].toggleActive(true);
-
         char buf[32];
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);

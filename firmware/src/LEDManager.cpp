@@ -1,76 +1,63 @@
 #include "LEDManager.h"
 
 LEDManager::~LEDManager() {
-    delete[] leds;       // Clean up allocated memory
-    delete[] dirtyFlags; // Clean up dirty flags
+    delete[] leds;
+    delete[] dirtyFlags;
 }
 
 LEDManager::LEDManager(uint8_t pin, uint16_t numLEDs)
     : pin(pin), numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false) {
-    leds = new CRGB[numLEDs];           // Allocate LED array
-    dirtyFlags = new bool[numLEDs]();  // Allocate dirty flags
+    leds = new CRGB[numLEDs];
+    dirtyFlags = new bool[numLEDs]();
 }
 
 void LEDManager::begin() {
     FastLED.addLeds<WS2812, 6, GRB>(leds, numLEDs).setCorrection(TypicalLEDStrip);
     FastLED.clear();
     FastLED.show();
+    startupAnimation();
 }
-
 
 void LEDManager::setPotValue(uint8_t potIndex, uint8_t value) {
     if (potIndex < numLEDs) {
-        leds[potIndex] = CHSV(map(value, 0, 127, 0, 255), 255, 255); // Set LED color based on value
+        leds[potIndex] = CHSV(map(value, 0, 127, 0, 255), 255, 255);
+        markDirty(potIndex);
     }
 }
 
 void LEDManager::setModeDisplay(uint8_t mode) {
     modeDisplay = mode;
     for (int i = 0; i < numLEDs; i++) {
-        leds[i] = (i == mode) ? CRGB::Blue : CRGB::Black; // Set mode display
+        leds[i] = (i == mode) ? CRGB::Blue : CRGB::Black;
+        markDirty(i);
     }
 }
 
 void LEDManager::setActivePot(uint8_t potIndex) {
-    // Clear the previously highlighted pot
     if (activePot < numLEDs) {
         leds[activePot] = CRGB::Black;
+        markDirty(activePot);
     }
-    // Highlight the active pot in red
     activePot = potIndex;
     if (activePot < numLEDs) {
         leds[activePot] = CRGB::Red;
+        markDirty(activePot);
     }
 }
 
 void LEDManager::indicateEnvelopeMode(bool isActive) {
     envelopeModeActive = isActive;
-    if (isActive) {
-        for (int i = 0; i < numLEDs; i++) {
-            leds[i] = CRGB::Green; // Indicate envelope mode with green LEDs
-        }
+    currentState = isActive ? LEDState::ENVELOPE_MODE : LEDState::IDLE;
+    // For envelope mode, set all LEDs to green; otherwise, no change.
+    for (int i = 0; i < numLEDs; i++) {
+        leds[i] = isActive ? CRGB::Green : leds[i];
+        markDirty(i);
     }
 }
 
 void LEDManager::markDirty(uint8_t index) {
-    if (index < numLEDs) {
+    if (index < numLEDs)
         dirtyFlags[index] = true;
-    }
-}
-
-void LEDManager::update() {
-    bool needsUpdate = false;
-
-    for (int i = 0; i < numLEDs; i++) {
-        if (dirtyFlags[i]) {
-            needsUpdate = true;
-            dirtyFlags[i] = false; // Clear the dirty flag
-        }
-    }
-
-    if (needsUpdate) {
-        FastLED.show(); // Update LEDs only if needed
-    }
 }
 
 void LEDManager::setBrightness(uint8_t b) {
@@ -82,6 +69,7 @@ void LEDManager::setBrightness(uint8_t b) {
 void LEDManager::setColor(CRGB color) {
     for (int i = 0; i < numLEDs; i++) {
         leds[i] = color;
+        markDirty(i);
     }
     FastLED.show();
 }
@@ -91,5 +79,50 @@ uint8_t LEDManager::getBrightness() const {
 }
 
 CRGB LEDManager::getColor() const {
-    return leds[0];  // Assume all LEDs share the same color
+    return leds[0];
+}
+
+void LEDManager::startupAnimation() {
+    for (int i = 0; i < numLEDs; i++) {
+        leds[i] = CRGB::White;
+        FastLED.show();
+        delay(20);
+        leds[i] = CRGB::Black;
+        markDirty(i);
+    }
+}
+
+void LEDManager::setState(LEDState state, uint8_t index) {
+    currentState = state;
+    activeIndex = index;
+    update();
+}
+
+void LEDManager::update() {
+    switch (currentState) {
+        case LEDState::ACTIVE_POT:
+            leds[activeIndex] = CRGB::Red;
+            break;
+        case LEDState::ENVELOPE_MODE:
+            for (int i = 0; i < numLEDs; i++) {
+                leds[i] = CRGB::Green;
+            }
+            break;
+        case LEDState::ARG_MODE:
+            leds[activeIndex] = CRGB::Blue;
+            break;
+        case LEDState::MIDI_UPDATE:
+            leds[activeIndex] = CRGB::Yellow;
+            break;
+        case LEDState::TEMP_FEEDBACK:
+            leds[activeIndex] = CRGB::White;
+            break;
+        case LEDState::IDLE:
+        default:
+            for (int i = 0; i < numLEDs; i++) {
+                leds[i] = CRGB::Black;
+            }
+            break;
+    }
+    FastLED.show();
 }
