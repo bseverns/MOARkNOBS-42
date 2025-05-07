@@ -48,21 +48,31 @@ static const std::pair<int,int> ARG_PAIRS[] = {
     {A0, A7},
 
     // Then pairs beginning with A1
+    {A1, A0},
     {A1, A2},
     {A1, A3},
     {A1, A6},
     {A1, A7},
 
     // Then pairs beginning with A2
+    {A2, A0},
+    {A2, A1},
     {A2, A3},
     {A2, A6},
     {A2, A7},
 
     // Then pairs beginning with A3
+    {A3, A0},
+    {A3, A1},
+    {A3, A2},
     {A3, A6},
     {A3, A7},
 
     // Finally the one pair from A6
+    {A6, A0},
+    {A6, A1},
+    {A6, A2},
+    {A6, A3},
     {A6, A7}
 };
 

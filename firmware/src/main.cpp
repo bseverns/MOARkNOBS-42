@@ -198,7 +198,7 @@ void processSerial() {
             Serial.print(",");
             Serial.print(ledColor.g);
             Serial.print(",");
-            Serial.println(ledColor.b); // `println` ensures newline
+            Serial.println(ledColor.b);
         } 
         else {
             Serial.println("Unknown command: " + command);
