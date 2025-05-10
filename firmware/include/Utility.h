@@ -2,6 +2,7 @@
 #define UTILITY_H
 
 #include <Arduino.h>
+#include <functional>
 #include <vector>
 #include <queue>
 #include <FastLED.h>
@@ -10,6 +11,21 @@
 #include "EEPROM.h"
 
 class EnvelopeFollower;
+
+struct ScheduledTask {
+    std::function<void()> callback;
+    unsigned long interval;
+    unsigned long lastRun;
+    ScheduledTask(std::function<void()> cb, unsigned long intv);
+};
+
+class TaskScheduler {
+public:
+    void addTask(std::function<void()> callback, unsigned long interval);
+    void update();
+private:
+    std::vector<ScheduledTask> tasks;
+};
 
 class Utility {
 public:
@@ -59,5 +75,8 @@ public:
     static void resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue = 0xFF);
     static void processBulkUpdate(const String& command, uint8_t numPots);
 };
+    static TaskScheduler schedulerHigh;
+    static TaskScheduler schedulerMid;
+    static TaskScheduler schedulerLow;
 
 #endif // UTILITY_H

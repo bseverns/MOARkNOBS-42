@@ -208,3 +208,26 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         Serial.println("Error: Insufficient data for all pots");
     }
 }
+
+// --- Task Struct ---
+ScheduledTask::ScheduledTask(std::function<void()> cb, unsigned long intv)
+    : callback(cb), interval(intv), lastRun(0) {}
+
+// --- Task Scheduler ---
+void TaskScheduler::addTask(std::function<void()> callback, unsigned long interval) {
+    tasks.emplace_back(callback, interval);
+}
+
+void TaskScheduler::update() {
+    unsigned long now = millis();
+    for (auto& task : tasks) {
+        if (now - task.lastRun >= task.interval) {
+            task.callback();
+            task.lastRun = now;
+        }
+    }
+}
+
+TaskScheduler Utility::schedulerHigh;
+TaskScheduler Utility::schedulerMid;
+TaskScheduler Utility::schedulerLow;

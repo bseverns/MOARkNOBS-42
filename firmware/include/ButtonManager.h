@@ -3,16 +3,15 @@
 
 #include <Arduino.h>
 #include <vector>
+#include <map>
 #include "DisplayManager.h"
 #include "EnvelopeFollower.h"
 #include "ConfigManager.h"
 #include "Utility.h"
 #include "PotentiometerManager.h"
 
-// Optional: a compile-time DEBUG flag
-// Set to 1 for debug prints, 0 to remove them entirely from your build.
+// Optional: Enable detailed debug logging for development
 #define BUTTON_MANAGER_DEBUG 1
-
 #if BUTTON_MANAGER_DEBUG
   #define BM_DBG_PRINT(x)   Serial.print(x)
   #define BM_DBG_PRINTLN(x) Serial.println(x)
@@ -21,53 +20,67 @@
   #define BM_DBG_PRINTLN(x)
 #endif
 
-// Forward declaration (if needed)
-struct ButtonManagerContext;
-
-// Number of multiplexed & control buttons
+// Total number of multiplexed "virtual" buttons
 #define NUM_VIRTUAL_BUTTONS 42
+// Total number of direct hardware control buttons
 #define NUM_CONTROL_BUTTONS 6
+// Debounce period in milliseconds
 #define DEBOUNCE_DELAY 50
 
 /**
- * A simple state machine for each button to handle short press, long press, etc.
+ * States for each button in the debounce & press state machine.
  */
 enum class ButtonState {
-    IDLE,
-    PRESSED,
-    LONG_PRESS,
-    RELEASED
-};
-
-struct ButtonStateMachine {
-    ButtonState state = ButtonState::IDLE;
-    unsigned long pressTimestamp = 0;
-    unsigned long releaseTimestamp = 0;
-    bool longPressFired = false;
-    unsigned long lastShortRelease = 0; // For double-press detection
-};
-
-// This is the same context struct you likely already have
-// containing references to pot channels, display, etc.
-struct ButtonManagerContext {
-    std::vector<uint8_t>& potChannels;
-    uint8_t& activePot;
-    uint8_t& activeChannel;
-    bool& envelopeFollowMode;
-    ConfigManager &configManager;
-    LEDManager &ledManager;
-    DisplayManager &displayManager;
-    std::vector<EnvelopeFollower> &envelopes;
-    std::map<int, int>& potToEnvelopeMap;
+    IDLE,        // No press detected
+    PRESSED,     // Button is pressed (but not yet long-pressed)
+    LONG_PRESS,  // Long press threshold reached
+    RELEASED     // Button has been released
 };
 
 /**
- * The main ButtonManager class
+ * Tracks timing and flags for each individual button.
+ */
+struct ButtonStateMachine {
+    ButtonState state = ButtonState::IDLE;
+    unsigned long pressTimestamp     = 0;  // When button first pressed
+    unsigned long releaseTimestamp   = 0;  // When button released
+    bool longPressFired              = false; // Ensures long-press event only fires once
+    unsigned long lastShortRelease   = 0;  // Timestamp of last release for double-press detection
+};
+
+/**
+ * Aggregated context passed into processButtons(), containing all
+ * shared resources and state the ButtonManager needs to act.
+ */
+struct ButtonManagerContext {
+    std::vector<uint8_t>& potChannels;          // Mapping of pot indices to CC channels
+    uint8_t& activePot;                         // Currently selected potentiometer index
+    uint8_t& activeChannel;                     // MIDI channel to send CC on
+    bool& envelopeFollowMode;                   // Flag: envelope-following mode active
+    ConfigManager& configManager;               // For loading/saving persistent settings
+    LEDManager& ledManager;                     // For updating visual feedback LEDs
+    DisplayManager& displayManager;             // For writing status to OLED
+    std::vector<EnvelopeFollower>& envelopes;   // List of envelope follower objects
+    std::map<int, int>& potToEnvelopeMap;       // Associative map: pot -> envelope index
+};
+
+/**
+ * ButtonManager handles both:
+ *  - Virtual buttons via external multiplexers
+ *  - Direct control buttons wired to GPIO
+ *
+ * It manages debounce, short/long/double press detection, and
+ * dispatches events into user code via the provided context.
  */
 class ButtonManager {
 public:
     /**
      * Constructor
+     * @param primaryMuxPins   Array of GPIO pins controlling primary mux select lines
+     * @param secondaryMuxPins Array of GPIO pins controlling secondary mux select lines
+     * @param muxAnalogPin     Analog pin reading the mux output
+     * @param controlPins      Array of direct GPIO pins for control buttons
+     * @param potentiometerManager Pointer to PotentiometerManager (to sync mode changes)
      */
     ButtonManager(const uint8_t* primaryMuxPins,
                   const uint8_t* secondaryMuxPins,
@@ -76,92 +89,91 @@ public:
                   PotentiometerManager* potentiometerManager);
 
     /**
-     * Initialize button pins, etc.
+     * Call once in setup() to configure pin modes for control buttons.
      */
     void initButtons();
 
     /**
-     * Main update method—call this regularly in loop().
-     * Processes both multiplexed virtual buttons & direct control buttons.
+     * Call in loop() to scan both virtual & control buttons,
+     * update state machines, and trigger press events.
+     * @param context    Aggregated references & state used for handling events
      */
     void processButtons(ButtonManagerContext& context);
 
 private:
-    // Pin references
+    // Mux select pins & analog input for virtual buttons scan
     const uint8_t* _primaryMuxPins;
     const uint8_t* _secondaryMuxPins;
     uint8_t _muxAnalogPin;
+    // Direct control button pins
     const uint8_t* _controlPins;
+    // Link to PotentiometerManager for mode switching
     PotentiometerManager* _potentiometerManager;
 
-    // Bookkeeping
-    bool buttonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
-    unsigned long lastDebounceTimes[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
+    // Debounce & last-press tracking for all buttons
+    bool buttonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {false};
+    unsigned long lastDebounceTimes[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {0};
 
-    // (Optional) track mode, ARG method, envelope pairs, etc.
-    uint8_t activeMode;
-    uint8_t activeARGMethod;
-    uint8_t argEnvelopeA;
-    uint8_t argEnvelopeB;
+    // Current UI mode (e.g., CC vs ENV vs ARG)
+    uint8_t activeMode      = 0;
+    uint8_t activeARGMethod = 0;
+    uint8_t argEnvelopeA    = 0;
+    uint8_t argEnvelopeB    = 0;
 
-    // For each control button, hold a state machine struct
-    ButtonStateMachine _buttonMachines[NUM_CONTROL_BUTTONS + NUM_VIRTUAL_BUTTONS];
+    // State machines for each button detection
+    ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
 
     /**
-     * Helper to select row,col in multiplexer.
+     * Drive the mux select lines to read a specific row/column.
      */
     void selectMux(uint8_t row, uint8_t col);
 
     /**
-     * Read one multiplexed virtual button.
-     * Return HIGH if pressed, LOW if not (or vice versa).
+     * Read the analog value for a virtual button index via the mux.
+     * @return HIGH (unpressed) or LOW (pressed)
      */
     uint8_t readMuxButton(uint8_t buttonIndex);
 
     /**
-     * Read a control button connected directly to a GPIO pin.
+     * Read a direct control button pin.
+     * @return true if pressed (active LOW), false otherwise
      */
     bool readControlButton(uint8_t buttonIndex);
 
     /**
-     * Called when a single button press (short press) is finalized.
+     * Handle a confirmed short press (single tap). Updates display and state.
      */
     void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context);
 
     /**
-     * Called to handle multi-button combos (or we can adapt it for SHIFT combos).
-     * You can keep or remove this as suits your system.
+     * (Optional) handle combination presses, e.g. SHIFT+button
      */
     void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context);
 
     /**
-     * State machine update for each button
+     * Core state-machine logic for each button. Handles transitions between
+     * IDLE, PRESSED, LONG_PRESS, RELEASED, and fires appropriate callbacks.
      */
     void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext& context);
 
     /**
-     * Called when we detect a transition to a LONG_PRESS state.
+     * Called once when a button transitions into LONG_PRESS state.
      */
     void onLongPress(uint8_t index, ButtonManagerContext& context);
 
     /**
-     * Called when the button is released.
-     * We can check if it was a short press or a long press release.
+     * Called once when a button is released from PRESSED or LONG_PRESS.
      */
     void onRelease(uint8_t index, ButtonManagerContext& context);
 
     /**
-     * If short press, we check if it's a double press or single press
+     * Detect single vs double short-press based on release timing.
      */
     void handleShortPress(uint8_t index, ButtonManagerContext& context);
-
-    /**
-     * Distinguish single press from double press
-     */
     void handleDoublePress(uint8_t index, ButtonManagerContext& context);
 
     /**
-     * Actual single-press logic
+     * Actual action for a single-press event, separate for clarity.
      */
     void doSinglePressAction(uint8_t index, ButtonManagerContext& context);
 };

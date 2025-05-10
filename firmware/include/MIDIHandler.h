@@ -1,13 +1,15 @@
 #ifndef MIDIHANDLER_H
 #define MIDIHANDLER_H
 
-#include <Arduino.h>
-#include <MIDI.h>
+#include "Arduino.h"
+#include "MIDI.h"
+#include "DisplayManager.h"
 
 #define IS_USB_CONNECTED() (usbMIDI.connected())
 
 class MIDIHandler {
 public:
+    void setDisplayManager(DisplayManager* dm) { _displayManager = dm; }
     MIDIHandler();
     void begin();
     void sendControlChange(uint8_t control, uint8_t value, uint8_t channel);
@@ -22,6 +24,7 @@ public:
 
 private:
     bool clockTick = false;
+    DisplayManager* _displayManager = nullptr;
 };
 
 #endif

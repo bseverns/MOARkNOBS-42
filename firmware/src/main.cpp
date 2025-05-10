@@ -26,6 +26,7 @@ LEDManager ledManager(LED_PIN, NUM_LEDS);
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 BiquadFilter filter;
+TaskScheduler scheduler;
 
 //tempo
 unsigned long lastClockTime = 0;
@@ -100,7 +101,7 @@ void processInternalClock() {
 }
 
 void processMIDI() {
-    midiHandler.processIncomingMIDI(); 
+    midiHandler.processIncomingMIDI();
 
     if (midiHandler.isClockTick()) {
         // Record the time we received an external clock
@@ -123,7 +124,6 @@ void processMIDI() {
         midiHandler.clearClockTick();
     }
 }
-
 
 void processSerial() {
     while (Serial.available()) {
@@ -199,7 +199,7 @@ void processSerial() {
             Serial.print(ledColor.g);
             Serial.print(",");
             Serial.println(ledColor.b);
-        } 
+        }
         else {
             Serial.println("Unknown command: " + command);
         }
@@ -256,7 +256,7 @@ void updateFilterTuning(ButtonManagerContext& context) {
     //    - For instance, map from 0..1023 => 50..400, then /100
     float q = map(rawQ, 0, 1023, 50, 400) / 100.0f; // => 0.50..4.00
 
-    // 5. Which EF are we tuning? 
+    // 5. Which EF are we tuning?
     //    We'll tune the EF assigned to the “activePot” in the context
     auto it = context.potToEnvelopeMap.find(context.activePot);
     if (it == context.potToEnvelopeMap.end()) {
@@ -266,8 +266,8 @@ void updateFilterTuning(ButtonManagerContext& context) {
     int efIndex = it->second; // e.g. 0..5 if you have 6 EFs total
 
     // 6. Actually set that EF’s filter freq/Q
-    //    BUT remember, it only affects EFs whose filterType is 
-    //    LOWPASS, HIGHPASS, or BANDPASS. 
+    //    BUT remember, it only affects EFs whose filterType is
+    //    LOWPASS, HIGHPASS, or BANDPASS.
     context.envelopes[efIndex].configureFilter(freq, q);
     EEPROM.put(EEPROM_FILTER_FREQ, freq);
     EEPROM.put(EEPROM_FILTER_Q, q);
@@ -281,6 +281,7 @@ void setup() {
     configManager.begin(potChannels);
     configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     midiHandler.begin();
+    midiHandler.setDisplayManager(&displayManager);
 
     ledManager.begin();
     uint8_t ledBrightness;
@@ -293,10 +294,9 @@ void setup() {
     displayManager.showText("Initializing...");
     potentiometerManager.loadFromEEPROM();
     Timer1.initialize(1000); // 1ms interrupt
-    //Timer1.attachInterrupt(processMIDI);
     pinMode(FILTER_FREQ_POT_PIN, INPUT);
     pinMode(FILTER_RES_POT_PIN, INPUT);
-    filter.configure(BiquadFilter::LOWPASS, 1000, 44100); // Configure as 1kHz low-pass filter
+    filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
     for (auto& envelope : envelopeFollowers) {
         envelope.toggleActive(true);
@@ -305,23 +305,18 @@ void setup() {
     float savedFreq, savedQ;
     EEPROM.get(EEPROM_FILTER_FREQ, savedFreq);
     EEPROM.get(EEPROM_FILTER_Q, savedQ);
-
-    // Validate or clamp them to e.g. 20..5000 and 0.5..4.0
     savedFreq = constrain(savedFreq, 20.0f, 5000.0f);
     savedQ    = constrain(savedQ, 0.5f, 4.0f);
-
-    // Then apply them to your EF or EFs
     for (auto& ef : envelopeFollowers) {
         ef.configureFilter(savedFreq, savedQ);
     }
 
-    potentiometerManager.loadFromEEPROM();
     for (int i = 0; i < NUM_POTS; i++) {
         if (potentiometerManager.getChannel(i) == 0) {
-            potentiometerManager.setChannel(i, 1); // Default to channel 1
+            potentiometerManager.setChannel(i, 1);
         }
         if (potentiometerManager.getCCNumber(i) > 127) {
-            potentiometerManager.setCCNumber(i, i % 128); // Limit CC to valid range
+            potentiometerManager.setCCNumber(i, i % 128);
         }
     }
 
@@ -335,7 +330,6 @@ void setup() {
     displayManager.clear();
     displayManager.showText("MOAR");
 
-    // Print loaded configuration for debugging
     Serial.println("Verifying loaded pot channels:");
     for (int i = 0; i < NUM_POTS; i++) {
         Serial.print("Pot ");
@@ -344,48 +338,42 @@ void setup() {
         Serial.println(potChannels[i]);
     }
     Serial.println("Setup complete!");
+
+    // --- Schedule repeating tasks ---
+    scheduler.addTask([] { processMIDI(); }, MIDI_TASK_INTERVAL);
+
+    scheduler.addTask([] {
+        if (millis() - lastClockTime > CLOCK_TIMEOUT_MS) {
+            processInternalClock();
+        }
+    }, MIDI_TASK_INTERVAL);
+
+    scheduler.addTask([] { processSerial(); }, SERIAL_TASK_INTERVAL);
+
+    scheduler.addTask([] {
+        ledManager.update();
+        updateFilterTuning(buttonContext);
+    }, LED_TASK_INTERVAL);
+
+    scheduler.addTask([] { processEnvelopes(); }, ENVELOPE_TASK_INTERVAL);
+
+    scheduler.addTask([] {
+        if (!displayManager.shouldRunScreensaver()) {
+            displayManager.beginDraw();
+            displayManager.updateFromContext(buttonContext);
+            displayManager.showEnvelopeLevels(envA, envB);
+            displayManager.highlightActivePot(activePot);
+            displayManager.highlightActiveMode(activeMode);
+            displayManager.endDraw();
+        } else {
+            displayManager.runIdleScreensaver();
+        }
+    }, 100);
 }
 
 void loop() {
-    unsigned long currentMillis = millis();
-
-    // Process MIDI every 1ms
-    if (currentMillis - lastMIDIProcess >= MIDI_TASK_INTERVAL) {
-        processMIDI();
-        lastMIDIProcess = currentMillis;
-    }
-    // If no USB MIDI clock, run our internal clock
-    if (currentMillis - lastClockTime > CLOCK_TIMEOUT_MS) {
-    processInternalClock();
-    }
-
-    // Process Serial commands every 10ms
-    if (currentMillis - lastSerialProcess >= SERIAL_TASK_INTERVAL) {
-        processSerial();
-        lastSerialProcess = currentMillis;
-    }
-
-    // Update LEDs & filter tuning every 50ms
-    if (currentMillis - lastLEDUpdate >= LED_TASK_INTERVAL) {
-        ledManager.update();
-        updateFilterTuning(buttonContext);
-        lastLEDUpdate = currentMillis;
-    }
-
-    // Process Envelopes every 5ms
-    if (currentMillis - lastEnvelopeProcess >= ENVELOPE_TASK_INTERVAL) {
-        processEnvelopes();
-        lastEnvelopeProcess = currentMillis;
-    }
-
-    // Process Display every 100ms
-    if (millis() - lastDisplayUpdate > 100) {
-        lastDisplayUpdate = millis();
-        displayManager.updateFromContext(buttonContext);
-    }
-
-    // Process buttons and potentiometers
+    scheduler.update();
     buttonManager.processButtons(buttonContext);
     potentiometerManager.processPots(ledManager, envelopeFollowers);
-    monitorSystemLoad(); // Track and log task execution
+    monitorSystemLoad();
 }

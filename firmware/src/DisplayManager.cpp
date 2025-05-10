@@ -1,3 +1,5 @@
+// DisplayManager.cpp — Merged and polished
+
 #include "DisplayManager.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -5,13 +7,13 @@
 
 DisplayManager::DisplayManager(uint8_t i2cAddress) : _i2cAddress(i2cAddress), _display(128, 64, &Wire) {
     _isDrawing = false;
-    _updateIntervalMs = 100;  // Default update interval
+    _updateIntervalMs = 100;
     _activePot = 0;
     _activeChannel = 0;
     _activeMode = "MIDI";
+    _lastInteractionTime = millis();
 }
 
-// === Begin ===
 bool DisplayManager::begin() {
     if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
         return false;
@@ -21,8 +23,93 @@ bool DisplayManager::begin() {
     return true;
 }
 
+void DisplayManager::triggerFade(uint16_t ms) {
+    _fadeAnim.state = AnimState::FADE_IN;
+    _fadeAnim.duration = ms;
+    _fadeAnim.lastTime = millis();
+    _fadeAnim.brightness = 0;
+}
+
+void DisplayManager::updateFadeAnimation() {
+    uint32_t now = millis();
+    switch (_fadeAnim.state) {
+        case AnimState::FADE_IN:
+            if (now - _fadeAnim.lastTime >= _fadeAnim.duration) {
+                _fadeAnim.state = AnimState::HOLD;
+                _fadeAnim.lastTime = now;
+                _fadeAnim.brightness = 255;
+            } else {
+                _fadeAnim.brightness = map(now - _fadeAnim.lastTime, 0, _fadeAnim.duration, 0, 255);
+            }
+            _display.dim(255 - _fadeAnim.brightness);
+            break;
+        case AnimState::HOLD:
+            if (now - _fadeAnim.lastTime >= 500) {
+                _fadeAnim.state = AnimState::FADE_OUT;
+                _fadeAnim.lastTime = now;
+            }
+            break;
+        case AnimState::FADE_OUT:
+            if (now - _fadeAnim.lastTime >= _fadeAnim.duration) {
+                _fadeAnim.state = AnimState::DONE;
+                _fadeAnim.brightness = 0;
+            } else {
+                _fadeAnim.brightness = map(now - _fadeAnim.lastTime, 0, _fadeAnim.duration, 255, 0);
+            }
+            _display.dim(255 - _fadeAnim.brightness);
+            break;
+        default:
+            break;
+    }
+}
+
+void DisplayManager::runStartupAnimation() {
+    _display.clearDisplay();
+    for (int step = 0; step < 5; step++) {
+        for (int i = 0; i < _display.width(); i += (1 << step)) {
+            _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_WHITE);
+            _display.drawLine(_display.width() - 1, _display.height() - 1, _display.width() - 1 - i, 0, SSD1306_WHITE);
+        }
+        _display.display();
+        delay(250);
+    }
+    delay(500);
+    _display.clearDisplay();
+    _display.setTextSize(2);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
+    _display.println("MOARkNOBS-42");
+    _display.display();
+    delay(1500);
+    _display.clearDisplay();
+    _display.display();
+}
+
+void DisplayManager::runIdleScreensaver() {
+    _display.clearDisplay();
+    for (int i = 0; i < 20; i++) {
+        int x = random(0, _display.width());
+        int y = random(0, _display.height());
+        _display.drawPixel(x, y, SSD1306_WHITE);
+    }
+    _display.display();
+}
+
+void DisplayManager::registerInteraction() {
+    _lastInteractionTime = millis();
+}
+
+bool DisplayManager::shouldRunScreensaver() const {
+    return (millis() - _lastInteractionTime > 90000);
+}
+
+
+void DisplayManager::drawBorder() {
+    _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_WHITE);
+}
+
 void DisplayManager::showText(const char* line1, const char* line2, const char* line3) {
-    if (millis() < _statusTimeout) return;  // Prevent overwriting an active status message
+    if (millis() < _statusTimeout) return;
 
     clear();
     _display.setTextSize(1);
@@ -41,6 +128,7 @@ void DisplayManager::showText(const char* line1, const char* line2, const char* 
         _display.println(line3);
     }
 
+    drawBorder();
     _display.display();
 }
 
@@ -50,12 +138,14 @@ void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
     if (clearDisplay) {
         _display.clearDisplay();
     }
-    
+
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
     _display.print("Value: ");
     _display.println(value);
+
+    drawBorder();
     _display.display();
 }
 
@@ -63,7 +153,7 @@ void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const cha
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
-    
+
     _display.setCursor(0, 0);
     _display.print("Slot ");
     _display.print(potIndex);
@@ -81,11 +171,10 @@ void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const cha
         _display.print("Method: ");
         _display.println(argMethod);
     }
-
+    drawBorder();
     _display.display();
-    _statusTimeout = millis() + NORMAL_DISPLAY_TIME;  
+    _statusTimeout = millis() + NORMAL_DISPLAY_TIME;
 }
-
 
 void DisplayManager::showMode(const char *mode, bool clearDisplay) {
     if (millis() < _statusTimeout) return;
@@ -93,24 +182,42 @@ void DisplayManager::showMode(const char *mode, bool clearDisplay) {
     if (clearDisplay) {
         _display.clearDisplay();
     }
-    
+
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
     _display.print("Mode: ");
     _display.println(mode);
+    drawBorder();
     _display.display();
 }
 
 void DisplayManager::clear() {
-    if (millis() < _statusTimeout) return;  // Prevent clearing an active status message
+    if (millis() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.display();
 }
 
+void DisplayManager::showFilterTuning(float frequency, float q) {
+    if (millis() < _statusTimeout) return;  // Added timeout check for consistency
+
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(0, 0);
+    _display.print("Filter Freq: ");
+    _display.print(frequency, 1);
+    _display.setCursor(0, 10);
+    _display.print("Q Factor: ");
+    _display.print(q, 2);
+
+    drawBorder();
+    _display.display();
+}
+
 void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode) {
-    if (millis() < _statusTimeout) return;  // Prevent overwriting an active status
+    if (millis() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.setTextSize(1);
@@ -126,10 +233,24 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
     _display.setCursor(0, 20);
     _display.print("Mode: ");
     _display.println(envelopeMode);
+
+    // Visualize envelope levels as vertical bars along the bottom
+    const int numEnvelopes = envelopeLevels.size();
+    const int barWidth = 6;
+    const int maxHeight = 20;
+    const int baseY = _display.height() - 1;
+
+    for (int i = 0; i < numEnvelopes; i++) {
+        int barHeight = map(envelopeLevels[i], 0, 127, 0, maxHeight);
+        int x = i * (barWidth + 2);
+        _display.fillRect(x, baseY - barHeight, barWidth, barHeight, SSD1306_WHITE);
+    }
+
+    drawBorder();
     _display.display();
 
     if (statusMessage && statusMessage[0] != '\0') {
-        _statusTimeout = millis() + NORMAL_DISPLAY_TIME;  // Only apply timeout if a status message is shown
+        _statusTimeout = millis() + NORMAL_DISPLAY_TIME;
     }
 }
 
@@ -146,7 +267,7 @@ void DisplayManager::displayStatus(const char *status, unsigned long duration) {
 }
 
 void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
-    if (millis() < _statusTimeout) return;  // Do not overwrite active status
+    if (millis() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.setCursor(0, 0);
@@ -169,9 +290,9 @@ void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
 }
 
 void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
-    if (millis() < _statusTimeout) return;  // Prevent overwriting active status
+    if (millis() < _statusTimeout) return;
 
-    clear();  
+    clear();
 
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
@@ -217,24 +338,24 @@ void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel)
     _display.print("Ch: ");
     _display.println(channel);
     _display.display();
-    _statusTimeout = millis() + SHORT_DISPLAY_TIME;  // Display for 1s
+    _statusTimeout = millis() + SHORT_DISPLAY_TIME;
 }
 
 void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
-    if (millis() < _statusTimeout) return;  // Prevent overwriting status messages
+    if (millis() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
-    
+
     if (clockRunning) {
         _display.print("Beat: ");
         _display.println(beatPosition);
     } else {
         _display.println("No Clock");
     }
-    
+
     _display.display();
 }
 
@@ -248,8 +369,9 @@ void DisplayManager::endDraw() {
     _isDrawing = false;
 }
 
-// === New: Error/debug overlay ===
 void DisplayManager::showError(const char* errorMessage, bool persistent) {
+    if (millis() < _statusTimeout) return;
+
     beginDraw();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
@@ -258,33 +380,34 @@ void DisplayManager::showError(const char* errorMessage, bool persistent) {
     _display.println(errorMessage);
     endDraw();
     if (persistent) {
-        while (1); // Halt system (optional)
+        while (1);
     }
 }
 
-// === Updated: Envelope display (single) ===
 void DisplayManager::showEnvelopeLevel(uint8_t level) {
+    if (millis() < _statusTimeout) return;
+
     const int barHeight = 10;
     const int barY = SCREEN_HEIGHT - barHeight;
-    int barWidth = map(level, 0, 100, 0, SCREEN_WIDTH);
+    int barWidth = map(level, 0, 127, 0, SCREEN_WIDTH);
     _display.fillRect(0, barY, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
     _display.fillRect(0, barY, barWidth, barHeight, SSD1306_WHITE);
 }
 
-// === New: Dual envelope display for ARG mode ===
 void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
+    if (millis() < _statusTimeout) return;
+
     const int barHeight = 5;
     const int gap = 2;
-    int widthA = map(envA, 0, 100, 0, SCREEN_WIDTH);
+    int widthA = map(envA, 0, 127, 0, SCREEN_WIDTH);
     _display.fillRect(0, SCREEN_HEIGHT - barHeight * 2 - gap, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
     _display.fillRect(0, SCREEN_HEIGHT - barHeight * 2 - gap, widthA, barHeight, SSD1306_WHITE);
 
-    int widthB = map(envB, 0, 100, 0, SCREEN_WIDTH);
+    int widthB = map(envB, 0, 127, 0, SCREEN_WIDTH);
     _display.fillRect(0, SCREEN_HEIGHT - barHeight, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
     _display.fillRect(0, SCREEN_HEIGHT - barHeight, widthB, barHeight, SSD1306_WHITE);
 }
 
-// === New: Active selection updates ===
 void DisplayManager::updateActiveSelection(uint8_t activePot, uint8_t activeChannel) {
     _activePot = activePot;
     _activeChannel = activeChannel;
@@ -301,7 +424,6 @@ void DisplayManager::highlightActiveMode(const String& modeName) {
     _display.print(_activeMode);
 }
 
-// === New: Update interval control ===
 void DisplayManager::setUpdateInterval(unsigned long intervalMs) {
     _updateIntervalMs = intervalMs;
 }

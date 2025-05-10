@@ -1,12 +1,10 @@
 #include "ButtonManager.h"
-#include "DisplayManager.h"
 #include "EnvelopeFollower.h"
 #include "Globals.h"
 #include "ConfigManager.h"
 #include "Utility.h"
 #include <map>
 
-extern DisplayManager displayManager;
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
@@ -111,7 +109,7 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
 
         if (stableReading) {
             // interpret 'pressed' as buttonStates[i] == HIGH or LOW, whichever is your design
-            bool pressed = (buttonStates[i] == HIGH); 
+            bool pressed = (buttonStates[i] == HIGH);
             updateButtonStateMachine(i, pressed, context);
         }
     }
@@ -151,6 +149,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
             // short release
             sm.state = ButtonState::RELEASED;
             sm.releaseTimestamp = now;
+            displayManager.registerInteraction()
         } else {
             // still pressed, check for long press
             if (!sm.longPressFired && (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
@@ -167,6 +166,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
             // user just released after a long press
             sm.state = ButtonState::RELEASED;
             sm.releaseTimestamp = now;
+            displayManager.registerInteraction()
         }
         break;
 
@@ -208,7 +208,7 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context)
 }
 
 /**
- * Called after the user releases (short or long). If it wasn't a long press, we treat it as short press. 
+ * Called after the user releases (short or long). If it wasn't a long press, we treat it as short press.
  */
 void ButtonManager::onRelease(uint8_t index, ButtonManagerContext& context) {
     auto &sm = _buttonMachines[index];
@@ -279,10 +279,10 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
                 }
                 int efIndex = it->second;
                 filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
-            
+
                 EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
                 context.envelopes[efIndex].setFilterType(newType);
-            
+
                 const char* name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
                 char msg[32];
                 sprintf(msg, "Slot %d => %s", context.activePot, name);
@@ -299,14 +299,14 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
                     return;
                 }
                 int efIndex = it->second;
-            
+
                 // Safely move backward by adding NUM_FILTER_TYPES - 1
                 filterTypeIndexForEF[efIndex] =
                     (filterTypeIndexForEF[efIndex] + NUM_FILTER_TYPES - 1) % NUM_FILTER_TYPES;
-            
+
                 EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
                 context.envelopes[efIndex].setFilterType(newType);
-            
+
                 const char* name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
                 char msg[32];
                 sprintf(msg, "Slot %d => %s", context.activePot, name);
@@ -432,7 +432,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             unsigned long now = millis();
             if (lastTap != 0) {
                 float intervalMs = (float)(now - lastTap);
-                float newBPM = 60000.0f / intervalMs; 
+                float newBPM = 60000.0f / intervalMs;
                 char buf[32];
                 snprintf(buf, sizeof(buf), "Tapped BPM=%.1f", newBPM);
                 context.displayManager.displayStatus(buf, 1500);
