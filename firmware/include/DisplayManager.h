@@ -95,6 +95,29 @@ public:
     void showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel);
     void updateBeat(uint8_t beatPosition, bool clockRunning); 
 
+
+// 🔹 Buffered draw batching
+void beginDraw();      // Prepares frame (clears, setups)
+void endDraw();        // Commits frame with .display()
+
+// 🔹 Error/debug overlay
+void showError(const char* errorMessage, bool persistent = false);
+
+// 🔹 Specific update helpers
+void updateEnvelope(uint8_t level);
+void showEnvelopeLevel(uint8_t level);  // Single
+void showEnvelopeLevels(uint8_t envA, uint8_t envB);  // Dual
+void updateActiveSelection(uint8_t activePot, uint8_t activeChannel);
+
+// 🔹 Highlighting helpers
+void highlightActivePot(uint8_t potIndex);
+void highlightActiveMode(const String& modeName);
+
+// 🔹 Dynamic update interval control
+void setUpdateInterval(unsigned long intervalMs);
+unsigned long getUpdateInterval() const;
+    
+
 private:
     // The Adafruit SSD1306 display object
     Adafruit_SSD1306 _display;
@@ -102,6 +125,17 @@ private:
     uint8_t _i2cAddress;        // I2C address of the display
     String _statusMessage;      // For storing any temp status messages
     unsigned long _statusTimeout; // For clearing status messages after a delay
+
+    // 🔹 Internal state for batching
+bool _isDrawing = false;
+
+// 🔹 Configurable update interval
+unsigned long _updateIntervalMs = 100;  // Default value or configurable
+
+// 🔹 Active selection tracking
+uint8_t _activePot = 0;
+uint8_t _activeChannel = 0;
+String _activeMode = "MIDI";
 };
 
 #endif // DISPLAYMANAGER_H

@@ -3,18 +3,22 @@
 #include <Adafruit_SSD1306.h>
 #include "ButtonManager.h"
 
-DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t width, uint16_t height)
-    : _display(width, height, &Wire), _i2cAddress(i2cAddress), _statusTimeout(0) {}
+DisplayManager::DisplayManager(uint8_t i2cAddress) : _i2cAddress(i2cAddress), _display(128, 64, &Wire) {
+    _isDrawing = false;
+    _updateIntervalMs = 100;  // Default update interval
+    _activePot = 0;
+    _activeChannel = 0;
+    _activeMode = "MIDI";
+}
 
-    DisplayState lastDisplay = {0, 0};
-
-void DisplayManager::begin() {
-    if (!_display.begin(_i2cAddress)) {
-        Serial.println(F("SSD1306 allocation failed"));
-        for (;;); // Don't proceed, loop forever
+// === Begin ===
+bool DisplayManager::begin() {
+    if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
+        return false;
     }
     _display.clearDisplay();
     _display.display();
+    return true;
 }
 
 void DisplayManager::showText(const char* line1, const char* line2, const char* line3) {
@@ -232,4 +236,76 @@ void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
     }
     
     _display.display();
+}
+
+void DisplayManager::beginDraw() {
+    _display.clearDisplay();
+    _isDrawing = true;
+}
+
+void DisplayManager::endDraw() {
+    _display.display();
+    _isDrawing = false;
+}
+
+// === New: Error/debug overlay ===
+void DisplayManager::showError(const char* errorMessage, bool persistent) {
+    beginDraw();
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(0, 0);
+    _display.println(F("ERROR:"));
+    _display.println(errorMessage);
+    endDraw();
+    if (persistent) {
+        while (1); // Halt system (optional)
+    }
+}
+
+// === Updated: Envelope display (single) ===
+void DisplayManager::showEnvelopeLevel(uint8_t level) {
+    const int barHeight = 10;
+    const int barY = SCREEN_HEIGHT - barHeight;
+    int barWidth = map(level, 0, 100, 0, SCREEN_WIDTH);
+    _display.fillRect(0, barY, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
+    _display.fillRect(0, barY, barWidth, barHeight, SSD1306_WHITE);
+}
+
+// === New: Dual envelope display for ARG mode ===
+void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
+    const int barHeight = 5;
+    const int gap = 2;
+    int widthA = map(envA, 0, 100, 0, SCREEN_WIDTH);
+    _display.fillRect(0, SCREEN_HEIGHT - barHeight * 2 - gap, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
+    _display.fillRect(0, SCREEN_HEIGHT - barHeight * 2 - gap, widthA, barHeight, SSD1306_WHITE);
+
+    int widthB = map(envB, 0, 100, 0, SCREEN_WIDTH);
+    _display.fillRect(0, SCREEN_HEIGHT - barHeight, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
+    _display.fillRect(0, SCREEN_HEIGHT - barHeight, widthB, barHeight, SSD1306_WHITE);
+}
+
+// === New: Active selection updates ===
+void DisplayManager::updateActiveSelection(uint8_t activePot, uint8_t activeChannel) {
+    _activePot = activePot;
+    _activeChannel = activeChannel;
+}
+
+void DisplayManager::highlightActivePot(uint8_t potIndex) {
+    _display.drawRect(5 + potIndex * 10, 50, 8, 8, SSD1306_WHITE);
+}
+
+void DisplayManager::highlightActiveMode(const String& modeName) {
+    _activeMode = modeName;
+    _display.setCursor(0, 56);
+    _display.print(F("MODE: "));
+    _display.print(_activeMode);
+}
+
+// === New: Update interval control ===
+void DisplayManager::setUpdateInterval(unsigned long intervalMs) {
+    _updateIntervalMs = intervalMs;
+}
+
+unsigned long DisplayManager::getUpdateInterval() const {
+    return _updateIntervalMs;
 }
