@@ -3,7 +3,7 @@
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
 #include "EEPROM.h"
-
+#include <core_cm7.h>
 
 // Mapping and Value Transformations
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {

@@ -358,16 +358,23 @@ void setup() {
     scheduler.addTask([] { processEnvelopes(); }, ENVELOPE_TASK_INTERVAL);
 
     scheduler.addTask([] {
-        if (!displayManager.shouldRunScreensaver()) {
-            displayManager.beginDraw();
-            displayManager.updateFromContext(buttonContext);
-            displayManager.showEnvelopeLevels(envA, envB);
-            displayManager.highlightActivePot(activePot);
-            displayManager.highlightActiveMode(activeMode);
-            displayManager.endDraw();
-        } else {
-            displayManager.runIdleScreensaver();
+      if (!displayManager.shouldRunScreensaver()) {
+        displayManager.beginDraw();
+        displayManager.updateFromContext(buttonContext);
+
+        // show the envelope level for the currently‑selected pot
+        auto it = potToEnvelopeMap.find(activePot);
+        if (it != potToEnvelopeMap.end()) {
+          uint8_t lvl = envelopeFollowers[it->second].getEnvelopeLevel();
+          displayManager.showEnvelopeLevel(lvl);
         }
+
+        displayManager.highlightActivePot(activePot);
+        displayManager.highlightActiveMode(envelopeMode);
+        displayManager.endDraw();
+      } else {
+        displayManager.runIdleScreensaver();
+      }
     }, 100);
 }
 
