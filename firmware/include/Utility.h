@@ -68,6 +68,10 @@ public:
     uint8_t activePot,
     uint8_t activeChannel,
     const char* envelopeMode
+    static void processBulkUpdate(const String& command, uint8_t numPots);
+    static TaskScheduler schedulerHigh;
+    static TaskScheduler schedulerMid;
+    static TaskScheduler schedulerLow;
 );
 
     static uint16_t readEEPROMWord(int address);
@@ -75,8 +79,5 @@ public:
     static void resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue = 0xFF);
     static void processBulkUpdate(const String& command, uint8_t numPots);
 };
-    static TaskScheduler schedulerHigh;
-    static TaskScheduler schedulerMid;
-    static TaskScheduler schedulerLow;
 
 #endif // UTILITY_H

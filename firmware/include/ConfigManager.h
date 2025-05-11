@@ -84,6 +84,9 @@ private:
     // Internal helper methods for EEPROM operations
     void readEEPROM();
     void writeEEPROM();
+
+    void readEEPROM(bool backup);
+    void writeEEPROM(bool backup);
 };
 
 #endif // CONFIGURATION_MANAGER_H

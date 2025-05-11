@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "PotentiometerManager.h"
 #include "BiquadFilter.h"
+#include "Globals.h"
 
 // Forward declaration
 class PotentiometerManager;
@@ -43,23 +44,23 @@ public:
         BABS,
         TABS
     };
-    
+
 
 private:
     int audioInputPin;            // Pin for audio input
     int currentEnvelopeLevel;     // Current envelope value
     int modulationTargetCC;       // Target MIDI CC
     bool isActive;                // Is envelope follower active?
-    
+
     // Existing filter type
-    FilterType filterType;      
+    FilterType filterType;
     // Track whether we're in SEF or ARG mode
-    Mode mode;                    
+    Mode mode;
     // Which ARG method is selected
-    ARG_Method argMethod;         
+    ARG_Method argMethod;
     // Envelope indices used by ARG mode
-    int envelopeA;                
-    int envelopeB;                
+    int envelopeA;
+    int envelopeB;
 
     PotentiometerManager* potManager;
     BiquadFilter filter;          // Existing custom filter
@@ -109,8 +110,8 @@ public:
      *Switch between SEF and ARG modes.
      */
     void setMode(Mode newMode);
-    Mode getMode() const { 
-        return mode; 
+    Mode getMode() const {
+        return mode;
     };
 
     /**

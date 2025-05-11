@@ -8,6 +8,15 @@
 #include <Adafruit_SSD1306.h>
 #include <vector>
 #include "ButtonManager.h"
++#include "Globals.h"    // for OLED_WIDTH / OLED_HEIGHT
+
+// how long to hold status screens
+static const unsigned long NORMAL_DISPLAY_TIME = 2000;
+static const unsigned long SHORT_DISPLAY_TIME  =  500;
+
+// Adafruit_SSD1306::width()/height() == OLED_WIDTH/OLED_HEIGHT
+#define SCREEN_WIDTH  OLED_WIDTH
+#define SCREEN_HEIGHT OLED_HEIGHT
 
 enum class AnimState {
   IDLE,

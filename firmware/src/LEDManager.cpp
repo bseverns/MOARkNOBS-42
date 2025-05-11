@@ -103,6 +103,24 @@ void LEDManager::setState(LEDState state, uint8_t index) {
     update();
 }
 
+void LEDManager::setAll(const CRGB& color) {
+    for (auto& led : leds) {
+        led = color;
+        markDirty(&led - &leds[0]);
+    }
+    FastLED.show();
+}
+
+void LEDManager::setGroupColor(const std::string& group, const CRGB& color) {
+    auto it = ledGroups.find(group);
+    if (it == ledGroups.end()) return;
+    for (uint16_t idx : it->second) {
+        leds[idx] = color;
+        markDirty(idx);
+    }
+    FastLED.show();
+}
+
 void LEDManager::update() {
     switch (currentState) {
         case LEDState::ACTIVE_POT:
