@@ -41,7 +41,7 @@ void DisplayManager::updateFadeAnimation() {
             } else {
                 _fadeAnim.brightness = map(now - _fadeAnim.lastTime, 0, _fadeAnim.duration, 0, 255);
             }
-            _display.dim(255 - _fadeAnim.brightness);
+            _display.ssd1306_command(SSD1306_SETCONTRAST, 255 - _fadeAnim.brightness);
             break;
         case AnimState::HOLD:
             if (now - _fadeAnim.lastTime >= 500) {

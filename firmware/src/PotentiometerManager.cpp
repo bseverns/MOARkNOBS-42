@@ -9,8 +9,8 @@ static int smoothedValue[NUM_POTS] = {0};
 #define CHANGE_THRESHOLD 2  // Adjust based on your noise tolerance
 
 PotentiometerManager::PotentiometerManager(
-    const uint8_t* primaryPins, 
-    const uint8_t* secondaryPins, 
+    const uint8_t* primaryPins,
+    const uint8_t* secondaryPins,
     uint8_t analogPin
 ) : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins), analogPin(analogPin) {
     // Initialize pot default values
@@ -140,6 +140,13 @@ void PotentiometerManager::resetEEPROM() {
         potCCNumbers[i] = i;  // Default CC number
         EEPROM.update(i * 2, potChannels[i]);
         EEPROM.update(i * 2 + 1, potCCNumbers[i]);
+    }
+}
+
+void PotentiometerManager::saveToEEPROM() {
+    for (uint8_t i = 0; i < NUM_POTS; i++) {
+        EEPROM.update(i*2,    potChannels[i]);
+        EEPROM.update(i*2+1,  potCCNumbers[i]);
     }
 }
 

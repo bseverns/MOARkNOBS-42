@@ -149,7 +149,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
             // short release
             sm.state = ButtonState::RELEASED;
             sm.releaseTimestamp = now;
-            context.displayManager.registerInteraction()
+            context.displayManager.registerInteraction();
         } else {
             // still pressed, check for long press
             if (!sm.longPressFired && (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
@@ -166,7 +166,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
             // user just released after a long press
             sm.state = ButtonState::RELEASED;
             sm.releaseTimestamp = now;
-            context.displayManager.registerInteraction()
+            context.displayManager.registerInteraction();
         }
         break;
 

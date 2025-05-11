@@ -82,9 +82,6 @@ private:
     std::map<uint8_t, uint8_t> _potCCNumbers; // Potentiometer index -> MIDI CC Number
 
     // Internal helper methods for EEPROM operations
-    void readEEPROM();
-    void writeEEPROM();
-
     void readEEPROM(bool backup);
     void writeEEPROM(bool backup);
 };
