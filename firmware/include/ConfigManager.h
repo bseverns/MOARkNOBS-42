@@ -7,7 +7,6 @@
 #include <map>
 #include <vector>
 #include <FastLED.h>
-#include <EnvelopeFollower.h>
 
 #define EEPROM_START_ADDRESS 0
 #define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
