@@ -38,8 +38,7 @@ struct Animation {
 
 class DisplayManager {
 public:
-    DisplayManager(uint8_t i2cAddress = 0x3C);
-
+    DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight);
     bool begin();
 
     // Existing methods

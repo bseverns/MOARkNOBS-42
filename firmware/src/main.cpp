@@ -135,11 +135,9 @@ void processSerial() {
             commandQueue.push(String(serialBuffer)); // Add the full command to the queue
             serialBufferIndex = 0; // Reset buffer index
         } else if (command == "GET_SCHEMA") {
-          // Print the whole JSON schema from PROGMEM:
-          char buf[sizeof(SCHEMA_JSON)];
-          strcpy_P(buf, SCHEMA_JSON);
-          Serial.println(buf);
-        } else {
+          String schema = makeSchema();
+          Serial.println(schema);
+        }else {
             serialBuffer[serialBufferIndex++] = received;
         }
 
@@ -345,46 +343,72 @@ void setup() {
     Serial.println("Setup complete!");
 
     // --- Schedule repeating tasks ---
-    scheduler.addTask([] { processMIDI(); }, MIDI_TASK_INTERVAL);
-
-    scheduler.addTask([] {
+    // High-priority tasks (1ms interval)
+      Utility::schedulerHigh.addTask([] { processMIDI(); }, MIDI_TASK_INTERVAL);
+      Utility::schedulerHigh.addTask([] {
         if (millis() - lastClockTime > CLOCK_TIMEOUT_MS) {
-            processInternalClock();
+          processInternalClock();
         }
-    }, MIDI_TASK_INTERVAL);
+      }, MIDI_TASK_INTERVAL);
 
-    scheduler.addTask([] { processSerial(); }, SERIAL_TASK_INTERVAL);
+      // Mid-priority tasks (~5-10ms intervals)
+      Utility::schedulerMid.addTask([] { processSerial(); }, SERIAL_TASK_INTERVAL);
+      Utility::schedulerMid.addTask([] { processEnvelopes(); }, ENVELOPE_TASK_INTERVAL);
 
-    scheduler.addTask([] {
+      // Low-priority tasks (~30-100ms intervals)
+      Utility::schedulerLow.addTask([] {
         ledManager.update();
         updateFilterTuning(buttonContext);
-    }, LED_TASK_INTERVAL);
+      }, LED_TASK_INTERVAL);
 
-    scheduler.addTask([] { processEnvelopes(); }, ENVELOPE_TASK_INTERVAL);
+      Utility::schedulerLow.addTask([] {
+        if (!displayManager.shouldRunScreensaver()) {
+          displayManager.beginDraw();
+          displayManager.updateFromContext(buttonContext);
 
-    scheduler.addTask([] {
-      if (!displayManager.shouldRunScreensaver()) {
-        displayManager.beginDraw();
-        displayManager.updateFromContext(buttonContext);
+          auto it = potToEnvelopeMap.find(activePot);
+          if (it != potToEnvelopeMap.end()) {
+            uint8_t lvl = envelopeFollowers[it->second].getEnvelopeLevel();
+            displayManager.showEnvelopeLevel(lvl);
+          }
 
-        // show the envelope level for the currently‑selected pot
-        auto it = potToEnvelopeMap.find(activePot);
-        if (it != potToEnvelopeMap.end()) {
-          uint8_t lvl = envelopeFollowers[it->second].getEnvelopeLevel();
-          displayManager.showEnvelopeLevel(lvl);
+          displayManager.highlightActivePot(activePot);
+          displayManager.highlightActiveMode(envelopeMode);
+          displayManager.endDraw();
+        } else {
+          displayManager.runIdleScreensaver();
         }
-
-        displayManager.highlightActivePot(activePot);
-        displayManager.highlightActiveMode(envelopeMode);
-        displayManager.endDraw();
-      } else {
-        displayManager.runIdleScreensaver();
-      }
-    }, 100);
+      }, 100);
 }
 
 void loop() {
-    scheduler.update();
+  if (Serial.available()) {
+    char c = Serial.read();
+    if (c != '\n' && serialBufferIndex < SERIAL_BUFFER_SIZE - 1) {
+      serialBuffer[serialBufferIndex++] = c;
+    } else {
+      // end of line reached
+      serialBuffer[serialBufferIndex] = '\0';
+      String command = String(serialBuffer);
+      serialBufferIndex = 0;
+
+      if (command == "GET_SCHEMA") {
+        Serial.println(makeSchema());
+      }
+      else if (command == "GET_ALL") {
+        // assemble full settings JSON...
+        Serial.println(configManager.serializeAll());
+      }
+      // (add SET_ALL, etc.)
+
+      // clear buffer for next command
+      memset(serialBuffer, 0, SERIAL_BUFFER_SIZE);
+    }
+  }
+
+    Utility::schedulerHigh.execute();
+    Utility::schedulerMid.execute();
+    Utility::schedulerLow.execute();
     buttonManager.processButtons(buttonContext);
     potentiometerManager.processPots(ledManager, envelopeFollowers);
     monitorSystemLoad();
