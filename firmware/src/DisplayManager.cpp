@@ -5,7 +5,13 @@
 #include <Adafruit_SSD1306.h>
 #include "ButtonManager.h"
 
-DisplayManager::DisplayManager(uint8_t i2cAddress) : _i2cAddress(i2cAddress), _display(128, 64, &Wire) {
+ DisplayManager::DisplayManager(uint8_t i2cAddress,
+                                uint16_t screenWidth,
+                                uint16_t screenHeight)
+     : _i2cAddress(i2cAddress),
+       _screenWidth(screenWidth),
+       _screenHeight(screenHeight),
+       _display(screenWidth, screenHeight, &Wire) {
     _isDrawing = false;
     _updateIntervalMs = 100;
     _activePot = 0;
@@ -56,7 +62,7 @@ void DisplayManager::updateFadeAnimation() {
             } else {
                 _fadeAnim.brightness = map(now - _fadeAnim.lastTime, 0, _fadeAnim.duration, 255, 0);
             }
-            _display.dim(255 - _fadeAnim.brightness);
+            _display.ssd1306_command(SSD1306_SETCONTRAST, 255 - _fadeAnim.brightness);
             break;
         default:
             break;

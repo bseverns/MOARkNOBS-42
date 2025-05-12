@@ -7,8 +7,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <vector>
-#include "ButtonManager.h"
 +#include "Globals.h"    // for OLED_WIDTH / OLED_HEIGHT
+
+// top of DisplayManager.h
+struct ButtonManagerContext;
 
 // how long to hold status screens
 static const unsigned long NORMAL_DISPLAY_TIME = 2000;
@@ -80,7 +82,7 @@ private:
 
     bool _isDrawing;
     unsigned long _updateIntervalMs;
-
+    unsigned long _lastInteractionTime;
     uint8_t _activePot;
     uint8_t _activeChannel;
     String _activeMode;

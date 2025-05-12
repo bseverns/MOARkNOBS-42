@@ -62,13 +62,13 @@ public:
     static void displayStatus(Adafruit_SSD1306& display, const char* status, unsigned long duration);
 
     static void updateDisplay(
-    Adafruit_SSD1306& display,
-    uint8_t beatPosition,
-    const std::vector<EnvelopeFollower>& envelopeFollowers, // Accept EnvelopeFollower objects
-    const char* statusMessage,
-    uint8_t activePot,
-    uint8_t activeChannel,
-    const char* envelopeMode
+      Adafruit_SSD1306& display,
+      uint8_t beatPosition,
+      const std::vector<EnvelopeFollower>& envelopeFollowers, // Accept EnvelopeFollower objects
+      const char* statusMessage,
+      uint8_t activePot,
+      uint8_t activeChannel,
+      const char* envelopeMode
 );
 
     static void processBulkUpdate(const String& command, uint8_t numPots);
@@ -79,7 +79,6 @@ public:
     static uint16_t readEEPROMWord(int address);
     static void writeEEPROMWord(int address, uint16_t value);
     static void resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue = 0xFF);
-    static void processBulkUpdate(const String& command, uint8_t numPots);
 };
 
 #endif // UTILITY_H

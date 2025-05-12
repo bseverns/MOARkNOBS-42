@@ -134,6 +134,11 @@ void processSerial() {
             serialBuffer[serialBufferIndex] = '\0'; // Null-terminate the command
             commandQueue.push(String(serialBuffer)); // Add the full command to the queue
             serialBufferIndex = 0; // Reset buffer index
+        } else if (command == "GET_SCHEMA") {
+          // Print the whole JSON schema from PROGMEM:
+          char buf[sizeof(SCHEMA_JSON)];
+          strcpy_P(buf, SCHEMA_JSON);
+          Serial.println(buf);
         } else {
             serialBuffer[serialBufferIndex++] = received;
         }

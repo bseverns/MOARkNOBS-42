@@ -65,105 +65,153 @@
       font-size: 14px;
     }
   </style>
+  <script type="module">
+  let port, reader, writer;
+
+    const statusEl = document.getElementById("status");
+    const connectBtn = document.getElementById("connect");
+    const saveBtn    = document.getElementById("save");
+
+    async function connect() {
+      try {
+        statusEl.textContent = "🔌 Opening port…";
+        port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 31250 });
+
+        // set up text streams
+        const textDecoder = new TextDecoderStream();
+        port.readable.pipeTo(textDecoder.writable);
+        reader = textDecoder.readable.getReader();
+        writer = port.writable.getWriter();
+
+        statusEl.textContent = "Connected.";
+        connectBtn.disabled = true;   // disable connect after success
+        saveBtn.disabled    = false;  // allow saving now
+
+        // Optionally pre‑load form automatically:
+        const schema = await loadSchema();
+        const config = await loadConfig();
+        buildForm(schema, config);
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = `Connection failed: ${err.message || err}`;
+      }
+    }
+
+    async function send(cmd) {
+        // encode & write
+        const packet = encoder.encode(cmd + "\n");
+        await writer.write(packet);
+
+        // read until newline
+        let response = "";
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          response += value || "";
+          if (response.includes("\n")) break;
+        }
+        return response.trim();
+      }
+
+      async function loadSchema() {
+        try {
+          statusEl.textContent = "Loading schema…";
+          const raw = await send("GET_SCHEMA");
+          statusEl.textContent = "Schema loaded.";
+          return JSON.parse(raw);
+        } catch (err) {
+          statusEl.textContent = `Schema error: ${err.message || err}`;
+          throw err;
+        }
+      }
+
+      async function loadConfig() {
+        try {
+          statusEl.textContent = "Loading config…";
+          const raw = await send("GET_ALL");
+          statusEl.textContent = "Config loaded.";
+          return JSON.parse(raw);
+        } catch (err) {
+          statusEl.textContent = `Config error: ${err.message || err}`;
+          throw err;
+        }
+      }
+
+function buildForm(schema, values) {
+  const container = document.getElementById("form");
+  container.innerHTML = "";
+  for (const field of schema) {
+    if (field.type === "group") {
+      const groupEl = document.createElement("fieldset");
+      groupEl.innerHTML = `<legend>${field.label}</legend>`;
+      for (let i=0; i< (field.count||1); i++) {
+        const sub = document.createElement("div");
+        for (const f of field.fields) {
+          const key = `${field.key}[${i}].${f.subkey}`;
+          const val = values[field.key][i][f.subkey];
+          sub.innerHTML += `
+            <label>${f.label} ${i}:
+              <input name="${key}" type="${f.type}"
+                     value="${val}"
+                     ${f.min?`min=${f.min}`:""} ${f.max?`max=${f.max}`:""}
+                     ${f.step?`step=${f.step}`:""}>
+            </label>
+          `;
+        }
+        groupEl.appendChild(sub);
+      }
+      container.appendChild(groupEl);
+    }
+    else if (field.type === "select") {
+      const sel = document.createElement("select");
+      sel.name = field.key;
+      for (const opt of field.options) {
+        sel.innerHTML += `<option value="${opt}"
+            ${values[field.key]===opt?"selected":""}>${opt}</option>`;
+      }
+      container.innerHTML += `<label>${field.label}</label>`;
+      container.appendChild(sel);
+    }
+  }
+}
+
+async function saveConfig() {
+  try {
+    statusEl.textContent = "Saving…";
+    const data = {};
+    const form = document.querySelector("#form");
+    new FormData(form).forEach((v,k) => {
+      const m = k.match(/([^.]+)\[(\d+)\]\.(.+)/);
+      if (m) {
+        data[m[1]] = data[m[1]]||[];
+        data[m[1]][+m[2]] = data[m[1]][+m[2]]||{};
+        data[m[1]][+m[2]][m[3]] = isNaN(v)?v: +v;
+      } else {
+        data[k] = isNaN(v)?v: +v;
+      }
+    });
+    const resp = await send("SET_ALL " + JSON.stringify(data));
+    statusEl.textContent = resp.startsWith("OK")
+      ? "Saved!"
+      : `Save response: ${resp}`;
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = `Save failed: ${err.message || err}`;
+  }
+}
+
+// wire it up
+connectBtn.addEventListener("click", connect);
+saveBtn.addEventListener("click", saveConfig);
+</script>
+
 </head>
 <body>
-  <h1>Benz EEPROM Settings Manager</h1>
-  <button id="connect">Connect to Device</button>
-  <p id="status">Status: Not connected</p>
-
-  <h2>Potentiometer Configuration</h2>
-  <form id="bulk-update-form">
-    <div id="pot-controls">
-      <script>
-        for (let i = 0; i < 42; i++) {
-          document.write(`
-            <div class="pot-row">
-              <label>Pot ${i + 1}:</label>
-              <input type="number" id="cc-${i}" placeholder="CC (0–127)" min="0" max="127" required>
-              <input type="number" id="channel-${i}" placeholder="Ch (1–16)" min="1" max="16" required>
-              <select id="env-${i}">
-                <option value="-1">MIDI</option>
-                <option value="0">Envelope 1</option>
-                <option value="1">Envelope 2</option>
-                <option value="2">Envelope 3</option>
-                <option value="3">Envelope 4</option>
-                <option value="4">Envelope 5</option>
-                <option value="5">Envelope 6</option>
-              </select>
-            </div>
-          `);
-        }
-      </script>
-    </div>
-    
-    <h2>LED Settings</h2>
-    <div id="led-settings">
-      <label>Brightness:</label>
-      <input type="range" id="led-brightness" min="0" max="255" value="128">
-      
-      <label>Color:</label>
-      <input type="color" id="led-color" value="#ffffff">
-    </div>
-
-    <button type="button" id="update-all">Update All Settings</button>
-  </form>
-
-  <script>
-    let port;
-    let writer;
-
-    document.getElementById('connect').addEventListener('click', async () => {
-      try {
-        port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 9600 });
-        writer = port.writable.getWriter();
-        document.getElementById('status').textContent = 'Status: Connected';
-        fetchCurrentSettings();
-      } catch (err) {
-        console.error('Connection failed:', err);
-        document.getElementById('status').textContent = 'Status: Connection failed';
-      }
-    });
-
-    async function fetchCurrentSettings() {
-      const encoder = new TextEncoder();
-      await writer.write(encoder.encode("GET_ALL\n"));
-    }
-
-    document.getElementById('update-all').addEventListener('click', async () => {
-      if (!port || !port.writable) {
-        alert('Please connect to the device first.');
-        return;
-      }
-
-      let command = "SET_ALL ";
-      for (let i = 0; i < 42; i++) {
-        const cc = document.getElementById(`cc-${i}`).value || 0;
-        const channel = document.getElementById(`channel-${i}`).value || 1;
-        const envelope = document.getElementById(`env-${i}`).value;
-        command += `${cc},${channel},${envelope};`;
-      }
-      
-      // LED settings
-      const brightness = document.getElementById("led-brightness").value;
-      const color = document.getElementById("led-color").value;
-      const [r, g, b] = hexToRgb(color);
-      command += ` LED:${brightness},${r},${g},${b}\n`;
-
-      try {
-        const encoder = new TextEncoder();
-        await writer.write(encoder.encode(command));
-        alert('Settings updated successfully!');
-      } catch (err) {
-        console.error('Failed to send data:', err);
-        alert('Failed to send data.');
-      }
-    });
-
-    function hexToRgb(hex) {
-      let bigint = parseInt(hex.substring(1), 16);
-      return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
-    }
-  </script>
+  <button id="connect">Connect</button>
+  <form id="pot-controls"></form>
+  <div id="led-settings"></div>
+  <div id="status"></div>
+  <button id="save" disabled>Save</button>
 </body>
 </html>

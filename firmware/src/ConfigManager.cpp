@@ -2,6 +2,46 @@
 
 #include "ConfigManager.h"
 
+//eeprom update parameters
+const char SCHEMA_JSON[] PROGMEM = R"rawliteral(
+  [
+    {
+      "key": "pots",
+      "label": "Pot Configuration",
+      "type": "group",
+      "count":  NUM_POTS,
+      "fields": [
+        { "subkey": "cc",      "label": "CC Number",       "type": "number", "min": 0,   "max": 127 },
+        { "subkey": "channel", "label": "MIDI Channel",    "type": "number", "min": 1,   "max": 16  }
+      ]
+    },
+    {
+      "key": "filter",
+      "label": "Filter Settings",
+      "type": "group",
+      "fields": [
+        { "subkey": "freq",   "label": "Cutoff (Hz)",      "type": "number", "min": 20,    "max": 5000 },
+        { "subkey": "q",      "label": "Resonance (Q)",     "type": "number", "min": 0.5,   "max": 4.0, "step": 0.01 }
+      ]
+    },
+    {
+      "key": "led",
+      "label": "LED",
+      "type": "group",
+      "fields": [
+        { "subkey": "brightness", "label": "Brightness", "type": "number", "min": 0, "max": 255 },
+        { "subkey": "color",      "label": "Color",      "type": "color" }
+      ]
+    },
+    {
+      "key": "envelopeMode",
+      "label": "Envelope Mode",
+      "type": "select",
+      "options": ["LINEAR","EXPONENTIAL","LOG"]
+    }
+  ]
+)rawliteral";
+
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
     : _numPots(numPots), _numButtons(numButtons) {}

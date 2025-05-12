@@ -81,9 +81,10 @@ private:
     std::map<uint8_t, uint8_t> _potChannels;   // Potentiometer index -> MIDI Channel
     std::map<uint8_t, uint8_t> _potCCNumbers; // Potentiometer index -> MIDI CC Number
 
-    // Internal helper methods for EEPROM operations
-    void readEEPROM(bool backup);
-    void writeEEPROM(bool backup);
+    // Health‑check & backup support
+    bool checkEEPROMHealth(bool backup);
+    void writeMagicNumber(bool backup);
+    bool loadBackupConfiguration(std::vector<uint8_t>& potChannels);
 };
 
 #endif // CONFIGURATION_MANAGER_H
