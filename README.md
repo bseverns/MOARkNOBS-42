@@ -31,16 +31,13 @@ The MOARkNOBS-42 (MN42) Controller is a versatile MIDI and envelope-follower-bas
 ### Initial Setup
 
 1. **Upload Firmware**: Use PlatformIO or Arduino IDE with Teensyduino to upload the provided firmware to the Teensy 4.0.
-2. **Hardware Assembly**: Utilize the provided Gerber files (`Gerber_btnBRD_2025-04-17.zip`) to manufacture your PCB.
-3. **Connections**:
-
-   * Connect potentiometers to designated multiplexed inputs.
-   * Wire RGB LEDs, OLED display, and buttons according to the PCB design.
+2. **Hardware Assembly**: To be expanded
+3. **Connections**: To be expanded
 
 ### Configuration
 
-* **Web Interface**: Open the provided `website` in a web browser supporting WebSerial to configure MIDI channels, CC numbers, envelope assignments, and LED settings.
-* **OLED Feedback**: Real-time parameter values and statuses are continuously displayed on the OLED screen during operation and can be saved with a double-tap of CNTRL5.
+* **Web Interface**: Open the provided `website-to-be-named` in a web browser supporting WebSerial to configure MIDI channels, CC numbers, envelope assignments, and LED settings.
+* **OLED Feedback**: Real-time parameter values and statuses are continuously displayed on the OLED screen during operation and can be saved with a double-tap of Control #5.
 
 ### Performance Operation
 
@@ -48,7 +45,6 @@ The MOARkNOBS-42 (MN42) Controller is a versatile MIDI and envelope-follower-bas
 * **Button Interaction**:
 
 * Short Press:
-
 * Slot Buttons (0-41): Select active potentiometer.
 
 * Control Button #0: Toggle Envelope Follower (EF) mode ON/OFF.
@@ -64,23 +60,20 @@ The MOARkNOBS-42 (MN42) Controller is a versatile MIDI and envelope-follower-bas
 * Control Button #5: Tap tempo for internal BPM.
 
 * Long Press:
-
 * Slot Buttons (0-41): Dynamically assign or cycle envelope followers.
 
 * Double Press:
-
 * Slot Buttons (0-41): Cycle envelope follower filter types.
 
 * Control Button #0: Cycle envelope filter list forward.
 
 * Control Button #1: Cycle envelope filter list backward.
 
-* Control Button #4: Reset EEPROM to previously saved settings.
+* Control Button #3: Reset EEPROM to previously saved settings. //to be reset in firmware
 
-* Control Button #5: Save current configuration to EEPROM.
+* Control Button #4: Save current configuration to EEPROM.
 
-* Button Combinations:
-
+* Button Combination Short Press:
 * Control #0 + Control #1: Cycle ARG method if ARG mode active.
 
 * Control #2 + Control #3: Cycle LED modes.
@@ -100,7 +93,7 @@ The MOARkNOBS-42 (MN42) Controller is a versatile MIDI and envelope-follower-bas
 
 ## License
 
-BenzKnobz Controller firmware and hardware design files are provided under the MIT License. You are free to modify and redistribute with attribution.
+MOARkNOBS Controller firmware and hardware design files are provided under the MIT License. You are free to modify and redistribute with attribution.
 
 ## Author
 
