@@ -9,8 +9,6 @@
                                 uint16_t screenWidth,
                                 uint16_t screenHeight)
      : _i2cAddress(i2cAddress),
-       _screenWidth(screenWidth),
-       _screenHeight(screenHeight),
        _display(screenWidth, screenHeight, &Wire) {
     _isDrawing = false;
     _updateIntervalMs = 100;
