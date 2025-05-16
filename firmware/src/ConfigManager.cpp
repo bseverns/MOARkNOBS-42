@@ -3,6 +3,7 @@
 #include "ConfigManager.h"
 
 //eeprom update parameters
+//break that single expression into separate s += …; calls, so each step is clearly a String operation:
 static String makeSchema() {
   const uint8_t count = NUM_POTS;
   String s = R"rawliteral(
@@ -12,13 +13,22 @@ static String makeSchema() {
         "type": "array",
         "items": { "type": "number" },
         )rawliteral";
-  s += F("\"count\": ") + count + F(",");
+
+  // instead of: s += F("\"count\": ") + count + F(",");
+  s += F("\"count\": ");
+  s += count;
+  s += F(",");
+
+  // and similarly for the second piece:
   s += R"rawliteral(
-        "minItems": )rawliteral" + count + R"rawliteral(
+        "minItems": )rawliteral";
+  s += count;
+  s += R"rawliteral(
       }
     }
   }
   )rawliteral";
+
   return s;
 }
 
@@ -195,4 +205,28 @@ uint8_t ConfigManager::getEnvelopeA() const {
 
 uint8_t ConfigManager::getEnvelopeB() const {
     return EEPROM.read(EEPROM_ARG_ENV_B);
+}
+
+String ConfigManager::makeSchema() {
+    const uint8_t count = NUM_POTS;
+
+    String s = "{";
+    s += "\"type\": \"object\",";
+    s += "\"properties\": {";
+    s += "\"pots\": {";
+    s += "\"type\": \"array\",";
+    s += "\"items\": {\"type\": \"number\"},";
+    s += "\"count\": ";
+    s += String(count);
+    s += ",";
+    s += "\"minItems\": ";
+    s += String(count);
+    s += ",";
+    s += "\"maxItems\": ";
+    s += String(count);
+    s += "}";
+    s += "}";  // properties
+    s += "}";  // root object
+
+    return s;
 }

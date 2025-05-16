@@ -1,15 +1,18 @@
-// DisplayManager.cpp — Merged and polished
 
+#include <Arduino.h>
 #include "DisplayManager.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "ButtonManager.h"
+#include <vector>
+#include "Globals.h"
 
- DisplayManager::DisplayManager(uint8_t i2cAddress,
-                                uint16_t screenWidth,
-                                uint16_t screenHeight)
-     : _i2cAddress(i2cAddress),
-       _display(screenWidth, screenHeight, &Wire) {
+DisplayManager::DisplayManager(uint8_t i2cAddress,
+                               uint16_t screenWidth,
+                               uint16_t screenHeight)
+  : _display(screenWidth, screenHeight, &Wire),
+    _i2cAddress(i2cAddress)
+{
     _isDrawing = false;
     _updateIntervalMs = 100;
     _activePot = 0;
@@ -43,9 +46,11 @@ void DisplayManager::updateFadeAnimation() {
                 _fadeAnim.lastTime = now;
                 _fadeAnim.brightness = 255;
             } else {
-                _fadeAnim.brightness = map(now - _fadeAnim.lastTime, 0, _fadeAnim.duration, 0, 255);
+                 _display.ssd1306_command(SSD1306_SETCONTRAST);
+                 _display.ssd1306_command(255 - _fadeAnim.brightness);
             }
-            _display.ssd1306_command(SSD1306_SETCONTRAST, 255 - _fadeAnim.brightness);
+            _display.ssd1306_command(SSD1306_SETCONTRAST);
+            _display.ssd1306_command(255 - _fadeAnim.brightness);
             break;
         case AnimState::HOLD:
             if (now - _fadeAnim.lastTime >= 500) {
@@ -58,9 +63,11 @@ void DisplayManager::updateFadeAnimation() {
                 _fadeAnim.state = AnimState::DONE;
                 _fadeAnim.brightness = 0;
             } else {
-                _fadeAnim.brightness = map(now - _fadeAnim.lastTime, 0, _fadeAnim.duration, 255, 0);
+                            _display.ssd1306_command(SSD1306_SETCONTRAST);
+            _display.ssd1306_command(255 - _fadeAnim.brightness);
             }
-            _display.ssd1306_command(SSD1306_SETCONTRAST, 255 - _fadeAnim.brightness);
+            _display.ssd1306_command(SSD1306_SETCONTRAST);
+            _display.ssd1306_command(255 - _fadeAnim.brightness);
             break;
         default:
             break;
@@ -220,7 +227,7 @@ void DisplayManager::showFilterTuning(float frequency, float q) {
     _display.display();
 }
 
-void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode) {
+void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode){
     if (millis() < _statusTimeout) return;
 
     _display.clearDisplay();
@@ -392,9 +399,9 @@ void DisplayManager::showEnvelopeLevel(uint8_t level) {
     if (millis() < _statusTimeout) return;
 
     const int barHeight = 10;
-    const int barY = SCREEN_HEIGHT - barHeight;
-    int barWidth = map(level, 0, 127, 0, SCREEN_WIDTH);
-    _display.fillRect(0, barY, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
+    const int barY = _display.height() - barHeight;
+    int barWidth = map(level, 0, 127, 0, _display.width());
+    _display.fillRect(0, barY, _display.width(), barHeight, SSD1306_BLACK);
     _display.fillRect(0, barY, barWidth, barHeight, SSD1306_WHITE);
 }
 
@@ -403,13 +410,13 @@ void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
 
     const int barHeight = 5;
     const int gap = 2;
-    int widthA = map(envA, 0, 127, 0, SCREEN_WIDTH);
-    _display.fillRect(0, SCREEN_HEIGHT - barHeight * 2 - gap, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
-    _display.fillRect(0, SCREEN_HEIGHT - barHeight * 2 - gap, widthA, barHeight, SSD1306_WHITE);
+    int widthA = map(envA, 0, 127, 0, _display.width());
+    _display.fillRect(0, _display.height() - barHeight * 2 - gap, _display.width(), barHeight, SSD1306_BLACK);
+    _display.fillRect(0, _display.height() - barHeight * 2 - gap, widthA, barHeight, SSD1306_WHITE);
 
-    int widthB = map(envB, 0, 127, 0, SCREEN_WIDTH);
-    _display.fillRect(0, SCREEN_HEIGHT - barHeight, SCREEN_WIDTH, barHeight, SSD1306_BLACK);
-    _display.fillRect(0, SCREEN_HEIGHT - barHeight, widthB, barHeight, SSD1306_WHITE);
+    int widthB = map(envB, 0, 127, 0, _display.width());
+    _display.fillRect(0, _display.height() - barHeight, _display.width(), barHeight, SSD1306_BLACK);
+    _display.fillRect(0, _display.height() - barHeight, widthB, barHeight, SSD1306_WHITE);
 }
 
 void DisplayManager::updateActiveSelection(uint8_t activePot, uint8_t activeChannel) {

@@ -29,7 +29,9 @@ class EnvelopeFollower;
 
 class ConfigManager {
 public:
-    ConfigManager(uint8_t numPots, uint8_t numButtons);
+     ConfigManager(uint8_t numPots, uint8_t numButtons);
+  static String makeSchema();           // declare here
+  String serializeAll() const;          // see next point
 
     // Initialize configuration (e.g., load from EEPROM)
     void begin(std::vector<uint8_t>& potChannels);
@@ -72,6 +74,9 @@ public:
     uint8_t getEnvelopeA() const;
     uint8_t getEnvelopeB() const;
 
+    bool shouldRunScreensaver() const;
+  void runIdleScreensaver();
+
 private:
     uint8_t _numPots;
     uint8_t _numButtons;
@@ -84,6 +89,8 @@ private:
     bool checkEEPROMHealth(bool backup);
     void writeMagicNumber(bool backup);
     bool loadBackupConfiguration(std::vector<uint8_t>& potChannels);
+    void readEEPROM(bool backup);
+    void writeEEPROM(bool backup);
 };
 
 #endif // CONFIGURATION_MANAGER_H

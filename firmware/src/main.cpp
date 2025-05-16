@@ -128,15 +128,15 @@ void processMIDI() {
 void processSerial() {
     while (Serial.available()) {
         char received = Serial.read();
-
+String command = String(serialBuffer);
+      command.trim();
         // End of command or buffer overflow
         if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
             serialBuffer[serialBufferIndex] = '\0'; // Null-terminate the command
             commandQueue.push(String(serialBuffer)); // Add the full command to the queue
             serialBufferIndex = 0; // Reset buffer index
         } else if (command == "GET_SCHEMA") {
-          String schema = makeSchema();
-          Serial.println(schema);
+            Serial.println(ConfigManager::makeSchema());
         }else {
             serialBuffer[serialBufferIndex++] = received;
         }
@@ -382,33 +382,33 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available()) {
-    char c = Serial.read();
-    if (c != '\n' && serialBufferIndex < SERIAL_BUFFER_SIZE - 1) {
-      serialBuffer[serialBufferIndex++] = c;
+   if (Serial.available()) {
+    // read up to newline, drop the '\n'
+    String command = Serial.readStringUntil('\n');
+    command.trim();  // remove any '\r' or extra whitespace
+
+    if (command == "GET_SCHEMA") {
+      // call the method on your instance:
+      Serial.println(configManager.makeSchema());
+    }
+    else if (command == "GET_ALL") {
+      Serial.println(configManager.serializeAll());
     } else {
       // end of line reached
       serialBuffer[serialBufferIndex] = '\0';
       String command = String(serialBuffer);
       serialBufferIndex = 0;
 
-      if (command == "GET_SCHEMA") {
-        Serial.println(makeSchema());
-      }
-      else if (command == "GET_ALL") {
-        // assemble full settings JSON...
-        Serial.println(configManager.serializeAll());
-      }
-      // (add SET_ALL, etc.)
+      
 
       // clear buffer for next command
       memset(serialBuffer, 0, SERIAL_BUFFER_SIZE);
     }
   }
 
-    Utility::schedulerHigh.execute();
-    Utility::schedulerMid.execute();
-    Utility::schedulerLow.execute();
+    Utility::schedulerHigh.update();
+    Utility::schedulerMid.update();
+    Utility::schedulerLow.update();
     buttonManager.processButtons(buttonContext);
     potentiometerManager.processPots(ledManager, envelopeFollowers);
     monitorSystemLoad();

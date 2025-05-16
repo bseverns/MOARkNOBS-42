@@ -2,6 +2,8 @@
 #define LEDMANAGER_H
 
 #include <vector>
+#include <map>
+#include <string>
 #include <FastLED.h>
 
 enum class LEDState {
