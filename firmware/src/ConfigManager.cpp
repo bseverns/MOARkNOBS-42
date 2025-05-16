@@ -230,3 +230,23 @@ String ConfigManager::makeSchema() {
 
     return s;
 }
+
+String ConfigManager::serializeAll() const {
+    String output = "{ \"pots\": [";
+
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        output += "{";
+        output += "\"channel\": ";
+        output += _potChannels.at(i);
+        output += ", \"cc\": ";
+        output += _potCCNumbers.at(i);
+        output += "}";
+
+        if (i < _numPots - 1) {
+            output += ",";
+        }
+    }
+
+    output += "] }";
+    return output;
+}

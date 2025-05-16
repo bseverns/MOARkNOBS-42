@@ -52,6 +52,8 @@ uint8_t activePot = 0xFF;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
 const char* envelopeMode = "LINEAR"; // Default envelope mode
+int NORMAL_DISPLAY_TIME = 30000;
+int SHORT_DISPLAY_TIME = 10000;
 
 // Timers for processing
 unsigned long lastMIDIProcess = 0;

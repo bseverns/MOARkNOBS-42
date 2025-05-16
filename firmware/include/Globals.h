@@ -39,8 +39,8 @@ const uint8_t primaryMuxPins[] = {7, 8, 9};
 const uint8_t secondaryMuxPins[] = {10, 11, 12};
 const uint8_t analogPin = 4; //mux reader
 
-int NORMAL_DISPLAY_TIME = 30000;
-int SHORT_DISPLAY_TIME = 10000;
+extern int NORMAL_DISPLAY_TIME;
+extern int SHORT_DISPLAY_TIME;
 
 static const std::pair<int,int> ARG_PAIRS[] = {
     // All pairs beginning with A0
