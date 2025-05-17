@@ -19,11 +19,11 @@ The MOARkNOBS-42 (MN42) Controller is a versatile MIDI and envelope-follower-bas
 ## Hardware Specifications
 
 * **Microcontroller**: Teensy 4.0
-* **Analog Inputs**: 42 multiplexed potentiometers
+* **Analog Inputs**: 42 multiplexed Buttons that connect with values from potentiometers and envelopes.
 * **Digital Inputs**: 6 direct control buttons
 * **LED Feedback**: WS2812 RGB LED strips (42 LEDs)
 * **Display**: 128x64 OLED (SSD1306)
-* **Connection**: MIDI DIN (Serial) and USB MIDI
+* **Connection**: MIDI DIN-5 and USB MIDI
 * **Power Supply**: USB 5V or external regulated 5V supply
 
 ## Using the Controller
@@ -32,7 +32,7 @@ The MOARkNOBS-42 (MN42) Controller is a versatile MIDI and envelope-follower-bas
 
 1. **Upload Firmware**: Use PlatformIO or Arduino IDE with Teensyduino to upload the provided firmware to the Teensy 4.0.
 2. **Hardware Assembly**: To be expanded
-3. **Connections**: To be expanded
+3. **Connections**: To be expanded - this is still a work in progress
 
 ### Configuration
 
