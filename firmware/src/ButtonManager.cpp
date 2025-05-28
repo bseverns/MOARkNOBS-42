@@ -533,3 +533,7 @@ void ButtonManager::selectMux(uint8_t row, uint8_t col) {
         digitalWrite(_secondaryMuxPins[i], (col >> i) & 1);
     }
 }
+
+bool ButtonManager::isMuxButtonPressed(uint8_t index) {
+    return readMuxButton(index) == LOW;  // assuming LOW means pressed
+}

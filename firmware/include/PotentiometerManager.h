@@ -59,6 +59,8 @@ public:
 
     void setArgEnvelopePair(int a, int b);
     void getArgEnvelopePair(int &a, int &b) const;
+
+    int readRawPot(uint8_t potIndex); //testing shortcut
 };
 
 #endif // POTENTIOMETER_MANAGER_H

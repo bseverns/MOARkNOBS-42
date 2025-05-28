@@ -99,6 +99,7 @@ public:
      * @param context    Aggregated references & state used for handling events
      */
     void processButtons(ButtonManagerContext& context);
+    bool isMuxButtonPressed(uint8_t index);
 
 private:
     // Mux select pins & analog input for virtual buttons scan

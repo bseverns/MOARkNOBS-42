@@ -24,7 +24,10 @@ extern ConfigManager configManager;
 #define ENVELOPE_TASK_INTERVAL 5  // 5ms for Envelope processing
 #define EEPROM_FILTER_FREQ 1000
 #define EEPROM_FILTER_Q    1004
-
+#define POT_RANGE_MIN 10     // adjust to desired minimum acceptable delta value
+#define ENV_RANGE_MIN 5      // adjust based on your signal threshold requirements
+static const uint8_t buttonMuxAnalogPin = A4;
+static const uint8_t potMuxAnalogPin    = A5;
 #define NUM_POTS 42
 
 //clock

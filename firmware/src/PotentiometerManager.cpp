@@ -159,3 +159,15 @@ void PotentiometerManager::getArgEnvelopePair(int &a, int &b) const {
     a = argEnvA;
     b = argEnvB;
 }
+
+int PotentiometerManager::readRawPot(uint8_t potIndex) {
+    // decode into bank and pot bits
+    uint8_t bank = potIndex >> SECONDARY_MUX_PINS;
+    uint8_t pot  = potIndex & ((1 << SECONDARY_MUX_PINS) - 1);
+
+    // do the private selects
+    selectMuxBank(bank);
+    selectPotBank(pot);
+    delayMicroseconds(5);           // settle time
+    return analogRead(analogPin);   // direct raw read
+}
