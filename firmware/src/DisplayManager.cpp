@@ -38,40 +38,47 @@ void DisplayManager::triggerFade(uint16_t ms) {
 }
 
 void DisplayManager::updateFadeAnimation() {
+    if (_fadeAnim.state == AnimState::IDLE || _fadeAnim.state == AnimState::DONE) {
+        return;
+    }
+
     uint32_t now = millis();
+    uint32_t elapsed = now - _fadeAnim.lastTime;
+
     switch (_fadeAnim.state) {
-        case AnimState::FADE_IN:
-            if (now - _fadeAnim.lastTime >= _fadeAnim.duration) {
+        case AnimState::FADE_IN: {
+            if (elapsed >= _fadeAnim.duration) {
                 _fadeAnim.state = AnimState::HOLD;
                 _fadeAnim.lastTime = now;
                 _fadeAnim.brightness = 255;
             } else {
-                 _display.ssd1306_command(SSD1306_SETCONTRAST);
-                 _display.ssd1306_command(255 - _fadeAnim.brightness);
+                float progress = static_cast<float>(elapsed) / _fadeAnim.duration;
+                _fadeAnim.brightness = static_cast<uint8_t>(progress * 255);
             }
-            _display.ssd1306_command(SSD1306_SETCONTRAST);
-            _display.ssd1306_command(255 - _fadeAnim.brightness);
             break;
+        }
         case AnimState::HOLD:
-            if (now - _fadeAnim.lastTime >= 500) {
+            if (elapsed >= 500) {
                 _fadeAnim.state = AnimState::FADE_OUT;
                 _fadeAnim.lastTime = now;
             }
             break;
-        case AnimState::FADE_OUT:
-            if (now - _fadeAnim.lastTime >= _fadeAnim.duration) {
+        case AnimState::FADE_OUT: {
+            if (elapsed >= _fadeAnim.duration) {
                 _fadeAnim.state = AnimState::DONE;
                 _fadeAnim.brightness = 0;
             } else {
-                            _display.ssd1306_command(SSD1306_SETCONTRAST);
-            _display.ssd1306_command(255 - _fadeAnim.brightness);
+                float progress = 1.0f - static_cast<float>(elapsed) / _fadeAnim.duration;
+                _fadeAnim.brightness = static_cast<uint8_t>(progress * 255);
             }
-            _display.ssd1306_command(SSD1306_SETCONTRAST);
-            _display.ssd1306_command(255 - _fadeAnim.brightness);
             break;
+        }
         default:
             break;
     }
+
+    _display.ssd1306_command(SSD1306_SETCONTRAST);
+    _display.ssd1306_command(_fadeAnim.brightness);
 }
 
 void DisplayManager::runStartupAnimation() {
