@@ -2,7 +2,7 @@
 #define MIDIHANDLER_H
 
 #include "Arduino.h"
-#include "MIDI.h"
+//#include "MIDI.h"
 #include "DisplayManager.h"
 
 #define IS_USB_CONNECTED() (usbMIDI.connected())
