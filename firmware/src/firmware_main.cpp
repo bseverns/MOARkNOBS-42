@@ -1,3 +1,6 @@
+//cc-share-alike-attribution B.Severns 2025
+//MOARkNOBS-42 was inspired by the Bastl Instruments '60 Knobs' controller.
+
 #include <Arduino.h>
 #include "MIDIHandler.h"
 #include "LEDManager.h"
