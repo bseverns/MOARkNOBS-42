@@ -113,8 +113,28 @@ void ConfigManager::writeEEPROM(bool backup) {
 }
 
 // Initialize configuration
-void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
-    loadConfiguration(potChannels);
+void ConfigManager::begin() {
+    for (uint8_t i = 0; i < NUM_SLOTS; i++) {
+        loadSlot(i, slots[i]);
+    }
+}
+
+void ConfigManager::saveSlot(uint8_t slotIndex, const MIDISlot &slot) {
+    uint16_t addr = EEPROM_SLOT_BASE + (slotIndex * SLOT_EEPROM_SIZE);
+    EEPROM.update(addr, static_cast<uint8_t>(slot.type));
+    EEPROM.update(addr + 1, slot.midiChannel);
+    EEPROM.update(addr + 2, slot.data1);
+    EEPROM.update(addr + 3, slot.efIndex);
+    EEPROM.update(addr + 4, slot.active ? 1 : 0);
+}
+
+void ConfigManager::loadSlot(uint8_t slotIndex, MIDISlot &slot) {
+    uint16_t addr = EEPROM_SLOT_BASE + (slotIndex * SLOT_EEPROM_SIZE);
+    slot.type = static_cast<MIDIMessageType>(EEPROM.read(addr));
+    slot.midiChannel = EEPROM.read(addr + 1);
+    slot.data1 = EEPROM.read(addr + 2);
+    slot.efIndex = EEPROM.read(addr + 3);
+    slot.active = EEPROM.read(addr + 4) == 1;
 }
 
 // Potentiometer accessors

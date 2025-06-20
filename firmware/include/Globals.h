@@ -8,6 +8,25 @@
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
 
+enum class MIDIMessageType : uint8_t {
+    OFF = 0,       
+    CC,
+    Note,
+    PitchBend,
+    ProgramChange,
+    Aftertouch
+};
+
+struct MIDISlot {
+    MIDIMessageType type;     // MIDI message type (CC, Note, etc.)
+    uint8_t midiChannel;      // MIDI Channel (1-16)
+    uint8_t data1;            // CC#, Note#, Program#, etc.
+    uint8_t efIndex;          // EnvelopeFollower (0-5, 255 if none)
+    bool active;              // Slot active/inactive
+};
+
+constexpr uint8_t NUM_SLOTS = 42;
+
 class ConfigManager;
 extern ConfigManager configManager;
 
@@ -29,6 +48,10 @@ extern ConfigManager configManager;
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
 #define NUM_POTS 42
+
+// EEPROM storage constants
+constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
+constexpr uint8_t SLOT_EEPROM_SIZE = sizeof(MIDISlot);  // typically 5 bytes
 
 //clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback

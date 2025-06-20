@@ -33,8 +33,12 @@ public:
   static String makeSchema();           // declare here
   String serializeAll() const;          // see next point
 
+  MIDISlot slots[NUM_SLOTS];
+
     // Initialize configuration (e.g., load from EEPROM)
-    void begin(std::vector<uint8_t>& potChannels);
+    void begin();
+    void saveSlot(uint8_t slotIndex, const MIDISlot &slot);
+    void loadSlot(uint8_t slotIndex, MIDISlot &slot);
 
     // Accessor methods for key configurations
     uint8_t getPotChannel(uint8_t potIndex) const;
