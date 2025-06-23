@@ -5,40 +5,59 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Benz EEPROM Settings Manager</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    #pot-controls {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 20px;
-      justify-items: center;
-      align-items: start;
-      margin-top: 20px;
-    }
-    .pot-row {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      background-color: #f9f9f9;
-    }
-    .pot-row label {
-      font-weight: bold;
-      margin-bottom: 5px;
-    }
-    .pot-row input, .pot-row select {
-      width: 60px;
-      text-align: center;
-      margin-bottom: 5px;
-    }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: #111;
+  color: #eee;
+  margin: 20px;
+}
+h1, h2 {
+  text-align: center;
+  color: #00ffff;
+}
+#pot-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+.pot-row {
+  background-color: #222;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+}
+.pot-row label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.pot-row input, .pot-row select {
+  background: #333;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 4px;
+  width: 100%;
+  padding: 4px;
+}
+button {
+  background: #007BFF;
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  font-size: 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+button:hover {
+  background: #0056b3;
+}
+#status {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+  color: #ffcc00;
+}
     #led-settings {
       margin-top: 20px;
       text-align: center;
@@ -208,10 +227,10 @@ saveBtn.addEventListener("click", saveConfig);
 
 </head>
 <body>
+  <h1>MOARkNOBZ Configurator</h1>
   <button id="connect">Connect</button>
-  <form id="pot-controls"></form>
-  <div id="led-settings"></div>
-  <div id="status"></div>
+  <div id="form"></div>
   <button id="save" disabled>Save</button>
+  <div id="status"></div>
 </body>
 </html>
