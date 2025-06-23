@@ -57,6 +57,7 @@ struct ButtonManagerContext {
     uint8_t& activePot;                         // Currently selected potentiometer index
     uint8_t& activeChannel;                     // MIDI channel to send CC on
     bool& envelopeFollowMode;                   // Flag: envelope-following mode active
+    const char*& envelopeMode;                  // Envelope mode display
     ConfigManager& configManager;               // For loading/saving persistent settings
     LEDManager& ledManager;                     // For updating visual feedback LEDs
     DisplayManager& displayManager;             // For writing status to OLED

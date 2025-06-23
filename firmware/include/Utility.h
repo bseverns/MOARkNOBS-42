@@ -10,25 +10,39 @@
 #include <EnvelopeFollower.h>
 #include "EEPROM.h"
 
+class MIDIHandler;
 class EnvelopeFollower;
 
 struct ScheduledTask {
     std::function<void()> callback;
+    unsigned long runAt;
+    bool repeat;
     unsigned long interval;
-    unsigned long lastRun;
-    ScheduledTask(std::function<void()> cb, unsigned long intv);
+
+    ScheduledTask(std::function<void()> cb, unsigned long delayMs, bool rpt)
+        : callback(cb), runAt(millis() + delayMs), repeat(rpt), interval(delayMs) {}
 };
 
 class TaskScheduler {
 public:
-    void addTask(std::function<void()> callback, unsigned long interval);
+    void addTask(std::function<void()> callback, unsigned long delayMs, bool repeat = false);
     void update();
+   
 private:
     std::vector<ScheduledTask> tasks;
 };
 
 class Utility {
 public:
+    //note on/off
+    static void scheduleNoteOnOff(
+        MIDIHandler& midiHandler,
+        uint8_t note,
+        uint8_t velocity,
+        uint8_t channel,
+        unsigned long durationMs
+    );
+
     // Mapping and Value Transformations
     static uint8_t mapToMidiValue(int analogValue, int minValue = 0, int maxValue = 1023);
     static int mapToRange(int value, int inMin, int inMax, int outMin, int outMax);

@@ -180,10 +180,9 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
 /**
  * Called as soon as we confirm a long press.
  */
-void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context)
-{
+void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
+    // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
-        // Long Press (Slot Button): Assign the selected slot to an EF, or cycle which EF is assigned
         auto it = context.potToEnvelopeMap.find(index);
         if (it == context.potToEnvelopeMap.end()) {
             context.potToEnvelopeMap[index] = 0; // Assign EF0
@@ -194,18 +193,41 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context)
         }
         int assigned = context.potToEnvelopeMap[index];
         context.envelopes[assigned].toggleActive(true);
-
-        char buf[32];
-        sprintf(buf, "Long: Slot %d->EF %d", index, assigned);
-        context.displayManager.displayStatus(buf, 1500);
+        context.displayManager.displayStatus("EF Assigned", 1000);
     }
     else {
-        // Could do something else if a control button is long-pressed
-        char msg[32];
-        sprintf(msg, "LongPress Ctrl %d", index - NUM_VIRTUAL_BUTTONS);
-        context.displayManager.displayStatus(msg, 1000);
+        // Control buttons (0-5)
+        uint8_t ctrlIdx = index - NUM_VIRTUAL_BUTTONS;
+        switch (ctrlIdx) {
+            case 1: { //Cycle MIDI Message Type
+                MIDISlot &slot = context.configManager.getSlot(context.activePot);
+                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::Aftertouch) + 1));
+                context.configManager.saveSlot(context.activePot, slot);
+                char buf[32];
+                sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
+                context.displayManager.displayStatus(buf, 1500);
+                break;
+            }
+            case 2: { //Toggle Slot Active
+                MIDISlot &slot = context.configManager.getSlot(context.activePot);
+                slot.active = !slot.active;
+                context.configManager.saveSlot(context.activePot, slot);
+                char buf[32];
+                sprintf(buf, "Slot %d %s", context.activePot, slot.active ? "ON" : "OFF");
+                context.displayManager.displayStatus(buf, 1500);
+                break;
+            }
+            case 4: // EEPROM reset
+                context.configManager.loadConfiguration(context.potChannels);
+                context.displayManager.displayStatus("EEPROM Reset", 1500);
+                break;
+            default:
+                context.displayManager.displayStatus("No Long Action", 1000);
+                break;
+        }
     }
 }
+
 
 /**
  * Called after the user releases (short or long). If it wasn't a long press, we treat it as short press.

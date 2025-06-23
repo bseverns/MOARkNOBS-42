@@ -71,6 +71,7 @@ ButtonManagerContext buttonContext = {
     activePot,
     activeChannel,
     envelopeFollowMode,
+    envelopeMode,
     configManager,
     ledManager,
     displayManager,
@@ -285,105 +286,156 @@ void updateFilterTuning(ButtonManagerContext& context) {
 }
 
 void setup() {
+    // — Serial & Config —
     Serial.begin(31250);
+
+    // Load per-slot EEPROM into RAM, and pot→CC into potChannels[]
     configManager.begin(potChannels);
+    configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
     configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+
+    // — MIDI Handler —
     midiHandler.begin();
     midiHandler.setDisplayManager(&displayManager);
 
+    // — Pot → MIDI routing callback —
+    potentiometerManager.setMidiCallback(
+      [&](uint8_t /*ignored*/, uint8_t value, uint8_t rawValue, uint8_t potIdx){
+        auto& slot = configManager.getSlots()[potIdx];
+        if (!slot.active) return;
+
+        switch (slot.type) {
+          case MIDIMessageType::CC:
+            midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
+            break;
+
+          case MIDIMessageType::Note: {
+            uint8_t velo = (slot.efIndex < envelopeFollowers.size())
+                           ? envelopeFollowers[slot.efIndex].getEnvelopeLevel()
+                           : 125;
+            midiHandler.sendNoteOn(slot.data1, velo, slot.midiChannel);
+            // schedule Note-Off in 100 ms
+            Utility::schedulerHigh.addTask([=](){
+              midiHandler.sendNoteOff(slot.data1, 0, slot.midiChannel);
+            }, 100);
+            break;
+          }
+
+          case MIDIMessageType::PitchBend: {
+            int16_t bend = map(rawValue, 0, 1023, -8192, 8191);
+            midiHandler.sendPitchBend(bend, slot.midiChannel);
+            break;
+          }
+
+          case MIDIMessageType::ProgramChange:
+            midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
+            break;
+
+          case MIDIMessageType::Aftertouch: {
+            uint8_t pres = Utility::mapToMidiValue(rawValue);
+            midiHandler.sendAftertouch(pres, slot.midiChannel);
+            break;
+          }
+
+          default:
+            break;
+        }
+      }
+    );
+
+    // — LEDs & Display —
     ledManager.begin();
-    uint8_t ledBrightness;
-    CRGB ledColor;
-    configManager.loadLEDSettings(ledBrightness, ledColor);
-    ledManager.setBrightness(ledBrightness);
-    ledManager.setColor(ledColor);
+    uint8_t ledB;
+    CRGB    ledC;
+    configManager.loadLEDSettings(ledB, ledC);
+    ledManager.setBrightness(ledB);
+    ledManager.setColor(ledC);
 
     displayManager.begin();
     displayManager.showText("Initializing...");
+
+    // — EEPROM & Mux init —
     potentiometerManager.loadFromEEPROM();
-    Timer1.initialize(1000); // 1ms interrupt
+
+    // — Timer (1 ms base for MIDI & internal clock) —
+    Timer1.initialize(1000);
+    Timer1.attachInterrupt(processMIDI);
+
+    // — Filter hardware —
     pinMode(FILTER_FREQ_POT_PIN, INPUT);
     pinMode(FILTER_RES_POT_PIN, INPUT);
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
-    for (auto& envelope : envelopeFollowers) {
-        envelope.toggleActive(true);
+    // — Envelope followers —
+    for (auto& ef : envelopeFollowers) ef.toggleActive(true);
+    float sf, sq;
+    EEPROM.get(EEPROM_FILTER_FREQ, sf);
+    EEPROM.get(EEPROM_FILTER_Q,    sq);
+    sf = constrain(sf, 20.0f, 5000.0f);
+    sq = constrain(sq, 0.5f, 4.0f);
+    for (auto& ef : envelopeFollowers) ef.configureFilter(sf, sq);
+
+    // — Slot sanity check (channel & CC) —
+    for (uint8_t i = 0; i < NUM_SLOTS; i++) {
+      if (potentiometerManager.getChannel(i) == 0)
+        potentiometerManager.setChannel(i, 1);
+      if (potentiometerManager.getCCNumber(i) > 127)
+        potentiometerManager.setCCNumber(i, i % 128);
     }
 
-    float savedFreq, savedQ;
-    EEPROM.get(EEPROM_FILTER_FREQ, savedFreq);
-    EEPROM.get(EEPROM_FILTER_Q, savedQ);
-    savedFreq = constrain(savedFreq, 20.0f, 5000.0f);
-    savedQ    = constrain(savedQ, 0.5f, 4.0f);
-    for (auto& ef : envelopeFollowers) {
-        ef.configureFilter(savedFreq, savedQ);
-    }
-
-    for (int i = 0; i < NUM_POTS; i++) {
-        if (potentiometerManager.getChannel(i) == 0) {
-            potentiometerManager.setChannel(i, 1);
-        }
-        if (potentiometerManager.getCCNumber(i) > 127) {
-            potentiometerManager.setCCNumber(i, i % 128);
-        }
-    }
-
+    // — Load or reset full config —
     if (!configManager.loadConfiguration(potChannels)) {
-        Serial.println("EEPROM data corrupted, resetting to defaults.");
-        potentiometerManager.resetEEPROM();
+      Serial.println("EEPROM corrupted → resetting.");
+      potentiometerManager.resetEEPROM();
     }
 
+    // — Buttons & splash —
     buttonManager.initButtons();
     delay(1000);
     displayManager.clear();
     displayManager.showText("MOAR");
 
-    Serial.println("Verifying loaded pot channels:");
-    for (int i = 0; i < NUM_POTS; i++) {
-        Serial.print("Pot ");
-        Serial.print(i);
-        Serial.print(": CC=");
-        Serial.println(potChannels[i]);
+    // — Debug dump —
+    for (uint8_t i = 0; i < NUM_SLOTS; i++) {
+      Serial.printf("Slot %u → CC %u\n", i, potChannels[i]);
     }
     Serial.println("Setup complete!");
 
-    // --- Schedule repeating tasks ---
-    // High-priority tasks (1ms interval)
-      Utility::schedulerHigh.addTask([] { processMIDI(); }, MIDI_TASK_INTERVAL);
-      Utility::schedulerHigh.addTask([] {
-        if (millis() - lastClockTime > CLOCK_TIMEOUT_MS) {
-          processInternalClock();
+    // — Scheduler tasks —
+    // High-priority (1 ms):
+    Utility::schedulerHigh.addTask(processMIDI,          MIDI_TASK_INTERVAL);
+    Utility::schedulerHigh.addTask([](){
+      if (millis() - lastClockTime > CLOCK_TIMEOUT_MS)
+        processInternalClock();
+    }, MIDI_TASK_INTERVAL);
+
+    // Mid-priority (~5 ms):
+    Utility::schedulerMid.addTask(processSerial,        SERIAL_TASK_INTERVAL);
+    Utility::schedulerMid.addTask(processEnvelopes,     ENVELOPE_TASK_INTERVAL);
+
+    // Low-priority (~50 ms):
+    Utility::schedulerLow.addTask([](){
+      ledManager.update();
+      updateFilterTuning(buttonContext);
+    }, LED_TASK_INTERVAL);
+
+    Utility::schedulerLow.addTask([](){
+      if (!displayManager.shouldRunScreensaver()) {
+        displayManager.beginDraw();
+        displayManager.updateFromContext(buttonContext);
+        auto it = potToEnvelopeMap.find(buttonContext.activePot);
+        if (it != potToEnvelopeMap.end()) {
+          displayManager.showEnvelopeLevel(
+            envelopeFollowers[it->second].getEnvelopeLevel()
+          );
         }
-      }, MIDI_TASK_INTERVAL);
-
-      // Mid-priority tasks (~5-10ms intervals)
-      Utility::schedulerMid.addTask([] { processSerial(); }, SERIAL_TASK_INTERVAL);
-      Utility::schedulerMid.addTask([] { processEnvelopes(); }, ENVELOPE_TASK_INTERVAL);
-
-      // Low-priority tasks (~30-100ms intervals)
-      Utility::schedulerLow.addTask([] {
-        ledManager.update();
-        updateFilterTuning(buttonContext);
-      }, LED_TASK_INTERVAL);
-
-      Utility::schedulerLow.addTask([] {
-        if (!displayManager.shouldRunScreensaver()) {
-          displayManager.beginDraw();
-          displayManager.updateFromContext(buttonContext);
-
-          auto it = potToEnvelopeMap.find(activePot);
-          if (it != potToEnvelopeMap.end()) {
-            uint8_t lvl = envelopeFollowers[it->second].getEnvelopeLevel();
-            displayManager.showEnvelopeLevel(lvl);
-          }
-
-          displayManager.highlightActivePot(activePot);
-          displayManager.highlightActiveMode(envelopeMode);
-          displayManager.endDraw();
-        } else {
-          displayManager.runIdleScreensaver();
-        }
-      }, 100);
+        displayManager.highlightActivePot(buttonContext.activePot);
+        displayManager.highlightActiveMode(envelopeMode);
+        displayManager.endDraw();
+      } else {
+        displayManager.runIdleScreensaver();
+      }
+    }, 100);
 }
 
 void loop() {

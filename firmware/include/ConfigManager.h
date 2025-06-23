@@ -1,12 +1,17 @@
-#ifndef CONFIGURATION_MANAGER_H
-#define CONFIGURATION_MANAGER_H
+#ifndef CONFIGMANAGER_H
+#define CONFIGMANAGER_H
 
+#include "Globals.h"
+#include "MIDITypes.h"
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <Globals.h>
 #include <map>
 #include <vector>
+#include <array>
 #include <FastLED.h>
+
+class MIDIHandler;
+extern MIDIHandler midihandler;
 
 #define EEPROM_START_ADDRESS 0
 #define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
@@ -29,16 +34,19 @@ class EnvelopeFollower;
 
 class ConfigManager {
 public:
-     ConfigManager(uint8_t numPots, uint8_t numButtons);
-  static String makeSchema();           // declare here
-  String serializeAll() const;          // see next point
-
-  MIDISlot slots[NUM_SLOTS];
+    ConfigManager(uint8_t numPots, uint8_t numButtons);
+    static String makeSchema();
+    String serializeAll() const;
 
     // Initialize configuration (e.g., load from EEPROM)
-    void begin();
-    void saveSlot(uint8_t slotIndex, const MIDISlot &slot);
-    void loadSlot(uint8_t slotIndex, MIDISlot &slot);
+    void begin(std::vector<uint8_t>& potChannels);
+
+    MIDIMessageType getSlotType(uint8_t idx) const { return slots[idx].type; }
+    void setSlotType(uint8_t idx, MIDIMessageType t) { slots[idx].type = t; saveSlot(idx, slots[idx]); }
+    bool getSlotActive(uint8_t idx) const { return slots[idx].active; }
+    void setSlotActive(uint8_t idx, bool a) { slots[idx].active = a; saveSlot(idx, slots[idx]); }
+    uint8_t getSlotData1(uint8_t idx) const { return slots[idx].data1; }
+    void    setSlotData1(uint8_t idx, uint8_t v){ slots[idx].data1=v; saveSlot(idx,slots[idx]); }
 
     // Accessor methods for key configurations
     uint8_t getPotChannel(uint8_t potIndex) const;
@@ -61,7 +69,7 @@ public:
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
     void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
-    // Utility method to get global constants
+    // Utility methods to get global constants
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
 
@@ -78,16 +86,28 @@ public:
     uint8_t getEnvelopeA() const;
     uint8_t getEnvelopeB() const;
 
+    // MIDI Slot configuration
+    void saveMIDISlots(const MIDISlot* slots, size_t count);
+    void loadMIDISlots(MIDISlot* slots, size_t count);
+
     bool shouldRunScreensaver() const;
-  void runIdleScreensaver();
+    void runIdleScreensaver();
+
+        /** Accessor so the rest of your code can see the live slots. */
+    const std::array<MIDISlot,NUM_SLOTS>& getSlots() const { return slots; }
+    MIDISlot& getSlot(uint8_t idx){
+         return slots[idx]; 
+        }
+
+    /** Helpers for individual slot persistence: */
+    void loadSlot(uint8_t idx, MIDISlot& dest);
+    void saveSlot(uint8_t idx, const MIDISlot& src);
 
 private:
     uint8_t _numPots;
     uint8_t _numButtons;
 
-    // Configuration data (stored in RAM)
-    std::map<uint8_t, uint8_t> _potChannels;   // Potentiometer index -> MIDI Channel
-    std::map<uint8_t, uint8_t> _potCCNumbers; // Potentiometer index -> MIDI CC Number
+    std::array<MIDISlot,NUM_SLOTS> slots;//42 of them
 
     // Health‑check & backup support
     bool checkEEPROMHealth(bool backup);
@@ -95,6 +115,10 @@ private:
     bool loadBackupConfiguration(std::vector<uint8_t>& potChannels);
     void readEEPROM(bool backup);
     void writeEEPROM(bool backup);
+
+    //virtual slot/array:
+    std::array<uint8_t, NUM_POTS>   _potChannels; // your pot→CC map
+    std::array<uint8_t, NUM_POTS>   _potCCNumbers;
 };
 
-#endif // CONFIGURATION_MANAGER_H
+#endif // CONFIGMANAGER_H

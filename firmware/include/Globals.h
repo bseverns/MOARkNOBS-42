@@ -4,28 +4,9 @@
 #include <Arduino.h>
 #include <vector>
 #include <map>
-#include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
-
-enum class MIDIMessageType : uint8_t {
-    OFF = 0,       
-    CC,
-    Note,
-    PitchBend,
-    ProgramChange,
-    Aftertouch
-};
-
-struct MIDISlot {
-    MIDIMessageType type;     // MIDI message type (CC, Note, etc.)
-    uint8_t midiChannel;      // MIDI Channel (1-16)
-    uint8_t data1;            // CC#, Note#, Program#, etc.
-    uint8_t efIndex;          // EnvelopeFollower (0-5, 255 if none)
-    bool active;              // Slot active/inactive
-};
-
-constexpr uint8_t NUM_SLOTS = 42;
+#include "MIDITypes.h"
 
 class ConfigManager;
 extern ConfigManager configManager;

@@ -28,7 +28,7 @@ private:
     void selectPotBank(uint8_t pot);  // Select the secondary mux pot
 
     // Callback for sending MIDI messages
-    std::function<void(uint8_t, uint8_t, uint8_t)> midiCallback;
+  std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> midiCallback;
 
     // Helper for filtered analog reads
     int readAnalogFiltered(uint8_t pin); // New function for analog filtering
@@ -43,7 +43,13 @@ public:
         uint8_t analogPin
     );
 
-    void setMidiCallback(std::function<void(uint8_t, uint8_t, uint8_t)> callback);
+    // data1, value, channel, slotIdx
+    void setMidiCallback(std::function<void(
+    uint8_t /*data1*/,
+    uint8_t /*mappedValue*/,
+    uint8_t /*midiChannel*/,
+    uint8_t /*slotIndex*/
+    )> callback);
 
     void loadFromEEPROM();
     void saveToEEPROM();

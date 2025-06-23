@@ -3,6 +3,7 @@
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
 #include "EEPROM.h"
+#include "MIDIHandler.h"
 #include <imxrt.h>
 
 // Mapping and Value Transformations
@@ -18,6 +19,20 @@ float Utility::mapExponential(float value, float inMin, float inMax, float outMi
     float normalized = (value - inMin) / (inMax - inMin);
     float scaled = pow(normalized, exponent);
     return scaled * (outMax - outMin) + outMin;
+}
+
+//Note On/Off scheduling
+void Utility::scheduleNoteOnOff(
+    MIDIHandler& midiHandler,
+    uint8_t note,
+    uint8_t velocity,
+    uint8_t channel,
+    unsigned long durationMs
+) {
+    midiHandler.sendNoteOn(note, velocity, channel);
+    Utility::schedulerHigh.addTask([note, channel, &midiHandler]() {
+        midiHandler.sendNoteOff(note, 0, channel);
+    }, durationMs, false);
 }
 
 // Debouncing
@@ -209,23 +224,25 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     }
 }
 
-// --- Task Struct ---
-ScheduledTask::ScheduledTask(std::function<void()> cb, unsigned long intv)
-    : callback(cb), interval(intv), lastRun(0) {}
-
-// --- Task Scheduler ---
-void TaskScheduler::addTask(std::function<void()> callback, unsigned long interval) {
-    tasks.emplace_back(callback, interval);
+void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayMs, bool repeat) {
+    tasks.emplace_back(callback, delayMs, repeat);
 }
 
 void TaskScheduler::update() {
     unsigned long now = millis();
-    for (auto& task : tasks) {
-        if (now - task.lastRun >= task.interval) {
-            task.callback();
-            task.lastRun = now;
-        }
-    }
+  
+    tasks.erase(std::remove_if(tasks.begin(), tasks.end(),
+        [now](ScheduledTask& task) {
+            if (now >= task.runAt) {
+                task.callback();
+                if (task.repeat) {
+                    task.runAt = now + task.interval; // reschedule next run
+                    return false; // keep repeating task
+                }
+                return true; // remove one-time task
+            }
+            return false; // not yet due
+        }), tasks.end());
 }
 
 TaskScheduler Utility::schedulerHigh;

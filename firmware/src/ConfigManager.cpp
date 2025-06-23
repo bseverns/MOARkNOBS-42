@@ -113,28 +113,25 @@ void ConfigManager::writeEEPROM(bool backup) {
 }
 
 // Initialize configuration
-void ConfigManager::begin() {
-    for (uint8_t i = 0; i < NUM_SLOTS; i++) {
+void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
+    // 1) Load every MIDISlot from EEPROM into our in-RAM array
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         loadSlot(i, slots[i]);
+    }
+    // 2) Pull out the existing pot → CC mappings
+    //    (assuming _potCCNumbers was filled by readEEPROM)
+    potChannels.clear();
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        potChannels.push_back(_potCCNumbers[i]);
     }
 }
 
-void ConfigManager::saveSlot(uint8_t slotIndex, const MIDISlot &slot) {
-    uint16_t addr = EEPROM_SLOT_BASE + (slotIndex * SLOT_EEPROM_SIZE);
-    EEPROM.update(addr, static_cast<uint8_t>(slot.type));
-    EEPROM.update(addr + 1, slot.midiChannel);
-    EEPROM.update(addr + 2, slot.data1);
-    EEPROM.update(addr + 3, slot.efIndex);
-    EEPROM.update(addr + 4, slot.active ? 1 : 0);
+void ConfigManager::loadSlot(uint8_t idx, MIDISlot& dest) {
+  EEPROM.get(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, dest);
 }
 
-void ConfigManager::loadSlot(uint8_t slotIndex, MIDISlot &slot) {
-    uint16_t addr = EEPROM_SLOT_BASE + (slotIndex * SLOT_EEPROM_SIZE);
-    slot.type = static_cast<MIDIMessageType>(EEPROM.read(addr));
-    slot.midiChannel = EEPROM.read(addr + 1);
-    slot.data1 = EEPROM.read(addr + 2);
-    slot.efIndex = EEPROM.read(addr + 3);
-    slot.active = EEPROM.read(addr + 4) == 1;
+void ConfigManager::saveSlot(uint8_t idx, const MIDISlot& src) {
+  EEPROM.put(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, src);
 }
 
 // Potentiometer accessors
@@ -269,4 +266,31 @@ String ConfigManager::serializeAll() const {
 
     output += "] }";
     return output;
+}
+
+void ConfigManager::saveMIDISlots(const MIDISlot* slots, size_t count) {
+    if (slots == nullptr || count == 0) {
+        return;
+    }
+    // Clamp to maximum number of slots to avoid overflow
+    if (count > 42) {
+        count = 42;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        int address = EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE;
+        EEPROM.put(address, slots[i]);
+    }
+}
+
+void ConfigManager::loadMIDISlots(MIDISlot* slots, size_t count) {
+    if (slots == nullptr || count == 0) {
+        return;
+    }
+    if (count > 42) {
+        count = 42;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        int address = EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE;
+        EEPROM.get(address, slots[i]);
+    }
 }

@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "Globals.h"
+#include "MIDIHandler.h"
 #include "ConfigManager.h"
 #include "LEDManager.h"
 #include "DisplayManager.h"
@@ -13,6 +14,7 @@ std::vector<uint8_t> potChannels; // EEPROM-loaded channels
 // Instantiate board objects:
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 LEDManager ledManager(LED_PIN, NUM_LEDS);
+MIDIHandler midiHandler;
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, OLED_WIDTH, OLED_HEIGHT);
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
 ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, (const uint8_t[]){2,3,4,5,6,13}, &potentiometerManager);
@@ -23,6 +25,19 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
   EnvelopeFollower(A3, &potentiometerManager),
   EnvelopeFollower(A6, &potentiometerManager),
   EnvelopeFollower(A7, &potentiometerManager),
+};
+
+uint8_t activePot = 0, activeChannel = 1;
+bool envelopeFollowMode = false;
+const char* envelopeMode = "SEF";
+std::map<int, int> potToEnvelopeMap;
+
+ButtonManagerContext buttonContext = {
+    potChannels, activePot, activeChannel,
+    envelopeFollowMode, envelopeMode,
+    configManager, ledManager,
+    displayManager, envelopeFollowers,
+    potToEnvelopeMap
 };
 
 // --- Utility ---
@@ -123,6 +138,11 @@ void setup() {
   Serial.println("\n=== MOARkNOBS Unit Test ===");
 
   configManager.begin(potChannels);
+  configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
+
+  midiHandler.begin();
+  midiHandler.setDisplayManager(&displayManager);
+
   ledManager.begin();
   displayManager.begin();
   potentiometerManager.loadFromEEPROM();
@@ -130,7 +150,20 @@ void setup() {
 
   pinMode(potMuxAnalogPin, INPUT);
   pinMode(buttonMuxAnalogPin, INPUT);
-  
+
+  uint8_t activePot = 0, activeChannel = 1;
+  bool envelopeFollowMode = false;
+  const char* envelopeMode = "SEF";
+  std::map<int, int> potToEnvelopeMap;
+
+  ButtonManagerContext buttonContext = {
+      potChannels, activePot, activeChannel,
+      envelopeFollowMode, envelopeMode,
+      configManager, ledManager,
+      displayManager, envelopeFollowers,
+      potToEnvelopeMap
+  };
+
   // Run each test individually:
   testLEDManager();
   testButtonManager();

@@ -83,3 +83,22 @@ bool MIDIHandler::isClockTick() {
 void MIDIHandler::clearClockTick() {
     clockTick = false;
 }
+
+void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
+  if (program>127|| channel<1||channel>16) return;
+  MIDI.sendProgramChange(program, channel);
+  usbMIDI.sendProgramChange(program, channel);
+}
+
+void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
+  if (pressure>127|| channel<1||channel>16) return;
+  MIDI.sendAfterTouch(pressure, channel);
+  usbMIDI.sendAfterTouch(pressure, channel);
+}
+
+void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
+  // map -8192..8191 into two data bytes:
+  uint8_t l = bend & 0x7F, h = (bend>>7)&0x7F;
+  MIDI.sendPitchBend(l|h<<8, channel);
+  usbMIDI.sendPitchBend(l|h<<8, channel);
+}

@@ -1,5 +1,5 @@
 #include "PotentiometerManager.h"
-#include "EnvelopeFollower.h" // Include full definition here
+//#include "EnvelopeFollower.h" // Include full definition here
 #include <EEPROM.h>
 #include "Globals.h"
 
@@ -19,10 +19,6 @@ PotentiometerManager::PotentiometerManager(
         potCCNumbers[i] = i;      // Default MIDI CC number
         potLastValues[i] = -1;    // Ensure the first read updates
     }
-}
-
-void PotentiometerManager::setMidiCallback(std::function<void(uint8_t, uint8_t, uint8_t)> callback) {
-    midiCallback = callback;
 }
 
 void PotentiometerManager::selectMuxBank(uint8_t bank) {
@@ -108,17 +104,18 @@ void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<Envel
                 potLastValues[potIndex] = smoothedValue[potIndex]; // Update last known value
                 dirtyFlags[potIndex] = true;
 
-                // Update LEDs to reflect the new value
-                ledManager.setPotValue(potIndex, smoothedValue[potIndex]);
+    // Update LEDs…
+    ledManager.setPotValue(potIndex, smoothedValue[potIndex]);
 
-                // Send the MIDI update if a callback is set
-                if (midiCallback) {
-                    midiCallback(
-                        potCCNumbers[potIndex],               // CC number for this pot
-                        Utility::mapToMidiValue(smoothedValue[potIndex]), // Map value to MIDI range
-                        potChannels[potIndex]                // Channel for this pot
-                    );
-                }
+    if (midiCallback) {
+        midiCallback(
+            potCCNumbers[potIndex],
+            Utility::mapToMidiValue(smoothedValue[potIndex]),
+            potChannels[potIndex],
+            potIndex
+        );
+    }
+
             }
         }
     }
@@ -170,4 +167,10 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
     selectPotBank(pot);
     delayMicroseconds(5);           // settle time
     return analogRead(analogPin);   // direct raw read
+}
+
+void PotentiometerManager::setMidiCallback(
+  std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> cb
+) {
+  midiCallback = cb;
 }
