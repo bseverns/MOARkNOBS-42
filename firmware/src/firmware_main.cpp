@@ -280,6 +280,7 @@ void updateFilterTuning(ButtonManagerContext& context) {
     context.envelopes[efIndex].configureFilter(freq, q);
     EEPROM.put(EEPROM_FILTER_FREQ, freq);
     EEPROM.put(EEPROM_FILTER_Q, q);
+    displayManager.showFilterTuning(freq, q);
 
     // Optionally display or debug-print
     // Serial.printf("EF %d => freq=%.1f Q=%.2f\n", efIndex, freq, q);

@@ -529,6 +529,63 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);
     }
+    // (4) Ctrl0 + Ctrl4: Set active slot to MIDI Note mode
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl4)) == (maskCtrl0 | maskCtrl4)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::Note);
+        char buf[32];
+        sprintf(buf, "Slot %d => NOTE", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (5) Ctrl0 + Ctrl5: Set active slot to Program Change
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::ProgramChange);
+        char buf[32];
+        sprintf(buf, "Slot %d => PROG", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (6) Ctrl1 + Ctrl4: Set active slot to Aftertouch
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::Aftertouch);
+        char buf[32];
+        sprintf(buf, "Slot %d => AFTER", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (7) Ctrl1 + Ctrl5: Set active slot to Pitch Bend
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::PitchBend);
+        char buf[32];
+        sprintf(buf, "Slot %d => BEND", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (8) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
+        auto it = context.potToEnvelopeMap.find(context.activePot);
+        if (it == context.potToEnvelopeMap.end()) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return;
+        }
+        int efIndex = it->second;
+        static int pairPos = 0;
+        pairPos = (pairPos + 1) % NUM_ARG_PAIRS;
+        int envA = ARG_PAIRS[pairPos].first;
+        int envB = ARG_PAIRS[pairPos].second;
+        context.envelopes[efIndex].setEnvelopePair(envA, envB);
+        context.configManager.setEnvelopePair(envA, envB);
+        auto pinName = [](int pin) {
+            switch(pin) {
+                case A0: return "A0";
+                case A1: return "A1";
+                case A2: return "A2";
+                case A3: return "A3";
+                case A6: return "A6";
+                case A7: return "A7";
+                default: return "Ax";
+            }
+        };
+        char buf[32];
+        sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
+        context.displayManager.displayStatus(buf, 1500);
+    }
 }
 
 /**
