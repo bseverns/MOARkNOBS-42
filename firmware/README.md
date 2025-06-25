@@ -2,6 +2,8 @@
 
 > Firmware for the unapologetically DIY, button-stabbin', knob-hackin', MIDI-mashin' controller you didn’t ask for but definitely need.
 
+*Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a single pot, a bunch of buttons, and enough virtual slots to make your DAW weep.
