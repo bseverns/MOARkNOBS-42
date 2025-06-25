@@ -84,6 +84,7 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 
 void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
+        if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS) break;
         selectMuxBank(primaryBank);
 
         for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS); secondaryBank++) {

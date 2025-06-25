@@ -12,8 +12,8 @@
 class EnvelopeFollower;
 
 #define NUM_POTS 42
-#define PRIMARY_MUX_PINS 3
-#define SECONDARY_MUX_PINS 3
+#define PRIMARY_MUX_PINS 4
+#define SECONDARY_MUX_PINS 4
 
 class PotentiometerManager {
 private:
