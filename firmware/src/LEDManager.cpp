@@ -1,6 +1,7 @@
 // LEDManager.cpp — STL-integrated full class refactor preserving all features
 
 #include "LEDManager.h"
+#include "Globals.h"
 #include <FastLED.h>
 #include <map>
 #include <string>
@@ -9,11 +10,11 @@ LEDManager::~LEDManager() {
     // Nothing to delete; STL containers clean up automatically
 }
 
-LEDManager::LEDManager(uint8_t pin, uint16_t numLEDs)
-    : pin(pin), numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
+LEDManager::LEDManager(uint16_t numLEDs)
+    : numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
-    FastLED.addLeds<WS2812, GRB>(leds.data(), leds.size(), pin).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<WS2812, LED_PIN, GRB>(leds.data(), leds.size()).setCorrection(TypicalLEDStrip);
     FastLED.clear();
     FastLED.show();
     startupAnimation();

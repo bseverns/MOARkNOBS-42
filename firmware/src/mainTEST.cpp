@@ -13,7 +13,7 @@ std::vector<uint8_t> potChannels; // EEPROM-loaded channels
 
 // Instantiate board objects:
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
-LEDManager ledManager(LED_PIN, NUM_LEDS);
+LEDManager ledManager(NUM_LEDS);
 MIDIHandler midiHandler;
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, OLED_WIDTH, OLED_HEIGHT);
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
