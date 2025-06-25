@@ -1,6 +1,6 @@
 # MOARkNOBS-42
 
-DIY MIDI controller with **42 virtual control slots**, envelope followers and plenty of button-driven chaos. This repo contains both the firmware and the KiCad hardware designs.
+DIY MIDI controller with **42 virtual control slots**, envelope followers and plenty of button-driven chaos. This repo contains both the firmware and the EasyEDA Pro hardware designs.
 
 ## Firmware Highlights
 
@@ -18,13 +18,13 @@ See [`firmware/README.md`](firmware/README.md) for the full manual. Key features
 
 ## Hardware Files
 
-The `hardware/` directory provides KiCad projects and manufacturing files for the PCBs:
+The `hardware/` directory currently contains the EasyEDA Pro project and manufacturing files for the button matrix PCB:
 
-- **BenzKnobz/** – main interface board. Contains `BenzKnobz.kicad_pcb` along with `Gerber_BenzKnobz_2025-01-29/` and `InterfaceMN42.zip` for fabrication.
-- **Control/** – control PCB for the display and tuning pots. Includes `Gerber_Control_2025-01-29/` and `MN42_CTRL.zip`.
-- **BTN_42/** – button matrix board with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip`.
+- **BTN_42/** – houses the `MN42-1` project with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip` for fabrication.
 
-Use these directories to manufacture the hardware or modify the designs.
+Directories for the main interface and control boards are not included in this repository.
+
+Use this directory to manufacture the hardware or modify the design.
 
 ## Getting Started
 
