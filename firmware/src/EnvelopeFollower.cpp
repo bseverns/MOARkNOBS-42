@@ -224,6 +224,16 @@ void EnvelopeFollower::setEnvelopePair(int envA, int envB) {
 }
 
 /**
+ * readEnvelopeLevel()
+ * Helper used by update() to read the raw envelope value
+ * from the configured analog pin and map it to a MIDI range.
+ */
+int EnvelopeFollower::readEnvelopeLevel() {
+    int raw = analogRead(audioInputPin);
+    return map(raw, 0, 1023, 0, 127);
+}
+
+/**
  * getEnvelopeLevel()
  */
 int EnvelopeFollower::getEnvelopeLevel() const {
