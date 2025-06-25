@@ -5,6 +5,12 @@
 #include "Utility.h"
 #include <map>
 
+// The BTN_42 PCB connects 42 pushbuttons in a 7×6 diode matrix. Each row and
+// column is wired to one channel of two CD74HC4067 analog multiplexers. The
+// select lines for the row mux are labeled `MUXR1..4` and the column mux uses
+// `MUXC1..4`. The firmware cycles these select lines and reads the shared
+// analog node to detect button presses.
+
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
@@ -70,8 +76,10 @@ ButtonManager::ButtonManager(const uint8_t* primaryMuxPins,
 
 // We call this once at setup, just like your original approach:
 void ButtonManager::initButtons() {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
         pinMode(_primaryMuxPins[i], OUTPUT);
+    }
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
         pinMode(_secondaryMuxPins[i], OUTPUT);
     }
     pinMode(analogPin, INPUT);
@@ -592,8 +600,10 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
  * Implementation of reading from multiplexer (same as your old code).
  */
 uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
-    uint8_t row = buttonIndex / 8;
-    uint8_t col = buttonIndex % 8;
+    // BTN_42 arranges 42 buttons in a 7x6 diode matrix. We map the
+    // linear index into row/column coordinates accordingly.
+    uint8_t row = buttonIndex / BUTTON_COLS;
+    uint8_t col = buttonIndex % BUTTON_COLS;
     selectMux(row, col);
     int value = analogRead(_muxAnalogPin);
     return (value < 512) ? HIGH : LOW; // or invert if needed
@@ -607,8 +617,10 @@ bool ButtonManager::readControlButton(uint8_t buttonIndex) {
 }
 
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
         digitalWrite(_primaryMuxPins[i], (row >> i) & 1);
+    }
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
         digitalWrite(_secondaryMuxPins[i], (col >> i) & 1);
     }
 }

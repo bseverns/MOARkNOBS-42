@@ -23,6 +23,9 @@ The `hardware/` directory provides KiCad projects and manufacturing files for th
 - **BenzKnobz/** – main interface board. Contains `BenzKnobz.kicad_pcb` along with `Gerber_BenzKnobz_2025-01-29/` and `InterfaceMN42.zip` for fabrication.
 - **Control/** – control PCB for the display and tuning pots. Includes `Gerber_Control_2025-01-29/` and `MN42_CTRL.zip`.
 - **BTN_42/** – button matrix board with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip`.
+  The 42 slot buttons plus 6 control buttons form a 7×6 diode matrix. Two
+  CD74HC4067 multiplexers scan the rows (`ROW1..ROW7`) and columns
+  (`COL1..COL6`) via select lines labeled `MUXR1..4` and `MUXC1..4`.
 
 Use these directories to manufacture the hardware or modify the designs.
 

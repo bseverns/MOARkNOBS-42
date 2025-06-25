@@ -26,6 +26,9 @@
 #define NUM_CONTROL_BUTTONS 6
 // Debounce period in milliseconds
 #define DEBOUNCE_DELAY 50
+// Button matrix layout (rows x columns)
+#define BUTTON_ROWS 7
+#define BUTTON_COLS 6
 
 /**
  * States for each button in the debounce & press state machine.
