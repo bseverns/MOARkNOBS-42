@@ -34,7 +34,7 @@ Use these directories to manufacture the hardware or modify the designs.
 
 ## License
 
-MOARkNOBS Controller firmware and hardware design files are provided under the MIT License.
+MOARkNOBS Controller firmware and hardware design files are provided under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Author
 
