@@ -21,7 +21,7 @@ std::vector<uint8_t> potChannels;
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 
 // LED & display
-LEDManager    ledManager(LED_PIN, NUM_LEDS);
+LEDManager    ledManager(NUM_LEDS);
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, OLED_WIDTH, OLED_HEIGHT);
 
 // Mux-1 (U3) for pots + control buttons:

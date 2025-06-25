@@ -25,7 +25,7 @@ std::vector<uint8_t> potChannels;
 std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
 std::queue<String> commandQueue; // Queue to store incoming commands
 MIDIHandler midiHandler;
-LEDManager ledManager(LED_PIN, NUM_LEDS);
+LEDManager ledManager(NUM_LEDS);
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 BiquadFilter filter;
