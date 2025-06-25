@@ -32,7 +32,11 @@ The original idea was simple: 42 knobs (emulating the 60 Knobs from Bastl). But 
 * **1 physical control pot**: total recall per slot.
 * **2 more physical pots**: for filter tuning.
 * **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
-* **A grid of buttons**: short press, long press, combos, the works.
+* **A grid of buttons**: short press, long press, combos, the works. The
+  button PCB (`BTN_42`) wires them into a 7×6 diode matrix which is scanned
+  through two CD74HC4067 multiplexers. The firmware drives the select lines
+  (`MUXR1..4` for rows, `MUXC1..4` for columns) and reads the combined node to
+  detect presses.
 * **OLED Display + Addressable LEDs**: full visual feedback like a punk rock spaceship control panel.
 * **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
 * **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
