@@ -49,7 +49,6 @@ const uint8_t FILTER_RES_POT_PIN = 23;
 // muxC select lines -> pins 8,9,10,11
 const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
 const uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
-const uint8_t analogPin = 4; //mux reader
 
 extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;
