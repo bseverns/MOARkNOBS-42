@@ -1,0 +1,5 @@
+# Ignore macOS metadata files
+.DS_Store
+
+# Ignore firmware zip archive
+firmwareZip.zip
