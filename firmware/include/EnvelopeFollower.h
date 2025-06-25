@@ -66,6 +66,11 @@ private:
 
     PotentiometerManager* potManager;
     BiquadFilter filter;          // Existing custom filter
+    /**
+     * Read the raw envelope level from the configured analog pin
+     * and map it to the 0-127 MIDI range.
+     */
+    int readEnvelopeLevel();
 
 public:
     EnvelopeFollower(int pin, PotentiometerManager* pm);
