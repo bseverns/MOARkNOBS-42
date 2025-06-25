@@ -217,18 +217,19 @@ void DisplayManager::clear() {
     _display.display();
 }
 
-void DisplayManager::showFilterTuning(float frequency, float q) {
-    if (millis() < _statusTimeout) return;  // Added timeout check for consistency
-
+void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
-    _display.print("Filter Freq: ");
-    _display.print(frequency, 1);
+    _display.print(labelFreq);
+    _display.print(": ");
+    _display.println(freqValue, 2);
+
     _display.setCursor(0, 10);
-    _display.print("Q Factor: ");
-    _display.print(q, 2);
+    _display.print(labelQ);
+    _display.print(": ");
+    _display.println(qValue, 2);
 
     drawBorder();
     _display.display();

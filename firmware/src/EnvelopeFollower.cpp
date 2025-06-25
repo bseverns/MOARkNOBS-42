@@ -26,13 +26,27 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
 }
 
 /**
- * readEnvelopeLevel()
- * reads from the assigned audio pin,
- *   maps to 0–127 for typical MIDI range.
+ * configureFilter()
+ * - Keep the function that was used elsewhere for dynamic changes to freq & Q
  */
-int EnvelopeFollower::readEnvelopeLevel() {
-    int rawValue = analogRead(audioInputPin);
-    return map(rawValue, 0, 1023, 0, 127);
+void EnvelopeFollower::configureFilter(float frequency, float q) {
+    shapingFreq = frequency;
+    shapingQ = q;
+
+    switch (filterType) {
+        case LOWPASS:
+            filter.configure(BiquadFilter::LOWPASS, frequency, 44100, q);
+            break;
+        case HIGHPASS:
+            filter.configure(BiquadFilter::HIGHPASS, frequency, 44100, q);
+            break;
+        case BANDPASS:
+            filter.configure(BiquadFilter::BANDPASS, frequency, 44100, q);
+            break;
+        default:
+            // parameters stored directly for other modes
+            break;
+    }
 }
 
 /**
@@ -45,27 +59,35 @@ int EnvelopeFollower::readEnvelopeLevel() {
 int EnvelopeFollower::processEnvelopeLevel(int level) {
     level = constrain(level, 0, 127);
 
-    // Original envelope follower mode
     if (mode == SEF) {
-        // Original filter logic
         if (filterType == LOWPASS || filterType == HIGHPASS || filterType == BANDPASS) {
             return filter.process(level);
         }
-        // Original processing logic
+
         switch (filterType) {
             case LINEAR:
-                return level;
+                return constrain(level * (shapingFreq / 1000.0f), 0, 127);
+
             case OPPOSITE_LINEAR:
-                return 127 - level;
+                return constrain(127 - (level * (shapingFreq / 1000.0f)), 0, 127);
+
             case EXPONENTIAL:
-                return pow(level / 127.0, 2) * 127;
-            case RANDOM:
-                return random(level);
+                return constrain(pow(level / 127.0f, shapingQ) * (shapingFreq / 1000.0f) * 127.0f, 0, 127);
+
+            case RANDOM: {
+                int probability = map(shapingFreq, 20, 5000, 0, 100);
+                if (random(0, 100) < probability) {
+                    int range = map(shapingQ * 100.0f, 50, 400, 1, 64);
+                    return constrain(level + random(-range, range), 0, 127);
+                } else {
+                    return level;
+                }
+            }
+
             default:
                 return level;
         }
-    }
-    else {
+    } else {
         // ARG mode: read two envelope pins, do your math combos
         int A = 0;
         int B = 0;
@@ -165,28 +187,6 @@ void EnvelopeFollower::setFilterType(FilterType type) {
             filter.configure(BiquadFilter::BANDPASS, 1000, 44100, 0.707);
             break;
         default:
-            // LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, RANDOM -> no filter usage
-            break;
-    }
-}
-
-/**
- * configureFilter()
- * - Keep the function that was used elsewhere for dynamic changes to freq & Q
- */
-void EnvelopeFollower::configureFilter(float frequency, float q) {
-    switch (filterType) {
-        case LOWPASS:
-            filter.configure(BiquadFilter::LOWPASS, frequency, 44100, q);
-            break;
-        case HIGHPASS:
-            filter.configure(BiquadFilter::HIGHPASS, frequency, 44100, q);
-            break;
-        case BANDPASS:
-            filter.configure(BiquadFilter::BANDPASS, frequency, 44100, q);
-            break;
-        default:
-            // Non-filter types skip
             break;
     }
 }

@@ -47,6 +47,8 @@ public:
 
 
 private:
+    float shapingFreq = 1000.0f;  // Frequency or shaping parameter
+    float shapingQ = 0.707f;      // Resonance or secondary shaping parameter
     int audioInputPin;            // Pin for audio input
     int currentEnvelopeLevel;     // Current envelope value
     int modulationTargetCC;       // Target MIDI CC
@@ -65,44 +67,32 @@ private:
     PotentiometerManager* potManager;
     BiquadFilter filter;          // Existing custom filter
 
-    /**
-     * Internal helpers (unchanged).
-     */
-    int readEnvelopeLevel();
-    int processEnvelopeLevel(int level);
-
 public:
-    /**
-     * Constructor, unchanged except for storing mode/ARG variables.
-     */
     EnvelopeFollower(int pin, PotentiometerManager* pm);
-
-    /**
-     * Original methods (unchanged).
-     */
     void setModulationTarget(int cc);
     void toggleActive(bool state);
     bool getActiveState() const;
+    int processEnvelopeLevel(int level);
 
     /**
-     * Filter handling (unchanged).
+     * Filter handling.
      */
     void setFilterType(FilterType type);
     void configureFilter(float frequency, float q);
     FilterType getFilterType() const;
 
     /**
-     * Primary update cycle (unchanged).
+     * Primary update cycle.
      */
     void update();
 
     /**
-     * Original applyToCC method (unchanged).
+     * Original applyToCC method.
      */
     void applyToCC(int potIndex, uint8_t& ccValue);
 
     /**
-     * Get the current envelope level (unchanged).
+     * Get the current envelope level.
      */
     int getEnvelopeLevel() const;
 
