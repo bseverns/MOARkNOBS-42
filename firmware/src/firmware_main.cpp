@@ -38,8 +38,8 @@ float g_tappedBPM = 120.0f; // Default to 120 BPM
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
 const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {2, 3, 4, 5, 13, 24};
-PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, analogPin);
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, analogPin, controlPins, &potentiometerManager);
+PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, controlPins, &potentiometerManager);
 
 // Envelope followers - assign to analog inputs
 std::vector<EnvelopeFollower> envelopeFollowers = {
