@@ -82,7 +82,7 @@ void ButtonManager::initButtons() {
     for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
         pinMode(_secondaryMuxPins[i], OUTPUT);
     }
-    pinMode(analogPin, INPUT);
+    pinMode(_muxAnalogPin, INPUT);
 
     for (int i = 0; i < NUM_CONTROL_BUTTONS; i++) {
         pinMode(_controlPins[i], INPUT_PULLUP);
