@@ -13,6 +13,8 @@ class EnvelopeFollower;
 
 #define PRIMARY_MUX_PINS 4
 #define SECONDARY_MUX_PINS 4
+constexpr uint8_t NUM_POTS = 42;
+
 
 class PotentiometerManager {
 private:

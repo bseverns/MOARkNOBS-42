@@ -28,7 +28,6 @@ extern ConfigManager configManager;
 #define ENV_RANGE_MIN 5      // adjust based on your signal threshold requirements
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
-#define NUM_POTS 42
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
