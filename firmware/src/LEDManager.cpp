@@ -13,7 +13,7 @@ LEDManager::LEDManager(uint8_t pin, uint16_t numLEDs)
     : pin(pin), numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
-    FastLED.addLeds<WS2812, 6, GRB>(leds.data(), leds.size()).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<WS2812, GRB>(leds.data(), leds.size(), pin).setCorrection(TypicalLEDStrip);
     FastLED.clear();
     FastLED.show();
     startupAnimation();

@@ -11,7 +11,7 @@
 class ConfigManager;
 extern ConfigManager configManager;
 
-#define LED_PIN 6
+#define LED_PIN 6  // WS2812 LED data pin
 #define NUM_LEDS 42
 #define NUM_BUTTONS 6
 #define OLED_WIDTH 128

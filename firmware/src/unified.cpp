@@ -32,7 +32,8 @@ PotentiometerManager potentiometerManager(
 );
 
 // Mux-0 (U2) for your “virtual slot” buttons:
-const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {2,3,4,5,6,13};
+// Pin 6 reserved for LED strip
+const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {2,3,4,5,13,24};
 ButtonManager buttonManager(
   primaryMuxPins,
   secondaryMuxPins,
