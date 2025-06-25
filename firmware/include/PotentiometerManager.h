@@ -6,12 +6,11 @@
 #include <vector> // For std::vector
 #include "LEDManager.h"
 #include "Utility.h"
-#include "ConfigManager.h"
+#include "Globals.h"
 
 // Forward declaration to avoid circular dependency
 class EnvelopeFollower;
 
-#define NUM_POTS 42
 #define PRIMARY_MUX_PINS 4
 #define SECONDARY_MUX_PINS 4
 

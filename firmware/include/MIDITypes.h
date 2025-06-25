@@ -17,6 +17,5 @@ struct MIDISlot {
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
-#define NUM_POTS 42
 
 #endif // MIDI_TYPES_H
