@@ -168,10 +168,17 @@ All changes are visualized in real time on the display.
 
 ## LEDs + Display
 
-* **Red**: Current slot
-* **Green**: EF is active
-* **Blue**: Configuration mode / ARG wizardry
-* OLED shows:
+LED colours follow the states defined in `LEDManager::update()`. They provide at-a-glance feedback while you twist and mash buttons:
+
+- **Red** – the currently active pot/slot.
+- **Green** – envelope mode enabled for that slot.
+- **Blue** – ARG mode is engaged.
+- **Yellow** – flashes during MIDI updates.
+- **White** – temporary feedback (also used for the startup sweep).
+
+On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware.
+
+The OLED shows:
   - Slot info (CC, Channel, Value)
   - EF status and assignment
   - Envelope bars and filter info
