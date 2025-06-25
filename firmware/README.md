@@ -6,7 +6,7 @@
 
 ## What's This?
 
-The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a single pot, a bunch of buttons, and enough virtual slots to make your DAW weep.
+The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a single control pot, a bunch of buttons, and enough virtual slots to make your DAW weep.
 
 Forget fragile GUIs and boutique workflows. This beast lives in the guts: hand-coded on a Teensy4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
@@ -27,7 +27,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 
 ## Hardware Redefined
 
-The original idea was simple: 42 knobs. But simplicity is for cowards. So here’s what it became:
+The original idea was simple: 42 knobs (emulating the 60 Knobs from Bastl). But simplicity is for cowards. So here’s what it became:
 
 * **1 physical control pot**: total recall per slot.
 * **2 more physical pots**: for filter tuning.
@@ -39,8 +39,8 @@ The original idea was simple: 42 knobs. But simplicity is for cowards. So here�
 
 ## What It Does
 
-* Navigate 42 virtual CC slots.
-* Dynamically modulate CCs or other MIDI parameters with audio-driven envelope followers.
+* Navigate 42 MIDI slots.
+* Dynamically modulate CCs or other MIDI parameters with audio or CV-driven (+5vdc) envelope followers.
 * Select filter mode for each envelope follower (with visual OLED feedback).
 * Adjust filter frequency and resonance per EF live, using dedicated knobs.
 * Store/reload settings in EEPROM (with backup integrity checking).
@@ -222,7 +222,7 @@ Your configuration is stored in EEPROM. Manual save required.
 1. Plug it in.
 2. Use a DAW or synth.
 3. Watch LEDs. Twist knob. Push buttons.
-4. Reconfigure until satisfied—or mildly horrified.
+4. Reconfigure until satisfied—or mildly horrified. The web editor might help.
 
 ## Web Editor
 
