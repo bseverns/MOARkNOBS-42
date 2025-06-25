@@ -103,6 +103,20 @@ And yes, combo presses are supported:
 
 ---
 
+### OLED Feedback Cheat Sheet
+
+Typical screen messages from the firmware’s `DisplayManager` include:
+
+* `Active Slot=<n>` when you select a slot button.
+* `EF: ON/OFF` when toggling envelope following with Control Button #0.
+* `Slot <n> -> EF <m>` when assigning an EF (long press on a slot or short press on Control Button #2).
+* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
+* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
+
+Turning the **main pot** simply updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
+
+---
+
 ## ARG Mode
 
 ### What Is ARG Mode?
