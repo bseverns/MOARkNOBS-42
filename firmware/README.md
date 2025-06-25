@@ -83,14 +83,15 @@ And yes, combo presses are supported:
 | #2 + #3 | Cycle LED light display modes               |
 | #4 + #5 | Enable EF and randomize settings            |
 
-*Planned/future combos* (not implemented yet, but mapped in the README for reference/future firmware work):
+*Additional combos implemented in firmware:*
 
-| Combo      | (Future) Intended Action                    |
-|------------|--------------------------------------------|
-| #0 + #4    | Set slot to MIDI Note mode                 |
-| #0 + #5    | Set slot to Program Change mode            |
-| #1 + #4    | Set slot to Aftertouch                     |
-| #1 + #5    | Set slot to Pitch Bend                     |
+| Combo      | Action                                   |
+|------------|------------------------------------------|
+| #0 + #4    | Set slot to MIDI Note mode               |
+| #0 + #5    | Set slot to Program Change               |
+| #1 + #4    | Set slot to Aftertouch                   |
+| #1 + #5    | Set slot to Pitch Bend                   |
+| #2 + #5    | Cycle ARG envelope pair                  |
 
 ---
 
