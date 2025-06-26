@@ -37,7 +37,9 @@ float g_tappedBPM = 120.0f; // Default to 120 BPM
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
-const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {2, 3, 4, 5, 13, 24};
+// Control buttons are direct-wired (not part of the mux matrix)
+// and must not share the mux select pins.
+const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25};
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
 ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, controlPins, &potentiometerManager);
 
