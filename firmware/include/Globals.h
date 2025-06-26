@@ -41,10 +41,7 @@ const uint8_t FILTER_FREQ_POT_PIN = 22;
 const uint8_t FILTER_RES_POT_PIN = 23;
 
 // Pin assignments for primary and secondary mux layers
-// The BTN_42 PCB uses CD74HC4067 multiplexers which require four
-// select lines each.  Earlier firmware revisions only defined three
-// pins per mux; the fourth line is now added to match the hardware.
-// Updated to match the BTN_42 PCB wiring
+// The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select
 // muxR select lines -> pins 2,3,4,5
 // muxC select lines -> pins 8,9,10,11
 const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
