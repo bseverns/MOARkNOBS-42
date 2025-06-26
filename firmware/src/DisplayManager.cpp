@@ -38,6 +38,45 @@ void DisplayManager::triggerFade(uint16_t ms) {
 }
 
 void DisplayManager::updateFadeAnimation() {
+    uint32_t now = millis();
+    uint32_t elapsed = now - _fadeAnim.lastTime;
+
+    switch (_fadeAnim.state) {
+        case AnimState::FADE_IN: {
+            if (elapsed >= _fadeAnim.duration) {
+                _fadeAnim.state = AnimState::HOLD;
+                _fadeAnim.lastTime = now;
+                _fadeAnim.brightness = 255;
+            } else {
+                _fadeAnim.brightness = map(elapsed, 0, _fadeAnim.duration, 0, 255);
+            }
+            break;
+        }
+        case AnimState::HOLD:
+            if (elapsed >= 500) {
+                _fadeAnim.state = AnimState::FADE_OUT;
+                _fadeAnim.lastTime = now;
+            }
+            break;
+        case AnimState::FADE_OUT: {
+            if (elapsed >= _fadeAnim.duration) {
+                _fadeAnim.state = AnimState::DONE;
+                _fadeAnim.brightness = 0;
+            } else {
+                _fadeAnim.brightness = map(elapsed, 0, _fadeAnim.duration, 255, 0);
+            }
+            break;
+        }
+        default:
+            break;
+    }
+
+    // Apply the computed brightness once per loop
+    _display.ssd1306_command(SSD1306_SETCONTRAST);
+    _display.ssd1306_command(_fadeAnim.brightness);
+}
+
+void DisplayManager::updateFadeAnimation() {
     if (_fadeAnim.state == AnimState::IDLE || _fadeAnim.state == AnimState::DONE) {
         return;
     }
