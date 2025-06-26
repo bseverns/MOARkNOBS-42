@@ -27,7 +27,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 
 ## Hardware Redefined
 
-The original idea was simple: 42 knobs (emulating the 60 Knobs from Bastl). But simplicity is for cowards. So here’s what it became:
+The original idea was simple: 42 knobs (emulating the '60 Knobs' from Bastl Instruments). But simplicity is for cowards. So here’s what it became:
 
 * **1 physical control pot**: total recall per slot.
 * **2 more physical pots**: for filter tuning.
@@ -61,7 +61,6 @@ Test files include:
 
 * `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
 * `unified.cpp`: full integration test—just power it on and watch the magic.
-* `test_biquadfilter.cpp`: for the nerds tuning their DSP coefficients in the dead of night.
 
 ## Button Mayhem
 
@@ -226,7 +225,7 @@ Your configuration is stored in EEPROM. Manual save required.
 1. Plug it in.
 2. Use a DAW or synth.
 3. Watch LEDs. Twist knob. Push buttons.
-4. Reconfigure until satisfied—or mildly horrified. The web editor might help.
+4. Reconfigure until satisfied—or mildly horrified. The web editor might help those that seek some simplicity.
 
 ## Web Editor
 
@@ -239,7 +238,7 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
 ## Support
 
-This isn’t plug-and-play consumer gear yet. It’s for builders, hackers, and those who edit INIs on purpose.
+This isn’t a normal plug-and-play piece gear. It’s for builders, hackers, and those who edit INIs on purpose.
 
 For firmware help: check this repo.
 

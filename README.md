@@ -20,8 +20,12 @@ See [`firmware/README.md`](firmware/README.md) for the full manual. Key features
 
 The `hardware/` directory contains design files for the button matrix PCB:
 
+<<<<<<< Updated upstream
 - **BTN_42/** – houses the `MN42-1` project with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip` for fabrication. The 42 slot buttons plus 6 control buttons form a 7×6 diode matrix. Two CD74HC4067 multiplexers scan the rows (`ROW1..ROW7`) and columns (`COL1..COL6`) via select lines labeled `MUXR1..4` and `MUXC1..4`.
 Directories for the main interface and control boards are not included in this repository.
+=======
+- **BTN_42/** – houses the `MN42-1` project with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip` for fabrication.
+>>>>>>> Stashed changes
 
 Use this directory to manufacture the hardware or modify the design.
 
