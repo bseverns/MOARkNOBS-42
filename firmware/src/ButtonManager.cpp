@@ -5,6 +5,12 @@
 #include "Utility.h"
 #include <map>
 
+// The BTN_42 PCB connects 42 pushbuttons in a 7×6 diode matrix. Each row and
+// column is wired to one channel of two CD74HC4067 analog multiplexers. The
+// select lines for the row mux are labeled `MUXR1..4` and the column mux uses
+// `MUXC1..4`. The firmware cycles these select lines and reads the shared
+// analog node to detect button presses.
+
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
@@ -70,11 +76,13 @@ ButtonManager::ButtonManager(const uint8_t* primaryMuxPins,
 
 // We call this once at setup, just like your original approach:
 void ButtonManager::initButtons() {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
         pinMode(_primaryMuxPins[i], OUTPUT);
+    }
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
         pinMode(_secondaryMuxPins[i], OUTPUT);
     }
-    pinMode(analogPin, INPUT);
+    pinMode(_muxAnalogPin, INPUT);
 
     for (int i = 0; i < NUM_CONTROL_BUTTONS; i++) {
         pinMode(_controlPins[i], INPUT_PULLUP);
@@ -180,10 +188,9 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
 /**
  * Called as soon as we confirm a long press.
  */
-void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context)
-{
+void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
+    // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
-        // Long Press (Slot Button): Assign the selected slot to an EF, or cycle which EF is assigned
         auto it = context.potToEnvelopeMap.find(index);
         if (it == context.potToEnvelopeMap.end()) {
             context.potToEnvelopeMap[index] = 0; // Assign EF0
@@ -194,18 +201,41 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context)
         }
         int assigned = context.potToEnvelopeMap[index];
         context.envelopes[assigned].toggleActive(true);
-
-        char buf[32];
-        sprintf(buf, "Long: Slot %d->EF %d", index, assigned);
-        context.displayManager.displayStatus(buf, 1500);
+        context.displayManager.displayStatus("EF Assigned", 1000);
     }
     else {
-        // Could do something else if a control button is long-pressed
-        char msg[32];
-        sprintf(msg, "LongPress Ctrl %d", index - NUM_VIRTUAL_BUTTONS);
-        context.displayManager.displayStatus(msg, 1000);
+        // Control buttons (0-5)
+        uint8_t ctrlIdx = index - NUM_VIRTUAL_BUTTONS;
+        switch (ctrlIdx) {
+            case 1: { //Cycle MIDI Message Type
+                MIDISlot &slot = context.configManager.getSlot(context.activePot);
+                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::Aftertouch) + 1));
+                context.configManager.saveSlot(context.activePot, slot);
+                char buf[32];
+                sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
+                context.displayManager.displayStatus(buf, 1500);
+                break;
+            }
+            case 2: { //Toggle Slot Active
+                MIDISlot &slot = context.configManager.getSlot(context.activePot);
+                slot.active = !slot.active;
+                context.configManager.saveSlot(context.activePot, slot);
+                char buf[32];
+                sprintf(buf, "Slot %d %s", context.activePot, slot.active ? "ON" : "OFF");
+                context.displayManager.displayStatus(buf, 1500);
+                break;
+            }
+            case 4: // EEPROM reset
+                context.configManager.loadConfiguration(context.potChannels);
+                context.displayManager.displayStatus("EEPROM Reset", 1500);
+                break;
+            default:
+                context.displayManager.displayStatus("No Long Action", 1000);
+                break;
+        }
     }
 }
+
 
 /**
  * Called after the user releases (short or long). If it wasn't a long press, we treat it as short press.
@@ -507,14 +537,73 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);
     }
+    // (4) Ctrl0 + Ctrl4: Set active slot to MIDI Note mode
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl4)) == (maskCtrl0 | maskCtrl4)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::Note);
+        char buf[32];
+        sprintf(buf, "Slot %d => NOTE", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (5) Ctrl0 + Ctrl5: Set active slot to Program Change
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::ProgramChange);
+        char buf[32];
+        sprintf(buf, "Slot %d => PROG", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (6) Ctrl1 + Ctrl4: Set active slot to Aftertouch
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::Aftertouch);
+        char buf[32];
+        sprintf(buf, "Slot %d => AFTER", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (7) Ctrl1 + Ctrl5: Set active slot to Pitch Bend
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::PitchBend);
+        char buf[32];
+        sprintf(buf, "Slot %d => BEND", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (8) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
+        auto it = context.potToEnvelopeMap.find(context.activePot);
+        if (it == context.potToEnvelopeMap.end()) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return;
+        }
+        int efIndex = it->second;
+        static int pairPos = 0;
+        pairPos = (pairPos + 1) % NUM_ARG_PAIRS;
+        int envA = ARG_PAIRS[pairPos].first;
+        int envB = ARG_PAIRS[pairPos].second;
+        context.envelopes[efIndex].setEnvelopePair(envA, envB);
+        context.configManager.setEnvelopePair(envA, envB);
+        auto pinName = [](int pin) {
+            switch(pin) {
+                case A0: return "A0";
+                case A1: return "A1";
+                case A2: return "A2";
+                case A3: return "A3";
+                case A6: return "A6";
+                case A7: return "A7";
+                default: return "Ax";
+            }
+        };
+        char buf[32];
+        sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
+        context.displayManager.displayStatus(buf, 1500);
+    }
 }
 
 /**
  * Implementation of reading from multiplexer (same as your old code).
  */
 uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
-    uint8_t row = buttonIndex / 8;
-    uint8_t col = buttonIndex % 8;
+    // BTN_42 arranges 42 buttons in a 7x6 diode matrix. We map the
+    // linear index into row/column coordinates accordingly.
+    uint8_t row = buttonIndex / BUTTON_COLS;
+    uint8_t col = buttonIndex % BUTTON_COLS;
     selectMux(row, col);
     int value = analogRead(_muxAnalogPin);
     return (value < 512) ? HIGH : LOW; // or invert if needed
@@ -528,8 +617,10 @@ bool ButtonManager::readControlButton(uint8_t buttonIndex) {
 }
 
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
         digitalWrite(_primaryMuxPins[i], (row >> i) & 1);
+    }
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
         digitalWrite(_secondaryMuxPins[i], (col >> i) & 1);
     }
 }

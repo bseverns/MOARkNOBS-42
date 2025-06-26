@@ -61,7 +61,7 @@ public:
   void runIdleScreensaver();
   void registerInteraction();
   bool shouldRunScreensaver() const;
-  void showFilterTuning(float frequency, float q);
+  void showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue);
 
 private:
   Animation          _fadeAnim;

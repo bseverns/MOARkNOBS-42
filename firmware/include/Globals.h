@@ -4,14 +4,14 @@
 #include <Arduino.h>
 #include <vector>
 #include <map>
-#include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
+#include "MIDITypes.h"
 
 class ConfigManager;
 extern ConfigManager configManager;
 
-#define LED_PIN 6
+#define LED_PIN 6  // WS2812 LED data pin
 #define NUM_LEDS 42
 #define NUM_BUTTONS 6
 #define OLED_WIDTH 128
@@ -28,7 +28,10 @@ extern ConfigManager configManager;
 #define ENV_RANGE_MIN 5      // adjust based on your signal threshold requirements
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
-#define NUM_POTS 42
+
+// EEPROM storage constants
+constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
+constexpr uint8_t SLOT_EEPROM_SIZE = sizeof(MIDISlot);  // typically 5 bytes
 
 //clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
@@ -38,9 +41,15 @@ const uint8_t FILTER_FREQ_POT_PIN = 22;
 const uint8_t FILTER_RES_POT_PIN = 23;
 
 // Pin assignments for primary and secondary mux layers
-const uint8_t primaryMuxPins[] = {7, 8, 9};
-const uint8_t secondaryMuxPins[] = {10, 11, 12};
-const uint8_t analogPin = 4; //mux reader
+// The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select
+// muxR select lines -> pins 2,3,4,5
+// muxC select lines -> pins 8,9,10,11
+const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
+const uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
+
+// Direct-wired control buttons use separate GPIOs so they don't
+// interfere with the mux select lines.
+// Wiring: C0->12, C1->13, C2->14, C3->15, C4->24, C5->25
 
 extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;

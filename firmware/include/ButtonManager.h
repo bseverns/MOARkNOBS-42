@@ -26,6 +26,9 @@
 #define NUM_CONTROL_BUTTONS 6
 // Debounce period in milliseconds
 #define DEBOUNCE_DELAY 50
+// Button matrix layout (rows x columns)
+#define BUTTON_ROWS 7
+#define BUTTON_COLS 6
 
 /**
  * States for each button in the debounce & press state machine.
@@ -57,6 +60,7 @@ struct ButtonManagerContext {
     uint8_t& activePot;                         // Currently selected potentiometer index
     uint8_t& activeChannel;                     // MIDI channel to send CC on
     bool& envelopeFollowMode;                   // Flag: envelope-following mode active
+    const char*& envelopeMode;                  // Envelope mode display
     ConfigManager& configManager;               // For loading/saving persistent settings
     LEDManager& ledManager;                     // For updating visual feedback LEDs
     DisplayManager& displayManager;             // For writing status to OLED

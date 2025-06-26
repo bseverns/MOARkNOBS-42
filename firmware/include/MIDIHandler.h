@@ -2,10 +2,9 @@
 #define MIDIHANDLER_H
 
 #include "Arduino.h"
-#include "MIDI.h"
 #include "DisplayManager.h"
 
-#define IS_USB_CONNECTED() (usbMIDI.connected())
+#define IS_USB_CONNECTED() (usbMidi.connected())
 
 class MIDIHandler {
 public:
@@ -19,6 +18,9 @@ public:
     void handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2); // Process a generic MIDI message
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
     void handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity);
+    void sendProgramChange(uint8_t program, uint8_t channel);
+    void sendAftertouch(uint8_t pressure, uint8_t channel);
+    void sendPitchBend(int16_t bend, uint8_t channel);
     bool isClockTick();
     void clearClockTick();
 

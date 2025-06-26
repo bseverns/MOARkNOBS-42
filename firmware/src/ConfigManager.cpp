@@ -114,7 +114,24 @@ void ConfigManager::writeEEPROM(bool backup) {
 
 // Initialize configuration
 void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
-    loadConfiguration(potChannels);
+    // 1) Load every MIDISlot from EEPROM into our in-RAM array
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        loadSlot(i, slots[i]);
+    }
+    // 2) Pull out the existing pot → CC mappings
+    //    (assuming _potCCNumbers was filled by readEEPROM)
+    potChannels.clear();
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        potChannels.push_back(_potCCNumbers[i]);
+    }
+}
+
+void ConfigManager::loadSlot(uint8_t idx, MIDISlot& dest) {
+  EEPROM.get(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, dest);
+}
+
+void ConfigManager::saveSlot(uint8_t idx, const MIDISlot& src) {
+  EEPROM.put(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, src);
 }
 
 // Potentiometer accessors
@@ -249,4 +266,31 @@ String ConfigManager::serializeAll() const {
 
     output += "] }";
     return output;
+}
+
+void ConfigManager::saveMIDISlots(const MIDISlot* slots, size_t count) {
+    if (slots == nullptr || count == 0) {
+        return;
+    }
+    // Clamp to maximum number of slots to avoid overflow
+    if (count > 42) {
+        count = 42;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        int address = EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE;
+        EEPROM.put(address, slots[i]);
+    }
+}
+
+void ConfigManager::loadMIDISlots(MIDISlot* slots, size_t count) {
+    if (slots == nullptr || count == 0) {
+        return;
+    }
+    if (count > 42) {
+        count = 42;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        int address = EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE;
+        EEPROM.get(address, slots[i]);
+    }
 }

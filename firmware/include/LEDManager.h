@@ -17,7 +17,7 @@ enum class LEDState {
 
 class LEDManager {
 public:
-    LEDManager(uint8_t pin, uint16_t numLEDs);
+    LEDManager(uint16_t numLEDs);
     ~LEDManager();
     void begin();
     void setPotValue(uint8_t potIndex, uint8_t value);
@@ -36,7 +36,6 @@ public:
     void update();
 
 private:
-    uint8_t pin;
     uint16_t numLEDs;
     std::vector<CRGB> leds;
     std::map<std::string, std::vector<uint16_t>> ledGroups;

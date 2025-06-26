@@ -1,163 +1,248 @@
 # MOARkNOBZ MN42 MIDI Controller
 
-## Introduction
-The **MOARkNOBZ MN42** is a flexible, dynamic MIDI controller designed for real-time performance and parameter modulation. Originally designed with **42 physical potentiometers**, the current hardware configuration replaces them with:
+> Firmware for the unapologetically DIY, button-stabbin', knob-hackin', MIDI-mashin' controller you didn’t ask for but definitely need.
 
-- A **single physical pot** for continuous control.
-- A **set of buttons** to navigate and modify **42 virtual CC slots**.
-- An **OLED display** and **addressable LEDs** for real-time feedback.
+*Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
 
-While the hardware layout has changed, the firmware still operates as though there are **42 virtual pots (CC slots)**. Each slot can be individually assigned:
-- A **MIDI Channel**
-- A **CC number**
-- **Optional Envelope Follower modulation**
+## What's This?
 
-With **one pot to rule them all**, you can swap between these 42 slots on the fly, using the button matrix. The ButtonManager interprets short, long, and multi-button presses, allowing for dynamic control without requiring a massive bank of physical knobs.
+The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a single control pot, a bunch of buttons, and enough virtual slots to make your DAW weep.
+
+Forget fragile GUIs and boutique workflows. This beast lives in the guts: hand-coded on a Teensy4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
+
+And driving the chaos? Six real-time **envelope followers**, each capable of modulating any CC slot based on live input audio. These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
+
+## Key Features
+
+- **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
+- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend.
+- **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
+- **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
+- **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
+- **EEPROM Resilience**: Built-in config backup system with auto-recovery from corruption.
+- **Dual MIDI Output**: Send messages via USB and classic 5-pin DIN simultaneously.
+- **Idle Screensaver**: OLED enters low-power animations after inactivity.
+- **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
+- **HTML-Based Editor**: View and update settings via WebSerial (USB).
+
+## Hardware Redefined
+
+The original idea was simple: 42 knobs (emulating the '60 Knobs' from Bastl Instruments). But simplicity is for cowards. So here’s what it became:
+
+* **1 physical control pot**: total recall per slot.
+* **2 more physical pots**: for filter tuning.
+* **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
+* **A grid of buttons**: short press, long press, combos, the works. The
+  button PCB (`BTN_42`) wires them into a 7×6 diode matrix which is scanned
+  through two CD74HC4067 multiplexers. The firmware drives the select lines
+  (`MUXR1..4` for rows, `MUXC1..4` for columns) and reads the combined node to
+  detect presses.
+* **OLED Display + Addressable LEDs**: full visual feedback like a punk rock spaceship control panel.
+* **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
+* **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
+
+## What It Does
+
+* Navigate 42 MIDI slots.
+* Dynamically modulate CCs or other MIDI parameters with audio or CV-driven (+5vdc) envelope followers.
+* Select filter mode for each envelope follower (with visual OLED feedback).
+* Adjust filter frequency and resonance per EF live, using dedicated knobs.
+* Store/reload settings in EEPROM (with backup integrity checking).
+* Send CCs, notes, pitch bend, aftertouch, and program change via USB and DIN.
+* Use a Web Serial editor to configure settings over USB.
+
+## Test Philosophy (and Real Talk)
+
+We don’t run tests in `/test`. That folder’s dead to us. Our hardware tests live right in `src/` where the real work happens.
+
+Why? Because PlatformIO’s unit test runner is a pain when your test requires poking real LEDs or twisting actual knobs. We write direct test files and compile each one as a standalone firmware. It’s brute-force testing—manual, visual, deliberate.
+
+Test files include:
+
+* `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
+* `unified.cpp`: full integration test—just power it on and watch the magic.
+
+## Button Mayhem
+
+Each controlbutton can do several things depending on how you hit it:
+
+| Button | Short Press         | Long Press                    | Double Press                     |
+| ------ | ------------------- | -----------------------------| --------------------------------- |
+| #0     | Toggle EF           | —                             | Cycle EF Filter (forward)         |
+| #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
+| #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
+| #3     | Cycle MIDI Channel  | —                             | —                                 |
+| #4     | Cycle CC Number     | Reset EEPROM                  | Save config                       |
+| #5     | Tap BPM             | —                             | —                                 |
+
+**Slot Buttons (0–41):**
+- **Long Press:** Assign or cycle the Envelope Follower for that slot and toggle EF ON.
+
+And yes, combo presses are supported:
+
+| Combo   | Action                                      |
+| ------- | ------------------------------------------- |
+| #0 + #1 | Cycle EF ARG mode method                    |
+| #2 + #3 | Cycle LED light display modes               |
+| #4 + #5 | Enable EF and randomize settings            |
+
+*Additional combos implemented in firmware:*
+
+| Combo      | Action                                   |
+|------------|------------------------------------------|
+| #0 + #4    | Set slot to MIDI Note mode               |
+| #0 + #5    | Set slot to Program Change               |
+| #1 + #4    | Set slot to Aftertouch                   |
+| #1 + #5    | Set slot to Pitch Bend                   |
+| #2 + #5    | Cycle ARG envelope pair                  |
 
 ---
 
-## Features Overview
+### Filter Selection Pro Tip
 
-### Virtual Potentiometers
-- The firmware manages **42 CC slots**.
-- The **physical pot** controls one virtual slot at a time, with quick selection via buttons.
-- Pot positions update dynamically, making it easy to recall and adjust values live.
-
-### Button-Controlled System
-- **Short, long, and double press detection** for quick access.
-- **Multi-button combinations** to unlock additional features.
-- **Dedicated commands for slot selection, channel/CC assignment, and effect toggling.**
-
-### Envelope Follower (EF)
-- Dynamically modulates MIDI CC values based on **incoming audio amplitude**.
-- Choose between **Standard Envelope Follower (SEF) and Advanced Relative Gain (ARG) mode**.
-- Multiple filter types: **Lowpass, Highpass, Bandpass, Linear, Opposite, Exponential, Random**.
-- Adjustable response behavior using onboard **filter tuning pots** for Lowpass, Highpass, and Bandpass.
-
-### Real-Time Filter Tuning
-- Two dedicated tuning potentiometers allow **live control** over filter settings:
-  - **Frequency Control** (FILTER_FREQ_POT_PIN): Adjusts cutoff frequency.
-  - **Resonance Control** (FILTER_RES_POT_PIN): Controls the resonance, shaping sharpness.
-- Active only when the **Envelope Follower is assigned and using Lowpass, Highpass, or Bandpass mode**.
-- LED and OLED display reflect real-time adjustments.
-
-### Display & LED Feedback
-- **OLED screen**: Displays active slot, envelope status, channel/CC info.
-- **Addressable LEDs**: Provide color-coded feedback on the current mode and modulation state.
-- Dynamic updates for envelope follower activity and real-time performance.
-
-### MIDI Connectivity
-- Supports **USB MIDI** (DAW, softsynths, etc.).
-- Supports **DIN MIDI** (hardware synths, sequencers, etc.).
-- **Both outputs work simultaneously**, so you can control multiple systems at once.
-
-### EEPROM Storage
-- **Saves your mappings, assignments, and filter settings across power cycles**.
-- Prevents accidental resets when tweaking your setup.
-
-### Web-Based Editor
-- **An HTML-based firmware editor** will allow quick reconfiguration over USB.
-- Users will be able to set CC assignments, LED color schemes, and envelope behaviors visually. -url tbd-
+> **To change the filter type** (linear, exponential, low-pass, high-pass, etc.) for a slot’s Envelope Follower, simply:
+>
+> - **Double-press Control Button #0** to cycle the filter type **forward**.
+> - **Double-press Control Button #1** to cycle the filter type **backward**.
+>
+> The OLED will display the new filter type (e.g., `Slot 5 => BANDPASS`). This works for the EF assigned to the current slot.
 
 ---
+
+### OLED Feedback Cheat Sheet
+
+Typical screen messages from the firmware’s `DisplayManager` include:
+
+* `Active Slot=<n>` when you select a slot button.
+* `EF: ON/OFF` when toggling envelope following with Control Button #0.
+* `Slot <n> -> EF <m>` when assigning an EF (long press on a slot or short press on Control Button #2).
+* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
+* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
+
+Turning the **main pot** simply updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
+
+---
+
+## ARG Mode
+
+### What Is ARG Mode?
+
+ARG (Advanced Relative Gain) mode lets you break free from single-source modulation. Instead of just one audio signal driving an Envelope Follower, ARG lets you **combine or compare two**. It supports 7 expressive modulation algorithms (like `A+B`, `A-B`, `B-A`, `A*B`, etc.) for glitchy, reactive, or chaotic behaviors.
+
+This ain't your mom’s envelope follower.
+
+### How to Activate ARG Mode
+
+You need to already have an **Envelope Follower assigned** to the active slot. To do that:
+
+1. **Press Control Button #0** to toggle EF mode **ON** (green LED will confirm).
+2. **Press Control Button #0 + Control Button #1** at the same time to enter **ARG mode** for the assigned EF.
+
+### Cycling ARG Methods
+
+With ARG mode active and an EF already assigned:
+
+* Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**:
+
+  * `PLUS` – A + B
+  * `MIN` – A - B
+  * `PECK`, `SHAV`, `SQAR`, `BABS`, `TABS` – creative algorithmic transforms and distortions
+
+Each press shifts to the next method; the OLED will display something like: `EF 2 => SHAV`.
+
+### Assigning Envelope Pairs for ARG
+
+Once you're in ARG mode:
+
+* Press **Control Button #2 + Control Button #5** together
+* This will cycle through all combinations of the 6 envelope inputs (A0, A1, A2, A3, A6, A7)
+* Each time, it pairs a new (A, B) set and assigns them to the active EF
+* The OLED will display the current pairing: `EF 1: A3/B0`
+
+This allows reactive modulation—i.e., *side-chaining*, *comparative analysis*, or *musical sabotage*—by letting one signal influence another.
+
+### Pro Tips
+
+* LED color will shift in response to filter type + ARG mode
+* Use this to chain bass envelope to pad CC, or voice amplitude to delay feedback
+* It’s experimental by nature. Push it too far. Then back off just enough to groove.
+
+## Filter Controls
+
+Each envelope follower features a full DSP filter section with **7 selectable modes**:
+- **Linear**
+- **Opposite Linear**
+- **Exponential**
+- **Random**
+- **Low-pass (LPF)**
+- **High-pass (HPF)**
+- **Band-pass (BPF)**
+
+Switch filter type via double-presses on control buttons. The currently assigned filter is shown on the OLED.
+
+When LPF/HPF/BPF is selected, **two dedicated tuning pots** become active for that EF, letting you adjust:
+- **Frequency**: Cutoff/center frequency (20–5000Hz)
+- **Resonance (Q)**: 0.5–4.0 (slope/sharpness)
+
+All changes are visualized in real time on the display.
+
+## LEDs + Display
+
+LED colours follow the states defined in `LEDManager::update()`. They provide at-a-glance feedback while you twist and mash buttons:
+
+- **Red** – the currently active pot/slot.
+- **Green** – envelope mode enabled for that slot.
+- **Blue** – ARG mode is engaged.
+- **Yellow** – flashes during MIDI updates.
+- **White** – temporary feedback (also used for the startup sweep).
+
+On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware.
+
+The OLED shows:
+  - Slot info (CC, Channel, Value)
+  - EF status and assignment
+  - Envelope bars and filter info
+  - MIDI messages as they occur
+  - Animated fades and idle screensaver after 90s
+
+## Saving and Loading
+
+Your configuration is stored in EEPROM. Manual save required.
+
+* **Button #4 (long press)** resets config.
+* **Button #4 (double press)** stores current setup.
+* A backup copy is also maintained and auto-restored if needed.
+
+## MIDI: The Lifeblood
+
+* **USB MIDI**: works with anything modern.
+* **DIN MIDI**: hardware junkies rejoice.
+* **Both at once**: of course.
+* **Supports**: CC, Note, Program Change, Aftertouch, Pitch Bend
 
 ## Getting Started
 
-### 1. Setup & Connections
-- **Connect the MN42** via USB to a computer.
-- **Power Requirements:** If using external power, supply a stable **5V 2A**.
-- **MIDI Connections:**
-  - **USB MIDI**: Works immediately with most DAWs and software.
-  - **DIN MIDI**: Connect external gear via the **MIDI IN/OUT ports**.
-- Upon connection, your device should be detected as **"MOARkNOBZ"**.
+1. Plug it in.
+2. Use a DAW or synth.
+3. Watch LEDs. Twist knob. Push buttons.
+4. Reconfigure until satisfied—or mildly horrified. The web editor might help those that seek some simplicity.
 
-### 2. Powering On & Interface Overview
-- The **OLED display** will show a brief **MOAR splash screen**.
-- The **firmware loads stored assignments from EEPROM**.
-- LEDs will indicate:
-  - **Red**: Active slot.
-  - **Green**: Envelope Follower is enabled.
-  - **Blue**: Special configuration or status modes.
+## Web Editor
 
-### 3. Controlling Virtual Pots
-- The single **physical pot** controls whichever **virtual CC slot** is active.
-- Use buttons to navigate between slots, assigning them to different MIDI parameters.
-- The OLED screen and LED color scheme reflect changes instantly.
+Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
----
+* Assign CCs visually
+* Set envelope pairings
+* Tweak filter types, EF settings
+* Save back to EEPROM over WebSerial
 
-## Using the Controls
+## Support
 
-### 1. The Physical Pot
-- **Adjusts MIDI CC values** in real-time.
-- The **OLED and LED indicators** reflect active slot status.
-- **Easily reassign the pot** to any virtual CC slot using button commands.
+This isn’t a normal plug-and-play piece gear. It’s for builders, hackers, and those who edit INIs on purpose.
 
-### 2. Filter Tuning Controls
-#### When Are the Tuning Pots Used?
-- Only active when an **Envelope Follower is assigned**.
-- Only affects slots using **Lowpass, Highpass, or Bandpass filters**.
-- Changes take effect **immediately** and persist after saving.
+For firmware help: check this repo.
 
-#### How to Use the Filter Controls
-1. **Enable an Envelope Follower** on a slot.
-2. **Set the filter type** (Lowpass, Highpass, or Bandpass) using button combinations.
-3. **Turn the tuning pots:**
-   - **Frequency Pot:** Controls the cutoff point, shifting timbre in response to input.
-   - **Resonance Pot:** Adjusts the filter resonance (sharpness or smoothness of effect).
-4. **Watch the LEDs** to monitor changes—color intensity reflects filter activity.
+For personal catharsis:  
+**[support@bseverns.me](mailto:support@bseverns.me)**
 
-#### Creative Uses
-- **Sculpt dynamic modulations** by fine-tuning envelope-driven MIDI CC outputs.
-- **Create rhythmic sweeps** by assigning the Envelope Follower to LFO-like behaviors.
-- **Introduce subtle or dramatic resonance shifts** based on real-time audio input.
-- **Enhance live performance** with responsive and expressive filtering.
-
-### 3. Buttons & ButtonManager
-#### Button Functions
-| Button | Short Press | Long Press | Double Press |
-|--------|------------|------------|--------------|
-| **#0** | Toggle Envelope Follower | Assign slot to EF | Cycle EF Filter Type (Forward) |
-| **#1** | Select next slot | | Cycle EF Filter Type (Backward) |
-| **#2** | Cycle EF assignment | | |
-| **#3** | Cycle active slot’s MIDI Channel (1-16) | | |
-| **#4** | Cycle active slot’s CC number | Reset EEPROM | Save Configuration |
-| **#5** | Tap BPM | | |
-
-#### Multi-Button Combos
-| Combo | Action |
-|-------|--------|
-| **#0 + #1** | Cycle EF ARG mode method |
-| **#2 + #3** | Cycle light modes |
-| **#4 + #5** | Turn on EF (if off) and randomly assign envelope |
-
-### 4. Display & LED Feedback
-- The **OLED screen** provides clear, at-a-glance status updates.
-- **LED indicators** shift dynamically based on envelope status, slot selection, and modulation depth.
-
----
-
-## Troubleshooting & Tips
-
-| Issue | Possible Cause | Solution |
-|-------|---------------|---------|
-| Device not recognized | Faulty USB cable | Try a different cable/port |
-| No MIDI output | Incorrect slot or CC mapping | Verify MIDI assignments |
-| Envelope not responding | EF not enabled | Check if EF mode is active |
-| Filter controls not working | Wrong filter type selected | Ensure LPF/HPF/BPF is active |
-| EEPROM settings not saving | Not stored properly | Use the **Save Configuration** button |
-
----
-
-## Firmware Updates & Future Expansions
-- The upcoming **HTML-based configuration editor** will streamline CC assignments and visual mapping.
-- Future firmware updates will introduce **custom modulation curves** and additional LED behaviors.
-
----
-
-## Contact & Support
-For firmware updates, detailed documentation, or troubleshooting:
-- Visit **our GitHub repository**
-- Contact **support@bseverns.me**
-
-Enjoy the **MOARkNOBZ** experience—where one pot holds the power of **42 virtual CC slots**, advanced modulation, and expressive control. Happy tweaking!
+Build bold. Tweak louder. Modulate everything.

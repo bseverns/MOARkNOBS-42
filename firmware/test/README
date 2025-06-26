@@ -1,8 +1,78 @@
+#MOARkNOBZ Firmware: Hardware Testing Suite
 
-This directory is for unit and project tests.
+This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware. 
 
-Unit Testing is a software testing method by which individual units of
-source code, sets of one or more MCU program modules together with associated
-control data, usage procedures, and operating procedures, are tested to
-determine whether they are fit for use. Unit testing finds problems early
-in the development cycle.
+These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters.
+
+##File Descriptions
+
+###mainTEST.cpp
+
+Location: src/mainTEST.cpp
+
+####Purpose-built to verify all major subsystems individually:
+
+LEDManager: one LED at a time, manually stepped
+
+ButtonManager: tests both the matrix-multiplexed buttons and the direct-wired buttons
+
+PotentiometerManager: reads all knobs, prints analog values
+
+EnvelopeFollower: confirms dynamic envelope response
+
+DisplayManager: shows static test data on all 3 lines
+
+Run this and check it with your eyes. No automation. Human-in-the-loop sanity checks, every time.
+
+Interaction: Step manually by hitting Enter in the serial monitor between stages.
+
+###unified.cpp
+
+Location: src/unified.cpp
+
+####This is the integration stress-test. All systems together, reacting to physical input. No waiting for user input via serial; it uses the actual button matrix for flow control. If something doesn't light up, react, or show data, you know exactly where to poke.
+
+Used for field validation, QA benches, and righteous debugging rage.
+
+Interaction: Uses real button presses (not keyboard input). Designed to be used with the assembled controller.
+
+###test_biquadfilter.cpp
+
+Location: src/test_biquadfilter.cpp
+
+####Tests the digital signal processing side of things. No LEDs. No buttons. Just math:
+
+Verifies BiquadFilter's behavior for low-pass filters
+
+Confirms correct coefficient updates and state handling
+
+Useful for catching dumb mistakes in your DSP brain
+
+Run this when your filter "sounds weird" and you're sure the hardware is fine.
+
+##How to Build a Test
+
+Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building mainTEST.cpp:
+
+[env:teensy40_mainTEST]
+extends = env:teensy40_base
+build_src_filter =
+    +<**/mainTEST.cpp>
+    +<**/ButtonManager.cpp>
+    +<**/ConfigManager.cpp>
+    +<**/DisplayManager.cpp>
+    +<**/EnvelopeFollower.cpp>
+    +<**/LEDManager.cpp>
+    +<**/MIDIHandler.cpp>
+    +<**/PotentiometerManager.cpp>
+    +<**/Utility.cpp>
+    +<include/**.h>
+    -<**/firmware_main.cpp>
+
+Substitute mainTEST.cpp with unified.cpp or test_biquadfilter.cpp depending on what you're testing.
+
+##Final Note
+
+This isn't a test suite for a codebase. It's a test suite for a circuit. If you're not plugging in wires and getting your fingers zapped on that one cap you forgot was charged, you're doing it wrong. This repo is for makers, hackers, educators, and the electrically-inclined misfits who prefer flickering LEDs over CI badges.
+
+If you're here, you're one of us. Let's test dirty.
