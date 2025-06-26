@@ -18,7 +18,9 @@ MIDIHandler midiHandler;
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, OLED_WIDTH, OLED_HEIGHT);
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
 // Pin 6 reserved for LED strip
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, (const uint8_t[]){2,3,4,5,13,24}, &potentiometerManager);
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin,
+                            (const uint8_t[]){12,13,14,15,24,25},
+                            &potentiometerManager);
 std::vector<EnvelopeFollower> envelopeFollowers = {
   EnvelopeFollower(A0, &potentiometerManager),
   EnvelopeFollower(A1, &potentiometerManager),
@@ -73,7 +75,7 @@ void testButtonManager() {
 
   Serial.println("Press each physical control button now.");
   // Pin 6 reserved for LED strip
-  const uint8_t ctrlPins[] = {2,3,4,5,13,24};
+  const uint8_t ctrlPins[] = {12,13,14,15,24,25};
   for (int i = 0; i < NUM_CONTROL_BUTTONS; i++) {
     Serial.printf("Press Control Button #%d (pin %d)...\n", i, ctrlPins[i]);
     while (digitalRead(ctrlPins[i]));
