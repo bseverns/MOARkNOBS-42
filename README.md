@@ -26,10 +26,6 @@ The `hardware/` directory contains design files for the button matrix PCB:
 Directories for the main interface and control boards are not included in this repository.
 =======
 - **BTN_42/** – houses the `MN42-1` project with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip` for fabrication.
->>>>>>> Stashed changes
-=======
-- **BTN_42/** – houses the `MN42-1` project with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip` for fabrication.
->>>>>>> Stashed changes
 
 Use this directory to manufacture the hardware or modify the design.
 
