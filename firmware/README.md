@@ -57,17 +57,18 @@ We don’t run tests in `/test`. That folder’s dead to us. Our hardware tests 
 
 Why? Because PlatformIO’s unit test runner is a pain when your test requires poking real LEDs or twisting actual knobs. We write direct test files and compile each one as a standalone firmware. It’s brute-force testing—manual, visual, deliberate.
 
-Test files include:
+Test files used in the development of this project include:
 
 * `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
 * `unified.cpp`: full integration test—just power it on and watch the magic.
+* `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
 
 ## Button Mayhem
 
 Each controlbutton can do several things depending on how you hit it:
 
-| Button | Short Press         | Long Press                    | Double Press                     |
-| ------ | ------------------- | -----------------------------| --------------------------------- |
+| Button | Short Press         | Long Press                    | Double Press                      |
+| ------ | ------------------- | ----------------------------- | --------------------------------- |
 | #0     | Toggle EF           | —                             | Cycle EF Filter (forward)         |
 | #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
 | #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
