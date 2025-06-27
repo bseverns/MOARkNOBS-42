@@ -13,6 +13,7 @@
 class MIDIHandler;
 class EnvelopeFollower;
 
+/** Small structure representing a scheduled callback. */
 struct ScheduledTask {
     std::function<void()> callback;
     unsigned long runAt;
@@ -23,6 +24,7 @@ struct ScheduledTask {
         : callback(cb), runAt(millis() + delayMs), repeat(rpt), interval(delayMs) {}
 };
 
+/** Simple cooperative task scheduler used by Utility. */
 class TaskScheduler {
 public:
     void addTask(std::function<void()> callback, unsigned long delayMs, bool repeat = false);
@@ -32,9 +34,18 @@ private:
     std::vector<ScheduledTask> tasks;
 };
 
+/** Collection of miscellaneous helper functions. */
 class Utility {
 public:
-    //note on/off
+    /**
+     * Schedule a Note On immediately followed by a delayed Note Off.
+     *
+     * @param midiHandler  Reference to the MIDI handler used to send messages.
+     * @param note         MIDI note number.
+     * @param velocity     Note on velocity.
+     * @param channel      MIDI channel (1‑16).
+     * @param durationMs   Duration in milliseconds before the Note Off is sent.
+     */
     static void scheduleNoteOnOff(
         MIDIHandler& midiHandler,
         uint8_t note,
@@ -44,11 +55,17 @@ public:
     );
 
     // Mapping and Value Transformations
+    /** Map a raw analog reading to the 0‑127 MIDI range. */
     static uint8_t mapToMidiValue(int analogValue, int minValue = 0, int maxValue = 1023);
+
+    /** Generic integer mapping helper. */
     static int mapToRange(int value, int inMin, int inMax, int outMin, int outMax);
+
+    /** Exponential scaling used for envelope shaping. */
     static float mapExponential(float value, float inMin, float inMax, float outMin, float outMax, float exponent);
 
     // Debouncing
+    /** Simple digital input debouncing helper. */
     static bool debounce(bool& previousState, bool currentState, unsigned long& lastDebounceTime, unsigned long currentTime, unsigned long debounceDelay);
 
     // EEPROM Operations
@@ -86,6 +103,8 @@ public:
 );
 
     static void processBulkUpdate(const String& command, uint8_t numPots);
+
+    /** High, medium and low priority schedulers used globally. */
     static TaskScheduler schedulerHigh;
     static TaskScheduler schedulerMid;
     static TaskScheduler schedulerLow;

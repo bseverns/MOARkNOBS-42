@@ -32,13 +32,35 @@ extern MIDIHandler midihandler;
 
 class EnvelopeFollower;
 
+/**
+ * @brief Handles persistence of user configuration in EEPROM.
+ *
+ * ConfigManager provides helpers for saving and loading all
+ * user‑modifiable settings such as pot assignments, LED configuration
+ * and MIDI slot definitions.  It also maintains a backup area in
+ * EEPROM and performs simple integrity checks using a magic number.
+ */
 class ConfigManager {
 public:
+    /**
+     * @param numPots    Number of potentiometer slots available.
+     * @param numButtons Number of dedicated control buttons.
+     */
     ConfigManager(uint8_t numPots, uint8_t numButtons);
+
+    /** Generate the JSON configuration schema string. */
     static String makeSchema();
+
+    /** Serialize the entire configuration to a JSON-like string. */
     String serializeAll() const;
 
-    // Initialize configuration (e.g., load from EEPROM)
+    /**
+     * @brief Initialise the configuration subsystem and read settings
+     *        from EEPROM.
+     *
+     * @param potChannels Reference to a vector that will be filled with the
+     *        stored pot‑to‑CC assignments.
+     */
     void begin(std::vector<uint8_t>& potChannels);
 
     MIDIMessageType getSlotType(uint8_t idx) const { return slots[idx].type; }
@@ -48,56 +70,93 @@ public:
     uint8_t getSlotData1(uint8_t idx) const { return slots[idx].data1; }
     void    setSlotData1(uint8_t idx, uint8_t v){ slots[idx].data1=v; saveSlot(idx,slots[idx]); }
 
-    // Accessor methods for key configurations
+    // Accessors -----------------------------------------------------------
+
+    /** Retrieve the stored MIDI channel for the given pot. */
     uint8_t getPotChannel(uint8_t potIndex) const;
+
+    /** Retrieve the stored CC number for the given pot. */
     uint8_t getPotCCNumber(uint8_t potIndex) const;
+
+    /** Assign a MIDI channel to a pot. */
     void setPotChannel(uint8_t potIndex, uint8_t channel);
+
+    /** Assign a CC number to a pot. */
     void setPotCCNumber(uint8_t potIndex, uint8_t ccNumber);
 
-    // Save and load configurations from EEPROM
+    // Persistence --------------------------------------------------------
+
+    /** Write all configuration data to EEPROM with backup verification. */
     void saveConfiguration();
+
+    /** Load configuration from EEPROM. Returns false if data was invalid. */
     bool loadConfiguration(std::vector<uint8_t>& potChannels);
 
-    // LED EEPROM management
+    // LED settings -------------------------------------------------------
+
+    /** Persist LED brightness and colour to EEPROM. */
     void saveLEDSettings(uint8_t brightness, CRGB color);
+
+    /** Retrieve LED brightness and colour from EEPROM. */
     void loadLEDSettings(uint8_t& brightness, CRGB& color);
 
-    // Reset configuration to defaults
+    /** Reset configuration to factory defaults. */
     void resetConfiguration(std::vector<uint8_t>& potChannels);
 
-    // Envelope Follower configuration
+    // Envelope follower configuration -----------------------------------
+
+    /** Save envelope assignments to EEPROM. */
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
+
+    /** Load envelope assignments from EEPROM. */
     void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
-    // Utility methods to get global constants
+    // Utility methods ----------------------------------------------------
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
 
-    // Store and load the Envelope Follower mode (SEF or ARG)
-    void setMode(uint8_t mode);     // 0 = SEF, 1 = ARG, etc.
+    /** Save the current envelope follower mode (e.g. SEF or ARG). */
+    void setMode(uint8_t mode);
+
+    /** Retrieve the stored envelope follower mode. */
     uint8_t getMode() const;
 
-    // Store and load the ARG method (PLUS, MIN, PECK, etc.)
+    /** Persist the selected ARG method. */
     void setARGMethod(uint8_t method);
+
+    /** Retrieve the stored ARG method. */
     uint8_t getARGMethod() const;
 
-    // Store and load the two envelope “pins” used in ARG mode
+    /** Store the two envelope indices used for ARG calculations. */
     void setEnvelopePair(uint8_t envA, uint8_t envB);
+
+    /** Retrieve the first envelope index used by ARG mode. */
     uint8_t getEnvelopeA() const;
+
+    /** Retrieve the second envelope index used by ARG mode. */
     uint8_t getEnvelopeB() const;
 
-    // MIDI Slot configuration
+    // MIDI slot configuration -------------------------------------------
+
+    /** Save an array of MIDISlot structures to EEPROM. */
     void saveMIDISlots(const MIDISlot* slots, size_t count);
+
+    /** Load MIDISlot structures from EEPROM into the provided buffer. */
     void loadMIDISlots(MIDISlot* slots, size_t count);
 
+    /** Determine if the display should switch to the screensaver. */
     bool shouldRunScreensaver() const;
+
+    /** Execute the idle screensaver animation. */
     void runIdleScreensaver();
 
-        /** Accessor so the rest of your code can see the live slots. */
+    /** Accessor so the rest of your code can see the live slots. */
     const std::array<MIDISlot,NUM_SLOTS>& getSlots() const { return slots; }
+
+    /** Return a reference to a specific slot. */
     MIDISlot& getSlot(uint8_t idx){
-         return slots[idx]; 
-        }
+         return slots[idx];
+    }
 
     /** Helpers for individual slot persistence: */
     void loadSlot(uint8_t idx, MIDISlot& dest);
