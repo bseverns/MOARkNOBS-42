@@ -1,16 +1,16 @@
-#MOARkNOBZ Firmware: Hardware Testing Suite
+# MOARkNOBZ Firmware: Hardware Testing Suite
 
 This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware. 
 
 These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters.
 
-##File Descriptions
+## File Descriptions
 
-###mainTEST.cpp
+### mainTEST.cpp
 
 Location: src/mainTEST.cpp
 
-####Purpose-built to verify all major subsystems individually:
+#### Purpose-built to verify all major subsystems individually:
 
 LEDManager: one LED at a time, manually stepped
 
@@ -26,21 +26,21 @@ Run this and check it with your eyes. No automation. Human-in-the-loop sanity ch
 
 Interaction: Step manually by hitting Enter in the serial monitor between stages.
 
-###unified.cpp
+### unified.cpp
 
 Location: src/unified.cpp
 
-####This is the integration stress-test. All systems together, reacting to physical input. No waiting for user input via serial; it uses the actual button matrix for flow control. If something doesn't light up, react, or show data, you know exactly where to poke.
+#### This is the integration stress-test. All systems together, reacting to physical input. No waiting for user input via serial; it uses the actual button matrix for flow control. If something doesn't light up, react, or show data, you know exactly where to poke.
 
 Used for field validation, QA benches, and righteous debugging rage.
 
 Interaction: Uses real button presses (not keyboard input). Designed to be used with the assembled controller.
 
-###test_biquadfilter.cpp
+### test_biquadfilter.cpp
 
 Location: src/test_biquadfilter.cpp
 
-####Tests the digital signal processing side of things. No LEDs. No buttons. Just math:
+#### Tests the digital signal processing side of things. No LEDs. No buttons. Just math:
 
 Verifies BiquadFilter's behavior for low-pass filters
 
@@ -50,7 +50,7 @@ Useful for catching dumb mistakes in your DSP brain
 
 Run this when your filter "sounds weird" and you're sure the hardware is fine.
 
-##How to Build a Test
+## How to Build a Test
 
 Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building mainTEST.cpp:
 
@@ -71,7 +71,7 @@ build_src_filter =
 
 Substitute mainTEST.cpp with unified.cpp or test_biquadfilter.cpp depending on what you're testing.
 
-##Final Note
+## Final Note
 
 This isn't a test suite for a codebase. It's a test suite for a circuit. If you're not plugging in wires and getting your fingers zapped on that one cap you forgot was charged, you're doing it wrong. This repo is for makers, hackers, educators, and the electrically-inclined misfits who prefer flickering LEDs over CI badges.
 
