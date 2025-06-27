@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+*.zip binary
+*.png binary
+*.stl binary
+*.step binary
+*.xlsx binary
+*.epro binary
+firmware/test/README -text
