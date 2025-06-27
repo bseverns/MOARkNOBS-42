@@ -34,14 +34,14 @@
  * States for each button in the debounce & press state machine.
  */
 enum class ButtonState {
-    IDLE,        // No press detected
-    PRESSED,     // Button is pressed (but not yet long-pressed)
-    LONG_PRESS,  // Long press threshold reached
-    RELEASED     // Button has been released
+    IDLE,        //!< No press detected
+    PRESSED,     //!< Button is pressed but not yet long-pressed
+    LONG_PRESS,  //!< Long press threshold reached
+    RELEASED     //!< Button has been released
 };
 
 /**
- * Tracks timing and flags for each individual button.
+ * @brief Per-button state machine data.
  */
 struct ButtonStateMachine {
     ButtonState state = ButtonState::IDLE;
@@ -52,8 +52,12 @@ struct ButtonStateMachine {
 };
 
 /**
- * Aggregated context passed into processButtons(), containing all
- * shared resources and state the ButtonManager needs to act.
+ * @brief Aggregated references passed to ::processButtons().
+ *
+ * The context contains all mutable state shared between the
+ * ButtonManager and the rest of the application so that button events
+ * can modify system behaviour without the class needing global
+ * variables.
  */
 struct ButtonManagerContext {
     std::vector<uint8_t>& potChannels;          // Mapping of pot indices to CC channels
@@ -69,22 +73,22 @@ struct ButtonManagerContext {
 };
 
 /**
- * ButtonManager handles both:
- *  - Virtual buttons via external multiplexers
- *  - Direct control buttons wired to GPIO
+ * @brief Handles scanning and interpreting all physical and virtual buttons.
  *
- * It manages debounce, short/long/double press detection, and
- * dispatches events into user code via the provided context.
+ * The manager abstracts away the multiplexing hardware and exposes a
+ * high level event interface.  Use ::processButtons regularly in the
+ * main loop to update the state machines for every button.
  */
 class ButtonManager {
 public:
     /**
-     * Constructor
-     * @param primaryMuxPins   Array of GPIO pins controlling primary mux select lines
-     * @param secondaryMuxPins Array of GPIO pins controlling secondary mux select lines
-     * @param muxAnalogPin     Analog pin reading the mux output
-     * @param controlPins      Array of direct GPIO pins for control buttons
-     * @param potentiometerManager Pointer to PotentiometerManager (to sync mode changes)
+     * @brief Create a new ButtonManager instance.
+     *
+     * @param primaryMuxPins   Array of GPIO pins controlling the primary mux row select.
+     * @param secondaryMuxPins Array of GPIO pins controlling the column select.
+     * @param muxAnalogPin     Analog pin used to read the multiplexer output.
+     * @param controlPins      Array of GPIO pins wired to direct control buttons.
+     * @param potentiometerManager Pointer to the PotentiometerManager used for slot configuration.
      */
     ButtonManager(const uint8_t* primaryMuxPins,
                   const uint8_t* secondaryMuxPins,
@@ -93,16 +97,24 @@ public:
                   PotentiometerManager* potentiometerManager);
 
     /**
-     * Call once in setup() to configure pin modes for control buttons.
+     * @brief Initialize GPIO directions for the direct buttons.
+     *
+     * Should be called from the Arduino `setup()` function.
      */
     void initButtons();
 
     /**
-     * Call in loop() to scan both virtual & control buttons,
-     * update state machines, and trigger press events.
-     * @param context    Aggregated references & state used for handling events
+     * @brief Poll all buttons and generate events.
+     *
+     * @param context    Mutable context carrying current selection and resources.
      */
     void processButtons(ButtonManagerContext& context);
+
+    /**
+     * @brief Test helper to query the raw state of a virtual button.
+     * @param index Index of the button (0..NUM_VIRTUAL_BUTTONS-1).
+     * @return true if pressed, false otherwise.
+     */
     bool isMuxButtonPressed(uint8_t index);
 
 private:

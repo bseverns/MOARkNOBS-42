@@ -16,6 +16,10 @@ class EnvelopeFollower;
 constexpr uint8_t NUM_POTS = 42;
 
 
+/**
+ * @brief Reads all potentiometers via a pair of analog multiplexers and
+ *        forwards the values as MIDI messages.
+ */
 class PotentiometerManager {
 private:
     const uint8_t* primaryMuxPins;   // Pins for primary mux bank
@@ -38,13 +42,18 @@ private:
     int argEnvB;
 
 public:
+    /**
+     * @param primaryPins   Pointer to four GPIO pins selecting the primary mux.
+     * @param secondaryPins Pointer to four GPIO pins selecting the pot within the mux.
+     * @param analogPin     Analog input used to read the mux output.
+     */
     PotentiometerManager(
-        const uint8_t* primaryPins, 
-        const uint8_t* secondaryPins, 
+        const uint8_t* primaryPins,
+        const uint8_t* secondaryPins,
         uint8_t analogPin
     );
 
-    // data1, value, channel, slotIdx
+    /** Callback invoked when a pot value changes. */
     void setMidiCallback(std::function<void(
     uint8_t /*data1*/,
     uint8_t /*mappedValue*/,
@@ -52,22 +61,35 @@ public:
     uint8_t /*slotIndex*/
     )> callback);
 
+    /** Read pot/channel settings from EEPROM. */
     void loadFromEEPROM();
+    /** Persist current pot settings to EEPROM. */
     void saveToEEPROM();
+    /** Reset EEPROM mappings to defaults. */
     void resetEEPROM();
+
+    /** Return the last raw value read from a pot. */
     int getLastValue(int potIndex) const;
+
+    /** Set the MIDI channel for a pot. */
     void setChannel(int potIndex, uint8_t channel);
+    /** Set the CC number for a pot. */
     void setCCNumber(int potIndex, uint8_t ccNumber);
+
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);
 
-    // Updated to accept envelopes
+    /** Scan all pots, sending MIDI via the callback when values change. */
     void processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes);
 
+    /** Specify the envelope pair used for ARG operations. */
     void setArgEnvelopePair(int a, int b);
+
+    /** Retrieve the current envelope pair selection. */
     void getArgEnvelopePair(int &a, int &b) const;
 
-    int readRawPot(uint8_t potIndex); //testing shortcut
+    /** Direct raw ADC read helper used in tests. */
+    int readRawPot(uint8_t potIndex);
 };
 
 #endif // POTENTIOMETER_MANAGER_H

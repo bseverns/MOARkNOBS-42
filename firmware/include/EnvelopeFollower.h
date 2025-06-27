@@ -9,11 +9,12 @@
 // Forward declaration
 class PotentiometerManager;
 
+/**
+ * @brief Audio envelope follower with optional ARG combination mode.
+ */
 class EnvelopeFollower {
 public:
-    /**
-     *FilterType enum
-     */
+    /** Available shaping/filter modes. */
     enum FilterType {
         LINEAR,
         OPPOSITE_LINEAR,
@@ -24,17 +25,13 @@ public:
         BANDPASS
     };
 
-    /**
-     * Distinguish between standard envelope follower (SEF) and ARG mode.
-     */
+    /** Operating modes for the follower. */
     enum Mode {
         SEF,
         ARG
     };
 
-    /**
-     * Enumerate the argument-based methods (A+B, A-B, etc.).
-     */
+    /** Methods used when in ARG mode. */
     enum ARG_Method {
         PLUS,
         MIN,
@@ -73,10 +70,22 @@ private:
     int readEnvelopeLevel();
 
 public:
+    /**
+     * @param pin Analog pin from which to read the audio envelope.
+     * @param pm  Reference to the PotentiometerManager for CC routing.
+     */
     EnvelopeFollower(int pin, PotentiometerManager* pm);
+
+    /** MIDI CC that will be modulated by this envelope. */
     void setModulationTarget(int cc);
+
+    /** Enable or disable the follower. */
     void toggleActive(bool state);
+
+    /** Query whether the follower is currently active. */
     bool getActiveState() const;
+
+    /** Apply the selected filter/curve to a raw level value. */
     int processEnvelopeLevel(int level);
 
     /**
@@ -89,21 +98,25 @@ public:
     /**
      * Primary update cycle.
      */
+    /** Read the input pin and update the internal envelope value. */
     void update();
 
     /**
      * Original applyToCC method.
      */
+    /** Modulate the provided CC value with the current envelope level. */
     void applyToCC(int potIndex, uint8_t& ccValue);
 
     /**
      * Get the current envelope level.
      */
+    /** Return the last processed envelope level (0‑127). */
     int getEnvelopeLevel() const;
 
     /**
      *Switch between SEF and ARG modes.
      */
+    /** Switch between SEF and ARG operating modes. */
     void setMode(Mode newMode);
     Mode getMode() const {
         return mode;
@@ -112,11 +125,13 @@ public:
     /**
      *Choose which method (A+B, etc.) for ARG mode.
      */
+    /** Select which arithmetic method to use in ARG mode. */
     void setARGMethod(ARG_Method method);
 
     /**
      *Select the two analog inputs for ARG calculations.
      */
+    /** Specify which two inputs feed the ARG calculations. */
     void setEnvelopePair(int envA, int envB);
 };
 

@@ -4,10 +4,17 @@
 
 #include <cstdint>
 
+/** Supported MIDI message types for a slot. */
 enum class MIDIMessageType : uint8_t {
-  OFF = 0, CC, Note, PitchBend, ProgramChange, Aftertouch
+  OFF = 0, //!< Slot disabled
+  CC,     //!< Control Change
+  Note,   //!< Note on/off
+  PitchBend,
+  ProgramChange,
+  Aftertouch
 };
 
+/** Configuration for a single pot slot. */
 struct MIDISlot {
   MIDIMessageType type;
   uint8_t        midiChannel;
