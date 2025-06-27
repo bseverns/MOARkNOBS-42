@@ -6,21 +6,42 @@
 
 #define IS_USB_CONNECTED() (usbMidi.connected())
 
+/**
+ * @brief Thin wrapper around the Arduino and USB MIDI libraries.
+ */
 class MIDIHandler {
 public:
+    /** Assign a DisplayManager for showing MIDI activity. */
     void setDisplayManager(DisplayManager* dm) { _displayManager = dm; }
+
     MIDIHandler();
+
+    /** Initialise serial and USB MIDI. */
     void begin();
+
+    /** Send a standard Control Change message. */
     void sendControlChange(uint8_t control, uint8_t value, uint8_t channel);
+
+    /** Send a MIDI Note On message. */
     void sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel);
+
+    /** Send a MIDI Note Off message. */
     void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
+
+    /** Poll both serial and USB for incoming MIDI bytes. */
     void processIncomingMIDI();
-    void handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2); // Process a generic MIDI message
+
+    /** Generic dispatcher for parsed MIDI messages. */
+    void handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2);
+
+    /** Convenience helpers for specific message types. */
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
     void handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity);
     void sendProgramChange(uint8_t program, uint8_t channel);
     void sendAftertouch(uint8_t pressure, uint8_t channel);
     void sendPitchBend(int16_t bend, uint8_t channel);
+
+    /** MIDI clock helpers. */
     bool isClockTick();
     void clearClockTick();
 
