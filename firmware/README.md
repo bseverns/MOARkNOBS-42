@@ -149,6 +149,18 @@ With ARG mode active and an EF already assigned:
   * `MIN` – A - B
   * `PECK`, `SHAV`, `SQAR`, `BABS`, `TABS` – creative algorithmic transforms and distortions
 
+#### ARG Method Reference
+
+| Method | Formula (A,B) | Description |
+| ------ | ------------- | ----------- |
+| `PLUS` | `A + B` | Sum of the two envelope levels. |
+| `MIN`  | `A - B` | Subtract B from A for a unipolar difference. |
+| `PECK` | `B - A` | Invert the subtraction (B minus A). |
+| `SHAV` | `(A - B) / 10` | Scaled difference for subtle movement. |
+| `SQAR` | `sqrt(A*A + B*B)` | Vector magnitude style blend. |
+| `BABS` | `A / |B|` | Ratio of A over the absolute of B. |
+| `TABS` | `(10 * A) / |B|` | BABS with a ×10 boost. |
+
 Each press shifts to the next method; the OLED will display something like: `EF 2 => SHAV`.
 
 ### Assigning Envelope Pairs for ARG
@@ -178,6 +190,16 @@ Each envelope follower features a full DSP filter section with **7 selectable mo
 - **Low-pass (LPF)**
 - **High-pass (HPF)**
 - **Band-pass (BPF)**
+
+#### Filter Behavior
+
+* **Linear** – direct gain scaling; `Freq` acts as a multiplier.
+* **Opposite Linear** – inverts the response so high input yields low output.
+* **Exponential** – emphasizes extremes; `Q` controls curve steepness.
+* **Random** – introduces jitter based on `Freq` (probability) and `Q` (range).
+* **Low-pass** – smooths fast changes; `Freq` is cutoff and `Q` is resonance.
+* **High-pass** – emphasizes sharp transients; cutoff and resonance as above.
+* **Band-pass** – isolates a band around the chosen frequency with given `Q`.
 
 Switch filter type via double-presses on control buttons. The currently assigned filter is shown on the OLED.
 
