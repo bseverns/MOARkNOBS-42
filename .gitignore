@@ -3,3 +3,13 @@
 
 # Ignore firmware zip archive
 firmwareZip.zip
+
+# Ignore PlatformIO build folders
+.pio/
+
+# Ignore editor swap files
+*.swp
+
+# Ignore compiled binaries
+*.bin
+*.elf
