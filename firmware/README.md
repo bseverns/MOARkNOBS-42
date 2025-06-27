@@ -216,10 +216,49 @@ Your configuration is stored in EEPROM. Manual save required.
 
 ## MIDI: The Lifeblood
 
-* **USB MIDI**: works with anything modern.
-* **DIN MIDI**: hardware junkies rejoice.
-* **Both at once**: of course.
-* **Supports**: CC, Note, Program Change, Aftertouch, Pitch Bend
+The MN42 is first and foremost a MIDI generator.  Every pot twist and
+envelope movement ultimately ends up as a MIDI message that is pushed to
+**both** the 5‑pin DIN jack and the USB port at the same time.  The
+firmware uses a hardware serial instance for traditional DIN MIDI and the
+`usbMIDI` stack for modern computer connections.  Whatever leaves one
+interface is mirrored on the other so you can drive hardware synths and a
+DAW concurrently with zero configuration.
+
+### Supported Message Types
+
+Each of the 42 virtual slots can transmit any of the following MIDI
+messages, with the channel and data byte stored per slot:
+
+* **Control Change** – standard CC messages with values 0–127.
+* **Note** – sends Note On and automatically issues a Note Off shortly
+  after, using envelope level (if available) as velocity.
+* **Program Change** – select patches or presets on your synths.
+* **Channel Aftertouch** – channel pressure values derived from the pot
+  or an envelope follower.
+* **Pitch Bend** – full 14‑bit bend range mapped from the active pot.
+
+Buttons let you cycle the message type, channel (1–16) and data values in
+real time.  All assignments persist in EEPROM so your setup survives a
+power cycle.
+
+### Incoming MIDI and Clock Sync
+
+The firmware listens on both USB and DIN.  Incoming bytes are parsed and
+can trigger on‑screen feedback or internal actions.  MIDI Clock messages
+are recognised to advance the internal beat counter.  If no external
+clock is seen for two seconds the MN42 falls back to its own tempo based
+on the tapped BPM, keeping modulation and display animations in time.
+
+### High‑Resolution Modulation
+
+Envelope followers and the main potentiometer send updates on a 1 ms
+schedule.  CCs or other parameters can therefore react smoothly to audio
+input or manual tweaks.  LED animations and the OLED display mirror this
+activity so you always see what is being transmitted.
+
+In short, the MN42 speaks fluent MIDI on all fronts—USB and DIN, outgoing
+and incoming—and gives every slot the flexibility to send exactly the
+messages your rig requires.
 
 ## Getting Started
 
