@@ -97,18 +97,6 @@ And yes, combo presses are supported:
 | #1 + #5    | Set slot to Pitch Bend                   |
 | #2 + #5    | Cycle ARG envelope pair                  |
 
----
-
-### Filter Selection Pro Tip
-
-> **To change the filter type** (linear, exponential, low-pass, high-pass, etc.) for a slot’s Envelope Follower, simply:
->
-> - **Double-press Control Button #0** to cycle the filter type **forward**.
-> - **Double-press Control Button #1** to cycle the filter type **backward**.
->
-> The OLED will display the new filter type (e.g., `Slot 5 => BANDPASS`). This works for the EF assigned to the current slot.
-
----
 
 ### OLED Feedback Cheat Sheet
 
@@ -158,10 +146,8 @@ With ARG mode active and an EF already assigned:
 | `PECK` | `B - A` | Invert the subtraction (B minus A). |
 | `SHAV` | `(A - B) / 10` | Scaled difference for subtle movement. |
 | `SQAR` | `sqrt(A*A + B*B)` | Vector magnitude style blend. |
-| `BABS` | `A / |B|` | Ratio of A over the absolute of B. |
-| `TABS` | `(10 * A) / |B|` | BABS with a ×10 boost. |
-
-Each press shifts to the next method; the OLED will display something like: `EF 2 => SHAV`.
+| `BABS` | `A / abs(B)` | Ratio of A over the absolute of B. |
+| `TABS` | `(10 * A) / abs(B)` | BABS with a ×10 boost. |
 
 ### Assigning Envelope Pairs for ARG
 
@@ -206,6 +192,18 @@ Switch filter type via double-presses on control buttons. The currently assigned
 When LPF/HPF/BPF is selected, **two dedicated tuning pots** become active for that EF, letting you adjust:
 - **Frequency**: Cutoff/center frequency (20–5000Hz)
 - **Resonance (Q)**: 0.5–4.0 (slope/sharpness)
+---
+
+### Filter Selection Pro Tip
+
+> **To change the filter type** (linear, exponential, low-pass, high-pass, etc.) for a slot’s Envelope Follower, simply:
+>
+> - **Double-press Control Button #0** to cycle the filter type **forward**.
+> - **Double-press Control Button #1** to cycle the filter type **backward**.
+>
+> The OLED will display the new filter type (e.g., `Slot 5 => BANDPASS`). This works for the EF assigned to the current slot.
+
+---
 
 All changes are visualized in real time on the display.
 
@@ -255,12 +253,12 @@ messages, with the channel and data byte stored per slot:
 * **Note** – sends Note On and automatically issues a Note Off shortly
   after, using envelope level (if available) as velocity.
 * **Program Change** – select patches or presets on your synths.
-* **Channel Aftertouch** – channel pressure values derived from the pot
+* **Channel Aftertouch** – channel pressure values derived from the control pot
   or an envelope follower.
-* **Pitch Bend** – full 14‑bit bend range mapped from the active pot.
+* **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
 
-Buttons let you cycle the message type, channel (1–16) and data values in
-real time.  All assignments persist in EEPROM so your setup survives a
+The Control Buttons let you cycle the message type, channel (1–16) and data values in
+real time.  All assignments persist in EEPROM -if you save them- so your setup survives a
 power cycle.
 
 ### Incoming MIDI and Clock Sync
@@ -273,7 +271,7 @@ on the tapped BPM, keeping modulation and display animations in time.
 
 ### High‑Resolution Modulation
 
-Envelope followers and the main potentiometer send updates on a 1 ms
+Envelope followers and the main control potentiometer send updates on a 1 ms
 schedule.  CCs or other parameters can therefore react smoothly to audio
 input or manual tweaks.  LED animations and the OLED display mirror this
 activity so you always see what is being transmitted.
