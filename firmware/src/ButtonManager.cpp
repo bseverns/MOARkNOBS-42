@@ -596,7 +596,16 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (9) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
+    // (9) Ctrl3 + Ctrl4: Increment arpeggiator base note
+    else if ((pressedButtons & (maskCtrl3 | maskCtrl4)) == (maskCtrl3 | maskCtrl4)) {
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        slot.arpNote = (slot.arpNote + 1) % 128;
+        context.configManager.saveSlot(context.activePot, slot);
+        char buf[32];
+        sprintf(buf, "ARP NOTE %d", slot.arpNote);
+        context.displayManager.displayStatus(buf, 1000);
+    }
+    // (10) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
         if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
             arpeggiator.stop();
