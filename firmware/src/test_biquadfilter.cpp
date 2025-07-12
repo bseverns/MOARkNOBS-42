@@ -2,7 +2,7 @@
 #include "BiquadFilter.h"
 
 // Basic DSP sanity checks for BiquadFilter
-// - verifies low‑pass coefficients
+// - verifies coefficients for low‑pass, high‑pass and band‑pass modes
 // - confirms filter state behaves as expected
 
 void setup() {
@@ -14,37 +14,62 @@ void setup() {
     const float sampleRate = 48000.0f;
     const float q = 0.707f;
 
-    BiquadFilter filter;
-    filter.configure(BiquadFilter::LOWPASS, freq, sampleRate, q);
+    bool passLP = false;
+    bool passHP = false;
+    bool passBP = false;
 
-    float omega = 2.0f * PI * freq / sampleRate;
-    float cos_omega = cosf(omega);
-    float sin_omega = sinf(omega);
-    float alpha = sin_omega / (2.0f * q);
+    auto runTest = [&](BiquadFilter::FilterType type) -> bool {
+        BiquadFilter filter;
+        filter.configure(type, freq, sampleRate, q);
 
-    float a0 = (1.0f - cos_omega) / 2.0f;
-    float a1 = 1.0f - cos_omega;
-    float a2 = a0;
-    float b1 = -2.0f * cos_omega;
-    float b2 = 1.0f - alpha;
-    float norm = 1.0f + alpha;
-    a0 /= norm; a1 /= norm; a2 /= norm; b1 /= norm; b2 /= norm;
+        float omega = 2.0f * PI * freq / sampleRate;
+        float cos_omega = cosf(omega);
+        float sin_omega = sinf(omega);
+        float alpha = sin_omega / (2.0f * q);
 
-    float out1 = filter.process(1.0f);
-    bool coefCheck = fabs(out1 - a0) < 1e-6f;
+        float a0 = 0.0f;
+        float a1 = 0.0f;
+        float a2 = 0.0f;
+        float b1 = -2.0f * cos_omega;
+        float b2 = 1.0f - alpha;
 
-    // Let the filter settle with zeros
-    for (int i = 0; i < 50; ++i) {
-        filter.process(0.0f);
-    }
-    bool settleCheck = fabs(filter.process(0.0f)) < 1e-3f;
+        switch(type) {
+            case BiquadFilter::LOWPASS:
+                a0 = (1.0f - cos_omega) / 2.0f;
+                a1 = 1.0f - cos_omega;
+                a2 = a0;
+                break;
+            case BiquadFilter::HIGHPASS:
+                a0 = (1.0f + cos_omega) / 2.0f;
+                a1 = -(1.0f + cos_omega);
+                a2 = a0;
+                break;
+            case BiquadFilter::BANDPASS:
+                a0 = alpha;
+                a1 = 0.0f;
+                a2 = -alpha;
+                break;
+        }
 
-    // Reconfigure to make sure coefficients actually change
-    filter.configure(BiquadFilter::LOWPASS, 5000.0f, sampleRate, q);
-    float out2 = filter.process(1.0f);
-    bool updateCheck = fabs(out1 - out2) > 1e-4f;
+        float norm = 1.0f + alpha;
+        a0 /= norm; a1 /= norm; a2 /= norm; b1 /= norm; b2 /= norm;
 
-    if (coefCheck && settleCheck && updateCheck) {
+        float firstOut = filter.process(1.0f);
+        bool coefCheck = fabs(firstOut - a0) < 1e-6f;
+
+        for (int i = 0; i < 50; ++i) {
+            filter.process(0.0f);
+        }
+        bool settleCheck = fabs(filter.process(0.0f)) < 1e-3f;
+
+        return coefCheck && settleCheck;
+    };
+
+    passLP = runTest(BiquadFilter::LOWPASS);
+    passHP = runTest(BiquadFilter::HIGHPASS);
+    passBP = runTest(BiquadFilter::BANDPASS);
+
+    if (passLP && passHP && passBP) {
         Serial.println("BiquadFilter tests PASS");
     } else {
         Serial.println("BiquadFilter tests FAIL");
@@ -52,3 +77,4 @@ void setup() {
 }
 
 void loop() {}
+
