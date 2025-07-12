@@ -131,6 +131,9 @@ public:
   /** Display helper for tuning filter frequency and resonance. */
   void showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue);
 
+  /** Display helper for arpeggiator length and shape. */
+  void showArpSettings(float lengthMs, const char* shapeName);
+
 private:
   Animation          _fadeAnim;
   Adafruit_SSD1306   _display;
