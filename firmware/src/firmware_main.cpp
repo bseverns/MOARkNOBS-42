@@ -12,6 +12,7 @@
 #include "name.c"
 #include "Globals.h"
 #include "BiquadFilter.h"
+#include "Arpeggiator.h"
 #include <TimerOne.h>
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
@@ -30,6 +31,7 @@ DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // 128x64 for SSD13
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 BiquadFilter filter;
 TaskScheduler scheduler;
+Arpeggiator arpeggiator;
 
 //tempo
 unsigned long lastClockTime = 0;
@@ -290,6 +292,23 @@ void updateFilterTuning(ButtonManagerContext& context) {
     // Serial.printf("EF %d => freq=%.1f Q=%.2f\n", efIndex, freq, q);
 }
 
+void updateArpTuning() {
+    if (!arpeggiator.isActive()) return;
+
+    int rawLen   = analogRead(FILTER_FREQ_POT_PIN);
+    int rawShape = analogRead(FILTER_RES_POT_PIN);
+
+    float lengthMs = map(rawLen, 0, 1023, 80, 800);
+    int shapeIdx   = map(rawShape, 0, 1023, 0, 3);
+    static const char* names[] = {"UP", "DOWN", "UPDN", "RAND"};
+    Arpeggiator::Shape shapes[] = {Arpeggiator::UP, Arpeggiator::DOWN, Arpeggiator::UPDOWN, Arpeggiator::RANDOM};
+
+    arpeggiator.setLength(lengthMs);
+    arpeggiator.setShape(shapes[shapeIdx]);
+
+    displayManager.showArpSettings(lengthMs, names[shapeIdx]);
+}
+
 void setup() {
     // — Serial & Config —
     Serial.begin(31250);
@@ -413,6 +432,9 @@ void setup() {
       if (millis() - lastClockTime > CLOCK_TIMEOUT_MS)
         processInternalClock();
     }, MIDI_TASK_INTERVAL);
+    Utility::schedulerHigh.addTask([](){
+      arpeggiator.update(midiHandler, configManager);
+    }, MIDI_TASK_INTERVAL);
 
     // Mid-priority (~5 ms):
     Utility::schedulerMid.addTask(processSerial,        SERIAL_TASK_INTERVAL);
@@ -422,6 +444,7 @@ void setup() {
     Utility::schedulerLow.addTask([](){
       ledManager.update();
       updateFilterTuning(buttonContext);
+      updateArpTuning();
     }, LED_TASK_INTERVAL);
 
     Utility::schedulerLow.addTask([](){

@@ -3,6 +3,7 @@
 #include "Globals.h"
 #include "ConfigManager.h"
 #include "Utility.h"
+#include "Arpeggiator.h"
 #include <map>
 
 // The BTN_42 PCB connects 42 pushbuttons in a 7×6 diode matrix. Each row and
@@ -14,6 +15,7 @@
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
+extern Arpeggiator arpeggiator;
 
 // A debug flag for local logs if desired
 #define BM_DEBUG 1
@@ -593,6 +595,16 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
         context.displayManager.displayStatus(buf, 1500);
+    }
+    // (9) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
+    else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
+        if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
+            arpeggiator.stop();
+            context.displayManager.displayStatus("ARP OFF", 1000);
+        } else {
+            arpeggiator.start(context.activePot);
+            context.displayManager.displayStatus("ARP ON", 1000);
+        }
     }
 }
 

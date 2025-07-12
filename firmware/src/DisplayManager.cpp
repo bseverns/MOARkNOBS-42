@@ -235,6 +235,20 @@ void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, co
     _display.display();
 }
 
+void DisplayManager::showArpSettings(float lengthMs, const char* shapeName) {
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_WHITE);
+    _display.setCursor(0, 0);
+    _display.print("Len: ");
+    _display.println(lengthMs, 0);
+    _display.setCursor(0, 10);
+    _display.print("Shape: ");
+    _display.println(shapeName);
+    drawBorder();
+    _display.display();
+}
+
 void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode){
     if (millis() < _statusTimeout) return;
 
