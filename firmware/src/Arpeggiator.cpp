@@ -2,6 +2,7 @@
 #include "MIDIHandler.h"
 #include "ConfigManager.h"
 #include "Utility.h"
+#include "PotentiometerManager.h"
 
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _intervalMs(250), _shape(UP),
@@ -42,19 +43,48 @@ static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step) {
     }
 }
 
-void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg) {
+void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots) {
     if (!_active) return;
     unsigned long now = millis();
     if (now - _lastStep < _intervalMs) return;
     _lastStep = now;
 
     const MIDISlot& slot = cfg.getSlots()[_slotIdx];
+    if (!slot.active) return;
 
-    uint8_t base = slot.arpNote;
     int8_t offset = noteOffset(_shape, _step++);
-    uint8_t note = constrain(base + offset, 0, 127);
-    midi.sendNoteOn(note, 100, slot.midiChannel);
-    Utility::schedulerHigh.addTask([note, ch=slot.midiChannel, &midi](){
-        midi.sendNoteOff(note, 0, ch);
-    }, (unsigned long)(_intervalMs / 2), false);
+    uint8_t potVal = Utility::mapToMidiValue(pots.getLastValue(_slotIdx));
+
+    switch (slot.type) {
+        case MIDIMessageType::CC:
+            midi.sendControlChange(slot.data1,
+                                   constrain(potVal + offset, 0, 127),
+                                   slot.midiChannel);
+            break;
+        case MIDIMessageType::Note: {
+            uint8_t note = constrain(slot.data1 + offset, 0, 127);
+            midi.sendNoteOn(note, potVal, slot.midiChannel);
+            Utility::schedulerHigh.addTask([note, ch=slot.midiChannel, &midi](){
+                midi.sendNoteOff(note, 0, ch);
+            }, (unsigned long)(_intervalMs / 2), false);
+            break;
+        }
+        case MIDIMessageType::PitchBend: {
+            int raw = pots.getLastValue(_slotIdx);
+            int16_t bend = map(raw, 0, 1023, -8192, 8191) + offset * 128;
+            bend = constrain(bend, -8192, 8191);
+            midi.sendPitchBend(bend, slot.midiChannel);
+            break;
+        }
+        case MIDIMessageType::ProgramChange:
+            midi.sendProgramChange(constrain(slot.data1 + offset, 0, 127),
+                                   slot.midiChannel);
+            break;
+        case MIDIMessageType::Aftertouch:
+            midi.sendAftertouch(constrain(potVal + offset, 0, 127),
+                                slot.midiChannel);
+            break;
+        default:
+            break;
+    }
 }

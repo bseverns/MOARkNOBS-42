@@ -6,6 +6,7 @@
 
 class MIDIHandler;
 class ConfigManager;
+class PotentiometerManager;
 
 class Arpeggiator {
 public:
@@ -21,7 +22,7 @@ public:
     void setLength(float ms);
     void setShape(Shape s);
 
-    void update(MIDIHandler& midi, ConfigManager& cfg);
+    void update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots);
 
 private:
     bool          _active;
