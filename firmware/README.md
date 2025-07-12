@@ -18,7 +18,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend.
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
-- **Arpeggiator Mode**: Generate note sequences with length set by the filter frequency pot and pattern by the Q pot.
+- **Arpeggiator Mode**: Note data is stored per slot, independent of the slot's MIDI message type. Length is set by the filter frequency pot and pattern by the Q pot.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with auto-recovery from corruption.
 - **Dual MIDI Output**: Send messages via USB and classic 5-pin DIN simultaneously.
@@ -169,8 +169,7 @@ This allows reactive modulation—i.e., *side-chaining*, *comparative analysis*,
 
 ## Arpeggiator Mode
 
-`Ctrl #3 + Ctrl #5` toggles an arpeggiator for the active slot. The slot must be
-set to **MIDI Note** type. While active, the filter knobs repurpose themselves:
+`Ctrl #3 + Ctrl #5` toggles an arpeggiator for the active slot. Arpeggiator note data is configured separately from the slot's MIDI message type, so any slot can still transmit CCs or other messages. While active, the filter knobs repurpose themselves:
 
 * **Freq Pot** → length of each step (80–800 ms)
 * **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
