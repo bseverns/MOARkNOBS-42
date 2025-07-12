@@ -10,6 +10,7 @@
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "TestHelpers.h"
 
 #define SERIAL_BAUD 115200
 
@@ -18,40 +19,22 @@
 std::vector<uint8_t> potChannels;
 
 // EEPROM-backed configuration
-ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
+ConfigManager configManager = createConfigManager();
 
 // LED & display
-LEDManager    ledManager(NUM_LEDS);
-DisplayManager displayManager(SSD1306_I2C_ADDRESS, OLED_WIDTH, OLED_HEIGHT);
+LEDManager    ledManager    = createLEDManager();
+DisplayManager displayManager = createDisplayManager();
 
 // Mux-1 (U3) for pots + control buttons:
-PotentiometerManager potentiometerManager(
-  primaryMuxPins,
-  secondaryMuxPins,
-  potMuxAnalogPin
-);
+PotentiometerManager potentiometerManager = createPotentiometerManager();
 
 // Mux-0 (U2) for your “virtual slot” buttons:
 // Pin 6 reserved for LED strip
 // Control buttons wired directly to GPIOs, avoid mux select pins
-const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12,13,14,15,24,25};
-ButtonManager buttonManager(
-  primaryMuxPins,
-  secondaryMuxPins,
-  buttonMuxAnalogPin,
-  controlPins,
-  &potentiometerManager
-);
+ButtonManager buttonManager = createButtonManager(&potentiometerManager);
 
 // Envelope followers (unchanged)
-std::vector<EnvelopeFollower> envelopeFollowers = {
-  EnvelopeFollower(A0, &potentiometerManager),
-  EnvelopeFollower(A1, &potentiometerManager),
-  EnvelopeFollower(A2, &potentiometerManager),
-  EnvelopeFollower(A3, &potentiometerManager),
-  EnvelopeFollower(A6, &potentiometerManager),
-  EnvelopeFollower(A7, &potentiometerManager),
-};
+std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&potentiometerManager);
 
 // ———————— Helpers ——————————————
 
@@ -71,7 +54,7 @@ bool waitForAnyButton(const char* prompt = "Press any button to continue...")
     }
     // direct-wired control buttons (active LOW)
     for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
-      if (! digitalRead(controlPins[i])) return true;
+      if (! digitalRead(TEST_CONTROL_PINS[i])) return true;
     }
     delay(5);
   }
@@ -112,8 +95,8 @@ void testButtons() {
   }
   // Direct-wired control buttons
   for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
-    Serial.printf("Press C-Button #%u (pin %u)...\n", i, controlPins[i]);
-    while (digitalRead(controlPins[i])) ;
+    Serial.printf("Press C-Button #%u (pin %u)...\n", i, TEST_CONTROL_PINS[i]);
+    while (digitalRead(TEST_CONTROL_PINS[i])) ;
     Serial.printf("  Detected control %u OK.\n", i);
     delay(200);
   }
@@ -204,7 +187,7 @@ void setup() {
   for (auto p: secondaryMuxPins) pinMode(p, OUTPUT);
   pinMode(potMuxAnalogPin, INPUT);
   pinMode(buttonMuxAnalogPin, INPUT);
-  for (uint8_t c: controlPins)   pinMode(c, INPUT_PULLUP);
+  for (uint8_t c: TEST_CONTROL_PINS)   pinMode(c, INPUT_PULLUP);
 
   Serial.println("\n=== MOARkNOBS HW Test ===");
 
