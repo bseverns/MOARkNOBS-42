@@ -433,7 +433,7 @@ void setup() {
         processInternalClock();
     }, MIDI_TASK_INTERVAL);
     Utility::schedulerHigh.addTask([](){
-      arpeggiator.update(midiHandler, configManager);
+      arpeggiator.update(midiHandler, configManager, potentiometerManager);
     }, MIDI_TASK_INTERVAL);
 
     // Mid-priority (~5 ms):

@@ -18,7 +18,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend.
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
-- **Arpeggiator Mode**: Generate note sequences with length set by the filter frequency pot and pattern by the Q pot.
+- **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with auto-recovery from corruption.
 - **Dual MIDI Output**: Send messages via USB and classic 5-pin DIN simultaneously.
@@ -97,6 +97,7 @@ And yes, combo presses are supported:
 | #1 + #4    | Set slot to Aftertouch                   |
 | #1 + #5    | Set slot to Pitch Bend                   |
 | #2 + #5    | Cycle ARG envelope pair                  |
+| #3 + #5    | Toggle Arpeggiator mode                  |
 
 
 ### OLED Feedback Cheat Sheet
@@ -169,13 +170,15 @@ This allows reactive modulation—i.e., *side-chaining*, *comparative analysis*,
 
 ## Arpeggiator Mode
 
-`Ctrl #3 + Ctrl #5` toggles an arpeggiator for the active slot. The slot must be
-set to **MIDI Note** type. While active, the filter knobs repurpose themselves:
+`Ctrl #3 + Ctrl #5` toggles an arpeggiator for the active slot. It works with
+**any MIDI type** (CC, Note, Aftertouch, etc.). While active, the filter knobs
+repurpose themselves:
 
 * **Freq Pot** → length of each step (80–800 ms)
 * **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
-Notes are generated from the slot’s base note in a simple major‑triad pattern.
+The arpeggiator repeatedly sends the slot's current value according to the
+selected pattern.
 
 ## Filter Controls
 

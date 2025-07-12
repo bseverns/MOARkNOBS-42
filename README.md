@@ -11,7 +11,7 @@ See [`firmware/README.md`](firmware/README.md) for the full manual. Key features
 - Six real-time envelope followers with seven selectable filter types (linear, opposite, exponential, random, LPF, HPF, BPF).
 - Button matrix (42 slot buttons plus 6 control buttons) supporting short, long and double presses.
 - ARG mode to blend or compare envelope signals.
-- Arpeggiator mode controllable via filter knobs.
+- Arpeggiator mode for any MIDI type, controllable via filter knobs.
 - Dual USB & DIN MIDI output.
 - OLED display and addressable LEDs for immediate visual feedback.
 - Settings stored in EEPROM with automatic backup.
