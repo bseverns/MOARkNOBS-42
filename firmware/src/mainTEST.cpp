@@ -7,6 +7,7 @@
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+
 std::vector<uint8_t> potChannels; // EEPROM-loaded channels
 
 #define SERIAL_BAUD 115200
@@ -43,11 +44,22 @@ ButtonManagerContext buttonContext = {
     potToEnvelopeMap
 };
 
+// Control button used to advance test phases
+const uint8_t phaseButtonPin = 12; // Control Button #0
+
+// Ordered test phases
+enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, DISPLAY, COMPLETE };
+TestPhase currentPhase = TestPhase::IDLE;
+bool phaseStarted = false;
+
 // --- Utility ---
-void waitForSerialInput(const char* prompt = "Press Enter to continue...") {
+/** Wait for Control Button #0 to be pressed and released. */
+void waitForButtonPress(const char* prompt = "Press Btn0 to continue") {
   Serial.println(prompt);
-  while (!Serial.available());
-  Serial.read();  // clear input
+  displayManager.showText(prompt, "", "Btn0");
+  while (digitalRead(phaseButtonPin)) ;      // wait press (active LOW)
+  while (!digitalRead(phaseButtonPin)) ;     // wait release
+  delay(50);
 }
 
 // --- Unit Tests ---
@@ -56,8 +68,8 @@ void testLEDManager() {
   for (int i = 0; i < NUM_LEDS; i++) {
     ledManager.setColor(CRGB::Black);
     ledManager.setPotValue(i, 127);
-    Serial.printf("LED #%d ON? Confirm visually and press Enter.\n", i);
-    waitForSerialInput();
+    Serial.printf("LED #%d ON? Press Btn0.\n", i);
+    waitForButtonPress();
   }
   ledManager.setColor(CRGB::Black);
   Serial.println("LEDManager test done.");
@@ -88,12 +100,12 @@ void testButtonManager() {
 void testPotentiometerManager() {
   Serial.println("\n--- PotentiometerManager Test ---");
   for (int idx = 0; idx < NUM_POTS; idx++) {
-    Serial.printf("Pot #%d: set MIN, press Enter.\n", idx);
-    waitForSerialInput();
+    Serial.printf("Pot #%d: set MIN, press Btn0.\n", idx);
+    waitForButtonPress();
     int vmin = potentiometerManager.readRawPot(idx);
     
-    Serial.printf("Pot #%d: set MAX, press Enter.\n", idx);
-    waitForSerialInput();
+    Serial.printf("Pot #%d: set MAX, press Btn0.\n", idx);
+    waitForButtonPress();
     int vmax = potentiometerManager.readRawPot(idx);
 
     int delta = vmax - vmin;
@@ -107,13 +119,13 @@ void testEnvelopeFollowers() {
   Serial.println("\n--- EnvelopeFollower Test ---");
   int pins[] = {A0,A1,A2,A3,A6,A7};
   for (size_t i = 0; i < envelopeFollowers.size(); i++) {
-    Serial.printf("Envelope #%d (Pin A%d): MIN input, press Enter.\n", i, pins[i]);
-    waitForSerialInput();
+    Serial.printf("Envelope #%d (Pin A%d): MIN input, Btn0.\n", i, pins[i]);
+    waitForButtonPress();
     envelopeFollowers[i].update();
     int vmin = envelopeFollowers[i].getEnvelopeLevel();
 
-    Serial.printf("Envelope #%d (Pin A%d): MAX input, press Enter.\n", i, pins[i]);
-    waitForSerialInput();
+    Serial.printf("Envelope #%d (Pin A%d): MAX input, Btn0.\n", i, pins[i]);
+    waitForButtonPress();
     envelopeFollowers[i].update();
     int vmax = envelopeFollowers[i].getEnvelopeLevel();
 
@@ -128,8 +140,8 @@ void testDisplayManager() {
   Serial.println("\n--- DisplayManager Test ---");
   displayManager.clear();
   displayManager.showText("Display Test", "Line 2", "Line 3");
-  Serial.println("Verify OLED shows 'Display Test', 'Line 2', 'Line 3'. Press Enter.");
-  waitForSerialInput();
+  Serial.println("Verify OLED shows 'Display Test', 'Line 2', 'Line 3'. Press Btn0.");
+  waitForButtonPress();
   displayManager.clear();
   Serial.println("DisplayManager test done.");
 }
@@ -154,28 +166,59 @@ void setup() {
 
   pinMode(potMuxAnalogPin, INPUT);
   pinMode(buttonMuxAnalogPin, INPUT);
+  pinMode(phaseButtonPin, INPUT_PULLUP);
 
-  uint8_t activePot = 0, activeChannel = 1;
-  bool envelopeFollowMode = false;
-  const char* envelopeMode = "SEF";
-  std::map<int, int> potToEnvelopeMap;
-
-  ButtonManagerContext buttonContext = {
-      potChannels, activePot, activeChannel,
-      envelopeFollowMode, envelopeMode,
-      configManager, ledManager,
-      displayManager, envelopeFollowers,
-      potToEnvelopeMap
-  };
-
-  // Run each test individually:
-  testLEDManager();
-  testButtonManager();
-  testPotentiometerManager();
-  testEnvelopeFollowers();
-  testDisplayManager();
-
-  Serial.println("\n=== All Tests Completed! ===");
+  Serial.println("\nPress Btn0 to start tests");
+  displayManager.showText("Test Mode", "Press Btn0");
 }
 
-void loop() {}
+static const char* phaseName(TestPhase p) {
+  switch (p) {
+    case TestPhase::LEDS: return "LEDs";
+    case TestPhase::BUTTONS: return "Buttons";
+    case TestPhase::POTS: return "Pots";
+    case TestPhase::ENVELOPES: return "Envelopes";
+    case TestPhase::DISPLAY: return "Display";
+    default: return "";
+  }
+}
+
+void runPhase(TestPhase phase) {
+  Serial.printf("\n-- %s Test --\n", phaseName(phase));
+  displayManager.showText(phaseName(phase), "running...");
+  switch (phase) {
+    case TestPhase::LEDS:       testLEDManager(); break;
+    case TestPhase::BUTTONS:    testButtonManager(); break;
+    case TestPhase::POTS:       testPotentiometerManager(); break;
+    case TestPhase::ENVELOPES:  testEnvelopeFollowers(); break;
+    case TestPhase::DISPLAY:    testDisplayManager(); break;
+    default: break;
+  }
+  Serial.printf("%s phase complete.\n", phaseName(phase));
+  displayManager.showText(phaseName(phase), "DONE", "Btn0 next");
+}
+
+void loop() {
+  static bool lastBtn = true;
+  bool pressed = digitalRead(phaseButtonPin) == LOW;
+  if (pressed && !lastBtn) {
+    if (currentPhase == TestPhase::IDLE)          currentPhase = TestPhase::LEDS;
+    else if (currentPhase == TestPhase::DISPLAY)  currentPhase = TestPhase::COMPLETE;
+    else if (currentPhase == TestPhase::COMPLETE) currentPhase = TestPhase::IDLE;
+    else                                          currentPhase = (TestPhase)((int)currentPhase + 1);
+    phaseStarted = false;
+  }
+  lastBtn = pressed;
+
+  if (!phaseStarted) {
+    if (currentPhase == TestPhase::IDLE) {
+      displayManager.showText("Test Mode", "Press Btn0");
+    } else if (currentPhase == TestPhase::COMPLETE) {
+      Serial.println("All tests complete");
+      displayManager.showText("All tests", "complete", "Btn0 reset");
+    } else {
+      runPhase(currentPhase);
+    }
+    phaseStarted = true;
+  }
+}
