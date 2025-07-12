@@ -128,6 +128,7 @@ void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
 
 void ConfigManager::loadSlot(uint8_t idx, MIDISlot& dest) {
   EEPROM.get(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, dest);
+  if (dest.arpNote > 127) dest.arpNote = dest.data1;
 }
 
 void ConfigManager::saveSlot(uint8_t idx, const MIDISlot& src) {

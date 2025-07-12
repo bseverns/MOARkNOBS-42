@@ -49,9 +49,8 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg) {
     _lastStep = now;
 
     const MIDISlot& slot = cfg.getSlots()[_slotIdx];
-    if (slot.type != MIDIMessageType::Note) return;
 
-    uint8_t base = slot.data1;
+    uint8_t base = slot.arpNote;
     int8_t offset = noteOffset(_shape, _step++);
     uint8_t note = constrain(base + offset, 0, 127);
     midi.sendNoteOn(note, 100, slot.midiChannel);

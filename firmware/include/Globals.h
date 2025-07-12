@@ -31,7 +31,7 @@ static const uint8_t potMuxAnalogPin    = A5;
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
-constexpr uint8_t SLOT_EEPROM_SIZE = sizeof(MIDISlot);  // typically 5 bytes
+constexpr uint8_t SLOT_EEPROM_SIZE = sizeof(MIDISlot);  // typically 6 bytes
 
 //clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
