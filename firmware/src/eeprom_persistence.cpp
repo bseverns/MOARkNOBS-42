@@ -7,6 +7,7 @@
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "TestHelpers.h"
 
 // -- Constants ---------------------------------------------------------------
 // address well outside normal config space
@@ -17,21 +18,12 @@
 
 // -- Globals -----------------------------------------------------------------
 std::vector<uint8_t> potChannels;
-ConfigManager       configManager(NUM_POTS, NUM_BUTTONS);
-LEDManager          ledManager(NUM_LEDS);
-DisplayManager      displayManager(SSD1306_I2C_ADDRESS, OLED_WIDTH, OLED_HEIGHT);
-PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
-ButtonManager       buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin,
-                                  (const uint8_t[]){12,13,14,15,24,25},
-                                  &potentiometerManager);
-std::vector<EnvelopeFollower> envelopeFollowers = {
-    EnvelopeFollower(A0, &potentiometerManager),
-    EnvelopeFollower(A1, &potentiometerManager),
-    EnvelopeFollower(A2, &potentiometerManager),
-    EnvelopeFollower(A3, &potentiometerManager),
-    EnvelopeFollower(A6, &potentiometerManager),
-    EnvelopeFollower(A7, &potentiometerManager),
-};
+ConfigManager       configManager = createConfigManager();
+LEDManager          ledManager    = createLEDManager();
+DisplayManager      displayManager = createDisplayManager();
+PotentiometerManager potentiometerManager = createPotentiometerManager();
+ButtonManager       buttonManager = createButtonManager(&potentiometerManager);
+std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&potentiometerManager);
 
 static MIDISlot testSlots[NUM_SLOTS];
 
