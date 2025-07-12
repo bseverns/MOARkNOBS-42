@@ -42,7 +42,8 @@ void fillTestData() {
         configManager.setPotCCNumber(i, 10 + i);
     }
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        testSlots[i] = {MIDIMessageType::CC, (uint8_t)((i % 16) + 1), i, (uint8_t)(i % 6), true};
+        testSlots[i] = {MIDIMessageType::CC, (uint8_t)((i % 16) + 1), i,
+                        (uint8_t)(i % 6), true, 60};
     }
 }
 
@@ -58,6 +59,7 @@ bool verifyTestData() {
         if (s.data1 != i)                            return false;
         if (s.efIndex != (uint8_t)(i % 6))           return false;
         if (!s.active)                               return false;
+        if (s.arpNote != 60)                        return false;
     }
     return true;
 }

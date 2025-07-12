@@ -21,6 +21,7 @@ struct MIDISlot {
   uint8_t        data1;
   uint8_t        efIndex;
   bool           active;
+  uint8_t        arpNote;   //!< Base note for arpeggiator
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
