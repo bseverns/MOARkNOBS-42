@@ -40,7 +40,7 @@ ButtonManagerContext buttonContext = {
 const uint8_t phaseButtonPin = 12; // Control Button #0
 
 // Ordered test phases
-enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, DISPLAY, COMPLETE };
+enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, DISP, COMPLETE };
 TestPhase currentPhase = TestPhase::IDLE;
 bool phaseStarted = false;
 
@@ -170,7 +170,7 @@ static const char* phaseName(TestPhase p) {
     case TestPhase::BUTTONS: return "Buttons";
     case TestPhase::POTS: return "Pots";
     case TestPhase::ENVELOPES: return "Envelopes";
-    case TestPhase::DISPLAY: return "Display";
+    case TestPhase::DISP: return "Display";
     default: return "";
   }
 }
@@ -183,7 +183,7 @@ void runPhase(TestPhase phase) {
     case TestPhase::BUTTONS:    testButtonManager(); break;
     case TestPhase::POTS:       testPotentiometerManager(); break;
     case TestPhase::ENVELOPES:  testEnvelopeFollowers(); break;
-    case TestPhase::DISPLAY:    testDisplayManager(); break;
+    case TestPhase::DISP:    testDisplayManager(); break;
     default: break;
   }
   Serial.printf("%s phase complete.\n", phaseName(phase));
@@ -195,7 +195,7 @@ void loop() {
   bool pressed = digitalRead(phaseButtonPin) == LOW;
   if (pressed && !lastBtn) {
     if (currentPhase == TestPhase::IDLE)          currentPhase = TestPhase::LEDS;
-    else if (currentPhase == TestPhase::DISPLAY)  currentPhase = TestPhase::COMPLETE;
+    else if (currentPhase == TestPhase::DISP)  currentPhase = TestPhase::COMPLETE;
     else if (currentPhase == TestPhase::COMPLETE) currentPhase = TestPhase::IDLE;
     else                                          currentPhase = (TestPhase)((int)currentPhase + 1);
     phaseStarted = false;
