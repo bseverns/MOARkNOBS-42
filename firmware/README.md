@@ -6,11 +6,11 @@
 
 ## What's This?
 
-The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a single control pot, a bunch of buttons, and enough virtual slots to make your DAW weep.
+The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a 3 control pots, a bunch of buttons, and enough virtual slots to make your DAW weep.
 
-Forget fragile GUIs and boutique workflows. This beast lives in the guts: hand-coded on a Teensy4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
+Forget fragile GUIs and boutique workflows. This beast lives in the guts: hand-coded on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
-And driving the chaos? Six real-time **envelope followers**, each capable of modulating any CC slot based on live input audio. These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
+And driving the chaos? Six real-time **envelope followers**, each capable of modulating any control slot based on live input audio. These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
 
 ## Key Features
 
@@ -56,7 +56,7 @@ The original idea was simple: 42 knobs (emulating the '60 Knobs' from Bastl Inst
 
 We don’t run tests in `/test`. That folder’s dead to us. Our hardware tests live right in `src/` where the real work happens.
 
-Why? Because PlatformIO’s unit test runner is a pain when your test requires poking real LEDs or twisting actual knobs. We write direct test files and compile each one as a standalone firmware. It’s brute-force testing—manual, visual, deliberate.
+Why? Because PlatformIO’s unit test runner is a pain when your test requires poking real LEDs or twisting actual knobs. We write direct test files and compile each one as a standalone firmware. It’s brute-force testing—manual, visual, deliberate verification makes the dream work.
 
 Test files used in the development of this project include:
 
@@ -68,7 +68,7 @@ Test files used in the development of this project include:
 
 ## Button Mayhem
 
-Each controlbutton can do several things depending on how you hit it:
+Each control button can do several things depending on how you hit it:
 
 | Button | Short Press         | Long Press                    | Double Press                      |
 | ------ | ------------------- | ----------------------------- | --------------------------------- |
@@ -104,15 +104,15 @@ And yes, combo presses are supported:
 
 ### OLED Feedback Cheat Sheet
 
-Typical screen messages from the firmware’s `DisplayManager` include:
+>Typical screen messages from the firmware’s `DisplayManager` include:
+>
+>* `Active Slot=<n>` when you select a slot button.
+>* `EF: ON/OFF` when toggling envelope following with Control Button #0.
+>* `Slot <n> -> EF <m>` when assigning an EF (long press on a slot or short press on Control Button #2).
+>* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
+>* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
 
-* `Active Slot=<n>` when you select a slot button.
-* `EF: ON/OFF` when toggling envelope following with Control Button #0.
-* `Slot <n> -> EF <m>` when assigning an EF (long press on a slot or short press on Control Button #2).
-* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
-* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
-
-Turning the **main pot** simply updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
+>Turning the **main pot** simply updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
 
 ---
 

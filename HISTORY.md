@@ -43,6 +43,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Late June brings documentation improvements describing envelope filters, ARG mode, and exhaustive testing approaches. [43b1d33, b14ef44]
 - **June 28:** Final `readme tweaks` commit wraps up the documented state of the project. [8ed5568]
 - *^^^ see what I mean? I am tyring to get better at documentation as I go, but this helps explain what is happening so much more than my drafts ever did*
+
 ### July
 
 - Arpeggiator mode added with base note support and full MIDI type coverage. [850b4e9, 60abd55, e03466d]
