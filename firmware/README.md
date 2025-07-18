@@ -8,9 +8,9 @@
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a 3 control pots, a bunch of buttons, and enough virtual slots to make your DAW weep.
 
-Forget fragile GUIs and boutique workflows. This beast lives in the guts: hand-coded on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
+Forget fragile GUIs and boutique workflows. This beast lives in the guts: built on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
-And driving the chaos? Six real-time **envelope followers**, each capable of modulating any control slot based on live input audio. These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
+And driving the chaos? Six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
 
 ## Key Features
 
@@ -28,14 +28,14 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 
 ## Hardware Redefined
 
-The original idea was simple: 42 knobs (emulating the '60 Knobs' from Bastl Instruments). But simplicity is for cowards. So here’s what it became:
+The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:
 
 * **1 physical control pot**: total recall per slot.
 * **2 more physical pots**: for filter tuning.
 * **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
 * **A grid of buttons**: short press, long press, combos, the works. The
   button PCB (`BTN_42`) wires them into a 7×6 diode matrix which is scanned
-  through two CD74HC4067 multiplexers. The firmware drives the select lines
+  through a CD74HC4067 multiplexer. The firmware drives the select lines
   (`MUXR1..4` for rows, `MUXC1..4` for columns) and reads the combined node to
   detect presses.
 * **OLED Display + Addressable LEDs**: full visual feedback like a punk rock spaceship control panel.
@@ -112,7 +112,7 @@ And yes, combo presses are supported:
 >* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
 >* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
 
->Turning the **main pot** simply updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
+>Turning the **main pot** updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
 
 ---
 
@@ -179,8 +179,7 @@ repurpose themselves:
 * **Freq Pot** → length of each step (80–800 ms)
 * **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
-The arpeggiator repeatedly sends the slot's current value according to the
-selected pattern.
+The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
 
 ## Filter Controls
 
