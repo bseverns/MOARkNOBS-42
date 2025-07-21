@@ -1,20 +1,26 @@
-# BTN_42 Hardware
+# Hardware Overview
 
-This directory contains the button-board design used by the MOARkNOBS controller.
+This directory contains the hardware design files for the MOARkNOBS controller.
+All PCBs were created in EasyEDA Pro.
 
-## MN42-1
+## BTN_42
 
-The `MN42-1` folder is the first PCB revision. It provides everything needed to build the board:
+The `BTN_42` folder hosts revision `MN42-1` of the button board and enclosure.
+Key subcircuits are documented as simple flowchart diagrams in
+[`BTN_42/sketch/`](BTN_42/sketch/):
 
-- **BOM_btnBRD_btnBRD_2025-04-17.xlsx** – complete bill of materials.
-- **PickAndPlace_btnBRD_2025-04-17.xlsx** – reference positions for automated assembly.
-- **Gerber_btnBRD_2025-04-17.zip** – Gerber package for fabrication.
-- **shell/** – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes.
+- [buttonMatrix.md](BTN_42/sketch/buttonMatrix.md)
+- [display.md](BTN_42/sketch/display.md)
+- [envelopeFE.md](BTN_42/sketch/envelopeFE.md)
+- [led&midiOut.md](BTN_42/sketch/led&midiOut.md)
+- [midiOpto.md](BTN_42/sketch/midiOpto.md)
+- [power&protection.md](BTN_42/sketch/power&protection.md)
+- [teensy&headers.md](BTN_42/sketch/teensy&headers.md)
 
-Sketch diagrams showing the circuitry live in [`sketch/`](sketch/). The subfolder
-`PNG_btnBRD_2025-07-20` contains exported PNG screenshots of the full EasyEDA schematic.
+PNG screenshots of the EasyEDA schematic can be found in
+[`BTN_42/sketch/PNG_btnBRD_2025-07-20/`](BTN_42/sketch/PNG_btnBRD_2025-07-20/).
 
-Below is a summary of the schematic sheets:
+Below is a quick reference for the EasyEDA schematic sections:
 
 | Sheet # | Title                                  | Contents                                                                                       |
 | ------- | -------------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -27,7 +33,3 @@ Below is a summary of the schematic sheets:
 | 7       | **Envelope Follower Analog Front-End** | 6 channels: audio jack (or header), rectifier, RC, clamp to 3V3, into ADC pins.                |
 | 8       | **Display, UI, Aux Headers**           | SSD1306 (I²C), spare expansion header (5V, 3V3, SDA, SCL, GND), debug SWD pads.                |
 | 9       | Netlist summary / BOM cross-ref.       |                                                                                                |
-
-## License
-
-All hardware files are released under the MIT License, matching the rest of this repository. See the [LICENSE](../../LICENSE) file for details.
