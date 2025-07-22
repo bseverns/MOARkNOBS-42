@@ -2,36 +2,6 @@
 
 #include "ConfigManager.h"
 
-//eeprom update parameters
-//break that single expression into separate s += …; calls, so each step is clearly a String operation:
-static String makeSchema() {
-  const uint8_t count = NUM_POTS;
-  String s = R"rawliteral(
-  {
-    "properties": {
-      "pots": {
-        "type": "array",
-        "items": { "type": "number" },
-        )rawliteral";
-
-  // instead of: s += F("\"count\": ") + count + F(",");
-  s += F("\"count\": ");
-  s += count;
-  s += F(",");
-
-  // and similarly for the second piece:
-  s += R"rawliteral(
-        "minItems": )rawliteral";
-  s += count;
-  s += R"rawliteral(
-      }
-    }
-  }
-  )rawliteral";
-
-  return s;
-}
-
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
     : _numPots(numPots), _numButtons(numButtons) {}
