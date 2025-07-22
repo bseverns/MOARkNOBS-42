@@ -8,6 +8,7 @@
 #include <FastLED.h>
 #include <DisplayManager.h>
 #include <EnvelopeFollower.h>
+#include <Globals.h>
 #include "EEPROM.h"
 
 class MIDIHandler;
