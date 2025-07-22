@@ -28,6 +28,13 @@ extern ConfigManager configManager;
 #define ENV_RANGE_MIN 5      // adjust based on your signal threshold requirements
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
+// Analog pin tied to the mid-rail reference divider
+static const uint8_t VREF_ADC_PIN       = A8;
+
+// ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
+constexpr float VadcScale = 3.3f / 1023.0f;
+// Global storage for measured VREF voltage
+extern float g_vref;
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
@@ -46,6 +53,12 @@ const uint8_t FILTER_RES_POT_PIN = 23;
 // muxC select lines -> pins 8,9,10,11
 const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
 const uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
+
+// Aliases used by the row-driven button scanner
+#define PIN_MUXR primaryMuxPins
+#define PIN_MUXC secondaryMuxPins
+#define PIN_COL_SENSE buttonMuxAnalogPin
+#define PIN_ROW_DRV 7
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

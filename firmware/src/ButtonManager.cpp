@@ -85,10 +85,9 @@ void ButtonManager::initButtons() {
         pinMode(_secondaryMuxPins[i], OUTPUT);
     }
     pinMode(_muxAnalogPin, INPUT);
+    pinMode(PIN_ROW_DRV, OUTPUT);
+    digitalWrite(PIN_ROW_DRV, LOW);
 
-    for (int i = 0; i < NUM_CONTROL_BUTTONS; i++) {
-        pinMode(_controlPins[i], INPUT_PULLUP);
-    }
 
     // optional: initialize each state machine for each button
     for (int i = 0; i < (NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS); i++) {
@@ -110,32 +109,36 @@ void ButtonManager::initButtons() {
 void ButtonManager::processButtons(ButtonManagerContext& context) {
     unsigned long now = millis();
 
-    // Process virtual (multiplexer) buttons
+    // Scan mux matrix row by row
+    uint8_t rawStates[NUM_VIRTUAL_BUTTONS];
+    for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
+        digitalWrite(PIN_ROW_DRV, HIGH);
+        setMux(PIN_MUXR, r);
+        delayMicroseconds(5);
+        for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
+            setMux(PIN_MUXC, c);
+            delayMicroseconds(5);
+            int v = analogRead(PIN_COL_SENSE);
+            rawStates[r * BUTTON_COLS + c] = (v < 512) ? HIGH : LOW;
+        }
+        digitalWrite(PIN_ROW_DRV, LOW);
+    }
+
+    // Process virtual (multiplexer) buttons using scanned states
     for (uint8_t i = 0; i < NUM_VIRTUAL_BUTTONS; i++) {
-        uint8_t rawState = readMuxButton(i);
+        uint8_t rawState = rawStates[i];
         bool stableReading = Utility::debounce(buttonStates[i], rawState,
                                                lastDebounceTimes[i], now,
                                                DEBOUNCE_DELAY);
 
         if (stableReading) {
-            // interpret 'pressed' as buttonStates[i] == HIGH or LOW, whichever is your design
             bool pressed = (buttonStates[i] == HIGH);
             updateButtonStateMachine(i, pressed, context);
         }
     }
 
-    // Process direct control buttons
-    for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; i++) {
-        bool currentState = readControlButton(i);
-        bool stableReading = Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + i],
-                                               currentState,
-                                               lastDebounceTimes[NUM_VIRTUAL_BUTTONS + i],
-                                               now, DEBOUNCE_DELAY);
-        if (stableReading) {
-            bool pressed = buttonStates[NUM_VIRTUAL_BUTTONS + i];
-            updateButtonStateMachine(NUM_VIRTUAL_BUTTONS + i, pressed, context);
-        }
-    }
+    // Control buttons & pots via spare mux channels
+    scanControlInputs(context);
 }
 
 /**
@@ -618,16 +621,32 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
 }
 
 /**
- * Implementation of reading from multiplexer (same as your old code).
+ * Read a single button using the row-driven scanning method.
+ * Caches the most recently scanned row so repeated calls within the
+ * same row do not trigger additional ADC reads.
  */
 uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
-    // BTN_42 arranges 42 buttons in a 7x6 diode matrix. We map the
-    // linear index into row/column coordinates accordingly.
+    static uint8_t lastRow = 0xFF;
+    static uint8_t rowValues[BUTTON_COLS] = {0};
+
     uint8_t row = buttonIndex / BUTTON_COLS;
     uint8_t col = buttonIndex % BUTTON_COLS;
-    selectMux(row, col);
-    int value = analogRead(_muxAnalogPin);
-    return (value < 512) ? HIGH : LOW; // or invert if needed
+
+    if (row != lastRow) {
+        digitalWrite(PIN_ROW_DRV, HIGH);
+        setMux(PIN_MUXR, row);
+        delayMicroseconds(5);
+        for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
+            setMux(PIN_MUXC, c);
+            delayMicroseconds(5);
+            int v = analogRead(PIN_COL_SENSE);
+            rowValues[c] = (v < 512) ? HIGH : LOW;
+        }
+        digitalWrite(PIN_ROW_DRV, LOW);
+        lastRow = row;
+    }
+
+    return rowValues[col];
 }
 
 /**
@@ -637,13 +656,38 @@ bool ButtonManager::readControlButton(uint8_t buttonIndex) {
     return (digitalRead(_controlPins[buttonIndex]) == LOW);
 }
 
+void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
+    unsigned long now = millis();
+    for (uint8_t ch = 6; ch < 12; ++ch) {
+        selectMux(0, ch);
+        delayMicroseconds(5);
+        int val = analogRead(_muxAnalogPin);
+        bool pressed = (val < 512);
+        uint8_t idx = ch - 6;
+        bool stable = Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + idx], pressed,
+                                        lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now,
+                                        DEBOUNCE_DELAY);
+        if (stable) {
+            updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
+        }
+    }
+
+    for (uint8_t i = 0; i < 3; ++i) {
+        uint8_t ch = 12 + i;
+        selectMux(0, ch);
+        delayMicroseconds(5);
+        int val = analogRead(_muxAnalogPin);
+        _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
+    }
+}
+
+void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context) {
+    updateButtonStateMachine(NUM_VIRTUAL_BUTTONS + index, pressed, context);
+}
+
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
-    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
-        digitalWrite(_primaryMuxPins[i], (row >> i) & 1);
-    }
-    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
-        digitalWrite(_secondaryMuxPins[i], (col >> i) & 1);
-    }
+    setMux(PIN_MUXR, row);
+    setMux(PIN_MUXC, col);
 }
 
 bool ButtonManager::isMuxButtonPressed(uint8_t index) {

@@ -104,6 +104,9 @@ public:
 
     static void processBulkUpdate(const String& command, uint8_t numPots);
 
+    /** Sample the hardware VREF divider and return the measured voltage. */
+    static float readVrefADC(uint8_t pin = VREF_ADC_PIN);
+
     /** High, medium and low priority schedulers used globally. */
     static TaskScheduler schedulerHigh;
     static TaskScheduler schedulerMid;
@@ -113,5 +116,17 @@ public:
     static void writeEEPROMWord(int address, uint16_t value);
     static void resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue = 0xFF);
 };
+
+/**
+ * @brief Drive a 4-bit multiplexer select bus.
+ *
+ * Convenience helper used by both the button and potentiometer scanners
+ * to update the CD74HC4067 address lines.
+ */
+inline void setMux(const uint8_t selPins[4], uint8_t index) {
+    for (uint8_t i = 0; i < 4; ++i) {
+        digitalWrite(selPins[i], (index >> i) & 1);
+    }
+}
 
 #endif // UTILITY_H

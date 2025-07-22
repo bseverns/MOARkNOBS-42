@@ -5,6 +5,7 @@
 
 // Keep your external references
 extern MIDIHandler midiHandler;
+extern float g_vref;
 
 /**
  * Constructor
@@ -223,14 +224,27 @@ void EnvelopeFollower::setEnvelopePair(int envA, int envB) {
     envelopeB = envB;
 }
 
+void EnvelopeFollower::calibrateBaseline() {
+    const uint8_t samples = 8;
+    uint32_t total = 0;
+    for (uint8_t i = 0; i < samples; ++i) {
+        total += analogRead(audioInputPin);
+        delayMicroseconds(10);
+    }
+    float avg = static_cast<float>(total) / samples;
+    baseline = avg * VadcScale - g_vref;
+}
+
 /**
  * readEnvelopeLevel()
  * Helper used by update() to read the raw envelope value
  * from the configured analog pin and map it to a MIDI range.
  */
 int EnvelopeFollower::readEnvelopeLevel() {
-    int raw = analogRead(audioInputPin);
-    return map(raw, 0, 1023, 0, 127);
+    float env = (analogRead(audioInputPin) * VadcScale - g_vref - baseline) * gain;
+    env = max(0.0f, env);
+    int midi = static_cast<int>((env / g_vref) * 127.0f);
+    return constrain(midi, 0, 127);
 }
 
 /**

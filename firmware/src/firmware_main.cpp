@@ -9,6 +9,7 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
+#include "Utility.h"
 #include "name.c"
 #include "Globals.h"
 #include "BiquadFilter.h"
@@ -36,6 +37,7 @@ Arpeggiator arpeggiator;
 //tempo
 unsigned long lastClockTime = 0;
 float g_tappedBPM = 120.0f; // Default to 120 BPM
+float g_vref = 1.65f;       // Measured VREF voltage
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
@@ -259,9 +261,9 @@ void monitorSystemLoad() {
 
 void updateFilterTuning(ButtonManagerContext& context) {
     // 1. Read raw ADC from freq pot
-    int rawFreq = analogRead(FILTER_FREQ_POT_PIN);  // 0..1023
+    int rawFreq = buttonManager.getControlPotValue(1);  // MUXC channel 13
     // 2. Read raw ADC from Q pot
-    int rawQ = analogRead(FILTER_RES_POT_PIN);        // 0..1023
+    int rawQ = buttonManager.getControlPotValue(2);      // MUXC channel 14
 
     // 3. Map rawFreq => 20..5000 Hz (pick a range that feels good)
     float freq = map(rawFreq, 0, 1023, 20, 5000);
@@ -295,8 +297,8 @@ void updateFilterTuning(ButtonManagerContext& context) {
 void updateArpTuning() {
     if (!arpeggiator.isActive()) return;
 
-    int rawLen   = analogRead(FILTER_FREQ_POT_PIN);
-    int rawShape = analogRead(FILTER_RES_POT_PIN);
+    int rawLen   = buttonManager.getControlPotValue(1);
+    int rawShape = buttonManager.getControlPotValue(2);
 
     float lengthMs = map(rawLen, 0, 1023, 80, 800);
     int shapeIdx   = map(rawShape, 0, 1023, 0, 3);
@@ -312,6 +314,10 @@ void updateArpTuning() {
 void setup() {
     // — Serial & Config —
     Serial.begin(31250);
+
+    // Measure VREF for baseline calibration
+    pinMode(VREF_ADC_PIN, INPUT);
+    g_vref = Utility::readVrefADC(VREF_ADC_PIN);
 
     // Load per-slot EEPROM into RAM, and pot→CC into potChannels[]
     configManager.begin(potChannels);
@@ -386,12 +392,13 @@ void setup() {
     Timer1.attachInterrupt(processMIDI);
 
     // — Filter hardware —
-    pinMode(FILTER_FREQ_POT_PIN, INPUT);
-    pinMode(FILTER_RES_POT_PIN, INPUT);
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
     // — Envelope followers —
-    for (auto& ef : envelopeFollowers) ef.toggleActive(true);
+    for (auto& ef : envelopeFollowers) {
+        ef.toggleActive(true);
+        ef.calibrateBaseline();
+    }
     float sf, sq;
     EEPROM.get(EEPROM_FILTER_FREQ, sf);
     EEPROM.get(EEPROM_FILTER_Q,    sq);
