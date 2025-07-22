@@ -365,7 +365,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
             }
 
             default:
-                context.displayManager.displayStatus("DoublePress ???", 1000);
+                context.displayManager.displayStatus("Unknown double press", 1000);
                 break;
         }
     }
