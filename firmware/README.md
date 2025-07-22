@@ -50,8 +50,6 @@ The constants below come from `pins.h` and define how the Teensy 4.0 is wired.
 | `BUTTON_MUX_PIN` | A4 | Shared button sense line |
 | `POT_MUX_PIN` | A5 | Potentiometer MUX analog input |
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
-| `FILTER_FREQ_POT_PIN` | 22 | Filter frequency pot |
-| `FILTER_RES_POT_PIN` | 23 | Filter resonance pot |
 
 
 ## What It Does
