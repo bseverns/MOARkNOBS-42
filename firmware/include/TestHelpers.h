@@ -24,11 +24,11 @@ inline DisplayManager createDisplayManager() {
 }
 
 inline PotentiometerManager createPotentiometerManager() {
-    return PotentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    return PotentiometerManager(PIN_MUXR, PIN_MUXC, potMuxAnalogPin);
 }
 
 inline ButtonManager createButtonManager(PotentiometerManager* pm) {
-    return ButtonManager(primaryMuxPins, secondaryMuxPins,
+    return ButtonManager(PIN_MUXR, PIN_MUXC,
                          buttonMuxAnalogPin, TEST_CONTROL_PINS, pm);
 }
 

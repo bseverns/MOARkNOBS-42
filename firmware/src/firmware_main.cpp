@@ -42,8 +42,8 @@ float g_tappedBPM = 120.0f; // Default to 120 BPM
 // Control buttons are direct-wired (not part of the mux matrix)
 // and must not share the mux select pins.
 const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25};
-PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, controlPins, &potentiometerManager);
+PotentiometerManager potentiometerManager(PIN_MUXR, PIN_MUXC, potMuxAnalogPin);
+ButtonManager buttonManager(PIN_MUXR, PIN_MUXC, buttonMuxAnalogPin, controlPins, &potentiometerManager);
 
 // Envelope followers - assign to analog inputs
 std::vector<EnvelopeFollower> envelopeFollowers = {

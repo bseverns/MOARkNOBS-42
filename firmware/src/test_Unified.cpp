@@ -46,9 +46,9 @@ bool waitForAnyButton(const char* prompt = "Press any button to continue...")
     for (uint8_t b = 0; b < NUM_VIRTUAL_BUTTONS; ++b) {
       uint8_t row = b / 8, col = b % 8;
       for (int i = 0; i < PRIMARY_MUX_PINS; i++)
-        digitalWrite(primaryMuxPins[i], (row >> i) & 1);
+        digitalWrite(PIN_MUXR[i], (row >> i) & 1);
       for (int i = 0; i < SECONDARY_MUX_PINS; i++)
-        digitalWrite(secondaryMuxPins[i], (col >> i) & 1);
+        digitalWrite(PIN_MUXC[i], (col >> i) & 1);
       delayMicroseconds(5);
       if (analogRead(buttonMuxAnalogPin) < 512) return true;
     }
@@ -84,9 +84,9 @@ void testButtons() {
     while (true) {
       uint8_t row = b / 8, col = b % 8;
       for (int i = 0; i < PRIMARY_MUX_PINS; i++)
-        digitalWrite(primaryMuxPins[i], (row >> i) & 1);
+        digitalWrite(PIN_MUXR[i], (row >> i) & 1);
       for (int i = 0; i < SECONDARY_MUX_PINS; i++)
-        digitalWrite(secondaryMuxPins[i], (col >> i) & 1);
+        digitalWrite(PIN_MUXC[i], (col >> i) & 1);
       delayMicroseconds(5);
       if (analogRead(buttonMuxAnalogPin) < 512) break;
     }
@@ -183,8 +183,8 @@ void setup() {
   potentiometerManager.loadFromEEPROM();
   buttonManager.initButtons();
 
-  for (auto p: primaryMuxPins)   pinMode(p, OUTPUT);
-  for (auto p: secondaryMuxPins) pinMode(p, OUTPUT);
+  for (auto p: PIN_MUXR)   pinMode(p, OUTPUT);
+  for (auto p: PIN_MUXC) pinMode(p, OUTPUT);
   pinMode(potMuxAnalogPin, INPUT);
   pinMode(buttonMuxAnalogPin, INPUT);
   for (uint8_t c: TEST_CONTROL_PINS)   pinMode(c, INPUT_PULLUP);

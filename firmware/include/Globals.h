@@ -7,6 +7,7 @@
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
 #include "MIDITypes.h"
+#include "pins.h"
 
 class ConfigManager;
 extern ConfigManager configManager;
@@ -40,12 +41,8 @@ extern float g_tappedBPM;
 const uint8_t FILTER_FREQ_POT_PIN = 22;
 const uint8_t FILTER_RES_POT_PIN = 23;
 
-// Pin assignments for primary and secondary mux layers
-// The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select
-// muxR select lines -> pins 2,3,4,5
-// muxC select lines -> pins 8,9,10,11
-const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
-const uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
+// Pin assignments for the button/pot multiplexers
+// Defined in pins.h as PIN_MUXR and PIN_MUXC
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.
