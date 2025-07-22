@@ -8,8 +8,8 @@ See [`firmware/README.md`](firmware/README.md) for the full manual. Key features
 
 - 42 virtual MIDI slots storing channel, CC number and type.
 - One main control pot and two additional pots for filter tuning.
-- Six real-time envelope followers with seven selectable filter types (linear, opposite, exponential, random, LPF, HPF, BPF).
-- Button matrix (42 slot buttons plus 6 control buttons) supporting short, long and double presses.
+- Six precision envelope followers with diode rectifier and attack/release networks, each offering seven filter types (linear, opposite, exponential, random, LPF, HPF, BPF).
+- 7x6 diode button matrix scanned via CD74HC4067s; 42 slot buttons plus 6 direct controls handle short, long and double presses.
 - ARG mode to blend or compare envelope signals.
 - Arpeggiator mode for any MIDI type, controllable via filter knobs.
 - Dual USB & DIN MIDI output.

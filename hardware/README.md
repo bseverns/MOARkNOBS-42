@@ -52,8 +52,8 @@ Provides a macro view of power domains, scan loops, and UI connections.
 
 ### 4. Key Matrix & MUX
 
-* **7×6 matrix** of B3F switches with LL4148 diodes.
-* **2× CD74HC4067** scan rows (mux A) and columns + control pots/buttons (mux B).
+* **7×6 diode matrix** of B3F switches. Row lines (MUXR1..4) and column lines (MUXC1..4) route into two CD74HC4067 multiplexers.
+* Firmware cycles these lines with a `setMux()` helper, scanning all 42 buttons through a single analog sense pin.
 * Single pull-up resistor on column sense; analog read on control MUX.
 
 > **Theory:** Multiplexing slashes GPIO count. Diode isolation prevents ghosting; settle delays in firmware ensure stable reads.
@@ -77,7 +77,7 @@ Provides a macro view of power domains, scan loops, and UI connections.
 
 * **Option A**: single-supply precision rectifier using rail‑to‑rail op-amp (e.g., MCP6002), biased at **VREF ≈ 1.65 V**.
 * **R\_IN = R\_F = 100 kΩ**, **R\_A = 4.7 kΩ** (5 ms attack), **R\_R = 20 kΩ** (20 ms release), **C\_ENV = 1 µF**.
-* Unity‑gain feedback compensates diode drop; output series resistor (1 kΩ) and optional clamps (DNI).
+* Six channels feed A0, A1, A2, A3, A6 and A7 so audio or CV can modulate any slot.
 
 > **Theory:** Rail‑to‑rail amps handle 0–VCC signals; mid‑rail bias avoids negative swings; precision rectification yields accurate envelope curves.
 

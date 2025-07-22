@@ -33,14 +33,26 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 * **1 physical control pot**: total recall per slot.
 * **2 more physical pots**: for filter tuning.
 * **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
-* **A grid of buttons**: short press, long press, combos, the works. The
-  button PCB (`BTN_42`) wires them into a 7×6 diode matrix which is scanned
-  through a CD74HC4067 multiplexer. The firmware drives the select lines
-  (`MUXR1..4` for rows, `MUXC1..4` for columns) and reads the combined node to
-  detect presses.
+* **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
 * **OLED Display + Addressable LEDs**: full visual feedback like a punk rock spaceship control panel.
 * **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
 * **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
+
+### Pin Map
+
+The constants below come from `pins.h` and define how the Teensy 4.0 is wired.
+
+| Constant | Pin(s) | Purpose |
+|---------|-------|---------|
+| `LED_PIN` | 6 | WS2812 data out |
+| `MUXR_PINS` | 2,3,4,5 | Row select lines for the button matrix |
+| `MUXC_PINS` | 8,9,10,11 | Column select lines for the button matrix |
+| `BUTTON_MUX_PIN` | A4 | Shared button sense line |
+| `POT_MUX_PIN` | A5 | Potentiometer MUX analog input |
+| `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
+| `FILTER_FREQ_POT_PIN` | 22 | Filter frequency pot |
+| `FILTER_RES_POT_PIN` | 23 | Filter resonance pot |
+
 
 ## What It Does
 
@@ -67,6 +79,7 @@ Test files used in the development of this project include:
 * `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
 
 ## Button Mayhem
+Buttons are scanned continuously using `setMux()` which sets the row and column addresses before each read.
 
 Each control button can do several things depending on how you hit it:
 
