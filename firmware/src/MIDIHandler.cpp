@@ -97,8 +97,12 @@ void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
 }
 
 void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
-  // map -8192..8191 into two data bytes:
-  uint8_t l = bend & 0x7F, h = (bend>>7)&0x7F;
-  MIDI.sendPitchBend(l|h<<8, channel);
-  usbMIDI.sendPitchBend(l|h<<8, channel);
+  // Validate channel and clamp bend value
+  if (channel < 1 || channel > 16) return;
+  if (bend < -8192) bend = -8192;
+  else if (bend > 8191) bend = 8191;
+
+  // Teensy and USB MIDI libraries accept the signed 14-bit value directly
+  MIDI.sendPitchBend(bend, channel);
+  usbMIDI.sendPitchBend(bend, channel);
 }
