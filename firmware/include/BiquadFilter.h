@@ -20,7 +20,9 @@ public:
         BANDPASS   //!< Allows a band around the cutoff to pass
     };
 
-    BiquadFilter() : a0(0), a1(0), a2(0), b1(0), b2(0), z1(0), z2(0) {}
+    BiquadFilter()
+        : a0(0), a1(0), a2(0), b1(0), b2(0),
+          x1(0), x2(0), y1(0), y2(0) {}
 
     /**
      * @brief Configure the filter coefficients.
@@ -82,16 +84,19 @@ public:
      * @return Filtered sample value.
      */
     float process(float input) {
-        float output = a0 * input + a1 * z1 + a2 * z2 - b1 * z1 - b2 * z2;
-        z2 = z1;
-        z1 = output;
+        float output = a0 * input + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
+        x2 = x1;
+        x1 = input;
+        y2 = y1;
+        y1 = output;
         return output;
     }
 
 private:
     float a0, a1, a2;
     float b1, b2;
-    float z1, z2;
+    float x1, x2; //!< Previous input samples
+    float y1, y2; //!< Previous output samples
 };
 
 #endif // BIQUAD_FILTER_H
