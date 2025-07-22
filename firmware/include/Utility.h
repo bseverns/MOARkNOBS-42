@@ -104,6 +104,9 @@ public:
 
     static void processBulkUpdate(const String& command, uint8_t numPots);
 
+    /** Sample the hardware VREF divider and return the measured voltage. */
+    static float readVrefADC(uint8_t pin = VREF_ADC_PIN);
+
     /** High, medium and low priority schedulers used globally. */
     static TaskScheduler schedulerHigh;
     static TaskScheduler schedulerMid;

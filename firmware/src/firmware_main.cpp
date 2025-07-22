@@ -9,6 +9,7 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
+#include "Utility.h"
 #include "name.c"
 #include "Globals.h"
 #include "BiquadFilter.h"
@@ -36,6 +37,7 @@ Arpeggiator arpeggiator;
 //tempo
 unsigned long lastClockTime = 0;
 float g_tappedBPM = 120.0f; // Default to 120 BPM
+float g_vref = 1.65f;       // Measured VREF voltage
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
@@ -313,6 +315,10 @@ void setup() {
     // — Serial & Config —
     Serial.begin(31250);
 
+    // Measure VREF for baseline calibration
+    pinMode(VREF_ADC_PIN, INPUT);
+    g_vref = Utility::readVrefADC(VREF_ADC_PIN);
+
     // Load per-slot EEPROM into RAM, and pot→CC into potChannels[]
     configManager.begin(potChannels);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
@@ -391,7 +397,10 @@ void setup() {
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
     // — Envelope followers —
-    for (auto& ef : envelopeFollowers) ef.toggleActive(true);
+    for (auto& ef : envelopeFollowers) {
+        ef.toggleActive(true);
+        ef.calibrateBaseline();
+    }
     float sf, sq;
     EEPROM.get(EEPROM_FILTER_FREQ, sf);
     EEPROM.get(EEPROM_FILTER_Q,    sq);

@@ -248,3 +248,14 @@ void TaskScheduler::update() {
 TaskScheduler Utility::schedulerHigh;
 TaskScheduler Utility::schedulerMid;
 TaskScheduler Utility::schedulerLow;
+
+float Utility::readVrefADC(uint8_t pin) {
+    const uint8_t samples = 4;
+    uint32_t total = 0;
+    for (uint8_t i = 0; i < samples; ++i) {
+        total += analogRead(pin);
+        delayMicroseconds(10);
+    }
+    float avg = static_cast<float>(total) / samples;
+    return avg * VadcScale;
+}
