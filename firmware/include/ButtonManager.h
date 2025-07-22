@@ -123,7 +123,7 @@ private:
     const uint8_t* _secondaryMuxPins;
     uint8_t _muxAnalogPin;
     // Direct control button pins
-    const uint8_t* _controlPins;
+    const uint8_t* _controlPins; // direct GPIOs (legacy, unused with mux scan)
     // Link to PotentiometerManager for mode switching
     PotentiometerManager* _potentiometerManager;
 
@@ -155,7 +155,7 @@ private:
      * Read a direct control button pin.
      * @return true if pressed (active LOW), false otherwise
      */
-    bool readControlButton(uint8_t buttonIndex);
+    bool readControlButton(uint8_t buttonIndex); // legacy helper
 
     /**
      * Handle a confirmed short press (single tap). Updates display and state.
@@ -193,6 +193,15 @@ private:
      * Actual action for a single-press event, separate for clarity.
      */
     void doSinglePressAction(uint8_t index, ButtonManagerContext& context);
+
+    // ---- New multiplexer-based control scanning ----
+    void scanControlInputs(ButtonManagerContext& context);
+    void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context);
+    int _ctrlPotValues[3] = {0};
+
+public:
+    /** Return filtered control pot value (0..2). */
+    int getControlPotValue(uint8_t idx) const { return (idx < 3) ? _ctrlPotValues[idx] : 0; }
 };
 
 #endif // BUTTON_MANAGER_H

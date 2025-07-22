@@ -259,9 +259,9 @@ void monitorSystemLoad() {
 
 void updateFilterTuning(ButtonManagerContext& context) {
     // 1. Read raw ADC from freq pot
-    int rawFreq = analogRead(FILTER_FREQ_POT_PIN);  // 0..1023
+    int rawFreq = buttonManager.getControlPotValue(1);  // MUXC channel 13
     // 2. Read raw ADC from Q pot
-    int rawQ = analogRead(FILTER_RES_POT_PIN);        // 0..1023
+    int rawQ = buttonManager.getControlPotValue(2);      // MUXC channel 14
 
     // 3. Map rawFreq => 20..5000 Hz (pick a range that feels good)
     float freq = map(rawFreq, 0, 1023, 20, 5000);
@@ -295,8 +295,8 @@ void updateFilterTuning(ButtonManagerContext& context) {
 void updateArpTuning() {
     if (!arpeggiator.isActive()) return;
 
-    int rawLen   = analogRead(FILTER_FREQ_POT_PIN);
-    int rawShape = analogRead(FILTER_RES_POT_PIN);
+    int rawLen   = buttonManager.getControlPotValue(1);
+    int rawShape = buttonManager.getControlPotValue(2);
 
     float lengthMs = map(rawLen, 0, 1023, 80, 800);
     int shapeIdx   = map(rawShape, 0, 1023, 0, 3);
@@ -386,8 +386,6 @@ void setup() {
     Timer1.attachInterrupt(processMIDI);
 
     // — Filter hardware —
-    pinMode(FILTER_FREQ_POT_PIN, INPUT);
-    pinMode(FILTER_RES_POT_PIN, INPUT);
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
     // — Envelope followers —
