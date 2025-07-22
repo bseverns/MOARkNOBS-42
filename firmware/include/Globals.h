@@ -44,8 +44,6 @@ constexpr uint8_t SLOT_EEPROM_SIZE = sizeof(MIDISlot);  // typically 6 bytes
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;
 
-const uint8_t FILTER_FREQ_POT_PIN = 22;
-const uint8_t FILTER_RES_POT_PIN = 23;
 
 // Pin assignments for primary and secondary mux layers
 // The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select
