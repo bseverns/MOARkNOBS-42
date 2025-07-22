@@ -61,6 +61,10 @@ private:
     int envelopeA;
     int envelopeB;
 
+    // Calibration values
+    float baseline = 0.0f;
+    float gain = 1.0f;
+
     PotentiometerManager* potManager;
     BiquadFilter filter;          // Existing custom filter
     /**
@@ -133,6 +137,12 @@ public:
      */
     /** Specify which two inputs feed the ARG calculations. */
     void setEnvelopePair(int envA, int envB);
+
+    /** Sample the current input to establish a baseline offset. */
+    void calibrateBaseline();
+
+    /** Set the gain used when converting the envelope to MIDI. */
+    void setGain(float g) { gain = g; }
 };
 
 #endif // ENVELOPE_FOLLOWER_H

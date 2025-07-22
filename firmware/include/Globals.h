@@ -28,6 +28,13 @@ extern ConfigManager configManager;
 #define ENV_RANGE_MIN 5      // adjust based on your signal threshold requirements
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
+// Analog pin tied to the mid-rail reference divider
+static const uint8_t VREF_ADC_PIN       = A8;
+
+// ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
+constexpr float VadcScale = 3.3f / 1023.0f;
+// Global storage for measured VREF voltage
+extern float g_vref;
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
