@@ -54,6 +54,12 @@ const uint8_t FILTER_RES_POT_PIN = 23;
 const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
 const uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
 
+// Aliases used by the row-driven button scanner
+#define PIN_MUXR primaryMuxPins
+#define PIN_MUXC secondaryMuxPins
+#define PIN_COL_SENSE buttonMuxAnalogPin
+#define PIN_ROW_DRV 7
+
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.
 // Wiring: C0->12, C1->13, C2->14, C3->15, C4->24, C5->25
