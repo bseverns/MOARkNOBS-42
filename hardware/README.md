@@ -1,14 +1,31 @@
 # BTN\_42 Hardware (MOARkNOBS v2)
 
-> Welcome to the heart of the MOARkNOBS controller: the BTN\_42 button board. This document combines a concise hardware overview with in-depth electrical theory, design rationale, and optional/DNI notes to guide you from schematic to debug.
+> Hardware for the same rebellious spirit as the firmware—button‑stabbin', knob‑hackin' and ready for a beating. This board hosts the 42‑button grid and every last protection part that keeps the Teensy alive.
+
+![Board Layout](BTN_42/sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
 
 ## Directory Contents
 
-* **BOM\_btnBRD\_btnBRD\_2025-04-17.xlsx** – complete bill of materials for v2.
-* **PickAndPlace\_btnBRD\_2025-04-17.xlsx** – component placement for automated assembly.
-* **Gerber\_btnBRD\_2025-04-17.zip** – fabrication files (2 oz copper, ENIG finish).
-* **shell/** – mechanical STEP (in `3DShell_btnBRD/`) and STL (`stl/`) enclosure models.
-* **sketch/** – block diagrams and EasyEDA schematic exports (`PNG_btnBRD_2025-07-20/`).
+* **MN42-1/** – board project with:
+  * [BOM\_btnBRD\_btnBRD\_2025-04-17.xlsx](BTN_42/MN42-1/BOM_btnBRD_btnBRD_2025-04-17.xlsx) – full bill of materials.
+  * [PickAndPlace\_btnBRD\_2025-04-17.xlsx](BTN_42/MN42-1/PickAndPlace_btnBRD_2025-04-17.xlsx) – reference locations for assembly.
+  * [Gerber\_btnBRD\_2025-04-17.zip](BTN_42/MN42-1/Gerber_btnBRD_2025-04-17.zip) – the actual fabrication package.
+  * `shell/` – STEP models in `3DShell_btnBRD/` and printable STLs in `stl/`.
+* **sketch/** – block diagrams and EasyEDA exports (`PNG_btnBRD_2025-07-22/`).
+
+---
+
+## Sketch Documents
+
+For a closer look at each schematic sheet, see the individual sketches:
+
+* [buttonMatrix.md](BTN_42/sketch/buttonMatrix.md)
+* [power&protection.md](BTN_42/sketch/power&protection.md)
+* [teensy&headers.md](BTN_42/sketch/teensy&headers.md)
+* [led&midiOut.md](BTN_42/sketch/led&midiOut.md)
+* [midiOpto.md](BTN_42/sketch/midiOpto.md)
+* [envelopeFE.md](BTN_42/sketch/envelopeFE.md)
+* [display.md](BTN_42/sketch/display.md)
 
 ---
 
