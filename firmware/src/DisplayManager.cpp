@@ -1,3 +1,7 @@
+// Wraps the SSD1306 display for UI messages and animations.
+// Receives updates from ButtonManager, MIDIHandler and firmware_main.cpp.
+// Handles startup screens, status text and screensaver.
+
 
 #include <Arduino.h>
 #include "DisplayManager.h"

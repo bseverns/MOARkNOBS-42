@@ -1,4 +1,7 @@
-// LEDManager.cpp — STL-integrated full class refactor preserving all features
+// Manages the WS2812 LED strip for visual feedback.
+// Updated by PotentiometerManager and ButtonManager.
+// Initialized and polled from firmware_main.cpp.
+
 
 #include "LEDManager.h"
 #include "Globals.h"

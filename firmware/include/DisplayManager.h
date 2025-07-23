@@ -1,3 +1,6 @@
+// Provides simple wrappers around the OLED display for status output.
+// Updated by ButtonManager, MIDIHandler and the main loop.
+// Manages startup animation and idle screensaver.
 #ifndef DISPLAYMANAGER_H
 #define DISPLAYMANAGER_H
 

@@ -1,3 +1,7 @@
+// Scans the 42-button matrix and control buttons.
+// Sends events to ConfigManager, DisplayManager and other modules.
+// Called in every loop of firmware_main.cpp.
+
 #include "ButtonManager.h"
 #include "EnvelopeFollower.h"
 #include "Globals.h"

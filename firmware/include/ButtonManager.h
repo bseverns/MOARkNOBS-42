@@ -1,3 +1,7 @@
+// Handles all button scanning and debouncing.
+// Works with DisplayManager and ConfigManager to drive UI actions.
+// Polled by firmware_main.cpp every frame.
+
 #ifndef BUTTON_MANAGER_H
 #define BUTTON_MANAGER_H
 
