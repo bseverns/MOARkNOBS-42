@@ -1,3 +1,7 @@
+// Thin wrapper around the Teensy MIDI libraries.
+// Sends and receives messages while updating DisplayManager.
+// Instantiated and used throughout firmware_main.cpp.
+
 #include "MIDIHandler.h"
 #include <USB-MIDI.h>
 

@@ -1,3 +1,7 @@
+// Miscellaneous helpers used across the firmware.
+// Provides mapping functions, scheduling and EEPROM utilities.
+// Referenced by most modules including firmware_main.cpp.
+
 #include "Utility.h"
 #include <Arduino.h>
 #include "EnvelopeFollower.h"

@@ -1,3 +1,6 @@
+// Controls the addressable LEDs used for slot and mode feedback.
+// Receives value updates from PotentiometerManager and button events.
+// Firmware_main.cpp drives its animation updates.
 #ifndef LEDMANAGER_H
 #define LEDMANAGER_H
 

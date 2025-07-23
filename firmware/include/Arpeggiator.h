@@ -1,3 +1,7 @@
+// Simple note arpeggiator for a selected slot.
+// Uses MIDIHandler to send notes and gets settings from ConfigManager.
+// Controlled from firmware_main.cpp and ButtonManager.
+
 #ifndef ARPEGGIATOR_H
 #define ARPEGGIATOR_H
 

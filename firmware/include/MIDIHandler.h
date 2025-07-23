@@ -1,3 +1,6 @@
+// Central hub for sending and receiving MIDI.
+// Relays activity to the DisplayManager and validates data.
+// Created once in firmware_main.cpp.
 #ifndef MIDIHANDLER_H
 #define MIDIHANDLER_H
 

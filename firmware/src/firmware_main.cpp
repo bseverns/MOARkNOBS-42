@@ -1,6 +1,6 @@
-// Core firmware wiring together MIDI I/O, envelopes, buttons and display. This
-// file creates the global instances used across the project and schedules the
-// periodic tasks that keep everything updated.
+// Entry point for the MN42 firmware.
+// Instantiates all managers and drives the scheduler loop.
+// Coordinates interactions between machine sub-systems.
 
 #include <Arduino.h>
 #include "MIDIHandler.h"

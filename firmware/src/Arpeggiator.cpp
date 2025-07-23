@@ -1,3 +1,7 @@
+// Controls the simple arpeggiator used by the MN42.
+// Reads slot settings from ConfigManager and triggers notes via MIDIHandler.
+// Started from firmware_main.cpp and reacts to ButtonManager.
+
 #include "Arpeggiator.h"
 #include "MIDIHandler.h"
 #include "ConfigManager.h"

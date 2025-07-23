@@ -1,3 +1,6 @@
+// Common utility routines and lightweight task scheduler.
+// Includes mapping helpers, EEPROM wrappers and global schedulers.
+// Used by nearly every other module.
 #ifndef UTILITY_H
 #define UTILITY_H
 

@@ -1,3 +1,7 @@
+// Tracks audio or CV levels to modulate MIDI messages.
+// Supports SEF and ARG modes and several filter shapes.
+// Updated each loop by firmware_main.cpp and consulted by ButtonManager.
+
 #include "EnvelopeFollower.h"
 #include "MIDIHandler.h"
 #include "BiquadFilter.h"

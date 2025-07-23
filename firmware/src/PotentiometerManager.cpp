@@ -1,5 +1,8 @@
+// Reads potentiometers through analog multiplexers and reports changes.
+// Triggers MIDI callbacks and updates LEDManager.
+// Polled in firmware_main.cpp.
+
 #include "PotentiometerManager.h"
-//#include "EnvelopeFollower.h" // Include full definition here
 #include <EEPROM.h>
 #include "Globals.h"
 
