@@ -7,8 +7,8 @@
 * **BOM\_btnBRD\_btnBRD\_2025-04-17.xlsx** – complete bill of materials for v2.
 * **PickAndPlace\_btnBRD\_2025-04-17.xlsx** – component placement for automated assembly.
 * **Gerber\_btnBRD\_2025-04-17.zip** – fabrication files (2 oz copper, ENIG finish).
-* **shell/** – mechanical STEP (in `3DShell_btnBRD/`) and STL (`stl/`) enclosure models.
-* **sketch/** – block diagrams and EasyEDA schematic exports (`PNG_btnBRD_2025-07-20/`).
+* **shell/** – mechanical STEP (in `3DShell_btnBRD/`) and STL (`stl/`) enclosure models. Use them to preview fit or tweak your own case.
+* **sketch/** – block diagrams and EasyEDA schematic exports (`PNG_btnBRD_2025-07-22/`). The PNGs capture each schematic sheet for quick reference.
 
 ---
 
