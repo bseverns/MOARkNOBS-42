@@ -103,7 +103,7 @@ public:
     /** Reset configuration to factory defaults. */
     void resetConfiguration(std::vector<uint8_t>& potChannels);
 
-    // Envelope follower configuration -----------------------------------
+    // Envelope Follower configuration -----------------------------------
 
     /** Save envelope assignments to EEPROM. */
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
@@ -115,10 +115,10 @@ public:
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
 
-    /** Save the current envelope follower mode (e.g. SEF or ARG). */
+    /** Save the current Envelope Follower mode (e.g. SEF or ARG). */
     void setMode(uint8_t mode);
 
-    /** Retrieve the stored envelope follower mode. */
+    /** Retrieve the stored Envelope Follower mode. */
     uint8_t getMode() const;
 
     /** Persist the selected ARG method. */

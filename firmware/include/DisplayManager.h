@@ -43,7 +43,7 @@ public:
   /** Convenience for showing a numeric value. */
   void showValue(uint8_t value, bool clearDisplay = true);
 
-  /** Show which envelope follower is assigned to a slot. */
+  /** Show which Envelope Follower is assigned to a slot. */
   void showEnvelopeAssignment(int potIndex, int efIndex, const char* mode, const char* argMethod);
 
   /** Display the current operating mode string. */

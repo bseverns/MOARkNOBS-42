@@ -2,7 +2,7 @@
 #define BIQUAD_FILTER_H
 
 /**
- * @brief Lightweight biquad filter used by the envelope follower.
+ * @brief Lightweight biquad filter used by the Envelope Follower.
  *
  * The filter can operate in low‑pass, high‑pass or band‑pass mode and
  * exposes a very small API for run‑time configuration.  It is intended

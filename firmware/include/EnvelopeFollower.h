@@ -10,7 +10,7 @@
 class PotentiometerManager;
 
 /**
- * @brief Audio envelope follower with optional ARG combination mode.
+ * @brief Audio Envelope Follower with optional ARG combination mode.
  */
 class EnvelopeFollower {
 public:
@@ -49,7 +49,7 @@ private:
     int audioInputPin;            // Pin for audio input
     int currentEnvelopeLevel;     // Current envelope value
     int modulationTargetCC;       // Target MIDI CC
-    bool isActive;                // Is envelope follower active?
+    bool isActive;                // Is the Envelope Follower active?
 
     // Existing filter type
     FilterType filterType;
@@ -100,41 +100,25 @@ public:
     FilterType getFilterType() const;
 
     /**
-     * Primary update cycle.
+     * Read the input pin and update the internal envelope value.
      */
-    /** Read the input pin and update the internal envelope value. */
     void update();
 
-    /**
-     * Original applyToCC method.
-     */
     /** Modulate the provided CC value with the current envelope level. */
     void applyToCC(int potIndex, uint8_t& ccValue);
 
-    /**
-     * Get the current envelope level.
-     */
     /** Return the last processed envelope level (0‑127). */
     int getEnvelopeLevel() const;
 
-    /**
-     *Switch between SEF and ARG modes.
-     */
     /** Switch between SEF and ARG operating modes. */
     void setMode(Mode newMode);
     Mode getMode() const {
         return mode;
     };
 
-    /**
-     *Choose which method (A+B, etc.) for ARG mode.
-     */
     /** Select which arithmetic method to use in ARG mode. */
     void setARGMethod(ARG_Method method);
 
-    /**
-     *Select the two analog inputs for ARG calculations.
-     */
     /** Specify which two inputs feed the ARG calculations. */
     void setEnvelopePair(int envA, int envB);
 
