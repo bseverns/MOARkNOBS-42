@@ -1,3 +1,7 @@
+// Miscellaneous helpers used across the firmware.
+// Provides mapping functions, scheduling and EEPROM utilities.
+// Referenced by most modules including firmware_main.cpp.
+
 #include "Utility.h"
 #include <Arduino.h>
 #include "EnvelopeFollower.h"
@@ -5,6 +9,10 @@
 #include "EEPROM.h"
 #include "MIDIHandler.h"
 #include <imxrt.h>
+
+// Collection of helpers used across the firmware. These range from value
+// mappings and EEPROM utilities to simple schedulers that run tasks at different
+// priorities.
 
 // Mapping and Value Transformations
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {

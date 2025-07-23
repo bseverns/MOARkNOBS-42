@@ -1,3 +1,6 @@
+// Oversees reading all analog pots via multiplexers.
+// Calls a user-supplied callback for MIDI output and drives the LEDManager.
+// Used continuously by firmware_main.cpp.
 #ifndef POTENTIOMETER_MANAGER_H
 #define POTENTIOMETER_MANAGER_H
 
@@ -29,23 +32,21 @@ private:
     uint8_t potCCNumbers[NUM_POTS];  // MIDI CC number for each pot
     int potLastValues[NUM_POTS];     // Last read values for each pot
 
-    void selectMuxBank(uint8_t bank); // Select the primary mux bank
-    void selectPotBank(uint8_t pot);  // Select the secondary mux pot
+    void selectMuxBank(uint8_t bank); // Drive the primary mux address lines
+    void selectPotBank(uint8_t pot);  // Drive the secondary mux address lines
 
     // Callback for sending MIDI messages
-  std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> midiCallback;
+    std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> midiCallback;
 
     // Helper for filtered analog reads
-    int readAnalogFiltered(uint8_t pin); // New function for analog filtering
+    int readAnalogFiltered(uint8_t pin); // Low-pass filtered ADC read
 
     int argEnvA;
     int argEnvB;
 
 public:
     /**
-     * @param primaryPins   Pointer to four GPIO pins selecting the primary mux.
-     * @param secondaryPins Pointer to four GPIO pins selecting the pot within the mux.
-     * @param analogPin     Analog input used to read the mux output.
+     * Construct the manager with the mux address pin arrays and analog input.
      */
     PotentiometerManager(
         const uint8_t* primaryPins,
@@ -53,7 +54,7 @@ public:
         uint8_t analogPin
     );
 
-    /** Callback invoked when a pot value changes. */
+    /** Register a callback to send MIDI when a pot changes. */
     void setMidiCallback(std::function<void(
     uint8_t /*data1*/,
     uint8_t /*mappedValue*/,
@@ -79,7 +80,10 @@ public:
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);
 
-    /** Scan all pots, sending MIDI via the callback when values change. */
+    /**
+     * Read every pot via the muxes and invoke the MIDI callback for changes.
+     * Also updates LEDs and envelope followers.
+     */
     void processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes);
 
     /** Specify the envelope pair used for ARG operations. */

@@ -1,3 +1,6 @@
+Feast your eyes on the button matrix! A matching screenshot lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+
+```mermaid
 flowchart LR
   subgraph SlotMatrix["Slot Matrix (42 Buttons)"]
     U1[Teensy 4.0] -->|A0–A5 select| CD1[CD74HC4067 #1]
@@ -13,3 +16,5 @@ flowchart LR
     CD2 --> Pot2[Pot2_Analog]
     CD2 --> Pot3[Pot3_Analog]
   end
+```
+

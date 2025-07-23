@@ -1,5 +1,6 @@
-//cc-share-alike-attribution B.Severns 2025
-//MOARkNOBS-42 was inspired by the Bastl Instruments '60 Knobs' controller.
+// Entry point for the MN42 firmware.
+// Instantiates all managers and drives the scheduler loop.
+// Coordinates interactions between machine sub-systems.
 
 #include <Arduino.h>
 #include "MIDIHandler.h"

@@ -1,3 +1,6 @@
+Teensy power pins and expansion headers. The screenshot version lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+
+```mermaid
 flowchart LR
   subgraph TeensyPower[" "]
     VIN_FUSED -->|5V→3V3 reg| VCC3V3[3V3 Rail]
@@ -16,3 +19,4 @@ flowchart LR
   classDef groundBus fill:none,stroke:#000,stroke-width:3px;
   GND --- groundBusNode((GND Bus))
   groundBusNode:::groundBus
+```

@@ -322,6 +322,11 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 * Tweak filter types, EF settings
 * Save back to EEPROM over WebSerial
 
+## Development Timeline
+
+Check out the project evolution in the main repo's
+[HISTORY.md](../HISTORY.md).
+
 ## Support
 
 This isn’t a normal plug-and-play piece gear. It’s for builders, hackers, and those who edit INIs on purpose.

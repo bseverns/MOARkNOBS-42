@@ -17,7 +17,8 @@
 #include "ConfigManager.h"
 #include "Globals.h"
 
-// Simple EEPROM slot verification
+// Utility test that writes predictable data to each MIDISlot and reads it back
+// to confirm EEPROM integrity.
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 
 void setup() {

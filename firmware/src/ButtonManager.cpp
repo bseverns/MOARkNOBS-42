@@ -1,3 +1,7 @@
+// Scans the 42-button matrix and control buttons.
+// Sends events to ConfigManager, DisplayManager and other modules.
+// Called in every loop of firmware_main.cpp.
+
 #include "ButtonManager.h"
 #include "EnvelopeFollower.h"
 #include "Globals.h"
@@ -5,6 +9,10 @@
 #include "Utility.h"
 #include "Arpeggiator.h"
 #include <map>
+
+// Scans the button matrix and direct control buttons. Results are fed into
+// DisplayManager, ConfigManager, EnvelopeFollower assignments and the
+// Arpeggiator. This class ties user interaction to the rest of the system.
 
 // The BTN_42 PCB connects 42 pushbuttons in a 7×6 diode matrix. Each row and
 // column is wired to one channel of two CD74HC4067 analog multiplexers. The
@@ -76,7 +84,8 @@ ButtonManager::ButtonManager(const uint8_t* primaryMuxPins,
     }
 }
 
-// We call this once at setup, just like your original approach:
+// Called during setup to configure the multiplexers and reset the internal
+// state machines that track button presses.
 void ButtonManager::initButtons() {
     for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
         pinMode(_primaryMuxPins[i], OUTPUT);
@@ -372,12 +381,11 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
 }
 
 /**
- * The real single-press logic calls your *original* handleSingleButtonPress.
+ * Dispatch a confirmed short press. The helper `handleSingleButtonPress` keeps
+ * the actual per-button actions so other parts of the firmware can reuse them.
  */
 void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext& context) {
     BM_DBG_PRINTLN("Single Press on button " + String(index));
-
-    // old logic:
     handleSingleButtonPress(index, context);
 }
 
@@ -650,7 +658,8 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
 }
 
 /**
- * Implementation of reading direct buttons (same as old).
+ * Read a direct-wired control button. These inputs are active LOW and bypass
+ * the multiplexer used for slot buttons.
  */
 bool ButtonManager::readControlButton(uint8_t buttonIndex) {
     return (digitalRead(_controlPins[buttonIndex]) == LOW);

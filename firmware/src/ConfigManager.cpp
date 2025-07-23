@@ -1,4 +1,6 @@
-// ConfigManager.cpp — Updated with EEPROM robustness and backup handling, preserving development comments
+// Handles all persistent configuration stored in EEPROM. This includes MIDI slot
+// settings, envelope follower assignments and LED preferences. Backup copies are
+// automatically managed to guard against corruption.
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
