@@ -23,6 +23,14 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 
 ## Development Timeline
 
+## Getting Started
+
+1. **Flash the Firmware**
+   - **PlatformIO**: install it via `pip install platformio` or grab the VS Code extension. Change into the `firmware/` directory, pick the `teensy40_main` environment and run `pio run -t upload` with your Teensy 4.0 connected.
+   - **Arduino IDE**: install the Teensy board package (`Teensyduino`) and the same libraries listed in `platformio.ini` (FastLED, Bounce2, USB-MIDI, Adafruit SSD1306, Adafruit GFX Library, TimerOne and EEPROM). Open `firmware_main.cpp` as a sketch and upload normally.
+2. Order or assemble the PCBs from the files in `hardware/`.
+3. Wire up the buttons, LEDs and display, then start tweaking.
+
 For a month-by-month look at how this controller came together, see
 [HISTORY.md](HISTORY.md).
 
