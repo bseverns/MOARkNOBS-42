@@ -7,6 +7,7 @@
 
 #include "Globals.h"
 #include "MIDITypes.h"
+#include "PotentiometerManager.h"
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <map>

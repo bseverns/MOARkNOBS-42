@@ -8,7 +8,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <vector>
-#include "Globals.h"    // for SCREEN_WIDTH, SCREEN_HEIGHT
+#include "Globals.h"    // for OLED_WIDTH, OLED_HEIGHT
 
 struct ButtonManagerContext;
 

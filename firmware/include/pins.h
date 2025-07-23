@@ -14,4 +14,3 @@ constexpr uint8_t POT_MUX_PIN    = A5; // Analog read for pot mux
 
 // Direct control buttons
 const uint8_t CONTROL_PINS[6] = {12, 13, 14, 15, 24, 25};
-
