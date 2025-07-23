@@ -32,24 +32,24 @@ public:
    */
   DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight);
 
-  /** Initialise the underlying display hardware. */
+  /** Initialise the underlying display hardware. Call from setup(). */
   bool begin();
 
   // Core display methods ------------------------------------------------
 
-  /** Display up to three lines of text. */
+  /** Clear the screen and show up to three lines of text. */
   void showText(const char* line1, const char* line2 = "", const char* line3 = "");
 
-  /** Convenience for showing a numeric value. */
+  /** Convenience helper for displaying a single numeric value. */
   void showValue(uint8_t value, bool clearDisplay = true);
 
   /** Show which envelope follower is assigned to a slot. */
   void showEnvelopeAssignment(int potIndex, int efIndex, const char* mode, const char* argMethod);
 
-  /** Display the current operating mode string. */
+  /** Display the current operating mode string on the bottom row. */
   void showMode(const char* mode, bool clearDisplay = true);
 
-  /** Clear the display immediately. */
+  /** Clear the display buffer immediately. */
   void clear();
 
   /** Update the main UI view with real‑time information. */
@@ -60,42 +60,42 @@ public:
                      uint8_t activeChannel,
                      const char* envelopeMode);
 
-  /** Show a short status message for a fixed duration. */
+  /** Display a transient message for the given duration. */
   void displayStatus(const char* status, unsigned long duration);
 
-  /** Render state based on a ButtonManagerContext snapshot. */
+  /** Refresh the UI using values from a ButtonManagerContext. */
   void updateFromContext(const ButtonManagerContext& context);
 
-  /** Display info about the current ARG method and envelope pair. */
+  /** Show the selected ARG method and envelope pairing. */
   void showARGInfo(const char* methodName, int envA, int envB);
 
-  /** Display a temporary message without disturbing the main UI. */
+  /** Set a message that overrides the UI for a short time. */
   void setTemporaryMessage(const char* message, unsigned long duration);
 
   /** Display a human readable representation of a MIDI message. */
   void showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel);
 
-  /** Display the current beat or 'no clock' state. */
+  /** Update the beat indicator or show "--" when clock is stopped. */
   void updateBeat(uint8_t beatPosition, bool clockRunning);
 
   // Advanced features ---------------------------------------------------
 
-  /** Begin a manual drawing session (clears the screen). */
+  /** Begin a manual drawing session by clearing the buffer. */
   void beginDraw();
 
   /** End a manual drawing session and push pixels to the display. */
   void endDraw();
 
-  /** Show an error message, optionally halting the program. */
+  /** Display an error message; optionally leave it on screen indefinitely. */
   void showError(const char* errorMessage, bool persistent = false);
 
-  /** Draw a single envelope level bar. */
+  /** Draw a single vertical envelope meter. */
   void showEnvelopeLevel(uint8_t level);
 
   /** Draw two envelope level bars used in ARG mode. */
   void showEnvelopeLevels(uint8_t envA, uint8_t envB);
 
-  /** Update cached selection indices. */
+  /** Cache the active pot and channel for later updates. */
   void updateActiveSelection(uint8_t activePot, uint8_t activeChannel);
 
   /** Highlight a particular pot in custom UI screens. */
@@ -104,7 +104,7 @@ public:
   /** Highlight the active mode string along the bottom of the display. */
   void highlightActiveMode(const String& modeName);
 
-  /** Set how often updateFromContext should refresh the display. */
+  /** Configure how often updateFromContext refreshes the display. */
   void setUpdateInterval(unsigned long intervalMs);
 
   /** Return the current update interval in milliseconds. */

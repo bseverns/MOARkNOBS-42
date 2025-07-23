@@ -25,49 +25,49 @@ public:
     LEDManager(uint16_t numLEDs);
     ~LEDManager();
 
-    /** Prepare the LED strip hardware. */
+    /** Initialise FastLED and clear the strip. Call once from setup(). */
     void begin();
 
-    /** Update a single pot LED based on a MIDI value. */
+    /** Map a MIDI value (0-127) to a pot LED brightness or colour. */
     void setPotValue(uint8_t potIndex, uint8_t value);
 
-    /** Display an index used to show the current mode selection. */
+    /** Show a numeric mode indicator using the pot LEDs. */
     void setModeDisplay(uint8_t mode);
 
-    /** Highlight the currently active pot. */
+    /** Visually highlight the pot being edited. */
     void setActivePot(uint8_t potIndex);
 
-    /** Indicate whether envelope follow mode is active. */
+    /** Indicate whether envelope-follow mode is active. */
     void indicateEnvelopeMode(bool isActive);
 
-    /** Mark an LED as needing to be refreshed on the next update. */
+    /** Mark a specific LED so update() will rewrite it. */
     void markDirty(uint8_t index);
 
-    /** Run the power‑on animation. */
+    /** Play a short LED animation at startup. */
     void startupAnimation();
 
-    /** Adjust global brightness. */
+    /** Change the global brightness for the entire strip. */
     void setBrightness(uint8_t brightness);
 
-    /** Set all LEDs to the same colour. */
+    /** Remember a base colour used by simple states. */
     void setColor(CRGB color);
 
-    /** Change state machine controlling LED behaviour. */
+    /** Switch the LED behaviour state machine. */
     void setState(LEDState state, uint8_t index = 255);
 
-    /** Current brightness value. */
+    /** Retrieve the currently set brightness. */
     uint8_t getBrightness() const;
 
     /** Return the colour currently used by simple states. */
     CRGB getColor() const;
 
-    /** Set all LEDs to the specified colour immediately. */
+    /** Set every LED on the strip to a single colour now. */
     void setAll(const CRGB& color);
 
     /** Set colour for a named group of LEDs. */
     void setGroupColor(const std::string& group, const CRGB& color);
 
-    /** Push any dirty LED values to the strip. */
+    /** Write any changed LED values to the strip. Call each loop. */
     void update();
 
 private:
