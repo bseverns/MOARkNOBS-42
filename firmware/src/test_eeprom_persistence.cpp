@@ -12,6 +12,23 @@
 #include "EnvelopeFollower.h"
 #include "TestHelpers.h"
 
+/*
+ * EEPROM Persistence Test
+ *
+ * Exercises configuration save/restore across reboots. The sketch runs in
+ * three manual stages:
+ *   1. Write known data and prompt a reboot.
+ *   2. Verify data after reboot, corrupt the primary copy, reboot again.
+ *   3. Ensure the backup copy restores correctly.
+ *
+ * Build with PlatformIO environment `teensy40_eeprom_persistence`
+ * (e.g. `platformio run -e teensy40_eeprom_persistence -t upload`).
+ * Requires a Teensy 4.0 wired as described in the MOARkNOBS hardware docs.
+ *
+ * See `firmware/README.md` under "Test Philosophy (and Real Talk)" for
+ * more background on the test suite.
+ */
+
 // -- Constants ---------------------------------------------------------------
 // address well outside normal config space
 #define EEPROM_TEST_FLAG_ADDR (EEPROM_BACKUP_START + 100)

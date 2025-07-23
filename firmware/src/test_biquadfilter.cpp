@@ -1,9 +1,19 @@
 #include <Arduino.h>
 #include "BiquadFilter.h"
 
-// Standalone unit test for the BiquadFilter class. Used during development to
-// verify coefficient calculations and stability outside of the full firmware.
-// - confirms filter state behaves as expected
+/*
+ * BiquadFilter math test
+ *
+ * Confirms coefficient calculations and internal state for low-, high-
+ * and band-pass modes.
+ *
+ * Build and upload with PlatformIO environment `teensy40_biquad_test`.
+ * Requires only a board capable of Serial output (Teensy 4.0 recommended);
+ * no other hardware is needed.
+ *
+ * See `firmware/README.md` under "Test Philosophy (and Real Talk)" for
+ * the full list of available test sketches.
+ */
 
 void setup() {
     Serial.begin(115200);
