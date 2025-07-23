@@ -21,6 +21,11 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 2. Order or assemble the board from the hardware files.
 3. Wire things up and start twisting knobs.
 
+## Development Timeline
+
+For a month-by-month look at how this controller came together, see
+[HISTORY.md](HISTORY.md).
+
 ## License
 
 MIT, see [LICENSE](LICENSE) for details.
