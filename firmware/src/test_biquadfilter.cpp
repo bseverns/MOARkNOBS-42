@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include "BiquadFilter.h"
 
-// Basic DSP sanity checks for BiquadFilter
-// - verifies coefficients for low‑pass, high‑pass and band‑pass modes
+// Standalone unit test for the BiquadFilter class. Used during development to
+// verify coefficient calculations and stability outside of the full firmware.
 // - confirms filter state behaves as expected
 
 void setup() {

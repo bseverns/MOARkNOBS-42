@@ -1,5 +1,8 @@
 #include <Arduino.h>
 #include "Globals.h"
+
+// Entry point for a series of manual board tests. Compile this instead of the
+// production firmware to verify hardware functionality during assembly.
 #include "MIDIHandler.h"
 #include "ConfigManager.h"
 #include "LEDManager.h"

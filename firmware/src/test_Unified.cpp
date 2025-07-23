@@ -1,4 +1,6 @@
 // unified.cpp
+// Manual integration test that exercises all subsystems when compiled instead
+// of the main firmware.
 
 #include <Arduino.h>
 #include "Globals.h"

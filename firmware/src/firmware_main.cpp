@@ -1,5 +1,6 @@
-//cc-share-alike-attribution B.Severns 2025
-//MOARkNOBS-42 was inspired by the Bastl Instruments '60 Knobs' controller.
+// Core firmware wiring together MIDI I/O, envelopes, buttons and display. This
+// file creates the global instances used across the project and schedules the
+// periodic tasks that keep everything updated.
 
 #include <Arduino.h>
 #include "MIDIHandler.h"
