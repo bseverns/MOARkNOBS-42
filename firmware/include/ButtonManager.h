@@ -82,13 +82,9 @@ struct ButtonManagerContext {
 class ButtonManager {
 public:
     /**
-     * @brief Create a new ButtonManager instance.
-     *
-     * @param primaryMuxPins   Array of GPIO pins controlling the primary mux row select.
-     * @param secondaryMuxPins Array of GPIO pins controlling the column select.
-     * @param muxAnalogPin     Analog pin used to read the multiplexer output.
-     * @param controlPins      Array of GPIO pins wired to direct control buttons.
-     * @param potentiometerManager Pointer to the PotentiometerManager used for slot configuration.
+     * Create a manager for all button inputs.
+     * The mux pin arrays define the scanning hardware and the
+     * PotentiometerManager link allows button presses to change slots.
      */
     ButtonManager(const uint8_t* primaryMuxPins,
                   const uint8_t* secondaryMuxPins,
@@ -97,23 +93,19 @@ public:
                   PotentiometerManager* potentiometerManager);
 
     /**
-     * @brief Initialize GPIO directions for the direct buttons.
-     *
-     * Should be called from the Arduino `setup()` function.
+     * Configure the GPIO directions for all buttons.
+     * Call once from setup() before processButtons() is used.
      */
     void initButtons();
 
     /**
-     * @brief Poll all buttons and generate events.
-     *
-     * @param context    Mutable context carrying current selection and resources.
+     * Poll the button matrix, update state machines and fire callbacks.
+     * Invoke this in the main loop with a shared ButtonManagerContext.
      */
     void processButtons(ButtonManagerContext& context);
 
     /**
-     * @brief Test helper to query the raw state of a virtual button.
-     * @param index Index of the button (0..NUM_VIRTUAL_BUTTONS-1).
-     * @return true if pressed, false otherwise.
+     * Directly read a muxed button's state; useful for unit tests.
      */
     bool isMuxButtonPressed(uint8_t index);
 
@@ -140,67 +132,46 @@ private:
     // State machines for each button detection
     ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
 
-    /**
-     * Drive the mux select lines to read a specific row/column.
-     */
+    /** Set the multiplexer address lines so a given row/column can be read. */
     void selectMux(uint8_t row, uint8_t col);
 
-    /**
-     * Read the analog value for a virtual button index via the mux.
-     * @return HIGH (unpressed) or LOW (pressed)
-     */
+    /** Return the digital state for a multiplexed button. */
     uint8_t readMuxButton(uint8_t buttonIndex);
 
-    /**
-     * Read a direct control button pin.
-     * @return true if pressed (active LOW), false otherwise
-     */
-    bool readControlButton(uint8_t buttonIndex); // legacy helper
+    /** Read a direct control button pin (legacy non-mux input). */
+    bool readControlButton(uint8_t buttonIndex);
 
-    /**
-     * Handle a confirmed short press (single tap). Updates display and state.
-     */
+    /** Handle the action for a single short press after debouncing. */
     void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context);
 
-    /**
-     * (Optional) handle combination presses, e.g. SHIFT+button
-     */
+    /** Optional hook for combination presses (e.g. SHIFT + button). */
     void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context);
 
-    /**
-     * Core state-machine logic for each button. Handles transitions between
-     * IDLE, PRESSED, LONG_PRESS, RELEASED, and fires appropriate callbacks.
-     */
+    /** Internal state machine driving press/hold/release detection. */
     void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext& context);
 
-    /**
-     * Called once when a button transitions into LONG_PRESS state.
-     */
+    /** Callback fired exactly once when a long press is detected. */
     void onLongPress(uint8_t index, ButtonManagerContext& context);
 
-    /**
-     * Called once when a button is released from PRESSED or LONG_PRESS.
-     */
+    /** Called when the button is released after press or long-press. */
     void onRelease(uint8_t index, ButtonManagerContext& context);
 
-    /**
-     * Detect single vs double short-press based on release timing.
-     */
+    /** Detect and dispatch short vs double presses based on timing. */
     void handleShortPress(uint8_t index, ButtonManagerContext& context);
     void handleDoublePress(uint8_t index, ButtonManagerContext& context);
 
-    /**
-     * Actual action for a single-press event, separate for clarity.
-     */
+    /** Perform the mapped action for a simple press. */
     void doSinglePressAction(uint8_t index, ButtonManagerContext& context);
 
     // ---- New multiplexer-based control scanning ----
+    /** Poll the dedicated control inputs and update _ctrlPotValues. */
     void scanControlInputs(ButtonManagerContext& context);
+    /** Update a single control button state during scanning. */
     void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context);
     int _ctrlPotValues[3] = {0};
 
 public:
-    /** Return filtered control pot value (0..2). */
+    /** Return the latest smoothed value for one of the control pots. */
     int getControlPotValue(uint8_t idx) const { return (idx < 3) ? _ctrlPotValues[idx] : 0; }
 };
 
