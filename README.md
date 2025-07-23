@@ -31,6 +31,11 @@ Use this directory to manufacture the hardware or modify the design.
 2. Order or assemble the PCBs from the files in `hardware/`.
 3. Wire up the buttons, LEDs and display, then start tweaking.
 
+## Development Timeline
+
+For a month-by-month look at how this controller came together, see
+[HISTORY.md](HISTORY.md).
+
 ## License
 
 MOARkNOBS Controller firmware and hardware design files are provided under the MIT License. See the [LICENSE](LICENSE) file for details.
