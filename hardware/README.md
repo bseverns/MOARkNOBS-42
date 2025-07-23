@@ -41,7 +41,7 @@ For a closer look at each schematic sheet, see the individual sketches:
 | 6       | **MIDI IN Optocoupler + ESD**          | 6N138 (or alternative), series resistors, 1N4148 reverse diode, 3.3 V pull-up, ESD TVS placeholder. |
 | 7       | **Envelope Follower Analog Front‑End** | 6 channels: AC coupling, unity‑gain precision rectifier, attack/release RC, VREF mid‑rail bias.     |
 | 8       | **Display, UI & Aux Headers**          | SSD1306 OLED (I²C), pull‑ups, debug header, reserved SPI\_FUT (DNI), SWD pads.                      |
-| 9       | **Netlist & BOM Cross‑Reference**      | Consolidated nets, optional/DNI footprints checklist (`Optional_DNI_Reference.md`).                 |
+| 9       | **Netlist & BOM Cross‑Reference**      | Consolidated nets, optional/DNI footprints checklist ([Options_DNI.md](../docs/Options_DNI.md)).                 |
 
 ---
 
@@ -108,7 +108,7 @@ Provides a macro view of power domains, scan loops, and UI connections.
 
 ### 9. Netlist & BOM Cross‑Reference
 
-* All nets and parts with **DNI / Opt / Future** flags documented in `Optional_DNI_Reference.md`.
+* All nets and parts with **DNI / Opt / Future** flags documented in [Options_DNI.md](../docs/Options_DNI.md).
 * Ensures assembly clarity and prevents unintentional omissions.
 
 ---
@@ -124,7 +124,7 @@ Provides a macro view of power domains, scan loops, and UI connections.
 
 ## Optional / DNI Features
 
-Refer to `sketch/Optional_DNI_Reference.md` for the full checklist of optional footprints, RC networks, and future header reservations.
+Refer to [../docs/Options_DNI.md](../docs/Options_DNI.md) for the full checklist of optional footprints, RC networks, and future header reservations.
 
 ---
 
