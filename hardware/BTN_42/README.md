@@ -1,18 +1,29 @@
 # BTN_42 Hardware
 
-This directory contains the button-board design used by the MOARkNOBS controller.
+> The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude.
+
+![Board Layout](sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
 
 ## MN42-1
 
-The `MN42-1` folder is the first PCB revision. It provides everything needed to build the board:
+The `MN42-1` folder holds the first PCB revision:
 
-- **BOM_btnBRD_btnBRD_2025-04-17.xlsx** – complete bill of materials.
-- **PickAndPlace_btnBRD_2025-04-17.xlsx** – reference positions for automated assembly.
-- **Gerber_btnBRD_2025-04-17.zip** – Gerber package for fabrication.
-- **shell/** – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes. Use these 3D models to verify clearances or remix the case.
+- [BOM_btnBRD_btnBRD_2025-04-17.xlsx](MN42-1/BOM_btnBRD_btnBRD_2025-04-17.xlsx) – complete bill of materials.
+- [PickAndPlace_btnBRD_2025-04-17.xlsx](MN42-1/PickAndPlace_btnBRD_2025-04-17.xlsx) – reference positions for automated assembly.
+- [Gerber_btnBRD_2025-04-17.zip](MN42-1/Gerber_btnBRD_2025-04-17.zip) – ready-to-send fabrication package.
+- `shell/` – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes.
 
-Sketch diagrams showing the circuitry live in [`sketch/`](sketch/). The subfolder
-`PNG_btnBRD_2025-07-22` contains exported PNG screenshots of the full EasyEDA schematic. Grab them for offline viewing or quick reference alongside the mermaid docs.
+Sketch diagrams live in [`sketch/`](sketch/). The `PNG_btnBRD_2025-07-22` folder contains exported PNG screenshots of the full EasyEDA schematic.
+
+### Sketch Documents
+
+* [buttonMatrix.md](sketch/buttonMatrix.md)
+* [power&protection.md](sketch/power&protection.md)
+* [teensy&headers.md](sketch/teensy&headers.md)
+* [led&midiOut.md](sketch/led&midiOut.md)
+* [midiOpto.md](sketch/midiOpto.md)
+* [envelopeFE.md](sketch/envelopeFE.md)
+* [display.md](sketch/display.md)
 
 Below is a summary of the schematic sheets:
 
