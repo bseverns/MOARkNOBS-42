@@ -13,7 +13,7 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
 - **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the overview.
   - **BTN_42/** – button board design; more notes in [BTN_42/README.md](hardware/BTN_42/README.md). Block diagrams and schematics are under [`sketch/`](hardware/BTN_42/sketch).
-- **HISTORY.md** – running log of how this project came to be.
+ - **[HISTORY.md](HISTORY.md)** – running log of how this project came to be.
 
 ## Getting started
 

@@ -53,6 +53,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Button-driven navigation simplifies test phases. [8716674]
 - Helper functions unify test initialization. [bf1936f, 109a1b8]
 - Variables clarified for easier maintenance. [6d769ec]
+- Documentation overhaul adds flashing instructions, diagrams, and links back to this history. Firmware comments and tests gain more clarity. [822a1ea, 5f3e34b, e25622e, 0941fcb]
 
 ## Overview
 
