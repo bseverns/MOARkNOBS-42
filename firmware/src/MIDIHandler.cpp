@@ -1,5 +1,13 @@
+// Thin wrapper around the Teensy MIDI libraries.
+// Sends and receives messages while updating DisplayManager.
+// Instantiated and used throughout firmware_main.cpp.
+
 #include "MIDIHandler.h"
 #include <USB-MIDI.h>
+
+// Provides a small abstraction over both Serial and USB MIDI transports. Other
+// modules call these helpers to send messages, while incoming data is routed to
+// callbacks that update display and arpeggiator state.
 
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
@@ -38,7 +46,7 @@ void MIDIHandler::processIncomingMIDI() {
         handleMIDI(MIDI.getType(), MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
     }
 
-    // Process USB MIDI (single loop; removed duplicate read)
+    // Handle any pending USB MIDI messages
     while (usbMIDI.read()) {
         handleMIDI(usbMIDI.getType(), usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
     }

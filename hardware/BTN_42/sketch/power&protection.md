@@ -1,3 +1,6 @@
+Power and protection overview! A detailed PNG version lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+
+```mermaid
 flowchart LR
   subgraph PowerEntry[" "]
     DC_JACK((DC Jack))
@@ -31,3 +34,4 @@ flowchart LR
   class F1,F2 fill:#ffeeba,stroke:#b89400;
   class DTVS1 fill:#f5c6cb,stroke:#a71d2a;
   class Cbulk1,Cbulk2,CLED1 fill:#d4edda,stroke:#155724;
+```
