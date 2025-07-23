@@ -7,6 +7,10 @@
 #include <vector>
 #include "Globals.h"
 
+// Manages the OLED display. Other modules report user interaction and system
+// state here so the screen always reflects the latest configuration.
+// Updates are triggered from the low-priority scheduler in firmware_main.cpp.
+
 DisplayManager::DisplayManager(uint8_t i2cAddress,
                                uint16_t screenWidth,
                                uint16_t screenHeight)

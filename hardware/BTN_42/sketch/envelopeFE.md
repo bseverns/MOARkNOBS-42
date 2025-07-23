@@ -1,3 +1,6 @@
+This is the envelope follower analog front-end. The original sheet lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+
+```mermaid
 flowchart LR
 %% Shared VREF generator
 subgraph VREF_GEN[Shared VREF Generator]
@@ -33,3 +36,5 @@ end
 
 %% Bias connections
 VREF --> OP1_PLUS
+```
+

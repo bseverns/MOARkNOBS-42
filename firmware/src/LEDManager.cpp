@@ -1,4 +1,6 @@
-// LEDManager.cpp — STL-integrated full class refactor preserving all features
+// Manages the addressable LED strip used for visual feedback. It receives
+// updates from PotentiometerManager, ButtonManager and other modules to keep
+// the LEDs in sync with the controller state.
 
 #include "LEDManager.h"
 #include "Globals.h"

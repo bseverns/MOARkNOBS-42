@@ -75,73 +75,68 @@ private:
 
 public:
     /**
-     * @param pin Analog pin from which to read the audio envelope.
-     * @param pm  Reference to the PotentiometerManager for CC routing.
+     * Create an envelope follower attached to the given analog input.
+     * The PotentiometerManager reference allows the processed value to
+     * be applied back to a CC slot.
      */
     EnvelopeFollower(int pin, PotentiometerManager* pm);
 
-    /** MIDI CC that will be modulated by this envelope. */
+    /**
+     * Choose which MIDI CC this follower will control. Call when a pot
+     * is assigned an envelope.
+     */
     void setModulationTarget(int cc);
 
-    /** Enable or disable the follower. */
+    /** Enable or disable processing, typically from a button event. */
     void toggleActive(bool state);
 
-    /** Query whether the follower is currently active. */
+    /** Return true if update() is currently processing new values. */
     bool getActiveState() const;
 
-    /** Apply the selected filter/curve to a raw level value. */
+    /** Apply the selected shaping/filter algorithm to a raw level. */
     int processEnvelopeLevel(int level);
 
-    /**
-     * Filter handling.
-     */
+    /** Select which shaping/filter algorithm is active in SEF mode. */
     void setFilterType(FilterType type);
+    /** Update the cutoff frequency and Q for the biquad filter modes. */
     void configureFilter(float frequency, float q);
+    /** Query the current filter type. */
     FilterType getFilterType() const;
 
     /**
-     * Primary update cycle.
+     * Read the analog pin, process the value and store it. Call every loop
+     * when the follower is active.
      */
-    /** Read the input pin and update the internal envelope value. */
     void update();
 
     /**
-     * Original applyToCC method.
+     * Modulate the provided CC value with the current envelope level and
+     * send the resulting MIDI message. Avoids sending duplicates.
      */
-    /** Modulate the provided CC value with the current envelope level. */
     void applyToCC(int potIndex, uint8_t& ccValue);
 
-    /**
-     * Get the current envelope level.
-     */
-    /** Return the last processed envelope level (0‑127). */
+    /** Return the last processed envelope level (0-127). */
     int getEnvelopeLevel() const;
 
-    /**
-     *Switch between SEF and ARG modes.
-     */
     /** Switch between SEF and ARG operating modes. */
     void setMode(Mode newMode);
     Mode getMode() const {
         return mode;
     };
 
-    /**
-     *Choose which method (A+B, etc.) for ARG mode.
-     */
     /** Select which arithmetic method to use in ARG mode. */
     void setARGMethod(ARG_Method method);
 
     /**
-     *Select the two analog inputs for ARG calculations.
+     * Specify which two inputs feed the ARG calculations. Call together
+     * with setARGMethod when configuring the follower.
      */
-    /** Specify which two inputs feed the ARG calculations. */
     void setEnvelopePair(int envA, int envB);
 
-    /** Sample the current input to establish a baseline offset. */
+    /** Take a short average of the input to calculate the noise baseline. */
     void calibrateBaseline();
 
-    /** Set the gain used when converting the envelope to MIDI. */
+    /** Adjust the scaling factor applied before mapping to MIDI. */
     void setGain(float g) { gain = g; }
 };
 

@@ -43,8 +43,8 @@ class EnvelopeFollower;
 class ConfigManager {
 public:
     /**
-     * @param numPots    Number of potentiometer slots available.
-     * @param numButtons Number of dedicated control buttons.
+     * Create a configuration manager for the given number of pots and
+     * buttons. No EEPROM access occurs here.
      */
     ConfigManager(uint8_t numPots, uint8_t numButtons);
 
@@ -55,11 +55,8 @@ public:
     String serializeAll() const;
 
     /**
-     * @brief Initialise the configuration subsystem and read settings
-     *        from EEPROM.
-     *
-     * @param potChannels Reference to a vector that will be filled with the
-     *        stored pot‑to‑CC assignments.
+     * Initialise the subsystem and load settings from EEPROM. Populates
+     * potChannels with the stored pot→CC map.
      */
     void begin(std::vector<uint8_t>& potChannels);
 
@@ -105,29 +102,29 @@ public:
 
     // Envelope follower configuration -----------------------------------
 
-    /** Save envelope assignments to EEPROM. */
+    /** Persist the current envelope routing and types to EEPROM. */
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
 
-    /** Load envelope assignments from EEPROM. */
+    /** Restore envelope routing and filter types from EEPROM. */
     void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
     // Utility methods ----------------------------------------------------
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
 
-    /** Save the current envelope follower mode (e.g. SEF or ARG). */
+    /** Store whether the system is in SEF or ARG envelope mode. */
     void setMode(uint8_t mode);
 
     /** Retrieve the stored envelope follower mode. */
     uint8_t getMode() const;
 
-    /** Persist the selected ARG method. */
+    /** Save which ARG combination method is currently selected. */
     void setARGMethod(uint8_t method);
 
     /** Retrieve the stored ARG method. */
     uint8_t getARGMethod() const;
 
-    /** Store the two envelope indices used for ARG calculations. */
+    /** Persist which two envelope inputs are used for ARG calculations. */
     void setEnvelopePair(uint8_t envA, uint8_t envB);
 
     /** Retrieve the first envelope index used by ARG mode. */
@@ -158,8 +155,9 @@ public:
          return slots[idx];
     }
 
-    /** Helpers for individual slot persistence: */
+    /** Read a single MIDISlot from EEPROM into the provided struct. */
     void loadSlot(uint8_t idx, MIDISlot& dest);
+    /** Write one MIDISlot structure back to EEPROM. */
     void saveSlot(uint8_t idx, const MIDISlot& src);
 
 private:
@@ -169,11 +167,11 @@ private:
     std::array<MIDISlot,NUM_SLOTS> slots;//42 of them
 
     // Health‑check & backup support
-    bool checkEEPROMHealth(bool backup);
-    void writeMagicNumber(bool backup);
-    bool loadBackupConfiguration(std::vector<uint8_t>& potChannels);
-    void readEEPROM(bool backup);
-    void writeEEPROM(bool backup);
+    bool checkEEPROMHealth(bool backup);               // verify header magic
+    void writeMagicNumber(bool backup);                // stamp EEPROM with magic
+    bool loadBackupConfiguration(std::vector<uint8_t>& potChannels); // restore from backup copy
+    void readEEPROM(bool backup);                      // raw EEPROM read helper
+    void writeEEPROM(bool backup);                     // raw EEPROM write helper
 
     //virtual slot/array:
     std::array<uint8_t, NUM_POTS>   _potChannels; // your pot→CC map
