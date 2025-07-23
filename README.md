@@ -27,7 +27,9 @@ Use this directory to manufacture the hardware or modify the design.
 
 ## Getting Started
 
-1. Build and flash the firmware in `firmware/` using PlatformIO or the Arduino IDE.
+1. **Flash the Firmware**
+   - **PlatformIO**: install it via `pip install platformio` or grab the VS Code extension. Change into the `firmware/` directory, pick the `teensy40_main` environment and run `pio run -t upload` with your Teensy 4.0 connected.
+   - **Arduino IDE**: install the Teensy board package (`Teensyduino`) and the same libraries listed in `platformio.ini` (FastLED, Bounce2, USB-MIDI, Adafruit SSD1306, Adafruit GFX Library, TimerOne and EEPROM). Open `firmware_main.cpp` as a sketch and upload normally.
 2. Order or assemble the PCBs from the files in `hardware/`.
 3. Wire up the buttons, LEDs and display, then start tweaking.
 
