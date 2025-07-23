@@ -1,3 +1,18 @@
+/*
+ * MOARkNOBS Hardware Smoke Test
+ *
+ * Validates LEDs, the button matrix, potentiometers, envelope followers and
+ * the OLED display. Use Control Button #0 to advance through each phase.
+ *
+ * Build and upload with PlatformIO environment `teensy40_mainTEST`
+ * (e.g. `platformio run -e teensy40_mainTEST -t upload`).
+ * Requires a Teensy 4.0 wired with the full MOARkNOBS hardware
+ * (button matrix, LED strip, OLED, envelope circuits).
+ *
+ * See `firmware/README.md` under "Test Philosophy (and Real Talk)"
+ * for additional context and a list of all available test sketches.
+ */
+
 #include <Arduino.h>
 #include "Globals.h"
 #include "MIDIHandler.h"

@@ -1,4 +1,16 @@
-// unified.cpp
+/*
+ * MOARkNOBS Unified Hardware Test
+ *
+ * Runs an end-to-end check of LEDs, buttons, pots, envelope followers
+ * and the OLED display immediately at boot.
+ *
+ * Build and upload with PlatformIO environment `teensy40_unified_test`
+ * (e.g. `platformio run -e teensy40_unified_test -t upload`).
+ * Requires a Teensy 4.0 wired with the MOARkNOBS hardware.
+ *
+ * See `firmware/README.md` under "Test Philosophy (and Real Talk)"
+ * for context and the list of available tests.
+ */
 
 #include <Arduino.h>
 #include "Globals.h"
