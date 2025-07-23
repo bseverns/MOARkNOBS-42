@@ -1,6 +1,7 @@
 // ConfigManager.cpp — Updated with EEPROM robustness and backup handling, preserving development comments
 
 #include "ConfigManager.h"
+#include "EnvelopeFollower.h"
 
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)

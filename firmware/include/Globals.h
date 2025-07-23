@@ -4,9 +4,6 @@
 #include <Arduino.h>
 #include <vector>
 #include <map>
-#include "EnvelopeFollower.h"
-#include "LEDManager.h"
-#include "MIDITypes.h"
 
 class ConfigManager;
 extern ConfigManager configManager;
@@ -38,7 +35,7 @@ extern float g_vref;
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
-constexpr uint8_t SLOT_EEPROM_SIZE = sizeof(MIDISlot);  // typically 6 bytes
+constexpr uint8_t SLOT_EEPROM_SIZE = 6;  // bytes required to store a MIDISlot
 
 //clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
