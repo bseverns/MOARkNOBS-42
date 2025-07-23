@@ -1,7 +1,6 @@
 // Entry point for the MN42 firmware.
 // Instantiates all managers and drives the scheduler loop.
-// Coordinates interactions between ButtonManager, MIDIHandler, DisplayManager and more.
-
+// Coordinates interactions between machine sub-systems.
 
 #include <Arduino.h>
 #include "MIDIHandler.h"

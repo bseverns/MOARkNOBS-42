@@ -7,6 +7,10 @@
 #include "BiquadFilter.h"
 #include <cmath>
 
+// Tracks external audio/CV and converts it to a MIDI-friendly envelope. The
+// value produced here is consumed by PotentiometerManager and the arpeggiator
+// to modulate outgoing MIDI data.
+
 // Keep your external references
 extern MIDIHandler midiHandler;
 extern float g_vref;
@@ -55,11 +59,9 @@ void EnvelopeFollower::configureFilter(float frequency, float q) {
 }
 
 /**
- * processEnvelopeLevel(int level)
- * - If mode == SEF, it behaves exactly like your original code:
- *   filtering (low, high, band) or curve (linear, opposite, etc.).
- * - If mode == ARG, it uses your math combos (PLUS, MIN, etc.)
- *   reading from envelopeA and envelopeB.
+ * Convert a raw ADC reading into an envelope value. In SEF mode this applies
+ * the selected shaping curve or filter; in ARG mode it combines two external
+ * envelopes according to the configured algorithm.
  */
 int EnvelopeFollower::processEnvelopeLevel(int level) {
     level = constrain(level, 0, 127);
@@ -137,14 +139,15 @@ void EnvelopeFollower::update() {
  * - Just adds or subtracts the new envelope level
  * - Avoids redundant MIDI messages
  */
+// Adjust the given CC value with the current envelope and send it if it changed
+// since the last update. This prevents spamming duplicate MIDI messages.
 void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
-    static uint8_t lastSentCC[NUM_POTS] = {255}; // same as original
+    static uint8_t lastSentCC[NUM_POTS] = {255};
 
     if (isActive && modulationTargetCC >= 0) {
         int modulatedValue = ccValue + currentEnvelopeLevel;
         ccValue = constrain(modulatedValue, 0, 127);
 
-        // Original redundancy check
         if (ccValue != lastSentCC[potIndex]) {
             lastSentCC[potIndex] = ccValue;
             midiHandler.sendControlChange(modulationTargetCC, ccValue, potManager->getChannel(potIndex));

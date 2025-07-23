@@ -1,3 +1,6 @@
+Here’s the display & aux header layout. Check the [PNG](PNG_btnBRD_2025-07-22) folder for the original schematic snapshot.
+
+```mermaid
 flowchart LR
   subgraph Sheet8["Sheet 8 – Display & Aux"]
     U1[Teensy 4.0] -->|SDA| OLED[SSD1306 OLED]
@@ -9,3 +12,5 @@ flowchart LR
     U1 -->|Pins| EXP[Exp Header<br/>5V/3V3/SDA/SCL/GND]
     EXP -->|SWDIO/SWCLK/RESET| SWD[SWD Pads]
   end
+```
+

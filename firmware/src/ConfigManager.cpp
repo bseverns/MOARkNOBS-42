@@ -1,7 +1,6 @@
-// Persists user settings to EEPROM and restores them on boot.
-// Offers getters for MIDI slot data and LED configuration used by other modules.
-// Accessed heavily by firmware_main.cpp and ButtonManager.
-
+// Handles all persistent configuration stored in EEPROM. This includes MIDI slot
+// settings, envelope follower assignments and LED preferences. Backup copies are
+// automatically managed to guard against corruption.
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"

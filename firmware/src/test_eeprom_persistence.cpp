@@ -3,6 +3,9 @@
 #include "Utility.h"
 #include "ConfigManager.h"
 #include "LEDManager.h"
+
+// Multi-stage test that verifies configuration data survives reboots and that
+// the backup EEPROM region can restore corrupted primary data.
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"

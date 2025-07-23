@@ -8,9 +8,17 @@
 #include "Utility.h"
 #include "PotentiometerManager.h"
 
+// Handles per-slot arpeggiation. This component ties into ConfigManager to
+// fetch slot settings, reads the most recent pot value from
+// PotentiometerManager and issues MIDI messages through MIDIHandler. The
+// update() routine is scheduled from the main firmware loop.
+
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _intervalMs(250), _shape(UP),
       _lastStep(0), _step(0) {}
+
+// Begin generating an arpeggio for the given slot. The slot index refers to the
+// entry stored by ConfigManager and determines both MIDI type and channel.
 
 void Arpeggiator::start(uint8_t slotIdx) {
     _slotIdx = slotIdx;
@@ -19,6 +27,7 @@ void Arpeggiator::start(uint8_t slotIdx) {
     _step = 0;
 }
 
+// Stop arpeggiation immediately. update() will simply return once inactive.
 void Arpeggiator::stop() {
     _active = false;
 }
@@ -47,6 +56,8 @@ static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step) {
     }
 }
 
+// Called frequently from the scheduler. When active, this checks the slot's
+// settings and emits the next MIDI event via MIDIHandler.
 void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots) {
     if (!_active) return;
     unsigned long now = millis();

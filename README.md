@@ -1,41 +1,43 @@
 # MOARkNOBS-42
 
-DIY MIDI controller with **42 virtual control slots**, envelope followers and plenty of button-driven chaos. This repo contains both the firmware and the EasyEDA Pro hardware designs.
+> The button-mashing, knob-twisting controller that refuses to behave.
 
-## Firmware Highlights
+This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below.
 
-See [`firmware/README.md`](firmware/README.md) for the full manual. Key features include:
+![BTN_42 Schematic](hardware/BTN_42/sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
 
-- 42 virtual MIDI slots storing channel, CC number and type.
-- One main control pot and two additional pots for filter tuning.
-- Six precision envelope followers with diode rectifier and attack/release networks, each offering seven filter types (linear, opposite, exponential, random, LPF, HPF, BPF).
-- 7x6 diode button matrix scanned via CD74HC4067s; 42 slot buttons plus 6 direct controls handle short, long and double presses.
-- ARG mode to blend or compare envelope signals.
-- Arpeggiator mode for any MIDI type, controllable via filter knobs.
-- Dual USB & DIN MIDI output.
-- OLED display and addressable LEDs for immediate visual feedback.
-- Settings stored in EEPROM with automatic backup.
-- Configuration via a WebSerial HTML editor.
+## Where's what
 
-## Hardware Files
+- **firmware/** – Teensy 4.0 source and project files. The full manual lives in [firmware/README.md](firmware/README.md).
+  - **App/** – simple WebSerial editor to tweak settings over USB.
+  - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
+- **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the overview.
+  - **BTN_42/** – button board design; more notes in [BTN_42/README.md](hardware/BTN_42/README.md). Block diagrams and schematics are under [`sketch/`](hardware/BTN_42/sketch).
+- **HISTORY.md** – running log of how this project came to be.
 
-The `hardware/` directory contains design files for the button matrix interface PCB:
+## Getting started
 
-- **BTN_42/** – houses the `MN42-1` project with BOM spreadsheets and `Gerber_btnBRD_2025-04-17.zip` for fabrication.
+1. Build and flash the firmware.
+2. Order or assemble the board from the hardware files.
+3. Wire things up and start twisting knobs.
 
-Use this directory to manufacture the hardware or modify the design.
+## Development Timeline
 
 ## Getting Started
 
-1. Build and flash the firmware in `firmware/` using PlatformIO or the Arduino IDE.
+1. **Flash the Firmware**
+   - **PlatformIO**: install it via `pip install platformio` or grab the VS Code extension. Change into the `firmware/` directory, pick the `teensy40_main` environment and run `pio run -t upload` with your Teensy 4.0 connected.
+   - **Arduino IDE**: install the Teensy board package (`Teensyduino`) and the same libraries listed in `platformio.ini` (FastLED, Bounce2, USB-MIDI, Adafruit SSD1306, Adafruit GFX Library, TimerOne and EEPROM). Open `firmware_main.cpp` as a sketch and upload normally.
 2. Order or assemble the PCBs from the files in `hardware/`.
 3. Wire up the buttons, LEDs and display, then start tweaking.
 
+For a month-by-month look at how this controller came together, see
+[HISTORY.md](HISTORY.md).
+
 ## License
 
-MOARkNOBS Controller firmware and hardware design files are provided under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT, see [LICENSE](LICENSE) for details.
 
 ## Author
 
-Designed and developed by the BSSS project team.
-
+BSSS project team.

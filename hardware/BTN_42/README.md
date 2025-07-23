@@ -9,10 +9,10 @@ The `MN42-1` folder is the first PCB revision. It provides everything needed to 
 - **BOM_btnBRD_btnBRD_2025-04-17.xlsx** – complete bill of materials.
 - **PickAndPlace_btnBRD_2025-04-17.xlsx** – reference positions for automated assembly.
 - **Gerber_btnBRD_2025-04-17.zip** – Gerber package for fabrication.
-- **shell/** – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes.
+- **shell/** – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes. Use these 3D models to verify clearances or remix the case.
 
 Sketch diagrams showing the circuitry live in [`sketch/`](sketch/). The subfolder
-`PNG_btnBRD_2025-07-20` contains exported PNG screenshots of the full EasyEDA schematic.
+`PNG_btnBRD_2025-07-22` contains exported PNG screenshots of the full EasyEDA schematic. Grab them for offline viewing or quick reference alongside the mermaid docs.
 
 Below is a summary of the schematic sheets:
 

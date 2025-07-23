@@ -14,12 +14,13 @@
  */
 class MIDIHandler {
 public:
-    /** Assign a DisplayManager for showing MIDI activity. */
+    /** Assign a DisplayManager so MIDI traffic can be displayed. */
     void setDisplayManager(DisplayManager* dm) { _displayManager = dm; }
 
+    /** Create a new MIDI handler with no side effects. */
     MIDIHandler();
 
-    /** Initialise serial and USB MIDI. */
+    /** Set up the serial and USB MIDI interfaces. Call from setup(). */
     void begin();
 
     /** Send a standard Control Change message. */
@@ -34,7 +35,7 @@ public:
     /** Poll both serial and USB for incoming MIDI bytes. */
     void processIncomingMIDI();
 
-    /** Generic dispatcher for parsed MIDI messages. */
+    /** Dispatch a parsed MIDI message to the appropriate handler. */
     void handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2);
 
     /** Convenience helpers for specific message types. */

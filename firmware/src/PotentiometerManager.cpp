@@ -6,6 +6,10 @@
 #include <EEPROM.h>
 #include "Globals.h"
 
+// Reads all potentiometers via a pair of multiplexers. The most recent values
+// feed LEDManager for visual feedback and trigger MIDI messages through the
+// callback registered by firmware_main.cpp.
+
 bool dirtyFlags[NUM_POTS] = {false};
 const float alpha = 0.1; // Smoothing factor
 static int smoothedValue[NUM_POTS] = {0};
