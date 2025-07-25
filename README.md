@@ -4,7 +4,7 @@
 
 This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below.
 
-![BTN_42 Schematic](hardware/BTN_42/sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
+![BTN_42 Schematic](docs/sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
 
 ## Where's what
 
@@ -13,7 +13,7 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
 - **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the overview.
   - **BTN_42/** – button board design; more notes in [BTN_42/README.md](hardware/BTN_42/README.md). Block diagrams and schematics are under [`sketch/`](hardware/BTN_42/sketch).
- - **[HISTORY.md](HISTORY.md)** – running log of how this project came to be.
+ - **[HISTORY.md](docs/HISTORY.md)** – running log of how this project came to be.
 
 ## Getting started
 

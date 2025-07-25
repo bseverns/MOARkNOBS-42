@@ -2,7 +2,7 @@
 
 > The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude.
 
-![Board Layout](sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
+![Board Layout](../docs/sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
 
 ## MN42-1
 
@@ -13,17 +13,17 @@ The `MN42-1` folder holds the first PCB revision:
 - [Gerber_btnBRD_2025-04-17.zip](MN42-1/Gerber_btnBRD_2025-04-17.zip) – ready-to-send fabrication package.
 - `shell/` – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes.
 
-Sketch diagrams live in [`sketch/`](sketch/). The `PNG_btnBRD_2025-07-22` folder contains exported PNG screenshots of the full EasyEDA schematic.
+Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_btnBRD_2025-07-22` folder contains exported PNG screenshots of the full EasyEDA schematic.
 
 ### Sketch Documents
 
-* [buttonMatrix.md](sketch/buttonMatrix.md)
-* [power&protection.md](sketch/power&protection.md)
-* [teensy&headers.md](sketch/teensy&headers.md)
-* [led&midiOut.md](sketch/led&midiOut.md)
-* [midiOpto.md](sketch/midiOpto.md)
-* [envelopeFE.md](sketch/envelopeFE.md)
-* [display.md](sketch/display.md)
+* [buttonMatrix.md](../docs/sketch/buttonMatrix.md)
+* [power&protection.md](../docs/sketch/power&protection.md)
+* [teensy&headers.md](../docs/sketch/teensy&headers.md)
+* [led&midiOut.md](../docs/sketch/led&midiOut.md)
+* [midiOpto.md](../docs/sketch/midiOpto.md)
+* [envelopeFE.md](../docs/sketch/envelopeFE.md)
+* [display.md](../docs/sketch/display.md)
 
 Below is a summary of the schematic sheets:
 
@@ -41,4 +41,4 @@ Below is a summary of the schematic sheets:
 
 ## License
 
-All hardware files are released under the MIT License, matching the rest of this repository. See the [LICENSE](../../LICENSE) file for details.
+All hardware files are released under the MIT License, matching the rest of this repository. See the [LICENSE](../LICENSE) file for details.
