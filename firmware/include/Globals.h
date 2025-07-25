@@ -31,7 +31,7 @@ static const uint8_t VREF_ADC_PIN       = A8;
 // ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
 constexpr float VadcScale = 3.3f / 1023.0f;
 // Global storage for measured VREF voltage
-extern float g_vref;
+float g_vref= 1.65f;       // Measured VREF voltage
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
@@ -39,8 +39,7 @@ constexpr uint8_t SLOT_EEPROM_SIZE = 6;  // bytes required to store a MIDISlot
 
 //clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
-extern float g_tappedBPM;
-
+float g_tappedBPM= 120.0f; // Default to 120 BPM
 
 // Pin assignments for primary and secondary mux layers
 // The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select

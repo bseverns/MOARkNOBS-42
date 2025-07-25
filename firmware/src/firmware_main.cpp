@@ -37,8 +37,6 @@ Arpeggiator arpeggiator;
 
 //tempo
 unsigned long lastClockTime = 0;
-float g_tappedBPM = 120.0f; // Default to 120 BPM
-float g_vref = 1.65f;       // Measured VREF voltage
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
