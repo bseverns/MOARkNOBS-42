@@ -11,9 +11,6 @@
 // value produced here is consumed by PotentiometerManager and the arpeggiator
 // to modulate outgoing MIDI data.
 
-// Keep your external references
-extern MIDIHandler midiHandler;
-
 /**
  * Constructor
  */
