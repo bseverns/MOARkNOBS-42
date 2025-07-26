@@ -3,7 +3,7 @@
 This file summarizes the development of the MOARkNOBS-42 project based on commit history with a few inserts re: design choices
 
 ## 2024
-- *I decided I wanted to build more instruments*
+- *I decided I wanted to build more instruments and wanted to explore MIDI and microcontrollers more expansively. Heavy early research around simple machines, 1-function mock ups, and C++ best-practices began. Initial functional inspiration: Bastl Instruments '60 Knobs' [TODO: link repo, add link to experimental repo]*
 - **December 10:** Initial commit introduces the firmware source tree with modules for button scanning, MIDI handling, display control, and EEPROM support. [58ef040]
 - **Mid December:** Early work on display management and multiplexed button matrix ("mux management" and "display/managers").
 - *More complicated in areas that I didn't anticipate complexity in than in the outright complicated parts*
@@ -11,7 +11,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 
 ## 2025
 
-- *How is this thing supposed to happen irl?*
+- *How is this thing supposed to happen, as more than just a simple experiment?*
 ### January – March
 
 - Hardware design begins in KiCad. Multiple board iterations are committed along with early firmware clean‑ups and configuration handling. [70665ff, 4c22a8b]
