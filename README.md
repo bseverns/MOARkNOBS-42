@@ -31,6 +31,25 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 2. Order or assemble the PCBs from the files in `hardware/`.
 3. Wire up the buttons, LEDs and display, then start tweaking.
 
+### Manual Hardware Tests
+
+Compile the test environments when you want to verify the board outside of the
+main firmware:
+
+```bash
+pio run -e teensy40_mainTEST      # or teensy40_unified_test, etc.
+```
+
+Available environments:
+
+- `teensy40_mainTEST` – step-through checks of each subsystem
+- `teensy40_unified_test` – full integration test
+- `teensy40_biquad_test` – biquad filter calibration
+- `teensy40_eeprom_persistence` – EEPROM backup/restore test
+- `teensy40_slot_verify` – verifies MIDI slot storage
+
+See [firmware/test/README.md](firmware/test/README.md) for details.
+
 For a month-by-month look at how this controller came together, see
 [HISTORY.md](HISTORY.md).
 
