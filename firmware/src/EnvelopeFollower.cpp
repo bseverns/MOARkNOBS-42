@@ -13,7 +13,6 @@
 
 // Keep your external references
 extern MIDIHandler midiHandler;
-extern float g_vref;
 
 /**
  * Constructor
