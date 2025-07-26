@@ -322,6 +322,14 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 * Tweak filter types, EF settings
 * Save back to EEPROM over WebSerial
 
+## Build Notes
+
+This repo ships with a small patch to the FastLED library.  The file
+`src/platforms/arm/mxrt1062/clockless_arm_mxrt1062.h` is stored under
+`lib/FastLED` and is pulled in via `platformio.ini`.  PlatformIO will use
+this version instead of the default package so the firmware builds without
+spurious warnings on Teensy 4.x.
+
 ## Development Timeline
 
 Check out the project evolution in the main repo's
