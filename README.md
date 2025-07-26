@@ -48,7 +48,7 @@ Available environments:
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test
 - `teensy40_slot_verify` – verifies MIDI slot storage
 
-See [firmware/test/README.md](firmware/test/README.md) for details.
+See [firmware/test/README.md](firmware/test/README.md) for details on this project's testing suite.
 
 For a month-by-month look at how this controller came together, see
 [HISTORY.md](HISTORY.md).
@@ -60,3 +60,7 @@ MIT, see [LICENSE](LICENSE) for details.
 ## Author
 
 BSSS project team.
+
+## Thanks
+
+To all of you. You've all made this better whether you realize it or not. Thank you all.
