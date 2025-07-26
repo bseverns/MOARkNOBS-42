@@ -14,7 +14,7 @@ Location: src/mainTEST.cpp
 
 LEDManager: one LED at a time, manually stepped
 
-ButtonManager: tests both the matrix-multiplexed buttons and the direct-wired buttons
+ButtonManager: tests both the matrix-multiplexed buttons and the direct-wired control buttons
 
 PotentiometerManager: reads all knobs, prints analog values
 
@@ -73,6 +73,6 @@ Substitute mainTEST.cpp with unified.cpp or test_biquadfilter.cpp depending on w
 
 ## Final Note
 
-This isn't a test suite for a codebase. It's a test suite for a circuit. If you're not plugging in wires and getting your fingers zapped on that one cap you forgot was charged, you're doing it wrong. This repo is for makers, hackers, educators, and the electrically-inclined misfits who prefer flickering LEDs over CI badges.
+This isn't a test suite for a codebase. It's a test suite for a circuit. If you're not plugging in wires and getting your fingers zapped on that one cap you forgot was charged, you're doing it wrong or I did it wrong, building it for you. This repo is for makers, hackers, educators, and the electrically-inclined misfits who prefer flickering LEDs and buzzers over CI badges.
 
-If you're here, you're one of us. Let's test dirty.
+If you're here, you're one of us. Thank you for looking at a README this deep in the project. Let's test dirty.
