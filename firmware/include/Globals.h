@@ -7,6 +7,8 @@
 
 class ConfigManager;
 extern ConfigManager configManager;
+class MIDIHandler;
+extern MIDIHandler midiHandler;
 
 #define LED_PIN 6  // WS2812 LED data pin
 #define NUM_LEDS 42

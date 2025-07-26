@@ -16,7 +16,6 @@
 #include <FastLED.h>
 
 class MIDIHandler;
-extern MIDIHandler midihandler;
 
 #define EEPROM_START_ADDRESS 0
 #define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
