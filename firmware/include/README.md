@@ -22,7 +22,6 @@ Below is a quick cheat sheet.
 - **PotentiometerManager.h** – reads analog pots via multiplexers.
 - **TestHelpers.h** – small helpers used by the manual test firmware.
 - **Utility.h** – common math helpers and a lightweight task scheduler.
-- **pins.h** – Teensy pin assignments for buttons, LEDs and pots.
 - **name.c** – sets the custom USB MIDI product string.
 
 For the full firmware story see [../README.md](../README.md).
