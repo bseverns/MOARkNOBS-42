@@ -50,6 +50,7 @@ The constants below come from `pins.h` and define how the Teensy 4.0 is wired.
 | `BUTTON_MUX_PIN` | A4 | Shared button sense line |
 | `POT_MUX_PIN` | A5 | Potentiometer MUX analog input |
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
+| `STATUS_LED_PIN` | 23 | Board status indicator |
 
 
 ## What It Does

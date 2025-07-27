@@ -15,6 +15,7 @@
 #include "Globals.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
+#include "pins.h"
 #include <TimerOne.h>
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
@@ -312,6 +313,10 @@ void setup() {
     // — Serial & Config —
     Serial.begin(31250);
 
+    // Configure status LED
+    pinMode(STATUS_LED_PIN, OUTPUT);
+    digitalWrite(STATUS_LED_PIN, LOW);
+
     // Measure VREF for baseline calibration
     pinMode(VREF_ADC_PIN, INPUT);
     g_vref = Utility::readVrefADC(VREF_ADC_PIN);
@@ -422,6 +427,7 @@ void setup() {
     delay(1000);
     displayManager.clear();
     displayManager.showText("MOAR");
+    ledManager.blinkStatusLED(2, 100);
 
     // — Debug dump —
     for (uint8_t i = 0; i < NUM_SLOTS; i++) {

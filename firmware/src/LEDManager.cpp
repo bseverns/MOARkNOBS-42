@@ -4,6 +4,7 @@
 
 #include "LEDManager.h"
 #include "Globals.h"
+#include "pins.h"
 #include <FastLED.h>
 #include <map>
 #include <string>
@@ -147,4 +148,17 @@ void LEDManager::update() {
             break;
     }
     FastLED.show();
+}
+
+void LEDManager::setStatusLED(bool on) {
+    digitalWrite(STATUS_LED_PIN, on ? HIGH : LOW);
+}
+
+void LEDManager::blinkStatusLED(uint8_t times, uint16_t delayMs) {
+    for (uint8_t i = 0; i < times; ++i) {
+        setStatusLED(true);
+        delay(delayMs);
+        setStatusLED(false);
+        delay(delayMs);
+    }
 }

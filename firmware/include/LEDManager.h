@@ -73,6 +73,12 @@ public:
     /** Write any changed LED values to the strip. Call each loop. */
     void update();
 
+    /** Set the board status LED on or off. */
+    void setStatusLED(bool on);
+
+    /** Blink the status LED a number of times. */
+    void blinkStatusLED(uint8_t times, uint16_t delayMs);
+
 private:
     uint16_t numLEDs;
     std::vector<CRGB> leds;
