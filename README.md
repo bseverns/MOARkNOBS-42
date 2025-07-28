@@ -15,13 +15,10 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
   - **BTN_42/** – button board design; more notes in [BTN_42/README.md](hardware/BTN_42/README.md). Block diagrams and schematics are under [`sketch/`](hardware/BTN_42/sketch).
  - **[HISTORY.md](docs/HISTORY.md)** – running log of how this project came to be.
 
-## Getting started
-
-1. Build and flash the firmware.
-2. Order or assemble the board from the hardware files.
-3. Wire things up and start twisting knobs.
-
 ## Development Timeline
+
+The timeline reads like a diary of questionable decisions. For the month-by-month breakdown, see
+[docs/HISTORY.md](docs/HISTORY.md).
 
 ## Getting Started
 
