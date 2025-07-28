@@ -40,15 +40,15 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 
 ### Pin Map
 
-The constants below come from `pins.h` and define how the Teensy 4.0 is wired.
+The constants below come from the `Globals` class and define how the Teensy 4.0 is wired.
 
 | Constant | Pin(s) | Purpose |
 |---------|-------|---------|
 | `LED_PIN` | 6 | WS2812 data out |
 | `MUXR_PINS` | 2,3,4,5 | Row select lines for the button matrix |
 | `MUXC_PINS` | 8,9,10,11 | Column select lines for the button matrix |
-| `BUTTON_MUX_PIN` | A4 | Shared button sense line |
-| `POT_MUX_PIN` | A5 | Potentiometer MUX analog input |
+| `buttonMuxAnalogPin` | A4 | Shared button sense line |
+| `potMuxAnalogPin` | A5 | Potentiometer MUX analog input |
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
 | `STATUS_LED_PIN` | 23 | Board status indicator |
 

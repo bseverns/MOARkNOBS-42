@@ -7,6 +7,7 @@
 
 class ConfigManager;
 extern ConfigManager configManager;
+
 class MIDIHandler;
 extern MIDIHandler midiHandler;
 
@@ -47,8 +48,10 @@ extern float g_tappedBPM;
 // The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select
 // muxR select lines -> pins 2,3,4,5
 // muxC select lines -> pins 8,9,10,11
-const uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
-const uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
+extern const uint8_t MUXR_PINS[4];
+extern const uint8_t MUXC_PINS[4];
+extern const uint8_t primaryMuxPins[];
+extern const uint8_t secondaryMuxPins[];
 
 // Aliases used by the row-driven button scanner
 #define PIN_MUXR primaryMuxPins
