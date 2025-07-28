@@ -12,6 +12,7 @@ class MIDIHandler;
 extern MIDIHandler midiHandler;
 
 extern constexpr uint8_t  LED_PIN;           //!< WS2812 LED data pin
+extern constexpr uint8_t  STATUS_LED_PIN;    //!< single debug/status LED
 extern constexpr uint16_t NUM_LEDS;          //!< Number of addressable LEDs
 extern constexpr uint8_t  NUM_BUTTONS;       //!< Number of direct control buttons
 extern constexpr uint16_t OLED_WIDTH;        //!< OLED display width in pixels
