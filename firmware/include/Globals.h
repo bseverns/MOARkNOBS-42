@@ -11,21 +11,21 @@ extern ConfigManager configManager;
 class MIDIHandler;
 extern MIDIHandler midiHandler;
 
-#define LED_PIN 6  // WS2812 LED data pin
-#define NUM_LEDS 42
-#define NUM_BUTTONS 6
-#define OLED_WIDTH 128
-#define OLED_HEIGHT 64
-#define SSD1306_I2C_ADDRESS 0x3C
-#define SERIAL_BUFFER_SIZE 128
-#define MIDI_TASK_INTERVAL 1      // 1ms for MIDI processing
-#define SERIAL_TASK_INTERVAL 10   // 10ms for Serial processing
-#define LED_TASK_INTERVAL 50      // 50ms for LED updates
-#define ENVELOPE_TASK_INTERVAL 5  // 5ms for Envelope processing
-#define EEPROM_FILTER_FREQ 1000
-#define EEPROM_FILTER_Q    1004
-#define POT_RANGE_MIN 10     // adjust to desired minimum acceptable delta value
-#define ENV_RANGE_MIN 5      // adjust based on your signal threshold requirements
+extern constexpr uint8_t  LED_PIN;           //!< WS2812 LED data pin
+extern constexpr uint16_t NUM_LEDS;          //!< Number of addressable LEDs
+extern constexpr uint8_t  NUM_BUTTONS;       //!< Number of direct control buttons
+extern constexpr uint16_t OLED_WIDTH;        //!< OLED display width in pixels
+extern constexpr uint16_t OLED_HEIGHT;       //!< OLED display height in pixels
+extern constexpr uint8_t  SSD1306_I2C_ADDRESS; //!< I2C address for the OLED
+extern constexpr uint16_t SERIAL_BUFFER_SIZE;   //!< bytes in the serial buffer
+extern constexpr uint8_t  MIDI_TASK_INTERVAL;   //!< Scheduler tick for MIDI (ms)
+extern constexpr uint8_t  SERIAL_TASK_INTERVAL; //!< Scheduler tick for serial (ms)
+extern constexpr uint8_t  LED_TASK_INTERVAL;    //!< LED update interval (ms)
+extern constexpr uint8_t  ENVELOPE_TASK_INTERVAL; //!< Envelope follower interval (ms)
+extern constexpr uint16_t EEPROM_FILTER_FREQ; //!< EEPROM address for filter freq
+extern constexpr uint16_t EEPROM_FILTER_Q;    //!< EEPROM address for filter Q
+extern constexpr uint8_t  POT_RANGE_MIN;      //!< Min pot delta before acting
+extern constexpr uint8_t  ENV_RANGE_MIN;      //!< Min envelope delta threshold
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
 // Analog pin tied to the mid-rail reference divider
@@ -57,7 +57,7 @@ extern const uint8_t secondaryMuxPins[];
 #define PIN_MUXR primaryMuxPins
 #define PIN_MUXC secondaryMuxPins
 #define PIN_COL_SENSE buttonMuxAnalogPin
-#define PIN_ROW_DRV 7
+extern constexpr uint8_t PIN_ROW_DRV;  //!< Output driver for button rows
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

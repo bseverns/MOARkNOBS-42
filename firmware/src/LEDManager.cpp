@@ -3,7 +3,8 @@
 // the LEDs in sync with the controller state.
 
 #include "LEDManager.h"
-#include "Globals.h"  // pin definitions now centralized here
+
+#include "Globals.h"  // pin definitions centralized here
 #include <FastLED.h>
 #include <map>
 #include <string>
