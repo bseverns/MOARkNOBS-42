@@ -12,10 +12,9 @@
 #include "PotentiometerManager.h"
 #include "Utility.h"
 #include "name.c"
-#include "Globals.h"
+#include "Globals.h"  // contains all pin definitions
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
-#include "pins.h"
 #include <TimerOne.h>
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
