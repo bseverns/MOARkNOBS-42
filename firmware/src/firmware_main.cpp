@@ -12,7 +12,7 @@
 #include "PotentiometerManager.h"
 #include "Utility.h"
 #include "name.c"
-#include "Globals.h"
+#include "Globals.h"  // contains all pin definitions
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
 #include <TimerOne.h>
