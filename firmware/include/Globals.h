@@ -11,6 +11,7 @@ extern ConfigManager configManager;
 class MIDIHandler;
 extern MIDIHandler midiHandler;
 
+
 inline constexpr uint8_t  LED_PIN         = 6;    //!< WS2812 LED data pin
 inline constexpr uint8_t  STATUS_LED_PIN  = 23;   //!< Board status indicator
 inline constexpr uint8_t  PIN_ROW_DRV     = 7;    //!< Output driver for button rows
@@ -29,6 +30,7 @@ inline constexpr uint16_t EEPROM_FILTER_FREQ    = 1000; //!< EEPROM address for 
 inline constexpr uint16_t EEPROM_FILTER_Q       = 1004; //!< EEPROM address for filter Q
 inline constexpr uint8_t  POT_RANGE_MIN         = 10;   //!< Min pot delta before acting
 inline constexpr uint8_t  ENV_RANGE_MIN         = 5;    //!< Min envelope delta threshold
+
 static const uint8_t buttonMuxAnalogPin = A4;
 static const uint8_t potMuxAnalogPin    = A5;
 // Analog pin tied to the mid-rail reference divider

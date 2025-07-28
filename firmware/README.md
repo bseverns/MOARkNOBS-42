@@ -52,6 +52,9 @@ The constants below come from `Globals.h`. They're declared as `inline constexpr
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
 | `STATUS_LED_PIN` | 23 | Board status indicator |
 
+The `STATUS_LED_PIN` constant now lives in `Globals.h` as an `extern constexpr`,
+letting `LEDManager` and `firmware_main.cpp` flip that debug light in unison.
+
 
 ## What It Does
 
