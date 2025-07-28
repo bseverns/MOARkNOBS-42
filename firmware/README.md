@@ -40,7 +40,7 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 
 ### Pin Map
 
-The constants below come from the `Globals` class and define how the Teensy 4.0 is wired.
+The constants below come from `Globals.h` and are `constexpr` values baked in at compile time. They describe how the Teensy 4.0 is wired.
 
 | Constant | Pin(s) | Purpose |
 |---------|-------|---------|

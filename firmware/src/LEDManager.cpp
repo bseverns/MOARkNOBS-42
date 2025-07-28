@@ -4,7 +4,6 @@
 
 #include "LEDManager.h"
 #include "Globals.h"
-#include "pins.h"
 #include <FastLED.h>
 #include <map>
 #include <string>

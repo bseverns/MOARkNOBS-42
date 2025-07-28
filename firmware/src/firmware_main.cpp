@@ -15,7 +15,6 @@
 #include "Globals.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
-#include "pins.h"
 #include <TimerOne.h>
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
