@@ -25,3 +25,8 @@
 - Row/Col buses as tidy bundles.
 
 - Test pads last, near edges.
+
+
+## LED Integration
+
+- Add controls for the additional 10 ws2812 LEDs

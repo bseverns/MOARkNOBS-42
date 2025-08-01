@@ -2,7 +2,11 @@
 
 > The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude.
 
-![Board Layout](../docs/sketch/PNG_btnBRD_2025-07-22/SCH_btnBRD_1-btnBRD_2025-07-22.png)
+![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_btnBRD_1-btnBRD_2025-07-22.png)
+
+![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_2-ENVELOPE.png)
+
+![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_3-PWR-BUTTON-TEST.png)
 
 ## MN42-1
 
@@ -13,7 +17,7 @@ The `MN42-1` folder holds the first PCB revision:
 - [Gerber_btnBRD_2025-04-17.zip](MN42-1/Gerber_btnBRD_2025-04-17.zip) – ready-to-send fabrication package.
 - `shell/` – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes.
 
-Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_btnBRD_2025-07-22` folder contains exported PNG screenshots of the full EasyEDA schematic.
+Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_MOAR_Schematic` folder contains exported PNG screenshots of the full EasyEDA schematic.
 
 ### Sketch Documents
 
