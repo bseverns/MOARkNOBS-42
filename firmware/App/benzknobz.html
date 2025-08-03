@@ -111,6 +111,12 @@ button:hover {
     const p = document.createElement("progress");
     p.max = 127; p.value = 0; envContainer.appendChild(p); return p;
   });
+  // filter + ARG inputs
+  const filterTypeEl = document.getElementById("filter-type");
+  const filterFreqEl = document.getElementById("filter-freq");
+  const filterQEl    = document.getElementById("filter-q");
+  const argAEl       = document.getElementById("arg-a");
+  const argBEl       = document.getElementById("arg-b");
 
     async function connect() {
       try {
@@ -133,6 +139,8 @@ button:hover {
         const schema = await loadSchema();
         const config = await loadConfig();
         buildForm(schema, config);
+        await loadFilter();
+        await loadARGPair();
       } catch (err) {
         console.error(err);
         statusEl.textContent = `Connection failed: ${err.message || err}`;
@@ -194,7 +202,7 @@ button:hover {
         }
       }
 
-      async function loadConfig() {
+  async function loadConfig() {
         try {
           statusEl.textContent = "Loading config…";
           const raw = await send("GET_ALL");
@@ -205,6 +213,29 @@ button:hover {
           throw err;
         }
       }
+
+    async function loadFilter() {
+      try {
+        const raw = await send("GET_FILTER");
+        const [type, freq, q] = raw.split(",");
+        filterTypeEl.value = type;
+        filterFreqEl.value = freq;
+        filterQEl.value = q;
+      } catch (err) {
+        statusEl.textContent = `Filter load fail: ${err.message || err}`;
+      }
+    }
+
+    async function loadARGPair() {
+      try {
+        const raw = await send("GET_ARGPAIR");
+        const [a, b] = raw.split(",");
+        argAEl.value = a;
+        argBEl.value = b;
+      } catch (err) {
+        statusEl.textContent = `ARG load fail: ${err.message || err}`;
+      }
+    }
 
 function buildForm(schema, values) {
   const container = document.getElementById("form");
@@ -260,6 +291,8 @@ async function saveConfig() {
       }
     });
     await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
+    await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
+    await send(`SET_ARGPAIR ${argAEl.value},${argBEl.value}`);
     statusEl.textContent = "Save sent.";
   } catch (err) {
     console.error(err);
@@ -276,8 +309,29 @@ saveBtn.addEventListener("click", saveConfig);
 <body>
   <h1>MOARkNOBZ Configurator</h1>
   <button id="connect">Connect</button>
-  <div id="form"></div>
-  <button id="save" disabled>Save</button>
+    <div id="form"></div>
+    <fieldset id="filter-settings">
+      <legend>Filter</legend>
+      <label>Type
+        <select id="filter-type">
+          <option value="0">LINEAR</option>
+          <option value="1">OPPOSITE_LINEAR</option>
+          <option value="2">EXPONENTIAL</option>
+          <option value="3">RANDOM</option>
+          <option value="4">LOWPASS</option>
+          <option value="5">HIGHPASS</option>
+          <option value="6">BANDPASS</option>
+        </select>
+      </label>
+      <label>Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
+      <label>Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
+    </fieldset>
+    <fieldset id="arg-settings">
+      <legend>ARG Pair</legend>
+      <label>A <input id="arg-a" type="number" min="0" max="5"></label>
+      <label>B <input id="arg-b" type="number" min="0" max="5"></label>
+    </fieldset>
+    <button id="save" disabled>Save</button>
   <div id="status"></div>
   <div id="live">
     <h2>Live Slots</h2>

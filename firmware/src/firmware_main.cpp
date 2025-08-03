@@ -218,8 +218,9 @@ void processSerial() {
             Serial.print(ledColor.g);
             Serial.print(",");
             Serial.println(ledColor.b);
-        }
-        else {
+        } else if (configManager.handleCommand(command)) {
+            // handled inside ConfigManager
+        } else {
             Serial.println("Unknown command: " + command);
         }
     }

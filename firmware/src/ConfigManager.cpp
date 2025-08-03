@@ -294,3 +294,50 @@ void ConfigManager::loadMIDISlots(MIDISlot* slots, size_t count) {
         EEPROM.get(address, slots[i]);
     }
 }
+
+bool ConfigManager::handleCommand(const String& command) {
+    if (command.startsWith("GET_FILTER")) {
+        uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+        float freq, q;
+        EEPROM.get(EEPROM_FILTER_FREQ, freq);
+        EEPROM.get(EEPROM_FILTER_Q, q);
+        Serial.print(type);
+        Serial.print(",");
+        Serial.print(freq, 2);
+        Serial.print(",");
+        Serial.println(q, 2);
+        return true;
+    } else if (command.startsWith("SET_FILTER")) {
+        int firstComma = command.indexOf(',');
+        int secondComma = command.indexOf(',', firstComma + 1);
+        if (firstComma == -1 || secondComma == -1) {
+            Serial.println("ERR");
+            return true;
+        }
+        uint8_t type = command.substring(10, firstComma).toInt();
+        float freq = command.substring(firstComma + 1, secondComma).toFloat();
+        float q = command.substring(secondComma + 1).toFloat();
+        EEPROM.update(EEPROM_ENVELOPE_TYPES, type);
+        EEPROM.put(EEPROM_FILTER_FREQ, freq);
+        EEPROM.put(EEPROM_FILTER_Q, q);
+        Serial.println("OK");
+        return true;
+    } else if (command.startsWith("GET_ARGPAIR")) {
+        Serial.print(getEnvelopeA());
+        Serial.print(",");
+        Serial.println(getEnvelopeB());
+        return true;
+    } else if (command.startsWith("SET_ARGPAIR")) {
+        int comma = command.indexOf(',');
+        if (comma == -1) {
+            Serial.println("ERR");
+            return true;
+        }
+        uint8_t envA = command.substring(11, comma).toInt();
+        uint8_t envB = command.substring(comma + 1).toInt();
+        setEnvelopePair(envA, envB);
+        Serial.println("OK");
+        return true;
+    }
+    return false;
+}
