@@ -244,9 +244,11 @@ void processEnvelopes() {
         }
     }
 
-    uint8_t slotVal = configManager.getSlot(buttonContext.activePot).value;
+    // Reflect the current pot's MIDI-scaled value on the indicators
+    uint8_t potMidiValue = Utility::mapToMidiValue(
+        potentiometerManager.getLastValue(buttonContext.activePot));
     for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
-        ledManager.setPotIndicator(i, slotVal);
+        ledManager.setPotIndicator(i, potMidiValue);
     }
 }
 
