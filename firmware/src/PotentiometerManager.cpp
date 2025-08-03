@@ -11,9 +11,6 @@
 // feed LEDManager for visual feedback and trigger MIDI messages through the
 // callback registered by firmware_main.cpp.
 
-bool dirtyFlags[NUM_POTS] = {false};
-const float alpha = 0.1; // Smoothing factor
-static int smoothedValue[NUM_POTS] = {0};
 #define CHANGE_THRESHOLD 2  // Adjust based on your noise tolerance
 
 PotentiometerManager::PotentiometerManager(
@@ -26,6 +23,8 @@ PotentiometerManager::PotentiometerManager(
         potChannels[i] = 1;       // Default MIDI channel
         potCCNumbers[i] = i;      // Default MIDI CC number
         potLastValues[i] = -1;    // Ensure the first read updates
+        smoothedValue[i] = 0;     // EWMA starting point
+        dirtyFlags[i] = false;    // Nothing dirty yet
     }
 }
 
@@ -93,9 +92,11 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
         if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS) break;
+        // Primary mux hops between banks of pots wired to the board.
         selectMuxBank(primaryBank);
 
         for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS); secondaryBank++) {
+            // Secondary mux picks the specific pot inside the current bank.
             selectPotBank(secondaryBank);
 
             uint8_t potIndex = (primaryBank << SECONDARY_MUX_PINS) | secondaryBank;
@@ -105,10 +106,10 @@ void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<Envel
             // Use filtered analog read
             int rawValue = readAnalogFiltered(analogPin);
 
-            // Apply EWMA smoothing
-           smoothedValue[potIndex] = Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], alpha);
+            // Apply EWMA smoothing using the ALPHA factor declared above.
+            smoothedValue[potIndex] = Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], ALPHA);
 
-            // Smarter change detection
+            // Ignore minor wiggles; CHANGE_THRESHOLD kills micro-jitter.
             if (abs(smoothedValue[potIndex] - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
                 potLastValues[potIndex] = smoothedValue[potIndex]; // Update last known value
                 dirtyFlags[potIndex] = true;
