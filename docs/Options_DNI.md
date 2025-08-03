@@ -130,7 +130,6 @@ TP\_VINRAW, TP\_VINFUSE, TP\_VLED, TP\_3V3 (x2), TP\_GND (per cluster), TP\_ROWD
 | Item                        | Ref             | Status     | Notes                                   |
 | --------------------------- | --------------- | ---------- | --------------------------------------- |
 | OLED Mounting holes plating | Hx              | **Opt**    | Plate & tie to GND for shield else NPTH |
-| Keepout under OLED          | Mech layer note | Installed  | Prevent tall components underneath      |
 | Address pad/jumper          | SJ\_ADDR        | **Future** | For second display / address conflict   |
 
 ---
