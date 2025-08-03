@@ -6,6 +6,11 @@
 #include "MIDIHandler.h"
 #include "BiquadFilter.h"
 #include <cmath>
+#include <array>
+#include <algorithm>
+
+// Remember the last CC value sent for each pot so we don't spam duplicates
+static std::array<uint8_t, NUM_POTS> lastSentCC;
 
 // Tracks external audio/CV and converts it to a MIDI-friendly envelope. The
 // value produced here is consumed by PotentiometerManager and the arpeggiator
@@ -26,6 +31,9 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
       envelopeB(1),
       potManager(pm)
 {
+    // Initialize last sent CCs to 0xFF so the first real value always fires
+    std::fill(lastSentCC.begin(), lastSentCC.end(), 0xFF);
+
     // default low-pass at 1kHz
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
 }
@@ -138,8 +146,6 @@ void EnvelopeFollower::update() {
 // Adjust the given CC value with the current envelope and send it if it changed
 // since the last update. This prevents spamming duplicate MIDI messages.
 void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
-    static uint8_t lastSentCC[NUM_POTS] = {255};
-
     if (isActive && modulationTargetCC >= 0) {
         int modulatedValue = ccValue + currentEnvelopeLevel;
         ccValue = constrain(modulatedValue, 0, 127);
