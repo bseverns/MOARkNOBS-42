@@ -66,14 +66,10 @@ static int filterTypeIndexForEF[6] = {0, 0, 0, 0, 0, 0};
 static uint8_t currentProfile = 0;
 
 // Constructor
-ButtonManager::ButtonManager(const uint8_t* primaryMuxPins,
-                             const uint8_t* secondaryMuxPins,
-                             uint8_t muxAnalogPin,
+ButtonManager::ButtonManager(const HardwareConfig& config,
                              const uint8_t* controlPins,
                              PotentiometerManager* potentiometerManager)
-    : _primaryMuxPins(primaryMuxPins),
-      _secondaryMuxPins(secondaryMuxPins),
-      _muxAnalogPin(muxAnalogPin),
+    : _cfg(config),
       _controlPins(controlPins),
       _potentiometerManager(potentiometerManager),
       activeMode(0),
@@ -91,14 +87,14 @@ ButtonManager::ButtonManager(const uint8_t* primaryMuxPins,
 // state machines that track button presses.
 void ButtonManager::initButtons() {
     for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
-        pinMode(_primaryMuxPins[i], OUTPUT);
+        pinMode(_cfg.muxrPins[i], OUTPUT);
     }
     for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
-        pinMode(_secondaryMuxPins[i], OUTPUT);
+        pinMode(_cfg.muxcPins[i], OUTPUT);
     }
-    pinMode(_muxAnalogPin, INPUT);
-    pinMode(PIN_ROW_DRV, OUTPUT);
-    digitalWrite(PIN_ROW_DRV, LOW);
+    pinMode(_cfg.buttonMuxAnalogPin, INPUT);
+    pinMode(_cfg.rowDriverPin, OUTPUT);
+    digitalWrite(_cfg.rowDriverPin, LOW);
 
 
     // optional: initialize each state machine for each button
@@ -124,16 +120,16 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
     // Scan mux matrix row by row
     uint8_t rawStates[NUM_VIRTUAL_BUTTONS];
     for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
-        digitalWrite(PIN_ROW_DRV, HIGH);
-        setMux(PIN_MUXR, r);
+        digitalWrite(_cfg.rowDriverPin, HIGH);
+        setMux(_cfg.muxrPins, r);
         delayMicroseconds(5);
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-            setMux(PIN_MUXC, c);
+            setMux(_cfg.muxcPins, c);
             delayMicroseconds(5);
-            int v = analogRead(PIN_COL_SENSE);
+            int v = analogRead(_cfg.buttonMuxAnalogPin);
             rawStates[r * BUTTON_COLS + c] = (v < 512) ? HIGH : LOW;
         }
-        digitalWrite(PIN_ROW_DRV, LOW);
+        digitalWrite(_cfg.rowDriverPin, LOW);
     }
 
     // Process virtual (multiplexer) buttons using scanned states
@@ -668,16 +664,16 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
     uint8_t col = buttonIndex % BUTTON_COLS;
 
     if (row != lastRow) {
-        digitalWrite(PIN_ROW_DRV, HIGH);
-        setMux(PIN_MUXR, row);
+        digitalWrite(_cfg.rowDriverPin, HIGH);
+        setMux(_cfg.muxrPins, row);
         delayMicroseconds(5);
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-            setMux(PIN_MUXC, c);
+            setMux(_cfg.muxcPins, c);
             delayMicroseconds(5);
-            int v = analogRead(PIN_COL_SENSE);
+            int v = analogRead(_cfg.buttonMuxAnalogPin);
             rowValues[c] = (v < 512) ? HIGH : LOW;
         }
-        digitalWrite(PIN_ROW_DRV, LOW);
+        digitalWrite(_cfg.rowDriverPin, LOW);
         lastRow = row;
     }
 
@@ -697,7 +693,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
     for (uint8_t ch = 6; ch < 12; ++ch) {
         selectMux(0, ch);
         delayMicroseconds(5);
-        int val = analogRead(_muxAnalogPin);
+        int val = analogRead(_cfg.buttonMuxAnalogPin);
         bool pressed = (val < 512);
         uint8_t idx = ch - 6;
         bool stable = Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + idx], pressed,
@@ -712,7 +708,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
         uint8_t ch = 12 + i;
         selectMux(0, ch);
         delayMicroseconds(5);
-        int val = analogRead(_muxAnalogPin);
+        int val = analogRead(_cfg.buttonMuxAnalogPin);
         _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
     }
 }
@@ -722,8 +718,8 @@ void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerC
 }
 
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
-    setMux(PIN_MUXR, row);
-    setMux(PIN_MUXC, col);
+    setMux(_cfg.muxrPins, row);
+    setMux(_cfg.muxcPins, col);
 }
 
 bool ButtonManager::isMuxButtonPressed(uint8_t index) {

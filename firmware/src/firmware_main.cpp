@@ -20,6 +20,8 @@
 #include <queue>
 #include <map> // For tracking pot-to-envelope associations
 
+struct HardwareConfigInitializer { HardwareConfigInitializer() { loadHardwareConfig(); } } _hwInit;
+
 uint8_t midiBeatPosition = 0;
 char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
@@ -30,7 +32,7 @@ std::vector<uint8_t> potChannels;             // 42-slot table: each entry store
 std::map<int, int> potToEnvelopeMap;          // Crosswalk from pot index to its envelope follower partner
 std::queue<String> commandQueue;              // Serial command backlog waiting for mid-tier processing
 MIDIHandler midiHandler;                      // Central MIDI traffic cop slinging bytes over USB + DIN
-LEDManager ledManager(NUM_LEDS);              // Whips the WS2812 strip into obedient patterns
+LEDManager ledManager(hwConfig);              // Whips the WS2812 strip into obedient patterns
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // Bosses around the 128x64 OLED
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button config to EEPROM
 BiquadFilter filter;                          // Shared filter template for envelope follower shaping
@@ -43,7 +45,7 @@ Arpeggiator arpeggiator;                      // Keeps notes chugging along in t
 // and must not share the mux select pins.
 const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25}; // Direct-wired control buttons
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin); // Scans pot muxes & EEPROM slots
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, controlPins, &potentiometerManager); // Wrangles the button matrix
+ButtonManager buttonManager(hwConfig, controlPins, &potentiometerManager); // Wrangles the button matrix
 
 // Envelope followers – six ADC spies that turn audio/CV into modulation
 std::vector<EnvelopeFollower> envelopeFollowers = {
@@ -300,8 +302,8 @@ void setup() {
     Serial.begin(31250);
 
     // Configure status LED
-    pinMode(STATUS_LED_PIN, OUTPUT);
-    digitalWrite(STATUS_LED_PIN, LOW);
+    pinMode(hwConfig.statusLedPin, OUTPUT);
+    digitalWrite(hwConfig.statusLedPin, LOW);
 
     // Measure VREF for baseline calibration
     pinMode(VREF_ADC_PIN, INPUT);
@@ -425,21 +427,26 @@ void setup() {
     // — Scheduler tasks —
     // Three cooperative schedulers slice time so nothing blocks:
     // High-priority (1 ms):
-    Utility::schedulerHigh.addTask(processMIDI,          MIDI_TASK_INTERVAL);
+    Utility::schedulerHigh.addTask(processMIDI,          hwConfig.midiTaskInterval);
+    Utility::schedulerHigh.addTask([](){
+
+      if (millis() - lastClockTime > CLOCK_TIMEOUT_MS)
+        processInternalClock();
+    }, hwConfig.midiTaskInterval);
     Utility::schedulerHigh.addTask([](){
       arpeggiator.update(midiHandler, configManager, potentiometerManager);
-    }, MIDI_TASK_INTERVAL);
+    }, hwConfig.midiTaskInterval);
 
     // Mid-priority (~5 ms):
-    Utility::schedulerMid.addTask(processSerial,        SERIAL_TASK_INTERVAL);
-    Utility::schedulerMid.addTask(processEnvelopes,     ENVELOPE_TASK_INTERVAL);
+    Utility::schedulerMid.addTask(processSerial,        hwConfig.serialTaskInterval);
+    Utility::schedulerMid.addTask(processEnvelopes,     hwConfig.envelopeTaskInterval);
 
     // Low-priority (~50 ms):
     Utility::schedulerLow.addTask([](){
       ledManager.update();
       updateFilterTuning(buttonContext);
       updateArpTuning();
-    }, LED_TASK_INTERVAL);
+    }, hwConfig.ledTaskInterval);
 
     Utility::schedulerLow.addTask([](){
       if (!displayManager.shouldRunScreensaver()) {

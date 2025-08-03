@@ -20,45 +20,64 @@
 #define GLOBALS_H
 
 #include <Arduino.h>
-#include <vector>
-#include <map>
-
 class ConfigManager;
 extern ConfigManager configManager;
 
 class MIDIHandler;
 extern MIDIHandler midiHandler;
 
+/**
+ * Bundle every pin and scheduler tick that describes the hardware.
+ * Defaults live in Globals.cpp but can be patched at build or run time.
+ */
+struct HardwareConfig {
+    uint8_t ledPin;
+    uint8_t statusLedPin;
+    uint8_t rowDriverPin;
+    uint16_t slotLedCount;
+    uint8_t efLedCount;
+    uint8_t potLedCount;
+    uint8_t numButtons;
+    uint8_t midiTaskInterval;
+    uint8_t serialTaskInterval;
+    uint8_t ledTaskInterval;
+    uint8_t envelopeTaskInterval;
+    uint8_t muxrPins[4];
+    uint8_t muxcPins[4];
+    uint8_t buttonMuxAnalogPin;
+    uint8_t potMuxAnalogPin;
+    uint8_t vrefAdcPin;
+};
 
-inline constexpr uint8_t  LED_PIN         = 6;    //!< WS2812 LED data pin
-inline constexpr uint8_t  STATUS_LED_PIN  = 23;   //!< Board status indicator
-inline constexpr uint8_t  PIN_ROW_DRV     = 7;    //!< Output driver for button rows
+extern HardwareConfig hwConfig;
+void loadHardwareConfig();
 
-inline constexpr uint16_t SLOT_LED_COUNT  = 42;   //!< LEDs mapped to virtual slots
-inline constexpr uint8_t  EF_LED_COUNT    = 6;    //!< Envelope follower indicators
-inline constexpr uint8_t  POT_LED_COUNT   = 3;    //!< Physical pot indicators
-inline constexpr uint16_t EF_LED_OFFSET   = SLOT_LED_COUNT;
-inline constexpr uint16_t CONTROL_LED_INDEX = EF_LED_OFFSET + EF_LED_COUNT;
-inline constexpr uint16_t POT_LED_OFFSET  = CONTROL_LED_INDEX + 1;
-inline constexpr uint16_t NUM_LEDS        = SLOT_LED_COUNT + EF_LED_COUNT + 1 + POT_LED_COUNT; //!< Total LED count
-inline constexpr uint8_t  NUM_BUTTONS     = 6;    //!< Number of direct control buttons
+// Derived LED indices
+inline uint16_t EF_LED_OFFSET() { return hwConfig.slotLedCount; }
+inline uint16_t CONTROL_LED_INDEX() { return EF_LED_OFFSET() + hwConfig.efLedCount; }
+inline uint16_t POT_LED_OFFSET() { return CONTROL_LED_INDEX() + 1; }
+inline uint16_t NUM_LEDS() { return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount; }
+
+inline constexpr uint8_t NUM_BUTTONS = 6;    //!< Number of direct control buttons
+
+// Legacy aliases for modules awaiting full refactors
+inline const uint8_t (&primaryMuxPins)[4]   = hwConfig.muxrPins;
+inline const uint8_t (&secondaryMuxPins)[4] = hwConfig.muxcPins;
+inline uint8_t& buttonMuxAnalogPin          = hwConfig.buttonMuxAnalogPin;
+inline uint8_t& potMuxAnalogPin             = hwConfig.potMuxAnalogPin;
+inline uint8_t& VREF_ADC_PIN                = hwConfig.vrefAdcPin;
+inline uint16_t& SLOT_LED_COUNT             = hwConfig.slotLedCount;
+inline uint8_t& EF_LED_COUNT                = hwConfig.efLedCount;
+inline uint8_t& POT_LED_COUNT               = hwConfig.potLedCount;
+
 inline constexpr uint16_t OLED_WIDTH      = 128;  //!< OLED display width in pixels
 inline constexpr uint16_t OLED_HEIGHT     = 64;   //!< OLED display height in pixels
 inline constexpr uint8_t  SSD1306_I2C_ADDRESS   = 0x3C; //!< I2C address for the OLED
 inline constexpr uint16_t SERIAL_BUFFER_SIZE    = 128;  //!< bytes in the serial buffer
-inline constexpr uint8_t  MIDI_TASK_INTERVAL    = 1;    //!< Scheduler tick for MIDI (ms)
-inline constexpr uint8_t  SERIAL_TASK_INTERVAL  = 10;   //!< Scheduler tick for serial (ms)
-inline constexpr uint8_t  LED_TASK_INTERVAL     = 50;   //!< LED update interval (ms)
-inline constexpr uint8_t  ENVELOPE_TASK_INTERVAL = 5;   //!< Envelope follower interval (ms)
 inline constexpr uint16_t EEPROM_FILTER_FREQ    = 1000; //!< EEPROM address for filter freq
 inline constexpr uint16_t EEPROM_FILTER_Q       = 1004; //!< EEPROM address for filter Q
 inline constexpr uint8_t  POT_RANGE_MIN         = 10;   //!< Min pot delta before acting
 inline constexpr uint8_t  ENV_RANGE_MIN         = 5;    //!< Min envelope delta threshold
-
-static const uint8_t buttonMuxAnalogPin = A4;
-static const uint8_t potMuxAnalogPin    = A5;
-// Analog pin tied to the mid-rail reference divider
-static const uint8_t VREF_ADC_PIN       = A8;
 
 // ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
 constexpr float VadcScale = 3.3f / 1023.0f;
@@ -66,27 +85,13 @@ constexpr float VadcScale = 3.3f / 1023.0f;
 extern float g_vref;
 
 // EEPROM storage constants
-constexpr uint16_t EEPROM_SLOT_BASE = 0x000; 
+constexpr uint16_t EEPROM_SLOT_BASE = 0x000;
 constexpr uint8_t SLOT_EEPROM_SIZE = 6;  // bytes required to store a MIDISlot
 
 //clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;
 extern bool g_clockOutEnabled;
-
-// Pin assignments for primary and secondary mux layers
-// The BTN_42 PCB uses CD74HC4067 multiplexers which require four connections to select
-// muxR select lines -> pins 2,3,4,5
-// muxC select lines -> pins 8,9,10,11
-inline constexpr uint8_t MUXR_PINS[4]       = {2, 3, 4, 5};
-inline constexpr uint8_t MUXC_PINS[4]       = {8, 9, 10, 11};
-inline constexpr uint8_t primaryMuxPins[]   = {2, 3, 4, 5};
-inline constexpr uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
-
-// Aliases used by the row-driven button scanner
-#define PIN_MUXR primaryMuxPins
-#define PIN_MUXC secondaryMuxPins
-#define PIN_COL_SENSE buttonMuxAnalogPin
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

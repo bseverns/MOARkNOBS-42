@@ -24,6 +24,7 @@
 #include "ConfigManager.h"
 #include "Utility.h"
 #include "PotentiometerManager.h"
+#include "Globals.h"
 
 // Optional: Enable detailed debug logging for development
 #define BUTTON_MANAGER_DEBUG 1
@@ -101,9 +102,7 @@ public:
      * The mux pin arrays define the scanning hardware and the
      * PotentiometerManager link allows button presses to change slots.
      */
-    ButtonManager(const uint8_t* primaryMuxPins,
-                  const uint8_t* secondaryMuxPins,
-                  uint8_t muxAnalogPin,
+    ButtonManager(const HardwareConfig& config,
                   const uint8_t* controlPins,
                   PotentiometerManager* potentiometerManager);
 
@@ -133,9 +132,7 @@ public:
 
 private:
     // Mux select pins & analog input for virtual buttons scan
-    const uint8_t* _primaryMuxPins;
-    const uint8_t* _secondaryMuxPins;
-    uint8_t _muxAnalogPin;
+    const HardwareConfig& _cfg;
     // Direct control button pins
     const uint8_t* _controlPins; // direct GPIOs (legacy, unused with mux scan)
     // Link to PotentiometerManager for mode switching

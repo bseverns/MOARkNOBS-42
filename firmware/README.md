@@ -49,20 +49,40 @@ Some hardware choices only come alive when the firmware plays along:
 
 ### Pin Map
 
-The constants below come from `Globals.h`. They're declared as `inline constexpr` so every translation unit sees the same compile‑time values. That keeps templates happy and lets the compiler inline everything.
+Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`. Those numbers get loaded at startup and can be punked via a `hardware_config.h` or a tiny `/hardware_config.json` dropped next to the firmware. The table below shows the baked-in defaults.
 
 | Constant | Pin(s) | Purpose |
 |---------|-------|---------|
-| `LED_PIN` | 6 | WS2812 data out |
-| `MUXR_PINS` | 2,3,4,5 | Row select lines for the button matrix |
-| `MUXC_PINS` | 8,9,10,11 | Column select lines for the button matrix |
+| Field | Pin(s) | Purpose |
+|-------|-------|---------|
+| `ledPin` | 6 | WS2812 data out |
+| `muxrPins` | 2,3,4,5 | Row select lines for the button matrix |
+| `muxcPins` | 8,9,10,11 | Column select lines for the button matrix |
 | `buttonMuxAnalogPin` | A4 | Shared button sense line |
 | `potMuxAnalogPin` | A5 | Potentiometer MUX analog input |
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
-| `STATUS_LED_PIN` | 23 | Board status indicator mounted between the PWR and brain on the board |
+| `statusLedPin` | 23 | Board status indicator mounted between the PWR and brain on the board |
 
-The `STATUS_LED_PIN` constant now lives in `Globals.h` as an `extern constexpr`,
-letting `LEDManager` and `firmware_main.cpp` flip that debug light in unison.
+Need different pins or scheduler ticks? Override the defaults with a header:
+
+```cpp
+// firmware/include/hardware_config.h
+void applyHardwareConfigOverrides(HardwareConfig& cfg) {
+    cfg.ledPin = 5;            // move the LED strip
+    cfg.midiTaskInterval = 2;  // slow the MIDI tick for experiments
+}
+```
+
+Or toss a JSON file on an SD card:
+
+```json
+{
+  "LED_PIN": 5,
+  "MIDI_TASK_INTERVAL": 2
+}
+```
+
+The boot code slurps in either override so `LEDManager` and friends all march to the same drum.
 
 
 ## What It Does
