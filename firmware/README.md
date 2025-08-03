@@ -92,14 +92,15 @@ Test files used in the development of this project include:
 
 | Module | What it wrangles |
 |-------|------------------|
-| `ButtonManager` | Scans the 7×6 button matrix, debounces it, and dishes out events. |
-| `PotentiometerManager` | Reads the three analog pots and smooths their jittery souls. |
-| `EnvelopeFollower` | Converts audio/CV into modulation curves with selectable filters. |
-| `LEDManager` | Paints 52 WS2812s and that lone status LED with righteous fury. |
-| `DisplayManager` | Talks to the OLED and makes pixels dance. |
-| `MIDIHandler` | Speaks MIDI over USB and DIN, mirroring every message. |
-| `ConfigManager` | Saves to EEPROM, restores from backup when things go sideways. |
-| `Arpeggiator` | Spits out repeating patterns so you can noodle hands‑free. |
+| [Arpeggiator](include/Arpeggiator/README.md) | Spits out repeating patterns so you can noodle hands‑free. |
+| [BiquadFilter](include/BiquadFilter/README.md) | Lightweight filter used by the envelope followers. |
+| [ButtonManager](include/ButtonManager/README.md) | Scans the 7×6 button matrix, debounces it, and dishes out events. |
+| [ConfigManager](include/ConfigManager/README.md) | Saves to EEPROM, restores from backup when things go sideways. |
+| [DisplayManager](include/DisplayManager/README.md) | Talks to the OLED and makes pixels dance. |
+| [EnvelopeFollower](include/EnvelopeFollower/README.md) | Converts audio/CV into modulation curves with selectable filters. |
+| [LEDManager](include/LEDManager/README.md) | Paints 52 WS2812s and that lone status LED with righteous fury. |
+| [MIDIHandler](include/MIDIHandler/README.md) | Speaks MIDI over USB and DIN, mirroring every message. |
+| [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls. |
 | `Globals` | Shared constants and state that keep the gang in sync. |
 | `Utility` | Misc helpers—because even chaos needs some glue. |
 

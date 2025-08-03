@@ -1,0 +1,24 @@
+# ConfigManager
+
+Keeps the controller's brain in EEPROM so your madness survives power cycles.
+
+## Key Methods
+
+- `begin(potChannels)` – load saved settings at boot.
+- `getSlotType(idx)` – figure out what a slot sends.
+- `saveConfiguration()` – write everything back to flash.
+
+## Typical Use
+
+```cpp
+#include "ConfigManager.h"
+
+ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+std::vector<uint8_t> potCh(NUM_POTS);
+cfg.begin(potCh);
+
+cfg.setSlotType(0, MIDI_CC);
+cfg.saveConfiguration();
+```
+
+The full saga lives in [ConfigManager.h](../ConfigManager.h).
