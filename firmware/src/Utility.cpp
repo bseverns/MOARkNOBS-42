@@ -9,6 +9,8 @@
 #include "EEPROM.h"
 #include "MIDIHandler.h"
 #include <imxrt.h>
+#include <cstring>
+#include <cstdlib>
 
 // Collection of helpers used across the firmware. These range from value
 // mappings and EEPROM utilities to simple schedulers that run tasks at different
@@ -189,40 +191,56 @@ void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue
 }
 
 void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
-    if (!command.startsWith("SET_ALL")) {
+    const char* prefix = "SET_ALL ";
+    if (!command.startsWith(prefix)) {
         Serial.println("Error: Command must start with 'SET_ALL'");
         return;
     }
 
-    int startIdx = 8; // Skip "SET_ALL "
+    constexpr size_t MAX_CMD_LEN = 256;
+    if (command.length() >= MAX_CMD_LEN) {
+        Serial.println("Error: Command too long");
+        return;
+    }
+
+    char cmdBuffer[MAX_CMD_LEN];
+    command.toCharArray(cmdBuffer, MAX_CMD_LEN);
+
+    char* payload = cmdBuffer + strlen(prefix);
     unsigned int currentPot = 0;
 
-    while (static_cast<unsigned int>(startIdx) < static_cast<unsigned int>(command.length()) &&
-           currentPot < static_cast<unsigned int>(numPots)) {
-        int ccEnd = command.indexOf(',', startIdx);
-        int channelEnd = command.indexOf(';', startIdx);
+    for (char* token = strtok(payload, ";");
+         token != nullptr && currentPot < static_cast<unsigned int>(numPots);
+         token = strtok(nullptr, ";")) {
 
-        if (ccEnd == -1 || channelEnd == -1 || ccEnd >= channelEnd) {
+        char* comma = strchr(token, ',');
+        if (!comma) {
             Serial.println("Error: Malformed command");
             return;
         }
 
-        int ccNumber = command.substring(startIdx, ccEnd).toInt();
-        int channel = command.substring(ccEnd + 1, channelEnd).toInt();
+        *comma = '\0';
+        const char* ccStr = token;
+        const char* channelStr = comma + 1;
 
-        // Validate CC number and channel
+        if (strlen(ccStr) >= 4 || strlen(channelStr) >= 4) {
+            Serial.println("Error: Value too long");
+            return;
+        }
+
+        int ccNumber = atoi(ccStr);
+        int channel = atoi(channelStr);
+
         if (ccNumber < 0 || ccNumber > 127 || channel < 1 || channel > 16) {
             Serial.println("Error: Invalid CC number or channel");
             return;
         }
 
-        // Update EEPROM (2 bytes per potentiometer: channel and CC number)
         int address = currentPot * 2;
         EEPROM.update(address, channel);
         EEPROM.update(address + 1, ccNumber);
 
         currentPot++;
-        startIdx = channelEnd + 1;
     }
 
     if (currentPot == static_cast<unsigned int>(numPots)) {
