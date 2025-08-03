@@ -412,6 +412,22 @@ Other test flavors are available for deeper debugging:
 
 Run any of them with `pio run -e <env>` and bask in the compile-time glory.
 
+### Serial MIDI Sniffer
+
+Sometimes you just want to watch the bytes scream. Crack open `platformio.ini` and
+uncomment the `MIDI_DEBUG` flag under `build_flags`:
+
+```ini
+build_flags =
+    -D USB_MIDI_SERIAL
+    -D FASTLED_ALLOW_INTERRUPTS=0
+    -D LED_DATA_PIN=6
+    ; -D MIDI_DEBUG        ; uncomment to spit MIDI logs over Serial
+```
+
+Rebuild and the firmware will spew every handled message over the USB Serial
+console. Comment it back out when the noise gets old.
+
 ## Getting Started
 
 1. Plug it in.

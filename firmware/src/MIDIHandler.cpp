@@ -6,6 +6,15 @@
 #include "Globals.h"
 #include <USB-MIDI.h>
 
+// Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
+#ifdef MIDI_DEBUG
+  #define MIDI_DBG_PRINTF(...) Serial.printf(__VA_ARGS__)
+  #define MIDI_DBG_PRINTLN(x) Serial.println(x)
+#else
+  #define MIDI_DBG_PRINTF(...)
+  #define MIDI_DBG_PRINTLN(x)
+#endif
+
 // Provides a small abstraction over both Serial and USB MIDI transports. Other
 // modules call these helpers to send messages, while incoming data is routed to
 // callbacks that update display and arpeggiator state.
@@ -100,7 +109,7 @@ void MIDIHandler::processIncomingMIDI() {
 void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2) {
     switch (type) {
         case midi::ControlChange:
-            Serial.printf("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
+            MIDI_DBG_PRINTF("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
             break;
         case midi::NoteOn:
             handleNoteOn(channel, data1, data2);
@@ -109,19 +118,19 @@ void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8
             handleNoteOff(channel, data1, data2);
             break;
         default:
-            Serial.println("Unhandled MIDI message");
+            MIDI_DBG_PRINTLN("Unhandled MIDI message");
             break;
     }
 }
 
 void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
-    Serial.printf("Note On: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
+    MIDI_DBG_PRINTF("Note On: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOn(note, velocity, channel);
     usbMIDI.sendNoteOn(note, velocity, channel);
 }
 
 void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
-    Serial.printf("Note Off: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
+    MIDI_DBG_PRINTF("Note Off: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOff(note, velocity, channel);
     usbMIDI.sendNoteOff(note, velocity, channel);
 }
