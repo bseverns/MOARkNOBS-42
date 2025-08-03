@@ -6,7 +6,7 @@
 
 ## What's This?
 
-The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
+The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
 
 Forget fragile GUIs and boutique workflows. This beast lives in the guts: built on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
@@ -50,7 +50,7 @@ The constants below come from `Globals.h`. They're declared as `inline constexpr
 | `buttonMuxAnalogPin` | A4 | Shared button sense line |
 | `potMuxAnalogPin` | A5 | Potentiometer MUX analog input |
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
-| `STATUS_LED_PIN` | 23 | Board status indicator |
+| `STATUS_LED_PIN` | 23 | Board status indicator mounted between the PWR and brain on the board |
 
 The `STATUS_LED_PIN` constant now lives in `Globals.h` as an `extern constexpr`,
 letting `LEDManager` and `firmware_main.cpp` flip that debug light in unison.
@@ -83,7 +83,7 @@ Test files used in the development of this project include:
 ## Button Mayhem
 Buttons are scanned continuously using `setMux()` which sets the row and column addresses before each read.
 
-Need to peek under the hood? `ButtonManager::scanControlInputs()` is now fair game.
+Need to peek under the hood? `ButtonManager::scanControlInputs()` is fair game for granular debug.
 It sniffs the control pots and buttons without dragging the rest of the matrix along for the ride.
 Still, the grown-up move is to call `processButtons()` and let it wrangle everything.
 
@@ -329,14 +329,6 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 * Set envelope pairings
 * Tweak filter types, EF settings
 * Save back to EEPROM over WebSerial
-
-## Build Notes
-
-This repo ships with a small patch to the FastLED library.  The file
-`src/platforms/arm/mxrt1062/clockless_arm_mxrt1062.h` is stored under
-`lib/FastLED` and is pulled in via `platformio.ini`.  PlatformIO will use
-this version instead of the default package so the firmware builds without
-spurious warnings on Teensy 4.x.
 
 ## Development Timeline
 

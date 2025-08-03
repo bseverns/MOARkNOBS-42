@@ -2,7 +2,7 @@
 
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below. The latest board rev adds ten more WS2812s, bringing the grand total to fifty‑two LEDs: forty‑two for virtual slots, six tracking envelope follower levels, one beacon for the control buttons and three haloing the hardware knobs—one slot pot and a pair of filter‑tuning misfits.
+This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below. The latest board rev adds ten more WS2812s, bringing the grand total to fifty‑two LEDs: forty‑two for virtual slots, six tracking envelope follower levels, one beacon for the control buttons and three haloing the hardware knobs—one slot pot and a pair of filter‑tuning lights.
 
 ![Interface & LED Schematic](docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)
 
@@ -12,7 +12,7 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
   - **App/** – simple WebSerial editor to tweak settings over USB.
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
 - **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the full tour.
-  - **MN42-1/** – first board rev; a crash course in how all forty‑two buttons and their misfit LEDs get along. Block diagrams and schematics chill under [`docs/sketch/`](docs/sketch/).
+  - **MN42-1/** – first board rev; a crash course in how all forty‑two buttons and their misfit LEDs get along with their co-mingled power and data lines. Block diagrams and schematics chill under [`docs/sketch/`](docs/sketch/).
  - **[HISTORY.md](docs/HISTORY.md)** – running log of how this project came to be.
 
 ## Development Timeline
