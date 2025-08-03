@@ -25,6 +25,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
+- **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
 ## Hardware Redefined
 

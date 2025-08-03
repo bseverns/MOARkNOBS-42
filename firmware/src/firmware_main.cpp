@@ -10,6 +10,7 @@
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
+#include "WebSerial.h"
 #include "Utility.h"
 #include "name.c"
 #include "Globals.h"  // contains all pin definitions
@@ -22,6 +23,7 @@
 uint8_t midiBeatPosition = 0;
 char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
+bool webSerialStreaming = false;            // True once the browser says HELLO
 
 // Global objects
 std::vector<uint8_t> potChannels;             // 42-slot table: each entry stores a slot's MIDI CC value
@@ -160,7 +162,11 @@ void processSerial() {
 
         command.trim();
 
-        if (command == "GET_SCHEMA") {
+        if (command == "HELLO") {
+            webSerialStreaming = true;
+            Serial.println("{\"hello\":\"mn42\"}");
+
+        } else if (command == "GET_SCHEMA") {
             Serial.println(ConfigManager::makeSchema());
 
         } else if (command.startsWith("SET_POT")) {
@@ -314,6 +320,11 @@ void updateArpTuning() {
     arpeggiator.setShape(shapes[shapeIdx]);
 
     displayManager.showArpSettings(lengthMs, names[shapeIdx]);
+}
+
+void streamWebSerialState() {
+    if (!webSerialStreaming) return;
+    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers);
 }
 
 void setup() {
@@ -483,6 +494,9 @@ void setup() {
         displayManager.runIdleScreensaver();
       }
     }, 100);
+
+    // WebSerial telemetry every ~100 ms once the browser says hello
+    Utility::schedulerLow.addTask(streamWebSerialState, 100, true);
 }
 
 /*
