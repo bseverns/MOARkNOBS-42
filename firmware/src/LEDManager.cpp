@@ -113,6 +113,13 @@ CRGB LEDManager::getColor() const {
     return leds.empty() ? CRGB::Black : leds[0];
 }
 
+/**
+ * @brief Runs a white sweep while the box boots.
+ *
+ * Each LED gets ~20 ms of fame before going dark again. It's a blocking
+ * love letter to the strip, so the rest of the firmware sits tight until
+ * the dance is over.
+ */
 void LEDManager::startupAnimation() {
     for (size_t i = 0; i < leds.size(); i++) {
         leds[i] = CRGB::White;
@@ -129,6 +136,15 @@ void LEDManager::setState(LEDState state, uint8_t index) {
     update();
 }
 
+/**
+ * @brief Treats the strip as one big unruly group and splashes a single colour on it.
+ *
+ * Call when you want a full wipe. Every pixel gets tagged via @ref dirtyFlags so a
+ * later update() knows who changed. We also fire FastLED.show() right here for
+ * instant gratification.
+ *
+ * @param color The hue to paint across the entire strip.
+ */
 void LEDManager::setAll(const CRGB& color) {
     for (auto& led : leds) {
         led = color;
@@ -137,6 +153,17 @@ void LEDManager::setAll(const CRGB& color) {
     FastLED.show();
 }
 
+/**
+ * @brief Repaints a named LED group in one shot.
+ *
+ * Groups are string keys mapped to index lists—think crews like "pots" or
+ * "buttons". Use this when a whole crew needs a new vibe. Each member's
+ * @ref dirtyFlags entry is set so update() can flush them together, though we
+ * also hit FastLED.show() immediately.
+ *
+ * @param group The posse to recolour.
+ * @param color Fresh paint for the group.
+ */
 void LEDManager::setGroupColor(const std::string& group, const CRGB& color) {
     auto it = ledGroups.find(group);
     if (it == ledGroups.end()) return;
@@ -147,6 +174,14 @@ void LEDManager::setGroupColor(const std::string& group, const CRGB& color) {
     FastLED.show();
 }
 
+/**
+ * @brief Pushes any dirty LEDs out to the strip and clears the flags.
+ *
+ * Functions like setAll() and setGroupColor() flip @ref dirtyFlags for the
+ * pixels they touch. Call update() from the main loop after staging those
+ * changes; it shows the new frame and resets all flags so the next round can
+ * track fresh edits.
+ */
 void LEDManager::update() {
     if (controlActive) {
         unsigned long elapsed = millis() - controlStart;
