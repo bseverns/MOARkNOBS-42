@@ -1,3 +1,12 @@
+This chunk wrangles incoming power, fuses, and transient smackdowns before the rest of the rig sees a volt.
+VIN hits a resettable fuse, bulk caps, and a TVS clamp, then splits off to a beefy LED rail through its own PTC.
+PTCs trip slow—short that LED strip and the core might brown out before the fuse wakes up.
+
+**References**
+- [Full schematic](SCH_MOAR_Schematic_2025-08-01.pdf)
+- [SA6.0A TVS datasheet](https://www.littelfuse.com/products/tvs-diodes/standard-tvs-diodes/sa.aspx)
+- Snapshot [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22)
+
 Power and protection overview! A detailed PNG version lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
 
 ```mermaid

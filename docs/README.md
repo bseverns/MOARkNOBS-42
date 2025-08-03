@@ -2,6 +2,12 @@
 
 Welcome to the MOARkNOBS-42 documentation playground. This README aims to help you navigate the library of notes, design scraps, and personal ramblings we keep around to teach ourselves and the next hacker.
 
+## Where to Start
+
+- [HISTORY.md](HISTORY.md) — quick tour of the chaos so far.
+- [Options_DNI.md](Options_DNI.md) — parts you can skip or swap without guilt.
+- [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
+
 ## Choose Your Adventure
 
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
@@ -16,5 +22,9 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 - HISTORY tracks design moves that show up as options in `Options_DNI.md`.
 - The sketch notes reference those options when routing or debugging.
+
+## Your Turn
+
+To drop a new sketch, stash a Markdown file in `sketch/` with a punchy intro. Want to memorialize a breakthrough or fiasco? Append a dated note in `HISTORY.md` with the commit that started the fire. PR it and you're part of the legend.
 
 Read, tweak, repeat. And if the docs don't answer it, that's your cue to write the next page—preferably with a soldering iron in hand.

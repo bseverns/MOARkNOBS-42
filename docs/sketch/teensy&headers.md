@@ -1,3 +1,12 @@
+This page maps how the Teensy 4.0 gets its juice and how its pins escape the board.
+A 5 V feed hits the onboard regulator for 3 V3, while I²C and SWD signals fan out to headers for hacking.
+Never back‑feed the 3 V3 rail through the expander unless you like smoke.
+
+**References**
+- [Full schematic](SCH_MOAR_Schematic_2025-08-01.pdf)
+- [Teensy 4.0 pinout](https://www.pjrc.com/teensy/pinout.html)
+- Snapshot [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22)
+
 Teensy power pins and expansion headers. The screenshot version lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
 
 ```mermaid

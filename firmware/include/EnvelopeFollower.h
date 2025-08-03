@@ -14,6 +14,20 @@ class PotentiometerManager;
 
 /**
  * @brief Audio envelope follower with optional ARG combination mode.
+ *
+ * ## Quick and dirty setup
+ * ```cpp
+ * // Wire the follower to analog pin A0 and hand it a pot manager
+ * EnvelopeFollower env(A0, &potManager);
+ * env.setModulationTarget(42);                 // spit out MIDI CC 42
+ * env.setMode(EnvelopeFollower::SEF);          // roll with Single Envelope mode
+ * env.toggleActive(true);                      // let it rip
+ * ```
+ * baseline and gain are the attitude knobs:
+ * - **baseline**: measured noise floor subtracted before anything else.
+ *   Crank it up if the input won't shut up.
+ * - **gain**: multiplier applied *after* baseline, before mapping to 0–127.
+ *   Push it past 1.0f when you want the envelope to hit harder.
  */
 class EnvelopeFollower {
 public:
@@ -65,8 +79,8 @@ private:
     int envelopeB;
 
     // Calibration values
-    float baseline = 0.0f;
-    float gain = 1.0f;
+    float baseline = 0.0f; // value subtracted from raw input to ditch noise
+    float gain = 1.0f;     // scales the baseline-adjusted level before MIDI mapping
 
     PotentiometerManager* potManager;
     BiquadFilter filter;          // Existing custom filter
@@ -136,10 +150,16 @@ public:
      */
     void setEnvelopePair(int envA, int envB);
 
-    /** Take a short average of the input to calculate the noise baseline. */
+    /**
+     * Take a short average of the input to calculate the noise baseline.
+     * This offset gets subtracted from every raw read before scaling.
+     */
     void calibrateBaseline();
 
-    /** Adjust the scaling factor applied before mapping to MIDI. */
+    /**
+     * Adjust the scaling factor applied after baseline removal.
+     * Higher gain makes the envelope punchier before it's squeezed into 0–127.
+     */
     void setGain(float g) { gain = g; }
 };
 

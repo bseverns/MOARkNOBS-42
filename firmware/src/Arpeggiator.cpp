@@ -41,9 +41,11 @@ void Arpeggiator::setLength(float ms) { _intervalMs = ms; }
 void Arpeggiator::setShape(Shape s) { _shape = s; }
 
 static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step) {
-    static const int8_t up[]     = {0, 4, 7, 12};
-    static const int8_t down[]   = {12, 7, 4, 0};
-    static const int8_t updown[] = {0, 4, 7, 12, 7, 4};
+    // Major triad plus the octave; these tables dictate the interval jump for
+    // each step of the pattern.
+    static const int8_t up[]     = {0, 4, 7, 12};   // climb from root to octave
+    static const int8_t down[]   = {12, 7, 4, 0};   // descend from octave back to root
+    static const int8_t updown[] = {0, 4, 7, 12, 7, 4}; // bounce up then fall halfway
     switch (shape) {
         case Arpeggiator::UP:      return up[step % 4];
         case Arpeggiator::DOWN:    return down[step % 4];
@@ -79,6 +81,8 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
         case MIDIMessageType::Note: {
             uint8_t note = constrain(slot.data1 + offset, 0, 127);
             midi.sendNoteOn(note, potVal, slot.midiChannel);
+            // Schedule a note-off at half the interval so each note gets a
+            // quick release without blocking the main loop.
             Utility::schedulerHigh.addTask([note, ch=slot.midiChannel, &midi](){
                 midi.sendNoteOff(note, 0, ch);
             }, (unsigned long)(_intervalMs / 2), false);

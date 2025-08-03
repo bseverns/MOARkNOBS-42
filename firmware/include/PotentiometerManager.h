@@ -32,8 +32,15 @@ private:
     uint8_t potCCNumbers[NUM_POTS];  // MIDI CC number for each pot
     int potLastValues[NUM_POTS];     // Last read values for each pot
 
-    void selectMuxBank(uint8_t bank); // Slam the primary mux to the desired pot bank
-    void selectPotBank(uint8_t pot);  // Once a bank is live, aim the secondary mux at a specific pot
+    // Exponential Weighted Moving Average (EWMA) smoothing
+    // keeps analog jitter down without killing responsiveness.
+    static constexpr float ALPHA = 0.1f; // weight of the newest sample
+    int smoothedValue[NUM_POTS];         // running EWMA for each pot
+
+    bool dirtyFlags[NUM_POTS];           // pots that moved enough to matter
+
+    void selectMuxBank(uint8_t bank); // Drive the primary mux address lines
+    void selectPotBank(uint8_t pot);  // Drive the secondary mux address lines
 
     // Callback for sending MIDI messages
     std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> midiCallback;

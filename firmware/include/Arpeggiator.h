@@ -22,18 +22,35 @@ public:
     /** Construct a stopped arpeggiator with default settings. */
     Arpeggiator();
 
-    /** Begin playing notes for the given slot index. */
+    /**
+     * Kick off the arpeggiator on a slot.
+     * @param slotIdx Index of the slot in ConfigManager whose notes should be
+     *                ripped through. Once called, the arpeggiator will march
+     *                through that slot's pitches until `stop()` is invoked.
+     */
     void start(uint8_t slotIdx);
-    /** Stop sending arpeggiated notes. */
+    /**
+     * Slam the brakes and silence any further steps.
+     * Calling this halts the groove immediately and prevents more MIDI events
+     * from being triggered.
+     */
     void stop();
     /** True while the arpeggiator is actively stepping. */
     bool isActive() const;
     /** Return the slot currently being arpeggiated. */
     uint8_t getSlot() const;
 
-    /** Set the delay between note steps in milliseconds. */
+    /**
+     * Set the time between note triggers.
+     * @param ms Delay in milliseconds; shorter values make the riff blaze
+     *           faster while longer ones chill it out.
+     */
     void setLength(float ms);
-    /** Choose the pattern used to step through notes. */
+    /**
+     * Choose how the offsets are ordered.
+     * @param s Pattern of note movement—UP, DOWN, UPDOWN or RANDOM—which
+     *          changes the melodic contour of the arpeggio.
+     */
     void setShape(Shape s);
 
     /** Call regularly to send notes when due. */
