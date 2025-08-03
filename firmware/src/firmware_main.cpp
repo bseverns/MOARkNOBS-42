@@ -71,7 +71,6 @@ unsigned long lastSerialProcess = 0;
 unsigned long lastLEDUpdate = 0;
 unsigned long lastEnvelopeProcess = 0;
 unsigned long lastDisplayUpdate = 0;
-unsigned long lastClockTime = 0;          // Tracks the last external MIDI clock tick
 
 // ButtonManagerContext: glue struct passed around to avoid global rummaging
 ButtonManagerContext buttonContext = {
