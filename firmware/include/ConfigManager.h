@@ -17,10 +17,40 @@
 
 class MIDIHandler;
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+/*
+ * ------------- EEPROM Memory Map -------------
+ * Offset (bytes)  Region                             Bytes
+ * --------------------------------------------------------
+ * 0               Pot channel map                  NUM_POTS
+ * NUM_POTS        Pot CC map                       NUM_POTS
+ * 2*NUM_POTS      Envelope assignments             NUM_POTS
+ * 3*NUM_POTS      Envelope types                   NUM_POTS
+ * 4*NUM_POTS      LED brightness                   1
+ * 4*NUM_POTS + 1  LED colour (RGB)                 3
+ * 4*NUM_POTS + 4  ARG mode                         1
+ * 4*NUM_POTS + 5  ARG method                       1
+ * 4*NUM_POTS + 6  ARG env A                        1
+ * 4*NUM_POTS + 7  ARG env B                        1
+ * 4*NUM_POTS + 8-199  Reserved/buffer                 ~50
+ * 200             Primary magic (0xABCD)           2
+ * 202             Backup magic  (0xDCBA)           2
+ * 204-225        Reserved/buffer                 part of above
+ * 226             Backup copy of config starts     mirrors layout
+ * --------------------------------------------------------
+ * Backup strategy: Write the primary block and tag it with
+ * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
+ * firmware punts to the backup block (tagged with
+ * EEPROM_MAGIC_BACKUP) as a safety net. On boot the tags are
+ * inspected in order-primary first, backup second-to decide
+ * which copy to trust.
+ */
+#endif
+
 #define EEPROM_START_ADDRESS 0
 #define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
-#define EEPROM_MAGIC_PRIMARY 0xABCD
-#define EEPROM_MAGIC_BACKUP  0xDCBA
+#define EEPROM_MAGIC_PRIMARY 0xABCD  // Validates the main config block
+#define EEPROM_MAGIC_BACKUP  0xDCBA  // Signals a sane backup image
 
 #define EEPROM_POT_CHANNELS EEPROM_START_ADDRESS
 #define EEPROM_POT_CC (EEPROM_POT_CHANNELS + NUM_POTS)

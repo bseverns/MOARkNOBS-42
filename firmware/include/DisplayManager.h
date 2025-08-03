@@ -12,9 +12,42 @@
 
 struct ButtonManagerContext;
 
+/*
+ * Animation & Timing 101
+ * ----------------------
+ * `Animation` is a tiny state machine that handles brightness fades. Call
+ * `triggerFade()` to kick it awake and `updateFadeAnimation()` each loop to
+ * march through `FADE_IN`, `HOLD`, and `FADE_OUT` states based on `lastTime`
+ * and `duration`. Once the party hits `DONE`, the screen stays put until the
+ * next trigger.
+ *
+ * `updateFromContext()` is the high‑level refresh that keeps the UI snappy
+ * without frying the MCU. It bails out early unless at least `_updateIntervalMs`
+ * milliseconds have passed since the last update. Tweak that interval with
+ * `setUpdateInterval()` to get your preferred balance of responsiveness and
+ * chill.
+ *
+ * Example mash‑up: fade into the screensaver when the user ghosts you:
+ *
+ * ```cpp
+ * DisplayManager ui(0x3C, OLED_WIDTH, OLED_HEIGHT);
+ * // inside loop()
+ * if (ui.shouldRunScreensaver()) {
+ *   ui.triggerFade(500);          // half‑second fade out
+ *   while (ui.shouldRunScreensaver()) {
+ *     ui.updateFadeAnimation();
+ *     ui.runIdleScreensaver();   // random pixel mayhem
+ *   }
+ * }
+ * ```
+ */
+
 enum class AnimState { IDLE, FADE_IN, HOLD, FADE_OUT, DONE };
 
-/** Simple helper struct used for fade animations. */
+/**
+ * Simple helper struct used for fade animations. It's fed by `triggerFade()`
+ * and advanced by `updateFadeAnimation()`.
+ */
 struct Animation {
   AnimState  state      = AnimState::IDLE; //!< Current animation state
   uint32_t   lastTime   = 0;               //!< Timestamp of last update
@@ -66,7 +99,11 @@ public:
   /** Display a transient message for the given duration. */
   void displayStatus(const char* status, unsigned long duration);
 
-  /** Refresh the UI using values from a ButtonManagerContext. */
+  /**
+   * Refresh the UI using values from a ButtonManagerContext.
+   * Call this from your main loop; it quietly returns if invoked
+   * before `_updateIntervalMs` has elapsed since the last refresh.
+   */
   void updateFromContext(const ButtonManagerContext& context);
 
   /** Show the selected ARG method and envelope pairing. */
