@@ -71,6 +71,7 @@ unsigned long lastSerialProcess = 0;
 unsigned long lastLEDUpdate = 0;
 unsigned long lastEnvelopeProcess = 0;
 unsigned long lastDisplayUpdate = 0;
+unsigned long lastClockTime = 0;          // Tracks the last external MIDI clock tick
 
 // ButtonManagerContext: glue struct passed around to avoid global rummaging
 ButtonManagerContext buttonContext = {
@@ -90,6 +91,7 @@ void processMIDI() {
     midiHandler.processIncomingMIDI();
 
     if (midiHandler.isClockTick()) {
+        lastClockTime = millis();
         // Advance beat
         midiBeatPosition = (midiBeatPosition + 1) % 8;
 
@@ -108,6 +110,26 @@ void processMIDI() {
 
         // Clear the clock flag
         midiHandler.clearClockTick();
+    }
+}
+
+// When the outside world stops keeping time, fall back to our own tapped tempo
+void processInternalClock() {
+    static unsigned long lastInternalTick = 0;
+    if (g_tappedBPM <= 0.0f) return;
+
+    float msPerTick = 60000.0f / (g_tappedBPM * 24.0f); // 24 PPQN
+    if (millis() - lastInternalTick >= msPerTick) {
+        lastInternalTick = millis();
+        midiBeatPosition = (midiBeatPosition + 1) % 8;
+        displayManager.updateDisplay(
+            midiBeatPosition,
+            std::vector<uint8_t>(),
+            envelopeFollowMode ? "EF ON" : "EF OFF",
+            activePot,
+            activeChannel,
+            envelopeMode
+        );
     }
 }
 
