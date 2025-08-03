@@ -5,6 +5,7 @@
 #include "PotentiometerManager.h"
 #include <EEPROM.h>
 #include "Globals.h"
+#include "Utility.h"
 
 // Reads all potentiometers via a pair of multiplexers. The most recent values
 // feed LEDManager for visual feedback and trigger MIDI messages through the
@@ -112,8 +113,9 @@ void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<Envel
                 potLastValues[potIndex] = smoothedValue[potIndex]; // Update last known value
                 dirtyFlags[potIndex] = true;
 
-    // Update LEDs…
-    ledManager.setPotValue(potIndex, smoothedValue[potIndex]);
+    // Update LEDs after translating the raw analog value to MIDI range
+    int midiValue = Utility::mapToMidiValue(smoothedValue[potIndex]);
+    ledManager.setPotValue(potIndex, midiValue);
 
     if (midiCallback) {
         midiCallback(
