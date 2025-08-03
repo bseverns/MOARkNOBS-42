@@ -51,6 +51,8 @@ public:
 
 private:
     bool clockTick = false;
+    unsigned long lastExternalClock = 0;
+    unsigned long lastInternalTick = 0;
     DisplayManager* _displayManager = nullptr;
 };
 

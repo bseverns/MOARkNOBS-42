@@ -648,6 +648,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "PROFILE %d", currentProfile);
         context.displayManager.displayStatus(buf, 1500);
     }
+    // (12) Ctrl1 + Ctrl2: Toggle MIDI clock output
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
+        g_clockOutEnabled = !g_clockOutEnabled;
+        context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF", 1000);
+    }
 }
 
 /**
