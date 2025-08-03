@@ -13,7 +13,7 @@ LEDManager::~LEDManager() {
 }
 
 LEDManager::LEDManager(const HardwareConfig& config)
-    : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
+    : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255), currentState(LEDState::IDLE), activeIndex(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
 
