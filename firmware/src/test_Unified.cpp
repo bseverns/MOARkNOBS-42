@@ -74,16 +74,49 @@ bool waitForAnyButton(const char* prompt = "Press any button to continue...")
 
 // ———————— Tests ——————————————
 
+// Walk each set of LEDs in turn, then ask the human if the show looked right.
 void testLEDs() {
   Serial.println("=== LED Test ===");
-  for (int i = 0; i < NUM_LEDS; ++i) {
+
+  // Slot LEDs get a rainbow chase via pot values
+  for (int i = 0; i < SLOT_LED_COUNT; ++i) {
     ledManager.setColor(CRGB::Black);
     ledManager.setPotValue(i, 127);
-    Serial.printf("LED %d ON? Press any button if lit.\n", i);
-    displayManager.showText("LED Test", ("LED #" + String(i)).c_str());
-    waitForAnyButton();
+    ledManager.update();
+    delay(50);
   }
+  displayManager.showText("LED Test", "Slots OK?", "Hit btn");
+  waitForAnyButton();
+
+  // Envelope follower indicators in grayscale
+  for (int i = 0; i < EF_LED_COUNT; ++i) {
+    ledManager.setColor(CRGB::Black);
+    ledManager.setEnvelopeLevel(i, 127);
+    ledManager.update();
+    delay(50);
+  }
+  displayManager.showText("LED Test", "Followers OK?", "Hit btn");
+  waitForAnyButton();
+
+  // Control button LED flash
   ledManager.setColor(CRGB::Black);
+  ledManager.triggerControlButton();
+  ledManager.update();
+  displayManager.showText("LED Test", "Ctrl LED?", "Hit btn");
+  waitForAnyButton();
+
+  // Pot halo indicators
+  for (int i = 0; i < POT_LED_COUNT; ++i) {
+    ledManager.setColor(CRGB::Black);
+    ledManager.setPotIndicator(i, 127);
+    ledManager.update();
+    delay(50);
+  }
+  displayManager.showText("LED Test", "Halos OK?", "Hit btn");
+  waitForAnyButton();
+
+  ledManager.setColor(CRGB::Black);
+  ledManager.update();
   displayManager.clear();
 }
 
