@@ -78,6 +78,25 @@ bool waitForAnyButton(const char* prompt = "Press any button to continue...")
   }
 }
 
+// Non-blocking check for any button press
+static bool anyButtonPressed() {
+  // scan U2’s COM
+  for (uint8_t b = 0; b < NUM_VIRTUAL_BUTTONS; ++b) {
+    uint8_t row = b / 8, col = b % 8;
+    for (int i = 0; i < PRIMARY_MUX_PINS; i++)
+      digitalWrite(primaryMuxPins[i], (row >> i) & 1);
+    for (int i = 0; i < SECONDARY_MUX_PINS; i++)
+      digitalWrite(secondaryMuxPins[i], (col >> i) & 1);
+    delayMicroseconds(5);
+    if (analogRead(buttonMuxAnalogPin) < 512) return true;
+  }
+  // direct-wired control buttons (active LOW)
+  for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
+    if (!digitalRead(TEST_CONTROL_PINS[i])) return true;
+  }
+  return false;
+}
+
 // ———————— Tests ——————————————
 
 // Walk each set of LEDs in turn, then ask the human if the show looked right.
@@ -242,6 +261,37 @@ void testPots() {
   displayManager.clear();
 }
 
+void testFilterPots() {
+  Serial.println("=== Filter Filter Pots ===");
+  Serial.println("Sweep Freq/Q pots then press any button.");
+  float minFreq = 1e6, maxFreq = 0;
+  float minQ = 10, maxQ = 0;
+  while (!anyButtonPressed()) {
+    int rawFreq = buttonManager.getControlPotValue(1);
+    int rawQ = buttonManager.getControlPotValue(2);
+    float freq = map(rawFreq, 0, 1023, 20, 5000);
+    float q = map(rawQ, 0, 1023, 50, 400) / 100.0f;
+    if (freq < minFreq) minFreq = freq;
+    if (freq > maxFreq) maxFreq = freq;
+    if (q < minQ) minQ = q;
+    if (q > maxQ) maxQ = q;
+    displayManager.showFilterTuning("Freq", freq, "Q", q);
+    Serial.printf("Freq=%.1f Hz Q=%.2f\n", freq, q);
+    delay(100);
+  }
+  while (anyButtonPressed()) delay(10);
+  bool freqPass = (minFreq <= 30 && maxFreq >= 4900);
+  bool qPass = (minQ <= 0.6 && maxQ >= 3.9);
+  char line1[32], line2[32];
+  sprintf(line1, "F %.0f-%.0f %s", minFreq, maxFreq, freqPass ? "OK" : "BAD");
+  sprintf(line2, "Q %.1f-%.1f %s", minQ, maxQ, qPass ? "OK" : "BAD");
+  Serial.printf("Freq range: %.1f-%.1f Hz [%s]\n", minFreq, maxFreq, freqPass ? "PASS" : "FAIL");
+  Serial.printf("Q range: %.1f-%.1f [%s]\n", minQ, maxQ, qPass ? "PASS" : "FAIL");
+  displayManager.showText("Filter Pots", line1, line2);
+  delay(1000);
+  displayManager.clear();
+}
+
 void testEnvelopes() {
   Serial.println("=== Envelope Test ===");
   for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
@@ -306,6 +356,7 @@ void setup() {
   testLEDs();
   testButtons();
   testPots();
+  testFilterPots();
   testEnvelopes();
   testDisplay();
 
