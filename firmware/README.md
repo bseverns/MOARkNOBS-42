@@ -354,6 +354,7 @@ The firmware juggles work with three cooperative schedulers so the Teensy never 
 - **Low Priority – 50–100 ms**: LED animations, filter/arp tuning, and OLED refreshes.
 
 The `loop()` function ticks these schedulers in order and then polls buttons and pots every pass. Tasks yield quickly—no preemption, just disciplined cooperation so UI and MIDI stay tight.
+
 =======
 ## Build It (PlatformIO or Bust)
 

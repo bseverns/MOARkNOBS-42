@@ -55,6 +55,11 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Variables clarified for easier maintenance. [6d769ec]
 - Documentation overhaul adds flashing instructions, diagrams, and links back to this history. Firmware comments and tests gain more clarity. [822a1ea, 5f3e34b, e25622e, 0941fcb]
 
+### August
+- Finalizing helpers and test suites.
+- Hardware v1.02 design completed.
+- Clarifications added to language and comments expanded throughout the repo.
+
 ## Overview
 
 Across roughly seven months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:
