@@ -82,6 +82,12 @@ private:
     float baseline = 0.0f; // value subtracted from raw input to ditch noise
     float gain = 1.0f;     // scales the baseline-adjusted level before MIDI mapping
 
+    // ADC and smoothing tweaks
+    uint8_t oversampleCount = 4; // number of reads per update
+    float smoothingAlpha = 0.2f; // EWMA weight for new samples
+    int smoothedLevel = 0;       // running smoothed MIDI value
+    float vref;                  // cached reference voltage
+
     PotentiometerManager* potManager;
     BiquadFilter filter;          // Existing custom filter
     /**
@@ -151,6 +157,11 @@ public:
     void setEnvelopePair(int envA, int envB);
 
     /**
+     * Sample the voltage reference and current input to stash baseline offsets.
+     */
+    void calibrate();
+
+    /**
      * Take a short average of the input to calculate the noise baseline.
      * This offset gets subtracted from every raw read before scaling.
      */
@@ -161,6 +172,14 @@ public:
      * Higher gain makes the envelope punchier before it's squeezed into 0–127.
      */
     void setGain(float g) { gain = g; }
+
+    /** Set how many ADC samples to average per update. */
+    void setOversampleCount(uint8_t count);
+    uint8_t getOversampleCount() const;
+
+    /** Set the EWMA smoothing factor applied after oversampling. */
+    void setSmoothingAlpha(float alpha);
+    float getSmoothingAlpha() const;
 };
 
 #endif // ENVELOPE_FOLLOWER_H
