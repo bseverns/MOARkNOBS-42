@@ -229,6 +229,7 @@ void processEnvelopes() {
                 envelope->update(); // Update envelope values
                 uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
                 envelope->applyToCC(potIndex, ccValue); // Modulate CC value
+                ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
                 if (ccValue != potentiometerManager.getLastValue(potIndex)) { // Avoid redundant MIDI messages
                     midiHandler.sendControlChange(
@@ -241,6 +242,11 @@ void processEnvelopes() {
                 }
             }
         }
+    }
+
+    uint8_t slotVal = configManager.getSlot(buttonContext.activePot).value;
+    for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
+        ledManager.setPotIndicator(i, slotVal);
     }
 }
 

@@ -16,7 +16,13 @@ inline constexpr uint8_t  LED_PIN         = 6;    //!< WS2812 LED data pin
 inline constexpr uint8_t  STATUS_LED_PIN  = 23;   //!< Board status indicator
 inline constexpr uint8_t  PIN_ROW_DRV     = 7;    //!< Output driver for button rows
 
-inline constexpr uint16_t NUM_LEDS        = 42;   //!< Number of addressable LEDs
+inline constexpr uint16_t SLOT_LED_COUNT  = 42;   //!< LEDs mapped to virtual slots
+inline constexpr uint8_t  EF_LED_COUNT    = 6;    //!< Envelope follower indicators
+inline constexpr uint8_t  POT_LED_COUNT   = 3;    //!< Physical pot indicators
+inline constexpr uint16_t EF_LED_OFFSET   = SLOT_LED_COUNT;
+inline constexpr uint16_t CONTROL_LED_INDEX = EF_LED_OFFSET + EF_LED_COUNT;
+inline constexpr uint16_t POT_LED_OFFSET  = CONTROL_LED_INDEX + 1;
+inline constexpr uint16_t NUM_LEDS        = SLOT_LED_COUNT + EF_LED_COUNT + 1 + POT_LED_COUNT; //!< Total LED count
 inline constexpr uint8_t  NUM_BUTTONS     = 6;    //!< Number of direct control buttons
 inline constexpr uint16_t OLED_WIDTH      = 128;  //!< OLED display width in pixels
 inline constexpr uint16_t OLED_HEIGHT     = 64;   //!< OLED display height in pixels

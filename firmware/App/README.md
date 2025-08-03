@@ -1,6 +1,6 @@
 # WebSerial Configuration App
 
-`benzknobz.html` is a very small HTML page used to edit the MOARkNOBS controller configuration over USB. It relies on the Web Serial API so you need Chrome or Edge.
+`benzknobz.html` is a very small HTML page used to edit the MOARkNOBS controller configuration over USB. It relies on the Web Serial API so you need Chrome or Edge. The latest schema exposes brightness and colour settings for the new EF meters, control beacon and pot halos.
 
 The page reads a JSON schema and the current settings from the board, builds a form and then lets you push changes back.
 

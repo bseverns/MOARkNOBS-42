@@ -34,7 +34,7 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 * **2 more physical pots**: for filter tuning.
 * **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
 * **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
-* **OLED Display + Addressable LEDs**: full visual feedback like a punk rock spaceship control panel.
+* **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 ring the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.
 * **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
 * **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
 
@@ -239,7 +239,7 @@ All changes are visualized in real time on the display.
 
 ## LEDs + Display
 
-LED colours follow the states defined in `LEDManager::update()`. They provide at-a-glance feedback while you twist and mash buttons:
+LED colours follow the states defined in `LEDManager::update()`. The strip now hosts 52 diodes: six gauge the raw strength of each envelope follower, a single control-button sentinel blasts full white for 750 ms then idles at half power for another 1.25 s, and three pot halos mirror the value of the currently selected slot. They provide at-a-glance feedback while you twist and mash buttons:
 
 - **Red** – the currently active pot/slot.
 - **Green** – envelope mode enabled for that slot.
