@@ -394,6 +394,14 @@ Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```
 
+Craving button gossip over serial? Build with `BM_DEBUG=1` to unleash verbose ButtonManager logs:
+
+```bash
+pio run -e teensy40_main -D BM_DEBUG=1
+```
+
+Leave it off and the firmware keeps its mouth shut.
+
 Want to poke the main test rig instead? Swap the environment:
 
 ```bash

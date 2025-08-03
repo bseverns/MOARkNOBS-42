@@ -25,8 +25,11 @@ extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
 extern Arpeggiator arpeggiator;
 
-// A debug flag for local logs if desired
-#define BM_DEBUG 1
+// Verbose logging is off by default. Flip BM_DEBUG to 1 at build time for noise.
+#ifndef BM_DEBUG
+#define BM_DEBUG 0
+#endif
+
 #if BM_DEBUG
   #define BM_DBG_PRINT(x)   Serial.print(x)
   #define BM_DBG_PRINTLN(x) Serial.println(x)
