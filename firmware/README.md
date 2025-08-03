@@ -26,6 +26,43 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 
+## Build It (PlatformIO or Bust)
+
+All builds happen inside this `firmware/` directory. Fire up
+PlatformIO like you mean it:
+
+```bash
+pio run -e teensy40_main
+```
+
+Expected noise in your terminal:
+
+```text
+Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
+...snip...
+========================= [SUCCESS] Took XX.XX seconds =========================
+```
+
+Want to poke the main test rig instead? Swap the environment:
+
+```bash
+pio run -e teensy40_mainTEST
+```
+
+Which usually ends with:
+
+```text
+Processing teensy40_mainTEST (platform: teensy; board: teensy40; framework: arduino)
+...snip...
+========================= [SUCCESS] Took XX.XX seconds =========================
+```
+
+Other test flavors are available for deeper debugging:
+`teensy40_unified_test`, `teensy40_biquad_test`,
+`teensy40_eeprom_persistence`, and `teensy40_slot_verify`.
+
+Run any of them with `pio run -e <env>` and bask in the compile-time glory.
+
 ## Hardware Redefined
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:
@@ -87,6 +124,29 @@ Test files used in the development of this project include:
 * `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
 * `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
 * `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
+
+## Module Cheat Sheet
+
+| Module | What it wrangles |
+|-------|------------------|
+| `ButtonManager` | Scans the 7×6 button matrix, debounces it, and dishes out events. |
+| `PotentiometerManager` | Reads the three analog pots and smooths their jittery souls. |
+| `EnvelopeFollower` | Converts audio/CV into modulation curves with selectable filters. |
+| `LEDManager` | Paints 52 WS2812s and that lone status LED with righteous fury. |
+| `DisplayManager` | Talks to the OLED and makes pixels dance. |
+| `MIDIHandler` | Speaks MIDI over USB and DIN, mirroring every message. |
+| `ConfigManager` | Saves to EEPROM, restores from backup when things go sideways. |
+| `Arpeggiator` | Spits out repeating patterns so you can noodle hands‑free. |
+| `Globals` | Shared constants and state that keep the gang in sync. |
+| `Utility` | Misc helpers—because even chaos needs some glue. |
+
+```
+[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB & DIN]
+                   |-> [LEDManager] (bling)
+                   |-> [DisplayManager] (OLED)
+                   |-> [ConfigManager] (EEPROM)
+                   |-> [EnvelopeFollower] (modulation)
+```
 
 ## Button Mayhem
 Buttons are scanned continuously using `setMux()` which sets the row and column addresses before each read.
