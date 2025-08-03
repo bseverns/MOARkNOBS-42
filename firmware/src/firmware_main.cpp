@@ -39,9 +39,6 @@ BiquadFilter filter;                          // Shared filter template for enve
 TaskScheduler scheduler;                      // Legacy scheduler kept for posterity (most work lives in Utility)
 Arpeggiator arpeggiator;                      // Keeps notes chugging along in time
 
-// tempo
-unsigned long lastClockTime = 0;              // ms timestamp of the most recent external MIDI clock
-
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
 // Control buttons are direct-wired (not part of the mux matrix)
@@ -89,40 +86,10 @@ ButtonManagerContext buttonContext = {
     potToEnvelopeMap
 };
 
-void processInternalClock() {
-    // For 24 PPQN (like MIDI clock), you multiply BPM * 24 = pulses per minute
-    // So each pulse is 60000 / (BPM*24) milliseconds
-    static unsigned long lastTick = 0;
-    static float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
-
-    unsigned long now = millis();
-    msPerTick = 60000.0f / (g_tappedBPM * 24.0f); // recalc in case BPM changed
-
-    if (now - lastTick >= msPerTick) {
-        lastTick += msPerTick; // schedule the next tick
-
-        // do the same code you do on external MIDI Clock:
-        midiBeatPosition = (midiBeatPosition + 1) % 8;
-
-        // Optionally call display update or other “beat-based” logic:
-        displayManager.updateDisplay(
-            midiBeatPosition,
-            std::vector<uint8_t>(), // envelope levels if desired
-            envelopeFollowMode ? "EF ON" : "EF OFF",
-            activePot,
-            activeChannel,
-            envelopeMode
-        );
-    }
-}
-
 void processMIDI() {
     midiHandler.processIncomingMIDI();
 
     if (midiHandler.isClockTick()) {
-        // Record the time we received an external clock
-        lastClockTime = millis();
-
         // Advance beat
         midiBeatPosition = (midiBeatPosition + 1) % 8;
 
@@ -220,8 +187,9 @@ void processSerial() {
             Serial.print(ledColor.g);
             Serial.print(",");
             Serial.println(ledColor.b);
-        }
-        else {
+        } else if (configManager.handleCommand(command)) {
+            // handled inside ConfigManager
+        } else {
             Serial.println("Unknown command: " + command);
         }
     }
@@ -419,7 +387,7 @@ void setup() {
     // — Envelope followers —
     for (auto& ef : envelopeFollowers) {
         ef.toggleActive(true);
-        ef.calibrateBaseline();
+        ef.calibrate();
     }
     float sf, sq;
     EEPROM.get(EEPROM_FILTER_FREQ, sf);
@@ -461,6 +429,7 @@ void setup() {
     // High-priority (1 ms):
     Utility::schedulerHigh.addTask(processMIDI,          hwConfig.midiTaskInterval);
     Utility::schedulerHigh.addTask([](){
+
       if (millis() - lastClockTime > CLOCK_TIMEOUT_MS)
         processInternalClock();
     }, hwConfig.midiTaskInterval);

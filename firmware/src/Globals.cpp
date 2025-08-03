@@ -28,6 +28,7 @@ HardwareConfig hwConfig = {
 // Global runtime variables
 float g_vref       = 1.65f;    // midpoint voltage reference
 float g_tappedBPM  = 120.0f;   // last tapped tempo
+bool  g_clockOutEnabled = false; // runtime toggle for MIDI clock out
 
 static void loadFromJson(HardwareConfig& cfg) {
 #if __has_include(<ArduinoJson.h>)

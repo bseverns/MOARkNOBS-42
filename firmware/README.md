@@ -170,6 +170,7 @@ And yes, combo presses are supported:
 | #0 + #5    | Set slot to Program Change               |
 | #1 + #4    | Set slot to Aftertouch                   |
 | #1 + #5    | Set slot to Pitch Bend                   |
+| #1 + #2    | Toggle MIDI clock output                 |
 | #2 + #5    | Cycle ARG envelope pair                  |
 | #3 + #5    | Toggle Arpeggiator mode                  |
 
@@ -350,11 +351,12 @@ power cycle.
 
 ### Incoming MIDI and Clock Sync
 
-The firmware listens on both USB and DIN.  Incoming bytes are parsed and
-can trigger on‑screen feedback or internal actions.  MIDI Clock messages
-are recognised to advance the internal beat counter.  If no external
-clock is seen for two seconds the MN42 falls back to its own tempo based
-on the tapped BPM, keeping modulation and display animations in time.
+The firmware listens on both USB and DIN. Incoming bytes are parsed and can
+trigger on‑screen feedback or internal actions. MIDI Clock messages advance
+the beat counter and, when you feel like being the metronome, the box can spit
+them back out. Slam Control #1 + #2 to arm or kill clock out. External clock
+always rules; if it ghosts you for two seconds, the tapped BPM rises from the
+grave and keeps everything stomping in time.
 
 ### High‑Resolution Modulation
 
@@ -428,8 +430,20 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
 * Assign CCs visually
 * Set envelope pairings
-* Tweak filter types, EF settings
+* Tweak filter types, EF settings, and ARG pairings
 * Save back to EEPROM over WebSerial
+
+### Filter & ARG WebSerial Commands
+
+The browser flings a couple of plain-text orders over WebSerial and the
+firmware salutes:
+
+| Command | What it does |
+|---------|--------------|
+| `GET_FILTER` | Returns `type,freq,q` for the active envelope filter. |
+| `SET_FILTER <type,freq,q>` | Stores filter shape, cutoff and Q into EEPROM. |
+| `GET_ARGPAIR` | Spits back the two envelope indices blended in ARG mode. |
+| `SET_ARGPAIR <a,b>` | Persists a new envelope follower duo for ARG shenanigans. |
 
 ## Development Timeline
 

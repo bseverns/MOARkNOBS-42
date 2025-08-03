@@ -187,6 +187,12 @@ public:
     /** Load MIDISlot structures from EEPROM into the provided buffer. */
     void loadMIDISlots(MIDISlot* slots, size_t count);
 
+    /**
+     * Parse a WebSerial command. Returns true if the command was
+     * recognised and handled.
+     */
+    bool handleCommand(const String& command);
+
     /** Determine if the display should switch to the screensaver. */
     bool shouldRunScreensaver() const;
 
