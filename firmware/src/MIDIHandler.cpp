@@ -158,3 +158,9 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
   MIDI.sendPitchBend(bend, channel);
   usbMIDI.sendPitchBend(bend, channel);
 }
+
+void MIDIHandler::sendClock() {
+  if (!g_clockOutEnabled) return;
+  MIDI.sendClock();
+  usbMIDI.sendClock();
+}

@@ -92,6 +92,7 @@ constexpr uint8_t SLOT_EEPROM_SIZE = 6;  // bytes required to store a MIDISlot
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;
 extern bool g_clockOutEnabled;
+extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

@@ -44,6 +44,7 @@ public:
     void sendProgramChange(uint8_t program, uint8_t channel);
     void sendAftertouch(uint8_t pressure, uint8_t channel);
     void sendPitchBend(int16_t bend, uint8_t channel);
+    void sendClock();
 
     /** MIDI clock helpers. */
     bool isClockTick();
