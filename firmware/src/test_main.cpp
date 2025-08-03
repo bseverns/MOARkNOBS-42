@@ -1,8 +1,9 @@
 /*
  * MOARkNOBS Hardware Smoke Test
  *
- * Validates LEDs, the button matrix, potentiometers, envelope followers and
- * the OLED display. Use Control Button #0 to advance through each phase.
+ * Validates LEDs, the button matrix, one slot pot plus two filter-tuning pots,
+ * envelope followers and the OLED display. Use Control Button #0 to advance
+ * through each phase.
  *
  * Build and upload with PlatformIO environment `teensy40_mainTEST`
  * (e.g. `platformio run -e teensy40_mainTEST -t upload`).
@@ -143,21 +144,52 @@ void testButtonManager() {
   Serial.println("ButtonManager test done.");
 }
 
+// Checks the lone slot pot plus the two filter-tuning rebels.
 void testPotentiometerManager() {
   Serial.println("\n--- PotentiometerManager Test ---");
-  for (int idx = 0; idx < NUM_POTS; idx++) {
-    Serial.printf("Pot #%d: set MIN, press Btn0.\n", idx);
-    waitForButtonPress();
-    int vmin = potentiometerManager.readRawPot(idx);
-    
-    Serial.printf("Pot #%d: set MAX, press Btn0.\n", idx);
-    waitForButtonPress();
-    int vmax = potentiometerManager.readRawPot(idx);
 
-    int delta = vmax - vmin;
-    bool pass = delta >= POT_RANGE_MIN;
-    Serial.printf("Pot #%d range check: MIN=%d MAX=%d Δ=%d [%s]\n", idx, vmin, vmax, delta, pass ? "PASS" : "FAIL");
-  }
+  // --- Slot pot -----------------------------------------------------------
+  Serial.println("Slot Pot: crank to MIN, hit Btn0.");
+  waitForButtonPress();
+  int slotMin = potentiometerManager.readRawPot(0);
+
+  Serial.println("Slot Pot: now twist to MAX, hit Btn0.");
+  waitForButtonPress();
+  int slotMax = potentiometerManager.readRawPot(0);
+
+  int slotDelta = slotMax - slotMin;
+  bool slotPass = slotDelta >= POT_RANGE_MIN;
+  Serial.printf("Slot Pot sweep: MIN=%d MAX=%d Δ=%d [%s]\n",
+                slotMin, slotMax, slotDelta, slotPass ? "PASS" : "FAIL");
+
+  // --- Filter frequency pot ----------------------------------------------
+  Serial.println("Filter Freq: roll to MIN, Btn0.");
+  waitForButtonPress();
+  int freqMin = buttonManager.getControlPotValue(1);
+
+  Serial.println("Filter Freq: peg it to MAX, Btn0.");
+  waitForButtonPress();
+  int freqMax = buttonManager.getControlPotValue(1);
+
+  int freqDelta = freqMax - freqMin;
+  bool freqPass = freqDelta >= POT_RANGE_MIN;
+  Serial.printf("Filter Freq sweep: MIN=%d MAX=%d Δ=%d [%s]\n",
+                freqMin, freqMax, freqDelta, freqPass ? "PASS" : "FAIL");
+
+  // --- Filter resonance/Q pot --------------------------------------------
+  Serial.println("Filter Q: dive to MIN, Btn0.");
+  waitForButtonPress();
+  int qMin = buttonManager.getControlPotValue(2);
+
+  Serial.println("Filter Q: hammer to MAX, Btn0.");
+  waitForButtonPress();
+  int qMax = buttonManager.getControlPotValue(2);
+
+  int qDelta = qMax - qMin;
+  bool qPass = qDelta >= POT_RANGE_MIN;
+  Serial.printf("Filter Q sweep: MIN=%d MAX=%d Δ=%d [%s]\n",
+                qMin, qMax, qDelta, qPass ? "PASS" : "FAIL");
+
   Serial.println("PotentiometerManager test done.");
 }
 

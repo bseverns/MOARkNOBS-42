@@ -6,7 +6,7 @@
 
 ## What's This?
 
-The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with a 3 control pots, a bunch of buttons, and enough virtual slots to make your DAW weep.
+The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
 
 Forget fragile GUIs and boutique workflows. This beast lives in the guts: built on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
@@ -30,8 +30,8 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:
 
-* **1 physical control pot**: total recall per slot.
-* **2 more physical pots**: for filter tuning.
+* **1 slot pot**: total recall per slot.
+* **2 filter-tuning pots**: dial in frequency and resonance.
 * **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
 * **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
 * **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 ring the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.

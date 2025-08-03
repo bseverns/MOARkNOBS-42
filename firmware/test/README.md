@@ -16,7 +16,7 @@ LEDManager: one LED at a time, now including the new EF meters, control beacon a
 
 ButtonManager: tests both the matrix-multiplexed buttons and the direct-wired control buttons
 
-PotentiometerManager: reads all knobs, prints analog values
+PotentiometerManager: sweeps the lone slot pot; filter knobs get read via ButtonManager
 
 EnvelopeFollower: confirms dynamic envelope response
 
