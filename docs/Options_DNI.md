@@ -39,10 +39,8 @@
 
 | Item                                   | Ref                  | Status    | Notes                                                                                                   |
 | -------------------------------------- | -------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
-| Series resistor                        | R20 (33–100 Ω)       | Installed | Damps edges (keep)                                                                                      |
 | Shunt cap (data line)                  | C\_LEDD (100–220 pF) | **DNI**   | Only if EMI or overshoot persists after good routing                                                    |
 | Buffer/level shifter (AHCT125 channel) | U8.x channel         | **Opt**   | Use if long external LED cable / signal degradation; otherwise may tie OE high and leave channel unused |
-| Unused buffer channels tie‑off         | U8 unused inputs/OE  | Required  | Inputs → GND, OE → VCC (disable)                                                                        |
 
 ---
 
