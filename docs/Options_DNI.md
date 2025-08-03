@@ -30,14 +30,12 @@
 
 ## 2. I²C / Display Subsystem
 
-| Item                      | Ref                             | Status     | Notes                                                                |
-| ------------------------- | ------------------------------- | ---------- | -------------------------------------------------------------------- |
-| External I²C pull-ups     | R\_I2C1, R\_I2C2 (4.7 kΩ)       | **Opt**    | Populate if OLED module pull-ups removed or weak; pull to 3.3 V only |
-| Series edge damping       | R\_SDA, R\_SCL (22–33 Ω)        | **DNI**    | Populate if ringing / overshoot on scope                             |
-| Alternate address jumper  | SJ\_ADDR                        | **Future** | If second display or address conflict later                          |
-| OLED VCC 5 V support path | Net note                        | **Opt**    | Default to 3.3 V; power at 5 V only after verifying pull-up levels   |
-| Test header (debug)       | J\_I2C\_DEBUG (GND,3V3,SDA,SCL) | Installed  | For logic analyzer / expansion                                       |
-
+| Item                     | Ref                             | Status     | Notes |
+|--------------------------|---------------------------------|------------|-------|
+| External I²C pull-ups    | R_I2C1, R_I2C2 (4.7 kΩ)         | **Opt**    | Populate if OLED module pull-ups removed or weak; pull to 3.3 V only |
+| Series edge damping      | R_SDA, R_SCL (22–33 Ω)          | **DNI**    | Populate if ringing / overshoot on scope |
+| Alternate address jumper | SJ_ADDR                         | **Future** | If second display or address conflict later |
+| OLED VCC 5 V support path| Net note                        | **Opt**    | Default to 3.3 V; power at 5 V only after verifying pull-up levels |
 ---
 
 ## 3. LED Data Path
