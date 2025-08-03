@@ -113,6 +113,13 @@ public:
      */
     bool isMuxButtonPressed(uint8_t index);
 
+    /**
+     * Peek at the control pots and buttons without running the whole
+     * ::processButtons loop.  Handy for tests, but normal code should
+     * let processButtons() do the heavy lifting.
+     */
+    void scanControlInputs(ButtonManagerContext& context);
+
 private:
     // Mux select pins & analog input for virtual buttons scan
     const uint8_t* _primaryMuxPins;
@@ -168,8 +175,6 @@ private:
     void doSinglePressAction(uint8_t index, ButtonManagerContext& context);
 
     // ---- New multiplexer-based control scanning ----
-    /** Poll the dedicated control inputs and update _ctrlPotValues. */
-    void scanControlInputs(ButtonManagerContext& context);
     /** Update a single control button state during scanning. */
     void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context);
     int _ctrlPotValues[3] = {0};
