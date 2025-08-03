@@ -3,6 +3,22 @@
 This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware. 
 
 These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
+## Now with Unity smoke tests
+
+We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
+
+```bash
+pio test -e teensy40_mainTEST
+```
+
+### test_envelope_follower.cpp
+Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
+
+### test_config_manager.cpp
+Corrupts EEPROM headers on purpose and checks that the backup block rides to the rescue.
+
+### test_button_manager.cpp
+Fakes time itself to ensure long presses don't fire until 500ms has actually passed.
 
 ## File Descriptions
 
