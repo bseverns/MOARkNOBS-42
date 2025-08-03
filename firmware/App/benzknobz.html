@@ -83,13 +83,34 @@ button:hover {
       margin-top: 10px;
       font-size: 14px;
     }
+    #slots, #envelopes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: center;
+    }
+    #slots progress, #envelopes progress {
+      width: 40px;
+    }
   </style>
   <script type="module">
   let port, reader, writer;
+  const encoder = new TextEncoder();
+  const lineQueue = [], lineWaiters = [];
 
-    const statusEl = document.getElementById("status");
-    const connectBtn = document.getElementById("connect");
-    const saveBtn    = document.getElementById("save");
+  const statusEl = document.getElementById("status");
+  const connectBtn = document.getElementById("connect");
+  const saveBtn    = document.getElementById("save");
+  const slotContainer = document.getElementById("slots");
+  const envContainer  = document.getElementById("envelopes");
+  const slotEls = Array.from({length:42}, () => {
+    const p = document.createElement("progress");
+    p.max = 127; p.value = 0; slotContainer.appendChild(p); return p;
+  });
+  const envEls = Array.from({length:6}, () => {
+    const p = document.createElement("progress");
+    p.max = 127; p.value = 0; envContainer.appendChild(p); return p;
+  });
 
     async function connect() {
       try {
@@ -107,7 +128,8 @@ button:hover {
         connectBtn.disabled = true;   // disable connect after success
         saveBtn.disabled    = false;  // allow saving now
 
-        // Optionally pre‑load form automatically:
+        readLoop();
+        await send("HELLO");
         const schema = await loadSchema();
         const config = await loadConfig();
         buildForm(schema, config);
@@ -117,23 +139,50 @@ button:hover {
       }
     }
 
+    function getLine() {
+      return lineQueue.length ?
+        Promise.resolve(lineQueue.shift()) :
+        new Promise(res => lineWaiters.push(res));
+    }
+
     async function send(cmd) {
-        // encode & write
-        const packet = encoder.encode(cmd + "\n");
-        await writer.write(packet);
+      const packet = encoder.encode(cmd + "\n");
+      await writer.write(packet);
+      return await getLine();
+    }
 
-        // read until newline
-        let response = "";
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          response += value || "";
-          if (response.includes("\n")) break;
+    async function readLoop() {
+      let buf = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += value;
+        let idx;
+        while ((idx = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, idx).trim();
+          buf = buf.slice(idx + 1);
+          if (!line) continue;
+          try {
+            const msg = JSON.parse(line);
+            if (msg.slots && msg.envelopes) {
+              drawState(msg);
+              continue;
+            }
+          } catch (e) {
+            // not JSON, treat as raw line
+          }
+          if (lineWaiters.length) lineWaiters.shift()(line);
+          else lineQueue.push(line);
         }
-        return response.trim();
       }
+    }
 
-      async function loadSchema() {
+    function drawState(msg) {
+      msg.slots.forEach((v,i)=> slotEls[i].value = v);
+      msg.envelopes.forEach((v,i)=> envEls[i].value = v);
+    }
+
+    async function loadSchema() {
         try {
           statusEl.textContent = "Loading schema…";
           const raw = await send("GET_SCHEMA");
@@ -210,10 +259,8 @@ async function saveConfig() {
         data[k] = isNaN(v)?v: +v;
       }
     });
-    const resp = await send("SET_ALL " + JSON.stringify(data));
-    statusEl.textContent = resp.startsWith("OK")
-      ? "Saved!"
-      : `Save response: ${resp}`;
+    await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
+    statusEl.textContent = "Save sent.";
   } catch (err) {
     console.error(err);
     statusEl.textContent = `Save failed: ${err.message || err}`;
@@ -232,5 +279,11 @@ saveBtn.addEventListener("click", saveConfig);
   <div id="form"></div>
   <button id="save" disabled>Save</button>
   <div id="status"></div>
+  <div id="live">
+    <h2>Live Slots</h2>
+    <div id="slots"></div>
+    <h2>Envelope Levels</h2>
+    <div id="envelopes"></div>
+  </div>
 </body>
 </html>
