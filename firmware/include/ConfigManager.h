@@ -32,25 +32,38 @@ class MIDIHandler;
  * 4*NUM_POTS + 5  ARG method                       1
  * 4*NUM_POTS + 6  ARG env A                        1
  * 4*NUM_POTS + 7  ARG env B                        1
- * 4*NUM_POTS + 8-199  Reserved/buffer                 ~50
- * 200             Primary magic (0xABCD)           2
- * 202             Backup magic  (0xDCBA)           2
+ * 4*NUM_POTS + 8  Config version                   1
+ * 4*NUM_POTS + 9-199  Reserved/buffer                 ~50
+ * 200             CRC16 of primary block           2
+ * 202             Primary magic (0xABCD)           2
  * 204-225        Reserved/buffer                 part of above
  * 226             Backup copy of config starts     mirrors layout
+ * 426             CRC16 of backup block            2
+ * 428             Backup magic  (0xDCBA)           2
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
  * firmware punts to the backup block (tagged with
- * EEPROM_MAGIC_BACKUP) as a safety net. On boot the tags are
- * inspected in order-primary first, backup second-to decide
- * which copy to trust.
+ * EEPROM_MAGIC_BACKUP) as a safety net. Each block carries its
+ * own CRC16 for data integrity.
  */
 #endif
 
+#define CONFIG_VERSION 1
+
 #define EEPROM_START_ADDRESS 0
-#define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
+#define EEPROM_BLOCK_SIZE 200
+#define EEPROM_CRC_PRIMARY      (EEPROM_START_ADDRESS + EEPROM_BLOCK_SIZE)
+#define EEPROM_MAGIC_PRIMARY_ADDR (EEPROM_CRC_PRIMARY + 2)
+#define EEPROM_BACKUP_START     (EEPROM_MAGIC_PRIMARY_ADDR + 2 + 22)  // Space after primary block/CRC/magic/reserved
+#define EEPROM_CRC_BACKUP       (EEPROM_BACKUP_START + EEPROM_BLOCK_SIZE)
+#define EEPROM_MAGIC_BACKUP_ADDR (EEPROM_CRC_BACKUP + 2)
+
 #define EEPROM_MAGIC_PRIMARY 0xABCD  // Validates the main config block
 #define EEPROM_MAGIC_BACKUP  0xDCBA  // Signals a sane backup image
+
+// legacy alias for older tests/tools
+#define EEPROM_MAGIC_ADDRESS EEPROM_MAGIC_PRIMARY_ADDR
 
 #define EEPROM_POT_CHANNELS EEPROM_START_ADDRESS
 #define EEPROM_POT_CC (EEPROM_POT_CHANNELS + NUM_POTS)
@@ -62,7 +75,7 @@ class MIDIHandler;
 #define EEPROM_ARG_METHOD   (EEPROM_ARG_MODE + 1)
 #define EEPROM_ARG_ENV_A    (EEPROM_ARG_METHOD + 1)
 #define EEPROM_ARG_ENV_B    (EEPROM_ARG_ENV_A + 1)
-#define EEPROM_BACKUP_START (EEPROM_ARG_ENV_B + 1 + 50)  // Space after primary + buffer
+#define EEPROM_CONFIG_VERSION (EEPROM_ARG_ENV_B + 1)
 
 class EnvelopeFollower;
 
@@ -206,6 +219,7 @@ private:
     bool loadBackupConfiguration(std::vector<uint8_t>& potChannels); // restore from backup copy
     void readEEPROM(bool backup);                      // raw EEPROM read helper
     void writeEEPROM(bool backup);                     // raw EEPROM write helper
+    uint16_t computeCRC(int baseAddr);                 // CRC helper
 
     //virtual slot/array:
     std::array<uint8_t, NUM_POTS>   _potChannels; // your pot→CC map

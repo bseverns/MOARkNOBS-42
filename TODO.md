@@ -17,3 +17,4 @@
 - Config CRC/versioning.
 - Expanded MIDI handling.
 - Envelope follower persistence & calibration.
+- WebSerial config export/import.

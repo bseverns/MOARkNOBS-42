@@ -11,14 +11,20 @@ ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
 
 // Centralized EEPROM health check
 bool ConfigManager::checkEEPROMHealth(bool backup) {
-    int address = backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS;
-    uint16_t magic = EEPROM.read(address) << 8 | EEPROM.read(address + 1);
-    return (magic == (backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY));
+    int crcAddress   = backup ? EEPROM_CRC_BACKUP : EEPROM_CRC_PRIMARY;
+    int magicAddress = backup ? EEPROM_MAGIC_BACKUP_ADDR : EEPROM_MAGIC_PRIMARY_ADDR;
+    uint16_t storedCRC = EEPROM.read(crcAddress) << 8 | EEPROM.read(crcAddress + 1);
+    uint16_t magic     = EEPROM.read(magicAddress) << 8 | EEPROM.read(magicAddress + 1);
+    if (magic != (backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY)) {
+        return false;
+    }
+    uint16_t calc = computeCRC(backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
+    return storedCRC == calc;
 }
 
 // Write magic number to EEPROM
 void ConfigManager::writeMagicNumber(bool backup) {
-    int address = backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS;
+    int address = backup ? EEPROM_MAGIC_BACKUP_ADDR : EEPROM_MAGIC_PRIMARY_ADDR;
     uint16_t magic = backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY;
     EEPROM.update(address, (magic >> 8) & 0xFF);
     EEPROM.update(address + 1, magic & 0xFF);
@@ -26,7 +32,7 @@ void ConfigManager::writeMagicNumber(bool backup) {
 
 // Save configuration with verification and backup
 void ConfigManager::saveConfiguration() {
-    writeEEPROM(false);  // Write primary
+    writeEEPROM(false);  // Write primary (includes CRC)
     writeMagicNumber(false);
 
     // Verify
@@ -41,12 +47,17 @@ void ConfigManager::saveConfiguration() {
 // Load configuration (primary)
 bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels) {
     if (checkEEPROMHealth(false)) {
-        readEEPROM(false);
-        potChannels.clear();
-        for (uint8_t i = 0; i < _numPots; i++) {
-            potChannels.push_back(_potChannels[i]);
+        uint8_t version = EEPROM.read(EEPROM_START_ADDRESS + EEPROM_CONFIG_VERSION);
+        if (version != CONFIG_VERSION) {
+            Serial.println("Config version mismatch.");
+        } else {
+            readEEPROM(false);
+            potChannels.clear();
+            for (uint8_t i = 0; i < _numPots; i++) {
+                potChannels.push_back(_potChannels[i]);
+            }
+            return true;
         }
-        return true;
     }
     Serial.println("Primary EEPROM corrupted, trying backup.");
     return loadBackupConfiguration(potChannels);
@@ -55,12 +66,16 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels) {
 // Load configuration (backup)
 bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels) {
     if (checkEEPROMHealth(true)) {
-        readEEPROM(true);
-        potChannels.clear();
-        for (uint8_t i = 0; i < _numPots; i++) {
-            potChannels.push_back(_potChannels[i]);
+        uint8_t version = EEPROM.read(EEPROM_BACKUP_START + EEPROM_CONFIG_VERSION);
+        if (version == CONFIG_VERSION) {
+            readEEPROM(true);
+            potChannels.clear();
+            for (uint8_t i = 0; i < _numPots; i++) {
+                potChannels.push_back(_potChannels[i]);
+            }
+            return true;
         }
-        return true;
+        Serial.println("Backup config version mismatch.");
     }
     Serial.println("Backup EEPROM corrupted, resetting to defaults.");
     resetConfiguration(potChannels);
@@ -83,6 +98,26 @@ void ConfigManager::writeEEPROM(bool backup) {
         EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _potChannels[i]);
         EEPROM.update(offset + EEPROM_POT_CC + i, _potCCNumbers[i]);
     }
+    EEPROM.update(offset + EEPROM_CONFIG_VERSION, CONFIG_VERSION);
+    uint16_t crc = computeCRC(offset);
+    int crcAddr = backup ? EEPROM_CRC_BACKUP : EEPROM_CRC_PRIMARY;
+    EEPROM.update(crcAddr,     (crc >> 8) & 0xFF);
+    EEPROM.update(crcAddr + 1, crc & 0xFF);
+}
+
+uint16_t ConfigManager::computeCRC(int baseAddr) {
+    uint16_t crc = 0xFFFF;
+    for (int i = 0; i < EEPROM_BLOCK_SIZE; ++i) {
+        crc ^= (uint16_t)EEPROM.read(baseAddr + i) << 8;
+        for (int j = 0; j < 8; ++j) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ 0x1021;
+            } else {
+                crc <<= 1;
+            }
+        }
+    }
+    return crc;
 }
 
 // Initialize configuration

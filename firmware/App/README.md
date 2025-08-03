@@ -13,7 +13,8 @@ For an overview of the entire project see the [repo README](../../README.md).
 3. Click **Connect** and select the MOARkNOBS serial port.
 4. Wait for the settings to load.
 5. Tweak values in the form.
-6. Press **Save** to write everything back to EEPROM.
+6. Hit **Export** to stash a JSON backup or **Import** to restore one.
+7. Press **Save** to write everything back to EEPROM.
 
 The schema used to build the form lives in `config_schema.json` in this folder.
 

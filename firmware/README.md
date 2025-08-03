@@ -26,6 +26,21 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 
+## Configuration Schema & Backups
+
+Config data is jammed into EEPROM as a 200‑byte block followed by a 16‑bit CRC and a magic number. The first spare byte after the ARG settings carries a `CONFIG_VERSION` flag so newer firmware can spot stale layouts and bail before things get weird.
+
+```
+{
+  "pots": [{"channel":1,"cc":74}, ...],
+  "version": 1
+}
+```
+
+On save the firmware recalculates the CRC; on load it checks the CRC and version before trusting the block. A backup copy lives further down in EEPROM with its own CRC+magic in case the primary goes sideways.
+
+Feeling cautious? The WebSerial editor now lets you **export** configs to disk and **import** them later, so your knob‑twisting gospel survives laptop crashes and late‑night experiments.
+
 ## Hardware Redefined
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:

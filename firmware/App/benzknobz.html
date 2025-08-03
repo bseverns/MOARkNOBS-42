@@ -86,10 +86,14 @@ button:hover {
   </style>
   <script type="module">
   let port, reader, writer;
+  const encoder = new TextEncoder();
 
     const statusEl = document.getElementById("status");
-    const connectBtn = document.getElementById("connect");
-    const saveBtn    = document.getElementById("save");
+  const connectBtn = document.getElementById("connect");
+  const saveBtn    = document.getElementById("save");
+  const exportBtn  = document.getElementById("export");
+  const importBtn  = document.getElementById("import");
+  const importFile = document.getElementById("import-file");
 
     async function connect() {
       try {
@@ -106,6 +110,8 @@ button:hover {
         statusEl.textContent = "Connected.";
         connectBtn.disabled = true;   // disable connect after success
         saveBtn.disabled    = false;  // allow saving now
+        exportBtn.disabled  = false;
+        importBtn.disabled  = false;
 
         // Optionally pre‑load form automatically:
         const schema = await loadSchema();
@@ -221,8 +227,39 @@ async function saveConfig() {
 }
 
 // wire it up
+async function exportConfig() {
+  try {
+    const raw = await send("GET_ALL");
+    const blob = new Blob([raw], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'moarknobz_config.json';
+    a.click();
+    statusEl.textContent = 'Config exported.';
+  } catch (err) {
+    statusEl.textContent = `Export failed: ${err.message || err}`;
+  }
+}
+
+function triggerImport(){ importFile.click(); }
+
+importFile.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if(!file) return;
+  try {
+    const text = await file.text();
+    JSON.parse(text); // sanity check
+    const resp = await send('SET_ALL ' + text);
+    statusEl.textContent = resp.startsWith('OK') ? 'Imported!' : `Import response: ${resp}`;
+  } catch (err) {
+    statusEl.textContent = `Import failed: ${err.message || err}`;
+  }
+});
+
 connectBtn.addEventListener("click", connect);
 saveBtn.addEventListener("click", saveConfig);
+exportBtn.addEventListener("click", exportConfig);
+importBtn.addEventListener("click", triggerImport);
 </script>
 
 </head>
@@ -231,6 +268,9 @@ saveBtn.addEventListener("click", saveConfig);
   <button id="connect">Connect</button>
   <div id="form"></div>
   <button id="save" disabled>Save</button>
+  <button id="export" disabled>Export</button>
+  <button id="import" disabled>Import</button>
+  <input id="import-file" type="file" accept="application/json" style="display:none" />
   <div id="status"></div>
 </body>
 </html>
