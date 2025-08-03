@@ -9,7 +9,23 @@
 #include <string>
 #include <FastLED.h>
 
-/** Possible LED indication states. */
+// Strip layout (see Globals.h):
+//  [0-41]   : slot LEDs mapped to virtual controller slots
+//  [42-47]  : envelope follower meters
+//  [48]     : control button LED
+//  [49-51]  : pot halos for the three physical knobs
+
+/**
+ * Possible LED indication states.
+ *
+ * Mini state map (everyone eventually drifts back to IDLE):
+ *   IDLE
+ *    ├─ setActivePot()        → ACTIVE_POT        ─┐
+ *    ├─ indicateEnvelopeMode(true) → ENVELOPE_MODE ─┤
+ *    ├─ setState(ARG_MODE)    → ARG_MODE          ─┤ → setState(IDLE)
+ *    ├─ setState(MIDI_UPDATE) → MIDI_UPDATE       ─┤
+ *    └─ setState(TEMP_FEEDBACK) → TEMP_FEEDBACK  ─┘
+ */
 enum class LEDState {
     IDLE,
     ACTIVE_POT,
@@ -31,13 +47,22 @@ public:
     /** Initialise FastLED and clear the strip. Call once from setup(). */
     void begin();
 
-    /** Map a MIDI value (0-127) to a pot LED brightness or colour. */
+    /**
+     * Map a MIDI value (0-127) to a slot LED's brightness or colour.
+     * @param potIndex index 0-41, hitting the raw slot LED range.
+     */
     void setPotValue(uint8_t potIndex, uint8_t value);
 
-    /** Map an envelope follower level (0-127) to its LED brightness. */
+    /**
+     * Map an envelope follower level (0-127) to its LED brightness.
+     * @param efIndex 0-5, painted at EF_LED_OFFSET + efIndex (42-47).
+     */
     void setEnvelopeLevel(uint8_t efIndex, uint8_t value);
 
-    /** Light LEDs next to the three physical pots with a slot value. */
+    /**
+     * Light LEDs next to the three physical pots with a slot value.
+     * @param potIndex 0-2, mapped to POT_LED_OFFSET + potIndex (49-51).
+     */
     void setPotIndicator(uint8_t potIndex, uint8_t value);
 
     /** Flash the control button LED with a timed fade. */
