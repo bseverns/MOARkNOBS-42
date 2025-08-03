@@ -62,6 +62,16 @@ Once the light show works, raid `hardware/` for PCB files and go full‑build.
 - **Missing libraries** – PlatformIO fails fast if dependencies vanish. Check `platformio.ini` before blaming the hardware.
 - **Bootloader naps** – if the Teensy doesn’t auto‑program, hit its button to jolt the bootloader awake.
 
+### Profiles: stash three setups
+
+The rig now hoards three full configuration profiles in EEPROM. Each profile is a 256‑byte bunker storing your pot maps, LED vibe, and envelope tricks.
+
+- **Jump profiles** – mash **Ctrl0 + Ctrl2** on the control panel to hop to the next profile. It wraps after the third, so keep cycling until you land where you want.
+- **Save the chaos** – double‑tap **Ctrl5** once you’ve mangled the knobs to taste. That burns the current state into the active profile.
+- **Panic reload** – double‑tap **Ctrl4** to yank the active profile from EEPROM and forget any unsaved noodling.
+
+Profiles share MIDI slot data, so only the user‑tweakable mappings get swapped. It’s a fast way to keep separate live, studio, and “what if I break everything” setups without re-flashing.
+
 ### Manual Hardware Tests
 
 Compile the test environments when you want to verify the board outside of the

@@ -10,15 +10,15 @@ ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
     : _numPots(numPots), _numButtons(numButtons) {}
 
 // Centralized EEPROM health check
-bool ConfigManager::checkEEPROMHealth(bool backup) {
-    int address = backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS;
+bool ConfigManager::checkEEPROMHealth(bool backup, uint16_t base) {
+    int address = base + (backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS);
     uint16_t magic = EEPROM.read(address) << 8 | EEPROM.read(address + 1);
     return (magic == (backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY));
 }
 
 // Write magic number to EEPROM
-void ConfigManager::writeMagicNumber(bool backup) {
-    int address = backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS;
+void ConfigManager::writeMagicNumber(bool backup, uint16_t base) {
+    int address = base + (backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS);
     uint16_t magic = backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY;
     EEPROM.update(address, (magic >> 8) & 0xFF);
     EEPROM.update(address + 1, magic & 0xFF);
@@ -26,22 +26,23 @@ void ConfigManager::writeMagicNumber(bool backup) {
 
 // Save configuration with verification and backup
 void ConfigManager::saveConfiguration() {
-    writeEEPROM(false);  // Write primary
-    writeMagicNumber(false);
+    uint16_t base = EEPROM_PROFILE_START(0);
+    writeEEPROM(false, base);  // Write primary
+    writeMagicNumber(false, base);
 
     // Verify
     std::vector<uint8_t> temp;
-    if (!loadConfiguration(temp)) {
+    if (!loadConfiguration(temp, base)) {
         Serial.println("Primary EEPROM write failed, saving to backup.");
-        writeEEPROM(true);
-        writeMagicNumber(true);
+        writeEEPROM(true, base);
+        writeMagicNumber(true, base);
     }
 }
 
 // Load configuration (primary)
-bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels) {
-    if (checkEEPROMHealth(false)) {
-        readEEPROM(false);
+bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
+    if (checkEEPROMHealth(false, base)) {
+        readEEPROM(false, base);
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_potChannels[i]);
@@ -49,13 +50,13 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels) {
         return true;
     }
     Serial.println("Primary EEPROM corrupted, trying backup.");
-    return loadBackupConfiguration(potChannels);
+    return loadBackupConfiguration(potChannels, base);
 }
 
 // Load configuration (backup)
-bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels) {
-    if (checkEEPROMHealth(true)) {
-        readEEPROM(true);
+bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
+    if (checkEEPROMHealth(true, base)) {
+        readEEPROM(true, base);
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_potChannels[i]);
@@ -68,8 +69,8 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels) {
 }
 
 // Internal read from EEPROM
-void ConfigManager::readEEPROM(bool backup) {
-    int offset = backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS;
+void ConfigManager::readEEPROM(bool backup, uint16_t base) {
+    int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
     for (uint8_t i = 0; i < _numPots; i++) {
         _potChannels[i] = EEPROM.read(offset + EEPROM_POT_CHANNELS + i);
         _potCCNumbers[i] = EEPROM.read(offset + EEPROM_POT_CC + i);
@@ -77,11 +78,36 @@ void ConfigManager::readEEPROM(bool backup) {
 }
 
 // Internal write to EEPROM
-void ConfigManager::writeEEPROM(bool backup) {
-    int offset = backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS;
+void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
+    int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
     for (uint8_t i = 0; i < _numPots; i++) {
         EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _potChannels[i]);
         EEPROM.update(offset + EEPROM_POT_CC + i, _potCCNumbers[i]);
+    }
+}
+
+// Load a profile block into the current working config
+void ConfigManager::loadProfile(uint8_t id) {
+    uint16_t base = EEPROM_PROFILE_START(id);
+    if (checkEEPROMHealth(false, base)) {
+        readEEPROM(false, base);
+    } else if (checkEEPROMHealth(true, base)) {
+        readEEPROM(true, base);
+    } else {
+        Serial.println("Profile slot corrupted, using defaults.");
+    }
+}
+
+// Save the current config into the given profile block
+void ConfigManager::saveProfile(uint8_t id) {
+    uint16_t base = EEPROM_PROFILE_START(id);
+    writeEEPROM(false, base);
+    writeMagicNumber(false, base);
+    std::vector<uint8_t> temp;
+    if (!loadConfiguration(temp, base)) {
+        Serial.println("Primary EEPROM write failed, saving to backup.");
+        writeEEPROM(true, base);
+        writeMagicNumber(true, base);
     }
 }
 

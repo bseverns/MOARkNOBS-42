@@ -37,15 +37,21 @@ class MIDIHandler;
  * 202             Backup magic  (0xDCBA)           2
  * 204-225        Reserved/buffer                 part of above
  * 226             Backup copy of config starts     mirrors layout
+ * 256             Profile 1 block begins           256 bytes
+ * 512             Profile 2 block begins           256 bytes
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
  * firmware punts to the backup block (tagged with
  * EEPROM_MAGIC_BACKUP) as a safety net. On boot the tags are
  * inspected in order-primary first, backup second-to decide
- * which copy to trust.
+ * which copy to trust. Each additional profile repeats this
+ * layout in its own 256-byte slice.
  */
 #endif
+
+#define EEPROM_PROFILE_BLOCK_SIZE 256
+#define EEPROM_PROFILE_START(id) (EEPROM_PROFILE_BLOCK_SIZE * (id))
 
 #define EEPROM_START_ADDRESS 0
 #define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
@@ -121,7 +127,13 @@ public:
     void saveConfiguration();
 
     /** Load configuration from EEPROM. Returns false if data was invalid. */
-    bool loadConfiguration(std::vector<uint8_t>& potChannels);
+    bool loadConfiguration(std::vector<uint8_t>& potChannels, uint16_t base = EEPROM_PROFILE_START(0));
+
+    /** Load a saved profile from one of the reserved EEPROM blocks. */
+    void loadProfile(uint8_t id);
+
+    /** Save the current in-RAM settings to a profile block. */
+    void saveProfile(uint8_t id);
 
     // LED settings -------------------------------------------------------
 
@@ -201,11 +213,11 @@ private:
     std::array<MIDISlot,NUM_SLOTS> slots;//42 of them
 
     // Health‑check & backup support
-    bool checkEEPROMHealth(bool backup);               // verify header magic
-    void writeMagicNumber(bool backup);                // stamp EEPROM with magic
-    bool loadBackupConfiguration(std::vector<uint8_t>& potChannels); // restore from backup copy
-    void readEEPROM(bool backup);                      // raw EEPROM read helper
-    void writeEEPROM(bool backup);                     // raw EEPROM write helper
+    bool checkEEPROMHealth(bool backup, uint16_t base = EEPROM_PROFILE_START(0)); // verify header magic
+    void writeMagicNumber(bool backup, uint16_t base = EEPROM_PROFILE_START(0));  // stamp EEPROM with magic
+    bool loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base); // restore from backup copy
+    void readEEPROM(bool backup, uint16_t base);        // raw EEPROM read helper
+    void writeEEPROM(bool backup, uint16_t base);       // raw EEPROM write helper
 
     //virtual slot/array:
     std::array<uint8_t, NUM_POTS>   _potChannels; // your pot→CC map

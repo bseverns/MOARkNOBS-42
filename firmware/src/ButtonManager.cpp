@@ -62,6 +62,9 @@ static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0])
 // We'll track which filter index each EnvelopeFollower (e.g. 6 total) is using:
 static int filterTypeIndexForEF[6] = {0, 0, 0, 0, 0, 0};
 
+// Active configuration profile stored in EEPROM
+static uint8_t currentProfile = 0;
+
 // Constructor
 ButtonManager::ButtonManager(const uint8_t* primaryMuxPins,
                              const uint8_t* secondaryMuxPins,
@@ -362,17 +365,21 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
             }
 
             case 4: {
-                // Double Press (Ctrl #4): Undo unsaved changes (reset EEPROM)
-                context.configManager.loadConfiguration(context.potChannels);
-                context.displayManager.displayStatus("EEPROM Reset!", 1500);
+                // Double Press (Ctrl #4): Reload current profile from EEPROM
+                context.configManager.loadProfile(currentProfile);
+                context.potChannels.clear();
+                for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
+                    context.potChannels.push_back(context.configManager.getPotChannel(i));
+                }
+                context.displayManager.displayStatus("Profile Reset!", 1500);
                 break;
             }
 
             case 5: {
-                // Double Press (Ctrl #5): Save configuration
-                context.configManager.saveConfiguration();
+                // Double Press (Ctrl #5): Save configuration to current profile
+                context.configManager.saveProfile(currentProfile);
                 context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
-                context.displayManager.displayStatus("Config Saved!", 1500);
+                context.displayManager.displayStatus("Profile Saved!", 1500);
                 break;
             }
 
@@ -628,6 +635,18 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             arpeggiator.start(context.activePot);
             context.displayManager.displayStatus("ARP ON", 1000);
         }
+    }
+    // (11) Ctrl0 + Ctrl2: Cycle configuration profiles
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
+        currentProfile = (currentProfile + 1) % 3;
+        context.configManager.loadProfile(currentProfile);
+        context.potChannels.clear();
+        for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
+            context.potChannels.push_back(context.configManager.getPotChannel(i));
+        }
+        char buf[32];
+        sprintf(buf, "PROFILE %d", currentProfile);
+        context.displayManager.displayStatus(buf, 1500);
     }
 }
 
