@@ -73,15 +73,47 @@ void waitForButtonPress(const char* prompt = "Press Btn0 to continue") {
 }
 
 // --- Unit Tests ---
+// Cycle each LED cluster and make sure FastLED actually spits bits.
+// We don't block on every single diode; instead we run a sweep and ask the
+// human if the glow looked good.  Punk rock hardware testing, basically.
 void testLEDManager() {
   Serial.println("\n--- LEDManager Test ---");
-  for (int i = 0; i < NUM_LEDS; i++) {
+
+  // --- Slot LEDs ---
+  for (int i = 0; i < SLOT_LED_COUNT; i++) {
     ledManager.setColor(CRGB::Black);
     ledManager.setPotValue(i, 127);
-    Serial.printf("LED #%d ON? Press Btn0.\n", i);
-    waitForButtonPress();
+    ledManager.update();
+    delay(50);
   }
+  waitForButtonPress("Slots glow in order? Btn0");
+
+  // --- Envelope follower LEDs ---
+  for (int i = 0; i < EF_LED_COUNT; i++) {
+    ledManager.setColor(CRGB::Black);
+    ledManager.setEnvelopeLevel(i, 127);
+    ledManager.update();
+    delay(50);
+  }
+  waitForButtonPress("Followers shine? Btn0");
+
+  // --- Control button LED ---
   ledManager.setColor(CRGB::Black);
+  ledManager.triggerControlButton();
+  ledManager.update();
+  waitForButtonPress("Control LED pop? Btn0");
+
+  // --- Pot halo LEDs ---
+  for (int i = 0; i < POT_LED_COUNT; i++) {
+    ledManager.setColor(CRGB::Black);
+    ledManager.setPotIndicator(i, 127);
+    ledManager.update();
+    delay(50);
+  }
+  waitForButtonPress("Halos look righteous? Btn0");
+
+  ledManager.setColor(CRGB::Black);
+  ledManager.update();
   Serial.println("LEDManager test done.");
 }
 
