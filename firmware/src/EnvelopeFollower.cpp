@@ -29,6 +29,7 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
       argMethod(PLUS),
       envelopeA(0),
       envelopeB(1),
+      vref(g_vref),
       potManager(pm)
 {
     // Initialize last sent CCs to 0xFF so the first real value always fires
@@ -233,6 +234,17 @@ void EnvelopeFollower::setEnvelopePair(int envA, int envB) {
     envelopeB = envB;
 }
 
+void EnvelopeFollower::calibrate() {
+    const uint8_t samples = 8;
+    uint32_t refTotal = 0;
+    for (uint8_t i = 0; i < samples; ++i) {
+        refTotal += analogRead(VREF_ADC_PIN);
+        delayMicroseconds(10);
+    }
+    vref = (static_cast<float>(refTotal) / samples) * VadcScale;
+    calibrateBaseline();
+}
+
 void EnvelopeFollower::calibrateBaseline() {
     const uint8_t samples = 8;
     uint32_t total = 0;
@@ -241,7 +253,23 @@ void EnvelopeFollower::calibrateBaseline() {
         delayMicroseconds(10);
     }
     float avg = static_cast<float>(total) / samples;
-    baseline = avg * VadcScale - g_vref;
+    baseline = avg * VadcScale - vref;
+}
+
+void EnvelopeFollower::setOversampleCount(uint8_t count) {
+    oversampleCount = count ? count : 1;
+}
+
+uint8_t EnvelopeFollower::getOversampleCount() const {
+    return oversampleCount;
+}
+
+void EnvelopeFollower::setSmoothingAlpha(float alpha) {
+    smoothingAlpha = constrain(alpha, 0.0f, 1.0f);
+}
+
+float EnvelopeFollower::getSmoothingAlpha() const {
+    return smoothingAlpha;
 }
 
 /**
@@ -250,10 +278,17 @@ void EnvelopeFollower::calibrateBaseline() {
  * from the configured analog pin and map it to a MIDI range.
  */
 int EnvelopeFollower::readEnvelopeLevel() {
-    float env = (analogRead(audioInputPin) * VadcScale - g_vref - baseline) * gain;
+    uint32_t total = 0;
+    for (uint8_t i = 0; i < oversampleCount; ++i) {
+        total += analogRead(audioInputPin);
+        delayMicroseconds(10);
+    }
+    float avg = static_cast<float>(total) / oversampleCount;
+    float env = (avg * VadcScale - vref - baseline) * gain;
     env = max(0.0f, env);
-    int midi = static_cast<int>((env / g_vref) * 127.0f);
-    return constrain(midi, 0, 127);
+    int midi = static_cast<int>((env / vref) * 127.0f);
+    smoothedLevel = smoothingAlpha * midi + (1.0f - smoothingAlpha) * smoothedLevel;
+    return constrain(smoothedLevel, 0, 127);
 }
 
 /**

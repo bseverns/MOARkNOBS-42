@@ -417,7 +417,7 @@ void setup() {
     // — Envelope followers —
     for (auto& ef : envelopeFollowers) {
         ef.toggleActive(true);
-        ef.calibrateBaseline();
+        ef.calibrate();
     }
     float sf, sq;
     EEPROM.get(EEPROM_FILTER_FREQ, sf);
