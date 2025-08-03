@@ -412,7 +412,7 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 ## Development Timeline
 
 Check out the project evolution in the main repo's
-[HISTORY.md](../HISTORY.md).
+[HISTORY.md](../docs/HISTORY.md).
 
 ## Support
 
