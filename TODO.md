@@ -13,4 +13,7 @@
 
 ## firmware
 
-- 
+- Automated tests & CI pipeline.
+- Config CRC/versioning.
+- Expanded MIDI handling.
+- Envelope follower persistence & calibration.
