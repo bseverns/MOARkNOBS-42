@@ -185,14 +185,14 @@ void LEDManager::update() {
     if (controlActive) {
         unsigned long elapsed = millis() - controlStart;
         if (elapsed < 750) {
-            leds[CONTROL_LED_INDEX] = CRGB::White;
+            leds[CONTROL_LED_INDEX()] = CRGB::White;
         } else if (elapsed < 2000) {
-            leds[CONTROL_LED_INDEX] = CRGB(127, 127, 127);
+            leds[CONTROL_LED_INDEX()] = CRGB(127, 127, 127);
         } else {
-            leds[CONTROL_LED_INDEX] = CRGB::Black;
+            leds[CONTROL_LED_INDEX()] = CRGB::Black;
             controlActive = false;
         }
-        markDirty(CONTROL_LED_INDEX);
+        markDirty(CONTROL_LED_INDEX());
     }
 
     switch (currentState) {
