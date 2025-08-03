@@ -55,7 +55,7 @@ Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`
 |---------|-------|---------|
 | Field | Pin(s) | Purpose |
 |-------|-------|---------|
-| `ledPin` | 6 | WS2812 data out |
+| `ledPin` | 6 | WS2812 data out (wired to `LED_DATA_PIN`) |
 | `muxrPins` | 2,3,4,5 | Row select lines for the button matrix |
 | `muxcPins` | 8,9,10,11 | Column select lines for the button matrix |
 | `buttonMuxAnalogPin` | A4 | Shared button sense line |
@@ -63,29 +63,22 @@ Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
 | `statusLedPin` | 23 | Board status indicator mounted between the PWR and brain on the board |
 
-Need different pins or scheduler ticks? Override the defaults with a header:
+Need different pins or scheduler ticks? Override the defaults with a header or drop a JSON sidecar. Here's a sample that drags the MIDI scheduler:
 
 ```cpp
 // firmware/include/hardware_config.h
 void applyHardwareConfigOverrides(HardwareConfig& cfg) {
-    cfg.ledPin = 5;            // move the LED strip
     cfg.midiTaskInterval = 2;  // slow the MIDI tick for experiments
 }
 ```
 
-Or toss a JSON file on an SD card:
-
 ```json
 {
-  "LED_PIN": 5,
   "MIDI_TASK_INTERVAL": 2
 }
 ```
 
-The boot code slurps in either override so `LEDManager` and friends all march to the same drum.
-
-Want to lock the strip to a specific pin at compile time? Define `LED_DATA_PIN` when you build and the firmware skips the runtime lookup. Otherwise `hwConfig.ledPin` rules the roost and the pin can be shuffled via the overrides above.
-
+The LED strip is more hardheaded. FastLED demands its data pin up front, so we hard-code it with `LED_DATA_PIN` via `platformio.ini` (defaults to 6). Want the glow on another GPIO? Change that build flag and rebuild—runtime pin shenanigans are history.
 
 ## What It Does
 
