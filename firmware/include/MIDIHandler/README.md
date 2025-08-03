@@ -6,6 +6,7 @@ USB, DIN, whatever—this thing speaks MIDI like it's 1983 and even keeps time f
 
 - `begin()` – open both MIDI pipes.
 - `sendControlChange(cc, value, channel)` – fire a CC.
+- `sendClock()` – spit out a raw 0xF8 when you want to be the metronome.
 - `processIncomingMIDI()` – keep an ear on incoming bytes **and** spew MIDI clock when `g_tappedBPM` says so.
 
 Clock out defers to any incoming tempo; if the outside world goes dark for `CLOCK_TIMEOUT_MS`

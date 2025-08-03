@@ -103,6 +103,9 @@ void processMIDI() {
             envelopeMode
         );
 
+        // Record the last time a clock tick landed
+        lastClockTime = millis();
+
         // Clear the clock flag
         midiHandler.clearClockTick();
     }
@@ -225,6 +228,33 @@ void processEnvelopes() {
         potentiometerManager.getLastValue(buttonContext.activePot));
     for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
         ledManager.setPotIndicator(i, potMidiValue);
+    }
+}
+
+// Kick out MIDI clock pulses if the outside world bails on us.
+void processInternalClock() {
+    static unsigned long lastInternalTick = 0;
+    if (g_tappedBPM <= 0.0f) return; // No tempo tapped, nothing to do
+
+    unsigned long msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
+    unsigned long now = millis();
+    if (now - lastInternalTick >= msPerTick) {
+        lastInternalTick = now;
+        lastClockTime    = now;
+
+        // Chuck out a clock tick if we're allowed to shout
+        midiHandler.sendClock();
+
+        // Advance beat and refresh the screen so the groove stays visible
+        midiBeatPosition = (midiBeatPosition + 1) % 8;
+        displayManager.updateDisplay(
+            midiBeatPosition,
+            std::vector<uint8_t>(),
+            envelopeFollowMode ? "EF ON" : "EF OFF",
+            activePot,
+            activeChannel,
+            envelopeMode
+        );
     }
 }
 
