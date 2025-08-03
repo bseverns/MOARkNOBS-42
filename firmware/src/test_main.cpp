@@ -125,6 +125,37 @@ void testPotentiometerManager() {
   Serial.println("PotentiometerManager test done.");
 }
 
+void testFilterPots() {
+  Serial.println("\n--- Filter Pot Test ---");
+  Serial.println("Sweep Freq & Q pots then press Btn0.");
+  float minFreq = 1e6, maxFreq = 0;
+  float minQ = 10, maxQ = 0;
+  while (digitalRead(phaseButtonPin)) {
+    int rawFreq = buttonManager.getControlPotValue(1);
+    int rawQ = buttonManager.getControlPotValue(2);
+    float freq = map(rawFreq, 0, 1023, 20, 5000);
+    float q = map(rawQ, 0, 1023, 50, 400) / 100.0f;
+    if (freq < minFreq) minFreq = freq;
+    if (freq > maxFreq) maxFreq = freq;
+    if (q < minQ) minQ = q;
+    if (q > maxQ) maxQ = q;
+    displayManager.showFilterTuning("Freq", freq, "Q", q);
+    Serial.printf("Freq=%.1f Hz Q=%.2f\n", freq, q);
+    delay(100);
+  }
+  while (!digitalRead(phaseButtonPin));
+  bool freqPass = (minFreq <= 30 && maxFreq >= 4900);
+  bool qPass = (minQ <= 0.6 && maxQ >= 3.9);
+  Serial.printf("Freq range: %.1f-%.1f Hz [%s]\n", minFreq, maxFreq, freqPass ? "PASS" : "FAIL");
+  Serial.printf("Q range: %.1f-%.1f [%s]\n", minQ, maxQ, qPass ? "PASS" : "FAIL");
+  char line1[32], line2[32];
+  sprintf(line1, "F %.0f-%.0f %s", minFreq, maxFreq, freqPass ? "OK" : "BAD");
+  sprintf(line2, "Q %.1f-%.1f %s", minQ, maxQ, qPass ? "OK" : "BAD");
+  displayManager.showText("Filter Pots", line1, line2);
+  delay(1000);
+  displayManager.clear();
+}
+
 void testEnvelopeFollowers() {
   Serial.println("\n--- EnvelopeFollower Test ---");
   int pins[] = {A0,A1,A2,A3,A6,A7};
@@ -199,7 +230,7 @@ void runPhase(TestPhase phase) {
   switch (phase) {
     case TestPhase::LEDS:       testLEDManager(); break;
     case TestPhase::BUTTONS:    testButtonManager(); break;
-    case TestPhase::POTS:       testPotentiometerManager(); break;
+    case TestPhase::POTS:       testPotentiometerManager(); testFilterPots(); break;
     case TestPhase::ENVELOPES:  testEnvelopeFollowers(); break;
     case TestPhase::DISP:    testDisplayManager(); break;
     default: break;
