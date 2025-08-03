@@ -16,7 +16,19 @@ LEDManager::LEDManager(const HardwareConfig& config)
     : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
-    FastLED.addLeds<WS2812, cfg.ledPin, GRB>(leds.data(), leds.size()).setCorrection(TypicalLEDStrip);
+
+    // FastLED needs to know the data pin at compile time unless we hand it a controller.
+    // If you hardwire the strip to a fixed GPIO, define LED_DATA_PIN at build time and
+    // we use the lean template form. Otherwise we spin up a controller and slap the
+    // pin number on it at runtime – loud and flexible.
+#ifdef LED_DATA_PIN
+    FastLED.addLeds<WS2812, LED_DATA_PIN, GRB>(leds.data(), leds.size())
+        .setCorrection(TypicalLEDStrip);
+#else
+    CLEDController& controller = FastLED.addLeds<WS2812, GRB>(leds.data(), leds.size());
+    controller.setCorrection(TypicalLEDStrip);
+    controller.setPin(cfg.ledPin);
+#endif
     FastLED.clear();
     FastLED.show();
     startupAnimation();

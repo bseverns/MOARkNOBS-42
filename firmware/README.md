@@ -84,6 +84,8 @@ Or toss a JSON file on an SD card:
 
 The boot code slurps in either override so `LEDManager` and friends all march to the same drum.
 
+Want to lock the strip to a specific pin at compile time? Define `LED_DATA_PIN` when you build and the firmware skips the runtime lookup. Otherwise `hwConfig.ledPin` rules the roost and the pin can be shuffled via the overrides above.
+
 
 ## What It Does
 
