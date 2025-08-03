@@ -14,8 +14,8 @@
 // Forward declaration to avoid circular dependency
 class EnvelopeFollower;
 
-#define PRIMARY_MUX_PINS 4
-#define SECONDARY_MUX_PINS 4
+#define PRIMARY_MUX_PINS 4   // Address lines for the "upstream" mux selecting which pot bank hits the bus
+#define SECONDARY_MUX_PINS 4 // Address lines for the "downstream" mux choosing a single pot within that bank
 constexpr uint8_t NUM_POTS = 42;
 
 
@@ -25,20 +25,23 @@ constexpr uint8_t NUM_POTS = 42;
  */
 class PotentiometerManager {
 private:
-    const uint8_t* primaryMuxPins;   // Pins for primary mux bank
-    const uint8_t* secondaryMuxPins; // Pins for secondary mux bank
+    const uint8_t* primaryMuxPins;   // Drives the primary mux: pick which secondary mux is talking
+    const uint8_t* secondaryMuxPins; // Drives the secondary mux: pick the actual pot within that bank
     const uint8_t analogPin;         // Analog pin for mux output
     uint8_t potChannels[NUM_POTS];   // MIDI channel for each pot
     uint8_t potCCNumbers[NUM_POTS];  // MIDI CC number for each pot
     int potLastValues[NUM_POTS];     // Last read values for each pot
 
-    void selectMuxBank(uint8_t bank); // Drive the primary mux address lines
-    void selectPotBank(uint8_t pot);  // Drive the secondary mux address lines
+    void selectMuxBank(uint8_t bank); // Slam the primary mux to the desired pot bank
+    void selectPotBank(uint8_t pot);  // Once a bank is live, aim the secondary mux at a specific pot
 
     // Callback for sending MIDI messages
     std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> midiCallback;
 
     // Helper for filtered analog reads
+    // Grabs several fast ADC samples, averages them, then later code runs an EWMA
+    // over the result. It's a cheap low-pass filter: jagged noise gets smashed,
+    // but every extra layer of smoothing adds a few milliseconds of lag.
     int readAnalogFiltered(uint8_t pin); // Low-pass filtered ADC read
 
     int argEnvA;
