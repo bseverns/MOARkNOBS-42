@@ -134,18 +134,7 @@ TP\_VINRAW, TP\_VINFUSE, TP\_VLED, TP\_3V3 (x2), TP\_GND (per cluster), TP\_ROWD
 | Address pad/jumper          | SJ\_ADDR        | **Future** | For second display / address conflict   |
 
 ---
-
-## 11. Firmware-Dependent Options (Documented in Hardware)
-
-| Item                                      | Hardware Ref     | Status  | Notes                                           |
-| ----------------------------------------- | ---------------- | ------- | ----------------------------------------------- |
-| Internal pull-ups only for column sense   | COL\_SENSE pin 7 | Current | External R\_COLPU available if needed           |
-| Baseline subtraction for EF               | VREF node        | Current | Firmware must sample TP\_VREF at boot           |
-| Analog vs digital read multiplex strategy | MUX B channels   | Current | Single analog read path; thresholds for buttons |
-
----
-
-## 12. Alternate Component Choices Summary
+## 11. Alternate Component Choices Summary
 
 | Function         | Default             | Alt (Why)                                  | Populate Criteria              |
 | ---------------- | ------------------- | ------------------------------------------ | ------------------------------ |
@@ -158,7 +147,7 @@ TP\_VINRAW, TP\_VINFUSE, TP\_VLED, TP\_3V3 (x2), TP\_GND (per cluster), TP\_ROWD
 
 ---
 
-## 13. Pre-Layout Optional Footprint Checklist
+## 12. Pre-Layout Optional Footprint Checklist
 
 * [ ] Place all TP\_\* pads (see inventory) near edge.
 * [ ] Add R\_SDA / R\_SCL (DNI) in series path.
@@ -172,7 +161,7 @@ TP\_VINRAW, TP\_VINFUSE, TP\_VLED, TP\_3V3 (x2), TP\_GND (per cluster), TP\_ROWD
 
 ---
 
-## 14. Bring-Up Population Guidance
+## 13. Bring-Up Population Guidance
 
 | Stage                 | Populate                                                         | Leave DNI                                                                       | Measurement Goal                           |
 | --------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -183,7 +172,7 @@ TP\_VINRAW, TP\_VINFUSE, TP\_VLED, TP\_3V3 (x2), TP\_GND (per cluster), TP\_ROWD
 
 ---
 
-## 15. Revision Log Placeholder
+## 14. Revision Log Placeholder
 
 | Rev       | Date   | Changes to Optional/DNI Strategy          |
 | --------- | ------ | ----------------------------------------- |
@@ -192,7 +181,7 @@ TP\_VINRAW, TP\_VINFUSE, TP\_VLED, TP\_3V3 (x2), TP\_GND (per cluster), TP\_ROWD
 
 ---
 
-## 16. Quick Reference (Top 10 Fast Checks)
+## 15. Quick Reference (Top 10 Fast Checks)
 
 1. VREF node present & stable (divider + cap).
 2. AHCT125 unused channels properly tied off.

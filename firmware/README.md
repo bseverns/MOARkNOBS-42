@@ -38,6 +38,14 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 * **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
 * **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
 
+### Hardware Assumptions the Firmware Leans On
+
+Some hardware choices only come alive when the firmware plays along:
+
+- **Internal pull-ups handle the column sense line.** The PCB leaves room for an external resistor, but the code sticks with the MCU's own pull-ups unless we see jitter.
+- **Envelope followers baseline themselves.** On boot the firmware samples the mid-rail `VREF` pad and subtracts it so your envelopes start from zero, not from whatever offset the op-amps woke up with.
+- **Only one analog read path.** We scan the button and pot multiplexers through a single ADC channel and sort out digital vs. analog thresholds in code—simpler wiring, firmware does the heavy lifting.
+
 ### Pin Map
 
 The constants below come from `Globals.h`. They're declared as `inline constexpr` so every translation unit sees the same compile‑time values. That keeps templates happy and lets the compiler inline everything.
