@@ -1,3 +1,21 @@
+/**
+ * Global juice for the MOAR kNOBS firmware.
+ *
+ * LED gangs:
+ *   - `SLOT_LED_COUNT`, `EF_LED_COUNT`, and `POT_LED_COUNT` define the three
+ *     clans of pixels on the strip.  Offsets like `EF_LED_OFFSET` and
+ *     `POT_LED_OFFSET` stitch them together into one loud `NUM_LEDS` parade.
+ *
+ * Timing ticks:
+ *   - The scheduler runs off constants such as `MIDI_TASK_INTERVAL`,
+ *     `LED_TASK_INTERVAL`, and `ENVELOPE_TASK_INTERVAL`, all in milliseconds.
+ *     These keep MIDI, blinkenlights, and envelope followers marching in time.
+ *
+ * EEPROM stash:
+ *   - Addresses like `EEPROM_FILTER_FREQ`, `EEPROM_FILTER_Q`, and
+ *     `EEPROM_SLOT_BASE` mark where we squirrel settings away so the rig
+ *     remembers its vibe after power-down.
+ */
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
@@ -76,6 +94,9 @@ inline constexpr uint8_t secondaryMuxPins[] = {8, 9, 10, 11};
 extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;
 
+// Analog Routing Grid pairings. Each tuple names two ADC inputs that can be
+// slammed together into an envelope follower.  Cycling through this table lets
+// the firmware re-route envelopes without repatching the hardware.
 static const std::pair<int,int> ARG_PAIRS[] = {
     // All pairs beginning with A0
     {A0, A1},
