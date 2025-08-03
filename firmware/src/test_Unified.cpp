@@ -219,14 +219,14 @@ void testPots() {
   Serial.println("\nFreq Pot: roll to MIN, button when ready.");
   displayManager.showText("Pot Test", label);
   waitForAnyButton();
-  buttonManager.scanControlInputs(bmCtx);
+  buttonManager.processButtons(bmCtx);
   int freqMin = buttonManager.getControlPotValue(1);
 
   sprintf(label, "Freq→MAX");
   Serial.println("Freq Pot: roll to MAX, button when ready.");
   displayManager.showText("Pot Test", label);
   waitForAnyButton();
-  buttonManager.scanControlInputs(bmCtx);
+  buttonManager.processButtons(bmCtx);
   int freqMax = buttonManager.getControlPotValue(1);
 
   delta = freqMax - freqMin;
@@ -242,14 +242,14 @@ void testPots() {
   Serial.println("\nQ Pot: drop to MIN, button when ready.");
   displayManager.showText("Pot Test", label);
   waitForAnyButton();
-  buttonManager.scanControlInputs(bmCtx);
+  buttonManager.processButtons(bmCtx);
   int qMin = buttonManager.getControlPotValue(2);
 
   sprintf(label, "Q→MAX");
   Serial.println("Q Pot: push to MAX, button when ready.");
   displayManager.showText("Pot Test", label);
   waitForAnyButton();
-  buttonManager.scanControlInputs(bmCtx);
+  buttonManager.processButtons(bmCtx);
   int qMax = buttonManager.getControlPotValue(2);
 
   delta = qMax - qMin;

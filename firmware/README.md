@@ -83,6 +83,10 @@ Test files used in the development of this project include:
 ## Button Mayhem
 Buttons are scanned continuously using `setMux()` which sets the row and column addresses before each read.
 
+Need to peek under the hood? `ButtonManager::scanControlInputs()` is now fair game.
+It sniffs the control pots and buttons without dragging the rest of the matrix along for the ride.
+Still, the grown-up move is to call `processButtons()` and let it wrangle everything.
+
 Each control button can do several things depending on how you hit it:
 
 | Button | Short Press         | Long Press                    | Double Press                      |
