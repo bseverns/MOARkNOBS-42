@@ -433,7 +433,8 @@ void setup() {
       Serial.printf("Slot %u → CC %u\n", i, potChannels[i]);
     }
     Serial.println("Setup complete!");
-
+    displayManager.runStartupAnimation();
+    
     // — Scheduler tasks —
     // High-priority (1 ms):
     Utility::schedulerHigh.addTask(processMIDI,          MIDI_TASK_INTERVAL);
