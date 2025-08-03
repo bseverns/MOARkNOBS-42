@@ -1,3 +1,12 @@
+This matrix corrals forty‑two stomp buttons and a handful of extra controls into a duo of CD74HC4067 multiplexers.
+The Teensy hurls address lines on A0–A5 (buttons) and A8–A11 (aux stuff) then listens back on pins 22/23 or analog taps.
+Keep the wiring tight and the logic at 3 V3 or phantom hits will riot across the board.
+
+**References**
+- [Full schematic](SCH_MOAR_Schematic_2025-08-01.pdf)
+- [CD74HC4067 datasheet](https://www.ti.com/lit/ds/symlink/cd74hc4067.pdf)
+- Snapshot [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22)
+
 Feast your eyes on the button matrix! A matching screenshot lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
 
 ```mermaid
