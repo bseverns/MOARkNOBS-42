@@ -19,9 +19,6 @@
 
 | Item                                          | Ref / Net              | Status            | Notes                                                                                                        |
 | --------------------------------------------- | ---------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------ |
-| Logic PTC fuse                                | F1 (0.5 A hold)        | Installed         | Mandatory protection                                                                                         |
-| LED rail PTC fuse                             | F2 / U6 (2–2.5 A hold) | Installed         | Mandatory for LED chain                                                                                      |
-| TVS diode                                     | D44 SA6.0A             | Installed         | Protects VIN\_FUSED (≥6 V clamp)                                                                             |
 | Reverse / backfeed isolation (USB vs DC jack) | Schottky or note       | **Opt**           | Add diode or explicit silkscreen warning if not implemented                                                  |
 | Per‑LED 0.1 µF decoupling caps                | C\_perLED\_x           | **DNI** / **Opt** | Provide footprints every LED or at least start/mid/end; populate if signal integrity / color glitches appear |
 | Additional bulk cap on VLED (extra 220 µF)    | C\_LED\_EXTRA          | **Opt**           | Populate if brownouts when many LEDs white                                                                   |
