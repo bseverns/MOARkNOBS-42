@@ -22,11 +22,45 @@ The timeline reads like a diary of questionable decisions. For the month-by-mont
 
 ## Getting Started
 
-1. **Flash the Firmware**
-   - **PlatformIO**: install it via `pip install platformio` or grab the VS Code extension. Change into the `firmware/` directory, pick the `teensy40_main` environment and run `pio run -t upload` with your Teensy 4.0 connected.
-   - **Arduino IDE**: install the Teensy board package (`Teensyduino`) and the same libraries listed in `platformio.ini` (FastLED, Bounce2, USB-MIDI, Adafruit SSD1306, Adafruit GFX Library, TimerOne and EEPROM). Open `firmware_main.cpp` as a sketch and upload normally.
-2. Order or assemble the PCBs from the files in `hardware/`.
-3. Wire up the buttons, LEDs and display, then start tweaking.
+### Flash the Firmware (the loud way)
+
+1. **Install the tools** – grab PlatformIO with `pip install platformio` or lean on the VS Code extension. Old‑school? Fire up the Arduino IDE with the Teensyduino add‑on and the libraries listed in `platformio.ini`.
+2. **Plug in your Teensy 4.0** – USB cable, no mystery.
+3. **Kick the build** – from `firmware/` run:
+   ```bash
+   pio run -t upload -e teensy40_main
+   ```
+   The loader will scream success if everything sticks.
+4. **Arduino alternate** – open `firmware_main.cpp` as a sketch and mash upload like it owes you money.
+
+### Wiring Basics
+
+1. **Feed it power** – 5 V into VUSB and common ground to every module. Star grounds save your sanity.
+2. **Data line** – Teensy pin `6` pumps bits to the WS2812 chain through a ~330 Ω resistor. First LED’s DIN gets the love.
+3. **Buttons and encoders** – wire them to their labeled pins; keep wires short so they don’t act like antennas for the void.
+
+### Run a “Hello LED” Test
+
+1. With the board still on USB, drop this minimal sketch into `firmware/test/` or a fresh project:
+   ```cpp
+   #include <FastLED.h>
+   #define LED_PIN 6
+   #define NUM_LEDS 1
+   CRGB leds[NUM_LEDS];
+   void setup(){ FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS); }
+   void loop(){ leds[0]=CRGB::Green; FastLED.show(); delay(500); leds[0]=CRGB::Black; FastLED.show(); delay(500); }
+   ```
+2. Build and upload it the same way as the main firmware. If that lone LED blinks like a tiny rave, you’re golden.
+
+Once the light show works, raid `hardware/` for PCB files and go full‑build.
+
+### What Could Go Wrong?
+
+- **No common ground** – LEDs ghost or don’t light. Tie every ground together like you mean it.
+- **Wrong pin** – LED data on any pin but 6? Enjoy the dark.
+- **Power sag** – feeding 52 WS2812s from a wimpy supply causes brownouts and swearing.
+- **Missing libraries** – PlatformIO fails fast if dependencies vanish. Check `platformio.ini` before blaming the hardware.
+- **Bootloader naps** – if the Teensy doesn’t auto‑program, hit its button to jolt the bootloader awake.
 
 ### Manual Hardware Tests
 
