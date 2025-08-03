@@ -26,6 +26,16 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 
+## Task Flow & Timing
+
+The firmware juggles work with three cooperative schedulers so the Teensy never misses a beat:
+
+- **High Priority – 1 ms**: MIDI parsing, the internal clock failover, and the arpeggiator's relentless tick.
+- **Mid Priority – 5–10 ms**: Serial command digestion and envelope followers tracking incoming audio or CV.
+- **Low Priority – 50–100 ms**: LED animations, filter/arp tuning, and OLED refreshes.
+
+The `loop()` function ticks these schedulers in order and then polls buttons and pots every pass. Tasks yield quickly—no preemption, just disciplined cooperation so UI and MIDI stay tight.
+
 ## Hardware Redefined
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:

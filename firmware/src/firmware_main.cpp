@@ -24,29 +24,29 @@ char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
 
 // Global objects
-std::vector<uint8_t> potChannels;
-std::map<int, int> potToEnvelopeMap; // Map pot index to envelope index
-std::queue<String> commandQueue; // Queue to store incoming commands
-MIDIHandler midiHandler;
-LEDManager ledManager(NUM_LEDS);
-DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // 128x64 for SSD1306
-ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
-BiquadFilter filter;
-TaskScheduler scheduler;
-Arpeggiator arpeggiator;
+std::vector<uint8_t> potChannels;             // 42-slot table: each entry stores a slot's MIDI CC value
+std::map<int, int> potToEnvelopeMap;          // Crosswalk from pot index to its envelope follower partner
+std::queue<String> commandQueue;              // Serial command backlog waiting for mid-tier processing
+MIDIHandler midiHandler;                      // Central MIDI traffic cop slinging bytes over USB + DIN
+LEDManager ledManager(NUM_LEDS);              // Whips the WS2812 strip into obedient patterns
+DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // Bosses around the 128x64 OLED
+ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button config to EEPROM
+BiquadFilter filter;                          // Shared filter template for envelope follower shaping
+TaskScheduler scheduler;                      // Legacy scheduler kept for posterity (most work lives in Utility)
+Arpeggiator arpeggiator;                      // Keeps notes chugging along in time
 
-//tempo
-unsigned long lastClockTime = 0;
+// tempo
+unsigned long lastClockTime = 0;              // ms timestamp of the most recent external MIDI clock
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
 // Control buttons are direct-wired (not part of the mux matrix)
 // and must not share the mux select pins.
-const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25};
-PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
-ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, controlPins, &potentiometerManager);
+const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25}; // Direct-wired control buttons
+PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin); // Scans pot muxes & EEPROM slots
+ButtonManager buttonManager(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, controlPins, &potentiometerManager); // Wrangles the button matrix
 
-// Envelope followers - assign to analog inputs
+// Envelope followers – six ADC spies that turn audio/CV into modulation
 std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A0, &potentiometerManager),
     EnvelopeFollower(A1, &potentiometerManager),
@@ -56,13 +56,13 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A7, &potentiometerManager),
 };
 
-// Hardware states
-uint8_t activePot = 0xFF;
-uint8_t activeChannel = 1;
-bool envelopeFollowMode = false;
-const char* envelopeMode = "LINEAR"; // Default envelope mode
-int NORMAL_DISPLAY_TIME = 30000;
-int SHORT_DISPLAY_TIME = 10000;
+// Hardware/UI state trackers
+uint8_t activePot = 0xFF;                 // Current slot index; 0xFF means "none selected"
+uint8_t activeChannel = 1;                // MIDI channel currently under the spotlight
+bool envelopeFollowMode = false;          // True when EFs are allowed to hijack a slot
+const char* envelopeMode = "LINEAR";      // Default envelope mode
+int NORMAL_DISPLAY_TIME = 30000;          // ms duration for full-size messages
+int SHORT_DISPLAY_TIME = 10000;           // ms duration for terse status flashes
 
 // Timers for processing
 unsigned long lastMIDIProcess = 0;
@@ -71,7 +71,7 @@ unsigned long lastLEDUpdate = 0;
 unsigned long lastEnvelopeProcess = 0;
 unsigned long lastDisplayUpdate = 0;
 
-// ButtonManagerContext
+// ButtonManagerContext: glue struct passed around to avoid global rummaging
 ButtonManagerContext buttonContext = {
     potChannels,
     activePot,
@@ -444,6 +444,7 @@ void setup() {
     displayManager.runStartupAnimation();
     
     // — Scheduler tasks —
+    // Three cooperative schedulers slice time so nothing blocks:
     // High-priority (1 ms):
     Utility::schedulerHigh.addTask(processMIDI,          MIDI_TASK_INTERVAL);
     Utility::schedulerHigh.addTask([](){
@@ -484,6 +485,16 @@ void setup() {
     }, 100);
 }
 
+/*
+ * Main loop groove:
+ * 1. Kick the schedulers in priority order so time-critical MIDI work happens first.
+ *    - schedulerHigh → 1 ms tick: MIDI parsing, internal clock, arpeggiator.
+ *    - schedulerMid  → 5–10 ms chores: serial command parsing and envelope tracking.
+ *    - schedulerLow  → 50–100 ms eye candy: LEDs, filter tweaks, and display drawing.
+ * 2. After the schedulers run, poll buttons and pots every spin for instant UI feel.
+ * 3. Finish by checking system load so we know if we're pushing the MCU too hard.
+ * Tasks never preempt each other; everyone plays nice and yields fast for the next riff.
+ */
 void loop() {
     Utility::schedulerHigh.update();
     Utility::schedulerMid.update();
