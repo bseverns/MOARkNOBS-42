@@ -28,10 +28,20 @@ struct ScheduledTask {
         : callback(cb), runAt(millis() + delayMs), repeat(rpt), interval(delayMs) {}
 };
 
-/** Simple cooperative task scheduler used by Utility. */
+/**
+ * Simple cooperative task scheduler used by Utility.
+ *
+ * Callbacks get collected and fired later, so they must not try to
+ * monkey with the scheduler's task list directly.
+ */
 class TaskScheduler {
 public:
     void addTask(std::function<void()> callback, unsigned long delayMs, bool repeat = false);
+
+    /**
+     * Tick the scheduler: collect due tasks, fire callbacks, and then
+     * wipe finished one-shots.
+     */
     void update();
    
 private:

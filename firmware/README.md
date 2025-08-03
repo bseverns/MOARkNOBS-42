@@ -374,6 +374,8 @@ The firmware juggles work with three cooperative schedulers so the Teensy never 
 
 The `loop()` function ticks these schedulers in order and then polls buttons and pots every pass. Tasks yield quickly—no preemption, just disciplined cooperation so UI and MIDI stay tight.
 
+> **House Rule:** scheduler callbacks get rounded up before they run. Don't mosh the task list from inside a callback—queue new gigs after `update()` finishes or risk a scheduler bar fight.
+
 =======
 ## Build It (PlatformIO or Bust)
 
