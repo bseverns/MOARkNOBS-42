@@ -106,7 +106,6 @@
 | SPI future header      | J\_SPI\_FUT (1×6 or 2×5)                        | **Future / DNI** | Reserve pins 10–13 + CS; not populated v2 |
 | UART debug header      | J\_UART\_DBG (GND, TX, RX)                      | **Future**       | Only if spare serial planned              |
 | Power probe header     | J\_PWR\_PROBE (VIN\_RAW, VIN\_FUSED, VLED, 3V3) | **Opt**          | Convenience for voltage drop measurements |
-| Test pads (signals)    | TP\_\* (see list)                               | Installed        | Bring-up instrumentation                  |
 | Optional VREF test pad | TP\_VREF                                        | **Opt**          | Useful for baseline calibration           |
 
 ### Test Pad Inventory (Planned)
