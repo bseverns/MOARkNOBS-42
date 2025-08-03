@@ -112,26 +112,6 @@ void processMIDI() {
     }
 }
 
-// When the outside world stops keeping time, fall back to our own tapped tempo
-void processInternalClock() {
-    static unsigned long lastInternalTick = 0;
-    if (g_tappedBPM <= 0.0f) return;
-
-    float msPerTick = 60000.0f / (g_tappedBPM * 24.0f); // 24 PPQN
-    if (millis() - lastInternalTick >= msPerTick) {
-        lastInternalTick = millis();
-        midiBeatPosition = (midiBeatPosition + 1) % 8;
-        displayManager.updateDisplay(
-            midiBeatPosition,
-            std::vector<uint8_t>(),
-            envelopeFollowMode ? "EF ON" : "EF OFF",
-            activePot,
-            activeChannel,
-            envelopeMode
-        );
-    }
-}
-
 void processSerial() {
     while (Serial.available()) {
         char received = Serial.read();
@@ -257,7 +237,7 @@ void processInternalClock() {
     static unsigned long lastInternalTick = 0;
     if (g_tappedBPM <= 0.0f) return; // No tempo tapped, nothing to do
 
-    unsigned long msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
+    float msPerTick = 60000.0f / (g_tappedBPM * 24.0f); // 24 PPQN
     unsigned long now = millis();
     if (now - lastInternalTick >= msPerTick) {
         lastInternalTick = now;
