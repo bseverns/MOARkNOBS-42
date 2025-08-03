@@ -238,19 +238,32 @@ void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayM
 
 void TaskScheduler::update() {
     unsigned long now = millis();
-  
-    tasks.erase(std::remove_if(tasks.begin(), tasks.end(),
-        [now](ScheduledTask& task) {
-            if (now >= task.runAt) {
-                task.callback();
-                if (task.repeat) {
-                    task.runAt = now + task.interval; // reschedule next run
-                    return false; // keep repeating task
-                }
-                return true; // remove one-time task
+
+    // Stage callbacks and track which one-shot tasks need culling.
+    std::vector<std::function<void()>> dueCallbacks;
+    std::vector<size_t> finished;
+
+    for (size_t i = 0; i < tasks.size(); ++i) {
+        ScheduledTask& task = tasks[i];
+        if (now >= task.runAt) {
+            dueCallbacks.push_back(task.callback);
+            if (task.repeat) {
+                task.runAt = now + task.interval; // reschedule next run
+            } else {
+                finished.push_back(i); // mark for removal
             }
-            return false; // not yet due
-        }), tasks.end());
+        }
+    }
+
+    // Run callbacks outside of the bookkeeping loop.
+    for (auto& cb : dueCallbacks) {
+        cb();
+    }
+
+    // Remove completed one-shot tasks, highest index first.
+    for (auto it = finished.rbegin(); it != finished.rend(); ++it) {
+        tasks.erase(tasks.begin() + *it);
+    }
 }
 
 TaskScheduler Utility::schedulerHigh;

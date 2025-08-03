@@ -374,6 +374,8 @@ The firmware juggles work with three cooperative schedulers so the Teensy never 
 
 The `loop()` function ticks these schedulers in order and then polls buttons and pots every pass. Tasks yield quickly—no preemption, just disciplined cooperation so UI and MIDI stay tight.
 
+> **House Rule:** scheduler callbacks get rounded up before they run. Don't mosh the task list from inside a callback—queue new gigs after `update()` finishes or risk a scheduler bar fight.
+
 =======
 ## Build It (PlatformIO or Bust)
 
@@ -391,6 +393,14 @@ Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
 ...snip...
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```
+
+Craving button gossip over serial? Build with `BM_DEBUG=1` to unleash verbose ButtonManager logs:
+
+```bash
+pio run -e teensy40_main -D BM_DEBUG=1
+```
+
+Leave it off and the firmware keeps its mouth shut.
 
 Want to poke the main test rig instead? Swap the environment:
 
