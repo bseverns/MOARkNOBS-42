@@ -97,10 +97,9 @@ void testButtonManager() {
 
   Serial.println("Press each physical control button now.");
   // Pin 6 reserved for LED strip
-  const uint8_t ctrlPins[] = {12,13,14,15,24,25};
   for (int i = 0; i < NUM_CONTROL_BUTTONS; i++) {
-    Serial.printf("Press Control Button #%d (pin %d)...\n", i, ctrlPins[i]);
-    while (digitalRead(ctrlPins[i]));
+    Serial.printf("Press Control Button #%d (pin %d)...\n", i, TEST_CONTROL_PINS[i]);
+    while (digitalRead(TEST_CONTROL_PINS[i]));
     Serial.printf("Control Button #%d OK!\n", i);
     delay(200);
   }
