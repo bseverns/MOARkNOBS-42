@@ -16,7 +16,13 @@ LEDManager::LEDManager(const HardwareConfig& config)
     : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
-    FastLED.addLeds<WS2812, cfg.ledPin, GRB>(leds.data(), leds.size()).setCorrection(TypicalLEDStrip);
+
+    // Bind the LED controller at runtime so the strip can hop pins without
+    // a recompile. FastLED hands back a controller reference we can nudge.
+    auto &ctrl = FastLED.addLeds<WS2812, GRB>(leds.data(), leds.size());
+    ctrl.setPin(cfg.ledPin);
+    ctrl.setCorrection(TypicalLEDStrip);
+
     FastLED.clear();
     FastLED.show();
     startupAnimation();

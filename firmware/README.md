@@ -73,6 +73,10 @@ void applyHardwareConfigOverrides(HardwareConfig& cfg) {
 }
 ```
 
+With the strip now wired up at runtime via FastLED's controller,
+that `ledPin` tweak really moves the data line—no recompile, no
+complaints.
+
 Or toss a JSON file on an SD card:
 
 ```json
