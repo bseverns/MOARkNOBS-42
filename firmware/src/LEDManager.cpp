@@ -3,8 +3,7 @@
 // the LEDs in sync with the controller state.
 
 #include "LEDManager.h"
-
-#include "Globals.h"  // pin definitions centralized here
+#include "Globals.h"  // hardware config
 #include <FastLED.h>
 #include <map>
 #include <string>
@@ -13,11 +12,11 @@ LEDManager::~LEDManager() {
     // Nothing to delete; STL containers clean up automatically
 }
 
-LEDManager::LEDManager(uint16_t numLEDs)
-    : numLEDs(numLEDs), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
+LEDManager::LEDManager(const HardwareConfig& config)
+    : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
-    FastLED.addLeds<WS2812, LED_PIN, GRB>(leds.data(), leds.size()).setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<WS2812, cfg.ledPin, GRB>(leds.data(), leds.size()).setCorrection(TypicalLEDStrip);
     FastLED.clear();
     FastLED.show();
     startupAnimation();
@@ -35,7 +34,7 @@ void LEDManager::setPotValue(uint8_t potIndex, uint8_t value) {
 }
 
 void LEDManager::setEnvelopeLevel(uint8_t efIndex, uint8_t value) {
-    uint16_t idx = EF_LED_OFFSET + efIndex;
+    uint16_t idx = EF_LED_OFFSET() + efIndex;
     if (idx < leds.size()) {
         uint8_t b = map(value, 0, 127, 0, 255);
         leds[idx] = CRGB(b, b, b);
@@ -44,7 +43,7 @@ void LEDManager::setEnvelopeLevel(uint8_t efIndex, uint8_t value) {
 }
 
 void LEDManager::setPotIndicator(uint8_t potIndex, uint8_t value) {
-    uint16_t idx = POT_LED_OFFSET + potIndex;
+    uint16_t idx = POT_LED_OFFSET() + potIndex;
     if (idx < leds.size()) {
         leds[idx] = CHSV(map(value, 0, 127, 0, 255), 255, 255);
         markDirty(idx);
@@ -222,7 +221,7 @@ void LEDManager::update() {
 }
 
 void LEDManager::setStatusLED(bool on) {
-    digitalWrite(STATUS_LED_PIN, on ? HIGH : LOW);
+    digitalWrite(cfg.statusLedPin, on ? HIGH : LOW);
 }
 
 void LEDManager::blinkStatusLED(uint8_t times, uint16_t delayMs) {

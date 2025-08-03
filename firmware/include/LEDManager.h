@@ -4,6 +4,7 @@
 #ifndef LEDMANAGER_H
 #define LEDMANAGER_H
 
+struct HardwareConfig;
 #include <vector>
 #include <map>
 #include <string>
@@ -40,8 +41,8 @@ enum class LEDState {
  */
 class LEDManager {
 public:
-    /** Construct a manager for a strip with the given LED count. */
-    LEDManager(uint16_t numLEDs);
+    /** Construct a manager bound to the hardware config. */
+    explicit LEDManager(const HardwareConfig& config);
     ~LEDManager();
 
     /** Initialise FastLED and clear the strip. Call once from setup(). */
@@ -114,6 +115,7 @@ public:
     void blinkStatusLED(uint8_t times, uint16_t delayMs);
 
 private:
+    const HardwareConfig& cfg;
     uint16_t numLEDs;
     std::vector<CRGB> leds;
     std::map<std::string, std::vector<uint16_t>> ledGroups;

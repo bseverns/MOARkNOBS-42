@@ -27,10 +27,7 @@
 
 #define SERIAL_BAUD 115200
 
-static_assert(NUM_LEDS == 52, "NUM_LEDS should match strip length");
-static_assert(SLOT_LED_COUNT == 42, "SLOT_LED_COUNT should match slot count");
-static_assert(EF_LED_COUNT == 6, "EF_LED_COUNT should match envelope follower count");
-static_assert(POT_LED_COUNT == 3, "POT_LED_COUNT should match physical pot LEDs");
+static_assert(NUM_BUTTONS == 6, "expect six control buttons");
 
 // --- Board objects ---
 // potChannels just holds the loaded EEPROM channels
@@ -351,7 +348,7 @@ void setup() {
 
   Serial.println("\n=== MOARkNOBS HW Test ===");
   Serial.printf("NUM_LEDS=%u SLOT_LED_COUNT=%u EF_LED_COUNT=%u POT_LED_COUNT=%u\n",
-                NUM_LEDS, SLOT_LED_COUNT, EF_LED_COUNT, POT_LED_COUNT);
+                NUM_LEDS(), hwConfig.slotLedCount, hwConfig.efLedCount, hwConfig.potLedCount);
 
   testLEDs();
   testButtons();

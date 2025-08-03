@@ -16,7 +16,7 @@ inline ConfigManager createConfigManager() {
 }
 
 inline LEDManager createLEDManager() {
-    return LEDManager(NUM_LEDS);
+    return LEDManager(hwConfig);
 }
 
 inline DisplayManager createDisplayManager() {
@@ -28,8 +28,7 @@ inline PotentiometerManager createPotentiometerManager() {
 }
 
 inline ButtonManager createButtonManager(PotentiometerManager* pm) {
-    return ButtonManager(primaryMuxPins, secondaryMuxPins,
-                         buttonMuxAnalogPin, TEST_CONTROL_PINS, pm);
+    return ButtonManager(hwConfig, TEST_CONTROL_PINS, pm);
 }
 
 inline std::vector<EnvelopeFollower> createEnvelopeFollowers(PotentiometerManager* pm) {
