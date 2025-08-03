@@ -16,7 +16,7 @@ Below is a quick cheat sheet.
 - **DisplayManager.h** – wrappers around the SSD1306 OLED display.
 - **EnvelopeFollower.h** – tracks audio or CV to modulate slots.
 - **Globals.h** – compile-time constants and forward declarations.
-- **LEDManager.h** – drives the addressable LED strip.
+- **LEDManager.h** – drives the 52-piece addressable LED circus: slot halos, envelope meters, pot glows and the control-button beacon.
 - **MIDIHandler.h** – thin wrapper for USB and DIN MIDI I/O.
 - **MIDITypes.h** – enums and structs defining slot data.
 - **PotentiometerManager.h** – reads analog pots via multiplexers.

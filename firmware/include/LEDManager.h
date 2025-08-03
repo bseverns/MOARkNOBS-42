@@ -34,6 +34,15 @@ public:
     /** Map a MIDI value (0-127) to a pot LED brightness or colour. */
     void setPotValue(uint8_t potIndex, uint8_t value);
 
+    /** Map an envelope follower level (0-127) to its LED brightness. */
+    void setEnvelopeLevel(uint8_t efIndex, uint8_t value);
+
+    /** Light LEDs next to the three physical pots with a slot value. */
+    void setPotIndicator(uint8_t potIndex, uint8_t value);
+
+    /** Flash the control button LED with a timed fade. */
+    void triggerControlButton();
+
     /** Show a numeric mode indicator using the pot LEDs. */
     void setModeDisplay(uint8_t mode);
 
@@ -90,6 +99,8 @@ private:
     uint8_t brightness = 128;
     LEDState currentState;
     uint8_t activeIndex;
+    unsigned long controlStart = 0;
+    bool controlActive = false;
 };
 
 #endif // LEDMANAGER_H

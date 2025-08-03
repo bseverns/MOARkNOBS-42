@@ -34,6 +34,28 @@ void LEDManager::setPotValue(uint8_t potIndex, uint8_t value) {
     }
 }
 
+void LEDManager::setEnvelopeLevel(uint8_t efIndex, uint8_t value) {
+    uint16_t idx = EF_LED_OFFSET + efIndex;
+    if (idx < leds.size()) {
+        uint8_t b = map(value, 0, 127, 0, 255);
+        leds[idx] = CRGB(b, b, b);
+        markDirty(idx);
+    }
+}
+
+void LEDManager::setPotIndicator(uint8_t potIndex, uint8_t value) {
+    uint16_t idx = POT_LED_OFFSET + potIndex;
+    if (idx < leds.size()) {
+        leds[idx] = CHSV(map(value, 0, 127, 0, 255), 255, 255);
+        markDirty(idx);
+    }
+}
+
+void LEDManager::triggerControlButton() {
+    controlStart = millis();
+    controlActive = true;
+}
+
 void LEDManager::setModeDisplay(uint8_t mode) {
     modeDisplay = mode;
     for (size_t i = 0; i < leds.size(); i++) {
@@ -126,6 +148,19 @@ void LEDManager::setGroupColor(const std::string& group, const CRGB& color) {
 }
 
 void LEDManager::update() {
+    if (controlActive) {
+        unsigned long elapsed = millis() - controlStart;
+        if (elapsed < 750) {
+            leds[CONTROL_LED_INDEX] = CRGB::White;
+        } else if (elapsed < 2000) {
+            leds[CONTROL_LED_INDEX] = CRGB(127, 127, 127);
+        } else {
+            leds[CONTROL_LED_INDEX] = CRGB::Black;
+            controlActive = false;
+        }
+        markDirty(CONTROL_LED_INDEX);
+    }
+
     switch (currentState) {
         case LEDState::ACTIVE_POT:
             if (activeIndex < leds.size()) leds[activeIndex] = CRGB::Red;
@@ -144,10 +179,11 @@ void LEDManager::update() {
             break;
         case LEDState::IDLE:
         default:
-            for (auto& led : leds) led = CRGB::Black;
-            break;
+            break; // keep existing colours
     }
+
     FastLED.show();
+    std::fill(dirtyFlags.begin(), dirtyFlags.end(), false);
 }
 
 void LEDManager::setStatusLED(bool on) {

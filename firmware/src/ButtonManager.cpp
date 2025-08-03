@@ -163,6 +163,9 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
             sm.state = ButtonState::PRESSED;
             sm.pressTimestamp = now;
             sm.longPressFired = false;
+            if (index >= NUM_VIRTUAL_BUTTONS) {
+                context.ledManager.triggerControlButton();
+            }
         }
         break;
 

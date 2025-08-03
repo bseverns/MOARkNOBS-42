@@ -1,6 +1,6 @@
 # BTN_42 Hardware
 
-> The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude.
+> The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude. Latest layout adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots.
 
 ![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_btnBRD_1-btnBRD_2025-07-22.png)
 

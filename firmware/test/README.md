@@ -12,7 +12,7 @@ Location: src/mainTEST.cpp
 
 #### Purpose-built to verify all major subsystems individually:
 
-LEDManager: one LED at a time, manually stepped
+LEDManager: one LED at a time, now including the new EF meters, control beacon and pot halos
 
 ButtonManager: tests both the matrix-multiplexed buttons and the direct-wired control buttons
 
