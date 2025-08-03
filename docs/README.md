@@ -1,17 +1,20 @@
-# Documentation Decoder Ring
+# Docs Index
 
-Welcome to the paper trail for MOARkNOBS-42. Grab a notebook, crank the volume, and dive into whichever pile of words fits your current fight.
+Welcome to the MOARkNOBS-42 documentation playground. This README aims to help you navigate the library of notes, design scraps, and personal ramblings we keep around to teach ourselves and the next hacker.
 
-## The Classics
-- [HISTORY.md](HISTORY.md) — the saga so far. Read this when you need context for why the firmware looks the way it does or to trace back design left turns.
-- [Options_DNI.md](Options_DNI.md) — every "maybe" and "do not install" footprint we argued about. Check it before locking a PCB layout or packing a BOM so you know what parts can stay in the drawer.
+## Choose Your Adventure
 
-## Scribbles and Schematics
-- [sketch/](sketch/) — loose diagrams, mermaid doodles, and quick hardware riffs. Use these when you want a fast visual on how the guts connect without wading through the full CAD files.
+- [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
+- [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
+- [sketch/](sketch/) — loose hardware sketches and subsystem guides. Highlights:
+  - [buttonMatrix.md](sketch/buttonMatrix.md) — how the 42-button grid scans its soul.
+  - [display.md](sketch/display.md) — wrangling pixels and I²C.
+  - [envelopeFE.md](sketch/envelopeFE.md) — analog envelope follower circuits.
+  - Plenty more (midi opto, power antics, board PDFs) for late-night study.
 
-## Choosing Your Weapon
-- History = debugging old ghosts.
-- Options_DNI = planning your next hardware rev.
-- sketch/ = flash-card anatomy for the hardware.
+## Cross-Pollination
 
-Keep it loud, keep it documented.
+- HISTORY tracks design moves that show up as options in `Options_DNI.md`.
+- The sketch notes reference those options when routing or debugging.
+
+Read, tweak, repeat. And if the docs don't answer it, that's your cue to write the next page—preferably with a soldering iron in hand.
