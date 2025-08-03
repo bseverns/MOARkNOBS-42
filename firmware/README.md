@@ -408,8 +408,20 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
 * Assign CCs visually
 * Set envelope pairings
-* Tweak filter types, EF settings
+* Tweak filter types, EF settings, and ARG pairings
 * Save back to EEPROM over WebSerial
+
+### Filter & ARG WebSerial Commands
+
+The browser flings a couple of plain-text orders over WebSerial and the
+firmware salutes:
+
+| Command | What it does |
+|---------|--------------|
+| `GET_FILTER` | Returns `type,freq,q` for the active envelope filter. |
+| `SET_FILTER <type,freq,q>` | Stores filter shape, cutoff and Q into EEPROM. |
+| `GET_ARGPAIR` | Spits back the two envelope indices blended in ARG mode. |
+| `SET_ARGPAIR <a,b>` | Persists a new envelope follower duo for ARG shenanigans. |
 
 ## Development Timeline
 
