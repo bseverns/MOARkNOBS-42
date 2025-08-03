@@ -3,6 +3,7 @@
 // Instantiated and used throughout firmware_main.cpp.
 
 #include "MIDIHandler.h"
+#include "Globals.h"
 #include <USB-MIDI.h>
 
 // Provides a small abstraction over both Serial and USB MIDI transports. Other
@@ -45,15 +46,52 @@ void MIDIHandler::processIncomingMIDI() {
     // message, read() returns true and we hurl the parsed bytes at
     // handleMIDI so the rest of the rig can jam.
     if (MIDI.read()) {
-        handleMIDI(MIDI.getType(), MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
+        auto type = MIDI.getType();
+        if (type == midi::Clock) {
+            clockTick = true;
+            lastExternalClock = lastInternalTick = millis();
+            if (g_clockOutEnabled) {
+                MIDI.sendClock();
+                usbMIDI.sendClock();
+            }
+        } else {
+            handleMIDI(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
+        }
     }
 
     // USB MIDI stockpiles packets in a buffer. Drain that queue in a loop
     // so nothing gets stale, feeding each packet through the same handler as
     // the old-school wire.
     while (usbMIDI.read()) {
-        handleMIDI(usbMIDI.getType(), usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
+        auto type = usbMIDI.getType();
+        if (type == midi::Clock) {
+            clockTick = true;
+            lastExternalClock = lastInternalTick = millis();
+            if (g_clockOutEnabled) {
+                MIDI.sendClock();
+                usbMIDI.sendClock();
+            }
+        } else {
+            handleMIDI(type, usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
+        }
     }
+
+    // If the outside world goes quiet, puke out our own clock based on tapped BPM
+    if (g_tappedBPM > 0.0f) {
+        bool externalHot = (millis() - lastExternalClock) < CLOCK_TIMEOUT_MS;
+        if (!externalHot) {
+            float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
+            if (millis() - lastInternalTick >= msPerTick) {
+                lastInternalTick = millis();
+                if (g_clockOutEnabled) {
+                    MIDI.sendClock();
+                    usbMIDI.sendClock();
+                }
+                clockTick = true;
+            }
+        }
+    }
+
     if (_displayManager) {
         _displayManager->registerInteraction();
     }
@@ -88,9 +126,9 @@ void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
     usbMIDI.sendNoteOff(note, velocity, channel);
 }
 
-// Did we just hear a MIDI clock pulse? Tempo tracker taps this.
+// Did we just spew or hear a MIDI clock pulse since last check?
 bool MIDIHandler::isClockTick() {
-    return MIDI.getType() == midi::Clock;
+    return clockTick;
 }
 
 // Wipe the clock pulse flag so the next beat counts.
