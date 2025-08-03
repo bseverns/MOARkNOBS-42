@@ -35,11 +35,10 @@ void loop() {
 
 ## HardwareConfig: the Puppet Master
 
-Tired of magic numbers? `HardwareConfig` (defined in [`Globals.h`](../Globals.h)) is
-the project's central ledger for every pin, LED count, and timing knob.
-`LEDManager` siphons the LED data pin and strip length straight from that
-struct, so you can reroute wires or swap strips without rewriting code.
-Want different pins? Override `hwConfig` with a `hardware_config.h` or even a
-tiny `hardware_config.json` and the lights obey.
+Tired of magic numbers? `HardwareConfig` (defined in [`Globals.h`](../Globals.h)) still
+tracks the board's pins and timing knobs. `LEDManager` leans on it for odds and
+ends like the status LED, but the strip's data pin is now a compile-time rebel:
+`LED_DATA_PIN` in `platformio.ini` decides where the bits fly. Want to reroute
+the glow? Change that flag and rebuild—runtime config won't save you.
 
 Peer at the wiring in [LEDManager.h](../LEDManager.h).
