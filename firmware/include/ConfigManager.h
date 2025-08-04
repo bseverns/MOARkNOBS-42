@@ -32,7 +32,9 @@ class MIDIHandler;
  * 4*NUM_POTS + 5  ARG method                       1
  * 4*NUM_POTS + 6  ARG env A                        1
  * 4*NUM_POTS + 7  ARG env B                        1
- * 4*NUM_POTS + 8-199  Reserved/buffer                 ~50
+ * 4*NUM_POTS + 8  Config version                   2
+ * 4*NUM_POTS + 10 CRC                              2
+ * 4*NUM_POTS + 12-225 Reserved/buffer                 ~46
  * 200             Primary magic (0xABCD)           2
  * 202             Backup magic  (0xDCBA)           2
  * 204-225        Reserved/buffer                 part of above
@@ -58,6 +60,8 @@ class MIDIHandler;
 #define EEPROM_MAGIC_PRIMARY 0xABCD  // Validates the main config block
 #define EEPROM_MAGIC_BACKUP  0xDCBA  // Signals a sane backup image
 
+#define CONFIG_VERSION 0x0001
+
 #define EEPROM_POT_CHANNELS EEPROM_START_ADDRESS
 #define EEPROM_POT_CC (EEPROM_POT_CHANNELS + NUM_POTS)
 #define EEPROM_ENVELOPE_ASSIGNMENTS (EEPROM_POT_CC + NUM_POTS)
@@ -68,7 +72,9 @@ class MIDIHandler;
 #define EEPROM_ARG_METHOD   (EEPROM_ARG_MODE + 1)
 #define EEPROM_ARG_ENV_A    (EEPROM_ARG_METHOD + 1)
 #define EEPROM_ARG_ENV_B    (EEPROM_ARG_ENV_A + 1)
-#define EEPROM_BACKUP_START (EEPROM_ARG_ENV_B + 1 + 50)  // Space after primary + buffer
+#define EEPROM_CONFIG_VERSION (EEPROM_ARG_ENV_B + 1)
+#define EEPROM_CONFIG_CRC    (EEPROM_CONFIG_VERSION + 2)
+#define EEPROM_BACKUP_START  (EEPROM_CONFIG_CRC + 2 + 46)  // Space after primary + buffer
 
 class EnvelopeFollower;
 
@@ -224,10 +230,13 @@ private:
     bool loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base); // restore from backup copy
     void readEEPROM(bool backup, uint16_t base);        // raw EEPROM read helper
     void writeEEPROM(bool backup, uint16_t base);       // raw EEPROM write helper
+    uint16_t calculateCRC() const;                      // compute config CRC
 
     //virtual slot/array:
     std::array<uint8_t, NUM_POTS>   _potChannels; // your pot→CC map
     std::array<uint8_t, NUM_POTS>   _potCCNumbers;
+    uint16_t _storedVersion = 0;                      // version read from EEPROM
+    uint16_t _storedCRC = 0;                          // CRC read from EEPROM
 };
 
 #endif // CONFIGMANAGER_H

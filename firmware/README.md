@@ -20,7 +20,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
 - **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
-- **EEPROM Resilience**: Built-in config backup system with auto-recovery from corruption.
+- **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
 - **Dual MIDI Output**: Send messages via USB and classic 5-pin DIN simultaneously.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.

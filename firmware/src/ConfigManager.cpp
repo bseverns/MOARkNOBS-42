@@ -5,6 +5,18 @@
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 
+static uint16_t crc16_update(uint16_t crc, uint8_t data) {
+    crc ^= data;
+    for (uint8_t i = 0; i < 8; ++i) {
+        if (crc & 1) {
+            crc = (crc >> 1) ^ 0xA001;
+        } else {
+            crc >>= 1;
+        }
+    }
+    return crc;
+}
+
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
     : _numPots(numPots), _numButtons(numButtons) {}
@@ -43,6 +55,11 @@ void ConfigManager::saveConfiguration() {
 bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
+        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+            Serial.println("Config CRC/version mismatch.");
+            resetConfiguration(potChannels);
+            return false;
+        }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_potChannels[i]);
@@ -57,6 +74,11 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_
 bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
     if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
+        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+            Serial.println("Backup CRC/version mismatch.");
+            resetConfiguration(potChannels);
+            return false;
+        }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_potChannels[i]);
@@ -75,15 +97,31 @@ void ConfigManager::readEEPROM(bool backup, uint16_t base) {
         _potChannels[i] = EEPROM.read(offset + EEPROM_POT_CHANNELS + i);
         _potCCNumbers[i] = EEPROM.read(offset + EEPROM_POT_CC + i);
     }
+    EEPROM.get(offset + EEPROM_CONFIG_VERSION, _storedVersion);
+    EEPROM.get(offset + EEPROM_CONFIG_CRC, _storedCRC);
 }
 
 // Internal write to EEPROM
 void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
+    uint16_t crc = calculateCRC();
     for (uint8_t i = 0; i < _numPots; i++) {
         EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _potChannels[i]);
         EEPROM.update(offset + EEPROM_POT_CC + i, _potCCNumbers[i]);
     }
+    EEPROM.put(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
+    EEPROM.put(offset + EEPROM_CONFIG_CRC, crc);
+}
+
+uint16_t ConfigManager::calculateCRC() const {
+    uint16_t crc = 0xFFFF;
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        crc = crc16_update(crc, _potChannels[i]);
+    }
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        crc = crc16_update(crc, _potCCNumbers[i]);
+    }
+    return crc;
 }
 
 // Load a profile block into the current working config
@@ -91,8 +129,14 @@ void ConfigManager::loadProfile(uint8_t id) {
     uint16_t base = EEPROM_PROFILE_START(id);
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
+        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+            Serial.println("Profile slot corrupted, using defaults.");
+        }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
+        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+            Serial.println("Profile slot corrupted, using defaults.");
+        }
     } else {
         Serial.println("Profile slot corrupted, using defaults.");
     }
