@@ -438,6 +438,46 @@ build_flags =
 Rebuild and the firmware will spew every handled message over the USB Serial
 console. Comment it back out when the noise gets old.
 
+### USB Serial & OLED Interface
+
+Once the MN42 is flashed you can jaw at it over USB like it's your favorite
+noisy synth. Crack open a terminal with PlatformIO:
+
+```bash
+pio device monitor
+```
+
+The `monitor_speed` is baked into `platformio.ini` (115200 baud), but any
+serial program that speaks 115200‑8‑N‑1 works in a pinch.
+
+Fire commands line‑by‑line:
+
+- `HELLO` – handshake and flip on WebSerial streaming.
+- `GET_SCHEMA` – dump the JSON schema describing pots and slots.
+- `SET_POT <pot,channel,cc>` – e.g. `SET_POT 0,1,74` maps pot 0 to CC 74 on
+  MIDI channel 1.
+- `GET_ALL` – spit every pot’s channel/CC plus the LED config.
+
+While the terminal spits data, the buttons drive the OLED menus. Tap a slot
+button and it flashes `Active Slot=<n>`. Long‑press the same button to marry an
+envelope follower (`Slot <n> -> EF <m>`). Double‑press control buttons to flip
+filter types and the screen shouts `Slot <n> => BANDPASS` so you know what just
+happened.
+
+Example session:
+
+```text
+$ pio device monitor
+> HELLO
+{"hello":"mn42"}
+> SET_POT 0,1,74
+Pot configuration updated!
+```
+
+While those lines scroll by, the OLED pops `Active Slot=0` and then
+`Slot 0 ch1 CC74` before fading back to its idle vibe. Trust the terminal for
+truth; use the screen to make sure your button mashing landed where it should.
+
 ## Getting Started
 
 1. Plug it in.
