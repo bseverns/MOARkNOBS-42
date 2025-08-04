@@ -29,6 +29,12 @@ Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_MOAR_Schematic` f
 * [envelopeFE.md](../docs/sketch/envelopeFE.md)
 * [display.md](../docs/sketch/display.md)
 
+### Thermal Sanity Checks
+
+- Make sure the regulator and LED-driver zones have fat copper pours or bolt-on heatsinks. No one likes roasted silicon.
+- Still worried about temps? Go for larger packages or share the current across multiple regulators so nothing melts.
+- Wanna nerd out harder? The [thermal crash course](../docs/thermal/README.md) walks through keeping the board chill.
+
 Below is a summary of the schematic sheets:
 
 | Sheet # | Title                                  | Contents                                                                                       |
