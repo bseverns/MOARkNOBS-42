@@ -143,11 +143,13 @@ Each control button can do several things depending on how you hit it:
 | #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
 | #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
 | #3     | Cycle MIDI Channel  | —                             | —                                 |
-| #4     | Cycle CC Number     | Reset EEPROM                  | Save config                       |
-| #5     | Tap BPM             | —                             | —                                 |
+| #4     | Cycle CC Number     | Reset EEPROM                  | Reload profile from EEPROM        |
+| #5     | Tap BPM             | —                             | Save config                       |
 
 **Slot Buttons (0–41):**
-- **Long Press:** Assign or cycle the Envelope Follower for that slot and toggle EF ON.
+- **Short Press:** Pick the slot you want to mangle.
+- **Long Press:** Assign or cycle the Envelope Follower for that slot and kick EF ON.
+- **Double Press:** Flip that slot’s EF filter to the next flavor.
 
 And yes, combo presses are supported:
 
@@ -165,9 +167,13 @@ And yes, combo presses are supported:
 | #0 + #5    | Set slot to Program Change               |
 | #1 + #4    | Set slot to Aftertouch                   |
 | #1 + #5    | Set slot to Pitch Bend                   |
+| #2 + #4    | Set slot to NRPN                         |
+| #0 + #3    | Set slot to SysEx                        |
 | #1 + #2    | Toggle MIDI clock output                 |
 | #2 + #5    | Cycle ARG envelope pair                  |
+| #3 + #4    | Bump arpeggiator base note               |
 | #3 + #5    | Toggle Arpeggiator mode                  |
+| #0 + #2    | Cycle configuration profiles             |
 
 
 ### OLED Feedback Cheat Sheet
@@ -313,8 +319,9 @@ The OLED shows:
 
 Your configuration is stored in EEPROM. Manual save required.
 
-* **Button #4 (long press)** resets config.
-* **Button #4 (double press)** stores current setup.
+* **Button #4 (long press)** nukes your config.
+* **Button #4 (double press)** reloads the profile from EEPROM.
+* **Button #5 (double press)** saves the current setup.
 * A backup copy is also maintained and auto-restored if needed.
 
 ## MIDI: The Lifeblood
