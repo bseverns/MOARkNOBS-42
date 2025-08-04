@@ -92,11 +92,13 @@ The LED strip is more hardheaded. FastLED demands its data pin up front, so we h
 
 ## Test Philosophy (and Real Talk)
 
-We don’t run tests in `/test`. That folder’s dead to us. Our hardware tests live right in `src/` where the real work happens.
+Some checks need hot solder and a human in the loop; others just need to prove they boot without catching fire.
 
-Why? Because PlatformIO’s unit test runner is a pain when your test requires poking real LEDs or twisting actual knobs. We write direct test files and compile each one as a standalone firmware. It’s brute-force testing—manual, visual, deliberate verification makes the dream work.
+**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_mainTEST`). They demand real LEDs, real knobs, and a willing operator.
 
-Test files used in the development of this project include:
+**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_mainTEST`. They make sure the code still starts up before we plug in anything expensive.
+
+Test sketches used in the development of this project include:
 
 * `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
 * `unified.cpp`: full integration test—just power it on and watch the magic.
