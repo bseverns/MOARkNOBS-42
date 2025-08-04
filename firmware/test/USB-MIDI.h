@@ -23,8 +23,17 @@ struct MidiInterfaceStub {
   int16_t lastPitchBend = 0;
   uint8_t lastPitchBendChannel = 0;
 
+  struct CCEvent { uint8_t control; uint8_t value; uint8_t channel; };
+  CCEvent ccLog[8];
+  uint8_t ccCount = 0;
+
+  uint8_t lastSysEx[32];
+  uint16_t lastSysExLength = 0;
+
   void begin(...) {}
-  void sendControlChange(uint8_t, uint8_t, uint8_t) {}
+  void sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
+    if (ccCount < 8) ccLog[ccCount++] = {control, value, channel};
+  }
   void sendNoteOn(uint8_t, uint8_t, uint8_t) {}
   void sendNoteOff(uint8_t, uint8_t, uint8_t) {}
   void sendProgramChange(uint8_t program, uint8_t channel) {
@@ -37,14 +46,17 @@ struct MidiInterfaceStub {
     lastPitchBend = bend; lastPitchBendChannel = channel;
   }
   void sendClock() {}
-  void sendSysEx(uint16_t, const uint8_t*, bool) {}
+  void sendSysEx(uint16_t length, const uint8_t* data, bool) {
+    lastSysExLength = length > 32 ? 32 : length;
+    for (uint16_t i = 0; i < lastSysExLength; ++i) lastSysEx[i] = data[i];
+  }
   bool read() { return false; }
   midi::MidiType getType() { return midi::NoteOff; }
   uint8_t getChannel() { return 0; }
   uint8_t getData1() { return 0; }
   uint8_t getData2() { return 0; }
-  const uint8_t* getSysExArray() { return nullptr; }
-  uint16_t getSysExArrayLength() { return 0; }
+  const uint8_t* getSysExArray() { return lastSysEx; }
+  uint16_t getSysExArrayLength() { return lastSysExLength; }
 };
 
 extern MidiInterfaceStub MIDI;
