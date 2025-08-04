@@ -5,7 +5,7 @@ Keeps the controller's brain in EEPROM so your madness survives power cycles.
 ## Key Methods
 
 - `begin(potChannels)` – load saved settings at boot.
-- `getSlotType(idx)` – figure out what a slot sends.
+- `getSlotType(idx)` – figure out what a slot sends, now including NRPN and SysEx weirdness.
 - `saveConfiguration()` – write everything back to flash.
 
 ## Typical Use

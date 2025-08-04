@@ -388,6 +388,19 @@ void setup() {
             break;
           }
 
+          case MIDIMessageType::NRPN: {
+            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+            uint16_t val   = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+            midiHandler.sendNRPN(param, val, slot.midiChannel);
+            break;
+          }
+
+          case MIDIMessageType::SysEx: {
+            uint8_t msg[4] = {0xF0, slot.data1, Utility::mapToMidiValue(rawValue), 0xF7};
+            midiHandler.sendSysEx(msg, 4);
+            break;
+          }
+
           default:
             break;
         }

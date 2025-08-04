@@ -15,7 +15,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
-- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend.
+- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend, NRPN, and full-blown SysEx.
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
 - **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.

@@ -50,6 +50,29 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     usbMIDI.sendNoteOff(note, velocity, channel);
 }
 
+void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
+    if (channel < 1 || channel > 16) return;
+    uint8_t pMsb = (param >> 7) & 0x7F;
+    uint8_t pLsb = param & 0x7F;
+    uint8_t vMsb = (value >> 7) & 0x7F;
+    uint8_t vLsb = value & 0x7F;
+    // classic NRPN sequence: param MSB/LSB then data entry MSB/LSB
+    MIDI.sendControlChange(99, pMsb, channel);
+    MIDI.sendControlChange(98, pLsb, channel);
+    MIDI.sendControlChange(6,  vMsb, channel);
+    MIDI.sendControlChange(38, vLsb, channel);
+    usbMIDI.sendControlChange(99, pMsb, channel);
+    usbMIDI.sendControlChange(98, pLsb, channel);
+    usbMIDI.sendControlChange(6,  vMsb, channel);
+    usbMIDI.sendControlChange(38, vLsb, channel);
+}
+
+void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
+    if (!data || length == 0) return;
+    MIDI.sendSysEx(length, data, true);
+    usbMIDI.sendSysEx(length, data, true);
+}
+
 void MIDIHandler::processIncomingMIDI() {
     // Serial MIDI is the crusty hardware port. When it spits out a full
     // message, read() returns true and we hurl the parsed bytes at
@@ -63,6 +86,8 @@ void MIDIHandler::processIncomingMIDI() {
                 MIDI.sendClock();
                 usbMIDI.sendClock();
             }
+        } else if (type == midi::SystemExclusive) {
+            handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
         } else {
             handleMIDI(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
         }
@@ -80,6 +105,8 @@ void MIDIHandler::processIncomingMIDI() {
                 MIDI.sendClock();
                 usbMIDI.sendClock();
             }
+        } else if (type == midi::SystemExclusive) {
+            handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
         } else {
             handleMIDI(type, usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
         }
@@ -109,13 +136,38 @@ void MIDIHandler::processIncomingMIDI() {
 void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2) {
     switch (type) {
         case midi::ControlChange:
-            MIDI_DBG_PRINTF("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
+            // Peek for NRPN sequences; otherwise just log the CC
+            switch (data1) {
+                case 99: // NRPN parameter MSB
+                    _nrpnParam = (data2 & 0x7F) << 7;
+                    _nrpnParamReady = false;
+                    break;
+                case 98: // NRPN parameter LSB
+                    _nrpnParam |= (data2 & 0x7F);
+                    _nrpnParamReady = true;
+                    break;
+                case 6: // Data entry MSB
+                    _nrpnValue = (data2 & 0x7F) << 7;
+                    break;
+                case 38: // Data entry LSB
+                    _nrpnValue |= (data2 & 0x7F);
+                    if (_nrpnParamReady) {
+                        handleNRPN(channel, _nrpnParam, _nrpnValue);
+                    }
+                    break;
+                default:
+                    MIDI_DBG_PRINTF("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
+                    break;
+            }
             break;
         case midi::NoteOn:
             handleNoteOn(channel, data1, data2);
             break;
         case midi::NoteOff:
             handleNoteOff(channel, data1, data2);
+            break;
+        case midi::SystemExclusive:
+            // handled upstream
             break;
         default:
             MIDI_DBG_PRINTLN("Unhandled MIDI message");
@@ -172,4 +224,16 @@ void MIDIHandler::sendClock() {
   if (!g_clockOutEnabled) return;
   MIDI.sendClock();
   usbMIDI.sendClock();
+}
+
+void MIDIHandler::handleNRPN(uint8_t channel, uint16_t param, uint16_t value) {
+    MIDI_DBG_PRINTF("NRPN %u = %u on ch %u\n", param, value, channel);
+}
+
+void MIDIHandler::handleSysEx(const uint8_t* data, uint16_t length) {
+    MIDI_DBG_PRINTF("SysEx[%u]", length);
+    for (uint16_t i = 0; i < length; ++i) {
+        MIDI_DBG_PRINTF(" %02X", data[i]);
+    }
+    MIDI_DBG_PRINTLN("");
 }

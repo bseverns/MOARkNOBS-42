@@ -228,7 +228,7 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
         switch (ctrlIdx) {
             case 1: { //Cycle MIDI Message Type
                 MIDISlot &slot = context.configManager.getSlot(context.activePot);
-                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::Aftertouch) + 1));
+                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
                 context.configManager.saveSlot(context.activePot, slot);
                 char buf[32];
                 sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
@@ -587,7 +587,21 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "Slot %d => BEND", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (8) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
+    // (8) Ctrl2 + Ctrl4: Set active slot to NRPN
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::NRPN);
+        char buf[32];
+        sprintf(buf, "Slot %d => NRPN", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (9) Ctrl0 + Ctrl3: Set active slot to SysEx
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::SysEx);
+        char buf[32];
+        sprintf(buf, "Slot %d => SYSEX", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (10) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
     else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it == context.potToEnvelopeMap.end()) {
@@ -616,7 +630,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (9) Ctrl3 + Ctrl4: Increment arpeggiator base note
+    // (11) Ctrl3 + Ctrl4: Increment arpeggiator base note
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4)) == (maskCtrl3 | maskCtrl4)) {
         MIDISlot &slot = context.configManager.getSlot(context.activePot);
         slot.arpNote = (slot.arpNote + 1) % 128;
@@ -625,7 +639,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "ARP NOTE %d", slot.arpNote);
         context.displayManager.displayStatus(buf, 1000);
     }
-    // (10) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
+    // (12) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
         if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
             arpeggiator.stop();
@@ -635,7 +649,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             context.displayManager.displayStatus("ARP ON", 1000);
         }
     }
-    // (11) Ctrl0 + Ctrl2: Cycle configuration profiles
+    // (13) Ctrl0 + Ctrl2: Cycle configuration profiles
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
         currentProfile = (currentProfile + 1) % 3;
         context.configManager.loadProfile(currentProfile);
@@ -647,7 +661,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "PROFILE %d", currentProfile);
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (12) Ctrl1 + Ctrl2: Toggle MIDI clock output
+    // (14) Ctrl1 + Ctrl2: Toggle MIDI clock output
     else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
         g_clockOutEnabled = !g_clockOutEnabled;
         context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF", 1000);
