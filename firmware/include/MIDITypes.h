@@ -11,7 +11,9 @@ enum class MIDIMessageType : uint8_t {
   Note,   //!< Note on/off
   PitchBend,
   ProgramChange,
-  Aftertouch
+  Aftertouch,
+  NRPN,   //!< Non-Registered Parameter Number send
+  SysEx   //!< System Exclusive thrasher
 };
 
 /** Configuration for a single pot slot. */

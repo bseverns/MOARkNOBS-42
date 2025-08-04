@@ -32,6 +32,12 @@ public:
     /** Send a MIDI Note Off message. */
     void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
 
+    /** Sling a raw NRPN sequence (CC99/98 + CC6/38). */
+    void sendNRPN(uint16_t param, uint16_t value, uint8_t channel);
+
+    /** Fire off a System Exclusive packet. `data` should include F0/F7. */
+    void sendSysEx(const uint8_t* data, uint16_t length);
+
     /** Poll both serial and USB for incoming MIDI bytes. */
     void processIncomingMIDI();
 
@@ -55,6 +61,14 @@ private:
     unsigned long lastExternalClock = 0;
     unsigned long lastInternalTick = 0;
     DisplayManager* _displayManager = nullptr;
+
+    // NRPN decode state
+    uint16_t _nrpnParam = 0;
+    uint16_t _nrpnValue = 0;
+    bool     _nrpnParamReady = false;
+
+    void handleNRPN(uint8_t channel, uint16_t param, uint16_t value);
+    void handleSysEx(const uint8_t* data, uint16_t length);
 };
 
 #endif
