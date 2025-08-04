@@ -1,5 +1,7 @@
 # DisplayManager
 
+Part of the firmware `include` jungle. Check the [parent README](../README.md) if you get lost in pixels.
+
 Talks to the SSD1306 OLED and isn't afraid to shout.
 
 ## Key Methods

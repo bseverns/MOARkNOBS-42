@@ -1,5 +1,7 @@
 # MIDIHandler
 
+Part of the firmware `include` jungle. Scope the [parent README](../README.md) to see where the bytes route.
+
 USB, DIN, whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
 
 ## Key Methods

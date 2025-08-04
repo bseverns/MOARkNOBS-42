@@ -1,5 +1,7 @@
 # EnvelopeFollower
 
+Part of the firmware `include` jungle. Hit the [parent README](../README.md) for how envelopes boss the rest.
+
 Sniffs audio or CV, shapes it, and hurls MIDI-friendly levels back.
 
 ## Key Methods

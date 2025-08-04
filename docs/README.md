@@ -4,9 +4,12 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 ## Where to Start
 
+- [QuickStart.md](QuickStart.md) — wire it, flash it, and smoke‑test it.
 - [HISTORY.md](HISTORY.md) — quick tour of the chaos so far.
 - [Options_DNI.md](Options_DNI.md) — parts you can skip or swap without guilt.
+- [WebSerial.md](WebSerial.md) — how the board chats with browsers.
 - [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
+- [thermal/](thermal/) — keep the silicon from frying itself.
 
 ## Choose Your Adventure
 

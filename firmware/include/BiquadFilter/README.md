@@ -1,5 +1,7 @@
 # BiquadFilter
 
+Part of the firmware `include` jungle. Peek at the [parent README](../README.md) for map and compass.
+
 Tiny DSP sledgehammer for shaping envelope vibes.
 
 ## Key Methods

@@ -1,5 +1,7 @@
 # ButtonManager
 
+Part of the firmware `include` jungle. The [parent README](../README.md) explains how button rage propagates.
+
 Scans the 7×6 button grid, smacks bounce in the teeth, and spits out events.
 
 ## Key Methods

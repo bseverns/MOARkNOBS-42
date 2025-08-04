@@ -2,6 +2,8 @@
 
 Regulators and LED drivers aren't fans of flash fry. Here's how to keep them from cooking themselves off the board.
 
+Back up one directory to the [docs index](../README.md) for the full paper trail.
+
 ## Copper Pours & Heatsinks
 
 - Flood the regulator and LED-driver zones with copper pour. Let the board act as their personal radiator.

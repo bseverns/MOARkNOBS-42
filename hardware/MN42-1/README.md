@@ -11,6 +11,7 @@
 - **[BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx)** – every resistor, diode, and shiny trinket spelled out.
 - **[Gerber_MOAR_Board_2025-08-02.zip](Gerber_MOAR_Board_2025-08-02.zip)** – drop this on your fab house and watch the copper fly.
 - **[shell/](shell/)** – enclosure models. `3DShell_btnBRD` holds STEP files for CAD nerds; `stl/` is ready for your printer.
+- **[gerber/](gerber/)** – raw CAM output if you want to eyeball layers before fab.
 
 ## Big-Picture Context
 

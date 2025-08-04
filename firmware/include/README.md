@@ -7,6 +7,8 @@ This folder holds the C++ headers that glue the controller together.
 Each file corresponds to a manager class or shared structure.
 Below is a quick cheat sheet.
 
+Most modules stash a mini README in their own subfolder for API riffs—check `*/README.md` for details while you hack.
+
 ## Files
 
 - **Arpeggiator.h** – simple timed note repeater for any slot ([Arpeggiator.cpp](../src/Arpeggiator.cpp)).

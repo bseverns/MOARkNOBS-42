@@ -1,5 +1,7 @@
 # PotentiometerManager
 
+Part of the firmware `include` jungle. See the [parent README](../README.md) to map the territory.
+
 Reads the three real pots through a mess of muxes and smooths their jittery souls.
 
 ## Key Methods
