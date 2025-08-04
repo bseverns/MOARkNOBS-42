@@ -152,7 +152,8 @@ void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8
                 case 38: // Data entry LSB
                     _nrpnValue |= (data2 & 0x7F);
                     if (_nrpnParamReady) {
-                        handleNRPN(channel, _nrpnParam, _nrpnValue);
+                        receiveNRPN(channel, _nrpnParam, _nrpnValue);
+                        _nrpnParamReady = false;
                     }
                     break;
                 default:
@@ -253,11 +254,18 @@ void MIDIHandler::sendClock() {
   usbMIDI.sendClock();
 }
 
-void MIDIHandler::handleNRPN(uint8_t channel, uint16_t param, uint16_t value) {
+void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {
+    _lastNRPNParam = param;
+    _lastNRPNValue = value;
     MIDI_DBG_PRINTF("NRPN %u = %u on ch %u\n", param, value, channel);
 }
 
 void MIDIHandler::handleSysEx(const uint8_t* data, uint16_t length) {
+    if (!data || length == 0) return;
+    _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
+    for (uint16_t i = 0; i < _lastSysExLength; ++i) {
+        _lastSysEx[i] = data[i];
+    }
     MIDI_DBG_PRINTF("SysEx[%u]", length);
     for (uint16_t i = 0; i < length; ++i) {
         MIDI_DBG_PRINTF(" %02X", data[i]);

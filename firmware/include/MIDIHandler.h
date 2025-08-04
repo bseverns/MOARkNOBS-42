@@ -35,8 +35,16 @@ public:
     /** Sling a raw NRPN sequence (CC99/98 + CC6/38). */
     void sendNRPN(uint16_t param, uint16_t value, uint8_t channel);
 
+    /** Last NRPN parsed from the wire. */
+    uint16_t lastNRPNParam() const { return _lastNRPNParam; }
+    uint16_t lastNRPNValue() const { return _lastNRPNValue; }
+
     /** Fire off a System Exclusive packet. `data` should include F0/F7. */
     void sendSysEx(const uint8_t* data, uint16_t length);
+
+    /** Snapshot of the most recent SysEx payload. */
+    uint16_t lastSysExLength() const { return _lastSysExLength; }
+    const uint8_t* lastSysExData() const { return _lastSysEx; }
 
     /** Poll both serial and USB for incoming MIDI bytes. */
     void processIncomingMIDI();
@@ -70,7 +78,15 @@ private:
     uint16_t _nrpnValue = 0;
     bool     _nrpnParamReady = false;
 
-    void handleNRPN(uint8_t channel, uint16_t param, uint16_t value);
+    // Last fully received NRPN for external inspection
+    uint16_t _lastNRPNParam = 0;
+    uint16_t _lastNRPNValue = 0;
+
+    // SysEx stash for quick testing/debugging
+    uint8_t  _lastSysEx[32] = {0};
+    uint16_t _lastSysExLength = 0;
+
+    void receiveNRPN(uint8_t channel, uint16_t param, uint16_t value);
     void handleSysEx(const uint8_t* data, uint16_t length);
 };
 

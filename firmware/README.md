@@ -37,6 +37,9 @@ midi.begin();
 midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
 midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
 midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
+midi.sendNRPN(0x1234, 0x5678, 1); // tweak a deep-cut parameter
+uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
+midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
 ```
 
 Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.

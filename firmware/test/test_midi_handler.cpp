@@ -36,6 +36,48 @@ void test_pitch_bend() {
     TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastPitchBendChannel);
 }
 
+void test_send_nrpn() {
+    MIDIHandler mh;
+    MIDI.ccCount = usbMIDI.ccCount = 0;
+    mh.sendNRPN(0x1234, 0x5678, 3);
+    TEST_ASSERT_EQUAL_UINT8(4, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(99, MIDI.ccLog[0].control);
+    TEST_ASSERT_EQUAL_UINT8(0x24, MIDI.ccLog[0].value);
+    TEST_ASSERT_EQUAL_UINT8(98, MIDI.ccLog[1].control);
+    TEST_ASSERT_EQUAL_UINT8(0x34, MIDI.ccLog[1].value);
+    TEST_ASSERT_EQUAL_UINT8(6,  MIDI.ccLog[2].control);
+    TEST_ASSERT_EQUAL_UINT8(0xAC, MIDI.ccLog[2].value);
+    TEST_ASSERT_EQUAL_UINT8(38, MIDI.ccLog[3].control);
+    TEST_ASSERT_EQUAL_UINT8(0x78, MIDI.ccLog[3].value);
+    TEST_ASSERT_EQUAL_UINT8(4, usbMIDI.ccCount);
+}
+
+void test_receive_nrpn() {
+    MIDIHandler mh;
+    uint16_t param = 0x1234;
+    uint16_t value = 0x5678;
+    uint8_t ch = 2;
+    mh.handleMIDI(midi::ControlChange, ch, 99, (param >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, ch, 98, param & 0x7F);
+    mh.handleMIDI(midi::ControlChange, ch, 6,  (value >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, ch, 38, value & 0x7F);
+    TEST_ASSERT_EQUAL_UINT16(param, mh.lastNRPNParam());
+    TEST_ASSERT_EQUAL_UINT16(value, mh.lastNRPNValue());
+}
+
+void test_send_sysex() {
+    MIDIHandler mh;
+    uint8_t msg[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
+    MIDI.lastSysExLength = usbMIDI.lastSysExLength = 0;
+    mh.sendSysEx(msg, sizeof(msg));
+    TEST_ASSERT_EQUAL_UINT16(sizeof(msg), MIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(sizeof(msg), usbMIDI.lastSysExLength);
+    for (uint8_t i = 0; i < sizeof(msg); ++i) {
+        TEST_ASSERT_EQUAL_UINT8(msg[i], MIDI.lastSysEx[i]);
+        TEST_ASSERT_EQUAL_UINT8(msg[i], usbMIDI.lastSysEx[i]);
+    }
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -44,6 +86,9 @@ void setup() {
     RUN_TEST(test_program_change);
     RUN_TEST(test_aftertouch);
     RUN_TEST(test_pitch_bend);
+    RUN_TEST(test_send_nrpn);
+    RUN_TEST(test_receive_nrpn);
+    RUN_TEST(test_send_sysex);
     UNITY_END();
 }
 
