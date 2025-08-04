@@ -8,6 +8,10 @@
 
 ![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_3-PWR-BUTTON-TEST.png)
 
+## Directory Layout
+
+- **MN42-1/** – first board spin, complete with BOMs, Gerbers and printable shells.
+
 ## Power Rails Need Fat Copper
 
 If you're routing or poking at the LED power network, keep the lifeblood thick:

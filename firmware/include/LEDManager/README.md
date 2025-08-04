@@ -1,5 +1,7 @@
 # LEDManager
 
+Part of the firmware `include` jungle. Scope the [parent README](../README.md) to see how the glow plugs in.
+
 Runs the 52-piece WS2812 light riot and keeps it barely under control.
 
 ## Key Methods

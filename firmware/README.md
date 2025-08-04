@@ -12,6 +12,14 @@ Forget fragile GUIs and boutique workflows. This beast lives in the guts: built 
 
 And driving the chaos? Six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
 
+## Directory Layout
+
+- **src/** – core firmware sources.
+- **include/** – headers and module docs.
+- **test/** – manual and Unity-driven hardware checks.
+- **App/** – WebSerial config page.
+- **lib/** – vendored Arduino libs that keep the lights on.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.

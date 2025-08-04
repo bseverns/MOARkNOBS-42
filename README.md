@@ -11,6 +11,7 @@ Fresh to the scene and itching to see blinkenlights? Hit the [QuickStart](docs/Q
 
 ## Where's what
 
+- **docs/** – QuickStart, history log, WebSerial guide, and thermal rants.
 - **firmware/** – Teensy 4.0 source and project files. The full manual lives in [firmware/README.md](firmware/README.md).
   - **App/** – simple WebSerial editor to tweak settings over USB.
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).

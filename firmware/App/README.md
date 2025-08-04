@@ -6,6 +6,11 @@ The page reads a JSON schema and the current settings from the board, builds a f
 
 For an overview of the entire project see the [repo README](../../README.md).
 
+## Contents
+
+- `benzknobz.html` – barebones WebSerial editor.
+- `config_schema.json` – describes every field the app can twiddle.
+
 ## Usage
 
 1. Flash the firmware and connect the device via USB.

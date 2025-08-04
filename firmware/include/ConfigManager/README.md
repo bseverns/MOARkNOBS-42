@@ -1,5 +1,7 @@
 # ConfigManager
 
+Part of the firmware `include` jungle. Read the [parent README](../README.md) to see how configs steer the beast.
+
 Keeps the controller's brain in EEPROM so your madness survives power cycles.
 
 ## Key Methods

@@ -1,6 +1,8 @@
 # MOARkNOBZ Firmware: Hardware Testing Suite
 
-This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware. 
+This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware.
+
+You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
 
 These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
 

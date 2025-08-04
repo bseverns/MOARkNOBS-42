@@ -1,5 +1,7 @@
 # Arpeggiator
 
+Part of the firmware `include` jungle. The [parent README](../README.md) shows how it locks to the rest of the circus.
+
 Clock-synced riff machine that rips through a slot's note stack like it's late for soundcheck.
 
 ## Key Methods
