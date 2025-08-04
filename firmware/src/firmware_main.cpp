@@ -343,7 +343,7 @@ void setup() {
     // Load per-slot EEPROM into RAM, and pot→CC into potChannels[]
     configManager.begin(potChannels);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
-    configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    bool baselinesLoaded = configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
 
     // — MIDI Handler —
     midiHandler.begin();
@@ -431,7 +431,9 @@ void setup() {
     // — Envelope followers —
     for (auto& ef : envelopeFollowers) {
         ef.toggleActive(true);
-        ef.calibrate();
+        if (!baselinesLoaded) {
+            ef.calibrate();
+        }
     }
     float sf, sq;
     EEPROM.get(EEPROM_FILTER_FREQ, sf);

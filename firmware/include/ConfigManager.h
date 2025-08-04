@@ -157,11 +157,14 @@ public:
 
     // Envelope follower configuration -----------------------------------
 
-    /** Persist the current envelope routing and types to EEPROM. */
+    /** Persist the current envelope routing and baselines to EEPROM. */
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
 
-    /** Restore envelope routing and filter types from EEPROM. */
-    void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
+    /**
+     * Restore envelope routing and baseline offsets from EEPROM.
+     * Returns true if every envelope's baseline was recovered.
+     */
+    bool loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
     // Utility methods ----------------------------------------------------
     uint8_t getNumPots() const { return _numPots; }

@@ -4,6 +4,7 @@
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
+#include <cmath>
 
 static uint16_t crc16_update(uint16_t crc, uint8_t data) {
     crc ^= data;
@@ -200,16 +201,31 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
 }
 
 // Envelope settings
-void ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopeFollowers) {
-    for (size_t i = 0; i < envelopeFollowers.size(); i++) {
+bool ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes) {
+    bool allFound = true;
+    for (size_t i = 0; i < envelopes.size(); i++) {
         int envelopeIndex = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
         potToEnvelopeMap[i] = envelopeIndex;
+
+        float b;
+        EEPROM.get(EEPROM_ENVELOPE_BASELINES + i * sizeof(float), b);
+
+        envelopes[i].setVref(g_vref);  // always refresh Vref
+        if (!std::isnan(b)) {
+            envelopes[i].setBaseline(b);
+        } else {
+            allFound = false;
+        }
     }
+    return allFound;
 }
 
 void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes) {
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
+    }
+    for (size_t i = 0; i < envelopes.size(); ++i) {
+        EEPROM.put(EEPROM_ENVELOPE_BASELINES + i * sizeof(float), envelopes[i].getBaseline());
     }
 }
 
