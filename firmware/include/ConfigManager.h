@@ -238,11 +238,12 @@ private:
     void writeEEPROM(bool backup, uint16_t base);       // raw EEPROM write helper
     uint16_t calculateCRC() const;                      // compute config CRC
 
-    //virtual slot/array:
-    std::array<uint8_t, NUM_POTS>   _potChannels; // your pot→CC map
-    std::array<uint8_t, NUM_POTS>   _potCCNumbers;
-    uint16_t _storedVersion = 0;                      // version read from EEPROM
-    uint16_t _storedCRC = 0;                          // CRC read from EEPROM
+    struct StoredConfig {
+        std::array<uint8_t, NUM_POTS> potChannels;   //!< saved pot→CC map
+        std::array<uint8_t, NUM_POTS> potCCNumbers;  //!< saved CC numbers
+        uint16_t version = 0;                        //!< config schema version
+        uint16_t crc = 0;                            //!< integrity check value
+    } _stored;
 };
 
 #endif // CONFIGMANAGER_H
