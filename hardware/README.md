@@ -21,11 +21,7 @@ If you're routing or poking at the LED power network, keep the lifeblood thick:
 - `VLED`
 - any other LED power rail hiding in your design
 
-In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover the
-trace, and smash **Change Width** until it's **0.5 mm or wider**.  After you push the
-update, regenerate the Gerbers and pop open `Gerber_TopLayer.GTL`—the smallest
-`%ADD` aperture should scream `0.5` or bigger.  Thin copper means brown‑outs and sad
-pixels, so keep it beefy.
+In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover the trace, and smash **Change Width** until it's **0.5 mm or wider**.  After you push the update, regenerate the Gerbers and pop open `Gerber_TopLayer.GTL`—the smallest `%ADD` aperture should scream `0.5` or bigger.  Thin copper means brown‑outs and sad pixels, so keep it beefy.
 
 ## MN42-1
 

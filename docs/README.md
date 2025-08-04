@@ -2,24 +2,19 @@
 
 Welcome to the MOARkNOBS-42 documentation playground. This README aims to help you navigate the library of notes, design scraps, and personal ramblings we keep around to teach ourselves and the next hacker.
 
-## Where to Start
-
-- [QuickStart.md](QuickStart.md) — wire it, flash it, and smoke‑test it.
-- [HISTORY.md](HISTORY.md) — quick tour of the chaos so far.
-- [Options_DNI.md](Options_DNI.md) — parts you can skip or swap without guilt.
-- [WebSerial.md](WebSerial.md) — how the board chats with browsers.
-- [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
-- [thermal/](thermal/) — keep the silicon from frying itself.
-
 ## Choose Your Adventure
 
+- [QuickStart.md](QuickStart.md) — wire it, flash it, and smoke‑test it.
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
-- [sketch/](sketch/) — loose hardware sketches and subsystem guides. Highlights:
+- [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
+Highlights:
   - [buttonMatrix.md](sketch/buttonMatrix.md) — how the 42-button grid scans its soul.
   - [display.md](sketch/display.md) — wrangling pixels and I²C.
   - [envelopeFE.md](sketch/envelopeFE.md) — analog envelope follower circuits.
   - Plenty more (midi opto, power antics, board PDFs) for late-night study.
+- [WebSerial.md](WebSerial.md) — how the board chats with browsers.
+- [thermal/](thermal/) — keep the silicon from frying itself.
 
 ## Cross-Pollination
 
