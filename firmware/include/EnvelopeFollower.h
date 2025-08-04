@@ -173,6 +173,10 @@ public:
      */
     void setGain(float g) { gain = g; }
 
+    /** Directly set or query the stored baseline offset. */
+    void setBaseline(float b) { baseline = b; }
+    float getBaseline() const { return baseline; }
+
     /** Set how many ADC samples to average per update. */
     void setOversampleCount(uint8_t count);
     uint8_t getOversampleCount() const;
@@ -180,6 +184,9 @@ public:
     /** Set the EWMA smoothing factor applied after oversampling. */
     void setSmoothingAlpha(float alpha);
     float getSmoothingAlpha() const;
+
+    /** Override the reference voltage used during reads. */
+    void setVref(float ref) { vref = ref; }
 };
 
 #endif // ENVELOPE_FOLLOWER_H

@@ -3,6 +3,7 @@
 // Updated each loop by firmware_main.cpp and consulted by ButtonManager.
 
 #include "EnvelopeFollower.h"
+#include "ConfigManager.h"
 #include "MIDIHandler.h"
 #include "BiquadFilter.h"
 #include <cmath>
@@ -11,6 +12,18 @@
 
 // Remember the last CC value sent for each pot so we don't spam duplicates
 static std::array<uint8_t, NUM_POTS> lastSentCC;
+
+static int pinToIndex(int pin) {
+    switch (pin) {
+        case A0: return 0;
+        case A1: return 1;
+        case A2: return 2;
+        case A3: return 3;
+        case A6: return 4;
+        case A7: return 5;
+        default: return -1;
+    }
+}
 
 // Tracks external audio/CV and converts it to a MIDI-friendly envelope. The
 // value produced here is consumed by PotentiometerManager and the arpeggiator
@@ -243,6 +256,12 @@ void EnvelopeFollower::calibrate() {
     }
     vref = (static_cast<float>(refTotal) / samples) * VadcScale;
     calibrateBaseline();
+
+    // Drop the freshly measured baseline into EEPROM so we wake up sane next boot
+    int idx = pinToIndex(audioInputPin);
+    if (idx >= 0) {
+        configManager.saveEnvelopeCalibration(idx, baseline);
+    }
 }
 
 void EnvelopeFollower::calibrateBaseline() {

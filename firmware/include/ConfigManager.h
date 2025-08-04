@@ -32,7 +32,8 @@ class MIDIHandler;
  * 4*NUM_POTS + 5  ARG method                       1
  * 4*NUM_POTS + 6  ARG env A                        1
  * 4*NUM_POTS + 7  ARG env B                        1
- * 4*NUM_POTS + 8-199  Reserved/buffer                 ~50
+ * 4*NUM_POTS + 8  Envelope baselines (float)       6*4
+ * 4*NUM_POTS + 32-199  Reserved/buffer                 ~26
  * 200             Primary magic (0xABCD)           2
  * 202             Backup magic  (0xDCBA)           2
  * 204-225        Reserved/buffer                 part of above
@@ -68,6 +69,7 @@ class MIDIHandler;
 #define EEPROM_ARG_METHOD   (EEPROM_ARG_MODE + 1)
 #define EEPROM_ARG_ENV_A    (EEPROM_ARG_METHOD + 1)
 #define EEPROM_ARG_ENV_B    (EEPROM_ARG_ENV_A + 1)
+#define EEPROM_EF_BASELINES (EEPROM_ARG_ENV_B + 1)
 #define EEPROM_BACKUP_START (EEPROM_ARG_ENV_B + 1 + 50)  // Space after primary + buffer
 
 class EnvelopeFollower;
@@ -153,6 +155,12 @@ public:
 
     /** Restore envelope routing and filter types from EEPROM. */
     void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
+
+    /** Persist per-follower baseline offsets for calibration. */
+    void saveEnvelopeCalibration(uint8_t idx, float baseline);
+
+    /** Load stored baseline offsets. Returns false if none were found. */
+    bool loadEnvelopeCalibrations(std::vector<EnvelopeFollower>& envelopes);
 
     // Utility methods ----------------------------------------------------
     uint8_t getNumPots() const { return _numPots; }

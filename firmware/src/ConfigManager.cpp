@@ -4,6 +4,7 @@
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
+#include <math.h>
 
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
@@ -167,6 +168,24 @@ void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelope
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
     }
+}
+
+void ConfigManager::saveEnvelopeCalibration(uint8_t idx, float baseline) {
+    EEPROM.put(EEPROM_EF_BASELINES + idx * sizeof(float), baseline);
+}
+
+bool ConfigManager::loadEnvelopeCalibrations(std::vector<EnvelopeFollower>& envelopes) {
+    bool found = false;
+    for (size_t i = 0; i < envelopes.size(); ++i) {
+        float b;
+        EEPROM.get(EEPROM_EF_BASELINES + i * sizeof(float), b);
+        if (!isnan(b)) {
+            envelopes[i].setBaseline(b);
+            envelopes[i].setVref(g_vref);
+            found = true;
+        }
+    }
+    return found;
 }
 
 // LED settings

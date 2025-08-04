@@ -7,6 +7,9 @@ Keeps the controller's brain in EEPROM so your madness survives power cycles.
 - `begin(potChannels)` – load saved settings at boot.
 - `getSlotType(idx)` – figure out what a slot sends, now including NRPN and SysEx weirdness.
 - `saveConfiguration()` – write everything back to flash.
+- `loadEnvelopeCalibrations(envelopes)` – hydrate envelope followers with their
+  saved baselines. Call `saveEnvelopeCalibration(idx, b)` after calibrating to
+  stash new offsets.
 
 ## Typical Use
 

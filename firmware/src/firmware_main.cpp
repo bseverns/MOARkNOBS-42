@@ -336,6 +336,11 @@ void setup() {
     pinMode(hwConfig.statusLedPin, OUTPUT);
     digitalWrite(hwConfig.statusLedPin, LOW);
 
+    // Sniff control buttons early so we can catch boot-time combos
+    for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
+        pinMode(controlPins[i], INPUT_PULLUP);
+    }
+
     // Measure VREF for baseline calibration
     pinMode(VREF_ADC_PIN, INPUT);
     g_vref = Utility::readVrefADC(VREF_ADC_PIN);
@@ -429,9 +434,14 @@ void setup() {
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
     // — Envelope followers —
+    bool forceRecal = (digitalRead(controlPins[0]) == LOW);
+    if (!configManager.loadEnvelopeCalibrations(envelopeFollowers) || forceRecal) {
+        for (auto& ef : envelopeFollowers) {
+            ef.calibrate();
+        }
+    }
     for (auto& ef : envelopeFollowers) {
         ef.toggleActive(true);
-        ef.calibrate();
     }
     float sf, sq;
     EEPROM.get(EEPROM_FILTER_FREQ, sf);

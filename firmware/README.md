@@ -115,7 +115,7 @@ Test sketches used in the development of this project include:
 | [ButtonManager](include/ButtonManager/README.md) | Scans the 7×6 button matrix, debounces it, and dishes out events. |
 | [ConfigManager](include/ConfigManager/README.md) | Saves to EEPROM, restores from backup when things go sideways. |
 | [DisplayManager](include/DisplayManager/README.md) | Talks to the OLED and makes pixels dance. |
-| [EnvelopeFollower](include/EnvelopeFollower/README.md) | Converts audio/CV into modulation curves with selectable filters. |
+| [EnvelopeFollower](include/EnvelopeFollower/README.md) | Converts audio/CV into modulation curves with selectable filters and remembers its calibration. |
 | [LEDManager](include/LEDManager/README.md) | Paints 52 WS2812s and that lone status LED with righteous fury. |
 | [MIDIHandler](include/MIDIHandler/README.md) | Speaks MIDI over USB and DIN, mirroring every message. |
 | [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls. |
