@@ -61,6 +61,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Clarifications added to language and comments expanded throughout the repo.
 - Refactored `Utility::processBulkUpdate` in `firmware/src/Utility.cpp` to chew through bulk updates with a raw char buffer.
 - Dropped the gritty `MN42_v2` hardware rev with fresh design assets under `hardware/MN42-1/`.
+- `fea338e` calls for thicker LED power traces in `hardware/MN42-1/`—beefier copper keeps the LEDs from sagging or cooking when you crank the current.
 
 ## Overview
 
