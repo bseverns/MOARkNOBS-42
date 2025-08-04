@@ -55,6 +55,37 @@ The timeline reads like a diary of questionable decisions. For the month-by-mont
 
 Once the light show works, raid `hardware/` for PCB files and go full‑build.
 
+### Button Controls
+
+Need a crash course in front-panel mayhem? Here's how the six control buttons misbehave. *EF = Envelope Follower.*
+
+| Button | Short Press | Long Press | Double Press |
+| ------ | ----------- | ---------- | ------------ |
+| #0 | Toggle EF | — | Cycle EF filter forward |
+| #1 | Next Slot | Cycle MIDI Type (CC/Note/etc) | Cycle EF filter backward |
+| #2 | Cycle EF assignment | Toggle Slot Active | — |
+| #3 | Cycle MIDI Channel | — | — |
+| #4 | Cycle CC Number | Reset EEPROM | Save config |
+| #5 | Tap BPM | — | — |
+
+**Slot Buttons (0–41):**  
+Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on.
+
+**Combos worth remembering:**
+
+- **#0 + #1** – Cycle EF ARG mode method  
+- **#2 + #3** – Cycle LED light display modes  
+- **#4 + #5** – Enable EF and randomize settings  
+- **#0 + #4** – Set slot to MIDI Note mode  
+- **#0 + #5** – Set slot to Program Change  
+- **#1 + #4** – Set slot to Aftertouch  
+- **#1 + #5** – Set slot to Pitch Bend  
+- **#1 + #2** – Toggle MIDI clock output  
+- **#2 + #5** – Cycle ARG envelope pair  
+- **#3 + #5** – Toggle Arpeggiator mode  
+
+For the full riot of possibilities, see the [Button Mayhem table](firmware/README.md#button-mayhem).
+
 ### What Could Go Wrong?
 
 - **No common ground** – LEDs ghost or don’t light. Tie every ground together like you mean it.
