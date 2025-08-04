@@ -166,6 +166,18 @@ void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8
         case midi::NoteOff:
             handleNoteOff(channel, data1, data2);
             break;
+        case midi::ProgramChange:
+            handleProgramChange(channel, data1);
+            break;
+        case midi::AfterTouchChannel:
+            handleAftertouch(channel, data1);
+            break;
+        case midi::PitchBend: {
+            int16_t bend = ((data2 & 0x7F) << 7) | (data1 & 0x7F);
+            bend -= 8192;
+            handlePitchBend(channel, bend);
+            break;
+        }
         case midi::SystemExclusive:
             // handled upstream
             break;
@@ -185,6 +197,21 @@ void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity)
     MIDI_DBG_PRINTF("Note Off: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOff(note, velocity, channel);
     usbMIDI.sendNoteOff(note, velocity, channel);
+}
+
+void MIDIHandler::handleProgramChange(uint8_t channel, uint8_t program) {
+    MIDI_DBG_PRINTF("Program Change: %d, Channel: %d\n", program, channel);
+    sendProgramChange(program, channel);
+}
+
+void MIDIHandler::handleAftertouch(uint8_t channel, uint8_t pressure) {
+    MIDI_DBG_PRINTF("Aftertouch: %d, Channel: %d\n", pressure, channel);
+    sendAftertouch(pressure, channel);
+}
+
+void MIDIHandler::handlePitchBend(uint8_t channel, int16_t bend) {
+    MIDI_DBG_PRINTF("Pitch Bend: %d, Channel: %d\n", bend, channel);
+    sendPitchBend(bend, channel);
 }
 
 // Did we just spew or hear a MIDI clock pulse since last check?
