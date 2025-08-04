@@ -15,3 +15,16 @@
 ## Big-Picture Context
 
 Want the whole saga? Jump back to the [hardware overview](../README.md) and see how this misfit board fits into the bigger beast.
+
+## Test Pad Hookups (WIP)
+
+Feeling brave enough to poke the live board with a scope?  This spin needs test pads for the gritty bits:
+
+- `TP_VIN` and `TP_VREF` keep power honest.
+- `TP_ROW*` / `TP_COL*` let you spy on the matrix scans.
+- `TP_MIDIRX` and `TP_MIDITX` watch the 5‑pin traffic.
+- `TP_EF*` taps into the EF triggers.
+
+Each pad is a 1.6 mm SMD landing—big enough for spring clips, small enough to stay out of the way.  After dropping them in your EDA tool of choice, regenerate the Gerbers and BOM so fabrication doesn’t miss the party.
+
+> Heads‑up: the pads aren’t in this repo yet. You’ll have to slam them into the schematic/PCB by hand until someone commits the definitive update.
