@@ -27,6 +27,20 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
+### MIDI Message Examples
+
+Want to flip patches, squish aftertouch, or yank pitch? Here's how the rig does it:
+
+```cpp
+MIDIHandler midi;
+midi.begin();
+midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
+midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
+midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
+```
+
+Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.
+
 ## Hardware Redefined
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:

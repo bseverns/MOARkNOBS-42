@@ -47,6 +47,9 @@ public:
     /** Convenience helpers for specific message types. */
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
     void handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity);
+    void handleProgramChange(uint8_t channel, uint8_t program);
+    void handleAftertouch(uint8_t channel, uint8_t pressure);
+    void handlePitchBend(uint8_t channel, int16_t bend);
     void sendProgramChange(uint8_t program, uint8_t channel);
     void sendAftertouch(uint8_t pressure, uint8_t channel);
     void sendPitchBend(int16_t bend, uint8_t channel);
