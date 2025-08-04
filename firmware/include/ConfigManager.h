@@ -34,11 +34,11 @@ class MIDIHandler;
  * 4*NUM_POTS + 7  ARG env B                        1
  * 4*NUM_POTS + 8  Config version                   2
  * 4*NUM_POTS + 10 CRC                              2
- * 4*NUM_POTS + 12-225 Reserved/buffer                 ~46
  * 200             Primary magic (0xABCD)           2
  * 202             Backup magic  (0xDCBA)           2
- * 204-225        Reserved/buffer                 part of above
- * 226             Backup copy of config starts     mirrors layout
+ * EEPROM_EF_BASELINES (204) EF baselines          EEPROM_EF_BASELINES_SIZE
+ * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           BUFFER_SIZE
+ * EEPROM_BACKUP_START (250) Backup copy of config starts     mirrors layout
  * 256             Profile 1 block begins           256 bytes
  * 512             Profile 2 block begins           256 bytes
  * --------------------------------------------------------
@@ -74,7 +74,10 @@ class MIDIHandler;
 #define EEPROM_ARG_ENV_B    (EEPROM_ARG_ENV_A + 1)
 #define EEPROM_CONFIG_VERSION (EEPROM_ARG_ENV_B + 1)
 #define EEPROM_CONFIG_CRC    (EEPROM_CONFIG_VERSION + 2)
-#define EEPROM_BACKUP_START  (EEPROM_CONFIG_CRC + 2 + 46)  // Space after primary + buffer
+#define EEPROM_EF_BASELINES (EEPROM_MAGIC_ADDRESS + 4)
+#define EEPROM_EF_BASELINES_SIZE (NUM_ENVELOPES * sizeof(float))
+#define BUFFER_SIZE 22
+#define EEPROM_BACKUP_START (EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE)
 
 class EnvelopeFollower;
 
