@@ -208,12 +208,14 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, s
         potToEnvelopeMap[i] = envelopeIndex;
 
         float b;
-        EEPROM.get(EEPROM_ENVELOPE_BASELINES + i * sizeof(float), b);
+        EEPROM.get(EEPROM_EF_BASELINES + i * sizeof(float), b);
 
         envelopes[i].setVref(g_vref);  // always refresh Vref
         if (!std::isnan(b)) {
             envelopes[i].setBaseline(b);
+            envelopeConfig.baselines[i] = b;
         } else {
+            envelopeConfig.baselines[i] = 0.0f;
             allFound = false;
         }
     }
@@ -225,7 +227,8 @@ void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelope
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
-        EEPROM.put(EEPROM_ENVELOPE_BASELINES + i * sizeof(float), envelopes[i].getBaseline());
+        envelopeConfig.baselines[i] = envelopes[i].getBaseline();
+        EEPROM.put(EEPROM_EF_BASELINES + i * sizeof(float), envelopeConfig.baselines[i]);
     }
 }
 

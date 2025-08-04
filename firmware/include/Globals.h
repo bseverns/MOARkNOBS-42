@@ -61,6 +61,16 @@ inline uint16_t NUM_LEDS() { return hwConfig.slotLedCount + hwConfig.efLedCount 
 inline constexpr uint8_t NUM_BUTTONS  = 6;    //!< Number of direct control buttons
 inline constexpr uint8_t NUM_ENVELOPES = 6;   //!< Envelope followers stalking your signal
 
+/**
+ * Baseline offsets for each envelope follower.  These numbers get learned
+ * during calibration so the followers know where "silence" sits.
+ */
+struct EnvelopeConfig {
+    float baselines[NUM_ENVELOPES];
+};
+
+extern EnvelopeConfig envelopeConfig;
+
 // Legacy aliases for modules awaiting full refactors
 inline const uint8_t (&primaryMuxPins)[4]   = hwConfig.muxrPins;
 inline const uint8_t (&secondaryMuxPins)[4] = hwConfig.muxcPins;
