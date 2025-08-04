@@ -61,7 +61,7 @@ Need a crash course in front-panel mayhem? Here's how the six control buttons mi
 
 | Button | Short Press | Long Press | Double Press |
 | ------ | ----------- | ---------- | ------------ |
-| #0 | Toggle EF | — | Cycle EF filter forward |
+| #0 | Toggle EF | Calibrate EF baseline | Cycle EF filter forward |
 | #1 | Next Slot | Cycle MIDI Type (CC/Note/etc) | Cycle EF filter backward |
 | #2 | Cycle EF assignment | Toggle Slot Active | — |
 | #3 | Cycle MIDI Channel | Reset EEPROM | — |
@@ -70,6 +70,9 @@ Need a crash course in front-panel mayhem? Here's how the six control buttons mi
 
 **Slot Buttons (0–41):**  
 Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on.
+
+**Need to tame the noise floor?** Hold **Ctrl0** until the display shouts "EF Calibrated." The box samples VREF, learns the current
+baseline for the follower tied to the active slot, and burns that offset into EEPROM so it survives the next power cycle.
 
 **Combos worth remembering:**
 

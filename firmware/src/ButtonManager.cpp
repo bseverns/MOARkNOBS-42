@@ -226,6 +226,19 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
         // Control buttons (0-5)
         uint8_t ctrlIdx = index - NUM_VIRTUAL_BUTTONS;
         switch (ctrlIdx) {
+            case 0: { // Calibrate assigned envelope follower
+                auto it = context.potToEnvelopeMap.find(context.activePot);
+                if (it == context.potToEnvelopeMap.end()) {
+                    context.displayManager.displayStatus("No EF assigned", 1000);
+                    break;
+                }
+                int efIndex = it->second;
+                context.envelopes[efIndex].calibrate();
+                envelopeConfig.baselines[efIndex] = context.envelopes[efIndex].getBaseline();
+                context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+                context.displayManager.displayStatus("EF Calibrated", 1500);
+                break;
+            }
             case 1: { //Cycle MIDI Message Type
                 MIDISlot &slot = context.configManager.getSlot(context.activePot);
                 slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
