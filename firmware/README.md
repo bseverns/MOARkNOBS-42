@@ -142,9 +142,9 @@ Each control button can do several things depending on how you hit it:
 | #0     | Toggle EF           | —                             | Cycle EF Filter (forward)         |
 | #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
 | #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
-| #3     | Cycle MIDI Channel  | —                             | —                                 |
-| #4     | Cycle CC Number     | Reset EEPROM                  | Reload profile from EEPROM        |
-| #5     | Tap BPM             | —                             | Save config                       |
+| #3     | Cycle MIDI Channel  | Reset EEPROM                  | —                                 |
+| #4     | Cycle CC Number     | Save config                   | Reload profile from EEPROM        |
+| #5     | Tap BPM             | —                             | —                                 |
 
 **Slot Buttons (0–41):**
 - **Short Press:** Pick the slot you want to mangle.
@@ -319,9 +319,9 @@ The OLED shows:
 
 Your configuration is stored in EEPROM. Manual save required.
 
-* **Button #4 (long press)** nukes your config.
+* **Button #3 (long press)** nukes your config.
+* **Button #4 (long press)** saves the current setup.
 * **Button #4 (double press)** reloads the profile from EEPROM.
-* **Button #5 (double press)** saves the current setup.
 * A backup copy is also maintained and auto-restored if needed.
 
 ## MIDI: The Lifeblood

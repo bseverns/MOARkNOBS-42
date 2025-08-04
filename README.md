@@ -64,8 +64,8 @@ Need a crash course in front-panel mayhem? Here's how the six control buttons mi
 | #0 | Toggle EF | — | Cycle EF filter forward |
 | #1 | Next Slot | Cycle MIDI Type (CC/Note/etc) | Cycle EF filter backward |
 | #2 | Cycle EF assignment | Toggle Slot Active | — |
-| #3 | Cycle MIDI Channel | — | — |
-| #4 | Cycle CC Number | Reset EEPROM | Save config |
+| #3 | Cycle MIDI Channel | Reset EEPROM | — |
+| #4 | Cycle CC Number | Save config | Reload profile from EEPROM |
 | #5 | Tap BPM | — | — |
 
 **Slot Buttons (0–41):**  
@@ -99,8 +99,9 @@ For the full riot of possibilities, see the [Button Mayhem table](firmware/READM
 The rig now hoards three full configuration profiles in EEPROM. Each profile is a 256‑byte bunker storing your pot maps, LED vibe, and envelope tricks.
 
 - **Jump profiles** – mash **Ctrl0 + Ctrl2** on the control panel to hop to the next profile. It wraps after the third, so keep cycling until you land where you want.
-- **Save the chaos** – double‑tap **Ctrl5** once you’ve mangled the knobs to taste. That burns the current state into the active profile.
+- **Save the chaos** – long‑press **Ctrl4** once you’ve mangled the knobs to taste. That burns the current state into the active profile.
 - **Panic reload** – double‑tap **Ctrl4** to yank the active profile from EEPROM and forget any unsaved noodling.
+_Need to nuke it all?_ Long‑press **Ctrl3** to reset the whole EEPROM back to factory‑dumb defaults.
 
 Profiles share MIDI slot data, so only the user‑tweakable mappings get swapped. It’s a fast way to keep separate live, studio, and “what if I break everything” setups without re-flashing.
 
