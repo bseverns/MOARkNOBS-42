@@ -467,7 +467,7 @@ void setup() {
     }
     Serial.println("Setup complete!");
     displayManager.runStartupAnimation();
-    
+
     // — Scheduler tasks —
     // Three cooperative schedulers slice time so nothing blocks:
     // High-priority (1 ms):
