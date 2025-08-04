@@ -58,7 +58,8 @@ inline uint16_t CONTROL_LED_INDEX() { return EF_LED_OFFSET() + hwConfig.efLedCou
 inline uint16_t POT_LED_OFFSET() { return CONTROL_LED_INDEX() + 1; }
 inline uint16_t NUM_LEDS() { return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount; }
 
-inline constexpr uint8_t NUM_BUTTONS = 6;    //!< Number of direct control buttons
+inline constexpr uint8_t NUM_BUTTONS  = 6;    //!< Number of direct control buttons
+inline constexpr uint8_t NUM_ENVELOPES = 6;   //!< Envelope followers stalking your signal
 
 // Legacy aliases for modules awaiting full refactors
 inline const uint8_t (&primaryMuxPins)[4]   = hwConfig.muxrPins;
