@@ -49,6 +49,10 @@ Below is a summary of the schematic sheets:
 | 8       | **Display, UI, Aux Headers**           | SSD1306 (I²C), spare expansion header (5V, 3V3, SDA, SCL, GND), debug SWD pads.                |
 | 9       | Netlist summary / BOM cross-ref.       |                                                                                                |
 
+### Analog Ground Stitching
+
+The envelope follower front-end is a noise magnet, so we drenched it in a GND pour and pinned that copper down with vias every ~5 mm. Each stitch dives into the main ground plane so the envelope follower keeps quiet. If you mod this section or stretch the board, clone those vias and keep the spacing tight—same net, same vibe. Peek at `MN42-1/gerber/Drill_PTH_Through_Via.DRL` for the pattern and march them along your new edge.
+
 ## License
 
 All hardware files are released under the MIT License, matching the rest of this repository. See the [LICENSE](../LICENSE) file for details.
