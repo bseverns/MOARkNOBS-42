@@ -340,6 +340,13 @@ Your configuration is stored in EEPROM. Manual save required.
 * **Button #4 (double press)** reloads the profile from EEPROM.
 * A backup copy is also maintained and auto-restored if needed.
 
+### Configuration Persistence
+
+Every save tacks on a 16-bit `version` tag and a matching 16-bit `crc`.
+The version lets the firmware evolve without bricking old configs, while
+the CRC sniffs out corruption.  If either check fails on boot, we torch
+the junk and fall back to factory defaults.
+
 ## MIDI: The Lifeblood
 
 The MN42 is first and foremost a MIDI generator.  Every pot twist and

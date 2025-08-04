@@ -56,14 +56,14 @@ void ConfigManager::saveConfiguration() {
 bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
-        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
             Serial.println("Config CRC/version mismatch.");
             resetConfiguration(potChannels);
             return false;
         }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
-            potChannels.push_back(_potChannels[i]);
+            potChannels.push_back(_stored.potChannels[i]);
         }
         return true;
     }
@@ -75,14 +75,14 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_
 bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
     if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
-        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
             Serial.println("Backup CRC/version mismatch.");
             resetConfiguration(potChannels);
             return false;
         }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
-            potChannels.push_back(_potChannels[i]);
+            potChannels.push_back(_stored.potChannels[i]);
         }
         return true;
     }
@@ -95,11 +95,11 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, u
 void ConfigManager::readEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
     for (uint8_t i = 0; i < _numPots; i++) {
-        _potChannels[i] = EEPROM.read(offset + EEPROM_POT_CHANNELS + i);
-        _potCCNumbers[i] = EEPROM.read(offset + EEPROM_POT_CC + i);
+        _stored.potChannels[i] = EEPROM.read(offset + EEPROM_POT_CHANNELS + i);
+        _stored.potCCNumbers[i] = EEPROM.read(offset + EEPROM_POT_CC + i);
     }
-    EEPROM.get(offset + EEPROM_CONFIG_VERSION, _storedVersion);
-    EEPROM.get(offset + EEPROM_CONFIG_CRC, _storedCRC);
+    EEPROM.get(offset + EEPROM_CONFIG_VERSION, _stored.version);
+    EEPROM.get(offset + EEPROM_CONFIG_CRC, _stored.crc);
 }
 
 // Internal write to EEPROM
@@ -107,20 +107,22 @@ void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
     uint16_t crc = calculateCRC();
     for (uint8_t i = 0; i < _numPots; i++) {
-        EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _potChannels[i]);
-        EEPROM.update(offset + EEPROM_POT_CC + i, _potCCNumbers[i]);
+        EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _stored.potChannels[i]);
+        EEPROM.update(offset + EEPROM_POT_CC + i, _stored.potCCNumbers[i]);
     }
     EEPROM.put(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
     EEPROM.put(offset + EEPROM_CONFIG_CRC, crc);
+    _stored.version = CONFIG_VERSION;
+    _stored.crc = crc;
 }
 
 uint16_t ConfigManager::calculateCRC() const {
     uint16_t crc = 0xFFFF;
     for (uint8_t i = 0; i < _numPots; ++i) {
-        crc = crc16_update(crc, _potChannels[i]);
+        crc = crc16_update(crc, _stored.potChannels[i]);
     }
     for (uint8_t i = 0; i < _numPots; ++i) {
-        crc = crc16_update(crc, _potCCNumbers[i]);
+        crc = crc16_update(crc, _stored.potCCNumbers[i]);
     }
     return crc;
 }
@@ -130,12 +132,12 @@ void ConfigManager::loadProfile(uint8_t id) {
     uint16_t base = EEPROM_PROFILE_START(id);
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
-        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
             Serial.println("Profile slot corrupted, using defaults.");
         }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
-        if (_storedVersion != CONFIG_VERSION || _storedCRC != calculateCRC()) {
+        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
             Serial.println("Profile slot corrupted, using defaults.");
         }
     } else {
@@ -163,10 +165,10 @@ void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
         loadSlot(i, slots[i]);
     }
     // 2) Pull out the existing pot → CC mappings
-    //    (assuming _potCCNumbers was filled by readEEPROM)
+    //    (assuming _stored.potCCNumbers was filled by readEEPROM)
     potChannels.clear();
     for (uint8_t i = 0; i < _numPots; ++i) {
-        potChannels.push_back(_potCCNumbers[i]);
+        potChannels.push_back(_stored.potCCNumbers[i]);
     }
 }
 
@@ -181,22 +183,22 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot& src) {
 
 // Potentiometer accessors
 uint8_t ConfigManager::getPotChannel(uint8_t potIndex) const {
-    return _potChannels.at(potIndex);
+    return _stored.potChannels.at(potIndex);
 }
 
 uint8_t ConfigManager::getPotCCNumber(uint8_t potIndex) const {
-    return _potCCNumbers.at(potIndex);
+    return _stored.potCCNumbers.at(potIndex);
 }
 
 void ConfigManager::setPotChannel(uint8_t potIndex, uint8_t channel) {
     if (potIndex < _numPots) {
-        _potChannels[potIndex] = channel;
+        _stored.potChannels[potIndex] = channel;
     }
 }
 
 void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
     if (potIndex < _numPots) {
-        _potCCNumbers[potIndex] = ccNumber;
+        _stored.potCCNumbers[potIndex] = ccNumber;
     }
 }
 
@@ -314,9 +316,9 @@ String ConfigManager::serializeAll() const {
     for (uint8_t i = 0; i < _numPots; ++i) {
         output += "{";
         output += "\"channel\": ";
-        output += _potChannels.at(i);
+        output += _stored.potChannels.at(i);
         output += ", \"cc\": ";
-        output += _potCCNumbers.at(i);
+        output += _stored.potCCNumbers.at(i);
         output += "}";
 
         if (i < _numPots - 1) {
