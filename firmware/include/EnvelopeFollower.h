@@ -167,6 +167,13 @@ public:
      */
     void calibrateBaseline();
 
+    /** Manually stash a baseline offset (e.g., from EEPROM). */
+    void setBaseline(float b) { baseline = b; }
+    /** Read back the current baseline. */
+    float getBaseline() const { return baseline; }
+    /** Force a new Vref without recalibrating. */
+    void setVref(float v) { vref = v; }
+
     /**
      * Adjust the scaling factor applied after baseline removal.
      * Higher gain makes the envelope punchier before it's squeezed into 0–127.

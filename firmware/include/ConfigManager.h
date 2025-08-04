@@ -34,7 +34,8 @@ class MIDIHandler;
  * 4*NUM_POTS + 7  ARG env B                        1
  * 4*NUM_POTS + 8  Config version                   2
  * 4*NUM_POTS + 10 CRC                              2
- * 4*NUM_POTS + 12-225 Reserved/buffer                 ~46
+ * 4*NUM_POTS + 12 Envelope baselines               6 * 4
+ * 4*NUM_POTS + 36-225 Reserved/buffer                 ~22
  * 200             Primary magic (0xABCD)           2
  * 202             Backup magic  (0xDCBA)           2
  * 204-225        Reserved/buffer                 part of above
@@ -74,6 +75,7 @@ class MIDIHandler;
 #define EEPROM_ARG_ENV_B    (EEPROM_ARG_ENV_A + 1)
 #define EEPROM_CONFIG_VERSION (EEPROM_ARG_ENV_B + 1)
 #define EEPROM_CONFIG_CRC    (EEPROM_CONFIG_VERSION + 2)
+#define EEPROM_ENVELOPE_BASELINES (EEPROM_CONFIG_CRC + 2)
 #define EEPROM_BACKUP_START  (EEPROM_CONFIG_CRC + 2 + 46)  // Space after primary + buffer
 
 class EnvelopeFollower;
@@ -154,11 +156,14 @@ public:
 
     // Envelope follower configuration -----------------------------------
 
-    /** Persist the current envelope routing and types to EEPROM. */
+    /** Persist the current envelope routing and baselines to EEPROM. */
     void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
 
-    /** Restore envelope routing and filter types from EEPROM. */
-    void loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
+    /**
+     * Restore envelope routing and baseline offsets from EEPROM.
+     * Returns true if every envelope's baseline was recovered.
+     */
+    bool loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
     // Utility methods ----------------------------------------------------
     uint8_t getNumPots() const { return _numPots; }

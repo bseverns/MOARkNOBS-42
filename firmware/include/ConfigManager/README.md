@@ -7,6 +7,7 @@ Keeps the controller's brain in EEPROM so your madness survives power cycles.
 - `begin(potChannels)` – load saved settings at boot.
 - `getSlotType(idx)` – figure out what a slot sends, now including NRPN and SysEx weirdness.
 - `saveConfiguration()` – write everything back to flash.
+- `loadEnvelopeSettings(map, envs)` – patch in EF routing *and* baselines; returns false if any follower still needs to find its feet.
 
 ## Typical Use
 
