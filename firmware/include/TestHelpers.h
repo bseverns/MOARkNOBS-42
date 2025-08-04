@@ -9,7 +9,7 @@
 #include <vector>
 
 // Control button pins used across tests
-static const uint8_t TEST_CONTROL_PINS[NUM_BUTTONS] = {12, 13, 14, 15, 24, 25};
+extern const uint8_t TEST_CONTROL_PINS[NUM_BUTTONS];
 
 inline ConfigManager createConfigManager() {
     return ConfigManager(NUM_POTS, NUM_BUTTONS);

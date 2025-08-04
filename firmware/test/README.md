@@ -3,6 +3,11 @@
 This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware. 
 
 These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
+
+### Shared helpers
+
+`TestHelpers.cpp` anchors the control-button matrix in one spot so every test riffs from the same pin map. Include `TestHelpers.h` and you're good to shred without duplicating arrays.
+
 ## Now with Unity smoke tests
 
 We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
