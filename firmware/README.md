@@ -63,7 +63,7 @@ Some hardware choices only come alive when the firmware plays along:
 
 ### Pin Map
 
-Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`. Those numbers get loaded at startup and can be punked via a `hardware_config.h` or a tiny `/hardware_config.json` dropped next to the firmware. The table below shows the baked-in defaults.
+Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`. Those numbers get loaded at startup and can be punked via the stubbed `include/hardware_config.h` or a tiny `/hardware_config.json` dropped next to the firmware. The table below shows the baked-in defaults.
 
 | Constant | Pin(s) | Purpose |
 |---------|-------|---------|
@@ -77,7 +77,7 @@ Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
 | `statusLedPin` | 23 | Board status indicator mounted between the PWR and brain on the board |
 
-Need different pins or scheduler ticks? Override the defaults with a header or drop a JSON sidecar. Here's a sample that drags the MIDI scheduler:
+Need different pins or scheduler ticks? Override the defaults with a header or drop a JSON sidecar. The repo already ships a no-op `include/hardware_config.h`; wire it up like this to drag the MIDI scheduler:
 
 ```cpp
 // firmware/include/hardware_config.h
