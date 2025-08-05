@@ -54,7 +54,7 @@ Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both D
 
 ## Hardware Redefined
 
-The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments). But simplicity is for cowards(!), so here’s what it became:
+The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! though they may be more reasonable), so here’s what it became:
 
 * **1 slot pot**: total recall per slot.
 * **2 filter-tuning pots**: dial in frequency and resonance.
@@ -103,7 +103,7 @@ void applyHardwareConfigOverrides(HardwareConfig& cfg) {
 }
 ```
 
-The LED strip is more hardheaded. FastLED demands its data pin up front, so we hard-code it with `LED_DATA_PIN` via `platformio.ini` (defaults to 6). Want the glow on another GPIO? Change that build flag and rebuild—runtime pin shenanigans are history.
+The LED matrix is more hardheaded for a multitude of reasons. FastLED demands its data pin up front, so we hard-code it with `LED_DATA_PIN` via `platformio.ini` (defaults to 6). Want the glow on another GPIO? Change that build flag and rebuild—runtime pin shenanigans are history.
 
 ## What It Does
 
@@ -443,7 +443,7 @@ pio run -e teensy40_main -D BM_DEBUG=1
 
 Leave it off and the firmware keeps its mouth shut.
 
-Want to poke the main test rig instead? Swap the environment:
+Want to poke the main test rig instead? Use the machine-test sandbox and point it at a test file:
 
 ```bash
 pio run -e teensy40_full_system
@@ -453,6 +453,7 @@ Which usually ends with:
 
 ```text
 Processing teensy40_full_system (platform: teensy; board: teensy40; framework: arduino)
+
 ...snip...
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```

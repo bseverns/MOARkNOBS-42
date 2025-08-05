@@ -1,18 +1,37 @@
 # MOARkNOBZ Firmware: Hardware Testing Suite
 
-This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware.
+This project doubles as a proving ground and a punching bag. Two flavors of tests keep the firmware honest:
+
+* `src/test_*.cpp` – full-system, manual machine tests you flash and prod like a lab rat.
+* `test/test_*.cpp` – Unity smoke tests that run under `pio test` when you want receipts without solder burns.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
+ 
+Two breeds of tests haunt this folder:
 
-These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
+* `src/test_*.cpp` – dirt-under-the-nails sketches. Flash one, plug in the board, and mash buttons until it screams.
+* `test/test_*.cpp` – buttoned-up Unity checks that run on your desk before you risk real hardware.
+
+The hardware tests live under `src/` because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own framework, but when you're pushing bytes over MIDI and chasing I2C ghosts, you need clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
 
 ### Shared helpers
 
 `TestHelpers.cpp` anchors the control-button matrix in one spot so every test riffs from the same pin map. Include `TestHelpers.h` and you're good to shred without duplicating arrays.
 
+## Manual machine tests (`src/test_*.cpp`)
+
+When you need to stare the hardware in the face, grab a `src/test_*.cpp` sketch and drive it yourself.
+
+Example: run the unified gauntlet and see what smokes first.
+
+1. `cd firmware`
+2. `pio run -e teensy40_unified_test -t upload`
+3. `pio device monitor`
+4. Mash buttons, twist pots, and read the OLED like a fortune teller. Fix whatever flinches.
+
 ## Now with Unity smoke tests
 
-We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
+We finally caved and wired up a few automated checks in `test/` for those lonely nights when you want proof without solder burns.
 
 ```bash
 pio test -e teensy40_unity
@@ -107,6 +126,14 @@ build_src_filter =
     +<**/Utility.cpp>
     +<include/**.h>
     -<**/firmware_main.cpp>
+
+Flash it with:
+
+```bash
+pio run -e teensy40_full_system -t upload
+```
+
+That `teensy40_full_system` build shoves the whole circus onto the board so you can poke every subsystem live.
 
 Swap in `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
 
