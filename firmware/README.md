@@ -558,7 +558,11 @@ This isn’t a normal plug-and-play piece gear. It’s for builders, hackers, an
 
 For firmware help: check this repo.
 
-For personal catharsis:  
+For personal catharsis:
 **[support@bseverns.me](mailto:support@bseverns.me)**
+
+## Redistribution
+
+Passing binaries or pre-flashed boards around? Include this directory's `LICENSES/` bundle and point to the EEPROM guts at https://github.com/PaulStoffregen/cores/tree/master/teensy4. That keeps the LGPL-2.1 demons at bay.
 
 Build bold. Tweak louder. Modulate everything.
