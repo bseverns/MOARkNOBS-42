@@ -1,6 +1,9 @@
 # MOARkNOBZ Firmware: Hardware Testing Suite
 
-This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware.
+This project doubles as a proving ground and a punching bag. Two flavors of tests keep the firmware honest:
+
+* `src/test_*.cpp` – full-system, manual machine tests you flash and prod like a lab rat.
+* `test/test_*.cpp` – Unity smoke tests that run under `pio test` when you want receipts without solder burns.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
  
@@ -15,13 +18,36 @@ The hardware tests live under `src/` because we want full control. PlatformIO's 
 
 `TestHelpers.cpp` anchors the control-button matrix in one spot so every test riffs from the same pin map. Include `TestHelpers.h` and you're good to shred without duplicating arrays.
 
+## Manual machine tests (`src/test_*.cpp`)
+
+When you need to stare the hardware in the face, grab a `src/test_*.cpp` sketch and drive it yourself.
+
+Example: run the unified gauntlet and see what smokes first.
+
+1. `cd firmware`
+2. `pio run -e teensy40_unified_test -t upload`
+3. `pio device monitor`
+4. Mash buttons, twist pots, and read the OLED like a fortune teller. Fix whatever flinches.
+
 ## Now with Unity smoke tests
 
-We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
+We finally caved and wired up a few automated checks in `test/` for those lonely nights when you want proof without solder burns.
 
-```bash
-pio test -e teensy40_unity
-```
+Quick-start:
+
+1. `cd firmware`
+2. `pio test -e teensy40_mainTEST`
+3. Watch for PASS/FAIL and let the CI bots cry later.
+
+### PlatformIO test environments
+
+`platformio.ini` ships a roster of playgrounds so each test stays in its lane:
+
+- `teensy40_mainTEST` – baseline harness; doubles as the Unity testbed.
+- `teensy40_unified_test` – integration cage match.
+- `teensy40_biquad_test` – DSP sanity check.
+- `teensy40_eeprom_persistence` – power-cycle endurance trial.
+- `teensy40_slot_verify` – EEPROM truth serum.
 
 That `teensy40_unity` target keeps things virtual—compile, run, and bail out before you melt anything.
 
