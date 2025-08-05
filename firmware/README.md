@@ -54,13 +54,13 @@ Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both D
 
 ## Hardware Redefined
 
-The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! though they may be more reasonable), so here’s what it became:
+The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! they may be more reasonable, however), so here’s what it became:
 
 * **1 slot pot**: total recall per slot.
 * **2 filter-tuning pots**: dial in frequency and resonance.
 * **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
 * **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
-* **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 ring the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.
+* **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 for each of the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.
 * **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
 * **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
 
@@ -68,7 +68,7 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 
 Some hardware choices only come alive when the firmware plays along:
 
-- **Internal pull-ups handle the column sense line.** The PCB leaves room for an external resistor, but the code sticks with the MCU's own pull-ups unless we see jitter.
+- **Internal pull-ups handle the column sense line.** The PCB leaves room for an external resistor, but at this point in the project the code sticks with the MCU's own pull-ups unless we see jitter.
 - **Envelope followers baseline themselves.** On boot the firmware samples the mid-rail `VREF` pad and subtracts it so your envelopes start from zero, not from whatever offset the op-amps woke up with.
 - **Only one analog read path.** We scan the button and pot multiplexers through a single ADC channel and sort out digital vs. analog thresholds in code—simpler wiring, firmware does the heavy lifting.
 
