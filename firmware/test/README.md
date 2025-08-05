@@ -3,8 +3,13 @@
 This project contains a set of low-level, unapologetically manual tests for the MOARkNOBZ firmware.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
+ 
+Two breeds of tests haunt this folder:
 
-These test files are not placed in the conventional /test folder, but directly in the src/ directory. Why? Because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own test framework, but when you're pushing bytes over MIDI and debugging weird I2C flickers, you need direct access and clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
+* `src/test_*.cpp` – dirt-under-the-nails sketches. Flash one, plug in the board, and mash buttons until it screams.
+* `test/test_*.cpp` – buttoned-up Unity checks that run on your desk before you risk real hardware.
+
+The hardware tests live under `src/` because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own framework, but when you're pushing bytes over MIDI and chasing I2C ghosts, you need clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
 
 ### Shared helpers
 
@@ -15,8 +20,10 @@ These test files are not placed in the conventional /test folder, but directly i
 We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
 
 ```bash
-pio test -e teensy40_mainTEST
+pio test -e teensy40_unity
 ```
+
+That `teensy40_unity` target keeps things virtual—compile, run, and bail out before you melt anything.
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
@@ -93,7 +100,7 @@ Output scrolls by on Serial with PASS/FAIL verdicts. Trust, but verify.
 
 Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building `test_main.cpp`:
 
-[env:teensy40_mainTEST]
+[env:teensy40_full_system]
 extends = env:teensy40_base
 build_src_filter =
     +<**/test_main.cpp>
@@ -107,6 +114,14 @@ build_src_filter =
     +<**/Utility.cpp>
     +<include/**.h>
     -<**/firmware_main.cpp>
+
+Flash it with:
+
+```bash
+pio run -e teensy40_full_system -t upload
+```
+
+That `teensy40_full_system` build shoves the whole circus onto the board so you can poke every subsystem live.
 
 Swap in `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
 
