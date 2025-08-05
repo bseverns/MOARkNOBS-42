@@ -5,8 +5,8 @@
  * envelope followers and the OLED display. Use Control Button #0 to advance
  * through each phase.
  *
- * Build and upload with PlatformIO environment `teensy40_mainTEST`
- * (e.g. `platformio run -e teensy40_mainTEST -t upload`).
+ * Build and upload with PlatformIO environment `teensy40_full_system`
+ * (e.g. `platformio run -e teensy40_full_system -t upload`).
  * Requires a Teensy 4.0 wired with the full MOARkNOBS hardware
  * (button matrix, LED strip, OLED, envelope circuits).
  *

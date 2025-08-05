@@ -33,23 +33,9 @@ Example: run the unified gauntlet and see what smokes first.
 
 We finally caved and wired up a few automated checks in `test/` for those lonely nights when you want proof without solder burns.
 
-Quick-start:
-
-1. `cd firmware`
-2. `pio test -e teensy40_mainTEST`
-3. Watch for PASS/FAIL and let the CI bots cry later.
-
-### PlatformIO test environments
-
-`platformio.ini` ships a roster of playgrounds so each test stays in its lane:
-
-- `teensy40_mainTEST` – baseline harness; doubles as the Unity testbed.
-- `teensy40_unified_test` – integration cage match.
-- `teensy40_biquad_test` – DSP sanity check.
-- `teensy40_eeprom_persistence` – power-cycle endurance trial.
-- `teensy40_slot_verify` – EEPROM truth serum.
-
-That `teensy40_unity` target keeps things virtual—compile, run, and bail out before you melt anything.
+```bash
+pio test -e teensy40_unity
+```
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.

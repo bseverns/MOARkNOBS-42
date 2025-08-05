@@ -117,12 +117,13 @@ Compile the test environments when you want to verify the board outside of the
 main firmware:
 
 ```bash
-pio run -e teensy40_mainTEST      # or teensy40_unified_test, etc.
+pio run -e teensy40_full_system      # or teensy40_unified_test, etc.
 ```
 
 Available environments:
 
-- `teensy40_mainTEST` – step-through checks of each subsystem
+- `teensy40_full_system` – step-through checks of each subsystem
+- `teensy40_unity` – Unity-driven automated tests
 - `teensy40_unified_test` – full integration test
 - `teensy40_biquad_test` – biquad filter calibration
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test

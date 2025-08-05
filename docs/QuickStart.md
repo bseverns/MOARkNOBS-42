@@ -45,7 +45,7 @@ Once the firmware's on board, make sure the basics don't flake out:
    If that lone pixel blinks, you're in business.
 2. **Button sanity** – Build the hardware test suite:
    ```bash
-   pio run -e teensy40_mainTEST
+   pio run -e teensy40_full_system
    ```
    Follow the serial prompts to poke every switch and LED.
 

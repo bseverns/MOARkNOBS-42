@@ -119,9 +119,9 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 
 Some checks need hot solder and a human in the loop; others just need to prove they boot without catching fire.
 
-**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e teensy40_machine_test --project-option="build_src_filter=+<../test/TestHelpers.cpp> +<**/test_main.cpp> +<**/*.cpp> -<**/test_*.cpp>"` (swap in any `test_*.cpp` you want to thrash). They demand real LEDs, real knobs, and a willing operator.
+**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_full_system`). They demand real LEDs, real knobs, and a willing operator.
 
-**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unit_tests`. They make sure the code still starts up before we plug in anything expensive.
+**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive.
 
 Test sketches used in the development of this project include:
 
@@ -446,13 +446,14 @@ Leave it off and the firmware keeps its mouth shut.
 Want to poke the main test rig instead? Use the machine-test sandbox and point it at a test file:
 
 ```bash
-pio run -e teensy40_machine_test --project-option="build_src_filter=+<../test/TestHelpers.cpp> +<**/test_main.cpp> +<**/*.cpp> -<**/test_*.cpp>"
+pio run -e teensy40_full_system
 ```
 
 Which usually ends with:
 
 ```text
-Processing teensy40_machine_test (platform: teensy; board: teensy40; framework: arduino)
+Processing teensy40_full_system (platform: teensy; board: teensy40; framework: arduino)
+
 ...snip...
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```
