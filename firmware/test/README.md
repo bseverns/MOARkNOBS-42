@@ -26,7 +26,7 @@ Example: run the unified gauntlet and see what smokes first.
 
 ## Now with Unity smoke tests
 
-We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns.
+We finally caved and wired up a few automated checks in `test/` for those lonely nights when you want proof without solder burns.
 
 Quick-start:
 
