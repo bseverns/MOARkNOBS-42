@@ -6,8 +6,13 @@ This project doubles as a proving ground and a punching bag. Two flavors of test
 * `test/test_*.cpp` – Unity smoke tests that run under `pio test` when you want receipts without solder burns.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
+ 
+Two breeds of tests haunt this folder:
 
-The manual tests live in `src/` so the build system doesn't get clever and hide the wires. Unity tests stay put in this `test/` folder where PlatformIO can babysit them.
+* `src/test_*.cpp` – dirt-under-the-nails sketches. Flash one, plug in the board, and mash buttons until it screams.
+* `test/test_*.cpp` – buttoned-up Unity checks that run on your desk before you risk real hardware.
+
+The hardware tests live under `src/` because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own framework, but when you're pushing bytes over MIDI and chasing I2C ghosts, you need clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
 
 ### Shared helpers
 
@@ -43,6 +48,8 @@ Quick-start:
 - `teensy40_biquad_test` – DSP sanity check.
 - `teensy40_eeprom_persistence` – power-cycle endurance trial.
 - `teensy40_slot_verify` – EEPROM truth serum.
+
+That `teensy40_unity` target keeps things virtual—compile, run, and bail out before you melt anything.
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
@@ -117,13 +124,32 @@ Output scrolls by on Serial with PASS/FAIL verdicts. Trust, but verify.
 
 ## How to Build a Test
 
-The machine-test sandbox takes the guesswork out. Point it at the test you want and let it rip:
+Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building `test_main.cpp`:
+
+[env:teensy40_full_system]
+extends = env:teensy40_base
+build_src_filter =
+    +<**/test_main.cpp>
+    +<**/ButtonManager.cpp>
+    +<**/ConfigManager.cpp>
+    +<**/DisplayManager.cpp>
+    +<**/EnvelopeFollower.cpp>
+    +<**/LEDManager.cpp>
+    +<**/MIDIHandler.cpp>
+    +<**/PotentiometerManager.cpp>
+    +<**/Utility.cpp>
+    +<include/**.h>
+    -<**/firmware_main.cpp>
+
+Flash it with:
 
 ```bash
-pio run -e teensy40_machine_test --project-option="build_src_filter=+<../test/TestHelpers.cpp> +<**/test_main.cpp> +<**/*.cpp> -<**/test_*.cpp>"
+pio run -e teensy40_full_system -t upload
 ```
 
-Swap `test_main.cpp` for `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
+That `teensy40_full_system` build shoves the whole circus onto the board so you can poke every subsystem live.
+
+Swap in `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
 
 ## Final Note
 
