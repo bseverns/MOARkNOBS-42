@@ -133,9 +133,13 @@ See [firmware/test/README.md](firmware/test/README.md) for details on this proje
 For a month-by-month look at how this controller came together, see
 [HISTORY.md](HISTORY.md).
 
-## License
+## License & Redistribution
 
 MIT, see [LICENSE](LICENSE) for details.
+
+### Redistribution Terms
+
+If you sling this firmware or ship a kit, bundle the `firmware/LICENSES/` directory and either stash the EEPROM source or point to https://github.com/PaulStoffregen/cores/tree/master/teensy4 so the LGPL folks stay cool.
 
 ## Author
 

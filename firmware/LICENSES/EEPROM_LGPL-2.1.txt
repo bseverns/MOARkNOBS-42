@@ -1,57 +1,7 @@
-# Third-Party Licenses
+EEPROM library (Teensy core)
+Source: https://github.com/PaulStoffregen/cores/tree/master/teensy4
+License: LGPL-2.1
 
-This riot of a project leans on a bunch of open-source libraries. Here’s the breakdown straight from `firmware/platformio.ini`’s `lib_deps`.
-Each license below gives you the green light to ship a commercial product, as long as you respect the terms.
-When you bundle binaries or kits, drag along the whole `firmware/LICENSES/` folder so every attribution rides shotgun.
-
-## Libraries and Licenses
-- FastLED — MIT
-- Bounce2 — MIT
-- USB-MIDI (lathoub) — MIT
-- Adafruit SSD1306 — MIT
-- Adafruit GFX Library — MIT
-- TimerOne — MIT
-- EEPROM — LGPL-2.1 (source: https://github.com/PaulStoffregen/cores/tree/master/teensy4)
-- ArduinoJson — MIT
-
----
-
-## MIT License
-Used by FastLED, Bounce2, USB-MIDI, Adafruit SSD1306, Adafruit GFX Library, TimerOne, and ArduinoJson.
-
-```
-MIT License
-
-Copyright (c) the respective authors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
-
-This license is as chill as they come: commercial use, redistribution, and modification are all cool.
-
----
-
-## LGPL-2.1 License
-Used by EEPROM (part of the Arduino core).
-If you're shipping hardware or binaries, either include the EEPROM source or point folks to https://github.com/PaulStoffregen/cores/tree/master/teensy4 so the LGPL keeps smiling.
-
-```
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
 
@@ -554,7 +504,3 @@ necessary.  Here is a sample; alter the names:
   Ty Coon, President of Vice
 
 That's all there is to it!
-```
-
-Commercial use is permitted, just remember that if you tweak the EEPROM library itself, you’ve gotta share those changes.
-
