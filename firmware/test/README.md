@@ -6,13 +6,6 @@ This project doubles as a proving ground and a punching bag. Two flavors of test
 * `test/test_*.cpp` – Unity smoke tests that run under `pio test` when you want receipts without solder burns.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
- 
-Two breeds of tests haunt this folder:
-
-* `src/test_*.cpp` – dirt-under-the-nails sketches. Flash one, plug in the board, and mash buttons until it screams.
-* `test/test_*.cpp` – buttoned-up Unity checks that run on your desk before you risk real hardware.
-
-The hardware tests live under `src/` because we want full control. PlatformIO's test runner is fine for blinking LEDs and clapping for your own framework, but when you're pushing bytes over MIDI and chasing I2C ghosts, you need clean compile filters. Every sketch here flies the `test_*.cpp` flag so the build system knows exactly what mischief you're up to.
 
 ### Shared helpers
 
