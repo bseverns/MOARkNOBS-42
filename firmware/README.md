@@ -119,9 +119,9 @@ The LED strip is more hardheaded. FastLED demands its data pin up front, so we h
 
 Some checks need hot solder and a human in the loop; others just need to prove they boot without catching fire.
 
-**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_mainTEST`). They demand real LEDs, real knobs, and a willing operator.
+**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_full_system`). They demand real LEDs, real knobs, and a willing operator.
 
-**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_mainTEST`. They make sure the code still starts up before we plug in anything expensive.
+**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive.
 
 Test sketches used in the development of this project include:
 
@@ -446,13 +446,13 @@ Leave it off and the firmware keeps its mouth shut.
 Want to poke the main test rig instead? Swap the environment:
 
 ```bash
-pio run -e teensy40_mainTEST
+pio run -e teensy40_full_system
 ```
 
 Which usually ends with:
 
 ```text
-Processing teensy40_mainTEST (platform: teensy; board: teensy40; framework: arduino)
+Processing teensy40_full_system (platform: teensy; board: teensy40; framework: arduino)
 ...snip...
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```

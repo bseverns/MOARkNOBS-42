@@ -8,7 +8,8 @@
   pio run -e teensy40_main
   ```
 - Available test environments (build with `pio run -e <env>`):
-  - `teensy40_mainTEST`
+  - `teensy40_full_system`
+  - `teensy40_unity`
   - `teensy40_unified_test`
   - `teensy40_biquad_test`
   - `teensy40_eeprom_persistence`

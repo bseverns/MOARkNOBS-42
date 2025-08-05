@@ -22,4 +22,4 @@ jobs:
         run: pio run -e teensy40_main
       - name: Run tests
         working-directory: firmware
-        run: pio test -e teensy40_mainTEST
+        run: pio test -e teensy40_unity

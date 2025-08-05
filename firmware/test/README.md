@@ -15,7 +15,7 @@ These test files are not placed in the conventional /test folder, but directly i
 We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
 
 ```bash
-pio test -e teensy40_mainTEST
+pio test -e teensy40_unity
 ```
 
 ### test_envelope_follower.cpp
@@ -93,7 +93,7 @@ Output scrolls by on Serial with PASS/FAIL verdicts. Trust, but verify.
 
 Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building `test_main.cpp`:
 
-[env:teensy40_mainTEST]
+[env:teensy40_full_system]
 extends = env:teensy40_base
 build_src_filter =
     +<**/test_main.cpp>
