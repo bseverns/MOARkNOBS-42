@@ -15,7 +15,7 @@ These test files are not placed in the conventional /test folder, but directly i
 We finally caved and wired up a few automated checks in `test/` for those nights when you want proof without solder burns. Kick them off with:
 
 ```bash
-pio test -e teensy40_mainTEST
+pio test -e teensy40_unit_tests
 ```
 
 ### test_envelope_follower.cpp
@@ -91,24 +91,13 @@ Output scrolls by on Serial with PASS/FAIL verdicts. Trust, but verify.
 
 ## How to Build a Test
 
-Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building `test_main.cpp`:
+The machine-test sandbox takes the guesswork out. Point it at the test you want and let it rip:
 
-[env:teensy40_mainTEST]
-extends = env:teensy40_base
-build_src_filter =
-    +<**/test_main.cpp>
-    +<**/ButtonManager.cpp>
-    +<**/ConfigManager.cpp>
-    +<**/DisplayManager.cpp>
-    +<**/EnvelopeFollower.cpp>
-    +<**/LEDManager.cpp>
-    +<**/MIDIHandler.cpp>
-    +<**/PotentiometerManager.cpp>
-    +<**/Utility.cpp>
-    +<include/**.h>
-    -<**/firmware_main.cpp>
+```bash
+pio run -e teensy40_machine_test --project-option="build_src_filter=+<../test/TestHelpers.cpp> +<**/test_main.cpp> +<**/*.cpp> -<**/test_*.cpp>"
+```
 
-Swap in `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
+Swap `test_main.cpp` for `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
 
 ## Final Note
 
