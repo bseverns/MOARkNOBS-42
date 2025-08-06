@@ -149,7 +149,7 @@ Each control button can do several things depending on how you hit it:
 
 | Button | Short Press         | Long Press                    | Double Press                      |
 | ------ | ------------------- | ----------------------------- | --------------------------------- |
-| #0     | Toggle EF           | —                             | Cycle EF Filter (forward)         |
+| #0     | Toggle EF           | Calibrate EF baseline         | Cycle EF Filter (forward)         |
 | #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
 | #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
 | #3     | Cycle MIDI Channel  | Reset EEPROM                  | —                                 |
