@@ -23,7 +23,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
-- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend, NRPN, and full-blown SysEx.
+- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend, NRPN, RPN, and SysEx.
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
 - **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.
@@ -42,7 +42,7 @@ The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' fr
 
 * **1 slot pot**: total recall per slot.
 * **2 filter-tuning pots**: dial in frequency and resonance.
-* **42 virtual CC slots**: each one stores its own value, channel, MIDI protocol (note on/off, CC, prog change, pitch bend, aftertouch), and envelope interaction settings.
+* **42 virtual MIDI slots**: each one stores its own value, channel, MIDI protocol (CC, note on/off, program change, aftertouch, pitch bend, NRPN, RPN, or SysEx), and envelope interaction settings.
 * **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
 * **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 for each of the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.
 * **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
@@ -160,6 +160,7 @@ And yes, combo presses are supported:
 | #3 + #5    | Toggle Arpeggiator mode                  |
 | #0 + #2    | Cycle configuration profiles             |
 
+RPN slots are supported too—assign them via WebSerial or `hardware_config` until a front-panel combo joins the party.
 
 ## Profile Controls
 
@@ -389,6 +390,7 @@ midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
 midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
 midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
 midi.sendNRPN(0x1234, 0x5678, 1); // tweak a deep-cut parameter
+midi.sendRPN(0x0001, 0x0040, 1); // spec-sanctioned pitch range tweak
 uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
 midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
 ```
@@ -407,6 +409,9 @@ messages, with the channel and data byte stored per slot:
 * **Channel Aftertouch** – channel pressure values derived from the control pot
   or an envelope follower.
 * **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
+* **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
+* **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
+* **SysEx** – raw byte dumps for when CCs just won't cut it.
 
 The Control Buttons let you cycle the message type, channel (1–16) and data values in
 real time.  All assignments persist in EEPROM -if you save them- so your setup survives a
