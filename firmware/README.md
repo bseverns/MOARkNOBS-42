@@ -160,21 +160,6 @@ And yes, combo presses are supported:
 | #0 + #2    | Cycle configuration profiles             |
 
 
-## Envelope Follower Calibration
-
-Each follower learns where "silence" lives and dumps that baseline into EEPROM.
-On boot those offsets get slurped back so your modulation starts from zero
-instead of the hum of your studio fridge. If an offset is missing, the rig
-auto-calibrates and saves it.
-
-### Re-calibrating on the fly
-
-- **Per slot:** long‑press Control Button **#0**. The assigned follower sniffs the
-  input, writes the new baseline to EEPROM, and the OLED flashes its approval.
-- **All at once:** crack open WebSerial and shout `CAL_ENVS`. Every follower
-  re-calibrates and the new baselines are burned in.
-
-
 ## Profile Controls
 
 Profiles are the controller's second brain. They stash the whole CC+EF circus so you can yank it back mid-set without booting a laptop. Swap from a bass patch to a lead scream on stage, or flip a chill studio layout into a live-wired noise wall in seconds.
@@ -301,6 +286,20 @@ When LPF/HPF/BPF is selected, **two dedicated tuning pots** become active for th
 - **Frequency**: Cutoff/center frequency (20–5000Hz)
 - **Resonance (Q)**: 0.5–4.0 (slope/sharpness)
 ---
+
+## Envelope Follower Calibration
+
+Each follower learns where "silence" lives and dumps that baseline into EEPROM.
+On boot those offsets get slurped back so your modulation starts from zero
+instead of the hum of your studio fridge. If an offset is missing, the rig
+auto-calibrates and saves it.
+
+### Re-calibrating on the fly
+
+- **Per slot:** long‑press Control Button **#0**. The assigned follower sniffs the
+  input, writes the new baseline to EEPROM, and the OLED flashes its approval.
+- **All at once:** crack open WebSerial and shout `CAL_ENVS`. Every follower
+  re-calibrates and the new baselines are burned in.
 
 ### Filter Selection Pro Tip
 
