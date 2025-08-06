@@ -27,7 +27,9 @@
 #include "Globals.h"
 
 // Optional: Enable detailed debug logging for development
-#define BUTTON_MANAGER_DEBUG 1
+#ifndef BUTTON_MANAGER_DEBUG
+#define BUTTON_MANAGER_DEBUG 0
+#endif
 #if BUTTON_MANAGER_DEBUG
   #define BM_DBG_PRINT(x)   Serial.print(x)
   #define BM_DBG_PRINTLN(x) Serial.println(x)

@@ -468,10 +468,11 @@ Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```
 
-Craving button gossip over serial? Build with `BM_DEBUG=1` to unleash verbose ButtonManager logs:
+Craving button gossip over serial? Build with `BUTTON_MANAGER_DEBUG=1` to
+unleash verbose ButtonManager logs:
 
 ```bash
-pio run -e teensy40_main -D BM_DEBUG=1
+pio run -e teensy40_main -D BUTTON_MANAGER_DEBUG=1
 ```
 
 Leave it off and the firmware keeps its mouth shut.
@@ -533,6 +534,24 @@ build_flags =
 
 Rebuild and the firmware will spew every handled message over the USB Serial
 console. Comment it back out when the noise gets old.
+
+### Button Matrix Racket
+
+Need to watch the button grid rat itself out? The `ButtonManager` can shout
+every press and release over Serial when you flip on its debug flag. By default
+the header keeps things quiet, but you can crank the volume like this:
+
+```ini
+build_flags =
+    -D USB_MIDI_SERIAL
+    -D FASTLED_ALLOW_INTERRUPTS=0
+    -D LED_DATA_PIN=6
+    -D BUTTON_MANAGER_DEBUG=1  ; unleash the chatter
+```
+
+Rebuild and open a serial monitor. The console will scroll with button
+state changes so you can chase down flaky switches or just admire the chaos.
+Dial it back to `0` when your investigation is over.
 
 ### USB Serial & OLED Interface
 

@@ -25,19 +25,6 @@ extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
 extern Arpeggiator arpeggiator;
 
-// Verbose logging is off by default. Flip BM_DEBUG to 1 at build time for noise.
-#ifndef BM_DEBUG
-#define BM_DEBUG 0
-#endif
-
-#if BM_DEBUG
-  #define BM_DBG_PRINT(x)   Serial.print(x)
-  #define BM_DBG_PRINTLN(x) Serial.println(x)
-#else
-  #define BM_DBG_PRINT(x)
-  #define BM_DBG_PRINTLN(x)
-#endif
-
 static const unsigned long LONG_PRESS_DELAY   = 500;
 static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
