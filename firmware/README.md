@@ -468,13 +468,17 @@ Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```
 
-Craving button gossip over serial? Build with `BM_DEBUG=1` to unleash verbose ButtonManager logs:
+### Button Manager Debug Logging
+
+Need to hear every switch squeal? Flip `BUTTON_MANAGER_DEBUG` and watch the serial console light up:
 
 ```bash
-pio run -e teensy40_main -D BM_DEBUG=1
+pio run -e teensy40_main -D BUTTON_MANAGER_DEBUG=1
 ```
 
-Leave it off and the firmware keeps its mouth shut.
+`ButtonManager.h` defines the `BM_DBG_PRINT` and `BM_DBG_PRINTLN` macros, so `ButtonManager.cpp` stopped copy-pasting them like a cover band. Dig in deeper here: [ButtonManager.h](include/ButtonManager.h).
+
+Leave the flag off and the firmware keeps its mouth shut.
 
 Want to poke the main test rig instead? Use the machine-test sandbox and point it at a test file:
 
