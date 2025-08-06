@@ -79,16 +79,22 @@ baseline for the follower tied to the active slot, and burns that offset into EE
 
 **Combos worth remembering:**
 
-- **#0 + #1** – Cycle EF ARG mode method  
-- **#2 + #3** – Cycle LED light display modes  
-- **#4 + #5** – Enable EF and randomize settings  
-- **#0 + #4** – Set slot to MIDI Note mode  
-- **#0 + #5** – Set slot to Program Change  
-- **#1 + #4** – Set slot to Aftertouch  
-- **#1 + #5** – Set slot to Pitch Bend  
+Mirror this list with the [Button Mayhem table](firmware/README.md#button-mayhem) so the docs don’t drift.
+
+- **#0 + #1** – Cycle EF ARG mode method
+- **#2 + #3** – Cycle LED light display modes
+- **#4 + #5** – Enable EF and randomize settings
+- **#0 + #4** – Set slot to MIDI Note mode
+- **#0 + #5** – Set slot to Program Change
+- **#1 + #4** – Set slot to Aftertouch
+- **#1 + #5** – Set slot to Pitch Bend
+- **#2 + #4** – Set slot to NRPN
+- **#0 + #3** – Set slot to SysEx
 - **#1 + #2** – Toggle MIDI clock output
 - **#2 + #5** – Cycle ARG envelope pair
+- **#3 + #4** – Bump arpeggiator base note
 - **#3 + #5** – Toggle Arpeggiator mode
+- **#0 + #2** – Cycle configuration profiles
 
 Want to script your own riff? The firmware now lets you call
 `setLength(ticks)` to space notes by raw MIDI clock pulses—no more guessing in
