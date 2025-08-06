@@ -359,7 +359,7 @@ void setup() {
     // — Pot → MIDI routing callback —
     potentiometerManager.setMidiCallback(
       [&](uint8_t /*ignored*/, uint8_t value, uint8_t rawValue, uint8_t potIdx){
-        auto& slot = configManager.getSlots()[potIdx];
+        auto& slot = configManager.getSlot(potIdx);
         if (!slot.active) return;
 
         switch (slot.type) {
