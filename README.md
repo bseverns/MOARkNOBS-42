@@ -27,6 +27,22 @@ Fresh to the scene and itching to see blinkenlights? Hit the [QuickStart](docs/Q
 The timeline reads like a diary of questionable decisions. For the month-by-month breakdown, see
 [docs/HISTORY.md](docs/HISTORY.md).
 
+## Release Notes
+
+Cutting a drop shouldn't feel like paperwork. From the repo root:
+
+- Run `./release.sh <version>` and it will crank out `dist/mn42_<version>.hex` plus a copy of
+  `THIRD_PARTY_LICENSES.md`. That license file isn't optional—ship it with the hex or expect angry
+  ghosts of GPL past.
+
+### Flash with Teensy Loader
+
+1. Plug in the Teensy 4.0.
+2. Fire up the Teensy Loader app.
+3. **File → Open** and aim it at your freshly baked `mn42_<version>.hex`.
+4. If the board plays dead, mash the Teensy's button, then hit **Program**.
+5. When the loader cheers "Reboot OK," yank the cable or leave it for the encore.
+
 ## Getting Started
 
 ### Flash the Firmware (the loud way)
