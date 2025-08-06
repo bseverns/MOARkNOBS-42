@@ -35,32 +35,6 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
-### Arpeggiator Offsets
-
-The arpeggiator ditched lookup tables. `noteOffset(shape, step, patternLen)` now
-calculates the semitone hop for each tick. `patternLen` sets how high the ladder
-goes—set it to 4 and you're working with offsets 0–3. Shapes pick the route:
-`UP` climbs, `DOWN` dives, `UPDOWN` bounces off the top, and `RANDOM` throws a
-dart anywhere inside the range. Example: `patternLen=5` with `DOWN` spits
-**4,3,2,1,0** before looping.
-
-### MIDI Message Examples
-
-Want to flip patches, squish aftertouch, or yank pitch? Here's how the rig does it:
-
-```cpp
-MIDIHandler midi;
-midi.begin();
-midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
-midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
-midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
-midi.sendNRPN(0x1234, 0x5678, 1); // tweak a deep-cut parameter
-uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
-midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
-```
-
-Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.
-
 ## Hardware Redefined
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! they may be more reasonable, however), so here’s what it became:
@@ -301,6 +275,16 @@ repurpose themselves:
 
 The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
 
+### Arpeggiator Offsets
+
+The arpeggiator ditched lookup tables. `noteOffset(shape, step, patternLen)` now
+calculates the semitone hop for each tick. `patternLen` sets how high the ladder
+goes—set it to 4 and you're working with offsets 0–3. Shapes pick the route:
+`UP` climbs, `DOWN` dives, `UPDOWN` bounces off the top, and `RANDOM` throws a
+dart anywhere inside the range. Example: `patternLen=5` with `DOWN` spits
+**4,3,2,1,0** before looping.
+
+
 ## Filter Controls
 
 Each envelope follower features a full DSP filter section with **7 selectable modes**:
@@ -386,6 +370,23 @@ firmware uses a hardware serial instance for traditional DIN MIDI and the
 `usbMIDI` stack for modern computer connections.  Whatever leaves one
 interface is mirrored on the other so you can drive hardware synths and a
 DAW concurrently with zero configuration.
+
+### MIDI Message Examples
+
+Want to flip patches, squish aftertouch, or yank pitch? Here's how the rig does it:
+
+```cpp
+MIDIHandler midi;
+midi.begin();
+midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
+midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
+midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
+midi.sendNRPN(0x1234, 0x5678, 1); // tweak a deep-cut parameter
+uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
+midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
+```
+
+Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.
 
 ### Supported Message Types
 
