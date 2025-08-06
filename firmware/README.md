@@ -203,6 +203,16 @@ And yes, combo presses are supported:
 | #0 + #2    | Cycle configuration profiles             |
 
 
+## Profile Controls
+
+Profiles are the controller's second brain. They stash the whole CC+EF circus so you can yank it back mid-set without booting a laptop. Swap from a bass patch to a lead scream on stage, or flip a chill studio layout into a live-wired noise wall in seconds.
+
+- **Save:** Long-press **Control Button #4** to dump the current configuration into EEPROM.
+- **Load:** Double-tap **Control Button #4** to resurrect the last saved profile.
+- **Cycle:** Mash **Control Buttons #0 and #2** together to hop to the next profile slot when you've hoarded more than one.
+
+Profiles live in EEPROM, so the chaos survives power cycles. Kill the power, plug back in, and you're right where you left off.
+
 ### OLED Feedback Cheat Sheet
 
 >Typical screen messages from the firmware’s `DisplayManager` include:
