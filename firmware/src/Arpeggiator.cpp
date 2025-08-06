@@ -19,7 +19,8 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0),
-      _shape(UP), _step(0), _patternLength(4) {}
+      _shape(UP), _step(0), _patternLength(4), _baseNote(0),
+      _baseNoteSrc(BaseNoteSource::Slot), _baseNoteCb(nullptr) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -49,6 +50,14 @@ void Arpeggiator::setShape(Shape s) { _shape = s; }
 void Arpeggiator::setPatternLength(uint8_t steps) {
     steps = constrain(steps, 2, MAX_STEPS);
     _patternLength = steps;
+}
+
+void Arpeggiator::setBaseNoteSource(BaseNoteSource src) { _baseNoteSrc = src; }
+
+void Arpeggiator::setBaseNote(uint8_t note) { _baseNote = note; }
+
+void Arpeggiator::setBaseNoteCallback(std::function<uint8_t()> cb) {
+    _baseNoteCb = cb;
 }
 
 static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t patternLen) {
@@ -84,6 +93,14 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
     const MIDISlot& slot = cfg.getSlots()[_slotIdx];
     if (!slot.active) return;
 
+    if (_step == 0) {
+        if (_baseNoteSrc == BaseNoteSource::Slot) {
+            _baseNote = slot.arpNote;
+        } else if (_baseNoteCb) {
+            _baseNote = _baseNoteCb();
+        }
+    }
+
     int8_t offset = noteOffset(_shape, _step, _patternLength);
     _step = (_step + 1) % _patternLength; // advance and wrap within the pattern
     uint8_t potVal = Utility::mapToMidiValue(pots.getLastValue(_slotIdx));
@@ -95,7 +112,7 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
                                    slot.midiChannel);
             break;
         case MIDIMessageType::Note: {
-            uint8_t note = constrain(slot.data1 + offset, 0, 127);
+            uint8_t note = constrain(_baseNote + offset, 0, 127);
             midi.sendNoteOn(note, potVal, slot.midiChannel);
             // Clock-synced release: fire a note-off halfway to the next tick hit.
             unsigned long noteOffDelay = (hwConfig.midiTaskInterval * _lengthTicks) / 2;
@@ -112,7 +129,7 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
             break;
         }
         case MIDIMessageType::ProgramChange:
-            midi.sendProgramChange(constrain(slot.data1 + offset, 0, 127),
+            midi.sendProgramChange(constrain(_baseNote + offset, 0, 127),
                                    slot.midiChannel);
             break;
         case MIDIMessageType::Aftertouch:
