@@ -6,6 +6,7 @@
 
 #include "Arduino.h"
 #include "DisplayManager.h"
+#include "MIDITypes.h"
 
 #define IS_USB_CONNECTED() (usbMidi.connected())
 
@@ -35,9 +36,16 @@ public:
     /** Sling a raw NRPN sequence (CC99/98 + CC6/38). */
     void sendNRPN(uint16_t param, uint16_t value, uint8_t channel);
 
+    /** Sling a Registered Parameter Number sequence (CC101/100 + CC6/38). */
+    void sendRPN(uint16_t param, uint16_t value, uint8_t channel);
+
     /** Last NRPN parsed from the wire. */
     uint16_t lastNRPNParam() const { return _lastNRPNParam; }
     uint16_t lastNRPNValue() const { return _lastNRPNValue; }
+
+    /** Last RPN parsed from the wire. */
+    uint16_t lastRPNParam() const { return _lastRPNParam; }
+    uint16_t lastRPNValue() const { return _lastRPNValue; }
 
     /** Fire off a System Exclusive packet. `data` should include F0/F7. */
     void sendSysEx(const uint8_t* data, uint16_t length);
@@ -45,6 +53,9 @@ public:
     /** Snapshot of the most recent SysEx payload. */
     uint16_t lastSysExLength() const { return _lastSysExLength; }
     const uint8_t* lastSysExData() const { return _lastSysEx; }
+    SysExType lastSysExType() const { return _lastSysExType; }
+    uint8_t lastSysExSubId1() const { return _lastSysExSubId1; }
+    uint8_t lastSysExSubId2() const { return _lastSysExSubId2; }
 
     /** Poll both serial and USB for incoming MIDI bytes. */
     void processIncomingMIDI();
@@ -82,11 +93,24 @@ private:
     uint16_t _lastNRPNParam = 0;
     uint16_t _lastNRPNValue = 0;
 
+    // RPN decode state
+    uint16_t _rpnParam = 0;
+    uint16_t _rpnValue = 0;
+    bool     _rpnParamReady = false;
+
+    // Last fully received RPN for external inspection
+    uint16_t _lastRPNParam = 0;
+    uint16_t _lastRPNValue = 0;
+
     // SysEx stash for quick testing/debugging
     uint8_t  _lastSysEx[32] = {0};
     uint16_t _lastSysExLength = 0;
+    SysExType _lastSysExType = SysExType::ManufacturerSpecific;
+    uint8_t _lastSysExSubId1 = 0;
+    uint8_t _lastSysExSubId2 = 0;
 
     void receiveNRPN(uint8_t channel, uint16_t param, uint16_t value);
+    void receiveRPN(uint8_t channel, uint16_t param, uint16_t value);
     void handleSysEx(const uint8_t* data, uint16_t length);
 };
 
