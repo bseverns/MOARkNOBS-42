@@ -88,33 +88,7 @@ void applyHardwareConfigOverrides(HardwareConfig& cfg) {
 
 The LED matrix is more hardheaded for a multitude of reasons. FastLED demands its data pin up front, so we hard-code it with `LED_DATA_PIN` via `platformio.ini` (defaults to 6). Want the glow on another GPIO? Change that build flag and rebuild—runtime pin shenanigans are history.
 
-## What It Does
-
-* Navigate 42 MIDI slots.
-* Dynamically modulate CCs or other MIDI parameters with audio or CV-driven (+5vdc) envelope followers.
-* Select filter mode for each envelope follower (with visual OLED feedback).
-* Adjust filter frequency and resonance per EF live, using dedicated knobs.
-* Store/reload settings in EEPROM (with backup integrity checking).
-* Send CCs, notes, pitch bend, aftertouch, and program change via USB and DIN.
-* Use a Web Serial editor to configure settings over USB.
-
-## Test Philosophy (and Real Talk)
-
-Some checks need hot solder and a human in the loop; others just need to prove they boot without catching fire.
-
-**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_full_system`). They demand real LEDs, real knobs, and a willing operator.
-
-**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive.
-
-Test sketches used in the development of this project include:
-
-* `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
-* `unified.cpp`: full integration test—just power it on and watch the magic.
-* `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
-* `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
-* `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
-
-## Module Cheat Sheet
+## Firmware Module Cheat Sheet
 
 | Module | What it wrangles |
 |-------|------------------|
@@ -353,6 +327,22 @@ Your configuration is stored in EEPROM. Manual save required.
 * **Button #4 (long press)** saves the current setup.
 * **Button #4 (double press)** reloads the profile from EEPROM.
 * A backup copy is also maintained and auto-restored if needed.
+
+## Test Philosophy (and Real Talk)
+
+Some checks need hot solder and a human in the loop; others just need to prove they boot without catching fire.
+
+**Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_full_system`). They demand real LEDs, real knobs, and a willing operator.
+
+**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive.
+
+Test sketches used in the development of this project include:
+
+* `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
+* `unified.cpp`: full integration test—just power it on and watch the magic.
+* `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
+* `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
+* `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
 
 ### Configuration Persistence
 
