@@ -1,0 +1,42 @@
+name: Firmware CI
+
+on:
+  push:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware.yml'
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python (and keep it snappy)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Cache build mojo
+        uses: actions/cache@v4
+        with:
+          path: firmware/.pio
+          key: ${{ runner.os }}-pio-${{ hashFiles('firmware/platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Build firmware
+        working-directory: firmware
+        run: pio run -e teensy40_main
+
+      - name: Run Unity tests
+        working-directory: firmware
+        run: pio test -e teensy40_unity
