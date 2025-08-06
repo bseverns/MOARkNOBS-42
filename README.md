@@ -79,8 +79,6 @@ baseline for the follower tied to the active slot, and burns that offset into EE
 
 **Combos worth remembering:**
 
-Mirror this list with the [Button Mayhem table](firmware/README.md#button-mayhem) so the docs don’t drift.
-
 - **#0 + #1** – Cycle EF ARG mode method
 - **#2 + #3** – Cycle LED light display modes
 - **#4 + #5** – Enable EF and randomize settings
@@ -95,20 +93,6 @@ Mirror this list with the [Button Mayhem table](firmware/README.md#button-mayhem
 - **#3 + #4** – Bump arpeggiator base note
 - **#3 + #5** – Toggle Arpeggiator mode
 - **#0 + #2** – Cycle configuration profiles
-
-Want to script your own riff? The firmware now lets you call
-`setLength(ticks)` to space notes by raw MIDI clock pulses—no more guessing in
-milliseconds. One tick is a 24th of a quarter note and anything past 24 gets
-chopped so the beat never drags. Stack that with `setPatternLength(steps)` to
-stretch the loop from a terse two-step jab up to a 16-note wander—anything
-outside that range gets slapped back into line.
-
-Under the hood `noteOffset(shape, step, patternLen)` spits out the semitone hop
-for each tick. `patternLen` sets the ceiling: dial in 4 and the offsets run
-0‒3. Shapes just steer the climb—`UP` walks 0→3, `DOWN` dives 3→0, `UPDOWN`
-mirrors back on itself, and `RANDOM` throws darts inside the range. Try
-`patternLen=5` with `UPDOWN` and you'll hear **0,1,2,3,4,3,2…** before the loop
-spins again.
 
 For the full riot of possibilities, see the [Button Mayhem table](firmware/README.md#button-mayhem).
 
@@ -170,4 +154,4 @@ BSSS project team.
 
 ## Thanks
 
-To all of you. You've all made this better whether you realize it or not. Thank you all.
+To all of you. You've all made this better whether you realize it or not. Thank you all. Especially Gary.
