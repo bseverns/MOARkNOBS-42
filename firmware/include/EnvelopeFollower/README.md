@@ -9,17 +9,17 @@ Sniffs audio or CV, shapes it, and hurls MIDI-friendly levels back.
 - `update()` – sample the pin and cook the envelope.
 - `applyToCC(potIndex, value)` – mash a CC with the current level.
 - `setFilterType(type)` – pick your flavor of chaos.
-- `calibrate()` – sniff `VREF_ADC_PIN`, zero the noise floor, stash offsets.
+- `calibrate()` – sniff `VREF_ADC_PIN`, zero the noise floor, stash offsets to EEPROM.
 
 ## Typical Use
 
 ```cpp
 #include "EnvelopeFollower.h"
 
-EnvelopeFollower env(A0, &pots);
+EnvelopeFollower env(A0, &pots, 0); // third arg tags it for EEPROM
 env.setFilterType(EnvelopeFollower::LOWPASS);
 env.setModulationTarget(10);
-env.calibrate();       // learn the baseline and voltage ref
+env.calibrate();       // learn the baseline, stash it in EEPROM
 env.toggleActive(true);
 
 void loop() {

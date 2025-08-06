@@ -123,7 +123,7 @@ Each control button can do several things depending on how you hit it:
 
 | Button | Short Press         | Long Press                    | Double Press                      |
 | ------ | ------------------- | ----------------------------- | --------------------------------- |
-| #0     | Toggle EF           | Calibrate EF baseline         | Cycle EF Filter (forward)         |
+| #0     | Toggle EF           | Calibrate & save EF baseline  | Cycle EF Filter (forward)         |
 | #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
 | #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
 | #3     | Cycle MIDI Channel  | Reset EEPROM                  | —                                 |
@@ -158,6 +158,21 @@ And yes, combo presses are supported:
 | #3 + #4    | Bump arpeggiator base note               |
 | #3 + #5    | Toggle Arpeggiator mode                  |
 | #0 + #2    | Cycle configuration profiles             |
+
+
+## Envelope Follower Calibration
+
+Each follower learns where "silence" lives and dumps that baseline into EEPROM.
+On boot those offsets get slurped back so your modulation starts from zero
+instead of the hum of your studio fridge. If an offset is missing, the rig
+auto-calibrates and saves it.
+
+### Re-calibrating on the fly
+
+- **Per slot:** long‑press Control Button **#0**. The assigned follower sniffs the
+  input, writes the new baseline to EEPROM, and the OLED flashes its approval.
+- **All at once:** crack open WebSerial and shout `CAL_ENVS`. Every follower
+  re-calibrates and the new baselines are burned in.
 
 
 ## Profile Controls

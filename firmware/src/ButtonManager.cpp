@@ -233,9 +233,7 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
                     break;
                 }
                 int efIndex = it->second;
-                context.envelopes[efIndex].calibrate();
-                envelopeConfig.baselines[efIndex] = context.envelopes[efIndex].getBaseline();
-                context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+                context.envelopes[efIndex].calibrate(); // auto-saves baseline via ConfigManager
                 context.displayManager.displayStatus("EF Calibrated", 1500);
                 break;
             }

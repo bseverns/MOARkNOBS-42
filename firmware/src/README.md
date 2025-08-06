@@ -18,3 +18,7 @@ pio run -e teensy40_slot_verify        # builds test_verify_slots.cpp
 ```
 
 Use these to keep your mods honest. Compile, flash, repeat—no fear, no mercy.
+
+## MIDI Nerd Notes
+
+`MIDIHandler.cpp` now speaks RPN and can sniff out universal SysEx packets. If you're poking at the MIDI spec, this is your playground to see how the fancy stuff maps to code.

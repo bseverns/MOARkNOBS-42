@@ -9,7 +9,7 @@
 
 void test_filter_type_switching() {
     auto pm = createPotentiometerManager();
-    EnvelopeFollower env(A0, &pm);
+    EnvelopeFollower env(A0, &pm, 0);
 
     env.setFilterType(EnvelopeFollower::LOWPASS);
     int lp = 0;

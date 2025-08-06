@@ -17,9 +17,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install platformio
-      - name: Build firmware
+      - name: Build every environment
         working-directory: firmware
-        run: pio run -e teensy40_main
-      - name: Run tests
+        run: >-
+          pio run -e teensy40_main -e teensy40_machine_test -e teensy40_unit_tests -e teensy40_full_system -e teensy40_unity -e teensy40_unified_test -e teensy40_biquad_test -e teensy40_eeprom_persistence -e teensy40_slot_verify
+      - name: Run full Unity suite
         working-directory: firmware
-        run: pio test -e teensy40_unity
+        run: |
+          pio test -e teensy40_unity | tee pio-test.log
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pio-test-log
+          path: firmware/pio-test.log

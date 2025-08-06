@@ -49,12 +49,12 @@ ButtonManager buttonManager(hwConfig, controlPins, &potentiometerManager); // Wr
 
 // Envelope followers – six ADC spies that turn audio/CV into modulation
 std::vector<EnvelopeFollower> envelopeFollowers = {
-    EnvelopeFollower(A0, &potentiometerManager),
-    EnvelopeFollower(A1, &potentiometerManager),
-    EnvelopeFollower(A2, &potentiometerManager),
-    EnvelopeFollower(A3, &potentiometerManager),
-    EnvelopeFollower(A6, &potentiometerManager),
-    EnvelopeFollower(A7, &potentiometerManager),
+    EnvelopeFollower(A0, &potentiometerManager, 0),
+    EnvelopeFollower(A1, &potentiometerManager, 1),
+    EnvelopeFollower(A2, &potentiometerManager, 2),
+    EnvelopeFollower(A3, &potentiometerManager, 3),
+    EnvelopeFollower(A6, &potentiometerManager, 4),
+    EnvelopeFollower(A7, &potentiometerManager, 5),
 };
 
 // Hardware/UI state trackers
@@ -399,6 +399,13 @@ void setup() {
             uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
             uint16_t val   = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
             midiHandler.sendNRPN(param, val, slot.midiChannel);
+            break;
+          }
+
+          case MIDIMessageType::RPN: {
+            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+            uint16_t val   = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+            midiHandler.sendRPN(param, val, slot.midiChannel);
             break;
           }
 

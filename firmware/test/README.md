@@ -42,6 +42,21 @@ Corrupts EEPROM headers on purpose and checks that the backup block rides to the
 ### test_button_manager.cpp
 Fakes time itself to ensure long presses don't fire until 500ms has actually passed.
 
+### test_led_manager.cpp
+Makes sure the LED engine listens when we bark new brightness or colour orders.
+
+### test_potentiometer_manager.cpp
+Checks that channel and CC mapping stick for the first slot pot.
+
+### test_display_manager.cpp
+Pokes the update interval to prove the UI can chill when told.
+
+### test_arpeggiator.cpp
+Starts the riff machine, stops it, and double-checks it grabbed the right slot.
+
+### test_biquad_filter.cpp
+Runs a quick low-pass vs high-pass duel to catch any rogue DSP math.
+
 ## File Descriptions
 
 ### test_main.cpp
