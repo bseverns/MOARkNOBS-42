@@ -18,7 +18,7 @@ class PotentiometerManager;
  * ## Quick and dirty setup
  * ```cpp
  * // Wire the follower to analog pin A0 and hand it a pot manager
- * EnvelopeFollower env(A0, &potManager);
+ * EnvelopeFollower env(A0, &potManager, 0); // index 0 so ConfigManager knows where to stash offsets
  * env.setModulationTarget(42);                 // spit out MIDI CC 42
  * env.setMode(EnvelopeFollower::SEF);          // roll with Single Envelope mode
  * env.toggleActive(true);                      // let it rip
@@ -64,6 +64,7 @@ private:
     float shapingFreq = 1000.0f;  // Frequency or shaping parameter
     float shapingQ = 0.707f;      // Resonance or secondary shaping parameter
     int audioInputPin;            // Pin for audio input
+    uint8_t index;               // Which follower we are; used for EEPROM writes
     int currentEnvelopeLevel;     // Current envelope value
     int modulationTargetCC;       // Target MIDI CC
     bool isActive;                // Is envelope follower active?
@@ -102,7 +103,7 @@ public:
      * The PotentiometerManager reference allows the processed value to
      * be applied back to a CC slot.
      */
-    EnvelopeFollower(int pin, PotentiometerManager* pm);
+    EnvelopeFollower(int pin, PotentiometerManager* pm, uint8_t id);
 
     /**
      * Choose which MIDI CC this follower will control. Call when a pot
@@ -157,7 +158,8 @@ public:
     void setEnvelopePair(int envA, int envB);
 
     /**
-     * Sample the voltage reference and current input to stash baseline offsets.
+     * Sample Vref and the current input, then burn the baseline to EEPROM so
+     * the follower remembers where "silence" lives.
      */
     void calibrate();
 

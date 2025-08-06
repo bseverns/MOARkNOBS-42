@@ -19,8 +19,9 @@ static std::array<uint8_t, NUM_POTS> lastSentCC;
 /**
  * Constructor
  */
-EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm)
+EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm, uint8_t id)
     : audioInputPin(pin),
+      index(id),
       currentEnvelopeLevel(0),
       modulationTargetCC(-1),
       isActive(false),
@@ -243,6 +244,7 @@ void EnvelopeFollower::calibrate() {
     }
     vref = (static_cast<float>(refTotal) / samples) * VadcScale;
     calibrateBaseline();
+    configManager.saveEnvelopeBaseline(index, baseline);
 }
 
 void EnvelopeFollower::calibrateBaseline() {

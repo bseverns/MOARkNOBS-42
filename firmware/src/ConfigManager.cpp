@@ -5,6 +5,9 @@
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include <cmath>
+#include <vector>
+
+extern std::vector<EnvelopeFollower> envelopeFollowers;
 
 static uint16_t crc16_update(uint16_t crc, uint8_t data) {
     crc ^= data;
@@ -234,6 +237,13 @@ void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelope
     }
 }
 
+void ConfigManager::saveEnvelopeBaseline(uint8_t envIndex, float baseline) {
+    if (envIndex < NUM_ENVELOPES) {
+        envelopeConfig.baselines[envIndex] = baseline;
+        EEPROM.put(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
+    }
+}
+
 // LED settings
 void ConfigManager::loadLEDSettings(uint8_t& brightness, CRGB& color) {
     brightness = EEPROM.read(EEPROM_LED_BRIGHTNESS);
@@ -361,7 +371,13 @@ void ConfigManager::loadMIDISlots(MIDISlot* slots, size_t count) {
 }
 
 bool ConfigManager::handleCommand(const String& command) {
-    if (command.startsWith("GET_FILTER")) {
+    if (command.startsWith("CAL_ENVS")) {
+        for (auto &ef : envelopeFollowers) {
+            ef.calibrate();
+        }
+        Serial.println("OK");
+        return true;
+    } else if (command.startsWith("GET_FILTER")) {
         uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
         float freq, q;
         EEPROM.get(EEPROM_FILTER_FREQ, freq);
