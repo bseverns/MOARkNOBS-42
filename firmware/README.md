@@ -27,6 +27,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
 - **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.
+- **Perlin-Spiced Randomness**: The "random" shape now rides lightweight Perlin noise, giving chaos a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
 - **Dual MIDI Output**: Send messages via USB and classic 5-pin DIN simultaneously.
@@ -248,16 +249,17 @@ repurpose themselves:
 * **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
 The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
-By default it roots itself in `arpNote`, but you can hijack the base note with `setBaseNoteSource()` or a callback to let an envelope follower or ARG drive the riff.
+Each tick it grabs the slot's pot value as the root, parks that in `arpNote`, and hammers out `root + offset` for notes.
+You can still hijack the base via `setBaseNoteSource()` or a callback if you want an envelope follower or ARG steering the riff.
 
 ### Arpeggiator Offsets
 
 The arpeggiator ditched lookup tables. `noteOffset(shape, step, patternLen)` now
 calculates the semitone hop for each tick. `patternLen` sets how high the ladder
 goes—set it to 4 and you're working with offsets 0–3. Shapes pick the route:
-`UP` climbs, `DOWN` dives, `UPDOWN` bounces off the top, and `RANDOM` throws a
-dart anywhere inside the range. Example: `patternLen=5` with `DOWN` spits
-**4,3,2,1,0** before looping.
+`UP` climbs, `DOWN` dives, `UPDOWN` bounces off the top, and `RANDOM` wanders via
+Perlin noise so it remembers where it came from. Example: `patternLen=5` with
+`DOWN` spits **4,3,2,1,0** before looping.
 
 
 ## Filter Controls

@@ -368,13 +368,15 @@ void setup() {
             break;
 
           case MIDIMessageType::Note: {
+            uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
+            slot.arpNote = note; // stash for the arpeggiator
             uint8_t velo = (slot.efIndex < envelopeFollowers.size())
                            ? envelopeFollowers[slot.efIndex].getEnvelopeLevel()
                            : 125;
-            midiHandler.sendNoteOn(slot.data1, velo, slot.midiChannel);
+            midiHandler.sendNoteOn(note, velo, slot.midiChannel);
             // schedule Note-Off in 100 ms
             Utility::schedulerHigh.addTask([=](){
-              midiHandler.sendNoteOff(slot.data1, 0, slot.midiChannel);
+              midiHandler.sendNoteOff(note, 0, slot.midiChannel);
             }, 100);
             break;
           }
