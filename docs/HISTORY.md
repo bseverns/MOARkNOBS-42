@@ -63,6 +63,12 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Dropped the gritty `MN42_v2` hardware rev with fresh design assets under `hardware/MN42-1/`.
 - `fea338e` calls for thicker LED power traces in `hardware/MN42-1/`—beefier copper keeps the LEDs from sagging or cooking when you crank the current.
 
+### September
+- NRPN, RPN, and raw SysEx support crash the party, ditching vanilla CCs for full‑fat MIDI mojo and teaching us how deep the protocol rabbit hole really goes.
+- WebSerial begins streaming the synth's guts straight to the browser; the editor's rough edges prove the web can be a lab bench if you don't mind a little chaos.
+- Wired up the filter‑tuning pot and roughed up the arpeggiator—hands‑on analog control meets sequencer swagger, plus a reminder that drift and off‑by‑ones are always lurking.
+- *Standards are optional; the best lessons come from coloring off the page.*
+
 ## Overview
 
 Across roughly seven months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:
