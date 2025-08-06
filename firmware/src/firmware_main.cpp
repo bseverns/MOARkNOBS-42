@@ -312,14 +312,21 @@ void updateArpTuning() {
     int rawLen   = buttonManager.getControlPotValue(1);
     int rawShape = buttonManager.getControlPotValue(2);
 
+    // Knob #1 owns the step length. Its raw 10‑bit reading gets linearly remapped
+    // to MIDI clock ticks so the riff stays welded to the global tempo:
+    //   0     -> 1 tick   (every pulse)
+    //   1023  -> MAX_LENGTH ticks (a whole quarter note at 24 PPQN)
+    // Future hackers: tweak Arpeggiator::MAX_LENGTH if you want longer gaps.
     uint8_t lengthTicks = map(rawLen, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
     int shapeIdx        = map(rawShape, 0, 1023, 0, 3);
     static const char* names[] = {"UP", "DOWN", "UPDN", "RAND"};
     Arpeggiator::Shape shapes[] = {Arpeggiator::UP, Arpeggiator::DOWN, Arpeggiator::UPDOWN, Arpeggiator::RANDOM};
 
+    // Pump the tick count into the arp engine and shape selector.
     arpeggiator.setLength(lengthTicks);
     arpeggiator.setShape(shapes[shapeIdx]);
 
+    // Flash the current groove math on the OLED so humans can vibe too.
     displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
 }
 

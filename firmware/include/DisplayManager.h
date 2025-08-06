@@ -171,7 +171,7 @@ public:
   /** Display helper for tuning filter frequency and resonance. */
   void showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue);
 
-  /** Display helper for arpeggiator length and shape. */
+  /** Display helper for arpeggiator length (in MIDI clock ticks) and shape. */
   void showArpSettings(uint8_t lengthTicks, const char* shapeName);
 
 private:

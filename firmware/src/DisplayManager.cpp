@@ -248,7 +248,8 @@ void DisplayManager::showArpSettings(uint8_t lengthTicks, const char* shapeName)
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
-    _display.print("Ticks: ");
+    // Show the raw tick span so the groove math is crystal clear.
+    _display.print("Len (ticks): ");
     _display.println(lengthTicks);
     _display.setCursor(0, 10);
     _display.print("Shape: ");
