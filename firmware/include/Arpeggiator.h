@@ -52,6 +52,12 @@ public:
      *          changes the melodic contour of the arpeggio.
      */
     void setShape(Shape s);
+    /**
+     * Define how many steps the riff walks through before looping.
+     * @param steps Number of notes in the pattern; clamped to a safe range
+     *              so it never trips over itself.
+     */
+    void setPatternLength(uint8_t steps);
 
     /** Call regularly to send notes when due. */
     void update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots);
@@ -63,6 +69,7 @@ private:
     Shape         _shape;
     unsigned long _lastStep;
     uint8_t       _step;
+    uint8_t       _patternLength;
 };
 
 #endif // ARPEGGIATOR_H

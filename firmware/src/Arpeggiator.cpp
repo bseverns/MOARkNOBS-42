@@ -8,6 +8,8 @@
 #include "Utility.h"
 #include "PotentiometerManager.h"
 
+constexpr uint8_t MAX_STEPS = 16;
+
 // Handles per-slot arpeggiation. This component ties into ConfigManager to
 // fetch slot settings, reads the most recent pot value from
 // PotentiometerManager and issues MIDI messages through MIDIHandler. The
@@ -15,7 +17,7 @@
 
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _intervalMs(250), _shape(UP),
-      _lastStep(0), _step(0) {}
+      _lastStep(0), _step(0), _patternLength(4) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -39,6 +41,11 @@ uint8_t Arpeggiator::getSlot() const { return _slotIdx; }
 void Arpeggiator::setLength(float ms) { _intervalMs = ms; }
 
 void Arpeggiator::setShape(Shape s) { _shape = s; }
+
+void Arpeggiator::setPatternLength(uint8_t steps) {
+    steps = constrain(steps, 2, MAX_STEPS);
+    _patternLength = steps;
+}
 
 static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step) {
     // Major triad plus the octave; these tables dictate the interval jump for
