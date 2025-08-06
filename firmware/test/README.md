@@ -30,6 +30,9 @@ We finally caved and wired up a few automated checks in `test/` for those lonely
 pio test -e teensy40_unity
 ```
 
+That env sets `test_build_src = true`, so PlatformIO drags the project's core sources into the test build. If something in `src/`
+won't compile, Unity will scream before you ever flash a board.
+
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
 
