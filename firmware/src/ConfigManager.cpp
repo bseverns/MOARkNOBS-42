@@ -406,3 +406,55 @@ bool ConfigManager::handleCommand(const String& command) {
     }
     return false;
 }
+
+#ifdef UNIT_TEST
+#include <unity.h>
+#include "TestHelpers.h"
+
+// Ensure the manager can resurrect configuration from the backup copy
+// after the primary EEPROM header gets nuked.
+void test_eeprom_recovery_after_power_cycle() {
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    cfg.setPotChannel(0, 9);
+    cfg.setPotCCNumber(0, 77);
+    cfg.saveConfiguration();
+
+    // Mirror primary data into the backup region and wreck the primary header
+    EEPROM.write(EEPROM_MAGIC_ADDRESS + 2, (EEPROM_MAGIC_BACKUP >> 8) & 0xFF);
+    EEPROM.write(EEPROM_MAGIC_ADDRESS + 3, EEPROM_MAGIC_BACKUP & 0xFF);
+    EEPROM.write(EEPROM_BACKUP_START + EEPROM_POT_CHANNELS, 9);
+    EEPROM.write(EEPROM_BACKUP_START + EEPROM_POT_CC, 77);
+    EEPROM.write(EEPROM_MAGIC_ADDRESS, 0x00);
+    EEPROM.write(EEPROM_MAGIC_ADDRESS + 1, 0x00);
+
+    ConfigManager rebooted(NUM_POTS, NUM_BUTTONS);
+    std::vector<uint8_t> pots;
+    bool ok = rebooted.loadConfiguration(pots);
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_UINT8(9, pots[0]);
+    TEST_ASSERT_EQUAL_UINT8(77, rebooted.getPotCCNumber(0));
+}
+
+// Baseline calibration should make it through a simulated reboot.
+void test_calibration_offsets_survive_power_cycle() {
+    auto pm = createPotentiometerManager();
+    std::vector<EnvelopeFollower> envs = {EnvelopeFollower(A0, &pm)};
+    std::map<int, int> mapping = {{0, 0}};
+
+    envs[0].setBaseline(0.42f);
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    cfg.saveEnvelopeSettings(mapping, envs);
+
+    // Pretend the board restarted – wipe RAM and reload from EEPROM
+    for (int i = 0; i < NUM_ENVELOPES; ++i) {
+        envelopeConfig.baselines[i] = 0.0f;
+    }
+    std::vector<EnvelopeFollower> fresh = {EnvelopeFollower(A0, &pm)};
+    std::map<int, int> mapping2;
+    bool ok = cfg.loadEnvelopeSettings(mapping2, fresh);
+
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.42f, fresh[0].getBaseline());
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.42f, envelopeConfig.baselines[0]);
+}
+#endif
