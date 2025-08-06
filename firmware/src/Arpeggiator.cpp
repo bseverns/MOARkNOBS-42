@@ -47,21 +47,21 @@ void Arpeggiator::setPatternLength(uint8_t steps) {
     _patternLength = steps;
 }
 
-static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step) {
-    // Major triad plus the octave; these tables dictate the interval jump for
-    // each step of the pattern.
-    static const int8_t up[]     = {0, 4, 7, 12};   // climb from root to octave
-    static const int8_t down[]   = {12, 7, 4, 0};   // descend from octave back to root
-    static const int8_t updown[] = {0, 4, 7, 12, 7, 4}; // bounce up then fall halfway
+static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t patternLen) {
+    // Semitone offsets now derive from simple math rather than pre-baked tables.
+    // This lets pattern length drive the range while shapes dictate direction.
+    uint8_t pos = step % patternLen;
     switch (shape) {
-        case Arpeggiator::UP:      return up[step % 4];
-        case Arpeggiator::DOWN:    return down[step % 4];
-        case Arpeggiator::UPDOWN:  return updown[step % 6];
+        case Arpeggiator::UP:
+            return pos;                       // climb from root
+        case Arpeggiator::DOWN:
+            return patternLen - 1 - pos;      // descend back to root
+        case Arpeggiator::UPDOWN:
+            // walk up then mirror back down over the pattern range
+            return (step < patternLen ? pos : (patternLen - 1 - pos));
         case Arpeggiator::RANDOM:
-        default: {
-            const int8_t choices[] = {0,4,7,12};
-            return choices[random(0,4)];
-        }
+        default:
+            return static_cast<int8_t>(random(0, patternLen));
     }
 }
 
@@ -76,7 +76,7 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
     const MIDISlot& slot = cfg.getSlots()[_slotIdx];
     if (!slot.active) return;
 
-    int8_t offset = noteOffset(_shape, _step++);
+    int8_t offset = noteOffset(_shape, _step++, _patternLength);
     uint8_t potVal = Utility::mapToMidiValue(pots.getLastValue(_slotIdx));
 
     switch (slot.type) {
