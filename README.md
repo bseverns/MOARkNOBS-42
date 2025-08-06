@@ -86,9 +86,14 @@ baseline for the follower tied to the active slot, and burns that offset into EE
 - **#0 + #5** – Set slot to Program Change  
 - **#1 + #4** – Set slot to Aftertouch  
 - **#1 + #5** – Set slot to Pitch Bend  
-- **#1 + #2** – Toggle MIDI clock output  
-- **#2 + #5** – Cycle ARG envelope pair  
-- **#3 + #5** – Toggle Arpeggiator mode  
+- **#1 + #2** – Toggle MIDI clock output
+- **#2 + #5** – Cycle ARG envelope pair
+- **#3 + #5** – Toggle Arpeggiator mode
+
+Want to script your own riff? The firmware now lets you call
+`setPatternLength(steps)` on the Arpeggiator to stretch the loop from a terse
+two-step jab up to a 16-note wander—anything outside that range gets slapped
+back into line.
 
 For the full riot of possibilities, see the [Button Mayhem table](firmware/README.md#button-mayhem).
 
