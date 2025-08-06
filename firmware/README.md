@@ -30,7 +30,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Perlin-Spiced Randomness**: The "random" shape now rides lightweight Perlin noise, giving chaos a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
-- **Dual MIDI Output**: Send messages via USB and classic 5-pin DIN simultaneously.
+- **Dual MIDI Output**: DIN blares from boot; USB stays mute until you mash Control Buttons **0+1+2** to arm it.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
@@ -148,6 +148,7 @@ And yes, combo presses are supported:
 
 | Combo      | Action                                   |
 |------------|------------------------------------------|
+| #0 + #1 + #2 | Toggle USB MIDI output                   |
 | #0 + #4    | Set slot to MIDI Note mode               |
 | #0 + #5    | Set slot to Program Change               |
 | #1 + #4    | Set slot to Aftertouch                   |

@@ -523,8 +523,13 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl4 = 1 << 4;
     const uint8_t maskCtrl5 = 1 << 5;
 
+    // (0) Ctrl0 + Ctrl1 + Ctrl2: toggle USB MIDI output
+    if ((pressedButtons & (maskCtrl0 | maskCtrl1 | maskCtrl2)) == (maskCtrl0 | maskCtrl1 | maskCtrl2)) {
+        g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
+        context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF", 1500);
+    }
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
-    if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it == context.potToEnvelopeMap.end()) {
             context.displayManager.displayStatus("No EF assigned", 1000);
@@ -734,6 +739,21 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
         if (stable) {
             updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
         }
+    }
+
+    // After updating each control button, check for multi-button combos
+    uint8_t mask = 0;
+    for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
+        if (buttonStates[NUM_VIRTUAL_BUTTONS + i]) {
+            mask |= (1 << i);
+        }
+    }
+    static uint8_t lastMask = 0;
+    if (mask != lastMask) {
+        if (mask && (mask & (mask - 1))) { // more than one button pressed
+            handleMultiButtonPress(mask, context);
+        }
+        lastMask = mask;
     }
 
     for (uint8_t i = 0; i < 3; ++i) {
