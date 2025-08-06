@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- Filter tuning pots let you twist the analog guts without a screwdriver.
+- Arpeggiator learned to wiggle on its own, Perlin noise and all.
+- WebSerial telemetry spews live state into the browser.
+- NRPN/RPN/SysEx support because MIDI's dark corners are fun.
 - Start tracking changes with this log.
 
 ## [0.1.0] - 2025-08-06
