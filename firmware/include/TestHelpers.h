@@ -33,11 +33,11 @@ inline ButtonManager createButtonManager(PotentiometerManager* pm) {
 
 inline std::vector<EnvelopeFollower> createEnvelopeFollowers(PotentiometerManager* pm) {
     return {
-        EnvelopeFollower(A0, pm),
-        EnvelopeFollower(A1, pm),
-        EnvelopeFollower(A2, pm),
-        EnvelopeFollower(A3, pm),
-        EnvelopeFollower(A6, pm),
-        EnvelopeFollower(A7, pm),
+        EnvelopeFollower(A0, pm, 0),
+        EnvelopeFollower(A1, pm, 1),
+        EnvelopeFollower(A2, pm, 2),
+        EnvelopeFollower(A3, pm, 3),
+        EnvelopeFollower(A6, pm, 4),
+        EnvelopeFollower(A7, pm, 5),
     };
 }

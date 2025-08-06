@@ -166,6 +166,9 @@ public:
      */
     bool loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
 
+    /** Save a single envelope follower's baseline to EEPROM. */
+    void saveEnvelopeBaseline(uint8_t envIndex, float baseline);
+
     // Utility methods ----------------------------------------------------
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
