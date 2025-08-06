@@ -140,6 +140,15 @@ See [firmware/test/README.md](firmware/test/README.md) for details on this proje
 For a month-by-month look at how this controller came together, see
 [HISTORY.md](HISTORY.md).
 
+## Firmware Updates
+
+Shipped units don't have to rot on old code. Follow the step-by-step [Firmware Update guide](docs/FirmwareUpdate.md) to flash new bits without drama.
+
+## Support
+
+Need help or want to yell into the void? Open an issue on [GitHub](https://github.com/bseverns/MOARkNOBS-42/issues) or drop a line at [support@bseverns.me](mailto:support@bseverns.me).
+
+
 ## License & Redistribution
 
 MIT, see [LICENSE](LICENSE) for details.
