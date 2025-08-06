@@ -1,7 +1,6 @@
 # MOARkNOBS-42
 
-[![CI](https://github.com/owner/MOARkNOBS-42/actions/workflows/ci.yml/badge.svg)](https://github.com/owner/MOARkNOBS-42/actions/workflows/ci.yml)
-
+![Title Image](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
 This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below. The latest board rev adds ten more WS2812s, bringing the grand total to fifty‑two LEDs: forty‑two for virtual slots, six tracking envelope follower levels, one beacon for the control buttons and three haloing the hardware knobs—one slot pot and a pair of filter‑tuning lights.
