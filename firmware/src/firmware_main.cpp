@@ -312,15 +312,15 @@ void updateArpTuning() {
     int rawLen   = buttonManager.getControlPotValue(1);
     int rawShape = buttonManager.getControlPotValue(2);
 
-    float lengthMs = map(rawLen, 0, 1023, 80, 800);
-    int shapeIdx   = map(rawShape, 0, 1023, 0, 3);
+    uint8_t lengthTicks = map(rawLen, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
+    int shapeIdx        = map(rawShape, 0, 1023, 0, 3);
     static const char* names[] = {"UP", "DOWN", "UPDN", "RAND"};
     Arpeggiator::Shape shapes[] = {Arpeggiator::UP, Arpeggiator::DOWN, Arpeggiator::UPDOWN, Arpeggiator::RANDOM};
 
-    arpeggiator.setLength(lengthMs);
+    arpeggiator.setLength(lengthTicks);
     arpeggiator.setShape(shapes[shapeIdx]);
 
-    displayManager.showArpSettings(lengthMs, names[shapeIdx]);
+    displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
 }
 
 void streamWebSerialState() {

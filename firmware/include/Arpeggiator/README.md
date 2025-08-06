@@ -7,7 +7,7 @@ Clock-synced riff machine that rips through a slot's note stack like it's late f
 ## Key Methods
 
 - `start(slotIdx)` – point it at a slot and let the notes fly.
-- `setLength(ms)` – tell it how fast to spit notes.
+- `setLength(ticks)` – how many MIDI clock ticks to wait between hits (max 24).
 - `setPatternLength(steps)` – define how many steps and semitones the loop spans.
 - `update(midi, cfg, pots)` – call every loop so it keeps drumming.
 
@@ -22,7 +22,7 @@ then spits the actual jump each tick: `UP` counts up, `DOWN` walks back to zero,
 #include "Arpeggiator.h"
 
 Arpeggiator arp;
-arp.setLength(120); // 120 ms between hits
+arp.setLength(12);       // fire every 12 clock ticks
 arp.setPatternLength(4); // four-step pattern, offsets 0-3
 arp.start(0);       // chew on slot 0
 

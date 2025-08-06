@@ -19,6 +19,9 @@ class Arpeggiator {
 public:
     enum Shape { UP, DOWN, UPDOWN, RANDOM };
 
+    /** Max ticks allowed between note hits so the riff never drifts past a beat. */
+    static constexpr uint8_t MAX_LENGTH = 24;
+
     /** Construct a stopped arpeggiator with default settings. */
     Arpeggiator();
 
@@ -41,11 +44,10 @@ public:
     uint8_t getSlot() const;
 
     /**
-     * Set the time between note triggers.
-     * @param ms Delay in milliseconds; shorter values make the riff blaze
-     *           faster while longer ones chill it out.
+     * Set the gap between note triggers in global MIDI clock ticks.
+     * @param ticks Number of 24 PPQN ticks to wait; clamped so the beat stays tight.
      */
-    void setLength(float ms);
+    void setLength(uint8_t ticks);
     /**
      * Choose how the offsets are ordered.
      * @param s Pattern of note movement—UP, DOWN, UPDOWN or RANDOM—which
@@ -59,15 +61,18 @@ public:
      */
     void setPatternLength(uint8_t steps);
 
-    /** Call regularly to send notes when due. */
+    /**
+     * Call every loop; notes only fire on MIDI clock ticks.
+     * Keeps the groove glued to the global tempo.
+     */
     void update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots);
 
 private:
     bool          _active;
     uint8_t       _slotIdx;
-    float         _intervalMs;
+    uint8_t       _lengthTicks;
+    uint8_t       _tickCounter;
     Shape         _shape;
-    unsigned long _lastStep;
     uint8_t       _step;
     uint8_t       _patternLength;
 };

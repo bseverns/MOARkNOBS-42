@@ -8,7 +8,9 @@
 #include "Utility.h"
 #include "PotentiometerManager.h"
 
-constexpr uint8_t MAX_STEPS = 16;
+constexpr uint8_t MAX_STEPS  = 16;
+// Longest span between notes, in MIDI clock ticks. Anything longer loses the groove.
+constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 
 // Handles per-slot arpeggiation. This component ties into ConfigManager to
 // fetch slot settings, reads the most recent pot value from
@@ -16,8 +18,8 @@ constexpr uint8_t MAX_STEPS = 16;
 // update() routine is scheduled from the main firmware loop.
 
 Arpeggiator::Arpeggiator()
-    : _active(false), _slotIdx(0), _intervalMs(250), _shape(UP),
-      _lastStep(0), _step(0), _patternLength(4) {}
+    : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0),
+      _shape(UP), _step(0), _patternLength(4) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -25,7 +27,7 @@ Arpeggiator::Arpeggiator()
 void Arpeggiator::start(uint8_t slotIdx) {
     _slotIdx = slotIdx;
     _active = true;
-    _lastStep = millis();
+    _tickCounter = 0;
     _step = 0;
 }
 
@@ -38,7 +40,9 @@ bool Arpeggiator::isActive() const { return _active; }
 
 uint8_t Arpeggiator::getSlot() const { return _slotIdx; }
 
-void Arpeggiator::setLength(float ms) { _intervalMs = ms; }
+void Arpeggiator::setLength(uint8_t ticks) {
+    _lengthTicks = constrain(ticks, 1, MAX_LENGTH);
+}
 
 void Arpeggiator::setShape(Shape s) { _shape = s; }
 
@@ -69,9 +73,13 @@ static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t pattern
 // settings and emits the next MIDI event via MIDIHandler.
 void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots) {
     if (!_active) return;
-    unsigned long now = millis();
-    if (now - _lastStep < _intervalMs) return;
-    _lastStep = now;
+
+    // Ride the global MIDI clock. No tick, no note.
+    if (!midi.isClockTick()) return;
+    midi.clearClockTick(); // consume the pulse so we don't double-dip
+
+    if (++_tickCounter < _lengthTicks) return; // not time yet
+    _tickCounter = 0; // reset for the next hit
 
     const MIDISlot& slot = cfg.getSlots()[_slotIdx];
     if (!slot.active) return;
@@ -89,11 +97,11 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
         case MIDIMessageType::Note: {
             uint8_t note = constrain(slot.data1 + offset, 0, 127);
             midi.sendNoteOn(note, potVal, slot.midiChannel);
-            // Schedule a note-off at half the interval so each note gets a
-            // quick release without blocking the main loop.
-            Utility::schedulerHigh.addTask([note, ch=slot.midiChannel, &midi](){
+            // Clock-synced release: fire a note-off halfway to the next tick hit.
+            unsigned long noteOffDelay = (hwConfig.midiTaskInterval * _lengthTicks) / 2;
+            Utility::schedulerHigh.addTask([note, ch=slot.midiChannel, &midi]() {
                 midi.sendNoteOff(note, 0, ch);
-            }, (unsigned long)(_intervalMs / 2), false);
+            }, noteOffDelay, false);
             break;
         }
         case MIDIMessageType::PitchBend: {

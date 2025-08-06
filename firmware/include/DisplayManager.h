@@ -172,7 +172,7 @@ public:
   void showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue);
 
   /** Display helper for arpeggiator length and shape. */
-  void showArpSettings(float lengthMs, const char* shapeName);
+  void showArpSettings(uint8_t lengthTicks, const char* shapeName);
 
 private:
   Animation          _fadeAnim;
