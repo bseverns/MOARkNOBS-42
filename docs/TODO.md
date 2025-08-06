@@ -5,15 +5,3 @@
 - Drop TP_VINRAW, TP_VINFUSED, TP_3V3, TP_VREF, TP_ROWDRV, TP_COLSENSE, TP_SDA/SCL, TP_LED, TP_MIDIRX/TX, TP_E1–E6.
 
 - - 1.6 mm round SMD, no paste, edge-accessible. Name TP_* in schematic.
-
-## Editor
-
-- Live-host/connect
-- js visual confirm
-
-## firmware
-
-- Automated tests & CI pipeline.
-- Config CRC/versioning.
-- Expanded MIDI handling.
-- Envelope follower persistence & calibration.
