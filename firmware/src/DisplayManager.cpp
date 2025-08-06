@@ -243,13 +243,13 @@ void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, co
     _display.display();
 }
 
-void DisplayManager::showArpSettings(float lengthMs, const char* shapeName) {
+void DisplayManager::showArpSettings(uint8_t lengthTicks, const char* shapeName) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_WHITE);
     _display.setCursor(0, 0);
-    _display.print("Len: ");
-    _display.println(lengthMs, 0);
+    _display.print("Ticks: ");
+    _display.println(lengthTicks);
     _display.setCursor(0, 10);
     _display.print("Shape: ");
     _display.println(shapeName);

@@ -91,9 +91,11 @@ baseline for the follower tied to the active slot, and burns that offset into EE
 - **#3 + #5** – Toggle Arpeggiator mode
 
 Want to script your own riff? The firmware now lets you call
-`setPatternLength(steps)` on the Arpeggiator to stretch the loop from a terse
-two-step jab up to a 16-note wander—anything outside that range gets slapped
-back into line.
+`setLength(ticks)` to space notes by raw MIDI clock pulses—no more guessing in
+milliseconds. One tick is a 24th of a quarter note and anything past 24 gets
+chopped so the beat never drags. Stack that with `setPatternLength(steps)` to
+stretch the loop from a terse two-step jab up to a 16-note wander—anything
+outside that range gets slapped back into line.
 
 Under the hood `noteOffset(shape, step, patternLen)` spits out the semitone hop
 for each tick. `patternLen` sets the ceiling: dial in 4 and the offsets run
