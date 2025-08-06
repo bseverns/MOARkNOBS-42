@@ -76,7 +76,8 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
     const MIDISlot& slot = cfg.getSlots()[_slotIdx];
     if (!slot.active) return;
 
-    int8_t offset = noteOffset(_shape, _step++, _patternLength);
+    int8_t offset = noteOffset(_shape, _step, _patternLength);
+    _step = (_step + 1) % _patternLength; // advance and wrap within the pattern
     uint8_t potVal = Utility::mapToMidiValue(pots.getLastValue(_slotIdx));
 
     switch (slot.type) {
