@@ -43,9 +43,6 @@ static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
 static const int NUM_ARG_PAIRS = sizeof(ARG_PAIRS) / sizeof(ARG_PAIRS[0]);
 
-// We also need a quick reference to the analog pins used by each EF index:
-static const int EF_PINS[6] = { A0, A1, A2, A3, A6, A7 };
-
 static const EnvelopeFollower::FilterType ALL_FILTERS[] = {
     EnvelopeFollower::LINEAR,
     EnvelopeFollower::OPPOSITE_LINEAR,
