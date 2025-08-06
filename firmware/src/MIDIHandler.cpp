@@ -52,6 +52,7 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
 
 void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     if (channel < 1 || channel > 16) return;
+    if (param > 16383 || value > 16383) return;
     uint8_t pMsb = (param >> 7) & 0x7F;
     uint8_t pLsb = param & 0x7F;
     uint8_t vMsb = (value >> 7) & 0x7F;
@@ -67,8 +68,26 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     usbMIDI.sendControlChange(38, vLsb, channel);
 }
 
+void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
+    if (channel < 1 || channel > 16) return;
+    if (param > 16383 || value > 16383) return;
+    uint8_t pMsb = (param >> 7) & 0x7F;
+    uint8_t pLsb = param & 0x7F;
+    uint8_t vMsb = (value >> 7) & 0x7F;
+    uint8_t vLsb = value & 0x7F;
+    // RPN sequence: param MSB/LSB then data entry MSB/LSB
+    MIDI.sendControlChange(101, pMsb, channel);
+    MIDI.sendControlChange(100, pLsb, channel);
+    MIDI.sendControlChange(6,   vMsb, channel);
+    MIDI.sendControlChange(38,  vLsb, channel);
+    usbMIDI.sendControlChange(101, pMsb, channel);
+    usbMIDI.sendControlChange(100, pLsb, channel);
+    usbMIDI.sendControlChange(6,   vMsb, channel);
+    usbMIDI.sendControlChange(38,  vLsb, channel);
+}
+
 void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
-    if (!data || length == 0) return;
+    if (!data || length == 0 || length > 1024) return;
     MIDI.sendSysEx(length, data, true);
     usbMIDI.sendSysEx(length, data, true);
 }
@@ -134,10 +153,22 @@ void MIDIHandler::processIncomingMIDI() {
 }
 
 void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2) {
+    if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
+        MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
+        return;
+    }
     switch (type) {
         case midi::ControlChange:
             // Peek for NRPN sequences; otherwise just log the CC
             switch (data1) {
+                case 101: // RPN parameter MSB
+                    _rpnParam = (data2 & 0x7F) << 7;
+                    _rpnParamReady = false;
+                    break;
+                case 100: // RPN parameter LSB
+                    _rpnParam |= (data2 & 0x7F);
+                    _rpnParamReady = true;
+                    break;
                 case 99: // NRPN parameter MSB
                     _nrpnParam = (data2 & 0x7F) << 7;
                     _nrpnParamReady = false;
@@ -148,12 +179,18 @@ void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8
                     break;
                 case 6: // Data entry MSB
                     _nrpnValue = (data2 & 0x7F) << 7;
+                    _rpnValue  = (data2 & 0x7F) << 7;
                     break;
                 case 38: // Data entry LSB
                     _nrpnValue |= (data2 & 0x7F);
+                    _rpnValue  |= (data2 & 0x7F);
                     if (_nrpnParamReady) {
                         receiveNRPN(channel, _nrpnParam, _nrpnValue);
                         _nrpnParamReady = false;
+                    }
+                    if (_rpnParamReady) {
+                        receiveRPN(channel, _rpnParam, _rpnValue);
+                        _rpnParamReady = false;
                     }
                     break;
                 default:
@@ -260,11 +297,28 @@ void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {
     MIDI_DBG_PRINTF("NRPN %u = %u on ch %u\n", param, value, channel);
 }
 
+void MIDIHandler::receiveRPN(uint8_t channel, uint16_t param, uint16_t value) {
+    _lastRPNParam = param;
+    _lastRPNValue = value;
+    MIDI_DBG_PRINTF("RPN %u = %u on ch %u\n", param, value, channel);
+}
+
 void MIDIHandler::handleSysEx(const uint8_t* data, uint16_t length) {
     if (!data || length == 0) return;
     _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
     for (uint16_t i = 0; i < _lastSysExLength; ++i) {
         _lastSysEx[i] = data[i];
+    }
+    _lastSysExType = SysExType::ManufacturerSpecific;
+    _lastSysExSubId1 = _lastSysExSubId2 = 0;
+    if (length >= 5) {
+        uint8_t manufacturer = data[1];
+        if (manufacturer == 0x7E || manufacturer == 0x7F) {
+            _lastSysExType = (manufacturer == 0x7E) ?
+                SysExType::UniversalNonRealTime : SysExType::UniversalRealTime;
+            _lastSysExSubId1 = data[3];
+            _lastSysExSubId2 = data[4];
+        }
     }
     MIDI_DBG_PRINTF("SysEx[%u]", length);
     for (uint16_t i = 0; i < length; ++i) {

@@ -13,7 +13,15 @@ enum class MIDIMessageType : uint8_t {
   ProgramChange,
   Aftertouch,
   NRPN,   //!< Non-Registered Parameter Number send
+  RPN,    //!< Registered Parameter Number send
   SysEx   //!< System Exclusive thrasher
+};
+
+/** Classification for the most recent SysEx packet. */
+enum class SysExType : uint8_t {
+  ManufacturerSpecific = 0, //!< Vendor IDs other than 7E/7F
+  UniversalNonRealTime,     //!< 0x7E per the MIDI spec
+  UniversalRealTime         //!< 0x7F per the MIDI spec
 };
 
 /** Configuration for a single pot slot. */
