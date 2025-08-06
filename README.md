@@ -10,7 +10,7 @@ RPN opens the door to spec-sanctioned tweaks like pitch range, while the univers
 
 ## Features at a Glance
 
-- **Speaks NRPN, RPN & SysEx** – your rig can't hide behind vanilla CCs. [More on MIDI types](firmware/README.md#supports-multiple-midi-types).
+- **Speaks NRPN, RPN & SysEx** – your rig can't hide behind vanilla CCs. [More on MIDI types](firmware/README.md#supported-midi-types).
 - **42 virtual slots** – stash independent MIDI channels and modes with LED halos for each. [Slot anatomy](firmware/README.md#42-virtual-midi-slots).
 - **Six envelope followers** – feed it audio or CV and watch live signals hijack any slot. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
 - **Built-in arpeggiator** – clock-locked riffs for any slot; twist the filter knobs to bend length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
