@@ -95,7 +95,7 @@ void Arpeggiator::update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerMan
     if (++_tickCounter < _lengthTicks) return; // not time yet
     _tickCounter = 0; // reset for the next hit
 
-    MIDISlot& slot = cfg.getSlots()[_slotIdx];
+    MIDISlot& slot = cfg.getSlot(_slotIdx);
     if (!slot.active) return;
 
     int8_t offset = noteOffset(_shape, _step, _patternLength);
