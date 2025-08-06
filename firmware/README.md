@@ -35,6 +35,15 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
+### Arpeggiator Offsets
+
+The arpeggiator ditched lookup tables. `noteOffset(shape, step, patternLen)` now
+calculates the semitone hop for each tick. `patternLen` sets how high the ladder
+goes—set it to 4 and you're working with offsets 0–3. Shapes pick the route:
+`UP` climbs, `DOWN` dives, `UPDOWN` bounces off the top, and `RANDOM` throws a
+dart anywhere inside the range. Example: `patternLen=5` with `DOWN` spits
+**4,3,2,1,0** before looping.
+
 ### MIDI Message Examples
 
 Want to flip patches, squish aftertouch, or yank pitch? Here's how the rig does it:
