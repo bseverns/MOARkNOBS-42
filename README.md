@@ -95,6 +95,13 @@ Want to script your own riff? The firmware now lets you call
 two-step jab up to a 16-note wander—anything outside that range gets slapped
 back into line.
 
+Under the hood `noteOffset(shape, step, patternLen)` spits out the semitone hop
+for each tick. `patternLen` sets the ceiling: dial in 4 and the offsets run
+0‒3. Shapes just steer the climb—`UP` walks 0→3, `DOWN` dives 3→0, `UPDOWN`
+mirrors back on itself, and `RANDOM` throws darts inside the range. Try
+`patternLen=5` with `UPDOWN` and you'll hear **0,1,2,3,4,3,2…** before the loop
+spins again.
+
 For the full riot of possibilities, see the [Button Mayhem table](firmware/README.md#button-mayhem).
 
 ### What Could Go Wrong?
