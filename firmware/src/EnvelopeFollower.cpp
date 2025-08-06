@@ -5,6 +5,7 @@
 #include "EnvelopeFollower.h"
 #include "MIDIHandler.h"
 #include "BiquadFilter.h"
+#include "ConfigManager.h"
 #include <cmath>
 #include <array>
 #include <algorithm>

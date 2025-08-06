@@ -25,6 +25,8 @@ extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
 extern Arpeggiator arpeggiator;
 
+// Verbose logging rides on BUTTON_MANAGER_DEBUG. See ButtonManager.h for macros.
+
 static const unsigned long LONG_PRESS_DELAY   = 500;
 static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
