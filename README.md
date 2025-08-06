@@ -7,8 +7,17 @@
 This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below. The latest board rev adds ten more WS2812s, bringing the grand total to fifty‑two LEDs: forty‑two for virtual slots, six tracking envelope follower levels, one beacon for the control buttons and three haloing the hardware knobs—one slot pot and a pair of filter‑tuning lights.
 As of this rev the box speaks NRPN, RPN, and even parses registered SysEx, so your DAW can't hide behind stock CCs anymore.
 RPN opens the door to spec-sanctioned tweaks like pitch range, while the universal SysEx decoder listens for identity blips and other standardized screeches.
+## Quick Start
 
-Fresh to the scene and itching to see blinkenlights? Crack open the [Builder's Handbook](docs/BuildersHandbook.md) to wire it, flash it, and run first sanity checks before the solder fumes settle.
+1. **Install PlatformIO** or fire up the Arduino IDE with Teensyduino.
+2. **Clone this repo** and plug a Teensy 4.0 into your rig.
+3. **Flash it** from `firmware/` with:
+   ```bash
+   pio run -t upload -e teensy40_main
+   ```
+4. **Blink proof** – run the ["Hello LED" test](#run-a-hello-led-test) to see that first pixel twitch.
+
+Need the full blueprint? Hit the [Builder's Handbook](docs/BuildersHandbook.md) for wiring and smoke tests, and the [User Manual](firmware/README.md) when you're ready to tame every slot.
 
 ![Interface & LED Schematic](docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)
 
@@ -79,6 +88,8 @@ Once the light show works, raid `hardware/` for PCB files and go full‑build.
 
 ### Button Controls
 
+#### Control Buttons
+
 Need a crash course in front-panel mayhem? Here's how the six control buttons misbehave. *EF = Envelope Follower.*
 
 | Button | Short Press | Long Press | Double Press |
@@ -90,13 +101,13 @@ Need a crash course in front-panel mayhem? Here's how the six control buttons mi
 | #4 | Cycle CC Number | Save config | Reload profile from EEPROM |
 | #5 | Tap BPM | — | — |
 
-**Slot Buttons (0–41):**  
+#### Slot Buttons
+
 Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on.
 
-**Need to tame the noise floor?** Hold **Ctrl0** until the display shouts "EF Calibrated." The box samples VREF, learns the current
-baseline for the follower tied to the active slot, and burns that offset into EEPROM so it survives the next power cycle.
+**Need to tame the noise floor?** Hold **Ctrl0** until the display shouts "EF Calibrated." The box samples VREF, learns the current baseline for the follower tied to the active slot, and burns that offset into EEPROM so it survives the next power cycle.
 
-**Combos worth remembering:**
+#### Combo Moves
 
 - **#0 + #1** – Cycle EF ARG mode method
 - **#2 + #3** – Cycle LED light display modes
@@ -127,9 +138,18 @@ For the full riot of possibilities, see the [Button Mayhem table](firmware/READM
 
 The rig now hoards three full configuration profiles in EEPROM. Each profile is a 256‑byte bunker storing your pot maps, LED vibe, and envelope tricks.
 
-- **Jump profiles** – mash **Ctrl0 + Ctrl2** on the control panel to hop to the next profile. It wraps after the third, so keep cycling until you land where you want.
-- **Save the chaos** – long‑press **Ctrl4** once you’ve mangled the knobs to taste. That burns the current state into the active profile.
-- **Panic reload** – double‑tap **Ctrl4** to yank the active profile from EEPROM and forget any unsaved noodling.
+#### Jump profiles
+
+Mash **Ctrl0 + Ctrl2** on the control panel to hop to the next profile. It wraps after the third, so keep cycling until you land where you want.
+
+#### Save the chaos
+
+Long‑press **Ctrl4** once you’ve mangled the knobs to taste. That burns the current state into the active profile.
+
+#### Panic reload
+
+Double‑tap **Ctrl4** to yank the active profile from EEPROM and forget any unsaved noodling.
+
 _Need to nuke it all?_ Long‑press **Ctrl3** to reset the whole EEPROM back to factory‑dumb defaults.
 
 Profiles share MIDI slot data, so only the user‑tweakable mappings get swapped. It’s a fast way to keep separate live, studio, and “what if I break everything” setups without re-flashing.
