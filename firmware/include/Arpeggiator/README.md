@@ -35,3 +35,27 @@ void loop() {
 ```
 
 See the guts in [Arpeggiator.h](../Arpeggiator.h).
+
+## Base Notes that Don't Rot
+
+`_baseNote` isn't chained to one sad MIDI number. Feed it whatever
+`EnvelopeFollower` or ARG mashup you can dream up. At the end of every
+loop the arpeggiator re-sniffs that source and locks onto the fresh value
+so the riff doesn't crust over.
+
+```cpp
+#include "Arpeggiator.h"
+#include "EnvelopeFollower.h"
+
+EnvelopeFollower env;        // converts raw audio into a note-ish value
+Arpeggiator   arp;
+arp.setBaseNoteSource(&env); // arp will sample this at each loop end
+
+void loop() {
+  env.update(audioInput);    // keep the follower breathing
+  arp.update(midi, cfg, pots); // arp grabs the latest base note here
+}
+```
+
+That re-sampling is the anti-stale sauce—no more looping last week's
+riffs like it's mall music.
