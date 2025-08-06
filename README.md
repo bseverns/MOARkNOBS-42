@@ -124,6 +124,7 @@ Short press selects the slot. Long press assigns or cycles the Envelope Follower
 - **#3 + #4** – Bump arpeggiator base note
 - **#3 + #5** – Toggle Arpeggiator mode
 - **#0 + #2** – Cycle configuration profiles
+- **#0 + #1 + #2** – Toggle USB MIDI output
 
 For the full riot of possibilities, see the [Button Mayhem table](firmware/README.md#button-mayhem).
 

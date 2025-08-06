@@ -29,6 +29,7 @@ HardwareConfig hwConfig = {
 float g_vref       = 1.65f;    // midpoint voltage reference
 float g_tappedBPM  = 120.0f;   // last tapped tempo
 bool  g_clockOutEnabled = false; // runtime toggle for MIDI clock out
+bool  g_usbMidiOutEnabled = false; // suppressed until Ctrl0+1+2 says otherwise
 unsigned long lastClockTime = 0;  // ms timestamp of the last MIDI clock tick
 
 // Envelope follower calibration stash

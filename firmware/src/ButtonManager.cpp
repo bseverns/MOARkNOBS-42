@@ -523,6 +523,13 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl4 = 1 << 4;
     const uint8_t maskCtrl5 = 1 << 5;
 
+    // (0) Ctrl0 + Ctrl1 + Ctrl2: Toggle USB MIDI output
+    if ((pressedButtons & (maskCtrl0 | maskCtrl1 | maskCtrl2)) == (maskCtrl0 | maskCtrl1 | maskCtrl2)) {
+        g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
+        context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF", 1000);
+        return;
+    }
+
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
@@ -747,6 +754,18 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
 
 void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context) {
     updateButtonStateMachine(NUM_VIRTUAL_BUTTONS + index, pressed, context);
+
+    if (pressed) {
+        uint8_t mask = 0;
+        for (uint8_t i = 0; i < NUM_BUTTONS; ++i) {
+            if (buttonStates[NUM_VIRTUAL_BUTTONS + i] == HIGH) {
+                mask |= (1 << i);
+            }
+        }
+        if (mask & (mask - 1)) {
+            handleMultiButtonPress(mask, context);
+        }
+    }
 }
 
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {

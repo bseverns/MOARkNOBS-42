@@ -155,6 +155,7 @@ And yes, combo presses are supported:
 | #2 + #4    | Set slot to NRPN                         |
 | #0 + #3    | Set slot to SysEx                        |
 | #1 + #2    | Toggle MIDI clock output                 |
+| #0 + #1 + #2 | Toggle USB MIDI output                 |
 | #2 + #5    | Cycle ARG envelope pair                  |
 | #3 + #4    | Bump arpeggiator base note               |
 | #3 + #5    | Toggle Arpeggiator mode                  |

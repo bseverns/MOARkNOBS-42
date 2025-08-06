@@ -33,21 +33,24 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
     if (control > 127 || value > 127 || channel < 1 || channel > 16)
         return;
     MIDI.sendControlChange(control, value, channel);
-    usbMIDI.sendControlChange(control, value, channel);  // USB MIDI
+    if (g_usbMidiOutEnabled)
+        usbMIDI.sendControlChange(control, value, channel);  // USB MIDI
 }
 
 void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
     MIDI.sendNoteOn(note, velocity, channel);
-    usbMIDI.sendNoteOn(note, velocity, channel);
+    if (g_usbMidiOutEnabled)
+        usbMIDI.sendNoteOn(note, velocity, channel);
 }
 
 void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
     MIDI.sendNoteOff(note, velocity, channel);
-    usbMIDI.sendNoteOff(note, velocity, channel);
+    if (g_usbMidiOutEnabled)
+        usbMIDI.sendNoteOff(note, velocity, channel);
 }
 
 void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
@@ -62,10 +65,12 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     MIDI.sendControlChange(98, pLsb, channel);
     MIDI.sendControlChange(6,  vMsb, channel);
     MIDI.sendControlChange(38, vLsb, channel);
-    usbMIDI.sendControlChange(99, pMsb, channel);
-    usbMIDI.sendControlChange(98, pLsb, channel);
-    usbMIDI.sendControlChange(6,  vMsb, channel);
-    usbMIDI.sendControlChange(38, vLsb, channel);
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.sendControlChange(99, pMsb, channel);
+        usbMIDI.sendControlChange(98, pLsb, channel);
+        usbMIDI.sendControlChange(6,  vMsb, channel);
+        usbMIDI.sendControlChange(38, vLsb, channel);
+    }
 }
 
 void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
@@ -80,16 +85,19 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
     MIDI.sendControlChange(100, pLsb, channel);
     MIDI.sendControlChange(6,   vMsb, channel);
     MIDI.sendControlChange(38,  vLsb, channel);
-    usbMIDI.sendControlChange(101, pMsb, channel);
-    usbMIDI.sendControlChange(100, pLsb, channel);
-    usbMIDI.sendControlChange(6,   vMsb, channel);
-    usbMIDI.sendControlChange(38,  vLsb, channel);
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.sendControlChange(101, pMsb, channel);
+        usbMIDI.sendControlChange(100, pLsb, channel);
+        usbMIDI.sendControlChange(6,   vMsb, channel);
+        usbMIDI.sendControlChange(38,  vLsb, channel);
+    }
 }
 
 void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
     if (!data || length == 0 || length > 1024) return;
     MIDI.sendSysEx(length, data, true);
-    usbMIDI.sendSysEx(length, data, true);
+    if (g_usbMidiOutEnabled)
+        usbMIDI.sendSysEx(length, data, true);
 }
 
 void MIDIHandler::processIncomingMIDI() {
@@ -103,7 +111,8 @@ void MIDIHandler::processIncomingMIDI() {
             lastExternalClock = lastInternalTick = millis();
             if (g_clockOutEnabled) {
                 MIDI.sendClock();
-                usbMIDI.sendClock();
+                if (g_usbMidiOutEnabled)
+                    usbMIDI.sendClock();
             }
         } else if (type == midi::SystemExclusive) {
             handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
@@ -122,7 +131,8 @@ void MIDIHandler::processIncomingMIDI() {
             lastExternalClock = lastInternalTick = millis();
             if (g_clockOutEnabled) {
                 MIDI.sendClock();
-                usbMIDI.sendClock();
+                if (g_usbMidiOutEnabled)
+                    usbMIDI.sendClock();
             }
         } else if (type == midi::SystemExclusive) {
             handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
@@ -140,7 +150,8 @@ void MIDIHandler::processIncomingMIDI() {
                 lastInternalTick = millis();
                 if (g_clockOutEnabled) {
                     MIDI.sendClock();
-                    usbMIDI.sendClock();
+                    if (g_usbMidiOutEnabled)
+                        usbMIDI.sendClock();
                 }
                 clockTick = true;
             }
@@ -228,13 +239,15 @@ void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8
 void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     MIDI_DBG_PRINTF("Note On: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOn(note, velocity, channel);
-    usbMIDI.sendNoteOn(note, velocity, channel);
+    if (g_usbMidiOutEnabled)
+        usbMIDI.sendNoteOn(note, velocity, channel);
 }
 
 void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     MIDI_DBG_PRINTF("Note Off: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOff(note, velocity, channel);
-    usbMIDI.sendNoteOff(note, velocity, channel);
+    if (g_usbMidiOutEnabled)
+        usbMIDI.sendNoteOff(note, velocity, channel);
 }
 
 void MIDIHandler::handleProgramChange(uint8_t channel, uint8_t program) {
@@ -265,13 +278,15 @@ void MIDIHandler::clearClockTick() {
 void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
   if (program>127|| channel<1||channel>16) return;
   MIDI.sendProgramChange(program, channel);
-  usbMIDI.sendProgramChange(program, channel);
+  if (g_usbMidiOutEnabled)
+      usbMIDI.sendProgramChange(program, channel);
 }
 
 void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
   if (pressure>127|| channel<1||channel>16) return;
   MIDI.sendAfterTouch(pressure, channel);
-  usbMIDI.sendAfterTouch(pressure, channel);
+  if (g_usbMidiOutEnabled)
+      usbMIDI.sendAfterTouch(pressure, channel);
 }
 
 void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
@@ -282,13 +297,15 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
 
   // Teensy and USB MIDI libraries accept the signed 14-bit value directly
   MIDI.sendPitchBend(bend, channel);
-  usbMIDI.sendPitchBend(bend, channel);
+  if (g_usbMidiOutEnabled)
+      usbMIDI.sendPitchBend(bend, channel);
 }
 
 void MIDIHandler::sendClock() {
   if (!g_clockOutEnabled) return;
   MIDI.sendClock();
-  usbMIDI.sendClock();
+  if (g_usbMidiOutEnabled)
+      usbMIDI.sendClock();
 }
 
 void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {
