@@ -6,6 +6,7 @@
 #define ARPEGGIATOR_H
 
 #include <Arduino.h>
+#include <functional>
 #include "MIDITypes.h"
 
 class MIDIHandler;
@@ -18,6 +19,7 @@ class PotentiometerManager;
 class Arpeggiator {
 public:
     enum Shape { UP, DOWN, UPDOWN, RANDOM };
+    enum class BaseNoteSource { Slot, External };
 
     /** Max ticks allowed between note hits so the riff never drifts past a beat. */
     static constexpr uint8_t MAX_LENGTH = 24;
@@ -62,6 +64,20 @@ public:
     void setPatternLength(uint8_t steps);
 
     /**
+     * Pick where the root note comes from.
+     * `Slot` grabs the slot's stored arp note; `External` calls a user hook.
+     */
+    void setBaseNoteSource(BaseNoteSource src);
+    /**
+     * Directly poke a new base note (0-127) when using `External` sourcing.
+     */
+    void setBaseNote(uint8_t note);
+    /**
+     * Provide a callback that coughs up the current base note on demand.
+     */
+    void setBaseNoteCallback(std::function<uint8_t()> cb);
+
+    /**
      * Call every loop; notes only fire on MIDI clock ticks.
      * Keeps the groove glued to the global tempo.
      */
@@ -75,6 +91,9 @@ private:
     Shape         _shape;
     uint8_t       _step;
     uint8_t       _patternLength;
+    uint8_t       _baseNote;        //!< Root note for the pattern
+    BaseNoteSource _baseNoteSrc;    //!< Who owns the root
+    std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
 };
 
 #endif // ARPEGGIATOR_H

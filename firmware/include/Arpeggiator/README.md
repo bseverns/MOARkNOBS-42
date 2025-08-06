@@ -3,12 +3,15 @@
 Part of the firmware `include` jungle. The [parent README](../README.md) shows how it locks to the rest of the circus.
 
 Clock-synced riff machine that rips through a slot's note stack like it's late for soundcheck.
+Now it can yank its root note from wherever you tell it—slot memory, envelope follower, or some mystery source you cooked up.
 
 ## Key Methods
 
 - `start(slotIdx)` – point it at a slot and let the notes fly.
 - `setLength(ticks)` – how many MIDI clock ticks to wait between hits (max 24).
 - `setPatternLength(steps)` – define how many steps and semitones the loop spans.
+- `setBaseNoteSource(src)` – choose who owns the root (`Slot` or `External`).
+- `setBaseNote(note)` / `setBaseNoteCallback(fn)` – shove in a fresh base note or a function that returns one.
 - `update(midi, cfg, pots)` – call every loop so it keeps drumming.
 
 `noteOffset(shape, step, patternLen)` handles the pitch math. `patternLen`

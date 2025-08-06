@@ -248,6 +248,7 @@ repurpose themselves:
 * **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
 The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
+By default it roots itself in `arpNote`, but you can hijack the base note with `setBaseNoteSource()` or a callback to let an envelope follower or ARG drive the riff.
 
 ### Arpeggiator Offsets
 
