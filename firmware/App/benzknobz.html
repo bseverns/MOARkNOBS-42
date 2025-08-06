@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Benz EEPROM Settings Manager</title>
+  <!--
+    WebSerial refuses to jam from a file:// URL.
+    Spin up a quick server:
+      $ cd firmware/App
+      $ python3 -m http.server
+    Then point your browser at http://localhost:8000/benzknobz.html and rock on.
+  -->
   <style>
 body {
   font-family: 'Segoe UI', sans-serif;
@@ -89,8 +96,24 @@ button:hover {
       gap: 4px;
       justify-content: center;
     }
+    #slots .meter, #envelopes .meter {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
     #slots progress, #envelopes progress {
       width: 40px;
+    }
+    #slots span, #envelopes span {
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .flash {
+      animation: flash 0.2s linear;
+    }
+    @keyframes flash {
+      from { transform: scale(1.3); }
+      to   { transform: scale(1); }
     }
   </style>
   <script type="module">
@@ -103,13 +126,35 @@ button:hover {
   const saveBtn    = document.getElementById("save");
   const slotContainer = document.getElementById("slots");
   const envContainer  = document.getElementById("envelopes");
+
+  // Show a nudge if we're loaded from disk and not over HTTP(S)
+  if (location.protocol === 'file:') {
+    statusEl.textContent = 'Serve this page with "python3 -m http.server" so WebSerial will cooperate.';
+  }
+
   const slotEls = Array.from({length:42}, () => {
+    const wrap = document.createElement("div");
+    wrap.className = "meter";
     const p = document.createElement("progress");
-    p.max = 127; p.value = 0; slotContainer.appendChild(p); return p;
+    p.max = 127; p.value = 0;
+    const s = document.createElement("span");
+    s.textContent = "0";
+    wrap.appendChild(p);
+    wrap.appendChild(s);
+    slotContainer.appendChild(wrap);
+    return {p,s};
   });
   const envEls = Array.from({length:6}, () => {
+    const wrap = document.createElement("div");
+    wrap.className = "meter";
     const p = document.createElement("progress");
-    p.max = 127; p.value = 0; envContainer.appendChild(p); return p;
+    p.max = 127; p.value = 0;
+    const s = document.createElement("span");
+    s.textContent = "0";
+    wrap.appendChild(p);
+    wrap.appendChild(s);
+    envContainer.appendChild(wrap);
+    return {p,s};
   });
   // filter + ARG inputs
   const filterTypeEl = document.getElementById("filter-type");
@@ -186,8 +231,22 @@ button:hover {
     }
 
     function drawState(msg) {
-      msg.slots.forEach((v,i)=> slotEls[i].value = v);
-      msg.envelopes.forEach((v,i)=> envEls[i].value = v);
+      msg.slots.forEach((v,i)=> {
+        slotEls[i].p.value = v;
+        slotEls[i].s.textContent = v;
+        flash(slotEls[i].s);
+      });
+      msg.envelopes.forEach((v,i)=> {
+        envEls[i].p.value = v;
+        envEls[i].s.textContent = v;
+        flash(envEls[i].s);
+      });
+    }
+
+    function flash(el) {
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
     }
 
     async function loadSchema() {

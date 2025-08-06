@@ -14,12 +14,18 @@ For an overview of the entire project see the [repo README](../../README.md).
 ## Usage
 
 1. Flash the firmware and connect the device via USB.
-2. Open `benzknobz.html` in Chrome or Edge.
+2. From this directory run a quick server:
+   ```bash
+   python3 -m http.server
+   ```
+   then open <http://localhost:8000/benzknobz.html> in Chrome or Edge.
 3. Click **Connect** and select the MOARkNOBS serial port.
 4. Wait for the settings to load.
 5. Tweak values in the form.
 6. Press **Save** to write everything back to EEPROM.
 
 The schema used to build the form lives in `config_schema.json` in this folder.
+
+For the gritty details of the serial stream, peep the [WebSerial protocol doc](../../docs/WebSerial.md).
 
 *(Screenshot generation was not possible in this environment.)*

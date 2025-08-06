@@ -28,3 +28,7 @@ Parse each line as JSON and redraw your UI. There’s no framing besides the new
 ## Why So Barebones?
 
 Less baggage means faster feedback. This protocol exists so you can patch in a browser, twist a pot, and immediately see the numbers jump. Fork it, abuse it, or teach it to do bigger tricks.
+
+## See It in Action
+
+Want a live demo? Fire up the [WebSerial configuration app](../firmware/App/README.md) and watch the slots and envelopes shimmy while you tweak settings.
