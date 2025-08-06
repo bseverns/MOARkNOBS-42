@@ -13,3 +13,6 @@ firmwareZip.zip
 # Ignore compiled binaries
 *.bin
 *.elf
+
+# Ignore release artifacts
+dist/
