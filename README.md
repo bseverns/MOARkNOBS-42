@@ -8,19 +8,19 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 As of this rev the box speaks NRPN, RPN, and even parses registered SysEx, so your DAW can't hide behind stock CCs anymore.
 RPN opens the door to spec-sanctioned tweaks like pitch range, while the universal SysEx decoder listens for identity blips and other standardized screeches.
 
-Fresh to the scene and itching to see blinkenlights? Hit the [QuickStart](docs/QuickStart.md) to wire it, flash it, and run its first sanity checks before the solder fumes settle.
+Fresh to the scene and itching to see blinkenlights? Crack open the [Builder's Handbook](docs/BuildersHandbook.md) to wire it, flash it, and run first sanity checks before the solder fumes settle.
 
 ![Interface & LED Schematic](docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)
 
 ## Where's what
 
-- **docs/** – QuickStart, history log, WebSerial guide, and thermal rants.
+- **docs/** – Builder's Handbook, history log, WebSerial guide, and thermal rants.
 - **firmware/** – Teensy 4.0 source and project files. The full manual lives in [firmware/README.md](firmware/README.md).
   - **App/** – simple WebSerial editor to tweak settings over USB.
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
 - **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the full tour.
   - **MN42-1/** – first board rev; a crash course in how all forty‑two buttons and their misfit LEDs get along with their co-mingled power and data lines. Block diagrams and schematics chill under [`docs/sketch/`](docs/sketch/).
- - **[HISTORY.md](docs/HISTORY.md)** – running log of how this project came to be.
+- **[HISTORY.md](docs/HISTORY.md)** – running log of how this project came to be.
 
 ## Development Timeline
 
@@ -144,7 +144,6 @@ pio run -e teensy40_full_system      # or teensy40_unified_test, etc.
 # Unity harness flexes a different muscle:
 pio test -e teensy40_unity
 ```
-
 Available environments:
 
 - `teensy40_full_system` – step-through checks of each subsystem

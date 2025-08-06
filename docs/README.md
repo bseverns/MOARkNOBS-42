@@ -4,7 +4,7 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 ## Choose Your Adventure
 
-- [QuickStart.md](QuickStart.md) — wire it, flash it, and smoke‑test it.
+- [BuildersHandbook.md](BuildersHandbook.md) — wire it, flash it, and smoke-test it.
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
 - [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
