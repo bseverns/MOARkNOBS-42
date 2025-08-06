@@ -56,4 +56,12 @@ Once the firmware's on board, make sure the basics don't flake out:
 - **Random resets?** Your 5 V rail is sagging—use a beefier supply.
 - **Nothing works?** Walk away, breathe, then come back with a multimeter.
 
+## MIDI Map: Knobs to Bytes
+
+| Physical Control | MIDI Message | Channel (default) | Data Bytes | What It Does |
+|------------------|-------------|-------------------|------------|--------------|
+| 42 Slot Pots | Control Change (reconfigurable) | 1 | `data1` = CC#, `data2` = 0–127 | Each pot is a "slot" you can repatch to CC, Note, or whatever mood strikes. Defaults to CC on ch 1 with CC#0. |
+| 6 Direct Buttons | Note On / Note Off | 1 | `note` = 60–65, `velocity` = 127 on press | Tap a button, it screams a note; let go, velocity drops to zero. Hack the numbers in firmware if you want different notes or channels. |
+| Clock Out | MIDI Clock (`0xF8`) | n/a | — | When `g_clockOutEnabled` is hot, the rig spits 24 PPQN clock ticks to both DIN and USB. |
+
 You're now dangerous. For deeper dives, the rest of the docs are waiting.

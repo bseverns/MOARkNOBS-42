@@ -22,6 +22,12 @@ struct MidiInterfaceStub {
   uint8_t lastAftertouchChannel = 0;
   int16_t lastPitchBend = 0;
   uint8_t lastPitchBendChannel = 0;
+  uint8_t lastNoteOn = 0;
+  uint8_t lastNoteOnVelocity = 0;
+  uint8_t lastNoteOnChannel = 0;
+  uint8_t lastNoteOff = 0;
+  uint8_t lastNoteOffVelocity = 0;
+  uint8_t lastNoteOffChannel = 0;
 
   struct CCEvent { uint8_t control; uint8_t value; uint8_t channel; };
   CCEvent ccLog[8];
@@ -34,8 +40,16 @@ struct MidiInterfaceStub {
   void sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
     if (ccCount < 8) ccLog[ccCount++] = {control, value, channel};
   }
-  void sendNoteOn(uint8_t, uint8_t, uint8_t) {}
-  void sendNoteOff(uint8_t, uint8_t, uint8_t) {}
+  void sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
+    lastNoteOn = note;
+    lastNoteOnVelocity = velocity;
+    lastNoteOnChannel = channel;
+  }
+  void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
+    lastNoteOff = note;
+    lastNoteOffVelocity = velocity;
+    lastNoteOffChannel = channel;
+  }
   void sendProgramChange(uint8_t program, uint8_t channel) {
     lastProgram = program; lastProgramChannel = channel;
   }

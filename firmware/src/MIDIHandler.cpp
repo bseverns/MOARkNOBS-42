@@ -148,12 +148,27 @@ void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8
                     break;
                 case 6: // Data entry MSB
                     _nrpnValue = (data2 & 0x7F) << 7;
+                    if (_nrpnParamReady) {
+                        receiveNRPN(channel, _nrpnParam, _nrpnValue);
+                    }
                     break;
                 case 38: // Data entry LSB
-                    _nrpnValue |= (data2 & 0x7F);
+                    _nrpnValue = (_nrpnValue & 0x3F80) | (data2 & 0x7F);
                     if (_nrpnParamReady) {
                         receiveNRPN(channel, _nrpnParam, _nrpnValue);
                         _nrpnParamReady = false;
+                    }
+                    break;
+                case 96: // Data increment
+                    if (_nrpnParamReady) {
+                        if (_nrpnValue < 16383) ++_nrpnValue;
+                        receiveNRPN(channel, _nrpnParam, _nrpnValue);
+                    }
+                    break;
+                case 97: // Data decrement
+                    if (_nrpnParamReady) {
+                        if (_nrpnValue > 0) --_nrpnValue;
+                        receiveNRPN(channel, _nrpnParam, _nrpnValue);
                     }
                     break;
                 default:
