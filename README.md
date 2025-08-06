@@ -40,9 +40,10 @@ The timeline reads like a diary of questionable decisions. For the month-by-mont
 
 Cutting a drop shouldn't feel like paperwork. From the repo root:
 
-- Run `./release.sh <version>` and it will crank out `dist/mn42_<version>.hex` plus a copy of
-  `THIRD_PARTY_LICENSES.md`. That license file isn't optional—ship it with the hex or expect angry
-  ghosts of GPL past.
+- Run `./release.sh <version>` and it will crank out `dist/mn42_<version>.hex`, a copy of
+  `THIRD_PARTY_LICENSES.md`, **and** a `LICENSES/` folder stocked with the raw license texts from the
+  firmware tree. Those files aren't optional—ship them or expect angry ghosts of GPL past to stage-
+  dive onto your inbox.
 
 ### Flash with Teensy Loader
 
