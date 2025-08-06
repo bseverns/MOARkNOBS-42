@@ -1,0 +1,12 @@
+#pragma once
+
+#if defined(__AVR__) ||defined(ARDUINO_TEENSYLC) || defined(ARDUINO_TEENSY30) || defined(__MK20DX256__) || defined(STM32F1) || defined(ESP8266) || defined(ARDUINO_ARCH_RENESAS_UNO)
+#define SKETCH_HAS_LOTS_OF_MEMORY 0
+#else
+#define SKETCH_HAS_LOTS_OF_MEMORY 1
+#endif
+
+#ifndef FASTLED_STRINGIFY
+#define FASTLED_STRINGIFY_HELPER(x) #x
+#define FASTLED_STRINGIFY(x) FASTLED_STRINGIFY_HELPER(x)
+#endif
