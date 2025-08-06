@@ -488,6 +488,27 @@ Other test flavors are available for deeper debugging:
 
 Run any of them with `pio run -e <env>` and bask in the compile-time glory.
 
+### Calibration & EEPROM sanity check
+
+Envelope followers need to know what "silence" smells like before they can
+ride your signal. Do this little dance:
+
+1. Boot with every audio/CV input quiet so the MCU can sniff `VREF`.
+2. Map a slot to an envelope follower.
+3. While it’s still quiet, mash **Control Button 0**. The follower samples the
+   moment, writes the baseline to EEPROM, and flashes `EF Calibrated` for style.
+4. Power cycle. Those offsets reload on boot, no questions asked.
+
+Wanna double-check the EEPROM isn’t gaslighting you? Run the persistence test:
+
+- `pio run -e teensy40_eeprom_persistence -t upload`
+- **Stage 1**: writes known bytes, then nags you to reset.
+- **Stage 2**: verifies the save, trashes the primary header, and asks for one
+  more reboot.
+- **Stage 3**: loads from the backup and shouts PASS if everything survived.
+
+See three green lights? Your EEPROM is road‑ready.
+
 ### Serial MIDI Sniffer
 
 Sometimes you just want to watch the bytes scream. Crack open `platformio.ini` and

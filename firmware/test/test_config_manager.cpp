@@ -3,6 +3,10 @@
 #include "ConfigManager.h"
 #include "TestHelpers.h"
 
+// Extra tests live inside ConfigManager.cpp under UNIT_TEST
+extern void test_eeprom_recovery_after_power_cycle();
+extern void test_calibration_offsets_survive_power_cycle();
+
 // Fake the EEPROM header so the primary copy looks rotten
 // while the backup stays pristine. The ConfigManager should
 // sniff this out and pull the backup instead.
@@ -52,6 +56,8 @@ void setup() {
     UNITY_BEGIN();
     RUN_TEST(corrupt_primary_valid_backup);
     RUN_TEST(corrupted_primary_and_backup);
+    RUN_TEST(test_eeprom_recovery_after_power_cycle);
+    RUN_TEST(test_calibration_offsets_survive_power_cycle);
     UNITY_END();
 }
 
