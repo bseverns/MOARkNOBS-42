@@ -20,6 +20,16 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
 
+## Building
+
+PlatformIO runs the show. From this `firmware/` dir, hammer:
+
+```bash
+pio run -e teensy40_main
+```
+
+That's the main firmware loadout. Want to poke the edges? Swap `teensy40_main` for any of the test rigs like `teensy40_unity` or `teensy40_full_system` using the same `pio run -e <env>` groove.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
