@@ -121,7 +121,7 @@ void Utility::displayStatus(Adafruit_SSD1306& display, const char* status, unsig
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextSize(1); // Standard text size
-    display.setTextColor(SSD1306_WHITE);
+    display.setTextColor(SSD1306_COLOR_WHITE);
     display.println(status);
     display.display();
     delay(duration); // Hold the status for the given duration
@@ -138,7 +138,7 @@ void Utility::updateDisplay(
 ) {
     display.clearDisplay();
     display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
+    display.setTextColor(SSD1306_COLOR_WHITE);
 
     // Display beat position
     display.setCursor(0, 0);

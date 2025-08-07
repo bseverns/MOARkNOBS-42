@@ -93,8 +93,8 @@ void DisplayManager::runStartupAnimation() {
     _display.clearDisplay();
     for (int step = 0; step < 5; step++) {
         for (int i = 0; i < _display.width(); i += (1 << step)) {
-            _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_WHITE);
-            _display.drawLine(_display.width() - 1, _display.height() - 1, _display.width() - 1 - i, 0, SSD1306_WHITE);
+            _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_COLOR_WHITE);
+            _display.drawLine(_display.width() - 1, _display.height() - 1, _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
         }
         _display.display();
         delay(250);
@@ -102,7 +102,7 @@ void DisplayManager::runStartupAnimation() {
     delay(500);
     _display.clearDisplay();
     _display.setTextSize(2);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
     _display.println("MOARkNOBS-42");
     _display.display();
@@ -116,7 +116,7 @@ void DisplayManager::runIdleScreensaver() {
     for (int i = 0; i < 20; i++) {
         int x = random(0, _display.width());
         int y = random(0, _display.height());
-        _display.drawPixel(x, y, SSD1306_WHITE);
+        _display.drawPixel(x, y, SSD1306_COLOR_WHITE);
     }
     _display.display();
 }
@@ -131,7 +131,7 @@ bool DisplayManager::shouldRunScreensaver() const {
 
 
 void DisplayManager::drawBorder() {
-    _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_WHITE);
+    _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_COLOR_WHITE);
 }
 
 void DisplayManager::showText(const char* line1, const char* line2, const char* line3) {
@@ -139,7 +139,7 @@ void DisplayManager::showText(const char* line1, const char* line2, const char* 
 
     clear();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
 
     _display.setCursor(0, 0);
     _display.println(line1);
@@ -166,7 +166,7 @@ void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
     }
 
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.print("Value: ");
     _display.println(value);
@@ -178,7 +178,7 @@ void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
 void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const char* mode, const char* argMethod) {
     _display.clearDisplay();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
 
     _display.setCursor(0, 0);
     _display.print("Slot ");
@@ -210,7 +210,7 @@ void DisplayManager::showMode(const char *mode, bool clearDisplay) {
     }
 
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.print("Mode: ");
     _display.println(mode);
@@ -228,7 +228,7 @@ void DisplayManager::clear() {
 void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue) {
     _display.clearDisplay();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.print(labelFreq);
     _display.print(": ");
@@ -246,7 +246,7 @@ void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, co
 void DisplayManager::showArpSettings(uint8_t lengthTicks, const char* shapeName) {
     _display.clearDisplay();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     // Show the raw tick span so the groove math is crystal clear.
     _display.print("Len (ticks): ");
@@ -263,7 +263,7 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
 
     _display.clearDisplay();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.print("Beat: ");
     _display.println(beatPosition);
@@ -285,7 +285,7 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
     for (int i = 0; i < numEnvelopes; i++) {
         int barHeight = map(envelopeLevels[i], 0, 127, 0, maxHeight);
         int x = i * (barWidth + 2);
-        _display.fillRect(x, baseY - barHeight, barWidth, barHeight, SSD1306_WHITE);
+        _display.fillRect(x, baseY - barHeight, barWidth, barHeight, SSD1306_COLOR_WHITE);
     }
 
     drawBorder();
@@ -302,7 +302,7 @@ void DisplayManager::displayStatus(const char *status, unsigned long duration) {
 
     _display.clearDisplay();
     _display.setTextSize(2);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.println(status);
     _display.display();
@@ -337,7 +337,7 @@ void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
     clear();
 
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
 
     _display.setCursor(0, 0);
     _display.print("MODE: ARG");
@@ -361,7 +361,7 @@ void DisplayManager::setTemporaryMessage(const char* message, unsigned long dura
     _statusTimeout = millis() + duration;
     clear();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.println(message);
     _display.display();
@@ -370,7 +370,7 @@ void DisplayManager::setTemporaryMessage(const char* message, unsigned long dura
 void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel) {
     _display.clearDisplay();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.print("CC: ");
     _display.print(cc);
@@ -388,7 +388,7 @@ void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
 
     _display.clearDisplay();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
 
     if (clockRunning) {
@@ -416,7 +416,7 @@ void DisplayManager::showError(const char* errorMessage, bool persistent) {
 
     beginDraw();
     _display.setTextSize(1);
-    _display.setTextColor(SSD1306_WHITE);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.println(F("ERROR:"));
     _display.println(errorMessage);
@@ -432,8 +432,8 @@ void DisplayManager::showEnvelopeLevel(uint8_t level) {
     const int barHeight = 10;
     const int barY = _display.height() - barHeight;
     int barWidth = map(level, 0, 127, 0, _display.width());
-    _display.fillRect(0, barY, _display.width(), barHeight, SSD1306_BLACK);
-    _display.fillRect(0, barY, barWidth, barHeight, SSD1306_WHITE);
+    _display.fillRect(0, barY, _display.width(), barHeight, SSD1306_COLOR_BLACK);
+    _display.fillRect(0, barY, barWidth, barHeight, SSD1306_COLOR_WHITE);
 }
 
 void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
@@ -442,12 +442,12 @@ void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
     const int barHeight = 5;
     const int gap = 2;
     int widthA = map(envA, 0, 127, 0, _display.width());
-    _display.fillRect(0, _display.height() - barHeight * 2 - gap, _display.width(), barHeight, SSD1306_BLACK);
-    _display.fillRect(0, _display.height() - barHeight * 2 - gap, widthA, barHeight, SSD1306_WHITE);
+    _display.fillRect(0, _display.height() - barHeight * 2 - gap, _display.width(), barHeight, SSD1306_COLOR_BLACK);
+    _display.fillRect(0, _display.height() - barHeight * 2 - gap, widthA, barHeight, SSD1306_COLOR_WHITE);
 
     int widthB = map(envB, 0, 127, 0, _display.width());
-    _display.fillRect(0, _display.height() - barHeight, _display.width(), barHeight, SSD1306_BLACK);
-    _display.fillRect(0, _display.height() - barHeight, widthB, barHeight, SSD1306_WHITE);
+    _display.fillRect(0, _display.height() - barHeight, _display.width(), barHeight, SSD1306_COLOR_BLACK);
+    _display.fillRect(0, _display.height() - barHeight, widthB, barHeight, SSD1306_COLOR_WHITE);
 }
 
 void DisplayManager::updateActiveSelection(uint8_t activePot, uint8_t activeChannel) {
@@ -456,7 +456,7 @@ void DisplayManager::updateActiveSelection(uint8_t activePot, uint8_t activeChan
 }
 
 void DisplayManager::highlightActivePot(uint8_t potIndex) {
-    _display.drawRect(5 + potIndex * 10, 50, 8, 8, SSD1306_WHITE);
+    _display.drawRect(5 + potIndex * 10, 50, 8, 8, SSD1306_COLOR_WHITE);
 }
 
 void DisplayManager::highlightActiveMode(const String& modeName) {
