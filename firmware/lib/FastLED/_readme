@@ -19,3 +19,9 @@ For example:
 #include "fl/crgb.h"
 using fl::CRGB;
 ```
+
+---
+
+### Dependency Notes
+
+FastLED.h drags in `fl/map.h` so the `fl_map` alias doesn't throw a tantrum at build time. Rip it out and the compiler will scream.
