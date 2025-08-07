@@ -20,11 +20,22 @@ You will also have to install the **Adafruit GFX library** which provides graphi
 
 ## Changes
 Pull Request:
-   (November 2021) 
+   (August 2025)
+   * Color constants moved into an enum: `SSD1306_COLOR_BLACK`,
+     `SSD1306_COLOR_WHITE`, and `SSD1306_COLOR_INVERSE`.  Use these and keep
+     your codebase squeaky clean.
+   * Legacy macros (`BLACK`, `WHITE`, `INVERSE` and the old `SSD1306_*`
+     variants) are now optional.  Define
+     `ADAFRUIT_SSD1306_COLOR_COMPATIBILITY` before including the header if
+     you're nostalgic.  Otherwise `NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY`
+     blocks them by default.
+
+Pull Request:
+   (November 2021)
    * Added define `SSD1306_NO_SPLASH` to opt-out of including splash images in `PROGMEM` and drawing to display during `begin`.
 
 Pull Request:
-   (September 2019) 
+   (September 2019)
    * new #defines for SSD1306_BLACK, SSD1306_WHITE and SSD1306_INVERSE that match existing #define naming scheme and won't conflict with common color names
    * old #defines for BLACK, WHITE and INVERSE kept for backwards compat (opt-out with #define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY)
 

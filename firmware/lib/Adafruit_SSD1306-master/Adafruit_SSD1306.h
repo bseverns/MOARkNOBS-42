@@ -60,19 +60,29 @@ typedef uint32_t PortMask;
 #define HAVE_PORTREG
 #endif
 
-/// The following "raw" color names are kept for backwards client compatability
-/// They can be disabled by predefining this macro before including the Adafruit
-/// header client code will then need to be modified to use the scoped enum
-/// values directly
-#ifndef NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
-#define BLACK SSD1306_BLACK     ///< Draw 'off' pixels
-#define WHITE SSD1306_WHITE     ///< Draw 'on' pixels
-#define INVERSE SSD1306_INVERSE ///< Invert pixels
+#ifndef ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
+#define NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
 #endif
-/// fit into the SSD1306_ naming scheme
-#define SSD1306_BLACK 0   ///< Draw 'off' pixels
-#define SSD1306_WHITE 1   ///< Draw 'on' pixels
-#define SSD1306_INVERSE 2 ///< Invert pixels
+
+/// Preferred color identifiers live in an enum so they don't trash the global
+/// namespace.  Use these everywhere in new code.
+enum {
+  SSD1306_COLOR_BLACK = 0,  ///< Draw 'off' pixels
+  SSD1306_COLOR_WHITE = 1,  ///< Draw 'on' pixels
+  SSD1306_COLOR_INVERSE = 2 ///< Invert pixels
+};
+
+/// Legacy macros for folks living in the past.  Define
+/// `NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY` before including this header if
+/// you want to skip these global defines.
+#ifndef NO_ADAFRUIT_SSD1306_COLOR_COMPATIBILITY
+#define SSD1306_BLACK SSD1306_COLOR_BLACK   ///< Draw 'off' pixels
+#define SSD1306_WHITE SSD1306_COLOR_WHITE   ///< Draw 'on' pixels
+#define SSD1306_INVERSE SSD1306_COLOR_INVERSE ///< Invert pixels
+#define BLACK SSD1306_BLACK                 ///< Draw 'off' pixels
+#define WHITE SSD1306_WHITE                 ///< Draw 'on' pixels
+#define INVERSE SSD1306_INVERSE             ///< Invert pixels
+#endif
 
 #define SSD1306_MEMORYMODE 0x20          ///< See datasheet
 #define SSD1306_COLUMNADDR 0x21          ///< See datasheet
