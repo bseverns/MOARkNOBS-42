@@ -16,7 +16,7 @@ Mess up the power or data line and the board either sulks or smokes. A clean wir
 
 ## Flash the Brain
 
-1. **Install PlatformIO** – `pip install platformio` or use the VS Code add-on. Old‑school? Arduino IDE with Teensyduino works too.
+1. **Install PlatformIO** – `pip install -r requirements.txt` or use the VS Code add-on. Old‑school? Arduino IDE with Teensyduino works too.
 2. **Plug in the Teensy 4.0** over USB.
 3. **Build and upload** the main firmware from the `firmware/` directory:
    ```bash

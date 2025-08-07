@@ -16,7 +16,7 @@ RPN opens the door to spec-sanctioned tweaks like pitch range, while the univers
 - **WebSerial editor** – tweak and spy on settings right from your browser, no drivers, no mercy. [WebSerial guide](docs/WebSerial.md).
 ## Quick Start
 
-1. **Install PlatformIO** or fire up the Arduino IDE with Teensyduino.
+1. **Install the Python tools** – `pip install -r requirements.txt` snags PlatformIO (and any future Python riffraff). Old‑school? Fire up the Arduino IDE with Teensyduino instead.
 2. **Clone this repo** and plug a Teensy 4.0 into your rig.
 3. **Flash it** from `firmware/` with:
    ```bash
@@ -25,6 +25,16 @@ RPN opens the door to spec-sanctioned tweaks like pitch range, while the univers
 4. **Blink proof** – run the ["Hello LED" test](#run-a-hello-led-test) to see that first pixel twitch.
 
 Need the full blueprint? Hit the [Builder's Handbook](docs/BuildersHandbook.md) for wiring and smoke tests, and the [User Manual](firmware/README.md) when you're ready to tame every slot.
+
+### Python build toys
+
+There's a `requirements.txt` squatting in the repo root. It pins PlatformIO and any future Python sidekicks so CI and your local shell march in step.
+
+```bash
+pip install -r requirements.txt
+```
+
+Run that once and you're cleared for takeoff.
 
 ![Interface & LED Schematic](docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)
 
@@ -64,7 +74,7 @@ Cutting a drop shouldn't feel like paperwork. From the repo root:
 
 ### Flash the Firmware (the loud way)
 
-1. **Install the tools** – grab PlatformIO with `pip install platformio` or lean on the VS Code extension. Old‑school? Fire up the Arduino IDE with the Teensyduino add‑on and the libraries listed in `platformio.ini`.
+1. **Install the tools** – `pip install -r requirements.txt` to grab PlatformIO or lean on the VS Code extension. Old‑school? Fire up the Arduino IDE with the Teensyduino add‑on and the libraries listed in `platformio.ini`.
 2. **Plug in your Teensy 4.0** – USB cable, no mystery.
 3. **Kick the build** – from `firmware/` run:
    ```bash
