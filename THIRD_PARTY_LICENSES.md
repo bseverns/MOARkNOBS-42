@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-This riot of a project leans on a bunch of open-source libraries. Here’s the breakdown straight from `firmware/platformio.ini`’s `lib_deps`.
+This riot of a project leans on a bunch of open-source libraries. Some are vendored in `firmware/lib/`, the rest are pulled in via `firmware/platformio.ini`’s `lib_deps`.
 Each license below gives you the green light to ship a commercial product, as long as you respect the terms.
 When you bundle binaries or kits, drag along the whole `firmware/LICENSES/` folder so every attribution rides shotgun.
 
@@ -13,6 +13,9 @@ When you bundle binaries or kits, drag along the whole `firmware/LICENSES/` fold
 - TimerOne — MIT
 - EEPROM — LGPL-2.1 (source: https://github.com/PaulStoffregen/cores/tree/master/teensy4)
 - ArduinoJson — MIT
+
+FastLED and the Adafruit display libs are checked into `firmware/lib/` so builds don't rely on the whims of the network.
+If you need newer versions, swap in the latest release and keep their LICENSE files intact.
 
 ---
 

@@ -23,6 +23,9 @@ Mess up the power or data line and the board either sulks or smokes. A clean wir
    pio run -t upload -e teensy40_main
    ```
    The loader will yell success when it's done.
+4. **Local library stash** – We archive FastLED and the Adafruit display libs under `firmware/lib/`.
+   PlatformIO grabs these first, so builds don't choke when you're offline or the registry glitches.
+   To refresh them, pull the latest release from upstream, drop it in that folder, and keep the license file.
 
 ### Firmware Flow
 

@@ -89,11 +89,13 @@ protected:
 
 		off[0] = _FASTLED_NS_TO_DWT(T1+T2+T3);
 		off[1] = _FASTLED_NS_TO_DWT(T2+T3);
-		off[2] = _FASTLED_NS_TO_DWT(T3);
+        off[2] = _FASTLED_NS_TO_DWT(T3);
 
-	uint32_t wait_off = _FASTLED_NS_TO_DWT((WAIT_TIME-INTERRUPT_THRESHOLD)*1000);
+#if (FASTLED_ALLOW_INTERRUPTS == 1)
+        uint32_t wait_off = _FASTLED_NS_TO_DWT((WAIT_TIME-INTERRUPT_THRESHOLD)*1000);
+#endif
 
-    	uint32_t next_mark = ARM_DWT_CYCCNT + off[0];
+        uint32_t next_mark = ARM_DWT_CYCCNT + off[0];
 
 		while(pixels.has(1)) {
 			pixels.stepDithering();
