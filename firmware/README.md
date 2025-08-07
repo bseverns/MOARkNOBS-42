@@ -26,6 +26,8 @@ We ship FastLED and the Adafruit SSD1306/GFX duo right in `lib/` so builds work 
 PlatformIO prefers these local copies, meaning fewer heisenbugs from shifting upstream versions.
 To update, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
 
+Some pieces are light enough not to vendor. `Adafruit BusIO` rides in via PlatformIO's library registry, keeping the bus chatter tight without cluttering our tree.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
