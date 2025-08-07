@@ -69,7 +69,7 @@
 
 | Item                                   | Ref                                                     | Status    | Notes                                                                                             |
 | -------------------------------------- | ------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------- |
-| Op-amp choice                          | MCP6002 vs TLV/TLV9xxx                                  | **Alt**   | Choose rail-to-rail dual (3 pcs for 6 ch). TL072 **deprecated** in low-voltage single-supply role |
+| Op-amp choice                          | MCP6002 vs TLV9062                                      | **Alt**   | Choose rail-to-rail dual (3 pcs for 6 ch). TL072 **deprecated** in low-voltage single-supply role |
 | Clamp diodes                           | D\_CLAMPn+ / D\_CLAMPn– (1N4148)                        | **DNI**   | Populate if over/under-shoot risk or external CV overvoltage                                      |
 | Alternate ground-ref follower topology | Entire block                                            | **Alt**   | Not selected; would remove VREF offset processing                                                 |
 

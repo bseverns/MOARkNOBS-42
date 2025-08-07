@@ -1,7 +1,7 @@
-# Things I need to do in order for the project to reach demo stage - 8/3/2025
+# Post-release Wishlist
 
-## Pads
+These are the "nice to have" riffs once the first demo ships. No blockers, just future mischief.
 
-- Drop TP_VINRAW, TP_VINFUSED, TP_3V3, TP_VREF, TP_ROWDRV, TP_COLSENSE, TP_SDA/SCL, TP_LED, TP_MIDIRX/TX, TP_E1–E6.
-
-- - 1.6 mm round SMD, no paste, edge-accessible. Name TP_* in schematic.
+- Flesh out the docs with a troubleshooting flowchart for field repairs.
+- Swap out crusty macros for readable constants in the firmware.
+- Offer an optional breakout board so modders can hang more toys off the bus.

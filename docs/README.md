@@ -7,6 +7,8 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 - [BuildersHandbook.md](BuildersHandbook.md) — wire it, flash it, and smoke-test it.
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
+- [TODO.md](TODO.md) — post-release wishlist for when the first build is out and you're itching for v2.
+- [DemoBlockers.md](DemoBlockers.md) — the pre-demo punch list; burn this down before you show it to strangers.
 - [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
 Highlights:
   - [buttonMatrix.md](sketch/buttonMatrix.md) — how the 42-button grid scans its soul.
