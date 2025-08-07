@@ -20,6 +20,12 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
 
+### Vendored Libraries
+
+We ship FastLED and the Adafruit SSD1306/GFX duo right in `lib/` so builds work even if the outside world ghosts us.
+PlatformIO prefers these local copies, meaning fewer heisenbugs from shifting upstream versions.
+To update, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
