@@ -27,7 +27,7 @@ jobs:
           pio test -e teensy40_unity | tee pio-test.log
       - name: Upload test log
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: pio-test-log
           path: firmware/pio-test.log
