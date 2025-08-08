@@ -361,7 +361,7 @@ LED colours follow the states defined in `LEDManager::update()`. The strip now h
 - **Yellow** – flashes during MIDI updates.
 - **White** – temporary feedback (also used for the startup sweep).
 
-On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware.
+On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware. There's now a matching colour swatch baked into EEPROM too, so you can decide the board's wake‑up hue instead of living with factory white.
 
 The OLED shows:
   - Slot info (CC, Channel, Value)
@@ -641,7 +641,7 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
 * Assign CCs visually
 * Set envelope pairings
-* Tweak filter types, EF settings, ARG pairings, and LED colors
+* Tweak filter types, EF settings, ARG pairings, and LED colors (including a global strip tint)
 * Save back to EEPROM over WebSerial
 
 ### WebSerial Commands
@@ -661,6 +661,14 @@ firmware salutes:
 | `SET_ARGMETHOD <n>` | Picks the ARG method to torment signals with. |
 | `GET_EF <slot>` | Tells which envelope follower owns a slot (`-1` = none). |
 | `SET_EF <slot,ef>` | Assigns follower `ef` to `slot` and saves it. |
+
+Need to bake a hue right into EEPROM? The WebSerial editor now stuffs a `#RRGGBB` string into `SET_ALL` so you can slam brightness and colour in one hit:
+
+```
+SET_ALL {"led":{"brightness":200,"color":"#ff0066"}}
+```
+
+The board parses that, flashes its new tint, and tucks the values away for next boot.
 
 ## Development Timeline
 
