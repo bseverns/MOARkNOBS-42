@@ -38,7 +38,7 @@ pip install -r requirements.txt
 
 Run that once and you're cleared for takeoff.
 
-![Interface & LED Schematic](docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)
+![Board Trace](docs/trace.png)
 
 ## Where's what
 
