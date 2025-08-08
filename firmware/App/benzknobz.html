@@ -169,12 +169,6 @@ button:hover {
     envContainer.appendChild(wrap);
     return {p,s};
   });
-  // filter + ARG inputs
-  const filterTypeEl = document.getElementById("filter-type");
-  const filterFreqEl = document.getElementById("filter-freq");
-  const filterQEl    = document.getElementById("filter-q");
-  const argAEl       = document.getElementById("arg-a");
-  const argBEl       = document.getElementById("arg-b");
 
     async function connect() {
       try {
@@ -197,8 +191,6 @@ button:hover {
         const schema = await loadSchema();
         const config = await loadConfig();
         buildForm(schema, config);
-        await loadFilter();
-        await loadARGPair();
       } catch (err) {
         console.error(err);
         setStatus(`Connection failed: ${err.message || err}`, true);
@@ -331,33 +323,80 @@ function buildForm(schema, values) {
     if (field.type === "group") {
       const groupEl = document.createElement("fieldset");
       groupEl.innerHTML = `<legend>${field.label}</legend>`;
-      for (let i=0; i< (field.count||1); i++) {
+      const count = field.count || 1;
+      for (let i = 0; i < count; i++) {
         const sub = document.createElement("div");
         for (const f of field.fields) {
           const key = `${field.key}[${i}].${f.subkey}`;
-          const val = values[field.key][i][f.subkey];
-          sub.innerHTML += `
-            <label>${f.label} ${i}:
-              <input name="${key}" type="${f.type}"
-                     value="${val}"
-                     ${f.min?`min=${f.min}`:""} ${f.max?`max=${f.max}`:""}
-                     ${f.step?`step=${f.step}`:""}>
-            </label>
-          `;
+          const val = values[field.key]?.[i]?.[f.subkey];
+          const labelText = `${f.label}${count>1?` ${i}`:""}`;
+          if (f.type === "select") {
+            const sel = document.createElement("select");
+            sel.name = key;
+            for (const opt of f.options) {
+              sel.innerHTML += `<option value="${opt}" ${val===opt?"selected":""}>${opt}</option>`;
+            }
+            const lab = document.createElement("label");
+            lab.textContent = labelText;
+            lab.appendChild(sel);
+            sub.appendChild(lab);
+          } else if (f.type === "boolean") {
+            const inp = document.createElement("input");
+            inp.type = "checkbox";
+            inp.name = key;
+            if (val) inp.checked = true;
+            const lab = document.createElement("label");
+            lab.textContent = labelText;
+            lab.appendChild(inp);
+            sub.appendChild(lab);
+          } else {
+            const inp = document.createElement("input");
+            inp.type = f.type;
+            inp.name = key;
+            if (val !== undefined) inp.value = val;
+            if (f.min !== undefined) inp.min = f.min;
+            if (f.max !== undefined) inp.max = f.max;
+            if (f.step !== undefined) inp.step = f.step;
+            const lab = document.createElement("label");
+            lab.textContent = labelText;
+            lab.appendChild(inp);
+            sub.appendChild(lab);
+          }
         }
         groupEl.appendChild(sub);
       }
       container.appendChild(groupEl);
-    }
-    else if (field.type === "select") {
+    } else if (field.type === "select") {
       const sel = document.createElement("select");
       sel.name = field.key;
       for (const opt of field.options) {
-        sel.innerHTML += `<option value="${opt}"
-            ${values[field.key]===opt?"selected":""}>${opt}</option>`;
+        sel.innerHTML += `<option value="${opt}" ${values[field.key]===opt?"selected":""}>${opt}</option>`;
       }
-      container.innerHTML += `<label>${field.label}</label>`;
-      container.appendChild(sel);
+      const lab = document.createElement("label");
+      lab.textContent = field.label;
+      lab.appendChild(sel);
+      container.appendChild(lab);
+    } else if (field.type === "boolean") {
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.name = field.key;
+      if (values[field.key]) chk.checked = true;
+      const lab = document.createElement("label");
+      lab.textContent = field.label;
+      lab.appendChild(chk);
+      container.appendChild(lab);
+    } else {
+      const inp = document.createElement("input");
+      inp.type = field.type;
+      inp.name = field.key;
+      if (values[field.key] !== undefined) inp.value = values[field.key];
+      if (field.min !== undefined) inp.min = field.min;
+      if (field.max !== undefined) inp.max = field.max;
+      if (field.step !== undefined) inp.step = field.step;
+      const lab = document.createElement("label");
+      lab.textContent = field.label;
+      lab.appendChild(inp);
+      container.appendChild(lab);
     }
   }
 }
@@ -367,16 +406,21 @@ async function saveConfig() {
     setStatus("Saving…");
     const data = {};
     const form = document.querySelector("#form");
-    new FormData(form).forEach((v,k) => {
-      const m = k.match(/([^.]+)\[(\d+)\]\.(.+)/);
+    Array.from(form.elements).forEach(el => {
+      if (!el.name) return;
+      const raw = el.type === "checkbox" ? el.checked : el.value;
+      const v = el.type === "checkbox" ? raw : (isNaN(raw) ? raw : +raw);
+      const m = el.name.match(/([^.]+)\[(\d+)\]\.(.+)/);
       if (m) {
-        data[m[1]] = data[m[1]]||[];
-        data[m[1]][+m[2]] = data[m[1]][+m[2]]||{};
-        data[m[1]][+m[2]][m[3]] = isNaN(v)?v: +v;
+        const [_, group, idx, sub] = m;
+        data[group] = data[group] || [];
+        data[group][+idx] = data[group][+idx] || {};
+        data[group][+idx][sub] = v;
       } else {
-        data[k] = isNaN(v)?v: +v;
+        data[el.name] = v;
       }
     });
+
     await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
     await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
     await send(`SET_ARGPAIR ${argAEl.value},${argBEl.value}`);
@@ -415,27 +459,6 @@ saveBtn.addEventListener("click", saveConfig);
   <h1>MOARkNOBZ Configurator</h1>
   <button id="connect">Connect</button>
     <div id="form"></div>
-    <fieldset id="filter-settings">
-      <legend>Filter</legend>
-      <label>Type
-        <select id="filter-type">
-          <option value="0">LINEAR</option>
-          <option value="1">OPPOSITE_LINEAR</option>
-          <option value="2">EXPONENTIAL</option>
-          <option value="3">RANDOM</option>
-          <option value="4">LOWPASS</option>
-          <option value="5">HIGHPASS</option>
-          <option value="6">BANDPASS</option>
-        </select>
-      </label>
-      <label>Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
-      <label>Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
-    </fieldset>
-    <fieldset id="arg-settings">
-      <legend>ARG Pair</legend>
-      <label>A <input id="arg-a" type="number" min="0" max="5"></label>
-      <label>B <input id="arg-b" type="number" min="0" max="5"></label>
-    </fieldset>
     <button id="save" disabled>Save</button>
   <div id="status"></div>
   <details>

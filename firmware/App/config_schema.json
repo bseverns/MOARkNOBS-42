@@ -1,24 +1,44 @@
 [
-{
-  "key": "slots",
-  "label": "Slot Configuration",
-  "type": "group",
-  "count": 42,
-  "fields": [
-    { "subkey": "type", "label": "MIDI Type", "type": "select", "options": ["OFF", "CC", "Note", "PitchBend", "ProgramChange", "Aftertouch"] },
-    { "subkey": "midiChannel", "label": "MIDI Channel", "type": "number", "min": 1, "max": 16 },
-    { "subkey": "data1", "label": "Data (CC/Note)", "type": "number", "min": 0, "max": 127 },
-    { "subkey": "efIndex", "label": "Envelope Follower", "type": "number", "min": 0, "max": 5 },
-    { "subkey": "active", "label": "Active", "type": "boolean" }
-  ]
-},
+  {
+    "key": "slots",
+    "label": "Slot Configuration",
+    "type": "group",
+    "count": 42,
+    "fields": [
+      { "subkey": "type", "label": "MIDI Type", "type": "select", "options": ["OFF", "CC", "Note", "PitchBend", "ProgramChange", "Aftertouch"] },
+      { "subkey": "midiChannel", "label": "MIDI Channel", "type": "number", "min": 1, "max": 16 },
+      { "subkey": "data1", "label": "Data (CC/Note)", "type": "number", "min": 0, "max": 127 },
+      { "subkey": "efIndex", "label": "Envelope Follower", "type": "number", "min": 0, "max": 5 },
+      { "subkey": "active", "label": "Active", "type": "boolean" }
+    ]
+  },
+  {
+    "key": "efSlots",
+    "label": "EF Assignment Slots",
+    "type": "group",
+    "count": 6,
+    "fields": [
+      { "subkey": "slot", "label": "Slot", "type": "number", "min": 0, "max": 41 }
+    ]
+  },
   {
     "key": "filter",
     "label": "Filter Settings",
     "type": "group",
     "fields": [
+      { "subkey": "type", "label": "Type", "type": "select", "options": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"] },
       { "subkey": "freq",   "label": "Cutoff (Hz)",      "type": "number", "min": 20,    "max": 5000 },
       { "subkey": "q",      "label": "Resonance (Q)",     "type": "number", "min": 0.5,   "max": 4.0, "step": 0.01 }
+    ]
+  },
+  {
+    "key": "arg",
+    "label": "ARG Settings",
+    "type": "group",
+    "fields": [
+      { "subkey": "method", "label": "Method", "type": "select", "options": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"] },
+      { "subkey": "a", "label": "Envelope A", "type": "number", "min": 0, "max": 5 },
+      { "subkey": "b", "label": "Envelope B", "type": "number", "min": 0, "max": 5 }
     ]
   },
   {
@@ -26,8 +46,16 @@
     "label": "LED",
     "type": "group",
     "fields": [
-      { "subkey": "brightness", "label": "Brightness", "type": "number", "min": 0, "max": 255 },
-      { "subkey": "color",      "label": "Color",      "type": "color" }
+      { "subkey": "brightness", "label": "Brightness", "type": "number", "min": 0, "max": 255 }
+    ]
+  },
+  {
+    "key": "ledColors",
+    "label": "Per-LED Colors",
+    "type": "group",
+    "count": 42,
+    "fields": [
+      { "subkey": "color", "label": "Color", "type": "color" }
     ]
   },
   {
