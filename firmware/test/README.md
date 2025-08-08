@@ -7,6 +7,34 @@ This project doubles as a proving ground and a punching bag. Two flavors of test
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
 
+## Hardware Hit List
+
+| File | What it beats on |
+|------|------------------|
+| `src/test_main.cpp` | LEDs, button matrix, slot pot, envelope followers, OLED display |
+| `src/test_Unified.cpp` | Whole rig at once: LEDs, buttons, pots, envelopes, display, config |
+| `src/test_biquadfilter.cpp` | BiquadFilter DSP math only |
+| `src/test_eeprom_persistence.cpp` | EEPROM, ConfigManager, slots, display, buttons, pots, envelopes, LEDs |
+| `src/test_verify_slots.cpp` | MIDISlots and EEPROM integrity |
+| `test/test_led_manager.cpp` | LEDManager brightness and colour knobs |
+| `test/test_button_manager.cpp` | ButtonManager long‑press timing |
+| `test/test_potentiometer_manager.cpp` | Pot channel + CC mapping |
+| `test/test_display_manager.cpp` | DisplayManager update throttle |
+| `test/test_envelope_follower.cpp` | EnvelopeFollower low‑pass/high‑pass flip |
+| `test/test_config_manager.cpp` | ConfigManager EEPROM recovery |
+| `test/test_midi_handler.cpp` | MIDIHandler program/aftertouch/pitch bend/NRPN/SysEx routing |
+| `test/test_arpeggiator.cpp` | Arpeggiator start/stop sanity |
+| `test/test_biquad_filter.cpp` | BiquadFilter low‑pass vs high‑pass math |
+
+### Picking the right test
+
+Say the OLED ghosts you mid-jam:
+
+1. Scan the table and spot `test/test_display_manager.cpp`.
+2. Run its Unity check: `pio test -e teensy40_unity -f test_display_manager.cpp`.
+3. If Unity shrugs, flash `src/test_main.cpp` (`pio run -e teensy40_full_system -t upload`) and watch the screen dance.
+4. Still blank? time to chase solder joints.
+
 ### Shared helpers
 
 `TestHelpers.cpp` anchors the control-button matrix in one spot so every test riffs from the same pin map. Include `TestHelpers.h` and you're good to shred without duplicating arrays.
