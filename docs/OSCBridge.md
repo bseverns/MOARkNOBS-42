@@ -25,3 +25,4 @@ Any OSC poke is immediately flung over WebMIDI. When you're ready to make it sti
 - Or run `node bridge/mn42_bridge.js --push my_patch.json` to blast a saved profile.
 
 Ride the bridge, break the rules, and remember you can always yank the USB cable if things get weird.
+ts. Hack, remix, and make the bridge scream your tune.

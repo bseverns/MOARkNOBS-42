@@ -1,0 +1,18 @@
+{
+  "name": "mn42-bridge",
+  "version": "1.0.0",
+  "description": "Serial to OSC/MIDI bridge for MOARkNOBS-42",
+  "main": "mn42_bridge.js",
+  "scripts": {
+    "test": "node mn42_bridge.js --help"
+  },
+  "keywords": ["mn42","bridge","osc","midi"],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "serialport": "^10.5.0",
+    "osc": "^2.4.1",
+    "jzz": "^1.5.9"
+  }
+}
