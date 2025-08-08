@@ -26,23 +26,53 @@ async function main() {
   const JZZ = require('jzz');
 
   const udp = new osc.UDPPort({ localAddress: '0.0.0.0', localPort: oscPort });
+  udp.on('error', err => {
+    console.error('udp error:', err.message);
+    try { udp.close(); } catch {}
+    setTimeout(() => udp.open(), 1000);
+  });
   udp.open();
-
-  const midi = JZZ();
-  const midiOut = midi.openMidiOut(midiLabel).or(() => console.error('MIDI out failed'));
-  const midiIn = midi.openMidiIn(midiLabel).or(() => console.error('MIDI in failed'));
 
   const serial = new SerialPort({ path: serialName, baudRate: 31250 });
   const parser = serial.pipe(new ReadlineParser({ delimiter: '\n' }));
   serial.on('open', () => serial.write('HELLO\n'));
-
-  midiIn && midiIn.connect(msg => {
-    const arr = msg.toArray();
-    if ((arr[0] & 0xF0) === 0xB0) {
-      const cmd = { cmd: 'SET_POT', slot: arr[1], value: arr[2] };
-      serial.write(JSON.stringify(cmd) + '\n');
-    }
+  serial.on('error', err => {
+    console.error('serial error:', err.message);
+    setTimeout(() => serial.open(e => e && console.error('serial reconnect failed:', e.message)), 1000);
   });
+
+  const midi = JZZ();
+  let midiOut, midiIn;
+  function connectMidi() {
+    midiOut = midi.openMidiOut(midiLabel).or(() => {
+      console.error('MIDI out failed');
+      setTimeout(connectMidi, 1000);
+    });
+    if (midiOut && typeof midiOut.on === 'function') {
+      midiOut.on('error', err => {
+        console.error('MIDI out error:', err.message);
+        setTimeout(connectMidi, 1000);
+      });
+    }
+    midiIn = midi.openMidiIn(midiLabel).or(() => {
+      console.error('MIDI in failed');
+      setTimeout(connectMidi, 1000);
+    });
+    if (midiIn && typeof midiIn.on === 'function') {
+      midiIn.on('error', err => {
+        console.error('MIDI in error:', err.message);
+        setTimeout(connectMidi, 1000);
+      });
+    }
+    midiIn && midiIn.connect(msg => {
+      const arr = msg.toArray();
+      if ((arr[0] & 0xF0) === 0xB0) {
+        const cmd = { cmd: 'SET_POT', slot: arr[1], value: arr[2] };
+        serial.write(JSON.stringify(cmd) + '\n');
+      }
+    });
+  }
+  connectMidi();
 
   udp.on('message', msg => {
     if (msg.address === '/mn42/cmd' && msg.args.length) {

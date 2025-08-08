@@ -52,13 +52,13 @@ npm ci
 
 ## Testing vibes
 
-This repo doesn't ship with a hardware mock, so our test suite keeps it lean and mean. `npm test` spawns the bridge with `--help` and screams if it doesn't print a usage banner and bail.
+This repo doesn't ship with a hardware mock. To prove the script at least boots and dies gracefully when the wire's pulled:
 
 ```bash
 npm test
 ```
 
-GitHub Actions runs that smoke test for every push or PR that pokes the `bridge/` folder. If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
+The test pokes a fake serial port so you can watch the bridge complain and keep its cool. If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
 
 ## Example Session
 
