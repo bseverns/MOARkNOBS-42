@@ -54,7 +54,8 @@ Run that once and you're cleared for takeoff.
   - **App/** – simple WebSerial editor to tweak settings over USB.
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
 - **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the full tour.
-  - **MN42-1/** – first board rev; a crash course in how all forty‑two buttons and their misfit LEDs get along with their co-mingled power and data lines. Block diagrams and schematics chill under [`docs/sketch/`](docs/sketch/).
+  - [Gerber_MOAR_Board_2025-08-08.zip](hardware/Gerber_MOAR_Board_2025-08-08.zip) – current fab package.
+  - [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](hardware/BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – parts list for the build.
 - **bridge/** – Node.js gateway that slings serial chatter into OSC and a virtual MIDI port. See [bridge/README.md](bridge/README.md).
 - **[HISTORY.md](docs/HISTORY.md)** – running log of how this project came to be.
 
