@@ -35,6 +35,10 @@ This little app lets you boss the board around without touching code. Dial in:
 - **Slot mappings** – reshuffle which physical knob controls which slot. Break the factory order and claim your own layout.
 - **Envelope routing** – point each envelope follower at a slot and pick an ARG method with your favourite A/B combo. Chaos becomes configurable.
 
+### LED Colour Picker
+
+Scroll past the filter and ARG blocks and you'll find a fresh **LED Colors** fieldset. Each of the 42 little squares is a color picker tied to a specific LED on the rig. Click one, pick your shade – from black-hole subtle to retina-searing neon – and it's baked into the board the moment you slam **Save**. Mix a rainbow or go full goth; the firmware now slurps these hex codes straight into its `SET_ALL` payload and lights the strip accordingly.
+
 ## Troubleshooting
 
 If the browser throws a permission tantrum when you hit **Connect**:
