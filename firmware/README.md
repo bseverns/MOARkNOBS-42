@@ -64,6 +64,10 @@ To update any vendored lib, grab the latest release, drop it into `firmware/lib/
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
+### Dynamic Envelope Modulation
+
+Those six envelope followers aren't just spectators—they hijack whatever slot you point them at. Wire an EF to a slot, pick a curve (linear, inverse, exponential, random, or the filter trio), and the `Freq`/`Q` pots sculpt cutoff and resonance live. It's side-chain mayhem without a DAW. Scripters can poke `GET_FILTER` / `SET_FILTER` over WebSerial to lock in the shape.
+
 ## Hardware Redefined
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! they may be more reasonable, however), so here’s what it became:
