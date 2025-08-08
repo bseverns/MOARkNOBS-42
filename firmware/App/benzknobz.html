@@ -115,6 +115,13 @@ button:hover {
       from { transform: scale(1.3); }
       to   { transform: scale(1); }
     }
+    #log {
+      background: #000;
+      color: #0f0;
+      padding: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
   </style>
   <script type="module">
   let port, reader, writer;
@@ -126,10 +133,16 @@ button:hover {
   const saveBtn    = document.getElementById("save");
   const slotContainer = document.getElementById("slots");
   const envContainer  = document.getElementById("envelopes");
+  const logEl = document.getElementById("log");
+
+  function setStatus(msg, isError = false) {
+    statusEl.style.color = isError ? '#ff073a' : '#ffcc00';
+    statusEl.textContent = msg;
+  }
 
   // Show a nudge if we're loaded from disk and not over HTTP(S)
   if (location.protocol === 'file:') {
-    statusEl.textContent = 'Serve this page with "python3 -m http.server" so WebSerial will cooperate.';
+    setStatus('Serve this page with "python3 -m http.server" so WebSerial will cooperate.');
   }
 
   const slotEls = Array.from({length:42}, () => {
@@ -165,7 +178,7 @@ button:hover {
 
     async function connect() {
       try {
-        statusEl.textContent = "🔌 Opening port…";
+        setStatus("🔌 Opening port…");
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 31250 });
 
@@ -175,7 +188,7 @@ button:hover {
         reader = textDecoder.readable.getReader();
         writer = port.writable.getWriter();
 
-        statusEl.textContent = "Connected.";
+        setStatus("Connected.");
         connectBtn.disabled = true;   // disable connect after success
         saveBtn.disabled    = false;  // allow saving now
 
@@ -188,7 +201,8 @@ button:hover {
         await loadARGPair();
       } catch (err) {
         console.error(err);
-        statusEl.textContent = `Connection failed: ${err.message || err}`;
+        setStatus(`Connection failed: ${err.message || err}`, true);
+        throw err;
       }
     }
 
@@ -199,34 +213,48 @@ button:hover {
     }
 
     async function send(cmd) {
-      const packet = encoder.encode(cmd + "\n");
-      await writer.write(packet);
-      return await getLine();
+      try {
+        const packet = encoder.encode(cmd + "\n");
+        await writer.write(packet);
+        return await getLine();
+      } catch (err) {
+        console.error(err);
+        setStatus(`Send fail: ${err.message || err}`, true);
+        throw err;
+      }
     }
 
     async function readLoop() {
       let buf = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += value;
-        let idx;
-        while ((idx = buf.indexOf("\n")) >= 0) {
-          const line = buf.slice(0, idx).trim();
-          buf = buf.slice(idx + 1);
-          if (!line) continue;
-          try {
-            const msg = JSON.parse(line);
-            if (msg.slots && msg.envelopes) {
-              drawState(msg);
-              continue;
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += value;
+          let idx;
+          while ((idx = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, idx).trim();
+            buf = buf.slice(idx + 1);
+            if (!line) continue;
+            if (logEl) logEl.textContent += line + "\n";
+            try {
+              const msg = JSON.parse(line);
+              if (msg.slots && msg.envelopes) {
+                drawState(msg);
+                continue;
+              }
+            } catch (e) {
+              // not JSON, treat as raw line
             }
-          } catch (e) {
-            // not JSON, treat as raw line
+            if (lineWaiters.length) lineWaiters.shift()(line);
+            else lineQueue.push(line);
           }
-          if (lineWaiters.length) lineWaiters.shift()(line);
-          else lineQueue.push(line);
         }
+      } finally {
+        port = null;
+        setStatus("Port closed.", true);
+        connectBtn.disabled = false;
+        saveBtn.disabled = true;
       }
     }
 
@@ -251,24 +279,24 @@ button:hover {
 
     async function loadSchema() {
         try {
-          statusEl.textContent = "Loading schema…";
+          setStatus("Loading schema…");
           const raw = await send("GET_SCHEMA");
-          statusEl.textContent = "Schema loaded.";
+          setStatus("Schema loaded.");
           return JSON.parse(raw);
         } catch (err) {
-          statusEl.textContent = `Schema error: ${err.message || err}`;
+          setStatus(`Schema error: ${err.message || err}`, true);
           throw err;
         }
       }
 
   async function loadConfig() {
         try {
-          statusEl.textContent = "Loading config…";
+          setStatus("Loading config…");
           const raw = await send("GET_ALL");
-          statusEl.textContent = "Config loaded.";
+          setStatus("Config loaded.");
           return JSON.parse(raw);
         } catch (err) {
-          statusEl.textContent = `Config error: ${err.message || err}`;
+          setStatus(`Config error: ${err.message || err}`, true);
           throw err;
         }
       }
@@ -281,7 +309,7 @@ button:hover {
         filterFreqEl.value = freq;
         filterQEl.value = q;
       } catch (err) {
-        statusEl.textContent = `Filter load fail: ${err.message || err}`;
+        setStatus(`Filter load fail: ${err.message || err}`, true);
       }
     }
 
@@ -292,7 +320,7 @@ button:hover {
         argAEl.value = a;
         argBEl.value = b;
       } catch (err) {
-        statusEl.textContent = `ARG load fail: ${err.message || err}`;
+        setStatus(`ARG load fail: ${err.message || err}`, true);
       }
     }
 
@@ -336,7 +364,7 @@ function buildForm(schema, values) {
 
 async function saveConfig() {
   try {
-    statusEl.textContent = "Saving…";
+    setStatus("Saving…");
     const data = {};
     const form = document.querySelector("#form");
     new FormData(form).forEach((v,k) => {
@@ -352,15 +380,33 @@ async function saveConfig() {
     await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
     await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
     await send(`SET_ARGPAIR ${argAEl.value},${argBEl.value}`);
-    statusEl.textContent = "Save sent.";
+    setStatus("Save sent.");
   } catch (err) {
     console.error(err);
-    statusEl.textContent = `Save failed: ${err.message || err}`;
+    setStatus(`Save failed: ${err.message || err}`, true);
   }
 }
 
+// poll for a previously-granted port coming back from the void
+setInterval(async () => {
+  try {
+    if (port) return;
+    const ports = await navigator.serial.getPorts();
+    if (ports.length) {
+      setStatus('Device is back. Smash Connect?');
+      if (confirm('Device is back. Connect now?')) {
+        try { await connect(); } catch (_) { /* status already set */ }
+      }
+    }
+  } catch (err) {
+    console.error('reconnect poll', err);
+  }
+}, 5000);
+
 // wire it up
-connectBtn.addEventListener("click", connect);
+connectBtn.addEventListener("click", async () => {
+  try { await connect(); } catch (_) { /* status already set */ }
+});
 saveBtn.addEventListener("click", saveConfig);
 </script>
 
@@ -392,6 +438,10 @@ saveBtn.addEventListener("click", saveConfig);
     </fieldset>
     <button id="save" disabled>Save</button>
   <div id="status"></div>
+  <details>
+    <summary>Debug Log</summary>
+    <pre id="log"></pre>
+  </details>
   <div id="live">
     <h2>Live Slots</h2>
     <div id="slots"></div>
