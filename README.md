@@ -21,7 +21,7 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 - **Six envelope followers** – feed it audio or CV and watch live signals hijack any slot. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
 - **Built-in arpeggiator** – clock-locked riffs for any slot; twist the filter knobs to bend length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
 - **Freq/Q double agents** – when the arp chills, “Freq” shoves note velocity up or down while “Q” decides if a pot twist actually spits out a new note.
-- **WebSerial editor** – tweak and spy on settings right from your browser, no drivers, no mercy. [WebSerial guide](docs/WebSerial.md).
+- **WebSerial editor** – tweak and spy on settings right from your browser, no drivers, no mercy. [WebSerial guide](docs/WebSerial.md), and the [config app README](firmware/App/README_webserial.md) for philosophy and troubleshooting.
 - **OSC/WebMIDI bridge** – hurl OSC at the Node shim and it slings MIDI at the box. [Bridge playbook](docs/OSCBridge.md).
 ## Quick Start
 
@@ -51,7 +51,7 @@ Run that once and you're cleared for takeoff.
 
 - **docs/** – Builder's Handbook, history log, WebSerial guide, and thermal rants.
 - **firmware/** – Teensy 4.0 source and project files. The full manual lives in [firmware/README.md](firmware/README.md).
-  - **App/** – simple WebSerial editor to tweak settings over USB.
+  - **App/** – simple WebSerial editor to tweak settings over USB. See [README_webserial.md](firmware/App/README_webserial.md) for philosophy and troubleshooting riffs.
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
 - **hardware/** – PCB and enclosure docs. Check [hardware/README.md](hardware/README.md) for the full tour.
   - [Gerber_MOAR_Board_2025-08-08.zip](hardware/Gerber_MOAR_Board_2025-08-08.zip) – current fab package.
