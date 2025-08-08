@@ -3,7 +3,20 @@
 Welcome to the belly of the beast. This folder splits into two gangs:
 
 - **Core firmware** — the `.cpp` files that actually make the MN42 sing. Stuff like `Arpeggiator.cpp`, `ButtonManager.cpp`, and `firmware_main.cpp` get baked into the shipping build.
-- **Machine tests** — files named `test_*.cpp`. They're not here to cuddle; they exist to punch the firmware in the face and make sure it still behaves.
+- **Machine tests** — files named `test_*.cpp`. They're not here to cuddle; they exist to punch the firmware in the face and make sure it still behaves. These builds mirror the final hardware and yank in the same headers from `../include/`, so you're throwing real punches.
+
+## Source ↔ Docs Fast Lane
+
+If you're trying to grok what a file is supposed to do, jump straight to its manifesto:
+
+- [Arpeggiator.cpp](Arpeggiator.cpp) → [../include/Arpeggiator/README.md](../include/Arpeggiator/README.md)
+- [ButtonManager.cpp](ButtonManager.cpp) → [../include/ButtonManager/README.md](../include/ButtonManager/README.md)
+- [ConfigManager.cpp](ConfigManager.cpp) → [../include/ConfigManager/README.md](../include/ConfigManager/README.md)
+- [DisplayManager.cpp](DisplayManager.cpp) → [../include/DisplayManager/README.md](../include/DisplayManager/README.md)
+- [EnvelopeFollower.cpp](EnvelopeFollower.cpp) → [../include/EnvelopeFollower/README.md](../include/EnvelopeFollower/README.md)
+- [LEDManager.cpp](LEDManager.cpp) → [../include/LEDManager/README.md](../include/LEDManager/README.md)
+- [MIDIHandler.cpp](MIDIHandler.cpp) → [../include/MIDIHandler/README.md](../include/MIDIHandler/README.md)
+- [PotentiometerManager.cpp](PotentiometerManager.cpp) → [../include/PotentiometerManager/README.md](../include/PotentiometerManager/README.md)
 
 ## Run the Tests
 

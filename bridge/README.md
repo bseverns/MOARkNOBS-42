@@ -2,6 +2,14 @@
 
 Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** talk trash on modern networks.
 
+## System context
+
+Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial.
+
+```bash
+oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC -> serial sets pot 2 to 99
+```
+
 ## What's the gig?
 
 - **Serial** in at 31,250 baud.
@@ -37,4 +45,34 @@ npm test
 ```
 
 If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
+
+## Example Session
+
+Need proof this gremlin works? Try this slam-dunk walkthrough.
+
+1. Kick the bridge to life:
+
+   ```bash
+   node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --midi "MN42 Bridge"
+   ```
+
+2. In another terminal, eavesdrop on the OSC noise:
+
+   ```bash
+   oscdump 9000
+   ```
+
+3. Sniff the MIDI echo too:
+
+   ```bash
+   aseqdump -p "MN42 Bridge"
+   ```
+
+4. Now hurl a `SET_POT` command at slot 2:
+
+   ```bash
+   oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+   ```
+
+   The hardware's slot 2 should snap to 95. `oscdump` spits back a `/mn42/slots` update and `aseqdump` coughs up a matching Control Change. That's the round trip—OSC in, MIDI out, and the rig obeys.
 
