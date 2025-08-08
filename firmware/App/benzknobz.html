@@ -111,10 +111,22 @@ button:hover {
     .flash {
       animation: flash 0.2s linear;
     }
+    .meter.active {
+      animation: blip 0.3s linear;
+    }
+    @keyframes blip {
+      from { background-color: #0ff; }
+      to   { background-color: #222; }
+    }
     @keyframes flash {
       from { transform: scale(1.3); }
       to   { transform: scale(1); }
     }
+    #arg-method {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 14px;
+
 
     [data-tooltip] {
       position: relative;
@@ -152,6 +164,8 @@ button:hover {
   const saveBtn    = document.getElementById("save");
   const slotContainer = document.getElementById("slots");
   const envContainer  = document.getElementById("envelopes");
+  const argMethodEl   = document.getElementById("arg-method");
+
   const logEl = document.getElementById("log");
 
   function setStatus(msg, isError = false) {
@@ -174,7 +188,7 @@ button:hover {
     wrap.appendChild(p);
     wrap.appendChild(s);
     slotContainer.appendChild(wrap);
-    return {p,s};
+    return {p,s,wrap};
   });
   const envEls = Array.from({length:6}, () => {
     const wrap = document.createElement("div");
@@ -186,7 +200,7 @@ button:hover {
     wrap.appendChild(p);
     wrap.appendChild(s);
     envContainer.appendChild(wrap);
-    return {p,s};
+    return {p,s,wrap};
   });
 
     async function connect() {
@@ -280,12 +294,31 @@ button:hover {
         envEls[i].s.textContent = v;
         flash(envEls[i].s);
       });
+      if (msg.currentSlot !== undefined) {
+        slotEls.forEach((el,i)=> {
+          if (i === msg.currentSlot) highlight(el.wrap);
+        });
+      }
+      if (msg.efStatus) {
+        msg.efStatus.forEach((on,i)=> {
+          if (on) highlight(envEls[i].wrap);
+        });
+      }
+      if (msg.argMethod !== undefined && argMethodEl) {
+        argMethodEl.textContent = msg.argMethod;
+      }
     }
 
     function flash(el) {
       el.classList.remove('flash');
       void el.offsetWidth;
       el.classList.add('flash');
+    }
+
+    function highlight(el) {
+      el.classList.remove('active');
+      void el.offsetWidth;
+      el.classList.add('active');
     }
 
     async function loadSchema() {
@@ -511,6 +544,8 @@ saveBtn.addEventListener("click", saveConfig);
     <div id="slots"></div>
     <h2>Envelope Levels</h2>
     <div id="envelopes"></div>
+    <h2>ARG Method</h2>
+    <div id="arg-method"></div>
   </div>
 </body>
 </html>
