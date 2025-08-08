@@ -581,37 +581,17 @@ saveBtn.addEventListener("click", saveConfig);
       </fieldset>
       <fieldset id="arg-settings">
         <legend>ARG Pair</legend>
+        <label data-tooltip="ARG engine on or off?">Enable
+          <select id="arg-enable">
+            <option value="1">ON</option>
+            <option value="0">OFF</option>
+          </select>
+        </label>
         <label data-tooltip="Envelope follower A gain">A <input id="arg-a" type="number" min="0" max="5"></label>
         <label data-tooltip="Envelope follower B gain">B <input id="arg-b" type="number" min="0" max="5"></label>
       </fieldset>
     </div>
     <div id="form"></div>
-    <fieldset id="filter-settings">
-      <legend>Filter</legend>
-      <label data-tooltip="Filter curve applied to pot motion. LINEAR keeps it straight, RANDOM goes rogue.">Type
-        <select id="filter-type">
-          <option value="0">LINEAR</option>
-          <option value="1">OPPOSITE_LINEAR</option>
-          <option value="2">EXPONENTIAL</option>
-          <option value="3">RANDOM</option>
-          <option value="4">LOWPASS</option>
-          <option value="5">HIGHPASS</option>
-          <option value="6">BANDPASS</option>
-        </select>
-      </label>
-      <label data-tooltip="Cutoff frequency in Hz. 20–5000">Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
-      <label data-tooltip="Resonance. Higher Q = sharper bite">Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
-    </fieldset>
-    <fieldset id="arg-settings">
-      <legend>ARG Pair</legend>
-      <label data-tooltip="ARG engine on or off?">Enable
-        <select id="arg-enable">
-          <option value="1">ON</option>
-          <option value="0">OFF</option>
-        </select>
-      </label>
-      <label data-tooltip="Envelope follower A gain">A <input id="arg-a" type="number" min="0" max="5"></label>
-      <label data-tooltip="Envelope follower B gain">B <input id="arg-b" type="number" min="0" max="5"></label>
   </div>
 
   <fieldset id="led-settings">

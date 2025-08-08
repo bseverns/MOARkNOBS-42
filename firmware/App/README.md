@@ -34,6 +34,7 @@ This little app lets you boss the board around without touching code. Dial in:
 - **Colours for every LED** – paint each halo or meter however you like. Psychedelic rainbows encouraged.
 - **Slot mappings** – reshuffle which physical knob controls which slot. Break the factory order and claim your own layout.
 - **Envelope routing** – point each envelope follower at a slot and pick an ARG method with your favourite A/B combo. Chaos becomes configurable.
+- **ARG power switch** – flip the engine on or off right in the form, no soldering iron required.
 
 ### LED Colour Picker
 
