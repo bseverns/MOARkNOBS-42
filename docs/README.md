@@ -1,6 +1,13 @@
 # Docs Index
 
+> Hardware's signed off and etched in copper. This folder is the reference stash for the whole machine—schematics, firmware lore, and every misadventure we've documented.
+
 Welcome to the MOARkNOBS-42 documentation playground. This README aims to help you navigate the library of notes, design scraps, and personal ramblings we keep around to teach ourselves and the next hacker.
+
+## System Capabilities
+
+- [Hardware README](../hardware/README.md) — final board layout, power rails, and the gritty bits you can actually solder.
+- [Firmware README](../firmware/README.md) — how the code slings MIDI, wrangles envelope followers, and keeps the LEDs honest.
 
 ## Choose Your Adventure
 
