@@ -185,6 +185,12 @@ button:hover {
   const slotContainer = document.getElementById("slots");
   const envContainer  = document.getElementById("envelopes");
   const argMethodEl   = document.getElementById("arg-method");
+  const filterTypeEl  = document.getElementById("filter-type");
+  const filterFreqEl  = document.getElementById("filter-freq");
+  const filterQEl     = document.getElementById("filter-q");
+  const argEnableEl   = document.getElementById("arg-enable");
+  const argAEl        = document.getElementById("arg-a");
+  const argBEl        = document.getElementById("arg-b");
 
   const logEl = document.getElementById("log");
 
@@ -244,6 +250,8 @@ button:hover {
         const schema = await loadSchema();
         const config = await loadConfig();
         buildForm(schema, config);
+        await loadFilter();
+        await loadARGPair();
       } catch (err) {
         console.error(err);
         setStatus(`Connection failed: ${err.message || err}`, true);
@@ -380,7 +388,8 @@ button:hover {
     async function loadARGPair() {
       try {
         const raw = await send("GET_ARGPAIR");
-        const [a, b] = raw.split(",");
+        const [en, a, b] = raw.split(",");
+        argEnableEl.value = en;
         argAEl.value = a;
         argBEl.value = b;
       } catch (err) {
@@ -517,7 +526,7 @@ async function saveConfig() {
 
     await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
     await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
-    await send(`SET_ARGPAIR ${argAEl.value},${argBEl.value}`);
+    await send(`SET_ARGPAIR ${argEnableEl.value},${argAEl.value},${argBEl.value}`);
     setStatus("Save sent.");
   } catch (err) {
     console.error(err);
@@ -577,12 +586,39 @@ saveBtn.addEventListener("click", saveConfig);
       </fieldset>
     </div>
     <div id="form"></div>
+    <fieldset id="filter-settings">
+      <legend>Filter</legend>
+      <label data-tooltip="Filter curve applied to pot motion. LINEAR keeps it straight, RANDOM goes rogue.">Type
+        <select id="filter-type">
+          <option value="0">LINEAR</option>
+          <option value="1">OPPOSITE_LINEAR</option>
+          <option value="2">EXPONENTIAL</option>
+          <option value="3">RANDOM</option>
+          <option value="4">LOWPASS</option>
+          <option value="5">HIGHPASS</option>
+          <option value="6">BANDPASS</option>
+        </select>
+      </label>
+      <label data-tooltip="Cutoff frequency in Hz. 20–5000">Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
+      <label data-tooltip="Resonance. Higher Q = sharper bite">Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
+    </fieldset>
+    <fieldset id="arg-settings">
+      <legend>ARG Pair</legend>
+      <label data-tooltip="ARG engine on or off?">Enable
+        <select id="arg-enable">
+          <option value="1">ON</option>
+          <option value="0">OFF</option>
+        </select>
+      </label>
+      <label data-tooltip="Envelope follower A gain">A <input id="arg-a" type="number" min="0" max="5"></label>
+      <label data-tooltip="Envelope follower B gain">B <input id="arg-b" type="number" min="0" max="5"></label>
   </div>
 
   <button id="save" disabled>Save</button>
 
     <fieldset id="led-settings">
       <legend>LED Colors</legend>
+
     </fieldset>
 
     <button id="save" disabled>Save</button>

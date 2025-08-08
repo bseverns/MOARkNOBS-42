@@ -286,6 +286,14 @@ uint8_t ConfigManager::getARGMethod() const {
     return EEPROM.read(EEPROM_ARG_METHOD);
 }
 
+void ConfigManager::setARGEnable(uint8_t enable) {
+    EEPROM.update(EEPROM_ARG_ENABLE, enable);
+}
+
+uint8_t ConfigManager::getARGEnable() const {
+    return EEPROM.read(EEPROM_ARG_ENABLE);
+}
+
 void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
     EEPROM.update(EEPROM_ARG_ENV_A, envA);
     EEPROM.update(EEPROM_ARG_ENV_B, envB);
@@ -404,18 +412,23 @@ bool ConfigManager::handleCommand(const String& command) {
         Serial.println("OK");
         return true;
     } else if (command.startsWith("GET_ARGPAIR")) {
+        Serial.print(getARGEnable());
+        Serial.print(",");
         Serial.print(getEnvelopeA());
         Serial.print(",");
         Serial.println(getEnvelopeB());
         return true;
     } else if (command.startsWith("SET_ARGPAIR")) {
-        int comma = command.indexOf(',');
-        if (comma == -1) {
+        int first = command.indexOf(',');
+        int second = command.indexOf(',', first + 1);
+        if (first == -1 || second == -1) {
             Serial.println("ERR");
             return true;
         }
-        uint8_t envA = command.substring(11, comma).toInt();
-        uint8_t envB = command.substring(comma + 1).toInt();
+        uint8_t enable = command.substring(11, first).toInt();
+        uint8_t envA = command.substring(first + 1, second).toInt();
+        uint8_t envB = command.substring(second + 1).toInt();
+        setARGEnable(enable);
         setEnvelopePair(envA, envB);
         Serial.println("OK");
         return true;
