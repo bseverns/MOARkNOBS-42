@@ -26,6 +26,22 @@ For an overview of the entire project see the [repo README](../../README.md).
 
 The schema used to build the form lives in `config_schema.json` in this folder.
 
+### LED swagger
+
+Want the board to glow like a radioactive jellyfish or chill in dim doom? `config_schema.json` now exposes an `led` group with
+`brightness` (0-255) and `color` (hex). Drop a snippet like this into your config and the halos obey:
+
+```json
+{
+  "led": {
+    "brightness": 64,
+    "color": "#00FF00"
+  }
+}
+```
+
+This example mellows the LEDs to quarter power and paints them acid green.
+
 For the gritty details of the serial stream, peep the [WebSerial protocol doc](../../docs/WebSerial.md).
 
 *(Screenshot generation was not possible in this environment.)*
