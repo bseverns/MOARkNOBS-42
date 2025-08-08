@@ -7,8 +7,8 @@
     "test": "node test/mn42_bridge.test.js"
   },
   "keywords": ["mn42","bridge","osc","midi"],
-  "author": "",
-  "license": "ISC",
+  "author": "BSSS project team",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "serialport": "^10.5.0",

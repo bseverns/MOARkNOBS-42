@@ -90,3 +90,7 @@ Need proof this gremlin works? Try this slam-dunk walkthrough.
 
    The hardware's slot 2 should snap to 95. `oscdump` spits back a `/mn42/slots` update and `aseqdump` coughs up a matching Control Change. That's the round trip—OSC in, MIDI out, and the rig obeys.
 
+## License
+
+This scrappy sidecar rides under the [MIT License](../LICENSE). Peep the root file for the full legal riff.
+
