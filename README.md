@@ -16,7 +16,7 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 
 ## Features at a Glance
 
-- **Speaks NRPN, RPN & SysEx** – your rig can't hide behind vanilla CCs. [More on MIDI types](firmware/README.md#supported-midi-types).
+- **Speaks NRPN, RPN & SysEx** – your rig can't hide behind vanilla CCs. [More on MIDI types](firmware/README.md#supported-message-types).
 - **42 virtual slots** – stash independent MIDI channels and modes with LED halos for each. [Slot anatomy](firmware/README.md#supported-message-types).
 - **Six envelope followers** – feed it audio or CV and watch live signals hijack any slot. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
 - **Built-in arpeggiator** – clock-locked riffs for any slot; twist the filter knobs to bend length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
@@ -204,7 +204,7 @@ Available environments:
 See [firmware/test/README.md](firmware/test/README.md) for details on this project's testing suite.
 
 For a month-by-month look at how this controller came together, see
-[HISTORY.md](HISTORY.md).
+[HISTORY.md](docs/HISTORY.md).
 
 ## Firmware Updates
 
