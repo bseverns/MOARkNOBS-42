@@ -42,15 +42,29 @@ Safety bumpers:
 
 The bridge waits for `{"hello":"mn42"}` from the controller before it starts spewing data. Each JSON line from the serial port is parsed and shotgunned to both OSC and MIDI. Incoming OSC or MIDI messages get repackaged as JSON and fired back at the controller.
 
+## Install
+
+Bring Node.js 12 or later—the `serialport` dependency won't slum it with anything older, and we tend to jam on Node 18+.
+
+```bash
+npm install
+```
+
+Feeling deterministic? Swap in the lockstep version:
+
+```bash
+npm ci
+```
+
 ## Testing vibes
 
-This repo doesn't ship with a hardware mock. To prove the script at least boots:
+This repo doesn't ship with a hardware mock. To prove the script at least boots and dies gracefully when the wire's pulled:
 
 ```bash
 npm test
 ```
 
-If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
+The test pokes a fake serial port so you can watch the bridge complain and keep its cool. If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
 
 ## Example Session
 
@@ -81,4 +95,8 @@ Need proof this gremlin works? Try this slam-dunk walkthrough.
    ```
 
    The hardware's slot 2 should snap to 95. `oscdump` spits back a `/mn42/slots` update and `aseqdump` coughs up a matching Control Change. That's the round trip—OSC in, MIDI out, and the rig obeys.
+
+## License
+
+This scrappy sidecar rides under the [MIT License](../LICENSE). Peep the root file for the full legal riff.
 

@@ -25,7 +25,7 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
 - **OSC/WebMIDI bridge** – hurl OSC at the Node shim and it slings MIDI at the box. [Bridge playbook](docs/OSCBridge.md).
 ## Quick Start
 
-1. **Install the Python tools** – `pip install -r requirements.txt` snags PlatformIO (and any future Python riffraff). Old‑school? Fire up the Arduino IDE with Teensyduino instead.
+1. **Install the Python tools** – `pip install -r requirements.txt` snags PlatformIO 6.1.18 (and any future Python riffraff). Old‑school? Fire up the Arduino IDE with Teensyduino instead.
 2. **Clone this repo** and plug a Teensy 4.0 into your rig.
 3. **Flash it** from `firmware/` with:
    ```bash
@@ -37,7 +37,7 @@ Need the full blueprint? Hit the [Builder's Handbook](docs/BuildersHandbook.md) 
 
 ### Python build toys
 
-There's a `requirements.txt` squatting in the repo root. It pins PlatformIO and any future Python sidekicks so CI and your local shell march in step.
+There's a `requirements.txt` squatting in the repo root. It nails PlatformIO to 6.1.18 so CI and your local shell march in step. Bump the version? Mirror the change here so the crew stays synced.
 
 ```bash
 pip install -r requirements.txt
@@ -84,7 +84,7 @@ Cutting a drop shouldn't feel like paperwork. From the repo root:
 
 ### Flash the Firmware (the loud way)
 
-1. **Install the tools** – `pip install -r requirements.txt` to grab PlatformIO or lean on the VS Code extension. Old‑school? Fire up the Arduino IDE with the Teensyduino add‑on and the libraries listed in `platformio.ini`.
+1. **Install the tools** – `pip install -r requirements.txt` to grab PlatformIO 6.1.18 or lean on the VS Code extension. Old‑school? Fire up the Arduino IDE with the Teensyduino add‑on and the libraries listed in `platformio.ini`.
 2. **Plug in your Teensy 4.0** – USB cable, no mystery.
 3. **Kick the build** – from `firmware/` run:
    ```bash

@@ -4,11 +4,11 @@
   "description": "Serial to OSC/MIDI bridge for MOARkNOBS-42",
   "main": "mn42_bridge.js",
   "scripts": {
-    "test": "node mn42_bridge.js --help"
+    "test": "node mn42_bridge.js --help && node test_missing_port.js"
   },
   "keywords": ["mn42","bridge","osc","midi"],
-  "author": "",
-  "license": "ISC",
+  "author": "BSSS project team",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "serialport": "^10.5.0",
