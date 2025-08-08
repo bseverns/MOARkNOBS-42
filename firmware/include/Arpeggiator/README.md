@@ -1,9 +1,19 @@
 # Arpeggiator
 
-Part of the firmware `include` jungle. The [parent README](../README.md) shows how it locks to the rest of the circus.
+Part of the firmware `include` jungle. The [include README](../README.md) shows how it locks to the rest of the circus; the [main firmware README](../../README.md) explains why the band even exists.
 
 Clock-synced riff machine that rips through a slot's note stack like it's late for soundcheck.
 Now it can yank its root note from wherever you tell it—slot memory, envelope follower, or some mystery source you cooked up.
+
+## Where it fits
+
+Arpeggiator chews on slot memory or an EnvelopeFollower and spits the notes through MIDIHandler.
+
+```
+[Slots/env] --> Arpeggiator --> MIDIHandler
+```
+
+Get the bird's-eye in the [main firmware README](../../README.md).
 
 ## Key Methods
 

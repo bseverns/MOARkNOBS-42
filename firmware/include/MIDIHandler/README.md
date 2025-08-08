@@ -1,8 +1,18 @@
 # MIDIHandler
 
-Part of the firmware `include` jungle. Scope the [parent README](../README.md) to see where the bytes route.
+Part of the firmware `include` jungle. Scope the [include README](../README.md) to see where the bytes route and the [main firmware README](../../README.md) for the full wiring diagram.
 
 USB, DIN, whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
+
+## Where it fits
+
+ButtonManager, PotentiometerManager, and Arpeggiator shove events in; the USB and DIN ports blast them out. ConfigManager sets the channels and tempo law.
+
+```
+[Buttons/Pots/Arp] --> MIDIHandler --> USB/DIN jacks
+```
+
+More context lives in the [main firmware README](../../README.md).
 
 ## Key Methods
 

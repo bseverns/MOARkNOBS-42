@@ -1,8 +1,18 @@
 # DisplayManager
 
-Part of the firmware `include` jungle. Check the [parent README](../README.md) if you get lost in pixels.
+Part of the firmware `include` jungle. Check the [include README](../README.md) if you get lost in pixels, and the [main firmware README](../../README.md) for the grand tour.
 
 Talks to the SSD1306 OLED and isn't afraid to shout.
+
+## Where it fits
+
+DisplayManager takes button-driven context and splashes it to the SSD1306 over I2C. ConfigManager tells it what to show.
+
+```
+[Button ctx] --> DisplayManager --> SSD1306
+```
+
+More backstory in the [main firmware README](../../README.md).
 
 ## Key Methods
 

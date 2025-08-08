@@ -1,8 +1,19 @@
 # ButtonManager
 
-Part of the firmware `include` jungle. The [parent README](../README.md) explains how button rage propagates.
+Part of the firmware `include` jungle. The [include README](../README.md) explains how button rage propagates; the [main firmware README](../../README.md) zooms out to the whole machine.
 
 Scans the 7×6 button grid, smacks bounce in the teeth, and spits out events.
+
+## Where it fits
+
+ButtonManager rides the multiplexed button grid, feeds MIDIHandler and flashes clues through LEDManager. ConfigManager keeps the map of what each press actually means.
+
+```
+[Muxed buttons] --> ButtonManager --> MIDIHandler
+                                \-> LEDManager
+```
+
+See the big picture in the [main firmware README](../../README.md).
 
 ## Key Methods
 

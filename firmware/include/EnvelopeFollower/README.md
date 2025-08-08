@@ -1,8 +1,18 @@
 # EnvelopeFollower
 
-Part of the firmware `include` jungle. Hit the [parent README](../README.md) for how envelopes boss the rest.
+Part of the firmware `include` jungle. Hit the [include README](../README.md) for how envelopes boss the rest, and the [main firmware README](../../README.md) for the system tour.
 
 Sniffs audio or CV, shapes it, and hurls MIDI-friendly levels back.
+
+## Where it fits
+
+EnvelopeFollower reads an analog pin, smooths the chaos with BiquadFilter, and tosses values to MIDIHandler, LEDManager, or even Arpeggiator for note voodoo.
+
+```
+[Audio/CV] --> EnvelopeFollower --> MIDI/LED/Arp
+```
+
+See more wiring in the [main firmware README](../../README.md).
 
 ## Key Methods
 
