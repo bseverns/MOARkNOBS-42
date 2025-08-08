@@ -330,6 +330,20 @@ void updateArpTuning() {
     displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
 }
 
+void updateNoteDynamics() {
+    if (arpeggiator.isActive()) return;
+
+    int rawShift = buttonManager.getControlPotValue(1);
+    int rawProb  = buttonManager.getControlPotValue(2);
+
+    velocityShift    = map(rawShift, 0, 1023, -64, 63);
+    changeProbability = map(rawProb, 0, 1023, 0, 100);
+
+    String line2 = String("Vel ") + String(velocityShift);
+    String line3 = String("Prob ") + String(changeProbability) + "%";
+    displayManager.showText("Note Dyn", line2.c_str(), line3.c_str());
+}
+
 void streamWebSerialState() {
     if (!webSerialStreaming) return;
     WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers);
@@ -373,7 +387,11 @@ void setup() {
             uint8_t velo = (slot.efIndex < envelopeFollowers.size())
                            ? envelopeFollowers[slot.efIndex].getEnvelopeLevel()
                            : 125;
-            midiHandler.sendNoteOn(note, velo, slot.midiChannel);
+            int shifted = velo + velocityShift;
+            if (shifted < 0)   shifted = 0;
+            if (shifted > 127) shifted = 127;
+            if (random(100) >= changeProbability) break;
+            midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
             // schedule Note-Off in 100 ms
             Utility::schedulerHigh.addTask([=](){
               midiHandler.sendNoteOff(note, 0, slot.midiChannel);
@@ -508,6 +526,7 @@ void setup() {
       ledManager.update();
       updateFilterTuning(buttonContext);
       updateArpTuning();
+      updateNoteDynamics();
     }, hwConfig.ledTaskInterval);
 
     Utility::schedulerLow.addTask([](){

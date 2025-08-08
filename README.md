@@ -13,6 +13,7 @@ RPN opens the door to spec-sanctioned tweaks like pitch range, while the univers
 - **42 virtual slots** – stash independent MIDI channels and modes with LED halos for each. [Slot anatomy](firmware/README.md#supported-message-types).
 - **Six envelope followers** – feed it audio or CV and watch live signals hijack any slot. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
 - **Built-in arpeggiator** – clock-locked riffs for any slot; twist the filter knobs to bend length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
+- **Freq/Q double agents** – when the arp chills, “Freq” shoves note velocity up or down while “Q” decides if a pot twist actually spits out a new note.
 - **WebSerial editor** – tweak and spy on settings right from your browser, no drivers, no mercy. [WebSerial guide](docs/WebSerial.md).
 - **OSC/WebMIDI bridge** – hurl OSC at the Node shim and it slings MIDI at the box. [Bridge playbook](docs/OSCBridge.md).
 ## Quick Start
