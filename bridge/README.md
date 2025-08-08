@@ -38,13 +38,13 @@ The bridge waits for `{"hello":"mn42"}` from the controller before it starts spe
 
 ## Testing vibes
 
-This repo doesn't ship with a hardware mock. To prove the script at least boots:
+This repo doesn't ship with a hardware mock, so our test suite keeps it lean and mean. `npm test` spawns the bridge with `--help` and screams if it doesn't print a usage banner and bail.
 
 ```bash
 npm test
 ```
 
-If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
+GitHub Actions runs that smoke test for every push or PR that pokes the `bridge/` folder. If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
 
 ## Example Session
 
