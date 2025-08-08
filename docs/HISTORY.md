@@ -64,10 +64,10 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - `fea338e` calls for thicker LED power traces in `hardware/MN42-1/`—beefier copper keeps the LEDs from sagging or cooking when you crank the current.
 - NRPN, RPN, and raw SysEx support crash the party, ditching vanilla CCs for full‑fat MIDI mojo and teaching us how deep the protocol rabbit hole really goes.
 - WebSerial begins streaming the synth's guts straight to the browser; the editor's rough edges prove the web can be a lab bench if you don't mind a little chaos.
+- *If you ever wanted a synth to show you its source and its soul, this is the moment.*
 - Wired up the filter‑tuning pot and roughed up the arpeggiator—hands‑on analog control meets sequencer swagger, plus a reminder that drift and off‑by‑ones are always lurking.
 - **August 8:** Merged PR #286, hauling in the full FastLED arsenal and scribbling teachable comments all over `firmware/App/benzknobz.html`. [956069c]
-- *If you ever wanted a synth to show you its source and its soul, this is the moment.*
-- *Standards are optional; the best lessons come from coloring off the page.*
+- *Standards are not optional; often the best lessons come from coloring off the page.*
 
 ## Overview
 
