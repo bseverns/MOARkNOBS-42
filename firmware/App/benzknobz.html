@@ -115,6 +115,23 @@ button:hover {
       from { transform: scale(1.3); }
       to   { transform: scale(1); }
     }
+    [data-tooltip] {
+      position: relative;
+      cursor: help;
+    }
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #333;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 10;
+      transform: translateY(4px);
+    }
   </style>
   <script type="module">
   let port, reader, writer;
@@ -371,7 +388,7 @@ saveBtn.addEventListener("click", saveConfig);
     <div id="form"></div>
     <fieldset id="filter-settings">
       <legend>Filter</legend>
-      <label>Type
+      <label data-tooltip="Filter curve applied to pot motion. LINEAR keeps it straight, RANDOM goes rogue.">Type
         <select id="filter-type">
           <option value="0">LINEAR</option>
           <option value="1">OPPOSITE_LINEAR</option>
@@ -382,13 +399,13 @@ saveBtn.addEventListener("click", saveConfig);
           <option value="6">BANDPASS</option>
         </select>
       </label>
-      <label>Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
-      <label>Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
+      <label data-tooltip="Cutoff frequency in Hz. 20–5000">Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
+      <label data-tooltip="Resonance. Higher Q = sharper bite">Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
     </fieldset>
     <fieldset id="arg-settings">
       <legend>ARG Pair</legend>
-      <label>A <input id="arg-a" type="number" min="0" max="5"></label>
-      <label>B <input id="arg-b" type="number" min="0" max="5"></label>
+      <label data-tooltip="Envelope follower A gain">A <input id="arg-a" type="number" min="0" max="5"></label>
+      <label data-tooltip="Envelope follower B gain">B <input id="arg-b" type="number" min="0" max="5"></label>
     </fieldset>
     <button id="save" disabled>Save</button>
   <div id="status"></div>
