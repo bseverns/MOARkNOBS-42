@@ -2,6 +2,16 @@
 
 > Firmware for the unapologetically DIY, button-stabbin', knob-hackin', MIDI-mashin' controller you didn’t ask for but definitely need.
 
+### System Primer
+
+Even chaos needs a conductor. Here’s how the firmware keeps the band in line:
+
+- **MCU** – A Teensy 4.0 does the heavy lifting, clocking the madness and juggling tasks.
+- **I/O wrangling** – A multiplexed button grid and a trio of pots funnel into shared ADC lanes while 52 WS2812s scream status back at you.
+- **Envelope followers** – Six analog voyeurs sniff audio or CV and modulate whichever virtual slot you point them at.
+
+Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want to sling bytes at a host? The [bridge README](../bridge/README.md) maps out the Node/OSC/MIDI handshake.
+
 *Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
 
 ## What's This?
