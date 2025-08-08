@@ -38,13 +38,13 @@ The bridge waits for `{"hello":"mn42"}` from the controller before it starts spe
 
 ## Testing vibes
 
-This repo doesn't ship with a hardware mock. To prove the script at least boots:
+This repo doesn't ship with a hardware mock. To prove the script at least boots and dies gracefully when the wire's pulled:
 
 ```bash
 npm test
 ```
 
-If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
+The test pokes a fake serial port so you can watch the bridge complain and keep its cool. If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
 
 ## Example Session
 
