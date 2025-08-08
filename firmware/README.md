@@ -653,8 +653,8 @@ firmware salutes:
 |---------|--------------|
 | `GET_FILTER` | Returns `type,freq,q` for the active envelope filter. |
 | `SET_FILTER <type,freq,q>` | Stores filter shape, cutoff and Q into EEPROM. |
-| `GET_ARGPAIR` | Spits back the two envelope indices blended in ARG mode. |
-| `SET_ARGPAIR <a,b>` | Persists a new envelope follower duo for ARG shenanigans. |
+| `GET_ARGPAIR` | Spits back `enable,a,b` for the ARG mashup. |
+| `SET_ARGPAIR <en,a,b>` | Persists an on/off flag and the envelope duo for ARG shenanigans. |
 | `GET_LED` | Returns `brightness,r,g,b` for the status strip. |
 | `SET_LED <b,r,g,b>` | Burns new brightness and color into EEPROM. |
 | `GET_ARGMETHOD` | Reports which ARG math trick is armed (0‑6). |
