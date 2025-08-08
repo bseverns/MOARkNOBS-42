@@ -30,9 +30,33 @@ Most modules stash a mini README in their own subfolder for API riffs—check `*
 
 ## How these pieces jam together
 
+```mermaid
+flowchart LR
+    ButtonManager --> ConfigManager
+    PotentiometerManager --> ConfigManager
+    ConfigManager --> LEDManager
+    ConfigManager --> DisplayManager
+    MIDIHandler --> Arpeggiator
+    MIDIHandler --> EnvelopeFollower
+    Arpeggiator --> LEDManager
+    EnvelopeFollower --> LEDManager
+    ButtonManager --> LEDManager
+```
+
 - `ButtonManager` hollers when a switch gets smacked and `LEDManager` answers with a light show, while `DisplayManager` scribbles the update on the OLED.
 - `PotentiometerManager` pours raw knob juice into `ConfigManager`, which then nudges `LEDManager` and `DisplayManager` so your fingers see what your ears are about to hear.
 - `MIDIHandler` routes incoming notes and clock, letting `Arpeggiator` and `EnvelopeFollower` sync their mischief; `BiquadFilter` keeps the follower's wiggles smooth.
 - `WebSerial` taps `ConfigManager` to fling slot snapshots over USB for external editors or debugging.
+
+## Hardware hookups
+
+| Module | Hardware hookup |
+| --- | --- |
+| **ButtonManager** | 42 matrix buttons plus 6 direct-wired control punks |
+| **PotentiometerManager** | 42 analog slots fed through muxes |
+| **LEDManager** | 52 WS2812 rebels (42 slot halos, 6 EF meters, 1 control beacon, 3 pot halos) |
+| **EnvelopeFollower** | 6 envelope-sniffing inputs |
+| **DisplayManager** | 128x64 SSD1306 OLED canvas |
+| **MIDIHandler** | USB and 5-pin DIN ports |
 
 For the full firmware story see [../README.md](../README.md).
