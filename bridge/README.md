@@ -23,6 +23,7 @@ oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC 
 node mn42_bridge.js \
   --serial /dev/ttyACM0 \
   --osc 9000 \
+  --bind 127.0.0.1 \
   --midi "MN42 Bridge"
 ```
 
@@ -30,7 +31,12 @@ Flags:
 
 - `--serial` (`-s`) – which serial port to sniff.
 - `--osc` (`-o`) – UDP port to scream OSC from (and listen for commands).
+- `--bind` (`-b`) – IP to park the UDP server on. Defaults to `127.0.0.1` so randos can't wiggle your knobs.
 - `--midi` (`-m`) – label for the virtual MIDI port.
+
+Safety bumpers:
+
+- The bridge ignores OSC/MIDI JSON that doesn't spell out `cmd`, `slot`, and a numeric `value`. No half-baked packets make it to serial.
 
 ## Teaching moment
 

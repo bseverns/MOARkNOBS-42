@@ -2,7 +2,7 @@
 
 function usage() {
   console.log(`mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n` +
-`Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--midi LABEL]`);
+`Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--bind ADDR] [--midi LABEL]`);
 }
 
 function getArg(flag, def) {
@@ -18,6 +18,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 const serialName = getArg('--serial', getArg('-s', '/dev/ttyACM0'));
 const oscPort = parseInt(getArg('--osc', getArg('-o', '9000')), 10);
+const oscBind = getArg('--bind', getArg('-b', '127.0.0.1'));
 const midiLabel = getArg('--midi', getArg('-m', 'MN42 Bridge'));
 
 async function main() {
@@ -41,6 +42,16 @@ async function main() {
     setTimeout(() => serial.open(e => e && console.error('serial reconnect failed:', e.message)), 1000);
   });
 
+
+  const validCmd = m => m && typeof m.cmd === 'string' &&
+    typeof m.slot === 'number' && typeof m.value === 'number';
+
+  midiIn && midiIn.connect(msg => {
+    const arr = msg.toArray();
+    if ((arr[0] & 0xF0) === 0xB0) {
+      const cmd = { cmd: 'SET_POT', slot: arr[1], value: arr[2] };
+      if (validCmd(cmd)) serial.write(JSON.stringify(cmd) + '\n');
+
   const midi = JZZ();
   let midiOut, midiIn;
   function connectMidi() {
@@ -53,6 +64,7 @@ async function main() {
         console.error('MIDI out error:', err.message);
         setTimeout(connectMidi, 1000);
       });
+
     }
     midiIn = midi.openMidiIn(midiLabel).or(() => {
       console.error('MIDI in failed');
@@ -76,7 +88,11 @@ async function main() {
 
   udp.on('message', msg => {
     if (msg.address === '/mn42/cmd' && msg.args.length) {
-      serial.write(JSON.stringify(msg.args[0]) + '\n');
+      let data = msg.args[0];
+      if (typeof data === 'string') {
+        try { data = JSON.parse(data); } catch { return; }
+      }
+      if (validCmd(data)) serial.write(JSON.stringify(data) + '\n');
     }
   });
 
