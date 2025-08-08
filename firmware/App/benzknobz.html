@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Benz EEPROM Settings Manager</title>
   <!--
+    This page is the raucous front door to your MOARkNOBZ.
+    It uses the browser's Web Serial API to trade JSON with the firmware.
+    Perfect for learning how a web app can boss around embedded gear.
+  -->
+  <!--
     WebSerial refuses to jam from a file:// URL.
     Spin up a quick server:
       $ cd firmware/App
@@ -229,6 +234,7 @@ button:hover {
     return {p,s,wrap};
   });
 
+    // connect() cranks open a Web Serial port and syncs the UI with device state.
     async function connect() {
       try {
         setStatus("🔌 Opening port…");
@@ -265,6 +271,7 @@ button:hover {
         new Promise(res => lineWaiters.push(res));
     }
 
+    // send() shoots a command down the wire and waits for a single-line comeback.
     async function send(cmd) {
       try {
         const packet = encoder.encode(cmd + "\n");
@@ -277,6 +284,7 @@ button:hover {
       }
     }
 
+    // readLoop() munches incoming bytes, updates meters, and keeps the vibe alive.
     async function readLoop() {
       let buf = "";
       try {
@@ -361,6 +369,7 @@ button:hover {
         }
       }
 
+  // loadConfig() pulls the full config payload from the device.
   async function loadConfig() {
         try {
           setStatus("Loading config…");
@@ -397,6 +406,7 @@ button:hover {
       }
     }
 
+// buildForm() dynamically creates form controls based on the firmware's schema.
 function buildForm(schema, values) {
   const container = document.getElementById("form");
   container.innerHTML = "";
@@ -499,6 +509,7 @@ function buildForm(schema, values) {
   }
 }
 
+// saveConfig() marshals the current form values and sends them back to the box.
 async function saveConfig() {
   try {
     setStatus("Saving…");
@@ -561,8 +572,9 @@ saveBtn.addEventListener("click", saveConfig);
 <body>
   <h1>MOARkNOBZ Configurator</h1>
   <button id="connect">Connect</button>
-  <div id="main-layout">
-    <div id="sidebar">
+    <div id="main-layout">
+      <div id="sidebar">
+      <!-- Filter section: shapes raw pot data before it hits the sound engine -->
       <fieldset id="filter-settings">
         <legend>Filter</legend>
         <label data-tooltip="Filter curve applied to pot motion. LINEAR keeps it straight, RANDOM goes rogue.">Type
@@ -579,6 +591,7 @@ saveBtn.addEventListener("click", saveConfig);
         <label data-tooltip="Cutoff frequency in Hz. 20–5000">Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
         <label data-tooltip="Resonance. Higher Q = sharper bite">Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
       </fieldset>
+      <!-- ARG Pair section: dial in the envelope follower gains -->
       <fieldset id="arg-settings">
         <legend>ARG Pair</legend>
         <label data-tooltip="ARG engine on or off?">Enable
@@ -594,6 +607,7 @@ saveBtn.addEventListener("click", saveConfig);
     <div id="form"></div>
   </div>
 
+  <!-- LED color picker - make those blinkenlights scream -->
   <fieldset id="led-settings">
     <legend>LED Colors</legend>
 
