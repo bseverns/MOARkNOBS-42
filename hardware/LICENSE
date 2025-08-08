@@ -1,0 +1,49 @@
+CERN Open Hardware Licence Version 2 - Strongly Reciprocal
+
+Preamble
+
+CERN has developed this licence to promote collaboration among hardware designers and to provide a legal framework for the distribution and improvement of open hardware designs.
+
+1 Definitions
+
+"Licence" means this CERN Open Hardware Licence Version 2 - Strongly Reciprocal.
+"Licensee" means a person exercising rights under this Licence.
+"Documentation" means schematic diagrams, designs, circuit or circuit board layouts, mechanical drawings, flow charts, descriptive text, specifications and other explanatory material, all sufficiently detailed for a skilled person to reproduce the Product.
+"Product" means any device or physical object, whether in finished or intermediate form, arising from Documentation.
+"Source" means the preferred form of the Documentation for making modifications to it.
+"Modified Documentation" means any Documentation modified by the Licensee.
+"Product Modification" means any change to the Product, including without limitation, any new physical object or device arising from the Product or Documentation.
+
+2 Application of this Licence
+
+2.1 This Licence governs the copying, modification and distribution of the Documentation, and the manufacture and distribution of Products.
+2.2 The Licensor hereby grants to the Licensee a worldwide, royalty-free, non-exclusive licence:
+    a) to copy, modify, communicate to the public and distribute the Documentation,
+    b) to make, use, sell, offer for sale, import, export or otherwise distribute the Product.
+
+3 Copying, Modifying and Distributing the Documentation
+
+3.1 The Licensee shall provide a copy of this Licence to any person to whom the Licensee distributes the Documentation or a Product.
+3.2 Any Modified Documentation must be released under the terms and conditions of this Licence.
+3.3 The Licensee must maintain all copyright, patent, trademark and attribution notices in the Documentation and Modified Documentation.
+
+4 Making and Distributing Products
+
+4.1 The Licensee may manufacture or distribute Products.
+4.2 Products must retain the notices referred to in section 3.3 where practical.
+
+5 Warranty and Liability
+
+5.1 DISCLAIMER: THE DOCUMENTATION AND PRODUCT ARE PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT ARE DISCLAIMED.
+5.2 IN NO EVENT SHALL THE LICENSOR OR ANY CONTRIBUTOR BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS DOCUMENTATION OR PRODUCT, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+6 Patents
+
+6.1 The Licensor grants to the Licensee a perpetual, worldwide, royalty-free, non-exclusive licence under any patent it holds, to the extent necessary to make, use, sell, offer for sale, import, export or otherwise distribute the Product.
+
+7 General
+
+7.1 This Licence is governed by the laws of Switzerland.
+7.2 If any provision of this Licence is held to be unenforceable, such provision shall be severed from this Licence and the remaining provisions shall remain in full force and effect.
+7.3 Any dispute arising from or relating to this Licence shall be resolved by the competent courts of Geneva, Switzerland.
+

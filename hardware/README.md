@@ -79,4 +79,5 @@ The envelope follower front-end is a noise magnet, so we drenched it in a GND po
 
 ## License
 
-All hardware files are released under the MIT License, matching the rest of this repository. See the [LICENSE](../LICENSE) file for details.
+These board blueprints are under the CERN Open Hardware Licence v2 - Strongly Reciprocal. Remix, fab, and share alike. Scope the [LICENSE](LICENSE) in this folder for the full legal spiel.
+
