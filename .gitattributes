@@ -5,5 +5,5 @@
 *.stl binary
 *.step binary
 *.xlsx binary
-*.epro binary
-firmware/test/README -text
+*.eprj binary
+firmware/test/README.md -text
