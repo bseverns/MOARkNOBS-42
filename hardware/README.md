@@ -8,6 +8,15 @@
 
 ![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_3-PWR-BUTTON-TEST.png)
 
+## Specs
+
+- **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show.
+- **Addressable LEDs**: 10 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots.
+- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV.
+- **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A.
+
+The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will.
+
 ## Directory Layout
 
 - **MN42-1/** – first board spin, complete with BOMs, Gerbers and printable shells.
