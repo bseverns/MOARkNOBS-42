@@ -36,6 +36,20 @@ Flags:
 
 The bridge waits for `{"hello":"mn42"}` from the controller before it starts spewing data. Each JSON line from the serial port is parsed and shotgunned to both OSC and MIDI. Incoming OSC or MIDI messages get repackaged as JSON and fired back at the controller.
 
+## Install
+
+Bring Node.js 12 or later—the `serialport` dependency won't slum it with anything older, and we tend to jam on Node 18+.
+
+```bash
+npm install
+```
+
+Feeling deterministic? Swap in the lockstep version:
+
+```bash
+npm ci
+```
+
 ## Testing vibes
 
 This repo doesn't ship with a hardware mock. To prove the script at least boots:
