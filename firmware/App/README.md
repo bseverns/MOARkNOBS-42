@@ -26,6 +26,23 @@ For an overview of the entire project see the [repo README](../../README.md).
 
 The schema used to build the form lives in `config_schema.json` in this folder.
 
+## What You Can Tweak
+
+This little app lets you boss the board around without touching code. Dial in:
+
+- **Brightness** – decide how blinding the EF meters blaze. Dim for stealth or crank it to stage-lamp levels.
+- **Color** – repaint the control beacon and pot halos to match your vibe.
+- **Slot mappings** – reshuffle which physical knob controls which slot. Break the factory order and claim your own layout.
+
+## Troubleshooting
+
+If the browser throws a permission tantrum when you hit **Connect**:
+
+- Chrome or Edge will only talk WebSerial over secure origins. Use `http://localhost` or host it with HTTPS.
+- If the permission prompt ghosts you, click the little plug icon in the address bar and flip Serial to **Allow**.
+- Said “no” once? The browser holds grudges. Clear the block in site settings, then reconnect.
+- Still stuck? Yank the USB cable and plug it back in. Sometimes hardware needs a quick reality check.
+
 For the gritty details of the serial stream, peep the [WebSerial protocol doc](../../docs/WebSerial.md).
 
 *(Screenshot generation was not possible in this environment.)*
