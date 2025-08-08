@@ -1,6 +1,6 @@
 # WebSerial Configuration App
 
-`benzknobz.html` is a very small HTML page used to edit the MOARkNOBS controller configuration over USB. It relies on the Web Serial API so you need Chrome or Edge. The latest schema exposes brightness and colour settings for the new EF meters, control beacon and pot halos.
+`benzknobz.html` is a very small HTML page used to edit the MOARkNOBS controller configuration over USB. It relies on the Web Serial API so you need Chrome or Edge. The latest schema now covers **ARG method selection**, **envelope‑follower slot assignments**, and **per‑LED colour tweaks** alongside brightness for the EF meters, control beacon and pot halos.
 
 The page reads a JSON schema and the current settings from the board, builds a form and then lets you push changes back.
 
@@ -31,8 +31,9 @@ The schema used to build the form lives in `config_schema.json` in this folder.
 This little app lets you boss the board around without touching code. Dial in:
 
 - **Brightness** – decide how blinding the EF meters blaze. Dim for stealth or crank it to stage-lamp levels.
-- **Color** – repaint the control beacon and pot halos to match your vibe.
+- **Colours for every LED** – paint each halo or meter however you like. Psychedelic rainbows encouraged.
 - **Slot mappings** – reshuffle which physical knob controls which slot. Break the factory order and claim your own layout.
+- **Envelope routing** – point each envelope follower at a slot and pick an ARG method with your favourite A/B combo. Chaos becomes configurable.
 
 ## Troubleshooting
 
