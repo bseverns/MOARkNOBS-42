@@ -47,7 +47,9 @@ GET_LED
 ```
 
 `SET_LED` dials the strip’s brightness and RGB vibe (all 0‑255). `GET_LED`
-returns the current `brightness,r,g,b` quartet.
+returns the current `brightness,r,g,b` quartet. Feeling lazy? You can also chuck a
+colour hex into `SET_ALL` like `{"led":{"color":"#00ffee"}}` and the board
+will wake up wearing that shade.
 
 ### Pick an ARG Method
 
