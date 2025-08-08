@@ -17,8 +17,9 @@
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
 #include <TimerOne.h>
+#include <ArduinoJson.h>
 #include <queue>
-#include <map> // For tracking pot-to-envelope associations
+#include <map>
 
 struct HardwareConfigInitializer { HardwareConfigInitializer() { loadHardwareConfig(); } } _hwInit;
 
@@ -166,7 +167,33 @@ void processSerial() {
             }
 
         } else if (command.startsWith("SET_ALL")) {
-            Utility::processBulkUpdate(command, configManager.getNumPots());
+            String payload = command.substring(8);
+            if (payload.startsWith("{")) {
+                StaticJsonDocument<256> doc;
+                DeserializationError err = deserializeJson(doc, payload);
+                if (err) {
+                    Serial.println("ERR");
+                } else {
+                    if (doc.containsKey("led")) {
+                        JsonObject led = doc["led"];
+                        uint8_t brightness = led.containsKey("brightness") ? led["brightness"].as<uint8_t>() : ledManager.getBrightness();
+                        ledManager.setBrightness(brightness);
+                        CRGB color = ledManager.getColor();
+                        if (led.containsKey("color")) {
+                            const char* cstr = led["color"];
+                            if (cstr && cstr[0] == '#' && strlen(cstr) == 7) {
+                                long rgb = strtol(cstr + 1, nullptr, 16);
+                                color = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+                                ledManager.setColor(color);
+                            }
+                        }
+                        configManager.saveLEDSettings(brightness, color);
+                    }
+                    Serial.println("OK");
+                }
+            } else {
+                Utility::processBulkUpdate(command, configManager.getNumPots());
+            }
 
         } else if (command.startsWith("GET_ALL")) {
             // Send all pot settings

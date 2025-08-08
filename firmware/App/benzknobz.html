@@ -391,7 +391,24 @@ button:hover {
 function buildForm(schema, values) {
   const container = document.getElementById("form");
   container.innerHTML = "";
+  const ledContainer = document.getElementById("led-settings");
+  if (ledContainer) ledContainer.innerHTML = "<legend>LED Colors</legend>";
   for (const field of schema) {
+    if (field.key === "ledColors") {
+      const count = field.count || 0;
+      for (let i = 0; i < count; i++) {
+        const val = values[field.key]?.[i]?.color || "#000000";
+        const inp = document.createElement("input");
+        inp.type = "color";
+        inp.name = `ledColors[${i}].color`;
+        inp.value = val;
+        const lab = document.createElement("label");
+        lab.textContent = `LED ${i + 1}`;
+        lab.appendChild(inp);
+        ledContainer.appendChild(lab);
+      }
+      continue;
+    }
     if (field.type === "group") {
       const groupEl = document.createElement("fieldset");
       groupEl.innerHTML = `<legend>${field.label}</legend>`;
@@ -493,6 +510,11 @@ async function saveConfig() {
       }
     });
 
+    const ledInputs = document.querySelectorAll("#led-settings input[type='color']");
+    if (ledInputs.length) {
+      data.ledColors = Array.from(ledInputs).map(inp => ({ color: inp.value }));
+    }
+
     await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
     await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
     await send(`SET_ARGPAIR ${argAEl.value},${argBEl.value}`);
@@ -558,6 +580,12 @@ saveBtn.addEventListener("click", saveConfig);
   </div>
 
   <button id="save" disabled>Save</button>
+
+    <fieldset id="led-settings">
+      <legend>LED Colors</legend>
+    </fieldset>
+
+    <button id="save" disabled>Save</button>
   <div id="status"></div>
   <details>
     <summary>Debug Log</summary>
