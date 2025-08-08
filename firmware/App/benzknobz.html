@@ -126,6 +126,32 @@ button:hover {
       text-align: center;
       margin-top: 8px;
       font-size: 14px;
+
+
+    [data-tooltip] {
+      position: relative;
+      cursor: help;
+    }
+    [data-tooltip]:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #333;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      z-index: 10;
+      transform: translateY(4px);
+
+    #log {
+      background: #000;
+      color: #0f0;
+      padding: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+
     }
   </style>
   <script type="module">
@@ -140,9 +166,16 @@ button:hover {
   const envContainer  = document.getElementById("envelopes");
   const argMethodEl   = document.getElementById("arg-method");
 
+  const logEl = document.getElementById("log");
+
+  function setStatus(msg, isError = false) {
+    statusEl.style.color = isError ? '#ff073a' : '#ffcc00';
+    statusEl.textContent = msg;
+  }
+
   // Show a nudge if we're loaded from disk and not over HTTP(S)
   if (location.protocol === 'file:') {
-    statusEl.textContent = 'Serve this page with "python3 -m http.server" so WebSerial will cooperate.';
+    setStatus('Serve this page with "python3 -m http.server" so WebSerial will cooperate.');
   }
 
   const slotEls = Array.from({length:42}, () => {
@@ -169,16 +202,10 @@ button:hover {
     envContainer.appendChild(wrap);
     return {p,s,wrap};
   });
-  // filter + ARG inputs
-  const filterTypeEl = document.getElementById("filter-type");
-  const filterFreqEl = document.getElementById("filter-freq");
-  const filterQEl    = document.getElementById("filter-q");
-  const argAEl       = document.getElementById("arg-a");
-  const argBEl       = document.getElementById("arg-b");
 
     async function connect() {
       try {
-        statusEl.textContent = "🔌 Opening port…";
+        setStatus("🔌 Opening port…");
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 31250 });
 
@@ -188,7 +215,7 @@ button:hover {
         reader = textDecoder.readable.getReader();
         writer = port.writable.getWriter();
 
-        statusEl.textContent = "Connected.";
+        setStatus("Connected.");
         connectBtn.disabled = true;   // disable connect after success
         saveBtn.disabled    = false;  // allow saving now
 
@@ -197,11 +224,10 @@ button:hover {
         const schema = await loadSchema();
         const config = await loadConfig();
         buildForm(schema, config);
-        await loadFilter();
-        await loadARGPair();
       } catch (err) {
         console.error(err);
-        statusEl.textContent = `Connection failed: ${err.message || err}`;
+        setStatus(`Connection failed: ${err.message || err}`, true);
+        throw err;
       }
     }
 
@@ -212,34 +238,48 @@ button:hover {
     }
 
     async function send(cmd) {
-      const packet = encoder.encode(cmd + "\n");
-      await writer.write(packet);
-      return await getLine();
+      try {
+        const packet = encoder.encode(cmd + "\n");
+        await writer.write(packet);
+        return await getLine();
+      } catch (err) {
+        console.error(err);
+        setStatus(`Send fail: ${err.message || err}`, true);
+        throw err;
+      }
     }
 
     async function readLoop() {
       let buf = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buf += value;
-        let idx;
-        while ((idx = buf.indexOf("\n")) >= 0) {
-          const line = buf.slice(0, idx).trim();
-          buf = buf.slice(idx + 1);
-          if (!line) continue;
-          try {
-            const msg = JSON.parse(line);
-            if (msg.slots && msg.envelopes) {
-              drawState(msg);
-              continue;
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf += value;
+          let idx;
+          while ((idx = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, idx).trim();
+            buf = buf.slice(idx + 1);
+            if (!line) continue;
+            if (logEl) logEl.textContent += line + "\n";
+            try {
+              const msg = JSON.parse(line);
+              if (msg.slots && msg.envelopes) {
+                drawState(msg);
+                continue;
+              }
+            } catch (e) {
+              // not JSON, treat as raw line
             }
-          } catch (e) {
-            // not JSON, treat as raw line
+            if (lineWaiters.length) lineWaiters.shift()(line);
+            else lineQueue.push(line);
           }
-          if (lineWaiters.length) lineWaiters.shift()(line);
-          else lineQueue.push(line);
         }
+      } finally {
+        port = null;
+        setStatus("Port closed.", true);
+        connectBtn.disabled = false;
+        saveBtn.disabled = true;
       }
     }
 
@@ -283,24 +323,24 @@ button:hover {
 
     async function loadSchema() {
         try {
-          statusEl.textContent = "Loading schema…";
+          setStatus("Loading schema…");
           const raw = await send("GET_SCHEMA");
-          statusEl.textContent = "Schema loaded.";
+          setStatus("Schema loaded.");
           return JSON.parse(raw);
         } catch (err) {
-          statusEl.textContent = `Schema error: ${err.message || err}`;
+          setStatus(`Schema error: ${err.message || err}`, true);
           throw err;
         }
       }
 
   async function loadConfig() {
         try {
-          statusEl.textContent = "Loading config…";
+          setStatus("Loading config…");
           const raw = await send("GET_ALL");
-          statusEl.textContent = "Config loaded.";
+          setStatus("Config loaded.");
           return JSON.parse(raw);
         } catch (err) {
-          statusEl.textContent = `Config error: ${err.message || err}`;
+          setStatus(`Config error: ${err.message || err}`, true);
           throw err;
         }
       }
@@ -313,7 +353,7 @@ button:hover {
         filterFreqEl.value = freq;
         filterQEl.value = q;
       } catch (err) {
-        statusEl.textContent = `Filter load fail: ${err.message || err}`;
+        setStatus(`Filter load fail: ${err.message || err}`, true);
       }
     }
 
@@ -324,7 +364,7 @@ button:hover {
         argAEl.value = a;
         argBEl.value = b;
       } catch (err) {
-        statusEl.textContent = `ARG load fail: ${err.message || err}`;
+        setStatus(`ARG load fail: ${err.message || err}`, true);
       }
     }
 
@@ -335,64 +375,134 @@ function buildForm(schema, values) {
     if (field.type === "group") {
       const groupEl = document.createElement("fieldset");
       groupEl.innerHTML = `<legend>${field.label}</legend>`;
-      for (let i=0; i< (field.count||1); i++) {
+      const count = field.count || 1;
+      for (let i = 0; i < count; i++) {
         const sub = document.createElement("div");
         for (const f of field.fields) {
           const key = `${field.key}[${i}].${f.subkey}`;
-          const val = values[field.key][i][f.subkey];
-          sub.innerHTML += `
-            <label>${f.label} ${i}:
-              <input name="${key}" type="${f.type}"
-                     value="${val}"
-                     ${f.min?`min=${f.min}`:""} ${f.max?`max=${f.max}`:""}
-                     ${f.step?`step=${f.step}`:""}>
-            </label>
-          `;
+          const val = values[field.key]?.[i]?.[f.subkey];
+          const labelText = `${f.label}${count>1?` ${i}`:""}`;
+          if (f.type === "select") {
+            const sel = document.createElement("select");
+            sel.name = key;
+            for (const opt of f.options) {
+              sel.innerHTML += `<option value="${opt}" ${val===opt?"selected":""}>${opt}</option>`;
+            }
+            const lab = document.createElement("label");
+            lab.textContent = labelText;
+            lab.appendChild(sel);
+            sub.appendChild(lab);
+          } else if (f.type === "boolean") {
+            const inp = document.createElement("input");
+            inp.type = "checkbox";
+            inp.name = key;
+            if (val) inp.checked = true;
+            const lab = document.createElement("label");
+            lab.textContent = labelText;
+            lab.appendChild(inp);
+            sub.appendChild(lab);
+          } else {
+            const inp = document.createElement("input");
+            inp.type = f.type;
+            inp.name = key;
+            if (val !== undefined) inp.value = val;
+            if (f.min !== undefined) inp.min = f.min;
+            if (f.max !== undefined) inp.max = f.max;
+            if (f.step !== undefined) inp.step = f.step;
+            const lab = document.createElement("label");
+            lab.textContent = labelText;
+            lab.appendChild(inp);
+            sub.appendChild(lab);
+          }
         }
         groupEl.appendChild(sub);
       }
       container.appendChild(groupEl);
-    }
-    else if (field.type === "select") {
+    } else if (field.type === "select") {
       const sel = document.createElement("select");
       sel.name = field.key;
       for (const opt of field.options) {
-        sel.innerHTML += `<option value="${opt}"
-            ${values[field.key]===opt?"selected":""}>${opt}</option>`;
+        sel.innerHTML += `<option value="${opt}" ${values[field.key]===opt?"selected":""}>${opt}</option>`;
       }
-      container.innerHTML += `<label>${field.label}</label>`;
-      container.appendChild(sel);
+      const lab = document.createElement("label");
+      lab.textContent = field.label;
+      lab.appendChild(sel);
+      container.appendChild(lab);
+    } else if (field.type === "boolean") {
+      const chk = document.createElement("input");
+      chk.type = "checkbox";
+      chk.name = field.key;
+      if (values[field.key]) chk.checked = true;
+      const lab = document.createElement("label");
+      lab.textContent = field.label;
+      lab.appendChild(chk);
+      container.appendChild(lab);
+    } else {
+      const inp = document.createElement("input");
+      inp.type = field.type;
+      inp.name = field.key;
+      if (values[field.key] !== undefined) inp.value = values[field.key];
+      if (field.min !== undefined) inp.min = field.min;
+      if (field.max !== undefined) inp.max = field.max;
+      if (field.step !== undefined) inp.step = field.step;
+      const lab = document.createElement("label");
+      lab.textContent = field.label;
+      lab.appendChild(inp);
+      container.appendChild(lab);
     }
   }
 }
 
 async function saveConfig() {
   try {
-    statusEl.textContent = "Saving…";
+    setStatus("Saving…");
     const data = {};
     const form = document.querySelector("#form");
-    new FormData(form).forEach((v,k) => {
-      const m = k.match(/([^.]+)\[(\d+)\]\.(.+)/);
+    Array.from(form.elements).forEach(el => {
+      if (!el.name) return;
+      const raw = el.type === "checkbox" ? el.checked : el.value;
+      const v = el.type === "checkbox" ? raw : (isNaN(raw) ? raw : +raw);
+      const m = el.name.match(/([^.]+)\[(\d+)\]\.(.+)/);
       if (m) {
-        data[m[1]] = data[m[1]]||[];
-        data[m[1]][+m[2]] = data[m[1]][+m[2]]||{};
-        data[m[1]][+m[2]][m[3]] = isNaN(v)?v: +v;
+        const [_, group, idx, sub] = m;
+        data[group] = data[group] || [];
+        data[group][+idx] = data[group][+idx] || {};
+        data[group][+idx][sub] = v;
       } else {
-        data[k] = isNaN(v)?v: +v;
+        data[el.name] = v;
       }
     });
+
     await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
     await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
     await send(`SET_ARGPAIR ${argAEl.value},${argBEl.value}`);
-    statusEl.textContent = "Save sent.";
+    setStatus("Save sent.");
   } catch (err) {
     console.error(err);
-    statusEl.textContent = `Save failed: ${err.message || err}`;
+    setStatus(`Save failed: ${err.message || err}`, true);
   }
 }
 
+// poll for a previously-granted port coming back from the void
+setInterval(async () => {
+  try {
+    if (port) return;
+    const ports = await navigator.serial.getPorts();
+    if (ports.length) {
+      setStatus('Device is back. Smash Connect?');
+      if (confirm('Device is back. Connect now?')) {
+        try { await connect(); } catch (_) { /* status already set */ }
+      }
+    }
+  } catch (err) {
+    console.error('reconnect poll', err);
+  }
+}, 5000);
+
 // wire it up
-connectBtn.addEventListener("click", connect);
+connectBtn.addEventListener("click", async () => {
+  try { await connect(); } catch (_) { /* status already set */ }
+});
 saveBtn.addEventListener("click", saveConfig);
 </script>
 
@@ -403,7 +513,7 @@ saveBtn.addEventListener("click", saveConfig);
     <div id="form"></div>
     <fieldset id="filter-settings">
       <legend>Filter</legend>
-      <label>Type
+      <label data-tooltip="Filter curve applied to pot motion. LINEAR keeps it straight, RANDOM goes rogue.">Type
         <select id="filter-type">
           <option value="0">LINEAR</option>
           <option value="1">OPPOSITE_LINEAR</option>
@@ -414,16 +524,21 @@ saveBtn.addEventListener("click", saveConfig);
           <option value="6">BANDPASS</option>
         </select>
       </label>
-      <label>Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
-      <label>Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
+      <label data-tooltip="Cutoff frequency in Hz. 20–5000">Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
+      <label data-tooltip="Resonance. Higher Q = sharper bite">Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
     </fieldset>
     <fieldset id="arg-settings">
       <legend>ARG Pair</legend>
-      <label>A <input id="arg-a" type="number" min="0" max="5"></label>
-      <label>B <input id="arg-b" type="number" min="0" max="5"></label>
+      <label data-tooltip="Envelope follower A gain">A <input id="arg-a" type="number" min="0" max="5"></label>
+      <label data-tooltip="Envelope follower B gain">B <input id="arg-b" type="number" min="0" max="5"></label>
     </fieldset>
+
     <button id="save" disabled>Save</button>
   <div id="status"></div>
+  <details>
+    <summary>Debug Log</summary>
+    <pre id="log"></pre>
+  </details>
   <div id="live">
     <h2>Live Slots</h2>
     <div id="slots"></div>

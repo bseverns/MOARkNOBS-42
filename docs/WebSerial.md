@@ -40,4 +40,4 @@ Less baggage means faster feedback. This protocol exists so you can patch in a b
 
 ## See It in Action
 
-Want a live demo? Fire up the [WebSerial configuration app](../firmware/App/README.md) and watch the slots and envelopes shimmy while you tweak settings.
+Want a live demo? Fire up the [WebSerial configuration app](../firmware/App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep [README_webserial.md](../firmware/App/README_webserial.md).
