@@ -1,8 +1,18 @@
 # LEDManager
 
-Part of the firmware `include` jungle. Scope the [parent README](../README.md) to see how the glow plugs in.
+Part of the firmware `include` jungle. Scope the [include README](../README.md) to see how the glow plugs in and the [main firmware README](../../README.md) for the megawatt overview.
 
 Runs the 52-piece WS2812 light riot and keeps it barely under control.
+
+## Where it fits
+
+LEDManager mirrors pot moves and config quirks on a WS2812 strip; EnvelopeFollower can hijack it for visual throb.
+
+```
+[Pots/Config] --> LEDManager --> WS2812 strip
+```
+
+Catch the full scene in the [main firmware README](../../README.md).
 
 ## Key Methods
 

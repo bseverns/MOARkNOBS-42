@@ -1,8 +1,20 @@
 # PotentiometerManager
 
-Part of the firmware `include` jungle. See the [parent README](../README.md) to map the territory.
+Part of the firmware `include` jungle. See the [include README](../README.md) to map the territory and the [main firmware README](../../README.md) for the whole rig.
 
 Reads the three real pots through a mess of muxes and smooths their jittery souls.
+
+## Where it fits
+
+PotentiometerManager sucks analog off the muxes, tells MIDIHandler what moved, and gives LEDManager and ConfigManager the numbers they need.
+
+```
+[Pots via mux] --> PotentiometerManager --> MIDIHandler
+                                    \-> LEDManager
+                                    \-> ConfigManager
+```
+
+See the bigger picture in the [main firmware README](../../README.md).
 
 ## Key Methods
 
