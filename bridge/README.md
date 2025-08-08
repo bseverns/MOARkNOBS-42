@@ -38,3 +38,33 @@ npm test
 
 If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
 
+## Example Session
+
+Need proof this gremlin works? Try this slam-dunk walkthrough.
+
+1. Kick the bridge to life:
+
+   ```bash
+   node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --midi "MN42 Bridge"
+   ```
+
+2. In another terminal, eavesdrop on the OSC noise:
+
+   ```bash
+   oscdump 9000
+   ```
+
+3. Sniff the MIDI echo too:
+
+   ```bash
+   aseqdump -p "MN42 Bridge"
+   ```
+
+4. Now hurl a `SET_POT` command at slot 2:
+
+   ```bash
+   oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+   ```
+
+   The hardware's slot 2 should snap to 95. `oscdump` spits back a `/mn42/slots` update and `aseqdump` coughs up a matching Control Change. That's the round trip—OSC in, MIDI out, and the rig obeys.
+
