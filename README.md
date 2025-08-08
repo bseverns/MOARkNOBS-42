@@ -3,9 +3,16 @@
 ![Title Image](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. If you're after the gritty details, dive into the subdirectories below. The latest board rev adds ten more WS2812s, bringing the grand total to fifty‑two LEDs: forty‑two for virtual slots, six tracking envelope follower levels, one beacon for the control buttons and three haloing the hardware knobs—one slot pot and a pair of filter‑tuning lights.
-As of this rev the box speaks NRPN, RPN, and even parses registered SysEx, so your DAW can't hide behind stock CCs anymore.
-RPN opens the door to spec-sanctioned tweaks like pitch range, while the universal SysEx decoder listens for identity blips and other standardized screeches.
+Hardware's finally nailed—no more bodge wires or last‑minute re‑spins. The board now drives 52 WS2812s, watches six envelope followers, and chats in NRPN, RPN, SysEx and the usual CC/Note circus.
+
+| Spec | Details |
+|------|---------|
+| LEDs | 52 WS2812 (42 slot + 6 EF + 1 control + 3 knob) |
+| Envelope follower channels | 6 |
+| MIDI protocol support | NRPN, RPN, CC, Note, Program Change, Pitch Bend, Aftertouch, SysEx |
+| Microcontroller | Teensy 4.0 (600 MHz Cortex‑M7) |
+
+This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. Dive into the subdirectories below for the gritty details.
 
 ## Features at a Glance
 
