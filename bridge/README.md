@@ -2,6 +2,14 @@
 
 Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** talk trash on modern networks.
 
+## System context
+
+Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial.
+
+```bash
+oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC -> serial sets pot 2 to 99
+```
+
 ## What's the gig?
 
 - **Serial** in at 31,250 baud.
