@@ -17,11 +17,20 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
 Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 ```json
-{"slots":[0,1,2,...,41],"envelopes":[0,0,0,0,0,0]}
+{
+  "slots":[0,1,2,...,41],
+  "envelopes":[0,0,0,0,0,0],
+  "currentSlot":5,
+  "argMethod":"PLUS",
+  "efStatus":[1,0,0,0,0,1]
+}
 ```
 
 - `slots` – 42 MIDI‑scaled values (0‑127) for each virtual slot.
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
+- `currentSlot` – which slot is currently screaming.
+- `argMethod` – firmware's current ARG calculation mode.
+- `efStatus` – array of six flags; `1` means that envelope follower is lit.
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 
