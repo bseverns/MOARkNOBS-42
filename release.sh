@@ -18,6 +18,14 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 mkdir -p "$ROOT_DIR/$OUTPUT_DIR"
 
 pushd "$ROOT_DIR/firmware" >/dev/null
+# Kick the tires before we torch the build server.
+echo "Running Unity tests..."
+pio test -e teensy40_unity || {
+  echo "Tests failed. Refusing to ship busted bits." >&2
+  exit 1
+}
+
+# If we made it here, the rig's cool. Build the main firmware.
 pio run -e teensy40_main
 cp .pio/build/teensy40_main/firmware.hex "$ROOT_DIR/$OUTPUT_DIR/mn42_${VERSION}.hex"
 popd >/dev/null
