@@ -19,7 +19,9 @@ The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, 
 
 ## Directory Layout
 
-- **MN42-1/** – first board spin, complete with BOMs, Gerbers and printable shells.
+- [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – the parts shopping list.
+- [Gerber_MOAR_Board_2025-08-08.zip](Gerber_MOAR_Board_2025-08-08.zip) – fab-ready package for the latest spin.
+- [shell/](shell/) – STEP and STL models of the enclosure.
 
 ## Power Rails Need Fat Copper
 
@@ -30,18 +32,17 @@ If you're routing or poking at the LED power network, keep the lifeblood thick:
 - `VLED`
 - any other LED power rail hiding in your design
 
-In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover the trace, and smash **Change Width** until it's **0.5 mm or wider**.  After you push the update, regenerate the Gerbers and pop open `Gerber_TopLayer.GTL`—the smallest `%ADD` aperture should scream `0.5` or bigger.  Thin copper means brown‑outs and sad pixels, so keep it beefy.
+In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover the trace, and smash **Change Width** until it's **0.5 mm or wider**.  After you push the update, regenerate the Gerbers and crack open `Gerber_MOAR_Board_2025-08-08.zip`'s `TopLayer.GTL`—the smallest `%ADD` aperture should scream `0.5` or bigger.  Thin copper means brown‑outs and sad pixels, so keep it beefy.
 
-## MN42-1
+## Fabrication Package
 
-The `MN42-1` folder holds the first PCB revision:
+Everything you need to spin boards is sitting in this repo, no scavenger hunt required:
 
-- [BOM_btnBRD_btnBRD_2025-04-17.xlsx](MN42-1/BOM_btnBRD_btnBRD_2025-04-17.xlsx) – complete bill of materials.
-- [PickAndPlace_btnBRD_2025-04-17.xlsx](MN42-1/PickAndPlace_btnBRD_2025-04-17.xlsx) – reference positions for automated assembly.
-- [Gerber_btnBRD_2025-04-17.zip](MN42-1/Gerber_btnBRD_2025-04-17.zip) – ready-to-send fabrication package.
-- `shell/` – STEP and STL models of the enclosure. `3DShell_btnBRD/` holds the STEP files, while `stl/` contains printable STL meshes.
+- [Gerber_MOAR_Board_2025-08-08.zip](Gerber_MOAR_Board_2025-08-08.zip) – unzip and punt it straight to your board house.
+- [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – full bill of materials.
+- `shell/` – STEP files in `3DShell_btnBRD/` and printable meshes in `stl/`.
 
-Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_MOAR_Schematic` folder contains exported PNG screenshots of the full EasyEDA schematic.
+Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_MOAR_Schematic` folder holds exported PNG screenshots of the full EasyEDA schematic.
 
 ### Sketch Documents
 
@@ -75,7 +76,7 @@ Below is a summary of the schematic sheets:
 
 ### Analog Ground Stitching
 
-The envelope follower front-end is a noise magnet, so we drenched it in a GND pour and pinned that copper down with vias every ~5 mm. Each stitch dives into the main ground plane so the envelope follower keeps quiet. If you mod this section or stretch the board, clone those vias and keep the spacing tight—same net, same vibe. Peek at `MN42-1/gerber/Drill_PTH_Through_Via.DRL` for the pattern and march them along your new edge.
+The envelope follower front-end is a noise magnet, so we drenched it in a GND pour and pinned that copper down with vias every ~5 mm. Each stitch dives into the main ground plane so the envelope follower keeps quiet. If you mod this section or stretch the board, clone those vias and keep the spacing tight—same net, same vibe. Peek inside `Gerber_MOAR_Board_2025-08-08.zip` for `Drill_PTH_Through_Via.DRL` to copy the pattern and march them along your new edge.
 
 ## License
 
