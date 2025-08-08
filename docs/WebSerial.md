@@ -34,6 +34,41 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 
+## Text Commands
+
+Spying is fun, but sometimes you gotta bark orders. Hurl plain‑text commands
+terminated with a newline and the firmware snaps back with either `OK` or `ERR`.
+
+### Paint the LEDs
+
+```
+SET_LED <brightness>,<r>,<g>,<b>
+GET_LED
+```
+
+`SET_LED` dials the strip’s brightness and RGB vibe (all 0‑255). `GET_LED`
+returns the current `brightness,r,g,b` quartet.
+
+### Pick an ARG Method
+
+```
+SET_ARGMETHOD <n>
+GET_ARGMETHOD
+```
+
+ARG mode can mash signals in seven different ways. Toss an index `0‑6` at
+`SET_ARGMETHOD` to lock one in; `GET_ARGMETHOD` spits the stored index back.
+
+### Rewire an Envelope Follower
+
+```
+SET_EF <slot>,<ef>
+GET_EF <slot>
+```
+
+Patch an envelope follower to a slot with `SET_EF`. Ask who’s riding shotgun
+with `GET_EF`, which replies with the follower number or `-1` if nobody showed.
+
 ## Why So Barebones?
 
 Less baggage means faster feedback. This protocol exists so you can patch in a browser, twist a pot, and immediately see the numbers jump. Fork it, abuse it, or teach it to do bigger tricks.

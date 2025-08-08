@@ -641,12 +641,12 @@ Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
 * Assign CCs visually
 * Set envelope pairings
-* Tweak filter types, EF settings, and ARG pairings
+* Tweak filter types, EF settings, ARG pairings, and LED colors
 * Save back to EEPROM over WebSerial
 
-### Filter & ARG WebSerial Commands
+### WebSerial Commands
 
-The browser flings a couple of plain-text orders over WebSerial and the
+The browser flings a couple of plain‑text orders over WebSerial and the
 firmware salutes:
 
 | Command | What it does |
@@ -655,6 +655,12 @@ firmware salutes:
 | `SET_FILTER <type,freq,q>` | Stores filter shape, cutoff and Q into EEPROM. |
 | `GET_ARGPAIR` | Spits back the two envelope indices blended in ARG mode. |
 | `SET_ARGPAIR <a,b>` | Persists a new envelope follower duo for ARG shenanigans. |
+| `GET_LED` | Returns `brightness,r,g,b` for the status strip. |
+| `SET_LED <b,r,g,b>` | Burns new brightness and color into EEPROM. |
+| `GET_ARGMETHOD` | Reports which ARG math trick is armed (0‑6). |
+| `SET_ARGMETHOD <n>` | Picks the ARG method to torment signals with. |
+| `GET_EF <slot>` | Tells which envelope follower owns a slot (`-1` = none). |
+| `SET_EF <slot,ef>` | Assigns follower `ef` to `slot` and saves it. |
 
 ## Development Timeline
 

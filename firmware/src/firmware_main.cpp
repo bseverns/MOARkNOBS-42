@@ -191,6 +191,77 @@ void processSerial() {
             Serial.print(ledColor.g);
             Serial.print(",");
             Serial.println(ledColor.b);
+        } else if (command == "GET_LED") {
+            CRGB c = ledManager.getColor();
+            Serial.print(ledManager.getBrightness());
+            Serial.print(",");
+            Serial.print(c.r);
+            Serial.print(",");
+            Serial.print(c.g);
+            Serial.print(",");
+            Serial.println(c.b);
+        } else if (command.startsWith("SET_LED")) {
+            int first = command.indexOf(',');
+            int second = command.indexOf(',', first + 1);
+            int third = command.indexOf(',', second + 1);
+            if (first == -1 || second == -1 || third == -1) {
+                Serial.println("ERR");
+            } else {
+                int brightness = command.substring(8, first).toInt();
+                int r = command.substring(first + 1, second).toInt();
+                int g = command.substring(second + 1, third).toInt();
+                int b = command.substring(third + 1).toInt();
+                if (brightness >= 0 && brightness <= 255 &&
+                    r >= 0 && r <= 255 &&
+                    g >= 0 && g <= 255 &&
+                    b >= 0 && b <= 255) {
+                    CRGB color(r, g, b);
+                    ledManager.setBrightness(brightness);
+                    ledManager.setColor(color);
+                    configManager.saveLEDSettings(brightness, color);
+                    Serial.println("OK");
+                } else {
+                    Serial.println("ERR");
+                }
+            }
+        } else if (command == "GET_ARGMETHOD") {
+            Serial.println(configManager.getARGMethod());
+        } else if (command.startsWith("SET_ARGMETHOD")) {
+            int method = command.substring(14).toInt();
+            if (method >= 0 && method <= 6) {
+                for (auto &ef : envelopeFollowers) {
+                    ef.setARGMethod(static_cast<EnvelopeFollower::ARG_Method>(method));
+                }
+                configManager.setARGMethod(method);
+                Serial.println("OK");
+            } else {
+                Serial.println("ERR");
+            }
+        } else if (command.startsWith("GET_EF")) {
+            int potIndex = command.substring(7).toInt();
+            if (potIndex >= 0 && potIndex < NUM_POTS) {
+                int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
+                Serial.println(env);
+            } else {
+                Serial.println("ERR");
+            }
+        } else if (command.startsWith("SET_EF")) {
+            int comma = command.indexOf(',');
+            if (comma == -1) {
+                Serial.println("ERR");
+            } else {
+                int potIndex = command.substring(7, comma).toInt();
+                int envIndex = command.substring(comma + 1).toInt();
+                if (potIndex >= 0 && potIndex < NUM_POTS &&
+                    envIndex >= 0 && envIndex < (int)envelopeFollowers.size()) {
+                    potToEnvelopeMap[potIndex] = envIndex;
+                    envelopeFollowers[envIndex].toggleActive(true);
+                    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+                    Serial.println("OK");
+                } else {
+                    Serial.println("ERR");
+                }
+            }
         } else if (configManager.handleCommand(command)) {
             // handled inside ConfigManager
         } else {
