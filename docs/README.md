@@ -16,6 +16,7 @@ Highlights:
   - [envelopeFE.md](sketch/envelopeFE.md) — analog envelope follower circuits.
   - Plenty more (midi opto, power antics, board PDFs) for late-night study.
 - [WebSerial.md](WebSerial.md) — how the board chats with browsers.
+- [OSCBridge.md](OSCBridge.md) — hurl OSC at a Node shim and let it punch MIDI into the hardware.
 - [thermal/](thermal/) — keep the silicon from frying itself.
 
 ## Cross-Pollination

@@ -14,6 +14,7 @@ RPN opens the door to spec-sanctioned tweaks like pitch range, while the univers
 - **Six envelope followers** – feed it audio or CV and watch live signals hijack any slot. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
 - **Built-in arpeggiator** – clock-locked riffs for any slot; twist the filter knobs to bend length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
 - **WebSerial editor** – tweak and spy on settings right from your browser, no drivers, no mercy. [WebSerial guide](docs/WebSerial.md).
+- **OSC/WebMIDI bridge** – hurl OSC at the Node shim and it slings MIDI at the box. [Bridge playbook](docs/OSCBridge.md).
 ## Quick Start
 
 1. **Install the Python tools** – `pip install -r requirements.txt` snags PlatformIO (and any future Python riffraff). Old‑school? Fire up the Arduino IDE with Teensyduino instead.
