@@ -46,7 +46,8 @@
     "label": "LED",
     "type": "group",
     "fields": [
-      { "subkey": "brightness", "label": "Brightness", "type": "number", "min": 0, "max": 255 }
+      { "subkey": "brightness", "label": "Brightness", "type": "number", "min": 0, "max": 255 },
+      { "subkey": "color", "label": "Color", "type": "color" }
     ]
   },
   {
