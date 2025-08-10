@@ -2,8 +2,14 @@
 #define private public
 #include "MIDIHandler.h"
 #undef private
+
 MidiInterfaceStub MIDI;
-MidiInterfaceStub usbMIDI;
+struct USBMidiStub : MidiInterfaceStub {
+    bool nextRead = false;
+    midi::MidiType nextType = midi::NoteOff;
+    bool read() { bool r = nextRead; nextRead = false; return r; }
+    midi::MidiType getType() { return nextType; }
+} usbMIDI;
 HardwareSerial Serial1;
 #include <unity.h>
 
@@ -78,6 +84,21 @@ void test_send_sysex() {
     }
 }
 
+void test_drop_unsupported_usb_type() {
+    MIDIHandler mh;
+    MIDI.ccCount = usbMIDI.ccCount = 0;
+    mh.clockTick = false;
+    mh.lastExternalClock = mh.lastInternalTick = 0;
+    usbMIDI.nextType = static_cast<midi::MidiType>(0x7F);
+    usbMIDI.nextRead = true;
+    mh.processIncomingMIDI();
+    TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(0, usbMIDI.ccCount);
+    TEST_ASSERT_FALSE(mh.clockTick);
+    TEST_ASSERT_EQUAL_UINT32(0, mh.lastExternalClock);
+    TEST_ASSERT_EQUAL_UINT32(0, mh.lastInternalTick);
+}
+
 void setUp() {}
 void tearDown() {}
 
@@ -89,6 +110,7 @@ void setup() {
     RUN_TEST(test_send_nrpn);
     RUN_TEST(test_receive_nrpn);
     RUN_TEST(test_send_sysex);
+    RUN_TEST(test_drop_unsupported_usb_type);
     UNITY_END();
 }
 
