@@ -16,6 +16,7 @@
 #include <map>
 #include "Globals.h"
 #include "Utility.h"
+#include "Arpeggiator.h"
 #include "BiquadFilter.h"
 #include "ConfigManager.h"
 #include "LEDManager.h"
@@ -50,6 +51,8 @@ ButtonManager buttonManager = createButtonManager(&potentiometerManager);
 
 // Envelope followers (unchanged)
 std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&potentiometerManager);
+
+Arpeggiator arpeggiator;  // Test stub
 
 // ———————— Helpers ——————————————
 
