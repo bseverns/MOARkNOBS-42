@@ -362,7 +362,7 @@ void monitorSystemLoad() {
     static unsigned long taskCounter = 0;
 
     taskCounter++;
-    if (millis() - lastMonitorTime >= 1000) { // Log every second
+    if (millis() - lastMonitorTime >= 1000UL) { // Log every second
         Serial.printf("Tasks per second: %lu\n", taskCounter);
         taskCounter = 0;
         lastMonitorTime = millis();
@@ -435,7 +435,7 @@ void updateNoteDynamics() {
     int rawProb  = buttonManager.getControlPotValue(2);
 
     velocityShift    = map(rawShift, 0, 1023, -64, 63);
-    changeProbability = map(rawProb, 0, 1023, 0, 100);
+    changeProbability = static_cast<uint8_t>(map(rawProb, 0, 1023, 0, 100));
 
     String line2 = String("Vel ") + String(velocityShift);
     String line3 = String("Prob ") + String(changeProbability) + "%";
@@ -488,7 +488,7 @@ void setup() {
             int shifted = velo + velocityShift;
             if (shifted < 0)   shifted = 0;
             if (shifted > 127) shifted = 127;
-            if (random(100) >= changeProbability) break;
+            if (random(100U) >= changeProbability) break;
             midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
             // schedule Note-Off in 100 ms
             Utility::schedulerHigh.addTask([=](){
