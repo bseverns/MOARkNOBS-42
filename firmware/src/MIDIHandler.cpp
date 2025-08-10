@@ -105,6 +105,22 @@ void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
     }
 }
 
+static bool isSupportedType(midi::MidiType t) {
+    switch (t) {
+        case midi::ControlChange:
+        case midi::NoteOn:
+        case midi::NoteOff:
+        case midi::ProgramChange:
+        case midi::AfterTouchChannel:
+        case midi::PitchBend:
+        case midi::SystemExclusive:
+        case midi::Clock:
+            return true;
+        default:
+            return false;
+    }
+}
+
 void MIDIHandler::processIncomingMIDI() {
     // Serial MIDI is the crusty hardware port. When it spits out a full
     // message, read() returns true and we hurl the parsed bytes at
@@ -132,6 +148,10 @@ void MIDIHandler::processIncomingMIDI() {
     // the old-school wire.
     while (usbMIDI.read()) {
         auto type = usbMIDI.getType();
+        if (!isSupportedType(type)) {
+            MIDI_DBG_PRINTLN("Dropping unsupported USB MIDI type");
+            continue;
+        }
         if (type == midi::Clock) {
             clockTick = true;
             lastExternalClock = lastInternalTick = now();

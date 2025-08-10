@@ -3,6 +3,7 @@
 Part of the firmware `include` jungle. Scope the [include README](../README.md) to see where the bytes route and the [main firmware README](../../README.md) for the full wiring diagram.
 
 USB, DIN, whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
+USB input now filters out bogus message types, like a bouncer keeping the freaks off the dance floor.
 
 ## Where it fits
 
