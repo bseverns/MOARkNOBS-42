@@ -51,6 +51,12 @@ Offline, paranoid, or just punk? Clone [Adafruit_BusIO](https://github.com/adafr
 
 To update any vendored lib, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
 
+### Teensy Core Patches
+
+Some bits of the official Teensy core get loose with types and compare signed pointers against unsigned counts. That can flip a
+negative into a huge positive and invite buffer trashing. We stash patched copies under `lib/teensy_patches/` where the math is
+done with `size_t` from the get‑go. If upstream ever cleans it up, yank our shim and cruise on stock.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
