@@ -1,0 +1,8 @@
+#pragma once
+
+#define FASTLED_FORCE_TEENSY4 1
+#define FASTLED_NO_ATEXIT
+#define FASTLED_NO_PINMAP
+#define FASTLED_NO_JSON
+#define FASTLED_NO_FORCE_INLINE
+

@@ -51,6 +51,15 @@ Offline, paranoid, or just punk? Clone [Adafruit_BusIO](https://github.com/adafr
 
 To update any vendored lib, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
 
+#### FastLED: Teensy4 or bust
+
+FastLED normally drags a war chest of MCU support code into the build. We slam a custom config header at `lib/FastLEDConfig/src/FastLEDConfig.h` that:
+
+- forces the Teensy 4.0 platform with `FASTLED_FORCE_TEENSY4`.
+- strips unused subsystems with a handful of `FASTLED_NO_*` defines.
+
+Tweaking it is simple: crack open that header, flip defines on or off, then rebuild. If you re-enable something and the compiler starts pulling in half the Arduino zoo again, that's on you.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
