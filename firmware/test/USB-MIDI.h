@@ -1,4 +1,6 @@
 #pragma once
+
+#ifndef ARDUINO
 #include <cstdint>
 
 namespace midi {
@@ -66,3 +68,5 @@ struct HardwareSerial {};
 extern HardwareSerial Serial1;
 
 #define MIDI_CREATE_INSTANCE(type, serial, name)
+
+#endif // !ARDUINO

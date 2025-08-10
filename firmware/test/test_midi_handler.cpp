@@ -1,10 +1,10 @@
 #include "USB-MIDI.h"
-MidiInterfaceStub MIDI;
-MidiInterfaceStub usbMIDI;
-HardwareSerial Serial1;
 #define private public
 #include "MIDIHandler.h"
 #undef private
+MidiInterfaceStub MIDI;
+MidiInterfaceStub usbMIDI;
+HardwareSerial Serial1;
 #include <unity.h>
 
 void test_program_change() {

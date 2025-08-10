@@ -4,7 +4,11 @@
 #ifndef MIDIHANDLER_H
 #define MIDIHANDLER_H
 
+#ifdef ARDUINO
 #include "Arduino.h"
+#else
+class HardwareSerial;
+#endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
 
