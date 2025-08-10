@@ -5,6 +5,7 @@
 
 #include <Arduino.h>
 #include "DisplayManager.h"
+#include "TimeUtils.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "ButtonManager.h"
@@ -26,7 +27,7 @@ DisplayManager::DisplayManager(uint8_t i2cAddress,
     _activePot = 0;
     _activeChannel = 0;
     _activeMode = "MIDI";
-    _lastInteractionTime = millis();
+    _lastInteractionTime = now();
 }
 
 bool DisplayManager::begin() {
@@ -41,7 +42,7 @@ bool DisplayManager::begin() {
 void DisplayManager::triggerFade(uint16_t ms) {
     _fadeAnim.state = AnimState::FADE_IN;
     _fadeAnim.duration = ms;
-    _fadeAnim.lastTime = millis();
+    _fadeAnim.lastTime = now();
     _fadeAnim.brightness = 0;
 }
 
@@ -50,7 +51,7 @@ void DisplayManager::updateFadeAnimation() {
         return;
     }
 
-    uint32_t now = millis();
+    uint32_t now = ::now();
     uint32_t elapsed = now - _fadeAnim.lastTime;
 
     switch (_fadeAnim.state) {
@@ -122,11 +123,11 @@ void DisplayManager::runIdleScreensaver() {
 }
 
 void DisplayManager::registerInteraction() {
-    _lastInteractionTime = millis();
+    _lastInteractionTime = now();
 }
 
 bool DisplayManager::shouldRunScreensaver() const {
-    return (millis() - _lastInteractionTime > 90000);
+    return (now() - _lastInteractionTime > 90000);
 }
 
 
@@ -135,7 +136,7 @@ void DisplayManager::drawBorder() {
 }
 
 void DisplayManager::showText(const char* line1, const char* line2, const char* line3) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     clear();
     _display.setTextSize(1);
@@ -159,7 +160,7 @@ void DisplayManager::showText(const char* line1, const char* line2, const char* 
 }
 
 void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     if (clearDisplay) {
         _display.clearDisplay();
@@ -199,11 +200,11 @@ void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const cha
     }
     drawBorder();
     _display.display();
-    _statusTimeout = millis() + NORMAL_DISPLAY_TIME;
+    _statusTimeout = now() + NORMAL_DISPLAY_TIME;
 }
 
 void DisplayManager::showMode(const char *mode, bool clearDisplay) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     if (clearDisplay) {
         _display.clearDisplay();
@@ -219,7 +220,7 @@ void DisplayManager::showMode(const char *mode, bool clearDisplay) {
 }
 
 void DisplayManager::clear() {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.display();
@@ -259,7 +260,7 @@ void DisplayManager::showArpSettings(uint8_t lengthTicks, const char* shapeName)
 }
 
 void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode){
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.setTextSize(1);
@@ -292,13 +293,13 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
     _display.display();
 
     if (statusMessage && statusMessage[0] != '\0') {
-        _statusTimeout = millis() + NORMAL_DISPLAY_TIME;
+        _statusTimeout = now() + NORMAL_DISPLAY_TIME;
     }
 }
 
 void DisplayManager::displayStatus(const char *status, unsigned long duration) {
     _statusMessage = status;
-    _statusTimeout = millis() + duration;
+    _statusTimeout = now() + duration;
 
     _display.clearDisplay();
     _display.setTextSize(2);
@@ -309,7 +310,7 @@ void DisplayManager::displayStatus(const char *status, unsigned long duration) {
 }
 
 void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.setCursor(0, 0);
@@ -332,7 +333,7 @@ void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
 }
 
 void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     clear();
 
@@ -353,12 +354,12 @@ void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
     _display.println(envB);
 
     _display.display();
-    _statusTimeout = millis() + NORMAL_DISPLAY_TIME;
+    _statusTimeout = now() + NORMAL_DISPLAY_TIME;
 }
 
 void DisplayManager::setTemporaryMessage(const char* message, unsigned long duration) {
     _statusMessage = message;
-    _statusTimeout = millis() + duration;
+    _statusTimeout = now() + duration;
     clear();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
@@ -380,11 +381,11 @@ void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel)
     _display.print("Ch: ");
     _display.println(channel);
     _display.display();
-    _statusTimeout = millis() + SHORT_DISPLAY_TIME;
+    _statusTimeout = now() + SHORT_DISPLAY_TIME;
 }
 
 void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     _display.clearDisplay();
     _display.setTextSize(1);
@@ -412,7 +413,7 @@ void DisplayManager::endDraw() {
 }
 
 void DisplayManager::showError(const char* errorMessage, bool persistent) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     beginDraw();
     _display.setTextSize(1);
@@ -427,7 +428,7 @@ void DisplayManager::showError(const char* errorMessage, bool persistent) {
 }
 
 void DisplayManager::showEnvelopeLevel(uint8_t level) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     const int barHeight = 10;
     const int barY = _display.height() - barHeight;
@@ -437,7 +438,7 @@ void DisplayManager::showEnvelopeLevel(uint8_t level) {
 }
 
 void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
-    if (millis() < _statusTimeout) return;
+    if (now() < _statusTimeout) return;
 
     const int barHeight = 5;
     const int gap = 2;

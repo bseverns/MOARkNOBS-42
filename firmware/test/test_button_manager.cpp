@@ -1,11 +1,12 @@
 #define private public
 
+#include <Arduino.h>
+
 // Mock time so we can step through the long-press dance
 static unsigned long fakeMillis = 0;
-#define millis() (fakeMillis)
+unsigned long now() { return fakeMillis; }
 
 #include "ButtonManager.h"
-#undef millis
 #undef private
 #include "TestHelpers.h"
 #include <unity.h>

@@ -4,6 +4,7 @@
 
 #include "Utility.h"
 #include <Arduino.h>
+#include "TimeUtils.h"
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
 #include "EEPROM.h"
@@ -17,6 +18,9 @@
 // priorities.
 
 // Mapping and Value Transformations
+
+// Default time source; tests can override by defining their own now().
+unsigned long __attribute__((weak)) now() { return millis(); }
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
 }
@@ -68,7 +72,7 @@ void Utility::writeEEPROMByte(int address, uint8_t value) {
 
 // Timer Helpers
 bool Utility::isTimeElapsed(unsigned long& lastTime, unsigned long interval) {
-    unsigned long currentTime = millis();
+    unsigned long currentTime = now();
     if ((currentTime - lastTime) >= interval) {
         lastTime = currentTime; // Reset timer
         return true;
@@ -255,7 +259,7 @@ void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayM
 }
 
 void TaskScheduler::update() {
-    unsigned long now = millis();
+    unsigned long now = ::now();
 
     // Stage callbacks and track which one-shot tasks need culling.
     std::vector<std::function<void()>> dueCallbacks;

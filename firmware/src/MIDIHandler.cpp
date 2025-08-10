@@ -4,6 +4,7 @@
 
 #include "MIDIHandler.h"
 #include "Globals.h"
+#include "TimeUtils.h"
 #include <USB-MIDI.h>
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
@@ -112,7 +113,7 @@ void MIDIHandler::processIncomingMIDI() {
         auto type = MIDI.getType();
         if (type == midi::Clock) {
             clockTick = true;
-            lastExternalClock = lastInternalTick = millis();
+            lastExternalClock = lastInternalTick = now();
             if (g_clockOutEnabled) {
                 MIDI.sendClock();
                 if (g_usbMidiOutEnabled) {
@@ -133,7 +134,7 @@ void MIDIHandler::processIncomingMIDI() {
         auto type = usbMIDI.getType();
         if (type == midi::Clock) {
             clockTick = true;
-            lastExternalClock = lastInternalTick = millis();
+            lastExternalClock = lastInternalTick = now();
             if (g_clockOutEnabled) {
                 MIDI.sendClock();
                 if (g_usbMidiOutEnabled) {
@@ -149,11 +150,11 @@ void MIDIHandler::processIncomingMIDI() {
 
     // If the outside world goes quiet, puke out our own clock based on tapped BPM
     if (g_tappedBPM > 0.0f) {
-        bool externalHot = (millis() - lastExternalClock) < CLOCK_TIMEOUT_MS;
+        bool externalHot = (now() - lastExternalClock) < CLOCK_TIMEOUT_MS;
         if (!externalHot) {
             float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
-            if (millis() - lastInternalTick >= msPerTick) {
-                lastInternalTick = millis();
+            if (now() - lastInternalTick >= msPerTick) {
+                lastInternalTick = now();
                 if (g_clockOutEnabled) {
                     MIDI.sendClock();
                     if (g_usbMidiOutEnabled) {

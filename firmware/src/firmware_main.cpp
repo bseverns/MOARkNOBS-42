@@ -12,6 +12,7 @@
 #include "PotentiometerManager.h"
 #include "WebSerial.h"
 #include "Utility.h"
+#include "TimeUtils.h"
 #include "name.c"
 #include "Globals.h"  // contains all pin definitions
 #include "BiquadFilter.h"
@@ -91,7 +92,7 @@ void processMIDI() {
     midiHandler.processIncomingMIDI();
 
     if (midiHandler.isClockTick()) {
-        lastClockTime = millis();
+        lastClockTime = now();
         // Advance beat
         midiBeatPosition = (midiBeatPosition + 1) % 8;
 
@@ -106,7 +107,7 @@ void processMIDI() {
         );
 
         // Record the last time a clock tick landed
-        lastClockTime = millis();
+        lastClockTime = now();
 
         // Clear the clock flag
         midiHandler.clearClockTick();
@@ -336,7 +337,7 @@ void processInternalClock() {
     if (g_tappedBPM <= 0.0f) return; // No tempo tapped, nothing to do
 
     float msPerTick = 60000.0f / (g_tappedBPM * 24.0f); // 24 PPQN
-    unsigned long now = millis();
+    unsigned long now = ::now();
     if (now - lastInternalTick >= msPerTick) {
         lastInternalTick = now;
         lastClockTime    = now;
@@ -362,10 +363,10 @@ void monitorSystemLoad() {
     static unsigned long taskCounter = 0;
 
     taskCounter++;
-    if (millis() - lastMonitorTime >= 1000UL) { // Log every second
+    if (now() - lastMonitorTime >= 1000UL) { // Log every second
         Serial.printf("Tasks per second: %lu\n", taskCounter);
         taskCounter = 0;
-        lastMonitorTime = millis();
+        lastMonitorTime = now();
     }
 }
 
@@ -608,7 +609,7 @@ void setup() {
     Utility::schedulerHigh.addTask(processMIDI,          hwConfig.midiTaskInterval);
     Utility::schedulerHigh.addTask([](){
 
-      if (millis() - lastClockTime > CLOCK_TIMEOUT_MS)
+      if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
         processInternalClock();
     }, hwConfig.midiTaskInterval);
     Utility::schedulerHigh.addTask([](){
