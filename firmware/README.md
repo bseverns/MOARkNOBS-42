@@ -14,6 +14,10 @@ Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want t
 
 *Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
 
+### Build Rules
+
+This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` flips on `-Wall`, `-Wextra`, and `-Werror` for every environment, so one warning is all it takes to nuke a build. Patch the code, don't gag the compiler.
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.

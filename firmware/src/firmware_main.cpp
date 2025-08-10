@@ -362,7 +362,7 @@ void monitorSystemLoad() {
     static unsigned long taskCounter = 0;
 
     taskCounter++;
-    if (millis() - lastMonitorTime >= 1000) { // Log every second
+    if (millis() - lastMonitorTime >= 1000UL) { // Log every second
         Serial.printf("Tasks per second: %lu\n", taskCounter);
         taskCounter = 0;
         lastMonitorTime = millis();
