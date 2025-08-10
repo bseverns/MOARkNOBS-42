@@ -363,9 +363,9 @@ void OctoWS2811::isr(void)
 
 int OctoWS2811::busy(void)
 {
-	if (!dma3.complete()) ; // DMA still running
-	if (micros() - update_begin_micros < numbytes * 10 + 300) return 1; // WS2812 reset
-	return 0;
+        if (!dma3.complete()) return 1;  // DMA still running
+        if (micros() - update_begin_micros < numbytes * 10 + 300) return 1; // WS2812 reset
+        return 0;
 }
 
 // For Teensy 4.x, the pixel data is stored in ordinary RGB format.  Translation
