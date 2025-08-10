@@ -26,6 +26,9 @@ extern ConfigManager configManager;
 class MIDIHandler;
 extern MIDIHandler midiHandler;
 
+class Arpeggiator;
+extern Arpeggiator arpeggiator;
+
 /**
  * Bundle every pin and scheduler tick that describes the hardware.
  * Defaults live in Globals.cpp but can be patched at build or run time.
