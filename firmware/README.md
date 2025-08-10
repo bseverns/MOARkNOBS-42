@@ -16,7 +16,7 @@ Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want t
 
 ### Build Rules
 
-This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` slams on `-Wall`, `-Wextra`, and `-Werror` for every environment. We muzzle a handful of upstream library nags (`-Wno-cast-function-type`, `-Wno-unused-parameter`, `-Wno-ignored-qualifiers`, `-Wno-type-limits`, and even declaw a `deprecated-copy` gripe) so our own code has no excuse to squeak. Patch the code, don't gag the compiler.
+This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` slams on `-Wall`, `-Wextra`, and `-Werror` for every environment. We muzzle a handful of upstream library nags (`-Wno-cast-function-type`, `-Wno-unused-parameter`, `-Wno-ignored-qualifiers`, `-Wno-type-limits`, and we pre-include a wrapper around Teensy's `DMAChannel` to declaw a `deprecated-copy` gripe) so our own code has no excuse to squeak. Patch the code, don't gag the compiler.
 
 ## What's This?
 
