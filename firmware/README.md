@@ -16,7 +16,7 @@ Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want t
 
 ### Build Rules
 
-This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`. Patch the code, don't gag the compiler.
+This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
 
 ## What's This?
 
@@ -51,14 +51,11 @@ Offline, paranoid, or just punk? Clone [Adafruit_BusIO](https://github.com/adafr
 
 To update any vendored lib, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
 
-#### FastLED: Teensy4 or bust
+### Teensy Core Patches
 
-FastLED normally drags a war chest of MCU support code into the build. We slam a custom config header at `lib/FastLEDConfig/src/FastLEDConfig.h` that:
-
-- forces the Teensy 4.0 platform with `FASTLED_FORCE_TEENSY4`.
-- strips unused subsystems with a handful of `FASTLED_NO_*` defines.
-
-Tweaking it is simple: crack open that header, flip defines on or off, then rebuild. If you re-enable something and the compiler starts pulling in half the Arduino zoo again, that's on you.
+Some bits of the official Teensy core get loose with types and compare signed pointers against unsigned counts. That can flip a
+negative into a huge positive and invite buffer trashing. We stash patched copies under `lib/teensy_patches/` where the math is
+done with `size_t` from the get‑go. If upstream ever cleans it up, yank our shim and cruise on stock.
 
 ## Key Features
 
