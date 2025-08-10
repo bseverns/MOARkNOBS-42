@@ -26,7 +26,7 @@ See the big picture in the [main firmware README](../../README.md).
 ```cpp
 #include "ButtonManager.h"
 
-ButtonManager buttons(MUXR_PINS, MUXC_PINS, buttonMuxAnalogPin, CONTROL_PINS, &pots);
+ButtonManager buttons(hwConfig, CONTROL_PINS, &pots);
 
 void setup() {
   buttons.initButtons();
@@ -36,5 +36,7 @@ void loop() {
   buttons.processButtons(ctx);
 }
 ```
+
+That `hwConfig` bundle wrangles mux pins, LED counts, and timing so the tests and firmware slam in sync.
 
 Dig deeper in [ButtonManager.h](../ButtonManager.h).
