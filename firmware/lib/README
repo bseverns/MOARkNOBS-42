@@ -1,46 +1,36 @@
+# Vendored libraries, no apologies
 
-This directory is intended for project specific (private) libraries.
-PlatformIO will compile them to static libraries and link into executable file.
+This folder isn't a dumping ground—it's a curated stash of third‑party code we drag in‑house so builds stay fast, deterministic, and completely offline. PlatformIO slurps everything under `firmware/lib/` into the build, so we keep our dependencies here where we can keep an eye on them.
 
-The source code of each library should be placed in a an own separate directory
-("lib/your_library_name/[here are source files]").
+## What's bundled and why
 
-For example, see a structure of the following two libraries `Foo` and `Bar`:
+| Library | Why it's here | Upstream |
+|--------|---------------|---------|
+| **FastLED** | Rock‑solid LED driver. Bundled to pin a known‑good version and keep our timing patches close. | https://github.com/FastLED/FastLED |
+| **Adafruit GFX** | Core graphics primitives backing the OLED driver. Vendored so SSD1306 doesn't drift. | https://github.com/adafruit/Adafruit-GFX-Library |
+| **Adafruit SSD1306** | Talks to the front‑panel display. Checked in to dodge network hiccups and let us tweak defaults. | https://github.com/adafruit/Adafruit_SSD1306 |
+| **OctoWS2811** | Teensy‑optimized DMA driver for huge LED chains. Lives here so we can smash it into FastLED when needed. | https://github.com/PaulStoffregen/OctoWS2811 |
 
-|--lib
-|  |
-|  |--Bar
-|  |  |--docs
-|  |  |--examples
-|  |  |--src
-|  |     |- Bar.c
-|  |     |- Bar.h
-|  |  |- library.json (optional, custom build options, etc) https://docs.platformio.org/page/librarymanager/config.html
-|  |
-|  |--Foo
-|  |  |- Foo.c
-|  |  |- Foo.h
-|  |
-|  |- README --> THIS FILE
-|
-|- platformio.ini
-|--src
-   |- main.c
+## How to update a library
 
-and a contents of `src/main.c`:
-```
-#include <Foo.h>
-#include <Bar.h>
+1. **Grab the latest release** from the upstream link above.
+2. **Nuke the old directory** (`rm -rf firmware/lib/<Library>`), then drop in the fresh files.
+3. **Keep their `license.txt` or `LICENSE` files**. If upstream ships one, it must ship with us.
+4. **Rebuild the firmware** from `firmware/`:
+   ```bash
+   pio run -e teensy40_main
+   ```
+5. If we carry local patches, reapply them or document why they vanished.
 
-int main (void)
-{
-  ...
-}
+## License obligations
 
-```
+| Library | License | What you owe the author |
+|--------|---------|------------------------|
+| FastLED | MIT | Keep the copyright and that MIT license text in any binary or source distribution. |
+| Adafruit GFX | BSD‑2‑Clause | Include the copyright, conditions, and disclaimer wherever you ship the code. |
+| Adafruit SSD1306 | BSD‑3‑Clause | Same as above, plus don't use Adafruit's name to hawk your wares without permission. |
+| OctoWS2811 | MIT | Copy the license along and you're golden. |
 
-PlatformIO Library Dependency Finder will find automatically dependent
-libraries scanning project source files.
+When you ship hardware, firmware, or derivatives, also bundle `THIRD_PARTY_LICENSES.md` so every author gets their shout‑out.
 
-More information about PlatformIO Library Dependency Finder
-- https://docs.platformio.org/page/librarymanager/ldf.html
+Now go hack—just don't lose the licenses.
