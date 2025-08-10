@@ -23,7 +23,6 @@
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
-extern Arpeggiator arpeggiator;
 
 // Verbose logging rides on BUTTON_MANAGER_DEBUG. See ButtonManager.h for macros.
 
