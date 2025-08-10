@@ -1,6 +1,8 @@
 #ifndef BIQUAD_FILTER_H
 #define BIQUAD_FILTER_H
 
+#include <Arduino.h>
+
 /**
  * @brief Lightweight biquad filter used by the envelope follower.
  *
