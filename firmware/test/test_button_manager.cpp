@@ -1,12 +1,14 @@
 #define private public
-#include "ButtonManager.h"
-#undef private
-#include "TestHelpers.h"
-#include <unity.h>
 
 // Mock time so we can step through the long-press dance
 static unsigned long fakeMillis = 0;
-unsigned long millis() { return fakeMillis; }
+#define millis() (fakeMillis)
+
+#include "ButtonManager.h"
+#undef millis
+#undef private
+#include "TestHelpers.h"
+#include <unity.h>
 
 void test_long_press_detection() {
     auto pm = createPotentiometerManager();
