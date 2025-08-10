@@ -15,8 +15,8 @@ char *dtostrf(double val, signed char width, unsigned char precision, char *buf)
     if (sign) *out++ = '-';
 
     char *newDecimalPoint = tmp + decpt;
-    // If rounding adds an extra digit, keep the signed types on the same side.
-    if (newDecimalPoint - tmp == (int)precision + 1) {
+    // If rounding adds an extra digit, use unsigned math so the compiler keeps its cool.
+    if ((unsigned)(newDecimalPoint - tmp) == (unsigned)(precision + 1)) {
         decpt++;
         newDecimalPoint--; // drop the overflowed digit
     }
