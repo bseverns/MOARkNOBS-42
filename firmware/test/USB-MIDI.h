@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef ARDUINO
+#if !defined(ARDUINO) || defined(PIO_UNIT_TESTING)
 #include <cstdint>
 
 namespace midi {
@@ -61,12 +61,19 @@ struct MidiInterfaceStub {
   uint16_t getSysExArrayLength() { return lastSysExLength; }
 };
 
+struct USBMidiStub : MidiInterfaceStub {
+  bool nextRead = false;
+  midi::MidiType nextType = midi::NoteOff;
+  bool read() { bool r = nextRead; nextRead = false; return r; }
+  midi::MidiType getType() { return nextType; }
+};
+
 extern MidiInterfaceStub MIDI;
-extern MidiInterfaceStub usbMIDI;
+extern USBMidiStub usbMIDI;
 
 struct HardwareSerial {};
 extern HardwareSerial Serial1;
 
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 
-#endif // !ARDUINO
+#endif // !defined(ARDUINO) || defined(PIO_UNIT_TESTING)

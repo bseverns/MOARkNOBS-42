@@ -2,15 +2,6 @@
 #define private public
 #include "MIDIHandler.h"
 #undef private
-
-MidiInterfaceStub MIDI;
-struct USBMidiStub : MidiInterfaceStub {
-    bool nextRead = false;
-    midi::MidiType nextType = midi::NoteOff;
-    bool read() { bool r = nextRead; nextRead = false; return r; }
-    midi::MidiType getType() { return nextType; }
-} usbMIDI;
-HardwareSerial Serial1;
 #include <unity.h>
 
 void test_program_change() {
