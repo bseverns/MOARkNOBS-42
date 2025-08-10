@@ -4,10 +4,6 @@
 #ifndef DISPLAYMANAGER_H
 #define DISPLAYMANAGER_H
 
-#if defined(__IMXRT1062__)
-#include <DMAChannel.h>
-#endif
-
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
