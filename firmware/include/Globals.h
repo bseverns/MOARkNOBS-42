@@ -107,8 +107,8 @@ extern bool g_usbMidiOutEnabled; //!< USB MIDI stays quiet until these three go 
 extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
 
 // Note dynamics from the "Freq" and "Q" control pots
-extern int velocityShift;     //!< -64..+63 shove applied to outgoing note velocity
-extern int changeProbability; //!< 0-100% chance a moved pot actually slings a new note
+extern int8_t  velocityShift;     //!< -64..+63 shove applied to outgoing note velocity
+extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings a new note
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

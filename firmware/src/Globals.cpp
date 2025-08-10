@@ -33,8 +33,8 @@ bool  g_usbMidiOutEnabled = false; // gated USB MIDI output
 unsigned long lastClockTime = 0;  // ms timestamp of the last MIDI clock tick
 
 // Note dynamics knobs
-int velocityShift = 0;
-int changeProbability = 100;
+int8_t  velocityShift   = 0;
+uint8_t changeProbability = 100;
 
 // Envelope follower calibration stash
 EnvelopeConfig envelopeConfig = { {0} };
