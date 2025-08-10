@@ -7,6 +7,7 @@
 #include "Globals.h"
 #include "ConfigManager.h"
 #include "Utility.h"
+#include "TimeUtils.h"
 #include "Arpeggiator.h"
 #include <map>
 
@@ -103,7 +104,7 @@ void ButtonManager::initButtons() {
  *    -> update state machine
  */
 void ButtonManager::processButtons(ButtonManagerContext& context) {
-    unsigned long now = millis();
+    unsigned long now = ::now();
 
     // Scan mux matrix row by row
     uint8_t rawStates[NUM_VIRTUAL_BUTTONS];
@@ -142,7 +143,7 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
  */
 void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext& context) {
     ButtonStateMachine &sm = _buttonMachines[index];
-    unsigned long now = millis();
+    unsigned long now = ::now();
 
     switch (sm.state) {
     case ButtonState::IDLE:
@@ -277,7 +278,7 @@ void ButtonManager::onRelease(uint8_t index, ButtonManagerContext& context) {
  */
 void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext& context) {
     auto &sm = _buttonMachines[index];
-    unsigned long now = millis();
+    unsigned long now = ::now();
 
     // Double-press detection
     if ((now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
@@ -481,7 +482,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         case 5: {
             // Short Press (Control Button #5): Tapped BPM
             static unsigned long lastTap = 0;
-            unsigned long now = millis();
+            unsigned long now = ::now();
             if (lastTap != 0) {
                 float intervalMs = (float)(now - lastTap);
                 float newBPM = 60000.0f / intervalMs;
@@ -711,7 +712,7 @@ bool ButtonManager::readControlButton(uint8_t buttonIndex) {
 }
 
 void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
-    unsigned long now = millis();
+    unsigned long now = ::now();
     for (uint8_t ch = 6; ch < 12; ++ch) {
         selectMux(0, ch);
         delayMicroseconds(5);

@@ -13,6 +13,7 @@
 #include <EnvelopeFollower.h>
 #include <Globals.h>
 #include "EEPROM.h"
+#include "TimeUtils.h"
 
 class MIDIHandler;
 class EnvelopeFollower;
@@ -25,7 +26,7 @@ struct ScheduledTask {
     unsigned long interval;
 
     ScheduledTask(std::function<void()> cb, unsigned long delayMs, bool rpt)
-        : callback(cb), runAt(millis() + delayMs), repeat(rpt), interval(delayMs) {}
+        : callback(cb), runAt(now() + delayMs), repeat(rpt), interval(delayMs) {}
 };
 
 /**

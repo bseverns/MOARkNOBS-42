@@ -4,6 +4,7 @@
 
 #include "LEDManager.h"
 #include "Globals.h"  // hardware config
+#include "TimeUtils.h"
 #include <FastLED.h>
 #include <map>
 #include <string>
@@ -55,7 +56,7 @@ void LEDManager::setPotIndicator(uint8_t potIndex, uint8_t value) {
 }
 
 void LEDManager::triggerControlButton() {
-    controlStart = millis();
+    controlStart = now();
     controlActive = true;
 }
 
@@ -187,7 +188,7 @@ void LEDManager::setGroupColor(const std::string& group, const CRGB& color) {
  */
 void LEDManager::update() {
     if (controlActive) {
-        unsigned long elapsed = millis() - controlStart;
+        unsigned long elapsed = now() - controlStart;
         if (elapsed < 750) {
             leds[CONTROL_LED_INDEX()] = CRGB::White;
         } else if (elapsed < 2000) {
