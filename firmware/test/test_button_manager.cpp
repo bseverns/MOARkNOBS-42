@@ -10,7 +10,7 @@ unsigned long millis() { return fakeMillis; }
 
 void test_long_press_detection() {
     auto pm = createPotentiometerManager();
-    ButtonManager bm(primaryMuxPins, secondaryMuxPins, buttonMuxAnalogPin, TEST_CONTROL_PINS, &pm);
+    auto bm = createButtonManager(&pm);
 
     auto cfg = createConfigManager();
     auto led = createLEDManager();
