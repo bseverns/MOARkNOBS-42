@@ -14,6 +14,8 @@ Hardware's finally nailed—no more bodge wires or last‑minute re‑spins. The
 
 This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. Dive into the subdirectories below for the gritty details.
 
+This isn't just a code dump; it's a loud, messy lab notebook. Every README, sketch, and test exists so you can follow the breadcrumb trail and spin up your own mutant MIDI rig.
+
 ## Features at a Glance
 
 - **Speaks NRPN, RPN & SysEx** – your rig can't hide behind vanilla CCs. [More on MIDI types](firmware/README.md#supported-message-types).
