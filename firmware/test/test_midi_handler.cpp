@@ -1,3 +1,4 @@
+#ifdef UNIT_TEST
 #include "USB-MIDI.h"
 #define private public
 #include "MIDIHandler.h"
@@ -106,3 +107,4 @@ void setup() {
 }
 
 void loop() {}
+#endif // UNIT_TEST
