@@ -31,8 +31,18 @@
 #define BUTTON_MANAGER_DEBUG 0
 #endif
 #if BUTTON_MANAGER_DEBUG
-  #define BM_DBG_PRINT(x)   Serial.print(x)
-  #define BM_DBG_PRINTLN(x) Serial.println(x)
+  // Pump debug chatter over Serial when we're running on real Arduino
+  // silicon.  Host-side tests don't boot a `Serial` object, so we duck out
+  // to libc's `printf` and keep the noise flowing.  Keep your messages
+  // stringy in that case.
+  #if defined(ARDUINO)
+    #define BM_DBG_PRINT(x)   Serial.print(x)
+    #define BM_DBG_PRINTLN(x) Serial.println(x)
+  #else
+    #include <cstdio>
+    #define BM_DBG_PRINT(x)   std::printf("%s", x)
+    #define BM_DBG_PRINTLN(x) std::printf("%s\n", x)
+  #endif
 #else
   #define BM_DBG_PRINT(x)
   #define BM_DBG_PRINTLN(x)

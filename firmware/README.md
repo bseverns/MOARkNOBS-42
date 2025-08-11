@@ -530,6 +530,10 @@ pio run -e teensy40_main -D BUTTON_MANAGER_DEBUG=1
 
 `ButtonManager.h` defines the `BM_DBG_PRINT` and `BM_DBG_PRINTLN` macros, so `ButtonManager.cpp` stopped copy-pasting them like a cover band. Dig in deeper here: [ButtonManager.h](include/ButtonManager.h).
 
+Those macros aren’t just Serial cheerleaders anymore.  We check for the
+`ARDUINO` flag and fall back to good old `printf` if the MCU ghosts us.
+That way even host-side tests get to hear the button gossip.
+
 Leave the flag off and the firmware keeps its mouth shut.
 
 Want to poke the main test rig instead? Use the machine-test sandbox and point it at a test file:
