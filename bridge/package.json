@@ -11,8 +11,8 @@
   "license": "MIT",
   "type": "commonjs",
   "dependencies": {
-    "serialport": "^10.5.0",
+    "serialport": "^12.0.0",
     "osc": "^2.4.1",
-    "jzz": "^1.5.9"
+    "jzz": "^1.9.3"
   }
 }
