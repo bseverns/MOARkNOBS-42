@@ -148,7 +148,8 @@ void MIDIHandler::processIncomingMIDI() {
     // so nothing gets stale, feeding each packet through the same handler as
     // the old-school wire.
     while (usbMIDI.read()) {
-        auto type = usbMIDI.getType();
+        // Force usbMIDI's raw type into midi::MidiType so isSupportedType doesn't choke
+        auto type = static_cast<midi::MidiType>(usbMIDI.getType());
         if (!isSupportedType(type)) {
             MIDI_DBG_PRINTLN("Dropping unsupported USB MIDI type");
             continue;
