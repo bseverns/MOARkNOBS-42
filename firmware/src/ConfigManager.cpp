@@ -467,7 +467,7 @@ void test_eeprom_recovery_after_power_cycle() {
 // Baseline calibration should make it through a simulated reboot.
 void test_calibration_offsets_survive_power_cycle() {
     auto pm = createPotentiometerManager();
-    std::vector<EnvelopeFollower> envs = {EnvelopeFollower(A0, &pm)};
+    std::vector<EnvelopeFollower> envs = {EnvelopeFollower(A0, &pm, 0)};
     std::map<int, int> mapping = {{0, 0}};
 
     envs[0].setBaseline(0.42f);
@@ -478,7 +478,7 @@ void test_calibration_offsets_survive_power_cycle() {
     for (int i = 0; i < NUM_ENVELOPES; ++i) {
         envelopeConfig.baselines[i] = 0.0f;
     }
-    std::vector<EnvelopeFollower> fresh = {EnvelopeFollower(A0, &pm)};
+    std::vector<EnvelopeFollower> fresh = {EnvelopeFollower(A0, &pm, 0)};
     std::map<int, int> mapping2;
     bool ok = cfg.loadEnvelopeSettings(mapping2, fresh);
 
