@@ -191,7 +191,7 @@ void MIDIHandler::processIncomingMIDI() {
     }
 }
 
-void MIDIHandler::handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2) {
+void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2) {
     if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
         MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
         return;
