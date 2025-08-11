@@ -11,6 +11,7 @@ class HardwareSerial;
 #endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
+#include <USB-MIDI.h>
 
 #define IS_USB_CONNECTED() (usbMidi.connected())
 
@@ -65,7 +66,7 @@ public:
     void processIncomingMIDI();
 
     /** Dispatch a parsed MIDI message to the appropriate handler. */
-    void handleMIDI(uint8_t type, uint8_t channel, uint8_t data1, uint8_t data2);
+    void handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2);
 
     /** Convenience helpers for specific message types. */
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
