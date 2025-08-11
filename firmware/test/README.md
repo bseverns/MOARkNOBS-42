@@ -79,6 +79,15 @@ Checks that channel and CC mapping stick for the first slot pot.
 ### test_display_manager.cpp
 Pokes the update interval to prove the UI can chill when told.
 
+### test_midi_handler.cpp
+Runs the MIDIHandler through program changes, aftertouch, pitch bend, NRPNs, and SysEx without ever touching a real synth.
+Relies on the lightweight `USB-MIDI` stubs in this folder because your desktop doesn't speak Teensy. The stubs fake both the
+`MIDI` and `usbMIDI` pipes so the handler can spit data at virtual ports and we can inspect every byte.
+
+Fire it up with `pio test -e teensy40_unity -f test_midi_handler.cpp`. If a test bombs, it means the handler isn't mirroring
+messages between the hardware and USB sides the way the rest of the rig expects. Fix it before you start wondering why your
+DAW ignores you.
+
 ### test_arpeggiator.cpp
 Starts the riff machine, stops it, and double-checks it grabbed the right slot.
 
