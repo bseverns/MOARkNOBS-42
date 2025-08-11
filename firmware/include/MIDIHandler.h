@@ -116,6 +116,7 @@ private:
     void receiveNRPN(uint8_t channel, uint16_t param, uint16_t value);
     void receiveRPN(uint8_t channel, uint16_t param, uint16_t value);
     void handleSysEx(const uint8_t* data, uint16_t length);
+    void handleClockTick();
 };
 
 #endif
