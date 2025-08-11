@@ -1,9 +1,9 @@
 #pragma once
 
-// Spin up these lightweight MIDI stubs only for host-side UNIT_TEST runs
-// where the Arduino core is MIA. Real hardware ships with its own
-// USB-MIDI definitions and we keep out of its way.
-#if defined(UNIT_TEST) && !defined(ARDUINO)
+// Spin up these lightweight MIDI stubs only for UNIT_TEST runs.
+// Real hardware builds ship with their own USB-MIDI definitions
+// and we keep out of their way.
+#if defined(UNIT_TEST)
 #include <cstdint>
 
 namespace midi {
