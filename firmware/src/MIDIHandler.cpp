@@ -121,6 +121,13 @@ static bool isSupportedType(midi::MidiType t) {
     }
 }
 
+void MIDIHandler::handleClockTick() {
+    // Flip the tick flag so listeners know a pulse went down.
+    clockTick = !clockTick;
+    // Mirror the tick to any enabled outputs.
+    sendClock();
+}
+
 void MIDIHandler::processIncomingMIDI() {
     // Serial MIDI is the crusty hardware port. When it spits out a full
     // message, read() returns true and we hurl the parsed bytes at
@@ -128,14 +135,8 @@ void MIDIHandler::processIncomingMIDI() {
     if (MIDI.read()) {
         auto type = MIDI.getType();
         if (type == midi::Clock) {
-            clockTick = true;
             lastExternalClock = lastInternalTick = now();
-            if (g_clockOutEnabled) {
-                MIDI.sendClock();
-                if (g_usbMidiOutEnabled) {
-                    usbMIDI.sendClock();
-                }
-            }
+            handleClockTick();
         } else if (type == midi::SystemExclusive) {
             handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
         } else {
@@ -153,14 +154,8 @@ void MIDIHandler::processIncomingMIDI() {
             continue;
         }
         if (type == midi::Clock) {
-            clockTick = true;
             lastExternalClock = lastInternalTick = now();
-            if (g_clockOutEnabled) {
-                MIDI.sendClock();
-                if (g_usbMidiOutEnabled) {
-                    usbMIDI.sendClock();
-                }
-            }
+            handleClockTick();
         } else if (type == midi::SystemExclusive) {
             handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
         } else {
@@ -175,13 +170,7 @@ void MIDIHandler::processIncomingMIDI() {
             float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
             if (now() - lastInternalTick >= msPerTick) {
                 lastInternalTick = now();
-                if (g_clockOutEnabled) {
-                    MIDI.sendClock();
-                    if (g_usbMidiOutEnabled) {
-                        usbMIDI.sendClock();
-                    }
-                }
-                clockTick = true;
+                handleClockTick();
             }
         }
     }
