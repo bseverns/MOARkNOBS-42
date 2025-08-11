@@ -11,7 +11,7 @@ class HardwareSerial;
 #endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
-#include <USB-MIDI.h>
+#include "USB-MIDI.h"
 
 #define IS_USB_CONNECTED() (usbMidi.connected())
 
