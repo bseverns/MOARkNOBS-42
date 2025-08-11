@@ -58,6 +58,11 @@ We finally caved and wired up a few automated checks in `test/` for those lonely
 pio test -e teensy40_unity
 ```
 
+Unity is fussy and demands a `unity_config.h` to map its battle cries.
+There's a lean version sitting in `../include/` that just sprays bytes
+over `Serial`. If you need different output, crack that file open and
+remix the macros.
+
 That env sets `test_build_src = true`, so PlatformIO drags the project's core sources into the test build. If something in `src/`
 won't compile, Unity will scream before you ever flash a board.
 
