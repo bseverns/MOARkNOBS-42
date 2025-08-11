@@ -18,6 +18,14 @@ Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want t
 
 This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
 
+Need the default build? Kick this from the `firmware/` dir and let PlatformIO scream the bits into existence:
+
+```bash
+pio run -e teensy40_main
+```
+
+That cranks out the main firmware for the Teensy 4.0.
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
