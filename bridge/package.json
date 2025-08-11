@@ -9,6 +9,9 @@
   "keywords": ["mn42","bridge","osc","midi"],
   "author": "BSSS project team",
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "type": "commonjs",
   "dependencies": {
     "serialport": "^10.5.0",
