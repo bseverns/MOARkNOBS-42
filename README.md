@@ -190,13 +190,13 @@ main firmware:
 
 ```bash
 pio run -e teensy40_full_system      # or teensy40_unified_test, etc.
-# Unity harness flexes a different muscle:
-pio test -e teensy40_unity
+# Unity harness ain't special anymore:
+pio run -e teensy40_unity
 ```
 Available environments:
 
 - `teensy40_full_system` – step-through checks of each subsystem
-- `teensy40_unity` – Unity-driven automated tests (run with `pio test -e teensy40_unity`)
+- `teensy40_unity` – Unity-driven automated tests (build with `pio run -e teensy40_unity`)
 - `teensy40_unified_test` – full integration test
 - `teensy40_biquad_test` – biquad filter calibration
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test
