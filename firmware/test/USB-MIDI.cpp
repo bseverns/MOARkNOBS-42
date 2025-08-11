@@ -1,5 +1,5 @@
 #include "USB-MIDI.h"
-#if !defined(ARDUINO) || defined(UNIT_TEST)
+#if !defined(ARDUINO)
 MidiInterfaceStub MIDI;
 USBMidiStub usbMIDI;
 HardwareSerial Serial1;
