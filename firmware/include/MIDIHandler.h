@@ -11,7 +11,11 @@ class HardwareSerial;
 #endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
-#include "USB-MIDI.h"
+#ifdef UNIT_TEST
+#include "USB-MIDI.h"      // assumes test/ is on the include path
+#else
+#include <USB-MIDI.h>
+#endif
 
 #define IS_USB_CONNECTED() (usbMidi.connected())
 
