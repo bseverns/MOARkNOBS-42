@@ -33,6 +33,16 @@ This repo bundles the firmware, hardware designs and documentation for the **MOA
    ```
 4. **Blink proof** – run the ["Hello LED" test](#run-a-hello-led-test) to see that first pixel twitch.
 
+**CLI tip:** every `pio` command expects you to camp out in `firmware/` so the headers and home-brew libs are on the path. Example smoke run:
+
+```bash
+cd firmware
+pio test -e teensy40_unity
+```
+
+There's a skinny `platformio.ini` in the repo root for the folks who forget, but it's training wheels—do the real work under `firmware/`.
+
+
 Need the full blueprint? Hit the [Builder's Handbook](docs/BuildersHandbook.md) for wiring and smoke tests, and the [User Manual](firmware/README.md) when you're ready to tame every slot.
 
 ### Python build toys
