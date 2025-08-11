@@ -56,6 +56,12 @@ Feeling deterministic? Swap in the lockstep version:
 npm ci
 ```
 
+`npm install` grabs whatever fits your semver ranges and rewrites `package-lock.json` while it's at it—perfect when you're auditioning new gear.
+
+`npm ci` plays it straight-edge: it nukes `node_modules` and installs *exactly* what's in `package-lock.json`, bailing if the lock and `package.json` disagree. CI loves it, and so should you when you want repeatable builds.
+
+Whenever you tweak dependencies, let `npm install` refresh the lockfile and make sure you commit that updated `package-lock.json` so the next hacker isn't stuck with a stale mix.
+
 ## Testing vibes
 
 This repo doesn't ship with a hardware mock. To prove the script at least boots and dies gracefully when the wire's pulled:
