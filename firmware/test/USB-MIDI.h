@@ -1,9 +1,9 @@
 #pragma once
 
 // Only compile these lightweight MIDI stubs when the Arduino core is
-// missing. Real hardware brings its own USB-MIDI definitions and we keep
-// out of its way.
-#if !defined(ARDUINO)
+// missing or when building unit tests. Real hardware brings its own
+// USB-MIDI definitions and we keep out of its way.
+#if !defined(ARDUINO) || defined(UNIT_TEST)
 #include <cstdint>
 
 namespace midi {
@@ -80,4 +80,4 @@ extern HardwareSerial Serial1;
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 #else
 #include_next "USB-MIDI.h"
-#endif  // !defined(ARDUINO)
+#endif  // !defined(ARDUINO) || defined(UNIT_TEST)
