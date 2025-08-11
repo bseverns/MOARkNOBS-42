@@ -80,6 +80,7 @@ Checks that channel and CC mapping stick for the first slot pot.
 Pokes the update interval to prove the UI can chill when told.
 
 ### test_midi_handler.cpp
+
 Shoots fake MIDI through stubbed veins to make sure routing doesn't flake out. The USB-MIDI impostors live in this folder and disappear on real silicon, so `teensy40_unified_test` leaves this test on the bench.
 
 ### test_arpeggiator.cpp
