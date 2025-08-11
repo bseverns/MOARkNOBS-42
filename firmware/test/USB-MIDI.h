@@ -7,16 +7,32 @@
 #include <cstdint>
 
 namespace midi {
+// Mirror the real library's event codes so tests match reality.
 enum MidiType : uint8_t {
-  NoteOff,
-  NoteOn,
-  AfterTouchPoly,
-  ControlChange,
-  ProgramChange,
-  AfterTouchChannel,
-  PitchBend,
-  SystemExclusive,
-  Clock
+  InvalidType           = 0x00,
+  NoteOff               = 0x80,
+  NoteOn                = 0x90,
+  AfterTouchPoly        = 0xA0,
+  ControlChange         = 0xB0,
+  ProgramChange         = 0xC0,
+  AfterTouchChannel     = 0xD0,
+  PitchBend             = 0xE0,
+  SystemExclusive       = 0xF0,
+  TimeCodeQuarterFrame  = 0xF1,
+  SongPosition          = 0xF2,
+  SongSelect            = 0xF3,
+  Undefined_F4          = 0xF4,
+  Undefined_F5          = 0xF5,
+  TuneRequest           = 0xF6,
+  EndOfExclusive        = 0xF7,
+  Clock                 = 0xF8,
+  Undefined_F9          = 0xF9,
+  Start                 = 0xFA,
+  Continue              = 0xFB,
+  Stop                  = 0xFC,
+  Undefined_FD          = 0xFD,
+  ActiveSensing         = 0xFE,
+  SystemReset           = 0xFF
 };
 }
 
@@ -56,7 +72,7 @@ struct MidiInterfaceStub {
     for (uint16_t i = 0; i < lastSysExLength; ++i) lastSysEx[i] = data[i];
   }
   bool read() { return false; }
-  midi::MidiType getType() { return midi::NoteOff; }
+  midi::MidiType getType() { return midi::InvalidType; }
   uint8_t getChannel() { return 0; }
   uint8_t getData1() { return 0; }
   uint8_t getData2() { return 0; }
@@ -66,7 +82,7 @@ struct MidiInterfaceStub {
 
 struct USBMidiStub : MidiInterfaceStub {
   bool nextRead = false;
-  midi::MidiType nextType = midi::NoteOff;
+  midi::MidiType nextType = midi::InvalidType;
   bool read() { bool r = nextRead; nextRead = false; return r; }
   midi::MidiType getType() { return nextType; }
 };
