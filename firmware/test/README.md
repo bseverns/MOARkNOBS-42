@@ -58,6 +58,8 @@ We finally caved and wired up a few automated checks in `test/` for those lonely
 pio test -e teensy40_unity
 ```
 
+This is the only build that hoists the `-DUSB_MIDI_STUB` flag and spins up our USB‑MIDI impostors. Every other environment leaves them on the cutting-room floor, so any tests wired to that stub just wait for their cue.
+
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
 There's a lean version sitting in `../include/` that just sprays bytes
 over `Serial`. If you need different output, crack that file open and
@@ -86,7 +88,7 @@ Pokes the update interval to prove the UI can chill when told.
 
 ### test_midi_handler.cpp
 
-Shoots fake MIDI through stubbed veins to make sure routing doesn't flake out. The USB-MIDI impostors live in this folder and disappear on real silicon, so `teensy40_unified_test` leaves this test on the bench.
+Shoots fake MIDI through stubbed veins to make sure routing doesn't flake out. The USB-MIDI impostors live in this folder and disappear on real silicon, so `teensy40_unified_test` leaves this test on the bench. Only the `teensy40_unity` rig flips on the `-DUSB_MIDI_STUB` switch to conjure those impostors; every other env skips the flag, so anything leaning on the stub just naps.
 
 ### test_arpeggiator.cpp
 Starts the riff machine, stops it, and double-checks it grabbed the right slot.
