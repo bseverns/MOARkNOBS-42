@@ -3,7 +3,7 @@
 // Spin up these lightweight MIDI stubs only for UNIT_TEST runs.
 // Real hardware builds ship with their own USB-MIDI definitions
 // and we keep out of their way.
-#if defined(UNIT_TEST)
+#ifdef USB_MIDI_STUB
 #include <cstdint>
 
 namespace midi {
