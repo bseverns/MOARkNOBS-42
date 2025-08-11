@@ -26,6 +26,15 @@ pio run -e teensy40_main
 
 That cranks out the main firmware for the Teensy 4.0.
 
+### Testing
+
+When you need proof the rig still howls, run the tests and watch the logs spill.
+
+- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet and spews results over Serial at 115200 baud.
+- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks and dumps output straight to stdout.
+
+The split is deliberate. `include/unity_config.h` wires a `unity_output` bridge so hardware tests bark over Serial while host tests mumble through stdout. If Unity screams into the void, crack that file open and make sure the bridge didn't burn out.
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
