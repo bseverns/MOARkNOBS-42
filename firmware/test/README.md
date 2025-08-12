@@ -90,7 +90,7 @@ Pokes the update interval to prove the UI can chill when told.
 
 Shoots fake MIDI through stubbed veins to make sure routing doesn't flake out. The USB-MIDI impostors live in this folder and disappear on real silicon, so `teensy40_unified_test` leaves this test on the bench. Only the `teensy40_unity` rig builds with `UNIT_TEST` to conjure those impostors; every other env skips the flag, so anything leaning on the stub just naps.
 
-The stub's `MidiType` enum mirrors the real deal. The opener is `SystemExclusiveStart`, the curtain drop is `SystemExclusiveEnd`, and a freshly-minted `Tick` rides 0xF8 so you can count the beat without pulling in the whole clock rig. If your tests still shout the old names, patch 'em—yesterday's API won't save today's jam.
+The stub's `MidiType` enum mirrors the real deal. The opener is `SystemExclusive`, the curtain drop is `EndOfExclusive`, and a freshly-minted `Tick` rides 0xF8 so you can count the beat without pulling in the whole clock rig. If your tests still shout the old names, patch 'em—yesterday's API won't save today's jam.
 
 ### test_arpeggiator.cpp
 Starts the riff machine, stops it, and double-checks it grabbed the right slot.
