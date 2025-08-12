@@ -31,11 +31,11 @@ That cranks out the main firmware for the Teensy 4.0.
 When you need proof the rig still howls, run the tests and watch the logs spill.
 
 - **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet and spews results over Serial at 115200 baud.
-- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks and dumps output straight to stdout.
+- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
 
 Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
 
-The split is deliberate. `include/unity_config.h` wires a `unity_output` bridge so hardware tests bark over Serial while host tests mumble through stdout. If Unity screams into the void, crack that file open and make sure the bridge didn't burn out.
+The split is deliberate. `include/unity_config.h` and `src/unity_output.cpp` tag-team as the switchboard so hardware tests bark over USB while host runs stay console-only. If Unity screams into the void, crack those files open and make sure the bridge didn't burn out.
 
 Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the baud rate you want to shout over, no more hard‑wired 115200.
 

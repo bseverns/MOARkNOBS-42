@@ -29,13 +29,15 @@ void unityTestFlush() {
 #ifdef USB_MIDI_SERIAL
   Serial.flush();
 #else
-  fflush(stdout);
+  fflush(stdout); // make sure host logs don't get stuck in a buffer
 #endif
 }
 
 void unityTestComplete() {
 #ifdef USB_MIDI_SERIAL
   Serial.end();
+#else
+  fflush(stdout); // last gasp when the USB serial gadget bails
 #endif
 }
 
