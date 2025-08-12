@@ -5,6 +5,16 @@
 // Mirror those hooks to our punk wrappers so nothing touches
 // Serial unless we mean it.
 
+#ifndef ARDUINO
+#include <cstdio>
+extern "C" {
+  void unityTestStart(unsigned long) { /* no-op */ }
+  void unityTestChar(unsigned int c) { putchar((int)c); }
+  void unityTestFlush(void)          { fflush(stdout); }
+  void unityTestComplete(void)       { fflush(stdout); }
+}
+#endif
+
 extern "C" {
 
 void unityOutputStart(unsigned long baudrate) {
