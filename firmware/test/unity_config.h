@@ -32,7 +32,9 @@ void unityTestComplete();
 #undef UNITY_OUTPUT_FLUSH
 #undef UNITY_OUTPUT_COMPLETE
 
-#define UNITY_OUTPUT_START(b)      unityTestStart(b)
+// Fire up Unity's comms at a punk-approved fixed speed.
+// No args, no fuss—just holler at 115200 every time.
+#define UNITY_OUTPUT_START()       unityTestStart(115200)
 #define UNITY_OUTPUT_CHAR(c)       unityTestChar(c)
 #define UNITY_OUTPUT_FLUSH()       unityTestFlush()
 #define UNITY_OUTPUT_COMPLETE()    unityTestComplete()
