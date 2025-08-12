@@ -15,6 +15,9 @@ You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the 
 `[env:teensy40_unity]` flips on `UNITY_INCLUDE_CONFIG_H`, so that file rides along automatically—no extra `build_src_filter`
 dance.
 
+`UNITY_OUTPUT_START()` boots the chatter at 115200 on `Serial1` by default. If your hardware grooves at some other rate, crack
+open `unity_config.h` and remix the macro or call `unityTestStart()` with your own tempo.
+
 `unittest_transport.cpp` rides shotgun, providing the UART hooks PlatformIO's custom test transport expects. Both files
 lean on the same wrappers so every rant that Unity spits makes it back to the host. Change one without the other and you'll be
 debugging in the dark.
