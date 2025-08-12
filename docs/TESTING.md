@@ -9,7 +9,6 @@ stub out anything that would otherwise demand real wires. Fire them up when you'
 or want receipts before you solder.
 
 **Command**
-
 ```bash
 cd firmware
 pio test -e teensy40_unity
@@ -69,4 +68,6 @@ node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000
 
 Run the full-system layer before releases or any time hardware or bridge changes. It's the last line
 of defense before you haul gear on stage.
+
+Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place.
 
