@@ -58,7 +58,7 @@ We finally caved and wired up a few automated checks in `test/` for those lonely
 pio test -e teensy40_unity
 ```
 
-That Unity env automatically defines `UNIT_TEST`, which wakes up our USB‑MIDI impostors. Real hardware builds never see that flag, so the stubs stay buried and the genuine library runs the show.
+That Unity env automatically defines `UNIT_TEST` *and* `USB_MIDI_STUB`. When those flags fly, `test/USB-MIDI.cpp` and its header hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Real hardware builds leave `USB_MIDI_STUB` undefined, so `MIDIHandler.cpp` skips the faux pipes and the legit USB stack owns the symbols—no linker brawls, no ghosts.
 
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
 There's a lean version sitting in `../include/` that just sprays bytes
