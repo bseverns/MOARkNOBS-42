@@ -1,13 +1,9 @@
 #include "USB-MIDI.h"
-#if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+#if defined(UNIT_TEST)
 #include "MIDIHandler.h"
 // Guard keeps the stub from hijacking real hardware builds.
 #undef usbMIDI
 MidiInterfaceStub MIDI;
 USBMidiStub usbMIDI;
-#ifndef ARDUINO
-HardwareSerial Serial1;
-SerialStub Serial;
-#endif
-#endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+#endif  // defined(UNIT_TEST)
 
