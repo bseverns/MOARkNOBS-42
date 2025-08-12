@@ -30,7 +30,8 @@ extern ConfigManager configManager;
 static const unsigned long LONG_PRESS_DELAY   = 500;
 static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
-static const int NUM_ARG_PAIRS = sizeof(ARG_PAIRS) / sizeof(ARG_PAIRS[0]);
+// Mirror the global ARG pair count so our math stays synced without recomputing.
+static const int NUM_ARG_PAIRS = ARG_PAIRS_LEN;
 
 static const EnvelopeFollower::FilterType ALL_FILTERS[] = {
     EnvelopeFollower::LINEAR,

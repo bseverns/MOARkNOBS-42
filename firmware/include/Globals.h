@@ -20,6 +20,7 @@
 #define GLOBALS_H
 
 #include <Arduino.h>
+#include <utility>
 class ConfigManager;
 extern ConfigManager configManager;
 
@@ -120,44 +121,9 @@ extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings
 extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;
 
-// Analog Routing Grid pairings. Each tuple names two ADC inputs that can be
-// slammed together into an envelope follower.  Cycling through this table lets
-// the firmware re-route envelopes without repatching the hardware.
-static const std::pair<int,int> ARG_PAIRS[] = {
-    // All pairs beginning with A0
-    {A0, A1},
-    {A0, A2},
-    {A0, A3},
-    {A0, A6},
-    {A0, A7},
-
-    // Then pairs beginning with A1
-    {A1, A0},
-    {A1, A2},
-    {A1, A3},
-    {A1, A6},
-    {A1, A7},
-
-    // Then pairs beginning with A2
-    {A2, A0},
-    {A2, A1},
-    {A2, A3},
-    {A2, A6},
-    {A2, A7},
-
-    // Then pairs beginning with A3
-    {A3, A0},
-    {A3, A1},
-    {A3, A2},
-    {A3, A6},
-    {A3, A7},
-
-    // Finally the one pair from A6
-    {A6, A0},
-    {A6, A1},
-    {A6, A2},
-    {A6, A3},
-    {A6, A7}
-};
+// Analog Routing Grid pairings.  Declared here, defined loud and proud in
+// Globals.cpp so every translation unit plays nice.
+extern const std::pair<int, int> ARG_PAIRS[];
+extern const size_t ARG_PAIRS_LEN;
 
 #endif // GLOBALS_H
