@@ -3,6 +3,7 @@
 This project doubles as a proving ground and a punching bag. Two flavors of tests keep the firmware honest:
 
 * `src/test_*.cpp` – full-system, manual machine tests you flash and prod like a lab rat.
+* `system_test/test_*.cpp` – Unity-driven integration tests that need real hardware on the bench.
 * `test/test_*.cpp` – Unity smoke tests that run under `pio test` when you want receipts without solder burns.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
@@ -26,12 +27,12 @@ debugging in the dark.
 | `src/test_biquadfilter.cpp` | BiquadFilter DSP math only |
 | `src/test_eeprom_persistence.cpp` | EEPROM, ConfigManager, slots, display, buttons, pots, envelopes, LEDs |
 | `src/test_verify_slots.cpp` | MIDISlots and EEPROM integrity |
-| `test/test_led_manager.cpp` | LEDManager brightness and colour knobs |
-| `test/test_button_manager.cpp` | ButtonManager long‑press timing |
-| `test/test_potentiometer_manager.cpp` | Pot channel + CC mapping |
-| `test/test_display_manager.cpp` | DisplayManager update throttle |
-| `test/test_envelope_follower.cpp` | EnvelopeFollower low‑pass/high‑pass flip |
-| `test/test_config_manager.cpp` | ConfigManager EEPROM recovery |
+| `system_test/test_led_manager.cpp` | LEDManager brightness and colour knobs |
+| `system_test/test_button_manager.cpp` | ButtonManager long‑press timing |
+| `system_test/test_potentiometer_manager.cpp` | Pot channel + CC mapping |
+| `system_test/test_display_manager.cpp` | DisplayManager update throttle |
+| `system_test/test_envelope_follower.cpp` | EnvelopeFollower low‑pass/high‑pass flip |
+| `system_test/test_config_manager.cpp` | ConfigManager EEPROM recovery |
 | `test/test_midi_handler.cpp` | MIDIHandler program/aftertouch/pitch bend/NRPN/SysEx routing – fakes the pipes, so keep it off hardware |
 | `test/test_arpeggiator.cpp` | Arpeggiator start/stop sanity |
 | `test/test_biquad_filter.cpp` | BiquadFilter low‑pass vs high‑pass math |
@@ -40,7 +41,7 @@ debugging in the dark.
 
 Say the OLED ghosts you mid-jam:
 
-1. Scan the table and spot `test/test_display_manager.cpp`.
+1. Scan the table and spot `system_test/test_display_manager.cpp`.
 2. Blast the whole Unity suite: `pio test -e teensy40_unity`. `test_main.cpp` will herd every test, including the display check. Want just one? comment out the `RUN_TEST` lines you don't care about and rerun.
 3. If Unity shrugs, flash `src/test_main.cpp` (`pio run -e teensy40_full_system -t upload`) and watch the screen dance.
 4. Still blank? time to chase solder joints.
