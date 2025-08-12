@@ -425,6 +425,8 @@ Some checks need hot solder and a human in the loop; others just need to prove t
 
 **Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive.
 
+The `teensy40_unity` rig skips the usual `setup()`/`loop()` duet and our Unity serial shim; the tests bring their own and even punk out the core's `usbMIDI` with a stub so names don't collide.
+
 Modules like `ButtonManager` roll with a posse of globals—`arpeggiator`, `configManager`, even the envelope follower herd. When you craft a test build, the linker expects those heavy hitters to exist. Drag in the real source file that defines them or toss in a skinny stub (`Arpeggiator arpeggiator;`) to keep the build from bailing. If global soup isn’t your vibe, refactor the module to take dependencies as arguments and inject them in your harness. More work, but no ghosts in the global state.
 
 Test sketches used in the development of this project include:
