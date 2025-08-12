@@ -74,6 +74,15 @@ Some bits of the official Teensy core get loose with types and compare signed po
 negative into a huge positive and invite buffer trashing. We stash patched copies under `lib/teensy_patches/` where the math is
 done with `size_t` from the get‑go. If upstream ever cleans it up, yank our shim and cruise on stock.
 
+### MIDI Type Shims
+
+The Arduino MIDI stack can't agree on whether a clock pulse is `Clock` or `Tick`,
+or if SysEx kicks off with `SystemExclusive` or its wordier cousin
+`SystemExclusiveStart`. `include/MidiTypeShim.h` throws down a few
+`MidiType_*` macros so our code laughs off upstream name changes. Use
+`MidiType_SystemExclusiveStart`, `MidiType_SystemExclusiveEnd`, and
+`MidiType_Tick` when checking message types and you'll dodge the churn.
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
