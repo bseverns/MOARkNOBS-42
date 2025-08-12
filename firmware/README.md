@@ -33,6 +33,8 @@ When you need proof the rig still howls, run the tests and watch the logs spill.
 - **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet and spews results over Serial at 115200 baud.
 - **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks and dumps output straight to stdout.
 
+Those host tests lean on a stubbed `MidiType` enum. We renamed the SysEx bookends to `SystemExclusiveStart`/`SystemExclusiveEnd` and dropped in a `Tick` alias for the 0xF8 clock pulse. Call them by their new names or watch the build spit you back to the prompt.
+
 The split is deliberate. `include/unity_config.h` wires a `unity_output` bridge so hardware tests bark over Serial while host tests mumble through stdout. If Unity screams into the void, crack that file open and make sure the bridge didn't burn out.
 
 ## What's This?

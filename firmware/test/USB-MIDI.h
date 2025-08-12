@@ -1,9 +1,9 @@
 #pragma once
 
-// Spin up these lightweight MIDI stubs only for UNIT_TEST runs.
-// Real hardware builds ship with their own USB-MIDI definitions
-// and we keep out of their way.
-#ifdef USB_MIDI_STUB
+// Spin up these lightweight MIDI stubs only when the unit-test rig asks for
+// them. The real Teensy core drags in its own USB‑MIDI guts, so we bail out
+// unless the UNIT_TEST flag is waving.
+#ifdef UNIT_TEST
 #include <cstdint>
 
 namespace midi {
@@ -17,15 +17,16 @@ enum MidiType : uint8_t {
   ProgramChange         = 0xC0,
   AfterTouchChannel     = 0xD0,
   PitchBend             = 0xE0,
-  SystemExclusive       = 0xF0,
+  SystemExclusiveStart  = 0xF0,
   TimeCodeQuarterFrame  = 0xF1,
   SongPosition          = 0xF2,
   SongSelect            = 0xF3,
   Undefined_F4          = 0xF4,
   Undefined_F5          = 0xF5,
   TuneRequest           = 0xF6,
-  EndOfExclusive        = 0xF7,
+  SystemExclusiveEnd    = 0xF7,
   Clock                 = 0xF8,
+  Tick                  = Clock, // real-time clock tick
   Undefined_F9          = 0xF9,
   Start                 = 0xFA,
   Continue              = 0xFB,
@@ -90,10 +91,13 @@ struct USBMidiStub : MidiInterfaceStub {
 extern MidiInterfaceStub MIDI;
 extern USBMidiStub usbMIDI;
 
+#ifndef ARDUINO
+// Only fake the serial port when the Arduino core isn't around to provide it.
 struct HardwareSerial {};
 extern HardwareSerial Serial1;
+#endif
 
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 #else
 #include_next "USB-MIDI.h"
-#endif  // defined(UNIT_TEST) && !defined(ARDUINO)
+#endif  // UNIT_TEST
