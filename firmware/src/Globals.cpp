@@ -6,7 +6,13 @@
 #include "USB-MIDI.h"
 #endif
 #include <ArduinoJson.h>
+#endif
+
+#if !defined(UNIT_TEST) && __has_include(<SD.h>)
 #include <SD.h>
+#define HAS_SD 1
+#else
+#define HAS_SD 0
 #endif
 
 
@@ -86,7 +92,7 @@ const std::pair<int, int> ARG_PAIRS[] = {
 const size_t ARG_PAIRS_LEN = sizeof(ARG_PAIRS) / sizeof(ARG_PAIRS[0]);
 
 static void loadFromJson(HardwareConfig& cfg) {
-#if __has_include(<ArduinoJson.h>)
+#if __has_include(<ArduinoJson.h>) && HAS_SD
     if (!SD.begin()) return;
     File f = SD.open("/hardware_config.json");
     if (!f) return;
