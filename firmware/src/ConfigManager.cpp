@@ -8,6 +8,12 @@
 #include <vector>
 #include "Log.h"
 
+#ifndef UNIT_TEST
+uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+#else
+uint8_t type = 0;
+#endif
+
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 
 static uint16_t crc16_update(uint16_t crc, uint8_t data) {
