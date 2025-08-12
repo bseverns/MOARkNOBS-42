@@ -68,7 +68,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Wired up the filter‑tuning pot and roughed up the arpeggiator—hands‑on analog control meets sequencer swagger, plus a reminder that drift and off‑by‑ones are always lurking.
 - **August 6:** First public drop lands as `v0.1.0`, bundling filter‑tuning pots, a self‑driving arpeggiator, WebSerial telemetry, NRPN/RPN/SysEx support, and the project's inaugural `CHANGELOG`. [v0.1.0]
 - **August 8:** Merged PR #286, hauling in the full FastLED arsenal and scribbling teachable comments all over `firmware/App/benzknobz.html`. [956069c]
-- **August 11:** PR #344 slams the door on loose ends—bridge lockfile regenerated, docs swept across the tree, Builder's Handbook and module READMEs fleshed out, turning this repo into a straight‑up teaching manual. [67cedd6]
+- **August 11** My ears are still ringing because I went to a metal show in the basement of an American Legion. I am scrambling to make these Unity testers work for the codebase as well as actual builds of the firmware.
 - *Standards are not optional; often the best lessons come from coloring off the page.*
 
 ## Overview
