@@ -49,16 +49,3 @@ void corrupted_primary_and_backup() {
     TEST_ASSERT_EQUAL_UINT8(1, pots[1]);
 }
 
-void setUp(void) {}
-void tearDown(void) {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(corrupt_primary_valid_backup);
-    RUN_TEST(corrupted_primary_and_backup);
-    RUN_TEST(test_eeprom_recovery_after_power_cycle);
-    RUN_TEST(test_calibration_offsets_survive_power_cycle);
-    UNITY_END();
-}
-
-void loop() {}

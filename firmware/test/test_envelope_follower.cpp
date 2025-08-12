@@ -29,13 +29,3 @@ void test_filter_type_switching() {
     TEST_ASSERT_LESS_THAN(10, hp);
 }
 
-void setUp(void) {}
-void tearDown(void) {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(test_filter_type_switching);
-    UNITY_END();
-}
-
-void loop() {}

@@ -129,8 +129,8 @@ static bool isSupportedType(midi::MidiType t) {
         case midi::ProgramChange:
         case midi::AfterTouchChannel:
         case midi::PitchBend:
-        case midi::SystemExclusiveStart:
-        case midi::Clock:
+        case MidiType_SystemExclusiveStart:
+        case MidiType_Tick:
             return true;
         default:
             return false;
@@ -150,10 +150,10 @@ void MIDIHandler::processIncomingMIDI() {
     // handleMIDI so the rest of the rig can jam.
     if (MIDI.read()) {
         auto type = MIDI.getType();
-        if (type == midi::Clock) {
+        if (type == MidiType_Tick) {
             lastExternalClock = lastInternalTick = now();
             handleClockTick();
-        } else if (type == midi::SystemExclusiveStart) {
+        } else if (type == MidiType_SystemExclusiveStart) {
             handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
         } else {
             handleMIDI(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
@@ -171,10 +171,10 @@ void MIDIHandler::processIncomingMIDI() {
             MIDI_DBG_PRINTLN("Dropping unsupported USB MIDI type");
             continue;
         }
-        if (type == midi::Clock) {
+        if (type == MidiType_Tick) {
             lastExternalClock = lastInternalTick = now();
             handleClockTick();
-        } else if (type == midi::SystemExclusiveStart) {
+        } else if (type == MidiType_SystemExclusiveStart) {
             handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
         } else {
             handleMIDI(type, usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
@@ -263,7 +263,7 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
             handlePitchBend(channel, bend);
             break;
         }
-        case midi::SystemExclusiveStart:
+        case MidiType_SystemExclusiveStart:
             // handled upstream
             break;
         default:

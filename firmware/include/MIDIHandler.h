@@ -11,6 +11,7 @@ class HardwareSerial;
 #endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
+#include "MidiTypeShim.h"
 #ifdef UNIT_TEST
 #include "USB-MIDI.h"      // assumes test/ is on the include path
 #else
