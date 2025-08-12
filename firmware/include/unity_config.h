@@ -25,17 +25,14 @@ void unityTestComplete();
 #ifdef __cplusplus
 }
 #endif
+// Chuck Unity's baked-in hooks so our wrappers take the wheel.
+#undef UNITY_OUTPUT_START
+#undef UNITY_OUTPUT_CHAR
+#undef UNITY_OUTPUT_FLUSH
+#undef UNITY_OUTPUT_COMPLETE
 
-#ifndef UNITY_OUTPUT_START
 #define UNITY_OUTPUT_START(b)      unityTestStart(b)
-#endif
-#ifndef UNITY_OUTPUT_CHAR
-#define UNITY_OUTPUT_CHAR(c)      unityTestChar(c)
-#endif
-#ifndef UNITY_OUTPUT_FLUSH
-#define UNITY_OUTPUT_FLUSH()      unityTestFlush()
-#endif
-#ifndef UNITY_OUTPUT_COMPLETE
-#define UNITY_OUTPUT_COMPLETE()   unityTestComplete()
-#endif
+#define UNITY_OUTPUT_CHAR(c)       unityTestChar(c)
+#define UNITY_OUTPUT_FLUSH()       unityTestFlush()
+#define UNITY_OUTPUT_COMPLETE()    unityTestComplete()
 
