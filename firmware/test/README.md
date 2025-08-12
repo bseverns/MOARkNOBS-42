@@ -21,6 +21,10 @@ build_src_filter =
     +<**/unity_output.cpp>
 ```
 
+`unittest_transport.cpp` rides shotgun with it, providing the UART hooks PlatformIO's custom test transport expects. Both files
+lean on the same wrappers so every rant that Unity spits makes it back to the host. Change one without the other and you'll be
+debugging in the dark.
+
 ## Hardware Hit List
 
 | File | What it beats on |
