@@ -1,29 +1,73 @@
-# Testing the Firmware
+# Testing the Beast
 
-Yeah, we've got tests. Two flavors, two moods:
+This repo runs tests in layers, from polite unit checks to full-on hardware cage matches.
 
-- `firmware/test/` – quick Unity checks that run without touching a soldering iron.
-- `firmware/system_test/` – gritty integration trials that expect a live board on the other end of the USB cable.
+## Unity smoke tests (`firmware/test/`)
 
-## Unity Tests
+Unity tests are the quick-and-dirty pulse check for the firmware. They run on the Teensy board and
+stub out anything that would otherwise demand real wires. Fire them up when you've tweaked core logic
+or want receipts before you solder.
 
-If you just changed some logic and want proof it still behaves, let Unity scream for you:
-
+**Command**
 ```bash
 cd firmware
 pio test -e teensy40_unity
 ```
 
-That build only scoops up files in `firmware/test/`, so you're safe to run it on a laptop in a coffee shop.
+**Environment**
 
-## System Tests
+`teensy40_unity` – Teensy 4.0 with the Unity harness. Plug the board in over USB; the tests scream back
+over serial.
 
-When you need to poke real silicon, fire up the system tests. They live in `firmware/system_test/` and demand hardware to pass.
+Run these anytime you touch code under `src/` or `lib/`. They catch dumb regressions before you waste
+minutes flashing the full rig.
+
+## Full-system trials (`bridge/test/` and future `system_test/`)
+
+When you need to prove the whole stack plays nice, you move up to full-system tests. These expect real
+hardware and the Node bridge to be awake.
+
+### Bridge CLI sanity
+
+`bridge/test/` holds a Node.js script that makes sure the bridge even starts. It won't mock your
+hardware for you—it's just a smoke signal for the command-line parser.
+
+**Command**
+
+```bash
+cd bridge
+npm test
+```
+
+**Environment**
+
+Node 18+, controller connected if you want to see real serial chatter. The test suite itself fakes a
+missing port to make sure the bridge doesn't crash when the cable's yanked.
+
+### Real hardware gauntlet
+
+The future `system_test/` directory will host black-box tests that kick the actual controller and
+listen for the right squeals. Expect scripts here to upload dedicated test firmware and then poke the
+board through the bridge.
+
+**Example flow**
 
 ```bash
 cd firmware
-pio test -e teensy40_unity -d system_test
+pio run -e teensy40_full_system -t upload
+cd ../bridge
+node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000
+# ...run system_test scripts once the bridge is live...
 ```
+
+**Environment**
+
+- `teensy40_full_system` – flashes a firmware build that exposes every subsystem.
+- Node 18+ with `mn42_bridge.js` talking to the board on `/dev/ttyACM0`.
+- Whatever `system_test/` scripts land here will assume the controller and bridge are both lit up.
+
+Run the full-system layer before releases or any time hardware or bridge changes. It's the last line
+of defense before you haul gear on stage.
 
 Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place.
 

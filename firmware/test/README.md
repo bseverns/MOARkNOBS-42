@@ -2,9 +2,10 @@
 
 This project doubles as a proving ground and a punching bag. Two flavors of tests keep the firmware honest:
 
-* `src/test_*.cpp` – full-system, manual machine tests you flash and prod like a lab rat.
-* `system_test/test_*.cpp` – Unity-driven integration tests that need real hardware on the bench.
-* `test/test_*.cpp` – Unity smoke tests that run under `pio test` when you want receipts without solder burns.
+* `src/*_t.cpp` – manual hardware gauntlets you flash and prod like a lab rat.
+* `test/test_*.cpp` – the only Unity smoke tests, run under `pio test` when you want receipts without solder burns.
+
+Only the `test/test_*.cpp` crowd plays nice with Unity. Anything in `src/*_t.cpp` won't budge until you upload it to real silicon.
 
 You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the grand tour of the firmware proper.
 
@@ -22,17 +23,17 @@ debugging in the dark.
 
 | File | What it beats on |
 |------|------------------|
-| `src/test_main.cpp` | LEDs, button matrix, slot pot, envelope followers, OLED display |
-| `src/test_Unified.cpp` | Whole rig at once: LEDs, buttons, pots, envelopes, display, config |
-| `src/test_biquadfilter.cpp` | BiquadFilter DSP math only |
-| `src/test_eeprom_persistence.cpp` | EEPROM, ConfigManager, slots, display, buttons, pots, envelopes, LEDs |
-| `src/test_verify_slots.cpp` | MIDISlots and EEPROM integrity |
-| `system_test/test_led_manager.cpp` | LEDManager brightness and colour knobs |
-| `system_test/test_button_manager.cpp` | ButtonManager long‑press timing |
-| `system_test/test_potentiometer_manager.cpp` | Pot channel + CC mapping |
-| `system_test/test_display_manager.cpp` | DisplayManager update throttle |
-| `system_test/test_envelope_follower.cpp` | EnvelopeFollower low‑pass/high‑pass flip |
-| `system_test/test_config_manager.cpp` | ConfigManager EEPROM recovery |
+| `src/main_t.cpp` | LEDs, button matrix, slot pot, envelope followers, OLED display |
+| `src/unified_t.cpp` | Whole rig at once: LEDs, buttons, pots, envelopes, display, config |
+| `src/biquadfilter_t.cpp` | BiquadFilter DSP math only |
+| `src/eeprom_persistence_t.cpp` | EEPROM, ConfigManager, slots, display, buttons, pots, envelopes, LEDs |
+| `src/verify_slots_t.cpp` | MIDISlots and EEPROM integrity |
+| `test/test_led_manager.cpp` | LEDManager brightness and colour knobs |
+| `test/test_button_manager.cpp` | ButtonManager long‑press timing |
+| `test/test_potentiometer_manager.cpp` | Pot channel + CC mapping |
+| `test/test_display_manager.cpp` | DisplayManager update throttle |
+| `test/test_envelope_follower.cpp` | EnvelopeFollower low‑pass/high‑pass flip |
+| `test/test_config_manager.cpp` | ConfigManager EEPROM recovery |
 | `test/test_midi_handler.cpp` | MIDIHandler program/aftertouch/pitch bend/NRPN/SysEx routing – fakes the pipes, so keep it off hardware |
 | `test/test_arpeggiator.cpp` | Arpeggiator start/stop sanity |
 | `test/test_biquad_filter.cpp` | BiquadFilter low‑pass vs high‑pass math |
@@ -41,18 +42,18 @@ debugging in the dark.
 
 Say the OLED ghosts you mid-jam:
 
-1. Scan the table and spot `system_test/test_display_manager.cpp`.
-2. Blast the whole Unity suite: `pio test -e teensy40_unity`. `test_main.cpp` will herd every test, including the display check. Want just one? comment out the `RUN_TEST` lines you don't care about and rerun.
-3. If Unity shrugs, flash `src/test_main.cpp` (`pio run -e teensy40_full_system -t upload`) and watch the screen dance.
+1. Scan the table and spot `test/test_display_manager.cpp`.
+2. Blast the whole Unity suite: `pio test -e teensy40_unity`. `test/test_mainUnity.cpp` will herd every test, including the display check. Want just one? comment out the `RUN_TEST` lines you don't care about and rerun.
+3. If Unity shrugs, flash `src/main_t.cpp` (`pio run -e teensy40_full_system -t upload`) and watch the screen dance.
 4. Still blank? time to chase solder joints.
 
 ### Shared helpers
 
 `TestHelpers.cpp` anchors the control-button matrix in one spot so every test riffs from the same pin map. Include `TestHelpers.h` and you're good to shred without duplicating arrays.
 
-## Manual machine tests (`src/test_*.cpp`)
+## Manual machine tests (`src/*_t.cpp`)
 
-When you need to stare the hardware in the face, grab a `src/test_*.cpp` sketch and drive it yourself.
+When you need to stare the hardware in the face, grab a `src/*_t.cpp` sketch and drive it yourself.
 
 Example: run the unified gauntlet and see what smokes first.
 
@@ -63,7 +64,7 @@ Example: run the unified gauntlet and see what smokes first.
 
 ## Now with Unity smoke tests
 
-We finally caved and wired up a few automated checks in `test/` for those lonely nights when you want proof without solder burns.
+We finally caved and wired up a few automated checks in `test/test_*.cpp` for those lonely nights when you want proof without solder burns. Anything in `src/*_t.cpp` still demands real hardware and a steady trigger finger.
 
 ```bash
 pio test -e teensy40_unity
@@ -115,9 +116,9 @@ Runs a quick low-pass vs high-pass duel to catch any rogue DSP math.
 
 ## File Descriptions
 
-### test_main.cpp
+### main_t.cpp
 
-Location: src/test_main.cpp
+Location: src/main_t.cpp
 
 #### Purpose-built to verify all major subsystems individually:
 
@@ -135,9 +136,9 @@ Run this and check it with your eyes. No automation. Human-in-the-loop sanity ch
 
 Interaction: Step manually by hitting Enter in the serial monitor between stages.
 
-### test_Unified.cpp
+### unified_t.cpp
 
-Location: src/test_Unified.cpp
+Location: src/unified_t.cpp
 
 #### This is the integration stress-test. All systems together, reacting to physical input. No waiting for user input via serial; it uses the actual button matrix for flow control. If something doesn't light up, react, or show data, you know exactly where to poke.
 
@@ -145,9 +146,9 @@ Used for field validation, QA benches, and righteous debugging rage.
 
 Interaction: Uses real button presses (not keyboard input). Designed to be used with the assembled controller.
 
-### test_biquadfilter.cpp
+### biquadfilter_t.cpp
 
-Location: src/test_biquadfilter.cpp
+Location: src/biquadfilter_t.cpp
 
 #### Tests the digital signal processing side of things. No LEDs. No buttons. Just math:
 
@@ -159,17 +160,17 @@ Useful for catching dumb mistakes in your DSP brain
 
 Run this when your filter "sounds weird" and you're sure the hardware is fine.
 
-### test_eeprom_persistence.cpp
+### eeprom_persistence_t.cpp
 
-Location: src/test_eeprom_persistence.cpp
+Location: src/eeprom_persistence_t.cpp
 
 #### Checks that configuration data survives a power cycle and that the backup EEPROM region can resurrect corrupted settings.
 
 Expect to reboot the board a couple of times and watch the display for prompts. It's manual, messy, and exactly why this suite exists.
 
-### test_verify_slots.cpp
+### verify_slots_t.cpp
 
-Location: src/test_verify_slots.cpp
+Location: src/verify_slots_t.cpp
 
 #### Blasts known values into every MIDISlot and slurps them back out to make sure EEPROM isn't lying to you.
 
@@ -177,12 +178,12 @@ Output scrolls by on Serial with PASS/FAIL verdicts. Trust, but verify.
 
 ## How to Build a Test
 
-Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building `test_main.cpp`:
+Each test is wired to its own PlatformIO environment in platformio.ini. The trick is to explicitly define which files you want to include. Here's an example for building `main_t.cpp`:
 
 [env:teensy40_full_system]
 extends = env:teensy40_base
 build_src_filter =
-    +<**/test_main.cpp>
+    +<**/main_t.cpp>
     +<**/ButtonManager.cpp>
     +<**/ConfigManager.cpp>
     +<**/DisplayManager.cpp>
@@ -202,7 +203,22 @@ pio run -e teensy40_full_system -t upload
 
 That `teensy40_full_system` build shoves the whole circus onto the board so you can poke every subsystem live.
 
-Swap in `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
+Swap in `unified_t.cpp`, `biquadfilter_t.cpp`, `eeprom_persistence_t.cpp`, or `verify_slots_t.cpp` depending on what you're shaking down today.
+
+## Add Your Own Test
+
+Got a new stunt that isn't in the roster? Spin up your own environment:
+
+```ini
+[env:your_new_test]
+extends = env:teensy40_base
+build_src_filter = +<**/your_new_test.cpp>
+test_build_src = true
+```
+
+`build_src_filter` is your whitelist—only sources tagged with a `+` get invited to the party. Flip `test_build_src` to haul in everything under `src/` so Unity hammers the real firmware, not some cardboard cutout.
+
+For a full-blown example, raid [platformio.ini](../platformio.ini) and riff off an existing `env:` block.
 
 ## Final Note
 
