@@ -18,6 +18,9 @@ extern "C" {
 // Wrap the output hooks in uniquely named functions so the Unity
 // macros never see `Serial` directly.  That keeps the tests from
 // tripping over missing USB gadgets on the host.
+//
+// `unityTestStart()` still takes a baud so we can pick a lane if the
+// default doesn't groove with the hardware.
 void unityTestStart(unsigned long baudrate);
 void unityTestChar(unsigned int c);
 void unityTestFlush();

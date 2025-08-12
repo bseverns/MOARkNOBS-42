@@ -37,7 +37,7 @@ Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly t
 
 The split is deliberate. `include/unity_config.h` and its sidekick `src/unity_config.cpp` tag‑team as the switchboard so hardware tests bark over USB while host runs stay console‑only. If Unity screams into the void, crack that pair open and make sure the bridge didn’t burn out.
 
-Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the baud rate you want to shout over, no more hard‑wired 115200.
+By default Unity yells over Serial1 at 115200. `UNITY_OUTPUT_START()` kicks that off for you—edit the macro if your rig screams at some other tempo.
 
 Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
 

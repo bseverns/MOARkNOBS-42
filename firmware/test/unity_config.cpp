@@ -8,6 +8,8 @@
 #ifdef ARDUINO
 #include <Arduino.h>
 extern "C" {
+  // unityTestStart still lets us pick the tempo; UNITY_OUTPUT_START()
+  // slaps it with 115200 unless you remix the macro.
   void unityTestStart(unsigned long baudrate) { Serial1.begin(baudrate); }
   void unityTestChar(unsigned int c) { Serial1.write(static_cast<uint8_t>(c)); }
   void unityTestFlush(void) { Serial1.flush(); }
