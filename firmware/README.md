@@ -37,6 +37,8 @@ Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly t
 
 The split is deliberate. `include/unity_config.h` wires a `unity_output` bridge so hardware tests bark over Serial while host tests mumble through stdout. If Unity screams into the void, crack that file open and make sure the bridge didn't burn out.
 
+Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the baud rate you want to shout over, no more hard‑wired 115200.
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.

@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 
-void unityOutputStart();
+void unityOutputStart(unsigned long baudrate);
 void unityOutputChar(char c);
 void unityOutputFlush();
 void unityOutputComplete();
@@ -23,13 +23,13 @@ void unityOutputComplete();
 }
 #endif
 
-#define UNITY_OUTPUT_START()      unityOutputStart()
+#define UNITY_OUTPUT_START(b)      unityOutputStart(b)
 #define UNITY_OUTPUT_CHAR(c)      unityOutputChar(c)
 #define UNITY_OUTPUT_FLUSH()      unityOutputFlush()
 #define UNITY_OUTPUT_COMPLETE()   unityOutputComplete()
 
 #ifndef ARDUINO
-static inline void unityOutputStart(void) {}
+static inline void unityOutputStart(unsigned long baudrate) { (void)baudrate; }
 static inline void unityOutputChar(char c) { putchar(c); }
 static inline void unityOutputFlush(void) { fflush(stdout); }
 static inline void unityOutputComplete(void) {}
