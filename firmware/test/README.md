@@ -70,6 +70,10 @@ pio test -e teensy40_unity
 
 That Unity env automatically defines `UNIT_TEST` *and* `USB_MIDI_STUB`. When those flags fly, `test/USB-MIDI.cpp` and its header hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Real hardware builds leave `USB_MIDI_STUB` undefined, so `MIDIHandler.cpp` skips the faux pipes and the legit USB stack owns the symbols—no linker brawls, no ghosts.
 
+### Serial? fake it.
+
+Vendor libs love to yammer over `Serial` even when there's no UART in sight. The host test rig doesn't drag in the Arduino core, so we slap down a bare-bones `SerialStub` in `test/SerialStub.h` and force it into every Unity compile via `-include`. It's just enough to keep `Adafruit BusIO` and friends from choking while the real hardware sleeps.
+
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
 There's a lean version sitting in `../include/` that just sprays bytes
 over `Serial`. If you need different output, crack that file open and

@@ -2,8 +2,8 @@
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them. The real Teensy core drags in its own USB‑MIDI guts, so we bail out
-// unless both UNIT_TEST and USB_MIDI_STUB flags are waving.
-#if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+// unless the UNIT_TEST flag is waving.
+#if defined(UNIT_TEST)
 // Hijack the core's usbMIDI symbol before any Arduino headers get a shot.
 #define usbMIDI usbMIDI_real
 #include <cstdint>
@@ -92,23 +92,9 @@ struct USBMidiStub : MidiInterfaceStub {
 
 extern MidiInterfaceStub MIDI;
 
-#ifndef ARDUINO
-// Only fake the serial port when the Arduino core isn't around to provide it.
-struct HardwareSerial {};
-extern HardwareSerial Serial1;
-class SerialStub {
- public:
-  template <typename... Args> void print(Args...) {}
-  template <typename... Args> void println(Args...) {}
-  template <typename... Args> void printf(Args...) {}
-};
-
-extern SerialStub Serial;
-#endif
-
 #ifndef MIDI_CREATE_INSTANCE
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 #endif
 #else
 #include_next "USB-MIDI.h"
-#endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+#endif  // defined(UNIT_TEST)
