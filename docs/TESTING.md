@@ -1,25 +1,29 @@
-# TESTING.md
+# Testing the Firmware
 
-So you want to know if the knobs behave before you melt anything? Here's how the CI circus rolls.
+Yeah, we've got tests. Two flavors, two moods:
 
-## Unity tests
+- `firmware/test/` – quick Unity checks that run without touching a soldering iron.
+- `firmware/system_test/` – gritty integration trials that expect a live board on the other end of the USB cable.
 
-These are the fast, software-only checks that keep our logic tidy.
+## Unity Tests
 
-- **Trigger:** every push and pull request. Manual dispatch works too.
-- **Command:** `platformio test -e teensy40_unity` from the `firmware/` directory.
-- **Artifacts:** look for the `unity-test-logs` artifact. It's the receipt proving this job ran.
+If you just changed some logic and want proof it still behaves, let Unity scream for you:
 
-## System tests
+```bash
+cd firmware
+pio test -e teensy40_unity
+```
 
-These go after the hardware. They only run when you mean it.
+That build only scoops up files in `firmware/test/`, so you're safe to run it on a laptop in a coffee shop.
 
-- **Trigger:** push to the `hardware-test` branch *or* smash the manual dispatch button in GitHub.
-- **Command:** `platformio test -e teensy40_full_system` from `firmware/`.
-- **Artifacts:** `system-test-logs` show up when this job actually fires.
+## System Tests
 
-## DIY
+When you need to poke real silicon, fire up the system tests. They live in `firmware/system_test/` and demand hardware to pass.
 
-Run either suite locally with the same `platformio test` commands above. If you're not in `firmware/`, the tests will give you side-eye.
+```bash
+cd firmware
+pio test -e teensy40_unity -d system_test
+```
 
-Stay loud, test often.
+Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place.
+
