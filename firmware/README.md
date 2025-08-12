@@ -41,6 +41,16 @@ Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the ba
 
 Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
 
+#### USB_MIDI_STUB
+
+Flip on `USB_MIDI_STUB` and the firmware boots without the USB serial gadget. `Serial` goes dark, so every print needs to ride through our `LOG_*` wrapper or a stub logger or the build won't link. The `teensy40_unity` env already pipes Unity's yaps straight to stdout, and any extra chatter has to go through the same wrapper.
+
+```cpp
+#if !defined(USB_MIDI_STUB)
+LOG_PRINTLN("serial still lives");
+#endif
+```
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
