@@ -14,32 +14,28 @@
 extern "C" {
 #endif
 
-void unityOutputStart(unsigned long baudrate);
-void unityOutputChar(unsigned int c);
-void unityOutputFlush();
-void unityOutputComplete();
+// Wrap the output hooks in uniquely named functions so the Unity
+// macros never see `Serial` directly.  That keeps the tests from
+// tripping over missing USB gadgets on the host.
+void unityTestStart(unsigned long baudrate);
+void unityTestChar(unsigned int c);
+void unityTestFlush();
+void unityTestComplete();
 
 #ifdef __cplusplus
 }
 #endif
 
 #ifndef UNITY_OUTPUT_START
-#define UNITY_OUTPUT_START(b)      unityOutputStart(b)
+#define UNITY_OUTPUT_START(b)      unityTestStart(b)
 #endif
 #ifndef UNITY_OUTPUT_CHAR
-#define UNITY_OUTPUT_CHAR(c)      unityOutputChar(c)
+#define UNITY_OUTPUT_CHAR(c)      unityTestChar(c)
 #endif
 #ifndef UNITY_OUTPUT_FLUSH
-#define UNITY_OUTPUT_FLUSH()      unityOutputFlush()
+#define UNITY_OUTPUT_FLUSH()      unityTestFlush()
 #endif
 #ifndef UNITY_OUTPUT_COMPLETE
-#define UNITY_OUTPUT_COMPLETE()   unityOutputComplete()
-#endif
-
-#if !defined(ARDUINO) && !defined(TEENSYDUINO) && !defined(UNIT_TEST)
-static inline void unityOutputStart(unsigned long baudrate) { (void)baudrate; }
-static inline void unityOutputChar(unsigned int c) { putchar(c); }
-static inline void unityOutputFlush(void) { fflush(stdout); }
-static inline void unityOutputComplete(void) {}
+#define UNITY_OUTPUT_COMPLETE()   unityTestComplete()
 #endif
 
