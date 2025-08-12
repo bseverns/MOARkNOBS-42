@@ -1,10 +1,15 @@
-#include <Arduino.h>
 #include <cstdio>
+#ifdef USB_MIDI_SERIAL
+#include <Arduino.h>
+#endif
 #include "unity_config.h"
 
+// The Unity test runner wants a handful of hooks to squirt out text.
+// We punt those to uniquely named functions so nothing drags in
+// `Serial` unless we absolutely mean it.
 extern "C" {
 
-void unityOutputStart(unsigned long baudrate) {
+void unityTestStart(unsigned long baudrate) {
 #ifdef USB_MIDI_SERIAL
   Serial.begin(baudrate);
 #else
@@ -12,7 +17,7 @@ void unityOutputStart(unsigned long baudrate) {
 #endif
 }
 
-void unityOutputChar(unsigned int c) {
+void unityTestChar(unsigned int c) {
 #ifdef USB_MIDI_SERIAL
   Serial.write(static_cast<uint8_t>(c)); // Unity slings ints; Serial chews bytes
 #else
@@ -20,7 +25,7 @@ void unityOutputChar(unsigned int c) {
 #endif
 }
 
-void unityOutputFlush() {
+void unityTestFlush() {
 #ifdef USB_MIDI_SERIAL
   Serial.flush();
 #else
@@ -28,7 +33,7 @@ void unityOutputFlush() {
 #endif
 }
 
-void unityOutputComplete() {
+void unityTestComplete() {
 #ifdef USB_MIDI_SERIAL
   Serial.end();
 #endif
