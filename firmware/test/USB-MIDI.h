@@ -96,6 +96,14 @@ extern MidiInterfaceStub MIDI;
 // Only fake the serial port when the Arduino core isn't around to provide it.
 struct HardwareSerial {};
 extern HardwareSerial Serial1;
+class SerialStub {
+ public:
+  template <typename... Args> void print(Args...) {}
+  template <typename... Args> void println(Args...) {}
+  template <typename... Args> void printf(Args...) {}
+};
+
+extern SerialStub Serial;
 #endif
 
 #ifndef MIDI_CREATE_INSTANCE

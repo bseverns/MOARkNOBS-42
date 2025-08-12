@@ -1,9 +1,13 @@
 #include "Globals.h"
 
 #if __has_include(<ArduinoJson.h>)
+#if defined(USB_MIDI_STUB)
+#include "USB-MIDI.h"
+#endif
 #include <ArduinoJson.h>
 #include <SD.h>
 #endif
+
 
 // Default hardware description
 HardwareConfig hwConfig = {

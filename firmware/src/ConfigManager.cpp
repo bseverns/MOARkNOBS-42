@@ -393,7 +393,8 @@ bool ConfigManager::handleCommand(const String& command) {
         LOG_PRINTLN("OK");
         return true;
     } else if (command.startsWith("GET_FILTER")) {
-        uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+         const uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+        (void)type; // keep the compiler chill
         float freq, q;
         EEPROM.get(EEPROM_FILTER_FREQ, freq);
         EEPROM.get(EEPROM_FILTER_Q, q);
