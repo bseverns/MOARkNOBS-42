@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef ARDUINO
+#if defined(ARDUINO) || defined(TEENSYDUINO) || defined(UNIT_TEST)
 #include <Arduino.h>
 #else
 #include <cstdio>
@@ -30,7 +30,7 @@ void unityOutputComplete();
 #define UNITY_OUTPUT_FLUSH()      unityOutputFlush()
 #define UNITY_OUTPUT_COMPLETE()   unityOutputComplete()
 
-#ifndef ARDUINO
+#if !defined(ARDUINO) && !defined(TEENSYDUINO) && !defined(UNIT_TEST)
 static inline void unityOutputStart(unsigned long baudrate) { (void)baudrate; }
 static inline void unityOutputChar(char c) { putchar(c); }
 static inline void unityOutputStart(void) {}

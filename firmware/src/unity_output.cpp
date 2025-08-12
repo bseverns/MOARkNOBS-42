@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "unity_config.h"
 
 extern "C" {
 
