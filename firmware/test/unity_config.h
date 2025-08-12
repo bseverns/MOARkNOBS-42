@@ -1,12 +1,8 @@
 #pragma once
 
-#if defined(ARDUINO) || defined(TEENSYDUINO)
-#include <Arduino.h>
-#elif defined(UNIT_TEST) && !defined(ARDUINO)
 #include <cstdio>
+#ifdef UNIT_TEST
 #include "../test/USB-MIDI.h"  // rope in the Serial stand-in when the core's MIA
-#else
-#include <cstdio>
 #endif
 
 // Unity wants to know where to spit its test logs.
