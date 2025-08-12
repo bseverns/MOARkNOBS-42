@@ -18,13 +18,3 @@ void test_lowpass_highpass_response() {
     TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, hpOut);
 }
 
-void setUp(void) {}
-void tearDown(void) {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(test_lowpass_highpass_response);
-    UNITY_END();
-}
-
-void loop() {}

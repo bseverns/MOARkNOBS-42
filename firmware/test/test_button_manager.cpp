@@ -40,13 +40,3 @@ void test_long_press_detection() {
     TEST_ASSERT_TRUE(bm._buttonMachines[0].longPressFired);
 }
 
-void setUp(void) {}
-void tearDown(void) {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(test_long_press_detection);
-    UNITY_END();
-}
-
-void loop() {}

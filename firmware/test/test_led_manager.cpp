@@ -13,13 +13,3 @@ void test_brightness_and_color() {
     TEST_ASSERT_EQUAL_UINT8(hotpink.b, read.b);
 }
 
-void setUp(void) {}
-void tearDown(void) {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(test_brightness_and_color);
-    UNITY_END();
-}
-
-void loop() {}

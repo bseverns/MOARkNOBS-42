@@ -31,7 +31,7 @@ You're in `firmware/test/`; bounce back to [../README.md](../README.md) for the 
 Say the OLED ghosts you mid-jam:
 
 1. Scan the table and spot `test/test_display_manager.cpp`.
-2. Run its Unity check: `pio test -e teensy40_unity -f test_display_manager.cpp`.
+2. Blast the whole Unity suite: `pio test -e teensy40_unity`. `test_main.cpp` will herd every test, including the display check. Want just one? comment out the `RUN_TEST` lines you don't care about and rerun.
 3. If Unity shrugs, flash `src/test_main.cpp` (`pio run -e teensy40_full_system -t upload`) and watch the screen dance.
 4. Still blank? time to chase solder joints.
 

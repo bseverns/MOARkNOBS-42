@@ -91,20 +91,4 @@ void test_drop_unsupported_usb_type() {
     TEST_ASSERT_EQUAL_UINT32(0, mh.lastInternalTick);
 }
 
-void setUp() {}
-void tearDown() {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(test_program_change);
-    RUN_TEST(test_aftertouch);
-    RUN_TEST(test_pitch_bend);
-    RUN_TEST(test_send_nrpn);
-    RUN_TEST(test_receive_nrpn);
-    RUN_TEST(test_send_sysex);
-    RUN_TEST(test_drop_unsupported_usb_type);
-    UNITY_END();
-}
-
-void loop() {}
 #endif // UNIT_TEST
