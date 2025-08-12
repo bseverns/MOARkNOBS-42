@@ -41,6 +41,16 @@ Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the ba
 
 Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
 
+#### USB_MIDI_STUB
+
+Flip on `USB_MIDI_STUB` and the firmware boots without the USB serial gadget. `Serial` goes dark, so every print needs to ride through our `LOG_*` wrapper or a stub logger or the build won't link. The `teensy40_unity` env already pipes Unity's yaps straight to stdout, and any extra chatter has to go through the same wrapper.
+
+```cpp
+#if !defined(USB_MIDI_STUB)
+LOG_PRINTLN("serial still lives");
+#endif
+```
+
 #### Serial logging, minus the Serial
 
 Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
@@ -50,6 +60,7 @@ Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
 stub in `test/USB-MIDI.cpp` gulps the output so the linker stays chill. Include
 [`Log.h`](include/Log.h) and lean on the macros whenever you need to spit
 debug.
+
 
 ## What's This?
 
