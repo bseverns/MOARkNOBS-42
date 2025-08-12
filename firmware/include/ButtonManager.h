@@ -25,27 +25,18 @@
 #include "Utility.h"
 #include "PotentiometerManager.h"
 #include "Globals.h"
+#include "Log.h"
 
 // Optional: Enable detailed debug logging for development
 #ifndef BUTTON_MANAGER_DEBUG
 #define BUTTON_MANAGER_DEBUG 0
 #endif
 #if BUTTON_MANAGER_DEBUG
-  // Pump debug chatter over Serial when we're running on real Arduino
-  // silicon.  Host-side tests don't boot a `Serial` object, so we duck out
-  // to libc's `printf` and keep the noise flowing.  Keep your messages
-  // stringy in that case.
-  #if defined(ARDUINO)
-    #define BM_DBG_PRINT(x)   Serial.print(x)
-    #define BM_DBG_PRINTLN(x) Serial.println(x)
-  #else
-    #include <cstdio>
-    #define BM_DBG_PRINT(x)   std::printf("%s", x)
-    #define BM_DBG_PRINTLN(x) std::printf("%s\n", x)
-  #endif
+  #define BM_DBG_PRINT(...)   LOG_PRINT(__VA_ARGS__)
+  #define BM_DBG_PRINTLN(...) LOG_PRINTLN(__VA_ARGS__)
 #else
-  #define BM_DBG_PRINT(x)
-  #define BM_DBG_PRINTLN(x)
+  #define BM_DBG_PRINT(...)
+  #define BM_DBG_PRINTLN(...)
 #endif
 
 // Total number of multiplexed "virtual" buttons

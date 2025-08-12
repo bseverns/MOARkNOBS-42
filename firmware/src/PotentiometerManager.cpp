@@ -6,6 +6,7 @@
 #include <EEPROM.h>
 #include "Globals.h"
 #include "Utility.h"
+#include "Log.h"
 
 // Reads all potentiometers via a pair of multiplexers. The most recent values
 // feed LEDManager for visual feedback and trigger MIDI messages through the
@@ -133,7 +134,7 @@ void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<Envel
 }
 
 void PotentiometerManager::loadFromEEPROM() {
-    Serial.println("Loading potentiometer settings from EEPROM...");
+    LOG_PRINTLN("Loading potentiometer settings from EEPROM...");
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         int address = i * 2;
         potChannels[i] = EEPROM.read(address);
@@ -142,7 +143,7 @@ void PotentiometerManager::loadFromEEPROM() {
 }
 
 void PotentiometerManager::resetEEPROM() {
-    Serial.println("Resetting EEPROM settings for potentiometers...");
+    LOG_PRINTLN("Resetting EEPROM settings for potentiometers...");
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         potChannels[i] = 1;  // Default MIDI channel
         potCCNumbers[i] = i;  // Default CC number
