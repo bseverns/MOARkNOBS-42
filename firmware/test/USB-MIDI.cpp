@@ -1,8 +1,10 @@
 #include "USB-MIDI.h"
-#ifdef USB_MIDI_STUB
+#ifdef UNIT_TEST
 // Guard keeps the stub from hijacking real hardware builds.
 MidiInterfaceStub MIDI;
 USBMidiStub usbMIDI;
+#ifndef ARDUINO
 HardwareSerial Serial1;
-#endif  // defined(UNIT_TEST)
+#endif
+#endif  // UNIT_TEST
 
