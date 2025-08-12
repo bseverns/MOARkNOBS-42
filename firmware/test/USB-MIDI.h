@@ -2,8 +2,8 @@
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them. The real Teensy core drags in its own USB‑MIDI guts, so we bail out
-// unless the UNIT_TEST flag is waving.
-#ifdef UNIT_TEST
+// unless both UNIT_TEST and USB_MIDI_STUB flags are waving.
+#if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 #include <cstdint>
 
 namespace midi {
@@ -100,4 +100,4 @@ extern HardwareSerial Serial1;
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 #else
 #include_next "USB-MIDI.h"
-#endif  // UNIT_TEST
+#endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
