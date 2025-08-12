@@ -1,17 +1,20 @@
 #pragma once
 
-#ifdef UNIT_TEST
-#if !defined(ARDUINO) || defined(USB_MIDI_STUB)
-struct HardwareSerial {};
-static HardwareSerial Serial1;
+#if defined(UNIT_TEST) && (defined(USB_MIDI_STUB) || !defined(ARDUINO))
 
-class SerialStub {
- public:
+struct Print {
   template <typename... Args> void print(Args...) {}
   template <typename... Args> void println(Args...) {}
   template <typename... Args> void printf(Args...) {}
 };
 
+struct Stream : Print {};
+
+struct HardwareSerial : Stream {};
+
+class SerialStub : public HardwareSerial {};
+
 static SerialStub Serial;
-#endif // !defined(ARDUINO) || defined(USB_MIDI_STUB)
-#endif // UNIT_TEST
+static SerialStub Serial1;
+
+#endif // defined(UNIT_TEST) && (defined(USB_MIDI_STUB) || !defined(ARDUINO))
