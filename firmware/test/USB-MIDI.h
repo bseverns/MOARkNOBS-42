@@ -17,14 +17,14 @@ enum MidiType : uint8_t {
   ProgramChange         = 0xC0,
   AfterTouchChannel     = 0xD0,
   PitchBend             = 0xE0,
-  SystemExclusiveStart  = 0xF0,
+  SystemExclusive       = 0xF0,
   TimeCodeQuarterFrame  = 0xF1,
   SongPosition          = 0xF2,
   SongSelect            = 0xF3,
   Undefined_F4          = 0xF4,
   Undefined_F5          = 0xF5,
   TuneRequest           = 0xF6,
-  SystemExclusiveEnd    = 0xF7,
+  EndOfExclusive        = 0xF7,
   Clock                 = 0xF8,
   Tick                  = Clock, // real-time clock tick
   Undefined_F9          = 0xF9,
@@ -97,7 +97,9 @@ struct HardwareSerial {};
 extern HardwareSerial Serial1;
 #endif
 
+#ifndef MIDI_CREATE_INSTANCE
 #define MIDI_CREATE_INSTANCE(type, serial, name)
+#endif
 #else
 #include_next "USB-MIDI.h"
 #endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
