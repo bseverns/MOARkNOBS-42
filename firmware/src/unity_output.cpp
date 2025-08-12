@@ -2,8 +2,8 @@
 
 extern "C" {
 
-void unityOutputStart() {
-  Serial.begin(115200);
+void unityOutputStart(unsigned long baudrate) {
+  Serial.begin(baudrate);
 }
 
 void unityOutputChar(char c) {
