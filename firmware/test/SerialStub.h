@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef UNIT_TEST
-#ifndef ARDUINO
+#if !defined(ARDUINO) || defined(USB_MIDI_STUB)
 struct HardwareSerial {};
 static HardwareSerial Serial1;
 
@@ -13,5 +13,5 @@ class SerialStub {
 };
 
 static SerialStub Serial;
-#endif // !ARDUINO
+#endif // !defined(ARDUINO) || defined(USB_MIDI_STUB)
 #endif // UNIT_TEST
