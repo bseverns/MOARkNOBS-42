@@ -27,7 +27,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 MIDIHandler::MIDIHandler() {}
 
 void MIDIHandler::begin() {
-    MIDI.begin(MIDI_CHANNEL_OMNI);
+    MIDI.begin();  // default Omni channel; stub libs may skip the constant
 #ifndef USB_MIDI_STUB
     usbMIDI.begin();
 #endif
