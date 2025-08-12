@@ -113,7 +113,7 @@ static bool isSupportedType(midi::MidiType t) {
         case midi::ProgramChange:
         case midi::AfterTouchChannel:
         case midi::PitchBend:
-        case midi::SystemExclusive:
+        case midi::SystemExclusiveStart:
         case midi::Clock:
             return true;
         default:
@@ -137,7 +137,7 @@ void MIDIHandler::processIncomingMIDI() {
         if (type == midi::Clock) {
             lastExternalClock = lastInternalTick = now();
             handleClockTick();
-        } else if (type == midi::SystemExclusive) {
+        } else if (type == midi::SystemExclusiveStart) {
             handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
         } else {
             handleMIDI(type, MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
@@ -157,7 +157,7 @@ void MIDIHandler::processIncomingMIDI() {
         if (type == midi::Clock) {
             lastExternalClock = lastInternalTick = now();
             handleClockTick();
-        } else if (type == midi::SystemExclusive) {
+        } else if (type == midi::SystemExclusiveStart) {
             handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
         } else {
             handleMIDI(type, usbMIDI.getChannel(), usbMIDI.getData1(), usbMIDI.getData2());
@@ -245,7 +245,7 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
             handlePitchBend(channel, bend);
             break;
         }
-        case midi::SystemExclusive:
+        case midi::SystemExclusiveStart:
             // handled upstream
             break;
         default:
