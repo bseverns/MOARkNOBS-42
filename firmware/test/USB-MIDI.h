@@ -92,7 +92,7 @@ struct USBMidiStub : MidiInterfaceStub {
 
 extern MidiInterfaceStub MIDI;
 
-#ifndef ARDUINO
+#if !defined(ARDUINO)
 // Only fake the serial port when the Arduino core isn't around to provide it.
 struct HardwareSerial {};
 extern HardwareSerial Serial1;

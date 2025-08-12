@@ -5,8 +5,10 @@
 #undef usbMIDI
 MidiInterfaceStub MIDI;
 USBMidiStub usbMIDI;
-HardwareSerial Serial1;
+#endif
 
+#if defined(UNIT_TEST) && defined(USB_MIDI_STUB) && !defined(ARDUINO)
+HardwareSerial Serial1;
 SerialStub Serial;
-#endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+#endif
 
