@@ -203,6 +203,21 @@ That `teensy40_full_system` build shoves the whole circus onto the board so you 
 
 Swap in `test_Unified.cpp`, `test_biquadfilter.cpp`, `test_eeprom_persistence.cpp`, or `test_verify_slots.cpp` depending on what you're shaking down today.
 
+## Add Your Own Test
+
+Got a new stunt that isn't in the roster? Spin up your own environment:
+
+```ini
+[env:your_new_test]
+extends = env:teensy40_base
+build_src_filter = +<**/your_new_test.cpp>
+test_build_src = true
+```
+
+`build_src_filter` is your whitelist—only sources tagged with a `+` get invited to the party. Flip `test_build_src` to haul in everything under `src/` so Unity hammers the real firmware, not some cardboard cutout.
+
+For a full-blown example, raid [platformio.ini](../platformio.ini) and riff off an existing `env:` block.
+
 ## Final Note
 
 This isn't a test suite for a codebase. It's a test suite for a circuit. If you're not plugging in wires and getting your fingers zapped on that one cap you forgot was charged, you're doing it wrong or I did it wrong, building it for you. This repo is for makers, hackers, educators, and the electrically-inclined misfits who prefer flickering LEDs and buzzers over CI badges.
