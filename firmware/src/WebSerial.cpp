@@ -10,12 +10,16 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager& pots,
     LOG_PRINT("{\"slots\":[");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         LOG_PRINT(Utility::mapToMidiValue(pots.getLastValue(i)));
-        if (i < NUM_POTS - 1) LOG_PRINT(',');
+           if (i < NUM_POTS - 1) {
+            LOG_PRINT(',');
+        }
     }
     LOG_PRINT("],\"envelopes\":[");
     for (size_t i = 0; i < envelopes.size(); ++i) {
         LOG_PRINT(envelopes[i].getEnvelopeLevel());
-        if (i < envelopes.size() - 1) LOG_PRINT(',');
+         if (i < envelopes.size() - 1) {
+            LOG_PRINT(',');
+        }
     }
     LOG_PRINTLN("]}");
 }

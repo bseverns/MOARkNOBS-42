@@ -1,4 +1,5 @@
 #include "Globals.h"
+#include <Arduino.h>
 
 #if __has_include(<ArduinoJson.h>)
 #if defined(USB_MIDI_STUB)
