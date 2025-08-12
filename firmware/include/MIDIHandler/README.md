@@ -5,6 +5,21 @@ Part of the firmware `include` jungle. Scope the [include README](../README.md) 
 USB, DIN, whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
 USB input now filters out bogus message types, like a bouncer keeping the freaks off the dance floor.
 
+## Supported Message Types
+
+When the real USB stack is in play, `isSupportedType()` stands at the door checking IDs. Here's who gets in:
+
+- `ControlChange` – knobs, sliders, and anything twisty.
+- `NoteOn` – because silence is boring.
+- `NoteOff` – every party ends.
+- `ProgramChange` – swap patches without drama.
+- `AfterTouchChannel` – channel pressure for the expressive crowd.
+- `PitchBend` – wiggle that pitch like you mean it.
+- `SystemExclusiveStart` – the opening byte for SysEx dumps.
+- `Tick` – 24 PPQN MIDI clock pulses.
+
+Flip on the `USB_MIDI_STUB` build flag and the bouncer clocks out: the USB path is mocked, no filtering happens, and `isSupportedType` disappears from the scene.
+
 ## Where it fits
 
 ButtonManager, PotentiometerManager, and Arpeggiator shove events in; the USB and DIN ports blast them out. ConfigManager sets the channels and tempo law.
