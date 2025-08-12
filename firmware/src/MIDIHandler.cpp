@@ -121,6 +121,9 @@ void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
 #endif
 }
 
+#ifdef USB_MIDI_STUB
+[[maybe_unused]]
+#endif
 static bool isSupportedType(midi::MidiType t) {
     switch (t) {
         case midi::ControlChange:
