@@ -35,7 +35,7 @@ When you need proof the rig still howls, run the tests and watch the logs spill.
 
 Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
 
-The split is deliberate. `include/unity_config.h` and `src/unity_output.cpp` tag-team as the switchboard so hardware tests bark over USB while host runs stay console-only. If Unity screams into the void, crack those files open and make sure the bridge didn't burn out.
+The split is deliberate. `include/unity_config.h` and its sidekick `src/unity_config.cpp` tag‑team as the switchboard so hardware tests bark over USB while host runs stay console‑only. If Unity screams into the void, crack that pair open and make sure the bridge didn’t burn out.
 
 Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the baud rate you want to shout over, no more hard‑wired 115200.
 
