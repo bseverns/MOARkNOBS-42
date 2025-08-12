@@ -121,8 +121,9 @@ void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
 #endif
 }
 
-#ifndef USB_MIDI_STUB
-static bool isSupportedType(midi::MidiType t) {
+// Utility to filter USB MIDI packets we actually care about. Tagged
+// [[maybe_unused]] because USB builds might stub out the call site.
+[[maybe_unused]] static bool isSupportedType(midi::MidiType t) {
     switch (t) {
         case midi::ControlChange:
         case midi::NoteOn:
@@ -137,7 +138,6 @@ static bool isSupportedType(midi::MidiType t) {
             return false;
     }
 }
-#endif
 
 void MIDIHandler::handleClockTick() {
     // Flip the tick flag so listeners know a pulse went down.
