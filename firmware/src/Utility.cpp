@@ -12,6 +12,7 @@
 #include <imxrt.h>
 #include <cstring>
 #include <cstdlib>
+#include "Log.h"
 
 // Collection of helpers used across the firmware. These range from value
 // mappings and EEPROM utilities to simple schedulers that run tasks at different
@@ -87,13 +88,13 @@ CRGB Utility::mapValueToColor(uint8_t value, CRGB lowColor, CRGB highColor) {
 
 // Debugging
 void Utility::logError(const char* errorMessage) {
-    Serial.print("[ERROR]: ");
-    Serial.println(errorMessage);
+    LOG_PRINT("[ERROR]: ");
+    LOG_PRINTLN(errorMessage);
 }
 
 void Utility::logDebug(const char* debugMessage) {
-    Serial.print("[DEBUG]: ");
-    Serial.println(debugMessage);
+    LOG_PRINT("[DEBUG]: ");
+    LOG_PRINTLN(debugMessage);
 }
 
 // Filtering
@@ -197,13 +198,13 @@ void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue
 void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     const char* prefix = "SET_ALL ";
     if (!command.startsWith(prefix)) {
-        Serial.println("Error: Command must start with 'SET_ALL'");
+        LOG_PRINTLN("Error: Command must start with 'SET_ALL'");
         return;
     }
 
     constexpr size_t MAX_CMD_LEN = 256;
     if (command.length() >= MAX_CMD_LEN) {
-        Serial.println("Error: Command too long");
+        LOG_PRINTLN("Error: Command too long");
         return;
     }
 
@@ -219,7 +220,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
 
         char* comma = strchr(token, ',');
         if (!comma) {
-            Serial.println("Error: Malformed command");
+            LOG_PRINTLN("Error: Malformed command");
             return;
         }
 
@@ -228,7 +229,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         const char* channelStr = comma + 1;
 
         if (strlen(ccStr) >= 4 || strlen(channelStr) >= 4) {
-            Serial.println("Error: Value too long");
+            LOG_PRINTLN("Error: Value too long");
             return;
         }
 
@@ -236,7 +237,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         int channel = atoi(channelStr);
 
         if (ccNumber < 0 || ccNumber > 127 || channel < 1 || channel > 16) {
-            Serial.println("Error: Invalid CC number or channel");
+            LOG_PRINTLN("Error: Invalid CC number or channel");
             return;
         }
 
@@ -248,9 +249,9 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     }
 
     if (currentPot == static_cast<unsigned int>(numPots)) {
-        Serial.println("Bulk update successful");
+        LOG_PRINTLN("Bulk update successful");
     } else {
-        Serial.println("Error: Insufficient data for all pots");
+        LOG_PRINTLN("Error: Insufficient data for all pots");
     }
 }
 

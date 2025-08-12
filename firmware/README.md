@@ -41,6 +41,16 @@ Need to holler at a different speed? `UNITY_OUTPUT_START(baud)` now takes the ba
 
 Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
 
+#### Serial logging, minus the Serial
+
+Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
+`Serial.print()` would usually faceplant, so every chatterbox call routes through
+`LOG_PRINT`, `LOG_PRINTLN`, or `LOG_PRINTF`. Those macros shout over USB when
+`USB_MIDI_SERIAL` is defined and ghost everything when it isn't. A tiny `Serial`
+stub in `test/USB-MIDI.cpp` gulps the output so the linker stays chill. Include
+[`Log.h`](include/Log.h) and lean on the macros whenever you need to spit
+debug.
+
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.

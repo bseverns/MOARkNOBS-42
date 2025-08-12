@@ -3,19 +3,20 @@
 
 #include "WebSerial.h"
 #include "Utility.h"
+#include "Log.h"
 
 void WebSerial::sendStateSnapshot(const PotentiometerManager& pots,
                                   const std::vector<EnvelopeFollower>& envelopes) {
-    Serial.print("{\"slots\":[");
+    LOG_PRINT("{\"slots\":[");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
-        Serial.print(Utility::mapToMidiValue(pots.getLastValue(i)));
-        if (i < NUM_POTS - 1) Serial.print(',');
+        LOG_PRINT(Utility::mapToMidiValue(pots.getLastValue(i)));
+        if (i < NUM_POTS - 1) LOG_PRINT(',');
     }
-    Serial.print("],\"envelopes\":[");
+    LOG_PRINT("],\"envelopes\":[");
     for (size_t i = 0; i < envelopes.size(); ++i) {
-        Serial.print(envelopes[i].getEnvelopeLevel());
-        if (i < envelopes.size() - 1) Serial.print(',');
+        LOG_PRINT(envelopes[i].getEnvelopeLevel());
+        if (i < envelopes.size() - 1) LOG_PRINT(',');
     }
-    Serial.println("]}");
+    LOG_PRINTLN("]}");
 }
 

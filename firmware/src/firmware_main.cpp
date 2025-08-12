@@ -12,6 +12,7 @@
 #include "PotentiometerManager.h"
 #include "WebSerial.h"
 #include "Utility.h"
+#include "Log.h"
 #include "TimeUtils.h"
 #include "name.c"
 #include "Globals.h"  // contains all pin definitions
@@ -121,7 +122,7 @@ void processSerial() {
         if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
             serialBuffer[serialBufferIndex] = '\0';
             if (serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
-                Serial.println("Error: Command too long");
+                LOG_PRINTLN("Error: Command too long");
             }
             commandQueue.push(String(serialBuffer));
             serialBufferIndex = 0;
@@ -139,10 +140,10 @@ void processSerial() {
 
         if (command == "HELLO") {
             webSerialStreaming = true;
-            Serial.println("{\"hello\":\"mn42\"}");
+            LOG_PRINTLN("{\"hello\":\"mn42\"}");
 
         } else if (command == "GET_SCHEMA") {
-            Serial.println(ConfigManager::makeSchema());
+            LOG_PRINTLN(ConfigManager::makeSchema());
 
         } else if (command.startsWith("SET_POT")) {
             // Parse "SET_POT" command
@@ -150,7 +151,7 @@ void processSerial() {
             int lastComma = command.lastIndexOf(',');
 
             if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
-                Serial.println("Error: Malformed SET_POT command");
+                LOG_PRINTLN("Error: Malformed SET_POT command");
                 continue; // Skip invalid command
             }
 
@@ -162,9 +163,9 @@ void processSerial() {
                 configManager.setPotChannel(potIndex, channel);
                 configManager.setPotCCNumber(potIndex, ccNumber);
                 configManager.saveConfiguration();
-                Serial.println("Pot configuration updated!");
+                LOG_PRINTLN("Pot configuration updated!");
             } else {
-                Serial.println("Error: Invalid values for SET_POT");
+                LOG_PRINTLN("Error: Invalid values for SET_POT");
             }
 
         } else if (command.startsWith("SET_ALL")) {
@@ -173,7 +174,7 @@ void processSerial() {
                 StaticJsonDocument<256> doc;
                 DeserializationError err = deserializeJson(doc, payload);
                 if (err) {
-                    Serial.println("ERR");
+                    LOG_PRINTLN("ERR");
                 } else {
                     if (doc.containsKey("led")) {
                         JsonObject led = doc["led"];
@@ -190,7 +191,7 @@ void processSerial() {
                         }
                         configManager.saveLEDSettings(brightness, color);
                     }
-                    Serial.println("OK");
+                    LOG_PRINTLN("OK");
                 }
             } else {
                 Utility::processBulkUpdate(command, configManager.getNumPots());
@@ -198,42 +199,42 @@ void processSerial() {
 
         } else if (command.startsWith("GET_ALL")) {
             // Send all pot settings
-            Serial.print("POTS:");
+            LOG_PRINT("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
                 int envelopeValue = (potToEnvelopeMap.count(i)) ? potToEnvelopeMap[i] : -1;
-                Serial.print(configManager.getPotCCNumber(i));
-                Serial.print(",");
-                Serial.print(configManager.getPotChannel(i));
-                Serial.print(",");
-                Serial.print(envelopeValue);
-                Serial.print(";");
+                LOG_PRINT(configManager.getPotCCNumber(i));
+                LOG_PRINT(",");
+                LOG_PRINT(configManager.getPotChannel(i));
+                LOG_PRINT(",");
+                LOG_PRINT(envelopeValue);
+                LOG_PRINT(";");
             }
 
             // Send LED settings
             CRGB ledColor = ledManager.getColor();
-            Serial.print(" LED:");
-            Serial.print(ledManager.getBrightness());
-            Serial.print(",");
-            Serial.print(ledColor.r);
-            Serial.print(",");
-            Serial.print(ledColor.g);
-            Serial.print(",");
-            Serial.println(ledColor.b);
+            LOG_PRINT(" LED:");
+            LOG_PRINT(ledManager.getBrightness());
+            LOG_PRINT(",");
+            LOG_PRINT(ledColor.r);
+            LOG_PRINT(",");
+            LOG_PRINT(ledColor.g);
+            LOG_PRINT(",");
+            LOG_PRINTLN(ledColor.b);
         } else if (command == "GET_LED") {
             CRGB c = ledManager.getColor();
-            Serial.print(ledManager.getBrightness());
-            Serial.print(",");
-            Serial.print(c.r);
-            Serial.print(",");
-            Serial.print(c.g);
-            Serial.print(",");
-            Serial.println(c.b);
+            LOG_PRINT(ledManager.getBrightness());
+            LOG_PRINT(",");
+            LOG_PRINT(c.r);
+            LOG_PRINT(",");
+            LOG_PRINT(c.g);
+            LOG_PRINT(",");
+            LOG_PRINTLN(c.b);
         } else if (command.startsWith("SET_LED")) {
             int first = command.indexOf(',');
             int second = command.indexOf(',', first + 1);
             int third = command.indexOf(',', second + 1);
             if (first == -1 || second == -1 || third == -1) {
-                Serial.println("ERR");
+                LOG_PRINTLN("ERR");
             } else {
                 int brightness = command.substring(8, first).toInt();
                 int r = command.substring(first + 1, second).toInt();
@@ -247,13 +248,13 @@ void processSerial() {
                     ledManager.setBrightness(brightness);
                     ledManager.setColor(color);
                     configManager.saveLEDSettings(brightness, color);
-                    Serial.println("OK");
+                    LOG_PRINTLN("OK");
                 } else {
-                    Serial.println("ERR");
+                    LOG_PRINTLN("ERR");
                 }
             }
         } else if (command == "GET_ARGMETHOD") {
-            Serial.println(configManager.getARGMethod());
+            LOG_PRINTLN(configManager.getARGMethod());
         } else if (command.startsWith("SET_ARGMETHOD")) {
             int method = command.substring(14).toInt();
             if (method >= 0 && method <= 6) {
@@ -261,22 +262,22 @@ void processSerial() {
                     ef.setARGMethod(static_cast<EnvelopeFollower::ARG_Method>(method));
                 }
                 configManager.setARGMethod(method);
-                Serial.println("OK");
+                LOG_PRINTLN("OK");
             } else {
-                Serial.println("ERR");
+                LOG_PRINTLN("ERR");
             }
         } else if (command.startsWith("GET_EF")) {
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
                 int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
-                Serial.println(env);
+                LOG_PRINTLN(env);
             } else {
-                Serial.println("ERR");
+                LOG_PRINTLN("ERR");
             }
         } else if (command.startsWith("SET_EF")) {
             int comma = command.indexOf(',');
             if (comma == -1) {
-                Serial.println("ERR");
+                LOG_PRINTLN("ERR");
             } else {
                 int potIndex = command.substring(7, comma).toInt();
                 int envIndex = command.substring(comma + 1).toInt();
@@ -285,15 +286,15 @@ void processSerial() {
                     potToEnvelopeMap[potIndex] = envIndex;
                     envelopeFollowers[envIndex].toggleActive(true);
                     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-                    Serial.println("OK");
+                    LOG_PRINTLN("OK");
                 } else {
-                    Serial.println("ERR");
+                    LOG_PRINTLN("ERR");
                 }
             }
         } else if (configManager.handleCommand(command)) {
             // handled inside ConfigManager
         } else {
-            Serial.println("Unknown command: " + command);
+            LOG_PRINTLN("Unknown command: " + command);
         }
     }
 }
@@ -364,7 +365,7 @@ void monitorSystemLoad() {
 
     taskCounter++;
     if (now() - lastMonitorTime >= 1000UL) { // Log every second
-        Serial.printf("Tasks per second: %lu\n", taskCounter);
+        LOG_PRINTF("Tasks per second: %lu\n", taskCounter);
         taskCounter = 0;
         lastMonitorTime = now();
     }
@@ -402,7 +403,7 @@ void updateFilterTuning(ButtonManagerContext& context) {
     displayManager.showFilterTuning("Freq", freq, "Q", q);
 
     // Optionally display or debug-print
-    // Serial.printf("EF %d => freq=%.1f Q=%.2f\n", efIndex, freq, q);
+    // LOG_PRINTF("EF %d => freq=%.1f Q=%.2f\n", efIndex, freq, q);
 }
 
 void updateArpTuning() {
@@ -585,7 +586,7 @@ void setup() {
 
     // — Load or reset full config —
     if (!configManager.loadConfiguration(potChannels)) {
-      Serial.println("EEPROM corrupted → resetting.");
+      LOG_PRINTLN("EEPROM corrupted → resetting.");
       potentiometerManager.resetEEPROM();
     }
 
@@ -598,9 +599,9 @@ void setup() {
 
     // — Debug dump —
     for (uint8_t i = 0; i < NUM_SLOTS; i++) {
-      Serial.printf("Slot %u → CC %u\n", i, potChannels[i]);
+      LOG_PRINTF("Slot %u → CC %u\n", i, potChannels[i]);
     }
-    Serial.println("Setup complete!");
+    LOG_PRINTLN("Setup complete!");
     displayManager.runStartupAnimation();
 
     // — Scheduler tasks —

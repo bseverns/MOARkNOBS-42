@@ -6,6 +6,7 @@
 #include "EnvelopeFollower.h"
 #include <cmath>
 #include <vector>
+#include "Log.h"
 
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 
@@ -49,7 +50,7 @@ void ConfigManager::saveConfiguration() {
     // Verify
     std::vector<uint8_t> temp;
     if (!loadConfiguration(temp, base)) {
-        Serial.println("Primary EEPROM write failed, saving to backup.");
+        LOG_PRINTLN("Primary EEPROM write failed, saving to backup.");
         writeEEPROM(true, base);
         writeMagicNumber(true, base);
     }
@@ -60,7 +61,7 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
-            Serial.println("Config CRC/version mismatch.");
+            LOG_PRINTLN("Config CRC/version mismatch.");
             resetConfiguration(potChannels);
             return false;
         }
@@ -70,7 +71,7 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_
         }
         return true;
     }
-    Serial.println("Primary EEPROM corrupted, trying backup.");
+    LOG_PRINTLN("Primary EEPROM corrupted, trying backup.");
     return loadBackupConfiguration(potChannels, base);
 }
 
@@ -79,7 +80,7 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, u
     if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
-            Serial.println("Backup CRC/version mismatch.");
+            LOG_PRINTLN("Backup CRC/version mismatch.");
             resetConfiguration(potChannels);
             return false;
         }
@@ -89,7 +90,7 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, u
         }
         return true;
     }
-    Serial.println("Backup EEPROM corrupted, resetting to defaults.");
+    LOG_PRINTLN("Backup EEPROM corrupted, resetting to defaults.");
     resetConfiguration(potChannels);
     return false;
 }
@@ -136,15 +137,15 @@ void ConfigManager::loadProfile(uint8_t id) {
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
-            Serial.println("Profile slot corrupted, using defaults.");
+            LOG_PRINTLN("Profile slot corrupted, using defaults.");
         }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
-            Serial.println("Profile slot corrupted, using defaults.");
+            LOG_PRINTLN("Profile slot corrupted, using defaults.");
         }
     } else {
-        Serial.println("Profile slot corrupted, using defaults.");
+        LOG_PRINTLN("Profile slot corrupted, using defaults.");
     }
 }
 
@@ -155,7 +156,7 @@ void ConfigManager::saveProfile(uint8_t id) {
     writeMagicNumber(false, base);
     std::vector<uint8_t> temp;
     if (!loadConfiguration(temp, base)) {
-        Serial.println("Primary EEPROM write failed, saving to backup.");
+        LOG_PRINTLN("Primary EEPROM write failed, saving to backup.");
         writeEEPROM(true, base);
         writeMagicNumber(true, base);
     }
@@ -383,24 +384,24 @@ bool ConfigManager::handleCommand(const String& command) {
         for (auto &ef : envelopeFollowers) {
             ef.calibrate();
         }
-        Serial.println("OK");
+        LOG_PRINTLN("OK");
         return true;
     } else if (command.startsWith("GET_FILTER")) {
         uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
         float freq, q;
         EEPROM.get(EEPROM_FILTER_FREQ, freq);
         EEPROM.get(EEPROM_FILTER_Q, q);
-        Serial.print(type);
-        Serial.print(",");
-        Serial.print(freq, 2);
-        Serial.print(",");
-        Serial.println(q, 2);
+        LOG_PRINT(type);
+        LOG_PRINT(",");
+        LOG_PRINT(freq, 2);
+        LOG_PRINT(",");
+        LOG_PRINTLN(q, 2);
         return true;
     } else if (command.startsWith("SET_FILTER")) {
         int firstComma = command.indexOf(',');
         int secondComma = command.indexOf(',', firstComma + 1);
         if (firstComma == -1 || secondComma == -1) {
-            Serial.println("ERR");
+            LOG_PRINTLN("ERR");
             return true;
         }
         uint8_t type = command.substring(10, firstComma).toInt();
@@ -409,20 +410,20 @@ bool ConfigManager::handleCommand(const String& command) {
         EEPROM.update(EEPROM_ENVELOPE_TYPES, type);
         EEPROM.put(EEPROM_FILTER_FREQ, freq);
         EEPROM.put(EEPROM_FILTER_Q, q);
-        Serial.println("OK");
+        LOG_PRINTLN("OK");
         return true;
     } else if (command.startsWith("GET_ARGPAIR")) {
-        Serial.print(getARGEnable());
-        Serial.print(",");
-        Serial.print(getEnvelopeA());
-        Serial.print(",");
-        Serial.println(getEnvelopeB());
+        LOG_PRINT(getARGEnable());
+        LOG_PRINT(",");
+        LOG_PRINT(getEnvelopeA());
+        LOG_PRINT(",");
+        LOG_PRINTLN(getEnvelopeB());
         return true;
     } else if (command.startsWith("SET_ARGPAIR")) {
         int first = command.indexOf(',');
         int second = command.indexOf(',', first + 1);
         if (first == -1 || second == -1) {
-            Serial.println("ERR");
+            LOG_PRINTLN("ERR");
             return true;
         }
         uint8_t enable = command.substring(11, first).toInt();
@@ -430,7 +431,7 @@ bool ConfigManager::handleCommand(const String& command) {
         uint8_t envB = command.substring(second + 1).toInt();
         setARGEnable(enable);
         setEnvelopePair(envA, envB);
-        Serial.println("OK");
+        LOG_PRINTLN("OK");
         return true;
     }
     return false;
