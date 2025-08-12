@@ -6,14 +6,15 @@
 #include "Globals.h"
 #include "TimeUtils.h"
 #include <USB-MIDI.h>
+#include "Log.h"
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
 #ifdef MIDI_DEBUG
-  #define MIDI_DBG_PRINTF(...) Serial.printf(__VA_ARGS__)
-  #define MIDI_DBG_PRINTLN(x) Serial.println(x)
+  #define MIDI_DBG_PRINTF(...) LOG_PRINTF(__VA_ARGS__)
+  #define MIDI_DBG_PRINTLN(...) LOG_PRINTLN(__VA_ARGS__)
 #else
   #define MIDI_DBG_PRINTF(...)
-  #define MIDI_DBG_PRINTLN(x)
+  #define MIDI_DBG_PRINTLN(...)
 #endif
 
 // Provides a small abstraction over both Serial and USB MIDI transports. Other
