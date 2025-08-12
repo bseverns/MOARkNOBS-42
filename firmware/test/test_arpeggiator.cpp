@@ -11,13 +11,3 @@ void test_start_stop_cycle() {
     TEST_ASSERT_FALSE(arp.isActive());
 }
 
-void setUp(void) {}
-void tearDown(void) {}
-
-void setup() {
-    UNITY_BEGIN();
-    RUN_TEST(test_start_stop_cycle);
-    UNITY_END();
-}
-
-void loop() {}
