@@ -30,6 +30,14 @@ int Utility::mapToRange(int value, int inMin, int inMax, int outMin, int outMax)
     return map(value, inMin, inMax, outMin, outMax);
 }
 
+float Utility::scale(float value, float inMin, float inMax, float outMin, float outMax) {
+    if (inMax - inMin == 0) {
+        return outMin;
+    }
+    float ratio = (value - inMin) / (inMax - inMin);
+    return outMin + ratio * (outMax - outMin);
+}
+
 float Utility::mapExponential(float value, float inMin, float inMax, float outMin, float outMax, float exponent) {
     float normalized = (value - inMin) / (inMax - inMin);
     float scaled = pow(normalized, exponent);

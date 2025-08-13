@@ -76,6 +76,9 @@ public:
     /** Generic integer mapping helper. */
     static int mapToRange(int value, int inMin, int inMax, int outMin, int outMax);
 
+    /** Map a value from one float range to another. */
+    static float scale(float value, float inMin, float inMax, float outMin, float outMax);
+
     /** Exponential scaling used for envelope shaping. */
     static float mapExponential(float value, float inMin, float inMax, float outMin, float outMax, float exponent);
 
