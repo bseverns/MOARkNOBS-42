@@ -3,15 +3,6 @@
 ![Title Image](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-Hardware's finally nailed—no more bodge wires or last‑minute re‑spins. The board now drives 52 WS2812s, watches six envelope followers, and chats in NRPN, RPN, SysEx and the usual CC/Note circus.
-
-| Spec | Details |
-|------|---------|
-| LEDs | 52 WS2812 (42 slot + 6 EF + 1 control + 3 knob) |
-| Envelope follower channels | 6 |
-| MIDI protocol support | NRPN, RPN, CC, Note, Program Change, Pitch Bend, Aftertouch, SysEx |
-| Microcontroller | Teensy 4.0 (600 MHz Cortex‑M7) |
-
 This repo bundles the firmware, hardware designs and documentation for the **MOARkNOBS-42** project. Dive into the subdirectories below for the gritty details.
 
 This isn't just a code dump; it's a loud, messy lab notebook. Every README, sketch, and test exists so you can follow the breadcrumb trail and spin up your own mutant MIDI rig.
@@ -28,39 +19,6 @@ This isn't just a code dump; it's a loud, messy lab notebook. Every README, sket
 - **WebSerial editor + OSC bridge** – tweak the box from a browser or fire OSC/WebMIDI across a Node shim. [WebSerial guide](docs/WebSerial.md) • [Bridge playbook](docs/OSCBridge.md).
 - **Button mayhem** – six control buttons and a world of combos to reset, randomize or just start trouble. [Button chart](firmware/README.md#button-mayhem).
 - **Test harness included** – Unity-driven sanity checks and manual hardware tests when paranoia strikes. [Test suite](firmware/test/README.md).
-## Quick Start
-
-1. **Install the Python tools** – `pip install -r requirements.txt` snags PlatformIO 6.1.18 (and any future Python riffraff). Old‑school? Fire up the Arduino IDE with Teensyduino instead.
-2. **Clone this repo** and plug a Teensy 4.0 into your rig.
-3. **Flash it** from `firmware/` with:
-   ```bash
-   pio run -t upload -e teensy40_main
-   ```
-4. **Blink proof** – run the ["Hello LED" test](#run-a-hello-led-test) to see that first pixel twitch.
-
-**CLI tip:** every `pio` command expects you to camp out in `firmware/` so the headers and home-brew libs are on the path. Example smoke run:
-
-```bash
-cd firmware
-pio test -e teensy40_unity --without-uploading --without-testing
-```
-Leave off the extra flags and PlatformIO will start hunting for a physical
-Teensy, then sulk when it can't find one.
-
-There's a skinny `platformio.ini` in the repo root for the folks who forget, but it's training wheels—do the real work under `firmware/`.
-
-
-Need the full blueprint? Hit the [Builder's Handbook](docs/BuildersHandbook.md) for wiring and smoke tests, and the [User Manual](firmware/README.md) when you're ready to tame every slot.
-
-### Python build toys
-
-There's a `requirements.txt` squatting in the repo root. It nails PlatformIO to 6.1.18 so CI and your local shell march in step. Bump the version? Mirror the change here so the crew stays synced.
-
-```bash
-pip install -r requirements.txt
-```
-
-Run that once and you're cleared for takeoff.
 
 ![Board Trace](docs/trace.png)
 
