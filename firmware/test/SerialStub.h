@@ -1,6 +1,8 @@
 #pragma once
 
-#if defined(UNIT_TEST) && (defined(USB_MIDI_STUB) || !defined(ARDUINO))
+#if defined(UNIT_TEST) && !defined(ARDUINO)
+
+#include <cstddef>
 
 struct Print {
   template <typename... Args> void print(Args...) {}
@@ -10,11 +12,27 @@ struct Print {
 
 struct Stream : Print {};
 
-struct HardwareSerial : Stream {};
+class HardwareSerial : public Stream {
+ public:
+  void begin(unsigned long) {}
+  size_t write(uint8_t) { return 1; }
+  void flush() {}
+};
 
 class SerialStub : public HardwareSerial {};
 
-static SerialStub Serial;
-static SerialStub Serial1;
+inline SerialStub Serial;
+inline SerialStub Serial1;
 
-#endif // defined(UNIT_TEST) && (defined(USB_MIDI_STUB) || !defined(ARDUINO))
+#elif defined(UNIT_TEST)
+
+#include <Arduino.h>
+
+// On real Teensy builds, lean on the core's HardwareSerial.
+using SerialStub = decltype(::Serial1);
+
+extern decltype(::Serial) &Serial;
+extern SerialStub &Serial1;
+
+#endif  // UNIT_TEST
+
