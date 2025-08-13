@@ -18,16 +18,13 @@
 extern "C" {
 #endif
 
-// Wrap the output hooks in uniquely named functions so the Unity
-// macros never see `Serial` directly.  That keeps the tests from
-// tripping over missing USB gadgets on the host.
-//
-// `unityTestStart()` still takes a baud so we can pick a lane if the
-// default doesn't groove with the hardware.
-void unityTestStart(unsigned long baudrate);
-void unityTestChar(unsigned int c);
-void unityTestFlush();
-void unityTestComplete();
+// Unity punts its log through these wrappers.  The real work lives in
+// unity_output.cpp where we punt bytes over Serial1 so the board never
+// touches the USB CDC port.
+void unityOutputStart(unsigned long baudrate);
+void unityOutputChar(unsigned int c);
+void unityOutputFlush();
+void unityOutputComplete();
 
 #ifdef __cplusplus
 }
@@ -40,8 +37,8 @@ void unityTestComplete();
 
 // Kick off the log line at 115200 by default.  Tweak the magic number
 // if your setup jams at a different tempo.
-#define UNITY_OUTPUT_START()       unityTestStart(115200)
-#define UNITY_OUTPUT_CHAR(c)       unityTestChar(c)
-#define UNITY_OUTPUT_FLUSH()       unityTestFlush()
-#define UNITY_OUTPUT_COMPLETE()    unityTestComplete()
+#define UNITY_OUTPUT_START()       unityOutputStart(115200)
+#define UNITY_OUTPUT_CHAR(c)       unityOutputChar(c)
+#define UNITY_OUTPUT_FLUSH()       unityOutputFlush()
+#define UNITY_OUTPUT_COMPLETE()    unityOutputComplete()
 
