@@ -2,69 +2,6 @@
 
 > Firmware for the unapologetically DIY, button-stabbin', knob-hackin', MIDI-mashin' controller you didn’t ask for but definitely need.
 
-### System Primer
-
-Even chaos needs a conductor. Here’s how the firmware keeps the band in line:
-
-- **MCU** – A Teensy 4.0 does the heavy lifting, clocking the madness and juggling tasks.
-- **I/O wrangling** – A multiplexed button grid and a trio of pots funnel into shared ADC lanes while 52 WS2812s scream status back at you.
-- **Envelope followers** – Six analog voyeurs sniff audio or CV and modulate whichever virtual slot you point them at.
-
-Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want to sling bytes at a host? The [bridge README](../bridge/README.md) maps out the Node/OSC/MIDI handshake.
-
-*Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
-
-### Build Rules
-
-This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
-Teensy's core has a bad habit of pitting signed and unsigned ints in cage matches; `-Wno-sign-compare` kicks that noise to the curb so real bugs still punch through.
-
-Need the default build? Kick this from the `firmware/` dir and let PlatformIO scream the bits into existence:
-
-```bash
-pio run -e teensy40_main
-```
-
-That cranks out the main firmware for the Teensy 4.0.
-
-The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_serial` *and* slams a `-DUSB_MIDI_SERIAL` into `build_flags`, so every build enumerates as both Serial and MIDI. No extra hoops—`usbMIDI` shows up ready to spit notes whether PlatformIO feels like cooperating or not.
-
-### Testing
-
-When you need proof the rig still howls, run the tests and watch the logs spill.
-
-- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet and spews results over Serial at 115200 baud.
-- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
-
-Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
-
-The split is deliberate. `include/unity_config.h` and its sidekick `src/unity_config.cpp` tag‑team as the switchboard so hardware tests bark over USB while host runs stay console‑only. If Unity screams into the void, crack that pair open and make sure the bridge didn’t burn out.
-
-By default Unity yells over Serial1 at 115200. `UNITY_OUTPUT_START()` kicks that off for you—edit the macro if your rig screams at some other tempo.
-
-Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
-
-#### USB_MIDI_STUB
-
-Flip on `USB_MIDI_STUB` and the firmware boots without the USB serial gadget. `Serial` goes dark, so every print needs to ride through our `LOG_*` wrapper or a stub logger or the build won't link. The `teensy40_unity` env leaves this flag off; add it yourself only when you want a headless USB stack.
-
-```cpp
-#if !defined(USB_MIDI_STUB)
-LOG_PRINTLN("serial still lives");
-#endif
-```
-
-#### Serial logging, minus the Serial
-
-Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
-`Serial.print()` would usually faceplant, so every chatterbox call routes through
-`LOG_PRINT`, `LOG_PRINTLN`, or `LOG_PRINTF`. Those macros shout over USB when
-`USB_MIDI_SERIAL` is defined and ghost everything when it isn't. A tiny `Serial`
-stub in `test/usb_midi.cpp` gulps the output so the linker stays chill. Include
-[`Log.h`](include/Log.h) and lean on the macros whenever you need to spit
-debug.
-
-
 ## What's This?
 
 The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to rock 42 real pots, but now it gets the job done with 3 control pots—one slot value pot and a pair for filter tuning—a bunch of buttons, and enough virtual slots to make your DAW weep.
@@ -80,38 +17,6 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **test/** – manual and Unity-driven hardware checks.
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
-
-### Vendored Libraries
-
-We ship FastLED and the Adafruit SSD1306/GFX duo right in `lib/` so builds work even if the outside world ghosts us. PlatformIO prefers these local copies, meaning fewer heisenbugs from shifting upstream versions.
-
-One gotcha: that OLED stack drags in **Adafruit BusIO**. Skip it and the compiler throws a fit.
-
-If you're online and chill with automatic pulls, wire it up in `platformio.ini`:
-
-```ini
-lib_deps =
-    adafruit/Adafruit BusIO
-```
-
-Offline, paranoid, or just punk? Clone [Adafruit_BusIO](https://github.com/adafruit/Adafruit_BusIO) into `firmware/lib/` and haul its LICENSE along for the ride.
-
-To update any vendored lib, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
-
-### Teensy Core Patches
-
-Some bits of the official Teensy core get loose with types and compare signed pointers against unsigned counts. That can flip a
-negative into a huge positive and invite buffer trashing. We stash patched copies under `lib/teensy_patches/` where the math is
-done with `size_t` from the get‑go. If upstream ever cleans it up, yank our shim and cruise on stock.
-
-### MIDI Type Shims
-
-The Arduino MIDI stack can't agree on whether a clock pulse is `Clock` or `Tick`,
-or if SysEx kicks off with `SystemExclusive` or its wordier cousin
-`SystemExclusiveStart`. `include/MidiTypeShim.h` throws down a few
-`MidiType_*` macros so our code laughs off upstream name changes. Use
-`MidiType_SystemExclusiveStart`, `MidiType_SystemExclusiveEnd`, and
-`MidiType_Tick` when checking message types and you'll dodge the churn.
 
 ## Key Features
 
@@ -210,6 +115,74 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
                    |-> [ConfigManager] (EEPROM)
                    |-> [EnvelopeFollower] (modulation)
 ```
+
+## MIDI: The Lifeblood
+
+The MN42 is first and foremost a MIDI generator.  Every pot twist and
+envelope movement ultimately ends up as a MIDI message that is pushed to
+**both** the 5‑pin DIN jack and the USB port at the same time.  The
+firmware uses a hardware serial instance for traditional DIN MIDI and the
+`usbMIDI` stack for modern computer connections.  Whatever leaves one
+interface is mirrored on the other so you can drive hardware synths and a
+DAW concurrently with zero configuration.
+
+### MIDI Message Examples
+
+Want to flip patches, squish aftertouch, or yank pitch? Here's how the rig does it:
+
+```cpp
+MIDIHandler midi;
+midi.begin();
+midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
+midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
+midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
+midi.sendNRPN(0x1234, 0x5678, 1); // tweak a deep-cut parameter
+midi.sendRPN(0x0001, 0x0040, 1); // spec-sanctioned pitch range tweak
+uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
+midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
+```
+
+Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.
+
+### Supported Message Types
+
+Each of the 42 virtual slots can transmit any of the following MIDI
+messages, with the channel and data byte stored per slot:
+
+* **Control Change** – standard CC messages with values 0–127.
+* **Note** – sends Note On and automatically issues a Note Off shortly
+  after, using envelope level (if available) as velocity.
+* **Program Change** – select patches or presets on your synths.
+* **Channel Aftertouch** – channel pressure values derived from the control pot
+  or an envelope follower.
+* **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
+* **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
+* **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
+* **SysEx** – raw byte dumps for when CCs just won't cut it.
+
+The Control Buttons let you cycle the message type, channel (1–16) and data values in
+real time.  All assignments persist in EEPROM -if you save them- so your setup survives a
+power cycle.
+
+### Incoming MIDI and Clock Sync
+
+The firmware listens on both USB and DIN. Incoming bytes are parsed and can
+trigger on‑screen feedback or internal actions. MIDI Clock messages advance
+the beat counter and, when you feel like being the metronome, the box can spit
+them back out. Slam Control #1 + #2 to arm or kill clock out. External clock
+always rules; if it ghosts you for two seconds, the tapped BPM rises from the
+grave and keeps everything stomping in time.
+
+### High‑Resolution Modulation
+
+Envelope followers and the main control potentiometer send updates on a 1 ms
+schedule.  CCs or other parameters can therefore react smoothly to audio
+input or manual tweaks.  LED animations and the OLED display mirror this
+activity so you always see what is being transmitted.
+
+In short, the MN42 speaks fluent MIDI on all fronts—USB and DIN, outgoing
+and incoming—and gives every slot the flexibility to send exactly the
+messages your rig requires.
 
 ## Button Mayhem
 Buttons are scanned continuously using `setMux()` which sets the row and column addresses before each read.
@@ -465,80 +438,65 @@ Test sketches used in the development of this project include:
 * `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
 * `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
 
+### System Primer
+
+Even chaos needs a conductor. Here’s how the firmware keeps the band in line:
+
+- **MCU** – A Teensy 4.0 does the heavy lifting, clocking the madness and juggling tasks.
+- **I/O wrangling** – A multiplexed button grid and a trio of pots funnel into shared ADC lanes while 52 WS2812s scream status back at you.
+- **Envelope followers** – Six analog voyeurs sniff audio or CV and modulate whichever virtual slot you point them at.
+
+Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want to sling bytes at a host? The [bridge README](../bridge/README.md) maps out the Node/OSC/MIDI handshake.
+
+*Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
+
+### Build Rules
+
+This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
+Teensy's core has a bad habit of pitting signed and unsigned ints in cage matches; `-Wno-sign-compare` kicks that noise to the curb so real bugs still punch through.
+
+Need the default build? Kick this from the `firmware/` dir and let PlatformIO scream the bits into existence:
+
+```bash
+pio run -e teensy40_main
+```
+
+That cranks out the main firmware for the Teensy 4.0.
+
+The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_serial` *and* slams a `-DUSB_MIDI_SERIAL` into `build_flags`, so every build enumerates as both Serial and MIDI. No extra hoops—`usbMIDI` shows up ready to spit notes whether PlatformIO feels like cooperating or not.
+
+### Testing
+
+When you need proof the rig still howls, run the tests and watch the logs spill.
+
+- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet and spews results over Serial at 115200 baud.
+- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
+
+Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
+
+The split is deliberate. `include/unity_config.h` and its sidekick `src/unity_config.cpp` tag‑team as the switchboard so hardware tests bark over USB while host runs stay console‑only. If Unity screams into the void, crack that pair open and make sure the bridge didn’t burn out.
+
+By default Unity yells over Serial1 at 115200. `UNITY_OUTPUT_START()` kicks that off for you—edit the macro if your rig screams at some other tempo.
+
+Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
+
+#### Serial logging, minus the Serial
+
+Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
+`Serial.print()` would usually faceplant, so every chatterbox call routes through
+`LOG_PRINT`, `LOG_PRINTLN`, or `LOG_PRINTF`. Those macros shout over USB when
+`USB_MIDI_SERIAL` is defined and ghost everything when it isn't. A tiny `Serial`
+stub in `test/usb_midi.cpp` gulps the output so the linker stays chill. Include
+[`Log.h`](include/Log.h) and lean on the macros whenever you need to spit
+debug.
+
+
 ### Configuration Persistence
 
 Every save tacks on a 16-bit `version` tag and a matching 16-bit `crc`.
 The version lets the firmware evolve without bricking old configs, while
 the CRC sniffs out corruption.  If either check fails on boot, we torch
 the junk and fall back to factory defaults.
-
-## MIDI: The Lifeblood
-
-The MN42 is first and foremost a MIDI generator.  Every pot twist and
-envelope movement ultimately ends up as a MIDI message that is pushed to
-**both** the 5‑pin DIN jack and the USB port at the same time.  The
-firmware uses a hardware serial instance for traditional DIN MIDI and the
-`usbMIDI` stack for modern computer connections.  Whatever leaves one
-interface is mirrored on the other so you can drive hardware synths and a
-DAW concurrently with zero configuration.
-
-### MIDI Message Examples
-
-Want to flip patches, squish aftertouch, or yank pitch? Here's how the rig does it:
-
-```cpp
-MIDIHandler midi;
-midi.begin();
-midi.sendProgramChange(10, 1);   // jump to patch 11 on channel 1
-midi.sendAftertouch(127, 1);     // mash the key harder than the keyboard ever could
-midi.sendPitchBend(2048, 1);     // nudge the note a little sharp
-midi.sendNRPN(0x1234, 0x5678, 1); // tweak a deep-cut parameter
-midi.sendRPN(0x0001, 0x0040, 1); // spec-sanctioned pitch range tweak
-uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
-midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
-```
-
-Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.
-
-### Supported Message Types
-
-Each of the 42 virtual slots can transmit any of the following MIDI
-messages, with the channel and data byte stored per slot:
-
-* **Control Change** – standard CC messages with values 0–127.
-* **Note** – sends Note On and automatically issues a Note Off shortly
-  after, using envelope level (if available) as velocity.
-* **Program Change** – select patches or presets on your synths.
-* **Channel Aftertouch** – channel pressure values derived from the control pot
-  or an envelope follower.
-* **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
-* **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
-* **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
-* **SysEx** – raw byte dumps for when CCs just won't cut it.
-
-The Control Buttons let you cycle the message type, channel (1–16) and data values in
-real time.  All assignments persist in EEPROM -if you save them- so your setup survives a
-power cycle.
-
-### Incoming MIDI and Clock Sync
-
-The firmware listens on both USB and DIN. Incoming bytes are parsed and can
-trigger on‑screen feedback or internal actions. MIDI Clock messages advance
-the beat counter and, when you feel like being the metronome, the box can spit
-them back out. Slam Control #1 + #2 to arm or kill clock out. External clock
-always rules; if it ghosts you for two seconds, the tapped BPM rises from the
-grave and keeps everything stomping in time.
-
-### High‑Resolution Modulation
-
-Envelope followers and the main control potentiometer send updates on a 1 ms
-schedule.  CCs or other parameters can therefore react smoothly to audio
-input or manual tweaks.  LED animations and the OLED display mirror this
-activity so you always see what is being transmitted.
-
-In short, the MN42 speaks fluent MIDI on all fronts—USB and DIN, outgoing
-and incoming—and gives every slot the flexibility to send exactly the
-messages your rig requires.
 
 ## Task Flow & Timing
 
@@ -569,6 +527,38 @@ Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
 ...snip...
 ========================= [SUCCESS] Took XX.XX seconds =========================
 ```
+
+### Vendored Libraries
+
+We ship FastLED and the Adafruit SSD1306/GFX duo right in `lib/` so builds work even if the outside world ghosts us. PlatformIO prefers these local copies, meaning fewer heisenbugs from shifting upstream versions.
+
+One gotcha: that OLED stack drags in **Adafruit BusIO**. Skip it and the compiler throws a fit.
+
+If you're online and chill with automatic pulls, wire it up in `platformio.ini`:
+
+```ini
+lib_deps =
+    adafruit/Adafruit BusIO
+```
+
+Offline, paranoid, or just punk? Clone [Adafruit_BusIO](https://github.com/adafruit/Adafruit_BusIO) into `firmware/lib/` and haul its LICENSE along for the ride.
+
+To update any vendored lib, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
+
+### Teensy Core Patches
+
+Some bits of the official Teensy core get loose with types and compare signed pointers against unsigned counts. That can flip a
+negative into a huge positive and invite buffer trashing. We stash patched copies under `lib/teensy_patches/` where the math is
+done with `size_t` from the get‑go. If upstream ever cleans it up, yank our shim and cruise on stock.
+
+### MIDI Type Shims
+
+The Arduino MIDI stack can't agree on whether a clock pulse is `Clock` or `Tick`,
+or if SysEx kicks off with `SystemExclusive` or its wordier cousin
+`SystemExclusiveStart`. `include/MidiTypeShim.h` throws down a few
+`MidiType_*` macros so our code laughs off upstream name changes. Use
+`MidiType_SystemExclusiveStart`, `MidiType_SystemExclusiveEnd`, and
+`MidiType_Tick` when checking message types and you'll dodge the churn.
 
 ### Button Manager Debug Logging
 
@@ -702,12 +692,6 @@ While those lines scroll by, the OLED pops `Active Slot=0` and then
 `Slot 0 ch1 CC74` before fading back to its idle vibe. Trust the terminal for
 truth; use the screen to make sure your button mashing landed where it should.
 
-## Getting Started
-
-1. Plug it in.
-2. Use a DAW or synth.
-3. Watch LEDs. Twist knob. Push buttons.
-4. Reconfigure until satisfied—or mildly horrified. The web editor might help those that seek some simplicity.
 
 ## Web Editor
 
