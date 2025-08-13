@@ -19,7 +19,7 @@ class HardwareSerial;
 #include <usb_midi.h>
 #endif
 
-#define IS_USB_CONNECTED() (usbMidi.connected())
+#define IS_USB_CONNECTED() (usbMIDI.connected())
 
 /**
  * @brief Thin wrapper around the Arduino and USB MIDI libraries.
