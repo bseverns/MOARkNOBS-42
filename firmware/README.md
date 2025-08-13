@@ -258,6 +258,57 @@ Profiles live in EEPROM, so the chaos survives power cycles. Kill the power, plu
 
 ---
 
+## Filter Controls
+
+Each envelope follower features a full DSP filter section with **7 selectable modes**:
+- **Linear**
+- **Opposite Linear**
+- **Exponential**
+- **Random**
+- **Low-pass (LPF)**
+- **High-pass (HPF)**
+- **Band-pass (BPF)**
+
+#### Filter Behavior
+
+* **Linear** – direct gain scaling; `Freq` acts as a multiplier.
+* **Opposite Linear** – inverts the response so high input yields low output.
+* **Exponential** – emphasizes extremes; `Q` controls curve steepness.
+* **Random** – introduces jitter based on `Freq` (probability) and `Q` (range).
+* **Low-pass** – smooths fast changes; `Freq` is cutoff and `Q` is resonance.
+* **High-pass** – emphasizes sharp transients; cutoff and resonance as above.
+* **Band-pass** – isolates a band around the chosen frequency with given `Q`.
+
+Switch filter type via double-presses on control buttons. The currently assigned filter is shown on the OLED.
+
+When LPF/HPF/BPF is selected, **two dedicated tuning pots** become active for that EF, letting you adjust:
+- **Frequency**: Cutoff/center frequency (20–5000Hz)
+- **Resonance (Q)**: 0.5–4.0 (slope/sharpness)
+---
+
+## Envelope Follower Calibration
+
+Each follower learns where "silence" lives and dumps that baseline into EEPROM.
+On boot those offsets get slurped back so your modulation starts from zero
+instead of the hum of your studio fridge. If an offset is missing, the rig
+auto-calibrates and saves it.
+
+### Re-calibrating on the fly
+
+- **Per slot:** long‑press Control Button **#0**. The assigned follower sniffs the
+  input, writes the new baseline to EEPROM, and the OLED flashes its approval.
+- **All at once:** crack open WebSerial and shout `CAL_ENVS`. Every follower
+  re-calibrates and the new baselines are burned in.
+
+### Filter Selection Pro Tip
+
+> **To change the filter type** (linear, exponential, low-pass, high-pass, etc.) for a slot’s Envelope Follower, simply:
+>
+> - **Double-press Control Button #0** to cycle the filter type **forward**.
+> - **Double-press Control Button #1** to cycle the filter type **backward**.
+>
+> The OLED will display the new filter type (e.g., `Slot 5 => BANDPASS`). This works for the EF assigned to the current slot.
+
 ## ARG Mode
 
 ### What Is ARG Mode?
@@ -333,58 +384,6 @@ goes—set it to 4 and you're working with offsets 0–3. Shapes pick the route:
 `UP` climbs, `DOWN` dives, `UPDOWN` bounces off the top, and `RANDOM` wanders via
 Perlin noise so it remembers where it came from. Example: `patternLen=5` with
 `DOWN` spits **4,3,2,1,0** before looping.
-
-
-## Filter Controls
-
-Each envelope follower features a full DSP filter section with **7 selectable modes**:
-- **Linear**
-- **Opposite Linear**
-- **Exponential**
-- **Random**
-- **Low-pass (LPF)**
-- **High-pass (HPF)**
-- **Band-pass (BPF)**
-
-#### Filter Behavior
-
-* **Linear** – direct gain scaling; `Freq` acts as a multiplier.
-* **Opposite Linear** – inverts the response so high input yields low output.
-* **Exponential** – emphasizes extremes; `Q` controls curve steepness.
-* **Random** – introduces jitter based on `Freq` (probability) and `Q` (range).
-* **Low-pass** – smooths fast changes; `Freq` is cutoff and `Q` is resonance.
-* **High-pass** – emphasizes sharp transients; cutoff and resonance as above.
-* **Band-pass** – isolates a band around the chosen frequency with given `Q`.
-
-Switch filter type via double-presses on control buttons. The currently assigned filter is shown on the OLED.
-
-When LPF/HPF/BPF is selected, **two dedicated tuning pots** become active for that EF, letting you adjust:
-- **Frequency**: Cutoff/center frequency (20–5000Hz)
-- **Resonance (Q)**: 0.5–4.0 (slope/sharpness)
----
-
-## Envelope Follower Calibration
-
-Each follower learns where "silence" lives and dumps that baseline into EEPROM.
-On boot those offsets get slurped back so your modulation starts from zero
-instead of the hum of your studio fridge. If an offset is missing, the rig
-auto-calibrates and saves it.
-
-### Re-calibrating on the fly
-
-- **Per slot:** long‑press Control Button **#0**. The assigned follower sniffs the
-  input, writes the new baseline to EEPROM, and the OLED flashes its approval.
-- **All at once:** crack open WebSerial and shout `CAL_ENVS`. Every follower
-  re-calibrates and the new baselines are burned in.
-
-### Filter Selection Pro Tip
-
-> **To change the filter type** (linear, exponential, low-pass, high-pass, etc.) for a slot’s Envelope Follower, simply:
->
-> - **Double-press Control Button #0** to cycle the filter type **forward**.
-> - **Double-press Control Button #1** to cycle the filter type **backward**.
->
-> The OLED will display the new filter type (e.g., `Slot 5 => BANDPASS`). This works for the EF assigned to the current slot.
 
 ---
 
