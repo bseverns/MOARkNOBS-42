@@ -33,23 +33,16 @@ jobs:
       - name: Install PlatformIO + deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pio --version
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-          - name: Guard against autogen Unity transport
-          if: always()
-          working-directory: firmware
-          run: |
-          ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen Unity transport detected"; exit 1)
+          pio --version
 
 
-      # Build-only (no flashing). Run from firmware/ so the right platformio.ini is used.
-      - name: Build Unity tests (compile-only)
+      # Build, flash, and run the Unity suite on real hardware.
+      - name: Run Unity tests
         working-directory: firmware
         run: |
           platformio run -t clean
-          platformio test -e teensy40_unity --without-uploading -vvv | tee unity-test.log
+          platformio test -e teensy40_unity -vvv | tee unity-test.log
           # Guard: fail if autogen Serial-based transport sneaks back in
           ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen Unity transport detected"; exit 1)
 
@@ -72,14 +65,13 @@ jobs:
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
-           pip install -r requirements.txt
-          pio --version
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: Build system tests (compile-only)
+          pio --version
+      - name: Run system tests
         working-directory: firmware
         run: |
           platformio run -t clean
-          platformio test -e teensy40_full_system --without-uploading -vvv | tee system-test.log
+          platformio test -e teensy40_full_system -vvv | tee system-test.log
       - name: Upload system test log
         if: always()
         uses: actions/upload-artifact@v4
