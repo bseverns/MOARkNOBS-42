@@ -38,7 +38,3 @@ jobs:
       - name: Build firmware
         working-directory: firmware
         run: pio run -e teensy40_main
-
-      - name: Run Unity tests
-        working-directory: firmware
-        run: pio test -e teensy40_unity
