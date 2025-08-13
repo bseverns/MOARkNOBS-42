@@ -39,8 +39,10 @@ This isn't just a code dump; it's a loud, messy lab notebook. Every README, sket
 
 ```bash
 cd firmware
-pio test -e teensy40_unity
+pio test -e teensy40_unity --without-uploading --without-testing
 ```
+Leave off the extra flags and PlatformIO will start hunting for a physical
+Teensy, then sulk when it can't find one.
 
 There's a skinny `platformio.ini` in the repo root for the folks who forget, but it's training wheels—do the real work under `firmware/`.
 
