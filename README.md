@@ -18,13 +18,16 @@ This isn't just a code dump; it's a loud, messy lab notebook. Every README, sket
 
 ## Features at a Glance
 
-- **Speaks NRPN, RPN & SysEx** – your rig can't hide behind vanilla CCs. [More on MIDI types](firmware/README.md#supported-message-types).
-- **42 virtual slots** – stash independent MIDI channels and modes with LED halos for each. [Slot anatomy](firmware/README.md#supported-message-types).
-- **Six envelope followers** – feed it audio or CV and watch live signals hijack any slot. ARG pairs now sport an ON/OFF switch so you can muzzle the math when you need to. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
-- **Built-in arpeggiator** – clock-locked riffs for any slot; twist the filter knobs to bend length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
-- **Freq/Q double agents** – when the arp chills, “Freq” shoves note velocity up or down while “Q” decides if a pot twist actually spits out a new note.
-- **WebSerial editor** – tweak and spy on settings right from your browser, no drivers, no mercy. [WebSerial guide](docs/WebSerial.md), and the [config app README](firmware/App/README_webserial.md) for philosophy and troubleshooting.
-- **OSC/WebMIDI bridge** – hurl OSC at the Node shim and it slings MIDI at the box. [Bridge playbook](docs/OSCBridge.md).
+- **Full RGB LED riot** – 52 WS2812s light up slot halos, envelope eyes and whatever else needs to scream.
+- **Speaks every dialect** – NRPN, RPN, SysEx, CC, Note, Program Change, Pitch Bend and Aftertouch or it doesn't play. [More on MIDI types](firmware/README.md#supported-message-types).
+- **42 virtual slots** – each a self-contained MIDI brain with its own LED halo. [Slot anatomy](firmware/README.md#supported-message-types).
+- **Six envelope followers** – feed it audio or CV; hardware ON/OFF lets you muzzle the math when you need to. [How the EFs work](firmware/README.md#dynamic-envelope-modulation).
+- **Built-in arpeggiator** – clock-locked riffs with filter knobs warping length and pattern. [Arp details](firmware/README.md#arpeggiator-mode).
+- **Freq/Q double agents** – when the arp chills, Freq shoves velocity while Q decides if a twist actually spits out a note.
+- **Profiles on tap** – three EEPROM bunkers to stash complete setups; jump between live, studio and meltdown. [Profiles guide](#profiles-stash-three-setups).
+- **WebSerial editor + OSC bridge** – tweak the box from a browser or fire OSC/WebMIDI across a Node shim. [WebSerial guide](docs/WebSerial.md) • [Bridge playbook](docs/OSCBridge.md).
+- **Button mayhem** – six control buttons and a world of combos to reset, randomize or just start trouble. [Button chart](firmware/README.md#button-mayhem).
+- **Test harness included** – Unity-driven sanity checks and manual hardware tests when paranoia strikes. [Test suite](firmware/test/README.md).
 ## Quick Start
 
 1. **Install the Python tools** – `pip install -r requirements.txt` snags PlatformIO 6.1.18 (and any future Python riffraff). Old‑school? Fire up the Arduino IDE with Teensyduino instead.
