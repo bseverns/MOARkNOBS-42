@@ -65,7 +65,7 @@ jobs:
       - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
-          pip install -U platformio
+           pip install -r requirements.txt
           pio --version
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Build system tests (compile-only)
