@@ -1,9 +1,12 @@
 #pragma once
 
 #include <stdio.h>
+
+#include <Arduino.h>
+
 #ifdef UNIT_TEST
 #ifdef __cplusplus
-#include "../test/usb_midi.h"  // rope in the Serial stand-in when the core's MIA
+#include "usb_midi.h"
 #endif
 #endif
 

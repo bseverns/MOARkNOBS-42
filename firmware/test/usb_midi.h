@@ -1,12 +1,43 @@
 #pragma once
+
+// Preempt the Teensy core's usb_midi.h so our stub keeps center stage.
+// The core has shipped with a grab bag of include guards over the years, so
+// we spray them all here to slam the door on any version that wanders in.
 #ifndef USB_MIDI_H
 #define USB_MIDI_H
+#endif
+#ifndef USB_MIDI_H_
+#define USB_MIDI_H_
+#endif
+#ifndef usb_midi_h
+#define usb_midi_h
+#endif
+#ifndef usb_midi_h_
+#define usb_midi_h_
+#endif
+#ifndef usb_midi_h__
+#define usb_midi_h__
+#endif
+#ifndef __USB_MIDI_H__
+#define __USB_MIDI_H__
+#endif
+#ifndef __usb_midi_h__
+#define __usb_midi_h__
+#endif
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them *and* the USB_MIDI_STUB flag is set. The real Teensy core drags in its
 // own usbMIDI guts, so we bail out unless both flags are waving.
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 #include <cstdint>
+#include <Arduino.h>
+
+#ifdef usb_midi_class
+#undef usb_midi_class
+#endif
+#ifdef usbMIDI
+#undef usbMIDI
+#endif
 
 namespace midi {
 // Mirror the real library's event codes so tests match reality.
@@ -101,5 +132,3 @@ extern usb_midi_class usbMIDI;
 #else
 #include_next "usb_midi.h"
 #endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
-
-#endif  // USB_MIDI_H
