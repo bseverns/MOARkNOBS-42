@@ -43,8 +43,8 @@ jobs:
         run: |
           platformio run -t clean
           platformio test -e teensy40_unity --without-uploading -vvv | tee unity-test.log
-          # sanity: assert we didn't compile the autogen Serial transport
-          ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen unity_config.cpp detected (transport not custom)"; exit 1)
+          # Guard: fail if autogen Serial-based transport sneaks back in
+          ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen Unity transport detected"; exit 1)
 
       - name: Upload unity test log
         if: always()
