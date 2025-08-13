@@ -26,7 +26,7 @@ pio run -e teensy40_main
 
 That cranks out the main firmware for the Teensy 4.0.
 
-The base `platformio.ini` already bakes in `board_build.usbtype = USB_MIDI_SERIAL`, so every build enumerates as both Serial and MIDI. No extra flags, no mystery gadgets—`usbMIDI` just shows up ready to spit notes.
+The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_serial`, so every build enumerates as both Serial and MIDI. No extra flags, no mystery gadgets—PlatformIO flips that into the `USB_MIDI_SERIAL` macro and `usbMIDI` just shows up ready to spit notes.
 
 ### Testing
 
