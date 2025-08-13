@@ -1,11 +1,28 @@
 #pragma once
 
 // Preempt the Teensy core's usb_midi.h so our stub keeps center stage.
+// The core has shipped with a grab bag of include guards over the years, so
+// we spray them all here to slam the door on any version that wanders in.
 #ifndef USB_MIDI_H
 #define USB_MIDI_H
 #endif
+#ifndef USB_MIDI_H_
+#define USB_MIDI_H_
+#endif
+#ifndef usb_midi_h
+#define usb_midi_h
+#endif
 #ifndef usb_midi_h_
 #define usb_midi_h_
+#endif
+#ifndef usb_midi_h__
+#define usb_midi_h__
+#endif
+#ifndef __USB_MIDI_H__
+#define __USB_MIDI_H__
+#endif
+#ifndef __usb_midi_h__
+#define __usb_midi_h__
 #endif
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
