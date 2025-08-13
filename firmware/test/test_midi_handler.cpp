@@ -3,8 +3,6 @@
 #define private public
 #include "MIDIHandler.h"
 #undef private
-#undef usbMIDI
-extern USBMidiStub usbMIDI;
 #include <unity.h>
 
 void test_program_change() {

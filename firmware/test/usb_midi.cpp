@@ -5,8 +5,7 @@
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 #include "MIDIHandler.h"
 // Guard keeps the stub from hijacking real hardware builds.
-#undef usbMIDI
-MidiInterfaceStub MIDI;  // fake MIDI interface for tests
-USBMidiStub usbMIDI;     // test double standing in for Teensy's usbMIDI
+MidiInterfaceStub MIDI;    // fake MIDI interface for tests
+usb_midi_class usbMIDI;    // stand-in for Teensy's usbMIDI
 #endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 

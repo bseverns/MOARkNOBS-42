@@ -1,3 +1,4 @@
+#include "unity_config.h"  // make sure our stub wins the usbMIDI showdown
 #include <Arduino.h>
 #include <unity.h>
 

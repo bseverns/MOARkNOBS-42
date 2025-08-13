@@ -1,11 +1,11 @@
 #pragma once
+#ifndef USB_MIDI_H
+#define USB_MIDI_H
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them *and* the USB_MIDI_STUB flag is set. The real Teensy core drags in its
 // own usbMIDI guts, so we bail out unless both flags are waving.
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
-// Hijack the core's usbMIDI symbol before any Arduino headers get a shot.
-#define usbMIDI usbMIDI_real
 #include <cstdint>
 
 namespace midi {
@@ -83,7 +83,9 @@ struct MidiInterfaceStub {
   uint16_t getSysExArrayLength() { return lastSysExLength; }
 };
 
-struct USBMidiStub : MidiInterfaceStub {
+// Mirror the real Teensy type name so downstream code doesn't know the
+// difference.  Keep the class lean; we just log the bits we care about.
+struct usb_midi_class : MidiInterfaceStub {
   bool nextRead = false;
   midi::MidiType nextType = midi::InvalidType;
   bool read() { bool r = nextRead; nextRead = false; return r; }
@@ -91,10 +93,13 @@ struct USBMidiStub : MidiInterfaceStub {
 };
 
 extern MidiInterfaceStub MIDI;
+extern usb_midi_class usbMIDI;
 
 #ifndef MIDI_CREATE_INSTANCE
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 #endif
 #else
 #include_next "usb_midi.h"
-#endif  // defined(UNIT_TEST)
+#endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+
+#endif  // USB_MIDI_H
