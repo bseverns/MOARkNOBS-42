@@ -26,6 +26,8 @@ pio run -e teensy40_main
 
 That cranks out the main firmware for the Teensy 4.0.
 
+The base `platformio.ini` already bakes in `board_build.usbtype = USB_MIDI_SERIAL`, so every build enumerates as both Serial and MIDI. No extra flags, no mystery gadgets—`usbMIDI` just shows up ready to spit notes.
+
 ### Testing
 
 When you need proof the rig still howls, run the tests and watch the logs spill.
@@ -57,7 +59,7 @@ Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
 `Serial.print()` would usually faceplant, so every chatterbox call routes through
 `LOG_PRINT`, `LOG_PRINTLN`, or `LOG_PRINTF`. Those macros shout over USB when
 `USB_MIDI_SERIAL` is defined and ghost everything when it isn't. A tiny `Serial`
-stub in `test/USB-MIDI.cpp` gulps the output so the linker stays chill. Include
+stub in `test/usb_midi.cpp` gulps the output so the linker stays chill. Include
 [`Log.h`](include/Log.h) and lean on the macros whenever you need to spit
 debug.
 

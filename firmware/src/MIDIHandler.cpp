@@ -5,7 +5,6 @@
 #include "MIDIHandler.h"
 #include "Globals.h"
 #include "TimeUtils.h"
-#include <USB-MIDI.h>
 #include "Log.h"
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
