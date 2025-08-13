@@ -42,7 +42,7 @@ jobs:
         working-directory: firmware
         run: |
           platformio run -t clean
-          platformio test -e teensy40_unity --without-uploading --without-testing -vvv | tee unity-test.log
+          platformio test -e teensy40_unity --without-uploading -vvv | tee unity-test.log
           # sanity: assert we didn't compile the autogen Serial transport
           ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen unity_config.cpp detected (transport not custom)"; exit 1)
 
@@ -72,7 +72,7 @@ jobs:
         working-directory: firmware
         run: |
           platformio run -t clean
-          platformio test -e teensy40_full_system --without-uploading --without-testing -vvv | tee system-test.log
+          platformio test -e teensy40_full_system --without-uploading -vvv | tee system-test.log
       - name: Upload system test log
         if: always()
         uses: actions/upload-artifact@v4
