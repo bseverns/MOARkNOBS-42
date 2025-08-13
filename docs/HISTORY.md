@@ -70,6 +70,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - **August 8:** Merged PR #286, hauling in the full FastLED arsenal and scribbling teachable comments all over `firmware/App/benzknobz.html`. [956069c]
 - **August 11** My ears are still ringing because I went to a metal show in the basement of an American Legion. I am scrambling to make these Unity testers work for the codebase as well as actual builds of the firmware.
 - *Standards are not optional; often the best lessons come from coloring off the page.*
+- **Late August:** CI kept flaking out, so the build scripts took a beating. Swapped the MIDI library, chased phantom `usb_midi` ghosts, and bolted on a Unity test rig so every commit has to prove itself.
 
 ## Overview
 
