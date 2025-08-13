@@ -1,6 +1,13 @@
 #pragma once
+// Teensy's core guards its USB MIDI header with a lowercase macro.
+// If we don't mirror it here, the core header barges in and redefines
+// usb_midi_class, and the build goes up in smoke. So we claim both
+// guards up front.
+#ifndef usb_midi_h_
+#define usb_midi_h_
 #ifndef USB_MIDI_H
 #define USB_MIDI_H
+#endif
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them *and* the USB_MIDI_STUB flag is set. The real Teensy core drags in its
@@ -102,4 +109,4 @@ extern usb_midi_class usbMIDI;
 #include_next "usb_midi.h"
 #endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 
-#endif  // USB_MIDI_H
+#endif  // usb_midi_h_
