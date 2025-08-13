@@ -24,8 +24,8 @@ class HardwareSerial : public Stream {
 
 class SerialStub : public HardwareSerial {};
 
-inline SerialStub Serial;
-inline SerialStub Serial1;
+extern SerialStub Serial;
+extern SerialStub Serial1;
 
 #elif defined(UNIT_TEST)
 

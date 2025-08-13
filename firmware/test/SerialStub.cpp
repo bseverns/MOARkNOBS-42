@@ -1,6 +1,8 @@
 #include "SerialStub.h"
 
 #if defined(UNIT_TEST) && !defined(ARDUINO)
-[[maybe_unused]] SerialStub Serial;
-[[maybe_unused]] SerialStub Serial1;
+SerialStub Serial;
+SerialStub Serial1;
+#elif defined(UNIT_TEST)
+SerialStub &Serial = Serial1;
 #endif
