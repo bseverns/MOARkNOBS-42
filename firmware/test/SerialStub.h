@@ -34,7 +34,4 @@ extern SerialStub Serial1;
 // On real Teensy builds, lean on the core's HardwareSerial.
 using SerialStub = decltype(::Serial1);
 
-extern decltype(::Serial) &Serial;
-extern SerialStub &Serial1;
-
 #endif  // UNIT_TEST
