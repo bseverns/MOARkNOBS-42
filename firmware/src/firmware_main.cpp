@@ -201,7 +201,7 @@ void processSerial() {
             // Send all pot settings
             LOG_PRINT("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
-                int envelopeValue = (potToEnvelopeMap.count(i)) ? potToEnvelopeMap[i] : -1;
+                [[maybe_unused]] int envelopeValue = (potToEnvelopeMap.count(i)) ? potToEnvelopeMap[i] : -1;
                 LOG_PRINT(configManager.getPotCCNumber(i));
                 LOG_PRINT(",");
                 LOG_PRINT(configManager.getPotChannel(i));
@@ -210,8 +210,10 @@ void processSerial() {
                 LOG_PRINT(";");
             }
 
-            // Send LED settings
-            CRGB ledColor = ledManager.getColor();
+            // Send LED settings. `ledColor` only exists so we can pull r/g/b when
+            // logging is live. Mark it maybe_unused so the compiler chills when
+            // LOG_* macros ghost themselves.
+            [[maybe_unused]] CRGB ledColor = ledManager.getColor();
             LOG_PRINT(" LED:");
             LOG_PRINT(ledManager.getBrightness());
             LOG_PRINT(",");
@@ -221,7 +223,7 @@ void processSerial() {
             LOG_PRINT(",");
             LOG_PRINTLN(ledColor.b);
         } else if (command == "GET_LED") {
-            CRGB c = ledManager.getColor();
+            [[maybe_unused]] CRGB c = ledManager.getColor();
             LOG_PRINT(ledManager.getBrightness());
             LOG_PRINT(",");
             LOG_PRINT(c.r);
@@ -269,7 +271,7 @@ void processSerial() {
         } else if (command.startsWith("GET_EF")) {
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
-                int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
+                [[maybe_unused]] int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
                 LOG_PRINTLN(env);
             } else {
                 LOG_PRINTLN("ERR");

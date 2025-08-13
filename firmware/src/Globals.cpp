@@ -3,7 +3,7 @@
 
 #if __has_include(<ArduinoJson.h>)
 #if defined(USB_MIDI_STUB)
-#include "USB-MIDI.h"
+#include "usb_midi.h"
 #endif
 #include <ArduinoJson.h>
 #endif
