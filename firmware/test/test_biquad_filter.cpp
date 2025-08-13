@@ -1,3 +1,4 @@
+#include "unity_config.h"  // stage the MIDI doppelganger before Arduino drags in the core
 #include <Arduino.h>
 #include <unity.h>
 #include "BiquadFilter.h"
