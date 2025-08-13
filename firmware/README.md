@@ -17,6 +17,7 @@ Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want t
 ### Build Rules
 
 This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
+Teensy's core has a bad habit of pitting signed and unsigned ints in cage matches; `-Wno-sign-compare` kicks that noise to the curb so real bugs still punch through.
 
 Need the default build? Kick this from the `firmware/` dir and let PlatformIO scream the bits into existence:
 
