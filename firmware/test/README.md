@@ -75,6 +75,8 @@ pio test -e teensy40_unity
 
 The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/USB-MIDI.cpp` and its header hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
 
+Need a clock or a screen? `UnityStubs.cpp` fakes `now()`, the tempo globals, and even a minimalist `DisplayManager` so `MIDIHandler.cpp` can link without dragging the whole UI circus into every test.
+
 ### Serial? fake it.
 
 Vendor libs love to yammer over `Serial` even when there's no UART in sight. Host-side builds don't drag in the Arduino core, so `test/SerialStub.h` fakes just enough of `Print` and `HardwareSerial` to keep `Adafruit BusIO` and friends from choking. When you compile for a Teensy, the stub backs off and the real UARTs take over.
@@ -84,8 +86,7 @@ There's a lean version sitting in `../include/` that just sprays bytes
 over `Serial`. If you need different output, crack that file open and
 remix the macros.
 
-That env sets `test_build_src = true`, so PlatformIO drags the project's core sources into the test build. If something in `src/`
-won't compile, Unity will scream before you ever flash a board.
+That env sets `test_build_src = true`, but we keep the haul lean with a `build_src_filter`. Only the bits we actually test hitch a ride—`test_mainUnity.cpp`, `Arpeggiator.cpp`, and now `MIDIHandler.cpp` so the stubbed MIDI tests have real meat to chew on. If something in those files won't compile, Unity will scream before you ever flash a board.
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
