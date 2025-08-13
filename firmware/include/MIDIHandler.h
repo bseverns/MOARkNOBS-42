@@ -11,6 +11,7 @@ class HardwareSerial;
 #endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
+#include <MIDI.h>
 #include "MidiTypeShim.h"
 #ifdef USB_MIDI_STUB
 #include "usb_midi.h"       // snag the stub from test/ when asked
