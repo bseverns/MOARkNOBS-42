@@ -3,7 +3,7 @@
 #include <stdio.h>
 #ifdef UNIT_TEST
 #ifdef __cplusplus
-#include "../test/USB-MIDI.h"  // rope in the Serial stand-in when the core's MIA
+#include "../test/usb_midi.h"  // rope in the Serial stand-in when the core's MIA
 #endif
 #endif
 
