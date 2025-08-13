@@ -5,7 +5,6 @@
 #include "MIDIHandler.h"
 #include "Globals.h"
 #include "TimeUtils.h"
-#include <USB-MIDI.h>
 #include "Log.h"
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
@@ -21,15 +20,13 @@
 // modules call these helpers to send messages, while incoming data is routed to
 // callbacks that update display and arpeggiator state.
 
-#ifndef USB_MIDI_STUB
 MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
-#endif
 
 MIDIHandler::MIDIHandler() {}
 
 void MIDIHandler::begin() {
     MIDI.begin();  // default Omni channel; stub libs may skip the constant
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     usbMIDI.begin();
 #endif
 }
@@ -39,7 +36,7 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
     if (control > 127 || value > 127 || channel < 1 || channel > 16)
         return;
     MIDI.sendControlChange(control, value, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(control, value, channel);  // USB MIDI
     }
@@ -50,7 +47,7 @@ void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
     MIDI.sendNoteOn(note, velocity, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOn(note, velocity, channel);
     }
@@ -61,7 +58,7 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
     MIDI.sendNoteOff(note, velocity, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOff(note, velocity, channel);
     }
@@ -80,7 +77,7 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     MIDI.sendControlChange(98, pLsb, channel);
     MIDI.sendControlChange(6,  vMsb, channel);
     MIDI.sendControlChange(38, vLsb, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(99, pMsb, channel);
         usbMIDI.sendControlChange(98, pLsb, channel);
@@ -102,7 +99,7 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
     MIDI.sendControlChange(100, pLsb, channel);
     MIDI.sendControlChange(6,   vMsb, channel);
     MIDI.sendControlChange(38,  vLsb, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(101, pMsb, channel);
         usbMIDI.sendControlChange(100, pLsb, channel);
@@ -115,7 +112,7 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
 void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
     if (!data || length == 0 || length > 1024) return;
     MIDI.sendSysEx(length, data, true);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendSysEx(length, data, true);
     }
@@ -166,7 +163,7 @@ void MIDIHandler::processIncomingMIDI() {
     // USB MIDI stockpiles packets in a buffer. Drain that queue in a loop
     // so nothing gets stale, feeding each packet through the same handler as
     // the old-school wire.
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     while (usbMIDI.read()) {
         // Force usbMIDI's raw type into midi::MidiType so isSupportedType doesn't choke
         auto type = static_cast<midi::MidiType>(usbMIDI.getType());
@@ -278,7 +275,7 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
 void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     MIDI_DBG_PRINTF("Note On: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOn(note, velocity, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOn(note, velocity, channel);
     }
@@ -288,7 +285,7 @@ void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) 
 void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     MIDI_DBG_PRINTF("Note Off: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
     MIDI.sendNoteOff(note, velocity, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOff(note, velocity, channel);
     }
@@ -323,7 +320,7 @@ void MIDIHandler::clearClockTick() {
 void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
   if (program>127|| channel<1||channel>16) return;
   MIDI.sendProgramChange(program, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
   if (g_usbMidiOutEnabled) {
     usbMIDI.sendProgramChange(program, channel);
   }
@@ -333,7 +330,7 @@ void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
 void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
   if (pressure>127|| channel<1||channel>16) return;
   MIDI.sendAfterTouch(pressure, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
   if (g_usbMidiOutEnabled) {
     usbMIDI.sendAfterTouch(pressure, channel);
   }
@@ -348,7 +345,7 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
 
   // Teensy and USB MIDI libraries accept the signed 14-bit value directly
   MIDI.sendPitchBend(bend, channel);
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
   if (g_usbMidiOutEnabled) {
     usbMIDI.sendPitchBend(bend, channel);
   }
@@ -358,7 +355,7 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
 void MIDIHandler::sendClock() {
   if (!g_clockOutEnabled) return;
   MIDI.sendClock();
-#ifndef USB_MIDI_STUB
+#if HAS_USB_MIDI
   if (g_usbMidiOutEnabled) {
     usbMIDI.sendClock();
   }
