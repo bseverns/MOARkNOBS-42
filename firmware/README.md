@@ -43,7 +43,7 @@ Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` cat
 
 #### USB_MIDI_STUB
 
-Flip on `USB_MIDI_STUB` and the firmware boots without the USB serial gadget. `Serial` goes dark, so every print needs to ride through our `LOG_*` wrapper or a stub logger or the build won't link. The `teensy40_unity` env already pipes Unity's yaps straight to stdout, and any extra chatter has to go through the same wrapper.
+Flip on `USB_MIDI_STUB` and the firmware boots without the USB serial gadget. `Serial` goes dark, so every print needs to ride through our `LOG_*` wrapper or a stub logger or the build won't link. The `teensy40_unity` env leaves this flag off; add it yourself only when you want a headless USB stack.
 
 ```cpp
 #if !defined(USB_MIDI_STUB)

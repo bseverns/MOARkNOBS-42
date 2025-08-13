@@ -73,13 +73,11 @@ We finally caved and wired up a few automated checks in `test/test_*.cpp` for th
 pio test -e teensy40_unity
 ```
 
-That Unity env automatically defines `UNIT_TEST` *and* `USB_MIDI_STUB`. When those flags fly, `test/USB-MIDI.cpp` and its header hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Real hardware builds leave `USB_MIDI_STUB` undefined, so `MIDIHandler.cpp` skips the faux pipes and the legit USB stack owns the symbols—no linker brawls, no ghosts.
+The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/USB-MIDI.cpp` and its header hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
 
 ### Serial? fake it.
 
-Vendor libs love to yammer over `Serial` even when there's no UART in sight. The host test rig doesn't drag in the Arduino core, so we slap down a bare-bones `SerialStub` in `test/SerialStub.h` and jam it into host Unity builds with a global `-include`. It's just enough to keep `Adafruit BusIO` and friends from choking while the real hardware sleeps.
-
-That shim is strictly for desk jockeys. The moment `ARDUINO` shows up (read: you're flashing a Teensy), the stub bails and the actual `HardwareSerial` steps in. The header fences itself with `#if defined(UNIT_TEST) && !defined(ARDUINO)`, so if that macro's lit, the fake stays quiet and the real ports do the talking.
+Vendor libs love to yammer over `Serial` even when there's no UART in sight. Host-side builds don't drag in the Arduino core, so `test/SerialStub.h` fakes just enough of `Print` and `HardwareSerial` to keep `Adafruit BusIO` and friends from choking. When you compile for a Teensy, the stub backs off and the real UARTs take over.
 
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
 There's a lean version sitting in `../include/` that just sprays bytes

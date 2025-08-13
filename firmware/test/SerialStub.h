@@ -3,7 +3,6 @@
 #if defined(UNIT_TEST) && !defined(ARDUINO)
 
 #include <cstddef>
-#include <cstdint>
 
 struct Print {
   template <typename... Args> void print(Args...) {}
@@ -16,26 +15,26 @@ struct Print {
 
 struct Stream : Print {};
 
-struct HardwareSerial : Stream {
-  void begin(unsigned long) {}
-  void flush() {}
-};
-
-class SerialStub : public HardwareSerial {};
-
-extern SerialStub Serial;
-extern SerialStub Serial1;
-
-#else
-
-#include <Arduino.h>
-
-class SerialStub : public HardwareSerial {
+class HardwareSerial : public Stream {
  public:
-  using HardwareSerial::HardwareSerial;
   void begin(unsigned long) {}
   size_t write(uint8_t) { return 1; }
   void flush() {}
 };
 
-#endif // defined(UNIT_TEST) && !defined(ARDUINO)
+class SerialStub : public HardwareSerial {};
+
+inline SerialStub Serial;
+inline SerialStub Serial1;
+
+#elif defined(UNIT_TEST)
+
+#include <Arduino.h>
+
+// On real Teensy builds, lean on the core's HardwareSerial.
+using SerialStub = decltype(::Serial1);
+
+extern decltype(::Serial) &Serial;
+extern SerialStub &Serial1;
+
+#endif  // UNIT_TEST
