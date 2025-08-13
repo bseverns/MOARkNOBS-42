@@ -40,11 +40,18 @@ jobs:
       # Build, flash, and run the Unity suite on real hardware.
       - name: Run Unity tests
         working-directory: firmware
+        env:
+          TEST_PORT: ${{ secrets.TEST_PORT }}
         run: |
           platformio run -t clean
-          platformio test -e teensy40_unity --without-uploading -vvv | tee unity-test.log
-          # Guard: fail if autogen Serial-based transport sneaks back in
-          ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen Unity transport detected"; exit 1)
+          if [ -n "$TEST_PORT" ]; then
+            platformio test -e teensy40_unity --without-uploading --test-port "$TEST_PORT" -vvv | tee unity-test.log
+            # Guard: fail if autogen Serial-based transport sneaks back in
+            ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen Unity transport detected"; exit 1)
+          else
+            echo "Skipping Unity tests: TEST_PORT not set"
+            touch unity-test.log
+          fi
 
       - name: Upload unity test log
         if: always()
