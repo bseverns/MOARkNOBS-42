@@ -77,7 +77,9 @@ That Unity env automatically defines `UNIT_TEST` *and* `USB_MIDI_STUB`. When tho
 
 ### Serial? fake it.
 
-Vendor libs love to yammer over `Serial` even when there's no UART in sight. The host test rig doesn't drag in the Arduino core, so we slap down a bare-bones `SerialStub` in `test/SerialStub.h` and force it into every Unity compile via `-include`. It's just enough to keep `Adafruit BusIO` and friends from choking while the real hardware sleeps.
+Vendor libs love to yammer over `Serial` even when there's no UART in sight. The host test rig doesn't drag in the Arduino core, so we slap down a bare-bones `SerialStub` in `test/SerialStub.h` and jam it into host Unity builds with a global `-include`. It's just enough to keep `Adafruit BusIO` and friends from choking while the real hardware sleeps.
+
+That shim is strictly for desk jockeys. The moment `ARDUINO` shows up (read: you're flashing a Teensy), the stub bails and the actual `HardwareSerial` steps in. The header fences itself with `#if defined(UNIT_TEST) && !defined(ARDUINO)`, so if that macro's lit, the fake stays quiet and the real ports do the talking.
 
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
 There's a lean version sitting in `../include/` that just sprays bytes
