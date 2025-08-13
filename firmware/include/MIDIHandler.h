@@ -13,9 +13,9 @@ class HardwareSerial;
 #include "MIDITypes.h"
 #include "MidiTypeShim.h"
 #ifdef USB_MIDI_STUB
-#include "USB-MIDI.h"      // snag the stub from test/ when asked
+#include "usb_midi.h"       // snag the stub from test/ when asked
 #else
-#include <USB-MIDI.h>
+#include <usb_midi.h>
 #endif
 
 #define IS_USB_CONNECTED() (usbMidi.connected())
