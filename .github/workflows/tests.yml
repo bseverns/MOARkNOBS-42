@@ -37,6 +37,13 @@ jobs:
           pio --version
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
+          - name: Guard against autogen Unity transport
+          if: always()
+          working-directory: firmware
+          run: |
+          ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" unity-test.log || (echo "Autogen Unity transport detected"; exit 1)
+
+
       # Build-only (no flashing). Run from firmware/ so the right platformio.ini is used.
       - name: Build Unity tests (compile-only)
         working-directory: firmware
