@@ -1,6 +1,7 @@
 #pragma once
 #ifndef USB_MIDI_H
 #define USB_MIDI_H
+#define usb_midi_h_
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them *and* the USB_MIDI_STUB flag is set. The real Teensy core drags in its

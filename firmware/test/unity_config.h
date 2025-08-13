@@ -3,7 +3,9 @@
 #include <stdio.h>
 #ifdef UNIT_TEST
 #ifdef __cplusplus
+extern "C++" {
 #include "../test/usb_midi.h"  // rope in the Serial stand-in when the core's MIA
+}
 #endif
 #endif
 

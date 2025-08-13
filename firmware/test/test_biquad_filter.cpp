@@ -1,3 +1,4 @@
+#define usb_midi_h_
 #include <Arduino.h>
 #include <unity.h>
 #include "BiquadFilter.h"

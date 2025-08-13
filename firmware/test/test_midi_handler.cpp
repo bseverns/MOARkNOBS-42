@@ -1,4 +1,5 @@
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+#define usb_midi_h_
 #include "usb_midi.h"
 #define private public
 #include "MIDIHandler.h"
