@@ -1,9 +1,23 @@
 #pragma once
 
 #include <stdio.h>
+
 #ifdef UNIT_TEST
 #ifdef __cplusplus
-#include "../test/usb_midi.h"  // rope in the Serial stand-in when the core's MIA
+// Rename the core's usbMIDI symbols before Arduino drags them in.
+#define usb_midi_class teensy_core_usb_midi_class
+#define usbMIDI teensy_core_usbMIDI
+#endif
+#endif
+
+#include <Arduino.h>
+
+#ifdef UNIT_TEST
+#ifdef __cplusplus
+// Undo the rename and slip in our stub so tests talk to the fake.
+#undef usb_midi_class
+#undef usbMIDI
+#include "usb_midi.h"
 #endif
 #endif
 
