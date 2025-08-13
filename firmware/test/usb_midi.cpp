@@ -1,7 +1,7 @@
-// Only spin up the fake USB-MIDI guts when both UNIT_TEST and
+// Only spin up the fake usbMIDI guts when both UNIT_TEST and
 // USB_MIDI_STUB flags are waving. That keeps the Teensy core's real
 // implementation from clashing with our test double.
-#include "USB-MIDI.h"
+#include "usb_midi.h"
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 #include "MIDIHandler.h"
 // Guard keeps the stub from hijacking real hardware builds.

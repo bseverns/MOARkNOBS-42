@@ -2,7 +2,7 @@
 
 // Spin up these lightweight MIDI stubs only when the unit-test rig asks for
 // them *and* the USB_MIDI_STUB flag is set. The real Teensy core drags in its
-// own USB‑MIDI guts, so we bail out unless both flags are waving.
+// own usbMIDI guts, so we bail out unless both flags are waving.
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 // Hijack the core's usbMIDI symbol before any Arduino headers get a shot.
 #define usbMIDI usbMIDI_real
@@ -96,5 +96,5 @@ extern MidiInterfaceStub MIDI;
 #define MIDI_CREATE_INSTANCE(type, serial, name)
 #endif
 #else
-#include_next "USB-MIDI.h"
+#include_next "usb_midi.h"
 #endif  // defined(UNIT_TEST)
