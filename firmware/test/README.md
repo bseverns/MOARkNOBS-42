@@ -84,8 +84,7 @@ There's a lean version sitting in `../include/` that just sprays bytes
 over `Serial`. If you need different output, crack that file open and
 remix the macros.
 
-That env sets `test_build_src = true`, so PlatformIO drags the project's core sources into the test build. If something in `src/`
-won't compile, Unity will scream before you ever flash a board.
+That env sets `test_build_src = true`, but we keep the haul lean with a `build_src_filter`. Only the bits we actually test hitch a ride—`test_mainUnity.cpp`, `Arpeggiator.cpp`, `MIDIHandler.cpp`, plus `Globals.cpp` and `Utility.cpp` so the clock math and tapped BPM global keep time. `DisplayManager::registerInteraction()` gets faked in `test/DisplayManagerStub.cpp` so the UI stays out of the link step. If anything in that pile won't compile, Unity will scream before you ever flash a board.
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
