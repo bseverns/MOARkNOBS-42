@@ -198,6 +198,7 @@ void processSerial() {
             }
 
         } else if (command.startsWith("GET_ALL")) {
+#ifdef SERIAL_LOGGING
             // Send all pot settings
             LOG_PRINT("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
@@ -220,7 +221,9 @@ void processSerial() {
             LOG_PRINT(ledColor.g);
             LOG_PRINT(",");
             LOG_PRINTLN(ledColor.b);
+#endif
         } else if (command == "GET_LED") {
+#ifdef SERIAL_LOGGING
             CRGB c = ledManager.getColor();
             LOG_PRINT(ledManager.getBrightness());
             LOG_PRINT(",");
@@ -229,6 +232,7 @@ void processSerial() {
             LOG_PRINT(c.g);
             LOG_PRINT(",");
             LOG_PRINTLN(c.b);
+#endif
         } else if (command.startsWith("SET_LED")) {
             int first = command.indexOf(',');
             int second = command.indexOf(',', first + 1);
@@ -270,7 +274,11 @@ void processSerial() {
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
                 int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
+#ifdef SERIAL_LOGGING
                 LOG_PRINTLN(env);
+#else
+                (void)env;
+#endif
             } else {
                 LOG_PRINTLN("ERR");
             }
