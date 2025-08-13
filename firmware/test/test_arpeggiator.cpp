@@ -2,6 +2,10 @@
 #include <unity.h>
 #include "Arpeggiator.h"
 
+// Unity expects these, even if they just wave from the sidelines.
+void setUp() {}
+void tearDown() {}
+
 void test_start_stop_cycle() {
     Arpeggiator arp;
     TEST_ASSERT_FALSE(arp.isActive());
