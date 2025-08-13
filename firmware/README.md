@@ -25,6 +25,8 @@ pio run -e teensy40_main
 ```
 
 That cranks out the main firmware for the Teensy 4.0.
+We ride the Teensy core's built-in `usbMIDI` driver—no sketchy
+third-party USB-MIDI baggage slowing us down.
 
 ### Testing
 
