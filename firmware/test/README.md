@@ -75,8 +75,8 @@ pio test -e teensy40_unity
 
  The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/usb_midi.cpp` and pals hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Instead of playing macro shell games, we drop in a skinny `usb_midi_class` that exposes the same face as the real deal. Any code shouting for `usbMIDI` ends up talking to our stub, the core header never loads, and the linker goes back to sleep. A tiny `MIDI.h` shim rides shotgun so the `midi` namespace exists even when the heavyweight library sits out. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
 
-  Tests never include `<Arduino.h>` directly anymore. Drop `#include "unity_config.h"` at the top and it drags in Arduino, muzzles the core's usbMIDI symbols, and swaps in our faker. Skip it and the compiler will howl about dueling `usb_midi_class` defs.
-  That shim now straight-up renames the core symbols before they hit the stage, so our stub keeps the spotlight without playing whack-a-macro with include guards.
+  Tests never include `<Arduino.h>` directly anymore. `platformio.ini` force-feeds `unity_config.h` into every compile unit so the Teensy core's `usbMIDI` never even steps on stage. Still, slap `#include "unity_config.h"` at the top of test files to make it loud and clear. Skip it and future-you might forget why the header's there.
+  That shim renames the core symbols before they roll in, then swaps in our faker so the real header stays ghosted and our stub keeps the spotlight.
 
 ### Serial? fake it.
 
