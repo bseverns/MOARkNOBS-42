@@ -6,7 +6,6 @@
 #include "MIDIHandler.h"
 // Guard keeps the stub from hijacking real hardware builds.
 MidiInterfaceStub MIDI;    // fake MIDI interface for tests
-// Define the stub with its real name so linkers never see a bare usbMIDI.
-USBMidiStub usbMIDI_stub;  // test double standing in for Teensy's usbMIDI
+usb_midi_class usbMIDI;    // stand-in for Teensy's usbMIDI
 #endif  // defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 
