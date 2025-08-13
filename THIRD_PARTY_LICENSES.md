@@ -7,7 +7,6 @@ When you bundle binaries or kits, drag along the whole `firmware/LICENSES/` fold
 ## Libraries and Licenses
 - FastLED — MIT
 - Bounce2 — MIT
-- USB-MIDI (lathoub) — MIT
 - Adafruit SSD1306 — MIT
 - Adafruit GFX Library — MIT
 - TimerOne — MIT
@@ -20,7 +19,7 @@ If you need newer versions, swap in the latest release and keep their LICENSE fi
 ---
 
 ## MIT License
-Used by FastLED, Bounce2, USB-MIDI, Adafruit SSD1306, Adafruit GFX Library, TimerOne, and ArduinoJson.
+Used by FastLED, Bounce2, Adafruit SSD1306, Adafruit GFX Library, TimerOne, and ArduinoJson.
 
 ```
 MIT License
