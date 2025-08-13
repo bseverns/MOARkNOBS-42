@@ -5,7 +5,10 @@
 // own usbMIDI guts, so we bail out unless both flags are waving.
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 // Hijack the core's usbMIDI symbol before any Arduino headers get a shot.
-#define usbMIDI usbMIDI_real
+// Everything in the tests that thinks it's talking to `usbMIDI` actually
+// gets routed to this stubbed alias so the real core symbol never even
+// enters the ring.
+#define usbMIDI usbMIDI_stub
 #include <cstdint>
 
 namespace midi {
@@ -91,6 +94,7 @@ struct USBMidiStub : MidiInterfaceStub {
 };
 
 extern MidiInterfaceStub MIDI;
+extern USBMidiStub usbMIDI;
 
 #ifndef MIDI_CREATE_INSTANCE
 #define MIDI_CREATE_INSTANCE(type, serial, name)
