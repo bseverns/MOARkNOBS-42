@@ -1,5 +1,4 @@
-#include "unity_config.h"  // pull in usbMIDI imposter before Arduino grabs the real one
-#include <Arduino.h>
+#include "unity_config.h"  // yanks in Arduino and our usbMIDI doppelganger
 #include <unity.h>
 #include "Arpeggiator.h"
 

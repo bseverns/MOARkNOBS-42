@@ -1,5 +1,4 @@
-#include "unity_config.h"  // make sure our stub wins the usbMIDI showdown
-#include <Arduino.h>
+#include "unity_config.h"  // bundles Arduino and corrals usbMIDI into our stub
 #include <unity.h>
 
 void test_start_stop_cycle();
