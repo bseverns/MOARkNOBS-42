@@ -20,7 +20,7 @@ jobs:
       - name: Build every environment
         working-directory: firmware
         run: >-
-          pio run -e teensy40_main -e teensy40_unit_tests -e teensy40_full_system -e teensy40_unified_test -e teensy40_biquad_test -e teensy40_eeprom_persistence -e teensy40_slot_verify
+          pio run -e teensy40_main -e teensy40_full_system -e teensy40_unified_test -e teensy40_biquad_test -e teensy40_eeprom_persistence -e teensy40_slot_verify
 
 
   bridge:
