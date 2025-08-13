@@ -11,14 +11,15 @@ class HardwareSerial;
 #endif
 #include "DisplayManager.h"
 #include "MIDITypes.h"
+#include <MIDI.h>
 #include "MidiTypeShim.h"
 #ifdef USB_MIDI_STUB
-#include "USB-MIDI.h"      // snag the stub from test/ when asked
+#include "usb_midi.h"       // snag the stub from test/ when asked
 #else
-#include <USB-MIDI.h>
+#include <usb_midi.h>
 #endif
 
-#define IS_USB_CONNECTED() (usbMidi.connected())
+#define IS_USB_CONNECTED() (usbMIDI.connected())
 
 /**
  * @brief Thin wrapper around the Arduino and USB MIDI libraries.

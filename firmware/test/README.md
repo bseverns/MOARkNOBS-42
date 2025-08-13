@@ -73,7 +73,7 @@ We finally caved and wired up a few automated checks in `test/test_*.cpp` for th
 pio test -e teensy40_unity
 ```
 
-The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/USB-MIDI.cpp` and its header hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
+The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/usb_midi.cpp` and pals hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. A tiny `MIDI.h` shim rides shotgun so the `midi` namespace exists even when the heavyweight library sits out. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
 
 ### Serial? fake it.
 
@@ -106,7 +106,7 @@ Pokes the update interval to prove the UI can chill when told.
 
 ### test_midi_handler.cpp
 
-Shoots fake MIDI through stubbed veins to make sure routing doesn't flake out. The USB-MIDI impostors live in this folder and disappear on real silicon, so `teensy40_unified_test` leaves this test on the bench. Only the `teensy40_unity` rig builds with `UNIT_TEST` to conjure those impostors; every other env skips the flag, so anything leaning on the stub just naps.
+Shoots fake MIDI through stubbed veins to make sure routing doesn't flake out. The usb_midi impostors live in this folder and disappear on real silicon, so `teensy40_unified_test` leaves this test on the bench. Only the `teensy40_unity` rig builds with `UNIT_TEST` to conjure those impostors; every other env skips the flag, so anything leaning on the stub just naps.
 
 The stub's `MidiType` enum mirrors the real deal. The opener is `SystemExclusive`, the curtain drop is `EndOfExclusive`, and a freshly-minted `Tick` rides 0xF8 so you can count the beat without pulling in the whole clock rig. If your tests still shout the old names, patch 'em—yesterday's API won't save today's jam.
 
