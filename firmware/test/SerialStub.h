@@ -8,6 +8,9 @@ struct Print {
   template <typename... Args> void print(Args...) {}
   template <typename... Args> void println(Args...) {}
   template <typename... Args> void printf(Args...) {}
+  size_t write(uint8_t) { return 1; }
+  size_t write(const uint8_t*, size_t) { return 0; }
+  size_t write(const char*) { return 0; }
 };
 
 struct Stream : Print {};
@@ -35,4 +38,3 @@ extern decltype(::Serial) &Serial;
 extern SerialStub &Serial1;
 
 #endif  // UNIT_TEST
-
