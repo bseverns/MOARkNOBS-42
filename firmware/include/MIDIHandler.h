@@ -9,7 +9,7 @@
 #else
 class HardwareSerial;
 #endif
-#include "DisplayManager.h"
+#include <DisplayManager.h>  // angle brackets let Unity tests swap in a stub
 #include "MIDITypes.h"
 #include "MidiTypeShim.h"
 #ifdef USB_MIDI_STUB
