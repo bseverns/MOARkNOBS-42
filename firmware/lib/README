@@ -22,6 +22,10 @@ This folder isn't a dumping ground—it's a curated stash of third‑party code 
    ```
 5. If we carry local patches, reapply them or document why they vanished.
 
+## Trim the bloat
+
+Upstream drops a galaxy of extras—GitHub issue templates, demo sketches, and build files for chips we don't even own. We junk all that noise so this folder stays lean and every vendored bit earns its keep. If you actually need those examples, yank a fresh copy from upstream and rage on in a scratch directory.
+
 ## License obligations
 
 | Library | License | What you owe the author |
