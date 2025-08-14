@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 namespace sys {
-    // Return a JSON string describing firmware version and git revision.
+    // Return a JSON string packed with firmware, build, and hardware info.
     String report();
 
     // Print the system report to the given stream (defaults to Serial).
