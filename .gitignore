@@ -16,3 +16,5 @@ firmwareZip.zip
 
 # Ignore release artifacts
 dist/
+logs/
+bridge/node_modules/

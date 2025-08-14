@@ -179,6 +179,8 @@ Available environments:
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test
 - `teensy40_slot_verify` – verifies MIDI slot storage
 
+Grab `./test.sh` when you just want receipts: it sniffs for a Teensy, blasts the Unity rig, roughs up the Node bridge, and squirts both transcripts into `logs/` for later gawking. Set `TEST_PORT` if you’re juggling more than one board.
+
 See [firmware/test/README.md](firmware/test/README.md) for details on this project's testing suite.
 
 For a month-by-month look at how this controller came together, see
