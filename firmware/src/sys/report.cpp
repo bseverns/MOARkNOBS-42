@@ -5,8 +5,8 @@
 namespace sys {
 String report() {
     StaticJsonDocument<128> doc;
-    doc["fw_version"] = FW_VERSION;
-    doc["git_sha"] = GIT_SHA;
+    doc["fw_version"] = FW_VERSION_STR;
+    doc["git_sha"] = GIT_SHA_STR;
     String out;
     serializeJson(doc, out);
     return out;
