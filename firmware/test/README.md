@@ -22,6 +22,20 @@ open `unity_config.h` and remix the macro.
 seeds `g_tappedBPM` so the linker chills without hauling in `Globals.cpp` and its SD baggage. Change one without the others and
 you'll be debugging in the dark.
 
+## Custom Runner
+
+PlatformIO's stock Unity runner speaks over the default `Serial` port, which is useless for this rig. Our tests scream down
+`Serial1`, so we roll a tiny Python runner that just parses Unity's output and calls it a day.
+
+To take it for a spin, the `teensy40_unity` env already points at the runner, so just:
+
+```bash
+pio test -e teensy40_unity
+```
+
+Drop new flashing logic into `stage_uploading()` if your CI needs to lob firmware at some remote hardware. The rest of the
+runner is pure line parsing, so hack away.
+
 ## Hardware Hit List
 
 | File | What it beats on |
