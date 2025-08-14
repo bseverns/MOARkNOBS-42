@@ -665,6 +665,10 @@ Reset 0x<cause> Brownouts <count>
 
 If the brownout count isn't zero, your power rail is having a bad day.
 
+That `UID` field comes straight from the MCU's one-time-programmable fuse
+bank. We yank `HW_OCOTP_CFG0..3` out of `imxrt.h` and print the 128-bit serial
+as four hex words so you can fingerprint a board without whipping out a JTAG.
+
 ### USB Serial & OLED Interface
 
 Once the MN42 is flashed you can jaw at it over USB like it's your favorite
