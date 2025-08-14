@@ -20,6 +20,7 @@ class MIDIHandler;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 /*
  * ------------- EEPROM Memory Map -------------
+ * See `docs/EEPROMLayout.md` for a table version.
  * Offset (bytes)  Region                             Bytes
  * --------------------------------------------------------
  * 0               Pot channel map                  NUM_POTS

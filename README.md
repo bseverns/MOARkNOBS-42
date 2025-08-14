@@ -25,6 +25,8 @@ This isn't just a code dump; it's a loud, messy lab notebook. Every README, sket
 ## Where's what
 
 - **docs/** – Builder's Handbook, history log, WebSerial guide, and thermal rants.
+  - [Pin Map](docs/PinMap.md) – MCU pins and what they terrorize.
+  - [EEPROM Layout](docs/EEPROMLayout.md) – offsets for every saved byte.
 - **firmware/** – Teensy 4.0 source and project files. The full manual lives in [firmware/README.md](firmware/README.md).
   - **App/** – simple WebSerial editor to tweak settings over USB. See [README_webserial.md](firmware/App/README_webserial.md) for philosophy and troubleshooting riffs.
   - **test/** – manual hardware test suite with its own [README](firmware/test/README.md).
@@ -56,9 +58,9 @@ Cutting a drop shouldn't feel like paperwork. From the repo root:
 4. If the board plays dead, mash the Teensy's button, then hit **Program**.
 5. When the loader cheers "Reboot OK," yank the cable or leave it for the encore.
 
-## Getting Started
+## Build the Firmware
 
-### Flash the Firmware (the loud way)
+### Build & Flash (the loud way)
 
 1. **Install the tools** – `pip install -r requirements.txt` to grab PlatformIO 6.1.18 or lean on the VS Code extension. Old‑school? Fire up the Arduino IDE with the Teensyduino add‑on and the libraries listed in `platformio.ini`.
 2. **Plug in your Teensy 4.0** – USB cable, no mystery.
