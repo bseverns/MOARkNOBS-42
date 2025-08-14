@@ -30,6 +30,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
 - **Self-Test Boot Banner**: On boot the rig screams its firmware tag, EEPROM schema, and MCU fingerprint over USB before doing anything else.
+- **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
 - **Brownout Counter**: Every power sag gets tallied in EEPROM. Ask `GET_BROWNOUTS` over serial to see how rough the ride has been.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
 - **Dual MIDI Output**: DIN blares from boot; USB stays mute until you mash Control Buttons **0+1+2** to arm it.
@@ -427,6 +428,7 @@ Some checks need hot solder and a human in the loop; others just need to prove t
 **Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_full_system`). They demand real LEDs, real knobs, and a willing operator.
 
 **Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive. CI only bothers if `TEST_PORT` points at your Teensy; otherwise the tests ghost out so the build stays green.
+Too lazy to type? `../test.sh` fires the same command and saves the trash talk under `logs/`.
 
 The `teensy40_unity` rig skips the usual `setup()`/`loop()` duet and our Unity serial shim; the tests bring their own and even punk out the core's `usbMIDI` with a stub so names don't collide.
 

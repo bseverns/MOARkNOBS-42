@@ -16,3 +16,4 @@ firmwareZip.zip
 
 # Ignore release artifacts
 dist/
+logs/

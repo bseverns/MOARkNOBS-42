@@ -27,6 +27,7 @@ Most modules stash a mini README in their own subfolder for API riffs—check `*
 - **Utility.h** – math mischief like `scale()` for warping ranges and a lightweight task scheduler ([Utility.cpp](../src/Utility.cpp)).
 - **WebSerial.h** – ships slot snapshots over USB for the web editor ([WebSerial.cpp](../src/WebSerial.cpp)).
 - **name.c** – sets the custom USB MIDI product string.
+- **sys/report.h** – spits a JSON system report with FW version and Git hash.
 
 ## How these pieces jam together
 
