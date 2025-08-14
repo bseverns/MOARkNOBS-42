@@ -36,6 +36,14 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           pio --version
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install bridge deps
+        run: npm --prefix bridge ci
+
 
       # Build, flash, and run the Unity suite on real hardware.
       - name: Run Unity tests
@@ -56,6 +64,13 @@ jobs:
         with:
           name: unity-test-junit
           path: logs/unity-test.xml
+
+      - name: Upload bridge test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bridge-test-logs
+          path: logs/bridge-test.log
 
   # Optional: keep a system test lane you can trigger manually or on a branch
   system-tests:

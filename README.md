@@ -179,7 +179,7 @@ Available environments:
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test
 - `teensy40_slot_verify` – verifies MIDI slot storage
 
-Grab `./test.sh` when you just want receipts: it blasts the Unity rig and squirts the transcript into `logs/` for later gawking.
+Grab `./test.sh` when you just want receipts: it blasts the Unity rig, roughs up the Node bridge, and squirts both transcripts into `logs/` for later gawking.
 
 See [firmware/test/README.md](firmware/test/README.md) for details on this project's testing suite.
 

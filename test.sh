@@ -9,3 +9,5 @@ else
   echo "Skipping Unity tests: TEST_PORT not set" | tee logs/unity-test.log
   : > logs/unity-test.xml
 fi
+npm --prefix bridge test | tee logs/bridge-test.log
+
