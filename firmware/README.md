@@ -427,8 +427,8 @@ Some checks need hot solder and a human in the loop; others just need to prove t
 
 **Hardware jam sessions.** Hand-rolled test sketches live in `src/` and get flashed with `pio run -e <env>` (the usual suspect is `teensy40_full_system`). They demand real LEDs, real knobs, and a willing operator.
 
-**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive. CI only bothers if `TEST_PORT` points at your Teensy; otherwise the tests ghost out so the build stays green.
-Too lazy to type? `../test.sh` fires the same command and saves the trash talk under `logs/`.
+**Unity smoke rituals.** Quick sanity tests camp out in `firmware/test/` and run with `pio test -e teensy40_unity`. They make sure the code still starts up before we plug in anything expensive. CI only bothers if it can sniff your Teensy or you set `TEST_PORT`; otherwise the tests ghost out so the build stays green.
+Too lazy to type? `../test.sh` does the sniffing, fires the same command, and saves the trash talk under `logs/`.
 
 The `teensy40_unity` rig skips the usual `setup()`/`loop()` duet and our Unity serial shim; the tests bring their own and even punk out the core's `usbMIDI` with a stub so names don't collide.
 
@@ -474,7 +474,7 @@ The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_seria
 When you need proof the rig still howls, run the tests and watch the logs spill.
 
 - **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet, screams the boot banner self-test, and spews results over Serial at 115200 baud.
-- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Wire up a board and set `TEST_PORT` to its serial node if you actually want the run. No `TEST_PORT`? The CI shrugs and skips so you don't eat a red X. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
+- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Wire up a board and we'll sniff for its serial node; set `TEST_PORT` if you're picky. No board? The CI shrugs and skips so you don't eat a red X. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
 
 Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
 
