@@ -61,7 +61,6 @@ class MIDIHandler;
 #define EEPROM_MAGIC_PRIMARY 0xABCD  // Validates the main config block
 #define EEPROM_MAGIC_BACKUP  0xDCBA  // Signals a sane backup image
 
-#define CONFIG_VERSION 0x0002
 
 #define EEPROM_POT_CHANNELS EEPROM_START_ADDRESS
 #define EEPROM_POT_CC (EEPROM_POT_CHANNELS + NUM_POTS)

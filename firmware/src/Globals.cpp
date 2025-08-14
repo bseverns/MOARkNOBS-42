@@ -42,6 +42,8 @@ float g_tappedBPM  = 120.0f;   // last tapped tempo
 bool  g_clockOutEnabled = false; // runtime toggle for MIDI clock out
 bool  g_usbMidiOutEnabled = false; // gated USB MIDI output
 unsigned long lastClockTime = 0;  // ms timestamp of the last MIDI clock tick
+uint32_t g_resetCause = 0;        // raw reset cause from SRC_SRSR
+uint16_t g_brownoutCount = 0;     // persisted brownout counter
 
 // Note dynamics knobs
 int8_t  velocityShift   = 0;

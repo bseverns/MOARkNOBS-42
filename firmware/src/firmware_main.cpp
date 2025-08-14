@@ -22,6 +22,7 @@
 #include <ArduinoJson.h>
 #include <queue>
 #include <map>
+#include <imxrt.h>
 
 struct HardwareConfigInitializer { HardwareConfigInitializer() { loadHardwareConfig(); } } _hwInit;
 
@@ -144,6 +145,9 @@ void processSerial() {
 
         } else if (command == "GET_SCHEMA") {
             LOG_PRINTLN(ConfigManager::makeSchema());
+
+        } else if (command == "GET_BROWNOUTS") {
+            LOG_PRINTLN(g_brownoutCount);
 
         } else if (command.startsWith("SET_POT")) {
             // Parse "SET_POT" command
@@ -460,6 +464,16 @@ void streamWebSerialState() {
 void setup() {
     // — Serial & Config —
     Serial.begin(31250);
+    g_resetCause = SRC_SRSR;
+    EEPROM.get(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    if (g_resetCause & 0x40) {
+        g_brownoutCount++;
+        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    }
+    Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n",
+                  FIRMWARE_VERSION, CONFIG_VERSION,
+                  IMXRT_UIDH, IMXRT_UIDMH, IMXRT_UIDML, IMXRT_UIDL);
+    Serial.printf("Reset 0x%08lX Brownouts %u\n", g_resetCause, g_brownoutCount);
 
     // Configure status LED
     pinMode(hwConfig.statusLedPin, OUTPUT);
@@ -605,11 +619,6 @@ void setup() {
     displayManager.showText("MOAR");
     ledManager.blinkStatusLED(2, 100);
 
-    // — Debug dump —
-    for (uint8_t i = 0; i < NUM_SLOTS; i++) {
-      LOG_PRINTF("Slot %u → CC %u\n", i, potChannels[i]);
-    }
-    LOG_PRINTLN("Setup complete!");
     displayManager.runStartupAnimation();
 
     // — Scheduler tasks —

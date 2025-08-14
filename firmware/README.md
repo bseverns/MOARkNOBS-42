@@ -29,6 +29,9 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 - **Perlin-Spiced Randomness**: The "random" shape now rides lightweight Perlin noise, giving chaos a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
+- **Self-Test Boot Banner**: On boot the rig screams its firmware tag, EEPROM schema, and MCU fingerprint over USB before doing anything else.
+- **Brownout Counter**: Every power sag gets tallied in EEPROM. Ask `GET_BROWNOUTS` over serial to see how rough the ride has been.
+- **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
 - **Dual MIDI Output**: DIN blares from boot; USB stays mute until you mash Control Buttons **0+1+2** to arm it.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
@@ -468,7 +471,7 @@ The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_seria
 
 When you need proof the rig still howls, run the tests and watch the logs spill.
 
-- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet and spews results over Serial at 115200 baud.
+- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet, screams the boot banner self-test, and spews results over Serial at 115200 baud.
 - **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Wire up a board and set `TEST_PORT` to its serial node if you actually want the run. No `TEST_PORT`? The CI shrugs and skips so you don't eat a red X. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
 
 Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
@@ -651,6 +654,17 @@ Rebuild and open a serial monitor. The console will scroll with button
 state changes so you can chase down flaky switches or just admire the chaos.
 Dial it back to `0` when your investigation is over.
 
+### Boot Self-Test
+
+Every power-up kicks out a loud status line before the menus wake:
+
+```
+MN42 FW <version> schema <hex> UID <32-bit-hex>
+Reset 0x<cause> Brownouts <count>
+```
+
+If the brownout count isn't zero, your power rail is having a bad day.
+
 ### USB Serial & OLED Interface
 
 Once the MN42 is flashed you can jaw at it over USB like it's your favorite
@@ -670,6 +684,7 @@ Fire commands line‑by‑line:
 - `SET_POT <pot,channel,cc>` – e.g. `SET_POT 0,1,74` maps pot 0 to CC 74 on
   MIDI channel 1.
 - `GET_ALL` – spit every pot’s channel/CC plus the LED config.
+- `GET_BROWNOUTS` – print how many brownouts the MCU has survived.
 
 While the terminal spits data, the buttons drive the OLED menus. Tap a slot
 button and it flashes `Active Slot=<n>`. Long‑press the same button to marry an
