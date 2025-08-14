@@ -15,6 +15,8 @@
  *   - Addresses like `EEPROM_FILTER_FREQ`, `EEPROM_FILTER_Q`, and
  *     `EEPROM_SLOT_BASE` mark where we squirrel settings away so the rig
  *     remembers its vibe after power-down.
+ *
+ * Pin legends and memory map live in `docs/PinMap.md` and `docs/EEPROMLayout.md`.
  */
 #ifndef GLOBALS_H
 #define GLOBALS_H
