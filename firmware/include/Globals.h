@@ -32,6 +32,13 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
+inline constexpr uint16_t CONFIG_VERSION = 0x0002; //!< EEPROM schema version
+inline constexpr const char* FIRMWARE_VERSION = "0.1.0"; //!< Firmware release tag
+inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008; //!< EEPROM addr for brownout counter
+
+extern uint32_t g_resetCause; //!< Raw reset cause register
+extern uint16_t g_brownoutCount; //!< Persistent brownout counter
+
 /**
  * Bundle every pin and scheduler tick that describes the hardware.
  * Defaults live in Globals.cpp but can be patched at build or run time.
