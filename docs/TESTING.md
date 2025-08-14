@@ -14,6 +14,9 @@ cd firmware
 pio test -e teensy40_unity
 ```
 
+From the repo root you can also sling `./test.sh` – it does the same dance
+and dumps stdout into `logs/unity.log` and JUnit into `logs/unity-junit.xml`.
+
 **Environment**
 
 `teensy40_unity` – Teensy 4.0 with the Unity harness. Plug the board in over USB; the tests scream back
