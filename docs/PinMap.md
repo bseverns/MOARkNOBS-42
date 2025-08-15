@@ -35,5 +35,6 @@ Here's the lowdown on how the Teensy 4.0 talks to the outside world. For the ful
 | 18 | I²C SDA | `SDA` | SSD1306 OLED | |
 | 19 | I²C SCL | `SCL` | SSD1306 OLED | |
 | 1 | MIDI out | `MIDI_TX` | DIN jack via AHCT245 | 220 Ω resistor on the line |
+| 0 | MIDI in | `MIDI_RX` | DIN jack | optocoupler assembly |
 
 If a pin isn't listed here, it's either unused or riding shotgun for future hacks.
