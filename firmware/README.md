@@ -166,7 +166,7 @@ envelope level (if available) as velocity or having a little wiggle (possibly) i
 * **SysEx** – raw byte dumps for when CCs just won't cut it.
 
 The Control Buttons let you cycle the message type, channel (1–16) and data values in
-real time.  All assignments persist in EEPROM -if you remember to save them (spoken by an Korg E2S owner)- so your setup survives a power cycle.
+real time.  All assignments persist in EEPROM -if you remember to save them (this is coming from a Korg E2S owner)- so your setup survives a power cycle.
 
 ### Incoming MIDI and Clock Sync
 
