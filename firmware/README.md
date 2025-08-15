@@ -442,18 +442,6 @@ Test sketches used in the development of this project include:
 * `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
 * `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
 
-### System Primer
-
-Even chaos needs a conductor. Here’s how the firmware keeps the band in line:
-
-- **MCU** – A Teensy 4.0 does the heavy lifting, clocking the madness and juggling tasks.
-- **I/O wrangling** – A multiplexed button grid and a trio of pots funnel into shared ADC lanes while 52 WS2812s scream status back at you.
-- **Envelope followers** – Six analog voyeurs sniff audio or CV and modulate whichever virtual slot you point them at.
-
-Need pin gossip? Crack open the [hardware README](../hardware/README.md). Want to sling bytes at a host? The [bridge README](../bridge/README.md) maps out the Node/OSC/MIDI handshake.
-
-*Need a bird's-eye view of the whole project? Scoot up to the repo's [README](../README.md) for hardware notes and overall organization.*
-
 ### Build Rules
 
 This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
