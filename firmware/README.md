@@ -14,6 +14,7 @@ And driving the chaos? Six real-time **envelope followers**, each capable of mod
 
 - **src/** – core firmware sources.
 - **include/** – headers and module docs.
+- **system_test** - helpers and snippets for full rig tests.
 - **test/** – manual and Unity-driven hardware checks.
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
@@ -146,27 +147,26 @@ uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
 midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
 ```
 
-Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both DIN and USB so the whole chain feels the twist.
+Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both 
+DIN and USB so the whole chain feels the twist.
 
 ### Supported Message Types
 
 Each of the 42 virtual slots can transmit any of the following MIDI
 messages, with the channel and data byte stored per slot:
 
-* **Control Change** – standard CC messages with values 0–127.
-* **Note** – sends Note On and automatically issues a Note Off shortly
-  after, using envelope level (if available) as velocity.
+* **Control Change** – standard CC messages with values 0–127 - this was where the project started.
+* **Note** – sends Note On and automatically issues a Note Off shortly after, using 
+envelope level (if available) as velocity or having a little wiggle (possibly) inserted by the machine vs the set value.
 * **Program Change** – select patches or presets on your synths.
-* **Channel Aftertouch** – channel pressure values derived from the control pot
-  or an envelope follower.
+* **Channel Aftertouch** – channel pressure values derived from the control pot or an envelope follower.
 * **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
 * **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
 * **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
 * **SysEx** – raw byte dumps for when CCs just won't cut it.
 
 The Control Buttons let you cycle the message type, channel (1–16) and data values in
-real time.  All assignments persist in EEPROM -if you save them- so your setup survives a
-power cycle.
+real time.  All assignments persist in EEPROM -if you remember to save them (spoken by an Korg E2S owner)- so your setup survives a power cycle.
 
 ### Incoming MIDI and Clock Sync
 
