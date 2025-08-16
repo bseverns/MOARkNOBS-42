@@ -1,0 +1,8 @@
+{
+  "name": "FastLED-embedded",
+  "version": "3.6.0+mknobs",
+  "description": "MOARkNOBS-trimmed FastLED fork locked to ARM targets.",
+  "build": {
+    "srcFilter": "+<*>"
+  }
+}
