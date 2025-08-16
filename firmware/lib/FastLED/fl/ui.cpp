@@ -34,16 +34,9 @@ void UISlider::Listener::onBeginFrame() {
 }
 
 void UIButton::Listener::onBeginFrame() {
+    // Physical button support is dead; just poll the virtual state.
     bool clicked_this_frame = mOwner->clicked();
-    
-    // Check the real button if one is attached
-    if (mOwner->mRealButton) {
-        if (mOwner->mRealButton->isPressed()) {
-            clicked_this_frame = true;
-            //mOwner->click(); // Update the UI button state
-        }
-    }
-    
+
     const bool clicked_changed = (clicked_this_frame != mClickedLastFrame);
     mClickedLastFrame = clicked_this_frame;
     if (clicked_changed) {
@@ -84,21 +77,8 @@ void UINumberField::Listener::onBeginFrame() {
 
 void UIDropdown::Listener::onBeginFrame() {
     UIDropdown &owner = *mOwner;
-    
-    // Check the next button if one is attached
-    bool shouldAdvance = false;
-    if (owner.mNextButton) {
-        if (owner.mNextButton->clicked()) {
-            shouldAdvance = true;
-        }
-    }
-    
-    // If the next button was clicked, advance to the next option
-    if (shouldAdvance) {
-        owner.nextOption();
-        // The option change will be detected below and callbacks will be invoked
-    }
-    
+
+    // No more secret "next" button—dropdown changes only through the UI.
     if (!owner.mLastFrameValueValid) {
         owner.mLastFrameValue = owner.as_int();
         owner.mLastFrameValueValid = true;

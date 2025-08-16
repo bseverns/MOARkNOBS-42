@@ -6,58 +6,10 @@
 #include "fl/engine_events.h"
 #include "fl/async.h"
 
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#include <emscripten/val.h>
-#endif
-
-// Include WASM-specific implementation
-#include "platforms/wasm/js_fetch.h"
-
 namespace fl {
 
-#ifdef __EMSCRIPTEN__
-// ========== WASM Implementation using JavaScript fetch ==========
+// The WASM fetch bridge skipped town; embedded builds get this no-op stub
 
-
-
-// Promise storage moved to FetchManager singleton
-
-// Use existing WASM fetch infrastructure
-void fetch(const fl::string& url, const FetchCallback& callback) {
-    // Use the existing WASM fetch implementation - no conversion needed since both use fl::response
-    wasm_fetch.get(url).response(callback);
-}
-
-// Internal helper to execute a fetch request and return a promise
-fl::promise<response> execute_fetch_request(const fl::string& url, const fetch_options& request) {
-    // Create a promise for this request
-    auto promise = fl::promise<response>::create();
-    
-    // Register with fetch manager to ensure it's tracked
-    FetchManager::instance().register_promise(promise);
-    
-    // Get the actual URL to use (use request URL if provided, otherwise use parameter URL)
-    fl::string fetch_url = request.url().empty() ? url : request.url();
-    
-    // Convert our request to the existing WASM fetch system
-    auto wasm_request = WasmFetchRequest(fetch_url);
-    
-    // Use lambda that captures the promise directly (shared_ptr is safe to copy)
-    // Make the lambda mutable so we can call non-const methods on the captured promise
-    wasm_request.response([promise](const response& resp) mutable {
-        // Complete the promise directly - no need for double storage
-        if (promise.valid()) {
-            promise.complete_with_value(resp);
-        }
-    });
-    
-    return promise;
-}
-
-
-
-#else
 // ========== Embedded/Stub Implementation ==========
 
 void fetch(const fl::string& url, const FetchCallback& callback) {
@@ -85,7 +37,6 @@ fl::promise<response> execute_fetch_request(const fl::string& url, const fetch_o
 
 
 
-#endif
 
 // ========== Engine Events Integration ==========
 
