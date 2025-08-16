@@ -14,7 +14,6 @@
 #include "fl/ui_impl.h"
 #include "fl/unused.h"
 #include "platforms/ui_defs.h"
-#include "sensors/button.h"
 #include "fl/virtual_if_not_avr.h"
 #include "fl/int.h"
 
@@ -133,34 +132,11 @@ class UIButton : public UIElement {
     FL_NO_COPY(UIButton)
     UIButton(const char *name) : mImpl(name), mListener(this) {}
     ~UIButton() {}
-    bool isPressed() const {
-        if (mImpl.isPressed()) {
-            return true;
-        }
-        // If we have a real button, check if it's pressed
-        if (mRealButton) {
-            return mRealButton->isPressed();
-        }
-        // Otherwise, return the default state
-        return false;
-    }
-    bool clicked() const {
-        if (mImpl.clicked()) {
-            return true;
-        }
-        if (mRealButton) {
-            // If we have a real button, check if it was clicked
-            return mRealButton->isPressed();
-        }
-        return false;
-    }
+    bool isPressed() const { return mImpl.isPressed(); }
+    bool clicked() const { return mImpl.clicked(); }
     int clickedCount() const { return mImpl.clickedCount(); }
     operator bool() const { return clicked(); }
     bool value() const { return clicked(); }
-
-    void addRealButton(const Button& pin) {
-        mRealButton.reset(new Button(pin));
-    }
 
     void click() { mImpl.click(); }
     
@@ -220,7 +196,7 @@ class UIButton : public UIElement {
   private:
     FunctionList<UIButton &> mCallbacks;
     Listener mListener;
-    fl::unique_ptr<Button> mRealButton;
+    // physical button hooks stripped—FastLED now flies solo
 };
 
 class UICheckbox : public UIElement {
@@ -464,11 +440,6 @@ class UIDropdown : public UIElement {
         return *this;
     }
     
-    // Add a physical button that will advance to the next option when pressed
-    void addNextButton(int pin) {
-        mNextButton.reset(new Button(pin));
-    }
-    
     // Advance to the next option (cycles back to first option after last)
     void nextOption() {
         int currentIndex = as_int();
@@ -521,7 +492,7 @@ class UIDropdown : public UIElement {
     int mLastFrameValue = -1;
     bool mLastFrameValueValid = false;
     Listener mListener;
-    fl::unique_ptr<Button> mNextButton;
+    // stripped physical next-button support
 };
 
 class UIGroup {
