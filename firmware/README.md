@@ -8,7 +8,7 @@ The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to r
 
 Forget fragile GUIs and boutique workflows. This beast lives in the guts: built on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
-And driving the chaos? Six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
+And driving the chaos? Your own automation parameters or six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
 
 ## Directory Layout
 
