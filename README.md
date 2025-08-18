@@ -20,7 +20,7 @@ This isn't just a code dump; it's a loud, messy lab notebook. Every README, sket
 - **Button mayhem** – six control buttons and a world of combos to reset, randomize or just start trouble. [Button chart](firmware/README.md#button-mayhem).
 - **Test harness included** – Unity-driven sanity checks and manual hardware tests when paranoia strikes. [Test suite](firmware/test/README.md).
 
-![In-Progress Board Trace Screen Shot](docs/trace.png)
+![In-Progress Board Trace Screen Shot](docs/trace.jpg)
 
 ## Where's what
 
