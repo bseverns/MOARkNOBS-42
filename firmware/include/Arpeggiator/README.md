@@ -29,6 +29,18 @@ Get the bird's-eye in the [main firmware README](../../README.md).
 then spits the actual jump each tick: `UP` counts up, `DOWN` walks back to zero,
 `UPDOWN` mirrors the climb, and `RANDOM` lobs a number somewhere in range.
 
+## Arp Settings
+
+| Setting | Range / Options | What it does |
+| ------- | --------------- | ------------ |
+| Length | 1–24 ticks | MIDI clock ticks between notes |
+| Pattern Length | 2–16 steps | Semitone span before the loop repeats |
+| Mode | UP, DOWN, UPDOWN, RANDOM | Direction for `noteOffset` |
+| Base Note Source | Slot, External | Where the root comes from |
+| Base Note / Callback | 0–127 or func | Force a root note or supply a generator |
+
+Dial these in and the arp will march (or stumble) exactly how you tell it.
+
 ## Typical Use
 
 ```cpp

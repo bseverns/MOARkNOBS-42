@@ -19,6 +19,15 @@ And driving the chaos? Your own automation parameters or six real-time **envelop
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
 
+## Reference Tables
+
+- [Button map](include/ButtonManager/README.md#button-map)
+- [Envelope filter types](include/EnvelopeFollower/README.md#filter-types)
+- [Arp settings](include/Arpeggiator/README.md#arp-settings)
+- [MIDI message types](include/MIDIHandler/README.md#supported-message-types)
+- [ARG methods](include/EnvelopeFollower/README.md#arg-methods)
+- [Display hooks](include/DisplayManager/README.md#key-methods)
+
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.

@@ -8,6 +8,7 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 - [Hardware README](../hardware/README.md) — final board layout, power rails, and the gritty bits you can actually solder.
 - [Firmware README](../firmware/README.md) — how the code slings MIDI, wrangles envelope followers, and keeps the LEDs honest.
+- Firmware reference tables: [button map](../firmware/include/ButtonManager/README.md#button-map), [filter types](../firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](../firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](../firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](../firmware/include/EnvelopeFollower/README.md#arg-methods), [display hooks](../firmware/include/DisplayManager/README.md#key-methods).
 
 ## Choose Your Adventure
 
