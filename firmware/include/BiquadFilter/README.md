@@ -30,3 +30,13 @@ float out = filt.process(in);
 ```
 
 Read the source at [BiquadFilter.h](../BiquadFilter.h).
+
+## Filter Types
+
+| Type | What slips through | Typical use |
+| ---- | ------------------ | ----------- |
+| `LOWPASS` | Frequencies below the cutoff | Calm the high-end buzz before modulation |
+| `HIGHPASS` | Frequencies above the cutoff | Dump DC and sluggish swells |
+| `BANDPASS` | A window around the cutoff | Focus on a slice and trash the rest |
+
+These modes feed the [EnvelopeFollower](../EnvelopeFollower/README.md) and any other module that needs quick tone surgery.

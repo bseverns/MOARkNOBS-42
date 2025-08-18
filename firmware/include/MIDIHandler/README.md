@@ -9,14 +9,16 @@ USB input now filters out bogus message types, like a bouncer keeping the freaks
 
 When the real USB stack is in play, `isSupportedType()` stands at the door checking IDs. Here's who gets in:
 
-- `ControlChange` – knobs, sliders, and anything twisty.
-- `NoteOn` – because silence is boring.
-- `NoteOff` – every party ends.
-- `ProgramChange` – swap patches without drama.
-- `AfterTouchChannel` – channel pressure for the expressive crowd.
-- `PitchBend` – wiggle that pitch like you mean it.
-- `SystemExclusiveStart` – the opening byte for SysEx dumps.
-- `Tick` – 24 PPQN MIDI clock pulses.
+| Type | What it’s good for |
+| ---- | ------------------ |
+| `ControlChange` | Knobs, sliders, and anything twisty |
+| `NoteOn` | Because silence is boring |
+| `NoteOff` | Every party ends |
+| `ProgramChange` | Swap patches without drama |
+| `AfterTouchChannel` | Channel pressure for the expressive crowd |
+| `PitchBend` | Wiggle that pitch like you mean it |
+| `SystemExclusiveStart` | Opening byte for SysEx dumps |
+| `Tick` | 24 PPQN MIDI clock pulses |
 
 Flip on the `USB_MIDI_STUB` build flag and the bouncer clocks out: the USB path is mocked, no filtering happens, and `isSupportedType` disappears from the scene.
 

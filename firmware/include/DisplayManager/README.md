@@ -16,9 +16,14 @@ More backstory in the [main firmware README](../../README.md).
 
 ## Key Methods
 
-- `begin()` – fire up the display hardware.
-- `showText(line1, line2, line3)` – scribble three lines and bail.
-- `updateFromContext(ctx)` – let button events drive the UI.
+| Call | What it paints |
+| ---- | --------------- |
+| `begin()` | Fire up the display hardware |
+| `showText(line1, line2, line3)` | Scribble three lines and bail |
+| `updateFromContext(ctx)` | Let button events drive the UI |
+| `showFilterTuning(labelFreq, freqValue, labelQ, qValue)` | Visualize filter pot tweaks |
+| `showArpSettings(lengthTicks, shapeName)` | Keep the arpeggiator honest |
+| `showARGInfo(methodName, envA, envB)` | Flash the active ARG combo |
 
 ## Typical Use
 

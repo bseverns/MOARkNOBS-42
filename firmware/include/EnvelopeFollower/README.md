@@ -44,3 +44,36 @@ latency. Crank the sample count for cleaner reads, bump the alpha for snappier
 response. The defaults (4 samples, 0.2f) play nice with most rigs.
 
 Scope its internals in [EnvelopeFollower.h](../EnvelopeFollower.h).
+
+## Filter Types
+
+Each follower can twist its response curve. Pick the one that matches your mood.
+
+| Type | Shape | What it’s good for |
+| ---- | ----- | ------------------ |
+| `LINEAR` | Straight passthrough | Raw level mapped 1:1 |
+| `OPPOSITE_LINEAR` | Inverted ramp | Flip loud to quiet and vice versa |
+| `EXPONENTIAL` | Hot peaks, soft lows | Emphasize attacks, tame sustain |
+| `RANDOM` | Perlin-spiced chaos | Organic wobble without repeating |
+| `LOWPASS` | Biquad low-pass | Smooth out fizz above the cutoff |
+| `HIGHPASS` | Biquad high-pass | Ignore slow swells and DC rumble |
+| `BANDPASS` | Biquad band-pass | Solo a slice of the spectrum |
+
+The last three lean on the [BiquadFilter](../BiquadFilter/README.md) module under the hood.
+
+## ARG Methods
+
+Flip an EF into **ARG** mode and it stops flying solo, blending two inputs with crude math and zero shame.
+Here’s the bag of tricks:
+
+| Method | Formula (A,B) | Vibe |
+| ------ | ------------- | ---- |
+| `PLUS` | `A + B` | Sum the pair and hope they get along |
+| `MIN`  | `A - B` | Subtract B from A for a unipolar scuffle |
+| `PECK` | `B - A` | Swap the order and pick at A instead |
+| `SHAV` | `(A - B) / 10` | Same fight, dialed way down |
+| `SQAR` | `sqrt(A*A + B*B)` | Vector magnitude mashup |
+| `BABS` | `A / abs(B)` | Ratio mix, ignoring B’s sign |
+| `TABS` | `(10 * A) / abs(B)` | BABS with a ×10 ego boost |
+
+Deep dive into ARG routing in the [main firmware README](../../README.md#arg-mode).
