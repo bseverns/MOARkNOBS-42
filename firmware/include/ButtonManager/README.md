@@ -47,11 +47,13 @@ Dig deeper in [ButtonManager.h](../ButtonManager.h).
 
 Need the cheat sheet for the six front-panel punks? Here it is.
 
+*Long-press stunts ask for a quick confirm tap after you let go—no more accidental nukes.*
+
 | Button | Short Press | Long Press | Double Press |
 | ------ | ----------- | ---------- | ------------ |
 | Ctrl0 | Toggle EF | Calibrate EF baseline | Cycle EF filter forward |
-| Ctrl1 | Next Slot | Cycle MIDI Type | Cycle EF filter backward |
-| Ctrl2 | Cycle EF assignment | Toggle Slot Active | — |
+| Ctrl1 | Next Slot | — | Cycle EF filter backward |
+| Ctrl2 | Cycle EF assignment | Toggle Slot Active | Cycle MIDI Type |
 | Ctrl3 | Cycle MIDI Channel | Reset EEPROM | — |
 | Ctrl4 | Cycle CC Number | Save config | Reload profile from EEPROM |
 | Ctrl5 | Tap BPM | — | — |
@@ -61,7 +63,7 @@ Need the cheat sheet for the six front-panel punks? Here it is.
 | Move | Action |
 | --- | --- |
 | Short press | Select the slot |
-| Long press | Assign/cycle an Envelope Follower and flip it on |
+| Long press + confirm | Assign/cycle an Envelope Follower and flip it on |
 
 ### Combo Moves
 

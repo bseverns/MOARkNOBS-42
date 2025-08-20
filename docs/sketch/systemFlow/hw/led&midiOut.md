@@ -1,4 +1,4 @@
-One AHCT245 channel kicks 3 V3 logic up to 5 V for a rowdy WS2812B LED strip, while another shoves MIDI bits out a DIN jack.
+One AHCT245 channel kicks 3 V3 logic up to 5 V for a rowdy WS2812B LED strip, while another shoves MIDI bits out both a DIN jack and a 1/8" TRS Type‑A socket.
 Teensy pin 6 drives the LED chain; pin 1 handles MIDI through a 220 Ω resistor.
 The AHCT245 wants 5 V on VCC—starve it and your colors go full anarchy.
 
@@ -22,6 +22,7 @@ flowchart LR
     U1 -->|pin1| LS2[AHCT245_CH2]
     LS2 --> R220[Res220_Ω]
     R220 --> DINOut[DIN_Out]
+    R220 --> TRSOut[TRS_Type-A_Out]
   end
 ```
 

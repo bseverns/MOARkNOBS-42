@@ -20,7 +20,7 @@ Most modules stash a mini README in their own subfolder for API riffs—check `*
 - **Globals.h** – compile-time constants and forward declarations ([Globals.cpp](../src/Globals.cpp)).
 - **hardware_config.h** – empty stage where `applyHardwareConfigOverrides()` can thrash default pins and ticks into your rig's groove.
 - **LEDManager.h** – drives the 52-piece addressable LED circus: slot halos, envelope meters, pot glows and the control-button beacon ([LEDManager.cpp](../src/LEDManager.cpp)).
-- **MIDIHandler.h** – thin wrapper for USB and DIN MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
+ - **MIDIHandler.h** – thin wrapper for USB, DIN, and TRS MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
 - **MIDITypes.h** – enums and structs defining slot data.
 - **PotentiometerManager.h** – reads analog pots via multiplexers ([PotentiometerManager.cpp](../src/PotentiometerManager.cpp)).
 - **TestHelpers.h** – small helpers used by the manual test firmware.
@@ -58,6 +58,6 @@ flowchart LR
 | **LEDManager** | 52 WS2812 rebels (42 slot halos, 6 EF meters, 1 control beacon, 3 pot halos) |
 | **EnvelopeFollower** | 6 envelope-sniffing inputs |
 | **DisplayManager** | 128x64 SSD1306 OLED canvas |
-| **MIDIHandler** | USB and 5-pin DIN ports |
+| **MIDIHandler** | USB, 5-pin DIN, and 1/8" TRS ports |
 
 For the full firmware story see [../README.md](../README.md).

@@ -10,9 +10,9 @@
 
 #if !defined(UNIT_TEST) && __has_include(<SD.h>)
 #include <SD.h>
-#define HAS_SD 1
+inline constexpr bool kHasSD = true;
 #else
-#define HAS_SD 0
+inline constexpr bool kHasSD = false;
 #endif
 
 
@@ -94,7 +94,8 @@ const std::pair<int, int> ARG_PAIRS[] = {
 const size_t ARG_PAIRS_LEN = sizeof(ARG_PAIRS) / sizeof(ARG_PAIRS[0]);
 
 static void loadFromJson(HardwareConfig& cfg) {
-#if __has_include(<ArduinoJson.h>) && HAS_SD
+#if __has_include(<ArduinoJson.h>)
+    if (!kHasSD) return;
     if (!SD.begin()) return;
     File f = SD.open("/hardware_config.json");
     if (!f) return;

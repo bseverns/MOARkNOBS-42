@@ -76,8 +76,8 @@ Need a crash course in front‑panel mayhem? Here's how the six control buttons 
 | Button | Short Press | Long Press | Double Press |
 | ------ | ----------- | ---------- | ------------ |
 | #0 | Toggle EF | Calibrate EF baseline | Cycle EF filter forward |
-| #1 | Next Slot | Cycle MIDI Type (CC/Note/etc) | Cycle EF filter backward |
-| #2 | Cycle EF assignment | Toggle Slot Active | — |
+| #1 | Next Slot | — | Cycle EF filter backward |
+| #2 | Cycle EF assignment | Toggle Slot Active | Cycle MIDI Type (CC/Note/etc) |
 | #3 | Cycle MIDI Channel | Reset EEPROM | — |
 | #4 | Cycle CC Number | Save config | Reload profile from EEPROM |
 | #5 | Tap BPM | — | — |

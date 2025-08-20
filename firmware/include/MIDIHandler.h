@@ -15,18 +15,12 @@ class HardwareSerial;
 #include "MidiTypeShim.h"
 #if defined(USB_MIDI_STUB)
 #include "usb_midi.h"       // snag the stub from test/ when asked
-#define HAS_USB_MIDI 1
+inline constexpr bool HAS_USB_MIDI = true;
 #elif defined(USB_MIDI) || defined(USB_MIDI_SERIAL)
 #include <usb_midi.h>
-#define HAS_USB_MIDI 1
+inline constexpr bool HAS_USB_MIDI = true;
 #else
-#define HAS_USB_MIDI 0
-#endif
-
-#if HAS_USB_MIDI
-#define IS_USB_CONNECTED() (usbMIDI.connected())
-#else
-#define IS_USB_CONNECTED() false
+inline constexpr bool HAS_USB_MIDI = false;
 #endif
 
 /**

@@ -31,10 +31,10 @@
 
 // -- Constants ---------------------------------------------------------------
 // address well outside normal config space
-#define EEPROM_TEST_FLAG_ADDR (EEPROM_BACKUP_START + 100)
-#define TEST_NOT_STARTED 0xFF
-#define TEST_STAGE_SAVE  0x55
-#define TEST_STAGE_VERIFY 0xAA
+static constexpr int EEPROM_TEST_FLAG_ADDR = EEPROM_BACKUP_START + 100;
+static constexpr uint8_t TEST_NOT_STARTED = 0xFF;
+static constexpr uint8_t TEST_STAGE_SAVE  = 0x55;
+static constexpr uint8_t TEST_STAGE_VERIFY = 0xAA;
 
 // -- Globals -----------------------------------------------------------------
 std::vector<uint8_t> potChannels;
