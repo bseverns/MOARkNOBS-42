@@ -40,3 +40,68 @@ void test_long_press_detection() {
     TEST_ASSERT_TRUE(bm._buttonMachines[0].longPressFired);
 }
 
+void test_long_press_requires_confirm() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 0);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 0;
+    bool envMode = false;
+    const char* envStr = "";
+    std::map<int,int> map;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map};
+
+    // Long press triggers confirm but no action yet
+    fakeMillis = 0;
+    bm.updateButtonStateMachine(0, true, ctx); // press
+    fakeMillis = 600;
+    bm.updateButtonStateMachine(0, true, ctx); // hold past threshold
+    bm.updateButtonStateMachine(0, false, ctx); // release
+    TEST_ASSERT_EQUAL(0, bm._confirmIndex);
+    TEST_ASSERT_TRUE(ctx.potToEnvelopeMap.empty());
+
+    // Second tap within window commits the move
+    fakeMillis = 800;
+    bm.updateButtonStateMachine(0, true, ctx);
+    bm.updateButtonStateMachine(0, false, ctx);
+    TEST_ASSERT_EQUAL(-1, bm._confirmIndex);
+    TEST_ASSERT_FALSE(ctx.potToEnvelopeMap.empty());
+}
+
+void test_double_press_ctrl2_cycles_midi_type() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 0);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 0;
+    bool envMode = false;
+    const char* envStr = "";
+    std::map<int,int> map;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map};
+
+    MIDISlot &slot = cfg.getSlot(0);
+    slot.type = MIDIMessageType::CC;
+
+    uint8_t ctrlIdx = NUM_VIRTUAL_BUTTONS + 2;
+    fakeMillis = 0;
+    bm.updateButtonStateMachine(ctrlIdx, true, ctx);
+    fakeMillis = 50;
+    bm.updateButtonStateMachine(ctrlIdx, false, ctx);
+    fakeMillis = 100;
+    bm.updateButtonStateMachine(ctrlIdx, true, ctx);
+    fakeMillis = 150;
+    bm.updateButtonStateMachine(ctrlIdx, false, ctx);
+
+    TEST_ASSERT_EQUAL(MIDIMessageType::Note, slot.type);
+}
+

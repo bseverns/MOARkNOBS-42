@@ -109,7 +109,7 @@ Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets g
 Corrupts EEPROM headers on purpose and checks that the backup block rides to the rescue.
 
 ### test_button_manager.cpp
-Fakes time itself to ensure long presses don't fire until 500ms has actually passed.
+Fakes time itself to ensure long presses don't fire until 500ms has actually passed and that a follow-up tap is needed to seal the deal.
 
 ### test_led_manager.cpp
 Makes sure the LED engine listens when we bark new brightness or colour orders.

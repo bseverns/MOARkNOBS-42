@@ -10,10 +10,14 @@ void test_brightness_and_color();
 void test_update_interval_round_trip();
 void test_filter_type_switching();
 void test_channel_and_cc();
+void test_long_press_requires_confirm();
+void test_double_press_ctrl2_cycles_midi_type();
 
 void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_long_press_detection);
+    RUN_TEST(test_long_press_requires_confirm);
+    RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
     RUN_TEST(corrupt_primary_valid_backup);
     RUN_TEST(corrupted_primary_and_backup);
     RUN_TEST(test_eeprom_recovery_after_power_cycle);

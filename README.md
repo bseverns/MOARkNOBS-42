@@ -23,6 +23,7 @@ the full scoop.
 - WebSerial editor and OSC bridge for remote tweaking.
 - Button grid that does far more than it should—see the [ButtonManager table](firmware/include/ButtonManager/README.md#button-map) for the full mischief.
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
+- Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
 
 Need the dirt? Dive into the sub-READMEs and get lost.
 

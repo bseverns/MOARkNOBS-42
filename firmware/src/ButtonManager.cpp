@@ -146,6 +146,16 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
     ButtonStateMachine &sm = _buttonMachines[index];
     unsigned long now = ::now();
 
+    // Kill any pending confirm if time ran out
+    if (_confirmIndex >= 0 && now > _confirmDeadline) {
+        _confirmIndex = -1;
+    }
+
+    // Smack pending confirm if some other button gets poked
+    if (_confirmIndex >= 0 && index != _confirmIndex && pressed) {
+        _confirmIndex = -1;
+    }
+
     switch (sm.state) {
     case ButtonState::IDLE:
         if (pressed) {
@@ -169,7 +179,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
             if (!sm.longPressFired && (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
                 sm.state = ButtonState::LONG_PRESS;
                 sm.longPressFired = true;
-                onLongPress(index, context); // handle immediate logic for a recognized long press
+                onLongPress(index, context); // arm the action, wait for confirm
             }
         }
         break;
@@ -192,9 +202,18 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
 }
 
 /**
- * Called as soon as we confirm a long press.
+ * Called when a long press crosses the threshold; we just arm it.
  */
 void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
+    _confirmIndex = index;
+    _confirmDeadline = ::now() + CONFIRM_WINDOW_MS;
+    context.displayManager.displayStatus("Press again to confirm", 1000);
+}
+
+/**
+ * Fire the actual long‑press payload after confirmation.
+ */
+void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext& context) {
     // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
         auto it = context.potToEnvelopeMap.find(index);
@@ -222,15 +241,6 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
                 int efIndex = it->second;
                 context.envelopes[efIndex].calibrate(); // auto-saves baseline via ConfigManager
                 context.displayManager.displayStatus("EF Calibrated", 1500);
-                break;
-            }
-            case 1: { //Cycle MIDI Message Type
-                MIDISlot &slot = context.configManager.getSlot(context.activePot);
-                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
-                context.configManager.saveSlot(context.activePot, slot);
-                char buf[32];
-                sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
-                context.displayManager.displayStatus(buf, 1500);
                 break;
             }
             case 2: { //Toggle Slot Active
@@ -280,6 +290,15 @@ void ButtonManager::onRelease(uint8_t index, ButtonManagerContext& context) {
 void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext& context) {
     auto &sm = _buttonMachines[index];
     unsigned long now = ::now();
+
+    if (_confirmIndex == index) {
+        // Second tap confirms the long‑press move
+        if (now <= _confirmDeadline) {
+            performLongPressAction(index, context);
+        }
+        _confirmIndex = -1;
+        return;
+    }
 
     // Double-press detection
     if ((now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
@@ -365,6 +384,17 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
                 sprintf(msg, "Slot %d => %s", context.activePot, name);
                 context.displayManager.displayStatus(msg, 1500);
                 break; // <--- ensure we break out of case 1
+            }
+
+            case 2: {
+                // Double Press (Ctrl #2): Cycle MIDI message type
+                MIDISlot &slot = context.configManager.getSlot(context.activePot);
+                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
+                context.configManager.saveSlot(context.activePot, slot);
+                char buf[32];
+                sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
+                context.displayManager.displayStatus(buf, 1500);
+                break;
             }
 
             case 4: {

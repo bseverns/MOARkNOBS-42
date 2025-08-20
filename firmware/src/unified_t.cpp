@@ -28,7 +28,7 @@
 #include "EnvelopeFollower.h"
 #include "TestHelpers.h"
 
-#define SERIAL_BAUD 115200
+static constexpr unsigned long SERIAL_BAUD = 115200;
 
 static_assert(NUM_BUTTONS == 6, "expect six control buttons");
 

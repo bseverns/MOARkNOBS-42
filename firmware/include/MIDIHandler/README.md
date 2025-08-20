@@ -2,7 +2,7 @@
 
 Part of the firmware `include` jungle. Scope the [include README](../README.md) to see where the bytes route and the [main firmware README](../../README.md) for the full wiring diagram.
 
-USB, DIN, whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
+USB, DIN, TRS—whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
 USB input now filters out bogus message types, like a bouncer keeping the freaks off the dance floor.
 
 ## Supported Message Types
@@ -24,10 +24,10 @@ Flip on the `USB_MIDI_STUB` build flag and the bouncer clocks out: the USB path 
 
 ## Where it fits
 
-ButtonManager, PotentiometerManager, and Arpeggiator shove events in; the USB and DIN ports blast them out. ConfigManager sets the channels and tempo law.
+ButtonManager, PotentiometerManager, and Arpeggiator shove events in; the USB, DIN, and TRS ports blast them out. ConfigManager sets the channels and tempo law.
 
 ```
-[Buttons/Pots/Arp] --> MIDIHandler --> USB/DIN jacks
+[Buttons/Pots/Arp] --> MIDIHandler --> USB/DIN/TRS jacks
 ```
 
 More context lives in the [main firmware README](../../README.md).

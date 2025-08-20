@@ -12,7 +12,7 @@
 // feed LEDManager for visual feedback and trigger MIDI messages through the
 // callback registered by firmware_main.cpp.
 
-#define CHANGE_THRESHOLD 2  // Adjust based on your noise tolerance
+static constexpr int CHANGE_THRESHOLD = 2;  // Adjust based on your noise tolerance
 
 PotentiometerManager::PotentiometerManager(
     const uint8_t* primaryPins,

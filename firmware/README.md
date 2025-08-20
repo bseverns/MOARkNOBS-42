@@ -41,7 +41,7 @@ And driving the chaos? Your own automation parameters or six real-time **envelop
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
 - **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
-- **Dual MIDI Output**: DIN blares from boot because we assume you would want to plug an 1/8" Type-A or full 5 pin MIDI; USB stays mute until you mash Control Buttons **0+1+2** to arm it for future synths/DAWs <- a feature to be expanded on.
+  - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot; USB stays mute until you mash Control Buttons **0+1+2** to arm it for future synths/DAWs <- a feature to be expanded on.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
@@ -115,13 +115,13 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 | [DisplayManager](include/DisplayManager/README.md) | Talks to the OLED and makes pixels dance. |
 | [EnvelopeFollower](include/EnvelopeFollower/README.md) | Converts audio/CV into modulation curves with selectable filters. |
 | [LEDManager](include/LEDManager/README.md) | Paints 52 WS2812s and that lone status LED with righteous fury. |
-| [MIDIHandler](include/MIDIHandler/README.md) | Speaks MIDI over USB and DIN, mirroring every message. |
+| [MIDIHandler](include/MIDIHandler/README.md) | Speaks MIDI over USB, DIN, and TRS, mirroring every message. |
 | [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls. |
 | `Globals` | Shared constants and state that keep the gang in sync. |
 | `Utility` | Misc helpers—because even chaos needs some glue. |
 
 ```
-[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB & DIN]
+[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB, DIN & TRS]
                    |-> [LEDManager] (bling)
                    |-> [DisplayManager] (OLED)
                    |-> [ConfigManager] (EEPROM)
@@ -154,8 +154,8 @@ uint8_t dump[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
 midi.sendSysEx(dump, sizeof(dump)); // sling a bare-bones SysEx
 ```
 
-Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over both 
-DIN and USB so the whole chain feels the twist.
+Incoming Program Change, Aftertouch, and Pitch Bend now get mirrored over
+DIN, TRS, and USB so the whole chain feels the twist.
 
 ### Supported Message Types
 
@@ -177,7 +177,7 @@ real time.  All assignments persist in EEPROM -if you remember to save them (thi
 
 ### Incoming MIDI and Clock Sync
 
-The firmware listens on both USB and DIN. Incoming bytes are parsed and can
+The firmware listens on both USB and the hardware MIDI port (DIN/TRS). Incoming bytes are parsed and can
 trigger on‑screen feedback or internal actions. MIDI Clock messages advance
 the beat counter and, when you feel like being the metronome, the box can spit
 them back out. Slam Control #1 + #2 to arm or kill clock out. External clock
@@ -191,7 +191,7 @@ schedule.  CCs or other parameters can therefore react smoothly to audio
 input or manual tweaks.  LED animations and the OLED display mirror this
 activity so you always see what is being transmitted.
 
-In short, the MN42 speaks fluent MIDI on all fronts—USB and DIN, outgoing
+In short, the MN42 speaks fluent MIDI on all fronts—USB, DIN, and TRS, outgoing
 and incoming—and gives every slot the flexibility to send exactly the
 messages your rig requires.
 
@@ -207,8 +207,8 @@ Each control button can do several things depending on how you hit it:
 | Button | Short Press         | Long Press                    | Double Press                      |
 | ------ | ------------------- | ----------------------------- | --------------------------------- |
 | #0     | Toggle EF           | Calibrate & save EF baseline  | Cycle EF Filter (forward)         |
-| #1     | Next Slot           | Cycle MIDI Type (CC/Note/etc) | Cycle EF Filter (backward)        |
-| #2     | Cycle EF assignment | Toggle Slot Active            | —                                 |
+| #1     | Next Slot           | —                             | Cycle EF Filter (backward)        |
+| #2     | Cycle EF assignment | Toggle Slot Active            | Cycle MIDI Type (CC/Note/etc)     |
 | #3     | Cycle MIDI Channel  | Reset EEPROM                  | —                                 |
 | #4     | Cycle CC Number     | Save config                   | Reload profile from EEPROM        |
 | #5     | Tap BPM             | —                             | —                                 |
@@ -249,7 +249,7 @@ RPN slots are supported too—assign them via WebSerial or `hardware_config` unt
 
 Profiles are the controller's second brain. They stash the whole CC+EF circus so you can yank it back mid-set without booting a laptop. Swap from a bass patch to a lead scream on stage, or flip a chill studio layout into a live-wired noise wall in seconds.
 
-- **Save:** Long-press **Control Button #4** to dump the current configuration into EEPROM.
+- **Save:** Long-press **Control Button #4**, then give it a quick confirm tap to dump the current configuration into EEPROM.
 - **Load:** Double-tap **Control Button #4** to resurrect the last saved profile.
 - **Cycle:** Mash **Control Buttons #0 and #2** together to hop to the next profile slot when you've hoarded more than one.
 
@@ -261,7 +261,7 @@ Profiles live in EEPROM, so the chaos survives power cycles. Kill the power, plu
 >
 >* `Active Slot=<n>` when you select a slot button.
 >* `EF: ON/OFF` when toggling envelope following with Control Button #0.
->* `Slot <n> -> EF <m>` when assigning an EF (long press on a slot or short press on Control Button #2).
+>* `Slot <n> -> EF <m>` when assigning an EF (long press + confirm on a slot or short press on Control Button #2).
 >* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
 >* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
 
@@ -423,8 +423,8 @@ The OLED shows:
 
 Your configuration is stored in EEPROM. Manual save required.
 
-* **Button #3 (long press)** nukes your config.
-* **Button #4 (long press)** saves the current setup.
+* **Button #3 (long press + confirm)** nukes your config.
+* **Button #4 (long press + confirm)** saves the current setup.
 * **Button #4 (double press)** reloads the profile from EEPROM.
 * A backup copy is also maintained and auto-restored if needed.
 

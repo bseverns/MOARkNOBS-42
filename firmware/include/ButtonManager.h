@@ -40,14 +40,14 @@
 #endif
 
 // Total number of multiplexed "virtual" buttons
-#define NUM_VIRTUAL_BUTTONS 42
+inline constexpr uint8_t NUM_VIRTUAL_BUTTONS = 42;
 // Total number of direct hardware control buttons
-#define NUM_CONTROL_BUTTONS 6
+inline constexpr uint8_t NUM_CONTROL_BUTTONS = 6;
 // Debounce period in milliseconds
-#define DEBOUNCE_DELAY 50
+inline constexpr unsigned long DEBOUNCE_DELAY = 50;
 // Button matrix layout (rows x columns)
-#define BUTTON_ROWS 7
-#define BUTTON_COLS 6
+inline constexpr uint8_t BUTTON_ROWS = 7;
+inline constexpr uint8_t BUTTON_COLS = 6;
 
 /**
  * States for each button in the debounce & press state machine.
@@ -172,8 +172,11 @@ private:
     /** Internal state machine driving press/hold/release detection. */
     void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext& context);
 
-    /** Callback fired exactly once when a long press is detected. */
+    /** Arm a long‑press action and wait for a confirm tap. */
     void onLongPress(uint8_t index, ButtonManagerContext& context);
+
+    /** Actually perform the long‑press action once confirmed. */
+    void performLongPressAction(uint8_t index, ButtonManagerContext& context);
 
     /** Called when the button is released after press or long-press. */
     void onRelease(uint8_t index, ButtonManagerContext& context);
@@ -189,6 +192,11 @@ private:
     /** Update a single control button state during scanning. */
     void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context);
     int _ctrlPotValues[3] = {0};
+
+    // Long‑press confirmation tracking
+    static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net
+    int8_t _confirmIndex = -1;      // which button waits for confirmation
+    unsigned long _confirmDeadline = 0; // when the confirm window expires
 
 public:
     /** Return the latest smoothed value for one of the control pots. */

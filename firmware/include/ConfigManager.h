@@ -54,32 +54,31 @@ class MIDIHandler;
  */
 #endif
 
-#define EEPROM_PROFILE_BLOCK_SIZE 256
-#define EEPROM_PROFILE_START(id) (EEPROM_PROFILE_BLOCK_SIZE * (id))
+inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
+inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
+inline constexpr uint16_t EEPROM_MAGIC_ADDRESS = EEPROM_START_ADDRESS + 200;  // Reserve space for config + magic number
+inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD;  // Validates the main config block
+inline constexpr uint16_t EEPROM_MAGIC_BACKUP  = 0xDCBA;  // Signals a sane backup image
 
-#define EEPROM_START_ADDRESS 0
-#define EEPROM_MAGIC_ADDRESS (EEPROM_START_ADDRESS + 200)  // Reserve space for config + magic number
-#define EEPROM_MAGIC_PRIMARY 0xABCD  // Validates the main config block
-#define EEPROM_MAGIC_BACKUP  0xDCBA  // Signals a sane backup image
+inline constexpr uint16_t EEPROM_POT_CHANNELS = EEPROM_START_ADDRESS;
+inline constexpr uint16_t EEPROM_POT_CC = EEPROM_POT_CHANNELS + NUM_POTS;
+inline constexpr uint16_t EEPROM_ENVELOPE_ASSIGNMENTS = EEPROM_POT_CC + NUM_POTS;
+inline constexpr uint16_t EEPROM_ENVELOPE_TYPES = EEPROM_ENVELOPE_ASSIGNMENTS + NUM_POTS;
+inline constexpr uint16_t EEPROM_LED_BRIGHTNESS = EEPROM_ENVELOPE_TYPES + NUM_POTS;
+inline constexpr uint16_t EEPROM_LED_COLOR = EEPROM_LED_BRIGHTNESS + 1;
+inline constexpr uint16_t EEPROM_ARG_MODE   = EEPROM_LED_COLOR + 3;
+inline constexpr uint16_t EEPROM_ARG_METHOD = EEPROM_ARG_MODE + 1;
+inline constexpr uint16_t EEPROM_ARG_ENV_A  = EEPROM_ARG_METHOD + 1;
+inline constexpr uint16_t EEPROM_ARG_ENV_B  = EEPROM_ARG_ENV_A + 1;
+inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
+inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
+inline constexpr uint16_t EEPROM_CONFIG_CRC    = EEPROM_CONFIG_VERSION + 2;
+inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
+inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
+inline constexpr uint8_t  BUFFER_SIZE = 22;
+inline constexpr uint16_t EEPROM_BACKUP_START = EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
 
-
-#define EEPROM_POT_CHANNELS EEPROM_START_ADDRESS
-#define EEPROM_POT_CC (EEPROM_POT_CHANNELS + NUM_POTS)
-#define EEPROM_ENVELOPE_ASSIGNMENTS (EEPROM_POT_CC + NUM_POTS)
-#define EEPROM_ENVELOPE_TYPES (EEPROM_ENVELOPE_ASSIGNMENTS + NUM_POTS)
-#define EEPROM_LED_BRIGHTNESS (EEPROM_ENVELOPE_TYPES + NUM_POTS)
-#define EEPROM_LED_COLOR (EEPROM_LED_BRIGHTNESS + 1)
-#define EEPROM_ARG_MODE     (EEPROM_LED_COLOR + 3)
-#define EEPROM_ARG_METHOD   (EEPROM_ARG_MODE + 1)
-#define EEPROM_ARG_ENV_A    (EEPROM_ARG_METHOD + 1)
-#define EEPROM_ARG_ENV_B    (EEPROM_ARG_ENV_A + 1)
-#define EEPROM_ARG_ENABLE   (EEPROM_ARG_ENV_B + 1)
-#define EEPROM_CONFIG_VERSION (EEPROM_ARG_ENABLE + 1)
-#define EEPROM_CONFIG_CRC    (EEPROM_CONFIG_VERSION + 2)
-#define EEPROM_EF_BASELINES (EEPROM_MAGIC_ADDRESS + 4)
-#define EEPROM_EF_BASELINES_SIZE (NUM_ENVELOPES * sizeof(float))
-#define BUFFER_SIZE 22
-#define EEPROM_BACKUP_START (EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE)
+inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) { return EEPROM_PROFILE_BLOCK_SIZE * id; }
 
 class EnvelopeFollower;
 
