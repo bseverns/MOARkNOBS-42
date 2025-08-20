@@ -36,14 +36,12 @@ And driving the chaos? Your own automation parameters or six real-time **envelop
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
 - **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.
 - **Note Dynamics Knobs**: When the arp is idle, “Freq” shoves outgoing velocity (‑64…+63) and “Q” rigs the odds a pot twist actually fires a new note.
-- **Perlin-Spiced Randomness**: The "random" shape now rides lightweight Perlin noise, giving chaos a groove.
+- **Perlin-Spiced Randomness**: The "random" shape rides a lightweight Perlin noise function, giving chaos more of a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
-- **Self-Test Boot Banner**: On boot the rig screams its firmware tag, EEPROM schema, and MCU fingerprint over USB before doing anything else.
 - **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
-- **Brownout Counter**: Every power sag gets tallied in EEPROM. Ask `GET_BROWNOUTS` over serial to see how rough the ride has been.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
-- **Dual MIDI Output**: DIN blares from boot; USB stays mute until you mash Control Buttons **0+1+2** to arm it.
+- **Dual MIDI Output**: DIN blares from boot because we assume you would want to plug an 1/8" Type-A or full 5 pin MIDI; USB stays mute until you mash Control Buttons **0+1+2** to arm it for future synths/DAWs <- a feature to be expanded on.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
@@ -89,7 +87,7 @@ Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`
 | `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
 | `statusLedPin` | 23 | Board status indicator mounted between the PWR and brain on the board |
 
-Need different pins or scheduler ticks? Override the defaults with a header or drop a JSON sidecar. The repo already ships a no-op `include/hardware_config.h`; wire it up like this to drag the MIDI scheduler:
+Need different pins or scheduler ticks? Override the defaults with a header or drop a JSON sidecar if that's more your thing. The repo already ships a no-op `include/hardware_config.h`; wire it up like this to drag the MIDI scheduler:
 
 ```cpp
 // firmware/include/hardware_config.h
@@ -110,7 +108,7 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 
 | Module | What it wrangles |
 |-------|------------------|
-| [Arpeggiator](include/Arpeggiator/README.md) | Spits out repeating patterns so you can noodle hands‑free. |
+| [Arpeggiator](include/Arpeggiator/README.md) | Spits out repeating patterns so you can noodle hands‑free in dynamic ways using slot values or EF/ARG values for root notes. |
 | [BiquadFilter](include/BiquadFilter/README.md) | Lightweight filter used by the envelope followers. |
 | [ButtonManager](include/ButtonManager/README.md) | Scans the 7×6 button matrix, debounces it, and dishes out events. |
 | [ConfigManager](include/ConfigManager/README.md) | Saves to EEPROM, restores from backup when things go sideways. |
@@ -134,11 +132,11 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 
 The MN42 is first and foremost a MIDI generator.  Every pot twist and
 envelope movement ultimately ends up as a MIDI message that is pushed to
-**both** the 5‑pin DIN jack and the USB port at the same time.  The
-firmware uses a hardware serial instance for traditional DIN MIDI and the
-`usbMIDI` stack for modern computer connections.  Whatever leaves one
-interface is mirrored on the other so you can drive hardware synths and a
-DAW concurrently with zero configuration.
+**both** the 5‑pin DIN jack and 1/8" TRS Type-A plug as well as the USB port 
+at the same time, if it is enabled.  The firmware uses a hardware serial 
+instance for traditional DIN MIDI and the`usbMIDI` stack for modern computer 
+connections.  Whatever leaves one interface is mirrored on the other 
+so you can drive hardware synths and a DAW concurrently with zero configuration.
 
 ### MIDI Message Examples
 
