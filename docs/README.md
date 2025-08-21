@@ -8,39 +8,20 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 > Sketches that slap the architecture on a napkin so you don't have to squint at code.
 
-### Subsystem Crosstalk
+### Everything Everywhere
 
 ```mermaid
-graph LR
-  Buttons((Buttons)) -->|scan| BM[ButtonManager]
-  BM --> MIDI[MIDIHandler]
+flowchart TD
+  Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
+  FW --> BM[ButtonManager]
+  Buttons((Buttons)) -->|scan| BM --> MIDI[MIDIHandler]
   EF[EnvelopeFollower] -->|mod| MIDI
   ARP[Arpeggiator] --> MIDI
   MIDI --> DM[DisplayManager]
   MIDI --> Slots((Slots))
-```
-
-### Boot Ruckus
-
-```mermaid
-sequenceDiagram
-  participant Flash
-  participant Loader as Bootloader
-  participant FW as Firmware
-  participant Mods as Modules
-  Flash->>Loader: write image
-  Loader->>FW: handoff
-  FW->>Mods: init & rage
-```
-
-### Bridge Paths
-
-```mermaid
-graph TD
-  Browser[[Browser]] --> WebSerial
-  WebSerial --> Board[Teensy]
-  NodeOSC[[Node OSC Bridge]] --> Board
-  Board --> MIDIOut
+  Browser[[Browser]] --> WebSerial --> FW
+  NodeOSC[[Node OSC Bridge]] --> FW
+  FW --> MIDIOut((MIDI Out))
 ```
 
 ## System Capabilities

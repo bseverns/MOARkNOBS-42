@@ -29,41 +29,33 @@ the full scoop.
 
 > Because ascii tables only go so far. Here's how the beast actually routes its noise.
 
-### System Wiring
+### One Big Flow
 
 ```mermaid
-graph LR
-  Host((Host Computer))
-  WebSerial[[WebSerial Editor]]
-  Bridge[[OSC Bridge]]
-  Firmware[Teensy 4.0 Firmware]
-  Hardware[[Knobs & Buttons]]
-  Host --> WebSerial --> Firmware
-  Host --> Bridge --> Firmware
+flowchart LR
+  subgraph Userland
+    User((User))
+    Grid[[Button Grid]]
+  end
+  subgraph Host
+    HostPC((Host))
+    WebSerial[[WebSerial Editor]]
+    Bridge[[OSC Bridge]]
+  end
+  subgraph Board
+    Firmware[Teensy 4.0 Firmware]
+    Hardware[[Knobs & LEDs]]
+    MIDIOut((MIDI Out))
+    LFO1((LFO1))
+    Env((Envelope Follower))
+    Slot42((Slot 42))
+  end
+  User -->|mash| Grid -->|scan| Firmware
+  HostPC --> WebSerial --> Firmware
+  HostPC --> Bridge --> Firmware
   Firmware <--> Hardware
-```
-
-### Control Burst
-
-```mermaid
-sequenceDiagram
-  participant User
-  participant Grid as ButtonGrid
-  participant Code as Firmware
-  participant MIDI as MIDIOut
-  User->>Grid: mash button
-  Grid->>Code: scan & report
-  Code->>Code: mod matrix chaos
-  Code->>MIDI: blast CC/Note
-```
-
-### Mod Matrix Teaser
-
-```mermaid
-graph TD
-  LFO1((LFO1)) -->|shakes| Slot42
-  Env((Envelope Follower)) -->|tugs| LFO1
-  Slot42 -->|spits| MIDIOut
+  Env -->|tugs| LFO1 -->|shakes| Slot42 -->|spits| MIDIOut
+  Firmware --> Slot42
 ```
 
 Need the dirt? Dive into the sub-READMEs and get lost.
