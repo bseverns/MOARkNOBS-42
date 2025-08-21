@@ -14,11 +14,11 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 flowchart TD
   Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
   FW --> BM[ButtonManager]
-  Buttons((Buttons)) -->|scan| BM --> MIDI[MIDIHandler]
-  EF[EnvelopeFollower] -->|mod| MIDI
-  ARP[Arpeggiator] --> MIDI
-  MIDI --> DM[DisplayManager]
-  MIDI --> Slots((Slots))
+  Buttons((Buttons)) -->|scan| BM --> MIDI Out[MIDIHandler]
+  EF[EnvelopeFollower] -->|mod| MIDI Out
+  ARP[Arpeggiator] --> MIDI Out
+  MIDI IN --> DM[DisplayManager]
+  MIDI IN --> Slots((Slots))
   Browser[[Browser]] --> WebSerial --> FW
   NodeOSC[[Node OSC Bridge]] --> FW
   FW --> MIDIOut((MIDI Out))
