@@ -25,45 +25,30 @@ the full scoop.
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
 - Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
 
-## Diagram Dump
+## Signal Flow Rodeo
 
-> Because ascii tables only go so far. Here's how the beast actually routes its noise.
-
-### System Wiring
-
-```mermaid
-graph LR
-  Host((Host Computer))
-  WebSerial[[WebSerial Editor]]
-  Bridge[[OSC Bridge]]
-  Firmware[Teensy 4.0 Firmware]
-  Hardware[[Knobs & Buttons]]
-  Host --> WebSerial --> Firmware
-  Host --> Bridge --> Firmware
-  Firmware <--> Hardware
-```
-
-### Control Burst
+> One picture to rule the chaos. This mashup shows how bits and button fury tear through the system.
 
 ```mermaid
 sequenceDiagram
+  participant Host
+  participant WebSerial
+  participant Bridge
   participant User
-  participant Grid as ButtonGrid
-  participant Code as Firmware
-  participant MIDI as MIDIOut
-  User->>Grid: mash button
-  Grid->>Code: scan & report
-  Code->>Code: mod matrix chaos
-  Code->>MIDI: blast CC/Note
-```
+  participant Hardware
+  participant Firmware
+  participant ModMatrix
+  participant MIDIOut
 
-### Mod Matrix Teaser
-
-```mermaid
-graph TD
-  LFO1((LFO1)) -->|shakes| Slot42
-  Env((Envelope Follower)) -->|tugs| LFO1
-  Slot42 -->|spits| MIDIOut
+  Host->>WebSerial: tweak params
+  Host->>Bridge: throw OSC
+  WebSerial->>Firmware: stream edits
+  Bridge->>Firmware: pump messages
+  User->>Hardware: mash button
+  Hardware->>Firmware: scan & report
+  Firmware->>ModMatrix: route & mod
+  ModMatrix->>MIDIOut: spit CC/Note
+  MIDIOut-->>Host: USB/TRS/DIN
 ```
 
 Need the dirt? Dive into the sub-READMEs and get lost.
