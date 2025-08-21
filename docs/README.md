@@ -4,6 +4,45 @@
 
 Welcome to the MOARkNOBS-42 documentation playground. This README aims to help you navigate the library of notes, design scraps, and personal ramblings we keep around to teach ourselves and the next hacker.
 
+## Visual Quickies
+
+> Sketches that slap the architecture on a napkin so you don't have to squint at code.
+
+### Subsystem Crosstalk
+
+```mermaid
+graph LR
+  Buttons((Buttons)) -->|scan| BM[ButtonManager]
+  BM --> MIDI[MIDIHandler]
+  EF[EnvelopeFollower] -->|mod| MIDI
+  ARP[Arpeggiator] --> MIDI
+  MIDI --> DM[DisplayManager]
+  MIDI --> Slots((Slots))
+```
+
+### Boot Ruckus
+
+```mermaid
+sequenceDiagram
+  participant Flash
+  participant Loader as Bootloader
+  participant FW as Firmware
+  participant Mods as Modules
+  Flash->>Loader: write image
+  Loader->>FW: handoff
+  FW->>Mods: init & rage
+```
+
+### Bridge Paths
+
+```mermaid
+graph TD
+  Browser[[Browser]] --> WebSerial
+  WebSerial --> Board[Teensy]
+  NodeOSC[[Node OSC Bridge]] --> Board
+  Board --> MIDIOut
+```
+
 ## System Capabilities
 
 - [Hardware README](../hardware/README.md) — final board layout, power rails, and the gritty bits you can actually solder.
