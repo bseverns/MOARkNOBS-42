@@ -55,6 +55,20 @@ struct Animation {
   uint8_t    brightness = 0;               //!< Current display brightness
 };
 
+// Startup splash, non-blocking because we're not monsters.
+enum class StartupPhase { IDLE, DRAW_LINES, HOLD_LINES, HOLD_LOGO, DONE };
+
+/**
+ * Tracks progress of the boot animation so `runStartupAnimation()` can be
+ * called every loop without resorting to `delay()`. Think of it as a very tiny
+ * punk rock state machine.
+ */
+struct StartupAnimation {
+  StartupPhase phase   = StartupPhase::IDLE; //!< Current animation phase
+  uint8_t      step    = 0;                 //!< Line pattern step
+  uint32_t     lastTime = 0;                //!< Time of last phase advance
+};
+
 /**
  * @brief Wrapper around the Adafruit SSD1306 library providing
  *        higher level UI helpers.
@@ -188,6 +202,8 @@ private:
   uint8_t            _activePot;
   uint8_t            _activeChannel;
   String             _activeMode;
+
+  StartupAnimation   _startupAnim;  //!< State tracker for the boot splash
 
   void drawBorder();
 };
