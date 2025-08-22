@@ -23,6 +23,7 @@
 
 #include <Arduino.h>
 #include <utility>
+#include <array>
 class ConfigManager;
 extern ConfigManager configManager;
 
@@ -130,9 +131,10 @@ extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings
 extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;
 
-// Analog Routing Grid pairings.  Declared here, defined loud and proud in
-// Globals.cpp so every translation unit plays nice.
-extern const std::pair<int, int> ARG_PAIRS[];
+// Analog Routing Grid pairings. Cooked at compile time in Globals.cpp so
+// we never hand-maintain that gnarly list again.
+inline constexpr size_t ARG_PAIR_COUNT = (NUM_ENVELOPES * (NUM_ENVELOPES - 1)) / 2;
+extern const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS;
 extern const size_t ARG_PAIRS_LEN;
 
 #endif // GLOBALS_H
