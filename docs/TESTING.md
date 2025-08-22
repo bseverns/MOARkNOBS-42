@@ -2,6 +2,20 @@
 
 This repo runs tests in layers, from polite unit checks to full-on hardware cage matches.
 
+## Quick hit: `test.sh`
+
+Too lazy to juggle commands? Slam `./test.sh` in the repo root and it will sniff for a Teensy on the
+first `/dev/ttyACM*`, `/dev/ttyUSB*`, or macOS cousin. If it can't find your board—or you're juggling
+more than one—yell the port name through `TEST_PORT`:
+
+```bash
+TEST_PORT=/dev/ttyACM0 ./test.sh
+```
+
+Either way, the run leaves bread crumbs in `logs/` so you can trace what blew up or brag about what
+passed. The script blasts Unity firmware tests and bridge checks, and it writes JUnit and console
+output to `logs/unity-test.xml`, `logs/unity-test.log`, and `logs/bridge-test.log`.
+
 ## Unity smoke tests (`firmware/test/`)
 
 Unity tests are the quick-and-dirty pulse check for the firmware. They run on the Teensy board and
