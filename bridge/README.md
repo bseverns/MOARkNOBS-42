@@ -4,7 +4,7 @@ Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** ta
 
 ## System context
 
-Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial.
+Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC heads to whatever port you feed `--osc`; inbound commands always land on UDP 9000.
 
 ```bash
 oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC -> serial sets pot 2 to 99
@@ -13,7 +13,7 @@ oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC 
 ## What's the gig?
 
 - **Serial** in at 31,250 baud.
-- **OSC** blasts out on `/mn42/slots` and `/mn42/envelopes` (UDP 9000 by default).
+- **OSC** blasts out on `/mn42/slots` and `/mn42/envelopes` (aimed at the `--osc` port, default 9000).
 - **Virtual MIDI** mirror so WebMIDI punks can jam along.
 - Shoot back commands like `SET_POT` over OSC or MIDI and they hitch a ride over serial.
 
@@ -30,7 +30,7 @@ node mn42_bridge.js \
 Flags:
 
 - `--serial` (`-s`) – which serial port to sniff.
-- `--osc` (`-o`) – UDP port to scream OSC from (and listen for commands).
+- `--osc` (`-o`) – remote UDP port to scream OSC at. The bridge still listens for `/mn42/cmd` on 9000.
 - `--bind` (`-b`) – IP to park the UDP server on. Defaults to `127.0.0.1` so randos can't wiggle your knobs.
 - `--midi` (`-m`) – label for the virtual MIDI port.
 
