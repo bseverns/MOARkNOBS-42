@@ -8,12 +8,6 @@
 #include <vector>
 #include "Log.h"
 
-#ifndef UNIT_TEST
-uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
-#else
-uint8_t type = 0;
-#endif
-
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 
 static uint16_t crc16_update(uint16_t crc, uint8_t data) {
@@ -393,12 +387,12 @@ bool ConfigManager::handleCommand(const String& command) {
         LOG_PRINTLN("OK");
         return true;
     } else if (command.startsWith("GET_FILTER")) {
-         const uint8_t type = EEPROM.read(EEPROM_ENVELOPE_TYPES);
-        (void)type; // keep the compiler chill
+        const uint8_t efType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+        (void)efType; // keep the compiler chill
         float freq, q;
         EEPROM.get(EEPROM_FILTER_FREQ, freq);
         EEPROM.get(EEPROM_FILTER_Q, q);
-        LOG_PRINT(type);
+        LOG_PRINT(efType);
         LOG_PRINT(",");
         LOG_PRINT(freq, 2);
         LOG_PRINT(",");
@@ -411,10 +405,10 @@ bool ConfigManager::handleCommand(const String& command) {
             LOG_PRINTLN("ERR");
             return true;
         }
-        uint8_t type = command.substring(10, firstComma).toInt();
+        uint8_t efType = command.substring(10, firstComma).toInt();
         float freq = command.substring(firstComma + 1, secondComma).toFloat();
         float q = command.substring(secondComma + 1).toFloat();
-        EEPROM.update(EEPROM_ENVELOPE_TYPES, type);
+        EEPROM.update(EEPROM_ENVELOPE_TYPES, efType);
         EEPROM.put(EEPROM_FILTER_FREQ, freq);
         EEPROM.put(EEPROM_FILTER_Q, q);
         LOG_PRINTLN("OK");
