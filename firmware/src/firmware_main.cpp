@@ -397,13 +397,16 @@ void processInternalClock() {
     }
 }
 
+// Measure how often the main loop cycles each second—our quick-and-dirty load meter.
+// On a healthy Teensy 4.0 we usually see about a kilospin per second; if it tanks,
+// you're choking the core.
 void monitorSystemLoad() {
     static unsigned long lastMonitorTime = 0;
-    static unsigned long taskCounter = 0;
+    static unsigned long taskCounter = 0; // main loop iterations
 
-    taskCounter++;
+    taskCounter++; // count another lap around the loop
     if (now() - lastMonitorTime >= 1000UL) { // Log every second
-        LOG_PRINTF("Tasks per second: %lu\n", taskCounter);
+        LOG_PRINTF("Tasks per second: %lu\n", taskCounter); // ~1000 on a chill rig
         taskCounter = 0;
         lastMonitorTime = now();
     }
