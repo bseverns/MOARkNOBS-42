@@ -14,8 +14,13 @@ Ready to shred? Here's the bare minimum to get the beast humming.
 ### Dependencies
 
 - Python bits: `pip install -r requirements.txt`
-- Node 18+ for the bridge (LTS or go home)
+- Node 20 for the bridge (LTS or bust)
 - PlatformIO on your PATH
+- Bridge deps:
+
+   ```bash
+   npm --prefix bridge ci
+   ```
 
 ### Firmware build
 

@@ -4,9 +4,9 @@
   "description": "Serial to OSC/MIDI bridge for MOARkNOBS-42",
   "main": "mn42_bridge.js",
   "scripts": {
-    "test": "node test/mn42_bridge.test.js && node test/serial_to_osc.test.js && node test_missing_port.js",
-    "lint": "eslint .",
-    "format": "prettier --write ."
+    "test": "node test/mn42_bridge.test.js && node test/serial_to_osc.test.js && node test/test_missing_port.js",
+    "lint": "npx eslint .",
+    "format": "npx prettier --write ."
   },
   "keywords": ["mn42","bridge","osc","midi"],
   "author": "BSSS project team",
@@ -19,9 +19,5 @@
     "serialport": "^10.5.0",
     "osc": "^2.4.1",
     "jzz": "^1.5.9"
-  },
-  "devDependencies": {
-    "eslint": "^8.57.0",
-    "prettier": "^3.1.0"
   }
 }
