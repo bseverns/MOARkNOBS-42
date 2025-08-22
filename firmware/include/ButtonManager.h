@@ -32,11 +32,11 @@
 #define BUTTON_MANAGER_DEBUG 0
 #endif
 #if BUTTON_MANAGER_DEBUG
-  #define BM_DBG_PRINT(...)   LOG_PRINT(__VA_ARGS__)
-  #define BM_DBG_PRINTLN(...) LOG_PRINTLN(__VA_ARGS__)
+#define BM_DBG_PRINT(...) LOG_PRINT(__VA_ARGS__)
+#define BM_DBG_PRINTLN(...) LOG_PRINTLN(__VA_ARGS__)
 #else
-  #define BM_DBG_PRINT(...)
-  #define BM_DBG_PRINTLN(...)
+#define BM_DBG_PRINT(...)
+#define BM_DBG_PRINTLN(...)
 #endif
 
 // Total number of multiplexed "virtual" buttons
@@ -55,10 +55,10 @@ inline constexpr int BUTTON_PRESS_THRESHOLD = 512;
  * States for each button in the debounce & press state machine.
  */
 enum class ButtonState {
-    IDLE,        //!< No press detected
-    PRESSED,     //!< Button is pressed but not yet long-pressed
-    LONG_PRESS,  //!< Long press threshold reached
-    RELEASED     //!< Button has been released
+    IDLE,       //!< No press detected
+    PRESSED,    //!< Button is pressed but not yet long-pressed
+    LONG_PRESS, //!< Long press threshold reached
+    RELEASED    //!< Button has been released
 };
 
 /**
@@ -66,10 +66,10 @@ enum class ButtonState {
  */
 struct ButtonStateMachine {
     ButtonState state = ButtonState::IDLE;
-    unsigned long pressTimestamp     = 0;  // When button first pressed
-    unsigned long releaseTimestamp   = 0;  // When button released
-    bool longPressFired              = false; // Ensures long-press event only fires once
-    unsigned long lastShortRelease   = 0;  // Timestamp of last release for double-press detection
+    unsigned long pressTimestamp = 0;   // When button first pressed
+    unsigned long releaseTimestamp = 0; // When button released
+    bool longPressFired = false;        // Ensures long-press event only fires once
+    unsigned long lastShortRelease = 0; // Timestamp of last release for double-press detection
 };
 
 /**
@@ -81,18 +81,18 @@ struct ButtonStateMachine {
  * variables.
  */
 struct ButtonManagerContext {
-    std::vector<uint8_t>& potChannels;          // Mapping of pot indices to CC channels
-    uint8_t& activePot;                         // Currently selected potentiometer index
-    uint8_t& activeChannel;                     // MIDI channel to send CC on
-    bool& envelopeFollowMode;                   // Flag: envelope-following mode active
-    const char*& envelopeMode;                  // Envelope mode display
-    ConfigManager& configManager;               // For loading/saving persistent settings
-    LEDManager& ledManager;                     // For updating visual feedback LEDs
-    DisplayManager& displayManager;             // For writing status to OLED
-    std::vector<EnvelopeFollower>& envelopes;   // List of envelope follower objects
-    std::map<int, int>& potToEnvelopeMap;       // Associative map: pot -> envelope index
-    bool& diagnosticMode;                       // Self-test mode flag
-    uint8_t& diagnosticPage;                    // Which diagnostic page to show
+    std::vector<uint8_t> &potChannels;        // Mapping of pot indices to CC channels
+    uint8_t &activePot;                       // Currently selected potentiometer index
+    uint8_t &activeChannel;                   // MIDI channel to send CC on
+    bool &envelopeFollowMode;                 // Flag: envelope-following mode active
+    const char *&envelopeMode;                // Envelope mode display
+    ConfigManager &configManager;             // For loading/saving persistent settings
+    LEDManager &ledManager;                   // For updating visual feedback LEDs
+    DisplayManager &displayManager;           // For writing status to OLED
+    std::vector<EnvelopeFollower> &envelopes; // List of envelope follower objects
+    std::map<int, int> &potToEnvelopeMap;     // Associative map: pot -> envelope index
+    bool &diagnosticMode;                     // Self-test mode flag
+    uint8_t &diagnosticPage;                  // Which diagnostic page to show
 };
 
 /**
@@ -103,15 +103,14 @@ struct ButtonManagerContext {
  * main loop to update the state machines for every button.
  */
 class ButtonManager {
-public:
+  public:
     /**
      * Create a manager for all button inputs.
      * The mux pin arrays define the scanning hardware and the
      * PotentiometerManager link allows button presses to change slots.
      */
-    ButtonManager(const HardwareConfig& config,
-                  const uint8_t* controlPins,
-                  PotentiometerManager* potentiometerManager);
+    ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
+                  PotentiometerManager *potentiometerManager);
 
     /**
      * Configure the GPIO directions for all buttons.
@@ -123,7 +122,7 @@ public:
      * Poll the button matrix, update state machines and fire callbacks.
      * Invoke this in the main loop with a shared ButtonManagerContext.
      */
-    void processButtons(ButtonManagerContext& context);
+    void processButtons(ButtonManagerContext &context);
 
     /**
      * Directly read a muxed button's state; useful for unit tests and safe to
@@ -136,25 +135,25 @@ public:
      * ::processButtons loop.  Handy for tests, but normal code should
      * let processButtons() do the heavy lifting.
      */
-    void scanControlInputs(ButtonManagerContext& context);
+    void scanControlInputs(ButtonManagerContext &context);
 
-private:
+  private:
     // Mux select pins & analog input for virtual buttons scan
-    const HardwareConfig& _cfg;
+    const HardwareConfig &_cfg;
     // Direct control button pins
-    const uint8_t* _controlPins; // direct GPIOs (legacy, unused with mux scan)
+    const uint8_t *_controlPins; // direct GPIOs (legacy, unused with mux scan)
     // Link to PotentiometerManager for mode switching
-    PotentiometerManager* _potentiometerManager;
+    PotentiometerManager *_potentiometerManager;
 
     // Debounce & last-press tracking for all buttons
     bool buttonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {false};
     unsigned long lastDebounceTimes[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {0};
 
     // Current UI mode (e.g., CC vs ENV vs ARG)
-    uint8_t activeMode      = 0;
+    uint8_t activeMode = 0;
     uint8_t activeARGMethod = 0;
-    uint8_t argEnvelopeA    = 0;
-    uint8_t argEnvelopeB    = 0;
+    uint8_t argEnvelopeA = 0;
+    uint8_t argEnvelopeB = 0;
 
     // State machines for each button detection
     ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
@@ -169,41 +168,41 @@ private:
     bool readControlButton(uint8_t buttonIndex);
 
     /** Handle the action for a single short press after debouncing. */
-    void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context);
+    void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context);
 
     /** Optional hook for combination presses (e.g. SHIFT + button). */
-    void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context);
+    void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext &context);
 
     /** Internal state machine driving press/hold/release detection. */
-    void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext& context);
+    void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext &context);
 
     /** Arm a long‑press action and wait for a confirm tap. */
-    void onLongPress(uint8_t index, ButtonManagerContext& context);
+    void onLongPress(uint8_t index, ButtonManagerContext &context);
 
     /** Actually perform the long‑press action once confirmed. */
-    void performLongPressAction(uint8_t index, ButtonManagerContext& context);
+    void performLongPressAction(uint8_t index, ButtonManagerContext &context);
 
     /** Called when the button is released after press or long-press. */
-    void onRelease(uint8_t index, ButtonManagerContext& context);
+    void onRelease(uint8_t index, ButtonManagerContext &context);
 
     /** Detect and dispatch short vs double presses based on timing. */
-    void handleShortPress(uint8_t index, ButtonManagerContext& context);
-    void handleDoublePress(uint8_t index, ButtonManagerContext& context);
+    void handleShortPress(uint8_t index, ButtonManagerContext &context);
+    void handleDoublePress(uint8_t index, ButtonManagerContext &context);
 
     /** Perform the mapped action for a simple press. */
-    void doSinglePressAction(uint8_t index, ButtonManagerContext& context);
+    void doSinglePressAction(uint8_t index, ButtonManagerContext &context);
 
     // ---- New multiplexer-based control scanning ----
     /** Update a single control button state during scanning. */
-    void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context);
+    void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext &context);
     int _ctrlPotValues[3] = {0};
 
     // Long‑press confirmation tracking
     static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net
-    int8_t _confirmIndex = -1;      // which button waits for confirmation
-    unsigned long _confirmDeadline = 0; // when the confirm window expires
+    int8_t _confirmIndex = -1;                               // which button waits for confirmation
+    unsigned long _confirmDeadline = 0;                      // when the confirm window expires
 
-public:
+  public:
     /** Return the latest smoothed value for one of the control pots. */
     int getControlPotValue(uint8_t idx) const { return (idx < 3) ? _ctrlPotValues[idx] : 0; }
 };
