@@ -25,7 +25,8 @@ void test_long_press_detection() {
     bool envMode = false;
     const char* envStr = "";
     std::map<int,int> map;
-    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map};
+    bool diag = false; uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map, diag, diagPage};
 
     fakeMillis = 0;
     bm.updateButtonStateMachine(0, true, ctx); // press
@@ -54,7 +55,8 @@ void test_long_press_requires_confirm() {
     bool envMode = false;
     const char* envStr = "";
     std::map<int,int> map;
-    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map};
+    bool diag = false; uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map, diag, diagPage};
 
     // Long press triggers confirm but no action yet
     fakeMillis = 0;
@@ -87,7 +89,8 @@ void test_double_press_ctrl2_cycles_midi_type() {
     bool envMode = false;
     const char* envStr = "";
     std::map<int,int> map;
-    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map};
+    bool diag = false; uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map, diag, diagPage};
 
     MIDISlot &slot = cfg.getSlot(0);
     slot.type = MIDIMessageType::CC;

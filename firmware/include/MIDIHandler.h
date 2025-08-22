@@ -91,6 +91,10 @@ public:
     bool isClockTick();
     void clearClockTick();
 
+    /** How many MIDI messages we've heard and blasted. */
+    uint32_t getRxCount() const { return _rxCount; }
+    uint32_t getTxCount() const { return _txCount; }
+
 private:
     bool clockTick = false;
     unsigned long lastExternalClock = 0;
@@ -121,6 +125,9 @@ private:
     SysExType _lastSysExType = SysExType::ManufacturerSpecific;
     uint8_t _lastSysExSubId1 = 0;
     uint8_t _lastSysExSubId2 = 0;
+
+    uint32_t _rxCount = 0;
+    uint32_t _txCount = 0;
 
     void receiveNRPN(uint8_t channel, uint16_t param, uint16_t value);
     void receiveRPN(uint8_t channel, uint16_t param, uint16_t value);

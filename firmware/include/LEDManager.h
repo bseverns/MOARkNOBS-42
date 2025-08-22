@@ -114,6 +114,9 @@ public:
     /** Blink the status LED a number of times. */
     void blinkStatusLED(uint8_t times, uint16_t delayMs);
 
+    /** Pulse a single LED while diagnostics are active. */
+    void setDiagnosticMode(bool enabled);
+
 private:
     const HardwareConfig& cfg;
     uint16_t numLEDs;
@@ -128,6 +131,8 @@ private:
     uint8_t activeIndex;
     unsigned long controlStart = 0;
     bool controlActive = false;
+    bool diagnosticMode = false;
+    unsigned long diagStart = 0;
 };
 
 #endif // LEDMANAGER_H

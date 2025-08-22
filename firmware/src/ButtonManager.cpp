@@ -289,13 +289,18 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext& 
                 break;
             }
             case 1: {
-                // Reload configuration profile from EEPROM
-                context.configManager.loadProfile(currentProfile);
-                context.potChannels.clear();
-                for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
-                    context.potChannels.push_back(context.configManager.getPotChannel(i));
+                if (context.diagnosticMode) {
+                    context.diagnosticPage = (context.diagnosticPage + 1) % 3;
+                    context.displayManager.displayStatus("Diag Page", 1000);
+                } else {
+                    // Reload configuration profile from EEPROM
+                    context.configManager.loadProfile(currentProfile);
+                    context.potChannels.clear();
+                    for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
+                        context.potChannels.push_back(context.configManager.getPotChannel(i));
+                    }
+                    context.displayManager.displayStatus("Profile Reset!", 1500);
                 }
-                context.displayManager.displayStatus("Profile Reset!", 1500);
                 break;
             }
             case 2: { //Toggle Slot Active
@@ -315,6 +320,17 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext& 
                 context.configManager.saveProfile(currentProfile);
                 context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
                 context.displayManager.displayStatus("Config Saved", 1500);
+                break;
+            }
+            case 5: { // Toggle diagnostic mode
+                context.diagnosticMode = !context.diagnosticMode;
+                if (context.diagnosticMode) {
+                    context.diagnosticPage = 0;
+                    context.displayManager.displayStatus("Diagnostics", 1000);
+                } else {
+                    context.displayManager.displayStatus("Diag Off", 1000);
+                }
+                context.ledManager.setDiagnosticMode(context.diagnosticMode);
                 break;
             }
             default:

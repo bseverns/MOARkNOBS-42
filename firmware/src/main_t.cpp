@@ -48,13 +48,15 @@ uint8_t activePot = 0, activeChannel = 1;
 bool envelopeFollowMode = false;
 const char* envelopeMode = "SEF";
 std::map<int, int> potToEnvelopeMap;
+bool diagnosticMode = false; uint8_t diagnosticPage = 0;
 
 ButtonManagerContext buttonContext = {
     potChannels, activePot, activeChannel,
     envelopeFollowMode, envelopeMode,
     configManager, ledManager,
     displayManager, envelopeFollowers,
-    potToEnvelopeMap
+    potToEnvelopeMap,
+    diagnosticMode, diagnosticPage
 };
 
 // Control button used to advance test phases
