@@ -99,7 +99,11 @@ static void loadFromJson(HardwareConfig& cfg) {
     if (!SD.begin()) return;
     File f = SD.open("/hardware_config.json");
     if (!f) return;
-    StaticJsonDocument<256> doc;
+    // Punk rock move: allocate exactly what the config file demands.
+    // The old 256B static doc would thrash if the JSON grew; this way we
+    // size the DynamicJsonDocument based on the file's byte count and keep
+    // the stack chill.
+    DynamicJsonDocument doc(f.size());
     DeserializationError err = deserializeJson(doc, f);
     if (err) { f.close(); return; }
     if (doc.containsKey("LED_PIN")) cfg.ledPin = doc["LED_PIN"];
