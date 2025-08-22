@@ -12,6 +12,8 @@ This folder isn't a dumping ground—it's a curated stash of third‑party code 
 
 OctoWS2811 used to lurk here for ridiculous LED walls, but FastLED's built-in chops cover our strip just fine. If you need the DMA firehose, fork it back in and go wild.
 
+PlatformIO still ships its own OctoWS2811, so `platformio.ini` now blacklists it to keep stray DMA code from bloating our builds.
+
 ## How to update a library
 
 1. **Grab the latest release** from the upstream link above.

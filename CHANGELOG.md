@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - OctoWS2811 vendored library; FastLED handles the LEDs solo now.
+- Blocked the Teensy core's OctoWS2811 copy via `lib_ignore` to keep builds clean.
 
 ## [0.2.0] - 2025-08-14
 ### Added
