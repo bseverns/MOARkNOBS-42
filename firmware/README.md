@@ -474,7 +474,7 @@ The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_seria
 
 When you need proof the rig still howls, run the tests and watch the logs spill.
 
-- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet, screams the boot banner self-test, and spews results over Serial at 115200 baud.
+- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet, spells out the reset reason in the boot banner, then `sys::printReport()` dumps a JSON stats blob so you know exactly what firmware you're torturing.
 - **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Wire up a board and we'll sniff for its serial node; set `TEST_PORT` if you're picky. No board? The CI shrugs and skips so you don't eat a red X. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
 
 Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
@@ -663,10 +663,11 @@ Every power-up kicks out a loud status line before the menus wake:
 
 ```
 MN42 FW <version> schema <hex> UID <32-bit-hex>
-Reset 0x<cause> Brownouts <count>
+Reset 0x<cause> (<reason>) Brownouts <count>
+{ JSON system report }
 ```
 
-If the brownout count isn't zero, your power rail is having a bad day.
+If the brownout count isn't zero, your power rail is having a bad day. That extra line is `sys::printReport()` coughing up a JSON snapshot of firmware version, commit hash, and board stats.
 
 That `UID` field comes straight from the MCU's one-time-programmable fuse
 bank. We yank `HW_OCOTP_CFG0..3` out of `imxrt.h` and print the 128-bit serial
