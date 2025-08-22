@@ -109,7 +109,41 @@ Need proof this gremlin works? Try this slam-dunk walkthrough.
 
    The hardware's slot 2 should snap to 95. `oscdump` spits back a `/mn42/slots` update and `aseqdump` coughs up a matching Control Change. That's the round trip—OSC in, MIDI out, and the rig obeys.
 
+### Command/response cycle
+
+Want to see every hop in gory detail? Here's the full loop.
+
+1. Lob a `SET_POT` grenade over OSC:
+
+   ```bash
+   oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":99}'
+   ```
+
+   ```json
+   { "cmd": "SET_POT", "slot": 2, "value": 99 }
+   ```
+
+2. The bridge belches back `/mn42/slots` so you know it stuck:
+
+   ```bash
+   oscdump 9000
+   # /mn42/slots 0 99 0 ...
+   ```
+
+   ```json
+   {"slots":[0,99,0,...]}
+   ```
+
+3. Same trick, voiced in MIDI:
+
+   ```bash
+   amidi -p "MN42 Bridge" -S 'B0 02 63'  # CC on ch1, slot 2 => 99
+   ```
+
+   ```json
+   { "cmd": "SET_POT", "slot": 2, "value": 99 }
+   ```
+
 ## License
 
 This scrappy sidecar rides under the [MIT License](../LICENSE). Peep the root file for the full legal riff.
-
