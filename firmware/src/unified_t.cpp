@@ -200,94 +200,22 @@ void testButtons() {
 }
 
 void testPots() {
-  Serial.println("=== Potentiometer Test ===");
-  displayManager.showText("Pot Test", "See Serial...");
+    Serial.println("=== Potentiometer Test ===");
+    displayManager.showText("Pot Test", "See Serial...");
 
-  // Context required for scanning the control pots via ButtonManager
-  uint8_t dummyPot = 0, dummyChannel = 1;
-  bool dummyEnvFollow = false;
-  const char* dummyEnvMode = "";
-  std::map<int, int> dummyMap;
-  bool diag = false; uint8_t diagPage = 0;
-  ButtonManagerContext bmCtx = {
-    potChannels, dummyPot, dummyChannel,
-    dummyEnvFollow, dummyEnvMode,
-    configManager, ledManager,
-    displayManager, envelopeFollowers,
-    dummyMap,
-    diag, diagPage
-  };
+    // Context required for scanning the control pots via ButtonManager
+    uint8_t dummyPot = 0, dummyChannel = 1;
+    bool dummyEnvFollow = false;
+    const char *dummyEnvMode = "";
+    std::map<int, int> dummyMap;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext bmCtx = {potChannels,       dummyPot,      dummyChannel, dummyEnvFollow,
+                                  dummyEnvMode,      configManager, ledManager,   displayManager,
+                                  envelopeFollowers, dummyMap,      diag,         diagPage};
 
-  char label[24];
-  char result[64];
-
-  // --- Main control pot (MUX A index 0) ---
-  sprintf(label, "Main→MIN");
-  Serial.println("\nMain Pot: twist to MIN, then hit a button.");
-  displayManager.showText("Pot Test", label);
-  waitForAnyButton();
-  int mainMin = potentiometerManager.readRawPot(0);
-
-  sprintf(label, "Main→MAX");
-  Serial.println("Main Pot: twist to MAX, then hit a button.");
-  displayManager.showText("Pot Test", label);
-  waitForAnyButton();
-  int mainMax = potentiometerManager.readRawPot(0);
-
-  int delta = mainMax - mainMin;
-  bool pass = (delta >= POT_RANGE_MIN);
-  sprintf(result, "Min=%d Max=%d Δ=%d", mainMin, mainMax, delta);
-  Serial.printf("  %s\n", result);
-  displayManager.showText(pass ? "Main PASS" : "Main FAIL", result);
-  delay(800);
-  displayManager.clear();
-
-  // --- Filter frequency pot ---
-  sprintf(label, "Freq→MIN");
-  Serial.println("\nFreq Pot: roll to MIN, button when ready.");
-  displayManager.showText("Pot Test", label);
-  waitForAnyButton();
-  buttonManager.processButtons(bmCtx);
-  int freqMin = buttonManager.getControlPotValue(1);
-
-  sprintf(label, "Freq→MAX");
-  Serial.println("Freq Pot: roll to MAX, button when ready.");
-  displayManager.showText("Pot Test", label);
-  waitForAnyButton();
-  buttonManager.processButtons(bmCtx);
-  int freqMax = buttonManager.getControlPotValue(1);
-
-  delta = freqMax - freqMin;
-  pass = (delta >= POT_RANGE_MIN);
-  sprintf(result, "Min=%d Max=%d Δ=%d", freqMin, freqMax, delta);
-  Serial.printf("  %s\n", result);
-  displayManager.showText(pass ? "Freq PASS" : "Freq FAIL", result);
-  delay(800);
-  displayManager.clear();
-
-  // --- Filter Q pot ---
-  sprintf(label, "Q→MIN");
-  Serial.println("\nQ Pot: drop to MIN, button when ready.");
-  displayManager.showText("Pot Test", label);
-  waitForAnyButton();
-  buttonManager.processButtons(bmCtx);
-  int qMin = buttonManager.getControlPotValue(2);
-
-  sprintf(label, "Q→MAX");
-  Serial.println("Q Pot: push to MAX, button when ready.");
-  displayManager.showText("Pot Test", label);
-  waitForAnyButton();
-  buttonManager.processButtons(bmCtx);
-  int qMax = buttonManager.getControlPotValue(2);
-
-  delta = qMax - qMin;
-  pass = (delta >= POT_RANGE_MIN);
-  sprintf(result, "Min=%d Max=%d Δ=%d", qMin, qMax, delta);
-  Serial.printf("  %s\n", result);
-  displayManager.showText(pass ? "Q PASS" : "Q FAIL", result);
-  delay(800);
-  displayManager.clear();
-}
+    char label[24];
+    char result[64];
 
     // --- Main control pot (MUX A index 0) ---
     sprintf(label, "Main→MIN");
