@@ -44,7 +44,14 @@ The bridge waits for `{"hello":"mn42"}` from the controller before it starts spe
 
 ## Install
 
-Bring Node.js 12 or later—the `serialport` dependency won't slum it with anything older, and we tend to jam on Node 18+.
+This miscreant only rolls with **Node.js 20**. Anything older is a poser and won't even get past the door. Check your version:
+
+```bash
+node --version
+# v20.x.x or bust
+```
+
+Once you're speaking fluent v20, wire up the deps:
 
 ```bash
 npm install
