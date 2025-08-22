@@ -24,6 +24,11 @@
 #include <map>
 #include <imxrt.h>
 
+// Sneaky static that kicks in before setup() even thinks about stretching.
+// It pulls in pin maps and timing constants from Globals.h so the rest of this
+// file can swagger with real values. If you need to rewrite the defaults,
+// hunt down loadHardwareConfig() in firmware/src/Globals.cpp
+// and make your mark.
 struct HardwareConfigInitializer { HardwareConfigInitializer() { loadHardwareConfig(); } } _hwInit;
 
 uint8_t midiBeatPosition = 0;
