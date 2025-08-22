@@ -93,41 +93,41 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
 void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
         if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS) break;
-        // Primary mux hops between banks of pots wired to the board.
+        // Stage 1a: the primary mux selects which gang of pots we're sniffing.
         selectMuxBank(primaryBank);
 
         for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS); secondaryBank++) {
-            // Secondary mux picks the specific pot inside the current bank.
+            // Stage 1b: secondary mux dials in the exact pot within that gang.
             selectPotBank(secondaryBank);
 
+            // Mash the two bank numbers together to get the global pot index.
             uint8_t potIndex = (primaryBank << SECONDARY_MUX_PINS) | secondaryBank;
 
             if (potIndex >= NUM_POTS) break;
 
-            // Use filtered analog read
+            // Stage 2: snag the raw voltage and run it through our tiny RC filter.
             int rawValue = readAnalogFiltered(analogPin);
 
-            // Apply EWMA smoothing using the ALPHA factor declared above.
+            // EWMA smoothing – ALPHA (see header) leans toward fresh readings.
             smoothedValue[potIndex] = Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], ALPHA);
 
-            // Ignore minor wiggles; CHANGE_THRESHOLD kills micro-jitter.
+            // Stage 3: bail if the movement is smaller than the noise floor.
             if (abs(smoothedValue[potIndex] - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
-                potLastValues[potIndex] = smoothedValue[potIndex]; // Update last known value
+                potLastValues[potIndex] = smoothedValue[potIndex]; // lock in the latest value
                 dirtyFlags[potIndex] = true;
 
-    // Update LEDs after translating the raw analog value to MIDI range
-    int midiValue = Utility::mapToMidiValue(smoothedValue[potIndex]);
-    ledManager.setPotValue(potIndex, midiValue);
+                // Stage 4: map to MIDI, light the LED, then shout over MIDI.
+                int midiValue = Utility::mapToMidiValue(smoothedValue[potIndex]);
+                ledManager.setPotValue(potIndex, midiValue);
 
-    if (midiCallback) {
-        midiCallback(
-            potCCNumbers[potIndex],
-            Utility::mapToMidiValue(smoothedValue[potIndex]),
-            potChannels[potIndex],
-            potIndex
-        );
-    }
-
+                if (midiCallback) {
+                    midiCallback(
+                        potCCNumbers[potIndex],
+                        midiValue,
+                        potChannels[potIndex],
+                        potIndex
+                    );
+                }
             }
         }
     }

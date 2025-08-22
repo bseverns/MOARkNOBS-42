@@ -10,6 +10,9 @@
 
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 
+// Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
+// saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
+// where the checksum bunkers down.
 static uint16_t crc16_update(uint16_t crc, uint8_t data) {
     crc ^= data;
     for (uint8_t i = 0; i < 8; ++i) {
