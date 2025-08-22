@@ -27,25 +27,18 @@ extern ConfigManager configManager;
 
 // Verbose logging rides on BUTTON_MANAGER_DEBUG. See ButtonManager.h for macros.
 
-static const unsigned long LONG_PRESS_DELAY   = 500;
+static const unsigned long LONG_PRESS_DELAY = 500;
 static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
 // Mirror the global ARG pair count so our math stays synced without recomputing.
 static const int NUM_ARG_PAIRS = ARG_PAIRS_LEN;
 
 static const EnvelopeFollower::FilterType ALL_FILTERS[] = {
-    EnvelopeFollower::LINEAR,
-    EnvelopeFollower::OPPOSITE_LINEAR,
-    EnvelopeFollower::EXPONENTIAL,
-    EnvelopeFollower::RANDOM,
-    EnvelopeFollower::LOWPASS,
-    EnvelopeFollower::HIGHPASS,
-    EnvelopeFollower::BANDPASS
-};
-static const char* FILTER_TYPE_NAMES[] = {
-    "LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM",
-    "LOWPASS", "HIGHPASS", "BANDPASS"
-};
+    EnvelopeFollower::LINEAR,  EnvelopeFollower::OPPOSITE_LINEAR, EnvelopeFollower::EXPONENTIAL,
+    EnvelopeFollower::RANDOM,  EnvelopeFollower::LOWPASS,         EnvelopeFollower::HIGHPASS,
+    EnvelopeFollower::BANDPASS};
+static const char *FILTER_TYPE_NAMES[] = {"LINEAR",  "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM",
+                                          "LOWPASS", "HIGHPASS",        "BANDPASS"};
 
 static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0]);
 
@@ -66,13 +59,11 @@ inline void waitForMuxSettle() {
 }
 
 inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
-    static const uint8_t lut[16][4] = {
-        {0,0,0,0},{1,0,0,0},{0,1,0,0},{1,1,0,0},
-        {0,0,1,0},{1,0,1,0},{0,1,1,0},{1,1,1,0},
-        {0,0,0,1},{1,0,0,1},{0,1,0,1},{1,1,0,1},
-        {0,0,1,1},{1,0,1,1},{0,1,1,1},{1,1,1,1}
-    };
-    const uint8_t* bits = lut[index & 0x0F];
+    static const uint8_t lut[16][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0},
+                                       {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0},
+                                       {0, 0, 0, 1}, {1, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1},
+                                       {0, 0, 1, 1}, {1, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}};
+    const uint8_t *bits = lut[index & 0x0F];
     digitalWriteFast(selPins[0], bits[0]);
     digitalWriteFast(selPins[1], bits[1]);
     digitalWriteFast(selPins[2], bits[2]);
@@ -81,17 +72,10 @@ inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
 } // namespace
 
 // Constructor
-ButtonManager::ButtonManager(const HardwareConfig& config,
-                             const uint8_t* controlPins,
-                             PotentiometerManager* potentiometerManager)
-    : _cfg(config),
-      _controlPins(controlPins),
-      _potentiometerManager(potentiometerManager),
-      activeMode(0),
-      activeARGMethod(0),
-      argEnvelopeA(0),
-      argEnvelopeB(1)
-{
+ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
+                             PotentiometerManager *potentiometerManager)
+    : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
+      activeMode(0), activeARGMethod(0), argEnvelopeA(0), argEnvelopeB(1) {
     for (int i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; i++) {
         buttonStates[i] = false;
         lastDebounceTimes[i] = 0;
@@ -111,7 +95,6 @@ void ButtonManager::initButtons() {
     pinMode(_cfg.rowDriverPin, OUTPUT);
     digitalWrite(_cfg.rowDriverPin, LOW);
 
-
     // optional: initialize each state machine for each button
     for (int i = 0; i < (NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS); i++) {
         _buttonMachines[i].state = ButtonState::IDLE;
@@ -129,7 +112,7 @@ void ButtonManager::initButtons() {
  *  - For each control (direct) button, read & debounce
  *    -> update state machine
  */
-void ButtonManager::processButtons(ButtonManagerContext& context) {
+void ButtonManager::processButtons(ButtonManagerContext &context) {
     unsigned long now = ::now();
 
 #ifdef BUTTON_MANAGER_PROFILE
@@ -154,9 +137,8 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
     // Process virtual (multiplexer) buttons using scanned states
     for (uint8_t i = 0; i < NUM_VIRTUAL_BUTTONS; i++) {
         uint8_t rawState = rawStates[i];
-        bool stableReading = Utility::debounce(buttonStates[i], rawState,
-                                               lastDebounceTimes[i], now,
-                                               DEBOUNCE_DELAY);
+        bool stableReading =
+            Utility::debounce(buttonStates[i], rawState, lastDebounceTimes[i], now, DEBOUNCE_DELAY);
 
         if (stableReading) {
             bool pressed = (buttonStates[i] == HIGH);
@@ -177,8 +159,7 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
     }
     totalScan += tElapsed;
     if (++scanCount % 1000 == 0) {
-        Serial.printf("btn scan avg %luus max %luus\n",
-                      (unsigned long)(totalScan / scanCount),
+        Serial.printf("btn scan avg %luus max %luus\n", (unsigned long)(totalScan / scanCount),
                       (unsigned long)maxScan);
     }
 #endif
@@ -187,7 +168,8 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
 /**
  * The new state machine approach for short vs. long press.
  */
-void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext& context) {
+void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
+                                             ButtonManagerContext &context) {
     ButtonStateMachine &sm = _buttonMachines[index];
     unsigned long now = ::now();
 
@@ -249,7 +231,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed, Button
 /**
  * Called when a long press crosses the threshold; we just arm it.
  */
-void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
+void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
     _confirmIndex = index;
     _confirmDeadline = ::now() + CONFIRM_WINDOW_MS;
     context.displayManager.displayStatus("Press again to confirm", 1000);
@@ -258,7 +240,7 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext& context) {
 /**
  * Fire the actual long‑press payload after confirmation.
  */
-void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext& context) {
+void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &context) {
     // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
         auto it = context.potToEnvelopeMap.find(index);
@@ -272,79 +254,78 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext& 
         int assigned = context.potToEnvelopeMap[index];
         context.envelopes[assigned].toggleActive(true);
         context.displayManager.displayStatus("EF Assigned", 1000);
-    }
-    else {
+    } else {
         // Control buttons (0-5)
         uint8_t ctrlIdx = index - NUM_VIRTUAL_BUTTONS;
         switch (ctrlIdx) {
-            case 0: { // Calibrate assigned envelope follower
-                auto it = context.potToEnvelopeMap.find(context.activePot);
-                if (it == context.potToEnvelopeMap.end()) {
-                    context.displayManager.displayStatus("No EF assigned", 1000);
-                    break;
+        case 0: { // Calibrate assigned envelope follower
+            auto it = context.potToEnvelopeMap.find(context.activePot);
+            if (it == context.potToEnvelopeMap.end()) {
+                context.displayManager.displayStatus("No EF assigned", 1000);
+                break;
+            }
+            int efIndex = it->second;
+            context.envelopes[efIndex].calibrate(); // auto-saves baseline via ConfigManager
+            context.displayManager.displayStatus("EF Calibrated", 1500);
+            break;
+        }
+        case 1: {
+            if (context.diagnosticMode) {
+                context.diagnosticPage = (context.diagnosticPage + 1) % 3;
+                context.displayManager.displayStatus("Diag Page", 1000);
+            } else {
+                // Reload configuration profile from EEPROM
+                context.configManager.loadProfile(currentProfile);
+                context.potChannels.clear();
+                for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
+                    context.potChannels.push_back(context.configManager.getPotChannel(i));
                 }
-                int efIndex = it->second;
-                context.envelopes[efIndex].calibrate(); // auto-saves baseline via ConfigManager
-                context.displayManager.displayStatus("EF Calibrated", 1500);
-                break;
+                context.displayManager.displayStatus("Profile Reset!", 1500);
             }
-            case 1: {
-                if (context.diagnosticMode) {
-                    context.diagnosticPage = (context.diagnosticPage + 1) % 3;
-                    context.displayManager.displayStatus("Diag Page", 1000);
-                } else {
-                    // Reload configuration profile from EEPROM
-                    context.configManager.loadProfile(currentProfile);
-                    context.potChannels.clear();
-                    for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
-                        context.potChannels.push_back(context.configManager.getPotChannel(i));
-                    }
-                    context.displayManager.displayStatus("Profile Reset!", 1500);
-                }
-                break;
+            break;
+        }
+        case 2: { // Toggle Slot Active
+            MIDISlot &slot = context.configManager.getSlot(context.activePot);
+            slot.active = !slot.active;
+            context.configManager.saveSlot(context.activePot, slot);
+            char buf[32];
+            sprintf(buf, "Slot %d %s", context.activePot, slot.active ? "ON" : "OFF");
+            context.displayManager.displayStatus(buf, 1500);
+            break;
+        }
+        case 3: // EEPROM reset now rides here
+            context.configManager.loadConfiguration(context.potChannels);
+            context.displayManager.displayStatus("EEPROM Reset", 1500);
+            break;
+        case 4: { // Save configuration to the active profile
+            context.configManager.saveProfile(currentProfile);
+            context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+            context.displayManager.displayStatus("Config Saved", 1500);
+            break;
+        }
+        case 5: { // Toggle diagnostic mode
+            context.diagnosticMode = !context.diagnosticMode;
+            if (context.diagnosticMode) {
+                context.diagnosticPage = 0;
+                context.displayManager.displayStatus("Diagnostics", 1000);
+            } else {
+                context.displayManager.displayStatus("Diag Off", 1000);
             }
-            case 2: { //Toggle Slot Active
-                MIDISlot &slot = context.configManager.getSlot(context.activePot);
-                slot.active = !slot.active;
-                context.configManager.saveSlot(context.activePot, slot);
-                char buf[32];
-                sprintf(buf, "Slot %d %s", context.activePot, slot.active ? "ON" : "OFF");
-                context.displayManager.displayStatus(buf, 1500);
-                break;
-            }
-            case 3: // EEPROM reset now rides here
-                context.configManager.loadConfiguration(context.potChannels);
-                context.displayManager.displayStatus("EEPROM Reset", 1500);
-                break;
-            case 4: { // Save configuration to the active profile
-                context.configManager.saveProfile(currentProfile);
-                context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
-                context.displayManager.displayStatus("Config Saved", 1500);
-                break;
-            }
-            case 5: { // Toggle diagnostic mode
-                context.diagnosticMode = !context.diagnosticMode;
-                if (context.diagnosticMode) {
-                    context.diagnosticPage = 0;
-                    context.displayManager.displayStatus("Diagnostics", 1000);
-                } else {
-                    context.displayManager.displayStatus("Diag Off", 1000);
-                }
-                context.ledManager.setDiagnosticMode(context.diagnosticMode);
-                break;
-            }
-            default:
-                context.displayManager.displayStatus("No Long Action", 1000);
-                break;
+            context.ledManager.setDiagnosticMode(context.diagnosticMode);
+            break;
+        }
+        default:
+            context.displayManager.displayStatus("No Long Action", 1000);
+            break;
         }
     }
 }
 
-
 /**
- * Called after the user releases (short or long). If it wasn't a long press, we treat it as short press.
+ * Called after the user releases (short or long). If it wasn't a long press, we treat it as short
+ * press.
  */
-void ButtonManager::onRelease(uint8_t index, ButtonManagerContext& context) {
+void ButtonManager::onRelease(uint8_t index, ButtonManagerContext &context) {
     auto &sm = _buttonMachines[index];
     if (!sm.longPressFired) {
         // It's a short press
@@ -358,7 +339,7 @@ void ButtonManager::onRelease(uint8_t index, ButtonManagerContext& context) {
 /**
  * If short press, we see if it's a double press or single press.
  */
-void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext& context) {
+void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &context) {
     auto &sm = _buttonMachines[index];
     unsigned long now = ::now();
 
@@ -384,8 +365,7 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext& contex
 /**
  * Double press logic
  */
-void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& context)
-{
+void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &context) {
     // If user double-pressed a slot button (0..41)
     if (index < NUM_VIRTUAL_BUTTONS) {
         auto it = context.potToEnvelopeMap.find(index);
@@ -404,85 +384,85 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
         context.envelopes[efIndex].setFilterType(newType);
 
         // Feedback
-        const char* filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+        const char *filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
         char msg[32];
         sprintf(msg, "Slot %d => %s", index, filterName);
         context.displayManager.displayStatus(msg, 1500);
-    }
-    else {
+    } else {
         // Double-press on a control button
         uint8_t cIndex = index - NUM_VIRTUAL_BUTTONS;
         switch (cIndex) {
-            case 0: {
-                // Double Press (Ctrl #0): Cycle EF filter forward
-                auto it = context.potToEnvelopeMap.find(context.activePot);
-                if (it == context.potToEnvelopeMap.end()) {
-                    context.displayManager.displayStatus("No EF assigned", 1000);
-                    return;
-                }
-                int efIndex = it->second;
-                filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
-
-                EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
-                context.envelopes[efIndex].setFilterType(newType);
-
-                const char* name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
-                char msg[32];
-                sprintf(msg, "Slot %d => %s", context.activePot, name);
-                context.displayManager.displayStatus(msg, 1500);
-                break;
+        case 0: {
+            // Double Press (Ctrl #0): Cycle EF filter forward
+            auto it = context.potToEnvelopeMap.find(context.activePot);
+            if (it == context.potToEnvelopeMap.end()) {
+                context.displayManager.displayStatus("No EF assigned", 1000);
+                return;
             }
+            int efIndex = it->second;
+            filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
 
-            case 1: {
-                // Double Press (Ctrl #1): Cycle EF filter backward
-                // [CHANGED] => use activePot instead of 'index', and properly wrap negative
-                auto it = context.potToEnvelopeMap.find(context.activePot);
-                if (it == context.potToEnvelopeMap.end()) {
-                    context.displayManager.displayStatus("No EF assigned", 1000);
-                    return;
-                }
-                int efIndex = it->second;
+            EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
+            context.envelopes[efIndex].setFilterType(newType);
 
-                // Safely move backward by adding NUM_FILTER_TYPES - 1
-                filterTypeIndexForEF[efIndex] =
-                    (filterTypeIndexForEF[efIndex] + NUM_FILTER_TYPES - 1) % NUM_FILTER_TYPES;
+            const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+            char msg[32];
+            sprintf(msg, "Slot %d => %s", context.activePot, name);
+            context.displayManager.displayStatus(msg, 1500);
+            break;
+        }
 
-                EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
-                context.envelopes[efIndex].setFilterType(newType);
-
-                const char* name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
-                char msg[32];
-                sprintf(msg, "Slot %d => %s", context.activePot, name);
-                context.displayManager.displayStatus(msg, 1500);
-                break; // <--- ensure we break out of case 1
+        case 1: {
+            // Double Press (Ctrl #1): Cycle EF filter backward
+            // [CHANGED] => use activePot instead of 'index', and properly wrap negative
+            auto it = context.potToEnvelopeMap.find(context.activePot);
+            if (it == context.potToEnvelopeMap.end()) {
+                context.displayManager.displayStatus("No EF assigned", 1000);
+                return;
             }
+            int efIndex = it->second;
 
-            case 2: {
-                // Double Press (Ctrl #2): Cycle MIDI message type
-                MIDISlot &slot = context.configManager.getSlot(context.activePot);
-                slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
-                context.configManager.saveSlot(context.activePot, slot);
-                char buf[32];
-                sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
-                context.displayManager.displayStatus(buf, 1500);
-                break;
-            }
+            // Safely move backward by adding NUM_FILTER_TYPES - 1
+            filterTypeIndexForEF[efIndex] =
+                (filterTypeIndexForEF[efIndex] + NUM_FILTER_TYPES - 1) % NUM_FILTER_TYPES;
 
-            case 4: {
-                // Intentionally left blank: no double-press stunt for Ctrl #4 now
-                context.displayManager.displayStatus("No Double Action", 1000);
-                break;
-            }
+            EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
+            context.envelopes[efIndex].setFilterType(newType);
 
-            case 5: {
-                // Intentionally left blank: no double-press stunt for Ctrl #5 now
-                context.displayManager.displayStatus("No Double Action", 1000);
-                break;
-            }
+            const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+            char msg[32];
+            sprintf(msg, "Slot %d => %s", context.activePot, name);
+            context.displayManager.displayStatus(msg, 1500);
+            break; // <--- ensure we break out of case 1
+        }
 
-            default:
-                context.displayManager.displayStatus("Unknown double press", 1000);
-                break;
+        case 2: {
+            // Double Press (Ctrl #2): Cycle MIDI message type
+            MIDISlot &slot = context.configManager.getSlot(context.activePot);
+            slot.type = static_cast<MIDIMessageType>(
+                (static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
+            context.configManager.saveSlot(context.activePot, slot);
+            char buf[32];
+            sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
+            context.displayManager.displayStatus(buf, 1500);
+            break;
+        }
+
+        case 4: {
+            // Intentionally left blank: no double-press stunt for Ctrl #4 now
+            context.displayManager.displayStatus("No Double Action", 1000);
+            break;
+        }
+
+        case 5: {
+            // Intentionally left blank: no double-press stunt for Ctrl #5 now
+            context.displayManager.displayStatus("No Double Action", 1000);
+            break;
+        }
+
+        default:
+            context.displayManager.displayStatus("Unknown double press", 1000);
+            break;
         }
     }
 }
@@ -491,13 +471,12 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
  * Dispatch a confirmed short press. The helper `handleSingleButtonPress` keeps
  * the actual per-button actions so other parts of the firmware can reuse them.
  */
-void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext& context) {
+void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext &context) {
     BM_DBG_PRINTLN("Single Press on button " + String(index));
     handleSingleButtonPress(index, context);
 }
 
-void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext& context)
-{
+void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context) {
     // If it's a virtual "slot" button (0..41)
     if (buttonIndex < NUM_VIRTUAL_BUTTONS) {
         // Make that pot (slot) the “active slot.”
@@ -509,105 +488,98 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
     // Otherwise, it's a control button
     uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
     switch (controlIndex) {
-        case 0:
-            // Short Press (Control Button #0): Toggle EF On/Off
-            context.envelopeFollowMode = !context.envelopeFollowMode;
-            context.displayManager.displayStatus(
-                context.envelopeFollowMode ? "EF: ON" : "EF: OFF",
-                1500
-            );
-            break;
+    case 0:
+        // Short Press (Control Button #0): Toggle EF On/Off
+        context.envelopeFollowMode = !context.envelopeFollowMode;
+        context.displayManager.displayStatus(context.envelopeFollowMode ? "EF: ON" : "EF: OFF",
+                                             1500);
+        break;
 
-        case 1: {
-            // Short Press (Control Button #1): Select next slot
-            context.activePot = (context.activePot + 1) % NUM_POTS;
-            context.displayManager.displayStatus(
-                ("Next Slot=" + String(context.activePot)).c_str(), 1500);
+    case 1: {
+        // Short Press (Control Button #1): Select next slot
+        context.activePot = (context.activePot + 1) % NUM_POTS;
+        context.displayManager.displayStatus(("Next Slot=" + String(context.activePot)).c_str(),
+                                             1500);
+    } break;
+
+    case 2: {
+        // Short Press (Control Button #2): Cycle Envelope to follow [if EF on]
+        if (!context.envelopeFollowMode) {
+            context.displayManager.displayStatus("EF is OFF", 1000);
+            break;
         }
-            break;
 
-        case 2: {
-            // Short Press (Control Button #2): Cycle Envelope to follow [if EF on]
-            if (!context.envelopeFollowMode) {
-                context.displayManager.displayStatus("EF is OFF", 1000);
-                break;
-            }
+        // If EF is on, cycle to the next EF for the active slot
+        auto it = context.potToEnvelopeMap.find(context.activePot);
+        if (it == context.potToEnvelopeMap.end()) {
+            // not assigned yet => assign EF0
+            context.potToEnvelopeMap[context.activePot] = 0;
+        } else {
+            int currentEF = it->second;
+            int nextEF = (currentEF + 1) % context.envelopes.size();
+            it->second = nextEF;
+        }
+        int assigned = context.potToEnvelopeMap[context.activePot];
+        context.envelopes[assigned].toggleActive(true);
 
-            // If EF is on, cycle to the next EF for the active slot
-            auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
-                // not assigned yet => assign EF0
-                context.potToEnvelopeMap[context.activePot] = 0;
-            } else {
-                int currentEF = it->second;
-                int nextEF = (currentEF + 1) % context.envelopes.size();
-                it->second = nextEF;
-            }
-            int assigned = context.potToEnvelopeMap[context.activePot];
-            context.envelopes[assigned].toggleActive(true);
+        char buf[32];
+        sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
+        context.displayManager.displayStatus(buf, 1500);
+    } break;
 
+    case 3: {
+        // Short Press (Control Button #3): Cycle the active slot’s MIDI channel 1..16
+        uint8_t oldChan = context.configManager.getPotChannel(context.activePot);
+        uint8_t newChan = (oldChan % 16) + 1; // cycles 1..16
+        context.configManager.setPotChannel(context.activePot, newChan);
+
+        char buf[32];
+        sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
+        context.displayManager.displayStatus(buf, 1500);
+    } break;
+
+    case 4: {
+        // Short Press (Control Button #4): Cycle the active slot’s registry number
+        MIDIMessageType type = context.configManager.getSlotType(context.activePot);
+        if (type == MIDIMessageType::NRPN || type == MIDIMessageType::RPN) {
+            uint8_t param = context.configManager.getSlotData1(context.activePot);
+            param = (param + 1) % 128;
+            context.configManager.setSlotData1(context.activePot, param);
             char buf[32];
-            sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
+            sprintf(buf, "Slot %d => %s %d", context.activePot,
+                    type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
+            context.displayManager.displayStatus(buf, 1500);
+        } else {
+            uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
+            uint8_t newCC = (oldCC + 1) % 128; // 0..127
+            context.configManager.setPotCCNumber(context.activePot, newCC);
+            char buf[32];
+            sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
             context.displayManager.displayStatus(buf, 1500);
         }
-        break;
+    } break;
 
-        case 3: {
-            // Short Press (Control Button #3): Cycle the active slot’s MIDI channel 1..16
-            uint8_t oldChan = context.configManager.getPotChannel(context.activePot);
-            uint8_t newChan = (oldChan % 16) + 1;  // cycles 1..16
-            context.configManager.setPotChannel(context.activePot, newChan);
-
+    case 5: {
+        // Short Press (Control Button #5): Tapped BPM
+        static unsigned long lastTap = 0;
+        unsigned long now = ::now();
+        if (lastTap != 0) {
+            float intervalMs = (float)(now - lastTap);
+            float newBPM = 60000.0f / intervalMs;
             char buf[32];
-            sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
+            snprintf(buf, sizeof(buf), "Tapped BPM=%.1f", newBPM);
             context.displayManager.displayStatus(buf, 1500);
         }
-        break;
+        lastTap = now;
+    } break;
 
-        case 4: {
-            // Short Press (Control Button #4): Cycle the active slot’s registry number
-            MIDIMessageType type = context.configManager.getSlotType(context.activePot);
-            if (type == MIDIMessageType::NRPN || type == MIDIMessageType::RPN) {
-                uint8_t param = context.configManager.getSlotData1(context.activePot);
-                param = (param + 1) % 128;
-                context.configManager.setSlotData1(context.activePot, param);
-                char buf[32];
-                sprintf(buf, "Slot %d => %s %d", context.activePot,
-                        type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
-                context.displayManager.displayStatus(buf, 1500);
-            } else {
-                uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
-                uint8_t newCC = (oldCC + 1) % 128; // 0..127
-                context.configManager.setPotCCNumber(context.activePot, newCC);
-                char buf[32];
-                sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
-                context.displayManager.displayStatus(buf, 1500);
-            }
-        }
+    default:
+        context.displayManager.displayStatus("UNKNOWN CTRL BTN", 1000);
         break;
-
-        case 5: {
-            // Short Press (Control Button #5): Tapped BPM
-            static unsigned long lastTap = 0;
-            unsigned long now = ::now();
-            if (lastTap != 0) {
-                float intervalMs = (float)(now - lastTap);
-                float newBPM = 60000.0f / intervalMs;
-                char buf[32];
-                snprintf(buf, sizeof(buf), "Tapped BPM=%.1f", newBPM);
-                context.displayManager.displayStatus(buf, 1500);
-            }
-            lastTap = now;
-        }
-        break;
-
-        default:
-            context.displayManager.displayStatus("UNKNOWN CTRL BTN", 1000);
-            break;
     }
 }
 
-void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext& context) {
+void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext &context) {
     // Define bit masks for the control buttons
     const uint8_t maskCtrl0 = 1 << 0;
     const uint8_t maskCtrl1 = 1 << 1;
@@ -617,9 +589,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl5 = 1 << 5;
 
     // (0) Ctrl0 + Ctrl1 + Ctrl2: toggle USB MIDI output
-    if ((pressedButtons & (maskCtrl0 | maskCtrl1 | maskCtrl2)) == (maskCtrl0 | maskCtrl1 | maskCtrl2)) {
+    if ((pressedButtons & (maskCtrl0 | maskCtrl1 | maskCtrl2)) ==
+        (maskCtrl0 | maskCtrl1 | maskCtrl2)) {
         g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
-        context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF", 1500);
+        context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF",
+                                             1500);
     }
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
@@ -636,15 +610,14 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         }
         // Cycle through ARG methods (using similar logic as before)
         static EnvelopeFollower::ARG_Method ALL_METHODS[] = {
-            EnvelopeFollower::PLUS, EnvelopeFollower::MIN,
-            EnvelopeFollower::PECK, EnvelopeFollower::SHAV,
-            EnvelopeFollower::SQAR, EnvelopeFollower::BABS,
-            EnvelopeFollower::TABS
-        };
-        static const char* NAMES[] = {"PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"};
-        static int argMethodPos[6] = {0,0,0,0,0,0};
+            EnvelopeFollower::PLUS, EnvelopeFollower::MIN,  EnvelopeFollower::PECK,
+            EnvelopeFollower::SHAV, EnvelopeFollower::SQAR, EnvelopeFollower::BABS,
+            EnvelopeFollower::TABS};
+        static const char *NAMES[] = {"PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"};
+        static int argMethodPos[6] = {0, 0, 0, 0, 0, 0};
 
-        argMethodPos[efIndex] = (argMethodPos[efIndex] + 1) % (sizeof(ALL_METHODS)/sizeof(ALL_METHODS[0]));
+        argMethodPos[efIndex] =
+            (argMethodPos[efIndex] + 1) % (sizeof(ALL_METHODS) / sizeof(ALL_METHODS[0]));
         env.setARGMethod(ALL_METHODS[argMethodPos[efIndex]]);
         char msg[32];
         sprintf(msg, "EF %d=>%s", efIndex, NAMES[argMethodPos[efIndex]]);
@@ -736,14 +709,21 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.envelopes[efIndex].setEnvelopePair(envA, envB);
         context.configManager.setEnvelopePair(envA, envB);
         auto pinName = [](int pin) {
-            switch(pin) {
-                case A0: return "A0";
-                case A1: return "A1";
-                case A2: return "A2";
-                case A3: return "A3";
-                case A6: return "A6";
-                case A7: return "A7";
-                default: return "Ax";
+            switch (pin) {
+            case A0:
+                return "A0";
+            case A1:
+                return "A1";
+            case A2:
+                return "A2";
+            case A3:
+                return "A3";
+            case A6:
+                return "A6";
+            case A7:
+                return "A7";
+            default:
+                return "Ax";
             }
         };
         char buf[32];
@@ -784,7 +764,8 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     // (15) Ctrl1 + Ctrl2: Toggle MIDI clock output
     else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
         g_clockOutEnabled = !g_clockOutEnabled;
-        context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF", 1000);
+        context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF",
+                                             1000);
     }
 }
 
@@ -793,7 +774,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
  * Caches the most recently scanned row so repeated calls within the
  * same row do not trigger additional ADC reads.
  */
-uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
+uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
     static uint8_t lastRow = 0xFF;
     static uint8_t rowValues[BUTTON_COLS] = {0};
 
@@ -825,7 +806,7 @@ bool ButtonManager::readControlButton(uint8_t buttonIndex) {
     return (digitalRead(_controlPins[buttonIndex]) == LOW);
 }
 
-void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
+void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     unsigned long now = ::now();
     for (uint8_t ch = 6; ch < 12; ++ch) {
         selectMux(0, ch);
@@ -833,9 +814,9 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
         int val = analogRead(_cfg.buttonMuxAnalogPin);
         bool pressed = (val < BUTTON_PRESS_THRESHOLD);
         uint8_t idx = ch - 6;
-        bool stable = Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + idx], pressed,
-                                        lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now,
-                                        DEBOUNCE_DELAY);
+        bool stable =
+            Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + idx], pressed,
+                              lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now, DEBOUNCE_DELAY);
         if (stable) {
             updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
         }
@@ -865,7 +846,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
     }
 }
 
-void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext& context) {
+void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext &context) {
     updateButtonStateMachine(NUM_VIRTUAL_BUTTONS + index, pressed, context);
 }
 
@@ -874,6 +855,6 @@ void ButtonManager::selectMux(uint8_t row, uint8_t col) {
     setMuxFast(_cfg.muxcPins, col);
 }
 
-bool ButtonManager::isMuxButtonPressed(uint8_t index) {
-    return readMuxButton(index) == LOW;  // assuming LOW means pressed
+bool ButtonManager::isMuxButtonPressed(uint8_t index) const {
+    return readMuxButton(index) == LOW; // assuming LOW means pressed
 }

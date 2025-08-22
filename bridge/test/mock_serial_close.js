@@ -19,7 +19,9 @@ class FakeSerialPort extends EventEmitter {
     });
   }
   write() {}
-  pipe() { return new PassThrough(); }
+  pipe() {
+    return new PassThrough();
+  }
 }
 
 // Replace serialport with our minimal troublemaker.
@@ -28,4 +30,3 @@ require.cache[require.resolve('serialport')].exports = {
   SerialPort: FakeSerialPort,
   ReadlineParser,
 };
-

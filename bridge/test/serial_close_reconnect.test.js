@@ -8,10 +8,18 @@ const script = path.join(__dirname, '..', 'mn42_bridge.js');
 const serialMock = path.join(__dirname, 'mock_serial_close.js');
 const jzzMock = path.join(__dirname, 'mock_jzz.js');
 
-const child = spawn(process.execPath, ['-r', serialMock, '-r', jzzMock, script, '--serial', '/dev/fake']);
+const child = spawn(process.execPath, [
+  '-r',
+  serialMock,
+  '-r',
+  jzzMock,
+  script,
+  '--serial',
+  '/dev/fake',
+]);
 
 let reopened = false;
-child.stdout.on('data', data => {
+child.stdout.on('data', (data) => {
   if (data.toString().includes('reopen')) {
     reopened = true;
     child.kill();
@@ -23,7 +31,7 @@ child.once('exit', () => {
   console.log('serial close triggers a reopen—punk rock resilience');
 });
 
-child.once('error', err => {
+child.once('error', (err) => {
   console.error(err.message || err);
   process.exit(1);
 });
@@ -34,4 +42,3 @@ setTimeout(() => {
     child.kill();
   }
 }, 1500);
-

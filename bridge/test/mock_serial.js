@@ -12,5 +12,5 @@ require.cache[require.resolve('serialport')].exports = {
 SerialPortMock.binding.createPort('/dev/fake', {
   echo: false,
   record: false,
-  readyData: '{"hello":"mn42"}\n{"slots":[1,2,3]}\n'
+  readyData: '{"hello":"mn42"}\n{"slots":[1,2,3]}\n',
 });

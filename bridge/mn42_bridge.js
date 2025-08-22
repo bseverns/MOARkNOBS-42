@@ -5,8 +5,10 @@
 
 function usage() {
   // Show a tiny help banner for the command-line crowd.
-  console.log(`mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n` +
-    `Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--bind ADDR] [--midi LABEL]`);
+  console.log(
+    `mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n` +
+      `Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--bind ADDR] [--midi LABEL]`,
+  );
 }
 
 function getArg(flag, def) {
@@ -37,10 +39,14 @@ async function main() {
   // Fire up an OSC UDP port. Keep the local port fixed and aim outgoing
   // packets at whatever --osc points to.
   const udp = new osc.UDPPort({ localAddress: oscBind, localPort: 9000 });
-  udp.on('error', err => {
+  udp.on('error', (err) => {
     // If the socket coughs, log it, slam it shut, and try again in a sec.
     console.error('udp error:', err.message);
-    try { udp.close(); } catch {}
+    try {
+      udp.close();
+    } catch (err) {
+      void err;
+    }
     setTimeout(() => udp.open(), 1000);
   });
   udp.open();
@@ -49,20 +55,35 @@ async function main() {
   const serial = new SerialPort({ path: serialName, baudRate: 31250 });
   const parser = serial.pipe(new ReadlineParser({ delimiter: '\n' }));
   serial.on('open', () => serial.write('HELLO\n'));
-  serial.on('error', err => {
+  serial.on('error', (err) => {
     // Serial trouble? Whine, then poke it again after a beat.
     console.error('serial error:', err.message);
-    setTimeout(() => serial.open(e => e && console.error('serial reconnect failed:', e.message)), 1000);
+    setTimeout(
+      () =>
+        serial.open(
+          (e) => e && console.error('serial reconnect failed:', e.message),
+        ),
+      1000,
+    );
   });
   serial.on('close', () => {
     // Cable yanked? Grumble and try to crawl back after a tick.
     console.error('serial disconnected');
-    setTimeout(() => serial.open(e => e && console.error('serial reconnect failed:', e.message)), 1000);
+    setTimeout(
+      () =>
+        serial.open(
+          (e) => e && console.error('serial reconnect failed:', e.message),
+        ),
+      1000,
+    );
   });
 
   // Validate inbound commands before we spew them back out.
-  const validCmd = m => m && typeof m.cmd === 'string' &&
-    typeof m.slot === 'number' && typeof m.value === 'number';
+  const validCmd = (m) =>
+    m &&
+    typeof m.cmd === 'string' &&
+    typeof m.slot === 'number' &&
+    typeof m.value === 'number';
 
   // MIDI setup lives in a reconnect loop because ports come and go.
   const midi = JZZ();
@@ -74,7 +95,7 @@ async function main() {
       setTimeout(connectMidi, 1000);
     });
     if (midiOut && typeof midiOut.on === 'function') {
-      midiOut.on('error', err => {
+      midiOut.on('error', (err) => {
         // If the port dies mid-set, complain and retry.
         console.error('MIDI out error:', err.message);
         setTimeout(connectMidi, 1000);
@@ -86,28 +107,33 @@ async function main() {
       setTimeout(connectMidi, 1000);
     });
     if (midiIn && typeof midiIn.on === 'function') {
-      midiIn.on('error', err => {
+      midiIn.on('error', (err) => {
         console.error('MIDI in error:', err.message);
         setTimeout(connectMidi, 1000);
       });
     }
     // Pipe incoming MIDI CCs back to the hardware.
-    midiIn && midiIn.connect(msg => {
-      const arr = msg.toArray();
-      if ((arr[0] & 0xF0) === 0xB0) {
-        const cmd = { cmd: 'SET_POT', slot: arr[1], value: arr[2] };
-        serial.write(JSON.stringify(cmd) + '\n');
-      }
-    });
+    midiIn &&
+      midiIn.connect((msg) => {
+        const arr = msg.toArray();
+        if ((arr[0] & 0xf0) === 0xb0) {
+          const cmd = { cmd: 'SET_POT', slot: arr[1], value: arr[2] };
+          serial.write(JSON.stringify(cmd) + '\n');
+        }
+      });
   }
   connectMidi();
 
   // Listen for OSC commands coming in hot.
-  udp.on('message', msg => {
+  udp.on('message', (msg) => {
     if (msg.address === '/mn42/cmd' && msg.args.length) {
       let data = msg.args[0];
       if (typeof data === 'string') {
-        try { data = JSON.parse(data); } catch { return; }
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
       }
       if (validCmd(data)) serial.write(JSON.stringify(data) + '\n');
     }
@@ -115,27 +141,35 @@ async function main() {
 
   // Relay serial reports back out over OSC and MIDI.
   let ready = false;
-  parser.on('data', line => {
+  parser.on('data', (line) => {
     line = line.trim();
     if (!ready) {
       if (line === '{"hello":"mn42"}') ready = true;
       return;
     }
     let data;
-    try { data = JSON.parse(line); } catch { return; }
+    try {
+      data = JSON.parse(line);
+    } catch {
+      return;
+    }
     if (data.slots) {
       udp.send({ address: '/mn42/slots', args: data.slots }, oscBind, oscPort);
-      midiOut && data.slots.forEach((v, i) => midiOut.send([0xB0, i, v]));
+      midiOut && data.slots.forEach((v, i) => midiOut.send([0xb0, i, v]));
     }
     if (data.envelopes) {
-      udp.send({ address: '/mn42/envelopes', args: data.envelopes }, oscBind, oscPort);
-      midiOut && data.envelopes.forEach((v, i) => midiOut.send([0xB1, i, v]));
+      udp.send(
+        { address: '/mn42/envelopes', args: data.envelopes },
+        oscBind,
+        oscPort,
+      );
+      midiOut && data.envelopes.forEach((v, i) => midiOut.send([0xb1, i, v]));
     }
   });
 }
 
 // Top-level catch: if all else fails, crash loud.
-main().catch(err => {
+main().catch((err) => {
   console.error('bridge failed:', err.message);
   process.exit(1);
 });

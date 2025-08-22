@@ -8,7 +8,12 @@
     "lint": "npx eslint .",
     "format": "npx prettier --write ."
   },
-  "keywords": ["mn42","bridge","osc","midi"],
+  "keywords": [
+    "mn42",
+    "bridge",
+    "osc",
+    "midi"
+  ],
   "author": "BSSS project team",
   "license": "MIT",
   "type": "commonjs",
