@@ -28,11 +28,10 @@
 // so pins roll in knowing their destiny.
 struct HardwareConfigInitializer { HardwareConfigInitializer() { loadHardwareConfig(); } } _hwInit;
 
-// Tracks which eighth-note slot of the incoming MIDI clock we're riding (0-7)
-uint8_t midiBeatPosition = 0;
-char serialBuffer[SERIAL_BUFFER_SIZE];
-uint8_t serialBufferIndex = 0;
-bool webSerialStreaming = false;            // True once the browser says HELLO
+uint8_t midiBeatPosition = 0;               // 0-7 beat slot; bumps each MIDI clock tick then wraps on the 8th
+char serialBuffer[SERIAL_BUFFER_SIZE];      // Holding pen where serial graffiti waits for judgement
+uint8_t serialBufferIndex = 0;              // Cursor into serialBuffer; resets on newline or when it overflows
+bool webSerialStreaming = false;            // Goes true when the browser hollers HELLO and stays that way
 
 // Global objects
 std::vector<uint8_t> potChannels;             // 42-slot table: each entry stores a slot's MIDI CC value
