@@ -18,7 +18,7 @@ The tests hijack modules so you don't need the real controller dangling off USB:
 
 - `mock_serial.js` spins up `SerialPortMock` with a canned handshake and a few slot values. Use it when you want serial JSON to spill over into OSC without touching hardware.
 - `mock_serial_close.js` fakes a flaky cable by dropping the port once and shouting whenever the bridge claws its way back. Perfect for verifying reconnect logic.
-- Some tests stub out `JZZ` and patch `SerialPortMock` directly so MIDI echoes stay indoors where we can snoop on them.
+- `mock_jzz.js` muzzles the `jzz` MIDI driver so ALSA stays quiet and tests don't go spelunking for hardware.
 
 ## Rolling your own serial saga
 

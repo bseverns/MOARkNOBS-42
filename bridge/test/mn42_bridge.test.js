@@ -6,7 +6,8 @@ const path = require('node:path');
 // prove the argument parser even boots. If the bridge can't explain itself on
 // demand, something's deeply wrong.
 const script = path.join(__dirname, '..', 'mn42_bridge.js');
-const result = spawnSync(process.execPath, [script, '--help'], { encoding: 'utf8' }); // snag stdout/stderr for inspection
+const mock = path.join(__dirname, 'mock_jzz.js');
+const result = spawnSync(process.execPath, ['-r', mock, script, '--help'], { encoding: 'utf8' }); // snag stdout/stderr for inspection
 
 // It should exit gracefully and spit out a usage banner. Anything else means
 // the CLI wiring is busted.

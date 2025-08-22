@@ -5,9 +5,10 @@ const path = require('node:path');
 // Boot the bridge with a sketchy serial mock that drops the line, then make
 // sure it claws its way back by reopening the port.
 const script = path.join(__dirname, '..', 'mn42_bridge.js');
-const mock = path.join(__dirname, 'mock_serial_close.js');
+const serialMock = path.join(__dirname, 'mock_serial_close.js');
+const jzzMock = path.join(__dirname, 'mock_jzz.js');
 
-const child = spawn(process.execPath, ['-r', mock, script, '--serial', '/dev/fake']);
+const child = spawn(process.execPath, ['-r', serialMock, '-r', jzzMock, script, '--serial', '/dev/fake']);
 
 let reopened = false;
 child.stdout.on('data', data => {
