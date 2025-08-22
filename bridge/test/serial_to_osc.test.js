@@ -17,7 +17,7 @@ async function run() {
 
   const script = path.join(__dirname, '..', 'mn42_bridge.js');
   const mock = path.join(__dirname, 'mock_serial.js');
-  const child = spawn(process.execPath, ['-r', mock, script, '--serial', '/dev/fake', '--osc', '9700']);
+  const child = spawn(process.execPath, ['-r', mock, script, '--serial', '/dev/fake', '--osc', String(listenPort)]);
 
   // Wait for the bridge to spit out an OSC packet or time out.
   await new Promise((resolve, reject) => {
