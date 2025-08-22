@@ -119,12 +119,27 @@ void processMIDI() {
     }
 }
 
-// Punk-rock switchboard for WebSerial commands.
-// Slurps newline-terminated strings from USB, queues them up,
-// and fires back config tweaks or status reports.
-// Key riffs: HELLO, GET_SCHEMA, GET_BROWNOUTS, SET_POT, SET_ALL,
-// GET_ALL, GET_LED, SET_LED, GET_ARGMETHOD, SET_ARGMETHOD, GET_EF, SET_EF.
-// Full command manifesto lives in docs/WebSerial.md.
+
+/*
+ * Serial command rodeo — every lasso ends with a newline:
+ *   HELLO                             : kick off WebSerial streaming
+ *   GET_SCHEMA                        : cough up the config schema
+ *   GET_BROWNOUTS                     : report how many times power sagged
+ *   SET_POT,<slot>,<chan>,<cc>        : bind slot to MIDI channel+CC
+ *   SET_ALL,<payload>                 : blast a JSON blob or bulk slot dump
+ *   GET_ALL                           : dump every slot and LED setting
+ *   GET_LED                           : spit back brightness,r,g,b
+ *   SET_LED,<bri>,<r>,<g>,<b>         : 0‑255 each, paints the strip
+ *   GET_ARGMETHOD                     : report current ARG blend
+ *   SET_ARGMETHOD,<n>                 : n=0‑6 picks the blend
+ *   GET_EF,<slot>                     : who’s modding that slot (‑1 means none)
+ *   SET_EF,<slot>,<ef>                : patch an envelope follower
+ *   CAL_ENVS                          : recalibrate all envelope spies
+ *   GET_FILTER                        : reply with type,freq,q for EF filter
+ *   SET_FILTER,<type>,<freq>,<q>      : stash envelope filter settings
+ *   GET_ARGPAIR                       : echo ARG pair enable,envA,envB
+ *   SET_ARGPAIR,<on>,<envA>,<envB>    : wire two envelopes together
+ */
 void processSerial() {
     while (Serial.available()) {
         char received = Serial.read();
