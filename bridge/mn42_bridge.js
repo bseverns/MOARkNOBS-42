@@ -53,6 +53,11 @@ async function main() {
     console.error('serial error:', err.message);
     setTimeout(() => serial.open(e => e && console.error('serial reconnect failed:', e.message)), 1000);
   });
+  serial.on('close', () => {
+    // Cable yanked? Grumble and try to crawl back after a tick.
+    console.error('serial disconnected');
+    setTimeout(() => serial.open(e => e && console.error('serial reconnect failed:', e.message)), 1000);
+  });
 
   // Validate inbound commands before we spew them back out.
   const validCmd = m => m && typeof m.cmd === 'string' &&
