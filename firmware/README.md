@@ -363,6 +363,10 @@ Once you're in ARG mode:
 * Each time, it pairs a new (A, B) set and assigns them to the active EF
 * The OLED will display the current pairing: `EF 1: A3/B0`
 
+> Nerd note: the firmware builds that list at compile time by iterating the six
+> analog pins and shoving every unique `(A,B)` combo into a constexpr array.
+> Tweak the pin lineup and the pairs follow—no hand-edited tables, no drift.
+
 This allows reactive modulation—i.e., *side-chaining*, *comparative analysis*, or *musical sabotage*—by letting one signal influence another.
 
 ### Pro Tips
