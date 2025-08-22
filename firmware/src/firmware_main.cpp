@@ -116,6 +116,12 @@ void processMIDI() {
     }
 }
 
+// Punk-rock switchboard for WebSerial commands.
+// Slurps newline-terminated strings from USB, queues them up,
+// and fires back config tweaks or status reports.
+// Key riffs: HELLO, GET_SCHEMA, GET_BROWNOUTS, SET_POT, SET_ALL,
+// GET_ALL, GET_LED, SET_LED, GET_ARGMETHOD, SET_ARGMETHOD, GET_EF, SET_EF.
+// Full command manifesto lives in docs/WebSerial.md.
 void processSerial() {
     while (Serial.available()) {
         char received = Serial.read();
