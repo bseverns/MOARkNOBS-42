@@ -264,6 +264,11 @@ void processSerial() {
         } else if (command == "GET_ARGMETHOD") {
             LOG_PRINTLN(configManager.getARGMethod());
         } else if (command.startsWith("SET_ARGMETHOD")) {
+            // SET_ARGMETHOD <method>
+            // method: 0-6 mapping to EnvelopeFollower::ARG_Method; see
+            // firmware/include/EnvelopeFollower/README.md#L64-L79 for the math.
+            // Side effects: blasts method into every follower and burns it into
+            // EEPROM via ConfigManager.
             int method = command.substring(14).toInt();
             if (method >= 0 && method <= 6) {
                 for (auto &ef : envelopeFollowers) {
@@ -272,9 +277,14 @@ void processSerial() {
                 configManager.setARGMethod(method);
                 LOG_PRINTLN("OK");
             } else {
+                // out-of-range method? we spit ERR
                 LOG_PRINTLN("ERR");
             }
         } else if (command.startsWith("GET_EF")) {
+            // GET_EF <slot>
+            // slot: 0..NUM_POTS-1. Reports which envelope (or -1) owns it.
+            // See firmware/README.md#L730-L744 or docs/WebSerial.md#L60-L72 for
+            // the whole WebSerial spiel.
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
                 int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
@@ -284,9 +294,15 @@ void processSerial() {
                 (void)env;
 #endif
             } else {
+                // bogus slot index
                 LOG_PRINTLN("ERR");
             }
         } else if (command.startsWith("SET_EF")) {
+            // SET_EF <slot,env>
+            // slot: 0..NUM_POTS-1, env: 0..envelopeFollowers.size()-1
+            // Side effects: maps slot to follower, flips it active, and
+            // saves mapping/baseline to EEPROM. See firmware/README.md#L730-L744
+            // and firmware/include/EnvelopeFollower/README.md for EF guts.
             int comma = command.indexOf(',');
             if (comma == -1) {
                 LOG_PRINTLN("ERR");
@@ -300,6 +316,7 @@ void processSerial() {
                     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
                     LOG_PRINTLN("OK");
                 } else {
+                    // numbers don't line up? it's an ERR
                     LOG_PRINTLN("ERR");
                 }
             }
