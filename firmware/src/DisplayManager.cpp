@@ -9,6 +9,7 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include "ButtonManager.h"
+#include "MIDIHandler.h"
 #include <vector>
 #include "Globals.h"
 
@@ -415,6 +416,47 @@ void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel)
     _display.println(channel);
     _display.display();
     _statusTimeout = now() + SHORT_DISPLAY_TIME;
+}
+
+void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager& bm, const ButtonManagerContext& ctx, const MIDIHandler& midi) {
+    _display.clearDisplay();
+    _display.setTextSize(1);
+    _display.setTextColor(SSD1306_COLOR_WHITE);
+
+    switch (page % 3) {
+        case 0: { // Button matrix snapshot
+            _display.setCursor(0, 0);
+            for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
+                for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
+                    uint8_t idx = r * BUTTON_COLS + c;
+                    _display.print(bm.isMuxButtonPressed(idx) ? '1' : '0');
+                }
+                _display.println();
+            }
+            break;
+        }
+        case 1: { // Envelope baselines
+            for (uint8_t i = 0; i < ctx.envelopes.size() && i < 6; ++i) {
+                _display.setCursor(0, i * 10);
+                _display.print("EF");
+                _display.print(i);
+                _display.print(':');
+                _display.println(ctx.envelopes[i].getBaseline(), 2);
+            }
+            break;
+        }
+        case 2: { // MIDI counters
+            _display.setCursor(0, 0);
+            _display.print("RX:");
+            _display.println(midi.getRxCount());
+            _display.setCursor(0, 10);
+            _display.print("TX:");
+            _display.println(midi.getTxCount());
+            break;
+        }
+    }
+    drawBorder();
+    _display.display();
 }
 
 void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {

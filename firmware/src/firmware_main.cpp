@@ -73,6 +73,8 @@ bool envelopeFollowMode = false;          // True when EFs are allowed to hijack
 const char* envelopeMode = "LINEAR";      // Default envelope mode
 int NORMAL_DISPLAY_TIME = 30000;          // ms duration for full-size messages
 int SHORT_DISPLAY_TIME = 10000;           // ms duration for terse status flashes
+bool diagnosticMode = false;             // Self-test mode flag
+uint8_t diagnosticPage = 0;              // Active diagnostic page
 
 // Timers for processing
 unsigned long lastMIDIProcess = 0;
@@ -92,7 +94,9 @@ ButtonManagerContext buttonContext = {
     ledManager,
     displayManager,
     envelopeFollowers,
-    potToEnvelopeMap
+    potToEnvelopeMap,
+    diagnosticMode,
+    diagnosticPage
 };
 
 void processMIDI() {
@@ -705,7 +709,11 @@ void setup() {
     }, hwConfig.ledTaskInterval);
 
     Utility::schedulerLow.addTask([](){
-      if (!displayManager.shouldRunScreensaver()) {
+      if (diagnosticMode) {
+        displayManager.beginDraw();
+        displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext, midiHandler);
+        displayManager.endDraw();
+      } else if (!displayManager.shouldRunScreensaver()) {
         displayManager.beginDraw();
         displayManager.updateFromContext(buttonContext);
         auto it = potToEnvelopeMap.find(buttonContext.activePot);

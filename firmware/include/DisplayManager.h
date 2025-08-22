@@ -11,6 +11,8 @@
 #include "Globals.h"    // for OLED_WIDTH, OLED_HEIGHT
 
 struct ButtonManagerContext;
+class ButtonManager;
+class MIDIHandler;
 
 /*
  * Animation & Timing 101
@@ -128,6 +130,9 @@ public:
 
   /** Display a human readable representation of a MIDI message. */
   void showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel);
+
+  /** Show diagnostics pages when the box is in self-test mode. */
+  void showDiagnostic(uint8_t page, const ButtonManager& bm, const ButtonManagerContext& ctx, const MIDIHandler& midi);
 
   /** Update the beat indicator or show "--" when clock is stopped. */
   void updateBeat(uint8_t beatPosition, bool clockRunning);

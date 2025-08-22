@@ -216,7 +216,9 @@ Each control button can do several things depending on how you hit it. Long pres
 | Ctrl2  | Cycle EF assignment | Toggle Slot Active            | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
 | Ctrl3  | Cycle MIDI Channel  | Reset EEPROM                  | —                       |
 | Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                   | —                       |
-| Ctrl5  | Tap BPM             | —                             | —                       |
+| Ctrl5  | Tap BPM             | Enter/Exit Diagnostics        | —                       |
+
+Long-hold **Ctrl5** and you drop into our scrappy diagnostic pit. That fourth-from-last LED starts a slow pulse so you know you’re off the beaten path. While you're in there, a long press on **Ctrl1** flips through pages: first the button matrix, then EF baselines, then raw MIDI RX/TX counts. Another long squeeze on **Ctrl5** ejects you back to normal jam mode.
 
 **Slot Buttons (0–41):**
 - **Short Press:** Pick the slot you want to mangle.

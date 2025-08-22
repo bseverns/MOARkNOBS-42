@@ -200,6 +200,13 @@ void LEDManager::update() {
         markDirty(CONTROL_LED_INDEX());
     }
 
+    if (diagnosticMode && leds.size() >= 4) {
+        uint8_t idx = leds.size() - 4;
+        uint8_t b = sin8((now() - diagStart) >> 2);
+        leds[idx] = CRGB(b, b, b);
+        markDirty(idx);
+    }
+
     switch (currentState) {
         case LEDState::ACTIVE_POT:
             if (activeIndex < leds.size()) leds[activeIndex] = CRGB::Red;
@@ -235,5 +242,15 @@ void LEDManager::blinkStatusLED(uint8_t times, uint16_t delayMs) {
         delay(delayMs);
         setStatusLED(false);
         delay(delayMs);
+    }
+}
+
+void LEDManager::setDiagnosticMode(bool enabled) {
+    diagnosticMode = enabled;
+    diagStart = now();
+    if (!enabled && leds.size() >= 4) {
+        leds[leds.size() - 4] = CRGB::Black;
+        markDirty(leds.size() - 4);
+        FastLED.show();
     }
 }

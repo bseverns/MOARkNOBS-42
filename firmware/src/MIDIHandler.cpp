@@ -37,6 +37,7 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
     // Validate before sending
     if (control > 127 || value > 127 || channel < 1 || channel > 16)
         return;
+    _txCount++;
     MIDI.sendControlChange(control, value, channel);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
@@ -48,6 +49,7 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
 void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
+    _txCount++;
     MIDI.sendNoteOn(note, velocity, channel);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
@@ -59,6 +61,7 @@ void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
 void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
+    _txCount++;
     MIDI.sendNoteOff(note, velocity, channel);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
@@ -70,6 +73,7 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
 void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     if (channel < 1 || channel > 16) return;
     if (param > 16383 || value > 16383) return;
+    _txCount++;
     uint8_t pMsb = (param >> 7) & 0x7F;
     uint8_t pLsb = param & 0x7F;
     uint8_t vMsb = (value >> 7) & 0x7F;
@@ -92,6 +96,7 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
 void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
     if (channel < 1 || channel > 16) return;
     if (param > 16383 || value > 16383) return;
+    _txCount++;
     uint8_t pMsb = (param >> 7) & 0x7F;
     uint8_t pLsb = param & 0x7F;
     uint8_t vMsb = (value >> 7) & 0x7F;
@@ -113,6 +118,7 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
 
 void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
     if (!data || length == 0 || length > 1024) return;
+    _txCount++;
     MIDI.sendSysEx(length, data, true);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
@@ -206,6 +212,7 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
         MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
         return;
     }
+    _rxCount++;
     switch (type) {
         case midi::ControlChange:
             // Peek for NRPN sequences; otherwise just log the CC
@@ -321,6 +328,7 @@ void MIDIHandler::clearClockTick() {
 
 void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
   if (program>127|| channel<1||channel>16) return;
+  _txCount++;
   MIDI.sendProgramChange(program, channel);
 #ifndef USB_MIDI_STUB
   if (g_usbMidiOutEnabled) {
@@ -337,6 +345,7 @@ void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
     usbMIDI.sendAfterTouch(pressure, channel);
   }
 #endif
+  _txCount++;
 }
 
 void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
@@ -352,6 +361,7 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
     usbMIDI.sendPitchBend(bend, channel);
   }
 #endif
+  _txCount++;
 }
 
 void MIDIHandler::sendClock() {
@@ -362,6 +372,7 @@ void MIDIHandler::sendClock() {
     usbMIDI.sendClock();
   }
 #endif
+  _txCount++;
 }
 
 void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {
@@ -378,6 +389,7 @@ void MIDIHandler::receiveRPN(uint8_t channel, uint16_t param, uint16_t value) {
 
 void MIDIHandler::handleSysEx(const uint8_t* data, uint16_t length) {
     if (!data || length == 0) return;
+    _rxCount++;
     _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
     for (uint16_t i = 0; i < _lastSysExLength; ++i) {
         _lastSysEx[i] = data[i];
