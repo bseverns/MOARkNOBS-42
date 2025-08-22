@@ -24,8 +24,11 @@
 #include <map>
 #include <imxrt.h>
 
+// Boot-time hustler: slurps hardware config before setup() even blinks
+// so pins roll in knowing their destiny.
 struct HardwareConfigInitializer { HardwareConfigInitializer() { loadHardwareConfig(); } } _hwInit;
 
+// Tracks which eighth-note slot of the incoming MIDI clock we're riding (0-7)
 uint8_t midiBeatPosition = 0;
 char serialBuffer[SERIAL_BUFFER_SIZE];
 uint8_t serialBufferIndex = 0;
