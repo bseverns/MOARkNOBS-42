@@ -9,7 +9,8 @@ This folder isn't a dumping ground—it's a curated stash of third‑party code 
 | **FastLED** | Rock‑solid LED driver. Bundled to pin a known‑good version and keep our timing patches close. | https://github.com/FastLED/FastLED |
 | **Adafruit GFX** | Core graphics primitives backing the OLED driver. Vendored so SSD1306 doesn't drift. | https://github.com/adafruit/Adafruit-GFX-Library |
 | **Adafruit SSD1306** | Talks to the front‑panel display. Checked in to dodge network hiccups and let us tweak defaults. | https://github.com/adafruit/Adafruit_SSD1306 |
-| **OctoWS2811** | Teensy‑optimized DMA driver for huge LED chains. Lives here so we can smash it into FastLED when needed. | https://github.com/PaulStoffregen/OctoWS2811 |
+
+OctoWS2811 used to lurk here for ridiculous LED walls, but FastLED's built-in chops cover our strip just fine. If you need the DMA firehose, fork it back in and go wild.
 
 ## How to update a library
 
@@ -36,7 +37,6 @@ PlatformIO kept trying to sneak in its own copy anyway, so we dropped a `library
 | FastLED | MIT | Keep the copyright and that MIT license text in any binary or source distribution. |
 | Adafruit GFX | BSD‑2‑Clause | Include the copyright, conditions, and disclaimer wherever you ship the code. |
 | Adafruit SSD1306 | BSD‑3‑Clause | Same as above, plus don't use Adafruit's name to hawk your wares without permission. |
-| OctoWS2811 | MIT | Copy the license along and you're golden. |
 
 When you ship hardware, firmware, or derivatives, also bundle `THIRD_PARTY_LICENSES.md` so every author gets their shout‑out.
 

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- OctoWS2811 vendored library; FastLED handles the LEDs solo now.
+
 ## [0.2.0] - 2025-08-14
 ### Added
 - Filter tuning pots let you twist the analog guts without a screwdriver.
