@@ -7,6 +7,32 @@ This repo mashes firmware, hardware, docs, and a scrappy bridge into one place.
 The top README is intentionally barebones—poke the READMEs in each folder for
 the full scoop.
 
+## Quick Start
+
+Ready to shred? Here's the bare minimum to get the beast humming.
+
+### Dependencies
+
+- Python bits: `pip install -r requirements.txt`
+- Node 18+ for the bridge (LTS or go home)
+- PlatformIO on your PATH
+
+### Firmware build
+
+```bash
+pio run -e teensy40_main
+```
+
+### Test run
+
+```bash
+pio -d firmware test -e teensy40_unity -vvv
+npm --prefix bridge test
+```
+
+Want the deep cuts? The full chronicles live in [docs/](docs/README.md) and
+the gritty firmware lore is in [firmware/](firmware/README.md).
+
 ## Quick Map
 
 | Folder | What's in it |
