@@ -204,12 +204,17 @@ void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue
 }
 
 void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
+    // Bulk update parser. Accepts a raw line like:
+    //   SET_ALL cc,chan;cc,chan;...
+    // or a JSON twin with the same cc/channel pairs. Anything else gets tossed.
     const char* prefix = "SET_ALL ";
     if (!command.startsWith(prefix)) {
         LOG_PRINTLN("Error: Command must start with 'SET_ALL'");
         return;
     }
 
+    // 256-byte guardrail: we allocate a static buffer and refuse to mosh
+    // if the payload tries to crowd-surf past it.
     constexpr size_t MAX_CMD_LEN = 256;
     if (command.length() >= MAX_CMD_LEN) {
         LOG_PRINTLN("Error: Command too long");
@@ -222,12 +227,15 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     char* payload = cmdBuffer + strlen(prefix);
     unsigned int currentPot = 0;
 
+    // Tokenize on ';'. Each token should be "cc,chan". We parse, vet the
+    // numbers, then slam them into EEPROM two bytes per pot.
     for (char* token = strtok(payload, ";");
          token != nullptr && currentPot < static_cast<unsigned int>(numPots);
          token = strtok(nullptr, ";")) {
 
         char* comma = strchr(token, ',');
         if (!comma) {
+            // Missing comma? Busted token, bail before we scribble garbage.
             LOG_PRINTLN("Error: Malformed command");
             return;
         }
@@ -237,6 +245,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         const char* channelStr = comma + 1;
 
         if (strlen(ccStr) >= 4 || strlen(channelStr) >= 4) {
+            // We only expect up to three digits per field. Longer reeks of trouble.
             LOG_PRINTLN("Error: Value too long");
             return;
         }
@@ -245,6 +254,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         int channel = atoi(channelStr);
 
         if (ccNumber < 0 || ccNumber > 127 || channel < 1 || channel > 16) {
+            // MIDI CC range is 0–127, channel is 1–16. Stay in bounds or get ejected.
             LOG_PRINTLN("Error: Invalid CC number or channel");
             return;
         }
@@ -259,6 +269,7 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     if (currentPot == static_cast<unsigned int>(numPots)) {
         LOG_PRINTLN("Bulk update successful");
     } else {
+        // Not enough tokens to cover every pot; shout about it.
         LOG_PRINTLN("Error: Insufficient data for all pots");
     }
 }
