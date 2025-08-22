@@ -34,8 +34,9 @@ async function main() {
   const osc = require('osc');
   const JZZ = require('jzz');
 
-  // Fire up an OSC UDP port bound to the chosen address/port.
-  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: oscPort });
+  // Fire up an OSC UDP port. Keep the local port fixed and aim outgoing
+  // packets at whatever --osc points to.
+  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: 9000 });
   udp.on('error', err => {
     // If the socket coughs, log it, slam it shut, and try again in a sec.
     console.error('udp error:', err.message);
@@ -123,11 +124,11 @@ async function main() {
     let data;
     try { data = JSON.parse(line); } catch { return; }
     if (data.slots) {
-      udp.send({ address: '/mn42/slots', args: data.slots });
+      udp.send({ address: '/mn42/slots', args: data.slots }, oscBind, oscPort);
       midiOut && data.slots.forEach((v, i) => midiOut.send([0xB0, i, v]));
     }
     if (data.envelopes) {
-      udp.send({ address: '/mn42/envelopes', args: data.envelopes });
+      udp.send({ address: '/mn42/envelopes', args: data.envelopes }, oscBind, oscPort);
       midiOut && data.envelopes.forEach((v, i) => midiOut.send([0xB1, i, v]));
     }
   });
