@@ -56,6 +56,12 @@ Feeling deterministic? Swap in the lockstep version:
 npm ci
 ```
 
+## Code style
+
+Linting isn't optional—it keeps this sidecar from steering into a ditch. Use
+`npm run lint` to sniff out nonsense and `npm run format` when the code needs a
+trim. The `pre-commit` hook will bark if you forget.
+
 ## Testing vibes
 
 This repo doesn't ship with a hardware mock. To prove the script at least boots and dies gracefully when the wire's pulled:

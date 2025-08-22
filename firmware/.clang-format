@@ -1,0 +1,6 @@
+# Keep the riffs tight: clang-format rules for MN42 firmware
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 100
+SortIncludes: false
+...
