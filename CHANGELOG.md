@@ -7,11 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Removed
-- OctoWS2811 vendored library; FastLED handles the LEDs solo now.
-- Blocked the Teensy core's OctoWS2811 copy via `lib_ignore` to keep builds clean.
-
-## [0.2.0] - 2025-08-14
 ### Added
 - Filter tuning pots let you twist the analog guts without a screwdriver.
 - Arpeggiator learned to wiggle on its own, Perlin noise and all.
@@ -19,10 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NRPN/RPN/SysEx support because MIDI's dark corners are fun.
 - Start tracking changes with this log.
 - Pin map and EEPROM layout docs locked down.
+
 ### Changed
 - README now calls out firmware build steps and links the new docs.
 
-## [0.1.0] - 2025-08-06
+### Removed
+- OctoWS2811 vendored library; FastLED handles the LEDs solo now.
+- Blocked the Teensy core's OctoWS2811 copy via `lib_ignore` to keep builds clean.
+
+## [0.1.0] - TBD
 ### Added
 - First public release of MOARkNOBS-42.
 
