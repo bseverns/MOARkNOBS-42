@@ -19,7 +19,8 @@ See the big picture in the [main firmware README](../../README.md).
 
 - `initButtons()` – wire up mux pins and ready the machines.
 - `processButtons(ctx)` – poll the matrix and trigger actions.
-- `isMuxButtonPressed(idx)` – peek a raw button for tests.
+- `isMuxButtonPressed(idx)` – peek a raw button for tests; works on `const`
+  managers too.
 
 ## Typical Use
 

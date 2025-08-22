@@ -793,7 +793,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
  * Caches the most recently scanned row so repeated calls within the
  * same row do not trigger additional ADC reads.
  */
-uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
+uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
     static uint8_t lastRow = 0xFF;
     static uint8_t rowValues[BUTTON_COLS] = {0};
 
@@ -874,6 +874,6 @@ void ButtonManager::selectMux(uint8_t row, uint8_t col) {
     setMuxFast(_cfg.muxcPins, col);
 }
 
-bool ButtonManager::isMuxButtonPressed(uint8_t index) {
+bool ButtonManager::isMuxButtonPressed(uint8_t index) const {
     return readMuxButton(index) == LOW;  // assuming LOW means pressed
 }

@@ -126,9 +126,10 @@ public:
     void processButtons(ButtonManagerContext& context);
 
     /**
-     * Directly read a muxed button's state; useful for unit tests.
+     * Directly read a muxed button's state; useful for unit tests and safe to
+     * call on a const ButtonManager.
      */
-    bool isMuxButtonPressed(uint8_t index);
+    bool isMuxButtonPressed(uint8_t index) const;
 
     /**
      * Peek at the control pots and buttons without running the whole
@@ -162,7 +163,7 @@ private:
     void selectMux(uint8_t row, uint8_t col);
 
     /** Return the digital state for a multiplexed button. */
-    uint8_t readMuxButton(uint8_t buttonIndex);
+    uint8_t readMuxButton(uint8_t buttonIndex) const;
 
     /** Read a direct control button pin (legacy non-mux input). */
     bool readControlButton(uint8_t buttonIndex);
