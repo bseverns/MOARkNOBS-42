@@ -28,6 +28,11 @@ cd firmware
 pio test -e teensy40_unity
 ```
 
+If you want receipts, the run spits a raw transcript to `logs/unity-test.log`.
+Each test drops a line ending in `PASS` or `FAIL`; the file wraps with an `OK`
+summary when every test behaves. Spot a `FAIL` or some grumpy final tally and
+you've got work before you rock on.
+
 **Environment**
 
 `teensy40_unity` – Teensy 4.0 with the Unity harness. Plug the board in over USB; the tests scream back
