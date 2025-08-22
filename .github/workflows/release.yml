@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Build firmware
+        working-directory: firmware
+        env:
+          FW_VERSION: ${{ github.event.release.tag_name }}
+        run: pio run -e teensy40_main
+
+      - name: Bake sysreport
+        env:
+          FW_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          python - <<'PY'
+import json, os, subprocess, time
+fw = os.environ['FW_VERSION']
+sha = subprocess.check_output(['git','rev-parse','--short','HEAD']).decode().strip()
+info = {
+  'fw_version': fw,
+  'git_sha': sha,
+  'board': 'teensy40',
+  'mcu': 'IMXRT1062',
+  'f_cpu_hz': 600000000,
+  'build_time': time.strftime('%b %d %Y %H:%M:%S'),
+  'compiler': subprocess.check_output(['g++','--version']).decode().splitlines()[0],
+  'pio_env': 'teensy40_main',
+}
+with open('sysreport.json','w') as f:
+  json.dump(info, f)
+PY
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            firmware/.pio/build/teensy40_main/firmware.hex
+            sysreport.json

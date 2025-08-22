@@ -35,6 +35,13 @@ pio -d firmware test -e teensy40_unity -vvv
 npm --prefix bridge test
 ```
 
+### Release builds
+
+Cut a tag and publish it on GitHub and the [release workflow](.github/workflows/release.yml)
+will crank out a fresh `firmware.hex` and a `sysreport.json` ripped from
+`sys::report()`, then slap both onto the release page. Want to go DIY? Run
+`./release.sh <version>` and haul the bits yourself.
+
 Want the deep cuts? The full chronicles live in [docs/](docs/README.md) and
 the gritty firmware lore is in [firmware/](firmware/README.md).
 

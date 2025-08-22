@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Release helper: builds firmware and bundles license intel.
+# Tagging a version on GitHub kicks off `.github/workflows/release.yml`,
+# which rebuilds the hex and drops a sys report on the release page.
+# This script sticks around for local smoke-tests and offline rituals.
 #
 # Keep this script honest: the distro **must** ship the source license texts from
 # `firmware/LICENSES/` alongside `THIRD_PARTY_LICENSES.md`. Skip that and you're
@@ -36,3 +39,4 @@ cp -r "$ROOT_DIR/firmware/LICENSES" "$ROOT_DIR/$OUTPUT_DIR/"
 
 echo "Release artifacts ready in $OUTPUT_DIR/"
 ls "$ROOT_DIR/$OUTPUT_DIR"
+echo "Push a tag and let CI upload the goods to GitHub releases."
