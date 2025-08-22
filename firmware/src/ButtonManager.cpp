@@ -55,6 +55,31 @@ static int filterTypeIndexForEF[6] = {0, 0, 0, 0, 0, 0};
 // Active configuration profile stored in EEPROM
 static uint8_t currentProfile = 0;
 
+namespace {
+constexpr uint32_t MUX_SETTLE_US = 5;
+
+inline void waitForMuxSettle() {
+    uint32_t start = micros();
+    while (micros() - start < MUX_SETTLE_US) {
+        yield();
+    }
+}
+
+inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
+    static const uint8_t lut[16][4] = {
+        {0,0,0,0},{1,0,0,0},{0,1,0,0},{1,1,0,0},
+        {0,0,1,0},{1,0,1,0},{0,1,1,0},{1,1,1,0},
+        {0,0,0,1},{1,0,0,1},{0,1,0,1},{1,1,0,1},
+        {0,0,1,1},{1,0,1,1},{0,1,1,1},{1,1,1,1}
+    };
+    const uint8_t* bits = lut[index & 0x0F];
+    digitalWriteFast(selPins[0], bits[0]);
+    digitalWriteFast(selPins[1], bits[1]);
+    digitalWriteFast(selPins[2], bits[2]);
+    digitalWriteFast(selPins[3], bits[3]);
+}
+} // namespace
+
 // Constructor
 ButtonManager::ButtonManager(const HardwareConfig& config,
                              const uint8_t* controlPins,
@@ -107,15 +132,19 @@ void ButtonManager::initButtons() {
 void ButtonManager::processButtons(ButtonManagerContext& context) {
     unsigned long now = ::now();
 
+#ifdef BUTTON_MANAGER_PROFILE
+    uint32_t tStart = micros();
+#endif
+
     // Scan mux matrix row by row
     uint8_t rawStates[NUM_VIRTUAL_BUTTONS];
     for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
         digitalWrite(_cfg.rowDriverPin, HIGH);
-        setMux(_cfg.muxrPins, r);
-        delayMicroseconds(5);
+        setMuxFast(_cfg.muxrPins, r);
+        waitForMuxSettle();
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-            setMux(_cfg.muxcPins, c);
-            delayMicroseconds(5);
+            setMuxFast(_cfg.muxcPins, c);
+            waitForMuxSettle();
             int v = analogRead(_cfg.buttonMuxAnalogPin);
             rawStates[r * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
@@ -137,6 +166,22 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
 
     // Control buttons & pots via spare mux channels
     scanControlInputs(context);
+
+#ifdef BUTTON_MANAGER_PROFILE
+    uint32_t tElapsed = micros() - tStart;
+    static uint32_t maxScan = 0;
+    static uint64_t totalScan = 0;
+    static uint32_t scanCount = 0;
+    if (tElapsed > maxScan) {
+        maxScan = tElapsed;
+    }
+    totalScan += tElapsed;
+    if (++scanCount % 1000 == 0) {
+        Serial.printf("btn scan avg %luus max %luus\n",
+                      (unsigned long)(totalScan / scanCount),
+                      (unsigned long)maxScan);
+    }
+#endif
 }
 
 /**
@@ -741,11 +786,11 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
 
     if (row != lastRow) {
         digitalWrite(_cfg.rowDriverPin, HIGH);
-        setMux(_cfg.muxrPins, row);
-        delayMicroseconds(5);
+        setMuxFast(_cfg.muxrPins, row);
+        waitForMuxSettle();
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-            setMux(_cfg.muxcPins, c);
-            delayMicroseconds(5);
+            setMuxFast(_cfg.muxcPins, c);
+            waitForMuxSettle();
             int v = analogRead(_cfg.buttonMuxAnalogPin);
             rowValues[c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
@@ -768,7 +813,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
     unsigned long now = ::now();
     for (uint8_t ch = 6; ch < 12; ++ch) {
         selectMux(0, ch);
-        delayMicroseconds(5);
+        waitForMuxSettle();
         int val = analogRead(_cfg.buttonMuxAnalogPin);
         bool pressed = (val < BUTTON_PRESS_THRESHOLD);
         uint8_t idx = ch - 6;
@@ -798,7 +843,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
     for (uint8_t i = 0; i < 3; ++i) {
         uint8_t ch = 12 + i;
         selectMux(0, ch);
-        delayMicroseconds(5);
+        waitForMuxSettle();
         int val = analogRead(_cfg.buttonMuxAnalogPin);
         _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
     }
@@ -809,8 +854,8 @@ void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerC
 }
 
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
-    setMux(_cfg.muxrPins, row);
-    setMux(_cfg.muxcPins, col);
+    setMuxFast(_cfg.muxrPins, row);
+    setMuxFast(_cfg.muxcPins, col);
 }
 
 bool ButtonManager::isMuxButtonPressed(uint8_t index) {

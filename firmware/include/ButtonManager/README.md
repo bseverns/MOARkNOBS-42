@@ -39,6 +39,12 @@ void loop() {
 
 That `hwConfig` bundle wrangles mux pins, LED counts, and timing so the tests and firmware slam in sync.
 
+## Faster, non-blocking scans
+
+`ButtonManager` used to pause for raw `delayMicroseconds()` calls every time it poked the mux. That was lazy. Now a tiny `waitForMuxSettle()` helper watches `micros()` and yields while the CD74HC4067 settles. The main loop keeps breathing and we still catch every click.
+
+Mux select lines get smashed via a pre-baked lookup table and `digitalWriteFast()`, ditching the bit‑twiddling on every pass. Flip `BUTTON_MANAGER_PROFILE` in the build and you'll get Serial spam with average and max scan times—handy to prove we're not dropping states while chasing speed.
+
 Dig deeper in [ButtonManager.h](../ButtonManager.h).
 
 ## Button Map
