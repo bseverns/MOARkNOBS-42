@@ -4,23 +4,23 @@
 #include "WebSerial.h"
 #include "Utility.h"
 #include "Log.h"
+#include <ArduinoJson.h>
 
 void WebSerial::sendStateSnapshot(const PotentiometerManager& pots,
                                   const std::vector<EnvelopeFollower>& envelopes) {
-    LOG_PRINT("{\"slots\":[");
+    StaticJsonDocument<1024> doc;
+    JsonArray slots = doc.createNestedArray("slots");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
-        LOG_PRINT(Utility::mapToMidiValue(pots.getLastValue(i)));
-           if (i < NUM_POTS - 1) {
-            LOG_PRINT(',');
-        }
+        slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
     }
-    LOG_PRINT("],\"envelopes\":[");
-    for (size_t i = 0; i < envelopes.size(); ++i) {
-        LOG_PRINT(envelopes[i].getEnvelopeLevel());
-         if (i < envelopes.size() - 1) {
-            LOG_PRINT(',');
-        }
+
+    JsonArray envs = doc.createNestedArray("envelopes");
+    for (const auto& env : envelopes) {
+        envs.add(env.getEnvelopeLevel());
     }
-    LOG_PRINTLN("]}");
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
 }
 
