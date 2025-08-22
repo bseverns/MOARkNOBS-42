@@ -76,10 +76,10 @@ Need a crash course in front‑panel mayhem? Here's how the six control buttons 
 | Button | Short Press | Long Press | Double Press |
 | ------ | ----------- | ---------- | ------------ |
 | #0 | Toggle EF | Calibrate EF baseline | Cycle EF filter forward |
-| #1 | Next Slot | — | Cycle EF filter backward |
+| #1 | Next Slot | Reload profile from EEPROM | Cycle EF filter backward |
 | #2 | Cycle EF assignment | Toggle Slot Active | Cycle MIDI Type (CC/Note/etc) |
 | #3 | Cycle MIDI Channel | Reset EEPROM | — |
-| #4 | Cycle CC Number | Save config | Reload profile from EEPROM |
+| #4 | Cycle registry number (CC/NRPN/RPN) | Save config | — |
 | #5 | Tap BPM | — | — |
 
 **Slot Buttons (0–41):**
@@ -126,7 +126,7 @@ The rig hoards three full configuration profiles in EEPROM. Each profile is a 25
 
 - **Jump profiles** – mash **Ctrl0 + Ctrl2** to hop to the next profile. It wraps after the third.
 - **Save the chaos** – long‑press **Ctrl4** once you've mangled the knobs to taste.
-- **Panic reload** – double‑tap **Ctrl4** to yank the active profile from EEPROM.
+- **Panic reload** – long‑press **Ctrl1** (with the confirm jab) to yank the active profile from EEPROM.
 
 ### Why this matters
 

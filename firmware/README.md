@@ -41,7 +41,7 @@ And driving the chaos? Your own automation parameters or six real-time **envelop
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
 - **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
-  - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot; USB stays mute until you mash Control Buttons **0+1+2** to arm it for future synths/DAWs <- a feature to be expanded on.
+  - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl0+Ctrl1+Ctrl2**.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB).
@@ -202,16 +202,16 @@ Need to peek under the hood? `ButtonManager::scanControlInputs()` is fair game f
 It sniffs the control pots and buttons without dragging the rest of the matrix along for the ride.
 Still, the grown-up move is to call `processButtons()` and let it wrangle everything.
 
-Each control button can do several things depending on how you hit it:
+Each control button can do several things depending on how you hit it. Long presses demand a quick confirm jab after you let go:
 
-| Button | Short Press         | Long Press                    | Double Press                      |
-| ------ | ------------------- | ----------------------------- | --------------------------------- |
-| #0     | Toggle EF           | Calibrate & save EF baseline  | Cycle EF Filter (forward)         |
-| #1     | Next Slot           | —                             | Cycle EF Filter (backward)        |
-| #2     | Cycle EF assignment | Toggle Slot Active            | Cycle MIDI Type (CC/Note/etc)     |
-| #3     | Cycle MIDI Channel  | Reset EEPROM                  | —                                 |
-| #4     | Cycle CC Number     | Save config                   | Reload profile from EEPROM        |
-| #5     | Tap BPM             | —                             | —                                 |
+| Button | Short Press         | Long Press                    | Double Press            |
+| ------ | ------------------- | ----------------------------- | ----------------------- |
+| Ctrl0  | Toggle EF           | Calibrate & save EF baseline  | Cycle EF filter forward |
+| Ctrl1  | Next Slot           | Reload profile from EEPROM    | Cycle EF filter backward|
+| Ctrl2  | Cycle EF assignment | Toggle Slot Active            | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
+| Ctrl3  | Cycle MIDI Channel  | Reset EEPROM                  | —                       |
+| Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                   | —                       |
+| Ctrl5  | Tap BPM             | —                             | —                       |
 
 **Slot Buttons (0–41):**
 - **Short Press:** Pick the slot you want to mangle.
@@ -220,37 +220,34 @@ Each control button can do several things depending on how you hit it:
 
 And yes, combo presses are supported:
 
-| Combo   | Action                                      |
-| ------- | ------------------------------------------- |
-| #0 + #1 | Cycle EF ARG mode method                    |
-| #2 + #3 | Cycle LED light display modes               |
-| #4 + #5 | Enable EF and randomize settings            |
+| Combo         | Action                       |
+|---------------|------------------------------|
+| Ctrl0 + Ctrl1 + Ctrl2 | Toggle USB MIDI output |
+| Ctrl0 + Ctrl1 | Cycle EF ARG mode method     |
+| Ctrl2 + Ctrl3 | Cycle LED display modes      |
+| Ctrl4 + Ctrl5 | Enable EF and randomize settings |
+| Ctrl0 + Ctrl4 | Set slot to MIDI Note mode   |
+| Ctrl0 + Ctrl5 | Set slot to Program Change   |
+| Ctrl1 + Ctrl4 | Set slot to Aftertouch       |
+| Ctrl1 + Ctrl5 | Set slot to Pitch Bend       |
+| Ctrl2 + Ctrl4 | Set slot to NRPN             |
+| Ctrl1 + Ctrl3 | Set slot to RPN              |
+| Ctrl0 + Ctrl3 | Set slot to SysEx            |
+| Ctrl1 + Ctrl2 | Toggle MIDI clock output     |
+| Ctrl2 + Ctrl5 | Cycle ARG envelope pair      |
+| Ctrl3 + Ctrl4 | Bump arpeggiator base note   |
+| Ctrl3 + Ctrl5 | Toggle Arpeggiator mode      |
+| Ctrl0 + Ctrl2 | Cycle configuration profiles |
 
-*Additional combos implemented in firmware:*
 
-| Combo      | Action                                   |
-|------------|------------------------------------------|
-| #0 + #1 + #2 | Toggle USB MIDI output                   |
-| #0 + #4    | Set slot to MIDI Note mode               |
-| #0 + #5    | Set slot to Program Change               |
-| #1 + #4    | Set slot to Aftertouch                   |
-| #1 + #5    | Set slot to Pitch Bend                   |
-| #2 + #4    | Set slot to NRPN                         |
-| #0 + #3    | Set slot to SysEx                        |
-| #1 + #2    | Toggle MIDI clock output                 |
-| #2 + #5    | Cycle ARG envelope pair                  |
-| #3 + #4    | Bump arpeggiator base note               |
-| #3 + #5    | Toggle Arpeggiator mode                  |
-| #0 + #2    | Cycle configuration profiles             |
-
-RPN slots are supported too—assign them via WebSerial or `hardware_config` until a front-panel combo joins the party.
+Need RPN in a flash? Mash **Ctrl1 + Ctrl3** to flip the active slot, or keep double‑tapping **Ctrl2** to cycle through the full MIDI zoo.
 
 ## Profile Controls
 
 Profiles are the controller's second brain. They stash the whole CC+EF circus so you can yank it back mid-set without booting a laptop. Swap from a bass patch to a lead scream on stage, or flip a chill studio layout into a live-wired noise wall in seconds.
 
 - **Save:** Long-press **Control Button #4**, then give it a quick confirm tap to dump the current configuration into EEPROM.
-- **Load:** Double-tap **Control Button #4** to resurrect the last saved profile.
+- **Load:** Long-press **Control Button #1** (plus the confirm jab) to resurrect the last saved profile.
 - **Cycle:** Mash **Control Buttons #0 and #2** together to hop to the next profile slot when you've hoarded more than one.
 
 Profiles live in EEPROM, so the chaos survives power cycles. Kill the power, plug back in, and you're right where you left off.
