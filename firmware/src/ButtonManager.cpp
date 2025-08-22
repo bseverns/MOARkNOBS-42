@@ -243,6 +243,16 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext& 
                 context.displayManager.displayStatus("EF Calibrated", 1500);
                 break;
             }
+            case 1: {
+                // Reload configuration profile from EEPROM
+                context.configManager.loadProfile(currentProfile);
+                context.potChannels.clear();
+                for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
+                    context.potChannels.push_back(context.configManager.getPotChannel(i));
+                }
+                context.displayManager.displayStatus("Profile Reset!", 1500);
+                break;
+            }
             case 2: { //Toggle Slot Active
                 MIDISlot &slot = context.configManager.getSlot(context.activePot);
                 slot.active = !slot.active;
@@ -398,13 +408,8 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext& conte
             }
 
             case 4: {
-                // Double Press (Ctrl #4): Reload current profile from EEPROM
-                context.configManager.loadProfile(currentProfile);
-                context.potChannels.clear();
-                for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
-                    context.potChannels.push_back(context.configManager.getPotChannel(i));
-                }
-                context.displayManager.displayStatus("Profile Reset!", 1500);
+                // Intentionally left blank: no double-press stunt for Ctrl #4 now
+                context.displayManager.displayStatus("No Double Action", 1000);
                 break;
             }
 
@@ -499,14 +504,24 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         break;
 
         case 4: {
-            // Short Press (Control Button #4): Cycle the active slot’s CC number
-            uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
-            uint8_t newCC = (oldCC + 1) % 128; // 0..127
-            context.configManager.setPotCCNumber(context.activePot, newCC);
-
-            char buf[32];
-            sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
-            context.displayManager.displayStatus(buf, 1500);
+            // Short Press (Control Button #4): Cycle the active slot’s registry number
+            MIDIMessageType type = context.configManager.getSlotType(context.activePot);
+            if (type == MIDIMessageType::NRPN || type == MIDIMessageType::RPN) {
+                uint8_t param = context.configManager.getSlotData1(context.activePot);
+                param = (param + 1) % 128;
+                context.configManager.setSlotData1(context.activePot, param);
+                char buf[32];
+                sprintf(buf, "Slot %d => %s %d", context.activePot,
+                        type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
+                context.displayManager.displayStatus(buf, 1500);
+            } else {
+                uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
+                uint8_t newCC = (oldCC + 1) % 128; // 0..127
+                context.configManager.setPotCCNumber(context.activePot, newCC);
+                char buf[32];
+                sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
+                context.displayManager.displayStatus(buf, 1500);
+            }
         }
         break;
 
@@ -631,14 +646,21 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "Slot %d => NRPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (9) Ctrl0 + Ctrl3: Set active slot to SysEx
+    // (9) Ctrl1 + Ctrl3: Set active slot to RPN
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::RPN);
+        char buf[32];
+        sprintf(buf, "Slot %d => RPN", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (10) Ctrl0 + Ctrl3: Set active slot to SysEx
     else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::SysEx);
         char buf[32];
         sprintf(buf, "Slot %d => SYSEX", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (10) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
+    // (11) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
     else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it == context.potToEnvelopeMap.end()) {
@@ -667,7 +689,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (11) Ctrl3 + Ctrl4: Increment arpeggiator base note
+    // (12) Ctrl3 + Ctrl4: Increment arpeggiator base note
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4)) == (maskCtrl3 | maskCtrl4)) {
         MIDISlot &slot = context.configManager.getSlot(context.activePot);
         slot.arpNote = (slot.arpNote + 1) % 128;
@@ -676,7 +698,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "ARP NOTE %d", slot.arpNote);
         context.displayManager.displayStatus(buf, 1000);
     }
-    // (12) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
+    // (13) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
         if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
             arpeggiator.stop();
@@ -686,7 +708,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             context.displayManager.displayStatus("ARP ON", 1000);
         }
     }
-    // (13) Ctrl0 + Ctrl2: Cycle configuration profiles
+    // (14) Ctrl0 + Ctrl2: Cycle configuration profiles
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
         currentProfile = (currentProfile + 1) % 3;
         context.configManager.loadProfile(currentProfile);
@@ -698,7 +720,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "PROFILE %d", currentProfile);
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (14) Ctrl1 + Ctrl2: Toggle MIDI clock output
+    // (15) Ctrl1 + Ctrl2: Toggle MIDI clock output
     else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
         g_clockOutEnabled = !g_clockOutEnabled;
         context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF", 1000);

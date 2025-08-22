@@ -52,10 +52,10 @@ Need the cheat sheet for the six front-panel punks? Here it is.
 | Button | Short Press | Long Press | Double Press |
 | ------ | ----------- | ---------- | ------------ |
 | Ctrl0 | Toggle EF | Calibrate EF baseline | Cycle EF filter forward |
-| Ctrl1 | Next Slot | — | Cycle EF filter backward |
-| Ctrl2 | Cycle EF assignment | Toggle Slot Active | Cycle MIDI Type |
+| Ctrl1 | Next Slot | Reload profile from EEPROM | Cycle EF filter backward |
+| Ctrl2 | Cycle EF assignment | Toggle Slot Active | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
 | Ctrl3 | Cycle MIDI Channel | Reset EEPROM | — |
-| Ctrl4 | Cycle CC Number | Save config | Reload profile from EEPROM |
+| Ctrl4 | Cycle registry number (CC/NRPN/RPN) | Save config | — |
 | Ctrl5 | Tap BPM | — | — |
 
 ### Slot Buttons
@@ -69,6 +69,7 @@ Need the cheat sheet for the six front-panel punks? Here it is.
 
 | Combo | What happens |
 | ----- | ------------- |
+| Ctrl0 + Ctrl1 + Ctrl2 | Toggle USB MIDI output |
 | Ctrl0 + Ctrl1 | Cycle EF ARG mode method |
 | Ctrl2 + Ctrl3 | Cycle LED display modes |
 | Ctrl4 + Ctrl5 | Enable EF and randomize settings |
@@ -77,6 +78,7 @@ Need the cheat sheet for the six front-panel punks? Here it is.
 | Ctrl1 + Ctrl4 | Set slot to Aftertouch |
 | Ctrl1 + Ctrl5 | Set slot to Pitch Bend |
 | Ctrl2 + Ctrl4 | Set slot to NRPN |
+| Ctrl1 + Ctrl3 | Set slot to RPN |
 | Ctrl0 + Ctrl3 | Set slot to SysEx |
 | Ctrl1 + Ctrl2 | Toggle MIDI clock output |
 | Ctrl2 + Ctrl5 | Cycle ARG envelope pair |
