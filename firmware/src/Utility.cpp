@@ -59,6 +59,14 @@ void Utility::scheduleNoteOnOff(
 }
 
 // Debouncing
+/*
+ * `previousState`   holds the last rock-solid reading and gets clobbered when
+ *                    a new state proves itself.
+ * `currentState`    the raw sample we're checking out right now.
+ * `lastDebounceTime` time stamp of the most recent flip.
+ * `debounceDelay`   minimum interval the input has to keep screaming the same
+ *                    value before we believe it.
+ */
 bool Utility::debounce(bool& previousState, bool currentState, unsigned long& lastDebounceTime, unsigned long currentTime, unsigned long debounceDelay) {
     if (currentState != previousState) {
         lastDebounceTime = currentTime; // Update debounce time
