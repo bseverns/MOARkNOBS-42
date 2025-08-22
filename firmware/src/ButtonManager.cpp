@@ -117,7 +117,7 @@ void ButtonManager::processButtons(ButtonManagerContext& context) {
             setMux(_cfg.muxcPins, c);
             delayMicroseconds(5);
             int v = analogRead(_cfg.buttonMuxAnalogPin);
-            rawStates[r * BUTTON_COLS + c] = (v < 512) ? HIGH : LOW;
+            rawStates[r * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
         digitalWrite(_cfg.rowDriverPin, LOW);
     }
@@ -747,7 +747,7 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) {
             setMux(_cfg.muxcPins, c);
             delayMicroseconds(5);
             int v = analogRead(_cfg.buttonMuxAnalogPin);
-            rowValues[c] = (v < 512) ? HIGH : LOW;
+            rowValues[c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
         digitalWrite(_cfg.rowDriverPin, LOW);
         lastRow = row;
@@ -770,7 +770,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext& context) {
         selectMux(0, ch);
         delayMicroseconds(5);
         int val = analogRead(_cfg.buttonMuxAnalogPin);
-        bool pressed = (val < 512);
+        bool pressed = (val < BUTTON_PRESS_THRESHOLD);
         uint8_t idx = ch - 6;
         bool stable = Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + idx], pressed,
                                         lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now,
