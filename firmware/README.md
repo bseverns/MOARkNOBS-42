@@ -84,8 +84,6 @@ Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`
 
 | Constant | Pin(s) | Purpose |
 |---------|-------|---------|
-| Field | Pin(s) | Purpose |
-|-------|-------|---------|
 | `ledPin` | 6 | WS2812 data out (wired to `LED_DATA_PIN`) |
 | `muxrPins` | 2,3,4,5 | Row select lines for the button matrix |
 | `muxcPins` | 8,9,10,11 | Column select lines for the button matrix |
