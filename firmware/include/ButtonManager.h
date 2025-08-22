@@ -48,6 +48,8 @@ inline constexpr unsigned long DEBOUNCE_DELAY = 50;
 // Button matrix layout (rows x columns)
 inline constexpr uint8_t BUTTON_ROWS = 7;
 inline constexpr uint8_t BUTTON_COLS = 6;
+// Analog read threshold for detecting a pressed button
+inline constexpr int BUTTON_PRESS_THRESHOLD = 512;
 
 /**
  * States for each button in the debounce & press state machine.
