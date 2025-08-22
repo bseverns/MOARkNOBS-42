@@ -27,22 +27,15 @@ struct HardwareConfig;
  *    ├─ setState(MIDI_UPDATE) → MIDI_UPDATE       ─┤
  *    └─ setState(TEMP_FEEDBACK) → TEMP_FEEDBACK  ─┘
  */
-enum class LEDState {
-    IDLE,
-    ACTIVE_POT,
-    ENVELOPE_MODE,
-    ARG_MODE,
-    MIDI_UPDATE,
-    TEMP_FEEDBACK
-};
+enum class LEDState { IDLE, ACTIVE_POT, ENVELOPE_MODE, ARG_MODE, MIDI_UPDATE, TEMP_FEEDBACK };
 
 /**
  * @brief Manages the WS2812 LED strip used for visual feedback.
  */
 class LEDManager {
-public:
+  public:
     /** Construct a manager bound to the hardware config. */
-    explicit LEDManager(const HardwareConfig& config);
+    explicit LEDManager(const HardwareConfig &config);
     ~LEDManager();
 
     /** Initialise FastLED and clear the strip. Call once from setup(). */
@@ -100,10 +93,10 @@ public:
     CRGB getColor() const;
 
     /** Set every LED on the strip to a single colour now. */
-    void setAll(const CRGB& color);
+    void setAll(const CRGB &color);
 
     /** Set colour for a named group of LEDs. */
-    void setGroupColor(const std::string& group, const CRGB& color);
+    void setGroupColor(const std::string &group, const CRGB &color);
 
     /** Write any changed LED values to the strip. Call each loop. */
     void update();
@@ -117,8 +110,8 @@ public:
     /** Pulse a single LED while diagnostics are active. */
     void setDiagnosticMode(bool enabled);
 
-private:
-    const HardwareConfig& cfg;
+  private:
+    const HardwareConfig &cfg;
     uint16_t numLEDs;
     std::vector<CRGB> leds;
     std::map<std::string, std::vector<uint16_t>> ledGroups;

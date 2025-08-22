@@ -38,24 +38,20 @@ float Utility::scale(float value, float inMin, float inMax, float outMin, float 
     return outMin + ratio * (outMax - outMin);
 }
 
-float Utility::mapExponential(float value, float inMin, float inMax, float outMin, float outMax, float exponent) {
+float Utility::mapExponential(float value, float inMin, float inMax, float outMin, float outMax,
+                              float exponent) {
     float normalized = (value - inMin) / (inMax - inMin);
     float scaled = pow(normalized, exponent);
     return scaled * (outMax - outMin) + outMin;
 }
 
-//Note On/Off scheduling
-void Utility::scheduleNoteOnOff(
-    MIDIHandler& midiHandler,
-    uint8_t note,
-    uint8_t velocity,
-    uint8_t channel,
-    unsigned long durationMs
-) {
+// Note On/Off scheduling
+void Utility::scheduleNoteOnOff(MIDIHandler &midiHandler, uint8_t note, uint8_t velocity,
+                                uint8_t channel, unsigned long durationMs) {
     midiHandler.sendNoteOn(note, velocity, channel);
-    Utility::schedulerHigh.addTask([note, channel, &midiHandler]() {
-        midiHandler.sendNoteOff(note, 0, channel);
-    }, durationMs, false);
+    Utility::schedulerHigh.addTask(
+        [note, channel, &midiHandler]() { midiHandler.sendNoteOff(note, 0, channel); }, durationMs,
+        false);
 }
 
 // Debouncing
@@ -67,28 +63,25 @@ void Utility::scheduleNoteOnOff(
  * `debounceDelay`   minimum interval the input has to keep screaming the same
  *                    value before we believe it.
  */
-bool Utility::debounce(bool& previousState, bool currentState, unsigned long& lastDebounceTime, unsigned long currentTime, unsigned long debounceDelay) {
+bool Utility::debounce(bool &previousState, bool currentState, unsigned long &lastDebounceTime,
+                       unsigned long currentTime, unsigned long debounceDelay) {
     if (currentState != previousState) {
         lastDebounceTime = currentTime; // Update debounce time
     }
     if ((currentTime - lastDebounceTime) > debounceDelay) {
         previousState = currentState; // Update state
-        return true; // Stable state change
+        return true;                  // Stable state change
     }
     return false; // Not stable
 }
 
 // EEPROM Operations
-uint8_t Utility::readEEPROMByte(int address) {
-    return EEPROM.read(address);
-}
+uint8_t Utility::readEEPROMByte(int address) { return EEPROM.read(address); }
 
-void Utility::writeEEPROMByte(int address, uint8_t value) {
-    EEPROM.update(address, value);
-}
+void Utility::writeEEPROMByte(int address, uint8_t value) { EEPROM.update(address, value); }
 
 // Timer Helpers
-bool Utility::isTimeElapsed(unsigned long& lastTime, unsigned long interval) {
+bool Utility::isTimeElapsed(unsigned long &lastTime, unsigned long interval) {
     unsigned long currentTime = now();
     if ((currentTime - lastTime) >= interval) {
         lastTime = currentTime; // Reset timer
@@ -103,12 +96,12 @@ CRGB Utility::mapValueToColor(uint8_t value, CRGB lowColor, CRGB highColor) {
 }
 
 // Debugging
-void Utility::logError(const char* errorMessage) {
+void Utility::logError(const char *errorMessage) {
     LOG_PRINT("[ERROR]: ");
     LOG_PRINTLN(errorMessage);
 }
 
-void Utility::logDebug(const char* debugMessage) {
+void Utility::logDebug(const char *debugMessage) {
     LOG_PRINT("[DEBUG]: ");
     LOG_PRINTLN(debugMessage);
 }
@@ -121,10 +114,11 @@ int Utility::exponentialMovingAverage(int currentValue, int previousValue, float
 // System Operations
 void Utility::rebootTeensy() {
     SCB_AIRCR = 0x05FA0004; // System reset for ARM Cortex-M
-    while (1);              // Ensure the system halts
+    while (1)
+        ; // Ensure the system halts
 }
 
-void Utility::displayCenteredText(Adafruit_SSD1306& display, const char* text) {
+void Utility::displayCenteredText(Adafruit_SSD1306 &display, const char *text) {
     int16_t x1, y1;
     uint16_t w, h;
     display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
@@ -138,7 +132,7 @@ void Utility::displayCenteredText(Adafruit_SSD1306& display, const char* text) {
     display.display();
 }
 
-void Utility::displayStatus(Adafruit_SSD1306& display, const char* status, unsigned long duration) {
+void Utility::displayStatus(Adafruit_SSD1306 &display, const char *status, unsigned long duration) {
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextSize(1); // Standard text size
@@ -148,15 +142,10 @@ void Utility::displayStatus(Adafruit_SSD1306& display, const char* status, unsig
     delay(duration); // Hold the status for the given duration
 }
 
-void Utility::updateDisplay(
-    Adafruit_SSD1306& display,
-    uint8_t beatPosition,
-    const std::vector<EnvelopeFollower>& envelopeFollowers,
-    const char* statusMessage,
-    uint8_t activePot,
-    uint8_t activeChannel,
-    const char* envelopeMode
-) {
+void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
+                            const std::vector<EnvelopeFollower> &envelopeFollowers,
+                            const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
+                            const char *envelopeMode) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SSD1306_COLOR_WHITE);
@@ -181,7 +170,7 @@ void Utility::updateDisplay(
     // Display envelope levels
     display.setCursor(0, 30);
     display.print("Env: ");
-    for (const auto& follower : envelopeFollowers) {
+    for (const auto &follower : envelopeFollowers) {
         display.print(follower.getEnvelopeLevel());
         display.print(" ");
     }
@@ -201,8 +190,8 @@ uint16_t Utility::readEEPROMWord(int address) {
 }
 
 void Utility::writeEEPROMWord(int address, uint16_t value) {
-    EEPROM.update(address, value & 0xFF);       // Write low byte
-    EEPROM.update(address + 1, (value >> 8));  // Write high byte
+    EEPROM.update(address, value & 0xFF);     // Write low byte
+    EEPROM.update(address + 1, (value >> 8)); // Write high byte
 }
 
 void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue) {
@@ -211,11 +200,11 @@ void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue
     }
 }
 
-void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
+void Utility::processBulkUpdate(const String &command, uint8_t numPots) {
     // Bulk update parser. Accepts a raw line like:
     //   SET_ALL cc,chan;cc,chan;...
     // or a JSON twin with the same cc/channel pairs. Anything else gets tossed.
-    const char* prefix = "SET_ALL ";
+    const char *prefix = "SET_ALL ";
     if (!command.startsWith(prefix)) {
         LOG_PRINTLN("Error: Command must start with 'SET_ALL'");
         return;
@@ -232,16 +221,16 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
     char cmdBuffer[MAX_CMD_LEN];
     command.toCharArray(cmdBuffer, MAX_CMD_LEN);
 
-    char* payload = cmdBuffer + strlen(prefix);
+    char *payload = cmdBuffer + strlen(prefix);
     unsigned int currentPot = 0;
 
     // Tokenize on ';'. Each token should be "cc,chan". We parse, vet the
     // numbers, then slam them into EEPROM two bytes per pot.
-    for (char* token = strtok(payload, ";");
+    for (char *token = strtok(payload, ";");
          token != nullptr && currentPot < static_cast<unsigned int>(numPots);
          token = strtok(nullptr, ";")) {
 
-        char* comma = strchr(token, ',');
+        char *comma = strchr(token, ',');
         if (!comma) {
             // Missing comma? Busted token, bail before we scribble garbage.
             LOG_PRINTLN("Error: Malformed command");
@@ -249,8 +238,8 @@ void Utility::processBulkUpdate(const String& command, uint8_t numPots) {
         }
 
         *comma = '\0';
-        const char* ccStr = token;
-        const char* channelStr = comma + 1;
+        const char *ccStr = token;
+        const char *channelStr = comma + 1;
 
         if (strlen(ccStr) >= 4 || strlen(channelStr) >= 4) {
             // We only expect up to three digits per field. Longer reeks of trouble.
@@ -294,7 +283,7 @@ void TaskScheduler::update() {
     std::vector<size_t> finished;
 
     for (size_t i = 0; i < tasks.size(); ++i) {
-        ScheduledTask& task = tasks[i];
+        ScheduledTask &task = tasks[i];
         if (now >= task.runAt) {
             dueCallbacks.push_back(task.callback);
             if (task.repeat) {
@@ -306,7 +295,7 @@ void TaskScheduler::update() {
     }
 
     // Run callbacks outside of the bookkeeping loop.
-    for (auto& cb : dueCallbacks) {
+    for (auto &cb : dueCallbacks) {
         cb();
     }
 

@@ -23,4 +23,3 @@ void test_system_report() {
     TEST_ASSERT_GREATER_THAN(0, strlen(doc["build_time"] | ""));
     sys::printReport(Serial);
 }
-

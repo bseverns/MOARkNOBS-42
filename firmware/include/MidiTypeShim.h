@@ -13,4 +13,3 @@
 #ifndef MidiType_Tick
 #define MidiType_Tick midi::Clock
 #endif
-

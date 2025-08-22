@@ -17,7 +17,7 @@ class PotentiometerManager;
  * Simple timed arpeggiator that plays notes from a configured slot.
  */
 class Arpeggiator {
-public:
+  public:
     enum Shape { UP, DOWN, UPDOWN, RANDOM };
     enum class BaseNoteSource { Slot, External };
 
@@ -81,18 +81,18 @@ public:
      * Call every loop; notes only fire on MIDI clock ticks.
      * Keeps the groove glued to the global tempo.
      */
-    void update(MIDIHandler& midi, ConfigManager& cfg, PotentiometerManager& pots);
+    void update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerManager &pots);
 
-private:
-    bool          _active;
-    uint8_t       _slotIdx;
-    uint8_t       _lengthTicks;
-    uint8_t       _tickCounter;
-    Shape         _shape;
-    uint8_t       _step;
-    uint8_t       _patternLength;
-    uint8_t       _baseNote;        //!< Root note for the pattern
-    BaseNoteSource _baseNoteSrc;    //!< Who owns the root
+  private:
+    bool _active;
+    uint8_t _slotIdx;
+    uint8_t _lengthTicks;
+    uint8_t _tickCounter;
+    Shape _shape;
+    uint8_t _step;
+    uint8_t _patternLength;
+    uint8_t _baseNote;                    //!< Root note for the pattern
+    BaseNoteSource _baseNoteSrc;          //!< Who owns the root
     std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
 };
 

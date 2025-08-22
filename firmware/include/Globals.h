@@ -33,11 +33,11 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0002; //!< EEPROM schema version
-inline constexpr const char* FIRMWARE_VERSION = "0.1.0"; //!< Firmware release tag
-inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008; //!< EEPROM addr for brownout counter
+inline constexpr uint16_t CONFIG_VERSION = 0x0002;       //!< EEPROM schema version
+inline constexpr const char *FIRMWARE_VERSION = "0.1.0"; //!< Firmware release tag
+inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008;  //!< EEPROM addr for brownout counter
 
-extern uint32_t g_resetCause; //!< Raw reset cause register
+extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
 
 /**
@@ -70,10 +70,12 @@ void loadHardwareConfig();
 inline uint16_t EF_LED_OFFSET() { return hwConfig.slotLedCount; }
 inline uint16_t CONTROL_LED_INDEX() { return EF_LED_OFFSET() + hwConfig.efLedCount; }
 inline uint16_t POT_LED_OFFSET() { return CONTROL_LED_INDEX() + 1; }
-inline uint16_t NUM_LEDS() { return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount; }
+inline uint16_t NUM_LEDS() {
+    return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount;
+}
 
-inline constexpr uint8_t NUM_BUTTONS  = 6;    //!< Number of direct control buttons
-inline constexpr uint8_t NUM_ENVELOPES = 6;   //!< Envelope followers stalking your signal
+inline constexpr uint8_t NUM_BUTTONS = 6;   //!< Number of direct control buttons
+inline constexpr uint8_t NUM_ENVELOPES = 6; //!< Envelope followers stalking your signal
 
 /**
  * Baseline offsets for each envelope follower.  These numbers get learned
@@ -86,23 +88,23 @@ struct EnvelopeConfig {
 extern EnvelopeConfig envelopeConfig;
 
 // Legacy aliases for modules awaiting full refactors
-inline const uint8_t (&primaryMuxPins)[4]   = hwConfig.muxrPins;
+inline const uint8_t (&primaryMuxPins)[4] = hwConfig.muxrPins;
 inline const uint8_t (&secondaryMuxPins)[4] = hwConfig.muxcPins;
-inline uint8_t& buttonMuxAnalogPin          = hwConfig.buttonMuxAnalogPin;
-inline uint8_t& potMuxAnalogPin             = hwConfig.potMuxAnalogPin;
-inline uint8_t& VREF_ADC_PIN                = hwConfig.vrefAdcPin;
-inline uint16_t& SLOT_LED_COUNT             = hwConfig.slotLedCount;
-inline uint8_t& EF_LED_COUNT                = hwConfig.efLedCount;
-inline uint8_t& POT_LED_COUNT               = hwConfig.potLedCount;
+inline uint8_t &buttonMuxAnalogPin = hwConfig.buttonMuxAnalogPin;
+inline uint8_t &potMuxAnalogPin = hwConfig.potMuxAnalogPin;
+inline uint8_t &VREF_ADC_PIN = hwConfig.vrefAdcPin;
+inline uint16_t &SLOT_LED_COUNT = hwConfig.slotLedCount;
+inline uint8_t &EF_LED_COUNT = hwConfig.efLedCount;
+inline uint8_t &POT_LED_COUNT = hwConfig.potLedCount;
 
-inline constexpr uint16_t OLED_WIDTH      = 128;  //!< OLED display width in pixels
-inline constexpr uint16_t OLED_HEIGHT     = 64;   //!< OLED display height in pixels
-inline constexpr uint8_t  SSD1306_I2C_ADDRESS   = 0x3C; //!< I2C address for the OLED
-inline constexpr uint16_t SERIAL_BUFFER_SIZE    = 128;  //!< bytes in the serial buffer
-inline constexpr uint16_t EEPROM_FILTER_FREQ    = 1000; //!< EEPROM address for filter freq
-inline constexpr uint16_t EEPROM_FILTER_Q       = 1004; //!< EEPROM address for filter Q
-inline constexpr uint8_t  POT_RANGE_MIN         = 10;   //!< Min pot delta before acting
-inline constexpr uint8_t  ENV_RANGE_MIN         = 5;    //!< Min envelope delta threshold
+inline constexpr uint16_t OLED_WIDTH = 128;          //!< OLED display width in pixels
+inline constexpr uint16_t OLED_HEIGHT = 64;          //!< OLED display height in pixels
+inline constexpr uint8_t SSD1306_I2C_ADDRESS = 0x3C; //!< I2C address for the OLED
+inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial buffer
+inline constexpr uint16_t EEPROM_FILTER_FREQ = 1000; //!< EEPROM address for filter freq
+inline constexpr uint16_t EEPROM_FILTER_Q = 1004;    //!< EEPROM address for filter Q
+inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
+inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
 
 // ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
 constexpr float VadcScale = 3.3f / 1023.0f;
@@ -111,17 +113,17 @@ extern float g_vref;
 
 // EEPROM storage constants
 constexpr uint16_t EEPROM_SLOT_BASE = 0x000;
-constexpr uint8_t SLOT_EEPROM_SIZE = 6;  // bytes required to store a MIDISlot
+constexpr uint8_t SLOT_EEPROM_SIZE = 6; // bytes required to store a MIDISlot
 
-//clock
+// clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;
 extern bool g_clockOutEnabled;
-extern bool g_usbMidiOutEnabled; //!< USB MIDI stays quiet until these three go down
+extern bool g_usbMidiOutEnabled;    //!< USB MIDI stays quiet until these three go down
 extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
 
 // Note dynamics from the "Freq" and "Q" control pots
-extern int8_t  velocityShift;     //!< -64..+63 shove applied to outgoing note velocity
+extern int8_t velocityShift;      //!< -64..+63 shove applied to outgoing note velocity
 extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings a new note
 
 // Direct-wired control buttons use separate GPIOs so they don't

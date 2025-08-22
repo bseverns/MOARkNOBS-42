@@ -18,8 +18,8 @@ class PotentiometerManager;
  * ## Quick and dirty setup
  * ```cpp
  * // Wire the follower to analog pin A0 and hand it a pot manager
- * EnvelopeFollower env(A0, &potManager, 0); // index 0 so ConfigManager knows where to stash offsets
- * env.setModulationTarget(42);                 // spit out MIDI CC 42
+ * EnvelopeFollower env(A0, &potManager, 0); // index 0 so ConfigManager knows where to stash
+ * offsets env.setModulationTarget(42);                 // spit out MIDI CC 42
  * env.setMode(EnvelopeFollower::SEF);          // roll with Single Envelope mode
  * env.toggleActive(true);                      // let it rip
  * ```
@@ -30,44 +30,24 @@ class PotentiometerManager;
  *   Push it past 1.0f when you want the envelope to hit harder.
  */
 class EnvelopeFollower {
-public:
+  public:
     /** Available shaping/filter modes. */
-    enum FilterType {
-        LINEAR,
-        OPPOSITE_LINEAR,
-        EXPONENTIAL,
-        RANDOM,
-        LOWPASS,
-        HIGHPASS,
-        BANDPASS
-    };
+    enum FilterType { LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, RANDOM, LOWPASS, HIGHPASS, BANDPASS };
 
     /** Operating modes for the follower. */
-    enum Mode {
-        SEF,
-        ARG
-    };
+    enum Mode { SEF, ARG };
 
     /** Methods used when in ARG mode. */
-    enum ARG_Method {
-        PLUS,
-        MIN,
-        PECK,
-        SHAV,
-        SQAR,
-        BABS,
-        TABS
-    };
+    enum ARG_Method { PLUS, MIN, PECK, SHAV, SQAR, BABS, TABS };
 
-
-private:
-    float shapingFreq = 1000.0f;  // Frequency or shaping parameter
-    float shapingQ = 0.707f;      // Resonance or secondary shaping parameter
-    int audioInputPin;            // Pin for audio input
+  private:
+    float shapingFreq = 1000.0f; // Frequency or shaping parameter
+    float shapingQ = 0.707f;     // Resonance or secondary shaping parameter
+    int audioInputPin;           // Pin for audio input
     uint8_t index;               // Which follower we are; used for EEPROM writes
-    int currentEnvelopeLevel;     // Current envelope value
-    int modulationTargetCC;       // Target MIDI CC
-    bool isActive;                // Is envelope follower active?
+    int currentEnvelopeLevel;    // Current envelope value
+    int modulationTargetCC;      // Target MIDI CC
+    bool isActive;               // Is envelope follower active?
 
     // Existing filter type
     FilterType filterType;
@@ -89,21 +69,21 @@ private:
     int smoothedLevel = 0;       // running smoothed MIDI value
     float vref;                  // cached reference voltage
 
-    PotentiometerManager* potManager;
-    BiquadFilter filter;          // Existing custom filter
+    PotentiometerManager *potManager;
+    BiquadFilter filter; // Existing custom filter
     /**
      * Read the raw envelope level from the configured analog pin
      * and map it to the 0-127 MIDI range.
      */
     int readEnvelopeLevel();
 
-public:
+  public:
     /**
      * Create an envelope follower attached to the given analog input.
      * The PotentiometerManager reference allows the processed value to
      * be applied back to a CC slot.
      */
-    EnvelopeFollower(int pin, PotentiometerManager* pm, uint8_t id);
+    EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id);
 
     /**
      * Choose which MIDI CC this follower will control. Call when a pot
@@ -137,16 +117,14 @@ public:
      * Modulate the provided CC value with the current envelope level and
      * send the resulting MIDI message. Avoids sending duplicates.
      */
-    void applyToCC(int potIndex, uint8_t& ccValue);
+    void applyToCC(int potIndex, uint8_t &ccValue);
 
     /** Return the last processed envelope level (0-127). */
     int getEnvelopeLevel() const;
 
     /** Switch between SEF and ARG operating modes. */
     void setMode(Mode newMode);
-    Mode getMode() const {
-        return mode;
-    };
+    Mode getMode() const { return mode; };
 
     /** Select which arithmetic method to use in ARG mode. */
     void setARGMethod(ARG_Method method);

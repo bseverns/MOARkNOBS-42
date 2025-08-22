@@ -12,4 +12,3 @@ void unittest_uart_end();
 #ifdef __cplusplus
 }
 #endif
-

@@ -17,7 +17,8 @@
 
 void setup() {
     Serial.begin(115200);
-    while(!Serial) { /* wait for serial */ }
+    while (!Serial) { /* wait for serial */
+    }
     Serial.println("=== BiquadFilter Test ===");
 
     const float freq = 1000.0f;
@@ -43,26 +44,30 @@ void setup() {
         float b1 = -2.0f * cos_omega;
         float b2 = 1.0f - alpha;
 
-        switch(type) {
-            case BiquadFilter::LOWPASS:
-                a0 = (1.0f - cos_omega) / 2.0f;
-                a1 = 1.0f - cos_omega;
-                a2 = a0;
-                break;
-            case BiquadFilter::HIGHPASS:
-                a0 = (1.0f + cos_omega) / 2.0f;
-                a1 = -(1.0f + cos_omega);
-                a2 = a0;
-                break;
-            case BiquadFilter::BANDPASS:
-                a0 = alpha;
-                a1 = 0.0f;
-                a2 = -alpha;
-                break;
+        switch (type) {
+        case BiquadFilter::LOWPASS:
+            a0 = (1.0f - cos_omega) / 2.0f;
+            a1 = 1.0f - cos_omega;
+            a2 = a0;
+            break;
+        case BiquadFilter::HIGHPASS:
+            a0 = (1.0f + cos_omega) / 2.0f;
+            a1 = -(1.0f + cos_omega);
+            a2 = a0;
+            break;
+        case BiquadFilter::BANDPASS:
+            a0 = alpha;
+            a1 = 0.0f;
+            a2 = -alpha;
+            break;
         }
 
         float norm = 1.0f + alpha;
-        a0 /= norm; a1 /= norm; a2 /= norm; b1 /= norm; b2 /= norm;
+        a0 /= norm;
+        a1 /= norm;
+        a2 /= norm;
+        b1 /= norm;
+        b2 /= norm;
 
         float firstOut = filter.process(1.0f);
         bool coefCheck = fabs(firstOut - a0) < 1e-6f;

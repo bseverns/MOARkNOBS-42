@@ -20,20 +20,11 @@ static std::array<uint8_t, NUM_POTS> lastSentCC;
 /**
  * Constructor
  */
-EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager* pm, uint8_t id)
-    : audioInputPin(pin),
-      index(id),
-      currentEnvelopeLevel(0),
-      modulationTargetCC(-1),
-      isActive(false),
-      filterType(LINEAR),     // initialize filterType first
-      mode(SEF),             // then mode
-      argMethod(PLUS),
-      envelopeA(0),
-      envelopeB(1),
-      vref(g_vref),
-      potManager(pm)
-{
+EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id)
+    : audioInputPin(pin), index(id), currentEnvelopeLevel(0), modulationTargetCC(-1),
+      isActive(false), filterType(LINEAR), // initialize filterType first
+      mode(SEF),                           // then mode
+      argMethod(PLUS), envelopeA(0), envelopeB(1), vref(g_vref), potManager(pm) {
     // Initialize last sent CCs to 0xFF so the first real value always fires
     std::fill(lastSentCC.begin(), lastSentCC.end(), 0xFF);
 
@@ -50,18 +41,18 @@ void EnvelopeFollower::configureFilter(float frequency, float q) {
     shapingQ = q;
 
     switch (filterType) {
-        case LOWPASS:
-            filter.configure(BiquadFilter::LOWPASS, frequency, 44100, q);
-            break;
-        case HIGHPASS:
-            filter.configure(BiquadFilter::HIGHPASS, frequency, 44100, q);
-            break;
-        case BANDPASS:
-            filter.configure(BiquadFilter::BANDPASS, frequency, 44100, q);
-            break;
-        default:
-            // parameters stored directly for other modes
-            break;
+    case LOWPASS:
+        filter.configure(BiquadFilter::LOWPASS, frequency, 44100, q);
+        break;
+    case HIGHPASS:
+        filter.configure(BiquadFilter::HIGHPASS, frequency, 44100, q);
+        break;
+    case BANDPASS:
+        filter.configure(BiquadFilter::BANDPASS, frequency, 44100, q);
+        break;
+    default:
+        // parameters stored directly for other modes
+        break;
     }
 }
 
@@ -79,27 +70,28 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
         }
 
         switch (filterType) {
-            case LINEAR:
-                return constrain(level * (shapingFreq / 1000.0f), 0, 127);
+        case LINEAR:
+            return constrain(level * (shapingFreq / 1000.0f), 0, 127);
 
-            case OPPOSITE_LINEAR:
-                return constrain(127 - (level * (shapingFreq / 1000.0f)), 0, 127);
+        case OPPOSITE_LINEAR:
+            return constrain(127 - (level * (shapingFreq / 1000.0f)), 0, 127);
 
-            case EXPONENTIAL:
-                return constrain(pow(level / 127.0f, shapingQ) * (shapingFreq / 1000.0f) * 127.0f, 0, 127);
+        case EXPONENTIAL:
+            return constrain(pow(level / 127.0f, shapingQ) * (shapingFreq / 1000.0f) * 127.0f, 0,
+                             127);
 
-            case RANDOM: {
-                int probability = map(shapingFreq, 20, 5000, 0, 100);
-                if (random(0, 100) < probability) {
-                    int range = map(shapingQ * 100.0f, 50, 400, 1, 64);
-                    return constrain(level + random(-range, range), 0, 127);
-                } else {
-                    return level;
-                }
-            }
-
-            default:
+        case RANDOM: {
+            int probability = map(shapingFreq, 20, 5000, 0, 100);
+            if (random(0, 100) < probability) {
+                int range = map(shapingQ * 100.0f, 50, 400, 1, 64);
+                return constrain(level + random(-range, range), 0, 127);
+            } else {
                 return level;
+            }
+        }
+
+        default:
+            return level;
         }
     } else {
         // ARG mode: read two envelope pins, do your math combos
@@ -117,14 +109,22 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
         }
 
         switch (argMethod) {
-            case PLUS: return constrain(A + B, 0, 127);
-            case MIN:  return constrain(A - B, 0, 127);
-            case PECK: return constrain(B - A, 0, 127);
-            case SHAV: return constrain((A - B) / 10, 0, 127);
-            case SQAR: return constrain((int) sqrt((float)(A * A + B * B)), 0, 127);
-            case BABS: return (B != 0) ? constrain(A / abs(B), 0, 127) : 0;
-            case TABS: return (B != 0) ? constrain((10 * A) / abs(B), 0, 127) : 0;
-            default:   return level;
+        case PLUS:
+            return constrain(A + B, 0, 127);
+        case MIN:
+            return constrain(A - B, 0, 127);
+        case PECK:
+            return constrain(B - A, 0, 127);
+        case SHAV:
+            return constrain((A - B) / 10, 0, 127);
+        case SQAR:
+            return constrain((int)sqrt((float)(A * A + B * B)), 0, 127);
+        case BABS:
+            return (B != 0) ? constrain(A / abs(B), 0, 127) : 0;
+        case TABS:
+            return (B != 0) ? constrain((10 * A) / abs(B), 0, 127) : 0;
+        default:
+            return level;
         }
     }
 }
@@ -148,14 +148,15 @@ void EnvelopeFollower::update() {
  */
 // Adjust the given CC value with the current envelope and send it if it changed
 // since the last update. This prevents spamming duplicate MIDI messages.
-void EnvelopeFollower::applyToCC(int potIndex, uint8_t& ccValue) {
+void EnvelopeFollower::applyToCC(int potIndex, uint8_t &ccValue) {
     if (isActive && modulationTargetCC >= 0) {
         int modulatedValue = ccValue + currentEnvelopeLevel;
         ccValue = constrain(modulatedValue, 0, 127);
 
         if (ccValue != lastSentCC[potIndex]) {
             lastSentCC[potIndex] = ccValue;
-            midiHandler.sendControlChange(modulationTargetCC, ccValue, potManager->getChannel(potIndex));
+            midiHandler.sendControlChange(modulationTargetCC, ccValue,
+                                          potManager->getChannel(potIndex));
         }
     }
 }
@@ -172,16 +173,12 @@ void EnvelopeFollower::toggleActive(bool state) {
 /**
  * getActiveState()
  */
-bool EnvelopeFollower::getActiveState() const {
-    return isActive;
-}
+bool EnvelopeFollower::getActiveState() const { return isActive; }
 
 /**
  * setModulationTarget()
  */
-void EnvelopeFollower::setModulationTarget(int cc) {
-    modulationTargetCC = cc;
-}
+void EnvelopeFollower::setModulationTarget(int cc) { modulationTargetCC = cc; }
 
 /**
  * setFilterType()
@@ -190,42 +187,36 @@ void EnvelopeFollower::setFilterType(FilterType type) {
     filterType = type;
     // Reapply default config based on new filter type
     switch (type) {
-        case LOWPASS:
-            filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
-            break;
-        case HIGHPASS:
-            filter.configure(BiquadFilter::HIGHPASS, 1000, 44100, 0.707);
-            break;
-        case BANDPASS:
-            filter.configure(BiquadFilter::BANDPASS, 1000, 44100, 0.707);
-            break;
-        default:
-            break;
+    case LOWPASS:
+        filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
+        break;
+    case HIGHPASS:
+        filter.configure(BiquadFilter::HIGHPASS, 1000, 44100, 0.707);
+        break;
+    case BANDPASS:
+        filter.configure(BiquadFilter::BANDPASS, 1000, 44100, 0.707);
+        break;
+    default:
+        break;
     }
 }
 
 /**
  * getFilterType()
  */
-EnvelopeFollower::FilterType EnvelopeFollower::getFilterType() const {
-    return filterType;
-}
+EnvelopeFollower::FilterType EnvelopeFollower::getFilterType() const { return filterType; }
 
 /**
  * setMode()
  * - New method for switching between SEF and ARG
  */
-void EnvelopeFollower::setMode(Mode newMode) {
-    mode = newMode;
-}
+void EnvelopeFollower::setMode(Mode newMode) { mode = newMode; }
 
 /**
  * setARGMethod()
  * - New method for selecting among PLUS, MIN, PECK, etc.
  */
-void EnvelopeFollower::setARGMethod(ARG_Method method) {
-    argMethod = method;
-}
+void EnvelopeFollower::setARGMethod(ARG_Method method) { argMethod = method; }
 
 /**
  * setEnvelopePair()
@@ -259,21 +250,15 @@ void EnvelopeFollower::calibrateBaseline() {
     baseline = avg * VadcScale - vref;
 }
 
-void EnvelopeFollower::setOversampleCount(uint8_t count) {
-    oversampleCount = count ? count : 1;
-}
+void EnvelopeFollower::setOversampleCount(uint8_t count) { oversampleCount = count ? count : 1; }
 
-uint8_t EnvelopeFollower::getOversampleCount() const {
-    return oversampleCount;
-}
+uint8_t EnvelopeFollower::getOversampleCount() const { return oversampleCount; }
 
 void EnvelopeFollower::setSmoothingAlpha(float alpha) {
     smoothingAlpha = constrain(alpha, 0.0f, 1.0f);
 }
 
-float EnvelopeFollower::getSmoothingAlpha() const {
-    return smoothingAlpha;
-}
+float EnvelopeFollower::getSmoothingAlpha() const { return smoothingAlpha; }
 
 /**
  * readEnvelopeLevel()
@@ -297,6 +282,4 @@ int EnvelopeFollower::readEnvelopeLevel() {
 /**
  * getEnvelopeLevel()
  */
-int EnvelopeFollower::getEnvelopeLevel() const {
-    return currentEnvelopeLevel;
-}
+int EnvelopeFollower::getEnvelopeLevel() const { return currentEnvelopeLevel; }

@@ -15,4 +15,3 @@
 
 #define FW_VERSION_STR STR(FW_VERSION)
 #define GIT_SHA_STR STR(GIT_SHA)
-

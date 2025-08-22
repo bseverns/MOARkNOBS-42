@@ -1,4 +1,4 @@
-#include "unity_config.h"  // bundles Arduino and corrals usbMIDI into our stub
+#include "unity_config.h" // bundles Arduino and corrals usbMIDI into our stub
 #include <unity.h>
 
 void test_start_stop_cycle();
@@ -32,4 +32,3 @@ void setup() {
 }
 
 void loop() {}
-

@@ -3,7 +3,7 @@
 // the LEDs in sync with the controller state.
 
 #include "LEDManager.h"
-#include "Globals.h"  // hardware config
+#include "Globals.h" // hardware config
 #include "TimeUtils.h"
 #include <FastLED.h>
 #include <map>
@@ -13,8 +13,9 @@ LEDManager::~LEDManager() {
     // Nothing to delete; STL containers clean up automatically
 }
 
-LEDManager::LEDManager(const HardwareConfig& config)
-    : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false), brightness(255), currentState(LEDState::IDLE), activeIndex(255) {
+LEDManager::LEDManager(const HardwareConfig &config)
+    : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false),
+      brightness(255), currentState(LEDState::IDLE), activeIndex(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
 
@@ -109,13 +110,9 @@ void LEDManager::setColor(CRGB color) {
     FastLED.show();
 }
 
-uint8_t LEDManager::getBrightness() const {
-    return brightness;
-}
+uint8_t LEDManager::getBrightness() const { return brightness; }
 
-CRGB LEDManager::getColor() const {
-    return leds.empty() ? CRGB::Black : leds[0];
-}
+CRGB LEDManager::getColor() const { return leds.empty() ? CRGB::Black : leds[0]; }
 
 /**
  * @brief Runs a white sweep while the box boots.
@@ -149,8 +146,8 @@ void LEDManager::setState(LEDState state, uint8_t index) {
  *
  * @param color The hue to paint across the entire strip.
  */
-void LEDManager::setAll(const CRGB& color) {
-    for (auto& led : leds) {
+void LEDManager::setAll(const CRGB &color) {
+    for (auto &led : leds) {
         led = color;
         markDirty(&led - &leds[0]);
     }
@@ -168,9 +165,10 @@ void LEDManager::setAll(const CRGB& color) {
  * @param group The posse to recolour.
  * @param color Fresh paint for the group.
  */
-void LEDManager::setGroupColor(const std::string& group, const CRGB& color) {
+void LEDManager::setGroupColor(const std::string &group, const CRGB &color) {
     auto it = ledGroups.find(group);
-    if (it == ledGroups.end()) return;
+    if (it == ledGroups.end())
+        return;
     for (uint16_t idx : it->second) {
         leds[idx] = color;
         markDirty(idx);
@@ -208,33 +206,36 @@ void LEDManager::update() {
     }
 
     switch (currentState) {
-        case LEDState::ACTIVE_POT:
-            if (activeIndex < leds.size()) leds[activeIndex] = CRGB::Red;
-            break;
-        case LEDState::ENVELOPE_MODE:
-            for (auto& led : leds) led = CRGB::Green;
-            break;
-        case LEDState::ARG_MODE:
-            if (activeIndex < leds.size()) leds[activeIndex] = CRGB::Blue;
-            break;
-        case LEDState::MIDI_UPDATE:
-            if (activeIndex < leds.size()) leds[activeIndex] = CRGB::Yellow;
-            break;
-        case LEDState::TEMP_FEEDBACK:
-            if (activeIndex < leds.size()) leds[activeIndex] = CRGB::White;
-            break;
-        case LEDState::IDLE:
-        default:
-            break; // keep existing colours
+    case LEDState::ACTIVE_POT:
+        if (activeIndex < leds.size())
+            leds[activeIndex] = CRGB::Red;
+        break;
+    case LEDState::ENVELOPE_MODE:
+        for (auto &led : leds)
+            led = CRGB::Green;
+        break;
+    case LEDState::ARG_MODE:
+        if (activeIndex < leds.size())
+            leds[activeIndex] = CRGB::Blue;
+        break;
+    case LEDState::MIDI_UPDATE:
+        if (activeIndex < leds.size())
+            leds[activeIndex] = CRGB::Yellow;
+        break;
+    case LEDState::TEMP_FEEDBACK:
+        if (activeIndex < leds.size())
+            leds[activeIndex] = CRGB::White;
+        break;
+    case LEDState::IDLE:
+    default:
+        break; // keep existing colours
     }
 
     FastLED.show();
     std::fill(dirtyFlags.begin(), dirtyFlags.end(), false);
 }
 
-void LEDManager::setStatusLED(bool on) {
-    digitalWrite(cfg.statusLedPin, on ? HIGH : LOW);
-}
+void LEDManager::setStatusLED(bool on) { digitalWrite(cfg.statusLedPin, on ? HIGH : LOW); }
 
 void LEDManager::blinkStatusLED(uint8_t times, uint16_t delayMs) {
     for (uint8_t i = 0; i < times; ++i) {

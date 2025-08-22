@@ -47,7 +47,7 @@ void ConfigManager::writeMagicNumber(bool backup, uint16_t base) {
 // Save configuration with verification and backup
 void ConfigManager::saveConfiguration() {
     uint16_t base = EEPROM_PROFILE_START(0);
-    writeEEPROM(false, base);  // Write primary
+    writeEEPROM(false, base); // Write primary
     writeMagicNumber(false, base);
 
     // Verify
@@ -60,7 +60,7 @@ void ConfigManager::saveConfiguration() {
 }
 
 // Load configuration (primary)
-bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
+bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_t base) {
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
@@ -79,7 +79,7 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t>& potChannels, uint16_
 }
 
 // Load configuration (backup)
-bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base) {
+bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, uint16_t base) {
     if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
@@ -166,7 +166,7 @@ void ConfigManager::saveProfile(uint8_t id) {
 }
 
 // Initialize configuration
-void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
+void ConfigManager::begin(std::vector<uint8_t> &potChannels) {
     // 1) Load every MIDISlot from EEPROM into our in-RAM array
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         loadSlot(i, slots[i]);
@@ -179,13 +179,14 @@ void ConfigManager::begin(std::vector<uint8_t>& potChannels) {
     }
 }
 
-void ConfigManager::loadSlot(uint8_t idx, MIDISlot& dest) {
-  EEPROM.get(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, dest);
-  if (dest.arpNote > 127) dest.arpNote = dest.data1;
+void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
+    EEPROM.get(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, dest);
+    if (dest.arpNote > 127)
+        dest.arpNote = dest.data1;
 }
 
-void ConfigManager::saveSlot(uint8_t idx, const MIDISlot& src) {
-  EEPROM.put(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, src);
+void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
+    EEPROM.put(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, src);
 }
 
 // Potentiometer accessors
@@ -210,7 +211,8 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
 }
 
 // Envelope settings
-bool ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes) {
+bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
+                                         std::vector<EnvelopeFollower> &envelopes) {
     bool allFound = true;
     for (size_t i = 0; i < envelopes.size(); i++) {
         int envelopeIndex = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
@@ -219,7 +221,7 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, s
         float b;
         EEPROM.get(EEPROM_EF_BASELINES + i * sizeof(float), b);
 
-        envelopes[i].setVref(g_vref);  // always refresh Vref
+        envelopes[i].setVref(g_vref); // always refresh Vref
         if (!std::isnan(b)) {
             envelopes[i].setBaseline(b);
             envelopeConfig.baselines[i] = b;
@@ -231,8 +233,9 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, s
     return allFound;
 }
 
-void ConfigManager::saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes) {
-    for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
+void ConfigManager::saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
+                                         const std::vector<EnvelopeFollower> &envelopes) {
+    for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
@@ -249,7 +252,7 @@ void ConfigManager::saveEnvelopeBaseline(uint8_t envIndex, float baseline) {
 }
 
 // LED settings
-void ConfigManager::loadLEDSettings(uint8_t& brightness, CRGB& color) {
+void ConfigManager::loadLEDSettings(uint8_t &brightness, CRGB &color) {
     brightness = EEPROM.read(EEPROM_LED_BRIGHTNESS);
     color.r = EEPROM.read(EEPROM_LED_COLOR);
     color.g = EEPROM.read(EEPROM_LED_COLOR + 1);
@@ -264,52 +267,36 @@ void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
 }
 
 // Reset configuration to defaults
-void ConfigManager::resetConfiguration(std::vector<uint8_t>& potChannels) {
+void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
     potChannels.clear();
     for (uint8_t i = 0; i < _numPots; i++) {
-        setPotChannel(i, 1); // Default to channel 1
+        setPotChannel(i, 1);  // Default to channel 1
         setPotCCNumber(i, 0); // Default to CC 0
     }
     saveConfiguration();
 }
 
 // Mode and ARG methods
-void ConfigManager::setMode(uint8_t mode) {
-    EEPROM.update(EEPROM_ARG_MODE, mode);
-}
+void ConfigManager::setMode(uint8_t mode) { EEPROM.update(EEPROM_ARG_MODE, mode); }
 
-uint8_t ConfigManager::getMode() const {
-    return EEPROM.read(EEPROM_ARG_MODE);
-}
+uint8_t ConfigManager::getMode() const { return EEPROM.read(EEPROM_ARG_MODE); }
 
-void ConfigManager::setARGMethod(uint8_t method) {
-    EEPROM.update(EEPROM_ARG_METHOD, method);
-}
+void ConfigManager::setARGMethod(uint8_t method) { EEPROM.update(EEPROM_ARG_METHOD, method); }
 
-uint8_t ConfigManager::getARGMethod() const {
-    return EEPROM.read(EEPROM_ARG_METHOD);
-}
+uint8_t ConfigManager::getARGMethod() const { return EEPROM.read(EEPROM_ARG_METHOD); }
 
-void ConfigManager::setARGEnable(uint8_t enable) {
-    EEPROM.update(EEPROM_ARG_ENABLE, enable);
-}
+void ConfigManager::setARGEnable(uint8_t enable) { EEPROM.update(EEPROM_ARG_ENABLE, enable); }
 
-uint8_t ConfigManager::getARGEnable() const {
-    return EEPROM.read(EEPROM_ARG_ENABLE);
-}
+uint8_t ConfigManager::getARGEnable() const { return EEPROM.read(EEPROM_ARG_ENABLE); }
 
 void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
     EEPROM.update(EEPROM_ARG_ENV_A, envA);
     EEPROM.update(EEPROM_ARG_ENV_B, envB);
 }
 
-uint8_t ConfigManager::getEnvelopeA() const {
-    return EEPROM.read(EEPROM_ARG_ENV_A);
-}
+uint8_t ConfigManager::getEnvelopeA() const { return EEPROM.read(EEPROM_ARG_ENV_A); }
 
-uint8_t ConfigManager::getEnvelopeB() const {
-    return EEPROM.read(EEPROM_ARG_ENV_B);
-}
+uint8_t ConfigManager::getEnvelopeB() const { return EEPROM.read(EEPROM_ARG_ENV_B); }
 
 String ConfigManager::makeSchema() {
     const uint8_t count = NUM_POTS;
@@ -329,8 +316,8 @@ String ConfigManager::makeSchema() {
     s += "\"maxItems\": ";
     s += String(count);
     s += "}";
-    s += "}";  // properties
-    s += "}";  // root object
+    s += "}"; // properties
+    s += "}"; // root object
 
     return s;
 }
@@ -355,7 +342,7 @@ String ConfigManager::serializeAll() const {
     return output;
 }
 
-void ConfigManager::saveMIDISlots(const MIDISlot* slots, size_t count) {
+void ConfigManager::saveMIDISlots(const MIDISlot *slots, size_t count) {
     if (slots == nullptr || count == 0) {
         return;
     }
@@ -369,7 +356,7 @@ void ConfigManager::saveMIDISlots(const MIDISlot* slots, size_t count) {
     }
 }
 
-void ConfigManager::loadMIDISlots(MIDISlot* slots, size_t count) {
+void ConfigManager::loadMIDISlots(MIDISlot *slots, size_t count) {
     if (slots == nullptr || count == 0) {
         return;
     }
@@ -382,7 +369,7 @@ void ConfigManager::loadMIDISlots(MIDISlot* slots, size_t count) {
     }
 }
 
-bool ConfigManager::handleCommand(const String& command) {
+bool ConfigManager::handleCommand(const String &command) {
     if (command.startsWith("CAL_ENVS")) {
         for (auto &ef : envelopeFollowers) {
             ef.calibrate();

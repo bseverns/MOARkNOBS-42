@@ -49,4 +49,3 @@ void corrupted_primary_and_backup() {
     TEST_ASSERT_EQUAL_UINT8(1, pots[0]);
     TEST_ASSERT_EQUAL_UINT8(1, pots[1]);
 }
-

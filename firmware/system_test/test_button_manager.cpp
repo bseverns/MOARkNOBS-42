@@ -23,14 +23,16 @@ void test_long_press_detection() {
     uint8_t activePot = 0;
     uint8_t activeCh = 0;
     bool envMode = false;
-    const char* envStr = "";
-    std::map<int,int> map;
-    bool diag = false; uint8_t diagPage = 0;
-    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map, diag, diagPage};
+    const char *envStr = "";
+    std::map<int, int> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage};
 
     fakeMillis = 0;
     bm.updateButtonStateMachine(0, true, ctx); // press
-    fakeMillis = 499; // just shy of the 500 ms threshold
+    fakeMillis = 499;                          // just shy of the 500 ms threshold
     bm.updateButtonStateMachine(0, true, ctx);
     TEST_ASSERT_EQUAL(ButtonState::PRESSED, bm._buttonMachines[0].state);
     TEST_ASSERT_FALSE(bm._buttonMachines[0].longPressFired);
@@ -53,16 +55,18 @@ void test_long_press_requires_confirm() {
     uint8_t activePot = 0;
     uint8_t activeCh = 0;
     bool envMode = false;
-    const char* envStr = "";
-    std::map<int,int> map;
-    bool diag = false; uint8_t diagPage = 0;
-    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map, diag, diagPage};
+    const char *envStr = "";
+    std::map<int, int> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage};
 
     // Long press triggers confirm but no action yet
     fakeMillis = 0;
     bm.updateButtonStateMachine(0, true, ctx); // press
     fakeMillis = 600;
-    bm.updateButtonStateMachine(0, true, ctx); // hold past threshold
+    bm.updateButtonStateMachine(0, true, ctx);  // hold past threshold
     bm.updateButtonStateMachine(0, false, ctx); // release
     TEST_ASSERT_EQUAL(0, bm._confirmIndex);
     TEST_ASSERT_TRUE(ctx.potToEnvelopeMap.empty());
@@ -87,10 +91,12 @@ void test_double_press_ctrl2_cycles_midi_type() {
     uint8_t activePot = 0;
     uint8_t activeCh = 0;
     bool envMode = false;
-    const char* envStr = "";
-    std::map<int,int> map;
-    bool diag = false; uint8_t diagPage = 0;
-    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg, led, disp, envs, map, diag, diagPage};
+    const char *envStr = "";
+    std::map<int, int> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage};
 
     MIDISlot &slot = cfg.getSlot(0);
     slot.type = MIDIMessageType::CC;
@@ -107,4 +113,3 @@ void test_double_press_ctrl2_cycles_midi_type() {
 
     TEST_ASSERT_EQUAL(MIDIMessageType::Note, slot.type);
 }
-
