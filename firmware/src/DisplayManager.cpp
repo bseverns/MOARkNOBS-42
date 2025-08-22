@@ -91,25 +91,58 @@ void DisplayManager::updateFadeAnimation() {
 }
 
 void DisplayManager::runStartupAnimation() {
-    _display.clearDisplay();
-    for (int step = 0; step < 5; step++) {
-        for (int i = 0; i < _display.width(); i += (1 << step)) {
-            _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_COLOR_WHITE);
-            _display.drawLine(_display.width() - 1, _display.height() - 1, _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
-        }
-        _display.display();
-        delay(250);
+    uint32_t current = now();
+
+    switch (_startupAnim.phase) {
+        case StartupPhase::IDLE:
+            // Kick off the line-drawing frenzy
+            _display.clearDisplay();
+            _startupAnim.phase = StartupPhase::DRAW_LINES;
+            _startupAnim.step = 0;
+            _startupAnim.lastTime = current; // draw immediately
+            break;
+
+        case StartupPhase::DRAW_LINES:
+            if (current - _startupAnim.lastTime >= 250 || _startupAnim.step == 0) {
+                _display.clearDisplay();
+                for (int i = 0; i < _display.width(); i += (1 << _startupAnim.step)) {
+                    _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_COLOR_WHITE);
+                    _display.drawLine(_display.width() - 1, _display.height() - 1,
+                                      _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
+                }
+                _display.display();
+                _startupAnim.lastTime = current;
+                if (++_startupAnim.step >= 5) {
+                    _startupAnim.phase = StartupPhase::HOLD_LINES;
+                }
+            }
+            break;
+
+        case StartupPhase::HOLD_LINES:
+            if (current - _startupAnim.lastTime >= 500) {
+                _display.clearDisplay();
+                _display.setTextSize(2);
+                _display.setTextColor(SSD1306_COLOR_WHITE);
+                _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
+                _display.println("MOARkNOBS-42");
+                _display.display();
+                _startupAnim.phase = StartupPhase::HOLD_LOGO;
+                _startupAnim.lastTime = current;
+            }
+            break;
+
+        case StartupPhase::HOLD_LOGO:
+            if (current - _startupAnim.lastTime >= 1500) {
+                _display.clearDisplay();
+                _display.display();
+                _startupAnim.phase = StartupPhase::DONE;
+            }
+            break;
+
+        case StartupPhase::DONE:
+            // No-op. We've already made our grand entrance.
+            break;
     }
-    delay(500);
-    _display.clearDisplay();
-    _display.setTextSize(2);
-    _display.setTextColor(SSD1306_COLOR_WHITE);
-    _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
-    _display.println("MOARkNOBS-42");
-    _display.display();
-    delay(1500);
-    _display.clearDisplay();
-    _display.display();
 }
 
 void DisplayManager::runIdleScreensaver() {
