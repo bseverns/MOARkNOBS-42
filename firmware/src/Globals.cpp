@@ -18,22 +18,22 @@ inline constexpr bool kHasSD = false;
 
 // Default hardware description
 HardwareConfig hwConfig = {
-    .ledPin = 6,
-    .statusLedPin = 23,
-    .rowDriverPin = 7,
-    .slotLedCount = 42,
-    .efLedCount = 6,
-    .potLedCount = 3,
-    .numButtons = NUM_BUTTONS,
-    .midiTaskInterval = 1,
-    .serialTaskInterval = 10,
-    .ledTaskInterval = 50,
-    .envelopeTaskInterval = 5,
-    .muxrPins = {2, 3, 4, 5},
-    .muxcPins = {8, 9, 10, 11},
-    .buttonMuxAnalogPin = A4,
-    .potMuxAnalogPin = A5,
-    .vrefAdcPin = A8,
+    .ledPin = 6,               // WS2812 data pin (docs/PinMap.md: LED_PIN)
+    .statusLedPin = 23,        // status LED indicator (docs/PinMap.md: STATUS_LED_PIN)
+    .rowDriverPin = 7,         // button matrix row driver (docs/PinMap.md: PIN_ROW_DRV)
+    .slotLedCount = 42,        // total WS2812s in slot ring
+    .efLedCount = 6,           // envelope follower LEDs riding the strip
+    .potLedCount = 3,          // pot position LEDs
+    .numButtons = NUM_BUTTONS, // direct-control buttons on deck
+    .midiTaskInterval = 1,     // ms between MIDI service loops
+    .serialTaskInterval = 10,  // ms between serial pokes
+    .ledTaskInterval = 50,     // ms between LED refresh bursts
+    .envelopeTaskInterval = 5, // ms cadence for envelope tracking
+    .muxrPins = {2, 3, 4, 5},  // CD74HC4067 row select lines (docs/PinMap.md: MUXR0..3)
+    .muxcPins = {8, 9, 10, 11},// CD74HC4067 column select lines (docs/PinMap.md: MUXC0..3)
+    .buttonMuxAnalogPin = A4,  // button matrix analog read (docs/PinMap.md: BTN_MUX_OUT)
+    .potMuxAnalogPin = A5,     // pot matrix analog read (docs/PinMap.md: POT_MUX_OUT)
+    .vrefAdcPin = A8,          // VREF sense tap (docs/PinMap.md: VREF_ADC)
 };
 
 // Global runtime variables
