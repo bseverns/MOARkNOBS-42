@@ -339,30 +339,42 @@ void processSerial() {
 
 
 void processEnvelopes() {
+    // Stroll through the pot→envelope map; every pair says which envelope
+    // rides shotgun with which physical pot.
     for (const auto& [potIndex, envelopeIndex] : potToEnvelopeMap) {
+        // Trust no one: make sure the map didn't hand us a bogus index
+        // before poking the envelope array.
         if (envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
             EnvelopeFollower* envelope = &envelopeFollowers[envelopeIndex];
 
-            if (envelope->getActiveState()) { // Process only active envelopes
-                envelope->update(); // Update envelope values
+            // Only waste cycles on envelopes that are actually lit up.
+            // Sleeping envelopes don't get CPU time or make noise.
+            if (envelope->getActiveState()) {
+                envelope->update(); // Pull in the latest peak/decay stats.
+
                 uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
-                envelope->applyToCC(potIndex, ccValue); // Modulate CC value
+                // applyToCC mutates ccValue with the envelope's swagger and will
+                // sling a CC at the target if that modulation changed anything.
+                envelope->applyToCC(potIndex, ccValue);
                 ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
-                if (ccValue != potentiometerManager.getLastValue(potIndex)) { // Avoid redundant MIDI messages
+                // If the tweaked value differs from what the pot last screamed,
+                // fire off a fresh CC and light the pot LED accordingly.
+                if (ccValue != potentiometerManager.getLastValue(potIndex)) {
                     midiHandler.sendControlChange(
                         potentiometerManager.getCCNumber(potIndex),
                         ccValue,
                         potentiometerManager.getChannel(potIndex)
                     );
 
-                    ledManager.setPotValue(potIndex, ccValue); // Update corresponding LED
+                    ledManager.setPotValue(potIndex, ccValue);
                 }
             }
         }
     }
 
-    // Reflect the current pot's MIDI-scaled value on the indicators
+    // After the dust settles, mirror the active pot's MIDI-scaled value on
+    // every indicator LED so the panel shows exactly what that knob is yelling.
     uint8_t potMidiValue = Utility::mapToMidiValue(
         potentiometerManager.getLastValue(buttonContext.activePot));
     for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
