@@ -50,7 +50,7 @@ static const char* FILTER_TYPE_NAMES[] = {
 static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0]);
 
 // We'll track which filter index each EnvelopeFollower (e.g. 6 total) is using:
-static int filterTypeIndexForEF[6] = {0, 0, 0, 0, 0, 0};
+static int filterTypeIndexForEF[NUM_ENVELOPES] = {0};
 
 // Active configuration profile stored in EEPROM
 static uint8_t currentProfile = 0;
