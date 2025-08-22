@@ -19,6 +19,13 @@ And driving the chaos? Your own automation parameters or six real-time **envelop
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
 
+## Code Style
+
+This rig now ships with a `.clang-format` file. Before you commit any C or C++ noise,
+run `clang-format -i` on the files you touched (or let the pre-commit hook do it for
+you). It's basically LLVM style with 4-space indents and a 100 column guardrail. Keep
+the chaos in the riffs, not in the whitespace.
+
 ## Reference Tables
 
 - [Button map](include/ButtonManager/README.md#button-map)

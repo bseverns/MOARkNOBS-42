@@ -88,3 +88,9 @@ Need the dirt? Dive into the sub-READMEs and get lost.
 
 License: MIT. See [LICENSE](LICENSE).
 
+## Contributing
+
+Want in on the mayhem? `pre-commit` now guards the gates with `clang-format`,
+ESLint and Prettier. Run `pre-commit install` once and it'll slap your changes
+into shape every commit.
+
