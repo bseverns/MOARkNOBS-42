@@ -31,23 +31,23 @@ jobs:
         env:
           FW_VERSION: ${{ github.event.release.tag_name }}
         run: |
-          python - <<'PY'
-            import json, os, subprocess, time
-            fw = os.environ['FW_VERSION']
-            sha = subprocess.check_output(['git','rev-parse','--short','HEAD']).decode().strip()
-            info = {
-              'fw_version': fw,
-              'git_sha': sha,
-              'board': 'teensy40',
-              'mcu': 'IMXRT1062',
-              'f_cpu_hz': 600000000,
-              'build_time': time.strftime('%b %d %Y %H:%M:%S'),
-              'compiler': subprocess.check_output(['g++','--version']).decode().splitlines()[0],
-              'pio_env': 'teensy40_main',
-            }
-            with open('sysreport.json','w') as f:
-              json.dump(info, f)
-          PY
+          python - <<'EOF'
+          import json, os, subprocess, time
+          fw = os.environ["FW_VERSION"]
+          sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
+          info = {
+            "fw_version": fw,
+            "git_sha": sha,
+            "board": "teensy40",
+            "mcu": "IMXRT1062",
+            "f_cpu_hz": 600000000,
+            "build_time": time.strftime("%b %d %Y %H:%M:%S"),
+            "compiler": subprocess.check_output(["g++", "--version"]).decode().splitlines()[0],
+            "pio_env": "teensy40_main",
+          }
+          with open("sysreport.json", "w") as f:
+            json.dump(info, f)
+          EOF
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
