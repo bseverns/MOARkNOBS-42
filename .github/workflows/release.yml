@@ -31,7 +31,7 @@ jobs:
         env:
           FW_VERSION: ${{ github.event.release.tag_name }}
         run: |
-          python - <<'EOF'
+          python - <<"EOF"
           import json, os, subprocess, time
           fw = os.environ["FW_VERSION"]
           sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
