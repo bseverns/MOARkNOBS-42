@@ -17,6 +17,7 @@
 #include <EEPROM.h>
 #include <imxrt.h>
 #include "Globals.h"
+#include "version.h"
 #include "Utility.h"
 #include "Arpeggiator.h"
 #include "BiquadFilter.h"
@@ -376,7 +377,7 @@ void setup() {
         g_brownoutCount++;
         EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
     }
-    Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FIRMWARE_VERSION,
+    Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FW_VERSION_STR,
                   CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);
     Serial.printf("Reset 0x%08lX (%s) Brownouts %u\n", g_resetCause,
                   resetCauseToString(g_resetCause), g_brownoutCount);

@@ -16,6 +16,7 @@
 #include "TimeUtils.h"
 #include "name.c"
 #include "Globals.h" // contains all pin definitions
+#include "version.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
 #include <TimerOne.h>
@@ -517,7 +518,7 @@ void setup() {
         g_brownoutCount++;
         EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
     }
-    Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FIRMWARE_VERSION,
+    Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FW_VERSION_STR,
                   CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);
     Serial.printf("Reset 0x%08lX Brownouts %u\n", g_resetCause, g_brownoutCount);
 
