@@ -36,6 +36,7 @@ flowchart TD
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
 - [TODO.md](TODO.md) — post-release wishlist for when the first build is out and you're itching for v2.
+- [ReleaseGuide.md](ReleaseGuide.md) — full release playbook. For quick steps see [Publishing a Release](../README.md#publishing-a-release).
 - [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
 Highlights:
   - [buttonMatrix.md](sketch/systemFlow/hw/buttonMatrix.md) — how the 42-button grid scans its soul.
