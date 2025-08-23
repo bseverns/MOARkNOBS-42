@@ -1,4 +1,4 @@
-#include "unity_config.h"  // yanks in Arduino and our usbMIDI doppelganger
+#include "unity_config.h" // yanks in Arduino and our usbMIDI doppelganger
 #include <unity.h>
 #include "Arpeggiator.h"
 
@@ -15,4 +15,3 @@ void test_start_stop_cycle() {
     arp.stop();
     TEST_ASSERT_FALSE(arp.isActive());
 }
-

@@ -29,4 +29,3 @@ void test_filter_type_switching() {
     // high-pass should murder DC
     TEST_ASSERT_LESS_THAN(10, hp);
 }
-

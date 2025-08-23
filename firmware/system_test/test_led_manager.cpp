@@ -13,4 +13,3 @@ void test_brightness_and_color() {
     TEST_ASSERT_EQUAL_UINT8(hotpink.g, read.g);
     TEST_ASSERT_EQUAL_UINT8(hotpink.b, read.b);
 }
-

@@ -2,7 +2,6 @@
 // Receives updates from ButtonManager, MIDIHandler and firmware_main.cpp.
 // Handles startup screens, status text and screensaver.
 
-
 #include <Arduino.h>
 #include "DisplayManager.h"
 #include "TimeUtils.h"
@@ -17,12 +16,8 @@
 // state here so the screen always reflects the latest configuration.
 // Updates are triggered from the low-priority scheduler in firmware_main.cpp.
 
-DisplayManager::DisplayManager(uint8_t i2cAddress,
-                               uint16_t screenWidth,
-                               uint16_t screenHeight)
-  : _display(screenWidth, screenHeight, &Wire),
-    _i2cAddress(i2cAddress)
-{
+DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight)
+    : _display(screenWidth, screenHeight, &Wire), _i2cAddress(i2cAddress) {
     _isDrawing = false;
     _updateIntervalMs = 100;
     _activePot = 0;
@@ -56,35 +51,35 @@ void DisplayManager::updateFadeAnimation() {
     uint32_t elapsed = now - _fadeAnim.lastTime;
 
     switch (_fadeAnim.state) {
-        case AnimState::FADE_IN: {
-            if (elapsed >= _fadeAnim.duration) {
-                _fadeAnim.state = AnimState::HOLD;
-                _fadeAnim.lastTime = now;
-                _fadeAnim.brightness = 255;
-            } else {
-                float progress = static_cast<float>(elapsed) / _fadeAnim.duration;
-                _fadeAnim.brightness = static_cast<uint8_t>(progress * 255);
-            }
-            break;
+    case AnimState::FADE_IN: {
+        if (elapsed >= _fadeAnim.duration) {
+            _fadeAnim.state = AnimState::HOLD;
+            _fadeAnim.lastTime = now;
+            _fadeAnim.brightness = 255;
+        } else {
+            float progress = static_cast<float>(elapsed) / _fadeAnim.duration;
+            _fadeAnim.brightness = static_cast<uint8_t>(progress * 255);
         }
-        case AnimState::HOLD:
-            if (elapsed >= 500) {
-                _fadeAnim.state = AnimState::FADE_OUT;
-                _fadeAnim.lastTime = now;
-            }
-            break;
-        case AnimState::FADE_OUT: {
-            if (elapsed >= _fadeAnim.duration) {
-                _fadeAnim.state = AnimState::DONE;
-                _fadeAnim.brightness = 0;
-            } else {
-                float progress = 1.0f - static_cast<float>(elapsed) / _fadeAnim.duration;
-                _fadeAnim.brightness = static_cast<uint8_t>(progress * 255);
-            }
-            break;
+        break;
+    }
+    case AnimState::HOLD:
+        if (elapsed >= 500) {
+            _fadeAnim.state = AnimState::FADE_OUT;
+            _fadeAnim.lastTime = now;
         }
-        default:
-            break;
+        break;
+    case AnimState::FADE_OUT: {
+        if (elapsed >= _fadeAnim.duration) {
+            _fadeAnim.state = AnimState::DONE;
+            _fadeAnim.brightness = 0;
+        } else {
+            float progress = 1.0f - static_cast<float>(elapsed) / _fadeAnim.duration;
+            _fadeAnim.brightness = static_cast<uint8_t>(progress * 255);
+        }
+        break;
+    }
+    default:
+        break;
     }
 
     _display.ssd1306_command(SSD1306_SETCONTRAST);
@@ -95,54 +90,54 @@ void DisplayManager::runStartupAnimation() {
     uint32_t current = now();
 
     switch (_startupAnim.phase) {
-        case StartupPhase::IDLE:
-            // Kick off the line-drawing frenzy
+    case StartupPhase::IDLE:
+        // Kick off the line-drawing frenzy
+        _display.clearDisplay();
+        _startupAnim.phase = StartupPhase::DRAW_LINES;
+        _startupAnim.step = 0;
+        _startupAnim.lastTime = current; // draw immediately
+        break;
+
+    case StartupPhase::DRAW_LINES:
+        if (current - _startupAnim.lastTime >= 250 || _startupAnim.step == 0) {
             _display.clearDisplay();
-            _startupAnim.phase = StartupPhase::DRAW_LINES;
-            _startupAnim.step = 0;
-            _startupAnim.lastTime = current; // draw immediately
-            break;
-
-        case StartupPhase::DRAW_LINES:
-            if (current - _startupAnim.lastTime >= 250 || _startupAnim.step == 0) {
-                _display.clearDisplay();
-                for (int i = 0; i < _display.width(); i += (1 << _startupAnim.step)) {
-                    _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_COLOR_WHITE);
-                    _display.drawLine(_display.width() - 1, _display.height() - 1,
-                                      _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
-                }
-                _display.display();
-                _startupAnim.lastTime = current;
-                if (++_startupAnim.step >= 5) {
-                    _startupAnim.phase = StartupPhase::HOLD_LINES;
-                }
+            for (int i = 0; i < _display.width(); i += (1 << _startupAnim.step)) {
+                _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_COLOR_WHITE);
+                _display.drawLine(_display.width() - 1, _display.height() - 1,
+                                  _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
             }
-            break;
-
-        case StartupPhase::HOLD_LINES:
-            if (current - _startupAnim.lastTime >= 500) {
-                _display.clearDisplay();
-                _display.setTextSize(2);
-                _display.setTextColor(SSD1306_COLOR_WHITE);
-                _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
-                _display.println("MOARkNOBS-42");
-                _display.display();
-                _startupAnim.phase = StartupPhase::HOLD_LOGO;
-                _startupAnim.lastTime = current;
+            _display.display();
+            _startupAnim.lastTime = current;
+            if (++_startupAnim.step >= 5) {
+                _startupAnim.phase = StartupPhase::HOLD_LINES;
             }
-            break;
+        }
+        break;
 
-        case StartupPhase::HOLD_LOGO:
-            if (current - _startupAnim.lastTime >= 1500) {
-                _display.clearDisplay();
-                _display.display();
-                _startupAnim.phase = StartupPhase::DONE;
-            }
-            break;
+    case StartupPhase::HOLD_LINES:
+        if (current - _startupAnim.lastTime >= 500) {
+            _display.clearDisplay();
+            _display.setTextSize(2);
+            _display.setTextColor(SSD1306_COLOR_WHITE);
+            _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
+            _display.println("MOARkNOBS-42");
+            _display.display();
+            _startupAnim.phase = StartupPhase::HOLD_LOGO;
+            _startupAnim.lastTime = current;
+        }
+        break;
 
-        case StartupPhase::DONE:
-            // No-op. We've already made our grand entrance.
-            break;
+    case StartupPhase::HOLD_LOGO:
+        if (current - _startupAnim.lastTime >= 1500) {
+            _display.clearDisplay();
+            _display.display();
+            _startupAnim.phase = StartupPhase::DONE;
+        }
+        break;
+
+    case StartupPhase::DONE:
+        // No-op. We've already made our grand entrance.
+        break;
     }
 }
 
@@ -156,21 +151,17 @@ void DisplayManager::runIdleScreensaver() {
     _display.display();
 }
 
-void DisplayManager::registerInteraction() {
-    _lastInteractionTime = now();
-}
+void DisplayManager::registerInteraction() { _lastInteractionTime = now(); }
 
-bool DisplayManager::shouldRunScreensaver() const {
-    return (now() - _lastInteractionTime > 90000);
-}
-
+bool DisplayManager::shouldRunScreensaver() const { return (now() - _lastInteractionTime > 90000); }
 
 void DisplayManager::drawBorder() {
     _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_COLOR_WHITE);
 }
 
-void DisplayManager::showText(const char* line1, const char* line2, const char* line3) {
-    if (now() < _statusTimeout) return;
+void DisplayManager::showText(const char *line1, const char *line2, const char *line3) {
+    if (now() < _statusTimeout)
+        return;
 
     clear();
     _display.setTextSize(1);
@@ -194,7 +185,8 @@ void DisplayManager::showText(const char* line1, const char* line2, const char* 
 }
 
 void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
-    if (now() < _statusTimeout) return;
+    if (now() < _statusTimeout)
+        return;
 
     if (clearDisplay) {
         _display.clearDisplay();
@@ -210,7 +202,8 @@ void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
     _display.display();
 }
 
-void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const char* mode, const char* argMethod) {
+void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const char *mode,
+                                            const char *argMethod) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
@@ -238,7 +231,8 @@ void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const cha
 }
 
 void DisplayManager::showMode(const char *mode, bool clearDisplay) {
-    if (now() < _statusTimeout) return;
+    if (now() < _statusTimeout)
+        return;
 
     if (clearDisplay) {
         _display.clearDisplay();
@@ -254,13 +248,15 @@ void DisplayManager::showMode(const char *mode, bool clearDisplay) {
 }
 
 void DisplayManager::clear() {
-    if (now() < _statusTimeout) return;
+    if (now() < _statusTimeout)
+        return;
 
     _display.clearDisplay();
     _display.display();
 }
 
-void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, const char* labelQ, float qValue) {
+void DisplayManager::showFilterTuning(const char *labelFreq, float freqValue, const char *labelQ,
+                                      float qValue) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
@@ -278,7 +274,7 @@ void DisplayManager::showFilterTuning(const char* labelFreq, float freqValue, co
     _display.display();
 }
 
-void DisplayManager::showArpSettings(uint8_t lengthTicks, const char* shapeName) {
+void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
@@ -293,8 +289,11 @@ void DisplayManager::showArpSettings(uint8_t lengthTicks, const char* shapeName)
     _display.display();
 }
 
-void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t>& envelopeLevels, const char* statusMessage, uint8_t activePot, uint8_t activeChannel, const char* envelopeMode){
-    if (now() < _statusTimeout) return;
+void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t> &envelopeLevels,
+                                   const char *statusMessage, uint8_t activePot,
+                                   uint8_t activeChannel, const char *envelopeMode) {
+    if (now() < _statusTimeout)
+        return;
 
     _display.clearDisplay();
     _display.setTextSize(1);
@@ -343,8 +342,9 @@ void DisplayManager::displayStatus(const char *status, unsigned long duration) {
     _display.display();
 }
 
-void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
-    if (now() < _statusTimeout) return;
+void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
+    if (now() < _statusTimeout)
+        return;
 
     _display.clearDisplay();
     _display.setCursor(0, 0);
@@ -366,8 +366,9 @@ void DisplayManager::updateFromContext(const ButtonManagerContext& context) {
     _display.display();
 }
 
-void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
-    if (now() < _statusTimeout) return;
+void DisplayManager::showARGInfo(const char *methodName, int envA, int envB) {
+    if (now() < _statusTimeout)
+        return;
 
     clear();
 
@@ -391,7 +392,7 @@ void DisplayManager::showARGInfo(const char* methodName, int envA, int envB) {
     _statusTimeout = now() + NORMAL_DISPLAY_TIME;
 }
 
-void DisplayManager::setTemporaryMessage(const char* message, unsigned long duration) {
+void DisplayManager::setTemporaryMessage(const char *message, unsigned long duration) {
     _statusMessage = message;
     _statusTimeout = now() + duration;
     clear();
@@ -418,49 +419,51 @@ void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel)
     _statusTimeout = now() + SHORT_DISPLAY_TIME;
 }
 
-void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager& bm, const ButtonManagerContext& ctx, const MIDIHandler& midi) {
+void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
+                                    const ButtonManagerContext &ctx, const MIDIHandler &midi) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
 
     switch (page % 3) {
-        case 0: { // Button matrix snapshot
-            _display.setCursor(0, 0);
-            for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
-                for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-                    uint8_t idx = r * BUTTON_COLS + c;
-                    _display.print(bm.isMuxButtonPressed(idx) ? '1' : '0');
-                }
-                _display.println();
+    case 0: { // Button matrix snapshot
+        _display.setCursor(0, 0);
+        for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
+            for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
+                uint8_t idx = r * BUTTON_COLS + c;
+                _display.print(bm.isMuxButtonPressed(idx) ? '1' : '0');
             }
-            break;
+            _display.println();
         }
-        case 1: { // Envelope baselines
-            for (uint8_t i = 0; i < ctx.envelopes.size() && i < 6; ++i) {
-                _display.setCursor(0, i * 10);
-                _display.print("EF");
-                _display.print(i);
-                _display.print(':');
-                _display.println(ctx.envelopes[i].getBaseline(), 2);
-            }
-            break;
+        break;
+    }
+    case 1: { // Envelope baselines
+        for (uint8_t i = 0; i < ctx.envelopes.size() && i < 6; ++i) {
+            _display.setCursor(0, i * 10);
+            _display.print("EF");
+            _display.print(i);
+            _display.print(':');
+            _display.println(ctx.envelopes[i].getBaseline(), 2);
         }
-        case 2: { // MIDI counters
-            _display.setCursor(0, 0);
-            _display.print("RX:");
-            _display.println(midi.getRxCount());
-            _display.setCursor(0, 10);
-            _display.print("TX:");
-            _display.println(midi.getTxCount());
-            break;
-        }
+        break;
+    }
+    case 2: { // MIDI counters
+        _display.setCursor(0, 0);
+        _display.print("RX:");
+        _display.println(midi.getRxCount());
+        _display.setCursor(0, 10);
+        _display.print("TX:");
+        _display.println(midi.getTxCount());
+        break;
+    }
     }
     drawBorder();
     _display.display();
 }
 
 void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
-    if (now() < _statusTimeout) return;
+    if (now() < _statusTimeout)
+        return;
 
     _display.clearDisplay();
     _display.setTextSize(1);
@@ -487,8 +490,9 @@ void DisplayManager::endDraw() {
     _isDrawing = false;
 }
 
-void DisplayManager::showError(const char* errorMessage, bool persistent) {
-    if (now() < _statusTimeout) return;
+void DisplayManager::showError(const char *errorMessage, bool persistent) {
+    if (now() < _statusTimeout)
+        return;
 
     beginDraw();
     _display.setTextSize(1);
@@ -498,12 +502,14 @@ void DisplayManager::showError(const char* errorMessage, bool persistent) {
     _display.println(errorMessage);
     endDraw();
     if (persistent) {
-        while (1);
+        while (1)
+            ;
     }
 }
 
 void DisplayManager::showEnvelopeLevel(uint8_t level) {
-    if (now() < _statusTimeout) return;
+    if (now() < _statusTimeout)
+        return;
 
     const int barHeight = 10;
     const int barY = _display.height() - barHeight;
@@ -513,16 +519,20 @@ void DisplayManager::showEnvelopeLevel(uint8_t level) {
 }
 
 void DisplayManager::showEnvelopeLevels(uint8_t envA, uint8_t envB) {
-    if (now() < _statusTimeout) return;
+    if (now() < _statusTimeout)
+        return;
 
     const int barHeight = 5;
     const int gap = 2;
     int widthA = map(envA, 0, 127, 0, _display.width());
-    _display.fillRect(0, _display.height() - barHeight * 2 - gap, _display.width(), barHeight, SSD1306_COLOR_BLACK);
-    _display.fillRect(0, _display.height() - barHeight * 2 - gap, widthA, barHeight, SSD1306_COLOR_WHITE);
+    _display.fillRect(0, _display.height() - barHeight * 2 - gap, _display.width(), barHeight,
+                      SSD1306_COLOR_BLACK);
+    _display.fillRect(0, _display.height() - barHeight * 2 - gap, widthA, barHeight,
+                      SSD1306_COLOR_WHITE);
 
     int widthB = map(envB, 0, 127, 0, _display.width());
-    _display.fillRect(0, _display.height() - barHeight, _display.width(), barHeight, SSD1306_COLOR_BLACK);
+    _display.fillRect(0, _display.height() - barHeight, _display.width(), barHeight,
+                      SSD1306_COLOR_BLACK);
     _display.fillRect(0, _display.height() - barHeight, widthB, barHeight, SSD1306_COLOR_WHITE);
 }
 
@@ -535,17 +545,13 @@ void DisplayManager::highlightActivePot(uint8_t potIndex) {
     _display.drawRect(5 + potIndex * 10, 50, 8, 8, SSD1306_COLOR_WHITE);
 }
 
-void DisplayManager::highlightActiveMode(const String& modeName) {
+void DisplayManager::highlightActiveMode(const String &modeName) {
     _activeMode = modeName;
     _display.setCursor(0, 56);
     _display.print(F("MODE: "));
     _display.print(_activeMode);
 }
 
-void DisplayManager::setUpdateInterval(unsigned long intervalMs) {
-    _updateIntervalMs = intervalMs;
-}
+void DisplayManager::setUpdateInterval(unsigned long intervalMs) { _updateIntervalMs = intervalMs; }
 
-unsigned long DisplayManager::getUpdateInterval() const {
-    return _updateIntervalMs;
-}
+unsigned long DisplayManager::getUpdateInterval() const { return _updateIntervalMs; }

@@ -14,7 +14,7 @@ class HardwareSerial;
 #include <MIDI.h>
 #include "MidiTypeShim.h"
 #if defined(USB_MIDI_STUB)
-#include "usb_midi.h"       // snag the stub from test/ when asked
+#include "usb_midi.h" // snag the stub from test/ when asked
 inline constexpr bool HAS_USB_MIDI = true;
 #elif defined(USB_MIDI) || defined(USB_MIDI_SERIAL)
 #include <usb_midi.h>
@@ -27,9 +27,9 @@ inline constexpr bool HAS_USB_MIDI = false;
  * @brief Thin wrapper around the Arduino and USB MIDI libraries.
  */
 class MIDIHandler {
-public:
+  public:
     /** Assign a DisplayManager so MIDI traffic can be displayed. */
-    void setDisplayManager(DisplayManager* dm) { _displayManager = dm; }
+    void setDisplayManager(DisplayManager *dm) { _displayManager = dm; }
 
     /** Create a new MIDI handler with no side effects. */
     MIDIHandler();
@@ -61,11 +61,11 @@ public:
     uint16_t lastRPNValue() const { return _lastRPNValue; }
 
     /** Fire off a System Exclusive packet. `data` should include F0/F7. */
-    void sendSysEx(const uint8_t* data, uint16_t length);
+    void sendSysEx(const uint8_t *data, uint16_t length);
 
     /** Snapshot of the most recent SysEx payload. */
     uint16_t lastSysExLength() const { return _lastSysExLength; }
-    const uint8_t* lastSysExData() const { return _lastSysEx; }
+    const uint8_t *lastSysExData() const { return _lastSysEx; }
     SysExType lastSysExType() const { return _lastSysExType; }
     uint8_t lastSysExSubId1() const { return _lastSysExSubId1; }
     uint8_t lastSysExSubId2() const { return _lastSysExSubId2; }
@@ -95,16 +95,16 @@ public:
     uint32_t getRxCount() const { return _rxCount; }
     uint32_t getTxCount() const { return _txCount; }
 
-private:
+  private:
     bool clockTick = false;
     unsigned long lastExternalClock = 0;
     unsigned long lastInternalTick = 0;
-    DisplayManager* _displayManager = nullptr;
+    DisplayManager *_displayManager = nullptr;
 
     // NRPN decode state
     uint16_t _nrpnParam = 0;
     uint16_t _nrpnValue = 0;
-    bool     _nrpnParamReady = false;
+    bool _nrpnParamReady = false;
 
     // Last fully received NRPN for external inspection
     uint16_t _lastNRPNParam = 0;
@@ -113,14 +113,14 @@ private:
     // RPN decode state
     uint16_t _rpnParam = 0;
     uint16_t _rpnValue = 0;
-    bool     _rpnParamReady = false;
+    bool _rpnParamReady = false;
 
     // Last fully received RPN for external inspection
     uint16_t _lastRPNParam = 0;
     uint16_t _lastRPNValue = 0;
 
     // SysEx stash for quick testing/debugging
-    uint8_t  _lastSysEx[32] = {0};
+    uint8_t _lastSysEx[32] = {0};
     uint16_t _lastSysExLength = 0;
     SysExType _lastSysExType = SysExType::ManufacturerSpecific;
     uint8_t _lastSysExSubId1 = 0;
@@ -131,7 +131,7 @@ private:
 
     void receiveNRPN(uint8_t channel, uint16_t param, uint16_t value);
     void receiveRPN(uint8_t channel, uint16_t param, uint16_t value);
-    void handleSysEx(const uint8_t* data, uint16_t length);
+    void handleSysEx(const uint8_t *data, uint16_t length);
     void handleClockTick();
 };
 

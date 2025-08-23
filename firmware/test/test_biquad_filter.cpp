@@ -1,4 +1,4 @@
-#include "unity_config.h"  // bundles Arduino and the usbMIDI stand-in
+#include "unity_config.h" // bundles Arduino and the usbMIDI stand-in
 #include <unity.h>
 #include "BiquadFilter.h"
 
@@ -18,4 +18,3 @@ void test_lowpass_highpass_response() {
     TEST_ASSERT_FLOAT_WITHIN(0.1f, 1.0f, lpOut);
     TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, hpOut);
 }
-

@@ -12,20 +12,18 @@
 // feed LEDManager for visual feedback and trigger MIDI messages through the
 // callback registered by firmware_main.cpp.
 
-static constexpr int CHANGE_THRESHOLD = 2;  // Adjust based on your noise tolerance
+static constexpr int CHANGE_THRESHOLD = 2; // Adjust based on your noise tolerance
 
-PotentiometerManager::PotentiometerManager(
-    const uint8_t* primaryPins,
-    const uint8_t* secondaryPins,
-    uint8_t analogPin
-) : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins), analogPin(analogPin) {
+PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
+                                           uint8_t analogPin)
+    : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins), analogPin(analogPin) {
     // Initialize pot default values
     for (int i = 0; i < NUM_POTS; i++) {
-        potChannels[i] = 1;       // Default MIDI channel
-        potCCNumbers[i] = i;      // Default MIDI CC number
-        potLastValues[i] = -1;    // Ensure the first read updates
-        smoothedValue[i] = 0;     // EWMA starting point
-        dirtyFlags[i] = false;    // Nothing dirty yet
+        potChannels[i] = 1;    // Default MIDI channel
+        potCCNumbers[i] = i;   // Default MIDI CC number
+        potLastValues[i] = -1; // Ensure the first read updates
+        smoothedValue[i] = 0;  // EWMA starting point
+        dirtyFlags[i] = false; // Nothing dirty yet
     }
 }
 
@@ -89,27 +87,31 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
-
-void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes) {
+void PotentiometerManager::processPots(LEDManager &ledManager,
+                                       std::vector<EnvelopeFollower> &envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
-        if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS) break;
+        if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS)
+            break;
         // Stage 1a: the primary mux selects which gang of pots we're sniffing.
         selectMuxBank(primaryBank);
 
-        for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS); secondaryBank++) {
+        for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS);
+             secondaryBank++) {
             // Stage 1b: secondary mux dials in the exact pot within that gang.
             selectPotBank(secondaryBank);
 
             // Mash the two bank numbers together to get the global pot index.
             uint8_t potIndex = (primaryBank << SECONDARY_MUX_PINS) | secondaryBank;
 
-            if (potIndex >= NUM_POTS) break;
+            if (potIndex >= NUM_POTS)
+                break;
 
             // Stage 2: snag the raw voltage and run it through our tiny RC filter.
             int rawValue = readAnalogFiltered(analogPin);
 
             // EWMA smoothing – ALPHA (see header) leans toward fresh readings.
-            smoothedValue[potIndex] = Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], ALPHA);
+            smoothedValue[potIndex] =
+                Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], ALPHA);
 
             // Stage 3: bail if the movement is smaller than the noise floor.
             if (abs(smoothedValue[potIndex] - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
@@ -121,12 +123,8 @@ void PotentiometerManager::processPots(LEDManager& ledManager, std::vector<Envel
                 ledManager.setPotValue(potIndex, midiValue);
 
                 if (midiCallback) {
-                    midiCallback(
-                        potCCNumbers[potIndex],
-                        midiValue,
-                        potChannels[potIndex],
-                        potIndex
-                    );
+                    midiCallback(potCCNumbers[potIndex], midiValue, potChannels[potIndex],
+                                 potIndex);
                 }
             }
         }
@@ -146,7 +144,7 @@ void PotentiometerManager::resetEEPROM() {
     LOG_PRINTLN("Resetting EEPROM settings for potentiometers...");
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         potChannels[i] = 1;  // Default MIDI channel
-        potCCNumbers[i] = i;  // Default CC number
+        potCCNumbers[i] = i; // Default CC number
         EEPROM.update(i * 2, potChannels[i]);
         EEPROM.update(i * 2 + 1, potCCNumbers[i]);
     }
@@ -154,8 +152,8 @@ void PotentiometerManager::resetEEPROM() {
 
 void PotentiometerManager::saveToEEPROM() {
     for (uint8_t i = 0; i < NUM_POTS; i++) {
-        EEPROM.update(i*2,    potChannels[i]);
-        EEPROM.update(i*2+1,  potCCNumbers[i]);
+        EEPROM.update(i * 2, potChannels[i]);
+        EEPROM.update(i * 2 + 1, potCCNumbers[i]);
     }
 }
 
@@ -172,17 +170,16 @@ void PotentiometerManager::getArgEnvelopePair(int &a, int &b) const {
 int PotentiometerManager::readRawPot(uint8_t potIndex) {
     // decode into bank and pot bits
     uint8_t bank = potIndex >> SECONDARY_MUX_PINS;
-    uint8_t pot  = potIndex & ((1 << SECONDARY_MUX_PINS) - 1);
+    uint8_t pot = potIndex & ((1 << SECONDARY_MUX_PINS) - 1);
 
     // do the private selects
     selectMuxBank(bank);
     selectPotBank(pot);
-    delayMicroseconds(5);           // settle time
-    return analogRead(analogPin);   // direct raw read
+    delayMicroseconds(5);         // settle time
+    return analogRead(analogPin); // direct raw read
 }
 
 void PotentiometerManager::setMidiCallback(
-  std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> cb
-) {
-  midiCallback = cb;
+    std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> cb) {
+    midiCallback = cb;
 }

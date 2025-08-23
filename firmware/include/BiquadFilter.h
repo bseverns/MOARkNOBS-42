@@ -12,19 +12,17 @@
  * values are processed.
  */
 class BiquadFilter {
-public:
+  public:
     /**
      * @brief Supported filter response types.
      */
     enum FilterType {
-        LOWPASS,   //!< Allows frequencies below the cutoff to pass
-        HIGHPASS,  //!< Allows frequencies above the cutoff to pass
-        BANDPASS   //!< Allows a band around the cutoff to pass
+        LOWPASS,  //!< Allows frequencies below the cutoff to pass
+        HIGHPASS, //!< Allows frequencies above the cutoff to pass
+        BANDPASS  //!< Allows a band around the cutoff to pass
     };
 
-    BiquadFilter()
-        : a0(0), a1(0), a2(0), b1(0), b2(0),
-          x1(0), x2(0), y1(0), y2(0) {}
+    BiquadFilter() : a0(0), a1(0), a2(0), b1(0), b2(0), x1(0), x2(0), y1(0), y2(0) {}
 
     /**
      * @brief Configure the filter coefficients.
@@ -48,27 +46,27 @@ public:
         float alpha = sin_omega / (2.0f * q);
 
         switch (type) {
-            case LOWPASS:
-                a0 = (1 - cos_omega) / 2.0f;
-                a1 = 1 - cos_omega;
-                a2 = (1 - cos_omega) / 2.0f;
-                b1 = -2.0f * cos_omega;
-                b2 = 1.0f - alpha;
-                break;
-            case HIGHPASS:
-                a0 = (1 + cos_omega) / 2.0f;
-                a1 = -(1 + cos_omega);
-                a2 = (1 + cos_omega) / 2.0f;
-                b1 = -2.0f * cos_omega;
-                b2 = 1.0f - alpha;
-                break;
-            case BANDPASS:
-                a0 = alpha;
-                a1 = 0.0f;
-                a2 = -alpha;
-                b1 = -2.0f * cos_omega;
-                b2 = 1.0f - alpha;
-                break;
+        case LOWPASS:
+            a0 = (1 - cos_omega) / 2.0f;
+            a1 = 1 - cos_omega;
+            a2 = (1 - cos_omega) / 2.0f;
+            b1 = -2.0f * cos_omega;
+            b2 = 1.0f - alpha;
+            break;
+        case HIGHPASS:
+            a0 = (1 + cos_omega) / 2.0f;
+            a1 = -(1 + cos_omega);
+            a2 = (1 + cos_omega) / 2.0f;
+            b1 = -2.0f * cos_omega;
+            b2 = 1.0f - alpha;
+            break;
+        case BANDPASS:
+            a0 = alpha;
+            a1 = 0.0f;
+            a2 = -alpha;
+            b1 = -2.0f * cos_omega;
+            b2 = 1.0f - alpha;
+            break;
         }
 
         float norm = 1.0f + alpha;
@@ -94,7 +92,7 @@ public:
         return output;
     }
 
-private:
+  private:
     float a0, a1, a2;
     float b1, b2;
     float x1, x2; //!< Previous input samples

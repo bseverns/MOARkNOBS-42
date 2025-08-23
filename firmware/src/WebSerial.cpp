@@ -6,8 +6,8 @@
 #include "Log.h"
 #include <ArduinoJson.h>
 
-void WebSerial::sendStateSnapshot(const PotentiometerManager& pots,
-                                  const std::vector<EnvelopeFollower>& envelopes) {
+void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
+                                  const std::vector<EnvelopeFollower> &envelopes) {
     StaticJsonDocument<1024> doc;
     JsonArray slots = doc.createNestedArray("slots");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
@@ -15,7 +15,7 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager& pots,
     }
 
     JsonArray envs = doc.createNestedArray("envelopes");
-    for (const auto& env : envelopes) {
+    for (const auto &env : envelopes) {
         envs.add(env.getEnvelopeLevel());
     }
 
@@ -23,4 +23,3 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager& pots,
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
 }
-

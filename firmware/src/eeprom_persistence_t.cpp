@@ -33,16 +33,16 @@
 // address well outside normal config space
 static constexpr int EEPROM_TEST_FLAG_ADDR = EEPROM_BACKUP_START + 100;
 static constexpr uint8_t TEST_NOT_STARTED = 0xFF;
-static constexpr uint8_t TEST_STAGE_SAVE  = 0x55;
+static constexpr uint8_t TEST_STAGE_SAVE = 0x55;
 static constexpr uint8_t TEST_STAGE_VERIFY = 0xAA;
 
 // -- Globals -----------------------------------------------------------------
 std::vector<uint8_t> potChannels;
-ConfigManager       configManager = createConfigManager();
-LEDManager          ledManager    = createLEDManager();
-DisplayManager      displayManager = createDisplayManager();
+ConfigManager configManager = createConfigManager();
+LEDManager ledManager = createLEDManager();
+DisplayManager displayManager = createDisplayManager();
 PotentiometerManager potentiometerManager = createPotentiometerManager();
-ButtonManager       buttonManager = createButtonManager(&potentiometerManager);
+ButtonManager buttonManager = createButtonManager(&potentiometerManager);
 std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&potentiometerManager);
 
 static MIDISlot testSlots[NUM_SLOTS];
@@ -54,31 +54,40 @@ void fillTestData() {
         configManager.setPotCCNumber(i, 10 + i);
     }
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        testSlots[i] = {MIDIMessageType::CC, (uint8_t)((i % 16) + 1), i,
-                        (uint8_t)(i % 6), true, 60};
+        testSlots[i] = {
+            MIDIMessageType::CC, (uint8_t)((i % 16) + 1), i, (uint8_t)(i % 6), true, 60};
     }
 }
 
 bool verifyTestData() {
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
-        if (configManager.getPotChannel(i) != (i % 16) + 1) return false;
-        if (configManager.getPotCCNumber(i) != 10 + i)     return false;
+        if (configManager.getPotChannel(i) != (i % 16) + 1)
+            return false;
+        if (configManager.getPotCCNumber(i) != 10 + i)
+            return false;
     }
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot &s = configManager.getSlot(i);
-        if (s.type != MIDIMessageType::CC)           return false;
-        if (s.midiChannel != (uint8_t)((i % 16) + 1)) return false;
-        if (s.data1 != i)                            return false;
-        if (s.efIndex != (uint8_t)(i % 6))           return false;
-        if (!s.active)                               return false;
-        if (s.arpNote != 60)                        return false;
+        if (s.type != MIDIMessageType::CC)
+            return false;
+        if (s.midiChannel != (uint8_t)((i % 16) + 1))
+            return false;
+        if (s.data1 != i)
+            return false;
+        if (s.efIndex != (uint8_t)(i % 6))
+            return false;
+        if (!s.active)
+            return false;
+        if (s.arpNote != 60)
+            return false;
     }
     return true;
 }
 
 void setup() {
     Serial.begin(115200);
-    while (!Serial);
+    while (!Serial)
+        ;
     delay(200);
 
     uint8_t flag = EEPROM.read(EEPROM_TEST_FLAG_ADDR);
@@ -101,7 +110,7 @@ void setup() {
             Serial.println("Primary load PASS");
             // corrupt primary magic to force backup usage on next boot
             EEPROM.update(EEPROM_MAGIC_ADDRESS, 0x00);
-            EEPROM.update(EEPROM_MAGIC_ADDRESS+1, 0x00);
+            EEPROM.update(EEPROM_MAGIC_ADDRESS + 1, 0x00);
             EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_VERIFY);
             Serial.println("Corrupted primary. Reset once more to test backup.");
             delay(1000);

@@ -14,30 +14,32 @@
 // Forward declaration to avoid circular dependency
 class EnvelopeFollower;
 
-inline constexpr uint8_t PRIMARY_MUX_PINS = 4;   // Address lines for the "upstream" mux selecting which pot bank hits the bus
-inline constexpr uint8_t SECONDARY_MUX_PINS = 4; // Address lines for the "downstream" mux choosing a single pot within that bank
+inline constexpr uint8_t PRIMARY_MUX_PINS =
+    4; // Address lines for the "upstream" mux selecting which pot bank hits the bus
+inline constexpr uint8_t SECONDARY_MUX_PINS =
+    4; // Address lines for the "downstream" mux choosing a single pot within that bank
 constexpr uint8_t NUM_POTS = 42;
-
 
 /**
  * @brief Reads all potentiometers via a pair of analog multiplexers and
  *        forwards the values as MIDI messages.
  */
 class PotentiometerManager {
-private:
-    const uint8_t* primaryMuxPins;   // Drives the primary mux: pick which secondary mux is talking
-    const uint8_t* secondaryMuxPins; // Drives the secondary mux: pick the actual pot within that bank
-    const uint8_t analogPin;         // Analog pin for mux output
-    uint8_t potChannels[NUM_POTS];   // MIDI channel for each pot
-    uint8_t potCCNumbers[NUM_POTS];  // MIDI CC number for each pot
-    int potLastValues[NUM_POTS];     // Last read values for each pot
+  private:
+    const uint8_t *primaryMuxPins; // Drives the primary mux: pick which secondary mux is talking
+    const uint8_t
+        *secondaryMuxPins;         // Drives the secondary mux: pick the actual pot within that bank
+    const uint8_t analogPin;       // Analog pin for mux output
+    uint8_t potChannels[NUM_POTS]; // MIDI channel for each pot
+    uint8_t potCCNumbers[NUM_POTS]; // MIDI CC number for each pot
+    int potLastValues[NUM_POTS];    // Last read values for each pot
 
     // Exponential Weighted Moving Average (EWMA) smoothing
     // keeps analog jitter down without killing responsiveness.
     static constexpr float ALPHA = 0.1f; // weight of the newest sample
     int smoothedValue[NUM_POTS];         // running EWMA for each pot
 
-    bool dirtyFlags[NUM_POTS];           // pots that moved enough to matter
+    bool dirtyFlags[NUM_POTS]; // pots that moved enough to matter
 
     void selectMuxBank(uint8_t bank); // Drive the primary mux address lines
     void selectPotBank(uint8_t pot);  // Drive the secondary mux address lines
@@ -54,23 +56,18 @@ private:
     int argEnvA;
     int argEnvB;
 
-public:
+  public:
     /**
      * Construct the manager with the mux address pin arrays and analog input.
      */
-    PotentiometerManager(
-        const uint8_t* primaryPins,
-        const uint8_t* secondaryPins,
-        uint8_t analogPin
-    );
+    PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
+                         uint8_t analogPin);
 
     /** Register a callback to send MIDI when a pot changes. */
-    void setMidiCallback(std::function<void(
-    uint8_t /*data1*/,
-    uint8_t /*mappedValue*/,
-    uint8_t /*midiChannel*/,
-    uint8_t /*slotIndex*/
-    )> callback);
+    void setMidiCallback(std::function<void(uint8_t /*data1*/, uint8_t /*mappedValue*/,
+                                            uint8_t /*midiChannel*/, uint8_t /*slotIndex*/
+                                            )>
+                             callback);
 
     /** Read pot/channel settings from EEPROM. */
     void loadFromEEPROM();
@@ -94,7 +91,7 @@ public:
      * Read every pot via the muxes and invoke the MIDI callback for changes.
      * Also updates LEDs and envelope followers.
      */
-    void processPots(LEDManager& ledManager, std::vector<EnvelopeFollower>& envelopes);
+    void processPots(LEDManager &ledManager, std::vector<EnvelopeFollower> &envelopes);
 
     /** Specify the envelope pair used for ARG operations. */
     void setArgEnvelopePair(int a, int b);

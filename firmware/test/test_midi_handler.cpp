@@ -43,7 +43,7 @@ void test_send_nrpn() {
     TEST_ASSERT_EQUAL_UINT8(0x24, MIDI.ccLog[0].value);
     TEST_ASSERT_EQUAL_UINT8(98, MIDI.ccLog[1].control);
     TEST_ASSERT_EQUAL_UINT8(0x34, MIDI.ccLog[1].value);
-    TEST_ASSERT_EQUAL_UINT8(6,  MIDI.ccLog[2].control);
+    TEST_ASSERT_EQUAL_UINT8(6, MIDI.ccLog[2].control);
     TEST_ASSERT_EQUAL_UINT8(0xAC, MIDI.ccLog[2].value);
     TEST_ASSERT_EQUAL_UINT8(38, MIDI.ccLog[3].control);
     TEST_ASSERT_EQUAL_UINT8(0x78, MIDI.ccLog[3].value);
@@ -57,7 +57,7 @@ void test_receive_nrpn() {
     uint8_t ch = 2;
     mh.handleMIDI(midi::ControlChange, ch, 99, (param >> 7) & 0x7F);
     mh.handleMIDI(midi::ControlChange, ch, 98, param & 0x7F);
-    mh.handleMIDI(midi::ControlChange, ch, 6,  (value >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, ch, 6, (value >> 7) & 0x7F);
     mh.handleMIDI(midi::ControlChange, ch, 38, value & 0x7F);
     TEST_ASSERT_EQUAL_UINT16(param, mh.lastNRPNParam());
     TEST_ASSERT_EQUAL_UINT16(value, mh.lastNRPNValue());

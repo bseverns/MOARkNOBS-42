@@ -36,7 +36,7 @@ struct ScheduledTask {
  * monkey with the scheduler's task list directly.
  */
 class TaskScheduler {
-public:
+  public:
     void addTask(std::function<void()> callback, unsigned long delayMs, bool repeat = false);
 
     /**
@@ -44,14 +44,14 @@ public:
      * wipe finished one-shots.
      */
     void update();
-   
-private:
+
+  private:
     std::vector<ScheduledTask> tasks;
 };
 
 /** Collection of miscellaneous helper functions. */
 class Utility {
-public:
+  public:
     /**
      * Schedule a Note On immediately followed by a delayed Note Off.
      *
@@ -61,13 +61,8 @@ public:
      * @param channel      MIDI channel (1‑16).
      * @param durationMs   Duration in milliseconds before the Note Off is sent.
      */
-    static void scheduleNoteOnOff(
-        MIDIHandler& midiHandler,
-        uint8_t note,
-        uint8_t velocity,
-        uint8_t channel,
-        unsigned long durationMs
-    );
+    static void scheduleNoteOnOff(MIDIHandler &midiHandler, uint8_t note, uint8_t velocity,
+                                  uint8_t channel, unsigned long durationMs);
 
     // Mapping and Value Transformations
     /** Map a raw analog reading to the 0‑127 MIDI range. */
@@ -80,25 +75,27 @@ public:
     static float scale(float value, float inMin, float inMax, float outMin, float outMax);
 
     /** Exponential scaling used for envelope shaping. */
-    static float mapExponential(float value, float inMin, float inMax, float outMin, float outMax, float exponent);
+    static float mapExponential(float value, float inMin, float inMax, float outMin, float outMax,
+                                float exponent);
 
     // Debouncing
     /** Simple digital input debouncing helper. */
-    static bool debounce(bool& previousState, bool currentState, unsigned long& lastDebounceTime, unsigned long currentTime, unsigned long debounceDelay);
+    static bool debounce(bool &previousState, bool currentState, unsigned long &lastDebounceTime,
+                         unsigned long currentTime, unsigned long debounceDelay);
 
     // EEPROM Operations
     static uint8_t readEEPROMByte(int address);
     static void writeEEPROMByte(int address, uint8_t value);
 
     // Timer Helpers
-    static bool isTimeElapsed(unsigned long& lastTime, unsigned long interval);
+    static bool isTimeElapsed(unsigned long &lastTime, unsigned long interval);
 
     // LED Utilities
     static CRGB mapValueToColor(uint8_t value, CRGB lowColor, CRGB highColor);
 
     // Serial Communication Helpers
-    static void logError(const char* errorMessage);
-    static void logDebug(const char* debugMessage);
+    static void logError(const char *errorMessage);
+    static void logDebug(const char *debugMessage);
 
     // Filtering
     static int exponentialMovingAverage(int currentValue, int previousValue, float alpha);
@@ -107,20 +104,17 @@ public:
     static void rebootTeensy();
 
     // Display Utilities
-    static void displayCenteredText(Adafruit_SSD1306& display, const char* text);
-    static void displayStatus(Adafruit_SSD1306& display, const char* status, unsigned long duration);
+    static void displayCenteredText(Adafruit_SSD1306 &display, const char *text);
+    static void displayStatus(Adafruit_SSD1306 &display, const char *status,
+                              unsigned long duration);
 
     static void updateDisplay(
-      Adafruit_SSD1306& display,
-      uint8_t beatPosition,
-      const std::vector<EnvelopeFollower>& envelopeFollowers, // Accept EnvelopeFollower objects
-      const char* statusMessage,
-      uint8_t activePot,
-      uint8_t activeChannel,
-      const char* envelopeMode
-);
+        Adafruit_SSD1306 &display, uint8_t beatPosition,
+        const std::vector<EnvelopeFollower> &envelopeFollowers, // Accept EnvelopeFollower objects
+        const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
+        const char *envelopeMode);
 
-    static void processBulkUpdate(const String& command, uint8_t numPots);
+    static void processBulkUpdate(const String &command, uint8_t numPots);
 
     /** Sample the hardware VREF divider and return the measured voltage. */
     static float readVrefADC(uint8_t pin = VREF_ADC_PIN);

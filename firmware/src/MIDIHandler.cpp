@@ -9,11 +9,11 @@
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
 #ifdef MIDI_DEBUG
-  #define MIDI_DBG_PRINTF(...) LOG_PRINTF(__VA_ARGS__)
-  #define MIDI_DBG_PRINTLN(...) LOG_PRINTLN(__VA_ARGS__)
+#define MIDI_DBG_PRINTF(...) LOG_PRINTF(__VA_ARGS__)
+#define MIDI_DBG_PRINTLN(...) LOG_PRINTLN(__VA_ARGS__)
 #else
-  #define MIDI_DBG_PRINTF(...)
-  #define MIDI_DBG_PRINTLN(...)
+#define MIDI_DBG_PRINTF(...)
+#define MIDI_DBG_PRINTLN(...)
 #endif
 
 // Provides a small abstraction over both Serial and USB MIDI transports. Other
@@ -27,7 +27,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 MIDIHandler::MIDIHandler() {}
 
 void MIDIHandler::begin() {
-    MIDI.begin();  // default Omni channel; stub libs may skip the constant
+    MIDI.begin(); // default Omni channel; stub libs may skip the constant
 #ifndef USB_MIDI_STUB
     usbMIDI.begin();
 #endif
@@ -41,7 +41,7 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
     MIDI.sendControlChange(control, value, channel);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
-        usbMIDI.sendControlChange(control, value, channel);  // USB MIDI
+        usbMIDI.sendControlChange(control, value, channel); // USB MIDI
     }
 #endif
 }
@@ -71,8 +71,10 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
 }
 
 void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
-    if (channel < 1 || channel > 16) return;
-    if (param > 16383 || value > 16383) return;
+    if (channel < 1 || channel > 16)
+        return;
+    if (param > 16383 || value > 16383)
+        return;
     _txCount++;
     uint8_t pMsb = (param >> 7) & 0x7F;
     uint8_t pLsb = param & 0x7F;
@@ -81,21 +83,23 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     // classic NRPN sequence: param MSB/LSB then data entry MSB/LSB
     MIDI.sendControlChange(99, pMsb, channel);
     MIDI.sendControlChange(98, pLsb, channel);
-    MIDI.sendControlChange(6,  vMsb, channel);
+    MIDI.sendControlChange(6, vMsb, channel);
     MIDI.sendControlChange(38, vLsb, channel);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(99, pMsb, channel);
         usbMIDI.sendControlChange(98, pLsb, channel);
-        usbMIDI.sendControlChange(6,  vMsb, channel);
+        usbMIDI.sendControlChange(6, vMsb, channel);
         usbMIDI.sendControlChange(38, vLsb, channel);
     }
 #endif
 }
 
 void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
-    if (channel < 1 || channel > 16) return;
-    if (param > 16383 || value > 16383) return;
+    if (channel < 1 || channel > 16)
+        return;
+    if (param > 16383 || value > 16383)
+        return;
     _txCount++;
     uint8_t pMsb = (param >> 7) & 0x7F;
     uint8_t pLsb = param & 0x7F;
@@ -104,20 +108,21 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
     // RPN sequence: param MSB/LSB then data entry MSB/LSB
     MIDI.sendControlChange(101, pMsb, channel);
     MIDI.sendControlChange(100, pLsb, channel);
-    MIDI.sendControlChange(6,   vMsb, channel);
-    MIDI.sendControlChange(38,  vLsb, channel);
+    MIDI.sendControlChange(6, vMsb, channel);
+    MIDI.sendControlChange(38, vLsb, channel);
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(101, pMsb, channel);
         usbMIDI.sendControlChange(100, pLsb, channel);
-        usbMIDI.sendControlChange(6,   vMsb, channel);
-        usbMIDI.sendControlChange(38,  vLsb, channel);
+        usbMIDI.sendControlChange(6, vMsb, channel);
+        usbMIDI.sendControlChange(38, vLsb, channel);
     }
 #endif
 }
 
-void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
-    if (!data || length == 0 || length > 1024) return;
+void MIDIHandler::sendSysEx(const uint8_t *data, uint16_t length) {
+    if (!data || length == 0 || length > 1024)
+        return;
     _txCount++;
     MIDI.sendSysEx(length, data, true);
 #ifndef USB_MIDI_STUB
@@ -131,17 +136,17 @@ void MIDIHandler::sendSysEx(const uint8_t* data, uint16_t length) {
 // [[maybe_unused]] because USB builds might stub out the call site.
 [[maybe_unused]] static bool isSupportedType(midi::MidiType t) {
     switch (t) {
-        case midi::ControlChange:
-        case midi::NoteOn:
-        case midi::NoteOff:
-        case midi::ProgramChange:
-        case midi::AfterTouchChannel:
-        case midi::PitchBend:
-        case MidiType_SystemExclusiveStart:
-        case MidiType_Tick:
-            return true;
-        default:
-            return false;
+    case midi::ControlChange:
+    case midi::NoteOn:
+    case midi::NoteOff:
+    case midi::ProgramChange:
+    case midi::AfterTouchChannel:
+    case midi::PitchBend:
+    case MidiType_SystemExclusiveStart:
+    case MidiType_Tick:
+        return true;
+    default:
+        return false;
     }
 }
 
@@ -214,70 +219,70 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
     }
     _rxCount++;
     switch (type) {
-        case midi::ControlChange:
-            // Peek for NRPN sequences; otherwise just log the CC
-            switch (data1) {
-                case 101: // RPN parameter MSB
-                    _rpnParam = (data2 & 0x7F) << 7;
-                    _rpnParamReady = false;
-                    break;
-                case 100: // RPN parameter LSB
-                    _rpnParam |= (data2 & 0x7F);
-                    _rpnParamReady = true;
-                    break;
-                case 99: // NRPN parameter MSB
-                    _nrpnParam = (data2 & 0x7F) << 7;
-                    _nrpnParamReady = false;
-                    break;
-                case 98: // NRPN parameter LSB
-                    _nrpnParam |= (data2 & 0x7F);
-                    _nrpnParamReady = true;
-                    break;
-                case 6: // Data entry MSB
-                    _nrpnValue = (data2 & 0x7F) << 7;
-                    _rpnValue  = (data2 & 0x7F) << 7;
-                    break;
-                case 38: // Data entry LSB
-                    _nrpnValue |= (data2 & 0x7F);
-                    _rpnValue  |= (data2 & 0x7F);
-                    if (_nrpnParamReady) {
-                        receiveNRPN(channel, _nrpnParam, _nrpnValue);
-                        _nrpnParamReady = false;
-                    }
-                    if (_rpnParamReady) {
-                        receiveRPN(channel, _rpnParam, _rpnValue);
-                        _rpnParamReady = false;
-                    }
-                    break;
-                default:
-                    MIDI_DBG_PRINTF("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
-                    break;
+    case midi::ControlChange:
+        // Peek for NRPN sequences; otherwise just log the CC
+        switch (data1) {
+        case 101: // RPN parameter MSB
+            _rpnParam = (data2 & 0x7F) << 7;
+            _rpnParamReady = false;
+            break;
+        case 100: // RPN parameter LSB
+            _rpnParam |= (data2 & 0x7F);
+            _rpnParamReady = true;
+            break;
+        case 99: // NRPN parameter MSB
+            _nrpnParam = (data2 & 0x7F) << 7;
+            _nrpnParamReady = false;
+            break;
+        case 98: // NRPN parameter LSB
+            _nrpnParam |= (data2 & 0x7F);
+            _nrpnParamReady = true;
+            break;
+        case 6: // Data entry MSB
+            _nrpnValue = (data2 & 0x7F) << 7;
+            _rpnValue = (data2 & 0x7F) << 7;
+            break;
+        case 38: // Data entry LSB
+            _nrpnValue |= (data2 & 0x7F);
+            _rpnValue |= (data2 & 0x7F);
+            if (_nrpnParamReady) {
+                receiveNRPN(channel, _nrpnParam, _nrpnValue);
+                _nrpnParamReady = false;
+            }
+            if (_rpnParamReady) {
+                receiveRPN(channel, _rpnParam, _rpnValue);
+                _rpnParamReady = false;
             }
             break;
-        case midi::NoteOn:
-            handleNoteOn(channel, data1, data2);
-            break;
-        case midi::NoteOff:
-            handleNoteOff(channel, data1, data2);
-            break;
-        case midi::ProgramChange:
-            handleProgramChange(channel, data1);
-            break;
-        case midi::AfterTouchChannel:
-            handleAftertouch(channel, data1);
-            break;
-        case midi::PitchBend: {
-            int16_t bend = ((data2 & 0x7F) << 7) | (data1 & 0x7F);
-            bend -= 8192;
-            handlePitchBend(channel, bend);
+        default:
+            MIDI_DBG_PRINTF("CC: %d, Value: %d, Channel: %d\n", data1, data2, channel);
             break;
         }
-        case MidiType_SystemExclusiveStart:
-            // handled upstream
-            break;
-        default:
-            MIDI_DBG_PRINTLN("Unhandled MIDI message");
-            break;
+        break;
+    case midi::NoteOn:
+        handleNoteOn(channel, data1, data2);
+        break;
+    case midi::NoteOff:
+        handleNoteOff(channel, data1, data2);
+        break;
+    case midi::ProgramChange:
+        handleProgramChange(channel, data1);
+        break;
+    case midi::AfterTouchChannel:
+        handleAftertouch(channel, data1);
+        break;
+    case midi::PitchBend: {
+        int16_t bend = ((data2 & 0x7F) << 7) | (data1 & 0x7F);
+        bend -= 8192;
+        handlePitchBend(channel, bend);
+        break;
+    }
+    case MidiType_SystemExclusiveStart:
+        // handled upstream
+        break;
+    default:
+        MIDI_DBG_PRINTLN("Unhandled MIDI message");
+        break;
     }
 }
 
@@ -317,62 +322,64 @@ void MIDIHandler::handlePitchBend(uint8_t channel, int16_t bend) {
 }
 
 // Did we just spew or hear a MIDI clock pulse since last check?
-bool MIDIHandler::isClockTick() {
-    return clockTick;
-}
+bool MIDIHandler::isClockTick() { return clockTick; }
 
 // Wipe the clock pulse flag so the next beat counts.
-void MIDIHandler::clearClockTick() {
-    clockTick = false;
-}
+void MIDIHandler::clearClockTick() { clockTick = false; }
 
 void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
-  if (program>127|| channel<1||channel>16) return;
-  _txCount++;
-  MIDI.sendProgramChange(program, channel);
+    if (program > 127 || channel < 1 || channel > 16)
+        return;
+    _txCount++;
+    MIDI.sendProgramChange(program, channel);
 #ifndef USB_MIDI_STUB
-  if (g_usbMidiOutEnabled) {
-    usbMIDI.sendProgramChange(program, channel);
-  }
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.sendProgramChange(program, channel);
+    }
 #endif
 }
 
 void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
-  if (pressure>127|| channel<1||channel>16) return;
-  MIDI.sendAfterTouch(pressure, channel);
+    if (pressure > 127 || channel < 1 || channel > 16)
+        return;
+    MIDI.sendAfterTouch(pressure, channel);
 #ifndef USB_MIDI_STUB
-  if (g_usbMidiOutEnabled) {
-    usbMIDI.sendAfterTouch(pressure, channel);
-  }
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.sendAfterTouch(pressure, channel);
+    }
 #endif
-  _txCount++;
+    _txCount++;
 }
 
 void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
-  // Validate channel and clamp bend value
-  if (channel < 1 || channel > 16) return;
-  if (bend < -8192) bend = -8192;
-  else if (bend > 8191) bend = 8191;
+    // Validate channel and clamp bend value
+    if (channel < 1 || channel > 16)
+        return;
+    if (bend < -8192)
+        bend = -8192;
+    else if (bend > 8191)
+        bend = 8191;
 
-  // Teensy and USB MIDI libraries accept the signed 14-bit value directly
-  MIDI.sendPitchBend(bend, channel);
+    // Teensy and USB MIDI libraries accept the signed 14-bit value directly
+    MIDI.sendPitchBend(bend, channel);
 #ifndef USB_MIDI_STUB
-  if (g_usbMidiOutEnabled) {
-    usbMIDI.sendPitchBend(bend, channel);
-  }
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.sendPitchBend(bend, channel);
+    }
 #endif
-  _txCount++;
+    _txCount++;
 }
 
 void MIDIHandler::sendClock() {
-  if (!g_clockOutEnabled) return;
-  MIDI.sendClock();
+    if (!g_clockOutEnabled)
+        return;
+    MIDI.sendClock();
 #ifndef USB_MIDI_STUB
-  if (g_usbMidiOutEnabled) {
-    usbMIDI.sendClock();
-  }
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.sendClock();
+    }
 #endif
-  _txCount++;
+    _txCount++;
 }
 
 void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {
@@ -387,8 +394,9 @@ void MIDIHandler::receiveRPN(uint8_t channel, uint16_t param, uint16_t value) {
     MIDI_DBG_PRINTF("RPN %u = %u on ch %u\n", param, value, channel);
 }
 
-void MIDIHandler::handleSysEx(const uint8_t* data, uint16_t length) {
-    if (!data || length == 0) return;
+void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
+    if (!data || length == 0)
+        return;
     _rxCount++;
     _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
     for (uint16_t i = 0; i < _lastSysExLength; ++i) {
@@ -399,8 +407,8 @@ void MIDIHandler::handleSysEx(const uint8_t* data, uint16_t length) {
     if (length >= 5) {
         uint8_t manufacturer = data[1];
         if (manufacturer == 0x7E || manufacturer == 0x7F) {
-            _lastSysExType = (manufacturer == 0x7E) ?
-                SysExType::UniversalNonRealTime : SysExType::UniversalRealTime;
+            _lastSysExType = (manufacturer == 0x7E) ? SysExType::UniversalNonRealTime
+                                                    : SysExType::UniversalRealTime;
             _lastSysExSubId1 = data[3];
             _lastSysExSubId2 = data[4];
         }

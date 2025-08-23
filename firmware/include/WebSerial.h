@@ -8,7 +8,7 @@
 #include "EnvelopeFollower.h"
 
 class WebSerial {
-public:
+  public:
     /**
      * Send a JSON snapshot of all slot values and envelope levels.
      * Structure (newline-terminated):
@@ -20,8 +20,8 @@ public:
      * {"slots":[0,1,2,...,41],"envelopes":[0,0,0,0,0,0]}
      * Cross-check docs/WebSerial.md for the gritty protocol details.
      */
-    static void sendStateSnapshot(const PotentiometerManager& pots,
-                                  const std::vector<EnvelopeFollower>& envelopes);
+    static void sendStateSnapshot(const PotentiometerManager &pots,
+                                  const std::vector<EnvelopeFollower> &envelopes);
 };
 
 #endif // WEBSERIAL_H

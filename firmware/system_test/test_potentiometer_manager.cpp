@@ -9,4 +9,3 @@ void test_channel_and_cc() {
     TEST_ASSERT_EQUAL_UINT8(9, pm.getChannel(0));
     TEST_ASSERT_EQUAL_UINT8(74, pm.getCCNumber(0));
 }
-

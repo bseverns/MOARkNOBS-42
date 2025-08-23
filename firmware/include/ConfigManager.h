@@ -56,9 +56,10 @@ class MIDIHandler;
 
 inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
 inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
-inline constexpr uint16_t EEPROM_MAGIC_ADDRESS = EEPROM_START_ADDRESS + 200;  // Reserve space for config + magic number
-inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD;  // Validates the main config block
-inline constexpr uint16_t EEPROM_MAGIC_BACKUP  = 0xDCBA;  // Signals a sane backup image
+inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
+    EEPROM_START_ADDRESS + 200;                          // Reserve space for config + magic number
+inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; // Validates the main config block
+inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  // Signals a sane backup image
 
 inline constexpr uint16_t EEPROM_POT_CHANNELS = EEPROM_START_ADDRESS;
 inline constexpr uint16_t EEPROM_POT_CC = EEPROM_POT_CHANNELS + NUM_POTS;
@@ -66,19 +67,22 @@ inline constexpr uint16_t EEPROM_ENVELOPE_ASSIGNMENTS = EEPROM_POT_CC + NUM_POTS
 inline constexpr uint16_t EEPROM_ENVELOPE_TYPES = EEPROM_ENVELOPE_ASSIGNMENTS + NUM_POTS;
 inline constexpr uint16_t EEPROM_LED_BRIGHTNESS = EEPROM_ENVELOPE_TYPES + NUM_POTS;
 inline constexpr uint16_t EEPROM_LED_COLOR = EEPROM_LED_BRIGHTNESS + 1;
-inline constexpr uint16_t EEPROM_ARG_MODE   = EEPROM_LED_COLOR + 3;
+inline constexpr uint16_t EEPROM_ARG_MODE = EEPROM_LED_COLOR + 3;
 inline constexpr uint16_t EEPROM_ARG_METHOD = EEPROM_ARG_MODE + 1;
-inline constexpr uint16_t EEPROM_ARG_ENV_A  = EEPROM_ARG_METHOD + 1;
-inline constexpr uint16_t EEPROM_ARG_ENV_B  = EEPROM_ARG_ENV_A + 1;
+inline constexpr uint16_t EEPROM_ARG_ENV_A = EEPROM_ARG_METHOD + 1;
+inline constexpr uint16_t EEPROM_ARG_ENV_B = EEPROM_ARG_ENV_A + 1;
 inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
 inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
-inline constexpr uint16_t EEPROM_CONFIG_CRC    = EEPROM_CONFIG_VERSION + 2;
+inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
 inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
 inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
-inline constexpr uint8_t  BUFFER_SIZE = 22;
-inline constexpr uint16_t EEPROM_BACKUP_START = EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
+inline constexpr uint8_t BUFFER_SIZE = 22;
+inline constexpr uint16_t EEPROM_BACKUP_START =
+    EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
 
-inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) { return EEPROM_PROFILE_BLOCK_SIZE * id; }
+inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
+    return EEPROM_PROFILE_BLOCK_SIZE * id;
+}
 
 class EnvelopeFollower;
 
@@ -91,7 +95,7 @@ class EnvelopeFollower;
  * EEPROM and performs simple integrity checks using a magic number.
  */
 class ConfigManager {
-public:
+  public:
     /**
      * Create a configuration manager for the given number of pots and
      * buttons. No EEPROM access occurs here.
@@ -108,14 +112,23 @@ public:
      * Initialise the subsystem and load settings from EEPROM. Populates
      * potChannels with the stored pot→CC map.
      */
-    void begin(std::vector<uint8_t>& potChannels);
+    void begin(std::vector<uint8_t> &potChannels);
 
     MIDIMessageType getSlotType(uint8_t idx) const { return slots[idx].type; }
-    void setSlotType(uint8_t idx, MIDIMessageType t) { slots[idx].type = t; saveSlot(idx, slots[idx]); }
+    void setSlotType(uint8_t idx, MIDIMessageType t) {
+        slots[idx].type = t;
+        saveSlot(idx, slots[idx]);
+    }
     bool getSlotActive(uint8_t idx) const { return slots[idx].active; }
-    void setSlotActive(uint8_t idx, bool a) { slots[idx].active = a; saveSlot(idx, slots[idx]); }
+    void setSlotActive(uint8_t idx, bool a) {
+        slots[idx].active = a;
+        saveSlot(idx, slots[idx]);
+    }
     uint8_t getSlotData1(uint8_t idx) const { return slots[idx].data1; }
-    void    setSlotData1(uint8_t idx, uint8_t v){ slots[idx].data1=v; saveSlot(idx,slots[idx]); }
+    void setSlotData1(uint8_t idx, uint8_t v) {
+        slots[idx].data1 = v;
+        saveSlot(idx, slots[idx]);
+    }
 
     // Accessors -----------------------------------------------------------
 
@@ -137,7 +150,8 @@ public:
     void saveConfiguration();
 
     /** Load configuration from EEPROM. Returns false if data was invalid. */
-    bool loadConfiguration(std::vector<uint8_t>& potChannels, uint16_t base = EEPROM_PROFILE_START(0));
+    bool loadConfiguration(std::vector<uint8_t> &potChannels,
+                           uint16_t base = EEPROM_PROFILE_START(0));
 
     /** Load a saved profile from one of the reserved EEPROM blocks. */
     void loadProfile(uint8_t id);
@@ -151,21 +165,23 @@ public:
     void saveLEDSettings(uint8_t brightness, CRGB color);
 
     /** Retrieve LED brightness and colour from EEPROM. */
-    void loadLEDSettings(uint8_t& brightness, CRGB& color);
+    void loadLEDSettings(uint8_t &brightness, CRGB &color);
 
     /** Reset configuration to factory defaults. */
-    void resetConfiguration(std::vector<uint8_t>& potChannels);
+    void resetConfiguration(std::vector<uint8_t> &potChannels);
 
     // Envelope follower configuration -----------------------------------
 
     /** Persist the current envelope routing and baselines to EEPROM. */
-    void saveEnvelopeSettings(const std::map<int, int>& potToEnvelopeMap, const std::vector<EnvelopeFollower>& envelopes);
+    void saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
+                              const std::vector<EnvelopeFollower> &envelopes);
 
     /**
      * Restore envelope routing and baseline offsets from EEPROM.
      * Returns true if every envelope's baseline was recovered.
      */
-    bool loadEnvelopeSettings(std::map<int, int>& potToEnvelopeMap, std::vector<EnvelopeFollower>& envelopes);
+    bool loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
+                              std::vector<EnvelopeFollower> &envelopes);
 
     /** Save a single envelope follower's baseline to EEPROM. */
     void saveEnvelopeBaseline(uint8_t envIndex, float baseline);
@@ -204,16 +220,16 @@ public:
     // MIDI slot configuration -------------------------------------------
 
     /** Save an array of MIDISlot structures to EEPROM. */
-    void saveMIDISlots(const MIDISlot* slots, size_t count);
+    void saveMIDISlots(const MIDISlot *slots, size_t count);
 
     /** Load MIDISlot structures from EEPROM into the provided buffer. */
-    void loadMIDISlots(MIDISlot* slots, size_t count);
+    void loadMIDISlots(MIDISlot *slots, size_t count);
 
     /**
      * Parse a WebSerial command. Returns true if the command was
      * recognised and handled.
      */
-    bool handleCommand(const String& command);
+    bool handleCommand(const String &command);
 
     /** Determine if the display should switch to the screensaver. */
     bool shouldRunScreensaver() const;
@@ -222,37 +238,38 @@ public:
     void runIdleScreensaver();
 
     /** Accessor so the rest of your code can see the live slots. */
-    const std::array<MIDISlot,NUM_SLOTS>& getSlots() const { return slots; }
+    const std::array<MIDISlot, NUM_SLOTS> &getSlots() const { return slots; }
 
     /** Return a reference to a specific slot. */
-    MIDISlot& getSlot(uint8_t idx){
-         return slots[idx];
-    }
+    MIDISlot &getSlot(uint8_t idx) { return slots[idx]; }
 
     /** Read a single MIDISlot from EEPROM into the provided struct. */
-    void loadSlot(uint8_t idx, MIDISlot& dest);
+    void loadSlot(uint8_t idx, MIDISlot &dest);
     /** Write one MIDISlot structure back to EEPROM. */
-    void saveSlot(uint8_t idx, const MIDISlot& src);
+    void saveSlot(uint8_t idx, const MIDISlot &src);
 
-private:
+  private:
     uint8_t _numPots;
     uint8_t _numButtons;
 
-    std::array<MIDISlot,NUM_SLOTS> slots;//42 of them
+    std::array<MIDISlot, NUM_SLOTS> slots; // 42 of them
 
     // Health‑check & backup support
-    bool checkEEPROMHealth(bool backup, uint16_t base = EEPROM_PROFILE_START(0)); // verify header magic
-    void writeMagicNumber(bool backup, uint16_t base = EEPROM_PROFILE_START(0));  // stamp EEPROM with magic
-    bool loadBackupConfiguration(std::vector<uint8_t>& potChannels, uint16_t base); // restore from backup copy
-    void readEEPROM(bool backup, uint16_t base);        // raw EEPROM read helper
-    void writeEEPROM(bool backup, uint16_t base);       // raw EEPROM write helper
-    uint16_t calculateCRC() const;                      // compute config CRC
+    bool checkEEPROMHealth(bool backup,
+                           uint16_t base = EEPROM_PROFILE_START(0)); // verify header magic
+    void writeMagicNumber(bool backup,
+                          uint16_t base = EEPROM_PROFILE_START(0)); // stamp EEPROM with magic
+    bool loadBackupConfiguration(std::vector<uint8_t> &potChannels,
+                                 uint16_t base);  // restore from backup copy
+    void readEEPROM(bool backup, uint16_t base);  // raw EEPROM read helper
+    void writeEEPROM(bool backup, uint16_t base); // raw EEPROM write helper
+    uint16_t calculateCRC() const;                // compute config CRC
 
     struct StoredConfig {
-        std::array<uint8_t, NUM_POTS> potChannels;   //!< saved pot→CC map
-        std::array<uint8_t, NUM_POTS> potCCNumbers;  //!< saved CC numbers
-        uint16_t version = 0;                        //!< config schema version
-        uint16_t crc = 0;                            //!< integrity check value
+        std::array<uint8_t, NUM_POTS> potChannels;  //!< saved pot→CC map
+        std::array<uint8_t, NUM_POTS> potCCNumbers; //!< saved CC numbers
+        uint16_t version = 0;                       //!< config schema version
+        uint16_t crc = 0;                           //!< integrity check value
     } _stored;
 };
 

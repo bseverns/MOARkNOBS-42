@@ -37,8 +37,7 @@ void unityOutputComplete();
 
 // Kick off the log line at 115200 by default.  Tweak the magic number
 // if your setup jams at a different tempo.
-#define UNITY_OUTPUT_START()       unityOutputStart(115200)
-#define UNITY_OUTPUT_CHAR(c)       unityOutputChar(c)
-#define UNITY_OUTPUT_FLUSH()       unityOutputFlush()
-#define UNITY_OUTPUT_COMPLETE()    unityOutputComplete()
-
+#define UNITY_OUTPUT_START() unityOutputStart(115200)
+#define UNITY_OUTPUT_CHAR(c) unityOutputChar(c)
+#define UNITY_OUTPUT_FLUSH() unityOutputFlush()
+#define UNITY_OUTPUT_COMPLETE() unityOutputComplete()
