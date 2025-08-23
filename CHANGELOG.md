@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Diagnostic mode boots with self-test pages and a compact matrix view.
+- Boot banner now decodes reset causes and spits a system report.
+- Release pipeline and a pre-commit lint job keep CI honest.
 - Filter tuning pots let you twist the analog guts without a screwdriver.
 - Arpeggiator learned to wiggle on its own, Perlin noise and all.
 - WebSerial telemetry spews live state into the browser.
@@ -16,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pin map and EEPROM layout docs locked down.
 
 ### Changed
+- Bridge rides Node 20 and clang-format marches in lockstep with CI.
 - README now calls out firmware build steps and links the new docs.
 
 ### Removed

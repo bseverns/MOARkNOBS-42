@@ -71,6 +71,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - **August 11** My ears are still ringing because I went to a metal show in the basement of an American Legion. I am scrambling to make these Unity testers work for the codebase as well as actual builds of the firmware.
 - *Standards are not optional; often the best lessons come from coloring off the page.*
 - **Late August:** CI kept flaking out, so the build scripts took a beating. Swapped the MIDI library, chased phantom `usb_midi` ghosts, and bolted on a Unity test rig so every commit has to prove itself.
+- **August 22–23:** Diagnostic mode lands with self-test pages and a compact matrix view, the boot banner decodes reset causes and spills a system report, and a release workflow with pre-commit lint locks CI to Node 20. [0215e43, 00af0f1, 399b17, b7c126a, 19fbe9b, 7ee46c7, 702c107]
 
 ## Overview
 
