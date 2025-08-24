@@ -15,5 +15,6 @@ const result = spawnSync(process.execPath, ['-r', mock, script, '--help'], {
 // the CLI wiring is busted.
 assert.equal(result.status, 0, 'script should exit cleanly'); // non-zero exit means it crashed, not cool
 assert.match(result.stdout, /Usage:/, 'help text should mention usage'); // the help text needs a Usage line or it's useless
+assert.match(result.stdout, /--serial/, 'help text should advertise the serial flag');
 
 console.log('mn42_bridge --help prints usage and exits without drama'); // victory lap message
