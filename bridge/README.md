@@ -38,6 +38,17 @@ Flags:
 - `--bind` (`-b`) – IP we listen on for inbound OSC. Defaults to `127.0.0.1` to keep rando packets out.
 - `--midi` (`-m`) – label for the virtual MIDI port.
 
+### Split send/receive ports
+
+Feeling fancy? Send OSC out one port and listen on another:
+
+```bash
+node mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
+oscsend localhost 8000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":10}'
+```
+
+The bridge screams updates at port **7000** while soaking inbound commands on **8000**.
+
 Safety bumpers:
 
 - The bridge ignores OSC/MIDI JSON that doesn't spell out `cmd`, `slot`, and a numeric `value`. No half-baked packets make it to serial.

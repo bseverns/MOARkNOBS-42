@@ -58,6 +58,8 @@ async function run() {
     '9711',
     '--host',
     '127.0.0.1',
+    '--osc-listen',
+    '9710',
   ];
   require('../mn42_bridge.js');
   await new Promise((r) => setTimeout(r, 100)); // give it a tick to boot
@@ -67,7 +69,7 @@ async function run() {
     localAddress: '127.0.0.1',
     localPort: 0,
     remoteAddress: '127.0.0.1',
-    remotePort: 9000,
+    remotePort: 9710,
   });
   udp.open();
   await new Promise((resolve) => udp.on('ready', resolve));
