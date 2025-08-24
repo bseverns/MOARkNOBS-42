@@ -37,10 +37,7 @@ if (!Number.isInteger(oscPort) || oscPort <= 0) {
   usage();
   process.exit(1);
 }
-let oscListen = parseInt(
-  getArg('--osc-listen', String(DEFAULT_OSC_PORT)),
-  10,
-);
+let oscListen = parseInt(getArg('--osc-listen', String(DEFAULT_OSC_PORT)), 10);
 if (!Number.isInteger(oscListen) || oscListen <= 0) {
   // Garbage in? drop a warning and fall back to the stock port.
   console.warn(`bad --osc-listen port; defaulting to ${DEFAULT_OSC_PORT}`);
