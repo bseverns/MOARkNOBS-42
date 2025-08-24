@@ -56,6 +56,8 @@ async function run() {
     '/dev/fake',
     '--osc',
     '9711',
+    '--osc-listen',
+    '9000',
   ];
   require('../mn42_bridge.js');
   await new Promise((r) => setTimeout(r, 100)); // give it a tick to boot

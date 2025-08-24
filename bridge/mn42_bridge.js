@@ -25,9 +25,16 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 }
 
 // Pull CLI overrides or fall back to defaults.
+const DEFAULT_OSC_PORT = 9000;
 const serialName = getArg('--serial', getArg('-s', '/dev/ttyACM0'));
-const oscPort = parseInt(getArg('--osc', getArg('-o', '9000')), 10);
-const oscListen = parseInt(getArg('--osc-listen', '9000'), 10);
+const oscPort = parseInt(
+  getArg('--osc', getArg('-o', String(DEFAULT_OSC_PORT))),
+  10,
+);
+const oscListen = parseInt(
+  getArg('--osc-listen', String(DEFAULT_OSC_PORT)),
+  10,
+);
 const oscBind = getArg('--bind', getArg('-b', '127.0.0.1'));
 const midiLabel = getArg('--midi', getArg('-m', 'MN42 Bridge'));
 

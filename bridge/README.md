@@ -36,6 +36,13 @@ Flags:
 - `--bind` (`-b`) – IP to park the UDP server on. Defaults to `127.0.0.1` so randos can't wiggle your knobs.
 - `--midi` (`-m`) – label for the virtual MIDI port.
 
+Need the listener somewhere else because 9000's already occupied? Slide it over:
+
+```bash
+node mn42_bridge.js --serial /dev/ttyACM0 --osc 8000 --osc-listen 9100
+oscsend localhost 9100 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'
+```
+
 Safety bumpers:
 
 - The bridge ignores OSC/MIDI JSON that doesn't spell out `cmd`, `slot`, and a numeric `value`. No half-baked packets make it to serial.
