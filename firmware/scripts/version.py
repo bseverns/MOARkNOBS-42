@@ -10,11 +10,15 @@ import subprocess
 
 
 def get_git_sha() -> str:
-    return (
-        subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])  # nosec B603
-        .decode()
-        .strip()
-    )
+    """Return the current commit SHA or 'unknown' if Git misbehaves."""
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"])  # nosec B603
+            .decode()
+            .strip()
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "unknown"
 
 
 def main() -> None:

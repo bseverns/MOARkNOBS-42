@@ -27,3 +27,10 @@ extra_scripts =
 ```
 
 Keep these scripts small, loud, and well‑commented so the next punk knows why they exist.
+
+## `version.py`
+
+This troublemaker prints out two `-D` flags every time the build spins up:
+`FW_VERSION` comes from the environment and `GIT_SHA` tries to grab the short
+commit hash. If Git ghosts us—maybe you're building from a tarball or the repo
+isn't around—it just stamps `GIT_SHA=unknown` and keeps the party going.
