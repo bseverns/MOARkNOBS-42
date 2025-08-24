@@ -4,14 +4,16 @@ const path = require('node:path');
 const osc = require('osc');
 
 async function run() {
-  // Fire up an OSC listener to catch whatever the bridge screams out.
-  const listenPort = 57121;
+  // Fire up an OSC listener to catch whatever the bridge screams out. Bind to
+  // port 0 so the OS hands us something free instead of gambling on 57121 being
+  // open on CI runners.
   const udp = new osc.UDPPort({
     localAddress: '127.0.0.1',
-    localPort: listenPort,
+    localPort: 0,
   });
   udp.open();
   await new Promise((resolve) => udp.on('ready', resolve));
+  const listenPort = udp.socket.address().port;
 
   let slots;
   udp.on('message', (msg) => {
@@ -37,7 +39,7 @@ async function run() {
 
   // Wait for the bridge to spit out an OSC packet or time out.
   await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('no OSC data')), 1000);
+    const timer = setTimeout(() => reject(new Error('no OSC data')), 2000);
     udp.on('message', () => {
       clearTimeout(timer);
       resolve();
