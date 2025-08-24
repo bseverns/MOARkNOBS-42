@@ -19,6 +19,12 @@ oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC 
 
 ## CLI
 
+When your brain's swiss cheese, let the bridge bail you out:
+
+```bash
+node mn42_bridge.js --help
+```
+
 ```bash
 node mn42_bridge.js \
   --serial /dev/ttyACM0 \
