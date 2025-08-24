@@ -16,7 +16,7 @@ Ready to shred? Here's the bare minimum to get the beast humming.
 - Python bits: `pip install -r requirements.txt`
 - Node 20 for the bridge (LTS or bust)
 - PlatformIO on your PATH
-- Bridge deps:
+- Bridge deps (repo skips node_modules; `npm ci` hauls them in):
 
    ```bash
    npm --prefix bridge ci
