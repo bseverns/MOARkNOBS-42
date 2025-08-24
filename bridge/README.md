@@ -39,6 +39,10 @@ Flags:
 Safety bumpers:
 
 - The bridge ignores OSC/MIDI JSON that doesn't spell out `cmd`, `slot`, and a numeric `value`. No half-baked packets make it to serial.
+- Packets over **128 bytes** get tossed in the pit.
+- `slot` only rides **0–41** and `value` only **0–127**; outside that, the bridge laughs and drops it.
+
+The test suite (`cmd_validation.test.js`) hammers those limits—run `npm test` to watch bogus commands get choked out.
 
 ## Teaching moment
 
@@ -64,6 +68,8 @@ Feeling deterministic? Swap in the lockstep version:
 ```bash
 npm ci
 ```
+
+If it whines about missing modules, run `npm install` once to refresh `package-lock.json` and try again.
 
 ## Code style
 
