@@ -16,6 +16,8 @@ const child = spawn(process.execPath, [
   script,
   '--serial',
   '/dev/fake',
+  '--host',
+  '127.0.0.1',
   '--osc-listen',
   '0',
 ]);
