@@ -12,6 +12,10 @@ npm test
 
 Run it from inside `bridge/` and watch each script light up. It's the fastest way to prove the bridge still boots, screams OSC, and whines when the serial line ghosts it.
 
+### Command validation cage match
+
+Need to make sure the bridge slams the door on garbage? `cmd_validation.test.js` hurls oversized JSON and off-the-rails slot/value pairs to confirm anything sketchy gets dropped before it can fry your rig.
+
 ## What's with the mocks?
 
 The tests hijack modules so you don't need the real controller dangling off USB:
