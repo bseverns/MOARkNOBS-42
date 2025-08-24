@@ -3,32 +3,45 @@
 // serialport speaks USB, osc shouts over UDP, jzz slings MIDI.
 // Callbacks and retry loops keep the party alive when links bail.
 
-function usage() {
-  // Show a tiny help banner for the command-line crowd.
-  console.log(
-    `mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n` +
-      `Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--bind ADDR] [--midi LABEL]`,
-  );
-}
-
-function getArg(flag, def) {
-  // Walk argv for a flag and grab the value sitting next to it.
-  const idx = process.argv.indexOf(flag);
-  if (idx >= 0 && idx + 1 < process.argv.length) return process.argv[idx + 1];
-  return def;
-}
-
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  // Bail early if someone just wants the manual.
-  usage();
-  process.exit(0);
-}
+// Let yargs boss around our CLI flags.
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
+const argv = yargs(hideBin(process.argv))
+  .scriptName('mn42_bridge.js')
+  .usage(
+    'mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n' +
+      'Usage: $0 [--serial PORT] [--osc PORT] [--bind ADDR] [--midi LABEL]',
+  )
+  .option('serial', {
+    alias: 's',
+    type: 'string',
+    describe: 'serial port to poke',
+    default: '/dev/ttyACM0',
+  })
+  .option('osc', {
+    alias: 'o',
+    type: 'number',
+    describe: 'remote OSC port to scream at',
+    default: 9000,
+  })
+  .option('bind', {
+    alias: 'b',
+    type: 'string',
+    describe: 'local address to bind the OSC listener to',
+    default: '127.0.0.1',
+  })
+  .option('midi', {
+    alias: 'm',
+    type: 'string',
+    describe: 'label for the virtual MIDI port',
+    default: 'MN42 Bridge',
+  })
+  .help()
+  .alias('h', 'help')
+  .parseSync();
 
 // Pull CLI overrides or fall back to defaults.
-const serialName = getArg('--serial', getArg('-s', '/dev/ttyACM0'));
-const oscPort = parseInt(getArg('--osc', getArg('-o', '9000')), 10);
-const oscBind = getArg('--bind', getArg('-b', '127.0.0.1'));
-const midiLabel = getArg('--midi', getArg('-m', 'MN42 Bridge'));
+const { serial: serialName, osc: oscPort, bind: oscBind, midi: midiLabel } = argv;
 
 async function main() {
   // Pull in the heavy lifters.
