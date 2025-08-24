@@ -33,6 +33,8 @@ async function run() {
     '/dev/fake',
     '--osc',
     String(listenPort),
+    '--host',
+    '127.0.0.1',
     '--osc-listen',
     '0',
   ]);

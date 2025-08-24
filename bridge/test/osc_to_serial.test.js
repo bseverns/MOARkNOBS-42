@@ -53,6 +53,8 @@ async function run() {
     '/dev/fake',
     '--osc',
     '9701',
+    '--host',
+    '127.0.0.1',
     '--osc-listen',
     '9701',
   ];
