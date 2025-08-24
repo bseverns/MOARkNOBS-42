@@ -4,7 +4,7 @@ Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** ta
 
 ## System context
 
-Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC heads to whatever port you feed `--osc`; inbound commands always land on UDP 9000.
+Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC heads to whatever port you feed `--osc`; inbound commands land on the `--osc-listen` port (default 9000).
 
 ```bash
 oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC -> serial sets pot 2 to 99
@@ -29,6 +29,7 @@ node mn42_bridge.js --help
 node mn42_bridge.js \
   --serial /dev/ttyACM0 \
   --osc 9000 \
+  --osc-listen 9000 \
   --bind 127.0.0.1 \
   --midi "MN42 Bridge"
 ```
@@ -36,7 +37,8 @@ node mn42_bridge.js \
 Flags:
 
 - `--serial` (`-s`) – which serial port to sniff.
-- `--osc` (`-o`) – remote UDP port to scream OSC at. The bridge still listens for `/mn42/cmd` on 9000.
+- `--osc` (`-o`) – remote UDP port to scream OSC at.
+- `--osc-listen` – local UDP port soaking up `/mn42/cmd` (default 9000).
 - `--bind` (`-b`) – IP to park the UDP server on. Defaults to `127.0.0.1` so randos can't wiggle your knobs.
 - `--midi` (`-m`) – label for the virtual MIDI port.
 
@@ -92,7 +94,7 @@ Need proof this gremlin works? Try this slam-dunk walkthrough.
 1. Kick the bridge to life:
 
    ```bash
-   node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --midi "MN42 Bridge"
+   node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --midi "MN42 Bridge"
    ```
 
 2. In another terminal, eavesdrop on the OSC noise:

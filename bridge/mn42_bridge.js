@@ -49,9 +49,9 @@ async function main() {
   const osc = require('osc');
   const JZZ = require('jzz');
 
-  // Fire up an OSC UDP port. Keep the local port fixed and aim outgoing
-  // packets at whatever --osc points to.
-  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: 9000 });
+  // Fire up an OSC UDP port. Bind the local port (default 9000, tweak with
+  // --osc-listen) and aim outgoing packets at whatever --osc points to.
+  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: oscListen });
   udp.on('error', (err) => {
     // If the socket coughs, log it, slam it shut, and try again in a sec.
     console.error('udp error:', err.message);

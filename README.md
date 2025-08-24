@@ -35,6 +35,27 @@ pio -d firmware test -e teensy40_unity -vvv
 npm --prefix bridge test
 ```
 
+## Quick Install & First Boot
+
+This misfit box exists to teach you how far a Teensy and a dream can go. The hardware ships under the CERN Open Hardware Licence v2 – Strongly Reciprocal, so if you fab the board or tweak it, publish your changes and keep the credits (scope the [hardware README](hardware/README.md#license) for the fine print).
+
+1. **Prep the dev rig**
+   - `pip install -r requirements.txt`
+   - `npm --prefix bridge ci`
+   - Node 20 LTS and PlatformIO need to be on your PATH.
+   - More setup lore lives in the [Builder's Handbook](docs/BuildersHandbook.md).
+
+2. **Flash the brain**
+   - `pio run -t upload -e teensy40_main`
+   - The [firmware README](firmware/README.md) digs into build flags and alternate targets.
+
+3. **Say hello over serial**
+   - Plug it in, crack a terminal or the [bridge](bridge/README.md).
+   - Type `HELLO` and the board coughs up `{"hello":"mn42"}`.
+   - Want the whole WebSerial rant? See [docs/WebSerial.md](docs/WebSerial.md).
+
+Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
+
 ### Release builds
 
 Cut a tag and publish it on GitHub and the [release workflow](.github/workflows/release.yml)
