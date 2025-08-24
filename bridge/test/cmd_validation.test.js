@@ -29,13 +29,19 @@ async function run() {
   function JZZ() {
     return {
       openMidiOut: () => ({
-        or() { return this; },
+        or() {
+          return this;
+        },
         send() {},
         on() {},
       }),
       openMidiIn: () => ({
-        or() { return this; },
-        connect() { return this; },
+        or() {
+          return this;
+        },
+        connect() {
+          return this;
+        },
         on() {},
       }),
     };
