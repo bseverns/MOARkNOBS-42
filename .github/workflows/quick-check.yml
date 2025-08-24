@@ -1,0 +1,54 @@
+name: Firmware lint + Bridge tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo for diff magic
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # haul in enough history to see what changed
+
+      - name: Set up Python (for PlatformIO & pre-commit)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO and pre-commit
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pre-commit
+          pio --version  # shout the version so logs know what's up
+
+      - name: Set up Node for the bridge jam
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Figure out which firmware files you touched
+        id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          files=$(git diff --name-only "$base" | grep '^firmware/' || true)
+          files="${files//$'\n'/ }"
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "linting: $files"
+
+      - name: Pre-commit the firmware changes
+        if: steps.diff.outputs.files != ''
+        run: pre-commit run --files ${{ steps.diff.outputs.files }}
+        # any hook whining here breaks the build
+
+      - name: Bridge tests on Node
+        run: |
+          npm --prefix bridge ci
+          npm --prefix bridge test
+          # rock those JS tests
