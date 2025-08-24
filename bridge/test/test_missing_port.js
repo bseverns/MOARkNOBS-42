@@ -10,6 +10,8 @@ const child = spawn(process.execPath, [
   'mn42_bridge.js',
   '--serial',
   '/dev/notaport',
+  '--host',
+  '127.0.0.1',
   '--osc-listen',
   '0',
 ]);
