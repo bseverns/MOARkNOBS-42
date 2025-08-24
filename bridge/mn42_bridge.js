@@ -31,10 +31,21 @@ const oscPort = parseInt(
   getArg('--osc', getArg('-o', String(DEFAULT_OSC_PORT))),
   10,
 );
-const oscListen = parseInt(
+if (!Number.isInteger(oscPort) || oscPort <= 0) {
+  // parseInt can spit NaN; if so, scream usage and bail.
+  console.error('bad --osc port');
+  usage();
+  process.exit(1);
+}
+let oscListen = parseInt(
   getArg('--osc-listen', String(DEFAULT_OSC_PORT)),
   10,
 );
+if (!Number.isInteger(oscListen) || oscListen <= 0) {
+  // Garbage in? drop a warning and fall back to the stock port.
+  console.warn(`bad --osc-listen port; defaulting to ${DEFAULT_OSC_PORT}`);
+  oscListen = DEFAULT_OSC_PORT;
+}
 const oscHost = getArg('--host', getArg('-H', '127.0.0.1'));
 const oscBind = getArg('--bind', getArg('-b', '127.0.0.1'));
 const midiLabel = getArg('--midi', getArg('-m', 'MN42 Bridge'));
