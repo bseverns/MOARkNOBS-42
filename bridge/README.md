@@ -70,19 +70,13 @@ node --version
 # v20.x.x or bust
 ```
 
-Once you're speaking fluent v20, wire up the deps:
-
-```bash
-npm install
-```
-
-Feeling deterministic? Swap in the lockstep version:
+Once you're speaking fluent v20, yank the deps back in with a clean slate—this repo refuses to babysit `node_modules/`, so every build pulls them fresh:
 
 ```bash
 npm ci
 ```
 
-If it whines about missing modules, run `npm install` once to refresh `package-lock.json` and try again.
+Need to bump versions? Run `npm install` to refresh `package-lock.json`, then commit that lockfile.
 
 ## Code style
 

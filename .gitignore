@@ -17,4 +17,6 @@ firmwareZip.zip
 # Ignore release artifacts
 dist/
 logs/
+
+# Bridge deps live outside git; npm ci resurrects them
 bridge/node_modules/
