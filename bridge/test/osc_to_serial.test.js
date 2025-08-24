@@ -53,6 +53,8 @@ async function run() {
     '/dev/fake',
     '--osc',
     '9701',
+    '--osc-listen',
+    '9701',
   ];
   require('../mn42_bridge.js');
   await new Promise((r) => setTimeout(r, 100)); // let UDP and serial settle

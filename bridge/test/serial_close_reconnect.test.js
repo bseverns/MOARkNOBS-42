@@ -16,6 +16,8 @@ const child = spawn(process.execPath, [
   script,
   '--serial',
   '/dev/fake',
+  '--osc-listen',
+  '0',
 ]);
 
 let reopened = false;

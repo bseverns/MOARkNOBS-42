@@ -7,7 +7,7 @@ function usage() {
   // Show a tiny help banner for the command-line crowd.
   console.log(
     `mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n` +
-      `Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--bind ADDR] [--midi LABEL]`,
+      `Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--osc-listen PORT] [--bind ADDR] [--midi LABEL]`,
   );
 }
 
@@ -27,6 +27,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 // Pull CLI overrides or fall back to defaults.
 const serialName = getArg('--serial', getArg('-s', '/dev/ttyACM0'));
 const oscPort = parseInt(getArg('--osc', getArg('-o', '9000')), 10);
+const oscListen = parseInt(getArg('--osc-listen', '9000'), 10);
 const oscBind = getArg('--bind', getArg('-b', '127.0.0.1'));
 const midiLabel = getArg('--midi', getArg('-m', 'MN42 Bridge'));
 
@@ -36,9 +37,9 @@ async function main() {
   const osc = require('osc');
   const JZZ = require('jzz');
 
-  // Fire up an OSC UDP port. Keep the local port fixed and aim outgoing
-  // packets at whatever --osc points to.
-  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: 9000 });
+  // Fire up an OSC UDP port. Bind the local port (default 9000, tweak with
+  // --osc-listen) and aim outgoing packets at whatever --osc points to.
+  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: oscListen });
   udp.on('error', (err) => {
     // If the socket coughs, log it, slam it shut, and try again in a sec.
     console.error('udp error:', err.message);
