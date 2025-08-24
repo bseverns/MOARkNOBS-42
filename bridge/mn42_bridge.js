@@ -79,11 +79,20 @@ async function main() {
   });
 
   // Validate inbound commands before we spew them back out.
-  const validCmd = (m) =>
-    m &&
-    typeof m.cmd === 'string' &&
-    typeof m.slot === 'number' &&
-    typeof m.value === 'number';
+  const MAX_MSG_LEN = 128;
+  function validateCmd(m) {
+    if (
+      !m ||
+      typeof m.cmd !== 'string' ||
+      !Number.isInteger(m.slot) ||
+      !Number.isInteger(m.value)
+    )
+      return null;
+    if (m.slot < 0 || m.slot > 41 || m.value < 0 || m.value > 127) return null;
+    const cmd = { cmd: m.cmd, slot: m.slot, value: m.value };
+    if (JSON.stringify(cmd).length > MAX_MSG_LEN) return null;
+    return cmd;
+  }
 
   // MIDI setup lives in a reconnect loop because ports come and go.
   const midi = JZZ();
@@ -117,8 +126,13 @@ async function main() {
       midiIn.connect((msg) => {
         const arr = msg.toArray();
         if ((arr[0] & 0xf0) === 0xb0) {
-          const cmd = { cmd: 'SET_POT', slot: arr[1], value: arr[2] };
-          serial.write(JSON.stringify(cmd) + '\n');
+          const cmd = validateCmd({
+            cmd: 'SET_POT',
+            slot: arr[1],
+            value: arr[2],
+          });
+          if (cmd) serial.write(JSON.stringify(cmd) + '\n');
+          else console.warn('dropping bad MIDI CC', arr);
         }
       });
   }
@@ -129,13 +143,24 @@ async function main() {
     if (msg.address === '/mn42/cmd' && msg.args.length) {
       let data = msg.args[0];
       if (typeof data === 'string') {
+        if (data.length > MAX_MSG_LEN) {
+          console.warn('OSC cmd too big');
+          return;
+        }
         try {
           data = JSON.parse(data);
         } catch {
+          console.warn('bad OSC JSON');
           return;
         }
       }
-      if (validCmd(data)) serial.write(JSON.stringify(data) + '\n');
+      if (JSON.stringify(data).length > MAX_MSG_LEN) {
+        console.warn('OSC cmd too big');
+        return;
+      }
+      const cmd = validateCmd(data);
+      if (cmd) serial.write(JSON.stringify(cmd) + '\n');
+      else console.warn('bad OSC cmd', data);
     }
   });
 
@@ -147,10 +172,15 @@ async function main() {
       if (line === '{"hello":"mn42"}') ready = true;
       return;
     }
+    if (line.length > MAX_MSG_LEN) {
+      console.warn('serial packet too big');
+      return;
+    }
     let data;
     try {
       data = JSON.parse(line);
     } catch {
+      console.warn('bad serial JSON');
       return;
     }
     if (data.slots) {
