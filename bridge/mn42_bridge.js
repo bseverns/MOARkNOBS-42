@@ -3,7 +3,7 @@
 // serialport speaks USB, osc shouts over UDP, jzz slings MIDI.
 // Callbacks and retry loops keep the party alive when links bail.
 
-// Let yargs boss around our CLI flags.
+// Let yargs boss around our CLI flags so we don't have to.
 const yargs = require('yargs/yargs');
 const { hideBin } = require('yargs/helpers');
 const argv = yargs(hideBin(process.argv))
