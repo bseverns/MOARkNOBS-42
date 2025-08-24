@@ -31,6 +31,8 @@ async function run() {
     '/dev/fake',
     '--osc',
     String(listenPort),
+    '--osc-listen',
+    '0',
   ]);
 
   // Wait for the bridge to spit out an OSC packet or time out.

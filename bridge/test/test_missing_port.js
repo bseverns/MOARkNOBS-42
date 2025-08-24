@@ -10,6 +10,8 @@ const child = spawn(process.execPath, [
   'mn42_bridge.js',
   '--serial',
   '/dev/notaport',
+  '--osc-listen',
+  '0',
 ]);
 let sawError = false; // flips true once the bridge yells about the missing port
 
