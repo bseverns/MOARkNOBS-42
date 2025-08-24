@@ -82,6 +82,8 @@ Feeling deterministic? Swap in the lockstep version:
 npm ci
 ```
 
+Release builds travel light—no `node_modules` directory is ever bundled. If one slinks into version control, you're expected to torch it and let `npm ci` rebuild the pile. 
+
 If it whines about missing modules, run `npm install` once to refresh `package-lock.json` and try again.
 
 ## Code style
