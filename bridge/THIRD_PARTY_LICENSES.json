@@ -1,0 +1,140 @@
+{
+  "@serialport/binding-mock@10.2.2": {
+    "licenses": "MIT"
+  },
+  "@serialport/bindings-cpp@10.8.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/bindings-interface@1.2.2": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-byte-length@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-cctalk@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-delimiter@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-inter-byte-timeout@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-packet-length@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-readline@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-ready@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-regex@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-slip-encoder@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-spacepacket@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/stream@10.5.0": {
+    "licenses": "MIT"
+  },
+  "@types/webmidi@2.1.0": {
+    "licenses": "MIT"
+  },
+  "debug@4.4.1": {
+    "licenses": "MIT"
+  },
+  "jazz-midi@1.7.9": {
+    "licenses": "MIT"
+  },
+  "jzz@1.9.3": {
+    "licenses": "MIT"
+  },
+  "long@4.0.0": {
+    "licenses": "Apache-2.0"
+  },
+  "ms@2.1.3": {
+    "licenses": "MIT"
+  },
+  "node-addon-api@5.1.0": {
+    "licenses": "MIT"
+  },
+  "node-gyp-build@4.8.4": {
+    "licenses": "MIT"
+  },
+  "osc@2.4.5": {
+    "licenses": "(MIT OR GPL-2.0)"
+  },
+  "@serialport/bindings-cpp@12.0.1": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-delimiter@11.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-readline@11.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-byte-length@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-cctalk@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-delimiter@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-inter-byte-timeout@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-packet-length@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-readline@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-ready@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-regex@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-slip-encoder@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/parser-spacepacket@12.0.0": {
+    "licenses": "MIT"
+  },
+  "@serialport/stream@12.0.0": {
+    "licenses": "MIT"
+  },
+  "debug@4.3.4": {
+    "licenses": "MIT"
+  },
+  "ms@2.1.2": {
+    "licenses": "MIT"
+  },
+  "node-addon-api@7.0.0": {
+    "licenses": "MIT"
+  },
+  "node-gyp-build@4.6.0": {
+    "licenses": "MIT"
+  },
+  "serialport@12.0.0": {
+    "licenses": "MIT"
+  },
+  "serialport@10.5.0": {
+    "licenses": "MIT"
+  },
+  "slip@1.0.2": {
+    "licenses": "(MIT OR GPL-2.0)"
+  },
+  "wolfy87-eventemitter@5.2.9": {
+    "licenses": "Unlicense"
+  },
+  "ws@8.18.0": {
+    "licenses": "MIT"
+  }
+}
