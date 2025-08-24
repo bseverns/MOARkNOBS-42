@@ -76,7 +76,7 @@ Once you're speaking fluent v20, yank the deps back in with a clean slate—this
 npm ci
 ```
 
-Release builds travel light—no `node_modules` directory is ever bundled. If one slinks into version control, you're expected to torch it and let `npm ci` rebuild the pile. 
+Release builds travel light—no `node_modules` directory is ever bundled. If one slinks into version control, you're expected to torch it and let `npm ci` rebuild the pile.
 
 If it whines about missing modules, run `npm install` once to refresh `package-lock.json` and try again.
 
