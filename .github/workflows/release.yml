@@ -1,20 +1,21 @@
 name: Release
+# Kicks off when a GitHub release is published; spits out firmware + sysreport.
 
 on:
   release:
-    types: [published]
+    types: [published]  # only run once the release is officially live
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4  # snag the source so we can build it
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          cache: 'pip'
+          cache: 'pip'             # speed up pip installs
 
       - name: Install PlatformIO
         run: |
@@ -24,14 +25,14 @@ jobs:
       - name: Build firmware
         working-directory: firmware
         env:
-          FW_VERSION: ${{ github.event.release.tag_name }}
+          FW_VERSION: ${{ github.event.release.tag_name }}  # pass tag as version define
         run: pio run -e teensy40_main
 
       - name: Bake sysreport
         env:
           FW_VERSION: ${{ github.event.release.tag_name }}
         run: |
-          python - <<"EOF"
+          python - <<"EOF"  # small inline Python to snapshot build metadata
           import json, os, subprocess, time
           fw = os.environ["FW_VERSION"]
           sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
@@ -53,5 +54,5 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            firmware/.pio/build/teensy40_main/firmware.hex
-            sysreport.json
+            firmware/.pio/build/teensy40_main/firmware.hex  # compiled firmware
+            sysreport.json                                 # build metadata dump

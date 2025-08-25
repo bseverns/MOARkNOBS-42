@@ -1,9 +1,10 @@
 name: bridge
+# CI for the Node-based bridge; keeps the JS layer honest.
 
 on:
   push:
     paths:
-      - 'bridge/**'
+      - 'bridge/**'                 # only fire when the bridge or this workflow changes
       - '.github/workflows/bridge.yml'
   pull_request:
     paths:
@@ -15,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: bridge
+        working-directory: bridge   # keep all commands scoped to the bridge folder
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4   # pull down the repo
+      - uses: actions/setup-node@v4 # install a fresh Node toolchain
         with:
-          node-version: 20.x
-      - run: npm ci
-      - run: npm test
+          node-version: 20.x        # lock to LTS so the build doesn't drift
+      - run: npm ci                 # install deps exactly as package-lock dictates
+      - run: npm test               # slam the test suite

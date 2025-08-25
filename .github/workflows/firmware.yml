@@ -1,4 +1,5 @@
 name: Firmware CI
+# Watches firmware changes and makes sure the build still stands.
 
 on:
   push:
@@ -14,13 +15,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4   # grab the repo contents
 
       - name: Set up Python (and keep it snappy)
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          cache: 'pip'
+          cache: 'pip'              # cache pip packages for speed
 
       - name: Install Python tools
         run: |
@@ -37,4 +38,4 @@ jobs:
 
       - name: Build firmware
         working-directory: firmware
-        run: pio run -e teensy40_main
+        run: pio run -e teensy40_main  # compile the default firmware target

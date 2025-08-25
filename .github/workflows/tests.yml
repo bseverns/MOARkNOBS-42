@@ -1,4 +1,5 @@
 name: Tests
+# CI lane that actually flashes hardware and runs the Unity and system tests.
 
 on:
   push:
@@ -9,7 +10,7 @@ jobs:
   unity-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4  # bring the code to the runner
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -49,7 +50,7 @@ jobs:
       - name: Run Unity tests
         env:
           TEST_PORT: ${{ secrets.TEST_PORT }}
-        run: ./test.sh
+        run: ./test.sh  # leverage local script to handle hardware and logging
 
       - name: Upload unity test log
         if: always()
