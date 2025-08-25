@@ -1,4 +1,5 @@
 name: Firmware lint + Bridge tests
+# Quick sanity check: lint only changed firmware files and run bridge tests.
 
 on:
   push:

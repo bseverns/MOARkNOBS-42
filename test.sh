@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
-set -euo pipefail
-mkdir -p logs
+# Local and CI test orchestrator. Pokes firmware tests if a board is around
+# and always runs the bridge's JS tests so nothing sneaks by.
+set -euo pipefail  # nuke on first failure, unset var, or pipe mischief
+mkdir -p logs  # stash outputs where CI can snarf them
 
 PORT="${TEST_PORT:-}"
 if [ -z "$PORT" ]; then
+  # No explicit port? Go spelunking for a likely Teensy serial device.
   shopt -s nullglob
   ports=(/dev/ttyACM* /dev/ttyUSB* /dev/cu.usbmodem* /dev/cu.usbserial*)
   shopt -u nullglob
@@ -14,12 +17,16 @@ if [ -z "$PORT" ]; then
 fi
 
 if [ -n "$PORT" ]; then
+  # Clean the build and run Unity tests without re-flashing the board.
   pio run -d firmware -t clean
   pio test -d firmware -e teensy40_unity --without-uploading --test-port "$PORT" -vvv --junit-output logs/unity-test.xml | tee logs/unity-test.log
+  # Fail the run if PlatformIO tries to sneak in its own Unity transport.
   ! grep -F ".pio/build/teensy40_unity/unity_config/unity_config.cpp" logs/unity-test.log || { echo "Autogen Unity transport detected" >&2; exit 1; }
 else
+  # No board? Fine—drop a placeholder so CI artifacts stay predictable.
   echo "Skipping Unity tests: TEST_PORT not set and no port auto-detected" | tee logs/unity-test.log
   : > logs/unity-test.xml
 fi
 
+# JavaScript side of the house always gets tested.
 npm --prefix bridge test | tee logs/bridge-test.log
