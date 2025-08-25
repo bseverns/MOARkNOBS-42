@@ -1,4 +1,5 @@
 name: Tests
+# Runs the full Unity suite and optional system tests on hardware.
 
 on:
   push:
@@ -39,10 +40,10 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 20.x  # bridge sticks to Node LTS
 
       - name: Install bridge deps
-        run: npm --prefix bridge ci
+        run: npm --prefix bridge ci  # install JS deps for tests
 
 
       # Build, flash, and run the Unity suite on real hardware.

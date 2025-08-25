@@ -1,8 +1,9 @@
 name: bridge
+# CI for the Node.js bridge; runs whenever bridge code or this workflow changes.
 
 on:
   push:
-    paths:
+    paths:  # only trigger when bridge files or this workflow are touched
       - 'bridge/**'
       - '.github/workflows/bridge.yml'
   pull_request:
@@ -12,14 +13,14 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # generic runner is plenty
     defaults:
       run:
-        working-directory: bridge
+        working-directory: bridge  # stay rooted in the bridge dir
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v4  # grab the repo
+      - uses: actions/setup-node@v4  # load Node for npm
         with:
-          node-version: 20.x
-      - run: npm ci
-      - run: npm test
+          node-version: 20.x  # LTS swagger
+      - run: npm ci  # install exact deps
+      - run: npm test  # light up the JS test suite
