@@ -2,19 +2,26 @@
 
 > The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude. Latest layout adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and now drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
 
-![Interface / LED / MIDI / Control](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)
+![Interface / LED / MIDI / Control](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_1-INTERFACE-LED-MIDI-CNTRL.png)[^logic][^midi]
 
-![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_2-ENVELOPE.png)
+![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_2-ENVELOPE.png)[^opamp]
 
 ![Board Layout](../docs/sketch/PNG_MOAR_Schematic/SCH_MOAR_Schematic_3-PWR-BUTTON-TEST.png)
 
 ## Specs
 
 - **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show.
+  > **Why this part?** Tiny, fast and already speaks USB MIDI. The [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) shows pinout, power limits, and how to flash the module without bricking it.
 - **Addressable LEDs**: 10 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots.
+  > **Why this part?** WS2812s daisy-chain over a single pin and scream in full RGB. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) covers timing voodoo and power decoupling.
 - **Envelope Follower Inputs**: 6 analog channels ready for audio or CV.
+  > **Why this part?** A dirt-cheap MCP6002 op-amp rectifies and smooths the signal so the Teensy can sniff envelope peaks. SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) walks through precision rectifiers like the one on this board.
+- **Key Matrix MUX**: Two CD74HC4067s funnel forty‑two switches into a single ADC read.
+  > **Why this part?** Saves pins and sanity. The [16-Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to prototype the trick with a breakout before you spin copper.
 - **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A.
+  > **Why this part?** Separate rails keep LEDs from sagging the logic. SparkFun's [Fuse Tutorial](https://learn.sparkfun.com/tutorials/fuses) explains why we protect each branch.
 - **MIDI I/O**: 5‑pin DIN plus 1/8" TRS Type‑A jacks wired in parallel.
+  > **Why this part?** A 6N138 optocoupler isolates MIDI IN so rogue gear doesn't fry the Teensy. SparkFun's [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) digs into DIN vs. TRS wiring and opto isolation.
 
 The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will.
 
@@ -55,24 +62,27 @@ Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_MOAR_Schematic` f
 * [envelopeFE.md](../docs/sketch/systemFlow/hw/envelopeFE.md)
 * [display.md](../docs/sketch/systemFlow/hw/display.md)
 
-### Sparkfun Reference Stash
+### SparkFun Shortcut
 
-Sparkfun now fabs the Teensy line and keeps a bench full of breakout boards
-for nearly every silicon misfit on this PCB.  When you want to trace a part
-back to a friendly tutorial or snag a quick dev board, start here:
+SparkFun fabs the Teensy line and sells breakouts for nearly every silicon misfit on this board. Grab a dev board, follow the tutorial, and prototype before you ever open a PCB editor.
 
-- **Teensy 4.0** – [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide)
-  and [product page](https://www.sparkfun.com/products/15583).
-- **WS2812 / NeoPixel LED** – [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide)
-  for addressable color chaos.
-- **CD74HC4067 MUX** – [16‑Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide)
-  lines up with the board's switch matrix.
-- **SN74HCT245 Level Shifter** – Sparkfun’s [Logic Level Shifting](https://learn.sparkfun.com/tutorials/logic-level-shifting)
-  primer covers why this octal bus transceiver keeps 5 V and 3.3 V from fist‑fighting.
-- **6N138 MIDI Opto** – [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all)
-  walks through the isolated input stage we cribbed.
-- **SSD1306 OLED** – [Micro OLED Breakout Guide](https://learn.sparkfun.com/tutorials/micro-oled-breakout-hookup-guide)
-  if you want extra pixels to blink at.
+| Part | SparkFun Link | What the article covers |
+| --- | --- | --- |
+| Teensy 4.0 | [Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) | Pinout, power, programming basics |
+| WS2812 / NeoPixel LED | [WS2812 Breakout Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) | Driving addressable LEDs and power tips |
+| CD74HC4067 MUX | [16‑Channel Mux Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) | Reading 16 channels through one port |
+| SN74HCT245 Level Shifter | [Logic Level Shifting 101](https://learn.sparkfun.com/tutorials/logic-level-shifting) | Translating 5 V button buses to 3 V3 logic |
+| 6N138 MIDI Opto | [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) | Opto‑isolated MIDI wiring and DIN vs. TRS |
+| SSD1306 OLED | [Micro OLED Breakout Guide](https://learn.sparkfun.com/tutorials/micro-oled-breakout-hookup-guide) | I²C wiring and drawing pixels |
+
+#### If this, then that
+
+- Want variable CV routing? Swap in SparkFun's [CD74HC4067 breakout](https://www.sparkfun.com/products/9056) and reroute envelopes without soldering.
+- Testing MIDI before committing to the PCB? Their [MIDI Shield](https://www.sparkfun.com/products/12898) drops a ready-made DIN/optocoupler stage on your bench.
+
+[^logic]: SparkFun's [Logic Level Shifting 101](https://learn.sparkfun.com/tutorials/logic-level-shifting) article explains the SN74HCT245 block on sheet 5.
+[^midi]: SparkFun's [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) covers opto-isolation and TRS vs. DIN wiring used on sheet 6.
+[^opamp]: SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) digs into the rectifier + RC filter behind the envelope follower on sheet 7.
 
 ### Thermal Sanity Checks
 
