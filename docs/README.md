@@ -26,7 +26,7 @@ flowchart TD
 
 ## System Capabilities
 
-- [Hardware README](../hardware/README.md) — final board layout, power rails, and the gritty bits you can actually solder.
+ - [Hardware README](../hardware/README.md#sparkfun-reference-stash) — final board layout, power rails, and a Sparkfun reference stash for the silicon.
 - [Firmware README](../firmware/README.md) — how the code slings MIDI, wrangles envelope followers, and keeps the LEDs honest.
 - Firmware reference tables: [button map & combo guide](../firmware/include/ButtonManager/README.md#button-map), [filter types](../firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](../firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](../firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](../firmware/include/EnvelopeFollower/README.md#arg-methods), [display hooks](../firmware/include/DisplayManager/README.md#key-methods).
 

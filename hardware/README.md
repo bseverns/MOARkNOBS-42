@@ -55,6 +55,25 @@ Sketch diagrams live in [`sketch/`](../docs/sketch/). The `PNG_MOAR_Schematic` f
 * [envelopeFE.md](../docs/sketch/systemFlow/hw/envelopeFE.md)
 * [display.md](../docs/sketch/systemFlow/hw/display.md)
 
+### Sparkfun Reference Stash
+
+Sparkfun now fabs the Teensy line and keeps a bench full of breakout boards
+for nearly every silicon misfit on this PCB.  When you want to trace a part
+back to a friendly tutorial or snag a quick dev board, start here:
+
+- **Teensy 4.0** – [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide)
+  and [product page](https://www.sparkfun.com/products/15583).
+- **WS2812 / NeoPixel LED** – [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide)
+  for addressable color chaos.
+- **CD74HC4067 MUX** – [16‑Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide)
+  lines up with the board's switch matrix.
+- **SN74HCT245 Level Shifter** – Sparkfun’s [Logic Level Shifting](https://learn.sparkfun.com/tutorials/logic-level-shifting)
+  primer covers why this octal bus transceiver keeps 5 V and 3.3 V from fist‑fighting.
+- **6N138 MIDI Opto** – [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all)
+  walks through the isolated input stage we cribbed.
+- **SSD1306 OLED** – [Micro OLED Breakout Guide](https://learn.sparkfun.com/tutorials/micro-oled-breakout-hookup-guide)
+  if you want extra pixels to blink at.
+
 ### Thermal Sanity Checks
 
 - Make sure the regulator and LED-driver zones have fat copper pours or bolt-on heatsinks. No one likes roasted silicon.
