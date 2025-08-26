@@ -16,8 +16,13 @@ Zoom out via the [main firmware README](../../README.md).
 
 ## Key Methods
 
-- `configure(type, freq, sampleRate, q)` – set up the coefficients.
+- `configure(type, freq, sampleRate, q)` – set up the coefficients and blast any leftover history.
 - `process(sample)` – run one float through the math grinder.
+
+## Reset Behavior
+
+When you call `configure`, the filter torches its memory (`x1`, `x2`, `y1`, `y2`).
+Perfect when you want a clean start, but don't expect continuity across reconfigs.
 
 ## Typical Use
 
