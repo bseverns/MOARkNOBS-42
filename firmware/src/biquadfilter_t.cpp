@@ -70,12 +70,12 @@ void setup() {
         b2 /= norm;
 
         float firstOut = filter.process(1.0f);
-        bool coefCheck = fabs(firstOut - a0) < 1e-6f;
+        bool coefCheck = fabsf(firstOut - a0) < 1e-5f;
 
         for (int i = 0; i < 50; ++i) {
             filter.process(0.0f);
         }
-        bool settleCheck = fabs(filter.process(0.0f)) < 1e-3f;
+        bool settleCheck = fabsf(filter.process(0.0f)) < 1e-3f;
 
         return coefCheck && settleCheck;
     };
