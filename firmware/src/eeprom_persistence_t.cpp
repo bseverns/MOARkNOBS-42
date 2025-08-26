@@ -84,20 +84,27 @@ bool verifyTestData() {
     return true;
 }
 
+// Mirror messages to both USB and UART so you can spy on the test from any port
+static void logLine(const char *msg) {
+    Serial.println(msg);
+    Serial1.println(msg);
+}
+
 void setup() {
     Serial.begin(115200);
+    Serial1.begin(115200);
     while (!Serial)
         ;
     delay(200);
 
     uint8_t flag = EEPROM.read(EEPROM_TEST_FLAG_ADDR);
     if (flag == TEST_NOT_STARTED) {
-        Serial.println("EEPROM Test Stage 1: writing data");
+        logLine("EEPROM Test Stage 1: writing data");
         fillTestData();
         configManager.saveConfiguration();
         configManager.saveMIDISlots(testSlots, NUM_SLOTS);
         EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_SAVE);
-        Serial.println("Data written. Please reset the board.");
+        logLine("Data written. Please reset the board.");
         return;
     }
 
@@ -105,28 +112,28 @@ void setup() {
     configManager.loadMIDISlots(testSlots, NUM_SLOTS);
 
     if (flag == TEST_STAGE_SAVE) {
-        Serial.println("EEPROM Test Stage 2: verifying after reboot");
+        logLine("EEPROM Test Stage 2: verifying after reboot");
         if (verifyTestData()) {
-            Serial.println("Primary load PASS");
+            logLine("Primary load PASS");
             // corrupt primary magic to force backup usage on next boot
             EEPROM.update(EEPROM_MAGIC_ADDRESS, 0x00);
             EEPROM.update(EEPROM_MAGIC_ADDRESS + 1, 0x00);
             EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_VERIFY);
-            Serial.println("Corrupted primary. Reset once more to test backup.");
+            logLine("Corrupted primary. Reset once more to test backup.");
             delay(1000);
             Utility::rebootTeensy();
         } else {
-            Serial.println("Primary load FAIL");
+            logLine("Primary load FAIL");
         }
         return;
     }
 
     if (flag == TEST_STAGE_VERIFY) {
-        Serial.println("EEPROM Test Stage 3: verifying backup restore");
+        logLine("EEPROM Test Stage 3: verifying backup restore");
         if (verifyTestData()) {
-            Serial.println("Backup restore PASS");
+            logLine("Backup restore PASS");
         } else {
-            Serial.println("Backup restore FAIL");
+            logLine("Backup restore FAIL");
         }
         EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_NOT_STARTED);
     }
