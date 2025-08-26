@@ -72,6 +72,8 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - *Standards are not optional; often the best lessons come from coloring off the page.*
 - **Late August:** CI kept flaking out, so the build scripts took a beating. Swapped the MIDI library, chased phantom `usb_midi` ghosts, and bolted on a Unity test rig so every commit has to prove itself.
 - **August 22–23:** Diagnostic mode lands with self-test pages and a compact matrix view, the boot banner decodes reset causes and spills a system report, and a release workflow with pre-commit lint locks CI to Node 20. [0215e43, 00af0f1, 399b17, b7c126a, 19fbe9b, 7ee46c7, 702c107]
+- **August 25:** SparkFun reference sidebars crash the docs, curating learning links straight from the source. [4e4cf22]
+- *Because a README that teaches you nothing is just wall art.*
 
 ## Overview
 

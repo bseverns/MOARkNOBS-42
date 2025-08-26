@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NRPN/RPN/SysEx support because MIDI's dark corners are fun.
 - Start tracking changes with this log.
 - Pin map and EEPROM layout docs locked down.
+- SparkFun reference sidebars point straight to the solder-stained source.
 
 ### Changed
 - Bridge rides Node 20 and clang-format marches in lockstep with CI.
@@ -26,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OctoWS2811 vendored library; FastLED handles the LEDs solo now.
 - Blocked the Teensy core's OctoWS2811 copy via `lib_ignore` to keep builds clean.
 
-## [0.1.0] - TBD
+## [0.1.0] - 2025-08-06
 ### Added
 - First public release of MOARkNOBS-42.
 
