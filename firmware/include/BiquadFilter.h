@@ -29,7 +29,8 @@ class BiquadFilter {
      *
      * The coefficients are calculated according to the selected
      * filter type.  Frequency values outside of the audible range are
-     * clamped before the coefficients are computed.
+     * clamped before the coefficients are computed.  Calling this wipes
+     * any previously stored samples so the filter starts fresh.
      *
      * @param type        Desired filter type.
      * @param frequency   Cutoff/centre frequency in Hz.
@@ -75,6 +76,9 @@ class BiquadFilter {
         a2 /= norm;
         b1 /= norm;
         b2 /= norm;
+
+        // Reset internal state so old history doesn't haunt new settings
+        x1 = x2 = y1 = y2 = 0.0f;
     }
 
     /**
