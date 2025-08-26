@@ -41,8 +41,8 @@ class BiquadFilter {
         frequency = constrain(frequency, 20.0f, 20000.0f);
 
         float omega = 2.0f * PI * frequency / sampleRate;
-        float cos_omega = cos(omega);
-        float sin_omega = sin(omega);
+        float cos_omega = cosf(omega);
+        float sin_omega = sinf(omega);
         float alpha = sin_omega / (2.0f * q);
 
         switch (type) {
