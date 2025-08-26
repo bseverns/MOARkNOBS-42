@@ -184,7 +184,7 @@ Location: src/eeprom_persistence_t.cpp
 
 #### Checks that configuration data survives a power cycle and that the backup EEPROM region can resurrect corrupted settings.
 
-Expect to reboot the board a couple of times and watch the display for prompts. It's manual, messy, and exactly why this suite exists.
+Expect to reboot the board a couple of times and watch the display for prompts. The sketch now hollers over both `Serial` and `Serial1`, so pick your poison. It's manual, messy, and exactly why this suite exists.
 
 ### verify_slots_t.cpp
 
