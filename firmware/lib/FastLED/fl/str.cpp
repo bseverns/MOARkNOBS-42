@@ -3,7 +3,6 @@
 #include "fl/str.h"
 
 #include "crgb.h"
-#include "fl/fft.h"
 #include "fl/namespace.h"
 #include "fl/unused.h"
 #include "fl/xymap.h"
@@ -308,16 +307,6 @@ int StringFormatter::parseInt(const char *str) {
 
 int string::strcmp(const string& a, const string& b) {
     return ::strcmp(a.c_str(), b.c_str());
-}
-
-string &string::append(const FFTBins &str) {
-    append("\n FFTImpl Bins:\n  ");
-    append(str.bins_raw);
-    append("\n");
-    append(" FFTImpl Bins DB:\n  ");
-    append(str.bins_db);
-    append("\n");
-    return *this;
 }
 
 string &string::append(const XYMap &map) {

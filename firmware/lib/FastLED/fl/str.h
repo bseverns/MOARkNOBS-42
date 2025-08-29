@@ -65,7 +65,6 @@ template <fl::u32 N> class BitsetInlined;
 
 class XYMap;
 
-struct FFTBins;
 
 // A copy on write string class. Fast to copy from another
 // Str object as read only pointers are shared. If the size
@@ -876,7 +875,6 @@ class string : public StrN<FASTLED_STR_INLINED_SIZE> {
         return *this;
     }
 
-    string &append(const FFTBins &str);
 
     string &append(const XYMap &map);
 

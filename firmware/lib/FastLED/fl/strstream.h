@@ -12,7 +12,6 @@ class Tile2x2_u8;
 class Tile2x2_u8_wrap;  // Forward declaration to support operator<< overload
 template <typename T> struct vec2;  // Forward declaration from fl/geometry.h
 template <typename T, typename Alloc> class HeapVector;  // Forward declaration from fl/vector.h
-struct FFTBins;  // Forward declaration from fl/fft.h
 template <fl::u32 N> class BitsetFixed;
 class bitset_dynamic;
 template <fl::u32 N> class BitsetInlined;
@@ -63,8 +62,6 @@ class StrStream {
     StrStream &operator<<(const Tile2x2_u8 &subpixel);
     StrStream &operator<<(const Tile2x2_u8_wrap &tile);  // New overload for wrapped tiles
 
-    // FFTBins support - implemented in strstream.cpp.hpp
-    StrStream &operator<<(const FFTBins &bins);
 
     // vec2<T> support - format as (x,y)
     template<typename T>
