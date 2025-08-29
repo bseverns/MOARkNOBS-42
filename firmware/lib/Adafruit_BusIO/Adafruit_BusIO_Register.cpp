@@ -39,7 +39,8 @@ bool Adafruit_BusIO_Register::read(uint8_t *buffer) {
 
 bool Adafruit_BusIO_Register::write(const uint8_t *buffer) {
   if (_i2cdevice) {
-    uint8_t buf[3];
+    // allocate enough room for up to a 2-byte address and 4 bytes of data
+    uint8_t buf[6];
     buf[0] = _addr & 0xFF;
     if (_width > 1) {
       buf[1] = (_addr >> 8) & 0xFF;
@@ -47,7 +48,8 @@ bool Adafruit_BusIO_Register::write(const uint8_t *buffer) {
     memcpy(buf + ((_width > 1) ? 2 : 1), buffer, _width);
     return _i2cdevice->write(buf, _width + ((_width > 1) ? 2 : 1));
   } else if (_spidevice) {
-    uint8_t buf[3];
+    // allocate enough room for up to a 2-byte address and 4 bytes of data
+    uint8_t buf[6];
     if (_width > 1 && _bitorder == LSBFIRST) {
       buf[0] = _addr & 0xFF;
       buf[1] = (_addr >> 8) & 0xFF;
