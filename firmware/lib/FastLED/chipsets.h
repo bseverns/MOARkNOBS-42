@@ -36,11 +36,6 @@
  #endif  // FASTLED_TEENSY4
 #endif  // FASTLED_CLOCKLESS_USES_NANOSECONDS
 
-
-#ifdef __IMXRT1062__
-#include "platforms/arm/k20/clockless_objectfled.h"
-#endif
-
 /// @file chipsets.h
 /// Contains the bulk of the definitions for the various LED chipsets supported.
 
