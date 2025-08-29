@@ -1,6 +1,6 @@
 # MOARkNOBS-42
 
-![Title Image](docs/land.png)
+![Top Layout](docs/sketch/TopAss.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
 This repo is like a studio notebook that mashes firmware, hardware, docs, and a scrappy bridge into one place.
