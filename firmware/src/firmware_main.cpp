@@ -284,12 +284,12 @@ void processSerial() {
             LOG_PRINTLN(configManager.getARGMethod());
         } else if (command.startsWith("SET_ARGMETHOD")) {
             // SET_ARGMETHOD <method>
-            // method: 0-6 mapping to EnvelopeFollower::ARG_Method; see
-            // firmware/include/EnvelopeFollower/README.md#L64-L79 for the math.
+            // method: 0-13 mapping to EnvelopeFollower::ARG_Method; see
+            // firmware/include/EnvelopeFollower/README.md#arg-methods for the math.
             // Side effects: blasts method into every follower and burns it into
             // EEPROM via ConfigManager.
             int method = command.substring(14).toInt();
-            if (method >= 0 && method <= 6) {
+            if (method >= 0 && method <= 13) {
                 for (auto &ef : envelopeFollowers) {
                     ef.setARGMethod(static_cast<EnvelopeFollower::ARG_Method>(method));
                 }
