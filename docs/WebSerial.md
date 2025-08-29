@@ -54,7 +54,7 @@ never fall out of sync.
 | `GET_ALL` | – | dump every slot and LED setting |
 | `SET_LED` `<bri>,<r>,<g>,<b>` | 0‑255 each | paint LED strip |
 | `GET_LED` | – | return `bri,r,g,b` |
-| `SET_ARGMETHOD` `<n>` | 0‑6 | choose ARG blend |
+| `SET_ARGMETHOD` `<n>` | 0‑13 | choose ARG blend |
 | `GET_ARGMETHOD` | – | spit current ARG blend |
 | `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
 | `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
@@ -83,7 +83,7 @@ SET_ARGMETHOD <n>
 GET_ARGMETHOD
 ```
 
-ARG mode can mash signals in seven different ways. Toss an index `0‑6` at
+ARG mode can mash signals in fourteen different ways. Toss an index `0‑13` at
 `SET_ARGMETHOD` to lock one in; `GET_ARGMETHOD` spits the stored index back.
 
 ### Rewire an Envelope Follower

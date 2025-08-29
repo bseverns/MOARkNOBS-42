@@ -612,8 +612,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         static EnvelopeFollower::ARG_Method ALL_METHODS[] = {
             EnvelopeFollower::PLUS, EnvelopeFollower::MIN,  EnvelopeFollower::PECK,
             EnvelopeFollower::SHAV, EnvelopeFollower::SQAR, EnvelopeFollower::BABS,
-            EnvelopeFollower::TABS};
-        static const char *NAMES[] = {"PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"};
+            EnvelopeFollower::TABS, EnvelopeFollower::MULT, EnvelopeFollower::DIVI,
+            EnvelopeFollower::AVG,  EnvelopeFollower::XABS, EnvelopeFollower::MAXX,
+            EnvelopeFollower::MINN, EnvelopeFollower::XORR};
+        static const char *NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR", "BABS", "TABS",
+                                      "MULT", "DIVI", "AVG",  "XABS", "MAXX", "MINN", "XORR"};
         static int argMethodPos[6] = {0, 0, 0, 0, 0, 0};
 
         argMethodPos[efIndex] =

@@ -123,6 +123,20 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
             return (B != 0) ? constrain(A / abs(B), 0, 127) : 0;
         case TABS:
             return (B != 0) ? constrain((10 * A) / abs(B), 0, 127) : 0;
+        case MULT:
+            return constrain((A * B) / 127, 0, 127);
+        case DIVI:
+            return constrain((A * 127) / (B + 1), 0, 127);
+        case AVG:
+            return (A + B) / 2;
+        case XABS:
+            return abs(A - B);
+        case MAXX:
+            return std::max(A, B);
+        case MINN:
+            return std::min(A, B);
+        case XORR:
+            return A ^ B;
         default:
             return level;
         }

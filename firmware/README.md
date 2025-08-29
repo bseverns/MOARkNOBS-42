@@ -321,7 +321,7 @@ auto-calibrates and saves it.
 
 ### What Is ARG Mode?
 
-ARG (Advanced Relative Gain) mode lets you break free from single-source modulation. Instead of just one audio signal driving an Envelope Follower, ARG lets you **combine or compare two**. It supports 7 expressive modulation algorithms (like `A+B`, `A-B`, `B-A`, `A*B`, etc.) for glitchy, reactive, or chaotic behaviors.
+ARG (Advanced Relative Gain) mode lets you break free from single-source modulation. Instead of just one audio signal driving an Envelope Follower, ARG lets you **combine or compare two**. It supports 14 expressive modulation algorithms (think `A+B`, `A/B`, `max(A,B)`, even `A^B`) for glitchy, reactive, or chaotic behaviors.
 
 This ain't your mom’s envelope follower.
 
@@ -336,11 +336,22 @@ You need to already have an **Envelope Follower assigned** to the active slot. T
 
 With ARG mode active and an EF already assigned:
 
-* Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**:
+* Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**. The lineup:
 
   * `PLUS` – A + B
   * `MIN` – A - B
-  * `PECK`, `SHAV`, `SQAR`, `BABS`, `TABS` – creative algorithmic transforms and distortions
+  * `PECK` – B - A
+  * `SHAV` – (A - B) / 10
+  * `SQAR` – sqrt(A*A + B*B)
+  * `BABS` – A / abs(B)
+  * `TABS` – (10 * A) / abs(B)
+  * `MULT` – (A * B) / 127
+  * `DIVI` – (A * 127) / (B + 1)
+  * `AVG` – (A + B) / 2
+  * `XABS` – abs(A - B)
+  * `MAXX` – max(A, B)
+  * `MINN` – min(A, B)
+  * `XORR` – A ^ B
 
 #### ARG Method Reference
 
@@ -353,6 +364,13 @@ With ARG mode active and an EF already assigned:
 | `SQAR` | `sqrt(A*A + B*B)` | Vector magnitude style blend. |
 | `BABS` | `A / abs(B)` | Ratio of A over the absolute of B. |
 | `TABS` | `(10 * A) / abs(B)` | BABS with a ×10 boost. |
+| `MULT` | `(A * B) / 127` | Multiply and scale—ring‑mod sidebands. |
+| `DIVI` | `(A * 127) / (B + 1)` | Divide without exploding on zero. |
+| `AVG`  | `(A + B) / 2` | Straight-up average for a chill blend. |
+| `XABS` | `abs(A - B)` | Absolute difference; instant gate fodder. |
+| `MAXX` | `max(A, B)` | Whatever envelope screams louder wins. |
+| `MINN` | `min(A, B)` | Follow the quieter of the two. |
+| `XORR` | `A ^ B` | Bit-twisted chaos for digital grit. |
 
 ### Assigning Envelope Pairs for ARG
 
@@ -739,7 +757,7 @@ firmware salutes:
 | `SET_ARGPAIR <en,a,b>` | Persists an on/off flag and the envelope duo for ARG shenanigans. |
 | `GET_LED` | Returns `brightness,r,g,b` for the status strip. |
 | `SET_LED <b,r,g,b>` | Burns new brightness and color into EEPROM. |
-| `GET_ARGMETHOD` | Reports which ARG math trick is armed (0‑6). |
+| `GET_ARGMETHOD` | Reports which ARG math trick is armed (0‑13). |
 | `SET_ARGMETHOD <n>` | Picks the ARG method to torment signals with. |
 | `GET_EF <slot>` | Tells which envelope follower owns a slot (`-1` = none). |
 | `SET_EF <slot,ef>` | Assigns follower `ef` to `slot` and saves it. |
