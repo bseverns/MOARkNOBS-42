@@ -1,10 +1,11 @@
 #include "Adafruit_SPIDevice.h"
 
 Adafruit_SPIDevice::Adafruit_SPIDevice(int8_t cs, uint32_t freq,
-                                       BitOrder dataOrder, uint8_t dataMode,
+                                       uint8_t dataOrder, uint8_t dataMode,
                                        SPIClass *theSPI)
     : _spiSetting(freq, dataOrder, dataMode), _spi(theSPI), _cs(cs),
-      _begun(false) {}
+      _begun(false), _freq(freq), _dataOrder(dataOrder),
+      _dataMode(dataMode) {}
 
 bool Adafruit_SPIDevice::begin() {
   pinMode(_cs, OUTPUT);
@@ -62,7 +63,8 @@ bool Adafruit_SPIDevice::write_then_read(const uint8_t *write_buffer,
 }
 
 void Adafruit_SPIDevice::setSpeed(uint32_t freq) {
-  _spiSetting = SPISettings(freq, _spiSetting.bitOrder, _spiSetting.dataMode);
+  _freq = freq;
+  _spiSetting = SPISettings(freq, _dataOrder, _dataMode);
 }
 
 uint8_t Adafruit_SPIDevice::transfer(uint8_t send) {
