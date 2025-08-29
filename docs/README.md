@@ -8,6 +8,8 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 > Sketches that slap the architecture on a napkin so you don't have to squint at code.
 
+![Board Render](sketch/MOAR_BOARD.png)
+
 ### Everything Everywhere
 
 ```mermaid
