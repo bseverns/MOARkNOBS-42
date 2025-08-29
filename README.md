@@ -3,8 +3,8 @@
 ![Title Image](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-This repo mashes firmware, hardware, docs, and a scrappy bridge into one place.
-The top README is intentionally barebones—poke the READMEs in each folder for
+This repo is like a studio notebook that mashes firmware, hardware, docs, and a scrappy bridge into one place.
+The top README is intentionally barebones—poke the READMEs in each folder (lots of 'em) for
 the full scoop.
 
 ## Quick Map
