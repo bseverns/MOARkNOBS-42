@@ -10,6 +10,14 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 ![Board Render](sketch/MOAR_BOARD.png)
 
+Need to zoom past the glam shot? Dive into the raw CAD layers:
+
+![Top Assembly](sketch/PCB_MOAR_Board/Top%20Assembly%20Drawings/Top%20Layer.pdf.pdf)
+![Bottom Assembly](sketch/PCB_MOAR_Board/Bottom%20Assembly%20Drawings/Bottom%20Layer.pdf.pdf)
+![Drill Map](sketch/PCB_MOAR_Board/Drill%20Drawing/Drill%20Drawing%20Layer.pdf.pdf)
+![Top Trace](sketch/PCB_MOAR_Board/trace/Top%20Layer.pdf.pdf)
+![Bottom Trace](sketch/PCB_MOAR_Board/trace/Bottom%20Layer.pdf.pdf)
+
 ### Everything Everywhere
 
 ```mermaid
