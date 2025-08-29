@@ -2,7 +2,7 @@
 
 Here's the lowdown on how the Teensy 4.0 talks to the outside world. For the full schematic chaos, peep the [hardware docs](../hardware/README.md).
 
-![Board Pin Trace](sketch/trace.png)
+![Board Pin Trace](sketch/TopLayer.png)
 
 Pins below are sorted by the Teensy's digital numbering. If you see "Analog read" in the notes, we're hitting that pin with `analogRead()` even though it's labeled by its digital ID.
 

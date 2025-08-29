@@ -2,11 +2,11 @@
 
 > The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude. Latest layout adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and now drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
 
-![Top Assembly](../docs/sketch/TopAss.png)[^logic][^midi]
+![Top Layer](../docs/sketch/TopLayer.png)[^logic][^midi]
 
-![Bottom Assembly](../docs/sketch/BottomAss.png)[^opamp]
+![Bottom Layer](../docs/sketch/BottomLayer.png)[^opamp]
 
-![Trace Map](../docs/sketch/trace.png)
+![Board Render](../docs/sketch/MOAR_BOARD.png)
 
 ## Specs
 
@@ -50,7 +50,7 @@ Everything you need to spin boards is sitting in this repo, no scavenger hunt re
 - [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – full bill of materials.
 - `shell/` – STEP files in `3DShell_btnBRD/` and printable meshes in `stl/`.
 
-Sketch diagrams live in [`sketch/`](../docs/sketch/). `TopAss.png` and `BottomAss.png` show the board's guts in living color.
+Sketch diagrams live in [`sketch/`](../docs/sketch/). `TopLayer.png`, `BottomLayer.png`, and `MOAR_BOARD.png` show the board's guts in living color.
 
 ### Sketch Documents
 
