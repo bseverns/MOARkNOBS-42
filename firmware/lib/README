@@ -34,7 +34,7 @@ FastLED arrived with fonts, PIR sensors, and scaffolding for a circus of platfor
 
 The UI scaffolding (`platforms/ui_defs.h` and friends) is gone, so FastLED falls back to its own stub widgets. Craving JSON-powered sliders? Drag those headers back from upstream and party on.
 Latest slash-and-burn: the `fx` playground and every `third_party` tag‑along got evicted, and `platforms/arm` now speaks only `mxrt1062`—Teensy 4 or bust. The core `fl` guts survived because FastLED leans on them; rip those out and the whole build faceplants. Need support for some other silicon? Grab upstream and roll your own.
-Any leftover pining for K20 relics—`ws2812serial`, SmartMatrix, the whole vintage crew—got snipped so our headers stop griefing over missing files.
+Any leftover pining for K20 relics—`ws2812serial`, SmartMatrix, the whole vintage crew—got snipped so our headers stop griefing over missing files. The ObjectFLED science project rode the same trash chute, so WS2812s now lean on FastLED's stock clockless driver.
 PlatformIO kept trying to sneak in its own copy anyway, so we dropped a `library.json` here and told `platformio.ini` to blacklist anything named `FastLED`. This fork is the only one that gets to play.
 
 ## License obligations
