@@ -555,18 +555,7 @@ Processing teensy40_main (platform: teensy; board: teensy40; framework: arduino)
 
 ### Vendored Libraries
 
-We ship FastLED and the Adafruit SSD1306/GFX duo right in `lib/` so builds work even if the outside world ghosts us. PlatformIO prefers these local copies, meaning fewer heisenbugs from shifting upstream versions.
-
-One gotcha: that OLED stack drags in **Adafruit BusIO**. Skip it and the compiler throws a fit.
-
-If you're online and chill with automatic pulls, wire it up in `platformio.ini`:
-
-```ini
-lib_deps =
-    adafruit/Adafruit BusIO
-```
-
-Offline, paranoid, or just punk? Clone [Adafruit_BusIO](https://github.com/adafruit/Adafruit_BusIO) into `firmware/lib/` and haul its LICENSE along for the ride.
+We ship FastLED, the Adafruit SSD1306/GFX duo, and their low-level sidekick **Adafruit BusIO** right in `lib/` so builds work even if the outside world ghosts us. PlatformIO leans on these local copies, meaning fewer heisenbugs from shifting upstream versions. That OLED stack used to demand a separate BusIO download; now it's baked in.
 
 To update any vendored lib, grab the latest release, drop it into `firmware/lib/`, and make sure the original LICENSE file rides along.
 

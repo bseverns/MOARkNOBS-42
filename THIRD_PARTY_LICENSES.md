@@ -9,6 +9,7 @@ When you bundle binaries or kits, drag along the whole `firmware/LICENSES/` fold
 - Bounce2 — MIT
 - Adafruit SSD1306 — MIT
 - Adafruit GFX Library — MIT
+- Adafruit BusIO — MIT
 - TimerOne — MIT
 - EEPROM — LGPL-2.1 (source: https://github.com/PaulStoffregen/cores/tree/master/teensy4)
 - ArduinoJson — MIT
@@ -16,13 +17,13 @@ When you bundle binaries or kits, drag along the whole `firmware/LICENSES/` fold
 - osc — BSD-3-Clause
 - jzz — MIT
 
-FastLED and the Adafruit display libs are checked into `firmware/lib/` so builds don't rely on the whims of the network.
+FastLED, the Adafruit display libs, and BusIO are checked into `firmware/lib/` so builds don't rely on the whims of the network.
 If you need newer versions, swap in the latest release and keep their LICENSE files intact.
 
 ---
 
 ## MIT License
-Used by FastLED, Bounce2, Adafruit SSD1306, Adafruit GFX Library, TimerOne, ArduinoJson, serialport, and jzz.
+Used by FastLED, Bounce2, Adafruit SSD1306, Adafruit GFX Library, Adafruit BusIO, TimerOne, ArduinoJson, serialport, and jzz.
 
 ```
 MIT License
