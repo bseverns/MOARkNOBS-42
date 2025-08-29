@@ -4,12 +4,27 @@ Adafruit_SPIDevice::Adafruit_SPIDevice(int8_t cs, uint32_t freq,
                                        uint8_t dataOrder, uint8_t dataMode,
                                        SPIClass *theSPI)
     : _spiSetting(freq, dataOrder, dataMode), _spi(theSPI), _cs(cs),
-      _begun(false), _freq(freq), _dataOrder(dataOrder),
-      _dataMode(dataMode) {}
+      _sck(-1), _miso(-1), _mosi(-1), _hwspi(true), _begun(false),
+      _freq(freq), _dataOrder(dataOrder), _dataMode(dataMode) {}
+
+Adafruit_SPIDevice::Adafruit_SPIDevice(int8_t cs, int8_t sck, int8_t miso,
+                                       int8_t mosi, uint32_t freq,
+                                       uint8_t dataOrder, uint8_t dataMode)
+    : _spiSetting(freq, dataOrder, dataMode), _spi(&SPI), _cs(cs),
+      _sck(sck), _miso(miso), _mosi(mosi), _hwspi(false), _begun(false),
+      _freq(freq), _dataOrder(dataOrder), _dataMode(dataMode) {}
 
 bool Adafruit_SPIDevice::begin() {
   pinMode(_cs, OUTPUT);
   digitalWrite(_cs, HIGH);
+  if (!_hwspi) {
+    if (_sck >= 0)
+      pinMode(_sck, OUTPUT);
+    if (_mosi >= 0)
+      pinMode(_mosi, OUTPUT);
+    if (_miso >= 0)
+      pinMode(_miso, INPUT);
+  }
   _spi->begin();
   _begun = true;
   return true;
