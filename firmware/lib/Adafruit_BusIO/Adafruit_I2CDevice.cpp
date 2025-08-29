@@ -49,9 +49,11 @@ bool Adafruit_I2CDevice::write_then_read(const uint8_t *write_buffer,
 }
 
 bool Adafruit_I2CDevice::setSpeed(uint32_t speed) {
-  if (_wire->setClock) {
-    _wire->setClock(speed);
-    return true;
-  }
-  return false;
+  // Teensy's TwoWire always exposes setClock(), but it's a method, not a
+  // function pointer.  The original BusIO checked for its existence at
+  // runtime, which trips up strict compilers.  Slam the clock unconditionally
+  // and trust the platform; if it doesn't implement setClock() we'll learn
+  // about it at link time.
+  _wire->setClock(speed);
+  return true;
 }
