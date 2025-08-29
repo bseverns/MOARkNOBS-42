@@ -587,6 +587,12 @@ void setup() {
                 break;
             }
 
+            case MIDIMessageType::ModWheel: {
+                uint8_t mod = Utility::mapToMidiValue(rawValue);
+                midiHandler.sendModWheel(mod, slot.midiChannel);
+                break;
+            }
+
             case MIDIMessageType::NRPN: {
                 uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
                 uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;

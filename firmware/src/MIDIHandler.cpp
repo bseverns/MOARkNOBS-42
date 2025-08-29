@@ -351,6 +351,10 @@ void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
     _txCount++;
 }
 
+void MIDIHandler::sendModWheel(uint8_t value, uint8_t channel) {
+    sendControlChange(1, value, channel);
+}
+
 void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
     // Validate channel and clamp bend value
     if (channel < 1 || channel > 16)

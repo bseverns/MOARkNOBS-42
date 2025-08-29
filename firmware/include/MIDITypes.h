@@ -12,9 +12,10 @@ enum class MIDIMessageType : uint8_t {
     PitchBend,
     ProgramChange,
     Aftertouch,
-    NRPN, //!< Non-Registered Parameter Number send
-    RPN,  //!< Registered Parameter Number send
-    SysEx //!< System Exclusive thrasher
+    ModWheel, //!< Modulation wheel (CC1)
+    NRPN,     //!< Non-Registered Parameter Number send
+    RPN,      //!< Registered Parameter Number send
+    SysEx     //!< System Exclusive thrasher
 };
 
 /** Classification for the most recent SysEx packet. */
