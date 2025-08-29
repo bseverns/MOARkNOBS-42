@@ -7,6 +7,7 @@ void test_system_report();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
 void test_aftertouch();
+void test_mod_wheel();
 void test_pitch_bend();
 void test_send_nrpn();
 void test_receive_nrpn();
@@ -22,6 +23,7 @@ void setup() {
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
     RUN_TEST(test_program_change);
     RUN_TEST(test_aftertouch);
+    RUN_TEST(test_mod_wheel);
     RUN_TEST(test_pitch_bend);
     RUN_TEST(test_send_nrpn);
     RUN_TEST(test_receive_nrpn);

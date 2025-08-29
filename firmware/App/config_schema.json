@@ -5,7 +5,7 @@
     "type": "group",
     "count": 42,
     "fields": [
-      { "subkey": "type", "label": "MIDI Type", "type": "select", "options": ["OFF", "CC", "Note", "PitchBend", "ProgramChange", "Aftertouch"] },
+      { "subkey": "type", "label": "MIDI Type", "type": "select", "options": ["OFF", "CC", "Note", "PitchBend", "ProgramChange", "Aftertouch", "ModWheel"] },
       { "subkey": "midiChannel", "label": "MIDI Channel", "type": "number", "min": 1, "max": 16 },
       { "subkey": "data1", "label": "Data (CC/Note)", "type": "number", "min": 0, "max": 127 },
       { "subkey": "efIndex", "label": "Envelope Follower", "type": "number", "min": 0, "max": 5 },
@@ -36,7 +36,7 @@
     "label": "ARG Settings",
     "type": "group",
     "fields": [
-      { "subkey": "method", "label": "Method", "type": "select", "options": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS"] },
+      { "subkey": "method", "label": "Method", "type": "select", "options": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS", "MULT", "DIVI", "AVG", "XABS", "MAXX", "MINN", "XORR"] },
       { "subkey": "a", "label": "Envelope A", "type": "number", "min": 0, "max": 5 },
       { "subkey": "b", "label": "Envelope B", "type": "number", "min": 0, "max": 5 }
     ]

@@ -64,7 +64,7 @@ The last three lean on the [BiquadFilter](../BiquadFilter/README.md) module unde
 ## ARG Methods
 
 Flip an EF into **ARG** mode and it stops flying solo, blending two inputs with crude math and zero shame.
-Here’s the bag of tricks:
+Here’s the bag of tricks—fourteen ways to mash envelopes:
 
 | Method | Formula (A,B) | Vibe |
 | ------ | ------------- | ---- |
@@ -75,5 +75,12 @@ Here’s the bag of tricks:
 | `SQAR` | `sqrt(A*A + B*B)` | Vector magnitude mashup |
 | `BABS` | `A / abs(B)` | Ratio mix, ignoring B’s sign |
 | `TABS` | `(10 * A) / abs(B)` | BABS with a ×10 ego boost |
+| `MULT` | `(A * B) / 127` | Ring‑mod mayhem; sidebands for days |
+| `DIVI` | `(A * 127) / (B + 1)` | A surfing B without divide-by-zero shrapnel |
+| `AVG`  | `(A + B) / 2` | Peace treaty crossfade |
+| `XABS` | `abs(A - B)` | Who’s louder? Absolute throwdown |
+| `MAXX` | `max(A, B)` | Crown the louder envelope |
+| `MINN` | `min(A, B)` | Stick with the wallflower |
+| `XORR` | `A ^ B` | Bitwise glitch punk |
 
 Deep dive into ARG routing in the [main firmware README](../../README.md#arg-mode).

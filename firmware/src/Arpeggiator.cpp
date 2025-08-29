@@ -129,6 +129,9 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     case MIDIMessageType::Aftertouch:
         midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
         break;
+    case MIDIMessageType::ModWheel:
+        midi.sendModWheel(constrain(potVal + offset, 0, 127), slot.midiChannel);
+        break;
     default:
         break;
     }

@@ -11,7 +11,7 @@ When the real USB stack is in play, `isSupportedType()` stands at the door check
 
 | Type | What it’s good for |
 | ---- | ------------------ |
-| `ControlChange` | Knobs, sliders, and anything twisty |
+| `ControlChange` | Knobs, mod wheels, sliders, and anything twisty |
 | `NoteOn` | Because silence is boring |
 | `NoteOff` | Every party ends |
 | `ProgramChange` | Swap patches without drama |
@@ -36,6 +36,7 @@ More context lives in the [main firmware README](../../README.md).
 
 - `begin()` – open both MIDI pipes.
 - `sendControlChange(cc, value, channel)` – fire a CC.
+- `sendModWheel(value, channel)` – slam CC1 like the synth came with a mohawk.
 - `sendClock()` – spit out a raw 0xF8 when you want to be the metronome.
 - `processIncomingMIDI()` – keep an ear on incoming bytes **and** spew MIDI clock when `g_tappedBPM` says so.
 - `handleMIDI(type, channel, data1, data2)` – strong-typed dispatch using `midi::MidiType` so stray bytes don't crash the party.

@@ -38,7 +38,22 @@ class EnvelopeFollower {
     enum Mode { SEF, ARG };
 
     /** Methods used when in ARG mode. */
-    enum ARG_Method { PLUS, MIN, PECK, SHAV, SQAR, BABS, TABS };
+    enum ARG_Method {
+        PLUS,
+        MIN,
+        PECK,
+        SHAV,
+        SQAR,
+        BABS,
+        TABS,
+        MULT,
+        DIVI,
+        AVG,
+        XABS,
+        MAXX,
+        MINN,
+        XORR
+    };
 
   private:
     float shapingFreq = 1000.0f; // Frequency or shaping parameter
