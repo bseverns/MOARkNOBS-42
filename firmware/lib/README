@@ -32,6 +32,7 @@ Upstream drops a galaxy of extras—GitHub issue templates, demo sketches, and b
 
 FastLED arrived with fonts, PIR sensors, and scaffolding for a circus of platforms we don't touch. We axe that cruft so only the ARM guts we actually drive stick around. Hardware button hooks in its UI layer got chopped too—yell if you miss them and we can wire 'em back. That includes the cute “next” button on dropdowns. The browser-only `js_fetch` bridge hit the curb as well, leaving a stub that just shrugs on embedded.
 Latest slash-and-burn: the `fx` playground and every `third_party` tag‑along got evicted, and `platforms/arm` now speaks only `mxrt1062`—Teensy 4 or bust. The core `fl` guts survived because FastLED leans on them; rip those out and the whole build faceplants. Need support for some other silicon? Grab upstream and roll your own.
+Scrubbed the lingering `k20` includes from the Teensy 4 header too—no more ghost hunts for SmartMatrix or WS2812Serial.
 PlatformIO kept trying to sneak in its own copy anyway, so we dropped a `library.json` here and told `platformio.ini` to blacklist anything named `FastLED`. This fork is the only one that gets to play.
 
 ## License obligations
