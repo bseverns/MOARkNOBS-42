@@ -52,6 +52,14 @@ Everything you need to spin boards is sitting in this repo, no scavenger hunt re
 
 Sketch diagrams live in [`sketch/`](../docs/sketch/). `TopLayer.png`, `BottomLayer.png`, and `MOAR_BOARD.png` show the board's guts in living color.
 
+Need the raw paperwork? The `PCB_MOAR_Board` stash spills the layers, drills, and traces:
+
+![Top Assembly](../docs/sketch/PCB_MOAR_Board/Top%20Assembly%20Drawings/Top%20Layer.pdf.pdf)
+![Bottom Assembly](../docs/sketch/PCB_MOAR_Board/Bottom%20Assembly%20Drawings/Bottom%20Layer.pdf.pdf)
+![Drill Map](../docs/sketch/PCB_MOAR_Board/Drill%20Drawing/Drill%20Drawing%20Layer.pdf.pdf)
+![Top Trace](../docs/sketch/PCB_MOAR_Board/trace/Top%20Layer.pdf.pdf)
+![Bottom Trace](../docs/sketch/PCB_MOAR_Board/trace/Bottom%20Layer.pdf.pdf)
+
 ### Sketch Documents
 
 * [buttonMatrix.md](../docs/sketch/systemFlow/hw/buttonMatrix.md)
