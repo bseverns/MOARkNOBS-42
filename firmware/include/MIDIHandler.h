@@ -84,6 +84,7 @@ class MIDIHandler {
     void handlePitchBend(uint8_t channel, int16_t bend);
     void sendProgramChange(uint8_t program, uint8_t channel);
     void sendAftertouch(uint8_t pressure, uint8_t channel);
+    void sendModWheel(uint8_t value, uint8_t channel);
     void sendPitchBend(int16_t bend, uint8_t channel);
     void sendClock();
 

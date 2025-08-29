@@ -23,6 +23,20 @@ void test_aftertouch() {
     TEST_ASSERT_EQUAL_UINT8(3, usbMIDI.lastAftertouchChannel);
 }
 
+void test_mod_wheel() {
+    MIDIHandler mh;
+    MIDI.ccCount = usbMIDI.ccCount = 0;
+    mh.sendModWheel(64, 2);
+    TEST_ASSERT_EQUAL_UINT8(1, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(1, MIDI.ccLog[0].control);
+    TEST_ASSERT_EQUAL_UINT8(64, MIDI.ccLog[0].value);
+    TEST_ASSERT_EQUAL_UINT8(2, MIDI.ccLog[0].channel);
+    TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.ccLog[0].control);
+    TEST_ASSERT_EQUAL_UINT8(64, usbMIDI.ccLog[0].value);
+    TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.ccLog[0].channel);
+}
+
 void test_pitch_bend() {
     MIDIHandler mh;
     uint8_t lsb = 0x00;
