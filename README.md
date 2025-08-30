@@ -120,22 +120,8 @@ This misfit box exists to teach you how far a Teensy and a dream can go. The har
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
 
-### Release builds
-
-Cut a tag and publish it on GitHub and the [release workflow](.github/workflows/release.yml)
-will crank out a fresh `firmware.hex` and a `sysreport.json` ripped from
-`sys::report()`, then slap both onto the release page. Want to go DIY? Run
-`./release.sh <version>` and haul the bits yourself.
-
-### Publishing a Release
-
-1. **Bump the numbers** – tweak the version strings in `firmware/include/Globals.h` and any other stragglers so the code owns the new tag.
-2. **Stamp it** – `git tag -a vX.Y.Z -m "vX.Y.Z"` so Git knows this is the real deal.
-3. **Push and brag** – `git push origin vX.Y.Z` and then hop over to GitHub to draft the release. CI will sling the `.hex` and `sysreport.json` for you.
-
 Want the deep cuts? The full chronicles live in [docs/](docs/README.md) and
 the gritty firmware lore is in [firmware/](firmware/README.md).
-
 
 License: MIT. See [LICENSE](LICENSE).
 
