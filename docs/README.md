@@ -12,7 +12,7 @@ Welcome to the MOARkNOBS-42 documentation playground. This README aims to help y
 
 Need to zoom past the glam shot? Dive into the raw CAD layers:
 
-![Assembly](sketchMOAR_BOARD.png)
+![Assembly](sketch/MOAR_BOARD.png)
 ![Top Trace](sketch/TopLayer.png)
 ![Bottom Trace](sketch/BottomLayer.png)
 
