@@ -20,7 +20,7 @@ Need to zoom past the glam shot? Dive into the raw CAD layers:
 ```mermaid
 flowchart TD
   Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
-  FW --> BM[ButtonManager]
+  FW --> BM[ButtonManager] --> DM[DisplayManager]
   Buttons((Buttons)) -->|scan| BM --> FW
   EF[EnvelopeFollower] -->|mod| Slots((Slots))
   ARP[Arpeggiator] --> Slots((Slots))
