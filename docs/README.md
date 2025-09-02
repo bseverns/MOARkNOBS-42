@@ -23,13 +23,13 @@ flowchart TD
   FW --> BM[ButtonManager] --> DM[DisplayManager]
   Buttons((Buttons)) -->|scan| BM --> FW
   EF[EnvelopeFollower] -->|mod| Slots((Slots))
-  ARP[Arpeggiator] --> Slots((Slots))
+  ARP[Arpeggiator] -->|mod| Slots((Slots))
   MIDIIN --> DM[DisplayManager]
   MIDIIN --> Slots((Slots)) --> FW
   Browser[[Browser]] --> WebSerial --> FW
   NodeOSC[[Node OSC Bridge]] --> FW
   FW --> Slots((Slots)) --> MIDIOut((MIDI Out))
-  FW --> MIDIOut((MIDI Out))
+  FW --> MIDIOut((MIDI Through))
 ```
 
 ## System Capabilities
