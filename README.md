@@ -3,8 +3,8 @@
 ![landing](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-This repo is like a studio notebook that mashes firmware, hardware, docs, and a scrappy bridge into one place.
-The top README is intentionally barebones—poke the READMEs in each folder (lots of 'em) for
+This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
+The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
 the full scoop.
 
 ## Quick Map
@@ -34,7 +34,7 @@ the full scoop.
 - **SN74HCT245 level shifter** — keeps the 5 V button grid and LED strip from punching the 3 V3 brain. SparkFun's [Logic Level Shifting 101](https://learn.sparkfun.com/tutorials/logic-level-shifting) explains the voltage‑translation sleight of hand.
 - **MCP6002 op‑amp** — rectifies and smooths incoming audio for the envelope followers. SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) covers precision rectifiers and bias tricks.
 - **6N138 optocoupler** — gives MIDI IN its own electrical bubble. SparkFun's [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) breaks down current loops, DIN vs. TRS jacks, and why opto‑isolation matters.
-- **WS2812 LEDs** — one data pin, a riot of color. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) dives into timing and power decoupling so you don't brown‑out the strip.
+- **WS2812 LEDs** — one data pin, a riot of color on 52 diodes. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) dives into timing and power decoupling so you don't brown‑out the strip.
 
 ## Diagram Dump
 
@@ -59,7 +59,7 @@ flowchart LR
     MIDIOut((MIDI Out))
     LFO1((LFO1))
     Env((Envelope Follower))
-    Slot42((Slot 42))
+    Slot((Slot -> 42 available))
   end
   User -->|mash| Grid -->|scan| Firmware
   HostPC --> WebSerial --> Firmware
@@ -74,35 +74,7 @@ Need the dirt? Dive into the sub-READMEs and get lost.
 ## Quick Start
 
 Ready to shred? Here's the bare minimum to get the beast humming.
-
-### Dependencies
-
-- Python bits: `pip install -r requirements.txt`
-- Node 20 for the bridge (LTS or bust)
-- PlatformIO on your PATH
-- Bridge deps (repo skips node_modules; `npm ci` hauls them in):
-
-   ```bash
-   npm --prefix bridge ci
-   ```
-
-### Firmware build
-
-```bash
-pio run -e teensy40_main
 ```
-
-### Test run
-
-```bash
-pio -d firmware test -e teensy40_unity -vvv
-npm --prefix bridge test
-```
-
-## Quick Install & First Boot
-
-This misfit box exists to teach you how far a Teensy and a dream can go. The hardware ships under the CERN Open Hardware Licence v2 – Strongly Reciprocal, so if you fab the board or tweak it, publish your changes and keep the credits (scope the [hardware README](hardware/README.md#license) for the fine print).
-
 1. **Prep the dev rig**
    - `pip install -r requirements.txt`
    - `npm --prefix bridge ci`
