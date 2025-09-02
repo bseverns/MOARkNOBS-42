@@ -28,6 +28,7 @@ flowchart TD
   MIDIIN --> Slots((Slots))
   Browser[[Browser]] --> WebSerial --> FW
   NodeOSC[[Node OSC Bridge]] --> FW
+  Slots((Slots)) --> MIDIOut((MIDI Out))
   FW --> MIDIOut((MIDI Out))
 ```
 
