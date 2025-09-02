@@ -90,6 +90,7 @@ Ready to shred? Here's the bare minimum to get the beast humming.
    - Plug it in, crack a terminal or the [bridge](bridge/README.md).
    - Type `HELLO` and the board coughs up `{"hello":"mn42"}`.
    - Want the whole WebSerial rant? See [docs/WebSerial.md](docs/WebSerial.md).
+```
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
 
