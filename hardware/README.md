@@ -12,9 +12,9 @@
 
 - **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show.
   > **Why this part?** Tiny, fast and already speaks USB MIDI. The [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) shows pinout, power limits, and how to flash the module without bricking it.
-- **Addressable LEDs**: 10 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots.
+- **Addressable LEDs**: 52 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots.
   > **Why this part?** WS2812s daisy-chain over a single pin and scream in full RGB. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) covers timing voodoo and power decoupling.
-- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV.
+- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV (+5V).
   > **Why this part?** A dirt-cheap MCP6002 op-amp rectifies and smooths the signal so the Teensy can sniff envelope peaks. SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) walks through precision rectifiers like the one on this board.
 - **Key Matrix MUX**: Two CD74HC4067s funnel forty‑two switches into a single ADC read.
   > **Why this part?** Saves pins and sanity. The [16-Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to prototype the trick with a breakout before you spin copper.
@@ -48,31 +48,23 @@ Everything you need to spin boards is sitting in this repo, no scavenger hunt re
 
 - [fabrication/Gerber_MOAR_Board_2025-08-17.zip](fabrication/Gerber_MOAR_Board_2025-08-17.zip) – unzip and punt it straight to your board house.
 - [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – full bill of materials.
-- `shell/` – STEP files in `3DShell_btnBRD/` and printable meshes in `stl/`.
+- `shell/` – STL files in `3DShell_btnBRD/` and printable meshes in `stl/`.
 
-Sketch diagrams live in [`sketch/`](../docs/sketch/). `TopLayer.png`, `BottomLayer.png`, and `MOAR_BOARD.png` show the board's guts in living color.
-
-Need the raw paperwork? The `PCB_MOAR_Board` stash spills the layers, drills, and traces:
-
-![Top Assembly](../docs/sketch/PCB_MOAR_Board/Top%20Assembly%20Drawings/Top%20Layer.pdf.pdf)
-![Bottom Assembly](../docs/sketch/PCB_MOAR_Board/Bottom%20Assembly%20Drawings/Bottom%20Layer.pdf.pdf)
-![Drill Map](../docs/sketch/PCB_MOAR_Board/Drill%20Drawing/Drill%20Drawing%20Layer.pdf.pdf)
-![Top Trace](../docs/sketch/PCB_MOAR_Board/trace/Top%20Layer.pdf.pdf)
-![Bottom Trace](../docs/sketch/PCB_MOAR_Board/trace/Bottom%20Layer.pdf.pdf)
+Circuit diagrams live in [`sketch/`](../docs/sketch/). System modules have their circuits diagramed to show the board's guts in living color.
 
 ### Sketch Documents
 
-* [buttonMatrix.md](../docs/sketch/systemFlow/hw/buttonMatrix.md)
-* [power&protection.md](../docs/sketch/systemFlow/hw/power&protection.md)
-* [teensy&headers.md](../docs/sketch/systemFlow/hw/teensy&headers.md)
-* [led&midiOut.md](../docs/sketch/systemFlow/hw/led&midiOut.md)
-* [midiOpto.md](../docs/sketch/systemFlow/hw/midiOpto.md)
-* [envelopeFE.md](../docs/sketch/systemFlow/hw/envelopeFE.md)
-* [display.md](../docs/sketch/systemFlow/hw/display.md)
+* Matrix Diode Array [buttonMatrix.md](../docs/sketch/systemFlow/hw/buttonMatrix.md)
+* Power and Protection [power&protection.md](../docs/sketch/systemFlow/hw/power&protection.md)
+* PLC/Voltage shifters [teensy&headers.md](../docs/sketch/systemFlow/hw/teensy&headers.md)
+* MIDI OUT [led&midiOut.md](../docs/sketch/systemFlow/hw/led&midiOut.md)
+* MIDI IN [midiOpto.md](../docs/sketch/systemFlow/hw/midiOpto.md)
+* Envelope Follower [envelopeFE.md](../docs/sketch/systemFlow/hw/envelopeFE.md)
+* Display [display.md](../docs/sketch/systemFlow/hw/display.md)
 
 ### SparkFun Shortcut
 
-SparkFun fabs the Teensy line and sells breakouts for nearly every silicon misfit on this board. Grab a dev board, follow the tutorial, and prototype before you ever open a PCB editor.
+If these things seem WAY over your head, don't worry. They were for me too, at first. A cool thing is that SparkFun fabs the Teensy line and sells breakouts for nearly every silicon misfit on this board. Grab a dev board, follow one of their many tutorials, and prototype before you ever open a PCB editor.
 
 | Part | SparkFun Link | What the article covers |
 | --- | --- | --- |
@@ -91,12 +83,6 @@ SparkFun fabs the Teensy line and sells breakouts for nearly every silicon misfi
 [^logic]: SparkFun's [Logic Level Shifting 101](https://learn.sparkfun.com/tutorials/logic-level-shifting) article explains the SN74HCT245 block on sheet 5.
 [^midi]: SparkFun's [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) covers opto-isolation and TRS vs. DIN wiring used on sheet 6.
 [^opamp]: SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) digs into the rectifier + RC filter behind the envelope follower on sheet 7.
-
-### Thermal Sanity Checks
-
-- Make sure the regulator and LED-driver zones have fat copper pours or bolt-on heatsinks. No one likes roasted silicon.
-- Still worried about temps? Go for larger packages or share the current across multiple regulators so nothing melts.
-- Wanna nerd out harder? The [thermal crash course](../docs/thermal/README.md) walks through keeping the board chill.
 
 Below is a summary of the schematic sheets:
 
