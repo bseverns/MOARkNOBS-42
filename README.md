@@ -59,7 +59,7 @@ flowchart LR
     MIDIOut((MIDI Out))
     LFO1((LFO1))
     Env((Envelope Follower))
-    Slot((Slot -> 42 available))
+    Slot((one of 42 slots))
   end
   User -->|mash| Grid -->|scan| Firmware
   HostPC --> WebSerial --> Firmware
