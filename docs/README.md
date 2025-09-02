@@ -22,8 +22,8 @@ flowchart TD
   Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
   FW --> BM[ButtonManager]
   Buttons((Buttons)) -->|scan| BM --> MIDIOut[MIDIHandler]
-  EF[EnvelopeFollower] -->|mod| MIDIOut
-  ARP[Arpeggiator] --> MIDIOut
+  EF[EnvelopeFollower] -->|mod| Slots((Slots))
+  ARP[Arpeggiator] --> Slots((Slots))
   MIDIIN --> DM[DisplayManager]
   MIDIIN --> Slots((Slots))
   Browser[[Browser]] --> WebSerial --> FW
