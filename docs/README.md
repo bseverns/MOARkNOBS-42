@@ -21,14 +21,14 @@ Need to zoom past the glam shot? Dive into the raw CAD layers:
 flowchart TD
   Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
   FW --> BM[ButtonManager]
-  Buttons((Buttons)) -->|scan| BM --> MIDIOut[MIDIHandler]
+  Buttons((Buttons)) -->|scan| BM --> FW
   EF[EnvelopeFollower] -->|mod| Slots((Slots))
   ARP[Arpeggiator] --> Slots((Slots))
   MIDIIN --> DM[DisplayManager]
-  MIDIIN --> Slots((Slots))
+  MIDIIN --> Slots((Slots)) --> FW
   Browser[[Browser]] --> WebSerial --> FW
   NodeOSC[[Node OSC Bridge]] --> FW
-  Slots((Slots)) --> MIDIOut((MIDI Out))
+  FW --> Slots((Slots)) --> MIDIOut((MIDI Out))
   FW --> MIDIOut((MIDI Out))
 ```
 
