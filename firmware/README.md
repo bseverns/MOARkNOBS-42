@@ -475,36 +475,6 @@ run `clang-format -i` on the files you touched (or let the pre-commit hook do it
 you). It's basically LLVM style with 4-space indents and a 100 column guardrail. Keep
 the chaos in the riffs, not in the whitespace.
 
-### Build Rules
-
-This codebase has a zero‑tolerance policy for sloppy compiles. `platformio.ini` still slams `-Wall` and `-Wextra` across every build, but `-Werror` is corralled into `build_src_flags` so only our code gets smacked for slip-ups while vendored libs keep their dignity. We hush the compiler's `deprecated-copy` whining with a blunt `-Wno-deprecated-copy`, injected via a pre-build hook so C stays chill. Patch the code, don't gag the compiler.
-Teensy's core has a bad habit of pitting signed and unsigned ints in cage matches; `-Wno-sign-compare` kicks that noise to the curb so real bugs still punch through.
-
-Need the default build? Kick this from the `firmware/` dir and let PlatformIO scream the bits into existence:
-
-```bash
-pio run -e teensy40_main
-```
-
-That cranks out the main firmware for the Teensy 4.0.
-
-The base `platformio.ini` already bakes in `board_build.usbtype = usb_midi_serial` *and* slams a `-DUSB_MIDI_SERIAL` into `build_flags`, so every build enumerates as both Serial and MIDI. No extra hoops—`usbMIDI` shows up ready to spit notes whether PlatformIO feels like cooperating or not.
-
-### Testing
-
-When you need proof the rig still howls, run the tests and watch the logs spill.
-
-- **Full-stack shakedown** – `pio run -e teensy40_unified_test` (tack on `-t upload` to actually flash). This builds the unified gauntlet, spells out the reset reason in the boot banner, then `sys::printReport()` dumps a JSON stats blob so you know exactly what firmware you're torturing.
-- **Unity smoke** – `pio test -e teensy40_unity` runs the host-side checks. Wire up a board and we'll sniff for its serial node; set `TEST_PORT` if you're picky. No board? The CI shrugs and skips so you don't eat a red X. Yank `USB_MIDI_SERIAL` and this env reroutes Unity's chatter straight to stdout.
-
-Those host tests lean on a stubbed `MidiType` enum. The SysEx bookends now fly the canonical `SystemExclusive`/`EndOfExclusive` flags, and we still drop in a `Tick` alias for the 0xF8 clock pulse. Call them by their official names or watch the build spit you back to the prompt.
-
-The split is deliberate. `include/unity_config.h` and its sidekick `src/unity_config.cpp` tag‑team as the switchboard so hardware tests bark over USB while host runs stay console‑only. If Unity screams into the void, crack that pair open and make sure the bridge didn’t burn out.
-
-By default Unity yells over Serial1 at 115200. `UNITY_OUTPUT_START()` kicks that off for you—edit the macro if your rig screams at some other tempo.
-
-Unity itself lobs characters at us as `unsigned int`; `UNITY_OUTPUT_CHAR(c)` catches that big boy and we choke it down to a byte before spitting it out.
-
 #### Serial logging, minus the Serial
 
 Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
@@ -514,7 +484,6 @@ Host-side Unity runs rip the USB serial gadget clean off the board. Any naked
 stub in `test/usb_midi.cpp` gulps the output so the linker stays chill. Include
 [`Log.h`](include/Log.h) and lean on the macros whenever you need to spit
 debug.
-
 
 ### Configuration Persistence
 
