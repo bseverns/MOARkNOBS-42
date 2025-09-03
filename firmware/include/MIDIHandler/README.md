@@ -5,6 +5,8 @@ Part of the firmware `include` jungle. Scope the [include README](../README.md) 
 USB, DIN, TRS—whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
 USB input now filters out bogus message types, like a bouncer keeping the freaks off the dance floor.
 
+![MIDI I/O flow](../../../docs/sketch/MIDI.png)
+
 ## Supported Message Types
 
 When the real USB stack is in play, `isSupportedType()` stands at the door checking IDs. Here's who gets in:
