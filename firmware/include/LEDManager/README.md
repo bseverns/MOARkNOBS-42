@@ -4,6 +4,8 @@ Part of the firmware `include` jungle. Scope the [include README](../README.md) 
 
 Runs the 52-piece WS2812 light riot and keeps it barely under control.
 
+![Main LED pool wiring](../../../docs/sketch/MainLEDPool.png)
+
 ## Where it fits
 
 LEDManager mirrors pot moves and config quirks on a WS2812 strip; EnvelopeFollower can hijack it for visual throb.

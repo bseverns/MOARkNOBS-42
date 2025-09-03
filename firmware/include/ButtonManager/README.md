@@ -4,6 +4,8 @@ Part of the firmware `include` jungle. The [include README](../README.md) explai
 
 Scans the 7×6 button grid, smacks bounce in the teeth, and spits out events.
 
+![Button matrix wiring diagram](../../../docs/sketch/ButtonMatrix.png)
+
 ## Where it fits
 
 ButtonManager rides the multiplexed button grid, feeds MIDIHandler and flashes clues through LEDManager. ConfigManager keeps the map of what each press actually means.
