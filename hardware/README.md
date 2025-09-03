@@ -52,6 +52,9 @@ Everything you need to spin boards is sitting in this repo, no scavenger hunt re
 
 Circuit diagrams live in [`sketch/`](../docs/sketch/). System modules have their circuits diagramed to show the board's guts in living color.
 
+![Interface and control](../docs/sketch/Interface%26Cntrl.png)
+![Power regulation and protection](../docs/sketch/Power%3AReg.png)
+
 ### Sketch Documents
 
 * Matrix Diode Array [buttonMatrix.md](../docs/sketch/systemFlow/hw/buttonMatrix.md)

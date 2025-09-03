@@ -4,6 +4,8 @@ Part of the firmware `include` jungle. Hit the [include README](../README.md) fo
 
 Sniffs audio or CV, shapes it, and hurls MIDI-friendly levels back.
 
+![Envelope follower pair](../../../docs/sketch/EFpair.png)
+
 ## Where it fits
 
 EnvelopeFollower reads an analog pin, smooths the chaos with BiquadFilter, and tosses values to MIDIHandler, LEDManager, or even Arpeggiator for note voodoo.
