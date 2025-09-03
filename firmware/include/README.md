@@ -38,10 +38,9 @@ flowchart LR
     ConfigManager --> LEDManager
     ConfigManager --> DisplayManager
     MIDIHandler --> Arpeggiator
-    MIDIHandler --> EnvelopeFollower
-    Arpeggiator --> LEDManager
-    EnvelopeFollower --> LEDManager
-    ButtonManager --> LEDManager
+    EnvelopeFollower --> MIDIHandler --> LEDManager
+    Arpeggiator --> MIDIHandler --> LEDManager
+    ButtonManager --> DisplayManager --> LEDManager
 ```
 
 - `ButtonManager` hollers when a switch gets smacked and `LEDManager` answers with a light show, while `DisplayManager` scribbles the update on the OLED.
@@ -55,7 +54,7 @@ flowchart LR
 | --- | --- |
 | **ButtonManager** | 42 matrix buttons plus 6 direct-wired control punks |
 | **PotentiometerManager** | 42 analog slots fed through muxes |
-| **LEDManager** | 52 WS2812 rebels (42 slot halos, 6 EF meters, 1 control beacon, 3 pot halos) |
+| **LEDManager** | 52 WS2812 rebels (42 slot halos, 6 EF meters, 1 control-actuated beacon, 3 pot indicators) |
 | **EnvelopeFollower** | 6 envelope-sniffing inputs |
 | **DisplayManager** | 128x64 SSD1306 OLED canvas |
 | **MIDIHandler** | USB, 5-pin DIN, and 1/8" TRS ports |
