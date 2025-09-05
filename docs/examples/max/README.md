@@ -1,8 +1,17 @@
 # Max Listener Patch
 
-`mn42_listener.maxpat` is a bare-knuckle example of how to tap the controller
-from Max. Fire it up when the bridge is running and watch slot values and
-envelopes stream in.
+~~`mn42_listener.maxpat` is a bare-knuckle example of how to tap the controller from Max.~~
+Kick it while the bridge howls and watch slot values and envelopes stream in.
+
+```mermaid
+flowchart LR
+  MaxPatch[mn42_listener.maxpat]
+  Bridge[[OSC/WebMIDI Bridge]]
+  Controller((MN42))
+  MaxPatch -->|OSC 8000| Bridge
+  Bridge -->|serial JSON| Controller
+  Controller -->|slot/envelope dump| Bridge --> MaxPatch
+```
 
 ## Run It
 

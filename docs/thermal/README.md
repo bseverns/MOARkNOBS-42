@@ -1,6 +1,14 @@
 # Thermal Mayhem 101
 
-Regulators and LED drivers aren't fans of flash fry. Here's how to keep them from cooking themselves off the board.
+~~Regulators and LED drivers aren't fans of flash fry.~~ Here's how to keep them from cooking themselves off the board.
+
+```mermaid
+flowchart LR
+  Reg[Regulator] --> Board[(Copper Pour)]
+  Reg --> Sink[Heatsink]
+  Board --> Air((Airflow))
+  Sink --> Air
+```
 
 Back up one directory to the [docs index](../README.md) for the full paper trail.
 

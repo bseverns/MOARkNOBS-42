@@ -1,6 +1,15 @@
 # MN42 Bridge Test Rig
 
-Before you smash that keyboard, make sure you've knocked out the setup in the [bridge README](../README.md). Node 20, deps installed, the whole prep talk.
+~~Before you smash that keyboard, make sure you've knocked out the setup in the [bridge README](../README.md).~~ Node 20, deps installed, the whole prep talk.
+
+```mermaid
+flowchart LR
+  Tests[npm test]
+  Bridge((mn42_bridge))
+  Mock[[Mock Serial]]
+  Tests --> Bridge
+  Bridge <-->|JSON| Mock
+```
 
 ## Running the suite
 

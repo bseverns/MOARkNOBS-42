@@ -4,7 +4,15 @@ Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** ta
 
 ## System context
 
-Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing. It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC screams at `--host`:`--osc`; inbound commands land on the `--osc-listen` port (default 9000).
+~~Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing.~~ It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC screams at `--host`:`--osc`; inbound commands land on the `--osc-listen` port (default 9000).
+
+```mermaid
+flowchart LR
+  Host[DAW / Browser]
+  Bridge((MN42 Bridge))
+  Controller((MN42 Controller))
+  Host <-->|OSC / WebMIDI| Bridge <-->|Serial JSON| Controller
+```
 
 ```bash
 oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC -> serial sets pot 2 to 99
