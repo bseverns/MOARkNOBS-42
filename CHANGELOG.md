@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Start tracking changes with this log.
 - Pin map and EEPROM layout docs locked down.
 - SparkFun reference sidebars point straight to the solder-stained source.
+- Web configurator now drives all slot parameters (EF, ARG, LED colour, full MIDI types) and falls back to a bundled schema when the device won't deliver one.
 
 ### Changed
 - Bridge rides Node 20 and clang-format marches in lockstep with CI.
