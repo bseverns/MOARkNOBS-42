@@ -358,14 +358,22 @@ button:hover {
     }
 
     async function loadSchema() {
+        setStatus("Loading schema…");
         try {
-          setStatus("Loading schema…");
           const raw = await send("GET_SCHEMA");
           setStatus("Schema loaded.");
           return JSON.parse(raw);
         } catch (err) {
-          setStatus(`Schema error: ${err.message || err}`, true);
-          throw err;
+          console.warn('Device schema failed, falling back to local file', err);
+          try {
+            const res = await fetch('config_schema.json');
+            const json = await res.json();
+            setStatus("Schema loaded (local).");
+            return json;
+          } catch (fetchErr) {
+            setStatus(`Schema error: ${fetchErr.message || fetchErr}`, true);
+            throw fetchErr;
+          }
         }
       }
 
