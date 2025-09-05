@@ -1,3 +1,5 @@
+![MN42 board render](../docs/brdR.png)
+
 # MOARkNOBZ MN42 MIDI Controller
 
 > Firmware for the unapologetically DIY, button-stabbin', knob-hackin', MIDI-mashin' controller you didn’t ask for but definitely need.
@@ -9,6 +11,16 @@ The **MOARkNOBZ MN42** is not your average MIDI controller. This thing used to r
 Forget fragile GUIs and boutique workflows. This beast lives in the guts: built on a Teensy 4.0 MCU, button-bounced, EEPROM-backed, LED-synced firmware for live tweaking, studio sculpting, or performance chaos.
 
 And driving the chaos? Your own automation parameters or six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
+
+## Quickstart: Jam Now, Explain Later
+
+1. **Power and Plug In** – USB wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl0`+`Ctrl1`+`Ctrl2`.
+2. **Pick a Slot** – Twist the lone slot pot or tap a slot button. Each of the 42 slots remembers its own channel, CC/note/program, and EF hookup.
+3. **Map It** – Use the [WebSerial editor](App/benzknobz.html) or `SET_POT` over a serial terminal to bind that slot to whatever your synth expects. Need button combos? See the [button map](include/ButtonManager/README.md#button-map).
+4. **Modulate** – Pair any slot with one of six envelope followers. `Freq` and `Q` pots sculpt the follower's filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
+5. **Save & Play** – Settings persist in EEPROM, so once it's dialed, yank the cable and go.
+
+Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial voodoo](../docs/WebSerial.md).
 
 ## Directory Layout
 
@@ -748,3 +760,5 @@ For personal catharsis:
 Passing binaries or pre-flashed boards around? Include this directory's `LICENSES/` bundle and point to the EEPROM guts at https://github.com/PaulStoffregen/cores/tree/master/teensy4. That keeps the LGPL-2.1 demons at bay.
 
 Build bold. Tweak louder. Modulate everything.
+
+![MN42 in the wild](../docs/land.png)
