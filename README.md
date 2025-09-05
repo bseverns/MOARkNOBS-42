@@ -3,9 +3,6 @@
 ![landing](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-![incorrect board render](docs/brdF.png)
->EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. Lots more SMD on the board for this version.
-
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
 The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
 the full scoop.
@@ -27,6 +24,9 @@ the full scoop.
 - Button grid that refuses to behave—short, long, double and combo presses are all mapped in the [ButtonManager cheat sheet](firmware/include/ButtonManager/README.md#button-map).
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
 - Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
+
+![incorrect board render](docs/brdF.png)
+>EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. Lots more SMD on the board for this version.
 
 ## Why these parts?
 
