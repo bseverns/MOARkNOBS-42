@@ -44,7 +44,8 @@ And driving the chaos? Your own automation parameters or six real-time **envelop
   - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl0+Ctrl1+Ctrl2**.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
-- **HTML-Based Editor**: View and update settings via WebSerial (USB).
+- **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign EFs, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
+  *Note:* The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
 ### Dynamic Envelope Modulation
