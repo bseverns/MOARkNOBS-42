@@ -48,6 +48,7 @@ never fall out of sync.
 | --- | --- | --- |
 | `HELLO` | – | start WebSerial streaming |
 | `GET_SCHEMA` | – | dump config schema |
+|  |  | If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
 | `GET_BROWNOUTS` | – | number of brownouts seen |
 | `SET_POT` `<slot>,<chan>,<cc>` | ints | bind slot to channel+CC |
 | `SET_ALL` `<payload>` | JSON or bulk CSV | mass update slots/LED |
@@ -103,3 +104,12 @@ Less baggage means faster feedback. This protocol exists so you can patch in a b
 ## See It in Action
 
 Want a live demo? Fire up the [WebSerial configuration app](../firmware/App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep [README_webserial.md](../firmware/App/README_webserial.md).
+
+The configurator lets you twist:
+
+- MIDI type
+- channel
+- data bytes
+- EF routing
+- ARG settings
+- LED colours
