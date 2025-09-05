@@ -1,6 +1,6 @@
 # WebSerial Configuration App
 
-`benzknobz.html` is a very small HTML page used to edit the MOARkNOBS controller configuration over USB. It relies on the Web Serial API so you need Chrome or Edge. The latest schema now covers **ARG method selection**, **envelope‑follower slot assignments**, and **per‑LED colour tweaks** alongside brightness for the EF meters, control beacon and pot halos.
+`benzknobz.html` is a very small HTML page used to edit the MOARkNOBS controller configuration over USB. It relies on the Web Serial API so you need Chrome or Edge. The latest schema now covers **ARG method selection**, **envelope‑follower slot assignments**, **every MIDI type the firmware can sling** (CC, Note, PitchBend, ProgramChange, Aftertouch, ModWheel, NRPN, RPN, SysEx), and **per‑LED colour tweaks** alongside brightness for the EF meters, control beacon and pot halos.
 
 The page reads a JSON schema and the current settings from the board, builds a form and then lets you push changes back.
 
@@ -33,6 +33,7 @@ This little app lets you boss the board around without touching code. Dial in:
 - **Brightness** – decide how blinding the EF meters blaze. Dim for stealth or crank it to stage-lamp levels.
 - **Colours for every LED** – paint each halo or meter however you like. Psychedelic rainbows encouraged.
 - **Slot mappings** – reshuffle which physical knob controls which slot. Break the factory order and claim your own layout.
+- **MIDI flavour** – flip any slot between CC, Note, PitchBend, ProgramChange, Aftertouch, ModWheel, NRPN, RPN or raw SysEx. If MIDI supports it, so does the form.
 - **Envelope routing** – point each envelope follower at a slot and pick an ARG method with your favourite A/B combo. Chaos becomes configurable.
 - **ARG power switch** – flip the engine on or off right in the form, no soldering iron required.
 
