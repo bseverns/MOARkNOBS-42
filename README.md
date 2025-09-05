@@ -3,6 +3,9 @@
 ![landing](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
+![incorrect board render](docs/brdF.png)
+>EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. Lots more SMD on the board for this version.
+
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
 The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
 the full scoop.
