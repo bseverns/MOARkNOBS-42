@@ -130,13 +130,23 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 | [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls. |
 | `Globals` | Shared constants and state that keep the gang in sync. |
 | `Utility` | Misc helpers—because even chaos needs some glue. |
+~~[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB, DIN & TRS]~~
 
-```
-[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB, DIN & TRS]
-                   |-> [LEDManager] (bling)
-                   |-> [DisplayManager] (OLED)
-                   |-> [ConfigManager] (EEPROM)
-                   |-> [EnvelopeFollower] (modulation)
+```mermaid
+flowchart LR
+  Buttons[Buttons/Pots]
+  Managers[Managers]
+  MIDI[MIDIHandler]
+  Outputs[USB, DIN & TRS]
+  LED[LEDManager]
+  Display[DisplayManager]
+  Config[ConfigManager]
+  Env[EnvelopeFollower]
+  Buttons --> Managers --> MIDI --> Outputs
+  Managers --> LED
+  Managers --> Display
+  Managers --> Config
+  Managers --> Env
 ```
 
 ## MIDI: The Lifeblood

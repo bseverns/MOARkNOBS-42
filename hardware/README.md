@@ -1,6 +1,15 @@
 # BTN_42 Hardware
 
-> The button board that turns the firmware's dreams into something you can actually solder. Pure DIY attitude. Latest layout adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and now drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
+> ~~The button board that turns the firmware's dreams into something you can actually solder.~~ Pure DIY attitude. Latest layout adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and now drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
+
+```mermaid
+flowchart TD
+  Buttons[Button Matrix] --> MUX[CD74HC4067]
+  MUX --> Teensy[Teensy 4.0]
+  Teensy --> LEDs[WS2812 LEDs]
+  Teensy --> MIDI[DIN/TRS MIDI]
+  Teensy --> EF[Envelope Inputs]
+```
 
 ![Top Layer](../docs/sketch/TopLayer.png)[^logic][^midi]
 

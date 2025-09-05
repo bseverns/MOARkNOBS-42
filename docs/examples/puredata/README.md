@@ -1,8 +1,18 @@
 # Pure Data Listener
 
-`mn42_listener.pd` does the same trick as the Max patch but keeps it free and
-open. It listens on port `8000` and dumps slot and envelope values into number
-boxes.
+~~`mn42_listener.pd` does the same trick as the Max patch but keeps it free and open.~~
+It listens on port `8000`, dumping slot and envelope numbers without a price tag.
+
+```mermaid
+sequenceDiagram
+    participant PdPatch
+    participant Bridge
+    participant Controller
+    PdPatch->>Bridge: OSC 8000
+    Bridge->>Controller: serial JSON
+    Controller-->>Bridge: slot/envelope dump
+    Bridge-->>PdPatch: OSC echo
+```
 
 ## Spin It Up
 

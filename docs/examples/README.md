@@ -1,8 +1,19 @@
 # Example Patches
 
-These patches are the training wheels and demolition derby for the controller.
-Each one shows how to jack into the board through the OSC/WebMIDI bridge and
-spy on the slots or sling MIDI back at it.
+~~These patches are the training wheels and demolition derby for the controller.~~
+Get a crash course in abusing the board through the OSC/WebMIDI bridge and
+spying on slots or hurling MIDI back at it.
+
+```mermaid
+sequenceDiagram
+    participant Patch
+    participant Bridge
+    participant Controller
+    Patch->>Bridge: OSC/WebMIDI noise
+    Bridge->>Controller: serial JSON
+    Controller-->>Bridge: slot/envelope dump
+    Bridge-->>Patch: OSC updates
+```
 
 ## Boot the Bridge
 
