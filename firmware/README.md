@@ -59,7 +59,7 @@ Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign EFs, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
-  *Note:* The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
+  _Note:_ The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 
 ### Dynamic Envelope Modulation
@@ -70,13 +70,13 @@ Those six envelope followers aren't just spectators—they hijack whatever slot 
 
 The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! they may be more reasonable, however), so here’s what it became:
 
-* **1 slot pot**: total recall per slot.
-* **2 filter-tuning pots**: dial in frequency and resonance.
-* **42 virtual MIDI slots**: each one stores its own value, channel, MIDI protocol (CC, note on/off, program change, aftertouch, pitch bend, NRPN, RPN, or SysEx), and envelope interaction settings.
-* **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
-* **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 for each of the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.
-* **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
-* **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
+- **1 slot pot**: total recall per slot.
+- **2 filter-tuning pots**: dial in frequency and resonance.
+- **42 virtual MIDI slots**: each one stores its own value, channel, MIDI protocol (CC, note on/off, program change, aftertouch, pitch bend, NRPN, RPN, or SysEx), and envelope interaction settings.
+- **A grid of buttons**: short press, long press, combos. The button PCB (`BTN_42`) forms a 7×6 diode matrix read via two CD74HC4067s. Firmware uses a `setMux()` helper to toggle `MUXR1..4`/`MUXC1..4` and scan all 42 buttons through one analog input.
+- **OLED Display + Addressable LEDs**: 52 WS2812s throw shade and light—42 for each of the virtual slots, six meter the envelope followers, one blinks at your control-button abuse, and three halo the pots.
+- **6 Envelope Followers**: Each with selectable filter modes—**linear, opposite, exponential, random, low-pass, high-pass, or band-pass**—letting you shape how each EF responds to signal dynamics.
+- **Live Filter Tuning**: Dedicated pots allow real-time control over frequency and resonance per EF. Sculpt reaction curves on the fly, no DAW needed.
 
 ### Hardware Assumptions the Firmware Leans On
 
@@ -90,15 +90,15 @@ Some hardware choices only come alive when the firmware plays along:
 
 Default pins and timing live in a `HardwareConfig` struct defined in `Globals.h`. Those numbers get loaded at startup and can be punked via the stubbed `include/hardware_config.h` or a tiny `/hardware_config.json` dropped next to the firmware. The table below shows the baked-in defaults.
 
-| Constant | Pin(s) | Purpose |
-|---------|-------|---------|
-| `ledPin` | 6 | WS2812 data out (wired to `LED_DATA_PIN`) |
-| `muxrPins` | 2,3,4,5 | Row select lines for the button matrix |
-| `muxcPins` | 8,9,10,11 | Column select lines for the button matrix |
-| `buttonMuxAnalogPin` | A4 | Shared button sense line |
-| `potMuxAnalogPin` | A5 | Potentiometer MUX analog input |
-| `CONTROL_PINS` | 12,13,14,15,24,25 | Direct control buttons |
-| `statusLedPin` | 23 | Board status indicator mounted between the PWR and brain on the board |
+| Constant             | Pin(s)            | Purpose                                                               |
+| -------------------- | ----------------- | --------------------------------------------------------------------- |
+| `ledPin`             | 6                 | WS2812 data out (wired to `LED_DATA_PIN`)                             |
+| `muxrPins`           | 2,3,4,5           | Row select lines for the button matrix                                |
+| `muxcPins`           | 8,9,10,11         | Column select lines for the button matrix                             |
+| `buttonMuxAnalogPin` | A4                | Shared button sense line                                              |
+| `potMuxAnalogPin`    | A5                | Potentiometer MUX analog input                                        |
+| `CONTROL_PINS`       | 12,13,14,15,24,25 | Direct control buttons                                                |
+| `statusLedPin`       | 23                | Board status indicator mounted between the PWR and brain on the board |
 
 Need different pins or scheduler ticks? Override the defaults with a header or drop a JSON sidecar if that's more your thing. The repo already ships a no-op `include/hardware_config.h`; wire it up like this to drag the MIDI scheduler:
 
@@ -119,19 +119,20 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 
 ## Firmware Module Cheat Sheet
 
-| Module | What it wrangles |
-|-------|------------------|
-| [Arpeggiator](include/Arpeggiator/README.md) | Spits out repeating patterns so you can noodle hands‑free in dynamic ways using slot values or EF/ARG values for root notes. |
-| [BiquadFilter](include/BiquadFilter/README.md) | Lightweight filter used by the envelope followers. |
-| [ButtonManager](include/ButtonManager/README.md) | Scans the 7×6 button matrix, debounces it, and dishes out events. |
-| [ConfigManager](include/ConfigManager/README.md) | Saves to EEPROM, restores from backup when things go sideways. |
-| [DisplayManager](include/DisplayManager/README.md) | Talks to the OLED and makes pixels dance. |
-| [EnvelopeFollower](include/EnvelopeFollower/README.md) | Converts audio/CV into modulation curves with selectable filters. |
-| [LEDManager](include/LEDManager/README.md) | Paints 52 WS2812s and that lone status LED with righteous fury. |
-| [MIDIHandler](include/MIDIHandler/README.md) | Speaks MIDI over USB, DIN, and TRS, mirroring every message. |
-| [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls. |
-| `Globals` | Shared constants and state that keep the gang in sync. |
-| `Utility` | Misc helpers—because even chaos needs some glue. |
+| Module                                                         | What it wrangles                                                                                                             |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [Arpeggiator](include/Arpeggiator/README.md)                   | Spits out repeating patterns so you can noodle hands‑free in dynamic ways using slot values or EF/ARG values for root notes. |
+| [BiquadFilter](include/BiquadFilter/README.md)                 | Lightweight filter used by the envelope followers.                                                                           |
+| [ButtonManager](include/ButtonManager/README.md)               | Scans the 7×6 button matrix, debounces it, and dishes out events.                                                            |
+| [ConfigManager](include/ConfigManager/README.md)               | Saves to EEPROM, restores from backup when things go sideways.                                                               |
+| [DisplayManager](include/DisplayManager/README.md)             | Talks to the OLED and makes pixels dance.                                                                                    |
+| [EnvelopeFollower](include/EnvelopeFollower/README.md)         | Converts audio/CV into modulation curves with selectable filters.                                                            |
+| [LEDManager](include/LEDManager/README.md)                     | Paints 52 WS2812s and that lone status LED with righteous fury.                                                              |
+| [MIDIHandler](include/MIDIHandler/README.md)                   | Speaks MIDI over USB, DIN, and TRS, mirroring every message.                                                                 |
+| [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls.                                                                 |
+| `Globals`                                                      | Shared constants and state that keep the gang in sync.                                                                       |
+| `Utility`                                                      | Misc helpers—because even chaos needs some glue.                                                                             |
+
 ~~[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB, DIN & TRS]~~
 
 ```mermaid
@@ -153,12 +154,12 @@ flowchart LR
 
 ## MIDI: The Lifeblood
 
-The MN42 is first and foremost a MIDI generator.  Every pot twist and
+The MN42 is first and foremost a MIDI generator. Every pot twist and
 envelope movement ultimately ends up as a MIDI message that is pushed to
-**both** the 5‑pin DIN jack and 1/8" TRS Type-A plug as well as the USB port 
-at the same time, if it is enabled.  The firmware uses a hardware serial 
-instance for traditional DIN MIDI and the`usbMIDI` stack for modern computer 
-connections.  Whatever leaves one interface is mirrored on the other 
+**both** the 5‑pin DIN jack and 1/8" TRS Type-A plug as well as the USB port
+at the same time, if it is enabled. The firmware uses a hardware serial
+instance for traditional DIN MIDI and the`usbMIDI` stack for modern computer
+connections. Whatever leaves one interface is mirrored on the other
 so you can drive hardware synths and a DAW concurrently with zero configuration.
 
 ### MIDI Message Examples
@@ -185,18 +186,18 @@ DIN, TRS, and USB so the whole chain feels the twist.
 Each of the 42 virtual slots can transmit any of the following MIDI
 messages, with the channel and data byte stored per slot:
 
-* **Control Change** – standard CC messages with values 0–127 - this was where the project started.
-* **Note** – sends Note On and automatically issues a Note Off shortly after, using 
-envelope level (if available) as velocity or having a little wiggle (possibly) inserted by the machine vs the set value.
-* **Program Change** – select patches or presets on your synths.
-* **Channel Aftertouch** – channel pressure values derived from the control pot or an envelope follower.
-* **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
-* **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
-* **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
-* **SysEx** – raw byte dumps for when CCs just won't cut it.
+- **Control Change** – standard CC messages with values 0–127 - this was where the project started.
+- **Note** – sends Note On and automatically issues a Note Off shortly after, using
+  envelope level (if available) as velocity or having a little wiggle (possibly) inserted by the machine vs the set value.
+- **Program Change** – select patches or presets on your synths.
+- **Channel Aftertouch** – channel pressure values derived from the control pot or an envelope follower.
+- **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
+- **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
+- **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
+- **SysEx** – raw byte dumps for when CCs just won't cut it.
 
 The Control Buttons let you cycle the message type, channel (1–16) and data values in
-real time.  All assignments persist in EEPROM -if you remember to save them (this is coming from a Korg E2S owner)- so your setup survives a power cycle.
+real time. All assignments persist in EEPROM -if you remember to save them (this is coming from a Korg E2S owner)- so your setup survives a power cycle.
 
 ### Incoming MIDI and Clock Sync
 
@@ -210,8 +211,8 @@ grave and keeps everything stomping in time.
 ### High‑Resolution Modulation
 
 Envelope followers and the main control potentiometer send updates on a 1 ms
-schedule.  CCs or other parameters can therefore react smoothly to audio
-input or manual tweaks.  LED animations and the OLED display mirror this
+schedule. CCs or other parameters can therefore react smoothly to audio
+input or manual tweaks. LED animations and the OLED display mirror this
 activity so you always see what is being transmitted.
 
 In short, the MN42 speaks fluent MIDI on all fronts—USB, DIN, and TRS, outgoing
@@ -219,6 +220,7 @@ and incoming—and gives every slot the flexibility to send exactly the
 messages your rig requires.
 
 ## Button Mayhem
+
 Buttons are scanned continuously using `setMux()` which sets the row and column addresses before each read.
 
 Need to peek under the hood? `ButtonManager::scanControlInputs()` is fair game for granular debug.
@@ -227,43 +229,43 @@ Still, the grown-up move is to call `processButtons()` and let it wrangle everyt
 
 Each control button can do several things depending on how you hit it. Long presses demand a quick confirm jab after you let go:
 
-| Button | Short Press         | Long Press                    | Double Press            |
-| ------ | ------------------- | ----------------------------- | ----------------------- |
-| Ctrl0  | Toggle EF           | Calibrate & save EF baseline  | Cycle EF filter forward |
-| Ctrl1  | Next Slot           | Reload profile from EEPROM    | Cycle EF filter backward|
-| Ctrl2  | Cycle EF assignment | Toggle Slot Active            | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
-| Ctrl3  | Cycle MIDI Channel  | Reset EEPROM                  | —                       |
-| Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                   | —                       |
-| Ctrl5  | Tap BPM             | Enter/Exit Diagnostics        | —                       |
+| Button | Short Press                         | Long Press                   | Double Press                                                                |
+| ------ | ----------------------------------- | ---------------------------- | --------------------------------------------------------------------------- |
+| Ctrl0  | Toggle EF                           | Calibrate & save EF baseline | Cycle EF filter forward                                                     |
+| Ctrl1  | Next Slot                           | Reload profile from EEPROM   | Cycle EF filter backward                                                    |
+| Ctrl2  | Cycle EF assignment                 | Toggle Slot Active           | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
+| Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM                 | —                                                                           |
+| Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                  | —                                                                           |
+| Ctrl5  | Tap BPM                             | Enter/Exit Diagnostics       | —                                                                           |
 
 Long-hold **Ctrl5** and you drop into our scrappy diagnostic pit. That fourth-from-last LED starts a slow pulse so you know you’re off the beaten path. While you're in there, a long press on **Ctrl1** flips through pages: first the button matrix, then EF baselines, then raw MIDI RX/TX counts. Another long squeeze on **Ctrl5** ejects you back to normal jam mode.
 
 **Slot Buttons (0–41):**
+
 - **Short Press:** Pick the slot you want to mangle.
 - **Long Press:** Assign or cycle the Envelope Follower for that slot and kick EF ON. After the slot wakes up, slam Control 0‑5 to nail a specific follower.
 - **Double Press:** Flip that slot’s EF filter to the next flavor.
 
 And yes, combo presses are supported:
 
-| Combo         | Action                       |
-|---------------|------------------------------|
-| Ctrl0 + Ctrl1 + Ctrl2 | Toggle USB MIDI output |
-| Ctrl0 + Ctrl1 | Cycle EF ARG mode method     |
-| Ctrl2 + Ctrl3 | Cycle LED display modes      |
-| Ctrl4 + Ctrl5 | Enable EF and randomize settings |
-| Ctrl0 + Ctrl4 | Set slot to MIDI Note mode   |
-| Ctrl0 + Ctrl5 | Set slot to Program Change   |
-| Ctrl1 + Ctrl4 | Set slot to Aftertouch       |
-| Ctrl1 + Ctrl5 | Set slot to Pitch Bend       |
-| Ctrl2 + Ctrl4 | Set slot to NRPN             |
-| Ctrl1 + Ctrl3 | Set slot to RPN              |
-| Ctrl0 + Ctrl3 | Set slot to SysEx            |
-| Ctrl1 + Ctrl2 | Toggle MIDI clock output     |
-| Ctrl2 + Ctrl5 | Cycle ARG envelope pair      |
-| Ctrl3 + Ctrl4 | Bump arpeggiator base note   |
-| Ctrl3 + Ctrl5 | Toggle Arpeggiator mode      |
-| Ctrl0 + Ctrl2 | Cycle configuration profiles |
-
+| Combo                 | Action                           |
+| --------------------- | -------------------------------- |
+| Ctrl0 + Ctrl1 + Ctrl2 | Toggle USB MIDI output           |
+| Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |
+| Ctrl2 + Ctrl3         | Cycle LED display modes          |
+| Ctrl4 + Ctrl5         | Enable EF and randomize settings |
+| Ctrl0 + Ctrl4         | Set slot to MIDI Note mode       |
+| Ctrl0 + Ctrl5         | Set slot to Program Change       |
+| Ctrl1 + Ctrl4         | Set slot to Aftertouch           |
+| Ctrl1 + Ctrl5         | Set slot to Pitch Bend           |
+| Ctrl2 + Ctrl4         | Set slot to NRPN                 |
+| Ctrl1 + Ctrl3         | Set slot to RPN                  |
+| Ctrl0 + Ctrl3         | Set slot to SysEx                |
+| Ctrl1 + Ctrl2         | Toggle MIDI clock output         |
+| Ctrl2 + Ctrl5         | Cycle ARG envelope pair          |
+| Ctrl3 + Ctrl4         | Bump arpeggiator base note       |
+| Ctrl3 + Ctrl5         | Toggle Arpeggiator mode          |
+| Ctrl0 + Ctrl2         | Cycle configuration profiles     |
 
 Need RPN in a flash? Mash **Ctrl1 + Ctrl3** to flip the active slot, or keep double‑tapping **Ctrl2** to cycle through the full MIDI zoo.
 
@@ -279,21 +281,22 @@ Profiles live in EEPROM, so the chaos survives power cycles. Kill the power, plu
 
 ### OLED Feedback Cheat Sheet
 
->Typical screen messages from the firmware’s `DisplayManager` include:
+> Typical screen messages from the firmware’s `DisplayManager` include:
 >
->* `Active Slot=<n>` when you select a slot button.
->* `EF: ON/OFF` when toggling envelope following with Control Button #0.
->* `Slot <n> -> EF <m>` when assigning an EF (long press + confirm on a slot or short press on Control Button #2).
->* `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
->* `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
+> - `Active Slot=<n>` when you select a slot button.
+> - `EF: ON/OFF` when toggling envelope following with Control Button #0.
+> - `Slot <n> -> EF <m>` when assigning an EF (long press + confirm on a slot or short press on Control Button #2).
+> - `Slot <n> => <FILTER>` whenever the filter type is changed via double‑press.
+> - `Tapped BPM=<value>` after hitting Control Button #5 to set tempo.
 
->Turning the **main pot** updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
+> Turning the **main pot** updates the active slot’s value (the OLED keeps showing slot/channels/EF status). Twisting the **filter-tuning pots** pops up a two-line readout with `Freq` and `Q` from `showFilterTuning()` so you can dial in cutoff and resonance.
 
 ---
 
 ## Filter Controls
 
 Each envelope follower features a full DSP filter section with **7 selectable modes**:
+
 - **Linear**
 - **Opposite Linear**
 - **Exponential**
@@ -304,19 +307,21 @@ Each envelope follower features a full DSP filter section with **7 selectable mo
 
 #### Filter Behavior
 
-* **Linear** – direct gain scaling; `Freq` acts as a multiplier.
-* **Opposite Linear** – inverts the response so high input yields low output.
-* **Exponential** – emphasizes extremes; `Q` controls curve steepness.
-* **Random** – introduces jitter based on `Freq` (probability) and `Q` (range).
-* **Low-pass** – smooths fast changes; `Freq` is cutoff and `Q` is resonance.
-* **High-pass** – emphasizes sharp transients; cutoff and resonance as above.
-* **Band-pass** – isolates a band around the chosen frequency with given `Q`.
+- **Linear** – direct gain scaling; `Freq` acts as a multiplier.
+- **Opposite Linear** – inverts the response so high input yields low output.
+- **Exponential** – emphasizes extremes; `Q` controls curve steepness.
+- **Random** – introduces jitter based on `Freq` (probability) and `Q` (range).
+- **Low-pass** – smooths fast changes; `Freq` is cutoff and `Q` is resonance.
+- **High-pass** – emphasizes sharp transients; cutoff and resonance as above.
+- **Band-pass** – isolates a band around the chosen frequency with given `Q`.
 
 Switch filter type via double-presses on control buttons. The currently assigned filter is shown on the OLED.
 
 When LPF/HPF/BPF is selected, **two dedicated tuning pots** become active for that EF, letting you adjust:
+
 - **Frequency**: Cutoff/center frequency (20–5000Hz)
 - **Resonance (Q)**: 0.5–4.0 (slope/sharpness)
+
 ---
 
 ## Envelope Follower Calibration
@@ -361,62 +366,61 @@ You need to already have an **Envelope Follower assigned** to the active slot. T
 
 With ARG mode active and an EF already assigned:
 
-* Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**. The lineup:
-
-  * `PLUS` – A + B
-  * `MIN` – A - B
-  * `PECK` – B - A
-  * `SHAV` – (A - B) / 10
-  * `SQAR` – sqrt(A*A + B*B)
-  * `BABS` – A / abs(B)
-  * `TABS` – (10 * A) / abs(B)
-  * `MULT` – (A * B) / 127
-  * `DIVI` – (A * 127) / (B + 1)
-  * `AVG` – (A + B) / 2
-  * `XABS` – abs(A - B)
-  * `MAXX` – max(A, B)
-  * `MINN` – min(A, B)
-  * `XORR` – A ^ B
+- Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**. The lineup:
+  - `PLUS` – A + B
+  - `MIN` – A - B
+  - `PECK` – B - A
+  - `SHAV` – (A - B) / 10
+  - `SQAR` – sqrt(A*A + B*B)
+  - `BABS` – A / abs(B)
+  - `TABS` – (10 \* A) / abs(B)
+  - `MULT` – (A \* B) / 127
+  - `DIVI` – (A \* 127) / (B + 1)
+  - `AVG` – (A + B) / 2
+  - `XABS` – abs(A - B)
+  - `MAXX` – max(A, B)
+  - `MINN` – min(A, B)
+  - `XORR` – A ^ B
 
 #### ARG Method Reference
 
-| Method | Formula (A,B) | Description |
-| ------ | ------------- | ----------- |
-| `PLUS` | `A + B` | Sum of the two envelope levels. |
-| `MIN`  | `A - B` | Subtract B from A for a unipolar difference. |
-| `PECK` | `B - A` | Invert the subtraction (B minus A). |
-| `SHAV` | `(A - B) / 10` | Scaled difference for subtle movement. |
-| `SQAR` | `sqrt(A*A + B*B)` | Vector magnitude style blend. |
-| `BABS` | `A / abs(B)` | Ratio of A over the absolute of B. |
-| `TABS` | `(10 * A) / abs(B)` | BABS with a ×10 boost. |
-| `MULT` | `(A * B) / 127` | Multiply and scale—ring‑mod sidebands. |
-| `DIVI` | `(A * 127) / (B + 1)` | Divide without exploding on zero. |
-| `AVG`  | `(A + B) / 2` | Straight-up average for a chill blend. |
-| `XABS` | `abs(A - B)` | Absolute difference; instant gate fodder. |
-| `MAXX` | `max(A, B)` | Whatever envelope screams louder wins. |
-| `MINN` | `min(A, B)` | Follow the quieter of the two. |
-| `XORR` | `A ^ B` | Bit-twisted chaos for digital grit. |
+| Method | Formula (A,B)         | Description                                  |
+| ------ | --------------------- | -------------------------------------------- |
+| `PLUS` | `A + B`               | Sum of the two envelope levels.              |
+| `MIN`  | `A - B`               | Subtract B from A for a unipolar difference. |
+| `PECK` | `B - A`               | Invert the subtraction (B minus A).          |
+| `SHAV` | `(A - B) / 10`        | Scaled difference for subtle movement.       |
+| `SQAR` | `sqrt(A*A + B*B)`     | Vector magnitude style blend.                |
+| `BABS` | `A / abs(B)`          | Ratio of A over the absolute of B.           |
+| `TABS` | `(10 * A) / abs(B)`   | BABS with a ×10 boost.                       |
+| `MULT` | `(A * B) / 127`       | Multiply and scale—ring‑mod sidebands.       |
+| `DIVI` | `(A * 127) / (B + 1)` | Divide without exploding on zero.            |
+| `AVG`  | `(A + B) / 2`         | Straight-up average for a chill blend.       |
+| `XABS` | `abs(A - B)`          | Absolute difference; instant gate fodder.    |
+| `MAXX` | `max(A, B)`           | Whatever envelope screams louder wins.       |
+| `MINN` | `min(A, B)`           | Follow the quieter of the two.               |
+| `XORR` | `A ^ B`               | Bit-twisted chaos for digital grit.          |
 
 ### Assigning Envelope Pairs for ARG
 
 Once you're in ARG mode:
 
-* Press **Control Button #2 + Control Button #5** together
-* This will cycle through all combinations of the 6 envelope inputs (A0, A1, A2, A3, A6, A7)
-* Each time, it pairs a new (A, B) set and assigns them to the active EF
-* The OLED will display the current pairing: `EF 1: A3/B0`
+- Press **Control Button #2 + Control Button #5** together
+- This will cycle through all combinations of the 6 envelope inputs (A0, A1, A2, A3, A6, A7)
+- Each time, it pairs a new (A, B) set and assigns them to the active EF
+- The OLED will display the current pairing: `EF 1: A3/B0`
 
 > Nerd note: the firmware builds that list at compile time by iterating the six
 > analog pins and shoving every unique `(A,B)` combo into a constexpr array.
 > Tweak the pin lineup and the pairs follow—no hand-edited tables, no drift.
 
-This allows reactive modulation—i.e., *side-chaining*, *comparative analysis*, or *musical sabotage*—by letting one signal influence another.
+This allows reactive modulation—i.e., _side-chaining_, _comparative analysis_, or _musical sabotage_—by letting one signal influence another.
 
 ### Pro Tips
 
-* LED color will shift in response to filter type + ARG mode
-* Use this to chain bass envelope to pad CC, or voice amplitude to delay feedback
-* It’s experimental by nature. Push it too far. Then back off just enough to groove.
+- LED color will shift in response to filter type + ARG mode
+- Use this to chain bass envelope to pad CC, or voice amplitude to delay feedback
+- It’s experimental by nature. Push it too far. Then back off just enough to groove.
 
 ## Arpeggiator Mode
 
@@ -424,8 +428,8 @@ This allows reactive modulation—i.e., *side-chaining*, *comparative analysis*,
 **any MIDI type** (CC, Note, Aftertouch, etc.). While active, the filter knobs
 repurpose themselves:
 
-* **Freq Pot** → length of each step (80–800 ms)
-* **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
+- **Freq Pot** → length of each step (80–800 ms)
+- **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
 The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
 Each tick it grabs the slot's pot value as the root, parks that in `arpNote`, and hammers out `root + offset` for notes.
@@ -457,20 +461,21 @@ LED colours follow the states defined in `LEDManager::update()`. The strip now h
 On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware. There's now a matching colour swatch baked into EEPROM too, so you can decide the board's wake‑up hue instead of living with factory white.
 
 The OLED shows:
-  - Slot info (CC, Channel, Value)
-  - EF status and assignment
-  - Envelope bars and filter info
-  - MIDI messages as they occur
-  - Animated fades and idle screensaver after 90s
+
+- Slot info (CC, Channel, Value)
+- EF status and assignment
+- Envelope bars and filter info
+- MIDI messages as they occur
+- Animated fades and idle screensaver after 90s
 
 ## Saving and Loading
 
 Your configuration is stored in EEPROM. Manual save required.
 
-* **Button #3 (long press + confirm)** nukes your config.
-* **Button #4 (long press + confirm)** saves the current setup.
-* **Button #4 (double press)** reloads the profile from EEPROM.
-* A backup copy is also maintained and auto-restored if needed.
+- **Button #3 (long press + confirm)** nukes your config.
+- **Button #4 (long press + confirm)** saves the current setup.
+- **Button #4 (double press)** reloads the profile from EEPROM.
+- A backup copy is also maintained and auto-restored if needed.
 
 ## Test Philosophy (and Real Talk)
 
@@ -487,11 +492,11 @@ Modules like `ButtonManager` roll with a posse of globals—`arpeggiator`, `conf
 
 Test sketches used in the development of this project include:
 
-* `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
-* `unified.cpp`: full integration test—just power it on and watch the magic.
-* `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
-* `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
-* `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
+- `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
+- `unified.cpp`: full integration test—just power it on and watch the magic.
+- `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
+- `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
+- `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
 
 ## Code Style
 
@@ -514,7 +519,7 @@ debug.
 
 Every save tacks on a 16-bit `version` tag and a matching 16-bit `crc`.
 The version lets the firmware evolve without bricking old configs, while
-the CRC sniffs out corruption.  If either check fails on boot, we torch
+the CRC sniffs out corruption. If either check fails on boot, we torch
 the junk and fall back to factory defaults.
 
 ## Task Flow & Timing
@@ -530,6 +535,7 @@ The `loop()` function ticks these schedulers in order and then polls buttons and
 > **House Rule:** scheduler callbacks get rounded up before they run. Don't mosh the task list from inside a callback—queue new gigs after `update()` finishes or risk a scheduler bar fight.
 
 =======
+
 ## Build It (PlatformIO or Bust)
 
 All builds happen inside this `firmware/` directory. Fire up
@@ -578,7 +584,7 @@ pio run -e teensy40_main -D BUTTON_MANAGER_DEBUG=1
 
 `ButtonManager.h` defines the `BM_DBG_PRINT` and `BM_DBG_PRINTLN` macros, so `ButtonManager.cpp` stopped copy-pasting them like a cover band. Dig in deeper here: [ButtonManager.h](include/ButtonManager.h).
 
-Those macros aren’t just Serial cheerleaders anymore.  We check for the
+Those macros aren’t just Serial cheerleaders anymore. We check for the
 `ARDUINO` flag and fall back to good old `printf` if the MCU ghosts us.
 That way even host-side tests get to hear the button gossip.
 
@@ -717,33 +723,32 @@ While those lines scroll by, the OLED pops `Active Slot=0` and then
 `Slot 0 ch1 CC74` before fading back to its idle vibe. Trust the terminal for
 truth; use the screen to make sure your button mashing landed where it should.
 
-
 ## Web Editor
 
 Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
-* Assign CCs visually
-* Set envelope pairings
-* Tweak filter types, EF settings, ARG pairings, and LED colors (including a global strip tint)
-* Save back to EEPROM over WebSerial
+- Assign CCs visually
+- Set envelope pairings
+- Tweak filter types, EF settings, ARG pairings, and LED colors (including a global strip tint)
+- Save back to EEPROM over WebSerial
 
 ### WebSerial Commands
 
 The browser flings a couple of plain‑text orders over WebSerial and the
 firmware salutes:
 
-| Command | What it does |
-|---------|--------------|
-| `GET_FILTER` | Returns `type,freq,q` for the active envelope filter. |
-| `SET_FILTER <type,freq,q>` | Stores filter shape, cutoff and Q into EEPROM. |
-| `GET_ARGPAIR` | Spits back `enable,a,b` for the ARG mashup. |
-| `SET_ARGPAIR <en,a,b>` | Persists an on/off flag and the envelope duo for ARG shenanigans. |
-| `GET_LED` | Returns `brightness,r,g,b` for the status strip. |
-| `SET_LED <b,r,g,b>` | Burns new brightness and color into EEPROM. |
-| `GET_ARGMETHOD` | Reports which ARG math trick is armed (0‑13). |
-| `SET_ARGMETHOD <n>` | Picks the ARG method to torment signals with. |
-| `GET_EF <slot>` | Tells which envelope follower owns a slot (`-1` = none). |
-| `SET_EF <slot,ef>` | Assigns follower `ef` to `slot` and saves it. |
+| Command                    | What it does                                                      |
+| -------------------------- | ----------------------------------------------------------------- |
+| `GET_FILTER`               | Returns `type,freq,q` for the active envelope filter.             |
+| `SET_FILTER <type,freq,q>` | Stores filter shape, cutoff and Q into EEPROM.                    |
+| `GET_ARGPAIR`              | Spits back `enable,a,b` for the ARG mashup.                       |
+| `SET_ARGPAIR <en,a,b>`     | Persists an on/off flag and the envelope duo for ARG shenanigans. |
+| `GET_LED`                  | Returns `brightness,r,g,b` for the status strip.                  |
+| `SET_LED <b,r,g,b>`        | Burns new brightness and color into EEPROM.                       |
+| `GET_ARGMETHOD`            | Reports which ARG math trick is armed (0‑13).                     |
+| `SET_ARGMETHOD <n>`        | Picks the ARG method to torment signals with.                     |
+| `GET_EF <slot>`            | Tells which envelope follower owns a slot (`-1` = none).          |
+| `SET_EF <slot,ef>`         | Assigns follower `ef` to `slot` and saves it.                     |
 
 Need to bake a hue right into EEPROM? The WebSerial editor now stuffs a `#RRGGBB` string into `SET_ALL` so you can slam brightness and colour in one hit:
 
