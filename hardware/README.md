@@ -17,6 +17,8 @@ flowchart TD
 
 ![Board Render](../docs/sketch/MOAR_BOARD.png)
 
+Need a deeper schematic fix? The [systemflow docs](../docs/sketch/systemFlow/hw/) slice the board into subsystems with all the gnarly traces.
+
 ## Specs
 
 - **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show.

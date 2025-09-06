@@ -74,6 +74,8 @@ flowchart LR
 
 Need the dirt? Dive into the sub-READMEs and get lost.
 
+For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/) tear down each hardware module—button matrix, display guts, envelope front-end—so you can trace every signal like a true knob punk.
+
 ## Quick Start
 
 Ready to shred? Here's the bare minimum to get the beast humming.

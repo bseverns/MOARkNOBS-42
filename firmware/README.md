@@ -12,6 +12,8 @@ Forget fragile GUIs and boutique workflows. This beast lives in the guts: built 
 
 And driving the chaos? Your own automation parameters or six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
 
+Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs/sketch/systemFlow/hw/) to see how the firmware wires into every slab of hardware.
+
 ## Quickstart: Jam Now, Explain Later
 
 1. **Power and Plug In** – USB wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl0`+`Ctrl1`+`Ctrl2`.
