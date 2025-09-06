@@ -6,6 +6,8 @@ Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** ta
 
 ~~Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing.~~ It listens on `/dev/ttyACM0` at 31,250 baud, shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC screams at `--host`:`--osc`; inbound commands land on the `--osc-listen` port (default 9000).
 
+Want to see where this misfit sits in the whole rig? Peep the [systemflow docs](../docs/sketch/systemFlow/hw/) for the bigger wiring saga.
+
 ```mermaid
 flowchart LR
   Host[DAW / Browser]
