@@ -75,7 +75,8 @@ inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                              PotentiometerManager *potentiometerManager)
     : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
-      activeMode(0), activeARGMethod(0), argEnvelopeA(0), argEnvelopeB(1) {
+      activeMode(0), activeARGMethod(0), argEnvelopeA(0), argEnvelopeB(1),
+      _pendingEfSlot(-1), _efAssignDeadline(0) {
     for (int i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; i++) {
         buttonStates[i] = false;
         lastDebounceTimes[i] = 0;
@@ -114,6 +115,12 @@ void ButtonManager::initButtons() {
  */
 void ButtonManager::processButtons(ButtonManagerContext &context) {
     unsigned long now = ::now();
+
+    // Drop pending EF assignment if the window expired
+    if (_pendingEfSlot >= 0 && now > _efAssignDeadline) {
+        _pendingEfSlot = -1;
+        context.displayManager.displayStatus("EF assign timeout", 1000);
+    }
 
 #ifdef BUTTON_MANAGER_PROFILE
     uint32_t tStart = micros();
@@ -245,7 +252,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
     if (index < NUM_VIRTUAL_BUTTONS) {
         auto it = context.potToEnvelopeMap.find(index);
         if (it == context.potToEnvelopeMap.end()) {
-            context.potToEnvelopeMap[index] = 0; // Assign EF0
+            context.potToEnvelopeMap[index] = 0; // default EF0
         } else {
             int currentEF = it->second;
             int nextEF = (currentEF + 1) % context.envelopes.size();
@@ -253,7 +260,13 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         }
         int assigned = context.potToEnvelopeMap[index];
         context.envelopes[assigned].toggleActive(true);
-        context.displayManager.displayStatus("EF Assigned", 1000);
+        char buf[32];
+        sprintf(buf, "Slot %d -> EF %d", index, assigned);
+        context.displayManager.displayStatus(buf, 1500);
+
+        // Allow an explicit EF pick via control buttons 0-5
+        _pendingEfSlot = index;
+        _efAssignDeadline = ::now() + EF_ASSIGN_WINDOW_MS;
     } else {
         // Control buttons (0-5)
         uint8_t ctrlIdx = index - NUM_VIRTUAL_BUTTONS;
@@ -477,6 +490,20 @@ void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext &con
 }
 
 void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context) {
+    // Pending EF selection overrides normal control button behavior
+    if (_pendingEfSlot >= 0 && buttonIndex >= NUM_VIRTUAL_BUTTONS) {
+        uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
+        if (controlIndex < context.envelopes.size()) {
+            context.potToEnvelopeMap[_pendingEfSlot] = controlIndex;
+            context.envelopes[controlIndex].toggleActive(true);
+            char buf[32];
+            sprintf(buf, "Slot %d -> EF %d", _pendingEfSlot, controlIndex);
+            context.displayManager.displayStatus(buf, 1500);
+        }
+        _pendingEfSlot = -1;
+        return;
+    }
+
     // If it's a virtual "slot" button (0..41)
     if (buttonIndex < NUM_VIRTUAL_BUTTONS) {
         // Make that pot (slot) the “active slot.”

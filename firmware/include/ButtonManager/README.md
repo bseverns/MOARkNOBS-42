@@ -72,7 +72,7 @@ Need the cheat sheet for the six front-panel punks? Here it is.
 | Move | Action |
 | --- | --- |
 | Short press | Select the slot |
-| Long press + confirm | Assign/cycle an Envelope Follower and flip it on |
+| Long press + confirm | Assign/cycle an Envelope Follower and flip it on. After confirming, punch Control 0‑5 to pick a specific EF |
 
 ### Combo Moves
 
