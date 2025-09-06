@@ -133,23 +133,19 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 | `Globals`                                                      | Shared constants and state that keep the gang in sync.                                                                       |
 | `Utility`                                                      | Misc helpers—because even chaos needs some glue.                                                                             |
 
-~~[Buttons/Pots] -> [Managers] -> [MIDIHandler] -> [USB, DIN & TRS]~~
-
 ```mermaid
-flowchart LR
-  Buttons[Buttons/Pots]
-  Managers[Managers]
-  MIDI[MIDIHandler]
-  Outputs[USB, DIN & TRS]
-  LED[LEDManager]
-  Display[DisplayManager]
-  Config[ConfigManager]
-  Env[EnvelopeFollower]
-  Buttons --> Managers --> MIDI --> Outputs
-  Managers --> LED
-  Managers --> Display
-  Managers --> Config
-  Managers --> Env
+flowchart TD
+  Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
+  FW --> BM[ButtonManager] --> DM[DisplayManager]
+  Buttons((Buttons)) -->|scan| BM --> FW
+  EF[EnvelopeFollower] -->|mod| Slots((Slots))
+  ARP[Arpeggiator] -->|mod| Slots((Slots))
+  MIDIIN --> FW --> DM[DisplayManager]
+  MIDIIN --> FW --> Slots((Slots))
+  Browser[[Browser]] --> WebSerial --> FW
+  NodeOSC[[Node OSC Bridge]] --> FW
+  FW --> Slots((Slots)) --> MIDIOut((MIDI Out))
+  FW --> MIDIThrough((MIDI Through))
 ```
 
 ## MIDI: The Lifeblood
