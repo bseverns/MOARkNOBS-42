@@ -3,11 +3,11 @@ A 5 V feed hits the onboard regulator for 3 V3, while I²C and SWD signals f
 Never back‑feed the 3 V3 rail through the expander unless you like smoke.
 
 **References**
-- [Full schematic](SCH_MOAR_Schematic_2025-08-01.pdf)
+- [Schematic](../../Interface&Cntrl.png)
 - [Teensy 4.0 pinout](https://www.pjrc.com/teensy/pinout.html)
-- Snapshot [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22)
+- Snapshot [Interface&Cntrl.png](../../Interface&Cntrl.png)
 
-Teensy power pins and expansion headers. The screenshot version lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+Teensy power pins and expansion headers. The screenshot version lives in [Interface&Cntrl.png](../../Interface&Cntrl.png).
 
 ```mermaid
 flowchart LR
