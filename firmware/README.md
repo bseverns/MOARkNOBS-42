@@ -240,7 +240,7 @@ Long-hold **Ctrl5** and you drop into our scrappy diagnostic pit. That fourth-fr
 
 **Slot Buttons (0–41):**
 - **Short Press:** Pick the slot you want to mangle.
-- **Long Press:** Assign or cycle the Envelope Follower for that slot and kick EF ON.
+- **Long Press:** Assign or cycle the Envelope Follower for that slot and kick EF ON. After the slot wakes up, slam Control 0‑5 to nail a specific follower.
 - **Double Press:** Flip that slot’s EF filter to the next flavor.
 
 And yes, combo presses are supported:

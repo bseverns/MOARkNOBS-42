@@ -83,7 +83,7 @@ Need a crash course in front‑panel mayhem? Here's how the six control buttons 
 | #5 | Tap BPM | — | — |
 
 **Slot Buttons (0–41):**
-Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on.
+Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on; once it’s awake, jab Control 0‑5 to lock to a specific EF.
 
 ### Why this matters
 

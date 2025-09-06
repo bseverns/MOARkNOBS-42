@@ -202,6 +202,11 @@ class ButtonManager {
     int8_t _confirmIndex = -1;                               // which button waits for confirmation
     unsigned long _confirmDeadline = 0;                      // when the confirm window expires
 
+    // Pending envelope follower assignment after a slot long press
+    static constexpr unsigned long EF_ASSIGN_WINDOW_MS = 3000; // window to pick EF 0-5
+    int _pendingEfSlot = -1;                                   // slot waiting for EF selection
+    unsigned long _efAssignDeadline = 0;                       // cancel time for pending assignment
+
   public:
     /** Return the latest smoothed value for one of the control pots. */
     int getControlPotValue(uint8_t idx) const { return (idx < 3) ? _ctrlPotValues[idx] : 0; }
