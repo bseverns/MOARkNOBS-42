@@ -1,6 +1,6 @@
 # Pin Map
 
-Here's the lowdown on how the Teensy 4.0 talks to the outside world. For the full schematic chaos, peep the [hardware docs](../hardware/README.md).
+Here's the lowdown on how the Teensy 4.0 talks to the outside world. For the full schematic chaos, peep the [board schematic](sketch/MOAR_BOARD.png).
 
 ![Board Pin Trace](sketch/TopLayer.png)
 

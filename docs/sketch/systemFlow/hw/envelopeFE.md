@@ -3,11 +3,11 @@ Each channel rectifies and filters around a shared mid‑rail (VREF) before slin
 Watch the op‑amp headroom and diode drop—starve the rails and your envelope will flatline.
 
 **References**
-- [Full schematic](SCH_MOAR_Schematic_2025-08-01.pdf)
+- [Schematic](../../EFpair.png)
 - [1N4148 datasheet](https://www.onsemi.com/pdf/datasheet/1n4148-d.pdf)
-- Snapshot [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22)
+- Snapshot [EFpair.png](../../EFpair.png)
 
-This is the envelope follower analog front-end. The original sheet lives in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+This is the envelope follower analog front-end. The original sheet lives in [EFpair.png](../../EFpair.png).
 
 ```mermaid
 flowchart LR

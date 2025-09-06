@@ -3,12 +3,13 @@ Teensy pin 6 drives the LED chain; pin 1 handles MIDI through a 220 Ω resis
 The AHCT245 wants 5 V on VCC—starve it and your colors go full anarchy.
 
 **References**
-- [Full schematic](SCH_MOAR_Schematic_2025-08-01.pdf)
+- [LED schematic](../../MainLEDPool.png)
+- [MIDI schematic](../../MIDI.png)
 - [74AHCT245 datasheet](https://www.ti.com/lit/ds/symlink/sn74ahct245.pdf)
 - [WS2812B datasheet](https://cdn-shop.adafruit.com/datasheets/WS2812B.pdf)
-- Snapshot [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22)
+- Snapshots [MainLEDPool.png](../../MainLEDPool.png) and [MIDI.png](../../MIDI.png)
 
-Tiny but mighty LED drivers and MIDI outlines! The related schematic snapshot is in [PNG_btnBRD_2025-07-22](PNG_btnBRD_2025-07-22).
+Tiny but mighty LED drivers and MIDI outlines! The related schematic snapshots live in [MainLEDPool.png](../../MainLEDPool.png) and [MIDI.png](../../MIDI.png).
 
 ```mermaid
 flowchart LR
