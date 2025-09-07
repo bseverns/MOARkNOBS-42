@@ -78,21 +78,21 @@ _Long-press stunts ask for a quick confirm tap after you let go—no more accide
 
 | Combo                 | What happens                     |
 | --------------------- | -------------------------------- |
-| Ctrl0 + Ctrl1 + Ctrl2 | Toggle USB MIDI output           |
+| Ctrl3 + Ctrl4 + Ctrl5 | Toggle USB MIDI output           |
 | Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |
-| Ctrl2 + Ctrl3         | Cycle LED display modes          |
-| Ctrl4 + Ctrl5         | Enable EF and randomize settings |
-| Ctrl0 + Ctrl4         | Set slot to MIDI Note mode       |
-| Ctrl0 + Ctrl5         | Set slot to Program Change       |
+| Ctrl0 + Ctrl2         | Cycle ARG envelope pair          |
+| Ctrl3 + Ctrl4         | Cycle LED display modes          |
+| Ctrl0 + Ctrl4         | Enable EF and randomize settings |
+| Ctrl4 + Ctrl5         | Set slot to MIDI Note mode       |
+| Ctrl3 + Ctrl5         | Set slot to Program Change       |
+| Ctrl0 + Ctrl5         | Set slot to Pitch Bend           |
 | Ctrl1 + Ctrl4         | Set slot to Aftertouch           |
-| Ctrl1 + Ctrl5         | Set slot to Pitch Bend           |
-| Ctrl2 + Ctrl4         | Set slot to NRPN                 |
+| Ctrl1 + Ctrl5         | Toggle MIDI clock output         |
+| Ctrl2 + Ctrl5         | Set slot to NRPN                 |
 | Ctrl1 + Ctrl3         | Set slot to RPN                  |
 | Ctrl0 + Ctrl3         | Set slot to SysEx                |
-| Ctrl1 + Ctrl2         | Toggle MIDI clock output         |
-| Ctrl2 + Ctrl5         | Cycle ARG envelope pair          |
-| Ctrl3 + Ctrl4         | Bump arpeggiator base note       |
-| Ctrl3 + Ctrl5         | Toggle Arpeggiator mode          |
-| Ctrl0 + Ctrl2         | Cycle configuration profiles     |
+| Ctrl2 + Ctrl4         | Toggle Arpeggiator mode          |
+| Ctrl2 + Ctrl3         | Bump arpeggiator base note       |
+| Ctrl1 + Ctrl2         | Cycle configuration profiles     |
 
 For deeper madness see the [firmware README](../../README.md).
