@@ -133,19 +133,82 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 | `Globals`                                                      | Shared constants and state that keep the gang in sync.                                                                       |
 | `Utility`                                                      | Misc helpers—because even chaos needs some glue.                                                                             |
 
+### Module Combat Map
+
+When everything boots, the modules start a polite riot. Here's the wiring carnage:
+
 ```mermaid
 flowchart TD
   Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
-  FW --> BM[ButtonManager] --> DM[DisplayManager]
-  Buttons((Buttons)) -->|scan| BM --> FW
-  EF[EnvelopeFollower] -->|mod| Slots((Slots))
-  ARP[Arpeggiator] -->|mod| Slots((Slots))
-  MIDIIN --> FW --> DM[DisplayManager]
-  MIDIIN --> FW --> Slots((Slots))
-  Browser[[Browser]] --> WebSerial --> FW
-  NodeOSC[[Node OSC Bridge]] --> FW
-  FW --> Slots((Slots)) --> MIDIOut((MIDI Out))
-  FW --> MIDIThrough((MIDI Through))
+
+  subgraph IO
+    Buttons((Buttons))
+    Pots((Pots: Slot/Freq/Q))
+    AudioIn((Audio/CV In))
+    MIDIIN((MIDI In))
+    Browser[[Browser]]
+    NodeOSC[[Node OSC Bridge]]
+  end
+
+  subgraph Core
+    FW
+    BM[ButtonManager]
+    PM[PotentiometerManager]
+    EF[EnvelopeFollower]
+    ARP[Arpeggiator]
+    MM[MIDIHandler]
+    DM[DisplayManager]
+    LM[LEDManager]
+    Slots((Slots))
+    EEPROM[(EEPROM)]
+  end
+
+  subgraph Outputs
+    OLED((OLED))
+    LEDs((WS2812 LEDs))
+    MIDIOut((MIDI Out))
+    MIDIThrough((MIDI Through))
+  end
+
+  Buttons -->|scan| BM
+  Pots -->|read| PM
+  AudioIn -->|sense| EF
+  MIDIIN --> MM
+  Browser --> WebSerial --> FW
+  NodeOSC --> FW
+
+  BM --> FW
+  PM --> FW
+  FW --> BM
+  FW --> PM
+  FW --> EF
+  FW --> ARP
+  FW --> MM
+  FW --> DM
+  FW --> LM
+  FW --> Slots
+  FW --> EEPROM
+  EEPROM --> FW
+
+  BM --> Slots
+  PM --> EF
+  EF -->|mod| Slots
+  ARP -->|mod| Slots
+  Slots --> MM
+  Slots --> LM
+  Slots --> DM
+  EF --> LM
+  EF --> DM
+  ARP --> DM
+  BM --> DM
+  BM --> LM
+  PM --> DM
+  MIDIIN --> DM
+
+  MM --> MIDIOut
+  MM --> MIDIThrough
+  DM --> OLED
+  LM --> LEDs
 ```
 
 ## MIDI: The Lifeblood
