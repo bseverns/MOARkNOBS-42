@@ -159,7 +159,7 @@ flowchart TD
     MM[MIDIHandler]
     DM[DisplayManager]
     LM[LEDManager]
-    Slots[Slot matrix]
+    Slots[Slot Matrix]
     EEPROM[(EEPROM)]
   end
 
