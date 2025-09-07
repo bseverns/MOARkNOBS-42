@@ -124,7 +124,7 @@ These classics ruin weekends. Keep them in mind and you'll spend more time makin
 
 The rig hoards three full configuration profiles in EEPROM. Each profile is a 256‑byte bunker storing your pot maps, LED vibe, and envelope tricks.
 
-- **Jump profiles** – mash **Ctrl0 + Ctrl2** to hop to the next profile. It wraps after the third.
+- **Jump profiles** – mash **Ctrl1 + Ctrl2** to hop to the next profile. It wraps after the third.
 - **Save the chaos** – long‑press **Ctrl4** once you've mangled the knobs to taste.
 - **Panic reload** – long‑press **Ctrl1** (with the confirm jab) to yank the active profile from EEPROM.
 

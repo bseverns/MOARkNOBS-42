@@ -16,7 +16,7 @@ Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs
 
 ## Quickstart: Jam Now, Explain Later
 
-1. **Power and Plug In** – USB wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl0`+`Ctrl1`+`Ctrl2`.
+1. **Power and Plug In** – USB wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl3`+`Ctrl4`+`Ctrl5`.
 2. **Pick a Slot** – Twist the lone slot pot or tap a slot button. Each of the 42 slots remembers its own channel, CC/note/program, and EF hookup.
 3. **Map It** – Use the [WebSerial editor](App/benzknobz.html) or `SET_POT` over a serial terminal to bind that slot to whatever your synth expects. Need button combos? See the [button map](include/ButtonManager/README.md#button-map).
 4. **Modulate** – Pair any slot with one of six envelope followers. `Freq` and `Q` pots sculpt the follower's filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
@@ -55,7 +55,7 @@ Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.
 - **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
 - **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
-  - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl0+Ctrl1+Ctrl2**.
+  - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl3+Ctrl4+Ctrl5**.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign EFs, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
@@ -309,22 +309,22 @@ And yes, combo presses are supported:
 
 | Combo                 | Action                           |
 | --------------------- | -------------------------------- |
-| Ctrl0 + Ctrl1 + Ctrl2 | Toggle USB MIDI output           |
+| Ctrl3 + Ctrl4 + Ctrl5 | Toggle USB MIDI output           |
 | Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |
-| Ctrl2 + Ctrl3         | Cycle LED display modes          |
-| Ctrl4 + Ctrl5         | Enable EF and randomize settings |
-| Ctrl0 + Ctrl4         | Set slot to MIDI Note mode       |
-| Ctrl0 + Ctrl5         | Set slot to Program Change       |
+| Ctrl0 + Ctrl2         | Cycle ARG envelope pair          |
+| Ctrl3 + Ctrl4         | Cycle LED display modes          |
+| Ctrl0 + Ctrl4         | Enable EF and randomize settings |
+| Ctrl4 + Ctrl5         | Set slot to MIDI Note mode       |
+| Ctrl3 + Ctrl5         | Set slot to Program Change       |
+| Ctrl0 + Ctrl5         | Set slot to Pitch Bend           |
 | Ctrl1 + Ctrl4         | Set slot to Aftertouch           |
-| Ctrl1 + Ctrl5         | Set slot to Pitch Bend           |
-| Ctrl2 + Ctrl4         | Set slot to NRPN                 |
+| Ctrl1 + Ctrl5         | Toggle MIDI clock output         |
+| Ctrl2 + Ctrl5         | Set slot to NRPN                 |
 | Ctrl1 + Ctrl3         | Set slot to RPN                  |
 | Ctrl0 + Ctrl3         | Set slot to SysEx                |
-| Ctrl1 + Ctrl2         | Toggle MIDI clock output         |
-| Ctrl2 + Ctrl5         | Cycle ARG envelope pair          |
-| Ctrl3 + Ctrl4         | Bump arpeggiator base note       |
-| Ctrl3 + Ctrl5         | Toggle Arpeggiator mode          |
-| Ctrl0 + Ctrl2         | Cycle configuration profiles     |
+| Ctrl2 + Ctrl4         | Toggle Arpeggiator mode          |
+| Ctrl2 + Ctrl3         | Bump arpeggiator base note       |
+| Ctrl1 + Ctrl2         | Cycle configuration profiles     |
 
 Need RPN in a flash? Mash **Ctrl1 + Ctrl3** to flip the active slot, or keep double‑tapping **Ctrl2** to cycle through the full MIDI zoo.
 

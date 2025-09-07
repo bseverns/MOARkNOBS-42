@@ -615,9 +615,9 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl4 = 1 << 4;
     const uint8_t maskCtrl5 = 1 << 5;
 
-    // (0) Ctrl0 + Ctrl1 + Ctrl2: toggle USB MIDI output
-    if ((pressedButtons & (maskCtrl0 | maskCtrl1 | maskCtrl2)) ==
-        (maskCtrl0 | maskCtrl1 | maskCtrl2)) {
+    // (0) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
+    if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
+        (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
         g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
         context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF",
                                              1500);
@@ -653,79 +653,8 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(msg, "EF %d=>%s", efIndex, NAMES[argMethodPos[efIndex]]);
         context.displayManager.displayStatus(msg, 1500);
     }
-    // (2) Ctrl2 + Ctrl3: Cycle light modes (unchanged)
-    else if ((pressedButtons & (maskCtrl2 | maskCtrl3)) == (maskCtrl2 | maskCtrl3)) {
-        static uint8_t currentLightMode = 0;
-        currentLightMode = (currentLightMode + 1) % 4;
-        context.ledManager.setModeDisplay(currentLightMode);
-        char buf[32];
-        sprintf(buf, "LightMode=%d", currentLightMode);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (3) Ctrl4 + Ctrl5: Toggle EF on and randomly assign envelope
-    else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
-        if (!context.envelopeFollowMode) {
-            context.envelopeFollowMode = true;
-            context.displayManager.displayStatus("EF turned ON", 1000);
-        }
-        int randomEF = random(context.envelopes.size());
-        context.potToEnvelopeMap[context.activePot] = randomEF;
-        context.envelopes[randomEF].toggleActive(true);
-        char buf[32];
-        sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (4) Ctrl0 + Ctrl4: Set active slot to MIDI Note mode
-    else if ((pressedButtons & (maskCtrl0 | maskCtrl4)) == (maskCtrl0 | maskCtrl4)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::Note);
-        char buf[32];
-        sprintf(buf, "Slot %d => NOTE", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (5) Ctrl0 + Ctrl5: Set active slot to Program Change
-    else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::ProgramChange);
-        char buf[32];
-        sprintf(buf, "Slot %d => PROG", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (6) Ctrl1 + Ctrl4: Set active slot to Aftertouch
-    else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::Aftertouch);
-        char buf[32];
-        sprintf(buf, "Slot %d => AFTER", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (7) Ctrl1 + Ctrl5: Set active slot to Pitch Bend
-    else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::PitchBend);
-        char buf[32];
-        sprintf(buf, "Slot %d => BEND", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (8) Ctrl2 + Ctrl4: Set active slot to NRPN
-    else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::NRPN);
-        char buf[32];
-        sprintf(buf, "Slot %d => NRPN", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (9) Ctrl1 + Ctrl3: Set active slot to RPN
-    else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::RPN);
-        char buf[32];
-        sprintf(buf, "Slot %d => RPN", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (10) Ctrl0 + Ctrl3: Set active slot to SysEx
-    else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
-        context.configManager.setSlotType(context.activePot, MIDIMessageType::SysEx);
-        char buf[32];
-        sprintf(buf, "Slot %d => SYSEX", context.activePot);
-        context.displayManager.displayStatus(buf, 1500);
-    }
-    // (11) Ctrl2 + Ctrl5: Cycle envelope pairings for ARG
-    else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
+    // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it == context.potToEnvelopeMap.end()) {
             context.displayManager.displayStatus("No EF assigned", 1000);
@@ -760,17 +689,85 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (12) Ctrl3 + Ctrl4: Increment arpeggiator base note
+    // (3) Ctrl3 + Ctrl4: Cycle light modes
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4)) == (maskCtrl3 | maskCtrl4)) {
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
-        slot.arpNote = (slot.arpNote + 1) % 128;
-        context.configManager.saveSlot(context.activePot, slot);
+        static uint8_t currentLightMode = 0;
+        currentLightMode = (currentLightMode + 1) % 4;
+        context.ledManager.setModeDisplay(currentLightMode);
         char buf[32];
-        sprintf(buf, "ARP NOTE %d", slot.arpNote);
-        context.displayManager.displayStatus(buf, 1000);
+        sprintf(buf, "LightMode=%d", currentLightMode);
+        context.displayManager.displayStatus(buf, 1500);
     }
-    // (13) Ctrl3 + Ctrl5: Toggle arpeggiator for active slot
+    // (4) Ctrl0 + Ctrl4: Enable EF and randomize settings
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl4)) == (maskCtrl0 | maskCtrl4)) {
+        if (!context.envelopeFollowMode) {
+            context.envelopeFollowMode = true;
+            context.displayManager.displayStatus("EF turned ON", 1000);
+        }
+        int randomEF = random(context.envelopes.size());
+        context.potToEnvelopeMap[context.activePot] = randomEF;
+        context.envelopes[randomEF].toggleActive(true);
+        char buf[32];
+        sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (5) Ctrl4 + Ctrl5: Set active slot to MIDI Note mode
+    else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::Note);
+        char buf[32];
+        sprintf(buf, "Slot %d => NOTE", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (6) Ctrl3 + Ctrl5: Set active slot to Program Change
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::ProgramChange);
+        char buf[32];
+        sprintf(buf, "Slot %d => PROG", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (7) Ctrl0 + Ctrl5: Set active slot to Pitch Bend
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::PitchBend);
+        char buf[32];
+        sprintf(buf, "Slot %d => BEND", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (8) Ctrl1 + Ctrl4: Set active slot to Aftertouch
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::Aftertouch);
+        char buf[32];
+        sprintf(buf, "Slot %d => AFTER", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (9) Ctrl1 + Ctrl5: Toggle MIDI clock output
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
+        g_clockOutEnabled = !g_clockOutEnabled;
+        context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF",
+                                             1000);
+    }
+    // (10) Ctrl2 + Ctrl5: Set active slot to NRPN
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::NRPN);
+        char buf[32];
+        sprintf(buf, "Slot %d => NRPN", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (11) Ctrl1 + Ctrl3: Set active slot to RPN
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::RPN);
+        char buf[32];
+        sprintf(buf, "Slot %d => RPN", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (12) Ctrl0 + Ctrl3: Set active slot to SysEx
+    else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
+        context.configManager.setSlotType(context.activePot, MIDIMessageType::SysEx);
+        char buf[32];
+        sprintf(buf, "Slot %d => SYSEX", context.activePot);
+        context.displayManager.displayStatus(buf, 1500);
+    }
+    // (13) Ctrl2 + Ctrl4: Toggle arpeggiator for active slot
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
         if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
             arpeggiator.stop();
             context.displayManager.displayStatus("ARP OFF", 1000);
@@ -779,8 +776,17 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             context.displayManager.displayStatus("ARP ON", 1000);
         }
     }
-    // (14) Ctrl0 + Ctrl2: Cycle configuration profiles
-    else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
+    // (14) Ctrl2 + Ctrl3: Increment arpeggiator base note
+    else if ((pressedButtons & (maskCtrl2 | maskCtrl3)) == (maskCtrl2 | maskCtrl3)) {
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        slot.arpNote = (slot.arpNote + 1) % 128;
+        context.configManager.saveSlot(context.activePot, slot);
+        char buf[32];
+        sprintf(buf, "ARP NOTE %d", slot.arpNote);
+        context.displayManager.displayStatus(buf, 1000);
+    }
+    // (15) Ctrl1 + Ctrl2: Cycle configuration profiles
+    else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
         currentProfile = (currentProfile + 1) % 3;
         context.configManager.loadProfile(currentProfile);
         context.potChannels.clear();
@@ -790,12 +796,6 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "PROFILE %d", currentProfile);
         context.displayManager.displayStatus(buf, 1500);
-    }
-    // (15) Ctrl1 + Ctrl2: Toggle MIDI clock output
-    else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
-        g_clockOutEnabled = !g_clockOutEnabled;
-        context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF",
-                                             1000);
     }
 }
 
