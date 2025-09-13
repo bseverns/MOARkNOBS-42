@@ -22,7 +22,7 @@ Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs
 4. **Modulate** – Pair any slot with one of six envelope followers. `Freq` and `Q` pots sculpt the follower's filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
 5. **Save & Play** – Settings persist in EEPROM, so once it's dialed, yank the cable and go.
 
-Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial voodoo](../docs/WebSerial.md).
+Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial dark magic](../docs/WebSerial.md).
 
 ## Directory Layout
 
