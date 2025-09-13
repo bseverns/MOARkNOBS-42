@@ -425,21 +425,7 @@ You need to already have an **Envelope Follower assigned** to the active slot. T
 
 With ARG mode active and an EF already assigned:
 
-- Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**. The lineup:
-  - `PLUS` – A + B
-  - `MIN` – A - B
-  - `PECK` – B - A
-  - `SHAV` – (A - B) / 10
-  - `SQAR` – sqrt(A*A + B*B)
-  - `BABS` – A / abs(B)
-  - `TABS` – (10 \* A) / abs(B)
-  - `MULT` – (A \* B) / 127
-  - `DIVI` – (A \* 127) / (B + 1)
-  - `AVG` – (A + B) / 2
-  - `XABS` – abs(A - B)
-  - `MAXX` – max(A, B)
-  - `MINN` – min(A, B)
-  - `XORR` – A ^ B
+- Press **Ctrl #0 + Ctrl #1** again to **cycle through methods**. This mode allows users to create chaos or strange synergies with inputs. Experimenters, play with this mode vigorously.
 
 #### ARG Method Reference
 
