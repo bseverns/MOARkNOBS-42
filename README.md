@@ -3,6 +3,11 @@
 ![landing](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
+##What this is
+
+MOARkNOBS-42 is a microcontroller-based MIDI/OSC controller built as a critical instrument—an interface you 
+can audit, rebuild, and modify to test how control, authorship, and embodiment shape sound and musical labor.
+
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
 The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
 the full scoop.
@@ -25,12 +30,27 @@ the full scoop.
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
 - Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
 
+## Ethics (what we optimize for).
+
+**Access & equity**: Parts are commonly available; we publish alternatives and cost ranges. Labels, spacing, and grip are designed for readability and different motor abilities.
+**Agency & authorship**: The layout makes mappings legible; users can re-map without reflashing (runtime tables), and we document trade-offs between fixed and assignable control.
+**Privacy & data**: The instrument does not capture personal data in any way; it emits MIDI/OSC only talks to other MIDI/OSC friends. No analytics, no hidden telemetry.
+**Safety & repair**: Power and enclosure choices follow basic electrical safety; off-the-shelf components keep repairs local and affordable.
+**Licensing & credit**: Hardware/design files and firmware are open-licensed; please cite the release tag you used so results are comparable.
+
 ![incorrect board render](docs/brdF.png)
->EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. Lots more SMD on the board for this version.
+>EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. All parts simulate correctly.
 
-## Why these parts?
+## Method (how we work).
 
-> The silicon misfits that make this controller tick.
+**Reproducible by design**: The repo ships with annotated schematics, a bill of materials, firmware, and a parameter map (what each control does).
+**Documentation as output**: Build notes, versioned change logs, and an assumption ledger (known limits, thresholds, what we never do) are first-class artifacts.
+**Modular & testable**: You can assemble a minimal 4-control version or the full 42-control build; each stage has a bench test so you can verify function before enclosure.
+**Critique-by-rebuild**: We encourage forks and remixes; issues and PRs that include measurements, audio/video traces, and diffs are preferred.
+
+## Why these specific parts?
+
+> The silicon misfits that make this controller tick and be the magic little disco ball that it can be.
 
 - **Teensy 4.0** — 600 MHz ARM core with native USB MIDI. SparkFun's [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) walks through pinout, power rails, and flashing without bricking.
 - **CD74HC4067 analog mux** — collapses forty‑two buttons into one ADC read. The [16‑Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to fan-in a forest of switches and breadboard it before spinning copper.
