@@ -100,6 +100,7 @@ inline constexpr uint16_t OLED_WIDTH = 128;          //!< OLED display width in 
 inline constexpr uint16_t OLED_HEIGHT = 64;          //!< OLED display height in pixels
 inline constexpr uint8_t SSD1306_I2C_ADDRESS = 0x3C; //!< I2C address for the OLED
 inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial buffer
+inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rate
 inline constexpr uint16_t EEPROM_FILTER_FREQ = 1000; //!< EEPROM address for filter freq
 inline constexpr uint16_t EEPROM_FILTER_Q = 1004;    //!< EEPROM address for filter Q
 inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting

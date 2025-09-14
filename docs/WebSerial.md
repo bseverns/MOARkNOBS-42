@@ -4,7 +4,7 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
 
 ## Handshake
 
-1. Browser opens the serial port at **31250** baud.
+1. Browser opens the serial port at **115200** baud.
 2. Browser sends `HELLO\n`.
 3. Teensy answers with:
    ```json

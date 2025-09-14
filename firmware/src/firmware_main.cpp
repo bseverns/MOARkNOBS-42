@@ -511,7 +511,7 @@ void streamWebSerialState() {
 
 void setup() {
     // — Serial & Config —
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUD);
     Serial.printf("MN42 FW %s %s\n", FW_VERSION_STR, GIT_SHA_STR);
     g_resetCause = SRC_SRSR;
     EEPROM.get(EEPROM_BROWNOUT_COUNT, g_brownoutCount);

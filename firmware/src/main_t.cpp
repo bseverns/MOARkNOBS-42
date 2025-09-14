@@ -32,8 +32,6 @@ static_assert(NUM_BUTTONS == 6, "expect six control buttons");
 
 std::vector<uint8_t> potChannels; // EEPROM-loaded channels
 
-static constexpr unsigned long SERIAL_BAUD = 115200;
-
 // Instantiate board objects:
 ConfigManager configManager = createConfigManager();
 LEDManager ledManager = createLEDManager();

@@ -26,6 +26,7 @@ if (process.argv.includes('--help') || process.argv.includes('-h')) {
 
 // Pull CLI overrides or fall back to defaults.
 const serialName = getArg('--serial', getArg('-s', '/dev/ttyACM0'));
+const SERIAL_BAUD = 115200; // must sync with Globals.h
 const DEFAULT_OSC_PORT = 9000;
 const oscPort = parseInt(
   getArg('--osc', getArg('-o', String(DEFAULT_OSC_PORT))),
@@ -69,7 +70,7 @@ async function main() {
   udp.open();
 
   // Wire up the serial link to the hardware.
-  const serial = new SerialPort({ path: serialName, baudRate: 31250 });
+  const serial = new SerialPort({ path: serialName, baudRate: SERIAL_BAUD });
   const parser = serial.pipe(new ReadlineParser({ delimiter: '\n' }));
   serial.on('open', () => serial.write('HELLO\n'));
   serial.on('error', (err) => {

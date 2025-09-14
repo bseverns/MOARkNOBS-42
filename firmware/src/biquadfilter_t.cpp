@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "BiquadFilter.h"
+#include "Globals.h"
 
 /*
  * BiquadFilter math test
@@ -16,7 +17,7 @@
  */
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUD);
     while (!Serial) { /* wait for serial */
     }
     Serial.println("=== BiquadFilter Test ===");
