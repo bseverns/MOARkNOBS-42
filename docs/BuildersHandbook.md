@@ -9,6 +9,18 @@ Start with the bare essentials. We'll keep the spaghetti minimal:
 1. **Power** – Feed the Teensy 5 V through `VUSB` and ground everything like your sanity depends on it.
 2. **LED Data** – Run Teensy pin `6` through a ~330 Ω resistor into the first WS2812's `DIN`. Chain the rest like dominoes.
 3. **Buttons/Encoders** – Follow the pin labels on the board. Short wires = less noise.
+4. **Decoupling** – Drop a 0.1 µF ceramic between 5 V and GND near the Teensy and again at the LED strip. It's cheaper than smoke.
+5. **Wire Gauge** – 22 AWG for power runs, 24 AWG stranded for data. Keep anything carrying bits under 30 cm unless you like debugging antennas.
+
+<!-- TODO: snap of core wiring layout goes here -->
+
+### Wiring Habits
+
+- Twist power and ground together; the pair that hums together stays quiet together.
+- Heat‑shrink every joint so nothing shorts when the roadies throw the rig in a van.
+- If it bends, give it strain relief—zip ties, hot glue, chewing gum, whatever keeps the Teensy from doing yoga.
+
+<!-- TODO: close‑up pic of heat‑shrunk joint -->
 
 ### Why this matters
 

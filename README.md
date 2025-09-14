@@ -102,6 +102,8 @@ For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/
 ## Quick Start
 
 Ready to shred? Here's the bare minimum to get the beast humming.
+Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md).
+
 ```
 
 1. **Prep the dev rig**
