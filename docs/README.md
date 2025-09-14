@@ -45,6 +45,7 @@ flowchart TD
 ## Choose Your Adventure
 
 - [BuildersHandbook.md](BuildersHandbook.md) — wire it, flash it, and smoke-test it.
+- [Troubleshooting.md](Troubleshooting.md) — chase gremlins when the box won't boot or buttons go rogue.
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
 - [PinMap.md](PinMap.md) — every MCU pin's mission and mayhem.
