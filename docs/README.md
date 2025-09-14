@@ -4,6 +4,8 @@
 
 Welcome to the MOARkNOBS-42 documentation playground. This README aims to help you navigate the library of notes, design scraps, and personal ramblings we keep around to teach ourselves and the next hacker.
 
+Need the fast track from bare board to release? Hit the [Process Overview](ProcessOverview.md).
+
 Craving the bird's-eye view? The [systemflow docs](sketch/systemFlow/) rip the machine into subsystems so you can see how every knob, LED, and envelope fits together before you dive into the weeds.
 
 ## Visual Quickies
