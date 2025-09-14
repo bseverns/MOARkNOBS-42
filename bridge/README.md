@@ -39,6 +39,8 @@ node mn42_bridge.js \
   --midi "MN42 Bridge"
 ```
 
+<!-- TODO: screenshot: run `node mn42_bridge.js` with above flags, then `oscsend localhost 9000 /mn42/cmd s {"cmd":"SET_POT","slot":2,"value":99}`; capture `/mn42/slots` update and matching MIDI CC echo. -->
+
 Flags:
 
 - `--serial` (`-s`) – which serial port to sniff.
