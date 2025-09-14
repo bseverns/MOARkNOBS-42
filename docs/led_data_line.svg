@@ -1,0 +1,10 @@
+<svg width="400" height="100" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="50" x2="120" y2="50" stroke="green" stroke-width="4" />
+  <polygon points="120,45 120,55 130,50" fill="green" />
+  <text x="5" y="55" font-size="14">Pin 6</text>
+  <rect x="130" y="40" width="40" height="20" fill="none" stroke="black" />
+  <text x="135" y="55" font-size="12">330&#937;</text>
+  <line x1="170" y1="50" x2="270" y2="50" stroke="green" stroke-width="4" />
+  <polygon points="270,45 270,55 280,50" fill="green" />
+  <text x="285" y="55" font-size="14">DIN</text>
+</svg>
