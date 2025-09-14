@@ -8,13 +8,11 @@
 
 #if BENCH_LATENCY_LOG
 // Print CSV header for latency log
-inline void benchLatencyHeader() {
-    Serial.println(F("ts_ms,control_id,delta_ms,path,notes"));
-}
+inline void benchLatencyHeader() { Serial.println(F("ts_ms,control_id,delta_ms,path,notes")); }
 
 // Log a latency sample in CSV format
-inline void benchLatencyLog(uint8_t controlId, uint32_t tScanUs, const char* path,
-                            const char* notes = "") {
+inline void benchLatencyLog(uint8_t controlId, uint32_t tScanUs, const char *path,
+                            const char *notes = "") {
     float delta_ms = (micros() - tScanUs) / 1000.0f;
     Serial.print(millis());
     Serial.print(',');
@@ -28,6 +26,5 @@ inline void benchLatencyLog(uint8_t controlId, uint32_t tScanUs, const char* pat
 }
 #else
 inline void benchLatencyHeader() {}
-inline void benchLatencyLog(uint8_t, uint32_t, const char*, const char*) {}
+inline void benchLatencyLog(uint8_t, uint32_t, const char *, const char *) {}
 #endif
-

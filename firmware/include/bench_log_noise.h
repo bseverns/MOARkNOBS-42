@@ -8,9 +8,7 @@
 
 #if BENCH_NOISE_LOG
 // Print CSV header for noise log
-inline void benchNoiseHeader() {
-    Serial.println(F("ts_ms,control_id,raw_counts"));
-}
+inline void benchNoiseHeader() { Serial.println(F("ts_ms,control_id,raw_counts")); }
 
 // Sample a pin at ~1kHz for durationMs and print CSV lines
 inline void benchNoiseRun(uint8_t controlId, uint8_t pin, uint32_t durationMs) {
@@ -32,4 +30,3 @@ inline void benchNoiseRun(uint8_t controlId, uint8_t pin, uint32_t durationMs) {
 inline void benchNoiseHeader() {}
 inline void benchNoiseRun(uint8_t, uint8_t, uint32_t) {}
 #endif
-
