@@ -736,8 +736,7 @@ noisy synth. Crack open a terminal with PlatformIO:
 pio device monitor
 ```
 
-The `monitor_speed` is baked into `platformio.ini` (115200 baud), but any
-serial program that speaks 115200‑8‑N‑1 works in a pinch.
+The `monitor_speed` is baked into `platformio.ini`, but the actual beat comes from SERIAL_BAUD in `Globals.h`—115200 by default. Any serial program that chats in 115200‑8‑N‑1 will keep up. Wanna live faster or slower? Tweak `Globals.h` and the whole firmware gang will march to your tempo.
 
 Fire commands line‑by‑line:
 

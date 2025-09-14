@@ -30,8 +30,6 @@
 #include "TestHelpers.h"
 #include "sys/report.h"
 
-static constexpr unsigned long SERIAL_BAUD = 115200;
-
 static_assert(NUM_BUTTONS == 6, "expect six control buttons");
 
 // --- Board objects ---

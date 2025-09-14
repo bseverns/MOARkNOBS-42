@@ -91,8 +91,8 @@ static void logLine(const char *msg) {
 }
 
 void setup() {
-    Serial.begin(115200);
-    Serial1.begin(115200);
+    Serial.begin(SERIAL_BAUD);
+    Serial1.begin(SERIAL_BAUD);
     while (!Serial)
         ;
     delay(200);

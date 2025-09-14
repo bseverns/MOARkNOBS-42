@@ -239,7 +239,7 @@ button:hover {
       try {
         setStatus("🔌 Opening port…");
         port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 31250 });
+        await port.open({ baudRate: 115200 // must match Globals.h SERIAL_BAUD });
 
         // set up text streams
         const textDecoder = new TextDecoderStream();

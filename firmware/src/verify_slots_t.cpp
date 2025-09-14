@@ -22,7 +22,7 @@
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BAUD);
     while (!Serial) {
     }
 
