@@ -10,6 +10,7 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    ```json
    {"hello":"mn42"}
    ```
+   ![Browser console showing HELLO handshake with JSON response](webserial_handshake.svg)
 4. Streaming begins. Bail out by closing the port.
 
 ## State Messages

@@ -38,6 +38,7 @@ node mn42_bridge.js \
   --bind 127.0.0.1 \
   --midi "MN42 Bridge"
 ```
+![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
 Flags:
 
