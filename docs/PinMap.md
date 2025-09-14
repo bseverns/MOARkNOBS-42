@@ -33,4 +33,4 @@ Pins below are sorted by the Teensy's digital numbering. If you see "Analog read
 | 22 | Row MUX read | `MUXR_IN` | CD74HC4067 row mux | Analog read (A8) |
 | 23 | Power status LED | `STATUS_LED_PIN` | On‑board indicator | Tied low until we scream |
 
-If a pin isn't listed here, it's either unused or riding shotgun for future hacks.
+If a pin isn't listed here, it's either unused or riding shotgun for future hacks. All of the significant I/O pins (the ones on the sides) on the Teensy 4.0 are accounted for here.
