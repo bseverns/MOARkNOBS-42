@@ -3,7 +3,7 @@
 ![landing](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
-##What this is
+## What this is
 
 MOARkNOBS-42 is a microcontroller-based MIDI/OSC controller built as a critical instrument—an interface you 
 can audit, rebuild, and modify to test how control, authorship, and embodiment shape sound and musical labor.
@@ -14,9 +14,12 @@ the full scoop.
 
 ## Quick Map
 
-| Folder | What's in it |
+| Path | What's in it |
 | --- | --- |
 | [docs/](docs/README.md) | Build notes, history and assorted rants |
+| [docs/TESTING.md](docs/TESTING.md) | Test gauntlet from polite to brutal |
+| [docs/PinMap.md](docs/PinMap.md) | Every MCU pin's dirty secret |
+| [docs/EEPROMLayout.md](docs/EEPROMLayout.md) | Where config bytes crash at night |
 | [firmware/](firmware/README.md) | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
 | [hardware/](hardware/README.md) | Schematics, BOM and enclosure bits |
 | [bridge/](bridge/README.md) | Node.js shim that slings serial into OSC/WebMIDI |
@@ -115,6 +118,9 @@ Ready to shred? Here's the bare minimum to get the beast humming.
    - Plug it in, crack a terminal or the [bridge](bridge/README.md).
    - Type `HELLO` and the board coughs up `{"hello":"mn42"}`.
    - Want the whole WebSerial rant? See [docs/WebSerial.md](docs/WebSerial.md).
+
+4. **Beat it up**
+   - `./test.sh` slams the Unity and bridge checks, or see [docs/TESTING.md](docs/TESTING.md) for the full ritual.
 ```
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
@@ -127,4 +133,6 @@ License: MIT. See [LICENSE](LICENSE).
 ## Contributing
 
 I'd love to see what you thought you could fit in here. Bring it, just format the code so it looks pretty like the rest of it. And make comments! That's how we all get better!
+
+Need the fine print? The [CONTRIBUTING guide](CONTRIBUTING.md) spells out the repo contract and patch etiquette.
 
