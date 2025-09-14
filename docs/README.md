@@ -45,14 +45,19 @@ flowchart TD
 - [BuildersHandbook.md](BuildersHandbook.md) — wire it, flash it, and smoke-test it.
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
+- [PinMap.md](PinMap.md) — every MCU pin's mission and mayhem.
+- [EEPROMLayout.md](EEPROMLayout.md) — where config bytes live and die.
+- [FirmwareUpdate.md](FirmwareUpdate.md) — flash new brains without desoldering.
+- [TESTING.md](TESTING.md) — unit tests to full-stack thrash sessions.
 - [TODO.md](TODO.md) — post-release wishlist for when the first build is out and you're itching for v2.
 - [ReleaseGuide.md](ReleaseGuide.md) — full release playbook. For quick steps see [Publishing a Release](../README.md#publishing-a-release).
+- [../CONTRIBUTING.md](../CONTRIBUTING.md) — patch etiquette and repo contract.
 - [sketch/](sketch/) — raw schematics and subsystem scribbles when you need the gory details.
-Highlights:
-  - [buttonMatrix.md](sketch/systemFlow/hw/buttonMatrix.md) — how the 42-button grid scans its soul.
-  - [display.md](sketch/systemFlow/hw/display.md) — wrangling pixels and I²C.
-  - [envelopeFE.md](sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
-  - Plenty more (midi opto, power antics, board PDFs) for late-night study.
+  Highlights:
+    - [buttonMatrix.md](sketch/systemFlow/hw/buttonMatrix.md) — how the 42-button grid scans its soul.
+    - [display.md](sketch/systemFlow/hw/display.md) — wrangling pixels and I²C.
+    - [envelopeFE.md](sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
+    - Plenty more (midi opto, power antics, board PDFs) for late-night study.
 - [WebSerial.md](WebSerial.md) — how the board chats with browsers.
 - [OSCBridge.md](OSCBridge.md) — hurl OSC at a Node shim and let it punch MIDI into the hardware.
 - [thermal/](thermal/) — keep the silicon from frying itself.
