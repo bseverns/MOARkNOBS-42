@@ -2,6 +2,8 @@
 
 Welcome to the MOARkNOBS-42 build bible—the fast-and-loose guide for wiring, flashing, and taming this misfit controller. If you're holding a soldering iron and a dream, you're in the right place.
 
+If the board throws a tantrum, consult the [Troubleshooting](Troubleshooting.md) page before you reach for the fire extinguisher.
+
 ## Wire It Up
 
 Start with the bare essentials. We'll keep the spaghetti minimal:
