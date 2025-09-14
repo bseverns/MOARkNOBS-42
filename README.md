@@ -6,7 +6,8 @@
 ## What this is
 
 MOARkNOBS-42 is a microcontroller-based MIDI/OSC controller built as a critical instrument—an interface you 
-can audit, rebuild, and modify to test how control, authorship, and embodiment shape sound and musical labor.
+can audit, rebuild, and modify to test how control, authorship, and embodiment shape sound and musical labor. 
+It is open, meaning you can fork, sell, remix—just credit and share like I have.
 
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
 The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
@@ -101,9 +102,8 @@ For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/
 
 ## Quick Start
 
-Ready to shred? Here's the bare minimum to get the beast humming.
+Ready to shred? Here's the bare minimum to get the beast humming, provided you have the completed board in-hand.
 Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md).
-
 ```
 
 1. **Prep the dev rig**
