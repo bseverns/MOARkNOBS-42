@@ -102,7 +102,7 @@ For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/
 
 ## Quick Start
 
-Ready to shred? Here's the bare minimum to get the beast humming.
+Ready to shred? Here's the bare minimum to get the beast humming, provided you have the completed board in-hand.
 ```
 
 1. **Prep the dev rig**
