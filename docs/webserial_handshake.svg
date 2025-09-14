@@ -1,6 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160">
-  <rect width="100%" height="100%" fill="#1e1e1e"/>
-  <text x="20" y="40" font-family="monospace" font-size="20" fill="#00ff00">Connected @115200 baud</text>
-  <text x="20" y="80" font-family="monospace" font-size="20" fill="#00ff00">&gt; HELLO</text>
-  <text x="20" y="120" font-family="monospace" font-size="20" fill="#00ff00">&lt; {"hello":"mn42"}</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" role="img" aria-labelledby="title desc">
+  <title id="title">WebSerial handshake</title>
+  <desc id="desc">Browser console shows HELLO exchange and JSON reply.</desc>
+  <style>
+    :root { color-scheme: light dark; }
+    rect { fill: #1e1e1e; }
+    text { fill: #00ff00; font-family: monospace; font-size: 20px; }
+    @media (prefers-color-scheme: light) {
+      rect { fill: #fff; }
+      text { fill: #006600; }
+    }
+  </style>
+  <rect width="100%" height="100%"/>
+  <text x="20" y="40">Connected @115200 baud</text>
+  <text x="20" y="80">&gt; HELLO</text>
+  <text x="20" y="120">&lt; {"hello":"mn42"}</text>
 </svg>

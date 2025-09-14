@@ -21,6 +21,7 @@
 
 - Declare global variables as `extern` in header files and define them exactly once in a corresponding `.cpp` file.
 - Keep code comments up to date. If you change any public API, document the change in `README.md`.
+- Markdown docs must be accessible: alt text on images, sequential headings, and no color-only cues.
 
 ## REPO CONTRACT — MOARkNOBS-42 (strict)
 

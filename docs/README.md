@@ -8,16 +8,22 @@ Need the fast track from bare board to release? Hit the [Process Overview](Proce
 
 Craving the bird's-eye view? The [systemflow docs](sketch/systemFlow/) rip the machine into subsystems so you can see how every knob, LED, and envelope fits together before you dive into the weeds.
 
+## Accessibility
+
+- Every diagram and board glam shot sports alt text so screen readers get the same gossip as eyeballs.
+- Headings descend one level at a time—no surprise teleporting from H1 to H4.
+- Code blocks and tables stay lightweight so zoom tools and high-contrast themes can rage without breaking layout.
+
 ## Visual Quickies
 
 > Sketches that slap the architecture on a napkin so you don't have to squint at code.
 
-![Board Render](sketch/MOAR_BOARD.png)
+![Render of MOARkNOBS board showing component layout](sketch/MOAR_BOARD.png)
 
 Need to zoom past the glam shot? Dive into the raw CAD layers:
 
-![Top Trace](sketch/TopLayer.png)
-![Bottom Trace](sketch/BottomLayer.png)
+![PCB top-layer trace map](sketch/TopLayer.png)
+![PCB bottom-layer trace map](sketch/BottomLayer.png)
 
 ### Everything Everywhere
 

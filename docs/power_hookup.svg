@@ -1,10 +1,22 @@
-<svg width="300" height="100" xmlns="http://www.w3.org/2000/svg">
-  <line x1="20" y1="30" x2="130" y2="30" stroke="red" stroke-width="4" />
-  <polygon points="130,25 130,35 140,30" fill="red" />
+<svg width="300" height="100" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">USB power hookup</title>
+  <desc id="desc">5V line feeds VUSB; ground ties to ground.</desc>
+  <style>
+    :root { color-scheme: light dark; }
+    text { fill: currentColor; }
+    .wire { stroke-width: 4; }
+    .gnd { stroke: currentColor; fill: currentColor; }
+    .vpos { stroke: #d00; fill: #d00; }
+    @media (prefers-color-scheme: dark) {
+      .vpos { stroke: #ff6a6a; fill: #ff6a6a; }
+    }
+  </style>
+  <line class="wire vpos" x1="20" y1="30" x2="130" y2="30" />
+  <polygon class="vpos" points="130,25 130,35 140,30" />
   <text x="5" y="35" font-size="14">5V</text>
   <text x="145" y="35" font-size="14">VUSB</text>
-  <line x1="20" y1="70" x2="140" y2="70" stroke="black" stroke-width="4" />
-  <polygon points="140,65 140,75 150,70" fill="black" />
+  <line class="wire gnd" x1="20" y1="70" x2="140" y2="70" />
+  <polygon class="gnd" points="140,65 140,75 150,70" />
   <text x="5" y="75" font-size="14">GND</text>
   <text x="155" y="75" font-size="14">GND</text>
 </svg>

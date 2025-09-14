@@ -11,11 +11,17 @@ flowchart TD
   Teensy --> EF[Envelope Inputs]
 ```
 
-![Top Layer](../docs/sketch/TopLayer.png)[^logic][^midi]
+![Top PCB layer with annotated traces](../docs/sketch/TopLayer.png)[^logic][^midi]
 
-![Bottom Layer](../docs/sketch/BottomLayer.png)[^opamp]
+![Bottom PCB layer showing ground pour and routing](../docs/sketch/BottomLayer.png)[^opamp]
 
-![Board Render](../docs/sketch/MOAR_BOARD.png)
+![3D render of MOARkNOBS board with jacks and knobs](../docs/sketch/MOAR_BOARD.png)
+
+## Accessibility
+
+- Silkscreen labels are big and high-contrast so you can read them under garbage lighting.
+- LEDs shadow inputs and buttons for visual feedback when audio or touch isn't enough.
+- The docs keep alt text and tidy heading levels, so screen readers don't puke trying to parse them.
 
 Need a deeper schematic fix? The [systemflow docs](../docs/sketch/systemFlow/hw/) slice the board into subsystems with all the gnarly traces.
 
@@ -63,8 +69,8 @@ Everything you need to spin boards is sitting in this repo, no scavenger hunt re
 
 Circuit diagrams live in [`sketch/`](../docs/sketch/). System modules have their circuits diagramed to show the board's guts in living color.
 
-![Interface and control](../docs/sketch/Interface%26Cntrl.png)
-![Power regulation and protection](../docs/sketch/Power%3AReg.png)
+![Schematic for interface and control section](../docs/sketch/Interface%26Cntrl.png)
+![Schematic for power regulation and protection](../docs/sketch/Power%3AReg.png)
 
 ### Sketch Documents
 
