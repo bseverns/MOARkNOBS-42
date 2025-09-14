@@ -7,6 +7,7 @@
 #include "Globals.h"
 #include "Utility.h"
 #include "Log.h"
+#include "bench_log_latency.h"
 
 // Reads all potentiometers via a pair of multiplexers. The most recent values
 // feed LEDManager for visual feedback and trigger MIDI messages through the
@@ -118,11 +119,23 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
                 potLastValues[potIndex] = smoothedValue[potIndex]; // lock in the latest value
                 dirtyFlags[potIndex] = true;
 
+#if BENCH_LATENCY_LOG
+                static bool headerPrinted = false;
+                if (!headerPrinted) {
+                    benchLatencyHeader();
+                    headerPrinted = true;
+                }
+                uint32_t t_scan_us = micros();
+#endif
+
                 // Stage 4: map to MIDI, light the LED, then shout over MIDI.
                 int midiValue = Utility::mapToMidiValue(smoothedValue[potIndex]);
                 ledManager.setPotValue(potIndex, midiValue);
 
                 if (midiCallback) {
+#if BENCH_LATENCY_LOG
+                    benchLatencyLog(potIndex, t_scan_us, "MIDI", "");
+#endif
                     midiCallback(potCCNumbers[potIndex], midiValue, potChannels[potIndex],
                                  potIndex);
                 }

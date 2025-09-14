@@ -1,0 +1,7 @@
+{
+  "host": "macOS 14.6 / M2",
+  "usb": "direct",
+  "room_temp_c": 22.5,
+  "firmware": "v0.3.0-portfolio-2025",
+  "board_core": "Arduino AVR 1.8.6"
+}
