@@ -16,7 +16,7 @@ Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs
 
 ## Quickstart: Jam Now, Explain Later
 
-1. **Power and Plug In** – USB wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl3`+`Ctrl4`+`Ctrl5`.
+1. **Power and Plug In** – External power wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl3`+`Ctrl4`+`Ctrl5`.
 2. **Pick a Slot** – Twist the lone slot pot or tap a slot button. Each of the 42 slots remembers its own channel, CC/note/program, and EF hookup.
 3. **Map It** – Use the [WebSerial editor](App/benzknobz.html) or `SET_POT` over a serial terminal to bind that slot to whatever your synth expects. Need button combos? See the [button map](include/ButtonManager/README.md#button-map).
 4. **Modulate** – Pair any slot with one of six envelope followers. `Freq` and `Q` pots sculpt the follower's filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
