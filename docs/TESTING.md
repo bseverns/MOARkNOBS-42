@@ -16,6 +16,15 @@ Either way, the run leaves bread crumbs in `logs/` so you can trace what blew up
 passed. The script blasts Unity firmware tests and bridge checks, and it writes JUnit and console
 output to `logs/unity-test.xml`, `logs/unity-test.log`, and `logs/bridge-test.log`.
 
+```mermaid
+flowchart TD
+  T["`test.sh`"] --> U["Unity tests\n(pio test -e teensy40_unity)"]
+  T --> B["Bridge checks\n(npm test)"]
+  U --> UL["logs/unity-test.xml\nlogs/unity-test.log"]
+  B --> BL["logs/bridge-test.log"]
+```
+*Alt text: Flowchart of `test.sh` hammering Unity firmware tests and bridge JS checks, each spraying their own log files.*
+
 ## Unity smoke tests (`firmware/test/`)
 
 Unity tests are the quick-and-dirty pulse check for the firmware. They run on the Teensy board and
