@@ -39,6 +39,8 @@ node mn42_bridge.js \
   --midi "MN42 Bridge"
 ```
 
+![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
+
 Flags:
 
 - `--serial` (`-s`) – which serial port to sniff.

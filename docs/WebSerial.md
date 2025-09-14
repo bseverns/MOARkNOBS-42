@@ -8,8 +8,9 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
 2. Browser sends `HELLO\n`.
 3. Teensy answers with:
    ```json
-   {"hello":"mn42"}
+   { "hello": "mn42" }
    ```
+   ![Browser console showing HELLO handshake with JSON response](webserial_handshake.svg)
 4. Streaming begins. Bail out by closing the port.
 
 ## State Messages
@@ -44,26 +45,26 @@ terminated with a newline and the firmware snaps back with either `OK` or `ERR`.
 This table mirrors the shout list in `firmware_main.cpp` so the code and docs
 never fall out of sync.
 
-| Command | Arguments | What it pokes |
-| --- | --- | --- |
-| `HELLO` | – | start WebSerial streaming |
-| `GET_SCHEMA` | – | dump config schema |
-|  |  | If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
-| `GET_BROWNOUTS` | – | number of brownouts seen |
-| `SET_POT` `<slot>,<chan>,<cc>` | ints | bind slot to channel+CC |
-| `SET_ALL` `<payload>` | JSON or bulk CSV | mass update slots/LED |
-| `GET_ALL` | – | dump every slot and LED setting |
-| `SET_LED` `<bri>,<r>,<g>,<b>` | 0‑255 each | paint LED strip |
-| `GET_LED` | – | return `bri,r,g,b` |
-| `SET_ARGMETHOD` `<n>` | 0‑13 | choose ARG blend |
-| `GET_ARGMETHOD` | – | spit current ARG blend |
-| `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
-| `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
-| `CAL_ENVS` | – | recalibrate all followers |
-| `SET_FILTER` `<type>,<freq>,<q>` | type 0‑?, floats | stash EF filter settings |
-| `GET_FILTER` | – | return `type,freq,q` |
-| `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5 | wire two envelopes for ARG |
-| `GET_ARGPAIR` | – | echo pair config |
+| Command                            | Arguments         | What it pokes                                                                       |
+| ---------------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| `HELLO`                            | –                 | start WebSerial streaming                                                           |
+| `GET_SCHEMA`                       | –                 | dump config schema                                                                  |
+|                                    |                   | If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
+| `GET_BROWNOUTS`                    | –                 | number of brownouts seen                                                            |
+| `SET_POT` `<slot>,<chan>,<cc>`     | ints              | bind slot to channel+CC                                                             |
+| `SET_ALL` `<payload>`              | JSON or bulk CSV  | mass update slots/LED                                                               |
+| `GET_ALL`                          | –                 | dump every slot and LED setting                                                     |
+| `SET_LED` `<bri>,<r>,<g>,<b>`      | 0‑255 each        | paint LED strip                                                                     |
+| `GET_LED`                          | –                 | return `bri,r,g,b`                                                                  |
+| `SET_ARGMETHOD` `<n>`              | 0‑13              | choose ARG blend                                                                    |
+| `GET_ARGMETHOD`                    | –                 | spit current ARG blend                                                              |
+| `SET_EF` `<slot>,<ef>`             | slot 0‑41, ef 0‑5 | patch envelope follower                                                             |
+| `GET_EF` `<slot>`                  | slot 0‑41         | see follower mapped                                                                 |
+| `CAL_ENVS`                         | –                 | recalibrate all followers                                                           |
+| `SET_FILTER` `<type>,<freq>,<q>`   | type 0‑?, floats  | stash EF filter settings                                                            |
+| `GET_FILTER`                       | –                 | return `type,freq,q`                                                                |
+| `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5       | wire two envelopes for ARG                                                          |
+| `GET_ARGPAIR`                      | –                 | echo pair config                                                                    |
 
 ### Paint the LEDs
 
