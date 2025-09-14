@@ -1,0 +1,10 @@
+<svg width="300" height="100" xmlns="http://www.w3.org/2000/svg">
+  <line x1="20" y1="30" x2="130" y2="30" stroke="red" stroke-width="4" />
+  <polygon points="130,25 130,35 140,30" fill="red" />
+  <text x="5" y="35" font-size="14">5V</text>
+  <text x="145" y="35" font-size="14">VUSB</text>
+  <line x1="20" y1="70" x2="140" y2="70" stroke="black" stroke-width="4" />
+  <polygon points="140,65 140,75 150,70" fill="black" />
+  <text x="5" y="75" font-size="14">GND</text>
+  <text x="155" y="75" font-size="14">GND</text>
+</svg>

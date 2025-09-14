@@ -7,8 +7,19 @@ Welcome to the MOARkNOBS-42 build bible—the fast-and-loose guide for wiring, f
 Start with the bare essentials. We'll keep the spaghetti minimal:
 
 1. **Power** – Feed the Teensy 5 V through `VUSB` and ground everything like your sanity depends on it.
+
+   ![Power hookup: 5V to VUSB, ground shared](power_hookup.svg)
+   *Teensy getting 5 V on VUSB, all grounds bonded.*
+
 2. **LED Data** – Run Teensy pin `6` through a ~330 Ω resistor into the first WS2812's `DIN`. Chain the rest like dominoes.
+
+   ![LED data line: pin 6 → 330 Ω → DIN](led_data_line.svg)
+   *Pin 6 hits a resistor before feeding DIN. If it looks like this, you're golden.*
+
 3. **Buttons/Encoders** – Follow the pin labels on the board. Short wires = less noise.
+
+   ![Button harness fanned to labeled pins](button_harness.svg)
+   *Each ribbon lands on its labeled pad; no loose strands, no drama.*
 4. **Decoupling** – Drop a 0.1 µF ceramic between 5 V and GND near the Teensy and again at the LED strip. It's cheaper than smoke.
 5. **Wire Gauge** – 22 AWG for power runs, 24 AWG stranded for data. Keep anything carrying bits under 30 cm unless you like debugging antennas.
 
