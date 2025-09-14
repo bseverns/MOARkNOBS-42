@@ -1,6 +1,6 @@
 # MOARkNOBS-42
 
-![landing](docs/land.png)
+![MOARkNOBS-42 controller with button grid and knob array](docs/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
 ## What this is
@@ -42,8 +42,14 @@ the full scoop.
 - **Safety & repair**: Power and enclosure choices follow basic electrical safety; off-the-shelf components keep repairs local and affordable.
 - **Licensing & credit**: Hardware/design files and firmware are open-licensed; please cite the release tag you used so results are comparable.
 
-![incorrect board render](docs/brdF.png)
+![Approximate board render missing some 3D models](docs/brdF.png)
 >EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. All parts simulate correctly.
+
+## Accessibility
+
+- Every image rolls with descriptive alt text so screen readers don't get ghosted.
+- Headings climb in order and tables have headers—no maze, just straight lines.
+- Labels and LEDs keep contrast high and feedback loud for eyes and ears alike.
 
 ## Method (how we work).
 

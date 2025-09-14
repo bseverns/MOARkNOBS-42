@@ -39,6 +39,12 @@ Unity screams over a custom `Serial1` transport—do **not** lean on the default
 - Tests run in USB_MIDI_SERIAL mode only. Don't sneak in other USB_* defines.
 - The unit-test environment is lean: no Adafruit GFX/SSD1306/BusIO or SD/SdFat unless absolutely required.
 
+## Accessibility Notes
+
+- Every image in docs needs alt text; "pic here" won't cut it.
+- Don't use color alone to signal meaning—pair it with words or symbols.
+- Headings should step down one level at a time so screen readers don't get whiplash.
+
 ## Before You Shred
 
 Unsure about a move? Ask first. We dig bold ideas, not reckless chaos.
