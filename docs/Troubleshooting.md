@@ -7,12 +7,12 @@ If the board's gone sulky, this cheat sheet walks you through the usual suspects
 ```mermaid
 flowchart TD
   A[Board lifeless?] --> B{Power LED lit?}
-  B -- No --> C[No Power\nCheck cable, supply, switch]
+  B -- No --> C[No Power<br>Check cable, supply, switch]
   B -- Yes --> D{Main LED alive?}
-  D -- No --> E[Dead LED r/ Swap LED or check data line]
+  D -- No --> E[Dead LED<br>Swap LED or check data line]
   D -- Yes --> F{Buttons clean?}
-  F -- No --> G[Noisy Button r/ Re-solder, add debounce cap]
-  F -- Yes --> H[All good r/ Make noise]
+  F -- No --> G[Noisy Button<br>Re-solder, add debounce cap]
+  F -- Yes --> H[All good<br>Make noise]
 ```
 
 ## Hardware Horror Show
