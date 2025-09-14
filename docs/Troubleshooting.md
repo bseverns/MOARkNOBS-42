@@ -9,10 +9,10 @@ flowchart TD
   A[Board lifeless?] --> B{Power LED lit?}
   B -- No --> C[No Power\nCheck cable, supply, switch]
   B -- Yes --> D{Main LED alive?}
-  D -- No --> E[Dead LED \n Swap LED or check data line]
+  D -- No --> E[Dead LED r/ Swap LED or check data line]
   D -- Yes --> F{Buttons clean?}
-  F -- No --> G[Noisy Button \n Re-solder, add debounce cap]
-  F -- Yes --> H[All good \n Make noise]
+  F -- No --> G[Noisy Button r/ Re-solder, add debounce cap]
+  F -- Yes --> H[All good r/ Make noise]
 ```
 
 ## Hardware Horror Show
