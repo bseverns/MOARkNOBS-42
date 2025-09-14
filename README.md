@@ -51,6 +51,7 @@ the full scoop.
 - **Documentation as output**: Build notes, versioned change logs, and an assumption ledger (known limits, thresholds, what we never do) are first-class artifacts.
 - **Modular & testable**: You can assemble a minimal 4-control version or the full 42-control build; each stage has a bench test so you can verify function before enclosure.
 - **Critique-by-rebuild**: We encourage forks and remixes; issues and PRs that include measurements, audio/video traces, and diffs are preferred.
+- **Bench data**: see `docs/bench/latency/latency.csv` and `docs/bench/noise/adc_idle.csv`. Methods in each folder explain how to reproduce the numbers.
 
 ## Why these specific parts?
 
