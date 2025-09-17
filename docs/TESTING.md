@@ -157,6 +157,25 @@ The tests intentionally mock a missing serial port to prove the CLI doesn’t ex
 
 Want to iterate quickly? `npm test -- --watch` reruns on file changes.
 
+### DAW loopback sanity check
+
+Round-trip latency is the one metric your fancy synth professor will ask about first. Once you capture loopback impulses from the DAW rig, fold them into the test ritual:
+
+```bash
+python tools/rtl_analyzer.py \
+  --group baseline=docs/bench/latency/baseline \
+  --group tuned=docs/bench/latency/tuned \
+  --buffer baseline=256 --buffer tuned=64 \
+  --max-ms 10 \
+  --export-json logs/rtl.json
+```
+
+- Toss this command into your bench notebook or CI job once audio captures are in place.
+- The script throws a non-zero exit code if the measured round-trip latency blows past `--max-ms`, so you can gate merges on real numbers.
+- JSON output keeps receipts—archive it next to the Unity and bridge logs so reviewers can reproduce your math.
+
+Stay honest about the buffer math: PlatformIO doesn’t know your DAW, so this script is how we keep firmware changes and host tweaks from secretly increasing the tactile lag.
+
 ## Real hardware gauntlet (`bridge/` + future `system_test/`)
 
 When you need to prove the whole stack plays nice, you move up to full-system tests. These expect real hardware **and** the Node bridge to be awake.
