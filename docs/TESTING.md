@@ -12,6 +12,23 @@ This repo runs tests in layers, from polite unit checks to full-on hardware cage
 | Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
 | Future black-box trials | `system_test/*` (coming soon) | Controller + bridge talking | Automated “kick the hardware” flows when the scripts land. |
 
+## Bench RTL via DAW loop
+
+When you need proof that the full rig (controller → interface → DAW → interface
+→ controller) behaves under pressure, run the Oblique RTL method alongside the
+regular firmware tests:
+
+```bash
+python tools/rtl_latency_report.py \
+  --baseline docs/bench/latency/raw/rtl_baseline_run*.wav \
+  --tuned docs/bench/latency/raw/rtl_tuned_run*.wav \
+  --buffers baseline=256 tuned=64
+```
+
+Stash the resulting table in your lab notes and commit the JSON if you pass
+`--json`. The script flags the latency in samples, milliseconds, and buffer
+counts so you can spot regressions between firmware changes.
+
 ## Preflight kit
 
 Before you run anything, make sure you actually have the tools:
