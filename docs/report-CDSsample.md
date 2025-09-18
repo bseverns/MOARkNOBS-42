@@ -140,26 +140,26 @@ MN42 treats **ethics as an interface**. That means:
 
 ## References
 
-- **Latency & control intimacy.** Wessel, D., & Wright, M. *Problems and Prospects for Intimate Musical Control of Computers* (NIME). 
-(Classic statement placing an acceptable upper bound on audible reaction at ~10 ms; details control strategies.) :contentReference[oaicite:13]{index=13}
-- **Latency measurement practice.** Oblique Audio. *RTL Utility* (site + user guide). 
-(Standardized loopback procedure for round-trip latency.) :contentReference[oaicite:14]{index=14}
-- **Technical overview / practitioner guidance.** *Sound on Sound*: *Round Trip Latency (RTL), J-Scope Oscilloscope*. 
-(Accessible discussion of real-world RTL vs reported values.) :contentReference[oaicite:15]{index=15}
-- **Perception/JND.** Schmid, A. et al. *Measuring the Just Noticeable Difference for Audio Latency* (ACM IMX 2024). 
-(JND depends on base latency and task; users can perceive ≈10 ms in some contexts; benefits <25–50 ms vary by task.) :contentReference[oaicite:16]{index=16}
-- **Mapping strategies.** Hunt, A., & Kirk, R. *Mapping performer parameters to synthesis engines* / *Mapping Strategies for Musical Performance*. 
-(Foundational taxonomy and design implications for learnability/expressivity.) :contentReference[oaicite:17]{index=17}
-- **Open hardware definitions & practice.** OSHWA: *Open Source Hardware Definition*; *Best Practices for Sharing*. 
-(Definition and packaging guidance for reproducible hardware.) :contentReference[oaicite:18]{index=18}
-- **Privacy by Design (for sensing builds).** Cavoukian, A. *The 7 Foundational Principles of Privacy by Design*. 
-(Design-stage guidance for consent-forward systems.) :contentReference[oaicite:19]{index=19}
-- **Embodied interface practice.** Bongers, B. *Physical Interfaces in the Electronic Arts: Interaction Theory and Interfacing Techniques* 
-(Trends in Gestural Control of Music, 2000). (Frames bodily feedback loops and sensing categories for DMI builders.) :contentReference[oaicite:20]{index=20}
-- **Evaluation heuristics.** Wanderley, M. M., & Orio, N. *Evaluation of Input Devices for Musical Expression* (Computer Music Journal, 2002). 
-(Offers criteria and methodologies for assessing expressivity, learnability, and control intimacy.) :contentReference[oaicite:21]{index=21}
-- **Pedagogical DMI design.** Gurevich, M., & Cavan Fyans, A. *Digital Musical Interactions: Performer–System Relationships in the Studio and Classroom* (NIME 2011). 
-(Discusses participatory design tactics for inclusive, teachable instrument ecologies.) :contentReference[oaicite:22]{index=22}
+- **Latency & control intimacy.** Wessel, D., & Wright, M. *Problems and Prospects for Intimate Musical Control of Computers* (NIME).
+  Classic statement placing an acceptable upper bound on audible reaction at ~10 ms; details control strategies.
+- **Latency measurement practice.** Oblique Audio. *RTL Utility* (site + user guide).
+  Standardized loopback procedure for round-trip latency.
+- **Technical overview / practitioner guidance.** *Sound on Sound*: *Round Trip Latency (RTL), J-Scope Oscilloscope*.
+  Accessible discussion of real-world RTL vs reported values.
+- **Perception/JND.** Schmid, A. et al. *Measuring the Just Noticeable Difference for Audio Latency* (ACM IMX 2024).
+  JND depends on base latency and task; users can perceive ≈10 ms in some contexts; benefits <25–50 ms vary by task.
+- **Mapping strategies.** Hunt, A., & Kirk, R. *Mapping performer parameters to synthesis engines* / *Mapping Strategies for Musical Performance*.
+  Foundational taxonomy and design implications for learnability/expressivity.
+- **Open hardware definitions & practice.** OSHWA: *Open Source Hardware Definition*; *Best Practices for Sharing*.
+  Definition and packaging guidance for reproducible hardware.
+- **Privacy by Design (for sensing builds).** Cavoukian, A. *The 7 Foundational Principles of Privacy by Design*.
+  Design-stage guidance for consent-forward systems.
+- **Embodied interface practice.** Bongers, B. *Physical Interfaces in the Electronic Arts: Interaction Theory and Interfacing Techniques* (Trends in Gestural Control of Music, 2000).
+  Frames bodily feedback loops and sensing categories for DMI builders.
+- **Evaluation heuristics.** Wanderley, M. M., & Orio, N. *Evaluation of Input Devices for Musical Expression* (Computer Music Journal, 2002).
+  Offers criteria and methodologies for assessing expressivity, learnability, and control intimacy.
+- **Pedagogical DMI design.** Gurevich, M., & Cavan Fyans, A. *Digital Musical Interactions: Performer–System Relationships in the Studio and Classroom* (NIME 2011).
+  Discusses participatory design tactics for inclusive, teachable instrument ecologies.
 
 ## Appendices
 
