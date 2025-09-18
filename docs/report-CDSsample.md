@@ -35,7 +35,7 @@ MN42 is a Teensy-based, 42-control instrument intended for both stage and studio
   - Panel layout (top-down) reflecting the control grammar (clusters, travel, performance reach)
 - **Firmware package**  
   - Scanning & debouncing, value mapping utilities (curves, clipping, slew), preset/mode system  
-  - MIDI I/O options (USB, DIN), clock utilities, and a small test harness
+  - MIDI I/O options (USB, DIN, TRS Type-A), clock utilities, and a small test harness
 - **Documentation & accountability**  
   - `ASSUMPTIONS.md` — statement-→risk-→mitigation table (e.g., “local processing,” “expected buffer sizes,” “no network calls”)  
   - `MAPPING_MANIFEST.md` — a machine-readable table of control → parameter relationships (domain, curve, range, smoothing, notes)  
