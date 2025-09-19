@@ -71,6 +71,19 @@ flowchart TD
 - [OSCBridge.md](OSCBridge.md) — hurl OSC at a Node shim and let it punch MIDI into the hardware.
 - [thermal/](thermal/) — keep the silicon from frying itself.
 
+## Exporting the narrative report
+
+The long-form release report (`report-CDSsample.md`) is meant to ship right next to the binaries.
+When you need a pretty PDF for Zenodo, a class handout, or a grant package, run our Pandoc helper:
+
+```bash
+./tools/render_report.sh
+```
+
+By default the PDF lands in `docs/dist/MOARkNOBS-42-report.pdf`. Set `PDF_ENGINE=xelatex`
+if you prefer a different LaTeX backend than [Tectonic](https://tectonic-typesetting.github.io/).
+Pass an alternate output directory as the first argument if you want the PDF elsewhere.
+
 ## Why these parts?
 
 > Quick hits on why each chunk of silicon shows up and where SparkFun teaches the tricks.
