@@ -19,10 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pin map and EEPROM layout docs locked down.
 - SparkFun reference sidebars point straight to the solder-stained source.
 - Web configurator now drives all slot parameters (EF, ARG, LED colour, full MIDI types) and falls back to a bundled schema when the device won't deliver one.
+- `docs/HISTORY.md` now carries a "how to read this thing" primer so future builders can trace the arc without spelunking the git log first.
+- Added a September status rollup capturing the post-`v0.1.0` cleanup sprint and what we're staging for the next hardware spin.
+- Dropped breadcrumbs to the bridge scripts so folks can sling telemetry without reverse engineering the tooling.
 
 ### Changed
 - Bridge rides Node 20 and clang-format marches in lockstep with CI.
 - README now calls out firmware build steps and links the new docs.
+- HISTORY timeline is chunked by focus blocks instead of loose commit lists—more story, less archeology.
 
 ### Removed
 - OctoWS2811 vendored library; FastLED handles the LEDs solo now.

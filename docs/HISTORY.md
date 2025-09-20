@@ -2,6 +2,13 @@
 
 This file summarizes the development of the MOARkNOBS-42 project based on commit history with a few inserts re: design choices
 
+## How to Read this History
+
+- **Start with the focus tags.** Each block pairs a time range with the main obsession so you know whether you're about to read about PCB copper or MIDI voodoo.
+- **Skim the italic callouts** for the "why" behind the commits—they're the diary fragments that explain decisions better than dry hashes ever could.
+- **Use the bracketed references** to chase the actual commits or tags if you want to see the gritty diffs.
+- **Bridge notes** flag the `bridge/` tooling so you can wire telemetry without cobbling your own serial hacks.
+
 ## 2024
 - *I decided I wanted to build more instruments and wanted to explore MIDI and microcontrollers more expansively. Heavy early research around simple machines, 1-function mock ups, and C++ best-practices began. Initial functional inspiration: Bastl Instruments '60 Knobs' ([repo](https://github.com/bastl-instruments/60knobs)) and their wild [experimental playground](https://github.com/bastl-instruments/60knobs-experimental)*
 - **December 10:** Initial commit introduces the firmware source tree with modules for button scanning, MIDI handling, display control, and EEPROM support. [58ef040]
@@ -12,25 +19,25 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 ## 2025
 
 - *How is this thing supposed to happen, as more than just a simple experiment?*
-### January – March
+### January – March — Hardware Layout Bootstrapping
 
 - Hardware design begins in KiCad. Multiple board iterations are committed along with early firmware clean‑ups and configuration handling. [70665ff, 4c22a8b]
 - *My old workstation only runs up to kiCAD 6*
 - By late January the "easyeda" project is created and the firmware tree moves under `firmware/` with substantial PCB files added. [20e518a]
 - February and March see continual board revisions (`brd`, `brd v2`), button routing tweaks, and resistor pull-up improvements. [f36d220, dd0ebb6]
 
-### April
+### April — Repo Reorg & First Board Spin
 
 - Repository reorganization and creation of the first official PCB revision `MN42-1` in EasyEDA. [174b516, f5916a7]
 - *Work just a little at a time, and eventually you have a whole castle*
 
-### May
+### May — Firmware Refine & Test Harness
 
 - Firmware refactors focus on display timing, envelope follower behavior, and general stability. README updates document usage. [44e89dc, ec7edb3]
 - Initial testing framework appears along with incremental fixes. [ed357da, 6a4e54a]
 - *Getting onto breadboards for timing testing/display/midi/etc.*
 
-### June
+### June — Filters, MIDI Depth, & Documentation
 
 - Early June introduces unit tests for the BiquadFilter and bug fixes around fade animations. [b050f4f, 69fd0db]
 - **June 17:** Tagged as `firmware1.0`, marking a stable baseline before adding more features. [04f6b72]
@@ -44,7 +51,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - **June 28:** Final `readme tweaks` commit wraps up the documented state of the project. [8ed5568]
 - *^^^ see what I mean? I am tyring to get better at documentation as I go, but this helps explain what is happening so much more than my drafts alone. I just have an assistant now.*
 
-### July
+### July — Arpeggiator Expansion & Testing Discipline
 
 - Arpeggiator mode added with base note support and full MIDI type coverage. [850b4e9, 60abd55, e03466d]
 - PlatformIO build updated to include the arpeggiator sources. [6b81ed0, 1e9a015]
@@ -55,7 +62,8 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Variables clarified for easier maintenance. [6d769ec]
 - Documentation overhaul adds flashing instructions, diagrams, and links back to this history. Firmware comments and tests gain more clarity. [822a1ea, 5f3e34b, e25622e, 0941fcb]
 
-### August
+### August — Release, CI Discipline, and Telemetry
+
 - Finalizing helpers and test suites.
 - Hardware v1.02 design completed.
 - Clarifications added to language and comments expanded throughout the repo.
@@ -74,6 +82,14 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - **August 22–23:** Diagnostic mode lands with self-test pages and a compact matrix view, the boot banner decodes reset causes and spills a system report, and a release workflow with pre-commit lint locks CI to Node 20. [0215e43, 00af0f1, 399b17, b7c126a, 19fbe9b, 7ee46c7, 702c107]
 - **August 25:** SparkFun reference sidebars crash the docs, curating learning links straight from the source. [4e4cf22]
 - *Because a README that teaches you nothing is just wall art.*
+
+### September — Hardening, Bridge Docs, and Next Spin Prep
+
+- **Early September:** Documented the `bridge/` scripts so serial telemetry nerds can plug in without reverse engineering the handshake.
+- Firmware clean-up blitz: reorganized diagnostic docs, annotated the boot banner logic, and dialed in Unity test expectations so the CI lights stay green.
+- Hardware planning notes capture the tweaks for a potential `MN42-1.1` spin—beefier regulator headroom and tidier pot footprints are on deck.
+- Wrote this "how to read" primer and restructured the month blocks so new contributors can ramp faster than we did.
+- *Next milestone: line up the manufacturing quote without losing the DIY ethos.*
 
 ## Overview
 
