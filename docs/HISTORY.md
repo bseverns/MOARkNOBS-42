@@ -93,7 +93,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 
 ## Overview
 
-Across roughly seven months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:
+Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:
 
 - `firmware/` – Teensy‑based C++ code with modular managers and tests.
 - `hardware/` – EasyEDA design files for the `BTN_42` button matrix.
