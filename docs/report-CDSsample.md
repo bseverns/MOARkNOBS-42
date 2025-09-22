@@ -25,7 +25,6 @@ header-includes:
 **Date**: 2025-09-17  
 **Version**: v0.1.0 (tag: `init`)  
 **Repository**: [github.com/bseverns/MOARkNOBS-42](https://github.com/bseverns/MOARkNOBS-42)  
-**Release DOI**: Zenodo deposition requested for tag `init` (pending DOI assignment)
 
 ## Abstract
 
