@@ -22,37 +22,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio  # we just need PIO for the build
 
-      - name: Build firmware
-        working-directory: firmware
-        env:
-          FW_VERSION: ${{ github.event.release.tag_name }}  # tag name becomes version
-        run: pio run -e teensy40_main
-
-      - name: Bake sysreport
-        env:
-          FW_VERSION: ${{ github.event.release.tag_name }}
-        run: |
-          python - <<"EOF"
-          import json, os, subprocess, time
-          fw = os.environ["FW_VERSION"]
-          sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
-          info = {
-            "fw_version": fw,
-            "git_sha": sha,
-            "board": "teensy40",
-            "mcu": "IMXRT1062",
-            "f_cpu_hz": 600000000,
-            "build_time": time.strftime("%b %d %Y %H:%M:%S"),
-            "compiler": subprocess.check_output(["g++", "--version"]).decode().splitlines()[0],
-            "pio_env": "teensy40_main",
-          }
-          with open("sysreport.json", "w") as f:
-            json.dump(info, f)
-          EOF  # produce sysreport.json so folks know what went into the build
+      - name: Package release artifacts
+        run: ./release.sh ${{ github.event.release.tag_name }}
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            firmware/.pio/build/teensy40_main/firmware.hex
-            sysreport.json  # attach both the hex and the report
+            dist/mn42_${{ github.event.release.tag_name }}.hex
+            dist/fabrication.zip
+            dist/manifest.json
+            dist/THIRD_PARTY_LICENSES.md
+            dist/LICENSES/**
