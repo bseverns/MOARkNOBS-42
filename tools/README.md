@@ -15,10 +15,6 @@ Curious about latency or noise? `serial_logger/SerialToCsv.pde` is a Processing 
 
 Outputs land in `docs/bench/latency/latency.csv` and `docs/bench/noise/adc_idle.csv`. More details live in the [serial_logger README](serial_logger/README.md).
 
-## Bring Your Own Hacks
-
-Got a script that makes debugging less dull? Park it here with a README and keep dependencies light. No binaries, no mystery jars—just plain text mischief that others can remix.
-
 ## RTL Latency Report
 
 When you bounce the rig through an external DAW loop and capture an impulse
@@ -27,3 +23,7 @@ send/return spikes, measures the gap in samples, and spits out both a table and
 JSON so you can compare baseline (256 buffer) against tuned (64 buffer) sessions
 without hand math. Think of it as a drummer with a calculator: loud, precise,
 and painfully honest.
+
+## Bring Your Own Hacks
+
+Got a script that makes debugging less dull? Park it here with a README and keep dependencies light. No binaries, no mystery jars—just plain text mischief that others can remix.
