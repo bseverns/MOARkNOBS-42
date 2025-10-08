@@ -26,6 +26,10 @@ the full scoop.
 | [bridge/](bridge/README.md) | Node.js shim that slings serial into OSC/WebMIDI |
 | [tools/](tools/README.md) | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md) |
 
+## Fresh to MIDI or DSP?
+
+Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101.md) for a tour of channels, CCs, NRPN/RPN sorcery, SysEx etiquette, envelope follower guts, and the biquad math we abuse. It links out to the canonical specs and street-level explainers so you can ramp from zero to firmware-ready without leaving the repo.
+
 ## Highlights
 
 - 42 virtual slots and six envelope followers ready to hijack any MIDI stream.

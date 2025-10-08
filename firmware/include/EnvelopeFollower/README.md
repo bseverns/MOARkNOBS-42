@@ -6,6 +6,8 @@ Sniffs audio or CV, shapes it, and hurls MIDI-friendly levels back.
 
 ![Envelope follower pair](../../../docs/sketch/EFpair.png)
 
+> Need a refresher on what an envelope follower actually does? The [MIDI + DSP 101 Primer](../../../docs/Primers/MIDI-DSP101.md#envelope-followers) walks through the analog guts before we digitize them.
+
 ## What's going on
 
 This circuit listens to a wiggly signal and turns it into a smooth “how much” number the microcontroller can read. First we slide the signal up to a safe middle point (VREF) so there are no negative volts, then a rectifier flips everything upward so we track loudness, not direction. A tiny “bucket” (capacitor) with two “leaks” (resistors) averages the bumps: the small leak makes it rise fast (attack ≈ 5 ms), the bigger leak lets it fall slower (release ≈ 20 ms). The output rests near 0 V when quiet and rises with intensity at pads E1/E2—perfect for 0–3.3 V ADCs. It tolerates 5 V inputs safely (the series resistor limits current), but a full-scale 5 V source will push the op-amp to its rail and flatten the envelope. For now, we shape that envelope with the filter/arg methods.

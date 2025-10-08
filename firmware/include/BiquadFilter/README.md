@@ -4,6 +4,8 @@ Part of the firmware `include` jungle. Peek at the [include README](../README.md
 
 Tiny DSP sledgehammer for shaping envelope vibes.
 
+> Need a refresher on coefficients and poles? The [MIDI + DSP 101 Primer](../../../docs/Primers/MIDI-DSP101.md#biquad-filters) breaks down the RBJ math we lean on.
+
 ## Where it fits
 
 BiquadFilter smooths raw signals for EnvelopeFollower or any module that needs a quick EQ before talking to the rest.
