@@ -112,7 +112,6 @@ For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/
 
 Ready to shred? Here's the bare minimum to get the beast humming, provided you have the completed board in-hand.
 Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md).
-```
 
 1. **Prep the dev rig**
    - `pip install -r requirements.txt`
@@ -131,7 +130,6 @@ Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md
 
 4. **Beat it up**
    - `./test.sh` slams the Unity and bridge checks, or see [docs/TESTING.md](docs/TESTING.md) for the full ritual.
-```
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
 
