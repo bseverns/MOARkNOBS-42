@@ -13,7 +13,10 @@
 
 namespace {
 struct MidiUsbGuard {
-    MidiUsbGuard() { g_usbMidiOutEnabled = true; reset(); }
+    MidiUsbGuard() {
+        g_usbMidiOutEnabled = true;
+        reset();
+    }
     ~MidiUsbGuard() { g_usbMidiOutEnabled = false; }
     void reset() {
         usbMIDI.lastNoteOn = 0;
@@ -52,7 +55,8 @@ MIDIHandler primeMidi() {
     return midi;
 }
 
-void prepSlot(ConfigManager &cfg, uint8_t idx, MIDIMessageType type, uint8_t channel, uint8_t arpNote) {
+void prepSlot(ConfigManager &cfg, uint8_t idx, MIDIMessageType type, uint8_t channel,
+              uint8_t arpNote) {
     MIDISlot &slot = cfg.getSlot(idx);
     slot.active = true;
     slot.type = type;
