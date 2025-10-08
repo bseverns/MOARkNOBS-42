@@ -3,7 +3,7 @@
 Part of the firmware `include` jungle. The [include README](../README.md) shows how it locks to the rest of the circus; the [main firmware README](../../README.md) explains why the band even exists.
 
 Clock-synced riff machine that rips through a slot's note stack like it's late for soundcheck.
-Now it can yank its root note from wherever you tell it—slot memory, envelope follower, or some mystery source you cooked up.
+Now it can yank its root note from wherever you tell it—slot memory, a callback, or some mystery source you cooked up—without accidentally sniffing the pot when you told it not to.
 
 ## Where it fits
 
@@ -20,7 +20,7 @@ Get the bird's-eye in the [main firmware README](../../README.md).
 - `start(slotIdx)` – point it at a slot and let the notes fly.
 - `setLength(ticks)` – how many MIDI clock ticks to wait between hits (max 24).
 - `setPatternLength(steps)` – define how many steps and semitones the loop spans.
-- `setBaseNoteSource(src)` – choose who owns the root (`Slot` or `External`).
+- `setBaseNoteSource(src)` – choose who owns the root (`Pot`, `Slot`, or `External`).
 - `setBaseNote(note)` / `setBaseNoteCallback(fn)` – shove in a fresh base note or a function that returns one.
 - `update(midi, cfg, pots)` – call every loop so it keeps drumming.
 
@@ -36,7 +36,7 @@ then spits the actual jump each tick: `UP` counts up, `DOWN` walks back to zero,
 | Length | 1–24 ticks | MIDI clock ticks between notes |
 | Pattern Length | 2–16 steps | Semitone span before the loop repeats |
 | Mode | UP, DOWN, UPDOWN, RANDOM | Direction for `noteOffset` |
-| Base Note Source | Slot, External | Where the root comes from |
+| Base Note Source | Pot, Slot, External | Where the root comes from |
 | Base Note / Callback | 0–127 or func | Force a root note or supply a generator |
 
 Dial these in and the arp will march (or stumble) exactly how you tell it.
@@ -58,26 +58,37 @@ void loop() {
 
 See the guts in [Arpeggiator.h](../Arpeggiator.h).
 
-## Base Notes that Don't Rot
+## Root note pecking order
 
-`_baseNote` isn't chained to one sad MIDI number. Feed it whatever
-`EnvelopeFollower` or ARG mashup you can dream up. At the end of every
-loop the arpeggiator re-sniffs that source and locks onto the fresh value
-so the riff doesn't crust over.
+The arpeggiator now plays nice with three possible root feeds and only
+touches the pot when you explicitly hand it the reins:
+
+1. **Knob life (`BaseNoteSource::Pot`)** – default mode. We read the slot
+   pot, map it to MIDI, and pump that straight out. The resulting note is
+   mirrored back into `slot.arpNote` so LEDs and displays stay honest.
+2. **Slot memory (`BaseNoteSource::Slot`)** – skips the pot entirely and
+   trusts whatever the slot last stored. We still write the emitted root
+   back so everyone else hears the same gospel.
+3. **External source (`BaseNoteSource::External`)** – first hits the
+   callback you registered with `setBaseNoteCallback()`. If you skipped
+   the callback, it falls back to the last MIDI value you stuffed in via
+   `setBaseNote()`. Only if both are missing do we raid the pot as a
+   desperation move.
+
+Because the emitted root always syncs back into the slot, other modules
+still see the latest note even if it came from some external wizardry.
 
 ```cpp
-#include "Arpeggiator.h"
-#include "EnvelopeFollower.h"
-
-EnvelopeFollower env;        // converts raw audio into a note-ish value
-Arpeggiator   arp;
-arp.setBaseNoteSource(&env); // arp will sample this at each loop end
+Arpeggiator arp;
+arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::External);
+arp.setBaseNoteCallback([] { return 64; });
+arp.start(0);
 
 void loop() {
-  env.update(audioInput);    // keep the follower breathing
-  arp.update(midi, cfg, pots); // arp grabs the latest base note here
+  arp.update(midi, cfg, pots); // locks to callback first, pot only if you're flying blind
 }
 ```
 
-That re-sampling is the anti-stale sauce—no more looping last week's
-riffs like it's mall music.
+That ordering keeps the groove honest: callbacks stay in control, slot
+storage stays current, and the pot only chimes in when nothing else is on
+the mic.

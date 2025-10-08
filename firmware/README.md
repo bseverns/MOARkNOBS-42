@@ -479,8 +479,13 @@ repurpose themselves:
 - **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
 The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
-Each tick it grabs the slot's pot value as the root, parks that in `arpNote`, and hammers out `root + offset` for notes.
-You can still hijack the base via `setBaseNoteSource()` or a callback if you want an envelope follower or ARG steering the riff.
+Each tick it now chases the root source you called dibs on via `setBaseNoteSource()`:
+
+1. **Knob life (`BaseNoteSource::Pot`)** – default. Twist the slot pot, we map it to MIDI, and we mirror the emitted root back into `slot.arpNote` so the UI keeps up.
+2. **Slot memory (`BaseNoteSource::Slot`)** – ignores the pot completely and trusts whatever the slot last saved. We still write the played note back to the slot for consistency.
+3. **External hook (`BaseNoteSource::External`)** – pings the callback from `setBaseNoteCallback()` first; if you skipped the hook it falls back to the last `_baseNote` you stuffed in via `setBaseNote()`. Only if both are missing do we raid the pot as a desperation move.
+
+That pecking order keeps callbacks and saved roots in control without phantom knob reads, while still letting displays and LEDs mirror whatever actually hit the wire.
 
 ### Arpeggiator Offsets
 
