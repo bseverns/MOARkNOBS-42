@@ -98,7 +98,40 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     int8_t offset = noteOffset(_shape, _step, _patternLength);
     _step = (_step + 1) % _patternLength; // advance and wrap within the pattern
 
-    uint8_t root = Utility::mapToMidiValue(pots.getLastValue(_slotIdx)) % 128;
+    auto clampMidi = [](int value) { return static_cast<uint8_t>(constrain(value, 0, 127)); };
+
+    uint8_t root = 0;
+    bool haveRoot = false;
+    bool usedPot = false;
+    int potRaw = 0;
+
+    switch (_baseNoteSrc) {
+    case BaseNoteSource::Slot:
+        root = clampMidi(slot.arpNote);
+        haveRoot = true;
+        break;
+    case BaseNoteSource::External:
+        if (_baseNoteCb) {
+            root = clampMidi(_baseNoteCb());
+            haveRoot = true;
+        } else {
+            root = clampMidi(_baseNote);
+            haveRoot = true;
+        }
+        break;
+    default:
+        break;
+    }
+
+    if (!haveRoot) {
+        potRaw = pots.getLastValue(_slotIdx);
+        if (potRaw < 0)
+            potRaw = 0;
+        root = Utility::mapToMidiValue(potRaw) % 128;
+        haveRoot = true;
+        usedPot = true;
+    }
+
     slot.arpNote = root; // keep last root around for anyone else who cares
     uint8_t potVal = root;
 
@@ -117,7 +150,7 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         break;
     }
     case MIDIMessageType::PitchBend: {
-        int raw = pots.getLastValue(_slotIdx);
+        int raw = usedPot ? potRaw : Utility::mapToRange(root, 0, 127, 0, 1023);
         int16_t bend = map(raw, 0, 1023, -8192, 8191) + offset * 128;
         bend = constrain(bend, -8192, 8191);
         midi.sendPitchBend(bend, slot.midiChannel);

@@ -2,6 +2,9 @@
 #include <unity.h>
 
 void test_start_stop_cycle();
+void test_slot_root_wins_over_pot();
+void test_external_callback_sets_root();
+void test_external_base_note_without_callback();
 void test_lowpass_highpass_response();
 void test_system_report();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
@@ -18,6 +21,9 @@ void test_drop_unsupported_usb_type();
 void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_start_stop_cycle);
+    RUN_TEST(test_slot_root_wins_over_pot);
+    RUN_TEST(test_external_callback_sets_root);
+    RUN_TEST(test_external_base_note_without_callback);
     RUN_TEST(test_lowpass_highpass_response);
     RUN_TEST(test_system_report);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)

@@ -3,7 +3,7 @@
 Part of the firmware `include` jungle. The [include README](../README.md) shows how it locks to the rest of the circus; the [main firmware README](../../README.md) explains why the band even exists.
 
 Clock-synced riff machine that rips through a slot's note stack like it's late for soundcheck.
-Now it can yank its root note from wherever you tell it—slot memory, envelope follower, or some mystery source you cooked up.
+Now it can yank its root note from wherever you tell it—slot memory, a callback, or some mystery source you cooked up—without accidentally sniffing the pot when you told it not to.
 
 ## Where it fits
 
@@ -58,26 +58,36 @@ void loop() {
 
 See the guts in [Arpeggiator.h](../Arpeggiator.h).
 
-## Base Notes that Don't Rot
+## Root note pecking order
 
-`_baseNote` isn't chained to one sad MIDI number. Feed it whatever
-`EnvelopeFollower` or ARG mashup you can dream up. At the end of every
-loop the arpeggiator re-sniffs that source and locks onto the fresh value
-so the riff doesn't crust over.
+The arpeggiator now plays nice with three possible root feeds and only
+touches the pot when you explicitly hand it the reins:
+
+1. **Slot memory (`BaseNoteSource::Slot`)** – grabs `cfg.getSlot(idx).arpNote`.
+   Whatever actually gets emitted is also written back, so displays and
+   other subsystems see the same root you just heard.
+2. **External source (`BaseNoteSource::External`)** – first hits the
+   callback you registered with `setBaseNoteCallback()`. If you skipped
+   the callback, it falls back to the last MIDI value you stuffed in via
+   `setBaseNote()`.
+3. **Pot fallback** – only when neither of the above is configured do we
+   crack the pot reading and map it to MIDI. No more phantom pot reads
+   when you're trying to drive the arp from a callback.
+
+Because the emitted root always syncs back into the slot, other modules
+still see the latest note even if it came from some external wizardry.
 
 ```cpp
-#include "Arpeggiator.h"
-#include "EnvelopeFollower.h"
-
-EnvelopeFollower env;        // converts raw audio into a note-ish value
-Arpeggiator   arp;
-arp.setBaseNoteSource(&env); // arp will sample this at each loop end
+Arpeggiator arp;
+arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::External);
+arp.setBaseNoteCallback([] { return 64; });
+arp.start(0);
 
 void loop() {
-  env.update(audioInput);    // keep the follower breathing
-  arp.update(midi, cfg, pots); // arp grabs the latest base note here
+  arp.update(midi, cfg, pots); // locks to callback first, pot only if you're flying blind
 }
 ```
 
-That re-sampling is the anti-stale sauce—no more looping last week's
-riffs like it's mall music.
+That ordering keeps the groove honest: callbacks stay in control, slot
+storage stays current, and the pot only chimes in when nothing else is on
+the mic.
