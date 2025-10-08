@@ -129,7 +129,9 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 | [EnvelopeFollower](include/EnvelopeFollower/README.md)         | Converts audio/CV into modulation curves with selectable filters.                                                            |
 | [LEDManager](include/LEDManager/README.md)                     | Paints 52 WS2812s and that lone status LED with righteous fury.                                                              |
 | [MIDIHandler](include/MIDIHandler/README.md)                   | Speaks MIDI over USB, DIN, and TRS, mirroring every message.                                                                 |
-| [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots and smooths their jittery souls.                                                                 |
+| [PotentiometerManager](include/PotentiometerManager/README.md) | Reads the three analog pots, smooths their jittery souls, and hands your callback.                                           |
+|                                                                | It now passes the mapped CC value plus the smoothed ADC reading.                                                             |
+|                                                                | Grab the MIDI channel from your slot config when you need it.                                                                |
 | `Globals`                                                      | Shared constants and state that keep the gang in sync.                                                                       |
 | `Utility`                                                      | Misc helpers—because even chaos needs some glue.                                                                             |
 

@@ -44,8 +44,9 @@ class PotentiometerManager {
     void selectMuxBank(uint8_t bank); // Drive the primary mux address lines
     void selectPotBank(uint8_t pot);  // Drive the secondary mux address lines
 
-    // Callback for sending MIDI messages
-    std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> midiCallback;
+    // Callback for sending MIDI messages.
+    // Args: CC number, mapped MIDI value, smoothed ADC reading, slot index.
+    std::function<void(uint8_t, uint8_t, uint16_t, uint8_t)> midiCallback;
 
     // Helper for filtered analog reads
     // Grabs several fast ADC samples, averages them, then later code runs an EWMA
@@ -63,9 +64,15 @@ class PotentiometerManager {
     PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
                          uint8_t analogPin);
 
-    /** Register a callback to send MIDI when a pot changes. */
-    void setMidiCallback(std::function<void(uint8_t /*data1*/, uint8_t /*mappedValue*/,
-                                            uint8_t /*midiChannel*/, uint8_t /*slotIndex*/
+    /**
+     * Register a callback to send MIDI when a pot changes.
+     * The callback receives the slot's CC number, the mapped MIDI value,
+     * the smoothed ADC reading (0-1023-ish depending on calibration), and
+     * the slot index. If you need the MIDI channel, grab it from your slot
+     * configuration rather than expecting it here.
+     */
+    void setMidiCallback(std::function<void(uint8_t /*ccNumber*/, uint8_t /*mappedValue*/,
+                                            uint16_t /*smoothedAdc*/, uint8_t /*slotIndex*/
                                             )>
                              callback);
 
