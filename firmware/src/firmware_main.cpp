@@ -542,7 +542,7 @@ void setup() {
 
     // — Pot → MIDI routing callback —
     potentiometerManager.setMidiCallback(
-        [&](uint8_t /*ignored*/, uint8_t value, uint8_t rawValue, uint8_t potIdx) {
+        [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
             auto &slot = configManager.getSlot(potIdx);
             if (!slot.active)
                 return;
@@ -573,7 +573,7 @@ void setup() {
             }
 
             case MIDIMessageType::PitchBend: {
-                int16_t bend = map(rawValue, 0, 1023, -8192, 8191);
+                int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
                 midiHandler.sendPitchBend(bend, slot.midiChannel);
                 break;
             }

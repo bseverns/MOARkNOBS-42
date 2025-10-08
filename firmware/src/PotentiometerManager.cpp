@@ -113,10 +113,11 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
             // EWMA smoothing – ALPHA (see header) leans toward fresh readings.
             smoothedValue[potIndex] =
                 Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], ALPHA);
+            int smoothedReading = smoothedValue[potIndex];
 
             // Stage 3: bail if the movement is smaller than the noise floor.
-            if (abs(smoothedValue[potIndex] - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
-                potLastValues[potIndex] = smoothedValue[potIndex]; // lock in the latest value
+            if (abs(smoothedReading - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
+                potLastValues[potIndex] = smoothedReading; // lock in the latest value
                 dirtyFlags[potIndex] = true;
 
 #if BENCH_LATENCY_LOG
@@ -129,15 +130,15 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
 #endif
 
                 // Stage 4: map to MIDI, light the LED, then shout over MIDI.
-                int midiValue = Utility::mapToMidiValue(smoothedValue[potIndex]);
+                int midiValue = Utility::mapToMidiValue(smoothedReading);
                 ledManager.setPotValue(potIndex, midiValue);
 
                 if (midiCallback) {
 #if BENCH_LATENCY_LOG
                     benchLatencyLog(potIndex, t_scan_us, "MIDI", "");
 #endif
-                    midiCallback(potCCNumbers[potIndex], midiValue, potChannels[potIndex],
-                                 potIndex);
+                    midiCallback(potCCNumbers[potIndex], midiValue,
+                                 static_cast<uint16_t>(smoothedReading), potIndex);
                 }
             }
         }
@@ -193,6 +194,6 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
 }
 
 void PotentiometerManager::setMidiCallback(
-    std::function<void(uint8_t, uint8_t, uint8_t, uint8_t)> cb) {
+    std::function<void(uint8_t, uint8_t, uint16_t, uint8_t)> cb) {
     midiCallback = cb;
 }
