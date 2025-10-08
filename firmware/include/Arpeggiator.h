@@ -19,7 +19,7 @@ class PotentiometerManager;
 class Arpeggiator {
   public:
     enum Shape { UP, DOWN, UPDOWN, RANDOM };
-    enum class BaseNoteSource { Slot, External };
+    enum class BaseNoteSource { Pot, Slot, External };
 
     /** Max ticks allowed between note hits so the riff never drifts past a beat. */
     static constexpr uint8_t MAX_LENGTH = 24;
@@ -65,7 +65,7 @@ class Arpeggiator {
 
     /**
      * Pick where the root note comes from.
-     * `Slot` grabs the slot's stored arp note; `External` calls a user hook.
+     * `Pot` reads the slot knob, `Slot` trusts saved memory, `External` calls a user hook.
      */
     void setBaseNoteSource(BaseNoteSource src);
     /**
@@ -93,6 +93,7 @@ class Arpeggiator {
     uint8_t _patternLength;
     uint8_t _baseNote;                    //!< Root note for the pattern
     BaseNoteSource _baseNoteSrc;          //!< Who owns the root
+    bool _baseNoteIsSet;                  //!< True once setBaseNote() has been called
     std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
 };
 

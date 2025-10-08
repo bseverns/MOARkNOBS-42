@@ -20,7 +20,8 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0), _shape(UP), _step(0),
-      _patternLength(4), _baseNote(0), _baseNoteSrc(BaseNoteSource::Slot), _baseNoteCb(nullptr) {}
+      _patternLength(4), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false),
+      _baseNoteCb(nullptr) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -50,7 +51,10 @@ void Arpeggiator::setPatternLength(uint8_t steps) {
 
 void Arpeggiator::setBaseNoteSource(BaseNoteSource src) { _baseNoteSrc = src; }
 
-void Arpeggiator::setBaseNote(uint8_t note) { _baseNote = note; }
+void Arpeggiator::setBaseNote(uint8_t note) {
+    _baseNote = note;
+    _baseNoteIsSet = true;
+}
 
 void Arpeggiator::setBaseNoteCallback(std::function<uint8_t()> cb) { _baseNoteCb = cb; }
 
@@ -105,7 +109,19 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     bool usedPot = false;
     int potRaw = 0;
 
+    auto readPot = [&]() {
+        potRaw = pots.getLastValue(_slotIdx);
+        if (potRaw < 0)
+            potRaw = 0;
+        root = Utility::mapToMidiValue(potRaw) % 128;
+        usedPot = true;
+        haveRoot = true;
+    };
+
     switch (_baseNoteSrc) {
+    case BaseNoteSource::Pot:
+        readPot();
+        break;
     case BaseNoteSource::Slot:
         root = clampMidi(slot.arpNote);
         haveRoot = true;
@@ -114,7 +130,7 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         if (_baseNoteCb) {
             root = clampMidi(_baseNoteCb());
             haveRoot = true;
-        } else {
+        } else if (_baseNoteIsSet) {
             root = clampMidi(_baseNote);
             haveRoot = true;
         }
@@ -123,14 +139,8 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         break;
     }
 
-    if (!haveRoot) {
-        potRaw = pots.getLastValue(_slotIdx);
-        if (potRaw < 0)
-            potRaw = 0;
-        root = Utility::mapToMidiValue(potRaw) % 128;
-        haveRoot = true;
-        usedPot = true;
-    }
+    if (!haveRoot)
+        readPot();
 
     slot.arpNote = root; // keep last root around for anyone else who cares
     uint8_t potVal = root;

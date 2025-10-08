@@ -477,13 +477,13 @@ repurpose themselves:
 - **Q Pot** → selects the pattern (Up, Down, Up&Down, Random)
 
 The arpeggiator repeatedly sends the slot's current value based on control input or EF, according to the selected pattern.
-Each tick it now chases the root source you called dibs on:
+Each tick it now chases the root source you called dibs on via `setBaseNoteSource()`:
 
-1. **Slot memory** – grabs `cfg.getSlot(idx).arpNote`, fires `root + offset`, then writes the actual root back so the rest of the rig stays synced.
-2. **External hook** – pings the callback from `setBaseNoteCallback()` first; if you skipped the hook it falls back to the last `_baseNote` you stuffed in via `setBaseNote()`.
-3. **Pot fallback** – only when you never picked a source do we crack the knob reading and map it to MIDI.
+1. **Knob life (`BaseNoteSource::Pot`)** – default. Twist the slot pot, we map it to MIDI, and we mirror the emitted root back into `slot.arpNote` so the UI keeps up.
+2. **Slot memory (`BaseNoteSource::Slot`)** – ignores the pot completely and trusts whatever the slot last saved. We still write the played note back to the slot for consistency.
+3. **External hook (`BaseNoteSource::External`)** – pings the callback from `setBaseNoteCallback()` first; if you skipped the hook it falls back to the last `_baseNote` you stuffed in via `setBaseNote()`. Only if both are missing do we raid the pot as a desperation move.
 
-That priority order means envelope followers, sequencers, or whatever else you wire in stay in control without phantom pot reads, and slot UI still mirrors the note you actually heard.
+That pecking order keeps callbacks and saved roots in control without phantom knob reads, while still letting displays and LEDs mirror whatever actually hit the wire.
 
 ### Arpeggiator Offsets
 

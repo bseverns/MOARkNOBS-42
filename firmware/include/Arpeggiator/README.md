@@ -20,7 +20,7 @@ Get the bird's-eye in the [main firmware README](../../README.md).
 - `start(slotIdx)` – point it at a slot and let the notes fly.
 - `setLength(ticks)` – how many MIDI clock ticks to wait between hits (max 24).
 - `setPatternLength(steps)` – define how many steps and semitones the loop spans.
-- `setBaseNoteSource(src)` – choose who owns the root (`Slot` or `External`).
+- `setBaseNoteSource(src)` – choose who owns the root (`Pot`, `Slot`, or `External`).
 - `setBaseNote(note)` / `setBaseNoteCallback(fn)` – shove in a fresh base note or a function that returns one.
 - `update(midi, cfg, pots)` – call every loop so it keeps drumming.
 
@@ -36,7 +36,7 @@ then spits the actual jump each tick: `UP` counts up, `DOWN` walks back to zero,
 | Length | 1–24 ticks | MIDI clock ticks between notes |
 | Pattern Length | 2–16 steps | Semitone span before the loop repeats |
 | Mode | UP, DOWN, UPDOWN, RANDOM | Direction for `noteOffset` |
-| Base Note Source | Slot, External | Where the root comes from |
+| Base Note Source | Pot, Slot, External | Where the root comes from |
 | Base Note / Callback | 0–127 or func | Force a root note or supply a generator |
 
 Dial these in and the arp will march (or stumble) exactly how you tell it.
@@ -63,16 +63,17 @@ See the guts in [Arpeggiator.h](../Arpeggiator.h).
 The arpeggiator now plays nice with three possible root feeds and only
 touches the pot when you explicitly hand it the reins:
 
-1. **Slot memory (`BaseNoteSource::Slot`)** – grabs `cfg.getSlot(idx).arpNote`.
-   Whatever actually gets emitted is also written back, so displays and
-   other subsystems see the same root you just heard.
-2. **External source (`BaseNoteSource::External`)** – first hits the
+1. **Knob life (`BaseNoteSource::Pot`)** – default mode. We read the slot
+   pot, map it to MIDI, and pump that straight out. The resulting note is
+   mirrored back into `slot.arpNote` so LEDs and displays stay honest.
+2. **Slot memory (`BaseNoteSource::Slot`)** – skips the pot entirely and
+   trusts whatever the slot last stored. We still write the emitted root
+   back so everyone else hears the same gospel.
+3. **External source (`BaseNoteSource::External`)** – first hits the
    callback you registered with `setBaseNoteCallback()`. If you skipped
    the callback, it falls back to the last MIDI value you stuffed in via
-   `setBaseNote()`.
-3. **Pot fallback** – only when neither of the above is configured do we
-   crack the pot reading and map it to MIDI. No more phantom pot reads
-   when you're trying to drive the arp from a callback.
+   `setBaseNote()`. Only if both are missing do we raid the pot as a
+   desperation move.
 
 Because the emitted root always syncs back into the slot, other modules
 still see the latest note even if it came from some external wizardry.

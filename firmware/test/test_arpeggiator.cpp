@@ -9,6 +9,7 @@
 #include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "Globals.h"
+#include "Utility.h"
 #include "usb_midi.h"
 
 namespace {
@@ -77,6 +78,30 @@ void test_start_stop_cycle() {
     TEST_ASSERT_EQUAL_UINT8(7, arp.getSlot());
     arp.stop();
     TEST_ASSERT_FALSE(arp.isActive());
+}
+
+void test_pot_root_drives_default() {
+    MidiUsbGuard guard;
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(1);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Pot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 2, 10);
+
+    auto pots = makePots();
+    pots.potLastValues[0] = 1023; // slam the knob to max
+
+    MIDIHandler midi = primeMidi();
+
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT8(127, usbMIDI.lastNoteOn);
+    TEST_ASSERT_EQUAL_UINT8(127, usbMIDI.lastNoteOnVelocity);
+    TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.lastNoteOnChannel);
+    TEST_ASSERT_EQUAL_UINT8(127, cfg.getSlot(0).arpNote);
 }
 
 void test_slot_root_wins_over_pot() {
@@ -149,4 +174,27 @@ void test_external_base_note_without_callback() {
     TEST_ASSERT_EQUAL_UINT8(55, usbMIDI.lastNoteOn);
     TEST_ASSERT_EQUAL_UINT8(55, cfg.getSlot(2).arpNote);
     TEST_ASSERT_EQUAL_UINT8(5, usbMIDI.lastNoteOnChannel);
+}
+
+void test_external_missing_inputs_falls_back_to_pot() {
+    MidiUsbGuard guard;
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(1);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::External);
+    arp.start(3);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 3, MIDIMessageType::Note, 6, 11);
+
+    auto pots = makePots();
+    pots.potLastValues[3] = 256; // maps to 31-ish once scaled
+
+    MIDIHandler midi = primeMidi();
+
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT8(Utility::mapToMidiValue(256) % 128, usbMIDI.lastNoteOn);
+    TEST_ASSERT_EQUAL_UINT8(usbMIDI.lastNoteOn, cfg.getSlot(3).arpNote);
+    TEST_ASSERT_EQUAL_UINT8(6, usbMIDI.lastNoteOnChannel);
 }
