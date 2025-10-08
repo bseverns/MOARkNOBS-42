@@ -8,6 +8,11 @@ Need the fast track from bare board to release? Hit the [Process Overview](Proce
 
 Craving the bird's-eye view? The [systemflow docs](sketch/systemFlow/) rip the machine into subsystems so you can see how every knob, LED, and envelope fits together before you dive into the weeds.
 
+| Doc | Why it exists | Keep it fresh |
+| --- | --- | --- |
+| [Primers/MIDI-DSP101.md](Primers/MIDI-DSP101.md) | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
+| [ProcessOverview.md](ProcessOverview.md) | Full build and release flow | Update when hardware or firmware release steps move |
+
 ## Accessibility
 
 - Every diagram and board glam shot sports alt text so screen readers get the same gossip as eyeballs.
@@ -49,6 +54,8 @@ flowchart TD
 - Firmware reference tables: [button map & combo guide](../firmware/include/ButtonManager/README.md#button-map), [filter types](../firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](../firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](../firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](../firmware/include/EnvelopeFollower/README.md#arg-methods), [display hooks](../firmware/include/DisplayManager/README.md#key-methods).
 
 ## Choose Your Adventure
+
+> Need a refresher before you dive? Hit the [MIDI + DSP 101 Primer](Primers/MIDI-DSP101.md) for channel lore, CC etiquette, and the envelope math our modules lean on.
 
 - [BuildersHandbook.md](BuildersHandbook.md) — wire it, flash it, and smoke-test it.
 - [Troubleshooting.md](Troubleshooting.md) — chase gremlins when the box won't boot or buttons go rogue.

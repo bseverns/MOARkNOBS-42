@@ -5,6 +5,8 @@ Part of the firmware `include` jungle. Scope the [include README](../README.md) 
 USB, DIN, TRS—whatever—this thing speaks MIDI like it's 1983 and even keeps time for the slackers.
 USB input now filters out bogus message types, like a bouncer keeping the freaks off the dance floor.
 
+> Need a refresher on channels, CCs, or SysEx framing? Slide over to the [MIDI + DSP 101 Primer](../../../docs/Primers/MIDI-DSP101.md#midi-in-60-seconds) before wiring new handlers.
+
 ![MIDI I/O flow](../../../docs/sketch/MIDI.png)
 
 ## Supported Message Types
