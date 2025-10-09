@@ -560,6 +560,13 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         uint8_t newChan = (oldChan % 16) + 1; // cycles 1..16
         context.configManager.setPotChannel(context.activePot, newChan);
 
+        if (_potentiometerManager != nullptr) {
+            _potentiometerManager->setChannel(context.activePot, newChan);
+        }
+        if (context.activePot < context.potChannels.size()) {
+            context.potChannels[context.activePot] = newChan;
+        }
+
         char buf[32];
         sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
         context.displayManager.displayStatus(buf, 1500);

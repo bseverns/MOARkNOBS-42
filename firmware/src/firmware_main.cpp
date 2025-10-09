@@ -185,6 +185,10 @@ void processSerial() {
                 ccNumber >= 0 && ccNumber <= 127) {
                 configManager.setPotChannel(potIndex, channel);
                 configManager.setPotCCNumber(potIndex, ccNumber);
+                potentiometerManager.setChannel(potIndex, channel);
+                if (static_cast<size_t>(potIndex) < potChannels.size()) {
+                    potChannels[potIndex] = channel;
+                }
                 configManager.saveConfiguration();
                 LOG_PRINTLN("Pot configuration updated!");
             } else {
