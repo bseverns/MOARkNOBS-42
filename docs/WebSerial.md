@@ -11,7 +11,24 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    { "hello": "mn42" }
    ```
    ![Browser console showing HELLO handshake with JSON response](webserial_handshake.svg)
-4. Streaming begins. Bail out by closing the port.
+4. Browser immediately fires off a schema probe so the UI and firmware agree on what "current" means:
+   ```json
+   {"request":"MANIFEST"}
+   ```
+   The firmware replies with a newline-terminated manifest:
+   ```json
+   {
+     "fw_version":"1.3.0",
+     "schema_version":4,
+     "slot_count":42,
+     "max_table_lengths":{"slots":42,"envelopes":6,"arg_modes":14}
+   }
+   ```
+5. The UI diffs that manifest against its baked-in schema definition. When anything smells off, pop a non-destructive migrate dialog:
+   - Offer to export the user’s current JSON before touching a byte.
+   - Run any adapters found in `firmware/App/migrations/` to lift the preset forward.
+   - Render the proposed patch for review; no silent rewrites.
+6. Streaming begins only after both sides agree on versions. Bail out by closing the port or if the manifest validation fails.
 
 ## State Messages
 
@@ -114,3 +131,58 @@ The configurator lets you twist:
 - EF routing
 - ARG settings
 - LED colours
+
+## Editor Contract Upgrades
+
+These are the ground rules for keeping a responsive UI without bricking rigs on stage. Think of it as a pact between firmware, browser, and the human in the loop.
+
+### Single Source of Truth Handshake
+
+- Treat the manifest response as sacred. Cache it per session and surface a status pill that shouts where you stand: `Disconnected → Handshake → Live`. Flip to `Dirty` whenever staged edits drift from what the device most recently confirmed.
+- If the schema diff fails, throw the migrate dialog mentioned above. The only destructive action allowed is a deliberate “Apply Migration” click.
+
+### Atomic Apply with Commit/Rollback
+
+- Stage every tweak locally (Redux store, Svelte store, whatever keeps you honest).
+- Clicking **Apply** should pack the pending diff into one message (`SET_ALL` payload or chunked frames with sequence IDs).
+- Firmware validates and replies with `{ "checksum": "deadbeef" }`. Only then do you commit locally.
+- When the checksum doesn’t match expectations, auto-rollback your local state and show a diff panel so the player knows what the device actually accepted.
+
+### Bidirectional Throttling
+
+- **Inbound**: Buffer device updates and paint them on `requestAnimationFrame` or `setTimeout(..., 16)`. Reflowing the DOM on every line will tank performance.
+- **Outbound**: Debounce knobs and sliders to at least 16–24 ms and batch bursts so the Teensy’s USB write locks don’t starve the UI thread.
+- Slot streaming at 30–60 Hz keeps things lively without choking browsers or MIDI bandwidth.
+
+### Schema-Versioned Presets
+
+- Every exported preset should include `"schema_version": <int>` at the top-level.
+- Stash migration scripts in `/migrations/` as pure JavaScript transforms: `(preset) => nextPreset`.
+- When someone drags in a vintage preset, detect the version mismatch, show the migration plan, and let them preview the transformed diff before writing it to the device.
+
+### Deterministic Control IDs
+
+- Represent every control as `{id, human_label, type, range, target}`.
+- Only ship IDs and machine-readable targets over the wire. Labels live purely in the UI so you can rename things without breaking stored presets or firmware expectations.
+
+### UX Guardrails
+
+- Connection status pill (Disconnected / Handshake / Live / Dirty) lives in the header.
+- Inline validators clamp ranges, show friendly tooltips, and link to the tables in `docs/` (filters, ARG, MIDI types) for context.
+- Surface a read-only **Device Monitor** sidebar that streams the manifest, firmware build info, free RAM/flash, and current profile.
+
+### Safe Writes for Pots vs. Encoders
+
+- Encoders nudge values in real time—write as the player twists.
+- Potentiometers snap. Keep their live writes behind an explicit **Take Control** toggle so you don’t surprise someone mid-set.
+
+### Teaching + QA Mode
+
+- Ship a WebSerial simulator that mimics the Teensy protocol for classrooms, CI screenshots, and unit tests.
+- Mocking the serial layer lets you verify migrations, diff previews, and throttling without hardware on every desk.
+
+### Accessibility + Layout
+
+- Headings stay sequential, controls get explicit labels, and hit areas stay chunky enough for shaky hands.
+- Keyboard navigation mirrors hardware muscle memory: arrow keys step values, `Shift` toggles coarse/fine adjustments.
+- Document the shortcuts inside the UI so folks using assistive tech don’t have to guess.

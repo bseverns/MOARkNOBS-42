@@ -74,7 +74,7 @@ flowchart TD
     - [display.md](sketch/systemFlow/hw/display.md) — wrangling pixels and I²C.
     - [envelopeFE.md](sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
     - Plenty more (midi opto, power antics, board PDFs) for late-night study.
-- [WebSerial.md](WebSerial.md) — how the board chats with browsers.
+- [WebSerial.md](WebSerial.md) — how the board chats with browsers, negotiates schema versions, and keeps presets safe.
 - [OSCBridge.md](OSCBridge.md) — hurl OSC at a Node shim and let it punch MIDI into the hardware.
 - [thermal/](thermal/) — keep the silicon from frying itself.
 
