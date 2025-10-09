@@ -17,307 +17,581 @@
     Then point your browser at http://localhost:8000/benzknobz.html and rock on.
   -->
   <style>
-body {
-  font-family: 'Segoe UI', sans-serif;
-  background: #111;
-  color: #eee;
-  margin: 20px;
-}
-h1, h2 {
-  text-align: center;
-  color: #00ffff;
-}
-#pot-controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-}
-.pot-row {
-  background-color: #222;
-  border: 1px solid #333;
-  border-radius: 10px;
-  padding: 12px;
-  box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-}
-.pot-row label {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.pot-row input, .pot-row select {
-  background: #333;
-  color: #eee;
-  border: 1px solid #444;
-  border-radius: 4px;
-  width: 100%;
-  padding: 4px;
-}
-button {
-  background: #007BFF;
-  border: none;
-  color: white;
-  padding: 10px 16px;
-  font-size: 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 20px;
-}
-button:hover {
-  background: #0056b3;
-}
-#status {
-  text-align: center;
-  margin-top: 10px;
-  font-size: 14px;
-  color: #ffcc00;
-}
+    :root {
+      --bg: #0a0c10;
+      --bg-panel: rgba(24, 29, 39, 0.88);
+      --bg-panel-alt: rgba(18, 21, 30, 0.95);
+      --border: rgba(0, 255, 255, 0.25);
+      --text: #f4f6fb;
+      --text-muted: #9da5b4;
+      --accent: #2de2e6;
+      --accent-hot: #ff5f96;
+      --radius: 14px;
+      --shadow: 0 24px 48px rgba(0, 0, 0, 0.55);
+      color-scheme: dark;
+    }
 
-#main-layout {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
-#form {
-  flex: 1;
-}
-#sidebar {
-  flex: 0 0 250px;
-}
-@media (max-width: 600px) {
-  #main-layout {
-    flex-direction: column;
-  }
-  #sidebar {
-    flex-basis: auto;
-  }
-}
-    #led-settings {
-      margin-top: 20px;
-      text-align: center;
+    * {
+      box-sizing: border-box;
     }
-    #update-all {
-      display: block;
-      margin: 20px auto;
-      padding: 10px 20px;
-      font-size: 16px;
-      font-weight: bold;
-      color: #fff;
-      background-color: #007BFF;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-    #update-all:hover {
-      background-color: #0056b3;
-    }
-    #status {
-      text-align: center;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    #slots, #envelopes {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      justify-content: center;
-    }
-    #slots .meter, #envelopes .meter {
+
+    body {
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, rgba(45, 226, 230, 0.2), transparent 45%),
+                  radial-gradient(circle at bottom, rgba(255, 95, 150, 0.15), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 32px clamp(16px, 3vw, 56px) 96px;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
+      gap: 32px;
+    }
+
+    header.hero {
+      display: grid;
+      gap: 16px;
+      text-align: center;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    header.hero h1 {
+      font-size: clamp(2.25rem, 5vw, 3.2rem);
+      letter-spacing: 0.04em;
+      margin: 0;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    header.hero p {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--text-muted);
+    }
+
+    header.hero .hero-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .badge {
+      border: 1px solid var(--border);
+      background: rgba(13, 17, 24, 0.65);
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) minmax(320px, 1fr);
+      gap: clamp(20px, 4vw, 48px);
+      align-items: start;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    aside, section, fieldset, details {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    fieldset {
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin: 0 0 18px;
+    }
+
+    fieldset legend {
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    #connect-card {
+      display: grid;
+      gap: 16px;
+    }
+
+    .connect-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
       align-items: center;
+      justify-content: space-between;
     }
-    #slots progress, #envelopes progress {
-      width: 40px;
+
+    .microcopy {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: var(--text-muted);
     }
-    #slots span, #envelopes span {
-      font-size: 12px;
-      margin-top: 2px;
+
+    button {
+      background: linear-gradient(135deg, var(--accent), #3d7eff);
+      border: none;
+      color: var(--text);
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      box-shadow: 0 12px 24px rgba(45, 226, 230, 0.2);
     }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    #status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(12, 16, 23, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+
+    #status[data-state="ok"] {
+      color: var(--accent);
+      border-color: rgba(45, 226, 230, 0.4);
+    }
+
+    #status[data-state="warn"] {
+      color: #ffce6b;
+      border-color: rgba(255, 206, 107, 0.45);
+    }
+
+    #status[data-state="err"] {
+      color: var(--accent-hot);
+      border-color: rgba(255, 95, 150, 0.45);
+    }
+
+    #status span.label {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    #status svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    #sidebar fieldset label,
+    #form label {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    #form {
+      display: grid;
+      gap: 24px;
+    }
+
+    #form fieldset {
+      background: var(--bg-panel-alt);
+    }
+
+    input,
+    select {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px 12px;
+      font-size: 0.95rem;
+    }
+
+    input[type="color"] {
+      padding: 0;
+      height: 40px;
+      cursor: pointer;
+    }
+
+    #led-settings {
+      display: grid;
+      gap: 12px;
+      text-align: left;
+    }
+
+    #led-settings label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    #ef-assignment-card {
+      display: grid;
+      gap: 12px;
+    }
+
+    #ef-assignment-card .microcopy {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .ef-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .ef-select {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .ef-select span {
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .ef-select.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(45, 226, 230, 0.2);
+    }
+
+    #live {
+      display: grid;
+      gap: 24px;
+    }
+
+    #live h2 {
+      margin: 0 0 12px;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-align: left;
+    }
+
+    #slots,
+    #envelopes {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+      gap: 12px;
+    }
+
+    .meter {
+      display: grid;
+      gap: 6px;
+      justify-items: center;
+      padding: 10px 6px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: transform 0.2s ease, border 0.2s ease;
+    }
+
+    .meter progress {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .meter span {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
     .flash {
       animation: flash 0.2s linear;
     }
+
     .meter.active {
       animation: blip 0.3s linear;
+      border-color: var(--accent-hot);
+      transform: translateY(-2px);
     }
+
     @keyframes blip {
-      from { background-color: #0ff; }
-      to   { background-color: #222; }
+      from { box-shadow: 0 0 0 rgba(255, 95, 150, 0.4); }
+      to   { box-shadow: 0 0 18px rgba(255, 95, 150, 0); }
     }
+
     @keyframes flash {
-      from { transform: scale(1.3); }
+      from { transform: scale(1.04); }
       to   { transform: scale(1); }
     }
-    #arg-method {
-      text-align: center;
-      margin-top: 8px;
-      font-size: 14px;
 
+    #arg-method {
+      font-size: 1.1rem;
+      color: var(--text);
+    }
 
     [data-tooltip] {
       position: relative;
       cursor: help;
     }
-    [data-tooltip]:hover::after {
+
+    [data-tooltip]::after {
       content: attr(data-tooltip);
       position: absolute;
-      top: 100%;
-      left: 0;
-      background: #333;
-      color: #fff;
-      padding: 4px 8px;
-      border-radius: 4px;
-      white-space: nowrap;
-      z-index: 10;
-      transform: translateY(4px);
+      top: 50%;
+      left: calc(100% + 12px);
+      transform: translateY(-50%);
+      background: rgba(12, 16, 23, 0.95);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      max-width: 220px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      line-height: 1.4;
+      z-index: 20;
+    }
+
+    [data-tooltip]:hover::after,
+    [data-tooltip]:focus-visible::after {
+      opacity: 1;
+    }
+
+    details {
+      background: rgba(10, 13, 20, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
 
     #log {
-      background: #000;
-      color: #0f0;
-      padding: 8px;
+      background: #050608;
+      color: #5aff8d;
+      padding: 12px;
       max-height: 200px;
       overflow-y: auto;
+      border-radius: 10px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 0.85rem;
+    }
 
+    footer {
+      max-width: 960px;
+      margin: 0 auto;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--accent);
+    }
+
+    @media (max-width: 980px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header.hero {
+        text-align: left;
+      }
+
+      [data-tooltip]::after {
+        left: 0;
+        top: calc(100% + 8px);
+        transform: translateY(0);
+      }
     }
   </style>
   <script type="module">
-  let port, reader, writer;
-  const encoder = new TextEncoder();
-  const lineQueue = [], lineWaiters = [];
+    window.addEventListener('DOMContentLoaded', () => {
+      let port, reader, writer;
+      const encoder = new TextEncoder();
+      const lineQueue = [], lineWaiters = [];
 
-  const statusEl = document.getElementById("status");
-  const connectBtn = document.getElementById("connect");
-  const saveBtn    = document.getElementById("save");
-  const slotContainer = document.getElementById("slots");
-  const envContainer  = document.getElementById("envelopes");
-  const argMethodEl   = document.getElementById("arg-method");
-  const filterTypeEl  = document.getElementById("filter-type");
-  const filterFreqEl  = document.getElementById("filter-freq");
-  const filterQEl     = document.getElementById("filter-q");
-  const argEnableEl   = document.getElementById("arg-enable");
-  const argAEl        = document.getElementById("arg-a");
-  const argBEl        = document.getElementById("arg-b");
+      const statusEl = document.getElementById("status");
+      const statusLabel = document.getElementById("status-label");
+      const connectBtn = document.getElementById("connect");
+      const saveBtn    = document.getElementById("save");
+      const slotContainer = document.getElementById("slots");
+      const envContainer  = document.getElementById("envelopes");
+      const argMethodEl   = document.getElementById("arg-method");
+      const filterTypeEl  = document.getElementById("filter-type");
+      const filterFreqEl  = document.getElementById("filter-freq");
+      const filterQEl     = document.getElementById("filter-q");
+      const argEnableEl   = document.getElementById("arg-enable");
+      const argAEl        = document.getElementById("arg-a");
+      const argBEl        = document.getElementById("arg-b");
+      const logEl         = document.getElementById("log");
+      const efAssignmentGrid = document.getElementById("ef-assignment-card")?.querySelector(".ef-grid");
+      let efSelectRows = [];
 
-  const logEl = document.getElementById("log");
-
-  function setStatus(msg, isError = false) {
-    statusEl.style.color = isError ? '#ff073a' : '#ffcc00';
-    statusEl.textContent = msg;
-  }
-
-  // Show a nudge if we're loaded from disk and not over HTTP(S)
-  if (location.protocol === 'file:') {
-    setStatus('Serve this page with "python3 -m http.server" so WebSerial will cooperate.');
-  }
-
-  const slotEls = Array.from({length:42}, () => {
-    const wrap = document.createElement("div");
-    wrap.className = "meter";
-    const p = document.createElement("progress");
-    p.max = 127; p.value = 0;
-    const s = document.createElement("span");
-    s.textContent = "0";
-    wrap.appendChild(p);
-    wrap.appendChild(s);
-    slotContainer.appendChild(wrap);
-    return {p,s,wrap};
-  });
-  const envEls = Array.from({length:6}, () => {
-    const wrap = document.createElement("div");
-    wrap.className = "meter";
-    const p = document.createElement("progress");
-    p.max = 127; p.value = 0;
-    const s = document.createElement("span");
-    s.textContent = "0";
-    wrap.appendChild(p);
-    wrap.appendChild(s);
-    envContainer.appendChild(wrap);
-    return {p,s,wrap};
-  });
-
-    // connect() cranks open a Web Serial port and syncs the UI with device state.
-    async function connect() {
-      try {
-        setStatus("🔌 Opening port…");
-        port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 115200 // must match Globals.h SERIAL_BAUD });
-
-        // set up text streams
-        const textDecoder = new TextDecoderStream();
-        port.readable.pipeTo(textDecoder.writable);
-        reader = textDecoder.readable.getReader();
-        writer = port.writable.getWriter();
-
-        setStatus("Connected.");
-        connectBtn.disabled = true;   // disable connect after success
-        saveBtn.disabled    = false;  // allow saving now
-
-        readLoop();
-        await send("HELLO");
-        const schema = await loadSchema();
-        const config = await loadConfig();
-        buildForm(schema, config);
-        await loadFilter();
-        await loadARGPair();
-      } catch (err) {
-        console.error(err);
-        setStatus(`Connection failed: ${err.message || err}`, true);
-        throw err;
+      function setStatus(msg, level = "warn") {
+        if (!statusEl) return;
+        const levels = {
+          ok:  { text: "ONLINE", icon: "M15.5 4.5 8.5 11.5 5 8" },
+          warn:{ text: "NOTE",   icon: "M12 5v14M5 12h14" },
+          err: { text: "ALERT",  icon: "M12 8v4m0 4h.01" }
+        };
+        const state = levels[level] ? level : "warn";
+        statusEl.dataset.state = state;
+        if (statusLabel) statusLabel.textContent = levels[state].text;
+        const iconPath = statusEl.querySelector('path');
+        if (iconPath) iconPath.setAttribute('d', levels[state].icon);
+        statusEl.querySelector('.status-message').textContent = msg;
       }
-    }
 
-    function getLine() {
-      return lineQueue.length ?
-        Promise.resolve(lineQueue.shift()) :
-        new Promise(res => lineWaiters.push(res));
-    }
-
-    // send() shoots a command down the wire and waits for a single-line comeback.
-    async function send(cmd) {
-      try {
-        const packet = encoder.encode(cmd + "\n");
-        await writer.write(packet);
-        return await getLine();
-      } catch (err) {
-        console.error(err);
-        setStatus(`Send fail: ${err.message || err}`, true);
-        throw err;
+      // Show a nudge if we're loaded from disk and not over HTTP(S)
+      if (location.protocol === 'file:') {
+        setStatus('Serve this page with "python3 -m http.server" so WebSerial will cooperate.');
       }
-    }
 
-    // readLoop() munches incoming bytes, updates meters, and keeps the vibe alive.
-    async function readLoop() {
-      let buf = "";
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buf += value;
-          let idx;
-          while ((idx = buf.indexOf("\n")) >= 0) {
-            const line = buf.slice(0, idx).trim();
-            buf = buf.slice(idx + 1);
-            if (!line) continue;
-            if (logEl) logEl.textContent += line + "\n";
-            try {
-              const msg = JSON.parse(line);
-              if (msg.slots && msg.envelopes) {
-                drawState(msg);
-                continue;
-              }
-            } catch (e) {
-              // not JSON, treat as raw line
-            }
-            if (lineWaiters.length) lineWaiters.shift()(line);
-            else lineQueue.push(line);
-          }
+      const slotEls = Array.from({length:42}, () => {
+        const wrap = document.createElement("div");
+        wrap.className = "meter";
+        const p = document.createElement("progress");
+        p.max = 127; p.value = 0;
+        const s = document.createElement("span");
+        s.textContent = "0";
+        wrap.appendChild(p);
+        wrap.appendChild(s);
+        slotContainer.appendChild(wrap);
+        return {p,s,wrap};
+      });
+      const envEls = Array.from({length:6}, () => {
+        const wrap = document.createElement("div");
+        wrap.className = "meter";
+        const p = document.createElement("progress");
+        p.max = 127; p.value = 0;
+        const s = document.createElement("span");
+        s.textContent = "0";
+        wrap.appendChild(p);
+        wrap.appendChild(s);
+        envContainer.appendChild(wrap);
+        return {p,s,wrap};
+      });
+
+      // connect() cranks open a Web Serial port and syncs the UI with device state.
+      async function connect() {
+        try {
+          setStatus("Summoning the synth…", "warn");
+          port = await navigator.serial.requestPort();
+          await port.open({ baudRate: 115200 /* must match Globals.h SERIAL_BAUD */ });
+
+          const textDecoder = new TextDecoderStream();
+          port.readable.pipeTo(textDecoder.writable);
+          reader = textDecoder.readable.getReader();
+          writer = port.writable.getWriter();
+
+          setStatus("We have handshake. Load incoming.", "ok");
+          connectBtn.disabled = true;
+          saveBtn.disabled    = false;
+
+          readLoop();
+          await send("HELLO");
+          const schema = await loadSchema();
+          const config = await loadConfig();
+          buildForm(schema, config);
+          await loadFilter();
+          await loadARGPair();
+        } catch (err) {
+          console.error(err);
+          setStatus(`Connection failed: ${err.message || err}`, "err");
+          throw err;
         }
-      } finally {
-        port = null;
-        setStatus("Port closed.", true);
-        connectBtn.disabled = false;
-        saveBtn.disabled = true;
       }
-    }
+
+      function getLine() {
+        return lineQueue.length ?
+          Promise.resolve(lineQueue.shift()) :
+          new Promise(res => lineWaiters.push(res));
+      }
+
+      // send() shoots a command down the wire and waits for a single-line comeback.
+      async function send(cmd) {
+        try {
+          const packet = encoder.encode(cmd + "\n");
+          await writer.write(packet);
+          return await getLine();
+        } catch (err) {
+          console.error(err);
+          setStatus(`Send fail: ${err.message || err}`, "err");
+          throw err;
+        }
+      }
+
+      // readLoop() munches incoming bytes, updates meters, and keeps the vibe alive.
+      async function readLoop() {
+        let buf = "";
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += value;
+            let idx;
+            while ((idx = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, idx).trim();
+              buf = buf.slice(idx + 1);
+              if (!line) continue;
+              if (logEl) logEl.textContent += line + "\n";
+              try {
+                const msg = JSON.parse(line);
+                if (msg.slots && msg.envelopes) {
+                  drawState(msg);
+                  continue;
+                }
+              } catch (e) {
+                // not JSON, treat as raw line
+              }
+              if (lineWaiters.length) lineWaiters.shift()(line);
+              else lineQueue.push(line);
+            }
+          }
+        } finally {
+          port = null;
+          setStatus("Port closed.", "warn");
+          connectBtn.disabled = false;
+          saveBtn.disabled = true;
+        }
+      }
 
     function drawState(msg) {
       msg.slots.forEach((v,i)=> {
@@ -339,107 +613,145 @@ button:hover {
         msg.efStatus.forEach((on,i)=> {
           if (on) highlight(envEls[i].wrap);
         });
+        if (efSelectRows.length) {
+          efSelectRows.forEach((entry, idx) => {
+            entry.row.classList.toggle("active", !!msg.efStatus[idx]);
+          });
+        }
       }
-      if (msg.argMethod !== undefined && argMethodEl) {
-        argMethodEl.textContent = msg.argMethod;
+        if (msg.argMethod !== undefined && argMethodEl) {
+          argMethodEl.textContent = msg.argMethod;
+        }
       }
-    }
 
-    function flash(el) {
-      el.classList.remove('flash');
-      void el.offsetWidth;
-      el.classList.add('flash');
-    }
+      function flash(el) {
+        el.classList.remove('flash');
+        void el.offsetWidth;
+        el.classList.add('flash');
+      }
 
-    function highlight(el) {
-      el.classList.remove('active');
-      void el.offsetWidth;
-      el.classList.add('active');
-    }
+      function highlight(el) {
+        el.classList.remove('active');
+        void el.offsetWidth;
+        el.classList.add('active');
+      }
 
-    async function loadSchema() {
-        setStatus("Loading schema…");
+      async function loadSchema() {
+        setStatus("Loading schema from the rig…", "warn");
         try {
           const raw = await send("GET_SCHEMA");
-          setStatus("Schema loaded.");
+          setStatus("Schema loaded. The knobs know their shapes.", "ok");
           return JSON.parse(raw);
         } catch (err) {
           console.warn('Device schema failed, falling back to local file', err);
           try {
             const res = await fetch('config_schema.json');
             const json = await res.json();
-            setStatus("Schema loaded (local).");
+            setStatus("Schema loaded (local fallback).", "warn");
             return json;
           } catch (fetchErr) {
-            setStatus(`Schema error: ${fetchErr.message || fetchErr}`, true);
+            setStatus(`Schema error: ${fetchErr.message || fetchErr}`, "err");
             throw fetchErr;
           }
         }
       }
 
-  // loadConfig() pulls the full config payload from the device.
-  async function loadConfig() {
+      // loadConfig() pulls the full config payload from the device.
+      async function loadConfig() {
         try {
-          setStatus("Loading config…");
+          setStatus("Pulling current scene…", "warn");
           const raw = await send("GET_ALL");
-          setStatus("Config loaded.");
+          setStatus("Config synced. Tweak with intent.", "ok");
           return JSON.parse(raw);
         } catch (err) {
-          setStatus(`Config error: ${err.message || err}`, true);
+          setStatus(`Config error: ${err.message || err}`, "err");
           throw err;
         }
       }
 
-    async function loadFilter() {
-      try {
-        const raw = await send("GET_FILTER");
-        const [type, freq, q] = raw.split(",");
-        filterTypeEl.value = type;
-        filterFreqEl.value = freq;
-        filterQEl.value = q;
-      } catch (err) {
-        setStatus(`Filter load fail: ${err.message || err}`, true);
+      async function loadFilter() {
+        try {
+          const raw = await send("GET_FILTER");
+          const [type, freq, q] = raw.split(",");
+          filterTypeEl.value = type;
+          filterFreqEl.value = freq;
+          filterQEl.value = q;
+        } catch (err) {
+          setStatus(`Filter load fail: ${err.message || err}`, "err");
+        }
       }
-    }
 
-    async function loadARGPair() {
-      try {
-        const raw = await send("GET_ARGPAIR");
-        const [en, a, b] = raw.split(",");
-        argEnableEl.value = en;
-        argAEl.value = a;
-        argBEl.value = b;
-      } catch (err) {
-        setStatus(`ARG load fail: ${err.message || err}`, true);
+      async function loadARGPair() {
+        try {
+          const raw = await send("GET_ARGPAIR");
+          const [en, a, b] = raw.split(",");
+          argEnableEl.value = en;
+          argAEl.value = a;
+          argBEl.value = b;
+        } catch (err) {
+          setStatus(`ARG load fail: ${err.message || err}`, "err");
+        }
       }
-    }
 
-// buildForm() dynamically creates form controls based on the firmware's schema.
-function buildForm(schema, values) {
-  const container = document.getElementById("form");
-  container.innerHTML = "";
-  const ledContainer = document.getElementById("led-settings");
-  if (ledContainer) ledContainer.innerHTML = "<legend>LED Colors</legend>";
-  for (const field of schema) {
-    if (field.key === "ledColors") {
-      const count = field.count || 0;
-      for (let i = 0; i < count; i++) {
-        const val = values[field.key]?.[i]?.color || "#000000";
-        const inp = document.createElement("input");
-        inp.type = "color";
-        inp.name = `ledColors[${i}].color`;
-        inp.value = val;
-        const lab = document.createElement("label");
-        lab.textContent = `LED ${i + 1}`;
-        lab.appendChild(inp);
-        ledContainer.appendChild(lab);
-      }
-      continue;
-    }
-    if (field.type === "group") {
-      const groupEl = document.createElement("fieldset");
-      groupEl.innerHTML = `<legend>${field.label}</legend>`;
-      const count = field.count || 1;
+      // buildForm() dynamically creates form controls based on the firmware's schema.
+      function buildForm(schema, values) {
+        const container = document.getElementById("form");
+        container.innerHTML = "";
+        const ledContainer = document.getElementById("led-settings");
+        if (ledContainer) ledContainer.innerHTML = "<legend>LED Colors</legend>";
+        if (efAssignmentGrid) efAssignmentGrid.innerHTML = "";
+        efSelectRows = [];
+        for (const field of schema) {
+          if (field.key === "ledColors") {
+            const count = field.count || 0;
+            for (let i = 0; i < count; i++) {
+              const val = values[field.key]?.[i]?.color || "#000000";
+              const inp = document.createElement("input");
+              inp.type = "color";
+              inp.name = `ledColors[${i}].color`;
+              inp.value = val;
+              const lab = document.createElement("label");
+              lab.textContent = `LED ${i + 1}`;
+              lab.appendChild(inp);
+              ledContainer.appendChild(lab);
+            }
+            continue;
+          }
+          if (field.key === "efSlots" && efAssignmentGrid) {
+            const totalSlots = values.slots?.length || 42;
+            const slotLabels = Array.from({ length: totalSlots }, (_, idx) => {
+              const slot = values.slots?.[idx] || {};
+              const num = idx.toString().padStart(2, "0");
+              const type = slot.type !== undefined ? slot.type : "Slot";
+              const chan = slot.midiChannel !== undefined ? ` ch${slot.midiChannel}` : "";
+              const data = slot.data1 !== undefined ? ` #${slot.data1}` : "";
+              return `Slot ${num} — ${type}${chan}${data}`;
+            });
+            const count = field.count || 0;
+            for (let i = 0; i < count; i++) {
+              const lab = document.createElement("label");
+              lab.className = "ef-select";
+              lab.innerHTML = `<span>EF ${i + 1}</span>`;
+              const sel = document.createElement("select");
+              sel.name = `efSlots[${i}].slot`;
+              const current = values[field.key]?.[i]?.slot ?? 0;
+              for (let idx = 0; idx < totalSlots; idx++) {
+                const opt = document.createElement("option");
+                opt.value = idx;
+                opt.textContent = slotLabels[idx];
+                if (idx === current) opt.selected = true;
+                sel.appendChild(opt);
+              }
+              lab.appendChild(sel);
+              efAssignmentGrid.appendChild(lab);
+              efSelectRows.push({ row: lab, select: sel });
+            }
+            continue;
+          }
+          if (field.type === "group") {
+            const groupEl = document.createElement("fieldset");
+            groupEl.innerHTML = `<legend>${field.label}</legend>`;
+            const count = field.count || 1;
       for (let i = 0; i < count; i++) {
         const sub = document.createElement("div");
         for (const f of field.fields) {
@@ -515,73 +827,104 @@ function buildForm(schema, values) {
       container.appendChild(lab);
     }
   }
-}
-
-// saveConfig() marshals the current form values and sends them back to the box.
-async function saveConfig() {
-  try {
-    setStatus("Saving…");
-    const data = {};
-    const form = document.querySelector("#form");
-    Array.from(form.elements).forEach(el => {
-      if (!el.name) return;
-      const raw = el.type === "checkbox" ? el.checked : el.value;
-      const v = el.type === "checkbox" ? raw : (isNaN(raw) ? raw : +raw);
-      const m = el.name.match(/([^.]+)\[(\d+)\]\.(.+)/);
-      if (m) {
-        const [_, group, idx, sub] = m;
-        data[group] = data[group] || [];
-        data[group][+idx] = data[group][+idx] || {};
-        data[group][+idx][sub] = v;
-      } else {
-        data[el.name] = v;
       }
-    });
 
-    const ledInputs = document.querySelectorAll("#led-settings input[type='color']");
-    if (ledInputs.length) {
-      data.ledColors = Array.from(ledInputs).map(inp => ({ color: inp.value }));
-    }
+      // saveConfig() marshals the current form values and sends them back to the box.
+      async function saveConfig() {
+        try {
+          setStatus("Pushing settings to the synth…", "warn");
+          const data = {};
+          const form = document.querySelector("#form");
+          Array.from(form.elements).forEach(el => {
+            if (!el.name) return;
+            const raw = el.type === "checkbox" ? el.checked : el.value;
+            const v = el.type === "checkbox" ? raw : (isNaN(raw) ? raw : +raw);
+            const m = el.name.match(/([^.]+)\[(\d+)\]\.(.+)/);
+            if (m) {
+              const [_, group, idx, sub] = m;
+              data[group] = data[group] || [];
+              data[group][+idx] = data[group][+idx] || {};
+              data[group][+idx][sub] = v;
+            } else {
+              data[el.name] = v;
+            }
+          });
 
-    await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
-    await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
-    await send(`SET_ARGPAIR ${argEnableEl.value},${argAEl.value},${argBEl.value}`);
-    setStatus("Save sent.");
-  } catch (err) {
-    console.error(err);
-    setStatus(`Save failed: ${err.message || err}`, true);
-  }
-}
+          const ledInputs = document.querySelectorAll("#led-settings input[type='color']");
+          if (ledInputs.length) {
+            data.ledColors = Array.from(ledInputs).map(inp => ({ color: inp.value }));
+          }
 
-// poll for a previously-granted port coming back from the void
-setInterval(async () => {
-  try {
-    if (port) return;
-    const ports = await navigator.serial.getPorts();
-    if (ports.length) {
-      setStatus('Device is back. Smash Connect?');
-      if (confirm('Device is back. Connect now?')) {
+          const efSelects = document.querySelectorAll("#ef-assignment-card select");
+          if (efSelects.length) {
+            data.efSlots = Array.from(efSelects).map(sel => ({ slot: +sel.value }));
+          }
+
+          await writer.write(encoder.encode("SET_ALL " + JSON.stringify(data) + "\n"));
+          await send(`SET_FILTER ${filterTypeEl.value},${filterFreqEl.value},${filterQEl.value}`);
+          await send(`SET_ARGPAIR ${argEnableEl.value},${argAEl.value},${argBEl.value}`);
+          setStatus("Settings landed. Go make noise.", "ok");
+        } catch (err) {
+          console.error(err);
+          setStatus(`Save failed: ${err.message || err}`, "err");
+        }
+      }
+
+      // poll for a previously-granted port coming back from the void
+      setInterval(async () => {
+        try {
+          if (port) return;
+          const ports = await navigator.serial.getPorts();
+          if (ports.length) {
+            setStatus('Device is back. Smash Connect?', "warn");
+            if (confirm('Device is back. Connect now?')) {
+              try { await connect(); } catch (_) { /* status already set */ }
+            }
+          }
+        } catch (err) {
+          console.error('reconnect poll', err);
+        }
+      }, 5000);
+
+      // wire it up
+      connectBtn.addEventListener("click", async () => {
         try { await connect(); } catch (_) { /* status already set */ }
-      }
-    }
-  } catch (err) {
-    console.error('reconnect poll', err);
-  }
-}, 5000);
-
-// wire it up
-connectBtn.addEventListener("click", async () => {
-  try { await connect(); } catch (_) { /* status already set */ }
-});
-saveBtn.addEventListener("click", saveConfig);
+      });
+      saveBtn.addEventListener("click", saveConfig);
+    });
 </script>
 
 </head>
 <body>
-  <h1>MOARkNOBZ Configurator</h1>
-  <button id="connect">Connect</button>
-    <div id="main-layout">
-      <div id="sidebar">
+  <header class="hero">
+    <h1>MOARkNOBZ Control Deck</h1>
+    <p>
+      Equal parts neon basement show and precision lab console. Inspired by the Electra One and Bastl
+      wizards, tuned for tweaking the MOARkNOBZ brain without losing the punk sparks.
+    </p>
+    <div class="hero-badges">
+      <span class="badge">Web Serial Powered</span>
+      <span class="badge">Real-time Slot Telemetry</span>
+      <span class="badge">Patch-safe Writing</span>
+    </div>
+  </header>
+
+  <main>
+    <aside id="connect-card">
+      <div class="connect-actions">
+        <button id="connect">Connect</button>
+        <button id="save" disabled>Save</button>
+      </div>
+      <p class="microcopy">
+        First time here? Plug the synth in over USB, slam <strong>Connect</strong>, and let the live meters confirm
+        the handshake. Want the raw serial flood? Pop open the Debug Log below.
+      </p>
+      <div id="status" data-state="warn">
+        <svg viewBox="0 0 24 24" aria-hidden="true" role="img"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6"></path></svg>
+        <span class="label" id="status-label">NOTE</span>
+        <span class="status-message">Waiting for instructions.</span>
+      </div>
+
       <!-- Filter section: shapes raw pot data before it hits the sound engine -->
       <fieldset id="filter-settings">
         <legend>Filter</legend>
@@ -599,6 +942,7 @@ saveBtn.addEventListener("click", saveConfig);
         <label data-tooltip="Cutoff frequency in Hz. 20–5000">Freq <input id="filter-freq" type="number" min="20" max="5000"></label>
         <label data-tooltip="Resonance. Higher Q = sharper bite">Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01"></label>
       </fieldset>
+
       <!-- ARG Pair section: dial in the envelope follower gains -->
       <fieldset id="arg-settings">
         <legend>ARG Pair</legend>
@@ -611,29 +955,44 @@ saveBtn.addEventListener("click", saveConfig);
         <label data-tooltip="Envelope follower A gain">A <input id="arg-a" type="number" min="0" max="5"></label>
         <label data-tooltip="Envelope follower B gain">B <input id="arg-b" type="number" min="0" max="5"></label>
       </fieldset>
-    </div>
-    <div id="form"></div>
-  </div>
 
-  <!-- LED color picker - make those blinkenlights scream -->
-  <fieldset id="led-settings">
-    <legend>LED Colors</legend>
+      <!-- LED color picker - make those blinkenlights scream -->
+      <fieldset id="led-settings">
+        <legend>LED Colors</legend>
+      </fieldset>
+    </aside>
 
-  </fieldset>
+    <section>
+      <fieldset id="ef-assignment-card">
+        <legend>Envelope Assignments</legend>
+        <p class="microcopy">Tell each follower which slot to stalk — no need to wait for live signals.</p>
+        <div class="ef-grid"></div>
+      </fieldset>
+      <div id="form"></div>
+      <details>
+        <summary>Debug Log</summary>
+        <pre id="log"></pre>
+      </details>
+      <div id="live">
+        <div>
+          <h2>Live Slots</h2>
+          <div id="slots"></div>
+        </div>
+        <div>
+          <h2>Envelope Levels</h2>
+          <div id="envelopes"></div>
+        </div>
+        <div>
+          <h2>ARG Method</h2>
+          <div id="arg-method"></div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-    <button id="save" disabled>Save</button>
-  <div id="status"></div>
-  <details>
-    <summary>Debug Log</summary>
-    <pre id="log"></pre>
-  </details>
-  <div id="live">
-    <h2>Live Slots</h2>
-    <div id="slots"></div>
-    <h2>Envelope Levels</h2>
-    <div id="envelopes"></div>
-    <h2>ARG Method</h2>
-    <div id="arg-method"></div>
-  </div>
+  <footer>
+    Built as a living notebook: part punk scene zine, part future-lab interface. If you break something,
+    capture the story and share it back.
+  </footer>
 </body>
 </html>
