@@ -201,6 +201,13 @@ uint8_t ConfigManager::getPotCCNumber(uint8_t potIndex) const {
 void ConfigManager::setPotChannel(uint8_t potIndex, uint8_t channel) {
     if (potIndex < _numPots) {
         _stored.potChannels[potIndex] = channel;
+        if (potIndex < slots.size()) {
+            MIDISlot &slot = slots[potIndex];
+            if (slot.midiChannel != channel) {
+                slot.midiChannel = channel;
+                saveSlot(potIndex, slot);
+            }
+        }
     }
 }
 
