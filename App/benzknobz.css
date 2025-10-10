@@ -37,7 +37,8 @@ body {
     var(--color-bg);
   color: var(--color-text);
   padding: clamp(12px, 2vh, 32px) clamp(18px, 4vw, 48px);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   justify-content: center;
 }
