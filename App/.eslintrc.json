@@ -1,0 +1,14 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "args": "none", "ignoreRestSiblings": true }],
+    "no-console": "off"
+  }
+}
