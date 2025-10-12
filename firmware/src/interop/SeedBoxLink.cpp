@@ -20,7 +20,7 @@ SeedBoxLink &SeedBoxLink::instance() {
     return link;
 }
 
-void SeedBoxLink::begin(MIDIHandler *handler) {
+void SeedBoxLink::begin(::MIDIHandler *handler) {
     _midi = handler;
     _hasAck = false;
     _lastHelloMs = 0;
