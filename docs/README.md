@@ -12,6 +12,7 @@ Craving the bird's-eye view? The [systemflow docs](sketch/systemFlow/) rip the m
 | --- | --- | --- |
 | [Primers/MIDI-DSP101.md](Primers/MIDI-DSP101.md) | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
 | [ProcessOverview.md](ProcessOverview.md) | Full build and release flow | Update when hardware or firmware release steps move |
+| [interop/seedbox.md](interop/seedbox.md) | SeedBox handshake + CC contract | Refresh when either repo tweaks the interop map |
 
 ## Accessibility
 

@@ -6,6 +6,7 @@
 #include "Globals.h"
 #include "TimeUtils.h"
 #include "Log.h"
+#include "interop/SeedBoxLink.h"
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
 #ifdef MIDI_DEBUG
@@ -221,6 +222,9 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
     switch (type) {
     case midi::ControlChange:
         // Peek for NRPN sequences; otherwise just log the CC
+        if (seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1, data2)) {
+            break;
+        }
         switch (data1) {
         case 101: // RPN parameter MSB
             _rpnParam = (data2 & 0x7F) << 7;
@@ -402,6 +406,7 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
     if (!data || length == 0)
         return;
     _rxCount++;
+    seedbox::interop::mn42::SeedBoxLink::instance().handleSysEx(data, length);
     _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
     for (uint16_t i = 0; i < _lastSysExLength; ++i) {
         _lastSysEx[i] = data[i];

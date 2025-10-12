@@ -19,6 +19,7 @@
 #include "version.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
+#include "interop/SeedBoxLink.h"
 #include <TimerOne.h>
 #include <ArduinoJson.h>
 #include <queue>
@@ -543,6 +544,7 @@ void setup() {
     // — MIDI Handler —
     midiHandler.begin();
     midiHandler.setDisplayManager(&displayManager);
+    seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
 
     // — Pot → MIDI routing callback —
     potentiometerManager.setMidiCallback(
@@ -733,6 +735,9 @@ void setup() {
             }
         },
         100);
+
+    Utility::schedulerLow.addTask(
+        []() { seedbox::interop::mn42::SeedBoxLink::instance().update(); }, 500);
 
     // WebSerial telemetry every ~100 ms once the browser says hello
     Utility::schedulerLow.addTask(streamWebSerialState, 100, true);
