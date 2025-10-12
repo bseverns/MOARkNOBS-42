@@ -222,7 +222,8 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
     switch (type) {
     case midi::ControlChange:
         // Peek for NRPN sequences; otherwise just log the CC
-        if (seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1, data2)) {
+        if (seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1,
+                                                                                data2)) {
             break;
         }
         switch (data1) {
