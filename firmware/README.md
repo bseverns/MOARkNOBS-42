@@ -809,6 +809,17 @@ SET_ALL {"led":{"brightness":200,"color":"#ff0066"}}
 
 The board parses that, flashes its new tint, and tucks the values away for next boot.
 
+### SeedBox Interop Handshake
+
+Boot the MN42 next to SeedBox and watch the MIDI wire for a little call-and-response:
+
+- Firmware fires `CC 14` value `0x01` on channel 1 as soon as `SeedBoxLink::begin()` runs.
+- SeedBox answers with value `0x11` when its router is awake.
+- Both rigs trade `0x7F` keep-alives roughly every three seconds; miss two pulses and we fall back to the boot hello.
+- A `F0 7D 4D 4E 42 01 F7` SysEx burst tags the controller as legit MN42 hardware.
+
+All of the constants live in [`interop/mn42_map.h`](include/interop/mn42_map.h), and the glue code rides inside [`src/interop/SeedBoxLink.cpp`](src/interop/SeedBoxLink.cpp). The [SeedBox ↔ MN42 link notes](../docs/interop/seedbox.md) dig into the flow and testing rituals.
+
 ## Development Timeline
 
 Check out the project evolution in the main repo's
