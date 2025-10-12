@@ -2,17 +2,17 @@
 
 #include <cstdint>
 
+class MIDIHandler; // forward declaration in global namespace
+
 namespace seedbox {
 namespace interop {
 namespace mn42 {
-
-class MIDIHandler; // forward declaration
 
 class SeedBoxLink {
   public:
     static SeedBoxLink &instance();
 
-    void begin(MIDIHandler *handler);
+    void begin(::MIDIHandler *handler);
     void update();
 
     bool handleControlChange(uint8_t channel, uint8_t control, uint8_t value);
@@ -31,7 +31,7 @@ class SeedBoxLink {
 
     void markPeerPulse();
 
-    MIDIHandler *_midi = nullptr;
+    ::MIDIHandler *_midi = nullptr;
     bool _hasAck = false;
     unsigned long _lastHelloMs = 0;
     unsigned long _lastKeepAliveMs = 0;
