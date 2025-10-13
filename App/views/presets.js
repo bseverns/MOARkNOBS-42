@@ -73,7 +73,7 @@ export const presets = [
   {
     id: 'korg-minilogue-init',
     label: 'Korg Minilogue XD – Layer Launch',
-    load: fetchPreset('/presets/korg/minilogue-init.json')
+    load: fetchPreset('./presets/korg/minilogue-init.json')
   },
   {
     id: 'ae-modular-sketch',
@@ -83,7 +83,7 @@ export const presets = [
   {
     id: 'akai-mpc-performance',
     label: 'Akai MPC – Performance Grid',
-    load: fetchPreset('/presets/akai/mpc-performance.json')
+    load: fetchPreset('./presets/akai/mpc-performance.json')
   },
   {
     id: 'elektron-analog-rytm',
