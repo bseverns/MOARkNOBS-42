@@ -49,6 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const filterFreqEl = document.getElementById('filter-freq');
   const filterQEl = document.getElementById('filter-q');
   const argEnableEl = document.getElementById('arg-enable');
+  const argMethodEl = document.getElementById('arg-method');
   const argAEl = document.getElementById('arg-a');
   const argBEl = document.getElementById('arg-b');
   const efAssignmentGrid = document.querySelector('#ef-assignment-card .ef-grid');
@@ -144,6 +145,7 @@ window.addEventListener('DOMContentLoaded', () => {
   filterFreqEl?.addEventListener('change', () => stageFilter('freq', Number(filterFreqEl.value)));
   filterQEl?.addEventListener('change', () => stageFilter('q', Number(filterQEl.value)));
   argEnableEl?.addEventListener('change', () => stageArg('enable', argEnableEl.value === 'true'));
+  argMethodEl?.addEventListener('change', () => stageArg('method', argMethodEl.value || 'PLUS'));
   argAEl?.addEventListener('change', () => stageArg('a', Number(argAEl.value)));
   argBEl?.addEventListener('change', () => stageArg('b', Number(argBEl.value)));
 
@@ -478,6 +480,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function populateArg(staged) {
     if (!staged) return;
     if (argEnableEl) argEnableEl.value = String(staged.arg?.enable ?? true);
+    if (argMethodEl) argMethodEl.value = staged.arg?.method ?? 'PLUS';
     if (argAEl) argAEl.value = staged.arg?.a ?? 0;
     if (argBEl) argBEl.value = staged.arg?.b ?? 0;
   }
