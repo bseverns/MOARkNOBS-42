@@ -1,4 +1,5 @@
 import { createRuntime } from '../runtime.js';
+import { presets } from './presets.js';
 
 const localManifest = {
   ui_version: '2024.08.01',
@@ -40,6 +41,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const headerStatus = document.getElementById('header-status');
   const exportPresetBtn = document.getElementById('export-preset');
   const importPresetBtn = document.getElementById('import-preset');
+  const presetPicker = document.getElementById('preset-picker');
   const simulatorToggle = document.getElementById('simulator-toggle');
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
@@ -173,6 +175,51 @@ window.addEventListener('DOMContentLoaded', () => {
     };
     input.click();
   });
+
+  if (presetPicker) {
+    const placeholder = presetPicker.querySelector('option[value=""]');
+    if (!placeholder) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Select a preset…';
+      presetPicker.prepend(option);
+    }
+
+    const presetMap = new Map();
+    presets.forEach((preset) => {
+      if (presetMap.has(preset.id)) return;
+      presetMap.set(preset.id, preset);
+      const option = document.createElement('option');
+      option.value = preset.id;
+      option.textContent = preset.label;
+      if (typeof preset.load !== 'function') {
+        option.disabled = true;
+      }
+      presetPicker.appendChild(option);
+    });
+    presetPicker.selectedIndex = 0;
+
+    presetPicker.addEventListener('change', async () => {
+      const presetId = presetPicker.value;
+      const descriptor = presetMap.get(presetId);
+      if (!descriptor || typeof descriptor.load !== 'function') {
+        presetPicker.selectedIndex = 0;
+        return;
+      }
+      try {
+        const config = await descriptor.load();
+        if (!config || typeof config !== 'object') {
+          throw new Error('Preset payload was empty');
+        }
+        runtime.stage(() => config);
+        setStatus('warn', 'Preset staged', `${descriptor.label} staged. Hit Apply to push it to the deck.`);
+      } catch (err) {
+        setStatus('err', 'Preset load failed', err.message || String(err));
+      } finally {
+        presetPicker.selectedIndex = 0;
+      }
+    });
+  }
 
   migrationApply?.addEventListener('click', () => migrationDialog?.close('apply'));
   migrationCancel?.addEventListener('click', () => migrationDialog?.close('cancel'));

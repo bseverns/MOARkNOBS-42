@@ -1,0 +1,506 @@
+{
+  "slots": [
+    {
+      "type": "Note",
+      "midiChannel": 1,
+      "data1": 48,
+      "efIndex": 0,
+      "active": true,
+      "pot": false,
+      "label": "Layer 1"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 3,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 6,
+      "efIndex": 2,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 9,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "Note",
+      "midiChannel": 5,
+      "data1": 52,
+      "efIndex": 4,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 15,
+      "efIndex": 5,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 18,
+      "efIndex": 0,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 21,
+      "efIndex": 1,
+      "active": true,
+      "pot": true,
+      "label": "Layer 2"
+    },
+    {
+      "type": "Note",
+      "midiChannel": 4,
+      "data1": 56,
+      "efIndex": 2,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 27,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 30,
+      "efIndex": 4,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 33,
+      "efIndex": 5,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "Note",
+      "midiChannel": 3,
+      "data1": 60,
+      "efIndex": 0,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 39,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 42,
+      "efIndex": 2,
+      "active": true,
+      "pot": true,
+      "label": "Layer 3"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 45,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "Note",
+      "midiChannel": 2,
+      "data1": 64,
+      "efIndex": 4,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 51,
+      "efIndex": 5,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 54,
+      "efIndex": 0,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 57,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "Note",
+      "midiChannel": 1,
+      "data1": 68,
+      "efIndex": 2,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 63,
+      "efIndex": 3,
+      "active": false,
+      "pot": false,
+      "label": "Layer 4"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 66,
+      "efIndex": 4,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 69,
+      "efIndex": 5,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "Note",
+      "midiChannel": 5,
+      "data1": 72,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 75,
+      "efIndex": 1,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 78,
+      "efIndex": 2,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 81,
+      "efIndex": 3,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Note",
+      "midiChannel": 4,
+      "data1": 76,
+      "efIndex": 4,
+      "active": false,
+      "pot": true,
+      "label": "Layer 5"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 87,
+      "efIndex": 5,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 90,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 93,
+      "efIndex": 1,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "Note",
+      "midiChannel": 3,
+      "data1": 80,
+      "efIndex": 2,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 99,
+      "efIndex": 3,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 102,
+      "efIndex": 4,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 105,
+      "efIndex": 5,
+      "active": false,
+      "pot": true,
+      "label": "Layer 6"
+    },
+    {
+      "type": "Note",
+      "midiChannel": 2,
+      "data1": 84,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 111,
+      "efIndex": 1,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 114,
+      "efIndex": 2,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 117,
+      "efIndex": 3,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Note",
+      "midiChannel": 1,
+      "data1": 88,
+      "efIndex": 4,
+      "active": false,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 123,
+      "efIndex": 5,
+      "active": false,
+      "pot": true
+    }
+  ],
+  "efSlots": [
+    {
+      "slot": 0
+    },
+    {
+      "slot": 4
+    },
+    {
+      "slot": 8
+    },
+    {
+      "slot": 12
+    },
+    {
+      "slot": 16
+    },
+    {
+      "slot": 20
+    }
+  ],
+  "filter": {
+    "type": "HIGHPASS",
+    "freq": 1680,
+    "q": 1.1
+  },
+  "arg": {
+    "method": "AVG",
+    "a": 2.0,
+    "b": 1.0,
+    "enable": true
+  },
+  "ledColors": [
+    {
+      "color": "#202060"
+    },
+    {
+      "color": "#232562"
+    },
+    {
+      "color": "#252b65"
+    },
+    {
+      "color": "#283067"
+    },
+    {
+      "color": "#2b3669"
+    },
+    {
+      "color": "#2e3b6c"
+    },
+    {
+      "color": "#30416e"
+    },
+    {
+      "color": "#334670"
+    },
+    {
+      "color": "#364c73"
+    },
+    {
+      "color": "#395175"
+    },
+    {
+      "color": "#3b5677"
+    },
+    {
+      "color": "#3e5c7a"
+    },
+    {
+      "color": "#41617c"
+    },
+    {
+      "color": "#44677e"
+    },
+    {
+      "color": "#466c81"
+    },
+    {
+      "color": "#497283"
+    },
+    {
+      "color": "#4c7785"
+    },
+    {
+      "color": "#4e7c88"
+    },
+    {
+      "color": "#51828a"
+    },
+    {
+      "color": "#54878c"
+    },
+    {
+      "color": "#578d8f"
+    },
+    {
+      "color": "#599291"
+    },
+    {
+      "color": "#5c9894"
+    },
+    {
+      "color": "#5f9d96"
+    },
+    {
+      "color": "#62a398"
+    },
+    {
+      "color": "#64a89b"
+    },
+    {
+      "color": "#67ad9d"
+    },
+    {
+      "color": "#6ab39f"
+    },
+    {
+      "color": "#6cb8a2"
+    },
+    {
+      "color": "#6fbea4"
+    },
+    {
+      "color": "#72c3a6"
+    },
+    {
+      "color": "#75c9a9"
+    },
+    {
+      "color": "#77ceab"
+    },
+    {
+      "color": "#7ad3ad"
+    },
+    {
+      "color": "#7dd9b0"
+    },
+    {
+      "color": "#80deb2"
+    },
+    {
+      "color": "#82e4b4"
+    },
+    {
+      "color": "#85e9b7"
+    },
+    {
+      "color": "#88efb9"
+    },
+    {
+      "color": "#8bf4bb"
+    },
+    {
+      "color": "#8dfabe"
+    },
+    {
+      "color": "#90ffc0"
+    }
+  ],
+  "envelopeMode": "LINEAR"
+}

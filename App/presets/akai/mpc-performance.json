@@ -1,0 +1,507 @@
+{
+  "slots": [
+    {
+      "type": "Aftertouch",
+      "midiChannel": 1,
+      "data1": 0,
+      "efIndex": 5,
+      "active": true,
+      "pot": true,
+      "label": "Macro 1"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 66,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 68,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 1,
+      "data1": 15,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 72,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 1,
+      "data1": 74,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 2,
+      "data1": 30,
+      "efIndex": 5,
+      "active": true,
+      "pot": false,
+      "label": "Macro 2"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 78,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 80,
+      "efIndex": 3,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 2,
+      "data1": 45,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 84,
+      "efIndex": 1,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 2,
+      "data1": 86,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 3,
+      "data1": 60,
+      "efIndex": 5,
+      "active": true,
+      "pot": true,
+      "label": "Macro 3"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 90,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 92,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 3,
+      "data1": 75,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 96,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 3,
+      "data1": 98,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 4,
+      "data1": 90,
+      "efIndex": 5,
+      "active": true,
+      "pot": false,
+      "label": "Macro 4"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 102,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 104,
+      "efIndex": 3,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 4,
+      "data1": 105,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 108,
+      "efIndex": 1,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 4,
+      "data1": 110,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 5,
+      "data1": 120,
+      "efIndex": 5,
+      "active": true,
+      "pot": true,
+      "label": "Macro 5"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 114,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 116,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 5,
+      "data1": 7,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 120,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 5,
+      "data1": 122,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 6,
+      "data1": 22,
+      "efIndex": 5,
+      "active": true,
+      "pot": false,
+      "label": "Macro 6"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 6,
+      "data1": 126,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 6,
+      "data1": 0,
+      "efIndex": 3,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 6,
+      "data1": 37,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 6,
+      "data1": 4,
+      "efIndex": 1,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 6,
+      "data1": 6,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 7,
+      "data1": 52,
+      "efIndex": 5,
+      "active": true,
+      "pot": true,
+      "label": "Macro 7"
+    },
+    {
+      "type": "CC",
+      "midiChannel": 7,
+      "data1": 10,
+      "efIndex": 4,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 7,
+      "data1": 12,
+      "efIndex": 3,
+      "active": true,
+      "pot": false
+    },
+    {
+      "type": "Aftertouch",
+      "midiChannel": 7,
+      "data1": 67,
+      "efIndex": 2,
+      "active": false,
+      "pot": false
+    },
+    {
+      "type": "CC",
+      "midiChannel": 7,
+      "data1": 16,
+      "efIndex": 1,
+      "active": true,
+      "pot": true
+    },
+    {
+      "type": "CC",
+      "midiChannel": 7,
+      "data1": 18,
+      "efIndex": 0,
+      "active": false,
+      "pot": false
+    }
+  ],
+  "efSlots": [
+    {
+      "slot": 1
+    },
+    {
+      "slot": 4
+    },
+    {
+      "slot": 7
+    },
+    {
+      "slot": 10
+    },
+    {
+      "slot": 13
+    },
+    {
+      "slot": 16
+    }
+  ],
+  "filter": {
+    "type": "BANDPASS",
+    "freq": 720,
+    "q": 1.6
+  },
+  "arg": {
+    "method": "MULT",
+    "a": 1.2,
+    "b": 0.8,
+    "enable": true
+  },
+  "ledColors": [
+    {
+      "color": "#101010"
+    },
+    {
+      "color": "#161210"
+    },
+    {
+      "color": "#1c1311"
+    },
+    {
+      "color": "#211511"
+    },
+    {
+      "color": "#271712"
+    },
+    {
+      "color": "#2d1812"
+    },
+    {
+      "color": "#331a13"
+    },
+    {
+      "color": "#391c13"
+    },
+    {
+      "color": "#3f1d14"
+    },
+    {
+      "color": "#441f14"
+    },
+    {
+      "color": "#4a2114"
+    },
+    {
+      "color": "#502315"
+    },
+    {
+      "color": "#562415"
+    },
+    {
+      "color": "#5c2616"
+    },
+    {
+      "color": "#622816"
+    },
+    {
+      "color": "#672917"
+    },
+    {
+      "color": "#6d2b17"
+    },
+    {
+      "color": "#732d17"
+    },
+    {
+      "color": "#792e18"
+    },
+    {
+      "color": "#7f3018"
+    },
+    {
+      "color": "#853219"
+    },
+    {
+      "color": "#8a3319"
+    },
+    {
+      "color": "#90351a"
+    },
+    {
+      "color": "#96371a"
+    },
+    {
+      "color": "#9c381b"
+    },
+    {
+      "color": "#a23a1b"
+    },
+    {
+      "color": "#a83c1b"
+    },
+    {
+      "color": "#ad3d1c"
+    },
+    {
+      "color": "#b33f1c"
+    },
+    {
+      "color": "#b9411d"
+    },
+    {
+      "color": "#bf421d"
+    },
+    {
+      "color": "#c5441e"
+    },
+    {
+      "color": "#cb461e"
+    },
+    {
+      "color": "#d0481e"
+    },
+    {
+      "color": "#d6491f"
+    },
+    {
+      "color": "#dc4b1f"
+    },
+    {
+      "color": "#e24d20"
+    },
+    {
+      "color": "#e84e20"
+    },
+    {
+      "color": "#ee5021"
+    },
+    {
+      "color": "#f35221"
+    },
+    {
+      "color": "#f95322"
+    },
+    {
+      "color": "#ff5522"
+    }
+  ],
+  "envelopeMode": "EXPONENTIAL"
+}
