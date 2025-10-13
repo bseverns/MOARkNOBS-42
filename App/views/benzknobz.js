@@ -141,8 +141,20 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   filterTypeEl?.addEventListener('change', () => stageFilter('type', filterTypeEl.value));
-  filterFreqEl?.addEventListener('change', () => stageFilter('freq', Number(filterFreqEl.value)));
-  filterQEl?.addEventListener('change', () => stageFilter('q', Number(filterQEl.value)));
+  filterFreqEl?.addEventListener('change', () => {
+    const parsed = Number.parseFloat(filterFreqEl.value);
+    if (Number.isNaN(parsed)) return;
+    const clamped = Math.min(5000, Math.max(20, parsed));
+    filterFreqEl.value = String(clamped);
+    stageFilter('freq', clamped);
+  });
+  filterQEl?.addEventListener('change', () => {
+    const parsed = Number.parseFloat(filterQEl.value);
+    if (Number.isNaN(parsed)) return;
+    const clamped = Math.min(4, Math.max(0.5, parsed));
+    filterQEl.value = String(clamped);
+    stageFilter('q', clamped);
+  });
   argEnableEl?.addEventListener('change', () => stageArg('enable', argEnableEl.value === 'true'));
   argAEl?.addEventListener('change', () => stageArg('a', Number(argAEl.value)));
   argBEl?.addEventListener('change', () => stageArg('b', Number(argBEl.value)));
