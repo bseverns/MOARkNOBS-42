@@ -99,6 +99,10 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       await runtime.connect();
     } catch (err) {
+      if (connectionPill) {
+        connectionPill.dataset.stage = 'disconnected';
+        connectionPill.textContent = 'Disconnected';
+      }
       setStatus('err', 'Connect failed', err.message || String(err));
     }
   });
@@ -319,6 +323,10 @@ window.addEventListener('DOMContentLoaded', () => {
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
   });
   runtime.on('error', (err) => {
+    if (connectionPill) {
+      connectionPill.dataset.stage = 'disconnected';
+      connectionPill.textContent = 'Disconnected';
+    }
     setStatus('err', 'Runtime error', err.message || String(err));
   });
   runtime.on('rollback', () => {
