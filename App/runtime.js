@@ -205,8 +205,8 @@ function createSimulator() {
       efIndex: idx % manifest.max_table_lengths.efSlots,
       pot: true
     })),
-    arg: { method: 'blend', enable: true, a: 1, b: 1 },
-    filter: { type: 0, freq: 800, q: 1 },
+    arg: { method: 'PLUS', enable: true, a: 1, b: 1 },
+    filter: { type: 'LOWPASS', freq: 800, q: 1 },
     ledColors: Array.from({ length: manifest.max_table_lengths.ledColors }, () => ({ color: '#ff00ff' }))
   };
   const telemetry = () => ({
