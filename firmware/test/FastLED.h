@@ -24,6 +24,16 @@ inline const CRGB CRGB::Red = CRGB(255, 0, 0);
 inline const CRGB CRGB::Green = CRGB(0, 255, 0);
 inline const CRGB CRGB::Blue = CRGB(0, 0, 255);
 
+inline CRGB blend(const CRGB &a, const CRGB &b, uint8_t amountOfB) {
+    const uint16_t weightB = amountOfB;
+    const uint16_t weightA = 255 - weightB;
+    auto blendChannel = [&](uint8_t channelA, uint8_t channelB) {
+        return static_cast<uint8_t>((channelA * weightA + channelB * weightB) / 255);
+    };
+
+    return CRGB(blendChannel(a.r, b.r), blendChannel(a.g, b.g), blendChannel(a.b, b.b));
+}
+
 struct CHSV {
     uint8_t h;
     uint8_t s;
