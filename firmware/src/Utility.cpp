@@ -3,6 +3,7 @@
 // Referenced by most modules including firmware_main.cpp.
 
 #include "Utility.h"
+#include <Adafruit_SSD1306.h>
 #include <Arduino.h>
 #include "TimeUtils.h"
 #include "EnvelopeFollower.h"
