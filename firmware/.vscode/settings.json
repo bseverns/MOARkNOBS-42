@@ -4,6 +4,36 @@
         "MIDIHANDLER",
         "MOARBENZ"
     ],
+    "C_Cpp.default.configurationProvider": "platformio",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/test",
+        "${workspaceFolder}/lib",
+        "${workspaceFolder}/lib/**",
+        "${workspaceFolder}/lib/FastLED",
+        "${workspaceFolder}/lib/FastLED/platforms",
+        "${workspaceFolder}/lib/teensy_patches",
+        "${workspaceFolder}/lib/teensy_patches/**",
+        "${workspaceFolder}/.pio/libdeps/**",
+        "${workspaceFolder}/.pio/packages/**"
+    ],
+    "C_Cpp.default.browse.path": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/src",
+        "${workspaceFolder}/test",
+        "${workspaceFolder}/lib",
+        "${workspaceFolder}/lib/**",
+        "${workspaceFolder}/lib/FastLED",
+        "${workspaceFolder}/lib/FastLED/platforms",
+        "${workspaceFolder}/lib/teensy_patches",
+        "${workspaceFolder}/lib/teensy_patches/**",
+        "${workspaceFolder}/.pio/libdeps/**",
+        "${workspaceFolder}/.pio/packages/**"
+    ],
+    "C_Cpp.default.forcedInclude": [
+        "${workspaceFolder}/test/MIDI.h"
+    ],
     "files.associations": {
         "array": "cpp",
         "atomic": "cpp",

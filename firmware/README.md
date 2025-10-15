@@ -24,6 +24,15 @@ Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs
 
 Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial dark magic](../docs/WebSerial.md).
 
+### Editor Setup That Doesn't Suck
+
+VS Code + PlatformIO should already wire IntelliSense through the PlatformIO configuration provider, but sometimes the C/C++ extension forgets where the vendored libraries live. We keep a curated `.vscode/settings.json` in `firmware/` that:
+
+- points IntelliSense at `include/`, `src/`, the vendored `lib/**` tree (including FastLED's stub headers), and the auto-generated `.pio/libdeps/**` installs for MIDI and friends;
+- force-includes the Unity test `MIDI` shim so translation units stop screaming about `MIDI.h` when the network isn't around to download dependencies yet.
+
+If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-workspace`, reload the window, and let PlatformIO regenerate its database. Worst case, run `pio run -e teensy40_main` once so `.pio/libdeps/` exists locally.
+
 ## Directory Layout
 
 - **src/** – core firmware sources.
