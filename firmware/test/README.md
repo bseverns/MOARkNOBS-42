@@ -102,6 +102,10 @@ remix the macros.
 
 That env sets `test_build_src = true`, but we keep the haul lean with a `build_src_filter`. Only the bits we actually test hitch a ride—`test_mainUnity.cpp`, `Arpeggiator.cpp`, `MIDIHandler.cpp`, plus `Globals.cpp` and `Utility.cpp` so the clock math and tapped BPM global keep time. `DisplayManager::registerInteraction()` gets faked in `test/DisplayManagerStub.cpp` so the UI stays out of the link step. If anything in that pile won't compile, Unity will scream before you ever flash a board.
 
+### VS Code's flaky build staging
+
+If VS Code yells about `firmware/test/DisplayManagerStub.cpp` and a missing `.sconsign311.dblite`, that's SCons trying to log its dependency cache before PlatformIO finished birthing the `.pio/build/<env>` directory. We now strong-arm that folder into existence in `scripts/deprecated_copy_flag.py`, but if you see the error again, nuke `.pio/` and rerun `pio test -e teensy40_unity` from `firmware/` so the script can repave the path.
+
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
 
