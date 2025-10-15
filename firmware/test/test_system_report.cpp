@@ -3,9 +3,6 @@
 #include <ArduinoJson.h>
 #include "sys/report.h"
 
-void setUp() {}
-void tearDown() {}
-
 void test_system_report() {
     String json = sys::report();
     StaticJsonDocument<256> doc;
