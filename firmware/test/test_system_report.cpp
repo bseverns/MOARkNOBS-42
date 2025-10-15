@@ -18,5 +18,8 @@ void test_system_report() {
     TEST_ASSERT_GREATER_THAN(0, strlen(doc["board"] | ""));
     TEST_ASSERT_GREATER_THAN(0, doc["f_cpu_hz"].as<long>());
     TEST_ASSERT_GREATER_THAN(0, strlen(doc["build_time"] | ""));
-    sys::printReport(Serial);
+    // Blast the report over Serial1 so the Teensy never blocks on the USB CDC
+    // port during tests. The Unity shim already pipes Serial1 through
+    // unityOutputChar, so we reuse that lane instead of poking plain Serial.
+    sys::printReport(Serial1);
 }
