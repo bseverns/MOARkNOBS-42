@@ -50,5 +50,5 @@
         "typeinfo": "cpp",
         "map": "cpp"
     },
-    "cmake.sourceDirectory": "C:/Users/Ben/Documents/GitHub/benzknober/firmware/lib/Adafruit-GFX-Library-master"
+    "cmake.sourceDirectory": "${workspaceFolder}/firmware/lib/Adafruit-GFX-Library-master"
 }
