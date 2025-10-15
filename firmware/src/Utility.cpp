@@ -133,11 +133,28 @@ void Utility::displayCenteredText(Adafruit_SSD1306 &display, const char *text) {
     display.display();
 }
 
+// Adafruit keeps flip-flopping between SSD1306_WHITE and SSD1306_COLOR_WHITE. We don't
+// particularly care which fad is in vogue, we just want white pixels. Route everything
+// through a helper that resolves whichever constant exists at compile time and falls back to
+// the traditional "1 means on" vibe if neither macro shows up.
+namespace {
+inline uint16_t resolveDisplayWhite() {
+#if defined(SSD1306_WHITE)
+    return SSD1306_WHITE;
+#elif defined(SSD1306_COLOR_WHITE)
+    return SSD1306_COLOR_WHITE;
+#else
+    return 1;
+#endif
+}
+} // namespace
+
 void Utility::displayStatus(Adafruit_SSD1306 &display, const char *status, unsigned long duration) {
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextSize(1); // Standard text size
-    display.setTextColor(SSD1306_COLOR_WHITE);
+    const uint16_t textColor = resolveDisplayWhite();
+    display.setTextColor(textColor);
     display.println(status);
     display.display();
     delay(duration); // Hold the status for the given duration
@@ -149,7 +166,8 @@ void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
                             const char *envelopeMode) {
     display.clearDisplay();
     display.setTextSize(1);
-    display.setTextColor(SSD1306_COLOR_WHITE);
+    const uint16_t textColor = resolveDisplayWhite();
+    display.setTextColor(textColor);
 
     // Display beat position
     display.setCursor(0, 0);
