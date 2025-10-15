@@ -11,8 +11,8 @@
 
 // Hardware snapshot so the tests can lean on mux pin definitions without
 // hauling in the full Globals.cpp (and its SD/Serial baggage).
-HardwareConfig hwConfig = {0, 0, 0, 16, 6, 8, NUM_BUTTONS, 1, 1, 1, 1, {2, 3, 4, 5},
-                           {6, 7, 8, 9}, A0, A1, A2};
+HardwareConfig hwConfig = {0,  0,  0, 16, 6, 8, NUM_BUTTONS, 1, 1, 1, 1, {2, 3, 4, 5}, {6, 7, 8, 9},
+                           A0, A1, A2};
 
 // Globals that the firmware normally defines in Globals.cpp.
 uint32_t g_resetCause = 0;
@@ -52,11 +52,9 @@ ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
 
 // Ditto for PotentiometerManager: we just need a predictable sandbox for
 // potLastValues, so the constructor skips any real hardware twiddling.
-PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins,
-                                           const uint8_t *secondaryPins,
+PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
                                            uint8_t analog)
-    : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins),
-      analogPin(analog) {
+    : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins), analogPin(analog) {
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         potChannels[i] = 1;
         potCCNumbers[i] = i;
@@ -97,9 +95,7 @@ void SeedBoxLink::begin(::MIDIHandler *handler) {
 
 void SeedBoxLink::update() {}
 
-bool SeedBoxLink::handleControlChange(uint8_t, uint8_t, uint8_t) {
-    return false;
-}
+bool SeedBoxLink::handleControlChange(uint8_t, uint8_t, uint8_t) { return false; }
 
 void SeedBoxLink::handleSysEx(const uint8_t *, uint16_t) {}
 
