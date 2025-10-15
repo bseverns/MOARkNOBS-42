@@ -133,6 +133,14 @@ void Utility::displayCenteredText(Adafruit_SSD1306 &display, const char *text) {
     display.display();
 }
 
+// Adafruit can't decide whether WHITE is spelled with or without "COLOR".
+// Keep both spellings alive so whichever version PlatformIO drags in stays happy.
+#if defined(SSD1306_COLOR_WHITE) && !defined(SSD1306_WHITE)
+#define SSD1306_WHITE SSD1306_COLOR_WHITE
+#elif defined(SSD1306_WHITE) && !defined(SSD1306_COLOR_WHITE)
+#define SSD1306_COLOR_WHITE SSD1306_WHITE
+#endif
+
 void Utility::displayStatus(Adafruit_SSD1306 &display, const char *status, unsigned long duration) {
     display.clearDisplay();
     display.setCursor(0, 0);
