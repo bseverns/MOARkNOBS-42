@@ -171,11 +171,11 @@ void ConfigManager::begin(std::vector<uint8_t> &potChannels) {
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         loadSlot(i, slots[i]);
     }
-    // 2) Pull out the existing pot → CC mappings
-    //    (assuming _stored.potCCNumbers was filled by readEEPROM)
+    // 2) Pull out the existing pot → MIDI channel assignments
+    //    (assuming _stored.potChannels was filled by readEEPROM)
     potChannels.clear();
     for (uint8_t i = 0; i < _numPots; ++i) {
-        potChannels.push_back(_stored.potCCNumbers[i]);
+        potChannels.push_back(_stored.potChannels[i]);
     }
 }
 

@@ -81,7 +81,7 @@ struct ButtonStateMachine {
  * variables.
  */
 struct ButtonManagerContext {
-    std::vector<uint8_t> &potChannels;        // Mapping of pot indices to CC channels
+    std::vector<uint8_t> &potChannels;        // Mapping of pot indices to MIDI channels
     uint8_t &activePot;                       // Currently selected potentiometer index
     uint8_t &activeChannel;                   // MIDI channel to send CC on
     bool &envelopeFollowMode;                 // Flag: envelope-following mode active
