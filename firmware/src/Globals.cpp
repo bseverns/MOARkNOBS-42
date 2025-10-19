@@ -1,5 +1,6 @@
 #include "Globals.h"
 #include <Arduino.h>
+#include <algorithm>
 
 #if __has_include(<ArduinoJson.h>)
 #if defined(USB_MIDI_STUB)
@@ -81,13 +82,13 @@ static void loadFromJson(HardwareConfig &cfg) {
     File f = SD.open("/hardware_config.json");
     if (!f)
         return;
-    // Punk rock move: allocate exactly what the config file demands.
-    // The old 256B static doc would thrash if the JSON grew; this way we
-    // size the DynamicJsonDocument based on the file's byte count and keep
-    // the stack chill.
-    DynamicJsonDocument doc(f.size());
+    // Punk rock move: allocate pretty close to what the config file demands,
+    // but pad it so the parser has headroom for metadata.
+    const size_t capacity = std::max<size_t>(512, f.size() + 64);
+    DynamicJsonDocument doc(capacity);
     DeserializationError err = deserializeJson(doc, f);
     if (err) {
+        Serial.printf("hardware_config.json parse failed: %s\n", err.c_str());
         f.close();
         return;
     }
