@@ -41,7 +41,7 @@ uint8_t serialBufferIndex = 0;   // Cursor into serialBuffer; resets on newline 
 bool webSerialStreaming = false; // Goes true when the browser hollers HELLO and stays that way
 
 // Global objects
-std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI CC value
+std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI channel
 std::map<int, int> potToEnvelopeMap; // Crosswalk from pot index to its envelope follower partner
 std::queue<String> commandQueue;     // Serial command backlog waiting for mid-tier processing
 MIDIHandler midiHandler;             // Central MIDI traffic cop slinging bytes over USB + DIN
@@ -536,7 +536,7 @@ void setup() {
     pinMode(VREF_ADC_PIN, INPUT);
     g_vref = Utility::readVrefADC(VREF_ADC_PIN);
 
-    // Load per-slot EEPROM into RAM, and pot→CC into potChannels[]
+    // Load per-slot EEPROM into RAM, and pot→channel data into potChannels[]
     configManager.begin(potChannels);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
     bool baselinesLoaded = configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);

@@ -110,7 +110,7 @@ class ConfigManager {
 
     /**
      * Initialise the subsystem and load settings from EEPROM. Populates
-     * potChannels with the stored pot→CC map.
+     * potChannels with the stored pot→MIDI-channel map.
      */
     void begin(std::vector<uint8_t> &potChannels);
 
@@ -149,7 +149,10 @@ class ConfigManager {
     /** Write all configuration data to EEPROM with backup verification. */
     void saveConfiguration();
 
-    /** Load configuration from EEPROM. Returns false if data was invalid. */
+    /**
+     * Load configuration from EEPROM. Returns false if data was invalid.
+     * Fills potChannels with the persisted pot→channel map.
+     */
     bool loadConfiguration(std::vector<uint8_t> &potChannels,
                            uint16_t base = EEPROM_PROFILE_START(0));
 
@@ -266,7 +269,7 @@ class ConfigManager {
     uint16_t calculateCRC() const;                // compute config CRC
 
     struct StoredConfig {
-        std::array<uint8_t, NUM_POTS> potChannels;  //!< saved pot→CC map
+        std::array<uint8_t, NUM_POTS> potChannels;  //!< saved pot→channel map
         std::array<uint8_t, NUM_POTS> potCCNumbers; //!< saved CC numbers
         uint16_t version = 0;                       //!< config schema version
         uint16_t crc = 0;                           //!< integrity check value
