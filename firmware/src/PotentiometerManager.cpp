@@ -4,6 +4,7 @@
 
 #include "PotentiometerManager.h"
 #include <EEPROM.h>
+#include "ConfigManager.h"
 #include "Globals.h"
 #include "Utility.h"
 #include "Log.h"
@@ -148,9 +149,10 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
 void PotentiometerManager::loadFromEEPROM() {
     LOG_PRINTLN("Loading potentiometer settings from EEPROM...");
     for (uint8_t i = 0; i < NUM_POTS; i++) {
-        int address = i * 2;
-        potChannels[i] = EEPROM.read(address);
-        potCCNumbers[i] = EEPROM.read(address + 1);
+        uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
+        uint16_t ccAddress = EEPROM_POT_CC + i;
+        potChannels[i] = EEPROM.read(channelAddress);
+        potCCNumbers[i] = EEPROM.read(ccAddress);
     }
 }
 
@@ -159,15 +161,19 @@ void PotentiometerManager::resetEEPROM() {
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         potChannels[i] = 1;  // Default MIDI channel
         potCCNumbers[i] = i; // Default CC number
-        EEPROM.update(i * 2, potChannels[i]);
-        EEPROM.update(i * 2 + 1, potCCNumbers[i]);
+        uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
+        uint16_t ccAddress = EEPROM_POT_CC + i;
+        EEPROM.update(channelAddress, potChannels[i]);
+        EEPROM.update(ccAddress, potCCNumbers[i]);
     }
 }
 
 void PotentiometerManager::saveToEEPROM() {
     for (uint8_t i = 0; i < NUM_POTS; i++) {
-        EEPROM.update(i * 2, potChannels[i]);
-        EEPROM.update(i * 2 + 1, potCCNumbers[i]);
+        uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
+        uint16_t ccAddress = EEPROM_POT_CC + i;
+        EEPROM.update(channelAddress, potChannels[i]);
+        EEPROM.update(ccAddress, potCCNumbers[i]);
     }
 }
 
