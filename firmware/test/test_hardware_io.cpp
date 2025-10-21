@@ -54,16 +54,6 @@ class ScopedSequence {
 
 } // namespace
 
-void setUp() {
-    hardware::resetAnalogReadProvider();
-    hardware::resetDigitalReadProvider();
-}
-
-void tearDown() {
-    hardware::resetAnalogReadProvider();
-    hardware::resetDigitalReadProvider();
-}
-
 void test_scoped_analog_provider_nesting() {
     hardware::ScopedAnalogReadProvider outer(stubAnalogA);
     TEST_ASSERT_EQUAL(111, hardware::readAnalog(0));
