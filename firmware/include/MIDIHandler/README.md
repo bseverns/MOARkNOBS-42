@@ -42,6 +42,8 @@ More context lives in the [main firmware README](../../README.md).
 - `sendControlChange(cc, value, channel)` – fire a CC.
 - `sendModWheel(value, channel)` – slam CC1 like the synth came with a mohawk.
 - `sendClock()` – spit out a raw 0xF8 when you want to be the metronome.
+- `generateClockTick()` – stamp an internal clock pulse that also mirrors out over MIDI.
+- `clockTickCount()` – running tally of every pulse heard or generated so arpeggiators can stay glued to the grid.
 - `processIncomingMIDI()` – keep an ear on incoming bytes **and** spew MIDI clock when `g_tappedBPM` says so.
 - `handleMIDI(type, channel, data1, data2)` – strong-typed dispatch using `midi::MidiType` so stray bytes don't crash the party.
 

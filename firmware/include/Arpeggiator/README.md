@@ -23,6 +23,7 @@ Get the bird's-eye in the [main firmware README](../../README.md).
 - `setBaseNoteSource(src)` – choose who owns the root (`Pot`, `Slot`, or `External`).
 - `setBaseNote(note)` / `setBaseNoteCallback(fn)` – shove in a fresh base note or a function that returns one.
 - `update(midi, cfg, pots)` – call every loop so it keeps drumming.
+- `update(midi, cfg, pots)` – call every loop so it keeps drumming; it watches `MIDIHandler::clockTickCount()` so multiple clock listeners can party without stepping on each other.
 
 `noteOffset(shape, step, patternLen)` handles the pitch math. `patternLen`
 (2–16) sets how many semitone rungs the arp climbs before wrapping. `noteOffset`
@@ -55,6 +56,8 @@ void loop() {
   arp.update(midi, cfg, pots);
 }
 ```
+
+When you call `start()`, the arp latches to whatever tick count the MIDI handler has already seen and waits for the next pulse before spitting notes. That keeps it phase-locked whether the groove comes from DIN, USB, or the internal clock fallback.
 
 See the guts in [Arpeggiator.h](../Arpeggiator.h).
 

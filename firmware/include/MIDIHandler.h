@@ -9,6 +9,7 @@
 #else
 class HardwareSerial;
 #endif
+#include <cstdint>
 #include "DisplayManager.h"
 #include "MIDITypes.h"
 #include <MIDI.h>
@@ -88,6 +89,12 @@ class MIDIHandler {
     void sendPitchBend(int16_t bend, uint8_t channel);
     void sendClock();
 
+    /** Emit an internal MIDI clock pulse so in-box features stay in sync. */
+    void generateClockTick();
+
+    /** Total MIDI clock pulses observed since boot. */
+    uint32_t clockTickCount() const { return _clockTickCount; }
+
     /** MIDI clock helpers. */
     bool isClockTick();
     void clearClockTick();
@@ -98,6 +105,7 @@ class MIDIHandler {
 
   private:
     bool clockTick = false;
+    uint32_t _clockTickCount = 0;
     unsigned long lastExternalClock = 0;
     unsigned long lastInternalTick = 0;
     DisplayManager *_displayManager = nullptr;

@@ -52,7 +52,8 @@ ConfigManager makeConfig() {
 
 MIDIHandler primeMidi() {
     MIDIHandler midi;
-    midi.clockTick = true;
+    midi.clockTick = false;
+    midi._clockTickCount = 0;
     return midi;
 }
 
@@ -95,7 +96,8 @@ void test_pot_root_drives_default() {
     pots.potLastValues[0] = 1023; // slam the knob to max
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots); // latch clock baseline
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(127, usbMIDI.lastNoteOn);
@@ -119,7 +121,8 @@ void test_slot_root_wins_over_pot() {
     pots.potLastValues[0] = 1023; // would map to 127 if we trusted the pot
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(60, usbMIDI.lastNoteOn);
@@ -144,7 +147,8 @@ void test_external_callback_sets_root() {
     pots.potLastValues[1] = 256; // stray value that should be ignored
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(72, usbMIDI.lastNoteOn);
@@ -168,7 +172,8 @@ void test_external_base_note_without_callback() {
     pots.potLastValues[2] = 700;
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(55, usbMIDI.lastNoteOn);
@@ -191,7 +196,8 @@ void test_external_missing_inputs_falls_back_to_pot() {
     pots.potLastValues[3] = 256; // maps to 31-ish once scaled
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(Utility::mapToMidiValue(256) % 128, usbMIDI.lastNoteOn);

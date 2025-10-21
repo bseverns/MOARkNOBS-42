@@ -105,4 +105,19 @@ void test_drop_unsupported_usb_type() {
     TEST_ASSERT_EQUAL_UINT32(0, mh.lastInternalTick);
 }
 
+void test_usb_clock_tick_advances_counter() {
+    MIDIHandler mh;
+    mh.clockTick = false;
+    mh._clockTickCount = 0;
+    usbMIDI.nextRead = true;
+    usbMIDI.nextType = midi::Tick;
+
+    mh.processIncomingMIDI();
+
+    TEST_ASSERT_EQUAL_UINT32(1, mh.clockTickCount());
+    TEST_ASSERT_TRUE(mh.isClockTick());
+    mh.clearClockTick();
+    TEST_ASSERT_FALSE(mh.isClockTick());
+}
+
 #endif // UNIT_TEST

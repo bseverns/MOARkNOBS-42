@@ -152,8 +152,9 @@ void MIDIHandler::sendSysEx(const uint8_t *data, uint16_t length) {
 }
 
 void MIDIHandler::handleClockTick() {
-    // Flip the tick flag so listeners know a pulse went down.
-    clockTick = !clockTick;
+    // Flag that a new pulse landed so every listener can catch the beat.
+    clockTick = true;
+    ++_clockTickCount;
     // Mirror the tick to any enabled outputs.
     sendClock();
 }
@@ -389,6 +390,11 @@ void MIDIHandler::sendClock() {
     }
 #endif
     _txCount++;
+}
+
+void MIDIHandler::generateClockTick() {
+    lastInternalTick = now();
+    handleClockTick();
 }
 
 void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {

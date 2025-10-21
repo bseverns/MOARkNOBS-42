@@ -95,6 +95,8 @@ class Arpeggiator {
     BaseNoteSource _baseNoteSrc;          //!< Who owns the root
     bool _baseNoteIsSet;                  //!< True once setBaseNote() has been called
     std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
+    uint32_t _lastClockTickCount;         //!< Clock tick counter snapshot for sync
+    bool _clockSynced;                    //!< True once we've latched onto the current beat
 };
 
 #endif // ARPEGGIATOR_H

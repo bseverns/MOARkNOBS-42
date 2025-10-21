@@ -18,6 +18,7 @@ void test_send_nrpn();
 void test_receive_nrpn();
 void test_send_sysex();
 void test_drop_unsupported_usb_type();
+void test_usb_clock_tick_advances_counter();
 #endif
 
 void setup() {
@@ -39,6 +40,7 @@ void setup() {
     RUN_TEST(test_receive_nrpn);
     RUN_TEST(test_send_sysex);
     RUN_TEST(test_drop_unsupported_usb_type);
+    RUN_TEST(test_usb_clock_tick_advances_counter);
 #endif
     UNITY_END();
 }

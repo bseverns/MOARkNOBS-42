@@ -96,10 +96,15 @@ ButtonManagerContext buttonContext = {potChannels,        activePot,      active
 void processMIDI() {
     midiHandler.processIncomingMIDI();
 
-    if (midiHandler.isClockTick()) {
+    static uint32_t lastDisplayTick = 0;
+    uint32_t tickCount = midiHandler.clockTickCount();
+    if (tickCount != lastDisplayTick) {
+        uint32_t diff = tickCount - lastDisplayTick;
+        lastDisplayTick = tickCount;
+
         lastClockTime = now();
-        // Advance beat
-        midiBeatPosition = (midiBeatPosition + 1) % 8;
+        // Advance beat by however many ticks landed since the last pass
+        midiBeatPosition = (midiBeatPosition + diff) % 8;
 
         // Perform clock-tied updates
         displayManager.updateDisplay(midiBeatPosition,
@@ -110,7 +115,6 @@ void processMIDI() {
         // Record the last time a clock tick landed
         lastClockTime = now();
 
-        // Clear the clock flag
         midiHandler.clearClockTick();
     }
 }
@@ -407,7 +411,7 @@ void processInternalClock() {
         lastClockTime = now;
 
         // Chuck out a clock tick if we're allowed to shout
-        midiHandler.sendClock();
+        midiHandler.generateClockTick();
 
         // Advance beat and refresh the screen so the groove stays visible
         midiBeatPosition = (midiBeatPosition + 1) % 8;
