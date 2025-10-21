@@ -6,6 +6,7 @@
 #include "EnvelopeFollower.h"
 #include "Globals.h"
 #include "ConfigManager.h"
+#include "Hardware/IO.h"
 #include "Utility.h"
 #include "TimeUtils.h"
 #include "Arpeggiator.h"
@@ -135,7 +136,7 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
             setMuxFast(_cfg.muxcPins, c);
             waitForMuxSettle();
-            int v = analogRead(_cfg.buttonMuxAnalogPin);
+            int v = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
             rawStates[r * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
         digitalWrite(_cfg.rowDriverPin, LOW);
@@ -825,7 +826,7 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
             setMuxFast(_cfg.muxcPins, c);
             waitForMuxSettle();
-            int v = analogRead(_cfg.buttonMuxAnalogPin);
+            int v = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
             rowValues[c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
         digitalWrite(_cfg.rowDriverPin, LOW);
@@ -840,7 +841,7 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
  * the multiplexer used for slot buttons.
  */
 bool ButtonManager::readControlButton(uint8_t buttonIndex) {
-    return (digitalRead(_controlPins[buttonIndex]) == LOW);
+    return (hardware::readDigital(_controlPins[buttonIndex]) == LOW);
 }
 
 void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
@@ -848,7 +849,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     for (uint8_t ch = 6; ch < 12; ++ch) {
         selectMux(0, ch);
         waitForMuxSettle();
-        int val = analogRead(_cfg.buttonMuxAnalogPin);
+        int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
         bool pressed = (val < BUTTON_PRESS_THRESHOLD);
         uint8_t idx = ch - 6;
         bool stable =
@@ -878,7 +879,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         uint8_t ch = 12 + i;
         selectMux(0, ch);
         waitForMuxSettle();
-        int val = analogRead(_cfg.buttonMuxAnalogPin);
+        int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
         _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
     }
 }

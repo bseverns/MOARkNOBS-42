@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "Hardware/IO.h"
 
 #ifndef BENCH_NOISE_LOG
 #define BENCH_NOISE_LOG 0
@@ -16,7 +17,7 @@ inline void benchNoiseRun(uint8_t controlId, uint8_t pin, uint32_t durationMs) {
     uint32_t next = start;
     while (millis() - start < durationMs) {
         if (millis() >= next) {
-            int raw = analogRead(pin);
+            int raw = hardware::readAnalog(pin);
             Serial.print(millis());
             Serial.print(',');
             Serial.print(controlId);

@@ -8,6 +8,7 @@
 
 #include "Arpeggiator.h"
 #include "ConfigManager.h"
+#include "Hardware/IO.h"
 #include "Globals.h"
 #include "Utility.h"
 #include "usb_midi.h"
@@ -66,9 +67,16 @@ void prepSlot(ConfigManager &cfg, uint8_t idx, MIDIMessageType type, uint8_t cha
 }
 } // namespace
 
-// Unity expects these, even if they just wave from the sidelines.
-void setUp() {}
-void tearDown() {}
+// Unity expects these, and now they moonlight as our mock reset crew.
+void setUp() {
+    hardware::resetAnalogReadProvider();
+    hardware::resetDigitalReadProvider();
+}
+
+void tearDown() {
+    hardware::resetAnalogReadProvider();
+    hardware::resetDigitalReadProvider();
+}
 
 void test_start_stop_cycle() {
     Arpeggiator arp;
