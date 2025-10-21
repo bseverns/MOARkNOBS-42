@@ -98,6 +98,11 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Captured the debugging rituals we keep repeating—scoped button-matrix traces, WebSerial console macros, and the “use Serial1, not Serial” mantra—so future us stops spelunking commit logs for the same hints.
 - Logged this update right as it landed because history that isn’t timestamped when the solder fumes are still in the air might as well be fiction.
 - *Documentation isn’t a tombstone; it’s a mosh pit and we just pushed closer to the stage.*
+- **Mid October:** ConfigManager now pushes its stored MIDI channel map straight into the live managers, PotentiometerManager tracks the same EEPROM offsets, and the globals JSON loader grabbed extra breathing room so oversized hardware presets stop choking the boot sequence.
+- **Mid October:** `test_system_report.cpp` pipes its Unity chatter through the same `PrintTarget`/`Serial1` combo the rest of the harness uses, dodging the phantom output problem that kept us guessing.
+- **Late October:** Dropped `demo_button_ef_usb_midi.cpp`, a button-plus-envelope USB MIDI sketch that shoves note-ons at your DAW while the envelope follower breathes CC sweeps—perfect for sanity checking the transport without hauling in the full rig.
+- **October 31:** Punched `v0.2.0` out the door with the diagnostic boot pages, verbose reset banner, USB MIDI demo, and the fresh release/CI discipline baked into the repo so contributors inherit a rig that actually proves itself.
+- *Feels good when the tooling jams as hard as the hardware—documentation, tests, and demo riffs all screaming through the same signal chain.*
 
 ## Overview
 
