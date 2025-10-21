@@ -159,7 +159,8 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
 
         switch (slot.type) {
         case MIDIMessageType::CC:
-            midi.sendControlChange(slot.data1, constrain(potVal + offset, 0, 127), slot.midiChannel);
+            midi.sendControlChange(slot.data1, constrain(potVal + offset, 0, 127),
+                                   slot.midiChannel);
             break;
         case MIDIMessageType::Note: {
             uint8_t note = constrain(root + offset, 0, 127);

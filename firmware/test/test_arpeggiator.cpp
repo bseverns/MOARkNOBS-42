@@ -228,5 +228,5 @@ void test_catches_up_when_ticks_pile_up() {
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT32(beforeTx + 2, midi._txCount); // two notes fired to catch up
-    TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastNoteOn);         // second note in the UP pattern
+    TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastNoteOn);        // second note in the UP pattern
 }
