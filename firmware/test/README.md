@@ -54,6 +54,7 @@ runner is pure line parsing, so hack away.
 | `test/test_midi_handler.cpp` | MIDIHandler program/aftertouch/pitch bend/NRPN/SysEx routing – fakes the pipes, so keep it off hardware |
 | `test/test_arpeggiator.cpp` | Arpeggiator start/stop sanity |
 | `test/test_biquad_filter.cpp` | BiquadFilter low‑pass vs high‑pass math |
+| `test/demo_button_ef_usb_midi.cpp` | Punk-simple USB MIDI hardware demo: one button, one envelope follower |
 
 ### Picking the right test
 
@@ -157,6 +158,26 @@ DisplayManager: shows static test data on all 3 lines
 Run this and check it with your eyes. No automation. Human-in-the-loop sanity checks, every time.
 
 Interaction: Step manually by hitting Enter in the serial monitor between stages.
+
+### demo_button_ef_usb_midi.cpp
+
+Location: test/demo_button_ef_usb_midi.cpp
+
+This is the "show it to the synth club" sketch. It ditches the whole firmware stack and just wires a single control button (pin 12) and one envelope follower input (A0) straight into USB MIDI. Flash it when you want to prove the analog front-end works without hauling the full UI along.
+
+Upload it like so:
+
+```bash
+pio run -d firmware -e teensy40_button_ef_demo -t upload
+```
+
+What you get once it boots:
+
+* Serial spits a quick setup spiel while it samples a noise-floor baseline.
+* Button presses blast middle C on channel 1.
+* The envelope jack maps to MIDI CC 21 with a fast smoothing tail. Wiggle your source and watch MIDI Monitor light up.
+
+Pro tip: keep the rig quiet for a hot second after reset so the baseline stays classy. After that, mash away.
 
 ### unified_t.cpp
 
