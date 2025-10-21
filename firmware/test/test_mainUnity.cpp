@@ -7,6 +7,7 @@ void test_slot_root_wins_over_pot();
 void test_external_callback_sets_root();
 void test_external_base_note_without_callback();
 void test_external_missing_inputs_falls_back_to_pot();
+void test_catches_up_when_ticks_pile_up();
 void test_lowpass_highpass_response();
 void test_system_report();
 void test_scoped_analog_provider_nesting();
@@ -22,6 +23,8 @@ void test_send_nrpn();
 void test_receive_nrpn();
 void test_send_sysex();
 void test_drop_unsupported_usb_type();
+void test_usb_clock_tick_advances_counter();
+void test_generate_clock_tick_advances_counter();
 #endif
 
 void setup() {
@@ -36,6 +39,7 @@ void setup() {
     RUN_TEST(test_external_callback_sets_root);
     RUN_TEST(test_external_base_note_without_callback);
     RUN_TEST(test_external_missing_inputs_falls_back_to_pot);
+    RUN_TEST(test_catches_up_when_ticks_pile_up);
     RUN_TEST(test_lowpass_highpass_response);
     RUN_TEST(test_system_report);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
@@ -47,6 +51,8 @@ void setup() {
     RUN_TEST(test_receive_nrpn);
     RUN_TEST(test_send_sysex);
     RUN_TEST(test_drop_unsupported_usb_type);
+    RUN_TEST(test_usb_clock_tick_advances_counter);
+    RUN_TEST(test_generate_clock_tick_advances_counter);
 #endif
     UNITY_END();
 }

@@ -53,7 +53,9 @@ ConfigManager makeConfig() {
 
 MIDIHandler primeMidi() {
     MIDIHandler midi;
-    midi.clockTick = true;
+    midi.clockTick = false;
+    midi._clockTickCount = 0;
+    midi._txCount = 0;
     return midi;
 }
 
@@ -103,7 +105,8 @@ void test_pot_root_drives_default() {
     pots.potLastValues[0] = 1023; // slam the knob to max
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots); // latch clock baseline
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(127, usbMIDI.lastNoteOn);
@@ -127,7 +130,8 @@ void test_slot_root_wins_over_pot() {
     pots.potLastValues[0] = 1023; // would map to 127 if we trusted the pot
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(60, usbMIDI.lastNoteOn);
@@ -152,7 +156,8 @@ void test_external_callback_sets_root() {
     pots.potLastValues[1] = 256; // stray value that should be ignored
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(72, usbMIDI.lastNoteOn);
@@ -176,7 +181,8 @@ void test_external_base_note_without_callback() {
     pots.potLastValues[2] = 700;
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(55, usbMIDI.lastNoteOn);
@@ -199,10 +205,36 @@ void test_external_missing_inputs_falls_back_to_pot() {
     pots.potLastValues[3] = 256; // maps to 31-ish once scaled
 
     MIDIHandler midi = primeMidi();
-
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(Utility::mapToMidiValue(256) % 128, usbMIDI.lastNoteOn);
     TEST_ASSERT_EQUAL_UINT8(usbMIDI.lastNoteOn, cfg.getSlot(3).arpNote);
     TEST_ASSERT_EQUAL_UINT8(6, usbMIDI.lastNoteOnChannel);
+}
+
+void test_catches_up_when_ticks_pile_up() {
+    MidiUsbGuard guard;
+    Arpeggiator arp;
+    arp.setLength(2);
+    arp.setPatternLength(4);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Pot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 0);
+
+    auto pots = makePots();
+    pots.potLastValues[0] = 0;
+
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots); // latch the current clock snapshot
+
+    midi._clockTickCount += 4; // pretend four ticks landed while we were away
+    uint32_t beforeTx = midi._txCount;
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTx + 2, midi._txCount); // two notes fired to catch up
+    TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastNoteOn);        // second note in the UP pattern
 }

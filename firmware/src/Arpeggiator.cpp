@@ -21,7 +21,7 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0), _shape(UP), _step(0),
       _patternLength(4), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false),
-      _baseNoteCb(nullptr) {}
+      _baseNoteCb(nullptr), _lastClockTickCount(0), _clockSynced(false) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -31,6 +31,7 @@ void Arpeggiator::start(uint8_t slotIdx) {
     _active = true;
     _tickCounter = 0;
     _step = 0;
+    _clockSynced = false;
 }
 
 // Stop arpeggiation immediately. update() will simply return once inactive.
@@ -86,21 +87,27 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     if (!_active)
         return;
 
-    // Ride the global MIDI clock. No tick, no note.
-    if (!midi.isClockTick())
-        return;
-    midi.clearClockTick(); // consume the pulse so we don't double-dip
+    uint32_t tickCount = midi.clockTickCount();
+    if (!_clockSynced) {
+        _lastClockTickCount = tickCount;
+        _clockSynced = true;
+        return; // latch to the current beat and wait for the next pulse
+    }
 
-    if (++_tickCounter < _lengthTicks)
-        return;       // not time yet
-    _tickCounter = 0; // reset for the next hit
+    uint32_t elapsed = tickCount - _lastClockTickCount;
+    if (elapsed == 0)
+        return; // nothing new from the clock
+    _lastClockTickCount = tickCount;
+
+    uint16_t ticks = static_cast<uint16_t>(_tickCounter) + static_cast<uint16_t>(elapsed);
+    uint16_t events = ticks / _lengthTicks;
+    _tickCounter = static_cast<uint8_t>(ticks % _lengthTicks);
+    if (events == 0)
+        return;
 
     MIDISlot &slot = cfg.getSlot(_slotIdx);
     if (!slot.active)
         return;
-
-    int8_t offset = noteOffset(_shape, _step, _patternLength);
-    _step = (_step + 1) % _patternLength; // advance and wrap within the pattern
 
     auto clampMidi = [](int value) { return static_cast<uint8_t>(constrain(value, 0, 127)); };
 
@@ -144,38 +151,44 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
 
     slot.arpNote = root; // keep last root around for anyone else who cares
     uint8_t potVal = root;
+    unsigned long noteOffDelay = (hwConfig.midiTaskInterval * _lengthTicks) / 2;
 
-    switch (slot.type) {
-    case MIDIMessageType::CC:
-        midi.sendControlChange(slot.data1, constrain(potVal + offset, 0, 127), slot.midiChannel);
-        break;
-    case MIDIMessageType::Note: {
-        uint8_t note = constrain(root + offset, 0, 127);
-        midi.sendNoteOn(note, potVal, slot.midiChannel);
-        // Clock-synced release: fire a note-off halfway to the next tick hit.
-        unsigned long noteOffDelay = (hwConfig.midiTaskInterval * _lengthTicks) / 2;
-        Utility::schedulerHigh.addTask(
-            [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); }, noteOffDelay,
-            false);
-        break;
-    }
-    case MIDIMessageType::PitchBend: {
-        int raw = usedPot ? potRaw : Utility::mapToRange(root, 0, 127, 0, 1023);
-        int16_t bend = map(raw, 0, 1023, -8192, 8191) + offset * 128;
-        bend = constrain(bend, -8192, 8191);
-        midi.sendPitchBend(bend, slot.midiChannel);
-        break;
-    }
-    case MIDIMessageType::ProgramChange:
-        midi.sendProgramChange(constrain(root + offset, 0, 127), slot.midiChannel);
-        break;
-    case MIDIMessageType::Aftertouch:
-        midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
-        break;
-    case MIDIMessageType::ModWheel:
-        midi.sendModWheel(constrain(potVal + offset, 0, 127), slot.midiChannel);
-        break;
-    default:
-        break;
+    for (uint16_t i = 0; i < events; ++i) {
+        int8_t offset = noteOffset(_shape, _step, _patternLength);
+        _step = (_step + 1) % _patternLength; // advance and wrap within the pattern
+
+        switch (slot.type) {
+        case MIDIMessageType::CC:
+            midi.sendControlChange(slot.data1, constrain(potVal + offset, 0, 127),
+                                   slot.midiChannel);
+            break;
+        case MIDIMessageType::Note: {
+            uint8_t note = constrain(root + offset, 0, 127);
+            midi.sendNoteOn(note, potVal, slot.midiChannel);
+            // Clock-synced release: fire a note-off halfway to the next tick hit.
+            Utility::schedulerHigh.addTask(
+                [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
+                noteOffDelay, false);
+            break;
+        }
+        case MIDIMessageType::PitchBend: {
+            int raw = usedPot ? potRaw : Utility::mapToRange(root, 0, 127, 0, 1023);
+            int16_t bend = map(raw, 0, 1023, -8192, 8191) + offset * 128;
+            bend = constrain(bend, -8192, 8191);
+            midi.sendPitchBend(bend, slot.midiChannel);
+            break;
+        }
+        case MIDIMessageType::ProgramChange:
+            midi.sendProgramChange(constrain(root + offset, 0, 127), slot.midiChannel);
+            break;
+        case MIDIMessageType::Aftertouch:
+            midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
+            break;
+        case MIDIMessageType::ModWheel:
+            midi.sendModWheel(constrain(potVal + offset, 0, 127), slot.midiChannel);
+            break;
+        default:
+            break;
+        }
     }
 }
