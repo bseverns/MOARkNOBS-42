@@ -37,8 +37,9 @@ void loop() {
 ### Map an analog read to MIDI 0‑127
 ```cpp
 #include "Utility.h"
+#include "Hardware/IO.h"
 
-int raw = analogRead(A0);
+int raw = hardware::readAnalog(A0);
 uint8_t midiValue = Utility::mapToMidiValue(raw);
 // midiValue now rides 0‑127
 ```

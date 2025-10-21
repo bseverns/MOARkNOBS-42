@@ -5,6 +5,7 @@
 #include "Utility.h"
 #include <Adafruit_SSD1306.h>
 #include <Arduino.h>
+#include "Hardware/IO.h"
 #include "TimeUtils.h"
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
@@ -332,7 +333,7 @@ float Utility::readVrefADC(uint8_t pin) {
     const uint8_t samples = 4;
     uint32_t total = 0;
     for (uint8_t i = 0; i < samples; ++i) {
-        total += analogRead(pin);
+        total += hardware::readAnalog(pin);
         delayMicroseconds(10);
     }
     float avg = static_cast<float>(total) / samples;

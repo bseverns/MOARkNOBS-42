@@ -9,6 +9,10 @@ void test_external_base_note_without_callback();
 void test_external_missing_inputs_falls_back_to_pot();
 void test_lowpass_highpass_response();
 void test_system_report();
+void test_scoped_analog_provider_nesting();
+void test_sequence_provider_cycles_values();
+void test_set_provider_returns_previous();
+void test_digital_provider_overrides_matrix_reads();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
 void test_aftertouch();
@@ -22,6 +26,10 @@ void test_drop_unsupported_usb_type();
 
 void setup() {
     UNITY_BEGIN();
+    RUN_TEST(test_scoped_analog_provider_nesting);
+    RUN_TEST(test_sequence_provider_cycles_values);
+    RUN_TEST(test_set_provider_returns_previous);
+    RUN_TEST(test_digital_provider_overrides_matrix_reads);
     RUN_TEST(test_start_stop_cycle);
     RUN_TEST(test_pot_root_drives_default);
     RUN_TEST(test_slot_root_wins_over_pot);

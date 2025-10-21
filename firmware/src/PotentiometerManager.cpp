@@ -6,6 +6,7 @@
 #include <EEPROM.h>
 #include "ConfigManager.h"
 #include "Globals.h"
+#include "Hardware/IO.h"
 #include "Utility.h"
 #include "Log.h"
 #include "bench_log_latency.h"
@@ -54,7 +55,7 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
     const int numSamples = 4; // Number of samples for averaging
 
     for (int i = 0; i < numSamples; i++) {
-        total += analogRead(pin); // Read analog value
+        total += hardware::readAnalog(pin); // Read analog value
         delayMicroseconds(10);    // Small delay for stability
     }
 
@@ -196,7 +197,7 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
     selectMuxBank(bank);
     selectPotBank(pot);
     delayMicroseconds(5);         // settle time
-    return analogRead(analogPin); // direct raw read
+    return hardware::readAnalog(analogPin); // direct raw read
 }
 
 void PotentiometerManager::setMidiCallback(

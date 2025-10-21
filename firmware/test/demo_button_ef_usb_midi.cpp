@@ -15,6 +15,7 @@
 #include <Arduino.h>
 #include <math.h>
 #include <usb_midi.h>
+#include "Hardware/IO.h"
 
 namespace {
 constexpr uint8_t kButtonPin = 12;   // control button #0
@@ -32,7 +33,7 @@ uint8_t lastCcValue = 0xFF;
 bool noteActive = false;
 uint32_t lastCcStamp = 0;
 
-uint16_t readRawEnvelope() { return analogRead(kEnvelopePin); }
+uint16_t readRawEnvelope() { return static_cast<uint16_t>(hardware::readAnalog(kEnvelopePin)); }
 
 void calibrateBaseline() {
     uint32_t total = 0;
@@ -72,7 +73,7 @@ void maybeSendEnvelope() {
 }
 
 void serviceButton() {
-    bool pressed = digitalRead(kButtonPin) == LOW;
+    bool pressed = hardware::readDigital(kButtonPin) == LOW;
     if (pressed && !noteActive) {
         usbMIDI.sendNoteOn(kNote, 100, kMidiChannel);
         noteActive = true;

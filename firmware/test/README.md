@@ -69,6 +69,10 @@ Say the OLED ghosts you mid-jam:
 
 `TestHelpers.cpp` anchors the control-button matrix in one spot so every test riffs from the same pin map. Include `TestHelpers.h` and you're good to shred without duplicating arrays.
 
+#### Hardware I/O fakes with a safety switch
+
+`Hardware/IO.h` is the new patch bay for `analogRead()` and `digitalRead()`. The default passthrough still hits the real ADC/GPIO on hardware, but tests can hijack the lines with `hardware::setAnalogReadProvider()`/`setDigitalReadProvider()` or the friendlier `Scoped…` wrappers. Feed it a lambda, spill out whatever fake voltage or button state you need, and Unity will believe you. Check `test/test_hardware_io.cpp` for the full recipe, including a tiny sequence generator that loops canned ADC readings while ButtonManager chews through its matrix. Use it to slam extreme values, bounce simulations, or timing edge cases without touching copper.
+
 ## Manual machine tests (`src/*_t.cpp`)
 
 When you need to stare the hardware in the face, grab a `src/*_t.cpp` sketch and drive it yourself.
