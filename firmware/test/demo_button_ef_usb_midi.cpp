@@ -23,8 +23,8 @@ constexpr uint8_t kMidiChannel = 1;  // 1-based MIDI channel
 constexpr uint8_t kNote = 60;        // middle C when the button fires
 constexpr uint8_t kEnvelopeCC = 21;  // CC number carrying the envelope
 constexpr uint32_t kCcIntervalMs = 8;
-constexpr float kBaselineLerp = 0.0025f;  // slow drift to follow noise floor
-constexpr float kEnvelopeLerp = 0.18f;    // snappy EWMA for envelope peaks
+constexpr float kBaselineLerp = 0.0025f; // slow drift to follow noise floor
+constexpr float kEnvelopeLerp = 0.18f;   // snappy EWMA for envelope peaks
 
 float baseline = 0.0f;
 float envelope = 0.0f;
@@ -32,13 +32,9 @@ uint8_t lastCcValue = 0xFF;
 bool noteActive = false;
 uint32_t lastCcStamp = 0;
 
-uint16_t readRawEnvelope()
-{
-    return analogRead(kEnvelopePin);
-}
+uint16_t readRawEnvelope() { return analogRead(kEnvelopePin); }
 
-void calibrateBaseline()
-{
+void calibrateBaseline() {
     uint32_t total = 0;
     constexpr uint16_t samples = 128;
     for (uint16_t i = 0; i < samples; ++i) {
@@ -49,14 +45,12 @@ void calibrateBaseline()
     envelope = 0.0f;
 }
 
-uint8_t levelToMidi(float level)
-{
+uint8_t levelToMidi(float level) {
     level = constrain(level, 0.0f, 1023.0f);
     return static_cast<uint8_t>(roundf((level / 1023.0f) * 127.0f));
 }
 
-void pumpEnvelope()
-{
+void pumpEnvelope() {
     float raw = static_cast<float>(readRawEnvelope());
     baseline = (1.0f - kBaselineLerp) * baseline + kBaselineLerp * raw;
     float delta = raw - baseline;
@@ -65,8 +59,7 @@ void pumpEnvelope()
     envelope = (1.0f - kEnvelopeLerp) * envelope + kEnvelopeLerp * delta;
 }
 
-void maybeSendEnvelope()
-{
+void maybeSendEnvelope() {
     uint32_t now = millis();
     if (now - lastCcStamp < kCcIntervalMs)
         return;
@@ -78,8 +71,7 @@ void maybeSendEnvelope()
     usbMIDI.sendControlChange(kEnvelopeCC, value, kMidiChannel);
 }
 
-void serviceButton()
-{
+void serviceButton() {
     bool pressed = digitalRead(kButtonPin) == LOW;
     if (pressed && !noteActive) {
         usbMIDI.sendNoteOn(kNote, 100, kMidiChannel);
@@ -90,8 +82,7 @@ void serviceButton()
     }
 }
 
-void drainUsbMidi()
-{
+void drainUsbMidi() {
     while (usbMIDI.read()) {
         // We don't react to incoming packets in this sketch; just keep
         // the Teensy USB stack from clogging.
@@ -100,8 +91,7 @@ void drainUsbMidi()
 
 } // namespace
 
-void setup()
-{
+void setup() {
     pinMode(kButtonPin, INPUT_PULLUP);
     pinMode(kEnvelopePin, INPUT);
     Serial.begin(115200);
@@ -116,8 +106,7 @@ void setup()
     usbMIDI.begin();
 }
 
-void loop()
-{
+void loop() {
     pumpEnvelope();
     maybeSendEnvelope();
     serviceButton();
