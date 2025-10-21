@@ -54,6 +54,7 @@ MIDIHandler primeMidi() {
     MIDIHandler midi;
     midi.clockTick = false;
     midi._clockTickCount = 0;
+    midi._txCount = 0;
     return midi;
 }
 
@@ -203,4 +204,29 @@ void test_external_missing_inputs_falls_back_to_pot() {
     TEST_ASSERT_EQUAL_UINT8(Utility::mapToMidiValue(256) % 128, usbMIDI.lastNoteOn);
     TEST_ASSERT_EQUAL_UINT8(usbMIDI.lastNoteOn, cfg.getSlot(3).arpNote);
     TEST_ASSERT_EQUAL_UINT8(6, usbMIDI.lastNoteOnChannel);
+}
+
+void test_catches_up_when_ticks_pile_up() {
+    MidiUsbGuard guard;
+    Arpeggiator arp;
+    arp.setLength(2);
+    arp.setPatternLength(4);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Pot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 0);
+
+    auto pots = makePots();
+    pots.potLastValues[0] = 0;
+
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots); // latch the current clock snapshot
+
+    midi._clockTickCount += 4; // pretend four ticks landed while we were away
+    uint32_t beforeTx = midi._txCount;
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTx + 2, midi._txCount); // two notes fired to catch up
+    TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastNoteOn);         // second note in the UP pattern
 }

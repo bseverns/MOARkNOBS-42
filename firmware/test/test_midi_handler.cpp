@@ -5,6 +5,8 @@
 #undef private
 #include <unity.h>
 
+extern bool g_clockOutEnabled;
+
 void test_program_change() {
     MIDIHandler mh;
     mh.handleMIDI(midi::ProgramChange, 2, 45, 0);
@@ -118,6 +120,23 @@ void test_usb_clock_tick_advances_counter() {
     TEST_ASSERT_TRUE(mh.isClockTick());
     mh.clearClockTick();
     TEST_ASSERT_FALSE(mh.isClockTick());
+}
+
+void test_generate_clock_tick_advances_counter() {
+    MIDIHandler mh;
+    mh.clockTick = false;
+    mh._clockTickCount = 0;
+    mh._txCount = 0;
+    g_clockOutEnabled = true;
+
+    mh.generateClockTick();
+
+    TEST_ASSERT_EQUAL_UINT32(1, mh.clockTickCount());
+    TEST_ASSERT_TRUE(mh.isClockTick());
+    TEST_ASSERT_EQUAL_UINT32(1, mh._txCount);
+
+    mh.clearClockTick();
+    g_clockOutEnabled = false;
 }
 
 #endif // UNIT_TEST

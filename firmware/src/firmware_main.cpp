@@ -410,14 +410,10 @@ void processInternalClock() {
         lastInternalTick = now;
         lastClockTime = now;
 
-        // Chuck out a clock tick if we're allowed to shout
+        // Chuck out a clock tick if we're allowed to shout. The MIDI handler will
+        // mirror it out and bump the shared counter so processMIDI() can advance
+        // beats and refresh the display exactly once per pulse.
         midiHandler.generateClockTick();
-
-        // Advance beat and refresh the screen so the groove stays visible
-        midiBeatPosition = (midiBeatPosition + 1) % 8;
-        displayManager.updateDisplay(midiBeatPosition, std::vector<uint8_t>(),
-                                     envelopeFollowMode ? "EF ON" : "EF OFF", activePot,
-                                     activeChannel, envelopeMode);
     }
 }
 
