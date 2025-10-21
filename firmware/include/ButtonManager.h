@@ -137,6 +137,15 @@ class ButtonManager {
      */
     void scanControlInputs(ButtonManagerContext &context);
 
+#if defined(UNIT_TEST)
+    /**
+     * Test-only shim that exposes the private control button reader so Unity
+     * specs can assert on the currently installed digital provider. Wrapped in
+     * UNIT_TEST to avoid expanding the runtime API footprint.
+     */
+    bool readControlButtonForTest(uint8_t buttonIndex) { return readControlButton(buttonIndex); }
+#endif
+
   private:
     // Mux select pins & analog input for virtual buttons scan
     const HardwareConfig &_cfg;

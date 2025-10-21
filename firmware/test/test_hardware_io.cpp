@@ -87,7 +87,7 @@ void test_digital_provider_overrides_matrix_reads() {
     const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
     ButtonManager manager(hwConfig, controlPins, nullptr);
     hardware::ScopedDigitalReadProvider hi(stubDigitalLow);
-    TEST_ASSERT_TRUE(manager.readControlButton(0));
+    TEST_ASSERT_TRUE(manager.readControlButtonForTest(0));
     hardware::ScopedDigitalReadProvider lo(stubDigitalHigh);
-    TEST_ASSERT_FALSE(manager.readControlButton(1));
+    TEST_ASSERT_FALSE(manager.readControlButtonForTest(1));
 }
