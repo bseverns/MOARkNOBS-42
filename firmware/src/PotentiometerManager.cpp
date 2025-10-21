@@ -9,6 +9,10 @@
 #include "Utility.h"
 #include "Log.h"
 #include "bench_log_latency.h"
+#include "hal/RuntimeIO.h"
+
+using moar::hal::getMicros;
+using moar::hal::readAnalog;
 
 // Reads all potentiometers via a pair of multiplexers. The most recent values
 // feed LEDManager for visual feedback and trigger MIDI messages through the
@@ -54,7 +58,7 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
     const int numSamples = 4; // Number of samples for averaging
 
     for (int i = 0; i < numSamples; i++) {
-        total += analogRead(pin); // Read analog value
+        total += readAnalog(pin); // Read analog value
         delayMicroseconds(10);    // Small delay for stability
     }
 
@@ -127,7 +131,7 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
                     benchLatencyHeader();
                     headerPrinted = true;
                 }
-                uint32_t t_scan_us = micros();
+                uint32_t t_scan_us = getMicros();
 #endif
 
                 // Stage 4: map to MIDI, light the LED, then shout over MIDI.
@@ -196,7 +200,7 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
     selectMuxBank(bank);
     selectPotBank(pot);
     delayMicroseconds(5);         // settle time
-    return analogRead(analogPin); // direct raw read
+    return readAnalog(analogPin); // direct raw read
 }
 
 void PotentiometerManager::setMidiCallback(

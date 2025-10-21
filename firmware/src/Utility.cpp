@@ -10,6 +10,7 @@
 #include "LEDManager.h"
 #include "EEPROM.h"
 #include "MIDIHandler.h"
+#include "hal/RuntimeIO.h"
 #include <imxrt.h>
 #include <cstring>
 #include <cstdlib>
@@ -21,8 +22,11 @@
 
 // Mapping and Value Transformations
 
+using moar::hal::getMillis;
+using moar::hal::readAnalog;
+
 // Default time source; tests can override by defining their own now().
-unsigned long __attribute__((weak)) now() { return millis(); }
+unsigned long __attribute__((weak)) now() { return getMillis(); }
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
 }
@@ -332,7 +336,7 @@ float Utility::readVrefADC(uint8_t pin) {
     const uint8_t samples = 4;
     uint32_t total = 0;
     for (uint8_t i = 0; i < samples; ++i) {
-        total += analogRead(pin);
+        total += readAnalog(pin);
         delayMicroseconds(10);
     }
     float avg = static_cast<float>(total) / samples;

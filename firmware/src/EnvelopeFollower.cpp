@@ -6,6 +6,9 @@
 #include "MIDIHandler.h"
 #include "BiquadFilter.h"
 #include "ConfigManager.h"
+#include "hal/RuntimeIO.h"
+
+using moar::hal::readAnalog;
 #include <cmath>
 #include <array>
 #include <algorithm>
@@ -100,11 +103,11 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
 
         // If envelopeA/B >= 0, treat them as valid analog pins
         if (envelopeA >= 0) {
-            int rawA = analogRead(envelopeA);
+            int rawA = hal::readAnalog(envelopeA);
             A = map(rawA, 0, 1023, 0, 127);
         }
         if (envelopeB >= 0) {
-            int rawB = analogRead(envelopeB);
+            int rawB = hal::readAnalog(envelopeB);
             B = map(rawB, 0, 1023, 0, 127);
         }
 
@@ -245,7 +248,7 @@ void EnvelopeFollower::calibrate() {
     const uint8_t samples = 8;
     uint32_t refTotal = 0;
     for (uint8_t i = 0; i < samples; ++i) {
-        refTotal += analogRead(VREF_ADC_PIN);
+        refTotal += hal::readAnalog(VREF_ADC_PIN);
         delayMicroseconds(10);
     }
     vref = (static_cast<float>(refTotal) / samples) * VadcScale;
@@ -257,7 +260,7 @@ void EnvelopeFollower::calibrateBaseline() {
     const uint8_t samples = 8;
     uint32_t total = 0;
     for (uint8_t i = 0; i < samples; ++i) {
-        total += analogRead(audioInputPin);
+        total += hal::readAnalog(audioInputPin);
         delayMicroseconds(10);
     }
     float avg = static_cast<float>(total) / samples;
@@ -282,7 +285,7 @@ float EnvelopeFollower::getSmoothingAlpha() const { return smoothingAlpha; }
 int EnvelopeFollower::readEnvelopeLevel() {
     uint32_t total = 0;
     for (uint8_t i = 0; i < oversampleCount; ++i) {
-        total += analogRead(audioInputPin);
+        total += hal::readAnalog(audioInputPin);
         delayMicroseconds(10);
     }
     float avg = static_cast<float>(total) / oversampleCount;

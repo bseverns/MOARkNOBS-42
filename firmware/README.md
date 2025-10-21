@@ -42,6 +42,16 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **App/** – WebSerial config page.
 - **lib/** – vendored Arduino libs that keep the lights on.
 
+### HAL: Fake the rig on a laptop
+
+Want to slam Unity tests with button-bounce nightmares or EF spikes without touching the Teensy? Slide in [`include/hal/RuntimeIO.h`](include/hal/RuntimeIO.h).
+
+- `moar::hal::readAnalog()` / `readDigital()` wrap the Arduino calls and let you inject custom handlers.
+- `moar::hal::getMillis()` / `getMicros()` break the timebase free from the MCU so you can fast-forward or freeze time in tests.
+- `ScopedAnalogReadHook` (and its siblings) make overrides RAII-friendly—drop them in a test case and the real hardware pipes snap back when the scope ends.
+
+Use the hooks in production builds as-is. Inside Unity tests, bolt on your own lambdas or data tables to mimic stuck buttons, noisy ADC reads, or time jumps. No more waiting on physical rigs to repro a glitch.
+
 ## Reference Tables
 
 - [Button map](include/ButtonManager/README.md#button-map)

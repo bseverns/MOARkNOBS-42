@@ -15,6 +15,7 @@
 #include <Arduino.h>
 #include <math.h>
 #include <usb_midi.h>
+#include "hal/RuntimeIO.h"
 
 namespace {
 constexpr uint8_t kButtonPin = 12;   // control button #0
@@ -32,7 +33,7 @@ uint8_t lastCcValue = 0xFF;
 bool noteActive = false;
 uint32_t lastCcStamp = 0;
 
-uint16_t readRawEnvelope() { return analogRead(kEnvelopePin); }
+uint16_t readRawEnvelope() { return moar::hal::readAnalog(kEnvelopePin); }
 
 void calibrateBaseline() {
     uint32_t total = 0;
@@ -60,7 +61,7 @@ void pumpEnvelope() {
 }
 
 void maybeSendEnvelope() {
-    uint32_t now = millis();
+    uint32_t now = moar::hal::getMillis();
     if (now - lastCcStamp < kCcIntervalMs)
         return;
     lastCcStamp = now;
@@ -72,7 +73,7 @@ void maybeSendEnvelope() {
 }
 
 void serviceButton() {
-    bool pressed = digitalRead(kButtonPin) == LOW;
+    bool pressed = moar::hal::readDigital(kButtonPin) == LOW;
     if (pressed && !noteActive) {
         usbMIDI.sendNoteOn(kNote, 100, kMidiChannel);
         noteActive = true;
@@ -95,7 +96,7 @@ void setup() {
     pinMode(kButtonPin, INPUT_PULLUP);
     pinMode(kEnvelopePin, INPUT);
     Serial.begin(115200);
-    while (!Serial && millis() < 2000) {
+    while (!Serial && moar::hal::getMillis() < 2000) {
         // Give USB a heartbeat on laptop-powered rigs.
     }
     Serial.println("MOARkNOBS: 1-button/1-EF USB MIDI demo");

@@ -37,16 +37,19 @@ void loop() {
 ### Map an analog read to MIDI 0‑127
 ```cpp
 #include "Utility.h"
+#include "hal/RuntimeIO.h"
 
-int raw = analogRead(A0);
+int raw = moar::hal::readAnalog(A0);
 uint8_t midiValue = Utility::mapToMidiValue(raw);
 // midiValue now rides 0‑127
 ```
 
 ## Gotchas
 
-- `now()` comes from [`TimeUtils.h`](../TimeUtils.h) and is a weak wrapper around `millis()`.
-  Tests can override it, so don’t stash its pointer expecting immortality.
+- `now()` comes from [`TimeUtils.h`](../TimeUtils.h) and, by default, pipes through `moar::hal::getMillis()`.
+  Tests can swap the HAL hook, so don’t stash its pointer expecting immortality.
+- If you need to fake ADC reads or button states, grab [`hal/RuntimeIO.h`](../hal/RuntimeIO.h).
+  It lets you park scoped overrides so Unity tests can boss the firmware around without real silicon.
 - Tasks are collected first, then executed. If a callback adds or deletes tasks you’ll confuse the queue—schedule meta-work for the next tick instead.
 - These schedulers don’t preempt; hog the CPU and you block the parade.
 

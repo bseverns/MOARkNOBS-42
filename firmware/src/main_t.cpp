@@ -26,6 +26,7 @@
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "hal/RuntimeIO.h"
 #include "TestHelpers.h"
 
 static_assert(NUM_BUTTONS == 6, "expect six control buttons");
@@ -67,9 +68,9 @@ bool phaseStarted = false;
 void waitForButtonPress(const char *prompt = "Press Btn0 to continue") {
     Serial.println(prompt);
     displayManager.showText(prompt, "", "Btn0");
-    while (digitalRead(phaseButtonPin))
+    while (readDigital(phaseButtonPin))
         ; // wait press (active LOW)
-    while (!digitalRead(phaseButtonPin))
+    while (!readDigital(phaseButtonPin))
         ; // wait release
     delay(50);
 }
@@ -134,7 +135,7 @@ void testButtonManager() {
     // Pin 6 reserved for LED strip
     for (int i = 0; i < NUM_CONTROL_BUTTONS; i++) {
         Serial.printf("Press Control Button #%d (pin %d)...\n", i, TEST_CONTROL_PINS[i]);
-        while (digitalRead(TEST_CONTROL_PINS[i]))
+        while (readDigital(TEST_CONTROL_PINS[i]))
             ;
         Serial.printf("Control Button #%d OK!\n", i);
         delay(200);
@@ -196,7 +197,7 @@ void testFilterPots() {
     Serial.println("Sweep Freq & Q pots then press Btn0.");
     float minFreq = 1e6, maxFreq = 0;
     float minQ = 10, maxQ = 0;
-    while (digitalRead(phaseButtonPin)) {
+    while (readDigital(phaseButtonPin)) {
         int rawFreq = buttonManager.getControlPotValue(1);
         int rawQ = buttonManager.getControlPotValue(2);
         float freq = map(rawFreq, 0, 1023, 20, 5000);
@@ -213,7 +214,7 @@ void testFilterPots() {
         Serial.printf("Freq=%.1f Hz Q=%.2f\n", freq, q);
         delay(100);
     }
-    while (!digitalRead(phaseButtonPin))
+    while (!readDigital(phaseButtonPin))
         ;
     bool freqPass = (minFreq <= 30 && maxFreq >= 4900);
     bool qPass = (minQ <= 0.6 && maxQ >= 3.9);
@@ -334,7 +335,7 @@ void runPhase(TestPhase phase) {
 
 void loop() {
     static bool lastBtn = true;
-    bool pressed = digitalRead(phaseButtonPin) == LOW;
+    bool pressed = readDigital(phaseButtonPin) == LOW;
     if (pressed && !lastBtn) {
         if (currentPhase == TestPhase::IDLE)
             currentPhase = TestPhase::LEDS;
@@ -360,3 +361,4 @@ void loop() {
         phaseStarted = true;
     }
 }
+using moar::hal::readDigital;

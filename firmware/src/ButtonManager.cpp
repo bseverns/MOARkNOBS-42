@@ -9,6 +9,7 @@
 #include "Utility.h"
 #include "TimeUtils.h"
 #include "Arpeggiator.h"
+#include "hal/RuntimeIO.h"
 #include <map>
 
 // Scans the button matrix and direct control buttons. Results are fed into
@@ -51,9 +52,13 @@ static uint8_t currentProfile = 0;
 namespace {
 constexpr uint32_t MUX_SETTLE_US = 5;
 
+using moar::hal::getMicros;
+using moar::hal::readAnalog;
+using moar::hal::readDigital;
+
 inline void waitForMuxSettle() {
-    uint32_t start = micros();
-    while (micros() - start < MUX_SETTLE_US) {
+    uint32_t start = getMicros();
+    while (getMicros() - start < MUX_SETTLE_US) {
         yield();
     }
 }
@@ -123,7 +128,7 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
     }
 
 #ifdef BUTTON_MANAGER_PROFILE
-    uint32_t tStart = micros();
+    uint32_t tStart = getMicros();
 #endif
 
     // Scan mux matrix row by row
@@ -135,7 +140,7 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
             setMuxFast(_cfg.muxcPins, c);
             waitForMuxSettle();
-            int v = analogRead(_cfg.buttonMuxAnalogPin);
+            int v = readAnalog(_cfg.buttonMuxAnalogPin);
             rawStates[r * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
         digitalWrite(_cfg.rowDriverPin, LOW);
@@ -157,7 +162,7 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
     scanControlInputs(context);
 
 #ifdef BUTTON_MANAGER_PROFILE
-    uint32_t tElapsed = micros() - tStart;
+    uint32_t tElapsed = getMicros() - tStart;
     static uint32_t maxScan = 0;
     static uint64_t totalScan = 0;
     static uint32_t scanCount = 0;
@@ -825,7 +830,7 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
         for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
             setMuxFast(_cfg.muxcPins, c);
             waitForMuxSettle();
-            int v = analogRead(_cfg.buttonMuxAnalogPin);
+            int v = readAnalog(_cfg.buttonMuxAnalogPin);
             rowValues[c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
         }
         digitalWrite(_cfg.rowDriverPin, LOW);
@@ -840,7 +845,7 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
  * the multiplexer used for slot buttons.
  */
 bool ButtonManager::readControlButton(uint8_t buttonIndex) {
-    return (digitalRead(_controlPins[buttonIndex]) == LOW);
+    return (readDigital(_controlPins[buttonIndex]) == LOW);
 }
 
 void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
@@ -848,7 +853,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     for (uint8_t ch = 6; ch < 12; ++ch) {
         selectMux(0, ch);
         waitForMuxSettle();
-        int val = analogRead(_cfg.buttonMuxAnalogPin);
+        int val = readAnalog(_cfg.buttonMuxAnalogPin);
         bool pressed = (val < BUTTON_PRESS_THRESHOLD);
         uint8_t idx = ch - 6;
         bool stable =
@@ -878,7 +883,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         uint8_t ch = 12 + i;
         selectMux(0, ch);
         waitForMuxSettle();
-        int val = analogRead(_cfg.buttonMuxAnalogPin);
+        int val = readAnalog(_cfg.buttonMuxAnalogPin);
         _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
     }
 }

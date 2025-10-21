@@ -9,6 +9,11 @@ void test_external_base_note_without_callback();
 void test_external_missing_inputs_falls_back_to_pot();
 void test_lowpass_highpass_response();
 void test_system_report();
+void test_hal_analog_override_sequence();
+void test_hal_analog_nested_scopes_restore_previous();
+void test_hal_digital_override();
+void test_hal_time_hooks();
+void test_hal_hook_roundtrip_metadata();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
 void test_aftertouch();
@@ -30,6 +35,11 @@ void setup() {
     RUN_TEST(test_external_missing_inputs_falls_back_to_pot);
     RUN_TEST(test_lowpass_highpass_response);
     RUN_TEST(test_system_report);
+    RUN_TEST(test_hal_analog_override_sequence);
+    RUN_TEST(test_hal_analog_nested_scopes_restore_previous);
+    RUN_TEST(test_hal_digital_override);
+    RUN_TEST(test_hal_time_hooks);
+    RUN_TEST(test_hal_hook_roundtrip_metadata);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
     RUN_TEST(test_program_change);
     RUN_TEST(test_aftertouch);

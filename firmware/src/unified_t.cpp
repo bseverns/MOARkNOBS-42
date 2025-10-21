@@ -28,7 +28,11 @@
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
 #include "TestHelpers.h"
+#include "hal/RuntimeIO.h"
 #include "sys/report.h"
+
+using moar::hal::readAnalog;
+using moar::hal::readDigital;
 
 static_assert(NUM_BUTTONS == 6, "expect six control buttons");
 
@@ -69,12 +73,12 @@ bool waitForAnyButton(const char *prompt = "Press any button to continue...") {
             for (int i = 0; i < SECONDARY_MUX_PINS; i++)
                 digitalWrite(secondaryMuxPins[i], (col >> i) & 1);
             delayMicroseconds(5);
-            if (analogRead(buttonMuxAnalogPin) < 512)
+            if (readAnalog(buttonMuxAnalogPin) < 512)
                 return true;
         }
         // direct-wired control buttons (active LOW)
         for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
-            if (!digitalRead(TEST_CONTROL_PINS[i]))
+            if (!readDigital(TEST_CONTROL_PINS[i]))
                 return true;
         }
         delay(5);
@@ -91,12 +95,12 @@ static bool anyButtonPressed() {
         for (int i = 0; i < SECONDARY_MUX_PINS; i++)
             digitalWrite(secondaryMuxPins[i], (col >> i) & 1);
         delayMicroseconds(5);
-        if (analogRead(buttonMuxAnalogPin) < 512)
+        if (readAnalog(buttonMuxAnalogPin) < 512)
             return true;
     }
     // direct-wired control buttons (active LOW)
     for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
-        if (!digitalRead(TEST_CONTROL_PINS[i]))
+        if (!readDigital(TEST_CONTROL_PINS[i]))
             return true;
     }
     return false;
@@ -181,7 +185,7 @@ void testButtons() {
             for (int i = 0; i < SECONDARY_MUX_PINS; i++)
                 digitalWrite(secondaryMuxPins[i], (col >> i) & 1);
             delayMicroseconds(5);
-            if (analogRead(buttonMuxAnalogPin) < 512)
+            if (readAnalog(buttonMuxAnalogPin) < 512)
                 break;
         }
         Serial.printf("  Detected slot %u OK.\n", b);
@@ -190,7 +194,7 @@ void testButtons() {
     // Direct-wired control buttons
     for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
         Serial.printf("Press C-Button #%u (pin %u)...\n", i, TEST_CONTROL_PINS[i]);
-        while (digitalRead(TEST_CONTROL_PINS[i]))
+        while (readDigital(TEST_CONTROL_PINS[i]))
             ;
         Serial.printf("  Detected control %u OK.\n", i);
         delay(200);
