@@ -56,7 +56,7 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
 
     for (int i = 0; i < numSamples; i++) {
         total += hardware::readAnalog(pin); // Read analog value
-        delayMicroseconds(10);    // Small delay for stability
+        delayMicroseconds(10);              // Small delay for stability
     }
 
     return total / numSamples; // Return the averaged value
@@ -196,7 +196,7 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
     // do the private selects
     selectMuxBank(bank);
     selectPotBank(pot);
-    delayMicroseconds(5);         // settle time
+    delayMicroseconds(5);                   // settle time
     return hardware::readAnalog(analogPin); // direct raw read
 }
 

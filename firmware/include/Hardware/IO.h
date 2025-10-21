@@ -47,4 +47,3 @@ class ScopedDigitalReadProvider {
 };
 
 } // namespace hardware
-

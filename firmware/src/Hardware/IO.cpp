@@ -31,9 +31,7 @@ hardware::DigitalReadProvider gDigitalProvider = passthroughDigital;
 
 namespace hardware {
 
-int readAnalog(uint8_t pin) {
-    return gAnalogProvider ? gAnalogProvider(pin) : 0;
-}
+int readAnalog(uint8_t pin) { return gAnalogProvider ? gAnalogProvider(pin) : 0; }
 
 int readDigital(uint8_t pin) { return gDigitalProvider ? gDigitalProvider(pin) : 0; }
 
@@ -60,16 +58,11 @@ void resetDigitalReadProvider() { gDigitalProvider = passthroughDigital; }
 ScopedAnalogReadProvider::ScopedAnalogReadProvider(AnalogReadProvider provider)
     : previous_(setAnalogReadProvider(provider)) {}
 
-ScopedAnalogReadProvider::~ScopedAnalogReadProvider() {
-    setAnalogReadProvider(previous_);
-}
+ScopedAnalogReadProvider::~ScopedAnalogReadProvider() { setAnalogReadProvider(previous_); }
 
 ScopedDigitalReadProvider::ScopedDigitalReadProvider(DigitalReadProvider provider)
     : previous_(setDigitalReadProvider(provider)) {}
 
-ScopedDigitalReadProvider::~ScopedDigitalReadProvider() {
-    setDigitalReadProvider(previous_);
-}
+ScopedDigitalReadProvider::~ScopedDigitalReadProvider() { setDigitalReadProvider(previous_); }
 
 } // namespace hardware
-

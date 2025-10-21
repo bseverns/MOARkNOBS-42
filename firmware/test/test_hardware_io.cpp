@@ -34,8 +34,7 @@ int sequenceAnalog(uint8_t) {
 
 class ScopedSequence {
   public:
-    explicit ScopedSequence(const std::initializer_list<int> &vals)
-        : guard_(sequenceAnalog) {
+    explicit ScopedSequence(const std::initializer_list<int> &vals) : guard_(sequenceAnalog) {
         buffer_.assign(vals.begin(), vals.end());
         sequence.values = buffer_.data();
         sequence.size = buffer_.size();
