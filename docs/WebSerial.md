@@ -11,17 +11,21 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    { "hello": "mn42" }
    ```
    ![Browser console showing HELLO handshake with JSON response](webserial_handshake.svg)
-4. Browser immediately fires off a schema probe so the UI and firmware agree on what "current" means:
-   ```json
-   {"request":"MANIFEST"}
-   ```
-   The firmware replies with a newline-terminated manifest:
+4. Browser immediately fires off `GET_MANIFEST\n` so the synth and the UI agree on schema + build trivia. The Teensy replies
+   with a newline-terminated JSON manifest:
    ```json
    {
      "fw_version":"1.3.0",
+     "git_sha":"012dead",
+     "build_time":"2024-05-10 21:37:02",
      "schema_version":4,
      "slot_count":42,
-     "max_table_lengths":{"slots":42,"envelopes":6,"arg_modes":14}
+     "pot_count":42,
+     "envelope_count":6,
+     "arg_method_count":14,
+     "led_count":51,
+     "free_ram":642112,
+     "free_flash":1185792
    }
    ```
 5. The UI diffs that manifest against its baked-in schema definition. When anything smells off, pop a non-destructive migrate dialog:
@@ -62,26 +66,27 @@ terminated with a newline and the firmware snaps back with either `OK` or `ERR`.
 This table mirrors the shout list in `firmware_main.cpp` so the code and docs
 never fall out of sync.
 
-| Command                            | Arguments         | What it pokes                                                                       |
-| ---------------------------------- | ----------------- | ----------------------------------------------------------------------------------- |
-| `HELLO`                            | –                 | start WebSerial streaming                                                           |
-| `GET_SCHEMA`                       | –                 | dump config schema                                                                  |
-|                                    |                   | If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
-| `GET_BROWNOUTS`                    | –                 | number of brownouts seen                                                            |
-| `SET_POT` `<slot>,<chan>,<cc>`     | ints              | bind slot to channel+CC                                                             |
-| `SET_ALL` `<payload>`              | JSON or bulk CSV  | mass update slots/LED                                                               |
-| `GET_ALL`                          | –                 | dump every slot and LED setting                                                     |
-| `SET_LED` `<bri>,<r>,<g>,<b>`      | 0‑255 each        | paint LED strip                                                                     |
-| `GET_LED`                          | –                 | return `bri,r,g,b`                                                                  |
-| `SET_ARGMETHOD` `<n>`              | 0‑13              | choose ARG blend                                                                    |
-| `GET_ARGMETHOD`                    | –                 | spit current ARG blend                                                              |
-| `SET_EF` `<slot>,<ef>`             | slot 0‑41, ef 0‑5 | patch envelope follower                                                             |
-| `GET_EF` `<slot>`                  | slot 0‑41         | see follower mapped                                                                 |
-| `CAL_ENVS`                         | –                 | recalibrate all followers                                                           |
-| `SET_FILTER` `<type>,<freq>,<q>`   | type 0‑?, floats  | stash EF filter settings                                                            |
-| `GET_FILTER`                       | –                 | return `type,freq,q`                                                                |
-| `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5       | wire two envelopes for ARG                                                          |
-| `GET_ARGPAIR`                      | –                 | echo pair config                                                                    |
+| Command | Arguments | What it pokes |
+| --- | --- | --- |
+| `HELLO` | – | start WebSerial streaming |
+| `GET_SCHEMA` | – | dump config schema. If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
+| `GET_BROWNOUTS` | – | number of brownouts seen |
+| `GET_MANIFEST` | – | confirm firmware build + schema, plus free RAM/flash stats |
+| `GET_CONFIG` | – | dump the live configuration: slots, pots, envelope routing, ARG/filter state, LEDs |
+| `SET_POT` `<slot>,<chan>,<cc>` | ints | bind slot to channel+CC |
+| `SET_ALL` `<payload>` | JSON or bulk CSV | mass update slots/LED |
+| `GET_ALL` | – | dump every slot and LED setting |
+| `SET_LED` `<bri>,<r>,<g>,<b>` | 0‑255 each | paint LED strip |
+| `GET_LED` | – | return `bri,r,g,b` |
+| `SET_ARGMETHOD` `<n>` | 0‑13 | choose ARG blend |
+| `GET_ARGMETHOD` | – | spit current ARG blend |
+| `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
+| `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
+| `CAL_ENVS` | – | recalibrate all followers |
+| `SET_FILTER` `<type>,<freq>,<q>` | type 0‑?, floats | stash EF filter settings |
+| `GET_FILTER` | – | return `type,freq,q` |
+| `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5 | wire two envelopes for ARG |
+| `GET_ARGPAIR` | – | echo pair config |
 
 ### Paint the LEDs
 
@@ -114,6 +119,11 @@ GET_EF <slot>
 
 Patch an envelope follower to a slot with `SET_EF`. Ask who’s riding shotgun
 with `GET_EF`, which replies with the follower number or `-1` if nobody showed.
+
+When you need the whole wiring diagram, `GET_CONFIG` is the firehose. It prints
+one JSON line mirroring the firmware’s in-RAM state—slot definitions, pot CC
+bindings, envelope routing, ARG selections, filter coefficients, and LED mood.
+Parse it once and drive your UI off that single source of truth.
 
 ## Why So Barebones?
 
