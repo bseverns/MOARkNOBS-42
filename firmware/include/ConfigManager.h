@@ -36,13 +36,13 @@ class MIDIHandler;
  * 4*NUM_POTS + 8  ARG enable                       1
  * 4*NUM_POTS + 9  Config version                   2
  * 4*NUM_POTS + 11 CRC                              2
- * 200             Primary magic (0xABCD)           2
- * 202             Backup magic  (0xDCBA)           2
- * EEPROM_EF_BASELINES (204) EF baselines          EEPROM_EF_BASELINES_SIZE
+ * 181             Primary magic (0xABCD)           2
+ * 183             Backup magic  (0xDCBA)           2
+ * EEPROM_EF_BASELINES (185) EF baselines          EEPROM_EF_BASELINES_SIZE
  * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           BUFFER_SIZE
- * EEPROM_BACKUP_START (250) Backup copy of config starts     mirrors layout
- * 256             Profile 1 block begins           256 bytes
- * 512             Profile 2 block begins           256 bytes
+ * EEPROM_BACKUP_START (231) Backup copy of config starts     mirrors layout
+ * 412             Profile 1 block begins           412 bytes
+ * 824             Profile 2 block begins           412 bytes
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
@@ -50,14 +50,11 @@ class MIDIHandler;
  * EEPROM_MAGIC_BACKUP) as a safety net. On boot the tags are
  * inspected in order-primary first, backup second-to decide
  * which copy to trust. Each additional profile repeats this
- * layout in its own 256-byte slice.
+ * layout in its own 412-byte slice.
  */
 #endif
 
-inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
 inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
-inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
-    EEPROM_START_ADDRESS + 200;                          // Reserve space for config + magic number
 inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; // Validates the main config block
 inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  // Signals a sane backup image
 
@@ -74,11 +71,18 @@ inline constexpr uint16_t EEPROM_ARG_ENV_B = EEPROM_ARG_ENV_A + 1;
 inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
 inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
 inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
+inline constexpr uint16_t EEPROM_CONFIG_BYTES =
+    EEPROM_CONFIG_CRC + sizeof(uint16_t);                //!< Total bytes persisted by writeEEPROM()
+inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
+    EEPROM_CONFIG_BYTES;                                 // Lives directly after the CRC bytes
 inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
 inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
 inline constexpr uint8_t BUFFER_SIZE = 22;
 inline constexpr uint16_t EEPROM_BACKUP_START =
     EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
+
+inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE =
+    EEPROM_BACKUP_START + EEPROM_CONFIG_BYTES;
 
 inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
     return EEPROM_PROFILE_BLOCK_SIZE * id;
