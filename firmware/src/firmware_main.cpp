@@ -380,7 +380,7 @@ void processEnvelopes() {
             continue; // Someone scribbled junk into the routing table; bail fast
         // Trust no one: make sure the map didn't hand us a bogus index
         // before poking the envelope array.
-        if (envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
+        if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
             EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
 
             // Only waste cycles on envelopes that are actually lit up.
