@@ -112,7 +112,6 @@ constexpr float VadcScale = 3.3f / 1023.0f;
 extern float g_vref;
 
 // EEPROM storage constants
-constexpr uint16_t EEPROM_SLOT_BASE = 0x000;
 constexpr uint8_t SLOT_EEPROM_SIZE = 6; // bytes required to store a MIDISlot
 
 // clock

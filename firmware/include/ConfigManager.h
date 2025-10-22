@@ -80,8 +80,15 @@ inline constexpr uint8_t BUFFER_SIZE = 22;
 inline constexpr uint16_t EEPROM_BACKUP_START =
     EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
 
+inline constexpr uint16_t EEPROM_CONFIG_BLOCK_SIZE = EEPROM_BACKUP_START;
+inline constexpr uint16_t EEPROM_SLOT_BASE =
+    EEPROM_BACKUP_START + EEPROM_CONFIG_BLOCK_SIZE;
+inline constexpr uint16_t EEPROM_SLOT_REGION_SIZE = SLOT_EEPROM_SIZE * NUM_SLOTS;
+
 inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
-    return EEPROM_PROFILE_BLOCK_SIZE * id;
+    return (id == 0) ? EEPROM_START_ADDRESS
+                     : static_cast<uint16_t>(EEPROM_SLOT_BASE + EEPROM_SLOT_REGION_SIZE +
+                                           (id - 1) * EEPROM_PROFILE_BLOCK_SIZE);
 }
 
 class EnvelopeFollower;
