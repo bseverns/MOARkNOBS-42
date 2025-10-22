@@ -35,7 +35,6 @@ extern char _estack;
 }
 #endif
 
-
 // Sneaky static that kicks in before setup() even thinks about stretching.
 // It pulls in pin maps and timing constants from Globals.h so the rest of this
 // file can swagger with real values. If you need to rewrite the defaults,
@@ -64,7 +63,8 @@ size_t computeFreeRAM() {
 
 size_t computeFreeFlash() {
 #if defined(ARDUINO)
-    constexpr size_t kFlashSizeBytes = 1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
+    constexpr size_t kFlashSizeBytes =
+        1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
     size_t used = reinterpret_cast<uintptr_t>(&_flashimagelen);
     return (used < kFlashSizeBytes) ? (kFlashSizeBytes - used) : 0U;
 #else
@@ -112,8 +112,9 @@ const char *envelopeFilterName(EnvelopeFollower::FilterType type) {
 }
 
 const char *argMethodName(uint8_t method) {
-    static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR", "BABS", "TABS",
-                                             "MULT", "DIVI", "AVG",  "XABS", "MAXX", "MINN", "XORR"};
+    static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
+                                             "BABS", "TABS", "MULT", "DIVI", "AVG",
+                                             "XABS", "MAXX", "MINN", "XORR"};
     if (method < (sizeof(kNames) / sizeof(kNames[0]))) {
         return kNames[method];
     }
