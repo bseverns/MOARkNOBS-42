@@ -3,16 +3,11 @@
 // Updated each loop by firmware_main.cpp and consulted by ButtonManager.
 
 #include "EnvelopeFollower.h"
-#include "MIDIHandler.h"
 #include "BiquadFilter.h"
 #include "ConfigManager.h"
 #include "Hardware/IO.h"
 #include <cmath>
-#include <array>
 #include <algorithm>
-
-// Remember the last CC value sent for each pot so we don't spam duplicates
-static std::array<uint8_t, NUM_POTS> lastSentCC;
 
 // Tracks external audio/CV and converts it to a MIDI-friendly envelope. The
 // value produced here is consumed by PotentiometerManager and the arpeggiator
@@ -26,9 +21,6 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id
       isActive(false), filterType(LINEAR), // initialize filterType first
       mode(SEF),                           // then mode
       argMethod(PLUS), envelopeA(0), envelopeB(1), vref(g_vref), potManager(pm) {
-    // Initialize last sent CCs to 0xFF so the first real value always fires
-    std::fill(lastSentCC.begin(), lastSentCC.end(), 0xFF);
-
     // default low-pass at 1kHz
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
 }
@@ -161,19 +153,16 @@ void EnvelopeFollower::update() {
  * - Just adds or subtracts the new envelope level
  * - Avoids redundant MIDI messages
  */
-// Adjust the given CC value with the current envelope and send it if it changed
-// since the last update. This prevents spamming duplicate MIDI messages.
+// Adjust the given CC value with the current envelope. The caller is
+// responsible for deciding whether to transmit the updated value.
 void EnvelopeFollower::applyToCC(int potIndex, uint8_t &ccValue) {
-    if (isActive && modulationTargetCC >= 0) {
-        int modulatedValue = ccValue + currentEnvelopeLevel;
-        ccValue = constrain(modulatedValue, 0, 127);
+    static_cast<void>(potIndex); // Pot index kept for future per-slot tweaks
 
-        if (ccValue != lastSentCC[potIndex]) {
-            lastSentCC[potIndex] = ccValue;
-            midiHandler.sendControlChange(modulationTargetCC, ccValue,
-                                          potManager->getChannel(potIndex));
-        }
-    }
+    if (!isActive)
+        return;
+
+    int modulatedValue = ccValue + currentEnvelopeLevel;
+    ccValue = constrain(modulatedValue, 0, 127);
 }
 
 /**
