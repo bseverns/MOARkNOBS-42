@@ -27,6 +27,12 @@
 #include <imxrt.h>
 #include <cstdint>
 
+#if defined(ARDUINO)
+extern "C" char _end;
+extern "C" char _flashimagelen;
+#endif
+
+
 // Sneaky static that kicks in before setup() even thinks about stretching.
 // It pulls in pin maps and timing constants from Globals.h so the rest of this
 // file can swagger with real values. If you need to rewrite the defaults,
@@ -44,12 +50,9 @@ bool webSerialStreaming = false; // Goes true when the browser hollers HELLO and
 namespace {
 size_t computeFreeRAM() {
 #if defined(ARDUINO)
-    extern "C" char _end;
-    extern "C" char *__brkval;
     char stackDummy = 0;       // Lives on the stack right now.
-    char *heapEnd = __brkval ? __brkval : &_end;
     uintptr_t stackPtr = reinterpret_cast<uintptr_t>(&stackDummy);
-    uintptr_t heapPtr = reinterpret_cast<uintptr_t>(heapEnd);
+    uintptr_t heapPtr = reinterpret_cast<uintptr_t>(&_end);
     return (stackPtr > heapPtr) ? static_cast<size_t>(stackPtr - heapPtr) : 0U;
 #else
     return 0U;
@@ -58,7 +61,6 @@ size_t computeFreeRAM() {
 
 size_t computeFreeFlash() {
 #if defined(ARDUINO)
-    extern "C" char _flashimagelen;
     constexpr size_t kFlashSizeBytes = 1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
     size_t used = reinterpret_cast<uintptr_t>(&_flashimagelen);
     return (used < kFlashSizeBytes) ? (kFlashSizeBytes - used) : 0U;
