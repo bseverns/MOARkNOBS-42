@@ -33,8 +33,18 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0002;      //!< EEPROM schema version
-inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008; //!< EEPROM addr for brownout counter
+inline constexpr uint16_t CONFIG_VERSION = 0x0002; //!< EEPROM schema version
+
+// Pots headline nearly every interaction, so hang the count in globals.
+inline constexpr uint8_t NUM_POTS = 42; //!< Number of analog pots marching across the panel
+
+// Filter tuning + power health sit just past the profile arena so patching them
+// never tramples a saved config image.
+inline constexpr uint16_t EEPROM_FILTER_FREQ = 0x04D4; //!< EEPROM address for filter freq
+inline constexpr uint16_t EEPROM_FILTER_Q =
+    EEPROM_FILTER_FREQ + sizeof(float); //!< EEPROM address for filter Q
+inline constexpr uint16_t EEPROM_BROWNOUT_COUNT =
+    EEPROM_FILTER_Q + sizeof(float); //!< EEPROM addr for brownout counter
 
 extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
@@ -76,6 +86,38 @@ inline uint16_t NUM_LEDS() {
 inline constexpr uint8_t NUM_BUTTONS = 6;   //!< Number of direct control buttons
 inline constexpr uint8_t NUM_ENVELOPES = 6; //!< Envelope followers stalking your signal
 
+// EEPROM Memory Map ------------------------------------------------------------------------
+// We stash the entire layout here so every module sings from the same hymnal.
+inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
+inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; //!< Validates the main config block
+inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  //!< Signals a sane backup image
+
+inline constexpr uint16_t EEPROM_POT_CHANNELS = EEPROM_START_ADDRESS;
+inline constexpr uint16_t EEPROM_POT_CC = EEPROM_POT_CHANNELS + NUM_POTS;
+inline constexpr uint16_t EEPROM_ENVELOPE_ASSIGNMENTS = EEPROM_POT_CC + NUM_POTS;
+inline constexpr uint16_t EEPROM_ENVELOPE_TYPES = EEPROM_ENVELOPE_ASSIGNMENTS + NUM_POTS;
+inline constexpr uint16_t EEPROM_LED_BRIGHTNESS = EEPROM_ENVELOPE_TYPES + NUM_POTS;
+inline constexpr uint16_t EEPROM_LED_COLOR = EEPROM_LED_BRIGHTNESS + 1;
+inline constexpr uint16_t EEPROM_ARG_MODE = EEPROM_LED_COLOR + 3;
+inline constexpr uint16_t EEPROM_ARG_METHOD = EEPROM_ARG_MODE + 1;
+inline constexpr uint16_t EEPROM_ARG_ENV_A = EEPROM_ARG_METHOD + 1;
+inline constexpr uint16_t EEPROM_ARG_ENV_B = EEPROM_ARG_ENV_A + 1;
+inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
+inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
+inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
+inline constexpr uint16_t EEPROM_CONFIG_BYTES =
+    EEPROM_CONFIG_CRC + sizeof(uint16_t); //!< Total bytes persisted by writeEEPROM()
+inline constexpr uint16_t EEPROM_MAGIC_ADDRESS = EEPROM_CONFIG_BYTES;
+inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
+inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
+inline constexpr uint8_t EEPROM_CONFIG_SCRATCH_SIZE = 22; //!< Scratch padding after baselines
+inline constexpr uint16_t EEPROM_BACKUP_START =
+    EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + EEPROM_CONFIG_SCRATCH_SIZE;
+inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = EEPROM_BACKUP_START + EEPROM_CONFIG_BYTES;
+inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
+    return EEPROM_PROFILE_BLOCK_SIZE * id;
+}
+
 /**
  * Baseline offsets for each envelope follower.  These numbers get learned
  * during calibration so the followers know where "silence" sits.
@@ -101,8 +143,6 @@ inline constexpr uint16_t OLED_HEIGHT = 64;          //!< OLED display height in
 inline constexpr uint8_t SSD1306_I2C_ADDRESS = 0x3C; //!< I2C address for the OLED
 inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial buffer
 inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rate
-inline constexpr uint16_t EEPROM_FILTER_FREQ = 1000; //!< EEPROM address for filter freq
-inline constexpr uint16_t EEPROM_FILTER_Q = 1004;    //!< EEPROM address for filter Q
 inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
 inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
 

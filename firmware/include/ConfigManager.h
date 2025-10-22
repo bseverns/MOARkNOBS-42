@@ -7,7 +7,6 @@
 
 #include "Globals.h"
 #include "MIDITypes.h"
-#include "PotentiometerManager.h"
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <map>
@@ -36,13 +35,16 @@ class MIDIHandler;
  * 4*NUM_POTS + 8  ARG enable                       1
  * 4*NUM_POTS + 9  Config version                   2
  * 4*NUM_POTS + 11 CRC                              2
- * 200             Primary magic (0xABCD)           2
- * 202             Backup magic  (0xDCBA)           2
- * EEPROM_EF_BASELINES (204) EF baselines          EEPROM_EF_BASELINES_SIZE
- * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           BUFFER_SIZE
- * EEPROM_BACKUP_START (250) Backup copy of config starts     mirrors layout
- * 256             Profile 1 block begins           256 bytes
- * 512             Profile 2 block begins           256 bytes
+ * 181             Primary magic (0xABCD)           2
+ * 183             Backup magic  (0xDCBA)           2
+ * EEPROM_EF_BASELINES (185) EF baselines          EEPROM_EF_BASELINES_SIZE
+ * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           EEPROM_CONFIG_SCRATCH_SIZE
+ * EEPROM_BACKUP_START (231) Backup copy of config starts     mirrors layout
+ * 412             Profile 1 block begins           412 bytes
+ * 824             Profile 2 block begins           412 bytes
+ * 1236 (0x4D4)   Filter freq (float)               4
+ * 1240 (0x4D8)   Filter Q (float)                  4
+ * 1244 (0x4DC)   Brown-out counter (uint16)        2
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
@@ -50,39 +52,12 @@ class MIDIHandler;
  * EEPROM_MAGIC_BACKUP) as a safety net. On boot the tags are
  * inspected in order-primary first, backup second-to decide
  * which copy to trust. Each additional profile repeats this
- * layout in its own 256-byte slice.
+ * layout in its own 412-byte slice.
  */
 #endif
 
-inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
-inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
-inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
-    EEPROM_START_ADDRESS + 200;                          // Reserve space for config + magic number
-inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; // Validates the main config block
-inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  // Signals a sane backup image
-
-inline constexpr uint16_t EEPROM_POT_CHANNELS = EEPROM_START_ADDRESS;
-inline constexpr uint16_t EEPROM_POT_CC = EEPROM_POT_CHANNELS + NUM_POTS;
-inline constexpr uint16_t EEPROM_ENVELOPE_ASSIGNMENTS = EEPROM_POT_CC + NUM_POTS;
-inline constexpr uint16_t EEPROM_ENVELOPE_TYPES = EEPROM_ENVELOPE_ASSIGNMENTS + NUM_POTS;
-inline constexpr uint16_t EEPROM_LED_BRIGHTNESS = EEPROM_ENVELOPE_TYPES + NUM_POTS;
-inline constexpr uint16_t EEPROM_LED_COLOR = EEPROM_LED_BRIGHTNESS + 1;
-inline constexpr uint16_t EEPROM_ARG_MODE = EEPROM_LED_COLOR + 3;
-inline constexpr uint16_t EEPROM_ARG_METHOD = EEPROM_ARG_MODE + 1;
-inline constexpr uint16_t EEPROM_ARG_ENV_A = EEPROM_ARG_METHOD + 1;
-inline constexpr uint16_t EEPROM_ARG_ENV_B = EEPROM_ARG_ENV_A + 1;
-inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
-inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
-inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
-inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
-inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
-inline constexpr uint8_t BUFFER_SIZE = 22;
-inline constexpr uint16_t EEPROM_BACKUP_START =
-    EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
-
-inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
-    return EEPROM_PROFILE_BLOCK_SIZE * id;
-}
+static_assert(EEPROM_PROFILE_BLOCK_SIZE * 3 <= EEPROM_FILTER_FREQ,
+              "Profile arena spills into filter/brownout scratchpad");
 
 class EnvelopeFollower;
 
