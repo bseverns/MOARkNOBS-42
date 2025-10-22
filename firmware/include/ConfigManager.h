@@ -40,11 +40,12 @@ class MIDIHandler;
  * EEPROM_EF_BASELINES (185) EF baselines          EEPROM_EF_BASELINES_SIZE
  * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           EEPROM_CONFIG_SCRATCH_SIZE
  * EEPROM_BACKUP_START (231) Backup copy of config starts     mirrors layout
- * 412             Profile 1 block begins           412 bytes
- * 824             Profile 2 block begins           412 bytes
- * 1236 (0x4D4)   Filter freq (float)               4
- * 1240 (0x4D8)   Filter Q (float)                  4
- * 1244 (0x4DC)   Brown-out counter (uint16)        2
+ * 412 (0x19C)    Slot arena begins (42×6 bytes)    252 bytes for MIDISlots
+ * 664 (0x298)    Profile 1 block begins            412 bytes for config+backup
+ * 1076 (0x434)   Profile 2 block begins            412 bytes for config+backup
+ * 1488 (0x5D0)   Filter freq (float)               4
+ * 1492 (0x5D4)   Filter Q (float)                  4
+ * 1496 (0x5D8)   Brown-out counter (uint16)        2
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
@@ -56,7 +57,7 @@ class MIDIHandler;
  */
 #endif
 
-static_assert(EEPROM_PROFILE_START(EEPROM_PROFILE_COUNT) == EEPROM_FILTER_FREQ,
+static_assert(EEPROM_PROFILE_ARENA_END == EEPROM_FILTER_FREQ,
               "Profile arena spills into filter/brownout scratchpad");
 
 class EnvelopeFollower;
