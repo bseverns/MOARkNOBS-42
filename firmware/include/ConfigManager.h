@@ -72,17 +72,16 @@ inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
 inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
 inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
 inline constexpr uint16_t EEPROM_CONFIG_BYTES =
-    EEPROM_CONFIG_CRC + sizeof(uint16_t);                //!< Total bytes persisted by writeEEPROM()
+    EEPROM_CONFIG_CRC + sizeof(uint16_t); //!< Total bytes persisted by writeEEPROM()
 inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
-    EEPROM_CONFIG_BYTES;                                 // Lives directly after the CRC bytes
+    EEPROM_CONFIG_BYTES; // Lives directly after the CRC bytes
 inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
 inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
 inline constexpr uint8_t BUFFER_SIZE = 22;
 inline constexpr uint16_t EEPROM_BACKUP_START =
     EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + BUFFER_SIZE;
 
-inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE =
-    EEPROM_BACKUP_START + EEPROM_CONFIG_BYTES;
+inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = EEPROM_BACKUP_START + EEPROM_CONFIG_BYTES;
 
 inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
     return EEPROM_PROFILE_BLOCK_SIZE * id;
