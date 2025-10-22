@@ -24,6 +24,8 @@
 #include <Arduino.h>
 #include <utility>
 #include <array>
+
+#include "MIDITypes.h"
 class ConfigManager;
 extern ConfigManager configManager;
 
@@ -113,6 +115,30 @@ extern float g_vref;
 
 // EEPROM storage constants
 constexpr uint8_t SLOT_EEPROM_SIZE = 6; // bytes required to store a MIDISlot
+
+inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
+inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
+inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
+    EEPROM_START_ADDRESS + 200; //!< Reserve space for config + magic number
+inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; //!< Validates the main config block
+inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  //!< Signals a sane backup image
+
+inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
+inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
+inline constexpr uint8_t EEPROM_BUFFER_SIZE = 22;
+
+inline constexpr uint16_t EEPROM_BACKUP_START =
+    EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + EEPROM_BUFFER_SIZE;
+inline constexpr uint16_t EEPROM_CONFIG_MIRROR_SIZE = EEPROM_BACKUP_START * 2;
+
+inline constexpr uint16_t EEPROM_SLOT_BASE = EEPROM_CONFIG_MIRROR_SIZE;
+inline constexpr uint16_t EEPROM_SLOT_REGION_SIZE = SLOT_EEPROM_SIZE * NUM_SLOTS;
+
+inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
+    return (id == 0) ? EEPROM_START_ADDRESS
+                     : static_cast<uint16_t>(EEPROM_SLOT_BASE + EEPROM_SLOT_REGION_SIZE +
+                                             (id - 1) * EEPROM_PROFILE_BLOCK_SIZE);
+}
 
 // clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback

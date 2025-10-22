@@ -30,4 +30,10 @@ The slot arena scoots out of the way of the config+backup duet so we never
 stomp the calibration data again. Think of it as a velvet rope at `0x1F4`:
 only the 42 MIDISlots get in, everybody else queues up afterwards.
 
+In code, that velvet rope shows up as `EEPROM_SLOT_BASE`, which now equals the
+full mirrored config span (`EEPROM_CONFIG_MIRROR_SIZE = 0x1F4`). The slots chew
+through `EEPROM_SLOT_REGION_SIZE` (252 bytes for 42×6) before
+`EEPROM_PROFILE_START(1)` kicks in at `0x2F0`. Profiles march forward in tidy
+`EEPROM_PROFILE_BLOCK_SIZE` (256 byte) chunks beyond that point.
+
 For the gory details, the code comments in [`firmware/include/ConfigManager.h`](../firmware/include/ConfigManager.h) spill every byte. This table just keeps the map close at hand.
