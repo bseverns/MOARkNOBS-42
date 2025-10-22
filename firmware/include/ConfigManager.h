@@ -56,7 +56,7 @@ class MIDIHandler;
  */
 #endif
 
-static_assert(EEPROM_PROFILE_BLOCK_SIZE * 3 <= EEPROM_FILTER_FREQ,
+static_assert(EEPROM_PROFILE_START(EEPROM_PROFILE_COUNT) == EEPROM_FILTER_FREQ,
               "Profile arena spills into filter/brownout scratchpad");
 
 class EnvelopeFollower;

@@ -38,14 +38,6 @@ inline constexpr uint16_t CONFIG_VERSION = 0x0002; //!< EEPROM schema version
 // Pots headline nearly every interaction, so hang the count in globals.
 inline constexpr uint8_t NUM_POTS = 42; //!< Number of analog pots marching across the panel
 
-// Filter tuning + power health sit just past the profile arena so patching them
-// never tramples a saved config image.
-inline constexpr uint16_t EEPROM_FILTER_FREQ = 0x04D4; //!< EEPROM address for filter freq
-inline constexpr uint16_t EEPROM_FILTER_Q =
-    EEPROM_FILTER_FREQ + sizeof(float); //!< EEPROM address for filter Q
-inline constexpr uint16_t EEPROM_BROWNOUT_COUNT =
-    EEPROM_FILTER_Q + sizeof(float); //!< EEPROM addr for brownout counter
-
 extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
 
@@ -114,9 +106,20 @@ inline constexpr uint8_t EEPROM_CONFIG_SCRATCH_SIZE = 22; //!< Scratch padding a
 inline constexpr uint16_t EEPROM_BACKUP_START =
     EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + EEPROM_CONFIG_SCRATCH_SIZE;
 inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = EEPROM_BACKUP_START + EEPROM_CONFIG_BYTES;
+inline constexpr uint8_t EEPROM_PROFILE_COUNT = 3; //!< Number of zero-indexed profile slots baked into flash
 inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
     return EEPROM_PROFILE_BLOCK_SIZE * id;
 }
+inline constexpr uint16_t EEPROM_PROFILE_ARENA_END =
+    EEPROM_PROFILE_BLOCK_SIZE * EEPROM_PROFILE_COUNT; //!< First byte after the profile arena
+
+// Filter tuning + power health sit just past the profile arena so patching them
+// never tramples a saved config image.
+inline constexpr uint16_t EEPROM_FILTER_FREQ = EEPROM_PROFILE_ARENA_END; //!< EEPROM address for filter freq
+inline constexpr uint16_t EEPROM_FILTER_Q =
+    EEPROM_FILTER_FREQ + sizeof(float); //!< EEPROM address for filter Q
+inline constexpr uint16_t EEPROM_BROWNOUT_COUNT =
+    EEPROM_FILTER_Q + sizeof(float); //!< EEPROM addr for brownout counter
 
 /**
  * Baseline offsets for each envelope follower.  These numbers get learned

@@ -36,6 +36,6 @@ For the gory details, [`firmware/include/Globals.h`](../firmware/include/Globals
 
 - `EEPROM_CONFIG_BYTES` evaluates to `0x0B5` (181 decimal), which is the exact footprint of the data written by `writeEEPROM()` – the pot channel/CC maps plus versioning and CRC tags.
 - `EEPROM_BACKUP_START` lands at `0x0E7` (231 decimal) after we tack on the six baseline floats and the 22-byte scratch buffer. That is where the mirrored block begins.
-- `EEPROM_PROFILE_BLOCK_SIZE` becomes the stride (`0x19C` / 412 bytes) so every profile slice comfortably holds both the primary payload and its backup twin. Profile index 2 therefore tops out at `0x4D3`, leaving the filter tuning cache and brown-out counter at `0x4D4` and beyond where profiles cannot trample them.
+- `EEPROM_PROFILE_BLOCK_SIZE` becomes the stride (`0x19C` / 412 bytes) so every profile slice comfortably holds both the primary payload and its backup twin. With `EEPROM_PROFILE_COUNT` pegged at three slots, the arena chews up `EEPROM_PROFILE_ARENA_END = 3 × 0x19C = 0x4D4`. That value is aliased by `EEPROM_FILTER_FREQ`, so any future bump to the profile size automatically punts the filter/Q/brown-out trio further down in lockstep.
 
 Knowing those three numbers makes it dead simple to sanity-check new fields: update the size in code, recalc the totals, and the profile stride will follow automatically.
