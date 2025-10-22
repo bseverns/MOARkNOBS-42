@@ -236,9 +236,8 @@ void processSerial() {
             // Send all pot settings
             LOG_PRINT("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
-                int envelopeValue = potToEnvelopeMap.count(i)
-                                          ? potToEnvelopeMap[i]
-                                          : ENVELOPE_UNASSIGNED;
+                int envelopeValue =
+                    potToEnvelopeMap.count(i) ? potToEnvelopeMap[i] : ENVELOPE_UNASSIGNED;
                 LOG_PRINT(configManager.getPotCCNumber(i));
                 LOG_PRINT(",");
                 LOG_PRINT(configManager.getPotChannel(i));
@@ -317,9 +316,8 @@ void processSerial() {
             // the whole WebSerial spiel.
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
-                int env = potToEnvelopeMap.count(potIndex)
-                               ? potToEnvelopeMap[potIndex]
-                               : ENVELOPE_UNASSIGNED;
+                int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex]
+                                                           : ENVELOPE_UNASSIGNED;
 #ifdef SERIAL_LOGGING
                 LOG_PRINTLN(env);
 #else
@@ -366,8 +364,7 @@ void processEnvelopes() {
     for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
         // Trust no one: make sure the map didn't hand us a bogus index
         // before poking the envelope array.
-        if (envelopeIndex < 0 ||
-            envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
+        if (envelopeIndex < 0 || envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
             continue;
         }
         EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
@@ -386,8 +383,7 @@ void processEnvelopes() {
             // If the tweaked value differs from what the pot last screamed,
             // fire off a fresh CC and light the pot LED accordingly.
             if (ccValue != potentiometerManager.getLastValue(potIndex)) {
-                midiHandler.sendControlChange(potentiometerManager.getCCNumber(potIndex),
-                                              ccValue,
+                midiHandler.sendControlChange(potentiometerManager.getCCNumber(potIndex), ccValue,
                                               potentiometerManager.getChannel(potIndex));
 
                 ledManager.setPotValue(potIndex, ccValue);
