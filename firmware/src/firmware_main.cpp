@@ -25,6 +25,7 @@
 #include <queue>
 #include <map>
 #include <array>
+#include <cstdlib>
 #include <imxrt.h>
 
 // Sneaky static that kicks in before setup() even thinks about stretching.
@@ -371,12 +372,16 @@ void processEnvelopes() {
     // Stroll through the pot→envelope map; every pair says which envelope
     // rides shotgun with which physical pot.
     for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
-        // Trust no one: make sure the map didn't hand us a bogus index
-        // before poking the envelope array.
-        if (envelopeIndex == ENVELOPE_UNASSIGNED || envelopeIndex < 0 ||
-            envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
+        if (envelopeIndex == ENVELOPE_UNASSIGNED) {
             continue;
         }
+
+        // Trust no one: make sure the map didn't hand us a bogus index
+        // before poking the envelope array.
+        if (envelopeIndex < 0 || envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
+            continue;
+        }
+
         EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
 
         // Only waste cycles on envelopes that are actually lit up.
@@ -389,25 +394,22 @@ void processEnvelopes() {
         ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
         int currentPotReading = potentiometerManager.getLastValue(potIndex);
-        if (currentPotReading < 0) {
+        if (currentPotReading < 0)
             continue; // No baseline yet; wait for the pot scanner to catch up
-        }
 
         int lastBaseline = lastBaselineAdcValues[potIndex];
         // Only refresh the baseline when the raw pot reading actually moved.
         // Anything under ~10 ADC counts is just the analog stage breathing.
-        int delta = currentPotReading - lastBaseline;
-        if (delta < 0) {
-            delta = -delta;
-        }
-        bool baselineChanged = lastBaseline < 0 || delta > kEnvelopeBaselineDeadband;
+        bool baselineChanged = lastBaseline < 0 || std::abs(currentPotReading - lastBaseline) >
+                                                       kEnvelopeBaselineDeadband;
 
         if (baselineChanged) {
             baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
             lastBaselineAdcValues[potIndex] = currentPotReading;
         }
 
-        uint8_t modulatedValue = baselineMidiValues[potIndex];
+        uint8_t baselineMidi = baselineMidiValues[potIndex];
+        uint8_t modulatedValue = baselineMidi;
 
         // applyToCC mutates the MIDI value with the envelope's swagger.
         envelope->applyToCC(potIndex, modulatedValue);
