@@ -129,8 +129,8 @@ class EnvelopeFollower {
     void update();
 
     /**
-     * Modulate the provided CC value with the current envelope level and
-     * send the resulting MIDI message. Avoids sending duplicates.
+     * Modulate the provided CC value with the current envelope level. The
+     * caller handles deduping and transmission.
      */
     void applyToCC(int potIndex, uint8_t &ccValue);
 
