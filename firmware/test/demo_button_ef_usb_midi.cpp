@@ -1,3 +1,4 @@
+#if !defined(UNIT_TEST)
 /*
  * Button + Envelope demo sketch
  * ------------------------------
@@ -113,3 +114,7 @@ void loop() {
     serviceButton();
     drainUsbMidi();
 }
+#else
+// When UNIT_TEST is defined we’re compiling inside PlatformIO’s Unity harness.
+// Skip the demo sketch entirely so test_mainUnity.cpp can own setup()/loop().
+#endif
