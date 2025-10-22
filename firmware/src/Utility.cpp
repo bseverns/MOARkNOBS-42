@@ -11,6 +11,7 @@
 #include "LEDManager.h"
 #include "EEPROM.h"
 #include "MIDIHandler.h"
+#include "ConfigManager.h"
 #include <imxrt.h>
 #include <cstring>
 #include <cstdlib>
@@ -276,9 +277,10 @@ void Utility::processBulkUpdate(const String &command, uint8_t numPots) {
             return;
         }
 
-        int address = currentPot * 2;
-        EEPROM.update(address, channel);
-        EEPROM.update(address + 1, ccNumber);
+        const int channelAddress = EEPROM_POT_CHANNELS + currentPot;
+        const int ccAddress = EEPROM_POT_CC + currentPot;
+        EEPROM.update(channelAddress, channel);
+        EEPROM.update(ccAddress, ccNumber);
 
         currentPot++;
     }

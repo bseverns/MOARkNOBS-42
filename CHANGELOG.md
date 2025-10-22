@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Nothing stamped yet. We’re still catching our breath after the `v0.2.0` drop and taking notes for the next riff.
 
+### Fixed
+- Bulk CC dumps finally stash channels under `EEPROM_POT_CHANNELS` and park CC numbers under `EEPROM_POT_CC`, so `Utility::processBulkUpdate`
+  lines up with the documented EEPROM map instead of gaslighting ConfigManager.
+
 ## [0.2.0] - 2025-10-31
 
 ### Added
