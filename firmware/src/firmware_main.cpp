@@ -28,8 +28,11 @@
 #include <cstdint>
 
 #if defined(ARDUINO)
-extern "C" char _end;
-extern "C" char _flashimagelen;
+extern "C" {
+extern char _ebss;
+extern char _flashimagelen;
+extern char _estack;
+}
 #endif
 
 
@@ -50,10 +53,10 @@ bool webSerialStreaming = false; // Goes true when the browser hollers HELLO and
 namespace {
 size_t computeFreeRAM() {
 #if defined(ARDUINO)
-    char stackDummy = 0;       // Lives on the stack right now.
+    char stackDummy = 0;
     uintptr_t stackPtr = reinterpret_cast<uintptr_t>(&stackDummy);
-    uintptr_t heapPtr = reinterpret_cast<uintptr_t>(&_end);
-    return (stackPtr > heapPtr) ? static_cast<size_t>(stackPtr - heapPtr) : 0U;
+    uintptr_t heapBase = reinterpret_cast<uintptr_t>(&_ebss);
+    return (stackPtr > heapBase) ? static_cast<size_t>(stackPtr - heapBase) : 0U;
 #else
     return 0U;
 #endif
