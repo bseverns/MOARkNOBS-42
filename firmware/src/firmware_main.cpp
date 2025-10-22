@@ -24,6 +24,8 @@
 #include <ArduinoJson.h>
 #include <queue>
 #include <map>
+#include <array>
+#include <cstdlib>
 #include <imxrt.h>
 
 // Sneaky static that kicks in before setup() even thinks about stretching.
@@ -51,6 +53,14 @@ ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button co
 BiquadFilter filter;     // Shared filter template for envelope follower shaping
 TaskScheduler scheduler; // Legacy scheduler kept for posterity (most work lives in Utility)
 Arpeggiator arpeggiator; // Keeps notes chugging along in time
+
+// Envelope-follow baseline bookkeeping. These tables let us debounce ADC noise,
+// remember each pot's last MIDI baseline, and dedupe MIDI chatter after the
+// envelope slaps extra movement on top.
+constexpr int kEnvelopeBaselineDeadband = 10;
+std::array<int, NUM_POTS> lastBaselineAdcValues;
+std::array<uint8_t, NUM_POTS> baselineMidiValues;
+std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
@@ -364,37 +374,60 @@ void processEnvelopes() {
     for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
         // Trust no one: make sure the map didn't hand us a bogus index
         // before poking the envelope array.
-        if (envelopeIndex < 0 || envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
+        if (envelopeIndex == ENVELOPE_UNASSIGNED || envelopeIndex < 0 ||
+            envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
             continue;
         }
         EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
 
         // Only waste cycles on envelopes that are actually lit up.
         // Sleeping envelopes don't get CPU time or make noise.
-        if (envelope->getActiveState()) {
-            envelope->update(); // Pull in the latest peak/decay stats.
-
-            uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
-            // applyToCC mutates ccValue with the envelope's swagger and will
-            // sling a CC at the target if that modulation changed anything.
-            envelope->applyToCC(potIndex, ccValue);
-            ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
-
-            // If the tweaked value differs from what the pot last screamed,
-            // fire off a fresh CC and light the pot LED accordingly.
-            if (ccValue != potentiometerManager.getLastValue(potIndex)) {
-                midiHandler.sendControlChange(potentiometerManager.getCCNumber(potIndex), ccValue,
-                                              potentiometerManager.getChannel(potIndex));
-
-                ledManager.setPotValue(potIndex, ccValue);
-            }
+        if (!envelope->getActiveState()) {
+            continue;
         }
+
+        envelope->update(); // Pull in the latest peak/decay stats.
+        ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
+
+        int currentPotReading = potentiometerManager.getLastValue(potIndex);
+        if (currentPotReading < 0) {
+            continue; // No baseline yet; wait for the pot scanner to catch up
+        }
+
+        int lastBaseline = lastBaselineAdcValues[potIndex];
+        // Only refresh the baseline when the raw pot reading actually moved.
+        // Anything under ~10 ADC counts is just the analog stage breathing.
+        bool baselineChanged = lastBaseline < 0 || std::abs(currentPotReading - lastBaseline) >
+                                                       kEnvelopeBaselineDeadband;
+
+        if (baselineChanged) {
+            baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
+            lastBaselineAdcValues[potIndex] = currentPotReading;
+        }
+
+        uint8_t modulatedValue = baselineMidiValues[potIndex];
+
+        // applyToCC mutates the MIDI value with the envelope's swagger.
+        envelope->applyToCC(potIndex, modulatedValue);
+
+        bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
+        if (valueChanged) {
+            // Only shout over MIDI when the value actually moved.
+            uint8_t ccNumber = potentiometerManager.getCCNumber(potIndex);
+            uint8_t channel = potentiometerManager.getChannel(potIndex);
+            midiHandler.sendControlChange(ccNumber, modulatedValue, channel);
+        }
+
+        // Mirror the post-modulation value on the pot LED, then memoize it
+        // so the dedupe logic stays in sync with what we just displayed.
+        ledManager.setPotValue(potIndex, modulatedValue);
+        lastEnvelopeMidiValues[potIndex] = modulatedValue;
     }
 
     // After the dust settles, mirror the active pot's MIDI-scaled value on
     // every indicator LED so the panel shows exactly what that knob is yelling.
-    uint8_t potMidiValue =
-        Utility::mapToMidiValue(potentiometerManager.getLastValue(buttonContext.activePot));
+    int activePotReading = potentiometerManager.getLastValue(buttonContext.activePot);
+    uint8_t potMidiValue = Utility::mapToMidiValue(activePotReading < 0 ? 0 : activePotReading);
     for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
         ledManager.setPotIndicator(i, potMidiValue);
     }
@@ -517,6 +550,10 @@ void streamWebSerialState() {
 }
 
 void setup() {
+    lastBaselineAdcValues.fill(-1);
+    baselineMidiValues.fill(0);
+    lastEnvelopeMidiValues.fill(0);
+
     // — Serial & Config —
     Serial.begin(SERIAL_BAUD);
     Serial.printf("MN42 FW %s %s\n", FW_VERSION_STR, GIT_SHA_STR);
