@@ -10,6 +10,7 @@ void test_brightness_and_color();
 void test_update_interval_round_trip();
 void test_filter_type_switching();
 void test_channel_and_cc();
+void test_high_index_envelope_assignment_survives_reload();
 void test_long_press_requires_confirm();
 void test_double_press_ctrl2_cycles_midi_type();
 
@@ -26,6 +27,7 @@ void setup() {
     RUN_TEST(test_update_interval_round_trip);
     RUN_TEST(test_filter_type_switching);
     RUN_TEST(test_channel_and_cc);
+    RUN_TEST(test_high_index_envelope_assignment_survives_reload);
     UNITY_END();
 }
 

@@ -362,29 +362,31 @@ void processEnvelopes() {
     for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
         // Trust no one: make sure the map didn't hand us a bogus index
         // before poking the envelope array.
-        if (envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
-            EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
+        if (envelopeIndex < 0 ||
+            envelopeIndex >= static_cast<int>(envelopeFollowers.size())) {
+            continue;
+        }
+        EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
 
-            // Only waste cycles on envelopes that are actually lit up.
-            // Sleeping envelopes don't get CPU time or make noise.
-            if (envelope->getActiveState()) {
-                envelope->update(); // Pull in the latest peak/decay stats.
+        // Only waste cycles on envelopes that are actually lit up.
+        // Sleeping envelopes don't get CPU time or make noise.
+        if (envelope->getActiveState()) {
+            envelope->update(); // Pull in the latest peak/decay stats.
 
-                uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
-                // applyToCC mutates ccValue with the envelope's swagger and will
-                // sling a CC at the target if that modulation changed anything.
-                envelope->applyToCC(potIndex, ccValue);
-                ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
+            uint8_t ccValue = potentiometerManager.getCCNumber(potIndex);
+            // applyToCC mutates ccValue with the envelope's swagger and will
+            // sling a CC at the target if that modulation changed anything.
+            envelope->applyToCC(potIndex, ccValue);
+            ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
-                // If the tweaked value differs from what the pot last screamed,
-                // fire off a fresh CC and light the pot LED accordingly.
-                if (ccValue != potentiometerManager.getLastValue(potIndex)) {
-                    midiHandler.sendControlChange(potentiometerManager.getCCNumber(potIndex),
-                                                  ccValue,
-                                                  potentiometerManager.getChannel(potIndex));
+            // If the tweaked value differs from what the pot last screamed,
+            // fire off a fresh CC and light the pot LED accordingly.
+            if (ccValue != potentiometerManager.getLastValue(potIndex)) {
+                midiHandler.sendControlChange(potentiometerManager.getCCNumber(potIndex),
+                                              ccValue,
+                                              potentiometerManager.getChannel(potIndex));
 
-                    ledManager.setPotValue(potIndex, ccValue);
-                }
+                ledManager.setPotValue(potIndex, ccValue);
             }
         }
     }

@@ -252,7 +252,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
     // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
         auto it = context.potToEnvelopeMap.find(index);
-        if (it == context.potToEnvelopeMap.end()) {
+        if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
             context.potToEnvelopeMap[index] = 0; // default EF0
         } else {
             int currentEF = it->second;
@@ -260,6 +260,10 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
             it->second = nextEF;
         }
         int assigned = context.potToEnvelopeMap[index];
+        if (assigned == ENVELOPE_UNASSIGNED) {
+            assigned = 0;
+            context.potToEnvelopeMap[index] = assigned;
+        }
         context.envelopes[assigned].toggleActive(true);
         char buf[32];
         sprintf(buf, "Slot %d -> EF %d", index, assigned);
@@ -274,7 +278,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         switch (ctrlIdx) {
         case 0: { // Calibrate assigned envelope follower
             auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
+            if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
                 context.displayManager.displayStatus("No EF assigned", 1000);
                 break;
             }
@@ -383,7 +387,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
     // If user double-pressed a slot button (0..41)
     if (index < NUM_VIRTUAL_BUTTONS) {
         auto it = context.potToEnvelopeMap.find(index);
-        if (it == context.potToEnvelopeMap.end()) {
+        if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
             context.displayManager.displayStatus("No EF assigned", 1000);
             return;
         }
@@ -409,7 +413,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         case 0: {
             // Double Press (Ctrl #0): Cycle EF filter forward
             auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
+            if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
                 context.displayManager.displayStatus("No EF assigned", 1000);
                 return;
             }
@@ -430,7 +434,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             // Double Press (Ctrl #1): Cycle EF filter backward
             // [CHANGED] => use activePot instead of 'index', and properly wrap negative
             auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
+            if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
                 context.displayManager.displayStatus("No EF assigned", 1000);
                 return;
             }
@@ -539,7 +543,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
 
         // If EF is on, cycle to the next EF for the active slot
         auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
+        if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
             // not assigned yet => assign EF0
             context.potToEnvelopeMap[context.activePot] = 0;
         } else {
@@ -548,6 +552,10 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             it->second = nextEF;
         }
         int assigned = context.potToEnvelopeMap[context.activePot];
+        if (assigned == ENVELOPE_UNASSIGNED) {
+            assigned = 0;
+            context.potToEnvelopeMap[context.activePot] = assigned;
+        }
         context.envelopes[assigned].toggleActive(true);
 
         char buf[32];
@@ -633,7 +641,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
+        if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
             context.displayManager.displayStatus("No EF assigned", 1000);
             return;
         }
@@ -664,7 +672,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
         auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
+        if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
             context.displayManager.displayStatus("No EF assigned", 1000);
             return;
         }

@@ -84,6 +84,8 @@ inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
     return EEPROM_PROFILE_BLOCK_SIZE * id;
 }
 
+inline constexpr int ENVELOPE_UNASSIGNED = -1;
+
 class EnvelopeFollower;
 
 /**

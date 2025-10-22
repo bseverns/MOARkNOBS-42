@@ -221,19 +221,27 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
 bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
                                          std::vector<EnvelopeFollower> &envelopes) {
     bool allFound = true;
-    for (size_t i = 0; i < envelopes.size(); i++) {
-        int envelopeIndex = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
-        potToEnvelopeMap[i] = envelopeIndex;
 
-        float b;
-        EEPROM.get(EEPROM_EF_BASELINES + i * sizeof(float), b);
+    potToEnvelopeMap.clear();
+    for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
+        int stored = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
+        int envelopeIndex = stored;
+        if (stored == 0xFF || envelopeIndex >= static_cast<int>(envelopes.size())) {
+            envelopeIndex = ENVELOPE_UNASSIGNED;
+        }
+        potToEnvelopeMap[potIndex] = envelopeIndex;
+    }
 
-        envelopes[i].setVref(g_vref); // always refresh Vref
-        if (!std::isnan(b)) {
-            envelopes[i].setBaseline(b);
-            envelopeConfig.baselines[i] = b;
+    for (size_t envIndex = 0; envIndex < envelopes.size(); ++envIndex) {
+        float baseline;
+        EEPROM.get(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
+
+        envelopes[envIndex].setVref(g_vref); // always refresh Vref
+        if (!std::isnan(baseline)) {
+            envelopes[envIndex].setBaseline(baseline);
+            envelopeConfig.baselines[envIndex] = baseline;
         } else {
-            envelopeConfig.baselines[i] = 0.0f;
+            envelopeConfig.baselines[envIndex] = 0.0f;
             allFound = false;
         }
     }
@@ -242,8 +250,13 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
 
 void ConfigManager::saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
                                          const std::vector<EnvelopeFollower> &envelopes) {
-    for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
-        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
+    for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
+        auto it = potToEnvelopeMap.find(potIndex);
+        int envelopeIndex = (it != potToEnvelopeMap.end()) ? it->second : ENVELOPE_UNASSIGNED;
+        uint8_t stored = (envelopeIndex == ENVELOPE_UNASSIGNED)
+                             ? static_cast<uint8_t>(0xFF)
+                             : static_cast<uint8_t>(envelopeIndex);
+        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, stored);
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
         envelopeConfig.baselines[i] = envelopes[i].getBaseline();

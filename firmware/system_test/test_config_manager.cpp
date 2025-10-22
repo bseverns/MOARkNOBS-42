@@ -7,6 +7,7 @@
 // Extra tests live inside ConfigManager.cpp under UNIT_TEST
 extern void test_eeprom_recovery_after_power_cycle();
 extern void test_calibration_offsets_survive_power_cycle();
+void test_high_index_envelope_assignment_survives_reload();
 
 // Fake the EEPROM header so the primary copy looks rotten
 // while the backup stays pristine. The ConfigManager should
@@ -48,4 +49,33 @@ void corrupted_primary_and_backup() {
     TEST_ASSERT_FALSE(ok);
     TEST_ASSERT_EQUAL_UINT8(1, pots[0]);
     TEST_ASSERT_EQUAL_UINT8(1, pots[1]);
+}
+
+void test_high_index_envelope_assignment_survives_reload() {
+    auto pm = createPotentiometerManager();
+    auto envelopes = createEnvelopeFollowers(&pm);
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+
+    std::map<int, int> assignments;
+    for (int pot = 0; pot < NUM_POTS; ++pot) {
+        assignments[pot] = ENVELOPE_UNASSIGNED;
+    }
+
+    const int highPot = NUM_POTS - 1;
+    const int envIndex = NUM_ENVELOPES - 1;
+    const float baseline = 0.37f;
+    assignments[highPot] = envIndex;
+    envelopes[envIndex].setBaseline(baseline);
+
+    cfg.saveEnvelopeSettings(assignments, envelopes);
+
+    std::map<int, int> restored;
+    auto freshEnvelopes = createEnvelopeFollowers(&pm);
+    bool baselinesOk = cfg.loadEnvelopeSettings(restored, freshEnvelopes);
+
+    TEST_ASSERT_TRUE(baselinesOk);
+    TEST_ASSERT_EQUAL_INT(NUM_POTS, restored.size());
+    TEST_ASSERT_EQUAL(envIndex, restored[highPot]);
+    TEST_ASSERT_EQUAL(ENVELOPE_UNASSIGNED, restored[0]);
+    TEST_ASSERT_FLOAT_WITHIN(0.0001f, baseline, freshEnvelopes[envIndex].getBaseline());
 }

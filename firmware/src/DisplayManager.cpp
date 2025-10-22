@@ -358,9 +358,11 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
 
     if (context.potToEnvelopeMap.count(context.activePot)) {
         int envelopeIndex = context.potToEnvelopeMap.at(context.activePot);
-        _display.setCursor(0, 20);
-        _display.print("ENV->POT: ");
-        _display.println(envelopeIndex);
+        if (envelopeIndex != ENVELOPE_UNASSIGNED) {
+            _display.setCursor(0, 20);
+            _display.print("ENV->POT: ");
+            _display.println(envelopeIndex);
+        }
     }
 
     _display.display();
