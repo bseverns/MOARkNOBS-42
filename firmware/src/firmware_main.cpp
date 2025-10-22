@@ -357,6 +357,10 @@ void processSerial() {
     }
 }
 
+namespace {
+constexpr int kEnvelopeBaselineDeadband = 10; // Ignore analog flutter beneath this delta
+} // namespace
+
 void processEnvelopes() {
     static std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
     static std::array<int, NUM_POTS> lastBaselineAdcValues;
@@ -372,6 +376,8 @@ void processEnvelopes() {
     // Stroll through the pot→envelope map; every pair says which envelope
     // rides shotgun with which physical pot.
     for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
+        if (potIndex < 0 || potIndex >= NUM_POTS)
+            continue; // Someone scribbled junk into the routing table; bail fast
         // Trust no one: make sure the map didn't hand us a bogus index
         // before poking the envelope array.
         if (envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
@@ -391,8 +397,8 @@ void processEnvelopes() {
                 int lastBaseline = lastBaselineAdcValues[potIndex];
                 // Only refresh the baseline when the raw pot reading actually moved.
                 // Anything under ~10 ADC counts is just the analog stage breathing.
-                bool baselineChanged = lastBaseline < 0 ||
-                                        abs(currentPotReading - lastBaseline) > 10;
+                bool baselineChanged = lastBaseline < 0 || abs(currentPotReading - lastBaseline) >
+                                                               kEnvelopeBaselineDeadband;
 
                 if (baselineChanged) {
                     baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
@@ -408,9 +414,9 @@ void processEnvelopes() {
                 bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
                 if (valueChanged) {
                     // Only shout over MIDI when the value actually moved.
-                    midiHandler.sendControlChange(potentiometerManager.getCCNumber(potIndex),
-                                                  modulatedValue,
-                                                  potentiometerManager.getChannel(potIndex));
+                    uint8_t ccNumber = potentiometerManager.getCCNumber(potIndex);
+                    uint8_t channel = potentiometerManager.getChannel(potIndex);
+                    midiHandler.sendControlChange(ccNumber, modulatedValue, channel);
                 }
 
                 // Mirror the post-modulation value on the pot LED, then memoize it
@@ -423,10 +429,14 @@ void processEnvelopes() {
 
     // After the dust settles, mirror the active pot's MIDI-scaled value on
     // every indicator LED so the panel shows exactly what that knob is yelling.
-    uint8_t potMidiValue =
-        Utility::mapToMidiValue(potentiometerManager.getLastValue(buttonContext.activePot));
-    for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
-        ledManager.setPotIndicator(i, potMidiValue);
+    if (buttonContext.activePot < NUM_POTS) {
+        int activePotReading = potentiometerManager.getLastValue(buttonContext.activePot);
+        if (activePotReading >= 0) {
+            uint8_t potMidiValue = Utility::mapToMidiValue(activePotReading);
+            for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
+                ledManager.setPotIndicator(i, potMidiValue);
+            }
+        }
     }
 }
 
