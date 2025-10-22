@@ -454,7 +454,7 @@ void updateFilterTuning(ButtonManagerContext &context) {
     // 5. Which EF are we tuning?
     //    We'll tune the EF assigned to the “activePot” in the context
     auto it = context.potToEnvelopeMap.find(context.activePot);
-    if (it == context.potToEnvelopeMap.end()) {
+    if (it == context.potToEnvelopeMap.end() || it->second == ENVELOPE_UNASSIGNED) {
         // If no EF assigned to active pot, do nothing
         return;
     }
@@ -729,7 +729,7 @@ void setup() {
                 displayManager.beginDraw();
                 displayManager.updateFromContext(buttonContext);
                 auto it = potToEnvelopeMap.find(buttonContext.activePot);
-                if (it != potToEnvelopeMap.end()) {
+                if (it != potToEnvelopeMap.end() && it->second != ENVELOPE_UNASSIGNED) {
                     displayManager.showEnvelopeLevel(
                         envelopeFollowers[it->second].getEnvelopeLevel());
                 }
