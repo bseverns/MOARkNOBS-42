@@ -91,3 +91,22 @@ void test_digital_provider_overrides_matrix_reads() {
     hardware::ScopedDigitalReadProvider lo(stubDigitalHigh);
     TEST_ASSERT_FALSE(manager.readControlButtonForTest(1));
 }
+
+#if defined(UNIT_TEST)
+
+ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
+                             PotentiometerManager *potentiometerManager)
+    : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
+      activeMode(0), activeARGMethod(0), argEnvelopeA(0), argEnvelopeB(1), _pendingEfSlot(-1),
+      _efAssignDeadline(0) {
+    for (size_t i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; ++i) {
+        buttonStates[i] = false;
+        lastDebounceTimes[i] = 0;
+    }
+}
+
+bool ButtonManager::readControlButton(uint8_t buttonIndex) {
+    return hardware::readDigital(_controlPins[buttonIndex]) == LOW;
+}
+
+#endif // defined(UNIT_TEST)
