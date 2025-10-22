@@ -236,7 +236,9 @@ void processSerial() {
             // Send all pot settings
             LOG_PRINT("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
-                int envelopeValue = (potToEnvelopeMap.count(i)) ? potToEnvelopeMap[i] : -1;
+                int envelopeValue = potToEnvelopeMap.count(i)
+                                          ? potToEnvelopeMap[i]
+                                          : ENVELOPE_UNASSIGNED;
                 LOG_PRINT(configManager.getPotCCNumber(i));
                 LOG_PRINT(",");
                 LOG_PRINT(configManager.getPotChannel(i));
@@ -315,7 +317,9 @@ void processSerial() {
             // the whole WebSerial spiel.
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
-                int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
+                int env = potToEnvelopeMap.count(potIndex)
+                               ? potToEnvelopeMap[potIndex]
+                               : ENVELOPE_UNASSIGNED;
 #ifdef SERIAL_LOGGING
                 LOG_PRINTLN(env);
 #else
