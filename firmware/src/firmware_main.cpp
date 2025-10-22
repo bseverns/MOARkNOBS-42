@@ -25,6 +25,15 @@
 #include <queue>
 #include <map>
 #include <imxrt.h>
+#include <cstdint>
+
+#if defined(ARDUINO)
+extern "C" {
+extern char _ebss;
+extern char _flashimagelen;
+extern char _estack;
+}
+#endif
 
 // Sneaky static that kicks in before setup() even thinks about stretching.
 // It pulls in pin maps and timing constants from Globals.h so the rest of this
@@ -39,6 +48,83 @@ uint8_t midiBeatPosition = 0; // 0-7 beat slot; bumps each MIDI clock tick then 
 char serialBuffer[SERIAL_BUFFER_SIZE]; // Holding pen where serial graffiti waits for judgement
 uint8_t serialBufferIndex = 0;   // Cursor into serialBuffer; resets on newline or when it overflows
 bool webSerialStreaming = false; // Goes true when the browser hollers HELLO and stays that way
+
+namespace {
+size_t computeFreeRAM() {
+#if defined(ARDUINO)
+    char stackDummy = 0;
+    uintptr_t stackPtr = reinterpret_cast<uintptr_t>(&stackDummy);
+    uintptr_t heapBase = reinterpret_cast<uintptr_t>(&_ebss);
+    return (stackPtr > heapBase) ? static_cast<size_t>(stackPtr - heapBase) : 0U;
+#else
+    return 0U;
+#endif
+}
+
+size_t computeFreeFlash() {
+#if defined(ARDUINO)
+    constexpr size_t kFlashSizeBytes =
+        1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
+    size_t used = reinterpret_cast<uintptr_t>(&_flashimagelen);
+    return (used < kFlashSizeBytes) ? (kFlashSizeBytes - used) : 0U;
+#else
+    return 0U;
+#endif
+}
+
+const char *midiMessageTypeName(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "PITCH_BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROGRAM";
+    case MIDIMessageType::Aftertouch:
+        return "AFTERTOUCH";
+    case MIDIMessageType::ModWheel:
+        return "MOD_WHEEL";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYSEX";
+    }
+    return "UNKNOWN";
+}
+
+const char *envelopeFilterName(EnvelopeFollower::FilterType type) {
+    switch (type) {
+    case EnvelopeFollower::LOWPASS:
+        return "LOWPASS";
+    case EnvelopeFollower::HIGHPASS:
+        return "HIGHPASS";
+    case EnvelopeFollower::BANDPASS:
+        return "BANDPASS";
+    default:
+        return "CUSTOM";
+    }
+}
+
+const char *argMethodName(uint8_t method) {
+    static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
+                                             "BABS", "TABS", "MULT", "DIVI", "AVG",
+                                             "XABS", "MAXX", "MINN", "XORR"};
+    if (method < (sizeof(kNames) / sizeof(kNames[0]))) {
+        return kNames[method];
+    }
+    return "UNKNOWN";
+}
+
+const char *envelopeModeName(uint8_t mode) {
+    return (mode == static_cast<uint8_t>(EnvelopeFollower::ARG)) ? "ARG" : "SEF";
+}
+} // namespace
 
 // Global objects
 std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI channel
@@ -171,6 +257,111 @@ void processSerial() {
 
         } else if (command == "GET_BROWNOUTS") {
             LOG_PRINTLN(g_brownoutCount);
+
+        } else if (command == "GET_MANIFEST") {
+            StaticJsonDocument<256> doc;
+            doc["fw_version"] = FW_VERSION_STR;
+            doc["git_sha"] = GIT_SHA_STR;
+            doc["build_time"] = __DATE__ " " __TIME__;
+            doc["schema_version"] = CONFIG_VERSION;
+            doc["slot_count"] = NUM_SLOTS;
+            doc["pot_count"] = configManager.getNumPots();
+            doc["envelope_count"] = NUM_ENVELOPES;
+            doc["arg_method_count"] = static_cast<uint8_t>(EnvelopeFollower::ARG_Method::XORR) + 1;
+            doc["led_count"] = NUM_LEDS();
+            doc["free_ram"] = computeFreeRAM();
+            doc["free_flash"] = computeFreeFlash();
+
+            String payload;
+            serializeJson(doc, payload);
+            LOG_PRINTLN(payload);
+
+        } else if (command == "GET_CONFIG") {
+            StaticJsonDocument<8192> doc;
+
+            doc["fw_version"] = FW_VERSION_STR;
+            doc["schema_version"] = CONFIG_VERSION;
+
+            JsonArray pots = doc.createNestedArray("pots");
+            for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+                JsonObject pot = pots.createNestedObject();
+                pot["index"] = i;
+                pot["channel"] = configManager.getPotChannel(i);
+                pot["cc"] = configManager.getPotCCNumber(i);
+            }
+
+            JsonArray slots = doc.createNestedArray("slots");
+            const auto &slotDefs = configManager.getSlots();
+            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+                const MIDISlot &slot = slotDefs[i];
+                JsonObject slotObj = slots.createNestedObject();
+                slotObj["index"] = i;
+                slotObj["type"] = static_cast<uint8_t>(slot.type);
+                slotObj["type_name"] = midiMessageTypeName(slot.type);
+                slotObj["channel"] = slot.midiChannel;
+                slotObj["data1"] = slot.data1;
+                slotObj["ef_index"] = slot.efIndex;
+                slotObj["active"] = slot.active;
+                slotObj["arp_note"] = slot.arpNote;
+            }
+
+            JsonObject env = doc.createNestedObject("envelopes");
+            JsonArray routing = env.createNestedArray("routing");
+            for (uint8_t i = 0; i < NUM_POTS; ++i) {
+                int mapping = -1;
+                auto it = potToEnvelopeMap.find(i);
+                if (it != potToEnvelopeMap.end()) {
+                    mapping = it->second;
+                }
+                routing.add(mapping);
+            }
+
+            JsonArray followers = env.createNestedArray("followers");
+            for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
+                JsonObject follower = followers.createNestedObject();
+                follower["index"] = static_cast<uint8_t>(i);
+                follower["active"] = envelopeFollowers[i].getActiveState();
+                follower["filter"] = envelopeFilterName(envelopeFollowers[i].getFilterType());
+                follower["baseline"] = envelopeConfig.baselines[i];
+                follower["oversample"] = envelopeFollowers[i].getOversampleCount();
+                follower["smoothing"] = envelopeFollowers[i].getSmoothingAlpha();
+            }
+
+            uint8_t storedMode = configManager.getMode();
+            env["mode"] = storedMode;
+            env["mode_name"] = envelopeModeName(storedMode);
+
+            uint8_t storedMethod = configManager.getARGMethod();
+            env["arg_method"] = storedMethod;
+            env["arg_method_name"] = argMethodName(storedMethod);
+            env["arg_enable"] = configManager.getARGEnable();
+
+            JsonObject argPair = env.createNestedObject("arg_pair");
+            argPair["a"] = configManager.getEnvelopeA();
+            argPair["b"] = configManager.getEnvelopeB();
+
+            float freq = 0.0f;
+            float q = 0.0f;
+            EEPROM.get(EEPROM_FILTER_FREQ, freq);
+            EEPROM.get(EEPROM_FILTER_Q, q);
+            JsonObject filter = env.createNestedObject("filter");
+            filter["frequency"] = freq;
+            filter["q"] = q;
+
+            JsonObject led = doc.createNestedObject("led");
+            led["brightness"] = ledManager.getBrightness();
+            CRGB color = ledManager.getColor();
+            JsonObject colorObj = led.createNestedObject("rgb");
+            colorObj["r"] = color.r;
+            colorObj["g"] = color.g;
+            colorObj["b"] = color.b;
+            char hex[8];
+            snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
+            led["hex"] = hex;
+
+            String payload;
+            serializeJson(doc, payload);
+            LOG_PRINTLN(payload);
 
         } else if (command.startsWith("SET_POT")) {
             // Parse "SET_POT" command
