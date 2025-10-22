@@ -25,7 +25,6 @@
 #include <queue>
 #include <map>
 #include <array>
-#include <cstdlib>
 #include <imxrt.h>
 
 // Sneaky static that kicks in before setup() even thinks about stretching.
@@ -397,8 +396,11 @@ void processEnvelopes() {
         int lastBaseline = lastBaselineAdcValues[potIndex];
         // Only refresh the baseline when the raw pot reading actually moved.
         // Anything under ~10 ADC counts is just the analog stage breathing.
-        bool baselineChanged = lastBaseline < 0 || std::abs(currentPotReading - lastBaseline) >
-                                                       kEnvelopeBaselineDeadband;
+        int delta = currentPotReading - lastBaseline;
+        if (delta < 0) {
+            delta = -delta;
+        }
+        bool baselineChanged = lastBaseline < 0 || delta > kEnvelopeBaselineDeadband;
 
         if (baselineChanged) {
             baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
@@ -426,10 +428,14 @@ void processEnvelopes() {
 
     // After the dust settles, mirror the active pot's MIDI-scaled value on
     // every indicator LED so the panel shows exactly what that knob is yelling.
-    int activePotReading = potentiometerManager.getLastValue(buttonContext.activePot);
-    uint8_t potMidiValue = Utility::mapToMidiValue(activePotReading < 0 ? 0 : activePotReading);
-    for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
-        ledManager.setPotIndicator(i, potMidiValue);
+    if (buttonContext.activePot < NUM_POTS) {
+        int activePotReading = potentiometerManager.getLastValue(buttonContext.activePot);
+        if (activePotReading >= 0) {
+            uint8_t potMidiValue = Utility::mapToMidiValue(activePotReading);
+            for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
+                ledManager.setPotIndicator(i, potMidiValue);
+            }
+        }
     }
 }
 
