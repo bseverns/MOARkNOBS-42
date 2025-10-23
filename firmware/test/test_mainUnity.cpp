@@ -14,7 +14,9 @@ void test_scoped_analog_provider_nesting();
 void test_sequence_provider_cycles_values();
 void test_set_provider_returns_previous();
 void test_digital_provider_overrides_matrix_reads();
-void test_process_bulk_update_writes_expected_layout();
+void test_bulk_config_assembler_handles_chunks();
+void test_bulk_config_assembler_detects_overflow();
+void test_format_ack_includes_checksum_and_seq();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
 void test_aftertouch();
@@ -34,7 +36,9 @@ void setup() {
     RUN_TEST(test_sequence_provider_cycles_values);
     RUN_TEST(test_set_provider_returns_previous);
     RUN_TEST(test_digital_provider_overrides_matrix_reads);
-    RUN_TEST(test_process_bulk_update_writes_expected_layout);
+    RUN_TEST(test_bulk_config_assembler_handles_chunks);
+    RUN_TEST(test_bulk_config_assembler_detects_overflow);
+    RUN_TEST(test_format_ack_includes_checksum_and_seq);
     RUN_TEST(test_start_stop_cycle);
     RUN_TEST(test_pot_root_drives_default);
     RUN_TEST(test_slot_root_wins_over_pot);

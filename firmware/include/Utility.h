@@ -114,7 +114,58 @@ class Utility {
         const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
         const char *envelopeMode);
 
-    static void processBulkUpdate(const String &command, uint8_t numPots);
+    /** Maximum JSON payload we accept for chunked configuration pushes. */
+    static constexpr size_t kMaxBulkConfigSize = 32768;
+
+    /**
+     * Incremental assembler for chunked configuration uploads. Each
+     * `SET_ALL` frame feeds a substring of the final JSON blob into this
+     * buffer until ArduinoJson can deserialize the full payload.
+     */
+    class BulkConfigAssembler {
+      public:
+        /** Reset state so the next chunk is treated as a brand-new frame. */
+        void reset();
+
+        /**
+         * Append a chunk of JSON to the working buffer.
+         *
+         * @param chunk  Raw substring captured after the `SET_ALL ` prefix.
+         * @param error  Populated with a short error code when ingestion fails.
+         * @return       true if the chunk was accepted, false on overflow or
+         *               orphaned fragments.
+         */
+        bool ingestChunk(const String &chunk, String &error);
+
+        /** Return true when a frame is currently being assembled. */
+        bool inProgress() const { return receiving; }
+
+        /** Expose the buffered JSON so callers can hand it to ArduinoJson. */
+        const String &payload() const { return buffer; }
+
+        /** True when no bytes are staged. */
+        bool empty() const { return buffer.isEmpty(); }
+
+        /** Rough sequence hint scraped from the staged payload. */
+        uint32_t sequenceHint() const { return seqHint; }
+
+        /** Best-effort checksum hint scraped from the staged payload. */
+        const String &checksumHint() const { return checksum; }
+
+        /** Current payload size in bytes. */
+        size_t size() const { return buffer.length(); }
+
+      private:
+        void refreshHints();
+
+        bool receiving = false;
+        String buffer;
+        uint32_t seqHint = 0;
+        String checksum;
+    };
+
+    /** Format the acknowledgement packet emitted after applying a config. */
+    static String formatAck(const char *checksum, uint32_t sequence);
 
     /** Sample the hardware VREF divider and return the measured voltage. */
     static float readVrefADC(uint8_t pin = VREF_ADC_PIN);

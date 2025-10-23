@@ -2,52 +2,41 @@
 #include <unity.h>
 
 #include "Utility.h"
-#include "ConfigManager.h"
-#include <EEPROM.h>
+#include <ArduinoJson.h>
 
-void test_process_bulk_update_writes_expected_layout() {
-    constexpr uint8_t numPotsUnderTest = 4;
-    constexpr uint8_t sentinel = 0xAA;
+void test_bulk_config_assembler_handles_chunks() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
 
-    const uint16_t layoutGuardEnd = EEPROM_ENVELOPE_ASSIGNMENTS + numPotsUnderTest;
-    for (uint16_t address = 0; address < layoutGuardEnd; ++address) {
-        EEPROM.update(address, sentinel);
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"seq\":1,\"checksum\":\"deadbeef\",\"config\":", error));
+    TEST_ASSERT_EQUAL_UINT32(1, assembler.sequenceHint());
+
+    StaticJsonDocument<256> partial;
+    auto partialErr = deserializeJson(partial, assembler.payload());
+    TEST_ASSERT_TRUE(partialErr == DeserializationError::IncompleteInput);
+
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"slots\":[]}}", error));
+    StaticJsonDocument<256> doc;
+    auto finalErr = deserializeJson(doc, assembler.payload());
+    TEST_ASSERT_FALSE(finalErr);
+    TEST_ASSERT_EQUAL_STRING("deadbeef", doc["checksum"]);
+}
+
+void test_bulk_config_assembler_detects_overflow() {
+    Utility::BulkConfigAssembler assembler;
+    String chunk;
+    chunk.reserve(Utility::kMaxBulkConfigSize + 2);
+    chunk = "{";
+    for (size_t i = 0; i <= Utility::kMaxBulkConfigSize; ++i) {
+        chunk += 'a';
     }
+    String error;
+    TEST_ASSERT_FALSE(assembler.ingestChunk(chunk, error));
+    TEST_ASSERT_TRUE(error == "overflow");
+}
 
-    struct Mapping {
-        uint8_t cc;
-        uint8_t channel;
-    };
-
-    const Mapping assignments[numPotsUnderTest] = {
-        {12, 2},
-        {34, 7},
-        {56, 13},
-        {78, 16},
-    };
-
-    String command = "SET_ALL ";
-    for (uint8_t i = 0; i < numPotsUnderTest; ++i) {
-        if (i > 0) {
-            command += ';';
-        }
-        command += String(assignments[i].cc);
-        command += ',';
-        command += String(assignments[i].channel);
-    }
-    command += ";99,5"; // extra payload should be ignored once we run out of pots
-
-    Utility::processBulkUpdate(command, numPotsUnderTest);
-
-    for (uint8_t i = 0; i < numPotsUnderTest; ++i) {
-        TEST_ASSERT_EQUAL_UINT8(assignments[i].channel, EEPROM.read(EEPROM_POT_CHANNELS + i));
-        TEST_ASSERT_EQUAL_UINT8(assignments[i].cc, EEPROM.read(EEPROM_POT_CC + i));
-    }
-
-    for (uint8_t i = 0; i < numPotsUnderTest; ++i) {
-        TEST_ASSERT_EQUAL_UINT8(sentinel, EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i));
-    }
-
-    TEST_ASSERT_EQUAL_UINT8(sentinel, EEPROM.read(EEPROM_POT_CHANNELS + numPotsUnderTest));
-    TEST_ASSERT_EQUAL_UINT8(sentinel, EEPROM.read(EEPROM_POT_CC + numPotsUnderTest));
+void test_format_ack_includes_checksum_and_seq() {
+    String ack = Utility::formatAck("cafebabe", 42);
+    TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"checksum\":\"cafebabe\""));
+    TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"seq\":42"));
 }
