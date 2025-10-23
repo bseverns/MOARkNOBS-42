@@ -573,28 +573,34 @@ void processEnvelopes() {
         // before poking the envelope array.
         if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
             EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
+            bool envelopeActive = envelope->getActiveState();
+
+            int currentPotReading = potentiometerManager.getLastValue(potIndex);
+            if (currentPotReading < 0)
+                continue; // No baseline yet; wait for the pot scanner to catch up
+
+            int lastBaseline = lastBaselineAdcValues[potIndex];
+            // Only refresh the baseline when the raw pot reading actually moved.
+            // Anything under ~10 ADC counts is just the analog stage breathing.
+            bool baselineChanged = lastBaseline < 0 ||
+                                   abs(currentPotReading - lastBaseline) > kEnvelopeBaselineDeadband;
+
+            if (baselineChanged) {
+                baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
+                lastBaselineAdcValues[potIndex] = currentPotReading;
+
+                // Keep our last-sent MIDI cache honest even while the envelope sleeps.
+                if (!envelopeActive)
+                    lastEnvelopeMidiValues[potIndex] = baselineMidiValues[potIndex];
+            }
 
             // Only waste cycles on envelopes that are actually lit up.
-            // Sleeping envelopes don't get CPU time or make noise.
-            if (envelope->getActiveState()) {
+            // Snoozing followers still refresh their baselines above so they can
+            // wake up without jolting the MIDI stream.
+            if (envelopeActive) {
                 envelope->update(); // Pull in the latest peak/decay stats.
 
                 ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
-
-                int currentPotReading = potentiometerManager.getLastValue(potIndex);
-                if (currentPotReading < 0)
-                    continue; // No baseline yet; wait for the pot scanner to catch up
-
-                int lastBaseline = lastBaselineAdcValues[potIndex];
-                // Only refresh the baseline when the raw pot reading actually moved.
-                // Anything under ~10 ADC counts is just the analog stage breathing.
-                bool baselineChanged = lastBaseline < 0 || abs(currentPotReading - lastBaseline) >
-                                                               kEnvelopeBaselineDeadband;
-
-                if (baselineChanged) {
-                    baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
-                    lastBaselineAdcValues[potIndex] = currentPotReading;
-                }
 
                 uint8_t baselineMidi = baselineMidiValues[potIndex];
                 uint8_t modulatedValue = baselineMidi;
