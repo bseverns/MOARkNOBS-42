@@ -90,6 +90,9 @@ newline-terminated JSON blobs as well, all prefixed with a `type` field so your 
 Every patch obeys the same “don’t spam unless streaming” rule as snapshots. If WebSerial streaming is paused, patches quietly bail
 so the USB line isn’t clogged when no one’s listening.
 
+> **Legacy compatibility:** Each targeted patch is also echoed as a classic `config-patch` blob. Old tooling keeps humming, and new
+> clients can key off the more focused message types above without losing backwards support.
+
 ## Text Commands
 
 Spying is fun, but sometimes you gotta bark orders. Hurl plain‑text commands

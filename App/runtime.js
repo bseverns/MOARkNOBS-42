@@ -498,6 +498,22 @@ export function createRuntime({
       }
       return;
     }
+    if (msg.type === 'slot_patch') {
+      handleSlotPatchMessage(msg);
+      return;
+    }
+    if (msg.type === 'envelope_assignment') {
+      handleEnvelopeAssignmentMessage(msg);
+      return;
+    }
+    if (msg.type === 'filter_patch') {
+      handleFilterPatchMessage(msg);
+      return;
+    }
+    if (msg.type === 'arg_patch') {
+      handleArgPatchMessage(msg);
+      return;
+    }
     if (msg.type === 'config-patch') {
       applyConfigPatch(msg);
       return;
@@ -517,6 +533,153 @@ export function createRuntime({
     if (!queuedTelemetry) return;
     emit('telemetry', queuedTelemetry);
     queuedTelemetry = null;
+  }
+
+  function handleSlotPatchMessage(msg) {
+    let slotIndex = coerceIndex(msg?.slot ?? msg?.index ?? msg?.slot_index ?? msg?.slotId);
+    if (slotIndex === null) {
+      const nestedIndex = Number(msg?.slot?.index ?? msg?.slot?.slot ?? msg?.slot?.id);
+      if (Number.isInteger(nestedIndex) && nestedIndex >= 0) slotIndex = nestedIndex;
+    }
+    if (slotIndex === null) return;
+    const body = typeof msg.slot === 'object' && msg.slot
+      ? msg.slot
+      : typeof msg.slot_state === 'object' && msg.slot_state
+        ? msg.slot_state
+        : {};
+    const entry = { index: slotIndex };
+    let hasPayload = false;
+
+    const schemaName = body.schema_name ?? body.type_name ?? body.legacy_name ?? body.type;
+    if (schemaName !== undefined) {
+      entry.type = schemaName;
+      hasPayload = true;
+    }
+    if (body.type_name !== undefined || body.legacy_name !== undefined || body.schema_name !== undefined) {
+      entry.type_name = body.type_name ?? body.legacy_name ?? body.schema_name;
+      hasPayload = true;
+    }
+    if (body.type !== undefined) {
+      entry.type_code = body.type;
+      hasPayload = true;
+    } else if (body.type_code !== undefined) {
+      entry.type_code = body.type_code;
+      hasPayload = true;
+    }
+    const midiChannel = body.channel ?? body.midiChannel;
+    if (midiChannel !== undefined) {
+      const value = Number(midiChannel);
+      if (Number.isFinite(value)) {
+        entry.midiChannel = value;
+        hasPayload = true;
+      }
+    }
+    if (body.data1 !== undefined) {
+      const value = Number(body.data1);
+      if (Number.isFinite(value)) {
+        entry.data1 = value;
+        hasPayload = true;
+      }
+    }
+    const efIndex = body.ef_index ?? body.efIndex;
+    if (efIndex !== undefined) {
+      const value = Number(efIndex);
+      if (Number.isFinite(value)) {
+        entry.efIndex = value;
+        hasPayload = true;
+      }
+    }
+    if (body.active !== undefined) {
+      entry.active = Boolean(body.active);
+      hasPayload = true;
+    }
+    if (body.takeover !== undefined) {
+      entry.takeover = Boolean(body.takeover);
+      hasPayload = true;
+    }
+    if (body.pot !== undefined) {
+      entry.pot = Boolean(body.pot);
+      hasPayload = true;
+    }
+    if (body.arp_note !== undefined || body.arpNote !== undefined) {
+      const value = Number(body.arp_note ?? body.arpNote);
+      if (Number.isFinite(value)) {
+        entry.arpNote = value;
+        hasPayload = true;
+      }
+    }
+    if (body.label !== undefined) {
+      entry.label = body.label;
+      hasPayload = true;
+    }
+
+    if (!hasPayload) return;
+    applyConfigPatch({ slots: [entry] });
+  }
+
+  function handleEnvelopeAssignmentMessage(msg) {
+    const slotValue = Number(msg?.slot ?? msg?.value ?? msg?.target ?? msg?.slot_index ?? msg?.slotId);
+    if (!Number.isFinite(slotValue)) return;
+    const envelopeRaw = Number(msg?.envelope ?? msg?.ef ?? msg?.index);
+    if (!Number.isFinite(envelopeRaw)) return;
+    if (envelopeRaw < 0) {
+      const currentIndex = Array.isArray(liveConfig?.efSlots)
+        ? liveConfig.efSlots.findIndex((entry) => Number(entry?.slot) === slotValue)
+        : -1;
+      if (currentIndex < 0) return;
+      applyConfigPatch({ efSlots: [{ index: currentIndex, slot: -1 }] });
+      return;
+    }
+    applyConfigPatch({ efSlots: [{ index: envelopeRaw, slot: slotValue }] });
+  }
+
+  function handleFilterPatchMessage(msg) {
+    const filter = msg?.filter;
+    if (!filter || typeof filter !== 'object') return;
+    const patch = {};
+    if (filter.type_name !== undefined || filter.type !== undefined) {
+      patch.type = filter.type_name ?? filter.type;
+    }
+    if (filter.type_index !== undefined) {
+      const value = Number(filter.type_index);
+      if (Number.isFinite(value)) patch.typeIndex = value;
+    }
+    if (filter.freq !== undefined) {
+      const value = Number(filter.freq);
+      if (Number.isFinite(value)) patch.freq = value;
+    }
+    if (filter.q !== undefined) {
+      const value = Number(filter.q);
+      if (Number.isFinite(value)) patch.q = value;
+    }
+    if (!Object.keys(patch).length) return;
+    applyConfigPatch({ filter: patch });
+  }
+
+  function handleArgPatchMessage(msg) {
+    const arg = msg?.arg;
+    if (!arg || typeof arg !== 'object') return;
+    const patch = {};
+    if (arg.method_name !== undefined || arg.method !== undefined) {
+      patch.method = arg.method_name ?? arg.method;
+    }
+    if (arg.method !== undefined) {
+      const value = Number(arg.method);
+      if (Number.isFinite(value)) patch.methodIndex = value;
+    }
+    if (arg.enable !== undefined) {
+      patch.enable = Boolean(arg.enable);
+    }
+    if (arg.a !== undefined) {
+      const value = Number(arg.a);
+      if (Number.isFinite(value)) patch.a = value;
+    }
+    if (arg.b !== undefined) {
+      const value = Number(arg.b);
+      if (Number.isFinite(value)) patch.b = value;
+    }
+    if (!Object.keys(patch).length) return;
+    applyConfigPatch({ arg: patch });
   }
 
   function applyConfigPatch(patch) {
