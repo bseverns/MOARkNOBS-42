@@ -26,19 +26,28 @@ class WebSerial {
                                   const std::vector<EnvelopeFollower> &envelopes);
 
     /**
-     * Blast a one-slot JSON patch when firmware rewires a MIDI slot from
+     * Emit a one-slot config patch when firmware rewires a MIDI slot from
      * hardware input (button combo, WebSerial command, whatever). The payload
-     * mirrors the slot objects inside GET_CONFIG so the browser can patch its
-     * local state without asking for a full dump.
+     * mirrors GET_CONFIG schema fields so the browser can merge the change
+     * without pulling a full dump.
      */
     static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
 
     /**
-     * Tell the WebSerial UI which envelope just latched onto a slot. During
-     * those long-press EF assignments we want the browser to redraw the matrix
-     * immediately so the human sees what just latched.
+     * Emit an envelope assignment patch for a single slot so the WebSerial UI
+     * can redraw the routing matrix immediately.
      */
     static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
+
+    /**
+     * Emit a filter configuration patch (type/frequency/Q).
+     */
+    static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
+
+    /**
+     * Emit an ARG configuration patch.
+     */
+    static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };
 
 #endif // WEBSERIAL_H

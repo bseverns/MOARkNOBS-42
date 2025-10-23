@@ -56,20 +56,43 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 
-### Patch Shouts
+### Config Patch Bursts
 
-Heavy edits don’t wait for the next telemetry frame. When a slot gets rerouted or a long-press wires an envelope follower, the
-firmware hurls one-off JSON patches so the browser can update instantly:
+Heavy edits don’t wait for the next telemetry frame. Whenever the deck flips a slot type, nudges the MIDI channel, remaps an
+envelope follower, or revoices the filter/ARG settings, the firmware hurls a one-off `config-patch` JSON doc so the browser can
+update instantly:
 
 ```json
-{"type":"slot_patch","slot":7,"payload":{"index":7,"type":1,"type_name":"CC","channel":3,"data1":74,"ef_index":2,"active":true,"arp_note":60}}
-{"type":"ef_assignment","slot":7,"envelope":2}
+{
+  "type": "config-patch",
+  "slots": [
+    {
+      "index": 7,
+      "type": "CC",
+      "type_name": "CC",
+      "type_code": 1,
+      "midiChannel": 3,
+      "data1": 74,
+      "efIndex": 2,
+      "active": true,
+      "arpNote": 60
+    }
+  ],
+  "efSlots": [
+    { "index": 2, "slot": 7 }
+  ]
+}
 ```
 
-- `slot_patch` mirrors a single entry from the `slots` array returned by `GET_CONFIG`. Treat it as the canonical slot state and
-  merge it into your staged config.
-- `ef_assignment` pings whenever a long-press assigns or clears an envelope follower. Negative envelope numbers mean “nobody’s
-  home”.
+- `slots` — array of partial slot records. Only the touched fields show up. Expect schema-shaped keys like `type`,
+  `midiChannel`, `data1`, `efIndex`, and friends. The legacy `type_name`/`type_code` pair rides along for older tools.
+- `efSlots` — optional array mirroring the envelope routing table: `{ "index": <ef>, "slot": <pot> }`. Pass `-1` for the
+  envelope index to mean “nobody’s home”.
+- `filter` / `arg` — when the firmware cycles filter shapes or ARG modes, the new values surface here with the same field names
+  returned by `GET_CONFIG`.
+
+The web editor merges these deltas into its local copy and keeps staged edits that don’t conflict. Mash the button combo for
+“Slot → NRPN” and watch the dropdown flip instantly, even if you’ve already staged other edits. Punk rock, zero desync.
 
 Miss a patch? Ask for `GET_CONFIG` again and rebuild your local model. The UI never has to guess.
 
