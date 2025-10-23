@@ -47,13 +47,18 @@ extern uint16_t g_brownoutCount; //!< Persistent brownout counter
  * the OLED, WebSerial, or anywhere else that wants to tattle on overloads.
  */
 struct SystemDiagnostics {
-    volatile uint32_t uartOverrunCount = 0;      //!< Hardware UART overruns latched from LPUART6
-    volatile uint32_t midiDropCount = 0;         //!< Messages we intentionally dropped (bad data, unsupported types)
-    volatile uint32_t midiTaskOverrunCount = 0;  //!< processIncomingMIDI calls that ran longer than the 1 ms budget
-    volatile uint32_t loopOverrunCount = 0;      //!< Main loop spins that busted the 1 ms soft ceiling
-    volatile uint32_t maxLoopMicros = 0;         //!< Worst-case loop duration observed during the last sampling window
-    volatile uint32_t lastLoopMicros = 0;        //!< Duration of the most recent loop iteration in microseconds
-    volatile uint32_t maxProcessMidiMicros = 0;  //!< Slowest MIDI service pass observed in microseconds
+    volatile uint32_t uartOverrunCount = 0; //!< Hardware UART overruns latched from LPUART6
+    volatile uint32_t midiDropCount =
+        0; //!< Messages we intentionally dropped (bad data, unsupported types)
+    volatile uint32_t midiTaskOverrunCount =
+        0; //!< processIncomingMIDI calls that ran longer than the 1 ms budget
+    volatile uint32_t loopOverrunCount = 0; //!< Main loop spins that busted the 1 ms soft ceiling
+    volatile uint32_t maxLoopMicros =
+        0; //!< Worst-case loop duration observed during the last sampling window
+    volatile uint32_t lastLoopMicros =
+        0; //!< Duration of the most recent loop iteration in microseconds
+    volatile uint32_t maxProcessMidiMicros =
+        0; //!< Slowest MIDI service pass observed in microseconds
     volatile uint32_t lastProcessMidiMicros = 0; //!< Duration of the most recent MIDI service pass
 };
 
