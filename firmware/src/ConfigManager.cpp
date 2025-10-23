@@ -10,6 +10,8 @@
 
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 
+constexpr int kUnassignedEnvelope = -1;
+
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
 // saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
 // where the checksum bunkers down.
@@ -220,7 +222,6 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
 // Envelope settings
 bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
                                          std::vector<EnvelopeFollower> &envelopes) {
-    constexpr int kUnassignedEnvelope = -1;
     bool allFound = true;
 
     potToEnvelopeMap.clear();
