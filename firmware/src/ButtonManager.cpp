@@ -10,6 +10,7 @@
 #include "Utility.h"
 #include "TimeUtils.h"
 #include "Arpeggiator.h"
+#include "WebSerial.h"
 #include <map>
 
 // Scans the button matrix and direct control buttons. Results are fed into
@@ -69,6 +70,23 @@ inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
     digitalWriteFast(selPins[1], bits[1]);
     digitalWriteFast(selPins[2], bits[2]);
     digitalWriteFast(selPins[3], bits[3]);
+}
+
+inline void streamSlotPatch(ConfigManager &config, uint8_t slotIndex) {
+    WebSerial::sendSlotPatch(config, slotIndex);
+}
+
+inline void streamEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
+    WebSerial::sendEnvelopeAssignment(slotIndex, envelopeIndex);
+}
+
+inline void streamFilterPatch(const EnvelopeFollower &env) {
+    WebSerial::sendFilterPatch(env.getFilterType(), env.getShapingFrequency(), env.getShapingQ());
+}
+
+inline void streamArgPatch(const ConfigManager &config) {
+    WebSerial::sendArgPatch(config.getARGMethod(), config.getARGEnable() != 0, config.getEnvelopeA(),
+                            config.getEnvelopeB());
 }
 } // namespace
 
@@ -285,7 +303,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         }
         case 1: {
             if (context.diagnosticMode) {
-                context.diagnosticPage = (context.diagnosticPage + 1) % 3;
+                context.diagnosticPage = (context.diagnosticPage + 1) % 4;
                 context.displayManager.displayStatus("Diag Page", 1000);
             } else {
                 // Reload configuration profile from EEPROM
@@ -396,6 +414,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
         // Apply it
         context.envelopes[efIndex].setFilterType(newType);
+        streamFilterPatch(context.envelopes[efIndex]);
 
         // Feedback
         const char *filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
@@ -423,6 +442,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             char msg[32];
             sprintf(msg, "Slot %d => %s", context.activePot, name);
             context.displayManager.displayStatus(msg, 1500);
+            streamFilterPatch(context.envelopes[efIndex]);
             break;
         }
 
@@ -447,6 +467,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             char msg[32];
             sprintf(msg, "Slot %d => %s", context.activePot, name);
             context.displayManager.displayStatus(msg, 1500);
+            streamFilterPatch(context.envelopes[efIndex]);
             break; // <--- ensure we break out of case 1
         }
 
@@ -459,6 +480,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             char buf[32];
             sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
             context.displayManager.displayStatus(buf, 1500);
+            streamSlotPatch(context.configManager, context.activePot);
             break;
         }
 
@@ -500,6 +522,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             char buf[32];
             sprintf(buf, "Slot %d -> EF %d", _pendingEfSlot, controlIndex);
             context.displayManager.displayStatus(buf, 1500);
+            streamEnvelopeAssignment(_pendingEfSlot, controlIndex);
         }
         _pendingEfSlot = -1;
         return;
@@ -553,6 +576,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         char buf[32];
         sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
         context.displayManager.displayStatus(buf, 1500);
+        streamEnvelopeAssignment(context.activePot, assigned);
     } break;
 
     case 3: {
@@ -571,6 +595,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         char buf[32];
         sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     } break;
 
     case 4: {
@@ -584,6 +609,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             sprintf(buf, "Slot %d => %s %d", context.activePot,
                     type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
             context.displayManager.displayStatus(buf, 1500);
+            streamSlotPatch(context.configManager, context.activePot);
         } else {
             uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
             uint8_t newCC = (oldCC + 1) % 128; // 0..127
@@ -594,6 +620,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             char buf[32];
             sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
             context.displayManager.displayStatus(buf, 1500);
+            streamSlotPatch(context.configManager, context.activePot);
         }
     } break;
 
@@ -660,9 +687,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         argMethodPos[efIndex] =
             (argMethodPos[efIndex] + 1) % (sizeof(ALL_METHODS) / sizeof(ALL_METHODS[0]));
         env.setARGMethod(ALL_METHODS[argMethodPos[efIndex]]);
+        context.configManager.setARGMethod(static_cast<uint8_t>(env.getARGMethod()));
         char msg[32];
         sprintf(msg, "EF %d=>%s", efIndex, NAMES[argMethodPos[efIndex]]);
         context.displayManager.displayStatus(msg, 1500);
+        streamArgPatch(context.configManager);
     }
     // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
@@ -699,6 +728,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
         context.displayManager.displayStatus(buf, 1500);
+        streamArgPatch(context.configManager);
     }
     // (3) Ctrl3 + Ctrl4: Cycle light modes
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4)) == (maskCtrl3 | maskCtrl4)) {
@@ -721,6 +751,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);
+        streamEnvelopeAssignment(context.activePot, randomEF);
     }
     // (5) Ctrl4 + Ctrl5: Set active slot to MIDI Note mode
     else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
@@ -728,6 +759,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => NOTE", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (6) Ctrl3 + Ctrl5: Set active slot to Program Change
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
@@ -735,6 +767,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => PROG", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (7) Ctrl0 + Ctrl5: Set active slot to Pitch Bend
     else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
@@ -742,6 +775,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => BEND", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (8) Ctrl1 + Ctrl4: Set active slot to Aftertouch
     else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
@@ -749,6 +783,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => AFTER", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (9) Ctrl1 + Ctrl5: Toggle MIDI clock output
     else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
@@ -762,6 +797,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => NRPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (11) Ctrl1 + Ctrl3: Set active slot to RPN
     else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
@@ -769,6 +805,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => RPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (12) Ctrl0 + Ctrl3: Set active slot to SysEx
     else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
@@ -776,6 +813,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => SYSEX", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (13) Ctrl2 + Ctrl4: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
@@ -795,6 +833,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "ARP NOTE %d", slot.arpNote);
         context.displayManager.displayStatus(buf, 1000);
+        streamSlotPatch(context.configManager, context.activePot);
     }
     // (15) Ctrl1 + Ctrl2: Cycle configuration profiles
     else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {

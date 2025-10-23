@@ -522,6 +522,80 @@ ButtonManagerContext buttonContext = {potChannels,        activePot,      active
                                       ledManager,         displayManager, envelopeFollowers,
                                       potToEnvelopeMap,   diagnosticMode, diagnosticPage};
 
+namespace {
+volatile unsigned long statusLedPulseDeadline = 0;
+
+void requestStatusLEDPulse(uint16_t durationMs = 200) {
+    statusLedPulseDeadline = now() + durationMs;
+}
+
+void serviceStatusLEDPulse() {
+    unsigned long deadline = statusLedPulseDeadline;
+    if (deadline == 0) {
+        ledManager.setStatusLED(false);
+        return;
+    }
+    unsigned long current = now();
+    if (static_cast<long>(current - deadline) >= 0) {
+        statusLedPulseDeadline = 0;
+        ledManager.setStatusLED(false);
+    } else {
+        ledManager.setStatusLED(true);
+    }
+}
+
+void monitorSerialHealth() {
+#if defined(__IMXRT1062__)
+    if (IMXRT_LPUART6.STAT & LPUART_STAT_OR) {
+        IMXRT_LPUART6.STAT |= LPUART_STAT_OR;
+        ++g_systemDiagnostics.uartOverrunCount;
+    }
+#endif
+}
+
+static SystemDiagnostics captureDiagnosticsSnapshot() {
+    SystemDiagnostics snapshot;
+    noInterrupts();
+    snapshot = g_systemDiagnostics;
+    interrupts();
+    return snapshot;
+}
+
+void checkDiagnosticsForAlerts() {
+    static uint32_t lastMidiDrop = 0;
+    static uint32_t lastMidiTaskOverrun = 0;
+    static uint32_t lastUartOverrun = 0;
+
+    const SystemDiagnostics diag = captureDiagnosticsSnapshot();
+
+    const uint32_t midiDrop = diag.midiDropCount;
+    if (midiDrop != lastMidiDrop) {
+        LOG_PRINTF("{\"diagnostic\":\"midi_drop\",\"count\":%lu}\n",
+                   static_cast<unsigned long>(midiDrop));
+        requestStatusLEDPulse();
+        lastMidiDrop = midiDrop;
+    }
+
+    const uint32_t midiTaskOverruns = diag.midiTaskOverrunCount;
+    const uint32_t maxMidiMicros = diag.maxProcessMidiMicros;
+    if (midiTaskOverruns != lastMidiTaskOverrun) {
+        LOG_PRINTF("{\"diagnostic\":\"midi_task_overrun\",\"count\":%lu,\"max_us\":%lu}\n",
+                   static_cast<unsigned long>(midiTaskOverruns),
+                   static_cast<unsigned long>(maxMidiMicros));
+        requestStatusLEDPulse();
+        lastMidiTaskOverrun = midiTaskOverruns;
+    }
+
+    const uint32_t uartOverruns = diag.uartOverrunCount;
+    if (uartOverruns != lastUartOverrun) {
+        LOG_PRINTF("{\"diagnostic\":\"uart_overrun\",\"count\":%lu}\n",
+                   static_cast<unsigned long>(uartOverruns));
+        requestStatusLEDPulse();
+        lastUartOverrun = uartOverruns;
+    }
+}
+} // namespace
+
 void processMIDI() {
     midiHandler.processIncomingMIDI();
 
@@ -546,6 +620,8 @@ void processMIDI() {
 
         midiHandler.clearClockTick();
     }
+
+    monitorSerialHealth();
 }
 
 /*
@@ -1018,13 +1094,36 @@ void processInternalClock() {
 void monitorSystemLoad() {
     static unsigned long lastMonitorTime = 0;
     static unsigned long taskCounter = 0; // main loop iterations
+    static unsigned long maxLoopDuration = 0;
+    static unsigned long lastLoopStart = micros();
 
-    taskCounter++;                                          // count another lap around the loop
-    if (now() - lastMonitorTime >= 1000UL) {                // Log every second
-        LOG_PRINTF("Tasks per second: %lu\n", taskCounter); // ~1000 on a chill rig
-        taskCounter = 0;
-        lastMonitorTime = now();
+    unsigned long currentMicros = micros();
+    unsigned long loopDuration = currentMicros - lastLoopStart;
+    lastLoopStart = currentMicros;
+
+    g_systemDiagnostics.lastLoopMicros = loopDuration;
+    if (loopDuration > maxLoopDuration) {
+        maxLoopDuration = loopDuration;
     }
+    if (loopDuration > 1000UL) {
+        ++g_systemDiagnostics.loopOverrunCount;
+        LOG_PRINTF("{\"diagnostic\":\"loop_overrun\",\"duration_us\":%lu}\n",
+                   static_cast<unsigned long>(loopDuration));
+        requestStatusLEDPulse();
+    }
+
+    taskCounter++; // count another lap around the loop
+    unsigned long currentMillis = now();
+    if (currentMillis - lastMonitorTime >= 1000UL) {        // Log every second
+        LOG_PRINTF("Tasks per second: %lu\n", taskCounter); // ~1000 on a chill rig
+        g_systemDiagnostics.maxLoopMicros = maxLoopDuration;
+        maxLoopDuration = 0;
+        taskCounter = 0;
+        lastMonitorTime = currentMillis;
+    }
+
+    checkDiagnosticsForAlerts();
+    serviceStatusLEDPulse();
 }
 
 void updateFilterTuning(ButtonManagerContext &context) {
@@ -1106,7 +1205,9 @@ void updateNoteDynamics() {
 void streamWebSerialState() {
     if (!webSerialStreaming)
         return;
-    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers);
+    const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
+    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers, configManager,
+                                 buttonContext.activePot, diagSnapshot);
 }
 
 void setup() {
@@ -1138,6 +1239,7 @@ void setup() {
 
     // — MIDI Handler —
     midiHandler.begin();
+    midiHandler.setDiagnostics(&g_systemDiagnostics);
     midiHandler.setDisplayManager(&displayManager);
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
 
@@ -1311,8 +1413,9 @@ void setup() {
         []() {
             if (diagnosticMode) {
                 displayManager.beginDraw();
+                const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,
-                                              midiHandler);
+                                              midiHandler, diagSnapshot);
                 displayManager.endDraw();
             } else if (!displayManager.shouldRunScreensaver()) {
                 displayManager.beginDraw();

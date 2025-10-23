@@ -70,6 +70,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign EFs, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
   _Note:_ The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
+- **Telemetry Watchdog**: Hardware UART overruns, dropped MIDI frames, and slow loops now bump counters, flash the status LED, and flow out over WebSerial so you know when you're skirting the edge.
 
 ### Dynamic Envelope Modulation
 

@@ -420,12 +420,13 @@ void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel)
 }
 
 void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
-                                    const ButtonManagerContext &ctx, const MIDIHandler &midi) {
+                                    const ButtonManagerContext &ctx, const MIDIHandler &midi,
+                                    const SystemDiagnostics &diag) {
     _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
 
-    switch (page % 3) {
+    switch (page % 4) {
     case 0: { // Button matrix snapshot
         _display.setCursor(0, 0);
         for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
@@ -454,6 +455,29 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
         _display.setCursor(0, 10);
         _display.print("TX:");
         _display.println(midi.getTxCount());
+        _display.setCursor(0, 20);
+        _display.print("Drop:");
+        _display.println(diag.midiDropCount);
+        _display.setCursor(0, 30);
+        _display.print("UART:");
+        _display.println(diag.uartOverrunCount);
+        break;
+    }
+    case 3: { // Loop and ISR timing
+        _display.setCursor(0, 0);
+        _display.print("Loop mx:");
+        _display.println(diag.maxLoopMicros);
+        _display.setCursor(0, 10);
+        _display.print("ISR mx:");
+        _display.println(diag.maxProcessMidiMicros);
+        _display.setCursor(0, 20);
+        _display.print(">1ms:");
+        _display.print(diag.loopOverrunCount);
+        _display.print('/');
+        _display.println(diag.midiTaskOverrunCount);
+        _display.setCursor(0, 30);
+        _display.print("Last:");
+        _display.println(diag.lastLoopMicros);
         break;
     }
     }

@@ -210,6 +210,10 @@ void EnvelopeFollower::setFilterType(FilterType type) {
  */
 EnvelopeFollower::FilterType EnvelopeFollower::getFilterType() const { return filterType; }
 
+float EnvelopeFollower::getShapingFrequency() const { return shapingFreq; }
+
+float EnvelopeFollower::getShapingQ() const { return shapingQ; }
+
 /**
  * setMode()
  * - New method for switching between SEF and ARG
@@ -222,6 +226,8 @@ void EnvelopeFollower::setMode(Mode newMode) { mode = newMode; }
  */
 void EnvelopeFollower::setARGMethod(ARG_Method method) { argMethod = method; }
 
+EnvelopeFollower::ARG_Method EnvelopeFollower::getARGMethod() const { return argMethod; }
+
 /**
  * setEnvelopePair()
  * - New method specifying which two analog inputs to use for A & B in ARG mode
@@ -230,6 +236,10 @@ void EnvelopeFollower::setEnvelopePair(int envA, int envB) {
     envelopeA = envA;
     envelopeB = envB;
 }
+
+int EnvelopeFollower::getEnvelopeA() const { return envelopeA; }
+
+int EnvelopeFollower::getEnvelopeB() const { return envelopeB; }
 
 void EnvelopeFollower::calibrate() {
     const uint8_t samples = 8;
