@@ -60,7 +60,7 @@ struct HardwareConfigInitializer {
 
 uint8_t midiBeatPosition = 0; // 0-7 beat slot; bumps each MIDI clock tick then wraps on the 8th
 char serialBuffer[SERIAL_BUFFER_SIZE]; // Holding pen where serial graffiti waits for judgement
-uint8_t serialBufferIndex = 0;   // Cursor into serialBuffer; resets on newline or when it overflows
+uint8_t serialBufferIndex = 0; // Cursor into serialBuffer; resets on newline or when it overflows
 
 namespace {
 size_t computeFreeRAM() {
