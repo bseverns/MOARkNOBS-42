@@ -29,6 +29,7 @@
 #include <imxrt.h>
 #include <cstdint>
 #include <cctype>
+#include <cmath>
 
 extern std::vector<uint8_t> potChannels;
 extern std::map<int, int> potToEnvelopeMap;
@@ -189,17 +190,39 @@ bool parseMIDIType(const char *label, MIDIMessageType &type) {
 
 bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
                    MIDIMessageType &type) {
+    auto assignFromIntegral = [&](long candidate) {
+        if (candidate < static_cast<long>(MIDIMessageType::OFF) ||
+            candidate > static_cast<long>(MIDIMessageType::SysEx)) {
+            return false;
+        }
+        type = static_cast<MIDIMessageType>(candidate);
+        return true;
+    };
+
     if (!typeField.isNull()) {
         if (typeField.is<const char *>()) {
             if (parseMIDIType(typeField.as<const char *>(), type)) {
                 return true;
             }
-        } else if (typeField.is<int>()) {
-            int raw = typeField.as<int>();
-            if (raw >= static_cast<int>(MIDIMessageType::OFF) &&
-                raw <= static_cast<int>(MIDIMessageType::SysEx)) {
-                type = static_cast<MIDIMessageType>(raw);
+        } else if (typeField.is<int>() || typeField.is<long>() || typeField.is<short>() ||
+                   typeField.is<signed char>()) {
+            if (assignFromIntegral(typeField.as<long>())) {
                 return true;
+            }
+        } else if (typeField.is<unsigned char>() || typeField.is<unsigned short>() ||
+                   typeField.is<unsigned int>() || typeField.is<unsigned long>()) {
+            unsigned long raw = typeField.as<unsigned long>();
+            if (raw <= static_cast<unsigned long>(static_cast<long>(MIDIMessageType::SysEx)) &&
+                assignFromIntegral(static_cast<long>(raw))) {
+                return true;
+            }
+        } else if (typeField.is<float>() || typeField.is<double>()) {
+            double raw = typeField.as<double>();
+            if (std::isfinite(raw)) {
+                long candidate = static_cast<long>(raw);
+                if (static_cast<double>(candidate) == raw && assignFromIntegral(candidate)) {
+                    return true;
+                }
             }
         }
     }

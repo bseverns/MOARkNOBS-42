@@ -57,6 +57,28 @@ void test_bulk_config_accepts_numeric_slot_type() {
                             static_cast<uint8_t>(resolved));
 }
 
+void test_bulk_config_accepts_wider_numeric_slot_type() {
+    StaticJsonDocument<64> doc;
+    JsonObject slot = doc.to<JsonObject>();
+    slot["type"] = static_cast<unsigned long>(MIDIMessageType::Aftertouch);
+
+    MIDIMessageType resolved = MIDIMessageType::OFF;
+    TEST_ASSERT_TRUE(testOnly_parseSlotType(slot["type"], slot["type_name"], resolved));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::Aftertouch),
+                            static_cast<uint8_t>(resolved));
+}
+
+void test_bulk_config_accepts_integral_float_slot_type() {
+    StaticJsonDocument<64> doc;
+    JsonObject slot = doc.to<JsonObject>();
+    slot["type"] = 3.0f; // MIDIMessageType::ProgramChange
+
+    MIDIMessageType resolved = MIDIMessageType::OFF;
+    TEST_ASSERT_TRUE(testOnly_parseSlotType(slot["type"], slot["type_name"], resolved));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::ProgramChange),
+                            static_cast<uint8_t>(resolved));
+}
+
 void test_bulk_config_accepts_type_name_alias() {
     StaticJsonDocument<64> doc;
     JsonObject slot = doc.to<JsonObject>();

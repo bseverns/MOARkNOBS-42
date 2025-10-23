@@ -18,6 +18,8 @@ void test_bulk_config_assembler_handles_chunks();
 void test_bulk_config_assembler_detects_overflow();
 void test_format_ack_includes_checksum_and_seq();
 void test_bulk_config_accepts_numeric_slot_type();
+void test_bulk_config_accepts_wider_numeric_slot_type();
+void test_bulk_config_accepts_integral_float_slot_type();
 void test_bulk_config_accepts_type_name_alias();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
@@ -42,6 +44,8 @@ void setup() {
     RUN_TEST(test_bulk_config_assembler_detects_overflow);
     RUN_TEST(test_format_ack_includes_checksum_and_seq);
     RUN_TEST(test_bulk_config_accepts_numeric_slot_type);
+    RUN_TEST(test_bulk_config_accepts_wider_numeric_slot_type);
+    RUN_TEST(test_bulk_config_accepts_integral_float_slot_type);
     RUN_TEST(test_bulk_config_accepts_type_name_alias);
     RUN_TEST(test_start_stop_cycle);
     RUN_TEST(test_pot_root_drives_default);
