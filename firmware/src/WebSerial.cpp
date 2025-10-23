@@ -7,7 +7,8 @@
 #include "ConfigManager.h"
 #include <ArduinoJson.h>
 
-extern bool webSerialStreaming;
+// Goes true when the browser hollers HELLO and stays that way
+bool webSerialStreaming = false;
 
 namespace {
 const char *slotTypeSchemaName(MIDIMessageType type) {
