@@ -28,6 +28,7 @@
 #include <vector>
 #include <imxrt.h>
 #include <cstdint>
+#include <cctype>
 
 extern std::vector<uint8_t> potChannels;
 extern std::map<int, int> potToEnvelopeMap;
@@ -143,25 +144,68 @@ Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 
+bool equalsIgnoreCase(const char *lhs, const char *rhs) {
+    if (!lhs || !rhs)
+        return false;
+    while (*lhs && *rhs) {
+        if (tolower(static_cast<unsigned char>(*lhs)) != tolower(static_cast<unsigned char>(*rhs)))
+            return false;
+        ++lhs;
+        ++rhs;
+    }
+    return *lhs == '\0' && *rhs == '\0';
+}
+
 bool parseMIDIType(const char *label, MIDIMessageType &type) {
     if (!label)
         return false;
     struct Entry {
-        const char *name;
+        const char *legacy;
+        const char *canonical;
+        const char *alt;
         MIDIMessageType value;
     };
-    static constexpr Entry kMap[] = {{"OFF", MIDIMessageType::OFF},        {"CC", MIDIMessageType::CC},
-                                     {"Note", MIDIMessageType::Note},      {"PitchBend", MIDIMessageType::PitchBend},
-                                     {"ProgramChange", MIDIMessageType::ProgramChange},
-                                     {"Aftertouch", MIDIMessageType::Aftertouch},
-                                     {"ModWheel", MIDIMessageType::ModWheel},
-                                     {"NRPN", MIDIMessageType::NRPN},      {"RPN", MIDIMessageType::RPN},
-                                     {"SysEx", MIDIMessageType::SysEx}};
+    static constexpr Entry kMap[] = {
+        {"OFF", "OFF", nullptr, MIDIMessageType::OFF},
+        {"CC", "CC", nullptr, MIDIMessageType::CC},
+        {"Note", "NOTE", nullptr, MIDIMessageType::Note},
+        {"PitchBend", "PITCH_BEND", "PITCHBEND", MIDIMessageType::PitchBend},
+        {"ProgramChange", "PROGRAM", "PROGRAM_CHANGE", MIDIMessageType::ProgramChange},
+        {"Aftertouch", "AFTERTOUCH", nullptr, MIDIMessageType::Aftertouch},
+        {"ModWheel", "MOD_WHEEL", "MODWHEEL", MIDIMessageType::ModWheel},
+        {"NRPN", "NRPN", nullptr, MIDIMessageType::NRPN},
+        {"RPN", "RPN", nullptr, MIDIMessageType::RPN},
+        {"SysEx", "SYSEX", "SYS_EX", MIDIMessageType::SysEx}};
     for (const auto &entry : kMap) {
-        if (strcmp(label, entry.name) == 0) {
+        if ((entry.legacy && equalsIgnoreCase(label, entry.legacy)) ||
+            (entry.canonical && equalsIgnoreCase(label, entry.canonical)) ||
+            (entry.alt && equalsIgnoreCase(label, entry.alt))) {
             type = entry.value;
             return true;
         }
+    }
+    return false;
+}
+
+bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                   MIDIMessageType &type) {
+    if (!typeField.isNull()) {
+        if (typeField.is<const char *>()) {
+            if (parseMIDIType(typeField.as<const char *>(), type)) {
+                return true;
+            }
+        } else if (typeField.is<int>()) {
+            int raw = typeField.as<int>();
+            if (raw >= static_cast<int>(MIDIMessageType::OFF) &&
+                raw <= static_cast<int>(MIDIMessageType::SysEx)) {
+                type = static_cast<MIDIMessageType>(raw);
+                return true;
+            }
+        }
+    }
+
+    if (!typeNameField.isNull() && typeNameField.is<const char *>()) {
+        return parseMIDIType(typeNameField.as<const char *>(), type);
     }
     return false;
 }
@@ -175,9 +219,12 @@ EnvelopeFollower::FilterType parseFilterType(const char *label,
         EnvelopeFollower::FilterType value;
     };
     static constexpr Entry kMap[] = {
-        {"LINEAR", EnvelopeFollower::LINEAR},           {"OPPOSITE_LINEAR", EnvelopeFollower::OPPOSITE_LINEAR},
-        {"EXPONENTIAL", EnvelopeFollower::EXPONENTIAL}, {"RANDOM", EnvelopeFollower::RANDOM},
-        {"LOWPASS", EnvelopeFollower::LOWPASS},         {"HIGHPASS", EnvelopeFollower::HIGHPASS},
+        {"LINEAR", EnvelopeFollower::LINEAR},
+        {"OPPOSITE_LINEAR", EnvelopeFollower::OPPOSITE_LINEAR},
+        {"EXPONENTIAL", EnvelopeFollower::EXPONENTIAL},
+        {"RANDOM", EnvelopeFollower::RANDOM},
+        {"LOWPASS", EnvelopeFollower::LOWPASS},
+        {"HIGHPASS", EnvelopeFollower::HIGHPASS},
         {"BANDPASS", EnvelopeFollower::BANDPASS},
     };
     for (const auto &entry : kMap) {
@@ -188,20 +235,22 @@ EnvelopeFollower::FilterType parseFilterType(const char *label,
     return fallback;
 }
 
-EnvelopeFollower::ARG_Method parseArgMethod(const char *label, EnvelopeFollower::ARG_Method fallback) {
+EnvelopeFollower::ARG_Method parseArgMethod(const char *label,
+                                            EnvelopeFollower::ARG_Method fallback) {
     if (!label)
         return fallback;
     struct Entry {
         const char *name;
         EnvelopeFollower::ARG_Method value;
     };
-    static constexpr Entry kMap[] = {{"PLUS", EnvelopeFollower::PLUS},   {"MIN", EnvelopeFollower::MIN},
-                                     {"PECK", EnvelopeFollower::PECK},   {"SHAV", EnvelopeFollower::SHAV},
-                                     {"SQAR", EnvelopeFollower::SQAR},   {"BABS", EnvelopeFollower::BABS},
-                                     {"TABS", EnvelopeFollower::TABS},   {"MULT", EnvelopeFollower::MULT},
-                                     {"DIVI", EnvelopeFollower::DIVI},   {"AVG", EnvelopeFollower::AVG},
-                                     {"XABS", EnvelopeFollower::XABS},   {"MAXX", EnvelopeFollower::MAXX},
-                                     {"MINN", EnvelopeFollower::MINN},   {"XORR", EnvelopeFollower::XORR}};
+    static constexpr Entry kMap[] = {
+        {"PLUS", EnvelopeFollower::PLUS}, {"MIN", EnvelopeFollower::MIN},
+        {"PECK", EnvelopeFollower::PECK}, {"SHAV", EnvelopeFollower::SHAV},
+        {"SQAR", EnvelopeFollower::SQAR}, {"BABS", EnvelopeFollower::BABS},
+        {"TABS", EnvelopeFollower::TABS}, {"MULT", EnvelopeFollower::MULT},
+        {"DIVI", EnvelopeFollower::DIVI}, {"AVG", EnvelopeFollower::AVG},
+        {"XABS", EnvelopeFollower::XABS}, {"MAXX", EnvelopeFollower::MAXX},
+        {"MINN", EnvelopeFollower::MINN}, {"XORR", EnvelopeFollower::XORR}};
     for (const auto &entry : kMap) {
         if (strcmp(label, entry.name) == 0) {
             return entry.value;
@@ -281,9 +330,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             return false;
         }
 
-        const char *typeLabel = slotObj["type"] | nullptr;
         MIDIMessageType midiType = MIDIMessageType::OFF;
-        if (!parseMIDIType(typeLabel, midiType)) {
+        if (!parseSlotType(slotObj["type"], slotObj["type_name"], midiType)) {
             emitBulkError("slot_type", "unknown slot type", seq);
             return false;
         }
@@ -331,8 +379,9 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
     if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
         JsonObject filterObj = config["filter"].as<JsonObject>();
-        EnvelopeFollower::FilterType current = envelopeFollowers.empty() ? EnvelopeFollower::LINEAR
-                                                                        : envelopeFollowers.front().getFilterType();
+        EnvelopeFollower::FilterType current = envelopeFollowers.empty()
+                                                   ? EnvelopeFollower::LINEAR
+                                                   : envelopeFollowers.front().getFilterType();
         EnvelopeFollower::FilterType filterType =
             parseFilterType(filterObj["type"].as<const char *>(), current);
         float freq = constrain(filterObj["freq"].as<float>(), 20.0f, 5000.0f);
@@ -389,6 +438,13 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 }
 } // namespace
 
+#if defined(UNIT_TEST)
+bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                            MIDIMessageType &type) {
+    return parseSlotType(typeField, typeNameField, type);
+}
+#endif
+
 // Global objects
 std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI channel
 std::map<int, int> potToEnvelopeMap; // Crosswalk from pot index to its envelope follower partner
@@ -420,15 +476,15 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
 };
 
 // Hardware/UI state trackers
-uint8_t activePot = 0xFF;            // Current slot index; 0xFF means "none selected"
-uint8_t activeChannel = 1;           // MIDI channel currently under the spotlight
+uint8_t activePot = 0xFF;        // Current slot index; 0xFF means "none selected"
+uint8_t activeChannel = 1;       // MIDI channel currently under the spotlight
 bool envelopeFollowMode = false; // True when EFs are allowed to hijack a slot
 String g_envelopeModeLabel = "LINEAR";
 const char *envelopeMode = g_envelopeModeLabel.c_str();
-int NORMAL_DISPLAY_TIME = 30000;     // ms duration for full-size messages
-int SHORT_DISPLAY_TIME = 10000;      // ms duration for terse status flashes
-bool diagnosticMode = false;         // Self-test mode flag
-uint8_t diagnosticPage = 0;          // Active diagnostic page
+int NORMAL_DISPLAY_TIME = 30000; // ms duration for full-size messages
+int SHORT_DISPLAY_TIME = 10000;  // ms duration for terse status flashes
+bool diagnosticMode = false;     // Self-test mode flag
+uint8_t diagnosticPage = 0;      // Active diagnostic page
 
 // Timers for processing
 unsigned long lastMIDIProcess = 0;
