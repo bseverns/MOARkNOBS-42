@@ -9,6 +9,10 @@
 
 namespace {
 
+// This file is our sandbox for the hardware::IO indirection layer.  By hot-
+// swapping providers we emulate analog/digital readings without touching real
+// silicon and prove the shims behave like the live firmware.
+
 int stubAnalogA(uint8_t) { return 111; }
 int stubAnalogB(uint8_t) { return 222; }
 
@@ -54,6 +58,8 @@ class ScopedSequence {
 
 } // namespace
 
+// Nesting ScopedAnalogReadProvider instances should restore the previous
+// callback once the inner guard dies.  This verifies the stack discipline.
 void test_scoped_analog_provider_nesting() {
     hardware::ScopedAnalogReadProvider outer(stubAnalogA);
     TEST_ASSERT_EQUAL(111, hardware::readAnalog(0));
@@ -64,6 +70,8 @@ void test_scoped_analog_provider_nesting() {
     TEST_ASSERT_EQUAL(111, hardware::readAnalog(0));
 }
 
+// Swap in a deterministic analog sequence and make sure the mux reader cycles
+// through values like a firmware scan would.
 void test_sequence_provider_cycles_values() {
     ScopedSequence values{0, 512, 1023};
     TEST_ASSERT_EQUAL(0, hardware::readAnalog(0));
@@ -72,6 +80,8 @@ void test_sequence_provider_cycles_values() {
     TEST_ASSERT_EQUAL(0, hardware::readAnalog(0));
 }
 
+// setAnalogReadProvider() should hand you the previous callback so callers can
+// unwind gracefully.  This covers that handshake.
 void test_set_provider_returns_previous() {
     auto baseline = hardware::currentAnalogReadProvider();
     auto previous = hardware::setAnalogReadProvider(stubAnalogA);
@@ -83,6 +93,8 @@ void test_set_provider_returns_previous() {
     hardware::setAnalogReadProvider(baseline);
 }
 
+// Digital reads also funnel through the provider API.  Force HIGH/LOW values
+// and make sure ButtonManager reports the expected active-low truth table.
 void test_digital_provider_overrides_matrix_reads() {
     const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
     ButtonManager manager(hwConfig, controlPins, nullptr);

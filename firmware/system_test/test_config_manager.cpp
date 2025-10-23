@@ -4,6 +4,10 @@
 #include "ConfigManager.h"
 #include "TestHelpers.h"
 
+// ConfigManager guards EEPROM like a hawk.  These integration tests flip the
+// primary/backup magic bytes so we can confirm the recovery logic keeps user
+// presets alive when corruption strikes.
+
 // Extra tests live inside ConfigManager.cpp under UNIT_TEST
 extern void test_eeprom_recovery_after_power_cycle();
 extern void test_calibration_offsets_survive_power_cycle();
@@ -12,6 +16,8 @@ extern void test_calibration_offsets_survive_power_cycle();
 // while the backup stays pristine. The ConfigManager should
 // sniff this out and pull the backup instead.
 
+// If the primary header gets trashed but the backup is intact we should fall
+// back gracefully and restore the saved channels.
 void corrupt_primary_valid_backup() {
     // wipe primary magic
     EEPROM.write(EEPROM_MAGIC_ADDRESS, 0x00);
@@ -35,6 +41,8 @@ void corrupt_primary_valid_backup() {
 }
 
 // Trash both headers and the manager should bail to defaults
+// When both headers are rotten we expect the manager to bail to defaults and
+// report the failure so the UI can warn the user.
 void corrupted_primary_and_backup() {
     EEPROM.write(EEPROM_MAGIC_ADDRESS, 0x00);
     EEPROM.write(EEPROM_MAGIC_ADDRESS + 1, 0x00);

@@ -4,10 +4,15 @@
 #include "PotentiometerManager.h"
 #include "TestHelpers.h"
 
+// The envelope follower owns the LED vibe, so we sanity-check that flipping
+// between filter modes actually changes how a steady signal gets treated.
+
 // The envelope follower lives and dies by its filter settings.
 // This test flips between low-pass and high-pass modes and ensures
 // that DC signals get squashed when they should.
 
+// Pump a constant into LOWPASS then HIGHPASS and confirm the former hugs the
+// input while the latter crushes it toward zero.
 void test_filter_type_switching() {
     auto pm = createPotentiometerManager();
     EnvelopeFollower env(A0, &pm, 0);

@@ -11,6 +11,12 @@ unsigned long now() { return fakeMillis; }
 #include "TestHelpers.h"
 #include <unity.h>
 
+// These system-level tests poke ButtonManager's private state machine directly
+// to validate the long-press confirmation flow the hardware UI relies on.  We
+// stub out millis() so we can fast-forward without waiting in real time.
+
+// Hold the button past the 500 ms mark and make sure we enter the long-press
+// state exactly once.
 void test_long_press_detection() {
     auto pm = createPotentiometerManager();
     auto bm = createButtonManager(&pm);
@@ -43,6 +49,8 @@ void test_long_press_detection() {
     TEST_ASSERT_TRUE(bm._buttonMachines[0].longPressFired);
 }
 
+// A long-press shouldn't trigger the destructive action until the user taps a
+// confirmation button.  This run mimics that two-step handshake.
 void test_long_press_requires_confirm() {
     auto pm = createPotentiometerManager();
     auto bm = createButtonManager(&pm);

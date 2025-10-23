@@ -7,6 +7,13 @@
 
 extern bool g_clockOutEnabled;
 
+// MIDIHandler has a ridiculous number of responsibilities—USB mirror writes,
+// serial fan-out, NRPN parsing, SysEx scratch buffers, and the internal clock
+// tick bookkeeping that keeps the arpeggiator honest.  These Unity specs lean
+// on the stub transport to make sure every leg of that routing table still
+// behaves with the same swagger the hardware build expects.
+
+// Smoke the Program Change path and ensure both DIN and USB mirrors agree.
 void test_program_change() {
     MIDIHandler mh;
     mh.handleMIDI(midi::ProgramChange, 2, 45, 0);
@@ -16,6 +23,7 @@ void test_program_change() {
     TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.lastProgramChannel);
 }
 
+// Aftertouch is edge-case city: double-check it hits both transports verbatim.
 void test_aftertouch() {
     MIDIHandler mh;
     mh.handleMIDI(midi::AfterTouchChannel, 3, 100, 0);
@@ -25,6 +33,8 @@ void test_aftertouch() {
     TEST_ASSERT_EQUAL_UINT8(3, usbMIDI.lastAftertouchChannel);
 }
 
+// The mod wheel is one of the CC hot paths; verify the fan-out log stays in
+// sync and that we don't silently drop channels or data bytes.
 void test_mod_wheel() {
     MIDIHandler mh;
     MIDI.ccCount = usbMIDI.ccCount = 0;
@@ -39,6 +49,8 @@ void test_mod_wheel() {
     TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.ccLog[0].channel);
 }
 
+// Pitch bend flows through the 14-bit code path.  This run keeps the math sane
+// so middle detents land back at zero instead of wobbling.
 void test_pitch_bend() {
     MIDIHandler mh;
     uint8_t lsb = 0x00;
@@ -50,6 +62,8 @@ void test_pitch_bend() {
     TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastPitchBendChannel);
 }
 
+// NRPN writes are a four-message handshake.  This test ensures we emit the
+// proper CC sequence and that the stub recorder remembers the lot.
 void test_send_nrpn() {
     MIDIHandler mh;
     MIDI.ccCount = usbMIDI.ccCount = 0;
@@ -66,6 +80,8 @@ void test_send_nrpn() {
     TEST_ASSERT_EQUAL_UINT8(4, usbMIDI.ccCount);
 }
 
+// Same NRPN dance but from the receiver side—assemble a packet manually and
+// confirm the decoded param/value pair we stash for diagnostics.
 void test_receive_nrpn() {
     MIDIHandler mh;
     uint16_t param = 0x1234;
@@ -79,6 +95,8 @@ void test_receive_nrpn() {
     TEST_ASSERT_EQUAL_UINT16(value, mh.lastNRPNValue());
 }
 
+// SysEx is our bulk config escape hatch.  Make sure the handler copies the
+// payload byte-for-byte so higher layers can rehydrate it later.
 void test_send_sysex() {
     MIDIHandler mh;
     uint8_t msg[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
@@ -92,6 +110,8 @@ void test_send_sysex() {
     }
 }
 
+// If usbMIDI throws a curveball message type the firmware doesn't support we
+// should shrug and move on, not crash or mutate state.
 void test_drop_unsupported_usb_type() {
     MIDIHandler mh;
     MIDI.ccCount = usbMIDI.ccCount = 0;
@@ -107,6 +127,8 @@ void test_drop_unsupported_usb_type() {
     TEST_ASSERT_EQUAL_UINT32(0, mh.lastInternalTick);
 }
 
+// Taps into usbMIDI's fake clock message to ensure we bump the edge counter
+// and leave a bread crumb for whoever polls ::isClockTick().
 void test_usb_clock_tick_advances_counter() {
     MIDIHandler mh;
     mh.clockTick = false;
@@ -122,6 +144,8 @@ void test_usb_clock_tick_advances_counter() {
     TEST_ASSERT_FALSE(mh.isClockTick());
 }
 
+// Exercise the internal clock generator and make sure the transmit counter
+// ticks along with the virtual pulse when the global clock out flag is hot.
 void test_generate_clock_tick_advances_counter() {
     MIDIHandler mh;
     mh.clockTick = false;
