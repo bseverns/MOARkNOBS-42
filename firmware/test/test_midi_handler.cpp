@@ -4,6 +4,11 @@
 #include "MIDIHandler.h"
 #undef private
 #include <unity.h>
+#include "interop/mn42_map.h"
+#include "version.h"
+
+#include <array>
+#include <vector>
 
 extern bool g_clockOutEnabled;
 
@@ -107,6 +112,68 @@ void test_send_sysex() {
     for (uint8_t i = 0; i < sizeof(msg); ++i) {
         TEST_ASSERT_EQUAL_UINT8(msg[i], MIDI.lastSysEx[i]);
         TEST_ASSERT_EQUAL_UINT8(msg[i], usbMIDI.lastSysEx[i]);
+    }
+}
+
+// Universal Identity Requests should get a full reply that mirrors across both
+// transports and advertises our firmware fingerprints.
+void test_sysex_identity_request_reply() {
+    MIDIHandler mh;
+    struct UsbMidiGuard {
+        UsbMidiGuard() : previous(g_usbMidiOutEnabled) { g_usbMidiOutEnabled = true; }
+        ~UsbMidiGuard() { g_usbMidiOutEnabled = previous; }
+        bool previous;
+    } guard;
+
+    MIDI.lastSysExLength = usbMIDI.lastSysExLength = 0;
+    const uint8_t request[] = {0xF0, 0x7E, 0x42, 0x06, 0x01, 0xF7};
+    mh.handleSysEx(request, sizeof(request));
+
+    std::vector<uint8_t> expected;
+    expected.reserve(32);
+    expected.push_back(0xF0);
+    expected.push_back(0x7E);
+    expected.push_back(request[2]);
+    expected.push_back(0x06);
+    expected.push_back(0x02);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kManufacturerId);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature0);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature1);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature2);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature0);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature1);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature2);
+    expected.push_back(seedbox::interop::mn42::handshake::product::kPresenceFlag);
+
+    std::array<uint8_t, 4> versionDigits{};
+    const char *versionStr = FW_VERSION_STR;
+    size_t versionCount = 0;
+    for (size_t i = 0; versionStr[i] != '\0' && versionCount < versionDigits.size(); ++i) {
+        char c = versionStr[i];
+        if (c >= '0' && c <= '9') {
+            versionDigits[versionCount++] = static_cast<uint8_t>(c - '0');
+        }
+    }
+    while (versionCount < versionDigits.size()) {
+        versionDigits[versionCount++] = 0;
+    }
+    expected.insert(expected.end(), versionDigits.begin(), versionDigits.end());
+
+    expected.push_back('g');
+    expected.push_back('i');
+    expected.push_back('t');
+    expected.push_back('-');
+    const char *gitSha = GIT_SHA_STR;
+    for (size_t i = 0; gitSha[i] != '\0' && i < 4; ++i) {
+        expected.push_back(static_cast<uint8_t>(gitSha[i]));
+    }
+    expected.push_back(0xF7);
+
+    TEST_ASSERT_EQUAL_UINT16(expected.size(), MIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(expected.size(), usbMIDI.lastSysExLength);
+    for (size_t i = 0; i < expected.size(); ++i) {
+        TEST_ASSERT_EQUAL_UINT8(expected[i], MIDI.lastSysEx[i]);
+        TEST_ASSERT_EQUAL_UINT8(expected[i], usbMIDI.lastSysEx[i]);
     }
 }
 

@@ -7,6 +7,10 @@
 #include "TimeUtils.h"
 #include "Log.h"
 #include "interop/SeedBoxLink.h"
+#include "interop/mn42_map.h"
+#include "version.h"
+
+#include <array>
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
 #ifdef MIDI_DEBUG
@@ -414,6 +418,63 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
         return;
     _rxCount++;
     seedbox::interop::mn42::SeedBoxLink::instance().handleSysEx(data, length);
+    bool isIdentityRequest = length >= 6 && data[0] == 0xF0 && data[length - 1] == 0xF7 && data[1] == 0x7E &&
+                             data[3] == 0x06 && data[4] == 0x01;
+    if (isIdentityRequest) {
+        std::array<uint8_t, 32> reply{};
+        size_t idx = 0;
+        auto push = [&](uint8_t value) {
+            if (idx < reply.size()) {
+                reply[idx++] = value;
+            }
+        };
+        uint8_t deviceId = data[2];
+        push(0xF0);
+        push(0x7E);
+        push(deviceId);
+        push(0x06);
+        push(0x02);
+        push(seedbox::interop::mn42::handshake::product::kManufacturerId);
+        push(seedbox::interop::mn42::handshake::product::kSignature0);
+        push(seedbox::interop::mn42::handshake::product::kSignature1);
+        push(seedbox::interop::mn42::handshake::product::kSignature2);
+        push(seedbox::interop::mn42::handshake::product::kSignature0);
+        push(seedbox::interop::mn42::handshake::product::kSignature1);
+        push(seedbox::interop::mn42::handshake::product::kSignature2);
+        push(seedbox::interop::mn42::handshake::product::kPresenceFlag);
+
+        std::array<uint8_t, 4> versionDigits{};
+        const char *versionStr = FW_VERSION_STR;
+        size_t versionCount = 0;
+        for (size_t i = 0; versionStr[i] != '\0' && versionCount < versionDigits.size(); ++i) {
+            char c = versionStr[i];
+            if (c >= '0' && c <= '9') {
+                versionDigits[versionCount++] = static_cast<uint8_t>(c - '0');
+            }
+        }
+        while (versionCount < versionDigits.size()) {
+            versionDigits[versionCount++] = 0;
+        }
+        for (uint8_t digit : versionDigits) {
+            push(digit);
+        }
+
+        const char *gitSha = GIT_SHA_STR;
+        if (gitSha[0] != '\0') {
+            push('g');
+            push('i');
+            push('t');
+            push('-');
+            for (size_t i = 0; gitSha[i] != '\0' && i < 4; ++i) {
+                unsigned char c = static_cast<unsigned char>(gitSha[i]);
+                if (c < 0x80) {
+                    push(static_cast<uint8_t>(c));
+                }
+            }
+        }
+        push(0xF7);
+        sendSysEx(reply.data(), static_cast<uint16_t>(idx));
+    }
     _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
     for (uint16_t i = 0; i < _lastSysExLength; ++i) {
         _lastSysEx[i] = data[i];
