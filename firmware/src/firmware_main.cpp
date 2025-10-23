@@ -553,12 +553,22 @@ void monitorSerialHealth() {
 #endif
 }
 
+static SystemDiagnostics captureDiagnosticsSnapshot() {
+    SystemDiagnostics snapshot;
+    noInterrupts();
+    snapshot = g_systemDiagnostics;
+    interrupts();
+    return snapshot;
+}
+
 void checkDiagnosticsForAlerts() {
     static uint32_t lastMidiDrop = 0;
     static uint32_t lastMidiTaskOverrun = 0;
     static uint32_t lastUartOverrun = 0;
 
-    const uint32_t midiDrop = g_systemDiagnostics.midiDropCount;
+    const SystemDiagnostics diag = captureDiagnosticsSnapshot();
+
+    const uint32_t midiDrop = diag.midiDropCount;
     if (midiDrop != lastMidiDrop) {
         LOG_PRINTF("{\"diagnostic\":\"midi_drop\",\"count\":%lu}\n",
                    static_cast<unsigned long>(midiDrop));
@@ -566,8 +576,8 @@ void checkDiagnosticsForAlerts() {
         lastMidiDrop = midiDrop;
     }
 
-    const uint32_t midiTaskOverruns = g_systemDiagnostics.midiTaskOverrunCount;
-    const uint32_t maxMidiMicros = g_systemDiagnostics.maxProcessMidiMicros;
+    const uint32_t midiTaskOverruns = diag.midiTaskOverrunCount;
+    const uint32_t maxMidiMicros = diag.maxProcessMidiMicros;
     if (midiTaskOverruns != lastMidiTaskOverrun) {
         LOG_PRINTF("{\"diagnostic\":\"midi_task_overrun\",\"count\":%lu,\"max_us\":%lu}\n",
                    static_cast<unsigned long>(midiTaskOverruns),
@@ -576,7 +586,7 @@ void checkDiagnosticsForAlerts() {
         lastMidiTaskOverrun = midiTaskOverruns;
     }
 
-    const uint32_t uartOverruns = g_systemDiagnostics.uartOverrunCount;
+    const uint32_t uartOverruns = diag.uartOverrunCount;
     if (uartOverruns != lastUartOverrun) {
         LOG_PRINTF("{\"diagnostic\":\"uart_overrun\",\"count\":%lu}\n",
                    static_cast<unsigned long>(uartOverruns));
@@ -1104,8 +1114,8 @@ void monitorSystemLoad() {
 
     taskCounter++; // count another lap around the loop
     unsigned long currentMillis = now();
-    if (currentMillis - lastMonitorTime >= 1000UL) {                // Log every second
-        LOG_PRINTF("Tasks per second: %lu\n", taskCounter);         // ~1000 on a chill rig
+    if (currentMillis - lastMonitorTime >= 1000UL) {        // Log every second
+        LOG_PRINTF("Tasks per second: %lu\n", taskCounter); // ~1000 on a chill rig
         g_systemDiagnostics.maxLoopMicros = maxLoopDuration;
         maxLoopDuration = 0;
         taskCounter = 0;
@@ -1195,7 +1205,8 @@ void updateNoteDynamics() {
 void streamWebSerialState() {
     if (!webSerialStreaming)
         return;
-    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers, g_systemDiagnostics);
+    const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
+    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers, diagSnapshot);
 }
 
 void setup() {
@@ -1401,8 +1412,9 @@ void setup() {
         []() {
             if (diagnosticMode) {
                 displayManager.beginDraw();
+                const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,
-                                              midiHandler, g_systemDiagnostics);
+                                              midiHandler, diagSnapshot);
                 displayManager.endDraw();
             } else if (!displayManager.shouldRunScreensaver()) {
                 displayManager.beginDraw();
