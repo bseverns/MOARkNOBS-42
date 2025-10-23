@@ -419,8 +419,8 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
 
     if (data[0] != 0xF0 || data[length - 1] != 0xF7) {
 #ifdef MIDI_DEBUG
-        MIDI_DBG_PRINTF("Dropping SysEx[%u]: invalid framing (start %02X end %02X)\n", length, data[0],
-                         data[length - 1]);
+        MIDI_DBG_PRINTF("Dropping SysEx[%u]: invalid framing (start %02X end %02X)\n", length,
+                        data[0], data[length - 1]);
 #endif
         return;
     }
