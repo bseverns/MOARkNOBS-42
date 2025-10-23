@@ -263,7 +263,8 @@ void Utility::BulkConfigAssembler::refreshHints() {
             int colon = buffer.indexOf(':', key);
             if (colon >= 0) {
                 int start = colon + 1;
-                while (start < buffer.length() && isspace(static_cast<unsigned char>(buffer[start]))) {
+                while (start < buffer.length() &&
+                       isspace(static_cast<unsigned char>(buffer[start]))) {
                     ++start;
                 }
                 int end = start;
@@ -283,7 +284,8 @@ void Utility::BulkConfigAssembler::refreshHints() {
             int colon = buffer.indexOf(':', key);
             if (colon >= 0) {
                 int start = colon + 1;
-                while (start < buffer.length() && isspace(static_cast<unsigned char>(buffer[start]))) {
+                while (start < buffer.length() &&
+                       isspace(static_cast<unsigned char>(buffer[start]))) {
                     ++start;
                 }
                 if (start < buffer.length() && buffer[start] == '"') {
