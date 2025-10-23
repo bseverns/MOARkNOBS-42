@@ -10,6 +10,10 @@
 
 class ConfigManager;
 
+class ConfigManager;
+
+extern bool webSerialStreaming;
+
 class WebSerial {
   public:
     /**
@@ -27,13 +31,16 @@ class WebSerial {
                                   const std::vector<EnvelopeFollower> &envelopes);
 
     /**
-     * Emit a compact config patch describing the current state of a slot.
-     * The payload mirrors the schema used by the WebSerial editor.
+     * Emit a one-slot config patch when firmware rewires a MIDI slot from
+     * hardware input (button combo, WebSerial command, whatever). The payload
+     * mirrors GET_CONFIG schema fields so the browser can merge the change
+     * without pulling a full dump.
      */
     static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
 
     /**
-     * Emit an envelope assignment patch for a single slot.
+     * Emit an envelope assignment patch for a single slot so the WebSerial UI
+     * can redraw the routing matrix immediately.
      */
     static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
 

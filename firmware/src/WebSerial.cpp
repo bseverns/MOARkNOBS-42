@@ -7,7 +7,8 @@
 #include "ConfigManager.h"
 #include <ArduinoJson.h>
 
-extern bool webSerialStreaming;
+// Goes true when the browser hollers HELLO and stays that way
+bool webSerialStreaming = false;
 
 namespace {
 const char *slotTypeSchemaName(MIDIMessageType type) {
@@ -123,6 +124,9 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
         return;
 
     const auto &slots = config.getSlots();
+    if (slotIndex >= slots.size())
+        return;
+
     const MIDISlot &slot = slots[slotIndex];
 
     StaticJsonDocument<384> doc;
