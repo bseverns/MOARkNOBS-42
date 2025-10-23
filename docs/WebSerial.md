@@ -44,7 +44,17 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
   "envelopes":[0,0,0,0,0,0],
   "currentSlot":5,
   "argMethod":"PLUS",
-  "efStatus":[1,0,0,0,0,1]
+  "efStatus":[1,0,0,0,0,1],
+  "diagnostics":{
+    "uart_overruns":0,
+    "midi_drops":0,
+    "loop_overruns":0,
+    "midi_task_overruns":0,
+    "loop_max_us":812,
+    "loop_last_us":742,
+    "midi_isr_max_us":320,
+    "midi_isr_last_us":110
+  }
 }
 ```
 
@@ -53,6 +63,15 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
 - `efStatus` – array of six flags; `1` means that envelope follower is lit.
+- `diagnostics` – brand-new watchdog metrics surfacing how hard the MCU is being pushed:
+  - `uart_overruns` – count of DIN UART receive overruns caught in hardware.
+  - `midi_drops` – messages we binned due to busted framing or unsupported types.
+  - `loop_overruns` – main loop iterations that blew past the 1 ms target.
+  - `midi_task_overruns` – MIDI service passes that ran longer than 1 ms.
+  - `loop_max_us` / `loop_last_us` – worst and most recent loop durations in microseconds.
+  - `midi_isr_max_us` / `midi_isr_last_us` – same deal for `processIncomingMIDI()`.
+
+When any of those counters tick upward the status LED on the board pulses and the JSON stream logs an event, so you get both a visual scream and structured telemetry.
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 

@@ -52,6 +52,8 @@ uint8_t changeProbability = 100;
 // Envelope follower calibration stash
 EnvelopeConfig envelopeConfig = {{0}};
 
+SystemDiagnostics g_systemDiagnostics;
+
 // Analog Routing Grid pairings.  We walk the six EF analog pins at compile time
 // and stash every unique (A,B) combo with A<B.  Change the pin list and the
 // pairings auto-update—no static table to forget.

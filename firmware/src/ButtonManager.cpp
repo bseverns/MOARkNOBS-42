@@ -285,7 +285,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         }
         case 1: {
             if (context.diagnosticMode) {
-                context.diagnosticPage = (context.diagnosticPage + 1) % 3;
+                context.diagnosticPage = (context.diagnosticPage + 1) % 4;
                 context.displayManager.displayStatus("Diag Page", 1000);
             } else {
                 // Reload configuration profile from EEPROM

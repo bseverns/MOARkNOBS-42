@@ -42,6 +42,24 @@ extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
 
 /**
+ * System-wide counters for performance hiccups and watchdog events. Updated by
+ * the hot paths in firmware_main.cpp and MIDIHandler so we can surface them on
+ * the OLED, WebSerial, or anywhere else that wants to tattle on overloads.
+ */
+struct SystemDiagnostics {
+    uint32_t uartOverrunCount = 0;      //!< Hardware UART overruns latched from LPUART6
+    uint32_t midiDropCount = 0;         //!< Messages we intentionally dropped (bad data, unsupported types)
+    uint32_t midiTaskOverrunCount = 0;  //!< processIncomingMIDI calls that ran longer than the 1 ms budget
+    uint32_t loopOverrunCount = 0;      //!< Main loop spins that busted the 1 ms soft ceiling
+    uint32_t maxLoopMicros = 0;         //!< Worst-case loop duration observed during the last sampling window
+    uint32_t lastLoopMicros = 0;        //!< Duration of the most recent loop iteration in microseconds
+    uint32_t maxProcessMidiMicros = 0;  //!< Slowest MIDI service pass observed in microseconds
+    uint32_t lastProcessMidiMicros = 0; //!< Duration of the most recent MIDI service pass
+};
+
+extern SystemDiagnostics g_systemDiagnostics;
+
+/**
  * Bundle every pin and scheduler tick that describes the hardware.
  * Defaults live in Globals.cpp but can be patched at build or run time.
  */
