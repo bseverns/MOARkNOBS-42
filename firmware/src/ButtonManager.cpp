@@ -588,6 +588,9 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
             uint8_t newCC = (oldCC + 1) % 128; // 0..127
             context.configManager.setPotCCNumber(context.activePot, newCC);
+            if (_potentiometerManager != nullptr) {
+                _potentiometerManager->setCCNumber(context.activePot, newCC);
+            }
             char buf[32];
             sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
             context.displayManager.displayStatus(buf, 1500);

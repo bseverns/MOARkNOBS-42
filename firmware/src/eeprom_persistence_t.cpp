@@ -52,6 +52,8 @@ void fillTestData() {
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         configManager.setPotChannel(i, (i % 16) + 1);
         configManager.setPotCCNumber(i, 10 + i);
+        potentiometerManager.setChannel(i, (i % 16) + 1);
+        potentiometerManager.setCCNumber(i, 10 + i);
     }
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         testSlots[i] = {
