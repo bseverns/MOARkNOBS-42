@@ -169,6 +169,10 @@ void MIDIHandler::handleClockTick() {
 }
 
 void MIDIHandler::processIncomingMIDI() {
+    // Even if no new traffic lands this frame, keep draining the DIN queue so
+    // anything throttled by the pacing guard still hits the wire ASAP.
+    serviceSerialQueue();
+
     // Serial MIDI is the crusty hardware port. When it spits out a full
     // message, read() returns true and we hurl the parsed bytes at
     // handleMIDI so the rest of the rig can jam.

@@ -236,6 +236,64 @@ void test_handle_sysex_rejects_bad_framing() {
     TEST_ASSERT_EQUAL_UINT32(3, mh._rxCount);
 }
 
+// When the serial queue is bursting at the seams with repeated CCs, the newest
+// value should be the one that survives and older duplicates must get axed.
+void test_serial_queue_coalesces_latest_value() {
+    MIDIHandler mh;
+
+    auto base = mh.makeControlChange(3, 74, 0);
+    auto fresh = mh.makeControlChange(3, 74, 0x7F);
+    auto program = mh.makeProgramChange(5, 17);
+    auto note = mh.makeNoteOn(6, 64, 96);
+
+    for (size_t i = 0; i < MIDIHandler::kSerialQueueSize; ++i) {
+        mh._serialQueue[i] = base;
+        mh._serialQueue[i].data2 = static_cast<uint8_t>(i & 0x7F);
+    }
+    mh._serialQueue[0] = program;
+    mh._serialQueue[3] = note;
+    mh._serialQueueHead = 0;
+    mh._serialQueueTail = 0;
+    mh._serialQueueFull = true;
+
+    TEST_ASSERT_TRUE(mh.enqueueSerialMessage(fresh));
+
+    TEST_ASSERT_FALSE(mh._serialQueueFull);
+    TEST_ASSERT_EQUAL_UINT32(3, mh.serialQueueSize());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::ProgramChange),
+                            static_cast<uint8_t>(mh._serialQueue[0].type));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::NoteOn),
+                            static_cast<uint8_t>(mh._serialQueue[1].type));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::ControlChange),
+                            static_cast<uint8_t>(mh._serialQueue[2].type));
+    TEST_ASSERT_EQUAL_UINT8(0x7F, mh._serialQueue[2].data2);
+}
+
+// DIN pacing can hold a message back for a few hundred microseconds; make sure
+// the idle polling path keeps draining the queue even without new traffic.
+void test_process_pumps_serial_queue() {
+    MIDIHandler mh;
+    MIDI.ccCount = 0;
+
+    auto msg = mh.makeControlChange(1, 99, 23);
+    mh.enqueueSerialMessage(msg);
+    mh._lastSerialSendUs = micros();
+
+    mh.serviceSerialQueue();
+    TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT32(1, mh.serialQueueSize());
+
+    mh._lastSerialSendUs = micros() -
+                           static_cast<uint32_t>(msg.byteCount) * MIDIHandler::kSerialByteMicros;
+
+    mh.processIncomingMIDI();
+
+    TEST_ASSERT_EQUAL_UINT32(0, mh.serialQueueSize());
+    TEST_ASSERT_EQUAL_UINT8(1, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(99, MIDI.ccLog[0].control);
+    TEST_ASSERT_EQUAL_UINT8(23, MIDI.ccLog[0].value);
+}
+
 // If usbMIDI throws a curveball message type the firmware doesn't support we
 // should shrug and move on, not crash or mutate state.
 void test_drop_unsupported_usb_type() {
