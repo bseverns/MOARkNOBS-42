@@ -725,6 +725,7 @@ void processSerial() {
                 configManager.setPotChannel(potIndex, channel);
                 configManager.setPotCCNumber(potIndex, ccNumber);
                 potentiometerManager.setChannel(potIndex, channel);
+                potentiometerManager.setCCNumber(potIndex, ccNumber);
                 if (static_cast<size_t>(potIndex) < potChannels.size()) {
                     potChannels[potIndex] = channel;
                 }
