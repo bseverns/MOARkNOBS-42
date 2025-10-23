@@ -12,6 +12,8 @@ class ConfigManager;
 
 class ConfigManager;
 
+extern bool webSerialStreaming;
+
 class WebSerial {
   public:
     /**
