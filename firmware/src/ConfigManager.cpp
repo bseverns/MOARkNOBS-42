@@ -227,10 +227,10 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
     for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
         int storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
         int envelopeIndex = (storedValue == 0xFF) ? kUnassignedEnvelope : storedValue;
-        if (envelopeIndex < 0 || envelopeIndex >= static_cast<int>(envelopes.size())) {
-            envelopeIndex = kUnassignedEnvelope;
+        if (envelopeIndex >= 0 &&
+            envelopeIndex < static_cast<int>(envelopes.size())) {
+            potToEnvelopeMap.emplace(potIndex, envelopeIndex);
         }
-        potToEnvelopeMap[potIndex] = envelopeIndex;
     }
 
     for (size_t envIndex = 0; envIndex < envelopes.size(); ++envIndex) {
@@ -252,8 +252,13 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
 void ConfigManager::saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
                                          const std::vector<EnvelopeFollower> &envelopes) {
     constexpr uint8_t kUnassignedMarker = 0xFF;
-    for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
-        uint8_t storedValue = (envelopeIndex < 0) ? kUnassignedMarker : static_cast<uint8_t>(envelopeIndex);
+    for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
+        auto it = potToEnvelopeMap.find(potIndex);
+        int envelopeIndex = (it != potToEnvelopeMap.end()) ? it->second : kUnassignedEnvelope;
+        uint8_t storedValue =
+            (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopes.size()))
+                ? static_cast<uint8_t>(envelopeIndex)
+                : kUnassignedMarker;
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, storedValue);
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
@@ -506,10 +511,6 @@ void test_high_index_envelope_assignment_survives_reload() {
     }
 
     std::map<int, int> mapping;
-    for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
-        mapping[potIndex] = -1;
-    }
-
     const int highPot = NUM_POTS - 1;
     const int assignedEnv = static_cast<int>(envs.size()) - 1;
     mapping[highPot] = assignedEnv;
@@ -522,7 +523,7 @@ void test_high_index_envelope_assignment_survives_reload() {
     bool ok = cfg.loadEnvelopeSettings(mapping, reloaded);
 
     TEST_ASSERT_TRUE(ok);
-    TEST_ASSERT_EQUAL_UINT(static_cast<unsigned int>(NUM_POTS), mapping.size());
+    TEST_ASSERT_EQUAL_UINT(1u, mapping.size());
 
     auto highPotIt = mapping.find(highPot);
     TEST_ASSERT_TRUE(highPotIt != mapping.end());
@@ -531,8 +532,7 @@ void test_high_index_envelope_assignment_survives_reload() {
     if (NUM_POTS > 1) {
         int unassignedPot = (highPot == 0) ? 1 : 0;
         auto unassignedIt = mapping.find(unassignedPot);
-        TEST_ASSERT_TRUE(unassignedIt != mapping.end());
-        TEST_ASSERT_EQUAL_INT(-1, unassignedIt->second);
+        TEST_ASSERT_TRUE(unassignedIt == mapping.end());
     }
 }
 #endif
