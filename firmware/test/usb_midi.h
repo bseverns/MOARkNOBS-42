@@ -39,9 +39,6 @@
 #undef usbMIDI
 #endif
 
-struct usb_midi_class;
-extern usb_midi_class usbMIDI;
-
 static constexpr uint16_t kSysExCapacity = 128;
 
 namespace midi {
