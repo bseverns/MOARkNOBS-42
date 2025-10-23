@@ -1,6 +1,10 @@
 #include <Arduino.h>
 #include <unity.h>
 
+// This is the orchestral score for the "full system" PlatformIO environment.
+// When you flash teensy40_full_system it runs every high-level integration
+// test back-to-back so you can slam through a hardware regression in one go.
+
 void test_long_press_detection();
 void corrupt_primary_valid_backup();
 void corrupted_primary_and_backup();

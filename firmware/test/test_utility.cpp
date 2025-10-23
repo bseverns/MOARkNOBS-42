@@ -8,6 +8,13 @@
 extern bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
                                    MIDIMessageType &type);
 
+// Utility.cpp quietly powers the bulk config transport, JSON ACK plumbing, and
+// those test-only helpers that turn sketchy numeric slot identifiers into the
+// friendly MIDIMessageType enum.  These tests keep that grab-bag honest so the
+// web UI and CLI tooling can stream payloads without bricking the rig.
+
+// Feed the assembler two payload fragments and make sure it stitches them into
+// one coherent JSON blob while preserving the sequence hint.
 void test_bulk_config_assembler_handles_chunks() {
     Utility::BulkConfigAssembler assembler;
     String error;
@@ -27,6 +34,8 @@ void test_bulk_config_assembler_handles_chunks() {
     TEST_ASSERT_EQUAL_STRING("deadbeef", doc["checksum"]);
 }
 
+// Smash the assembler with a payload larger than the advertised capacity and
+// confirm we get a clear overflow flag instead of wrapping the buffer.
 void test_bulk_config_assembler_detects_overflow() {
     Utility::BulkConfigAssembler assembler;
     String chunk;
@@ -40,12 +49,16 @@ void test_bulk_config_assembler_detects_overflow() {
     TEST_ASSERT_TRUE(error == "overflow");
 }
 
+// ACKs double as human-facing breadcrumbs—verify we echo both checksum and
+// sequence markers for the host.
 void test_format_ack_includes_checksum_and_seq() {
     String ack = Utility::formatAck("cafebabe", 42);
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"checksum\":\"cafebabe\""));
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"seq\":42"));
 }
 
+// Slot types can arrive as raw uint8_t values; make sure we preserve the enum
+// semantics when the config stream leans on that shortcut.
 void test_bulk_config_accepts_numeric_slot_type() {
     StaticJsonDocument<64> doc;
     JsonObject slot = doc.to<JsonObject>();
@@ -57,6 +70,8 @@ void test_bulk_config_accepts_numeric_slot_type() {
                             static_cast<uint8_t>(resolved));
 }
 
+// Some clients ship larger integer types (thanks, Python).  We still want to
+// coerce them into the right enum bucket.
 void test_bulk_config_accepts_wider_numeric_slot_type() {
     StaticJsonDocument<64> doc;
     JsonObject slot = doc.to<JsonObject>();
@@ -68,6 +83,8 @@ void test_bulk_config_accepts_wider_numeric_slot_type() {
                             static_cast<uint8_t>(resolved));
 }
 
+// Float parsing is another reality of loosely typed JSON—if the value is
+// mathematically integral we should treat it like the matching enum.
 void test_bulk_config_accepts_integral_float_slot_type() {
     StaticJsonDocument<64> doc;
     JsonObject slot = doc.to<JsonObject>();
@@ -79,6 +96,8 @@ void test_bulk_config_accepts_integral_float_slot_type() {
                             static_cast<uint8_t>(resolved));
 }
 
+// Human-readable aliases (like "PITCH_BEND") should land on the same enum as
+// their numeric cousins so the UX stays forgiving.
 void test_bulk_config_accepts_type_name_alias() {
     StaticJsonDocument<64> doc;
     JsonObject slot = doc.to<JsonObject>();

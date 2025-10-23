@@ -3,6 +3,8 @@
 #include <ArduinoJson.h>
 #include "sys/report.h"
 
+// sys::report() is the firmware's "tell me who you are" API.  Make sure the
+// JSON blob stays parseable and keeps the identity fields we promise tooling.
 void test_system_report() {
     String json = sys::report();
     StaticJsonDocument<256> doc;

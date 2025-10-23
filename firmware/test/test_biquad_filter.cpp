@@ -2,6 +2,9 @@
 #include <unity.h>
 #include "BiquadFilter.h"
 
+// The filter code gets exercised hard by the envelope followers.  This sanity
+// check ensures the low-pass hangs onto DC while the high-pass bleeds it out
+// after a step input.
 void test_lowpass_highpass_response() {
     BiquadFilter lp;
     lp.configure(BiquadFilter::LOWPASS, 1000.0f, 48000.0f);

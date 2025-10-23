@@ -2,6 +2,11 @@
 #include <unity.h>
 #include "TestHelpers.h"
 
+// LEDManager drives everything from the halo rings to the panic flash.  These
+// assertions make sure the basic setters stick.
+
+// Slam a brightness value and a neon CRGB and verify the getters report the
+// same payload we stuffed in.
 void test_brightness_and_color() {
     LEDManager led = createLEDManager();
     led.setBrightness(77);

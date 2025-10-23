@@ -1,6 +1,11 @@
 #include "unity_config.h" // bundles Arduino and corrals usbMIDI into our stub
 #include <unity.h>
 
+// Unity's Arduino harness insists on a sketch-style entry point.  This file is
+// the conductor that runs every firmware unit test when you flash the
+// teensy40_unity target.  Keep the RUN_TEST order roughly grouped so failures
+// point you at the right subsystem.
+
 void test_start_stop_cycle();
 void test_pot_root_drives_default();
 void test_slot_root_wins_over_pot();
