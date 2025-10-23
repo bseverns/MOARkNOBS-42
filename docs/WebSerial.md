@@ -56,6 +56,23 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 
+### Patch Shouts
+
+Heavy edits don’t wait for the next telemetry frame. When a slot gets rerouted or a long-press wires an envelope follower, the
+firmware hurls one-off JSON patches so the browser can update instantly:
+
+```json
+{"type":"slot_patch","slot":7,"payload":{"index":7,"type":1,"type_name":"CC","channel":3,"data1":74,"ef_index":2,"active":true,"arp_note":60}}
+{"type":"ef_assignment","slot":7,"envelope":2}
+```
+
+- `slot_patch` mirrors a single entry from the `slots` array returned by `GET_CONFIG`. Treat it as the canonical slot state and
+  merge it into your staged config.
+- `ef_assignment` pings whenever a long-press assigns or clears an envelope follower. Negative envelope numbers mean “nobody’s
+  home”.
+
+Miss a patch? Ask for `GET_CONFIG` again and rebuild your local model. The UI never has to guess.
+
 ## Text Commands
 
 Spying is fun, but sometimes you gotta bark orders. Hurl plain‑text commands
