@@ -92,7 +92,7 @@ struct MidiInterfaceStub {
     CCEvent ccLog[8];
     uint8_t ccCount = 0;
 
-    uint8_t lastSysEx[32];
+    uint8_t lastSysEx[64];
     uint16_t lastSysExLength = 0;
 
     void begin(...) {}
@@ -124,7 +124,7 @@ struct MidiInterfaceStub {
     }
     void sendClock() {}
     void sendSysEx(uint16_t length, const uint8_t *data, bool) {
-        lastSysExLength = length > 32 ? 32 : length;
+        lastSysExLength = length > 64 ? 64 : length;
         for (uint16_t i = 0; i < lastSysExLength; ++i)
             lastSysEx[i] = data[i];
     }

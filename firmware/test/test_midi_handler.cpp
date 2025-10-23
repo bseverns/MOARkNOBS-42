@@ -53,6 +53,26 @@ void test_mod_wheel() {
     TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.ccLog[0].channel);
 }
 
+// When pots spray a burst of CCs we only want to count the legit ones. Anything
+// out of range should bail before it pollutes the transport logs.
+void test_pot_burst_keeps_cc_counters_honest() {
+    MIDIHandler mh;
+    MIDI.ccCount = usbMIDI.ccCount = 0;
+
+    mh.sendControlChange(10, 64, 1);
+    mh.sendControlChange(74, 32, 16);
+
+    TEST_ASSERT_EQUAL_UINT8(2, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.ccCount);
+
+    mh.sendControlChange(140, 32, 1); // bogus control
+    mh.sendControlChange(10, 200, 1); // bogus value
+    mh.sendControlChange(10, 64, 0);  // bogus channel
+
+    TEST_ASSERT_EQUAL_UINT8(2, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.ccCount);
+}
+
 // Pitch bend flows through the 14-bit code path.  This run keeps the math sane
 // so middle detents land back at zero instead of wobbling.
 void test_pitch_bend() {
@@ -111,6 +131,29 @@ void test_send_sysex() {
     for (uint8_t i = 0; i < sizeof(msg); ++i) {
         TEST_ASSERT_EQUAL_UINT8(msg[i], MIDI.lastSysEx[i]);
         TEST_ASSERT_EQUAL_UINT8(msg[i], usbMIDI.lastSysEx[i]);
+    }
+}
+
+// Guardrail for the new 64-byte SysEx guard: long payloads should survive the
+// trip into our diagnostics stash without being mangled.
+void test_long_sysex_payload_round_trips() {
+    MIDIHandler mh;
+    mh._lastSysExLength = 0;
+    mh._rxCount = 0;
+
+    std::array<uint8_t, 64> payload{};
+    for (size_t i = 0; i < payload.size(); ++i) {
+        payload[i] = static_cast<uint8_t>((i * 3) & 0x7F);
+    }
+    payload[0] = 0xF0;
+    payload[payload.size() - 1] = 0xF7;
+
+    mh.handleSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
+
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), mh._lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT32(1, mh._rxCount);
+    for (size_t i = 0; i < payload.size(); ++i) {
+        TEST_ASSERT_EQUAL_UINT8(payload[i], mh._lastSysEx[i]);
     }
 }
 

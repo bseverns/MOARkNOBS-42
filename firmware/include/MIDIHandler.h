@@ -129,7 +129,7 @@ class MIDIHandler {
     uint16_t _lastRPNValue = 0;
 
     // SysEx stash for quick testing/debugging
-    uint8_t _lastSysEx[32] = {0};
+    uint8_t _lastSysEx[64] = {0};
     uint16_t _lastSysExLength = 0;
     SysExType _lastSysExType = SysExType::ManufacturerSpecific;
     uint8_t _lastSysExSubId1 = 0;

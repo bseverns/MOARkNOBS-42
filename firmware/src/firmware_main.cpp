@@ -526,6 +526,15 @@ bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNam
                             MIDIMessageType &type) {
     return parseSlotType(typeField, typeNameField, type);
 }
+
+bool testOnly_parseSysExTemplateField(JsonVariantConst value, MIDISlot &slot, String &error) {
+    return parseSysExTemplateField(value, slot, error);
+}
+
+uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
+                                   size_t capacity) {
+    return buildSysExPayload(slot, rawValue, dest, capacity);
+}
 #endif
 
 // Global objects

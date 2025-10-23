@@ -283,6 +283,10 @@ Leave the template blank and we fall back to the legacy four-byte burst (`F0 dat
 string like `F0 7F 01 04 XX F7` or `F0 7D 10 MSB LSB F7` and the firmware handles the substitution while mirroring the packet to
 USB and DIN. No code rebuilds, no magic numbers hiding in `firmware_main.cpp`.
 
+Heads-up for folks slinging longer dumps: the runtime now records up to 64 bytes of whatever SysEx you feed it, so diagnostics
+and unit tests can replay the exact payload that blasted through. Anything larger gets bounced before it can chew RAM, keeping the
+rig scrappy instead of sloppy.
+
 ### Incoming MIDI and Clock Sync
 
 The firmware listens on both USB and the hardware MIDI port (DIN/TRS). Incoming bytes are parsed and can
