@@ -10,6 +10,7 @@
 #include "Utility.h"
 #include "TimeUtils.h"
 #include "Arpeggiator.h"
+#include "WebSerial.h"
 #include <map>
 
 // Scans the button matrix and direct control buttons. Results are fed into
@@ -461,6 +462,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             char buf[32];
             sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
             context.displayManager.displayStatus(buf, 1500);
+            WebSerial::sendSlotPatch(context.configManager, context.activePot);
             break;
         }
 
@@ -552,9 +554,17 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         int assigned = context.potToEnvelopeMap[context.activePot];
         context.envelopes[assigned].toggleActive(true);
 
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        if (slot.efIndex != static_cast<uint8_t>(assigned)) {
+            slot.efIndex = static_cast<uint8_t>(assigned);
+            context.configManager.saveSlot(context.activePot, slot);
+        }
+
         char buf[32];
         sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendEnvelopeAssignment(context.activePot, assigned);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     } break;
 
     case 3: {
@@ -573,6 +583,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         char buf[32];
         sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     } break;
 
     case 4: {
@@ -597,6 +608,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
             context.displayManager.displayStatus(buf, 1500);
         }
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     } break;
 
     case 5: {
@@ -720,9 +732,16 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         int randomEF = random(context.envelopes.size());
         context.potToEnvelopeMap[context.activePot] = randomEF;
         context.envelopes[randomEF].toggleActive(true);
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        if (slot.efIndex != static_cast<uint8_t>(randomEF)) {
+            slot.efIndex = static_cast<uint8_t>(randomEF);
+            context.configManager.saveSlot(context.activePot, slot);
+        }
         char buf[32];
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendEnvelopeAssignment(context.activePot, randomEF);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (5) Ctrl4 + Ctrl5: Set active slot to MIDI Note mode
     else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
@@ -730,6 +749,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => NOTE", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (6) Ctrl3 + Ctrl5: Set active slot to Program Change
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
@@ -737,6 +757,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => PROG", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (7) Ctrl0 + Ctrl5: Set active slot to Pitch Bend
     else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
@@ -744,6 +765,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => BEND", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (8) Ctrl1 + Ctrl4: Set active slot to Aftertouch
     else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
@@ -751,6 +773,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => AFTER", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (9) Ctrl1 + Ctrl5: Toggle MIDI clock output
     else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
@@ -764,6 +787,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => NRPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (11) Ctrl1 + Ctrl3: Set active slot to RPN
     else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
@@ -771,6 +795,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => RPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (12) Ctrl0 + Ctrl3: Set active slot to SysEx
     else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
@@ -778,6 +803,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         sprintf(buf, "Slot %d => SYSEX", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     }
     // (13) Ctrl2 + Ctrl4: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
