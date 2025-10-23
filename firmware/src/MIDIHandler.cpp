@@ -476,31 +476,29 @@ bool MIDIHandler::tryCoalesceSerialMessage(const SerialMessage &msg) {
         return false;
     }
 
-    size_t latestMatchOffset = kSerialQueueSize; // sentinel for "not found"
-    for (size_t i = 0; i < count; ++i) {
-        size_t index = (_serialQueueHead + i) % kSerialQueueSize;
-        if (shouldCoalesce(_serialQueue[index])) {
-            latestMatchOffset = i; // keep walking so the newest match wins
-        }
-    }
-
-    if (latestMatchOffset == kSerialQueueSize) {
-        return false;
-    }
-
     std::array<SerialMessage, kSerialQueueSize> compact{};
     size_t compactCount = 0;
+    bool foundMatch = false;
     for (size_t i = 0; i < count; ++i) {
         size_t index = (_serialQueueHead + i) % kSerialQueueSize;
         SerialMessage candidate = _serialQueue[index];
         if (shouldCoalesce(candidate)) {
-            if (i == latestMatchOffset) {
-                compact[compactCount++] = msg;
-            }
-            // Older duplicates get dropped so stale values never reach the wire.
+            foundMatch = true;
+            // Every duplicate gets axed so we can tack the fresh value onto the tail.
             continue;
         }
         compact[compactCount++] = candidate;
+    }
+
+    if (!foundMatch) {
+        return false;
+    }
+
+    if (compactCount < kSerialQueueSize) {
+        compact[compactCount++] = msg;
+    } else {
+        // Should be unreachable because we dropped at least one entry, but fail safe.
+        compact[kSerialQueueSize - 1] = msg;
     }
 
     for (size_t i = 0; i < compactCount; ++i) {
@@ -563,7 +561,8 @@ void MIDIHandler::dispatchSerialMessage(const SerialMessage &msg) {
     }
 }
 
-MIDIHandler::SerialMessage MIDIHandler::makeControlChange(uint8_t channel, uint8_t control, uint8_t value) const {
+MIDIHandler::SerialMessage MIDIHandler::makeControlChange(uint8_t channel, uint8_t control,
+                                                          uint8_t value) const {
     SerialMessage msg;
     msg.type = SerialMessageType::ControlChange;
     msg.channel = channel;
@@ -573,7 +572,8 @@ MIDIHandler::SerialMessage MIDIHandler::makeControlChange(uint8_t channel, uint8
     return msg;
 }
 
-MIDIHandler::SerialMessage MIDIHandler::makeNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) const {
+MIDIHandler::SerialMessage MIDIHandler::makeNoteOn(uint8_t channel, uint8_t note,
+                                                   uint8_t velocity) const {
     SerialMessage msg;
     msg.type = SerialMessageType::NoteOn;
     msg.channel = channel;
@@ -583,7 +583,8 @@ MIDIHandler::SerialMessage MIDIHandler::makeNoteOn(uint8_t channel, uint8_t note
     return msg;
 }
 
-MIDIHandler::SerialMessage MIDIHandler::makeNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) const {
+MIDIHandler::SerialMessage MIDIHandler::makeNoteOff(uint8_t channel, uint8_t note,
+                                                    uint8_t velocity) const {
     SerialMessage msg;
     msg.type = SerialMessageType::NoteOff;
     msg.channel = channel;
