@@ -9,6 +9,7 @@
 #include "Globals.h"
 #include "ConfigManager.h"
 #include "TestHelpers.h"
+#include "Utility.h"
 #include <EEPROM.h>
 
 #include <algorithm>
@@ -29,10 +30,6 @@ struct StubEnvelope {
   private:
     uint8_t level;
 };
-
-uint8_t mapToMidi(uint16_t raw) {
-    return static_cast<uint8_t>((static_cast<uint32_t>(raw) * 127U) / 1023U);
-}
 
 void resetMidiTransports() {
     MIDI.ccCount = 0;
@@ -115,7 +112,7 @@ void test_pot_burst_keeps_cc_counters_honest() {
     constexpr uint16_t kBursts = 96;
     for (uint16_t i = 0; i < kBursts; ++i) {
         uint16_t raw = static_cast<uint16_t>((i * 37) % 1024);
-        uint8_t mapped = mapToMidi(raw);
+        uint8_t mapped = Utility::mapToMidiValue(raw);
         mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
     }
 
@@ -246,7 +243,7 @@ void test_config_mutation_during_stream_stays_valid() {
     constexpr uint16_t kUpdates = 40;
     for (uint16_t i = 0; i < kUpdates; ++i) {
         uint16_t raw = static_cast<uint16_t>((i * 23) % 1024);
-        uint8_t mapped = mapToMidi(raw);
+        uint8_t mapped = Utility::mapToMidiValue(raw);
 
         if (i == kUpdates / 2) {
             slot.type = MIDIMessageType::Note;
@@ -256,7 +253,7 @@ void test_config_mutation_during_stream_stays_valid() {
             mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
             ++ccEvents;
         } else {
-            uint8_t note = static_cast<uint8_t>(mapToMidi(raw) % 128);
+            uint8_t note = static_cast<uint8_t>(Utility::mapToMidiValue(raw) % 128);
             uint8_t velocity = env.getEnvelopeLevel();
             mh.sendNoteOn(note, velocity, slot.midiChannel);
             mh.sendNoteOff(note, 0, slot.midiChannel);
