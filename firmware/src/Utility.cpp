@@ -235,7 +235,7 @@ bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &erro
     }
 
     // Detect the start of a new frame.
-    if (!chunk.isEmpty() && chunk.charAt(0) == '{') {
+    if (chunk.charAt(0) == '{') {
         reset();
         receiving = true;
     } else if (!receiving) {
@@ -277,7 +277,7 @@ void Utility::BulkConfigAssembler::refreshHints() {
         }
     }
 
-    if (checksum.isEmpty()) {
+    if (checksum.length() == 0) {
         int key = buffer.indexOf("\"checksum\"");
         if (key >= 0) {
             int colon = buffer.indexOf(':', key);

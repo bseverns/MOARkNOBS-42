@@ -25,8 +25,19 @@
 #include <queue>
 #include <map>
 #include <array>
+#include <vector>
 #include <imxrt.h>
 #include <cstdint>
+
+extern std::vector<uint8_t> potChannels;
+extern std::map<int, int> potToEnvelopeMap;
+extern PotentiometerManager potentiometerManager;
+extern std::vector<EnvelopeFollower> envelopeFollowers;
+extern LEDManager ledManager;
+extern ConfigManager configManager;
+extern bool envelopeFollowMode;
+extern String g_envelopeModeLabel;
+extern const char *envelopeMode;
 
 #if defined(ARDUINO)
 extern "C" {
@@ -647,7 +658,7 @@ void processSerial() {
         } else if (command.startsWith("SET_ALL")) {
             String chunk = command.substring(8);
             chunk.trim();
-            if (chunk.isEmpty()) {
+            if (chunk.length() == 0) {
                 continue;
             }
 
