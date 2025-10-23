@@ -675,8 +675,9 @@ void processSerial() {
                 continue;
             }
 
-            static constexpr size_t kConfigDocCapacity = 16384;
-            StaticJsonDocument<kConfigDocCapacity> doc;
+            static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
+            // Persist the 32 KB document between uploads so we don't hammer the stack.
+            doc.clear();
             DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
             if (err == DeserializationError::IncompleteInput) {
                 continue;
