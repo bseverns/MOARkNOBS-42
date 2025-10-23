@@ -283,8 +283,8 @@ void test_process_pumps_serial_queue() {
     TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
     TEST_ASSERT_EQUAL_UINT32(1, mh.serialQueueSize());
 
-    mh._lastSerialSendUs = micros() -
-                           static_cast<uint32_t>(msg.byteCount) * MIDIHandler::kSerialByteMicros;
+    mh._lastSerialSendUs =
+        micros() - static_cast<uint32_t>(msg.byteCount) * MIDIHandler::kSerialByteMicros;
 
     mh.processIncomingMIDI();
 
