@@ -25,8 +25,21 @@
 #include <queue>
 #include <map>
 #include <array>
+#include <vector>
 #include <imxrt.h>
 #include <cstdint>
+#include <cctype>
+#include <cmath>
+
+extern std::vector<uint8_t> potChannels;
+extern std::map<int, int> potToEnvelopeMap;
+extern PotentiometerManager potentiometerManager;
+extern std::vector<EnvelopeFollower> envelopeFollowers;
+extern LEDManager ledManager;
+extern ConfigManager configManager;
+extern bool envelopeFollowMode;
+extern String g_envelopeModeLabel;
+extern const char *envelopeMode;
 
 #if defined(ARDUINO)
 extern "C" {
@@ -127,6 +140,334 @@ const char *envelopeModeName(uint8_t mode) {
 }
 } // namespace
 
+namespace {
+Utility::BulkConfigAssembler bulkConfigAssembler;
+uint32_t lastAckSequence = 0;
+String lastAckChecksum;
+
+bool equalsIgnoreCase(const char *lhs, const char *rhs) {
+    if (!lhs || !rhs)
+        return false;
+    while (*lhs && *rhs) {
+        if (tolower(static_cast<unsigned char>(*lhs)) != tolower(static_cast<unsigned char>(*rhs)))
+            return false;
+        ++lhs;
+        ++rhs;
+    }
+    return *lhs == '\0' && *rhs == '\0';
+}
+
+bool parseMIDIType(const char *label, MIDIMessageType &type) {
+    if (!label)
+        return false;
+    struct Entry {
+        const char *legacy;
+        const char *canonical;
+        const char *alt;
+        MIDIMessageType value;
+    };
+    static constexpr Entry kMap[] = {
+        {"OFF", "OFF", nullptr, MIDIMessageType::OFF},
+        {"CC", "CC", nullptr, MIDIMessageType::CC},
+        {"Note", "NOTE", nullptr, MIDIMessageType::Note},
+        {"PitchBend", "PITCH_BEND", "PITCHBEND", MIDIMessageType::PitchBend},
+        {"ProgramChange", "PROGRAM", "PROGRAM_CHANGE", MIDIMessageType::ProgramChange},
+        {"Aftertouch", "AFTERTOUCH", nullptr, MIDIMessageType::Aftertouch},
+        {"ModWheel", "MOD_WHEEL", "MODWHEEL", MIDIMessageType::ModWheel},
+        {"NRPN", "NRPN", nullptr, MIDIMessageType::NRPN},
+        {"RPN", "RPN", nullptr, MIDIMessageType::RPN},
+        {"SysEx", "SYSEX", "SYS_EX", MIDIMessageType::SysEx}};
+    for (const auto &entry : kMap) {
+        if ((entry.legacy && equalsIgnoreCase(label, entry.legacy)) ||
+            (entry.canonical && equalsIgnoreCase(label, entry.canonical)) ||
+            (entry.alt && equalsIgnoreCase(label, entry.alt))) {
+            type = entry.value;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                   MIDIMessageType &type) {
+    auto assignFromIntegral = [&](long candidate) {
+        if (candidate < static_cast<long>(MIDIMessageType::OFF) ||
+            candidate > static_cast<long>(MIDIMessageType::SysEx)) {
+            return false;
+        }
+        type = static_cast<MIDIMessageType>(candidate);
+        return true;
+    };
+
+    if (!typeField.isNull()) {
+        if (typeField.is<const char *>()) {
+            if (parseMIDIType(typeField.as<const char *>(), type)) {
+                return true;
+            }
+        } else if (typeField.is<int>() || typeField.is<long>() || typeField.is<short>() ||
+                   typeField.is<signed char>()) {
+            if (assignFromIntegral(typeField.as<long>())) {
+                return true;
+            }
+        } else if (typeField.is<unsigned char>() || typeField.is<unsigned short>() ||
+                   typeField.is<unsigned int>() || typeField.is<unsigned long>()) {
+            unsigned long raw = typeField.as<unsigned long>();
+            if (raw <= static_cast<unsigned long>(static_cast<long>(MIDIMessageType::SysEx)) &&
+                assignFromIntegral(static_cast<long>(raw))) {
+                return true;
+            }
+        } else if (typeField.is<float>() || typeField.is<double>()) {
+            double raw = typeField.as<double>();
+            if (std::isfinite(raw)) {
+                long candidate = static_cast<long>(raw);
+                if (static_cast<double>(candidate) == raw && assignFromIntegral(candidate)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    if (!typeNameField.isNull() && typeNameField.is<const char *>()) {
+        return parseMIDIType(typeNameField.as<const char *>(), type);
+    }
+    return false;
+}
+
+EnvelopeFollower::FilterType parseFilterType(const char *label,
+                                             EnvelopeFollower::FilterType fallback) {
+    if (!label)
+        return fallback;
+    struct Entry {
+        const char *name;
+        EnvelopeFollower::FilterType value;
+    };
+    static constexpr Entry kMap[] = {
+        {"LINEAR", EnvelopeFollower::LINEAR},
+        {"OPPOSITE_LINEAR", EnvelopeFollower::OPPOSITE_LINEAR},
+        {"EXPONENTIAL", EnvelopeFollower::EXPONENTIAL},
+        {"RANDOM", EnvelopeFollower::RANDOM},
+        {"LOWPASS", EnvelopeFollower::LOWPASS},
+        {"HIGHPASS", EnvelopeFollower::HIGHPASS},
+        {"BANDPASS", EnvelopeFollower::BANDPASS},
+    };
+    for (const auto &entry : kMap) {
+        if (strcmp(label, entry.name) == 0) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
+EnvelopeFollower::ARG_Method parseArgMethod(const char *label,
+                                            EnvelopeFollower::ARG_Method fallback) {
+    if (!label)
+        return fallback;
+    struct Entry {
+        const char *name;
+        EnvelopeFollower::ARG_Method value;
+    };
+    static constexpr Entry kMap[] = {
+        {"PLUS", EnvelopeFollower::PLUS}, {"MIN", EnvelopeFollower::MIN},
+        {"PECK", EnvelopeFollower::PECK}, {"SHAV", EnvelopeFollower::SHAV},
+        {"SQAR", EnvelopeFollower::SQAR}, {"BABS", EnvelopeFollower::BABS},
+        {"TABS", EnvelopeFollower::TABS}, {"MULT", EnvelopeFollower::MULT},
+        {"DIVI", EnvelopeFollower::DIVI}, {"AVG", EnvelopeFollower::AVG},
+        {"XABS", EnvelopeFollower::XABS}, {"MAXX", EnvelopeFollower::MAXX},
+        {"MINN", EnvelopeFollower::MINN}, {"XORR", EnvelopeFollower::XORR}};
+    for (const auto &entry : kMap) {
+        if (strcmp(label, entry.name) == 0) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
+bool parseHexColor(const char *hex, CRGB &color) {
+    if (!hex)
+        return false;
+    if (hex[0] == '#') {
+        ++hex;
+    }
+    if (strlen(hex) != 6)
+        return false;
+    char *end = nullptr;
+    long value = strtol(hex, &end, 16);
+    if (!end || *end != '\0')
+        return false;
+    color.r = static_cast<uint8_t>((value >> 16) & 0xFF);
+    color.g = static_cast<uint8_t>((value >> 8) & 0xFF);
+    color.b = static_cast<uint8_t>(value & 0xFF);
+    return true;
+}
+
+void emitBulkError(const char *code, const char *message, uint32_t seq = 0) {
+    String out = "{\"type\":\"error\"";
+    if (code && code[0] != '\0') {
+        out += ",\"code\":\"";
+        out += code;
+        out += "\"";
+    }
+    if (seq != 0) {
+        out += ",\"seq\":";
+        out += seq;
+    }
+    if (message && message[0] != '\0') {
+        out += ",\"message\":\"";
+        out += message;
+        out += "\"";
+    }
+    out += "}";
+    LOG_PRINTLN(out);
+}
+
+void updateEnvelopeModeLabel(const char *label) {
+    if (!label || label[0] == '\0') {
+        g_envelopeModeLabel = "LINEAR";
+    } else {
+        g_envelopeModeLabel = label;
+    }
+    envelopeMode = g_envelopeModeLabel.c_str();
+}
+
+bool applyConfigObject(JsonObject config, uint32_t seq) {
+    if (config.isNull()) {
+        emitBulkError("config_missing", "config object absent", seq);
+        return false;
+    }
+
+    if (!config.containsKey("slots") || !config["slots"].is<JsonArray>()) {
+        emitBulkError("slots_missing", "config.slots missing", seq);
+        return false;
+    }
+
+    JsonArray slotsJson = config["slots"].as<JsonArray>();
+    if (slotsJson.size() != NUM_SLOTS) {
+        emitBulkError("slots_size", "unexpected slot count", seq);
+        return false;
+    }
+
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        JsonObject slotObj = slotsJson[i];
+        if (slotObj.isNull()) {
+            emitBulkError("slot_null", "slot entry missing", seq);
+            return false;
+        }
+
+        MIDIMessageType midiType = MIDIMessageType::OFF;
+        if (!parseSlotType(slotObj["type"], slotObj["type_name"], midiType)) {
+            emitBulkError("slot_type", "unknown slot type", seq);
+            return false;
+        }
+
+        uint8_t midiChannel = constrain(slotObj["midiChannel"].as<int>(), 1, 16);
+        uint8_t data1 = constrain(slotObj["data1"].as<int>(), 0, 127);
+        uint8_t efIndex = constrain(slotObj["efIndex"].as<int>(), 0,
+                                    static_cast<int>(envelopeFollowers.size()) - 1);
+        bool active = slotObj["active"].as<bool>();
+
+        MIDISlot &slot = configManager.getSlot(i);
+        slot.type = midiType;
+        slot.midiChannel = midiChannel;
+        slot.data1 = data1;
+        slot.efIndex = efIndex;
+        slot.active = active;
+        configManager.saveSlot(i, slot);
+
+        configManager.setPotChannel(i, midiChannel);
+        configManager.setPotCCNumber(i, data1);
+        potentiometerManager.setChannel(i, midiChannel);
+        potentiometerManager.setCCNumber(i, data1);
+        if (static_cast<size_t>(i) < potChannels.size()) {
+            potChannels[i] = midiChannel;
+        }
+    }
+
+    configManager.saveConfiguration();
+
+    if (config.containsKey("efSlots") && config["efSlots"].is<JsonArray>()) {
+        JsonArray efSlots = config["efSlots"].as<JsonArray>();
+        potToEnvelopeMap.clear();
+        for (uint8_t i = 0; i < efSlots.size(); ++i) {
+            JsonObject mapping = efSlots[i];
+            if (mapping.isNull())
+                continue;
+            int slotIndex = mapping["slot"].as<int>();
+            if (slotIndex < 0 || slotIndex >= NUM_POTS)
+                continue;
+            potToEnvelopeMap[slotIndex] = i;
+            envelopeFollowers[i].setModulationTarget(potentiometerManager.getCCNumber(slotIndex));
+        }
+        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    }
+
+    if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
+        JsonObject filterObj = config["filter"].as<JsonObject>();
+        EnvelopeFollower::FilterType current = envelopeFollowers.empty()
+                                                   ? EnvelopeFollower::LINEAR
+                                                   : envelopeFollowers.front().getFilterType();
+        EnvelopeFollower::FilterType filterType =
+            parseFilterType(filterObj["type"].as<const char *>(), current);
+        float freq = constrain(filterObj["freq"].as<float>(), 20.0f, 5000.0f);
+        float q = constrain(filterObj["q"].as<float>(), 0.5f, 4.0f);
+
+        for (auto &ef : envelopeFollowers) {
+            ef.setFilterType(filterType);
+            ef.configureFilter(freq, q);
+        }
+        EEPROM.put(EEPROM_FILTER_FREQ, freq);
+        EEPROM.put(EEPROM_FILTER_Q, q);
+    }
+
+    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
+        JsonObject argObj = config["arg"].as<JsonObject>();
+        EnvelopeFollower::ARG_Method method =
+            parseArgMethod(argObj["method"].as<const char *>(), EnvelopeFollower::PLUS);
+        bool enable = argObj["enable"].as<bool>();
+        uint8_t envA = constrain(argObj["a"].as<int>(), 0, NUM_ENVELOPES - 1);
+        uint8_t envB = constrain(argObj["b"].as<int>(), 0, NUM_ENVELOPES - 1);
+
+        for (auto &ef : envelopeFollowers) {
+            ef.setARGMethod(method);
+            ef.setMode(enable ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
+        }
+        configManager.setARGMethod(static_cast<uint8_t>(method));
+        configManager.setARGEnable(enable ? 1 : 0);
+        configManager.setEnvelopePair(envA, envB);
+        potentiometerManager.setArgEnvelopePair(envA, envB);
+        envelopeFollowMode = enable;
+    }
+
+    if (config.containsKey("envelopeMode")) {
+        updateEnvelopeModeLabel(config["envelopeMode"].as<const char *>());
+    }
+
+    if (config.containsKey("led") && config["led"].is<JsonObject>()) {
+        JsonObject ledObj = config["led"].as<JsonObject>();
+        uint8_t brightness = constrain(ledObj["brightness"].as<int>(), 0, 255);
+        CRGB color = ledManager.getColor();
+        const char *hex = ledObj["color"].as<const char *>();
+        if (hex) {
+            CRGB parsed;
+            if (parseHexColor(hex, parsed)) {
+                color = parsed;
+            }
+        }
+        ledManager.setBrightness(brightness);
+        ledManager.setColor(color);
+        configManager.saveLEDSettings(brightness, color);
+    }
+
+    return true;
+}
+} // namespace
+
+#if defined(UNIT_TEST)
+bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                            MIDIMessageType &type) {
+    return parseSlotType(typeField, typeNameField, type);
+}
+#endif
+
 // Global objects
 std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI channel
 std::map<int, int> potToEnvelopeMap; // Crosswalk from pot index to its envelope follower partner
@@ -158,14 +499,15 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
 };
 
 // Hardware/UI state trackers
-uint8_t activePot = 0xFF;            // Current slot index; 0xFF means "none selected"
-uint8_t activeChannel = 1;           // MIDI channel currently under the spotlight
-bool envelopeFollowMode = false;     // True when EFs are allowed to hijack a slot
-const char *envelopeMode = "LINEAR"; // Default envelope mode
-int NORMAL_DISPLAY_TIME = 30000;     // ms duration for full-size messages
-int SHORT_DISPLAY_TIME = 10000;      // ms duration for terse status flashes
-bool diagnosticMode = false;         // Self-test mode flag
-uint8_t diagnosticPage = 0;          // Active diagnostic page
+uint8_t activePot = 0xFF;        // Current slot index; 0xFF means "none selected"
+uint8_t activeChannel = 1;       // MIDI channel currently under the spotlight
+bool envelopeFollowMode = false; // True when EFs are allowed to hijack a slot
+String g_envelopeModeLabel = "LINEAR";
+const char *envelopeMode = g_envelopeModeLabel.c_str();
+int NORMAL_DISPLAY_TIME = 30000; // ms duration for full-size messages
+int SHORT_DISPLAY_TIME = 10000;  // ms duration for terse status flashes
+bool diagnosticMode = false;     // Self-test mode flag
+uint8_t diagnosticPage = 0;      // Active diagnostic page
 
 // Timers for processing
 unsigned long lastMIDIProcess = 0;
@@ -393,35 +735,69 @@ void processSerial() {
             }
 
         } else if (command.startsWith("SET_ALL")) {
-            String payload = command.substring(8);
-            if (payload.startsWith("{")) {
-                StaticJsonDocument<256> doc;
-                DeserializationError err = deserializeJson(doc, payload);
-                if (err) {
-                    LOG_PRINTLN("ERR");
-                } else {
-                    if (doc.containsKey("led")) {
-                        JsonObject led = doc["led"];
-                        uint8_t brightness = led.containsKey("brightness")
-                                                 ? led["brightness"].as<uint8_t>()
-                                                 : ledManager.getBrightness();
-                        ledManager.setBrightness(brightness);
-                        CRGB color = ledManager.getColor();
-                        if (led.containsKey("color")) {
-                            const char *cstr = led["color"];
-                            if (cstr && cstr[0] == '#' && strlen(cstr) == 7) {
-                                long rgb = strtol(cstr + 1, nullptr, 16);
-                                color = CRGB((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
-                                ledManager.setColor(color);
-                            }
-                        }
-                        configManager.saveLEDSettings(brightness, color);
-                    }
-                    LOG_PRINTLN("OK");
-                }
-            } else {
-                Utility::processBulkUpdate(command, configManager.getNumPots());
+            String chunk = command.substring(8);
+            chunk.trim();
+            if (chunk.length() == 0) {
+                continue;
             }
+
+            String ingestError;
+            if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
+                uint32_t hint = bulkConfigAssembler.sequenceHint();
+                if (ingestError == "overflow") {
+                    emitBulkError("overflow", "config payload too large", hint);
+                } else if (ingestError == "orphan") {
+                    emitBulkError("orphan", "chunk missing frame start", hint);
+                } else {
+                    emitBulkError("ingest", "failed to stage chunk", hint);
+                }
+                continue;
+            }
+
+            static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
+            // Persist the 32 KB document between uploads so we don't hammer the stack.
+            doc.clear();
+            DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
+            if (err == DeserializationError::IncompleteInput) {
+                continue;
+            }
+            if (err) {
+                emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            uint32_t seq = doc["seq"].as<uint32_t>();
+            if (seq == 0) {
+                seq = bulkConfigAssembler.sequenceHint();
+            }
+            const char *checksum = doc["checksum"] | nullptr;
+            if (!checksum || checksum[0] == '\0') {
+                emitBulkError("checksum", "missing checksum", seq);
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            if (seq == 0) {
+                seq = lastAckSequence + 1;
+            }
+
+            if (seq == lastAckSequence && lastAckChecksum == checksum) {
+                LOG_PRINTLN(Utility::formatAck(checksum, seq));
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            JsonObject configObj = doc["config"].as<JsonObject>();
+            if (!applyConfigObject(configObj, seq)) {
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            lastAckSequence = seq;
+            lastAckChecksum = checksum;
+            LOG_PRINTLN(Utility::formatAck(checksum, seq));
+            bulkConfigAssembler.reset();
 
         } else if (command.startsWith("GET_ALL")) {
 #ifdef SERIAL_LOGGING

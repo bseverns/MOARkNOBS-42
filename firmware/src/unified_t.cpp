@@ -16,6 +16,7 @@
 #include <map>
 #include <EEPROM.h>
 #include <imxrt.h>
+#include <ArduinoJson.h>
 #include "Globals.h"
 #include "version.h"
 #include "Utility.h"
@@ -57,6 +58,39 @@ std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&poten
 Arpeggiator arpeggiator; // Test stub
 
 // ———————— Helpers ——————————————
+
+static void runBulkConfigSelfTest() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
+
+    assembler.ingestChunk("{\"seq\":7,\"checksum\":\"loopback\",\"config\":", error);
+    assembler.ingestChunk("{\"slots\":[]}}", error);
+    StaticJsonDocument<256> doc;
+    auto parseErr = deserializeJson(doc, assembler.payload());
+    if (parseErr) {
+        Serial.print("SELFTEST_ACK_ERROR:");
+        Serial.println(parseErr.c_str());
+    } else {
+        uint32_t seq = doc["seq"].as<uint32_t>();
+        const char *checksum = doc["checksum"].as<const char *>();
+        Serial.print("SELFTEST_ACK:");
+        Serial.println(Utility::formatAck(checksum, seq));
+    }
+
+    assembler.reset();
+    String giant;
+    giant.reserve(Utility::kMaxBulkConfigSize + 2);
+    giant = "{";
+    for (size_t i = 0; i <= Utility::kMaxBulkConfigSize; ++i) {
+        giant += 'x';
+    }
+    if (!assembler.ingestChunk(giant, error)) {
+        Serial.print("SELFTEST_OVERFLOW:");
+        Serial.println(error);
+    } else {
+        Serial.println("SELFTEST_OVERFLOW:missed");
+    }
+}
 
 bool waitForAnyButton(const char *prompt = "Press any button to continue...") {
     Serial.println(prompt);
@@ -380,6 +414,7 @@ void setup() {
     Serial.printf("Reset 0x%08lX (%s) Brownouts %u\n", g_resetCause,
                   resetCauseToString(g_resetCause), g_brownoutCount);
     sys::printReport();
+    runBulkConfigSelfTest();
 
     // inits
     configManager.begin(potChannels);

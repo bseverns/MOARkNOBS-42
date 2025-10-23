@@ -15,6 +15,7 @@
 #include <imxrt.h>
 #include <cstring>
 #include <cstdlib>
+#include <cctype>
 #include "Log.h"
 
 // Collection of helpers used across the firmware. These range from value
@@ -221,76 +222,96 @@ void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue
     }
 }
 
-void Utility::processBulkUpdate(const String &command, uint8_t numPots) {
-    // Bulk update parser. Accepts a raw line like:
-    //   SET_ALL cc,chan;cc,chan;...
-    // or a JSON twin with the same cc/channel pairs. Anything else gets tossed.
-    const char *prefix = "SET_ALL ";
-    if (!command.startsWith(prefix)) {
-        LOG_PRINTLN("Error: Command must start with 'SET_ALL'");
-        return;
+void Utility::BulkConfigAssembler::reset() {
+    receiving = false;
+    buffer = "";
+    seqHint = 0;
+    checksum = "";
+}
+
+bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &error) {
+    if (chunk.length() == 0) {
+        return true; // Ignore empty fragments.
     }
 
-    // 256-byte guardrail: we allocate a static buffer and refuse to mosh
-    // if the payload tries to crowd-surf past it.
-    constexpr size_t MAX_CMD_LEN = 256;
-    if (command.length() >= MAX_CMD_LEN) {
-        LOG_PRINTLN("Error: Command too long");
-        return;
+    // Detect the start of a new frame.
+    if (chunk.charAt(0) == '{') {
+        reset();
+        receiving = true;
+    } else if (!receiving) {
+        error = "orphan";
+        return false;
     }
 
-    char cmdBuffer[MAX_CMD_LEN];
-    command.toCharArray(cmdBuffer, MAX_CMD_LEN);
+    if (buffer.length() + chunk.length() > Utility::kMaxBulkConfigSize) {
+        error = "overflow";
+        reset();
+        return false;
+    }
 
-    char *payload = cmdBuffer + strlen(prefix);
-    unsigned int currentPot = 0;
+    buffer.reserve(buffer.length() + chunk.length());
+    buffer += chunk;
+    receiving = true;
+    refreshHints();
+    return true;
+}
 
-    // Tokenize on ';'. Each token should be "cc,chan". We parse, vet the
-    // numbers, then slam them into EEPROM two bytes per pot.
-    for (char *token = strtok(payload, ";");
-         token != nullptr && currentPot < static_cast<unsigned int>(numPots);
-         token = strtok(nullptr, ";")) {
-
-        char *comma = strchr(token, ',');
-        if (!comma) {
-            // Missing comma? Busted token, bail before we scribble garbage.
-            LOG_PRINTLN("Error: Malformed command");
-            return;
+void Utility::BulkConfigAssembler::refreshHints() {
+    if (seqHint == 0) {
+        int key = buffer.indexOf("\"seq\"");
+        if (key >= 0) {
+            int colon = buffer.indexOf(':', key);
+            if (colon >= 0) {
+                int start = colon + 1;
+                while (start < buffer.length() &&
+                       isspace(static_cast<unsigned char>(buffer[start]))) {
+                    ++start;
+                }
+                int end = start;
+                while (end < buffer.length() && isdigit(static_cast<unsigned char>(buffer[end]))) {
+                    ++end;
+                }
+                if (end > start) {
+                    seqHint = buffer.substring(start, end).toInt();
+                }
+            }
         }
-
-        *comma = '\0';
-        const char *ccStr = token;
-        const char *channelStr = comma + 1;
-
-        if (strlen(ccStr) >= 4 || strlen(channelStr) >= 4) {
-            // We only expect up to three digits per field. Longer reeks of trouble.
-            LOG_PRINTLN("Error: Value too long");
-            return;
-        }
-
-        int ccNumber = atoi(ccStr);
-        int channel = atoi(channelStr);
-
-        if (ccNumber < 0 || ccNumber > 127 || channel < 1 || channel > 16) {
-            // MIDI CC range is 0–127, channel is 1–16. Stay in bounds or get ejected.
-            LOG_PRINTLN("Error: Invalid CC number or channel");
-            return;
-        }
-
-        const int channelAddress = EEPROM_POT_CHANNELS + currentPot;
-        const int ccAddress = EEPROM_POT_CC + currentPot;
-        EEPROM.update(channelAddress, channel);
-        EEPROM.update(ccAddress, ccNumber);
-
-        currentPot++;
     }
 
-    if (currentPot == static_cast<unsigned int>(numPots)) {
-        LOG_PRINTLN("Bulk update successful");
-    } else {
-        // Not enough tokens to cover every pot; shout about it.
-        LOG_PRINTLN("Error: Insufficient data for all pots");
+    if (checksum.length() == 0) {
+        int key = buffer.indexOf("\"checksum\"");
+        if (key >= 0) {
+            int colon = buffer.indexOf(':', key);
+            if (colon >= 0) {
+                int start = colon + 1;
+                while (start < buffer.length() &&
+                       isspace(static_cast<unsigned char>(buffer[start]))) {
+                    ++start;
+                }
+                if (start < buffer.length() && buffer[start] == '"') {
+                    ++start;
+                    int end = buffer.indexOf('"', start);
+                    if (end > start) {
+                        checksum = buffer.substring(start, end);
+                    }
+                }
+            }
+        }
     }
+}
+
+String Utility::formatAck(const char *checksumValue, uint32_t sequence) {
+    String out = "{\"type\":\"ack\"";
+    if (sequence != 0) {
+        out += ",\"seq\":";
+        out += sequence;
+    }
+    out += ",\"checksum\":\"";
+    if (checksumValue) {
+        out += checksumValue;
+    }
+    out += "\"}";
+    return out;
 }
 
 void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayMs, bool repeat) {
