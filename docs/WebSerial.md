@@ -56,6 +56,24 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 
+## Config Patch Bursts
+
+Manual tweaks on the hardware no longer leave the browser guessing. Whenever the deck flips a slot type, nudges the MIDI channel,
+or remaps an envelope follower, the firmware spits a minimal `config-patch` document in addition to the normal telemetry pulse.
+
+```json
+{ "type": "config-patch", "slots": [ { "index": 0, "type": "NRPN", "midiChannel": 2, "data1": 99, "efIndex": 1 } ] }
+```
+
+- `slots` — array of partial slot records. Only the touched fields show up. Expect schema-shaped keys like `type`,
+  `midiChannel`, `data1`, `efIndex`, and friends. A legacy `type_name`/`type_code` pair rides along for older tools.
+- `efSlots` — optional array mirroring the envelope routing table: `{ "index": <ef>, "slot": <pot> }`.
+- `filter` / `arg` — when the firmware cycles filter shapes or ARG modes, the new values surface here.
+
+The web editor merges these deltas into its local copy and keeps staged edits that don’t conflict. That means you can mash the
+button combo for "Slot → NRPN" and watch the dropdown flip instantly, even if you’ve already staged other edits. Punk rock,
+zero desync.
+
 ## Text Commands
 
 Spying is fun, but sometimes you gotta bark orders. Hurl plain‑text commands
