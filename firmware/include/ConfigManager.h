@@ -36,13 +36,13 @@ class MIDIHandler;
  * 4*NUM_POTS + 8  ARG enable                       1
  * 4*NUM_POTS + 9  Config version                   2
  * 4*NUM_POTS + 11 CRC                              2
- * 200             Primary magic (0xABCD)           2
- * 202             Backup magic  (0xDCBA)           2
- * EEPROM_EF_BASELINES (204) EF baselines          EEPROM_EF_BASELINES_SIZE
+ * EEPROM_MAGIC_ADDRESS (181) Primary magic (0xABCD)           2
+ * EEPROM_MAGIC_ADDRESS + 2  Backup magic  (0xDCBA)           2
+ * EEPROM_EF_BASELINES (185) EF baselines          EEPROM_EF_BASELINES_SIZE
  * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           EEPROM_BUFFER_SIZE
- * EEPROM_BACKUP_START (250) Backup copy of config starts     mirrors layout
- * 256             Profile 1 block begins           256 bytes
- * 512             Profile 2 block begins           256 bytes
+ * EEPROM_BACKUP_START (231) Backup copy of config starts     mirrors layout
+ * EEPROM_PROFILE_START(1) (664) Profile 1 block begins        EEPROM_PROFILE_BLOCK_SIZE bytes
+ * EEPROM_PROFILE_START(2) (1076) Profile 2 block begins       EEPROM_PROFILE_BLOCK_SIZE bytes
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
@@ -50,7 +50,7 @@ class MIDIHandler;
  * EEPROM_MAGIC_BACKUP) as a safety net. On boot the tags are
  * inspected in order-primary first, backup second-to decide
  * which copy to trust. Each additional profile repeats this
- * layout in its own 256-byte slice.
+ * layout in its own EEPROM_PROFILE_BLOCK_SIZE-sized slice.
  */
 #endif
 
