@@ -36,7 +36,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0002;      //!< EEPROM schema version
+inline constexpr uint16_t CONFIG_VERSION = 0x0003;      //!< EEPROM schema version
 inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008; //!< EEPROM addr for brownout counter
 
 extern uint32_t g_resetCause;    //!< Raw reset cause register

@@ -44,6 +44,7 @@ void test_drop_unsupported_usb_type();
 void test_usb_clock_tick_advances_counter();
 void test_generate_clock_tick_advances_counter();
 void test_handle_sysex_drops_oversize();
+void test_config_manager_wipes_legacy_slot_stride();
 #endif
 
 void setup() {
@@ -86,6 +87,7 @@ void setup() {
     RUN_TEST(test_handle_sysex_drops_oversize);
     RUN_TEST(test_usb_clock_tick_advances_counter);
     RUN_TEST(test_generate_clock_tick_advances_counter);
+    RUN_TEST(test_config_manager_wipes_legacy_slot_stride);
 #endif
     UNITY_END();
 }

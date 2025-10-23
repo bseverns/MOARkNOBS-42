@@ -1,6 +1,6 @@
 # EEPROM Layout
 
-Schema version: `0x0002`
+Schema version: `0x0003`
 
 | Offset (hex) | Type / Size | Usage | Notes |
 | ------------ | ----------- | ----- | ----- |
@@ -29,6 +29,12 @@ Schema version: `0x0002`
 The slot arena scoots out of the way of the config+backup duet so we never
 stomp the calibration data again. Think of it as a velvet rope at `0x1F4`:
 only the 42 MIDISlots get in, everybody else queues up afterwards.
+
+Because this jump from 6-byte to 23-byte slot records is a breaking change,
+firmware stamped with schema `0x0003` nukes the old slot arena *and* the
+profile blocks the first time it sees an older config tag. That sacrificial
+wipe keeps legacy rigs from reading garbage out of the profile zone or
+scribbling over it once the wider structs land.
 
 Each MIDISlot snapshot now packs the usual suspects (type, channel, data byte, EF index, active flag, arpeggiator note) plus a
 `sysexLength` byte and 16-byte SysEx template buffer. Most slots stay tiny, but SysEx-heavy rigs get to keep their macros in

@@ -7,6 +7,9 @@
 #include "interop/mn42_map.h"
 #include "version.h"
 #include "Globals.h"
+#include "ConfigManager.h"
+#include "TestHelpers.h"
+#include <EEPROM.h>
 
 #include <array>
 #include <vector>
@@ -344,6 +347,42 @@ void test_generate_clock_tick_advances_counter() {
 
     mh.clearClockTick();
     g_clockOutEnabled = false;
+}
+
+// Schema 0x0003 should vaporise legacy 6-byte slot data before we start reading.
+void test_config_manager_wipes_legacy_slot_stride() {
+    // Pretend we just flashed over a 0x0002 build.
+    constexpr uint16_t kLegacyVersion = 0x0002;
+    EEPROM.put(EEPROM_CONFIG_VERSION, kLegacyVersion);
+
+    // Backfill the old 6-byte stride so the wipe has something obvious to nuke.
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        const uint16_t legacyAddress = static_cast<uint16_t>(EEPROM_SLOT_BASE + slot * 6);
+        for (uint8_t byte = 0; byte < 6; ++byte) {
+            EEPROM.update(static_cast<int>(legacyAddress + byte), 0x7E);
+        }
+    }
+
+    // Drop breadcrumbs into the profile blocks; the sanitizer should zero them.
+    EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(1)), 0xA5);
+    EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(2)), 0x5A);
+
+    ConfigManager cfg = createConfigManager();
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    MIDISlot stored{};
+    EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), stored);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::OFF),
+                            static_cast<uint8_t>(stored.type));
+    TEST_ASSERT_EQUAL_UINT8(1, stored.midiChannel);
+    TEST_ASSERT_EQUAL_UINT8(0, stored.sysexLength);
+    for (uint8_t i = 0; i < SysExTemplate::kMaxLength; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0, stored.sysexTemplate[i]);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(1))));
+    TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(2))));
 }
 
 #endif // UNIT_TEST

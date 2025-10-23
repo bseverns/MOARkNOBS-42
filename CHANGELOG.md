@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Pot channel persistence handoff won’t drop stored assignments when ConfigManager rebuilds the control surface on boot.
+- Bumping the EEPROM schema to `0x0003` wipes and realigns the slot arena before wider SysEx-ready structs load, so upgrades stop trampling profile blocks.
 
 ## [0.1.0] - 2025-08-06
 ### Added

@@ -61,7 +61,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **Note Dynamics Knobs**: When the arp is idle, “Freq” shoves outgoing velocity (‑64…+63) and “Q” rigs the odds a pot twist actually fires a new note.
 - **Perlin-Spiced Randomness**: The "random" shape rides a lightweight Perlin noise function, giving chaos more of a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
-- **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
+- **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean. The jump to schema `0x0003` also force-wipes legacy slot data and profile blocks so wider SysEx-aware records never trample your saved presets.
 - **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
   - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl3+Ctrl4+Ctrl5**.

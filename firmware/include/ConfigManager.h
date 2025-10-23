@@ -258,6 +258,11 @@ class ConfigManager {
         uint16_t version = 0;                       //!< config schema version
         uint16_t crc = 0;                           //!< integrity check value
     } _stored;
+
+    void sanitizeSlotArena();
+    void wipeSlotRegion();
+    void wipeProfileBlocks();
+    static bool slotLooksSane(const MIDISlot &candidate);
 };
 
 #endif // CONFIGMANAGER_H

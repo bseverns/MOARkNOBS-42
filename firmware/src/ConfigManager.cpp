@@ -169,6 +169,7 @@ void ConfigManager::saveProfile(uint8_t id) {
 
 // Initialize configuration
 void ConfigManager::begin(std::vector<uint8_t> &potChannels) {
+    sanitizeSlotArena();
     // 1) Load every MIDISlot from EEPROM into our in-RAM array
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         loadSlot(i, slots[i]);
@@ -402,6 +403,59 @@ void ConfigManager::loadMIDISlots(MIDISlot *slots, size_t count) {
     }
     for (size_t i = 0; i < count; ++i) {
         loadSlot(static_cast<uint8_t>(i), slots[i]);
+    }
+}
+
+bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
+    if (static_cast<uint8_t>(candidate.type) > static_cast<uint8_t>(MIDIMessageType::SysEx)) {
+        return false;
+    }
+    if (candidate.midiChannel < 1 || candidate.midiChannel > 16) {
+        return false;
+    }
+    if (candidate.sysexLength > SysExTemplate::kMaxLength) {
+        return false;
+    }
+    if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
+        return false;
+    }
+    return true;
+}
+
+void ConfigManager::sanitizeSlotArena() {
+    uint16_t storedVersion = 0;
+    EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
+
+    MIDISlot candidate{};
+    EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
+
+    const bool versionMismatch = storedVersion != CONFIG_VERSION;
+    const bool slotCorrupt = !slotLooksSane(candidate);
+
+    if (versionMismatch || slotCorrupt) {
+        wipeSlotRegion();
+        wipeProfileBlocks();
+    }
+}
+
+void ConfigManager::wipeSlotRegion() {
+    MIDISlot blank{};
+    blank.midiChannel = 1;
+    slots.fill(blank);
+
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        const int address = static_cast<int>(EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE);
+        EEPROM.put(address, blank);
+    }
+}
+
+void ConfigManager::wipeProfileBlocks() {
+    constexpr uint8_t kProfileCount = 3; // primary + two alternates in the UI cycle
+    for (uint8_t id = 1; id < kProfileCount; ++id) {
+        const uint16_t base = EEPROM_PROFILE_START(id);
+        for (uint16_t offset = 0; offset < EEPROM_PROFILE_BLOCK_SIZE; ++offset) {
+            EEPROM.update(static_cast<int>(base + offset), 0x00);
+        }
     }
 }
 
