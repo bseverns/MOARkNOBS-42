@@ -471,17 +471,45 @@ bool MIDIHandler::tryCoalesceSerialMessage(const SerialMessage &msg) {
         }
     };
 
-    size_t count = serialQueueSize();
-    size_t index = _serialQueueHead;
-    for (size_t i = 0; i < count; ++i) {
-        SerialMessage &candidate = _serialQueue[index];
-        if (shouldCoalesce(candidate)) {
-            candidate = msg;
-            return true;
-        }
-        index = (index + 1) % kSerialQueueSize;
+    const size_t count = serialQueueSize();
+    if (count == 0) {
+        return false;
     }
-    return false;
+
+    size_t latestMatchOffset = kSerialQueueSize; // sentinel for "not found"
+    for (size_t i = 0; i < count; ++i) {
+        size_t index = (_serialQueueHead + i) % kSerialQueueSize;
+        if (shouldCoalesce(_serialQueue[index])) {
+            latestMatchOffset = i; // keep walking so the newest match wins
+        }
+    }
+
+    if (latestMatchOffset == kSerialQueueSize) {
+        return false;
+    }
+
+    std::array<SerialMessage, kSerialQueueSize> compact{};
+    size_t compactCount = 0;
+    for (size_t i = 0; i < count; ++i) {
+        size_t index = (_serialQueueHead + i) % kSerialQueueSize;
+        SerialMessage candidate = _serialQueue[index];
+        if (shouldCoalesce(candidate)) {
+            if (i == latestMatchOffset) {
+                compact[compactCount++] = msg;
+            }
+            // Older duplicates get dropped so stale values never reach the wire.
+            continue;
+        }
+        compact[compactCount++] = candidate;
+    }
+
+    for (size_t i = 0; i < compactCount; ++i) {
+        _serialQueue[i] = compact[i];
+    }
+    _serialQueueHead = 0;
+    _serialQueueTail = compactCount % kSerialQueueSize;
+    _serialQueueFull = (compactCount == kSerialQueueSize);
+    return true;
 }
 
 void MIDIHandler::serviceSerialQueue() {
