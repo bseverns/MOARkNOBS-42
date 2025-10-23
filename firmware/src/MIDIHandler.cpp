@@ -43,7 +43,8 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
     if (control > 127 || value > 127 || channel < 1 || channel > 16)
         return;
     _txCount++;
-    MIDI.sendControlChange(control, value, channel);
+    enqueueSerialMessage(makeControlChange(channel, control, value));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(control, value, channel); // USB MIDI
@@ -55,7 +56,8 @@ void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
     _txCount++;
-    MIDI.sendNoteOn(note, velocity, channel);
+    enqueueSerialMessage(makeNoteOn(channel, note, velocity));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOn(note, velocity, channel);
@@ -67,7 +69,8 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
     _txCount++;
-    MIDI.sendNoteOff(note, velocity, channel);
+    enqueueSerialMessage(makeNoteOff(channel, note, velocity));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOff(note, velocity, channel);
@@ -86,10 +89,11 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     uint8_t vMsb = (value >> 7) & 0x7F;
     uint8_t vLsb = value & 0x7F;
     // classic NRPN sequence: param MSB/LSB then data entry MSB/LSB
-    MIDI.sendControlChange(99, pMsb, channel);
-    MIDI.sendControlChange(98, pLsb, channel);
-    MIDI.sendControlChange(6, vMsb, channel);
-    MIDI.sendControlChange(38, vLsb, channel);
+    enqueueSerialMessage(makeControlChange(channel, 99, pMsb));
+    enqueueSerialMessage(makeControlChange(channel, 98, pLsb));
+    enqueueSerialMessage(makeControlChange(channel, 6, vMsb));
+    enqueueSerialMessage(makeControlChange(channel, 38, vLsb));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(99, pMsb, channel);
@@ -111,10 +115,11 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
     uint8_t vMsb = (value >> 7) & 0x7F;
     uint8_t vLsb = value & 0x7F;
     // RPN sequence: param MSB/LSB then data entry MSB/LSB
-    MIDI.sendControlChange(101, pMsb, channel);
-    MIDI.sendControlChange(100, pLsb, channel);
-    MIDI.sendControlChange(6, vMsb, channel);
-    MIDI.sendControlChange(38, vLsb, channel);
+    enqueueSerialMessage(makeControlChange(channel, 101, pMsb));
+    enqueueSerialMessage(makeControlChange(channel, 100, pLsb));
+    enqueueSerialMessage(makeControlChange(channel, 6, vMsb));
+    enqueueSerialMessage(makeControlChange(channel, 38, vLsb));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendControlChange(101, pMsb, channel);
@@ -216,6 +221,8 @@ void MIDIHandler::processIncomingMIDI() {
     if (_displayManager) {
         _displayManager->registerInteraction();
     }
+
+    serviceSerialQueue();
 }
 
 void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2) {
@@ -298,7 +305,8 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
 
 void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) {
     MIDI_DBG_PRINTF("Note On: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
-    MIDI.sendNoteOn(note, velocity, channel);
+    enqueueSerialMessage(makeNoteOn(channel, note, velocity));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOn(note, velocity, channel);
@@ -308,7 +316,8 @@ void MIDIHandler::handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) 
 
 void MIDIHandler::handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) {
     MIDI_DBG_PRINTF("Note Off: %d, Velocity: %d, Channel: %d\n", note, velocity, channel);
-    MIDI.sendNoteOff(note, velocity, channel);
+    enqueueSerialMessage(makeNoteOff(channel, note, velocity));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendNoteOff(note, velocity, channel);
@@ -341,7 +350,8 @@ void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
     if (program > 127 || channel < 1 || channel > 16)
         return;
     _txCount++;
-    MIDI.sendProgramChange(program, channel);
+    enqueueSerialMessage(makeProgramChange(channel, program));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendProgramChange(program, channel);
@@ -352,7 +362,8 @@ void MIDIHandler::sendProgramChange(uint8_t program, uint8_t channel) {
 void MIDIHandler::sendAftertouch(uint8_t pressure, uint8_t channel) {
     if (pressure > 127 || channel < 1 || channel > 16)
         return;
-    MIDI.sendAfterTouch(pressure, channel);
+    enqueueSerialMessage(makeAftertouch(channel, pressure));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendAfterTouch(pressure, channel);
@@ -375,7 +386,8 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
         bend = 8191;
 
     // Teensy and USB MIDI libraries accept the signed 14-bit value directly
-    MIDI.sendPitchBend(bend, channel);
+    enqueueSerialMessage(makePitchBend(channel, bend));
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendPitchBend(bend, channel);
@@ -387,13 +399,204 @@ void MIDIHandler::sendPitchBend(int16_t bend, uint8_t channel) {
 void MIDIHandler::sendClock() {
     if (!g_clockOutEnabled)
         return;
-    MIDI.sendClock();
+    enqueueSerialMessage(makeClock());
+    serviceSerialQueue();
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendClock();
     }
 #endif
     _txCount++;
+}
+
+bool MIDIHandler::enqueueSerialMessage(const SerialMessage &msg) {
+    if (msg.byteCount == 0) {
+        return false;
+    }
+
+    if (_serialQueueFull) {
+        return tryCoalesceSerialMessage(msg);
+    }
+
+    if (serialQueueSize() >= kSerialQueueSize - 4 && tryCoalesceSerialMessage(msg)) {
+        return true;
+    }
+
+    _serialQueue[_serialQueueTail] = msg;
+    _serialQueueTail = (_serialQueueTail + 1) % kSerialQueueSize;
+    if (_serialQueueTail == _serialQueueHead) {
+        _serialQueueFull = true;
+    }
+    return true;
+}
+
+bool MIDIHandler::dequeueSerialMessage(SerialMessage &msg) {
+    if (serialQueueEmpty()) {
+        return false;
+    }
+    msg = _serialQueue[_serialQueueHead];
+    _serialQueueHead = (_serialQueueHead + 1) % kSerialQueueSize;
+    _serialQueueFull = false;
+    return true;
+}
+
+bool MIDIHandler::serialQueueEmpty() const {
+    return !_serialQueueFull && (_serialQueueHead == _serialQueueTail);
+}
+
+size_t MIDIHandler::serialQueueSize() const {
+    if (_serialQueueFull) {
+        return kSerialQueueSize;
+    }
+    if (_serialQueueTail >= _serialQueueHead) {
+        return _serialQueueTail - _serialQueueHead;
+    }
+    return kSerialQueueSize - (_serialQueueHead - _serialQueueTail);
+}
+
+bool MIDIHandler::tryCoalesceSerialMessage(const SerialMessage &msg) {
+    auto shouldCoalesce = [&](const SerialMessage &candidate) {
+        if (candidate.type != msg.type) {
+            return false;
+        }
+        switch (msg.type) {
+        case SerialMessageType::ControlChange:
+            return candidate.channel == msg.channel && candidate.data1 == msg.data1;
+        case SerialMessageType::Aftertouch:
+            return candidate.channel == msg.channel;
+        case SerialMessageType::PitchBend:
+            return candidate.channel == msg.channel;
+        default:
+            return false;
+        }
+    };
+
+    size_t count = serialQueueSize();
+    size_t index = _serialQueueHead;
+    for (size_t i = 0; i < count; ++i) {
+        SerialMessage &candidate = _serialQueue[index];
+        if (shouldCoalesce(candidate)) {
+            candidate = msg;
+            return true;
+        }
+        index = (index + 1) % kSerialQueueSize;
+    }
+    return false;
+}
+
+void MIDIHandler::serviceSerialQueue() {
+#ifdef USB_MIDI_STUB
+    SerialMessage msg;
+    while (dequeueSerialMessage(msg)) {
+        dispatchSerialMessage(msg);
+    }
+#else
+    while (!serialQueueEmpty()) {
+        const SerialMessage &next = _serialQueue[_serialQueueHead];
+        uint32_t required = static_cast<uint32_t>(next.byteCount) * kSerialByteMicros;
+        uint32_t nowUs = micros();
+        uint32_t elapsed = nowUs - _lastSerialSendUs;
+        if (elapsed < required) {
+            break;
+        }
+        SerialMessage msg;
+        if (!dequeueSerialMessage(msg)) {
+            break;
+        }
+        dispatchSerialMessage(msg);
+        _lastSerialSendUs = nowUs;
+    }
+#endif
+}
+
+void MIDIHandler::dispatchSerialMessage(const SerialMessage &msg) {
+    switch (msg.type) {
+    case SerialMessageType::ControlChange:
+        MIDI.sendControlChange(msg.data1, msg.data2, msg.channel);
+        break;
+    case SerialMessageType::NoteOn:
+        MIDI.sendNoteOn(msg.data1, msg.data2, msg.channel);
+        break;
+    case SerialMessageType::NoteOff:
+        MIDI.sendNoteOff(msg.data1, msg.data2, msg.channel);
+        break;
+    case SerialMessageType::ProgramChange:
+        MIDI.sendProgramChange(msg.data1, msg.channel);
+        break;
+    case SerialMessageType::Aftertouch:
+        MIDI.sendAfterTouch(msg.data1, msg.channel);
+        break;
+    case SerialMessageType::PitchBend:
+        MIDI.sendPitchBend(msg.pitch, msg.channel);
+        break;
+    case SerialMessageType::Clock:
+        MIDI.sendClock();
+        break;
+    }
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makeControlChange(uint8_t channel, uint8_t control, uint8_t value) const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::ControlChange;
+    msg.channel = channel;
+    msg.data1 = control;
+    msg.data2 = value;
+    msg.byteCount = 3;
+    return msg;
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makeNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::NoteOn;
+    msg.channel = channel;
+    msg.data1 = note;
+    msg.data2 = velocity;
+    msg.byteCount = 3;
+    return msg;
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makeNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::NoteOff;
+    msg.channel = channel;
+    msg.data1 = note;
+    msg.data2 = velocity;
+    msg.byteCount = 3;
+    return msg;
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makeProgramChange(uint8_t channel, uint8_t program) const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::ProgramChange;
+    msg.channel = channel;
+    msg.data1 = program;
+    msg.byteCount = 2;
+    return msg;
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makeAftertouch(uint8_t channel, uint8_t pressure) const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::Aftertouch;
+    msg.channel = channel;
+    msg.data1 = pressure;
+    msg.byteCount = 2;
+    return msg;
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makePitchBend(uint8_t channel, int16_t bend) const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::PitchBend;
+    msg.channel = channel;
+    msg.pitch = bend;
+    msg.byteCount = 3;
+    return msg;
+}
+
+MIDIHandler::SerialMessage MIDIHandler::makeClock() const {
+    SerialMessage msg;
+    msg.type = SerialMessageType::Clock;
+    msg.byteCount = 1;
+    return msg;
 }
 
 void MIDIHandler::generateClockTick() {
