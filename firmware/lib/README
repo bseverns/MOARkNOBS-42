@@ -10,10 +10,9 @@ This folder isn't a dumping ground—it's a curated stash of third‑party code 
 | **Adafruit GFX** | Core graphics primitives backing the OLED driver. Vendored so SSD1306 doesn't drift. | https://github.com/adafruit/Adafruit-GFX-Library |
 | **Adafruit SSD1306** | Talks to the front‑panel display. Checked in to dodge network hiccups and let us tweak defaults. | https://github.com/adafruit/Adafruit_SSD1306 |
 | **Adafruit BusIO** | Low-level I2C/SPI helpers for the Adafruit display stack. | https://github.com/adafruit/Adafruit_BusIO |
+| **OctoWS2811** | PJRC's DMA firehose. We keep it vendored so Teensy 4.x timing stays tight even when the internet ghosts us. | https://github.com/PaulStoffregen/OctoWS2811 |
 
-OctoWS2811 used to lurk here for ridiculous LED walls, but FastLED's built-in chops cover our strip just fine. If you need the DMA firehose, fork it back in and go wild.
-
-PlatformIO still ships its own OctoWS2811, so `platformio.ini` now blacklists it to keep stray DMA code from bloating our builds.
+PlatformIO still ships its own OctoWS2811, so `platformio.ini` blacklists the registry copy and forces builds to use this checked-in version.
 
 ## How to update a library
 
@@ -41,6 +40,7 @@ PlatformIO kept trying to sneak in its own copy anyway, so we dropped a `library
 | Adafruit GFX | BSD‑2‑Clause | Include the copyright, conditions, and disclaimer wherever you ship the code. |
 | Adafruit SSD1306 | BSD‑3‑Clause | Same as above, plus don't use Adafruit's name to hawk your wares without permission. |
 | Adafruit BusIO | MIT | Include the copyright and permission notice with any source or binary distribution. |
+| OctoWS2811 | MIT | Ship the MIT notice with the firmware and keep PJRC credited anywhere the code travels. |
 
 When you ship hardware, firmware, or derivatives, also bundle `THIRD_PARTY_LICENSES.md` so every author gets their shout‑out.
 

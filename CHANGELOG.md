@@ -41,9 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ConfigManager now coughs up the MIDI channel map it stashes in EEPROM so fresh boots inherit the saved routing without extra glue code.
 - PotentiometerManager and Globals keep their EEPROM offsets honest, carving out extra JSON buffer slack so oversized hardware presets don’t brick the load.
 - Unity system report test pipes its output through `PrintTarget` and `Serial1`, matching the custom transport instead of whispering into the void.
+- OctoWS2811 DMA driver is back under `firmware/lib/OctoWS2811/` so Teensy 4 builds keep upstream timing guarantees even when we compile offline.
 
 ### Removed
-- OctoWS2811 vendored library; FastLED handles the LEDs solo now.
+- OctoWS2811 vendored library; FastLED handles the LEDs solo now. *(Undone by the October 2025 DMA revival noted above.)*
 - Blocked the Teensy core’s OctoWS2811 copy via `lib_ignore` to keep builds clean.
 
 ### Fixed
