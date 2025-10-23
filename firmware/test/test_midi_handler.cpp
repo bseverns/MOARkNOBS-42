@@ -110,6 +110,23 @@ void test_send_sysex() {
     }
 }
 
+// Garbage in? Garbage out. Malformed SysEx payloads should be ignored so we
+// don't clobber the state sniffed by diagnostics.
+void test_handle_sysex_rejects_bad_framing() {
+    MIDIHandler mh;
+    mh._lastSysExLength = 4;
+    mh._lastSysExType = SysExType::UniversalRealTime;
+    mh._rxCount = 3;
+
+    uint8_t bogus[] = {0x7D, 0x01, 0x02};
+    mh.handleSysEx(bogus, sizeof(bogus));
+
+    TEST_ASSERT_EQUAL_UINT16(4, mh._lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(SysExType::UniversalRealTime),
+                            static_cast<uint8_t>(mh._lastSysExType));
+    TEST_ASSERT_EQUAL_UINT32(3, mh._rxCount);
+}
+
 // If usbMIDI throws a curveball message type the firmware doesn't support we
 // should shrug and move on, not crash or mutate state.
 void test_drop_unsupported_usb_type() {
