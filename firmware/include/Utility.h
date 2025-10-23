@@ -144,7 +144,7 @@ class Utility {
         const String &payload() const { return buffer; }
 
         /** True when no bytes are staged. */
-        bool empty() const { return buffer.isEmpty(); }
+        bool empty() const { return buffer.length() == 0; }
 
         /** Rough sequence hint scraped from the staged payload. */
         uint32_t sequenceHint() const { return seqHint; }
