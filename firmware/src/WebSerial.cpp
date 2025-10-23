@@ -4,7 +4,66 @@
 #include "WebSerial.h"
 #include "Utility.h"
 #include "Log.h"
+#include "ConfigManager.h"
 #include <ArduinoJson.h>
+
+namespace {
+const char *midiTypeName(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "PITCH_BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROGRAM";
+    case MIDIMessageType::Aftertouch:
+        return "AFTERTOUCH";
+    case MIDIMessageType::ModWheel:
+        return "MOD_WHEEL";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYSEX";
+    }
+    return "UNKNOWN";
+}
+
+const char *filterTypeName(EnvelopeFollower::FilterType type) {
+    switch (type) {
+    case EnvelopeFollower::LINEAR:
+        return "LINEAR";
+    case EnvelopeFollower::OPPOSITE_LINEAR:
+        return "OPPOSITE_LINEAR";
+    case EnvelopeFollower::EXPONENTIAL:
+        return "EXPONENTIAL";
+    case EnvelopeFollower::RANDOM:
+        return "RANDOM";
+    case EnvelopeFollower::LOWPASS:
+        return "LOWPASS";
+    case EnvelopeFollower::HIGHPASS:
+        return "HIGHPASS";
+    case EnvelopeFollower::BANDPASS:
+        return "BANDPASS";
+    }
+    return "LINEAR";
+}
+
+const char *argMethodName(uint8_t method) {
+    static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
+                                             "BABS", "TABS", "MULT", "DIVI", "AVG",
+                                             "XABS", "MAXX", "MINN", "XORR"};
+    if (method < (sizeof(kNames) / sizeof(kNames[0]))) {
+        return kNames[method];
+    }
+    return "UNKNOWN";
+}
+} // namespace
 
 void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes,
@@ -29,6 +88,69 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     diag["loop_last_us"] = static_cast<uint32_t>(diagnostics.lastLoopMicros);
     diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
     diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
+    if (slotIndex >= NUM_SLOTS)
+        return;
+
+    const auto &slots = config.getSlots();
+    const MIDISlot &slot = slots[slotIndex];
+    StaticJsonDocument<256> doc;
+    doc["type"] = "slot_patch";
+    doc["slot"] = slotIndex;
+    JsonObject body = doc.createNestedObject("slot");
+    body["type"] = static_cast<uint8_t>(slot.type);
+    body["type_name"] = midiTypeName(slot.type);
+    body["channel"] = slot.midiChannel;
+    body["data1"] = slot.data1;
+    body["ef_index"] = slot.efIndex;
+    body["active"] = slot.active;
+    body["arp_note"] = slot.arpNote;
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
+    StaticJsonDocument<128> doc;
+    doc["type"] = "envelope_assignment";
+    doc["slot"] = slotIndex;
+    doc["envelope"] = envelopeIndex;
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
+    StaticJsonDocument<192> doc;
+    doc["type"] = "filter_patch";
+    JsonObject filter = doc.createNestedObject("filter");
+    filter["type_index"] = static_cast<uint8_t>(type);
+    filter["type_name"] = filterTypeName(type);
+    filter["freq"] = freq;
+    filter["q"] = q;
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
+    StaticJsonDocument<192> doc;
+    doc["type"] = "arg_patch";
+    JsonObject arg = doc.createNestedObject("arg");
+    arg["method"] = method;
+    arg["method_name"] = argMethodName(method);
+    arg["enable"] = enable;
+    arg["a"] = envA;
+    arg["b"] = envB;
 
     String payload;
     serializeJson(doc, payload);

@@ -7,6 +7,8 @@
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
 
+class ConfigManager;
+
 class WebSerial {
   public:
     /**
@@ -33,6 +35,18 @@ class WebSerial {
     static void sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes,
                                   const SystemDiagnostics &diagnostics);
+
+    /** Emit a JSON patch for a single slot so the UI can stay in sync. */
+    static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
+
+    /** Notify listeners that a slot has a new envelope follower assignment. */
+    static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
+
+    /** Broadcast the active envelope follower filter settings. */
+    static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
+
+    /** Broadcast the ARG mixer settings (method, enable flag, input pair). */
+    static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };
 
 #endif // WEBSERIAL_H
