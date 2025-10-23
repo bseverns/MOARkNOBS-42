@@ -548,19 +548,11 @@ void processSerial() {
     }
 }
 
-namespace {
-constexpr int kEnvelopeBaselineDeadband = 10; // Ignore analog flutter beneath this delta
-} // namespace
-
 void processEnvelopes() {
     static std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
-    static std::array<int, NUM_POTS> lastBaselineAdcValues;
-    static std::array<uint8_t, NUM_POTS> baselineMidiValues;
     static bool envelopeMidiInitialized = false;
     if (!envelopeMidiInitialized) {
         lastEnvelopeMidiValues.fill(0xFF); // 0xFF sentinel guarantees the first send happens
-        lastBaselineAdcValues.fill(-1);
-        baselineMidiValues.fill(0);
         envelopeMidiInitialized = true;
     }
 
@@ -572,49 +564,42 @@ void processEnvelopes() {
         // Trust no one: make sure the map didn't hand us a bogus index
         // before poking the envelope array.
         if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
+            int currentPotReading = potentiometerManager.getLastValue(potIndex);
+            if (currentPotReading < 0)
+                continue; // No baseline yet; wait for the pot scanner to catch up
+
+            uint8_t baselineMidi = Utility::mapToMidiValue(currentPotReading);
+
             EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
+            bool envelopeActive = envelope->getActiveState();
 
-            // Only waste cycles on envelopes that are actually lit up.
-            // Sleeping envelopes don't get CPU time or make noise.
-            if (envelope->getActiveState()) {
-                envelope->update(); // Pull in the latest peak/decay stats.
+            if (!envelopeActive) {
+                // Keep the cache glued to the pot so the first pass after wake-up
+                // rides on the current baseline instead of a stale MIDI value.
+                lastEnvelopeMidiValues[potIndex] = baselineMidi;
+                continue;
+            }
 
-                ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
+            envelope->update(); // Pull in the latest peak/decay stats.
 
-                int currentPotReading = potentiometerManager.getLastValue(potIndex);
-                if (currentPotReading < 0)
-                    continue; // No baseline yet; wait for the pot scanner to catch up
+            ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
-                int lastBaseline = lastBaselineAdcValues[potIndex];
-                // Only refresh the baseline when the raw pot reading actually moved.
-                // Anything under ~10 ADC counts is just the analog stage breathing.
-                bool baselineChanged = lastBaseline < 0 || abs(currentPotReading - lastBaseline) >
-                                                               kEnvelopeBaselineDeadband;
+            uint8_t modulatedValue = baselineMidi;
 
-                if (baselineChanged) {
-                    baselineMidiValues[potIndex] = Utility::mapToMidiValue(currentPotReading);
-                    lastBaselineAdcValues[potIndex] = currentPotReading;
-                }
+            // applyToCC mutates the MIDI value with the envelope's swagger.
+            envelope->applyToCC(potIndex, modulatedValue);
 
-                uint8_t baselineMidi = baselineMidiValues[potIndex];
-                uint8_t modulatedValue = baselineMidi;
-
-                // applyToCC mutates the MIDI value with the envelope's swagger.
-                envelope->applyToCC(potIndex, modulatedValue);
-
-                bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
-                if (valueChanged) {
-                    // Only shout over MIDI when the value actually moved.
-                    uint8_t ccNumber = potentiometerManager.getCCNumber(potIndex);
-                    uint8_t channel = potentiometerManager.getChannel(potIndex);
-                    midiHandler.sendControlChange(ccNumber, modulatedValue, channel);
-                }
-
-                // Mirror the post-modulation value on the pot LED, then memoize it
-                // so the dedupe logic stays in sync with what we just displayed.
-                ledManager.setPotValue(potIndex, modulatedValue);
+            bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
+            if (valueChanged) {
+                // Only shout over MIDI when the value actually moved.
+                uint8_t ccNumber = potentiometerManager.getCCNumber(potIndex);
+                uint8_t channel = potentiometerManager.getChannel(potIndex);
+                midiHandler.sendControlChange(ccNumber, modulatedValue, channel);
                 lastEnvelopeMidiValues[potIndex] = modulatedValue;
             }
+
+            // Mirror the post-modulation value on the pot LED so the panel reflects the swing.
+            ledManager.setPotValue(potIndex, modulatedValue);
         }
     }
 
