@@ -27,8 +27,7 @@ LEDManager::LEDManager(const HardwareConfig &config)
     // OctoWS2811 fans data across eight parallel lanes. Only lane 4 is wired
     // in this rig, but we keep the other slots zeroed so the DMA bus stays
     // quiet.
-    FastLED.addLeds<OCTOWS2811>(octoLanes.data(), laneLength)
-        .setCorrection(TypicalLEDStrip);
+    FastLED.addLeds<OCTOWS2811>(octoLanes.data(), laneLength).setCorrection(TypicalLEDStrip);
 
     std::fill(leds.begin(), leds.end(), CRGB::Black);
     presentFrame();
