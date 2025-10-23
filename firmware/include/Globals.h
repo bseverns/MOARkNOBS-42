@@ -75,9 +75,9 @@ inline uint16_t NUM_LEDS() {
     return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount;
 }
 
-inline constexpr uint8_t NUM_POTS = 42;      //!< Total analog pots cruising the mux highway
-inline constexpr uint8_t NUM_BUTTONS = 6;    //!< Number of direct control buttons
-inline constexpr uint8_t NUM_ENVELOPES = 6;  //!< Envelope followers stalking your signal
+inline constexpr uint8_t NUM_POTS = 42;     //!< Total analog pots cruising the mux highway
+inline constexpr uint8_t NUM_BUTTONS = 6;   //!< Number of direct control buttons
+inline constexpr uint8_t NUM_ENVELOPES = 6; //!< Envelope followers stalking your signal
 
 /**
  * Baseline offsets for each envelope follower.  These numbers get learned
@@ -123,7 +123,7 @@ inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
 inline constexpr uint16_t EEPROM_CONFIG_DATA_LENGTH =
     static_cast<uint16_t>(NUM_POTS * 4 + 9 + sizeof(uint16_t) * 2);
 inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
-    EEPROM_START_ADDRESS + EEPROM_CONFIG_DATA_LENGTH; //!< Primary magic trails the config bytes
+    EEPROM_START_ADDRESS + EEPROM_CONFIG_DATA_LENGTH;    //!< Primary magic trails the config bytes
 inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; //!< Validates the main config block
 inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  //!< Signals a sane backup image
 
@@ -134,8 +134,7 @@ inline constexpr uint8_t EEPROM_BUFFER_SIZE = 22;
 inline constexpr uint16_t EEPROM_BASELINE_BUFFER_LENGTH =
     EEPROM_EF_BASELINES_SIZE + EEPROM_BUFFER_SIZE;
 
-inline constexpr uint16_t EEPROM_BACKUP_START =
-    EEPROM_EF_BASELINES + EEPROM_BASELINE_BUFFER_LENGTH;
+inline constexpr uint16_t EEPROM_BACKUP_START = EEPROM_EF_BASELINES + EEPROM_BASELINE_BUFFER_LENGTH;
 inline constexpr uint16_t EEPROM_CONFIG_MIRROR_SIZE =
     EEPROM_BACKUP_START + EEPROM_CONFIG_DATA_LENGTH;
 
