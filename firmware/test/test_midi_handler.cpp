@@ -7,9 +7,50 @@
 #include "interop/mn42_map.h"
 #include "version.h"
 #include "Globals.h"
+#include "ConfigManager.h"
+#include "Utility.h"
 
 #include <array>
 #include <vector>
+
+namespace {
+
+void resetMidiTransports() {
+    MIDI.ccCount = 0;
+    MIDI.ccTotal = 0;
+    MIDI.ccOverflow = false;
+    MIDI.lastSysExLength = 0;
+    MIDI.sysExTotal = 0;
+    MIDI.sysExOverflow = false;
+    MIDI.lastNoteOn = 0;
+    MIDI.lastNoteOnChannel = 0;
+    MIDI.lastNoteOff = 0;
+    MIDI.lastNoteOffChannel = 0;
+    usbMIDI.ccCount = 0;
+    usbMIDI.ccTotal = 0;
+    usbMIDI.ccOverflow = false;
+    usbMIDI.lastSysExLength = 0;
+    usbMIDI.sysExTotal = 0;
+    usbMIDI.sysExOverflow = false;
+    usbMIDI.lastNoteOn = 0;
+    usbMIDI.lastNoteOnChannel = 0;
+    usbMIDI.lastNoteOff = 0;
+    usbMIDI.lastNoteOffChannel = 0;
+}
+
+struct UsbMidiGuard {
+    UsbMidiGuard() : previous(g_usbMidiOutEnabled) { g_usbMidiOutEnabled = true; }
+    ~UsbMidiGuard() { g_usbMidiOutEnabled = previous; }
+    bool previous;
+};
+
+struct StubEnvelope {
+    explicit StubEnvelope(uint8_t lvl = 96) : level(lvl) {}
+    uint8_t getEnvelopeLevel() const { return level; }
+    uint8_t level;
+};
+
+} // namespace
 
 // MIDIHandler has a ridiculous number of responsibilities—USB mirror writes,
 // serial fan-out, NRPN parsing, SysEx scratch buffers, and the internal clock
@@ -287,6 +328,114 @@ void test_generate_clock_tick_advances_counter() {
 
     mh.clearClockTick();
     g_clockOutEnabled = false;
+}
+
+// Hammer the control-change lane with a burst of pot updates and confirm every
+// tick makes it out without triggering the stub's overflow latch.
+void test_pot_burst_keeps_cc_counters_honest() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
+    MIDIHandler mh;
+    mh._txCount = 0;
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    MIDISlot &slot = cfg.getSlot(0);
+    slot.active = true;
+    slot.type = MIDIMessageType::CC;
+    slot.midiChannel = 3;
+    slot.data1 = 74;
+
+    constexpr uint16_t kBursts = 96;
+    for (uint16_t i = 0; i < kBursts; ++i) {
+        uint16_t raw = static_cast<uint16_t>((i * 37) % 1024);
+        uint8_t mapped = Utility::mapToMidiValue(raw);
+        mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(kBursts, mh._txCount);
+    TEST_ASSERT_EQUAL_UINT32(kBursts, MIDI.ccTotal);
+    TEST_ASSERT_EQUAL_UINT32(kBursts, usbMIDI.ccTotal);
+    TEST_ASSERT_FALSE(MIDI.ccOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
+}
+
+// Feed a fat SysEx message through sendSysEx and make sure the transport logs
+// every byte without truncation.
+void test_long_sysex_payload_round_trips() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
+    MIDIHandler mh;
+
+    std::array<uint8_t, 120> payload{};
+    payload[0] = 0xF0;
+    for (size_t i = 1; i < payload.size() - 1; ++i) {
+        payload[i] = static_cast<uint8_t>((i * 7) & 0x7F);
+    }
+    payload.back() = 0xF7;
+
+    mh.sendSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
+
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.lastSysExLength);
+    TEST_ASSERT_FALSE(MIDI.sysExOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.sysExOverflow);
+    for (size_t i = 0; i < payload.size(); ++i) {
+        TEST_ASSERT_EQUAL_UINT8(payload[i], MIDI.lastSysEx[i]);
+        TEST_ASSERT_EQUAL_UINT8(payload[i], usbMIDI.lastSysEx[i]);
+    }
+}
+
+// While MIDI is streaming, flip a slot from CC to Note mode and confirm the
+// handler keeps emitting valid traffic instead of choking.
+void test_config_mutation_during_stream_stays_valid() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
+    MIDIHandler mh;
+    mh._txCount = 0;
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    MIDISlot &slot = cfg.getSlot(0);
+    slot.active = true;
+    slot.type = MIDIMessageType::CC;
+    slot.midiChannel = 4;
+    slot.data1 = 42;
+    slot.efIndex = 0;
+
+    StubEnvelope env{110};
+    uint32_t ccEvents = 0;
+    uint32_t noteEvents = 0;
+
+    constexpr uint16_t kUpdates = 40;
+    for (uint16_t i = 0; i < kUpdates; ++i) {
+        uint16_t raw = static_cast<uint16_t>((i * 23) % 1024);
+        uint8_t mapped = Utility::mapToMidiValue(raw);
+
+        if (i == kUpdates / 2) {
+            slot.type = MIDIMessageType::Note;
+        }
+
+        if (slot.type == MIDIMessageType::CC) {
+            mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
+            ++ccEvents;
+        } else {
+            uint8_t note = static_cast<uint8_t>(Utility::mapToMidiValue(raw) % 128);
+            uint8_t velocity = env.getEnvelopeLevel();
+            mh.sendNoteOn(note, velocity, slot.midiChannel);
+            mh.sendNoteOff(note, 0, slot.midiChannel);
+            ++noteEvents;
+        }
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, ccEvents);
+    TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, noteEvents);
+    TEST_ASSERT_EQUAL_UINT32(ccEvents + noteEvents * 2, mh._txCount);
+    TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, usbMIDI.lastNoteOnChannel);
+    TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, MIDI.lastNoteOnChannel);
+    TEST_ASSERT_FALSE(MIDI.ccOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
 }
 
 #endif // UNIT_TEST
