@@ -308,6 +308,8 @@ Each control button can do several things depending on how you hit it. Long pres
 | Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                  | —                                                                           |
 | Ctrl5  | Tap BPM                             | Enter/Exit Diagnostics       | —                                                                           |
 
+When a long press arms either the EEPROM nuke (**Ctrl3**) or the diagnostic dive (**Ctrl5**), the LED strip goes wild on purpose. Expect a red-and-white strobe for the factory reset combo and a shimmering teal sweep for diagnostics. That full-strip flare buys you the two-second confirm window to bail out if you fat-fingered the move.
+
 Long-hold **Ctrl5** and you drop into our scrappy diagnostic pit. That fourth-from-last LED starts a slow pulse so you know you’re off the beaten path. While you're in there, a long press on **Ctrl1** flips through pages: first the button matrix, then EF baselines, then raw MIDI RX/TX counts. Another long squeeze on **Ctrl5** ejects you back to normal jam mode.
 
 **Slot Buttons (0–41):**

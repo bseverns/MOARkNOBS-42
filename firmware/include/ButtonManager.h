@@ -26,6 +26,7 @@
 #include "PotentiometerManager.h"
 #include "Globals.h"
 #include "Log.h"
+#include "LEDManager.h"
 
 // Optional: Enable detailed debug logging for development
 #ifndef BUTTON_MANAGER_DEBUG
@@ -204,6 +205,8 @@ class ButtonManager {
     // ---- New multiplexer-based control scanning ----
     /** Update a single control button state during scanning. */
     void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext &context);
+    void cancelPendingConfirm(ButtonManagerContext &context);
+    void startWarningForIndex(uint8_t index, ButtonManagerContext &context);
     int _ctrlPotValues[3] = {0};
 
     // Long‑press confirmation tracking

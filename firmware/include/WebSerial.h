@@ -6,6 +6,9 @@
 #include "Globals.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "MIDITypes.h"
+
+class ConfigManager;
 
 class ConfigManager;
 

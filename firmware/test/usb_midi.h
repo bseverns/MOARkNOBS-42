@@ -71,6 +71,8 @@ enum MidiType : uint8_t {
 } // namespace midi
 
 struct MidiInterfaceStub {
+    static constexpr size_t kCCLogCapacity = 128;
+    static constexpr size_t kSysExCapacity = 256;
     uint8_t lastProgram = 0;
     uint8_t lastProgramChannel = 0;
     uint8_t lastAftertouch = 0;
@@ -89,16 +91,24 @@ struct MidiInterfaceStub {
         uint8_t value;
         uint8_t channel;
     };
-    CCEvent ccLog[8];
+    CCEvent ccLog[kCCLogCapacity];
     uint8_t ccCount = 0;
+    uint32_t ccTotal = 0;
+    bool ccOverflow = false;
 
-    uint8_t lastSysEx[32];
+    uint8_t lastSysEx[kSysExCapacity];
     uint16_t lastSysExLength = 0;
+    uint16_t sysExTotal = 0;
+    bool sysExOverflow = false;
 
     void begin(...) {}
     void sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
-        if (ccCount < 8)
+        ++ccTotal;
+        if (ccCount < kCCLogCapacity) {
             ccLog[ccCount++] = {control, value, channel};
+        } else {
+            ccOverflow = true;
+        }
     }
     void sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
         lastNoteOn = note;
@@ -124,7 +134,9 @@ struct MidiInterfaceStub {
     }
     void sendClock() {}
     void sendSysEx(uint16_t length, const uint8_t *data, bool) {
-        lastSysExLength = length > 32 ? 32 : length;
+        sysExTotal = length;
+        lastSysExLength = length > kSysExCapacity ? kSysExCapacity : length;
+        sysExOverflow = length > kSysExCapacity;
         for (uint16_t i = 0; i < lastSysExLength; ++i)
             lastSysEx[i] = data[i];
     }
