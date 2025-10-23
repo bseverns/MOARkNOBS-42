@@ -4,8 +4,12 @@
 #include "MIDIHandler.h"
 #undef private
 #include <unity.h>
+#include "interop/mn42_map.h"
+#include "version.h"
+#include "Globals.h"
 
-extern bool g_clockOutEnabled;
+#include <array>
+#include <vector>
 
 // MIDIHandler has a ridiculous number of responsibilities—USB mirror writes,
 // serial fan-out, NRPN parsing, SysEx scratch buffers, and the internal clock
@@ -107,6 +111,111 @@ void test_send_sysex() {
     for (uint8_t i = 0; i < sizeof(msg); ++i) {
         TEST_ASSERT_EQUAL_UINT8(msg[i], MIDI.lastSysEx[i]);
         TEST_ASSERT_EQUAL_UINT8(msg[i], usbMIDI.lastSysEx[i]);
+    }
+}
+
+// Universal Identity Requests should get a full reply that mirrors across both
+// transports and advertises our firmware fingerprints.
+void test_sysex_identity_request_reply() {
+    MIDIHandler mh;
+    struct UsbMidiGuard {
+        UsbMidiGuard() : previous(g_usbMidiOutEnabled) { g_usbMidiOutEnabled = true; }
+        ~UsbMidiGuard() { g_usbMidiOutEnabled = previous; }
+        bool previous;
+    } guard;
+
+    MIDI.lastSysExLength = usbMIDI.lastSysExLength = 0;
+    const uint8_t request[] = {0xF0, 0x7E, 0x42, 0x06, 0x01, 0xF7};
+    mh.handleSysEx(request, sizeof(request));
+
+    constexpr size_t kIdentityReplyLength = 15;
+    std::array<uint8_t, kIdentityReplyLength> expected{};
+    size_t idx = 0;
+    auto push = [&](uint8_t value) {
+        if (idx < expected.size()) {
+            expected[idx++] = value;
+        }
+    };
+
+    push(0xF0);
+    push(0x7E);
+    push(request[2]);
+    push(0x06);
+    push(0x02);
+    constexpr std::array<uint8_t, 1> manufacturer = {
+        seedbox::interop::mn42::handshake::product::kManufacturerId};
+    constexpr std::array<uint8_t, 2> family = {
+        seedbox::interop::mn42::handshake::product::kSignature0,
+        seedbox::interop::mn42::handshake::product::kSignature1};
+    constexpr std::array<uint8_t, 2> model = {
+        seedbox::interop::mn42::handshake::product::kSignature2, static_cast<uint8_t>('2')};
+
+    for (uint8_t byte : manufacturer) {
+        push(byte);
+    }
+    for (uint8_t byte : family) {
+        push(byte);
+    }
+    for (uint8_t byte : model) {
+        push(byte);
+    }
+
+    std::array<uint8_t, 4> versionBytes{};
+    const char *versionStr = FW_VERSION_STR;
+    size_t cursor = 0;
+    auto parseComponent = [&](size_t &pos) {
+        uint16_t value = 0;
+        bool foundDigit = false;
+        while (versionStr[pos] != '\0') {
+            char c = versionStr[pos];
+            if (c >= '0' && c <= '9') {
+                foundDigit = true;
+                value = static_cast<uint16_t>(value * 10 + (c - '0'));
+                ++pos;
+            } else {
+                if (foundDigit) {
+                    break;
+                }
+                ++pos;
+            }
+        }
+        if (value > 0x7F) {
+            value = 0x7F;
+        }
+        return static_cast<uint8_t>(value);
+    };
+
+    versionBytes[0] = parseComponent(cursor);
+    if (versionStr[cursor] == '.') {
+        ++cursor;
+    }
+    versionBytes[1] = parseComponent(cursor);
+    if (versionStr[cursor] == '.') {
+        ++cursor;
+    }
+    versionBytes[2] = parseComponent(cursor);
+
+    const char *gitSha = GIT_SHA_STR;
+    uint8_t gitTag = 0;
+    for (size_t i = 0; gitSha[i] != '\0'; ++i) {
+        unsigned char c = static_cast<unsigned char>(gitSha[i]);
+        if (c < 0x80) {
+            gitTag = static_cast<uint8_t>(c);
+            break;
+        }
+    }
+    versionBytes[3] = gitTag;
+
+    for (uint8_t byte : versionBytes) {
+        push(byte & 0x7F);
+    }
+    push(0xF7);
+
+    TEST_ASSERT_EQUAL_UINT16(idx, MIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(idx, usbMIDI.lastSysExLength);
+    for (size_t i = 0; i < idx; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(expected[i], MIDI.lastSysEx[i]);
+        TEST_ASSERT_EQUAL_UINT8(expected[i], usbMIDI.lastSysEx[i]);
     }
 }
 
