@@ -558,26 +558,30 @@ void checkDiagnosticsForAlerts() {
     static uint32_t lastMidiTaskOverrun = 0;
     static uint32_t lastUartOverrun = 0;
 
-    if (g_systemDiagnostics.midiDropCount != lastMidiDrop) {
+    const uint32_t midiDrop = g_systemDiagnostics.midiDropCount;
+    if (midiDrop != lastMidiDrop) {
         LOG_PRINTF("{\"diagnostic\":\"midi_drop\",\"count\":%lu}\n",
-                   static_cast<unsigned long>(g_systemDiagnostics.midiDropCount));
+                   static_cast<unsigned long>(midiDrop));
         requestStatusLEDPulse();
-        lastMidiDrop = g_systemDiagnostics.midiDropCount;
+        lastMidiDrop = midiDrop;
     }
 
-    if (g_systemDiagnostics.midiTaskOverrunCount != lastMidiTaskOverrun) {
+    const uint32_t midiTaskOverruns = g_systemDiagnostics.midiTaskOverrunCount;
+    const uint32_t maxMidiMicros = g_systemDiagnostics.maxProcessMidiMicros;
+    if (midiTaskOverruns != lastMidiTaskOverrun) {
         LOG_PRINTF("{\"diagnostic\":\"midi_task_overrun\",\"count\":%lu,\"max_us\":%lu}\n",
-                   static_cast<unsigned long>(g_systemDiagnostics.midiTaskOverrunCount),
-                   static_cast<unsigned long>(g_systemDiagnostics.maxProcessMidiMicros));
+                   static_cast<unsigned long>(midiTaskOverruns),
+                   static_cast<unsigned long>(maxMidiMicros));
         requestStatusLEDPulse();
-        lastMidiTaskOverrun = g_systemDiagnostics.midiTaskOverrunCount;
+        lastMidiTaskOverrun = midiTaskOverruns;
     }
 
-    if (g_systemDiagnostics.uartOverrunCount != lastUartOverrun) {
+    const uint32_t uartOverruns = g_systemDiagnostics.uartOverrunCount;
+    if (uartOverruns != lastUartOverrun) {
         LOG_PRINTF("{\"diagnostic\":\"uart_overrun\",\"count\":%lu}\n",
-                   static_cast<unsigned long>(g_systemDiagnostics.uartOverrunCount));
+                   static_cast<unsigned long>(uartOverruns));
         requestStatusLEDPulse();
-        lastUartOverrun = g_systemDiagnostics.uartOverrunCount;
+        lastUartOverrun = uartOverruns;
     }
 }
 } // namespace
