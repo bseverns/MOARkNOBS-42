@@ -183,6 +183,21 @@ void LEDManager::setGroupColor(const std::string &group, const CRGB &color) {
     presentFrame();
 }
 
+void LEDManager::beginWarningAnimation(LEDWarning type) {
+    warningType = type;
+    warningActive = (type != LEDWarning::None);
+    warningStart = now();
+}
+
+void LEDManager::clearWarningAnimation() {
+    if (!warningActive)
+        return;
+    warningActive = false;
+    warningType = LEDWarning::None;
+    presentFrame();
+    std::fill(dirtyFlags.begin(), dirtyFlags.end(), false);
+}
+
 /**
  * @brief Pushes any dirty LEDs out to the strip and clears the flags.
  *
@@ -238,6 +253,12 @@ void LEDManager::update() {
         break; // keep existing colours
     }
 
+    if (warningActive) {
+        renderWarningFrame();
+        std::fill(dirtyFlags.begin(), dirtyFlags.end(), false);
+        return;
+    }
+
     presentFrame();
     std::fill(dirtyFlags.begin(), dirtyFlags.end(), false);
 }
@@ -258,6 +279,45 @@ void LEDManager::syncToOctoBuffer() {
 
 void LEDManager::presentFrame() {
     syncToOctoBuffer();
+    FastLED.show();
+}
+
+void LEDManager::renderWarningFrame() {
+    if (octoLanes.empty())
+        return;
+
+    std::fill(octoLanes.begin(), octoLanes.end(), CRGB::Black);
+
+    if (laneLength == 0)
+        return;
+
+    const size_t copyCount = std::min(static_cast<size_t>(laneLength), leds.size());
+    CRGB *laneBase = octoLanes.data() + static_cast<size_t>(kOctoPinLane) * laneLength;
+    unsigned long elapsed = now() - warningStart;
+
+    switch (warningType) {
+    case LEDWarning::Destructive: {
+        bool strobeOn = ((elapsed / 120) % 2) == 0;
+        if (strobeOn) {
+            for (size_t i = 0; i < copyCount; ++i) {
+                laneBase[i] = (i % 2 == 0) ? CRGB::Red : CRGB::White;
+            }
+        }
+        break;
+    }
+    case LEDWarning::Diagnostic: {
+        uint16_t phase = static_cast<uint16_t>((elapsed / 40) % 256);
+        for (size_t i = 0; i < copyCount; ++i) {
+            uint8_t brightness = sin8(static_cast<uint8_t>(phase + i * 8));
+            laneBase[i] = CHSV(160, 200, brightness);
+        }
+        break;
+    }
+    case LEDWarning::None:
+    default:
+        break;
+    }
+
     FastLED.show();
 }
 

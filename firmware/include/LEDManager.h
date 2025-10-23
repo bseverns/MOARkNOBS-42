@@ -30,6 +30,11 @@ struct HardwareConfig;
 enum class LEDState { IDLE, ACTIVE_POT, ENVELOPE_MODE, ARG_MODE, MIDI_UPDATE, TEMP_FEEDBACK };
 
 /**
+ * Warning animations that temporarily override the strip during spicy actions.
+ */
+enum class LEDWarning { None, Destructive, Diagnostic };
+
+/**
  * @brief Manages the WS2812 LED strip used for visual feedback.
  */
 class LEDManager {
@@ -98,6 +103,15 @@ class LEDManager {
     /** Set colour for a named group of LEDs. */
     void setGroupColor(const std::string &group, const CRGB &color);
 
+    /** Kick off a temporary warning animation. */
+    void beginWarningAnimation(LEDWarning type);
+
+    /** Stop any warning animation and return to the normal frame. */
+    void clearWarningAnimation();
+
+    /** Check whether a warning animation currently owns the strip. */
+    bool isWarningActive() const { return warningActive; }
+
     /** Write any changed LED values to the strip. Call each loop. */
     void update();
 
@@ -113,6 +127,7 @@ class LEDManager {
   private:
     void syncToOctoBuffer();
     void presentFrame();
+    void renderWarningFrame();
 
     const HardwareConfig &cfg;
     uint16_t numLEDs;
@@ -131,6 +146,9 @@ class LEDManager {
     bool controlActive = false;
     bool diagnosticMode = false;
     unsigned long diagStart = 0;
+    bool warningActive = false;
+    LEDWarning warningType = LEDWarning::None;
+    unsigned long warningStart = 0;
 
     static constexpr uint8_t kOctoPinLane = 4; // Default pin map puts LED data on lane 4 (pin 6)
 };
