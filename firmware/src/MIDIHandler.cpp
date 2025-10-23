@@ -410,8 +410,21 @@ void MIDIHandler::receiveRPN(uint8_t channel, uint16_t param, uint16_t value) {
 }
 
 void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
-    if (!data || length == 0)
+    if (!data || length < 2) {
+#ifdef MIDI_DEBUG
+        MIDI_DBG_PRINTF("Dropping SysEx with length %u (too short for framing)\n", length);
+#endif
         return;
+    }
+
+    if (data[0] != 0xF0 || data[length - 1] != 0xF7) {
+#ifdef MIDI_DEBUG
+        MIDI_DBG_PRINTF("Dropping SysEx[%u]: invalid framing (start %02X end %02X)\n", length, data[0],
+                         data[length - 1]);
+#endif
+        return;
+    }
+
     _rxCount++;
     seedbox::interop::mn42::SeedBoxLink::instance().handleSysEx(data, length);
     _lastSysExLength = (length > sizeof(_lastSysEx)) ? sizeof(_lastSysEx) : length;
