@@ -220,20 +220,29 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
 // Envelope settings
 bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
                                          std::vector<EnvelopeFollower> &envelopes) {
+    constexpr int kUnassignedEnvelope = -1;
     bool allFound = true;
-    for (size_t i = 0; i < envelopes.size(); i++) {
-        int envelopeIndex = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + i);
-        potToEnvelopeMap[i] = envelopeIndex;
 
-        float b;
-        EEPROM.get(EEPROM_EF_BASELINES + i * sizeof(float), b);
+    potToEnvelopeMap.clear();
+    for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
+        int storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
+        int envelopeIndex = (storedValue == 0xFF) ? kUnassignedEnvelope : storedValue;
+        if (envelopeIndex < 0 || envelopeIndex >= static_cast<int>(envelopes.size())) {
+            envelopeIndex = kUnassignedEnvelope;
+        }
+        potToEnvelopeMap[potIndex] = envelopeIndex;
+    }
 
-        envelopes[i].setVref(g_vref); // always refresh Vref
-        if (!std::isnan(b)) {
-            envelopes[i].setBaseline(b);
-            envelopeConfig.baselines[i] = b;
+    for (size_t envIndex = 0; envIndex < envelopes.size(); ++envIndex) {
+        float baseline;
+        EEPROM.get(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
+
+        envelopes[envIndex].setVref(g_vref); // always refresh Vref
+        if (!std::isnan(baseline)) {
+            envelopes[envIndex].setBaseline(baseline);
+            envelopeConfig.baselines[envIndex] = baseline;
         } else {
-            envelopeConfig.baselines[i] = 0.0f;
+            envelopeConfig.baselines[envIndex] = 0.0f;
             allFound = false;
         }
     }
@@ -242,8 +251,10 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
 
 void ConfigManager::saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
                                          const std::vector<EnvelopeFollower> &envelopes) {
+    constexpr uint8_t kUnassignedMarker = 0xFF;
     for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
-        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, envelopeIndex);
+        uint8_t storedValue = (envelopeIndex < 0) ? kUnassignedMarker : static_cast<uint8_t>(envelopeIndex);
+        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, storedValue);
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
         envelopeConfig.baselines[i] = envelopes[i].getBaseline();
@@ -484,5 +495,44 @@ void test_calibration_offsets_survive_power_cycle() {
     TEST_ASSERT_TRUE(ok);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.42f, fresh[0].getBaseline());
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.42f, envelopeConfig.baselines[0]);
+}
+
+void test_high_index_envelope_assignment_survives_reload() {
+    auto pm = createPotentiometerManager();
+    auto envs = createEnvelopeFollowers(&pm);
+
+    for (size_t i = 0; i < envs.size(); ++i) {
+        envs[i].setBaseline(0.1f * static_cast<float>(i + 1));
+    }
+
+    std::map<int, int> mapping;
+    for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
+        mapping[potIndex] = -1;
+    }
+
+    const int highPot = NUM_POTS - 1;
+    const int assignedEnv = static_cast<int>(envs.size()) - 1;
+    mapping[highPot] = assignedEnv;
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    cfg.saveEnvelopeSettings(mapping, envs);
+
+    mapping.clear();
+    auto reloaded = createEnvelopeFollowers(&pm);
+    bool ok = cfg.loadEnvelopeSettings(mapping, reloaded);
+
+    TEST_ASSERT_TRUE(ok);
+    TEST_ASSERT_EQUAL_UINT(static_cast<unsigned int>(NUM_POTS), mapping.size());
+
+    auto highPotIt = mapping.find(highPot);
+    TEST_ASSERT_TRUE(highPotIt != mapping.end());
+    TEST_ASSERT_EQUAL_INT(assignedEnv, highPotIt->second);
+
+    if (NUM_POTS > 1) {
+        int unassignedPot = (highPot == 0) ? 1 : 0;
+        auto unassignedIt = mapping.find(unassignedPot);
+        TEST_ASSERT_TRUE(unassignedIt != mapping.end());
+        TEST_ASSERT_EQUAL_INT(-1, unassignedIt->second);
+    }
 }
 #endif
