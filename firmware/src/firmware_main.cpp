@@ -1206,7 +1206,8 @@ void streamWebSerialState() {
     if (!webSerialStreaming)
         return;
     const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
-    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers, diagSnapshot);
+    WebSerial::sendStateSnapshot(potentiometerManager, envelopeFollowers, configManager,
+                                 buttonContext.activePot, diagSnapshot);
 }
 
 void setup() {

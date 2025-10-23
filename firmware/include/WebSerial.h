@@ -17,6 +17,9 @@ class WebSerial {
      * {
      *   "slots": [s0, s1, ..., s41],       // 42 values, each 0-127
      *   "envelopes": [e0, e1, ..., e5],    // 6 values, each 0-127
+     *   "currentSlot": <int>,              // -1 if nothing is armed, otherwise 0-41
+     *   "argMethod": "<label>",          // e.g. "PLUS" or "MULT"
+     *   "efStatus": [0|1, ...],           // envelope follower enable flags
      *   "diagnostics": {
      *     "uart_overruns": <int>,         // DIN UART overruns caught since boot
      *     "midi_drops": <int>,            // Messages we refused (bad framing, etc)
@@ -29,11 +32,14 @@ class WebSerial {
      *   }
      * }
      * Example payload:
-     * {"slots":[0,1,2,...,41],"envelopes":[0,0,0,0,0,0],"diagnostics":{"loop_max_us":702}}
+     * {"slots":[0,1,2,...,41],"envelopes":[0,0,0,0,0,0],"currentSlot":5,
+     *  "argMethod":"PLUS","efStatus":[1,0,0,0,0,1],
+     *  "diagnostics":{"loop_max_us":702}}
      * Cross-check docs/WebSerial.md for the gritty protocol details.
      */
     static void sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes,
+                                  const ConfigManager &config, uint8_t currentSlot,
                                   const SystemDiagnostics &diagnostics);
 
     /** Emit a JSON patch for a single slot so the UI can stay in sync. */

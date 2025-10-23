@@ -7,8 +7,36 @@
 #include "ConfigManager.h"
 #include <ArduinoJson.h>
 
+extern bool webSerialStreaming;
+
 namespace {
-const char *midiTypeName(MIDIMessageType type) {
+const char *slotTypeSchemaName(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "Note";
+    case MIDIMessageType::PitchBend:
+        return "PitchBend";
+    case MIDIMessageType::ProgramChange:
+        return "ProgramChange";
+    case MIDIMessageType::Aftertouch:
+        return "Aftertouch";
+    case MIDIMessageType::ModWheel:
+        return "ModWheel";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SysEx";
+    }
+    return "UNKNOWN";
+}
+
+const char *slotTypeLegacyName(MIDIMessageType type) {
     switch (type) {
     case MIDIMessageType::OFF:
         return "OFF";
@@ -34,7 +62,7 @@ const char *midiTypeName(MIDIMessageType type) {
     return "UNKNOWN";
 }
 
-const char *filterTypeName(EnvelopeFollower::FilterType type) {
+const char *filterName(EnvelopeFollower::FilterType type) {
     switch (type) {
     case EnvelopeFollower::LINEAR:
         return "LINEAR";
@@ -54,7 +82,7 @@ const char *filterTypeName(EnvelopeFollower::FilterType type) {
     return "LINEAR";
 }
 
-const char *argMethodName(uint8_t method) {
+const char *argMethodLabel(uint8_t method) {
     static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
                                              "BABS", "TABS", "MULT", "DIVI", "AVG",
                                              "XABS", "MAXX", "MINN", "XORR"};
@@ -63,11 +91,22 @@ const char *argMethodName(uint8_t method) {
     }
     return "UNKNOWN";
 }
+
+uint8_t resolveDataByte(const ConfigManager &config, uint8_t slotIndex, const MIDISlot &slot) {
+    if (slot.type == MIDIMessageType::CC) {
+        return config.getPotCCNumber(slotIndex);
+    }
+    return slot.data1;
+}
 } // namespace
 
 void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes,
+                                  const ConfigManager &config, uint8_t currentSlot,
                                   const SystemDiagnostics &diagnostics) {
+    if (!webSerialStreaming)
+        return;
+
     StaticJsonDocument<1024> doc;
     JsonArray slots = doc.createNestedArray("slots");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
@@ -77,6 +116,15 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     JsonArray envs = doc.createNestedArray("envelopes");
     for (const auto &env : envelopes) {
         envs.add(env.getEnvelopeLevel());
+    }
+
+    const int slotValue = (currentSlot < NUM_POTS) ? static_cast<int>(currentSlot) : -1;
+    doc["currentSlot"] = slotValue;
+    doc["argMethod"] = argMethodLabel(config.getARGMethod());
+
+    JsonArray efStatus = doc.createNestedArray("efStatus");
+    for (const auto &env : envelopes) {
+        efStatus.add(env.getActiveState() ? 1 : 0);
     }
 
     JsonObject diag = doc.createNestedObject("diagnostics");
@@ -95,6 +143,8 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
 }
 
 void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
+    if (!webSerialStreaming)
+        return;
     if (slotIndex >= NUM_SLOTS)
         return;
 
@@ -105,9 +155,11 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     doc["slot"] = slotIndex;
     JsonObject body = doc.createNestedObject("slot");
     body["type"] = static_cast<uint8_t>(slot.type);
-    body["type_name"] = midiTypeName(slot.type);
+    body["schema_name"] = slotTypeSchemaName(slot.type);
+    body["legacy_name"] = slotTypeLegacyName(slot.type);
+    body["type_name"] = slotTypeLegacyName(slot.type);
     body["channel"] = slot.midiChannel;
-    body["data1"] = slot.data1;
+    body["data1"] = resolveDataByte(config, slotIndex, slot);
     body["ef_index"] = slot.efIndex;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
@@ -118,6 +170,8 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
 }
 
 void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
+    if (!webSerialStreaming)
+        return;
     StaticJsonDocument<128> doc;
     doc["type"] = "envelope_assignment";
     doc["slot"] = slotIndex;
@@ -129,11 +183,13 @@ void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
 }
 
 void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
+    if (!webSerialStreaming)
+        return;
     StaticJsonDocument<192> doc;
     doc["type"] = "filter_patch";
     JsonObject filter = doc.createNestedObject("filter");
     filter["type_index"] = static_cast<uint8_t>(type);
-    filter["type_name"] = filterTypeName(type);
+    filter["type_name"] = filterName(type);
     filter["freq"] = freq;
     filter["q"] = q;
 
@@ -143,11 +199,13 @@ void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, f
 }
 
 void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
+    if (!webSerialStreaming)
+        return;
     StaticJsonDocument<192> doc;
     doc["type"] = "arg_patch";
     JsonObject arg = doc.createNestedObject("arg");
     arg["method"] = method;
-    arg["method_name"] = argMethodName(method);
+    arg["method_name"] = argMethodLabel(method);
     arg["enable"] = enable;
     arg["a"] = envA;
     arg["b"] = envB;
