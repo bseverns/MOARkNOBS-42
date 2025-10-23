@@ -107,7 +107,10 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     if (!webSerialStreaming)
         return;
 
-    StaticJsonDocument<1024> doc;
+    // Snapshot carries 42 slots + 6 envelope levels + 6 enable flags + 8 diagnostics
+    // scalars, plus misc scalars/strings. Give ArduinoJson ample headroom so it
+    // never drops keys when we expand diagnostics.
+    StaticJsonDocument<2048> doc;
     JsonArray slots = doc.createNestedArray("slots");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
