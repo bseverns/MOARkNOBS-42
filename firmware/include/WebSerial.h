@@ -42,16 +42,28 @@ class WebSerial {
                                   const ConfigManager &config, uint8_t currentSlot,
                                   const SystemDiagnostics &diagnostics);
 
-    /** Emit a JSON patch for a single slot so the UI can stay in sync. */
+    /**
+     * Emit a compact config patch describing the current state of a slot.
+     * Mirrors the schema used by the WebSerial editor so diffs line up.
+     */
     static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
 
-    /** Notify listeners that a slot has a new envelope follower assignment. */
+    /**
+     * Emit an envelope assignment patch for a single slot.
+     * Lets the browser repaint routing badges without reloading everything.
+     */
     static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
 
-    /** Broadcast the active envelope follower filter settings. */
+    /**
+     * Emit a filter configuration patch (type/frequency/Q) for the active follower.
+     * Keeps the UI in lockstep when filters are tuned from the hardware side.
+     */
     static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
 
-    /** Broadcast the ARG mixer settings (method, enable flag, input pair). */
+    /**
+     * Emit an ARG configuration patch.
+     * Broadcasts method, enable flag, and the paired envelopes so remote editors sync up.
+     */
     static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };
 
