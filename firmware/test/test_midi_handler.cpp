@@ -136,11 +136,17 @@ void test_sysex_identity_request_reply() {
     expected.push_back(request[2]);
     expected.push_back(0x06);
     expected.push_back(0x02);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kManufacturerId);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature0);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature1);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature2);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kPresenceFlag);
+    constexpr std::array<uint8_t, 1> manufacturer = {
+        seedbox::interop::mn42::handshake::product::kManufacturerId};
+    constexpr std::array<uint8_t, 2> family = {
+        seedbox::interop::mn42::handshake::product::kSignature0,
+        seedbox::interop::mn42::handshake::product::kSignature1};
+    constexpr std::array<uint8_t, 2> model = {
+        seedbox::interop::mn42::handshake::product::kSignature2, static_cast<uint8_t>('2')};
+
+    expected.insert(expected.end(), manufacturer.begin(), manufacturer.end());
+    expected.insert(expected.end(), family.begin(), family.end());
+    expected.insert(expected.end(), model.begin(), model.end());
 
     std::array<uint8_t, 4> versionBytes{};
     const char *versionStr = FW_VERSION_STR;

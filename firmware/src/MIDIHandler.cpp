@@ -434,11 +434,23 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
         push(deviceId);
         push(0x06);
         push(0x02);
-        push(seedbox::interop::mn42::handshake::product::kManufacturerId);
-        push(seedbox::interop::mn42::handshake::product::kSignature0);
-        push(seedbox::interop::mn42::handshake::product::kSignature1);
-        push(seedbox::interop::mn42::handshake::product::kSignature2);
-        push(seedbox::interop::mn42::handshake::product::kPresenceFlag);
+        constexpr std::array<uint8_t, 1> manufacturer = {
+            seedbox::interop::mn42::handshake::product::kManufacturerId};
+        constexpr std::array<uint8_t, 2> family = {
+            seedbox::interop::mn42::handshake::product::kSignature0,
+            seedbox::interop::mn42::handshake::product::kSignature1};
+        constexpr std::array<uint8_t, 2> model = {
+            seedbox::interop::mn42::handshake::product::kSignature2, static_cast<uint8_t>('2')};
+
+        for (uint8_t byte : manufacturer) {
+            push(byte);
+        }
+        for (uint8_t byte : family) {
+            push(byte);
+        }
+        for (uint8_t byte : model) {
+            push(byte);
+        }
 
         std::array<uint8_t, 4> versionBytes{};
         const char *versionStr = FW_VERSION_STR;
