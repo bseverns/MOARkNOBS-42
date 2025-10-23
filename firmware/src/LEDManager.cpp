@@ -6,6 +6,7 @@
 #include "Globals.h" // hardware config
 #include "TimeUtils.h"
 #include <FastLED.h>
+#include <algorithm>
 #include <map>
 #include <string>
 
@@ -19,12 +20,18 @@ LEDManager::LEDManager(const HardwareConfig &config)
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
 
-    // FastLED insists on a compile-time data pin. LED_DATA_PIN gets baked in
-    // via platformio.ini so we can ditch the runtime controller shuffle.
-    FastLED.addLeds<WS2812, LED_DATA_PIN, GRB>(leds.data(), leds.size())
+    laneLength = numLEDs;
+    constexpr size_t kLaneCount = 8;
+    octoLanes.resize(static_cast<size_t>(laneLength) * kLaneCount, CRGB::Black);
+
+    // OctoWS2811 fans data across eight parallel lanes. Only lane 4 is wired
+    // in this rig, but we keep the other slots zeroed so the DMA bus stays
+    // quiet.
+    FastLED.addLeds<OCTOWS2811>(octoLanes.data(), laneLength)
         .setCorrection(TypicalLEDStrip);
-    FastLED.clear();
-    FastLED.show();
+
+    std::fill(leds.begin(), leds.end(), CRGB::Black);
+    presentFrame();
     startupAnimation();
 }
 
@@ -99,7 +106,7 @@ void LEDManager::markDirty(uint8_t index) {
 void LEDManager::setBrightness(uint8_t b) {
     brightness = b;
     FastLED.setBrightness(brightness);
-    FastLED.show();
+    presentFrame();
 }
 
 void LEDManager::setColor(CRGB color) {
@@ -107,7 +114,7 @@ void LEDManager::setColor(CRGB color) {
         leds[i] = color;
         markDirty(i);
     }
-    FastLED.show();
+    presentFrame();
 }
 
 uint8_t LEDManager::getBrightness() const { return brightness; }
@@ -124,11 +131,12 @@ CRGB LEDManager::getColor() const { return leds.empty() ? CRGB::Black : leds[0];
 void LEDManager::startupAnimation() {
     for (size_t i = 0; i < leds.size(); i++) {
         leds[i] = CRGB::White;
-        FastLED.show();
+        presentFrame();
         delay(20);
         leds[i] = CRGB::Black;
         markDirty(i);
     }
+    presentFrame();
 }
 
 void LEDManager::setState(LEDState state, uint8_t index) {
@@ -141,8 +149,8 @@ void LEDManager::setState(LEDState state, uint8_t index) {
  * @brief Treats the strip as one big unruly group and splashes a single colour on it.
  *
  * Call when you want a full wipe. Every pixel gets tagged via @ref dirtyFlags so a
- * later update() knows who changed. We also fire FastLED.show() right here for
- * instant gratification.
+ * later update() knows who changed. We also push the frame immediately so the
+ * strip mirrors the new colour without waiting for loop().
  *
  * @param color The hue to paint across the entire strip.
  */
@@ -151,7 +159,7 @@ void LEDManager::setAll(const CRGB &color) {
         led = color;
         markDirty(&led - &leds[0]);
     }
-    FastLED.show();
+    presentFrame();
 }
 
 /**
@@ -160,7 +168,7 @@ void LEDManager::setAll(const CRGB &color) {
  * Groups are string keys mapped to index lists—think crews like "pots" or
  * "buttons". Use this when a whole crew needs a new vibe. Each member's
  * @ref dirtyFlags entry is set so update() can flush them together, though we
- * also hit FastLED.show() immediately.
+ * also force an immediate refresh.
  *
  * @param group The posse to recolour.
  * @param color Fresh paint for the group.
@@ -173,7 +181,7 @@ void LEDManager::setGroupColor(const std::string &group, const CRGB &color) {
         leds[idx] = color;
         markDirty(idx);
     }
-    FastLED.show();
+    presentFrame();
 }
 
 /**
@@ -231,8 +239,27 @@ void LEDManager::update() {
         break; // keep existing colours
     }
 
-    FastLED.show();
+    presentFrame();
     std::fill(dirtyFlags.begin(), dirtyFlags.end(), false);
+}
+
+void LEDManager::syncToOctoBuffer() {
+    if (octoLanes.empty())
+        return;
+
+    std::fill(octoLanes.begin(), octoLanes.end(), CRGB::Black);
+
+    if (laneLength == 0)
+        return;
+
+    const size_t copyCount = std::min(static_cast<size_t>(laneLength), leds.size());
+    CRGB *laneBase = octoLanes.data() + static_cast<size_t>(kOctoPinLane) * laneLength;
+    std::copy_n(leds.begin(), copyCount, laneBase);
+}
+
+void LEDManager::presentFrame() {
+    syncToOctoBuffer();
+    FastLED.show();
 }
 
 void LEDManager::setStatusLED(bool on) { digitalWrite(cfg.statusLedPin, on ? HIGH : LOW); }
@@ -252,6 +279,6 @@ void LEDManager::setDiagnosticMode(bool enabled) {
     if (!enabled && leds.size() >= 4) {
         leds[leds.size() - 4] = CRGB::Black;
         markDirty(leds.size() - 4);
-        FastLED.show();
+        presentFrame();
     }
 }

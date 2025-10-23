@@ -1,0 +1,18 @@
+{
+  "name": "OctoWS2811",
+  "version": "1.5.0",
+  "description": "High performance WS2811 LED driver for Teensy using DMA.",
+  "keywords": "led, dma, octows2811, teensy",
+  "authors": [
+    {
+      "name": "Paul Stoffregen",
+      "maintainer": false
+    }
+  ],
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": ["teensy"],
+  "build": {
+    "includeDirs": "src"
+  }
+}

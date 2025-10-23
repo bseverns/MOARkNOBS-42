@@ -111,9 +111,14 @@ class LEDManager {
     void setDiagnosticMode(bool enabled);
 
   private:
+    void syncToOctoBuffer();
+    void presentFrame();
+
     const HardwareConfig &cfg;
     uint16_t numLEDs;
     std::vector<CRGB> leds;
+    std::vector<CRGB> octoLanes;
+    uint16_t laneLength = 0;
     std::map<std::string, std::vector<uint16_t>> ledGroups;
     std::vector<bool> dirtyFlags;
     uint8_t modeDisplay;
@@ -126,6 +131,8 @@ class LEDManager {
     bool controlActive = false;
     bool diagnosticMode = false;
     unsigned long diagStart = 0;
+
+    static constexpr uint8_t kOctoPinLane = 4; // Default pin map puts LED data on lane 4 (pin 6)
 };
 
 #endif // LEDMANAGER_H
