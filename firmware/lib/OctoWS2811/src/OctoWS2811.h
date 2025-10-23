@@ -123,5 +123,3 @@ class OctoWS2811 {
     uint8_t *frameBuffer;
     uint8_t *drawBuffer;
 };
-
-#endif

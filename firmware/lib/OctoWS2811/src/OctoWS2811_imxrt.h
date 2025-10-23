@@ -36,5 +36,3 @@ class OctoWS2811Driver {
   private:
     fl::ObjectFLED *object;
 };
-
-#endif
