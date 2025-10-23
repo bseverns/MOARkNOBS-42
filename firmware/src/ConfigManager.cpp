@@ -228,8 +228,7 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
     for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
         int storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
         int envelopeIndex = (storedValue == 0xFF) ? kUnassignedEnvelope : storedValue;
-        if (envelopeIndex >= 0 &&
-            envelopeIndex < static_cast<int>(envelopes.size())) {
+        if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopes.size())) {
             potToEnvelopeMap.emplace(potIndex, envelopeIndex);
         }
     }
