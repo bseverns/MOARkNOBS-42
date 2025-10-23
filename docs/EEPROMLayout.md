@@ -22,18 +22,22 @@ Schema version: `0x0002`
 | 0x0CC | `float[6]` | Envelope baselines | Learned silence |
 | 0x0E4 | `uint8[22]` | Buffer | Scratch padding |
 | 0x0FA | — | Backup config block | Mirrors 0x000–0x0F9 (ends at 0x1F3) |
-| 0x1F4 | `MIDISlot[42]` | Slot payload arena | 6 bytes per slot (0x1F4–0x2EF) |
-| 0x2F0 | — | Profile 1 block | 256‑byte slice for alt configs (id 1) |
-| 0x3F0 | — | Profile 2 block | Another 256‑byte slice (id 2) |
+| 0x1F4 | `MIDISlot[42]` | Slot payload arena | 23 bytes per slot (0x1F4–0x5B9) |
+| 0x5BA | — | Profile 1 block | 256‑byte slice for alt configs (id 1) |
+| 0x6BA | — | Profile 2 block | Another 256‑byte slice (id 2) |
 
 The slot arena scoots out of the way of the config+backup duet so we never
 stomp the calibration data again. Think of it as a velvet rope at `0x1F4`:
 only the 42 MIDISlots get in, everybody else queues up afterwards.
 
+Each MIDISlot snapshot now packs the usual suspects (type, channel, data byte, EF index, active flag, arpeggiator note) plus a
+`sysexLength` byte and 16-byte SysEx template buffer. Most slots stay tiny, but SysEx-heavy rigs get to keep their macros in
+EEPROM instead of in code.
+
 In code, that velvet rope shows up as `EEPROM_SLOT_BASE`, which now equals the
 full mirrored config span (`EEPROM_CONFIG_MIRROR_SIZE = 0x1F4`). The slots chew
-through `EEPROM_SLOT_REGION_SIZE` (252 bytes for 42×6) before
-`EEPROM_PROFILE_START(1)` kicks in at `0x2F0`. Profiles march forward in tidy
+through `EEPROM_SLOT_REGION_SIZE` (966 bytes for 42×23) before
+`EEPROM_PROFILE_START(1)` kicks in at `0x5BA`. Profiles march forward in tidy
 `EEPROM_PROFILE_BLOCK_SIZE` (256 byte) chunks beyond that point.
 
 For the gory details, the code comments in [`firmware/include/ConfigManager.h`](../firmware/include/ConfigManager.h) spill every byte. This table just keeps the map close at hand.

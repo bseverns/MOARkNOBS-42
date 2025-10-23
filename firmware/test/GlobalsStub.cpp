@@ -43,6 +43,8 @@ ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
         slot.midiChannel = 1;
         slot.data1 = 0;
         slot.arpNote = 0;
+        slot.sysexLength = 0;
+        slot.sysexTemplate.fill(0);
     }
     _stored.potChannels.fill(0);
     _stored.potCCNumbers.fill(0);

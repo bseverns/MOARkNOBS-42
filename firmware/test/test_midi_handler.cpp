@@ -236,6 +236,20 @@ void test_handle_sysex_rejects_bad_framing() {
     TEST_ASSERT_EQUAL_UINT32(3, mh._rxCount);
 }
 
+void test_handle_sysex_drops_oversize() {
+    MIDIHandler mh;
+    mh._lastSysExLength = 5;
+    mh._rxCount = 2;
+
+    std::array<uint8_t, 70> payload{};
+    payload[0] = 0xF0;
+    payload[payload.size() - 1] = 0xF7;
+    mh.handleSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
+
+    TEST_ASSERT_EQUAL_UINT16(5, mh._lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT32(2, mh._rxCount);
+}
+
 // If usbMIDI throws a curveball message type the firmware doesn't support we
 // should shrug and move on, not crash or mutate state.
 void test_drop_unsupported_usb_type() {

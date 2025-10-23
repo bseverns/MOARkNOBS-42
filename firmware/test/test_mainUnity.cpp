@@ -19,6 +19,9 @@ void test_scoped_analog_provider_nesting();
 void test_sequence_provider_cycles_values();
 void test_set_provider_returns_previous();
 void test_digital_provider_overrides_matrix_reads();
+void test_parse_basic_sysex_template();
+void test_parse_14bit_sysex_template();
+void test_parse_rejects_bad_template();
 void test_bulk_config_assembler_handles_chunks();
 void test_bulk_config_assembler_detects_overflow();
 void test_format_ack_includes_checksum_and_seq();
@@ -37,6 +40,7 @@ void test_send_sysex();
 void test_drop_unsupported_usb_type();
 void test_usb_clock_tick_advances_counter();
 void test_generate_clock_tick_advances_counter();
+void test_handle_sysex_drops_oversize();
 #endif
 
 void setup() {
@@ -45,6 +49,9 @@ void setup() {
     RUN_TEST(test_sequence_provider_cycles_values);
     RUN_TEST(test_set_provider_returns_previous);
     RUN_TEST(test_digital_provider_overrides_matrix_reads);
+    RUN_TEST(test_parse_basic_sysex_template);
+    RUN_TEST(test_parse_14bit_sysex_template);
+    RUN_TEST(test_parse_rejects_bad_template);
     RUN_TEST(test_bulk_config_assembler_handles_chunks);
     RUN_TEST(test_bulk_config_assembler_detects_overflow);
     RUN_TEST(test_format_ack_includes_checksum_and_seq);
@@ -70,6 +77,7 @@ void setup() {
     RUN_TEST(test_receive_nrpn);
     RUN_TEST(test_send_sysex);
     RUN_TEST(test_drop_unsupported_usb_type);
+    RUN_TEST(test_handle_sysex_drops_oversize);
     RUN_TEST(test_usb_clock_tick_advances_counter);
     RUN_TEST(test_generate_clock_tick_advances_counter);
 #endif

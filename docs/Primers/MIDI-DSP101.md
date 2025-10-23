@@ -49,7 +49,10 @@ We do not generate RPN/NRPN in firmware yet, but the CC parser keeps the sequenc
 
 ### System Exclusive (SysEx)
 
-SysEx messages start with `0xF0`, end with `0xF7`, and carry manufacturer-specific payloads. We pass SysEx through untouched so you can dump patches or request firmware info.
+SysEx messages start with `0xF0`, end with `0xF7`, and carry manufacturer-specific payloads. Slots now store 16-byte templates
+that accept `XX` (7-bit), `MSB`, and `LSB` placeholders so you can spit out parameterised bursts without editing code. The
+firmware still forwards arbitrary inbound packets, but anything longer than 64 bytes gets dropped unless you explicitly ask for
+pass-through mode—self-defense against misbehaving gear.
 
 - **Manufacturer ID** — first data byte(s) after `0xF0`. 0x7D is reserved for non-commercial DIY builds like ours.
 - **Variable length** — keep messages under a few hundred bytes when routing over DIN; USB can cope with more.

@@ -58,6 +58,8 @@ void fillTestData() {
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         testSlots[i] = {
             MIDIMessageType::CC, (uint8_t)((i % 16) + 1), i, (uint8_t)(i % 6), true, 60};
+        testSlots[i].sysexLength = 0;
+        testSlots[i].sysexTemplate.fill(0);
     }
 }
 
@@ -81,6 +83,8 @@ bool verifyTestData() {
         if (!s.active)
             return false;
         if (s.arpNote != 60)
+            return false;
+        if (s.sysexLength != 0)
             return false;
     }
     return true;

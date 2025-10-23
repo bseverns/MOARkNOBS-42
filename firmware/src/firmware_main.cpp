@@ -19,6 +19,7 @@
 #include "version.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
+#include "SysExTemplate.h"
 #include "interop/SeedBoxLink.h"
 #include <TimerOne.h>
 #include <ArduinoJson.h>
@@ -84,6 +85,56 @@ size_t computeFreeFlash() {
 #else
     return 0U;
 #endif
+}
+
+void clearSysExTemplate(MIDISlot &slot) {
+    slot.sysexLength = 0;
+    slot.sysexTemplate.fill(0);
+}
+
+bool parseSysExTemplateField(JsonVariantConst value, MIDISlot &slot, String &error) {
+    if (value.isNull()) {
+        clearSysExTemplate(slot);
+        return true;
+    }
+    const char *raw = value.as<const char *>();
+    if (!raw || raw[0] == '\0') {
+        clearSysExTemplate(slot);
+        return true;
+    }
+    if (SysExTemplate::parse(raw, slot.sysexTemplate, slot.sysexLength, error)) {
+        return true;
+    }
+    clearSysExTemplate(slot);
+    return false;
+}
+
+String formatSysExTemplate(const MIDISlot &slot) {
+    if (slot.sysexLength == 0) {
+        return String();
+    }
+    return SysExTemplate::format(slot.sysexTemplate, slot.sysexLength);
+}
+
+uint8_t buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
+                          std::size_t capacity) {
+    const uint8_t value7 = Utility::mapToMidiValue(static_cast<int>(rawValue));
+    const uint16_t value14 = Utility::mapTo14Bit(static_cast<int>(rawValue));
+    if (slot.sysexLength >= 2) {
+        uint8_t rendered = SysExTemplate::render(slot.sysexTemplate, slot.sysexLength, value7,
+                                                 value14, dest, capacity);
+        if (rendered > 0) {
+            return rendered;
+        }
+    }
+    if (capacity < 4) {
+        return 0;
+    }
+    dest[0] = 0xF0;
+    dest[1] = slot.data1;
+    dest[2] = value7;
+    dest[3] = 0xF7;
+    return 4;
 }
 
 const char *midiMessageTypeName(MIDIMessageType type) {
@@ -371,6 +422,15 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.data1 = data1;
         slot.efIndex = efIndex;
         slot.active = active;
+        if (slot.type == MIDIMessageType::SysEx) {
+            String templateError;
+            if (!parseSysExTemplateField(slotObj["sysexTemplate"], slot, templateError)) {
+                emitBulkError("sysex_template", templateError.c_str(), seq);
+                return false;
+            }
+        } else {
+            clearSysExTemplate(slot);
+        }
         configManager.saveSlot(i, slot);
 
         configManager.setPotChannel(i, midiChannel);
@@ -646,6 +706,7 @@ void processSerial() {
                 slotObj["ef_index"] = slot.efIndex;
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
+                slotObj["sysexTemplate"] = formatSysExTemplate(slot);
             }
 
             JsonObject env = doc.createNestedObject("envelopes");
@@ -1210,8 +1271,11 @@ void setup() {
             }
 
             case MIDIMessageType::SysEx: {
-                uint8_t msg[4] = {0xF0, slot.data1, Utility::mapToMidiValue(rawValue), 0xF7};
-                midiHandler.sendSysEx(msg, 4);
+                std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+                uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
+                if (length > 0) {
+                    midiHandler.sendSysEx(msg.data(), length);
+                }
                 break;
             }
 

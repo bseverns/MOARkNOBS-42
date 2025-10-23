@@ -182,13 +182,28 @@ void ConfigManager::begin(std::vector<uint8_t> &potChannels) {
 }
 
 void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
-    EEPROM.get(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, dest);
+    MIDISlot temp{};
+    const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
+    EEPROM.get(address, temp);
+    if (temp.sysexLength > SysExTemplate::kMaxLength) {
+        temp.sysexLength = 0;
+        temp.sysexTemplate.fill(0);
+    }
+    dest = temp;
     if (dest.arpNote > 127)
         dest.arpNote = dest.data1;
 }
 
 void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
-    EEPROM.put(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE, src);
+    MIDISlot sanitized = src;
+    if (sanitized.sysexLength > SysExTemplate::kMaxLength) {
+        sanitized.sysexLength = SysExTemplate::kMaxLength;
+    }
+    for (uint8_t i = sanitized.sysexLength; i < SysExTemplate::kMaxLength; ++i) {
+        sanitized.sysexTemplate[i] = 0;
+    }
+    const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
+    EEPROM.put(address, sanitized);
 }
 
 // Potentiometer accessors
@@ -374,8 +389,7 @@ void ConfigManager::saveMIDISlots(const MIDISlot *slots, size_t count) {
         count = 42;
     }
     for (size_t i = 0; i < count; ++i) {
-        int address = EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE;
-        EEPROM.put(address, slots[i]);
+        saveSlot(static_cast<uint8_t>(i), slots[i]);
     }
 }
 
@@ -387,8 +401,7 @@ void ConfigManager::loadMIDISlots(MIDISlot *slots, size_t count) {
         count = 42;
     }
     for (size_t i = 0; i < count; ++i) {
-        int address = EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE;
-        EEPROM.get(address, slots[i]);
+        loadSlot(static_cast<uint8_t>(i), slots[i]);
     }
 }
 

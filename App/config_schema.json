@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": "1.3.0",
+  "schema_version": "1.4.0",
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
   "required": ["slots", "efSlots", "filter", "arg", "ledColors"],
@@ -24,7 +24,12 @@
           "active": { "type": "boolean" },
           "pot": { "type": "boolean" },
           "label": { "type": "string" },
-          "takeover": { "type": "boolean" }
+          "takeover": { "type": "boolean" },
+          "sysexTemplate": {
+            "type": "string",
+            "description": "Hex bytes plus xx/MSB/LSB placeholders",
+            "maxLength": 128
+          }
         },
         "additionalProperties": false
       }

@@ -264,10 +264,24 @@ messages, with the channel and data byte stored per slot:
 - **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
 - **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
 - **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
-- **SysEx** – raw byte dumps for when CCs just won't cut it.
+- **SysEx** – raw byte dumps for when CCs just won't cut it, now with 16-byte templates so you can drop in `XX`/`MSB`/`LSB`
+  placeholders and let the pot stream live data straight into manufacturer IDs.
 
 The Control Buttons let you cycle the message type, channel (1–16) and data values in
 real time. All assignments persist in EEPROM -if you remember to save them (this is coming from a Korg E2S owner)- so your setup survives a power cycle.
+
+#### Crafting SysEx templates
+
+Punching `SysEx` on a slot unlocks a tiny macro pad baked into EEPROM. Each slot can store up to 16 bytes that the firmware
+sprays exactly as written, with three special tokens that get replaced on the fly:
+
+- `XX` becomes the slot’s live 7-bit value (think standard CC resolution).
+- `MSB` and `LSB` tag-team for 14-bit sweeps mapped from the raw potentiometer value.
+- Everything else should be straight hex like `F0`, `7D`, `04`, etc. The template still has to start with `F0` and end with `F7`.
+
+Leave the template blank and we fall back to the legacy four-byte burst (`F0 data1 value F7`). Show the WebSerial editor a
+string like `F0 7F 01 04 XX F7` or `F0 7D 10 MSB LSB F7` and the firmware handles the substitution while mirroring the packet to
+USB and DIN. No code rebuilds, no magic numbers hiding in `firmware_main.cpp`.
 
 ### Incoming MIDI and Clock Sync
 

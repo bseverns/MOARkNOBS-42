@@ -189,7 +189,7 @@ function createSimulator() {
     fw_version: 'sim-fw',
     fw_git: 'deadbeef',
     build_ts: new Date().toISOString(),
-    schema_version: '1.3.0',
+    schema_version: '1.4.0',
     slot_count: 42,
     capabilities: { atomicApply: true },
     max_table_lengths: { ledColors: 16, efSlots: 6 },
@@ -203,7 +203,8 @@ function createSimulator() {
       midiChannel: (idx % 16) + 1,
       data1: (idx % 120) + 1,
       efIndex: idx % manifest.max_table_lengths.efSlots,
-      pot: true
+      pot: true,
+      sysexTemplate: ''
     })),
     arg: { method: 'PLUS', enable: true, a: 1, b: 1 },
     filter: { type: 'LOWPASS', freq: 800, q: 1 },
