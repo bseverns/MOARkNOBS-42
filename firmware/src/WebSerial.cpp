@@ -121,6 +121,11 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     const int slotValue = (currentSlot < NUM_POTS) ? static_cast<int>(currentSlot) : -1;
     doc["currentSlot"] = slotValue;
     doc["argMethod"] = argMethodLabel(config.getARGMethod());
+    doc["argEnabled"] = config.getARGEnable() != 0;
+
+    JsonArray argPair = doc.createNestedArray("argPair");
+    argPair.add(config.getEnvelopeA());
+    argPair.add(config.getEnvelopeB());
 
     JsonArray efStatus = doc.createNestedArray("efStatus");
     for (const auto &env : envelopes) {

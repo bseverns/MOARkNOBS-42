@@ -44,6 +44,8 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
   "envelopes":[0,0,0,0,0,0],
   "currentSlot":5,
   "argMethod":"PLUS",
+  "argEnabled":true,
+  "argPair":[0,1],
   "efStatus":[1,0,0,0,0,1],
   "diagnostics":{
     "uart_overruns":0,
@@ -62,6 +64,8 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
+- `argEnabled` – whether the ARG blender is live or bypassed.
+- `argPair` – the two envelope followers currently feeding the ARG stage (indexes 0‑5).
 - `efStatus` – array of six flags; `1` means that envelope follower is lit.
 - `diagnostics` – brand-new watchdog metrics surfacing how hard the MCU is being pushed:
   - `uart_overruns` – count of DIN UART receive overruns caught in hardware.

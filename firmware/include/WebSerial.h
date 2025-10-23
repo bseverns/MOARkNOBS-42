@@ -19,6 +19,8 @@ class WebSerial {
      *   "envelopes": [e0, e1, ..., e5],    // 6 values, each 0-127
      *   "currentSlot": <int>,              // -1 if nothing is armed, otherwise 0-41
      *   "argMethod": "<label>",          // e.g. "PLUS" or "MULT"
+     *   "argEnabled": <bool>,            // true if the ARG blender is active
+     *   "argPair": [a, b],               // envelope followers feeding the ARG input pair
      *   "efStatus": [0|1, ...],           // envelope follower enable flags
      *   "diagnostics": {
      *     "uart_overruns": <int>,         // DIN UART overruns caught since boot
