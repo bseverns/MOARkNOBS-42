@@ -140,32 +140,56 @@ void test_sysex_identity_request_reply() {
     expected.push_back(seedbox::interop::mn42::handshake::product::kSignature0);
     expected.push_back(seedbox::interop::mn42::handshake::product::kSignature1);
     expected.push_back(seedbox::interop::mn42::handshake::product::kSignature2);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature0);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature1);
-    expected.push_back(seedbox::interop::mn42::handshake::product::kSignature2);
     expected.push_back(seedbox::interop::mn42::handshake::product::kPresenceFlag);
 
-    std::array<uint8_t, 4> versionDigits{};
+    std::array<uint8_t, 4> versionBytes{};
     const char *versionStr = FW_VERSION_STR;
-    size_t versionCount = 0;
-    for (size_t i = 0; versionStr[i] != '\0' && versionCount < versionDigits.size(); ++i) {
-        char c = versionStr[i];
-        if (c >= '0' && c <= '9') {
-            versionDigits[versionCount++] = static_cast<uint8_t>(c - '0');
+    size_t cursor = 0;
+    auto parseComponent = [&](size_t &pos) {
+        uint16_t value = 0;
+        bool foundDigit = false;
+        while (versionStr[pos] != '\0') {
+            char c = versionStr[pos];
+            if (c >= '0' && c <= '9') {
+                foundDigit = true;
+                value = static_cast<uint16_t>(value * 10 + (c - '0'));
+                ++pos;
+            } else {
+                if (foundDigit) {
+                    break;
+                }
+                ++pos;
+            }
+        }
+        if (value > 0x7F) {
+            value = 0x7F;
+        }
+        return static_cast<uint8_t>(value);
+    };
+
+    versionBytes[0] = parseComponent(cursor);
+    if (versionStr[cursor] == '.') {
+        ++cursor;
+    }
+    versionBytes[1] = parseComponent(cursor);
+    if (versionStr[cursor] == '.') {
+        ++cursor;
+    }
+    versionBytes[2] = parseComponent(cursor);
+
+    const char *gitSha = GIT_SHA_STR;
+    uint8_t gitTag = 0;
+    for (size_t i = 0; gitSha[i] != '\0'; ++i) {
+        unsigned char c = static_cast<unsigned char>(gitSha[i]);
+        if (c < 0x80) {
+            gitTag = static_cast<uint8_t>(c);
+            break;
         }
     }
-    while (versionCount < versionDigits.size()) {
-        versionDigits[versionCount++] = 0;
-    }
-    expected.insert(expected.end(), versionDigits.begin(), versionDigits.end());
+    versionBytes[3] = gitTag;
 
-    expected.push_back('g');
-    expected.push_back('i');
-    expected.push_back('t');
-    expected.push_back('-');
-    const char *gitSha = GIT_SHA_STR;
-    for (size_t i = 0; gitSha[i] != '\0' && i < 4; ++i) {
-        expected.push_back(static_cast<uint8_t>(gitSha[i]));
+    for (uint8_t byte : versionBytes) {
+        expected.push_back(byte & 0x7F);
     }
     expected.push_back(0xF7);
 
