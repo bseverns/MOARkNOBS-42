@@ -429,258 +429,153 @@ void test_handle_sysex_drops_oversize() {
 
     TEST_ASSERT_EQUAL_UINT16(5, mh._lastSysExLength);
     TEST_ASSERT_EQUAL_UINT32(2, mh._rxCount);
+}
 
-    // When the serial queue is bursting at the seams with repeated CCs, the newest
-    // value should be the one that survives and older duplicates must get axed.
-    void test_serial_queue_coalesces_latest_value() {
-        MIDIHandler mh;
+// When the serial queue is bursting at the seams with repeated CCs, the newest
+// value should be the one that survives and older duplicates must get axed.
+void test_serial_queue_coalesces_latest_value() {
+    MIDIHandler mh;
 
-        auto base = mh.makeControlChange(3, 74, 0);
-        auto fresh = mh.makeControlChange(3, 74, 0x7F);
-        auto program = mh.makeProgramChange(5, 17);
-        auto note = mh.makeNoteOn(6, 64, 96);
+    auto base = mh.makeControlChange(3, 74, 0);
+    auto fresh = mh.makeControlChange(3, 74, 0x7F);
+    auto program = mh.makeProgramChange(5, 17);
+    auto note = mh.makeNoteOn(6, 64, 96);
 
-        for (size_t i = 0; i < MIDIHandler::kSerialQueueSize; ++i) {
-            mh._serialQueue[i] = base;
-            mh._serialQueue[i].data2 = static_cast<uint8_t>(i & 0x7F);
+    for (size_t i = 0; i < MIDIHandler::kSerialQueueSize; ++i) {
+        mh._serialQueue[i] = base;
+        mh._serialQueue[i].data2 = static_cast<uint8_t>(i & 0x7F);
+    }
+    mh._serialQueue[0] = program;
+    mh._serialQueue[3] = note;
+    mh._serialQueueHead = 0;
+    mh._serialQueueTail = 0;
+    mh._serialQueueFull = true;
+
+    TEST_ASSERT_TRUE(mh.enqueueSerialMessage(fresh));
+
+    TEST_ASSERT_FALSE(mh._serialQueueFull);
+    TEST_ASSERT_EQUAL_UINT32(3, mh.serialQueueSize());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::ProgramChange),
+                            static_cast<uint8_t>(mh._serialQueue[0].type));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::NoteOn),
+                            static_cast<uint8_t>(mh._serialQueue[1].type));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::ControlChange),
+                            static_cast<uint8_t>(mh._serialQueue[2].type));
+    TEST_ASSERT_EQUAL_UINT8(0x7F, mh._serialQueue[2].data2);
+}
+
+// DIN pacing can hold a message back for a few hundred microseconds; make sure
+// the idle polling path keeps draining the queue even without new traffic.
+void test_process_pumps_serial_queue() {
+    MIDIHandler mh;
+    MIDI.ccCount = 0;
+
+    auto msg = mh.makeControlChange(1, 99, 23);
+    mh.enqueueSerialMessage(msg);
+    mh._lastSerialSendUs = micros();
+
+    mh.serviceSerialQueue();
+    TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT32(1, mh.serialQueueSize());
+
+    mh._lastSerialSendUs =
+        micros() - static_cast<uint32_t>(msg.byteCount) * MIDIHandler::kSerialByteMicros;
+
+    mh.processIncomingMIDI();
+
+    TEST_ASSERT_EQUAL_UINT32(0, mh.serialQueueSize());
+    TEST_ASSERT_EQUAL_UINT8(1, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(99, MIDI.ccLog[0].control);
+    TEST_ASSERT_EQUAL_UINT8(23, MIDI.ccLog[0].value);
+}
+
+// If usbMIDI throws a curveball message type the firmware doesn't support we
+// should shrug and move on, not crash or mutate state.
+void test_drop_unsupported_usb_type() {
+    MIDIHandler mh;
+    MIDI.ccCount = usbMIDI.ccCount = 0;
+    mh.clockTick = false;
+    mh.lastExternalClock = mh.lastInternalTick = 0;
+    usbMIDI.nextType = static_cast<midi::MidiType>(0x7F);
+    usbMIDI.nextRead = true;
+    mh.processIncomingMIDI();
+    TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
+    TEST_ASSERT_EQUAL_UINT8(0, usbMIDI.ccCount);
+    TEST_ASSERT_FALSE(mh.clockTick);
+    TEST_ASSERT_EQUAL_UINT32(0, mh.lastExternalClock);
+    TEST_ASSERT_EQUAL_UINT32(0, mh.lastInternalTick);
+}
+
+// Taps into usbMIDI's fake clock message to ensure we bump the edge counter
+// and leave a bread crumb for whoever polls ::isClockTick().
+void test_usb_clock_tick_advances_counter() {
+    MIDIHandler mh;
+    mh.clockTick = false;
+    mh._clockTickCount = 0;
+    usbMIDI.nextRead = true;
+    usbMIDI.nextType = midi::Tick;
+
+    mh.processIncomingMIDI();
+
+    TEST_ASSERT_EQUAL_UINT32(1, mh.clockTickCount());
+    TEST_ASSERT_TRUE(mh.isClockTick());
+    mh.clearClockTick();
+    TEST_ASSERT_FALSE(mh.isClockTick());
+}
+
+// Exercise the internal clock generator and make sure the transmit counter
+// ticks along with the virtual pulse when the global clock out flag is hot.
+void test_generate_clock_tick_advances_counter() {
+    MIDIHandler mh;
+    mh.clockTick = false;
+    mh._clockTickCount = 0;
+    mh._txCount = 0;
+    g_clockOutEnabled = true;
+
+    mh.generateClockTick();
+
+    TEST_ASSERT_EQUAL_UINT32(1, mh.clockTickCount());
+    TEST_ASSERT_TRUE(mh.isClockTick());
+    TEST_ASSERT_EQUAL_UINT32(1, mh._txCount);
+
+    mh.clearClockTick();
+    g_clockOutEnabled = false;
+}
+
+// Schema 0x0003 should vaporise legacy 6-byte slot data before we start reading.
+void test_config_manager_wipes_legacy_slot_stride() {
+    // Pretend we just flashed over a 0x0002 build.
+    constexpr uint16_t kLegacyVersion = 0x0002;
+    EEPROM.put(EEPROM_CONFIG_VERSION, kLegacyVersion);
+
+    // Backfill the old 6-byte stride so the wipe has something obvious to nuke.
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        const uint16_t legacyAddress = static_cast<uint16_t>(EEPROM_SLOT_BASE + slot * 6);
+        for (uint8_t byte = 0; byte < 6; ++byte) {
+            EEPROM.update(static_cast<int>(legacyAddress + byte), 0x7E);
         }
-        mh._serialQueue[0] = program;
-        mh._serialQueue[3] = note;
-        mh._serialQueueHead = 0;
-        mh._serialQueueTail = 0;
-        mh._serialQueueFull = true;
-
-        TEST_ASSERT_TRUE(mh.enqueueSerialMessage(fresh));
-
-        TEST_ASSERT_FALSE(mh._serialQueueFull);
-        TEST_ASSERT_EQUAL_UINT32(3, mh.serialQueueSize());
-        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::ProgramChange),
-                                static_cast<uint8_t>(mh._serialQueue[0].type));
-        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::NoteOn),
-                                static_cast<uint8_t>(mh._serialQueue[1].type));
-        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIHandler::SerialMessageType::ControlChange),
-                                static_cast<uint8_t>(mh._serialQueue[2].type));
-        TEST_ASSERT_EQUAL_UINT8(0x7F, mh._serialQueue[2].data2);
     }
 
-    // DIN pacing can hold a message back for a few hundred microseconds; make sure
-    // the idle polling path keeps draining the queue even without new traffic.
-    void test_process_pumps_serial_queue() {
-        MIDIHandler mh;
-        MIDI.ccCount = 0;
+    // Drop breadcrumbs into the profile blocks; the sanitizer should zero them.
+    EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(1)), 0xA5);
+    EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(2)), 0x5A);
 
-        auto msg = mh.makeControlChange(1, 99, 23);
-        mh.enqueueSerialMessage(msg);
-        mh._lastSerialSendUs = micros();
+    ConfigManager cfg = createConfigManager();
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
 
-        mh.serviceSerialQueue();
-        TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
-        TEST_ASSERT_EQUAL_UINT32(1, mh.serialQueueSize());
-
-        mh._lastSerialSendUs =
-            micros() - static_cast<uint32_t>(msg.byteCount) * MIDIHandler::kSerialByteMicros;
-
-        mh.processIncomingMIDI();
-
-        TEST_ASSERT_EQUAL_UINT32(0, mh.serialQueueSize());
-        TEST_ASSERT_EQUAL_UINT8(1, MIDI.ccCount);
-        TEST_ASSERT_EQUAL_UINT8(99, MIDI.ccLog[0].control);
-        TEST_ASSERT_EQUAL_UINT8(23, MIDI.ccLog[0].value);
+    MIDISlot stored{};
+    EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), stored);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::OFF),
+                            static_cast<uint8_t>(stored.type));
+    TEST_ASSERT_EQUAL_UINT8(1, stored.midiChannel);
+    TEST_ASSERT_EQUAL_UINT8(0, stored.sysexLength);
+    for (uint8_t i = 0; i < SysExTemplate::kMaxLength; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0, stored.sysexTemplate[i]);
     }
 
-    // If usbMIDI throws a curveball message type the firmware doesn't support we
-    // should shrug and move on, not crash or mutate state.
-    void test_drop_unsupported_usb_type() {
-        MIDIHandler mh;
-        MIDI.ccCount = usbMIDI.ccCount = 0;
-        mh.clockTick = false;
-        mh.lastExternalClock = mh.lastInternalTick = 0;
-        usbMIDI.nextType = static_cast<midi::MidiType>(0x7F);
-        usbMIDI.nextRead = true;
-        mh.processIncomingMIDI();
-        TEST_ASSERT_EQUAL_UINT8(0, MIDI.ccCount);
-        TEST_ASSERT_EQUAL_UINT8(0, usbMIDI.ccCount);
-        TEST_ASSERT_FALSE(mh.clockTick);
-        TEST_ASSERT_EQUAL_UINT32(0, mh.lastExternalClock);
-        TEST_ASSERT_EQUAL_UINT32(0, mh.lastInternalTick);
-    }
-
-    // Taps into usbMIDI's fake clock message to ensure we bump the edge counter
-    // and leave a bread crumb for whoever polls ::isClockTick().
-    void test_usb_clock_tick_advances_counter() {
-        MIDIHandler mh;
-        mh.clockTick = false;
-        mh._clockTickCount = 0;
-        usbMIDI.nextRead = true;
-        usbMIDI.nextType = midi::Tick;
-
-        mh.processIncomingMIDI();
-
-        TEST_ASSERT_EQUAL_UINT32(1, mh.clockTickCount());
-        TEST_ASSERT_TRUE(mh.isClockTick());
-        mh.clearClockTick();
-        TEST_ASSERT_FALSE(mh.isClockTick());
-    }
-
-    // Exercise the internal clock generator and make sure the transmit counter
-    // ticks along with the virtual pulse when the global clock out flag is hot.
-    void test_generate_clock_tick_advances_counter() {
-        MIDIHandler mh;
-        mh.clockTick = false;
-        mh._clockTickCount = 0;
-        mh._txCount = 0;
-        g_clockOutEnabled = true;
-
-        mh.generateClockTick();
-
-        TEST_ASSERT_EQUAL_UINT32(1, mh.clockTickCount());
-        TEST_ASSERT_TRUE(mh.isClockTick());
-        TEST_ASSERT_EQUAL_UINT32(1, mh._txCount);
-
-        mh.clearClockTick();
-        g_clockOutEnabled = false;
-    }
-
-    // Schema 0x0003 should vaporise legacy 6-byte slot data before we start reading.
-    void test_config_manager_wipes_legacy_slot_stride() {
-        // Pretend we just flashed over a 0x0002 build.
-        constexpr uint16_t kLegacyVersion = 0x0002;
-        EEPROM.put(EEPROM_CONFIG_VERSION, kLegacyVersion);
-
-        // Backfill the old 6-byte stride so the wipe has something obvious to nuke.
-        for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
-            const uint16_t legacyAddress = static_cast<uint16_t>(EEPROM_SLOT_BASE + slot * 6);
-            for (uint8_t byte = 0; byte < 6; ++byte) {
-                EEPROM.update(static_cast<int>(legacyAddress + byte), 0x7E);
-            }
-        }
-
-        // Drop breadcrumbs into the profile blocks; the sanitizer should zero them.
-        EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(1)), 0xA5);
-        EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(2)), 0x5A);
-
-        ConfigManager cfg = createConfigManager();
-        std::vector<uint8_t> pots;
-        cfg.begin(pots);
-
-        MIDISlot stored{};
-        EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), stored);
-        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::OFF),
-                                static_cast<uint8_t>(stored.type));
-        TEST_ASSERT_EQUAL_UINT8(1, stored.midiChannel);
-        TEST_ASSERT_EQUAL_UINT8(0, stored.sysexLength);
-        for (uint8_t i = 0; i < SysExTemplate::kMaxLength; ++i) {
-            TEST_ASSERT_EQUAL_UINT8(0, stored.sysexTemplate[i]);
-        }
-
-        TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(1))));
-        TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(2))));
-        // Hammer the control-change lane with a burst of pot updates and confirm every
-        // tick makes it out without triggering the stub's overflow latch.
-        void test_pot_burst_keeps_cc_counters_honest() {
-            UsbMidiGuard guard;
-            resetMidiTransports();
-
-            MIDIHandler mh;
-            mh._txCount = 0;
-
-            ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-            MIDISlot &slot = cfg.getSlot(0);
-            slot.active = true;
-            slot.type = MIDIMessageType::CC;
-            slot.midiChannel = 3;
-            slot.data1 = 74;
-
-            constexpr uint16_t kBursts = 96;
-            for (uint16_t i = 0; i < kBursts; ++i) {
-                uint16_t raw = static_cast<uint16_t>((i * 37) % 1024);
-                uint8_t mapped = Utility::mapToMidiValue(raw);
-                mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
-            }
-
-            TEST_ASSERT_EQUAL_UINT32(kBursts, mh._txCount);
-            TEST_ASSERT_EQUAL_UINT32(kBursts, MIDI.ccTotal);
-            TEST_ASSERT_EQUAL_UINT32(kBursts, usbMIDI.ccTotal);
-            TEST_ASSERT_FALSE(MIDI.ccOverflow);
-            TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
-        }
-
-        // Feed a fat SysEx message through sendSysEx and make sure the transport logs
-        // every byte without truncation.
-        void test_long_sysex_payload_round_trips() {
-            UsbMidiGuard guard;
-            resetMidiTransports();
-
-            MIDIHandler mh;
-
-            std::array<uint8_t, 120> payload{};
-            payload[0] = 0xF0;
-            for (size_t i = 1; i < payload.size() - 1; ++i) {
-                payload[i] = static_cast<uint8_t>((i * 7) & 0x7F);
-            }
-            payload.back() = 0xF7;
-
-            mh.sendSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
-
-            TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.lastSysExLength);
-            TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.lastSysExLength);
-            TEST_ASSERT_FALSE(MIDI.sysExOverflow);
-            TEST_ASSERT_FALSE(usbMIDI.sysExOverflow);
-            for (size_t i = 0; i < payload.size(); ++i) {
-                TEST_ASSERT_EQUAL_UINT8(payload[i], MIDI.lastSysEx[i]);
-                TEST_ASSERT_EQUAL_UINT8(payload[i], usbMIDI.lastSysEx[i]);
-            }
-        }
-
-        // While MIDI is streaming, flip a slot from CC to Note mode and confirm the
-        // handler keeps emitting valid traffic instead of choking.
-        void test_config_mutation_during_stream_stays_valid() {
-            UsbMidiGuard guard;
-            resetMidiTransports();
-
-            MIDIHandler mh;
-            mh._txCount = 0;
-
-            ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-            MIDISlot &slot = cfg.getSlot(0);
-            slot.active = true;
-            slot.type = MIDIMessageType::CC;
-            slot.midiChannel = 4;
-            slot.data1 = 42;
-            slot.efIndex = 0;
-
-            StubEnvelope env{110};
-            uint32_t ccEvents = 0;
-            uint32_t noteEvents = 0;
-
-            constexpr uint16_t kUpdates = 40;
-            for (uint16_t i = 0; i < kUpdates; ++i) {
-                uint16_t raw = static_cast<uint16_t>((i * 23) % 1024);
-                uint8_t mapped = Utility::mapToMidiValue(raw);
-
-                if (i == kUpdates / 2) {
-                    slot.type = MIDIMessageType::Note;
-                }
-
-                if (slot.type == MIDIMessageType::CC) {
-                    mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
-                    ++ccEvents;
-                } else {
-                    uint8_t note = static_cast<uint8_t>(Utility::mapToMidiValue(raw) % 128);
-                    uint8_t velocity = env.getEnvelopeLevel();
-                    mh.sendNoteOn(note, velocity, slot.midiChannel);
-                    mh.sendNoteOff(note, 0, slot.midiChannel);
-                    ++noteEvents;
-                }
-            }
-
-            TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, ccEvents);
-            TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, noteEvents);
-            TEST_ASSERT_EQUAL_UINT32(ccEvents + noteEvents * 2, mh._txCount);
-            TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, usbMIDI.lastNoteOnChannel);
-            TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, MIDI.lastNoteOnChannel);
-            TEST_ASSERT_FALSE(MIDI.ccOverflow);
-            TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
-        }
+    TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(1))));
+    TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(2))));
+}
 
 #endif // UNIT_TEST
