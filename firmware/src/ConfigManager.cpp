@@ -76,13 +76,13 @@ void maybeRescueFilterTailFromLegacy() {
 SlotARGConfig sanitizeSlotArg(const SlotARGConfig &config) {
     SlotARGConfig sanitized = config;
     sanitized.enabled = config.enabled ? 1 : 0;
-    int rawMethod = constrain(static_cast<int>(config.method), 0,
-                              static_cast<int>(ARGMethod::XORR));
+    int rawMethod =
+        constrain(static_cast<int>(config.method), 0, static_cast<int>(ARGMethod::XORR));
     sanitized.method = static_cast<ARGMethod>(rawMethod);
-    sanitized.sourceA = static_cast<uint8_t>(
-        constrain(static_cast<int>(config.sourceA), 0, NUM_ENVELOPES - 1));
-    sanitized.sourceB = static_cast<uint8_t>(
-        constrain(static_cast<int>(config.sourceB), 0, NUM_ENVELOPES - 1));
+    sanitized.sourceA =
+        static_cast<uint8_t>(constrain(static_cast<int>(config.sourceA), 0, NUM_ENVELOPES - 1));
+    sanitized.sourceB =
+        static_cast<uint8_t>(constrain(static_cast<int>(config.sourceB), 0, NUM_ENVELOPES - 1));
     if (NUM_ENVELOPES > 1 && sanitized.sourceA == sanitized.sourceB) {
         sanitized.sourceB = static_cast<uint8_t>((sanitized.sourceA + 1) % NUM_ENVELOPES);
     }
@@ -702,8 +702,8 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             upgraded.efPayload = sanitizedPayload;
             upgraded.arg = defaults;
 
-            const int upgradedAddress = static_cast<int>(
-                EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
+            const int upgradedAddress =
+                static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
             EEPROM.put(upgradedAddress, upgraded);
         }
     } else { // storedVersion == 0x0004
@@ -712,7 +712,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             uint8_t midiChannel;
             uint8_t data1;
             uint8_t efIndex;
-            bool active;
+            uint8_t active;
             uint8_t arpNote;
             uint8_t sysexLength;
             std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate;
@@ -720,26 +720,30 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         };
         static_assert(sizeof(LegacyMIDISlotV4) == 36, "Legacy v4 slot size drifted");
 
+        std::array<LegacyMIDISlotV4, NUM_SLOTS> legacySlots{};
         for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-            LegacyMIDISlotV4 legacy{};
             const int legacyAddress = static_cast<int>(
                 EEPROM_SLOT_BASE + static_cast<size_t>(i) * sizeof(LegacyMIDISlotV4));
-            EEPROM.get(legacyAddress, legacy);
+            EEPROM.get(legacyAddress, legacySlots[i]);
+        }
+
+        for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
+            const LegacyMIDISlotV4 &legacy = legacySlots[static_cast<size_t>(i)];
 
             MIDISlot upgraded{};
             upgraded.type = legacy.type;
             upgraded.midiChannel = legacy.midiChannel;
             upgraded.data1 = legacy.data1;
             upgraded.efIndex = legacy.efIndex;
-            upgraded.active = legacy.active;
+            upgraded.active = legacy.active != 0;
             upgraded.arpNote = legacy.arpNote;
             upgraded.sysexLength = legacy.sysexLength;
             upgraded.sysexTemplate = legacy.sysexTemplate;
             upgraded.efPayload = sanitizeEnvelopePayload(legacy.efPayload);
             upgraded.arg = defaults;
 
-            const int upgradedAddress = static_cast<int>(
-                EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
+            const int upgradedAddress =
+                static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
             EEPROM.put(upgradedAddress, upgraded);
         }
 
