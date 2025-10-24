@@ -9,9 +9,6 @@
 
 extern bool webSerialStreaming;
 
-// Provide a weak fallback so test harnesses link even without firmware_main.cpp.
-bool webSerialStreaming __attribute__((weak)) = false;
-
 namespace {
 const char *slotTypeSchemaName(MIDIMessageType type) {
     switch (type) {
