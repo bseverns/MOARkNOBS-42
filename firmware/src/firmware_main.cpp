@@ -416,7 +416,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         }
         if (argObj.containsKey("method")) {
             if (argObj["method"].is<const char *>()) {
-                incoming.method = parseArgMethod(argObj["method"].as<const char *>(), incoming.method);
+                incoming.method =
+                    parseArgMethod(argObj["method"].as<const char *>(), incoming.method);
             } else {
                 incoming.method = static_cast<ARGMethod>(
                     constrain(argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
@@ -495,10 +496,11 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             }
             if (argObj.containsKey("method")) {
                 if (argObj["method"].is<const char *>()) {
-                    slotArg.method = parseArgMethod(argObj["method"].as<const char *>(), slotArg.method);
+                    slotArg.method =
+                        parseArgMethod(argObj["method"].as<const char *>(), slotArg.method);
                 } else {
-                    slotArg.method = static_cast<ARGMethod>(
-                        constrain(argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
+                    slotArg.method = static_cast<ARGMethod>(constrain(
+                        argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
                 }
             }
             if (argObj.containsKey("a")) {

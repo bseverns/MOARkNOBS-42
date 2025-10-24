@@ -48,9 +48,9 @@ static constexpr ARGMethod ALL_ARG_METHODS[] = {
     ARGMethod::BABS, ARGMethod::TABS, ARGMethod::MULT, ARGMethod::DIVI, ARGMethod::AVG,
     ARGMethod::XABS, ARGMethod::MAXX, ARGMethod::MINN, ARGMethod::XORR};
 
-static constexpr const char *ARG_METHOD_NAMES[] = {
-    "PLUS", "MIN",  "PECK", "SHAV", "SQAR", "BABS", "TABS",
-    "MULT", "DIVI", "AVG",  "XABS", "MAXX", "MINN", "XORR"};
+static constexpr const char *ARG_METHOD_NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
+                                                   "BABS", "TABS", "MULT", "DIVI", "AVG",
+                                                   "XABS", "MAXX", "MINN", "XORR"};
 
 static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0]);
 

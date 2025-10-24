@@ -54,10 +54,10 @@ enum class ARGMethod : uint8_t {
 };
 
 struct SlotARGConfig {
-    uint8_t enabled = 0;          //!< Non-zero enables ARG blending for the slot
+    uint8_t enabled = 0;                //!< Non-zero enables ARG blending for the slot
     ARGMethod method = ARGMethod::PLUS; //!< Math trick to apply when enabled
-    uint8_t sourceA = 0;          //!< Envelope follower index feeding input A
-    uint8_t sourceB = 1;          //!< Envelope follower index feeding input B
+    uint8_t sourceA = 0;                //!< Envelope follower index feeding input A
+    uint8_t sourceB = 1;                //!< Envelope follower index feeding input B
 };
 
 /** Configuration for a single pot slot. */
