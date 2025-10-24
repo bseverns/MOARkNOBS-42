@@ -15,6 +15,8 @@
 #include <array>
 #include <FastLED.h>
 
+SlotARGConfig sanitizeSlotArg(const SlotARGConfig &config);
+
 class MIDIHandler;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -230,6 +232,15 @@ class ConfigManager {
     /** Return a reference to a specific slot. */
     MIDISlot &getSlot(uint8_t idx) { return slots[idx]; }
 
+    /** Fetch the stored envelope payload associated with a slot. */
+    SlotEnvelopePayload getSlotEnvelopePayload(uint8_t idx) const;
+
+    /** Replace the stored envelope payload for a slot and persist it. */
+    void setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload);
+
+    /** Mirror the most recent global filter tuning into the EEPROM tail. */
+    SlotEnvelopePayload persistFilterTail(const SlotEnvelopePayload &payload);
+
     /** Read a single MIDISlot from EEPROM into the provided struct. */
     void loadSlot(uint8_t idx, MIDISlot &dest);
     /** Write one MIDISlot structure back to EEPROM. */
@@ -240,14 +251,6 @@ class ConfigManager {
     uint8_t _numButtons;
 
     std::array<MIDISlot, NUM_SLOTS> slots; // 42 of them
-
-    struct LegacyARGConfig {
-        uint8_t mode = 0;
-        uint8_t method = 0;
-        uint8_t enable = 0;
-        uint8_t sourceA = 0;
-        uint8_t sourceB = 1;
-    } legacyArg;
 
     // Health‑check & backup support
     bool checkEEPROMHealth(bool backup,
@@ -271,7 +274,16 @@ class ConfigManager {
     void wipeSlotRegion();
     void wipeProfileBlocks();
     static bool slotLooksSane(const MIDISlot &candidate);
-    static SlotARGConfig sanitizeArgConfig(const SlotARGConfig &candidate);
+    void migrateLegacySlotPayloads(uint16_t storedVersion);
+    SlotEnvelopePayload seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
+    static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
+    struct LegacyARGSettings {
+        uint8_t mode = 0;
+        uint8_t method = 0;
+        uint8_t enable = 0;
+        uint8_t sourceA = 0;
+        uint8_t sourceB = 1;
+    } legacyArg{};
     void loadLegacyARGSettings();
     void migrateLegacyARGSettings();
 };

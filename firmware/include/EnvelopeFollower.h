@@ -33,6 +33,27 @@ class EnvelopeFollower {
     /** Available shaping/filter modes. */
     enum FilterType { LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, RANDOM, LOWPASS, HIGHPASS, BANDPASS };
 
+    /** Operating modes for the follower. */
+    enum Mode { SEF, ARG };
+
+    /** Math tricks available when blending two envelopes in ARG mode. */
+    enum ARG_Method {
+        PLUS,
+        MIN,
+        PECK,
+        SHAV,
+        SQAR,
+        BABS,
+        TABS,
+        MULT,
+        DIVI,
+        AVG,
+        XABS,
+        MAXX,
+        MINN,
+        XORR
+    };
+
   private:
     float shapingFreq = 1000.0f; // Frequency or shaping parameter
     float shapingQ = 0.707f;     // Resonance or secondary shaping parameter
@@ -44,6 +65,13 @@ class EnvelopeFollower {
 
     // Existing filter type
     FilterType filterType;
+    // Track whether we're in SEF or ARG mode
+    Mode mode;
+    // Which ARG method is selected
+    ARG_Method argMethod;
+    // Envelope indices used by ARG mode (store as Teensy analog pins)
+    int envelopeA;
+    int envelopeB;
 
     // Calibration values
     float baseline = 0.0f; // value subtracted from raw input to ditch noise
@@ -111,6 +139,22 @@ class EnvelopeFollower {
 
     /** Return the last processed envelope level (0-127). */
     int getEnvelopeLevel() const;
+
+    /** Switch between SEF and ARG operating modes. */
+    void setMode(Mode newMode);
+    Mode getMode() const { return mode; }
+
+    /** Select which arithmetic method to use in ARG mode. */
+    void setARGMethod(ARG_Method method);
+    /** Report which ARG math trick we currently have armed. */
+    ARG_Method getARGMethod() const;
+
+    /** Specify which two inputs feed the ARG calculations. */
+    void setEnvelopePair(int envA, int envB);
+    /** Return the configured A input pin for the ARG blender. */
+    int getEnvelopeA() const;
+    /** Return the configured B input pin for the ARG blender. */
+    int getEnvelopeB() const;
 
     /**
      * Sample Vref and the current input, then burn the baseline to EEPROM so

@@ -28,14 +28,7 @@ enum class SysExType : uint8_t {
     UniversalRealTime         //!< 0x7F per the MIDI spec
 };
 
-/**
- * Slot-scoped arithmetic routing grid (ARG) settings.
- *
- * Each slot can optionally splice two envelope followers together using
- * a method lifted straight from the legacy global ARG engine.  We keep
- * the payload tiny so it still fits neatly inside the EEPROM footprint
- * without blowing up the slot struct.
- */
+/** Enumerates how the per-slot ARG mixer should blend its envelope pair. */
 enum class ARGMethod : uint8_t {
     PLUS = 0,
     MIN,
@@ -53,45 +46,44 @@ enum class ARGMethod : uint8_t {
     XORR,
 };
 
-struct SlotARGConfig {
-    uint8_t enabled = 0;                //!< Non-zero enables ARG blending for the slot
-    ARGMethod method = ARGMethod::PLUS; //!< Math trick to apply when enabled
-    uint8_t sourceA = 0;                //!< Envelope follower index feeding input A
-    uint8_t sourceB = 1;                //!< Envelope follower index feeding input B
+/** Envelope follower payload persisted alongside the slot definition. */
+struct SlotEnvelopePayload {
+    uint8_t filterType = 0; //!< EnvelopeFollower::FilterType value
+    float frequency = 0.0f; //!< Stored cutoff/shape frequency (Hz or scalar)
+    float q = 0.0f;         //!< Stored resonance/Q for biquad-driven modes
 };
 
-/**
- * Envelope follower settings persisted with each slot.
- *
- * The struct lives at global scope so helper functions can talk about a slot's
- * configuration without dragging MIDISlot itself into the conversation.  The
- * slot struct aliases this record so existing code using MIDISlot::EfSettings
- * keeps working.
- */
-struct EfSettings {
-    /** Filter shapes mirrored from EnvelopeFollower::FilterType. */
-    enum class FilterType : uint8_t {
-        Linear = 0,
-        OppositeLinear,
-        Exponential,
-        Random,
-        Lowpass,
-        Highpass,
-        Bandpass
-    };
-
-    FilterType filterType = FilterType::Linear; //!< Desired filter topology
-    int8_t followerIndex = -1;                  //!< Assigned hardware follower (-1 when unbound)
-    uint8_t oversample = 4;                     //!< ADC oversample count (1 == disabled)
-    float frequency = 1000.0f;                  //!< Cutoff/shape frequency in Hz
-    float q = 0.707f;                           //!< Resonance / secondary filter parameter
-    float smoothing = 0.2f;                     //!< EWMA smoothing factor (0..1)
-    float baseline = 0.0f;                      //!< Noise floor offset after calibration
-    float gain = 1.0f;                          //!< Output gain applied post-baseline
+/** Slot-local configuration for the ARG combiner. */
+struct SlotARGConfig {
+    uint8_t enabled = 0;                //!< Non-zero enables ARG processing for this slot
+    ARGMethod method = ARGMethod::PLUS; //!< Mixer math to apply when ARG is on
+    uint8_t sourceA = 0;                //!< Primary envelope index
+    uint8_t sourceB = 1;                //!< Secondary envelope index
 };
 
 struct MIDISlot {
-    using EfSettings = ::EfSettings;
+    /** Envelope follower configuration scoped to this slot. */
+    struct EfSettings {
+        /** Filter shapes mirrored from EnvelopeFollower::FilterType. */
+        enum class FilterType : uint8_t {
+            Linear = 0,
+            OppositeLinear,
+            Exponential,
+            Random,
+            Lowpass,
+            Highpass,
+            Bandpass
+        };
+
+        int8_t followerIndex = -1; //!< Assigned hardware follower (-1 when unbound)
+        uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
+        FilterType filterType = FilterType::Linear;
+        float frequency = 1000.0f; //!< Cutoff/shape frequency in Hz
+        float q = 0.707f;          //!< Resonance / secondary filter parameter
+        float smoothing = 0.2f;    //!< EWMA smoothing factor (0..1)
+        float baseline = 0.0f;     //!< Noise floor offset after calibration
+        float gain = 1.0f;         //!< Output gain applied post-baseline
+    };
 
     MIDIMessageType type = MIDIMessageType::OFF;
     uint8_t midiChannel = 1;
@@ -101,12 +93,28 @@ struct MIDISlot {
     uint8_t sysexLength = 0;
     EfSettings efSettings{}; //!< Slot-specific envelope follower settings
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
-    EfSettings ef{};     //!< Local envelope follower configuration
+    struct EfRuntime {
+        int8_t followerIndex = -1; //!< Currently assigned hardware follower (-1 when unbound)
+    };
+    EfRuntime ef{};      //!< Live envelope follower assignment metadata
     SlotARGConfig arg{}; //!< Slot-local ARG mixer settings
+
+    /** Update both persistent and runtime follower assignments in lockstep. */
+    void setEnvelopeFollowerIndex(int8_t index) {
+        ef.followerIndex = index;
+        efSettings.followerIndex = index;
+    }
+
+    /** Convenience accessor mirroring the currently assigned follower index. */
+    int8_t getEnvelopeFollowerIndex() const { return ef.followerIndex; }
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) <= 96, "MIDISlot exploded past the expected 96 bytes");
+// The slot struct picked up a richer envelope follower payload which nudged it
+// past the original 64-byte budget. We still guard the footprint, but give it a
+// little more breathing room so the build doesn't implode every time we add a
+// tuning parameter.
+static_assert(sizeof(MIDISlot) <= 80, "MIDISlot exploded past the expected 80 bytes");
 
 #endif // MIDI_TYPES_H

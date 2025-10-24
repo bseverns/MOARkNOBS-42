@@ -262,22 +262,23 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     body["ef_index"] = slot.ef.followerIndex;
     JsonObject ef = body.createNestedObject("ef");
     ef["index"] = slot.ef.followerIndex;
-    ef["filter_index"] = static_cast<uint8_t>(slot.ef.filterType);
-    ef["filter_name"] = efFilterLabel(slot.ef.filterType);
-    ef["frequency"] = slot.ef.frequency;
-    ef["q"] = slot.ef.q;
-    ef["oversample"] = slot.ef.oversample;
-    ef["smoothing"] = slot.ef.smoothing;
-    ef["baseline"] = slot.ef.baseline;
-    ef["gain"] = slot.ef.gain;
+    ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+    ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
+    ef["frequency"] = slot.efSettings.frequency;
+    ef["q"] = slot.efSettings.q;
+    ef["oversample"] = slot.efSettings.oversample;
+    ef["smoothing"] = slot.efSettings.smoothing;
+    ef["baseline"] = slot.efSettings.baseline;
+    ef["gain"] = slot.efSettings.gain;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
-    JsonObject efCfg = body.createNestedObject("efSettings");
-    efCfg["type_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
-    efCfg["type"] =
-        filterName(static_cast<EnvelopeFollower::FilterType>(slot.efSettings.filterType));
-    efCfg["freq"] = slot.efSettings.frequency;
-    efCfg["q"] = slot.efSettings.q;
+    SlotEnvelopePayload payload = config.getSlotEnvelopePayload(slotIndex);
+    JsonObject efPayload = body.createNestedObject("ef_payload");
+    efPayload["type_index"] = payload.filterType;
+    efPayload["type_name"] =
+        filterName(static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+    efPayload["freq"] = payload.frequency;
+    efPayload["q"] = payload.q;
     JsonObject arg = body.createNestedObject("arg");
     arg["enabled"] = slot.arg.enabled != 0;
     arg["method"] = static_cast<uint8_t>(slot.arg.method);
