@@ -471,109 +471,67 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
  * Double press logic
  */
 void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &context) {
-    // If user double-pressed a slot button (0..41)
-    if (index < NUM_VIRTUAL_BUTTONS) {
-        auto it = context.potToEnvelopeMap.find(index);
+    auto cycleFilterForSlot = [&](int slotIndex, int delta) {
+        auto it = context.potToEnvelopeMap.find(slotIndex);
         if (it == context.potToEnvelopeMap.end()) {
             context.displayManager.displayStatus("No EF assigned", 1000);
-            return;
+            return false;
         }
+
         MIDISlot::EfSettings settings = it->second;
         if (settings.followerIndex < 0 ||
             settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
             context.displayManager.displayStatus("No EF assigned", 1000);
-            return;
+            return false;
         }
-        settings.filterType = cycleFilter(settings.filterType, +1);
-        commitEfSettings(context, index, settings);
+
+        settings.filterType = cycleFilter(settings.filterType, delta);
+        commitEfSettings(context, slotIndex, settings);
+        saveSlotEfSettings(static_cast<uint8_t>(slotIndex), settings);
+
         const char *filterName = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
         char msg[32];
-        sprintf(msg, "Slot %d => %s", index, filterName);
+        sprintf(msg, "Slot %d => %s", slotIndex, filterName);
         context.displayManager.displayStatus(msg, 1500);
         streamFilterPatch(context.envelopes[settings.followerIndex]);
-    } else {
-        // Double-press on a control button
-        uint8_t cIndex = index - NUM_VIRTUAL_BUTTONS;
-        switch (cIndex) {
-        case 0: {
-            // Double Press (Ctrl #0): Cycle EF filter forward
-            auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-            MIDISlot::EfSettings settings = it->second;
-            if (settings.followerIndex < 0 ||
-                settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-            settings.filterType = cycleFilter(settings.filterType, +1);
-            commitEfSettings(context, context.activePot, settings);
+        return true;
+    };
 
-            const char *name = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
-            char msg[32];
-            sprintf(msg, "Slot %d => %s", context.activePot, name);
-            context.displayManager.displayStatus(msg, 1500);
-            streamFilterPatch(context.envelopes[settings.followerIndex]);
-            break;
-        }
+    if (index < NUM_VIRTUAL_BUTTONS) {
+        cycleFilterForSlot(index, +1);
+        return;
+    }
 
-        case 1: {
-            // Double Press (Ctrl #1): Cycle EF filter backward
-            // [CHANGED] => use activePot instead of 'index', and properly wrap negative
-            auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-            MIDISlot::EfSettings settings = it->second;
-            if (settings.followerIndex < 0 ||
-                settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-
-            settings.filterType = cycleFilter(settings.filterType, -1);
-            commitEfSettings(context, context.activePot, settings);
-
-            const char *name = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
-            char msg[32];
-            sprintf(msg, "Slot %d => %s", context.activePot, name);
-            context.displayManager.displayStatus(msg, 1500);
-            streamFilterPatch(context.envelopes[settings.followerIndex]);
-            break; // <--- ensure we break out of case 1
-        }
-
-        case 2: {
-            // Double Press (Ctrl #2): Cycle MIDI message type
-            MIDISlot &slot = context.configManager.getSlot(context.activePot);
-            slot.type = static_cast<MIDIMessageType>(
-                (static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
-            context.configManager.saveSlot(context.activePot, slot);
-            char buf[32];
-            sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
-            context.displayManager.displayStatus(buf, 1500);
-            streamSlotPatch(context.configManager, context.activePot);
-            break;
-        }
-
-        case 4: {
-            // Intentionally left blank: no double-press stunt for Ctrl #4 now
-            context.displayManager.displayStatus("No Double Action", 1000);
-            break;
-        }
-
-        case 5: {
-            // Intentionally left blank: no double-press stunt for Ctrl #5 now
-            context.displayManager.displayStatus("No Double Action", 1000);
-            break;
-        }
-
-        default:
-            context.displayManager.displayStatus("Unknown double press", 1000);
-            break;
-        }
+    // Double-press on a control button
+    uint8_t cIndex = index - NUM_VIRTUAL_BUTTONS;
+    switch (cIndex) {
+    case 0:
+        cycleFilterForSlot(context.activePot, +1);
+        break;
+    case 1:
+        cycleFilterForSlot(context.activePot, -1);
+        break;
+    case 2: {
+        // Double Press (Ctrl #2): Cycle MIDI message type
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) %
+                                                 (static_cast<int>(MIDIMessageType::SysEx) + 1));
+        context.configManager.saveSlot(context.activePot, slot);
+        char buf[32];
+        sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
+        context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
+        break;
+    }
+    case 4:
+        context.displayManager.displayStatus("No Double Action", 1000);
+        break;
+    case 5:
+        context.displayManager.displayStatus("No Double Action", 1000);
+        break;
+    default:
+        context.displayManager.displayStatus("Unknown double press", 1000);
+        break;
     }
 }
 

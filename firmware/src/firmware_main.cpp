@@ -166,6 +166,14 @@ const char *midiMessageTypeName(MIDIMessageType type) {
 
 const char *envelopeFilterName(EnvelopeFollower::FilterType type) {
     switch (type) {
+    case EnvelopeFollower::LINEAR:
+        return "LINEAR";
+    case EnvelopeFollower::OPPOSITE_LINEAR:
+        return "OPPOSITE_LINEAR";
+    case EnvelopeFollower::EXPONENTIAL:
+        return "EXPONENTIAL";
+    case EnvelopeFollower::RANDOM:
+        return "RANDOM";
     case EnvelopeFollower::LOWPASS:
         return "LOWPASS";
     case EnvelopeFollower::HIGHPASS:
@@ -261,6 +269,8 @@ const char *argMethodName(uint8_t method) {
 const char *envelopeModeName(uint8_t mode) { return (mode != 0) ? "ARG" : "SEF"; }
 } // namespace
 
+void refreshEfVoicesFromConfig();
+
 namespace {
 Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
@@ -354,6 +364,14 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
     return false;
 }
 
+EnvelopeFollower::FilterType decodeFilterType(EfSettings::FilterType raw) {
+    return static_cast<EnvelopeFollower::FilterType>(raw);
+}
+
+EfSettings::FilterType encodeFilterType(EnvelopeFollower::FilterType type) {
+    return static_cast<EfSettings::FilterType>(type);
+}
+
 EnvelopeFollower::FilterType parseFilterType(const char *label,
                                              EnvelopeFollower::FilterType fallback) {
     if (!label)
@@ -399,6 +417,43 @@ ARGMethod parseArgMethod(const char *label, ARGMethod fallback) {
     }
     return fallback;
 }
+
+void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
+                     const EfSettings &defaults) {
+    settings = defaults;
+    if (settingsObj.isNull()) {
+        return;
+    }
+
+    if (settingsObj.containsKey("type")) {
+        JsonVariantConst typeField = settingsObj["type"];
+        if (typeField.is<const char *>()) {
+            const auto parsed = parseFilterType(typeField.as<const char *>(),
+                                                decodeFilterType(defaults.filterType));
+            settings.filterType = encodeFilterType(parsed);
+        } else if (typeField.is<int>() || typeField.is<long>()) {
+            long raw = typeField.as<long>();
+            if (raw >= 0 && raw <= static_cast<long>(EnvelopeFollower::BANDPASS)) {
+                settings.filterType =
+                    static_cast<EfSettings::FilterType>(static_cast<uint8_t>(raw));
+            }
+        }
+    }
+
+    if (settingsObj.containsKey("freq")) {
+        float freq = settingsObj["freq"].as<float>();
+        settings.frequency = constrain(freq, 20.0f, 5000.0f);
+    }
+
+    if (settingsObj.containsKey("q")) {
+        float q = settingsObj["q"].as<float>();
+        settings.q = constrain(q, 0.5f, 4.0f);
+    }
+}
+
+} // namespace
+
+namespace {
 
 bool parseHexColor(const char *hex, CRGB &color) {
     if (!hex)
@@ -462,6 +517,17 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     if (slotsJson.size() != NUM_SLOTS) {
         emitBulkError("slots_size", "unexpected slot count", seq);
         return false;
+    }
+
+    EfSettings defaultEfSettings{};
+    defaultEfSettings.filterType = encodeFilterType(EnvelopeFollower::LINEAR);
+    defaultEfSettings.frequency = 1000.0f;
+    defaultEfSettings.q = 0.707f;
+    bool filterOverrideProvided = false;
+    if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
+        JsonObject filterObj = config["filter"].as<JsonObject>();
+        parseEfSettings(filterObj, defaultEfSettings, defaultEfSettings);
+        filterOverrideProvided = true;
     }
 
     SlotARGConfig defaultArg{};
@@ -602,6 +668,14 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.data1 = data1;
         slot.ef = settings;
         slot.active = active;
+        JsonObjectConst efSettingsObj = slotObj["efSettings"].as<JsonObjectConst>();
+        if (!efSettingsObj.isNull()) {
+            EfSettings updated;
+            parseEfSettings(efSettingsObj, updated, slot.efSettings);
+            slot.efSettings = updated;
+        } else if (filterOverrideProvided) {
+            slot.efSettings = defaultEfSettings;
+        }
         if (slot.type == MIDIMessageType::SysEx) {
             String templateError;
             if (!parseSysExTemplateField(slotObj["sysexTemplate"], slot, templateError)) {
@@ -692,22 +766,11 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     }
 
-    if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
-        JsonObject filterObj = config["filter"].as<JsonObject>();
-        EnvelopeFollower::FilterType current = envelopeFollowers.empty()
-                                                   ? EnvelopeFollower::LINEAR
-                                                   : envelopeFollowers.front().getFilterType();
-        EnvelopeFollower::FilterType filterType =
-            parseFilterType(filterObj["type"].as<const char *>(), current);
-        float freq = constrain(filterObj["freq"].as<float>(), 20.0f, 5000.0f);
-        float q = constrain(filterObj["q"].as<float>(), 0.5f, 4.0f);
+    refreshEfVoicesFromConfig();
 
-        for (auto &ef : envelopeFollowers) {
-            ef.setFilterType(filterType);
-            ef.configureFilter(freq, q);
-        }
-        EEPROM.put(EEPROM_FILTER_FREQ, freq);
-        EEPROM.put(EEPROM_FILTER_Q, q);
+    if (filterOverrideProvided) {
+        EEPROM.put(EEPROM_FILTER_FREQ, defaultEfSettings.frequency);
+        EEPROM.put(EEPROM_FILTER_Q, defaultEfSettings.q);
     }
 
     if (config.containsKey("envelopeMode")) {
@@ -732,6 +795,143 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
     return true;
 }
+} // namespace
+
+namespace {
+
+BiquadFilter::FilterType toBiquadType(EnvelopeFollower::FilterType type) {
+    switch (type) {
+    case EnvelopeFollower::LOWPASS:
+        return BiquadFilter::LOWPASS;
+    case EnvelopeFollower::HIGHPASS:
+        return BiquadFilter::HIGHPASS;
+    case EnvelopeFollower::BANDPASS:
+        return BiquadFilter::BANDPASS;
+    default:
+        return BiquadFilter::LOWPASS;
+    }
+}
+
+struct EfVoice {
+    uint8_t followerIndex = 0xFF; //!< Physical follower index we mirror
+    EnvelopeFollower::FilterType filterType = EnvelopeFollower::LINEAR;
+    float frequency = 1000.0f;
+    float q = 0.707f;
+    bool filterDirty = true;
+    bool hasFollower = false;
+    uint8_t lastLevel = 0;
+    bool hasLevel = false;
+    BiquadFilter filter;
+
+    void resetFollower() {
+        followerIndex = 0xFF;
+        hasFollower = false;
+        hasLevel = false;
+        filterDirty = true;
+    }
+
+    void assignFollower(int index) {
+        if (index < 0) {
+            resetFollower();
+            return;
+        }
+        uint8_t next = static_cast<uint8_t>(index);
+        if (!hasFollower || followerIndex != next) {
+            followerIndex = next;
+            hasFollower = true;
+            hasLevel = false;
+            filterDirty = true;
+        }
+    }
+
+    void syncSettings(const EfSettings &settings) {
+        EnvelopeFollower::FilterType nextType = decodeFilterType(settings.filterType);
+        float nextFreq = settings.frequency;
+        float nextQ = settings.q;
+        if (!hasFollower) {
+            filterType = nextType;
+            frequency = nextFreq;
+            q = nextQ;
+            filterDirty = true;
+            return;
+        }
+        if (filterType != nextType || frequency != nextFreq || q != nextQ) {
+            filterType = nextType;
+            frequency = nextFreq;
+            q = nextQ;
+            filterDirty = true;
+        }
+    }
+
+    uint8_t render(int rawLevel) {
+        if (!hasFollower) {
+            hasLevel = false;
+            lastLevel = 0;
+            return 0;
+        }
+
+        int level = constrain(rawLevel, 0, 127);
+        uint8_t shaped = 0;
+
+        switch (filterType) {
+        case EnvelopeFollower::LOWPASS:
+        case EnvelopeFollower::HIGHPASS:
+        case EnvelopeFollower::BANDPASS: {
+            if (filterDirty) {
+                filter.configure(toBiquadType(filterType), frequency, 44100.0f, q);
+                filterDirty = false;
+            }
+            float processed = filter.process(static_cast<float>(level));
+            shaped = static_cast<uint8_t>(constrain(static_cast<int>(roundf(processed)), 0, 127));
+            break;
+        }
+
+        case EnvelopeFollower::OPPOSITE_LINEAR: {
+            float scaled = static_cast<float>(level) * (frequency / 1000.0f);
+            shaped = static_cast<uint8_t>(constrain(127 - static_cast<int>(scaled), 0, 127));
+            break;
+        }
+
+        case EnvelopeFollower::EXPONENTIAL: {
+            float ratio = level / 127.0f;
+            float curved = powf(ratio, q) * (frequency / 1000.0f) * 127.0f;
+            shaped = static_cast<uint8_t>(constrain(static_cast<int>(roundf(curved)), 0, 127));
+            break;
+        }
+
+        case EnvelopeFollower::RANDOM: {
+            int probability = map(static_cast<int>(frequency), 20, 5000, 0, 100);
+            if (probability < 0)
+                probability = 0;
+            if (probability > 100)
+                probability = 100;
+            if (random(0, 100) < probability) {
+                int range = map(static_cast<int>(q * 100.0f), 50, 400, 1, 64);
+                int swing = constrain(range, 1, 64);
+                shaped = static_cast<uint8_t>(constrain(level + random(-swing, swing), 0, 127));
+            } else {
+                shaped = static_cast<uint8_t>(level);
+            }
+            break;
+        }
+
+        case EnvelopeFollower::LINEAR:
+        default: {
+            float scaled = static_cast<float>(level) * (frequency / 1000.0f);
+            shaped = static_cast<uint8_t>(constrain(static_cast<int>(roundf(scaled)), 0, 127));
+            break;
+        }
+        }
+
+        lastLevel = shaped;
+        hasLevel = true;
+        return shaped;
+    }
+
+    uint8_t latestLevel() const { return hasLevel ? lastLevel : 0; }
+    bool hasRendered() const { return hasLevel; }
+};
+
 } // namespace
 
 #if defined(UNIT_TEST)
@@ -762,6 +962,21 @@ ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button co
 BiquadFilter filter;     // Shared filter template for envelope follower shaping
 TaskScheduler scheduler; // Legacy scheduler kept for posterity (most work lives in Utility)
 Arpeggiator arpeggiator; // Keeps notes chugging along in time
+std::array<EfVoice, NUM_SLOTS> efVoices; // Software voices riding raw envelope reads per slot
+
+void refreshEfVoicesFromConfig() {
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        EfVoice &voice = efVoices[slotIndex];
+        const MIDISlot &slot = configManager.getSlot(slotIndex);
+        auto mapIt = potToEnvelopeMap.find(slotIndex);
+        if (mapIt != potToEnvelopeMap.end()) {
+            voice.assignFollower(mapIt->second.followerIndex);
+        } else {
+            voice.resetFollower();
+        }
+        voice.syncSettings(slot.efSettings);
+    }
+}
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
@@ -1016,6 +1231,11 @@ void processSerial() {
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
+                JsonObject efCfg = slotObj.createNestedObject("efSettings");
+                efCfg["type"] = envelopeFilterName(decodeFilterType(slot.efSettings.filterType));
+                efCfg["type_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+                efCfg["freq"] = slot.efSettings.frequency;
+                efCfg["q"] = slot.efSettings.q;
                 JsonObject arg = slotObj.createNestedObject("arg");
                 arg["enabled"] = slot.arg.enabled != 0;
                 arg["method"] = static_cast<uint8_t>(slot.arg.method);
@@ -1299,6 +1519,7 @@ void processSerial() {
                     envelopeFollowers[envIndex].toggleActive(true);
                     applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.ef);
                     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+                    refreshEfVoicesFromConfig();
                     LOG_PRINTLN("OK");
                 } else {
                     // numbers don't line up? it's an ERR
@@ -1319,6 +1540,21 @@ void processEnvelopes() {
     if (!envelopeMidiInitialized) {
         lastEnvelopeMidiValues.fill(0xFF); // 0xFF sentinel guarantees the first send happens
         envelopeMidiInitialized = true;
+    }
+
+    std::array<int, NUM_ENVELOPES> rawFollowerLevels{};
+    std::array<bool, NUM_ENVELOPES> followerReady{};
+    for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
+        EnvelopeFollower &follower = envelopeFollowers[idx];
+        if (!follower.getActiveState()) {
+            followerReady[idx] = false;
+            continue;
+        }
+        follower.update();
+        int rawLevel = follower.getEnvelopeLevel();
+        rawFollowerLevels[idx] = rawLevel;
+        followerReady[idx] = true;
+        ledManager.setEnvelopeLevel(static_cast<uint8_t>(idx), constrain(rawLevel, 0, 127));
     }
 
     // Stroll through the pot→envelope map; every pair says which envelope
@@ -1346,13 +1582,19 @@ void processEnvelopes() {
                 continue;
             }
 
-            envelope->update(); // Pull in the latest peak/decay stats.
+            if (!followerReady[envelopeIndex]) {
+                lastEnvelopeMidiValues[potIndex] = baselineMidi;
+                continue;
+            }
 
-            ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
+            const MIDISlot &slot = configManager.getSlot(potIndex);
+            EfVoice &voice = efVoices[potIndex];
+            voice.assignFollower(envelopeIndex);
+            voice.syncSettings(slot.efSettings);
+            voice.render(rawFollowerLevels[envelopeIndex]);
 
             if (potIndex >= NUM_SLOTS)
                 continue;
-            const MIDISlot &slot = configManager.getSlot(potIndex);
             uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
             int modulatedInt = static_cast<int>(baselineMidi) + envelopeContribution;
             uint8_t modulatedValue = static_cast<uint8_t>(constrain(modulatedInt, 0, 127));
@@ -1473,6 +1715,13 @@ void updateFilterTuning(ButtonManagerContext &context) {
     settings.frequency = freq;
     settings.q = q;
     context.envelopes[efIndex].configureFilter(freq, q);
+    EEPROM.put(EEPROM_FILTER_FREQ, freq);
+    EEPROM.put(EEPROM_FILTER_Q, q);
+
+    MIDISlot::EfSettings slotSettings = configManager.getSlot(context.activePot).efSettings;
+    slotSettings.frequency = freq;
+    slotSettings.q = q;
+    saveSlotEfSettings(context.activePot, slotSettings);
 
     MIDISlot &slot = context.configManager.getSlot(context.activePot);
     slot.ef = settings;
@@ -1559,6 +1808,7 @@ void setup() {
     configManager.begin(potChannels);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
     bool baselinesLoaded = configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    refreshEfVoicesFromConfig();
 
     // — MIDI Handler —
     midiHandler.begin();
@@ -1567,87 +1817,92 @@ void setup() {
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
 
     // — Pot → MIDI routing callback —
-    potentiometerManager.setMidiCallback([&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue,
-                                             uint8_t potIdx) {
-        auto &slot = configManager.getSlot(potIdx);
-        if (!slot.active)
-            return;
+    potentiometerManager.setMidiCallback(
+        [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
+            auto &slot = configManager.getSlot(potIdx);
+            if (!slot.active)
+                return;
 
-        switch (slot.type) {
-        case MIDIMessageType::CC:
-            midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
-            break;
-
-        case MIDIMessageType::Note: {
-            uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
-            slot.arpNote = note; // stash for the arpeggiator
-            int follower = slot.ef.followerIndex;
-            uint8_t velo = (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size()))
-                               ? envelopeFollowers[follower].getEnvelopeLevel()
-                               : 125;
-            int shifted = velo + velocityShift;
-            if (shifted < 0)
-                shifted = 0;
-            if (shifted > 127)
-                shifted = 127;
-            if (random(100U) >= changeProbability)
+            switch (slot.type) {
+            case MIDIMessageType::CC:
+                midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
                 break;
-            midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
-            // schedule Note-Off in 100 ms
-            Utility::schedulerHigh.addTask(
-                [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
-            break;
-        }
 
-        case MIDIMessageType::PitchBend: {
-            int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
-            midiHandler.sendPitchBend(bend, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::ProgramChange:
-            midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
-            break;
-
-        case MIDIMessageType::Aftertouch: {
-            uint8_t pres = Utility::mapToMidiValue(rawValue);
-            midiHandler.sendAftertouch(pres, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::ModWheel: {
-            uint8_t mod = Utility::mapToMidiValue(rawValue);
-            midiHandler.sendModWheel(mod, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::NRPN: {
-            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-            midiHandler.sendNRPN(param, val, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::RPN: {
-            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-            midiHandler.sendRPN(param, val, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::SysEx: {
-            std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
-            uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
-            if (length > 0) {
-                midiHandler.sendSysEx(msg.data(), length);
+            case MIDIMessageType::Note: {
+                uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
+                slot.arpNote = note; // stash for the arpeggiator
+                uint8_t velo = 125;
+                if (potIdx < efVoices.size() && efVoices[potIdx].hasRendered()) {
+                    velo = efVoices[potIdx].latestLevel();
+                } else if (slot.ef.followerIndex >= 0 &&
+                           static_cast<size_t>(slot.ef.followerIndex) < envelopeFollowers.size()) {
+                    velo = static_cast<uint8_t>(
+                        constrain(envelopeFollowers[static_cast<size_t>(slot.ef.followerIndex)]
+                                      .getEnvelopeLevel(),
+                                  0, 127));
+                }
+                int shifted = velo + velocityShift;
+                if (shifted < 0)
+                    shifted = 0;
+                if (shifted > 127)
+                    shifted = 127;
+                if (random(100U) >= changeProbability)
+                    break;
+                midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
+                // schedule Note-Off in 100 ms
+                Utility::schedulerHigh.addTask(
+                    [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
+                break;
             }
-            break;
-        }
+            case MIDIMessageType::PitchBend: {
+                int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
+                midiHandler.sendPitchBend(bend, slot.midiChannel);
+                break;
+            }
 
-        default:
-            break;
-        }
-    });
+            case MIDIMessageType::ProgramChange:
+                midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
+                break;
+
+            case MIDIMessageType::Aftertouch: {
+                uint8_t pres = Utility::mapToMidiValue(rawValue);
+                midiHandler.sendAftertouch(pres, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::ModWheel: {
+                uint8_t mod = Utility::mapToMidiValue(rawValue);
+                midiHandler.sendModWheel(mod, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::NRPN: {
+                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+                midiHandler.sendNRPN(param, val, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::RPN: {
+                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+                midiHandler.sendRPN(param, val, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::SysEx: {
+                std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+                uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
+                if (length > 0) {
+                    midiHandler.sendSysEx(msg.data(), length);
+                }
+                break;
+            }
+
+            default:
+                break;
+            }
+        });
 
     // — LEDs & Display —
     ledManager.begin();
@@ -1749,6 +2004,8 @@ void setup() {
                 displayManager.updateFromContext(buttonContext);
                 auto it = potToEnvelopeMap.find(buttonContext.activePot);
                 if (it != potToEnvelopeMap.end()) {
+                    displayManager.showEnvelopeLevel(
+                        efVoices[buttonContext.activePot].latestLevel());
                     int follower = it->second.followerIndex;
                     if (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size())) {
                         displayManager.showEnvelopeLevel(

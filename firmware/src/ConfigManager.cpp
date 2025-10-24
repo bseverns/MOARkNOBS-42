@@ -10,6 +10,32 @@
 #include "Log.h"
 
 extern std::vector<EnvelopeFollower> envelopeFollowers;
+extern ConfigManager configManager;
+
+// Weak hook lets test firmware skip the heavyweight EF voice refresh logic.
+#if defined(__GNUC__) || defined(__clang__)
+extern void refreshEfVoicesFromConfig() __attribute__((weak));
+#else
+extern void refreshEfVoicesFromConfig();
+#endif
+
+void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings) {
+    if (slotIndex >= NUM_SLOTS) {
+        return;
+    }
+
+    MIDISlot &slot = configManager.getSlot(slotIndex);
+    slot.efSettings = settings;
+    configManager.saveSlot(slotIndex, slot);
+
+#if defined(__GNUC__) || defined(__clang__)
+    if (refreshEfVoicesFromConfig != nullptr) {
+        refreshEfVoicesFromConfig();
+    }
+#else
+    refreshEfVoicesFromConfig();
+#endif
+}
 
 namespace {
 EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
@@ -40,6 +66,20 @@ void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings 
     ef.setSmoothingAlpha(settings.smoothing);
     ef.setBaseline(settings.baseline);
     ef.setGain(settings.gain);
+}
+
+bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+    case MIDISlot::EfSettings::FilterType::Exponential:
+    case MIDISlot::EfSettings::FilterType::Random:
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+    case MIDISlot::EfSettings::FilterType::Highpass:
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return true;
+    }
+    return false;
 }
 } // namespace
 
@@ -645,6 +685,13 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
         return false;
     }
     if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
+        return false;
+    }
+    if (!filterTypeIsValid(candidate.efSettings.filterType)) {
+        return false;
+    }
+    if (candidate.efSettings.followerIndex < -1 ||
+        candidate.efSettings.followerIndex >= static_cast<int>(NUM_ENVELOPES)) {
         return false;
     }
     SlotARGConfig sanitized = sanitizeArgConfig(candidate.arg);

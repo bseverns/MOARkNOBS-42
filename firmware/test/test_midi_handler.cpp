@@ -542,7 +542,7 @@ void test_generate_clock_tick_advances_counter() {
     g_clockOutEnabled = false;
 }
 
-// Schema 0x0003 should vaporise legacy 6-byte slot data before we start reading.
+// Schema 0x0004 should vaporise legacy 6-byte slot data before we start reading.
 void test_config_manager_wipes_legacy_slot_stride() {
     // Pretend we just flashed over a 0x0002 build.
     constexpr uint16_t kLegacyVersion = 0x0002;

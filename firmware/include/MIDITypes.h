@@ -60,30 +60,38 @@ struct SlotARGConfig {
     uint8_t sourceB = 1;                //!< Envelope follower index feeding input B
 };
 
-/** Configuration for a single pot slot. */
-struct MIDISlot {
-    /** Envelope follower configuration scoped to this slot. */
-    struct EfSettings {
-        /** Filter shapes mirrored from EnvelopeFollower::FilterType. */
-        enum class FilterType : uint8_t {
-            Linear = 0,
-            OppositeLinear,
-            Exponential,
-            Random,
-            Lowpass,
-            Highpass,
-            Bandpass
-        };
-
-        int8_t followerIndex = -1; //!< Assigned hardware follower (-1 when unbound)
-        FilterType filterType = FilterType::Linear;
-        float frequency = 1000.0f; //!< Cutoff/shape frequency in Hz
-        float q = 0.707f;          //!< Resonance / secondary filter parameter
-        uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
-        float smoothing = 0.2f;    //!< EWMA smoothing factor (0..1)
-        float baseline = 0.0f;     //!< Noise floor offset after calibration
-        float gain = 1.0f;         //!< Output gain applied post-baseline
+/**
+ * Envelope follower settings persisted with each slot.
+ *
+ * The struct lives at global scope so helper functions can talk about a slot's
+ * configuration without dragging MIDISlot itself into the conversation.  The
+ * slot struct aliases this record so existing code using MIDISlot::EfSettings
+ * keeps working.
+ */
+struct EfSettings {
+    /** Filter shapes mirrored from EnvelopeFollower::FilterType. */
+    enum class FilterType : uint8_t {
+        Linear = 0,
+        OppositeLinear,
+        Exponential,
+        Random,
+        Lowpass,
+        Highpass,
+        Bandpass
     };
+
+    FilterType filterType = FilterType::Linear; //!< Desired filter topology
+    int8_t followerIndex = -1;                  //!< Assigned hardware follower (-1 when unbound)
+    uint8_t oversample = 4;                     //!< ADC oversample count (1 == disabled)
+    float frequency = 1000.0f;                  //!< Cutoff/shape frequency in Hz
+    float q = 0.707f;                           //!< Resonance / secondary filter parameter
+    float smoothing = 0.2f;                     //!< EWMA smoothing factor (0..1)
+    float baseline = 0.0f;                      //!< Noise floor offset after calibration
+    float gain = 1.0f;                          //!< Output gain applied post-baseline
+};
+
+struct MIDISlot {
+    using EfSettings = ::EfSettings;
 
     MIDIMessageType type = MIDIMessageType::OFF;
     uint8_t midiChannel = 1;
@@ -91,6 +99,7 @@ struct MIDISlot {
     bool active = false;
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
+    EfSettings efSettings{}; //!< Slot-specific envelope follower settings
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
     EfSettings ef{};     //!< Local envelope follower configuration
     SlotARGConfig arg{}; //!< Slot-local ARG mixer settings
@@ -98,6 +107,6 @@ struct MIDISlot {
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) <= 64, "MIDISlot exploded past the expected 64 bytes");
+static_assert(sizeof(MIDISlot) <= 96, "MIDISlot exploded past the expected 96 bytes");
 
 #endif // MIDI_TYPES_H
