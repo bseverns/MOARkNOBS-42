@@ -383,6 +383,8 @@ void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
 
 } // namespace
 
+void refreshEfVoicesFromConfig();
+
 void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings) {
     if (slotIndex >= NUM_SLOTS)
         return;
@@ -725,22 +727,6 @@ struct EfVoice {
     bool hasRendered() const { return hasLevel; }
 };
 
-extern std::array<EfVoice, NUM_SLOTS> efVoices;
-
-void refreshEfVoicesFromConfig() {
-    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-        EfVoice &voice = efVoices[slotIndex];
-        const MIDISlot &slot = configManager.getSlot(slotIndex);
-        auto mapIt = potToEnvelopeMap.find(slotIndex);
-        if (mapIt != potToEnvelopeMap.end()) {
-            voice.assignFollower(mapIt->second);
-        } else {
-            voice.resetFollower();
-        }
-        voice.syncSettings(slot.efSettings);
-    }
-}
-
 } // namespace
 
 #if defined(UNIT_TEST)
@@ -771,6 +757,20 @@ BiquadFilter filter;     // Shared filter template for envelope follower shaping
 TaskScheduler scheduler; // Legacy scheduler kept for posterity (most work lives in Utility)
 Arpeggiator arpeggiator; // Keeps notes chugging along in time
 std::array<EfVoice, NUM_SLOTS> efVoices; // Software voices riding raw envelope reads per slot
+
+void refreshEfVoicesFromConfig() {
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        EfVoice &voice = efVoices[slotIndex];
+        const MIDISlot &slot = configManager.getSlot(slotIndex);
+        auto mapIt = potToEnvelopeMap.find(slotIndex);
+        if (mapIt != potToEnvelopeMap.end()) {
+            voice.assignFollower(mapIt->second);
+        } else {
+            voice.resetFollower();
+        }
+        voice.syncSettings(slot.efSettings);
+    }
+}
 
 // Declare PotentiometerManager before ButtonManager
 // Pin 6 is reserved for the LED strip
