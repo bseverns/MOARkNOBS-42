@@ -366,6 +366,9 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
     return false;
 }
 
+EnvelopeFollower::FilterType parseFilterType(const char *label,
+                                             EnvelopeFollower::FilterType fallback);
+
 EnvelopeFollower::FilterType decodeFilterType(EfSettings::FilterType raw) {
     return static_cast<EnvelopeFollower::FilterType>(raw);
 }
