@@ -273,9 +273,8 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
     JsonObject efCfg = body.createNestedObject("efSettings");
-    efCfg["type_index"] = slot.efSettings.filterType;
-    efCfg["type"] =
-        filterName(static_cast<EnvelopeFollower::FilterType>(slot.efSettings.filterType));
+    efCfg["type_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+    efCfg["type"] = filterName(static_cast<EnvelopeFollower::FilterType>(slot.efSettings.filterType));
     efCfg["freq"] = slot.efSettings.frequency;
     efCfg["q"] = slot.efSettings.q;
     JsonObject arg = body.createNestedObject("arg");

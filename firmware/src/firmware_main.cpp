@@ -970,7 +970,7 @@ void refreshEfVoicesFromConfig() {
         const MIDISlot &slot = configManager.getSlot(slotIndex);
         auto mapIt = potToEnvelopeMap.find(slotIndex);
         if (mapIt != potToEnvelopeMap.end()) {
-            voice.assignFollower(mapIt->second);
+            voice.assignFollower(mapIt->second.followerIndex);
         } else {
             voice.resetFollower();
         }
@@ -1591,11 +1591,10 @@ void processEnvelopes() {
             EfVoice &voice = efVoices[potIndex];
             voice.assignFollower(envelopeIndex);
             voice.syncSettings(slot.efSettings);
-            uint8_t shapedLevel = voice.render(rawFollowerLevels[envelopeIndex]);
+            voice.render(rawFollowerLevels[envelopeIndex]);
 
             if (potIndex >= NUM_SLOTS)
                 continue;
-            const MIDISlot &slot = configManager.getSlot(potIndex);
             uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
             int modulatedInt = static_cast<int>(baselineMidi) + envelopeContribution;
             uint8_t modulatedValue = static_cast<uint8_t>(constrain(modulatedInt, 0, 127));
@@ -1835,9 +1834,10 @@ void setup() {
                 uint8_t velo = 125;
                 if (potIdx < efVoices.size() && efVoices[potIdx].hasRendered()) {
                     velo = efVoices[potIdx].latestLevel();
-                } else if (slot.efIndex < envelopeFollowers.size()) {
-                    velo = static_cast<uint8_t>(
-                        constrain(envelopeFollowers[slot.efIndex].getEnvelopeLevel(), 0, 127));
+                } else if (slot.ef.followerIndex >= 0 &&
+                           static_cast<size_t>(slot.ef.followerIndex) < envelopeFollowers.size()) {
+                    velo = static_cast<uint8_t>(constrain(
+                        envelopeFollowers[static_cast<size_t>(slot.ef.followerIndex)].getEnvelopeLevel(), 0, 127));
                 }
                 int shifted = velo + velocityShift;
                 if (shifted < 0)
