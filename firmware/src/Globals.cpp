@@ -59,14 +59,14 @@ SystemDiagnostics g_systemDiagnostics;
 // and stash every unique (A,B) combo with A<B.  Change the pin list and the
 // pairings auto-update—no static table to forget.
 namespace {
-constexpr std::array<int, NUM_ENVELOPES> kArgPins = {A0, A1, A2, A3, A6, A7};
+constexpr std::array<int, NUM_ENVELOPES> kEnvelopePins = {A0, A1, A2, A3, A6, A7};
 
 constexpr std::array<std::pair<int, int>, ARG_PAIR_COUNT> buildArgPairs() {
     std::array<std::pair<int, int>, ARG_PAIR_COUNT> pairs{};
     size_t idx = 0;
-    for (size_t a = 0; a < kArgPins.size(); ++a) {
-        for (size_t b = a + 1; b < kArgPins.size(); ++b) {
-            pairs[idx++] = {kArgPins[a], kArgPins[b]};
+    for (size_t a = 0; a < kEnvelopePins.size(); ++a) {
+        for (size_t b = a + 1; b < kEnvelopePins.size(); ++b) {
+            pairs[idx++] = {kEnvelopePins[a], kEnvelopePins[b]};
         }
     }
     return pairs;
@@ -75,6 +75,22 @@ constexpr std::array<std::pair<int, int>, ARG_PAIR_COUNT> buildArgPairs() {
 
 const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
 const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
+
+int envelopeAnalogPin(uint8_t index) {
+    if (index >= kEnvelopePins.size()) {
+        return -1;
+    }
+    return kEnvelopePins[index];
+}
+
+int envelopeIndexFromAnalogPin(int analogPin) {
+    for (size_t i = 0; i < kEnvelopePins.size(); ++i) {
+        if (kEnvelopePins[i] == analogPin) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
 
 static void loadFromJson(HardwareConfig &cfg) {
 #if __has_include(<ArduinoJson.h>)

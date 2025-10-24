@@ -440,8 +440,13 @@ void ConfigManager::setARGEnable(uint8_t enable) { EEPROM.update(EEPROM_ARG_ENAB
 uint8_t ConfigManager::getARGEnable() const { return EEPROM.read(EEPROM_ARG_ENABLE); }
 
 void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
-    EEPROM.update(EEPROM_ARG_ENV_A, envA);
-    EEPROM.update(EEPROM_ARG_ENV_B, envB);
+    uint8_t safeA = static_cast<uint8_t>(constrain(static_cast<int>(envA), 0, NUM_ENVELOPES - 1));
+    uint8_t safeB = static_cast<uint8_t>(constrain(static_cast<int>(envB), 0, NUM_ENVELOPES - 1));
+    if (NUM_ENVELOPES > 1 && safeA == safeB) {
+        safeB = static_cast<uint8_t>((safeA + 1) % NUM_ENVELOPES);
+    }
+    EEPROM.update(EEPROM_ARG_ENV_A, safeA);
+    EEPROM.update(EEPROM_ARG_ENV_B, safeB);
 }
 
 uint8_t ConfigManager::getEnvelopeA() const { return EEPROM.read(EEPROM_ARG_ENV_A); }
@@ -786,14 +791,23 @@ void ConfigManager::loadLegacyARGSettings() {
     legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
     legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
     legacyArg.enable = EEPROM.read(EEPROM_ARG_ENABLE);
-    legacyArg.sourceA = EEPROM.read(EEPROM_ARG_ENV_A);
-    legacyArg.sourceB = EEPROM.read(EEPROM_ARG_ENV_B);
+    const uint8_t rawSourceA = EEPROM.read(EEPROM_ARG_ENV_A);
+    const uint8_t rawSourceB = EEPROM.read(EEPROM_ARG_ENV_B);
+
+    int idxA = envelopeIndexFromAnalogPin(rawSourceA);
+    if (idxA < 0) {
+        idxA = constrain(static_cast<int>(rawSourceA), 0, NUM_ENVELOPES - 1);
+    }
+    int idxB = envelopeIndexFromAnalogPin(rawSourceB);
+    if (idxB < 0) {
+        idxB = constrain(static_cast<int>(rawSourceB), 0, NUM_ENVELOPES - 1);
+    }
 
     SlotARGConfig sanitized{};
     sanitized.enabled = legacyArg.enable;
     sanitized.method = static_cast<ARGMethod>(legacyArg.method);
-    sanitized.sourceA = legacyArg.sourceA;
-    sanitized.sourceB = legacyArg.sourceB;
+    sanitized.sourceA = static_cast<uint8_t>(idxA);
+    sanitized.sourceB = static_cast<uint8_t>(idxB);
     sanitized = sanitizeSlotArg(sanitized);
 
     legacyArg.enable = sanitized.enabled;
@@ -806,8 +820,7 @@ void ConfigManager::migrateLegacyARGSettings() {
     loadLegacyARGSettings();
     EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
     EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
-    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
-    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+    setEnvelopePair(legacyArg.sourceA, legacyArg.sourceB);
 }
 
 void ConfigManager::wipeProfileBlocks() {

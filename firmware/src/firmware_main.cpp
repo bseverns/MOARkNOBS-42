@@ -407,8 +407,22 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     SlotARGConfig defaultArg{};
     defaultArg.enabled = configManager.getARGEnable();
     defaultArg.method = static_cast<ARGMethod>(configManager.getARGMethod());
-    defaultArg.sourceA = configManager.getEnvelopeA();
-    defaultArg.sourceB = configManager.getEnvelopeB();
+    int storedA = static_cast<int>(configManager.getEnvelopeA());
+    if (storedA >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(storedA);
+        storedA = (converted >= 0) ? converted : constrain(storedA, 0, NUM_ENVELOPES - 1);
+    }
+    int storedB = static_cast<int>(configManager.getEnvelopeB());
+    if (storedB >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(storedB);
+        if (converted >= 0) {
+            storedB = converted;
+        } else {
+            storedB = constrain(storedB, 0, NUM_ENVELOPES - 1);
+        }
+    }
+    defaultArg.sourceA = static_cast<uint8_t>(storedA);
+    defaultArg.sourceB = static_cast<uint8_t>(storedB);
     defaultArg = sanitizeSlotArg(defaultArg);
 
     if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {

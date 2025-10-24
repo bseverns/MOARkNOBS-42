@@ -205,4 +205,10 @@ inline constexpr size_t ARG_PAIR_COUNT = (NUM_ENVELOPES * (NUM_ENVELOPES - 1)) /
 extern const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS;
 extern const size_t ARG_PAIRS_LEN;
 
+/** Map an envelope index (0..NUM_ENVELOPES-1) to its Teensy analog pin. */
+int envelopeAnalogPin(uint8_t index);
+
+/** Resolve a Teensy analog pin back to its envelope index, or -1 if unknown. */
+int envelopeIndexFromAnalogPin(int analogPin);
+
 #endif // GLOBALS_H
