@@ -298,9 +298,7 @@ EnvelopeFollower::FilterType decodeFilterType(uint8_t raw) {
     return static_cast<EnvelopeFollower::FilterType>(raw);
 }
 
-uint8_t encodeFilterType(EnvelopeFollower::FilterType type) {
-    return static_cast<uint8_t>(type);
-}
+uint8_t encodeFilterType(EnvelopeFollower::FilterType type) { return static_cast<uint8_t>(type); }
 
 EnvelopeFollower::FilterType parseFilterType(const char *label,
                                              EnvelopeFollower::FilterType fallback) {
