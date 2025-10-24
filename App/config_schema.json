@@ -20,7 +20,7 @@
           },
           "midiChannel": { "type": "integer", "minimum": 1, "maximum": 16 },
           "data1": { "type": "integer", "minimum": 0, "maximum": 127 },
-          "efIndex": { "type": "integer", "minimum": 0, "maximum": 5 },
+          "efIndex": { "type": "integer", "minimum": -1, "maximum": 5 },
           "ef": {
             "type": "object",
             "required": ["index", "filter_index", "filter_name", "frequency", "q", "oversample", "smoothing", "baseline", "gain"],
