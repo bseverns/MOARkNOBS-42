@@ -764,6 +764,8 @@ Fire commands line‑by‑line:
   MIDI channel 1.
 - `GET_ALL` – spit every pot’s channel/CC plus the LED config.
 - `GET_BROWNOUTS` – print how many brownouts the MCU has survived.
+- `GET_DIAGNOSTICS` – cough up loop timing + MIDI overflow counters in JSON so you
+  know when the synth is sweating.
 
 While the terminal spits data, the buttons drive the OLED menus. Tap a slot
 button and it flashes `Active Slot=<n>`. Long‑press the same button to marry an
@@ -784,6 +786,23 @@ Pot configuration updated!
 While those lines scroll by, the OLED pops `Active Slot=0` and then
 `Slot 0 ch1 CC74` before fading back to its idle vibe. Trust the terminal for
 truth; use the screen to make sure your button mashing landed where it should.
+
+### Performance Diagnostics
+
+When you redline the rig, it now tells on itself. Every loop spin records the
+microsecond budget it chewed through and keeps a high-score table of the
+slowest frame. If the queue feeding the 5-pin DIN overflows or the loop takes
+longer than 1 ms, the LED strip flashes the diagnostic warning and the serial
+console spits a `{"type":"diagnostic", ...}` blob with the fresh counters.
+
+- `serial_overruns` jumps when we had to drop UART bytes (a.k.a. “MIDI Overflow”).
+- `loop_last_us` / `loop_max_us` expose the most recent and worst-case loop
+  times so you can spot jitter.
+- `midi_parse_errors` ticks whenever a mangled USB packet shows up.
+
+Fire `GET_DIAGNOSTICS` from the CLI to grab the snapshot on demand, or park in
+diagnostic mode on the OLED to watch RX/TX totals, drops, loop timing, and parse
+errors update in real time. Transparency or bust.
 
 ## Web Editor
 

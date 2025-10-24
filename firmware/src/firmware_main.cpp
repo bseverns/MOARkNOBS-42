@@ -559,6 +559,7 @@ void processMIDI() {
  *   SET_LED,<bri>,<r>,<g>,<b>         : 0‑255 each, paints the strip
  *   GET_ARGMETHOD                     : report current ARG blend
  *   SET_ARGMETHOD,<n>                 : n=0‑6 picks the blend
+ *   GET_DIAGNOSTICS                   : dump loop timing + MIDI overflow counters
  *   GET_EF,<slot>                     : who’s modding that slot (‑1 means none)
  *   SET_EF,<slot>,<ef>                : patch an envelope follower
  *   CAL_ENVS                          : recalibrate all envelope spies
@@ -599,6 +600,9 @@ void processSerial() {
 
         } else if (command == "GET_BROWNOUTS") {
             LOG_PRINTLN(g_brownoutCount);
+
+        } else if (command == "GET_DIAGNOSTICS") {
+            WebSerial::sendDiagnostics(g_diagStats, "cli", true);
 
         } else if (command == "GET_MANIFEST") {
             StaticJsonDocument<256> doc;
@@ -1011,18 +1015,59 @@ void processInternalClock() {
     }
 }
 
+namespace {
+void reportDiagnosticEvent(const char *reason) {
+    static unsigned long lastLedPulse = 0;
+    unsigned long nowMs = now();
+    if (nowMs - lastLedPulse >= 250) {
+        ledManager.beginWarningAnimation(LEDWarning::Diagnostic);
+        lastLedPulse = nowMs;
+    }
+    WebSerial::sendDiagnostics(g_diagStats, reason, true);
+}
+} // namespace
+
 // Measure how often the main loop cycles each second—our quick-and-dirty load meter.
 // On a healthy Teensy 4.0 we usually see about a kilospin per second; if it tanks,
 // you're choking the core.
 void monitorSystemLoad() {
     static unsigned long lastMonitorTime = 0;
     static unsigned long taskCounter = 0; // main loop iterations
+    static uint32_t lastLoopTimestamp = micros();
 
-    taskCounter++;                                          // count another lap around the loop
-    if (now() - lastMonitorTime >= 1000UL) {                // Log every second
+    uint32_t nowUs = micros();
+    uint32_t loopDuration = nowUs - lastLoopTimestamp;
+    lastLoopTimestamp = nowUs;
+
+    g_diagStats.lastLoopMicros = loopDuration;
+    if (loopDuration > g_diagStats.maxLoopMicros) {
+        g_diagStats.maxLoopMicros = loopDuration;
+    }
+    if (loopDuration > LOOP_DIAGNOSTIC_THRESHOLD_US) {
+        g_diagStats.loopOverruns++;
+        g_diagStats.loopOverrunLatched = true;
+    }
+
+    taskCounter++; // count another lap around the loop
+
+    unsigned long nowMs = now();
+    if (nowMs - lastMonitorTime >= 1000UL) {              // Log every second
         LOG_PRINTF("Tasks per second: %lu\n", taskCounter); // ~1000 on a chill rig
         taskCounter = 0;
-        lastMonitorTime = now();
+        lastMonitorTime = nowMs;
+    }
+
+    if (g_diagStats.serialOverrunLatched) {
+        reportDiagnosticEvent("midi_overflow");
+        g_diagStats.serialOverrunLatched = false;
+    }
+    if (g_diagStats.loopOverrunLatched) {
+        reportDiagnosticEvent("loop_overrun");
+        g_diagStats.loopOverrunLatched = false;
+    }
+    if (g_diagStats.midiErrorLatched) {
+        reportDiagnosticEvent("midi_parse_error");
+        g_diagStats.midiErrorLatched = false;
     }
 }
 

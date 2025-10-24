@@ -42,6 +42,27 @@ extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
 
 /**
+ * Runtime counters for sneaky failures and timing hiccups.
+ * These get surfaced in diagnostics so power users can see
+ * when the firmware starts sweating.
+ */
+struct DiagnosticStats {
+    uint32_t serialQueueOverruns = 0;   //!< dropped UART bytes when the TX queue overflowed
+    uint32_t serialQueueCoalesced = 0;  //!< how often we merged queued messages to recover space
+    uint32_t midiParseErrors = 0;       //!< invalid MIDI payloads that were ignored
+    uint32_t loopOverruns = 0;          //!< main loop spins that busted the budget
+    uint32_t maxLoopMicros = 0;         //!< slowest observed loop iteration in microseconds
+    uint32_t lastLoopMicros = 0;        //!< most recent loop duration in microseconds
+    bool serialOverrunLatched = false;  //!< flag that a serial drop needs to be announced
+    bool loopOverrunLatched = false;    //!< flag that a loop hiccup needs to be announced
+    bool midiErrorLatched = false;      //!< flag that a parse error should be surfaced
+};
+
+extern DiagnosticStats g_diagStats;
+
+inline constexpr uint32_t LOOP_DIAGNOSTIC_THRESHOLD_US = 1000; //!< expected happy-path loop upper bound
+
+/**
  * Bundle every pin and scheduler tick that describes the hardware.
  * Defaults live in Globals.cpp but can be patched at build or run time.
  */

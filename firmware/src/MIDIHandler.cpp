@@ -197,6 +197,8 @@ void MIDIHandler::processIncomingMIDI() {
         auto type = static_cast<midi::MidiType>(usbMIDI.getType());
         if (!isSupportedType(type)) {
             MIDI_DBG_PRINTLN("Dropping unsupported USB MIDI type");
+            g_diagStats.midiParseErrors++;
+            g_diagStats.midiErrorLatched = true;
             continue;
         }
         if (type == MidiType_Tick) {
@@ -232,6 +234,8 @@ void MIDIHandler::processIncomingMIDI() {
 void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2) {
     if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
         MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
+        g_diagStats.midiParseErrors++;
+        g_diagStats.midiErrorLatched = true;
         return;
     }
     _rxCount++;
@@ -419,11 +423,22 @@ bool MIDIHandler::enqueueSerialMessage(const SerialMessage &msg) {
     }
 
     if (_serialQueueFull) {
-        return tryCoalesceSerialMessage(msg);
+        bool coalesced = tryCoalesceSerialMessage(msg);
+        if (coalesced) {
+            g_diagStats.serialQueueCoalesced++;
+        } else {
+            g_diagStats.serialQueueOverruns++;
+            g_diagStats.serialOverrunLatched = true;
+        }
+        return coalesced;
     }
 
-    if (serialQueueSize() >= kSerialQueueSize - 4 && tryCoalesceSerialMessage(msg)) {
-        return true;
+    if (serialQueueSize() >= kSerialQueueSize - 4) {
+        bool coalesced = tryCoalesceSerialMessage(msg);
+        if (coalesced) {
+            g_diagStats.serialQueueCoalesced++;
+            return true;
+        }
     }
 
     _serialQueue[_serialQueueTail] = msg;

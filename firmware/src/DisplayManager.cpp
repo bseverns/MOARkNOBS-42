@@ -454,6 +454,17 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
         _display.setCursor(0, 10);
         _display.print("TX:");
         _display.println(midi.getTxCount());
+        _display.setCursor(0, 20);
+        _display.print("Drop:");
+        _display.println(g_diagStats.serialQueueOverruns);
+        _display.setCursor(0, 30);
+        _display.print("Loop:");
+        _display.print(g_diagStats.lastLoopMicros);
+        _display.print('/');
+        _display.println(g_diagStats.maxLoopMicros);
+        _display.setCursor(0, 40);
+        _display.print("Err:");
+        _display.println(g_diagStats.midiParseErrors);
         break;
     }
     }

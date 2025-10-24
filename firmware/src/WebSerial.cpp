@@ -196,3 +196,24 @@ void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t 
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
 }
+
+void WebSerial::sendDiagnostics(const DiagnosticStats &stats, const char *reason, bool force) {
+    if (!force && !webSerialStreaming)
+        return;
+
+    StaticJsonDocument<256> doc;
+    doc["type"] = "diagnostic";
+    if (reason && reason[0] != '\0') {
+        doc["reason"] = reason;
+    }
+    doc["serial_overruns"] = stats.serialQueueOverruns;
+    doc["serial_coalesced"] = stats.serialQueueCoalesced;
+    doc["midi_parse_errors"] = stats.midiParseErrors;
+    doc["loop_last_us"] = stats.lastLoopMicros;
+    doc["loop_max_us"] = stats.maxLoopMicros;
+    doc["loop_overruns"] = stats.loopOverruns;
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}

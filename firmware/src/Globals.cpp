@@ -45,6 +45,8 @@ unsigned long lastClockTime = 0;  // ms timestamp of the last MIDI clock tick
 uint32_t g_resetCause = 0;        // raw reset cause from SRC_SRSR
 uint16_t g_brownoutCount = 0;     // persisted brownout counter
 
+DiagnosticStats g_diagStats{};    // live counters for dropped bytes and loop timing
+
 // Note dynamics knobs
 int8_t velocityShift = 0;
 uint8_t changeProbability = 100;

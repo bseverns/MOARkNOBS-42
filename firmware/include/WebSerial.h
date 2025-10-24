@@ -53,6 +53,15 @@ class WebSerial {
      * Emit an ARG configuration patch.
      */
     static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
+
+    /**
+     * Emit diagnostic counters whenever the firmware spots a hiccup.
+     * Optionally slap on a reason label ("midi_overflow", "loop_overrun", etc.).
+     * Pass force=true when answering CLI requests so the payload prints even
+     * before WebSerial streaming has been armed by HELLO.
+     */
+    static void sendDiagnostics(const DiagnosticStats &stats, const char *reason = nullptr,
+                                bool force = false);
 };
 
 #endif // WEBSERIAL_H
