@@ -739,7 +739,9 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         }
         context.configManager.setEnvelopePair(static_cast<uint8_t>(idxA),
                                               static_cast<uint8_t>(idxB));
-        context.potentiometerManager.setArgEnvelopePair(idxA, idxB);
+        if (_potentiometerManager != nullptr) {
+            _potentiometerManager->setArgEnvelopePair(idxA, idxB);
+        }
         auto pinName = [](int pin) {
             switch (pin) {
             case A0:
