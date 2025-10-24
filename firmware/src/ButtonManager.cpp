@@ -528,11 +528,12 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         break;
     case 2: {
         MIDISlot &slot = context.configManager.getSlot(context.activePot);
-        slot.type = static_cast<MIDIMessageType>(
-            (static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
+        slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) %
+                                                 (static_cast<int>(MIDIMessageType::SysEx) + 1));
         context.configManager.saveSlot(context.activePot, slot);
         char buf[32];
-        snprintf(buf, sizeof(buf), "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
+        snprintf(buf, sizeof(buf), "Slot %d Type %d", context.activePot,
+                 static_cast<int>(slot.type));
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
         break;

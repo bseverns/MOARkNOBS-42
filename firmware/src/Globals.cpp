@@ -141,4 +141,3 @@ void loadHardwareConfig() {
 #endif
     loadFromJson(hwConfig);
 }
-
