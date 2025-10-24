@@ -3,16 +3,12 @@
 
 #include <Arduino.h>
 #include <vector>
-#include "Globals.h"
-#include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "Globals.h"
 #include "MIDITypes.h"
+#include "PotentiometerManager.h"
 
 class ConfigManager;
-
-class ConfigManager;
-
-extern bool webSerialStreaming;
 
 class WebSerial {
   public:
@@ -21,36 +17,59 @@ class WebSerial {
      * Structure (newline-terminated):
      * {
      *   "slots": [s0, s1, ..., s41],       // 42 values, each 0-127
-     *   "envelopes": [e0, e1, ..., e5]     // 6 values, each 0-127
+     *   "envelopes": [e0, e1, ..., e5],    // 6 values, each 0-127
+     *   "currentSlot": <int>,              // -1 if nothing is armed, otherwise 0-41
+     *   "argMethod": "<label>",          // e.g. "PLUS" or "MULT"
+     *   "argEnabled": <bool>,            // true if the ARG blender is active
+     *   "argPair": [a, b],               // envelope followers feeding the ARG input pair
+     *   "efStatus": [0|1, ...],           // envelope follower enable flags
+     *   "diagnostics": {
+     *     "uart_overruns": <int>,         // DIN UART overruns caught since boot
+     *     "midi_drops": <int>,            // Messages we refused (bad framing, etc)
+     *     "loop_overruns": <int>,         // Main loop spins that broke the 1 ms budget
+     *     "midi_task_overruns": <int>,    // processIncomingMIDI calls running >1 ms
+     *     "loop_max_us": <int>,           // Worst loop duration in the last window
+     *     "loop_last_us": <int>,          // Duration of the most recent loop spin
+     *     "midi_isr_max_us": <int>,       // Slowest MIDI service pass in microseconds
+     *     "midi_isr_last_us": <int>       // Latest MIDI service duration in microseconds
+     *   }
      * }
      * Example payload:
-     * {"slots":[0,1,2,...,41],"envelopes":[0,0,0,0,0,0]}
+     * {"slots":[0,1,2,...,41],"envelopes":[0,0,0,0,0,0],"currentSlot":5,
+     *  "argMethod":"PLUS","efStatus":[1,0,0,0,0,1],
+     *  "diagnostics":{"loop_max_us":702}}
      * Cross-check docs/WebSerial.md for the gritty protocol details.
      */
     static void sendStateSnapshot(const PotentiometerManager &pots,
-                                  const std::vector<EnvelopeFollower> &envelopes);
+                                  const std::vector<EnvelopeFollower> &envelopes,
+                                  const ConfigManager &config, uint8_t currentSlot,
+                                  const SystemDiagnostics &diagnostics);
 
     /**
-     * Emit a one-slot config patch when firmware rewires a MIDI slot from
-     * hardware input (button combo, WebSerial command, whatever). The payload
-     * mirrors GET_CONFIG schema fields so the browser can merge the change
-     * without pulling a full dump.
+     * Emit a compact config patch describing the current state of a slot.
+     * Mirrors the schema used by the WebSerial editor so diffs line up.
+     * Also echoes the legacy "config-patch" payload so ancient frontends keep breathing.
      */
     static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
 
     /**
-     * Emit an envelope assignment patch for a single slot so the WebSerial UI
-     * can redraw the routing matrix immediately.
+     * Emit an envelope assignment patch for a single slot.
+     * Lets the browser repaint routing badges without reloading everything.
+     * Legacy "config-patch" events also fire so dusty dashboards stay in sync.
      */
     static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
 
     /**
-     * Emit a filter configuration patch (type/frequency/Q).
+     * Emit a filter configuration patch (type/frequency/Q) for the active follower.
+     * Keeps the UI in lockstep when filters are tuned from the hardware side.
+     * Echoes the historic config-patch format for any hold-out tooling.
      */
     static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
 
     /**
      * Emit an ARG configuration patch.
+     * Broadcasts method, enable flag, and the paired envelopes so remote editors sync up.
+     * Throws a matching config-patch blob for UI fossils that only learned the OG format.
      */
     static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };

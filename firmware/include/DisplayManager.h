@@ -13,6 +13,7 @@
 struct ButtonManagerContext;
 class ButtonManager;
 class MIDIHandler;
+struct SystemDiagnostics;
 
 /*
  * Animation & Timing 101
@@ -130,7 +131,7 @@ class DisplayManager {
 
     /** Show diagnostics pages when the box is in self-test mode. */
     void showDiagnostic(uint8_t page, const ButtonManager &bm, const ButtonManagerContext &ctx,
-                        const MIDIHandler &midi);
+                        const MIDIHandler &midi, const SystemDiagnostics &diag);
 
     /** Update the beat indicator or show "--" when clock is stopped. */
     void updateBeat(uint8_t beatPosition, bool clockRunning);

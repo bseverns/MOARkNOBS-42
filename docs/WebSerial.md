@@ -44,7 +44,19 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
   "envelopes":[0,0,0,0,0,0],
   "currentSlot":5,
   "argMethod":"PLUS",
-  "efStatus":[1,0,0,0,0,1]
+  "argEnabled":true,
+  "argPair":[0,1],
+  "efStatus":[1,0,0,0,0,1],
+  "diagnostics":{
+    "uart_overruns":0,
+    "midi_drops":0,
+    "loop_overruns":0,
+    "midi_task_overruns":0,
+    "loop_max_us":812,
+    "loop_last_us":742,
+    "midi_isr_max_us":320,
+    "midi_isr_last_us":110
+  }
 }
 ```
 
@@ -52,49 +64,35 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
+- `argEnabled` – whether the ARG blender is live or bypassed.
+- `argPair` – the two envelope followers currently feeding the ARG stage (indexes 0‑5).
 - `efStatus` – array of six flags; `1` means that envelope follower is lit.
+- `diagnostics` – brand-new watchdog metrics surfacing how hard the MCU is being pushed:
+  - `uart_overruns` – count of DIN UART receive overruns caught in hardware.
+  - `midi_drops` – messages we binned due to busted framing or unsupported types.
+  - `loop_overruns` – main loop iterations that blew past the 1 ms target.
+  - `midi_task_overruns` – MIDI service passes that ran longer than 1 ms.
+  - `loop_max_us` / `loop_last_us` – worst and most recent loop durations in microseconds.
+  - `midi_isr_max_us` / `midi_isr_last_us` – same deal for `processIncomingMIDI()`.
+
+When any of those counters tick upward the status LED on the board pulses and the JSON stream logs an event, so you get both a visual scream and structured telemetry.
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
 
-### Config Patch Bursts
+## Patch Messages
 
-Heavy edits don’t wait for the next telemetry frame. Whenever the deck flips a slot type, nudges the MIDI channel, remaps an
-envelope follower, or revoices the filter/ARG settings, the firmware hurls a one-off `config-patch` JSON doc so the browser can
-update instantly:
+Streaming snapshots are the vibe, but the firmware also fires micro-patches whenever a single slice of state changes. These are
+newline-terminated JSON blobs as well, all prefixed with a `type` field so your app can route them without guesswork.
 
-```json
-{
-  "type": "config-patch",
-  "slots": [
-    {
-      "index": 7,
-      "type": "CC",
-      "type_name": "CC",
-      "type_code": 1,
-      "midiChannel": 3,
-      "data1": 74,
-      "efIndex": 2,
-      "active": true,
-      "arpNote": 60
-    }
-  ],
-  "efSlots": [
-    { "index": 2, "slot": 7 }
-  ]
-}
-```
+| `type` value | When it fires | Payload notes |
+| --- | --- | --- |
+| `slot_patch` | Slot MIDI settings mutate (from the board or the browser) | `slot` index plus a nested `slot` object including `type`, `schema_name`, `legacy_name`, `channel`, resolved `data1`, EF routing, and active flag. That mirrors exactly what the editor expects, so you can diff-and-apply without a decode step. |
+| `envelope_assignment` | A slot gets re-routed to a new follower | `slot` index and `envelope` index (or `-1` if unassigned). Use it to repaint routing badges. |
+| `filter_patch` | Envelope follower filter tweaked live | `filter` object includes type index/name, frequency, and Q. Perfect for sliding UI knobs without yanking the full config. |
+| `arg_patch` | ARG mixer mode flips or toggles | Nested `arg` object with the method index/name, enable flag, and the paired envelopes so remote editors stay in sync. |
 
-- `slots` — array of partial slot records. Only the touched fields show up. Expect schema-shaped keys like `type`,
-  `midiChannel`, `data1`, `efIndex`, and friends. The legacy `type_name`/`type_code` pair rides along for older tools.
-- `efSlots` — optional array mirroring the envelope routing table: `{ "index": <ef>, "slot": <pot> }`. Pass `-1` for the
-  envelope index to mean “nobody’s home”.
-- `filter` / `arg` — when the firmware cycles filter shapes or ARG modes, the new values surface here with the same field names
-  returned by `GET_CONFIG`.
-
-The web editor merges these deltas into its local copy and keeps staged edits that don’t conflict. Mash the button combo for
-“Slot → NRPN” and watch the dropdown flip instantly, even if you’ve already staged other edits. Punk rock, zero desync.
-
-Miss a patch? Ask for `GET_CONFIG` again and rebuild your local model. The UI never has to guess.
+Every patch obeys the same “don’t spam unless streaming” rule as snapshots. If WebSerial streaming is paused, patches quietly bail
+so the USB line isn’t clogged when no one’s listening.
 
 ## Text Commands
 

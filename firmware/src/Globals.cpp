@@ -44,6 +44,7 @@ bool g_usbMidiOutEnabled = false; // gated USB MIDI output
 unsigned long lastClockTime = 0;  // ms timestamp of the last MIDI clock tick
 uint32_t g_resetCause = 0;        // raw reset cause from SRC_SRSR
 uint16_t g_brownoutCount = 0;     // persisted brownout counter
+bool webSerialStreaming = false;  // flipped on when the browser wants JSON telemetry
 
 // Note dynamics knobs
 int8_t velocityShift = 0;
@@ -51,6 +52,8 @@ uint8_t changeProbability = 100;
 
 // Envelope follower calibration stash
 EnvelopeConfig envelopeConfig = {{0}};
+
+SystemDiagnostics g_systemDiagnostics;
 
 // Analog Routing Grid pairings.  We walk the six EF analog pins at compile time
 // and stash every unique (A,B) combo with A<B.  Change the pin list and the

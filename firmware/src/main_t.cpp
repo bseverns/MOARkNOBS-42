@@ -273,6 +273,7 @@ void setup() {
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
 
     midiHandler.begin();
+    midiHandler.setDiagnostics(&g_systemDiagnostics);
     midiHandler.setDisplayManager(&displayManager);
 
     ledManager.begin();

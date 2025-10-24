@@ -169,10 +169,7 @@ void MIDIHandler::handleClockTick() {
 }
 
 void MIDIHandler::processIncomingMIDI() {
-    // Even if no new traffic lands this frame, keep draining the DIN queue so
-    // anything throttled by the pacing guard still hits the wire ASAP.
-    serviceSerialQueue();
-
+    uint32_t startMicros = micros();
     // Serial MIDI is the crusty hardware port. When it spits out a full
     // message, read() returns true and we hurl the parsed bytes at
     // handleMIDI so the rest of the rig can jam.
@@ -197,6 +194,9 @@ void MIDIHandler::processIncomingMIDI() {
         auto type = static_cast<midi::MidiType>(usbMIDI.getType());
         if (!isSupportedType(type)) {
             MIDI_DBG_PRINTLN("Dropping unsupported USB MIDI type");
+            if (_diagnostics) {
+                ++_diagnostics->midiDropCount;
+            }
             continue;
         }
         if (type == MidiType_Tick) {
@@ -226,12 +226,24 @@ void MIDIHandler::processIncomingMIDI() {
         _displayManager->registerInteraction();
     }
 
-    serviceSerialQueue();
+    uint32_t duration = micros() - startMicros;
+    if (_diagnostics) {
+        _diagnostics->lastProcessMidiMicros = duration;
+        if (duration > _diagnostics->maxProcessMidiMicros) {
+            _diagnostics->maxProcessMidiMicros = duration;
+        }
+        if (duration > 1000U) {
+            ++_diagnostics->midiTaskOverrunCount;
+        }
+    }
 }
 
 void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2) {
     if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
         MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
+        if (_diagnostics) {
+            ++_diagnostics->midiDropCount;
+        }
         return;
     }
     _rxCount++;
@@ -654,6 +666,9 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
 #ifdef MIDI_DEBUG
         MIDI_DBG_PRINTF("Dropping SysEx with length %u (too short for framing)\n", length);
 #endif
+        if (_diagnostics) {
+            ++_diagnostics->midiDropCount;
+        }
         return;
     }
 
@@ -670,6 +685,9 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
         MIDI_DBG_PRINTF("Dropping SysEx[%u]: invalid framing (start %02X end %02X)\n", length,
                         data[0], data[length - 1]);
 #endif
+        if (_diagnostics) {
+            ++_diagnostics->midiDropCount;
+        }
         return;
     }
 

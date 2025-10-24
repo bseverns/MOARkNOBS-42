@@ -25,6 +25,8 @@ inline constexpr bool HAS_USB_MIDI = true;
 inline constexpr bool HAS_USB_MIDI = false;
 #endif
 
+struct SystemDiagnostics;
+
 /**
  * @brief Thin wrapper around the Arduino and USB MIDI libraries.
  */
@@ -32,6 +34,9 @@ class MIDIHandler {
   public:
     /** Assign a DisplayManager so MIDI traffic can be displayed. */
     void setDisplayManager(DisplayManager *dm) { _displayManager = dm; }
+
+    /** Hook in a diagnostics block so we can count dropped bytes and overruns. */
+    void setDiagnostics(SystemDiagnostics *diag) { _diagnostics = diag; }
 
     /** Create a new MIDI handler with no side effects. */
     MIDIHandler();
@@ -132,6 +137,7 @@ class MIDIHandler {
     unsigned long lastExternalClock = 0;
     unsigned long lastInternalTick = 0;
     DisplayManager *_displayManager = nullptr;
+    SystemDiagnostics *_diagnostics = nullptr;
 
     // NRPN decode state
     uint16_t _nrpnParam = 0;

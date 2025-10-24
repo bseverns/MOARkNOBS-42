@@ -121,6 +121,10 @@ class EnvelopeFollower {
     void configureFilter(float frequency, float q);
     /** Query the current filter type. */
     FilterType getFilterType() const;
+    /** Sneak out the shaping frequency knob (Hz for filters, scaler for curves). */
+    float getShapingFrequency() const;
+    /** Show the stored shaping Q / resonance parameter. */
+    float getShapingQ() const;
 
     /**
      * Read the analog pin, process the value and store it. Call every loop
@@ -143,12 +147,18 @@ class EnvelopeFollower {
 
     /** Select which arithmetic method to use in ARG mode. */
     void setARGMethod(ARG_Method method);
+    /** Report which ARG math trick we currently have armed. */
+    ARG_Method getARGMethod() const;
 
     /**
      * Specify which two inputs feed the ARG calculations. Call together
      * with setARGMethod when configuring the follower.
      */
     void setEnvelopePair(int envA, int envB);
+    /** Return the configured A input pin for the ARG blender. */
+    int getEnvelopeA() const;
+    /** Return the configured B input pin for the ARG blender. */
+    int getEnvelopeB() const;
 
     /**
      * Sample Vref and the current input, then burn the baseline to EEPROM so
