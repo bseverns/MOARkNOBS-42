@@ -97,4 +97,6 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Ctrl2 + Ctrl3         | Bump arpeggiator base note       |
 | Ctrl1 + Ctrl2         | Cycle configuration profiles     |
 
+The ARG combos (`Ctrl0+Ctrl1` / `Ctrl0+Ctrl2`) only light up once the active slot actually owns an envelope follower. If no EF is assigned the firmware flashes “No EF assigned” on the OLED instead of scribbling ghost settings.
+
 For deeper madness see the [firmware README](../../README.md).

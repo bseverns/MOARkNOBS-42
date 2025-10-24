@@ -49,7 +49,7 @@ void test_compute_slot_arg_level_blends_followers() {
     }
 
     MIDISlot slot{};
-    slot.efIndex = 2;
+    slot.ef.followerIndex = 2;
     slot.arg.enabled = 1;
     slot.arg.method = ARGMethod::MULT;
     slot.arg.sourceA = 0;
@@ -123,7 +123,7 @@ void test_legacy_arg_migration_populates_slots() {
                                 static_cast<uint8_t>(slot.type));
         TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>((i % 16) + 1), slot.midiChannel);
         TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(i), slot.data1);
-        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(i % NUM_ENVELOPES), slot.efIndex);
+        TEST_ASSERT_EQUAL_INT8(static_cast<int8_t>(i % NUM_ENVELOPES), slot.ef.followerIndex);
         TEST_ASSERT_TRUE(slot.active);
         TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(60 + (i % 12)), slot.arpNote);
         TEST_ASSERT_EQUAL_UINT8(0, slot.sysexLength);

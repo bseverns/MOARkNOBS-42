@@ -5,6 +5,31 @@ const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
 const ACK_TIMEOUT_MS = 1500;
 const STORAGE_KEY = 'moarknobs:last-port';
+const EF_FILTER_NAMES = [
+  'LINEAR',
+  'OPPOSITE_LINEAR',
+  'EXPONENTIAL',
+  'RANDOM',
+  'LOWPASS',
+  'HIGHPASS',
+  'BANDPASS'
+];
+const ARG_METHOD_NAMES = [
+  'PLUS',
+  'MIN',
+  'PECK',
+  'SHAV',
+  'SQAR',
+  'BABS',
+  'TABS',
+  'MULT',
+  'DIVI',
+  'AVG',
+  'XABS',
+  'MAXX',
+  'MINN',
+  'XORR'
+];
 
 function makeEmitter() {
   const listeners = new Map();
@@ -129,9 +154,69 @@ function normalizeSlotPatchEntry(entry) {
     const value = Number(entry.data1);
     if (Number.isFinite(value)) fields.data1 = value;
   }
-  if (entry.efIndex !== undefined) {
-    const value = Number(entry.efIndex);
+  const efIndexValue =
+    entry.efIndex ?? entry.ef_index ?? (entry.ef && typeof entry.ef === 'object' ? entry.ef.index : undefined);
+  if (efIndexValue !== undefined) {
+    const value = Number(efIndexValue);
     if (Number.isFinite(value)) fields.efIndex = value;
+  }
+  if (entry.ef && typeof entry.ef === 'object') {
+    const ef = {};
+    const coerceNumber = (value) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    };
+    const pushNumber = (sourceKey, targetKey = sourceKey) => {
+      if (entry.ef[sourceKey] === undefined) return;
+      const num = coerceNumber(entry.ef[sourceKey]);
+      if (num === null) return;
+      ef[targetKey] = num;
+    };
+    if (entry.ef.filter_name !== undefined) {
+      ef.filter_name = String(entry.ef.filter_name);
+    }
+    pushNumber('index');
+    pushNumber('filter_index');
+    pushNumber('frequency');
+    pushNumber('q');
+    pushNumber('oversample');
+    pushNumber('smoothing');
+    pushNumber('baseline');
+    pushNumber('gain');
+    if (Object.keys(ef).length) {
+      fields.ef = ef;
+    }
+  }
+  if (entry.arg && typeof entry.arg === 'object') {
+    const arg = {};
+    if (entry.arg.enabled !== undefined) {
+      const raw = entry.arg.enabled;
+      if (typeof raw === 'string') {
+        arg.enabled = raw === 'true' || raw === '1';
+      } else if (typeof raw === 'number') {
+        arg.enabled = raw !== 0;
+      } else {
+        arg.enabled = Boolean(raw);
+      }
+    }
+    if (entry.arg.method !== undefined) {
+      const methodValue = Number(entry.arg.method);
+      if (Number.isFinite(methodValue)) arg.method = methodValue;
+    }
+    if (entry.arg.method_name !== undefined) {
+      arg.method_name = String(entry.arg.method_name);
+    }
+    if (entry.arg.sourceA !== undefined) {
+      const sourceA = Number(entry.arg.sourceA);
+      if (Number.isFinite(sourceA)) arg.sourceA = sourceA;
+    }
+    if (entry.arg.sourceB !== undefined) {
+      const sourceB = Number(entry.arg.sourceB);
+      if (Number.isFinite(sourceB)) arg.sourceB = sourceB;
+    }
+    if (Object.keys(arg).length) {
+      fields.arg = arg;
+    }
   }
   if (entry.active !== undefined) fields.active = Boolean(entry.active);
   if (entry.takeover !== undefined) fields.takeover = Boolean(entry.takeover);
@@ -240,26 +325,54 @@ function createSimulator() {
     fw_version: 'sim-fw',
     fw_git: 'deadbeef',
     build_ts: new Date().toISOString(),
-    schema_version: '1.4.0',
+    schema_version: '1.5.0',
     slot_count: 42,
     capabilities: { atomicApply: true },
-    max_table_lengths: { ledColors: 16, efSlots: 6 },
+    max_table_lengths: { ledColors: 42, efSlots: 6 },
     free: { ram: 48000, flash: 512000 }
   };
   const config = {
-    slots: Array.from({ length: manifest.slot_count }, (_, idx) => ({
-      id: idx,
-      active: idx % 2 === 0,
-      type: 'CC',
-      midiChannel: (idx % 16) + 1,
-      data1: (idx % 120) + 1,
-      efIndex: idx % manifest.max_table_lengths.efSlots,
-      pot: true,
-      sysexTemplate: ''
+    slots: Array.from({ length: manifest.slot_count }, (_, idx) => {
+      const efIndex = idx % manifest.max_table_lengths.efSlots;
+      const filterIndex = idx % EF_FILTER_NAMES.length;
+      const argMethod = idx % ARG_METHOD_NAMES.length;
+      return {
+        id: idx,
+        active: idx % 2 === 0,
+        type: 'CC',
+        midiChannel: (idx % 16) + 1,
+        data1: (idx % 120) + 1,
+        efIndex,
+        ef: {
+          index: efIndex,
+          filter_index: filterIndex,
+          filter_name: EF_FILTER_NAMES[filterIndex],
+          frequency: 400 + (idx % 8) * 50,
+          q: 0.6 + (idx % 5) * 0.1,
+          oversample: 4,
+          smoothing: 0.2 + (idx % 3) * 0.1,
+          baseline: 0,
+          gain: 1
+        },
+        arg: {
+          enabled: idx % 3 === 0,
+          method: argMethod,
+          method_name: ARG_METHOD_NAMES[argMethod],
+          sourceA: efIndex,
+          sourceB: (efIndex + 1) % manifest.max_table_lengths.efSlots
+        },
+        pot: true,
+        sysexTemplate: ''
+      };
+    }),
+    efSlots: Array.from({ length: manifest.max_table_lengths.efSlots }, (_, idx) => ({
+      slot: (idx * 7) % manifest.slot_count
     })),
     arg: { method: 'PLUS', enable: true, a: 1, b: 1 },
     filter: { type: 'LOWPASS', freq: 800, q: 1 },
-    ledColors: Array.from({ length: manifest.max_table_lengths.ledColors }, () => ({ color: '#ff00ff' }))
+    ledColors: Array.from({ length: manifest.max_table_lengths.ledColors }, (_, idx) => ({
+      color: `#${((idx * 6151) % 0xffffff).toString(16).padStart(6, '0')}`
+    }))
   };
   const telemetry = () => ({
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
