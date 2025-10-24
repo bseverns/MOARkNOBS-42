@@ -1,6 +1,8 @@
-// Tracks audio or CV levels to modulate MIDI messages.
-// Supports single-envelope mode with several filter shapes.
-// Updated each loop by firmware_main.cpp and consulted by ButtonManager.
+// EnvelopeFollower turns raw analog voltage into musically useful control data.
+// This file spells out every step—how pins get resolved, how filters sculpt the
+// signal, and why different modes take different math routes. Read it if you’re
+// trying to teach someone the difference between "sampling" and "shaping" or
+// why we stash filter parameters alongside the object instead of in global soup.
 
 #include "EnvelopeFollower.h"
 #include "BiquadFilter.h"

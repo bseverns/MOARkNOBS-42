@@ -8,10 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Slot ownership got formalized: each slot now names its owning manager and
+  persistence block, with the EEPROM serializer carving out explicit 64-byte
+  pages so firmware, WebSerial, and Unity tests stop stepping on each other's
+  toes when they rebuild schema drafts.
 - Slot configs now stash 16-byte SysEx templates with `XX`/`MSB`/`LSB` placeholders, and the WebSerial editor lets you script
   those bursts without cracking open the firmware.
 - Per-slot envelope follower settings (filter type, cutoff, Q) live alongside each MIDISlot and persist to EEPROM, bumping the
   schema to `0x0004` so stored patches remember their curves.
+
+### Changed
+- Firmware source files now carry teaching-forward comment blocks explaining
+  data flow, pointer ownership, and math choices so workshops can read the code
+  like a zine instead of a riddle.
+- The November comment pass now ships with subject headers—boot choreography,
+  input scanning, persistence hygiene, and signal-flow math—so instructors can
+  stitch the annotated files into lesson plans without reverse engineering the
+  comment trail.
+- Root and firmware READMEs map the control stack with new "crash course" and
+  "stack philosophy" sections, pointing students toward the annotated modules
+  and the docs they feed.
+- Added an "Annotated Source Field Guide" and guided-tour curriculum so mentors
+  know exactly which `.cpp` to open when explaining globals, mux math, or MIDI
+  queueing.
 
 ### Fixed
 - Bulk CC dumps finally stash channels under `EEPROM_POT_CHANNELS` and park CC numbers under `EEPROM_POT_CC`, so `Utility::processBulkUpdate`

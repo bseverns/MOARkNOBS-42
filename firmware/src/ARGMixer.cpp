@@ -1,3 +1,11 @@
+// ARG (Arithmetic Reference Generator) mixing glues together pairs of envelope
+// followers so a slot can riff on two modulation sources at once. This file is
+// intentionally loud about how the math works so folks new to DSP can track
+// the flow: sanitize the config, grab two envelope levels, then blend them with
+// whichever punky operator you picked in the editor. No hidden magic, just
+// pointers, references, and a handful of standard-library helpers earning
+// their keep.
+
 #include "ARGMixer.h"
 
 #include <Arduino.h>
@@ -12,11 +20,18 @@ SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
     SlotARGConfig sanitized = candidate;
     sanitized.enabled = candidate.enabled ? 1 : 0;
 
+    // `method` comes in as a raw integer from EEPROM or JSON. Clamping it here
+    // keeps us from indexing past the enum even if someone edits their config
+    // by hand at 2 a.m. while hopped up on solder fumes.
+
     const uint8_t maxMethod = static_cast<uint8_t>(ARGMethod::XORR);
     if (static_cast<uint8_t>(sanitized.method) > maxMethod) {
         sanitized.method = ARGMethod::PLUS;
     }
 
+    // Source indices are stored as raw bytes so the firmware can persist them
+    // without worrying about pointer lifetimes. We bounce them back into range
+    // before touching the envelope follower vector.
     if (sanitized.sourceA >= NUM_ENVELOPES) {
         sanitized.sourceA = 0;
     }
@@ -39,6 +54,8 @@ uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFoll
         return 0;
     };
 
+    // If ARG is disabled we fall back to the slot's linked follower. Think of
+    // this as "bypass"—the same wiring but no extra maths.
     if (!cfg.enabled) {
         const auto followerIndex = static_cast<size_t>(slot.ef.followerIndex);
         if (slot.ef.followerIndex >= 0 && followerIndex < followers.size()) {
@@ -51,6 +68,9 @@ uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFoll
     const int B = fetchLevel(cfg.sourceB);
     int result = 0;
 
+    // Each operator is kept explicit so students can tinker without spelunking
+    // into mysterious helper functions. Want to teach ratios, sums, xor? It's
+    // all laid out right here.
     switch (cfg.method) {
     case ARGMethod::PLUS:
         result = A + B;

@@ -1,3 +1,8 @@
+// SysExTemplate.cpp is both parser and teacher. It decodes human-friendly token
+// strings into raw 7-bit-safe payloads and back, with comments explaining every
+// guardrail. Handy for demystifying how SysEx placeholders turn into bytes on
+// the wire.
+
 #include "SysExTemplate.h"
 
 #include <algorithm>

@@ -1,6 +1,7 @@
-// Reads potentiometers through analog multiplexers and reports changes.
-// Triggers MIDI callbacks and updates LEDManager.
-// Polled in firmware_main.cpp.
+// PotentiometerManager is the analog whisperer. Every comment is tuned to teach
+// why multiplexers need settle time, how we smooth jitter without wrecking
+// responsiveness, and how MIDI callbacks use both the mapped CC value and the
+// raw ADC reading for richer control surfaces.
 
 #include "PotentiometerManager.h"
 #include <EEPROM.h>
@@ -202,5 +203,10 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
 
 void PotentiometerManager::setMidiCallback(
     std::function<void(uint8_t, uint8_t, uint16_t, uint8_t)> cb) {
+    // Callback signature is: (ccNumber, midiValue, rawAdc, potIndex).
+    // The double payload is intentional—classroom time gets a lot juicier when
+    // you can show the raw 0‑1023 data next to the scaled 0‑127 output, and it
+    // lets external schedulers reuse the analog voltage without re-reading the
+    // mux.
     midiCallback = cb;
 }

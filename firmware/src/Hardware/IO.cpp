@@ -1,3 +1,9 @@
+// Hardware/IO.cpp abstracts raw Arduino calls so the rest of the firmware can
+// swap in fakes during tests. The comments keep the why front-and-center:
+// function pointers as dependency injection, scoped helpers to automatically
+// restore the previous provider, and no hidden static state beyond what we
+// expose on purpose.
+
 #include "Hardware/IO.h"
 
 #if defined(ARDUINO)

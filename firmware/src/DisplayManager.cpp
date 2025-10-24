@@ -1,6 +1,8 @@
-// Wraps the SSD1306 display for UI messages and animations.
-// Receives updates from ButtonManager, MIDIHandler and firmware_main.cpp.
-// Handles startup screens, status text and screensaver.
+// DisplayManager shows how we choreograph pixels with purpose. The comments in
+// this file lean into the “why”: why we stage startup animations, why fades
+// tweak contrast directly, and how modules feed data into the OLED without
+// tripping over each other's buffers. Treat it like a gig poster explaining the
+// set list.
 
 #include <Arduino.h>
 #include "DisplayManager.h"

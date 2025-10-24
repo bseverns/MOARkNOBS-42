@@ -1,6 +1,7 @@
-// Entry point for the MN42 firmware.
-// Instantiates all managers and drives the scheduler loop.
-// Coordinates interactions between machine sub-systems.
+// firmware_main.cpp is the command center. Beyond spinning the scheduler, these
+// comments narrate how every subsystem plugs together—great for walking a class
+// through dependency injection, ownership, and why embedded code leans so hard
+// on globals for determinism.
 
 #include <Arduino.h>
 #include "MIDIHandler.h"

@@ -1,6 +1,8 @@
-// Scans the 42-button matrix and control buttons.
-// Sends events to ConfigManager, DisplayManager and other modules.
-// Called in every loop of firmware_main.cpp.
+// ButtonManager is where human hands meet firmware logic. Think of this file as
+// the field manual for diode-matrix scanning, timing thresholds, and how we map
+// physical gestures onto virtual slots. Comments call out why the mux waits,
+// how we debounce without hiding latency, and why we stream context back to the
+// WebSerial educator in the loop. Read it like a lab notebook.
 
 #include "ButtonManager.h"
 #include "EnvelopeFollower.h"

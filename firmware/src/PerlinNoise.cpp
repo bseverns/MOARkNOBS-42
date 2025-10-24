@@ -1,3 +1,7 @@
+// PerlinNoise.cpp is intentionally tiny but the comments make it clear how the
+// classic Ken Perlin table powers the arpeggiator's "random" shape. Great for a
+// quick aside on gradients, lerp, and why deterministic noise beats rand().
+
 #include "PerlinNoise.h"
 #include <cmath>
 #include <cstdint>

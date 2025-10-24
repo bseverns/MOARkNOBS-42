@@ -1,3 +1,9 @@
+// Globals.cpp is the wiring diagram the compiler can read. It corrals all the
+// cross-module shared state—hardware pin maps, runtime knobs, and helper
+// lookups—so we have one canonical source of truth. The comments aim to demystify
+// global data by explaining why each variable lives at this scope and how you
+// can override it safely via JSON or header hooks.
+
 #include "Globals.h"
 #include <Arduino.h>
 #include <algorithm>

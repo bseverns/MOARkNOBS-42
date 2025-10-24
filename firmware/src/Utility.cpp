@@ -1,6 +1,7 @@
-// Miscellaneous helpers used across the firmware.
-// Provides mapping functions, scheduling and EEPROM utilities.
-// Referenced by most modules including firmware_main.cpp.
+// Utility.cpp is the grab bag where we stash math tricks, timing helpers, and
+// display conveniences that would otherwise clutter the core modules. The
+// commentary leans toward teaching: every helper is contextualized so students
+// know when to reach for it and what trade-offs lurk under the hood.
 
 #include "Utility.h"
 #include <Adafruit_SSD1306.h>

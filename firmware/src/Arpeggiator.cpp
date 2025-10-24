@@ -1,6 +1,9 @@
-// Controls the simple arpeggiator used by the MN42.
-// Reads slot settings from ConfigManager and triggers notes via MIDIHandler.
-// Started from firmware_main.cpp and reacts to ButtonManager.
+// The arpeggiator is our looping storyteller: take one slot, advance through a
+// pattern, spit MIDI on the beat. This file doubles as a workshop on timing,
+// state machines, and data ownership. We lean on ConfigManager for slot state,
+// PotentiometerManager for live knobs, and MIDIHandler for the actual note
+// shouts. Follow the breadcrumbs—every pointer, reference, and struct handoff
+// is annotated so students can see exactly who owns what and why it matters.
 
 #include "Arpeggiator.h"
 #include "MIDIHandler.h"
@@ -13,10 +16,10 @@ constexpr uint8_t MAX_STEPS = 16;
 // Longest span between notes, in MIDI clock ticks. Anything longer loses the groove.
 constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 
-// Handles per-slot arpeggiation. This component ties into ConfigManager to
-// fetch slot settings, reads the most recent pot value from
-// PotentiometerManager and issues MIDI messages through MIDIHandler. The
-// update() routine is scheduled from the main firmware loop.
+// Handles per-slot arpeggiation. The constructor only seeds defaults; real work
+// happens once start() is called from firmware_main.cpp. We store primitive
+// types instead of dynamic allocations so there’s nothing sneaky to clean up
+// when the arp idles.
 
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0), _shape(UP), _step(0),
@@ -62,6 +65,8 @@ void Arpeggiator::setBaseNoteCallback(std::function<uint8_t()> cb) { _baseNoteCb
 static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t patternLen) {
     // Semitone offsets now derive from simple math rather than pre-baked tables.
     // This lets pattern length drive the range while shapes dictate direction.
+    // The helper is `static` on purpose: no free-floating functions in the
+    // global namespace and the compiler can inline it if it feels spicy.
     uint8_t pos = step % patternLen;
     switch (shape) {
     case Arpeggiator::UP:
@@ -83,6 +88,13 @@ static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t pattern
 
 // Called frequently from the scheduler. When active, this checks the slot's
 // settings and emits the next MIDI event via MIDIHandler.
+//
+// The trio of parameters spells out the data flow:
+//  * `midi`  → outbound messages + access to the MIDI clock tick counter.
+//  * `cfg`   → slot configuration, persisted in EEPROM.
+//  * `pots`  → cached ADC readings so we don’t block on fresh analog reads.
+// Each is passed by reference so we mutate the shared, long-lived singletons
+// instead of cloning state each frame.
 void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerManager &pots) {
     if (!_active)
         return;

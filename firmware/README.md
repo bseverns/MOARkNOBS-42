@@ -154,6 +154,60 @@ The LED matrix is more hardheaded for a multitude of reasons. FastLED demands it
 | `Globals`                                                      | Shared constants and state that keep the gang in sync.                                                                       |
 | `Utility`                                                      | Misc helpers—because even chaos needs some glue.                                                                             |
 
+
+### Stack Philosophy: Pointers, Ownership, and Flow
+
+This codebase leans on globals and references for a reason: the Teensy has to
+react in real time without a garbage collector or fancy RTOS to bail us out.
+Here’s how to read the pattern:
+
+- **Globals declare intent.** `Globals.cpp` publishes the hardware map and
+  long-lived runtime knobs. When `firmware_main.cpp` yanks those into module
+  constructors you can trace the wiring without diving through constructors-in-
+  constructors. It’s deterministic and easy to narrate to students.
+- **Managers own their buffers.** LED strips, button states, and envelope
+  levels all live inside their respective classes. We expose references when we
+  need to share data (`std::vector<EnvelopeFollower> &`) so ownership is obvious
+  and lifetimes stay sane.
+- **Callbacks carry both raw and cooked data.** Pot callbacks hand you the MIDI
+  value *and* the raw ADC reading so you can teach folks about scaling without
+  re-implementing the analog read yourself.
+- **Serial queues are explicit.** `MIDIHandler` keeps its own outbound FIFO so
+  you can talk about transport backpressure. Peek at the comments around
+  `enqueueSerialMessage` for the gritty details.
+
+Crack open the freshly annotated `.cpp` files (start with
+[`firmware_main.cpp`](src/firmware_main.cpp)) to see those decisions called out
+inline. The tone is part lab notebook, part "here’s how you explain pointers to
+your bandmate." Bring questions, bring experiments.
+
+### Comment Atlas: Running a Guided Tour
+
+If you’re onboarding students or a new collaborator, run this mini-curriculum to
+show how the annotated codebase fits together:
+
+1. **Boot choreography** – Skim `firmware_main.cpp` with them and trace the
+   constructor order plus the scheduler hooks. Pause on the comments that call
+   out why globals advertise intent while each manager hoards its own buffers.
+2. **Human input path** – Jump to `ButtonManager.cpp` and `PotentiometerManager.cpp`
+   to follow raw mux reads into MIDI callbacks. Have them highlight where the
+   comments explain settle delays, EWMA smoothing, and the callback signature.
+3. **Persistence reality check** – Crack `ConfigManager.cpp`. The inline notes
+   around schema upgrades and sanity checks are perfect for teaching what can go
+   wrong when you trust EEPROM blindly.
+   - Bonus: the new slot ownership ledger calls out which manager persists what
+     and why each 64-byte EEPROM page now quarantines SysEx templates + EF
+     curves.
+4. **Signal flow lab** – End with `EnvelopeFollower.cpp`, `ARGMixer.cpp`, and
+   `MIDIHandler.cpp` so they see the math evolve from audio/CV to outbound MIDI
+   packets. Point out how each comment references the next stop in the chain so
+   learners can keep the mental model alive.
+
+Wrap the tour by tossing them into `WebSerial.cpp`. Its narration shows how the
+firmware’s data model lands in JSON form and circles back into the editor. When
+the comments mention a table or primer, click through—it’s a deliberate breadcrumb
+to keep the repo half teaching zine, half bench log.
+
 ### Module Combat Map
 
 When everything boots, the modules start a polite riot. Here's the wiring carnage:
