@@ -24,11 +24,9 @@ struct UsbMidiGuard {
 };
 
 struct StubEnvelope {
-    // These Unity tests moonlight as a field notebook: the synth ships with a
-    // sustain plateau parked at 96, and most specs just want that truth baked
-    // in without ceremony.  When a test needs to stress the extremes it can
-    // still override the level, but the default keeps the "normal" vibe close
-    // to the hardware we gig with.
+    // Unity needs a "sounds-like-the-real-rig" baseline.  Our hardware ships
+    // with its sustain plateau at 96, so we codify that default here and let
+    // the outlier specs override it when they feel like getting weird.
     static constexpr uint8_t kDefaultSustain = 96;
 
     explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
