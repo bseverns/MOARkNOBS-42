@@ -24,6 +24,8 @@ struct UsbMidiGuard {
 };
 
 struct StubEnvelope {
+    // Unity specs lean on the same 96 sustain value the firmware boots with, so
+    // keep a single source of truth here instead of scattering magic numbers.
     static constexpr uint8_t kDefaultSustain = 96;
 
     explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
