@@ -19,7 +19,7 @@ extern void refreshEfVoicesFromConfig() __attribute__((weak));
 extern void refreshEfVoicesFromConfig();
 #endif
 
-void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings) {
+void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings) {
     if (slotIndex >= NUM_SLOTS) {
         return;
     }
@@ -66,6 +66,20 @@ void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings 
     ef.setSmoothingAlpha(settings.smoothing);
     ef.setBaseline(settings.baseline);
     ef.setGain(settings.gain);
+}
+
+bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+    case MIDISlot::EfSettings::FilterType::Exponential:
+    case MIDISlot::EfSettings::FilterType::Random:
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+    case MIDISlot::EfSettings::FilterType::Highpass:
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return true;
+    }
+    return false;
 }
 } // namespace
 
@@ -673,7 +687,13 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
         return false;
     }
-    if (candidate.efSettings.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+    if (!filterTypeIsValid(candidate.efSettings.filterType)) {
+        return false;
+    }
+    if (candidate.efSettings.followerIndex < -1 ||
+        candidate.efSettings.followerIndex >= static_cast<int>(NUM_ENVELOPES)) {
+        return false;
+    }
     SlotARGConfig sanitized = sanitizeArgConfig(candidate.arg);
     if (sanitized.enabled != (candidate.arg.enabled ? 1 : 0)) {
         return false;

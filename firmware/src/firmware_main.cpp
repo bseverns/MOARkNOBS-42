@@ -364,14 +364,13 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
     return false;
 }
 
-EnvelopeFollower::FilterType decodeFilterType(uint8_t raw) {
-    if (raw > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
-        return EnvelopeFollower::LINEAR;
-    }
+EnvelopeFollower::FilterType decodeFilterType(EfSettings::FilterType raw) {
     return static_cast<EnvelopeFollower::FilterType>(raw);
 }
 
-uint8_t encodeFilterType(EnvelopeFollower::FilterType type) { return static_cast<uint8_t>(type); }
+EfSettings::FilterType encodeFilterType(EnvelopeFollower::FilterType type) {
+    return static_cast<EfSettings::FilterType>(type);
+}
 
 EnvelopeFollower::FilterType parseFilterType(const char *label,
                                              EnvelopeFollower::FilterType fallback) {
@@ -435,7 +434,8 @@ void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
         } else if (typeField.is<int>() || typeField.is<long>()) {
             long raw = typeField.as<long>();
             if (raw >= 0 && raw <= static_cast<long>(EnvelopeFollower::BANDPASS)) {
-                settings.filterType = static_cast<uint8_t>(raw);
+                settings.filterType =
+                    static_cast<EfSettings::FilterType>(static_cast<uint8_t>(raw));
             }
         }
     }
@@ -970,7 +970,7 @@ void refreshEfVoicesFromConfig() {
         const MIDISlot &slot = configManager.getSlot(slotIndex);
         auto mapIt = potToEnvelopeMap.find(slotIndex);
         if (mapIt != potToEnvelopeMap.end()) {
-            voice.assignFollower(mapIt->second);
+            voice.assignFollower(mapIt->second.followerIndex);
         } else {
             voice.resetFollower();
         }
@@ -1233,7 +1233,7 @@ void processSerial() {
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
                 JsonObject efCfg = slotObj.createNestedObject("efSettings");
                 efCfg["type"] = envelopeFilterName(decodeFilterType(slot.efSettings.filterType));
-                efCfg["type_index"] = slot.efSettings.filterType;
+                efCfg["type_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
                 efCfg["freq"] = slot.efSettings.frequency;
                 efCfg["q"] = slot.efSettings.q;
                 JsonObject arg = slotObj.createNestedObject("arg");
@@ -1591,11 +1591,10 @@ void processEnvelopes() {
             EfVoice &voice = efVoices[potIndex];
             voice.assignFollower(envelopeIndex);
             voice.syncSettings(slot.efSettings);
-            uint8_t shapedLevel = voice.render(rawFollowerLevels[envelopeIndex]);
+            voice.render(rawFollowerLevels[envelopeIndex]);
 
             if (potIndex >= NUM_SLOTS)
                 continue;
-            const MIDISlot &slot = configManager.getSlot(potIndex);
             uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
             int modulatedInt = static_cast<int>(baselineMidi) + envelopeContribution;
             uint8_t modulatedValue = static_cast<uint8_t>(constrain(modulatedInt, 0, 127));
@@ -1719,10 +1718,10 @@ void updateFilterTuning(ButtonManagerContext &context) {
     EEPROM.put(EEPROM_FILTER_FREQ, freq);
     EEPROM.put(EEPROM_FILTER_Q, q);
 
-    EfSettings settings = configManager.getSlot(context.activePot).efSettings;
-    settings.frequency = freq;
-    settings.q = q;
-    saveSlotEfSettings(context.activePot, settings);
+    MIDISlot::EfSettings slotSettings = configManager.getSlot(context.activePot).efSettings;
+    slotSettings.frequency = freq;
+    slotSettings.q = q;
+    saveSlotEfSettings(context.activePot, slotSettings);
 
     MIDISlot &slot = context.configManager.getSlot(context.activePot);
     slot.ef = settings;
@@ -1818,16 +1817,16 @@ void setup() {
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
 
     // — Pot → MIDI routing callback —
-    potentiometerManager.setMidiCallback([&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue,
-                                             uint8_t potIdx) {
-        auto &slot = configManager.getSlot(potIdx);
-        if (!slot.active)
-            return;
+    potentiometerManager.setMidiCallback(
+        [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
+            auto &slot = configManager.getSlot(potIdx);
+            if (!slot.active)
+                return;
 
-        switch (slot.type) {
-        case MIDIMessageType::CC:
-            midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
-            break;
+            switch (slot.type) {
+            case MIDIMessageType::CC:
+                midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
+                break;
 
             case MIDIMessageType::Note: {
                 uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
@@ -1835,9 +1834,12 @@ void setup() {
                 uint8_t velo = 125;
                 if (potIdx < efVoices.size() && efVoices[potIdx].hasRendered()) {
                     velo = efVoices[potIdx].latestLevel();
-                } else if (slot.efIndex < envelopeFollowers.size()) {
+                } else if (slot.ef.followerIndex >= 0 &&
+                           static_cast<size_t>(slot.ef.followerIndex) < envelopeFollowers.size()) {
                     velo = static_cast<uint8_t>(
-                        constrain(envelopeFollowers[slot.efIndex].getEnvelopeLevel(), 0, 127));
+                        constrain(envelopeFollowers[static_cast<size_t>(slot.ef.followerIndex)]
+                                      .getEnvelopeLevel(),
+                                  0, 127));
                 }
                 int shifted = velo + velocityShift;
                 if (shifted < 0)
@@ -1852,55 +1854,55 @@ void setup() {
                     [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
                 break;
             }
-        case MIDIMessageType::PitchBend: {
-            int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
-            midiHandler.sendPitchBend(bend, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::ProgramChange:
-            midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
-            break;
-
-        case MIDIMessageType::Aftertouch: {
-            uint8_t pres = Utility::mapToMidiValue(rawValue);
-            midiHandler.sendAftertouch(pres, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::ModWheel: {
-            uint8_t mod = Utility::mapToMidiValue(rawValue);
-            midiHandler.sendModWheel(mod, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::NRPN: {
-            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-            midiHandler.sendNRPN(param, val, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::RPN: {
-            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-            midiHandler.sendRPN(param, val, slot.midiChannel);
-            break;
-        }
-
-        case MIDIMessageType::SysEx: {
-            std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
-            uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
-            if (length > 0) {
-                midiHandler.sendSysEx(msg.data(), length);
+            case MIDIMessageType::PitchBend: {
+                int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
+                midiHandler.sendPitchBend(bend, slot.midiChannel);
+                break;
             }
-            break;
-        }
 
-        default:
-            break;
-        }
-    });
+            case MIDIMessageType::ProgramChange:
+                midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
+                break;
+
+            case MIDIMessageType::Aftertouch: {
+                uint8_t pres = Utility::mapToMidiValue(rawValue);
+                midiHandler.sendAftertouch(pres, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::ModWheel: {
+                uint8_t mod = Utility::mapToMidiValue(rawValue);
+                midiHandler.sendModWheel(mod, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::NRPN: {
+                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+                midiHandler.sendNRPN(param, val, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::RPN: {
+                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+                midiHandler.sendRPN(param, val, slot.midiChannel);
+                break;
+            }
+
+            case MIDIMessageType::SysEx: {
+                std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+                uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
+                if (length > 0) {
+                    midiHandler.sendSysEx(msg.data(), length);
+                }
+                break;
+            }
+
+            default:
+                break;
+            }
+        });
 
     // — LEDs & Display —
     ledManager.begin();
