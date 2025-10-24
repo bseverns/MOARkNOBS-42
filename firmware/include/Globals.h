@@ -203,17 +203,15 @@ extern int SHORT_DISPLAY_TIME;
 // analog channel behind each follower index so legacy callers can still talk
 // pins while the modern UI traffics strictly in indices.
 extern const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS;
-int envelopeAnalogPin(uint8_t index);
-int envelopeIndexFromAnalogPin(int analogPin);
-
-inline constexpr size_t ARG_PAIR_COUNT = (NUM_ENVELOPES * (NUM_ENVELOPES - 1)) / 2;
-extern const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS;
-extern const size_t ARG_PAIRS_LEN;
 
 /** Map an envelope index (0..NUM_ENVELOPES-1) to its Teensy analog pin. */
 int envelopeAnalogPin(uint8_t index);
 
 /** Resolve a Teensy analog pin back to its envelope index, or -1 if unknown. */
 int envelopeIndexFromAnalogPin(int analogPin);
+
+inline constexpr size_t ARG_PAIR_COUNT = (NUM_ENVELOPES * (NUM_ENVELOPES - 1)) / 2;
+extern const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS;
+extern const size_t ARG_PAIRS_LEN;
 
 #endif // GLOBALS_H

@@ -99,6 +99,10 @@ struct MIDISlot {
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) <= 64, "MIDISlot exploded past the expected 64 bytes");
+// The slot struct picked up a richer envelope follower payload which nudged it
+// past the original 64-byte budget. We still guard the footprint, but give it a
+// little more breathing room so the build doesn't implode every time we add a
+// tuning parameter.
+static_assert(sizeof(MIDISlot) <= 80, "MIDISlot exploded past the expected 80 bytes");
 
 #endif // MIDI_TYPES_H

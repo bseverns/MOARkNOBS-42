@@ -96,6 +96,17 @@ inline void streamArgPatch(const ConfigManager &config) {
                             config.getEnvelopeA(), config.getEnvelopeB());
 }
 
+inline uint8_t normalizeEnvelopeIndex(uint8_t raw) {
+    int idx = envelopeIndexFromAnalogPin(raw);
+    if (idx >= 0) {
+        return static_cast<uint8_t>(idx);
+    }
+    if (raw < NUM_ENVELOPES) {
+        return raw;
+    }
+    return static_cast<uint8_t>(raw % NUM_ENVELOPES);
+}
+
 inline EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
@@ -749,19 +760,21 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         static size_t pairIndex = 0;
         pairIndex = (pairIndex + 1) % NUM_ARG_PAIRS;
         const auto &pair = ARG_PAIRS[pairIndex];
+        const uint8_t sourceA = normalizeEnvelopeIndex(pair.first);
+        const uint8_t sourceB = normalizeEnvelopeIndex(pair.second);
 
         slot->arg.enabled = 1;
-        slot->arg.sourceA = pair.first;
-        slot->arg.sourceB = pair.second;
+        slot->arg.sourceA = sourceA;
+        slot->arg.sourceB = sourceB;
         context.configManager.saveSlot(context.activePot, *slot);
 
         context.configManager.setARGEnable(slot->arg.enabled);
         context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
-        context.configManager.setEnvelopePair(pair.first, pair.second);
+        context.configManager.setEnvelopePair(sourceA, sourceB);
 
         char buf[32];
-        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, pair.first + 1,
-                 pair.second + 1);
+        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, sourceA + 1,
+                 sourceB + 1);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
