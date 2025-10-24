@@ -356,11 +356,20 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
     _display.print("EF: ");
     _display.println(context.envelopeFollowMode ? "ON" : "OFF");
 
-    if (context.potToEnvelopeMap.count(context.activePot)) {
-        int envelopeIndex = context.potToEnvelopeMap.at(context.activePot);
+    auto efIt = context.potToEnvelopeMap.find(context.activePot);
+    if (efIt != context.potToEnvelopeMap.end()) {
+        const MIDISlot::EfSettings &settings = efIt->second;
         _display.setCursor(0, 20);
         _display.print("ENV->POT: ");
-        _display.println(envelopeIndex);
+        if (settings.followerIndex >= 0) {
+            _display.println(settings.followerIndex);
+        } else {
+            _display.println("NONE");
+        }
+
+        _display.setCursor(0, 30);
+        _display.print("EF FREQ: ");
+        _display.println(static_cast<int>(settings.frequency));
     }
 
     _display.display();
