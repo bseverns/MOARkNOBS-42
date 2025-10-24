@@ -170,6 +170,12 @@ extern bool g_clockOutEnabled;
 extern bool g_usbMidiOutEnabled;    //!< USB MIDI stays quiet until these three go down
 extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
 
+/**
+ * Flag flipped once the browser opens a WebSerial stream.
+ * WebSerial.cpp only transmits telemetry when this stays true.
+ */
+extern bool webSerialStreaming;
+
 // Note dynamics from the "Freq" and "Q" control pots
 extern int8_t velocityShift;      //!< -64..+63 shove applied to outgoing note velocity
 extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings a new note
