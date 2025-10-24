@@ -1270,8 +1270,7 @@ void updateFilterTuning(ButtonManagerContext &context) {
     if (context.activePot < NUM_SLOTS) {
         SlotEnvelopePayload payload =
             configManager.getSlotEnvelopePayload(static_cast<uint8_t>(context.activePot));
-        payload.filterType =
-            static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
+        payload.filterType = static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
         payload.frequency = freq;
         payload.q = q;
         configManager.setSlotEnvelopePayload(static_cast<uint8_t>(context.activePot), payload);
