@@ -32,8 +32,24 @@ bool filterCoefficientsLookSane(float freq, float q) {
     return true;
 }
 
+SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &payload) {
+    SlotEnvelopePayload sanitized = payload;
+    if (sanitized.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+        sanitized.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
+    }
+    if (!std::isfinite(sanitized.frequency)) {
+        sanitized.frequency = kMinFilterFrequency;
+    }
+    sanitized.frequency = constrain(sanitized.frequency, kMinFilterFrequency, kMaxFilterFrequency);
+    if (!std::isfinite(sanitized.q)) {
+        sanitized.q = kMinFilterQ;
+    }
+    sanitized.q = constrain(sanitized.q, kMinFilterQ, kMaxFilterQ);
+    return sanitized;
+}
+
 void persistFilterTail(const SlotEnvelopePayload &payload) {
-    SlotEnvelopePayload sanitized = ConfigManager::sanitizeEnvelopePayload(payload);
+    SlotEnvelopePayload sanitized = sanitizeEnvelopePayloadImpl(payload);
     EEPROM.put(EEPROM_FILTER_FREQ, sanitized.frequency);
     EEPROM.put(EEPROM_FILTER_Q, sanitized.q);
 }
@@ -648,19 +664,7 @@ void ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, flo
 }
 
 SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
-    SlotEnvelopePayload sanitized = payload;
-    if (sanitized.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
-        sanitized.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
-    }
-    if (!std::isfinite(sanitized.frequency)) {
-        sanitized.frequency = kMinFilterFrequency;
-    }
-    sanitized.frequency = constrain(sanitized.frequency, kMinFilterFrequency, kMaxFilterFrequency);
-    if (!std::isfinite(sanitized.q)) {
-        sanitized.q = kMinFilterQ;
-    }
-    sanitized.q = constrain(sanitized.q, kMinFilterQ, kMaxFilterQ);
-    return sanitized;
+    return sanitizeEnvelopePayloadImpl(payload);
 }
 
 void ConfigManager::wipeProfileBlocks() {
