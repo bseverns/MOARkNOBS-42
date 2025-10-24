@@ -350,8 +350,9 @@ void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
     if (settingsObj.containsKey("type")) {
         JsonVariantConst typeField = settingsObj["type"];
         if (typeField.is<const char *>()) {
-            settings.filterType = encodeFilterType(
-                parseFilterType(typeField.as<const char *>(), decodeFilterType(defaults.filterType)));
+            const auto parsed = parseFilterType(typeField.as<const char *>(),
+                                                decodeFilterType(defaults.filterType));
+            settings.filterType = encodeFilterType(parsed);
         } else if (typeField.is<int>() || typeField.is<long>()) {
             long raw = typeField.as<long>();
             if (raw >= 0 && raw <= static_cast<long>(EnvelopeFollower::BANDPASS)) {
@@ -585,9 +586,7 @@ EnvelopeFollower::FilterType decodeFilterType(uint8_t raw) {
     return static_cast<EnvelopeFollower::FilterType>(raw);
 }
 
-uint8_t encodeFilterType(EnvelopeFollower::FilterType type) {
-    return static_cast<uint8_t>(type);
-}
+uint8_t encodeFilterType(EnvelopeFollower::FilterType type) { return static_cast<uint8_t>(type); }
 
 BiquadFilter::FilterType toBiquadType(EnvelopeFollower::FilterType type) {
     switch (type) {
@@ -603,7 +602,7 @@ BiquadFilter::FilterType toBiquadType(EnvelopeFollower::FilterType type) {
 }
 
 struct EfVoice {
-    uint8_t followerIndex = 0xFF;   //!< Physical follower index we mirror
+    uint8_t followerIndex = 0xFF; //!< Physical follower index we mirror
     EnvelopeFollower::FilterType filterType = EnvelopeFollower::LINEAR;
     float frequency = 1000.0f;
     float q = 0.707f;
@@ -698,8 +697,7 @@ struct EfVoice {
             if (random(0, 100) < probability) {
                 int range = map(static_cast<int>(q * 100.0f), 50, 400, 1, 64);
                 int swing = constrain(range, 1, 64);
-                shaped = static_cast<uint8_t>(
-                    constrain(level + random(-swing, swing), 0, 127));
+                shaped = static_cast<uint8_t>(constrain(level + random(-swing, swing), 0, 127));
             } else {
                 shaped = static_cast<uint8_t>(level);
             }
@@ -1753,7 +1751,8 @@ void setup() {
                 displayManager.updateFromContext(buttonContext);
                 auto it = potToEnvelopeMap.find(buttonContext.activePot);
                 if (it != potToEnvelopeMap.end()) {
-                    displayManager.showEnvelopeLevel(efVoices[buttonContext.activePot].latestLevel());
+                    displayManager.showEnvelopeLevel(
+                        efVoices[buttonContext.activePot].latestLevel());
                 }
                 displayManager.highlightActivePot(buttonContext.activePot);
                 displayManager.highlightActiveMode(envelopeMode);

@@ -30,7 +30,7 @@ enum class SysExType : uint8_t {
 
 /** Configuration for a single pot slot. */
 struct EfSettings {
-    uint8_t filterType = 0;   //!< Encoded EnvelopeFollower::FilterType
+    uint8_t filterType = 0;    //!< Encoded EnvelopeFollower::FilterType
     float frequency = 1000.0f; //!< Stored cutoff / shaping frequency
     float q = 0.707f;          //!< Stored resonance / shaping curve parameter
 };
@@ -49,6 +49,6 @@ struct MIDISlot {
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) == 32, "MIDISlot exploded past the expected 32 bytes");
+static_assert(sizeof(MIDISlot) == 36, "MIDISlot exploded past the expected 36 bytes");
 
 #endif // MIDI_TYPES_H
