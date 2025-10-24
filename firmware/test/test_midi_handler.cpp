@@ -24,9 +24,11 @@ struct UsbMidiGuard {
 };
 
 struct StubEnvelope {
-    // Unity specs ride the hardware's 96 sustain baseline so the release math
-    // stays honest; individual tests can still dial a different level when they
-    // want to get weird.
+    // These Unity tests moonlight as a field notebook: the synth ships with a
+    // sustain plateau parked at 96, and most specs just want that truth baked
+    // in without ceremony.  When a test needs to stress the extremes it can
+    // still override the level, but the default keeps the "normal" vibe close
+    // to the hardware we gig with.
     static constexpr uint8_t kDefaultSustain = 96;
 
     explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
