@@ -1,5 +1,5 @@
 // Tracks audio or CV levels to modulate MIDI messages.
-// Supports SEF and ARG modes and several filter shapes.
+// Supports single-envelope mode with several filter shapes.
 // Updated each loop by firmware_main.cpp and consulted by ButtonManager.
 
 #include "EnvelopeFollower.h"
@@ -18,9 +18,7 @@
  */
 EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id)
     : audioInputPin(pin), index(id), currentEnvelopeLevel(0), modulationTargetCC(-1),
-      isActive(false), filterType(LINEAR), // initialize filterType first
-      mode(SEF),                           // then mode
-      argMethod(PLUS), envelopeA(0), envelopeB(1), vref(g_vref), potManager(pm) {
+      isActive(false), filterType(LINEAR), vref(g_vref), potManager(pm) {
     // default low-pass at 1kHz
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
 }
@@ -50,89 +48,38 @@ void EnvelopeFollower::configureFilter(float frequency, float q) {
 }
 
 /**
- * Convert a raw ADC reading into an envelope value. In SEF mode this applies
- * the selected shaping curve or filter; in ARG mode it combines two external
- * envelopes according to the configured algorithm.
+ * Convert a raw ADC reading into an envelope value using the configured filter
+ * or shaping curve.
  */
 int EnvelopeFollower::processEnvelopeLevel(int level) {
     level = constrain(level, 0, 127);
 
-    if (mode == SEF) {
-        if (filterType == LOWPASS || filterType == HIGHPASS || filterType == BANDPASS) {
-            return filter.process(level);
-        }
+    if (filterType == LOWPASS || filterType == HIGHPASS || filterType == BANDPASS) {
+        return filter.process(level);
+    }
 
-        switch (filterType) {
-        case LINEAR:
-            return constrain(level * (shapingFreq / 1000.0f), 0, 127);
+    switch (filterType) {
+    case LINEAR:
+        return constrain(level * (shapingFreq / 1000.0f), 0, 127);
 
-        case OPPOSITE_LINEAR:
-            return constrain(127 - (level * (shapingFreq / 1000.0f)), 0, 127);
+    case OPPOSITE_LINEAR:
+        return constrain(127 - (level * (shapingFreq / 1000.0f)), 0, 127);
 
-        case EXPONENTIAL:
-            return constrain(pow(level / 127.0f, shapingQ) * (shapingFreq / 1000.0f) * 127.0f, 0,
-                             127);
+    case EXPONENTIAL:
+        return constrain(pow(level / 127.0f, shapingQ) * (shapingFreq / 1000.0f) * 127.0f, 0, 127);
 
-        case RANDOM: {
-            int probability = map(shapingFreq, 20, 5000, 0, 100);
-            if (random(0, 100) < probability) {
-                int range = map(shapingQ * 100.0f, 50, 400, 1, 64);
-                return constrain(level + random(-range, range), 0, 127);
-            } else {
-                return level;
-            }
-        }
-
-        default:
+    case RANDOM: {
+        int probability = map(shapingFreq, 20, 5000, 0, 100);
+        if (random(0, 100) < probability) {
+            int range = map(shapingQ * 100.0f, 50, 400, 1, 64);
+            return constrain(level + random(-range, range), 0, 127);
+        } else {
             return level;
         }
-    } else {
-        // ARG mode: read two envelope pins, do your math combos
-        int A = 0;
-        int B = 0;
+    }
 
-        // If envelopeA/B >= 0, treat them as valid analog pins
-        if (envelopeA >= 0) {
-            int rawA = hardware::readAnalog(envelopeA);
-            A = map(rawA, 0, 1023, 0, 127);
-        }
-        if (envelopeB >= 0) {
-            int rawB = hardware::readAnalog(envelopeB);
-            B = map(rawB, 0, 1023, 0, 127);
-        }
-
-        switch (argMethod) {
-        case PLUS:
-            return constrain(A + B, 0, 127);
-        case MIN:
-            return constrain(A - B, 0, 127);
-        case PECK:
-            return constrain(B - A, 0, 127);
-        case SHAV:
-            return constrain((A - B) / 10, 0, 127);
-        case SQAR:
-            return constrain((int)sqrt((float)(A * A + B * B)), 0, 127);
-        case BABS:
-            return (B != 0) ? constrain(A / abs(B), 0, 127) : 0;
-        case TABS:
-            return (B != 0) ? constrain((10 * A) / abs(B), 0, 127) : 0;
-        case MULT:
-            return constrain((A * B) / 127, 0, 127);
-        case DIVI:
-            return constrain((A * 127) / (B + 1), 0, 127);
-        case AVG:
-            return (A + B) / 2;
-        case XABS:
-            return abs(A - B);
-        case MAXX:
-            return std::max(A, B);
-        case MINN:
-            return std::min(A, B);
-        case XORR:
-            return A ^ B;
-        default:
-            return level;
-        }
+    default:
+        return level;
     }
 }
 
@@ -213,33 +160,6 @@ EnvelopeFollower::FilterType EnvelopeFollower::getFilterType() const { return fi
 float EnvelopeFollower::getShapingFrequency() const { return shapingFreq; }
 
 float EnvelopeFollower::getShapingQ() const { return shapingQ; }
-
-/**
- * setMode()
- * - New method for switching between SEF and ARG
- */
-void EnvelopeFollower::setMode(Mode newMode) { mode = newMode; }
-
-/**
- * setARGMethod()
- * - New method for selecting among PLUS, MIN, PECK, etc.
- */
-void EnvelopeFollower::setARGMethod(ARG_Method method) { argMethod = method; }
-
-EnvelopeFollower::ARG_Method EnvelopeFollower::getARGMethod() const { return argMethod; }
-
-/**
- * setEnvelopePair()
- * - New method specifying which two analog inputs to use for A & B in ARG mode
- */
-void EnvelopeFollower::setEnvelopePair(int envA, int envB) {
-    envelopeA = envA;
-    envelopeB = envB;
-}
-
-int EnvelopeFollower::getEnvelopeA() const { return envelopeA; }
-
-int EnvelopeFollower::getEnvelopeB() const { return envelopeB; }
 
 void EnvelopeFollower::calibrate() {
     const uint8_t samples = 8;

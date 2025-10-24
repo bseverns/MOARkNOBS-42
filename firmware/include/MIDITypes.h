@@ -28,6 +28,38 @@ enum class SysExType : uint8_t {
     UniversalRealTime         //!< 0x7F per the MIDI spec
 };
 
+/**
+ * Slot-scoped arithmetic routing grid (ARG) settings.
+ *
+ * Each slot can optionally splice two envelope followers together using
+ * a method lifted straight from the legacy global ARG engine.  We keep
+ * the payload tiny so it still fits neatly inside the EEPROM footprint
+ * without blowing up the slot struct.
+ */
+enum class ARGMethod : uint8_t {
+    PLUS = 0,
+    MIN,
+    PECK,
+    SHAV,
+    SQAR,
+    BABS,
+    TABS,
+    MULT,
+    DIVI,
+    AVG,
+    XABS,
+    MAXX,
+    MINN,
+    XORR,
+};
+
+struct SlotARGConfig {
+    uint8_t enabled = 0;          //!< Non-zero enables ARG blending for the slot
+    ARGMethod method = ARGMethod::PLUS; //!< Math trick to apply when enabled
+    uint8_t sourceA = 0;          //!< Envelope follower index feeding input A
+    uint8_t sourceB = 1;          //!< Envelope follower index feeding input B
+};
+
 /** Configuration for a single pot slot. */
 struct MIDISlot {
     MIDIMessageType type = MIDIMessageType::OFF;
@@ -38,10 +70,11 @@ struct MIDISlot {
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+    SlotARGConfig arg{}; //!< Slot-local ARG mixer settings
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) == 23, "MIDISlot exploded past the expected 23 bytes");
+static_assert(sizeof(MIDISlot) <= 32, "MIDISlot exploded past the expected 32 bytes");
 
 #endif // MIDI_TYPES_H

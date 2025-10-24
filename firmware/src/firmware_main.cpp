@@ -16,6 +16,7 @@
 #include "TimeUtils.h"
 #include "name.c"
 #include "Globals.h" // contains all pin definitions
+#include "ARGMixer.h"
 #include "version.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
@@ -31,6 +32,7 @@
 #include <cstdint>
 #include <cctype>
 #include <cmath>
+#include <algorithm>
 
 extern std::vector<uint8_t> potChannels;
 extern std::map<int, int> potToEnvelopeMap;
@@ -185,9 +187,7 @@ const char *argMethodName(uint8_t method) {
     return "UNKNOWN";
 }
 
-const char *envelopeModeName(uint8_t mode) {
-    return (mode == static_cast<uint8_t>(EnvelopeFollower::ARG)) ? "ARG" : "SEF";
-}
+const char *envelopeModeName(uint8_t mode) { return (mode != 0) ? "ARG" : "SEF"; }
 } // namespace
 
 namespace {
@@ -308,22 +308,19 @@ EnvelopeFollower::FilterType parseFilterType(const char *label,
     return fallback;
 }
 
-EnvelopeFollower::ARG_Method parseArgMethod(const char *label,
-                                            EnvelopeFollower::ARG_Method fallback) {
+ARGMethod parseArgMethod(const char *label, ARGMethod fallback) {
     if (!label)
         return fallback;
     struct Entry {
         const char *name;
-        EnvelopeFollower::ARG_Method value;
+        ARGMethod value;
     };
     static constexpr Entry kMap[] = {
-        {"PLUS", EnvelopeFollower::PLUS}, {"MIN", EnvelopeFollower::MIN},
-        {"PECK", EnvelopeFollower::PECK}, {"SHAV", EnvelopeFollower::SHAV},
-        {"SQAR", EnvelopeFollower::SQAR}, {"BABS", EnvelopeFollower::BABS},
-        {"TABS", EnvelopeFollower::TABS}, {"MULT", EnvelopeFollower::MULT},
-        {"DIVI", EnvelopeFollower::DIVI}, {"AVG", EnvelopeFollower::AVG},
-        {"XABS", EnvelopeFollower::XABS}, {"MAXX", EnvelopeFollower::MAXX},
-        {"MINN", EnvelopeFollower::MINN}, {"XORR", EnvelopeFollower::XORR}};
+        {"PLUS", ARGMethod::PLUS}, {"MIN", ARGMethod::MIN},   {"PECK", ARGMethod::PECK},
+        {"SHAV", ARGMethod::SHAV}, {"SQAR", ARGMethod::SQAR}, {"BABS", ARGMethod::BABS},
+        {"TABS", ARGMethod::TABS}, {"MULT", ARGMethod::MULT}, {"DIVI", ARGMethod::DIVI},
+        {"AVG", ARGMethod::AVG},   {"XABS", ARGMethod::XABS}, {"MAXX", ARGMethod::MAXX},
+        {"MINN", ARGMethod::MINN}, {"XORR", ARGMethod::XORR}};
     for (const auto &entry : kMap) {
         if (strcmp(label, entry.name) == 0) {
             return entry.value;
@@ -396,6 +393,64 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         return false;
     }
 
+    SlotARGConfig defaultArg{};
+    defaultArg.enabled = configManager.getARGEnable();
+    defaultArg.method = static_cast<ARGMethod>(configManager.getARGMethod());
+    int defaultSourceA = envelopeIndexFromAnalogPin(configManager.getEnvelopeA());
+    if (defaultSourceA < 0)
+        defaultSourceA = 0;
+    int defaultSourceB = envelopeIndexFromAnalogPin(configManager.getEnvelopeB());
+    if (defaultSourceB < 0)
+        defaultSourceB = (defaultSourceA + 1) % NUM_ENVELOPES;
+    defaultArg.sourceA = static_cast<uint8_t>(defaultSourceA);
+    defaultArg.sourceB = static_cast<uint8_t>(defaultSourceB);
+    defaultArg = sanitizeSlotArg(defaultArg);
+
+    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
+        JsonObject argObj = config["arg"].as<JsonObject>();
+        SlotARGConfig incoming = defaultArg;
+        if (argObj.containsKey("enable")) {
+            incoming.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+        } else if (argObj.containsKey("enabled")) {
+            incoming.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+        }
+        if (argObj.containsKey("method")) {
+            if (argObj["method"].is<const char *>()) {
+                incoming.method = parseArgMethod(argObj["method"].as<const char *>(), incoming.method);
+            } else {
+                incoming.method = static_cast<ARGMethod>(
+                    constrain(argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
+            }
+        }
+        if (argObj.containsKey("a")) {
+            int rawA = argObj["a"].as<int>();
+            int idxA = envelopeIndexFromAnalogPin(rawA);
+            if (idxA < 0)
+                idxA = constrain(rawA, 0, NUM_ENVELOPES - 1);
+            incoming.sourceA = static_cast<uint8_t>(idxA);
+        }
+        if (argObj.containsKey("b")) {
+            int rawB = argObj["b"].as<int>();
+            int idxB = envelopeIndexFromAnalogPin(rawB);
+            if (idxB < 0)
+                idxB = constrain(rawB, 0, NUM_ENVELOPES - 1);
+            incoming.sourceB = static_cast<uint8_t>(idxB);
+        }
+        defaultArg = sanitizeSlotArg(incoming);
+
+        configManager.setARGEnable(defaultArg.enabled);
+        configManager.setARGMethod(static_cast<uint8_t>(defaultArg.method));
+        int analogA = envelopeAnalogPin(defaultArg.sourceA);
+        if (analogA < 0)
+            analogA = 0;
+        int analogB = envelopeAnalogPin(defaultArg.sourceB);
+        if (analogB < 0)
+            analogB = analogA;
+        configManager.setEnvelopePair(static_cast<uint8_t>(analogA), static_cast<uint8_t>(analogB));
+    }
+
+    envelopeFollowMode = defaultArg.enabled != 0;
+
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         JsonObject slotObj = slotsJson[i];
         if (slotObj.isNull()) {
@@ -430,6 +485,39 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         } else {
             clearSysExTemplate(slot);
         }
+        SlotARGConfig slotArg = defaultArg;
+        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
+            JsonObject argObj = slotObj["arg"].as<JsonObject>();
+            if (argObj.containsKey("enable")) {
+                slotArg.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+            } else if (argObj.containsKey("enabled")) {
+                slotArg.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+            }
+            if (argObj.containsKey("method")) {
+                if (argObj["method"].is<const char *>()) {
+                    slotArg.method = parseArgMethod(argObj["method"].as<const char *>(), slotArg.method);
+                } else {
+                    slotArg.method = static_cast<ARGMethod>(
+                        constrain(argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
+                }
+            }
+            if (argObj.containsKey("a")) {
+                int rawA = argObj["a"].as<int>();
+                int idxA = envelopeIndexFromAnalogPin(rawA);
+                if (idxA < 0)
+                    idxA = constrain(rawA, 0, NUM_ENVELOPES - 1);
+                slotArg.sourceA = static_cast<uint8_t>(idxA);
+            }
+            if (argObj.containsKey("b")) {
+                int rawB = argObj["b"].as<int>();
+                int idxB = envelopeIndexFromAnalogPin(rawB);
+                if (idxB < 0)
+                    idxB = constrain(rawB, 0, NUM_ENVELOPES - 1);
+                slotArg.sourceB = static_cast<uint8_t>(idxB);
+            }
+            slotArg = sanitizeSlotArg(slotArg);
+        }
+        slot.arg = slotArg;
         configManager.saveSlot(i, slot);
 
         configManager.setPotChannel(i, midiChannel);
@@ -475,25 +563,6 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         }
         EEPROM.put(EEPROM_FILTER_FREQ, freq);
         EEPROM.put(EEPROM_FILTER_Q, q);
-    }
-
-    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
-        JsonObject argObj = config["arg"].as<JsonObject>();
-        EnvelopeFollower::ARG_Method method =
-            parseArgMethod(argObj["method"].as<const char *>(), EnvelopeFollower::PLUS);
-        bool enable = argObj["enable"].as<bool>();
-        uint8_t envA = constrain(argObj["a"].as<int>(), 0, NUM_ENVELOPES - 1);
-        uint8_t envB = constrain(argObj["b"].as<int>(), 0, NUM_ENVELOPES - 1);
-
-        for (auto &ef : envelopeFollowers) {
-            ef.setARGMethod(method);
-            ef.setMode(enable ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
-        }
-        configManager.setARGMethod(static_cast<uint8_t>(method));
-        configManager.setARGEnable(enable ? 1 : 0);
-        configManager.setEnvelopePair(envA, envB);
-        potentiometerManager.setArgEnvelopePair(envA, envB);
-        envelopeFollowMode = enable;
     }
 
     if (config.containsKey("envelopeMode")) {
@@ -754,7 +823,7 @@ void processSerial() {
             doc["slot_count"] = NUM_SLOTS;
             doc["pot_count"] = configManager.getNumPots();
             doc["envelope_count"] = NUM_ENVELOPES;
-            doc["arg_method_count"] = static_cast<uint8_t>(EnvelopeFollower::ARG_Method::XORR) + 1;
+            doc["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
             doc["led_count"] = NUM_LEDS();
             doc["free_ram"] = computeFreeRAM();
             doc["free_flash"] = computeFreeFlash();
@@ -791,6 +860,12 @@ void processSerial() {
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
+                JsonObject arg = slotObj.createNestedObject("arg");
+                arg["enabled"] = slot.arg.enabled != 0;
+                arg["method"] = static_cast<uint8_t>(slot.arg.method);
+                arg["method_name"] = argMethodName(static_cast<uint8_t>(slot.arg.method));
+                arg["sourceA"] = slot.arg.sourceA;
+                arg["sourceB"] = slot.arg.sourceB;
             }
 
             JsonObject env = doc.createNestedObject("envelopes");
@@ -1007,16 +1082,17 @@ void processSerial() {
             LOG_PRINTLN(configManager.getARGMethod());
         } else if (command.startsWith("SET_ARGMETHOD")) {
             // SET_ARGMETHOD <method>
-            // method: 0-13 mapping to EnvelopeFollower::ARG_Method; see
-            // firmware/include/EnvelopeFollower/README.md#arg-methods for the math.
-            // Side effects: blasts method into every follower and burns it into
-            // EEPROM via ConfigManager.
+            // method: 0-13 mapping to ARGMethod values; see docs for math notes.
+            // Side effects: updates every slot's ARG method and burns the
+            // legacy default into EEPROM via ConfigManager.
             int method = command.substring(14).toInt();
-            if (method >= 0 && method <= 13) {
-                for (auto &ef : envelopeFollowers) {
-                    ef.setARGMethod(static_cast<EnvelopeFollower::ARG_Method>(method));
+            if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {
+                for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+                    MIDISlot &slot = configManager.getSlot(slotIndex);
+                    slot.arg.method = static_cast<ARGMethod>(method);
+                    configManager.saveSlot(slotIndex, slot);
                 }
-                configManager.setARGMethod(method);
+                configManager.setARGMethod(static_cast<uint8_t>(method));
                 LOG_PRINTLN("OK");
             } else {
                 // out-of-range method? we spit ERR
@@ -1106,10 +1182,12 @@ void processEnvelopes() {
 
             ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
-            uint8_t modulatedValue = baselineMidi;
-
-            // applyToCC mutates the MIDI value with the envelope's swagger.
-            envelope->applyToCC(potIndex, modulatedValue);
+            if (potIndex >= NUM_SLOTS)
+                continue;
+            const MIDISlot &slot = configManager.getSlot(potIndex);
+            uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
+            int modulatedInt = static_cast<int>(baselineMidi) + envelopeContribution;
+            uint8_t modulatedValue = static_cast<uint8_t>(constrain(modulatedInt, 0, 127));
 
             bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
             if (valueChanged) {
