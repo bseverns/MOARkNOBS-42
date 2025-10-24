@@ -47,6 +47,8 @@ ConfigManager makeConfig() {
         slot.midiChannel = 1;
         slot.data1 = 0;
         slot.arpNote = 0;
+        slot.sysexLength = 0;
+        slot.sysexTemplate.fill(0);
     }
     return cfg;
 }

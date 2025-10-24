@@ -8,12 +8,33 @@
 #include "version.h"
 #include "Globals.h"
 #include "ConfigManager.h"
+#include "TestHelpers.h"
 #include "Utility.h"
+#include <EEPROM.h>
 
+#include <algorithm>
 #include <array>
 #include <vector>
 
 namespace {
+struct UsbMidiGuard {
+    UsbMidiGuard() : previous(g_usbMidiOutEnabled) { g_usbMidiOutEnabled = true; }
+    ~UsbMidiGuard() { g_usbMidiOutEnabled = previous; }
+    bool previous;
+};
+
+struct StubEnvelope {
+    // Unity wants a baseline that sounds like the shipping rig.
+    // The pedals leave sustain parked at 96, so we bake that here and let
+    // outlier specs override it when they feel like getting weird.
+    static constexpr uint8_t kDefaultSustain = 96;
+
+    explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
+    uint8_t getEnvelopeLevel() const { return level; }
+
+  private:
+    uint8_t level;
+};
 
 void resetMidiTransports() {
     MIDI.ccCount = 0;
@@ -23,9 +44,19 @@ void resetMidiTransports() {
     MIDI.sysExTotal = 0;
     MIDI.sysExOverflow = false;
     MIDI.lastNoteOn = 0;
+    MIDI.lastNoteOnVelocity = 0;
     MIDI.lastNoteOnChannel = 0;
     MIDI.lastNoteOff = 0;
+    MIDI.lastNoteOffVelocity = 0;
     MIDI.lastNoteOffChannel = 0;
+    MIDI.lastProgram = 0;
+    MIDI.lastProgramChannel = 0;
+    MIDI.lastAftertouch = 0;
+    MIDI.lastAftertouchChannel = 0;
+    MIDI.lastPitchBend = 0;
+    MIDI.lastPitchBendChannel = 0;
+    std::fill_n(MIDI.lastSysEx, kSysExCapacity, 0);
+
     usbMIDI.ccCount = 0;
     usbMIDI.ccTotal = 0;
     usbMIDI.ccOverflow = false;
@@ -33,23 +64,19 @@ void resetMidiTransports() {
     usbMIDI.sysExTotal = 0;
     usbMIDI.sysExOverflow = false;
     usbMIDI.lastNoteOn = 0;
+    usbMIDI.lastNoteOnVelocity = 0;
     usbMIDI.lastNoteOnChannel = 0;
     usbMIDI.lastNoteOff = 0;
+    usbMIDI.lastNoteOffVelocity = 0;
     usbMIDI.lastNoteOffChannel = 0;
+    usbMIDI.lastProgram = 0;
+    usbMIDI.lastProgramChannel = 0;
+    usbMIDI.lastAftertouch = 0;
+    usbMIDI.lastAftertouchChannel = 0;
+    usbMIDI.lastPitchBend = 0;
+    usbMIDI.lastPitchBendChannel = 0;
+    std::fill_n(usbMIDI.lastSysEx, kSysExCapacity, 0);
 }
-
-struct UsbMidiGuard {
-    UsbMidiGuard() : previous(g_usbMidiOutEnabled) { g_usbMidiOutEnabled = true; }
-    ~UsbMidiGuard() { g_usbMidiOutEnabled = previous; }
-    bool previous;
-};
-
-struct StubEnvelope {
-    explicit StubEnvelope(uint8_t lvl = 96) : level(lvl) {}
-    uint8_t getEnvelopeLevel() const { return level; }
-    uint8_t level;
-};
-
 } // namespace
 
 // MIDIHandler has a ridiculous number of responsibilities—USB mirror writes,
@@ -92,6 +119,36 @@ void test_mod_wheel() {
     TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.ccLog[0].control);
     TEST_ASSERT_EQUAL_UINT8(64, usbMIDI.ccLog[0].value);
     TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.ccLog[0].channel);
+}
+
+// When the firmware blasts a flood of CC writes we expect every legal event to
+// make it across both transports without tripping the overflow flags.
+void test_pot_burst_keeps_cc_counters_honest() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
+    MIDIHandler mh;
+    mh._txCount = 0;
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    MIDISlot &slot = cfg.getSlot(0);
+    slot.active = true;
+    slot.type = MIDIMessageType::CC;
+    slot.midiChannel = 3;
+    slot.data1 = 74;
+
+    constexpr uint16_t kBursts = 96;
+    for (uint16_t i = 0; i < kBursts; ++i) {
+        uint16_t raw = static_cast<uint16_t>((i * 37) % 1024);
+        uint8_t mapped = Utility::mapToMidiValue(raw);
+        mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(kBursts, mh._txCount);
+    TEST_ASSERT_EQUAL_UINT32(kBursts, MIDI.ccTotal);
+    TEST_ASSERT_EQUAL_UINT32(kBursts, usbMIDI.ccTotal);
+    TEST_ASSERT_FALSE(MIDI.ccOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
 }
 
 // Pitch bend flows through the 14-bit code path.  This run keeps the math sane
@@ -143,27 +200,110 @@ void test_receive_nrpn() {
 // SysEx is our bulk config escape hatch.  Make sure the handler copies the
 // payload byte-for-byte so higher layers can rehydrate it later.
 void test_send_sysex() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
     MIDIHandler mh;
     uint8_t msg[] = {0xF0, 0x7D, 0x01, 0x02, 0xF7};
-    MIDI.lastSysExLength = usbMIDI.lastSysExLength = 0;
     mh.sendSysEx(msg, sizeof(msg));
     TEST_ASSERT_EQUAL_UINT16(sizeof(msg), MIDI.lastSysExLength);
     TEST_ASSERT_EQUAL_UINT16(sizeof(msg), usbMIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(sizeof(msg), MIDI.sysExTotal);
+    TEST_ASSERT_EQUAL_UINT16(sizeof(msg), usbMIDI.sysExTotal);
+    TEST_ASSERT_FALSE(MIDI.sysExOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.sysExOverflow);
     for (uint8_t i = 0; i < sizeof(msg); ++i) {
         TEST_ASSERT_EQUAL_UINT8(msg[i], MIDI.lastSysEx[i]);
         TEST_ASSERT_EQUAL_UINT8(msg[i], usbMIDI.lastSysEx[i]);
     }
 }
 
+// Guardrail for the transport logging: long payloads should survive the trip
+// without getting truncated unless we exceed the stub's capacity.
+void test_long_sysex_payload_round_trips() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
+    MIDIHandler mh;
+
+    std::array<uint8_t, 120> payload{};
+    payload[0] = 0xF0;
+    for (size_t i = 1; i < payload.size() - 1; ++i) {
+        payload[i] = static_cast<uint8_t>((i * 7) & 0x7F);
+    }
+    payload.back() = 0xF7;
+
+    mh.sendSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
+
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.sysExTotal);
+    TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.sysExTotal);
+    TEST_ASSERT_FALSE(MIDI.sysExOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.sysExOverflow);
+    for (size_t i = 0; i < payload.size(); ++i) {
+        TEST_ASSERT_EQUAL_UINT8(payload[i], MIDI.lastSysEx[i]);
+        TEST_ASSERT_EQUAL_UINT8(payload[i], usbMIDI.lastSysEx[i]);
+    }
+}
+
+// While MIDI is streaming, flip a slot's mode and make sure we keep emitting
+// legit traffic without blowing out the counters.
+void test_config_mutation_during_stream_stays_valid() {
+    UsbMidiGuard guard;
+    resetMidiTransports();
+
+    MIDIHandler mh;
+    mh._txCount = 0;
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    MIDISlot &slot = cfg.getSlot(0);
+    slot.active = true;
+    slot.type = MIDIMessageType::CC;
+    slot.midiChannel = 4;
+    slot.data1 = 42;
+    slot.efIndex = 0;
+
+    StubEnvelope env{110};
+    uint32_t ccEvents = 0;
+    uint32_t noteEvents = 0;
+
+    constexpr uint16_t kUpdates = 40;
+    for (uint16_t i = 0; i < kUpdates; ++i) {
+        uint16_t raw = static_cast<uint16_t>((i * 23) % 1024);
+        uint8_t mapped = Utility::mapToMidiValue(raw);
+
+        if (i == kUpdates / 2) {
+            slot.type = MIDIMessageType::Note;
+        }
+
+        if (slot.type == MIDIMessageType::CC) {
+            mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
+            ++ccEvents;
+        } else {
+            uint8_t note = static_cast<uint8_t>(Utility::mapToMidiValue(raw) % 128);
+            uint8_t velocity = env.getEnvelopeLevel();
+            mh.sendNoteOn(note, velocity, slot.midiChannel);
+            mh.sendNoteOff(note, 0, slot.midiChannel);
+            ++noteEvents;
+        }
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, ccEvents);
+    TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, noteEvents);
+    TEST_ASSERT_EQUAL_UINT32(ccEvents + noteEvents * 2, mh._txCount);
+    TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, usbMIDI.lastNoteOnChannel);
+    TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, MIDI.lastNoteOnChannel);
+    TEST_ASSERT_FALSE(MIDI.ccOverflow);
+    TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
+}
+
 // Universal Identity Requests should get a full reply that mirrors across both
 // transports and advertises our firmware fingerprints.
 void test_sysex_identity_request_reply() {
     MIDIHandler mh;
-    struct UsbMidiGuard {
-        UsbMidiGuard() : previous(g_usbMidiOutEnabled) { g_usbMidiOutEnabled = true; }
-        ~UsbMidiGuard() { g_usbMidiOutEnabled = previous; }
-        bool previous;
-    } guard;
+    UsbMidiGuard guard;
+    resetMidiTransports();
 
     MIDI.lastSysExLength = usbMIDI.lastSysExLength = 0;
     const uint8_t request[] = {0xF0, 0x7E, 0x42, 0x06, 0x01, 0xF7};
@@ -277,6 +417,20 @@ void test_handle_sysex_rejects_bad_framing() {
     TEST_ASSERT_EQUAL_UINT32(3, mh._rxCount);
 }
 
+void test_handle_sysex_drops_oversize() {
+    MIDIHandler mh;
+    mh._lastSysExLength = 5;
+    mh._rxCount = 2;
+
+    std::array<uint8_t, 70> payload{};
+    payload[0] = 0xF0;
+    payload[payload.size() - 1] = 0xF7;
+    mh.handleSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
+
+    TEST_ASSERT_EQUAL_UINT16(5, mh._lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT32(2, mh._rxCount);
+}
+
 // When the serial queue is bursting at the seams with repeated CCs, the newest
 // value should be the one that survives and older duplicates must get axed.
 void test_serial_queue_coalesces_latest_value() {
@@ -388,112 +542,40 @@ void test_generate_clock_tick_advances_counter() {
     g_clockOutEnabled = false;
 }
 
-// Hammer the control-change lane with a burst of pot updates and confirm every
-// tick makes it out without triggering the stub's overflow latch.
-void test_pot_burst_keeps_cc_counters_honest() {
-    UsbMidiGuard guard;
-    resetMidiTransports();
+// Schema 0x0003 should vaporise legacy 6-byte slot data before we start reading.
+void test_config_manager_wipes_legacy_slot_stride() {
+    // Pretend we just flashed over a 0x0002 build.
+    constexpr uint16_t kLegacyVersion = 0x0002;
+    EEPROM.put(EEPROM_CONFIG_VERSION, kLegacyVersion);
 
-    MIDIHandler mh;
-    mh._txCount = 0;
-
-    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-    MIDISlot &slot = cfg.getSlot(0);
-    slot.active = true;
-    slot.type = MIDIMessageType::CC;
-    slot.midiChannel = 3;
-    slot.data1 = 74;
-
-    constexpr uint16_t kBursts = 96;
-    for (uint16_t i = 0; i < kBursts; ++i) {
-        uint16_t raw = static_cast<uint16_t>((i * 37) % 1024);
-        uint8_t mapped = Utility::mapToMidiValue(raw);
-        mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
-    }
-
-    TEST_ASSERT_EQUAL_UINT32(kBursts, mh._txCount);
-    TEST_ASSERT_EQUAL_UINT32(kBursts, MIDI.ccTotal);
-    TEST_ASSERT_EQUAL_UINT32(kBursts, usbMIDI.ccTotal);
-    TEST_ASSERT_FALSE(MIDI.ccOverflow);
-    TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
-}
-
-// Feed a fat SysEx message through sendSysEx and make sure the transport logs
-// every byte without truncation.
-void test_long_sysex_payload_round_trips() {
-    UsbMidiGuard guard;
-    resetMidiTransports();
-
-    MIDIHandler mh;
-
-    std::array<uint8_t, 120> payload{};
-    payload[0] = 0xF0;
-    for (size_t i = 1; i < payload.size() - 1; ++i) {
-        payload[i] = static_cast<uint8_t>((i * 7) & 0x7F);
-    }
-    payload.back() = 0xF7;
-
-    mh.sendSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
-
-    TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.lastSysExLength);
-    TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.lastSysExLength);
-    TEST_ASSERT_FALSE(MIDI.sysExOverflow);
-    TEST_ASSERT_FALSE(usbMIDI.sysExOverflow);
-    for (size_t i = 0; i < payload.size(); ++i) {
-        TEST_ASSERT_EQUAL_UINT8(payload[i], MIDI.lastSysEx[i]);
-        TEST_ASSERT_EQUAL_UINT8(payload[i], usbMIDI.lastSysEx[i]);
-    }
-}
-
-// While MIDI is streaming, flip a slot from CC to Note mode and confirm the
-// handler keeps emitting valid traffic instead of choking.
-void test_config_mutation_during_stream_stays_valid() {
-    UsbMidiGuard guard;
-    resetMidiTransports();
-
-    MIDIHandler mh;
-    mh._txCount = 0;
-
-    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-    MIDISlot &slot = cfg.getSlot(0);
-    slot.active = true;
-    slot.type = MIDIMessageType::CC;
-    slot.midiChannel = 4;
-    slot.data1 = 42;
-    slot.efIndex = 0;
-
-    StubEnvelope env{110};
-    uint32_t ccEvents = 0;
-    uint32_t noteEvents = 0;
-
-    constexpr uint16_t kUpdates = 40;
-    for (uint16_t i = 0; i < kUpdates; ++i) {
-        uint16_t raw = static_cast<uint16_t>((i * 23) % 1024);
-        uint8_t mapped = Utility::mapToMidiValue(raw);
-
-        if (i == kUpdates / 2) {
-            slot.type = MIDIMessageType::Note;
-        }
-
-        if (slot.type == MIDIMessageType::CC) {
-            mh.sendControlChange(slot.data1, mapped, slot.midiChannel);
-            ++ccEvents;
-        } else {
-            uint8_t note = static_cast<uint8_t>(Utility::mapToMidiValue(raw) % 128);
-            uint8_t velocity = env.getEnvelopeLevel();
-            mh.sendNoteOn(note, velocity, slot.midiChannel);
-            mh.sendNoteOff(note, 0, slot.midiChannel);
-            ++noteEvents;
+    // Backfill the old 6-byte stride so the wipe has something obvious to nuke.
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        const uint16_t legacyAddress = static_cast<uint16_t>(EEPROM_SLOT_BASE + slot * 6);
+        for (uint8_t byte = 0; byte < 6; ++byte) {
+            EEPROM.update(static_cast<int>(legacyAddress + byte), 0x7E);
         }
     }
 
-    TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, ccEvents);
-    TEST_ASSERT_EQUAL_UINT32(kUpdates / 2, noteEvents);
-    TEST_ASSERT_EQUAL_UINT32(ccEvents + noteEvents * 2, mh._txCount);
-    TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, usbMIDI.lastNoteOnChannel);
-    TEST_ASSERT_EQUAL_UINT8(slot.midiChannel, MIDI.lastNoteOnChannel);
-    TEST_ASSERT_FALSE(MIDI.ccOverflow);
-    TEST_ASSERT_FALSE(usbMIDI.ccOverflow);
+    // Drop breadcrumbs into the profile blocks; the sanitizer should zero them.
+    EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(1)), 0xA5);
+    EEPROM.update(static_cast<int>(EEPROM_PROFILE_START(2)), 0x5A);
+
+    ConfigManager cfg = createConfigManager();
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    MIDISlot stored{};
+    EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), stored);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::OFF),
+                            static_cast<uint8_t>(stored.type));
+    TEST_ASSERT_EQUAL_UINT8(1, stored.midiChannel);
+    TEST_ASSERT_EQUAL_UINT8(0, stored.sysexLength);
+    for (uint8_t i = 0; i < SysExTemplate::kMaxLength; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(0, stored.sysexTemplate[i]);
+    }
+
+    TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(1))));
+    TEST_ASSERT_EQUAL_UINT8(0x00, EEPROM.read(static_cast<int>(EEPROM_PROFILE_START(2))));
 }
 
 #endif // UNIT_TEST

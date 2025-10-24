@@ -536,6 +536,13 @@ label select:focus {
   padding: 16px;
 }
 
+.slot-editor .slot-hint {
+  grid-column: 1 / -1;
+  font-size: 0.85rem;
+  margin: -4px 0 0;
+  color: var(--color-muted);
+}
+
 #log {
   max-height: 160px;
   overflow-y: auto;

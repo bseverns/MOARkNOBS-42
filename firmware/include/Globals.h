@@ -24,6 +24,7 @@
 #include <Arduino.h>
 #include <utility>
 #include <array>
+#include <cstddef>
 
 #include "MIDITypes.h"
 class ConfigManager;
@@ -35,7 +36,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0002;      //!< EEPROM schema version
+inline constexpr uint16_t CONFIG_VERSION = 0x0003;      //!< EEPROM schema version
 inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008; //!< EEPROM addr for brownout counter
 
 extern uint32_t g_resetCause;    //!< Raw reset cause register
@@ -114,7 +115,7 @@ constexpr float VadcScale = 3.3f / 1023.0f;
 extern float g_vref;
 
 // EEPROM storage constants
-constexpr uint8_t SLOT_EEPROM_SIZE = 6; // bytes required to store a MIDISlot
+inline constexpr std::size_t SLOT_EEPROM_SIZE = sizeof(MIDISlot); // bytes required per MIDISlot
 
 inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
 inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
@@ -132,7 +133,8 @@ inline constexpr uint16_t EEPROM_BACKUP_START =
 inline constexpr uint16_t EEPROM_CONFIG_MIRROR_SIZE = EEPROM_BACKUP_START * 2;
 
 inline constexpr uint16_t EEPROM_SLOT_BASE = EEPROM_CONFIG_MIRROR_SIZE;
-inline constexpr uint16_t EEPROM_SLOT_REGION_SIZE = SLOT_EEPROM_SIZE * NUM_SLOTS;
+inline constexpr uint16_t EEPROM_SLOT_REGION_SIZE =
+    static_cast<uint16_t>(SLOT_EEPROM_SIZE * NUM_SLOTS);
 
 inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
     return (id == 0) ? EEPROM_START_ADDRESS

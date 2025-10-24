@@ -657,6 +657,14 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
         return;
     }
 
+    constexpr uint16_t kSysExGuardLength = 64;
+    if (length > kSysExGuardLength) {
+#ifdef MIDI_DEBUG
+        MIDI_DBG_PRINTF("Dropping SysEx[%u]: exceeds guard %u\n", length, kSysExGuardLength);
+#endif
+        return;
+    }
+
     if (data[0] != 0xF0 || data[length - 1] != 0xF7) {
 #ifdef MIDI_DEBUG
         MIDI_DBG_PRINTF("Dropping SysEx[%u]: invalid framing (start %02X end %02X)\n", length,
