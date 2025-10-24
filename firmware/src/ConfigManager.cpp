@@ -48,10 +48,12 @@ SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &paylo
     return sanitized;
 }
 
-void persistFilterTail(const SlotEnvelopePayload &payload) {
+SlotEnvelopePayload persistFilterTailImpl(const SlotEnvelopePayload &payload) {
     SlotEnvelopePayload sanitized = sanitizeEnvelopePayloadImpl(payload);
+    EEPROM.update(EEPROM_ENVELOPE_TYPES, sanitized.filterType);
     EEPROM.put(EEPROM_FILTER_FREQ, sanitized.frequency);
     EEPROM.put(EEPROM_FILTER_Q, sanitized.q);
+    return sanitized;
 }
 
 void maybeRescueFilterTailFromLegacy() {
@@ -67,7 +69,7 @@ void maybeRescueFilterTailFromLegacy() {
     legacy.filterType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
     EEPROM.get(EEPROM_LEGACY_FILTER_FREQ, legacy.frequency);
     EEPROM.get(EEPROM_LEGACY_FILTER_Q, legacy.q);
-    persistFilterTail(legacy);
+    persistFilterTailImpl(legacy);
 }
 } // namespace
 
@@ -532,6 +534,10 @@ void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayloa
     saveSlot(idx, slots[idx]);
 }
 
+SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &payload) {
+    return persistFilterTailImpl(payload);
+}
+
 bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (static_cast<uint8_t>(candidate.type) > static_cast<uint8_t>(MIDIMessageType::SysEx)) {
         return false;
@@ -646,12 +652,12 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     slots.fill({});
 }
 
-void ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q) {
+SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q) {
     SlotEnvelopePayload payload{};
     payload.filterType = filterType;
     payload.frequency = freq;
     payload.q = q;
-    SlotEnvelopePayload sanitized = sanitizeEnvelopePayload(payload);
+    SlotEnvelopePayload sanitized = persistFilterTail(payload);
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot slot{};
         loadSlot(i, slot);
@@ -659,8 +665,7 @@ void ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, flo
         slots[i] = slot;
         saveSlot(i, slots[i]);
     }
-
-    persistFilterTail(sanitized);
+    return sanitized;
 }
 
 SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
@@ -706,9 +711,6 @@ bool ConfigManager::handleCommand(const String &command) {
         uint8_t efType = command.substring(10, firstComma).toInt();
         float freq = command.substring(firstComma + 1, secondComma).toFloat();
         float q = command.substring(secondComma + 1).toFloat();
-        EEPROM.update(EEPROM_ENVELOPE_TYPES, efType);
-        EEPROM.put(EEPROM_FILTER_FREQ, freq);
-        EEPROM.put(EEPROM_FILTER_Q, q);
         seedSlotEnvelopePayloads(efType, freq, q);
         LOG_PRINTLN("OK");
         return true;

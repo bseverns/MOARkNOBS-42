@@ -493,12 +493,19 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         float freq = constrain(filterObj["freq"].as<float>(), 20.0f, 5000.0f);
         float q = constrain(filterObj["q"].as<float>(), 0.5f, 4.0f);
 
+        SlotEnvelopePayload tailPayload{};
+        tailPayload.filterType = static_cast<uint8_t>(filterType);
+        tailPayload.frequency = freq;
+        tailPayload.q = q;
+        SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
+        filterType = static_cast<EnvelopeFollower::FilterType>(sanitizedTail.filterType);
+        freq = sanitizedTail.frequency;
+        q = sanitizedTail.q;
+
         for (auto &ef : envelopeFollowers) {
             ef.setFilterType(filterType);
             ef.configureFilter(freq, q);
         }
-        EEPROM.put(EEPROM_FILTER_FREQ, freq);
-        EEPROM.put(EEPROM_FILTER_Q, q);
 
         if (!anySlotPayloadSpecified) {
             for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
@@ -1264,9 +1271,14 @@ void updateFilterTuning(ButtonManagerContext &context) {
     // 6. Actually set that EF’s filter freq/Q
     //    BUT remember, it only affects EFs whose filterType is
     //    LOWPASS, HIGHPASS, or BANDPASS.
+    SlotEnvelopePayload tailPayload{};
+    tailPayload.filterType = static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
+    tailPayload.frequency = freq;
+    tailPayload.q = q;
+    SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
+    freq = sanitizedTail.frequency;
+    q = sanitizedTail.q;
     context.envelopes[efIndex].configureFilter(freq, q);
-    EEPROM.put(EEPROM_FILTER_FREQ, freq);
-    EEPROM.put(EEPROM_FILTER_Q, q);
     if (context.activePot < NUM_SLOTS) {
         SlotEnvelopePayload payload =
             configManager.getSlotEnvelopePayload(static_cast<uint8_t>(context.activePot));

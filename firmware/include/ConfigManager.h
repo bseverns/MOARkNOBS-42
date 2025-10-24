@@ -236,6 +236,9 @@ class ConfigManager {
     /** Replace the stored envelope payload for a slot and persist it. */
     void setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload);
 
+    /** Mirror the most recent global filter tuning into the EEPROM tail. */
+    SlotEnvelopePayload persistFilterTail(const SlotEnvelopePayload &payload);
+
     /** Read a single MIDISlot from EEPROM into the provided struct. */
     void loadSlot(uint8_t idx, MIDISlot &dest);
     /** Write one MIDISlot structure back to EEPROM. */
@@ -270,7 +273,7 @@ class ConfigManager {
     void wipeProfileBlocks();
     static bool slotLooksSane(const MIDISlot &candidate);
     void migrateLegacySlotPayloads(uint16_t storedVersion);
-    void seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
+    SlotEnvelopePayload seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
     static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
 };
 
