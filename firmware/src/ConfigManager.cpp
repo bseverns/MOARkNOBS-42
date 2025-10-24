@@ -38,108 +38,13 @@ void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings)
 }
 
 namespace {
-EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
-    using Filter = MIDISlot::EfSettings::FilterType;
-    switch (type) {
-    case Filter::Linear:
-        return EnvelopeFollower::LINEAR;
-    case Filter::OppositeLinear:
-        return EnvelopeFollower::OPPOSITE_LINEAR;
-    case Filter::Exponential:
-        return EnvelopeFollower::EXPONENTIAL;
-    case Filter::Random:
-        return EnvelopeFollower::RANDOM;
-    case Filter::Lowpass:
-        return EnvelopeFollower::LOWPASS;
-    case Filter::Highpass:
-        return EnvelopeFollower::HIGHPASS;
-    case Filter::Bandpass:
-        return EnvelopeFollower::BANDPASS;
-    }
-    return EnvelopeFollower::LINEAR;
-}
 
-void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
-    ef.setFilterType(toEnvelopeFilter(settings.filterType));
-    ef.configureFilter(settings.frequency, settings.q);
-    ef.setOversampleCount(settings.oversample);
-    ef.setSmoothingAlpha(settings.smoothing);
-    ef.setBaseline(settings.baseline);
-    ef.setGain(settings.gain);
-}
-
-bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
-    switch (type) {
-    case MIDISlot::EfSettings::FilterType::Linear:
-    case MIDISlot::EfSettings::FilterType::OppositeLinear:
-    case MIDISlot::EfSettings::FilterType::Exponential:
-    case MIDISlot::EfSettings::FilterType::Random:
-    case MIDISlot::EfSettings::FilterType::Lowpass:
-    case MIDISlot::EfSettings::FilterType::Highpass:
-    case MIDISlot::EfSettings::FilterType::Bandpass:
-        return true;
-    }
-    return false;
-}
-
-SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &payload);
-
-SlotEnvelopePayload settingsToPayload(const MIDISlot::EfSettings &settings) {
-    SlotEnvelopePayload payload{};
-    payload.filterType = static_cast<uint8_t>(settings.filterType);
-    payload.frequency = settings.frequency;
-    payload.q = settings.q;
-    return payload;
-}
-
-void applyPayloadToSettings(const SlotEnvelopePayload &payload, MIDISlot::EfSettings &settings) {
-    settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(constrain(
-        payload.filterType, static_cast<uint8_t>(0),
-        static_cast<uint8_t>(MIDISlot::EfSettings::FilterType::Bandpass)));
-    settings.frequency = payload.frequency;
-    settings.q = payload.q;
-}
-
-MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
-    MIDISlot::EfSettings sanitized = settings;
-    if (!filterTypeIsValid(sanitized.filterType)) {
-        sanitized.filterType = MIDISlot::EfSettings::FilterType::Linear;
-    }
-    SlotEnvelopePayload payload = sanitizeEnvelopePayloadImpl(settingsToPayload(sanitized));
-    applyPayloadToSettings(payload, sanitized);
-    if (sanitized.oversample == 0) {
-        sanitized.oversample = 1;
-    }
-    if (!std::isfinite(sanitized.smoothing)) {
-        sanitized.smoothing = 0.2f;
-    }
-    sanitized.smoothing = constrain(sanitized.smoothing, 0.0f, 1.0f);
-    if (!std::isfinite(sanitized.baseline)) {
-        sanitized.baseline = 0.0f;
-    }
-    if (!std::isfinite(sanitized.gain)) {
-        sanitized.gain = 1.0f;
-    }
-    return sanitized;
-}
-
-MIDISlot::EfRuntime sanitizeEfRuntime(const MIDISlot::EfRuntime &runtime) {
-    MIDISlot::EfRuntime sanitized = runtime;
-    if (sanitized.followerIndex < -1) {
-        sanitized.followerIndex = -1;
-    }
-    return sanitized;
-}
-} // namespace
-
-constexpr int kUnassignedEnvelope = -1;
-
-namespace {
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
 constexpr float kMinFilterFrequency = 20.0f;
 constexpr float kMaxFilterFrequency = 5000.0f;
 constexpr float kMinFilterQ = 0.5f;
 constexpr float kMaxFilterQ = 4.0f;
+constexpr int kUnassignedEnvelope = -1;
 
 bool filterCoefficientsLookSane(float freq, float q) {
     if (!std::isfinite(freq) || !std::isfinite(q)) {
@@ -192,6 +97,97 @@ void maybeRescueFilterTailFromLegacy() {
     EEPROM.get(EEPROM_LEGACY_FILTER_FREQ, legacy.frequency);
     EEPROM.get(EEPROM_LEGACY_FILTER_Q, legacy.q);
     persistFilterTailImpl(legacy);
+}
+
+EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
+    using Filter = MIDISlot::EfSettings::FilterType;
+    switch (type) {
+    case Filter::Linear:
+        return EnvelopeFollower::LINEAR;
+    case Filter::OppositeLinear:
+        return EnvelopeFollower::OPPOSITE_LINEAR;
+    case Filter::Exponential:
+        return EnvelopeFollower::EXPONENTIAL;
+    case Filter::Random:
+        return EnvelopeFollower::RANDOM;
+    case Filter::Lowpass:
+        return EnvelopeFollower::LOWPASS;
+    case Filter::Highpass:
+        return EnvelopeFollower::HIGHPASS;
+    case Filter::Bandpass:
+        return EnvelopeFollower::BANDPASS;
+    }
+    return EnvelopeFollower::LINEAR;
+}
+
+void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
+    ef.setFilterType(toEnvelopeFilter(settings.filterType));
+    ef.configureFilter(settings.frequency, settings.q);
+    ef.setOversampleCount(settings.oversample);
+    ef.setSmoothingAlpha(settings.smoothing);
+    ef.setBaseline(settings.baseline);
+    ef.setGain(settings.gain);
+}
+
+bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+    case MIDISlot::EfSettings::FilterType::Exponential:
+    case MIDISlot::EfSettings::FilterType::Random:
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+    case MIDISlot::EfSettings::FilterType::Highpass:
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return true;
+    }
+    return false;
+}
+
+SlotEnvelopePayload settingsToPayload(const MIDISlot::EfSettings &settings) {
+    SlotEnvelopePayload payload{};
+    payload.filterType = static_cast<uint8_t>(settings.filterType);
+    payload.frequency = settings.frequency;
+    payload.q = settings.q;
+    return payload;
+}
+
+void applyPayloadToSettings(const SlotEnvelopePayload &payload, MIDISlot::EfSettings &settings) {
+    settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(constrain(
+        payload.filterType, static_cast<uint8_t>(0),
+        static_cast<uint8_t>(MIDISlot::EfSettings::FilterType::Bandpass)));
+    settings.frequency = payload.frequency;
+    settings.q = payload.q;
+}
+
+MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
+    MIDISlot::EfSettings sanitized = settings;
+    if (!filterTypeIsValid(sanitized.filterType)) {
+        sanitized.filterType = MIDISlot::EfSettings::FilterType::Linear;
+    }
+    SlotEnvelopePayload payload = sanitizeEnvelopePayloadImpl(settingsToPayload(sanitized));
+    applyPayloadToSettings(payload, sanitized);
+    if (sanitized.oversample == 0) {
+        sanitized.oversample = 1;
+    }
+    if (!std::isfinite(sanitized.smoothing)) {
+        sanitized.smoothing = 0.2f;
+    }
+    sanitized.smoothing = constrain(sanitized.smoothing, 0.0f, 1.0f);
+    if (!std::isfinite(sanitized.baseline)) {
+        sanitized.baseline = 0.0f;
+    }
+    if (!std::isfinite(sanitized.gain)) {
+        sanitized.gain = 1.0f;
+    }
+    return sanitized;
+}
+
+MIDISlot::EfRuntime sanitizeEfRuntime(const MIDISlot::EfRuntime &runtime) {
+    MIDISlot::EfRuntime sanitized = runtime;
+    if (sanitized.followerIndex < -1) {
+        sanitized.followerIndex = -1;
+    }
+    return sanitized;
 }
 } // namespace
 

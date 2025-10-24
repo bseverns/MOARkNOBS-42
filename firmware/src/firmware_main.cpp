@@ -44,6 +44,8 @@ extern bool envelopeFollowMode;
 extern String g_envelopeModeLabel;
 extern const char *envelopeMode;
 
+using EfSettings = MIDISlot::EfSettings;
+
 #if defined(ARDUINO)
 extern "C" {
 extern char _ebss;
@@ -370,6 +372,57 @@ EnvelopeFollower::FilterType decodeFilterType(EfSettings::FilterType raw) {
 
 EfSettings::FilterType encodeFilterType(EnvelopeFollower::FilterType type) {
     return static_cast<EfSettings::FilterType>(type);
+}
+
+void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out) {
+    out = defaults;
+    if (obj.isNull()) {
+        return;
+    }
+
+    if (obj.containsKey("filter_index")) {
+        int idx = constrain(obj["filter_index"].as<int>(), 0, 6);
+        out.filterType = static_cast<EfSettings::FilterType>(idx);
+    } else if (obj.containsKey("filter")) {
+        const char *label = obj["filter"].as<const char *>();
+        out.filterType = encodeFilterType(parseFilterType(label, decodeFilterType(out.filterType)));
+    } else if (obj.containsKey("filter_name")) {
+        const char *label = obj["filter_name"].as<const char *>();
+        out.filterType = encodeFilterType(parseFilterType(label, decodeFilterType(out.filterType)));
+    }
+
+    if (obj.containsKey("frequency")) {
+        out.frequency = obj["frequency"].as<float>();
+    } else if (obj.containsKey("freq")) {
+        out.frequency = obj["freq"].as<float>();
+    }
+
+    if (obj.containsKey("q")) {
+        out.q = obj["q"].as<float>();
+    }
+
+    if (obj.containsKey("oversample")) {
+        int oversample = obj["oversample"].as<int>();
+        out.oversample = static_cast<uint8_t>(constrain(oversample, 1, 32));
+    }
+
+    if (obj.containsKey("smoothing")) {
+        out.smoothing = obj["smoothing"].as<float>();
+    }
+
+    if (obj.containsKey("baseline")) {
+        out.baseline = obj["baseline"].as<float>();
+    }
+
+    if (obj.containsKey("gain")) {
+        out.gain = obj["gain"].as<float>();
+    }
+
+    if (obj.containsKey("index")) {
+        int rawIndex = obj["index"].as<int>();
+        rawIndex = constrain(rawIndex, -1, static_cast<int>(NUM_ENVELOPES) - 1);
+        out.followerIndex = static_cast<int8_t>(rawIndex);
+    }
 }
 
 EnvelopeFollower::FilterType parseFilterType(const char *label,
