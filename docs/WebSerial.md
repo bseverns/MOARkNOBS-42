@@ -94,6 +94,20 @@ newline-terminated JSON blobs as well, all prefixed with a `type` field so your 
 Every patch obeys the same “don’t spam unless streaming” rule as snapshots. If WebSerial streaming is paused, patches quietly bail
 so the USB line isn’t clogged when no one’s listening.
 
+When you catch a `slot_patch`, drill into the nested `slot.ef` object if you want the new per-slot envelope follower controls. The
+fields line up with `MIDISlot::EfSettings` in firmware:
+
+- `index` – follower index or `-1` when the slot isn’t riding an envelope.
+- `filter_index` / `filter_name` – one of the seven EnvelopeFollower filter shapes.
+- `frequency` and `q` – the knobs that drive `EnvelopeFollower::configureFilter()`.
+- `oversample` – extra ADC reads per update (1 disables the bonus noise shaping).
+- `smoothing` – EWMA alpha; higher values hug new samples harder.
+- `baseline` – calibration offset saved alongside the routing so quiet stays quiet.
+- `gain` – post-baseline multiplier that lets a follower punch above unity.
+
+Leave the object alone if you only care about routing. You can still rely on the legacy `ef_index` scalar for backward-compatible
+hosts, but the nested settings are the real playground for browser editors.
+
 ## Text Commands
 
 Spying is fun, but sometimes you gotta bark orders. Hurl plain‑text commands

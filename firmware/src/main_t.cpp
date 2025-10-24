@@ -45,7 +45,7 @@ std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&poten
 uint8_t activePot = 0, activeChannel = 1;
 bool envelopeFollowMode = false;
 const char *envelopeMode = "SEF";
-std::map<int, int> potToEnvelopeMap;
+std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
 bool diagnosticMode = false;
 uint8_t diagnosticPage = 0;
 

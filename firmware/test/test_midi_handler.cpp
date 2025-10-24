@@ -262,7 +262,7 @@ void test_config_mutation_during_stream_stays_valid() {
     slot.type = MIDIMessageType::CC;
     slot.midiChannel = 4;
     slot.data1 = 42;
-    slot.efIndex = 0;
+    slot.ef.followerIndex = 0;
 
     StubEnvelope env{110};
     uint32_t ccEvents = 0;

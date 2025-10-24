@@ -54,7 +54,7 @@ void setup() {
         bool pass = loaded.type == MIDIMessageType::CC &&
                     loaded.midiChannel == static_cast<uint8_t>((i % 16) + 1) &&
                     loaded.data1 == static_cast<uint8_t>(20 + i) &&
-                    loaded.efIndex == static_cast<uint8_t>(i % 6) && loaded.active &&
+                    loaded.ef.followerIndex == static_cast<int8_t>(i % 6) && loaded.active &&
                     loaded.arpNote == static_cast<uint8_t>(60 + i) && loaded.sysexLength == 0;
 
         Serial.print("Slot ");

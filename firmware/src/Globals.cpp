@@ -61,8 +61,9 @@ SystemDiagnostics g_systemDiagnostics;
 namespace {
 constexpr std::array<int, NUM_ENVELOPES> kEnvelopePins = {A0, A1, A2, A3, A6, A7};
 
-constexpr std::array<std::pair<int, int>, ARG_PAIR_COUNT> buildArgPairs() {
-    std::array<std::pair<int, int>, ARG_PAIR_COUNT> pairs{};
+namespace {
+constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildArgPairs() {
+    std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> pairs{};
     size_t idx = 0;
     for (size_t a = 0; a < kEnvelopePins.size(); ++a) {
         for (size_t b = a + 1; b < kEnvelopePins.size(); ++b) {
@@ -73,7 +74,7 @@ constexpr std::array<std::pair<int, int>, ARG_PAIR_COUNT> buildArgPairs() {
 }
 } // namespace
 
-const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
+const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
 const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
 
 int envelopeAnalogPin(uint8_t index) {

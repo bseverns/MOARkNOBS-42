@@ -56,8 +56,13 @@ void fillTestData() {
         potentiometerManager.setCCNumber(i, 10 + i);
     }
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        testSlots[i] = {
-            MIDIMessageType::CC, (uint8_t)((i % 16) + 1), i, (uint8_t)(i % 6), true, 60};
+        testSlots[i] = {};
+        testSlots[i].type = MIDIMessageType::CC;
+        testSlots[i].midiChannel = static_cast<uint8_t>((i % 16) + 1);
+        testSlots[i].data1 = i;
+        testSlots[i].active = true;
+        testSlots[i].arpNote = 60;
+        testSlots[i].ef.followerIndex = static_cast<int8_t>(i % 6);
         testSlots[i].sysexLength = 0;
         testSlots[i].sysexTemplate.fill(0);
     }
@@ -78,7 +83,7 @@ bool verifyTestData() {
             return false;
         if (s.data1 != i)
             return false;
-        if (s.efIndex != (uint8_t)(i % 6))
+        if (s.ef.followerIndex != static_cast<int8_t>(i % 6))
             return false;
         if (!s.active)
             return false;

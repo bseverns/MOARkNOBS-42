@@ -16,6 +16,7 @@
 #include "TimeUtils.h"
 #include "name.c"
 #include "Globals.h" // contains all pin definitions
+#include "ARGMixer.h"
 #include "version.h"
 #include "BiquadFilter.h"
 #include "Arpeggiator.h"
@@ -31,9 +32,10 @@
 #include <cstdint>
 #include <cctype>
 #include <cmath>
+#include <algorithm>
 
 extern std::vector<uint8_t> potChannels;
-extern std::map<int, int> potToEnvelopeMap;
+extern std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
 extern PotentiometerManager potentiometerManager;
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern LEDManager ledManager;
@@ -175,6 +177,77 @@ const char *envelopeFilterName(EnvelopeFollower::FilterType type) {
     }
 }
 
+const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
+    using Filter = MIDISlot::EfSettings::FilterType;
+    switch (type) {
+    case Filter::Linear:
+        return "LINEAR";
+    case Filter::OppositeLinear:
+        return "OPPOSITE_LINEAR";
+    case Filter::Exponential:
+        return "EXPONENTIAL";
+    case Filter::Random:
+        return "RANDOM";
+    case Filter::Lowpass:
+        return "LOWPASS";
+    case Filter::Highpass:
+        return "HIGHPASS";
+    case Filter::Bandpass:
+        return "BANDPASS";
+    }
+    return "LINEAR";
+}
+
+EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
+    using Filter = MIDISlot::EfSettings::FilterType;
+    switch (type) {
+    case Filter::Linear:
+        return EnvelopeFollower::LINEAR;
+    case Filter::OppositeLinear:
+        return EnvelopeFollower::OPPOSITE_LINEAR;
+    case Filter::Exponential:
+        return EnvelopeFollower::EXPONENTIAL;
+    case Filter::Random:
+        return EnvelopeFollower::RANDOM;
+    case Filter::Lowpass:
+        return EnvelopeFollower::LOWPASS;
+    case Filter::Highpass:
+        return EnvelopeFollower::HIGHPASS;
+    case Filter::Bandpass:
+        return EnvelopeFollower::BANDPASS;
+    }
+    return EnvelopeFollower::LINEAR;
+}
+
+MIDISlot::EfSettings::FilterType fromEnvelopeFilter(EnvelopeFollower::FilterType type) {
+    switch (type) {
+    case EnvelopeFollower::LINEAR:
+        return MIDISlot::EfSettings::FilterType::Linear;
+    case EnvelopeFollower::OPPOSITE_LINEAR:
+        return MIDISlot::EfSettings::FilterType::OppositeLinear;
+    case EnvelopeFollower::EXPONENTIAL:
+        return MIDISlot::EfSettings::FilterType::Exponential;
+    case EnvelopeFollower::RANDOM:
+        return MIDISlot::EfSettings::FilterType::Random;
+    case EnvelopeFollower::LOWPASS:
+        return MIDISlot::EfSettings::FilterType::Lowpass;
+    case EnvelopeFollower::HIGHPASS:
+        return MIDISlot::EfSettings::FilterType::Highpass;
+    case EnvelopeFollower::BANDPASS:
+        return MIDISlot::EfSettings::FilterType::Bandpass;
+    }
+    return MIDISlot::EfSettings::FilterType::Linear;
+}
+
+void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
+    ef.setFilterType(toEnvelopeFilter(settings.filterType));
+    ef.configureFilter(settings.frequency, settings.q);
+    ef.setOversampleCount(settings.oversample);
+    ef.setSmoothingAlpha(settings.smoothing);
+    ef.setBaseline(settings.baseline);
+    ef.setGain(settings.gain);
+}
+
 const char *argMethodName(uint8_t method) {
     static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
                                              "BABS", "TABS", "MULT", "DIVI", "AVG",
@@ -185,9 +258,7 @@ const char *argMethodName(uint8_t method) {
     return "UNKNOWN";
 }
 
-const char *envelopeModeName(uint8_t mode) {
-    return (mode == static_cast<uint8_t>(EnvelopeFollower::ARG)) ? "ARG" : "SEF";
-}
+const char *envelopeModeName(uint8_t mode) { return (mode != 0) ? "ARG" : "SEF"; }
 } // namespace
 
 namespace {
@@ -308,22 +379,19 @@ EnvelopeFollower::FilterType parseFilterType(const char *label,
     return fallback;
 }
 
-EnvelopeFollower::ARG_Method parseArgMethod(const char *label,
-                                            EnvelopeFollower::ARG_Method fallback) {
+ARGMethod parseArgMethod(const char *label, ARGMethod fallback) {
     if (!label)
         return fallback;
     struct Entry {
         const char *name;
-        EnvelopeFollower::ARG_Method value;
+        ARGMethod value;
     };
     static constexpr Entry kMap[] = {
-        {"PLUS", EnvelopeFollower::PLUS}, {"MIN", EnvelopeFollower::MIN},
-        {"PECK", EnvelopeFollower::PECK}, {"SHAV", EnvelopeFollower::SHAV},
-        {"SQAR", EnvelopeFollower::SQAR}, {"BABS", EnvelopeFollower::BABS},
-        {"TABS", EnvelopeFollower::TABS}, {"MULT", EnvelopeFollower::MULT},
-        {"DIVI", EnvelopeFollower::DIVI}, {"AVG", EnvelopeFollower::AVG},
-        {"XABS", EnvelopeFollower::XABS}, {"MAXX", EnvelopeFollower::MAXX},
-        {"MINN", EnvelopeFollower::MINN}, {"XORR", EnvelopeFollower::XORR}};
+        {"PLUS", ARGMethod::PLUS}, {"MIN", ARGMethod::MIN},   {"PECK", ARGMethod::PECK},
+        {"SHAV", ARGMethod::SHAV}, {"SQAR", ARGMethod::SQAR}, {"BABS", ARGMethod::BABS},
+        {"TABS", ARGMethod::TABS}, {"MULT", ARGMethod::MULT}, {"DIVI", ARGMethod::DIVI},
+        {"AVG", ARGMethod::AVG},   {"XABS", ARGMethod::XABS}, {"MAXX", ARGMethod::MAXX},
+        {"MINN", ARGMethod::MINN}, {"XORR", ARGMethod::XORR}};
     for (const auto &entry : kMap) {
         if (strcmp(label, entry.name) == 0) {
             return entry.value;
@@ -478,15 +546,69 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
         uint8_t midiChannel = constrain(slotObj["midiChannel"].as<int>(), 1, 16);
         uint8_t data1 = constrain(slotObj["data1"].as<int>(), 0, 127);
-        uint8_t efIndex = constrain(slotObj["efIndex"].as<int>(), 0,
-                                    static_cast<int>(envelopeFollowers.size()) - 1);
         bool active = slotObj["active"].as<bool>();
 
         MIDISlot &slot = configManager.getSlot(i);
+        MIDISlot::EfSettings settings = slot.ef;
+
+        int rawEfIndex = settings.followerIndex;
+        if (slotObj.containsKey("efIndex")) {
+            rawEfIndex = slotObj["efIndex"].as<int>();
+        } else if (slotObj.containsKey("ef_index")) {
+            rawEfIndex = slotObj["ef_index"].as<int>();
+        }
+
+        JsonObject efObj =
+            slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
+        if (!efObj.isNull()) {
+            if (efObj.containsKey("index")) {
+                rawEfIndex = efObj["index"].as<int>();
+            }
+            if (efObj.containsKey("filter_index")) {
+                int idx = constrain(efObj["filter_index"].as<int>(), 0, 6);
+                settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(idx);
+            } else if (efObj.containsKey("filter_name")) {
+                const char *label = efObj["filter_name"].as<const char *>();
+                EnvelopeFollower::FilterType parsed =
+                    parseFilterType(label, toEnvelopeFilter(settings.filterType));
+                settings.filterType = fromEnvelopeFilter(parsed);
+            } else if (efObj.containsKey("filter")) {
+                const char *label = efObj["filter"].as<const char *>();
+                EnvelopeFollower::FilterType parsed =
+                    parseFilterType(label, toEnvelopeFilter(settings.filterType));
+                settings.filterType = fromEnvelopeFilter(parsed);
+            }
+            if (efObj.containsKey("frequency")) {
+                settings.frequency = efObj["frequency"].as<float>();
+            }
+            if (efObj.containsKey("q")) {
+                settings.q = efObj["q"].as<float>();
+            }
+            if (efObj.containsKey("oversample")) {
+                int oversample = efObj["oversample"].as<int>();
+                settings.oversample = static_cast<uint8_t>(constrain(oversample, 1, 32));
+            }
+            if (efObj.containsKey("smoothing")) {
+                settings.smoothing = efObj["smoothing"].as<float>();
+            }
+            if (efObj.containsKey("baseline")) {
+                settings.baseline = efObj["baseline"].as<float>();
+            }
+            if (efObj.containsKey("gain")) {
+                settings.gain = efObj["gain"].as<float>();
+            }
+        }
+
+        if (rawEfIndex >= 0 && rawEfIndex < static_cast<int>(envelopeFollowers.size())) {
+            settings.followerIndex = static_cast<int8_t>(rawEfIndex);
+        } else {
+            settings.followerIndex = -1;
+        }
+
         slot.type = midiType;
         slot.midiChannel = midiChannel;
         slot.data1 = data1;
-        slot.efIndex = efIndex;
+        slot.ef = settings;
         slot.active = active;
         slot.arg = defaultArg;
         if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
@@ -534,6 +656,40 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         } else {
             clearSysExTemplate(slot);
         }
+        SlotARGConfig slotArg = defaultArg;
+        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
+            JsonObject argObj = slotObj["arg"].as<JsonObject>();
+            if (argObj.containsKey("enable")) {
+                slotArg.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+            } else if (argObj.containsKey("enabled")) {
+                slotArg.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+            }
+            if (argObj.containsKey("method")) {
+                if (argObj["method"].is<const char *>()) {
+                    slotArg.method =
+                        parseArgMethod(argObj["method"].as<const char *>(), slotArg.method);
+                } else {
+                    slotArg.method = static_cast<ARGMethod>(constrain(
+                        argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
+                }
+            }
+            if (argObj.containsKey("a")) {
+                int rawA = argObj["a"].as<int>();
+                int idxA = envelopeIndexFromAnalogPin(rawA);
+                if (idxA < 0)
+                    idxA = constrain(rawA, 0, NUM_ENVELOPES - 1);
+                slotArg.sourceA = static_cast<uint8_t>(idxA);
+            }
+            if (argObj.containsKey("b")) {
+                int rawB = argObj["b"].as<int>();
+                int idxB = envelopeIndexFromAnalogPin(rawB);
+                if (idxB < 0)
+                    idxB = constrain(rawB, 0, NUM_ENVELOPES - 1);
+                slotArg.sourceB = static_cast<uint8_t>(idxB);
+            }
+            slotArg = sanitizeSlotArg(slotArg);
+        }
+        slot.arg = slotArg;
         configManager.saveSlot(i, slot);
 
         if (slotObj.containsKey("ef_payload") && slotObj["ef_payload"].is<JsonObject>()) {
@@ -580,8 +736,16 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             int slotIndex = mapping["slot"].as<int>();
             if (slotIndex < 0 || slotIndex >= NUM_POTS)
                 continue;
-            potToEnvelopeMap[slotIndex] = i;
-            envelopeFollowers[i].setModulationTarget(potentiometerManager.getCCNumber(slotIndex));
+
+            MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
+            slot.ef.followerIndex = static_cast<int8_t>(i);
+            potToEnvelopeMap[slotIndex] = slot.ef;
+
+            if (i < envelopeFollowers.size()) {
+                envelopeFollowers[i].setModulationTarget(
+                    potentiometerManager.getCCNumber(slotIndex));
+                applyEfSettingsToFollower(envelopeFollowers[i], slot.ef);
+            }
         }
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     }
@@ -674,11 +838,12 @@ uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint
 #endif
 
 // Global objects
-std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI channel
-std::map<int, int> potToEnvelopeMap; // Crosswalk from pot index to its envelope follower partner
-std::queue<String> commandQueue;     // Serial command backlog waiting for mid-tier processing
-MIDIHandler midiHandler;             // Central MIDI traffic cop slinging bytes over USB + DIN
-LEDManager ledManager(hwConfig);     // Whips the WS2812 strip into obedient patterns
+std::vector<uint8_t> potChannels; // 42-slot table: each entry stores a slot's MIDI channel
+std::map<int, MIDISlot::EfSettings>
+    potToEnvelopeMap;            // Crosswalk from pot index to its envelope follower partner
+std::queue<String> commandQueue; // Serial command backlog waiting for mid-tier processing
+MIDIHandler midiHandler;         // Central MIDI traffic cop slinging bytes over USB + DIN
+LEDManager ledManager(hwConfig); // Whips the WS2812 strip into obedient patterns
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // Bosses around the 128x64 OLED
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button config to EEPROM
 BiquadFilter filter;     // Shared filter template for envelope follower shaping
@@ -894,7 +1059,7 @@ void processSerial() {
             doc["slot_count"] = NUM_SLOTS;
             doc["pot_count"] = configManager.getNumPots();
             doc["envelope_count"] = NUM_ENVELOPES;
-            doc["arg_method_count"] = static_cast<uint8_t>(EnvelopeFollower::ARG_Method::XORR) + 1;
+            doc["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
             doc["led_count"] = NUM_LEDS();
             doc["free_ram"] = computeFreeRAM();
             doc["free_flash"] = computeFreeFlash();
@@ -927,7 +1092,17 @@ void processSerial() {
                 slotObj["type_name"] = midiMessageTypeName(slot.type);
                 slotObj["channel"] = slot.midiChannel;
                 slotObj["data1"] = slot.data1;
-                slotObj["ef_index"] = slot.efIndex;
+                slotObj["ef_index"] = slot.ef.followerIndex;
+                JsonObject ef = slotObj.createNestedObject("ef");
+                ef["index"] = slot.ef.followerIndex;
+                ef["filter_index"] = static_cast<uint8_t>(slot.ef.filterType);
+                ef["filter_name"] = efFilterLabel(slot.ef.filterType);
+                ef["frequency"] = slot.ef.frequency;
+                ef["q"] = slot.ef.q;
+                ef["oversample"] = slot.ef.oversample;
+                ef["smoothing"] = slot.ef.smoothing;
+                ef["baseline"] = slot.ef.baseline;
+                ef["gain"] = slot.ef.gain;
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
@@ -953,7 +1128,7 @@ void processSerial() {
                 int mapping = -1;
                 auto it = potToEnvelopeMap.find(i);
                 if (it != potToEnvelopeMap.end()) {
-                    mapping = it->second;
+                    mapping = it->second.followerIndex;
                 }
                 routing.add(mapping);
             }
@@ -1104,7 +1279,11 @@ void processSerial() {
             // Send all pot settings
             LOG_PRINT("POTS:");
             for (int i = 0; i < NUM_POTS; i++) {
-                int envelopeValue = (potToEnvelopeMap.count(i)) ? potToEnvelopeMap[i] : -1;
+                int envelopeValue = -1;
+                auto it = potToEnvelopeMap.find(i);
+                if (it != potToEnvelopeMap.end()) {
+                    envelopeValue = it->second.followerIndex;
+                }
                 LOG_PRINT(configManager.getPotCCNumber(i));
                 LOG_PRINT(",");
                 LOG_PRINT(configManager.getPotChannel(i));
@@ -1161,16 +1340,17 @@ void processSerial() {
             LOG_PRINTLN(configManager.getARGMethod());
         } else if (command.startsWith("SET_ARGMETHOD")) {
             // SET_ARGMETHOD <method>
-            // method: 0-13 mapping to EnvelopeFollower::ARG_Method; see
-            // firmware/include/EnvelopeFollower/README.md#arg-methods for the math.
-            // Side effects: blasts method into every follower and burns it into
-            // EEPROM via ConfigManager.
+            // method: 0-13 mapping to ARGMethod values; see docs for math notes.
+            // Side effects: updates every slot's ARG method and burns the
+            // legacy default into EEPROM via ConfigManager.
             int method = command.substring(14).toInt();
-            if (method >= 0 && method <= 13) {
-                for (auto &ef : envelopeFollowers) {
-                    ef.setARGMethod(static_cast<EnvelopeFollower::ARG_Method>(method));
+            if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {
+                for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+                    MIDISlot &slot = configManager.getSlot(slotIndex);
+                    slot.arg.method = static_cast<ARGMethod>(method);
+                    configManager.saveSlot(slotIndex, slot);
                 }
-                configManager.setARGMethod(method);
+                configManager.setARGMethod(static_cast<uint8_t>(method));
                 LOG_PRINTLN("OK");
             } else {
                 // out-of-range method? we spit ERR
@@ -1183,7 +1363,11 @@ void processSerial() {
             // the whole WebSerial spiel.
             int potIndex = command.substring(7).toInt();
             if (potIndex >= 0 && potIndex < NUM_POTS) {
-                int env = potToEnvelopeMap.count(potIndex) ? potToEnvelopeMap[potIndex] : -1;
+                int env = -1;
+                auto it = potToEnvelopeMap.find(potIndex);
+                if (it != potToEnvelopeMap.end()) {
+                    env = it->second.followerIndex;
+                }
 #ifdef SERIAL_LOGGING
                 LOG_PRINTLN(env);
 #else
@@ -1207,8 +1391,11 @@ void processSerial() {
                 int envIndex = command.substring(comma + 1).toInt();
                 if (potIndex >= 0 && potIndex < NUM_POTS && envIndex >= 0 &&
                     envIndex < (int)envelopeFollowers.size()) {
-                    potToEnvelopeMap[potIndex] = envIndex;
+                    MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
+                    slot.ef.followerIndex = static_cast<int8_t>(envIndex);
+                    potToEnvelopeMap[potIndex] = slot.ef;
                     envelopeFollowers[envIndex].toggleActive(true);
+                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.ef);
                     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
                     LOG_PRINTLN("OK");
                 } else {
@@ -1234,11 +1421,12 @@ void processEnvelopes() {
 
     // Stroll through the pot→envelope map; every pair says which envelope
     // rides shotgun with which physical pot.
-    for (const auto &[potIndex, envelopeIndex] : potToEnvelopeMap) {
+    for (const auto &entry : potToEnvelopeMap) {
+        const int potIndex = entry.first;
+        const MIDISlot::EfSettings &settings = entry.second;
+        const int envelopeIndex = settings.followerIndex;
         if (potIndex < 0 || potIndex >= NUM_POTS)
             continue; // Someone scribbled junk into the routing table; bail fast
-        // Trust no one: make sure the map didn't hand us a bogus index
-        // before poking the envelope array.
         if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopeFollowers.size())) {
             int currentPotReading = potentiometerManager.getLastValue(potIndex);
             if (currentPotReading < 0)
@@ -1260,10 +1448,12 @@ void processEnvelopes() {
 
             ledManager.setEnvelopeLevel(envelopeIndex, envelope->getEnvelopeLevel());
 
-            uint8_t modulatedValue = baselineMidi;
-
-            // applyToCC mutates the MIDI value with the envelope's swagger.
-            envelope->applyToCC(potIndex, modulatedValue);
+            if (potIndex >= NUM_SLOTS)
+                continue;
+            const MIDISlot &slot = configManager.getSlot(potIndex);
+            uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
+            int modulatedInt = static_cast<int>(baselineMidi) + envelopeContribution;
+            uint8_t modulatedValue = static_cast<uint8_t>(constrain(modulatedInt, 0, 127));
 
             bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
             if (valueChanged) {
@@ -1369,7 +1559,11 @@ void updateFilterTuning(ButtonManagerContext &context) {
         // If no EF assigned to active pot, do nothing
         return;
     }
-    int efIndex = it->second; // e.g. 0..5 if you have 6 EFs total
+    MIDISlot::EfSettings &settings = it->second;
+    int efIndex = settings.followerIndex; // e.g. 0..5 if you have 6 EFs total
+    if (efIndex < 0 || efIndex >= static_cast<int>(context.envelopes.size())) {
+        return;
+    }
 
     // 6. Actually set that EF’s filter freq/Q
     //    BUT remember, it only affects EFs whose filterType is
@@ -1485,86 +1679,87 @@ void setup() {
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
 
     // — Pot → MIDI routing callback —
-    potentiometerManager.setMidiCallback(
-        [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
-            auto &slot = configManager.getSlot(potIdx);
-            if (!slot.active)
-                return;
+    potentiometerManager.setMidiCallback([&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue,
+                                             uint8_t potIdx) {
+        auto &slot = configManager.getSlot(potIdx);
+        if (!slot.active)
+            return;
 
-            switch (slot.type) {
-            case MIDIMessageType::CC:
-                midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
-                break;
+        switch (slot.type) {
+        case MIDIMessageType::CC:
+            midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
+            break;
 
-            case MIDIMessageType::Note: {
-                uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
-                slot.arpNote = note; // stash for the arpeggiator
-                uint8_t velo = (slot.efIndex < envelopeFollowers.size())
-                                   ? envelopeFollowers[slot.efIndex].getEnvelopeLevel()
-                                   : 125;
-                int shifted = velo + velocityShift;
-                if (shifted < 0)
-                    shifted = 0;
-                if (shifted > 127)
-                    shifted = 127;
-                if (random(100U) >= changeProbability)
-                    break;
-                midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
-                // schedule Note-Off in 100 ms
-                Utility::schedulerHigh.addTask(
-                    [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
+        case MIDIMessageType::Note: {
+            uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
+            slot.arpNote = note; // stash for the arpeggiator
+            int follower = slot.ef.followerIndex;
+            uint8_t velo = (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size()))
+                               ? envelopeFollowers[follower].getEnvelopeLevel()
+                               : 125;
+            int shifted = velo + velocityShift;
+            if (shifted < 0)
+                shifted = 0;
+            if (shifted > 127)
+                shifted = 127;
+            if (random(100U) >= changeProbability)
                 break;
+            midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
+            // schedule Note-Off in 100 ms
+            Utility::schedulerHigh.addTask(
+                [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
+            break;
+        }
+
+        case MIDIMessageType::PitchBend: {
+            int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
+            midiHandler.sendPitchBend(bend, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::ProgramChange:
+            midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
+            break;
+
+        case MIDIMessageType::Aftertouch: {
+            uint8_t pres = Utility::mapToMidiValue(rawValue);
+            midiHandler.sendAftertouch(pres, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::ModWheel: {
+            uint8_t mod = Utility::mapToMidiValue(rawValue);
+            midiHandler.sendModWheel(mod, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::NRPN: {
+            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+            midiHandler.sendNRPN(param, val, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::RPN: {
+            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+            midiHandler.sendRPN(param, val, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::SysEx: {
+            std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+            uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
+            if (length > 0) {
+                midiHandler.sendSysEx(msg.data(), length);
             }
+            break;
+        }
 
-            case MIDIMessageType::PitchBend: {
-                int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
-                midiHandler.sendPitchBend(bend, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::ProgramChange:
-                midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
-                break;
-
-            case MIDIMessageType::Aftertouch: {
-                uint8_t pres = Utility::mapToMidiValue(rawValue);
-                midiHandler.sendAftertouch(pres, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::ModWheel: {
-                uint8_t mod = Utility::mapToMidiValue(rawValue);
-                midiHandler.sendModWheel(mod, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::NRPN: {
-                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-                midiHandler.sendNRPN(param, val, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::RPN: {
-                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-                midiHandler.sendRPN(param, val, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::SysEx: {
-                std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
-                uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
-                if (length > 0) {
-                    midiHandler.sendSysEx(msg.data(), length);
-                }
-                break;
-            }
-
-            default:
-                break;
-            }
-        });
+        default:
+            break;
+        }
+    });
 
     // — LEDs & Display —
     ledManager.begin();
@@ -1666,8 +1861,11 @@ void setup() {
                 displayManager.updateFromContext(buttonContext);
                 auto it = potToEnvelopeMap.find(buttonContext.activePot);
                 if (it != potToEnvelopeMap.end()) {
-                    displayManager.showEnvelopeLevel(
-                        envelopeFollowers[it->second].getEnvelopeLevel());
+                    int follower = it->second.followerIndex;
+                    if (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size())) {
+                        displayManager.showEnvelopeLevel(
+                            envelopeFollowers[follower].getEnvelopeLevel());
+                    }
                 }
                 displayManager.highlightActivePot(buttonContext.activePot);
                 displayManager.highlightActiveMode(envelopeMode);
