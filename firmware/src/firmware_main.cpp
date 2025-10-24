@@ -400,10 +400,6 @@ ARGMethod parseArgMethod(const char *label, ARGMethod fallback) {
     return fallback;
 }
 
-ARGMethod toSlotArgMethod(EnvelopeFollower::ARG_Method method) {
-    return static_cast<ARGMethod>(static_cast<uint8_t>(method));
-}
-
 EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method) {
     return static_cast<EnvelopeFollower::ARG_Method>(static_cast<uint8_t>(method));
 }
