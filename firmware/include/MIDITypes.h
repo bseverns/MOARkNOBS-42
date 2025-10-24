@@ -91,10 +91,9 @@ struct MIDISlot {
     bool active = false;
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
-    std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
     EfSettings efSettings{}; //!< Slot-specific envelope follower settings
-    EfSettings ef{};                 //!< Live envelope follower assignment
-    SlotEnvelopePayload efPayload{}; //!< Per-slot EF filter payload
+    std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+    EfSettings ef{};             //!< Live envelope follower assignment
     SlotARGConfig arg{};             //!< Slot-local ARG mixer settings
 };
 

@@ -81,6 +81,45 @@ bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
     }
     return false;
 }
+
+SlotEnvelopePayload settingsToPayload(const MIDISlot::EfSettings &settings) {
+    SlotEnvelopePayload payload{};
+    payload.filterType = static_cast<uint8_t>(settings.filterType);
+    payload.frequency = settings.frequency;
+    payload.q = settings.q;
+    return payload;
+}
+
+void applyPayloadToSettings(const SlotEnvelopePayload &payload, MIDISlot::EfSettings &settings) {
+    settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(constrain(
+        payload.filterType, static_cast<uint8_t>(0),
+        static_cast<uint8_t>(MIDISlot::EfSettings::FilterType::Bandpass)));
+    settings.frequency = payload.frequency;
+    settings.q = payload.q;
+}
+
+MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
+    MIDISlot::EfSettings sanitized = settings;
+    if (!filterTypeIsValid(sanitized.filterType)) {
+        sanitized.filterType = MIDISlot::EfSettings::FilterType::Linear;
+    }
+    SlotEnvelopePayload payload = sanitizeEnvelopePayloadImpl(settingsToPayload(sanitized));
+    applyPayloadToSettings(payload, sanitized);
+    if (sanitized.oversample == 0) {
+        sanitized.oversample = 1;
+    }
+    if (!std::isfinite(sanitized.smoothing)) {
+        sanitized.smoothing = 0.2f;
+    }
+    sanitized.smoothing = constrain(sanitized.smoothing, 0.0f, 1.0f);
+    if (!std::isfinite(sanitized.baseline)) {
+        sanitized.baseline = 0.0f;
+    }
+    if (!std::isfinite(sanitized.gain)) {
+        sanitized.gain = 1.0f;
+    }
+    return sanitized;
+}
 } // namespace
 
 constexpr int kUnassignedEnvelope = -1;
@@ -352,7 +391,8 @@ void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
         temp.sysexLength = 0;
         temp.sysexTemplate.fill(0);
     }
-    temp.efPayload = sanitizeEnvelopePayload(temp.efPayload);
+    temp.efSettings = sanitizeEfSettings(temp.efSettings);
+    temp.ef = sanitizeEfSettings(temp.ef);
     temp.arg = sanitizeSlotArg(temp.arg);
     dest = temp;
     if (dest.arpNote > 127)
@@ -367,7 +407,8 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
     for (uint8_t i = sanitized.sysexLength; i < SysExTemplate::kMaxLength; ++i) {
         sanitized.sysexTemplate[i] = 0;
     }
-    sanitized.efPayload = sanitizeEnvelopePayload(sanitized.efPayload);
+    sanitized.efSettings = sanitizeEfSettings(sanitized.efSettings);
+    sanitized.ef = sanitizeEfSettings(sanitized.ef);
     sanitized.arg = sanitizeSlotArg(sanitized.arg);
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
     EEPROM.put(address, sanitized);
@@ -623,7 +664,8 @@ String ConfigManager::serializeAll() const {
 
     output += "], \"slots\": [";
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        SlotEnvelopePayload payload = sanitizeEnvelopePayload(slots[i].efPayload);
+        SlotEnvelopePayload payload =
+            sanitizeEnvelopePayload(settingsToPayload(slots[i].efSettings));
         output += "{";
         output += "\"index\": ";
         output += i;
@@ -683,7 +725,7 @@ SlotEnvelopePayload ConfigManager::getSlotEnvelopePayload(uint8_t idx) const {
         SlotEnvelopePayload fallback{};
         return sanitizeEnvelopePayload(fallback);
     }
-    return sanitizeEnvelopePayload(slots[idx].efPayload);
+    return sanitizeEnvelopePayload(settingsToPayload(slots[idx].efSettings));
 }
 
 void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload) {
@@ -691,7 +733,11 @@ void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayloa
         return;
     }
     SlotEnvelopePayload sanitized = sanitizeEnvelopePayload(payload);
-    slots[idx].efPayload = sanitized;
+    MIDISlot &slot = slots[idx];
+    applyPayloadToSettings(sanitized, slot.efSettings);
+    slot.efSettings = sanitizeEfSettings(slot.efSettings);
+    applyPayloadToSettings(sanitized, slot.ef);
+    slot.ef = sanitizeEfSettings(slot.ef);
     saveSlot(idx, slots[idx]);
 }
 
@@ -813,10 +859,11 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
         return false;
     }
-    if (candidate.efPayload.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+    if (!filterTypeIsValid(candidate.efSettings.filterType)) {
         return false;
     }
-    if (!std::isfinite(candidate.efPayload.frequency) || !std::isfinite(candidate.efPayload.q)) {
+    SlotEnvelopePayload payload = settingsToPayload(candidate.efSettings);
+    if (!std::isfinite(payload.frequency) || !std::isfinite(payload.q)) {
         return false;
     }
     SlotARGConfig sanitized = sanitizeSlotArg(candidate.arg);
@@ -865,13 +912,18 @@ void ConfigManager::sanitizeSlotArena() {
 void ConfigManager::wipeSlotRegion() {
     MIDISlot blank{};
     blank.midiChannel = 1;
-    blank.efPayload.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
-    blank.efPayload.frequency = kMinFilterFrequency;
-    blank.efPayload.q = 1.0f;
+    SlotEnvelopePayload defaultPayload{};
+    defaultPayload.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
+    defaultPayload.frequency = kMinFilterFrequency;
+    defaultPayload.q = 1.0f;
+    applyPayloadToSettings(defaultPayload, blank.efSettings);
+    blank.efSettings = sanitizeEfSettings(blank.efSettings);
+    applyPayloadToSettings(defaultPayload, blank.ef);
+    blank.ef = sanitizeEfSettings(blank.ef);
     blank.arg = sanitizeSlotArg(blank.arg);
     slots.fill(blank);
 
-    persistFilterTail(blank.efPayload);
+    persistFilterTail(defaultPayload);
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         const int address = static_cast<int>(EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE);
@@ -945,7 +997,10 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             upgraded.arpNote = legacy.arpNote;
             upgraded.sysexLength = legacy.sysexLength;
             upgraded.sysexTemplate = legacy.sysexTemplate;
-            upgraded.efPayload = sanitizedPayload;
+            applyPayloadToSettings(sanitizedPayload, upgraded.efSettings);
+            upgraded.efSettings = sanitizeEfSettings(upgraded.efSettings);
+            applyPayloadToSettings(sanitizedPayload, upgraded.ef);
+            upgraded.ef = sanitizeEfSettings(upgraded.ef);
             upgraded.arg = defaults;
 
             const int upgradedAddress =
@@ -985,7 +1040,11 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             upgraded.arpNote = legacy.arpNote;
             upgraded.sysexLength = legacy.sysexLength;
             upgraded.sysexTemplate = legacy.sysexTemplate;
-            upgraded.efPayload = sanitizeEnvelopePayload(legacy.efPayload);
+            SlotEnvelopePayload migratedPayload = sanitizeEnvelopePayload(legacy.efPayload);
+            applyPayloadToSettings(migratedPayload, upgraded.efSettings);
+            upgraded.efSettings = sanitizeEfSettings(upgraded.efSettings);
+            applyPayloadToSettings(migratedPayload, upgraded.ef);
+            upgraded.ef = sanitizeEfSettings(upgraded.ef);
             upgraded.arg = defaults;
 
             const int upgradedAddress =
@@ -995,7 +1054,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
         MIDISlot first{};
         loadSlot(0, first);
-        persistFilterTail(first.efPayload);
+        persistFilterTail(settingsToPayload(first.efSettings));
     }
 
     EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
@@ -1017,7 +1076,10 @@ SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot slot{};
         loadSlot(i, slot);
-        slot.efPayload = sanitized;
+        applyPayloadToSettings(sanitized, slot.efSettings);
+        slot.efSettings = sanitizeEfSettings(slot.efSettings);
+        applyPayloadToSettings(sanitized, slot.ef);
+        slot.ef = sanitizeEfSettings(slot.ef);
         slots[i] = slot;
         saveSlot(i, slots[i]);
     }
