@@ -55,26 +55,39 @@ EnvelopeConfig envelopeConfig = {{0}};
 
 SystemDiagnostics g_systemDiagnostics;
 
-// Analog Routing Grid pairings.  We walk the six EF analog pins at compile time
-// and stash every unique (A,B) combo with A<B.  Change the pin list and the
-// pairings auto-update—no static table to forget.
-namespace {
-constexpr std::array<int, NUM_ENVELOPES> kArgPins = {A0, A1, A2, A3, A6, A7};
+const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = {A0, A1, A2, A3, A6, A7};
 
-constexpr std::array<std::pair<int, int>, ARG_PAIR_COUNT> buildArgPairs() {
-    std::array<std::pair<int, int>, ARG_PAIR_COUNT> pairs{};
+namespace {
+constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildArgPairs() {
+    std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> pairs{};
     size_t idx = 0;
-    for (size_t a = 0; a < kArgPins.size(); ++a) {
-        for (size_t b = a + 1; b < kArgPins.size(); ++b) {
-            pairs[idx++] = {kArgPins[a], kArgPins[b]};
+    for (uint8_t a = 0; a < ENVELOPE_ANALOG_PINS.size(); ++a) {
+        for (uint8_t b = a + 1; b < ENVELOPE_ANALOG_PINS.size(); ++b) {
+            pairs[idx++] = {a, b};
         }
     }
     return pairs;
 }
 } // namespace
 
-const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
+const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
 const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
+
+int envelopeAnalogPin(uint8_t index) {
+    if (index < ENVELOPE_ANALOG_PINS.size()) {
+        return ENVELOPE_ANALOG_PINS[index];
+    }
+    return -1;
+}
+
+int envelopeIndexFromAnalogPin(int analogPin) {
+    for (uint8_t idx = 0; idx < ENVELOPE_ANALOG_PINS.size(); ++idx) {
+        if (ENVELOPE_ANALOG_PINS[idx] == analogPin) {
+            return idx;
+        }
+    }
+    return -1;
+}
 
 static void loadFromJson(HardwareConfig &cfg) {
 #if __has_include(<ArduinoJson.h>)

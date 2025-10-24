@@ -20,6 +20,7 @@
 #include <vector>
 #include <map>
 #include "DisplayManager.h"
+#include "MIDITypes.h"
 #include "EnvelopeFollower.h"
 #include "ConfigManager.h"
 #include "Utility.h"
@@ -91,9 +92,9 @@ struct ButtonManagerContext {
     LEDManager &ledManager;                   // For updating visual feedback LEDs
     DisplayManager &displayManager;           // For writing status to OLED
     std::vector<EnvelopeFollower> &envelopes; // List of envelope follower objects
-    std::map<int, int> &potToEnvelopeMap;     // Associative map: pot -> envelope index
-    bool &diagnosticMode;                     // Self-test mode flag
-    uint8_t &diagnosticPage;                  // Which diagnostic page to show
+    std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap; // Associative map: pot -> EF settings
+    bool &diagnosticMode;                                  // Self-test mode flag
+    uint8_t &diagnosticPage;                               // Which diagnostic page to show
 };
 
 /**
@@ -161,9 +162,6 @@ class ButtonManager {
 
     // Current UI mode (e.g., CC vs ENV vs ARG)
     uint8_t activeMode = 0;
-    uint8_t activeARGMethod = 0;
-    uint8_t argEnvelopeA = 0;
-    uint8_t argEnvelopeB = 0;
 
     // State machines for each button detection
     ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];

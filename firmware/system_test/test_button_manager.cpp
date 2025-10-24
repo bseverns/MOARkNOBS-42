@@ -30,7 +30,7 @@ void test_long_press_detection() {
     uint8_t activeCh = 0;
     bool envMode = false;
     const char *envStr = "";
-    std::map<int, int> map;
+    std::map<int, MIDISlot::EfSettings> map;
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
@@ -64,7 +64,7 @@ void test_long_press_requires_confirm() {
     uint8_t activeCh = 0;
     bool envMode = false;
     const char *envStr = "";
-    std::map<int, int> map;
+    std::map<int, MIDISlot::EfSettings> map;
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
@@ -100,7 +100,7 @@ void test_double_press_ctrl2_cycles_midi_type() {
     uint8_t activeCh = 0;
     bool envMode = false;
     const char *envStr = "";
-    std::map<int, int> map;
+    std::map<int, MIDISlot::EfSettings> map;
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,

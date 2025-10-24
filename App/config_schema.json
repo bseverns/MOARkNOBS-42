@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": "1.4.0",
+  "schema_version": "1.5.0",
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
   "required": ["slots", "efSlots", "filter", "arg", "ledColors"],
@@ -20,7 +20,26 @@
           },
           "midiChannel": { "type": "integer", "minimum": 1, "maximum": 16 },
           "data1": { "type": "integer", "minimum": 0, "maximum": 127 },
-          "efIndex": { "type": "integer", "minimum": 0, "maximum": 5 },
+          "efIndex": { "type": "integer", "minimum": -1, "maximum": 5 },
+          "ef": {
+            "type": "object",
+            "required": ["index", "filter_index", "filter_name", "frequency", "q", "oversample", "smoothing", "baseline", "gain"],
+            "properties": {
+              "index": { "type": "integer", "minimum": -1, "maximum": 5 },
+              "filter_index": { "type": "integer", "minimum": 0, "maximum": 6 },
+              "filter_name": {
+                "type": "string",
+                "enum": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"]
+              },
+              "frequency": { "type": "number" },
+              "q": { "type": "number" },
+              "oversample": { "type": "integer", "minimum": 1, "maximum": 32 },
+              "smoothing": { "type": "number", "minimum": 0, "maximum": 1 },
+              "baseline": { "type": "number" },
+              "gain": { "type": "number" }
+            },
+            "additionalProperties": false
+          },
           "active": { "type": "boolean" },
           "pot": { "type": "boolean" },
           "label": { "type": "string" },
@@ -29,6 +48,21 @@
             "type": "string",
             "description": "Hex bytes plus xx/MSB/LSB placeholders",
             "maxLength": 128
+          },
+          "arg": {
+            "type": "object",
+            "required": ["enabled", "method", "method_name", "sourceA", "sourceB"],
+            "properties": {
+              "enabled": { "type": "boolean" },
+              "method": { "type": "integer", "minimum": 0, "maximum": 13 },
+              "method_name": {
+                "type": "string",
+                "enum": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS", "MULT", "DIVI", "AVG", "XABS", "MAXX", "MINN", "XORR"]
+              },
+              "sourceA": { "type": "integer", "minimum": 0, "maximum": 5 },
+              "sourceB": { "type": "integer", "minimum": 0, "maximum": 5 }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": false

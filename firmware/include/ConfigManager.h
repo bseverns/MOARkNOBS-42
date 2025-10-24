@@ -160,14 +160,14 @@ class ConfigManager {
     // Envelope follower configuration -----------------------------------
 
     /** Persist the current envelope routing and baselines to EEPROM. */
-    void saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
+    void saveEnvelopeSettings(const std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
                               const std::vector<EnvelopeFollower> &envelopes);
 
     /**
      * Restore envelope routing and baseline offsets from EEPROM.
      * Returns true if every envelope's baseline was recovered.
      */
-    bool loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
+    bool loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
                               std::vector<EnvelopeFollower> &envelopes);
 
     /** Save a single envelope follower's baseline to EEPROM. */
@@ -177,31 +177,31 @@ class ConfigManager {
     uint8_t getNumPots() const { return _numPots; }
     uint8_t getNumButtons() const { return _numButtons; }
 
-    /** Store whether the system is in SEF or ARG envelope mode. */
+    /** Store whether the system is in SEF or ARG envelope mode (legacy compatibility). */
     void setMode(uint8_t mode);
 
-    /** Retrieve the stored envelope follower mode. */
+    /** Retrieve the stored envelope follower mode (legacy compatibility). */
     uint8_t getMode() const;
 
-    /** Save which ARG combination method is currently selected. */
+    /** Save which ARG combination method is currently selected (legacy compatibility). */
     void setARGMethod(uint8_t method);
 
-    /** Retrieve the stored ARG method. */
+    /** Retrieve the stored ARG method (legacy compatibility). */
     uint8_t getARGMethod() const;
 
-    /** Flip the ARG engine on or off. */
+    /** Flip the legacy ARG engine on or off. */
     void setARGEnable(uint8_t enable);
 
-    /** Retrieve whether ARG is currently enabled. */
+    /** Retrieve whether the legacy ARG path is currently enabled. */
     uint8_t getARGEnable() const;
 
-    /** Persist which two envelope inputs are used for ARG calculations. */
+    /** Persist which two envelope inputs are used for the legacy ARG calculations. */
     void setEnvelopePair(uint8_t envA, uint8_t envB);
 
-    /** Retrieve the first envelope index used by ARG mode. */
+    /** Retrieve the first envelope pin used by the legacy ARG tuple. */
     uint8_t getEnvelopeA() const;
 
-    /** Retrieve the second envelope index used by ARG mode. */
+    /** Retrieve the second envelope pin used by the legacy ARG tuple. */
     uint8_t getEnvelopeB() const;
 
     // MIDI slot configuration -------------------------------------------
@@ -241,6 +241,14 @@ class ConfigManager {
 
     std::array<MIDISlot, NUM_SLOTS> slots; // 42 of them
 
+    struct LegacyARGConfig {
+        uint8_t mode = 0;
+        uint8_t method = 0;
+        uint8_t enable = 0;
+        uint8_t sourceA = 0;
+        uint8_t sourceB = 1;
+    } legacyArg;
+
     // Health‑check & backup support
     bool checkEEPROMHealth(bool backup,
                            uint16_t base = EEPROM_PROFILE_START(0)); // verify header magic
@@ -263,6 +271,9 @@ class ConfigManager {
     void wipeSlotRegion();
     void wipeProfileBlocks();
     static bool slotLooksSane(const MIDISlot &candidate);
+    static SlotARGConfig sanitizeArgConfig(const SlotARGConfig &candidate);
+    void loadLegacyARGSettings();
+    void migrateLegacyARGSettings();
 };
 
 #endif // CONFIGMANAGER_H

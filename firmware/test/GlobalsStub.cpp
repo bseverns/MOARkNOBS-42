@@ -29,8 +29,36 @@ int SHORT_DISPLAY_TIME = 0;
 int8_t velocityShift = 0;
 uint8_t changeProbability = 100;
 
-const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS = {};
+const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = {A0, A1, A2, A3, A6, A7};
+namespace {
+constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildStubArgPairs() {
+    std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> pairs{};
+    size_t idx = 0;
+    for (uint8_t a = 0; a < ENVELOPE_ANALOG_PINS.size(); ++a) {
+        for (uint8_t b = a + 1; b < ENVELOPE_ANALOG_PINS.size(); ++b) {
+            pairs[idx++] = {a, b};
+        }
+    }
+    return pairs;
+}
+} // namespace
+
+const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildStubArgPairs();
 const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
+
+int envelopeAnalogPin(uint8_t index) {
+    if (index < ENVELOPE_ANALOG_PINS.size())
+        return ENVELOPE_ANALOG_PINS[index];
+    return -1;
+}
+
+int envelopeIndexFromAnalogPin(int analogPin) {
+    for (uint8_t idx = 0; idx < ENVELOPE_ANALOG_PINS.size(); ++idx) {
+        if (ENVELOPE_ANALOG_PINS[idx] == analogPin)
+            return idx;
+    }
+    return -1;
+}
 
 // ConfigManager normally gets its constructor from ConfigManager.cpp, but the
 // Unity slice doesn't compile that translation unit. Provide a skinny version

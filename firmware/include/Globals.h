@@ -189,10 +189,15 @@ extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings
 extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;
 
-// Analog Routing Grid pairings. Cooked at compile time in Globals.cpp so
-// we never hand-maintain that gnarly list again.
+// Analog Routing Grid helpers.  ENVELOPE_ANALOG_PINS exposes the raw Teensy
+// analog channel behind each follower index so legacy callers can still talk
+// pins while the modern UI traffics strictly in indices.
+extern const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS;
+int envelopeAnalogPin(uint8_t index);
+int envelopeIndexFromAnalogPin(int analogPin);
+
 inline constexpr size_t ARG_PAIR_COUNT = (NUM_ENVELOPES * (NUM_ENVELOPES - 1)) / 2;
-extern const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS;
+extern const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS;
 extern const size_t ARG_PAIRS_LEN;
 
 void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings);
