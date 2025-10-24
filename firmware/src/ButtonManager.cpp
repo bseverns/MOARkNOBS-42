@@ -6,6 +6,7 @@
 #include "EnvelopeFollower.h"
 #include "Globals.h"
 #include "ConfigManager.h"
+#include "MIDITypes.h"
 #include "Hardware/IO.h"
 #include "Utility.h"
 #include "TimeUtils.h"
@@ -44,6 +45,19 @@ static constexpr const char *FILTER_TYPE_NAMES[] = {
     "LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"};
 
 static constexpr int NUM_FILTER_TYPES = sizeof(SLOT_FILTERS) / sizeof(SLOT_FILTERS[0]);
+static constexpr ARGMethod ALL_ARG_METHODS[] = {
+    ARGMethod::PLUS, ARGMethod::MIN,  ARGMethod::PECK, ARGMethod::SHAV, ARGMethod::SQAR,
+    ARGMethod::BABS, ARGMethod::TABS, ARGMethod::MULT, ARGMethod::DIVI, ARGMethod::AVG,
+    ARGMethod::XABS, ARGMethod::MAXX, ARGMethod::MINN, ARGMethod::XORR};
+
+static constexpr const char *ARG_METHOD_NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
+                                                   "BABS", "TABS", "MULT", "DIVI", "AVG",
+                                                   "XABS", "MAXX", "MINN", "XORR"};
+
+static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0]);
+
+// We'll track which filter index each EnvelopeFollower (e.g. 6 total) is using:
+static int filterTypeIndexForEF[NUM_ENVELOPES] = {0};
 
 // Active configuration profile stored in EEPROM
 static uint8_t currentProfile = 0;
@@ -149,8 +163,7 @@ inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                              PotentiometerManager *potentiometerManager)
     : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
-      activeMode(0), activeARGMethod(0), argEnvelopeA(0), argEnvelopeB(1), _pendingEfSlot(-1),
-      _efAssignDeadline(0) {
+      activeMode(0), _pendingEfSlot(-1), _efAssignDeadline(0) {
     for (int i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; i++) {
         buttonStates[i] = false;
         lastDebounceTimes[i] = 0;
@@ -736,9 +749,8 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
-        auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
-            context.displayManager.displayStatus("No EF assigned", 1000);
+        if (context.activePot >= NUM_SLOTS) {
+            context.displayManager.displayStatus("Slot out of range", 1000);
             return;
         }
         int efIndex = it->second.followerIndex;
@@ -750,32 +762,43 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         if (env.getMode() != EnvelopeFollower::ARG) {
             context.displayManager.displayStatus("Not in ARG mode", 1000);
             return;
-        }
-        // Cycle through ARG methods (using similar logic as before)
-        static EnvelopeFollower::ARG_Method ALL_METHODS[] = {
-            EnvelopeFollower::PLUS, EnvelopeFollower::MIN,  EnvelopeFollower::PECK,
-            EnvelopeFollower::SHAV, EnvelopeFollower::SQAR, EnvelopeFollower::BABS,
-            EnvelopeFollower::TABS, EnvelopeFollower::MULT, EnvelopeFollower::DIVI,
-            EnvelopeFollower::AVG,  EnvelopeFollower::XABS, EnvelopeFollower::MAXX,
-            EnvelopeFollower::MINN, EnvelopeFollower::XORR};
-        static const char *NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR", "BABS", "TABS",
-                                      "MULT", "DIVI", "AVG",  "XABS", "MAXX", "MINN", "XORR"};
-        static int argMethodPos[6] = {0, 0, 0, 0, 0, 0};
 
-        argMethodPos[efIndex] =
-            (argMethodPos[efIndex] + 1) % (sizeof(ALL_METHODS) / sizeof(ALL_METHODS[0]));
-        env.setARGMethod(ALL_METHODS[argMethodPos[efIndex]]);
-        context.configManager.setARGMethod(static_cast<uint8_t>(env.getARGMethod()));
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        size_t methodIndex = 0;
+        size_t methodCount = sizeof(ALL_ARG_METHODS) / sizeof(ALL_ARG_METHODS[0]);
+        for (; methodIndex < methodCount; ++methodIndex) {
+            if (slot.arg.method == ALL_ARG_METHODS[methodIndex]) {
+                break;
+            }
+        }
+        methodIndex = (methodIndex + 1) % methodCount;
+
+        slot.arg.enabled = 1;
+        slot.arg.method = ALL_ARG_METHODS[methodIndex];
+        context.configManager.saveSlot(context.activePot, slot);
+
+        context.configManager.setARGEnable(slot.arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
+        int analogA = envelopeAnalogPin(slot.arg.sourceA);
+        if (analogA < 0)
+            analogA = 0;
+        int analogB = envelopeAnalogPin(slot.arg.sourceB);
+        if (analogB < 0)
+            analogB = analogA;
+        context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
+                                              static_cast<uint8_t>(analogB));
+
         char msg[32];
-        sprintf(msg, "EF %d=>%s", efIndex, NAMES[argMethodPos[efIndex]]);
+        snprintf(msg, sizeof(msg), "Slot %d ARG=%s", context.activePot,
+                 ARG_METHOD_NAMES[methodIndex]);
         context.displayManager.displayStatus(msg, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
     }
     // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
-        auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
-            context.displayManager.displayStatus("No EF assigned", 1000);
+        if (context.activePot >= NUM_SLOTS) {
+            context.displayManager.displayStatus("Slot out of range", 1000);
             return;
         }
         int efIndex = it->second.followerIndex;
@@ -806,10 +829,30 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             default:
                 return "Ax";
             }
-        };
+        }
+        pairIndex = (pairIndex + 1) % ARG_PAIRS_LEN;
+
+        slot.arg.enabled = 1;
+        slot.arg.sourceA = ARG_PAIRS[pairIndex].first;
+        slot.arg.sourceB = ARG_PAIRS[pairIndex].second;
+        context.configManager.saveSlot(context.activePot, slot);
+
+        context.configManager.setARGEnable(slot.arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
+        int analogA = envelopeAnalogPin(slot.arg.sourceA);
+        if (analogA < 0)
+            analogA = 0;
+        int analogB = envelopeAnalogPin(slot.arg.sourceB);
+        if (analogB < 0)
+            analogB = analogA;
+        context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
+                                              static_cast<uint8_t>(analogB));
+
         char buf[32];
-        sprintf(buf, "EF %d: %s/%s", efIndex, pinName(envA), pinName(envB));
+        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, slot.arg.sourceA + 1,
+                 slot.arg.sourceB + 1);
         context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
     }
     // (3) Ctrl3 + Ctrl4: Cycle light modes

@@ -162,9 +162,6 @@ class ButtonManager {
 
     // Current UI mode (e.g., CC vs ENV vs ARG)
     uint8_t activeMode = 0;
-    uint8_t activeARGMethod = 0;
-    uint8_t argEnvelopeA = 0;
-    uint8_t argEnvelopeB = 0;
 
     // State machines for each button detection
     ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];

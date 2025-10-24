@@ -136,6 +136,18 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
     }
 
+    JsonArray slotArgs = doc.createNestedArray("slotArgs");
+    const auto &slotDefs = config.getSlots();
+    for (uint8_t i = 0; i < slotDefs.size(); ++i) {
+        JsonObject arg = slotArgs.createNestedObject();
+        const SlotARGConfig &cfg = slotDefs[i].arg;
+        arg["enabled"] = cfg.enabled != 0;
+        arg["method"] = static_cast<uint8_t>(cfg.method);
+        arg["method_name"] = argMethodLabel(static_cast<uint8_t>(cfg.method));
+        arg["sourceA"] = cfg.sourceA;
+        arg["sourceB"] = cfg.sourceB;
+    }
+
     JsonArray envs = doc.createNestedArray("envelopes");
     for (const auto &env : envelopes) {
         envs.add(env.getEnvelopeLevel());
@@ -260,6 +272,12 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     ef["gain"] = slot.ef.gain;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
+    JsonObject arg = body.createNestedObject("arg");
+    arg["enabled"] = slot.arg.enabled != 0;
+    arg["method"] = static_cast<uint8_t>(slot.arg.method);
+    arg["method_name"] = argMethodLabel(static_cast<uint8_t>(slot.arg.method));
+    arg["sourceA"] = slot.arg.sourceA;
+    arg["sourceB"] = slot.arg.sourceB;
     emitJson(doc);
 
     emitLegacySlotPatch(slot, slotIndex, resolvedDataByte);

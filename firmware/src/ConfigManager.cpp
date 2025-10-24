@@ -4,6 +4,7 @@
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
+#include "ARGMixer.h"
 #include <cmath>
 #include <vector>
 #include "Log.h"
@@ -222,6 +223,7 @@ void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
         temp.sysexLength = 0;
         temp.sysexTemplate.fill(0);
     }
+    temp.arg = sanitizeArgConfig(temp.arg);
     dest = temp;
     if (dest.arpNote > 127)
         dest.arpNote = dest.data1;
@@ -235,8 +237,10 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
     for (uint8_t i = sanitized.sysexLength; i < SysExTemplate::kMaxLength; ++i) {
         sanitized.sysexTemplate[i] = 0;
     }
+    sanitized.arg = sanitizeArgConfig(sanitized.arg);
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
     EEPROM.put(address, sanitized);
+    slots[idx] = sanitized;
 }
 
 // Potentiometer accessors
@@ -390,26 +394,71 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
 }
 
 // Mode and ARG methods
-void ConfigManager::setMode(uint8_t mode) { EEPROM.update(EEPROM_ARG_MODE, mode); }
-
-uint8_t ConfigManager::getMode() const { return EEPROM.read(EEPROM_ARG_MODE); }
-
-void ConfigManager::setARGMethod(uint8_t method) { EEPROM.update(EEPROM_ARG_METHOD, method); }
-
-uint8_t ConfigManager::getARGMethod() const { return EEPROM.read(EEPROM_ARG_METHOD); }
-
-void ConfigManager::setARGEnable(uint8_t enable) { EEPROM.update(EEPROM_ARG_ENABLE, enable); }
-
-uint8_t ConfigManager::getARGEnable() const { return EEPROM.read(EEPROM_ARG_ENABLE); }
-
-void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
-    EEPROM.update(EEPROM_ARG_ENV_A, envA);
-    EEPROM.update(EEPROM_ARG_ENV_B, envB);
+void ConfigManager::setMode(uint8_t mode) {
+    legacyArg.mode = mode;
+    EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
 }
 
-uint8_t ConfigManager::getEnvelopeA() const { return EEPROM.read(EEPROM_ARG_ENV_A); }
+uint8_t ConfigManager::getMode() const { return legacyArg.mode; }
 
-uint8_t ConfigManager::getEnvelopeB() const { return EEPROM.read(EEPROM_ARG_ENV_B); }
+void ConfigManager::setARGMethod(uint8_t method) {
+    legacyArg.method = method;
+    SlotARGConfig defaults{};
+    defaults.enabled = legacyArg.enable;
+    defaults.method = static_cast<ARGMethod>(legacyArg.method);
+    defaults.sourceA = legacyArg.sourceA;
+    defaults.sourceB = legacyArg.sourceB;
+    defaults = sanitizeArgConfig(defaults);
+    legacyArg.method = static_cast<uint8_t>(defaults.method);
+    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+}
+
+uint8_t ConfigManager::getARGMethod() const { return legacyArg.method; }
+
+void ConfigManager::setARGEnable(uint8_t enable) {
+    legacyArg.enable = enable ? 1 : 0;
+    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+}
+
+uint8_t ConfigManager::getARGEnable() const { return legacyArg.enable; }
+
+void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
+    int idxA = envelopeIndexFromAnalogPin(envA);
+    if (idxA < 0 && envA < NUM_ENVELOPES) {
+        idxA = envA;
+    }
+    int idxB = envelopeIndexFromAnalogPin(envB);
+    if (idxB < 0 && envB < NUM_ENVELOPES) {
+        idxB = envB;
+    }
+    if (idxA < 0)
+        idxA = legacyArg.sourceA;
+    if (idxB < 0)
+        idxB = legacyArg.sourceB;
+
+    legacyArg.sourceA = static_cast<uint8_t>(idxA % NUM_ENVELOPES);
+    legacyArg.sourceB = static_cast<uint8_t>(idxB % NUM_ENVELOPES);
+    if (legacyArg.sourceA == legacyArg.sourceB) {
+        legacyArg.sourceB = (legacyArg.sourceA + 1) % NUM_ENVELOPES;
+    }
+
+    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+}
+
+uint8_t ConfigManager::getEnvelopeA() const {
+    int pin = envelopeAnalogPin(legacyArg.sourceA);
+    if (pin < 0)
+        pin = legacyArg.sourceA;
+    return static_cast<uint8_t>(pin);
+}
+
+uint8_t ConfigManager::getEnvelopeB() const {
+    int pin = envelopeAnalogPin(legacyArg.sourceB);
+    if (pin < 0)
+        pin = legacyArg.sourceB;
+    return static_cast<uint8_t>(pin);
+}
 
 String ConfigManager::makeSchema() {
     const uint8_t count = NUM_POTS;
@@ -480,6 +529,111 @@ void ConfigManager::loadMIDISlots(MIDISlot *slots, size_t count) {
     }
 }
 
+SlotARGConfig ConfigManager::sanitizeArgConfig(const SlotARGConfig &candidate) {
+    return sanitizeSlotArg(candidate);
+}
+
+void ConfigManager::loadLegacyARGSettings() {
+    legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
+    legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
+    legacyArg.enable = EEPROM.read(EEPROM_ARG_ENABLE);
+
+    const uint8_t rawA = EEPROM.read(EEPROM_ARG_ENV_A);
+    const uint8_t rawB = EEPROM.read(EEPROM_ARG_ENV_B);
+
+    int idxA = envelopeIndexFromAnalogPin(rawA);
+    if (idxA < 0) {
+        idxA = (rawA < NUM_ENVELOPES) ? rawA : 0;
+    }
+    int idxB = envelopeIndexFromAnalogPin(rawB);
+    if (idxB < 0) {
+        idxB = (rawB < NUM_ENVELOPES) ? rawB : ((idxA + 1) % NUM_ENVELOPES);
+    }
+
+    legacyArg.sourceA = static_cast<uint8_t>(idxA % NUM_ENVELOPES);
+    legacyArg.sourceB = static_cast<uint8_t>(idxB % NUM_ENVELOPES);
+    if (legacyArg.sourceA == legacyArg.sourceB) {
+        legacyArg.sourceB = (legacyArg.sourceA + 1) % NUM_ENVELOPES;
+    }
+
+    SlotARGConfig defaults{};
+    defaults.enabled = legacyArg.enable;
+    defaults.method = static_cast<ARGMethod>(legacyArg.method);
+    defaults.sourceA = legacyArg.sourceA;
+    defaults.sourceB = legacyArg.sourceB;
+    defaults = sanitizeArgConfig(defaults);
+
+    legacyArg.enable = defaults.enabled;
+    legacyArg.method = static_cast<uint8_t>(defaults.method);
+    legacyArg.sourceA = defaults.sourceA;
+    legacyArg.sourceB = defaults.sourceB;
+}
+
+void ConfigManager::migrateLegacyARGSettings() {
+    loadLegacyARGSettings();
+
+    uint16_t storedVersion = 0;
+    EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
+
+    if (storedVersion == CONFIG_VERSION) {
+        return;
+    }
+
+    if (storedVersion == 0x0003) {
+        struct LegacyMIDISlotV3 {
+            MIDIMessageType type;
+            uint8_t midiChannel;
+            uint8_t data1;
+            uint8_t efIndex;
+            uint8_t active;
+            uint8_t arpNote;
+            uint8_t sysexLength;
+            std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate;
+        };
+        static_assert(sizeof(LegacyMIDISlotV3) == 23, "Legacy MIDISlot size mismatch");
+
+        std::array<LegacyMIDISlotV3, NUM_SLOTS> legacySlots{};
+        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+            const int legacyAddress =
+                static_cast<int>(EEPROM_SLOT_BASE + i * sizeof(LegacyMIDISlotV3));
+            EEPROM.get(legacyAddress, legacySlots[i]);
+        }
+
+        SlotARGConfig defaults{};
+        defaults.enabled = legacyArg.enable;
+        defaults.method = static_cast<ARGMethod>(legacyArg.method);
+        defaults.sourceA = legacyArg.sourceA;
+        defaults.sourceB = legacyArg.sourceB;
+        defaults = sanitizeArgConfig(defaults);
+
+        legacyArg.enable = defaults.enabled;
+        legacyArg.method = static_cast<uint8_t>(defaults.method);
+        legacyArg.sourceA = defaults.sourceA;
+        legacyArg.sourceB = defaults.sourceB;
+
+        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+            MIDISlot upgraded{};
+            upgraded.type = legacySlots[i].type;
+            upgraded.midiChannel = legacySlots[i].midiChannel;
+            upgraded.data1 = legacySlots[i].data1;
+            upgraded.efIndex = legacySlots[i].efIndex;
+            upgraded.active = legacySlots[i].active != 0;
+            upgraded.arpNote = legacySlots[i].arpNote;
+            upgraded.sysexLength = legacySlots[i].sysexLength;
+            upgraded.sysexTemplate = legacySlots[i].sysexTemplate;
+            upgraded.arg = defaults;
+            saveSlot(i, upgraded);
+        }
+
+        EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
+        EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+        EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+        EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+        EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+        EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+    }
+}
+
 bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (static_cast<uint8_t>(candidate.type) > static_cast<uint8_t>(MIDIMessageType::SysEx)) {
         return false;
@@ -493,34 +647,61 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
         return false;
     }
+    SlotARGConfig sanitized = sanitizeArgConfig(candidate.arg);
+    if (sanitized.enabled != (candidate.arg.enabled ? 1 : 0)) {
+        return false;
+    }
+    if (sanitized.sourceA != candidate.arg.sourceA || sanitized.sourceB != candidate.arg.sourceB) {
+        return false;
+    }
+    if (sanitized.method != candidate.arg.method) {
+        return false;
+    }
     return true;
 }
 
 void ConfigManager::sanitizeSlotArena() {
+    migrateLegacyARGSettings();
+    loadLegacyARGSettings();
+
     uint16_t storedVersion = 0;
     EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
 
     MIDISlot candidate{};
     EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
 
-    const bool versionMismatch = storedVersion != CONFIG_VERSION;
-    const bool slotCorrupt = !slotLooksSane(candidate);
-
-    if (versionMismatch || slotCorrupt) {
+    if (!slotLooksSane(candidate)) {
         wipeSlotRegion();
         wipeProfileBlocks();
+        storedVersion = CONFIG_VERSION;
+    }
+
+    if (storedVersion != CONFIG_VERSION) {
+        wipeSlotRegion();
+        wipeProfileBlocks();
+        EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
     }
 }
 
 void ConfigManager::wipeSlotRegion() {
     MIDISlot blank{};
     blank.midiChannel = 1;
+    blank.arg = sanitizeArgConfig(blank.arg);
     slots.fill(blank);
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         const int address = static_cast<int>(EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE);
         EEPROM.put(address, blank);
     }
+
+    legacyArg.enable = 0;
+    legacyArg.method = static_cast<uint8_t>(ARGMethod::PLUS);
+    legacyArg.sourceA = 0;
+    legacyArg.sourceB = 1;
+    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
 }
 
 void ConfigManager::wipeProfileBlocks() {
@@ -586,6 +767,21 @@ bool ConfigManager::handleCommand(const String &command) {
         uint8_t envB = command.substring(second + 1).toInt();
         setARGEnable(enable);
         setEnvelopePair(envA, envB);
+
+        int idxA = envelopeIndexFromAnalogPin(envA);
+        if (idxA < 0)
+            idxA = constrain(envA, 0, NUM_ENVELOPES - 1);
+        int idxB = envelopeIndexFromAnalogPin(envB);
+        if (idxB < 0)
+            idxB = constrain(envB, 0, NUM_ENVELOPES - 1);
+
+        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+            MIDISlot &slot = getSlot(slotIndex);
+            slot.arg.enabled = enable ? 1 : 0;
+            slot.arg.sourceA = static_cast<uint8_t>(idxA);
+            slot.arg.sourceB = static_cast<uint8_t>(idxB);
+            saveSlot(slotIndex, slot);
+        }
         LOG_PRINTLN("OK");
         return true;
     }
