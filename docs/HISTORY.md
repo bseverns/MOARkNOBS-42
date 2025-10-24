@@ -104,6 +104,30 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - **October 31:** Punched `v0.2.0` out the door with the diagnostic boot pages, verbose reset banner, USB MIDI demo, and the fresh release/CI discipline baked into the repo so contributors inherit a rig that actually proves itself.
 - *Feels good when the tooling jams as hard as the hardware—documentation, tests, and demo riffs all screaming through the same signal chain.*
 
+
+### November — Teaching Pass & Crash Course Maps
+
+- Pulled a comment pass across the entire firmware stack so every major `.cpp`
+  reads like a guided lab—why we clamp enums, how the mux settle time works,
+  what "ownership" means for vectors living in global scope.
+- Locked in the new slot-ownership ledger and EEPROM layout: slots now declare
+  which manager owns them, their SysEx templates ship with each record, and the
+  `0x0004` schema reserves dedicated pages so migrations don't trample saved
+  presets.
+- Root README sprouted a "Firmware Stack Crash Course" pointing straight at the
+  annotated sources. The firmware README now unpacks the pointer/ownership
+  philosophy for folks learning embedded design by building weird instruments.
+- CHANGELOG and HISTORY entries (this one!) flag the documentation shift so
+  future builders know exactly when the repo turned into half notebook, half
+  teaching guide.
+- Follow-up docs drop a Field Guide + tour script so mentors can walk builders
+  through the annotated files in a single sitting—think of it as office-hours
+  crib notes baked into the repo.
+- Lesson headers now call out the subjects each annotated block covers: boot
+  choreography, mux scanning, EEPROM hygiene, signal flow math, and MIDI queue
+  arbitration all get their own riffs so teachers can stitch together bespoke
+  labs.
+
 ## Overview
 
 Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:

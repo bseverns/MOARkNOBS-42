@@ -1,6 +1,8 @@
-// Handles all persistent configuration stored in EEPROM. This includes MIDI slot
-// settings, envelope follower assignments and LED preferences. Backup copies are
-// automatically managed to guard against corruption.
+// ConfigManager is the repo's long-term memory. It shows how we marshal structs
+// into EEPROM, guard against corruption, and fan those bytes back into runtime
+// objects without leaking pointers or faith. Treat this file as a crash course
+// in embedded persistence: every helper explains why the bounds checks exist
+// and how legacy migrations keep older builds from bricking.
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"

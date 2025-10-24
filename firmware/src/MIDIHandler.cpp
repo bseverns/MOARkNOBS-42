@@ -1,6 +1,7 @@
-// Thin wrapper around the Teensy MIDI libraries.
-// Sends and receives messages while updating DisplayManager.
-// Instantiated and used throughout firmware_main.cpp.
+// MIDIHandler is the traffic cop for every byte of musical intent leaving the
+// Teensy. The notes below aim to teach why we sanity-check channels, how the
+// serial queue keeps DIN output flowing, and when USB gets to join the party.
+// Perfect fodder for explaining transport layers to curious builders.
 
 #include "MIDIHandler.h"
 #include "Globals.h"
@@ -426,6 +427,10 @@ void MIDIHandler::sendClock() {
 }
 
 bool MIDIHandler::enqueueSerialMessage(const SerialMessage &msg) {
+    // Serial writes are staged in a ring buffer so the main loop never blocks on
+    // `Serial1.write`. Teaching tip: sketch the ring on a whiteboard and have
+    // folks follow the head/tail math—it's pointer-free yet still nails the
+    // ownership story because the queue lives entirely inside MIDIHandler.
     if (msg.byteCount == 0) {
         return false;
     }

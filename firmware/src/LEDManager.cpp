@@ -1,6 +1,7 @@
-// Manages the addressable LED strip used for visual feedback. It receives
-// updates from PotentiometerManager, ButtonManager and other modules to keep
-// the LEDs in sync with the controller state.
+// LEDManager is the lightshow conductor. The tone here is intentionally chatty
+// so builders understand how DMA-backed strips, dirty-flag batching, and
+// colour math collide. Follow along to see how we keep the visuals responsive
+// without burning CPU cycles.
 
 #include "LEDManager.h"
 #include "Globals.h" // hardware config
@@ -156,6 +157,9 @@ void LEDManager::setState(LEDState state, uint8_t index) {
 void LEDManager::setAll(const CRGB &color) {
     for (auto &led : leds) {
         led = color;
+        // Taking the pointer difference here converts the reference back into an
+        // index. It’s the most direct way to flag the right LED without juggling
+        // counters alongside the range-for loop.
         markDirty(&led - &leds[0]);
     }
     presentFrame();

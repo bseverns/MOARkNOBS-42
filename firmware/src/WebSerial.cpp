@@ -1,5 +1,7 @@
-// Tiny helper for WebSerial telemetry.
-// Formats slot and envelope data as JSON and spits it over Serial.
+// WebSerial.cpp keeps the firmware chatty with the browser-side editor. The
+// tone is tutorial-forward: we call out which arrays travel over JSON, why we
+// gate all output behind the `webSerialStreaming` flag, and how slot metadata is
+// massaged so students can map it back to the UI without guesswork.
 
 #include "WebSerial.h"
 #include "Utility.h"

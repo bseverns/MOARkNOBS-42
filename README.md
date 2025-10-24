@@ -39,6 +39,74 @@ Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
 - Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
 
+## Firmware Stack Crash Course
+
+If you’re new to embedded firmware or just curious why this rig leans so hard on
+references and pointers, the freshly annotated source tree doubles as a guided
+tour. Start with [`firmware/src/firmware_main.cpp`](firmware/src/firmware_main.cpp)
+to see how each manager gets injected and why globals buy us deterministic boot
+order on a real-time microcontroller. From there:
+
+- [`ARGMixer.cpp`](firmware/src/ARGMixer.cpp) walks through how envelope
+  followers feed arithmetic mash-ups, including the guard rails that keep byte
+  enums from going feral when you hand-edit EEPROM dumps.
+- [`PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp) explains
+  why we smooth ADC reads, how we select mux banks, and what the MIDI callback
+  signature really delivers (hint: both mapped values *and* raw readings).
+- [`MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp) calls out the transport
+  layers and the serial queueing tricks that keep DIN and USB outputs in lock
+  step without starving the main loop.
+- [`WebSerial.cpp`](firmware/src/WebSerial.cpp) documents the JSON payloads the
+  browser expects so you can hack the UI without reverse engineering blobs.
+
+Each file has links to the relevant README tables if you want the cheat sheets
+instead of spelunking the code—perfect fodder for a classroom lab or a late
+night builder jam.
+
+#### Subject Tracks for the Comment Pass
+
+Want to translate the annotated source into a syllabus? Use these riffs as your
+module map:
+
+- **Boot choreography & dependency injection** – [`firmware_main.cpp`](firmware/src/firmware_main.cpp)
+  spells out the startup order, scheduler wiring, and why globals exist at all.
+- **Human input pipeline** – [`ButtonManager.cpp`](firmware/src/ButtonManager.cpp)
+  and [`PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp)
+  dive into mux scanning, debounce delays, EWMA smoothing, and the callback
+  contract that carries both raw ADC and MIDI-scaled data.
+- **Persistence & schema hygiene** – [`ConfigManager.cpp`](firmware/src/ConfigManager.cpp)
+  and [`Globals.cpp`](firmware/src/Globals.cpp) walk through version tags,
+  CRC checks, the new slot ownership ledger, and how the `0x0004` EEPROM layout
+  keeps SysEx templates + EF records from colliding.
+- **Signal flow math lab** – [`EnvelopeFollower.cpp`](firmware/src/EnvelopeFollower.cpp),
+  [`ARGMixer.cpp`](firmware/src/ARGMixer.cpp), and [`MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp)
+  link the DSP math to outbound MIDI packets while narrating queue ownership and
+  backpressure.
+- **Web & telemetry surface** – [`WebSerial.cpp`](firmware/src/WebSerial.cpp)
+  and [`Utility.cpp`](firmware/src/Utility.cpp) explain the JSON schemas,
+  watchdog counters, and how the bridge keeps browser tooling honest.
+
+### Annotated Source Field Guide
+
+The comment pass is more than hype—it’s a breadcrumb trail. Use this cheat sheet
+when you’re running a workshop or mentoring a new builder:
+
+| File | What to zero in on |
+| --- | --- |
+| [`firmware/src/firmware_main.cpp`](firmware/src/firmware_main.cpp) | Dependency graph narrated in real time: why globals matter for deterministic boot, how task schedulers, managers, and telemetry wire together. |
+| [`firmware/src/ButtonManager.cpp`](firmware/src/ButtonManager.cpp) | Debounce state machines, mux settle delays, and how human gestures translate into slot updates, MIDI calls, and WebSerial pushes. |
+| [`firmware/src/ConfigManager.cpp`](firmware/src/ConfigManager.cpp) | EEPROM schema migrations, pointer-safe handoffs, and the checksum rituals that keep corruption from bricking rigs. |
+| [`firmware/src/EnvelopeFollower.cpp`](firmware/src/EnvelopeFollower.cpp) | Filter maths laid bare: shaping curves, ARG pair logic, and how we keep ADC reads deterministic without extra allocations. |
+| [`firmware/src/MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp) | Queues, transport arbitration, and why serial writes run through explicit FIFOs instead of ad‑hoc `Serial.print` calls. |
+| [`firmware/src/LEDManager.cpp`](firmware/src/LEDManager.cpp) | Dirty-flag batching, DMA lane juggling, and the color math that makes sense to students when you explain CRGB vs CHSV. |
+| [`firmware/src/PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp) | Multiplexer walkthrough plus the callback contract that hands both raw ADC and MIDI-scaled data back to the caller. |
+| [`firmware/src/WebSerial.cpp`](firmware/src/WebSerial.cpp) | JSON schema primer: see how slot metadata gets massaged so browser UIs stay in sync with firmware realities. |
+
+The tl;dr: every manager owns its own buffers, globals just publish shared
+intent, and comments name the trade-offs so you can narrate the code like a
+zine. Treat it like a studio notebook, pull apart the sections live, and reroute
+the rig when you want to teach a different angle on pointers or data flow.
+
 ## Ethics (what we optimize for).
 
 - **Access & equity**: Parts are commonly available; we publish alternatives and cost ranges. Labels, spacing, and grip are designed for readability and different motor abilities.
