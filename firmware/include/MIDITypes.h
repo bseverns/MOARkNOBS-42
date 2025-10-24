@@ -56,10 +56,10 @@ struct SlotEnvelopePayload {
 
 /** Slot-local configuration for the ARG combiner. */
 struct SlotARGConfig {
-    uint8_t enabled = 0;       //!< Non-zero enables ARG processing for this slot
+    uint8_t enabled = 0;                //!< Non-zero enables ARG processing for this slot
     ARGMethod method = ARGMethod::PLUS; //!< Mixer math to apply when ARG is on
-    uint8_t sourceA = 0;       //!< Primary envelope index
-    uint8_t sourceB = 1;       //!< Secondary envelope index
+    uint8_t sourceA = 0;                //!< Primary envelope index
+    uint8_t sourceB = 1;                //!< Secondary envelope index
 };
 
 struct MIDISlot {
