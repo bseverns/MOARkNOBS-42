@@ -20,6 +20,7 @@
 #include <vector>
 #include <map>
 #include "DisplayManager.h"
+#include "MIDITypes.h"
 #include "EnvelopeFollower.h"
 #include "ConfigManager.h"
 #include "Utility.h"
@@ -90,8 +91,8 @@ struct ButtonManagerContext {
     ConfigManager &configManager;             // For loading/saving persistent settings
     LEDManager &ledManager;                   // For updating visual feedback LEDs
     DisplayManager &displayManager;           // For writing status to OLED
-    std::vector<EnvelopeFollower> &envelopes; // List of envelope follower objects
-    std::map<int, int> &potToEnvelopeMap;     // Associative map: pot -> envelope index
+    std::vector<EnvelopeFollower> &envelopes;         // List of envelope follower objects
+    std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap; // Associative map: pot -> EF settings
     bool &diagnosticMode;                     // Self-test mode flag
     uint8_t &diagnosticPage;                  // Which diagnostic page to show
 };

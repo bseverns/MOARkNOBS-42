@@ -240,7 +240,7 @@ void testPots() {
     uint8_t dummyPot = 0, dummyChannel = 1;
     bool dummyEnvFollow = false;
     const char *dummyEnvMode = "";
-    std::map<int, int> dummyMap;
+    std::map<int, MIDISlot::EfSettings> dummyMap;
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext bmCtx = {potChannels,       dummyPot,      dummyChannel, dummyEnvFollow,

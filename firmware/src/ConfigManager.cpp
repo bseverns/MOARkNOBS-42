@@ -10,6 +10,38 @@
 
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 
+namespace {
+EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
+    using Filter = MIDISlot::EfSettings::FilterType;
+    switch (type) {
+    case Filter::Linear:
+        return EnvelopeFollower::LINEAR;
+    case Filter::OppositeLinear:
+        return EnvelopeFollower::OPPOSITE_LINEAR;
+    case Filter::Exponential:
+        return EnvelopeFollower::EXPONENTIAL;
+    case Filter::Random:
+        return EnvelopeFollower::RANDOM;
+    case Filter::Lowpass:
+        return EnvelopeFollower::LOWPASS;
+    case Filter::Highpass:
+        return EnvelopeFollower::HIGHPASS;
+    case Filter::Bandpass:
+        return EnvelopeFollower::BANDPASS;
+    }
+    return EnvelopeFollower::LINEAR;
+}
+
+void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
+    ef.setFilterType(toEnvelopeFilter(settings.filterType));
+    ef.configureFilter(settings.frequency, settings.q);
+    ef.setOversampleCount(settings.oversample);
+    ef.setSmoothingAlpha(settings.smoothing);
+    ef.setBaseline(settings.baseline);
+    ef.setGain(settings.gain);
+}
+} // namespace
+
 constexpr int kUnassignedEnvelope = -1;
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
@@ -236,7 +268,7 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
 }
 
 // Envelope settings
-bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
+bool ConfigManager::loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
                                          std::vector<EnvelopeFollower> &envelopes) {
     bool allFound = true;
 
@@ -244,8 +276,18 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
     for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
         int storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
         int envelopeIndex = (storedValue == 0xFF) ? kUnassignedEnvelope : storedValue;
+        MIDISlot::EfSettings settings = {};
+        if (potIndex < slots.size()) {
+            settings = slots[potIndex].ef;
+        }
         if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopes.size())) {
-            potToEnvelopeMap.emplace(potIndex, envelopeIndex);
+            settings.followerIndex = static_cast<int8_t>(envelopeIndex);
+            potToEnvelopeMap.emplace(potIndex, settings);
+            if (potIndex < slots.size()) {
+                slots[potIndex].ef = settings;
+            }
+        } else if (potIndex < slots.size()) {
+            slots[potIndex].ef.followerIndex = -1;
         }
     }
 
@@ -262,20 +304,51 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
             allFound = false;
         }
     }
+
+    for (auto &entry : potToEnvelopeMap) {
+        auto &settings = entry.second;
+        const int follower = settings.followerIndex;
+        if (follower < 0 || follower >= static_cast<int>(envelopes.size())) {
+            continue;
+        }
+        settings.baseline = envelopes[follower].getBaseline();
+        applyEfSettingsToFollower(envelopes[follower], settings);
+        if (static_cast<size_t>(entry.first) < slots.size()) {
+            slots[entry.first].ef = settings;
+        }
+    }
     return allFound;
 }
 
-void ConfigManager::saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
+void ConfigManager::saveEnvelopeSettings(const std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
                                          const std::vector<EnvelopeFollower> &envelopes) {
     constexpr uint8_t kUnassignedMarker = 0xFF;
     for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
         auto it = potToEnvelopeMap.find(potIndex);
-        int envelopeIndex = (it != potToEnvelopeMap.end()) ? it->second : kUnassignedEnvelope;
+        int envelopeIndex = kUnassignedEnvelope;
+        if (it != potToEnvelopeMap.end()) {
+            envelopeIndex = it->second.followerIndex;
+        }
         uint8_t storedValue =
             (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopes.size()))
                 ? static_cast<uint8_t>(envelopeIndex)
                 : kUnassignedMarker;
         EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, storedValue);
+
+        if (potIndex < slots.size()) {
+            MIDISlot &slot = slots[potIndex];
+            if (it != potToEnvelopeMap.end()) {
+                slot.ef = it->second;
+                if (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopes.size())) {
+                    slot.ef.followerIndex = static_cast<int8_t>(envelopeIndex);
+                    slot.ef.baseline = envelopes[envelopeIndex].getBaseline();
+                } else {
+                    slot.ef.followerIndex = -1;
+                }
+            } else {
+                slot.ef.followerIndex = -1;
+            }
+        }
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
         envelopeConfig.baselines[i] = envelopes[i].getBaseline();
@@ -550,7 +623,10 @@ void test_eeprom_recovery_after_power_cycle() {
 void test_calibration_offsets_survive_power_cycle() {
     auto pm = createPotentiometerManager();
     std::vector<EnvelopeFollower> envs = {EnvelopeFollower(A0, &pm, 0)};
-    std::map<int, int> mapping = {{0, 0}};
+    std::map<int, MIDISlot::EfSettings> mapping;
+    MIDISlot::EfSettings settings;
+    settings.followerIndex = 0;
+    mapping.emplace(0, settings);
 
     envs[0].setBaseline(0.42f);
     ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
@@ -561,7 +637,7 @@ void test_calibration_offsets_survive_power_cycle() {
         envelopeConfig.baselines[i] = 0.0f;
     }
     std::vector<EnvelopeFollower> fresh = {EnvelopeFollower(A0, &pm, 0)};
-    std::map<int, int> mapping2;
+    std::map<int, MIDISlot::EfSettings> mapping2;
     bool ok = cfg.loadEnvelopeSettings(mapping2, fresh);
 
     TEST_ASSERT_TRUE(ok);

@@ -160,14 +160,14 @@ class ConfigManager {
     // Envelope follower configuration -----------------------------------
 
     /** Persist the current envelope routing and baselines to EEPROM. */
-    void saveEnvelopeSettings(const std::map<int, int> &potToEnvelopeMap,
+    void saveEnvelopeSettings(const std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
                               const std::vector<EnvelopeFollower> &envelopes);
 
     /**
      * Restore envelope routing and baseline offsets from EEPROM.
      * Returns true if every envelope's baseline was recovered.
      */
-    bool loadEnvelopeSettings(std::map<int, int> &potToEnvelopeMap,
+    bool loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
                               std::vector<EnvelopeFollower> &envelopes);
 
     /** Save a single envelope follower's baseline to EEPROM. */

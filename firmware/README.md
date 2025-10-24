@@ -831,6 +831,30 @@ firmware salutes:
 | `GET_EF <slot>`            | Tells which envelope follower owns a slot (`-1` = none).          |
 | `SET_EF <slot,ef>`         | Assigns follower `ef` to `slot` and saves it.                     |
 
+### Slot EF payload anatomy
+
+`SET_SLOT` and friends (`SET_ALL`, WebSerial `slot_patch`, the JSON config blob from `GET_CONFIG`) now ship a nested `"ef"`
+object for every slot. That little structure mirrors the firmware's new `MIDISlot::EfSettings` record, so the browser can tune
+follower parameters without side quests through global filter state. Here's what the synth expects:
+
+```json
+{
+  "index": 2,            // follower number or -1 when unassigned
+  "filter_index": 5,     // one of the 7 EnvelopeFollower::FilterType values
+  "frequency": 1200.0,   // Hz for the low/high/band-pass shapes or scaler for the curves
+  "q": 1.2,              // resonance / secondary parameter for filter modes
+  "oversample": 8,       // ADC oversample count (1 disables extra reads)
+  "smoothing": 0.35,     // EWMA alpha: 0 = frozen, 1 = no smoothing
+  "baseline": 0.02,      // volts to subtract after calibration
+  "gain": 1.5            // multiplier applied after baseline before mapping to MIDI
+}
+```
+
+Leave fields out and the firmware keeps whatever it already stored. Send the object with `index: -1` to ditch the follower
+assignment entirely. Baseline and gain are saved alongside the rest, so a calibrated follower stays civil across reboots. If
+you only care about the legacy integer, `ef_index` is still echoed for backward compatibility—but the nested object is where
+the real power lives.
+
 Need to bake a hue right into EEPROM? The WebSerial editor now stuffs a `#RRGGBB` string into `SET_ALL` so you can slam brightness and colour in one hit:
 
 ```
