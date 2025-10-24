@@ -4,7 +4,7 @@
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
-#include "ARGMixer.h"
+#include "ARGMixer.h" // reuse the shared sanitizeSlotArg implementation
 #include <cmath>
 #include <vector>
 #include "Log.h"
@@ -105,22 +105,6 @@ void maybeRescueFilterTailFromLegacy() {
     persistFilterTailImpl(legacy);
 }
 } // namespace
-
-SlotARGConfig sanitizeSlotArg(const SlotARGConfig &config) {
-    SlotARGConfig sanitized = config;
-    sanitized.enabled = config.enabled ? 1 : 0;
-    int rawMethod =
-        constrain(static_cast<int>(config.method), 0, static_cast<int>(ARGMethod::XORR));
-    sanitized.method = static_cast<ARGMethod>(rawMethod);
-    sanitized.sourceA =
-        static_cast<uint8_t>(constrain(static_cast<int>(config.sourceA), 0, NUM_ENVELOPES - 1));
-    sanitized.sourceB =
-        static_cast<uint8_t>(constrain(static_cast<int>(config.sourceB), 0, NUM_ENVELOPES - 1));
-    if (NUM_ENVELOPES > 1 && sanitized.sourceA == sanitized.sourceB) {
-        sanitized.sourceB = static_cast<uint8_t>((sanitized.sourceA + 1) % NUM_ENVELOPES);
-    }
-    return sanitized;
-}
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
 // saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
