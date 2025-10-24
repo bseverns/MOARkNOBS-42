@@ -409,7 +409,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     defaultArg.method = static_cast<ARGMethod>(configManager.getARGMethod());
     defaultArg.sourceA = configManager.getEnvelopeA();
     defaultArg.sourceB = configManager.getEnvelopeB();
-    defaultArg = ConfigManager::sanitizeArgConfig(defaultArg);
+    defaultArg = sanitizeSlotArg(defaultArg);
 
     bool anySlotPayloadSpecified = false;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
@@ -472,7 +472,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                 slotArgConfig.sourceB = static_cast<uint8_t>(
                     constrain(slotArgObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
             }
-            slot.arg = ConfigManager::sanitizeArgConfig(slotArgConfig);
+            slot.arg = sanitizeSlotArg(slotArgConfig);
         }
         if (slot.type == MIDIMessageType::SysEx) {
             String templateError;
@@ -605,7 +605,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                 constrain(argObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
         }
 
-        defaultArg = ConfigManager::sanitizeArgConfig(incoming);
+        defaultArg = sanitizeSlotArg(incoming);
     }
 
     envelopeFollowMode = defaultArg.enabled != 0;
@@ -925,7 +925,7 @@ void processSerial() {
                     static_cast<EnvelopeFollower::FilterType>(payload.filterType));
                 efPayload["freq"] = payload.frequency;
                 efPayload["q"] = payload.q;
-                SlotARGConfig arg = ConfigManager::sanitizeArgConfig(slot.arg);
+                SlotARGConfig arg = sanitizeSlotArg(slot.arg);
                 JsonObject argObj = slotObj.createNestedObject("arg");
                 argObj["enabled"] = arg.enabled != 0;
                 argObj["method"] = static_cast<uint8_t>(arg.method);

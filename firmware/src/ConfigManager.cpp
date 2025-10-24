@@ -502,7 +502,7 @@ String ConfigManager::serializeAll() const {
         output += ", \"q\": ";
         output += String(payload.q, 2);
         output += "}, \"arg\": {";
-        SlotARGConfig arg = sanitizeArgConfig(slots[i].arg);
+        SlotARGConfig arg = sanitizeSlotArg(slots[i].arg);
         output += "\"enabled\": ";
         output += arg.enabled;
         output += ", \"method\": ";
@@ -778,10 +778,6 @@ SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePay
     return sanitizeEnvelopePayloadImpl(payload);
 }
 
-SlotARGConfig ConfigManager::sanitizeArgConfig(const SlotARGConfig &candidate) {
-    return sanitizeSlotArg(candidate);
-}
-
 void ConfigManager::loadLegacyARGSettings() {
     legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
     legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
@@ -794,7 +790,7 @@ void ConfigManager::loadLegacyARGSettings() {
     sanitized.method = static_cast<ARGMethod>(legacyArg.method);
     sanitized.sourceA = legacyArg.sourceA;
     sanitized.sourceB = legacyArg.sourceB;
-    sanitized = sanitizeArgConfig(sanitized);
+    sanitized = sanitizeSlotArg(sanitized);
 
     legacyArg.enable = sanitized.enabled;
     legacyArg.method = static_cast<uint8_t>(sanitized.method);
