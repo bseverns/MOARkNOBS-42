@@ -546,11 +546,9 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     defaultEfSettings.filterType = encodeFilterType(EnvelopeFollower::LINEAR);
     defaultEfSettings.frequency = 1000.0f;
     defaultEfSettings.q = 0.707f;
-    bool filterOverrideProvided = false;
     if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
         JsonObject filterObj = config["filter"].as<JsonObject>();
         parseEfSettings(filterObj, defaultEfSettings, defaultEfSettings);
-        filterOverrideProvided = true;
     }
 
     SlotARGConfig defaultArg{};
