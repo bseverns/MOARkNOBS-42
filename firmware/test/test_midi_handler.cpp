@@ -24,7 +24,9 @@ struct UsbMidiGuard {
 };
 
 struct StubEnvelope {
-    explicit StubEnvelope(uint8_t sustain = 96) : level(sustain) {}
+    static constexpr uint8_t kDefaultSustain = 96;
+
+    explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
     uint8_t getEnvelopeLevel() const { return level; }
 
   private:
