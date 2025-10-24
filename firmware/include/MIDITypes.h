@@ -96,8 +96,17 @@ struct MIDISlot {
     struct EfRuntime {
         int8_t followerIndex = -1; //!< Currently assigned hardware follower (-1 when unbound)
     };
-    EfRuntime ef{};           //!< Live envelope follower assignment metadata
-    SlotARGConfig arg{};             //!< Slot-local ARG mixer settings
+    EfRuntime ef{};      //!< Live envelope follower assignment metadata
+    SlotARGConfig arg{}; //!< Slot-local ARG mixer settings
+
+    /** Update both persistent and runtime follower assignments in lockstep. */
+    void setEnvelopeFollowerIndex(int8_t index) {
+        ef.followerIndex = index;
+        efSettings.followerIndex = index;
+    }
+
+    /** Convenience accessor mirroring the currently assigned follower index. */
+    int8_t getEnvelopeFollowerIndex() const { return ef.followerIndex; }
 };
 
 constexpr uint8_t NUM_SLOTS = 42;

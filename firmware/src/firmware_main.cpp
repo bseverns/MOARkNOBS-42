@@ -629,7 +629,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
         MIDISlot &slot = configManager.getSlot(i);
         MIDISlot::EfSettings settings = slot.efSettings;
-        settings.followerIndex = slot.ef.followerIndex;
+        settings.followerIndex = slot.getEnvelopeFollowerIndex();
 
         int rawEfIndex = settings.followerIndex;
         if (slotObj.containsKey("efIndex")) {
@@ -689,7 +689,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.midiChannel = midiChannel;
         slot.data1 = data1;
         slot.efSettings = settings;
-        slot.ef.followerIndex = settings.followerIndex;
+        slot.setEnvelopeFollowerIndex(settings.followerIndex);
         slot.active = active;
         slot.arg = defaultArg;
         if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
@@ -818,8 +818,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                 continue;
 
             MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
-            slot.ef.followerIndex = static_cast<int8_t>(i);
-            slot.efSettings.followerIndex = slot.ef.followerIndex;
+            slot.setEnvelopeFollowerIndex(static_cast<int8_t>(i));
             potToEnvelopeMap[slotIndex] = slot.efSettings;
 
             if (i < envelopeFollowers.size()) {
@@ -1625,8 +1624,7 @@ void processSerial() {
                 if (potIndex >= 0 && potIndex < NUM_POTS && envIndex >= 0 &&
                     envIndex < (int)envelopeFollowers.size()) {
                     MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
-                    slot.ef.followerIndex = static_cast<int8_t>(envIndex);
-                    slot.efSettings.followerIndex = slot.ef.followerIndex;
+                    slot.setEnvelopeFollowerIndex(static_cast<int8_t>(envIndex));
                     potToEnvelopeMap[potIndex] = slot.efSettings;
                     envelopeFollowers[envIndex].toggleActive(true);
                     applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings);
