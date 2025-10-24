@@ -143,7 +143,7 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
 void EnvelopeFollower::update() {
     if (isActive) {
         int rawLevel = readEnvelopeLevel();
-        currentEnvelopeLevel = processEnvelopeLevel(rawLevel);
+        currentEnvelopeLevel = constrain(rawLevel, 0, 127);
     }
 }
 

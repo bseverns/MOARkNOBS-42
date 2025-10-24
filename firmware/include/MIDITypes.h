@@ -29,6 +29,12 @@ enum class SysExType : uint8_t {
 };
 
 /** Configuration for a single pot slot. */
+struct EfSettings {
+    uint8_t filterType = 0;   //!< Encoded EnvelopeFollower::FilterType
+    float frequency = 1000.0f; //!< Stored cutoff / shaping frequency
+    float q = 0.707f;          //!< Stored resonance / shaping curve parameter
+};
+
 struct MIDISlot {
     MIDIMessageType type = MIDIMessageType::OFF;
     uint8_t midiChannel = 1;
@@ -37,11 +43,12 @@ struct MIDISlot {
     bool active = false;
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
+    EfSettings efSettings{}; //!< Slot-specific envelope follower settings
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) == 23, "MIDISlot exploded past the expected 23 bytes");
+static_assert(sizeof(MIDISlot) == 32, "MIDISlot exploded past the expected 32 bytes");
 
 #endif // MIDI_TYPES_H

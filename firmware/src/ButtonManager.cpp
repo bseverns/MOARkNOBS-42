@@ -13,6 +13,8 @@
 #include "WebSerial.h"
 #include <map>
 
+extern void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings);
+
 // Scans the button matrix and direct control buttons. Results are fed into
 // DisplayManager, ConfigManager, EnvelopeFollower assignments and the
 // Arpeggiator. This class ties user interaction to the rest of the system.
@@ -418,6 +420,10 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         context.envelopes[efIndex].setFilterType(newType);
         streamFilterPatch(context.envelopes[efIndex]);
 
+        EfSettings settings = context.configManager.getSlot(index).efSettings;
+        settings.filterType = static_cast<uint8_t>(newType);
+        saveSlotEfSettings(index, settings);
+
         // Feedback
         const char *filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
         char msg[32];
@@ -445,6 +451,10 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             sprintf(msg, "Slot %d => %s", context.activePot, name);
             context.displayManager.displayStatus(msg, 1500);
             streamFilterPatch(context.envelopes[efIndex]);
+
+            EfSettings settings = context.configManager.getSlot(context.activePot).efSettings;
+            settings.filterType = static_cast<uint8_t>(newType);
+            saveSlotEfSettings(context.activePot, settings);
             break;
         }
 
@@ -470,6 +480,10 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             sprintf(msg, "Slot %d => %s", context.activePot, name);
             context.displayManager.displayStatus(msg, 1500);
             streamFilterPatch(context.envelopes[efIndex]);
+
+            EfSettings settings = context.configManager.getSlot(context.activePot).efSettings;
+            settings.filterType = static_cast<uint8_t>(newType);
+            saveSlotEfSettings(context.activePot, settings);
             break; // <--- ensure we break out of case 1
         }
 

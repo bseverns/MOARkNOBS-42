@@ -419,6 +419,9 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
         return false;
     }
+    if (candidate.efSettings.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+        return false;
+    }
     return true;
 }
 
