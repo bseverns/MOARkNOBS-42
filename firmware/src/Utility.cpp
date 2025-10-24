@@ -30,6 +30,10 @@ uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
 }
 
+uint16_t Utility::mapTo14Bit(int analogValue, int minValue, int maxValue) {
+    return static_cast<uint16_t>(map(analogValue, minValue, maxValue, 0, 16383));
+}
+
 int Utility::mapToRange(int value, int inMin, int inMax, int outMin, int outMax) {
     return map(value, inMin, inMax, outMin, outMax);
 }

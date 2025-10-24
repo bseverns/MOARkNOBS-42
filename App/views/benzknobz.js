@@ -390,7 +390,13 @@ window.addEventListener('DOMContentLoaded', () => {
     if (slotDetailStatus) slotDetailStatus.textContent = slot?.active ? 'Active' : 'Muted';
     if (slotDetailType) slotDetailType.textContent = slot?.type ?? '—';
     if (slotDetailChannel) slotDetailChannel.textContent = slot?.midiChannel ?? '—';
-    if (slotDetailData) slotDetailData.textContent = slot?.data1 ?? '—';
+    if (slotDetailData) {
+      if (slot?.type === 'SysEx') {
+        slotDetailData.textContent = slot?.sysexTemplate && slot.sysexTemplate.length ? slot.sysexTemplate : '—';
+      } else {
+        slotDetailData.textContent = slot?.data1 ?? '—';
+      }
+    }
     if (slotDetailEnvelope) slotDetailEnvelope.textContent = slot?.efIndex !== undefined ? `EF ${slot.efIndex + 1}` : '—';
     if (slotDetailArg) slotDetailArg.textContent = slotState.staged?.arg?.method ?? '—';
     const value = Array.isArray(telemetry.slots) ? telemetry.slots[slotState.selected] : null;
@@ -422,6 +428,24 @@ window.addEventListener('DOMContentLoaded', () => {
       runtime.setPotGuard([slotState.selected], !value);
     });
     form.appendChild(takeover);
+
+    if (slot.type === 'SysEx') {
+      form.appendChild(
+        makeText(
+          'SysEx Template',
+          slot.sysexTemplate ?? '',
+          'F0 7F 01 04 XX F7',
+          (value) => {
+            const normalised = normaliseSysexTemplate(value);
+            stageSlotField(slotState.selected, 'sysexTemplate', normalised);
+          },
+        ),
+      );
+      const hint = document.createElement('p');
+      hint.className = 'slot-hint';
+      hint.textContent = 'Hex bytes + XX/MSB/LSB placeholders. We swap the placeholders with live values.';
+      form.appendChild(hint);
+    }
 
     formContainer.appendChild(form);
   }
@@ -457,6 +481,18 @@ window.addEventListener('DOMContentLoaded', () => {
     return wrap;
   }
 
+  function makeText(labelText, current, placeholder, onCommit) {
+    const wrap = document.createElement('label');
+    wrap.textContent = labelText;
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = current ?? '';
+    if (placeholder) input.placeholder = placeholder;
+    input.addEventListener('change', () => onCommit(input.value));
+    wrap.appendChild(input);
+    return wrap;
+  }
+
   function makeToggle(labelText, current, onCommit) {
     const wrap = document.createElement('label');
     wrap.className = 'toggle';
@@ -488,6 +524,21 @@ window.addEventListener('DOMContentLoaded', () => {
       draft.slots[index][key] = value;
       return draft;
     });
+  }
+
+  function normaliseSysexTemplate(value) {
+    if (typeof value !== 'string') return '';
+    const trimmed = value.trim();
+    if (!trimmed.length) return '';
+    return trimmed
+      .split(/\s+/)
+      .map((token) => {
+        if (!token.length) return null;
+        if (/^(xx|msb|lsb)$/i.test(token)) return token.toUpperCase();
+        return token.toUpperCase();
+      })
+      .filter(Boolean)
+      .join(' ');
   }
 
   function populateFilter(staged) {

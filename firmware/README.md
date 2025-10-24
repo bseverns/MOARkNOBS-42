@@ -61,7 +61,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **Note Dynamics Knobs**: When the arp is idle, “Freq” shoves outgoing velocity (‑64…+63) and “Q” rigs the odds a pot twist actually fires a new note.
 - **Perlin-Spiced Randomness**: The "random" shape rides a lightweight Perlin noise function, giving chaos more of a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
-- **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean.
+- **EEPROM Resilience**: Built-in config backup system with a `CONFIG_VERSION` tag and a CRC sniff-test. If the bytes smell wrong, the firmware torches the lot and boots clean. The jump to schema `0x0003` also force-wipes legacy slot data and profile blocks so wider SysEx-aware records never trample your saved presets.
 - **JSON System Report**: `sys::printReport()` spills firmware version and commit hash in one tidy blob.
 - **Rollover-Proof Matrix Scan**: Diode-backed rows plus debounced reads keep ghosting and dropped presses from crashing the party.
   - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl3+Ctrl4+Ctrl5**.
@@ -265,10 +265,28 @@ messages, with the channel and data byte stored per slot:
 - **Pitch Bend** – full 14‑bit bend range mapped from the control pot.
 - **NRPN** – 14-bit Non-Registered Parameter Numbers for secret-sauce controls.
 - **RPN** – spec-approved Registered Parameter Numbers for things like pitch range.
-- **SysEx** – raw byte dumps for when CCs just won't cut it.
+- **SysEx** – raw byte dumps for when CCs just won't cut it, now with 16-byte templates so you can drop in `XX`/`MSB`/`LSB`
+  placeholders and let the pot stream live data straight into manufacturer IDs.
 
 The Control Buttons let you cycle the message type, channel (1–16) and data values in
 real time. All assignments persist in EEPROM -if you remember to save them (this is coming from a Korg E2S owner)- so your setup survives a power cycle.
+
+#### Crafting SysEx templates
+
+Punching `SysEx` on a slot unlocks a tiny macro pad baked into EEPROM. Each slot can store up to 16 bytes that the firmware
+sprays exactly as written, with three special tokens that get replaced on the fly:
+
+- `XX` becomes the slot’s live 7-bit value (think standard CC resolution).
+- `MSB` and `LSB` tag-team for 14-bit sweeps mapped from the raw potentiometer value.
+- Everything else should be straight hex like `F0`, `7D`, `04`, etc. The template still has to start with `F0` and end with `F7`.
+
+Leave the template blank and we fall back to the legacy four-byte burst (`F0 data1 value F7`). Show the WebSerial editor a
+string like `F0 7F 01 04 XX F7` or `F0 7D 10 MSB LSB F7` and the firmware handles the substitution while mirroring the packet to
+USB and DIN. No code rebuilds, no magic numbers hiding in `firmware_main.cpp`.
+
+Heads-up for folks slinging longer dumps: the runtime now records up to 64 bytes of whatever SysEx you feed it, so diagnostics
+and unit tests can replay the exact payload that blasted through. Anything larger gets bounced before it can chew RAM, keeping the
+rig scrappy instead of sloppy.
 
 ### Incoming MIDI and Clock Sync
 
@@ -308,6 +326,8 @@ Each control button can do several things depending on how you hit it. Long pres
 | Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM                 | —                                                                           |
 | Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                  | —                                                                           |
 | Ctrl5  | Tap BPM                             | Enter/Exit Diagnostics       | —                                                                           |
+
+When a long press arms either the EEPROM nuke (**Ctrl3**) or the diagnostic dive (**Ctrl5**), the LED strip goes wild on purpose. Expect a red-and-white strobe for the factory reset combo and a shimmering teal sweep for diagnostics. That full-strip flare buys you the two-second confirm window to bail out if you fat-fingered the move.
 
 Long-hold **Ctrl5** and you drop into our scrappy diagnostic pit. That fourth-from-last LED starts a slow pulse so you know you’re off the beaten path. While you're in there, a long press on **Ctrl1** flips through pages: first the button matrix, then EF baselines, then raw MIDI RX/TX counts. Another long squeeze on **Ctrl5** ejects you back to normal jam mode.
 

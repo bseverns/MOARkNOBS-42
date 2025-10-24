@@ -68,6 +68,9 @@ class Utility {
     /** Map a raw analog reading to the 0‑127 MIDI range. */
     static uint8_t mapToMidiValue(int analogValue, int minValue = 0, int maxValue = 1023);
 
+    /** Map a raw analog reading to the full 14-bit 0‑16383 span. */
+    static uint16_t mapTo14Bit(int analogValue, int minValue = 0, int maxValue = 1023);
+
     /** Generic integer mapping helper. */
     static int mapToRange(int value, int inMin, int inMax, int outMin, int outMax);
 

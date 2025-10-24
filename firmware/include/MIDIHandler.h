@@ -9,6 +9,7 @@
 #else
 class HardwareSerial;
 #endif
+#include <array>
 #include <cstdint>
 #include "DisplayManager.h"
 #include "MIDITypes.h"
@@ -109,6 +110,28 @@ class MIDIHandler {
     uint32_t getTxCount() const { return _txCount; }
 
   private:
+    enum class SerialMessageType : uint8_t {
+        ControlChange,
+        NoteOn,
+        NoteOff,
+        ProgramChange,
+        Aftertouch,
+        PitchBend,
+        Clock
+    };
+
+    struct SerialMessage {
+        SerialMessageType type = SerialMessageType::Clock;
+        uint8_t channel = 0;
+        uint8_t data1 = 0;
+        uint8_t data2 = 0;
+        int16_t pitch = 0;
+        uint8_t byteCount = 0;
+    };
+
+    static constexpr size_t kSerialQueueSize = 48;
+    static constexpr uint32_t kSerialByteMicros = 320; // 31.25 kbps → 320 µs per byte
+
     bool clockTick = false;
     uint32_t _clockTickCount = 0;
     unsigned long lastExternalClock = 0;
@@ -135,7 +158,7 @@ class MIDIHandler {
     uint16_t _lastRPNValue = 0;
 
     // SysEx stash for quick testing/debugging
-    uint8_t _lastSysEx[32] = {0};
+    uint8_t _lastSysEx[64] = {0};
     uint16_t _lastSysExLength = 0;
     SysExType _lastSysExType = SysExType::ManufacturerSpecific;
     uint8_t _lastSysExSubId1 = 0;
@@ -143,6 +166,27 @@ class MIDIHandler {
 
     uint32_t _rxCount = 0;
     uint32_t _txCount = 0;
+
+    std::array<SerialMessage, kSerialQueueSize> _serialQueue{};
+    size_t _serialQueueHead = 0;
+    size_t _serialQueueTail = 0;
+    bool _serialQueueFull = false;
+    uint32_t _lastSerialSendUs = 0;
+
+    bool enqueueSerialMessage(const SerialMessage &msg);
+    bool dequeueSerialMessage(SerialMessage &msg);
+    bool serialQueueEmpty() const;
+    size_t serialQueueSize() const;
+    bool tryCoalesceSerialMessage(const SerialMessage &msg);
+    void serviceSerialQueue();
+    void dispatchSerialMessage(const SerialMessage &msg);
+    SerialMessage makeControlChange(uint8_t channel, uint8_t control, uint8_t value) const;
+    SerialMessage makeNoteOn(uint8_t channel, uint8_t note, uint8_t velocity) const;
+    SerialMessage makeNoteOff(uint8_t channel, uint8_t note, uint8_t velocity) const;
+    SerialMessage makeProgramChange(uint8_t channel, uint8_t program) const;
+    SerialMessage makeAftertouch(uint8_t channel, uint8_t pressure) const;
+    SerialMessage makePitchBend(uint8_t channel, int16_t bend) const;
+    SerialMessage makeClock() const;
 
     void receiveNRPN(uint8_t channel, uint16_t param, uint16_t value);
     void receiveRPN(uint8_t channel, uint16_t param, uint16_t value);

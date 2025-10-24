@@ -6,6 +6,13 @@
 #include "Globals.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "MIDITypes.h"
+
+class ConfigManager;
+
+class ConfigManager;
+
+extern bool webSerialStreaming;
 
 class ConfigManager;
 
@@ -40,9 +47,9 @@ class WebSerial {
      * Cross-check docs/WebSerial.md for the gritty protocol details.
      */
     static void sendStateSnapshot(const PotentiometerManager &pots,
-                                  const std::vector<EnvelopeFollower> &envelopes,
-                                  const ConfigManager &config, uint8_t currentSlot,
-                                  const SystemDiagnostics &diagnostics);
+    const std::vector<EnvelopeFollower> &envelopes,
+    const ConfigManager &config, uint8_t currentSlot,
+    const SystemDiagnostics &diagnostics);
 
     /**
      * Emit a compact config patch describing the current state of a slot.

@@ -65,7 +65,9 @@ _Long-press stunts ask for a quick confirm tap after you let go—no more accide
 | Ctrl2  | Cycle EF assignment                 | Toggle Slot Active         | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
 | Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM               | —                                                                           |
 | Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                | —                                                                           |
-| Ctrl5  | Tap BPM                             | —                          | —                                                                           |
+| Ctrl5  | Tap BPM                             | Enter/Exit Diagnostics     | —                          |
+                          |
+When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) with a long press, the LED strip throws a full-strip warning animation. Red-and-white strobes scream "factory reset" while a teal shimmer covers diagnostics, buying you the confirmation window to bail if needed.
 
 ### Slot Buttons
 

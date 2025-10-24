@@ -201,12 +201,12 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
 
     // Kill any pending confirm if time ran out
     if (_confirmIndex >= 0 && now > _confirmDeadline) {
-        _confirmIndex = -1;
+        cancelPendingConfirm(context);
     }
 
     // Smack pending confirm if some other button gets poked
     if (_confirmIndex >= 0 && index != _confirmIndex && pressed) {
-        _confirmIndex = -1;
+        cancelPendingConfirm(context);
     }
 
     switch (sm.state) {
@@ -261,6 +261,7 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
     _confirmIndex = index;
     _confirmDeadline = ::now() + CONFIRM_WINDOW_MS;
     context.displayManager.displayStatus("Press again to confirm", 1000);
+    startWarningForIndex(index, context);
 }
 
 /**
@@ -377,10 +378,11 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
 
     if (_confirmIndex == index) {
         // Second tap confirms the long‑press move
-        if (now <= _confirmDeadline) {
+        bool withinWindow = (now <= _confirmDeadline);
+        cancelPendingConfirm(context);
+        if (withinWindow) {
             performLongPressAction(index, context);
         }
-        _confirmIndex = -1;
         return;
     }
 
@@ -573,6 +575,12 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         int assigned = context.potToEnvelopeMap[context.activePot];
         context.envelopes[assigned].toggleActive(true);
 
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        if (slot.efIndex != static_cast<uint8_t>(assigned)) {
+            slot.efIndex = static_cast<uint8_t>(assigned);
+            context.configManager.saveSlot(context.activePot, slot);
+        }
+
         char buf[32];
         sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
         context.displayManager.displayStatus(buf, 1500);
@@ -622,6 +630,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             context.displayManager.displayStatus(buf, 1500);
             streamSlotPatch(context.configManager, context.activePot);
         }
+        WebSerial::sendSlotPatch(context.configManager, context.activePot);
     } break;
 
     case 5: {
@@ -748,6 +757,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         int randomEF = random(context.envelopes.size());
         context.potToEnvelopeMap[context.activePot] = randomEF;
         context.envelopes[randomEF].toggleActive(true);
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        if (slot.efIndex != static_cast<uint8_t>(randomEF)) {
+            slot.efIndex = static_cast<uint8_t>(randomEF);
+            context.configManager.saveSlot(context.activePot, slot);
+        }
         char buf[32];
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);
@@ -928,6 +942,39 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
 
 void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext &context) {
     updateButtonStateMachine(NUM_VIRTUAL_BUTTONS + index, pressed, context);
+}
+
+void ButtonManager::cancelPendingConfirm(ButtonManagerContext &context) {
+    if (_confirmIndex >= 0) {
+        _confirmIndex = -1;
+    }
+    if (context.ledManager.isWarningActive()) {
+        context.ledManager.clearWarningAnimation();
+    }
+}
+
+void ButtonManager::startWarningForIndex(uint8_t index, ButtonManagerContext &context) {
+    if (index < NUM_VIRTUAL_BUTTONS) {
+        if (context.ledManager.isWarningActive()) {
+            context.ledManager.clearWarningAnimation();
+        }
+        return;
+    }
+
+    uint8_t ctrlIdx = index - NUM_VIRTUAL_BUTTONS;
+    switch (ctrlIdx) {
+    case 3:
+        context.ledManager.beginWarningAnimation(LEDWarning::Destructive);
+        break;
+    case 5:
+        context.ledManager.beginWarningAnimation(LEDWarning::Diagnostic);
+        break;
+    default:
+        if (context.ledManager.isWarningActive()) {
+            context.ledManager.clearWarningAnimation();
+        }
+        break;
+    }
 }
 
 void ButtonManager::selectMux(uint8_t row, uint8_t col) {
