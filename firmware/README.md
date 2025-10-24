@@ -79,8 +79,6 @@ Every slot now ships with two tiny structs riding shotgun:
 - `MIDISlot::EfSettings` – follower index, filter shape, oversample count, smoothing, baseline, and gain. When you lock a slot to an EF the firmware mirrors those knobs back to the follower so edits survive reboots.
 - `SlotARGConfig` – the per-slot ARG mix recipe. Disabled slots fall back to their assigned follower level, so the math never bleeds when you bail out of ARG mode.
 
-Legacy slots migrate automatically; the code reads the old `efIndex` byte, pours it into `EfSettings::followerIndex`, and lets the new defaults take over.
-
 ### Dynamic Envelope Modulation
 
 Those six envelope followers aren't just spectators—they hijack whatever slot you point them at. Wire an EF to a slot, pick a curve (linear, inverse, exponential, random, or the filter trio), and the `Freq`/`Q` pots sculpt cutoff and resonance live. It's side-chain mayhem without a DAW. Scripters can poke `GET_FILTER` / `SET_FILTER` over WebSerial to lock in the shape.
