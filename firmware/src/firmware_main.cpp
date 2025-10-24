@@ -1233,7 +1233,7 @@ void processSerial() {
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
                 JsonObject efCfg = slotObj.createNestedObject("efSettings");
                 efCfg["type"] = envelopeFilterName(decodeFilterType(slot.efSettings.filterType));
-                efCfg["type_index"] = slot.efSettings.filterType;
+                efCfg["type_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
                 efCfg["freq"] = slot.efSettings.frequency;
                 efCfg["q"] = slot.efSettings.q;
                 JsonObject arg = slotObj.createNestedObject("arg");
