@@ -73,6 +73,8 @@ enum MidiType : uint8_t {
 } // namespace midi
 
 struct MidiInterfaceStub {
+    static constexpr size_t kCCLogCapacity = 128;
+    static constexpr size_t kSysExCapacity = 256;
     uint8_t lastProgram = 0;
     uint8_t lastProgramChannel = 0;
     uint8_t lastAftertouch = 0;
@@ -91,7 +93,7 @@ struct MidiInterfaceStub {
         uint8_t value;
         uint8_t channel;
     };
-    CCEvent ccLog[8];
+    CCEvent ccLog[kCCLogCapacity];
     uint8_t ccCount = 0;
     uint32_t ccTotal = 0;
     bool ccOverflow = false;

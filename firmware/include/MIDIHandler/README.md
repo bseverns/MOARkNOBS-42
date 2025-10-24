@@ -51,6 +51,17 @@ Clock out defers to any incoming tempo; if the outside world goes dark for `CLOC
 the tapped BPM drags the beat back to life. Smash Control #1 + #2 to toggle that clock stream
 whenever you feel like it.
 
+## DIN MIDI pacing (a.k.a. stop drop-and-hope)
+
+DIN is a 31.25 kbps relic, so we stage every outbound byte in a 48-slot ring buffer.
+Whenever something tries to spam CCs or pitch bends, `MIDIHandler` coalesces the latest
+value for each control so stale messages never blow away your freshest tweaks.
+The queue drains from the main loop—`processIncomingMIDI()` quietly pumps it every
+frame—so even if the pacing guard pauses a send for a few hundred microseconds,
+the backlog clears without waiting for new traffic. Tests in
+[`test_midi_handler.cpp`](../../test/test_midi_handler.cpp) keep us honest when the queue
+is thrashing.
+
 ## Typical Use
 
 ```cpp

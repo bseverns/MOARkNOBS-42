@@ -6,6 +6,13 @@
 #include "Globals.h"
 #include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "MIDITypes.h"
+
+class ConfigManager;
+
+class ConfigManager;
+
+extern bool webSerialStreaming;
 
 class WebSerial {
   public:
@@ -22,6 +29,30 @@ class WebSerial {
      */
     static void sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes);
+
+    /**
+     * Emit a one-slot config patch when firmware rewires a MIDI slot from
+     * hardware input (button combo, WebSerial command, whatever). The payload
+     * mirrors GET_CONFIG schema fields so the browser can merge the change
+     * without pulling a full dump.
+     */
+    static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
+
+    /**
+     * Emit an envelope assignment patch for a single slot so the WebSerial UI
+     * can redraw the routing matrix immediately.
+     */
+    static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
+
+    /**
+     * Emit a filter configuration patch (type/frequency/Q).
+     */
+    static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
+
+    /**
+     * Emit an ARG configuration patch.
+     */
+    static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };
 
 #endif // WEBSERIAL_H

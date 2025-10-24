@@ -107,6 +107,57 @@ function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
   };
 }
 
+function coerceIndex(value) {
+  const num = Number(value);
+  return Number.isInteger(num) && num >= 0 ? num : null;
+}
+
+function normalizeSlotPatchEntry(entry) {
+  if (!entry || typeof entry !== 'object') return null;
+  const index = coerceIndex(entry.index ?? entry.id ?? entry.slot);
+  if (index === null) return null;
+  const fields = {};
+  if (entry.type !== undefined) fields.type = entry.type;
+  else if (entry.type_name !== undefined) fields.type = entry.type_name;
+  if (entry.type_code !== undefined) fields.typeCode = entry.type_code;
+  const midiChannel = entry.midiChannel ?? entry.channel;
+  if (midiChannel !== undefined) {
+    const value = Number(midiChannel);
+    if (Number.isFinite(value)) fields.midiChannel = value;
+  }
+  if (entry.data1 !== undefined) {
+    const value = Number(entry.data1);
+    if (Number.isFinite(value)) fields.data1 = value;
+  }
+  if (entry.efIndex !== undefined) {
+    const value = Number(entry.efIndex);
+    if (Number.isFinite(value)) fields.efIndex = value;
+  }
+  if (entry.active !== undefined) fields.active = Boolean(entry.active);
+  if (entry.takeover !== undefined) fields.takeover = Boolean(entry.takeover);
+  if (entry.pot !== undefined) fields.pot = Boolean(entry.pot);
+  if (entry.arpNote !== undefined) {
+    const value = Number(entry.arpNote);
+    if (Number.isFinite(value)) fields.arpNote = value;
+  }
+  if (entry.label !== undefined) fields.label = entry.label;
+  return { index, fields };
+}
+
+function applyEfSlotPatch(target, patch) {
+  if (!Array.isArray(target)) target = [];
+  const index = coerceIndex(patch.index);
+  const slotValue = patch.slot ?? patch.value ?? patch.target;
+  if (index === null || slotValue === undefined) return target;
+  const value = Number(slotValue);
+  if (!Number.isFinite(value)) return target;
+  const existing = target[index];
+  if (existing && Number(existing.slot) === value) return target;
+  const copy = [...target];
+  copy[index] = { ...(existing ?? {}), slot: value };
+  return copy;
+}
+
 function createTransportPort(port, options = {}) {
   const textEncoder = encoder();
   const textDecoder = decoder();
@@ -448,6 +499,10 @@ export function createRuntime({
       }
       return;
     }
+    if (msg.type === 'config-patch') {
+      applyConfigPatch(msg);
+      return;
+    }
     if (msg.type === 'ack') {
       emit('ack', msg);
       return;
@@ -463,6 +518,161 @@ export function createRuntime({
     if (!queuedTelemetry) return;
     emit('telemetry', queuedTelemetry);
     queuedTelemetry = null;
+  }
+
+  function applyConfigPatch(patch) {
+    if (!patch || typeof patch !== 'object' || !liveConfig) return;
+    const prevLive = clone(liveConfig);
+    const nextLive = clone(liveConfig);
+    let mutated = false;
+
+    if (Array.isArray(patch.slots)) {
+      const slotsSource = Array.isArray(nextLive.slots) ? [...nextLive.slots] : [];
+      let slotsChanged = false;
+      patch.slots.forEach((entry) => {
+        const normalized = normalizeSlotPatchEntry(entry);
+        if (!normalized) return;
+        const { index, fields } = normalized;
+        const current = { ...(slotsSource[index] ?? {}) };
+        let updated = false;
+        Object.entries(fields).forEach(([key, value]) => {
+          if (value === undefined) return;
+          if (current[key] !== value) {
+            current[key] = value;
+            updated = true;
+          }
+        });
+        if (updated) {
+          slotsSource[index] = current;
+          slotsChanged = true;
+        }
+      });
+      if (slotsChanged) {
+        nextLive.slots = slotsSource;
+        mutated = true;
+      }
+    }
+
+    if (Array.isArray(patch.efSlots)) {
+      let efSlots = Array.isArray(nextLive.efSlots) ? nextLive.efSlots : [];
+      let efChanged = false;
+      patch.efSlots.forEach((entry, idx) => {
+        const index = coerceIndex(entry?.index ?? idx);
+        const slotValue = entry?.slot ?? entry?.value ?? entry?.target;
+        if (index === null || slotValue === undefined) return;
+        const nextArray = applyEfSlotPatch(efSlots, { index, slot: slotValue });
+        if (nextArray !== efSlots) {
+          efSlots = nextArray;
+          efChanged = true;
+        }
+      });
+      if (efChanged) {
+        nextLive.efSlots = efSlots;
+        mutated = true;
+      }
+    }
+
+    if (patch.filter && typeof patch.filter === 'object') {
+      const prevFilter = prevLive.filter ?? {};
+      const nextFilter = { ...(nextLive.filter ?? {}), ...patch.filter };
+      if (JSON.stringify(nextFilter) !== JSON.stringify(nextLive.filter ?? {})) {
+        nextLive.filter = nextFilter;
+        mutated = true;
+        patch.__filterMeta = { prev: prevFilter, next: nextFilter }; // stash for staged reconciliation
+      }
+    }
+
+    if (patch.arg && typeof patch.arg === 'object') {
+      const prevArg = prevLive.arg ?? {};
+      const nextArg = { ...(nextLive.arg ?? {}), ...patch.arg };
+      if (JSON.stringify(nextArg) !== JSON.stringify(nextLive.arg ?? {})) {
+        nextLive.arg = nextArg;
+        mutated = true;
+        patch.__argMeta = { prev: prevArg, next: nextArg };
+      }
+    }
+
+    if (!mutated) return;
+
+    let nextStaged;
+    if (!stagedConfig || !dirty) {
+      nextStaged = clone(nextLive);
+    } else {
+      nextStaged = clone(stagedConfig);
+      if (Array.isArray(patch.slots) && Array.isArray(nextLive.slots)) {
+        const prevSlots = Array.isArray(prevLive.slots) ? prevLive.slots : [];
+        const stagedSlots = Array.isArray(nextStaged.slots) ? nextStaged.slots : [];
+        patch.slots.forEach((entry) => {
+          const normalized = normalizeSlotPatchEntry(entry);
+          if (!normalized) return;
+          const { index, fields } = normalized;
+          const prevSlot = prevSlots[index] ?? {};
+          const stagedSlot = stagedSlots[index] ?? {};
+          const nextSlot = nextLive.slots[index] ?? {};
+          const merged = { ...stagedSlot };
+          let stagedChanged = false;
+          Object.keys(fields).forEach((key) => {
+            if (merged[key] === undefined || merged[key] === prevSlot[key]) {
+              if (merged[key] !== nextSlot[key]) {
+                merged[key] = nextSlot[key];
+                stagedChanged = true;
+              }
+            }
+          });
+          if (!stagedSlots[index] && Object.keys(nextSlot).length) {
+            stagedSlots[index] = clone(nextSlot);
+          } else if (stagedChanged) {
+            stagedSlots[index] = merged;
+          }
+        });
+        nextStaged.slots = stagedSlots;
+      }
+
+      if (Array.isArray(patch.efSlots) && Array.isArray(nextLive.efSlots)) {
+        const prevEf = Array.isArray(prevLive.efSlots) ? prevLive.efSlots : [];
+        const stagedEf = Array.isArray(nextStaged.efSlots) ? nextStaged.efSlots : [];
+        patch.efSlots.forEach((entry, idx) => {
+          const index = coerceIndex(entry?.index ?? idx);
+          if (index === null) return;
+          const nextVal = nextLive.efSlots[index]?.slot;
+          const prevVal = prevEf[index]?.slot;
+          const stagedVal = stagedEf[index]?.slot;
+          if (nextVal === undefined) return;
+          if (stagedVal === undefined || stagedVal === prevVal) {
+            stagedEf[index] = { slot: nextVal };
+          }
+        });
+        nextStaged.efSlots = stagedEf;
+      }
+
+      if (patch.__filterMeta) {
+        const { prev, next } = patch.__filterMeta;
+        nextStaged.filter = nextStaged.filter ?? {};
+        Object.keys(next).forEach((key) => {
+          if (nextStaged.filter[key] === undefined || nextStaged.filter[key] === prev[key]) {
+            nextStaged.filter[key] = next[key];
+          }
+        });
+      }
+
+      if (patch.__argMeta) {
+        const { prev, next } = patch.__argMeta;
+        nextStaged.arg = nextStaged.arg ?? {};
+        Object.keys(next).forEach((key) => {
+          if (nextStaged.arg[key] === undefined || nextStaged.arg[key] === prev[key]) {
+            nextStaged.arg[key] = next[key];
+          }
+        });
+      }
+    }
+
+    if (patch.__filterMeta) delete patch.__filterMeta;
+    if (patch.__argMeta) delete patch.__argMeta;
+
+    liveConfig = nextLive;
+    stagedConfig = nextStaged;
+    dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
+    emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
   }
 
   function stage(updater) {

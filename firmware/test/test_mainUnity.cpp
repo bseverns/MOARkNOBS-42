@@ -45,6 +45,9 @@ void test_usb_clock_tick_advances_counter();
 void test_generate_clock_tick_advances_counter();
 void test_handle_sysex_drops_oversize();
 void test_config_manager_wipes_legacy_slot_stride();
+void test_pot_burst_keeps_cc_counters_honest();
+void test_long_sysex_payload_round_trips();
+void test_config_mutation_during_stream_stays_valid();
 #endif
 
 void setup() {
@@ -88,6 +91,9 @@ void setup() {
     RUN_TEST(test_usb_clock_tick_advances_counter);
     RUN_TEST(test_generate_clock_tick_advances_counter);
     RUN_TEST(test_config_manager_wipes_legacy_slot_stride);
+    RUN_TEST(test_pot_burst_keeps_cc_counters_honest);
+    RUN_TEST(test_long_sysex_payload_round_trips);
+    RUN_TEST(test_config_mutation_during_stream_stays_valid);
 #endif
     UNITY_END();
 }
