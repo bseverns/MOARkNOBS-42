@@ -416,6 +416,10 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
         // Apply it
         context.envelopes[efIndex].setFilterType(newType);
+        SlotEnvelopePayload payload = context.configManager.getSlotEnvelopePayload(index);
+        payload.filterType = static_cast<uint8_t>(newType);
+        context.configManager.setSlotEnvelopePayload(index, payload);
+        streamSlotPatch(context.configManager, index);
         streamFilterPatch(context.envelopes[efIndex]);
 
         // Feedback
@@ -440,6 +444,11 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
             context.envelopes[efIndex].setFilterType(newType);
 
+            SlotEnvelopePayload payload =
+                context.configManager.getSlotEnvelopePayload(context.activePot);
+            payload.filterType = static_cast<uint8_t>(newType);
+            context.configManager.setSlotEnvelopePayload(context.activePot, payload);
+            streamSlotPatch(context.configManager, context.activePot);
             const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
             char msg[32];
             sprintf(msg, "Slot %d => %s", context.activePot, name);
@@ -465,6 +474,11 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
             context.envelopes[efIndex].setFilterType(newType);
 
+            SlotEnvelopePayload payload =
+                context.configManager.getSlotEnvelopePayload(context.activePot);
+            payload.filterType = static_cast<uint8_t>(newType);
+            context.configManager.setSlotEnvelopePayload(context.activePot, payload);
+            streamSlotPatch(context.configManager, context.activePot);
             const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
             char msg[32];
             sprintf(msg, "Slot %d => %s", context.activePot, name);

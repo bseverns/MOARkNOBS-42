@@ -1,6 +1,6 @@
 # EEPROM Layout
 
-Schema version: `0x0003`
+Schema version: `0x0004`
 
 | Offset (hex) | Type / Size | Usage | Notes |
 | ------------ | ----------- | ----- | ----- |
@@ -22,7 +22,7 @@ Schema version: `0x0003`
 | 0x0CC | `float[6]` | Envelope baselines | Learned silence |
 | 0x0E4 | `uint8[22]` | Buffer | Scratch padding |
 | 0x0FA | — | Backup config block | Mirrors 0x000–0x0F9 (ends at 0x1F3) |
-| 0x1F4 | `MIDISlot[42]` | Slot payload arena | 23 bytes per slot (0x1F4–0x5B9) |
+| 0x1F4 | `MIDISlot[42]` | Slot payload arena | 36 bytes per slot (0x1F4–0x7DB) |
 | 0x5BA | — | Profile 1 block | 256‑byte slice for alt configs (id 1) |
 | 0x6BA | — | Profile 2 block | Another 256‑byte slice (id 2) |
 
@@ -30,20 +30,18 @@ The slot arena scoots out of the way of the config+backup duet so we never
 stomp the calibration data again. Think of it as a velvet rope at `0x1F4`:
 only the 42 MIDISlots get in, everybody else queues up afterwards.
 
-Because this jump from 6-byte to 23-byte slot records is a breaking change,
-firmware stamped with schema `0x0003` nukes the old slot arena *and* the
-profile blocks the first time it sees an older config tag. That sacrificial
-wipe keeps legacy rigs from reading garbage out of the profile zone or
-scribbling over it once the wider structs land.
+Schema `0x0004` fattens each slot record to 36 bytes so the per-slot envelope
+payload (filter type + frequency + Q) can live right beside the MIDI guts. On
+first boot after the upgrade the firmware copies the legacy global filter
+values into every slot and keeps emitting the old global fields so older UIs
+don’t choke. Slots still carry the usual suspects—message type, channel, data
+byte, EF index, active flag, arpeggiator note, and SysEx template metadata—but
+now they also remember how their follower was tuned.
 
-Each MIDISlot snapshot now packs the usual suspects (type, channel, data byte, EF index, active flag, arpeggiator note) plus a
-`sysexLength` byte and 16-byte SysEx template buffer. Most slots stay tiny, but SysEx-heavy rigs get to keep their macros in
-EEPROM instead of in code.
-
-In code, that velvet rope shows up as `EEPROM_SLOT_BASE`, which now equals the
-full mirrored config span (`EEPROM_CONFIG_MIRROR_SIZE = 0x1F4`). The slots chew
-through `EEPROM_SLOT_REGION_SIZE` (966 bytes for 42×23) before
-`EEPROM_PROFILE_START(1)` kicks in at `0x5BA`. Profiles march forward in tidy
-`EEPROM_PROFILE_BLOCK_SIZE` (256 byte) chunks beyond that point.
+In code, that velvet rope shows up as `EEPROM_SLOT_BASE`, which equals the full
+mirrored config span (`EEPROM_CONFIG_MIRROR_SIZE = 0x1F4`). The slots now chew
+through `EEPROM_SLOT_REGION_SIZE` (1512 bytes for 42×36) before
+`EEPROM_PROFILE_START(1)` kicks in at `0x7DC`. Profiles still march forward in
+tidy `EEPROM_PROFILE_BLOCK_SIZE` (256 byte) chunks beyond that point.
 
 For the gory details, the code comments in [`firmware/include/ConfigManager.h`](../firmware/include/ConfigManager.h) spill every byte. This table just keeps the map close at hand.

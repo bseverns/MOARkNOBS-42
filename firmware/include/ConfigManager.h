@@ -230,6 +230,12 @@ class ConfigManager {
     /** Return a reference to a specific slot. */
     MIDISlot &getSlot(uint8_t idx) { return slots[idx]; }
 
+    /** Fetch the stored envelope payload associated with a slot. */
+    SlotEnvelopePayload getSlotEnvelopePayload(uint8_t idx) const;
+
+    /** Replace the stored envelope payload for a slot and persist it. */
+    void setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload);
+
     /** Read a single MIDISlot from EEPROM into the provided struct. */
     void loadSlot(uint8_t idx, MIDISlot &dest);
     /** Write one MIDISlot structure back to EEPROM. */
@@ -263,6 +269,9 @@ class ConfigManager {
     void wipeSlotRegion();
     void wipeProfileBlocks();
     static bool slotLooksSane(const MIDISlot &candidate);
+    void migrateLegacySlotPayloads(uint16_t storedVersion);
+    void seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
+    static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
 };
 
 #endif // CONFIGMANAGER_H

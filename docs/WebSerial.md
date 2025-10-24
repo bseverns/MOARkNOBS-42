@@ -86,7 +86,7 @@ newline-terminated JSON blobs as well, all prefixed with a `type` field so your 
 
 | `type` value | When it fires | Payload notes |
 | --- | --- | --- |
-| `slot_patch` | Slot MIDI settings mutate (from the board or the browser) | `slot` index plus a nested `slot` object including `type`, `schema_name`, `legacy_name`, `channel`, resolved `data1`, EF routing, and active flag. That mirrors exactly what the editor expects, so you can diff-and-apply without a decode step. |
+| `slot_patch` | Slot MIDI settings mutate (from the board or the browser) | `slot` index plus a nested `slot` object including `type`, `schema_name`, `legacy_name`, `channel`, resolved `data1`, EF routing, and active flag. New in schema 4: an `ef_payload` bundle rides shotgun with the filter type, frequency, and Q for that slot. Legacy `filter_patch` broadcasts still fire so antique dashboards stay zen. |
 | `envelope_assignment` | A slot gets re-routed to a new follower | `slot` index and `envelope` index (or `-1` if unassigned). Use it to repaint routing badges. |
 | `filter_patch` | Envelope follower filter tweaked live | `filter` object includes type index/name, frequency, and Q. Perfect for sliding UI knobs without yanking the full config. |
 | `arg_patch` | ARG mixer mode flips or toggles | Nested `arg` object with the method index/name, enable flag, and the paired envelopes so remote editors stay in sync. |
@@ -121,8 +121,10 @@ never fall out of sync.
 | `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
 | `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
 | `CAL_ENVS` | – | recalibrate all followers |
-| `SET_FILTER` `<type>,<freq>,<q>` | type 0‑?, floats | stash EF filter settings |
-| `GET_FILTER` | – | return `type,freq,q` |
+| `SET_FILTER` `<type>,<freq>,<q>` | type 0‑?, floats | blast the legacy global filter (and mirror those values into every slot payload for backward compatibility) |
+| `GET_FILTER` | – | return `type,freq,q` using the legacy global stash |
+| `SET_SLOT_FILTER` `<slot>,<type>,<freq>,<q>` | slot 0‑41, type 0‑?, floats | surgically edit one slot’s envelope payload without touching the others |
+| `GET_SLOT_FILTER` `<slot>` | slot 0‑41 | read back one slot’s envelope payload as `type,freq,q` |
 | `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5 | wire two envelopes for ARG |
 | `GET_ARGPAIR` | – | echo pair config |
 

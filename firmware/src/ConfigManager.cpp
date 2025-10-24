@@ -12,6 +12,14 @@ extern std::vector<EnvelopeFollower> envelopeFollowers;
 
 constexpr int kUnassignedEnvelope = -1;
 
+namespace {
+constexpr uint16_t kLegacyConfigVersion = 0x0003;
+constexpr float kMinFilterFrequency = 20.0f;
+constexpr float kMaxFilterFrequency = 5000.0f;
+constexpr float kMinFilterQ = 0.5f;
+constexpr float kMaxFilterQ = 4.0f;
+} // namespace
+
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
 // saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
 // where the checksum bunkers down.
@@ -65,14 +73,28 @@ void ConfigManager::saveConfiguration() {
 bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_t base) {
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
-        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
-            LOG_PRINTLN("Config CRC/version mismatch.");
+        bool needsRewrite = false;
+        if (_stored.version != CONFIG_VERSION) {
+            if (_stored.version == kLegacyConfigVersion) {
+                needsRewrite = true;
+            } else {
+                LOG_PRINTLN("Config version mismatch.");
+                resetConfiguration(potChannels);
+                return false;
+            }
+        }
+        if (_stored.crc != calculateCRC()) {
+            LOG_PRINTLN("Config CRC mismatch.");
             resetConfiguration(potChannels);
             return false;
         }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_stored.potChannels[i]);
+        }
+        if (needsRewrite) {
+            _stored.version = CONFIG_VERSION;
+            saveConfiguration();
         }
         return true;
     }
@@ -84,14 +106,28 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
 bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, uint16_t base) {
     if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
-        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
-            LOG_PRINTLN("Backup CRC/version mismatch.");
+        bool needsRewrite = false;
+        if (_stored.version != CONFIG_VERSION) {
+            if (_stored.version == kLegacyConfigVersion) {
+                needsRewrite = true;
+            } else {
+                LOG_PRINTLN("Backup config version mismatch.");
+                resetConfiguration(potChannels);
+                return false;
+            }
+        }
+        if (_stored.crc != calculateCRC()) {
+            LOG_PRINTLN("Backup CRC mismatch.");
             resetConfiguration(potChannels);
             return false;
         }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_stored.potChannels[i]);
+        }
+        if (needsRewrite) {
+            _stored.version = CONFIG_VERSION;
+            saveConfiguration();
         }
         return true;
     }
@@ -190,6 +226,7 @@ void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
         temp.sysexLength = 0;
         temp.sysexTemplate.fill(0);
     }
+    temp.efPayload = sanitizeEnvelopePayload(temp.efPayload);
     dest = temp;
     if (dest.arpNote > 127)
         dest.arpNote = dest.data1;
@@ -203,6 +240,7 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
     for (uint8_t i = sanitized.sysexLength; i < SysExTemplate::kMaxLength; ++i) {
         sanitized.sysexTemplate[i] = 0;
     }
+    sanitized.efPayload = sanitizeEnvelopePayload(sanitized.efPayload);
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
     EEPROM.put(address, sanitized);
 }
@@ -312,6 +350,8 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
         setPotChannel(i, 1);  // Default to channel 1
         setPotCCNumber(i, 0); // Default to CC 0
     }
+    seedSlotEnvelopePayloads(static_cast<uint8_t>(EnvelopeFollower::LINEAR), kMinFilterFrequency,
+                             1.0f);
     saveConfiguration();
 }
 
@@ -377,6 +417,24 @@ String ConfigManager::serializeAll() const {
         }
     }
 
+    output += "], \"slots\": [";
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        SlotEnvelopePayload payload = sanitizeEnvelopePayload(slots[i].efPayload);
+        output += "{";
+        output += "\"index\": ";
+        output += i;
+        output += ", \"ef_payload\": {";
+        output += "\"type\": ";
+        output += payload.filterType;
+        output += ", \"freq\": ";
+        output += String(payload.frequency, 2);
+        output += ", \"q\": ";
+        output += String(payload.q, 2);
+        output += "}}";
+        if (i < NUM_SLOTS - 1) {
+            output += ",";
+        }
+    }
     output += "] }";
     return output;
 }
@@ -406,6 +464,23 @@ void ConfigManager::loadMIDISlots(MIDISlot *slots, size_t count) {
     }
 }
 
+SlotEnvelopePayload ConfigManager::getSlotEnvelopePayload(uint8_t idx) const {
+    if (idx >= slots.size()) {
+        SlotEnvelopePayload fallback{};
+        return sanitizeEnvelopePayload(fallback);
+    }
+    return sanitizeEnvelopePayload(slots[idx].efPayload);
+}
+
+void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload) {
+    if (idx >= slots.size()) {
+        return;
+    }
+    SlotEnvelopePayload sanitized = sanitizeEnvelopePayload(payload);
+    slots[idx].efPayload = sanitized;
+    saveSlot(idx, slots[idx]);
+}
+
 bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (static_cast<uint8_t>(candidate.type) > static_cast<uint8_t>(MIDIMessageType::SysEx)) {
         return false;
@@ -419,6 +494,12 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (candidate.type != MIDIMessageType::SysEx && candidate.sysexLength != 0) {
         return false;
     }
+    if (candidate.efPayload.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+        return false;
+    }
+    if (!std::isfinite(candidate.efPayload.frequency) || !std::isfinite(candidate.efPayload.q)) {
+        return false;
+    }
     return true;
 }
 
@@ -426,27 +507,118 @@ void ConfigManager::sanitizeSlotArena() {
     uint16_t storedVersion = 0;
     EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
 
-    MIDISlot candidate{};
-    EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
+    if (storedVersion == CONFIG_VERSION) {
+        MIDISlot candidate{};
+        EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
+        if (!slotLooksSane(candidate)) {
+            wipeSlotRegion();
+            wipeProfileBlocks();
+        }
+        return;
+    }
 
-    const bool versionMismatch = storedVersion != CONFIG_VERSION;
-    const bool slotCorrupt = !slotLooksSane(candidate);
-
-    if (versionMismatch || slotCorrupt) {
+    if (storedVersion == 0 || storedVersion > CONFIG_VERSION) {
         wipeSlotRegion();
         wipeProfileBlocks();
+        return;
     }
+
+    migrateLegacySlotPayloads(storedVersion);
 }
 
 void ConfigManager::wipeSlotRegion() {
     MIDISlot blank{};
     blank.midiChannel = 1;
+    blank.efPayload.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
+    blank.efPayload.frequency = kMinFilterFrequency;
+    blank.efPayload.q = 1.0f;
     slots.fill(blank);
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         const int address = static_cast<int>(EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE);
         EEPROM.put(address, blank);
     }
+}
+
+void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
+    if (storedVersion != kLegacyConfigVersion) {
+        wipeSlotRegion();
+        wipeProfileBlocks();
+        return;
+    }
+
+    struct LegacyMIDISlot {
+        MIDIMessageType type;
+        uint8_t midiChannel;
+        uint8_t data1;
+        uint8_t efIndex;
+        bool active;
+        uint8_t arpNote;
+        uint8_t sysexLength;
+        std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate;
+    };
+    static_assert(sizeof(LegacyMIDISlot) == 23, "Legacy slot struct size drifted");
+
+    SlotEnvelopePayload legacyPayload{};
+    legacyPayload.filterType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+    EEPROM.get(EEPROM_FILTER_FREQ, legacyPayload.frequency);
+    EEPROM.get(EEPROM_FILTER_Q, legacyPayload.q);
+    SlotEnvelopePayload sanitizedPayload = sanitizeEnvelopePayload(legacyPayload);
+
+    for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
+        LegacyMIDISlot legacy{};
+        const int legacyAddress =
+            static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * sizeof(LegacyMIDISlot));
+        EEPROM.get(legacyAddress, legacy);
+
+        MIDISlot upgraded{};
+        upgraded.type = legacy.type;
+        upgraded.midiChannel = legacy.midiChannel;
+        upgraded.data1 = legacy.data1;
+        upgraded.efIndex = legacy.efIndex;
+        upgraded.active = legacy.active;
+        upgraded.arpNote = legacy.arpNote;
+        upgraded.sysexLength = legacy.sysexLength;
+        upgraded.sysexTemplate = legacy.sysexTemplate;
+        upgraded.efPayload = sanitizedPayload;
+
+        const int upgradedAddress =
+            static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
+        EEPROM.put(upgradedAddress, upgraded);
+    }
+
+    slots.fill({});
+}
+
+void ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q) {
+    SlotEnvelopePayload payload{};
+    payload.filterType = filterType;
+    payload.frequency = freq;
+    payload.q = q;
+    SlotEnvelopePayload sanitized = sanitizeEnvelopePayload(payload);
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        MIDISlot slot{};
+        loadSlot(i, slot);
+        slot.efPayload = sanitized;
+        slots[i] = slot;
+        saveSlot(i, slots[i]);
+    }
+}
+
+SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
+    SlotEnvelopePayload sanitized = payload;
+    if (sanitized.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+        sanitized.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
+    }
+    if (!std::isfinite(sanitized.frequency)) {
+        sanitized.frequency = kMinFilterFrequency;
+    }
+    sanitized.frequency = constrain(sanitized.frequency, kMinFilterFrequency, kMaxFilterFrequency);
+    if (!std::isfinite(sanitized.q)) {
+        sanitized.q = kMinFilterQ;
+    }
+    sanitized.q = constrain(sanitized.q, kMinFilterQ, kMaxFilterQ);
+    return sanitized;
 }
 
 void ConfigManager::wipeProfileBlocks() {
@@ -491,6 +663,43 @@ bool ConfigManager::handleCommand(const String &command) {
         EEPROM.update(EEPROM_ENVELOPE_TYPES, efType);
         EEPROM.put(EEPROM_FILTER_FREQ, freq);
         EEPROM.put(EEPROM_FILTER_Q, q);
+        seedSlotEnvelopePayloads(efType, freq, q);
+        LOG_PRINTLN("OK");
+        return true;
+    } else if (command.startsWith("GET_SLOT_FILTER")) {
+        int slotIndex = command.substring(16).toInt();
+        if (slotIndex < 0 || slotIndex >= static_cast<int>(NUM_SLOTS)) {
+            LOG_PRINTLN("ERR");
+            return true;
+        }
+        SlotEnvelopePayload payload = getSlotEnvelopePayload(static_cast<uint8_t>(slotIndex));
+        LOG_PRINT(payload.filterType);
+        LOG_PRINT(",");
+        LOG_PRINT(payload.frequency, 2);
+        LOG_PRINT(",");
+        LOG_PRINTLN(payload.q, 2);
+        return true;
+    } else if (command.startsWith("SET_SLOT_FILTER")) {
+        int first = command.indexOf(',');
+        int second = command.indexOf(',', first + 1);
+        int third = command.indexOf(',', second + 1);
+        if (first == -1 || second == -1 || third == -1) {
+            LOG_PRINTLN("ERR");
+            return true;
+        }
+        int slotIndex = command.substring(16, first).toInt();
+        int rawType = command.substring(first + 1, second).toInt();
+        float freq = command.substring(second + 1, third).toFloat();
+        float q = command.substring(third + 1).toFloat();
+        if (slotIndex < 0 || slotIndex >= static_cast<int>(NUM_SLOTS)) {
+            LOG_PRINTLN("ERR");
+            return true;
+        }
+        SlotEnvelopePayload payload = getSlotEnvelopePayload(static_cast<uint8_t>(slotIndex));
+        payload.filterType = static_cast<uint8_t>(rawType);
+        payload.frequency = freq;
+        payload.q = q;
+        setSlotEnvelopePayload(static_cast<uint8_t>(slotIndex), payload);
         LOG_PRINTLN("OK");
         return true;
     } else if (command.startsWith("GET_ARGPAIR")) {

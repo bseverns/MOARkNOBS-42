@@ -396,6 +396,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         return false;
     }
 
+    bool anySlotPayloadSpecified = false;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         JsonObject slotObj = slotsJson[i];
         if (slotObj.isNull()) {
@@ -431,6 +432,29 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             clearSysExTemplate(slot);
         }
         configManager.saveSlot(i, slot);
+
+        if (slotObj.containsKey("ef_payload") && slotObj["ef_payload"].is<JsonObject>()) {
+            JsonObject efPayload = slotObj["ef_payload"].as<JsonObject>();
+            SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+
+            if (efPayload.containsKey("type_index")) {
+                payload.filterType = static_cast<uint8_t>(efPayload["type_index"].as<int>());
+            } else if (efPayload.containsKey("type")) {
+                const char *label = efPayload["type"].as<const char *>();
+                EnvelopeFollower::FilterType mapped = parseFilterType(
+                    label, static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+                payload.filterType = static_cast<uint8_t>(mapped);
+            }
+            if (efPayload.containsKey("freq")) {
+                payload.frequency = efPayload["freq"].as<float>();
+            }
+            if (efPayload.containsKey("q")) {
+                payload.q = efPayload["q"].as<float>();
+            }
+
+            configManager.setSlotEnvelopePayload(i, payload);
+            anySlotPayloadSpecified = true;
+        }
 
         configManager.setPotChannel(i, midiChannel);
         configManager.setPotCCNumber(i, data1);
@@ -475,6 +499,16 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         }
         EEPROM.put(EEPROM_FILTER_FREQ, freq);
         EEPROM.put(EEPROM_FILTER_Q, q);
+
+        if (!anySlotPayloadSpecified) {
+            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+                SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+                payload.filterType = static_cast<uint8_t>(filterType);
+                payload.frequency = freq;
+                payload.q = q;
+                configManager.setSlotEnvelopePayload(i, payload);
+            }
+        }
     }
 
     if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
@@ -709,6 +743,9 @@ void processMIDI() {
  *   CAL_ENVS                          : recalibrate all envelope spies
  *   GET_FILTER                        : reply with type,freq,q for EF filter
  *   SET_FILTER,<type>,<freq>,<q>      : stash envelope filter settings
+ *   GET_SLOT_FILTER <slot>            : read one slot's EF payload as type,freq,q
+ *   SET_SLOT_FILTER <slot>,<type>,<freq>,<q>
+ *                                     : surgically update a single slot's EF payload
  *   GET_ARGPAIR                       : echo ARG pair enable,envA,envB
  *   SET_ARGPAIR,<on>,<envA>,<envB>    : wire two envelopes together
  */
@@ -791,6 +828,13 @@ void processSerial() {
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
+                SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+                JsonObject efPayload = slotObj.createNestedObject("ef_payload");
+                efPayload["type"] = payload.filterType;
+                efPayload["type_name"] = envelopeFilterName(
+                    static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+                efPayload["freq"] = payload.frequency;
+                efPayload["q"] = payload.q;
             }
 
             JsonObject env = doc.createNestedObject("envelopes");
@@ -1223,6 +1267,16 @@ void updateFilterTuning(ButtonManagerContext &context) {
     context.envelopes[efIndex].configureFilter(freq, q);
     EEPROM.put(EEPROM_FILTER_FREQ, freq);
     EEPROM.put(EEPROM_FILTER_Q, q);
+    if (context.activePot < NUM_SLOTS) {
+        SlotEnvelopePayload payload =
+            configManager.getSlotEnvelopePayload(static_cast<uint8_t>(context.activePot));
+        payload.filterType =
+            static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
+        payload.frequency = freq;
+        payload.q = q;
+        configManager.setSlotEnvelopePayload(static_cast<uint8_t>(context.activePot), payload);
+        WebSerial::sendSlotPatch(configManager, static_cast<uint8_t>(context.activePot));
+    }
     // Provide labels for the on-screen filter tuning display
     displayManager.showFilterTuning("Freq", freq, "Q", q);
 
