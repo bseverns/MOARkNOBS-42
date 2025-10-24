@@ -364,14 +364,13 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
     return false;
 }
 
-EnvelopeFollower::FilterType decodeFilterType(uint8_t raw) {
-    if (raw > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
-        return EnvelopeFollower::LINEAR;
-    }
+EnvelopeFollower::FilterType decodeFilterType(EfSettings::FilterType raw) {
     return static_cast<EnvelopeFollower::FilterType>(raw);
 }
 
-uint8_t encodeFilterType(EnvelopeFollower::FilterType type) { return static_cast<uint8_t>(type); }
+EfSettings::FilterType encodeFilterType(EnvelopeFollower::FilterType type) {
+    return static_cast<EfSettings::FilterType>(type);
+}
 
 EnvelopeFollower::FilterType parseFilterType(const char *label,
                                              EnvelopeFollower::FilterType fallback) {
@@ -435,7 +434,8 @@ void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
         } else if (typeField.is<int>() || typeField.is<long>()) {
             long raw = typeField.as<long>();
             if (raw >= 0 && raw <= static_cast<long>(EnvelopeFollower::BANDPASS)) {
-                settings.filterType = static_cast<uint8_t>(raw);
+                settings.filterType =
+                    static_cast<EfSettings::FilterType>(static_cast<uint8_t>(raw));
             }
         }
     }
@@ -1719,10 +1719,10 @@ void updateFilterTuning(ButtonManagerContext &context) {
     EEPROM.put(EEPROM_FILTER_FREQ, freq);
     EEPROM.put(EEPROM_FILTER_Q, q);
 
-    EfSettings settings = configManager.getSlot(context.activePot).efSettings;
-    settings.frequency = freq;
-    settings.q = q;
-    saveSlotEfSettings(context.activePot, settings);
+    MIDISlot::EfSettings slotSettings = configManager.getSlot(context.activePot).efSettings;
+    slotSettings.frequency = freq;
+    slotSettings.q = q;
+    saveSlotEfSettings(context.activePot, slotSettings);
 
     MIDISlot &slot = context.configManager.getSlot(context.activePot);
     slot.ef = settings;
