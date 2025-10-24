@@ -652,7 +652,8 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     slots.fill({});
 }
 
-SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q) {
+SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq,
+                                                            float q) {
     SlotEnvelopePayload payload{};
     payload.filterType = filterType;
     payload.frequency = freq;
