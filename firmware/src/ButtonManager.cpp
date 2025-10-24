@@ -54,11 +54,6 @@ static constexpr const char *ARG_METHOD_NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV
                                                    "BABS", "TABS", "MULT", "DIVI", "AVG",
                                                    "XABS", "MAXX", "MINN", "XORR"};
 
-static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0]);
-
-// We'll track which filter index each EnvelopeFollower (e.g. 6 total) is using:
-static int filterTypeIndexForEF[NUM_ENVELOPES] = {0};
-
 // Active configuration profile stored in EEPROM
 static uint8_t currentProfile = 0;
 
@@ -740,6 +735,28 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl4 = 1 << 4;
     const uint8_t maskCtrl5 = 1 << 5;
 
+    auto ensureActiveSlot = [&]() -> MIDISlot * {
+        if (context.activePot >= NUM_SLOTS) {
+            context.displayManager.displayStatus("Slot out of range", 1000);
+            return nullptr;
+        }
+        return &context.configManager.getSlot(context.activePot);
+    };
+
+    auto requireFollowerAssignment = [&]() -> int {
+        auto it = context.potToEnvelopeMap.find(context.activePot);
+        if (it == context.potToEnvelopeMap.end()) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return -1;
+        }
+        int followerIndex = it->second.followerIndex;
+        if (followerIndex < 0 || followerIndex >= static_cast<int>(context.envelopes.size())) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return -1;
+        }
+        return followerIndex;
+    };
+
     // (0) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
         (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
@@ -749,42 +766,38 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
-        if (context.activePot >= NUM_SLOTS) {
-            context.displayManager.displayStatus("Slot out of range", 1000);
+        MIDISlot *slot = ensureActiveSlot();
+        if (slot == nullptr) {
             return;
         }
-        int efIndex = it->second.followerIndex;
-        if (efIndex < 0 || efIndex >= static_cast<int>(context.envelopes.size())) {
-            context.displayManager.displayStatus("No EF assigned", 1000);
+        if (requireFollowerAssignment() < 0) {
             return;
         }
-        EnvelopeFollower &env = context.envelopes[efIndex];
-        if (env.getMode() != EnvelopeFollower::ARG) {
-            context.displayManager.displayStatus("Not in ARG mode", 1000);
-            return;
 
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        constexpr size_t methodCount = sizeof(ALL_ARG_METHODS) / sizeof(ALL_ARG_METHODS[0]);
         size_t methodIndex = 0;
-        size_t methodCount = sizeof(ALL_ARG_METHODS) / sizeof(ALL_ARG_METHODS[0]);
         for (; methodIndex < methodCount; ++methodIndex) {
-            if (slot.arg.method == ALL_ARG_METHODS[methodIndex]) {
+            if (slot->arg.method == ALL_ARG_METHODS[methodIndex]) {
                 break;
             }
         }
         methodIndex = (methodIndex + 1) % methodCount;
 
-        slot.arg.enabled = 1;
-        slot.arg.method = ALL_ARG_METHODS[methodIndex];
-        context.configManager.saveSlot(context.activePot, slot);
+        slot->arg.enabled = 1;
+        slot->arg.method = ALL_ARG_METHODS[methodIndex];
+        context.configManager.saveSlot(context.activePot, *slot);
 
-        context.configManager.setARGEnable(slot.arg.enabled);
-        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
-        int analogA = envelopeAnalogPin(slot.arg.sourceA);
-        if (analogA < 0)
+        context.configManager.setARGEnable(slot->arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
+
+        int analogA = envelopeAnalogPin(slot->arg.sourceA);
+        if (analogA < 0) {
             analogA = 0;
-        int analogB = envelopeAnalogPin(slot.arg.sourceB);
-        if (analogB < 0)
+        }
+        int analogB = envelopeAnalogPin(slot->arg.sourceB);
+        if (analogB < 0) {
             analogB = analogA;
+        }
         context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
                                               static_cast<uint8_t>(analogB));
 
@@ -797,60 +810,40 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
-        if (context.activePot >= NUM_SLOTS) {
-            context.displayManager.displayStatus("Slot out of range", 1000);
+        MIDISlot *slot = ensureActiveSlot();
+        if (slot == nullptr) {
             return;
         }
-        int efIndex = it->second.followerIndex;
-        if (efIndex < 0 || efIndex >= static_cast<int>(context.envelopes.size())) {
-            context.displayManager.displayStatus("No EF assigned", 1000);
+        if (requireFollowerAssignment() < 0) {
             return;
         }
-        static int pairPos = 0;
-        pairPos = (pairPos + 1) % NUM_ARG_PAIRS;
-        int envA = ARG_PAIRS[pairPos].first;
-        int envB = ARG_PAIRS[pairPos].second;
-        context.envelopes[efIndex].setEnvelopePair(envA, envB);
-        context.configManager.setEnvelopePair(envA, envB);
-        auto pinName = [](int pin) {
-            switch (pin) {
-            case A0:
-                return "A0";
-            case A1:
-                return "A1";
-            case A2:
-                return "A2";
-            case A3:
-                return "A3";
-            case A6:
-                return "A6";
-            case A7:
-                return "A7";
-            default:
-                return "Ax";
-            }
-        }
-        pairIndex = (pairIndex + 1) % ARG_PAIRS_LEN;
 
-        slot.arg.enabled = 1;
-        slot.arg.sourceA = ARG_PAIRS[pairIndex].first;
-        slot.arg.sourceB = ARG_PAIRS[pairIndex].second;
-        context.configManager.saveSlot(context.activePot, slot);
+        static size_t pairIndex = 0;
+        pairIndex = (pairIndex + 1) % NUM_ARG_PAIRS;
+        const auto &pair = ARG_PAIRS[pairIndex];
 
-        context.configManager.setARGEnable(slot.arg.enabled);
-        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
-        int analogA = envelopeAnalogPin(slot.arg.sourceA);
-        if (analogA < 0)
+        slot->arg.enabled = 1;
+        slot->arg.sourceA = pair.first;
+        slot->arg.sourceB = pair.second;
+        context.configManager.saveSlot(context.activePot, *slot);
+
+        context.configManager.setARGEnable(slot->arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
+
+        int analogA = envelopeAnalogPin(pair.first);
+        if (analogA < 0) {
             analogA = 0;
-        int analogB = envelopeAnalogPin(slot.arg.sourceB);
-        if (analogB < 0)
+        }
+        int analogB = envelopeAnalogPin(pair.second);
+        if (analogB < 0) {
             analogB = analogA;
+        }
         context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
                                               static_cast<uint8_t>(analogB));
 
         char buf[32];
-        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, slot.arg.sourceA + 1,
-                 slot.arg.sourceB + 1);
+        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, pair.first + 1,
+                 pair.second + 1);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);

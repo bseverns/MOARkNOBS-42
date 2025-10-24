@@ -616,7 +616,7 @@ void ConfigManager::migrateLegacyARGSettings() {
             upgraded.type = legacySlots[i].type;
             upgraded.midiChannel = legacySlots[i].midiChannel;
             upgraded.data1 = legacySlots[i].data1;
-            upgraded.efIndex = legacySlots[i].efIndex;
+            upgraded.ef.followerIndex = static_cast<int8_t>(legacySlots[i].efIndex);
             upgraded.active = legacySlots[i].active != 0;
             upgraded.arpNote = legacySlots[i].arpNote;
             upgraded.sysexLength = legacySlots[i].sysexLength;

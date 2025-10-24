@@ -40,8 +40,9 @@ uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFoll
     };
 
     if (!cfg.enabled) {
-        if (slot.efIndex < followers.size()) {
-            return static_cast<uint8_t>(followers[slot.efIndex].getEnvelopeLevel());
+        const auto followerIndex = static_cast<size_t>(slot.ef.followerIndex);
+        if (slot.ef.followerIndex >= 0 && followerIndex < followers.size()) {
+            return static_cast<uint8_t>(followers[followerIndex].getEnvelopeLevel());
         }
         return 0;
     }
