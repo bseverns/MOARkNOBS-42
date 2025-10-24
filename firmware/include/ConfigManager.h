@@ -252,14 +252,6 @@ class ConfigManager {
 
     std::array<MIDISlot, NUM_SLOTS> slots; // 42 of them
 
-    struct LegacyARGConfig {
-        uint8_t mode = 0;
-        uint8_t method = 0;
-        uint8_t enable = 0;
-        uint8_t sourceA = 0;
-        uint8_t sourceB = 1;
-    } legacyArg;
-
     // Health‑check & backup support
     bool checkEEPROMHealth(bool backup,
                            uint16_t base = EEPROM_PROFILE_START(0)); // verify header magic
@@ -285,9 +277,6 @@ class ConfigManager {
     void migrateLegacySlotPayloads(uint16_t storedVersion);
     SlotEnvelopePayload seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
     static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
-    void loadLegacyARGSettings();
-    void migrateLegacyARGSettings();
-
     struct LegacyARGSettings {
         uint8_t mode = 0;
         uint8_t method = 0;

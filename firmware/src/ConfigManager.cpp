@@ -537,6 +537,8 @@ void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
     if (NUM_ENVELOPES > 1 && safeA == safeB) {
         safeB = static_cast<uint8_t>((safeA + 1) % NUM_ENVELOPES);
     }
+    legacyArg.sourceA = safeA;
+    legacyArg.sourceB = safeB;
     EEPROM.update(EEPROM_ARG_ENV_A, safeA);
     EEPROM.update(EEPROM_ARG_ENV_B, safeB);
 }
@@ -671,6 +673,8 @@ void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayloa
 
 SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &payload) {
     return persistFilterTailImpl(payload);
+}
+
 SlotARGConfig ConfigManager::sanitizeArgConfig(const SlotARGConfig &candidate) {
     return sanitizeSlotArg(candidate);
 }
@@ -713,6 +717,11 @@ void ConfigManager::loadLegacyARGSettings() {
 
 void ConfigManager::migrateLegacyARGSettings() {
     loadLegacyARGSettings();
+
+    EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
+    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+    setEnvelopePair(legacyArg.sourceA, legacyArg.sourceB);
 
     uint16_t storedVersion = 0;
     EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
@@ -767,11 +776,6 @@ void ConfigManager::migrateLegacyARGSettings() {
             saveSlot(i, upgraded);
         }
 
-        EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
-        EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
-        EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
-        EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
-        EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
         EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
     }
 }
@@ -916,7 +920,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             upgraded.type = legacy.type;
             upgraded.midiChannel = legacy.midiChannel;
             upgraded.data1 = legacy.data1;
-            upgraded.efIndex = legacy.efIndex;
+            upgraded.ef.followerIndex = static_cast<int8_t>(legacy.efIndex);
             upgraded.active = legacy.active;
             upgraded.arpNote = legacy.arpNote;
             upgraded.sysexLength = legacy.sysexLength;
@@ -956,7 +960,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             upgraded.type = legacy.type;
             upgraded.midiChannel = legacy.midiChannel;
             upgraded.data1 = legacy.data1;
-            upgraded.efIndex = legacy.efIndex;
+            upgraded.ef.followerIndex = static_cast<int8_t>(legacy.efIndex);
             upgraded.active = legacy.active != 0;
             upgraded.arpNote = legacy.arpNote;
             upgraded.sysexLength = legacy.sysexLength;
@@ -1002,42 +1006,6 @@ SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, 
 
 SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
     return sanitizeEnvelopePayloadImpl(payload);
-}
-
-void ConfigManager::loadLegacyARGSettings() {
-    legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
-    legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
-    legacyArg.enable = EEPROM.read(EEPROM_ARG_ENABLE);
-    const uint8_t rawSourceA = EEPROM.read(EEPROM_ARG_ENV_A);
-    const uint8_t rawSourceB = EEPROM.read(EEPROM_ARG_ENV_B);
-
-    int idxA = envelopeIndexFromAnalogPin(rawSourceA);
-    if (idxA < 0) {
-        idxA = constrain(static_cast<int>(rawSourceA), 0, NUM_ENVELOPES - 1);
-    }
-    int idxB = envelopeIndexFromAnalogPin(rawSourceB);
-    if (idxB < 0) {
-        idxB = constrain(static_cast<int>(rawSourceB), 0, NUM_ENVELOPES - 1);
-    }
-
-    SlotARGConfig sanitized{};
-    sanitized.enabled = legacyArg.enable;
-    sanitized.method = static_cast<ARGMethod>(legacyArg.method);
-    sanitized.sourceA = static_cast<uint8_t>(idxA);
-    sanitized.sourceB = static_cast<uint8_t>(idxB);
-    sanitized = sanitizeSlotArg(sanitized);
-
-    legacyArg.enable = sanitized.enabled;
-    legacyArg.method = static_cast<uint8_t>(sanitized.method);
-    legacyArg.sourceA = sanitized.sourceA;
-    legacyArg.sourceB = sanitized.sourceB;
-}
-
-void ConfigManager::migrateLegacyARGSettings() {
-    loadLegacyARGSettings();
-    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
-    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
-    setEnvelopePair(legacyArg.sourceA, legacyArg.sourceB);
 }
 
 void ConfigManager::wipeProfileBlocks() {
