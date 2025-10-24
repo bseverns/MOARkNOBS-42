@@ -91,10 +91,10 @@ struct ButtonManagerContext {
     ConfigManager &configManager;             // For loading/saving persistent settings
     LEDManager &ledManager;                   // For updating visual feedback LEDs
     DisplayManager &displayManager;           // For writing status to OLED
-    std::vector<EnvelopeFollower> &envelopes;         // List of envelope follower objects
+    std::vector<EnvelopeFollower> &envelopes; // List of envelope follower objects
     std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap; // Associative map: pot -> EF settings
-    bool &diagnosticMode;                     // Self-test mode flag
-    uint8_t &diagnosticPage;                  // Which diagnostic page to show
+    bool &diagnosticMode;                                  // Self-test mode flag
+    uint8_t &diagnosticPage;                               // Which diagnostic page to show
 };
 
 /**

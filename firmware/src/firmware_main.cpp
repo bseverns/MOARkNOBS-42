@@ -494,7 +494,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             rawEfIndex = slotObj["ef_index"].as<int>();
         }
 
-        JsonObject efObj = slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
+        JsonObject efObj =
+            slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
         if (!efObj.isNull()) {
             if (efObj.containsKey("index")) {
                 rawEfIndex = efObj["index"].as<int>();
@@ -593,7 +594,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             potToEnvelopeMap[slotIndex] = slot.ef;
 
             if (i < envelopeFollowers.size()) {
-                envelopeFollowers[i].setModulationTarget(potentiometerManager.getCCNumber(slotIndex));
+                envelopeFollowers[i].setModulationTarget(
+                    potentiometerManager.getCCNumber(slotIndex));
                 applyEfSettingsToFollower(envelopeFollowers[i], slot.ef);
             }
         }
@@ -678,12 +680,12 @@ uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint
 #endif
 
 // Global objects
-std::vector<uint8_t> potChannels;    // 42-slot table: each entry stores a slot's MIDI channel
+std::vector<uint8_t> potChannels; // 42-slot table: each entry stores a slot's MIDI channel
 std::map<int, MIDISlot::EfSettings>
-    potToEnvelopeMap; // Crosswalk from pot index to its envelope follower partner
-std::queue<String> commandQueue;     // Serial command backlog waiting for mid-tier processing
-MIDIHandler midiHandler;             // Central MIDI traffic cop slinging bytes over USB + DIN
-LEDManager ledManager(hwConfig);     // Whips the WS2812 strip into obedient patterns
+    potToEnvelopeMap;            // Crosswalk from pot index to its envelope follower partner
+std::queue<String> commandQueue; // Serial command backlog waiting for mid-tier processing
+MIDIHandler midiHandler;         // Central MIDI traffic cop slinging bytes over USB + DIN
+LEDManager ledManager(hwConfig); // Whips the WS2812 strip into obedient patterns
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64); // Bosses around the 128x64 OLED
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button config to EEPROM
 BiquadFilter filter;     // Shared filter template for envelope follower shaping
@@ -1485,88 +1487,87 @@ void setup() {
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
 
     // — Pot → MIDI routing callback —
-    potentiometerManager.setMidiCallback(
-        [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
-            auto &slot = configManager.getSlot(potIdx);
-            if (!slot.active)
-                return;
+    potentiometerManager.setMidiCallback([&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue,
+                                             uint8_t potIdx) {
+        auto &slot = configManager.getSlot(potIdx);
+        if (!slot.active)
+            return;
 
-            switch (slot.type) {
-            case MIDIMessageType::CC:
-                midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
-                break;
+        switch (slot.type) {
+        case MIDIMessageType::CC:
+            midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
+            break;
 
-            case MIDIMessageType::Note: {
-                uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
-                slot.arpNote = note; // stash for the arpeggiator
-                int follower = slot.ef.followerIndex;
-                uint8_t velo =
-                    (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size()))
-                        ? envelopeFollowers[follower].getEnvelopeLevel()
-                        : 125;
-                int shifted = velo + velocityShift;
-                if (shifted < 0)
-                    shifted = 0;
-                if (shifted > 127)
-                    shifted = 127;
-                if (random(100U) >= changeProbability)
-                    break;
-                midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
-                // schedule Note-Off in 100 ms
-                Utility::schedulerHigh.addTask(
-                    [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
+        case MIDIMessageType::Note: {
+            uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
+            slot.arpNote = note; // stash for the arpeggiator
+            int follower = slot.ef.followerIndex;
+            uint8_t velo = (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size()))
+                               ? envelopeFollowers[follower].getEnvelopeLevel()
+                               : 125;
+            int shifted = velo + velocityShift;
+            if (shifted < 0)
+                shifted = 0;
+            if (shifted > 127)
+                shifted = 127;
+            if (random(100U) >= changeProbability)
                 break;
+            midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
+            // schedule Note-Off in 100 ms
+            Utility::schedulerHigh.addTask(
+                [=]() { midiHandler.sendNoteOff(note, 0, slot.midiChannel); }, 100);
+            break;
+        }
+
+        case MIDIMessageType::PitchBend: {
+            int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
+            midiHandler.sendPitchBend(bend, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::ProgramChange:
+            midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
+            break;
+
+        case MIDIMessageType::Aftertouch: {
+            uint8_t pres = Utility::mapToMidiValue(rawValue);
+            midiHandler.sendAftertouch(pres, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::ModWheel: {
+            uint8_t mod = Utility::mapToMidiValue(rawValue);
+            midiHandler.sendModWheel(mod, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::NRPN: {
+            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+            midiHandler.sendNRPN(param, val, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::RPN: {
+            uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
+            uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
+            midiHandler.sendRPN(param, val, slot.midiChannel);
+            break;
+        }
+
+        case MIDIMessageType::SysEx: {
+            std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+            uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
+            if (length > 0) {
+                midiHandler.sendSysEx(msg.data(), length);
             }
+            break;
+        }
 
-            case MIDIMessageType::PitchBend: {
-                int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
-                midiHandler.sendPitchBend(bend, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::ProgramChange:
-                midiHandler.sendProgramChange(slot.data1, slot.midiChannel);
-                break;
-
-            case MIDIMessageType::Aftertouch: {
-                uint8_t pres = Utility::mapToMidiValue(rawValue);
-                midiHandler.sendAftertouch(pres, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::ModWheel: {
-                uint8_t mod = Utility::mapToMidiValue(rawValue);
-                midiHandler.sendModWheel(mod, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::NRPN: {
-                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-                midiHandler.sendNRPN(param, val, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::RPN: {
-                uint16_t param = static_cast<uint16_t>(slot.data1) << 7; // LSB zeroed
-                uint16_t val = static_cast<uint16_t>(Utility::mapToMidiValue(rawValue)) << 7;
-                midiHandler.sendRPN(param, val, slot.midiChannel);
-                break;
-            }
-
-            case MIDIMessageType::SysEx: {
-                std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
-                uint8_t length = buildSysExPayload(slot, rawValue, msg.data(), msg.size());
-                if (length > 0) {
-                    midiHandler.sendSysEx(msg.data(), length);
-                }
-                break;
-            }
-
-            default:
-                break;
-            }
-        });
+        default:
+            break;
+        }
+    });
 
     // — LEDs & Display —
     ledManager.begin();

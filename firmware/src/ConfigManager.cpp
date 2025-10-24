@@ -320,8 +320,9 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &po
     return allFound;
 }
 
-void ConfigManager::saveEnvelopeSettings(const std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
-                                         const std::vector<EnvelopeFollower> &envelopes) {
+void ConfigManager::saveEnvelopeSettings(
+    const std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap,
+    const std::vector<EnvelopeFollower> &envelopes) {
     constexpr uint8_t kUnassignedMarker = 0xFF;
     for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
         auto it = potToEnvelopeMap.find(potIndex);

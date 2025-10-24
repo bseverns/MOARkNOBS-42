@@ -393,10 +393,12 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
     }
 
     const MIDISlot::EfSettings &settings = efIt->second;
+    const int followerIndex = settings.followerIndex;
+
     _display.setCursor(0, 20);
     _display.print("ENV: ");
-    if (settings.followerIndex >= 0) {
-        _display.print(settings.followerIndex);
+    if (followerIndex >= 0) {
+        _display.print(followerIndex);
         _display.print(" ");
         _display.println(efFilterLabel(settings.filterType));
     } else {

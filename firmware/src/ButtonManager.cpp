@@ -36,16 +36,12 @@ static const unsigned long DOUBLE_PRESS_DELAY = 300;
 static const int NUM_ARG_PAIRS = ARG_PAIRS_LEN;
 
 static constexpr MIDISlot::EfSettings::FilterType SLOT_FILTERS[] = {
-    MIDISlot::EfSettings::FilterType::Linear,
-    MIDISlot::EfSettings::FilterType::OppositeLinear,
-    MIDISlot::EfSettings::FilterType::Exponential,
-    MIDISlot::EfSettings::FilterType::Random,
-    MIDISlot::EfSettings::FilterType::Lowpass,
-    MIDISlot::EfSettings::FilterType::Highpass,
+    MIDISlot::EfSettings::FilterType::Linear,      MIDISlot::EfSettings::FilterType::OppositeLinear,
+    MIDISlot::EfSettings::FilterType::Exponential, MIDISlot::EfSettings::FilterType::Random,
+    MIDISlot::EfSettings::FilterType::Lowpass,     MIDISlot::EfSettings::FilterType::Highpass,
     MIDISlot::EfSettings::FilterType::Bandpass};
-static constexpr const char *FILTER_TYPE_NAMES[] = {"LINEAR",  "OPPOSITE_LINEAR", "EXPONENTIAL",
-                                                   "RANDOM", "LOWPASS",         "HIGHPASS",
-                                                   "BANDPASS"};
+static constexpr const char *FILTER_TYPE_NAMES[] = {
+    "LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"};
 
 static constexpr int NUM_FILTER_TYPES = sizeof(SLOT_FILTERS) / sizeof(SLOT_FILTERS[0]);
 
