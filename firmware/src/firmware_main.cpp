@@ -574,7 +574,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         bool active = slotObj["active"].as<bool>();
 
         MIDISlot &slot = configManager.getSlot(i);
-        MIDISlot::EfSettings settings = slot.ef;
+        MIDISlot::EfSettings settings = slot.efSettings;
+        settings.followerIndex = slot.ef.followerIndex;
 
         int rawEfIndex = settings.followerIndex;
         if (slotObj.containsKey("efIndex")) {
@@ -633,7 +634,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.type = midiType;
         slot.midiChannel = midiChannel;
         slot.data1 = data1;
-        slot.ef = settings;
+        slot.efSettings = settings;
+        slot.ef.followerIndex = settings.followerIndex;
         slot.active = active;
         slot.arg = defaultArg;
         if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
@@ -763,12 +765,13 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
             MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
             slot.ef.followerIndex = static_cast<int8_t>(i);
-            potToEnvelopeMap[slotIndex] = slot.ef;
+            slot.efSettings.followerIndex = slot.ef.followerIndex;
+            potToEnvelopeMap[slotIndex] = slot.efSettings;
 
             if (i < envelopeFollowers.size()) {
                 envelopeFollowers[i].setModulationTarget(
                     potentiometerManager.getCCNumber(slotIndex));
-                applyEfSettingsToFollower(envelopeFollowers[i], slot.ef);
+                applyEfSettingsToFollower(envelopeFollowers[i], slot.efSettings);
             }
         }
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
@@ -1271,14 +1274,14 @@ void processSerial() {
                 slotObj["ef_index"] = slot.ef.followerIndex;
                 JsonObject ef = slotObj.createNestedObject("ef");
                 ef["index"] = slot.ef.followerIndex;
-                ef["filter_index"] = static_cast<uint8_t>(slot.ef.filterType);
-                ef["filter_name"] = efFilterLabel(slot.ef.filterType);
-                ef["frequency"] = slot.ef.frequency;
-                ef["q"] = slot.ef.q;
-                ef["oversample"] = slot.ef.oversample;
-                ef["smoothing"] = slot.ef.smoothing;
-                ef["baseline"] = slot.ef.baseline;
-                ef["gain"] = slot.ef.gain;
+                ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+                ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
+                ef["frequency"] = slot.efSettings.frequency;
+                ef["q"] = slot.efSettings.q;
+                ef["oversample"] = slot.efSettings.oversample;
+                ef["smoothing"] = slot.efSettings.smoothing;
+                ef["baseline"] = slot.efSettings.baseline;
+                ef["gain"] = slot.efSettings.gain;
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
@@ -1569,9 +1572,10 @@ void processSerial() {
                     envIndex < (int)envelopeFollowers.size()) {
                     MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
                     slot.ef.followerIndex = static_cast<int8_t>(envIndex);
-                    potToEnvelopeMap[potIndex] = slot.ef;
+                    slot.efSettings.followerIndex = slot.ef.followerIndex;
+                    potToEnvelopeMap[potIndex] = slot.efSettings;
                     envelopeFollowers[envIndex].toggleActive(true);
-                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.ef);
+                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings);
                     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
                     refreshEfVoicesFromConfig();
                     LOG_PRINTLN("OK");

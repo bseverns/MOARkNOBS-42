@@ -93,7 +93,10 @@ struct MIDISlot {
     uint8_t sysexLength = 0;
     EfSettings efSettings{}; //!< Slot-specific envelope follower settings
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
-    EfSettings ef{};             //!< Live envelope follower assignment
+    struct EfRuntime {
+        int8_t followerIndex = -1; //!< Currently assigned hardware follower (-1 when unbound)
+    };
+    EfRuntime ef{};           //!< Live envelope follower assignment metadata
     SlotARGConfig arg{};             //!< Slot-local ARG mixer settings
 };
 
