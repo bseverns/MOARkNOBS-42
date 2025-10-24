@@ -85,12 +85,26 @@ struct MIDISlot {
         float gain = 1.0f;         //!< Output gain applied post-baseline
     };
 
+    FilterType filterType = FilterType::Linear; //!< Desired filter topology
+    int8_t followerIndex = -1;                  //!< Assigned hardware follower (-1 when unbound)
+    uint8_t oversample = 4;                     //!< ADC oversample count (1 == disabled)
+    float frequency = 1000.0f;                  //!< Cutoff/shape frequency in Hz
+    float q = 0.707f;                           //!< Resonance / secondary filter parameter
+    float smoothing = 0.2f;                     //!< EWMA smoothing factor (0..1)
+    float baseline = 0.0f;                      //!< Noise floor offset after calibration
+    float gain = 1.0f;                          //!< Output gain applied post-baseline
+};
+
+struct MIDISlot {
+    using EfSettings = ::EfSettings;
+
     MIDIMessageType type = MIDIMessageType::OFF;
     uint8_t midiChannel = 1;
     uint8_t data1 = 0;
     bool active = false;
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
+    EfSettings efSettings{}; //!< Slot-specific envelope follower settings
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
     EfSettings ef{};                 //!< Live envelope follower assignment
     SlotEnvelopePayload efPayload{}; //!< Per-slot EF filter payload

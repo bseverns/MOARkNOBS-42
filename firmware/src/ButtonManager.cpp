@@ -527,6 +527,7 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         cycleFilterForSlot(context.activePot, -1);
         break;
     case 2: {
+        // Double Press (Ctrl #2): Cycle MIDI message type
         MIDISlot &slot = context.configManager.getSlot(context.activePot);
         slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) %
                                                  (static_cast<int>(MIDIMessageType::SysEx) + 1));

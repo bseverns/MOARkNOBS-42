@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Slot configs now stash 16-byte SysEx templates with `XX`/`MSB`/`LSB` placeholders, and the WebSerial editor lets you script
   those bursts without cracking open the firmware.
+- Per-slot envelope follower settings (filter type, cutoff, Q) live alongside each MIDISlot and persist to EEPROM, bumping the
+  schema to `0x0004` so stored patches remember their curves.
 
 ### Fixed
 - Bulk CC dumps finally stash channels under `EEPROM_POT_CHANNELS` and park CC numbers under `EEPROM_POT_CC`, so `Utility::processBulkUpdate`
