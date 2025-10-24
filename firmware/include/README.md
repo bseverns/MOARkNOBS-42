@@ -18,12 +18,14 @@ Most modules stash a mini README in their own subfolder for API riffs—check `*
 - **DisplayManager.h** – wrappers around the SSD1306 OLED display ([DisplayManager.cpp](../src/DisplayManager.cpp)).
 - **EnvelopeFollower.h** – tracks audio or CV to modulate slots ([EnvelopeFollower.cpp](../src/EnvelopeFollower.cpp)).
 - **Globals.h** – compile-time constants and forward declarations ([Globals.cpp](../src/Globals.cpp)).
+  - Hosts cross-cutting toggles like `webSerialStreaming` so both the main firmware and the test harness agree on when to shout telemetry over USB.
 - **hardware_config.h** – empty stage where `applyHardwareConfigOverrides()` can thrash default pins and ticks into your rig's groove.
 - **LEDManager.h** – drives the 52-piece addressable LED circus: slot halos, envelope meters, pot glows and the control-button beacon ([LEDManager.cpp](../src/LEDManager.cpp)).
  - **MIDIHandler.h** – thin wrapper for USB, DIN, and TRS MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
 - **MIDITypes.h** – enums and structs defining slot data.
 - **PotentiometerManager.h** – reads analog pots via multiplexers ([PotentiometerManager.cpp](../src/PotentiometerManager.cpp)).
 - **TestHelpers.h** – small helpers used by the manual test firmware.
+  - Defines the test-only `webSerialStreaming` stub that keeps the linker cool while we run isolated system suites.
 - **Utility.h** – math mischief like `scale()` for warping ranges and a lightweight task scheduler ([Utility.cpp](../src/Utility.cpp)).
 - **WebSerial.h** – ships slot snapshots over USB for the web editor ([WebSerial.cpp](../src/WebSerial.cpp)).
 - **name.c** – sets the custom USB MIDI product string.
