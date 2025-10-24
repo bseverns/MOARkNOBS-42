@@ -24,9 +24,9 @@ struct UsbMidiGuard {
 };
 
 struct StubEnvelope {
-    // Unity needs a "sounds-like-the-real-rig" baseline.  Our hardware ships
-    // with its sustain plateau at 96, so we codify that default here and let
-    // the outlier specs override it when they feel like getting weird.
+    // Unity wants a baseline that sounds like the shipping rig.
+    // The pedals leave sustain parked at 96, so we bake that here and let
+    // outlier specs override it when they feel like getting weird.
     static constexpr uint8_t kDefaultSustain = 96;
 
     explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
