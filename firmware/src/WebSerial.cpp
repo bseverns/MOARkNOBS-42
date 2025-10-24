@@ -97,6 +97,7 @@ uint8_t resolveDataByte(const ConfigManager &config, uint8_t slotIndex, const MI
     }
     return slot.data1;
 }
+
 } // namespace
 
 void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
@@ -149,6 +150,60 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     LOG_PRINTLN(payload);
 }
 
+template <size_t Capacity> void emitJson(StaticJsonDocument<Capacity> &doc) {
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolvedDataByte) {
+    StaticJsonDocument<384> doc;
+    doc["type"] = "config-patch";
+    JsonArray slotArray = doc.createNestedArray("slots");
+    JsonObject slotObj = slotArray.createNestedObject();
+    slotObj["index"] = slotIndex;
+    slotObj["type"] = slotTypeSchemaName(slot.type);
+    slotObj["type_name"] = slotTypeLegacyName(slot.type);
+    slotObj["type_code"] = static_cast<uint8_t>(slot.type);
+    slotObj["midiChannel"] = slot.midiChannel;
+    slotObj["data1"] = resolvedDataByte;
+    slotObj["efIndex"] = slot.efIndex;
+    slotObj["active"] = slot.active;
+    slotObj["arpNote"] = slot.arpNote;
+    emitJson(doc);
+}
+
+void emitLegacyEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
+    StaticJsonDocument<192> doc;
+    doc["type"] = "config-patch";
+    JsonArray ef = doc.createNestedArray("efSlots");
+    JsonObject entry = ef.createNestedObject();
+    entry["index"] = envelopeIndex;
+    entry["slot"] = slotIndex;
+    emitJson(doc);
+}
+
+void emitLegacyFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
+    StaticJsonDocument<192> doc;
+    doc["type"] = "config-patch";
+    JsonObject filter = doc.createNestedObject("filter");
+    filter["type"] = filterName(type);
+    filter["freq"] = freq;
+    filter["q"] = q;
+    emitJson(doc);
+}
+
+void emitLegacyArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
+    StaticJsonDocument<192> doc;
+    doc["type"] = "config-patch";
+    JsonObject arg = doc.createNestedObject("arg");
+    arg["method"] = argMethodLabel(method);
+    arg["enable"] = enable;
+    arg["a"] = envA;
+    arg["b"] = envB;
+    emitJson(doc);
+}
+
 void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     if (!webSerialStreaming)
         return;
@@ -156,7 +211,12 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
         return;
 
     const auto &slots = config.getSlots();
+    if (slotIndex >= slots.size())
+        return;
+
     const MIDISlot &slot = slots[slotIndex];
+    const uint8_t resolvedDataByte = resolveDataByte(config, slotIndex, slot);
+
     StaticJsonDocument<256> doc;
     doc["type"] = "slot_patch";
     doc["slot"] = slotIndex;
@@ -166,14 +226,13 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     body["legacy_name"] = slotTypeLegacyName(slot.type);
     body["type_name"] = slotTypeLegacyName(slot.type);
     body["channel"] = slot.midiChannel;
-    body["data1"] = resolveDataByte(config, slotIndex, slot);
+    body["data1"] = resolvedDataByte;
     body["ef_index"] = slot.efIndex;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
+    emitJson(doc);
 
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    emitLegacySlotPatch(slot, slotIndex, resolvedDataByte);
 }
 
 void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
@@ -183,10 +242,9 @@ void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     doc["type"] = "envelope_assignment";
     doc["slot"] = slotIndex;
     doc["envelope"] = envelopeIndex;
+    emitJson(doc);
 
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    emitLegacyEnvelopeAssignment(slotIndex, envelopeIndex);
 }
 
 void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
@@ -199,10 +257,9 @@ void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, f
     filter["type_name"] = filterName(type);
     filter["freq"] = freq;
     filter["q"] = q;
+    emitJson(doc);
 
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    emitLegacyFilterPatch(type, freq, q);
 }
 
 void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
@@ -216,86 +273,7 @@ void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t 
     arg["enable"] = enable;
     arg["a"] = envA;
     arg["b"] = envB;
+    emitJson(doc);
 
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
-}
-
-void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
-    if (!webSerialStreaming || slotIndex >= NUM_SLOTS)
-        return;
-
-    const auto &slots = config.getSlots();
-    if (slotIndex >= slots.size())
-        return;
-
-    const MIDISlot &slot = slots[slotIndex];
-
-    StaticJsonDocument<384> doc;
-    doc["type"] = "config-patch";
-    JsonArray slotArray = doc.createNestedArray("slots");
-    JsonObject slotObj = slotArray.createNestedObject();
-    slotObj["index"] = slotIndex;
-    slotObj["type"] = slotTypeSchemaName(slot.type);
-    slotObj["type_name"] = slotTypeLegacyName(slot.type);
-    slotObj["type_code"] = static_cast<uint8_t>(slot.type);
-    slotObj["midiChannel"] = slot.midiChannel;
-    slotObj["data1"] = resolveDataByte(config, slotIndex, slot);
-    slotObj["efIndex"] = slot.efIndex;
-    slotObj["active"] = slot.active;
-    slotObj["arpNote"] = slot.arpNote;
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
-}
-
-void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
-    if (!webSerialStreaming)
-        return;
-
-    StaticJsonDocument<192> doc;
-    doc["type"] = "config-patch";
-    JsonArray ef = doc.createNestedArray("efSlots");
-    JsonObject entry = ef.createNestedObject();
-    entry["index"] = envelopeIndex;
-    entry["slot"] = slotIndex;
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
-}
-
-void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
-    if (!webSerialStreaming)
-        return;
-
-    StaticJsonDocument<192> doc;
-    doc["type"] = "config-patch";
-    JsonObject filter = doc.createNestedObject("filter");
-    filter["type"] = filterName(type);
-    filter["freq"] = freq;
-    filter["q"] = q;
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
-}
-
-void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
-    if (!webSerialStreaming)
-        return;
-
-    StaticJsonDocument<192> doc;
-    doc["type"] = "config-patch";
-    JsonObject arg = doc.createNestedObject("arg");
-    arg["method"] = argMethodLabel(method);
-    arg["enable"] = enable;
-    arg["a"] = envA;
-    arg["b"] = envB;
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    emitLegacyArgPatch(method, enable, envA, envB);
 }

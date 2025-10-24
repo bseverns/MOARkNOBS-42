@@ -3,16 +3,10 @@
 
 #include <Arduino.h>
 #include <vector>
-#include "Globals.h"
-#include "PotentiometerManager.h"
 #include "EnvelopeFollower.h"
+#include "Globals.h"
 #include "MIDITypes.h"
-
-class ConfigManager;
-
-class ConfigManager;
-
-extern bool webSerialStreaming;
+#include "PotentiometerManager.h"
 
 class ConfigManager;
 
@@ -47,31 +41,35 @@ class WebSerial {
      * Cross-check docs/WebSerial.md for the gritty protocol details.
      */
     static void sendStateSnapshot(const PotentiometerManager &pots,
-    const std::vector<EnvelopeFollower> &envelopes,
-    const ConfigManager &config, uint8_t currentSlot,
-    const SystemDiagnostics &diagnostics);
+                                  const std::vector<EnvelopeFollower> &envelopes,
+                                  const ConfigManager &config, uint8_t currentSlot,
+                                  const SystemDiagnostics &diagnostics);
 
     /**
      * Emit a compact config patch describing the current state of a slot.
      * Mirrors the schema used by the WebSerial editor so diffs line up.
+     * Also echoes the legacy "config-patch" payload so ancient frontends keep breathing.
      */
     static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
 
     /**
      * Emit an envelope assignment patch for a single slot.
      * Lets the browser repaint routing badges without reloading everything.
+     * Legacy "config-patch" events also fire so dusty dashboards stay in sync.
      */
     static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
 
     /**
      * Emit a filter configuration patch (type/frequency/Q) for the active follower.
      * Keeps the UI in lockstep when filters are tuned from the hardware side.
+     * Echoes the historic config-patch format for any hold-out tooling.
      */
     static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
 
     /**
      * Emit an ARG configuration patch.
      * Broadcasts method, enable flag, and the paired envelopes so remote editors sync up.
+     * Throws a matching config-patch blob for UI fossils that only learned the OG format.
      */
     static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };
