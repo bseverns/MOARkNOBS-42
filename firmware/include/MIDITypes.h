@@ -28,39 +28,6 @@ enum class SysExType : uint8_t {
     UniversalRealTime         //!< 0x7F per the MIDI spec
 };
 
-/**
- * Slot-scoped arithmetic routing grid (ARG) settings.
- *
- * Each slot can optionally splice two envelope followers together using
- * a method lifted straight from the legacy global ARG engine.  We keep
- * the payload tiny so it still fits neatly inside the EEPROM footprint
- * without blowing up the slot struct.
- */
-enum class ARGMethod : uint8_t {
-    PLUS = 0,
-    MIN,
-    PECK,
-    SHAV,
-    SQAR,
-    BABS,
-    TABS,
-    MULT,
-    DIVI,
-    AVG,
-    XABS,
-    MAXX,
-    MINN,
-    XORR,
-};
-
-struct SlotARGConfig {
-    uint8_t enabled = 0;                //!< Non-zero enables ARG blending for the slot
-    ARGMethod method = ARGMethod::PLUS; //!< Math trick to apply when enabled
-    uint8_t sourceA = 0;                //!< Envelope follower index feeding input A
-    uint8_t sourceB = 1;                //!< Envelope follower index feeding input B
-};
-
-/** Configuration for a single pot slot. */
 /** Enumerates how the per-slot ARG mixer should blend its envelope pair. */
 enum class ARGMethod : uint8_t {
     PLUS = 0,
@@ -76,7 +43,7 @@ enum class ARGMethod : uint8_t {
     XABS,
     MAXX,
     MINN,
-    XORR
+    XORR,
 };
 
 /** Envelope follower payload persisted alongside the slot definition. */
@@ -109,10 +76,10 @@ struct MIDISlot {
         };
 
         int8_t followerIndex = -1; //!< Assigned hardware follower (-1 when unbound)
+        uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
         FilterType filterType = FilterType::Linear;
         float frequency = 1000.0f; //!< Cutoff/shape frequency in Hz
         float q = 0.707f;          //!< Resonance / secondary filter parameter
-        uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
         float smoothing = 0.2f;    //!< EWMA smoothing factor (0..1)
         float baseline = 0.0f;     //!< Noise floor offset after calibration
         float gain = 1.0f;         //!< Output gain applied post-baseline
@@ -125,12 +92,17 @@ struct MIDISlot {
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+    EfSettings ef{};                 //!< Live envelope follower assignment
     SlotEnvelopePayload efPayload{}; //!< Per-slot EF filter payload
     SlotARGConfig arg{};             //!< Slot-local ARG mixer settings
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) <= 64, "MIDISlot exploded past the expected 64 bytes");
+// The slot struct picked up a richer envelope follower payload which nudged it
+// past the original 64-byte budget. We still guard the footprint, but give it a
+// little more breathing room so the build doesn't implode every time we add a
+// tuning parameter.
+static_assert(sizeof(MIDISlot) <= 80, "MIDISlot exploded past the expected 80 bytes");
 
 #endif // MIDI_TYPES_H

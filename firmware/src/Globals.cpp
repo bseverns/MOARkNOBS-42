@@ -55,45 +55,25 @@ EnvelopeConfig envelopeConfig = {{0}};
 
 SystemDiagnostics g_systemDiagnostics;
 
+namespace {
 // Analog Routing Grid pairings.  We walk the six EF analog pins at compile time
 // and stash every unique (A,B) combo with A<B.  Change the pin list and the
-// pairings auto-update—no static table to forget.
-namespace {
+// pairings auto-update—no static table to forget.  The runtime only cares about
+// follower indices, so we store index pairs even though the source list is pins.
 constexpr std::array<int, NUM_ENVELOPES> kEnvelopePins = {A0, A1, A2, A3, A6, A7};
 
-namespace {
 constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildArgPairs() {
     std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> pairs{};
     size_t idx = 0;
     for (size_t a = 0; a < kEnvelopePins.size(); ++a) {
         for (size_t b = a + 1; b < kEnvelopePins.size(); ++b) {
-            pairs[idx++] = {kEnvelopePins[a], kEnvelopePins[b]};
+            pairs[idx++] = {static_cast<uint8_t>(a), static_cast<uint8_t>(b)};
         }
     }
     return pairs;
 }
-} // namespace
 
-const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
-const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
-
-int envelopeAnalogPin(uint8_t index) {
-    if (index >= kEnvelopePins.size()) {
-        return -1;
-    }
-    return kEnvelopePins[index];
-}
-
-int envelopeIndexFromAnalogPin(int analogPin) {
-    for (size_t i = 0; i < kEnvelopePins.size(); ++i) {
-        if (kEnvelopePins[i] == analogPin) {
-            return static_cast<int>(i);
-        }
-    }
-    return -1;
-}
-
-static void loadFromJson(HardwareConfig &cfg) {
+void loadFromJson(HardwareConfig &cfg) {
 #if __has_include(<ArduinoJson.h>)
     if (!kHasSD)
         return;
@@ -128,6 +108,27 @@ static void loadFromJson(HardwareConfig &cfg) {
         cfg.envelopeTaskInterval = doc["ENVELOPE_TASK_INTERVAL"];
     f.close();
 #endif
+}
+} // namespace
+
+const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = kEnvelopePins;
+const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
+const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
+
+int envelopeAnalogPin(uint8_t index) {
+    if (index >= kEnvelopePins.size()) {
+        return -1;
+    }
+    return kEnvelopePins[index];
+}
+
+int envelopeIndexFromAnalogPin(int analogPin) {
+    for (size_t i = 0; i < kEnvelopePins.size(); ++i) {
+        if (kEnvelopePins[i] == analogPin) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
 }
 
 #if __has_include("hardware_config.h")

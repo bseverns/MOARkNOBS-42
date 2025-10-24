@@ -54,6 +54,9 @@ class PotentiometerManager {
     // but every extra layer of smoothing adds a few milliseconds of lag.
     int readAnalogFiltered(uint8_t pin); // Low-pass filtered ADC read
 
+    int argEnvA = -1;
+    int argEnvB = -1;
+
   public:
     /**
      * Construct the manager with the mux address pin arrays and analog input.
@@ -96,6 +99,12 @@ class PotentiometerManager {
      * Also updates LEDs and envelope followers.
      */
     void processPots(LEDManager &ledManager, std::vector<EnvelopeFollower> &envelopes);
+
+    /** Specify the envelope pair used for ARG operations. */
+    void setArgEnvelopePair(int a, int b);
+
+    /** Retrieve the current envelope pair selection. */
+    void getArgEnvelopePair(int &a, int &b) const;
 
     /** Direct raw ADC read helper used in tests. */
     int readRawPot(uint8_t potIndex);

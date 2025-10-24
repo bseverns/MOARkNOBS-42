@@ -96,6 +96,17 @@ inline void streamArgPatch(const ConfigManager &config) {
                             config.getEnvelopeA(), config.getEnvelopeB());
 }
 
+inline uint8_t normalizeEnvelopeIndex(uint8_t raw) {
+    int idx = envelopeIndexFromAnalogPin(raw);
+    if (idx >= 0) {
+        return static_cast<uint8_t>(idx);
+    }
+    if (raw < NUM_ENVELOPES) {
+        return raw;
+    }
+    return static_cast<uint8_t>(raw % NUM_ENVELOPES);
+}
+
 inline EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
@@ -471,136 +482,69 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
  * Double press logic
  */
 void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &context) {
-    // If user double-pressed a slot button (0..41)
-    if (index < NUM_VIRTUAL_BUTTONS) {
-        auto it = context.potToEnvelopeMap.find(index);
+    auto cycleFilterForSlot = [&](uint8_t slotIndex, int delta) -> bool {
+        auto it = context.potToEnvelopeMap.find(slotIndex);
         if (it == context.potToEnvelopeMap.end()) {
             context.displayManager.displayStatus("No EF assigned", 1000);
-            return;
+            return false;
         }
-        int efIndex = it->second;
 
-        // Move to next filter index for that EF
-        filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
-
-        // Retrieve the new filter type
-        EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
-        // Apply it
-        context.envelopes[efIndex].setFilterType(newType);
-        SlotEnvelopePayload payload = context.configManager.getSlotEnvelopePayload(index);
-        payload.filterType = static_cast<uint8_t>(newType);
-        context.configManager.setSlotEnvelopePayload(index, payload);
-        streamSlotPatch(context.configManager, index);
-        streamFilterPatch(context.envelopes[efIndex]);
-
-        // Feedback
-        const char *filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
         MIDISlot::EfSettings settings = it->second;
         if (settings.followerIndex < 0 ||
             settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
             context.displayManager.displayStatus("No EF assigned", 1000);
-            return;
+            return false;
         }
-        settings.filterType = cycleFilter(settings.filterType, +1);
-        commitEfSettings(context, index, settings);
+
+        settings.filterType = cycleFilter(settings.filterType, delta);
+        commitEfSettings(context, slotIndex, settings);
+
+        SlotEnvelopePayload payload = context.configManager.getSlotEnvelopePayload(slotIndex);
+        payload.filterType = static_cast<uint8_t>(toEnvelopeFilter(settings.filterType));
+        context.configManager.setSlotEnvelopePayload(slotIndex, payload);
+
+        streamSlotPatch(context.configManager, slotIndex);
+        streamFilterPatch(context.envelopes[settings.followerIndex]);
+
         const char *filterName = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
         char msg[32];
-        sprintf(msg, "Slot %d => %s", index, filterName);
+        snprintf(msg, sizeof(msg), "Slot %d => %s", slotIndex, filterName);
         context.displayManager.displayStatus(msg, 1500);
-        streamFilterPatch(context.envelopes[settings.followerIndex]);
-    } else {
-        // Double-press on a control button
-        uint8_t cIndex = index - NUM_VIRTUAL_BUTTONS;
-        switch (cIndex) {
-        case 0: {
-            // Double Press (Ctrl #0): Cycle EF filter forward
-            auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-            MIDISlot::EfSettings settings = it->second;
-            if (settings.followerIndex < 0 ||
-                settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-            settings.filterType = cycleFilter(settings.filterType, +1);
-            commitEfSettings(context, context.activePot, settings);
+        return true;
+    };
 
-            SlotEnvelopePayload payload =
-                context.configManager.getSlotEnvelopePayload(context.activePot);
-            payload.filterType = static_cast<uint8_t>(newType);
-            context.configManager.setSlotEnvelopePayload(context.activePot, payload);
-            streamSlotPatch(context.configManager, context.activePot);
-            const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
-            char msg[32];
-            sprintf(msg, "Slot %d => %s", context.activePot, name);
-            context.displayManager.displayStatus(msg, 1500);
-            streamFilterPatch(context.envelopes[settings.followerIndex]);
-            break;
-        }
+    if (index < NUM_VIRTUAL_BUTTONS) {
+        cycleFilterForSlot(index, +1);
+        return;
+    }
 
-        case 1: {
-            // Double Press (Ctrl #1): Cycle EF filter backward
-            // [CHANGED] => use activePot instead of 'index', and properly wrap negative
-            auto it = context.potToEnvelopeMap.find(context.activePot);
-            if (it == context.potToEnvelopeMap.end()) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-            MIDISlot::EfSettings settings = it->second;
-            if (settings.followerIndex < 0 ||
-                settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
-                context.displayManager.displayStatus("No EF assigned", 1000);
-                return;
-            }
-
-            settings.filterType = cycleFilter(settings.filterType, -1);
-            commitEfSettings(context, context.activePot, settings);
-
-            SlotEnvelopePayload payload =
-                context.configManager.getSlotEnvelopePayload(context.activePot);
-            payload.filterType = static_cast<uint8_t>(newType);
-            context.configManager.setSlotEnvelopePayload(context.activePot, payload);
-            streamSlotPatch(context.configManager, context.activePot);
-            const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
-            char msg[32];
-            sprintf(msg, "Slot %d => %s", context.activePot, name);
-            context.displayManager.displayStatus(msg, 1500);
-            streamFilterPatch(context.envelopes[settings.followerIndex]);
-            break; // <--- ensure we break out of case 1
-        }
-
-        case 2: {
-            // Double Press (Ctrl #2): Cycle MIDI message type
-            MIDISlot &slot = context.configManager.getSlot(context.activePot);
-            slot.type = static_cast<MIDIMessageType>(
-                (static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
-            context.configManager.saveSlot(context.activePot, slot);
-            char buf[32];
-            sprintf(buf, "Slot %d Type %d", context.activePot, static_cast<int>(slot.type));
-            context.displayManager.displayStatus(buf, 1500);
-            streamSlotPatch(context.configManager, context.activePot);
-            break;
-        }
-
-        case 4: {
-            // Intentionally left blank: no double-press stunt for Ctrl #4 now
-            context.displayManager.displayStatus("No Double Action", 1000);
-            break;
-        }
-
-        case 5: {
-            // Intentionally left blank: no double-press stunt for Ctrl #5 now
-            context.displayManager.displayStatus("No Double Action", 1000);
-            break;
-        }
-
-        default:
-            context.displayManager.displayStatus("Unknown double press", 1000);
-            break;
-        }
+    uint8_t cIndex = static_cast<uint8_t>(index - NUM_VIRTUAL_BUTTONS);
+    switch (cIndex) {
+    case 0:
+        cycleFilterForSlot(context.activePot, +1);
+        break;
+    case 1:
+        cycleFilterForSlot(context.activePot, -1);
+        break;
+    case 2: {
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        slot.type = static_cast<MIDIMessageType>((static_cast<int>(slot.type) + 1) %
+                                                 (static_cast<int>(MIDIMessageType::SysEx) + 1));
+        context.configManager.saveSlot(context.activePot, slot);
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Slot %d Type %d", context.activePot,
+                 static_cast<int>(slot.type));
+        context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
+        break;
+    }
+    case 4:
+    case 5:
+        context.displayManager.displayStatus("No Double Action", 1000);
+        break;
+    default:
+        context.displayManager.displayStatus("Unknown double press", 1000);
+        break;
     }
 }
 
@@ -770,20 +714,6 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         return &context.configManager.getSlot(context.activePot);
     };
 
-    auto requireFollowerAssignment = [&]() -> int {
-        auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
-            context.displayManager.displayStatus("No EF assigned", 1000);
-            return -1;
-        }
-        int followerIndex = it->second.followerIndex;
-        if (followerIndex < 0 || followerIndex >= static_cast<int>(context.envelopes.size())) {
-            context.displayManager.displayStatus("No EF assigned", 1000);
-            return -1;
-        }
-        return followerIndex;
-    };
-
     // (0) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
         (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
@@ -797,10 +727,6 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         if (slot == nullptr) {
             return;
         }
-        if (requireFollowerAssignment() < 0) {
-            return;
-        }
-
         constexpr size_t methodCount = sizeof(ALL_ARG_METHODS) / sizeof(ALL_ARG_METHODS[0]);
         size_t methodIndex = 0;
         for (; methodIndex < methodCount; ++methodIndex) {
@@ -817,16 +743,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.configManager.setARGEnable(slot->arg.enabled);
         context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
 
-        int analogA = envelopeAnalogPin(slot->arg.sourceA);
-        if (analogA < 0) {
-            analogA = 0;
-        }
-        int analogB = envelopeAnalogPin(slot->arg.sourceB);
-        if (analogB < 0) {
-            analogB = analogA;
-        }
-        context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
-                                              static_cast<uint8_t>(analogB));
+        context.configManager.setEnvelopePair(slot->arg.sourceA, slot->arg.sourceB);
 
         char msg[32];
         snprintf(msg, sizeof(msg), "Slot %d ARG=%s", context.activePot,
@@ -841,73 +758,24 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         if (slot == nullptr) {
             return;
         }
-        int efIndex = it->second;
-        static int pairPos = 0;
-        pairPos = (pairPos + 1) % NUM_ARG_PAIRS;
-        int envA = ARG_PAIRS[pairPos].first;
-        int envB = ARG_PAIRS[pairPos].second;
-        context.envelopes[efIndex].setEnvelopePair(envA, envB);
-        int idxA = envelopeIndexFromAnalogPin(envA);
-        int idxB = envelopeIndexFromAnalogPin(envB);
-        if (idxA < 0) {
-            idxA = 0;
-        }
-        if (idxB < 0 || idxB == idxA) {
-            idxB = (idxA + 1) % NUM_ENVELOPES;
-        }
-        context.configManager.setEnvelopePair(static_cast<uint8_t>(idxA),
-                                              static_cast<uint8_t>(idxB));
-        if (_potentiometerManager != nullptr) {
-            _potentiometerManager->setArgEnvelopePair(idxA, idxB);
-        }
-        auto pinName = [](int pin) {
-            switch (pin) {
-            case A0:
-                return "A0";
-            case A1:
-                return "A1";
-            case A2:
-                return "A2";
-            case A3:
-                return "A3";
-            case A6:
-                return "A6";
-            case A7:
-                return "A7";
-            default:
-                return "Ax";
-            }
-        };
-        if (requireFollowerAssignment() < 0) {
-            return;
-        }
-
         static size_t pairIndex = 0;
         pairIndex = (pairIndex + 1) % NUM_ARG_PAIRS;
         const auto &pair = ARG_PAIRS[pairIndex];
+        const uint8_t sourceA = normalizeEnvelopeIndex(pair.first);
+        const uint8_t sourceB = normalizeEnvelopeIndex(pair.second);
 
         slot->arg.enabled = 1;
-        slot->arg.sourceA = pair.first;
-        slot->arg.sourceB = pair.second;
+        slot->arg.sourceA = sourceA;
+        slot->arg.sourceB = sourceB;
         context.configManager.saveSlot(context.activePot, *slot);
 
         context.configManager.setARGEnable(slot->arg.enabled);
         context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
-
-        int analogA = envelopeAnalogPin(pair.first);
-        if (analogA < 0) {
-            analogA = 0;
-        }
-        int analogB = envelopeAnalogPin(pair.second);
-        if (analogB < 0) {
-            analogB = analogA;
-        }
-        context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
-                                              static_cast<uint8_t>(analogB));
+        context.configManager.setEnvelopePair(sourceA, sourceB);
 
         char buf[32];
-        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, pair.first + 1,
-                 pair.second + 1);
+        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, sourceA + 1,
+                 sourceB + 1);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
