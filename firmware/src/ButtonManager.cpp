@@ -729,7 +729,19 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         int envA = ARG_PAIRS[pairPos].first;
         int envB = ARG_PAIRS[pairPos].second;
         context.envelopes[efIndex].setEnvelopePair(envA, envB);
-        context.configManager.setEnvelopePair(envA, envB);
+        int idxA = envelopeIndexFromAnalogPin(envA);
+        int idxB = envelopeIndexFromAnalogPin(envB);
+        if (idxA < 0) {
+            idxA = 0;
+        }
+        if (idxB < 0 || idxB == idxA) {
+            idxB = (idxA + 1) % NUM_ENVELOPES;
+        }
+        context.configManager.setEnvelopePair(static_cast<uint8_t>(idxA),
+                                              static_cast<uint8_t>(idxB));
+        if (_potentiometerManager != nullptr) {
+            _potentiometerManager->setArgEnvelopePair(idxA, idxB);
+        }
         auto pinName = [](int pin) {
             switch (pin) {
             case A0:

@@ -29,11 +29,37 @@ enum class SysExType : uint8_t {
 };
 
 /** Configuration for a single pot slot. */
+/** Enumerates how the per-slot ARG mixer should blend its envelope pair. */
+enum class ARGMethod : uint8_t {
+    PLUS = 0,
+    MIN,
+    PECK,
+    SHAV,
+    SQAR,
+    BABS,
+    TABS,
+    MULT,
+    DIVI,
+    AVG,
+    XABS,
+    MAXX,
+    MINN,
+    XORR
+};
+
 /** Envelope follower payload persisted alongside the slot definition. */
 struct SlotEnvelopePayload {
     uint8_t filterType = 0; //!< EnvelopeFollower::FilterType value
     float frequency = 0.0f; //!< Stored cutoff/shape frequency (Hz or scalar)
     float q = 0.0f;         //!< Stored resonance/Q for biquad-driven modes
+};
+
+/** Slot-local configuration for the ARG combiner. */
+struct SlotARGConfig {
+    uint8_t enabled = 0;                //!< Non-zero enables ARG processing for this slot
+    ARGMethod method = ARGMethod::PLUS; //!< Mixer math to apply when ARG is on
+    uint8_t sourceA = 0;                //!< Primary envelope index
+    uint8_t sourceB = 1;                //!< Secondary envelope index
 };
 
 struct MIDISlot {
@@ -46,10 +72,11 @@ struct MIDISlot {
     uint8_t sysexLength = 0;
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
     SlotEnvelopePayload efPayload{}; //!< Per-slot EF filter payload
+    SlotARGConfig arg{};             //!< Slot-local ARG mixer settings
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) == 36, "MIDISlot exploded past the expected 36 bytes");
+static_assert(sizeof(MIDISlot) <= 64, "MIDISlot exploded past the expected 64 bytes");
 
 #endif // MIDI_TYPES_H

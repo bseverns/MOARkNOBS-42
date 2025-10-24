@@ -332,6 +332,14 @@ EnvelopeFollower::ARG_Method parseArgMethod(const char *label,
     return fallback;
 }
 
+ARGMethod toSlotArgMethod(EnvelopeFollower::ARG_Method method) {
+    return static_cast<ARGMethod>(static_cast<uint8_t>(method));
+}
+
+EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method) {
+    return static_cast<EnvelopeFollower::ARG_Method>(static_cast<uint8_t>(method));
+}
+
 bool parseHexColor(const char *hex, CRGB &color) {
     if (!hex)
         return false;
@@ -396,6 +404,64 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         return false;
     }
 
+    SlotARGConfig defaultArg{};
+    defaultArg.enabled = configManager.getARGEnable();
+    defaultArg.method = static_cast<ARGMethod>(configManager.getARGMethod());
+    int storedA = static_cast<int>(configManager.getEnvelopeA());
+    if (storedA >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(storedA);
+        storedA = (converted >= 0) ? converted : constrain(storedA, 0, NUM_ENVELOPES - 1);
+    }
+    int storedB = static_cast<int>(configManager.getEnvelopeB());
+    if (storedB >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(storedB);
+        if (converted >= 0) {
+            storedB = converted;
+        } else {
+            storedB = constrain(storedB, 0, NUM_ENVELOPES - 1);
+        }
+    }
+    defaultArg.sourceA = static_cast<uint8_t>(storedA);
+    defaultArg.sourceB = static_cast<uint8_t>(storedB);
+    defaultArg = sanitizeSlotArg(defaultArg);
+
+    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
+        JsonObject argObj = config["arg"].as<JsonObject>();
+        SlotARGConfig incoming = defaultArg;
+        if (argObj.containsKey("enable")) {
+            incoming.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+        } else if (argObj.containsKey("enabled")) {
+            incoming.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+        }
+        if (argObj.containsKey("method")) {
+            if (argObj["method"].is<const char *>()) {
+                EnvelopeFollower::ARG_Method parsed = parseArgMethod(
+                    argObj["method"].as<const char *>(), toFollowerArgMethod(incoming.method));
+                incoming.method = toSlotArgMethod(parsed);
+            } else {
+                int raw = argObj["method"].as<int>();
+                raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
+                incoming.method = static_cast<ARGMethod>(raw);
+            }
+        }
+        if (argObj.containsKey("a")) {
+            incoming.sourceA =
+                static_cast<uint8_t>(constrain(argObj["a"].as<int>(), 0, NUM_ENVELOPES - 1));
+        } else if (argObj.containsKey("sourceA")) {
+            incoming.sourceA =
+                static_cast<uint8_t>(constrain(argObj["sourceA"].as<int>(), 0, NUM_ENVELOPES - 1));
+        }
+        if (argObj.containsKey("b")) {
+            incoming.sourceB =
+                static_cast<uint8_t>(constrain(argObj["b"].as<int>(), 0, NUM_ENVELOPES - 1));
+        } else if (argObj.containsKey("sourceB")) {
+            incoming.sourceB =
+                static_cast<uint8_t>(constrain(argObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
+        }
+
+        defaultArg = sanitizeSlotArg(incoming);
+    }
+
     bool anySlotPayloadSpecified = false;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         JsonObject slotObj = slotsJson[i];
@@ -422,6 +488,43 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.data1 = data1;
         slot.efIndex = efIndex;
         slot.active = active;
+        slot.arg = defaultArg;
+        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
+            JsonObject slotArgObj = slotObj["arg"].as<JsonObject>();
+            SlotARGConfig slotArgConfig = slot.arg;
+            if (slotArgObj.containsKey("enable")) {
+                slotArgConfig.enabled = slotArgObj["enable"].as<bool>() ? 1 : 0;
+            } else if (slotArgObj.containsKey("enabled")) {
+                slotArgConfig.enabled = slotArgObj["enabled"].as<bool>() ? 1 : 0;
+            }
+            if (slotArgObj.containsKey("method")) {
+                if (slotArgObj["method"].is<const char *>()) {
+                    EnvelopeFollower::ARG_Method parsed =
+                        parseArgMethod(slotArgObj["method"].as<const char *>(),
+                                       toFollowerArgMethod(slotArgConfig.method));
+                    slotArgConfig.method = toSlotArgMethod(parsed);
+                } else {
+                    int raw = slotArgObj["method"].as<int>();
+                    raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
+                    slotArgConfig.method = static_cast<ARGMethod>(raw);
+                }
+            }
+            if (slotArgObj.containsKey("a")) {
+                slotArgConfig.sourceA = static_cast<uint8_t>(
+                    constrain(slotArgObj["a"].as<int>(), 0, NUM_ENVELOPES - 1));
+            } else if (slotArgObj.containsKey("sourceA")) {
+                slotArgConfig.sourceA = static_cast<uint8_t>(
+                    constrain(slotArgObj["sourceA"].as<int>(), 0, NUM_ENVELOPES - 1));
+            }
+            if (slotArgObj.containsKey("b")) {
+                slotArgConfig.sourceB = static_cast<uint8_t>(
+                    constrain(slotArgObj["b"].as<int>(), 0, NUM_ENVELOPES - 1));
+            } else if (slotArgObj.containsKey("sourceB")) {
+                slotArgConfig.sourceB = static_cast<uint8_t>(
+                    constrain(slotArgObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
+            }
+            slot.arg = sanitizeSlotArg(slotArgConfig);
+        }
         if (slot.type == MIDIMessageType::SysEx) {
             String templateError;
             if (!parseSysExTemplateField(slotObj["sysexTemplate"], slot, templateError)) {
@@ -518,23 +621,16 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         }
     }
 
-    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
-        JsonObject argObj = config["arg"].as<JsonObject>();
-        EnvelopeFollower::ARG_Method method =
-            parseArgMethod(argObj["method"].as<const char *>(), EnvelopeFollower::PLUS);
-        bool enable = argObj["enable"].as<bool>();
-        uint8_t envA = constrain(argObj["a"].as<int>(), 0, NUM_ENVELOPES - 1);
-        uint8_t envB = constrain(argObj["b"].as<int>(), 0, NUM_ENVELOPES - 1);
+    envelopeFollowMode = defaultArg.enabled != 0;
+    configManager.setARGEnable(defaultArg.enabled);
+    configManager.setARGMethod(static_cast<uint8_t>(defaultArg.method));
+    configManager.setEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
+    potentiometerManager.setArgEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
 
-        for (auto &ef : envelopeFollowers) {
-            ef.setARGMethod(method);
-            ef.setMode(enable ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
-        }
-        configManager.setARGMethod(static_cast<uint8_t>(method));
-        configManager.setARGEnable(enable ? 1 : 0);
-        configManager.setEnvelopePair(envA, envB);
-        potentiometerManager.setArgEnvelopePair(envA, envB);
-        envelopeFollowMode = enable;
+    EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(defaultArg.method);
+    for (auto &ef : envelopeFollowers) {
+        ef.setARGMethod(followerMethod);
+        ef.setMode(envelopeFollowMode ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
     }
 
     if (config.containsKey("envelopeMode")) {
@@ -842,6 +938,13 @@ void processSerial() {
                     static_cast<EnvelopeFollower::FilterType>(payload.filterType));
                 efPayload["freq"] = payload.frequency;
                 efPayload["q"] = payload.q;
+                SlotARGConfig arg = sanitizeSlotArg(slot.arg);
+                JsonObject argObj = slotObj.createNestedObject("arg");
+                argObj["enabled"] = arg.enabled != 0;
+                argObj["method"] = static_cast<uint8_t>(arg.method);
+                argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
+                argObj["sourceA"] = arg.sourceA;
+                argObj["sourceB"] = arg.sourceB;
             }
 
             JsonObject env = doc.createNestedObject("envelopes");

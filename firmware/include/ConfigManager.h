@@ -15,6 +15,8 @@
 #include <array>
 #include <FastLED.h>
 
+SlotARGConfig sanitizeSlotArg(const SlotARGConfig &config);
+
 class MIDIHandler;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -275,6 +277,16 @@ class ConfigManager {
     void migrateLegacySlotPayloads(uint16_t storedVersion);
     SlotEnvelopePayload seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
     static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
+    void loadLegacyARGSettings();
+    void migrateLegacyARGSettings();
+
+    struct LegacyARGSettings {
+        uint8_t mode = 0;
+        uint8_t method = 0;
+        uint8_t enable = 0;
+        uint8_t sourceA = 0;
+        uint8_t sourceB = 1;
+    } legacyArg{};
 };
 
 #endif // CONFIGMANAGER_H
