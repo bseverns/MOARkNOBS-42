@@ -273,8 +273,19 @@ class ConfigManager {
     void wipeProfileBlocks();
     static bool slotLooksSane(const MIDISlot &candidate);
     void migrateLegacySlotPayloads(uint16_t storedVersion);
+    void loadLegacyARGSettings();
+    void migrateLegacyARGSettings();
     SlotEnvelopePayload seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
     static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
+    static SlotARGConfig sanitizeArgConfig(const SlotARGConfig &candidate);
+
+    struct LegacyArgSettings {
+        uint8_t mode = 0;
+        uint8_t method = 0;
+        uint8_t enable = 0;
+        uint8_t sourceA = 0;
+        uint8_t sourceB = 1;
+    } legacyArg{};
 };
 
 #endif // CONFIGMANAGER_H

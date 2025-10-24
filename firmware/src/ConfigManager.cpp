@@ -18,6 +18,46 @@ constexpr float kMinFilterFrequency = 20.0f;
 constexpr float kMaxFilterFrequency = 5000.0f;
 constexpr float kMinFilterQ = 0.5f;
 constexpr float kMaxFilterQ = 4.0f;
+constexpr uint8_t kMaxArgMethod = 13;
+
+constexpr std::array<int, NUM_ENVELOPES> kArgPins = {A0, A1, A2, A3, A6, A7};
+
+uint8_t resolveArgPin(uint8_t raw) {
+    for (int pin : kArgPins) {
+        if (raw == static_cast<uint8_t>(pin)) {
+            return static_cast<uint8_t>(pin);
+        }
+    }
+    uint8_t index = constrain(raw, static_cast<uint8_t>(0), static_cast<uint8_t>(NUM_ENVELOPES - 1));
+    return static_cast<uint8_t>(kArgPins[index]);
+}
+
+uint8_t nextArgPin(uint8_t pin) {
+    int idx = -1;
+    for (size_t i = 0; i < kArgPins.size(); ++i) {
+        if (static_cast<uint8_t>(kArgPins[i]) == pin) {
+            idx = static_cast<int>(i);
+            break;
+        }
+    }
+    if (idx < 0) {
+        idx = 0;
+    }
+    idx = (idx + 1) % static_cast<int>(kArgPins.size());
+    return static_cast<uint8_t>(kArgPins[static_cast<size_t>(idx)]);
+}
+
+SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
+    SlotARGConfig sanitized = candidate;
+    sanitized.enabled = candidate.enabled ? 1 : 0;
+    sanitized.method = constrain(candidate.method, static_cast<uint8_t>(0), kMaxArgMethod);
+    sanitized.sourceA = resolveArgPin(candidate.sourceA);
+    sanitized.sourceB = resolveArgPin(candidate.sourceB);
+    if (sanitized.sourceA == sanitized.sourceB) {
+        sanitized.sourceB = nextArgPin(sanitized.sourceA);
+    }
+    return sanitized;
+}
 
 bool filterCoefficientsLookSane(float freq, float q) {
     if (!std::isfinite(freq) || !std::isfinite(q)) {
@@ -280,6 +320,7 @@ void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
         temp.sysexTemplate.fill(0);
     }
     temp.efPayload = sanitizeEnvelopePayload(temp.efPayload);
+    temp.arg = sanitizeArgConfig(temp.arg);
     dest = temp;
     if (dest.arpNote > 127)
         dest.arpNote = dest.data1;
@@ -294,6 +335,7 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
         sanitized.sysexTemplate[i] = 0;
     }
     sanitized.efPayload = sanitizeEnvelopePayload(sanitized.efPayload);
+    sanitized.arg = sanitizeArgConfig(sanitized.arg);
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
     EEPROM.put(address, sanitized);
 }
@@ -483,6 +525,16 @@ String ConfigManager::serializeAll() const {
         output += String(payload.frequency, 2);
         output += ", \"q\": ";
         output += String(payload.q, 2);
+        output += "}, \"arg\": {";
+        SlotARGConfig argConfig = sanitizeArgConfig(slots[i].arg);
+        output += "\"enabled\": ";
+        output += static_cast<int>(argConfig.enabled != 0);
+        output += ", \"method\": ";
+        output += argConfig.method;
+        output += ", \"sourceA\": ";
+        output += argConfig.sourceA;
+        output += ", \"sourceB\": ";
+        output += argConfig.sourceB;
         output += "}}";
         if (i < NUM_SLOTS - 1) {
             output += ",";
@@ -557,6 +609,16 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (!std::isfinite(candidate.efPayload.frequency) || !std::isfinite(candidate.efPayload.q)) {
         return false;
     }
+    SlotARGConfig sanitized = sanitizeArgConfig(candidate.arg);
+    if (sanitized.enabled != (candidate.arg.enabled ? 1 : 0)) {
+        return false;
+    }
+    if (sanitized.method != candidate.arg.method) {
+        return false;
+    }
+    if (sanitized.sourceA != candidate.arg.sourceA || sanitized.sourceB != candidate.arg.sourceB) {
+        return false;
+    }
     return true;
 }
 
@@ -564,7 +626,10 @@ void ConfigManager::sanitizeSlotArena() {
     uint16_t storedVersion = 0;
     EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
 
+    loadLegacyARGSettings();
+
     if (storedVersion == CONFIG_VERSION) {
+        migrateLegacyARGSettings();
         maybeRescueFilterTailFromLegacy();
         MIDISlot candidate{};
         EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
@@ -581,6 +646,7 @@ void ConfigManager::sanitizeSlotArena() {
         return;
     }
 
+    migrateLegacyARGSettings();
     migrateLegacySlotPayloads(storedVersion);
 }
 
@@ -590,6 +656,7 @@ void ConfigManager::wipeSlotRegion() {
     blank.efPayload.filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
     blank.efPayload.frequency = kMinFilterFrequency;
     blank.efPayload.q = 1.0f;
+    blank.arg = sanitizeArgConfig(blank.arg);
     slots.fill(blank);
 
     persistFilterTail(blank.efPayload);
@@ -627,6 +694,18 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
     persistFilterTail(sanitizedPayload);
 
+    SlotARGConfig defaults{};
+    defaults.enabled = legacyArg.enable;
+    defaults.method = legacyArg.method;
+    defaults.sourceA = legacyArg.sourceA;
+    defaults.sourceB = legacyArg.sourceB;
+    defaults = sanitizeArgConfig(defaults);
+
+    legacyArg.enable = defaults.enabled;
+    legacyArg.method = defaults.method;
+    legacyArg.sourceA = defaults.sourceA;
+    legacyArg.sourceB = defaults.sourceB;
+
     for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
         LegacyMIDISlot legacy{};
         const int legacyAddress =
@@ -643,13 +722,55 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         upgraded.sysexLength = legacy.sysexLength;
         upgraded.sysexTemplate = legacy.sysexTemplate;
         upgraded.efPayload = sanitizedPayload;
+        upgraded.arg = defaults;
 
         const int upgradedAddress =
             static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
         EEPROM.put(upgradedAddress, upgraded);
     }
 
+    EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
+    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+    EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+
     slots.fill({});
+}
+
+void ConfigManager::loadLegacyARGSettings() {
+    legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
+    legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
+    legacyArg.enable = EEPROM.read(EEPROM_ARG_ENABLE);
+
+    const uint8_t rawA = EEPROM.read(EEPROM_ARG_ENV_A);
+    const uint8_t rawB = EEPROM.read(EEPROM_ARG_ENV_B);
+    legacyArg.sourceA = resolveArgPin(rawA);
+    legacyArg.sourceB = resolveArgPin(rawB);
+    if (legacyArg.sourceA == legacyArg.sourceB) {
+        legacyArg.sourceB = nextArgPin(legacyArg.sourceA);
+    }
+}
+
+void ConfigManager::migrateLegacyARGSettings() {
+    SlotARGConfig defaults{};
+    defaults.enabled = legacyArg.enable;
+    defaults.method = legacyArg.method;
+    defaults.sourceA = legacyArg.sourceA;
+    defaults.sourceB = legacyArg.sourceB;
+    defaults = sanitizeArgConfig(defaults);
+
+    legacyArg.enable = defaults.enabled;
+    legacyArg.method = defaults.method;
+    legacyArg.sourceA = defaults.sourceA;
+    legacyArg.sourceB = defaults.sourceB;
+
+    EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
+    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
 }
 
 SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq,
@@ -671,6 +792,10 @@ SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, 
 
 SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
     return sanitizeEnvelopePayloadImpl(payload);
+}
+
+SlotARGConfig ConfigManager::sanitizeArgConfig(const SlotARGConfig &candidate) {
+    return sanitizeSlotArg(candidate);
 }
 
 void ConfigManager::wipeProfileBlocks() {

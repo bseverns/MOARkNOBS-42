@@ -36,6 +36,14 @@ struct SlotEnvelopePayload {
     float q = 0.0f;         //!< Stored resonance/Q for biquad-driven modes
 };
 
+/** Per-slot configuration for the Analog Routing Grid mixer. */
+struct SlotARGConfig {
+    uint8_t enabled = 0; //!< Non-zero when ARG modulation should run for this slot
+    uint8_t method = 0;  //!< Index into EnvelopeFollower::ARG_Method
+    uint8_t sourceA = 0; //!< Primary envelope source (0-5)
+    uint8_t sourceB = 1; //!< Secondary envelope source (0-5, distinct from A)
+};
+
 struct MIDISlot {
     MIDIMessageType type = MIDIMessageType::OFF;
     uint8_t midiChannel = 1;
@@ -46,10 +54,11 @@ struct MIDISlot {
     uint8_t sysexLength = 0;
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
     SlotEnvelopePayload efPayload{}; //!< Per-slot EF filter payload
+    SlotARGConfig arg{};             //!< Slot-local ARG configuration defaults
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
 
-static_assert(sizeof(MIDISlot) == 36, "MIDISlot exploded past the expected 36 bytes");
+static_assert(sizeof(MIDISlot) <= 64, "MIDISlot exploded past the expected 64 bytes");
 
 #endif // MIDI_TYPES_H

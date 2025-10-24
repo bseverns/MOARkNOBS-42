@@ -185,6 +185,29 @@ const char *argMethodName(uint8_t method) {
     return "UNKNOWN";
 }
 
+constexpr std::array<int, NUM_ENVELOPES> kArgPins = {A0, A1, A2, A3, A6, A7};
+constexpr int kMaxArgMethod = 13;
+
+int envelopeIndexFromAnalogPin(int analogPin) {
+    for (size_t i = 0; i < kArgPins.size(); ++i) {
+        if (kArgPins[i] == analogPin) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+int envelopeAnalogPin(int index) {
+    if (index < 0 || index >= static_cast<int>(kArgPins.size())) {
+        return -1;
+    }
+    return kArgPins[static_cast<size_t>(index)];
+}
+
+SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
+    return ConfigManager::sanitizeArgConfig(candidate);
+}
+
 const char *envelopeModeName(uint8_t mode) {
     return (mode == static_cast<uint8_t>(EnvelopeFollower::ARG)) ? "ARG" : "SEF";
 }
@@ -397,6 +420,65 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     }
 
     bool anySlotPayloadSpecified = false;
+
+    SlotARGConfig defaultArg{};
+    defaultArg.enabled = configManager.getARGEnable();
+    defaultArg.method = configManager.getARGMethod();
+    defaultArg.sourceA = configManager.getEnvelopeA();
+    defaultArg.sourceB = configManager.getEnvelopeB();
+    defaultArg = sanitizeSlotArg(defaultArg);
+
+    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
+        JsonObject argObj = config["arg"].as<JsonObject>();
+        SlotARGConfig incoming = defaultArg;
+        if (argObj.containsKey("enable")) {
+            incoming.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+        } else if (argObj.containsKey("enabled")) {
+            incoming.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+        }
+        if (argObj.containsKey("method")) {
+            if (argObj["method"].is<const char *>()) {
+                EnvelopeFollower::ARG_Method parsed =
+                    parseArgMethod(argObj["method"].as<const char *>(),
+                                   static_cast<EnvelopeFollower::ARG_Method>(incoming.method));
+                incoming.method = static_cast<uint8_t>(parsed);
+            } else {
+                incoming.method = static_cast<uint8_t>(
+                    constrain(argObj["method"].as<int>(), 0, static_cast<int>(kMaxArgMethod)));
+            }
+        }
+        if (argObj.containsKey("a")) {
+            int rawA = argObj["a"].as<int>();
+            int idxA = envelopeIndexFromAnalogPin(rawA);
+            if (idxA < 0) {
+                idxA = constrain(rawA, 0, NUM_ENVELOPES - 1);
+            }
+            int analogA = envelopeAnalogPin(idxA);
+            if (analogA < 0) {
+                analogA = kArgPins.front();
+            }
+            incoming.sourceA = static_cast<uint8_t>(analogA);
+        }
+        if (argObj.containsKey("b")) {
+            int rawB = argObj["b"].as<int>();
+            int idxB = envelopeIndexFromAnalogPin(rawB);
+            if (idxB < 0) {
+                idxB = constrain(rawB, 0, NUM_ENVELOPES - 1);
+            }
+            int analogB = envelopeAnalogPin(idxB);
+            if (analogB < 0) {
+                analogB = kArgPins.back();
+            }
+            incoming.sourceB = static_cast<uint8_t>(analogB);
+        }
+        defaultArg = sanitizeSlotArg(incoming);
+
+        configManager.setARGEnable(defaultArg.enabled);
+        configManager.setARGMethod(defaultArg.method);
+        configManager.setEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
+    }
+
+    envelopeFollowMode = defaultArg.enabled != 0;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         JsonObject slotObj = slotsJson[i];
         if (slotObj.isNull()) {

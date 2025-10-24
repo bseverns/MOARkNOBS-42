@@ -237,6 +237,12 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
         filterName(static_cast<EnvelopeFollower::FilterType>(payload.filterType));
     efPayload["freq"] = payload.frequency;
     efPayload["q"] = payload.q;
+    JsonObject arg = body.createNestedObject("arg");
+    arg["enabled"] = slot.arg.enabled != 0;
+    arg["method"] = slot.arg.method;
+    arg["method_name"] = argMethodLabel(slot.arg.method);
+    arg["sourceA"] = slot.arg.sourceA;
+    arg["sourceB"] = slot.arg.sourceB;
     emitJson(doc);
 
     emitLegacySlotPatch(slot, slotIndex, resolvedDataByte);
