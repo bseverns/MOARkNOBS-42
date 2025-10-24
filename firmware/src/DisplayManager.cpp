@@ -16,6 +16,30 @@
 // state here so the screen always reflects the latest configuration.
 // Updates are triggered from the low-priority scheduler in firmware_main.cpp.
 
+namespace {
+
+const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+        return "Linear";
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+        return "Opp.Lin";
+    case MIDISlot::EfSettings::FilterType::Exponential:
+        return "Expo";
+    case MIDISlot::EfSettings::FilterType::Random:
+        return "Random";
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+        return "Lowpass";
+    case MIDISlot::EfSettings::FilterType::Highpass:
+        return "Highpass";
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return "Bandpass";
+    }
+    return "?";
+}
+
+} // namespace
+
 DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight)
     : _display(screenWidth, screenHeight, &Wire), _i2cAddress(i2cAddress) {
     _isDrawing = false;
@@ -357,20 +381,39 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
     _display.println(context.envelopeFollowMode ? "ON" : "OFF");
 
     auto efIt = context.potToEnvelopeMap.find(context.activePot);
-    if (efIt != context.potToEnvelopeMap.end()) {
-        const MIDISlot::EfSettings &settings = efIt->second;
+    if (efIt == context.potToEnvelopeMap.end()) {
         _display.setCursor(0, 20);
-        _display.print("ENV->POT: ");
-        if (settings.followerIndex >= 0) {
-            _display.println(settings.followerIndex);
-        } else {
-            _display.println("NONE");
-        }
-
+        _display.println("ENV: NONE");
         _display.setCursor(0, 30);
-        _display.print("EF FREQ: ");
-        _display.println(static_cast<int>(settings.frequency));
+        _display.println("F: --   Q: --");
+        _display.setCursor(0, 40);
+        _display.println("B: --   G: --");
+        _display.display();
+        return;
     }
+
+    const MIDISlot::EfSettings &settings = efIt->second;
+    _display.setCursor(0, 20);
+    _display.print("ENV: ");
+    if (settings.followerIndex >= 0) {
+        _display.print(settings.followerIndex);
+        _display.print(" ");
+        _display.println(efFilterLabel(settings.filterType));
+    } else {
+        _display.println("NONE");
+    }
+
+    _display.setCursor(0, 30);
+    _display.print("F: ");
+    _display.print(static_cast<int>(settings.frequency));
+    _display.print("Hz  Q:");
+    _display.print(settings.q, 2);
+
+    _display.setCursor(0, 40);
+    _display.print("B:");
+    _display.print(settings.baseline, 2);
+    _display.print("  G:");
+    _display.print(settings.gain, 2);
 
     _display.display();
 }
