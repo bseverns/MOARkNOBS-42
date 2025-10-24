@@ -198,6 +198,8 @@ const char *envelopeModeName(uint8_t mode) {
 }
 } // namespace
 
+void refreshEfVoicesFromConfig();
+
 namespace {
 Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
@@ -382,17 +384,6 @@ void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
 }
 
 } // namespace
-
-void refreshEfVoicesFromConfig();
-
-void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings) {
-    if (slotIndex >= NUM_SLOTS)
-        return;
-    MIDISlot &slot = configManager.getSlot(slotIndex);
-    slot.efSettings = settings;
-    configManager.saveSlot(slotIndex, slot);
-    refreshEfVoicesFromConfig();
-}
 
 namespace {
 
