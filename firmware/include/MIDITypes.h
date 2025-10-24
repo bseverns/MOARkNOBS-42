@@ -85,19 +85,6 @@ struct MIDISlot {
         float gain = 1.0f;         //!< Output gain applied post-baseline
     };
 
-    FilterType filterType = FilterType::Linear; //!< Desired filter topology
-    int8_t followerIndex = -1;                  //!< Assigned hardware follower (-1 when unbound)
-    uint8_t oversample = 4;                     //!< ADC oversample count (1 == disabled)
-    float frequency = 1000.0f;                  //!< Cutoff/shape frequency in Hz
-    float q = 0.707f;                           //!< Resonance / secondary filter parameter
-    float smoothing = 0.2f;                     //!< EWMA smoothing factor (0..1)
-    float baseline = 0.0f;                      //!< Noise floor offset after calibration
-    float gain = 1.0f;                          //!< Output gain applied post-baseline
-};
-
-struct MIDISlot {
-    using EfSettings = ::EfSettings;
-
     MIDIMessageType type = MIDIMessageType::OFF;
     uint8_t midiChannel = 1;
     uint8_t data1 = 0;
@@ -106,9 +93,20 @@ struct MIDISlot {
     uint8_t sysexLength = 0;
     EfSettings efSettings{}; //!< Slot-specific envelope follower settings
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
-    EfSettings ef{};                 //!< Live envelope follower assignment
-    SlotEnvelopePayload efPayload{}; //!< Per-slot EF filter payload
-    SlotARGConfig arg{};             //!< Slot-local ARG mixer settings
+    struct EfRuntime {
+        int8_t followerIndex = -1; //!< Currently assigned hardware follower (-1 when unbound)
+    };
+    EfRuntime ef{};      //!< Live envelope follower assignment metadata
+    SlotARGConfig arg{}; //!< Slot-local ARG mixer settings
+
+    /** Update both persistent and runtime follower assignments in lockstep. */
+    void setEnvelopeFollowerIndex(int8_t index) {
+        ef.followerIndex = index;
+        efSettings.followerIndex = index;
+    }
+
+    /** Convenience accessor mirroring the currently assigned follower index. */
+    int8_t getEnvelopeFollowerIndex() const { return ef.followerIndex; }
 };
 
 constexpr uint8_t NUM_SLOTS = 42;

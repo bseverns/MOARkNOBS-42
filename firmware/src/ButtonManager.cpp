@@ -155,12 +155,13 @@ inline void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSe
 inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
                              const MIDISlot::EfSettings &settings) {
     MIDISlot &slot = context.configManager.getSlot(static_cast<uint8_t>(slotIndex));
-    slot.ef = settings;
+    slot.efSettings = settings;
+    slot.setEnvelopeFollowerIndex(settings.followerIndex);
     context.configManager.saveSlot(static_cast<uint8_t>(slotIndex), slot);
-    context.potToEnvelopeMap[slotIndex] = settings;
+    context.potToEnvelopeMap[slotIndex] = slot.efSettings;
     int follower = settings.followerIndex;
     if (follower >= 0 && follower < static_cast<int>(context.envelopes.size())) {
-        applyEfSettingsToFollower(context.envelopes[follower], settings);
+        applyEfSettingsToFollower(context.envelopes[follower], slot.efSettings);
     }
 }
 } // namespace
@@ -344,7 +345,9 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
 void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &context) {
     // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
-        MIDISlot::EfSettings settings = context.configManager.getSlot(index).ef;
+        MIDISlot &slotRef = context.configManager.getSlot(index);
+        MIDISlot::EfSettings settings = slotRef.efSettings;
+        settings.followerIndex = slotRef.getEnvelopeFollowerIndex();
         auto it = context.potToEnvelopeMap.find(index);
         if (it != context.potToEnvelopeMap.end()) {
             settings = it->second;
@@ -563,7 +566,9 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
     if (_pendingEfSlot >= 0 && buttonIndex >= NUM_VIRTUAL_BUTTONS) {
         uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
         if (controlIndex < context.envelopes.size()) {
-            MIDISlot::EfSettings settings = context.configManager.getSlot(_pendingEfSlot).ef;
+            MIDISlot &slotRef = context.configManager.getSlot(_pendingEfSlot);
+            MIDISlot::EfSettings settings = slotRef.efSettings;
+            settings.followerIndex = slotRef.getEnvelopeFollowerIndex();
             settings.followerIndex = static_cast<int8_t>(controlIndex);
             commitEfSettings(context, _pendingEfSlot, settings);
             context.envelopes[controlIndex].toggleActive(true);
@@ -609,7 +614,9 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
 
         // If EF is on, cycle to the next EF for the active slot
-        MIDISlot::EfSettings settings = context.configManager.getSlot(context.activePot).ef;
+        MIDISlot &slotRef = context.configManager.getSlot(context.activePot);
+        MIDISlot::EfSettings settings = slotRef.efSettings;
+        settings.followerIndex = slotRef.getEnvelopeFollowerIndex();
         auto it = context.potToEnvelopeMap.find(context.activePot);
         if (it != context.potToEnvelopeMap.end()) {
             settings = it->second;
@@ -797,7 +804,9 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             context.displayManager.displayStatus("EF turned ON", 1000);
         }
         int randomEF = random(context.envelopes.size());
-        MIDISlot::EfSettings settings = context.configManager.getSlot(context.activePot).ef;
+        MIDISlot &slotRef = context.configManager.getSlot(context.activePot);
+        MIDISlot::EfSettings settings = slotRef.efSettings;
+        settings.followerIndex = slotRef.getEnvelopeFollowerIndex();
         settings.followerIndex = static_cast<int8_t>(randomEF);
         commitEfSettings(context, context.activePot, settings);
         context.envelopes[randomEF].toggleActive(true);
