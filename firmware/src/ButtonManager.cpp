@@ -36,13 +36,15 @@ static const unsigned long DOUBLE_PRESS_DELAY = 300;
 // Mirror the global ARG pair count so our math stays synced without recomputing.
 static const int NUM_ARG_PAIRS = ARG_PAIRS_LEN;
 
-static const EnvelopeFollower::FilterType ALL_FILTERS[] = {
-    EnvelopeFollower::LINEAR,  EnvelopeFollower::OPPOSITE_LINEAR, EnvelopeFollower::EXPONENTIAL,
-    EnvelopeFollower::RANDOM,  EnvelopeFollower::LOWPASS,         EnvelopeFollower::HIGHPASS,
-    EnvelopeFollower::BANDPASS};
-static const char *FILTER_TYPE_NAMES[] = {"LINEAR",  "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM",
-                                          "LOWPASS", "HIGHPASS",        "BANDPASS"};
+static constexpr MIDISlot::EfSettings::FilterType SLOT_FILTERS[] = {
+    MIDISlot::EfSettings::FilterType::Linear,      MIDISlot::EfSettings::FilterType::OppositeLinear,
+    MIDISlot::EfSettings::FilterType::Exponential, MIDISlot::EfSettings::FilterType::Random,
+    MIDISlot::EfSettings::FilterType::Lowpass,     MIDISlot::EfSettings::FilterType::Highpass,
+    MIDISlot::EfSettings::FilterType::Bandpass};
+static constexpr const char *FILTER_TYPE_NAMES[] = {
+    "LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"};
 
+static constexpr int NUM_FILTER_TYPES = sizeof(SLOT_FILTERS) / sizeof(SLOT_FILTERS[0]);
 static constexpr ARGMethod ALL_ARG_METHODS[] = {
     ARGMethod::PLUS, ARGMethod::MIN,  ARGMethod::PECK, ARGMethod::SHAV, ARGMethod::SQAR,
     ARGMethod::BABS, ARGMethod::TABS, ARGMethod::MULT, ARGMethod::DIVI, ARGMethod::AVG,
@@ -51,11 +53,6 @@ static constexpr ARGMethod ALL_ARG_METHODS[] = {
 static constexpr const char *ARG_METHOD_NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
                                                    "BABS", "TABS", "MULT", "DIVI", "AVG",
                                                    "XABS", "MAXX", "MINN", "XORR"};
-
-static const int NUM_FILTER_TYPES = sizeof(ALL_FILTERS) / sizeof(ALL_FILTERS[0]);
-
-// We'll track which filter index each EnvelopeFollower (e.g. 6 total) is using:
-static int filterTypeIndexForEF[NUM_ENVELOPES] = {0};
 
 // Active configuration profile stored in EEPROM
 static uint8_t currentProfile = 0;
@@ -97,6 +94,63 @@ inline void streamFilterPatch(const EnvelopeFollower &env) {
 inline void streamArgPatch(const ConfigManager &config) {
     WebSerial::sendArgPatch(config.getARGMethod(), config.getARGEnable() != 0,
                             config.getEnvelopeA(), config.getEnvelopeB());
+}
+
+inline EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+        return EnvelopeFollower::LINEAR;
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+        return EnvelopeFollower::OPPOSITE_LINEAR;
+    case MIDISlot::EfSettings::FilterType::Exponential:
+        return EnvelopeFollower::EXPONENTIAL;
+    case MIDISlot::EfSettings::FilterType::Random:
+        return EnvelopeFollower::RANDOM;
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+        return EnvelopeFollower::LOWPASS;
+    case MIDISlot::EfSettings::FilterType::Highpass:
+        return EnvelopeFollower::HIGHPASS;
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return EnvelopeFollower::BANDPASS;
+    }
+    return EnvelopeFollower::LINEAR;
+}
+
+inline int filterIndex(MIDISlot::EfSettings::FilterType type) {
+    for (int i = 0; i < NUM_FILTER_TYPES; ++i) {
+        if (SLOT_FILTERS[i] == type) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+inline MIDISlot::EfSettings::FilterType cycleFilter(MIDISlot::EfSettings::FilterType current,
+                                                    int delta) {
+    int index = filterIndex(current);
+    index = (index + delta + NUM_FILTER_TYPES) % NUM_FILTER_TYPES;
+    return SLOT_FILTERS[index];
+}
+
+inline void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
+    ef.setFilterType(toEnvelopeFilter(settings.filterType));
+    ef.configureFilter(settings.frequency, settings.q);
+    ef.setOversampleCount(settings.oversample);
+    ef.setSmoothingAlpha(settings.smoothing);
+    ef.setBaseline(settings.baseline);
+    ef.setGain(settings.gain);
+}
+
+inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
+                             const MIDISlot::EfSettings &settings) {
+    MIDISlot &slot = context.configManager.getSlot(static_cast<uint8_t>(slotIndex));
+    slot.ef = settings;
+    context.configManager.saveSlot(static_cast<uint8_t>(slotIndex), slot);
+    context.potToEnvelopeMap[slotIndex] = settings;
+    int follower = settings.followerIndex;
+    if (follower >= 0 && follower < static_cast<int>(context.envelopes.size())) {
+        applyEfSettingsToFollower(context.envelopes[follower], settings);
+    }
 }
 } // namespace
 
@@ -279,16 +333,22 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
 void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &context) {
     // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
+        MIDISlot::EfSettings settings = context.configManager.getSlot(index).ef;
         auto it = context.potToEnvelopeMap.find(index);
-        if (it == context.potToEnvelopeMap.end()) {
-            context.potToEnvelopeMap[index] = 0; // default EF0
-        } else {
-            int currentEF = it->second;
-            int nextEF = (currentEF + 1) % context.envelopes.size();
-            it->second = nextEF;
+        if (it != context.potToEnvelopeMap.end()) {
+            settings = it->second;
         }
-        int assigned = context.potToEnvelopeMap[index];
-        context.envelopes[assigned].toggleActive(true);
+        if (settings.followerIndex < 0) {
+            settings.followerIndex = 0;
+        } else {
+            settings.followerIndex =
+                static_cast<int8_t>((settings.followerIndex + 1) % context.envelopes.size());
+        }
+        commitEfSettings(context, index, settings);
+        int assigned = settings.followerIndex;
+        if (assigned >= 0 && assigned < static_cast<int>(context.envelopes.size())) {
+            context.envelopes[assigned].toggleActive(true);
+        }
         char buf[32];
         sprintf(buf, "Slot %d -> EF %d", index, assigned);
         context.displayManager.displayStatus(buf, 1500);
@@ -306,8 +366,10 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
                 context.displayManager.displayStatus("No EF assigned", 1000);
                 break;
             }
-            int efIndex = it->second;
-            context.envelopes[efIndex].calibrate(); // auto-saves baseline via ConfigManager
+            int efIndex = it->second.followerIndex;
+            if (efIndex >= 0 && efIndex < static_cast<int>(context.envelopes.size())) {
+                context.envelopes[efIndex].calibrate(); // auto-saves baseline via ConfigManager
+            }
             context.displayManager.displayStatus("EF Calibrated", 1500);
             break;
         }
@@ -416,22 +478,19 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
             context.displayManager.displayStatus("No EF assigned", 1000);
             return;
         }
-        int efIndex = it->second;
-
-        // Move to next filter index for that EF
-        filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
-
-        // Retrieve the new filter type
-        EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
-        // Apply it
-        context.envelopes[efIndex].setFilterType(newType);
-        streamFilterPatch(context.envelopes[efIndex]);
-
-        // Feedback
-        const char *filterName = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+        MIDISlot::EfSettings settings = it->second;
+        if (settings.followerIndex < 0 ||
+            settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return;
+        }
+        settings.filterType = cycleFilter(settings.filterType, +1);
+        commitEfSettings(context, index, settings);
+        const char *filterName = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
         char msg[32];
         sprintf(msg, "Slot %d => %s", index, filterName);
         context.displayManager.displayStatus(msg, 1500);
+        streamFilterPatch(context.envelopes[settings.followerIndex]);
     } else {
         // Double-press on a control button
         uint8_t cIndex = index - NUM_VIRTUAL_BUTTONS;
@@ -443,17 +502,20 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
                 context.displayManager.displayStatus("No EF assigned", 1000);
                 return;
             }
-            int efIndex = it->second;
-            filterTypeIndexForEF[efIndex] = (filterTypeIndexForEF[efIndex] + 1) % NUM_FILTER_TYPES;
+            MIDISlot::EfSettings settings = it->second;
+            if (settings.followerIndex < 0 ||
+                settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
+                context.displayManager.displayStatus("No EF assigned", 1000);
+                return;
+            }
+            settings.filterType = cycleFilter(settings.filterType, +1);
+            commitEfSettings(context, context.activePot, settings);
 
-            EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
-            context.envelopes[efIndex].setFilterType(newType);
-
-            const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+            const char *name = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
             char msg[32];
             sprintf(msg, "Slot %d => %s", context.activePot, name);
             context.displayManager.displayStatus(msg, 1500);
-            streamFilterPatch(context.envelopes[efIndex]);
+            streamFilterPatch(context.envelopes[settings.followerIndex]);
             break;
         }
 
@@ -465,20 +527,21 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
                 context.displayManager.displayStatus("No EF assigned", 1000);
                 return;
             }
-            int efIndex = it->second;
+            MIDISlot::EfSettings settings = it->second;
+            if (settings.followerIndex < 0 ||
+                settings.followerIndex >= static_cast<int>(context.envelopes.size())) {
+                context.displayManager.displayStatus("No EF assigned", 1000);
+                return;
+            }
 
-            // Safely move backward by adding NUM_FILTER_TYPES - 1
-            filterTypeIndexForEF[efIndex] =
-                (filterTypeIndexForEF[efIndex] + NUM_FILTER_TYPES - 1) % NUM_FILTER_TYPES;
+            settings.filterType = cycleFilter(settings.filterType, -1);
+            commitEfSettings(context, context.activePot, settings);
 
-            EnvelopeFollower::FilterType newType = ALL_FILTERS[filterTypeIndexForEF[efIndex]];
-            context.envelopes[efIndex].setFilterType(newType);
-
-            const char *name = FILTER_TYPE_NAMES[filterTypeIndexForEF[efIndex]];
+            const char *name = FILTER_TYPE_NAMES[filterIndex(settings.filterType)];
             char msg[32];
             sprintf(msg, "Slot %d => %s", context.activePot, name);
             context.displayManager.displayStatus(msg, 1500);
-            streamFilterPatch(context.envelopes[efIndex]);
+            streamFilterPatch(context.envelopes[settings.followerIndex]);
             break; // <--- ensure we break out of case 1
         }
 
@@ -528,7 +591,9 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
     if (_pendingEfSlot >= 0 && buttonIndex >= NUM_VIRTUAL_BUTTONS) {
         uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
         if (controlIndex < context.envelopes.size()) {
-            context.potToEnvelopeMap[_pendingEfSlot] = controlIndex;
+            MIDISlot::EfSettings settings = context.configManager.getSlot(_pendingEfSlot).ef;
+            settings.followerIndex = static_cast<int8_t>(controlIndex);
+            commitEfSettings(context, _pendingEfSlot, settings);
             context.envelopes[controlIndex].toggleActive(true);
             char buf[32];
             sprintf(buf, "Slot %d -> EF %d", _pendingEfSlot, controlIndex);
@@ -572,22 +637,21 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
 
         // If EF is on, cycle to the next EF for the active slot
+        MIDISlot::EfSettings settings = context.configManager.getSlot(context.activePot).ef;
         auto it = context.potToEnvelopeMap.find(context.activePot);
-        if (it == context.potToEnvelopeMap.end()) {
-            // not assigned yet => assign EF0
-            context.potToEnvelopeMap[context.activePot] = 0;
-        } else {
-            int currentEF = it->second;
-            int nextEF = (currentEF + 1) % context.envelopes.size();
-            it->second = nextEF;
+        if (it != context.potToEnvelopeMap.end()) {
+            settings = it->second;
         }
-        int assigned = context.potToEnvelopeMap[context.activePot];
-        context.envelopes[assigned].toggleActive(true);
-
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
-        if (slot.efIndex != static_cast<uint8_t>(assigned)) {
-            slot.efIndex = static_cast<uint8_t>(assigned);
-            context.configManager.saveSlot(context.activePot, slot);
+        if (settings.followerIndex < 0) {
+            settings.followerIndex = 0;
+        } else {
+            settings.followerIndex =
+                static_cast<int8_t>((settings.followerIndex + 1) % context.envelopes.size());
+        }
+        commitEfSettings(context, context.activePot, settings);
+        int assigned = settings.followerIndex;
+        if (assigned >= 0 && assigned < static_cast<int>(context.envelopes.size())) {
+            context.envelopes[assigned].toggleActive(true);
         }
 
         char buf[32];
@@ -671,6 +735,28 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl4 = 1 << 4;
     const uint8_t maskCtrl5 = 1 << 5;
 
+    auto ensureActiveSlot = [&]() -> MIDISlot * {
+        if (context.activePot >= NUM_SLOTS) {
+            context.displayManager.displayStatus("Slot out of range", 1000);
+            return nullptr;
+        }
+        return &context.configManager.getSlot(context.activePot);
+    };
+
+    auto requireFollowerAssignment = [&]() -> int {
+        auto it = context.potToEnvelopeMap.find(context.activePot);
+        if (it == context.potToEnvelopeMap.end()) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return -1;
+        }
+        int followerIndex = it->second.followerIndex;
+        if (followerIndex < 0 || followerIndex >= static_cast<int>(context.envelopes.size())) {
+            context.displayManager.displayStatus("No EF assigned", 1000);
+            return -1;
+        }
+        return followerIndex;
+    };
+
     // (0) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
         (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
@@ -680,33 +766,38 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
-        if (context.activePot >= NUM_SLOTS) {
-            context.displayManager.displayStatus("Slot out of range", 1000);
+        MIDISlot *slot = ensureActiveSlot();
+        if (slot == nullptr) {
+            return;
+        }
+        if (requireFollowerAssignment() < 0) {
             return;
         }
 
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        constexpr size_t methodCount = sizeof(ALL_ARG_METHODS) / sizeof(ALL_ARG_METHODS[0]);
         size_t methodIndex = 0;
-        size_t methodCount = sizeof(ALL_ARG_METHODS) / sizeof(ALL_ARG_METHODS[0]);
         for (; methodIndex < methodCount; ++methodIndex) {
-            if (slot.arg.method == ALL_ARG_METHODS[methodIndex]) {
+            if (slot->arg.method == ALL_ARG_METHODS[methodIndex]) {
                 break;
             }
         }
         methodIndex = (methodIndex + 1) % methodCount;
 
-        slot.arg.enabled = 1;
-        slot.arg.method = ALL_ARG_METHODS[methodIndex];
-        context.configManager.saveSlot(context.activePot, slot);
+        slot->arg.enabled = 1;
+        slot->arg.method = ALL_ARG_METHODS[methodIndex];
+        context.configManager.saveSlot(context.activePot, *slot);
 
-        context.configManager.setARGEnable(slot.arg.enabled);
-        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
-        int analogA = envelopeAnalogPin(slot.arg.sourceA);
-        if (analogA < 0)
+        context.configManager.setARGEnable(slot->arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
+
+        int analogA = envelopeAnalogPin(slot->arg.sourceA);
+        if (analogA < 0) {
             analogA = 0;
-        int analogB = envelopeAnalogPin(slot.arg.sourceB);
-        if (analogB < 0)
+        }
+        int analogB = envelopeAnalogPin(slot->arg.sourceB);
+        if (analogB < 0) {
             analogB = analogA;
+        }
         context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
                                               static_cast<uint8_t>(analogB));
 
@@ -719,40 +810,40 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
-        if (context.activePot >= NUM_SLOTS) {
-            context.displayManager.displayStatus("Slot out of range", 1000);
+        MIDISlot *slot = ensureActiveSlot();
+        if (slot == nullptr) {
+            return;
+        }
+        if (requireFollowerAssignment() < 0) {
             return;
         }
 
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
-        size_t pairIndex = 0;
-        for (; pairIndex < ARG_PAIRS_LEN; ++pairIndex) {
-            if (ARG_PAIRS[pairIndex].first == slot.arg.sourceA &&
-                ARG_PAIRS[pairIndex].second == slot.arg.sourceB) {
-                break;
-            }
-        }
-        pairIndex = (pairIndex + 1) % ARG_PAIRS_LEN;
+        static size_t pairIndex = 0;
+        pairIndex = (pairIndex + 1) % NUM_ARG_PAIRS;
+        const auto &pair = ARG_PAIRS[pairIndex];
 
-        slot.arg.enabled = 1;
-        slot.arg.sourceA = ARG_PAIRS[pairIndex].first;
-        slot.arg.sourceB = ARG_PAIRS[pairIndex].second;
-        context.configManager.saveSlot(context.activePot, slot);
+        slot->arg.enabled = 1;
+        slot->arg.sourceA = pair.first;
+        slot->arg.sourceB = pair.second;
+        context.configManager.saveSlot(context.activePot, *slot);
 
-        context.configManager.setARGEnable(slot.arg.enabled);
-        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
-        int analogA = envelopeAnalogPin(slot.arg.sourceA);
-        if (analogA < 0)
+        context.configManager.setARGEnable(slot->arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot->arg.method));
+
+        int analogA = envelopeAnalogPin(pair.first);
+        if (analogA < 0) {
             analogA = 0;
-        int analogB = envelopeAnalogPin(slot.arg.sourceB);
-        if (analogB < 0)
+        }
+        int analogB = envelopeAnalogPin(pair.second);
+        if (analogB < 0) {
             analogB = analogA;
+        }
         context.configManager.setEnvelopePair(static_cast<uint8_t>(analogA),
                                               static_cast<uint8_t>(analogB));
 
         char buf[32];
-        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, slot.arg.sourceA + 1,
-                 slot.arg.sourceB + 1);
+        snprintf(buf, sizeof(buf), "Slot %d: EF%u+EF%u", context.activePot, pair.first + 1,
+                 pair.second + 1);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
@@ -773,13 +864,10 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             context.displayManager.displayStatus("EF turned ON", 1000);
         }
         int randomEF = random(context.envelopes.size());
-        context.potToEnvelopeMap[context.activePot] = randomEF;
+        MIDISlot::EfSettings settings = context.configManager.getSlot(context.activePot).ef;
+        settings.followerIndex = static_cast<int8_t>(randomEF);
+        commitEfSettings(context, context.activePot, settings);
         context.envelopes[randomEF].toggleActive(true);
-        MIDISlot &slot = context.configManager.getSlot(context.activePot);
-        if (slot.efIndex != static_cast<uint8_t>(randomEF)) {
-            slot.efIndex = static_cast<uint8_t>(randomEF);
-            context.configManager.saveSlot(context.activePot, slot);
-        }
         char buf[32];
         sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);

@@ -72,6 +72,15 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 - **Telemetry Watchdog**: Hardware UART overruns, dropped MIDI frames, and slow loops now bump counters, flash the status LED, and flow out over WebSerial so you know when you're skirting the edge.
 
+### Slot Anatomy Cheat Sheet
+
+Every slot now ships with two tiny structs riding shotgun:
+
+- `MIDISlot::EfSettings` – follower index, filter shape, oversample count, smoothing, baseline, and gain. When you lock a slot to an EF the firmware mirrors those knobs back to the follower so edits survive reboots.
+- `SlotARGConfig` – the per-slot ARG mix recipe. Disabled slots fall back to their assigned follower level, so the math never bleeds when you bail out of ARG mode.
+
+Legacy slots migrate automatically; the code reads the old `efIndex` byte, pours it into `EfSettings::followerIndex`, and lets the new defaults take over.
+
 ### Dynamic Envelope Modulation
 
 Those six envelope followers aren't just spectators—they hijack whatever slot you point them at. Wire an EF to a slot, pick a curve (linear, inverse, exponential, random, or the filter trio), and the `Freq`/`Q` pots sculpt cutoff and resonance live. It's side-chain mayhem without a DAW. Scripters can poke `GET_FILTER` / `SET_FILTER` over WebSerial to lock in the shape.
@@ -830,6 +839,30 @@ firmware salutes:
 | `SET_ARGMETHOD <n>`        | Picks the ARG method to torment signals with.                     |
 | `GET_EF <slot>`            | Tells which envelope follower owns a slot (`-1` = none).          |
 | `SET_EF <slot,ef>`         | Assigns follower `ef` to `slot` and saves it.                     |
+
+### Slot EF payload anatomy
+
+`SET_SLOT` and friends (`SET_ALL`, WebSerial `slot_patch`, the JSON config blob from `GET_CONFIG`) now ship a nested `"ef"`
+object for every slot. That little structure mirrors the firmware's new `MIDISlot::EfSettings` record, so the browser can tune
+follower parameters without side quests through global filter state. Here's what the synth expects:
+
+```json
+{
+  "index": 2,            // follower number or -1 when unassigned
+  "filter_index": 5,     // one of the 7 EnvelopeFollower::FilterType values
+  "frequency": 1200.0,   // Hz for the low/high/band-pass shapes or scaler for the curves
+  "q": 1.2,              // resonance / secondary parameter for filter modes
+  "oversample": 8,       // ADC oversample count (1 disables extra reads)
+  "smoothing": 0.35,     // EWMA alpha: 0 = frozen, 1 = no smoothing
+  "baseline": 0.02,      // volts to subtract after calibration
+  "gain": 1.5            // multiplier applied after baseline before mapping to MIDI
+}
+```
+
+Leave fields out and the firmware keeps whatever it already stored. Send the object with `index: -1` to ditch the follower
+assignment entirely. Baseline and gain are saved alongside the rest, so a calibrated follower stays civil across reboots. If
+you only care about the legacy integer, `ef_index` is still echoed for backward compatibility—but the nested object is where
+the real power lives.
 
 Need to bake a hue right into EEPROM? The WebSerial editor now stuffs a `#RRGGBB` string into `SET_ALL` so you can slam brightness and colour in one hit:
 

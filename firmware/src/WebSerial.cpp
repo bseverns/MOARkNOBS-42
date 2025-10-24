@@ -81,6 +81,26 @@ const char *filterName(EnvelopeFollower::FilterType type) {
     return "LINEAR";
 }
 
+const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+        return "LINEAR";
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+        return "OPPOSITE_LINEAR";
+    case MIDISlot::EfSettings::FilterType::Exponential:
+        return "EXPONENTIAL";
+    case MIDISlot::EfSettings::FilterType::Random:
+        return "RANDOM";
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+        return "LOWPASS";
+    case MIDISlot::EfSettings::FilterType::Highpass:
+        return "HIGHPASS";
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return "BANDPASS";
+    }
+    return "LINEAR";
+}
+
 const char *argMethodLabel(uint8_t method) {
     static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
                                              "BABS", "TABS", "MULT", "DIVI", "AVG",
@@ -179,7 +199,7 @@ void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolv
     slotObj["type_code"] = static_cast<uint8_t>(slot.type);
     slotObj["midiChannel"] = slot.midiChannel;
     slotObj["data1"] = resolvedDataByte;
-    slotObj["efIndex"] = slot.efIndex;
+    slotObj["efIndex"] = slot.ef.followerIndex;
     slotObj["active"] = slot.active;
     slotObj["arpNote"] = slot.arpNote;
     emitJson(doc);
@@ -239,7 +259,17 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     body["type_name"] = slotTypeLegacyName(slot.type);
     body["channel"] = slot.midiChannel;
     body["data1"] = resolvedDataByte;
-    body["ef_index"] = slot.efIndex;
+    body["ef_index"] = slot.ef.followerIndex;
+    JsonObject ef = body.createNestedObject("ef");
+    ef["index"] = slot.ef.followerIndex;
+    ef["filter_index"] = static_cast<uint8_t>(slot.ef.filterType);
+    ef["filter_name"] = efFilterLabel(slot.ef.filterType);
+    ef["frequency"] = slot.ef.frequency;
+    ef["q"] = slot.ef.q;
+    ef["oversample"] = slot.ef.oversample;
+    ef["smoothing"] = slot.ef.smoothing;
+    ef["baseline"] = slot.ef.baseline;
+    ef["gain"] = slot.ef.gain;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
     JsonObject arg = body.createNestedObject("arg");
