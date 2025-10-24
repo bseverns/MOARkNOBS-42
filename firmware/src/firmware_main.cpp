@@ -291,6 +291,17 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
     return false;
 }
 
+EnvelopeFollower::FilterType decodeFilterType(uint8_t raw) {
+    if (raw > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
+        return EnvelopeFollower::LINEAR;
+    }
+    return static_cast<EnvelopeFollower::FilterType>(raw);
+}
+
+uint8_t encodeFilterType(EnvelopeFollower::FilterType type) {
+    return static_cast<uint8_t>(type);
+}
+
 EnvelopeFollower::FilterType parseFilterType(const char *label,
                                              EnvelopeFollower::FilterType fallback) {
     if (!label)
@@ -372,6 +383,8 @@ void parseEfSettings(JsonObjectConst settingsObj, EfSettings &settings,
     }
 }
 
+} // namespace
+
 void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings) {
     if (slotIndex >= NUM_SLOTS)
         return;
@@ -380,6 +393,8 @@ void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings) {
     configManager.saveSlot(slotIndex, slot);
     refreshEfVoicesFromConfig();
 }
+
+namespace {
 
 bool parseHexColor(const char *hex, CRGB &color) {
     if (!hex)
@@ -578,15 +593,6 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 } // namespace
 
 namespace {
-
-EnvelopeFollower::FilterType decodeFilterType(uint8_t raw) {
-    if (raw > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
-        return EnvelopeFollower::LINEAR;
-    }
-    return static_cast<EnvelopeFollower::FilterType>(raw);
-}
-
-uint8_t encodeFilterType(EnvelopeFollower::FilterType type) { return static_cast<uint8_t>(type); }
 
 BiquadFilter::FilterType toBiquadType(EnvelopeFollower::FilterType type) {
     switch (type) {

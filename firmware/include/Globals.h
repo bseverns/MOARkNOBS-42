@@ -195,4 +195,6 @@ inline constexpr size_t ARG_PAIR_COUNT = (NUM_ENVELOPES * (NUM_ENVELOPES - 1)) /
 extern const std::array<std::pair<int, int>, ARG_PAIR_COUNT> ARG_PAIRS;
 extern const size_t ARG_PAIRS_LEN;
 
+void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings);
+
 #endif // GLOBALS_H

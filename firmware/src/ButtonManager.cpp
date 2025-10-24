@@ -13,8 +13,6 @@
 #include "WebSerial.h"
 #include <map>
 
-extern void saveSlotEfSettings(uint8_t slotIndex, const EfSettings &settings);
-
 // Scans the button matrix and direct control buttons. Results are fed into
 // DisplayManager, ConfigManager, EnvelopeFollower assignments and the
 // Arpeggiator. This class ties user interaction to the rest of the system.
