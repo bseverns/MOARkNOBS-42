@@ -76,10 +76,10 @@ struct MIDISlot {
         };
 
         int8_t followerIndex = -1; //!< Assigned hardware follower (-1 when unbound)
+        uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
         FilterType filterType = FilterType::Linear;
         float frequency = 1000.0f; //!< Cutoff/shape frequency in Hz
         float q = 0.707f;          //!< Resonance / secondary filter parameter
-        uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
         float smoothing = 0.2f;    //!< EWMA smoothing factor (0..1)
         float baseline = 0.0f;     //!< Noise floor offset after calibration
         float gain = 1.0f;         //!< Output gain applied post-baseline
