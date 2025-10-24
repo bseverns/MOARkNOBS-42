@@ -503,9 +503,9 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         }
         if (argObj.containsKey("method")) {
             if (argObj["method"].is<const char *>()) {
-                EnvelopeFollower::ARG_Method parsed = parseArgMethod(
-                    argObj["method"].as<const char *>(), toFollowerArgMethod(incoming.method));
-                incoming.method = toSlotArgMethod(parsed);
+                ARGMethod parsed =
+                    parseArgMethod(argObj["method"].as<const char *>(), incoming.method);
+                incoming.method = parsed;
             } else {
                 int raw = argObj["method"].as<int>();
                 raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
@@ -621,10 +621,9 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             }
             if (slotArgObj.containsKey("method")) {
                 if (slotArgObj["method"].is<const char *>()) {
-                    EnvelopeFollower::ARG_Method parsed =
-                        parseArgMethod(slotArgObj["method"].as<const char *>(),
-                                       toFollowerArgMethod(slotArgConfig.method));
-                    slotArgConfig.method = toSlotArgMethod(parsed);
+                    ARGMethod parsed = parseArgMethod(slotArgObj["method"].as<const char *>(),
+                                                      slotArgConfig.method);
+                    slotArgConfig.method = parsed;
                 } else {
                     int raw = slotArgObj["method"].as<int>();
                     raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
