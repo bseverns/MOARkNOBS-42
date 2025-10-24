@@ -85,8 +85,8 @@ inline void streamFilterPatch(const EnvelopeFollower &env) {
 }
 
 inline void streamArgPatch(const ConfigManager &config) {
-    WebSerial::sendArgPatch(config.getARGMethod(), config.getARGEnable() != 0, config.getEnvelopeA(),
-                            config.getEnvelopeB());
+    WebSerial::sendArgPatch(config.getARGMethod(), config.getARGEnable() != 0,
+                            config.getEnvelopeA(), config.getEnvelopeB());
 }
 } // namespace
 

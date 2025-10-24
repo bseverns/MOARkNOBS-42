@@ -5,9 +5,8 @@
 #include "Utility.h"
 #include "Log.h"
 #include "ConfigManager.h"
+#include "Globals.h"
 #include <ArduinoJson.h>
-
-extern bool webSerialStreaming;
 
 namespace {
 const char *slotTypeSchemaName(MIDIMessageType type) {
