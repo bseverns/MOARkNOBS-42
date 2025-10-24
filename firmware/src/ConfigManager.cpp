@@ -501,7 +501,7 @@ void ConfigManager::setARGMethod(uint8_t method) {
     defaults.method = static_cast<ARGMethod>(legacyArg.method);
     defaults.sourceA = legacyArg.sourceA;
     defaults.sourceB = legacyArg.sourceB;
-    defaults = sanitizeArgConfig(defaults);
+    defaults = sanitizeSlotArg(defaults);
     legacyArg.method = static_cast<uint8_t>(defaults.method);
     EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
 }
@@ -659,10 +659,6 @@ SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &
     return persistFilterTailImpl(payload);
 }
 
-SlotARGConfig ConfigManager::sanitizeArgConfig(const SlotARGConfig &candidate) {
-    return sanitizeSlotArg(candidate);
-}
-
 void ConfigManager::loadLegacyARGSettings() {
     legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
     legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
@@ -691,7 +687,7 @@ void ConfigManager::loadLegacyARGSettings() {
     defaults.method = static_cast<ARGMethod>(legacyArg.method);
     defaults.sourceA = legacyArg.sourceA;
     defaults.sourceB = legacyArg.sourceB;
-    defaults = sanitizeArgConfig(defaults);
+    defaults = sanitizeSlotArg(defaults);
 
     legacyArg.enable = defaults.enabled;
     legacyArg.method = static_cast<uint8_t>(defaults.method);
@@ -739,7 +735,7 @@ void ConfigManager::migrateLegacyARGSettings() {
         defaults.method = static_cast<ARGMethod>(legacyArg.method);
         defaults.sourceA = legacyArg.sourceA;
         defaults.sourceB = legacyArg.sourceB;
-        defaults = sanitizeArgConfig(defaults);
+        defaults = sanitizeSlotArg(defaults);
 
         legacyArg.enable = defaults.enabled;
         legacyArg.method = static_cast<uint8_t>(defaults.method);

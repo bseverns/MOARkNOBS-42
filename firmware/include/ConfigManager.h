@@ -284,7 +284,6 @@ class ConfigManager {
         uint8_t sourceA = 0;
         uint8_t sourceB = 1;
     } legacyArg{};
-    static SlotARGConfig sanitizeArgConfig(const SlotARGConfig &candidate);
     void loadLegacyARGSettings();
     void migrateLegacyARGSettings();
 };
