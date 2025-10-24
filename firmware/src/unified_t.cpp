@@ -405,6 +405,10 @@ void setup() {
     // boot-time banner and brownout sniff test
     g_resetCause = SRC_SRSR;
     EEPROM.get(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    if (g_brownoutCount == 0xFFFF) {
+        g_brownoutCount = 0;
+        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    }
     if (g_resetCause & 0x40) {
         g_brownoutCount++;
         EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);

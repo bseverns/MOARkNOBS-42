@@ -36,8 +36,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0004;      //!< EEPROM schema version
-inline constexpr uint16_t EEPROM_BROWNOUT_COUNT = 1008; //!< EEPROM addr for brownout counter
+inline constexpr uint16_t CONFIG_VERSION = 0x0004; //!< EEPROM schema version
 
 extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
@@ -127,8 +126,6 @@ inline constexpr uint16_t OLED_HEIGHT = 64;          //!< OLED display height in
 inline constexpr uint8_t SSD1306_I2C_ADDRESS = 0x3C; //!< I2C address for the OLED
 inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial buffer
 inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rate
-inline constexpr uint16_t EEPROM_FILTER_FREQ = 1000; //!< EEPROM address for filter freq
-inline constexpr uint16_t EEPROM_FILTER_Q = 1004;    //!< EEPROM address for filter Q
 inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
 inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
 
@@ -159,10 +156,23 @@ inline constexpr uint16_t EEPROM_SLOT_BASE = EEPROM_CONFIG_MIRROR_SIZE;
 inline constexpr uint16_t EEPROM_SLOT_REGION_SIZE =
     static_cast<uint16_t>(SLOT_EEPROM_SIZE * NUM_SLOTS);
 
+inline constexpr uint16_t EEPROM_LEGACY_FILTER_FREQ = 1000;    //!< Pre-schema-4 filter freq slot
+inline constexpr uint16_t EEPROM_LEGACY_FILTER_Q = 1004;       //!< Pre-schema-4 filter Q slot
+inline constexpr uint16_t EEPROM_LEGACY_BROWNOUT_COUNT = 1008; //!< Old brownout counter slot
+
+inline constexpr uint16_t EEPROM_FILTER_FREQ =
+    static_cast<uint16_t>(EEPROM_SLOT_BASE + EEPROM_SLOT_REGION_SIZE);
+inline constexpr uint16_t EEPROM_FILTER_Q =
+    static_cast<uint16_t>(EEPROM_FILTER_FREQ + sizeof(float));
+inline constexpr uint16_t EEPROM_BROWNOUT_COUNT =
+    static_cast<uint16_t>(EEPROM_FILTER_Q + sizeof(float));
+inline constexpr uint16_t EEPROM_CONFIG_TAIL =
+    static_cast<uint16_t>(EEPROM_BROWNOUT_COUNT + sizeof(uint16_t));
+
 inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
-    return (id == 0) ? EEPROM_START_ADDRESS
-                     : static_cast<uint16_t>(EEPROM_SLOT_BASE + EEPROM_SLOT_REGION_SIZE +
-                                             (id - 1) * EEPROM_PROFILE_BLOCK_SIZE);
+    return (id == 0)
+               ? EEPROM_START_ADDRESS
+               : static_cast<uint16_t>(EEPROM_CONFIG_TAIL + (id - 1) * EEPROM_PROFILE_BLOCK_SIZE);
 }
 
 // clock

@@ -18,6 +18,41 @@ constexpr float kMinFilterFrequency = 20.0f;
 constexpr float kMaxFilterFrequency = 5000.0f;
 constexpr float kMinFilterQ = 0.5f;
 constexpr float kMaxFilterQ = 4.0f;
+
+bool filterCoefficientsLookSane(float freq, float q) {
+    if (!std::isfinite(freq) || !std::isfinite(q)) {
+        return false;
+    }
+    if (freq < kMinFilterFrequency || freq > kMaxFilterFrequency) {
+        return false;
+    }
+    if (q < kMinFilterQ || q > kMaxFilterQ) {
+        return false;
+    }
+    return true;
+}
+
+void persistFilterTail(const SlotEnvelopePayload &payload) {
+    SlotEnvelopePayload sanitized = ConfigManager::sanitizeEnvelopePayload(payload);
+    EEPROM.put(EEPROM_FILTER_FREQ, sanitized.frequency);
+    EEPROM.put(EEPROM_FILTER_Q, sanitized.q);
+}
+
+void maybeRescueFilterTailFromLegacy() {
+    float freq = 0.0f;
+    float q = 0.0f;
+    EEPROM.get(EEPROM_FILTER_FREQ, freq);
+    EEPROM.get(EEPROM_FILTER_Q, q);
+    if (filterCoefficientsLookSane(freq, q)) {
+        return;
+    }
+
+    SlotEnvelopePayload legacy{};
+    legacy.filterType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+    EEPROM.get(EEPROM_LEGACY_FILTER_FREQ, legacy.frequency);
+    EEPROM.get(EEPROM_LEGACY_FILTER_Q, legacy.q);
+    persistFilterTail(legacy);
+}
 } // namespace
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
@@ -508,6 +543,7 @@ void ConfigManager::sanitizeSlotArena() {
     EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
 
     if (storedVersion == CONFIG_VERSION) {
+        maybeRescueFilterTailFromLegacy();
         MIDISlot candidate{};
         EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
         if (!slotLooksSane(candidate)) {
@@ -533,6 +569,8 @@ void ConfigManager::wipeSlotRegion() {
     blank.efPayload.frequency = kMinFilterFrequency;
     blank.efPayload.q = 1.0f;
     slots.fill(blank);
+
+    persistFilterTail(blank.efPayload);
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         const int address = static_cast<int>(EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE);
@@ -561,9 +599,11 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
     SlotEnvelopePayload legacyPayload{};
     legacyPayload.filterType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
-    EEPROM.get(EEPROM_FILTER_FREQ, legacyPayload.frequency);
-    EEPROM.get(EEPROM_FILTER_Q, legacyPayload.q);
+    EEPROM.get(EEPROM_LEGACY_FILTER_FREQ, legacyPayload.frequency);
+    EEPROM.get(EEPROM_LEGACY_FILTER_Q, legacyPayload.q);
     SlotEnvelopePayload sanitizedPayload = sanitizeEnvelopePayload(legacyPayload);
+
+    persistFilterTail(sanitizedPayload);
 
     for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
         LegacyMIDISlot legacy{};
@@ -603,6 +643,8 @@ void ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq, flo
         slots[i] = slot;
         saveSlot(i, slots[i]);
     }
+
+    persistFilterTail(sanitized);
 }
 
 SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
