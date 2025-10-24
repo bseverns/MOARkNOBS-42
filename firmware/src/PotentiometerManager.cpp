@@ -178,6 +178,16 @@ void PotentiometerManager::saveToEEPROM() {
     }
 }
 
+void PotentiometerManager::setArgEnvelopePair(int a, int b) {
+    argEnvA = a;
+    argEnvB = b;
+}
+
+void PotentiometerManager::getArgEnvelopePair(int &a, int &b) const {
+    a = argEnvA;
+    b = argEnvB;
+}
+
 int PotentiometerManager::readRawPot(uint8_t potIndex) {
     // decode into bank and pot bits
     uint8_t bank = potIndex >> SECONDARY_MUX_PINS;
