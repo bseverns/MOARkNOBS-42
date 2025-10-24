@@ -240,7 +240,7 @@ function createSimulator() {
     fw_version: 'sim-fw',
     fw_git: 'deadbeef',
     build_ts: new Date().toISOString(),
-    schema_version: '1.4.0',
+    schema_version: '1.5.0',
     slot_count: 42,
     capabilities: { atomicApply: true },
     max_table_lengths: { ledColors: 16, efSlots: 6 },
