@@ -24,7 +24,12 @@ struct UsbMidiGuard {
 };
 
 struct StubEnvelope {
-    explicit StubEnvelope(uint8_t sustain) : level(sustain) {}
+    // Unity wants a baseline that sounds like the shipping rig.
+    // The pedals leave sustain parked at 96, so we bake that here and let
+    // outlier specs override it when they feel like getting weird.
+    static constexpr uint8_t kDefaultSustain = 96;
+
+    explicit StubEnvelope(uint8_t sustain = kDefaultSustain) : level(sustain) {}
     uint8_t getEnvelopeLevel() const { return level; }
 
   private:
@@ -35,18 +40,41 @@ void resetMidiTransports() {
     MIDI.ccCount = 0;
     MIDI.ccTotal = 0;
     MIDI.ccOverflow = false;
+    MIDI.lastSysExLength = 0;
+    MIDI.sysExTotal = 0;
+    MIDI.sysExOverflow = false;
+    MIDI.lastNoteOn = 0;
+    MIDI.lastNoteOnVelocity = 0;
+    MIDI.lastNoteOnChannel = 0;
+    MIDI.lastNoteOff = 0;
+    MIDI.lastNoteOffVelocity = 0;
+    MIDI.lastNoteOffChannel = 0;
+    MIDI.lastProgram = 0;
+    MIDI.lastProgramChannel = 0;
+    MIDI.lastAftertouch = 0;
+    MIDI.lastAftertouchChannel = 0;
+    MIDI.lastPitchBend = 0;
+    MIDI.lastPitchBendChannel = 0;
+    std::fill_n(MIDI.lastSysEx, kSysExCapacity, 0);
+
     usbMIDI.ccCount = 0;
     usbMIDI.ccTotal = 0;
     usbMIDI.ccOverflow = false;
-
-    MIDI.sysExTotal = 0;
-    MIDI.sysExOverflow = false;
-    MIDI.lastSysExLength = 0;
-    std::fill_n(MIDI.lastSysEx, kSysExCapacity, 0);
-
+    usbMIDI.lastSysExLength = 0;
     usbMIDI.sysExTotal = 0;
     usbMIDI.sysExOverflow = false;
-    usbMIDI.lastSysExLength = 0;
+    usbMIDI.lastNoteOn = 0;
+    usbMIDI.lastNoteOnVelocity = 0;
+    usbMIDI.lastNoteOnChannel = 0;
+    usbMIDI.lastNoteOff = 0;
+    usbMIDI.lastNoteOffVelocity = 0;
+    usbMIDI.lastNoteOffChannel = 0;
+    usbMIDI.lastProgram = 0;
+    usbMIDI.lastProgramChannel = 0;
+    usbMIDI.lastAftertouch = 0;
+    usbMIDI.lastAftertouchChannel = 0;
+    usbMIDI.lastPitchBend = 0;
+    usbMIDI.lastPitchBendChannel = 0;
     std::fill_n(usbMIDI.lastSysEx, kSysExCapacity, 0);
 }
 } // namespace

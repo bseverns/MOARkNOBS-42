@@ -55,8 +55,7 @@ void setup() {
                     loaded.midiChannel == static_cast<uint8_t>((i % 16) + 1) &&
                     loaded.data1 == static_cast<uint8_t>(20 + i) &&
                     loaded.efIndex == static_cast<uint8_t>(i % 6) && loaded.active &&
-                    loaded.arpNote == static_cast<uint8_t>(60 + i) &&
-                    loaded.sysexLength == 0;
+                    loaded.arpNote == static_cast<uint8_t>(60 + i) && loaded.sysexLength == 0;
 
         Serial.print("Slot ");
         Serial.print(i);

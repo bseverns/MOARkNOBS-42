@@ -24,7 +24,8 @@ void test_parse_basic_sysex_template() {
     TEST_ASSERT_EQUAL_STRING("F0 7F 01 04 xx F7", formatted.c_str());
 
     std::array<uint8_t, SysExTemplate::kMaxLength> rendered{};
-    uint8_t written = SysExTemplate::render(bytes, length, 0x22, 0x1234, rendered.data(), rendered.size());
+    uint8_t written =
+        SysExTemplate::render(bytes, length, 0x22, 0x1234, rendered.data(), rendered.size());
     TEST_ASSERT_EQUAL_UINT8(length, written);
     TEST_ASSERT_EQUAL_UINT8(0x22, rendered[4]);
 }
@@ -41,7 +42,8 @@ void test_parse_14bit_sysex_template() {
 
     std::array<uint8_t, SysExTemplate::kMaxLength> rendered{};
     uint16_t value14 = Utility::mapTo14Bit(1023);
-    uint8_t written = SysExTemplate::render(bytes, length, 0x55, value14, rendered.data(), rendered.size());
+    uint8_t written =
+        SysExTemplate::render(bytes, length, 0x55, value14, rendered.data(), rendered.size());
     TEST_ASSERT_EQUAL_UINT8(length, written);
     TEST_ASSERT_EQUAL_UINT8(0x7F, rendered[3]);
     TEST_ASSERT_EQUAL_UINT8(0x7F, rendered[4]);
@@ -84,8 +86,7 @@ void test_config_mutation_during_stream_stays_valid() {
 
     slot.data1 = 0x55;
     uint8_t buffer[8] = {0};
-    uint8_t produced =
-        testOnly_buildSysExPayload(slot, 512, buffer, sizeof(buffer));
+    uint8_t produced = testOnly_buildSysExPayload(slot, 512, buffer, sizeof(buffer));
     TEST_ASSERT_EQUAL_UINT8(4, produced);
     TEST_ASSERT_EQUAL_UINT8(0xF0, buffer[0]);
     TEST_ASSERT_EQUAL_UINT8(slot.data1, buffer[1]);

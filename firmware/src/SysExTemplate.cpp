@@ -15,9 +15,10 @@ String makeLowercase(const char *token, std::size_t len) {
     }
     return lowered;
 }
-}
+} // namespace
 
-bool parse(const char *input, std::array<uint8_t, kMaxLength> &out, uint8_t &length, String &error) {
+bool parse(const char *input, std::array<uint8_t, kMaxLength> &out, uint8_t &length,
+           String &error) {
     out.fill(0);
     length = 0;
     if (!input) {
