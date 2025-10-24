@@ -92,7 +92,7 @@ struct MIDISlot {
     uint8_t arpNote = 0; //!< Base note for arpeggiator
     uint8_t sysexLength = 0;
     std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
-    EfSettings ef{}; //!< Local envelope follower configuration
+    EfSettings ef{};     //!< Local envelope follower configuration
     SlotARGConfig arg{}; //!< Slot-local ARG mixer settings
 };
 
