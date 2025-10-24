@@ -98,6 +98,8 @@ uint8_t resolveDataByte(const ConfigManager &config, uint8_t slotIndex, const MI
     return slot.data1;
 }
 
+} // namespace
+
 void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes,
                                   const ConfigManager &config, uint8_t currentSlot,
@@ -201,7 +203,6 @@ void emitLegacyArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB)
     arg["b"] = envB;
     emitJson(doc);
 }
-} // namespace
 
 void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     if (!webSerialStreaming)
