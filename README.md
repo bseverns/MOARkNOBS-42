@@ -10,7 +10,7 @@ can audit, rebuild, and modify to test how control, authorship, and embodiment s
 It is open, meaning you can fork, sell, remix—just credit and share like I have.
 
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
-The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
+The top README is intentionally bareboens—poke the READMEs in each folder (there's lots of 'em) for
 the full scoop.
 
 ## Quick Map
@@ -26,10 +26,6 @@ the full scoop.
 | [bridge/](bridge/README.md) | Node.js shim that slings serial into OSC/WebMIDI |
 | [tools/](tools/README.md) | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md) |
 
-## Fresh to MIDI or DSP?
-
-Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101.md) for a tour of channels, CCs, NRPN/RPN sorcery, SysEx etiquette, envelope follower guts, and the biquad math we abuse. It links out to the canonical specs and street-level explainers so you can ramp from zero to firmware-ready without leaving the repo.
-
 ## Highlights
 
 - 42 virtual slots and six envelope followers ready to hijack any MIDI stream.
@@ -38,6 +34,10 @@ Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101
 - Button grid that refuses to behave—short, long, double and combo presses are all mapped in the [ButtonManager cheat sheet](firmware/include/ButtonManager/README.md#button-map).
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
 - Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
+
+## Fresh to MIDI or DSP?
+
+Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101.md) for a tour of channels, CCs, NRPN/RPN sorcery, SysEx etiquette, envelope follower guts, and the biquad math we abuse. It links out to the canonical specs and street-level explainers so you can ramp from zero to firmware-ready without leaving the repo.
 
 ## Firmware Stack Crash Course
 
@@ -63,29 +63,6 @@ Each file has links to the relevant README tables if you want the cheat sheets
 instead of spelunking the code—perfect fodder for a classroom lab or a late
 night builder jam.
 
-#### Subject Tracks for the Comment Pass
-
-Want to translate the annotated source into a syllabus? Use these riffs as your
-module map:
-
-- **Boot choreography & dependency injection** – [`firmware_main.cpp`](firmware/src/firmware_main.cpp)
-  spells out the startup order, scheduler wiring, and why globals exist at all.
-- **Human input pipeline** – [`ButtonManager.cpp`](firmware/src/ButtonManager.cpp)
-  and [`PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp)
-  dive into mux scanning, debounce delays, EWMA smoothing, and the callback
-  contract that carries both raw ADC and MIDI-scaled data.
-- **Persistence & schema hygiene** – [`ConfigManager.cpp`](firmware/src/ConfigManager.cpp)
-  and [`Globals.cpp`](firmware/src/Globals.cpp) walk through version tags,
-  CRC checks, the new slot ownership ledger, and how the `0x0004` EEPROM layout
-  keeps SysEx templates + EF records from colliding.
-- **Signal flow math lab** – [`EnvelopeFollower.cpp`](firmware/src/EnvelopeFollower.cpp),
-  [`ARGMixer.cpp`](firmware/src/ARGMixer.cpp), and [`MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp)
-  link the DSP math to outbound MIDI packets while narrating queue ownership and
-  backpressure.
-- **Web & telemetry surface** – [`WebSerial.cpp`](firmware/src/WebSerial.cpp)
-  and [`Utility.cpp`](firmware/src/Utility.cpp) explain the JSON schemas,
-  watchdog counters, and how the bridge keeps browser tooling honest.
-
 ### Annotated Source Field Guide
 
 The comment pass is more than hype—it’s a breadcrumb trail. Use this cheat sheet
@@ -107,30 +84,8 @@ intent, and comments name the trade-offs so you can narrate the code like a
 zine. Treat it like a studio notebook, pull apart the sections live, and reroute
 the rig when you want to teach a different angle on pointers or data flow.
 
-## Ethics (what we optimize for).
-
-- **Access & equity**: Parts are commonly available; we publish alternatives and cost ranges. Labels, spacing, and grip are designed for readability and different motor abilities.
-- **Agency & authorship**: The layout makes mappings legible; users can re-map without reflashing (runtime tables), and we document trade-offs between fixed and assignable control.
-- **Privacy & data**: The instrument does not capture personal data in any way; it emits MIDI/OSC only talks to other MIDI/OSC friends. No analytics, no hidden telemetry.
-- **Safety & repair**: Power and enclosure choices follow basic electrical safety; off-the-shelf components keep repairs local and affordable.
-- **Licensing & credit**: Hardware/design files and firmware are open-licensed; please cite the release tag you used so results are comparable.
-
 ![Approximate board render missing some 3D models](docs/brdF.png)
 >EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. All parts simulate correctly.
-
-## Accessibility
-
-- Every image rolls with descriptive alt text so screen readers don't get ghosted.
-- Headings climb in order and tables have headers—no maze, just straight lines.
-- Labels and LEDs keep contrast high and feedback loud for eyes and ears alike.
-
-## Method (how we work).
-
-- **Reproducible by design**: The repo ships with annotated schematics, a bill of materials, firmware, and a parameter map (what each control does).
-- **Documentation as output**: Build notes, versioned change logs, and an assumption ledger (known limits, thresholds, what we never do) are first-class artifacts.
-- **Modular & testable**: You can assemble a minimal 4-control version or the full 42-control build; each stage has a bench test so you can verify function before enclosure.
-- **Critique-by-rebuild**: We encourage forks and remixes; issues and PRs that include measurements, audio/video traces, and diffs are preferred.
-- **Bench data**: see `docs/bench/latency/latency.csv` and `docs/bench/noise/adc_idle.csv`. Methods in each folder explain how to reproduce the numbers.
 
 ## Why these specific parts?
 
@@ -176,8 +131,6 @@ flowchart LR
   Firmware --> Slot42
 ```
 
-Need the dirt? Dive into the sub-READMEs and get lost.
-
 For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/) tear down each hardware module—button matrix, display guts, envelope front-end—so you can trace every signal like a true knob punk.
 
 ## Quick Start
@@ -215,4 +168,26 @@ License: MIT. See [LICENSE](LICENSE).
 I'd love to see what you thought you could fit in here. Bring it, just format the code so it looks pretty like the rest of it. And make comments! That's how we all get better!
 
 Need the fine print? The [CONTRIBUTING guide](CONTRIBUTING.md) spells out the repo contract and patch etiquette.
+
+## Accessibility
+
+- Every image rolls with descriptive alt text so screen readers don't get ghosted.
+- Headings climb in order and tables have headers—no maze, just straight lines.
+- Labels and LEDs keep contrast high and feedback loud for eyes and ears alike.
+
+## Method (how we work).
+
+- **Reproducible by design**: The repo ships with annotated schematics, a bill of materials, firmware, and a parameter map (what each control does).
+- **Documentation as output**: Build notes, versioned change logs, and an assumption ledger (known limits, thresholds, what we never do) are first-class artifacts.
+- **Modular & testable**: You can assemble a minimal 4-control version or the full 42-control build; each stage has a bench test so you can verify function before enclosure.
+- **Critique-by-rebuild**: We encourage forks and remixes; issues and PRs that include measurements, audio/video traces, and diffs are preferred.
+- **Bench data**: see `docs/bench/latency/latency.csv` and `docs/bench/noise/adc_idle.csv`. Methods in each folder explain how to reproduce the numbers.
+
+- ## Ethics (what we optimize for).
+
+- **Access & equity**: Parts are commonly available; we publish alternatives and cost ranges. Labels, spacing, and grip are designed for readability and different motor abilities.
+- **Agency & authorship**: The layout makes mappings legible; users can re-map without reflashing (runtime tables), and we document trade-offs between fixed and assignable control.
+- **Privacy & data**: The instrument does not capture personal data in any way; it emits MIDI/OSC only talks to other MIDI/OSC friends. No analytics, no hidden telemetry.
+- **Safety & repair**: Power and enclosure choices follow basic electrical safety; off-the-shelf components keep repairs local and affordable.
+- **Licensing & credit**: Hardware/design files and firmware are open-licensed; please cite the release tag you used so results are comparable.
 
