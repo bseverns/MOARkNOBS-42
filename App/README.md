@@ -1,6 +1,6 @@
 # WebSerial Configuration App
 
-[bseverns.github.io/MN42](bseverns.github.io/MN42) is the browser-based patch bay for the MOARkNOBS-42 controller. The page is now split between a tiny runtime “kernel” and a BenzKnobz-specific view layer:
+[bseverns.github.io/MN42](http://bseverns.github.io/MN42) is the browser-based patch bay for the MOARkNOBS-42 controller. The page is now split between a tiny runtime “kernel” and a BenzKnobz-specific view layer:
 
 - `runtime.js` – owns WebSerial, schema validation (AJV), state diffing, checksum/rollback handling, throttling, and the simulator transport.
 - `views/benzknobz.js` – renders the current layout, wires UI controls to the runtime API, and keeps the hardware muscle-memory alive.
