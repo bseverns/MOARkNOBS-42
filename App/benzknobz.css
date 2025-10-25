@@ -527,19 +527,61 @@ label select:focus {
 }
 
 .slot-editor {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
   background: rgba(0, 0, 0, 0.32);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-sm);
-  padding: 16px;
+  padding: 18px;
+}
+
+.slot-fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs);
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.slot-fieldset legend {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding: 0 6px;
+}
+
+.slot-fieldset label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.slot-fieldset label input,
+.slot-fieldset label select {
+  font-size: 0.95rem;
+  padding: 6px 8px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.42);
+  color: inherit;
+}
+
+.slot-fieldset .toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
 }
 
 .slot-editor .slot-hint {
   grid-column: 1 / -1;
-  font-size: 0.85rem;
-  margin: -4px 0 0;
+  font-size: 0.82rem;
+  margin: -2px 0 2px;
   color: var(--color-muted);
 }
 

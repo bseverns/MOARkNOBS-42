@@ -110,6 +110,21 @@ function shallowDiff(before, after, basePath = '') {
   return changes;
 }
 
+function shallowEqual(a, b) {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+function clamp(value, min, max) {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
 function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
   let timer = null;
   let pendingArgs = null;
@@ -135,6 +150,15 @@ function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
 function coerceIndex(value) {
   const num = Number(value);
   return Number.isInteger(num) && num >= 0 ? num : null;
+}
+
+function extractSlotIndex(payload, fallback) {
+  const candidates = [payload?.index, payload?.slot, payload?.slot_index, payload?.slotIndex, fallback];
+  for (const candidate of candidates) {
+    const idx = coerceIndex(candidate);
+    if (idx !== null) return idx;
+  }
+  return null;
 }
 
 function normalizeSlotPatchEntry(entry) {
@@ -227,6 +251,121 @@ function normalizeSlotPatchEntry(entry) {
   }
   if (entry.label !== undefined) fields.label = entry.label;
   return { index, fields };
+}
+
+function normalizeSlotEnvelope(slot) {
+  const defaults = {
+    index: -1,
+    filter_index: 0,
+    filter_name: EF_FILTER_NAMES[0],
+    frequency: 1000,
+    q: 0.707,
+    oversample: 4,
+    smoothing: 0.2,
+    baseline: 0,
+    gain: 1
+  };
+  const efSource = slot?.ef && typeof slot.ef === 'object' ? slot.ef : {};
+  const ef = { ...defaults, ...efSource };
+  const index = Number.isFinite(Number(slot?.efIndex))
+    ? Number(slot.efIndex)
+    : Number.isFinite(Number(ef.index))
+    ? Number(ef.index)
+    : defaults.index;
+  ef.index = index;
+  const resolvedFilterIndex = Number.isFinite(Number(ef.filter_index)) ? Number(ef.filter_index) : null;
+  if (resolvedFilterIndex === null && typeof ef.filter_name === 'string') {
+    const idx = EF_FILTER_NAMES.indexOf(ef.filter_name);
+    ef.filter_index = idx >= 0 ? idx : defaults.filter_index;
+  } else if (resolvedFilterIndex !== null) {
+    ef.filter_index = clamp(resolvedFilterIndex, 0, EF_FILTER_NAMES.length - 1);
+  } else {
+    ef.filter_index = defaults.filter_index;
+  }
+  if (!ef.filter_name || typeof ef.filter_name !== 'string') {
+    ef.filter_name = EF_FILTER_NAMES[ef.filter_index] || defaults.filter_name;
+  }
+  ef.frequency = Number.isFinite(Number(ef.frequency)) ? Math.max(0, Number(ef.frequency)) : defaults.frequency;
+  ef.q = Number.isFinite(Number(ef.q)) ? Math.max(0, Number(ef.q)) : defaults.q;
+  ef.oversample = clamp(Math.round(Number(ef.oversample) || defaults.oversample), 1, 32);
+  const smoothing = Number(ef.smoothing);
+  ef.smoothing = Number.isFinite(smoothing) ? clamp(smoothing, 0, 1) : defaults.smoothing;
+  ef.baseline = Number.isFinite(Number(ef.baseline)) ? Number(ef.baseline) : defaults.baseline;
+  ef.gain = Number.isFinite(Number(ef.gain)) ? Number(ef.gain) : defaults.gain;
+  return ef;
+}
+
+function normalizeSlotArg(slot, efLimit = 6) {
+  const defaults = {
+    enabled: false,
+    method: 0,
+    method_name: ARG_METHOD_NAMES[0],
+    sourceA: 0,
+    sourceB: 1
+  };
+  const argSource = slot?.arg && typeof slot.arg === 'object' ? slot.arg : {};
+  const arg = { ...defaults, ...argSource };
+  arg.enabled = Boolean(arg.enabled);
+  let methodIndex = Number.isFinite(Number(arg.method)) ? Number(arg.method) : -1;
+  if (methodIndex < 0 && typeof arg.method_name === 'string') {
+    methodIndex = ARG_METHOD_NAMES.indexOf(arg.method_name);
+  }
+  if (methodIndex < 0) methodIndex = defaults.method;
+  arg.method = clamp(methodIndex, 0, ARG_METHOD_NAMES.length - 1);
+  arg.method_name = ARG_METHOD_NAMES[arg.method] || defaults.method_name;
+  const followerMax = Math.max(0, efLimit - 1);
+  arg.sourceA = clamp(Number.isFinite(Number(arg.sourceA)) ? Number(arg.sourceA) : defaults.sourceA, 0, followerMax || 0);
+  arg.sourceB = clamp(Number.isFinite(Number(arg.sourceB)) ? Number(arg.sourceB) : defaults.sourceB, 0, followerMax || 0);
+  return arg;
+}
+
+function normalizeSlotConfig(slot, efLimit = 6) {
+  const next = slot && typeof slot === 'object' ? { ...slot } : {};
+  next.ef = normalizeSlotEnvelope(next);
+  next.efIndex = Number.isFinite(Number(next.efIndex)) ? Number(next.efIndex) : next.ef.index;
+  if (!Number.isFinite(Number(next.efIndex))) next.efIndex = next.ef.index;
+  next.arg = normalizeSlotArg(next, efLimit);
+  return next;
+}
+
+function normalizeConfig(config, manifest = {}) {
+  if (!config || typeof config !== 'object') return config;
+  const next = { ...config };
+  const slotCount = manifest.slot_count ?? (Array.isArray(config.slots) ? config.slots.length : 0);
+  const efCount = manifest.max_table_lengths?.efSlots ?? (Array.isArray(config.efSlots) ? config.efSlots.length : 0);
+  const ledCount = manifest.max_table_lengths?.ledColors ?? (Array.isArray(config.ledColors) ? config.ledColors.length : 0);
+
+  next.slots = Array.from({ length: slotCount }, (_, idx) => normalizeSlotConfig(config.slots?.[idx], efCount));
+
+  next.efSlots = Array.from({ length: efCount }, (_, idx) => {
+    const entry = config.efSlots?.[idx];
+    const slotIndex = entry && Number.isFinite(Number(entry.slot)) ? Number(entry.slot) : 0;
+    const capped = clamp(slotIndex, 0, Math.max(0, slotCount - 1));
+    return { slot: capped };
+  });
+
+  next.ledColors = Array.from({ length: ledCount }, (_, idx) => {
+    const entry = Array.isArray(config.ledColors) ? config.ledColors[idx] : null;
+    if (entry && typeof entry.color === 'string') return { color: entry.color };
+    return { color: '#000000' };
+  });
+
+  if (next.filter && typeof next.filter === 'object') {
+    next.filter = { ...next.filter };
+  }
+
+  if (next.arg && typeof next.arg === 'object') {
+    const globalArg = { ...next.arg };
+    if (globalArg.method && typeof globalArg.method !== 'string') {
+      const idx = Number(globalArg.method);
+      if (Number.isFinite(idx) && ARG_METHOD_NAMES[idx]) {
+        globalArg.method = ARG_METHOD_NAMES[idx];
+      }
+    }
+    next.arg = globalArg;
+  }
+
+  return next;
 }
 
 function applyEfSlotPatch(target, patch) {
@@ -568,8 +707,9 @@ export function createRuntime({
     validator = ajv.compile(schema);
     const raw = await send('GET_CONFIG');
     const config = JSON.parse(raw);
-    liveConfig = clone(config);
-    stagedConfig = clone(config);
+    const normalized = normalizeConfig(config, remoteManifest ?? localManifest ?? {});
+    liveConfig = clone(normalized);
+    stagedConfig = clone(normalized);
     dirty = false;
     emit('schema', schema);
     emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
@@ -616,6 +756,15 @@ export function createRuntime({
       applyConfigPatch(msg);
       return;
     }
+    if (msg.type === 'slot_patch' && msg.slot && typeof msg.slot === 'object') {
+      const slotBody = { ...msg.slot };
+      const index = extractSlotIndex(slotBody, msg.slot_index ?? msg.index ?? msg.id);
+      if (index !== null) {
+        slotBody.index = index;
+        applyConfigPatch({ slots: [slotBody] });
+      }
+      return;
+    }
     if (msg.type === 'ack') {
       emit('ack', msg);
       return;
@@ -650,6 +799,15 @@ export function createRuntime({
         let updated = false;
         Object.entries(fields).forEach(([key, value]) => {
           if (value === undefined) return;
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const existing = current[key] && typeof current[key] === 'object' ? current[key] : {};
+            const merged = { ...existing, ...value };
+            if (!shallowEqual(existing, merged)) {
+              current[key] = merged;
+              updated = true;
+            }
+            return;
+          }
           if (current[key] !== value) {
             current[key] = value;
             updated = true;
@@ -782,8 +940,10 @@ export function createRuntime({
     if (patch.__filterMeta) delete patch.__filterMeta;
     if (patch.__argMeta) delete patch.__argMeta;
 
-    liveConfig = nextLive;
-    stagedConfig = nextStaged;
+    const normalizedLive = normalizeConfig(nextLive, remoteManifest ?? localManifest ?? {});
+    const normalizedStaged = normalizeConfig(nextStaged, remoteManifest ?? localManifest ?? {});
+    liveConfig = clone(normalizedLive);
+    stagedConfig = clone(normalizedStaged);
     dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
     emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
   }
@@ -791,7 +951,10 @@ export function createRuntime({
   function stage(updater) {
     const next = typeof updater === 'function' ? updater(clone(stagedConfig)) : updater;
     if (!next) return;
-    stagedConfig = clone(next);
+    const normalizedLive = normalizeConfig(liveConfig, remoteManifest ?? localManifest ?? {});
+    const normalizedStaged = normalizeConfig(next, remoteManifest ?? localManifest ?? {});
+    liveConfig = clone(normalizedLive);
+    stagedConfig = clone(normalizedStaged);
     dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
     emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
   }

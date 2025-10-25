@@ -1,9 +1,36 @@
 import { createRuntime } from '../runtime.js';
 import { presets } from './presets.js';
 
+const EF_FILTER_NAMES = [
+  'LINEAR',
+  'OPPOSITE_LINEAR',
+  'EXPONENTIAL',
+  'RANDOM',
+  'LOWPASS',
+  'HIGHPASS',
+  'BANDPASS'
+];
+
+const ARG_METHOD_NAMES = [
+  'PLUS',
+  'MIN',
+  'PECK',
+  'SHAV',
+  'SQAR',
+  'BABS',
+  'TABS',
+  'MULT',
+  'DIVI',
+  'AVG',
+  'XABS',
+  'MAXX',
+  'MINN',
+  'XORR'
+];
+
 const localManifest = {
   ui_version: '2024.08.01',
-  schema_version: '1.3.0',
+  schema_version: '1.5.0',
   slot_count: 42,
   max_table_lengths: {
     ledColors: 42,
@@ -58,8 +85,13 @@ window.addEventListener('DOMContentLoaded', () => {
   const slotDetailType = document.getElementById('slot-detail-type');
   const slotDetailChannel = document.getElementById('slot-detail-channel');
   const slotDetailData = document.getElementById('slot-detail-data');
-  const slotDetailEnvelope = document.getElementById('slot-detail-envelope');
+  const slotDetailEfIndex = document.getElementById('slot-detail-ef-index');
+  const slotDetailEfFilter = document.getElementById('slot-detail-ef-filter');
+  const slotDetailEfTuning = document.getElementById('slot-detail-ef-tuning');
+  const slotDetailEfDynamics = document.getElementById('slot-detail-ef-dynamics');
+  const slotDetailEfBaseline = document.getElementById('slot-detail-ef-baseline');
   const slotDetailArg = document.getElementById('slot-detail-arg');
+  const slotDetailArgSources = document.getElementById('slot-detail-arg-sources');
   const slotDetailValue = document.getElementById('slot-detail-value');
   const deviceMonitor = document.getElementById('device-monitor');
   const logEl = document.getElementById('log');
@@ -397,8 +429,15 @@ window.addEventListener('DOMContentLoaded', () => {
         slotDetailData.textContent = slot?.data1 ?? '—';
       }
     }
-    if (slotDetailEnvelope) slotDetailEnvelope.textContent = slot?.efIndex !== undefined ? `EF ${slot.efIndex + 1}` : '—';
-    if (slotDetailArg) slotDetailArg.textContent = slotState.staged?.arg?.method ?? '—';
+    const ef = normalizeEf(slot);
+    if (slotDetailEfIndex) slotDetailEfIndex.textContent = formatEfIndex(ef.index);
+    if (slotDetailEfFilter) slotDetailEfFilter.textContent = formatEfFilter(ef);
+    if (slotDetailEfTuning) slotDetailEfTuning.textContent = formatEfTuning(ef);
+    if (slotDetailEfDynamics) slotDetailEfDynamics.textContent = formatEfDynamics(ef);
+    if (slotDetailEfBaseline) slotDetailEfBaseline.textContent = formatEfBaseline(ef);
+    const arg = normalizeArg(slot);
+    if (slotDetailArg) slotDetailArg.textContent = formatArgMode(arg);
+    if (slotDetailArgSources) slotDetailArgSources.textContent = formatArgSources(arg);
     const value = Array.isArray(telemetry.slots) ? telemetry.slots[slotState.selected] : null;
     if (slotDetailValue) slotDetailValue.textContent = value ?? '—';
     renderSlotEditor();
@@ -416,21 +455,36 @@ window.addEventListener('DOMContentLoaded', () => {
     form.className = 'slot-editor';
     form.addEventListener('submit', (event) => event.preventDefault());
 
-    form.appendChild(makeSelect('MIDI Type', ['OFF', 'CC', 'Note', 'PitchBend', 'ProgramChange', 'Aftertouch', 'ModWheel', 'NRPN', 'RPN', 'SysEx'], slot.type, (value) => stageSlotField(slotState.selected, 'type', value)));
-    form.appendChild(makeNumber('MIDI Channel', slot.midiChannel ?? 1, 1, 16, 1, (value) => stageSlotField(slotState.selected, 'midiChannel', value)));
-    form.appendChild(makeNumber('Data (CC/Note)', slot.data1 ?? 0, 0, 127, 1, (value) => stageSlotField(slotState.selected, 'data1', value)));
-    form.appendChild(makeNumber('Envelope Follow', slot.efIndex ?? 0, 0, localManifest.max_table_lengths.efSlots - 1, 1, (value) => stageSlotField(slotState.selected, 'efIndex', value)));
-    form.appendChild(makeToggle('Active', !!slot.active, (value) => stageSlotField(slotState.selected, 'active', value)));
-    form.appendChild(makeToggle('Pot mapped', !!slot.pot, (value) => stageSlotField(slotState.selected, 'pot', value)));
-
+    const basics = makeFieldset('Slot Basics');
+    basics.appendChild(
+      makeSelect(
+        'MIDI Type',
+        ['OFF', 'CC', 'Note', 'PitchBend', 'ProgramChange', 'Aftertouch', 'ModWheel', 'NRPN', 'RPN', 'SysEx'],
+        slot.type,
+        (value) => stageSlotField(slotState.selected, 'type', value),
+      ),
+    );
+    basics.appendChild(
+      makeNumber('MIDI Channel', slot.midiChannel ?? 1, 1, 16, 1, (value) => stageSlotField(slotState.selected, 'midiChannel', value)),
+    );
+    basics.appendChild(
+      makeNumber('Data (CC/Note)', slot.data1 ?? 0, 0, 127, 1, (value) => stageSlotField(slotState.selected, 'data1', value)),
+    );
+    basics.appendChild(
+      makeNumber('Arp Root Note', slot.arpNote ?? 0, 0, 127, 1, (value) => stageSlotField(slotState.selected, 'arpNote', value)),
+    );
+    basics.appendChild(
+      makeText('Label', slot.label ?? '', 'Verse / build / drop cues', (value) => stageSlotField(slotState.selected, 'label', value)),
+    );
+    basics.appendChild(makeToggle('Active', !!slot.active, (value) => stageSlotField(slotState.selected, 'active', value)));
+    basics.appendChild(makeToggle('Pot mapped', !!slot.pot, (value) => stageSlotField(slotState.selected, 'pot', value)));
     const takeover = makeToggle('Take Control', !!slot.takeover, (value) => {
       stageSlotField(slotState.selected, 'takeover', value);
       runtime.setPotGuard([slotState.selected], !value);
     });
-    form.appendChild(takeover);
-
+    basics.appendChild(takeover);
     if (slot.type === 'SysEx') {
-      form.appendChild(
+      basics.appendChild(
         makeText(
           'SysEx Template',
           slot.sysexTemplate ?? '',
@@ -444,8 +498,65 @@ window.addEventListener('DOMContentLoaded', () => {
       const hint = document.createElement('p');
       hint.className = 'slot-hint';
       hint.textContent = 'Hex bytes + XX/MSB/LSB placeholders. We swap the placeholders with live values.';
-      form.appendChild(hint);
+      basics.appendChild(hint);
     }
+    form.appendChild(basics);
+
+    const manifest = runtime.getState().manifest ?? localManifest;
+    const ef = normalizeEf(slot);
+    const efSlots = manifest?.max_table_lengths?.efSlots ?? localManifest?.max_table_lengths?.efSlots ?? 0;
+    const efFieldset = makeFieldset('Envelope Follower', 'These values live with the slot and retune the hardware follower on apply.');
+    efFieldset.appendChild(
+      makeNumber('Follower Index', ef.index ?? -1, -1, Math.max(-1, efSlots - 1), 1, (value) => {
+        stageSlotField(slotState.selected, 'efIndex', value);
+        stageSlotEnvelopeField(slotState.selected, 'index', value);
+      }),
+    );
+    const currentFilter = ef.filter_name || (Number.isFinite(Number(ef.filter_index)) ? EF_FILTER_NAMES[Number(ef.filter_index)] : 'LINEAR');
+    efFieldset.appendChild(
+      makeSelect('Filter Shape', EF_FILTER_NAMES, currentFilter, (value) => {
+        const idx = Math.max(0, EF_FILTER_NAMES.indexOf(value));
+        stageSlotEnvelopeField(slotState.selected, 'filter_name', value);
+        stageSlotEnvelopeField(slotState.selected, 'filter_index', idx);
+      }),
+    );
+    efFieldset.appendChild(
+      makeNumber('Frequency (Hz)', ef.frequency ?? 1000, 0, 20000, 1, (value) => stageSlotEnvelopeField(slotState.selected, 'frequency', value)),
+    );
+    efFieldset.appendChild(
+      makeNumber('Resonance (Q)', ef.q ?? 0.707, 0, 10, 0.01, (value) => stageSlotEnvelopeField(slotState.selected, 'q', value)),
+    );
+    efFieldset.appendChild(
+      makeNumber('Oversample', ef.oversample ?? 4, 1, 32, 1, (value) => stageSlotEnvelopeField(slotState.selected, 'oversample', value)),
+    );
+    efFieldset.appendChild(
+      makeNumber('Smoothing', ef.smoothing ?? 0.2, 0, 1, 0.01, (value) => stageSlotEnvelopeField(slotState.selected, 'smoothing', value)),
+    );
+    efFieldset.appendChild(
+      makeNumber('Baseline Offset', ef.baseline ?? 0, -10, 10, 0.1, (value) => stageSlotEnvelopeField(slotState.selected, 'baseline', value)),
+    );
+    efFieldset.appendChild(
+      makeNumber('Gain', ef.gain ?? 1, 0, 8, 0.1, (value) => stageSlotEnvelopeField(slotState.selected, 'gain', value)),
+    );
+    form.appendChild(efFieldset);
+
+    const arg = normalizeArg(slot);
+    const argFieldset = makeFieldset('ARG Combiner', 'Crossfade or mash followers before the slot screams MIDI.');
+    argFieldset.appendChild(makeToggle('Enabled', !!arg.enabled, (value) => stageSlotArgField(slotState.selected, 'enabled', value)));
+    argFieldset.appendChild(
+      makeSelect('Method', ARG_METHOD_NAMES, resolveArgMethodName(arg) ?? ARG_METHOD_NAMES[0], (value) => {
+        const idx = Math.max(0, ARG_METHOD_NAMES.indexOf(value));
+        stageSlotArgField(slotState.selected, 'method', idx);
+        stageSlotArgField(slotState.selected, 'method_name', value);
+      }),
+    );
+    argFieldset.appendChild(
+      makeNumber('Source A', arg.sourceA ?? 0, 0, Math.max(0, efSlots - 1), 1, (value) => stageSlotArgField(slotState.selected, 'sourceA', value)),
+    );
+    argFieldset.appendChild(
+      makeNumber('Source B', arg.sourceB ?? 1, 0, Math.max(0, efSlots - 1), 1, (value) => stageSlotArgField(slotState.selected, 'sourceB', value)),
+    );
+    form.appendChild(argFieldset);
 
     formContainer.appendChild(form);
   }
@@ -471,12 +582,13 @@ window.addEventListener('DOMContentLoaded', () => {
     wrap.textContent = labelText;
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
+    if (min !== undefined && min !== null) input.min = String(min);
+    if (max !== undefined && max !== null) input.max = String(max);
+    if (step !== undefined && step !== null) input.step = String(step);
     input.value = current;
     input.onchange = () => onCommit(Number(input.value));
-    attachCoarseFine(input, step);
+    const coarseStep = step ?? 1;
+    attachCoarseFine(input, coarseStep);
     wrap.appendChild(input);
     return wrap;
   }
@@ -506,6 +618,21 @@ window.addEventListener('DOMContentLoaded', () => {
     return wrap;
   }
 
+  function makeFieldset(title, hint) {
+    const fieldset = document.createElement('fieldset');
+    fieldset.className = 'slot-fieldset';
+    const legend = document.createElement('legend');
+    legend.textContent = title;
+    fieldset.appendChild(legend);
+    if (hint) {
+      const blurb = document.createElement('p');
+      blurb.className = 'slot-hint';
+      blurb.textContent = hint;
+      fieldset.appendChild(blurb);
+    }
+    return fieldset;
+  }
+
   function attachCoarseFine(input, baseStep) {
     input.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
@@ -522,8 +649,186 @@ window.addEventListener('DOMContentLoaded', () => {
       draft.slots = draft.slots || [];
       if (!draft.slots[index]) draft.slots[index] = {};
       draft.slots[index][key] = value;
+      if (key === 'efIndex') {
+        draft.slots[index].ef = draft.slots[index].ef || {};
+        draft.slots[index].ef.index = value;
+      }
       return draft;
     });
+  }
+
+  function stageSlotEnvelopeField(index, key, value) {
+    runtime.stage((draft) => {
+      draft.slots = draft.slots || [];
+      if (!draft.slots[index]) draft.slots[index] = {};
+      draft.slots[index].ef = draft.slots[index].ef || {};
+      draft.slots[index].ef[key] = value;
+      if (key === 'index') {
+        draft.slots[index].efIndex = value;
+      }
+      return draft;
+    });
+  }
+
+  function stageSlotArgField(index, key, value) {
+    runtime.stage((draft) => {
+      draft.slots = draft.slots || [];
+      if (!draft.slots[index]) draft.slots[index] = {};
+      draft.slots[index].arg = draft.slots[index].arg || {};
+      draft.slots[index].arg[key] = value;
+      return draft;
+    });
+  }
+
+  function formatNumberField(value, fractionDigits = 2) {
+    if (value === null || value === undefined) return '—';
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '—';
+    if (fractionDigits <= 0) return String(Math.round(num));
+    return Number(num.toFixed(fractionDigits)).toString();
+  }
+
+  function formatEfIndex(index) {
+    if (index === null || index === undefined) return '—';
+    const num = Number(index);
+    if (!Number.isFinite(num)) return '—';
+    if (num < 0) return 'Unassigned';
+    return `EF ${String(num + 1).padStart(2, '0')}`;
+  }
+
+  function formatEfFilter(ef) {
+    if (!ef) return '—';
+    const index = Number(ef.filter_index);
+    const name = ef.filter_name || (Number.isFinite(index) ? EF_FILTER_NAMES[index] : null);
+    if (!name) return '—';
+    const idx = Number.isFinite(index) ? `#${index}` : null;
+    return idx ? `${name} (${idx})` : name;
+  }
+
+  function formatEfTuning(ef) {
+    if (!ef) return '—';
+    const freq = formatNumberField(ef.frequency, 1);
+    const q = formatNumberField(ef.q, 2);
+    if (freq === '—' && q === '—') return '—';
+    const freqLabel = freq === '—' ? '—' : `${freq} Hz`;
+    return `${freqLabel} • Q ${q}`;
+  }
+
+  function formatEfDynamics(ef) {
+    if (!ef) return '—';
+    const oversample = Number.isFinite(Number(ef.oversample)) ? Number(ef.oversample) : null;
+    const smoothing = formatNumberField(ef.smoothing, 2);
+    const oversampleLabel = oversample !== null ? `×${oversample}` : '—';
+    if (oversampleLabel === '—' && smoothing === '—') return '—';
+    return `Oversample ${oversampleLabel} • Smoothing ${smoothing}`;
+  }
+
+  function formatEfBaseline(ef) {
+    if (!ef) return '—';
+    const baseline = formatNumberField(ef.baseline, 2);
+    const gain = formatNumberField(ef.gain, 2);
+    if (baseline === '—' && gain === '—') return '—';
+    return `Baseline ${baseline} • Gain ${gain}`;
+  }
+
+  function resolveArgMethodName(arg) {
+    if (!arg || typeof arg !== 'object') return null;
+    if (arg.method_name && typeof arg.method_name === 'string') return arg.method_name;
+    const index = Number(arg.method);
+    if (Number.isFinite(index)) {
+      return ARG_METHOD_NAMES[index] || null;
+    }
+    return null;
+  }
+
+  function formatArgMode(arg) {
+    if (!arg || typeof arg !== 'object') return '—';
+    const methodName = resolveArgMethodName(arg);
+    const methodNum = Number(arg.method);
+    const methodIndex = Number.isFinite(methodNum) ? `#${methodNum}` : null;
+    const enabled = arg.enabled === undefined ? false : Boolean(arg.enabled);
+    const pieces = [];
+    if (methodName) pieces.push(methodName);
+    if (methodIndex && (!methodName || !methodName.includes(methodIndex))) pieces.push(methodIndex);
+    pieces.push(enabled ? 'ON' : 'OFF');
+    return pieces.join(' · ');
+  }
+
+  function formatEfRoute(index) {
+    if (index === null || index === undefined) return '—';
+    const num = Number(index);
+    if (!Number.isFinite(num) || num < 0) return '—';
+    return `EF ${String(num + 1).padStart(2, '0')}`;
+  }
+
+  function formatArgSources(arg) {
+    if (!arg || typeof arg !== 'object') return '—';
+    const sourceA = formatEfRoute(arg.sourceA);
+    const sourceB = formatEfRoute(arg.sourceB);
+    if (sourceA === '—' && sourceB === '—') return '—';
+    return `A → ${sourceA} • B → ${sourceB}`;
+  }
+
+  function normalizeEf(slot) {
+    const base = slot?.ef ? { ...slot.ef } : {};
+    const defaults = {
+      frequency: 1000,
+      q: 0.707,
+      oversample: 4,
+      smoothing: 0.2,
+      baseline: 0,
+      gain: 1
+    };
+    const index = Number.isFinite(slot?.efIndex)
+      ? Number(slot.efIndex)
+      : Number.isFinite(base.index)
+      ? Number(base.index)
+      : -1;
+    if (!Number.isFinite(base.index)) base.index = index;
+    if (Number.isFinite(Number(base.filter_index))) {
+      base.filter_index = Number(base.filter_index);
+    }
+    if (!Number.isFinite(base.filter_index) && typeof base.filter_name === 'string') {
+      const idx = EF_FILTER_NAMES.indexOf(base.filter_name);
+      if (idx >= 0) base.filter_index = idx;
+    }
+    if (!base.filter_name && Number.isFinite(base.filter_index)) {
+      base.filter_name = EF_FILTER_NAMES[base.filter_index] || null;
+    }
+    base.frequency = Number.isFinite(Number(base.frequency)) ? Number(base.frequency) : defaults.frequency;
+    base.q = Number.isFinite(Number(base.q)) ? Number(base.q) : defaults.q;
+    base.oversample = Number.isFinite(Number(base.oversample)) ? Math.max(1, Math.round(Number(base.oversample))) : defaults.oversample;
+    const smoothing = Number(base.smoothing);
+    base.smoothing = Number.isFinite(smoothing) ? Math.max(0, Math.min(1, smoothing)) : defaults.smoothing;
+    base.baseline = Number.isFinite(Number(base.baseline)) ? Number(base.baseline) : defaults.baseline;
+    base.gain = Number.isFinite(Number(base.gain)) ? Number(base.gain) : defaults.gain;
+    base.index = index;
+    return base;
+  }
+
+  function normalizeArg(slot) {
+    const base = slot?.arg ? { ...slot.arg } : {};
+    if (base.enabled === undefined) base.enabled = false;
+    const methodIndex = (() => {
+      if (base.method_name && typeof base.method_name === 'string') {
+        const idx = ARG_METHOD_NAMES.indexOf(base.method_name);
+        if (idx >= 0) return idx;
+      }
+      const idx = Number(base.method);
+      return Number.isFinite(idx) ? idx : 0;
+    })();
+    base.method = methodIndex;
+    base.method_name = ARG_METHOD_NAMES[methodIndex] || base.method_name || 'PLUS';
+    const manifest = runtime.getState().manifest ?? localManifest;
+    const efLimit = Math.max(0, (manifest?.max_table_lengths?.efSlots ?? localManifest?.max_table_lengths?.efSlots ?? 6) - 1);
+    const sanitizeSource = (value, fallback) => {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return fallback;
+      return Math.max(0, Math.min(efLimit, num));
+    };
+    base.sourceA = sanitizeSource(base.sourceA, 0);
+    base.sourceB = sanitizeSource(base.sourceB, Math.min(1, efLimit));
+    return base;
   }
 
   function normaliseSysexTemplate(value) {
