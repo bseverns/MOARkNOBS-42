@@ -3,6 +3,10 @@
   "version": "3.6.0+mknobs",
   "description": "MOARkNOBS-trimmed FastLED fork locked to ARM targets.",
   "build": {
-    "srcFilter": "+<*>"
+    "srcFilter": [
+      "+<*>",
+      "-<platforms/shared/active_strip_data/*>",
+      "-<platforms/shared/ui/*>"
+    ]
   }
 }
