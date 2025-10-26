@@ -1284,10 +1284,12 @@ void test_high_index_envelope_assignment_survives_reload() {
         envs[i].setBaseline(0.1f * static_cast<float>(i + 1));
     }
 
-    std::map<int, int> mapping;
+    std::map<int, MIDISlot::EfSettings> mapping;
     const int highPot = NUM_POTS - 1;
     const int assignedEnv = static_cast<int>(envs.size()) - 1;
-    mapping[highPot] = assignedEnv;
+    MIDISlot::EfSettings assignedSettings{};
+    assignedSettings.followerIndex = static_cast<int8_t>(assignedEnv);
+    mapping.emplace(highPot, assignedSettings);
 
     ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
     cfg.saveEnvelopeSettings(mapping, envs);
