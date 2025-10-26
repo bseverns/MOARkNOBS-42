@@ -1,7 +1,11 @@
-import processing.serial.*;
-import java.io.*;
+import processing.serial.Serial;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 
 Serial port;
+String currentPortName = "none";
 PrintWriter logWriter;
 String mode = "";
 int lineCount = 0;
@@ -18,7 +22,7 @@ void setup() {
 void draw() {
   background(0);
   fill(255);
-  String p = (port != null) ? port.getPortName() : "none";
+  String p = (port != null) ? currentPortName : "none";
   text("port: " + p + " mode: " + mode + " lines: " + lineCount, 10, 20);
 }
 
