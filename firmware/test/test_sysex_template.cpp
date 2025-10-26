@@ -58,7 +58,7 @@ void test_parse_rejects_bad_template() {
     TEST_ASSERT_TRUE(error.length() > 0);
 }
 
-void test_config_mutation_during_stream_stays_valid() {
+void test_sysex_template_config_mutation_stays_valid() {
     MIDISlot slot{};
     slot.type = MIDIMessageType::SysEx;
 

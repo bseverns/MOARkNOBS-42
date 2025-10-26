@@ -4,8 +4,12 @@
 #include "EnvelopeFollower.h"
 #include "interop/SeedBoxLink.h"
 #include "PerlinNoise.h"
+#include "SysExTemplate.h"
+#include "Utility.h"
 
+#include <ArduinoJson.h>
 #include <array>
+#include <cctype>
 #include <cmath>
 #include <vector>
 
@@ -60,46 +64,6 @@ int envelopeIndexFromAnalogPin(int analogPin) {
     return -1;
 }
 
-// ConfigManager normally gets its constructor from ConfigManager.cpp, but the
-// Unity slice doesn't compile that translation unit. Provide a skinny version
-// that keeps the tests humming without poking EEPROM.
-ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
-    : _numPots(numPots), _numButtons(numButtons) {
-    for (auto &slot : slots) {
-        slot.active = false;
-        slot.type = MIDIMessageType::OFF;
-        slot.midiChannel = 1;
-        slot.data1 = 0;
-        slot.arpNote = 0;
-        slot.sysexLength = 0;
-        slot.sysexTemplate.fill(0);
-    }
-    _stored.potChannels.fill(0);
-    _stored.potCCNumbers.fill(0);
-    _stored.version = CONFIG_VERSION;
-    _stored.crc = 0;
-}
-
-// Ditto for PotentiometerManager: we just need a predictable sandbox for
-// potLastValues, so the constructor skips any real hardware twiddling.
-PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
-                                           uint8_t analog)
-    : primaryMuxPins(primaryPins), secondaryMuxPins(secondaryPins), analogPin(analog) {
-    for (uint8_t i = 0; i < NUM_POTS; ++i) {
-        potChannels[i] = 1;
-        potCCNumbers[i] = i;
-        potLastValues[i] = 0;
-        smoothedValue[i] = 0;
-        dirtyFlags[i] = false;
-    }
-}
-
-int PotentiometerManager::getLastValue(int potIndex) const {
-    if (potIndex < 0 || potIndex >= static_cast<int>(NUM_POTS))
-        return -1;
-    return potLastValues[potIndex];
-}
-
 // The arpeggiator leans on Perlin noise for its RANDOM mode. The full noise
 // implementation is overkill for these unit tests, so collapse it to a simple
 // deterministic ramp that still exercises the call path.
@@ -140,3 +104,150 @@ void SeedBoxLink::markPeerPulse() {}
 } // namespace mn42
 } // namespace interop
 } // namespace seedbox
+
+namespace {
+
+bool equalsIgnoreCase(const char *lhs, const char *rhs) {
+    if (!lhs || !rhs)
+        return false;
+    while (*lhs && *rhs) {
+        if (std::tolower(static_cast<unsigned char>(*lhs)) !=
+            std::tolower(static_cast<unsigned char>(*rhs))) {
+            return false;
+        }
+        ++lhs;
+        ++rhs;
+    }
+    return *lhs == '\0' && *rhs == '\0';
+}
+
+bool parseMIDITypeLabel(const char *label, MIDIMessageType &type) {
+    if (!label)
+        return false;
+    struct Entry {
+        const char *legacy;
+        const char *canonical;
+        const char *alt;
+        MIDIMessageType value;
+    };
+    static constexpr Entry kMap[] = {
+        {"OFF", "OFF", nullptr, MIDIMessageType::OFF},
+        {"CC", "CC", nullptr, MIDIMessageType::CC},
+        {"Note", "NOTE", nullptr, MIDIMessageType::Note},
+        {"PitchBend", "PITCH_BEND", "PITCHBEND", MIDIMessageType::PitchBend},
+        {"ProgramChange", "PROGRAM", "PROGRAM_CHANGE", MIDIMessageType::ProgramChange},
+        {"Aftertouch", "AFTERTOUCH", nullptr, MIDIMessageType::Aftertouch},
+        {"ModWheel", "MOD_WHEEL", "MODWHEEL", MIDIMessageType::ModWheel},
+        {"NRPN", "NRPN", nullptr, MIDIMessageType::NRPN},
+        {"RPN", "RPN", nullptr, MIDIMessageType::RPN},
+        {"SysEx", "SYSEX", "SYS_EX", MIDIMessageType::SysEx},
+    };
+    for (const auto &entry : kMap) {
+        if ((entry.legacy && equalsIgnoreCase(label, entry.legacy)) ||
+            (entry.canonical && equalsIgnoreCase(label, entry.canonical)) ||
+            (entry.alt && equalsIgnoreCase(label, entry.alt))) {
+            type = entry.value;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool assignFromIntegral(long candidate, MIDIMessageType &type) {
+    if (candidate < static_cast<long>(MIDIMessageType::OFF) ||
+        candidate > static_cast<long>(MIDIMessageType::SysEx)) {
+        return false;
+    }
+    type = static_cast<MIDIMessageType>(candidate);
+    return true;
+}
+
+void clearSysExTemplate(MIDISlot &slot) {
+    slot.sysexLength = 0;
+    slot.sysexTemplate.fill(0);
+}
+
+uint8_t renderFallbackSysEx(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
+                            size_t capacity) {
+    if (capacity < 4) {
+        return 0;
+    }
+    dest[0] = 0xF0;
+    dest[1] = slot.data1;
+    dest[2] = Utility::mapToMidiValue(static_cast<int>(rawValue));
+    dest[3] = 0xF7;
+    return 4;
+}
+
+} // namespace
+
+bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                            MIDIMessageType &type) {
+    if (!typeField.isNull()) {
+        if (typeField.is<const char *>()) {
+            if (parseMIDITypeLabel(typeField.as<const char *>(), type)) {
+                return true;
+            }
+        } else if (typeField.is<int>() || typeField.is<long>() || typeField.is<short>() ||
+                   typeField.is<signed char>()) {
+            if (assignFromIntegral(typeField.as<long>(), type)) {
+                return true;
+            }
+        } else if (typeField.is<unsigned char>() || typeField.is<unsigned short>() ||
+                   typeField.is<unsigned int>() || typeField.is<unsigned long>()) {
+            unsigned long raw = typeField.as<unsigned long>();
+            if (raw <= static_cast<unsigned long>(static_cast<long>(MIDIMessageType::SysEx)) &&
+                assignFromIntegral(static_cast<long>(raw), type)) {
+                return true;
+            }
+        } else if (typeField.is<float>() || typeField.is<double>()) {
+            double raw = typeField.as<double>();
+            if (std::isfinite(raw)) {
+                long candidate = static_cast<long>(raw);
+                if (static_cast<double>(candidate) == raw && assignFromIntegral(candidate, type)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    if (!typeNameField.isNull() && typeNameField.is<const char *>()) {
+        return parseMIDITypeLabel(typeNameField.as<const char *>(), type);
+    }
+    return false;
+}
+
+bool testOnly_parseSysExTemplateField(JsonVariantConst value, MIDISlot &slot, String &error) {
+    if (value.isNull()) {
+        clearSysExTemplate(slot);
+        return true;
+    }
+
+    const char *raw = value.as<const char *>();
+    if (!raw || raw[0] == '\0') {
+        clearSysExTemplate(slot);
+        return true;
+    }
+
+    if (SysExTemplate::parse(raw, slot.sysexTemplate, slot.sysexLength, error)) {
+        return true;
+    }
+
+    clearSysExTemplate(slot);
+    return false;
+}
+
+uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
+                                   size_t capacity) {
+    const uint8_t midiValue = Utility::mapToMidiValue(static_cast<int>(rawValue));
+    const uint16_t value14 = Utility::mapTo14Bit(static_cast<int>(rawValue));
+    if (slot.sysexLength >= 2) {
+        uint8_t rendered =
+            SysExTemplate::render(slot.sysexTemplate, slot.sysexLength, midiValue, value14, dest,
+                                  capacity);
+        if (rendered > 0) {
+            return rendered;
+        }
+    }
+    return renderFallbackSysEx(slot, rawValue, dest, capacity);
+}

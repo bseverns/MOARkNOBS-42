@@ -22,7 +22,7 @@ void test_digital_provider_overrides_matrix_reads();
 void test_parse_basic_sysex_template();
 void test_parse_14bit_sysex_template();
 void test_parse_rejects_bad_template();
-void test_config_mutation_during_stream_stays_valid();
+void test_sysex_template_config_mutation_stays_valid();
 void test_bulk_config_assembler_handles_chunks();
 void test_bulk_config_assembler_detects_overflow();
 void test_format_ack_includes_checksum_and_seq();
@@ -62,7 +62,7 @@ void setup() {
     RUN_TEST(test_parse_basic_sysex_template);
     RUN_TEST(test_parse_14bit_sysex_template);
     RUN_TEST(test_parse_rejects_bad_template);
-    RUN_TEST(test_config_mutation_during_stream_stays_valid);
+    RUN_TEST(test_sysex_template_config_mutation_stays_valid);
     RUN_TEST(test_bulk_config_assembler_handles_chunks);
     RUN_TEST(test_bulk_config_assembler_detects_overflow);
     RUN_TEST(test_format_ack_includes_checksum_and_seq);

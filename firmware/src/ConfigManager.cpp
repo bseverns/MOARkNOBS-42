@@ -1303,7 +1303,7 @@ void test_high_index_envelope_assignment_survives_reload() {
 
     auto highPotIt = mapping.find(highPot);
     TEST_ASSERT_TRUE(highPotIt != mapping.end());
-    TEST_ASSERT_EQUAL_INT(assignedEnv, highPotIt->second);
+    TEST_ASSERT_EQUAL_INT(assignedEnv, highPotIt->second.followerIndex);
 
     if (NUM_POTS > 1) {
         int unassignedPot = (highPot == 0) ? 1 : 0;
