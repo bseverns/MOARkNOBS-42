@@ -30,14 +30,13 @@ void setup() {
 
     // Assign unique data to each slot then save
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        MIDISlot slot = {
-            MIDIMessageType::CC,
-            static_cast<uint8_t>((i % 16) + 1), // MIDI channel
-            static_cast<uint8_t>(20 + i),       // data1
-            static_cast<uint8_t>(i % 6),        // envelope index
-            true,
-            static_cast<uint8_t>(60 + i) // arp note
-        };
+        MIDISlot slot{};
+        slot.type = MIDIMessageType::CC;
+        slot.midiChannel = static_cast<uint8_t>((i % 16) + 1); // MIDI channel
+        slot.data1 = static_cast<uint8_t>(20 + i);             // data1
+        slot.active = true;
+        slot.arpNote = static_cast<uint8_t>(60 + i); // arp note
+        slot.setEnvelopeFollowerIndex(static_cast<int8_t>(i % 6)); // envelope index
         slot.sysexLength = 0;
         slot.sysexTemplate.fill(0);
         configManager.getSlot(i) = slot;
