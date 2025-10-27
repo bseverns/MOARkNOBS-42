@@ -11,16 +11,15 @@ class Teensy4HardwareSPIOutput {
 	Selectable *m_pSelect = nullptr;
 	uint32_t  m_bitCount = 0;
 	uint32_t m_bitData = 0;
-	inline IMXRT_LPSPI_t & port() __attribute__((always_inline)) {
-		switch(_SPI_INDEX) {
-			case 0:
-			return IMXRT_LPSPI4_S;
-			case 1:
-			return IMXRT_LPSPI3_S;
-			case 2:
-			return IMXRT_LPSPI1_S;
-		}
-	}
+        inline IMXRT_LPSPI_t & port() __attribute__((always_inline)) {
+                static IMXRT_LPSPI_t * const PORTS[] = {
+                        &IMXRT_LPSPI4_S,
+                        &IMXRT_LPSPI3_S,
+                        &IMXRT_LPSPI1_S,
+                };
+                static_assert(_SPI_INDEX < (sizeof(PORTS) / sizeof(PORTS[0])), "_SPI_INDEX out of range for Teensy 4 SPI bus");
+                return *PORTS[_SPI_INDEX];
+        }
 
 public:
 	Teensy4HardwareSPIOutput() { m_pSelect = NULL; m_bitCount = 0;}
