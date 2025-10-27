@@ -242,9 +242,8 @@ uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint
     const uint8_t midiValue = Utility::mapToMidiValue(static_cast<int>(rawValue));
     const uint16_t value14 = Utility::mapTo14Bit(static_cast<int>(rawValue));
     if (slot.sysexLength >= 2) {
-        uint8_t rendered =
-            SysExTemplate::render(slot.sysexTemplate, slot.sysexLength, midiValue, value14, dest,
-                                  capacity);
+            uint8_t rendered = SysExTemplate::render(slot.sysexTemplate, slot.sysexLength, midiValue,
+                                                    value14, dest, capacity);
         if (rendered > 0) {
             return rendered;
         }

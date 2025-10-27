@@ -109,8 +109,8 @@ void test_digital_provider_overrides_matrix_reads() {
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                              PotentiometerManager *potentiometerManager)
     : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
-       activeMode(0), _pendingEfSlot(-1), _efAssignDeadline(0) {
-    for (size_t i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; ++i) {
+      activeMode(0), _pendingEfSlot(-1), _efAssignDeadline(0) {
+            for (size_t i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; ++i) {
         buttonStates[i] = false;
         lastDebounceTimes[i] = 0;
     }

@@ -35,7 +35,7 @@ void setup() {
         slot.midiChannel = static_cast<uint8_t>((i % 16) + 1); // MIDI channel
         slot.data1 = static_cast<uint8_t>(20 + i);             // data1
         slot.active = true;
-        slot.arpNote = static_cast<uint8_t>(60 + i); // arp note
+        slot.arpNote = static_cast<uint8_t>(60 + i);               // arp note
         slot.setEnvelopeFollowerIndex(static_cast<int8_t>(i % 6)); // envelope index
         slot.sysexLength = 0;
         slot.sysexTemplate.fill(0);
