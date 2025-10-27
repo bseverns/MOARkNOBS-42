@@ -38,7 +38,10 @@ String report() {
 #endif
 
     String out;
-    serializeJson(doc, out);
+    out.reserve(128);
+    if (serializeJson(doc, out) == 0) {
+        out = "{}";
+    }
     return out;
 }
 

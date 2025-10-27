@@ -4,6 +4,7 @@
 #include "MIDIHandler.h"
 #include "TimeUtils.h"
 #include "interop/mn42_map.h"
+#include <array>
 
 namespace seedbox {
 namespace interop {
@@ -13,6 +14,7 @@ namespace {
 constexpr unsigned long kHelloRetryMs = 2000UL;
 constexpr unsigned long kKeepAlivePeriodMs = 3000UL;
 constexpr unsigned long kPeerTimeoutMs = 8000UL;
+constexpr size_t kIdentityPacketLength = 7;
 } // namespace
 
 SeedBoxLink &SeedBoxLink::instance() {
@@ -81,9 +83,10 @@ bool SeedBoxLink::handleControlChange(uint8_t channel, uint8_t control, uint8_t 
 }
 
 void SeedBoxLink::handleSysEx(const uint8_t *data, uint16_t length) {
-    if (!data || length < 7)
+    if (!data || length < kIdentityPacketLength)
         return;
-    if (data[0] != 0xF0 || data[length - 1] != 0xF7)
+    const size_t lastIndex = static_cast<size_t>(length) - 1;
+    if (data[0] != 0xF0 || data[lastIndex] != 0xF7)
         return;
     if (data[1] != handshake::product::kManufacturerId)
         return;
@@ -123,14 +126,15 @@ void SeedBoxLink::sendKeepAlive() {
 void SeedBoxLink::sendIdentityPing() {
     if (!_midi)
         return;
-    const uint8_t packet[] = {0xF0,
-                              handshake::product::kManufacturerId,
-                              handshake::product::kSignature0,
-                              handshake::product::kSignature1,
-                              handshake::product::kSignature2,
-                              handshake::product::kPresenceFlag,
-                              0xF7};
-    _midi->sendSysEx(packet, sizeof(packet));
+    constexpr std::array<uint8_t, kIdentityPacketLength> packet = {
+        0xF0,
+        handshake::product::kManufacturerId,
+        handshake::product::kSignature0,
+        handshake::product::kSignature1,
+        handshake::product::kSignature2,
+        handshake::product::kPresenceFlag,
+        0xF7};
+    _midi->sendSysEx(packet.data(), packet.size());
 }
 
 void SeedBoxLink::markPeerPulse() { _lastPeerPulseMs = now(); }
