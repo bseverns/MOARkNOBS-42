@@ -7,28 +7,19 @@ FASTLED_NAMESPACE_BEGIN
 #include <SPI.h>
 
 namespace detail {
-// Route FastLED's SPI index to the actual hardware register block. We lean on explicit
-// specializations instead of a pointer table because the Teensy core defines IMXRT_LPSPI?_S as
-// references to volatile structs, not raw addresses. Taking their address trips the compiler, so we
-// hand-roll a selector that still fails to compile on bogus indices.
-
-template <int Index> struct Teensy4SpiPortSelector;
-
-template <> struct Teensy4SpiPortSelector<0> {
-    static IMXRT_LPSPI_t &port() { return IMXRT_LPSPI4_S; }
-};
-
-template <> struct Teensy4SpiPortSelector<1> {
-    static IMXRT_LPSPI_t &port() { return IMXRT_LPSPI3_S; }
-};
-
-template <> struct Teensy4SpiPortSelector<2> {
-    static IMXRT_LPSPI_t &port() { return IMXRT_LPSPI1_S; }
-};
-
+// Route FastLED's SPI index to the actual hardware register block. A `constexpr` branch keeps the
+// compiler from ever seeing an invalid case while also side-stepping the forbidden "take the
+// address of a reference" trick that torpedoed the old lookup table.
 template <int Index> inline IMXRT_LPSPI_t &teensy4SpiPort() {
     static_assert(Index >= 0 && Index <= 2, "_SPI_INDEX out of range for Teensy 4 SPI bus");
-    return Teensy4SpiPortSelector<Index>::port();
+
+    if constexpr (Index == 0) {
+        return IMXRT_LPSPI4_S;
+    } else if constexpr (Index == 1) {
+        return IMXRT_LPSPI3_S;
+    } else { // Index == 2 is the only remaining legal option.
+        return IMXRT_LPSPI1_S;
+    }
 }
 } // namespace detail
 
