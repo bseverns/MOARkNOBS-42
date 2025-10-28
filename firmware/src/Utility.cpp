@@ -14,9 +14,12 @@
 #include "MIDIHandler.h"
 #include "ConfigManager.h"
 #include <imxrt.h>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <cstdlib>
 #include <cctype>
+#include <limits>
 #include "Log.h"
 
 // Collection of helpers used across the firmware. These range from value
@@ -40,17 +43,23 @@ int Utility::mapToRange(int value, int inMin, int inMax, int outMin, int outMax)
 }
 
 float Utility::scale(float value, float inMin, float inMax, float outMin, float outMax) {
-    if (inMax - inMin == 0) {
+    const float range = inMax - inMin;
+    if (std::fabs(range) <= std::numeric_limits<float>::epsilon()) {
         return outMin;
     }
-    float ratio = (value - inMin) / (inMax - inMin);
+    const float ratio = (value - inMin) / range;
     return outMin + ratio * (outMax - outMin);
 }
 
 float Utility::mapExponential(float value, float inMin, float inMax, float outMin, float outMax,
                               float exponent) {
-    float normalized = (value - inMin) / (inMax - inMin);
-    float scaled = pow(normalized, exponent);
+    const float range = inMax - inMin;
+    if (std::fabs(range) <= std::numeric_limits<float>::epsilon()) {
+        return outMin;
+    }
+    float normalized = (value - inMin) / range;
+    normalized = std::clamp(normalized, 0.0f, 1.0f);
+    const float scaled = std::pow(normalized, exponent);
     return scaled * (outMax - outMin) + outMin;
 }
 
@@ -117,7 +126,17 @@ void Utility::logDebug(const char *debugMessage) {
 
 // Filtering
 int Utility::exponentialMovingAverage(int currentValue, int previousValue, float alpha) {
-    return alpha * currentValue + (1 - alpha) * previousValue;
+    const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
+    const float weighted = (clampedAlpha * static_cast<float>(currentValue)) +
+                           ((1.0f - clampedAlpha) * static_cast<float>(previousValue));
+    const long rounded = std::lround(weighted);
+    if (rounded > std::numeric_limits<int>::max()) {
+        return std::numeric_limits<int>::max();
+    }
+    if (rounded < std::numeric_limits<int>::min()) {
+        return std::numeric_limits<int>::min();
+    }
+    return static_cast<int>(rounded);
 }
 
 // System Operations
@@ -128,16 +147,17 @@ void Utility::rebootTeensy() {
 }
 
 void Utility::displayCenteredText(Adafruit_SSD1306 &display, const char *text) {
+    const char *safeText = text ? text : "";
     int16_t x1, y1;
     uint16_t w, h;
-    display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+    display.getTextBounds(safeText, 0, 0, &x1, &y1, &w, &h);
 
     int x = (display.width() - w) / 2;
     int y = (display.height() - h) / 2;
 
     display.clearDisplay();
     display.setCursor(x, y);
-    display.print(text);
+    display.print(safeText);
     display.display();
 }
 
@@ -158,12 +178,13 @@ inline uint16_t resolveDisplayWhite() {
 } // namespace
 
 void Utility::displayStatus(Adafruit_SSD1306 &display, const char *status, unsigned long duration) {
+    const char *safeStatus = status ? status : "";
     display.clearDisplay();
     display.setCursor(0, 0);
     display.setTextSize(1); // Standard text size
     const uint16_t textColor = resolveDisplayWhite();
     display.setTextColor(textColor);
-    display.println(status);
+    display.println(safeStatus);
     display.display();
     delay(duration); // Hold the status for the given duration
 }
@@ -172,6 +193,8 @@ void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
                             const std::vector<EnvelopeFollower> &envelopeFollowers,
                             const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
                             const char *envelopeMode) {
+    const char *safeStatus = statusMessage ? statusMessage : "";
+    const char *safeMode = envelopeMode ? envelopeMode : "";
     display.clearDisplay();
     display.setTextSize(1);
     const uint16_t textColor = resolveDisplayWhite();
@@ -192,7 +215,7 @@ void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
     // Display envelope mode
     display.setCursor(0, 20);
     display.print("Mode: ");
-    display.println(envelopeMode);
+    display.println(safeMode);
 
     // Display envelope levels
     display.setCursor(0, 30);
@@ -205,7 +228,7 @@ void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
     // Display status message
     display.setCursor(0, 40);
     display.print("Status: ");
-    display.println(statusMessage);
+    display.println(safeStatus);
 
     display.display();
 }
@@ -222,6 +245,9 @@ void Utility::writeEEPROMWord(int address, uint16_t value) {
 }
 
 void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue) {
+    if (startAddress > endAddress) {
+        return;
+    }
     for (int i = startAddress; i <= endAddress; i++) {
         EEPROM.update(i, defaultValue);
     }

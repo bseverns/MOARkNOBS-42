@@ -5424,6 +5424,8 @@ struct Converter<T, detail::enable_if_t<detail::is_integral<T>::value &&
     if (!data)
       return false;
     auto resources = getResourceManager(dst);
+    if (!resources)
+      return false;
     data->clear(resources);
     return data->setInteger(src, resources);
   }
@@ -5436,7 +5438,7 @@ struct Converter<T, detail::enable_if_t<detail::is_integral<T>::value &&
   static bool checkJson(JsonVariantConst src) {
     auto data = getData(src);
     auto resources = getResourceManager(src);
-    return data && data->template isInteger<T>(resources);
+    return data && resources && data->template isInteger<T>(resources);
   }
 };
 template <typename T>
@@ -5454,7 +5456,7 @@ struct Converter<T, detail::enable_if_t<detail::is_enum<T>::value>>
   static bool checkJson(JsonVariantConst src) {
     auto data = getData(src);
     auto resources = getResourceManager(src);
-    return data && data->template isInteger<int>(resources);
+    return data && resources && data->template isInteger<int>(resources);
   }
 };
 template <>
@@ -5464,6 +5466,8 @@ struct Converter<bool> : private detail::VariantAttorney {
     if (!data)
       return false;
     auto resources = getResourceManager(dst);
+    if (!resources)
+      return false;
     data->clear(resources);
     data->setBoolean(src);
     return true;
@@ -5733,6 +5737,8 @@ template <typename T>
 inline void VariantData::setRawString(SerializedValue<T> value,
                                       ResourceManager* resources) {
   ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
+  if (!resources)
+    return;
   auto dup = resources->saveString(adaptString(value.data(), value.size()));
   if (dup)
     setRawString(dup);
@@ -5747,6 +5753,8 @@ inline bool VariantData::setString(TAdaptedString value,
     setLinkedString(value.data());
     return true;
   }
+  if (!resources)
+    return false;
   auto dup = resources->saveString(value);
   if (dup) {
     setOwnedString(dup);
@@ -5755,21 +5763,26 @@ inline bool VariantData::setString(TAdaptedString value,
   return false;
 }
 inline void VariantData::clear(ResourceManager* resources) {
-  if (type_ & VariantTypeBits::OwnedStringBit)
-    resources->dereferenceString(content_.asOwnedString->data);
+  if (type_ & VariantTypeBits::OwnedStringBit) {
+    if (resources && content_.asOwnedString)
+      resources->dereferenceString(content_.asOwnedString->data);
+    content_.asOwnedString = nullptr;
+  }
 #if ARDUINOJSON_USE_EXTENSIONS
-  if (type_ & VariantTypeBits::ExtensionBit)
-    resources->freeExtension(content_.asSlotId);
+  if (type_ & VariantTypeBits::ExtensionBit) {
+    if (resources)
+      resources->freeExtension(content_.asSlotId);
+  }
 #endif
   auto collection = asCollection();
-  if (collection)
+  if (collection && resources)
     collection->clear(resources);
   type_ = VariantType::Null;
 }
 #if ARDUINOJSON_USE_EXTENSIONS
 inline const VariantExtension* VariantData::getExtension(
     const ResourceManager* resources) const {
-  return type_ & VariantTypeBits::ExtensionBit
+  return (resources && (type_ & VariantTypeBits::ExtensionBit))
              ? resources->getExtension(content_.asSlotId)
              : nullptr;
 }
@@ -5778,13 +5791,14 @@ template <typename T>
 enable_if_t<sizeof(T) == 8, bool> VariantData::setFloat(
     T value, ResourceManager* resources) {
   ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
-  (void)resources;                                 // silence warning
   float valueAsFloat = static_cast<float>(value);
 #if ARDUINOJSON_USE_DOUBLE
   if (value == valueAsFloat) {
     type_ = VariantType::Float;
     content_.asFloat = valueAsFloat;
   } else {
+    if (!resources)
+      return false;
     auto extension = resources->allocExtension();
     if (!extension)
       return false;
@@ -5802,13 +5816,14 @@ template <typename T>
 enable_if_t<is_signed<T>::value, bool> VariantData::setInteger(
     T value, ResourceManager* resources) {
   ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
-  (void)resources;                                 // silence warning
   if (canConvertNumber<int32_t>(value)) {
     type_ = VariantType::Int32;
     content_.asInt32 = static_cast<int32_t>(value);
   }
 #if ARDUINOJSON_USE_LONG_LONG
   else {
+    if (!resources)
+      return false;
     auto extension = resources->allocExtension();
     if (!extension)
       return false;
@@ -5823,13 +5838,14 @@ template <typename T>
 enable_if_t<is_unsigned<T>::value, bool> VariantData::setInteger(
     T value, ResourceManager* resources) {
   ARDUINOJSON_ASSERT(type_ == VariantType::Null);  // must call clear() first
-  (void)resources;                                 // silence warning
   if (canConvertNumber<uint32_t>(value)) {
     type_ = VariantType::Uint32;
     content_.asUint32 = static_cast<uint32_t>(value);
   }
 #if ARDUINOJSON_USE_LONG_LONG
   else {
+    if (!resources)
+      return false;
     auto extension = resources->allocExtension();
     if (!extension)
       return false;
@@ -8139,78 +8155,72 @@ ARDUINOJSON_END_PUBLIC_NAMESPACE
 #define DynamicJsonBuffer ARDUINOJSON_DEPRECATION_ERROR(DynamicJsonBuffer, class)
 #define JsonBuffer ARDUINOJSON_DEPRECATION_ERROR(JsonBuffer, class)
 #define RawJson ARDUINOJSON_DEPRECATION_ERROR(RawJson, function)
-#define ARDUINOJSON_NAMESPACE _Pragma ("GCC warning \"ARDUINOJSON_NAMESPACE is deprecated, use ArduinoJson instead\"") FLArduinoJson
-#define JSON_ARRAY_SIZE(N) _Pragma ("GCC warning \"JSON_ARRAY_SIZE is deprecated, you don't need to compute the size anymore\"") (FLArduinoJson::detail::sizeofArray(N))
-#define JSON_OBJECT_SIZE(N) _Pragma ("GCC warning \"JSON_OBJECT_SIZE is deprecated, you don't need to compute the size anymore\"") (FLArduinoJson::detail::sizeofObject(N))
-#define JSON_STRING_SIZE(N) _Pragma ("GCC warning \"JSON_STRING_SIZE is deprecated, you don't need to compute the size anymore\"") (N+1)
+#define ARDUINOJSON_NAMESPACE                                                                      \
+    _Pragma("GCC warning \"ARDUINOJSON_NAMESPACE is deprecated, use ArduinoJson instead\"")        \
+        FLArduinoJson
+#define JSON_ARRAY_SIZE(N)                                                                         \
+    _Pragma("GCC warning \"JSON_ARRAY_SIZE is deprecated, you don't need to compute the size "     \
+            "anymore\"")(FLArduinoJson::detail::sizeofArray(N))
+#define JSON_OBJECT_SIZE(N)                                                                        \
+    _Pragma("GCC warning \"JSON_OBJECT_SIZE is deprecated, you don't need to compute the size "    \
+            "anymore\"")(FLArduinoJson::detail::sizeofObject(N))
+#define JSON_STRING_SIZE(N)                                                                        \
+    _Pragma("GCC warning \"JSON_STRING_SIZE is deprecated, you don't need to compute the size "    \
+            "anymore\"")(N + 1)
 #else
 #define JSON_ARRAY_SIZE(N) (FLArduinoJson::detail::sizeofArray(N))
 #define JSON_OBJECT_SIZE(N) (FLArduinoJson::detail::sizeofObject(N))
-#define JSON_STRING_SIZE(N) (N+1)
+#define JSON_STRING_SIZE(N) (N + 1)
 #endif
 ARDUINOJSON_BEGIN_PUBLIC_NAMESPACE
 template <size_t N>
-class ARDUINOJSON_DEPRECATED("use JsonDocument instead") StaticJsonDocument
-    : public JsonDocument {
- public:
-  using JsonDocument::JsonDocument;
-  size_t capacity() const {
-    return N;
-  }
+class ARDUINOJSON_DEPRECATED("use JsonDocument instead") StaticJsonDocument : public JsonDocument {
+  public:
+    using JsonDocument::JsonDocument;
+    size_t capacity() const { return N; }
 };
 namespace detail {
+template <typename TAllocator> class AllocatorAdapter : public Allocator {
+  public:
+    AllocatorAdapter(const AllocatorAdapter &) = delete;
+    AllocatorAdapter &operator=(const AllocatorAdapter &) = delete;
+    void *allocate(size_t size) override { return _allocator.allocate(size); }
+    void deallocate(void *ptr) override { _allocator.deallocate(ptr); }
+    void *reallocate(void *ptr, size_t new_size) override {
+        return _allocator.reallocate(ptr, new_size);
+    }
+    static Allocator *instance() {
+        static AllocatorAdapter instance;
+        return &instance;
+    }
+
+  private:
+    AllocatorAdapter() = default;
+    ~AllocatorAdapter() = default;
+    TAllocator _allocator;
+};
+} // namespace detail
 template <typename TAllocator>
-class AllocatorAdapter : public Allocator {
- public:
-  AllocatorAdapter(const AllocatorAdapter&) = delete;
-  AllocatorAdapter& operator=(const AllocatorAdapter&) = delete;
-  void* allocate(size_t size) override {
-    return _allocator.allocate(size);
-  }
-  void deallocate(void* ptr) override {
-    _allocator.deallocate(ptr);
-  }
-  void* reallocate(void* ptr, size_t new_size) override {
-    return _allocator.reallocate(ptr, new_size);
-  }
-  static Allocator* instance() {
-    static AllocatorAdapter instance;
-    return &instance;
-  }
- private:
-  AllocatorAdapter() = default;
-  ~AllocatorAdapter() = default;
-  TAllocator _allocator;
+class ARDUINOJSON_DEPRECATED("use JsonDocument instead") BasicJsonDocument : public JsonDocument {
+  public:
+    BasicJsonDocument(size_t capacity)
+        : JsonDocument(detail::AllocatorAdapter<TAllocator>::instance()), _capacity(capacity) {}
+    size_t capacity() const { return _capacity; }
+    void garbageCollect() {}
+
+  private:
+    size_t _capacity;
 };
-}  // namespace detail
-template <typename TAllocator>
-class ARDUINOJSON_DEPRECATED("use JsonDocument instead") BasicJsonDocument
-    : public JsonDocument {
- public:
-  BasicJsonDocument(size_t capacity)
-      : JsonDocument(detail::AllocatorAdapter<TAllocator>::instance()),
-        _capacity(capacity) {}
-  size_t capacity() const {
-    return _capacity;
-  }
-  void garbageCollect() {}
- private:
-  size_t _capacity;
+class ARDUINOJSON_DEPRECATED("use JsonDocument instead") DynamicJsonDocument : public JsonDocument {
+  public:
+    DynamicJsonDocument(size_t capacity) : _capacity(capacity) {}
+    size_t capacity() const { return _capacity; }
+    void garbageCollect() {}
+
+  private:
+    size_t _capacity;
 };
-class ARDUINOJSON_DEPRECATED("use JsonDocument instead") DynamicJsonDocument
-    : public JsonDocument {
- public:
-  DynamicJsonDocument(size_t capacity) : _capacity(capacity) {}
-  size_t capacity() const {
-    return _capacity;
-  }
-  void garbageCollect() {}
- private:
-  size_t _capacity;
-};
-inline JsonObject JsonArray::createNestedObject() const {
-  return add<JsonObject>();
-}
+inline JsonObject JsonArray::createNestedObject() const { return add<JsonObject>(); }
 ARDUINOJSON_END_PUBLIC_NAMESPACE
 
 // using namespace FLArduinoJson;
