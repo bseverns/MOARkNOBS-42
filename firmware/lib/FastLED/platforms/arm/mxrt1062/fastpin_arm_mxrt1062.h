@@ -3,6 +3,175 @@
 
 #include "fl/force_inline.h"
 
+#ifdef __CPPCHECK__
+#ifndef FASTLED_CPPCHECK_FAKE_GPIO_REG
+#define FASTLED_CPPCHECK_FAKE_GPIO_REG
+
+// cppcheck's preprocessor does not pull in the Teensy core register macros by default,
+// which leaves the GPIO* symbols undefined and causes it to mis-parse our macro goo.
+// We stub them out here so the analyzer sees balanced parentheses without touching
+// the real firmware build.
+
+#define FASTLED_CPPCHECK_STORAGE(PORT, REG) fastled_cppcheck_GPIO##PORT##_##REG##_storage
+
+#ifndef GPIO1_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(1, DR) = 0;
+#define GPIO1_DR FASTLED_CPPCHECK_STORAGE(1, DR)
+#endif
+#ifndef GPIO1_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(1, DR_SET) = 0;
+#define GPIO1_DR_SET FASTLED_CPPCHECK_STORAGE(1, DR_SET)
+#endif
+#ifndef GPIO1_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(1, DR_CLEAR) = 0;
+#define GPIO1_DR_CLEAR FASTLED_CPPCHECK_STORAGE(1, DR_CLEAR)
+#endif
+#ifndef GPIO1_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(1, DR_TOGGLE) = 0;
+#define GPIO1_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(1, DR_TOGGLE)
+#endif
+
+#ifndef GPIO2_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(2, DR) = 0;
+#define GPIO2_DR FASTLED_CPPCHECK_STORAGE(2, DR)
+#endif
+#ifndef GPIO2_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(2, DR_SET) = 0;
+#define GPIO2_DR_SET FASTLED_CPPCHECK_STORAGE(2, DR_SET)
+#endif
+#ifndef GPIO2_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(2, DR_CLEAR) = 0;
+#define GPIO2_DR_CLEAR FASTLED_CPPCHECK_STORAGE(2, DR_CLEAR)
+#endif
+#ifndef GPIO2_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(2, DR_TOGGLE) = 0;
+#define GPIO2_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(2, DR_TOGGLE)
+#endif
+
+#ifndef GPIO3_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(3, DR) = 0;
+#define GPIO3_DR FASTLED_CPPCHECK_STORAGE(3, DR)
+#endif
+#ifndef GPIO3_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(3, DR_SET) = 0;
+#define GPIO3_DR_SET FASTLED_CPPCHECK_STORAGE(3, DR_SET)
+#endif
+#ifndef GPIO3_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(3, DR_CLEAR) = 0;
+#define GPIO3_DR_CLEAR FASTLED_CPPCHECK_STORAGE(3, DR_CLEAR)
+#endif
+#ifndef GPIO3_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(3, DR_TOGGLE) = 0;
+#define GPIO3_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(3, DR_TOGGLE)
+#endif
+
+#ifndef GPIO4_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(4, DR) = 0;
+#define GPIO4_DR FASTLED_CPPCHECK_STORAGE(4, DR)
+#endif
+#ifndef GPIO4_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(4, DR_SET) = 0;
+#define GPIO4_DR_SET FASTLED_CPPCHECK_STORAGE(4, DR_SET)
+#endif
+#ifndef GPIO4_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(4, DR_CLEAR) = 0;
+#define GPIO4_DR_CLEAR FASTLED_CPPCHECK_STORAGE(4, DR_CLEAR)
+#endif
+#ifndef GPIO4_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(4, DR_TOGGLE) = 0;
+#define GPIO4_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(4, DR_TOGGLE)
+#endif
+
+#ifndef GPIO5_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(5, DR) = 0;
+#define GPIO5_DR FASTLED_CPPCHECK_STORAGE(5, DR)
+#endif
+#ifndef GPIO5_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(5, DR_SET) = 0;
+#define GPIO5_DR_SET FASTLED_CPPCHECK_STORAGE(5, DR_SET)
+#endif
+#ifndef GPIO5_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(5, DR_CLEAR) = 0;
+#define GPIO5_DR_CLEAR FASTLED_CPPCHECK_STORAGE(5, DR_CLEAR)
+#endif
+#ifndef GPIO5_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(5, DR_TOGGLE) = 0;
+#define GPIO5_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(5, DR_TOGGLE)
+#endif
+
+#ifndef GPIO6_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(6, DR) = 0;
+#define GPIO6_DR FASTLED_CPPCHECK_STORAGE(6, DR)
+#endif
+#ifndef GPIO6_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(6, DR_SET) = 0;
+#define GPIO6_DR_SET FASTLED_CPPCHECK_STORAGE(6, DR_SET)
+#endif
+#ifndef GPIO6_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(6, DR_CLEAR) = 0;
+#define GPIO6_DR_CLEAR FASTLED_CPPCHECK_STORAGE(6, DR_CLEAR)
+#endif
+#ifndef GPIO6_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(6, DR_TOGGLE) = 0;
+#define GPIO6_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(6, DR_TOGGLE)
+#endif
+
+#ifndef GPIO7_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(7, DR) = 0;
+#define GPIO7_DR FASTLED_CPPCHECK_STORAGE(7, DR)
+#endif
+#ifndef GPIO7_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(7, DR_SET) = 0;
+#define GPIO7_DR_SET FASTLED_CPPCHECK_STORAGE(7, DR_SET)
+#endif
+#ifndef GPIO7_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(7, DR_CLEAR) = 0;
+#define GPIO7_DR_CLEAR FASTLED_CPPCHECK_STORAGE(7, DR_CLEAR)
+#endif
+#ifndef GPIO7_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(7, DR_TOGGLE) = 0;
+#define GPIO7_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(7, DR_TOGGLE)
+#endif
+
+#ifndef GPIO8_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(8, DR) = 0;
+#define GPIO8_DR FASTLED_CPPCHECK_STORAGE(8, DR)
+#endif
+#ifndef GPIO8_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(8, DR_SET) = 0;
+#define GPIO8_DR_SET FASTLED_CPPCHECK_STORAGE(8, DR_SET)
+#endif
+#ifndef GPIO8_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(8, DR_CLEAR) = 0;
+#define GPIO8_DR_CLEAR FASTLED_CPPCHECK_STORAGE(8, DR_CLEAR)
+#endif
+#ifndef GPIO8_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(8, DR_TOGGLE) = 0;
+#define GPIO8_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(8, DR_TOGGLE)
+#endif
+
+#ifndef GPIO9_DR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(9, DR) = 0;
+#define GPIO9_DR FASTLED_CPPCHECK_STORAGE(9, DR)
+#endif
+#ifndef GPIO9_DR_SET
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(9, DR_SET) = 0;
+#define GPIO9_DR_SET FASTLED_CPPCHECK_STORAGE(9, DR_SET)
+#endif
+#ifndef GPIO9_DR_CLEAR
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(9, DR_CLEAR) = 0;
+#define GPIO9_DR_CLEAR FASTLED_CPPCHECK_STORAGE(9, DR_CLEAR)
+#endif
+#ifndef GPIO9_DR_TOGGLE
+static volatile uint32_t FASTLED_CPPCHECK_STORAGE(9, DR_TOGGLE) = 0;
+#define GPIO9_DR_TOGGLE FASTLED_CPPCHECK_STORAGE(9, DR_TOGGLE)
+#endif
+
+#undef FASTLED_CPPCHECK_STORAGE
+
+#endif // FASTLED_CPPCHECK_FAKE_GPIO_REG
+#endif // __CPPCHECK__
+
 FASTLED_NAMESPACE_BEGIN
 
 #if defined(FASTLED_FORCE_SOFTWARE_PINS)
