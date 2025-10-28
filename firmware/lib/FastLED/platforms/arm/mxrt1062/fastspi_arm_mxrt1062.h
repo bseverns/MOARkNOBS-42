@@ -6,7 +6,7 @@ FASTLED_NAMESPACE_BEGIN
 #if defined(FASTLED_TEENSY4) && defined(ARM_HARDWARE_SPI)
 #include <SPI.h>
 
-namespace detail {
+namespace fastled_teensy4_detail {
 // Route FastLED's SPI index to the actual hardware register block. A `constexpr` branch keeps the
 // compiler from ever seeing an invalid case while also side-stepping the forbidden "take the
 // address of a reference" trick that torpedoed the old lookup table.
@@ -21,7 +21,7 @@ template <int Index> inline IMXRT_LPSPI_t &teensy4SpiPort() {
         return IMXRT_LPSPI1_S;
     }
 }
-} // namespace detail
+} // namespace fastled_teensy4_detail
 
 template <uint8_t _DATA_PIN, uint8_t _CLOCK_PIN, uint32_t _SPI_CLOCK_RATE, SPIClass &_SPIObject,
           int _SPI_INDEX>
@@ -30,7 +30,7 @@ class Teensy4HardwareSPIOutput {
     uint32_t m_bitCount = 0;
     uint32_t m_bitData = 0;
     inline IMXRT_LPSPI_t &port() __attribute__((always_inline)) {
-        return detail::teensy4SpiPort<_SPI_INDEX>();
+        return fastled_teensy4_detail::teensy4SpiPort<_SPI_INDEX>();
     }
 
   public:
