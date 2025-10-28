@@ -27,9 +27,7 @@ class Teensy4HardwareSPIOutput {
             return IMXRT_LPSPI1_S;
         }
     }
-    inline IMXRT_LPSPI_t &port() __attribute__((always_inline)) {
-        return resolvePort();
-    }
+    inline IMXRT_LPSPI_t &port() __attribute__((always_inline)) { return resolvePort(); }
 
   public:
     Teensy4HardwareSPIOutput() {
