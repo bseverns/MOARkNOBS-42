@@ -6,31 +6,29 @@ FASTLED_NAMESPACE_BEGIN
 #if defined(FASTLED_TEENSY4) && defined(ARM_HARDWARE_SPI)
 #include <SPI.h>
 
-namespace fastled_teensy4_detail {
-// Route FastLED's SPI index to the actual hardware register block. A `constexpr` branch keeps the
-// compiler from ever seeing an invalid case while also side-stepping the forbidden "take the
-// address of a reference" trick that torpedoed the old lookup table.
-template <int Index> inline IMXRT_LPSPI_t &teensy4SpiPort() {
-    static_assert(Index >= 0 && Index <= 2, "_SPI_INDEX out of range for Teensy 4 SPI bus");
-
-    if constexpr (Index == 0) {
-        return IMXRT_LPSPI4_S;
-    } else if constexpr (Index == 1) {
-        return IMXRT_LPSPI3_S;
-    } else { // Index == 2 is the only remaining legal option.
-        return IMXRT_LPSPI1_S;
-    }
-}
-} // namespace fastled_teensy4_detail
-
 template <uint8_t _DATA_PIN, uint8_t _CLOCK_PIN, uint32_t _SPI_CLOCK_RATE, SPIClass &_SPIObject,
           int _SPI_INDEX>
 class Teensy4HardwareSPIOutput {
     Selectable *m_pSelect = nullptr;
     uint32_t m_bitCount = 0;
     uint32_t m_bitData = 0;
+    // Route FastLED's SPI index to the actual hardware register block. Keeping the logic as a
+    // `constexpr` branch means the compiler never sees an invalid case, avoiding the undefined
+    // "address of a reference" trick that triggered clang-tidy while still staying header-only.
+    static inline IMXRT_LPSPI_t &resolvePort() __attribute__((always_inline)) {
+        static_assert(_SPI_INDEX >= 0 && _SPI_INDEX <= 2,
+                      "_SPI_INDEX out of range for Teensy 4 SPI bus");
+
+        if constexpr (_SPI_INDEX == 0) {
+            return IMXRT_LPSPI4_S;
+        } else if constexpr (_SPI_INDEX == 1) {
+            return IMXRT_LPSPI3_S;
+        } else { // The only remaining legal option is index 2.
+            return IMXRT_LPSPI1_S;
+        }
+    }
     inline IMXRT_LPSPI_t &port() __attribute__((always_inline)) {
-        return fastled_teensy4_detail::teensy4SpiPort<_SPI_INDEX>();
+        return resolvePort();
     }
 
   public:
