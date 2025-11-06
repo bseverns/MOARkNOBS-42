@@ -1,6 +1,8 @@
 #ifndef __INC_BLOCK_CLOCKLESS_ARM_MXRT1062_H
 #define __INC_BLOCK_CLOCKLESS_ARM_MXRT1062_H
 
+#include "wait_time_utils.h"
+
 FASTLED_NAMESPACE_BEGIN
 
 // Definition for a single channel clockless controller for the teensy4
@@ -158,18 +160,24 @@ public:
     uint32_t showRGBInternal(PixelController<RGB_ORDER,LANES, __FL_T4_MASK> &allpixels) {
         allpixels.preStepFirstByteDithering();
         _outlines b0;
-        uint32_t start = ARM_DWT_CYCCNT;
+        uint32_t start = 0;
 
         for(int i = 0; i < m_nActualLanes; ++i) {
             b0.bytes[m_bitOffsets[i]] = allpixels.loadAndScale0(i);
         }
 
         cli();
+        // Reset the DWT counter so wraparound can't truncate our first wait window.
+        ARM_DWT_CYCCNT = 0;
+        start = ARM_DWT_CYCCNT;
 
         m_offsets[0] = _FASTLED_NS_TO_DWT(T1+T2+T3);
         m_offsets[1] = _FASTLED_NS_TO_DWT(T2+T3);
         m_offsets[2] = _FASTLED_NS_TO_DWT(T3);
-        uint32_t wait_off = _FASTLED_NS_TO_DWT(((WAIT_TIME-INTERRUPT_THRESHOLD) * 1000));
+        const int32_t wait_time_delta_us =
+            fastled_mxrt1062::clampWaitTimeDeltaUs(WAIT_TIME, INTERRUPT_THRESHOLD);
+        uint32_t wait_off =
+            _FASTLED_NS_TO_DWT(static_cast<uint32_t>(wait_time_delta_us) * 1000);
 
         uint32_t next_mark = ARM_DWT_CYCCNT + m_offsets[0];
 
