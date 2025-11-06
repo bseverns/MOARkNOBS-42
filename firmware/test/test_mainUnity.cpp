@@ -33,6 +33,8 @@ void test_bulk_config_accepts_type_name_alias();
 void test_arg_sanitize_clamps_sources();
 void test_compute_slot_arg_level_blends_followers();
 void test_legacy_arg_migration_populates_slots();
+void test_wait_guard_clamps_when_threshold_exceeds_wait();
+void test_wait_guard_preserves_positive_delta();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
 void test_aftertouch();
@@ -73,6 +75,8 @@ void setup() {
     RUN_TEST(test_arg_sanitize_clamps_sources);
     RUN_TEST(test_compute_slot_arg_level_blends_followers);
     RUN_TEST(test_legacy_arg_migration_populates_slots);
+    RUN_TEST(test_wait_guard_clamps_when_threshold_exceeds_wait);
+    RUN_TEST(test_wait_guard_preserves_positive_delta);
     RUN_TEST(test_start_stop_cycle);
     RUN_TEST(test_pot_root_drives_default);
     RUN_TEST(test_slot_root_wins_over_pot);

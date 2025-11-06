@@ -11,6 +11,8 @@ FASTLED_NAMESPACE_BEGIN
 
 #define _FASTLED_NS_TO_DWT(_NS) (((F_CPU_ACTUAL>>16)*(_NS)) / (1000000000UL>>16))
 
+#include "wait_time_utils.h"
+
 template <int DATA_PIN, int T1, int T2, int T3, EOrder RGB_ORDER = RGB, int XTRA0 = 0, bool FLIP = false, int WAIT_TIME = 50>
 class ClocklessController : public CPixelLEDController<RGB_ORDER> {
 	typedef typename FastPin<DATA_PIN>::port_ptr_t data_ptr_t;
@@ -95,7 +97,10 @@ protected:
         off[2] = _FASTLED_NS_TO_DWT(T3);
 
 #if (FASTLED_ALLOW_INTERRUPTS == 1)
-        uint32_t wait_off = _FASTLED_NS_TO_DWT((WAIT_TIME-INTERRUPT_THRESHOLD)*1000);
+        const int32_t wait_time_delta_us =
+            fastled_mxrt1062::clampWaitTimeDeltaUs(WAIT_TIME, INTERRUPT_THRESHOLD);
+        uint32_t wait_off =
+            _FASTLED_NS_TO_DWT(static_cast<uint32_t>(wait_time_delta_us) * 1000);
 #endif
 
         uint32_t next_mark = ARM_DWT_CYCCNT + off[0];
