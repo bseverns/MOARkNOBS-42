@@ -169,7 +169,7 @@ public:
         m_offsets[0] = _FASTLED_NS_TO_DWT(T1+T2+T3);
         m_offsets[1] = _FASTLED_NS_TO_DWT(T2+T3);
         m_offsets[2] = _FASTLED_NS_TO_DWT(T3);
-        uint32_t wait_off = _FASTLED_NS_TO_DWT((WAIT_TIME-INTERRUPT_THRESHOLD));
+        uint32_t wait_off = _FASTLED_NS_TO_DWT(((WAIT_TIME-INTERRUPT_THRESHOLD) * 1000));
 
         uint32_t next_mark = ARM_DWT_CYCCNT + m_offsets[0];
 
