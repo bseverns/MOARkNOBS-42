@@ -51,32 +51,32 @@ protected:
   	}
 
 	template<int BITS> __attribute__ ((always_inline)) inline void writeBits(FASTLED_REGISTER uint32_t & next_mark, FASTLED_REGISTER uint32_t & b)  {
-		for(FASTLED_REGISTER uint32_t i = BITS-1; i > 0; --i) {
-			while(ARM_DWT_CYCCNT < next_mark);
-			next_mark = ARM_DWT_CYCCNT + off[0];
-			FastPin<DATA_PIN>::hi();
-			if(b&0x80) {
-				while((next_mark - ARM_DWT_CYCCNT) > off[2]);
-				FastPin<DATA_PIN>::lo();
-			} else {
-				while((next_mark - ARM_DWT_CYCCNT) > off[1]);
-				FastPin<DATA_PIN>::lo();
-			}
-			b <<= 1;
-		}
+                for(FASTLED_REGISTER uint32_t i = BITS-1; i > 0; --i) {
+                        while((int32_t)(next_mark - ARM_DWT_CYCCNT) > 0) {}
+                        next_mark = ARM_DWT_CYCCNT + off[0];
+                        FastPin<DATA_PIN>::hi();
+                        if(b&0x80) {
+                                while((int32_t)(next_mark - ARM_DWT_CYCCNT) > (int32_t)off[2]) {}
+                                FastPin<DATA_PIN>::lo();
+                        } else {
+                                while((int32_t)(next_mark - ARM_DWT_CYCCNT) > (int32_t)off[1]) {}
+                                FastPin<DATA_PIN>::lo();
+                        }
+                        b <<= 1;
+                }
 
-		while(ARM_DWT_CYCCNT < next_mark);
-		next_mark = ARM_DWT_CYCCNT + off[0];
-		FastPin<DATA_PIN>::hi();
+                while((int32_t)(next_mark - ARM_DWT_CYCCNT) > 0) {}
+                next_mark = ARM_DWT_CYCCNT + off[0];
+                FastPin<DATA_PIN>::hi();
 
-		if(b&0x80) {
-			while((next_mark - ARM_DWT_CYCCNT) > off[2]);
-			FastPin<DATA_PIN>::lo();
-		} else {
-			while((next_mark - ARM_DWT_CYCCNT) > off[1]);
-			FastPin<DATA_PIN>::lo();
-		}
-	}
+                if(b&0x80) {
+                        while((int32_t)(next_mark - ARM_DWT_CYCCNT) > (int32_t)off[2]) {}
+                        FastPin<DATA_PIN>::lo();
+                } else {
+                        while((int32_t)(next_mark - ARM_DWT_CYCCNT) > (int32_t)off[1]) {}
+                        FastPin<DATA_PIN>::lo();
+                }
+        }
 
 	uint32_t showRGBInternal(PixelController<RGB_ORDER> pixels) {
 		uint32_t start = ARM_DWT_CYCCNT;
