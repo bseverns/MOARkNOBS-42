@@ -51,8 +51,8 @@ protected:
   	}
 
 	template<int BITS> __attribute__ ((always_inline)) inline void writeBits(FASTLED_REGISTER uint32_t & next_mark, FASTLED_REGISTER uint32_t & b)  {
-		for(FASTLED_REGISTER uint32_t i = BITS-1; i > 0; --i) {
-			while(ARM_DWT_CYCCNT < next_mark);
+                for(FASTLED_REGISTER uint32_t i = BITS-1; i > 0; --i) {
+                        while((int32_t)(next_mark - ARM_DWT_CYCCNT) > 0) { }
 			next_mark = ARM_DWT_CYCCNT + off[0];
 			FastPin<DATA_PIN>::hi();
 			if(b&0x80) {
@@ -65,7 +65,7 @@ protected:
 			b <<= 1;
 		}
 
-		while(ARM_DWT_CYCCNT < next_mark);
+                while((int32_t)(next_mark - ARM_DWT_CYCCNT) > 0) { }
 		next_mark = ARM_DWT_CYCCNT + off[0];
 		FastPin<DATA_PIN>::hi();
 
@@ -79,13 +79,16 @@ protected:
 	}
 
 	uint32_t showRGBInternal(PixelController<RGB_ORDER> pixels) {
-		uint32_t start = ARM_DWT_CYCCNT;
+                uint32_t start = 0;
 
 		// Setup the pixel controller and load/scale the first byte
 		pixels.preStepFirstByteDithering();
 		FASTLED_REGISTER uint32_t b = pixels.loadAndScale0();
 
-		cli();
+                cli();
+                // Reset the DWT counter so wraparound can't truncate our first wait window.
+                ARM_DWT_CYCCNT = 0;
+                start = ARM_DWT_CYCCNT;
 
 		off[0] = _FASTLED_NS_TO_DWT(T1+T2+T3);
 		off[1] = _FASTLED_NS_TO_DWT(T2+T3);
