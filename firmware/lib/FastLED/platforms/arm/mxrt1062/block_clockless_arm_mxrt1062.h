@@ -1,6 +1,8 @@
 #ifndef __INC_BLOCK_CLOCKLESS_ARM_MXRT1062_H
 #define __INC_BLOCK_CLOCKLESS_ARM_MXRT1062_H
 
+#include "wait_time_utils.h"
+
 FASTLED_NAMESPACE_BEGIN
 
 // Definition for a single channel clockless controller for the teensy4
@@ -129,18 +131,18 @@ public:
         int x = 0;
         for(uint32_t i = 8; i > 0;) {
             --i;
-            while(ARM_DWT_CYCCNT < next_mark);
+            while((int32_t)(next_mark - ARM_DWT_CYCCNT) > 0) {}
             *FastPin<FIRST_PIN>::sport() = m_nWriteMask;
             next_mark = ARM_DWT_CYCCNT + m_offsets[0];
 
             uint32_t out = (b2.bg[3][i] << 24) | (b2.bg[2][i] << 16) | (b2.bg[1][i] << 8) | b2.bg[0][i];
 
             out = ((~out) & m_nWriteMask);
-            while((next_mark - ARM_DWT_CYCCNT) > m_offsets[1]);
+            while((int32_t)(next_mark - ARM_DWT_CYCCNT) > (int32_t)m_offsets[1]) {}
             *FastPin<FIRST_PIN>::cport() = out;
 
             out = m_nWriteMask;
-            while((next_mark - ARM_DWT_CYCCNT) > m_offsets[2]);
+            while((int32_t)(next_mark - ARM_DWT_CYCCNT) > (int32_t)m_offsets[2]) {}
             *FastPin<FIRST_PIN>::cport() = out;
 
             // Read and store up to two bytes
@@ -158,13 +160,16 @@ public:
     uint32_t showRGBInternal(PixelController<RGB_ORDER,LANES, __FL_T4_MASK> &allpixels) {
         allpixels.preStepFirstByteDithering();
         _outlines b0;
-        uint32_t start = ARM_DWT_CYCCNT;
+        uint32_t start = 0;
 
         for(int i = 0; i < m_nActualLanes; ++i) {
             b0.bytes[m_bitOffsets[i]] = allpixels.loadAndScale0(i);
         }
 
         cli();
+        // Reset the DWT counter so wraparound can't truncate our first wait window.
+        ARM_DWT_CYCCNT = 0;
+        start = ARM_DWT_CYCCNT;
 
         m_offsets[0] = _FASTLED_NS_TO_DWT(T1+T2+T3);
         m_offsets[1] = _FASTLED_NS_TO_DWT(T2+T3);
