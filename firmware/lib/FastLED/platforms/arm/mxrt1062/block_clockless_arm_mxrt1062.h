@@ -185,8 +185,10 @@ public:
         #if (FASTLED_ALLOW_INTERRUPTS == 1)
             cli();
             // if interrupts took longer than 45µs, punt on the current frame
-            if(ARM_DWT_CYCCNT > next_mark) {
-                if((ARM_DWT_CYCCNT-next_mark) > wait_off) { sei(); return ARM_DWT_CYCCNT - start; }
+            uint32_t current_cycles = ARM_DWT_CYCCNT;
+            int32_t cycles_late = static_cast<int32_t>(current_cycles - next_mark);
+            if(cycles_late > 0) {
+                if(static_cast<uint32_t>(cycles_late) > wait_off) { sei(); return current_cycles - start; }
             }
         #endif
             // Write first byte, read next byte
