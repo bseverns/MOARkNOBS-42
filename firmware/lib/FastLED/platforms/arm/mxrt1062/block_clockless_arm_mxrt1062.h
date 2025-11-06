@@ -174,9 +174,9 @@ public:
         m_offsets[0] = _FASTLED_NS_TO_DWT(T1+T2+T3);
         m_offsets[1] = _FASTLED_NS_TO_DWT(T2+T3);
         m_offsets[2] = _FASTLED_NS_TO_DWT(T3);
-        int32_t slack_us = WAIT_TIME - INTERRUPT_THRESHOLD;
-        if(slack_us < 0) { slack_us = 0; }
-        uint32_t wait_off = _FASTLED_NS_TO_DWT(static_cast<uint32_t>(slack_us) * 1000U);
+        int32_t slack_us = fastled_mxrt1062::clampWaitTimeDeltaUs(WAIT_TIME, INTERRUPT_THRESHOLD);
+        uint32_t wait_ns = static_cast<uint32_t>(slack_us) * 1000U;
+        uint32_t wait_off = _FASTLED_NS_TO_DWT(wait_ns);
 
         uint32_t next_mark = ARM_DWT_CYCCNT + m_offsets[0];
 
