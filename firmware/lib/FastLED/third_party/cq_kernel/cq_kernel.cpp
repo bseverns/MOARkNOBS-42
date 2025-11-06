@@ -86,13 +86,40 @@ kiss_fft_scalar _mag(kiss_fft_cpx x){
     return sqrt(x.r*x.r+x.i*x.i);
 }
 
+static void _cleanup_partial_kernels(struct sparse_arr *kernels, int count){
+    if (!kernels) {
+        return;
+    }
+    for (int i = 0; i < count; i++) {
+        free(kernels[i].elems);
+        kernels[i].elems = nullptr;
+        kernels[i].n_elems = 0;
+    }
+}
+
 struct sparse_arr* generate_kernels(struct cq_kernel_cfg cfg){
     float *freq = (float*)malloc(cfg.bands * sizeof(float));
+    if (!freq) {
+        return nullptr;
+    }
+
     _generate_center_freqs(freq, cfg.bands, cfg.fmin, cfg.fmax);
 
     kiss_fftr_cfg fft_cfg = kiss_fftr_alloc(cfg.samples, 0, NULL, NULL);
     struct sparse_arr* kernels = (struct sparse_arr*)malloc(cfg.bands*sizeof(struct sparse_arr));
+    if (!kernels) {
+        free(freq);
+        free(fft_cfg);
+        return nullptr;
+    }
+
     kiss_fft_cpx *temp_kernel = (kiss_fft_cpx*)malloc(cfg.samples*sizeof(kiss_fft_cpx));
+    if (!temp_kernel) {
+        free(kernels);
+        free(freq);
+        free(fft_cfg);
+        return nullptr;
+    }
 
     for(int i = 0; i < cfg.bands; i++){
         // Clears temp_kernel before calling _generate_kernel on it
@@ -107,6 +134,14 @@ struct sparse_arr* generate_kernels(struct cq_kernel_cfg cfg){
         // Generates sparse_arr holding n_elems sparse_arr_elem's
         kernels[i].n_elems = n_elems;
         kernels[i].elems = (struct sparse_arr_elem*)malloc(n_elems*sizeof(struct sparse_arr_elem));
+        if (!kernels[i].elems) {
+            _cleanup_partial_kernels(kernels, i);
+            free(temp_kernel);
+            free(kernels);
+            free(freq);
+            free(fft_cfg);
+            return nullptr;
+        }
 
         // Generates sparse_arr_elem's from complex values counted before
         int k = 0;
@@ -128,10 +163,22 @@ struct sparse_arr* generate_kernels(struct cq_kernel_cfg cfg){
 
 struct sparse_arr* reallocate_kernels(struct sparse_arr *old_ptr, struct cq_kernel_cfg cfg){
     struct sparse_arr *new_ptr = (struct sparse_arr*)malloc(cfg.bands*sizeof(struct sparse_arr));
+    if (!new_ptr) {
+        return nullptr;
+    }
+
     for(int i = 0; i < cfg.bands; i++){
         new_ptr[i].n_elems = old_ptr[i].n_elems;
         new_ptr[i].elems = (struct sparse_arr_elem*)malloc(old_ptr[i].n_elems*sizeof(struct sparse_arr_elem));
+        if (!new_ptr[i].elems) {
+            _cleanup_partial_kernels(new_ptr, i);
+            free(new_ptr);
+            return nullptr;
+        }
         memcpy(new_ptr[i].elems, old_ptr[i].elems, old_ptr[i].n_elems*sizeof(struct sparse_arr_elem));
+    }
+
+    for(int i = 0; i < cfg.bands; i++){
         free(old_ptr[i].elems);
     }
     free(old_ptr);
