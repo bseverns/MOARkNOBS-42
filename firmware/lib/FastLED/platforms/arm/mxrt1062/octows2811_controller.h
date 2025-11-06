@@ -14,8 +14,19 @@ class COctoWS2811Controller : public CPixelLEDController<RGB_ORDER, 8, 0xFF> {
 
   void _init(int nLeds) {
     if(pocto == NULL) {
-      drawbuffer = (uint8_t*)malloc(nLeds * 8 * 3);
-      framebuffer = (uint8_t*)malloc(nLeds * 8 * 3);
+      size_t bufferBytes = (size_t)nLeds * 8U * 3U;
+      drawbuffer = (uint8_t*)malloc(bufferBytes);
+      if(drawbuffer == NULL) {
+        framebuffer = NULL;
+        return;
+      }
+      framebuffer = (uint8_t*)malloc(bufferBytes);
+      if(framebuffer == NULL) {
+        free(drawbuffer);
+        drawbuffer = NULL;
+        framebuffer = NULL;
+        return;
+      }
 
       // byte ordering is handled in show by the pixel controller
       int config = WS2811_RGB;
@@ -27,15 +38,24 @@ class COctoWS2811Controller : public CPixelLEDController<RGB_ORDER, 8, 0xFF> {
     }
   }
 public:
-  COctoWS2811Controller() { pocto = NULL; }
+  COctoWS2811Controller() { pocto = NULL; drawbuffer = NULL; framebuffer = NULL; }
   virtual int size() { return CLEDController::size() * 8; }
 
   virtual void init() { /* do nothing yet */ }
 
   virtual void showPixels(PixelController<RGB_ORDER, 8, 0xFF> &pixels) {
     uint32_t size = pixels.size();
-    uint32_t sizeTimes8 = 8U * size;
     _init(size);
+
+    if(pocto == NULL) {
+      while (pixels.has(1)) {
+        pixels.stepDithering();
+        pixels.advanceData();
+      }
+      return;
+    }
+
+    uint32_t sizeTimes8 = 8U * size;
 
     uint32_t index = 0;
     while (pixels.has(1)) {
