@@ -1,0 +1,57 @@
+{
+"name": "Electribe2S Hacktribe Preset",
+"slots": [
+// Slots 0–7: Filter (NRPN, Cat 0x04, Idx 0x42) for Ch 1–4 and 9–12
+{ "slot": 0, "channel": 1, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 1, "channel": 2, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 2, "channel": 3, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 3, "channel": 4, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 4, "channel": 9, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 5, "channel": 10, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 6, "channel": 11, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+{ "slot": 7, "channel": 12, "nrpn": {"msb": 0, "lsb": 5, "data": 66} },
+
+
+// Slots 8–15: IFX (NRPN, Cat 0x04, Idx 0x44) for Ch 1–4 and 9–12
+{ "slot": 8, "channel": 1, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 9, "channel": 2, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 10, "channel": 3, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 11, "channel": 4, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 12, "channel": 9, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 13, "channel": 10, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 14, "channel": 11, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+{ "slot": 15, "channel": 12, "nrpn": {"msb": 0, "lsb": 5, "data": 68} },
+
+
+// Slots 16–24: Modulation (NRPN, Cat 0x04, Idx 0x43) for Ch 1–8
+{ "slot": 16, "channel": 1, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 17, "channel": 2, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 18, "channel": 3, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 19, "channel": 4, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 20, "channel": 5, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 21, "channel": 6, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 22, "channel": 7, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 23, "channel": 8, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+{ "slot": 24, "channel": 1, "nrpn": {"msb": 0, "lsb": 5, "data": 67} },
+
+
+// Slots 25–41: Volume (CC 7) for Ch 1–16
+{ "slot": 25, "channel": 1, "cc": 7 },
+{ "slot": 26, "channel": 2, "cc": 7 },
+{ "slot": 27, "channel": 3, "cc": 7 },
+{ "slot": 28, "channel": 4, "cc": 7 },
+{ "slot": 29, "channel": 5, "cc": 7 },
+{ "slot": 30, "channel": 6, "cc": 7 },
+{ "slot": 31, "channel": 7, "cc": 7 },
+{ "slot": 32, "channel": 8, "cc": 7 },
+{ "slot": 33, "channel": 9, "cc": 7 },
+{ "slot": 34, "channel": 10, "cc": 7 },
+{ "slot": 35, "channel": 11, "cc": 7 },
+{ "slot": 36, "channel": 12, "cc": 7 },
+{ "slot": 37, "channel": 13, "cc": 7 },
+{ "slot": 38, "channel": 14, "cc": 7 },
+{ "slot": 39, "channel": 15, "cc": 7 },
+{ "slot": 40, "channel": 16, "cc": 7 },
+{ "slot": 41, "channel": 1, "cc": 7 }
+]
+}
