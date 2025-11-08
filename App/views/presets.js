@@ -22,11 +22,6 @@ const makeEfSlots = (mapper) =>
     slot: mapper ? mapper(idx) : (idx * 7) % SLOT_COUNT
   }));
 
-const makeLedColors = (mapper) =>
-  Array.from({ length: SLOT_COUNT }, (_, idx) => ({
-    color: mapper ? mapper(idx) : '#262626'
-  }));
-
 const fetchPreset = (path) => async () => {
   const response = await fetch(path);
   if (!response.ok) {
@@ -65,7 +60,10 @@ const aeModularSketch = {
   efSlots: makeEfSlots((idx) => (idx * 8) % SLOT_COUNT),
   filter: { type: 'LOWPASS', freq: 520, q: 1.4 },
   arg: { method: 'PLUS', a: 1.8, b: 0.6, enable: true },
-  ledColors: makeLedColors((idx) => (idx % 2 === 0 ? '#39ff9f' : '#1a4d3a')),
+  led: {
+    brightness: 64,
+    color: '#39FF9F'
+  },
   envelopeMode: 'EXPONENTIAL'
 };
 
