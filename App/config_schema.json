@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": "1.5.0",
+  "schema_version": 4,
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
-  "required": ["slots", "efSlots", "filter", "arg", "ledColors"],
+  "required": ["slots", "efSlots", "filter", "arg", "led"],
   "properties": {
     "slots": {
       "type": "array",
@@ -77,7 +77,7 @@
         "type": "object",
         "required": ["slot"],
         "properties": {
-          "slot": { "type": "integer", "minimum": 0, "maximum": 41 }
+          "slot": { "type": "integer", "minimum": -1, "maximum": 41 }
         },
         "additionalProperties": false
       }
@@ -90,7 +90,7 @@
           "type": "string",
           "enum": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"]
         },
-        "freq": { "type": "integer", "minimum": 20, "maximum": 5000 },
+        "freq": { "type": "number", "minimum": 20, "maximum": 5000 },
         "q": { "type": "number", "minimum": 0.5, "maximum": 4.0 }
       },
       "additionalProperties": false
@@ -117,20 +117,6 @@
         "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" }
       },
       "additionalProperties": false
-    },
-    "ledColors": {
-      "type": "array",
-      "title": "Per-LED Colors",
-      "minItems": 42,
-      "maxItems": 42,
-      "items": {
-        "type": "object",
-        "required": ["color"],
-        "properties": {
-          "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" }
-        },
-        "additionalProperties": false
-      }
     },
     "envelopeMode": {
       "type": "string",
