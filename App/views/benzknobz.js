@@ -29,13 +29,13 @@ const ARG_METHOD_NAMES = [
 ];
 
 const localManifest = {
-  ui_version: '2024.08.01',
-  schema_version: '1.5.0',
+  ui_version: '2025.03.01',
+  schema_version: 4,
   slot_count: 42,
-  max_table_lengths: {
-    ledColors: 42,
-    efSlots: 6
-  }
+  pot_count: 42,
+  envelope_count: 6,
+  arg_method_count: ARG_METHOD_NAMES.length,
+  led_count: 51
 };
 
 const runtime = createRuntime({
@@ -120,7 +120,11 @@ window.addEventListener('DOMContentLoaded', () => {
     render: renderEfRow
   });
 
-  const envMeters = initializeMeters(envContainer, localManifest.max_table_lengths.efSlots, 'EF');
+  let envMeters = [];
+  const rebuildMeters = (count) => {
+    envMeters = initializeMeters(envContainer, count, 'EF');
+  };
+  rebuildMeters(localManifest.envelope_count || 0);
   slotVirtualizer.setData([]);
 
   connectBtn?.addEventListener('click', async () => {
@@ -307,12 +311,16 @@ window.addEventListener('DOMContentLoaded', () => {
     populateDetail();
     populateFilter(staged);
     populateArg(staged);
-    renderLedGrid(staged);
+    renderLedControls(staged);
     updateTakeoverGuards(slotState.slots);
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
     renderDeviceMonitor(manifest);
+    const followerCount = Number.isFinite(Number(manifest?.envelope_count))
+      ? Number(manifest.envelope_count)
+      : localManifest.envelope_count || 0;
+    rebuildMeters(followerCount);
   });
   runtime.on('log', (line) => {
     if (!logEl) return;
@@ -395,9 +403,11 @@ window.addEventListener('DOMContentLoaded', () => {
   function updateHeader(config) {
     if (!headerStatus) return;
     const manifest = runtime.getState().manifest;
-    const ram = manifest?.free?.ram ? `${Math.round(manifest.free.ram / 1024)}k RAM` : 'ram?';
-    const flash = manifest?.free?.flash ? `${Math.round(manifest.free.flash / 1024)}k flash` : 'flash?';
-    headerStatus.textContent = [manifest?.fw_version || 'fw?', manifest?.schema_version || 'schema?', `${ram} • ${flash}`].join(' • ');
+    const ramBytes = Number(manifest?.free_ram);
+    const flashBytes = Number(manifest?.free_flash);
+    const ram = Number.isFinite(ramBytes) ? `${Math.round(ramBytes / 1024)}k RAM` : 'ram?';
+    const flash = Number.isFinite(flashBytes) ? `${Math.round(flashBytes / 1024)}k flash` : 'flash?';
+    headerStatus.textContent = [manifest?.fw_version || 'fw?', manifest?.schema_version ?? 'schema?', `${ram} • ${flash}`].join(' • ');
   }
 
   function updateHeaderManifest(manifest) {
@@ -504,7 +514,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     const manifest = runtime.getState().manifest ?? localManifest;
     const ef = normalizeEf(slot);
-    const efSlots = manifest?.max_table_lengths?.efSlots ?? localManifest?.max_table_lengths?.efSlots ?? 0;
+    const efSlots = manifest?.envelope_count ?? localManifest?.envelope_count ?? 0;
     const efFieldset = makeFieldset('Envelope Follower', 'These values live with the slot and retune the hardware follower on apply.');
     efFieldset.appendChild(
       makeNumber('Follower Index', ef.index ?? -1, -1, Math.max(-1, efSlots - 1), 1, (value) => {
@@ -820,7 +830,7 @@ window.addEventListener('DOMContentLoaded', () => {
     base.method = methodIndex;
     base.method_name = ARG_METHOD_NAMES[methodIndex] || base.method_name || 'PLUS';
     const manifest = runtime.getState().manifest ?? localManifest;
-    const efLimit = Math.max(0, (manifest?.max_table_lengths?.efSlots ?? localManifest?.max_table_lengths?.efSlots ?? 6) - 1);
+    const efLimit = Math.max(0, (manifest?.envelope_count ?? localManifest?.envelope_count ?? 6) - 1);
     const sanitizeSource = (value, fallback) => {
       const num = Number(value);
       if (!Number.isFinite(num)) return fallback;
@@ -877,30 +887,63 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function renderLedGrid(staged) {
+  function renderLedControls(staged) {
     if (!ledGrid) return;
     ledGrid.innerHTML = '';
-    const leds = staged?.ledColors ?? [];
-    const fragment = document.createDocumentFragment();
-    leds.forEach((entry, index) => {
-      const wrap = document.createElement('label');
-      wrap.className = 'led-chip';
-      wrap.textContent = `LED ${index + 1}`;
-      const input = document.createElement('input');
-      input.type = 'color';
-      input.value = entry?.color ?? '#000000';
-      input.addEventListener('input', runtime.createThrottle((event) => {
-        runtime.stage((draft) => {
-          draft.ledColors = draft.ledColors || [];
-          if (!draft.ledColors[index]) draft.ledColors[index] = { color: '#000000' };
-          draft.ledColors[index].color = event.target.value;
-          return draft;
-        });
-      }));
-      wrap.appendChild(input);
-      fragment.appendChild(wrap);
+    const led = staged?.led ?? { brightness: 0, color: '#000000' };
+
+    const brightnessWrap = document.createElement('label');
+    brightnessWrap.className = 'led-control';
+    brightnessWrap.textContent = 'Brightness';
+    const brightnessInput = document.createElement('input');
+    brightnessInput.type = 'range';
+    brightnessInput.min = '0';
+    brightnessInput.max = '255';
+    const initialBrightness = Number.isFinite(Number(led.brightness)) ? Number(led.brightness) : 0;
+    brightnessInput.value = String(initialBrightness);
+    const brightnessValue = document.createElement('span');
+    brightnessValue.className = 'led-value';
+    brightnessValue.textContent = String(initialBrightness);
+    const pushBrightness = runtime.createThrottle((value) => {
+      brightnessValue.textContent = String(value);
+      runtime.stage((draft) => {
+        draft.led = draft.led || { brightness: 0, color: '#000000' };
+        draft.led.brightness = value;
+        return draft;
+      });
     });
-    ledGrid.appendChild(fragment);
+    brightnessInput.addEventListener('input', (event) => {
+      const value = Math.min(255, Math.max(0, Math.round(Number(event.target.value))));
+      event.target.value = String(value);
+      pushBrightness(value);
+    });
+    brightnessWrap.append(brightnessInput, brightnessValue);
+
+    const colorWrap = document.createElement('label');
+    colorWrap.className = 'led-control';
+    colorWrap.textContent = 'Color';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    const initialColor = typeof led.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(led.color) ? led.color : '#000000';
+    colorInput.value = initialColor;
+    const colorValue = document.createElement('span');
+    colorValue.className = 'led-value';
+    colorValue.textContent = initialColor.toUpperCase();
+    const pushColor = runtime.createThrottle((value) => {
+      const formatted = typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value) ? value.toUpperCase() : '#000000';
+      colorValue.textContent = formatted;
+      runtime.stage((draft) => {
+        draft.led = draft.led || { brightness: 0, color: '#000000' };
+        draft.led.color = formatted;
+        return draft;
+      });
+    });
+    colorInput.addEventListener('input', (event) => {
+      pushColor(event.target.value);
+    });
+    colorWrap.append(colorInput, colorValue);
+
+    ledGrid.append(brightnessWrap, colorWrap);
   }
 
   function updateTakeoverGuards(slots) {
@@ -920,11 +963,11 @@ window.addEventListener('DOMContentLoaded', () => {
     deviceMonitor.innerHTML = '';
     const entries = {
       Firmware: manifest?.fw_version || '—',
-      'Git hash': manifest?.fw_git || '—',
-      'Build time': manifest?.build_ts || '—',
-      'Schema version': manifest?.schema_version || '—',
-      'Free RAM': manifest?.free?.ram ? `${Math.round(manifest.free.ram / 1024)} KiB` : '—',
-      'Free Flash': manifest?.free?.flash ? `${Math.round(manifest.free.flash / 1024)} KiB` : '—'
+      'Git SHA': manifest?.git_sha ? manifest.git_sha.slice(0, 8) : '—',
+      'Build time': manifest?.build_time || '—',
+      'Schema version': manifest?.schema_version ?? '—',
+      'Free RAM': Number.isFinite(Number(manifest?.free_ram)) ? `${Math.round(Number(manifest.free_ram) / 1024)} KiB` : '—',
+      'Free Flash': Number.isFinite(Number(manifest?.free_flash)) ? `${Math.round(Number(manifest.free_flash) / 1024)} KiB` : '—'
     };
     Object.entries(entries).forEach(([label, value]) => {
       const row = document.createElement('div');
@@ -1002,9 +1045,6 @@ window.addEventListener('DOMContentLoaded', () => {
       entry.progress.value = value;
       entry.value.textContent = String(value);
     });
-    if (frame.free) {
-      renderDeviceMonitor({ ...runtime.getState().manifest, free: frame.free });
-    }
     slotDetailValue.textContent = frame.slots[slotState.selected] ?? '—';
   }
 

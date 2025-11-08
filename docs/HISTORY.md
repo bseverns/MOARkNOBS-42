@@ -128,6 +128,19 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
   arbitration all get their own riffs so teachers can stitch together bespoke
   labs.
 
+#### Late November — WebSerial Parity Check
+
+- The WebSerial dashboard now speaks the same manifest dialect as
+  `CONFIG_VERSION` `0x0004`: the browser reads `git_sha`, `build_time`,
+  `free_ram`, and `free_flash` straight from the handshake so the migration
+  dialog stops screaming false mismatches.
+- The editor ditched the 42-cell LED colour grid in favour of a brightness +
+  hex picker that mirrors the firmware’s single `led` payload, and the local
+  schema advertises version `4` to match the firmware’s `GET_MANIFEST` story.
+- Runtime normalization backfills follower assignments from slot payloads and
+  the new `envelopes` block, keeping the staged diff/apply loop locked in step
+  with the slot patches the firmware now emits.
+
 ## Overview
 
 Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:

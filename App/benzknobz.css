@@ -450,7 +450,7 @@ label select:focus {
 
 #led-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -462,7 +462,7 @@ label select:focus {
   background: rgba(0, 0, 0, 0.22);
 }
 
-.led-chip {
+.led-control {
   display: grid;
   gap: 6px;
   padding: 10px;
@@ -474,13 +474,23 @@ label select:focus {
   letter-spacing: 0.08em;
 }
 
-.led-chip input[type='color'] {
+.led-control input[type='range'] {
   width: 100%;
-  height: 32px;
+}
+
+.led-control input[type='color'] {
+  width: 100%;
+  height: 38px;
   border: none;
   border-radius: var(--radius-sm);
   padding: 0;
   background: transparent;
+}
+
+.led-value {
+  font-family: var(--font-mono);
+  justify-self: end;
+  font-size: 0.75rem;
 }
 
 #device-monitor {

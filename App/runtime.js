@@ -331,38 +331,139 @@ function normalizeSlotConfig(slot, efLimit = 6) {
 function normalizeConfig(config, manifest = {}) {
   if (!config || typeof config !== 'object') return config;
   const next = { ...config };
-  const slotCount = manifest.slot_count ?? (Array.isArray(config.slots) ? config.slots.length : 0);
-  const efCount = manifest.max_table_lengths?.efSlots ?? (Array.isArray(config.efSlots) ? config.efSlots.length : 0);
-  const ledCount = manifest.max_table_lengths?.ledColors ?? (Array.isArray(config.ledColors) ? config.ledColors.length : 0);
+  const slotCount = Number.isFinite(Number(manifest.slot_count))
+    ? Number(manifest.slot_count)
+    : Array.isArray(config.slots)
+    ? config.slots.length
+    : 0;
+  const manifestEf = Number.isFinite(Number(manifest.envelope_count)) ? Number(manifest.envelope_count) : null;
+  const configEf = Array.isArray(config.efSlots) ? config.efSlots.length : null;
+  const followerEf = Array.isArray(config.envelopes?.followers) ? config.envelopes.followers.length : null;
+  const efCount = manifestEf ?? configEf ?? followerEf ?? 0;
 
   next.slots = Array.from({ length: slotCount }, (_, idx) => normalizeSlotConfig(config.slots?.[idx], efCount));
 
-  next.efSlots = Array.from({ length: efCount }, (_, idx) => {
-    const entry = config.efSlots?.[idx];
-    const slotIndex = entry && Number.isFinite(Number(entry.slot)) ? Number(entry.slot) : 0;
-    const capped = clamp(slotIndex, 0, Math.max(0, slotCount - 1));
-    return { slot: capped };
-  });
-
-  next.ledColors = Array.from({ length: ledCount }, (_, idx) => {
-    const entry = Array.isArray(config.ledColors) ? config.ledColors[idx] : null;
-    if (entry && typeof entry.color === 'string') return { color: entry.color };
-    return { color: '#000000' };
-  });
-
-  if (next.filter && typeof next.filter === 'object') {
-    next.filter = { ...next.filter };
+  if (Array.isArray(config.efSlots)) {
+    next.efSlots = Array.from({ length: efCount }, (_, idx) => {
+      const entry = config.efSlots[idx];
+      const slotIndex = entry && Number.isFinite(Number(entry.slot)) ? Number(entry.slot) : -1;
+      if (slotIndex < 0) return { slot: -1 };
+      const capped = clamp(slotIndex, 0, Math.max(0, slotCount - 1));
+      return { slot: capped };
+    });
+  } else {
+    const derived = Array.from({ length: efCount }, () => ({ slot: -1 }));
+    const routing = Array.isArray(config.envelopes?.routing) ? config.envelopes.routing : [];
+    routing.forEach((value, potIndex) => {
+      const follower = Number(value);
+      if (!Number.isFinite(follower)) return;
+      if (follower < 0 || follower >= derived.length) return;
+      if (derived[follower].slot !== -1) return;
+      const capped = clamp(potIndex, 0, Math.max(0, slotCount - 1));
+      derived[follower] = { slot: capped };
+    });
+    next.slots.forEach((slot, slotIndex) => {
+      const raw = Number.isFinite(Number(slot?.efIndex))
+        ? Number(slot.efIndex)
+        : Number.isFinite(Number(slot?.ef?.index))
+        ? Number(slot.ef.index)
+        : -1;
+      if (!Number.isFinite(raw) || raw < 0 || raw >= derived.length) return;
+      if (derived[raw].slot !== -1) return;
+      derived[raw] = { slot: clamp(slotIndex, 0, Math.max(0, slotCount - 1)) };
+    });
+    next.efSlots = derived;
   }
 
-  if (next.arg && typeof next.arg === 'object') {
-    const globalArg = { ...next.arg };
-    if (globalArg.method && typeof globalArg.method !== 'string') {
-      const idx = Number(globalArg.method);
-      if (Number.isFinite(idx) && ARG_METHOD_NAMES[idx]) {
-        globalArg.method = ARG_METHOD_NAMES[idx];
+  if (Array.isArray(config.ledColors) && config.ledColors.length) {
+    next.ledColors = Array.from({ length: config.ledColors.length }, (_, idx) => {
+      const entry = config.ledColors[idx];
+      if (entry && typeof entry.color === 'string') return { color: entry.color };
+      return { color: '#000000' };
+    });
+  } else {
+    delete next.ledColors;
+  }
+
+  if (config.led && typeof config.led === 'object') {
+    const led = { ...config.led };
+    const brightness = Number(led.brightness);
+    led.brightness = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
+    if (typeof led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(led.color)) {
+      if (typeof led.hex === 'string' && /^#([0-9a-fA-F]{6})$/.test(led.hex)) {
+        led.color = led.hex.toUpperCase();
+      } else if (led.rgb && Number.isFinite(led.rgb.r) && Number.isFinite(led.rgb.g) && Number.isFinite(led.rgb.b)) {
+        led.color = `#${[led.rgb.r, led.rgb.g, led.rgb.b]
+          .map((value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, '0'))
+          .join('')}`.toUpperCase();
+      } else {
+        led.color = '#000000';
       }
     }
-    next.arg = globalArg;
+    next.led = { brightness: led.brightness, color: led.color };
+  } else if (next.led && typeof next.led === 'object') {
+    const led = { ...next.led };
+    const brightness = Number(led.brightness);
+    led.brightness = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
+    if (typeof led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(led.color)) {
+      led.color = '#000000';
+    }
+    next.led = led;
+  } else {
+    next.led = { brightness: 0, color: '#000000' };
+  }
+
+  if (config.envelopes && typeof config.envelopes === 'object') {
+    const env = config.envelopes;
+    if (!next.filter || typeof next.filter !== 'object') next.filter = {};
+    if (env.filter && typeof env.filter === 'object') {
+      const freq = Number(env.filter.frequency ?? env.filter.freq);
+      const q = Number(env.filter.q);
+      if (Number.isFinite(freq)) next.filter.freq = freq;
+      if (Number.isFinite(q)) next.filter.q = q;
+    }
+    if (!next.filter.type) {
+      const followerFilter = env.followers?.find((entry) => typeof entry?.filter === 'string')?.filter;
+      const slotFilter = next.slots.find((slot) => typeof slot?.ef?.filter_name === 'string')?.ef?.filter_name;
+      const derivedFilter = followerFilter || slotFilter;
+      if (typeof derivedFilter === 'string' && EF_FILTER_NAMES.includes(derivedFilter)) {
+        next.filter.type = derivedFilter;
+      } else {
+        next.filter.type = 'LINEAR';
+      }
+    }
+
+    const argMethodName = typeof env.arg_method_name === 'string' ? env.arg_method_name : undefined;
+    const argMethodIndex = Number(env.arg_method);
+    const methodName = argMethodName || (Number.isFinite(argMethodIndex) ? ARG_METHOD_NAMES[argMethodIndex] : undefined) || 'PLUS';
+    const pair = env.arg_pair && typeof env.arg_pair === 'object' ? env.arg_pair : {};
+    const followerMax = Math.max(0, efCount - 1);
+    const rawA = Number.isFinite(Number(pair.a)) ? Number(pair.a) : 0;
+    const rawB = Number.isFinite(Number(pair.b)) ? Number(pair.b) : 1;
+    next.arg = {
+      method: methodName,
+      enable: Boolean(env.arg_enable ?? env.arg_enabled ?? true),
+      a: clamp(rawA, 0, followerMax || 0),
+      b: clamp(rawB, 0, followerMax || 0)
+    };
+
+    if (env.mode_name && typeof env.mode_name === 'string') {
+      next.envelopeMode = env.mode_name;
+    }
+  } else {
+    if (next.filter && typeof next.filter === 'object') {
+      next.filter = { ...next.filter };
+    }
+    if (next.arg && typeof next.arg === 'object') {
+      const globalArg = { ...next.arg };
+      if (globalArg.method && typeof globalArg.method !== 'string') {
+        const idx = Number(globalArg.method);
+        if (Number.isFinite(idx) && ARG_METHOD_NAMES[idx]) {
+          globalArg.method = ARG_METHOD_NAMES[idx];
+        }
+      }
+      next.arg = globalArg;
+    }
   }
 
   return next;
@@ -462,26 +563,36 @@ function createSimulator() {
   let resolver;
   const manifest = {
     fw_version: 'sim-fw',
-    fw_git: 'deadbeef',
-    build_ts: new Date().toISOString(),
-    schema_version: '1.5.0',
+    git_sha: 'deadbeef',
+    build_time: new Date().toISOString(),
+    schema_version: 4,
     slot_count: 42,
-    capabilities: { atomicApply: true },
-    max_table_lengths: { ledColors: 42, efSlots: 6 },
-    free: { ram: 48000, flash: 512000 }
+    pot_count: 42,
+    envelope_count: 6,
+    arg_method_count: ARG_METHOD_NAMES.length,
+    led_count: 51,
+    free_ram: 48000,
+    free_flash: 512000
   };
   const config = {
+    fw_version: manifest.fw_version,
+    schema_version: manifest.schema_version,
+    pots: Array.from({ length: manifest.pot_count }, (_, idx) => ({
+      index: idx,
+      channel: (idx % 16) + 1,
+      cc: (idx * 7) % 128
+    })),
     slots: Array.from({ length: manifest.slot_count }, (_, idx) => {
-      const efIndex = idx % manifest.max_table_lengths.efSlots;
+      const efIndex = idx % manifest.envelope_count;
       const filterIndex = idx % EF_FILTER_NAMES.length;
       const argMethod = idx % ARG_METHOD_NAMES.length;
       return {
-        id: idx,
-        active: idx % 2 === 0,
+        index: idx,
         type: 'CC',
-        midiChannel: (idx % 16) + 1,
+        type_name: 'CC',
+        channel: (idx % 16) + 1,
         data1: (idx % 120) + 1,
-        efIndex,
+        ef_index: efIndex,
         ef: {
           index: efIndex,
           filter_index: filterIndex,
@@ -493,31 +604,74 @@ function createSimulator() {
           baseline: 0,
           gain: 1
         },
+        ef_payload: {
+          type: EF_FILTER_NAMES[filterIndex],
+          freq: 400 + (idx % 8) * 50,
+          q: 0.6 + (idx % 5) * 0.1
+        },
         arg: {
           enabled: idx % 3 === 0,
           method: argMethod,
           method_name: ARG_METHOD_NAMES[argMethod],
           sourceA: efIndex,
-          sourceB: (efIndex + 1) % manifest.max_table_lengths.efSlots
+          sourceB: (efIndex + 1) % manifest.envelope_count
         },
+        active: idx % 2 === 0,
         pot: true,
+        takeover: idx % 5 === 0,
+        arp_note: (idx * 3) % 128,
+        label: `Slot ${idx + 1}`,
         sysexTemplate: ''
       };
     }),
-    efSlots: Array.from({ length: manifest.max_table_lengths.efSlots }, (_, idx) => ({
-      slot: (idx * 7) % manifest.slot_count
-    })),
-    arg: { method: 'PLUS', enable: true, a: 1, b: 1 },
-    filter: { type: 'LOWPASS', freq: 800, q: 1 },
-    ledColors: Array.from({ length: manifest.max_table_lengths.ledColors }, (_, idx) => ({
-      color: `#${((idx * 6151) % 0xffffff).toString(16).padStart(6, '0')}`
-    }))
+    envelopes: {
+      routing: Array.from({ length: manifest.pot_count }, (_, idx) => idx % manifest.envelope_count),
+      followers: Array.from({ length: manifest.envelope_count }, (_, idx) => ({
+        index: idx,
+        active: idx % 2 === 0,
+        filter: EF_FILTER_NAMES[idx % EF_FILTER_NAMES.length],
+        baseline: 0,
+        oversample: 4,
+        smoothing: 0.25
+      })),
+      mode: 0,
+      mode_name: 'LINEAR',
+      arg_method: 0,
+      arg_method_name: 'PLUS',
+      arg_enable: true,
+      arg_pair: { a: 0, b: 1 },
+      filter: { frequency: 800, q: 1 }
+    },
+    led: {
+      brightness: 64,
+      hex: '#ff00ff',
+      rgb: { r: 255, g: 0, b: 255 }
+    }
   };
   const telemetry = () => ({
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
-    envelopes: Array.from({ length: manifest.max_table_lengths.efSlots }, () => Math.floor(Math.random() * 127)),
+    slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
+      enabled: idx % 2 === 0,
+      method: idx % ARG_METHOD_NAMES.length,
+      method_name: ARG_METHOD_NAMES[idx % ARG_METHOD_NAMES.length],
+      sourceA: idx % manifest.envelope_count,
+      sourceB: (idx + 1) % manifest.envelope_count
+    })),
+    envelopes: Array.from({ length: manifest.envelope_count }, () => Math.floor(Math.random() * 127)),
     currentSlot: index++ % manifest.slot_count,
-    free: manifest.free
+    argPair: [0, 1],
+    argEnabled: true,
+    efStatus: Array.from({ length: manifest.envelope_count }, (_, idx) => (idx % 2 === 0 ? 1 : 0)),
+    diagnostics: {
+      loop_max_us: 702,
+      loop_last_us: 512,
+      midi_isr_max_us: 320,
+      midi_isr_last_us: 110,
+      midi_drops: 0,
+      uart_overruns: 0,
+      loop_overruns: 0,
+      midi_task_overruns: 0
+    }
   });
 
   async function open() {
@@ -679,11 +833,16 @@ export function createRuntime({
       } catch (_) {
         manifestRaw = JSON.stringify({
           fw_version: 'unknown',
+          git_sha: 'offline',
+          build_time: new Date().toISOString(),
           schema_version: localManifest?.schema_version,
           slot_count: localManifest?.slot_count,
-          max_table_lengths: localManifest?.max_table_lengths || {},
-          capabilities: { atomicApply: true },
-          free: { ram: 0, flash: 0 }
+          pot_count: localManifest?.pot_count,
+          envelope_count: localManifest?.envelope_count,
+          arg_method_count: ARG_METHOD_NAMES.length,
+          led_count: localManifest?.led_count ?? 0,
+          free_ram: 0,
+          free_flash: 0
         });
       }
     }
@@ -1019,8 +1178,8 @@ export function createRuntime({
       schema_version: schema?.schema_version || schema?.properties?.schema_version?.default,
       manifest: {
         fw_version: remoteManifest?.fw_version,
-        fw_git: remoteManifest?.fw_git,
-        build_ts: remoteManifest?.build_ts,
+        git_sha: remoteManifest?.git_sha,
+        build_time: remoteManifest?.build_time,
         schema_version: remoteManifest?.schema_version
       },
       config: clone(stagedConfig)
