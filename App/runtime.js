@@ -375,13 +375,12 @@ function normalizeConfig(config, manifest = {}) {
     next.efSlots = derived;
   }
 
+  let legacyLedColor = null;
   if (Array.isArray(config.ledColors) && config.ledColors.length) {
-    next.ledColors = Array.from({ length: config.ledColors.length }, (_, idx) => {
-      const entry = config.ledColors[idx];
-      if (entry && typeof entry.color === 'string') return { color: entry.color };
-      return { color: '#000000' };
-    });
-  } else {
+    const swatch = config.ledColors.find((entry) => typeof entry?.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(entry.color));
+    if (swatch) legacyLedColor = swatch.color.toUpperCase();
+  }
+  if ('ledColors' in next) {
     delete next.ledColors;
   }
 
@@ -411,6 +410,14 @@ function normalizeConfig(config, manifest = {}) {
     next.led = led;
   } else {
     next.led = { brightness: 0, color: '#000000' };
+  }
+
+  if (legacyLedColor) {
+    if (!next.led || typeof next.led !== 'object') {
+      next.led = { brightness: 0, color: legacyLedColor };
+    } else if (typeof next.led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(next.led.color)) {
+      next.led = { ...next.led, color: legacyLedColor };
+    }
   }
 
   if (config.envelopes && typeof config.envelopes === 'object') {
