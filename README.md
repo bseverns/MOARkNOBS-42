@@ -10,7 +10,7 @@ can audit, rebuild, and modify to test how control, authorship, and embodiment s
 It is open, meaning you can fork, sell, remix—just credit and share like I have.
 
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
-The top README is intentionally bareboens—poke the READMEs in each folder (there's lots of 'em) for
+The top README is intentionally barebones—poke the READMEs in each folder (there's lots of 'em) for
 the full scoop.
 
 ## Quick Map
