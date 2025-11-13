@@ -782,12 +782,14 @@ function createSimulator() {
       const chunk = line.replace(/^SET_ALL\s+/, '');
       pendingSetAll += chunk;
       try {
-        const payload = JSON.parse(pendingSetAll);
+        const rawPayload = pendingSetAll;
+        const payload = JSON.parse(rawPayload);
         pendingSetAll = '';
         if (payload?.config) {
           Object.assign(config, payload.config);
         }
-        lines.push(JSON.stringify({ type: 'ack', checksum: payload?.checksum || 'sim' }));
+        const ackChecksum = payload?.checksum ?? (await digest(rawPayload));
+        lines.push(JSON.stringify({ type: 'ack', checksum: ackChecksum }));
       } catch (err) {
         if (err instanceof SyntaxError && err.message && err.message.includes('Unexpected end')) {
           // Wait for the remaining chunks before deciding whether the payload is broken.
