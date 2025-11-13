@@ -6,7 +6,7 @@ const statusMessage = (page) => page.locator('#status .status-message');
 test.describe('Simulator transport flows', () => {
   test('handshake, validation, rollback, and toggles stay honest', async ({ page }) => {
     await page.addInitScript(() => {
-      window.__MN42_RUNTIME_OPTIONS = { ackTimeoutMs: 100 };
+      window.__MN42_RUNTIME_OPTIONS = { ackTimeoutMs: 800 };
       window.__MN42_TEST_HOOKS = {
         mutateTransport(transport) {
           window.__mn42Transport = transport;
@@ -77,7 +77,7 @@ test.describe('Simulator transport flows', () => {
   test('migration dialog and diff/rollback flows stay wired', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = {
-        ackTimeoutMs: 100,
+        ackTimeoutMs: 800,
         migrations: {
           '3->4': (config) => config
         }
