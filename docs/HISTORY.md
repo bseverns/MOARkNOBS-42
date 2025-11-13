@@ -153,6 +153,21 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
   the new `envelopes` block, keeping the staged diff/apply loop locked in step
   with the slot patches the firmware now emits.
 
+### December — Full-stack Autopilot & Migration Drills
+
+- The `firmware/system_test/mn42_fullstack_runner.js` script graduates from
+  prophecy to practice: it now spawns the bridge for you, confirms the HELLO
+  handshake, slings a slot patch over OSC, and tails the telemetry stream
+  before handing back JSON + text logs (`logs/system-test.*`) you can stash in
+  CI artifacts or your lab notebook.
+- Docs finally admit the automation exists—`docs/TESTING.md` spells out the
+  upload → runner flow so workshop crews don’t have to reverse engineer the
+  gauntlet.
+- Playwright coverage grows teeth: the headless simulator now rewrites the
+  manifest mid-run to trigger the migration dialog, rehearses rollback, and
+  proves a clean apply clears the diff badge. `npm --prefix App test` doubles as
+  a migration-fire drill you can run without touching hardware.
+
 ## Overview
 
 Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:

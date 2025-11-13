@@ -73,4 +73,79 @@ test.describe('Simulator transport flows', () => {
     await simulatorToggle.click();
     await expect(simulatorToggle).toHaveText('Start simulator');
   });
+
+  test('migration dialog and diff/rollback flows stay wired', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = {
+        ackTimeoutMs: 100,
+        migrations: {
+          '3->4': (config) => config
+        }
+      };
+      window.__MN42_TEST_HOOKS = {
+        mutateTransport(transport) {
+          window.__mn42Transport = transport;
+          let manifestPatched = false;
+          const originalNextLine = transport.nextLine.bind(transport);
+          transport.nextLine = async () => {
+            const line = await originalNextLine();
+            if (!manifestPatched && line) {
+              try {
+                const payload = JSON.parse(line);
+                if (payload && typeof payload === 'object' && payload.schema_version === 4) {
+                  manifestPatched = true;
+                  payload.schema_version = 3;
+                  return JSON.stringify(payload);
+                }
+              } catch (_) {
+                // ignore malformed JSON and fall back to the original line
+              }
+            }
+            return line;
+          };
+        }
+      };
+    });
+
+    await page.goto('/benzknobz.html');
+
+    const simulatorToggle = page.getByRole('button', { name: /simulator/i });
+    await simulatorToggle.click();
+    await page.getByRole('button', { name: 'Connect' }).click();
+
+    const migrationDialog = page.locator('#migration-dialog');
+    await expect(migrationDialog).toBeVisible();
+    await expect(page.locator('#migration-preview')).toContainText('Firmware schema 3 vs UI 4');
+    await expect(page.locator('#migration-preview')).toContainText('An adapter is available');
+
+    await page.getByRole('button', { name: 'Not now' }).click();
+    await expect(migrationDialog).toBeHidden();
+
+    const argA = page.locator('#arg-a');
+    await argA.fill('2');
+    await argA.blur();
+
+    await expect(page.locator('#dirty-badge')).toBeVisible();
+    await expect(page.locator('#diff-panel')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Rollback' }).click();
+    await expect(statusLabel(page)).toHaveText(/Rolled back/i);
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+    await expect(page.locator('#diff-panel')).toBeHidden();
+
+    await argA.fill('1');
+    await argA.blur();
+
+    const applyButton = page.getByRole('button', { name: 'Apply' });
+    await expect(applyButton).toBeEnabled();
+
+    await applyButton.click();
+    await expect(statusLabel(page)).toHaveText(/Synced/i);
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+    await expect(page.locator('#diff-panel')).toBeHidden();
+    await expect(applyButton).toBeDisabled();
+
+    await simulatorToggle.click();
+    await expect(simulatorToggle).toHaveText('Start simulator');
+  });
 });

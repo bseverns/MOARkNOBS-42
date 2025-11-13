@@ -11,7 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Playwright simulator rig bolts into CI and `test.sh`, so you can hammer the
   App’s UI without cracking open the firmware—kick it off locally with
   `npm --prefix App test` when you want browser-level truth before wiring up
-  the hardware.
+  the hardware. The suite now rewrites the manifest mid-run to trigger the
+  migration dialog, rehearses rollback, and proves a clean apply clears the diff
+  badge.
+- Hardware-in-the-loop system runner (`firmware/system_test/mn42_fullstack_runner.js`)
+  now ships as a first-class script: it spawns the bridge, drives the OSC slot
+  patch scenarios called out in the docs, and emits JSON + text logs ready for
+  CI artifacts or late-night lab notes.
 - Slot ownership got formalized: each slot now names its owning manager and
   persistence block, with the EEPROM serializer carving out explicit 64-byte
   pages so firmware, WebSerial, and Unity tests stop stepping on each other's
@@ -35,6 +41,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Root and firmware READMEs map the control stack with new "crash course" and
   "stack philosophy" sections, pointing students toward the annotated modules
   and the docs they feed.
+- Testing docs call their shot: `docs/TESTING.md` now walks through the
+  full-stack runner flags so contributors can actually reproduce the OSC↔firmware
+  handshake the release notes keep hyping.
 - Added an "Annotated Source Field Guide" and guided-tour curriculum so mentors
   know exactly which `.cpp` to open when explaining globals, mux math, or MIDI
   queueing.
