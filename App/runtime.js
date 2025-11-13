@@ -901,6 +901,10 @@ export function createRuntime({
   let seq = 0;
   let lastKnownChecksum = null;
   let potGuard = new Set();
+  // Stash ack frames so the apply waiter can drain them even if the device
+  // answers before we wire up the listener (the simulator is especially zippy
+  // here).
+  const ackQueue = [];
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -1082,7 +1086,7 @@ export function createRuntime({
       return;
     }
     if (msg.type === 'ack') {
-      emit('ack', msg);
+      queueAck(msg);
       return;
     }
     if (msg.type === 'error') {
@@ -1096,6 +1100,26 @@ export function createRuntime({
     if (!queuedTelemetry) return;
     emit('telemetry', queuedTelemetry);
     queuedTelemetry = null;
+  }
+
+  function queueAck(msg) {
+    if (!msg || typeof msg !== 'object') return;
+    ackQueue.push(msg);
+    emit('ack', msg);
+  }
+
+  function takeAck(checksum) {
+    if (!ackQueue.length) return null;
+    for (let i = 0; i < ackQueue.length; i += 1) {
+      const candidate = ackQueue[i];
+      const candidateChecksum = candidate?.checksum;
+      const hasChecksum = typeof candidateChecksum === 'string' && candidateChecksum.length > 0;
+      const matches = !hasChecksum || !checksum || candidateChecksum === checksum;
+      ackQueue.splice(i, 1);
+      if (!matches) return false;
+      return true;
+    }
+    return null;
   }
 
   function applyConfigPatch(patch) {
@@ -1370,22 +1394,19 @@ export function createRuntime({
   }
 
   async function waitForAck(checksum) {
-    return new Promise((resolve, reject) => {
+    const immediate = takeAck(checksum);
+    if (immediate !== null) return immediate;
+    return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         off();
         resolve(false);
       }, ackTimeout);
-      const off = on('ack', (msg) => {
-        if (!msg) return;
-        if (msg.checksum && checksum && msg.checksum !== checksum) {
-          clearTimeout(timeout);
-          off();
-          resolve(false);
-          return;
-        }
+      const off = on('ack', () => {
+        const queued = takeAck(checksum);
+        if (queued === null) return;
         clearTimeout(timeout);
         off();
-        resolve(true);
+        resolve(queued);
       });
     });
   }
