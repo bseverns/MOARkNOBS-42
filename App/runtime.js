@@ -330,7 +330,6 @@ function normalizeSlotConfig(slot, efLimit = 6) {
 
 function normalizeConfig(config, manifest = {}) {
   if (!config || typeof config !== 'object') return config;
-  const next = { ...config };
   const slotCount = Number.isFinite(Number(manifest.slot_count))
     ? Number(manifest.slot_count)
     : Array.isArray(config.slots)
@@ -341,10 +340,11 @@ function normalizeConfig(config, manifest = {}) {
   const followerEf = Array.isArray(config.envelopes?.followers) ? config.envelopes.followers.length : null;
   const efCount = manifestEf ?? configEf ?? followerEf ?? 0;
 
-  next.slots = Array.from({ length: slotCount }, (_, idx) => normalizeSlotConfig(config.slots?.[idx], efCount));
+  const slots = Array.from({ length: slotCount }, (_, idx) => normalizeSlotConfig(config.slots?.[idx], efCount));
 
+  let efSlots;
   if (Array.isArray(config.efSlots)) {
-    next.efSlots = Array.from({ length: efCount }, (_, idx) => {
+    efSlots = Array.from({ length: efCount }, (_, idx) => {
       const entry = config.efSlots[idx];
       const slotIndex = entry && Number.isFinite(Number(entry.slot)) ? Number(entry.slot) : -1;
       if (slotIndex < 0) return { slot: -1 };
@@ -362,7 +362,7 @@ function normalizeConfig(config, manifest = {}) {
       const capped = clamp(potIndex, 0, Math.max(0, slotCount - 1));
       derived[follower] = { slot: capped };
     });
-    next.slots.forEach((slot, slotIndex) => {
+    slots.forEach((slot, slotIndex) => {
       const raw = Number.isFinite(Number(slot?.efIndex))
         ? Number(slot.efIndex)
         : Number.isFinite(Number(slot?.ef?.index))
@@ -372,7 +372,7 @@ function normalizeConfig(config, manifest = {}) {
       if (derived[raw].slot !== -1) return;
       derived[raw] = { slot: clamp(slotIndex, 0, Math.max(0, slotCount - 1)) };
     });
-    next.efSlots = derived;
+    efSlots = derived;
   }
 
   let legacyLedColor = null;
@@ -380,100 +380,125 @@ function normalizeConfig(config, manifest = {}) {
     const swatch = config.ledColors.find((entry) => typeof entry?.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(entry.color));
     if (swatch) legacyLedColor = swatch.color.toUpperCase();
   }
-  if ('ledColors' in next) {
-    delete next.ledColors;
+  const env = config.envelopes && typeof config.envelopes === 'object' ? config.envelopes : {};
+
+  const filterSource = config.filter && typeof config.filter === 'object' ? config.filter : {};
+  const envFilter = env.filter && typeof env.filter === 'object' ? env.filter : {};
+  const filter = {};
+  const freqCandidate = Number(filterSource.freq ?? filterSource.frequency);
+  if (Number.isFinite(freqCandidate)) {
+    filter.freq = freqCandidate;
+  } else {
+    const envFreq = Number(envFilter.frequency ?? envFilter.freq);
+    if (Number.isFinite(envFreq)) filter.freq = envFreq;
+  }
+  if (!Number.isFinite(filter.freq)) filter.freq = 20;
+
+  const qCandidate = Number(filterSource.q);
+  if (Number.isFinite(qCandidate)) {
+    filter.q = qCandidate;
+  } else {
+    const envQ = Number(envFilter.q);
+    if (Number.isFinite(envQ)) filter.q = envQ;
+  }
+  if (!Number.isFinite(filter.q)) filter.q = 1;
+
+  if (typeof filterSource.type === 'string' && EF_FILTER_NAMES.includes(filterSource.type)) {
+    filter.type = filterSource.type;
+  } else if (typeof envFilter.type === 'string' && EF_FILTER_NAMES.includes(envFilter.type)) {
+    filter.type = envFilter.type;
+  } else {
+    const followerFilter = env.followers?.find((entry) => typeof entry?.filter === 'string')?.filter;
+    const slotFilter = slots.find((slot) => typeof slot?.ef?.filter_name === 'string')?.ef?.filter_name;
+    const derivedFilter = followerFilter || slotFilter;
+    filter.type = typeof derivedFilter === 'string' && EF_FILTER_NAMES.includes(derivedFilter) ? derivedFilter : 'LINEAR';
   }
 
+  const argSource = config.arg && typeof config.arg === 'object' ? config.arg : {};
+  const pair = env.arg_pair && typeof env.arg_pair === 'object' ? env.arg_pair : {};
+  const readNumber = (value, fallback) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  };
+
+  let methodName = null;
+  if (typeof argSource.method === 'string' && ARG_METHOD_NAMES.includes(argSource.method)) {
+    methodName = argSource.method;
+  } else if (typeof argSource.method_name === 'string' && ARG_METHOD_NAMES.includes(argSource.method_name)) {
+    methodName = argSource.method_name;
+  } else if (Number.isFinite(Number(argSource.method))) {
+    const idx = Math.max(0, Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(argSource.method))));
+    methodName = ARG_METHOD_NAMES[idx];
+  } else if (typeof env.arg_method_name === 'string' && ARG_METHOD_NAMES.includes(env.arg_method_name)) {
+    methodName = env.arg_method_name;
+  } else if (Number.isFinite(Number(env.arg_method))) {
+    const idx = Math.max(0, Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(env.arg_method))));
+    methodName = ARG_METHOD_NAMES[idx];
+  } else {
+    methodName = ARG_METHOD_NAMES[0];
+  }
+
+  let enabled;
+  if (typeof argSource.enable === 'boolean') enabled = argSource.enable;
+  else if (typeof argSource.enabled === 'boolean') enabled = argSource.enabled;
+  else if (typeof env.arg_enable === 'boolean') enabled = env.arg_enable;
+  else if (typeof env.arg_enabled === 'boolean') enabled = env.arg_enabled;
+  else enabled = true;
+
+  let argA = readNumber(argSource.a ?? argSource.sourceA, undefined);
+  if (argA === undefined) argA = readNumber(pair.a, 0);
+  if (!Number.isFinite(argA)) argA = 0;
+
+  let argB = readNumber(argSource.b ?? argSource.sourceB, undefined);
+  if (argB === undefined) argB = readNumber(pair.b, Math.max(0, Math.min(1, efCount - 1)));
+  if (!Number.isFinite(argB)) argB = Math.max(0, Math.min(1, efCount - 1));
+
+  const arg = { method: methodName, a: argA, b: argB, enable: Boolean(enabled) };
+
+  let led;
   if (config.led && typeof config.led === 'object') {
-    const led = { ...config.led };
-    const brightness = Number(led.brightness);
-    led.brightness = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
-    if (typeof led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(led.color)) {
-      if (typeof led.hex === 'string' && /^#([0-9a-fA-F]{6})$/.test(led.hex)) {
-        led.color = led.hex.toUpperCase();
-      } else if (led.rgb && Number.isFinite(led.rgb.r) && Number.isFinite(led.rgb.g) && Number.isFinite(led.rgb.b)) {
-        led.color = `#${[led.rgb.r, led.rgb.g, led.rgb.b]
+    const ledCandidate = { ...config.led };
+    const brightness = Number(ledCandidate.brightness);
+    const parsed = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
+    let color = ledCandidate.color;
+    if (typeof color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(color)) {
+      if (typeof ledCandidate.hex === 'string' && /^#([0-9a-fA-F]{6})$/.test(ledCandidate.hex)) {
+        color = ledCandidate.hex.toUpperCase();
+      } else if (
+        ledCandidate.rgb &&
+        Number.isFinite(ledCandidate.rgb.r) &&
+        Number.isFinite(ledCandidate.rgb.g) &&
+        Number.isFinite(ledCandidate.rgb.b)
+      ) {
+        color = `#${[ledCandidate.rgb.r, ledCandidate.rgb.g, ledCandidate.rgb.b]
           .map((value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, '0'))
           .join('')}`.toUpperCase();
       } else {
-        led.color = '#000000';
+        color = '#000000';
       }
     }
-    next.led = { brightness: led.brightness, color: led.color };
-  } else if (next.led && typeof next.led === 'object') {
-    const led = { ...next.led };
-    const brightness = Number(led.brightness);
-    led.brightness = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
-    if (typeof led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(led.color)) {
-      led.color = '#000000';
-    }
-    next.led = led;
-  } else {
-    next.led = { brightness: 0, color: '#000000' };
+    led = { brightness: parsed, color: color.toUpperCase?.() || '#000000' };
+  }
+
+  if (!led) {
+    led = { brightness: 0, color: '#000000' };
   }
 
   if (legacyLedColor) {
-    if (!next.led || typeof next.led !== 'object') {
-      next.led = { brightness: 0, color: legacyLedColor };
-    } else if (typeof next.led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(next.led.color)) {
-      next.led = { ...next.led, color: legacyLedColor };
+    if (!led || typeof led !== 'object') {
+      led = { brightness: 0, color: legacyLedColor };
+    } else if (typeof led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(led.color)) {
+      led = { ...led, color: legacyLedColor };
     }
   }
 
-  if (config.envelopes && typeof config.envelopes === 'object') {
-    const env = config.envelopes;
-    if (!next.filter || typeof next.filter !== 'object') next.filter = {};
-    if (env.filter && typeof env.filter === 'object') {
-      const freq = Number(env.filter.frequency ?? env.filter.freq);
-      const q = Number(env.filter.q);
-      if (Number.isFinite(freq)) next.filter.freq = freq;
-      if (Number.isFinite(q)) next.filter.q = q;
-    }
-    if (!next.filter.type) {
-      const followerFilter = env.followers?.find((entry) => typeof entry?.filter === 'string')?.filter;
-      const slotFilter = next.slots.find((slot) => typeof slot?.ef?.filter_name === 'string')?.ef?.filter_name;
-      const derivedFilter = followerFilter || slotFilter;
-      if (typeof derivedFilter === 'string' && EF_FILTER_NAMES.includes(derivedFilter)) {
-        next.filter.type = derivedFilter;
-      } else {
-        next.filter.type = 'LINEAR';
-      }
-    }
+  let envelopeMode = null;
+  if (typeof config.envelopeMode === 'string') envelopeMode = config.envelopeMode;
+  else if (typeof env.mode_name === 'string') envelopeMode = env.mode_name;
 
-    const argMethodName = typeof env.arg_method_name === 'string' ? env.arg_method_name : undefined;
-    const argMethodIndex = Number(env.arg_method);
-    const methodName = argMethodName || (Number.isFinite(argMethodIndex) ? ARG_METHOD_NAMES[argMethodIndex] : undefined) || 'PLUS';
-    const pair = env.arg_pair && typeof env.arg_pair === 'object' ? env.arg_pair : {};
-    const followerMax = Math.max(0, efCount - 1);
-    const rawA = Number.isFinite(Number(pair.a)) ? Number(pair.a) : 0;
-    const rawB = Number.isFinite(Number(pair.b)) ? Number(pair.b) : 1;
-    next.arg = {
-      method: methodName,
-      enable: Boolean(env.arg_enable ?? env.arg_enabled ?? true),
-      a: clamp(rawA, 0, followerMax || 0),
-      b: clamp(rawB, 0, followerMax || 0)
-    };
-
-    if (env.mode_name && typeof env.mode_name === 'string') {
-      next.envelopeMode = env.mode_name;
-    }
-  } else {
-    if (next.filter && typeof next.filter === 'object') {
-      next.filter = { ...next.filter };
-    }
-    if (next.arg && typeof next.arg === 'object') {
-      const globalArg = { ...next.arg };
-      if (globalArg.method && typeof globalArg.method !== 'string') {
-        const idx = Number(globalArg.method);
-        if (Number.isFinite(idx) && ARG_METHOD_NAMES[idx]) {
-          globalArg.method = ARG_METHOD_NAMES[idx];
-        }
-      }
-      next.arg = globalArg;
-    }
-  }
-
-  return next;
+  const normalized = { slots, efSlots, filter, arg, led };
+  if (envelopeMode) normalized.envelopeMode = envelopeMode;
+  return normalized;
 }
 
 function applyEfSlotPatch(target, patch) {
