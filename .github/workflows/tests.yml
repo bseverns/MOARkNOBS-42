@@ -45,6 +45,12 @@ jobs:
       - name: Install bridge deps
         run: npm --prefix bridge ci  # install JS deps for tests
 
+      - name: Install app deps
+        run: npm --prefix App install --no-audit --no-fund
+
+      - name: Install Playwright browsers
+        run: npx --prefix App playwright install --with-deps chromium
+
 
       # Build, flash, and run the Unity suite on real hardware.
       - name: Run Unity tests
@@ -72,6 +78,13 @@ jobs:
         with:
           name: bridge-test-logs
           path: logs/bridge-test.log
+
+      - name: Upload app test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-test-logs
+          path: logs/app-test.log
 
   # Optional: keep a system test lane you can trigger manually or on a branch
   system-tests:

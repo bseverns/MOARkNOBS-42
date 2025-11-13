@@ -30,6 +30,7 @@ fi
 
 # JavaScript side of the house always gets tested.
 npm --prefix bridge test | tee logs/bridge-test.log
+npm --prefix App test | tee logs/app-test.log
 
 if [ -n "$PORT" ]; then
   # Full-stack OSC↔firmware shakedown. Writes JSON + text logs for CI artifacts.

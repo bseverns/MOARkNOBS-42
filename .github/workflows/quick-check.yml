@@ -53,3 +53,9 @@ jobs:
           npm --prefix bridge ci
           npm --prefix bridge test
           # rock those JS tests
+
+      - name: App tests on Node
+        run: |
+          npm --prefix App install --no-audit --no-fund
+          npx --prefix App playwright install --with-deps chromium
+          npm --prefix App test
