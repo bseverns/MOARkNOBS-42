@@ -1230,6 +1230,9 @@ export function createRuntime({
       const off = on('ack', (msg) => {
         if (!msg) return;
         if (msg.checksum && checksum && msg.checksum !== checksum) {
+          clearTimeout(timeout);
+          off();
+          resolve(false);
           return;
         }
         clearTimeout(timeout);
