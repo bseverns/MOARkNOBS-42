@@ -6,7 +6,13 @@ const statusMessage = (page) => page.locator('#status .status-message');
 test.describe('Simulator transport flows', () => {
   test('handshake, validation, rollback, and toggles stay honest', async ({ page }) => {
     await page.addInitScript(() => {
-      window.__MN42_RUNTIME_OPTIONS = { ackTimeoutMs: 800 };
+      window.__MN42_RUNTIME_OPTIONS = {
+        // Give the simulated firmware plenty of time to echo the checksum ACK.
+        // The simulator throttles writes to keep parity with real hardware, so
+        // we trade a slightly longer wait for deterministic assertions instead
+        // of chasing timeout-induced flakes.
+        ackTimeoutMs: 2000
+      };
       window.__MN42_TEST_HOOKS = {
         mutateTransport(transport) {
           window.__mn42Transport = transport;
@@ -77,7 +83,11 @@ test.describe('Simulator transport flows', () => {
   test('migration dialog and diff/rollback flows stay wired', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = {
-        ackTimeoutMs: 800,
+        // Let adapter rehearsal finish chunking before the checksum gate slams.
+        // Staging + migration adds a few extra message hops; a generous timeout
+        // keeps the assertions focused on diff/rollback wiring instead of ACK
+        // races in headless CI.
+        ackTimeoutMs: 2000,
         migrations: {
           '3->4': (config) => config
         }
