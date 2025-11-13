@@ -115,11 +115,13 @@ test.describe('Simulator transport flows', () => {
 
     const migrationDialog = page.locator('#migration-dialog');
     await expect(migrationDialog).toBeVisible();
-    await expect(page.locator('#migration-preview')).toContainText('Firmware schema 3 vs UI 4');
-    await expect(page.locator('#migration-preview')).toContainText('An adapter is available');
+    const migrationPreview = page.locator('#migration-preview');
+    await expect(migrationPreview).toContainText('Firmware schema 3 vs UI 4');
+    await expect(migrationPreview).toContainText('An adapter is available');
 
-    await page.getByRole('button', { name: 'Not now' }).click();
+    await page.getByRole('button', { name: 'Apply adapter' }).click();
     await expect(migrationDialog).toBeHidden();
+    await expect(statusLabel(page)).toHaveText(/Migration ready/i);
 
     const argA = page.locator('#arg-a');
     await argA.fill('2');
@@ -128,7 +130,8 @@ test.describe('Simulator transport flows', () => {
     await expect(page.locator('#dirty-badge')).toBeVisible();
     await expect(page.locator('#diff-panel')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Rollback' }).click();
+    const rollbackButton = page.getByRole('button', { name: 'Rollback' });
+    await rollbackButton.click();
     await expect(statusLabel(page)).toHaveText(/Rolled back/i);
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await expect(page.locator('#diff-panel')).toBeHidden();
