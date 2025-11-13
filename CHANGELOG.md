@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Playwright simulator rig bolts into CI and `test.sh`, so you can hammer the
+  App’s UI without cracking open the firmware—kick it off locally with
+  `npm --prefix App test` when you want browser-level truth before wiring up
+  the hardware.
 - Slot ownership got formalized: each slot now names its owning manager and
   persistence block, with the EEPROM serializer carving out explicit 64-byte
   pages so firmware, WebSerial, and Unity tests stop stepping on each other's
@@ -18,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schema to `0x0004` so stored patches remember their curves.
 
 ### Changed
+- Runtime now runs a normalization/sanitization lap that clamps slot payloads
+  before validation/apply, so the control surface stops seeing ghost values
+  when the `runtime` bridge chews on sketchy input.
 - Firmware source files now carry teaching-forward comment blocks explaining
   data flow, pointer ownership, and math choices so workshops can read the code
   like a zine instead of a riddle.
@@ -33,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   queueing.
 
 ### Fixed
+- Status/diff badges finally clock the `hidden` flag and swap styles instead of
+  pretending they’re always visible—badge CSS tweaks landed in the App so the
+  UI doesn’t gaslight folks skimming change reports.
 - Bulk CC dumps finally stash channels under `EEPROM_POT_CHANNELS` and park CC numbers under `EEPROM_POT_CC`, so `Utility::processBulkUpdate`
   lines up with the documented EEPROM map instead of gaslighting ConfigManager.
 - Incoming SysEx packets longer than 64 bytes now get dropped at the door unless you explicitly forward them, keeping rogue gear
