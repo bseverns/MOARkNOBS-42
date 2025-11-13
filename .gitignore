@@ -23,3 +23,6 @@ logs/
 
 # Bridge deps live outside git; npm ci resurrects them
 bridge/node_modules/
+App/node_modules/
+App/playwright-report/
+App/test-results/

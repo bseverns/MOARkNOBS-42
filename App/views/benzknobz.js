@@ -38,10 +38,21 @@ const localManifest = {
   led_count: 51
 };
 
-const runtime = createRuntime({
+const runtimeOptions = {
   schemaUrl: './config_schema.json',
   localManifest
-});
+};
+if (
+  typeof window !== 'undefined' &&
+  window.__MN42_RUNTIME_OPTIONS &&
+  typeof window.__MN42_RUNTIME_OPTIONS === 'object'
+) {
+  Object.assign(runtimeOptions, window.__MN42_RUNTIME_OPTIONS);
+}
+const runtime = createRuntime(runtimeOptions);
+if (typeof window !== 'undefined') {
+  window.__MN42_RUNTIME = runtime;
+}
 
 const sharedResizeObserver =
   typeof ResizeObserver === 'function'

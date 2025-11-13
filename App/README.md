@@ -56,6 +56,16 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
 
 `runtime.js` exports a simulator transport that mimics the firmware handshake, config payload, and telemetry frames. CI (or your own tests) can connect, screenshot the UI, and run migrations without a Teensy on the desk.
 
+## Headless Harness
+
+Need proof the simulator flow hasn’t rotted without booting Chrome manually? Run:
+
+```bash
+npm --prefix App test
+```
+
+That spins up a tiny static server, launches Playwright’s headless Chromium, and imports the real `runtime.js` + `views/benzknobz.js`. The script walks through the README workflows—arming the simulator, driving the staged diff validator, forcing an ACK mismatch to trigger rollback, and finally flipping the simulator back off. When the test passes you know WebSerial ergonomics survived without babysitting a browser window.
+
 ## Troubleshooting
 
 - Serve over HTTPS or `http://localhost` or the browser will block WebSerial.

@@ -30,3 +30,4 @@ fi
 
 # JavaScript side of the house always gets tested.
 npm --prefix bridge test | tee logs/bridge-test.log
+npm --prefix App test | tee logs/app-test.log

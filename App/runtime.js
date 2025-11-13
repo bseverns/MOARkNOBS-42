@@ -739,7 +739,9 @@ export function createRuntime({
   schemaUrl = './config_schema.json',
   localManifest,
   migrations = {},
-  useSimulator = false
+  useSimulator = false,
+  ackTimeoutMs = ACK_TIMEOUT_MS,
+  testHooks
 } = {}) {
   const { emit, on } = makeEmitter();
 
@@ -762,6 +764,9 @@ export function createRuntime({
   const outboundQueue = [];
   let writing = false;
   let lastSend = 0;
+  const hooks =
+    testHooks ?? (typeof globalThis !== 'undefined' ? globalThis.__MN42_TEST_HOOKS : null) ?? null;
+  const ackTimeout = Number.isFinite(Number(ackTimeoutMs)) ? Number(ackTimeoutMs) : ACK_TIMEOUT_MS;
 
   function getPortInfo(port) {
     if (!port?.getInfo) return null;
@@ -812,6 +817,7 @@ export function createRuntime({
     try {
       emit('status', { stage: 'handshake', level: 'info', message: 'Negotiating manifest…' });
       transport = existingPort ?? (await requestPort());
+      hooks?.mutateTransport?.(transport);
       await transport.open();
       persistPortInfo(transport.rawPort);
       emit('transport-open', transport);
@@ -1220,7 +1226,7 @@ export function createRuntime({
       const timeout = setTimeout(() => {
         off();
         resolve(false);
-      }, ACK_TIMEOUT_MS);
+      }, ackTimeout);
       const off = on('ack', (msg) => {
         if (!msg) return;
         if (msg.checksum && checksum && msg.checksum !== checksum) {
