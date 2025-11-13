@@ -654,6 +654,7 @@ function createSimulator() {
   let index = 0;
   const lines = [];
   let resolver;
+  let pendingSetAll = '';
   const manifest = {
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
@@ -778,13 +779,21 @@ function createSimulator() {
     } else if (line.startsWith('GET_CONFIG')) {
       lines.push(JSON.stringify(config));
     } else if (line.startsWith('SET_ALL')) {
+      const chunk = line.replace(/^SET_ALL\s+/, '');
+      pendingSetAll += chunk;
       try {
-        const payload = JSON.parse(line.replace(/^SET_ALL\s+/, ''));
+        const payload = JSON.parse(pendingSetAll);
+        pendingSetAll = '';
         if (payload?.config) {
           Object.assign(config, payload.config);
         }
         lines.push(JSON.stringify({ type: 'ack', checksum: payload?.checksum || 'sim' }));
       } catch (err) {
+        if (err instanceof SyntaxError && err.message && err.message.includes('Unexpected end')) {
+          // Wait for the remaining chunks before deciding whether the payload is broken.
+          return;
+        }
+        pendingSetAll = '';
         lines.push(JSON.stringify({ type: 'error', message: err.message }));
       }
     } else if (line.startsWith('PING')) {
