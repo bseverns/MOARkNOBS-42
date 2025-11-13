@@ -17,7 +17,7 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
    ```bash
    python3 -m http.server
    ```
-3. Hit <http://localhost:8000/> (or `/benzknobz.html` if you prefer the old URL) in Chrome or Edge.
+3. Hit <http://localhost:8000/> — that root path is now the canonical deck. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
 4. Click **Connect**, pick the MOARkNOBS port, and let the header pill confirm the firmware, schema version, and memory stats.
 5. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes AJV validation.
 6. On Apply the runtime pushes a single `SET_ALL` payload, waits for a `{checksum}` ACK, and only then commits the local snapshot. If the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
