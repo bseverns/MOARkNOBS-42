@@ -1,5 +1,5 @@
-import Ajv from 'https://cdn.jsdelivr.net/npm/ajv@8/dist/ajv7.mjs';
-import addFormats from 'https://cdn.jsdelivr.net/npm/ajv-formats@3/dist/ajv-formats.mjs';
+import Ajv from './lib/mini-ajv.js';
+import addFormats from './lib/add-formats.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
