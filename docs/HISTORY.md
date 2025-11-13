@@ -128,6 +128,18 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
   arbitration all get their own riffs so teachers can stitch together bespoke
   labs.
 
+#### Mid November — Playwright Dress Rehearsal
+
+- Ran the Playwright-driven simulator through a full dress rehearsal so the
+  teaching tour has a live lab to point at, not just screenshots. The script
+  walks the handshake, forces the schema validation failure branch, replays a
+  checksum/ACK rollback, and slaps the simulator toggle to prove each flow in
+  the new spec actually screams in the browser.
+- Logged the win right in the tooling: `npm --prefix App test` is now wired into
+  `test.sh` and the CI workflows, so the same command new contributors run on
+  their laptops is the guardrail that keeps the rig honest. Pull it up when you
+  teach the module—the prose invites, the command gives them a riff to play.
+
 #### Late November — WebSerial Parity Check
 
 - The WebSerial dashboard now speaks the same manifest dialect as
