@@ -30,3 +30,18 @@ fi
 
 # JavaScript side of the house always gets tested.
 npm --prefix bridge test | tee logs/bridge-test.log
+
+if [ -n "$PORT" ]; then
+  # Full-stack OSC↔firmware shakedown. Writes JSON + text logs for CI artifacts.
+  node firmware/system_test/mn42_fullstack_runner.js \
+    --serial "$PORT" \
+    --report logs/system-test.json | tee logs/system-test.log
+else
+  echo "Skipping system bridge tests: TEST_PORT not set and no port auto-detected" | tee logs/system-test.log
+  cat <<'EOF' > logs/system-test.json
+{
+  "skipped": true,
+  "reason": "no serial port detected"
+}
+EOF
+fi
