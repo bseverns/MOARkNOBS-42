@@ -1,179 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Benz EEPROM Settings Manager</title>
-  <link rel="stylesheet" href="benzknobz.css" />
-</head>
-<body>
-  <div id="page-shell">
-    <header class="hero">
-      <div class="hero-top">
-        <h1>MOARkNOBZ Control Deck</h1>
-        <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
-      </div>
-      <p>
-        Equal parts neon basement show and precision lab console. Inspired by the Electra One and Bastl wizards,
-        tuned for tweaking the MOARkNOBZ brain without losing the punk sparks.
-      </p>
-      <div class="hero-badges" role="list">
-        <span class="badge" role="listitem">Web Serial Powered</span>
-        <span class="badge" role="listitem">Real-time Slot Telemetry</span>
-        <span class="badge" role="listitem">Patch-safe Writing</span>
-      </div>
-    </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="refresh" content="0; url=./" />
+    <title>MOARkNOBZ Control Deck</title>
+    <link rel="canonical" href="./" />
+    <link rel="stylesheet" href="benzknobz.css" />
+  </head>
+  <body>
     <main>
-      <section id="stage-panel">
-        <div id="live-panel">
-          <header class="live-header">
-            <h2>Live Slots</h2>
-            <p class="microcopy">Six columns to mirror the PCB. Click a slot or ride the arrow keys to roam.</p>
-          </header>
-          <div id="slots" class="button-grid" tabindex="0" aria-label="Slot overview"></div>
-          <section class="live-block" aria-labelledby="envelope-heading">
-            <h3 id="envelope-heading">Envelope Levels</h3>
-            <div id="envelopes"></div>
-          </section>
-          <section class="live-block" aria-labelledby="slot-detail-heading">
-            <h3 id="slot-detail-heading">Slot Details</h3>
-            <dl id="slot-details" aria-live="polite">
-              <div><dt>Slot</dt><dd id="slot-detail-index">—</dd></div>
-              <div><dt>Status</dt><dd id="slot-detail-status">—</dd></div>
-              <div><dt>MIDI Type</dt><dd id="slot-detail-type">—</dd></div>
-              <div><dt>Channel</dt><dd id="slot-detail-channel">—</dd></div>
-              <div><dt>Data</dt><dd id="slot-detail-data">—</dd></div>
-              <div><dt>EF Index</dt><dd id="slot-detail-ef-index">—</dd></div>
-              <div><dt>EF Filter</dt><dd id="slot-detail-ef-filter">—</dd></div>
-              <div><dt>EF Tuning</dt><dd id="slot-detail-ef-tuning">—</dd></div>
-              <div><dt>EF Dynamics</dt><dd id="slot-detail-ef-dynamics">—</dd></div>
-              <div><dt>EF Baseline</dt><dd id="slot-detail-ef-baseline">—</dd></div>
-              <div><dt>ARG Mode</dt><dd id="slot-detail-arg">—</dd></div>
-              <div><dt>ARG Sources</dt><dd id="slot-detail-arg-sources">—</dd></div>
-              <div><dt>Last Value</dt><dd id="slot-detail-value">—</dd></div>
-            </dl>
-          </section>
-        </div>
-        <fieldset id="ef-assignment-card">
-          <legend>Envelope Assignments</legend>
-          <p class="microcopy">Tell each follower which slot to stalk — no need to wait for live signals.</p>
-          <div class="ef-grid"></div>
-        </fieldset>
-        <div id="form"></div>
-        <details>
-          <summary>Debug Log</summary>
-          <pre id="log" aria-live="off"></pre>
-        </details>
-      </section>
-      <aside id="connect-card">
-        <div class="connect-actions">
-          <button id="connect" type="button">Connect</button>
-          <button id="apply" type="button" disabled>Apply</button>
-          <button id="rollback" type="button" disabled>Rollback</button>
-        </div>
-        <div class="stack" aria-live="polite">
-          <span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span>
-          <span id="dirty-badge" role="status" hidden>Dirty · staged edits</span>
-        </div>
-        <p class="microcopy">
-          First time here? Plug the synth in over USB, slam <strong>Connect</strong>, and let the live meters confirm the handshake.
-        </p>
-        <div id="status" data-state="warn" aria-live="polite">
-          <svg viewBox="0 0 24 24" aria-hidden="true" role="img">
-            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6" />
-          </svg>
-          <span class="label" id="status-label">NOTE</span>
-          <span class="status-message">Waiting for instructions.</span>
-        </div>
-        <div class="stack">
-          <button id="export-preset" disabled>Export preset</button>
-          <button id="import-preset" disabled>Import preset</button>
-          <select id="preset-picker">
-            <option value="">Select a preset…</option>
-          </select>
-          <button id="simulator-toggle" type="button">Start simulator</button>
-        </div>
-        <fieldset id="filter-settings">
-          <legend>Filter</legend>
-          <label>Type
-            <select id="filter-type">
-              <option value="LINEAR">LINEAR</option>
-              <option value="OPPOSITE_LINEAR">OPPOSITE_LINEAR</option>
-              <option value="EXPONENTIAL">EXPONENTIAL</option>
-              <option value="RANDOM">RANDOM</option>
-              <option value="LOWPASS">LOWPASS</option>
-              <option value="HIGHPASS">HIGHPASS</option>
-              <option value="BANDPASS">BANDPASS</option>
-            </select>
-          </label>
-          <label>Freq <input id="filter-freq" type="number" min="20" max="5000" data-control="pot" /></label>
-          <label>Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01" data-control="encoder" /></label>
-        </fieldset>
-        <fieldset id="arg-settings">
-          <legend>ARG Pair</legend>
-          <label>Enable
-            <select id="arg-enable">
-              <option value="true">ON</option>
-              <option value="false">OFF</option>
-            </select>
-          </label>
-          <label>Method
-            <select id="arg-method">
-              <option value="PLUS">PLUS</option>
-              <option value="MIN">MIN</option>
-              <option value="PECK">PECK</option>
-              <option value="SHAV">SHAV</option>
-              <option value="SQAR">SQAR</option>
-              <option value="BABS">BABS</option>
-              <option value="TABS">TABS</option>
-              <option value="MULT">MULT</option>
-              <option value="DIVI">DIVI</option>
-              <option value="AVG">AVG</option>
-              <option value="XABS">XABS</option>
-              <option value="MAXX">MAXX</option>
-              <option value="MINN">MINN</option>
-              <option value="XORR">XORR</option>
-            </select>
-          </label>
-          <label>A <input id="arg-a" type="number" min="0" max="5" step="0.01" /></label>
-          <label>B <input id="arg-b" type="number" min="0" max="5" step="0.01" /></label>
-        </fieldset>
-        <fieldset id="led-settings">
-          <legend>LED Colors</legend>
-          <p class="microcopy">
-            Brightness rides from 0–255, the color picker flashes a hex badge for whatever glow you dial in, and every
-            tweak queues quietly until you smash <strong>Apply</strong>.
-          </p>
-          <div id="led-grid" aria-live="polite"></div>
-        </fieldset>
-        <section aria-labelledby="device-monitor-title">
-          <h2 id="device-monitor-title">Device Monitor</h2>
-          <p class="microcopy">Read-only vitals pulled straight from the firmware handshake.</p>
-          <div class="monitor-grid" id="device-monitor"></div>
-        </section>
-        <section aria-labelledby="diff-title" id="diff-panel" hidden>
-          <h2 id="diff-title">Staged Diff</h2>
-          <pre id="diff-output"></pre>
-        </section>
-      </aside>
-    </main>
-    <dialog id="migration-dialog">
-      <h2 id="migration-title">Migration Needed</h2>
       <p>
-        Firmware and UI disagree about the current schema. Export your preset, review the migration patch,
-        then apply it when you are ready. Nothing is written to the device until you confirm.
+        The BenzKnobz layout now lives at
+        <a href="./">bseverns.github.io/MN42/</a>.
+        This legacy route sticks around for old bookmarks and will forward you automatically.
       </p>
-      <pre id="migration-preview" aria-live="polite"></pre>
-      <footer>
-        <button id="migration-export" type="button">Export current JSON</button>
-        <button id="migration-apply" type="button">Apply adapter</button>
-        <button id="migration-cancel" type="button">Not now</button>
-      </footer>
-    </dialog>
-    <footer>
-      Built as a living notebook: part punk scene zine, part future-lab interface. If you break something, capture the story and share it back.
-    </footer>
-  </div>
-  <script type="module" src="./views/benzknobz.js" defer></script>
-</body>
+    </main>
+  </body>
 </html>
