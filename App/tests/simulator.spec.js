@@ -6,6 +6,7 @@ const statusMessage = (page) => page.locator('#status .status-message');
 test.describe('Simulator transport flows', () => {
   test('handshake, validation, rollback, and toggles stay honest', async ({ page }) => {
     await page.addInitScript(() => {
+      window.__mn42TestState = { poisonAck: false, ackPoisoned: false };
       window.__MN42_RUNTIME_OPTIONS = {
         // Give the simulated firmware plenty of time to echo the checksum ACK.
         // The simulator throttles writes to keep parity with real hardware, so
@@ -16,6 +17,14 @@ test.describe('Simulator transport flows', () => {
       window.__MN42_TEST_HOOKS = {
         mutateTransport(transport) {
           window.__mn42Transport = transport;
+        },
+        interceptAck(ack) {
+          const state = window.__mn42TestState;
+          if (state?.poisonAck && !state.ackPoisoned) {
+            state.ackPoisoned = true;
+            return { ...ack, checksum: 'mismatch' };
+          }
+          return ack;
         }
       };
     });
@@ -55,19 +64,10 @@ test.describe('Simulator transport flows', () => {
     await expect(applyButton).toBeEnabled();
 
     await page.evaluate(() => {
-      const transport = window.__mn42Transport;
-      if (!transport) throw new Error('Transport hook missing');
-      if (transport.__testWrapped) return;
-      const originalNextLine = transport.nextLine.bind(transport);
-      let sentBadAck = false;
-      transport.__testWrapped = true;
-      transport.nextLine = async () => {
-        if (!sentBadAck) {
-          sentBadAck = true;
-          return JSON.stringify({ type: 'ack', checksum: 'mismatch' });
-        }
-        return originalNextLine();
-      };
+      const state = window.__mn42TestState;
+      if (!state) throw new Error('Test state missing');
+      state.poisonAck = true;
+      state.ackPoisoned = false;
     });
 
     await applyButton.click();
@@ -76,12 +76,18 @@ test.describe('Simulator transport flows', () => {
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await expect(page.locator('#diff-panel')).toBeHidden();
 
+    await page.evaluate(() => {
+      const state = window.__mn42TestState;
+      if (state) state.poisonAck = false;
+    });
+
     await simulatorToggle.click();
     await expect(simulatorToggle).toHaveText('Start simulator');
   });
 
   test('migration dialog and diff/rollback flows stay wired', async ({ page }) => {
     await page.addInitScript(() => {
+      window.__mn42TestState = { poisonAck: false, ackPoisoned: false };
       window.__MN42_RUNTIME_OPTIONS = {
         // Let adapter rehearsal finish chunking before the checksum gate slams.
         // Staging + migration adds a few extra message hops; a generous timeout
@@ -113,7 +119,8 @@ test.describe('Simulator transport flows', () => {
             }
             return line;
           };
-        }
+        },
+        interceptAck: (ack) => ack
       };
     });
 

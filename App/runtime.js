@@ -1104,8 +1104,22 @@ export function createRuntime({
 
   function queueAck(msg) {
     if (!msg || typeof msg !== 'object') return;
-    ackQueue.push(msg);
-    emit('ack', msg);
+    let ackMsg = msg;
+    if (hooks?.interceptAck) {
+      // Playwright drills flip this hook to poison or drop the next ack without
+      // rewriting the transport plumbing mid-flight.
+      try {
+        const candidate = hooks.interceptAck({ ...msg });
+        if (candidate === null) return;
+        if (candidate !== undefined) ackMsg = candidate;
+      } catch (err) {
+        console.error('ack intercept error', err);
+        ackMsg = msg;
+      }
+    }
+    if (!ackMsg || typeof ackMsg !== 'object') return;
+    ackQueue.push(ackMsg);
+    emit('ack', ackMsg);
   }
 
   function takeAck(checksum) {
