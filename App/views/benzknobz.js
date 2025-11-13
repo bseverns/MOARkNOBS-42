@@ -63,7 +63,7 @@ const sharedResizeObserver =
       })
     : null;
 
-window.addEventListener('DOMContentLoaded', () => {
+const boot = () => {
   const statusEl = document.getElementById('status');
   const statusLabel = document.getElementById('status-label');
   const statusMessage = statusEl?.querySelector('.status-message');
@@ -1227,4 +1227,10 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
-});
+};
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  boot();
+}
