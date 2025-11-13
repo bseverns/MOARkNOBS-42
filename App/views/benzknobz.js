@@ -1047,7 +1047,29 @@ const boot = () => {
 
   function stageFilter(key, value) {
     runtime.stage((draft) => {
-      draft.filter = draft.filter || {};
+      if (!draft || typeof draft !== 'object') return draft;
+      draft.filter = draft.filter && typeof draft.filter === 'object' ? draft.filter : {};
+
+      if (key === 'type') {
+        draft.filter.type = value;
+        return draft;
+      }
+
+      if (key === 'freq' || key === 'q') {
+        draft.envelopes = draft.envelopes && typeof draft.envelopes === 'object' ? draft.envelopes : {};
+        draft.envelopes.filter =
+          draft.envelopes.filter && typeof draft.envelopes.filter === 'object' ? draft.envelopes.filter : {};
+        if (key === 'freq') {
+          draft.filter.freq = value;
+          draft.envelopes.filter.frequency = value;
+          draft.envelopes.filter.freq = value;
+        } else {
+          draft.filter.q = value;
+          draft.envelopes.filter.q = value;
+        }
+        return draft;
+      }
+
       draft.filter[key] = value;
       return draft;
     });
@@ -1055,7 +1077,37 @@ const boot = () => {
 
   function stageArg(key, value) {
     runtime.stage((draft) => {
-      draft.arg = draft.arg || {};
+      if (!draft || typeof draft !== 'object') return draft;
+      draft.arg = draft.arg && typeof draft.arg === 'object' ? draft.arg : {};
+      draft.envelopes = draft.envelopes && typeof draft.envelopes === 'object' ? draft.envelopes : {};
+
+      if (key === 'enable') {
+        draft.arg.enable = value;
+        draft.arg.enabled = value;
+        draft.envelopes.arg_enable = value;
+        draft.envelopes.arg_enabled = value;
+        return draft;
+      }
+
+      if (key === 'method') {
+        const methodIndex = Math.max(0, ARG_METHOD_NAMES.indexOf(value));
+        draft.arg.method = value;
+        draft.arg.method_name = value;
+        draft.envelopes.arg_method = methodIndex;
+        draft.envelopes.arg_method_name = value;
+        return draft;
+      }
+
+      if (key === 'a' || key === 'b') {
+        draft.arg[key] = value;
+        draft.envelopes.arg_pair =
+          draft.envelopes.arg_pair && typeof draft.envelopes.arg_pair === 'object'
+            ? draft.envelopes.arg_pair
+            : {};
+        draft.envelopes.arg_pair[key] = value;
+        return draft;
+      }
+
       draft.arg[key] = value;
       return draft;
     });
