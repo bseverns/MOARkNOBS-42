@@ -655,6 +655,50 @@ function createSimulator() {
   const lines = [];
   let resolver;
   let pendingSetAll = '';
+  // Track aggregate parser state so multi-frame SET_ALL payloads can be
+  // reconstructed without relying on JSON.parse throwing "Unexpected end".
+  let setAllState = { depth: 0, inString: false, escape: false };
+
+  function resetSetAllState() {
+    setAllState = { depth: 0, inString: false, escape: false };
+  }
+
+  function feedSetAllState(chunk) {
+    let complete = false;
+    for (let i = 0; i < chunk.length; i += 1) {
+      const ch = chunk[i];
+      if (setAllState.inString) {
+        if (setAllState.escape) {
+          setAllState.escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          setAllState.escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          setAllState.inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        setAllState.inString = true;
+        continue;
+      }
+      if (ch === '{' || ch === '[') {
+        setAllState.depth += 1;
+        continue;
+      }
+      if (ch === '}' || ch === ']') {
+        if (setAllState.depth > 0) {
+          setAllState.depth -= 1;
+          if (setAllState.depth === 0) complete = true;
+        }
+        continue;
+      }
+    }
+    return complete;
+  }
   const manifest = {
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
@@ -780,22 +824,25 @@ function createSimulator() {
       lines.push(JSON.stringify(config));
     } else if (line.startsWith('SET_ALL')) {
       const chunk = line.replace(/^SET_ALL\s+/, '');
+      if (!pendingSetAll) resetSetAllState();
       pendingSetAll += chunk;
+      const complete = feedSetAllState(chunk);
+      if (!complete || setAllState.depth !== 0 || setAllState.inString) {
+        return;
+      }
       try {
         const rawPayload = pendingSetAll;
         const payload = JSON.parse(rawPayload);
         pendingSetAll = '';
+        resetSetAllState();
         if (payload?.config) {
           Object.assign(config, payload.config);
         }
         const ackChecksum = payload?.checksum ?? (await digest(rawPayload));
         lines.push(JSON.stringify({ type: 'ack', checksum: ackChecksum }));
       } catch (err) {
-        if (err instanceof SyntaxError && err.message && err.message.includes('Unexpected end')) {
-          // Wait for the remaining chunks before deciding whether the payload is broken.
-          return;
-        }
         pendingSetAll = '';
+        resetSetAllState();
         lines.push(JSON.stringify({ type: 'error', message: err.message }));
       }
     } else if (line.startsWith('PING')) {
@@ -1258,7 +1305,11 @@ export function createRuntime({
       const job = outboundQueue.shift();
       try {
         const now = performance.now();
-        const wait = Math.max(0, DEFAULT_DEBOUNCE - (now - lastSend));
+        // When the simulator drives the transport we can skip the inter-frame
+        // debounce so the Playwright harness finishes before the ACK timer
+        // expires; real hardware keeps the conservative DEFAULT_DEBOUNCE.
+        const debounce = useSimulator ? 0 : DEFAULT_DEBOUNCE;
+        const wait = Math.max(0, debounce - (now - lastSend));
         if (wait) await new Promise((r) => setTimeout(r, wait));
         await transport.writeLine(job.line);
         lastSend = performance.now();
