@@ -14,6 +14,18 @@ const EF_FILTER_NAMES = [
   'HIGHPASS',
   'BANDPASS'
 ];
+const SLOT_TYPE_NAMES = [
+  'OFF',
+  'CC',
+  'Note',
+  'PitchBend',
+  'ProgramChange',
+  'Aftertouch',
+  'ModWheel',
+  'NRPN',
+  'RPN',
+  'SysEx'
+];
 const ARG_METHOD_NAMES = [
   'PLUS',
   'MIN',
@@ -311,21 +323,70 @@ function normalizeSlotArg(slot, efLimit = 6) {
     methodIndex = ARG_METHOD_NAMES.indexOf(arg.method_name);
   }
   if (methodIndex < 0) methodIndex = defaults.method;
-  arg.method = clamp(methodIndex, 0, ARG_METHOD_NAMES.length - 1);
+  arg.method = clamp(Math.round(methodIndex), 0, ARG_METHOD_NAMES.length - 1);
   arg.method_name = ARG_METHOD_NAMES[arg.method] || defaults.method_name;
-  const followerMax = Math.max(0, efLimit - 1);
-  arg.sourceA = clamp(Number.isFinite(Number(arg.sourceA)) ? Number(arg.sourceA) : defaults.sourceA, 0, followerMax || 0);
-  arg.sourceB = clamp(Number.isFinite(Number(arg.sourceB)) ? Number(arg.sourceB) : defaults.sourceB, 0, followerMax || 0);
+  const sourceA = Number.isFinite(Number(arg.sourceA)) ? Math.round(Number(arg.sourceA)) : defaults.sourceA;
+  const sourceB = Number.isFinite(Number(arg.sourceB)) ? Math.round(Number(arg.sourceB)) : defaults.sourceB;
+  arg.sourceA = sourceA;
+  arg.sourceB = sourceB;
   return arg;
 }
 
 function normalizeSlotConfig(slot, efLimit = 6) {
-  const next = slot && typeof slot === 'object' ? { ...slot } : {};
-  next.ef = normalizeSlotEnvelope(next);
-  next.efIndex = Number.isFinite(Number(next.efIndex)) ? Number(next.efIndex) : next.ef.index;
-  if (!Number.isFinite(Number(next.efIndex))) next.efIndex = next.ef.index;
-  next.arg = normalizeSlotArg(next, efLimit);
-  return next;
+  const source = slot && typeof slot === 'object' ? slot : {};
+  const efMax = Math.max(-1, Math.round(Number.isFinite(Number(efLimit)) ? Number(efLimit) - 1 : 5));
+  const typeCandidate =
+    typeof source.type === 'string'
+      ? source.type
+      : typeof source.type_name === 'string'
+      ? source.type_name
+      : null;
+  const type = SLOT_TYPE_NAMES.includes(typeCandidate) ? typeCandidate : 'OFF';
+
+  const midiChannelCandidate = Number(source.midiChannel ?? source.channel);
+  const midiChannel = Number.isFinite(midiChannelCandidate)
+    ? clamp(Math.round(midiChannelCandidate), 1, 16)
+    : 1;
+
+  const dataCandidate = Number(source.data1 ?? source.cc ?? source.note ?? source.value);
+  const data1 = Number.isFinite(dataCandidate) ? clamp(Math.round(dataCandidate), 0, 127) : 0;
+
+  const efIndexCandidate = Number(source.efIndex ?? source.ef_index ?? source.ef?.index);
+  const efIndex = Number.isFinite(efIndexCandidate)
+    ? clamp(Math.round(efIndexCandidate), -1, Math.max(-1, efMax))
+    : -1;
+
+  const ef = normalizeSlotEnvelope(source);
+  ef.index = efIndex;
+
+  const activeCandidate = source.active ?? source.enabled;
+  const active = typeof activeCandidate === 'boolean' ? activeCandidate : Boolean(activeCandidate);
+
+  const potCandidate = source.pot;
+  let pot;
+  if (typeof potCandidate === 'boolean') pot = potCandidate;
+  else if (typeof potCandidate === 'number') pot = potCandidate !== 0;
+  else if (typeof potCandidate === 'string') pot = potCandidate === 'true' || potCandidate === '1';
+  else pot = Boolean(potCandidate);
+
+  const arg = normalizeSlotArg(source, efLimit);
+
+  const normalized = { type, midiChannel, data1, efIndex, ef, active, pot, arg };
+
+  const label = typeof source.label === 'string' ? source.label : undefined;
+  if (label !== undefined) normalized.label = label;
+
+  const takeoverCandidate = source.takeover;
+  if (typeof takeoverCandidate === 'boolean') normalized.takeover = takeoverCandidate;
+  else if (typeof takeoverCandidate === 'number') normalized.takeover = takeoverCandidate !== 0;
+
+  let sysexTemplate = source.sysexTemplate ?? source.sysex_template;
+  if (typeof sysexTemplate === 'string') {
+    sysexTemplate = sysexTemplate.trim().slice(0, 128);
+    normalized.sysexTemplate = sysexTemplate;
+  }
+
+  return normalized;
 }
 
 function normalizeConfig(config, manifest = {}) {
