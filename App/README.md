@@ -64,7 +64,7 @@ Need proof the simulator flow hasn’t rotted without booting Chrome manually? R
 npm --prefix App test
 ```
 
-That spins up a tiny static server, launches Playwright’s headless Chromium, and imports the real `runtime.js` + `views/benzknobz.js`. The script walks through the README workflows—arming the simulator, driving the staged diff validator, forcing an ACK mismatch to trigger rollback, and finally flipping the simulator back off. When the test passes you know WebSerial ergonomics survived without babysitting a browser window.
+That spins up a tiny static server, launches Playwright’s headless Chromium, and imports the real `runtime.js` + `views/benzknobz.js`. The script walks through the README workflows—arming the simulator, driving the staged diff validator, forcing an ACK mismatch to trigger rollback, rewriting the manifest on the fly to rehearse the migration dialog, and finally flipping the simulator back off once a clean apply lands. When the test passes you know WebSerial ergonomics (and the migration guardrails) survived without babysitting a browser window.
 
 ## Troubleshooting
 

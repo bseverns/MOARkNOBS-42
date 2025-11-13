@@ -10,7 +10,7 @@ This repo runs tests in layers, from polite unit checks to full-on hardware cage
 | Unity smoke tests | `pio test -e teensy40_unity` | Teensy 4.0 with USB cable | Exercises firmware logic with Unity harness and Serial1 shim. |
 | Manual firmware sketches | `pio run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc. |
 | Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
-| Future black-box trials | `system_test/*` (coming soon) | Controller + bridge talking | Automated “kick the hardware” flows when the scripts land. |
+| System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC ↔ firmware handshake, slot poke, and keep-alive proof with artifact logs. |
 
 ## Bench RTL via DAW loop
 
@@ -174,27 +174,39 @@ The tests intentionally mock a missing serial port to prove the CLI doesn’t ex
 
 Want to iterate quickly? `npm test -- --watch` reruns on file changes.
 
-## Real hardware gauntlet (`bridge/` + future `system_test/`)
+## Real hardware gauntlet (`bridge/` + `firmware/system_test/`)
 
-When you need to prove the whole stack plays nice, you move up to full-system tests. These expect real hardware **and** the Node bridge to be awake.
+When you need to prove the whole stack plays nice, you move up to the full-system runner. It expects real hardware **and** the Node bridge to be awake, then drives the OSC loops the docs keep promising.
 
-### Today’s manual flow
+### Scripted flow (no more "coming soon")
 
-```bash
-cd firmware
-pio run -e teensy40_full_system -t upload
-cd ../bridge
-node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000
-# ...run system_test scripts once the bridge is live...
-```
+1. Flash the Teensy with the full-system firmware so the bridge sees every subsystem:
 
-While the `system_test/` directory is still a sketchpad, this is how you can dry-run upcoming flows: flash the full-system firmware, light up the bridge on the right serial port, then execute whichever scripts you’re building. Capture console output and, if possible, video of the hardware reaction—future QA scripts will rely on that data.
+   ```bash
+   pio run -d firmware -e teensy40_full_system -t upload
+   ```
+
+2. Install bridge dependencies if you haven't already:
+
+   ```bash
+   npm --prefix bridge ci
+   ```
+
+3. Kick off the orchestrator from the repo root. It spawns the bridge, waits for the firmware handshake, slings an OSC command, and watches the telemetry stream before shutting everything down again:
+
+   ```bash
+   node firmware/system_test/mn42_fullstack_runner.js \
+     --serial /dev/ttyACM0 \
+     --report logs/system-test.json | tee logs/system-test.log
+   ```
+
+   Override serial or OSC ports with flags/env vars when your bench rig isn’t on the defaults. The command exits non-zero when any scenario flakes and writes both JSON + text logs so CI (or your lab notebook) can archive the receipts.
 
 ### Environment expectations
 
 - `teensy40_full_system` – firmware build that exposes every subsystem and respects the USB MIDI + Serial combo used in production.
-- Node 18+ with `mn42_bridge.js` talking to the board on `/dev/ttyACM0` (or your platform equivalent).
-- Once `system_test/` lands, assume it will call into the running bridge via OSC or WebSerial to poke the device.
+- Node 18+ with the bridge binaries installed. The runner shells out to `node bridge/mn42_bridge.js`, so make sure that CLI can reach your Teensy on `/dev/ttyACM0` (or whatever `TEST_PORT` points at).
+- Real hardware: buttons, LEDs, pots, and EEPROM all get exercised. If the runner times out, fall back to the legacy `test_*.cpp` sketches in the same directory to troubleshoot individual subsystems before re-running the automation.
 
-Run the full-system layer before releases or any time hardware or bridge changes. It’s the last line of defense before you haul gear on stage. Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place.
+Run the full-system layer before releases or any time hardware or bridge changes. It’s the last line of defense before you haul gear on stage. Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place—and now they leave a neat paper trail in `logs/system-test.*` every time they do it.
 

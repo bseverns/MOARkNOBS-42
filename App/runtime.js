@@ -654,6 +654,51 @@ function createSimulator() {
   let index = 0;
   const lines = [];
   let resolver;
+  let pendingSetAll = '';
+  // Track aggregate parser state so multi-frame SET_ALL payloads can be
+  // reconstructed without relying on JSON.parse throwing "Unexpected end".
+  let setAllState = { depth: 0, inString: false, escape: false };
+
+  function resetSetAllState() {
+    setAllState = { depth: 0, inString: false, escape: false };
+  }
+
+  function feedSetAllState(chunk) {
+    let complete = false;
+    for (let i = 0; i < chunk.length; i += 1) {
+      const ch = chunk[i];
+      if (setAllState.inString) {
+        if (setAllState.escape) {
+          setAllState.escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          setAllState.escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          setAllState.inString = false;
+        }
+        continue;
+      }
+      if (ch === '"') {
+        setAllState.inString = true;
+        continue;
+      }
+      if (ch === '{' || ch === '[') {
+        setAllState.depth += 1;
+        continue;
+      }
+      if (ch === '}' || ch === ']') {
+        if (setAllState.depth > 0) {
+          setAllState.depth -= 1;
+          if (setAllState.depth === 0) complete = true;
+        }
+        continue;
+      }
+    }
+    return complete;
+  }
   const manifest = {
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
@@ -778,13 +823,26 @@ function createSimulator() {
     } else if (line.startsWith('GET_CONFIG')) {
       lines.push(JSON.stringify(config));
     } else if (line.startsWith('SET_ALL')) {
+      const chunk = line.replace(/^SET_ALL\s+/, '');
+      if (!pendingSetAll) resetSetAllState();
+      pendingSetAll += chunk;
+      const complete = feedSetAllState(chunk);
+      if (!complete || setAllState.depth !== 0 || setAllState.inString) {
+        return;
+      }
       try {
-        const payload = JSON.parse(line.replace(/^SET_ALL\s+/, ''));
+        const rawPayload = pendingSetAll;
+        const payload = JSON.parse(rawPayload);
+        pendingSetAll = '';
+        resetSetAllState();
         if (payload?.config) {
           Object.assign(config, payload.config);
         }
-        lines.push(JSON.stringify({ type: 'ack', checksum: payload?.checksum || 'sim' }));
+        const ackChecksum = payload?.checksum ?? (await digest(rawPayload));
+        lines.push(JSON.stringify({ type: 'ack', checksum: ackChecksum }));
       } catch (err) {
+        pendingSetAll = '';
+        resetSetAllState();
         lines.push(JSON.stringify({ type: 'error', message: err.message }));
       }
     } else if (line.startsWith('PING')) {
@@ -843,6 +901,10 @@ export function createRuntime({
   let seq = 0;
   let lastKnownChecksum = null;
   let potGuard = new Set();
+  // Stash ack frames so the apply waiter can drain them even if the device
+  // answers before we wire up the listener (the simulator is especially zippy
+  // here).
+  const ackQueue = [];
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -1024,7 +1086,7 @@ export function createRuntime({
       return;
     }
     if (msg.type === 'ack') {
-      emit('ack', msg);
+      queueAck(msg);
       return;
     }
     if (msg.type === 'error') {
@@ -1038,6 +1100,40 @@ export function createRuntime({
     if (!queuedTelemetry) return;
     emit('telemetry', queuedTelemetry);
     queuedTelemetry = null;
+  }
+
+  function queueAck(msg) {
+    if (!msg || typeof msg !== 'object') return;
+    let ackMsg = msg;
+    if (hooks?.interceptAck) {
+      // Playwright drills flip this hook to poison or drop the next ack without
+      // rewriting the transport plumbing mid-flight.
+      try {
+        const candidate = hooks.interceptAck({ ...msg });
+        if (candidate === null) return;
+        if (candidate !== undefined) ackMsg = candidate;
+      } catch (err) {
+        console.error('ack intercept error', err);
+        ackMsg = msg;
+      }
+    }
+    if (!ackMsg || typeof ackMsg !== 'object') return;
+    ackQueue.push(ackMsg);
+    emit('ack', ackMsg);
+  }
+
+  function takeAck(checksum) {
+    if (!ackQueue.length) return null;
+    for (let i = 0; i < ackQueue.length; i += 1) {
+      const candidate = ackQueue[i];
+      const candidateChecksum = candidate?.checksum;
+      const hasChecksum = typeof candidateChecksum === 'string' && candidateChecksum.length > 0;
+      const matches = !hasChecksum || !checksum || candidateChecksum === checksum;
+      ackQueue.splice(i, 1);
+      if (!matches) return false;
+      return true;
+    }
+    return null;
   }
 
   function applyConfigPatch(patch) {
@@ -1247,7 +1343,11 @@ export function createRuntime({
       const job = outboundQueue.shift();
       try {
         const now = performance.now();
-        const wait = Math.max(0, DEFAULT_DEBOUNCE - (now - lastSend));
+        // When the simulator drives the transport we can skip the inter-frame
+        // debounce so the Playwright harness finishes before the ACK timer
+        // expires; real hardware keeps the conservative DEFAULT_DEBOUNCE.
+        const debounce = useSimulator ? 0 : DEFAULT_DEBOUNCE;
+        const wait = Math.max(0, debounce - (now - lastSend));
         if (wait) await new Promise((r) => setTimeout(r, wait));
         await transport.writeLine(job.line);
         lastSend = performance.now();
@@ -1308,22 +1408,19 @@ export function createRuntime({
   }
 
   async function waitForAck(checksum) {
-    return new Promise((resolve, reject) => {
+    const immediate = takeAck(checksum);
+    if (immediate !== null) return immediate;
+    return new Promise((resolve) => {
       const timeout = setTimeout(() => {
         off();
         resolve(false);
       }, ackTimeout);
-      const off = on('ack', (msg) => {
-        if (!msg) return;
-        if (msg.checksum && checksum && msg.checksum !== checksum) {
-          clearTimeout(timeout);
-          off();
-          resolve(false);
-          return;
-        }
+      const off = on('ack', () => {
+        const queued = takeAck(checksum);
+        if (queued === null) return;
         clearTimeout(timeout);
         off();
-        resolve(true);
+        resolve(queued);
       });
     });
   }
