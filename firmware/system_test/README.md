@@ -4,35 +4,59 @@ Welcome to the gauntlet. This folder is where the firmware proves it can survive
 These are **hardware-in-the-loop** tests — they don't fake the MCU or the peripherals.
 We flash the real board and make sure the buttons, LEDs, EEPROM and friends actually do their job.
 
+## OSC↔firmware rodeo (pulled from [`docs/TESTING.md`](../../docs/TESTING.md))
+
+`docs/TESTING.md` keeps teasing the "future black-box trials" that lean on OSC + WebSerial, so we sketched the drill before
+you wire up scripts. Think of these as end-to-end stories the automated runner will rehearse:
+
+1. **Handshake & heartbeat** – `mn42_bridge.js` should auto-fire `HELLO`, wait for the board’s `{"hello":"mn42"}` reply, and
+   stream `/mn42/slots` + `/mn42/envelopes` snapshots. No stream, no party.
+2. **OSC command loop** – sling `/mn42/cmd` with `{ "cmd": "SET_POT", "slot": N, "value": V }`. The bridge must validate the
+   JSON, push it over WebSerial, and the firmware should report the new value in the next `/mn42/slots` burst.
+3. **Keep-alive sanity** – once streaming, periodic snapshots should keep landing without re-sending `HELLO`. If packets stop,
+   the bridge should whine in its stdout and attempt a reconnect.
+
+These checkpoints match the spirit of the "Real hardware gauntlet" section: the scripts aren't just poking APIs, they're
+proving the board, bridge, and OSC stack stay in lockstep.
+
 ## What's inside
 
-Each `test_*.cpp` file boots a slim sketch that hammers a subsystem:
+- `mn42_fullstack_runner.js` – Node-based system smoke test that orchestrates the OSC ↔ bridge ↔ firmware handshake above.
+  Feed it a Teensy running `teensy40_full_system` and it will log which scenarios landed.
+- `test_*.cpp` – legacy manual sketches you can still flash for subsystem debugging until every edge case is automated.
+- `TestHelpers.cpp` – shared glue for those sketches.
 
-- `test_mainSystem.cpp` – full-stack slapdown covering long presses, EEPROM sanity and MIDI plumbing.
-- `test_button_manager.cpp` – makes the button grid earn its keep.
-- `test_display_manager.cpp` – pushes pixels and checks the OLED doesn't ghost out.
-- `test_led_manager.cpp` – runs the LED driver through color and brightness hoops.
-- `test_potentiometer_manager.cpp` – confirms the knobs report honest values.
+## Running the full-stack script
 
-Shared helpers live in `TestHelpers.cpp`; tweak them if your rig needs extra scaffolding.
+1. Flash the hardware with the full system firmware:
 
-## Running a test
+   ```bash
+   pio run -d firmware -e teensy40_full_system -t upload
+   ```
 
-Pick an environment from `platformio.ini` that matches the file you're poking. Examples:
+2. Install bridge deps if you haven’t already:
 
-```bash
-# full integration sweep
-pio run -d firmware -e teensy40_full_system
+   ```bash
+   npm --prefix bridge ci
+   ```
 
-# EEPROM persistence grinder
-pio run -d firmware -e teensy40_eeprom_persistence
-```
+3. Fire the runner (it spawns the bridge for you). Override ports via flags or env vars if needed:
 
-Each build uploads the sketch to the Teensy 4.0. Crack open a serial monitor on **Serial1** and watch the Unity output belt out test results.
+   ```bash
+   node firmware/system_test/mn42_fullstack_runner.js \
+     --serial /dev/ttyACM0 \
+     --osc-out 10000 \
+     --osc-in 10001 \
+     --report logs/system-test.json | tee logs/system-test.log
+   ```
 
-## Why bother?
+   It exits non-zero if any OSC↔firmware scenario craters. Reports capture both the story (JSON) and the raw log so CI can hoard
+   artifacts.
 
-Unit tests catch logic bugs, but these brutes uncover the "oops, forgot the pull-up" disasters.
-Run them anytime the hardware changes or before you call the prototype "done".
+## When to reach for the older sketches
+
+Those `test_*.cpp` binaries still have a place when you’re chasing electrical gremlins—buttons, LEDs, or the envelope follower
+baseline. Use `pio run -d firmware -e teensy40_eeprom_persistence` and friends for deep dives, then pivot back to the automated
+runner once the solder smoke clears.
 
 Rock it, break it, then make it better.
