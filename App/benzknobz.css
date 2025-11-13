@@ -351,6 +351,11 @@ button:not(:disabled):focus-visible {
   letter-spacing: 0.1em;
 }
 
+#dirty-badge[hidden],
+#diff-panel[hidden] {
+  display: none !important;
+}
+
 #status {
   display: grid;
   grid-template-columns: auto auto;
