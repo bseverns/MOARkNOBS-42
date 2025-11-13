@@ -64,6 +64,10 @@ const sharedResizeObserver =
     : null;
 
 const boot = () => {
+  if (typeof document === 'undefined') return;
+  const docRoot = document.documentElement;
+  if (docRoot?.dataset?.mn42Booted === 'true') return;
+  if (docRoot) docRoot.dataset.mn42Booted = 'true';
   const statusEl = document.getElementById('status');
   const statusLabel = document.getElementById('status-label');
   const statusMessage = statusEl?.querySelector('.status-message');
@@ -169,12 +173,24 @@ const boot = () => {
     setStatus('warn', 'Rolled back', 'Local edits were discarded.');
   });
 
-  simulatorToggle?.addEventListener('click', () => {
-    const toggled = simulatorToggle.classList.toggle('active');
-    runtime.useSimulator(toggled);
-    simulatorToggle.textContent = toggled ? 'Stop simulator' : 'Start simulator';
-    setStatus(toggled ? 'ok' : 'warn', toggled ? 'Simulator armed' : 'Simulator idle', toggled ? 'Replay frames without hardware.' : 'Connect to the physical deck.');
-  });
+  if (simulatorToggle) {
+    simulatorToggle.setAttribute('aria-pressed', simulatorToggle.classList.contains('active') ? 'true' : 'false');
+  }
+
+  if (simulatorToggle && !simulatorToggle.dataset.booted) {
+    simulatorToggle.dataset.booted = 'true';
+    simulatorToggle.addEventListener('click', () => {
+      const toggled = simulatorToggle.classList.toggle('active');
+      runtime.useSimulator(toggled);
+      simulatorToggle.textContent = toggled ? 'Stop simulator' : 'Start simulator';
+      simulatorToggle.setAttribute('aria-pressed', toggled ? 'true' : 'false');
+      setStatus(
+        toggled ? 'ok' : 'warn',
+        toggled ? 'Simulator armed' : 'Simulator idle',
+        toggled ? 'Replay frames without hardware.' : 'Connect to the physical deck.'
+      );
+    });
+  }
 
   slotContainer?.addEventListener('keydown', (event) => {
     if (!slotState.slots.length) return;
