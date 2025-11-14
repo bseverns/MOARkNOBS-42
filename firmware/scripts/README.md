@@ -4,7 +4,8 @@ This is the broom closet where we stash little Python gremlins that tweak Platfo
 
 ## `deprecated_copy_flag.py`
 
-PlatformIO slurps in this script via `extra_scripts = pre:scripts/deprecated_copy_flag.py` in `platformio.ini`. Once loaded, it calls:
+PlatformIO slurps in this script via `extra_scripts = pre:scripts/deprecated_copy_flag.py` in `firmware/platformio.ini`.
+That's the only "real" project file—the repo-root `platformio.ini` is just a shim that punts PlatformIO down into `firmware/` before any of the heavy lifting starts. Fire `pio` from inside `firmware/` (or use `pio -d firmware …` from anywhere) and the relative path lands right back on this file, so there's only one helper left to maintain. When the hook runs it simply calls:
 
 ```python
 env.Append(CXXFLAGS=["-Wno-deprecated-copy"])
