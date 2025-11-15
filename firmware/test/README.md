@@ -109,7 +109,7 @@ That env sets `test_build_src = true`, but we keep the haul lean with a `build_s
 
 ### VS Code's flaky build staging
 
-If VS Code yells about `firmware/test/DisplayManagerStub.cpp` and a missing `.sconsign311.dblite`, that's SCons trying to log its dependency cache before PlatformIO finished birthing the `.pio/build/<env>` directory. We now strong-arm that folder into existence in `firmware/scripts/deprecated_copy_flag.py` (peek [../scripts/README.md](../scripts/README.md) for the gritty details), but if you see the error again, nuke `.pio/` and rerun `pio test -e teensy40_unity` from `firmware/` so the script can repave the path.
+If VS Code yells about `firmware/test/DisplayManagerStub.cpp` and a missing `.sconsign311.dblite`, that's SCons trying to log its dependency cache before PlatformIO finished birthing the `.pio/build/<env>` directory. We now strong-arm that folder into existence in `firmware/scripts/deprecated_copy_flag.py` (peek [`firmware/scripts/README.md`](../scripts/README.md) for the gritty details), but if you see the error again, nuke `.pio/` and rerun `pio test -e teensy40_unity` from `firmware/` so the script can repave the path.
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.
