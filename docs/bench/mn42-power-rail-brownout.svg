@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">MN42 Power Rail Brownout Diagram</title>
+  <desc id="desc">Annotated sketch showing a stable USB input, a sagging 3V3 regulator rail and a flickering status LED.</desc>
+  <rect width="960" height="600" fill="#111"/>
+  <rect x="40" y="40" width="880" height="520" fill="#1b1b1b" stroke="#eee" stroke-width="4"/>
+  <text x="60" y="90" fill="#ffcb4d" font-family="'DejaVu Sans', Arial, sans-serif" font-size="36">Power Rail Woes — Browned-Out Core</text>
+  <text x="60" y="140" fill="#e0e0e0" font-family="'DejaVu Sans', Arial, sans-serif" font-size="22">Bench supply sits at 5V, but the MN42 regulator sags whenever the LEDs gulp current.</text>
+  <text x="60" y="172" fill="#e0e0e0" font-family="'DejaVu Sans', Arial, sans-serif" font-size="22">Watch for the 3V3 rail collapsing below 2.4V — that is the brownout gremlin.</text>
+  <rect x="80" y="210" width="200" height="140" fill="#1f2a3a" stroke="#ff7b7b" stroke-width="4" rx="12"/>
+  <text x="95" y="250" fill="#ff7b7b" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">USB input:</text>
+  <text x="95" y="280" fill="#ff7b7b" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">5.01 V steady.</text>
+  <text x="95" y="310" fill="#ff7b7b" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Cable and switch OK.</text>
+  <rect x="320" y="210" width="560" height="200" fill="#152027" stroke="#7bafff" stroke-width="4" rx="12"/>
+  <text x="340" y="250" fill="#7bafff" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Oscilloscope capture:</text>
+  <text x="340" y="280" fill="#7bafff" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">3V3 rail droops to 2.2 V during LED refresh.</text>
+  <text x="340" y="310" fill="#7bafff" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Ripple > 600 mV. Replace regulator or add bulk capacitance.</text>
+  <rect x="200" y="430" width="300" height="100" fill="#291f29" stroke="#ffa7f7" stroke-width="4" rx="12"/>
+  <text x="220" y="470" fill="#ffa7f7" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Status LED flickers dimly.</text>
+  <text x="220" y="500" fill="#ffa7f7" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">That&apos;s the MCU browning out, not a dead diode.</text>
+  <path d="M280 210 L280 180 L600 180" stroke="#ff7b7b" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M500 410 L500 380" stroke="#7bafff" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M350 430 L350 400 L220 400 L220 350" stroke="#ffa7f7" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ff7b7b"/>
+    </marker>
+  </defs>
+</svg>
