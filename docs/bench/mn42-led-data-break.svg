@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="title desc">
+  <title id="title">MN42 LED Data Break Diagram</title>
+  <desc id="desc">Annotated sketch showing a LED strip with an unlit pixel caused by a broken data line.</desc>
+  <rect width="960" height="600" fill="#080810"/>
+  <rect x="40" y="40" width="880" height="520" fill="#111" stroke="#fdfdfd" stroke-width="4"/>
+  <text x="60" y="90" fill="#ffa6ff" font-family="'DejaVu Sans', Arial, sans-serif" font-size="36">LED Data Break — Orphaned Pixel Mid-Chain</text>
+  <text x="60" y="140" fill="#e6e6e6" font-family="'DejaVu Sans', Arial, sans-serif" font-size="22">First ten pixels vibe, pixel eleven sulks.</text>
+  <text x="60" y="172" fill="#e6e6e6" font-family="'DejaVu Sans', Arial, sans-serif" font-size="22">Scope probe shows the data edge collapsing after a cracked solder joint.</text>
+  <rect x="80" y="220" width="440" height="160" fill="#1a1f33" stroke="#6fffd8" stroke-width="4" rx="12"/>
+  <text x="100" y="260" fill="#6fffd8" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Pixels 1–10 blasting rainbow.</text>
+  <text x="100" y="290" fill="#6fffd8" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Power rails holding 5.03 V / 3.31 V.</text>
+  <rect x="560" y="220" width="160" height="160" fill="#331a1a" stroke="#ff6f6f" stroke-width="4" rx="12"/>
+  <text x="580" y="260" fill="#ff6f6f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Pixel 11 dim flash,</text>
+  <text x="580" y="290" fill="#ff6f6f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">then darkness.</text>
+  <rect x="760" y="180" width="140" height="220" fill="#222" stroke="#ffe46f" stroke-width="4" rx="12"/>
+  <text x="780" y="220" fill="#ffe46f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Data probe:</text>
+  <text x="780" y="250" fill="#ffe46f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Edges bite short,</text>
+  <text x="780" y="280" fill="#ffe46f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">amplitude 1.2 V.</text>
+  <text x="780" y="310" fill="#ffe46f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Data pad joint cracked.</text>
+  <text x="780" y="340" fill="#ffe46f" font-family="'DejaVu Sans', Arial, sans-serif" font-size="20">Reflow or jumper wire.</text>
+  <defs>
+    <marker id="arrow-cyan" markerWidth="12" markerHeight="12" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#6fffd8"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ff6f6f"/>
+    </marker>
+    <marker id="arrow-gold" markerWidth="12" markerHeight="12" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#ffe46f"/>
+    </marker>
+  </defs>
+  <path d="M300 220 L300 180 L460 180" stroke="#6fffd8" stroke-width="4" fill="none" marker-end="url(#arrow-cyan)"/>
+  <path d="M640 220 L640 160 L760 160" stroke="#ff6f6f" stroke-width="4" fill="none" marker-end="url(#arrow-red)"/>
+  <path d="M830 180 L830 140 L940 140" stroke="#ffe46f" stroke-width="4" fill="none" marker-end="url(#arrow-gold)"/>
+</svg>
