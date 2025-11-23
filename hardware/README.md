@@ -27,20 +27,14 @@ Need a deeper schematic fix? The [systemflow docs](../docs/sketch/systemFlow/hw/
 
 ## Specs
 
-- **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show.
-  > **Why this part?** Tiny, fast and already speaks USB MIDI. The [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) shows pinout, power limits, and how to flash the module without bricking it.
-- **Addressable LEDs**: 52 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots.
-  > **Why this part?** WS2812s daisy-chain over a single pin and scream in full RGB. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) covers timing voodoo and power decoupling.
-- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV (+5V).
-  > **Why this part?** A dirt-cheap MCP6002 op-amp rectifies and smooths the signal so the Teensy can sniff envelope peaks. SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) walks through precision rectifiers like the one on this board.
-- **Key Matrix MUX**: Two CD74HC4067s funnel forty‑two switches into a single ADC read.
-  > **Why this part?** Saves pins and sanity. The [16-Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to prototype the trick with a breakout before you spin copper.
-- **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A.
-  > **Why this part?** Separate rails keep LEDs from sagging the logic. SparkFun's [Fuse Tutorial](https://learn.sparkfun.com/tutorials/fuses) explains why we protect each branch.
-- **MIDI I/O**: 5‑pin DIN plus 1/8" TRS Type‑A jacks wired in parallel.
-  > **Why this part?** A 6N138 optocoupler isolates MIDI IN so rogue gear doesn't fry the Teensy. SparkFun's [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) digs into DIN vs. TRS wiring and opto isolation.
+- **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show. [Why we picked it](./Parts.md#teensy-40).
+- **Addressable LEDs**: 52 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots. [Why we picked them](./Parts.md#ws2812-leds).
+- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV (+5 V). [Why the op-amp front-end looks this way](./Parts.md#mcp6002-op-amp).
+- **Key Matrix MUX**: Two CD74HC4067s funnel forty‑two switches into a single ADC read. [Why these muxes](./Parts.md#cd74hc4067-analog-mux).
+- **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A. [Why the split rails](./Parts.md#power-rails--fuses).
+- **MIDI I/O**: 5‑pin DIN plus 1/8" TRS Type‑A jacks wired in parallel. [Why the opto + TRS combo](./Parts.md#6n138-optocoupler).
 
-The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will.
+The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will, and grab the [Parts & Rationale](./Parts.md) doc when you need the deeper sourcing story.
 
 ## Directory Layout
 
