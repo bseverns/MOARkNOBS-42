@@ -15,3 +15,25 @@ Don't trust a build until it survives a gauntlet. Run the Unity tests and poke e
 ## Release Steps
 When the build is battle-tested, tag the code, pack the gerbers, and write up what changed so others can reproduce it. The [release guide](ReleaseGuide.md) spells out the full release grind.
 
+## Hands-on lab: tweak a slot, ship it, watch it scream
+
+The fastest way to learn the pipeline is to change something tiny and shove it through every stage. This lab keeps it spicy but beginner-proof—perfect for mentoring or self-study.
+
+1. **Edit a default in `firmware/src/`**
+   - Pop open [`firmware/src/ConfigManager.cpp`](../firmware/src/ConfigManager.cpp) and scroll to the slot defaults called out in the [Annotated Source Field Guide](../README.md#annotated-source-field-guide). Those `SlotARGConfig` and `SlotEnvelopePayload` defaults are where the checksum/rollback story begins.
+   - Nudge one of the default values (e.g., flip a `SlotARGConfig` method or tweak the `SlotEnvelopePayload` filter type) so you can spot the change downstream. Keep the edit small so you can track it end-to-end.
+
+2. **Compile + flash with the Quick Start incantation**
+   - From repo root, build and upload with: `pio run -t upload -d firmware -e teensy40_main`.
+   - Teensy on USB, PlatformIO on PATH—same ritual as the main [Quick Start](../README.md#quick-start). If the board is busy, kill any other serial monitors first.
+
+3. **Push the tweak over WebSerial (sim then hardware)**
+   - Launch the WebSerial configurator (see [docs/WebSerial.md](WebSerial.md)) and start in the simulator mode to confirm your edited default shows up. The simulator runs the same JSON schema but never touches hardware—great for sanity checks.
+   - Flip to the real device, hit `HELLO` → `GET_MANIFEST`, and let the app stream. Your changed slot should land with a fresh checksum; if the firmware rejects it, you’ll see rollback chatter in the console. That’s the ConfigManager guardrails doing their job.
+
+4. **Spy on the change stream over OSC**
+   - Fire up the bridge CLI: `node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000`.
+   - In another shell, watch the outbound updates: `oscdump 9000` (or `oscdump 9000 /mn42/slots` if you want to filter). Twist the slot in WebSerial and you’ll see the OSC patches echo live. If checksum validation rolls you back, the OSC stream shows the revert too.
+
+What you just proved: default tweak → firmware flash → WebSerial push with checksum/rollback → OSC telemetry. That’s the whole loop, no mysticism required.
+

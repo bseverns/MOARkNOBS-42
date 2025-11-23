@@ -136,7 +136,7 @@ For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/
 ## Quick Start
 
 Ready to shred? Here's the bare minimum to get the beast humming, provided you have the completed board in-hand.
-Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md).
+Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md)—and if you want a guided lap through the full pipeline, run the [slot tweak lab](docs/ProcessOverview.md#hands-on-lab-tweak-a-slot-ship-it-watch-it-scream).
 
 1. **Prep the dev rig**
    - `pip install -r requirements.txt`
