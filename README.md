@@ -22,7 +22,7 @@ folder for the gritty context, wiring diagrams, and experiments.
 | [docs/PinMap.md](docs/PinMap.md) | Every MCU pin's dirty secret |
 | [docs/EEPROMLayout.md](docs/EEPROMLayout.md) | Where config bytes crash at night |
 | [firmware/](firmware/README.md) | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
-| [hardware/](hardware/README.md) | Schematics, BOM and enclosure bits |
+| [hardware/](hardware/README.md) | Schematics, BOM, enclosure bits and the [Parts & Rationale](hardware/Parts.md) cheat sheet |
 | [bridge/](bridge/README.md) | Node.js shim that slings serial into OSC/WebMIDI |
 | [tools/](tools/README.md) | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md) |
 
@@ -89,14 +89,7 @@ the rig when you want to teach a different angle on pointers or data flow.
 
 ## Why these specific parts?
 
-> The silicon misfits that make this controller tick and be the magic little disco ball that it can be.
-
-- **Teensy 4.0** — 600 MHz ARM core with native USB MIDI. SparkFun's [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) walks through pinout, power rails, and flashing without bricking.
-- **CD74HC4067 analog mux** — collapses forty‑two buttons into one ADC read. The [16‑Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to fan-in a forest of switches and breadboard it before spinning copper.
-- **SN74HCT245 level shifter** — keeps the 5 V button grid and LED strip from punching the 3 V3 brain. SparkFun's [Logic Level Shifting 101](https://learn.sparkfun.com/tutorials/logic-level-shifting) explains the voltage‑translation sleight of hand.
-- **MCP6002 op‑amp** — rectifies and smooths incoming audio for the envelope followers. SparkFun's [Op-Amp Basics](https://learn.sparkfun.com/tutorials/op-amps/all) covers precision rectifiers and bias tricks.
-- **6N138 optocoupler** — gives MIDI IN its own electrical bubble. SparkFun's [MIDI Tutorial](https://learn.sparkfun.com/tutorials/midi-tutorial/all) breaks down current loops, DIN vs. TRS jacks, and why opto‑isolation matters.
-- **WS2812 LEDs** — one data pin, a riot of color on 52 diodes. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) dives into timing and power decoupling so you don't brown‑out the strip.
+The full part-by-part rant now lives in the [hardware Parts & Rationale](hardware/Parts.md) doc. Grab it when you want sourcing wisdom; stay here when you just need the vibe check.
 
 ## Diagram Dump
 
