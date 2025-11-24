@@ -89,7 +89,7 @@ the rig when you want to teach a different angle on pointers or data flow.
 
 ## Why these specific parts?
 
-The full part-by-part rant now lives in the [hardware Parts & Rationale](hardware/Parts.md) doc. Grab it when you want sourcing wisdom; stay here when you just need the vibe check.
+Chasing the SparkFun-backed part rationales? Skip down to the [docs index](docs/README.md#why-these-specific-parts) for the full bullet tour, then hit [hardware/Parts.md](hardware/Parts.md) when you want sourcing receipts.
 
 ## Diagram Dump
 
