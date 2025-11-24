@@ -92,9 +92,10 @@ By default the PDF lands in `docs/dist/MOARkNOBS-42-report.pdf`. Set `PDF_ENGINE
 if you prefer a different LaTeX backend than [Tectonic](https://tectonic-typesetting.github.io/).
 Pass an alternate output directory as the first argument if you want the PDF elsewhere.
 
-## Why these parts?
+## Why these specific parts?
 
-> Quick hits on why each chunk of silicon shows up and where SparkFun teaches the tricks.
+> Quick hits on why each chunk of silicon shows up and where SparkFun teaches the tricks. Longer sourcing diary still lives in
+> [../hardware/Parts.md](../hardware/Parts.md) when you want BOM-level receipts.
 
 - **Teensy 4.0** — horsepower with USB baked in. The [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) covers pinout, power, and programming basics.
 - **CD74HC4067 analog mux** — collapses 42 buttons into one ADC read. The [16‑Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to breadboard the trick.

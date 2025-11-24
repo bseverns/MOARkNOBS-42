@@ -89,7 +89,7 @@ the rig when you want to teach a different angle on pointers or data flow.
 
 ## Why these specific parts?
 
-Short answer: every component earned its slot because it behaves under demo abuse and makes the teaching story cleaner—Teensy 4.0 keeps MIDI honest, the mux tames forty-two buttons, the WS2812 strip supplies spectacle without tanking the MCU, and the fuses keep students from letting out the magic smoke; the long-form rant lives in [hardware/PartsRationale.md](hardware/PartsRationale.md) so this front page stays a breezy vibe check.
+Chasing the SparkFun-backed part rationales? Skip down to the [docs index](docs/README.md#why-these-specific-parts) for the full bullet tour, then hit [hardware/Parts.md](hardware/Parts.md) when you want sourcing receipts.
 
 ## Diagram Dump
 
