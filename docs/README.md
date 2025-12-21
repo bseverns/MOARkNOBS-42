@@ -20,13 +20,13 @@ Craving the bird's-eye view? The [systemflow docs](sketch/systemFlow/) rip the m
 - Headings descend one level at a time—no surprise teleporting from H1 to H4.
 - Code blocks and tables stay lightweight so zoom tools and high-contrast themes can rage without breaking layout.
 
-## Visual Quickies
+## PCB Gallery
 
-> Sketches that slap the architecture on a napkin so you don't have to squint at code.
+> Fast glamor shots live here so the hardware README can stay lean. Want the cadaver-level detail? The [sketch/](sketch/) folder holds every layer and subsystem sketch.
 
 ![Render of MOARkNOBS board showing component layout](sketch/MOAR_BOARD.png)
 
-Need to zoom past the glam shot? Dive into the raw CAD layers:
+Layer spelunking:
 
 ![PCB top-layer trace map](sketch/TopLayer.png)
 ![PCB bottom-layer trace map](sketch/BottomLayer.png)

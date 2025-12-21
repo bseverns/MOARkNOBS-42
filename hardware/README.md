@@ -11,11 +11,9 @@ flowchart TD
   Teensy --> EF[Envelope Inputs]
 ```
 
-![Top PCB layer with annotated traces](../docs/sketch/TopLayer.png)[^logic][^midi]
-
-![Bottom PCB layer showing ground pour and routing](../docs/sketch/BottomLayer.png)[^opamp]
-
 ![3D render of MOARkNOBS board with jacks and knobs](../docs/sketch/MOAR_BOARD.png)
+
+Want the whole glam squad—including top and bottom copper layers? Hit the [PCB gallery](../docs/README.md#pcb-gallery) or dive straight into [sketch/](../docs/sketch/).[^logic][^midi][^opamp]
 
 ## Accessibility
 
