@@ -69,6 +69,29 @@ Safety bumpers:
 
 The test suite (`cmd_validation.test.js`) hammers those limits—run `npm test` to watch bogus commands get choked out.
 
+## Message schema
+
+You asked for receipts; here's the contract the bridge enforces while it heckles everything else. The 128-byte guardrail above still rules all of these—oversized payloads go straight to the cutting room floor so you can fuzz fast without drowning in logs.
+
+### Outbound (bridge → OSC/MIDI)
+
+- `/mn42/slots` dumps `{ "slots": [42 integers between 0–127] }`. Slot 0 maps to CC0, slot 41 maps to CC41.
+- `/mn42/envelopes` dumps `{ "envelopes": [6 integers between 0–127] }`. Each index tracks an envelope follower and mirrors to MIDI CCs on channel 2.
+
+Quick hits:
+
+- Valid blast: `{ "slots": [0, 64, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }` (JSON length ~120 bytes, so it squeezes under the 128 cap.)
+- Rejected: `{ "envelopes": [0, 5, 9, 130, 4, 2] }` (value `130` busts the 0–127 range, so the bridge stays silent).
+
+### Inbound (OSC/MIDI → bridge → serial)
+
+- `/mn42/cmd` must include `cmd` (string), `slot` (integer 0–41), and `value` (integer 0–127). Anything missing or out of range dies before it ever hits the controller.
+
+Two samples to keep you honest:
+
+- Valid: `{ "cmd": "SET_POT", "slot": 2, "value": 99 }`
+- Rejected: `{ "cmd": "SET_POT", "slot": 99, "value": -1 }` (slot is out of bounds and the value is negative, so the bridge shrugs.)
+
 ## Teaching moment
 
 The bridge waits for `{"hello":"mn42"}` from the controller before it starts spewing data. Each JSON line from the serial port is parsed and shotgunned to both OSC and MIDI. Incoming OSC or MIDI messages get repackaged as JSON and fired back at the controller.
