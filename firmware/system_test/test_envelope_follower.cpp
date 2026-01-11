@@ -3,6 +3,7 @@
 #include "EnvelopeFollower.h"
 #include "PotentiometerManager.h"
 #include "TestHelpers.h"
+#include "Globals.h"
 
 // The envelope follower owns the LED vibe, so we sanity-check that flipping
 // between filter modes actually changes how a steady signal gets treated.
@@ -33,4 +34,20 @@ void test_filter_type_switching() {
     TEST_ASSERT_INT_WITHIN(10, 100, lp);
     // high-pass should murder DC
     TEST_ASSERT_LESS_THAN(10, hp);
+}
+
+void test_random_mode_respects_jitter_depth() {
+    auto pm = createPotentiometerManager();
+    EnvelopeFollower env(A0, &pm, 0);
+
+    g_jitterSettings.depth = 0.0f;
+    g_jitterSettings.smoothness = 0.5f;
+
+    env.setFilterType(EnvelopeFollower::RANDOM);
+    env.configureFilter(5000.0f, 4.0f);
+
+    for (int i = 0; i < 5; ++i) {
+        int out = env.processEnvelopeLevel(90);
+        TEST_ASSERT_EQUAL_INT(90, out);
+    }
 }

@@ -1,7 +1,7 @@
 #include "unity_config.h"
 #include <unity.h>
 
-#include <FastLED/platforms/arm/mxrt1062/wait_time_utils.h>
+#include "../lib/FastLED/platforms/arm/mxrt1062/wait_time_utils.h"
 
 // The Teensy 4 clockless drivers bail out when interrupts hog the bus for too
 // long. Historically, subtracting INTERRUPT_THRESHOLD from WAIT_TIME with

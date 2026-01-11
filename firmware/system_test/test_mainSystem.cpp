@@ -13,15 +13,18 @@ void test_calibration_offsets_survive_power_cycle();
 void test_brightness_and_color();
 void test_update_interval_round_trip();
 void test_filter_type_switching();
+void test_random_mode_respects_jitter_depth();
 void test_channel_and_cc();
 void test_long_press_requires_confirm();
 void test_double_press_ctrl2_cycles_midi_type();
+void test_jitter_combo_updates_settings();
 
 void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_long_press_detection);
     RUN_TEST(test_long_press_requires_confirm);
     RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
+    RUN_TEST(test_jitter_combo_updates_settings);
     RUN_TEST(corrupt_primary_valid_backup);
     RUN_TEST(corrupted_primary_and_backup);
     RUN_TEST(test_eeprom_recovery_after_power_cycle);
@@ -29,6 +32,7 @@ void setup() {
     RUN_TEST(test_brightness_and_color);
     RUN_TEST(test_update_interval_round_trip);
     RUN_TEST(test_filter_type_switching);
+    RUN_TEST(test_random_mode_respects_jitter_depth);
     RUN_TEST(test_channel_and_cc);
     UNITY_END();
 }

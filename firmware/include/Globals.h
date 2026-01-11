@@ -192,6 +192,15 @@ extern bool webSerialStreaming;
 extern int8_t velocityShift;      //!< -64..+63 shove applied to outgoing note velocity
 extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings a new note
 
+// Global Perlin jitter controls shared by arpeggiator + random EF filters.
+struct JitterSettings {
+    float depth;      //!< 0..1 scale applied to the noise amplitude
+    float smoothness; //!< 0..1 control over Perlin step smoothness
+};
+
+extern JitterSettings g_jitterSettings;
+extern bool g_jitterTuningActive;
+
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.
 // Wiring: C0->12, C1->13, C2->14, C3->15, C4->24, C5->25

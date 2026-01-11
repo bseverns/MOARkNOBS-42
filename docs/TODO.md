@@ -166,11 +166,6 @@ Formalize the “wiggle” helpers you’re already hinting at.
   - Allow mapping LFO outputs to slots similarly to EF (via config).  
   - Provide a minimal OLED indicator when LFO is active.
 
-- [ ] Perlin noise parameterization  
-  _Goal:_ Make the existing Perlin-powered jitter controllable.  
-  - Expose noise depth/smoothness for arp “random” shapes and any random EF filters as tunable parameters.  
-  - Map to a control path (e.g. holding a combo while turning a knob) and show a short status line (`Jitter: 0.35`).
-
 ---
 
 ### 6. Testing, Docs, and Meta

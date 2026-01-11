@@ -15,6 +15,7 @@
 #include "Arpeggiator.h"
 #include "WebSerial.h"
 #include <map>
+#include <cmath>
 
 // Scans the button matrix and direct control buttons. Results are fed into
 // DisplayManager, ConfigManager, EnvelopeFollower assignments and the
@@ -715,6 +716,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     const uint8_t maskCtrl3 = 1 << 3;
     const uint8_t maskCtrl4 = 1 << 4;
     const uint8_t maskCtrl5 = 1 << 5;
+    const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
 
     auto ensureActiveSlot = [&]() -> MIDISlot * {
         if (context.activePot >= NUM_SLOTS) {
@@ -724,14 +726,18 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         return &context.configManager.getSlot(context.activePot);
     };
 
-    // (0) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
-    if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
+    // (0) Ctrl0 + Ctrl3 + Ctrl4: Jitter tuning mode (handled in scanControlInputs)
+    if (pressedButtons == jitterMask) {
+        context.displayManager.displayStatus("Jitter Mode", 1000);
+    }
+    // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
+    else if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
         (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
         g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
         context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF",
                                              1500);
     }
-    // (1) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
+    // (2) Ctrl0 + Ctrl1: Cycle EF’s ARG method if in ARG mode
     else if ((pressedButtons & (maskCtrl0 | maskCtrl1)) == (maskCtrl0 | maskCtrl1)) {
         MIDISlot *slot = ensureActiveSlot();
         if (slot == nullptr) {
@@ -762,7 +768,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
     }
-    // (2) Ctrl0 + Ctrl2: Cycle ARG envelope pair
+    // (3) Ctrl0 + Ctrl2: Cycle ARG envelope pair
     else if ((pressedButtons & (maskCtrl0 | maskCtrl2)) == (maskCtrl0 | maskCtrl2)) {
         MIDISlot *slot = ensureActiveSlot();
         if (slot == nullptr) {
@@ -790,7 +796,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         streamSlotPatch(context.configManager, context.activePot);
         streamArgPatch(context.configManager);
     }
-    // (3) Ctrl3 + Ctrl4: Cycle light modes
+    // (4) Ctrl3 + Ctrl4: Cycle light modes
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4)) == (maskCtrl3 | maskCtrl4)) {
         static uint8_t currentLightMode = 0;
         currentLightMode = (currentLightMode + 1) % 4;
@@ -799,7 +805,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         sprintf(buf, "LightMode=%d", currentLightMode);
         context.displayManager.displayStatus(buf, 1500);
     }
-    // (4) Ctrl0 + Ctrl4: Enable EF and randomize settings
+    // (5) Ctrl0 + Ctrl4: Enable EF and randomize settings
     else if ((pressedButtons & (maskCtrl0 | maskCtrl4)) == (maskCtrl0 | maskCtrl4)) {
         if (!context.envelopeFollowMode) {
             context.envelopeFollowMode = true;
@@ -817,7 +823,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamEnvelopeAssignment(context.activePot, randomEF);
     }
-    // (5) Ctrl4 + Ctrl5: Set active slot to MIDI Note mode
+    // (6) Ctrl4 + Ctrl5: Set active slot to MIDI Note mode
     else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::Note);
         char buf[32];
@@ -825,7 +831,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (6) Ctrl3 + Ctrl5: Set active slot to Program Change
+    // (7) Ctrl3 + Ctrl5: Set active slot to Program Change
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::ProgramChange);
         char buf[32];
@@ -833,7 +839,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (7) Ctrl0 + Ctrl5: Set active slot to Pitch Bend
+    // (8) Ctrl0 + Ctrl5: Set active slot to Pitch Bend
     else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::PitchBend);
         char buf[32];
@@ -841,7 +847,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (8) Ctrl1 + Ctrl4: Set active slot to Aftertouch
+    // (9) Ctrl1 + Ctrl4: Set active slot to Aftertouch
     else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::Aftertouch);
         char buf[32];
@@ -849,13 +855,13 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (9) Ctrl1 + Ctrl5: Toggle MIDI clock output
+    // (10) Ctrl1 + Ctrl5: Toggle MIDI clock output
     else if ((pressedButtons & (maskCtrl1 | maskCtrl5)) == (maskCtrl1 | maskCtrl5)) {
         g_clockOutEnabled = !g_clockOutEnabled;
         context.displayManager.displayStatus(g_clockOutEnabled ? "CLK OUT ON" : "CLK OUT OFF",
                                              1000);
     }
-    // (10) Ctrl2 + Ctrl5: Set active slot to NRPN
+    // (11) Ctrl2 + Ctrl5: Set active slot to NRPN
     else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::NRPN);
         char buf[32];
@@ -863,7 +869,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (11) Ctrl1 + Ctrl3: Set active slot to RPN
+    // (12) Ctrl1 + Ctrl3: Set active slot to RPN
     else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::RPN);
         char buf[32];
@@ -871,7 +877,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (12) Ctrl0 + Ctrl3: Set active slot to SysEx
+    // (13) Ctrl0 + Ctrl3: Set active slot to SysEx
     else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::SysEx);
         char buf[32];
@@ -879,7 +885,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (13) Ctrl2 + Ctrl4: Toggle arpeggiator for active slot
+    // (14) Ctrl2 + Ctrl4: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
         if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
             arpeggiator.stop();
@@ -889,7 +895,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             context.displayManager.displayStatus("ARP ON", 1000);
         }
     }
-    // (14) Ctrl2 + Ctrl3: Increment arpeggiator base note
+    // (15) Ctrl2 + Ctrl3: Increment arpeggiator base note
     else if ((pressedButtons & (maskCtrl2 | maskCtrl3)) == (maskCtrl2 | maskCtrl3)) {
         MIDISlot &slot = context.configManager.getSlot(context.activePot);
         slot.arpNote = (slot.arpNote + 1) % 128;
@@ -899,7 +905,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         context.displayManager.displayStatus(buf, 1000);
         streamSlotPatch(context.configManager, context.activePot);
     }
-    // (15) Ctrl1 + Ctrl2: Cycle configuration profiles
+    // (16) Ctrl1 + Ctrl2: Cycle configuration profiles
     else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
         currentProfile = (currentProfile + 1) % 3;
         context.configManager.loadProfile(currentProfile);
@@ -973,6 +979,9 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             mask |= (1 << i);
         }
     }
+    const uint8_t jitterMask = (1 << 0) | (1 << 3) | (1 << 4);
+    bool jitterActive = (mask == jitterMask);
+    g_jitterTuningActive = jitterActive;
     static uint8_t lastMask = 0;
     if (mask != lastMask) {
         if (mask && (mask & (mask - 1))) { // more than one button pressed
@@ -987,6 +996,32 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         waitForMuxSettle();
         int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
         _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
+    }
+
+    if (jitterActive) {
+        float depth = Utility::scale(static_cast<float>(_ctrlPotValues[0]), 0.0f, 1023.0f, 0.0f, 1.0f);
+        float smooth = Utility::scale(static_cast<float>(_ctrlPotValues[1]), 0.0f, 1023.0f, 0.0f, 1.0f);
+        depth = constrain(depth, 0.0f, 1.0f);
+        smooth = constrain(smooth, 0.0f, 1.0f);
+
+        bool depthChanged = (_lastJitterDepth < 0.0f) || (fabsf(depth - _lastJitterDepth) >= 0.01f);
+        bool smoothChanged =
+            (_lastJitterSmoothness < 0.0f) || (fabsf(smooth - _lastJitterSmoothness) >= 0.01f);
+
+        g_jitterSettings.depth = depth;
+        g_jitterSettings.smoothness = smooth;
+
+        if (depthChanged) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Jitter: %.2f", depth);
+            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            _lastJitterDepth = depth;
+        } else if (smoothChanged) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Smooth: %.2f", smooth);
+            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            _lastJitterSmoothness = smooth;
+        }
     }
 }
 

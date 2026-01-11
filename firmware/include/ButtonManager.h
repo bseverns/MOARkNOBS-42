@@ -206,6 +206,8 @@ class ButtonManager {
     void cancelPendingConfirm(ButtonManagerContext &context);
     void startWarningForIndex(uint8_t index, ButtonManagerContext &context);
     int _ctrlPotValues[3] = {0};
+    float _lastJitterDepth = -1.0f;
+    float _lastJitterSmoothness = -1.0f;
 
     // Long‑press confirmation tracking
     static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net

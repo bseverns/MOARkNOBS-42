@@ -13,6 +13,7 @@ void test_external_callback_sets_root();
 void test_external_base_note_without_callback();
 void test_external_missing_inputs_falls_back_to_pot();
 void test_catches_up_when_ticks_pile_up();
+void test_random_shape_respects_jitter_depth();
 void test_lowpass_highpass_response();
 void test_system_report();
 void test_scoped_analog_provider_nesting();
@@ -84,6 +85,7 @@ void setup() {
     RUN_TEST(test_external_base_note_without_callback);
     RUN_TEST(test_external_missing_inputs_falls_back_to_pot);
     RUN_TEST(test_catches_up_when_ticks_pile_up);
+    RUN_TEST(test_random_shape_respects_jitter_depth);
     RUN_TEST(test_lowpass_highpass_response);
     RUN_TEST(test_system_report);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)

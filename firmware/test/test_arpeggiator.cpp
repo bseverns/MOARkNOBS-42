@@ -240,3 +240,29 @@ void test_catches_up_when_ticks_pile_up() {
     TEST_ASSERT_EQUAL_UINT32(beforeTx + 2, midi._txCount); // two notes fired to catch up
     TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastNoteOn);        // second note in the UP pattern
 }
+
+void test_random_shape_respects_jitter_depth() {
+    MidiUsbGuard guard;
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(8);
+    arp.setShape(Arpeggiator::RANDOM);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    g_jitterSettings.depth = 0.0f;
+    g_jitterSettings.smoothness = 0.5f;
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+
+    auto pots = makePots();
+    pots.potLastValues[0] = 0;
+
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT8(64, usbMIDI.lastNoteOn);
+}

@@ -11,6 +11,7 @@
 #include "Utility.h"
 #include "PotentiometerManager.h"
 #include "PerlinNoise.h"
+#include "Globals.h"
 
 constexpr uint8_t MAX_STEPS = 16;
 // Longest span between notes, in MIDI clock ticks. Anything longer loses the groove.
@@ -62,6 +63,13 @@ void Arpeggiator::setBaseNote(uint8_t note) {
 
 void Arpeggiator::setBaseNoteCallback(std::function<uint8_t()> cb) { _baseNoteCb = cb; }
 
+namespace {
+float jitterRateFromSmoothness(float smoothness) {
+    float clamped = constrain(smoothness, 0.0f, 1.0f);
+    return Utility::scale(clamped, 0.0f, 1.0f, 2.0f, 0.05f);
+}
+} // namespace
+
 static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t patternLen) {
     // Semitone offsets now derive from simple math rather than pre-baked tables.
     // This lets pattern length drive the range while shapes dictate direction.
@@ -78,8 +86,11 @@ static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t pattern
         return (step < patternLen ? pos : (patternLen - 1 - pos));
     case Arpeggiator::RANDOM:
     default: {
-        float n = perlinNoise1D(static_cast<float>(step));
-        int val = static_cast<int>((n * 0.5f + 0.5f) * patternLen);
+        float depth = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
+        float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
+        float n = perlinNoise1D(static_cast<float>(step) * rate);
+        float jitter = (n * depth * 0.5f) + 0.5f;
+        int val = static_cast<int>(jitter * patternLen);
         val = constrain(val, 0, patternLen - 1);
         return static_cast<int8_t>(val);
     }

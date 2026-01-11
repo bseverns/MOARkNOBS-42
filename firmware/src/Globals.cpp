@@ -56,6 +56,17 @@ bool webSerialStreaming = false;  // flipped on when the browser wants JSON tele
 int8_t velocityShift = 0;
 uint8_t changeProbability = 100;
 
+// Display timing defaults (overridden by firmware_main.cpp when linked).
+int NORMAL_DISPLAY_TIME __attribute__((weak)) = 30000;
+int SHORT_DISPLAY_TIME __attribute__((weak)) = 10000;
+
+// Perlin jitter defaults
+JitterSettings g_jitterSettings = {
+    1.0f,
+    0.5f,
+};
+bool g_jitterTuningActive = false;
+
 // Envelope follower calibration stash
 EnvelopeConfig envelopeConfig = {{0}};
 

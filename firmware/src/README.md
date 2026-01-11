@@ -32,6 +32,12 @@ pio run -e teensy40_slot_verify        # builds test_verify_slots.cpp
 
 Use these to keep your mods honest. Compile, flash, repeat—no fear, no mercy.
 
+## Jitter Tuning
+
+Hold `Ctrl0 + Ctrl3 + Ctrl4` and turn control pots to tune Perlin jitter:
+- Pot 0: depth (`Jitter: 0.35`)
+- Pot 1: smoothness (`Smooth: 0.42`)
+
 ## MIDI Nerd Notes
 
 `MIDIHandler.cpp` now speaks RPN and can sniff out universal SysEx packets. If you're poking at the MIDI spec, this is your playground to see how the fancy stuff maps to code.

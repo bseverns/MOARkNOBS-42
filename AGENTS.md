@@ -32,6 +32,5 @@
     unityOutputStart/Char/Flush/Complete → use Serial1 (NOT Serial).
   - Never add -DSerial=… or include unittest_transport.h.
 • Teensy USB mode for tests is USB_MIDI_SERIAL. Do not introduce or re-enable conflicting USB_* defines.
-• During edits, output a single unified diff touching only the files I list. Do not invent files or rename paths.
 • Don’t pull display (Adafruit GFX/SSD1306/BusIO) or SD/SdFat into the unit-test env unless explicitly requested.
 • If uncertain, ask one clarifying question before changing code.

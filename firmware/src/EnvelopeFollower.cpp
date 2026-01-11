@@ -7,7 +7,10 @@
 #include "EnvelopeFollower.h"
 #include "BiquadFilter.h"
 #include "ConfigManager.h"
+#include "Globals.h"
 #include "Hardware/IO.h"
+#include "PerlinNoise.h"
+#include "TimeUtils.h"
 #include <cmath>
 #include <algorithm>
 
@@ -40,6 +43,13 @@ int resolveEnvelopeInput(int candidate) {
 
     return candidate;
 }
+
+float jitterRateFromSmoothness(float smoothness) {
+    float clamped = constrain(smoothness, 0.0f, 1.0f);
+    return 0.05f + (1.0f - clamped) * 1.95f;
+}
+
+float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
 } // namespace
 
 EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id)
@@ -102,7 +112,15 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
             int probability = map(shapingFreq, 20, 5000, 0, 100);
             if (random(0, 100) < probability) {
                 int range = map(shapingQ * 100.0f, 50, 400, 1, 64);
-                return constrain(level + random(-range, range), 0, 127);
+                float depth = jitterDepth();
+                if (depth <= 0.0f) {
+                    return level;
+                }
+                float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
+                float t = (static_cast<float>(now()) * 0.001f * rate) + (index * 13.37f);
+                float n = perlinNoise1D(t);
+                int swing = static_cast<int>(roundf(n * static_cast<float>(range) * depth));
+                return constrain(level + swing, 0, 127);
             } else {
                 return level;
             }

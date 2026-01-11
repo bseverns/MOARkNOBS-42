@@ -17,6 +17,7 @@
 #include "TimeUtils.h"
 #include "name.c"
 #include "Globals.h" // contains all pin definitions
+#include "PerlinNoise.h"
 #include "ARGMixer.h"
 #include "version.h"
 #include "BiquadFilter.h"
@@ -917,6 +918,13 @@ BiquadFilter::FilterType toBiquadType(EnvelopeFollower::FilterType type) {
     }
 }
 
+float jitterRateFromSmoothness(float smoothness) {
+    float clamped = constrain(smoothness, 0.0f, 1.0f);
+    return 0.05f + (1.0f - clamped) * 1.95f;
+}
+
+float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
+
 struct EfVoice {
     uint8_t followerIndex = 0xFF; //!< Physical follower index we mirror
     EnvelopeFollower::FilterType filterType = EnvelopeFollower::LINEAR;
@@ -1012,8 +1020,18 @@ struct EfVoice {
                 probability = 100;
             if (random(0, 100) < probability) {
                 int range = map(static_cast<int>(q * 100.0f), 50, 400, 1, 64);
+                float depth = jitterDepth();
+                if (depth <= 0.0f) {
+                    shaped = static_cast<uint8_t>(level);
+                    break;
+                }
+                float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
+                float t = (static_cast<float>(now()) * 0.001f * rate) +
+                          (static_cast<float>(followerIndex) * 17.23f);
+                float n = perlinNoise1D(t);
                 int swing = constrain(range, 1, 64);
-                shaped = static_cast<uint8_t>(constrain(level + random(-swing, swing), 0, 127));
+                int jitter = static_cast<int>(roundf(n * static_cast<float>(swing) * depth));
+                shaped = static_cast<uint8_t>(constrain(level + jitter, 0, 127));
             } else {
                 shaped = static_cast<uint8_t>(level);
             }
@@ -1795,6 +1813,9 @@ void monitorSystemLoad() {
 }
 
 void updateFilterTuning(ButtonManagerContext &context) {
+    if (g_jitterTuningActive) {
+        return;
+    }
     // 1. Read raw ADC from freq pot
     int rawFreq = buttonManager.getControlPotValue(1); // MUXC channel 13
     // 2. Read raw ADC from Q pot
@@ -1848,6 +1869,9 @@ void updateFilterTuning(ButtonManagerContext &context) {
 }
 
 void updateArpTuning() {
+    if (g_jitterTuningActive) {
+        return;
+    }
     if (!arpeggiator.isActive())
         return;
 
@@ -1874,6 +1898,9 @@ void updateArpTuning() {
 }
 
 void updateNoteDynamics() {
+    if (g_jitterTuningActive) {
+        return;
+    }
     if (arpeggiator.isActive())
         return;
 

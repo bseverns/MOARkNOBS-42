@@ -32,6 +32,8 @@ int NORMAL_DISPLAY_TIME = 0;
 int SHORT_DISPLAY_TIME = 0;
 int8_t velocityShift = 0;
 uint8_t changeProbability = 100;
+JitterSettings g_jitterSettings = {1.0f, 0.5f};
+bool g_jitterTuningActive = false;
 
 const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = {A0, A1, A2, A3, A6, A7};
 namespace {
