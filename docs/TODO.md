@@ -6,9 +6,6 @@ These are the "nice to have" riffs once the first demo ships. No blockers, just 
 
 ## Hardware / Mechanical
 
-- [x] Flesh out the docs with a troubleshooting flowchart for field repairs with images of me myself experiencing builders' pain.  
-  - ✅ Done: `docs/Troubleshooting.md` now walks through common failure modes with bench captures and “builder-in-the-loop” photos, so future you doesn’t have to guess what broke.
-
 - [ ] Offer an optional breakout board so modders can hang more toys off the bus.  
   - Notes:  
     - Expose spare I²C, SPI, and a few GPIOs (with clear 5V/3V3 labeling) for sensor/footswitch/LED-strip experiments.  
@@ -20,12 +17,6 @@ These are the "nice to have" riffs once the first demo ships. No blockers, just 
     - Target: USB-C *device* only, no PD/alt-mode, just robust connector + strain relief.  
     - Coordinate mechanical clearances with case v2 so the panel opening and strain relief are future-proof.  
     - Verify bootloader and programming access are still reachable once Teensy pad castellations are used.
-
-- [ ] Make EF section more robust to accept Volca Modular voltage (-3.3–3.3 V), as well as the line and 5 V control that the machine already tracks.  
-  - Notes:  
-    - Hardware: add input protection + proper attenuation/level-shifting so EF inputs tolerate bipolar ±3.3 V without clipping or cooking diodes/op-amps.  
-    - Design toward three “comfort zones”: Eurorack-ish (0–5 V), Volca-style (±3.3 V), and line audio.  
-    - Firmware: EF auto-scaling / calibration tasks below should assume this expanded range so MN42 can “just work” when someone plugs in weird gear.
 
 ---
 
