@@ -164,6 +164,8 @@ void MIDIHandler::sendSysEx(const uint8_t *data, uint16_t length) {
 void MIDIHandler::handleClockTick() {
     // Flag that a new pulse landed so every listener can catch the beat.
     clockTick = true;
+    // Start/continue implies clock is running; keep the state hot.
+    _clockRunning = true;
     ++_clockTickCount;
     // Mirror the tick to any enabled outputs.
     sendClock();
@@ -240,15 +242,33 @@ void MIDIHandler::processIncomingMIDI() {
 }
 
 void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2) {
-    if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
-        MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
-        if (_diagnostics) {
-            ++_diagnostics->midiDropCount;
+    // Only validate channel/data for channelized messages; realtime Start/Stop ignore them.
+    if (type != midi::Start && type != midi::Stop && type != midi::Continue) {
+        if (channel < 1 || channel > 16 || data1 > 127 || data2 > 127) {
+            MIDI_DBG_PRINTLN("Bad MIDI data, dropped");
+            if (_diagnostics) {
+                ++_diagnostics->midiDropCount;
+            }
+            return;
         }
-        return;
     }
     _rxCount++;
     switch (type) {
+    case midi::Start:
+        // Reset beat counter on Start so sync'd modules re-align.
+        _clockRunning = true;
+        _clockTickCount = 0;
+        lastExternalClock = now();
+        break;
+    case midi::Continue:
+        // Continue resumes clock without resetting the counter.
+        _clockRunning = true;
+        lastExternalClock = now();
+        break;
+    case midi::Stop:
+        // Stop freezes clock-running state until Start/Continue arrives.
+        _clockRunning = false;
+        break;
     case midi::ControlChange:
         // Peek for NRPN sequences; otherwise just log the CC
         if (seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1,

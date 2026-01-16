@@ -24,6 +24,7 @@
 #include "Arpeggiator.h"
 #include "SysExTemplate.h"
 #include "interop/SeedBoxLink.h"
+#include "LFO/LFOManager.h"
 #include <TimerOne.h>
 #include <ArduinoJson.h>
 #include <queue>
@@ -45,6 +46,7 @@ extern ConfigManager configManager;
 extern bool envelopeFollowMode;
 extern String g_envelopeModeLabel;
 extern const char *envelopeMode;
+extern LFOManager lfoManager;
 
 using EfSettings = MIDISlot::EfSettings;
 
@@ -251,13 +253,189 @@ MIDISlot::EfSettings::FilterType fromEnvelopeFilter(EnvelopeFollower::FilterType
     return MIDISlot::EfSettings::FilterType::Linear;
 }
 
-void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
+std::array<float, NUM_ENVELOPES> efBaseGains{};
+
+void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings,
+                               uint8_t followerIndex) {
     ef.setFilterType(toEnvelopeFilter(settings.filterType));
     ef.configureFilter(settings.frequency, settings.q);
     ef.setOversampleCount(settings.oversample);
     ef.setSmoothingAlpha(settings.smoothing);
     ef.setBaseline(settings.baseline);
     ef.setGain(settings.gain);
+    EnvelopeFollower::EfModeSettings modeSettings{};
+    modeSettings.mode = static_cast<EnvelopeFollower::EFMode>(settings.efMode);
+    modeSettings.attackMs = settings.attackMs;
+    modeSettings.releaseMs = settings.releaseMs;
+    modeSettings.rmsWindowMs = settings.rmsWindowMs;
+    modeSettings.baselineTauMs = settings.baselineTauMs;
+    modeSettings.gainTauMs = settings.gainTauMs;
+    modeSettings.gateThreshold = settings.gateThreshold;
+    modeSettings.gateHysteresis = settings.gateHysteresis;
+    modeSettings.activityThreshold = settings.activityThreshold;
+    modeSettings.gainTarget = settings.gainTarget;
+    modeSettings.autoBaseline = settings.autoBaseline != 0;
+    modeSettings.autoGain = settings.autoGain != 0;
+    ef.setModeSettings(modeSettings);
+    if (followerIndex < NUM_ENVELOPES) {
+        efBaseGains[followerIndex] = settings.gain;
+    }
+}
+
+ProfileEfSettings profileEfFromSlot(const MIDISlot::EfSettings &settings) {
+    // Distill per-slot EF mode settings into the profile format.
+    ProfileEfSettings profile{};
+    profile.mode = settings.efMode;
+    profile.autoBaseline = settings.autoBaseline;
+    profile.autoGain = settings.autoGain;
+    profile.gateThreshold = settings.gateThreshold;
+    profile.gateHysteresis = settings.gateHysteresis;
+    profile.activityThreshold = settings.activityThreshold;
+    profile.gainTarget = settings.gainTarget;
+    profile.attackMs = settings.attackMs;
+    profile.releaseMs = settings.releaseMs;
+    profile.rmsWindowMs = settings.rmsWindowMs;
+    profile.baselineTauMs = settings.baselineTauMs;
+    profile.gainTauMs = settings.gainTauMs;
+    return profile;
+}
+
+void applyProfileEfToSlot(const ProfileEfSettings &profile, MIDISlot::EfSettings &settings) {
+    // Update only EF mode parameters, leaving filter/gain/routing intact.
+    settings.efMode = profile.mode;
+    settings.autoBaseline = profile.autoBaseline;
+    settings.autoGain = profile.autoGain;
+    settings.gateThreshold = profile.gateThreshold;
+    settings.gateHysteresis = profile.gateHysteresis;
+    settings.activityThreshold = profile.activityThreshold;
+    settings.gainTarget = profile.gainTarget;
+    settings.attackMs = profile.attackMs;
+    settings.releaseMs = profile.releaseMs;
+    settings.rmsWindowMs = profile.rmsWindowMs;
+    settings.baselineTauMs = profile.baselineTauMs;
+    settings.gainTauMs = profile.gainTauMs;
+}
+
+ProfileData captureProfileSnapshot() {
+    // Serialize the current runtime state into a profile payload.
+    ProfileData profile{};
+    profile.routeCount = 0;
+
+    profile.arp.lengthTicks = arpeggiator.getLength();
+    profile.arp.shape = static_cast<uint8_t>(arpeggiator.getShape());
+    profile.arp.swingPercent = static_cast<uint8_t>(constrain(arpeggiator.getSwingPercent(), 0.0f, 80.0f));
+    profile.arp.gatePercent = static_cast<uint8_t>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f));
+    profile.arp.octaveRange = arpeggiator.getOctaveRange();
+
+    profile.led.brightness = ledManager.getBrightness();
+    CRGB color = ledManager.getColor();
+    profile.led.r = color.r;
+    profile.led.g = color.g;
+    profile.led.b = color.b;
+
+    for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
+        LFO &lfo = lfoManager.lfo(i);
+        profile.lfos[i].shape = static_cast<uint8_t>(lfo.getShape());
+        profile.lfos[i].frequencyHz = lfo.getFrequencyHz();
+        profile.lfos[i].depth = lfo.getDepth();
+        profile.lfos[i].bipolar = lfo.isBipolar() ? 1 : 0;
+        profile.lfos[i].syncEnabled = lfo.isSyncEnabled() ? 1 : 0;
+        profile.lfos[i].syncRatio = static_cast<uint8_t>(lfo.getSyncRatio());
+    }
+
+    const size_t routeCount = std::min(lfoManager.routeCount(), static_cast<size_t>(PROFILE_MAX_ROUTES));
+    profile.routeCount = static_cast<uint8_t>(routeCount);
+    for (size_t i = 0; i < routeCount; ++i) {
+        LFOManager::Route route{};
+        if (!lfoManager.getRoute(i, route)) {
+            continue;
+        }
+        profile.routes[i].type = static_cast<uint8_t>(route.type);
+        profile.routes[i].lfoIndex = route.lfoIndex;
+        profile.routes[i].depth = route.depth;
+        profile.routes[i].target = static_cast<uint8_t>(route.target);
+        profile.routes[i].channel = route.channel;
+        profile.routes[i].ccMsb = route.ccMsb;
+        profile.routes[i].ccLsb = route.ccLsb;
+    }
+
+    const auto &slots = configManager.getSlots();
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        profile.slots[i].midiChannel = slots[i].midiChannel;
+        profile.slots[i].ef = profileEfFromSlot(slots[i].efSettings);
+    }
+
+    return profile;
+}
+
+void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
+    // Apply profile payload values across arp, LFOs, LEDs, and slot settings.
+    arpeggiator.setLength(profile.arp.lengthTicks);
+    arpeggiator.setShape(static_cast<Arpeggiator::Shape>(profile.arp.shape));
+    arpeggiator.setSwingPercent(profile.arp.swingPercent);
+    arpeggiator.setGatePercent(profile.arp.gatePercent);
+    arpeggiator.setOctaveRange(profile.arp.octaveRange);
+
+    ledManager.setBrightness(profile.led.brightness);
+    ledManager.setColor(CRGB(profile.led.r, profile.led.g, profile.led.b));
+
+    for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
+        LFO &lfo = lfoManager.lfo(i);
+        lfo.setShape(static_cast<LFOShape>(profile.lfos[i].shape));
+        lfo.setFrequencyHz(profile.lfos[i].frequencyHz);
+        lfo.setDepth(profile.lfos[i].depth);
+        lfo.setBipolar(profile.lfos[i].bipolar != 0);
+        lfo.setSyncEnabled(profile.lfos[i].syncEnabled != 0);
+        lfo.setSyncRatio(static_cast<LFOSyncRatio>(profile.lfos[i].syncRatio));
+    }
+
+    lfoManager.clearRoutes();
+    for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
+        const ProfileLfoRoute &route = profile.routes[i];
+        switch (static_cast<LFOManager::Route::Type>(route.type)) {
+        case LFOManager::Route::Type::Internal:
+            lfoManager.addInternalRoute(route.lfoIndex,
+                                        static_cast<LFOInternalTarget>(route.target),
+                                        route.depth);
+            break;
+        case LFOManager::Route::Type::MidiCC7:
+            lfoManager.addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth);
+            break;
+        case LFOManager::Route::Type::MidiCC14:
+            lfoManager.addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel,
+                                        route.depth);
+            break;
+        case LFOManager::Route::Type::Osc:
+            lfoManager.addOscRoute(route.lfoIndex, route.depth);
+            break;
+        }
+    }
+
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        MIDISlot &slot = configManager.getSlot(i);
+        slot.midiChannel = profile.slots[i].midiChannel;
+        applyProfileEfToSlot(profile.slots[i].ef, slot.efSettings);
+        if (persistSlots) {
+            configManager.saveSlot(i, slot);
+        }
+        if (slot.getEnvelopeFollowerIndex() >= 0) {
+            potToEnvelopeMap[i] = slot.efSettings;
+        }
+    }
+
+    for (const auto &entry : potToEnvelopeMap) {
+        const int potIndex = entry.first;
+        const int followerIndex = entry.second.followerIndex;
+        if (followerIndex >= 0 && followerIndex < static_cast<int>(envelopeFollowers.size())) {
+            applyEfSettingsToFollower(envelopeFollowers[followerIndex], entry.second,
+                                      static_cast<uint8_t>(followerIndex));
+        }
+    }
+
+    if (persistSlots) {
+        configManager.saveLEDSettings(ledManager.getBrightness(), ledManager.getColor());
+        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    }
 }
 
 const char *argMethodName(uint8_t method) {
@@ -370,6 +548,7 @@ bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
 
 EnvelopeFollower::FilterType parseFilterType(const char *label,
                                              EnvelopeFollower::FilterType fallback);
+EnvelopeFollower::EFMode parseEfMode(const char *label, EnvelopeFollower::EFMode fallback);
 
 EnvelopeFollower::FilterType decodeFilterType(EfSettings::FilterType raw) {
     return static_cast<EnvelopeFollower::FilterType>(raw);
@@ -423,11 +602,152 @@ void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out
         out.gain = obj["gain"].as<float>();
     }
 
+    // EF mode and auto-cal settings accept both snake_case and camelCase keys.
+    if (obj.containsKey("mode")) {
+        if (obj["mode"].is<const char *>()) {
+            out.efMode = static_cast<uint8_t>(
+                parseEfMode(obj["mode"].as<const char *>(),
+                            static_cast<EnvelopeFollower::EFMode>(out.efMode)));
+        } else {
+            int raw = obj["mode"].as<int>();
+            out.efMode =
+                static_cast<uint8_t>(constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+        }
+    }
+
+    if (obj.containsKey("auto_baseline")) {
+        out.autoBaseline = obj["auto_baseline"].as<bool>() ? 1 : 0;
+    } else if (obj.containsKey("autoBaseline")) {
+        out.autoBaseline = obj["autoBaseline"].as<bool>() ? 1 : 0;
+    }
+
+    if (obj.containsKey("auto_gain")) {
+        out.autoGain = obj["auto_gain"].as<bool>() ? 1 : 0;
+    } else if (obj.containsKey("autoGain")) {
+        out.autoGain = obj["autoGain"].as<bool>() ? 1 : 0;
+    }
+
+    if (obj.containsKey("attack_ms")) {
+        out.attackMs = static_cast<uint16_t>(obj["attack_ms"].as<int>());
+    } else if (obj.containsKey("attackMs")) {
+        out.attackMs = static_cast<uint16_t>(obj["attackMs"].as<int>());
+    }
+
+    if (obj.containsKey("release_ms")) {
+        out.releaseMs = static_cast<uint16_t>(obj["release_ms"].as<int>());
+    } else if (obj.containsKey("releaseMs")) {
+        out.releaseMs = static_cast<uint16_t>(obj["releaseMs"].as<int>());
+    }
+
+    if (obj.containsKey("rms_ms")) {
+        out.rmsWindowMs = static_cast<uint16_t>(obj["rms_ms"].as<int>());
+    } else if (obj.containsKey("rmsWindowMs")) {
+        out.rmsWindowMs = static_cast<uint16_t>(obj["rmsWindowMs"].as<int>());
+    }
+
+    if (obj.containsKey("baseline_tau_ms")) {
+        out.baselineTauMs = static_cast<uint16_t>(obj["baseline_tau_ms"].as<int>());
+    } else if (obj.containsKey("baselineTauMs")) {
+        out.baselineTauMs = static_cast<uint16_t>(obj["baselineTauMs"].as<int>());
+    }
+
+    if (obj.containsKey("gain_tau_ms")) {
+        out.gainTauMs = static_cast<uint16_t>(obj["gain_tau_ms"].as<int>());
+    } else if (obj.containsKey("gainTauMs")) {
+        out.gainTauMs = static_cast<uint16_t>(obj["gainTauMs"].as<int>());
+    }
+
+    if (obj.containsKey("gate_threshold")) {
+        out.gateThreshold = static_cast<uint8_t>(obj["gate_threshold"].as<int>());
+    } else if (obj.containsKey("gateThreshold")) {
+        out.gateThreshold = static_cast<uint8_t>(obj["gateThreshold"].as<int>());
+    }
+
+    if (obj.containsKey("gate_hysteresis")) {
+        out.gateHysteresis = static_cast<uint8_t>(obj["gate_hysteresis"].as<int>());
+    } else if (obj.containsKey("gateHysteresis")) {
+        out.gateHysteresis = static_cast<uint8_t>(obj["gateHysteresis"].as<int>());
+    }
+
+    if (obj.containsKey("activity_threshold")) {
+        out.activityThreshold = static_cast<uint8_t>(obj["activity_threshold"].as<int>());
+    } else if (obj.containsKey("activityThreshold")) {
+        out.activityThreshold = static_cast<uint8_t>(obj["activityThreshold"].as<int>());
+    }
+
+    if (obj.containsKey("gain_target")) {
+        out.gainTarget = static_cast<uint8_t>(obj["gain_target"].as<int>());
+    } else if (obj.containsKey("gainTarget")) {
+        out.gainTarget = static_cast<uint8_t>(obj["gainTarget"].as<int>());
+    }
+
     if (obj.containsKey("index")) {
         int rawIndex = obj["index"].as<int>();
         rawIndex = constrain(rawIndex, -1, static_cast<int>(NUM_ENVELOPES) - 1);
         out.followerIndex = static_cast<int8_t>(rawIndex);
     }
+}
+
+bool parseProfileEf(JsonObject obj, ProfileEfSettings &out) {
+    // Apply EF profile fields from JSON, keeping unspecified values intact.
+    if (obj.isNull()) {
+        return false;
+    }
+    if (obj.containsKey("mode")) {
+        int raw = obj["mode"].as<int>();
+        out.mode = static_cast<uint8_t>(
+            constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+    }
+    if (obj.containsKey("auto_baseline")) {
+        out.autoBaseline = obj["auto_baseline"].as<bool>() ? 1 : 0;
+    }
+    if (obj.containsKey("auto_gain")) {
+        out.autoGain = obj["auto_gain"].as<bool>() ? 1 : 0;
+    }
+    if (obj.containsKey("attack_ms")) {
+        out.attackMs = static_cast<uint16_t>(obj["attack_ms"].as<int>());
+    }
+    if (obj.containsKey("release_ms")) {
+        out.releaseMs = static_cast<uint16_t>(obj["release_ms"].as<int>());
+    }
+    if (obj.containsKey("rms_ms")) {
+        out.rmsWindowMs = static_cast<uint16_t>(obj["rms_ms"].as<int>());
+    }
+    if (obj.containsKey("baseline_tau_ms")) {
+        out.baselineTauMs = static_cast<uint16_t>(obj["baseline_tau_ms"].as<int>());
+    }
+    if (obj.containsKey("gain_tau_ms")) {
+        out.gainTauMs = static_cast<uint16_t>(obj["gain_tau_ms"].as<int>());
+    }
+    if (obj.containsKey("gate_threshold")) {
+        out.gateThreshold = static_cast<uint8_t>(obj["gate_threshold"].as<int>());
+    }
+    if (obj.containsKey("gate_hysteresis")) {
+        out.gateHysteresis = static_cast<uint8_t>(obj["gate_hysteresis"].as<int>());
+    }
+    if (obj.containsKey("activity_threshold")) {
+        out.activityThreshold = static_cast<uint8_t>(obj["activity_threshold"].as<int>());
+    }
+    if (obj.containsKey("gain_target")) {
+        out.gainTarget = static_cast<uint8_t>(obj["gain_target"].as<int>());
+    }
+    return true;
+}
+
+void writeProfileEf(JsonObject obj, const ProfileEfSettings &settings) {
+    // Serialize EF profile settings into JSON for the web configurator.
+    obj["mode"] = settings.mode;
+    obj["auto_baseline"] = settings.autoBaseline != 0;
+    obj["auto_gain"] = settings.autoGain != 0;
+    obj["attack_ms"] = settings.attackMs;
+    obj["release_ms"] = settings.releaseMs;
+    obj["rms_ms"] = settings.rmsWindowMs;
+    obj["baseline_tau_ms"] = settings.baselineTauMs;
+    obj["gain_tau_ms"] = settings.gainTauMs;
+    obj["gate_threshold"] = settings.gateThreshold;
+    obj["gate_hysteresis"] = settings.gateHysteresis;
+    obj["activity_threshold"] = settings.activityThreshold;
+    obj["gain_target"] = settings.gainTarget;
 }
 
 EnvelopeFollower::FilterType parseFilterType(const char *label,
@@ -446,6 +766,28 @@ EnvelopeFollower::FilterType parseFilterType(const char *label,
         {"LOWPASS", EnvelopeFollower::LOWPASS},
         {"HIGHPASS", EnvelopeFollower::HIGHPASS},
         {"BANDPASS", EnvelopeFollower::BANDPASS},
+    };
+    for (const auto &entry : kMap) {
+        if (strcmp(label, entry.name) == 0) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
+EnvelopeFollower::EFMode parseEfMode(const char *label, EnvelopeFollower::EFMode fallback) {
+    if (!label) {
+        return fallback;
+    }
+    struct Entry {
+        const char *name;
+        EnvelopeFollower::EFMode value;
+    };
+    static constexpr Entry kMap[] = {
+        {"PEAK", EnvelopeFollower::EFMode::Peak},
+        {"RMS", EnvelopeFollower::EFMode::RMS},
+        {"GATE", EnvelopeFollower::EFMode::Gate},
+        {"FOLLOWER", EnvelopeFollower::EFMode::Follower},
     };
     for (const auto &entry : kMap) {
         if (strcmp(label, entry.name) == 0) {
@@ -679,6 +1021,74 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             if (efObj.containsKey("gain")) {
                 settings.gain = efObj["gain"].as<float>();
             }
+            if (efObj.containsKey("mode")) {
+                if (efObj["mode"].is<const char *>()) {
+                    settings.efMode = static_cast<uint8_t>(
+                        parseEfMode(efObj["mode"].as<const char *>(),
+                                    static_cast<EnvelopeFollower::EFMode>(settings.efMode)));
+                } else {
+                    int raw = efObj["mode"].as<int>();
+                    settings.efMode = static_cast<uint8_t>(constrain(
+                        raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+                }
+            }
+            if (efObj.containsKey("auto_baseline")) {
+                settings.autoBaseline = efObj["auto_baseline"].as<bool>() ? 1 : 0;
+            } else if (efObj.containsKey("autoBaseline")) {
+                settings.autoBaseline = efObj["autoBaseline"].as<bool>() ? 1 : 0;
+            }
+            if (efObj.containsKey("auto_gain")) {
+                settings.autoGain = efObj["auto_gain"].as<bool>() ? 1 : 0;
+            } else if (efObj.containsKey("autoGain")) {
+                settings.autoGain = efObj["autoGain"].as<bool>() ? 1 : 0;
+            }
+            if (efObj.containsKey("attack_ms")) {
+                settings.attackMs = static_cast<uint16_t>(efObj["attack_ms"].as<int>());
+            } else if (efObj.containsKey("attackMs")) {
+                settings.attackMs = static_cast<uint16_t>(efObj["attackMs"].as<int>());
+            }
+            if (efObj.containsKey("release_ms")) {
+                settings.releaseMs = static_cast<uint16_t>(efObj["release_ms"].as<int>());
+            } else if (efObj.containsKey("releaseMs")) {
+                settings.releaseMs = static_cast<uint16_t>(efObj["releaseMs"].as<int>());
+            }
+            if (efObj.containsKey("rms_ms")) {
+                settings.rmsWindowMs = static_cast<uint16_t>(efObj["rms_ms"].as<int>());
+            } else if (efObj.containsKey("rmsWindowMs")) {
+                settings.rmsWindowMs = static_cast<uint16_t>(efObj["rmsWindowMs"].as<int>());
+            }
+            if (efObj.containsKey("baseline_tau_ms")) {
+                settings.baselineTauMs = static_cast<uint16_t>(efObj["baseline_tau_ms"].as<int>());
+            } else if (efObj.containsKey("baselineTauMs")) {
+                settings.baselineTauMs = static_cast<uint16_t>(efObj["baselineTauMs"].as<int>());
+            }
+            if (efObj.containsKey("gain_tau_ms")) {
+                settings.gainTauMs = static_cast<uint16_t>(efObj["gain_tau_ms"].as<int>());
+            } else if (efObj.containsKey("gainTauMs")) {
+                settings.gainTauMs = static_cast<uint16_t>(efObj["gainTauMs"].as<int>());
+            }
+            if (efObj.containsKey("gate_threshold")) {
+                settings.gateThreshold = static_cast<uint8_t>(efObj["gate_threshold"].as<int>());
+            } else if (efObj.containsKey("gateThreshold")) {
+                settings.gateThreshold = static_cast<uint8_t>(efObj["gateThreshold"].as<int>());
+            }
+            if (efObj.containsKey("gate_hysteresis")) {
+                settings.gateHysteresis = static_cast<uint8_t>(efObj["gate_hysteresis"].as<int>());
+            } else if (efObj.containsKey("gateHysteresis")) {
+                settings.gateHysteresis = static_cast<uint8_t>(efObj["gateHysteresis"].as<int>());
+            }
+            if (efObj.containsKey("activity_threshold")) {
+                settings.activityThreshold =
+                    static_cast<uint8_t>(efObj["activity_threshold"].as<int>());
+            } else if (efObj.containsKey("activityThreshold")) {
+                settings.activityThreshold =
+                    static_cast<uint8_t>(efObj["activityThreshold"].as<int>());
+            }
+            if (efObj.containsKey("gain_target")) {
+                settings.gainTarget = static_cast<uint8_t>(efObj["gain_target"].as<int>());
+            } else if (efObj.containsKey("gainTarget")) {
+                settings.gainTarget = static_cast<uint8_t>(efObj["gainTarget"].as<int>());
+            }
         }
 
         if (rawEfIndex >= 0 && rawEfIndex < static_cast<int>(envelopeFollowers.size())) {
@@ -826,7 +1236,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             if (i < envelopeFollowers.size()) {
                 envelopeFollowers[i].setModulationTarget(
                     potentiometerManager.getCCNumber(slotIndex));
-                applyEfSettingsToFollower(envelopeFollowers[i], slot.efSettings);
+                applyEfSettingsToFollower(envelopeFollowers[i], slot.efSettings, i);
             }
         }
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
@@ -1085,6 +1495,7 @@ ConfigManager configManager(NUM_POTS, NUM_BUTTONS); // Persists slot + button co
 BiquadFilter filter;     // Shared filter template for envelope follower shaping
 TaskScheduler scheduler; // Legacy scheduler kept for posterity (most work lives in Utility)
 Arpeggiator arpeggiator; // Keeps notes chugging along in time
+LFOManager lfoManager;   // Dual LFO engine with routing hooks
 std::array<EfVoice, NUM_SLOTS> efVoices; // Software voices riding raw envelope reads per slot
 
 void refreshEfVoicesFromConfig() {
@@ -1260,6 +1671,8 @@ void processMIDI() {
  *   GET_EF,<slot>                     : who’s modding that slot (‑1 means none)
  *   SET_EF,<slot>,<ef>                : patch an envelope follower
  *   CAL_ENVS                          : recalibrate all envelope spies
+ *   GET_PROFILE,<id>                  : dump profile payload as JSON (id 0-3)
+ *   SET_PROFILE,<id>,<payload>        : store profile payload JSON (id 0-3)
  *   GET_FILTER                        : reply with type,freq,q for EF filter
  *   SET_FILTER,<type>,<freq>,<q>      : stash envelope filter settings
  *   GET_SLOT_FILTER <slot>            : read one slot's EF payload as type,freq,q
@@ -1354,6 +1767,19 @@ void processSerial() {
                 ef["smoothing"] = slot.efSettings.smoothing;
                 ef["baseline"] = slot.efSettings.baseline;
                 ef["gain"] = slot.efSettings.gain;
+                // Extended EF mode + auto-calibration payload for the frontend.
+                ef["mode"] = slot.efSettings.efMode;
+                ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
+                ef["auto_gain"] = slot.efSettings.autoGain != 0;
+                ef["attack_ms"] = slot.efSettings.attackMs;
+                ef["release_ms"] = slot.efSettings.releaseMs;
+                ef["rms_ms"] = slot.efSettings.rmsWindowMs;
+                ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
+                ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
+                ef["gate_threshold"] = slot.efSettings.gateThreshold;
+                ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
+                ef["activity_threshold"] = slot.efSettings.activityThreshold;
+                ef["gain_target"] = slot.efSettings.gainTarget;
                 slotObj["active"] = slot.active;
                 slotObj["arp_note"] = slot.arpNote;
                 slotObj["sysexTemplate"] = formatSysExTemplate(slot);
@@ -1430,6 +1856,214 @@ void processSerial() {
             String payload;
             serializeJson(doc, payload);
             LOG_PRINTLN(payload);
+
+        } else if (command.startsWith("GET_PROFILE")) {
+            int comma = command.indexOf(',');
+            uint8_t id = g_activeProfile;
+            if (comma >= 0) {
+                id = static_cast<uint8_t>(command.substring(comma + 1).toInt());
+            }
+            if (id >= NUM_PROFILES) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            ProfileData profile{};
+            bool stored = configManager.loadProfileSettings(id, profile);
+            if (!stored) {
+                profile = captureProfileSnapshot();
+            }
+
+            StaticJsonDocument<12288> doc;
+            doc["profile"] = id;
+            doc["stored"] = stored;
+
+            JsonObject arp = doc.createNestedObject("arp");
+            arp["length_ticks"] = profile.arp.lengthTicks;
+            arp["shape"] = profile.arp.shape;
+            arp["swing_percent"] = profile.arp.swingPercent;
+            arp["gate_percent"] = profile.arp.gatePercent;
+            arp["octave_range"] = profile.arp.octaveRange;
+
+            JsonObject led = doc.createNestedObject("led");
+            led["brightness"] = profile.led.brightness;
+            JsonObject rgb = led.createNestedObject("rgb");
+            rgb["r"] = profile.led.r;
+            rgb["g"] = profile.led.g;
+            rgb["b"] = profile.led.b;
+
+            JsonArray lfos = doc.createNestedArray("lfos");
+            for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
+                JsonObject lfo = lfos.createNestedObject();
+                lfo["index"] = i;
+                lfo["shape"] = profile.lfos[i].shape;
+                lfo["frequency_hz"] = profile.lfos[i].frequencyHz;
+                lfo["depth"] = profile.lfos[i].depth;
+                lfo["bipolar"] = profile.lfos[i].bipolar != 0;
+                lfo["sync"] = profile.lfos[i].syncEnabled != 0;
+                lfo["sync_ratio"] = profile.lfos[i].syncRatio;
+            }
+
+            JsonArray routes = doc.createNestedArray("routes");
+            for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
+                JsonObject route = routes.createNestedObject();
+                route["index"] = i;
+                route["type"] = profile.routes[i].type;
+                route["lfo"] = profile.routes[i].lfoIndex;
+                route["depth"] = profile.routes[i].depth;
+                route["target"] = profile.routes[i].target;
+                route["channel"] = profile.routes[i].channel;
+                route["cc_msb"] = profile.routes[i].ccMsb;
+                route["cc_lsb"] = profile.routes[i].ccLsb;
+            }
+
+            JsonArray slots = doc.createNestedArray("slots");
+            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+                JsonObject slot = slots.createNestedObject();
+                slot["index"] = i;
+                slot["channel"] = profile.slots[i].midiChannel;
+                JsonObject ef = slot.createNestedObject("ef");
+                writeProfileEf(ef, profile.slots[i].ef);
+            }
+
+            String payload;
+            serializeJson(doc, payload);
+            LOG_PRINTLN(payload);
+
+        } else if (command.startsWith("SET_PROFILE")) {
+            int firstComma = command.indexOf(',');
+            int secondComma = command.indexOf(',', firstComma + 1);
+            if (firstComma < 0 || secondComma < 0) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            uint8_t id = static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
+            if (id >= NUM_PROFILES) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            String payload = command.substring(secondComma + 1);
+            payload.trim();
+            if (payload.length() == 0) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            StaticJsonDocument<12288> doc;
+            DeserializationError err = deserializeJson(doc, payload);
+            if (err) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            ProfileData profile = captureProfileSnapshot();
+            JsonObject root = doc.as<JsonObject>();
+
+            if (root.containsKey("arp")) {
+                JsonObject arp = root["arp"].as<JsonObject>();
+                if (arp.containsKey("length_ticks")) {
+                    profile.arp.lengthTicks = static_cast<uint8_t>(arp["length_ticks"].as<int>());
+                }
+                if (arp.containsKey("shape")) {
+                    profile.arp.shape = static_cast<uint8_t>(arp["shape"].as<int>());
+                }
+                if (arp.containsKey("swing_percent")) {
+                    profile.arp.swingPercent = static_cast<uint8_t>(arp["swing_percent"].as<int>());
+                }
+                if (arp.containsKey("gate_percent")) {
+                    profile.arp.gatePercent = static_cast<uint8_t>(arp["gate_percent"].as<int>());
+                }
+                if (arp.containsKey("octave_range")) {
+                    profile.arp.octaveRange = static_cast<uint8_t>(arp["octave_range"].as<int>());
+                }
+            }
+
+            if (root.containsKey("led")) {
+                JsonObject led = root["led"].as<JsonObject>();
+                if (led.containsKey("brightness")) {
+                    profile.led.brightness = static_cast<uint8_t>(led["brightness"].as<int>());
+                }
+                if (led.containsKey("rgb")) {
+                    JsonObject rgb = led["rgb"].as<JsonObject>();
+                    profile.led.r = static_cast<uint8_t>(rgb["r"].as<int>());
+                    profile.led.g = static_cast<uint8_t>(rgb["g"].as<int>());
+                    profile.led.b = static_cast<uint8_t>(rgb["b"].as<int>());
+                }
+            }
+
+            if (root.containsKey("lfos")) {
+                JsonArray lfos = root["lfos"].as<JsonArray>();
+                for (JsonObject lfo : lfos) {
+                    uint8_t index = static_cast<uint8_t>(lfo["index"].as<int>());
+                    if (index >= PROFILE_LFO_COUNT) {
+                        continue;
+                    }
+                    if (lfo.containsKey("shape")) {
+                        profile.lfos[index].shape = static_cast<uint8_t>(lfo["shape"].as<int>());
+                    }
+                    if (lfo.containsKey("frequency_hz")) {
+                        profile.lfos[index].frequencyHz = lfo["frequency_hz"].as<float>();
+                    }
+                    if (lfo.containsKey("depth")) {
+                        profile.lfos[index].depth = lfo["depth"].as<float>();
+                    }
+                    if (lfo.containsKey("bipolar")) {
+                        profile.lfos[index].bipolar = lfo["bipolar"].as<bool>() ? 1 : 0;
+                    }
+                    if (lfo.containsKey("sync")) {
+                        profile.lfos[index].syncEnabled = lfo["sync"].as<bool>() ? 1 : 0;
+                    }
+                    if (lfo.containsKey("sync_ratio")) {
+                        profile.lfos[index].syncRatio = static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
+                    }
+                }
+            }
+
+            profile.routeCount = 0;
+            if (root.containsKey("routes")) {
+                JsonArray routes = root["routes"].as<JsonArray>();
+                for (JsonObject route : routes) {
+                    if (profile.routeCount >= PROFILE_MAX_ROUTES) {
+                        break;
+                    }
+                    ProfileLfoRoute &out = profile.routes[profile.routeCount];
+                    out.type = static_cast<uint8_t>(route["type"].as<int>());
+                    out.lfoIndex = static_cast<uint8_t>(route["lfo"].as<int>());
+                    out.depth = route["depth"].as<float>();
+                    out.target = static_cast<uint8_t>(route["target"].as<int>());
+                    out.channel = static_cast<uint8_t>(route["channel"].as<int>());
+                    out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
+                    out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());
+                    profile.routeCount++;
+                }
+            }
+
+            if (root.containsKey("slots")) {
+                JsonArray slots = root["slots"].as<JsonArray>();
+                for (JsonObject slot : slots) {
+                    uint8_t index = static_cast<uint8_t>(slot["index"].as<int>());
+                    if (index >= NUM_SLOTS) {
+                        continue;
+                    }
+                    if (slot.containsKey("channel")) {
+                        profile.slots[index].midiChannel =
+                            static_cast<uint8_t>(slot["channel"].as<int>());
+                    }
+                    if (slot.containsKey("ef")) {
+                        JsonObject ef = slot["ef"].as<JsonObject>();
+                        parseProfileEf(ef, profile.slots[index].ef);
+                    }
+                }
+            }
+
+            if (!configManager.saveProfileSettings(id, profile)) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            if (id == g_activeProfile) {
+                ProfileData stored{};
+                if (configManager.loadProfileSettings(id, stored)) {
+                    applyProfileSnapshot(stored, true);
+                }
+            }
+            LOG_PRINTLN("OK");
 
         } else if (command.startsWith("SET_POT")) {
             // Parse "SET_POT" command
@@ -1646,7 +2280,8 @@ void processSerial() {
                     slot.setEnvelopeFollowerIndex(static_cast<int8_t>(envIndex));
                     potToEnvelopeMap[potIndex] = slot.efSettings;
                     envelopeFollowers[envIndex].toggleActive(true);
-                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings);
+                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings,
+                                              static_cast<uint8_t>(envIndex));
                     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
                     refreshEfVoicesFromConfig();
                     LOG_PRINTLN("OK");
@@ -1663,6 +2298,48 @@ void processSerial() {
     }
 }
 
+void processLFOs() {
+    // Update the LFO engine and mirror its bus values into globals.
+    lfoManager.update(now());
+    const LFOBus &bus = lfoManager.bus();
+    g_lfoEfGainTrim = bus.efGainTrim;
+    g_lfoArpSwing = bus.arpSwing;
+    g_lfoLedBrightness = bus.ledBrightness;
+    g_lfoValues[0] = lfoManager.normalizedValue(0);
+    g_lfoValues[1] = lfoManager.normalizedValue(1);
+
+    // Apply LFO-driven brightness modulation on top of the base LED level.
+    float brightnessScale = 1.0f + g_lfoLedBrightness;
+    brightnessScale = constrain(brightnessScale, 0.0f, 2.0f);
+    ledManager.setBrightnessModulator(brightnessScale);
+}
+
+void configureLFOs() {
+    // Reset routes and seed default LFO state (depth 0 so no modulation yet).
+    lfoManager.clearRoutes();
+
+    LFO &lfo1 = lfoManager.lfo(0);
+    lfo1.setShape(LFOShape::Sine);
+    lfo1.setFrequencyHz(1.0f);
+    lfo1.setDepth(0.0f); // idle until configured
+    lfo1.setBipolar(false);
+    lfo1.setSyncEnabled(false);
+    lfo1.setSyncRatio(LFOSyncRatio::Div1);
+
+    LFO &lfo2 = lfoManager.lfo(1);
+    lfo2.setShape(LFOShape::Triangle);
+    lfo2.setFrequencyHz(0.5f);
+    lfo2.setDepth(0.0f); // idle until configured
+    lfo2.setBipolar(true);
+    lfo2.setSyncEnabled(false);
+    lfo2.setSyncRatio(LFOSyncRatio::Div1);
+
+    // Default internal routes: LFO1 -> LEDs + arp swing, LFO2 -> EF gain trim.
+    lfoManager.addInternalRoute(0, LFOInternalTarget::LedBrightness, 1.0f);
+    lfoManager.addInternalRoute(0, LFOInternalTarget::ArpSwing, 1.0f);
+    lfoManager.addInternalRoute(1, LFOInternalTarget::EfGainTrim, 1.0f);
+}
+
 void processEnvelopes() {
     static std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
     static bool envelopeMidiInitialized = false;
@@ -1673,12 +2350,16 @@ void processEnvelopes() {
 
     std::array<int, NUM_ENVELOPES> rawFollowerLevels{};
     std::array<bool, NUM_ENVELOPES> followerReady{};
+    // LFO gain trim scales all active envelope followers in this frame.
+    float gainTrim = 1.0f + g_lfoEfGainTrim;
+    gainTrim = constrain(gainTrim, 0.0f, 2.0f);
     for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
         EnvelopeFollower &follower = envelopeFollowers[idx];
         if (!follower.getActiveState()) {
             followerReady[idx] = false;
             continue;
         }
+        follower.setExternalGainTrim(gainTrim);
         follower.update();
         int rawLevel = follower.getEnvelopeLevel();
         rawFollowerLevels[idx] = rawLevel;
@@ -1875,25 +2556,39 @@ void updateArpTuning() {
     if (!arpeggiator.isActive())
         return;
 
-    int rawLen = buttonManager.getControlPotValue(1);
-    int rawShape = buttonManager.getControlPotValue(2);
+    int raw1 = buttonManager.getControlPotValue(1);
+    int raw2 = buttonManager.getControlPotValue(2);
+
+    if (g_arpEditActive) {
+        // Arp edit mode maps control pots to gate length and octave range.
+        uint8_t gatePercent = map(raw1, 0, 1023, 5, 100);
+        uint8_t octaveRange = map(raw2, 0, 1023, 0, 3);
+        arpeggiator.setGatePercent(gatePercent);
+        arpeggiator.setOctaveRange(octaveRange);
+        char line2[24];
+        char line3[24];
+        snprintf(line2, sizeof(line2), "Gate %u%%", gatePercent);
+        snprintf(line3, sizeof(line3), "Oct +%u", octaveRange);
+        displayManager.showText("Arp Edit", line2, line3);
+        return;
+    }
 
     // Knob #1 owns the step length. Its raw 10‑bit reading gets linearly remapped
     // to MIDI clock ticks so the riff stays welded to the global tempo:
     //   0     -> 1 tick   (every pulse)
     //   1023  -> MAX_LENGTH ticks (a whole quarter note at 24 PPQN)
     // Future hackers: tweak Arpeggiator::MAX_LENGTH if you want longer gaps.
-    uint8_t lengthTicks = map(rawLen, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
-    int shapeIdx = map(rawShape, 0, 1023, 0, 3);
-    static const char *names[] = {"UP", "DOWN", "UPDN", "RAND"};
-    Arpeggiator::Shape shapes[] = {Arpeggiator::UP, Arpeggiator::DOWN, Arpeggiator::UPDOWN,
-                                   Arpeggiator::RANDOM};
+    uint8_t lengthTicks = map(raw1, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
+    int shapeIdx = map(raw2, 0, 1023, 0, 5);
+    static const char *names[] = {"UP", "DOWN", "UPDN", "RAND", "DRUNK", "EUCL"};
+    Arpeggiator::Shape shapes[] = {Arpeggiator::UP,      Arpeggiator::DOWN,
+                                   Arpeggiator::UPDOWN,  Arpeggiator::RANDOM,
+                                   Arpeggiator::DRUNK,   Arpeggiator::EUCLIDEAN};
 
-    // Pump the tick count into the arp engine and shape selector.
+    // Update the arpeggiator with the latest UI control values.
     arpeggiator.setLength(lengthTicks);
     arpeggiator.setShape(shapes[shapeIdx]);
 
-    // Flash the current groove math on the OLED so humans can vibe too.
     displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
 }
 
@@ -1954,12 +2649,37 @@ void setup() {
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
     bool baselinesLoaded = configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     refreshEfVoicesFromConfig();
+    for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
+        if (i < efBaseGains.size()) {
+            efBaseGains[i] = envelopeFollowers[i].getGain();
+        }
+    }
 
     // — MIDI Handler —
     midiHandler.begin();
     midiHandler.setDiagnostics(&g_systemDiagnostics);
     midiHandler.setDisplayManager(&displayManager);
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
+    // LFOs need MIDI tick access for clock sync routing.
+    lfoManager.attachMIDI(&midiHandler);
+    configureLFOs();
+
+    // — Profiles —
+    // Restore the active profile index and load its pot map + extended payload.
+    g_activeProfile = configManager.getActiveProfile();
+    if (g_activeProfile >= NUM_PROFILES) {
+        g_activeProfile = 0;
+        configManager.setActiveProfile(g_activeProfile);
+    }
+    configManager.loadProfile(g_activeProfile);
+    potChannels.clear();
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        potChannels.push_back(configManager.getPotChannel(i));
+    }
+    ProfileData storedProfile{};
+    if (configManager.loadProfileSettings(g_activeProfile, storedProfile)) {
+        applyProfileSnapshot(storedProfile, true);
+    }
 
     // — Pot → MIDI routing callback —
     potentiometerManager.setMidiCallback(
@@ -2112,6 +2832,8 @@ void setup() {
     // Three cooperative schedulers slice time so nothing blocks:
     // High-priority (1 ms):
     Utility::schedulerHigh.addTask(processMIDI, hwConfig.midiTaskInterval);
+    // Keep LFO updates on a tight 1 kHz cadence for smooth modulation.
+    Utility::schedulerHigh.addTask(processLFOs, 1, true);
     Utility::schedulerHigh.addTask(
         []() {
             if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
@@ -2164,7 +2886,7 @@ void setup() {
                 displayManager.runIdleScreensaver();
             }
         },
-        100);
+        50);
 
     Utility::schedulerLow.addTask(
         []() { seedbox::interop::mn42::SeedBoxLink::instance().update(); }, 500);
@@ -2189,5 +2911,19 @@ void loop() {
     Utility::schedulerLow.update();
     buttonManager.processButtons(buttonContext);
     potentiometerManager.processPots(ledManager, envelopeFollowers);
+    if (g_profileChangeRequested) {
+        // Apply the active profile payload once the UI requests a change.
+        ProfileData profile{};
+        if (configManager.loadProfileSettings(g_activeProfile, profile)) {
+            applyProfileSnapshot(profile, true);
+        }
+        g_profileChangeRequested = false;
+    }
+    if (g_profileSaveRequested) {
+        // Snapshot current runtime state into the active profile slot.
+        ProfileData profile = captureProfileSnapshot();
+        configManager.saveProfileSettings(g_activeProfile, profile);
+        g_profileSaveRequested = false;
+    }
     monitorSystemLoad();
 }

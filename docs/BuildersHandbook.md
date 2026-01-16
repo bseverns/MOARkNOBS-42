@@ -67,6 +67,33 @@ flowchart TD
 
 Knowing the firmware loop helps you predict how fast the box reacts and where to poke when hacking features.
 
+## LFO Engine
+
+Two low‑frequency oscillators live inside the firmware for modulation work. Each LFO can free‑run in Hz or lock to the MIDI clock (24 PPQN), with depth and polarity controls per instance.
+
+```cpp
+#include "LFO/LFOManager.h"
+
+LFO &lfo1 = lfoManager.lfo(0);
+lfo1.setShape(LFOShape::Sine);
+lfo1.setFrequencyHz(1.0f);
+lfo1.setDepth(0.75f);
+lfo1.setBipolar(false);
+lfo1.setSyncEnabled(true);
+lfo1.setSyncRatio(LFOSyncRatio::Div4); // 1 cycle per 4 beats
+```
+
+The LFO bus can drive internal targets like EF gain trim, arp swing, or LED brightness, and can be routed out over MIDI/OSC via the routing layer.
+
+## Arpeggiator
+
+The arpeggiator can run UP, DOWN, UP-DOWN, RAND, DRUNK, or EUCL patterns, synced to MIDI clock (24 PPQN) or the internal tapped BPM fallback. Step length stays in ticks, while swing and gate length are percent-based so timing scales with tempo.
+
+- **Toggle:** `Ctrl2 + Ctrl4` turns the arp on/off for the active slot.
+- **Edit (hold):** Long-press `Ctrl2 + Ctrl4` to enter Arp Edit while held; Control pot 1 sets gate length %, Control pot 2 sets octave range (0–3).
+- **Swing presets:** Long-press `Ctrl2 + Ctrl3` to cycle 0%, 8%, 16%, 30%.
+- **Base note:** Short press `Ctrl2 + Ctrl3` bumps the base note.
+
 ## First-Run Tests
 
 Once the firmware's on board, make sure the basics don't flake out:
@@ -145,11 +172,11 @@ WebSerial lets you tweak patches from a browser without custom software. It's qu
 
 These classics ruin weekends. Keep them in mind and you'll spend more time making noise than troubleshooting.
 
-## Profiles: stash three setups
+## Profiles: stash four setups
 
-The rig hoards three full configuration profiles in EEPROM. Each profile is a 256‑byte bunker storing your pot maps, LED vibe, and envelope tricks.
+The rig hoards four full configuration profiles (A–D) in EEPROM. Each profile stores your pot maps, LED vibe, envelope tricks, and modulation settings.
 
-- **Jump profiles** – mash **Ctrl1 + Ctrl2** to hop to the next profile. It wraps after the third.
+- **Jump profiles** – mash **Ctrl1 + Ctrl2** to hop to the next profile. It wraps after the fourth.
 - **Save the chaos** – long‑press **Ctrl4** once you've mangled the knobs to taste.
 - **Panic reload** – long‑press **Ctrl1** (with the confirm jab) to yank the active profile from EEPROM.
 
@@ -179,4 +206,3 @@ Available environments:
 ### Why this matters
 
 Running the test rigs lets you trust the hardware before you haul it on stage.
-

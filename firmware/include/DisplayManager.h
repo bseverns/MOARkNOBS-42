@@ -78,6 +78,11 @@ struct StartupAnimation {
  */
 class DisplayManager {
   public:
+    // Diagnostic page indices are shared with ButtonManager so long-press navigation
+    // never drifts out of sync with what the OLED actually renders.
+    static constexpr uint8_t kDiagnosticPageCount = 5;
+    static constexpr uint8_t kDiagnosticPageDebug = 4;
+
     /**
      * @param i2cAddress   I2C address of the SSD1306 display.
      * @param screenWidth  Display width in pixels.

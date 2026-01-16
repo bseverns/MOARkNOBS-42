@@ -19,7 +19,7 @@ Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs
 1. **Power and Plug In** – External power wakes the brain and both DIN/TRS jacks spit MIDI immediately. To light up USB MIDI, smash `Ctrl3`+`Ctrl4`+`Ctrl5`.
 2. **Pick a Slot** – Twist the lone slot pot or tap a slot button. Each of the 42 slots remembers its own channel, CC/note/program, and EF hookup.
 3. **Map It** – Use the [WebSerial editor](App/benzknobz.html) or `SET_POT` over a serial terminal to bind that slot to whatever your synth expects. Need button combos? See the [button map](include/ButtonManager/README.md#button-map).
-4. **Modulate** – Pair any slot with one of six envelope followers. `Freq` and `Q` pots sculpt the follower's filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
+4. **Modulate** – Pair any slot with one of six envelope followers. EF modes (Peak/RMS/Gate/Follower) and auto‑calibration now live per slot, while `Freq` and `Q` pots sculpt the filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
 5. **Save & Play** – Settings persist in EEPROM, so once it's dialed, yank the cable and go.
 
 Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial dark magic](../docs/WebSerial.md).
@@ -57,7 +57,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend, Mod Wheel, NRPN, RPN, and SysEx.
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
-- **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; filter pots set length and pattern.
+- **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; adds DRUNK/EUCL shapes plus swing, gate length, and octave range control.
 - **Note Dynamics Knobs**: When the arp is idle, “Freq” shoves outgoing velocity (‑64…+63) and “Q” rigs the odds a pot twist actually fires a new note.
 - **Perlin-Spiced Randomness**: The "random" shape rides a lightweight Perlin noise function, giving chaos more of a groove.
 - **Per-EF Filter Selection & Real-Time Tuning**: Each envelope follower can be set to linear, opposite, exponential, random, low-pass, high-pass, or band-pass response. Two dedicated pots allow on-the-fly tuning of filter cutoff (frequency) and resonance (Q).
@@ -69,7 +69,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign EFs, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
   _Note:_ The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
-- **WebSerial Telemetry**: Streams slot values and envelope levels so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
+- **WebSerial Telemetry**: Streams slot values, envelope levels, and LFO outputs so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 - **Telemetry Watchdog**: Hardware UART overruns, dropped MIDI frames, and slow loops now bump counters, flash the status LED, and flow out over WebSerial so you know when you're skirting the edge.
 
 ### Slot Anatomy Cheat Sheet
@@ -417,7 +417,7 @@ And yes, combo presses are supported:
 | Ctrl0 + Ctrl3         | Set slot to SysEx                |
 | Ctrl2 + Ctrl4         | Toggle Arpeggiator mode          |
 | Ctrl2 + Ctrl3         | Bump arpeggiator base note       |
-| Ctrl1 + Ctrl2         | Cycle configuration profiles     |
+| Ctrl1 + Ctrl2         | Cycle configuration profiles (A-D) |
 
 Need RPN in a flash? Mash **Ctrl1 + Ctrl3** to flip the active slot, or keep double‑tapping **Ctrl2** to cycle through the full MIDI zoo.
 
@@ -427,7 +427,7 @@ Profiles are the controller's second brain. They stash the whole CC+EF circus so
 
 - **Save:** Long-press **Control Button #4**, then give it a quick confirm tap to dump the current configuration into EEPROM.
 - **Load:** Long-press **Control Button #1** (plus the confirm jab) to resurrect the last saved profile.
-- **Cycle:** Mash **Control Buttons #0 and #2** together to hop to the next profile slot when you've hoarded more than one.
+- **Cycle:** Mash **Control Buttons #1 and #2** together to hop through profiles A–D.
 
 Profiles live in EEPROM, so the chaos survives power cycles. Kill the power, plug back in, and you're right where you left off.
 

@@ -57,8 +57,7 @@ static constexpr const char *ARG_METHOD_NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV
                                                    "BABS", "TABS", "MULT", "DIVI", "AVG",
                                                    "XABS", "MAXX", "MINN", "XORR"};
 
-// Active configuration profile stored in EEPROM
-static uint8_t currentProfile = 0;
+// Active profile index is stored globally so boot can restore it.
 
 namespace {
 constexpr uint32_t MUX_SETTLE_US = 5;
@@ -153,6 +152,20 @@ inline void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSe
     ef.setSmoothingAlpha(settings.smoothing);
     ef.setBaseline(settings.baseline);
     ef.setGain(settings.gain);
+    EnvelopeFollower::EfModeSettings modeSettings{};
+    modeSettings.mode = static_cast<EnvelopeFollower::EFMode>(settings.efMode);
+    modeSettings.attackMs = settings.attackMs;
+    modeSettings.releaseMs = settings.releaseMs;
+    modeSettings.rmsWindowMs = settings.rmsWindowMs;
+    modeSettings.baselineTauMs = settings.baselineTauMs;
+    modeSettings.gainTauMs = settings.gainTauMs;
+    modeSettings.gateThreshold = settings.gateThreshold;
+    modeSettings.gateHysteresis = settings.gateHysteresis;
+    modeSettings.activityThreshold = settings.activityThreshold;
+    modeSettings.gainTarget = settings.gainTarget;
+    modeSettings.autoBaseline = settings.autoBaseline != 0;
+    modeSettings.autoGain = settings.autoGain != 0;
+    ef.setModeSettings(modeSettings);
 }
 
 inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
@@ -392,15 +405,17 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         }
         case 1: {
             if (context.diagnosticMode) {
-                context.diagnosticPage = (context.diagnosticPage + 1) % 4;
+                context.diagnosticPage = static_cast<uint8_t>(
+                    (context.diagnosticPage + 1) % DisplayManager::kDiagnosticPageCount);
                 context.displayManager.displayStatus("Diag Page", 1000);
             } else {
                 // Reload configuration profile from EEPROM
-                context.configManager.loadProfile(currentProfile);
+                context.configManager.loadProfile(g_activeProfile);
                 context.potChannels.clear();
                 for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
                     context.potChannels.push_back(context.configManager.getPotChannel(i));
                 }
+                g_profileChangeRequested = true;
                 context.displayManager.displayStatus("Profile Reset!", 1500);
             }
             break;
@@ -419,20 +434,23 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
             context.displayManager.displayStatus("EEPROM Reset", 1500);
             break;
         case 4: { // Save configuration to the active profile
-            context.configManager.saveProfile(currentProfile);
+            context.configManager.saveProfile(g_activeProfile);
             context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+            g_profileSaveRequested = true;
             context.displayManager.displayStatus("Config Saved", 1500);
             break;
         }
-        case 5: { // Toggle diagnostic mode
-            context.diagnosticMode = !context.diagnosticMode;
-            if (context.diagnosticMode) {
-                context.diagnosticPage = 0;
+        case 5: { // Diagnostic entry + page cycling (encoder long-press)
+            if (!context.diagnosticMode) {
+                context.diagnosticMode = true;
+                context.diagnosticPage = DisplayManager::kDiagnosticPageDebug;
                 context.displayManager.displayStatus("Diagnostics", 1000);
+                context.ledManager.setDiagnosticMode(true);
             } else {
-                context.displayManager.displayStatus("Diag Off", 1000);
+                context.diagnosticPage = static_cast<uint8_t>(
+                    (context.diagnosticPage + 1) % DisplayManager::kDiagnosticPageCount);
+                context.displayManager.displayStatus("Diag Page", 1000);
             }
-            context.ledManager.setDiagnosticMode(context.diagnosticMode);
             break;
         }
         default:
@@ -690,6 +708,13 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
 
     case 5: {
         // Short Press (Control Button #5): Tapped BPM
+        if (context.diagnosticMode) {
+            // Diagnostics is modal; a quick tap exits so the panel returns to tempo duty.
+            context.diagnosticMode = false;
+            context.displayManager.displayStatus("Diag Off", 1000);
+            context.ledManager.setDiagnosticMode(false);
+            break;
+        }
         static unsigned long lastTap = 0;
         unsigned long now = ::now();
         if (lastTap != 0) {
@@ -907,15 +932,17 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (16) Ctrl1 + Ctrl2: Cycle configuration profiles
     else if ((pressedButtons & (maskCtrl1 | maskCtrl2)) == (maskCtrl1 | maskCtrl2)) {
-        currentProfile = (currentProfile + 1) % 3;
-        context.configManager.loadProfile(currentProfile);
+        g_activeProfile = static_cast<uint8_t>((g_activeProfile + 1) % NUM_PROFILES);
+        context.configManager.setActiveProfile(g_activeProfile);
+        context.configManager.loadProfile(g_activeProfile);
         context.potChannels.clear();
         for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
             context.potChannels.push_back(context.configManager.getPotChannel(i));
         }
         char buf[32];
-        sprintf(buf, "PROFILE %d", currentProfile);
+        snprintf(buf, sizeof(buf), "PROFILE %c", static_cast<char>('A' + g_activeProfile));
         context.displayManager.displayStatus(buf, 1500);
+        g_profileChangeRequested = true;
     }
 }
 
@@ -979,12 +1006,69 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             mask |= (1 << i);
         }
     }
+    const uint8_t maskCtrl0 = 1 << 0;
+    const uint8_t maskCtrl1 = 1 << 1;
+    const uint8_t maskCtrl2 = 1 << 2;
+    const uint8_t maskCtrl3 = 1 << 3;
+    const uint8_t maskCtrl4 = 1 << 4;
+    const uint8_t maskCtrl5 = 1 << 5;
     const uint8_t jitterMask = (1 << 0) | (1 << 3) | (1 << 4);
+    const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
+    const uint8_t swingMask = maskCtrl2 | maskCtrl3;
     bool jitterActive = (mask == jitterMask);
     g_jitterTuningActive = jitterActive;
     static uint8_t lastMask = 0;
+    // Track combos that have long-press behaviors (arp edit, swing presets).
+    bool multiPressed = (mask && (mask & (mask - 1)));
+    bool longPressCombo = (mask == arpEditMask || mask == swingMask);
+
+    // Combo transitions: handle short-press fallbacks and release behavior.
+    if (mask != _comboHoldMask) {
+        if (_comboHoldMask == arpEditMask) {
+            if (!_comboLongPressFired) {
+                handleMultiButtonPress(_comboHoldMask, context);
+            }
+            // Arp edit only stays active while the combo is held.
+            if (g_arpEditActive) {
+                g_arpEditActive = false;
+                context.displayManager.displayStatus("Arp Edit Off", 1000);
+            }
+        } else if (_comboHoldMask == swingMask) {
+            if (!_comboLongPressFired) {
+                handleMultiButtonPress(_comboHoldMask, context);
+            }
+        }
+        _comboHoldMask = longPressCombo ? mask : 0;
+        _comboHoldTimestamp = now;
+        _comboLongPressFired = false;
+    }
+
+    // Fire long-press actions once the combo crosses the hold threshold.
+    if (longPressCombo && !_comboLongPressFired &&
+        (now - _comboHoldTimestamp >= LONG_PRESS_DELAY)) {
+        _comboLongPressFired = true;
+        if (mask == arpEditMask) {
+            if (arpeggiator.isActive()) {
+                g_arpEditActive = true;
+                context.displayManager.displayStatus("Arp Edit", 1000);
+            } else {
+                context.displayManager.displayStatus("Arp Off", 1000);
+            }
+        } else if (mask == swingMask) {
+            // Cycle through swing presets for fast access.
+            static uint8_t swingPreset = 0;
+            static const uint8_t swingPresets[] = {0, 8, 16, 30};
+            swingPreset = static_cast<uint8_t>((swingPreset + 1) %
+                                               (sizeof(swingPresets) / sizeof(swingPresets[0])));
+            uint8_t value = swingPresets[swingPreset];
+            arpeggiator.setSwingPercent(static_cast<float>(value));
+            char buf[24];
+            snprintf(buf, sizeof(buf), "Swing %u%%", value);
+            context.displayManager.displayStatus(buf, 1000);
+        }
+    }
     if (mask != lastMask) {
-        if (mask && (mask & (mask - 1))) { // more than one button pressed
+        if (multiPressed && !longPressCombo) { // more than one button pressed
             handleMultiButtonPress(mask, context);
         }
         lastMask = mask;

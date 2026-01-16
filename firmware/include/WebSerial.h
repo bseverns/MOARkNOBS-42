@@ -18,6 +18,7 @@ class WebSerial {
      * {
      *   "slots": [s0, s1, ..., s41],       // 42 values, each 0-127
      *   "envelopes": [e0, e1, ..., e5],    // 6 values, each 0-127
+     *   "lfos": [lfo0, lfo1],              // 0..1 normalized values
      *   "currentSlot": <int>,              // -1 if nothing is armed, otherwise 0-41
      *   "argMethod": "<label>",          // e.g. "PLUS" or "MULT"
      *   "argEnabled": <bool>,            // true if the ARG blender is active

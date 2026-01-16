@@ -42,6 +42,7 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 {
   "slots":[0,1,2,...,41],
   "envelopes":[0,0,0,0,0,0],
+  "lfos":[0.0,0.0],
   "currentSlot":5,
   "argMethod":"PLUS",
   "argEnabled":true,
@@ -62,6 +63,7 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 - `slots` – 42 MIDI‑scaled values (0‑127) for each virtual slot.
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
+- `lfos` – normalized 0..1 LFO outputs (one entry per LFO engine).
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
 - `argEnabled` – whether the ARG blender is live or bypassed.
@@ -104,6 +106,11 @@ fields line up with `MIDISlot::EfSettings` in firmware:
 - `smoothing` – EWMA alpha; higher values hug new samples harder.
 - `baseline` – calibration offset saved alongside the routing so quiet stays quiet.
 - `gain` – post-baseline multiplier that lets a follower punch above unity.
+- `mode` – EF mode selector (`PEAK`, `RMS`, `GATE`, `FOLLOWER` or enum 0-3).
+- `auto_baseline` / `auto_gain` – flags for auto-calibration.
+- `attack_ms` / `release_ms` / `rms_ms` – timing controls for Peak/Follower/RMS.
+- `gate_threshold` / `gate_hysteresis` – gating thresholds in 0-127.
+- `activity_threshold` / `baseline_tau_ms` / `gain_tau_ms` / `gain_target` – auto-cal settings.
 
 Leave the object alone if you only care about routing. You can still rely on the legacy `ef_index` scalar for backward-compatible
 hosts, but the nested settings are the real playground for browser editors.
@@ -135,6 +142,8 @@ never fall out of sync.
 | `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
 | `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
 | `CAL_ENVS` | – | recalibrate all followers |
+| `GET_PROFILE` `<id>` | 0‑3 | dump profile payload JSON (arp/LFO/LED/EF/midi channel) |
+| `SET_PROFILE` `<id>,<payload>` | 0‑3, JSON | store profile payload JSON into EEPROM |
 | `SET_FILTER` `<type>,<freq>,<q>` | type 0‑?, floats | blast the legacy global filter (and mirror those values into every slot payload for backward compatibility) |
 | `GET_FILTER` | – | return `type,freq,q` using the legacy global stash |
 | `SET_SLOT_FILTER` `<slot>,<type>,<freq>,<q>` | slot 0‑41, type 0‑?, floats | surgically edit one slot’s envelope payload without touching the others |

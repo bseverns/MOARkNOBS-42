@@ -14,3 +14,11 @@
 - **Resolution:** Default MIDI 7-bit; 14-bit available where marked; OSC path mirrors 0.0–1.0.
 - **Curves:** Log/exp curves indicated per control; see firmware `mapping_curves.h`.
 - **Discoverability:** Send `/mn42/hello` on USB connect with firmware version and mapping hash.
+- **Mod sources:** `SOURCE_LFO1` and `SOURCE_LFO2` can be routed to internal targets (EF gain trim, arp swing, LED brightness) or external MIDI/OSC.
+
+## Arpeggiator Controls
+
+- **Ctrl pot 1/2 (arp active):** Step length (ticks) and shape: UP, DOWN, UPDN, RAND, DRUNK, EUCL.
+- **Ctrl2 + Ctrl4:** Toggle arpeggiator; long-press enters Arp Edit while held.
+- **Ctrl2 + Ctrl3:** Bump base note; long-press cycles swing presets (0%, 8%, 16%, 30%).
+- **Arp Edit (hold Ctrl2 + Ctrl4):** Ctrl pot 1 = gate length %, Ctrl pot 2 = octave range (0–3).
