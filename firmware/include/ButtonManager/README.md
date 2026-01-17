@@ -65,7 +65,7 @@ _Long-press stunts ask for a quick confirm tap after you let go—no more accide
 | Ctrl2  | Cycle EF assignment                 | Toggle Slot Active         | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
 | Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM               | —                                                                           |
 | Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                | —                                                                           |
-| Ctrl5  | Tap BPM                             | Enter/Exit Diagnostics     | —                          |
+| Ctrl5  | Tap BPM (exit diagnostics if active) | Enter diagnostics / cycle pages | —                          |
                           |
 When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) with a long press, the LED strip throws a full-strip warning animation. Red-and-white strobes scream "factory reset" while a teal shimmer covers diagnostics, buying you the confirmation window to bail if needed.
 
@@ -93,9 +93,9 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Ctrl2 + Ctrl5         | Set slot to NRPN                 |
 | Ctrl1 + Ctrl3         | Set slot to RPN                  |
 | Ctrl0 + Ctrl3         | Set slot to SysEx                |
-| Ctrl2 + Ctrl4         | Toggle Arpeggiator mode          |
-| Ctrl2 + Ctrl3         | Bump arpeggiator base note       |
-| Ctrl1 + Ctrl2         | Cycle configuration profiles     |
+| Ctrl2 + Ctrl4         | Toggle Arpeggiator mode (short), Arp Edit (long press) |
+| Ctrl2 + Ctrl3         | Bump arpeggiator base note (short), Swing preset (long press) |
+| Ctrl1 + Ctrl2         | Cycle configuration profiles (A-D) |
 
 The ARG combos (`Ctrl0+Ctrl1` / `Ctrl0+Ctrl2`) only light up once the active slot actually owns an envelope follower. If no EF is assigned the firmware flashes “No EF assigned” on the OLED instead of scribbling ghost settings.
 

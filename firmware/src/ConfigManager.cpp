@@ -7,7 +7,10 @@
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include "ARGMixer.h" // reuse the shared sanitizeSlotArg implementation
+#include "Arpeggiator.h"
+#include "LFO/LFOManager.h"
 #include <cmath>
+#include <cstddef>
 #include <vector>
 #include "Log.h"
 
@@ -42,11 +45,27 @@ void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings)
 namespace {
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
+constexpr uint16_t kProfileSettingsVersion = PROFILE_SETTINGS_VERSION;
 constexpr float kMinFilterFrequency = 20.0f;
 constexpr float kMaxFilterFrequency = 5000.0f;
 constexpr float kMinFilterQ = 0.5f;
 constexpr float kMaxFilterQ = 4.0f;
 constexpr int kUnassignedEnvelope = -1;
+
+// Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
+// saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
+// where the checksum bunkers down.
+static uint16_t crc16_update(uint16_t crc, uint8_t data) {
+    crc ^= data;
+    for (uint8_t i = 0; i < 8; ++i) {
+        if (crc & 1) {
+            crc = (crc >> 1) ^ 0xA001;
+        } else {
+            crc >>= 1;
+        }
+    }
+    return crc;
+}
 
 bool filterCoefficientsLookSane(float freq, float q) {
     if (!std::isfinite(freq) || !std::isfinite(q)) {
@@ -59,6 +78,102 @@ bool filterCoefficientsLookSane(float freq, float q) {
         return false;
     }
     return true;
+}
+
+ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings) {
+    // Clamp EF settings so profile loads can't push envelopes out of bounds.
+    ProfileEfSettings sanitized = settings;
+    if (sanitized.mode > static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower)) {
+        sanitized.mode = static_cast<uint8_t>(EnvelopeFollower::EFMode::Peak);
+    }
+    sanitized.autoBaseline = sanitized.autoBaseline ? 1 : 0;
+    sanitized.autoGain = sanitized.autoGain ? 1 : 0;
+    sanitized.gateThreshold = constrain(sanitized.gateThreshold, 0, 127);
+    sanitized.gateHysteresis = constrain(sanitized.gateHysteresis, 0, 127);
+    sanitized.activityThreshold = constrain(sanitized.activityThreshold, 0, 127);
+    sanitized.gainTarget = constrain(sanitized.gainTarget, 0, 127);
+    sanitized.attackMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.attackMs));
+    sanitized.releaseMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.releaseMs));
+    sanitized.rmsWindowMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.rmsWindowMs));
+    sanitized.baselineTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
+    sanitized.gainTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.gainTauMs));
+    return sanitized;
+}
+
+ProfileData sanitizeProfileData(const ProfileData &profile) {
+    // Clean up profile payloads loaded from EEPROM or JSON.
+    ProfileData sanitized = profile;
+    sanitized.version = kProfileSettingsVersion;
+    if (sanitized.routeCount > PROFILE_MAX_ROUTES) {
+        sanitized.routeCount = PROFILE_MAX_ROUTES;
+    }
+    sanitized.arp.lengthTicks =
+        static_cast<uint8_t>(constrain(sanitized.arp.lengthTicks, 1, Arpeggiator::MAX_LENGTH));
+    if (sanitized.arp.shape > static_cast<uint8_t>(Arpeggiator::EUCLIDEAN)) {
+        sanitized.arp.shape = static_cast<uint8_t>(Arpeggiator::UP);
+    }
+    sanitized.arp.swingPercent = static_cast<uint8_t>(constrain(sanitized.arp.swingPercent, 0, 80));
+    sanitized.arp.gatePercent = static_cast<uint8_t>(constrain(sanitized.arp.gatePercent, 5, 100));
+    sanitized.arp.octaveRange = static_cast<uint8_t>(constrain(sanitized.arp.octaveRange, 0, 3));
+
+    sanitized.led.brightness = static_cast<uint8_t>(constrain(sanitized.led.brightness, 0, 255));
+
+    for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
+        ProfileLfoSettings &lfo = sanitized.lfos[i];
+        if (lfo.shape > static_cast<uint8_t>(LFOShape::RandomSlew)) {
+            lfo.shape = static_cast<uint8_t>(LFOShape::Sine);
+        }
+        if (!std::isfinite(lfo.frequencyHz) || lfo.frequencyHz < 0.0f) {
+            lfo.frequencyHz = 0.0f;
+        }
+        if (!std::isfinite(lfo.depth)) {
+            lfo.depth = 0.0f;
+        }
+        lfo.depth = constrain(lfo.depth, 0.0f, 1.0f);
+        lfo.bipolar = lfo.bipolar ? 1 : 0;
+        lfo.syncEnabled = lfo.syncEnabled ? 1 : 0;
+        if (lfo.syncRatio > static_cast<uint8_t>(LFOSyncRatio::Mul4)) {
+            lfo.syncRatio = static_cast<uint8_t>(LFOSyncRatio::Div1);
+        }
+    }
+    for (uint8_t i = sanitized.routeCount; i < PROFILE_MAX_ROUTES; ++i) {
+        sanitized.routes[i] = ProfileLfoRoute{};
+    }
+    for (uint8_t i = 0; i < sanitized.routeCount; ++i) {
+        ProfileLfoRoute &route = sanitized.routes[i];
+        if (route.type > static_cast<uint8_t>(LFOManager::Route::Type::Osc)) {
+            route.type = static_cast<uint8_t>(LFOManager::Route::Type::Internal);
+        }
+        if (route.lfoIndex >= PROFILE_LFO_COUNT) {
+            route.lfoIndex = 0;
+        }
+        if (!std::isfinite(route.depth)) {
+            route.depth = 0.0f;
+        }
+        route.depth = constrain(route.depth, 0.0f, 1.0f);
+        if (route.target > static_cast<uint8_t>(LFOInternalTarget::LedBrightness)) {
+            route.target = static_cast<uint8_t>(LFOInternalTarget::EfGainTrim);
+        }
+        route.channel = static_cast<uint8_t>(constrain(route.channel, 1, 16));
+    }
+    for (auto &slot : sanitized.slots) {
+        if (slot.midiChannel < 1 || slot.midiChannel > 16) {
+            slot.midiChannel = 1;
+        }
+        slot.ef = sanitizeProfileEfSettings(slot.ef);
+    }
+    return sanitized;
+}
+
+uint16_t computeProfileCrc(const ProfileData &profile) {
+    // CRC covers the payload bytes following the crc field.
+    constexpr size_t kCrcStart = offsetof(ProfileData, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(ProfileData); ++i) {
+        crc = crc16_update(crc, bytes[i]);
+    }
+    return crc;
 }
 
 SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &payload) {
@@ -123,12 +238,28 @@ EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType t
 }
 
 void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
+    // Push persisted per-slot settings back into the live follower.
     ef.setFilterType(toEnvelopeFilter(settings.filterType));
     ef.configureFilter(settings.frequency, settings.q);
     ef.setOversampleCount(settings.oversample);
     ef.setSmoothingAlpha(settings.smoothing);
     ef.setBaseline(settings.baseline);
     ef.setGain(settings.gain);
+    // Convert serialized EF mode settings into the runtime structure.
+    EnvelopeFollower::EfModeSettings modeSettings{};
+    modeSettings.mode = static_cast<EnvelopeFollower::EFMode>(settings.efMode);
+    modeSettings.attackMs = settings.attackMs;
+    modeSettings.releaseMs = settings.releaseMs;
+    modeSettings.rmsWindowMs = settings.rmsWindowMs;
+    modeSettings.baselineTauMs = settings.baselineTauMs;
+    modeSettings.gainTauMs = settings.gainTauMs;
+    modeSettings.gateThreshold = settings.gateThreshold;
+    modeSettings.gateHysteresis = settings.gateHysteresis;
+    modeSettings.activityThreshold = settings.activityThreshold;
+    modeSettings.gainTarget = settings.gainTarget;
+    modeSettings.autoBaseline = settings.autoBaseline != 0;
+    modeSettings.autoGain = settings.autoGain != 0;
+    ef.setModeSettings(modeSettings);
 }
 
 bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
@@ -162,6 +293,7 @@ void applyPayloadToSettings(const SlotEnvelopePayload &payload, MIDISlot::EfSett
 }
 
 MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
+    // Clamp EF settings so corrupt EEPROM data doesn't destabilize runtime.
     MIDISlot::EfSettings sanitized = settings;
     if (!filterTypeIsValid(sanitized.filterType)) {
         sanitized.filterType = MIDISlot::EfSettings::FilterType::Linear;
@@ -181,6 +313,21 @@ MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     if (!std::isfinite(sanitized.gain)) {
         sanitized.gain = 1.0f;
     }
+    // Validate EF mode and auto-cal flags.
+    if (sanitized.efMode > static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower)) {
+        sanitized.efMode = static_cast<uint8_t>(EnvelopeFollower::EFMode::Peak);
+    }
+    sanitized.autoBaseline = sanitized.autoBaseline ? 1 : 0;
+    sanitized.autoGain = sanitized.autoGain ? 1 : 0;
+    sanitized.gateThreshold = constrain(sanitized.gateThreshold, 0, 127);
+    sanitized.gateHysteresis = constrain(sanitized.gateHysteresis, 0, 127);
+    sanitized.activityThreshold = constrain(sanitized.activityThreshold, 0, 127);
+    sanitized.gainTarget = constrain(sanitized.gainTarget, 0, 127);
+    sanitized.attackMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.attackMs));
+    sanitized.releaseMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.releaseMs));
+    sanitized.rmsWindowMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.rmsWindowMs));
+    sanitized.baselineTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
+    sanitized.gainTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.gainTauMs));
     return sanitized;
 }
 
@@ -192,21 +339,6 @@ MIDISlot::EfRuntime sanitizeEfRuntime(const MIDISlot::EfRuntime &runtime) {
     return sanitized;
 }
 } // namespace
-
-// Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
-// saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
-// where the checksum bunkers down.
-static uint16_t crc16_update(uint16_t crc, uint8_t data) {
-    crc ^= data;
-    for (uint8_t i = 0; i < 8; ++i) {
-        if (crc & 1) {
-            crc = (crc >> 1) ^ 0xA001;
-        } else {
-            crc >>= 1;
-        }
-    }
-    return crc;
-}
 
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
@@ -256,10 +388,15 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
                 return false;
             }
         }
-        if (_stored.crc != calculateCRC()) {
+        bool includeProfile = (base == EEPROM_PROFILE_START(0));
+        if (_stored.crc != calculateCRC(includeProfile)) {
             LOG_PRINTLN("Config CRC mismatch.");
             resetConfiguration(potChannels);
             return false;
+        }
+        if (_stored.activeProfile >= NUM_PROFILES) {
+            _stored.activeProfile = 0;
+            needsRewrite = true;
         }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
@@ -289,10 +426,15 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
                 return false;
             }
         }
-        if (_stored.crc != calculateCRC()) {
+        bool includeProfile = (base == EEPROM_PROFILE_START(0));
+        if (_stored.crc != calculateCRC(includeProfile)) {
             LOG_PRINTLN("Backup CRC mismatch.");
             resetConfiguration(potChannels);
             return false;
+        }
+        if (_stored.activeProfile >= NUM_PROFILES) {
+            _stored.activeProfile = 0;
+            needsRewrite = true;
         }
         potChannels.clear();
         for (uint8_t i = 0; i < _numPots; i++) {
@@ -316,6 +458,9 @@ void ConfigManager::readEEPROM(bool backup, uint16_t base) {
         _stored.potChannels[i] = EEPROM.read(offset + EEPROM_POT_CHANNELS + i);
         _stored.potCCNumbers[i] = EEPROM.read(offset + EEPROM_POT_CC + i);
     }
+    if (base == EEPROM_PROFILE_START(0)) {
+        _stored.activeProfile = EEPROM.read(offset + EEPROM_ACTIVE_PROFILE);
+    }
     EEPROM.get(offset + EEPROM_CONFIG_VERSION, _stored.version);
     EEPROM.get(offset + EEPROM_CONFIG_CRC, _stored.crc);
 }
@@ -323,10 +468,13 @@ void ConfigManager::readEEPROM(bool backup, uint16_t base) {
 // Internal write to EEPROM
 void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
-    uint16_t crc = calculateCRC();
+    uint16_t crc = calculateCRC(base == EEPROM_PROFILE_START(0));
     for (uint8_t i = 0; i < _numPots; i++) {
         EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _stored.potChannels[i]);
         EEPROM.update(offset + EEPROM_POT_CC + i, _stored.potCCNumbers[i]);
+    }
+    if (base == EEPROM_PROFILE_START(0)) {
+        EEPROM.update(offset + EEPROM_ACTIVE_PROFILE, _stored.activeProfile);
     }
     EEPROM.put(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
     EEPROM.put(offset + EEPROM_CONFIG_CRC, crc);
@@ -334,7 +482,7 @@ void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     _stored.crc = crc;
 }
 
-uint16_t ConfigManager::calculateCRC() const {
+uint16_t ConfigManager::calculateCRC(bool includeProfile) const {
     uint16_t crc = 0xFFFF;
     for (uint8_t i = 0; i < _numPots; ++i) {
         crc = crc16_update(crc, _stored.potChannels[i]);
@@ -342,20 +490,27 @@ uint16_t ConfigManager::calculateCRC() const {
     for (uint8_t i = 0; i < _numPots; ++i) {
         crc = crc16_update(crc, _stored.potCCNumbers[i]);
     }
+    if (includeProfile) {
+        crc = crc16_update(crc, _stored.activeProfile);
+    }
     return crc;
 }
 
 // Load a profile block into the current working config
 void ConfigManager::loadProfile(uint8_t id) {
+    // Clamp to valid profile slots so EEPROM reads stay in range.
+    if (id >= NUM_PROFILES) {
+        id = 0;
+    }
     uint16_t base = EEPROM_PROFILE_START(id);
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
-        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
+        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC(false)) {
             LOG_PRINTLN("Profile slot corrupted, using defaults.");
         }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
-        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC()) {
+        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC(false)) {
             LOG_PRINTLN("Profile slot corrupted, using defaults.");
         }
     } else {
@@ -365,6 +520,10 @@ void ConfigManager::loadProfile(uint8_t id) {
 
 // Save the current config into the given profile block
 void ConfigManager::saveProfile(uint8_t id) {
+    // Clamp to valid profile slots so EEPROM writes stay in range.
+    if (id >= NUM_PROFILES) {
+        id = 0;
+    }
     uint16_t base = EEPROM_PROFILE_START(id);
     writeEEPROM(false, base);
     writeMagicNumber(false, base);
@@ -374,6 +533,48 @@ void ConfigManager::saveProfile(uint8_t id) {
         writeEEPROM(true, base);
         writeMagicNumber(true, base);
     }
+}
+
+bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const {
+    // Pull the extended profile payload from EEPROM and validate checksum.
+    if (id >= NUM_PROFILES) {
+        return false;
+    }
+    const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+    ProfileData stored{};
+    EEPROM.get(base, stored);
+    if (stored.version != PROFILE_SETTINGS_VERSION) {
+        return false;
+    }
+    uint16_t crc = computeProfileCrc(stored);
+    if (crc != stored.crc) {
+        return false;
+    }
+    // Sanitize on load so bad data never reaches runtime.
+    profile = sanitizeProfileData(stored);
+    profile.crc = computeProfileCrc(profile);
+    return true;
+}
+
+bool ConfigManager::saveProfileSettings(uint8_t id, const ProfileData &profile) {
+    // Save a sanitized profile payload with a fresh CRC.
+    if (id >= NUM_PROFILES) {
+        return false;
+    }
+    ProfileData sanitized = sanitizeProfileData(profile);
+    sanitized.crc = computeProfileCrc(sanitized);
+    const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+    EEPROM.put(base, sanitized);
+    return true;
+}
+
+void ConfigManager::setActiveProfile(uint8_t id) {
+    // Persist the profile index so power cycles restore the last slot.
+    if (id >= NUM_PROFILES) {
+        id = 0;
+    }
+    _stored.activeProfile = id;
+    saveConfiguration();
 }
 
 // Initialize configuration
@@ -580,6 +781,7 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
     }
     seedSlotEnvelopePayloads(static_cast<uint8_t>(EnvelopeFollower::LINEAR), kMinFilterFrequency,
                              1.0f);
+    _stored.activeProfile = 0;
     saveConfiguration();
 }
 
@@ -877,6 +1079,9 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (!filterTypeIsValid(candidate.efSettings.filterType)) {
         return false;
     }
+    if (candidate.efSettings.efMode > static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower)) {
+        return false;
+    }
     SlotEnvelopePayload payload = settingsToPayload(candidate.efSettings);
     if (!std::isfinite(payload.frequency) || !std::isfinite(payload.q)) {
         return false;
@@ -1105,10 +1310,16 @@ SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePay
 }
 
 void ConfigManager::wipeProfileBlocks() {
-    constexpr uint8_t kProfileCount = 3; // primary + two alternates in the UI cycle
-    for (uint8_t id = 1; id < kProfileCount; ++id) {
+    // Wipe every auxiliary profile slot so schema migrations start clean.
+    for (uint8_t id = 1; id < NUM_PROFILES; ++id) {
         const uint16_t base = EEPROM_PROFILE_START(id);
         for (uint16_t offset = 0; offset < EEPROM_PROFILE_BLOCK_SIZE; ++offset) {
+            EEPROM.update(static_cast<int>(base + offset), 0x00);
+        }
+    }
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+        for (uint16_t offset = 0; offset < EEPROM_PROFILE_SETTINGS_BLOCK_SIZE; ++offset) {
             EEPROM.update(static_cast<int>(base + offset), 0x00);
         }
     }

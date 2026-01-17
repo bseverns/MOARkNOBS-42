@@ -482,7 +482,7 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
 
-    switch (page % 4) {
+    switch (page % kDiagnosticPageCount) {
     case 0: { // Button matrix snapshot
         _display.setCursor(0, 0);
         for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
@@ -534,6 +534,46 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
         _display.setCursor(0, 30);
         _display.print("Last:");
         _display.println(diag.lastLoopMicros);
+        break;
+    }
+    case kDiagnosticPageDebug: { // Deep dive: EF health, LFO taps, and tempo lock.
+        // Line 0: tempo and clock lock status.
+        _display.setCursor(0, 0);
+        _display.print("DBG BPM:");
+        if (g_tappedBPM > 0.0f) {
+            _display.print(g_tappedBPM, 1);
+        } else {
+            _display.print("--");
+        }
+        _display.print(" CLK:");
+        _display.print(midi.isClockRunning() ? "ON" : "OFF");
+
+        // Lines 1-6: one envelope follower per row (baseline, gain, value).
+        for (uint8_t i = 0; i < NUM_ENVELOPES; ++i) {
+            uint8_t y = static_cast<uint8_t>((i + 1) * 8);
+            _display.setCursor(0, y);
+            _display.print('E');
+            _display.print(i);
+            _display.print(' ');
+            if (i < ctx.envelopes.size()) {
+                EnvelopeFollower::EfStats stats = ctx.envelopes[i].getStats();
+                _display.print('B');
+                _display.print(stats.baseline, 2);
+                _display.print(" G");
+                _display.print(stats.gain, 2);
+                _display.print(" V");
+                _display.print(stats.value);
+            } else {
+                _display.print("B-- G-- V--");
+            }
+        }
+
+        // Line 7: LFO outputs mirrored in normalized 0..1 space.
+        _display.setCursor(0, 56);
+        _display.print("L1:");
+        _display.print(g_lfoValues[0], 2);
+        _display.print(" L2:");
+        _display.print(g_lfoValues[1], 2);
         break;
     }
     }

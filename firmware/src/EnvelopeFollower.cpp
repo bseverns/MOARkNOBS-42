@@ -59,6 +59,7 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id
       potManager(pm) {
     // default low-pass at 1kHz
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
+    efSettings.mode = efMode;
 }
 
 /**
@@ -182,10 +183,20 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
  * updates envelope level each loop if active
  */
 void EnvelopeFollower::update() {
-    if (isActive) {
-        int rawLevel = readEnvelopeLevel();
-        currentEnvelopeLevel = processEnvelopeLevel(rawLevel);
+    if (!isActive) {
+        return;
     }
+    unsigned long nowMs = now();
+    float dt = 0.0f;
+    if (lastUpdateMs != 0 && nowMs >= lastUpdateMs) {
+        dt = static_cast<float>(nowMs - lastUpdateMs) / 1000.0f;
+    }
+    lastUpdateMs = nowMs;
+    if (dt <= 0.0f) {
+        dt = 0.005f; // default to the mid-priority scheduler cadence
+    }
+    int rawLevel = readEnvelopeLevel(dt);
+    currentEnvelopeLevel = processEnvelopeLevel(rawLevel);
 }
 
 /**
@@ -257,6 +268,45 @@ float EnvelopeFollower::getShapingQ() const { return shapingQ; }
 
 void EnvelopeFollower::setMode(Mode newMode) { mode = newMode; }
 
+void EnvelopeFollower::setMode(EFMode newMode) {
+    // Switching modes resets the detector state so transitions feel clean.
+    if (efMode == newMode) {
+        return;
+    }
+    efMode = newMode;
+    efSettings.mode = newMode;
+    peakState = 0.0f;
+    rmsState = 0.0f;
+    gateOpen = false;
+}
+
+void EnvelopeFollower::setExternalGainTrim(float trim) {
+    // External trim scales the computed level (used by modulation sources).
+    if (!std::isfinite(trim)) {
+        return;
+    }
+    externalGainTrim = constrain(trim, 0.0f, 2.0f);
+}
+
+void EnvelopeFollower::setModeSettings(const EfModeSettings &settings) {
+    // Keep the stored settings in sync with the active mode.
+    efSettings = settings;
+    setMode(settings.mode);
+    efSettings = settings;
+}
+
+EnvelopeFollower::EfModeSettings EnvelopeFollower::getModeSettings() const { return efSettings; }
+
+EnvelopeFollower::EfStats EnvelopeFollower::getStats() const {
+    // Snapshot the current baseline, gain, output, and mode for diagnostics.
+    EfStats stats;
+    stats.baseline = baseline;
+    stats.gain = gainScale();
+    stats.value = currentEnvelopeLevel;
+    stats.mode = efMode;
+    return stats;
+}
+
 void EnvelopeFollower::setARGMethod(ARG_Method method) { argMethod = method; }
 
 EnvelopeFollower::ARG_Method EnvelopeFollower::getARGMethod() const { return argMethod; }
@@ -308,18 +358,147 @@ float EnvelopeFollower::getSmoothingAlpha() const { return smoothingAlpha; }
  * Helper used by update() to read the raw envelope value
  * from the configured analog pin and map it to a MIDI range.
  */
-int EnvelopeFollower::readEnvelopeLevel() {
+int EnvelopeFollower::readEnvelopeLevel(float dtSeconds) {
+    // Oversample the ADC to reduce noise and promote stability.
     uint32_t total = 0;
     for (uint8_t i = 0; i < oversampleCount; ++i) {
         total += hardware::readAnalog(audioInputPin);
         delayMicroseconds(10);
     }
     float avg = static_cast<float>(total) / oversampleCount;
-    float env = (avg * VadcScale - vref - baseline) * gain;
-    env = max(0.0f, env);
+    float sample = avg * VadcScale - vref;
+    float rectified = std::max(0.0f, sample);
+
+    // Update baseline and gain before applying the detector mode.
+    updateAutoBaseline(rectified, dtSeconds);
+    float adjusted = rectified - baseline;
+    if (adjusted < 0.0f) {
+        adjusted = 0.0f;
+    }
+
+    float level = modeOutput(adjusted, dtSeconds);
+    float gainApplied = updateAutoGain(level, dtSeconds);
+
+    // Scale to MIDI range and apply smoothing.
+    float env = level * gainApplied;
+    env = std::max(0.0f, env);
     int midi = static_cast<int>((env / vref) * 127.0f);
     smoothedLevel = smoothingAlpha * midi + (1.0f - smoothingAlpha) * smoothedLevel;
     return constrain(smoothedLevel, 0, 127);
+}
+
+float EnvelopeFollower::detectPeak(float level, float dtSeconds) {
+    // Peak detector with separate attack/release time constants.
+    float attackMs = static_cast<float>(std::max<uint16_t>(1, efSettings.attackMs));
+    float releaseMs = static_cast<float>(std::max<uint16_t>(1, efSettings.releaseMs));
+    float attackCoeff = 1.0f - expf(-dtSeconds / (attackMs / 1000.0f));
+    float releaseCoeff = 1.0f - expf(-dtSeconds / (releaseMs / 1000.0f));
+    float coeff = (level > peakState) ? attackCoeff : releaseCoeff;
+    peakState += (level - peakState) * coeff;
+    return peakState;
+}
+
+float EnvelopeFollower::detectRms(float level, float dtSeconds) {
+    // RMS-ish detector: integrate squared samples then sqrt.
+    float windowMs = static_cast<float>(std::max<uint16_t>(1, efSettings.rmsWindowMs));
+    float coeff = 1.0f - expf(-dtSeconds / (windowMs / 1000.0f));
+    float squared = level * level;
+    rmsState += (squared - rmsState) * coeff;
+    return sqrtf(std::max(0.0f, rmsState));
+}
+
+float EnvelopeFollower::detectGate(float level) {
+    // Gate with hysteresis to prevent chatter around the threshold.
+    float threshold = (static_cast<float>(efSettings.gateThreshold) / 127.0f) * vref;
+    float hysteresis = (static_cast<float>(efSettings.gateHysteresis) / 127.0f) * vref;
+    if (gateOpen) {
+        if (level < (threshold - hysteresis)) {
+            gateOpen = false;
+        }
+    } else if (level > (threshold + hysteresis)) {
+        gateOpen = true;
+    }
+    return gateOpen ? vref : 0.0f;
+}
+
+float EnvelopeFollower::detectFollower(float level, float dtSeconds) {
+    // Fast attack/release follower (shares the peakState integrator).
+    float attackMs = static_cast<float>(std::max<uint16_t>(1, efSettings.attackMs));
+    float releaseMs = static_cast<float>(std::max<uint16_t>(1, efSettings.releaseMs));
+    float attackCoeff = 1.0f - expf(-dtSeconds / (attackMs / 1000.0f));
+    float releaseCoeff = 1.0f - expf(-dtSeconds / (releaseMs / 1000.0f));
+    float coeff = (level > peakState) ? attackCoeff : releaseCoeff;
+    peakState += (level - peakState) * coeff;
+    return peakState;
+}
+
+void EnvelopeFollower::updateAutoBaseline(float inputLevel, float dtSeconds) {
+    // Track baseline slowly when signal is idle; freeze during activity.
+    if (!efSettings.autoBaseline) {
+        return;
+    }
+    float activityThreshold = (static_cast<float>(efSettings.activityThreshold) / 127.0f) * vref;
+    if (inputLevel >= activityThreshold) {
+        return;
+    }
+    float tauMs = static_cast<float>(std::max<uint16_t>(1, efSettings.baselineTauMs));
+    float coeff = 1.0f - expf(-dtSeconds / (tauMs / 1000.0f));
+    baseline += (inputLevel - baseline) * coeff;
+}
+
+float EnvelopeFollower::updateAutoGain(float inputLevel, float dtSeconds) {
+    // Adjust gain to hit target level when signal is active and clean.
+    float effectiveGain = gainScale();
+    if (!efSettings.autoGain) {
+        return effectiveGain;
+    }
+
+    float activityThreshold = (static_cast<float>(efSettings.activityThreshold) / 127.0f) * vref;
+    if (inputLevel < activityThreshold || baseline > activityThreshold) {
+        return effectiveGain;
+    }
+
+    float target = (static_cast<float>(efSettings.gainTarget) / 127.0f) * vref;
+    if (target <= 0.0f) {
+        return effectiveGain;
+    }
+
+    float current = inputLevel * effectiveGain;
+    if (current >= vref * 0.98f) {
+        return effectiveGain;
+    }
+
+    // Solve for gain that would hit the target, then converge slowly.
+    float desired = target / std::max(0.001f, inputLevel * gain * externalGainTrim);
+    float tauMs = static_cast<float>(std::max<uint16_t>(1, efSettings.gainTauMs));
+    float coeff = 1.0f - expf(-dtSeconds / (tauMs / 1000.0f));
+    autoGain += (desired - autoGain) * coeff;
+    autoGain = constrain(autoGain, 0.25f, 4.0f);
+    return gainScale();
+}
+
+float EnvelopeFollower::modeOutput(float inputLevel, float dtSeconds) {
+    // Dispatch to the correct detection algorithm for the current mode.
+    switch (efMode) {
+    case EFMode::RMS:
+        return detectRms(inputLevel, dtSeconds);
+    case EFMode::Gate:
+        return detectGate(inputLevel);
+    case EFMode::Follower:
+        return detectFollower(inputLevel, dtSeconds);
+    case EFMode::Peak:
+    default:
+        return detectPeak(inputLevel, dtSeconds);
+    }
+}
+
+float EnvelopeFollower::gainScale() const {
+    // Total scale is the product of manual gain, external trim, and auto gain.
+    float scale = gain * externalGainTrim * autoGain;
+    if (scale < 0.0f) {
+        scale = 0.0f;
+    }
+    return scale;
 }
 
 /**

@@ -218,6 +218,36 @@ void test_send_sysex() {
     }
 }
 
+void test_clock_start_stop_flags() {
+    // Start/Stop/Continue should toggle the running flag without choking on channel data.
+    MIDIHandler mh;
+    TEST_ASSERT_FALSE(mh.isClockRunning());
+    mh.handleMIDI(midi::Start, 1, 0, 0);
+    TEST_ASSERT_TRUE(mh.isClockRunning());
+    mh.handleMIDI(midi::Stop, 1, 0, 0);
+    TEST_ASSERT_FALSE(mh.isClockRunning());
+    mh.handleMIDI(midi::Continue, 1, 0, 0);
+    TEST_ASSERT_TRUE(mh.isClockRunning());
+}
+
+void test_clock_tick_stream_counts_cleanly() {
+    // A steady tick stream should bump the counter one-for-one and stay "running".
+    MIDIHandler mh;
+    mh.clockTick = false;
+    mh._clockTickCount = 0;
+
+    for (int i = 0; i < 24; ++i) {
+        usbMIDI.nextRead = true;
+        usbMIDI.nextType = midi::Tick;
+        mh.processIncomingMIDI();
+        TEST_ASSERT_TRUE(mh.isClockTick());
+        mh.clearClockTick();
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(24, mh.clockTickCount());
+    TEST_ASSERT_TRUE(mh.isClockRunning());
+}
+
 // Guardrail for the transport logging: long payloads should survive the trip
 // without getting truncated unless we exceed the stub's capacity.
 void test_long_sysex_payload_round_trips() {

@@ -105,9 +105,22 @@ void LEDManager::markDirty(uint8_t index) {
 
 void LEDManager::setBrightness(uint8_t b) {
     brightness = b;
-    FastLED.setBrightness(brightness);
+    applyBrightness();
     presentFrame();
 }
+
+void LEDManager::setBrightnessModulator(float scale) {
+    // Clamp modulation so brightness stays in a safe range.
+    if (scale < 0.0f)
+        brightnessMod = 0.0f;
+    else if (scale > 2.0f)
+        brightnessMod = 2.0f;
+    else
+        brightnessMod = scale;
+    applyBrightness();
+}
+
+float LEDManager::getBrightnessModulator() const { return brightnessMod; }
 
 void LEDManager::setColor(CRGB color) {
     for (size_t i = 0; i < leds.size(); i++) {
@@ -284,6 +297,16 @@ void LEDManager::syncToOctoBuffer() {
 void LEDManager::presentFrame() {
     syncToOctoBuffer();
     FastLED.show();
+}
+
+void LEDManager::applyBrightness() {
+    // Convert base brightness plus modulation into a FastLED brightness value.
+    float scaled = static_cast<float>(brightness) * brightnessMod;
+    if (scaled < 0.0f)
+        scaled = 0.0f;
+    if (scaled > 255.0f)
+        scaled = 255.0f;
+    FastLED.setBrightness(static_cast<uint8_t>(scaled));
 }
 
 void LEDManager::renderWarningFrame() {

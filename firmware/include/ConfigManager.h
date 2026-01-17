@@ -38,13 +38,17 @@ class MIDIHandler;
  * 4*NUM_POTS + 8  ARG enable                       1
  * 4*NUM_POTS + 9  Config version                   2
  * 4*NUM_POTS + 11 CRC                              2
+ * 4*NUM_POTS + 13 Active profile index             1
  * 200             Primary magic (0xABCD)           2
  * 202             Backup magic  (0xDCBA)           2
  * EEPROM_EF_BASELINES (204) EF baselines          EEPROM_EF_BASELINES_SIZE
  * EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE  Buffer           EEPROM_BUFFER_SIZE
  * EEPROM_BACKUP_START (250) Backup copy of config starts     mirrors layout
- * 256             Profile 1 block begins           256 bytes
- * 512             Profile 2 block begins           256 bytes
+ * EEPROM_CONFIG_TAIL + 0x000  Profile A block       256 bytes
+ * EEPROM_CONFIG_TAIL + 0x100  Profile B block       256 bytes
+ * EEPROM_CONFIG_TAIL + 0x200  Profile C block       256 bytes
+ * EEPROM_CONFIG_TAIL + 0x300  Profile D block       256 bytes
+ * EEPROM_PROFILE_SETTINGS_BASE                     Profile payloads (EF/LFO/arp/LED/midi)
  * --------------------------------------------------------
  * Backup strategy: Write the primary block and tag it with
  * EEPROM_MAGIC_PRIMARY. If the post-write check flops, the
@@ -69,8 +73,85 @@ inline constexpr uint16_t EEPROM_ARG_ENV_B = EEPROM_ARG_ENV_A + 1;
 inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
 inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
 inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
+inline constexpr uint16_t EEPROM_ACTIVE_PROFILE = EEPROM_CONFIG_CRC + 2;
 
 class EnvelopeFollower;
+
+/**
+ * Profile payload chunks used for multi-profile persistence.
+ * These structs are packed so EEPROM writes stay compact and predictable.
+ */
+struct __attribute__((packed)) ProfileEfSettings {
+    uint8_t mode = 0;              //!< EnvelopeFollower::EFMode
+    uint8_t autoBaseline = 1;      //!< Auto-baseline flag (0/1)
+    uint8_t autoGain = 1;          //!< Auto-gain flag (0/1)
+    uint8_t gateThreshold = 16;    //!< Gate threshold (0-127)
+    uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
+    uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
+    uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
+    uint16_t attackMs = 5;         //!< Attack time (ms)
+    uint16_t releaseMs = 20;       //!< Release time (ms)
+    uint16_t rmsWindowMs = 50;     //!< RMS window (ms)
+    uint16_t baselineTauMs = 2000; //!< Baseline time constant (ms)
+    uint16_t gainTauMs = 3000;     //!< Gain time constant (ms)
+};
+
+struct __attribute__((packed)) ProfileSlotSettings {
+    uint8_t midiChannel = 1; //!< Per-slot MIDI channel
+    ProfileEfSettings ef{};  //!< Per-slot EF mode settings
+};
+
+struct __attribute__((packed)) ProfileArpSettings {
+    uint8_t lengthTicks = 12; //!< Step length in MIDI ticks
+    uint8_t shape = 0;        //!< Arpeggiator::Shape
+    uint8_t swingPercent = 0; //!< Swing percent (0..80)
+    uint8_t gatePercent = 50; //!< Gate percent (5..100)
+    uint8_t octaveRange = 0;  //!< Extra octaves (0..3)
+};
+
+struct __attribute__((packed)) ProfileLedSettings {
+    uint8_t brightness = 128; //!< Base LED brightness
+    uint8_t r = 0;            //!< LED color R
+    uint8_t g = 0;            //!< LED color G
+    uint8_t b = 0;            //!< LED color B
+};
+
+struct __attribute__((packed)) ProfileLfoSettings {
+    uint8_t shape = 0;        //!< LFOShape value
+    float frequencyHz = 1.0f; //!< Free-run frequency
+    float depth = 0.0f;       //!< LFO depth (0..1)
+    uint8_t bipolar = 1;      //!< Bipolar flag (0/1)
+    uint8_t syncEnabled = 0;  //!< Sync flag (0/1)
+    uint8_t syncRatio = 0;    //!< LFOSyncRatio value
+};
+
+struct __attribute__((packed)) ProfileLfoRoute {
+    uint8_t type = 0;     //!< LFOManager::Route::Type
+    uint8_t lfoIndex = 0; //!< LFO index
+    float depth = 1.0f;   //!< Route depth
+    uint8_t target = 0;   //!< LFOInternalTarget
+    uint8_t channel = 1;  //!< MIDI channel
+    uint8_t ccMsb = 0;    //!< CC MSB
+    uint8_t ccLsb = 32;   //!< CC LSB
+};
+
+inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
+inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0001;
+
+struct __attribute__((packed)) ProfileData {
+    uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version
+    uint16_t crc = 0;                                         //!< CRC over payload bytes
+    uint8_t routeCount = 0;                                   //!< Active route count
+    ProfileArpSettings arp{};                                 //!< Arp settings snapshot
+    ProfileLedSettings led{};                                 //!< LED brightness/color
+    std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{}; //!< LFO state snapshot
+    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{}; //!< LFO route table
+    std::array<ProfileSlotSettings, NUM_SLOTS> slots{};       //!< Per-slot MIDI/EF settings
+};
+
+static_assert(sizeof(ProfileData) <= EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
+              "ProfileData exceeds the allotted EEPROM block size");
 
 /**
  * @brief Handles persistence of user configuration in EEPROM.
@@ -147,6 +228,18 @@ class ConfigManager {
 
     /** Save the current in-RAM settings to a profile block. */
     void saveProfile(uint8_t id);
+
+    /** Load the extended profile payload (EF/LFO/arp/LED/midi channel). */
+    bool loadProfileSettings(uint8_t id, ProfileData &profile) const;
+
+    /** Save the extended profile payload (EF/LFO/arp/LED/midi channel). */
+    bool saveProfileSettings(uint8_t id, const ProfileData &profile);
+
+    /** Return the last stored active profile index. */
+    uint8_t getActiveProfile() const { return _stored.activeProfile; }
+
+    /** Persist the active profile index to EEPROM. */
+    void setActiveProfile(uint8_t id);
 
     // LED settings -------------------------------------------------------
 
@@ -261,11 +354,13 @@ class ConfigManager {
                                  uint16_t base);  // restore from backup copy
     void readEEPROM(bool backup, uint16_t base);  // raw EEPROM read helper
     void writeEEPROM(bool backup, uint16_t base); // raw EEPROM write helper
-    uint16_t calculateCRC() const;                // compute config CRC
+    uint16_t calculateCRC(
+        bool includeProfile) const; // compute config CRC (optionally include active profile)
 
     struct StoredConfig {
         std::array<uint8_t, NUM_POTS> potChannels;  //!< saved pot→channel map
         std::array<uint8_t, NUM_POTS> potCCNumbers; //!< saved CC numbers
+        uint8_t activeProfile = 0;                  //!< stored active profile index
         uint16_t version = 0;                       //!< config schema version
         uint16_t crc = 0;                           //!< integrity check value
     } _stored;

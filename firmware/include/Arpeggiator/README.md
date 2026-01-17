@@ -24,10 +24,11 @@ Get the bird's-eye in the [main firmware README](../../README.md).
 - `setBaseNote(note)` / `setBaseNoteCallback(fn)` – shove in a fresh base note or a function that returns one.
 - `update(midi, cfg, pots)` – call every loop so it keeps drumming. It watches `MIDIHandler::clockTickCount()` so multiple clock listeners can party without stepping on each other and will sprint through any backlog of ticks if the loop ever stalls.
 
-`noteOffset(shape, step, patternLen)` handles the pitch math. `patternLen`
-(2–16) sets how many semitone rungs the arp climbs before wrapping. `noteOffset`
-then spits the actual jump each tick: `UP` counts up, `DOWN` walks back to zero,
-`UPDOWN` mirrors the climb, and `RANDOM` lobs a number somewhere in range.
+`computeOffset()` handles the pitch math. `patternLen` (2–16) sets how many
+semitone rungs the arp climbs before wrapping. Shapes now include `UP`, `DOWN`,
+`UPDOWN`, `RANDOM`, `DRUNK` (random walk), and `EUCLIDEAN` (hit/rest patterns).
+`octaveRange` extends the climb across multiple octaves, and swing/gate percent
+control timing per step.
 
 ## Arp Settings
 
@@ -35,7 +36,10 @@ then spits the actual jump each tick: `UP` counts up, `DOWN` walks back to zero,
 | ------- | --------------- | ------------ |
 | Length | 1–24 ticks | MIDI clock ticks between notes |
 | Pattern Length | 2–16 steps | Semitone span before the loop repeats |
-| Mode | UP, DOWN, UPDOWN, RANDOM | Direction for `noteOffset` |
+| Mode | UP, DOWN, UPDOWN, RANDOM, DRUNK, EUCLIDEAN | Direction and rhythm |
+| Swing | 0–80% | Off-beat delay as percent of the step |
+| Gate | 5–100% | Note length as percent of the step |
+| Octave Range | 0–3 | Extra octaves added to the pattern |
 | Base Note Source | Pot, Slot, External | Where the root comes from |
 | Base Note / Callback | 0–127 or func | Force a root note or supply a generator |
 

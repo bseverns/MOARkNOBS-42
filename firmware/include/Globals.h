@@ -36,7 +36,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0004; //!< EEPROM schema version
+inline constexpr uint16_t CONFIG_VERSION = 0x0006; //!< EEPROM schema version
 
 extern uint32_t g_resetCause;    //!< Raw reset cause register
 extern uint16_t g_brownoutCount; //!< Persistent brownout counter
@@ -137,7 +137,9 @@ extern float g_vref;
 // EEPROM storage constants
 inline constexpr std::size_t SLOT_EEPROM_SIZE = sizeof(MIDISlot); // bytes required per MIDISlot
 
+inline constexpr uint8_t NUM_PROFILES = 4; // Profiles A-D
 inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
+inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_BLOCK_SIZE = 1024; // Extended profile payload
 inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
 inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
     EEPROM_START_ADDRESS + 200; //!< Reserve space for config + magic number
@@ -175,12 +177,26 @@ inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
                : static_cast<uint16_t>(EEPROM_CONFIG_TAIL + (id - 1) * EEPROM_PROFILE_BLOCK_SIZE);
 }
 
+inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_BASE =
+    static_cast<uint16_t>(EEPROM_CONFIG_TAIL + NUM_PROFILES * EEPROM_PROFILE_BLOCK_SIZE);
+
+inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_START(uint8_t id) {
+    return static_cast<uint16_t>(EEPROM_PROFILE_SETTINGS_BASE +
+                                 id * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+}
+
 // clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;
 extern bool g_clockOutEnabled;
 extern bool g_usbMidiOutEnabled;    //!< USB MIDI stays quiet until these three go down
 extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
+
+// LFO modulation buses (range -1..1 unless otherwise noted).
+extern float g_lfoEfGainTrim;
+extern float g_lfoArpSwing;
+extern float g_lfoLedBrightness;
+extern std::array<float, 2> g_lfoValues; //!< Normalized LFO outputs (0..1)
 
 /**
  * Flag flipped once the browser opens a WebSerial stream.
@@ -200,6 +216,10 @@ struct JitterSettings {
 
 extern JitterSettings g_jitterSettings;
 extern bool g_jitterTuningActive;
+extern bool g_arpEditActive;          //!< True while the arp edit combo is held
+extern uint8_t g_activeProfile;       //!< Current profile index (0..NUM_PROFILES-1)
+extern bool g_profileChangeRequested; //!< Signal to reload profile data in main loop
+extern bool g_profileSaveRequested;   //!< Signal to snapshot current settings into profile
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

@@ -84,6 +84,10 @@ class LEDManager {
 
     /** Change the global brightness for the entire strip. */
     void setBrightness(uint8_t brightness);
+    /** Apply a modulation multiplier on top of the base brightness. */
+    void setBrightnessModulator(float scale);
+    /** Read back the current modulation multiplier. */
+    float getBrightnessModulator() const;
 
     /** Remember a base colour used by simple states. */
     void setColor(CRGB color);
@@ -125,6 +129,7 @@ class LEDManager {
     void setDiagnosticMode(bool enabled);
 
   private:
+    void applyBrightness();
     void syncToOctoBuffer();
     void presentFrame();
     void renderWarningFrame();
@@ -139,7 +144,8 @@ class LEDManager {
     uint8_t modeDisplay;
     uint8_t activePot;
     bool envelopeModeActive;
-    uint8_t brightness = 128;
+    uint8_t brightness = 128;   //!< Base brightness before modulation
+    float brightnessMod = 1.0f; //!< Modulator scale (0..2) applied to brightness
     LEDState currentState;
     uint8_t activeIndex;
     unsigned long controlStart = 0;

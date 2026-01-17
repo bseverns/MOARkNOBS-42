@@ -78,11 +78,23 @@ struct MIDISlot {
         int8_t followerIndex = -1; //!< Assigned hardware follower (-1 when unbound)
         uint8_t oversample = 4;    //!< ADC oversample count (1 == disabled)
         FilterType filterType = FilterType::Linear;
-        float frequency = 1000.0f; //!< Cutoff/shape frequency in Hz
-        float q = 0.707f;          //!< Resonance / secondary filter parameter
-        float smoothing = 0.2f;    //!< EWMA smoothing factor (0..1)
-        float baseline = 0.0f;     //!< Noise floor offset after calibration
-        float gain = 1.0f;         //!< Output gain applied post-baseline
+        uint8_t efMode = 0;            //!< EnvelopeFollower::EFMode value
+        uint8_t autoBaseline = 1;      //!< Enable auto-baseline tracking
+        uint8_t autoGain = 1;          //!< Enable auto-gain tracking
+        uint8_t gateThreshold = 16;    //!< Gate threshold (0-127)
+        uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
+        uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
+        uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
+        uint16_t attackMs = 5;         //!< Attack time for Peak/Follower modes
+        uint16_t releaseMs = 20;       //!< Release time for Peak/Follower modes
+        uint16_t rmsWindowMs = 50;     //!< RMS integration window
+        uint16_t baselineTauMs = 2000; //!< Auto-baseline time constant
+        uint16_t gainTauMs = 3000;     //!< Auto-gain time constant
+        float frequency = 1000.0f;     //!< Cutoff/shape frequency in Hz
+        float q = 0.707f;              //!< Resonance / secondary filter parameter
+        float smoothing = 0.2f;        //!< EWMA smoothing factor (0..1)
+        float baseline = 0.0f;         //!< Noise floor offset after calibration
+        float gain = 1.0f;             //!< Output gain applied post-baseline
     };
 
     MIDIMessageType type = MIDIMessageType::OFF;

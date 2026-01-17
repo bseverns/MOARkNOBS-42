@@ -36,6 +36,14 @@ class EnvelopeFollower {
     /** Operating modes for the follower. */
     enum Mode { SEF, ARG };
 
+    /** Envelope detection modes. */
+    enum class EFMode : uint8_t {
+        Peak = 0, //!< Half-wave rectified peak + RC smoothing
+        RMS,      //!< RMS-ish leaky integration for energy detection
+        Gate,     //!< Threshold gate with hysteresis
+        Follower  //!< Fast attack/release follower curve
+    };
+
     /** Math tricks available when blending two envelopes in ARG mode. */
     enum ARG_Method {
         PLUS,
@@ -54,6 +62,34 @@ class EnvelopeFollower {
         XORR
     };
 
+    /**
+     * Snapshot of the envelope follower state for diagnostics.
+     */
+    struct EfStats {
+        float baseline = 0.0f;      //!< Current baseline used for subtraction
+        float gain = 1.0f;          //!< Current total gain multiplier
+        int value = 0;              //!< Latest scaled MIDI value (0..127-ish)
+        EFMode mode = EFMode::Peak; //!< Active detection mode
+    };
+
+    /**
+     * Per-mode configuration data used by the envelope engine.
+     */
+    struct EfModeSettings {
+        EFMode mode = EFMode::Peak;    //!< Detection mode to apply
+        uint16_t attackMs = 5;         //!< Attack time for follower/gate
+        uint16_t releaseMs = 20;       //!< Release time for follower/gate
+        uint16_t rmsWindowMs = 50;     //!< Integration window for RMS-ish mode
+        uint16_t baselineTauMs = 2000; //!< Time constant for baseline tracker
+        uint16_t gainTauMs = 3000;     //!< Time constant for auto-gain
+        uint8_t gateThreshold = 16;    //!< Gate threshold (0..127)
+        uint8_t gateHysteresis = 4;    //!< Gate hysteresis band
+        uint8_t activityThreshold = 4; //!< Activity detect threshold
+        uint8_t gainTarget = 102;      //!< Auto-gain target (~80% FS)
+        bool autoBaseline = true;      //!< Enable baseline tracking
+        bool autoGain = true;          //!< Enable auto-gain tracking
+    };
+
   private:
     float shapingFreq = 1000.0f; // Frequency or shaping parameter
     float shapingQ = 0.707f;     // Resonance or secondary shaping parameter
@@ -67,6 +103,7 @@ class EnvelopeFollower {
     FilterType filterType;
     // Track whether we're in SEF or ARG mode
     Mode mode;
+    EFMode efMode = EFMode::Peak; // Current detection mode
     // Which ARG method is selected
     ARG_Method argMethod;
     // Envelope indices used by ARG mode (store as Teensy analog pins)
@@ -74,14 +111,21 @@ class EnvelopeFollower {
     int envelopeB;
 
     // Calibration values
-    float baseline = 0.0f; // value subtracted from raw input to ditch noise
-    float gain = 1.0f;     // scales the baseline-adjusted level before MIDI mapping
+    float baseline = 0.0f;         // value subtracted from raw input to ditch noise
+    float gain = 1.0f;             // scales the baseline-adjusted level before MIDI mapping
+    float externalGainTrim = 1.0f; // Extra multiplier for modulation sources
+    float autoGain = 1.0f;         // Auto-calculated gain multiplier
+    EfModeSettings efSettings{};   // Per-mode parameters for detection/auto-cal
 
     // ADC and smoothing tweaks
-    uint8_t oversampleCount = 4; // number of reads per update
-    float smoothingAlpha = 0.2f; // EWMA weight for new samples
-    int smoothedLevel = 0;       // running smoothed MIDI value
-    float vref;                  // cached reference voltage
+    uint8_t oversampleCount = 4;    // number of reads per update
+    float smoothingAlpha = 0.2f;    // EWMA weight for new samples
+    int smoothedLevel = 0;          // running smoothed MIDI value
+    float vref;                     // cached reference voltage
+    float peakState = 0.0f;         //!< Smoothed peak detector state
+    float rmsState = 0.0f;          //!< RMS integrator state
+    bool gateOpen = false;          //!< Gate hysteresis state
+    unsigned long lastUpdateMs = 0; //!< Timestamp of last update call
 
     PotentiometerManager *potManager;
     BiquadFilter filter; // Existing custom filter
@@ -89,7 +133,7 @@ class EnvelopeFollower {
      * Read the raw envelope level from the configured analog pin
      * and map it to the 0-127 MIDI range.
      */
-    int readEnvelopeLevel();
+    int readEnvelopeLevel(float dtSeconds);
 
   public:
     /**
@@ -143,6 +187,10 @@ class EnvelopeFollower {
     /** Switch between SEF and ARG operating modes. */
     void setMode(Mode newMode);
     Mode getMode() const { return mode; }
+    /** Set the envelope detection mode (Peak/RMS/Gate/Follower). */
+    void setMode(EFMode newMode);
+    /** Return the active envelope detection mode. */
+    EFMode getEfMode() const { return efMode; }
 
     /** Select which arithmetic method to use in ARG mode. */
     void setARGMethod(ARG_Method method);
@@ -180,6 +228,16 @@ class EnvelopeFollower {
      * Higher gain makes the envelope punchier before it's squeezed into 0–127.
      */
     void setGain(float g) { gain = g; }
+    /** Read back the current gain multiplier. */
+    float getGain() const { return gain; }
+    /** Apply a temporary gain trim (e.g. from modulators). */
+    void setExternalGainTrim(float trim);
+    /** Configure the detection mode and its parameters. */
+    /** Apply a new mode settings bundle (includes auto-cal flags). */
+    void setModeSettings(const EfModeSettings &settings);
+    /** Read back diagnostics. */
+    /** Return a diagnostics snapshot of the current EF state. */
+    EfStats getStats() const;
 
     /** Set how many ADC samples to average per update. */
     void setOversampleCount(uint8_t count);
@@ -188,6 +246,20 @@ class EnvelopeFollower {
     /** Set the EWMA smoothing factor applied after oversampling. */
     void setSmoothingAlpha(float alpha);
     float getSmoothingAlpha() const;
+
+    /** Read back the current detection mode settings. */
+    /** Return the current mode settings bundle. */
+    EfModeSettings getModeSettings() const;
+
+  private:
+    float detectPeak(float level, float dtSeconds);
+    float detectRms(float level, float dtSeconds);
+    float detectGate(float level);
+    float detectFollower(float level, float dtSeconds);
+    float updateAutoGain(float inputLevel, float dtSeconds);
+    void updateAutoBaseline(float inputLevel, float dtSeconds);
+    float modeOutput(float inputLevel, float dtSeconds);
+    float gainScale() const;
 };
 
 #endif // ENVELOPE_FOLLOWER_H

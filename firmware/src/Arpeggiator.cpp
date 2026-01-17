@@ -12,6 +12,7 @@
 #include "PotentiometerManager.h"
 #include "PerlinNoise.h"
 #include "Globals.h"
+#include <cmath>
 
 constexpr uint8_t MAX_STEPS = 16;
 // Longest span between notes, in MIDI clock ticks. Anything longer loses the groove.
@@ -24,8 +25,10 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0), _shape(UP), _step(0),
-      _patternLength(4), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false),
-      _baseNoteCb(nullptr), _lastClockTickCount(0), _clockSynced(false) {}
+      _patternLength(4), _swingPercent(0.0f), _gatePercent(50.0f), _octaveRange(0), _baseNote(0),
+      _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false), _baseNoteCb(nullptr),
+      _lastClockTickCount(0), _clockSynced(false), _lastTickTimeMs(0), _msPerTick(0.0f),
+      _rngState(0x12345678u), _drunkPosition(0) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -36,6 +39,11 @@ void Arpeggiator::start(uint8_t slotIdx) {
     _tickCounter = 0;
     _step = 0;
     _clockSynced = false;
+    _lastTickTimeMs = 0;
+    _msPerTick = 0.0f;
+    // Seed per-slot RNG so DRUNK mode stays deterministic.
+    _rngState = 0x12345678u ^ static_cast<uint32_t>(slotIdx);
+    _drunkPosition = 0;
 }
 
 // Stop arpeggiation immediately. update() will simply return once inactive.
@@ -54,6 +62,18 @@ void Arpeggiator::setPatternLength(uint8_t steps) {
     _patternLength = steps;
 }
 
+void Arpeggiator::setSwingPercent(float percent) {
+    // Cap swing to a musically sane range.
+    _swingPercent = constrain(percent, 0.0f, 80.0f);
+}
+
+void Arpeggiator::setGatePercent(float percent) {
+    // Gate length must leave a little gap so notes can release.
+    _gatePercent = constrain(percent, 5.0f, 100.0f);
+}
+
+void Arpeggiator::setOctaveRange(uint8_t octaves) { _octaveRange = constrain(octaves, 0, 3); }
+
 void Arpeggiator::setBaseNoteSource(BaseNoteSource src) { _baseNoteSrc = src; }
 
 void Arpeggiator::setBaseNote(uint8_t note) {
@@ -70,31 +90,101 @@ float jitterRateFromSmoothness(float smoothness) {
 }
 } // namespace
 
-static int8_t noteOffset(Arpeggiator::Shape shape, uint8_t step, uint8_t patternLen) {
-    // Semitone offsets now derive from simple math rather than pre-baked tables.
-    // This lets pattern length drive the range while shapes dictate direction.
-    // The helper is `static` on purpose: no free-floating functions in the
-    // global namespace and the compiler can inline it if it feels spicy.
-    uint8_t pos = step % patternLen;
-    switch (shape) {
+// Deterministic RNG used for DRUNK steps.
+uint32_t Arpeggiator::nextRng() {
+    _rngState = (_rngState * 1664525u) + 1013904223u;
+    return _rngState;
+}
+
+// Random walk that nudges the step position by +/-1 each hit.
+int8_t Arpeggiator::nextDrunkOffset(uint8_t totalSteps) {
+    if (totalSteps == 0) {
+        return 0;
+    }
+    uint8_t pos = static_cast<uint8_t>(_drunkPosition);
+    uint32_t r = nextRng();
+    int delta = (r & 0x1u) ? 1 : -1;
+    int nextPos = static_cast<int>(pos) + delta;
+    if (nextPos < 0) {
+        nextPos = 1;
+    } else if (nextPos >= static_cast<int>(totalSteps)) {
+        nextPos = static_cast<int>(totalSteps) - 2;
+    }
+    if (nextPos < 0) {
+        nextPos = 0;
+    }
+    _drunkPosition = static_cast<int8_t>(constrain(nextPos, 0, totalSteps - 1));
+    return _drunkPosition;
+}
+
+// UPDOWN walks up then back down, so we extend the step count.
+uint8_t Arpeggiator::stepCountForShape(uint8_t totalSteps) const {
+    if (totalSteps <= 1) {
+        return 1;
+    }
+    if (_shape == UPDOWN) {
+        return static_cast<uint8_t>(totalSteps * 2 - 2);
+    }
+    return totalSteps;
+}
+
+// Compute the semitone offset for a given step and shape.
+int8_t Arpeggiator::computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &stepEnabled) {
+    stepEnabled = true;
+    if (totalSteps == 0) {
+        stepEnabled = false;
+        return 0;
+    }
+
+    uint8_t pos = stepIndex % totalSteps;
+    // Shape-specific step logic.
+    switch (_shape) {
     case Arpeggiator::UP:
-        return pos; // climb from root
+        break;
     case Arpeggiator::DOWN:
-        return patternLen - 1 - pos; // descend back to root
-    case Arpeggiator::UPDOWN:
-        // walk up then mirror back down over the pattern range
-        return (step < patternLen ? pos : (patternLen - 1 - pos));
+        pos = totalSteps - 1 - pos;
+        break;
+    case Arpeggiator::UPDOWN: {
+        uint8_t maxStep = stepCountForShape(totalSteps);
+        if (stepIndex >= totalSteps) {
+            pos = static_cast<uint8_t>(maxStep - stepIndex);
+        }
+        break;
+    }
+    case Arpeggiator::DRUNK:
+        pos = static_cast<uint8_t>(nextDrunkOffset(totalSteps));
+        break;
+    case Arpeggiator::EUCLIDEAN: {
+        // Euclidean-lite hit/rest: fire on evenly distributed steps.
+        uint8_t pulses = static_cast<uint8_t>(totalSteps / 2);
+        if (pulses == 0) {
+            pulses = 1;
+        }
+        bool hit = ((stepIndex * pulses) % totalSteps) < pulses;
+        if (!hit) {
+            stepEnabled = false;
+            return 0;
+        }
+        break;
+    }
     case Arpeggiator::RANDOM:
     default: {
         float depth = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
         float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
-        float n = perlinNoise1D(static_cast<float>(step) * rate);
+        float n = perlinNoise1D(static_cast<float>(stepIndex) * rate);
         float jitter = (n * depth * 0.5f) + 0.5f;
-        int val = static_cast<int>(jitter * patternLen);
-        val = constrain(val, 0, patternLen - 1);
-        return static_cast<int8_t>(val);
+        int val = static_cast<int>(jitter * totalSteps);
+        val = constrain(val, 0, totalSteps - 1);
+        pos = static_cast<uint8_t>(val);
+        break;
     }
     }
+
+    // Map the step index into semitone + octave offsets.
+    uint8_t octave = pos / _patternLength;
+    uint8_t semitone = pos % _patternLength;
+    int offset = static_cast<int>(semitone) + static_cast<int>(octave) * 12;
+    return static_cast<int8_t>(offset);
 }
 
 // Called frequently from the scheduler. When active, this checks the slot's
@@ -111,8 +201,10 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         return;
 
     uint32_t tickCount = midi.clockTickCount();
+    unsigned long nowMs = now();
     if (!_clockSynced) {
         _lastClockTickCount = tickCount;
+        _lastTickTimeMs = nowMs;
         _clockSynced = true;
         return; // latch to the current beat and wait for the next pulse
     }
@@ -120,7 +212,27 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     uint32_t elapsed = tickCount - _lastClockTickCount;
     if (elapsed == 0)
         return; // nothing new from the clock
+
+    // Estimate ms per tick to support swing/gate timing in milliseconds.
+    if (_lastTickTimeMs > 0 && nowMs > _lastTickTimeMs) {
+        float deltaMs = static_cast<float>(nowMs - _lastTickTimeMs);
+        float newMsPerTick = deltaMs / static_cast<float>(elapsed);
+        if (_msPerTick > 0.0f) {
+            float drift = fabsf(newMsPerTick - _msPerTick) / _msPerTick;
+            if (drift > 0.25f) {
+                // Large drift implies tempo jump; reset counters for clean resync.
+                _tickCounter = 0;
+                _step = 0;
+                _drunkPosition = 0;
+            }
+            _msPerTick = (_msPerTick * 0.8f) + (newMsPerTick * 0.2f);
+        } else {
+            _msPerTick = newMsPerTick;
+        }
+    }
+
     _lastClockTickCount = tickCount;
+    _lastTickTimeMs = nowMs;
 
     uint16_t ticks = static_cast<uint16_t>(_tickCounter) + static_cast<uint16_t>(elapsed);
     uint16_t events = ticks / _lengthTicks;
@@ -174,41 +286,113 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
 
     slot.arpNote = root; // keep last root around for anyone else who cares
     uint8_t potVal = root;
-    unsigned long noteOffDelay = (hwConfig.midiTaskInterval * _lengthTicks) / 2;
+    // Derive per-step timing in ms; fall back to tapped BPM when needed.
+    float msPerTick = _msPerTick;
+    if (msPerTick <= 0.0f && g_tappedBPM > 0.0f) {
+        msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
+    }
+    if (msPerTick <= 0.0f) {
+        msPerTick = static_cast<float>(hwConfig.midiTaskInterval);
+    }
+    float stepDurationMs = msPerTick * static_cast<float>(_lengthTicks);
+    float gatePercent = constrain(_gatePercent, 5.0f, 100.0f);
+    // LFO swing modulation nudges swing percent up to +/-30%.
+    float swingPercent = constrain(_swingPercent + (g_lfoArpSwing * 30.0f), 0.0f, 80.0f);
+    unsigned long baseGateMs = static_cast<unsigned long>(
+        constrain(stepDurationMs * (gatePercent / 100.0f), 1.0f, stepDurationMs));
+    // Total steps include octave span.
+    uint8_t totalSteps = static_cast<uint8_t>(_patternLength * (_octaveRange + 1));
+    uint8_t stepCount = stepCountForShape(totalSteps);
 
     for (uint16_t i = 0; i < events; ++i) {
-        int8_t offset = noteOffset(_shape, _step, _patternLength);
-        _step = (_step + 1) % _patternLength; // advance and wrap within the pattern
+        uint8_t stepIndex = _step;
+        _step = (stepCount > 0) ? static_cast<uint8_t>((_step + 1) % stepCount) : 0;
+
+        bool stepEnabled = true;
+        int8_t offset = computeOffset(stepIndex, totalSteps, stepEnabled);
+        if (!stepEnabled) {
+            continue;
+        }
+
+        unsigned long delayMs = 0;
+        if (swingPercent > 0.0f && (stepIndex % 2 == 1)) {
+            // Delay off-beat steps by swing percent.
+            delayMs = static_cast<unsigned long>(stepDurationMs * (swingPercent / 100.0f));
+        }
 
         switch (slot.type) {
         case MIDIMessageType::CC:
-            midi.sendControlChange(slot.data1, constrain(potVal + offset, 0, 127),
-                                   slot.midiChannel);
+            // CC messages can be delayed to preserve swing feel.
+            if (delayMs == 0) {
+                midi.sendControlChange(slot.data1, constrain(potVal + offset, 0, 127),
+                                       slot.midiChannel);
+            } else {
+                uint8_t value = constrain(potVal + offset, 0, 127);
+                Utility::schedulerHigh.addTask([cc = slot.data1, value, ch = slot.midiChannel,
+                                                &midi]() { midi.sendControlChange(cc, value, ch); },
+                                               delayMs, false);
+            }
             break;
         case MIDIMessageType::Note: {
+            // Notes schedule a NoteOff based on gate length.
             uint8_t note = constrain(root + offset, 0, 127);
-            midi.sendNoteOn(note, potVal, slot.midiChannel);
-            // Clock-synced release: fire a note-off halfway to the next tick hit.
-            Utility::schedulerHigh.addTask(
-                [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
-                noteOffDelay, false);
+            if (delayMs == 0) {
+                midi.sendNoteOn(note, potVal, slot.midiChannel);
+                Utility::schedulerHigh.addTask(
+                    [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
+                    baseGateMs, false);
+            } else {
+                Utility::schedulerHigh.addTask([note, vel = potVal, ch = slot.midiChannel,
+                                                &midi]() { midi.sendNoteOn(note, vel, ch); },
+                                               delayMs, false);
+                Utility::schedulerHigh.addTask(
+                    [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
+                    delayMs + baseGateMs, false);
+            }
             break;
         }
         case MIDIMessageType::PitchBend: {
             int raw = usedPot ? potRaw : Utility::mapToRange(root, 0, 127, 0, 1023);
             int16_t bend = map(raw, 0, 1023, -8192, 8191) + offset * 128;
             bend = constrain(bend, -8192, 8191);
-            midi.sendPitchBend(bend, slot.midiChannel);
+            if (delayMs == 0) {
+                midi.sendPitchBend(bend, slot.midiChannel);
+            } else {
+                Utility::schedulerHigh.addTask(
+                    [bend, ch = slot.midiChannel, &midi]() { midi.sendPitchBend(bend, ch); },
+                    delayMs, false);
+            }
             break;
         }
         case MIDIMessageType::ProgramChange:
-            midi.sendProgramChange(constrain(root + offset, 0, 127), slot.midiChannel);
+            if (delayMs == 0) {
+                midi.sendProgramChange(constrain(root + offset, 0, 127), slot.midiChannel);
+            } else {
+                uint8_t program = constrain(root + offset, 0, 127);
+                Utility::schedulerHigh.addTask([program, ch = slot.midiChannel,
+                                                &midi]() { midi.sendProgramChange(program, ch); },
+                                               delayMs, false);
+            }
             break;
         case MIDIMessageType::Aftertouch:
-            midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
+            if (delayMs == 0) {
+                midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
+            } else {
+                uint8_t pressure = constrain(potVal + offset, 0, 127);
+                Utility::schedulerHigh.addTask([pressure, ch = slot.midiChannel,
+                                                &midi]() { midi.sendAftertouch(pressure, ch); },
+                                               delayMs, false);
+            }
             break;
         case MIDIMessageType::ModWheel:
-            midi.sendModWheel(constrain(potVal + offset, 0, 127), slot.midiChannel);
+            if (delayMs == 0) {
+                midi.sendModWheel(constrain(potVal + offset, 0, 127), slot.midiChannel);
+            } else {
+                uint8_t mod = constrain(potVal + offset, 0, 127);
+                Utility::schedulerHigh.addTask(
+                    [mod, ch = slot.midiChannel, &midi]() { midi.sendModWheel(mod, ch); }, delayMs,
+                    false);
+            }
             break;
         default:
             break;

@@ -25,6 +25,10 @@ float g_tappedBPM = 120.0f;
 bool g_clockOutEnabled = false;
 bool g_usbMidiOutEnabled = false;
 unsigned long lastClockTime = 0;
+float g_lfoEfGainTrim = 0.0f;
+float g_lfoArpSwing = 0.0f;
+float g_lfoLedBrightness = 0.0f;
+std::array<float, 2> g_lfoValues = {0.0f, 0.0f};
 float g_vref = 3.3f;
 EnvelopeConfig envelopeConfig = {};
 std::vector<EnvelopeFollower> envelopeFollowers;
@@ -34,6 +38,10 @@ int8_t velocityShift = 0;
 uint8_t changeProbability = 100;
 JitterSettings g_jitterSettings = {1.0f, 0.5f};
 bool g_jitterTuningActive = false;
+bool g_arpEditActive = false; // Test shim for arp edit toggle
+uint8_t g_activeProfile = 0;
+bool g_profileChangeRequested = false;
+bool g_profileSaveRequested = false;
 
 const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = {A0, A1, A2, A3, A6, A7};
 namespace {

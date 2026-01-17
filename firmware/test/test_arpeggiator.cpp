@@ -4,12 +4,13 @@
 #define private public
 #include "MIDIHandler.h"
 #include "PotentiometerManager.h"
+#include "Arpeggiator.h"
 #undef private
 
-#include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "Hardware/IO.h"
 #include "Globals.h"
+#include "TimeStub.h"
 #include "Utility.h"
 #include "usb_midi.h"
 
@@ -69,18 +70,21 @@ void prepSlot(ConfigManager &cfg, uint8_t idx, MIDIMessageType type, uint8_t cha
     slot.midiChannel = channel;
     slot.arpNote = arpNote;
 }
+
+// Reset the shared scheduler so delayed tasks don't leak between tests.
+void resetScheduler() { Utility::schedulerHigh = TaskScheduler(); }
+
+void tickAndUpdate(Arpeggiator &arp, MIDIHandler &midi, ConfigManager &cfg,
+                   PotentiometerManager &pots, unsigned long msPerTick, bool runScheduler = false) {
+    // Advance the MIDI clock and fake time, then tick the arp.
+    midi._clockTickCount++;
+    advanceMs(msPerTick);
+    arp.update(midi, cfg, pots);
+    if (runScheduler) {
+        Utility::schedulerHigh.update();
+    }
+}
 } // namespace
-
-// Unity expects these, and now they moonlight as our mock reset crew.
-void setUp() {
-    hardware::resetAnalogReadProvider();
-    hardware::resetDigitalReadProvider();
-}
-
-void tearDown() {
-    hardware::resetAnalogReadProvider();
-    hardware::resetDigitalReadProvider();
-}
 
 void test_start_stop_cycle() {
     Arpeggiator arp;
@@ -265,4 +269,188 @@ void test_random_shape_respects_jitter_depth() {
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT8(64, usbMIDI.lastNoteOn);
+}
+
+void test_updown_shape_walks_full_range() {
+    MidiUsbGuard guard;
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_lfoArpSwing = 0.0f;
+
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(4);
+    arp.setShape(Arpeggiator::UPDOWN);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots); // latch
+
+    // UPDOWN should climb then descend without repeating endpoints.
+    uint8_t expected[] = {60, 61, 62, 63, 62, 61};
+    for (size_t i = 0; i < sizeof(expected); ++i) {
+        tickAndUpdate(arp, midi, cfg, pots, 20, false);
+        TEST_ASSERT_EQUAL_UINT8(expected[i], usbMIDI.lastNoteOn);
+    }
+}
+
+void test_drunk_shape_is_deterministic() {
+    MidiUsbGuard guard;
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_lfoArpSwing = 0.0f;
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+    auto pots = makePots();
+
+    // Two separate arps with the same seed should match.
+    uint8_t sequenceA[6] = {0};
+    {
+        Arpeggiator arp;
+        arp.setLength(1);
+        arp.setPatternLength(4);
+        arp.setShape(Arpeggiator::DRUNK);
+        arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+        arp.start(0);
+
+        MIDIHandler midi = primeMidi();
+        arp.update(midi, cfg, pots);
+        for (size_t i = 0; i < 6; ++i) {
+            tickAndUpdate(arp, midi, cfg, pots, 20, false);
+            sequenceA[i] = usbMIDI.lastNoteOn;
+        }
+    }
+
+    g_fakeNowMs = 0;
+    resetScheduler();
+
+    uint8_t sequenceB[6] = {0};
+    {
+        Arpeggiator arp;
+        arp.setLength(1);
+        arp.setPatternLength(4);
+        arp.setShape(Arpeggiator::DRUNK);
+        arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+        arp.start(0);
+
+        MIDIHandler midi = primeMidi();
+        arp.update(midi, cfg, pots);
+        for (size_t i = 0; i < 6; ++i) {
+            tickAndUpdate(arp, midi, cfg, pots, 20, false);
+            sequenceB[i] = usbMIDI.lastNoteOn;
+        }
+    }
+
+    for (size_t i = 0; i < 6; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(sequenceA[i], sequenceB[i]);
+    }
+}
+
+void test_euclidean_lite_skips_steps() {
+    MidiUsbGuard guard;
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_lfoArpSwing = 0.0f;
+
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(8);
+    arp.setShape(Arpeggiator::EUCLIDEAN);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots);
+
+    // The euclidean pattern should skip some steps (not all, not none).
+    uint32_t beforeTx = midi._txCount;
+    for (int i = 0; i < 8; ++i) {
+        tickAndUpdate(arp, midi, cfg, pots, 20, false);
+    }
+    uint32_t fired = midi._txCount - beforeTx;
+    TEST_ASSERT_TRUE(fired > 0);
+    TEST_ASSERT_TRUE(fired < 8);
+}
+
+void test_swing_delays_offbeat_notes() {
+    MidiUsbGuard guard;
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_lfoArpSwing = 0.0f;
+
+    Arpeggiator arp;
+    arp.setLength(6);
+    arp.setPatternLength(2);
+    arp.setShape(Arpeggiator::UP);
+    arp.setGatePercent(50.0f);
+    arp.setSwingPercent(16.0f);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots); // sync
+
+    // First step: no delay, should fire immediately.
+    tickAndUpdate(arp, midi, cfg, pots, 21, true);
+    TEST_ASSERT_EQUAL_UINT8(60, usbMIDI.lastNoteOn);
+
+    // Second step: offbeat should delay by ~20ms.
+    uint8_t priorNote = usbMIDI.lastNoteOn;
+    tickAndUpdate(arp, midi, cfg, pots, 21, false);
+    TEST_ASSERT_EQUAL_UINT8(priorNote, usbMIDI.lastNoteOn);
+    advanceMs(19);
+    Utility::schedulerHigh.update();
+    TEST_ASSERT_EQUAL_UINT8(priorNote, usbMIDI.lastNoteOn);
+    advanceMs(2);
+    Utility::schedulerHigh.update();
+    TEST_ASSERT_EQUAL_UINT8(61, usbMIDI.lastNoteOn);
+}
+
+void test_tempo_change_updates_tick_ms() {
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 0.0f;
+    g_lfoArpSwing = 0.0f;
+
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(2);
+    arp.setShape(Arpeggiator::UP);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots);
+
+    // Prime ms-per-tick at ~20 ms.
+    for (int i = 0; i < 4; ++i) {
+        tickAndUpdate(arp, midi, cfg, pots, 20, false);
+    }
+    float first = arp._msPerTick;
+    TEST_ASSERT_FLOAT_WITHIN(1.0f, 20.0f, first);
+
+    // Simulate a tempo increase (10 ms per tick) and verify smoothing reacts.
+    for (int i = 0; i < 4; ++i) {
+        tickAndUpdate(arp, midi, cfg, pots, 10, false);
+    }
+    TEST_ASSERT_TRUE(arp._msPerTick < first);
 }

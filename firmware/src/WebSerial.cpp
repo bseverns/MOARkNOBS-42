@@ -155,6 +155,12 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         envs.add(env.getEnvelopeLevel());
     }
 
+    // Stream normalized LFO outputs for UI monitoring.
+    JsonArray lfos = doc.createNestedArray("lfos");
+    for (float value : g_lfoValues) {
+        lfos.add(value);
+    }
+
     const int slotValue = (currentSlot < NUM_POTS) ? static_cast<int>(currentSlot) : -1;
     doc["currentSlot"] = slotValue;
     doc["argMethod"] = argMethodLabel(config.getARGMethod());
@@ -272,6 +278,18 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     ef["smoothing"] = slot.efSettings.smoothing;
     ef["baseline"] = slot.efSettings.baseline;
     ef["gain"] = slot.efSettings.gain;
+    ef["mode"] = slot.efSettings.efMode;
+    ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
+    ef["auto_gain"] = slot.efSettings.autoGain != 0;
+    ef["attack_ms"] = slot.efSettings.attackMs;
+    ef["release_ms"] = slot.efSettings.releaseMs;
+    ef["rms_ms"] = slot.efSettings.rmsWindowMs;
+    ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
+    ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
+    ef["gate_threshold"] = slot.efSettings.gateThreshold;
+    ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
+    ef["activity_threshold"] = slot.efSettings.activityThreshold;
+    ef["gain_target"] = slot.efSettings.gainTarget;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
     SlotEnvelopePayload payload = config.getSlotEnvelopePayload(slotIndex);

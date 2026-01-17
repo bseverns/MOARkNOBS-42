@@ -104,6 +104,8 @@ class MIDIHandler {
     /** MIDI clock helpers. */
     bool isClockTick();
     void clearClockTick();
+    /** Return true when a MIDI Start/Continue has been seen without Stop. */
+    bool isClockRunning() const { return _clockRunning; }
 
     /** How many MIDI messages we've heard and blasted. */
     uint32_t getRxCount() const { return _rxCount; }
@@ -136,6 +138,7 @@ class MIDIHandler {
     uint32_t _clockTickCount = 0;
     unsigned long lastExternalClock = 0;
     unsigned long lastInternalTick = 0;
+    bool _clockRunning = false; //!< Track Start/Continue vs Stop for sync-aware modules
     DisplayManager *_displayManager = nullptr;
     SystemDiagnostics *_diagnostics = nullptr;
 
