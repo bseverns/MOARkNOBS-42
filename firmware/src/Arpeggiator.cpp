@@ -298,9 +298,8 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     float gatePercent = constrain(_gatePercent, 5.0f, 100.0f);
     // LFO swing modulation nudges swing percent up to +/-30%.
     float swingPercent = constrain(_swingPercent + (g_lfoArpSwing * 30.0f), 0.0f, 80.0f);
-    unsigned long baseGateMs =
-        static_cast<unsigned long>(constrain(stepDurationMs * (gatePercent / 100.0f), 1.0f,
-                                             stepDurationMs));
+    unsigned long baseGateMs = static_cast<unsigned long>(
+        constrain(stepDurationMs * (gatePercent / 100.0f), 1.0f, stepDurationMs));
     // Total steps include octave span.
     uint8_t totalSteps = static_cast<uint8_t>(_patternLength * (_octaveRange + 1));
     uint8_t stepCount = stepCountForShape(totalSteps);
@@ -329,11 +328,9 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
                                        slot.midiChannel);
             } else {
                 uint8_t value = constrain(potVal + offset, 0, 127);
-                Utility::schedulerHigh.addTask(
-                    [cc = slot.data1, value, ch = slot.midiChannel, &midi]() {
-                        midi.sendControlChange(cc, value, ch);
-                    },
-                    delayMs, false);
+                Utility::schedulerHigh.addTask([cc = slot.data1, value, ch = slot.midiChannel,
+                                                &midi]() { midi.sendControlChange(cc, value, ch); },
+                                               delayMs, false);
             }
             break;
         case MIDIMessageType::Note: {
@@ -345,11 +342,9 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
                     [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
                     baseGateMs, false);
             } else {
-                Utility::schedulerHigh.addTask(
-                    [note, vel = potVal, ch = slot.midiChannel, &midi]() {
-                        midi.sendNoteOn(note, vel, ch);
-                    },
-                    delayMs, false);
+                Utility::schedulerHigh.addTask([note, vel = potVal, ch = slot.midiChannel,
+                                                &midi]() { midi.sendNoteOn(note, vel, ch); },
+                                               delayMs, false);
                 Utility::schedulerHigh.addTask(
                     [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
                     delayMs + baseGateMs, false);
@@ -374,11 +369,9 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
                 midi.sendProgramChange(constrain(root + offset, 0, 127), slot.midiChannel);
             } else {
                 uint8_t program = constrain(root + offset, 0, 127);
-                Utility::schedulerHigh.addTask(
-                    [program, ch = slot.midiChannel, &midi]() {
-                        midi.sendProgramChange(program, ch);
-                    },
-                    delayMs, false);
+                Utility::schedulerHigh.addTask([program, ch = slot.midiChannel,
+                                                &midi]() { midi.sendProgramChange(program, ch); },
+                                               delayMs, false);
             }
             break;
         case MIDIMessageType::Aftertouch:
@@ -386,11 +379,9 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
                 midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
             } else {
                 uint8_t pressure = constrain(potVal + offset, 0, 127);
-                Utility::schedulerHigh.addTask(
-                    [pressure, ch = slot.midiChannel, &midi]() {
-                        midi.sendAftertouch(pressure, ch);
-                    },
-                    delayMs, false);
+                Utility::schedulerHigh.addTask([pressure, ch = slot.midiChannel,
+                                                &midi]() { midi.sendAftertouch(pressure, ch); },
+                                               delayMs, false);
             }
             break;
         case MIDIMessageType::ModWheel:
@@ -399,8 +390,8 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
             } else {
                 uint8_t mod = constrain(potVal + offset, 0, 127);
                 Utility::schedulerHigh.addTask(
-                    [mod, ch = slot.midiChannel, &midi]() { midi.sendModWheel(mod, ch); },
-                    delayMs, false);
+                    [mod, ch = slot.midiChannel, &midi]() { midi.sendModWheel(mod, ch); }, delayMs,
+                    false);
             }
             break;
         default:

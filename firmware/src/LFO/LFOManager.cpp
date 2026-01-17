@@ -17,7 +17,7 @@ float clampDepth(float depth) {
         return 1.0f;
     return depth;
 }
-}
+} // namespace
 
 LFOManager::LFOManager() {
     // Prime the timestamp so the first update has a sane delta.

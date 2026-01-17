@@ -19,11 +19,11 @@ class PotentiometerManager;
 class Arpeggiator {
   public:
     enum Shape {
-        UP,      //!< Ascending semitone steps
-        DOWN,    //!< Descending semitone steps
-        UPDOWN,  //!< Up then back down without repeating endpoints
-        RANDOM,  //!< Perlin-noise driven random offsets
-        DRUNK,   //!< Random walk ("drunk" step) offsets
+        UP,       //!< Ascending semitone steps
+        DOWN,     //!< Descending semitone steps
+        UPDOWN,   //!< Up then back down without repeating endpoints
+        RANDOM,   //!< Perlin-noise driven random offsets
+        DRUNK,    //!< Random walk ("drunk" step) offsets
         EUCLIDEAN //!< Euclidean-lite hit/rest pattern
     };
     enum class BaseNoteSource { Pot, Slot, External };
@@ -134,19 +134,19 @@ class Arpeggiator {
     Shape _shape;
     uint8_t _step;
     uint8_t _patternLength;
-    float _swingPercent;   //!< Swing in percent of step duration
-    float _gatePercent;    //!< Gate in percent of step duration
-    uint8_t _octaveRange;  //!< Number of extra octaves above the root
+    float _swingPercent;                  //!< Swing in percent of step duration
+    float _gatePercent;                   //!< Gate in percent of step duration
+    uint8_t _octaveRange;                 //!< Number of extra octaves above the root
     uint8_t _baseNote;                    //!< Root note for the pattern
     BaseNoteSource _baseNoteSrc;          //!< Who owns the root
     bool _baseNoteIsSet;                  //!< True once setBaseNote() has been called
     std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
     uint32_t _lastClockTickCount;         //!< Clock tick counter snapshot for sync
     bool _clockSynced;                    //!< True once we've latched onto the current beat
-    unsigned long _lastTickTimeMs; //!< Last tick timestamp (ms)
-    float _msPerTick;              //!< Smoothed ms per MIDI tick
-    uint32_t _rngState;            //!< Deterministic RNG state
-    int8_t _drunkPosition;         //!< Random walk position in steps
+    unsigned long _lastTickTimeMs;        //!< Last tick timestamp (ms)
+    float _msPerTick;                     //!< Smoothed ms per MIDI tick
+    uint32_t _rngState;                   //!< Deterministic RNG state
+    int8_t _drunkPosition;                //!< Random walk position in steps
 };
 
 #endif // ARPEGGIATOR_H

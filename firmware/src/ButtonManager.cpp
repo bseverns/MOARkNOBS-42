@@ -405,8 +405,8 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         }
         case 1: {
             if (context.diagnosticMode) {
-                context.diagnosticPage = static_cast<uint8_t>(
-                    (context.diagnosticPage + 1) % DisplayManager::kDiagnosticPageCount);
+                context.diagnosticPage = static_cast<uint8_t>((context.diagnosticPage + 1) %
+                                                              DisplayManager::kDiagnosticPageCount);
                 context.displayManager.displayStatus("Diag Page", 1000);
             } else {
                 // Reload configuration profile from EEPROM
@@ -447,8 +447,8 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
                 context.displayManager.displayStatus("Diagnostics", 1000);
                 context.ledManager.setDiagnosticMode(true);
             } else {
-                context.diagnosticPage = static_cast<uint8_t>(
-                    (context.diagnosticPage + 1) % DisplayManager::kDiagnosticPageCount);
+                context.diagnosticPage = static_cast<uint8_t>((context.diagnosticPage + 1) %
+                                                              DisplayManager::kDiagnosticPageCount);
                 context.displayManager.displayStatus("Diag Page", 1000);
             }
             break;
@@ -757,7 +757,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
-        (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
+             (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
         g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
         context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF",
                                              1500);
@@ -1083,8 +1083,10 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     }
 
     if (jitterActive) {
-        float depth = Utility::scale(static_cast<float>(_ctrlPotValues[0]), 0.0f, 1023.0f, 0.0f, 1.0f);
-        float smooth = Utility::scale(static_cast<float>(_ctrlPotValues[1]), 0.0f, 1023.0f, 0.0f, 1.0f);
+        float depth =
+            Utility::scale(static_cast<float>(_ctrlPotValues[0]), 0.0f, 1023.0f, 0.0f, 1.0f);
+        float smooth =
+            Utility::scale(static_cast<float>(_ctrlPotValues[1]), 0.0f, 1023.0f, 0.0f, 1.0f);
         depth = constrain(depth, 0.0f, 1.0f);
         smooth = constrain(smooth, 0.0f, 1.0f);
 

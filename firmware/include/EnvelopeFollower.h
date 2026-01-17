@@ -66,9 +66,9 @@ class EnvelopeFollower {
      * Snapshot of the envelope follower state for diagnostics.
      */
     struct EfStats {
-        float baseline = 0.0f; //!< Current baseline used for subtraction
-        float gain = 1.0f;     //!< Current total gain multiplier
-        int value = 0;         //!< Latest scaled MIDI value (0..127-ish)
+        float baseline = 0.0f;      //!< Current baseline used for subtraction
+        float gain = 1.0f;          //!< Current total gain multiplier
+        int value = 0;              //!< Latest scaled MIDI value (0..127-ish)
         EFMode mode = EFMode::Peak; //!< Active detection mode
     };
 
@@ -76,10 +76,10 @@ class EnvelopeFollower {
      * Per-mode configuration data used by the envelope engine.
      */
     struct EfModeSettings {
-        EFMode mode = EFMode::Peak;  //!< Detection mode to apply
-        uint16_t attackMs = 5;       //!< Attack time for follower/gate
-        uint16_t releaseMs = 20;     //!< Release time for follower/gate
-        uint16_t rmsWindowMs = 50;   //!< Integration window for RMS-ish mode
+        EFMode mode = EFMode::Peak;    //!< Detection mode to apply
+        uint16_t attackMs = 5;         //!< Attack time for follower/gate
+        uint16_t releaseMs = 20;       //!< Release time for follower/gate
+        uint16_t rmsWindowMs = 50;     //!< Integration window for RMS-ish mode
         uint16_t baselineTauMs = 2000; //!< Time constant for baseline tracker
         uint16_t gainTauMs = 3000;     //!< Time constant for auto-gain
         uint8_t gateThreshold = 16;    //!< Gate threshold (0..127)
@@ -89,6 +89,7 @@ class EnvelopeFollower {
         bool autoBaseline = true;      //!< Enable baseline tracking
         bool autoGain = true;          //!< Enable auto-gain tracking
     };
+
   private:
     float shapingFreq = 1000.0f; // Frequency or shaping parameter
     float shapingQ = 0.707f;     // Resonance or secondary shaping parameter
@@ -110,20 +111,20 @@ class EnvelopeFollower {
     int envelopeB;
 
     // Calibration values
-    float baseline = 0.0f; // value subtracted from raw input to ditch noise
-    float gain = 1.0f;     // scales the baseline-adjusted level before MIDI mapping
+    float baseline = 0.0f;         // value subtracted from raw input to ditch noise
+    float gain = 1.0f;             // scales the baseline-adjusted level before MIDI mapping
     float externalGainTrim = 1.0f; // Extra multiplier for modulation sources
     float autoGain = 1.0f;         // Auto-calculated gain multiplier
     EfModeSettings efSettings{};   // Per-mode parameters for detection/auto-cal
 
     // ADC and smoothing tweaks
-    uint8_t oversampleCount = 4; // number of reads per update
-    float smoothingAlpha = 0.2f; // EWMA weight for new samples
-    int smoothedLevel = 0;       // running smoothed MIDI value
-    float vref;                  // cached reference voltage
-    float peakState = 0.0f;      //!< Smoothed peak detector state
-    float rmsState = 0.0f;       //!< RMS integrator state
-    bool gateOpen = false;       //!< Gate hysteresis state
+    uint8_t oversampleCount = 4;    // number of reads per update
+    float smoothingAlpha = 0.2f;    // EWMA weight for new samples
+    int smoothedLevel = 0;          // running smoothed MIDI value
+    float vref;                     // cached reference voltage
+    float peakState = 0.0f;         //!< Smoothed peak detector state
+    float rmsState = 0.0f;          //!< RMS integrator state
+    bool gateOpen = false;          //!< Gate hysteresis state
     unsigned long lastUpdateMs = 0; //!< Timestamp of last update call
 
     PotentiometerManager *potManager;

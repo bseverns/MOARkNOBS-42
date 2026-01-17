@@ -216,10 +216,10 @@ struct JitterSettings {
 
 extern JitterSettings g_jitterSettings;
 extern bool g_jitterTuningActive;
-extern bool g_arpEditActive; //!< True while the arp edit combo is held
-extern uint8_t g_activeProfile; //!< Current profile index (0..NUM_PROFILES-1)
+extern bool g_arpEditActive;          //!< True while the arp edit combo is held
+extern uint8_t g_activeProfile;       //!< Current profile index (0..NUM_PROFILES-1)
 extern bool g_profileChangeRequested; //!< Signal to reload profile data in main loop
-extern bool g_profileSaveRequested; //!< Signal to snapshot current settings into profile
+extern bool g_profileSaveRequested;   //!< Signal to snapshot current settings into profile
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.
