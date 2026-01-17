@@ -54,7 +54,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 ## Key Features
 
 - **42 Virtual MIDI Slots**: Store independent CC/channel pairs, slot types, and EF settings.
-- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend, Mod Wheel, NRPN, RPN, and SysEx.
+- **Supports Multiple MIDI Types**: CC, Note, Program Change, Aftertouch, Pitch Bend, Mod Wheel, NRPN, RPN, and (some day, if the digits will it so) SysEx.
 - **Dynamic Envelope Modulation**: Shape CCs using audio input across 6 analog channels.
 - **ARG Mode**: Blend/compare signals using programmable logic for creative chaos.
 - **Arpeggiator Mode**: Repeats any MIDI slot type in tempo; adds DRUNK/EUCL shapes plus swing, gate length, and octave range control.
