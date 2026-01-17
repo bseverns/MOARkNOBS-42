@@ -390,7 +390,8 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
                 return false;
             }
         }
-        if (_stored.crc != calculateCRC(true)) {
+        bool includeProfile = (base == EEPROM_PROFILE_START(0));
+        if (_stored.crc != calculateCRC(includeProfile)) {
             LOG_PRINTLN("Config CRC mismatch.");
             resetConfiguration(potChannels);
             return false;
@@ -427,7 +428,8 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
                 return false;
             }
         }
-        if (_stored.crc != calculateCRC(true)) {
+        bool includeProfile = (base == EEPROM_PROFILE_START(0));
+        if (_stored.crc != calculateCRC(includeProfile)) {
             LOG_PRINTLN("Backup CRC mismatch.");
             resetConfiguration(potChannels);
             return false;

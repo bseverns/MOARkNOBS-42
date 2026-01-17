@@ -255,9 +255,8 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
     _rxCount++;
     switch (type) {
     case midi::Start:
-        // Reset beat counter on Start so sync'd modules re-align.
+        // Ensure running flag and timestamps align when a new clock stream begins.
         _clockRunning = true;
-        _clockTickCount = 0;
         lastExternalClock = now();
         break;
     case midi::Continue:
