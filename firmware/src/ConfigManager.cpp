@@ -95,8 +95,7 @@ ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings) {
     sanitized.attackMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.attackMs));
     sanitized.releaseMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.releaseMs));
     sanitized.rmsWindowMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.rmsWindowMs));
-    sanitized.baselineTauMs =
-        static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
+    sanitized.baselineTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
     sanitized.gainTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.gainTauMs));
     return sanitized;
 }
@@ -327,8 +326,7 @@ MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     sanitized.attackMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.attackMs));
     sanitized.releaseMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.releaseMs));
     sanitized.rmsWindowMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.rmsWindowMs));
-    sanitized.baselineTauMs =
-        static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
+    sanitized.baselineTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
     sanitized.gainTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.gainTauMs));
     return sanitized;
 }
@@ -1081,8 +1079,7 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (!filterTypeIsValid(candidate.efSettings.filterType)) {
         return false;
     }
-    if (candidate.efSettings.efMode >
-        static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower)) {
+    if (candidate.efSettings.efMode > static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower)) {
         return false;
     }
     SlotEnvelopePayload payload = settingsToPayload(candidate.efSettings);

@@ -323,8 +323,10 @@ ProfileData captureProfileSnapshot() {
 
     profile.arp.lengthTicks = arpeggiator.getLength();
     profile.arp.shape = static_cast<uint8_t>(arpeggiator.getShape());
-    profile.arp.swingPercent = static_cast<uint8_t>(constrain(arpeggiator.getSwingPercent(), 0.0f, 80.0f));
-    profile.arp.gatePercent = static_cast<uint8_t>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f));
+    profile.arp.swingPercent =
+        static_cast<uint8_t>(constrain(arpeggiator.getSwingPercent(), 0.0f, 80.0f));
+    profile.arp.gatePercent =
+        static_cast<uint8_t>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f));
     profile.arp.octaveRange = arpeggiator.getOctaveRange();
 
     profile.led.brightness = ledManager.getBrightness();
@@ -343,7 +345,8 @@ ProfileData captureProfileSnapshot() {
         profile.lfos[i].syncRatio = static_cast<uint8_t>(lfo.getSyncRatio());
     }
 
-    const size_t routeCount = std::min(lfoManager.routeCount(), static_cast<size_t>(PROFILE_MAX_ROUTES));
+    const size_t routeCount =
+        std::min(lfoManager.routeCount(), static_cast<size_t>(PROFILE_MAX_ROUTES));
     profile.routeCount = static_cast<uint8_t>(routeCount);
     for (size_t i = 0; i < routeCount; ++i) {
         LFOManager::Route route{};
@@ -395,8 +398,7 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
         switch (static_cast<LFOManager::Route::Type>(route.type)) {
         case LFOManager::Route::Type::Internal:
             lfoManager.addInternalRoute(route.lfoIndex,
-                                        static_cast<LFOInternalTarget>(route.target),
-                                        route.depth);
+                                        static_cast<LFOInternalTarget>(route.target), route.depth);
             break;
         case LFOManager::Route::Type::MidiCC7:
             lfoManager.addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth);
@@ -605,13 +607,12 @@ void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out
     // EF mode and auto-cal settings accept both snake_case and camelCase keys.
     if (obj.containsKey("mode")) {
         if (obj["mode"].is<const char *>()) {
-            out.efMode = static_cast<uint8_t>(
-                parseEfMode(obj["mode"].as<const char *>(),
-                            static_cast<EnvelopeFollower::EFMode>(out.efMode)));
+            out.efMode = static_cast<uint8_t>(parseEfMode(
+                obj["mode"].as<const char *>(), static_cast<EnvelopeFollower::EFMode>(out.efMode)));
         } else {
             int raw = obj["mode"].as<int>();
-            out.efMode =
-                static_cast<uint8_t>(constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+            out.efMode = static_cast<uint8_t>(
+                constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
         }
     }
 
@@ -1028,8 +1029,8 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                                     static_cast<EnvelopeFollower::EFMode>(settings.efMode)));
                 } else {
                     int raw = efObj["mode"].as<int>();
-                    settings.efMode = static_cast<uint8_t>(constrain(
-                        raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+                    settings.efMode = static_cast<uint8_t>(
+                        constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
                 }
             }
             if (efObj.containsKey("auto_baseline")) {
@@ -1936,7 +1937,8 @@ void processSerial() {
                 LOG_PRINTLN("ERR");
                 continue;
             }
-            uint8_t id = static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
+            uint8_t id =
+                static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
             if (id >= NUM_PROFILES) {
                 LOG_PRINTLN("ERR");
                 continue;
@@ -2011,7 +2013,8 @@ void processSerial() {
                         profile.lfos[index].syncEnabled = lfo["sync"].as<bool>() ? 1 : 0;
                     }
                     if (lfo.containsKey("sync_ratio")) {
-                        profile.lfos[index].syncRatio = static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
+                        profile.lfos[index].syncRatio =
+                            static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
                     }
                 }
             }
@@ -2581,9 +2584,8 @@ void updateArpTuning() {
     uint8_t lengthTicks = map(raw1, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
     int shapeIdx = map(raw2, 0, 1023, 0, 5);
     static const char *names[] = {"UP", "DOWN", "UPDN", "RAND", "DRUNK", "EUCL"};
-    Arpeggiator::Shape shapes[] = {Arpeggiator::UP,      Arpeggiator::DOWN,
-                                   Arpeggiator::UPDOWN,  Arpeggiator::RANDOM,
-                                   Arpeggiator::DRUNK,   Arpeggiator::EUCLIDEAN};
+    Arpeggiator::Shape shapes[] = {Arpeggiator::UP,     Arpeggiator::DOWN,  Arpeggiator::UPDOWN,
+                                   Arpeggiator::RANDOM, Arpeggiator::DRUNK, Arpeggiator::EUCLIDEAN};
 
     // Update the arpeggiator with the latest UI control values.
     arpeggiator.setLength(lengthTicks);

@@ -43,6 +43,5 @@ void test_no_heap_growth_over_fake_runtime() {
     uintptr_t heapEnd = heapBreak();
     hardware::resetAnalogReadProvider();
 
-    TEST_ASSERT_EQUAL_UINT32(static_cast<uint32_t>(heapStart),
-                             static_cast<uint32_t>(heapEnd));
+    TEST_ASSERT_EQUAL_UINT32(static_cast<uint32_t>(heapStart), static_cast<uint32_t>(heapEnd));
 }

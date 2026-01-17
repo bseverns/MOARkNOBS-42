@@ -82,11 +82,11 @@ class EnvelopeFollower;
  * These structs are packed so EEPROM writes stay compact and predictable.
  */
 struct __attribute__((packed)) ProfileEfSettings {
-    uint8_t mode = 0;             //!< EnvelopeFollower::EFMode
-    uint8_t autoBaseline = 1;     //!< Auto-baseline flag (0/1)
-    uint8_t autoGain = 1;         //!< Auto-gain flag (0/1)
-    uint8_t gateThreshold = 16;   //!< Gate threshold (0-127)
-    uint8_t gateHysteresis = 4;   //!< Gate hysteresis (0-127)
+    uint8_t mode = 0;              //!< EnvelopeFollower::EFMode
+    uint8_t autoBaseline = 1;      //!< Auto-baseline flag (0/1)
+    uint8_t autoGain = 1;          //!< Auto-gain flag (0/1)
+    uint8_t gateThreshold = 16;    //!< Gate threshold (0-127)
+    uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
     uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
     uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
     uint16_t attackMs = 5;         //!< Attack time (ms)
@@ -97,8 +97,8 @@ struct __attribute__((packed)) ProfileEfSettings {
 };
 
 struct __attribute__((packed)) ProfileSlotSettings {
-    uint8_t midiChannel = 1;     //!< Per-slot MIDI channel
-    ProfileEfSettings ef{};      //!< Per-slot EF mode settings
+    uint8_t midiChannel = 1; //!< Per-slot MIDI channel
+    ProfileEfSettings ef{};  //!< Per-slot EF mode settings
 };
 
 struct __attribute__((packed)) ProfileArpSettings {
@@ -117,7 +117,7 @@ struct __attribute__((packed)) ProfileLedSettings {
 };
 
 struct __attribute__((packed)) ProfileLfoSettings {
-    uint8_t shape = 0;       //!< LFOShape value
+    uint8_t shape = 0;        //!< LFOShape value
     float frequencyHz = 1.0f; //!< Free-run frequency
     float depth = 0.0f;       //!< LFO depth (0..1)
     uint8_t bipolar = 1;      //!< Bipolar flag (0/1)
@@ -126,13 +126,13 @@ struct __attribute__((packed)) ProfileLfoSettings {
 };
 
 struct __attribute__((packed)) ProfileLfoRoute {
-    uint8_t type = 0;       //!< LFOManager::Route::Type
-    uint8_t lfoIndex = 0;   //!< LFO index
-    float depth = 1.0f;     //!< Route depth
-    uint8_t target = 0;     //!< LFOInternalTarget
-    uint8_t channel = 1;    //!< MIDI channel
-    uint8_t ccMsb = 0;      //!< CC MSB
-    uint8_t ccLsb = 32;     //!< CC LSB
+    uint8_t type = 0;     //!< LFOManager::Route::Type
+    uint8_t lfoIndex = 0; //!< LFO index
+    float depth = 1.0f;   //!< Route depth
+    uint8_t target = 0;   //!< LFOInternalTarget
+    uint8_t channel = 1;  //!< MIDI channel
+    uint8_t ccMsb = 0;    //!< CC MSB
+    uint8_t ccLsb = 32;   //!< CC LSB
 };
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
@@ -140,11 +140,11 @@ inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
 inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0001;
 
 struct __attribute__((packed)) ProfileData {
-    uint16_t version = PROFILE_SETTINGS_VERSION; //!< Profile payload version
-    uint16_t crc = 0;                            //!< CRC over payload bytes
-    uint8_t routeCount = 0;                      //!< Active route count
-    ProfileArpSettings arp{};                    //!< Arp settings snapshot
-    ProfileLedSettings led{};                    //!< LED brightness/color
+    uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version
+    uint16_t crc = 0;                                         //!< CRC over payload bytes
+    uint8_t routeCount = 0;                                   //!< Active route count
+    ProfileArpSettings arp{};                                 //!< Arp settings snapshot
+    ProfileLedSettings led{};                                 //!< LED brightness/color
     std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{}; //!< LFO state snapshot
     std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{}; //!< LFO route table
     std::array<ProfileSlotSettings, NUM_SLOTS> slots{};       //!< Per-slot MIDI/EF settings
@@ -354,7 +354,8 @@ class ConfigManager {
                                  uint16_t base);  // restore from backup copy
     void readEEPROM(bool backup, uint16_t base);  // raw EEPROM read helper
     void writeEEPROM(bool backup, uint16_t base); // raw EEPROM write helper
-    uint16_t calculateCRC(bool includeProfile) const; // compute config CRC (optionally include active profile)
+    uint16_t calculateCRC(
+        bool includeProfile) const; // compute config CRC (optionally include active profile)
 
     struct StoredConfig {
         std::array<uint8_t, NUM_POTS> potChannels;  //!< saved pot→channel map

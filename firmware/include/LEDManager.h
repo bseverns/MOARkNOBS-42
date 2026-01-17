@@ -144,7 +144,7 @@ class LEDManager {
     uint8_t modeDisplay;
     uint8_t activePot;
     bool envelopeModeActive;
-    uint8_t brightness = 128; //!< Base brightness before modulation
+    uint8_t brightness = 128;   //!< Base brightness before modulation
     float brightnessMod = 1.0f; //!< Modulator scale (0..2) applied to brightness
     LEDState currentState;
     uint8_t activeIndex;

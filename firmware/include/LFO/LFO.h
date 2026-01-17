@@ -83,10 +83,10 @@ class LFO {
     bool bipolar_ = true;             //!< True => -1..1 output, false => 0..1
     float phase_ = 0.0f;              //!< Normalized phase (0..1)
 
-    float sampleHold_ = 0.0f;         //!< Latched value for Sample/Hold
-    float slewStart_ = 0.0f;          //!< Slew interpolation start
-    float slewTarget_ = 0.0f;         //!< Slew interpolation target
-    uint32_t rngState_ = 0x12345678u; //!< RNG state for random shapes
-    bool syncEnabled_ = false;        //!< True when clock sync is active
+    float sampleHold_ = 0.0f;                     //!< Latched value for Sample/Hold
+    float slewStart_ = 0.0f;                      //!< Slew interpolation start
+    float slewTarget_ = 0.0f;                     //!< Slew interpolation target
+    uint32_t rngState_ = 0x12345678u;             //!< RNG state for random shapes
+    bool syncEnabled_ = false;                    //!< True when clock sync is active
     LFOSyncRatio syncRatio_ = LFOSyncRatio::Div1; //!< Clock sync ratio
 };

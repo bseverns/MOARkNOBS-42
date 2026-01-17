@@ -100,10 +100,10 @@ class LFOManager {
     /** Send OSC callback if installed. */
     void maybeSendOsc(const Route &route, float normalized);
 
-    std::array<LFO, kMaxLFOs> lfos_{}; //!< LFO instances
-    std::vector<Route> routes_;        //!< Active routes
-    LFOClock clock_;                   //!< Shared clock sync adapter
-    MIDIHandler *midi_ = nullptr;      //!< MIDI output (not owned)
+    std::array<LFO, kMaxLFOs> lfos_{};              //!< LFO instances
+    std::vector<Route> routes_;                     //!< Active routes
+    LFOClock clock_;                                //!< Shared clock sync adapter
+    MIDIHandler *midi_ = nullptr;                   //!< MIDI output (not owned)
     void (*oscCallback_)(uint8_t, float) = nullptr; //!< OSC callback hook
     unsigned long lastUpdateMs_ = 0;                //!< Last update timestamp (ms)
     LFOBus bus_{};                                  //!< Current internal bus values

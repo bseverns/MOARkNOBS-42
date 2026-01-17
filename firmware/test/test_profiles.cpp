@@ -52,6 +52,7 @@ void test_profile_bounds_clamp() {
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel >= 1);
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel <= 16);
-        TEST_ASSERT_TRUE(loaded.slots[i].ef.mode <= static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower));
+        TEST_ASSERT_TRUE(loaded.slots[i].ef.mode <=
+                         static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower));
     }
 }

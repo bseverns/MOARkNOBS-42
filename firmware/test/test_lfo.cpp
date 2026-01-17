@@ -51,7 +51,7 @@ void test_waveform_ranges() {
     lfo.setBipolar(true);
     lfo.setFrequencyHz(1.0f);
 
-    LFOShape shapes[] = {LFOShape::Sine, LFOShape::Triangle, LFOShape::Saw,
+    LFOShape shapes[] = {LFOShape::Sine,   LFOShape::Triangle,   LFOShape::Saw,
                          LFOShape::Square, LFOShape::SampleHold, LFOShape::RandomSlew};
 
     for (LFOShape shape : shapes) {

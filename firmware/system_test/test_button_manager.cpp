@@ -197,7 +197,7 @@ void test_jitter_combo_updates_settings() {
     bm.buttonStates[NUM_VIRTUAL_BUTTONS + 5] = false;
     ScopedSequence values{
         pressed, released, released, pressed, pressed, released, // ctrl 0..5
-        1023, 0, 512                                             // control pots
+        1023,    0,        512                                   // control pots
     };
 
     fakeMillis = DEBOUNCE_DELAY + 1;

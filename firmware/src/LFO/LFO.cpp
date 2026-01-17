@@ -5,7 +5,7 @@
 namespace {
 // 2*pi for sine wave generation without pulling in heavier math helpers.
 constexpr float kTwoPi = 6.2831853071795864769f;
-}
+} // namespace
 
 LFO::LFO() {
     // Prime the random-based shapes so they have stable initial values.
