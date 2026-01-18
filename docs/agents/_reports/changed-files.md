@@ -15,3 +15,4 @@
 - firmware/include/Arpeggiator.h — expose the new `msPerTickEstimate()` helper so tests can inspect the clock-derived tempo without poking private fields.
 - firmware/test/test_arpeggiator.cpp — update `test_tempo_change_updates_tick_ms()` to use the public helper instead of the removed `_msPerTick` member.
 - firmware/platformio.ini — include `ClockDiscipline.cpp` in every test-specific `build_src_filter` so the new helper links into the various test targets.
+- firmware/src/ClockDiscipline.cpp — apply clang-format so the newly added discipline helper matches repo formatting rules.

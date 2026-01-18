@@ -4,7 +4,7 @@
 
 namespace {
 constexpr float kDriftThreshold = 0.25f; // 25% change in tempo triggers resync
-constexpr float kSmoothing = 0.2f;      // smoothing factor for ms-per-tick tracking
+constexpr float kSmoothing = 0.2f;       // smoothing factor for ms-per-tick tracking
 } // namespace
 
 ClockDiscipline::ClockDiscipline()
