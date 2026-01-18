@@ -168,6 +168,21 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
   proves a clean apply clears the diff badge. `npm --prefix App test` doubles as
   a migration-fire drill you can run without touching hardware.
 
+## 2026
+
+### January — Dual LFO Engines & Routing
+
+- Firmware now instantiates a dedicated `LFOManager` inside `firmware_main.cpp`, seeds two routed oscillators (LED brightness, arp swing, EF gain trim), and mirrors the normalized bus onto shared globals so OLED diagnostics and WebSerial telemetry see the same heartbeat. [2fe3c15]
+- *The rig finally has the pulse I imagined—two synced modulators that can flow into LEDs, the arpeggiator, MIDI CCs, or every envelope follower tweak without the scheduler hitching a beat.*
+- Unity/LFO tests now cover shapes, clock sync ratios, and normalized outputs so the oscillators stay honest even when MIDI clock vanishes, and EEPROM-backed profile payloads save the shape/sync/route snapshots between boots. [2fe3c15]
+
+### January — Web Configurator Build-Out
+
+- The App now splits the runtime kernel from the BenzKnobz view layer, introducing schema-driven forms, a staged diff+rollback panel, telemetry cards, a MIDI monitor, and a simulator toggle rooted in the refreshed `runtime.js`. [2fe3c15]
+- *With the simulator standing in for the Teensy and schema validation guarding every Apply, the browser is no longer just a read-only log—it edits profiles, replays slot patches, and rehearses checksum rollbacks before you touch the hardware.*
+- Playwright specs now vet the config forms, MIDI monitor, bridge handshake, and migration dance so CI can prove the UI without a human in Chromium. [2fe3c15]
+- Docs (README, Builder’s Handbook, new `docs/profiles-ui.png`) now explain the runtime contract and UI affordances so field labs can riff off the browser without reverse-engineering the glue code. [2fe3c15]
+
 ## Overview
 
 Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:
@@ -175,4 +190,3 @@ Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of unte
 - `firmware/` – Teensy‑based C++ code with modular managers and tests.
 - `hardware/` – EasyEDA design files for the `BTN_42` button matrix.
 - Comprehensive README files describing features, wiring, and building instructions.
-

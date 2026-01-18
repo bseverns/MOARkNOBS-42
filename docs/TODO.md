@@ -160,11 +160,18 @@ Shrink the distance between “idea” and “remap” so users don’t always n
 
 Formalize the “wiggle” helpers you’re already hinting at.
 
-- [ ] LFO module v1  
-  _Goal:_ A small, shared LFO that can be routed like an EF.  
-  - Implement a simple `LFO` class with rate/shape/depth, updated in the high-priority scheduler.  
-  - Allow mapping LFO outputs to slots similarly to EF (via config).  
-  - Provide a minimal OLED indicator when LFO is active.
+- [x] LFO module v1  
+  _Goal achieved:_ Dual LFOs now run at 1 kHz with rate/shape/depth controls, internal routes to LEDs/arp/EF gain, MIDI/OSC paths, and profile persistence so every boot replays the same modulation state.  
+  - The `LFO` class ticks via `Utility::schedulerHigh`, the manager reports normalized outputs, and Unity tests guard the shapes/clock math.  
+  - Routes feed the OLED diagnostics, Web Config editor, and EEPROM-backed profiles so the UI and firmware paint the same modulation bus.
+
+---
+
+### Web Config Builder Follow-ups
+
+- [ ] Capture the new staged diff panel, telemetry stack, and simulator workflow in `App/README` + docs once the hardware returns so the screenshots finally match the feature set.  
+  _Goal:_ Make the browser’s security choreography and UI affordances visible in the same place as the instructions you read before you flash the firmware.
+- [ ] Expand the runtime contract notes (schema-driven forms, `FormRenderer`, simulator transport, checksum rollback) inside `docs/WebSerial.md` or the Handbook so future contributors can grow the UI without reverse-engineering the kernel.
 
 ---
 

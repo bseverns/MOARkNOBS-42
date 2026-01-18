@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   those bursts without cracking open the firmware.
 - Per-slot envelope follower settings (filter type, cutoff, Q) live alongside each MIDISlot and persist to EEPROM, bumping the
   schema to `0x0004` so stored patches remember their curves.
+- Dual LFO engines now live in `firmware_main.cpp` via `LFOManager`, routing LED brightness, arp swing, and EF gain trim while persisting shapes/routes inside the profile payload so both UART telemetry and WebSerial keep the same modulation state. Unity LFO tests guard the shapes and clock sync math. [2fe3c15]
+- The Web Configurator was rebuilt around a split runtime kernel and BenzKnobz view layer: schema-driven forms, staged diff/rollback controls, telemetry cards, a MIDI monitor, and a simulator toggle all live in `runtime.js`/`views/*` plus new Playwright specs that exercise every panel without a human in Chromium. [2fe3c15]
 
 ### Changed
 - Runtime now runs a normalization/sanitization lap that clamps slot payloads
