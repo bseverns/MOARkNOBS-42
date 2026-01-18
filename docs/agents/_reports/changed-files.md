@@ -12,3 +12,6 @@
 - firmware/src/Arpeggiator.cpp — rewrite update() to consume ticks via ClockDiscipline, reset the groove on resumes/drift, and lean on its ms-per-tick for timing math.
 - firmware/test/test_clock_ppqn.cpp — oxygenate the clock discipline with start/stop/continue coverage plus a long jittery run that enforces the ±1 ms accuracy and tempo-jump resync.
 - firmware/test/test_mainUnity.cpp — declare and run the new clock-discipline tests so the unified suite stays comprehensive.
+- firmware/include/Arpeggiator.h — expose the new `msPerTickEstimate()` helper so tests can inspect the clock-derived tempo without poking private fields.
+- firmware/test/test_arpeggiator.cpp — update `test_tempo_change_updates_tick_ms()` to use the public helper instead of the removed `_msPerTick` member.
+- firmware/platformio.ini — include `ClockDiscipline.cpp` in every test-specific `build_src_filter` so the new helper links into the various test targets.

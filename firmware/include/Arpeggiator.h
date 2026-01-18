@@ -60,6 +60,8 @@ class Arpeggiator {
     void setLength(uint8_t ticks);
     /** Return the current step length in MIDI ticks. */
     uint8_t getLength() const { return _lengthTicks; }
+    /** Expose the current ms-per-tick estimate (for tests/insights). */
+    float msPerTickEstimate() const { return _clock.msPerTick(); }
     /**
      * Choose how the offsets are ordered.
      * @param s Pattern of note movement—UP, DOWN, UPDOWN or RANDOM—which

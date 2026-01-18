@@ -445,12 +445,12 @@ void test_tempo_change_updates_tick_ms() {
     for (int i = 0; i < 4; ++i) {
         tickAndUpdate(arp, midi, cfg, pots, 20, false);
     }
-    float first = arp._msPerTick;
+    float first = arp.msPerTickEstimate();
     TEST_ASSERT_FLOAT_WITHIN(1.0f, 20.0f, first);
 
     // Simulate a tempo increase (10 ms per tick) and verify smoothing reacts.
     for (int i = 0; i < 4; ++i) {
         tickAndUpdate(arp, midi, cfg, pots, 10, false);
     }
-    TEST_ASSERT_TRUE(arp._msPerTick < first);
+    TEST_ASSERT_TRUE(arp.msPerTickEstimate() < first);
 }
