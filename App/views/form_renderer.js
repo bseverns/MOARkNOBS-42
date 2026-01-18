@@ -184,9 +184,15 @@ export class FormRenderer {
       input.type = 'checkbox';
       input.checked = Boolean(value);
       action.appendChild(input);
-      this.bindInput(path, schema, () => input.checked, (next) => {
-        input.checked = Boolean(next);
-      });
+      this.bindInput(
+        path,
+        schema,
+        () => input.checked,
+        (next) => {
+          input.checked = Boolean(next);
+        },
+        input
+      );
     } else if (schema.enum) {
       const select = document.createElement('select');
       schema.enum.forEach((opt) => {
