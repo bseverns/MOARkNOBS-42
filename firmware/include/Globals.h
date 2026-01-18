@@ -46,11 +46,11 @@ inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rat
 inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
 inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
 
-extern uint32_t g_resetCause;    //!< Raw reset cause register
-extern uint16_t g_brownoutCount; //!< Persistent brownout counter
-extern uint8_t midiBeatPosition; //!< Current MIDI beat slot (0..7)
+extern uint32_t g_resetCause;                 //!< Raw reset cause register
+extern uint16_t g_brownoutCount;              //!< Persistent brownout counter
+extern uint8_t midiBeatPosition;              //!< Current MIDI beat slot (0..7)
 extern char serialBuffer[SERIAL_BUFFER_SIZE]; //!< Serial input buffer
-extern uint8_t serialBufferIndex; //!< Cursor into `serialBuffer`
+extern uint8_t serialBufferIndex;             //!< Cursor into `serialBuffer`
 
 /**
  * System-wide counters for performance hiccups and watchdog events. Updated by

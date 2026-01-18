@@ -56,7 +56,8 @@ float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
  * Convert the serialized EF filter enum into the runtime filter selection.
  * Keeping this one place prevents subtle drift when we add new filters later.
  */
-EnvelopeFollower::FilterType EnvelopeFollower::filterFromEfType(MIDISlot::EfSettings::FilterType type) {
+EnvelopeFollower::FilterType
+EnvelopeFollower::filterFromEfType(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
         return EnvelopeFollower::LINEAR;

@@ -340,7 +340,8 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     ledManager.setBrightness(profile.led.brightness);
     ledManager.setColor(CRGB(profile.led.r, profile.led.g, profile.led.b));
 
-    // Let the LFO manager digest the profile snapshot so firmware_main stays focused on orchestration.
+    // Let the LFO manager digest the profile snapshot so firmware_main stays focused on
+    // orchestration.
     lfoManager.applyProfile(profile);
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
@@ -925,14 +926,12 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             } else if (efObj.containsKey("filter_name")) {
                 const char *label = efObj["filter_name"].as<const char *>();
                 EnvelopeFollower::FilterType parsed =
-                    parseFilterType(label,
-                                    EnvelopeFollower::filterFromEfType(settings.filterType));
+                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
                 settings.filterType = fromEnvelopeFilter(parsed);
             } else if (efObj.containsKey("filter")) {
                 const char *label = efObj["filter"].as<const char *>();
                 EnvelopeFollower::FilterType parsed =
-                    parseFilterType(label,
-                                    EnvelopeFollower::filterFromEfType(settings.filterType));
+                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
                 settings.filterType = fromEnvelopeFilter(parsed);
             }
             if (efObj.containsKey("frequency")) {

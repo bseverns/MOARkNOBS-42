@@ -207,8 +207,7 @@ void LFOManager::applyProfile(const ProfileData &profile) {
             addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth);
             break;
         case LFOManager::Route::Type::MidiCC14:
-            addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel,
-                             route.depth);
+            addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel, route.depth);
             break;
         case LFOManager::Route::Type::Osc:
             addOscRoute(route.lfoIndex, route.depth);
