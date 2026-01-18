@@ -22,6 +22,28 @@
         <span class="badge" role="listitem">Real-time Slot Telemetry</span>
         <span class="badge" role="listitem">Patch-safe Writing</span>
       </div>
+      <div class="profile-bar" id="profile-bar" aria-label="Profile manager panel">
+        <div class="profile-switch" role="group" aria-label="Profile slot selector">
+          <strong>Profile slot</strong>
+          <div class="profile-slots">
+            <button type="button" class="profile-slot" data-profile-slot="0" aria-pressed="false">A</button>
+            <button type="button" class="profile-slot" data-profile-slot="1" aria-pressed="false">B</button>
+            <button type="button" class="profile-slot" data-profile-slot="2" aria-pressed="false">C</button>
+            <button type="button" class="profile-slot" data-profile-slot="3" aria-pressed="false">D</button>
+          </div>
+          <p class="microcopy profile-slot-meta" id="profile-slot-status">Slot A • mirrored</p>
+        </div>
+        <div class="profile-actions" role="group" aria-label="Device profile actions">
+          <button id="profile-save" type="button" disabled>Save profile</button>
+          <button id="profile-load" type="button" disabled>Load profile</button>
+          <button id="profile-reset" type="button" disabled>Reset profile</button>
+        </div>
+        <div class="profile-backup">
+          <button id="profile-download" type="button">Download profile</button>
+          <button id="profile-upload" type="button">Upload profile</button>
+        </div>
+        <p class="microcopy profile-hint">Device RPCs mirror EEPROM slots A–D while download/upload keeps a local backup ready for crash recovery.</p>
+      </div>
     </header>
     <main>
       <section id="stage-panel">
@@ -59,7 +81,22 @@
           <p class="microcopy">Tell each follower which slot to stalk — no need to wait for live signals.</p>
           <div class="ef-grid"></div>
         </fieldset>
-        <div id="form"></div>
+        <div id="form">
+          <section class="schema-section" id="ef-form">
+            <header>
+              <h3>EF Followers</h3>
+              <p class="microcopy">Route each envelope follower to a slot and tweak ahead of showtime.</p>
+            </header>
+            <div class="schema-section-body" data-schema-target="efSlots"></div>
+          </section>
+          <section class="schema-section" id="midi-form">
+            <header>
+              <h3>MIDI Slots</h3>
+              <p class="microcopy">Pick a slot, swap MIDI Type, and rehearse your patch before the crowd spills coffee.</p>
+            </header>
+            <div class="schema-section-body" data-schema-target="slots"></div>
+          </section>
+        </div>
         <details>
           <summary>Debug Log</summary>
           <pre id="log" aria-live="off"></pre>
@@ -93,53 +130,17 @@
           </select>
           <button id="simulator-toggle" type="button">Start simulator</button>
         </div>
-        <fieldset id="filter-settings">
+        <fieldset id="filter-settings" class="schema-section" data-schema-section="filter">
           <legend>Filter</legend>
-          <label>Type
-            <select id="filter-type">
-              <option value="LINEAR">LINEAR</option>
-              <option value="OPPOSITE_LINEAR">OPPOSITE_LINEAR</option>
-              <option value="EXPONENTIAL">EXPONENTIAL</option>
-              <option value="RANDOM">RANDOM</option>
-              <option value="LOWPASS">LOWPASS</option>
-              <option value="HIGHPASS">HIGHPASS</option>
-              <option value="BANDPASS">BANDPASS</option>
-            </select>
-          </label>
-          <label>Freq <input id="filter-freq" type="number" min="20" max="5000" data-control="pot" /></label>
-          <label>Q <input id="filter-q" type="number" min="0.5" max="4" step="0.01" data-control="encoder" /></label>
+          <div class="schema-section-body" data-schema-target="filter"></div>
         </fieldset>
-        <fieldset id="arg-settings">
+        <fieldset id="arg-settings" class="schema-section" data-schema-section="arg">
           <legend>ARG Pair</legend>
-          <label>Enable
-            <select id="arg-enable">
-              <option value="true">ON</option>
-              <option value="false">OFF</option>
-            </select>
-          </label>
-          <label>Method
-            <select id="arg-method">
-              <option value="PLUS">PLUS</option>
-              <option value="MIN">MIN</option>
-              <option value="PECK">PECK</option>
-              <option value="SHAV">SHAV</option>
-              <option value="SQAR">SQAR</option>
-              <option value="BABS">BABS</option>
-              <option value="TABS">TABS</option>
-              <option value="MULT">MULT</option>
-              <option value="DIVI">DIVI</option>
-              <option value="AVG">AVG</option>
-              <option value="XABS">XABS</option>
-              <option value="MAXX">MAXX</option>
-              <option value="MINN">MINN</option>
-              <option value="XORR">XORR</option>
-            </select>
-          </label>
-          <label>A <input id="arg-a" type="number" min="0" max="5" step="0.01" /></label>
-          <label>B <input id="arg-b" type="number" min="0" max="5" step="0.01" /></label>
+          <div class="schema-section-body" data-schema-target="arg"></div>
         </fieldset>
-        <fieldset id="led-settings">
+        <fieldset id="led-settings" class="schema-section" data-schema-section="led">
           <legend>LED Colors</legend>
+          <div class="schema-section-body" data-schema-target="led"></div>
           <div id="led-grid" aria-live="polite"></div>
         </fieldset>
         <section aria-labelledby="device-monitor-title">
@@ -150,6 +151,58 @@
         <section aria-labelledby="diff-title" id="diff-panel" hidden>
           <h2 id="diff-title">Staged Diff</h2>
           <pre id="diff-output"></pre>
+        </section>
+        <section id="midi-panel" class="midi-panel collapsed" aria-label="MIDI monitor panel">
+          <header class="midi-panel-header">
+            <div>
+              <h3>MIDI Monitor</h3>
+              <p class="microcopy">Logs incoming/outgoing MIDI bytes and optionally emits a clock.</p>
+            </div>
+            <button id="midi-panel-toggle" type="button" aria-expanded="false">Show MIDI monitor</button>
+          </header>
+          <div class="midi-panel-body">
+            <div class="midi-panel-status">
+              <button id="midi-enable" type="button">Enable MIDI</button>
+              <span class="microcopy" id="midi-status" aria-live="polite">Web MIDI access inactive.</span>
+            </div>
+            <div class="midi-panel-controls">
+              <label class="midi-control">
+                <span>Output</span>
+                <select id="midi-output-select">
+                  <option value="" selected disabled>Select output…</option>
+                </select>
+              </label>
+              <label class="midi-control">
+                <span>Clock BPM</span>
+                <input id="midi-clock-bpm" type="range" min="60" max="220" value="120" />
+                <span id="midi-clock-bpm-value">120</span>
+              </label>
+              <button id="midi-clock-toggle" type="button" disabled>Start clock</button>
+            </div>
+            <div class="midi-log" role="log" aria-live="polite" aria-label="MIDI message log">
+              <div class="midi-log-body" id="midi-log-body"></div>
+            </div>
+          </div>
+        </section>
+        <section id="scope-panel" class="scope-panel" aria-label="EF scope and LFO canvas">
+          <header class="scope-panel-header">
+            <div>
+              <h3>EF Scope &amp; LFO</h3>
+              <p class="microcopy">Watch the envelope followers and LFOs pulse in real time.</p>
+            </div>
+            <div class="scope-panel-actions">
+              <span id="scope-fps" class="microcopy">0 fps</span>
+              <button id="scope-snapshot" type="button">PNG snapshot</button>
+            </div>
+          </header>
+          <canvas id="scope-canvas" width="600" height="220" aria-label="EF scope display"></canvas>
+          <div class="scope-panel-footer">
+            <span id="scope-status" class="microcopy">Waiting for telemetry…</span>
+            <div class="scope-legend">
+              <span class="scope-legend-item">EF level</span>
+              <span class="scope-legend-item lfo">LFO</span>
+            </div>
+          </div>
         </section>
       </aside>
     </main>

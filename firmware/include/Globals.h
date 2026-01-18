@@ -38,8 +38,19 @@ extern Arpeggiator arpeggiator;
 
 inline constexpr uint16_t CONFIG_VERSION = 0x0006; //!< EEPROM schema version
 
-extern uint32_t g_resetCause;    //!< Raw reset cause register
-extern uint16_t g_brownoutCount; //!< Persistent brownout counter
+inline constexpr uint16_t OLED_WIDTH = 128;          //!< OLED display width in pixels
+inline constexpr uint16_t OLED_HEIGHT = 64;          //!< OLED display height in pixels
+inline constexpr uint8_t SSD1306_I2C_ADDRESS = 0x3C; //!< I2C address for the OLED
+inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial buffer
+inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rate
+inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
+inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
+
+extern uint32_t g_resetCause;                 //!< Raw reset cause register
+extern uint16_t g_brownoutCount;              //!< Persistent brownout counter
+extern uint8_t midiBeatPosition;              //!< Current MIDI beat slot (0..7)
+extern char serialBuffer[SERIAL_BUFFER_SIZE]; //!< Serial input buffer
+extern uint8_t serialBufferIndex;             //!< Cursor into `serialBuffer`
 
 /**
  * System-wide counters for performance hiccups and watchdog events. Updated by
@@ -120,14 +131,6 @@ inline uint8_t &VREF_ADC_PIN = hwConfig.vrefAdcPin;
 inline uint16_t &SLOT_LED_COUNT = hwConfig.slotLedCount;
 inline uint8_t &EF_LED_COUNT = hwConfig.efLedCount;
 inline uint8_t &POT_LED_COUNT = hwConfig.potLedCount;
-
-inline constexpr uint16_t OLED_WIDTH = 128;          //!< OLED display width in pixels
-inline constexpr uint16_t OLED_HEIGHT = 64;          //!< OLED display height in pixels
-inline constexpr uint8_t SSD1306_I2C_ADDRESS = 0x3C; //!< I2C address for the OLED
-inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial buffer
-inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rate
-inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
-inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
 
 // ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
 constexpr float VadcScale = 3.3f / 1023.0f;

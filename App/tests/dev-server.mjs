@@ -49,8 +49,10 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`[dev-server] listening on http://127.0.0.1:${PORT}`);
+const HOST = process.env.APP_HOST ?? '127.0.0.1';
+
+server.listen(PORT, HOST, () => {
+  console.log(`[dev-server] listening on http://${HOST}:${PORT}`);
 });
 
 const shutdown = () => {

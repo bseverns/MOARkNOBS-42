@@ -67,10 +67,6 @@ struct HardwareConfigInitializer {
     HardwareConfigInitializer() { loadHardwareConfig(); }
 } _hwInit;
 
-uint8_t midiBeatPosition = 0; // 0-7 beat slot; bumps each MIDI clock tick then wraps on the 8th
-char serialBuffer[SERIAL_BUFFER_SIZE]; // Holding pen where serial graffiti waits for judgement
-uint8_t serialBufferIndex = 0; // Cursor into serialBuffer; resets on newline or when it overflows
-
 namespace {
 size_t computeFreeRAM() {
 #if defined(ARDUINO)
@@ -212,27 +208,6 @@ const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     return "LINEAR";
 }
 
-EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
-    using Filter = MIDISlot::EfSettings::FilterType;
-    switch (type) {
-    case Filter::Linear:
-        return EnvelopeFollower::LINEAR;
-    case Filter::OppositeLinear:
-        return EnvelopeFollower::OPPOSITE_LINEAR;
-    case Filter::Exponential:
-        return EnvelopeFollower::EXPONENTIAL;
-    case Filter::Random:
-        return EnvelopeFollower::RANDOM;
-    case Filter::Lowpass:
-        return EnvelopeFollower::LOWPASS;
-    case Filter::Highpass:
-        return EnvelopeFollower::HIGHPASS;
-    case Filter::Bandpass:
-        return EnvelopeFollower::BANDPASS;
-    }
-    return EnvelopeFollower::LINEAR;
-}
-
 MIDISlot::EfSettings::FilterType fromEnvelopeFilter(EnvelopeFollower::FilterType type) {
     switch (type) {
     case EnvelopeFollower::LINEAR:
@@ -257,26 +232,9 @@ std::array<float, NUM_ENVELOPES> efBaseGains{};
 
 void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings,
                                uint8_t followerIndex) {
-    ef.setFilterType(toEnvelopeFilter(settings.filterType));
-    ef.configureFilter(settings.frequency, settings.q);
-    ef.setOversampleCount(settings.oversample);
-    ef.setSmoothingAlpha(settings.smoothing);
-    ef.setBaseline(settings.baseline);
-    ef.setGain(settings.gain);
-    EnvelopeFollower::EfModeSettings modeSettings{};
-    modeSettings.mode = static_cast<EnvelopeFollower::EFMode>(settings.efMode);
-    modeSettings.attackMs = settings.attackMs;
-    modeSettings.releaseMs = settings.releaseMs;
-    modeSettings.rmsWindowMs = settings.rmsWindowMs;
-    modeSettings.baselineTauMs = settings.baselineTauMs;
-    modeSettings.gainTauMs = settings.gainTauMs;
-    modeSettings.gateThreshold = settings.gateThreshold;
-    modeSettings.gateHysteresis = settings.gateHysteresis;
-    modeSettings.activityThreshold = settings.activityThreshold;
-    modeSettings.gainTarget = settings.gainTarget;
-    modeSettings.autoBaseline = settings.autoBaseline != 0;
-    modeSettings.autoGain = settings.autoGain != 0;
-    ef.setModeSettings(modeSettings);
+    // Route every slot-driven EF snapshot through the follower so the live object
+    // stays in sync with EEPROM + profile payloads.
+    ef.configureFromEfSettings(settings);
     if (followerIndex < NUM_ENVELOPES) {
         efBaseGains[followerIndex] = settings.gain;
     }
@@ -382,36 +340,9 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     ledManager.setBrightness(profile.led.brightness);
     ledManager.setColor(CRGB(profile.led.r, profile.led.g, profile.led.b));
 
-    for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
-        LFO &lfo = lfoManager.lfo(i);
-        lfo.setShape(static_cast<LFOShape>(profile.lfos[i].shape));
-        lfo.setFrequencyHz(profile.lfos[i].frequencyHz);
-        lfo.setDepth(profile.lfos[i].depth);
-        lfo.setBipolar(profile.lfos[i].bipolar != 0);
-        lfo.setSyncEnabled(profile.lfos[i].syncEnabled != 0);
-        lfo.setSyncRatio(static_cast<LFOSyncRatio>(profile.lfos[i].syncRatio));
-    }
-
-    lfoManager.clearRoutes();
-    for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
-        const ProfileLfoRoute &route = profile.routes[i];
-        switch (static_cast<LFOManager::Route::Type>(route.type)) {
-        case LFOManager::Route::Type::Internal:
-            lfoManager.addInternalRoute(route.lfoIndex,
-                                        static_cast<LFOInternalTarget>(route.target), route.depth);
-            break;
-        case LFOManager::Route::Type::MidiCC7:
-            lfoManager.addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth);
-            break;
-        case LFOManager::Route::Type::MidiCC14:
-            lfoManager.addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel,
-                                        route.depth);
-            break;
-        case LFOManager::Route::Type::Osc:
-            lfoManager.addOscRoute(route.lfoIndex, route.depth);
-            break;
-        }
-    }
+    // Let the LFO manager digest the profile snapshot so firmware_main stays focused on
+    // orchestration.
+    lfoManager.applyProfile(profile);
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot &slot = configManager.getSlot(i);
@@ -995,12 +926,12 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             } else if (efObj.containsKey("filter_name")) {
                 const char *label = efObj["filter_name"].as<const char *>();
                 EnvelopeFollower::FilterType parsed =
-                    parseFilterType(label, toEnvelopeFilter(settings.filterType));
+                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
                 settings.filterType = fromEnvelopeFilter(parsed);
             } else if (efObj.containsKey("filter")) {
                 const char *label = efObj["filter"].as<const char *>();
                 EnvelopeFollower::FilterType parsed =
-                    parseFilterType(label, toEnvelopeFilter(settings.filterType));
+                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
                 settings.filterType = fromEnvelopeFilter(parsed);
             }
             if (efObj.containsKey("frequency")) {

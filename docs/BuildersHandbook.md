@@ -172,9 +172,15 @@ WebSerial lets you tweak patches from a browser without custom software. It's qu
 
 These classics ruin weekends. Keep them in mind and you'll spend more time making noise than troubleshooting.
 
-## Profiles: stash four setups
+## Profiles
 
-The rig hoards four full configuration profiles (A–D) in EEPROM. Each profile stores your pot maps, LED vibe, envelope tricks, and modulation settings.
+The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot stores pot maps, LED vibes, envelope routing, and the modulation matrix.
+
+![Profile toolbar](docs/profiles-ui.png)
+
+The hero banner now mirrors those slots: click A–D to pick the active profile, then use **Save profile**, **Load profile**, or **Reset profile** to run the device RPCs `save_profile {slot}`, `load_profile {slot}`, and `reset_profile {slot}`. Load pushes the stored config into the UI and clears the staged diff; Save writes whatever is staged to the EEPROM slot. Reset brings the slot back to the firmware defaults.
+
+For crash recovery and sharing, download the staged profile as JSON or upload a backup file that stages immediately (the UI also mirrors the last staged state to `localStorage`, so a reload keeps unsent edits handy).
 
 - **Jump profiles** – mash **Ctrl1 + Ctrl2** to hop to the next profile. It wraps after the fourth.
 - **Save the chaos** – long‑press **Ctrl4** once you've mangled the knobs to taste.

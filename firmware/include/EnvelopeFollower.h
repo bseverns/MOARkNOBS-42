@@ -246,6 +246,10 @@ class EnvelopeFollower {
     /** Set the EWMA smoothing factor applied after oversampling. */
     void setSmoothingAlpha(float alpha);
     float getSmoothingAlpha() const;
+    /** Apply a stored EF settings snapshot to this follower in one call. */
+    void configureFromEfSettings(const MIDISlot::EfSettings &settings);
+    /** Convert persisted filter enums into the runtime filter type. */
+    static FilterType filterFromEfType(MIDISlot::EfSettings::FilterType type);
 
     /** Read back the current detection mode settings. */
     /** Return the current mode settings bundle. */
