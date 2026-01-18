@@ -1,5 +1,6 @@
 #include "LFO/LFOManager.h"
 
+#include "ConfigManager.h"
 #include "MIDIHandler.h"
 #include "TimeUtils.h"
 #include <algorithm>
@@ -175,6 +176,44 @@ void LFOManager::setRoutes(const Route *routes, size_t count) {
     }
     for (size_t i = 0; i < count; ++i) {
         routes_.push_back(routes[i]);
+    }
+}
+
+void LFOManager::applyProfile(const ProfileData &profile) {
+    // Apply the LFO state snapshot collected from ConfigManager/firmware_main.
+    const size_t lfoLimit = std::min<size_t>(PROFILE_LFO_COUNT, kMaxLFOs);
+    for (size_t i = 0; i < lfoLimit; ++i) {
+        const ProfileLfoSettings &snapshot = profile.lfos[i];
+        LFO &lfo = lfos_[i];
+        lfo.setShape(static_cast<LFOShape>(snapshot.shape));
+        lfo.setFrequencyHz(snapshot.frequencyHz);
+        lfo.setDepth(snapshot.depth);
+        lfo.setBipolar(snapshot.bipolar != 0);
+        lfo.setSyncEnabled(snapshot.syncEnabled != 0);
+        lfo.setSyncRatio(static_cast<LFOSyncRatio>(snapshot.syncRatio));
+    }
+
+    clearRoutes();
+    const size_t routeLimit =
+        std::min<size_t>(static_cast<size_t>(profile.routeCount), PROFILE_MAX_ROUTES);
+    for (size_t i = 0; i < routeLimit; ++i) {
+        const ProfileLfoRoute &route = profile.routes[i];
+        switch (static_cast<LFOManager::Route::Type>(route.type)) {
+        case LFOManager::Route::Type::Internal:
+            addInternalRoute(route.lfoIndex, static_cast<LFOInternalTarget>(route.target),
+                             route.depth);
+            break;
+        case LFOManager::Route::Type::MidiCC7:
+            addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth);
+            break;
+        case LFOManager::Route::Type::MidiCC14:
+            addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel,
+                             route.depth);
+            break;
+        case LFOManager::Route::Type::Osc:
+            addOscRoute(route.lfoIndex, route.depth);
+            break;
+        }
     }
 }
 

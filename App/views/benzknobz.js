@@ -1,5 +1,8 @@
 import { createRuntime } from '../runtime.js';
+import { FormRenderer } from './form_renderer.js';
+import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
+import { ScopePanel } from './scope_panel.js';
 
 const EF_FILTER_NAMES = [
   'LINEAR',
@@ -40,7 +43,11 @@ const localManifest = {
 
 const runtimeOptions = {
   schemaUrl: './config_schema.json',
-  localManifest
+  localManifest,
+  wsUrl:
+    typeof window !== 'undefined' && typeof window.location === 'object'
+      ? new URLSearchParams(window.location.search).get('ws') ?? undefined
+      : undefined
 };
 if (
   typeof window !== 'undefined' &&
@@ -234,13 +241,11 @@ const boot = () => {
   const simulatorToggle = document.getElementById('simulator-toggle');
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
-  const filterTypeEl = document.getElementById('filter-type');
-  const filterFreqEl = document.getElementById('filter-freq');
-  const filterQEl = document.getElementById('filter-q');
-  const argEnableEl = document.getElementById('arg-enable');
-  const argMethodEl = document.getElementById('arg-method');
-  const argAEl = document.getElementById('arg-a');
-  const argBEl = document.getElementById('arg-b');
+  const schemaSections = Array.from(document.querySelectorAll('[data-schema-target]')).map((element) => ({
+    target: element,
+    schemaPath: element.dataset.schemaTarget
+  }));
+  const formRenderer = new FormRenderer({ runtime, sections: schemaSections });
   const efAssignmentGrid = document.querySelector('#ef-assignment-card .ef-grid');
   const slotDetailIndex = document.getElementById('slot-detail-index');
   const slotDetailStatus = document.getElementById('slot-detail-status');
@@ -257,7 +262,20 @@ const boot = () => {
   const slotDetailValue = document.getElementById('slot-detail-value');
   const deviceMonitor = document.getElementById('device-monitor');
   const logEl = document.getElementById('log');
+  const profileSlotButtons = Array.from(document.querySelectorAll('[data-profile-slot]'));
+  const profileSlotStatus = document.getElementById('profile-slot-status');
+  const profileSaveBtn = document.getElementById('profile-save');
+  const profileLoadBtn = document.getElementById('profile-load');
+  const profileResetBtn = document.getElementById('profile-reset');
+  const profileDownloadBtn = document.getElementById('profile-download');
+  const profileUploadBtn = document.getElementById('profile-upload');
+  const PROFILE_LABELS = ['A', 'B', 'C', 'D'];
+  const PROFILE_STORAGE_KEY = 'moarknobs:selected-profile';
   const migrationDialog = document.getElementById('migration-dialog');
+  const profileRpcButtons = [profileSaveBtn, profileLoadBtn, profileResetBtn].filter(Boolean);
+  let profileInteractable = false;
+  let profileRpcLocked = false;
+  let activeProfileSlot = clampProfileSlot(readProfileSlotPreference());
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
   const migrationCancel = document.getElementById('migration-cancel');
@@ -339,6 +357,15 @@ const boot = () => {
     });
   }
 
+  profileSlotButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const slotIndex = clampProfileSlot(Number(button.dataset.profileSlot));
+      setActiveProfileSlot(slotIndex);
+    });
+  });
+  setActiveProfileSlot(activeProfileSlot, { persist: false });
+  refreshProfileControls();
+
   slotContainer?.addEventListener('keydown', (event) => {
     if (!slotState.slots.length) return;
     const { key } = event;
@@ -354,26 +381,6 @@ const boot = () => {
     event.preventDefault();
     selectSlot(Math.max(0, Math.min(slotState.slots.length - 1, next)));
   });
-
-  filterTypeEl?.addEventListener('change', () => stageFilter('type', filterTypeEl.value));
-  filterFreqEl?.addEventListener('change', () => {
-    const parsed = Number.parseFloat(filterFreqEl.value);
-    if (Number.isNaN(parsed)) return;
-    const clamped = Math.min(5000, Math.max(20, parsed));
-    filterFreqEl.value = String(clamped);
-    stageFilter('freq', clamped);
-  });
-  filterQEl?.addEventListener('change', () => {
-    const parsed = Number.parseFloat(filterQEl.value);
-    if (Number.isNaN(parsed)) return;
-    const clamped = Math.min(4, Math.max(0.5, parsed));
-    filterQEl.value = String(clamped);
-    stageFilter('q', clamped);
-  });
-  argEnableEl?.addEventListener('change', () => stageArg('enable', argEnableEl.value === 'true'));
-  argMethodEl?.addEventListener('change', () => stageArg('method', argMethodEl.value || 'PLUS'));
-  argAEl?.addEventListener('change', () => stageArg('a', Number(argAEl.value)));
-  argBEl?.addEventListener('change', () => stageArg('b', Number(argBEl.value)));
 
   exportPresetBtn?.addEventListener('click', () => {
     const { staged } = runtime.getState();
@@ -449,6 +456,32 @@ const boot = () => {
     });
   }
 
+  profileSaveBtn?.addEventListener('click', () =>
+    runProfileRpc('save_profile', {
+      busyLabel: 'Saving profile…',
+      successLabel: 'Profile saved',
+      successCopy: `${describeSlot()} archived`
+    }),
+  );
+  profileLoadBtn?.addEventListener('click', () =>
+    runProfileRpc('load_profile', {
+      busyLabel: 'Loading profile…',
+      successLabel: 'Profile loaded',
+      successCopy: `${describeSlot()} active`,
+      expectConfig: true
+    }),
+  );
+  profileResetBtn?.addEventListener('click', () =>
+    runProfileRpc('reset_profile', {
+      busyLabel: 'Resetting profile…',
+      successLabel: 'Profile reset',
+      successCopy: `${describeSlot()} restored`,
+      expectConfig: true
+    }),
+  );
+  profileDownloadBtn?.addEventListener('click', () => handleProfileDownload());
+  profileUploadBtn?.addEventListener('click', () => handleProfileUpload());
+
   migrationApply?.addEventListener('click', () => migrationDialog?.close('apply'));
   migrationCancel?.addEventListener('click', () => migrationDialog?.close('cancel'));
   migrationExport?.addEventListener('click', () => exportPresetBtn?.click());
@@ -464,6 +497,9 @@ const boot = () => {
     const map = { error: 'err', warn: 'warn', info: 'ok', ok: 'ok' };
     const state = map[level] || 'warn';
     setStatus(state, level?.toUpperCase?.() || 'NOTE', message);
+  });
+  runtime.on('schema', (schema) => {
+    formRenderer.updateSchema(schema);
   });
   runtime.on('telemetry', (frame) => {
     slotState.telemetry = frame;
@@ -483,10 +519,9 @@ const boot = () => {
     updateDiff(dirty);
     markDirty(dirty);
     populateDetail();
-    populateFilter(staged);
-    populateArg(staged);
     renderLedControls(staged);
     updateTakeoverGuards(slotState.slots);
+    formRenderer.updateValues();
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
@@ -524,6 +559,8 @@ const boot = () => {
     if (exportPresetBtn) exportPresetBtn.disabled = false;
     if (importPresetBtn) importPresetBtn.disabled = false;
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
+    profileInteractable = true;
+    refreshProfileControls();
   });
   runtime.on('disconnected', () => {
     if (connectionPill) {
@@ -535,6 +572,9 @@ const boot = () => {
     if (exportPresetBtn) exportPresetBtn.disabled = true;
     if (importPresetBtn) importPresetBtn.disabled = true;
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
+    profileInteractable = false;
+    profileRpcLocked = false;
+    refreshProfileControls();
   });
   runtime.on('error', (err) => {
     if (connectionPill) {
@@ -542,6 +582,9 @@ const boot = () => {
       connectionPill.textContent = 'Disconnected';
     }
     setStatus('err', 'Runtime error', err.message || String(err));
+    profileInteractable = false;
+    profileRpcLocked = false;
+    refreshProfileControls();
   });
   runtime.on('rollback', () => {
     updateDiff(false);
@@ -549,11 +592,151 @@ const boot = () => {
     setStatus('warn', 'Rollback', 'Local edits were discarded.');
   });
 
+  runtime.restoreLocalState();
+  new MidiMonitor({ container: document.getElementById('midi-panel') });
+  new ScopePanel({ container: document.getElementById('scope-panel'), runtime, manifest: localManifest });
+
   function setStatus(state, label, message) {
     if (!statusEl || !statusLabel || !statusMessage) return;
     statusEl.dataset.state = state;
     statusLabel.textContent = label;
     statusMessage.textContent = message;
+  }
+
+  function clampProfileSlot(value) {
+    const idx = Number(value);
+    if (!Number.isFinite(idx)) return 0;
+    return Math.max(0, Math.min(PROFILE_LABELS.length - 1, Math.floor(idx)));
+  }
+
+  function readProfileSlotPreference() {
+    if (typeof localStorage === 'undefined') return 0;
+    try {
+      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed) && parsed >= 0 && parsed < PROFILE_LABELS.length) {
+        return parsed;
+      }
+    } catch (err) {
+      console.debug('read profile slot preference failed', err);
+    }
+    return 0;
+  }
+
+  function persistProfileSlot(index) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, String(index));
+    } catch (err) {
+      console.debug('persist profile slot failed', err);
+    }
+  }
+
+  function slotLabel(index) {
+    return PROFILE_LABELS[index] ?? PROFILE_LABELS[0];
+  }
+
+  function describeSlot(index = activeProfileSlot) {
+    return `Slot ${slotLabel(index)}`;
+  }
+
+  function setActiveProfileSlot(index, { persist = true } = {}) {
+    const bounded = clampProfileSlot(index);
+    activeProfileSlot = bounded;
+    profileSlotButtons.forEach((button) => {
+      const slotValue = Number(button.dataset.profileSlot);
+      if (!Number.isFinite(slotValue)) return;
+      button.setAttribute('aria-pressed', slotValue === bounded ? 'true' : 'false');
+    });
+    if (profileSlotStatus) {
+      profileSlotStatus.textContent = `${describeSlot(bounded)} • mirrored`;
+    }
+    if (persist) {
+      persistProfileSlot(bounded);
+    }
+  }
+
+  function refreshProfileControls() {
+    const canInteract = profileInteractable && !profileRpcLocked;
+    profileRpcButtons.forEach((button) => {
+      if (!button) return;
+      button.disabled = !canInteract;
+    });
+  }
+
+  async function runProfileRpc(method, { busyLabel, successLabel, successCopy, expectConfig } = {}) {
+    if (!profileInteractable) {
+      setStatus('warn', 'Profile offline', 'Connect to the deck before using profiles.');
+      return;
+    }
+    profileRpcLocked = true;
+    refreshProfileControls();
+    setStatus('warn', busyLabel, `${describeSlot()} • busy`);
+    try {
+      const response = await runtime.sendRpc({ rpc: method, slot: activeProfileSlot });
+      if (expectConfig) {
+        const payload = response?.config ?? response;
+        if (payload && typeof payload === 'object') {
+          runtime.replaceConfig(payload);
+        }
+      }
+      setStatus('ok', successLabel, successCopy ?? describeSlot());
+    } catch (err) {
+      setStatus('err', `${successLabel ?? 'Profile'} failed`, err.message || String(err));
+    } finally {
+      profileRpcLocked = false;
+      refreshProfileControls();
+    }
+  }
+
+  function handleProfileDownload() {
+    const { staged, live } = runtime.getState();
+    const payload = staged ?? live;
+    if (!payload || typeof payload !== 'object') {
+      setStatus('warn', 'Nothing to download', 'Stage a profile before exporting.');
+      return;
+    }
+    const configPayload = {
+      slot: activeProfileSlot,
+      schema_version: runtime.getState().schema?.schema_version,
+      timestamp: new Date().toISOString(),
+      config: payload
+    };
+    const blob = new Blob([JSON.stringify(configPayload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `moarknobz-profile-${slotLabel(activeProfileSlot)}-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setStatus('ok', 'Profile downloaded', `${describeSlot()} saved locally.`);
+  }
+
+  function handleProfileUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const documentPayload = JSON.parse(text);
+        const configData = documentPayload?.config ?? documentPayload?.profile ?? documentPayload;
+        if (!configData || typeof configData !== 'object') {
+          throw new Error('File did not contain a config payload');
+        }
+        const requestedSlot = clampProfileSlot(documentPayload?.slot ?? documentPayload?.profile_slot ?? documentPayload?.slotIndex);
+        if (Number.isFinite(requestedSlot)) {
+          setActiveProfileSlot(requestedSlot);
+        }
+        runtime.stage(() => configData);
+        setStatus('warn', 'Profile imported', `${describeSlot()} staged. Apply to push it to the deck.`);
+      } catch (err) {
+        setStatus('err', 'Profile import failed', err.message || String(err));
+      }
+    };
+    input.click();
   }
 
   function markDirty(isDirty) {
@@ -1028,37 +1211,6 @@ const boot = () => {
       })
       .filter(Boolean)
       .join(' ');
-  }
-
-  function populateFilter(staged) {
-    if (!staged) return;
-    if (filterTypeEl) filterTypeEl.value = staged.filter?.type ?? 'LINEAR';
-    if (filterFreqEl) filterFreqEl.value = staged.filter?.freq ?? 20;
-    if (filterQEl) filterQEl.value = staged.filter?.q ?? 1;
-  }
-
-  function populateArg(staged) {
-    if (!staged) return;
-    if (argEnableEl) argEnableEl.value = String(staged.arg?.enable ?? true);
-    if (argMethodEl) argMethodEl.value = staged.arg?.method ?? 'PLUS';
-    if (argAEl) argAEl.value = staged.arg?.a ?? 0;
-    if (argBEl) argBEl.value = staged.arg?.b ?? 0;
-  }
-
-  function stageFilter(key, value) {
-    runtime.stage((draft) => {
-      draft.filter = draft.filter || {};
-      draft.filter[key] = value;
-      return draft;
-    });
-  }
-
-  function stageArg(key, value) {
-    runtime.stage((draft) => {
-      draft.arg = draft.arg || {};
-      draft.arg[key] = value;
-      return draft;
-    });
   }
 
   function renderLedControls(staged) {

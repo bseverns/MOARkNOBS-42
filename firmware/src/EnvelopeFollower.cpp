@@ -52,6 +52,30 @@ float jitterRateFromSmoothness(float smoothness) {
 float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
 } // namespace
 
+/**
+ * Convert the serialized EF filter enum into the runtime filter selection.
+ * Keeping this one place prevents subtle drift when we add new filters later.
+ */
+EnvelopeFollower::FilterType EnvelopeFollower::filterFromEfType(MIDISlot::EfSettings::FilterType type) {
+    switch (type) {
+    case MIDISlot::EfSettings::FilterType::Linear:
+        return EnvelopeFollower::LINEAR;
+    case MIDISlot::EfSettings::FilterType::OppositeLinear:
+        return EnvelopeFollower::OPPOSITE_LINEAR;
+    case MIDISlot::EfSettings::FilterType::Exponential:
+        return EnvelopeFollower::EXPONENTIAL;
+    case MIDISlot::EfSettings::FilterType::Random:
+        return EnvelopeFollower::RANDOM;
+    case MIDISlot::EfSettings::FilterType::Lowpass:
+        return EnvelopeFollower::LOWPASS;
+    case MIDISlot::EfSettings::FilterType::Highpass:
+        return EnvelopeFollower::HIGHPASS;
+    case MIDISlot::EfSettings::FilterType::Bandpass:
+        return EnvelopeFollower::BANDPASS;
+    }
+    return EnvelopeFollower::LINEAR;
+}
+
 EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id)
     : audioInputPin(pin), index(id), currentEnvelopeLevel(0), modulationTargetCC(-1),
       isActive(false), filterType(LINEAR), mode(SEF), argMethod(PLUS),
@@ -293,6 +317,31 @@ void EnvelopeFollower::setModeSettings(const EfModeSettings &settings) {
     efSettings = settings;
     setMode(settings.mode);
     efSettings = settings;
+}
+
+void EnvelopeFollower::configureFromEfSettings(const MIDISlot::EfSettings &settings) {
+    // One crystal-clear path for restoring persisted EF tuning keeps the rest
+    // of the firmware from re-implementing these assignments in a dozen places.
+    setFilterType(filterFromEfType(settings.filterType));
+    configureFilter(settings.frequency, settings.q);
+    setOversampleCount(settings.oversample);
+    setSmoothingAlpha(settings.smoothing);
+    setBaseline(settings.baseline);
+    setGain(settings.gain);
+    EfModeSettings modeSettings{};
+    modeSettings.mode = static_cast<EFMode>(settings.efMode);
+    modeSettings.attackMs = settings.attackMs;
+    modeSettings.releaseMs = settings.releaseMs;
+    modeSettings.rmsWindowMs = settings.rmsWindowMs;
+    modeSettings.baselineTauMs = settings.baselineTauMs;
+    modeSettings.gainTauMs = settings.gainTauMs;
+    modeSettings.gateThreshold = settings.gateThreshold;
+    modeSettings.gateHysteresis = settings.gateHysteresis;
+    modeSettings.activityThreshold = settings.activityThreshold;
+    modeSettings.gainTarget = settings.gainTarget;
+    modeSettings.autoBaseline = settings.autoBaseline != 0;
+    modeSettings.autoGain = settings.autoGain != 0;
+    setModeSettings(modeSettings);
 }
 
 EnvelopeFollower::EfModeSettings EnvelopeFollower::getModeSettings() const { return efSettings; }

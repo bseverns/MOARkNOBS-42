@@ -8,6 +8,8 @@
 #include "LFO.h"
 #include "LFOClock.h"
 
+struct ProfileData;
+
 class MIDIHandler;
 
 /**
@@ -91,6 +93,8 @@ class LFOManager {
     bool getRoute(size_t index, Route &route) const;
     /** Replace all routes with the provided list. */
     void setRoutes(const Route *routes, size_t count);
+    /** Apply profile-derived snapshot data (LFO state + routes). */
+    void applyProfile(const ProfileData &profile);
 
   private:
     /** Apply an internal route to the modulation bus. */

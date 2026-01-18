@@ -109,26 +109,6 @@ inline uint8_t normalizeEnvelopeIndex(uint8_t raw) {
     return static_cast<uint8_t>(raw % NUM_ENVELOPES);
 }
 
-inline EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
-    switch (type) {
-    case MIDISlot::EfSettings::FilterType::Linear:
-        return EnvelopeFollower::LINEAR;
-    case MIDISlot::EfSettings::FilterType::OppositeLinear:
-        return EnvelopeFollower::OPPOSITE_LINEAR;
-    case MIDISlot::EfSettings::FilterType::Exponential:
-        return EnvelopeFollower::EXPONENTIAL;
-    case MIDISlot::EfSettings::FilterType::Random:
-        return EnvelopeFollower::RANDOM;
-    case MIDISlot::EfSettings::FilterType::Lowpass:
-        return EnvelopeFollower::LOWPASS;
-    case MIDISlot::EfSettings::FilterType::Highpass:
-        return EnvelopeFollower::HIGHPASS;
-    case MIDISlot::EfSettings::FilterType::Bandpass:
-        return EnvelopeFollower::BANDPASS;
-    }
-    return EnvelopeFollower::LINEAR;
-}
-
 inline int filterIndex(MIDISlot::EfSettings::FilterType type) {
     for (int i = 0; i < NUM_FILTER_TYPES; ++i) {
         if (SLOT_FILTERS[i] == type) {
@@ -145,29 +125,6 @@ inline MIDISlot::EfSettings::FilterType cycleFilter(MIDISlot::EfSettings::Filter
     return SLOT_FILTERS[index];
 }
 
-inline void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
-    ef.setFilterType(toEnvelopeFilter(settings.filterType));
-    ef.configureFilter(settings.frequency, settings.q);
-    ef.setOversampleCount(settings.oversample);
-    ef.setSmoothingAlpha(settings.smoothing);
-    ef.setBaseline(settings.baseline);
-    ef.setGain(settings.gain);
-    EnvelopeFollower::EfModeSettings modeSettings{};
-    modeSettings.mode = static_cast<EnvelopeFollower::EFMode>(settings.efMode);
-    modeSettings.attackMs = settings.attackMs;
-    modeSettings.releaseMs = settings.releaseMs;
-    modeSettings.rmsWindowMs = settings.rmsWindowMs;
-    modeSettings.baselineTauMs = settings.baselineTauMs;
-    modeSettings.gainTauMs = settings.gainTauMs;
-    modeSettings.gateThreshold = settings.gateThreshold;
-    modeSettings.gateHysteresis = settings.gateHysteresis;
-    modeSettings.activityThreshold = settings.activityThreshold;
-    modeSettings.gainTarget = settings.gainTarget;
-    modeSettings.autoBaseline = settings.autoBaseline != 0;
-    modeSettings.autoGain = settings.autoGain != 0;
-    ef.setModeSettings(modeSettings);
-}
-
 inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
                              const MIDISlot::EfSettings &settings) {
     MIDISlot &slot = context.configManager.getSlot(static_cast<uint8_t>(slotIndex));
@@ -177,7 +134,7 @@ inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
     context.potToEnvelopeMap[slotIndex] = slot.efSettings;
     int follower = settings.followerIndex;
     if (follower >= 0 && follower < static_cast<int>(context.envelopes.size())) {
-        applyEfSettingsToFollower(context.envelopes[follower], slot.efSettings);
+        context.envelopes[follower].configureFromEfSettings(slot.efSettings);
     }
 }
 } // namespace
@@ -524,7 +481,8 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         commitEfSettings(context, slotIndex, settings);
 
         SlotEnvelopePayload payload = context.configManager.getSlotEnvelopePayload(slotIndex);
-        payload.filterType = static_cast<uint8_t>(toEnvelopeFilter(settings.filterType));
+        payload.filterType =
+            static_cast<uint8_t>(EnvelopeFollower::filterFromEfType(settings.filterType));
         context.configManager.setSlotEnvelopePayload(slotIndex, payload);
 
         streamSlotPatch(context.configManager, slotIndex);

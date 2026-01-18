@@ -216,52 +216,6 @@ void maybeRescueFilterTailFromLegacy() {
     persistFilterTailImpl(legacy);
 }
 
-EnvelopeFollower::FilterType toEnvelopeFilter(MIDISlot::EfSettings::FilterType type) {
-    using Filter = MIDISlot::EfSettings::FilterType;
-    switch (type) {
-    case Filter::Linear:
-        return EnvelopeFollower::LINEAR;
-    case Filter::OppositeLinear:
-        return EnvelopeFollower::OPPOSITE_LINEAR;
-    case Filter::Exponential:
-        return EnvelopeFollower::EXPONENTIAL;
-    case Filter::Random:
-        return EnvelopeFollower::RANDOM;
-    case Filter::Lowpass:
-        return EnvelopeFollower::LOWPASS;
-    case Filter::Highpass:
-        return EnvelopeFollower::HIGHPASS;
-    case Filter::Bandpass:
-        return EnvelopeFollower::BANDPASS;
-    }
-    return EnvelopeFollower::LINEAR;
-}
-
-void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings) {
-    // Push persisted per-slot settings back into the live follower.
-    ef.setFilterType(toEnvelopeFilter(settings.filterType));
-    ef.configureFilter(settings.frequency, settings.q);
-    ef.setOversampleCount(settings.oversample);
-    ef.setSmoothingAlpha(settings.smoothing);
-    ef.setBaseline(settings.baseline);
-    ef.setGain(settings.gain);
-    // Convert serialized EF mode settings into the runtime structure.
-    EnvelopeFollower::EfModeSettings modeSettings{};
-    modeSettings.mode = static_cast<EnvelopeFollower::EFMode>(settings.efMode);
-    modeSettings.attackMs = settings.attackMs;
-    modeSettings.releaseMs = settings.releaseMs;
-    modeSettings.rmsWindowMs = settings.rmsWindowMs;
-    modeSettings.baselineTauMs = settings.baselineTauMs;
-    modeSettings.gainTauMs = settings.gainTauMs;
-    modeSettings.gateThreshold = settings.gateThreshold;
-    modeSettings.gateHysteresis = settings.gateHysteresis;
-    modeSettings.activityThreshold = settings.activityThreshold;
-    modeSettings.gainTarget = settings.gainTarget;
-    modeSettings.autoBaseline = settings.autoBaseline != 0;
-    modeSettings.autoGain = settings.autoGain != 0;
-    ef.setModeSettings(modeSettings);
-}
-
 bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
@@ -703,7 +657,7 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &po
         }
         settings.baseline = envelopes[follower].getBaseline();
         settings = sanitizeEfSettings(settings);
-        applyEfSettingsToFollower(envelopes[follower], settings);
+        envelopes[follower].configureFromEfSettings(settings);
         if (static_cast<size_t>(entry.first) < slots.size()) {
             slots[entry.first].efSettings = settings;
             slots[entry.first].setEnvelopeFollowerIndex(settings.followerIndex);

@@ -3,8 +3,10 @@ import addFormats from './lib/add-formats.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
-const ACK_TIMEOUT_MS = 1500;
+const RPC_THROTTLE_INTERVAL_MS = 1000 / 120;
+const RPC_TIMEOUT_MS = 3000;
 const STORAGE_KEY = 'moarknobs:last-port';
+const STATE_STORAGE_KEY = 'moarknobs:last-state';
 const EF_FILTER_NAMES = [
   'LINEAR',
   'OPPOSITE_LINEAR',
@@ -74,15 +76,6 @@ function decoder() {
   return new TextDecoder();
 }
 
-function chunkBuffer(buffer, chunkSize) {
-  if (buffer.length <= chunkSize) return [buffer];
-  const out = [];
-  for (let i = 0; i < buffer.length; i += chunkSize) {
-    out.push(buffer.slice(i, i + chunkSize));
-  }
-  return out;
-}
-
 async function digest(message) {
   const bytes = typeof message === 'string' ? new TextEncoder().encode(message) : message;
   const hash = await crypto.subtle.digest('SHA-256', bytes);
@@ -130,6 +123,29 @@ function shallowEqual(a, b) {
     if (a[key] !== b[key]) return false;
   }
   return true;
+}
+
+function parseSegment(segment) {
+  const idx = Number(segment);
+  return Number.isInteger(idx) && String(idx) === segment ? idx : segment;
+}
+
+function setNestedValue(target, path, value) {
+  if (!path) return;
+  const segments = path.split('.').map(parseSegment);
+  let cursor = target;
+  for (let i = 0; i < segments.length; i += 1) {
+    const segment = segments[i];
+    if (i === segments.length - 1) {
+      cursor[segment] = value;
+      break;
+    }
+    const nextSegment = segments[i + 1];
+    if (cursor[segment] === undefined || cursor[segment] === null) {
+      cursor[segment] = typeof nextSegment === 'number' ? [] : {};
+    }
+    cursor = cursor[segment];
+  }
 }
 
 function clamp(value, min, max) {
@@ -654,51 +670,7 @@ function createSimulator() {
   let index = 0;
   const lines = [];
   let resolver;
-  let pendingSetAll = '';
-  // Track aggregate parser state so multi-frame SET_ALL payloads can be
-  // reconstructed without relying on JSON.parse throwing "Unexpected end".
-  let setAllState = { depth: 0, inString: false, escape: false };
 
-  function resetSetAllState() {
-    setAllState = { depth: 0, inString: false, escape: false };
-  }
-
-  function feedSetAllState(chunk) {
-    let complete = false;
-    for (let i = 0; i < chunk.length; i += 1) {
-      const ch = chunk[i];
-      if (setAllState.inString) {
-        if (setAllState.escape) {
-          setAllState.escape = false;
-          continue;
-        }
-        if (ch === '\\') {
-          setAllState.escape = true;
-          continue;
-        }
-        if (ch === '"') {
-          setAllState.inString = false;
-        }
-        continue;
-      }
-      if (ch === '"') {
-        setAllState.inString = true;
-        continue;
-      }
-      if (ch === '{' || ch === '[') {
-        setAllState.depth += 1;
-        continue;
-      }
-      if (ch === '}' || ch === ']') {
-        if (setAllState.depth > 0) {
-          setAllState.depth -= 1;
-          if (setAllState.depth === 0) complete = true;
-        }
-        continue;
-      }
-    }
-    return complete;
-  }
   const manifest = {
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
@@ -712,7 +684,8 @@ function createSimulator() {
     free_ram: 48000,
     free_flash: 512000
   };
-  const config = {
+
+  let config = {
     fw_version: manifest.fw_version,
     schema_version: manifest.schema_version,
     pots: Array.from({ length: manifest.pot_count }, (_, idx) => ({
@@ -786,6 +759,9 @@ function createSimulator() {
       rgb: { r: 255, g: 0, b: 255 }
     }
   };
+  const profileSlots = Array.from({ length: 4 }, () => clone(config));
+  const defaultProfile = clone(config);
+
   const telemetry = () => ({
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
     slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
@@ -816,45 +792,79 @@ function createSimulator() {
     opened = true;
   }
 
+  function pushLine(payload) {
+    lines.push(JSON.stringify(payload));
+    if (resolver) {
+      const fn = resolver;
+      resolver = null;
+      fn(lines.shift());
+    }
+  }
+
   async function writeLine(line) {
     if (!opened) throw new Error('simulator closed');
-    if (line.startsWith('GET_MANIFEST') || line.startsWith('HELLO')) {
-      lines.push(JSON.stringify(manifest));
-    } else if (line.startsWith('GET_CONFIG')) {
-      lines.push(JSON.stringify(config));
-    } else if (line.startsWith('SET_ALL')) {
-      const chunk = line.replace(/^SET_ALL\s+/, '');
-      if (!pendingSetAll) resetSetAllState();
-      pendingSetAll += chunk;
-      const complete = feedSetAllState(chunk);
-      if (!complete || setAllState.depth !== 0 || setAllState.inString) {
-        return;
-      }
-      try {
-        const rawPayload = pendingSetAll;
-        const payload = JSON.parse(rawPayload);
-        pendingSetAll = '';
-        resetSetAllState();
-        if (payload?.config) {
-          Object.assign(config, payload.config);
-        }
-        const ackChecksum = payload?.checksum ?? (await digest(rawPayload));
-        lines.push(JSON.stringify({ type: 'ack', checksum: ackChecksum }));
-      } catch (err) {
-        pendingSetAll = '';
-        resetSetAllState();
-        lines.push(JSON.stringify({ type: 'error', message: err.message }));
-      }
-    } else if (line.startsWith('PING')) {
-      lines.push(JSON.stringify({ type: 'pong' }));
+    const trimmed = line.trim();
+    if (!trimmed) return;
+    let request;
+    try {
+      request = JSON.parse(trimmed);
+    } catch (err) {
+      pushLine({ error: { message: err.message } });
+      return;
     }
-    queueMicrotask(() => {
-      if (resolver) {
-        const fn = resolver;
-        resolver = null;
-        fn(lines.shift());
+    const rpc = request.rpc ?? request.method;
+    const respond = (result) => {
+      if (request.id === undefined) return;
+      pushLine({ id: request.id, result });
+    };
+    const clampSlot = (value) => {
+      const idx = Number.isFinite(Number(value)) ? Number(value) : 0;
+      return Math.max(0, Math.min(profileSlots.length - 1, Math.floor(idx)));
+    };
+    switch (rpc) {
+      case 'hello':
+        respond({ message: 'hello' });
+        break;
+      case 'get_manifest':
+        respond({ manifest });
+        break;
+      case 'get_config':
+        respond({ config });
+        break;
+      case 'set_config':
+        if (request.config && typeof request.config === 'object') {
+          config = { ...config, ...request.config };
+        }
+        respond({ checksum: request.checksum ?? 'sim-checksum' });
+        break;
+      case 'save_profile': {
+        const slot = clampSlot(request.slot ?? request.id ?? 0);
+        profileSlots[slot] = clone(config);
+        respond({ slot, saved: true });
+        break;
       }
-    });
+      case 'load_profile': {
+        const slot = clampSlot(request.slot ?? request.id ?? 0);
+        const loaded = profileSlots[slot] ?? clone(defaultProfile);
+        config = clone(loaded);
+        respond({ slot, config: clone(config) });
+        break;
+      }
+      case 'reset_profile': {
+        const slot = clampSlot(request.slot ?? request.id ?? 0);
+        profileSlots[slot] = clone(defaultProfile);
+        config = clone(defaultProfile);
+        respond({ slot, config: clone(config) });
+        break;
+      }
+      case 'hang':
+        break;
+      default:
+        if (request.id !== undefined) {
+          pushLine({ id: request.id, error: { message: 'Unsupported RPC' } });
+        }
+        break;
+    }
   }
 
   function nextLine() {
@@ -864,10 +874,7 @@ function createSimulator() {
       resolver = resolve;
       setTimeout(() => {
         if (!resolver) return;
-        const fn = resolver;
-        resolver = null;
-        lines.push(JSON.stringify({ type: 'telemetry', ...telemetry() }));
-        fn(lines.shift());
+        pushLine({ type: 'telemetry', ...telemetry() });
       }, TELEMETRY_FRAME_MS * 4);
     });
   }
@@ -879,18 +886,149 @@ function createSimulator() {
   return { open, writeLine, nextLine, close, rawPort: { getInfo: () => ({ usbVendorId: 0xfeed, usbProductId: 0xbeef }) } };
 }
 
+function createWebSocketTransport(url) {
+  let socket = null;
+  let queue = [];
+  let resolver = null;
+  let buffer = '';
+  let closed = false;
+  const decoder = typeof TextDecoder === 'function' ? new TextDecoder() : null;
+
+  const enqueueLine = (line) => {
+    queue.push(line);
+    if (resolver) {
+      const pending = resolver;
+      resolver = null;
+      const next = queue.shift();
+      pending.resolve(next);
+    }
+  };
+
+  const flushBuffer = () => {
+    if (!buffer) return;
+    const trimmed = buffer.trim();
+    buffer = '';
+    if (trimmed) enqueueLine(trimmed);
+  };
+
+  const handleMessage = (event) => {
+    if (!event || closed) return;
+    const data = event.data;
+    const text = typeof data === 'string' ? data : decoder?.decode(data) ?? '';
+    if (!text) return;
+    buffer += text;
+    let index;
+    while ((index = buffer.indexOf('\n')) >= 0) {
+      const segment = buffer.slice(0, index);
+      buffer = buffer.slice(index + 1);
+      const trimmed = segment.trim();
+      if (trimmed) enqueueLine(trimmed);
+    }
+  };
+
+  const handleClose = () => {
+    closed = true;
+    flushBuffer();
+    if (resolver) {
+      const pending = resolver;
+      resolver = null;
+      pending.reject(new Error('WebSocket closed'));
+    }
+  };
+
+  function open() {
+    if (socket) {
+      if (socket.readyState === WebSocket.OPEN) return Promise.resolve();
+      if (socket.readyState === WebSocket.CONNECTING) return new Promise((resolve, reject) => {
+        const cleanup = () => {
+          socket.removeEventListener('open', onOpen);
+          socket.removeEventListener('error', onError);
+        };
+        const onOpen = () => {
+          cleanup();
+          resolve();
+        };
+        const onError = (event) => {
+          cleanup();
+          reject(new Error('WebSocket error'));
+        };
+        socket.addEventListener('open', onOpen);
+        socket.addEventListener('error', onError);
+      });
+    }
+    if (typeof WebSocket === 'undefined') return Promise.reject(new Error('WebSocket unsupported'));
+    closed = false;
+    buffer = '';
+    queue = [];
+    socket = new WebSocket(url);
+    socket.binaryType = 'arraybuffer';
+    return new Promise((resolve, reject) => {
+      const onOpen = () => {
+        socket.addEventListener('message', handleMessage);
+        socket.addEventListener('close', handleClose);
+        resolve();
+      };
+      const onError = (event) => {
+        handleClose();
+        reject(new Error('WebSocket error'));
+      };
+      socket.addEventListener('open', onOpen, { once: true });
+      socket.addEventListener('error', onError, { once: true });
+    });
+  }
+
+  function writeLine(line) {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return Promise.reject(new Error('WebSocket not connected'));
+    }
+    socket.send(`${typeof line === 'string' ? line.trim() : String(line)}\n`);
+    return Promise.resolve();
+  }
+
+  function nextLine() {
+    if (queue.length) {
+      return Promise.resolve(queue.shift());
+    }
+    if (closed) {
+      return Promise.reject(new Error('WebSocket closed'));
+    }
+    return new Promise((resolve, reject) => {
+      resolver = { resolve, reject };
+    });
+  }
+
+  function close() {
+    if (!socket) return Promise.resolve();
+    if (socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
+      return Promise.resolve();
+    }
+    socket.close();
+    return Promise.resolve();
+  }
+
+  return {
+    open,
+    writeLine,
+    nextLine,
+    close,
+    rawPort: { getInfo: () => null }
+  };
+}
+
 export function createRuntime({
   schemaUrl = './config_schema.json',
   localManifest,
   migrations = {},
   useSimulator = false,
-  ackTimeoutMs = ACK_TIMEOUT_MS,
-  testHooks
+  rpcTimeoutMs = RPC_TIMEOUT_MS,
+  testHooks,
+  wsUrl
 } = {}) {
   const { emit, on } = makeEmitter();
 
   let transport = null;
-  let telemetryTimer = null;
+  let readTimer = null;
+  let readLoopActive = false;
   let queuedTelemetry = null;
   let remoteManifest = null;
   let schema = null;
@@ -901,20 +1039,27 @@ export function createRuntime({
   let seq = 0;
   let lastKnownChecksum = null;
   let potGuard = new Set();
-  // Stash ack frames so the apply waiter can drain them even if the device
-  // answers before we wire up the listener (the simulator is especially zippy
-  // here).
-  const ackQueue = [];
+  const statusListeners = new Set();
+  let rpcSeq = 0;
+  const rpcQueue = [];
+  let rpcBusy = false;
+  let lastRpcTimestamp = 0;
+  const pendingRpc = new Map();
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
 
-  const outboundQueue = [];
-  let writing = false;
-  let lastSend = 0;
   const hooks =
     testHooks ?? (typeof globalThis !== 'undefined' ? globalThis.__MN42_TEST_HOOKS : null) ?? null;
-  const ackTimeout = Number.isFinite(Number(ackTimeoutMs)) ? Number(ackTimeoutMs) : ACK_TIMEOUT_MS;
+  const rpcTimeout = Number.isFinite(Number(rpcTimeoutMs)) ? Number(rpcTimeoutMs) : RPC_TIMEOUT_MS;
+  const params =
+    typeof window !== 'undefined' && typeof URLSearchParams === 'function' && typeof window.location === 'object'
+      ? new URLSearchParams(window.location.search)
+      : null;
+  let websocketUrl =
+    typeof wsUrl === 'string' && wsUrl.trim().length
+      ? wsUrl.trim()
+      : params?.get('ws')?.trim() ?? null;
 
   function getPortInfo(port) {
     if (!port?.getInfo) return null;
@@ -961,13 +1106,119 @@ export function createRuntime({
     return createTransportPort(port);
   }
 
+  function notifyStatus(payload) {
+    if (!payload || !statusListeners.size) return;
+    const snapshot = clone(payload);
+    for (const listener of [...statusListeners]) {
+      try {
+        listener(snapshot);
+      } catch (err) {
+        console.error('runtime status listener error', err);
+      }
+    }
+  }
+
+  function onStatus(handler) {
+    if (typeof handler !== 'function') return () => {};
+    statusListeners.add(handler);
+    return () => statusListeners.delete(handler);
+  }
+
+  async function processRpcQueue() {
+    if (rpcBusy || !transport) return;
+    rpcBusy = true;
+    try {
+      while (rpcQueue.length && transport) {
+        const message = rpcQueue.shift();
+        const elapsed = performance.now() - lastRpcTimestamp;
+        const wait = Math.max(0, RPC_THROTTLE_INTERVAL_MS - elapsed);
+        if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+        try {
+          await transport.writeLine(JSON.stringify(message));
+        } catch (err) {
+          const pending = pendingRpc.get(message.id);
+          if (pending) {
+            if (pending.timer) clearTimeout(pending.timer);
+            pendingRpc.delete(message.id);
+            pending.reject(err);
+          }
+          break;
+        }
+        lastRpcTimestamp = performance.now();
+        const pending = pendingRpc.get(message.id);
+        if (pending) {
+          pending.timer = setTimeout(() => {
+            if (pendingRpc.delete(message.id)) {
+              pending.reject(new Error('RPC timeout'));
+            }
+          }, pending.timeoutMs);
+        }
+      }
+    } finally {
+      rpcBusy = false;
+    }
+  }
+
+  function handleRpcResponse(msg) {
+    const pending = pendingRpc.get(msg.id);
+    if (!pending) return;
+    if (pending.timer) {
+      clearTimeout(pending.timer);
+      pending.timer = null;
+    }
+    pendingRpc.delete(msg.id);
+    if (msg.error) {
+      const error = new Error(msg.error.message ?? 'RPC error');
+      if (msg.error.code !== undefined) error.code = msg.error.code;
+      pending.reject(error);
+      return;
+    }
+    const response = Object.prototype.hasOwnProperty.call(msg, 'result') ? msg.result : msg;
+    pending.resolve(response);
+  }
+
+  function sendRpc(payload, { timeoutMs } = {}) {
+    if (!payload || typeof payload !== 'object' || !payload.rpc) {
+      return Promise.reject(new Error('RPC payload must include rpc property'));
+    }
+    if (!transport) return Promise.reject(new Error('Not connected'));
+    const id = ++rpcSeq;
+    const message = { ...payload, id };
+    return new Promise((resolve, reject) => {
+      const entry = {
+        resolve,
+        reject,
+        timeoutMs: Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : rpcTimeout,
+        timer: null
+      };
+      pendingRpc.set(id, entry);
+      rpcQueue.push(message);
+      processRpcQueue();
+    });
+  }
+
+  function flushRpcPending(error) {
+    rpcQueue.length = 0;
+    for (const [id, pending] of pendingRpc) {
+      if (pending.timer) clearTimeout(pending.timer);
+      pending.reject(error);
+      pendingRpc.delete(id);
+    }
+  }
+
   async function connect(existingPort) {
     try {
       emit('status', { stage: 'handshake', level: 'info', message: 'Negotiating manifest…' });
-      transport = existingPort ?? (await requestPort());
+      let candidate = existingPort ?? null;
+      if (!candidate) {
+        candidate = websocketUrl ? createWebSocketTransport(websocketUrl) : await requestPort();
+      }
+      transport = candidate;
       hooks?.mutateTransport?.(transport);
       await transport.open();
+      lastRpcTimestamp = 0;
       persistPortInfo(transport.rawPort);
+      startReadLoop();
       emit('transport-open', transport);
       await performHandshake();
       await hydrate();
@@ -980,34 +1231,42 @@ export function createRuntime({
       emit('error', err);
       await transport?.close().catch(() => {});
       transport = null;
+      flushRpcPending(err ?? new Error('Connection failed'));
       throw err;
     }
   }
 
   async function performHandshake() {
-    let manifestRaw;
     try {
-      manifestRaw = await send('GET_MANIFEST');
+      await sendRpc({ rpc: 'hello' });
     } catch (err) {
-      try {
-        manifestRaw = await send('HELLO');
-      } catch (_) {
-        manifestRaw = JSON.stringify({
-          fw_version: 'unknown',
-          git_sha: 'offline',
-          build_time: new Date().toISOString(),
-          schema_version: localManifest?.schema_version,
-          slot_count: localManifest?.slot_count,
-          pot_count: localManifest?.pot_count,
-          envelope_count: localManifest?.envelope_count,
-          arg_method_count: ARG_METHOD_NAMES.length,
-          led_count: localManifest?.led_count ?? 0,
-          free_ram: 0,
-          free_flash: 0
-        });
-      }
+      console.debug('hello RPC failed', err);
     }
-    remoteManifest = JSON.parse(manifestRaw);
+    let manifestPayload;
+    try {
+      manifestPayload = await sendRpc({ rpc: 'get_manifest' });
+    } catch (err) {
+      console.debug('get_manifest RPC failed', err);
+      manifestPayload = null;
+    }
+    const manifestData = manifestPayload?.manifest ?? manifestPayload;
+    if (manifestData && typeof manifestData === 'object') {
+      remoteManifest = manifestData;
+    } else {
+      remoteManifest = {
+        fw_version: 'unknown',
+        git_sha: 'offline',
+        build_time: new Date().toISOString(),
+        schema_version: localManifest?.schema_version,
+        slot_count: localManifest?.slot_count,
+        pot_count: localManifest?.pot_count,
+        envelope_count: localManifest?.envelope_count,
+        arg_method_count: ARG_METHOD_NAMES.length,
+        led_count: localManifest?.led_count ?? 0,
+        free_ram: 0,
+        free_flash: 0
+      };
+    }
     emit('manifest', remoteManifest);
     if (!remoteManifest.schema_version && remoteManifest.schemaVersion) {
       remoteManifest.schema_version = remoteManifest.schemaVersion;
@@ -1025,33 +1284,46 @@ export function createRuntime({
   async function hydrate() {
     schema = await fetch(schemaUrl).then((res) => res.json());
     validator = ajv.compile(schema);
-    const raw = await send('GET_CONFIG');
-    const config = JSON.parse(raw);
+    const configPayload = await sendRpc({ rpc: 'get_config' });
+    const config = configPayload?.config ?? configPayload;
     const normalized = normalizeConfig(config, remoteManifest ?? localManifest ?? {});
     liveConfig = clone(normalized);
     stagedConfig = clone(normalized);
     dirty = false;
     emit('schema', schema);
-    emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
-    scheduleTelemetry();
+    broadcastConfig({ persist: false });
+    const snapshot = readStateSnapshot();
+    if (snapshot?.staged) {
+      stage(() => snapshot.staged);
+    }
+    startReadLoop();
   }
 
-  function scheduleTelemetry() {
-    if (telemetryTimer) return;
+  function startReadLoop() {
+    if (readLoopActive) return;
+    readLoopActive = true;
     const pump = async () => {
-      telemetryTimer = null;
-      if (!transport) return;
+      readTimer = null;
+      if (!transport) {
+        readLoopActive = false;
+        return;
+      }
       try {
         const line = await transport.nextLine();
         handleLine(line);
       } catch (err) {
         emit('error', err);
         await disconnect();
+        return;
       } finally {
-        if (transport) telemetryTimer = setTimeout(pump, TELEMETRY_FRAME_MS);
+        if (transport) {
+          readTimer = setTimeout(pump, TELEMETRY_FRAME_MS);
+        } else {
+          readLoopActive = false;
+        }
       }
     };
-    telemetryTimer = setTimeout(pump, TELEMETRY_FRAME_MS);
+    pump();
   }
 
   function handleLine(line) {
@@ -1061,6 +1333,10 @@ export function createRuntime({
       msg = JSON.parse(line);
     } catch (err) {
       emit('log', line);
+      return;
+    }
+    if (msg?.id !== undefined) {
+      handleRpcResponse(msg);
       return;
     }
     if (msg.type === 'telemetry' || msg.slots || msg.envelopes) {
@@ -1085,12 +1361,12 @@ export function createRuntime({
       }
       return;
     }
-    if (msg.type === 'ack') {
-      queueAck(msg);
-      return;
-    }
     if (msg.type === 'error') {
       emit('device-error', msg);
+      return;
+    }
+    if (msg.status || msg.event || msg.type === 'status') {
+      notifyStatus(msg);
       return;
     }
     emit('log', line);
@@ -1098,42 +1374,65 @@ export function createRuntime({
 
   function flushTelemetry() {
     if (!queuedTelemetry) return;
-    emit('telemetry', queuedTelemetry);
+    const frame = clone(queuedTelemetry);
+    emit('telemetry', frame);
+    notifyStatus({ type: 'telemetry', ...frame });
     queuedTelemetry = null;
   }
 
-  function queueAck(msg) {
-    if (!msg || typeof msg !== 'object') return;
-    let ackMsg = msg;
-    if (hooks?.interceptAck) {
-      // Playwright drills flip this hook to poison or drop the next ack without
-      // rewriting the transport plumbing mid-flight.
-      try {
-        const candidate = hooks.interceptAck({ ...msg });
-        if (candidate === null) return;
-        if (candidate !== undefined) ackMsg = candidate;
-      } catch (err) {
-        console.error('ack intercept error', err);
-        ackMsg = msg;
+  function persistStateSnapshot() {
+    if (typeof localStorage === 'undefined') return;
+    try {
+      if (stagedConfig === null || stagedConfig === undefined) {
+        localStorage.removeItem(STATE_STORAGE_KEY);
+        return;
       }
+      localStorage.setItem(
+        STATE_STORAGE_KEY,
+        JSON.stringify({
+          schema_version: remoteManifest?.schema_version ?? localManifest?.schema_version,
+          staged: stagedConfig,
+          timestamp: Date.now()
+        })
+      );
+    } catch (err) {
+      console.debug('persist state snapshot failed', err);
     }
-    if (!ackMsg || typeof ackMsg !== 'object') return;
-    ackQueue.push(ackMsg);
-    emit('ack', ackMsg);
   }
 
-  function takeAck(checksum) {
-    if (!ackQueue.length) return null;
-    for (let i = 0; i < ackQueue.length; i += 1) {
-      const candidate = ackQueue[i];
-      const candidateChecksum = candidate?.checksum;
-      const hasChecksum = typeof candidateChecksum === 'string' && candidateChecksum.length > 0;
-      const matches = !hasChecksum || !checksum || candidateChecksum === checksum;
-      ackQueue.splice(i, 1);
-      if (!matches) return false;
-      return true;
+  function readStateSnapshot() {
+    if (typeof localStorage === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(STATE_STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (err) {
+      console.debug('read state snapshot failed', err);
+      return null;
     }
-    return null;
+  }
+
+  function broadcastConfig({ persist = true } = {}) {
+    const payload = { config: clone(liveConfig), staged: clone(stagedConfig), dirty };
+    if (persist) persistStateSnapshot();
+    emit('config', payload);
+  }
+
+  function restoreLocalState() {
+    const snapshot = readStateSnapshot();
+    if (!snapshot?.staged) return false;
+    stage(() => snapshot.staged);
+    return true;
+  }
+
+  function replaceConfig(configPayload) {
+    if (!configPayload || typeof configPayload !== 'object') return false;
+    const normalized = normalizeConfig(configPayload, remoteManifest ?? localManifest ?? {});
+    liveConfig = clone(normalized);
+    stagedConfig = clone(normalized);
+    dirty = false;
+    broadcastConfig();
+    return true;
   }
 
   function applyConfigPatch(patch) {
@@ -1299,7 +1598,7 @@ export function createRuntime({
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
     dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
-    emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
+    broadcastConfig();
   }
 
   function stage(updater) {
@@ -1310,7 +1609,20 @@ export function createRuntime({
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
     dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
-    emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
+    broadcastConfig();
+  }
+
+  function applyPatch(path, value) {
+    if (!path || typeof path !== 'string') {
+      return Promise.reject(new Error('Invalid patch path'));
+    }
+    // Stage the payload locally so the UI stays in sync while we hit the device.
+    stage((draft) => {
+      setNestedValue(draft, path, value);
+      return draft;
+    });
+    // Apply the patch with the JSON-RPC kernel so we can reuse the same timeout/throttle.
+    return sendRpc({ rpc: 'set_param', path, value });
   }
 
   function getState() {
@@ -1324,46 +1636,6 @@ export function createRuntime({
     };
   }
 
-  async function send(cmd) {
-    if (!transport) throw new Error('Not connected');
-    return enqueue(cmd, { reply: true });
-  }
-
-  async function enqueue(line, { reply = false } = {}) {
-    return new Promise((resolve, reject) => {
-      outboundQueue.push({ line, reply, resolve, reject });
-      pumpQueue();
-    });
-  }
-
-  async function pumpQueue() {
-    if (writing) return;
-    writing = true;
-    while (outboundQueue.length && transport) {
-      const job = outboundQueue.shift();
-      try {
-        const now = performance.now();
-        // When the simulator drives the transport we can skip the inter-frame
-        // debounce so the Playwright harness finishes before the ACK timer
-        // expires; real hardware keeps the conservative DEFAULT_DEBOUNCE.
-        const debounce = useSimulator ? 0 : DEFAULT_DEBOUNCE;
-        const wait = Math.max(0, debounce - (now - lastSend));
-        if (wait) await new Promise((r) => setTimeout(r, wait));
-        await transport.writeLine(job.line);
-        lastSend = performance.now();
-        if (job.reply) {
-          const line = await transport.nextLine();
-          job.resolve(line);
-        } else {
-          job.resolve();
-        }
-      } catch (err) {
-        job.reject(err);
-      }
-    }
-    writing = false;
-  }
-
   async function apply() {
     if (!dirty) return { applied: false };
     if (!validator(stagedConfig)) {
@@ -1373,6 +1645,7 @@ export function createRuntime({
       throw error;
     }
     const payload = {
+      rpc: 'set_config',
       seq: ++seq,
       schema_version: schema?.schema_version || schema?.properties?.schema_version?.default,
       manifest: {
@@ -1386,49 +1659,24 @@ export function createRuntime({
     const body = JSON.stringify(payload);
     const checksum = await digest(body);
     payload.checksum = checksum;
-    const json = JSON.stringify(payload);
-    const frames = chunkBuffer(json, 512);
-    let index = 0;
-    for (const chunk of frames) {
-      await enqueue(`SET_ALL ${chunk}`, { reply: false });
-      emit('progress', { type: 'chunk', index, total: frames.length });
-      index += 1;
-    }
-    const ack = await waitForAck(checksum);
-    if (!ack) {
+    const response = await sendRpc(payload);
+    const ackChecksum = response?.checksum ?? response?.result?.checksum ?? null;
+    if (ackChecksum !== checksum) {
       await rollback();
       throw new Error('Device failed to acknowledge apply');
     }
     liveConfig = clone(stagedConfig);
     dirty = false;
     lastKnownChecksum = checksum;
-    emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
+    broadcastConfig();
     emit('applied', { checksum });
     return { applied: true, checksum };
-  }
-
-  async function waitForAck(checksum) {
-    const immediate = takeAck(checksum);
-    if (immediate !== null) return immediate;
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        off();
-        resolve(false);
-      }, ackTimeout);
-      const off = on('ack', () => {
-        const queued = takeAck(checksum);
-        if (queued === null) return;
-        clearTimeout(timeout);
-        off();
-        resolve(queued);
-      });
-    });
   }
 
   async function rollback() {
     stagedConfig = clone(liveConfig);
     dirty = false;
-    emit('config', { config: clone(liveConfig), staged: clone(stagedConfig), dirty });
+    broadcastConfig();
     emit('rollback', {});
   }
 
@@ -1438,6 +1686,12 @@ export function createRuntime({
       await transport.close();
     } finally {
       transport = null;
+      if (readTimer) {
+        clearTimeout(readTimer);
+        readTimer = null;
+      }
+      readLoopActive = false;
+      flushRpcPending(new Error('Disconnected'));
       emit('disconnected');
     }
   }
@@ -1463,6 +1717,11 @@ export function createRuntime({
     diff,
     getState,
     on,
+    onStatus,
+    sendRpc,
+    applyPatch,
+    restoreLocalState,
+    replaceConfig,
     setPotGuard,
     createThrottle,
     requestPort,
