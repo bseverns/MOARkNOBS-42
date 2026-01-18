@@ -58,6 +58,9 @@ void test_gate_mode_hysteresis();
 void test_auto_baseline_converges();
 void test_auto_gain_targets_level();
 void test_stats_report_mode_and_value();
+void test_envelope_stats_sine_trace();
+void test_envelope_stats_step_trace();
+void test_envelope_stats_idle_noise();
 void test_no_heap_growth_over_fake_runtime();
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 void test_program_change();
@@ -79,6 +82,8 @@ void test_long_sysex_payload_round_trips();
 void test_config_mutation_during_stream_stays_valid();
 void test_clock_start_stop_flags();
 void test_clock_tick_stream_counts_cleanly();
+void test_clock_ppqn_start_stop_continue();
+void test_clock_ppqn_timing_accuracy_with_tempo_jump();
 #endif
 
 void setup() {
@@ -116,6 +121,9 @@ void setup() {
     RUN_TEST(test_auto_baseline_converges);
     RUN_TEST(test_auto_gain_targets_level);
     RUN_TEST(test_stats_report_mode_and_value);
+    RUN_TEST(test_envelope_stats_sine_trace);
+    RUN_TEST(test_envelope_stats_step_trace);
+    RUN_TEST(test_envelope_stats_idle_noise);
     RUN_TEST(test_no_heap_growth_over_fake_runtime);
     RUN_TEST(test_start_stop_cycle);
     RUN_TEST(test_pot_root_drives_default);
@@ -150,6 +158,8 @@ void setup() {
     RUN_TEST(test_generate_clock_tick_advances_counter);
     RUN_TEST(test_clock_start_stop_flags);
     RUN_TEST(test_clock_tick_stream_counts_cleanly);
+    RUN_TEST(test_clock_ppqn_start_stop_continue);
+    RUN_TEST(test_clock_ppqn_timing_accuracy_with_tempo_jump);
     RUN_TEST(test_config_manager_wipes_legacy_slot_stride);
     RUN_TEST(test_pot_burst_keeps_cc_counters_honest);
     RUN_TEST(test_long_sysex_payload_round_trips);

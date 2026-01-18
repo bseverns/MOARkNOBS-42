@@ -66,10 +66,10 @@ class EnvelopeFollower {
      * Snapshot of the envelope follower state for diagnostics.
      */
     struct EfStats {
-        float baseline = 0.0f;      //!< Current baseline used for subtraction
-        float gain = 1.0f;          //!< Current total gain multiplier
-        int value = 0;              //!< Latest scaled MIDI value (0..127-ish)
-        EFMode mode = EFMode::Peak; //!< Active detection mode
+        float baseline = 0.0f; //!< Current baseline used for subtraction
+        float gain = 1.0f;     //!< Current total gain multiplier
+        float value = 0.0f;    //!< Latest scaled MIDI value (0..127-ish)
+        uint8_t mode = 0;      //!< Active detection mode (enum value)
     };
 
     /**

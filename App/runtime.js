@@ -1124,35 +1124,65 @@ export function createRuntime({
     return () => statusListeners.delete(handler);
   }
 
+  function createCompletionLatch() {
+    let released = false;
+    let resolveLatch = () => {};
+    const promise = new Promise((resolve) => {
+      resolveLatch = resolve;
+    });
+    return {
+      promise,
+      release() {
+        if (released) return;
+        released = true;
+        resolveLatch();
+      }
+    };
+  }
+
   async function processRpcQueue() {
-    if (rpcBusy || !transport) return;
+    if (rpcBusy || !transport || !rpcQueue.length) return;
     rpcBusy = true;
     try {
-      while (rpcQueue.length && transport) {
-        const message = rpcQueue.shift();
+      while (transport && rpcQueue.length) {
+        const message = rpcQueue[0];
+        const entry = pendingRpc.get(message.id);
+        if (!entry) {
+          rpcQueue.shift();
+          continue;
+        }
         const elapsed = performance.now() - lastRpcTimestamp;
         const wait = Math.max(0, RPC_THROTTLE_INTERVAL_MS - elapsed);
-        if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+        if (wait) {
+          await new Promise((resolve) => setTimeout(resolve, wait));
+        }
         try {
           await transport.writeLine(JSON.stringify(message));
         } catch (err) {
-          const pending = pendingRpc.get(message.id);
-          if (pending) {
-            if (pending.timer) clearTimeout(pending.timer);
-            pendingRpc.delete(message.id);
-            pending.reject(err);
+          if (entry.timer) {
+            clearTimeout(entry.timer);
+            entry.timer = null;
           }
+          pendingRpc.delete(message.id);
+          entry.release?.();
+          entry.reject(err);
+          flushRpcPending(err);
           break;
         }
         lastRpcTimestamp = performance.now();
-        const pending = pendingRpc.get(message.id);
-        if (pending) {
-          pending.timer = setTimeout(() => {
-            if (pendingRpc.delete(message.id)) {
-              pending.reject(new Error('RPC timeout'));
-            }
-          }, pending.timeoutMs);
-        }
+        entry.timer = setTimeout(() => {
+          const pending = pendingRpc.get(message.id);
+          if (!pending) return;
+          if (pending.timer) {
+            clearTimeout(pending.timer);
+            pending.timer = null;
+          }
+          pending.release?.();
+          pendingRpc.delete(message.id);
+          pending.reject(new Error('RPC timeout'));
+        }, entry.timeoutMs);
+        await entry.completion;
+        rpcQueue.shift();
       }
     } finally {
       rpcBusy = false;
@@ -1171,10 +1201,12 @@ export function createRuntime({
       const error = new Error(msg.error.message ?? 'RPC error');
       if (msg.error.code !== undefined) error.code = msg.error.code;
       pending.reject(error);
+      pending.release?.();
       return;
     }
     const response = Object.prototype.hasOwnProperty.call(msg, 'result') ? msg.result : msg;
     pending.resolve(response);
+    pending.release?.();
   }
 
   function sendRpc(payload, { timeoutMs } = {}) {
@@ -1184,16 +1216,27 @@ export function createRuntime({
     if (!transport) return Promise.reject(new Error('Not connected'));
     const id = ++rpcSeq;
     const message = { ...payload, id };
-    return new Promise((resolve, reject) => {
+    const request = new Promise((resolve, reject) => {
+      const completion = createCompletionLatch();
       const entry = {
         resolve,
         reject,
         timeoutMs: Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : rpcTimeout,
-        timer: null
+        timer: null,
+        completion: completion.promise,
+        release: completion.release
       };
       pendingRpc.set(id, entry);
       rpcQueue.push(message);
       processRpcQueue();
+    });
+    return request.catch(async (err) => {
+      try {
+        await rollback();
+      } catch (rollbackErr) {
+        console.debug('rollback failed', rollbackErr);
+      }
+      throw err;
     });
   }
 
@@ -1201,6 +1244,7 @@ export function createRuntime({
     rpcQueue.length = 0;
     for (const [id, pending] of pendingRpc) {
       if (pending.timer) clearTimeout(pending.timer);
+      pending.release?.();
       pending.reject(error);
       pendingRpc.delete(id);
     }

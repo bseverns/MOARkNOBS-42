@@ -1,16 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test('rpc queue throttles and honors timeouts', async ({ page }) => {
+test('rpc queue throttles and respects single-flight ordering', async ({ page }) => {
   await page.addInitScript(() => {
     window.__mn42WriteTimes = [];
+    window.__mn42NextLineDelay = 150;
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, rpcTimeoutMs: 600 };
     window.__MN42_TEST_HOOKS = {
       mutateTransport(transport) {
-        const original = transport.writeLine.bind(transport);
+        const originalWrite = transport.writeLine.bind(transport);
         transport.writeLine = async (line) => {
           window.__mn42WriteTimes.push(performance.now());
-          return original(line);
+          return originalWrite(line);
         };
+        if (typeof transport.nextLine === 'function') {
+          const originalNext = transport.nextLine.bind(transport);
+          transport.nextLine = async () => {
+            await new Promise((resolve) => setTimeout(resolve, window.__mn42NextLineDelay));
+            return originalNext();
+          };
+        }
       }
     };
   });
@@ -41,11 +49,16 @@ test('rpc queue throttles and honors timeouts', async ({ page }) => {
     for (let i = 1; i < times.length; i += 1) {
       deltas.push(times[i] - times[i - 1]);
     }
-    return { times, deltas };
+    return {
+      times,
+      deltas,
+      responseDelay: window.__mn42NextLineDelay
+    };
   });
   expect(measurements.times.length).toBeGreaterThan(3);
   expect(Math.min(...measurements.deltas)).toBeGreaterThanOrEqual(4);
-
+  const expectedDelay = Math.max(0, (measurements.responseDelay ?? 0) - 40);
+  expect(measurements.deltas[0]).toBeGreaterThanOrEqual(expectedDelay);
   const timeoutMessage = await page.evaluate(async () => {
     try {
       await window.__MN42_RUNTIME.sendRpc({ rpc: 'hang' });

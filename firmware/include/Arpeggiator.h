@@ -7,6 +7,7 @@
 
 #include <Arduino.h>
 #include <functional>
+#include "ClockDiscipline.h"
 #include "MIDITypes.h"
 
 class MIDIHandler;
@@ -141,10 +142,7 @@ class Arpeggiator {
     BaseNoteSource _baseNoteSrc;          //!< Who owns the root
     bool _baseNoteIsSet;                  //!< True once setBaseNote() has been called
     std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
-    uint32_t _lastClockTickCount;         //!< Clock tick counter snapshot for sync
-    bool _clockSynced;                    //!< True once we've latched onto the current beat
-    unsigned long _lastTickTimeMs;        //!< Last tick timestamp (ms)
-    float _msPerTick;                     //!< Smoothed ms per MIDI tick
+    ClockDiscipline _clock;               //!< Tracks PPQN-derived ticks and drift
     uint32_t _rngState;                   //!< Deterministic RNG state
     int8_t _drunkPosition;                //!< Random walk position in steps
 };

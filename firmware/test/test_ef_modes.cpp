@@ -185,8 +185,7 @@ void test_stats_report_mode_and_value() {
     ef.update();
 
     EnvelopeFollower::EfStats stats = ef.getStats();
-    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower),
-                            static_cast<uint8_t>(stats.mode));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower), stats.mode);
     TEST_ASSERT_TRUE(stats.value >= 0);
     TEST_ASSERT_TRUE(stats.gain > 0.0f);
 }

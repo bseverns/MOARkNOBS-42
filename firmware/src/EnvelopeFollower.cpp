@@ -352,8 +352,8 @@ EnvelopeFollower::EfStats EnvelopeFollower::getStats() const {
     EfStats stats;
     stats.baseline = baseline;
     stats.gain = gainScale();
-    stats.value = currentEnvelopeLevel;
-    stats.mode = efMode;
+    stats.value = static_cast<float>(currentEnvelopeLevel);
+    stats.mode = static_cast<uint8_t>(efMode);
     return stats;
 }
 

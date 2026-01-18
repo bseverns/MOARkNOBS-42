@@ -26,8 +26,7 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 Arpeggiator::Arpeggiator()
     : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0), _shape(UP), _step(0),
       _patternLength(4), _swingPercent(0.0f), _gatePercent(50.0f), _octaveRange(0), _baseNote(0),
-      _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false), _baseNoteCb(nullptr),
-      _lastClockTickCount(0), _clockSynced(false), _lastTickTimeMs(0), _msPerTick(0.0f),
+      _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false), _baseNoteCb(nullptr), _clock(),
       _rngState(0x12345678u), _drunkPosition(0) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
@@ -38,9 +37,7 @@ void Arpeggiator::start(uint8_t slotIdx) {
     _active = true;
     _tickCounter = 0;
     _step = 0;
-    _clockSynced = false;
-    _lastTickTimeMs = 0;
-    _msPerTick = 0.0f;
+    _clock.reset();
     // Seed per-slot RNG so DRUNK mode stays deterministic.
     _rngState = 0x12345678u ^ static_cast<uint32_t>(slotIdx);
     _drunkPosition = 0;
@@ -200,42 +197,29 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     if (!_active)
         return;
 
-    uint32_t tickCount = midi.clockTickCount();
     unsigned long nowMs = now();
-    if (!_clockSynced) {
-        _lastClockTickCount = tickCount;
-        _lastTickTimeMs = nowMs;
-        _clockSynced = true;
-        return; // latch to the current beat and wait for the next pulse
+    _clock.observe(midi.clockTickCount(), nowMs, midi.isClockRunning());
+
+    if (_clock.justResumed()) {
+        _tickCounter = 0;
+        _step = 0;
+        _drunkPosition = 0;
+        _clock.clearResumeFlag();
     }
 
-    uint32_t elapsed = tickCount - _lastClockTickCount;
+    if (_clock.driftDetected()) {
+        _tickCounter = 0;
+        _step = 0;
+        _drunkPosition = 0;
+        _clock.clearDriftFlag();
+    }
+
+    uint32_t elapsed = _clock.consumeTicks();
     if (elapsed == 0)
-        return; // nothing new from the clock
+        return;
 
-    // Estimate ms per tick to support swing/gate timing in milliseconds.
-    if (_lastTickTimeMs > 0 && nowMs > _lastTickTimeMs) {
-        float deltaMs = static_cast<float>(nowMs - _lastTickTimeMs);
-        float newMsPerTick = deltaMs / static_cast<float>(elapsed);
-        if (_msPerTick > 0.0f) {
-            float drift = fabsf(newMsPerTick - _msPerTick) / _msPerTick;
-            if (drift > 0.25f) {
-                // Large drift implies tempo jump; reset counters for clean resync.
-                _tickCounter = 0;
-                _step = 0;
-                _drunkPosition = 0;
-            }
-            _msPerTick = (_msPerTick * 0.8f) + (newMsPerTick * 0.2f);
-        } else {
-            _msPerTick = newMsPerTick;
-        }
-    }
-
-    _lastClockTickCount = tickCount;
-    _lastTickTimeMs = nowMs;
-
-    uint16_t ticks = static_cast<uint16_t>(_tickCounter) + static_cast<uint16_t>(elapsed);
-    uint16_t events = ticks / _lengthTicks;
+    uint32_t ticks = static_cast<uint32_t>(_tickCounter) + elapsed;
+    uint32_t events = ticks / _lengthTicks;
     _tickCounter = static_cast<uint8_t>(ticks % _lengthTicks);
     if (events == 0)
         return;
@@ -287,7 +271,7 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     slot.arpNote = root; // keep last root around for anyone else who cares
     uint8_t potVal = root;
     // Derive per-step timing in ms; fall back to tapped BPM when needed.
-    float msPerTick = _msPerTick;
+    float msPerTick = _clock.msPerTick();
     if (msPerTick <= 0.0f && g_tappedBPM > 0.0f) {
         msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
     }

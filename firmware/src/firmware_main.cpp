@@ -1461,6 +1461,8 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A2, &potentiometerManager, 2), EnvelopeFollower(A3, &potentiometerManager, 3),
     EnvelopeFollower(A6, &potentiometerManager, 4), EnvelopeFollower(A7, &potentiometerManager, 5),
 };
+std::array<int, NUM_ENVELOPES> envelopeFollowerLevels{};
+std::array<bool, NUM_ENVELOPES> envelopeFollowerReady{};
 
 // Hardware/UI state trackers
 uint8_t activePot = 0xFF;        // Current slot index; 0xFF means "none selected"
@@ -2232,6 +2234,22 @@ void processSerial() {
     }
 }
 
+void processEnvelopeFollowers() {
+    float gainTrim = 1.0f + g_lfoEfGainTrim;
+    gainTrim = constrain(gainTrim, 0.0f, 2.0f);
+    for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
+        EnvelopeFollower &follower = envelopeFollowers[idx];
+        if (!follower.getActiveState()) {
+            envelopeFollowerReady[idx] = false;
+            continue;
+        }
+        follower.setExternalGainTrim(gainTrim);
+        follower.update();
+        envelopeFollowerLevels[idx] = follower.getEnvelopeLevel();
+        envelopeFollowerReady[idx] = true;
+    }
+}
+
 void processLFOs() {
     // Update the LFO engine and mirror its bus values into globals.
     lfoManager.update(now());
@@ -2284,21 +2302,13 @@ void processEnvelopes() {
 
     std::array<int, NUM_ENVELOPES> rawFollowerLevels{};
     std::array<bool, NUM_ENVELOPES> followerReady{};
-    // LFO gain trim scales all active envelope followers in this frame.
-    float gainTrim = 1.0f + g_lfoEfGainTrim;
-    gainTrim = constrain(gainTrim, 0.0f, 2.0f);
     for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
-        EnvelopeFollower &follower = envelopeFollowers[idx];
-        if (!follower.getActiveState()) {
-            followerReady[idx] = false;
-            continue;
+        rawFollowerLevels[idx] = envelopeFollowerLevels[idx];
+        followerReady[idx] = envelopeFollowerReady[idx];
+        if (followerReady[idx]) {
+            ledManager.setEnvelopeLevel(static_cast<uint8_t>(idx),
+                                        constrain(rawFollowerLevels[idx], 0, 127));
         }
-        follower.setExternalGainTrim(gainTrim);
-        follower.update();
-        int rawLevel = follower.getEnvelopeLevel();
-        rawFollowerLevels[idx] = rawLevel;
-        followerReady[idx] = true;
-        ledManager.setEnvelopeLevel(static_cast<uint8_t>(idx), constrain(rawLevel, 0, 127));
     }
 
     // Stroll through the pot→envelope map; every pair says which envelope
@@ -2767,6 +2777,8 @@ void setup() {
     Utility::schedulerHigh.addTask(processMIDI, hwConfig.midiTaskInterval);
     // Keep LFO updates on a tight 1 kHz cadence for smooth modulation.
     Utility::schedulerHigh.addTask(processLFOs, 1, true);
+    // Sample envelope followers on the same 1 kHz control tick.
+    Utility::schedulerHigh.addTask(processEnvelopeFollowers, 1, true);
     Utility::schedulerHigh.addTask(
         []() {
             if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
