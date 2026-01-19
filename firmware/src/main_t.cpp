@@ -1,6 +1,12 @@
 /*
  * MOARkNOBS Hardware Smoke Test
  *
+ * Mirrors the production firmware stack: boot sequence, scheduler rhythm,
+ * and per-manager checks happen in order so you can trace the same flow you
+ * teach in `firmware_main.cpp` (protocol → modes → UI → runtime).
+ * Each test phase simply exercises the managers that `FirmwareState.cpp`
+ * keeps alive while the scheduler would normally choreograph their callbacks.
+ *
  * Validates LEDs, the button matrix, one slot pot plus two filter-tuning pots,
  * envelope followers and the OLED display. Use Control Button #0 to advance
  * through each phase.
@@ -15,44 +21,10 @@
  */
 
 #include <Arduino.h>
+#include "Arduino.h"
 #include "Globals.h"
-
-// Entry point for a series of manual board tests. Compile this instead of the
-// production firmware to verify hardware functionality during assembly.
-#include "MIDIHandler.h"
-#include "ConfigManager.h"
-#include "LEDManager.h"
-#include "DisplayManager.h"
-#include "ButtonManager.h"
-#include "PotentiometerManager.h"
-#include "EnvelopeFollower.h"
-#include "TestHelpers.h"
-
-static_assert(NUM_BUTTONS == 6, "expect six control buttons");
-
-std::vector<uint8_t> potChannels; // EEPROM-loaded channels
-
-// Instantiate board objects:
-ConfigManager configManager = createConfigManager();
-LEDManager ledManager = createLEDManager();
-MIDIHandler midiHandler;
-DisplayManager displayManager = createDisplayManager();
-PotentiometerManager potentiometerManager = createPotentiometerManager();
-// Pin 6 reserved for LED strip
-ButtonManager buttonManager = createButtonManager(&potentiometerManager);
-std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&potentiometerManager);
-
-uint8_t activePot = 0, activeChannel = 1;
-bool envelopeFollowMode = false;
-const char *envelopeMode = "SEF";
-std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
-bool diagnosticMode = false;
-uint8_t diagnosticPage = 0;
-
-ButtonManagerContext buttonContext = {potChannels,        activePot,      activeChannel,
-                                      envelopeFollowMode, envelopeMode,   configManager,
-                                      ledManager,         displayManager, envelopeFollowers,
-                                      potToEnvelopeMap,   diagnosticMode, diagnosticPage};
+#include "FirmwareState.h"
+#include "Mode.h"
 
 // Control button used to advance test phases
 const uint8_t phaseButtonPin = 12; // Control Button #0

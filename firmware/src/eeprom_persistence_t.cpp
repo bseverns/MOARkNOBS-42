@@ -15,8 +15,11 @@
 /*
  * EEPROM Persistence Test
  *
- * Exercises configuration save/restore across reboots. The sketch runs in
- * three manual stages:
+ * Exercises configuration save/restore across reboots using the same ConfigManager
+ * layer pulled in by `FirmwareState.cpp`, so it mirrors the persistence path that
+ * `initializeModes()` walks during a normal boot.
+ *
+ * The sketch runs in three manual stages:
  *   1. Write known data and prompt a reboot.
  *   2. Verify data after reboot, corrupt the primary copy, reboot again.
  *   3. Ensure the backup copy restores correctly.

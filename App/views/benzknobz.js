@@ -740,6 +740,7 @@ const boot = () => {
   }
 
   function markDirty(isDirty) {
+    console.debug('[UI] markDirty', isDirty);
     if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
     if (applyBtn) applyBtn.disabled = !isDirty;
     if (rollbackBtn) rollbackBtn.disabled = !isDirty;

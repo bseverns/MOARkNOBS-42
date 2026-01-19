@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <vector>
+#include <cstddef>
 #include "Globals.h" // for OLED_WIDTH, OLED_HEIGHT
 
 struct ButtonManagerContext;
@@ -111,7 +111,7 @@ class DisplayManager {
     void clear();
 
     /** Update the main UI view with real‑time information. */
-    void updateDisplay(uint8_t beatPosition, const std::vector<uint8_t> &envelopeLevels,
+    void updateDisplay(uint8_t beatPosition, const uint8_t *envelopeLevels, size_t envelopeCount,
                        const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
                        const char *envelopeMode);
 

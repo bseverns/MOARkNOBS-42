@@ -1459,6 +1459,7 @@ export function createRuntime({
   function broadcastConfig({ persist = true } = {}) {
     const payload = { config: clone(liveConfig), staged: clone(stagedConfig), dirty };
     if (persist) persistStateSnapshot();
+    console.debug('[runtime] broadcastConfig dirty=', dirty);
     emit('config', payload);
   }
 
@@ -1641,7 +1642,6 @@ export function createRuntime({
     const normalizedStaged = normalizeConfig(nextStaged, remoteManifest ?? localManifest ?? {});
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
-    dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
     broadcastConfig();
   }
 
@@ -1652,7 +1652,7 @@ export function createRuntime({
     const normalizedStaged = normalizeConfig(next, remoteManifest ?? localManifest ?? {});
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
-    dirty = JSON.stringify(stagedConfig) !== JSON.stringify(liveConfig);
+    dirty = true;
     broadcastConfig();
   }
 

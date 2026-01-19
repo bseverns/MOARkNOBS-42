@@ -179,6 +179,20 @@ Crack open the freshly annotated `.cpp` files (start with
 inline. The tone is part lab notebook, part "here’s how you explain pointers to
 your bandmate." Bring questions, bring experiments.
 
+### Runtime refresher
+
+- **SystemState owns the globals** – `firmware/src/SystemState.cpp` is where the board populates every shared manager, follower, and scheduler table that used to cram `firmware_main.cpp`. The header `FirmwareState.h` exposes references so other modules can depend on the same instantiated objects without re-declaring them.
+- **Boot order is explicit** – `firmware_main.cpp` now just calls `initializeProtocol()`, `initializeModes()`, `initializeUI()`, and `initializeRuntime()` in that order. Each initializer owns its own hardware/peripheral concerns, so the boot story can now be narrated as four clear stages.
+- **Scheduler & command queue** – The scheduler lives in `firmware/src/Scheduler.cpp`, which registers the high/mid/low tasks there:  
+  * High priority: MIDI parsing, LFO/envelope ticks, pending note-offs, internal clock, and the arpeggiator update.  
+  * Mid priority: serial polling (`CommandQueue`) plus command processing (`protocol::processCommandQueue`) and envelope updates.  
+  * Low priority: LED/display updates, diagnostics/WebSerial stream, and SeedBoxLink.  
+  The `CommandQueue` module owns the serial buffer and queue, so the mid-priority tasks simply call `pollSerialInput()` to enqueue strings and `processCommandQueue()` to parse them inside the protocol module.
+
+This stack now reads like a four-act play: `firmware_main.cpp` drives the curtain call, `SystemState.cpp` keeps all of the actual actors (managers, followers, diagnostics) in one place, and each initializer owns its own stage. `initializeProtocol()` opens Serial, logs boot info, and lets `Protocol.cpp` set up the JSON/RPC handshake and SysEx helpers. `initializeModes()` loads the EEPROM-backed slot map, syncs envelope followers, and applies the selected profile so the runtime can start from a remembered state. `initializeUI()` brings the LEDs, display, and button context fully online, and `initializeRuntime()` hooks the MIDI handler, LFO manager, and potentiometer callbacks together so the scheduler tasks have real work to do. When the scheduler ticks, `Runtime.cpp` keeps the ISR tiny (`queueMidiServiceRequest()` just globs a flag) and lets the mid/high/low updates finish everything else.
+
+If something needs to be taught, point the students toward `firmware/src/protocol/Protocol.cpp` (command parsing + JSON replies), `firmware/src/runtime.cpp` (real-time service routines), `firmware/src/Scheduler.cpp` (fixed-priority job list), and `firmware/src/CommandQueue.cpp`. The order of those calls is now the thread you can trace on the whiteboard before you even open the `.cpp` files.
+
 ### Comment Atlas: Running a Guided Tour
 
 If you’re onboarding students or a new collaborator, run this mini-curriculum to

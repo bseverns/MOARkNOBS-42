@@ -6,7 +6,8 @@
  * BiquadFilter math test
  *
  * Confirms coefficient calculations and internal state for low-, high-
- * and band-pass modes.
+ * and band-pass modes—the same filters that EnvelopeFollower and EfVoice
+ * lean on when `initializeRuntime()` spins up the DSP chain.
  *
  * Build and upload with PlatformIO environment `teensy40_biquad_test`.
  * Requires only a board capable of Serial output (Teensy 4.0 recommended);

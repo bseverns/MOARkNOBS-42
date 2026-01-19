@@ -11,7 +11,6 @@
 #include <Adafruit_SSD1306.h>
 #include "ButtonManager.h"
 #include "MIDIHandler.h"
-#include <vector>
 #include "Globals.h"
 
 // Manages the OLED display. Other modules report user interaction and system
@@ -315,9 +314,10 @@ void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName)
     _display.display();
 }
 
-void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8_t> &envelopeLevels,
-                                   const char *statusMessage, uint8_t activePot,
-                                   uint8_t activeChannel, const char *envelopeMode) {
+void DisplayManager::updateDisplay(uint8_t beatPosition, const uint8_t *envelopeLevels,
+                                   size_t envelopeCount, const char *statusMessage,
+                                   uint8_t activePot, uint8_t activeChannel,
+                                   const char *envelopeMode) {
     if (now() < _statusTimeout)
         return;
 
@@ -337,14 +337,20 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const std::vector<uint8
     _display.println(envelopeMode);
 
     // Visualize envelope levels as vertical bars along the bottom
-    const int numEnvelopes = envelopeLevels.size();
+    size_t numEnvelopes = 0;
+    if (envelopeLevels && envelopeCount > 0) {
+        numEnvelopes = envelopeCount;
+        if (numEnvelopes > NUM_ENVELOPES) {
+            numEnvelopes = NUM_ENVELOPES;
+        }
+    }
     const int barWidth = 6;
     const int maxHeight = 20;
     const int baseY = _display.height() - 1;
 
-    for (int i = 0; i < numEnvelopes; i++) {
+    for (size_t i = 0; i < numEnvelopes; i++) {
         int barHeight = map(envelopeLevels[i], 0, 127, 0, maxHeight);
-        int x = i * (barWidth + 2);
+        int x = static_cast<int>(i) * (barWidth + 2);
         _display.fillRect(x, baseY - barHeight, barWidth, barHeight, SSD1306_COLOR_WHITE);
     }
 

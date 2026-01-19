@@ -154,6 +154,16 @@ Intent: make noise, learn something, and share what you tweak. Don't forget the 
 Want the deep cuts? The full chronicles live in [docs/](docs/README.md) and
 the gritty firmware lore is in [firmware/](firmware/README.md).
 
+## Firmware architecture
+
+- `firmware/src/SystemState.cpp` now owns every shared object that used to live in `firmware_main.cpp` so the boot driver stays small while the rest of the code still reaches the same globals via `FirmwareState.h`.
+- `Protocol`, `Modes`, `UI`, and `Runtime` each expose an `initialize*()` helper so `setup()` only needs to call four things in a predictable order; each helper is responsible for its own devices (serial framing + JSON RPC, envelope/LFO profiles, OLED/buttons, timer callbacks, etc.).
+- `CommandQueue` owns the serial buffer/ring queue for text commands while `processCommandQueue()` lives in the protocol module so those responsibilities stay grouped with the parser.
+- `Scheduler` registers the high/mid/low tasks—the MIDI tick, envelope/LFO sampling, the serial poll/command pair, and the display/LED updates—so we can keep the scheduler wiring next to the modules that drive each task instead of in `firmware_main.cpp`.
+- `Runtime` delegates the LED pulse diagnostic hooks, MIDI handler wiring, and Timer1 ISR to the new scheduler and state modules, making the runtime loop focused on yielding to the schedulers and servicing button/pot sweeps.
+
+The high-level idea is simple: `setup()` boots each layer, `loop()` ticks the schedulers and handles pots/buttons, and the heavy lifting lives in dedicated modules that can be read, documented, and tested independently.
+
 License: MIT. See [LICENSE](LICENSE).
 
 ## Contributing
@@ -183,4 +193,3 @@ Need the fine print? The [CONTRIBUTING guide](CONTRIBUTING.md) spells out the re
 - **Privacy & data**: The instrument does not capture personal data in any way; it emits MIDI/OSC only talks to other MIDI/OSC friends. No analytics, no hidden telemetry.
 - **Safety & repair**: Power and enclosure choices follow basic electrical safety; off-the-shelf components keep repairs local and affordable.
 - **Licensing & credit**: Hardware/design files and firmware are open-licensed; please cite the release tag you used so results are comparable.
-

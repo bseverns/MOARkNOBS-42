@@ -1,0 +1,1656 @@
+#include "Protocol.h"
+
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <cmath>
+#include <imxrt.h>
+#include <cctype>
+#include <cstdint>
+#include <cstring>
+#include <EEPROM.h>
+
+#include "ARGMixer.h"
+#include "ConfigManager.h"
+#include "EfSettingsUtils.h"
+#include "FirmwareState.h"
+#include "Globals.h"
+#include "EnvelopeFollower.h"
+#include "Log.h"
+#include "version.h"
+#include "Modes.h"
+#include "Utility.h"
+#include "SysExTemplate.h"
+
+#if defined(ARDUINO)
+extern "C" {
+extern char _ebss;
+extern char _flashimagelen;
+extern char _estack;
+}
+#endif
+
+#if defined(UNIT_TEST)
+bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                            MIDIMessageType &type) {
+    return parseSlotType(typeField, typeNameField, type);
+}
+
+bool testOnly_parseSysExTemplateField(JsonVariantConst value, MIDISlot &slot, String &error) {
+    return parseSysExTemplateField(value, slot, error);
+}
+
+uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
+                                   size_t capacity) {
+    return buildSysExPayload(slot, rawValue, dest, capacity);
+}
+#endif
+
+namespace {
+Utility::BulkConfigAssembler bulkConfigAssembler;
+uint32_t lastAckSequence = 0;
+String lastAckChecksum;
+} // namespace
+
+size_t computeFreeRAM() {
+#if defined(ARDUINO)
+    char stackDummy = 0;
+    uintptr_t stackPtr = reinterpret_cast<uintptr_t>(&stackDummy);
+    uintptr_t heapBase = reinterpret_cast<uintptr_t>(&_ebss);
+    return (stackPtr > heapBase) ? static_cast<size_t>(stackPtr - heapBase) : 0U;
+#else
+    return 0U;
+#endif
+}
+
+size_t computeFreeFlash() {
+#if defined(ARDUINO)
+    constexpr size_t kFlashSizeBytes =
+        1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
+    size_t used = reinterpret_cast<uintptr_t>(&_flashimagelen);
+    return (used < kFlashSizeBytes) ? (kFlashSizeBytes - used) : 0U;
+#else
+    return 0U;
+#endif
+}
+
+void initializeProtocol() {
+    Serial.begin(SERIAL_BAUD);
+    Serial.printf("MN42 FW %s %s\n", FW_VERSION_STR, GIT_SHA_STR);
+    g_resetCause = SRC_SRSR;
+    EEPROM.get(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    if (g_brownoutCount == 0xFFFF) {
+        g_brownoutCount = 0;
+        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    }
+    if (g_resetCause & 0x40) {
+        g_brownoutCount++;
+        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    }
+    Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FW_VERSION_STR,
+                  CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);
+    Serial.printf("Reset 0x%08lX Brownouts %u\n", g_resetCause, g_brownoutCount);
+    configManager.begin(potChannels);
+    configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
+}
+
+void clearSysExTemplate(MIDISlot &slot) {
+    slot.sysexLength = 0;
+    slot.sysexTemplate.fill(0);
+}
+
+bool parseSysExTemplateField(JsonVariantConst value, MIDISlot &slot, String &error) {
+    if (value.isNull()) {
+        clearSysExTemplate(slot);
+        return true;
+    }
+    const char *raw = value.as<const char *>();
+    if (!raw || raw[0] == '\0') {
+        clearSysExTemplate(slot);
+        return true;
+    }
+    if (SysExTemplate::parse(raw, slot.sysexTemplate, slot.sysexLength, error)) {
+        return true;
+    }
+    clearSysExTemplate(slot);
+    return false;
+}
+
+String formatSysExTemplate(const MIDISlot &slot) {
+    if (slot.sysexLength == 0) {
+        return String();
+    }
+    return SysExTemplate::format(slot.sysexTemplate, slot.sysexLength);
+}
+
+uint8_t buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
+                          std::size_t capacity) {
+    const uint8_t value7 = Utility::mapToMidiValue(static_cast<int>(rawValue));
+    const uint16_t value14 = Utility::mapTo14Bit(static_cast<int>(rawValue));
+    if (slot.sysexLength >= 2) {
+        uint8_t rendered = SysExTemplate::render(slot.sysexTemplate, slot.sysexLength, value7,
+                                                 value14, dest, capacity);
+        if (rendered > 0) {
+            return rendered;
+        }
+    }
+    if (capacity < 4) {
+        return 0;
+    }
+    dest[0] = 0xF0;
+    dest[1] = slot.data1;
+    dest[2] = value7;
+    dest[3] = 0xF7;
+    return 4;
+}
+
+const char *midiMessageTypeName(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "PITCH_BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROGRAM";
+    case MIDIMessageType::Aftertouch:
+        return "AFTERTOUCH";
+    case MIDIMessageType::ModWheel:
+        return "MOD_WHEEL";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYSEX";
+    }
+    return "UNKNOWN";
+}
+
+const char *envelopeFilterName(EnvelopeFollower::FilterType type) {
+    switch (type) {
+    case EnvelopeFollower::LINEAR:
+        return "LINEAR";
+    case EnvelopeFollower::OPPOSITE_LINEAR:
+        return "OPPOSITE_LINEAR";
+    case EnvelopeFollower::EXPONENTIAL:
+        return "EXPONENTIAL";
+    case EnvelopeFollower::RANDOM:
+        return "RANDOM";
+    case EnvelopeFollower::LOWPASS:
+        return "LOWPASS";
+    case EnvelopeFollower::HIGHPASS:
+        return "HIGHPASS";
+    case EnvelopeFollower::BANDPASS:
+        return "BANDPASS";
+    default:
+        return "CUSTOM";
+    }
+}
+
+const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
+    using Filter = MIDISlot::EfSettings::FilterType;
+    switch (type) {
+    case Filter::Linear:
+        return "LINEAR";
+    case Filter::OppositeLinear:
+        return "OPPOSITE_LINEAR";
+    case Filter::Exponential:
+        return "EXPONENTIAL";
+    case Filter::Random:
+        return "RANDOM";
+    case Filter::Lowpass:
+        return "LOWPASS";
+    case Filter::Highpass:
+        return "HIGHPASS";
+    case Filter::Bandpass:
+        return "BANDPASS";
+    }
+    return "LINEAR";
+}
+
+const char *argMethodName(uint8_t method) {
+    static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
+                                             "BABS", "TABS", "MULT", "DIVI", "AVG",
+                                             "XABS", "MAXX", "MINN", "XORR"};
+    if (method < (sizeof(kNames) / sizeof(kNames[0]))) {
+        return kNames[method];
+    }
+    return "UNKNOWN";
+}
+
+const char *envelopeModeName(uint8_t mode) { return (mode != 0) ? "ARG" : "SEF"; }
+
+bool equalsIgnoreCase(const char *lhs, const char *rhs) {
+    if (!lhs || !rhs)
+        return false;
+    while (*lhs && *rhs) {
+        if (tolower(static_cast<unsigned char>(*lhs)) != tolower(static_cast<unsigned char>(*rhs)))
+            return false;
+        ++lhs;
+        ++rhs;
+    }
+    return *lhs == '\0' && *rhs == '\0';
+}
+
+bool parseMIDIType(const char *label, MIDIMessageType &type) {
+    if (!label)
+        return false;
+    struct Entry {
+        const char *legacy;
+        const char *canonical;
+        const char *alt;
+        MIDIMessageType value;
+    };
+    static constexpr Entry kMap[] = {
+        {"OFF", "OFF", nullptr, MIDIMessageType::OFF},
+        {"CC", "CC", nullptr, MIDIMessageType::CC},
+        {"Note", "NOTE", nullptr, MIDIMessageType::Note},
+        {"PitchBend", "PITCH_BEND", "PITCHBEND", MIDIMessageType::PitchBend},
+        {"ProgramChange", "PROGRAM", "PROGRAM_CHANGE", MIDIMessageType::ProgramChange},
+        {"Aftertouch", "AFTERTOUCH", nullptr, MIDIMessageType::Aftertouch},
+        {"ModWheel", "MOD_WHEEL", "MODWHEEL", MIDIMessageType::ModWheel},
+        {"NRPN", "NRPN", nullptr, MIDIMessageType::NRPN},
+        {"RPN", "RPN", nullptr, MIDIMessageType::RPN},
+        {"SysEx", "SYSEX", "SYS_EX", MIDIMessageType::SysEx}};
+    for (const auto &entry : kMap) {
+        if ((entry.legacy && equalsIgnoreCase(label, entry.legacy)) ||
+            (entry.canonical && equalsIgnoreCase(label, entry.canonical)) ||
+            (entry.alt && equalsIgnoreCase(label, entry.alt))) {
+            type = entry.value;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
+                   MIDIMessageType &type) {
+    auto assignFromIntegral = [&](long candidate) {
+        if (candidate < static_cast<long>(MIDIMessageType::OFF) ||
+            candidate > static_cast<long>(MIDIMessageType::SysEx)) {
+            return false;
+        }
+        type = static_cast<MIDIMessageType>(candidate);
+        return true;
+    };
+
+    if (!typeField.isNull()) {
+        if (typeField.is<const char *>()) {
+            if (parseMIDIType(typeField.as<const char *>(), type)) {
+                return true;
+            }
+        } else if (typeField.is<int>() || typeField.is<long>() || typeField.is<short>() ||
+                   typeField.is<signed char>()) {
+            if (assignFromIntegral(typeField.as<long>())) {
+                return true;
+            }
+        } else if (typeField.is<unsigned char>() || typeField.is<unsigned short>() ||
+                   typeField.is<unsigned int>() || typeField.is<unsigned long>()) {
+            unsigned long raw = typeField.as<unsigned long>();
+            if (raw <= static_cast<unsigned long>(static_cast<long>(MIDIMessageType::SysEx)) &&
+                assignFromIntegral(static_cast<long>(raw))) {
+                return true;
+            }
+        } else if (typeField.is<float>() || typeField.is<double>()) {
+            double raw = typeField.as<double>();
+            if (std::isfinite(raw)) {
+                long candidate = static_cast<long>(raw);
+                if (static_cast<double>(candidate) == raw && assignFromIntegral(candidate)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    if (!typeNameField.isNull() && typeNameField.is<const char *>()) {
+        return parseMIDIType(typeNameField.as<const char *>(), type);
+    }
+    return false;
+}
+
+EnvelopeFollower::FilterType parseFilterType(const char *label,
+                                             EnvelopeFollower::FilterType fallback) {
+    if (!label)
+        return fallback;
+    struct Entry {
+        const char *name;
+        EnvelopeFollower::FilterType value;
+    };
+    static constexpr Entry kMap[] = {
+        {"LINEAR", EnvelopeFollower::LINEAR},
+        {"OPPOSITE_LINEAR", EnvelopeFollower::OPPOSITE_LINEAR},
+        {"EXPONENTIAL", EnvelopeFollower::EXPONENTIAL},
+        {"RANDOM", EnvelopeFollower::RANDOM},
+        {"LOWPASS", EnvelopeFollower::LOWPASS},
+        {"HIGHPASS", EnvelopeFollower::HIGHPASS},
+        {"BANDPASS", EnvelopeFollower::BANDPASS},
+    };
+    for (const auto &entry : kMap) {
+        if (strcmp(label, entry.name) == 0) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
+EnvelopeFollower::EFMode parseEfMode(const char *label, EnvelopeFollower::EFMode fallback) {
+    if (!label) {
+        return fallback;
+    }
+    struct Entry {
+        const char *name;
+        EnvelopeFollower::EFMode value;
+    };
+    static constexpr Entry kMap[] = {
+        {"PEAK", EnvelopeFollower::EFMode::Peak},
+        {"RMS", EnvelopeFollower::EFMode::RMS},
+        {"GATE", EnvelopeFollower::EFMode::Gate},
+        {"FOLLOWER", EnvelopeFollower::EFMode::Follower},
+    };
+    for (const auto &entry : kMap) {
+        if (strcmp(label, entry.name) == 0) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
+void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out) {
+    out = defaults;
+    if (obj.isNull()) {
+        return;
+    }
+
+    if (obj.containsKey("filter_index")) {
+        int idx = constrain(obj["filter_index"].as<int>(), 0, 6);
+        out.filterType = static_cast<EfSettings::FilterType>(idx);
+    } else if (obj.containsKey("filter")) {
+        const char *label = obj["filter"].as<const char *>();
+        out.filterType = encodeFilterType(parseFilterType(label, decodeFilterType(out.filterType)));
+    } else if (obj.containsKey("filter_name")) {
+        const char *label = obj["filter_name"].as<const char *>();
+        out.filterType = encodeFilterType(parseFilterType(label, decodeFilterType(out.filterType)));
+    }
+
+    if (obj.containsKey("frequency")) {
+        out.frequency = obj["frequency"].as<float>();
+    } else if (obj.containsKey("freq")) {
+        out.frequency = obj["freq"].as<float>();
+    }
+
+    if (obj.containsKey("q")) {
+        out.q = obj["q"].as<float>();
+    }
+
+    if (obj.containsKey("oversample")) {
+        int oversample = obj["oversample"].as<int>();
+        out.oversample = static_cast<uint8_t>(constrain(oversample, 1, 32));
+    }
+
+    if (obj.containsKey("smoothing")) {
+        out.smoothing = obj["smoothing"].as<float>();
+    }
+
+    if (obj.containsKey("baseline")) {
+        out.baseline = obj["baseline"].as<float>();
+    }
+
+    if (obj.containsKey("gain")) {
+        out.gain = obj["gain"].as<float>();
+    }
+
+    if (obj.containsKey("mode")) {
+        if (obj["mode"].is<const char *>()) {
+            out.efMode = static_cast<uint8_t>(parseEfMode(
+                obj["mode"].as<const char *>(), static_cast<EnvelopeFollower::EFMode>(out.efMode)));
+        } else {
+            int raw = obj["mode"].as<int>();
+            out.efMode = static_cast<uint8_t>(
+                constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+        }
+    }
+
+    if (obj.containsKey("auto_baseline")) {
+        out.autoBaseline = obj["auto_baseline"].as<bool>() ? 1 : 0;
+    } else if (obj.containsKey("autoBaseline")) {
+        out.autoBaseline = obj["autoBaseline"].as<bool>() ? 1 : 0;
+    }
+
+    if (obj.containsKey("auto_gain")) {
+        out.autoGain = obj["auto_gain"].as<bool>() ? 1 : 0;
+    } else if (obj.containsKey("autoGain")) {
+        out.autoGain = obj["autoGain"].as<bool>() ? 1 : 0;
+    }
+
+    if (obj.containsKey("attack_ms")) {
+        out.attackMs = static_cast<uint16_t>(obj["attack_ms"].as<int>());
+    } else if (obj.containsKey("attackMs")) {
+        out.attackMs = static_cast<uint16_t>(obj["attackMs"].as<int>());
+    }
+
+    if (obj.containsKey("release_ms")) {
+        out.releaseMs = static_cast<uint16_t>(obj["release_ms"].as<int>());
+    } else if (obj.containsKey("releaseMs")) {
+        out.releaseMs = static_cast<uint16_t>(obj["releaseMs"].as<int>());
+    }
+
+    if (obj.containsKey("rms_ms")) {
+        out.rmsWindowMs = static_cast<uint16_t>(obj["rms_ms"].as<int>());
+    } else if (obj.containsKey("rmsWindowMs")) {
+        out.rmsWindowMs = static_cast<uint16_t>(obj["rmsWindowMs"].as<int>());
+    }
+
+    if (obj.containsKey("baseline_tau_ms")) {
+        out.baselineTauMs = static_cast<uint16_t>(obj["baseline_tau_ms"].as<int>());
+    } else if (obj.containsKey("baselineTauMs")) {
+        out.baselineTauMs = static_cast<uint16_t>(obj["baselineTauMs"].as<int>());
+    }
+
+    if (obj.containsKey("gain_tau_ms")) {
+        out.gainTauMs = static_cast<uint16_t>(obj["gain_tau_ms"].as<int>());
+    } else if (obj.containsKey("gainTauMs")) {
+        out.gainTauMs = static_cast<uint16_t>(obj["gainTauMs"].as<int>());
+    }
+
+    if (obj.containsKey("gate_threshold")) {
+        out.gateThreshold = static_cast<uint8_t>(obj["gate_threshold"].as<int>());
+    } else if (obj.containsKey("gateThreshold")) {
+        out.gateThreshold = static_cast<uint8_t>(obj["gateThreshold"].as<int>());
+    }
+
+    if (obj.containsKey("gate_hysteresis")) {
+        out.gateHysteresis = static_cast<uint8_t>(obj["gate_hysteresis"].as<int>());
+    } else if (obj.containsKey("gateHysteresis")) {
+        out.gateHysteresis = static_cast<uint8_t>(obj["gateHysteresis"].as<int>());
+    }
+
+    if (obj.containsKey("activity_threshold")) {
+        out.activityThreshold = static_cast<uint8_t>(obj["activity_threshold"].as<int>());
+    } else if (obj.containsKey("activityThreshold")) {
+        out.activityThreshold = static_cast<uint8_t>(obj["activityThreshold"].as<int>());
+    }
+
+    if (obj.containsKey("gain_target")) {
+        out.gainTarget = static_cast<uint8_t>(obj["gain_target"].as<int>());
+    } else if (obj.containsKey("gainTarget")) {
+        out.gainTarget = static_cast<uint8_t>(obj["gainTarget"].as<int>());
+    }
+
+    if (obj.containsKey("index")) {
+        int rawIndex = obj["index"].as<int>();
+        rawIndex = constrain(rawIndex, -1, static_cast<int>(NUM_ENVELOPES) - 1);
+        out.followerIndex = static_cast<int8_t>(rawIndex);
+    }
+}
+
+bool parseProfileEf(JsonObject obj, ProfileEfSettings &out) {
+    if (obj.isNull()) {
+        return false;
+    }
+    if (obj.containsKey("mode")) {
+        int raw = obj["mode"].as<int>();
+        out.mode = static_cast<uint8_t>(
+            constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+    }
+    if (obj.containsKey("auto_baseline")) {
+        out.autoBaseline = obj["auto_baseline"].as<bool>() ? 1 : 0;
+    }
+    if (obj.containsKey("auto_gain")) {
+        out.autoGain = obj["auto_gain"].as<bool>() ? 1 : 0;
+    }
+    if (obj.containsKey("attack_ms")) {
+        out.attackMs = static_cast<uint16_t>(obj["attack_ms"].as<int>());
+    }
+    if (obj.containsKey("release_ms")) {
+        out.releaseMs = static_cast<uint16_t>(obj["release_ms"].as<int>());
+    }
+    if (obj.containsKey("rms_ms")) {
+        out.rmsWindowMs = static_cast<uint16_t>(obj["rms_ms"].as<int>());
+    }
+    if (obj.containsKey("baseline_tau_ms")) {
+        out.baselineTauMs = static_cast<uint16_t>(obj["baseline_tau_ms"].as<int>());
+    }
+    if (obj.containsKey("gain_tau_ms")) {
+        out.gainTauMs = static_cast<uint16_t>(obj["gain_tau_ms"].as<int>());
+    }
+    if (obj.containsKey("gate_threshold")) {
+        out.gateThreshold = static_cast<uint8_t>(obj["gate_threshold"].as<int>());
+    }
+    if (obj.containsKey("gate_hysteresis")) {
+        out.gateHysteresis = static_cast<uint8_t>(obj["gate_hysteresis"].as<int>());
+    }
+    if (obj.containsKey("activity_threshold")) {
+        out.activityThreshold = static_cast<uint8_t>(obj["activity_threshold"].as<int>());
+    }
+    if (obj.containsKey("gain_target")) {
+        out.gainTarget = static_cast<uint8_t>(obj["gain_target"].as<int>());
+    }
+    return true;
+}
+
+void writeProfileEf(JsonObject obj, const ProfileEfSettings &settings) {
+    obj["mode"] = settings.mode;
+    obj["auto_baseline"] = settings.autoBaseline != 0;
+    obj["auto_gain"] = settings.autoGain != 0;
+    obj["attack_ms"] = settings.attackMs;
+    obj["release_ms"] = settings.releaseMs;
+    obj["rms_ms"] = settings.rmsWindowMs;
+    obj["baseline_tau_ms"] = settings.baselineTauMs;
+    obj["gain_tau_ms"] = settings.gainTauMs;
+    obj["gate_threshold"] = settings.gateThreshold;
+    obj["gate_hysteresis"] = settings.gateHysteresis;
+    obj["activity_threshold"] = settings.activityThreshold;
+    obj["gain_target"] = settings.gainTarget;
+}
+
+ARGMethod parseArgMethod(const char *label, ARGMethod fallback) {
+    if (!label)
+        return fallback;
+    struct Entry {
+        const char *name;
+        ARGMethod value;
+    };
+    static constexpr Entry kMap[] = {
+        {"PLUS", ARGMethod::PLUS}, {"MIN", ARGMethod::MIN},   {"PECK", ARGMethod::PECK},
+        {"SHAV", ARGMethod::SHAV}, {"SQAR", ARGMethod::SQAR}, {"BABS", ARGMethod::BABS},
+        {"TABS", ARGMethod::TABS}, {"MULT", ARGMethod::MULT}, {"DIVI", ARGMethod::DIVI},
+        {"AVG", ARGMethod::AVG},   {"XABS", ARGMethod::XABS}, {"MAXX", ARGMethod::MAXX},
+        {"MINN", ARGMethod::MINN}, {"XORR", ARGMethod::XORR}};
+    for (const auto &entry : kMap) {
+        if (strcmp(label, entry.name) == 0) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
+EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method) {
+    return static_cast<EnvelopeFollower::ARG_Method>(static_cast<uint8_t>(method));
+}
+
+bool parseHexColor(const char *hex, CRGB &color) {
+    if (!hex)
+        return false;
+    if (hex[0] == '#') {
+        ++hex;
+    }
+    if (strlen(hex) != 6)
+        return false;
+    char *end = nullptr;
+    long value = strtol(hex, &end, 16);
+    if (!end || *end != '\0')
+        return false;
+    color.r = static_cast<uint8_t>((value >> 16) & 0xFF);
+    color.g = static_cast<uint8_t>((value >> 8) & 0xFF);
+    color.b = static_cast<uint8_t>(value & 0xFF);
+    return true;
+}
+
+void emitBulkError(const char *code, const char *message, uint32_t seq = 0) {
+    String out = "{\"type\":\"error\"";
+    if (code && code[0] != '\0') {
+        out += ",\"code\":\"";
+        out += code;
+        out += "\"";
+    }
+    if (seq != 0) {
+        out += ",\"seq\":";
+        out += seq;
+    }
+    if (message && message[0] != '\0') {
+        out += ",\"message\":\"";
+        out += message;
+        out += "\"";
+    }
+    out += "}";
+    LOG_PRINTLN(out);
+}
+
+bool applyConfigObject(JsonObject config, uint32_t seq) {
+    if (config.isNull()) {
+        emitBulkError("config_missing", "config object absent", seq);
+        return false;
+    }
+
+    if (!config.containsKey("slots") || !config["slots"].is<JsonArray>()) {
+        emitBulkError("slots_missing", "config.slots missing", seq);
+        return false;
+    }
+
+    JsonArray slotsJson = config["slots"].as<JsonArray>();
+    if (slotsJson.size() != NUM_SLOTS) {
+        emitBulkError("slots_size", "unexpected slot count", seq);
+        return false;
+    }
+
+    EfSettings defaultEfSettings{};
+    defaultEfSettings.filterType = encodeFilterType(EnvelopeFollower::LINEAR);
+    defaultEfSettings.frequency = 1000.0f;
+    defaultEfSettings.q = 0.707f;
+    if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
+        JsonObject filterObj = config["filter"].as<JsonObject>();
+        parseEfSettings(filterObj, defaultEfSettings, defaultEfSettings);
+    }
+
+    SlotARGConfig defaultArg{};
+    defaultArg.enabled = configManager.getARGEnable();
+    defaultArg.method = static_cast<ARGMethod>(configManager.getARGMethod());
+    int storedA = static_cast<int>(configManager.getEnvelopeA());
+    if (storedA >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(storedA);
+        storedA = (converted >= 0) ? converted : constrain(storedA, 0, NUM_ENVELOPES - 1);
+    }
+    int storedB = static_cast<int>(configManager.getEnvelopeB());
+    if (storedB >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(storedB);
+        if (converted >= 0) {
+            storedB = converted;
+        } else {
+            storedB = constrain(storedB, 0, NUM_ENVELOPES - 1);
+        }
+    }
+    defaultArg.sourceA = static_cast<uint8_t>(storedA);
+    defaultArg.sourceB = static_cast<uint8_t>(storedB);
+    defaultArg = sanitizeSlotArg(defaultArg);
+
+    if (config.containsKey("arg") && config["arg"].is<JsonObject>()) {
+        JsonObject argObj = config["arg"].as<JsonObject>();
+        SlotARGConfig incoming = defaultArg;
+        if (argObj.containsKey("enable")) {
+            incoming.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+        } else if (argObj.containsKey("enabled")) {
+            incoming.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+        }
+        if (argObj.containsKey("method")) {
+            if (argObj["method"].is<const char *>()) {
+                ARGMethod parsed =
+                    parseArgMethod(argObj["method"].as<const char *>(), incoming.method);
+                incoming.method = parsed;
+            } else {
+                int raw = argObj["method"].as<int>();
+                raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
+                incoming.method = static_cast<ARGMethod>(raw);
+            }
+        }
+        if (argObj.containsKey("a")) {
+            incoming.sourceA =
+                static_cast<uint8_t>(constrain(argObj["a"].as<int>(), 0, NUM_ENVELOPES - 1));
+        } else if (argObj.containsKey("sourceA")) {
+            incoming.sourceA =
+                static_cast<uint8_t>(constrain(argObj["sourceA"].as<int>(), 0, NUM_ENVELOPES - 1));
+        }
+        if (argObj.containsKey("b")) {
+            incoming.sourceB =
+                static_cast<uint8_t>(constrain(argObj["b"].as<int>(), 0, NUM_ENVELOPES - 1));
+        } else if (argObj.containsKey("sourceB")) {
+            incoming.sourceB =
+                static_cast<uint8_t>(constrain(argObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
+        }
+
+        defaultArg = sanitizeSlotArg(incoming);
+    }
+
+    bool anySlotPayloadSpecified = false;
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        JsonObject slotObj = slotsJson[i];
+        if (slotObj.isNull()) {
+            emitBulkError("slot_null", "slot entry missing", seq);
+            return false;
+        }
+
+        MIDIMessageType midiType = MIDIMessageType::OFF;
+        if (!parseSlotType(slotObj["type"], slotObj["type_name"], midiType)) {
+            emitBulkError("slot_type", "unknown slot type", seq);
+            return false;
+        }
+
+        uint8_t midiChannel = constrain(slotObj["midiChannel"].as<int>(), 1, 16);
+        uint8_t data1 = constrain(slotObj["data1"].as<int>(), 0, 127);
+        bool active = slotObj["active"].as<bool>();
+
+        MIDISlot &slot = configManager.getSlot(i);
+        MIDISlot::EfSettings settings = slot.efSettings;
+        settings.followerIndex = slot.getEnvelopeFollowerIndex();
+
+        int rawEfIndex = settings.followerIndex;
+        if (slotObj.containsKey("efIndex")) {
+            rawEfIndex = slotObj["efIndex"].as<int>();
+        } else if (slotObj.containsKey("ef_index")) {
+            rawEfIndex = slotObj["ef_index"].as<int>();
+        }
+
+        JsonObject efObj =
+            slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
+        if (!efObj.isNull()) {
+            if (efObj.containsKey("index")) {
+                rawEfIndex = efObj["index"].as<int>();
+            }
+            if (efObj.containsKey("filter_index")) {
+                int idx = constrain(efObj["filter_index"].as<int>(), 0, 6);
+                settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(idx);
+            } else if (efObj.containsKey("filter_name")) {
+                const char *label = efObj["filter_name"].as<const char *>();
+                EnvelopeFollower::FilterType parsed =
+                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
+                settings.filterType = fromEnvelopeFilter(parsed);
+            } else if (efObj.containsKey("filter")) {
+                const char *label = efObj["filter"].as<const char *>();
+                EnvelopeFollower::FilterType parsed =
+                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
+                settings.filterType = fromEnvelopeFilter(parsed);
+            }
+            if (efObj.containsKey("frequency")) {
+                settings.frequency = efObj["frequency"].as<float>();
+            }
+            if (efObj.containsKey("q")) {
+                settings.q = efObj["q"].as<float>();
+            }
+            if (efObj.containsKey("oversample")) {
+                int oversample = efObj["oversample"].as<int>();
+                settings.oversample = static_cast<uint8_t>(constrain(oversample, 1, 32));
+            }
+            if (efObj.containsKey("smoothing")) {
+                settings.smoothing = efObj["smoothing"].as<float>();
+            }
+            if (efObj.containsKey("baseline")) {
+                settings.baseline = efObj["baseline"].as<float>();
+            }
+            if (efObj.containsKey("gain")) {
+                settings.gain = efObj["gain"].as<float>();
+            }
+            if (efObj.containsKey("mode")) {
+                if (efObj["mode"].is<const char *>()) {
+                    settings.efMode = static_cast<uint8_t>(
+                        parseEfMode(efObj["mode"].as<const char *>(),
+                                    static_cast<EnvelopeFollower::EFMode>(settings.efMode)));
+                } else {
+                    int raw = efObj["mode"].as<int>();
+                    settings.efMode = static_cast<uint8_t>(
+                        constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
+                }
+            }
+            if (efObj.containsKey("auto_baseline")) {
+                settings.autoBaseline = efObj["auto_baseline"].as<bool>() ? 1 : 0;
+            } else if (efObj.containsKey("autoBaseline")) {
+                settings.autoBaseline = efObj["autoBaseline"].as<bool>() ? 1 : 0;
+            }
+            if (efObj.containsKey("auto_gain")) {
+                settings.autoGain = efObj["auto_gain"].as<bool>() ? 1 : 0;
+            } else if (efObj.containsKey("autoGain")) {
+                settings.autoGain = efObj["autoGain"].as<bool>() ? 1 : 0;
+            }
+            if (efObj.containsKey("attack_ms")) {
+                settings.attackMs = static_cast<uint16_t>(efObj["attack_ms"].as<int>());
+            } else if (efObj.containsKey("attackMs")) {
+                settings.attackMs = static_cast<uint16_t>(efObj["attackMs"].as<int>());
+            }
+            if (efObj.containsKey("release_ms")) {
+                settings.releaseMs = static_cast<uint16_t>(efObj["release_ms"].as<int>());
+            } else if (efObj.containsKey("releaseMs")) {
+                settings.releaseMs = static_cast<uint16_t>(efObj["releaseMs"].as<int>());
+            }
+            if (efObj.containsKey("rms_ms")) {
+                settings.rmsWindowMs = static_cast<uint16_t>(efObj["rms_ms"].as<int>());
+            } else if (efObj.containsKey("rmsWindowMs")) {
+                settings.rmsWindowMs = static_cast<uint16_t>(efObj["rmsWindowMs"].as<int>());
+            }
+            if (efObj.containsKey("baseline_tau_ms")) {
+                settings.baselineTauMs = static_cast<uint16_t>(efObj["baseline_tau_ms"].as<int>());
+            } else if (efObj.containsKey("baselineTauMs")) {
+                settings.baselineTauMs = static_cast<uint16_t>(efObj["baselineTauMs"].as<int>());
+            }
+            if (efObj.containsKey("gain_tau_ms")) {
+                settings.gainTauMs = static_cast<uint16_t>(efObj["gain_tau_ms"].as<int>());
+            } else if (efObj.containsKey("gainTauMs")) {
+                settings.gainTauMs = static_cast<uint16_t>(efObj["gainTauMs"].as<int>());
+            }
+            if (efObj.containsKey("gate_threshold")) {
+                settings.gateThreshold = static_cast<uint8_t>(efObj["gate_threshold"].as<int>());
+            } else if (efObj.containsKey("gateThreshold")) {
+                settings.gateThreshold = static_cast<uint8_t>(efObj["gateThreshold"].as<int>());
+            }
+            if (efObj.containsKey("gate_hysteresis")) {
+                settings.gateHysteresis = static_cast<uint8_t>(efObj["gate_hysteresis"].as<int>());
+            } else if (efObj.containsKey("gateHysteresis")) {
+                settings.gateHysteresis = static_cast<uint8_t>(efObj["gateHysteresis"].as<int>());
+            }
+            if (efObj.containsKey("activity_threshold")) {
+                settings.activityThreshold =
+                    static_cast<uint8_t>(efObj["activity_threshold"].as<int>());
+            } else if (efObj.containsKey("activityThreshold")) {
+                settings.activityThreshold =
+                    static_cast<uint8_t>(efObj["activityThreshold"].as<int>());
+            }
+            if (efObj.containsKey("gain_target")) {
+                settings.gainTarget = static_cast<uint8_t>(efObj["gain_target"].as<int>());
+            } else if (efObj.containsKey("gainTarget")) {
+                settings.gainTarget = static_cast<uint8_t>(efObj["gainTarget"].as<int>());
+            }
+        }
+
+        if (rawEfIndex >= 0 && rawEfIndex < static_cast<int>(envelopeFollowers.size())) {
+            settings.followerIndex = static_cast<int8_t>(rawEfIndex);
+        } else {
+            settings.followerIndex = -1;
+        }
+
+        slot.type = midiType;
+        slot.midiChannel = midiChannel;
+        slot.data1 = data1;
+        slot.efSettings = settings;
+        slot.setEnvelopeFollowerIndex(settings.followerIndex);
+        slot.active = active;
+        slot.arg = defaultArg;
+        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
+            JsonObject slotArgObj = slotObj["arg"].as<JsonObject>();
+            SlotARGConfig slotArgConfig = slot.arg;
+            if (slotArgObj.containsKey("enable")) {
+                slotArgConfig.enabled = slotArgObj["enable"].as<bool>() ? 1 : 0;
+            } else if (slotArgObj.containsKey("enabled")) {
+                slotArgConfig.enabled = slotArgObj["enabled"].as<bool>() ? 1 : 0;
+            }
+            if (slotArgObj.containsKey("method")) {
+                if (slotArgObj["method"].is<const char *>()) {
+                    ARGMethod parsed = parseArgMethod(slotArgObj["method"].as<const char *>(),
+                                                      slotArgConfig.method);
+                    slotArgConfig.method = parsed;
+                } else {
+                    int raw = slotArgObj["method"].as<int>();
+                    raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
+                    slotArgConfig.method = static_cast<ARGMethod>(raw);
+                }
+            }
+            if (slotArgObj.containsKey("a")) {
+                slotArgConfig.sourceA = static_cast<uint8_t>(
+                    constrain(slotArgObj["a"].as<int>(), 0, NUM_ENVELOPES - 1));
+            } else if (slotArgObj.containsKey("sourceA")) {
+                slotArgConfig.sourceA = static_cast<uint8_t>(
+                    constrain(slotArgObj["sourceA"].as<int>(), 0, NUM_ENVELOPES - 1));
+            }
+            if (slotArgObj.containsKey("b")) {
+                slotArgConfig.sourceB = static_cast<uint8_t>(
+                    constrain(slotArgObj["b"].as<int>(), 0, NUM_ENVELOPES - 1));
+            } else if (slotArgObj.containsKey("sourceB")) {
+                slotArgConfig.sourceB = static_cast<uint8_t>(
+                    constrain(slotArgObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
+            }
+            slot.arg = sanitizeSlotArg(slotArgConfig);
+        }
+        if (slot.type == MIDIMessageType::SysEx) {
+            String templateError;
+            if (!parseSysExTemplateField(slotObj["sysexTemplate"], slot, templateError)) {
+                emitBulkError("sysex_template", templateError.c_str(), seq);
+                return false;
+            }
+        } else {
+            clearSysExTemplate(slot);
+        }
+        SlotARGConfig slotArg = defaultArg;
+        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
+            JsonObject argObj = slotObj["arg"].as<JsonObject>();
+            if (argObj.containsKey("enable")) {
+                slotArg.enabled = argObj["enable"].as<bool>() ? 1 : 0;
+            } else if (argObj.containsKey("enabled")) {
+                slotArg.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
+            }
+            if (argObj.containsKey("method")) {
+                if (argObj["method"].is<const char *>()) {
+                    slotArg.method =
+                        parseArgMethod(argObj["method"].as<const char *>(), slotArg.method);
+                } else {
+                    slotArg.method = static_cast<ARGMethod>(constrain(
+                        argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
+                }
+            }
+            if (argObj.containsKey("a")) {
+                int rawA = argObj["a"].as<int>();
+                int idxA = envelopeIndexFromAnalogPin(rawA);
+                if (idxA < 0)
+                    idxA = constrain(rawA, 0, NUM_ENVELOPES - 1);
+                slotArg.sourceA = static_cast<uint8_t>(idxA);
+            }
+            if (argObj.containsKey("b")) {
+                int rawB = argObj["b"].as<int>();
+                int idxB = envelopeIndexFromAnalogPin(rawB);
+                if (idxB < 0)
+                    idxB = constrain(rawB, 0, NUM_ENVELOPES - 1);
+                slotArg.sourceB = static_cast<uint8_t>(idxB);
+            }
+            slotArg = sanitizeSlotArg(slotArg);
+        }
+        slot.arg = slotArg;
+        configManager.saveSlot(i, slot);
+
+        if (slotObj.containsKey("ef_payload") && slotObj["ef_payload"].is<JsonObject>()) {
+            JsonObject efPayload = slotObj["ef_payload"].as<JsonObject>();
+            SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+
+            if (efPayload.containsKey("type_index")) {
+                payload.filterType = static_cast<uint8_t>(efPayload["type_index"].as<int>());
+            } else if (efPayload.containsKey("type")) {
+                const char *label = efPayload["type"].as<const char *>();
+                EnvelopeFollower::FilterType mapped = parseFilterType(
+                    label, static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+                payload.filterType = static_cast<uint8_t>(mapped);
+            }
+            if (efPayload.containsKey("freq")) {
+                payload.frequency = efPayload["freq"].as<float>();
+            }
+            if (efPayload.containsKey("q")) {
+                payload.q = efPayload["q"].as<float>();
+            }
+
+            configManager.setSlotEnvelopePayload(i, payload);
+            anySlotPayloadSpecified = true;
+        }
+
+        configManager.setPotChannel(i, midiChannel);
+        configManager.setPotCCNumber(i, data1);
+        potentiometerManager.setChannel(i, midiChannel);
+        potentiometerManager.setCCNumber(i, data1);
+        if (static_cast<size_t>(i) < potChannels.size()) {
+            potChannels[i] = midiChannel;
+        }
+    }
+
+    configManager.saveConfiguration();
+
+    if (config.containsKey("efSlots") && config["efSlots"].is<JsonArray>()) {
+        JsonArray efSlots = config["efSlots"].as<JsonArray>();
+        potToEnvelopeMap.clear();
+        for (uint8_t i = 0; i < efSlots.size(); ++i) {
+            JsonObject mapping = efSlots[i];
+            if (mapping.isNull())
+                continue;
+            int slotIndex = mapping["slot"].as<int>();
+            if (slotIndex < 0 || slotIndex >= NUM_POTS)
+                continue;
+
+            MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
+            slot.setEnvelopeFollowerIndex(static_cast<int8_t>(i));
+            potToEnvelopeMap[slotIndex] = slot.efSettings;
+
+            if (i < envelopeFollowers.size()) {
+                envelopeFollowers[i].setModulationTarget(
+                    potentiometerManager.getCCNumber(slotIndex));
+                applyEfSettingsToFollower(envelopeFollowers[i], slot.efSettings, i);
+            }
+        }
+        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    }
+
+    if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
+        JsonObject filterObj = config["filter"].as<JsonObject>();
+        EnvelopeFollower::FilterType current = envelopeFollowers.empty()
+                                                   ? EnvelopeFollower::LINEAR
+                                                   : envelopeFollowers.front().getFilterType();
+        EnvelopeFollower::FilterType filterType =
+            parseFilterType(filterObj["type"].as<const char *>(), current);
+        float freq = constrain(filterObj["freq"].as<float>(), 20.0f, 5000.0f);
+        float q = constrain(filterObj["q"].as<float>(), 0.5f, 4.0f);
+
+        SlotEnvelopePayload tailPayload{};
+        tailPayload.filterType = static_cast<uint8_t>(filterType);
+        tailPayload.frequency = freq;
+        tailPayload.q = q;
+        SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
+        filterType = static_cast<EnvelopeFollower::FilterType>(sanitizedTail.filterType);
+        freq = sanitizedTail.frequency;
+        q = sanitizedTail.q;
+
+        for (auto &ef : envelopeFollowers) {
+            ef.setFilterType(filterType);
+            ef.configureFilter(freq, q);
+        }
+
+        if (!anySlotPayloadSpecified) {
+            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+                SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+                payload.filterType = static_cast<uint8_t>(filterType);
+                payload.frequency = freq;
+                payload.q = q;
+                configManager.setSlotEnvelopePayload(i, payload);
+            }
+        }
+    }
+
+    envelopeFollowMode = defaultArg.enabled != 0;
+    configManager.setARGEnable(defaultArg.enabled);
+    configManager.setARGMethod(static_cast<uint8_t>(defaultArg.method));
+    configManager.setEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
+    potentiometerManager.setArgEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
+
+    EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(defaultArg.method);
+    for (auto &ef : envelopeFollowers) {
+        ef.setARGMethod(followerMethod);
+        ef.setMode(envelopeFollowMode ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
+    }
+
+    if (config.containsKey("envelopeMode")) {
+        updateEnvelopeModeLabel(config["envelopeMode"].as<const char *>());
+    }
+
+    if (config.containsKey("led") && config["led"].is<JsonObject>()) {
+        JsonObject ledObj = config["led"].as<JsonObject>();
+        uint8_t brightness = constrain(ledObj["brightness"].as<int>(), 0, 255);
+        CRGB color = ledManager.getColor();
+        const char *hex = ledObj["color"].as<const char *>();
+        if (hex) {
+            CRGB parsed;
+            if (parseHexColor(hex, parsed)) {
+                color = parsed;
+            }
+        }
+        ledManager.setBrightness(brightness);
+        ledManager.setColor(color);
+        configManager.saveLEDSettings(brightness, color);
+    }
+
+    return true;
+}
+
+void processCommandQueue() {
+    while (!commandQueue.empty()) {
+        String command = commandQueue.front(); // Get the front command
+        commandQueue.pop();                    // Remove it from the queue
+
+        command.trim();
+
+        if (command == "HELLO") {
+            webSerialStreaming = true;
+            LOG_PRINTLN("{\"hello\":\"mn42\"}");
+
+        } else if (command == "GET_SCHEMA") {
+            LOG_PRINTLN(ConfigManager::makeSchema());
+
+        } else if (command == "GET_BROWNOUTS") {
+            LOG_PRINTLN(g_brownoutCount);
+
+        } else if (command == "GET_MANIFEST") {
+            StaticJsonDocument<256> doc;
+            doc["fw_version"] = FW_VERSION_STR;
+            doc["git_sha"] = GIT_SHA_STR;
+            doc["build_time"] = __DATE__ " " __TIME__;
+            doc["schema_version"] = CONFIG_VERSION;
+            doc["slot_count"] = NUM_SLOTS;
+            doc["pot_count"] = configManager.getNumPots();
+            doc["envelope_count"] = NUM_ENVELOPES;
+            doc["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
+            doc["led_count"] = NUM_LEDS();
+            doc["free_ram"] = computeFreeRAM();
+            doc["free_flash"] = computeFreeFlash();
+
+            String payload;
+            serializeJson(doc, payload);
+            LOG_PRINTLN(payload);
+
+        } else if (command == "GET_CONFIG") {
+            StaticJsonDocument<8192> doc;
+
+            doc["fw_version"] = FW_VERSION_STR;
+            doc["schema_version"] = CONFIG_VERSION;
+
+            JsonArray pots = doc.createNestedArray("pots");
+            for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+                JsonObject pot = pots.createNestedObject();
+                pot["index"] = i;
+                pot["channel"] = configManager.getPotChannel(i);
+                pot["cc"] = configManager.getPotCCNumber(i);
+            }
+
+            JsonArray slots = doc.createNestedArray("slots");
+            const auto &slotDefs = configManager.getSlots();
+            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+                const MIDISlot &slot = slotDefs[i];
+                JsonObject slotObj = slots.createNestedObject();
+                slotObj["index"] = i;
+                slotObj["type"] = static_cast<uint8_t>(slot.type);
+                slotObj["type_name"] = midiMessageTypeName(slot.type);
+                slotObj["channel"] = slot.midiChannel;
+                slotObj["data1"] = slot.data1;
+                slotObj["ef_index"] = slot.ef.followerIndex;
+                JsonObject ef = slotObj.createNestedObject("ef");
+                ef["index"] = slot.ef.followerIndex;
+                ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+                ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
+                ef["frequency"] = slot.efSettings.frequency;
+                ef["q"] = slot.efSettings.q;
+                ef["oversample"] = slot.efSettings.oversample;
+                ef["smoothing"] = slot.efSettings.smoothing;
+                ef["baseline"] = slot.efSettings.baseline;
+                ef["gain"] = slot.efSettings.gain;
+                // Extended EF mode + auto-calibration payload for the frontend.
+                ef["mode"] = slot.efSettings.efMode;
+                ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
+                ef["auto_gain"] = slot.efSettings.autoGain != 0;
+                ef["attack_ms"] = slot.efSettings.attackMs;
+                ef["release_ms"] = slot.efSettings.releaseMs;
+                ef["rms_ms"] = slot.efSettings.rmsWindowMs;
+                ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
+                ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
+                ef["gate_threshold"] = slot.efSettings.gateThreshold;
+                ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
+                ef["activity_threshold"] = slot.efSettings.activityThreshold;
+                ef["gain_target"] = slot.efSettings.gainTarget;
+                slotObj["active"] = slot.active;
+                slotObj["arp_note"] = slot.arpNote;
+                slotObj["sysexTemplate"] = formatSysExTemplate(slot);
+                SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+                JsonObject efPayload = slotObj.createNestedObject("ef_payload");
+                efPayload["type"] = payload.filterType;
+                efPayload["type_name"] = envelopeFilterName(
+                    static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+                efPayload["freq"] = payload.frequency;
+                efPayload["q"] = payload.q;
+                SlotARGConfig arg = sanitizeSlotArg(slot.arg);
+                JsonObject argObj = slotObj.createNestedObject("arg");
+                argObj["enabled"] = arg.enabled != 0;
+                argObj["method"] = static_cast<uint8_t>(arg.method);
+                argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
+                argObj["sourceA"] = arg.sourceA;
+                argObj["sourceB"] = arg.sourceB;
+            }
+
+            JsonObject env = doc.createNestedObject("envelopes");
+            JsonArray routing = env.createNestedArray("routing");
+            for (uint8_t i = 0; i < NUM_POTS; ++i) {
+                int mapping = -1;
+                auto it = potToEnvelopeMap.find(i);
+                if (it != potToEnvelopeMap.end()) {
+                    mapping = it->second.followerIndex;
+                }
+                routing.add(mapping);
+            }
+
+            JsonArray followers = env.createNestedArray("followers");
+            for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
+                JsonObject follower = followers.createNestedObject();
+                follower["index"] = static_cast<uint8_t>(i);
+                follower["active"] = envelopeFollowers[i].getActiveState();
+                follower["filter"] = envelopeFilterName(envelopeFollowers[i].getFilterType());
+                follower["baseline"] = envelopeConfig.baselines[i];
+                follower["oversample"] = envelopeFollowers[i].getOversampleCount();
+                follower["smoothing"] = envelopeFollowers[i].getSmoothingAlpha();
+            }
+
+            uint8_t storedMode = configManager.getMode();
+            env["mode"] = storedMode;
+            env["mode_name"] = envelopeModeName(storedMode);
+
+            uint8_t storedMethod = configManager.getARGMethod();
+            env["arg_method"] = storedMethod;
+            env["arg_method_name"] = argMethodName(storedMethod);
+            env["arg_enable"] = configManager.getARGEnable();
+
+            JsonObject argPair = env.createNestedObject("arg_pair");
+            argPair["a"] = configManager.getEnvelopeA();
+            argPair["b"] = configManager.getEnvelopeB();
+
+            float freq = 0.0f;
+            float q = 0.0f;
+            EEPROM.get(EEPROM_FILTER_FREQ, freq);
+            EEPROM.get(EEPROM_FILTER_Q, q);
+            JsonObject filter = env.createNestedObject("filter");
+            filter["frequency"] = freq;
+            filter["q"] = q;
+
+            JsonObject led = doc.createNestedObject("led");
+            led["brightness"] = ledManager.getBrightness();
+            CRGB color = ledManager.getColor();
+            JsonObject colorObj = led.createNestedObject("rgb");
+            colorObj["r"] = color.r;
+            colorObj["g"] = color.g;
+            colorObj["b"] = color.b;
+            char hex[8];
+            snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
+            led["hex"] = hex;
+
+            String payload;
+            serializeJson(doc, payload);
+            LOG_PRINTLN(payload);
+
+        } else if (command.startsWith("GET_PROFILE")) {
+            int comma = command.indexOf(',');
+            uint8_t id = g_activeProfile;
+            if (comma >= 0) {
+                id = static_cast<uint8_t>(command.substring(comma + 1).toInt());
+            }
+            if (id >= NUM_PROFILES) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            ProfileData profile{};
+            bool stored = configManager.loadProfileSettings(id, profile);
+            if (!stored) {
+                profile = captureProfileSnapshot();
+            }
+
+            StaticJsonDocument<12288> doc;
+            doc["profile"] = id;
+            doc["stored"] = stored;
+
+            JsonObject arp = doc.createNestedObject("arp");
+            arp["length_ticks"] = profile.arp.lengthTicks;
+            arp["shape"] = profile.arp.shape;
+            arp["swing_percent"] = profile.arp.swingPercent;
+            arp["gate_percent"] = profile.arp.gatePercent;
+            arp["octave_range"] = profile.arp.octaveRange;
+
+            JsonObject led = doc.createNestedObject("led");
+            led["brightness"] = profile.led.brightness;
+            JsonObject rgb = led.createNestedObject("rgb");
+            rgb["r"] = profile.led.r;
+            rgb["g"] = profile.led.g;
+            rgb["b"] = profile.led.b;
+
+            JsonArray lfos = doc.createNestedArray("lfos");
+            for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
+                JsonObject lfo = lfos.createNestedObject();
+                lfo["index"] = i;
+                lfo["shape"] = profile.lfos[i].shape;
+                lfo["frequency_hz"] = profile.lfos[i].frequencyHz;
+                lfo["depth"] = profile.lfos[i].depth;
+                lfo["bipolar"] = profile.lfos[i].bipolar != 0;
+                lfo["sync"] = profile.lfos[i].syncEnabled != 0;
+                lfo["sync_ratio"] = profile.lfos[i].syncRatio;
+            }
+
+            JsonArray routes = doc.createNestedArray("routes");
+            for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
+                JsonObject route = routes.createNestedObject();
+                route["index"] = i;
+                route["type"] = profile.routes[i].type;
+                route["lfo"] = profile.routes[i].lfoIndex;
+                route["depth"] = profile.routes[i].depth;
+                route["target"] = profile.routes[i].target;
+                route["channel"] = profile.routes[i].channel;
+                route["cc_msb"] = profile.routes[i].ccMsb;
+                route["cc_lsb"] = profile.routes[i].ccLsb;
+            }
+
+            JsonArray slots = doc.createNestedArray("slots");
+            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+                JsonObject slot = slots.createNestedObject();
+                slot["index"] = i;
+                slot["channel"] = profile.slots[i].midiChannel;
+                JsonObject ef = slot.createNestedObject("ef");
+                writeProfileEf(ef, profile.slots[i].ef);
+            }
+
+            String payload;
+            serializeJson(doc, payload);
+            LOG_PRINTLN(payload);
+
+        } else if (command.startsWith("SET_PROFILE")) {
+            int firstComma = command.indexOf(',');
+            int secondComma = command.indexOf(',', firstComma + 1);
+            if (firstComma < 0 || secondComma < 0) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            uint8_t id =
+                static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
+            if (id >= NUM_PROFILES) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            String payload = command.substring(secondComma + 1);
+            payload.trim();
+            if (payload.length() == 0) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            StaticJsonDocument<12288> doc;
+            DeserializationError err = deserializeJson(doc, payload);
+            if (err) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            ProfileData profile = captureProfileSnapshot();
+            JsonObject root = doc.as<JsonObject>();
+
+            if (root.containsKey("arp")) {
+                JsonObject arp = root["arp"].as<JsonObject>();
+                if (arp.containsKey("length_ticks")) {
+                    profile.arp.lengthTicks = static_cast<uint8_t>(arp["length_ticks"].as<int>());
+                }
+                if (arp.containsKey("shape")) {
+                    profile.arp.shape = static_cast<uint8_t>(arp["shape"].as<int>());
+                }
+                if (arp.containsKey("swing_percent")) {
+                    profile.arp.swingPercent = static_cast<uint8_t>(arp["swing_percent"].as<int>());
+                }
+                if (arp.containsKey("gate_percent")) {
+                    profile.arp.gatePercent = static_cast<uint8_t>(arp["gate_percent"].as<int>());
+                }
+                if (arp.containsKey("octave_range")) {
+                    profile.arp.octaveRange = static_cast<uint8_t>(arp["octave_range"].as<int>());
+                }
+            }
+
+            if (root.containsKey("led")) {
+                JsonObject led = root["led"].as<JsonObject>();
+                if (led.containsKey("brightness")) {
+                    profile.led.brightness = static_cast<uint8_t>(led["brightness"].as<int>());
+                }
+                if (led.containsKey("rgb")) {
+                    JsonObject rgb = led["rgb"].as<JsonObject>();
+                    profile.led.r = static_cast<uint8_t>(rgb["r"].as<int>());
+                    profile.led.g = static_cast<uint8_t>(rgb["g"].as<int>());
+                    profile.led.b = static_cast<uint8_t>(rgb["b"].as<int>());
+                }
+            }
+
+            if (root.containsKey("lfos")) {
+                JsonArray lfos = root["lfos"].as<JsonArray>();
+                for (JsonObject lfo : lfos) {
+                    uint8_t index = static_cast<uint8_t>(lfo["index"].as<int>());
+                    if (index >= PROFILE_LFO_COUNT) {
+                        continue;
+                    }
+                    if (lfo.containsKey("shape")) {
+                        profile.lfos[index].shape = static_cast<uint8_t>(lfo["shape"].as<int>());
+                    }
+                    if (lfo.containsKey("frequency_hz")) {
+                        profile.lfos[index].frequencyHz = lfo["frequency_hz"].as<float>();
+                    }
+                    if (lfo.containsKey("depth")) {
+                        profile.lfos[index].depth = lfo["depth"].as<float>();
+                    }
+                    if (lfo.containsKey("bipolar")) {
+                        profile.lfos[index].bipolar = lfo["bipolar"].as<bool>() ? 1 : 0;
+                    }
+                    if (lfo.containsKey("sync")) {
+                        profile.lfos[index].syncEnabled = lfo["sync"].as<bool>() ? 1 : 0;
+                    }
+                    if (lfo.containsKey("sync_ratio")) {
+                        profile.lfos[index].syncRatio =
+                            static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
+                    }
+                }
+            }
+
+            profile.routeCount = 0;
+            if (root.containsKey("routes")) {
+                JsonArray routes = root["routes"].as<JsonArray>();
+                for (JsonObject route : routes) {
+                    if (profile.routeCount >= PROFILE_MAX_ROUTES) {
+                        break;
+                    }
+                    ProfileLfoRoute &out = profile.routes[profile.routeCount];
+                    out.type = static_cast<uint8_t>(route["type"].as<int>());
+                    out.lfoIndex = static_cast<uint8_t>(route["lfo"].as<int>());
+                    out.depth = route["depth"].as<float>();
+                    out.target = static_cast<uint8_t>(route["target"].as<int>());
+                    out.channel = static_cast<uint8_t>(route["channel"].as<int>());
+                    out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
+                    out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());
+                    profile.routeCount++;
+                }
+            }
+
+            if (root.containsKey("slots")) {
+                JsonArray slots = root["slots"].as<JsonArray>();
+                for (JsonObject slot : slots) {
+                    uint8_t index = static_cast<uint8_t>(slot["index"].as<int>());
+                    if (index >= NUM_SLOTS) {
+                        continue;
+                    }
+                    if (slot.containsKey("channel")) {
+                        profile.slots[index].midiChannel =
+                            static_cast<uint8_t>(slot["channel"].as<int>());
+                    }
+                    if (slot.containsKey("ef")) {
+                        JsonObject ef = slot["ef"].as<JsonObject>();
+                        parseProfileEf(ef, profile.slots[index].ef);
+                    }
+                }
+            }
+
+            if (!configManager.saveProfileSettings(id, profile)) {
+                LOG_PRINTLN("ERR");
+                continue;
+            }
+            if (id == g_activeProfile) {
+                ProfileData stored{};
+                if (configManager.loadProfileSettings(id, stored)) {
+                    applyProfileSnapshot(stored, true);
+                }
+            }
+            LOG_PRINTLN("OK");
+
+        } else if (command.startsWith("SET_POT")) {
+            // Parse "SET_POT" command
+            int firstComma = command.indexOf(',');
+            int lastComma = command.lastIndexOf(',');
+
+            if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
+                LOG_PRINTLN("Error: Malformed SET_POT command");
+                continue; // Skip invalid command
+            }
+
+            int potIndex = command.substring(8, firstComma).toInt();
+            int channel = command.substring(firstComma + 1, lastComma).toInt();
+            int ccNumber = command.substring(lastComma + 1).toInt();
+
+            if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 &&
+                ccNumber >= 0 && ccNumber <= 127) {
+                configManager.setPotChannel(potIndex, channel);
+                configManager.setPotCCNumber(potIndex, ccNumber);
+                potentiometerManager.setChannel(potIndex, channel);
+                potentiometerManager.setCCNumber(potIndex, ccNumber);
+                if (static_cast<size_t>(potIndex) < potChannels.size()) {
+                    potChannels[potIndex] = channel;
+                }
+                configManager.saveConfiguration();
+                LOG_PRINTLN("Pot configuration updated!");
+            } else {
+                LOG_PRINTLN("Error: Invalid values for SET_POT");
+            }
+
+        } else if (command.startsWith("SET_ALL")) {
+            String chunk = command.substring(8);
+            chunk.trim();
+            if (chunk.length() == 0) {
+                continue;
+            }
+
+            String ingestError;
+            if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
+                uint32_t hint = bulkConfigAssembler.sequenceHint();
+                if (ingestError == "overflow") {
+                    emitBulkError("overflow", "config payload too large", hint);
+                } else if (ingestError == "orphan") {
+                    emitBulkError("orphan", "chunk missing frame start", hint);
+                } else {
+                    emitBulkError("ingest", "failed to stage chunk", hint);
+                }
+                continue;
+            }
+
+            static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
+            // Persist the 32 KB document between uploads so we don't hammer the stack.
+            doc.clear();
+            DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
+            if (err == DeserializationError::IncompleteInput) {
+                continue;
+            }
+            if (err) {
+                emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            uint32_t seq = doc["seq"].as<uint32_t>();
+            if (seq == 0) {
+                seq = bulkConfigAssembler.sequenceHint();
+            }
+            const char *checksum = doc["checksum"] | nullptr;
+            if (!checksum || checksum[0] == '\0') {
+                emitBulkError("checksum", "missing checksum", seq);
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            if (seq == 0) {
+                seq = lastAckSequence + 1;
+            }
+
+            if (seq == lastAckSequence && lastAckChecksum == checksum) {
+                LOG_PRINTLN(Utility::formatAck(checksum, seq));
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            JsonObject configObj = doc["config"].as<JsonObject>();
+            if (!applyConfigObject(configObj, seq)) {
+                bulkConfigAssembler.reset();
+                continue;
+            }
+
+            lastAckSequence = seq;
+            lastAckChecksum = checksum;
+            LOG_PRINTLN(Utility::formatAck(checksum, seq));
+            bulkConfigAssembler.reset();
+
+        } else if (command.startsWith("GET_ALL")) {
+#ifdef SERIAL_LOGGING
+            // Send all pot settings
+            LOG_PRINT("POTS:");
+            for (int i = 0; i < NUM_POTS; i++) {
+                int envelopeValue = -1;
+                auto it = potToEnvelopeMap.find(i);
+                if (it != potToEnvelopeMap.end()) {
+                    envelopeValue = it->second.followerIndex;
+                }
+                LOG_PRINT(configManager.getPotCCNumber(i));
+                LOG_PRINT(",");
+                LOG_PRINT(configManager.getPotChannel(i));
+                LOG_PRINT(",");
+                LOG_PRINT(envelopeValue);
+                LOG_PRINT(";");
+            }
+
+            // Send LED settings
+            CRGB ledColor = ledManager.getColor();
+            LOG_PRINT(" LED:");
+            LOG_PRINT(ledManager.getBrightness());
+            LOG_PRINT(",");
+            LOG_PRINT(ledColor.r);
+            LOG_PRINT(",");
+            LOG_PRINT(ledColor.g);
+            LOG_PRINT(",");
+            LOG_PRINTLN(ledColor.b);
+#endif
+        } else if (command == "GET_LED") {
+#ifdef SERIAL_LOGGING
+            CRGB c = ledManager.getColor();
+            LOG_PRINT(ledManager.getBrightness());
+            LOG_PRINT(",");
+            LOG_PRINT(c.r);
+            LOG_PRINT(",");
+            LOG_PRINT(c.g);
+            LOG_PRINT(",");
+            LOG_PRINTLN(c.b);
+#endif
+        } else if (command.startsWith("SET_LED")) {
+            int first = command.indexOf(',');
+            int second = command.indexOf(',', first + 1);
+            int third = command.indexOf(',', second + 1);
+            if (first == -1 || second == -1 || third == -1) {
+                LOG_PRINTLN("ERR");
+            } else {
+                int brightness = command.substring(8, first).toInt();
+                int r = command.substring(first + 1, second).toInt();
+                int g = command.substring(second + 1, third).toInt();
+                int b = command.substring(third + 1).toInt();
+                if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 &&
+                    g <= 255 && b >= 0 && b <= 255) {
+                    CRGB color(r, g, b);
+                    ledManager.setBrightness(brightness);
+                    ledManager.setColor(color);
+                    configManager.saveLEDSettings(brightness, color);
+                    LOG_PRINTLN("OK");
+                } else {
+                    LOG_PRINTLN("ERR");
+                }
+            }
+        } else if (command == "GET_ARGMETHOD") {
+            LOG_PRINTLN(configManager.getARGMethod());
+        } else if (command.startsWith("SET_ARGMETHOD")) {
+            // SET_ARGMETHOD <method>
+            // method: 0-13 mapping to ARGMethod values; see docs for math notes.
+            // Side effects: updates every slot's ARG method and burns the
+            // legacy default into EEPROM via ConfigManager.
+            int method = command.substring(14).toInt();
+            if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {
+                for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+                    MIDISlot &slot = configManager.getSlot(slotIndex);
+                    slot.arg.method = static_cast<ARGMethod>(method);
+                    configManager.saveSlot(slotIndex, slot);
+                }
+                configManager.setARGMethod(static_cast<uint8_t>(method));
+                LOG_PRINTLN("OK");
+            } else {
+                // out-of-range method? we spit ERR
+                LOG_PRINTLN("ERR");
+            }
+        } else if (command.startsWith("GET_EF")) {
+            // GET_EF <slot>
+            // slot: 0..NUM_POTS-1. Reports which envelope (or -1) owns it.
+            // See firmware/README.md#L730-L744 or docs/WebSerial.md#L60-L72 for
+            // the whole WebSerial spiel.
+            int potIndex = command.substring(7).toInt();
+            if (potIndex >= 0 && potIndex < NUM_POTS) {
+                int env = -1;
+                auto it = potToEnvelopeMap.find(potIndex);
+                if (it != potToEnvelopeMap.end()) {
+                    env = it->second.followerIndex;
+                }
+#ifdef SERIAL_LOGGING
+                LOG_PRINTLN(env);
+#else
+                (void)env;
+#endif
+            } else {
+                // bogus slot index
+                LOG_PRINTLN("ERR");
+            }
+        } else if (command.startsWith("SET_EF")) {
+            // SET_EF <slot,env>
+            // slot: 0..NUM_POTS-1, env: 0..envelopeFollowers.size()-1
+            // Side effects: maps slot to follower, flips it active, and
+            // saves mapping/baseline to EEPROM. See firmware/README.md#L730-L744
+            // and firmware/include/EnvelopeFollower/README.md for EF guts.
+            int comma = command.indexOf(',');
+            if (comma == -1) {
+                LOG_PRINTLN("ERR");
+            } else {
+                int potIndex = command.substring(7, comma).toInt();
+                int envIndex = command.substring(comma + 1).toInt();
+                if (potIndex >= 0 && potIndex < NUM_POTS && envIndex >= 0 &&
+                    envIndex < (int)envelopeFollowers.size()) {
+                    MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
+                    slot.setEnvelopeFollowerIndex(static_cast<int8_t>(envIndex));
+                    potToEnvelopeMap[potIndex] = slot.efSettings;
+                    envelopeFollowers[envIndex].toggleActive(true);
+                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings,
+                                              static_cast<uint8_t>(envIndex));
+                    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+                    refreshEfVoicesFromConfig();
+                    LOG_PRINTLN("OK");
+                } else {
+                    // numbers don't line up? it's an ERR
+                    LOG_PRINTLN("ERR");
+                }
+            }
+        } else if (configManager.handleCommand(command)) {
+            // handled inside ConfigManager
+        } else {
+            LOG_PRINTLN("Unknown command: " + command);
+        }
+    }
+}
