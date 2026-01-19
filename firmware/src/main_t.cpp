@@ -24,7 +24,7 @@
 #include "Arduino.h"
 #include "Globals.h"
 #include "FirmwareState.h"
-#include "Mode.h"
+#include "Modes.h"
 
 // Control button used to advance test phases
 const uint8_t phaseButtonPin = 12; // Control Button #0
