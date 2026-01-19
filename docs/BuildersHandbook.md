@@ -39,9 +39,13 @@ Start with the bare essentials. We'll keep the spaghetti minimal:
 
 Mess up the power or data line and the board either sulks or smokes. A clean wiring job saves you hours of "why is nothing blinking?".
 
+### Runtime LED control
+
+The WS2812 strip isn’t just a wiring exercise—the firmware persists brightness and color all the way through EEPROM and the profile system. `GET_CONFIG` shows the current `led` object (brightness, RGB, hex), `SET_LED` stores new values, and `SET_ALL` can ship `{"led":{"color":"#00ffee"}}` fragments to pick a shade for the whole rig. You still drive the data line through pin 6, but the LEDManager now listens to the LFO bus (`LedBrightness` target) and updates the strip as soon as a profile loads, a `SET_LED` lands, or an envelope follower tips a slot. The status LED on pin 23 pulses whenever a diagnostic counter increments (UART overruns, dropped MIDI, slow loops), so it’s the quickest smoke test when you suspect the firmware is under stress.
+
 ## Flash the Brain
 
-1. **Install PlatformIO** – `pip install -r requirements.txt` or use the VS Code add-on. Old‑school? Arduino IDE with Teensyduino works too.
+1. **Install PlatformIO** – `pip install -r requirements.txt` or use the VS Code add-on. Old-school? Arduino IDE with Teensyduino works too.
 2. **Plug in the Teensy 4.0** over USB.
 3. **Build and upload** the main firmware from the `firmware/` directory:
    ```bash
@@ -84,6 +88,8 @@ lfo1.setSyncRatio(LFOSyncRatio::Div4); // 1 cycle per 4 beats
 ```
 
 The LFO bus can drive internal targets like EF gain trim, arp swing, or LED brightness, and can be routed out over MIDI/OSC via the routing layer.
+
+The same LFO state lives inside each profile snapshot. `GET_PROFILE` returns the `lfos` array plus the `routes` table (internal targets, MIDI CC7/CC14, and OSC callbacks), and `SET_PROFILE` lets you persist changes by sending a JSON payload with partial updates. When a profile loads, the firmware replays those shapes, depths, and routes via `LFOManager::applyProfile`, so the LEDs, arpeggiator, and envelope gain trim all jump to the stored motion before you touch a knob. The normalized outputs are mirrored in `g_lfoValues` and the WebSerial `lfos` telemetry so the UI and OLED draw the same oscillations the scheduler runs.
 
 ## Arpeggiator
 
@@ -174,11 +180,11 @@ These classics ruin weekends. Keep them in mind and you'll spend more time makin
 
 ## Profiles
 
-The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot stores pot maps, LED vibes, envelope routing, and the modulation matrix.
+The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot stores pot mappings, LED brightness/color, envelope routing, ARG/filter details, and the entire modulation matrix (arpeggiator timing + shape, LFO shapes/depths/routes, and per-slot MIDI channel/EF payloads). The WebSerial [`GET_PROFILE`](WebSerial.md#profiles--modulation-snapshots) response exposes this snapshot so editors can replay the same state in software, and `SET_PROFILE` lets you persist a partial or complete payload back to the board. When you load a profile, the firmware replays the stored LED color, LFO routes, and slot envelope parameters instantly before your pots/docs move again.
 
 ![Profile toolbar](docs/profiles-ui.png)
 
-The hero banner now mirrors those slots: click A–D to pick the active profile, then use **Save profile**, **Load profile**, or **Reset profile** to run the device RPCs `save_profile {slot}`, `load_profile {slot}`, and `reset_profile {slot}`. Load pushes the stored config into the UI and clears the staged diff; Save writes whatever is staged to the EEPROM slot. Reset brings the slot back to the firmware defaults.
+The hero banner mirrors those slots: tap A–D to pick the active profile, then use **Save profile**, **Load profile**, or **Reset profile** to call the UI’s RPC helpers. Save will stage the current diff and then invoke `SET_PROFILE` for that slot, while Load clears the diff and re-fetches the stored snapshot via `GET_PROFILE`. Reset restores the slot to factory defaults and pushes them back through `SET_PROFILE` so the desk stays tidy.
 
 For crash recovery and sharing, download the staged profile as JSON or upload a backup file that stages immediately (the UI also mirrors the last staged state to `localStorage`, so a reload keeps unsent edits handy).
 
@@ -188,7 +194,7 @@ For crash recovery and sharing, download the staged profile as JSON or upload a 
 
 ### Why this matters
 
-Profiles let you keep live, studio, and "what if I break everything" setups without re‑flashing.
+Profiles let you keep live, studio, and "what if I break everything" setups without re‑flashing, and the payload ensures every modulation bus, LED cue, and envelope follower is restored exactly as it was.
 
 ## Manual Hardware Tests
 

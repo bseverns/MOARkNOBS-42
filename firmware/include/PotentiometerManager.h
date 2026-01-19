@@ -11,8 +11,9 @@
 #include "Utility.h"
 #include "Globals.h"
 
-// Forward declaration to avoid circular dependency
+// Forward declarations to avoid circular dependency
 class EnvelopeFollower;
+class ConfigManager;
 
 inline constexpr uint8_t PRIMARY_MUX_PINS =
     4; // Address lines for the "upstream" mux selecting which pot bank hits the bus
@@ -33,6 +34,7 @@ class PotentiometerManager {
     uint8_t potChannels[NUM_POTS]; // MIDI channel for each pot
     uint8_t potCCNumbers[NUM_POTS]; // MIDI CC number for each pot
     int potLastValues[NUM_POTS];    // Last read values for each pot
+    ConfigManager *configManager = nullptr;
 
     // Exponential Weighted Moving Average (EWMA) smoothing
     // keeps analog jitter down without killing responsiveness.
@@ -56,6 +58,7 @@ class PotentiometerManager {
 
     int argEnvA = -1;
     int argEnvB = -1;
+    void syncChannelCacheFromConfig();
 
   public:
     /**
@@ -63,6 +66,9 @@ class PotentiometerManager {
      */
     PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
                          uint8_t analogPin);
+
+    /** Link the manager with ConfigManager so channels/CCs stay in sync. */
+    void attachConfigManager(ConfigManager &cfg);
 
     /**
      * Register a callback to send MIDI when a pot changes.

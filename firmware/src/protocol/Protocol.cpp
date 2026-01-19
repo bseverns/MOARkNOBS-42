@@ -90,6 +90,7 @@ void initializeProtocol() {
                   CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);
     Serial.printf("Reset 0x%08lX Brownouts %u\n", g_resetCause, g_brownoutCount);
     configManager.begin(potChannels);
+    potentiometerManager.attachConfigManager(configManager);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
 }
 

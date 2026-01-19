@@ -11,6 +11,7 @@
 #include "Utility.h"
 #include "Log.h"
 #include "bench_log_latency.h"
+#include <vector>
 
 // Reads all potentiometers via a pair of multiplexers. The most recent values
 // feed LEDManager for visual feedback and trigger MIDI messages through the
@@ -29,6 +30,11 @@ PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins, const uin
         smoothedValue[i] = 0;  // EWMA starting point
         dirtyFlags[i] = false; // Nothing dirty yet
     }
+}
+
+void PotentiometerManager::attachConfigManager(ConfigManager &cfg) {
+    configManager = &cfg;
+    syncChannelCacheFromConfig();
 }
 
 void PotentiometerManager::selectMuxBank(uint8_t bank) {
@@ -65,6 +71,9 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
 
 void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
     if (potIndex < NUM_POTS) {
+        if (configManager) {
+            configManager->setPotChannel(static_cast<uint8_t>(potIndex), channel);
+        }
         potChannels[potIndex] = channel;
     }
 }
@@ -79,15 +88,24 @@ int PotentiometerManager::getLastValue(int potIndex) const {
 
 void PotentiometerManager::setCCNumber(int potIndex, uint8_t ccNumber) {
     if (potIndex < NUM_POTS) {
+        if (configManager) {
+            configManager->setPotCCNumber(static_cast<uint8_t>(potIndex), ccNumber);
+        }
         potCCNumbers[potIndex] = ccNumber;
     }
 }
 
 uint8_t PotentiometerManager::getChannel(int potIndex) {
+    if (configManager) {
+        return configManager->getPotChannel(static_cast<uint8_t>(potIndex));
+    }
     return (potIndex < NUM_POTS) ? potChannels[potIndex] : 0;
 }
 
 uint8_t PotentiometerManager::getCCNumber(int potIndex) {
+    if (configManager) {
+        return configManager->getPotCCNumber(static_cast<uint8_t>(potIndex));
+    }
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
@@ -140,7 +158,7 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
 #if BENCH_LATENCY_LOG
                     benchLatencyLog(potIndex, t_scan_us, "MIDI", "");
 #endif
-                    midiCallback(potCCNumbers[potIndex], midiValue,
+                    midiCallback(getCCNumber(potIndex), midiValue,
                                  static_cast<uint16_t>(smoothedReading), potIndex);
                 }
             }
@@ -150,6 +168,14 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
 
 void PotentiometerManager::loadFromEEPROM() {
     LOG_PRINTLN("Loading potentiometer settings from EEPROM...");
+    if (configManager) {
+        std::vector<uint8_t> channels;
+        if (!configManager->loadConfiguration(channels)) {
+            configManager->resetConfiguration(channels);
+        }
+        syncChannelCacheFromConfig();
+        return;
+    }
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
         uint16_t ccAddress = EEPROM_POT_CC + i;
@@ -160,6 +186,12 @@ void PotentiometerManager::loadFromEEPROM() {
 
 void PotentiometerManager::resetEEPROM() {
     LOG_PRINTLN("Resetting EEPROM settings for potentiometers...");
+    if (configManager) {
+        std::vector<uint8_t> channels;
+        configManager->resetConfiguration(channels);
+        syncChannelCacheFromConfig();
+        return;
+    }
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         potChannels[i] = 1;  // Default MIDI channel
         potCCNumbers[i] = i; // Default CC number
@@ -171,6 +203,10 @@ void PotentiometerManager::resetEEPROM() {
 }
 
 void PotentiometerManager::saveToEEPROM() {
+    if (configManager) {
+        configManager->saveConfiguration();
+        return;
+    }
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
         uint16_t ccAddress = EEPROM_POT_CC + i;
@@ -199,6 +235,16 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
     selectPotBank(pot);
     delayMicroseconds(5);                   // settle time
     return hardware::readAnalog(analogPin); // direct raw read
+}
+
+void PotentiometerManager::syncChannelCacheFromConfig() {
+    if (!configManager) {
+        return;
+    }
+    for (uint8_t i = 0; i < NUM_POTS; ++i) {
+        potChannels[i] = configManager->getPotChannel(i);
+        potCCNumbers[i] = configManager->getPotCCNumber(i);
+    }
 }
 
 void PotentiometerManager::setMidiCallback(

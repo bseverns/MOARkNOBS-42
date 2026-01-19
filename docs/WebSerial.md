@@ -34,6 +34,8 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    - Render the proposed patch for review; no silent rewrites.
 6. Streaming begins only after both sides agree on versions. Bail out by closing the port or if the manifest validation fails.
 
+The manifest handshake also tells the browser when it needs to fall back to the frozen `config_schema.json` that lives in the app bundle. Once the schema check passes the UI typically asks for `GET_CONFIG` instead of the old `GET_ALL` dump so it can hydrate every pot, slot, envelope, LFO route, and LED color from one well-behaved JSON line. `GET_SCHEMA` is still there for offline editors that want to compare against a stable schema without talking to hardware.
+
 ## State Messages
 
 Every ~100 ms the firmware spits a newline‑terminated JSON blob:
@@ -63,7 +65,7 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 - `slots` – 42 MIDI‑scaled values (0‑127) for each virtual slot.
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
-- `lfos` – normalized 0..1 LFO outputs (one entry per LFO engine).
+- `lfos` – normalized 0..1 outputs for each of the two routed LFO engines; the same values feed LED brightness, arp swing, and EF gain trim internally and can also be routed to MIDI/OSC so the editor can animate the modulation bus.
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
 - `argEnabled` – whether the ARG blender is live or bypassed.
@@ -80,6 +82,16 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 When any of those counters tick upward the status LED on the board pulses and the JSON stream logs an event, so you get both a visual scream and structured telemetry.
 
 Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
+
+### Diagnostics panel for power users
+
+Every state message exposes a `diagnostics` object with the watchdog counters. Build a debug panel that charts those values over time and you immediately get a profiling dashboard:
+
+- `loop_max_us` / `loop_last_us` – how long the main `loop()` takes. If either number nudges the 1000 µs budget or `loop_overruns` starts climbing, drop the frequency of non-critical tasks (e.g., reduce LED refresh rate, move expensive updates to the mid/low scheduler) and profile again.
+- `midi_isr_max_us` / `midi_isr_last_us` – ISR budget for MIDI handling. If these creep upward, throttle external MIDI bursts or trim work from `processIncomingMIDI()` so the high-priority scheduler can breathe.
+- `uart_overruns`, `midi_drops`, `midi_task_overruns` – counters that scream when serial hardware or MIDI parsing falls behind. Work from these backwards: confirm the USB/DIN queues are drained (check `MIDIHandler::_txCount`) and, if the board still struggles, push some tasks into a lower scheduler or clamp unsolicited MIDI sources.
+
+Bonus: ship the diagnostics view in the WebSerial UI as a “Loop Utilization” badge, and surface any non-zero counters as toast-level alerts. These values already flow over the same JSON channel the editor consumes, so you can draw bars, spark lines, and error rows without touching anything in firmware.
 
 ## Patch Messages
 
@@ -131,10 +143,10 @@ never fall out of sync.
 | `GET_SCHEMA` | – | dump config schema. If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
 | `GET_BROWNOUTS` | – | number of brownouts seen |
 | `GET_MANIFEST` | – | confirm firmware build + schema, plus free RAM/flash stats |
-| `GET_CONFIG` | – | dump the live configuration: slots, pots, envelope routing, ARG/filter state, LEDs |
+| `GET_CONFIG` | – | dump the live configuration: pots, slots, envelope routing, ARG/filter state, LEDs, and LFO info |
 | `SET_POT` `<slot>,<chan>,<cc>` | ints | bind slot to channel+CC |
 | `SET_ALL` `<payload>` | JSON or bulk CSV | mass update slots/LED |
-| `GET_ALL` | – | dump every slot and LED setting |
+| `GET_ALL` | – | legacy dump of slots + LED (only available when `SERIAL_LOGGING` is enabled) |
 | `SET_LED` `<bri>,<r>,<g>,<b>` | 0‑255 each | paint LED strip |
 | `GET_LED` | – | return `bri,r,g,b` |
 | `SET_ARGMETHOD` `<n>` | 0‑13 | choose ARG blend |
@@ -142,14 +154,34 @@ never fall out of sync.
 | `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
 | `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
 | `CAL_ENVS` | – | recalibrate all followers |
-| `GET_PROFILE` `<id>` | 0‑3 | dump profile payload JSON (arp/LFO/LED/EF/midi channel) |
-| `SET_PROFILE` `<id>,<payload>` | 0‑3, JSON | store profile payload JSON into EEPROM |
+| `GET_PROFILE` `<id>` | 0‑3 | dump profile payload JSON (arp/LFO/LED/EF/midi channel/routes/slots) |
+| `SET_PROFILE` `<id>,<payload>` | 0‑3, JSON | store profile payload JSON into EEPROM (partial payloads merge) |
 | `SET_FILTER` `<type>,<freq>,<q>` | type 0‑?, floats | blast the legacy global filter (and mirror those values into every slot payload for backward compatibility) |
 | `GET_FILTER` | – | return `type,freq,q` using the legacy global stash |
 | `SET_SLOT_FILTER` `<slot>,<type>,<freq>,<q>` | slot 0‑41, type 0‑?, floats | surgically edit one slot’s envelope payload without touching the others |
 | `GET_SLOT_FILTER` `<slot>` | slot 0‑41 | read back one slot’s envelope payload as `type,freq,q` |
 | `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5 | wire two envelopes for ARG |
 | `GET_ARGPAIR` | – | echo pair config |
+
+### Profiles & modulation snapshots
+
+`GET_PROFILE <id?>` (defaults to the active EEPROM slot) streams the JSON-safe snapshot the firmware keeps for each profile. The response contains:
+
+- `profile` / `stored` – the slot index and whether a saved snapshot lived in EEPROM or the response is just a live capture.
+- `arp` / `led` – the arpeggiator settings and the LED brightness/RGB that the profile last recorded.
+- `lfos` – two records describing each LFO’s shape, frequency, depth, bipolar flag, and clock sync state.
+- `routes` – the active route table that maps an LFO to an internal target, MIDI CC7/CC14, or the OSC callback (type, depth, target, MIDI channel, CC pair).
+- `slots` – per-slot MIDI channel and envelope follower (via the nested `ef` object) so an editor can repaint everything without poking each pot.
+
+Send `SET_PROFILE <id>,<payload>` with newline-terminated JSON to stage a new snapshot. The parser accepts partial payloads: include only the keys you changed (`led`, `lfos`, `routes`, `slots`, `arp`, etc.), and the firmware will merge them into the current snapshot before persisting to EEPROM. A successful store returns `OK`, and when you `SET_PROFILE` the active slot the firmware immediately applies the snapshot (LEDs, routes, envelopes, and MIDI channels update without needing a reboot).
+
+Use these RPCs to implement Load/Save/Reset buttons in your UI, and remember that the four EEPROM slots behave like dedicated profiles (A–D) so you can stage live tweaks, snapshot them, and recall them on stage.
+
+### LED + LFO telemetry
+
+The same `led` object that shows up in `GET_CONFIG` (brightness, RGB, and hex) also rides along with profile payloads. Use `SET_LED` and `GET_LED` to control the strip’s global color/brightness bond; `SET_ALL` respects `{"led":{"color":"#RRGGBB"}}` fragments so you can push a whole palette from one payload.
+
+Both the status LED and WS2812 strip follow the new LFO bus: the internal routes modulate LED brightness while another route nudges the arpeggiator swing and EF gain trim. Watch the 0..1 values from the `lfos` field in each state message and feed them into your UI’s scope or animators so the desktop mirrors exactly what the firmware is outputting.
 
 ### Paint the LEDs
 

@@ -3,6 +3,8 @@
 
 #include "Utility.h"
 #include "MIDITypes.h"
+#include "MIDIHandler.h"
+#include "TimeStub.h"
 #include <ArduinoJson.h>
 
 extern bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
@@ -12,6 +14,25 @@ extern bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst 
 // those test-only helpers that turn sketchy numeric slot identifiers into the
 // friendly MIDIMessageType enum.  These tests keep that grab-bag honest so the
 // web UI and CLI tooling can stream payloads without bricking the rig.
+
+namespace {
+
+void resetMidiLoggers() {
+    MIDI.lastNoteOn = 0;
+    MIDI.lastNoteOnVelocity = 0;
+    MIDI.lastNoteOnChannel = 0;
+    MIDI.lastNoteOff = 0;
+    MIDI.lastNoteOffVelocity = 0;
+    MIDI.lastNoteOffChannel = 0;
+    usbMIDI.lastNoteOn = 0;
+    usbMIDI.lastNoteOnVelocity = 0;
+    usbMIDI.lastNoteOnChannel = 0;
+    usbMIDI.lastNoteOff = 0;
+    usbMIDI.lastNoteOffVelocity = 0;
+    usbMIDI.lastNoteOffChannel = 0;
+}
+
+} // namespace
 
 // Feed the assembler two payload fragments and make sure it stitches them into
 // one coherent JSON blob while preserving the sequence hint.
@@ -107,4 +128,46 @@ void test_bulk_config_accepts_type_name_alias() {
     TEST_ASSERT_TRUE(testOnly_parseSlotType(slot["type"], slot["type_name"], resolved));
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(MIDIMessageType::PitchBend),
                             static_cast<uint8_t>(resolved));
+}
+
+void test_bulk_config_assembler_rejects_orphaned_fragment() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
+    TEST_ASSERT_FALSE(assembler.ingestChunk("\"seq\":7", error));
+    TEST_ASSERT_EQUAL_STRING("orphan", error.c_str());
+    TEST_ASSERT_FALSE(assembler.inProgress());
+}
+
+void test_bulk_config_assembler_updates_sequence_hint_after_restart() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"seq\":5}", error));
+    TEST_ASSERT_EQUAL_UINT32(5, assembler.sequenceHint());
+
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"seq\":42}", error));
+    TEST_ASSERT_EQUAL_UINT32(42, assembler.sequenceHint());
+}
+
+void test_schedule_note_on_off_delivers_note_off_after_delay() {
+    g_fakeNowMs = 0;
+    Utility::schedulerHigh = TaskScheduler();
+    resetMidiLoggers();
+
+    MIDIHandler midi;
+    Utility::scheduleNoteOnOff(midi, 60, 99, 2, 100);
+
+    TEST_ASSERT_EQUAL_UINT8(60, MIDI.lastNoteOn);
+    TEST_ASSERT_EQUAL_UINT8(60, usbMIDI.lastNoteOn);
+
+    advanceMs(99);
+    Utility::schedulerHigh.update();
+    TEST_ASSERT_EQUAL_UINT8(0, MIDI.lastNoteOff);
+    TEST_ASSERT_EQUAL_UINT8(0, usbMIDI.lastNoteOff);
+
+    advanceMs(1);
+    Utility::schedulerHigh.update();
+    TEST_ASSERT_EQUAL_UINT8(60, MIDI.lastNoteOff);
+    TEST_ASSERT_EQUAL_UINT8(60, usbMIDI.lastNoteOff);
+    TEST_ASSERT_EQUAL_UINT8(2, MIDI.lastNoteOffChannel);
+    TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.lastNoteOffChannel);
 }
