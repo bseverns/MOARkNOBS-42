@@ -22,9 +22,15 @@
 
 #include <Arduino.h>
 #include "Arduino.h"
-#include "Globals.h"
+#include "ButtonManager.h"
+#include "DisplayManager.h"
 #include "FirmwareState.h"
+#include "Globals.h"
+#include "LEDManager.h"
+#include "MIDIHandler.h"
 #include "Modes.h"
+#include "PotentiometerManager.h"
+#include "TestHelpers.h"
 
 // Control button used to advance test phases
 const uint8_t phaseButtonPin = 12; // Control Button #0
