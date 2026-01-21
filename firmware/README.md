@@ -226,28 +226,36 @@ When everything boots, the modules start a polite riot. Here's the wiring carnag
 
 ```mermaid
 flowchart TD
-  Flash --> Loader[Bootloader] --> FW[Teensy Firmware]
+  Flash --> Loader[Bootloader] --> Runtime["Runtime Loop (MN42 Firmware)"]
 
-  subgraph IO
-    Buttons((Buttons))
-    Pots((Pots: Slot/Freq/Q))
-    AudioIn((Audio/CV In))
+  subgraph Inputs
+    Buttons((Control + Slot Buttons))
+    SlotPot((Main Slot Pot))
+    FreqPot((Filter Frequency Pot))
+    QPot((Filter Resonance Pot))
+    AudioIn((Audio / CV In))
     MIDIIN((MIDI In))
-    Browser[[Browser]]
+    Browser[[Browser / WebSerial UI]]
     NodeOSC[[Node OSC Bridge]]
   end
 
   subgraph Core
-    FW
-    BM[ButtonManager]
-    PM[PotentiometerManager]
-    EF[EnvelopeFollower]
-    ARP[Arpeggiator]
-    MM[MIDIHandler]
-    DM[DisplayManager]
-    LM[LEDManager]
-    Slots[Slot Matrix]
-    EEPROM[(EEPROM)]
+    Scheduler["Task Scheduler"]
+    Runtime
+    ButtonManager
+    PotManager["PotentiometerManager"]
+    EnvelopeFollowers["EnvelopeFollowers"]
+    LFOManager
+    Arpeggiator
+    MIDIHandler
+    DisplayManager
+    LEDManager
+    ConfigManager
+    Modes
+    Protocol
+    Slots["Slot Matrix"]
+    EEPROM[(EEPROM + Profiles)]
+    WebSerial
   end
 
   subgraph Outputs
@@ -257,45 +265,53 @@ flowchart TD
     MIDIThrough((MIDI Through))
   end
 
-  Buttons -->|scan| BM
-  Pots -->|read| PM
-  AudioIn -->|sense| EF
-  MIDIIN --> MM
-  Browser --> WebSerial --> FW
-  NodeOSC --> FW
+  Buttons --> ButtonManager
+  SlotPot --> PotManager
+  FreqPot --> PotManager
+  QPot --> PotManager
+  AudioIn --> EnvelopeFollowers
+  MIDIIN --> MIDIHandler
+  Browser --> WebSerial --> Protocol
+  NodeOSC --> Protocol
 
-  BM --> FW
-  PM --> FW
-  FW --> BM
-  FW --> PM
-  FW --> EF
-  FW --> ARP
-  FW --> MM
-  FW --> DM
-  FW --> LM
-  FW --> Slots
-  FW --> EEPROM
-  EEPROM --> FW
+  Scheduler --> Runtime
+  Runtime --> ButtonManager
+  Runtime --> PotManager
+  Runtime --> EnvelopeFollowers
+  Runtime --> LFOManager
+  Runtime --> Arpeggiator
+  Runtime --> MIDIHandler
+  Runtime --> DisplayManager
+  Runtime --> LEDManager
 
-  BM --> Slots
-  PM --> EF
-  EF -->|mod| Slots
-  ARP -->|mod| Slots
-  Slots --> MM
-  Slots --> LM
-  Slots --> DM
-  EF --> LM
-  EF --> DM
-  ARP --> DM
-  BM --> DM
-  BM --> LM
-  PM --> DM
-  MIDIIN --> DM
+  ButtonManager --> Slots
+  PotManager --> Slots
+  PotManager --> EnvelopeFollowers
+  EnvelopeFollowers --> Slots
+  LFOManager --> Slots
+  Arpeggiator --> Slots
 
-  MM --> MIDIOut
-  MM --> MIDIThrough
-  DM --> OLED
-  LM --> LEDs
+  Modes --> EnvelopeFollowers
+  Modes --> Slots
+  ConfigManager --> Slots
+  Slots --> MIDIHandler
+  Slots --> LEDManager
+  Slots --> DisplayManager
+  Slots --> ConfigManager
+
+  Protocol --> ConfigManager
+  Protocol --> Modes
+  Protocol --> MIDIHandler
+
+  ConfigManager --> EEPROM
+  EEPROM --> ConfigManager
+  WebSerial --> Protocol
+
+  DisplayManager --> OLED
+  LEDManager --> LEDs
+
+  MIDIHandler --> MIDIOut
+  MIDIHandler --> MIDIThrough
 ```
 
 ## MIDI: The Lifeblood
