@@ -18,6 +18,8 @@
 HardwareConfig hwConfig = {0,  0,  0, 16, 6, 8, NUM_BUTTONS, 1, 1, 1, 1, {2, 3, 4, 5}, {6, 7, 8, 9},
                            A0, A1, A2};
 
+void loadHardwareConfig() {}
+
 // Globals that the firmware normally defines in Globals.cpp.
 uint32_t g_resetCause = 0;
 uint16_t g_brownoutCount = 0;
@@ -31,9 +33,7 @@ float g_lfoLedBrightness = 0.0f;
 std::array<float, 2> g_lfoValues = {0.0f, 0.0f};
 float g_vref = 3.3f;
 EnvelopeConfig envelopeConfig = {};
-std::vector<EnvelopeFollower> envelopeFollowers;
-int NORMAL_DISPLAY_TIME = 0;
-int SHORT_DISPLAY_TIME = 0;
+SystemDiagnostics g_systemDiagnostics;
 int8_t velocityShift = 0;
 uint8_t changeProbability = 100;
 JitterSettings g_jitterSettings = {1.0f, 0.5f};
@@ -42,6 +42,7 @@ bool g_arpEditActive = false; // Test shim for arp edit toggle
 uint8_t g_activeProfile = 0;
 bool g_profileChangeRequested = false;
 bool g_profileSaveRequested = false;
+bool webSerialStreaming = false;
 
 const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = {A0, A1, A2, A3, A6, A7};
 namespace {
@@ -115,6 +116,7 @@ void SeedBoxLink::markPeerPulse() {}
 } // namespace interop
 } // namespace seedbox
 
+#if !defined(UNIT_TEST_PROTOCOL_IMPL)
 namespace {
 
 bool equalsIgnoreCase(const char *lhs, const char *rhs) {
@@ -260,3 +262,4 @@ uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint
     }
     return renderFallbackSysEx(slot, rawValue, dest, capacity);
 }
+#endif

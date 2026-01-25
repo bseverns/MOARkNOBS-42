@@ -109,6 +109,7 @@ inline uint16_t NUM_LEDS() {
     return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount;
 }
 
+inline constexpr uint8_t NUM_POTS = 42;     //!< Analog pot count driving the ARG
 inline constexpr uint8_t NUM_BUTTONS = 6;   //!< Number of direct control buttons
 inline constexpr uint8_t NUM_ENVELOPES = 6; //!< Envelope followers stalking your signal
 

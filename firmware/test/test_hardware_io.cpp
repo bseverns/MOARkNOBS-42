@@ -104,7 +104,7 @@ void test_digital_provider_overrides_matrix_reads() {
     TEST_ASSERT_FALSE(manager.readControlButtonForTest(1));
 }
 
-#if defined(UNIT_TEST)
+#if defined(UNIT_TEST) && !defined(UNIT_TEST_PROTOCOL_IMPL)
 
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                              PotentiometerManager *potentiometerManager)

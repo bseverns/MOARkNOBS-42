@@ -20,7 +20,6 @@ inline constexpr uint8_t PRIMARY_MUX_PINS =
     4; // Address lines for the "upstream" mux selecting which pot bank hits the bus
 inline constexpr uint8_t SECONDARY_MUX_PINS =
     4; // Address lines for the "downstream" mux choosing a single pot within that bank
-constexpr uint8_t NUM_POTS = 42;
 
 /**
  * @brief Reads all potentiometers via a pair of analog multiplexers and

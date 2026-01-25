@@ -257,8 +257,17 @@ class ConfigManager {
     /** Retrieve the currently stored LED animation mode. */
     LedMode getLedMode() const;
 
+    enum class RecoveryEvent {
+        kNone,
+        kDefaultsLoaded,
+        kBackupRestored,
+    };
+
     /** Reset configuration to factory defaults. */
-    void resetConfiguration(std::vector<uint8_t> &potChannels);
+    void resetConfiguration(std::vector<uint8_t> &potChannels, bool recordRecoveryEvent = false);
+
+    /** Consume the latest recovery event (backup or defaults). */
+    RecoveryEvent consumeRecoveryEvent();
 
     // Envelope follower configuration -----------------------------------
 
@@ -388,6 +397,7 @@ class ConfigManager {
         uint8_t sourceA = 0;
         uint8_t sourceB = 1;
     } legacyArg{};
+    RecoveryEvent _lastRecoveryEvent = RecoveryEvent::kNone;
     void loadLegacyARGSettings();
     void migrateLegacyARGSettings();
 };

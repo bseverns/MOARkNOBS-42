@@ -250,6 +250,17 @@ void initializeRuntime(bool baselinesLoaded) {
         potentiometerManager.resetEEPROM();
     }
 
+    switch (configManager.consumeRecoveryEvent()) {
+    case ConfigManager::RecoveryEvent::kBackupRestored:
+        displayManager.setTemporaryMessage("Config restored\nfrom backup", 3000);
+        break;
+    case ConfigManager::RecoveryEvent::kDefaultsLoaded:
+        displayManager.setTemporaryMessage("EEPROM corrupted\ndefaults loaded", 4000);
+        break;
+    default:
+        break;
+    }
+
     initializeSchedulers();
 }
 

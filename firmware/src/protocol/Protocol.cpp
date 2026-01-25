@@ -6,6 +6,7 @@
 #include <imxrt.h>
 #include <cctype>
 #include <cstdint>
+#include <cstddef>
 #include <cstring>
 #include <cstdio>
 #include <array>
@@ -54,6 +55,33 @@ uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 } // namespace
 
+namespace SceneStorage {
+struct SceneInfo {
+    uint8_t slot = 0;
+    const char *name = nullptr;
+    bool available = false;
+};
+
+struct ConfigState {};
+
+struct SceneEntry {
+    const char *name = nullptr;
+    ConfigState state{};
+};
+
+constexpr uint8_t kSceneSlotCount = 0;
+
+inline uint8_t listScenes(SceneInfo *, size_t) { return 0; }
+inline ConfigState captureConfigState() { return ConfigState{}; }
+inline bool saveSceneSlot(uint8_t, const ConfigState &, const char *) { return false; }
+inline bool loadSceneSlot(uint8_t, SceneEntry &) { return false; }
+inline bool sceneSlotAvailable(uint8_t) { return false; }
+inline void applyConfigState(const ConfigState &, bool) {}
+inline bool macroSnapshotAvailable() { return false; }
+inline bool loadMacroSnapshot(ConfigState &) { return false; }
+inline bool saveMacroSnapshot(const ConfigState &) { return false; }
+} // namespace SceneStorage
+
 template <size_t Capacity>
 static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     String payload;
@@ -62,7 +90,7 @@ static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
 }
 
 static bool handleSceneJsonCommand(const String &command) {
-    if (command.isEmpty() || command[0] != '{') {
+    if (command.length() == 0 || command[0] != '{') {
         return false;
     }
     StaticJsonDocument<512> request;

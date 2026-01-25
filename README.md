@@ -170,6 +170,12 @@ The high-level idea is simple: `setup()` boots each layer, `loop()` ticks the sc
 - **Profiles live in EEPROM** – Four profile slots (A–D) now store the entire runtime snapshot: arpeggiator settings, LED brightness/color, every LFO shape/route, and each slot’s MIDI channel plus EF payload. Ping `GET_PROFILE,<id>` to fetch that JSON payload (defaults to the active slot) or `SET_PROFILE,<id>,<JSON>` to stage a new snapshot. The WebSerial editor uses those RPCs to implement Load/Save/Reset buttons, so you can roll back to the last saved profile even after a crash.
 - **Dual routed LFOs** – Two oscillators run in the high-priority scheduler, each exposing configurable shape, depth, bipolar mode, and MIDI clock sync ratios. They fan out internally to LED brightness, arp swing, and EF gain trim while also being routable to MIDI/OSC/OSC callbacks, and their normalized outputs land in `g_lfoValues` so the OLED, telemetry, and WebSerial stream can paint identical waveforms. The same LFO state travels with profiles, so loading a slot restores the modulation matrix exactly.
 - **LED behavior** – The WS2812 strip mirrors slot values via `LEDManager`, but the `led` object in `GET_CONFIG` (brightness + RGB + hex code) and the `SET_LED`/`GET_LED` commands let you treat the whole pool as a single color capstone. When diagnostics counters tick (UART overruns, dropped MIDI, slow loops), the status LED pulses and the JSON stream emits the event so you can spot pressure without a scope. The LFO routes above can modulate the LED brightness, so visual cues stay in sync with what the oscillators are doing.
+
+### Config recovery feedback
+If the boot loader detects EEPROM corruption it now shows a one-shot OLED message so you know what kind of recovery just happened:
+1. **“Config restored from backup”** – the primary block failed CRC/magic but the backup block was valid. Firmware continues from the backup data, so you can keep playing, rerun `GET_CONFIG`/`GET_PROFILE`, and optionally save the profile again to refresh both slots.
+2. **“EEPROM corrupted defaults loaded”** – both primary and backup were invalid, so the firmware reset the pot→channel map, CC map, and LED defaults. Reload a profile or redo your slot/channel assignments and save once everything looks right.
+Treat these messages as subtle warnings—if you see one, check the WebSerial snapshot or run the slot mapping routine before you return to performance mode.
 License: MIT. See [LICENSE](LICENSE).
 
 ## Contributing

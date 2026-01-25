@@ -3,6 +3,7 @@
 #include "CommandQueue.h"
 #include "Arpeggiator.h"
 #include "FirmwareState.h"
+#include "MIDIHandler.h"
 #include "Protocol.h"
 #include "Runtime.h"
 #include "UI.h"

@@ -338,14 +338,14 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
                 needsRewrite = true;
             } else {
                 LOG_PRINTLN("Config version mismatch.");
-                resetConfiguration(potChannels);
+                resetConfiguration(potChannels, true);
                 return false;
             }
         }
         bool includeProfile = (base == EEPROM_PROFILE_START(0));
         if (_stored.crc != calculateCRC(includeProfile)) {
             LOG_PRINTLN("Config CRC mismatch.");
-            resetConfiguration(potChannels);
+            resetConfiguration(potChannels, true);
             return false;
         }
         if (_stored.activeProfile >= NUM_PROFILES) {
@@ -376,14 +376,14 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
                 needsRewrite = true;
             } else {
                 LOG_PRINTLN("Backup config version mismatch.");
-                resetConfiguration(potChannels);
+                resetConfiguration(potChannels, true);
                 return false;
             }
         }
         bool includeProfile = (base == EEPROM_PROFILE_START(0));
         if (_stored.crc != calculateCRC(includeProfile)) {
             LOG_PRINTLN("Backup CRC mismatch.");
-            resetConfiguration(potChannels);
+            resetConfiguration(potChannels, true);
             return false;
         }
         if (_stored.activeProfile >= NUM_PROFILES) {
@@ -398,10 +398,11 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
             _stored.version = CONFIG_VERSION;
             saveConfiguration();
         }
+        _lastRecoveryEvent = RecoveryEvent::kBackupRestored;
         return true;
     }
     LOG_PRINTLN("Backup EEPROM corrupted, resetting to defaults.");
-    resetConfiguration(potChannels);
+    resetConfiguration(potChannels, true);
     return false;
 }
 
@@ -482,13 +483,15 @@ void ConfigManager::saveProfile(uint8_t id) {
         id = 0;
     }
     uint16_t base = EEPROM_PROFILE_START(id);
+    // Capture the new slot map in the backup region first so an interrupted write
+    // still leaves a complete copy to recover from.
+    writeEEPROM(true, base);
+    writeMagicNumber(true, base);
     writeEEPROM(false, base);
     writeMagicNumber(false, base);
     std::vector<uint8_t> temp;
     if (!loadConfiguration(temp, base)) {
-        LOG_PRINTLN("Primary EEPROM write failed, saving to backup.");
-        writeEEPROM(true, base);
-        writeMagicNumber(true, base);
+        LOG_PRINTLN("Primary EEPROM corrupted after save; backup contains latest profile.");
     }
 }
 
@@ -739,7 +742,10 @@ LedMode ConfigManager::getLedMode() const {
 }
 
 // Reset configuration to defaults
-void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
+void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels, bool recordRecoveryEvent) {
+    if (recordRecoveryEvent) {
+        _lastRecoveryEvent = RecoveryEvent::kDefaultsLoaded;
+    }
     potChannels.clear();
     for (uint8_t i = 0; i < _numPots; i++) {
         setPotChannel(i, 1);  // Default to channel 1
@@ -750,6 +756,12 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
     _stored.activeProfile = 0;
     _stored.ledMode = static_cast<uint8_t>(LedMode::Static);
     saveConfiguration();
+}
+
+ConfigManager::RecoveryEvent ConfigManager::consumeRecoveryEvent() {
+    RecoveryEvent event = _lastRecoveryEvent;
+    _lastRecoveryEvent = RecoveryEvent::kNone;
+    return event;
 }
 
 // Mode and ARG methods
