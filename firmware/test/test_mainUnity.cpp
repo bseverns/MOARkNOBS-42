@@ -25,6 +25,8 @@ void test_profile_crc_rejects_corruption();
 void test_profile_bounds_clamp();
 void test_lowpass_highpass_response();
 void test_system_report();
+void test_dispatch_handles_known_command();
+void test_dispatch_rejects_unknown_command();
 void test_scoped_analog_provider_nesting();
 void test_sequence_provider_cycles_values();
 void test_set_provider_returns_previous();
@@ -142,6 +144,8 @@ void setup() {
     RUN_TEST(test_profile_bounds_clamp);
     RUN_TEST(test_lowpass_highpass_response);
     RUN_TEST(test_system_report);
+    RUN_TEST(test_dispatch_handles_known_command);
+    RUN_TEST(test_dispatch_rejects_unknown_command);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
     RUN_TEST(test_program_change);
     RUN_TEST(test_aftertouch);

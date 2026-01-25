@@ -28,6 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schema to `0x0004` so stored patches remember their curves.
 - Dual LFO engines now live in `firmware_main.cpp` via `LFOManager`, routing LED brightness, arp swing, and EF gain trim while persisting shapes/routes inside the profile payload so both UART telemetry and WebSerial keep the same modulation state. Unity LFO tests guard the shapes and clock sync math. [2fe3c15]
 - The Web Configurator was rebuilt around a split runtime kernel and BenzKnobz view layer: schema-driven forms, staged diff/rollback controls, telemetry cards, a MIDI monitor, and a simulator toggle all live in `runtime.js`/`views/*` plus new Playwright specs that exercise every panel without a human in Chromium. [2fe3c15]
+- Serial commands now route through a sorted dispatch table with standalone handler functions, an exposed `dispatchCommand` for Unity, and an "unknown command" log that also prints the available verbs; new Unity tests hit both a known and unknown command so the glue layer stays covered. [current change]
+- Added `test/test_protocol_dispatch.cpp` and the `firmware/python` shim that makes `python -c ...` resolve to `python3`, keeping the Unity runner happy in environments without a bare `python`. [current change]
+- Macro snapshot controls now expose `SAVE_MACRO_SLOT`/`RECALL_MACRO_SLOT` to the WebSerial UI with inline feedback, disabled save during writes, and optional config reloads after recall so the browser mirrors slot 254 without touching live profiles.
+- Introduced LED animation modes (`Static`, `PeakHold`, `Trail`, `ClockPulse`) plus a scheduler-driven `LedAnimator`, diagnostics override, and RPC hooks so pots/envelopes can emit dynamic feedback safely outside interrupt context.
+- Planned scene slot support: fixed-size `Scene` records with named slots, `SAVE_SCENE`/`RECALL_SCENE` verbs, and a future WebSerial “Scenes” view that lists saved names and manages EEPROM-backed snapshots without blocking the loop.
 
 ### Changed
 - Runtime now runs a normalization/sanitization lap that clamps slot payloads

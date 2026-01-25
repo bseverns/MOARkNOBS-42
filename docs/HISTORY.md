@@ -183,6 +183,18 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Playwright specs now vet the config forms, MIDI monitor, bridge handshake, and migration dance so CI can prove the UI without a human in Chromium. [2fe3c15]
 - Docs (README, Builder’s Handbook, new `docs/profiles-ui.png`) now explain the runtime contract and UI affordances so field labs can riff off the browser without reverse-engineering the glue code. [2fe3c15]
 
+### January — Serial Command Dispatch Refactor
+
+- Replaced the massive `processCommandQueue` ladder with a sorted dispatch table, dedicated handler functions, and a reentrant `dispatchCommand` so serial commands stay heap-free and easy to extend; the dispatcher now logs unknown commands along with the available list and is exposed to Unity tests via `testOnly_dispatchCommand`. [current change]
+- Added `test/test_protocol_dispatch.cpp` plus Unity hooks that hit both a known `HELLO` command and an unknown command to keep the dispatch layer covered even when the rest of the firmware sleeps. [current change]
+- Introduced a tiny `firmware/python` shim that points `python` to `python3` so PlatformIO’s `-c` helper and CI-generated test scripts keep running even in environments that only ship `python3`. [current change]
+
+### February — Macro & Scene Snapshots
+
+- Drafted the WebSerial and firmware plumbing so slot 254 can host a macro snapshot: new `SAVE_MACRO_SLOT`/`RECALL_MACRO_SLOT` commands, UI buttons near the profile panel, inline success/failure cues, and optional `GET_CONFIG` refreshes keep the browser in sync without overwriting the active profile.
+- Spec'd richer LED feedback with `LedMode` (Static/PeakHold/Trail/ClockPulse), a scheduler-driven `LedAnimator`, diagnostics overrides, and RPC/UI controls so pots and envelopes can pulse, hold, or trail visually without touching interrupt context.
+- Laid out the scene recall system: fixed-size `Scene` records that bundle a saved `ConfigState` plus a 16‑byte name, EEPROM-backed slots (4–8), `SAVE_SCENE`/`RECALL_SCENE` verbs, and a planned “Scenes” WebSerial tab so performers can snapshot complete state safely and recall by name.
+
 ## Overview
 
 Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:

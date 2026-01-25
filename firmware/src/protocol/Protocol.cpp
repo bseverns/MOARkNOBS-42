@@ -9,6 +9,7 @@
 #include <cstring>
 #include <cstdio>
 #include <array>
+#include <algorithm>
 #include <EEPROM.h>
 
 #include "ARGMixer.h"
@@ -1151,6 +1152,148 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     return true;
 }
 
+namespace {
+struct ParsedCommand {
+    explicit ParsedCommand(const String &source)
+        : command(source),
+          data(source.c_str()),
+          length(source.length()),
+          nameLen(measureNameLength(data, length)) {}
+
+    const String &fullCommand() const { return command; }
+    const char *c_str() const { return data; }
+    size_t size() const { return length; }
+    size_t nameLength() const { return nameLen; }
+    const char *payload() const { return data + nameLen; }
+    size_t payloadLength() const { return (length > nameLen) ? (length - nameLen) : 0U; }
+
+    int compareName(const char *target) const {
+        size_t targetLen = std::strlen(target);
+        size_t cmpLen = std::min(nameLen, targetLen);
+        int cmp = std::memcmp(data, target, cmpLen);
+        if (cmp != 0) {
+            return cmp;
+        }
+        if (nameLen < targetLen) {
+            return -1;
+        }
+        if (nameLen > targetLen) {
+            return 1;
+        }
+        return 0;
+    }
+
+  private:
+    static size_t measureNameLength(const char *text, size_t capacity) {
+        size_t index = 0;
+        while (index < capacity) {
+            char c = text[index];
+            if (c == ',' || std::isspace(static_cast<unsigned char>(c))) {
+                break;
+            }
+            ++index;
+        }
+        return index;
+    }
+
+    const String &command;
+    const char *data;
+    size_t length;
+    size_t nameLen;
+};
+
+struct CommandHandler {
+    const char *name;
+    void (*handler)(const ParsedCommand &cmd);
+};
+
+void handleGetAllCommand(const ParsedCommand &cmd);
+void handleGetArgMethodCommand(const ParsedCommand &cmd);
+void handleGetBrownoutsCommand(const ParsedCommand &cmd);
+void handleGetConfigCommand(const ParsedCommand &cmd);
+void handleGetEfCommand(const ParsedCommand &cmd);
+void handleGetLedCommand(const ParsedCommand &cmd);
+void handleGetManifestCommand(const ParsedCommand &cmd);
+void handleGetProfileCommand(const ParsedCommand &cmd);
+void handleGetSchemaCommand(const ParsedCommand &cmd);
+void handleHelloCommand(const ParsedCommand &cmd);
+void handleRecallMacroSlotCommand(const ParsedCommand &cmd);
+void handleSaveMacroSlotCommand(const ParsedCommand &cmd);
+void handleSetAllCommand(const ParsedCommand &cmd);
+void handleSetArgMethodCommand(const ParsedCommand &cmd);
+void handleSetEfCommand(const ParsedCommand &cmd);
+void handleSetLedCommand(const ParsedCommand &cmd);
+void handleSetPotCommand(const ParsedCommand &cmd);
+void handleSetProfileCommand(const ParsedCommand &cmd);
+
+const CommandHandler kCommandHandlers[] = {
+    {"GET_ALL", handleGetAllCommand},
+    {"GET_ARGMETHOD", handleGetArgMethodCommand},
+    {"GET_BROWNOUTS", handleGetBrownoutsCommand},
+    {"GET_CONFIG", handleGetConfigCommand},
+    {"GET_EF", handleGetEfCommand},
+    {"GET_LED", handleGetLedCommand},
+    {"GET_MANIFEST", handleGetManifestCommand},
+    {"GET_PROFILE", handleGetProfileCommand},
+    {"GET_SCHEMA", handleGetSchemaCommand},
+    {"HELLO", handleHelloCommand},
+    {"RECALL_MACRO_SLOT", handleRecallMacroSlotCommand},
+    {"SAVE_MACRO_SLOT", handleSaveMacroSlotCommand},
+    {"SET_ALL", handleSetAllCommand},
+    {"SET_ARGMETHOD", handleSetArgMethodCommand},
+    {"SET_EF", handleSetEfCommand},
+    {"SET_LED", handleSetLedCommand},
+    {"SET_POT", handleSetPotCommand},
+    {"SET_PROFILE", handleSetProfileCommand},
+};
+
+constexpr size_t kCommandHandlerCount =
+    sizeof(kCommandHandlers) / sizeof(kCommandHandlers[0]);
+
+const CommandHandler *findCommandHandler(const ParsedCommand &cmd) {
+    size_t low = 0;
+    size_t high = kCommandHandlerCount;
+    while (low < high) {
+        size_t mid = low + (high - low) / 2;
+        int comparison = cmd.compareName(kCommandHandlers[mid].name);
+        if (comparison == 0) {
+            return &kCommandHandlers[mid];
+        }
+        if (comparison < 0) {
+            high = mid;
+        } else {
+            low = mid + 1;
+        }
+    }
+    return nullptr;
+}
+
+void logUnknownCommand(const String &command) {
+    LOG_PRINTLN("Unknown command: " + command);
+    LOG_PRINT("Available commands: ");
+    for (size_t i = 0; i < kCommandHandlerCount; ++i) {
+        LOG_PRINT(kCommandHandlers[i].name);
+        if (i + 1 < kCommandHandlerCount) {
+            LOG_PRINT(", ");
+        }
+    }
+    LOG_PRINTLN("");
+}
+
+bool dispatchCommand(const String &command) {
+    ParsedCommand parsed(command);
+    if (const CommandHandler *handler = findCommandHandler(parsed)) {
+        handler->handler(parsed);
+        return true;
+    }
+    if (configManager.handleCommand(command)) {
+        return true;
+    }
+    logUnknownCommand(command);
+    return false;
+}
+} // namespace
+
 void processCommandQueue() {
     while (!commandQueue.empty()) {
         String command = commandQueue.front(); // Get the front command
@@ -1162,624 +1305,650 @@ void processCommandQueue() {
             continue;
         }
 
-        if (command == "HELLO") {
-            webSerialStreaming = true;
-            LOG_PRINTLN("{\"hello\":\"mn42\"}");
-
-        } else if (command == "SAVE_MACRO_SLOT") {
-            SceneStorage::ConfigState snapshot = SceneStorage::captureConfigState();
-            bool saved = SceneStorage::saveMacroSnapshot(snapshot);
-            StaticJsonDocument<128> response;
-            response["macro_saved"] = saved;
-            response["macro_available"] = SceneStorage::macroSnapshotAvailable();
-            if (!saved) {
-                response["error"] = "Macro snapshot save failed";
-            }
-            sendJsonResponse(response);
-        } else if (command == "RECALL_MACRO_SLOT") {
-            SceneStorage::ConfigState snapshot{};
-            bool available = SceneStorage::macroSnapshotAvailable();
-            bool recalled = false;
-            if (available && SceneStorage::loadMacroSnapshot(snapshot)) {
-                SceneStorage::applyConfigState(snapshot, true);
-                recalled = true;
-            }
-            StaticJsonDocument<128> response;
-            response["macro_recalled"] = recalled;
-            response["macro_available"] = SceneStorage::macroSnapshotAvailable();
-            if (!recalled) {
-                response["error"] = available ? "Macro recall failed" : "No macro stored";
-            }
-            sendJsonResponse(response);
-        } else if (command == "GET_SCHEMA") {
-            LOG_PRINTLN(ConfigManager::makeSchema());
-
-        } else if (command == "GET_BROWNOUTS") {
-            LOG_PRINTLN(g_brownoutCount);
-
-        } else if (command == "GET_MANIFEST") {
-            StaticJsonDocument<256> doc;
-            doc["fw_version"] = FW_VERSION_STR;
-            doc["git_sha"] = GIT_SHA_STR;
-            doc["build_time"] = __DATE__ " " __TIME__;
-            doc["schema_version"] = CONFIG_VERSION;
-            doc["slot_count"] = NUM_SLOTS;
-            doc["pot_count"] = configManager.getNumPots();
-            doc["envelope_count"] = NUM_ENVELOPES;
-            doc["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
-            doc["led_count"] = NUM_LEDS();
-            doc["free_ram"] = computeFreeRAM();
-            doc["free_flash"] = computeFreeFlash();
-
-            String payload;
-            serializeJson(doc, payload);
-            LOG_PRINTLN(payload);
-
-        } else if (command == "GET_CONFIG") {
-            StaticJsonDocument<8192> doc;
-
-            doc["fw_version"] = FW_VERSION_STR;
-            doc["schema_version"] = CONFIG_VERSION;
-
-            JsonArray pots = doc.createNestedArray("pots");
-            for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-                JsonObject pot = pots.createNestedObject();
-                pot["index"] = i;
-                pot["channel"] = configManager.getPotChannel(i);
-                pot["cc"] = configManager.getPotCCNumber(i);
-            }
-
-            JsonArray slots = doc.createNestedArray("slots");
-            const auto &slotDefs = configManager.getSlots();
-            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-                const MIDISlot &slot = slotDefs[i];
-                JsonObject slotObj = slots.createNestedObject();
-                slotObj["index"] = i;
-                slotObj["type"] = static_cast<uint8_t>(slot.type);
-                slotObj["type_name"] = midiMessageTypeName(slot.type);
-                slotObj["channel"] = slot.midiChannel;
-                slotObj["data1"] = slot.data1;
-                slotObj["ef_index"] = slot.ef.followerIndex;
-                JsonObject ef = slotObj.createNestedObject("ef");
-                ef["index"] = slot.ef.followerIndex;
-                ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
-                ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
-                ef["frequency"] = slot.efSettings.frequency;
-                ef["q"] = slot.efSettings.q;
-                ef["oversample"] = slot.efSettings.oversample;
-                ef["smoothing"] = slot.efSettings.smoothing;
-                ef["baseline"] = slot.efSettings.baseline;
-                ef["gain"] = slot.efSettings.gain;
-                // Extended EF mode + auto-calibration payload for the frontend.
-                ef["mode"] = slot.efSettings.efMode;
-                ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
-                ef["auto_gain"] = slot.efSettings.autoGain != 0;
-                ef["attack_ms"] = slot.efSettings.attackMs;
-                ef["release_ms"] = slot.efSettings.releaseMs;
-                ef["rms_ms"] = slot.efSettings.rmsWindowMs;
-                ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
-                ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
-                ef["gate_threshold"] = slot.efSettings.gateThreshold;
-                ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
-                ef["activity_threshold"] = slot.efSettings.activityThreshold;
-                ef["gain_target"] = slot.efSettings.gainTarget;
-                slotObj["active"] = slot.active;
-                slotObj["arp_note"] = slot.arpNote;
-                slotObj["sysexTemplate"] = formatSysExTemplate(slot);
-                SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
-                JsonObject efPayload = slotObj.createNestedObject("ef_payload");
-                efPayload["type"] = payload.filterType;
-                efPayload["type_name"] = envelopeFilterName(
-                    static_cast<EnvelopeFollower::FilterType>(payload.filterType));
-                efPayload["freq"] = payload.frequency;
-                efPayload["q"] = payload.q;
-                SlotARGConfig arg = sanitizeSlotArg(slot.arg);
-                JsonObject argObj = slotObj.createNestedObject("arg");
-                argObj["enabled"] = arg.enabled != 0;
-                argObj["method"] = static_cast<uint8_t>(arg.method);
-                argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
-                argObj["sourceA"] = arg.sourceA;
-                argObj["sourceB"] = arg.sourceB;
-            }
-
-            JsonObject env = doc.createNestedObject("envelopes");
-            JsonArray routing = env.createNestedArray("routing");
-            for (uint8_t i = 0; i < NUM_POTS; ++i) {
-                int mapping = -1;
-                auto it = potToEnvelopeMap.find(i);
-                if (it != potToEnvelopeMap.end()) {
-                    mapping = it->second.followerIndex;
-                }
-                routing.add(mapping);
-            }
-
-            JsonArray followers = env.createNestedArray("followers");
-            for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
-                JsonObject follower = followers.createNestedObject();
-                follower["index"] = static_cast<uint8_t>(i);
-                follower["active"] = envelopeFollowers[i].getActiveState();
-                follower["filter"] = envelopeFilterName(envelopeFollowers[i].getFilterType());
-                follower["baseline"] = envelopeConfig.baselines[i];
-                follower["oversample"] = envelopeFollowers[i].getOversampleCount();
-                follower["smoothing"] = envelopeFollowers[i].getSmoothingAlpha();
-            }
-
-            uint8_t storedMode = configManager.getMode();
-            env["mode"] = storedMode;
-            env["mode_name"] = envelopeModeName(storedMode);
-
-            uint8_t storedMethod = configManager.getARGMethod();
-            env["arg_method"] = storedMethod;
-            env["arg_method_name"] = argMethodName(storedMethod);
-            env["arg_enable"] = configManager.getARGEnable();
-
-            JsonObject argPair = env.createNestedObject("arg_pair");
-            argPair["a"] = configManager.getEnvelopeA();
-            argPair["b"] = configManager.getEnvelopeB();
-
-            float freq = 0.0f;
-            float q = 0.0f;
-            EEPROM.get(EEPROM_FILTER_FREQ, freq);
-            EEPROM.get(EEPROM_FILTER_Q, q);
-            JsonObject filter = env.createNestedObject("filter");
-            filter["frequency"] = freq;
-            filter["q"] = q;
-
-            JsonObject led = doc.createNestedObject("led");
-            led["brightness"] = ledManager.getBrightness();
-            CRGB color = ledManager.getColor();
-            JsonObject colorObj = led.createNestedObject("rgb");
-            colorObj["r"] = color.r;
-            colorObj["g"] = color.g;
-            colorObj["b"] = color.b;
-            char hex[8];
-            snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
-            led["hex"] = hex;
-            led["mode"] = ledModeToString(configManager.getLedMode());
-
-            String payload;
-            serializeJson(doc, payload);
-            LOG_PRINTLN(payload);
-
-        } else if (command.startsWith("GET_PROFILE")) {
-            int comma = command.indexOf(',');
-            uint8_t id = g_activeProfile;
-            if (comma >= 0) {
-                id = static_cast<uint8_t>(command.substring(comma + 1).toInt());
-            }
-            if (id >= NUM_PROFILES) {
-                LOG_PRINTLN("ERR");
-                continue;
-            }
-            ProfileData profile{};
-            bool stored = configManager.loadProfileSettings(id, profile);
-            if (!stored) {
-                profile = captureProfileSnapshot();
-            }
-
-            StaticJsonDocument<12288> doc;
-            doc["profile"] = id;
-            doc["stored"] = stored;
-
-            JsonObject arp = doc.createNestedObject("arp");
-            arp["length_ticks"] = profile.arp.lengthTicks;
-            arp["shape"] = profile.arp.shape;
-            arp["swing_percent"] = profile.arp.swingPercent;
-            arp["gate_percent"] = profile.arp.gatePercent;
-            arp["octave_range"] = profile.arp.octaveRange;
-
-            JsonObject led = doc.createNestedObject("led");
-            led["brightness"] = profile.led.brightness;
-            JsonObject rgb = led.createNestedObject("rgb");
-            rgb["r"] = profile.led.r;
-            rgb["g"] = profile.led.g;
-            rgb["b"] = profile.led.b;
-
-            JsonArray lfos = doc.createNestedArray("lfos");
-            for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
-                JsonObject lfo = lfos.createNestedObject();
-                lfo["index"] = i;
-                lfo["shape"] = profile.lfos[i].shape;
-                lfo["frequency_hz"] = profile.lfos[i].frequencyHz;
-                lfo["depth"] = profile.lfos[i].depth;
-                lfo["bipolar"] = profile.lfos[i].bipolar != 0;
-                lfo["sync"] = profile.lfos[i].syncEnabled != 0;
-                lfo["sync_ratio"] = profile.lfos[i].syncRatio;
-            }
-
-            JsonArray routes = doc.createNestedArray("routes");
-            for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
-                JsonObject route = routes.createNestedObject();
-                route["index"] = i;
-                route["type"] = profile.routes[i].type;
-                route["lfo"] = profile.routes[i].lfoIndex;
-                route["depth"] = profile.routes[i].depth;
-                route["target"] = profile.routes[i].target;
-                route["channel"] = profile.routes[i].channel;
-                route["cc_msb"] = profile.routes[i].ccMsb;
-                route["cc_lsb"] = profile.routes[i].ccLsb;
-            }
-
-            JsonArray slots = doc.createNestedArray("slots");
-            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-                JsonObject slot = slots.createNestedObject();
-                slot["index"] = i;
-                slot["channel"] = profile.slots[i].midiChannel;
-                JsonObject ef = slot.createNestedObject("ef");
-                writeProfileEf(ef, profile.slots[i].ef);
-            }
-
-            String payload;
-            serializeJson(doc, payload);
-            LOG_PRINTLN(payload);
-
-        } else if (command.startsWith("SET_PROFILE")) {
-            int firstComma = command.indexOf(',');
-            int secondComma = command.indexOf(',', firstComma + 1);
-            if (firstComma < 0 || secondComma < 0) {
-                LOG_PRINTLN("ERR");
-                continue;
-            }
-            uint8_t id =
-                static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
-            if (id >= NUM_PROFILES) {
-                LOG_PRINTLN("ERR");
-                continue;
-            }
-            String payload = command.substring(secondComma + 1);
-            payload.trim();
-            if (payload.length() == 0) {
-                LOG_PRINTLN("ERR");
-                continue;
-            }
-            StaticJsonDocument<12288> doc;
-            DeserializationError err = deserializeJson(doc, payload);
-            if (err) {
-                LOG_PRINTLN("ERR");
-                continue;
-            }
-            ProfileData profile = captureProfileSnapshot();
-            JsonObject root = doc.as<JsonObject>();
-
-            if (root.containsKey("arp")) {
-                JsonObject arp = root["arp"].as<JsonObject>();
-                if (arp.containsKey("length_ticks")) {
-                    profile.arp.lengthTicks = static_cast<uint8_t>(arp["length_ticks"].as<int>());
-                }
-                if (arp.containsKey("shape")) {
-                    profile.arp.shape = static_cast<uint8_t>(arp["shape"].as<int>());
-                }
-                if (arp.containsKey("swing_percent")) {
-                    profile.arp.swingPercent = static_cast<uint8_t>(arp["swing_percent"].as<int>());
-                }
-                if (arp.containsKey("gate_percent")) {
-                    profile.arp.gatePercent = static_cast<uint8_t>(arp["gate_percent"].as<int>());
-                }
-                if (arp.containsKey("octave_range")) {
-                    profile.arp.octaveRange = static_cast<uint8_t>(arp["octave_range"].as<int>());
-                }
-            }
-
-            if (root.containsKey("led")) {
-                JsonObject led = root["led"].as<JsonObject>();
-                if (led.containsKey("brightness")) {
-                    profile.led.brightness = static_cast<uint8_t>(led["brightness"].as<int>());
-                }
-                if (led.containsKey("rgb")) {
-                    JsonObject rgb = led["rgb"].as<JsonObject>();
-                    profile.led.r = static_cast<uint8_t>(rgb["r"].as<int>());
-                    profile.led.g = static_cast<uint8_t>(rgb["g"].as<int>());
-                    profile.led.b = static_cast<uint8_t>(rgb["b"].as<int>());
-                }
-            }
-
-            if (root.containsKey("lfos")) {
-                JsonArray lfos = root["lfos"].as<JsonArray>();
-                for (JsonObject lfo : lfos) {
-                    uint8_t index = static_cast<uint8_t>(lfo["index"].as<int>());
-                    if (index >= PROFILE_LFO_COUNT) {
-                        continue;
-                    }
-                    if (lfo.containsKey("shape")) {
-                        profile.lfos[index].shape = static_cast<uint8_t>(lfo["shape"].as<int>());
-                    }
-                    if (lfo.containsKey("frequency_hz")) {
-                        profile.lfos[index].frequencyHz = lfo["frequency_hz"].as<float>();
-                    }
-                    if (lfo.containsKey("depth")) {
-                        profile.lfos[index].depth = lfo["depth"].as<float>();
-                    }
-                    if (lfo.containsKey("bipolar")) {
-                        profile.lfos[index].bipolar = lfo["bipolar"].as<bool>() ? 1 : 0;
-                    }
-                    if (lfo.containsKey("sync")) {
-                        profile.lfos[index].syncEnabled = lfo["sync"].as<bool>() ? 1 : 0;
-                    }
-                    if (lfo.containsKey("sync_ratio")) {
-                        profile.lfos[index].syncRatio =
-                            static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
-                    }
-                }
-            }
-
-            profile.routeCount = 0;
-            if (root.containsKey("routes")) {
-                JsonArray routes = root["routes"].as<JsonArray>();
-                for (JsonObject route : routes) {
-                    if (profile.routeCount >= PROFILE_MAX_ROUTES) {
-                        break;
-                    }
-                    ProfileLfoRoute &out = profile.routes[profile.routeCount];
-                    out.type = static_cast<uint8_t>(route["type"].as<int>());
-                    out.lfoIndex = static_cast<uint8_t>(route["lfo"].as<int>());
-                    out.depth = route["depth"].as<float>();
-                    out.target = static_cast<uint8_t>(route["target"].as<int>());
-                    out.channel = static_cast<uint8_t>(route["channel"].as<int>());
-                    out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
-                    out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());
-                    profile.routeCount++;
-                }
-            }
-
-            if (root.containsKey("slots")) {
-                JsonArray slots = root["slots"].as<JsonArray>();
-                for (JsonObject slot : slots) {
-                    uint8_t index = static_cast<uint8_t>(slot["index"].as<int>());
-                    if (index >= NUM_SLOTS) {
-                        continue;
-                    }
-                    if (slot.containsKey("channel")) {
-                        profile.slots[index].midiChannel =
-                            static_cast<uint8_t>(slot["channel"].as<int>());
-                    }
-                    if (slot.containsKey("ef")) {
-                        JsonObject ef = slot["ef"].as<JsonObject>();
-                        parseProfileEf(ef, profile.slots[index].ef);
-                    }
-                }
-            }
-
-            if (!configManager.saveProfileSettings(id, profile)) {
-                LOG_PRINTLN("ERR");
-                continue;
-            }
-            if (id == g_activeProfile) {
-                ProfileData stored{};
-                if (configManager.loadProfileSettings(id, stored)) {
-                    applyProfileSnapshot(stored, true);
-                }
-            }
-            LOG_PRINTLN("OK");
-
-        } else if (command.startsWith("SET_POT")) {
-            // Parse "SET_POT" command
-            int firstComma = command.indexOf(',');
-            int lastComma = command.lastIndexOf(',');
-
-            if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
-                LOG_PRINTLN("Error: Malformed SET_POT command");
-                continue; // Skip invalid command
-            }
-
-            int potIndex = command.substring(8, firstComma).toInt();
-            int channel = command.substring(firstComma + 1, lastComma).toInt();
-            int ccNumber = command.substring(lastComma + 1).toInt();
-
-            if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 &&
-                ccNumber >= 0 && ccNumber <= 127) {
-                configManager.setPotChannel(potIndex, channel);
-                configManager.setPotCCNumber(potIndex, ccNumber);
-                potentiometerManager.setChannel(potIndex, channel);
-                potentiometerManager.setCCNumber(potIndex, ccNumber);
-                if (static_cast<size_t>(potIndex) < potChannels.size()) {
-                    potChannels[potIndex] = channel;
-                }
-                configManager.saveConfiguration();
-                LOG_PRINTLN("Pot configuration updated!");
-            } else {
-                LOG_PRINTLN("Error: Invalid values for SET_POT");
-            }
-
-        } else if (command.startsWith("SET_ALL")) {
-            String chunk = command.substring(8);
-            chunk.trim();
-            if (chunk.length() == 0) {
-                continue;
-            }
-
-            String ingestError;
-            if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
-                uint32_t hint = bulkConfigAssembler.sequenceHint();
-                if (ingestError == "overflow") {
-                    emitBulkError("overflow", "config payload too large", hint);
-                } else if (ingestError == "orphan") {
-                    emitBulkError("orphan", "chunk missing frame start", hint);
-                } else {
-                    emitBulkError("ingest", "failed to stage chunk", hint);
-                }
-                continue;
-            }
-
-            static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
-            // Persist the 32 KB document between uploads so we don't hammer the stack.
-            doc.clear();
-            DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
-            if (err == DeserializationError::IncompleteInput) {
-                continue;
-            }
-            if (err) {
-                emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
-                bulkConfigAssembler.reset();
-                continue;
-            }
-
-            uint32_t seq = doc["seq"].as<uint32_t>();
-            if (seq == 0) {
-                seq = bulkConfigAssembler.sequenceHint();
-            }
-            const char *checksum = doc["checksum"] | nullptr;
-            if (!checksum || checksum[0] == '\0') {
-                emitBulkError("checksum", "missing checksum", seq);
-                bulkConfigAssembler.reset();
-                continue;
-            }
-
-            if (seq == 0) {
-                seq = lastAckSequence + 1;
-            }
-
-            if (seq == lastAckSequence && lastAckChecksum == checksum) {
-                LOG_PRINTLN(Utility::formatAck(checksum, seq));
-                bulkConfigAssembler.reset();
-                continue;
-            }
-
-            JsonObject configObj = doc["config"].as<JsonObject>();
-            if (!applyConfigObject(configObj, seq)) {
-                bulkConfigAssembler.reset();
-                continue;
-            }
-
-            lastAckSequence = seq;
-            lastAckChecksum = checksum;
-            LOG_PRINTLN(Utility::formatAck(checksum, seq));
-            bulkConfigAssembler.reset();
-
-        } else if (command.startsWith("GET_ALL")) {
-#ifdef SERIAL_LOGGING
-            // Send all pot settings
-            LOG_PRINT("POTS:");
-            for (int i = 0; i < NUM_POTS; i++) {
-                int envelopeValue = -1;
-                auto it = potToEnvelopeMap.find(i);
-                if (it != potToEnvelopeMap.end()) {
-                    envelopeValue = it->second.followerIndex;
-                }
-                LOG_PRINT(configManager.getPotCCNumber(i));
-                LOG_PRINT(",");
-                LOG_PRINT(configManager.getPotChannel(i));
-                LOG_PRINT(",");
-                LOG_PRINT(envelopeValue);
-                LOG_PRINT(";");
-            }
-
-            // Send LED settings
-            CRGB ledColor = ledManager.getColor();
-            LOG_PRINT(" LED:");
-            LOG_PRINT(ledManager.getBrightness());
-            LOG_PRINT(",");
-            LOG_PRINT(ledColor.r);
-            LOG_PRINT(",");
-            LOG_PRINT(ledColor.g);
-            LOG_PRINT(",");
-            LOG_PRINTLN(ledColor.b);
-#endif
-        } else if (command == "GET_LED") {
-#ifdef SERIAL_LOGGING
-            CRGB c = ledManager.getColor();
-            LOG_PRINT(ledManager.getBrightness());
-            LOG_PRINT(",");
-            LOG_PRINT(c.r);
-            LOG_PRINT(",");
-            LOG_PRINT(c.g);
-            LOG_PRINT(",");
-            LOG_PRINTLN(c.b);
-#endif
-        } else if (command.startsWith("SET_LED")) {
-            int first = command.indexOf(',');
-            int second = command.indexOf(',', first + 1);
-            int third = command.indexOf(',', second + 1);
-            if (first == -1 || second == -1 || third == -1) {
-                LOG_PRINTLN("ERR");
-            } else {
-                int brightness = command.substring(8, first).toInt();
-                int r = command.substring(first + 1, second).toInt();
-                int g = command.substring(second + 1, third).toInt();
-                int b = command.substring(third + 1).toInt();
-                if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 &&
-                    g <= 255 && b >= 0 && b <= 255) {
-                    CRGB color(r, g, b);
-                    ledManager.setBrightness(brightness);
-                    ledManager.setColor(color);
-                    configManager.saveLEDSettings(brightness, color);
-                    LOG_PRINTLN("OK");
-                } else {
-                    LOG_PRINTLN("ERR");
-                }
-            }
-        } else if (command == "GET_ARGMETHOD") {
-            LOG_PRINTLN(configManager.getARGMethod());
-        } else if (command.startsWith("SET_ARGMETHOD")) {
-            // SET_ARGMETHOD <method>
-            // method: 0-13 mapping to ARGMethod values; see docs for math notes.
-            // Side effects: updates every slot's ARG method and burns the
-            // legacy default into EEPROM via ConfigManager.
-            int method = command.substring(14).toInt();
-            if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {
-                for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-                    MIDISlot &slot = configManager.getSlot(slotIndex);
-                    slot.arg.method = static_cast<ARGMethod>(method);
-                    configManager.saveSlot(slotIndex, slot);
-                }
-                configManager.setARGMethod(static_cast<uint8_t>(method));
-                LOG_PRINTLN("OK");
-            } else {
-                // out-of-range method? we spit ERR
-                LOG_PRINTLN("ERR");
-            }
-        } else if (command.startsWith("GET_EF")) {
-            // GET_EF <slot>
-            // slot: 0..NUM_POTS-1. Reports which envelope (or -1) owns it.
-            // See firmware/README.md#L730-L744 or docs/WebSerial.md#L60-L72 for
-            // the whole WebSerial spiel.
-            int potIndex = command.substring(7).toInt();
-            if (potIndex >= 0 && potIndex < NUM_POTS) {
-                int env = -1;
-                auto it = potToEnvelopeMap.find(potIndex);
-                if (it != potToEnvelopeMap.end()) {
-                    env = it->second.followerIndex;
-                }
-#ifdef SERIAL_LOGGING
-                LOG_PRINTLN(env);
-#else
-                (void)env;
-#endif
-            } else {
-                // bogus slot index
-                LOG_PRINTLN("ERR");
-            }
-        } else if (command.startsWith("SET_EF")) {
-            // SET_EF <slot,env>
-            // slot: 0..NUM_POTS-1, env: 0..envelopeFollowers.size()-1
-            // Side effects: maps slot to follower, flips it active, and
-            // saves mapping/baseline to EEPROM. See firmware/README.md#L730-L744
-            // and firmware/include/EnvelopeFollower/README.md for EF guts.
-            int comma = command.indexOf(',');
-            if (comma == -1) {
-                LOG_PRINTLN("ERR");
-            } else {
-                int potIndex = command.substring(7, comma).toInt();
-                int envIndex = command.substring(comma + 1).toInt();
-                if (potIndex >= 0 && potIndex < NUM_POTS && envIndex >= 0 &&
-                    envIndex < (int)envelopeFollowers.size()) {
-                    MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
-                    slot.setEnvelopeFollowerIndex(static_cast<int8_t>(envIndex));
-                    potToEnvelopeMap[potIndex] = slot.efSettings;
-                    envelopeFollowers[envIndex].toggleActive(true);
-                    applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings,
-                                              static_cast<uint8_t>(envIndex));
-                    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-                    refreshEfVoicesFromConfig();
-                    LOG_PRINTLN("OK");
-                } else {
-                    // numbers don't line up? it's an ERR
-                    LOG_PRINTLN("ERR");
-                }
-            }
-        } else if (configManager.handleCommand(command)) {
-            // handled inside ConfigManager
-        } else {
-            LOG_PRINTLN("Unknown command: " + command);
-        }
+        dispatchCommand(command);
     }
 }
+
+namespace {
+void handleGetAllCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+#ifdef SERIAL_LOGGING
+    // Send all pot settings
+    LOG_PRINT("POTS:");
+    for (int i = 0; i < NUM_POTS; i++) {
+        int envelopeValue = -1;
+        auto it = potToEnvelopeMap.find(i);
+        if (it != potToEnvelopeMap.end()) {
+            envelopeValue = it->second.followerIndex;
+        }
+        LOG_PRINT(configManager.getPotCCNumber(i));
+        LOG_PRINT(",");
+        LOG_PRINT(configManager.getPotChannel(i));
+        LOG_PRINT(",");
+        LOG_PRINT(envelopeValue);
+        LOG_PRINT(";");
+    }
+
+    // Send LED settings
+    CRGB ledColor = ledManager.getColor();
+    LOG_PRINT(" LED:");
+    LOG_PRINT(ledManager.getBrightness());
+    LOG_PRINT(",");
+    LOG_PRINT(ledColor.r);
+    LOG_PRINT(",");
+    LOG_PRINT(ledColor.g);
+    LOG_PRINT(",");
+    LOG_PRINTLN(ledColor.b);
+#endif
+}
+
+void handleGetArgMethodCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    LOG_PRINTLN(configManager.getARGMethod());
+}
+
+void handleGetBrownoutsCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    LOG_PRINTLN(g_brownoutCount);
+}
+
+void handleGetConfigCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    StaticJsonDocument<8192> doc;
+
+    doc["fw_version"] = FW_VERSION_STR;
+    doc["schema_version"] = CONFIG_VERSION;
+
+    JsonArray pots = doc.createNestedArray("pots");
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        JsonObject pot = pots.createNestedObject();
+        pot["index"] = i;
+        pot["channel"] = configManager.getPotChannel(i);
+        pot["cc"] = configManager.getPotCCNumber(i);
+    }
+
+    JsonArray slots = doc.createNestedArray("slots");
+    const auto &slotDefs = configManager.getSlots();
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        const MIDISlot &slot = slotDefs[i];
+        JsonObject slotObj = slots.createNestedObject();
+        slotObj["index"] = i;
+        slotObj["type"] = static_cast<uint8_t>(slot.type);
+        slotObj["type_name"] = midiMessageTypeName(slot.type);
+        slotObj["channel"] = slot.midiChannel;
+        slotObj["data1"] = slot.data1;
+        slotObj["ef_index"] = slot.ef.followerIndex;
+        JsonObject ef = slotObj.createNestedObject("ef");
+        ef["index"] = slot.ef.followerIndex;
+        ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+        ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
+        ef["frequency"] = slot.efSettings.frequency;
+        ef["q"] = slot.efSettings.q;
+        ef["oversample"] = slot.efSettings.oversample;
+        ef["smoothing"] = slot.efSettings.smoothing;
+        ef["baseline"] = slot.efSettings.baseline;
+        ef["gain"] = slot.efSettings.gain;
+        ef["mode"] = slot.efSettings.efMode;
+        ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
+        ef["auto_gain"] = slot.efSettings.autoGain != 0;
+        ef["attack_ms"] = slot.efSettings.attackMs;
+        ef["release_ms"] = slot.efSettings.releaseMs;
+        ef["rms_ms"] = slot.efSettings.rmsWindowMs;
+        ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
+        ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
+        ef["gate_threshold"] = slot.efSettings.gateThreshold;
+        ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
+        ef["activity_threshold"] = slot.efSettings.activityThreshold;
+        ef["gain_target"] = slot.efSettings.gainTarget;
+        slotObj["active"] = slot.active;
+        slotObj["arp_note"] = slot.arpNote;
+        slotObj["sysexTemplate"] = formatSysExTemplate(slot);
+        SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+        JsonObject efPayload = slotObj.createNestedObject("ef_payload");
+        efPayload["type"] = payload.filterType;
+        efPayload["type_name"] = envelopeFilterName(
+            static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+        efPayload["freq"] = payload.frequency;
+        efPayload["q"] = payload.q;
+        SlotARGConfig arg = sanitizeSlotArg(slot.arg);
+        JsonObject argObj = slotObj.createNestedObject("arg");
+        argObj["enabled"] = arg.enabled != 0;
+        argObj["method"] = static_cast<uint8_t>(arg.method);
+        argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
+        argObj["sourceA"] = arg.sourceA;
+        argObj["sourceB"] = arg.sourceB;
+    }
+
+    JsonObject env = doc.createNestedObject("envelopes");
+    JsonArray routing = env.createNestedArray("routing");
+    for (uint8_t i = 0; i < NUM_POTS; ++i) {
+        int mapping = -1;
+        auto it = potToEnvelopeMap.find(i);
+        if (it != potToEnvelopeMap.end()) {
+            mapping = it->second.followerIndex;
+        }
+        routing.add(mapping);
+    }
+
+    JsonArray followers = env.createNestedArray("followers");
+    for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
+        JsonObject follower = followers.createNestedObject();
+        follower["index"] = static_cast<uint8_t>(i);
+        follower["active"] = envelopeFollowers[i].getActiveState();
+        follower["filter"] = envelopeFilterName(envelopeFollowers[i].getFilterType());
+        follower["baseline"] = envelopeConfig.baselines[i];
+        follower["oversample"] = envelopeFollowers[i].getOversampleCount();
+        follower["smoothing"] = envelopeFollowers[i].getSmoothingAlpha();
+    }
+
+    uint8_t storedMode = configManager.getMode();
+    env["mode"] = storedMode;
+    env["mode_name"] = envelopeModeName(storedMode);
+
+    uint8_t storedMethod = configManager.getARGMethod();
+    env["arg_method"] = storedMethod;
+    env["arg_method_name"] = argMethodName(storedMethod);
+    env["arg_enable"] = configManager.getARGEnable();
+
+    JsonObject argPair = env.createNestedObject("arg_pair");
+    argPair["a"] = configManager.getEnvelopeA();
+    argPair["b"] = configManager.getEnvelopeB();
+
+    float freq = 0.0f;
+    float q = 0.0f;
+    EEPROM.get(EEPROM_FILTER_FREQ, freq);
+    EEPROM.get(EEPROM_FILTER_Q, q);
+    JsonObject filter = env.createNestedObject("filter");
+    filter["frequency"] = freq;
+    filter["q"] = q;
+
+    JsonObject led = doc.createNestedObject("led");
+    led["brightness"] = ledManager.getBrightness();
+    CRGB color = ledManager.getColor();
+    JsonObject colorObj = led.createNestedObject("rgb");
+    colorObj["r"] = color.r;
+    colorObj["g"] = color.g;
+    colorObj["b"] = color.b;
+    char hex[8];
+    snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
+    led["hex"] = hex;
+    led["mode"] = ledModeToString(configManager.getLedMode());
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void handleGetEfCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int potIndex = command.substring(7).toInt();
+    if (potIndex >= 0 && potIndex < NUM_POTS) {
+        int env = -1;
+        auto it = potToEnvelopeMap.find(potIndex);
+        if (it != potToEnvelopeMap.end()) {
+            env = it->second.followerIndex;
+        }
+#ifdef SERIAL_LOGGING
+        LOG_PRINTLN(env);
+#else
+        (void)env;
+#endif
+    } else {
+        LOG_PRINTLN("ERR");
+    }
+}
+
+void handleGetLedCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+#ifdef SERIAL_LOGGING
+    CRGB c = ledManager.getColor();
+    LOG_PRINT(ledManager.getBrightness());
+    LOG_PRINT(",");
+    LOG_PRINT(c.r);
+    LOG_PRINT(",");
+    LOG_PRINT(c.g);
+    LOG_PRINT(",");
+    LOG_PRINTLN(c.b);
+#endif
+}
+
+void handleGetManifestCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    StaticJsonDocument<256> doc;
+    doc["fw_version"] = FW_VERSION_STR;
+    doc["git_sha"] = GIT_SHA_STR;
+    doc["build_time"] = __DATE__ " " __TIME__;
+    doc["schema_version"] = CONFIG_VERSION;
+    doc["slot_count"] = NUM_SLOTS;
+    doc["pot_count"] = configManager.getNumPots();
+    doc["envelope_count"] = NUM_ENVELOPES;
+    doc["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
+    doc["led_count"] = NUM_LEDS();
+    doc["free_ram"] = computeFreeRAM();
+    doc["free_flash"] = computeFreeFlash();
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void handleGetProfileCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int comma = command.indexOf(',');
+    uint8_t id = g_activeProfile;
+    if (comma >= 0) {
+        id = static_cast<uint8_t>(command.substring(comma + 1).toInt());
+    }
+    if (id >= NUM_PROFILES) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    ProfileData profile{};
+    bool stored = configManager.loadProfileSettings(id, profile);
+    if (!stored) {
+        profile = captureProfileSnapshot();
+    }
+
+    StaticJsonDocument<12288> doc;
+    doc["profile"] = id;
+    doc["stored"] = stored;
+
+    JsonObject arp = doc.createNestedObject("arp");
+    arp["length_ticks"] = profile.arp.lengthTicks;
+    arp["shape"] = profile.arp.shape;
+    arp["swing_percent"] = profile.arp.swingPercent;
+    arp["gate_percent"] = profile.arp.gatePercent;
+    arp["octave_range"] = profile.arp.octaveRange;
+
+    JsonObject led = doc.createNestedObject("led");
+    led["brightness"] = profile.led.brightness;
+    JsonObject rgb = led.createNestedObject("rgb");
+    rgb["r"] = profile.led.r;
+    rgb["g"] = profile.led.g;
+    rgb["b"] = profile.led.b;
+
+    JsonArray lfos = doc.createNestedArray("lfos");
+    for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
+        JsonObject lfo = lfos.createNestedObject();
+        lfo["index"] = i;
+        lfo["shape"] = profile.lfos[i].shape;
+        lfo["frequency_hz"] = profile.lfos[i].frequencyHz;
+        lfo["depth"] = profile.lfos[i].depth;
+        lfo["bipolar"] = profile.lfos[i].bipolar != 0;
+        lfo["sync"] = profile.lfos[i].syncEnabled != 0;
+        lfo["sync_ratio"] = profile.lfos[i].syncRatio;
+    }
+
+    JsonArray routes = doc.createNestedArray("routes");
+    for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
+        JsonObject route = routes.createNestedObject();
+        route["index"] = i;
+        route["type"] = profile.routes[i].type;
+        route["lfo"] = profile.routes[i].lfoIndex;
+        route["depth"] = profile.routes[i].depth;
+        route["target"] = profile.routes[i].target;
+        route["channel"] = profile.routes[i].channel;
+        route["cc_msb"] = profile.routes[i].ccMsb;
+        route["cc_lsb"] = profile.routes[i].ccLsb;
+    }
+
+    JsonArray slots = doc.createNestedArray("slots");
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        JsonObject slot = slots.createNestedObject();
+        slot["index"] = i;
+        slot["channel"] = profile.slots[i].midiChannel;
+        JsonObject ef = slot.createNestedObject("ef");
+        writeProfileEf(ef, profile.slots[i].ef);
+    }
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void handleGetSchemaCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    LOG_PRINTLN(ConfigManager::makeSchema());
+}
+
+void handleHelloCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    webSerialStreaming = true;
+    LOG_PRINTLN("{\"hello\":\"mn42\"}");
+}
+
+void handleRecallMacroSlotCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    SceneStorage::ConfigState snapshot{};
+    bool available = SceneStorage::macroSnapshotAvailable();
+    bool recalled = false;
+    if (available && SceneStorage::loadMacroSnapshot(snapshot)) {
+        SceneStorage::applyConfigState(snapshot, true);
+        recalled = true;
+    }
+    StaticJsonDocument<128> response;
+    response["macro_recalled"] = recalled;
+    response["macro_available"] = SceneStorage::macroSnapshotAvailable();
+    if (!recalled) {
+        response["error"] = available ? "Macro recall failed" : "No macro stored";
+    }
+    sendJsonResponse(response);
+}
+
+void handleSaveMacroSlotCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    SceneStorage::ConfigState snapshot = SceneStorage::captureConfigState();
+    bool saved = SceneStorage::saveMacroSnapshot(snapshot);
+    StaticJsonDocument<128> response;
+    response["macro_saved"] = saved;
+    response["macro_available"] = SceneStorage::macroSnapshotAvailable();
+    if (!saved) {
+        response["error"] = "Macro snapshot save failed";
+    }
+    sendJsonResponse(response);
+}
+
+void handleSetAllCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    String chunk = command.substring(8);
+    chunk.trim();
+    if (chunk.length() == 0) {
+        return;
+    }
+
+    String ingestError;
+    if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
+        uint32_t hint = bulkConfigAssembler.sequenceHint();
+        if (ingestError == "overflow") {
+            emitBulkError("overflow", "config payload too large", hint);
+        } else if (ingestError == "orphan") {
+            emitBulkError("orphan", "chunk missing frame start", hint);
+        } else {
+            emitBulkError("ingest", "failed to stage chunk", hint);
+        }
+        return;
+    }
+
+    static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
+    doc.clear();
+    DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
+    if (err == DeserializationError::IncompleteInput) {
+        return;
+    }
+    if (err) {
+        emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
+        bulkConfigAssembler.reset();
+        return;
+    }
+
+    uint32_t seq = doc["seq"].as<uint32_t>();
+    if (seq == 0) {
+        seq = bulkConfigAssembler.sequenceHint();
+    }
+    const char *checksum = doc["checksum"] | nullptr;
+    if (!checksum || checksum[0] == '\0') {
+        emitBulkError("checksum", "missing checksum", seq);
+        bulkConfigAssembler.reset();
+        return;
+    }
+
+    if (seq == 0) {
+        seq = lastAckSequence + 1;
+    }
+
+    if (seq == lastAckSequence && lastAckChecksum == checksum) {
+        LOG_PRINTLN(Utility::formatAck(checksum, seq));
+        bulkConfigAssembler.reset();
+        return;
+    }
+
+    JsonObject configObj = doc["config"].as<JsonObject>();
+    if (!applyConfigObject(configObj, seq)) {
+        bulkConfigAssembler.reset();
+        return;
+    }
+
+    lastAckSequence = seq;
+    lastAckChecksum = checksum;
+    LOG_PRINTLN(Utility::formatAck(checksum, seq));
+    bulkConfigAssembler.reset();
+}
+
+void handleSetArgMethodCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int method = command.substring(14).toInt();
+    if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {
+        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+            MIDISlot &slot = configManager.getSlot(slotIndex);
+            slot.arg.method = static_cast<ARGMethod>(method);
+            configManager.saveSlot(slotIndex, slot);
+        }
+        configManager.setARGMethod(static_cast<uint8_t>(method));
+        LOG_PRINTLN("OK");
+    } else {
+        LOG_PRINTLN("ERR");
+    }
+}
+
+void handleSetEfCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int comma = command.indexOf(',');
+    if (comma == -1) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    int potIndex = command.substring(7, comma).toInt();
+    int envIndex = command.substring(comma + 1).toInt();
+    if (potIndex >= 0 && potIndex < NUM_POTS && envIndex >= 0 &&
+        envIndex < static_cast<int>(envelopeFollowers.size())) {
+        MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
+        slot.setEnvelopeFollowerIndex(static_cast<int8_t>(envIndex));
+        potToEnvelopeMap[potIndex] = slot.efSettings;
+        envelopeFollowers[envIndex].toggleActive(true);
+        applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings,
+                                  static_cast<uint8_t>(envIndex));
+        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+        refreshEfVoicesFromConfig();
+        LOG_PRINTLN("OK");
+    } else {
+        LOG_PRINTLN("ERR");
+    }
+}
+
+void handleSetLedCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int first = command.indexOf(',');
+    int second = command.indexOf(',', first + 1);
+    int third = command.indexOf(',', second + 1);
+    if (first == -1 || second == -1 || third == -1) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    int brightness = command.substring(8, first).toInt();
+    int r = command.substring(first + 1, second).toInt();
+    int g = command.substring(second + 1, third).toInt();
+    int b = command.substring(third + 1).toInt();
+    if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 &&
+        g <= 255 && b >= 0 && b <= 255) {
+        CRGB color(r, g, b);
+        ledManager.setBrightness(brightness);
+        ledManager.setColor(color);
+        configManager.saveLEDSettings(brightness, color);
+        LOG_PRINTLN("OK");
+    } else {
+        LOG_PRINTLN("ERR");
+    }
+}
+
+void handleSetPotCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int firstComma = command.indexOf(',');
+    int lastComma = command.lastIndexOf(',');
+    if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
+        LOG_PRINTLN("Error: Malformed SET_POT command");
+        return;
+    }
+    int potIndex = command.substring(8, firstComma).toInt();
+    int channel = command.substring(firstComma + 1, lastComma).toInt();
+    int ccNumber = command.substring(lastComma + 1).toInt();
+    if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 &&
+        ccNumber >= 0 && ccNumber <= 127) {
+        configManager.setPotChannel(potIndex, channel);
+        configManager.setPotCCNumber(potIndex, ccNumber);
+        potentiometerManager.setChannel(potIndex, channel);
+        potentiometerManager.setCCNumber(potIndex, ccNumber);
+        if (static_cast<size_t>(potIndex) < potChannels.size()) {
+            potChannels[potIndex] = channel;
+        }
+        configManager.saveConfiguration();
+        LOG_PRINTLN("Pot configuration updated!");
+    } else {
+        LOG_PRINTLN("Error: Invalid values for SET_POT");
+    }
+}
+
+void handleSetProfileCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+    if (firstComma < 0 || secondComma < 0) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    uint8_t id = static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
+    if (id >= NUM_PROFILES) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    String payload = command.substring(secondComma + 1);
+    payload.trim();
+    if (payload.length() == 0) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    StaticJsonDocument<12288> doc;
+    DeserializationError err = deserializeJson(doc, payload);
+    if (err) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    ProfileData profile = captureProfileSnapshot();
+    JsonObject root = doc.as<JsonObject>();
+
+    if (root.containsKey("arp")) {
+        JsonObject arp = root["arp"].as<JsonObject>();
+        if (arp.containsKey("length_ticks")) {
+            profile.arp.lengthTicks = static_cast<uint8_t>(arp["length_ticks"].as<int>());
+        }
+        if (arp.containsKey("shape")) {
+            profile.arp.shape = static_cast<uint8_t>(arp["shape"].as<int>());
+        }
+        if (arp.containsKey("swing_percent")) {
+            profile.arp.swingPercent = static_cast<uint8_t>(arp["swing_percent"].as<int>());
+        }
+        if (arp.containsKey("gate_percent")) {
+            profile.arp.gatePercent = static_cast<uint8_t>(arp["gate_percent"].as<int>());
+        }
+        if (arp.containsKey("octave_range")) {
+            profile.arp.octaveRange = static_cast<uint8_t>(arp["octave_range"].as<int>());
+        }
+    }
+
+    if (root.containsKey("led")) {
+        JsonObject led = root["led"].as<JsonObject>();
+        if (led.containsKey("brightness")) {
+            profile.led.brightness = static_cast<uint8_t>(led["brightness"].as<int>());
+        }
+        if (led.containsKey("rgb")) {
+            JsonObject rgb = led["rgb"].as<JsonObject>();
+            profile.led.r = static_cast<uint8_t>(rgb["r"].as<int>());
+            profile.led.g = static_cast<uint8_t>(rgb["g"].as<int>());
+            profile.led.b = static_cast<uint8_t>(rgb["b"].as<int>());
+        }
+    }
+
+    if (root.containsKey("lfos")) {
+        JsonArray lfos = root["lfos"].as<JsonArray>();
+        for (JsonObject lfo : lfos) {
+            uint8_t index = static_cast<uint8_t>(lfo["index"].as<int>());
+            if (index >= PROFILE_LFO_COUNT) {
+                continue;
+            }
+            if (lfo.containsKey("shape")) {
+                profile.lfos[index].shape = static_cast<uint8_t>(lfo["shape"].as<int>());
+            }
+            if (lfo.containsKey("frequency_hz")) {
+                profile.lfos[index].frequencyHz = lfo["frequency_hz"].as<float>();
+            }
+            if (lfo.containsKey("depth")) {
+                profile.lfos[index].depth = lfo["depth"].as<float>();
+            }
+            if (lfo.containsKey("bipolar")) {
+                profile.lfos[index].bipolar = lfo["bipolar"].as<bool>() ? 1 : 0;
+            }
+            if (lfo.containsKey("sync")) {
+                profile.lfos[index].syncEnabled = lfo["sync"].as<bool>() ? 1 : 0;
+            }
+            if (lfo.containsKey("sync_ratio")) {
+                profile.lfos[index].syncRatio =
+                    static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
+            }
+        }
+    }
+
+    profile.routeCount = 0;
+    if (root.containsKey("routes")) {
+        JsonArray routes = root["routes"].as<JsonArray>();
+        for (JsonObject route : routes) {
+            if (profile.routeCount >= PROFILE_MAX_ROUTES) {
+                break;
+            }
+            ProfileLfoRoute &out = profile.routes[profile.routeCount];
+            out.type = static_cast<uint8_t>(route["type"].as<int>());
+            out.lfoIndex = static_cast<uint8_t>(route["lfo"].as<int>());
+            out.depth = route["depth"].as<float>();
+            out.target = static_cast<uint8_t>(route["target"].as<int>());
+            out.channel = static_cast<uint8_t>(route["channel"].as<int>());
+            out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
+            out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());
+            profile.routeCount++;
+        }
+    }
+
+    if (root.containsKey("slots")) {
+        JsonArray slots = root["slots"].as<JsonArray>();
+        for (JsonObject slot : slots) {
+            uint8_t index = static_cast<uint8_t>(slot["index"].as<int>());
+            if (index >= NUM_SLOTS) {
+                continue;
+            }
+            if (slot.containsKey("channel")) {
+                profile.slots[index].midiChannel =
+                    static_cast<uint8_t>(slot["channel"].as<int>());
+            }
+            if (slot.containsKey("ef")) {
+                JsonObject ef = slot["ef"].as<JsonObject>();
+                parseProfileEf(ef, profile.slots[index].ef);
+            }
+        }
+    }
+
+    if (!configManager.saveProfileSettings(id, profile)) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+    if (id == g_activeProfile) {
+        ProfileData stored{};
+        if (configManager.loadProfileSettings(id, stored)) {
+            applyProfileSnapshot(stored, true);
+        }
+    }
+    LOG_PRINTLN("OK");
+}
+
+} // namespace
+#if defined(UNIT_TEST)
+bool testOnly_dispatchCommand(const String &command) {
+    return dispatchCommand(command);
+}
+#endif

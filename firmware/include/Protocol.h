@@ -14,4 +14,8 @@ uint8_t buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest
 
 void initializeProtocol();
 
+#if defined(UNIT_TEST)
+bool testOnly_dispatchCommand(const String &command);
+#endif
+
 #endif // PROTOCOL_H
