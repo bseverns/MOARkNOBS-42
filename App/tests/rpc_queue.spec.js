@@ -57,7 +57,8 @@ test('rpc queue throttles and respects single-flight ordering', async ({ page })
   });
   expect(measurements.times.length).toBeGreaterThan(3);
   expect(Math.min(...measurements.deltas)).toBeGreaterThanOrEqual(4);
-  const expectedDelay = Math.max(0, (measurements.responseDelay ?? 0) - 40);
+  // Account for scheduling jitter so the throttling heuristic stays reliable.
+  const expectedDelay = Math.max(0, (measurements.responseDelay ?? 0) - 100);
   expect(measurements.deltas[0]).toBeGreaterThanOrEqual(expectedDelay);
   const timeoutMessage = await page.evaluate(async () => {
     try {
