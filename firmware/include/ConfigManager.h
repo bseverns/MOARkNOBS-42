@@ -6,6 +6,7 @@
 #define CONFIGMANAGER_H
 
 #include "Globals.h"
+#include "LedMode.h"
 #include "MIDITypes.h"
 #include "PotentiometerManager.h"
 #include <Arduino.h>
@@ -74,6 +75,7 @@ inline constexpr uint16_t EEPROM_ARG_ENABLE = EEPROM_ARG_ENV_B + 1;
 inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
 inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
 inline constexpr uint16_t EEPROM_ACTIVE_PROFILE = EEPROM_CONFIG_CRC + 2;
+inline constexpr uint16_t EEPROM_LED_MODE = EEPROM_ACTIVE_PROFILE + 1;
 
 class EnvelopeFollower;
 
@@ -249,6 +251,12 @@ class ConfigManager {
     /** Retrieve LED brightness and colour from EEPROM. */
     void loadLEDSettings(uint8_t &brightness, CRGB &color);
 
+    /** Persist which animation mode the LEDs should run in. */
+    void setLedMode(LedMode mode);
+
+    /** Retrieve the currently stored LED animation mode. */
+    LedMode getLedMode() const;
+
     /** Reset configuration to factory defaults. */
     void resetConfiguration(std::vector<uint8_t> &potChannels);
 
@@ -361,6 +369,7 @@ class ConfigManager {
         std::array<uint8_t, NUM_POTS> potChannels;  //!< saved pot→channel map
         std::array<uint8_t, NUM_POTS> potCCNumbers; //!< saved CC numbers
         uint8_t activeProfile = 0;                  //!< stored active profile index
+        uint8_t ledMode = static_cast<uint8_t>(LedMode::Static);
         uint16_t version = 0;                       //!< config schema version
         uint16_t crc = 0;                           //!< integrity check value
     } _stored;

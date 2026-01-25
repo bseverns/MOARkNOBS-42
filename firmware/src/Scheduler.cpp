@@ -34,6 +34,11 @@ void initializeSchedulers() {
     // Low-priority visual updates, diagnostics, and WebSerial telemetry.
     Utility::schedulerLow.addTask(
         []() {
+            bool clockTick = midiHandler.isClockTick();
+            if (clockTick) {
+                midiHandler.clearClockTick();
+            }
+            ledAnimator.tick(now(), clockTick, diagnosticMode);
             ledManager.update();
             updateFilterTuning(buttonContext);
             updateArpTuning();

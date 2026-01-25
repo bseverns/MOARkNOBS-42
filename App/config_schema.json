@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": 4,
+  "schema_version": 5,
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
   "required": ["slots", "efSlots", "filter", "arg", "led"],
@@ -114,9 +114,30 @@
       "required": ["brightness", "color"],
       "properties": {
         "brightness": { "type": "integer", "minimum": 0, "maximum": 255 },
-        "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" }
+        "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" },
+        "mode": {
+          "type": "string",
+          "enum": ["STATIC", "PEAK_HOLD", "TRAIL", "CLOCK_PULSE"],
+          "default": "STATIC"
+        }
       },
       "additionalProperties": false
+    },
+    "scenes": {
+      "type": "array",
+      "title": "Scenes",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": ["slot", "name", "available"],
+        "properties": {
+          "slot": { "type": "integer", "minimum": 0, "maximum": 5 },
+          "name": { "type": "string", "maxLength": 15 },
+          "available": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
     },
     "envelopeMode": {
       "type": "string",

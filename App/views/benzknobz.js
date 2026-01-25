@@ -33,7 +33,7 @@ const ARG_METHOD_NAMES = [
 
 const localManifest = {
   ui_version: '2025.03.01',
-  schema_version: 4,
+  schema_version: 5,
   slot_count: 42,
   pot_count: 42,
   envelope_count: 6,
@@ -269,12 +269,28 @@ const boot = () => {
   const profileResetBtn = document.getElementById('profile-reset');
   const profileDownloadBtn = document.getElementById('profile-download');
   const profileUploadBtn = document.getElementById('profile-upload');
+  const macroSaveBtn = document.getElementById('macro-save');
+  const macroRecallBtn = document.getElementById('macro-recall');
+  const macroStatusEl = document.getElementById('macro-status');
+  const sceneGrid = document.getElementById('scene-grid');
+  const sceneStatusEl = document.getElementById('scene-status');
   const PROFILE_LABELS = ['A', 'B', 'C', 'D'];
+  const MACRO_SAVE_COMMAND = 'SAVE_MACRO_SLOT';
+  const MACRO_RECALL_COMMAND = 'RECALL_MACRO_SLOT';
   const PROFILE_STORAGE_KEY = 'moarknobs:selected-profile';
   const migrationDialog = document.getElementById('migration-dialog');
   const profileRpcButtons = [profileSaveBtn, profileLoadBtn, profileResetBtn].filter(Boolean);
   let profileInteractable = false;
   let profileRpcLocked = false;
+  let macroBusy = false;
+  let macroAvailable = true;
+  const SCENE_SLOT_COUNT = 6;
+  const sceneSlotState = Array.from({ length: SCENE_SLOT_COUNT }, () => ({
+    name: '',
+    available: false
+  }));
+  const sceneSlotElements = [];
+  let sceneBusy = false;
   let activeProfileSlot = clampProfileSlot(readProfileSlotPreference());
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
@@ -306,6 +322,36 @@ const boot = () => {
   };
   rebuildMeters(localManifest.envelope_count || 0);
   slotVirtualizer.setData([]);
+
+  if (sceneGrid) {
+    for (let slotIndex = 0; slotIndex < SCENE_SLOT_COUNT; slotIndex++) {
+      const slotEl = document.createElement('div');
+      slotEl.className = 'scene-slot';
+      slotEl.dataset.sceneSlot = String(slotIndex);
+      slotEl.innerHTML = `
+        <div class="scene-slot-meta">
+          <span>Scene ${slotIndex + 1}</span>
+          <span class="scene-slot-status">Slot ${slotIndex + 1} empty</span>
+        </div>
+        <input class="scene-name-input" type="text" maxlength="15" placeholder="Name (optional)" />
+        <div class="scene-actions">
+          <button class="scene-save" type="button" title="Save current state to this slot.">Save</button>
+          <button class="scene-recall" type="button" title="Recall this scene snapshot.">Recall</button>
+        </div>`;
+      sceneGrid.appendChild(slotEl);
+      const slotInfo = {
+        slot: slotIndex,
+        element: slotEl,
+        statusEl: slotEl.querySelector('.scene-slot-status'),
+        nameInput: slotEl.querySelector('.scene-name-input'),
+        saveBtn: slotEl.querySelector('.scene-save'),
+        recallBtn: slotEl.querySelector('.scene-recall')
+      };
+      slotInfo.saveBtn?.addEventListener('click', () => handleSceneSave(slotIndex));
+      slotInfo.recallBtn?.addEventListener('click', () => handleSceneRecall(slotIndex));
+      sceneSlotElements.push(slotInfo);
+    }
+  }
 
   connectBtn?.addEventListener('click', async () => {
     try {
@@ -365,6 +411,19 @@ const boot = () => {
   });
   setActiveProfileSlot(activeProfileSlot, { persist: false });
   refreshProfileControls();
+
+  macroSaveBtn?.addEventListener('click', () => {
+    const confirmation =
+      typeof window !== 'undefined' && typeof window.confirm === 'function'
+        ? window.confirm('Overwrite the macro snapshot stored in EEPROM slot 254?')
+        : true;
+    if (!confirmation) return;
+    runMacroCommand(MACRO_SAVE_COMMAND);
+  });
+
+  macroRecallBtn?.addEventListener('click', () => runMacroCommand(MACRO_RECALL_COMMAND));
+
+  setMacroStatus('muted', 'Awaiting the first snapshot.');
 
   slotContainer?.addEventListener('keydown', (event) => {
     if (!slotState.slots.length) return;
@@ -561,6 +620,7 @@ const boot = () => {
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
     profileInteractable = true;
     refreshProfileControls();
+    refreshSceneList();
   });
   runtime.on('disconnected', () => {
     if (connectionPill) {
@@ -575,6 +635,7 @@ const boot = () => {
     profileInteractable = false;
     profileRpcLocked = false;
     refreshProfileControls();
+    setSceneStatus('muted', 'Scenes offline');
   });
   runtime.on('error', (err) => {
     if (connectionPill) {
@@ -585,6 +646,39 @@ const boot = () => {
     profileInteractable = false;
     profileRpcLocked = false;
     refreshProfileControls();
+    setSceneStatus('muted', 'Scenes offline');
+  });
+  runtime.on('macro', ({ available } = {}) => {
+    if (available === undefined) return;
+    macroAvailable = Boolean(available);
+    updateMacroControls();
+  });
+  runtime.on('scene', (payload) => {
+    if (!sceneSlotElements.length || !payload) return;
+    if (payload.type === 'list' && Array.isArray(payload.scenes)) {
+      payload.scenes.forEach((entry) => {
+        if (typeof entry.slot === 'number') {
+          updateSceneSlot(entry.slot, {
+            name: entry.name ?? '',
+            available: entry.available
+          });
+        }
+      });
+      setSceneStatus('muted', 'Scenes synced with the deck.');
+      return;
+    }
+    if (payload.type === 'saved' && typeof payload.slot === 'number') {
+      updateSceneSlot(payload.slot, {
+        name: payload.name ?? '',
+        available: payload.available
+      });
+    }
+    if (payload.type === 'recalled' && typeof payload.slot === 'number') {
+      updateSceneSlot(payload.slot, {
+        name: payload.name ?? '',
+        available: payload.available
+      });
+    }
   });
   runtime.on('rollback', () => {
     updateDiff(false);
@@ -662,6 +756,150 @@ const boot = () => {
       if (!button) return;
       button.disabled = !canInteract;
     });
+    updateMacroControls();
+    updateSceneControls();
+  }
+
+  function updateMacroControls() {
+    const offline = !profileInteractable;
+    if (macroSaveBtn) macroSaveBtn.disabled = offline || macroBusy;
+    if (macroRecallBtn) macroRecallBtn.disabled = offline || macroBusy || !macroAvailable;
+  }
+
+  function setMacroStatus(state, message) {
+    if (!macroStatusEl) return;
+    macroStatusEl.dataset.state = state;
+    if (typeof message === 'string') {
+      macroStatusEl.textContent = message;
+    }
+  }
+
+  function setSceneStatus(state, message) {
+    if (!sceneStatusEl) return;
+    sceneStatusEl.dataset.state = state;
+    if (typeof message === 'string') {
+      sceneStatusEl.textContent = message;
+    }
+  }
+
+  function updateSceneSlot(slotIndex, { name, available }) {
+    const slotInfo = sceneSlotElements.find((entry) => entry.slot === slotIndex);
+    if (!slotInfo) return;
+    const displayName = available
+      ? name || `Scene ${slotIndex + 1}`
+      : `Slot ${slotIndex + 1} empty`;
+    if (slotInfo.statusEl) slotInfo.statusEl.textContent = displayName;
+    sceneSlotState[slotIndex] = { name: name ?? '', available: Boolean(available) };
+    updateSceneControls();
+  }
+
+  function updateSceneControls() {
+    const offline = !profileInteractable;
+    sceneSlotElements.forEach((slotInfo) => {
+      const state = sceneSlotState[slotInfo.slot];
+      if (slotInfo.saveBtn) slotInfo.saveBtn.disabled = offline || sceneBusy;
+      if (slotInfo.recallBtn) {
+        slotInfo.recallBtn.disabled = offline || sceneBusy || !state.available;
+      }
+    });
+  }
+
+  async function refreshSceneList() {
+    if (!sceneGrid) return;
+    setSceneStatus('busy', 'Loading scenes…');
+    try {
+      await runtime.requestScenes();
+      setSceneStatus('muted', 'Scenes synced with the deck.');
+    } catch (err) {
+      setSceneStatus('err', `Scenes refresh failed: ${err.message || String(err)}`);
+    }
+  }
+
+  async function handleSceneSave(slotIndex) {
+    if (!profileInteractable || sceneBusy) return;
+    const slotInfo = sceneSlotElements.find((entry) => entry.slot === slotIndex);
+    if (!slotInfo) return;
+    const name = slotInfo.nameInput?.value.trim();
+    sceneBusy = true;
+    updateSceneControls();
+    setSceneStatus('busy', `Saving scene ${slotIndex + 1}…`);
+    try {
+      await runtime.sendSceneCommand({
+        cmd: 'SAVE_SCENE',
+        slot: slotIndex,
+        name: name || undefined
+      });
+      setSceneStatus('ok', `Scene ${slotIndex + 1} saved.`);
+      await refreshSceneList();
+    } catch (err) {
+      setSceneStatus('err', `Scene save failed: ${err.message || String(err)}`);
+    } finally {
+      sceneBusy = false;
+      updateSceneControls();
+    }
+  }
+
+  async function handleSceneRecall(slotIndex) {
+    if (!profileInteractable || sceneBusy) return;
+    sceneBusy = true;
+    updateSceneControls();
+    setSceneStatus('busy', `Recalling scene ${slotIndex + 1}…`);
+    try {
+      await runtime.sendSceneCommand({ cmd: 'RECALL_SCENE', slot: slotIndex });
+      setSceneStatus('ok', `Scene ${slotIndex + 1} recalled.`);
+      try {
+        const configPayload = await runtime.sendRpc({ rpc: 'get_config' });
+        const configData = configPayload?.config ?? configPayload;
+        if (configData && typeof configData === 'object') {
+          runtime.replaceConfig(configData);
+        }
+      } catch (refreshErr) {
+        setStatus('warn', 'Config refresh failed', refreshErr.message || String(refreshErr));
+      }
+      await refreshSceneList();
+    } catch (err) {
+      setSceneStatus('err', `Scene recall failed: ${err.message || String(err)}`);
+    } finally {
+      sceneBusy = false;
+      updateSceneControls();
+    }
+  }
+
+  async function runMacroCommand(command) {
+    if (!profileInteractable) {
+      setMacroStatus('muted', 'Connect to the deck before using macro snapshots.');
+      setStatus('warn', 'Macro offline', 'Connect to the deck before using macro snapshots.');
+      return;
+    }
+    macroBusy = true;
+    updateMacroControls();
+    const isSave = command === MACRO_SAVE_COMMAND;
+    setMacroStatus('busy', isSave ? 'Saving macro snapshot…' : 'Recalling macro snapshot…');
+    try {
+      await runtime.sendMacroCommand(command);
+      setMacroStatus(
+        'ok',
+        isSave ? 'Macro snapshot stored in EEPROM slot 254.' : 'Macro snapshot recalled from EEPROM slot 254.'
+      );
+      if (!isSave) {
+        try {
+          const configPayload = await runtime.sendRpc({ rpc: 'get_config' });
+          const configData = configPayload?.config ?? configPayload;
+          if (configData && typeof configData === 'object') {
+            runtime.replaceConfig(configData);
+          }
+        } catch (refreshErr) {
+          setStatus('warn', 'Config refresh failed', refreshErr.message || String(refreshErr));
+        }
+      }
+    } catch (err) {
+      const label = isSave ? 'Macro save' : 'Macro recall';
+      setMacroStatus('err', `${label} failed: ${err.message || String(err)}`);
+      setStatus('err', `${label} failed`, err.message || String(err));
+    } finally {
+      macroBusy = false;
+      updateMacroControls();
+    }
   }
 
   async function runProfileRpc(method, { busyLabel, successLabel, successCopy, expectConfig } = {}) {

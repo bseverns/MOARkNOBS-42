@@ -414,6 +414,7 @@ void ConfigManager::readEEPROM(bool backup, uint16_t base) {
     }
     if (base == EEPROM_PROFILE_START(0)) {
         _stored.activeProfile = EEPROM.read(offset + EEPROM_ACTIVE_PROFILE);
+        _stored.ledMode = EEPROM.read(offset + EEPROM_LED_MODE);
     }
     EEPROM.get(offset + EEPROM_CONFIG_VERSION, _stored.version);
     EEPROM.get(offset + EEPROM_CONFIG_CRC, _stored.crc);
@@ -429,6 +430,7 @@ void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     }
     if (base == EEPROM_PROFILE_START(0)) {
         EEPROM.update(offset + EEPROM_ACTIVE_PROFILE, _stored.activeProfile);
+        EEPROM.update(offset + EEPROM_LED_MODE, _stored.ledMode);
     }
     EEPROM.put(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
     EEPROM.put(offset + EEPROM_CONFIG_CRC, crc);
@@ -446,6 +448,7 @@ uint16_t ConfigManager::calculateCRC(bool includeProfile) const {
     }
     if (includeProfile) {
         crc = crc16_update(crc, _stored.activeProfile);
+        crc = crc16_update(crc, _stored.ledMode);
     }
     return crc;
 }
@@ -726,6 +729,15 @@ void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
     EEPROM.update(EEPROM_LED_COLOR + 2, color.b);
 }
 
+void ConfigManager::setLedMode(LedMode mode) {
+    _stored.ledMode = static_cast<uint8_t>(mode);
+    EEPROM.update(EEPROM_LED_MODE, _stored.ledMode);
+}
+
+LedMode ConfigManager::getLedMode() const {
+    return static_cast<LedMode>(_stored.ledMode);
+}
+
 // Reset configuration to defaults
 void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
     potChannels.clear();
@@ -736,6 +748,7 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels) {
     seedSlotEnvelopePayloads(static_cast<uint8_t>(EnvelopeFollower::LINEAR), kMinFilterFrequency,
                              1.0f);
     _stored.activeProfile = 0;
+    _stored.ledMode = static_cast<uint8_t>(LedMode::Static);
     saveConfiguration();
 }
 

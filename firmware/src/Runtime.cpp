@@ -130,6 +130,7 @@ void initializeRuntime(bool baselinesLoaded) {
     midiHandler.setDisplayManager(&displayManager);
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
     lfoManager.attachMIDI(&midiHandler);
+    ledAnimator.setMode(configManager.getLedMode());
 
     potentiometerManager.setMidiCallback(
         [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
@@ -357,8 +358,8 @@ void processEnvelopes() {
         rawFollowerLevels[idx] = envelopeFollowerLevels[idx];
         followerReady[idx] = envelopeFollowerReady[idx];
         if (followerReady[idx]) {
-            ledManager.setEnvelopeLevel(static_cast<uint8_t>(idx),
-                                        constrain(rawFollowerLevels[idx], 0, 127));
+            ledAnimator.setEnvelopeTarget(static_cast<uint8_t>(idx),
+                                          constrain(rawFollowerLevels[idx], 0, 127));
         }
     }
 
@@ -408,7 +409,7 @@ void processEnvelopes() {
                 lastEnvelopeMidiValues[potIndex] = modulatedValue;
             }
 
-            ledManager.setPotValue(potIndex, modulatedValue);
+            ledAnimator.setPotTarget(potIndex, modulatedValue);
         }
     }
 

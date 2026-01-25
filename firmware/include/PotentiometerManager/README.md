@@ -21,7 +21,7 @@ See the bigger picture in the [main firmware README](../../README.md).
 - `setMidiCallback(cb)` – tell it how to blast MIDI when a pot moves. The callback is
   `void(uint8_t ccNumber, uint8_t midiValue, uint16_t smoothedAdc, uint8_t slotIndex)`;
   snag the MIDI channel from your slot table, not from the callback args.
-- `processPots(leds, envelopes)` – scan, smooth, and dispatch.
+- `processPots(animator, envelopes)` – scan, smooth, and dispatch into the animator.
 - `loadFromEEPROM()` – pull channel/CC maps from storage.
 
 ## Typical Use

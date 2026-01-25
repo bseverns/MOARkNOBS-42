@@ -7,6 +7,8 @@
 #include <cctype>
 #include <cstdint>
 #include <cstring>
+#include <cstdio>
+#include <array>
 #include <EEPROM.h>
 
 #include "ARGMixer.h"
@@ -50,6 +52,95 @@ Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 } // namespace
+
+template <size_t Capacity>
+static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+static bool handleSceneJsonCommand(const String &command) {
+    if (command.isEmpty() || command[0] != '{') {
+        return false;
+    }
+    StaticJsonDocument<512> request;
+    DeserializationError err = deserializeJson(request, command);
+    if (err) {
+        return false;
+    }
+    const char *cmd = request["cmd"] | nullptr;
+    if (!cmd) {
+        return false;
+    }
+
+    if (std::strcmp(cmd, "GET_SCENES") == 0) {
+        SceneStorage::SceneInfo scenes[SceneStorage::kSceneSlotCount];
+        uint8_t count = SceneStorage::listScenes(scenes, SceneStorage::kSceneSlotCount);
+        StaticJsonDocument<768> response;
+        response["cmd"] = "GET_SCENES";
+        JsonArray array = response.createNestedArray("scenes");
+        for (uint8_t idx = 0; idx < count; ++idx) {
+            JsonObject scene = array.createNestedObject();
+            scene["slot"] = scenes[idx].slot;
+            scene["name"] = scenes[idx].name;
+            scene["available"] = scenes[idx].available;
+        }
+        sendJsonResponse(response);
+        return true;
+    }
+
+    if (std::strcmp(cmd, "SAVE_SCENE") == 0 || std::strcmp(cmd, "RECALL_SCENE") == 0) {
+        const int slotValue = request["slot"].is<int>() ? request["slot"].as<int>() : -1;
+        if (slotValue < 0 || slotValue >= SceneStorage::kSceneSlotCount) {
+            StaticJsonDocument<256> response;
+            response["cmd"] = cmd;
+            response["scene_slot"] = slotValue;
+            response["success"] = false;
+            response["scene_error"] = "Invalid slot";
+            sendJsonResponse(response);
+            return true;
+        }
+
+        if (std::strcmp(cmd, "SAVE_SCENE") == 0) {
+            const char *name = request["name"] | nullptr;
+            SceneStorage::ConfigState snapshot = SceneStorage::captureConfigState();
+            bool saved = SceneStorage::saveSceneSlot(static_cast<uint8_t>(slotValue), snapshot, name);
+            SceneStorage::SceneEntry entry{};
+            SceneStorage::loadSceneSlot(static_cast<uint8_t>(slotValue), entry);
+            StaticJsonDocument<384> response;
+            response["cmd"] = "SAVE_SCENE";
+            response["scene_saved"] = saved;
+            response["scene_slot"] = slotValue;
+            response["scene_name"] = entry.name;
+            response["scene_available"] = SceneStorage::sceneSlotAvailable(static_cast<uint8_t>(slotValue));
+            if (!saved) {
+                response["scene_error"] = "Snapshot save failed";
+            }
+            sendJsonResponse(response);
+            return true;
+        }
+
+        SceneStorage::SceneEntry entry{};
+        bool loaded = SceneStorage::loadSceneSlot(static_cast<uint8_t>(slotValue), entry);
+        StaticJsonDocument<384> response;
+        response["cmd"] = "RECALL_SCENE";
+        response["scene_slot"] = slotValue;
+        response["scene_name"] = entry.name;
+        response["scene_available"] = loaded;
+        if (loaded) {
+            SceneStorage::applyConfigState(entry.state, true);
+            response["scene_recalled"] = true;
+        } else {
+            response["scene_recalled"] = false;
+            response["scene_error"] = "No snapshot stored in this slot";
+        }
+        sendJsonResponse(response);
+        return true;
+    }
+
+    return false;
+}
 
 size_t computeFreeRAM() {
 #if defined(ARDUINO)
@@ -1048,6 +1139,13 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         ledManager.setBrightness(brightness);
         ledManager.setColor(color);
         configManager.saveLEDSettings(brightness, color);
+        if (ledObj.containsKey("mode")) {
+            const char *modeStr = ledObj["mode"].as<const char *>();
+            LedMode newMode =
+                ledModeFromString(modeStr, configManager.getLedMode());
+            configManager.setLedMode(newMode);
+            ledAnimator.setMode(newMode);
+        }
     }
 
     return true;
@@ -1060,10 +1158,39 @@ void processCommandQueue() {
 
         command.trim();
 
+        if (handleSceneJsonCommand(command)) {
+            continue;
+        }
+
         if (command == "HELLO") {
             webSerialStreaming = true;
             LOG_PRINTLN("{\"hello\":\"mn42\"}");
 
+        } else if (command == "SAVE_MACRO_SLOT") {
+            SceneStorage::ConfigState snapshot = SceneStorage::captureConfigState();
+            bool saved = SceneStorage::saveMacroSnapshot(snapshot);
+            StaticJsonDocument<128> response;
+            response["macro_saved"] = saved;
+            response["macro_available"] = SceneStorage::macroSnapshotAvailable();
+            if (!saved) {
+                response["error"] = "Macro snapshot save failed";
+            }
+            sendJsonResponse(response);
+        } else if (command == "RECALL_MACRO_SLOT") {
+            SceneStorage::ConfigState snapshot{};
+            bool available = SceneStorage::macroSnapshotAvailable();
+            bool recalled = false;
+            if (available && SceneStorage::loadMacroSnapshot(snapshot)) {
+                SceneStorage::applyConfigState(snapshot, true);
+                recalled = true;
+            }
+            StaticJsonDocument<128> response;
+            response["macro_recalled"] = recalled;
+            response["macro_available"] = SceneStorage::macroSnapshotAvailable();
+            if (!recalled) {
+                response["error"] = available ? "Macro recall failed" : "No macro stored";
+            }
+            sendJsonResponse(response);
         } else if (command == "GET_SCHEMA") {
             LOG_PRINTLN(ConfigManager::makeSchema());
 
@@ -1208,6 +1335,7 @@ void processCommandQueue() {
             char hex[8];
             snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
             led["hex"] = hex;
+            led["mode"] = ledModeToString(configManager.getLedMode());
 
             String payload;
             serializeJson(doc, payload);

@@ -631,7 +631,7 @@ LED colours follow the states defined in `LEDManager::update()`. The strip now h
 - **Yellow** – flashes during MIDI updates.
 - **White** – temporary feedback (also used for the startup sweep).
 
-On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware. There's now a matching colour swatch baked into EEPROM too, so you can decide the board's wake‑up hue instead of living with factory white.
+On power‑up the LEDs perform a short white sweep animation and then restore the saved brightness level. Brightness itself is stored in EEPROM and can be tweaked in the firmware. There's now a matching colour swatch baked into EEPROM too, so you can decide the board's wake‑up hue instead of living with factory white. The new `led.mode` field lets WebSerial pick between `STATIC`, `PEAK_HOLD`, `TRAIL`, and `CLOCK_PULSE` animations for the slot/envelope LEDs without touching the stored profiles.
 
 The OLED shows:
 

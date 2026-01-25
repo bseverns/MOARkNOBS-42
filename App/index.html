@@ -38,6 +38,37 @@
           <button id="profile-load" type="button" disabled>Load profile</button>
           <button id="profile-reset" type="button" disabled>Reset profile</button>
         </div>
+        <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls">
+          <div class="macro-card-header">
+            <strong>Macro snapshot</strong>
+            <p class="microcopy">
+              Quick-save a temporary config in EEPROM slot 254 without touching the full profile slots.
+            </p>
+          </div>
+          <div class="macro-actions" role="group" aria-label="Macro snapshot actions">
+            <button id="macro-save" type="button" disabled title="Quick save current state for temporary recall during a session.">
+              Save Macro Snapshot
+            </button>
+            <button id="macro-recall" type="button" disabled title="Recall the stored macro snapshot into the live configuration.">
+              Recall Macro Snapshot
+            </button>
+         </div>
+         <p class="microcopy macro-status" id="macro-status" data-state="muted" aria-live="polite">
+           Awaiting the first snapshot.
+         </p>
+       </div>
+        <div class="scene-card" id="scene-card" aria-label="Scene snapshots">
+          <div class="scene-card-header">
+            <strong>Scenes</strong>
+            <p class="microcopy">
+              Store six named scene snapshots that capture slots, envelopes, and leds.
+            </p>
+          </div>
+          <div class="scene-grid" id="scene-grid" role="list"></div>
+          <p class="microcopy scene-status" id="scene-status" data-state="muted" aria-live="polite">
+            Scenes sync with the device on connect.
+          </p>
+        </div>
         <div class="profile-backup">
           <button id="profile-download" type="button">Download profile</button>
           <button id="profile-upload" type="button">Upload profile</button>

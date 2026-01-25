@@ -8,6 +8,7 @@
 #include <functional>
 #include <vector> // For std::vector
 #include "LEDManager.h"
+#include "LedAnimator.h"
 #include "Utility.h"
 #include "Globals.h"
 
@@ -104,7 +105,7 @@ class PotentiometerManager {
      * Read every pot via the muxes and invoke the MIDI callback for changes.
      * Also updates LEDs and envelope followers.
      */
-    void processPots(LEDManager &ledManager, std::vector<EnvelopeFollower> &envelopes);
+    void processPots(LedAnimator &ledAnimator, std::vector<EnvelopeFollower> &envelopes);
 
     /** Specify the envelope pair used for ARG operations. */
     void setArgEnvelopePair(int a, int b);

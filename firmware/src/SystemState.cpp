@@ -9,6 +9,7 @@
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
 #include "LEDManager.h"
+#include "LedAnimator.h"
 #include "DisplayManager.h"
 #include "ConfigManager.h"
 #include "MIDIHandler.h"
@@ -37,6 +38,7 @@ std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
 // Hardware managers that stay alive for the lifetime of the firmware.
 MIDIHandler midiHandler;
 LEDManager ledManager(hwConfig);
+LedAnimator ledAnimator(ledManager);
 DisplayManager displayManager(SSD1306_I2C_ADDRESS, 128, 64);
 ConfigManager configManager(NUM_POTS, NUM_BUTTONS);
 BiquadFilter filter;

@@ -23,6 +23,7 @@ class BiquadFilter;
 class MIDIHandler;
 class String;
 class TaskScheduler;
+class LedAnimator;
 struct ButtonManagerContext;
 
 extern std::vector<uint8_t> potChannels;
@@ -30,6 +31,7 @@ extern std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
 extern std::queue<String> commandQueue;
 extern MIDIHandler midiHandler;
 extern LEDManager ledManager;
+extern LedAnimator ledAnimator;
 extern DisplayManager displayManager;
 extern ConfigManager configManager;
 extern BiquadFilter filter;

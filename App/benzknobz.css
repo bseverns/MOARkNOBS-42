@@ -173,6 +173,145 @@ body {
   color: var(--color-muted);
 }
 
+.macro-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.macro-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.macro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.macro-status {
+  margin: 0;
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.macro-status[data-state='ok'] {
+  color: var(--color-accent);
+}
+
+.macro-status[data-state='err'] {
+  color: var(--color-hot);
+}
+
+.macro-status[data-state='busy'] {
+  color: var(--color-warn);
+}
+
+.macro-status[data-state='muted'] {
+  color: var(--color-muted);
+}
+
+.scene-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.scene-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.scene-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.scene-slot {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scene-slot-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scene-slot-status {
+  color: var(--color-muted);
+}
+
+.scene-name-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+}
+
+.scene-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.scene-actions button {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+}
+
+.scene-actions button:disabled {
+  opacity: 0.5;
+}
+
+.scene-status {
+  margin: 0;
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.scene-status[data-state='ok'] {
+  color: var(--color-accent);
+}
+
+.scene-status[data-state='err'] {
+  color: var(--color-hot);
+}
+
+.scene-status[data-state='busy'] {
+  color: var(--color-warn);
+}
+
+.scene-status[data-state='muted'] {
+  color: var(--color-muted);
+}
+
 .badge {
   border: 1px solid var(--color-border);
   background: rgba(15, 20, 28, 0.72);

@@ -109,7 +109,7 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
-void PotentiometerManager::processPots(LEDManager &ledManager,
+void PotentiometerManager::processPots(LedAnimator &ledAnimator,
                                        std::vector<EnvelopeFollower> &envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
         if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS)
@@ -152,7 +152,7 @@ void PotentiometerManager::processPots(LEDManager &ledManager,
 
                 // Stage 4: map to MIDI, light the LED, then shout over MIDI.
                 int midiValue = Utility::mapToMidiValue(smoothedReading);
-                ledManager.setPotValue(potIndex, midiValue);
+                ledAnimator.setPotTarget(potIndex, midiValue);
 
                 if (midiCallback) {
 #if BENCH_LATENCY_LOG

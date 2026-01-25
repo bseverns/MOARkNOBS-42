@@ -5,6 +5,17 @@ const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
 const RPC_THROTTLE_INTERVAL_MS = 1000 / 120;
 const RPC_TIMEOUT_MS = 3000;
+const MACRO_COMMAND_TIMEOUT_MS = 6000;
+const MACRO_RESPONSE_KEYS = {
+  SAVE_MACRO_SLOT: 'macro_saved',
+  RECALL_MACRO_SLOT: 'macro_recalled'
+};
+const SCENE_COMMAND_TIMEOUT_MS = 6000;
+const SCENE_RESPONSE_KEYS = {
+  SAVE_SCENE: 'scene_saved',
+  RECALL_SCENE: 'scene_recalled',
+  GET_SCENES: 'scenes'
+};
 const STORAGE_KEY = 'moarknobs:last-port';
 const STATE_STORAGE_KEY = 'moarknobs:last-state';
 const EF_FILTER_NAMES = [
@@ -569,6 +580,19 @@ function normalizeConfig(config, manifest = {}) {
     }
   }
 
+  if (led && typeof led === 'object') {
+    let ledModeValue = null;
+    if (config.led && typeof config.led === 'object' && typeof config.led.mode === 'string') {
+      ledModeValue = config.led.mode.toUpperCase();
+    } else if (env.led && typeof env.led === 'object' && typeof env.led.mode === 'string') {
+      ledModeValue = env.led.mode.toUpperCase();
+    }
+    if (!ledModeValue) {
+      ledModeValue = 'STATIC';
+    }
+    led.mode = ledModeValue;
+  }
+
   let envelopeMode = null;
   if (typeof config.envelopeMode === 'string') envelopeMode = config.envelopeMode;
   else if (typeof env.mode_name === 'string') envelopeMode = env.mode_name;
@@ -675,7 +699,7 @@ function createSimulator() {
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
     build_time: new Date().toISOString(),
-    schema_version: 4,
+    schema_version: 5,
     slot_count: 42,
     pot_count: 42,
     envelope_count: 6,
@@ -759,6 +783,7 @@ function createSimulator() {
       rgb: { r: 255, g: 0, b: 255 }
     }
   };
+  let macroSnapshot = null;
   const profileSlots = Array.from({ length: 4 }, () => clone(config));
   const defaultProfile = clone(config);
 
@@ -801,10 +826,29 @@ function createSimulator() {
     }
   }
 
+  function handleSimulatorMacroCommand(command) {
+    if (!command) return false;
+    if (command === 'SAVE_MACRO_SLOT') {
+      macroSnapshot = clone(config);
+      pushLine({ macro_saved: true, macro_available: true });
+      return true;
+    }
+    if (command === 'RECALL_MACRO_SLOT') {
+      const hasSnapshot = Boolean(macroSnapshot);
+      if (hasSnapshot) {
+        config = clone(macroSnapshot);
+      }
+      pushLine({ macro_recalled: hasSnapshot, macro_available: hasSnapshot });
+      return true;
+    }
+    return false;
+  }
+
   async function writeLine(line) {
     if (!opened) throw new Error('simulator closed');
     const trimmed = line.trim();
     if (!trimmed) return;
+    if (handleSimulatorMacroCommand(trimmed)) return;
     let request;
     try {
       request = JSON.parse(trimmed);
@@ -1045,6 +1089,9 @@ export function createRuntime({
   let rpcBusy = false;
   let lastRpcTimestamp = 0;
   const pendingRpc = new Map();
+  let macroPending = null;
+  let macroAvailability = true;
+  let scenePending = null;
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -1240,6 +1287,137 @@ export function createRuntime({
     });
   }
 
+  function sendMacroCommand(command, { timeoutMs } = {}) {
+    if (!command || !MACRO_RESPONSE_KEYS[command]) {
+      return Promise.reject(new Error('Unknown macro command'));
+    }
+    if (!transport) return Promise.reject(new Error('Not connected'));
+    if (macroPending) return Promise.reject(new Error('Macro command already in progress'));
+    let resolveFn;
+    let rejectFn;
+    const promise = new Promise((resolve, reject) => {
+      resolveFn = resolve;
+      rejectFn = reject;
+    });
+    const pending = { command, resolve: resolveFn, reject: rejectFn, timer: null };
+    macroPending = pending;
+    const timeout = Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : MACRO_COMMAND_TIMEOUT_MS;
+    pending.timer = setTimeout(() => {
+      settleMacroPending(pending, { error: new Error('Macro command timed out') });
+    }, timeout);
+    transport.writeLine(command).catch((err) => {
+      settleMacroPending(pending, { error: err });
+    });
+    return promise;
+  }
+
+  function settleScenePending(pending, { error, response } = {}) {
+    if (!pending) return;
+    if (pending.timer) {
+      clearTimeout(pending.timer);
+      pending.timer = null;
+    }
+    if (scenePending === pending) {
+      scenePending = null;
+    }
+    if (error) {
+      pending.reject(error);
+      return;
+    }
+    pending.resolve(response);
+  }
+
+  function sendSceneCommand(payload, { timeoutMs } = {}) {
+    if (!payload || typeof payload !== 'object' || typeof payload.cmd !== 'string') {
+      return Promise.reject(new Error('Scene command requires cmd property'));
+    }
+    if (!transport) return Promise.reject(new Error('Not connected'));
+    if (scenePending) return Promise.reject(new Error('Scene command already in progress'));
+    const expectedKey = SCENE_RESPONSE_KEYS[payload.cmd];
+    if (!expectedKey) return Promise.reject(new Error('Unknown scene command'));
+    let resolveFn;
+    let rejectFn;
+    const promise = new Promise((resolve, reject) => {
+      resolveFn = resolve;
+      rejectFn = reject;
+    });
+    const pending = {
+      command: payload.cmd,
+      expectedKey,
+      resolve: resolveFn,
+      reject: rejectFn,
+      timer: null
+    };
+    scenePending = pending;
+    const timeout = Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : SCENE_COMMAND_TIMEOUT_MS;
+    pending.timer = setTimeout(() => {
+      settleScenePending(pending, { error: new Error('Scene command timed out') });
+    }, timeout);
+    transport.writeLine(JSON.stringify(payload)).catch((err) => {
+      settleScenePending(pending, { error: err });
+    });
+    return promise;
+  }
+
+  function handleSceneLine(msg) {
+    if (!msg || typeof msg !== 'object') return false;
+    const hasSceneField =
+      Object.prototype.hasOwnProperty.call(msg, 'scene_saved') ||
+      Object.prototype.hasOwnProperty.call(msg, 'scene_recalled') ||
+      Array.isArray(msg.scenes);
+    if (!hasSceneField) return false;
+
+    if (Array.isArray(msg.scenes)) {
+      const scenes = msg.scenes.map((entry) => ({
+        slot: Number.isFinite(Number(entry?.slot)) ? Number(entry.slot) : 0,
+        name: typeof entry?.name === 'string' ? entry.name : '',
+        available: Boolean(entry?.available)
+      }));
+      emit('scene', { type: 'list', scenes });
+    }
+
+    const pending = scenePending;
+    if (pending) {
+      const expectedKey = pending.expectedKey;
+      if (Object.prototype.hasOwnProperty.call(msg, expectedKey)) {
+        const success =
+          expectedKey === 'scenes' ? true : Boolean(msg[expectedKey]);
+        if (success) {
+          settleScenePending(pending, { response: msg });
+        } else {
+          const errorMessage =
+            msg.scene_error?.message ?? msg.scene_error ?? `${pending.command} failed`;
+          settleScenePending(pending, { error: new Error(errorMessage) });
+        }
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(msg, 'scene_saved')) {
+      emit('scene', {
+        type: 'saved',
+        slot: Number.isFinite(Number(msg.scene_slot)) ? Number(msg.scene_slot) : -1,
+        name: typeof msg.scene_name === 'string' ? msg.scene_name : '',
+        available: Boolean(msg.scene_available),
+        raw: msg
+      });
+    }
+    if (Object.prototype.hasOwnProperty.call(msg, 'scene_recalled')) {
+      emit('scene', {
+        type: 'recalled',
+        slot: Number.isFinite(Number(msg.scene_slot)) ? Number(msg.scene_slot) : -1,
+        name: typeof msg.scene_name === 'string' ? msg.scene_name : '',
+        available: Boolean(msg.scene_available),
+        raw: msg
+      });
+    }
+
+    return true;
+  }
+
+  function requestScenes(options = {}) {
+    return sendSceneCommand({ cmd: 'GET_SCENES' }, options);
+  }
+
   function flushRpcPending(error) {
     rpcQueue.length = 0;
     for (const [id, pending] of pendingRpc) {
@@ -1248,6 +1426,8 @@ export function createRuntime({
       pending.reject(error);
       pendingRpc.delete(id);
     }
+    settleMacroPending(macroPending, { error: error ?? new Error('Connection lost') });
+    settleScenePending(scenePending, { error: error ?? new Error('Connection lost') });
   }
 
   async function connect(existingPort) {
@@ -1370,6 +1550,54 @@ export function createRuntime({
     pump();
   }
 
+  function settleMacroPending(pending, { error, response } = {}) {
+    if (!pending) return;
+    if (pending.timer) {
+      clearTimeout(pending.timer);
+      pending.timer = null;
+    }
+    if (macroPending === pending) {
+      macroPending = null;
+    }
+    if (error) {
+      pending.reject(error);
+    } else {
+      pending.resolve(response);
+    }
+  }
+
+  function handleMacroLine(msg) {
+    if (!msg || typeof msg !== 'object') return false;
+    const hasMacroField =
+      Object.prototype.hasOwnProperty.call(msg, 'macro_saved') ||
+      Object.prototype.hasOwnProperty.call(msg, 'macro_recalled') ||
+      Object.prototype.hasOwnProperty.call(msg, 'macro_available');
+    if (!hasMacroField) return false;
+    if (Object.prototype.hasOwnProperty.call(msg, 'macro_available')) {
+      macroAvailability = Boolean(msg.macro_available);
+    }
+    emit('macro', {
+      saved: Boolean(msg.macro_saved),
+      recalled: Boolean(msg.macro_recalled),
+      available: macroAvailability,
+      raw: msg
+    });
+    const pending = macroPending;
+    if (pending) {
+      const expectedKey = MACRO_RESPONSE_KEYS[pending.command];
+      if (expectedKey && Object.prototype.hasOwnProperty.call(msg, expectedKey)) {
+        const success = Boolean(msg[expectedKey]);
+        if (success) {
+          settleMacroPending(pending, { response: msg });
+        } else {
+          const errorMessage = msg.error?.message ?? `${pending.command} failed`;
+          settleMacroPending(pending, { error: new Error(errorMessage) });
+        }
+      }
+    }
+    return true;
+  }
+
   function handleLine(line) {
     if (!line) return;
     let msg;
@@ -1379,6 +1607,8 @@ export function createRuntime({
       emit('log', line);
       return;
     }
+    if (handleSceneLine(msg)) return;
+    if (handleMacroLine(msg)) return;
     if (msg?.id !== undefined) {
       handleRpcResponse(msg);
       return;
@@ -1763,6 +1993,9 @@ export function createRuntime({
     on,
     onStatus,
     sendRpc,
+    sendMacroCommand,
+    sendSceneCommand,
+    requestScenes,
     applyPatch,
     restoreLocalState,
     replaceConfig,
