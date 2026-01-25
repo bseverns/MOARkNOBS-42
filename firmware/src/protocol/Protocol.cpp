@@ -82,8 +82,7 @@ inline bool loadMacroSnapshot(ConfigState &) { return false; }
 inline bool saveMacroSnapshot(const ConfigState &) { return false; }
 } // namespace SceneStorage
 
-template <size_t Capacity>
-static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
+template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
@@ -134,7 +133,8 @@ static bool handleSceneJsonCommand(const String &command) {
         if (std::strcmp(cmd, "SAVE_SCENE") == 0) {
             const char *name = request["name"] | nullptr;
             SceneStorage::ConfigState snapshot = SceneStorage::captureConfigState();
-            bool saved = SceneStorage::saveSceneSlot(static_cast<uint8_t>(slotValue), snapshot, name);
+            bool saved =
+                SceneStorage::saveSceneSlot(static_cast<uint8_t>(slotValue), snapshot, name);
             SceneStorage::SceneEntry entry{};
             SceneStorage::loadSceneSlot(static_cast<uint8_t>(slotValue), entry);
             StaticJsonDocument<384> response;
@@ -142,7 +142,8 @@ static bool handleSceneJsonCommand(const String &command) {
             response["scene_saved"] = saved;
             response["scene_slot"] = slotValue;
             response["scene_name"] = entry.name;
-            response["scene_available"] = SceneStorage::sceneSlotAvailable(static_cast<uint8_t>(slotValue));
+            response["scene_available"] =
+                SceneStorage::sceneSlotAvailable(static_cast<uint8_t>(slotValue));
             if (!saved) {
                 response["scene_error"] = "Snapshot save failed";
             }
@@ -1170,8 +1171,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         configManager.saveLEDSettings(brightness, color);
         if (ledObj.containsKey("mode")) {
             const char *modeStr = ledObj["mode"].as<const char *>();
-            LedMode newMode =
-                ledModeFromString(modeStr, configManager.getLedMode());
+            LedMode newMode = ledModeFromString(modeStr, configManager.getLedMode());
             configManager.setLedMode(newMode);
             ledAnimator.setMode(newMode);
         }
@@ -1183,9 +1183,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 namespace {
 struct ParsedCommand {
     explicit ParsedCommand(const String &source)
-        : command(source),
-          data(source.c_str()),
-          length(source.length()),
+        : command(source), data(source.c_str()), length(source.length()),
           nameLen(measureNameLength(data, length)) {}
 
     const String &fullCommand() const { return command; }
@@ -1275,8 +1273,7 @@ const CommandHandler kCommandHandlers[] = {
     {"SET_PROFILE", handleSetProfileCommand},
 };
 
-constexpr size_t kCommandHandlerCount =
-    sizeof(kCommandHandlers) / sizeof(kCommandHandlers[0]);
+constexpr size_t kCommandHandlerCount = sizeof(kCommandHandlers) / sizeof(kCommandHandlers[0]);
 
 const CommandHandler *findCommandHandler(const ParsedCommand &cmd) {
     size_t low = 0;
@@ -1434,8 +1431,8 @@ void handleGetConfigCommand(const ParsedCommand &cmd) {
         SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
         JsonObject efPayload = slotObj.createNestedObject("ef_payload");
         efPayload["type"] = payload.filterType;
-        efPayload["type_name"] = envelopeFilterName(
-            static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+        efPayload["type_name"] =
+            envelopeFilterName(static_cast<EnvelopeFollower::FilterType>(payload.filterType));
         efPayload["freq"] = payload.frequency;
         efPayload["q"] = payload.q;
         SlotARGConfig arg = sanitizeSlotArg(slot.arg);
@@ -1796,8 +1793,8 @@ void handleSetLedCommand(const ParsedCommand &cmd) {
     int r = command.substring(first + 1, second).toInt();
     int g = command.substring(second + 1, third).toInt();
     int b = command.substring(third + 1).toInt();
-    if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 &&
-        g <= 255 && b >= 0 && b <= 255) {
+    if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 && g <= 255 &&
+        b >= 0 && b <= 255) {
         CRGB color(r, g, b);
         ledManager.setBrightness(brightness);
         ledManager.setColor(color);
@@ -1819,8 +1816,8 @@ void handleSetPotCommand(const ParsedCommand &cmd) {
     int potIndex = command.substring(8, firstComma).toInt();
     int channel = command.substring(firstComma + 1, lastComma).toInt();
     int ccNumber = command.substring(lastComma + 1).toInt();
-    if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 &&
-        ccNumber >= 0 && ccNumber <= 127) {
+    if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 && ccNumber >= 0 &&
+        ccNumber <= 127) {
         configManager.setPotChannel(potIndex, channel);
         configManager.setPotCCNumber(potIndex, ccNumber);
         potentiometerManager.setChannel(potIndex, channel);
@@ -1918,8 +1915,7 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
                 profile.lfos[index].syncEnabled = lfo["sync"].as<bool>() ? 1 : 0;
             }
             if (lfo.containsKey("sync_ratio")) {
-                profile.lfos[index].syncRatio =
-                    static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
+                profile.lfos[index].syncRatio = static_cast<uint8_t>(lfo["sync_ratio"].as<int>());
             }
         }
     }
@@ -1951,8 +1947,7 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
                 continue;
             }
             if (slot.containsKey("channel")) {
-                profile.slots[index].midiChannel =
-                    static_cast<uint8_t>(slot["channel"].as<int>());
+                profile.slots[index].midiChannel = static_cast<uint8_t>(slot["channel"].as<int>());
             }
             if (slot.containsKey("ef")) {
                 JsonObject ef = slot["ef"].as<JsonObject>();
@@ -1976,7 +1971,5 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
 
 } // namespace
 #if defined(UNIT_TEST)
-bool testOnly_dispatchCommand(const String &command) {
-    return dispatchCommand(command);
-}
+bool testOnly_dispatchCommand(const String &command) { return dispatchCommand(command); }
 #endif

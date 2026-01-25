@@ -737,12 +737,11 @@ void ConfigManager::setLedMode(LedMode mode) {
     EEPROM.update(EEPROM_LED_MODE, _stored.ledMode);
 }
 
-LedMode ConfigManager::getLedMode() const {
-    return static_cast<LedMode>(_stored.ledMode);
-}
+LedMode ConfigManager::getLedMode() const { return static_cast<LedMode>(_stored.ledMode); }
 
 // Reset configuration to defaults
-void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels, bool recordRecoveryEvent) {
+void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
+                                       bool recordRecoveryEvent) {
     if (recordRecoveryEvent) {
         _lastRecoveryEvent = RecoveryEvent::kDefaultsLoaded;
     }

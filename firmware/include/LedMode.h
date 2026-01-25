@@ -5,12 +5,7 @@
 #include <cstdint>
 #include <cstring>
 
-enum class LedMode : uint8_t {
-    Static = 0,
-    PeakHold = 1,
-    Trail = 2,
-    ClockPulse = 3
-};
+enum class LedMode : uint8_t { Static = 0, PeakHold = 1, Trail = 2, ClockPulse = 3 };
 
 inline const char *ledModeToString(LedMode mode) {
     switch (mode) {

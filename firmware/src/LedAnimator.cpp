@@ -9,7 +9,8 @@ constexpr float kPeakDecay = 1.5f;
 constexpr float kTrailDecay = 1.2f;
 constexpr float kClockPulseDecay = 0.12f;
 constexpr unsigned long kDiagnosticCycleMs = 2500;
-constexpr LedMode kModeOrder[] = {LedMode::Static, LedMode::PeakHold, LedMode::Trail, LedMode::ClockPulse};
+constexpr LedMode kModeOrder[] = {LedMode::Static, LedMode::PeakHold, LedMode::Trail,
+                                  LedMode::ClockPulse};
 constexpr size_t kModeCount = sizeof(kModeOrder) / sizeof(kModeOrder[0]);
 } // namespace
 

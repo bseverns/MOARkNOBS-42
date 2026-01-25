@@ -379,8 +379,8 @@ class ConfigManager {
         std::array<uint8_t, NUM_POTS> potCCNumbers; //!< saved CC numbers
         uint8_t activeProfile = 0;                  //!< stored active profile index
         uint8_t ledMode = static_cast<uint8_t>(LedMode::Static);
-        uint16_t version = 0;                       //!< config schema version
-        uint16_t crc = 0;                           //!< integrity check value
+        uint16_t version = 0; //!< config schema version
+        uint16_t crc = 0;     //!< integrity check value
     } _stored;
 
     void sanitizeSlotArena();
