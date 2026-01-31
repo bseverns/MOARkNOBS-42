@@ -176,7 +176,9 @@ If the boot loader detects EEPROM corruption it now shows a one-shot OLED messag
 1. **“Config restored from backup”** – the primary block failed CRC/magic but the backup block was valid. Firmware continues from the backup data, so you can keep playing, rerun `GET_CONFIG`/`GET_PROFILE`, and optionally save the profile again to refresh both slots.
 2. **“EEPROM corrupted defaults loaded”** – both primary and backup were invalid, so the firmware reset the pot→channel map, CC map, and LED defaults. Reload a profile or redo your slot/channel assignments and save once everything looks right.
 Treat these messages as subtle warnings—if you see one, check the WebSerial snapshot or run the slot mapping routine before you return to performance mode.
-License: MIT. See [LICENSE](LICENSE).
+
+## License: MIT. 
+See [LICENSE](LICENSE).
 
 ## Contributing
 
