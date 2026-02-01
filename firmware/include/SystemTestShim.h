@@ -29,7 +29,7 @@ inline void systemTestAssertFalse(bool cond, const char *expr, const char *file,
 }
 
 inline void systemTestAssertEqualLong(long expected, long actual, const char *expr,
-                                          const char *file, int line) {
+                                      const char *file, int line) {
     if (expected != actual) {
         char msg[96];
         snprintf(msg, sizeof(msg), "expected %ld got %ld", expected, actual);
@@ -79,33 +79,33 @@ inline void systemTestAssertLessThan(long threshold, long actual, const char *ex
 
 #define TEST_ASSERT_TRUE(cond) systemTestAssertTrue((cond), #cond, __FILE__, __LINE__)
 #define TEST_ASSERT_FALSE(cond) systemTestAssertFalse((cond), #cond, __FILE__, __LINE__)
-#define TEST_ASSERT_EQUAL(expected, actual)                                                     \
-    systemTestAssertEqualLong((long)(expected), (long)(actual), #expected " == " #actual,        \
+#define TEST_ASSERT_EQUAL(expected, actual)                                                        \
+    systemTestAssertEqualLong((long)(expected), (long)(actual), #expected " == " #actual,          \
                               __FILE__, __LINE__)
-#define TEST_ASSERT_EQUAL_INT(expected, actual)                                                  \
-    systemTestAssertEqualLong((long)(expected), (long)(actual), #expected " == " #actual,        \
+#define TEST_ASSERT_EQUAL_INT(expected, actual)                                                    \
+    systemTestAssertEqualLong((long)(expected), (long)(actual), #expected " == " #actual,          \
                               __FILE__, __LINE__)
-#define TEST_ASSERT_EQUAL_UINT8(expected, actual)                                                \
-    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
+#define TEST_ASSERT_EQUAL_UINT8(expected, actual)                                                  \
+    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),              \
                                   #expected " == " #actual, __FILE__, __LINE__)
-#define TEST_ASSERT_EQUAL_UINT(expected, actual)                                                 \
-    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
+#define TEST_ASSERT_EQUAL_UINT(expected, actual)                                                   \
+    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),              \
                                   #expected " == " #actual, __FILE__, __LINE__)
-#define TEST_ASSERT_EQUAL_UINT16(expected, actual)                                               \
-    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
+#define TEST_ASSERT_EQUAL_UINT16(expected, actual)                                                 \
+    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),              \
                                   #expected " == " #actual, __FILE__, __LINE__)
-#define TEST_ASSERT_EQUAL_UINT32(expected, actual)                                               \
-    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
+#define TEST_ASSERT_EQUAL_UINT32(expected, actual)                                                 \
+    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),              \
                                   #expected " == " #actual, __FILE__, __LINE__)
-#define TEST_ASSERT_FLOAT_WITHIN(delta, expected, actual)                                        \
-    systemTestAssertFloatWithin((float)(delta), (float)(expected), (float)(actual),              \
+#define TEST_ASSERT_FLOAT_WITHIN(delta, expected, actual)                                          \
+    systemTestAssertFloatWithin((float)(delta), (float)(expected), (float)(actual),                \
                                 #expected " ~= " #actual, __FILE__, __LINE__)
-#define TEST_ASSERT_INT_WITHIN(delta, expected, actual)                                          \
-    systemTestAssertIntWithin((int)(delta), (int)(expected), (int)(actual),                       \
+#define TEST_ASSERT_INT_WITHIN(delta, expected, actual)                                            \
+    systemTestAssertIntWithin((int)(delta), (int)(expected), (int)(actual),                        \
                               #expected " ~= " #actual, __FILE__, __LINE__)
-#define TEST_ASSERT_LESS_THAN(threshold, actual)                                                 \
-    systemTestAssertLessThan((long)(threshold), (long)(actual),                                   \
-                             #actual " < " #threshold, __FILE__, __LINE__)
+#define TEST_ASSERT_LESS_THAN(threshold, actual)                                                   \
+    systemTestAssertLessThan((long)(threshold), (long)(actual), #actual " < " #threshold,          \
+                             __FILE__, __LINE__)
 
 #else
 #include <unity.h>

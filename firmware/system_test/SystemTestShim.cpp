@@ -30,7 +30,8 @@ void systemTestRun(const char *name, void (*fn)()) {
 }
 
 SystemTestSummary systemTestEnd() {
-    Serial1.printf("=== System Tests: %u total, %u failed ===\n", g_summary.total, g_summary.failed);
+    Serial1.printf("=== System Tests: %u total, %u failed ===\n", g_summary.total,
+                   g_summary.failed);
     return g_summary;
 }
 
