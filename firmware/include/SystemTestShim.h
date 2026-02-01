@@ -88,6 +88,9 @@ inline void systemTestAssertLessThan(long threshold, long actual, const char *ex
 #define TEST_ASSERT_EQUAL_UINT8(expected, actual)                                                \
     systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
                                   #expected " == " #actual, __FILE__, __LINE__)
+#define TEST_ASSERT_EQUAL_UINT(expected, actual)                                                 \
+    systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
+                                  #expected " == " #actual, __FILE__, __LINE__)
 #define TEST_ASSERT_EQUAL_UINT16(expected, actual)                                               \
     systemTestAssertEqualUnsigned((unsigned long)(expected), (unsigned long)(actual),            \
                                   #expected " == " #actual, __FILE__, __LINE__)
