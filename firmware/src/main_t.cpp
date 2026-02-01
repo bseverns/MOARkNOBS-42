@@ -30,13 +30,16 @@
 #include "MIDIHandler.h"
 #include "Modes.h"
 #include "PotentiometerManager.h"
+#include "SystemTestShim.h"
 #include "TestHelpers.h"
+
+SystemTestSummary runSystemTests();
 
 // Control button used to advance test phases
 const uint8_t phaseButtonPin = 12; // Control Button #0
 
 // Ordered test phases
-enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, DISP, COMPLETE };
+enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, DISP, SYSTEM, COMPLETE };
 TestPhase currentPhase = TestPhase::IDLE;
 bool phaseStarted = false;
 
@@ -237,6 +240,19 @@ void testDisplayManager() {
     Serial.println("DisplayManager test done.");
 }
 
+void testSystemSuite() {
+    Serial.println("\n--- System Test Suite ---");
+    displayManager.showText("System Tests", "running...");
+    SystemTestSummary summary = runSystemTests();
+    char line1[32], line2[32];
+    sprintf(line1, "Total %u", summary.total);
+    sprintf(line2, "Fail %u", summary.failed);
+    displayManager.showText(summary.failed ? "System FAIL" : "System PASS", line1, line2);
+    Serial.printf("System tests: %u total, %u failed\n", summary.total, summary.failed);
+    delay(1000);
+    displayManager.clear();
+}
+
 // --- Setup & Loop ---
 void setup() {
     Serial.begin(SERIAL_BAUD);
@@ -279,6 +295,8 @@ static const char *phaseName(TestPhase p) {
         return "Envelopes";
     case TestPhase::DISP:
         return "Display";
+    case TestPhase::SYSTEM:
+        return "System";
     default:
         return "";
     }
@@ -304,6 +322,9 @@ void runPhase(TestPhase phase) {
     case TestPhase::DISP:
         testDisplayManager();
         break;
+    case TestPhase::SYSTEM:
+        testSystemSuite();
+        break;
     default:
         break;
     }
@@ -317,7 +338,7 @@ void loop() {
     if (pressed && !lastBtn) {
         if (currentPhase == TestPhase::IDLE)
             currentPhase = TestPhase::LEDS;
-        else if (currentPhase == TestPhase::DISP)
+        else if (currentPhase == TestPhase::SYSTEM)
             currentPhase = TestPhase::COMPLETE;
         else if (currentPhase == TestPhase::COMPLETE)
             currentPhase = TestPhase::IDLE;

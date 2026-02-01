@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <unity.h>
+#include "SystemTestShim.h"
 #include "TestHelpers.h"
 
 // PotentiometerManager owns the muxed pots that steer slots.  This quick

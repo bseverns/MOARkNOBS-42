@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <unity.h>
+#include "SystemTestShim.h"
 
 // This is the orchestral score for the "full system" PlatformIO environment.
 // When you flash teensy40_full_system it runs every high-level integration
@@ -19,6 +19,25 @@ void test_long_press_requires_confirm();
 void test_double_press_ctrl2_cycles_midi_type();
 void test_jitter_combo_updates_settings();
 
+#if defined(FULL_SYSTEM_COMBINED)
+SystemTestSummary runSystemTests() {
+    UNITY_BEGIN();
+    RUN_TEST(test_long_press_detection);
+    RUN_TEST(test_long_press_requires_confirm);
+    RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
+    RUN_TEST(test_jitter_combo_updates_settings);
+    RUN_TEST(corrupt_primary_valid_backup);
+    RUN_TEST(corrupted_primary_and_backup);
+    RUN_TEST(test_eeprom_recovery_after_power_cycle);
+    RUN_TEST(test_calibration_offsets_survive_power_cycle);
+    RUN_TEST(test_brightness_and_color);
+    RUN_TEST(test_update_interval_round_trip);
+    RUN_TEST(test_filter_type_switching);
+    RUN_TEST(test_random_mode_respects_jitter_depth);
+    RUN_TEST(test_channel_and_cc);
+    return UNITY_END();
+}
+#else
 void setup() {
     UNITY_BEGIN();
     RUN_TEST(test_long_press_detection);
@@ -38,3 +57,4 @@ void setup() {
 }
 
 void loop() {}
+#endif

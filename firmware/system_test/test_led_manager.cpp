@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <unity.h>
+#include "SystemTestShim.h"
 #include "TestHelpers.h"
 
 // LEDManager drives everything from the halo rings to the panic flash.  These

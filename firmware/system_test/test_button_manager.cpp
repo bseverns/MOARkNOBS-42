@@ -12,7 +12,7 @@ unsigned long now() { return fakeMillis; }
 #include "ButtonManager.h"
 #undef private
 #include "TestHelpers.h"
-#include <unity.h>
+#include "SystemTestShim.h"
 
 // These system-level tests poke ButtonManager's private state machine directly
 // to validate the long-press confirmation flow the hardware UI relies on.  We

@@ -1411,8 +1411,8 @@ bool ConfigManager::handleCommand(const String &command) {
     return false;
 }
 
-#ifdef UNIT_TEST
-#include <unity.h>
+#if defined(UNIT_TEST) || defined(FULL_SYSTEM_COMBINED)
+#include "SystemTestShim.h"
 #include "TestHelpers.h"
 
 // Ensure the manager can resurrect configuration from the backup copy

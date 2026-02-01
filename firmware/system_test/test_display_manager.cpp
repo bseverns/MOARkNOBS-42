@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <unity.h>
+#include "SystemTestShim.h"
 #include "TestHelpers.h"
 
 // DisplayManager's system test is lightweight—just make sure whatever cadence

@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <EEPROM.h>
-#include <unity.h>
+#include "SystemTestShim.h"
 #include "ConfigManager.h"
 #include "TestHelpers.h"
 

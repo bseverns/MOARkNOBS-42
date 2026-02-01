@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <unity.h>
+#include "SystemTestShim.h"
 #include "EnvelopeFollower.h"
 #include "PotentiometerManager.h"
 #include "TestHelpers.h"
