@@ -25,6 +25,8 @@ void pollSerialInput() {
                 LOG_PRINTLN("Error: Command too long");
             }
             if (commandQueue.size() >= kMaxCommandQueueSize) {
+                // Keep newest commands under overload; interactive control is more useful than
+                // preserving stale backlog lines.
                 LOG_PRINTLN("Warning: Command queue overflow, dropping oldest command");
                 commandQueue.pop();
             }

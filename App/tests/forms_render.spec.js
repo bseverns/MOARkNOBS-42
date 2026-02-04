@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test('forms render, dirty badge toggles, and apply syncs', async ({ page }) => {
   await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__MN42_RUNTIME_OPTIONS = {
       useSimulator: true
     };

@@ -195,6 +195,17 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Spec'd richer LED feedback with `LedMode` (Static/PeakHold/Trail/ClockPulse), a scheduler-driven `LedAnimator`, diagnostics overrides, and RPC/UI controls so pots and envelopes can pulse, hold, or trail visually without touching interrupt context.
 - Laid out the scene recall system: fixed-size `Scene` records that bundle a saved `ConfigState` plus a 16‑byte name, EEPROM-backed slots (4–8), `SAVE_SCENE`/`RECALL_SCENE` verbs, and a planned “Scenes” WebSerial tab so performers can snapshot complete state safely and recall by name.
 
+### February — Onboarding UX, Bridge Usability, and v1.0 Release Prep
+
+- Introduced a persisted Basic/Advanced App UI mode so first-time users can focus on plain knob-to-MIDI mapping while experienced users still get full EF/ARG/filter tooling.
+- Added glossary/help cues directly in slot editors and schema-rendered forms so terms like EF, ARG, and SysEx placeholders are explained where users actually click.
+- Profile workflow got a guided lane (switch target slot -> apply staged edits -> save slot), plus safer RPC gating and clearer connect/disconnect behavior across profile, macro, and scene controls.
+- Bridge docs were rebuilt for real-world onboarding: quickstart, performer one-sheet, full operator reference, packaging roadmap, and release artifact checklist now cross-link from docs index and release guide.
+- Added bridge release-prep scripts (`smoke_bridge_cli.js`, `package_bridge.sh`) and npm aliases so packaging work can start from repeatable commands instead of ad-hoc shell history.
+- Hardware CAD iteration files are now ignored by default (`.epro/.eprj/autosave/_backup`) to keep repository release surfaces focused on firmware/app/docs while local board iteration remains private.
+- Ran a deep explainability pass over the post-2025 runtime/protocol/scheduler/config code paths so future contributors can read intent (ordering, recovery, throttling, staging semantics) directly in-source.
+- **Commit summary (current v1.0 prep sweep):** newcomer-friendly App UX, profile-flow hardening, bridge onboarding + packaging docs, release tooling/checklists, and maintainability comments across recent architecture work.
+
 ## Overview
 
 Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:

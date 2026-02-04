@@ -8,6 +8,7 @@
     "slots": {
       "type": "array",
       "title": "Slot Configuration",
+      "description": "Primary knob-to-MIDI mapping for each slot.",
       "minItems": 42,
       "maxItems": 42,
       "items": {
@@ -16,51 +17,98 @@
         "properties": {
           "type": {
             "type": "string",
+            "title": "Knob -> MIDI message",
+            "description": "Select what kind of MIDI message this slot sends.",
             "enum": ["OFF", "CC", "Note", "PitchBend", "ProgramChange", "Aftertouch", "ModWheel", "NRPN", "RPN", "SysEx"]
           },
-          "midiChannel": { "type": "integer", "minimum": 1, "maximum": 16 },
-          "data1": { "type": "integer", "minimum": 0, "maximum": 127 },
-          "efIndex": { "type": "integer", "minimum": -1, "maximum": 5 },
+          "midiChannel": {
+            "type": "integer",
+            "title": "MIDI channel",
+            "description": "MIDI channel number (1-16).",
+            "minimum": 1,
+            "maximum": 16
+          },
+          "data1": {
+            "type": "integer",
+            "title": "CC/Note number",
+            "description": "Controller number or note number used by this slot.",
+            "minimum": 0,
+            "maximum": 127
+          },
+          "efIndex": {
+            "type": "integer",
+            "title": "Envelope follower index",
+            "description": "Envelope follower source for this slot (-1 disables).",
+            "minimum": -1,
+            "maximum": 5
+          },
           "ef": {
             "type": "object",
+            "title": "Envelope Follower (EF)",
+            "description": "EF tracks signal level for dynamic modulation.",
             "required": ["index", "filter_index", "filter_name", "frequency", "q", "oversample", "smoothing", "baseline", "gain"],
             "properties": {
-              "index": { "type": "integer", "minimum": -1, "maximum": 5 },
-              "filter_index": { "type": "integer", "minimum": 0, "maximum": 6 },
+              "index": {
+                "type": "integer",
+                "title": "Follower index",
+                "minimum": -1,
+                "maximum": 5
+              },
+              "filter_index": {
+                "type": "integer",
+                "title": "Filter index",
+                "minimum": 0,
+                "maximum": 6
+              },
               "filter_name": {
                 "type": "string",
+                "title": "Response shape",
                 "enum": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"]
               },
-              "frequency": { "type": "number" },
-              "q": { "type": "number" },
-              "oversample": { "type": "integer", "minimum": 1, "maximum": 32 },
-              "smoothing": { "type": "number", "minimum": 0, "maximum": 1 },
-              "baseline": { "type": "number" },
-              "gain": { "type": "number" }
+              "frequency": { "type": "number", "title": "Tracking frequency (Hz)" },
+              "q": { "type": "number", "title": "Resonance (Q)" },
+              "oversample": {
+                "type": "integer",
+                "title": "Oversample amount",
+                "minimum": 1,
+                "maximum": 32
+              },
+              "smoothing": {
+                "type": "number",
+                "title": "Smoothing",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "baseline": { "type": "number", "title": "Baseline offset" },
+              "gain": { "type": "number", "title": "Gain" }
             },
             "additionalProperties": false
           },
-          "active": { "type": "boolean" },
-          "pot": { "type": "boolean" },
-          "label": { "type": "string" },
-          "takeover": { "type": "boolean" },
+          "active": { "type": "boolean", "title": "Enabled" },
+          "pot": { "type": "boolean", "title": "Knob sends MIDI" },
+          "label": { "type": "string", "title": "Slot label" },
+          "takeover": { "type": "boolean", "title": "Take Control (pickup)" },
           "sysexTemplate": {
             "type": "string",
+            "title": "SysEx template",
             "description": "Hex bytes plus xx/MSB/LSB placeholders",
             "maxLength": 128
           },
           "arg": {
             "type": "object",
+            "title": "Follower Combiner (ARG)",
+            "description": "ARG combines two envelope followers before MIDI output.",
             "required": ["enabled", "method", "method_name", "sourceA", "sourceB"],
             "properties": {
-              "enabled": { "type": "boolean" },
-              "method": { "type": "integer", "minimum": 0, "maximum": 13 },
+              "enabled": { "type": "boolean", "title": "Enable combiner" },
+              "method": { "type": "integer", "title": "Method index", "minimum": 0, "maximum": 13 },
               "method_name": {
                 "type": "string",
+                "title": "Combine method",
                 "enum": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS", "MULT", "DIVI", "AVG", "XABS", "MAXX", "MINN", "XORR"]
               },
-              "sourceA": { "type": "integer", "minimum": 0, "maximum": 5 },
-              "sourceB": { "type": "integer", "minimum": 0, "maximum": 5 }
+              "sourceA": { "type": "integer", "title": "Follower A", "minimum": 0, "maximum": 5 },
+              "sourceB": { "type": "integer", "title": "Follower B", "minimum": 0, "maximum": 5 }
             },
             "additionalProperties": false
           }
@@ -71,52 +119,77 @@
     "efSlots": {
       "type": "array",
       "title": "Envelope Assignments",
+      "description": "Assign each envelope follower to a slot.",
       "minItems": 6,
       "maxItems": 6,
       "items": {
         "type": "object",
         "required": ["slot"],
         "properties": {
-          "slot": { "type": "integer", "minimum": -1, "maximum": 41 }
+          "slot": {
+            "type": "integer",
+            "title": "Target slot",
+            "description": "Slot index to drive (-1 disables assignment).",
+            "minimum": -1,
+            "maximum": 41
+          }
         },
         "additionalProperties": false
       }
     },
     "filter": {
       "type": "object",
+      "title": "Follower Filter (Advanced)",
+      "description": "Global filter tuning for envelope follower response.",
       "required": ["type", "freq", "q"],
       "properties": {
         "type": {
           "type": "string",
+          "title": "Response shape",
           "enum": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"]
         },
-        "freq": { "type": "number", "minimum": 20, "maximum": 5000 },
-        "q": { "type": "number", "minimum": 0.5, "maximum": 4.0 }
+        "freq": {
+          "type": "number",
+          "title": "Cutoff frequency (Hz)",
+          "minimum": 20,
+          "maximum": 5000
+        },
+        "q": {
+          "type": "number",
+          "title": "Resonance (Q)",
+          "minimum": 0.5,
+          "maximum": 4.0
+        }
       },
       "additionalProperties": false
     },
     "arg": {
       "type": "object",
+      "title": "Follower Combiner (ARG)",
+      "description": "Blend two envelope followers using a selected method.",
       "required": ["method", "a", "b"],
       "properties": {
         "method": {
           "type": "string",
+          "title": "Combine method",
           "enum": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS", "MULT", "DIVI", "AVG", "XABS", "MAXX", "MINN", "XORR"]
         },
-        "a": { "type": "number", "minimum": 0, "maximum": 5 },
-        "b": { "type": "number", "minimum": 0, "maximum": 5 },
-        "enable": { "type": "boolean" }
+        "a": { "type": "number", "title": "Follower A", "minimum": 0, "maximum": 5 },
+        "b": { "type": "number", "title": "Follower B", "minimum": 0, "maximum": 5 },
+        "enable": { "type": "boolean", "title": "Enable combiner" }
       },
       "additionalProperties": false
     },
     "led": {
       "type": "object",
+      "title": "LED Colors",
       "required": ["brightness", "color"],
       "properties": {
-        "brightness": { "type": "integer", "minimum": 0, "maximum": 255 },
-        "color": { "type": "string", "pattern": "^#([0-9a-fA-F]{6})$" },
+        "brightness": { "type": "integer", "title": "Brightness", "minimum": 0, "maximum": 255 },
+        "color": { "type": "string", "title": "Color", "pattern": "^#([0-9a-fA-F]{6})$" },
         "mode": {
           "type": "string",
+          "title": "LED mode",
           "enum": ["STATIC", "PEAK_HOLD", "TRAIL", "CLOCK_PULSE"],
           "default": "STATIC"
         }

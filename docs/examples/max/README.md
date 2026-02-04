@@ -1,28 +1,24 @@
 # Max Listener Patch
 
-~~`mn42_listener.maxpat` is a bare-knuckle example of how to tap the controller from Max.~~
-Kick it while the bridge howls and watch slot values and envelopes stream in.
+`mn42_listener.maxpat` is a minimal monitor patch for bridge OSC output.
 
 ```mermaid
 flowchart LR
   MaxPatch[mn42_listener.maxpat]
-  Bridge[[OSC/WebMIDI Bridge]]
+  Bridge[[MN42 Bridge]]
   Controller((MN42))
-  MaxPatch -->|OSC 8000| Bridge
+  MaxPatch -->|OSC 9000| Bridge
   Bridge -->|serial JSON| Controller
   Controller -->|slot/envelope dump| Bridge --> MaxPatch
 ```
 
-## Run It
+## Run it
 
-1. Start the [OSC/WebMIDI bridge](../../OSCBridge.md) if it's not already
-   screaming:
+1. Start the bridge:
    ```bash
-   node bridge/mn42_bridge.js
+   node bridge/mn42_bridge.js --osc 9000 --osc-listen 9000
    ```
 2. Open `mn42_listener.maxpat` in Max.
-3. The patch's `udpreceive 8000` object will snarf the OSC messages and spit
-them into number boxes.
+3. The patch's `udpreceive 9000` object receives `/mn42/slots` and `/mn42/envelopes`.
 
-From there you can reroute the data, map it to UI, or feed it into whatever
-sound mayhem you're building. Tear it apart; it's just a starting block.
+Use it as a starting point for mapping, visuals, or DAW control.

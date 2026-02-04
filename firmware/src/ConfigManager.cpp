@@ -315,6 +315,7 @@ void ConfigManager::writeMagicNumber(bool backup, uint16_t base) {
 
 // Save configuration with verification and backup
 void ConfigManager::saveConfiguration() {
+    // Write primary first, then read-verify; backup is refreshed only when verification fails.
     uint16_t base = EEPROM_PROFILE_START(0);
     writeEEPROM(false, base); // Write primary
     writeMagicNumber(false, base);
@@ -330,6 +331,7 @@ void ConfigManager::saveConfiguration() {
 
 // Load configuration (primary)
 bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_t base) {
+    // Recovery order: primary -> backup -> defaults.
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
         bool needsRewrite = false;
@@ -368,6 +370,7 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
 
 // Load configuration (backup)
 bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, uint16_t base) {
+    // Backup path mirrors primary validation and emits a recovery event for UI messaging.
     if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
         bool needsRewrite = false;
@@ -1139,6 +1142,7 @@ void ConfigManager::wipeSlotRegion() {
 
 void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     if (storedVersion != kLegacyConfigVersion && storedVersion != 0x0004) {
+        // Unknown schema: wipe slot/profile regions so runtime starts from deterministic defaults.
         wipeSlotRegion();
         wipeProfileBlocks();
         return;
@@ -1288,7 +1292,7 @@ SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePay
 }
 
 void ConfigManager::wipeProfileBlocks() {
-    // Wipe every auxiliary profile slot so schema migrations start clean.
+    // Preserve profile slot 0 block layout; wipe auxiliary slots/settings used by migrations.
     for (uint8_t id = 1; id < NUM_PROFILES; ++id) {
         const uint16_t base = EEPROM_PROFILE_START(id);
         for (uint16_t offset = 0; offset < EEPROM_PROFILE_BLOCK_SIZE; ++offset) {

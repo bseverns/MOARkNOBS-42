@@ -55,6 +55,8 @@ uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 } // namespace
 
+// Scene commands are wired into the protocol now, but persistent scene storage is intentionally
+// stubbed until dedicated EEPROM/flash allocation is finalized.
 namespace SceneStorage {
 struct SceneInfo {
     uint8_t slot = 0;
@@ -172,6 +174,8 @@ static bool handleSceneJsonCommand(const String &command) {
     return false;
 }
 
+// Rough free-RAM estimate for telemetry; this is stack-pointer minus .bss base, not a full
+// allocator-level accounting.
 size_t computeFreeRAM() {
 #if defined(ARDUINO)
     char stackDummy = 0;
@@ -183,6 +187,7 @@ size_t computeFreeRAM() {
 #endif
 }
 
+// Report approximate remaining program flash so host tools can surface headroom warnings.
 size_t computeFreeFlash() {
 #if defined(ARDUINO)
     constexpr size_t kFlashSizeBytes =
@@ -195,6 +200,8 @@ size_t computeFreeFlash() {
 }
 
 void initializeProtocol() {
+    // Boot banner + reset diagnostics are emitted early so host tooling can log reset cause and
+    // brownout history before config RPCs begin.
     Serial.begin(SERIAL_BAUD);
     Serial.printf("MN42 FW %s %s\n", FW_VERSION_STR, GIT_SHA_STR);
     g_resetCause = SRC_SRSR;
@@ -1252,6 +1259,7 @@ void handleSetLedCommand(const ParsedCommand &cmd);
 void handleSetPotCommand(const ParsedCommand &cmd);
 void handleSetProfileCommand(const ParsedCommand &cmd);
 
+// Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
     {"GET_ALL", handleGetAllCommand},
     {"GET_ARGMETHOD", handleGetArgMethodCommand},
@@ -1326,6 +1334,7 @@ void processCommandQueue() {
 
         command.trim();
 
+        // JSON scene commands intentionally short-circuit before legacy CSV-style command parsing.
         if (handleSceneJsonCommand(command)) {
             continue;
         }
@@ -1539,6 +1548,7 @@ void handleGetLedCommand(const ParsedCommand &cmd) {
 
 void handleGetManifestCommand(const ParsedCommand &cmd) {
     (void)cmd;
+    // Manifest is the host's capability contract for this session (schema/version/counts/resources).
     StaticJsonDocument<256> doc;
     doc["fw_version"] = FW_VERSION_STR;
     doc["git_sha"] = GIT_SHA_STR;
@@ -1559,6 +1569,8 @@ void handleGetManifestCommand(const ParsedCommand &cmd) {
 
 void handleGetProfileCommand(const ParsedCommand &cmd) {
     const String &command = cmd.fullCommand();
+    // If a profile slot has never been persisted, fall back to a live runtime snapshot so hosts
+    // still receive a complete payload.
     int comma = command.indexOf(',');
     uint8_t id = g_activeProfile;
     if (comma >= 0) {
@@ -1638,6 +1650,7 @@ void handleGetSchemaCommand(const ParsedCommand &cmd) {
 
 void handleHelloCommand(const ParsedCommand &cmd) {
     (void)cmd;
+    // HELLO is both identity ping and telemetry opt-in for WebSerial clients.
     webSerialStreaming = true;
     LOG_PRINTLN("{\"hello\":\"mn42\"}");
 }
@@ -1834,6 +1847,8 @@ void handleSetPotCommand(const ParsedCommand &cmd) {
 
 void handleSetProfileCommand(const ParsedCommand &cmd) {
     const String &command = cmd.fullCommand();
+    // Merge incoming JSON onto a captured snapshot so callers may send sparse profile patches
+    // instead of a full profile document every time.
     int firstComma = command.indexOf(',');
     int secondComma = command.indexOf(',', firstComma + 1);
     if (firstComma < 0 || secondComma < 0) {
@@ -1961,6 +1976,7 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
         return;
     }
     if (id == g_activeProfile) {
+        // Keep runtime state in lockstep when the active profile slot is edited remotely.
         ProfileData stored{};
         if (configManager.loadProfileSettings(id, stored)) {
             applyProfileSnapshot(stored, true);

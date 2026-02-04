@@ -6,7 +6,10 @@
   "scripts": {
     "test": "node test/mn42_bridge.test.js && node test/serial_to_osc.test.js && node test/test_missing_port.js && node test/cmd_validation.test.js",
     "lint": "npx eslint .",
-    "format": "npx prettier --write ."
+    "format": "npx prettier --write .",
+    "smoke": "node scripts/smoke_bridge_cli.js",
+    "package:bridge": "bash scripts/package_bridge.sh",
+    "release:prep": "npm test && npm run smoke"
   },
   "keywords": [
     "mn42",

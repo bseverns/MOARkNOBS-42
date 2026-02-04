@@ -160,6 +160,43 @@ body {
   justify-content: center;
 }
 
+.profile-wizard {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.profile-wizard strong {
+  text-align: center;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.profile-wizard-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.profile-wizard-controls label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.profile-wizard-controls select {
+  width: 100%;
+}
+
+#profile-wizard-status {
+  margin: 0;
+  text-align: center;
+}
+
 .profile-backup {
   display: flex;
   flex-wrap: wrap;
@@ -568,6 +605,42 @@ button:not(:disabled):focus-visible {
   display: none !important;
 }
 
+.ui-tier-hidden {
+  display: none !important;
+}
+
+.mode-switch {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mode-switch-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.mode-switch-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mode-switch-buttons button {
+  padding: 8px 10px;
+}
+
+.mode-switch-buttons button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: rgba(45, 226, 230, 0.88);
+}
+
 #status {
   display: grid;
   grid-template-columns: auto auto;
@@ -689,6 +762,26 @@ label select:focus {
 .schema-control {
   display: grid;
   gap: 0.4rem;
+}
+
+.control-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.help-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(45, 226, 230, 0.42);
+  font-size: 0.68rem;
+  line-height: 1;
+  color: var(--color-accent);
+  cursor: help;
 }
 
 .schema-control label {
@@ -840,6 +933,8 @@ label select:focus {
   flex-direction: column;
   gap: 6px;
   font-size: 0.9rem;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .slot-fieldset label input,
@@ -1067,6 +1162,10 @@ footer {
 
   #slots {
     height: clamp(320px, 50vh, 520px);
+  }
+
+  .profile-wizard-controls {
+    grid-template-columns: 1fr;
   }
 }
 

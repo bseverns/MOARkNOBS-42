@@ -264,7 +264,10 @@ void initializeRuntime(bool baselinesLoaded) {
     initializeSchedulers();
 }
 
-void midiTimerISR() { queueMidiServiceRequest(); }
+void midiTimerISR() {
+    // Timer1 ISR only drops a service token; all real MIDI work stays in task context.
+    queueMidiServiceRequest();
+}
 
 void processMIDI() {
     if (!consumeMidiServiceRequest()) {
@@ -275,6 +278,8 @@ void processMIDI() {
     static uint32_t lastDisplayTick = 0;
     uint32_t tickCount = midiHandler.clockTickCount();
     if (tickCount != lastDisplayTick) {
+        // Catch-up path: if multiple clock ticks arrive between scheduler slices, advance by the
+        // full delta to keep beat position stable.
         uint32_t diff = tickCount - lastDisplayTick;
         lastDisplayTick = tickCount;
 
@@ -298,6 +303,8 @@ void processMIDI() {
 }
 
 void processEnvelopeFollowers() {
+    // Fast follower pass runs in the high-tier scheduler; downstream MIDI mapping happens in
+    // `processEnvelopes()` on the mid tier.
     float gainTrim = 1.0f + g_lfoEfGainTrim;
     gainTrim = constrain(gainTrim, 0.0f, 2.0f);
     for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
@@ -338,6 +345,7 @@ bool queuePendingNoteOff(uint8_t note, uint8_t channel, unsigned long delayMs) {
             return true;
         }
     }
+    // Note-off queue overflow is treated as a dropped-MIDI diagnostic event.
     ++g_systemDiagnostics.midiDropCount;
     requestStatusLEDPulse();
     return false;
@@ -356,6 +364,7 @@ void processPendingNoteOffs() {
 }
 
 void processEnvelopes() {
+    // Track last emitted values so EF modulation sends CC only on change.
     static std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
     static bool envelopeMidiInitialized = false;
     if (!envelopeMidiInitialized) {
@@ -401,6 +410,7 @@ void processEnvelopes() {
             }
 
             const MIDISlot &slot = configManager.getSlot(potIndex);
+            // Per-slot EfVoice applies filter/ARG semantics before we fold into base pot value.
             EfVoice &voice = efVoices[potIndex];
             voice.assignFollower(envelopeIndex);
             voice.syncSettings(slot.efSettings);

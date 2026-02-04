@@ -23,7 +23,7 @@ folder for the gritty context, wiring diagrams, and experiments.
 | [docs/EEPROMLayout.md](docs/EEPROMLayout.md) | Where config bytes crash at night |
 | [firmware/](firmware/README.md) | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
 | [hardware/](hardware/README.md) | Schematics, BOM, enclosure bits and the [Parts & Rationale](hardware/Parts.md) cheat sheet |
-| [bridge/](bridge/README.md) | Node.js shim that slings serial into OSC/WebMIDI |
+| [bridge/](bridge/README.md) | Node.js bridge docs for OSC + virtual MIDI setup, command reference, and troubleshooting |
 | [tools/](tools/README.md) | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md) |
 
 ## Highlights

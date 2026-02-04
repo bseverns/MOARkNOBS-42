@@ -1,28 +1,25 @@
 # Pure Data Listener
 
-~~`mn42_listener.pd` does the same trick as the Max patch but keeps it free and open.~~
-It listens on port `8000`, dumping slot and envelope numbers without a price tag.
+`mn42_listener.pd` is the Pure Data version of the OSC monitor patch.
 
 ```mermaid
 sequenceDiagram
     participant PdPatch
     participant Bridge
     participant Controller
-    PdPatch->>Bridge: OSC 8000
+    PdPatch->>Bridge: OSC 9000
     Bridge->>Controller: serial JSON
     Controller-->>Bridge: slot/envelope dump
-    Bridge-->>PdPatch: OSC echo
+    Bridge-->>PdPatch: OSC updates
 ```
 
-## Spin It Up
+## Run it
 
-1. Kick on the [OSC/WebMIDI bridge](../../OSCBridge.md):
+1. Start the bridge:
    ```bash
-   node bridge/mn42_bridge.js
+   node bridge/mn42_bridge.js --osc 9000 --osc-listen 9000
    ```
-2. Launch Pure Data and open `mn42_listener.pd`.
-3. The `netreceive -u -b 8000` object waits for the OSC stream and routes the
-   slot/envelope data to the rest of the patch.
+2. Open `mn42_listener.pd` in Pure Data.
+3. The `udpreceive 9000` object receives `/mn42/slots` and `/mn42/envelopes`.
 
-Hack it to route CVs, drive visuals, or whatever madness you need. It's a
-reference point—take it further.
+From there, route the values anywhere in your patch graph.

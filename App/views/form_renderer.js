@@ -55,6 +55,17 @@ function titleize(key) {
     .replace(/\w+/g, (word) => word[0].toUpperCase() + word.slice(1));
 }
 
+function createHelpBadge(message) {
+  if (!message) return null;
+  const badge = document.createElement('span');
+  badge.className = 'help-badge';
+  badge.textContent = 'i';
+  badge.title = message;
+  badge.setAttribute('aria-label', message);
+  badge.setAttribute('role', 'img');
+  return badge;
+}
+
 export class FormRenderer {
   constructor({ runtime, sections = [], debounceMs = DEFAULT_DEBOUNCE }) {
     this.runtime = runtime;
@@ -62,6 +73,7 @@ export class FormRenderer {
     this.debounceMs = debounceMs;
     this.schema = null;
     this.fields = new Map();
+    // Per-path timers coalesce rapid UI edits into one outbound patch per field.
     this._patchSchedule = new Map();
   }
 
@@ -125,7 +137,9 @@ export class FormRenderer {
         const sub = document.createElement('section');
         sub.className = 'schema-section';
         const heading = document.createElement('h4');
-        heading.textContent = titleize(key);
+        heading.textContent = meta.title ?? titleize(key);
+        const headingHelp = createHelpBadge(meta.description);
+        if (headingHelp) heading.appendChild(headingHelp);
         sub.appendChild(heading);
         if (meta.description) {
           const desc = document.createElement('p');
@@ -140,7 +154,7 @@ export class FormRenderer {
         container.appendChild(sub);
         return;
       }
-      container.appendChild(this.createField(path, meta, fieldValue, titleize(key)));
+      container.appendChild(this.createField(path, meta, fieldValue, meta.title ?? titleize(key)));
     });
   }
 
@@ -152,7 +166,8 @@ export class FormRenderer {
       const detail = document.createElement('details');
       detail.className = 'schema-section';
       const summary = document.createElement('summary');
-      summary.textContent = `${titleize(basePath)} ${index + 1}`;
+      const baseLabel = schema.title ?? titleize(basePath.split('.').pop() ?? basePath);
+      summary.textContent = `${baseLabel} ${index + 1}`;
       detail.appendChild(summary);
       const body = document.createElement('div');
       body.className = 'schema-section-body';
@@ -167,7 +182,12 @@ export class FormRenderer {
     const wrapper = document.createElement('div');
     wrapper.className = 'schema-control';
     const label = document.createElement('label');
-    label.textContent = labelText ?? titleize(path.split('.').pop() ?? path);
+    const labelLine = document.createElement('span');
+    labelLine.className = 'control-label';
+    labelLine.textContent = labelText ?? schema.title ?? titleize(path.split('.').pop() ?? path);
+    const labelHelp = createHelpBadge(schema.description);
+    if (labelHelp) labelLine.appendChild(labelHelp);
+    label.appendChild(labelLine);
     wrapper.appendChild(label);
     const action = document.createElement('div');
     action.className = 'schema-action';
@@ -233,6 +253,7 @@ export class FormRenderer {
       };
       const commit = (raw) => {
         const numericValue = applyVisualValue(raw);
+        // Local stage first for instant UI feedback; device patch follows on the debounce lane.
         this.stageValue(path, numericValue);
         this.schedulePatch(path, numericValue);
       };
@@ -299,6 +320,7 @@ export class FormRenderer {
   }
 
   stageValue(path, value) {
+    // Mutate staged config only; persistence happens when runtime apply/patch confirms.
     this.runtime.stage((draft) => {
       setValueAt(draft, path, value);
       return draft;
@@ -307,9 +329,11 @@ export class FormRenderer {
 
   schedulePatch(path, value) {
     const key = path;
+    // Last-write-wins per path: replace any pending timer so only the freshest value is sent.
     if (this._patchSchedule.has(key)) clearTimeout(this._patchSchedule.get(key));
     const timer = setTimeout(() => {
       this._patchSchedule.delete(key);
+      // Runtime already reports/rolls back transport errors; renderer keeps typing fluid.
       this.runtime.applyPatch(path, value).catch(() => {});
     }, this.debounceMs);
     this._patchSchedule.set(key, timer);

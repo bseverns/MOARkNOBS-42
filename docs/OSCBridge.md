@@ -1,28 +1,56 @@
-# OSC/WebMIDI Bridge
+# OSC and Virtual MIDI Bridge Quickstart
 
-When MIDI wiring feels like a straightjacket, the bridge lets the box speak OSC and WebMIDI so you can poke it from across the room or from a script instead of the front panel.
+This page is the friendly quickstart for using MOARkNOBS-42 with OSC apps and DAWs.
 
-## Setup
+For the full CLI reference and message contract, see [`bridge/README.md`](../bridge/README.md).
 
-1. `npm install` – pull in the Node bits.
-2. `node bridge/mn42_bridge.js` – spins up the translator. It listens for OSC on `127.0.0.1:8000` and chats WebMIDI to the first MN42 it finds. `--help` shows options for ports and devices.
+## What you can do with the bridge
 
-## OSC Address & MIDI Mapping
+- read MN42 slot/envelope updates in OSC
+- route those updates into a DAW over virtual MIDI
+- send control commands back to the hardware from OSC or MIDI
 
-All addresses live under `/mn42` and map to regular MIDI messages:
+## Start in 60 seconds
 
-- `/mn42/slot/<slot>/cc/<cc>` `<value>` → Control Change.
-- `/mn42/slot/<slot>/note/<note>` `<velocity>` → Note On/Off.
-- `/mn42/raw/<status>/<data1>/<data2>` → fire raw three‑byte MIDI at the board.
+From repo root:
 
-Slot and controller numbers start at zero because counting from one is for humans.
+```bash
+npm --prefix bridge ci
+node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --midi "MN42 Bridge"
+```
 
-## Push Updates Back to the Hardware
+Then:
+- in an OSC monitor, listen on UDP `9000` for `/mn42/slots` and `/mn42/envelopes`
+- in your DAW, enable the MIDI input named `MN42 Bridge`
 
-Any OSC poke is immediately flung over WebMIDI. When you're ready to make it stick:
+## OSC command example
 
-- Send `/mn42/persist` to burn the current state into EEPROM.
-- Or run `node bridge/mn42_bridge.js --push my_patch.json` to blast a saved profile.
+Send one command to set slot 2 to 95:
 
-Ride the bridge, break the rules, and remember you can always yank the USB cable if things get weird.
-ts. Hack, remix, and make the bridge scream your tune.
+```bash
+oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+```
+
+## Virtual MIDI example
+
+- Start bridge with default MIDI label (`MN42 Bridge`)
+- In your DAW MIDI devices, enable `MN42 Bridge`
+- You should see incoming CC data while turning knobs
+
+Bridge MIDI mapping:
+- Channel 1 CC 0..41 = slot values
+- Channel 2 CC 0..5 = envelope follower values
+
+## Common mistakes
+
+- Wrong serial device path
+- Sending OSC to the wrong port (`--osc-listen`)
+- Sending invalid JSON or out-of-range slot/value
+
+## If you want one-click install later
+
+Packaging is not shipped yet. The current bridge is CLI-first.
+If needed, the next step is a per-platform bundle using `pkg` or `nexe` plus signed installers.
+
+
+Performer-friendly one-pager: [`docs/BridgeForPerformers.md`](BridgeForPerformers.md).

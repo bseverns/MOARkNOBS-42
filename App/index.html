@@ -35,8 +35,29 @@
         </div>
         <div class="profile-actions" role="group" aria-label="Device profile actions">
           <button id="profile-save" type="button" disabled>Save profile</button>
-          <button id="profile-load" type="button" disabled>Load profile</button>
+          <button id="profile-load" type="button" disabled>Switch profile</button>
           <button id="profile-reset" type="button" disabled>Reset profile</button>
+        </div>
+        <div class="profile-wizard" id="profile-wizard" aria-label="Guided profile save">
+          <strong>Guided profile save</strong>
+          <p class="microcopy">Switch target slot, tweak controls, apply edits, then save.</p>
+          <div class="profile-wizard-controls">
+            <label>
+              <span>Target slot</span>
+              <select id="profile-wizard-target">
+                <option value="0">A</option>
+                <option value="1">B</option>
+                <option value="2">C</option>
+                <option value="3">D</option>
+              </select>
+            </label>
+            <button id="profile-wizard-switch" type="button" disabled>1. Switch target</button>
+            <button id="profile-wizard-apply" type="button" disabled>2. Sync edits</button>
+            <button id="profile-wizard-save" type="button" disabled>3. Save profile</button>
+          </div>
+          <p class="microcopy" id="profile-wizard-status" data-state="muted" aria-live="polite">
+            Connect to the device to start the guided flow.
+          </p>
         </div>
         <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls">
           <div class="macro-card-header">
@@ -96,24 +117,24 @@
               <div><dt>MIDI Type</dt><dd id="slot-detail-type">—</dd></div>
               <div><dt>Channel</dt><dd id="slot-detail-channel">—</dd></div>
               <div><dt>Data</dt><dd id="slot-detail-data">—</dd></div>
-              <div><dt>EF Index</dt><dd id="slot-detail-ef-index">—</dd></div>
-              <div><dt>EF Filter</dt><dd id="slot-detail-ef-filter">—</dd></div>
-              <div><dt>EF Tuning</dt><dd id="slot-detail-ef-tuning">—</dd></div>
-              <div><dt>EF Dynamics</dt><dd id="slot-detail-ef-dynamics">—</dd></div>
-              <div><dt>EF Baseline</dt><dd id="slot-detail-ef-baseline">—</dd></div>
-              <div><dt>ARG Mode</dt><dd id="slot-detail-arg">—</dd></div>
-              <div><dt>ARG Sources</dt><dd id="slot-detail-arg-sources">—</dd></div>
+              <div data-ui-tier="advanced"><dt>EF Index</dt><dd id="slot-detail-ef-index">—</dd></div>
+              <div data-ui-tier="advanced"><dt>EF Filter</dt><dd id="slot-detail-ef-filter">—</dd></div>
+              <div data-ui-tier="advanced"><dt>EF Tuning</dt><dd id="slot-detail-ef-tuning">—</dd></div>
+              <div data-ui-tier="advanced"><dt>EF Dynamics</dt><dd id="slot-detail-ef-dynamics">—</dd></div>
+              <div data-ui-tier="advanced"><dt>EF Baseline</dt><dd id="slot-detail-ef-baseline">—</dd></div>
+              <div data-ui-tier="advanced"><dt>ARG Mode</dt><dd id="slot-detail-arg">—</dd></div>
+              <div data-ui-tier="advanced"><dt>ARG Sources</dt><dd id="slot-detail-arg-sources">—</dd></div>
               <div><dt>Last Value</dt><dd id="slot-detail-value">—</dd></div>
             </dl>
           </section>
         </div>
-        <fieldset id="ef-assignment-card">
+        <fieldset id="ef-assignment-card" data-ui-tier="advanced">
           <legend>Envelope Assignments</legend>
           <p class="microcopy">Tell each follower which slot to stalk — no need to wait for live signals.</p>
           <div class="ef-grid"></div>
         </fieldset>
         <div id="form">
-          <section class="schema-section" id="ef-form">
+          <section class="schema-section" id="ef-form" data-ui-tier="advanced">
             <header>
               <h3>EF Followers</h3>
               <p class="microcopy">Route each envelope follower to a slot and tweak ahead of showtime.</p>
@@ -128,7 +149,7 @@
             <div class="schema-section-body" data-schema-target="slots"></div>
           </section>
         </div>
-        <details>
+        <details data-ui-tier="advanced">
           <summary>Debug Log</summary>
           <pre id="log" aria-live="off"></pre>
         </details>
@@ -146,6 +167,14 @@
         <p class="microcopy">
           First time here? Plug the synth in over USB, slam <strong>Connect</strong>, and let the live meters confirm the handshake.
         </p>
+        <div class="mode-switch" role="group" aria-label="Editing mode">
+          <span class="mode-switch-label">Editing mode</span>
+          <div class="mode-switch-buttons">
+            <button id="ui-mode-basic" type="button" data-ui-mode-btn="basic" aria-pressed="false">Basic</button>
+            <button id="ui-mode-advanced" type="button" data-ui-mode-btn="advanced" aria-pressed="false">Advanced</button>
+          </div>
+        </div>
+        <p class="microcopy" id="ui-mode-hint">Basic mode keeps common knob-to-MIDI mapping controls visible.</p>
         <div id="status" data-state="warn" aria-live="polite">
           <svg viewBox="0 0 24 24" aria-hidden="true" role="img">
             <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6" />
@@ -161,11 +190,11 @@
           </select>
           <button id="simulator-toggle" type="button">Start simulator</button>
         </div>
-        <fieldset id="filter-settings" class="schema-section" data-schema-section="filter">
+        <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
           <legend>Filter</legend>
           <div class="schema-section-body" data-schema-target="filter"></div>
         </fieldset>
-        <fieldset id="arg-settings" class="schema-section" data-schema-section="arg">
+        <fieldset id="arg-settings" class="schema-section" data-schema-section="arg" data-ui-tier="advanced">
           <legend>ARG Pair</legend>
           <div class="schema-section-body" data-schema-target="arg"></div>
         </fieldset>
@@ -215,7 +244,7 @@
             </div>
           </div>
         </section>
-        <section id="scope-panel" class="scope-panel" aria-label="EF scope and LFO canvas">
+        <section id="scope-panel" class="scope-panel" aria-label="EF scope and LFO canvas" data-ui-tier="advanced">
           <header class="scope-panel-header">
             <div>
               <h3>EF Scope &amp; LFO</h3>

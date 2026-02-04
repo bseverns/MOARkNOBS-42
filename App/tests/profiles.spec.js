@@ -5,6 +5,8 @@ import path from 'path';
 test.describe('Profiles toolbar', () => {
   async function bootWithSimulator(page) {
     await page.addInitScript(() => {
+      window.localStorage?.clear?.();
+      window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/benzknobz.html');
@@ -32,9 +34,43 @@ test.describe('Profiles toolbar', () => {
 
     await freqInput.fill('200');
     await freqInput.dispatchEvent('change');
-    await page.getByRole('button', { name: 'Load profile', exact: true }).click();
+    await page.getByRole('button', { name: 'Switch profile', exact: true }).click();
     await expect(freqInput).toHaveValue('123');
     await expect(page.locator('#dirty-badge')).toBeHidden();
+  });
+
+  test('save profile auto-applies dirty staged edits', async ({ page }) => {
+    await bootWithSimulator(page);
+
+    const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();
+    await freqInput.fill('444');
+    await freqInput.dispatchEvent('change');
+    await expect(page.locator('#dirty-badge')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+  });
+
+  test('guided wizard switches, applies, and saves target slot', async ({ page }) => {
+    await bootWithSimulator(page);
+
+    await page.selectOption('#profile-wizard-target', '2');
+    await page.getByRole('button', { name: '1. Switch target', exact: true }).click();
+    await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 5000 });
+    await expect(page.locator('#profile-slot-status')).toContainText('Slot C');
+
+    const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();
+    await freqInput.fill('321');
+    await freqInput.dispatchEvent('change');
+    await expect(page.locator('#dirty-badge')).toBeVisible();
+
+    await page.getByRole('button', { name: '2. Sync edits', exact: true }).click();
+    await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+
+    await page.getByRole('button', { name: '3. Save profile', exact: true }).click();
+    await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
   });
 
   test('uploading a backup stages the imported profile', async ({ page }) => {

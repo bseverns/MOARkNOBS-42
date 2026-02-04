@@ -881,6 +881,16 @@ function createSimulator() {
         }
         respond({ checksum: request.checksum ?? 'sim-checksum' });
         break;
+      case 'set_param':
+        if (typeof request.path !== 'string' || !request.path.length) {
+          if (request.id !== undefined) {
+            pushLine({ id: request.id, error: { message: 'set_param requires path' } });
+          }
+          break;
+        }
+        setNestedValue(config, request.path, request.value);
+        respond({ ok: true, path: request.path, value: request.value });
+        break;
       case 'save_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
         profileSlots[slot] = clone(config);
@@ -1172,6 +1182,8 @@ export function createRuntime({
   }
 
   function createCompletionLatch() {
+    // Serial transport stays strictly ordered, so each queued RPC waits until its response
+    // releases this latch before the next write goes out.
     let released = false;
     let resolveLatch = () => {};
     const promise = new Promise((resolve) => {
@@ -1192,6 +1204,8 @@ export function createRuntime({
     rpcBusy = true;
     try {
       while (transport && rpcQueue.length) {
+        // Keep one in-flight RPC at a time: firmware responses are line-oriented and keyed by id,
+        // so serialized writes avoid cross-talk when links get jittery.
         const message = rpcQueue[0];
         const entry = pendingRpc.get(message.id);
         if (!entry) {
@@ -1277,6 +1291,8 @@ export function createRuntime({
       rpcQueue.push(message);
       processRpcQueue();
     });
+    // Any failed RPC rolls staged edits back to the last known-good live config so the UI does
+    // not stay in a half-applied state.
     return request.catch(async (err) => {
       try {
         await rollback();
@@ -1599,6 +1615,8 @@ export function createRuntime({
   }
 
   function handleLine(line) {
+    // Dispatch order matters: scene/macro replies can look like normal JSON payloads, so route
+    // their handlers first before generic RPC/telemetry parsing.
     if (!line) return;
     let msg;
     try {
@@ -1711,6 +1729,8 @@ export function createRuntime({
   }
 
   function applyConfigPatch(patch) {
+    // Device-side patches update the live snapshot first, then selectively merge into staged
+    // values only where the user has not diverged locally.
     if (!patch || typeof patch !== 'object' || !liveConfig) return;
     const prevLive = clone(liveConfig);
     const nextLive = clone(liveConfig);
@@ -1882,7 +1902,7 @@ export function createRuntime({
     const normalizedStaged = normalizeConfig(next, remoteManifest ?? localManifest ?? {});
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
-    dirty = true;
+    dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
     broadcastConfig();
   }
 

@@ -1,201 +1,210 @@
 # MN42 Bridge
 
-Welcome to the scrappy little Node.js sidecar that lets your **MOARkNOBS-42** talk trash on modern networks.
+The MN42 Bridge is a Node.js CLI that connects MOARkNOBS-42 hardware to OSC apps and virtual MIDI ports.
 
-## System context
-
-~~Think of this as the surly middle manager between the MN42 controller and whatever OSC-aware DAW you're torturing.~~ It listens on `/dev/ttyACM0` at 115,200 baud (driven by `Globals.h`'s `SERIAL_BAUD`), shovels controller dumps out to `/mn42/slots` and `/mn42/envelopes`, and waits on `/mn42/cmd` for anything you want shot back over serial. Outbound OSC screams at `--host`:`--osc`; inbound commands land on the `--osc-listen` port (default 9000).
-
-Want to see where this misfit sits in the whole rig? Peep the [systemflow docs](../docs/sketch/systemFlow/hw/) for the bigger wiring saga.
-
-```mermaid
-flowchart LR
-  Host[DAW / Browser]
-  Bridge((MN42 Bridge))
-  Controller((MN42 Controller))
-  Host <-->|OSC / WebMIDI| Bridge <-->|Serial JSON| Controller
-```
-
-```bash
-oscsend localhost 9000 /mn42/cmd '{"cmd":"SET_POT","slot":2,"value":99}'  # OSC -> serial sets pot 2 to 99
-```
-
-## What's the gig?
-
-- **Serial** in at 115,200 baud (default `SERIAL_BAUD`).
-- **OSC** blasts out on `/mn42/slots` and `/mn42/envelopes` (aimed at the `--osc` port, default 9000).
-- **Virtual MIDI** mirror so WebMIDI punks can jam along.
-- Shoot back commands like `SET_POT` over OSC or MIDI and they hitch a ride over serial.
-
-## CLI
-
-```bash
-node mn42_bridge.js \
-  --serial /dev/ttyACM0 \
-  --osc 9000 \
-  --osc-listen 9000 \
-  --host 127.0.0.1 \
-  --bind 127.0.0.1 \
-  --midi "MN42 Bridge"
-```
+It does three things:
+- reads JSON telemetry from the controller over USB serial,
+- publishes that data as OSC and MIDI,
+- accepts OSC or MIDI control messages and forwards them back to the controller.
 
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
-Flags:
+## Quick start (musician-friendly)
 
-- `--serial` (`-s`) – which serial port to sniff.
-- `--osc` (`-o`) – remote UDP port to scream OSC at.
-- `--osc-listen` – local UDP port soaking up `/mn42/cmd` (default 9000).
-- `--host` (`-H`) – where to fling outbound OSC. Defaults to `127.0.0.1`.
-- `--bind` (`-b`) – IP we listen on for inbound OSC. Defaults to `127.0.0.1` to keep rando packets out.
-- `--midi` (`-m`) – label for the virtual MIDI port.
+### 1) Install prerequisites
 
-### Split send/receive ports
+- Node.js 20.x (`node --version` must report `v20.*`)
+- MN42 connected over USB
 
-Feeling fancy? Send OSC out one port and listen on another:
+From repo root:
 
 ```bash
-node mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
-oscsend localhost 8000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":10}'
+npm --prefix bridge ci
 ```
 
-The bridge screams updates at port **7000** while soaking inbound commands on **8000**.
-
-Safety bumpers:
-
-- The bridge ignores OSC/MIDI JSON that doesn't spell out `cmd`, `slot`, and a numeric `value`. No half-baked packets make it to serial.
-- Packets over **128 bytes** get tossed in the pit.
-- `slot` only rides **0–41** and `value` only **0–127**; outside that, the bridge laughs and drops it.
-
-The test suite (`cmd_validation.test.js`) hammers those limits—run `npm test` to watch bogus commands get choked out.
-
-## Message schema
-
-You asked for receipts; here's the contract the bridge enforces while it heckles everything else. The 128-byte guardrail above still rules all of these—oversized payloads go straight to the cutting room floor so you can fuzz fast without drowning in logs.
-
-### Outbound (bridge → OSC/MIDI)
-
-- `/mn42/slots` dumps `{ "slots": [42 integers between 0–127] }`. Slot 0 maps to CC0, slot 41 maps to CC41.
-- `/mn42/envelopes` dumps `{ "envelopes": [6 integers between 0–127] }`. Each index tracks an envelope follower and mirrors to MIDI CCs on channel 2.
-
-Quick hits:
-
-- Valid blast: `{ "slots": [0, 64, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] }` (JSON length ~120 bytes, so it squeezes under the 128 cap.)
-- Rejected: `{ "envelopes": [0, 5, 9, 130, 4, 2] }` (value `130` busts the 0–127 range, so the bridge stays silent).
-
-### Inbound (OSC/MIDI → bridge → serial)
-
-- `/mn42/cmd` must include `cmd` (string), `slot` (integer 0–41), and `value` (integer 0–127). Anything missing or out of range dies before it ever hits the controller.
-
-Two samples to keep you honest:
-
-- Valid: `{ "cmd": "SET_POT", "slot": 2, "value": 99 }`
-- Rejected: `{ "cmd": "SET_POT", "slot": 99, "value": -1 }` (slot is out of bounds and the value is negative, so the bridge shrugs.)
-
-## Teaching moment
-
-The bridge waits for `{"hello":"mn42"}` from the controller before it starts spewing data. Each JSON line from the serial port is parsed and shotgunned to both OSC and MIDI. Incoming OSC or MIDI messages get repackaged as JSON and fired back at the controller.
-
-## Install
-
-This miscreant only rolls with **Node.js 20**. Anything older is a poser and won't even get past the door. Check your version:
-
-```bash
-node --version
-# v20.x.x or bust
-```
-
-Once you're speaking fluent v20, yank the deps back in with a clean slate—this repo refuses to babysit `node_modules/`, so every build pulls them fresh:
+Or from `bridge/`:
 
 ```bash
 npm ci
 ```
 
-Release builds travel light—no `node_modules` directory is ever bundled. If one slinks into version control, you're expected to torch it and let `npm ci` rebuild the pile.
+### 2) Find your serial port
 
-If it whines about missing modules, run `npm install` once to refresh `package-lock.json` and try again.
+- macOS: `ls /dev/cu.usbmodem*`
+- Linux: `ls /dev/ttyACM* /dev/ttyUSB*`
+- Windows PowerShell: `Get-CimInstance Win32_SerialPort | Select-Object DeviceID,Name`
 
-## Code style
+### 3) Start the bridge
 
-Linting isn't optional—it keeps this sidecar from steering into a ditch. Use
-`npm run lint` to sniff out nonsense and `npm run format` when the code needs a
-trim. The `pre-commit` hook will bark if you forget.
-
-## Testing vibes
-
-This repo doesn't ship with a hardware mock. To prove the script at least boots and dies gracefully when the wire's pulled:
+From repo root:
 
 ```bash
-npm test
+node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --host 127.0.0.1 --bind 127.0.0.1 --midi "MN42 Bridge"
 ```
 
-The test pokes a fake serial port so you can watch the bridge complain and keep its cool. If you've got the real controller, open an OSC monitor and a WebMIDI client, twiddle a pot, and watch the packets fly.
+Or from `bridge/`:
 
-## Example Session
+```bash
+node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --host 127.0.0.1 --bind 127.0.0.1 --midi "MN42 Bridge"
+```
 
-Need proof this gremlin works? Try this slam-dunk walkthrough.
+Replace `/dev/ttyACM0` with your device path.
 
-1. Kick the bridge to life:
+### 4) Confirm it is live
 
-   ```bash
-   node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --host 127.0.0.1 --bind 127.0.0.1 --midi "MN42 Bridge"
-   ```
+After startup, the bridge sends `HELLO` over serial and waits for:
 
-2. In another terminal, eavesdrop on the OSC noise:
+```json
+{"hello":"mn42"}
+```
 
-   ```bash
-   oscdump 9000
-   ```
+When the handshake arrives, slot/envelope updates begin forwarding.
 
-3. Sniff the MIDI echo too:
+## Everyday workflows
 
-   ```bash
-   aseqdump -p "MN42 Bridge"
-   ```
+### OSC workflow (TouchOSC, Max, Pd, custom apps)
 
-4. Now hurl a `SET_POT` command at slot 2:
+1. Start the bridge.
+2. In your OSC app, listen on your outbound port (`--osc`, default `9000`).
+3. Send control commands to `/mn42/cmd` on the inbound port (`--osc-listen`, default `9000`).
 
-   ```bash
-   oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
-   ```
+Example command (liblo/oscsend):
 
-   The hardware's slot 2 should snap to 95. `oscdump` spits back a `/mn42/slots` update and `aseqdump` coughs up a matching Control Change. That's the round trip—OSC in, MIDI out, and the rig obeys.
+```bash
+oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+```
 
-### Command/response cycle
+That sets slot 2 to value 95.
 
-Want to see every hop in gory detail? Here's the full loop.
+### DAW workflow (virtual MIDI)
 
-1. Lob a `SET_POT` grenade over OSC:
+1. Start the bridge with `--midi "MN42 Bridge"` (default label).
+2. In your DAW, enable the MIDI device named `MN42 Bridge`.
+3. Record/monitor incoming CC data or send CC data back to the bridge.
 
-   ```bash
-   oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":99}'
-   ```
+MIDI mapping used by the bridge:
+- Channel 1 CC: slot updates (`CC 0..41`)
+- Channel 2 CC: envelope follower updates (`CC 0..5`)
 
-   ```json
-   { "cmd": "SET_POT", "slot": 2, "value": 99 }
-   ```
+Inbound MIDI CC on any channel is converted to:
 
-2. The bridge belches back `/mn42/slots` so you know it stuck:
+```json
+{"cmd":"SET_POT","slot":<cc_number>,"value":<cc_value>}
+```
 
-   ```bash
-   oscdump 9000
-   # /mn42/slots 0 99 0 ...
-   ```
+## OSC addresses and payloads
 
-   ```json
-   {"slots":[0,99,0,...]}
-   ```
+### Outbound (bridge -> OSC)
 
-3. Same trick, voiced in MIDI:
+- `/mn42/slots`
+  - OSC args: 42 integers, each `0..127`
+  - index 0 maps to slot 0, index 41 maps to slot 41
+- `/mn42/envelopes`
+  - OSC args: 6 integers, each `0..127`
 
-   ```bash
-   amidi -p "MN42 Bridge" -S 'B0 02 63'  # CC on ch1, slot 2 => 99
-   ```
+### Inbound (OSC -> bridge)
 
-   ```json
-   { "cmd": "SET_POT", "slot": 2, "value": 99 }
-   ```
+- `/mn42/cmd`
+  - first argument must be JSON text or object with:
+    - `cmd` (string)
+    - `slot` (integer `0..41`)
+    - `value` (integer `0..127`)
+
+Valid example:
+
+```json
+{"cmd":"SET_POT","slot":2,"value":99}
+```
+
+Rejected example:
+
+```json
+{"cmd":"SET_POT","slot":99,"value":-1}
+```
+
+## Validation and limits
+
+The bridge drops messages that do not match the contract.
+
+- Max command size: 128 bytes
+- `slot` must be `0..41`
+- `value` must be `0..127`
+- Missing keys (`cmd`, `slot`, `value`) are rejected
+
+## CLI reference
+
+| Flag | Alias | Default | Purpose |
+| --- | --- | --- | --- |
+| `--serial` | `-s` | `/dev/ttyACM0` | Serial device path |
+| `--osc` | `-o` | `9000` | UDP port for outbound OSC |
+| `--osc-listen` | - | `9000` | UDP port for inbound OSC commands |
+| `--host` | `-H` | `127.0.0.1` | Destination host for outbound OSC |
+| `--bind` | `-b` | `127.0.0.1` | Local interface for inbound OSC listener |
+| `--midi` | `-m` | `MN42 Bridge` | Virtual MIDI port label |
+
+### Split send/receive ports
+
+```bash
+node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
+```
+
+- listen for telemetry on port `7000`
+- send `/mn42/cmd` commands to port `8000`
+
+## Troubleshooting
+
+### Bridge starts but no updates
+
+- Confirm serial path is correct.
+- Confirm controller responds to `HELLO`.
+- Ensure firmware serial baud matches `115200`.
+
+### OSC commands are ignored
+
+- Confirm command is sent to `/mn42/cmd`.
+- Ensure JSON has `cmd`, `slot`, `value`.
+- Confirm `slot` and `value` are in range.
+
+### DAW cannot find `MN42 Bridge`
+
+- Restart DAW after bridge launch.
+- Check that bridge has no startup MIDI errors.
+- Try a different `--midi` label and re-scan MIDI devices.
+
+### Port in use errors
+
+- Change ports with `--osc` / `--osc-listen`.
+- Keep `--bind 127.0.0.1` if you only need local access.
+
+## Packaging status (for non-command-line users)
+
+Current state: the bridge is a Node CLI and is not yet shipped as a one-click installer.
+
+If demand grows, this is the practical path:
+1. Prototype binary packaging with `pkg` or `nexe` per platform.
+2. Include prebuilt native dependencies for `serialport`.
+3. Ship signed installers that launch the bridge with a simple UI wrapper.
+4. Keep advanced flags available for power users.
+
+Until then, this README is the canonical runbook for daily use.
+
+For rollout planning, see [`docs/BridgePackaging.md`](../docs/BridgePackaging.md).
+For a show-day quick reference, see [`docs/BridgeForPerformers.md`](../docs/BridgeForPerformers.md).
+
+## Development
+
+From `bridge/`:
+
+```bash
+npm run release:prep
+npm run lint
+npm run format
+# optional packaging step
+npm run package:bridge
+```
+
+`release:prep` runs the bridge test suite and CLI smoke checks before packaging.
 
 ## License
 
-This scrappy sidecar rides under the [MIT License](../LICENSE). Peep the root file for the full legal riff.
+MIT, same as the repository root: [../LICENSE](../LICENSE).

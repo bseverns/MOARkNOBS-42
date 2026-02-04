@@ -69,6 +69,7 @@ void applyProfileEfToSlot(const ProfileEfSettings &profile, MIDISlot::EfSettings
 }
 } // namespace
 
+// Capture the subset of runtime state that should travel with profile slots (A-D).
 ProfileData captureProfileSnapshot() {
     ProfileData profile{};
     profile.routeCount = 0;
@@ -124,6 +125,8 @@ ProfileData captureProfileSnapshot() {
 }
 
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
+    // `persistSlots` lets callers apply an in-memory profile preview without rewriting EEPROM
+    // until the user commits.
     arpeggiator.setLength(profile.arp.lengthTicks);
     arpeggiator.setShape(static_cast<Arpeggiator::Shape>(profile.arp.shape));
     arpeggiator.setSwingPercent(profile.arp.swingPercent);
@@ -201,6 +204,8 @@ void refreshEfVoicesFromConfig() {
 }
 
 bool initializeModes() {
+    // Load active profile wiring first, then rebuild the channel cache consumed by UI/transport
+    // paths that still read `potChannels` directly.
     bool baselinesLoaded = configManager.loadEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     refreshEfVoicesFromConfig();
     for (size_t i = 0; i < envelopeFollowers.size(); ++i) {

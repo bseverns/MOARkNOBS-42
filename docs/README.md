@@ -76,7 +76,10 @@ flowchart TD
     - [envelopeFE.md](sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
     - Plenty more (midi opto, power antics, board PDFs) for late-night study.
 - [WebSerial.md](WebSerial.md) — how the board chats with browsers, negotiates schema versions, and keeps presets safe.
-- [OSCBridge.md](OSCBridge.md) — hurl OSC at a Node shim and let it punch MIDI into the hardware.
+- [OSCBridge.md](OSCBridge.md) — quickstart for OSC + virtual MIDI bridge usage, including DAW setup and troubleshooting.
+- [BridgeForPerformers.md](BridgeForPerformers.md) — one-page show-day checklist for running bridge + OSC/DAW fast.
+- [BridgePackaging.md](BridgePackaging.md) — implementation plan for shipping one-click bridge binaries/installers.
+- [release/bridge-artifacts-checklist.md](release/bridge-artifacts-checklist.md) — per-release template for bridge binary assets, checksums, and sign-off.
 - [thermal/](thermal/) — keep the silicon from frying itself.
 
 ## Exporting the narrative report

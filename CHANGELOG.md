@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Added a persisted Basic/Advanced UI mode in the App (plus `ui_mode` Playwright coverage) so newcomers can stay on plain knob->MIDI mapping while power users keep EF/ARG/filter depth visible.
+- Added a guided profile workflow in the App (target slot -> switch/load -> apply -> save), profile import/export staging cues, and tighter profile toolbar behavior around connect/disconnect state.
+- Added glossary-style help badges and layman labels across slot editing + schema-rendered forms so EF/ARG/filter/SysEx terms are explained inline instead of buried in docs.
+- Added bridge usability docs for every audience level: full operator runbook (`bridge/README.md`), quickstart (`docs/OSCBridge.md`), performer one-pager (`docs/BridgeForPerformers.md`), and packaging plan (`docs/BridgePackaging.md`).
+- Added release-prep tooling for bridge packaging: `bridge/scripts/smoke_bridge_cli.js`, `bridge/scripts/package_bridge.sh`, and npm scripts (`smoke`, `package:bridge`, `release:prep`) plus a per-release artifact checklist (`docs/release/bridge-artifacts-checklist.md`).
 - Playwright simulator rig bolts into CI and `test.sh`, so you can hammer the
   App’s UI without cracking open the firmware—kick it off locally with
   `npm --prefix App test` when you want browser-level truth before wiring up
@@ -35,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Planned scene slot support: fixed-size `Scene` records with named slots, `SAVE_SCENE`/`RECALL_SCENE` verbs, and a future WebSerial “Scenes” view that lists saved names and manages EEPROM-backed snapshots without blocking the loop.
 
 ### Changed
+- Bridge and docs indexes now cross-link quickstart/performer/packaging/release-checklist flows, and bridge examples were corrected to the current default OSC ports (`9000` send/listen) so docs match the live bridge behavior.
+- `.gitignore` now excludes local hardware CAD project/autosave artifacts (`*.epro`, `*.eprj`, autosave patterns, and `hardware/*_backup/`) so board iteration files can stay local-only while firmware/app/docs ship cleanly.
+- Runtime simulator and staged-state handling were tightened for profile/testing flows (`set_param` support, staged/live dirty reconciliation), and profile save now auto-applies dirty staged edits before firmware snapshot commands.
+- Added a focused explainability pass across recent architecture hotspots (`App/runtime.js`, `App/views/benzknobz.js`, `App/views/form_renderer.js`, `firmware/src/{Runtime,Scheduler,Protocol,ConfigManager,CommandQueue}.cpp`, `firmware/src/modes/Modes.cpp`) so post-2025 additions read like maintainable design notes instead of archaeology.
+- Commit summary (v1.0 prep sweep): newcomer-friendly App UX + profile workflow hardening + bridge usability docs + packaging/release scaffolding + targeted code explainability comments.
 - Runtime now runs a normalization/sanitization lap that clamps slot payloads
   before validation/apply, so the control surface stops seeing ghost values
   when the `runtime` bridge chews on sketchy input.
@@ -56,6 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   queueing.
 
 ### Fixed
+- Corrected stale bridge/example docs that still referenced old OSC defaults and legacy bridge verbs; documentation now reflects the current `/mn42/cmd` contract and `--osc/--osc-listen` defaults.
 - Status/diff badges finally clock the `hidden` flag and swap styles instead of
   pretending they’re always visible—badge CSS tweaks landed in the App so the
   UI doesn’t gaslight folks skimming change reports.

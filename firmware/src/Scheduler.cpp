@@ -12,6 +12,7 @@
 
 void initializeSchedulers() {
     // High-priority timing: keep the MIDI & DSP work snappy without blocking lower tiers.
+    // Order high-tier tasks so transport/clock service happens before modulation/render passes.
     Utility::schedulerHigh.addTask(processMIDI, hwConfig.midiTaskInterval);
     Utility::schedulerHigh.addTask(processLFOs, 1, true);
     Utility::schedulerHigh.addTask(processEnvelopeFollowers, 1, true);
@@ -78,8 +79,10 @@ void initializeSchedulers() {
         },
         50);
 
+    // SeedBox bridge runs slow on purpose; keep interop chatter off the critical paths.
     Utility::schedulerLow.addTask(
         []() { seedbox::interop::mn42::SeedBoxLink::instance().update(); }, 500);
 
+    // WebSerial stream cadence targets UI responsiveness without saturating USB serial output.
     Utility::schedulerLow.addTask(streamWebSerialState, 100, true);
 }
