@@ -28,8 +28,8 @@ App/playwright-report/
 App/test-results/
 
 # Hardware CAD project/autosave artifacts (local-only)
-hardware/**/*.epro
-hardware/**/*.eprj
+hardware/*.epro
+hardware/*.eprj
 hardware/**/*autosave*
 hardware/**/*AutoSave*
 hardware/*_backup/
