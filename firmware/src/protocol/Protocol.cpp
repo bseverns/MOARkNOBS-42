@@ -1608,7 +1608,8 @@ void handleGetLedCommand(const ParsedCommand &cmd) {
 
 void handleGetManifestCommand(const ParsedCommand &cmd) {
     (void)cmd;
-    // Manifest is the host's capability contract for this session (schema/version/counts/resources).
+    // Manifest is the host's capability contract for this session
+    // (schema/version/counts/resources).
     StaticJsonDocument<256> doc;
     doc["fw_version"] = FW_VERSION_STR;
     doc["git_sha"] = GIT_SHA_STR;

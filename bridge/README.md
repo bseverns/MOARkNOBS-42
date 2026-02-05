@@ -3,6 +3,7 @@
 The MN42 Bridge is a Node.js CLI that connects MOARkNOBS-42 hardware to OSC apps and virtual MIDI ports.
 
 It does three things:
+
 - reads JSON telemetry from the controller over USB serial,
 - publishes that data as OSC and MIDI,
 - accepts OSC or MIDI control messages and forwards them back to the controller.
@@ -55,7 +56,7 @@ Replace `/dev/ttyACM0` with your device path.
 After startup, the bridge sends `HELLO` over serial and waits for:
 
 ```json
-{"hello":"mn42"}
+{ "hello": "mn42" }
 ```
 
 When the handshake arrives, slot/envelope updates begin forwarding.
@@ -83,6 +84,7 @@ That sets slot 2 to value 95.
 3. Record/monitor incoming CC data or send CC data back to the bridge.
 
 MIDI mapping used by the bridge:
+
 - Channel 1 CC: slot updates (`CC 0..41`)
 - Channel 2 CC: envelope follower updates (`CC 0..5`)
 
@@ -113,13 +115,13 @@ Inbound MIDI CC on any channel is converted to:
 Valid example:
 
 ```json
-{"cmd":"SET_POT","slot":2,"value":99}
+{ "cmd": "SET_POT", "slot": 2, "value": 99 }
 ```
 
 Rejected example:
 
 ```json
-{"cmd":"SET_POT","slot":99,"value":-1}
+{ "cmd": "SET_POT", "slot": 99, "value": -1 }
 ```
 
 ## Validation and limits
@@ -133,14 +135,14 @@ The bridge drops messages that do not match the contract.
 
 ## CLI reference
 
-| Flag | Alias | Default | Purpose |
-| --- | --- | --- | --- |
-| `--serial` | `-s` | `/dev/ttyACM0` | Serial device path |
-| `--osc` | `-o` | `9000` | UDP port for outbound OSC |
-| `--osc-listen` | - | `9000` | UDP port for inbound OSC commands |
-| `--host` | `-H` | `127.0.0.1` | Destination host for outbound OSC |
-| `--bind` | `-b` | `127.0.0.1` | Local interface for inbound OSC listener |
-| `--midi` | `-m` | `MN42 Bridge` | Virtual MIDI port label |
+| Flag           | Alias | Default        | Purpose                                  |
+| -------------- | ----- | -------------- | ---------------------------------------- |
+| `--serial`     | `-s`  | `/dev/ttyACM0` | Serial device path                       |
+| `--osc`        | `-o`  | `9000`         | UDP port for outbound OSC                |
+| `--osc-listen` | -     | `9000`         | UDP port for inbound OSC commands        |
+| `--host`       | `-H`  | `127.0.0.1`    | Destination host for outbound OSC        |
+| `--bind`       | `-b`  | `127.0.0.1`    | Local interface for inbound OSC listener |
+| `--midi`       | `-m`  | `MN42 Bridge`  | Virtual MIDI port label                  |
 
 ### Split send/receive ports
 
@@ -181,6 +183,7 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 Current state: the bridge is a Node CLI and is not yet shipped as a one-click installer.
 
 If demand grows, this is the practical path:
+
 1. Prototype binary packaging with `pkg` or `nexe` per platform.
 2. Include prebuilt native dependencies for `serialport`.
 3. Ship signed installers that launch the bridge with a simple UI wrapper.
