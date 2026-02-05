@@ -67,7 +67,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
   - **Dual MIDI Output**: 5‑pin DIN and 1/8" Type‑A jacks scream from boot. USB MIDI stays dark until you mash **Ctrl3+Ctrl4+Ctrl5**.
 - **Idle Screensaver**: OLED enters low-power animations after inactivity.
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
-- **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign EFs, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
+- **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign each EF to one or more slots, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
   _Note:_ The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
 - **WebSerial Telemetry**: Streams slot values, envelope levels, and LFO outputs so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
 - **Telemetry Watchdog**: Hardware UART overruns, dropped MIDI frames, and slow loops now bump counters, flash the status LED, and flow out over WebSerial so you know when you're skirting the edge.
@@ -900,7 +900,7 @@ truth; use the screen to make sure your button mashing landed where it should.
 Use the included HTML editor (`benzknobz.html`) in Chrome or Edge:
 
 - Assign CCs visually
-- Set envelope pairings
+- Route envelope followers to one or more slots
 - Tweak filter types, EF settings, ARG pairings, and LED colors (including a global strip tint)
 - Save back to EEPROM over WebSerial
 
@@ -920,13 +920,14 @@ firmware salutes:
 | `GET_ARGMETHOD`            | Reports which ARG math trick is armed (0‑13).                     |
 | `SET_ARGMETHOD <n>`        | Picks the ARG method to torment signals with.                     |
 | `GET_EF <slot>`            | Tells which envelope follower owns a slot (`-1` = none).          |
-| `SET_EF <slot,ef>`         | Assigns follower `ef` to `slot` and saves it.                     |
+| `SET_EF <slot,ef>`         | Assigns follower `ef` to `slot` and saves it (repeat for multi-assign). |
 
 ### Slot EF payload anatomy
 
 `SET_SLOT` and friends (`SET_ALL`, WebSerial `slot_patch`, the JSON config blob from `GET_CONFIG`) now ship a nested `"ef"`
 object for every slot. That little structure mirrors the firmware's new `MIDISlot::EfSettings` record, so the browser can tune
-follower parameters without side quests through global filter state. Here's what the synth expects:
+follower parameters without side quests through global filter state. Global EF routing is carried by `efSlots`, where each
+follower entry can include a `slots` array (legacy single `slot` is still accepted). Here's what the synth expects:
 
 ```json
 {

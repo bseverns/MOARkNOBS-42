@@ -59,10 +59,10 @@ function createHelpBadge(message) {
   if (!message) return null;
   const badge = document.createElement('span');
   badge.className = 'help-badge';
-  badge.textContent = 'i';
-  badge.title = message;
+  badge.textContent = '?';
+  badge.dataset.tooltip = message;
   badge.setAttribute('aria-label', message);
-  badge.setAttribute('role', 'img');
+  badge.setAttribute('role', 'note');
   return badge;
 }
 

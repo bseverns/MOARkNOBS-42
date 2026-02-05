@@ -35,6 +35,7 @@ test.describe('Profiles toolbar', () => {
     await freqInput.fill('200');
     await freqInput.dispatchEvent('change');
     await page.getByRole('button', { name: 'Switch profile', exact: true }).click();
+    await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 5000 });
     await expect(freqInput).toHaveValue('123');
     await expect(page.locator('#dirty-badge')).toBeHidden();
   });

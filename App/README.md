@@ -44,6 +44,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 ## Slot Architecture Cheat Sheet
 
 - Every slot now exposes its per-slot envelope follower payload. The editor’s **Envelope Follower** block lets you park a follower index, pick a filter shape, and dial in frequency, Q, oversample count, smoothing, baseline, and gain without leaving the browser.
+- EF assignment rows now accept comma-separated slot lists per follower (`efSlots[].slots`), so one follower can modulate multiple slots from the same staging pass.
 - ARG lives per-slot too. The **ARG Combiner** panel flips the enable flag, locks the math method, and routes sources A/B with the same coarse/fine nudging as the hardware encoders.
 - The slot details panel mirrors the new firmware schema: EF index, filter, dynamics, baseline/gain, plus the ARG mode and source map stream live next to the MIDI stats.
 - `runtime.js` normalises staged JSON so the firmware always gets properly-shaped `ef`/`arg` bundles, and it now digests live `slot_patch` frames from the bridge to keep the UI in sync when the hardware mutates slots.

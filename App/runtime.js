@@ -434,21 +434,17 @@ function normalizeConfig(config, manifest = {}) {
   if (Array.isArray(config.efSlots)) {
     efSlots = Array.from({ length: efCount }, (_, idx) => {
       const entry = config.efSlots[idx];
-      const slotIndex = entry && Number.isFinite(Number(entry.slot)) ? Number(entry.slot) : -1;
-      if (slotIndex < 0) return { slot: -1 };
-      const capped = clamp(slotIndex, 0, Math.max(0, slotCount - 1));
-      return { slot: capped };
+      return { slots: normalizeEfSlotTargets(entry, slotCount) };
     });
   } else {
-    const derived = Array.from({ length: efCount }, () => ({ slot: -1 }));
+    const derived = Array.from({ length: efCount }, () => new Set());
     const routing = Array.isArray(config.envelopes?.routing) ? config.envelopes.routing : [];
     routing.forEach((value, potIndex) => {
       const follower = Number(value);
       if (!Number.isFinite(follower)) return;
       if (follower < 0 || follower >= derived.length) return;
-      if (derived[follower].slot !== -1) return;
       const capped = clamp(potIndex, 0, Math.max(0, slotCount - 1));
-      derived[follower] = { slot: capped };
+      derived[follower].add(capped);
     });
     slots.forEach((slot, slotIndex) => {
       const raw = Number.isFinite(Number(slot?.efIndex))
@@ -457,10 +453,11 @@ function normalizeConfig(config, manifest = {}) {
         ? Number(slot.ef.index)
         : -1;
       if (!Number.isFinite(raw) || raw < 0 || raw >= derived.length) return;
-      if (derived[raw].slot !== -1) return;
-      derived[raw] = { slot: clamp(slotIndex, 0, Math.max(0, slotCount - 1)) };
+      derived[raw].add(clamp(slotIndex, 0, Math.max(0, slotCount - 1)));
     });
-    efSlots = derived;
+    efSlots = derived.map((slotsForFollower) => ({
+      slots: Array.from(slotsForFollower).sort((a, b) => a - b)
+    }));
   }
 
   let legacyLedColor = null;
@@ -602,18 +599,92 @@ function normalizeConfig(config, manifest = {}) {
   return normalized;
 }
 
-function applyEfSlotPatch(target, patch) {
+function normalizeEfSlotTargets(entry, slotCount) {
+  const rawSlots = [];
+  if (Array.isArray(entry?.slots)) {
+    rawSlots.push(...entry.slots);
+  } else {
+    const single = entry?.slot ?? entry?.value ?? entry?.target;
+    if (single !== undefined && single !== null) rawSlots.push(single);
+  }
+
+  const hasSlotLimit = Number.isFinite(Number(slotCount)) && Number(slotCount) > 0;
+  const maxSlotIndex = hasSlotLimit ? Number(slotCount) - 1 : Number.MAX_SAFE_INTEGER;
+  const seen = new Set();
+  const normalized = [];
+  rawSlots.forEach((candidate) => {
+    const value = Number(candidate);
+    if (!Number.isFinite(value)) return;
+    const rounded = Math.round(value);
+    if (rounded < 0) return;
+    const bounded = clamp(rounded, 0, maxSlotIndex);
+    if (seen.has(bounded)) return;
+    seen.add(bounded);
+    normalized.push(bounded);
+  });
+  normalized.sort((a, b) => a - b);
+  return normalized;
+}
+
+function sameNumberArray(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  if (left.length !== right.length) return false;
+  for (let idx = 0; idx < left.length; idx += 1) {
+    if (Number(left[idx]) !== Number(right[idx])) return false;
+  }
+  return true;
+}
+
+function applyEfSlotPatch(target, patch, slotCount) {
   if (!Array.isArray(target)) target = [];
   const index = coerceIndex(patch.index);
+
+  if (Array.isArray(patch.slots)) {
+    if (index === null) return target;
+    const nextSlots = normalizeEfSlotTargets({ slots: patch.slots }, slotCount);
+    const prevSlots = normalizeEfSlotTargets(target[index] ?? {}, slotCount);
+    if (sameNumberArray(prevSlots, nextSlots)) return target;
+    const copy = [...target];
+    copy[index] = { ...(copy[index] ?? {}), slots: nextSlots };
+    return copy;
+  }
+
   const slotValue = patch.slot ?? patch.value ?? patch.target;
-  if (index === null || slotValue === undefined) return target;
+  if (slotValue === undefined) return target;
   const value = Number(slotValue);
   if (!Number.isFinite(value)) return target;
-  const existing = target[index];
-  if (existing && Number(existing.slot) === value) return target;
-  const copy = [...target];
-  copy[index] = { ...(existing ?? {}), slot: value };
-  return copy;
+  const rounded = Math.round(value);
+  const hasSlotLimit = Number.isFinite(Number(slotCount)) && Number(slotCount) > 0;
+  const maxSlotIndex = hasSlotLimit ? Number(slotCount) - 1 : Number.MAX_SAFE_INTEGER;
+  if (rounded < 0) return target;
+  const boundedSlot = clamp(rounded, 0, maxSlotIndex);
+
+  const copy = target.map((entry) => ({
+    ...(entry ?? {}),
+    slots: normalizeEfSlotTargets(entry ?? {}, slotCount)
+  }));
+  let changed = false;
+
+  for (let follower = 0; follower < copy.length; follower += 1) {
+    const slots = copy[follower]?.slots ?? [];
+    if (!slots.includes(boundedSlot)) continue;
+    copy[follower].slots = slots.filter((slot) => slot !== boundedSlot);
+    changed = true;
+  }
+
+  if (index !== null) {
+    const current = copy[index] ?? { slots: [] };
+    const nextSet = new Set(current.slots ?? []);
+    const beforeSize = nextSet.size;
+    nextSet.add(boundedSlot);
+    const nextSlots = Array.from(nextSet).sort((a, b) => a - b);
+    if (!copy[index] || beforeSize !== nextSet.size || !sameNumberArray(current.slots ?? [], nextSlots)) {
+      copy[index] = { ...current, slots: nextSlots };
+      changed = true;
+    }
+  }
+
+  return changed ? copy : target;
 }
 
 function createTransportPort(port, options = {}) {
@@ -1777,9 +1848,11 @@ export function createRuntime({
       let efChanged = false;
       patch.efSlots.forEach((entry, idx) => {
         const index = coerceIndex(entry?.index ?? idx);
-        const slotValue = entry?.slot ?? entry?.value ?? entry?.target;
-        if (index === null || slotValue === undefined) return;
-        const nextArray = applyEfSlotPatch(efSlots, { index, slot: slotValue });
+        const nextArray = applyEfSlotPatch(
+          efSlots,
+          { ...(entry && typeof entry === 'object' ? entry : {}), index },
+          Array.isArray(nextLive.slots) ? nextLive.slots.length : 0
+        );
         if (nextArray !== efSlots) {
           efSlots = nextArray;
           efChanged = true;
@@ -1852,13 +1925,28 @@ export function createRuntime({
         const stagedEf = Array.isArray(nextStaged.efSlots) ? nextStaged.efSlots : [];
         patch.efSlots.forEach((entry, idx) => {
           const index = coerceIndex(entry?.index ?? idx);
-          if (index === null) return;
-          const nextVal = nextLive.efSlots[index]?.slot;
-          const prevVal = prevEf[index]?.slot;
-          const stagedVal = stagedEf[index]?.slot;
-          if (nextVal === undefined) return;
-          if (stagedVal === undefined || stagedVal === prevVal) {
-            stagedEf[index] = { slot: nextVal };
+          if (index === null) {
+            for (let follower = 0; follower < nextLive.efSlots.length; follower += 1) {
+              const nextVal = normalizeEfSlotTargets(nextLive.efSlots[follower] ?? {}, nextLive.slots?.length ?? 0);
+              const prevVal = normalizeEfSlotTargets(prevEf[follower] ?? {}, prevLive.slots?.length ?? 0);
+              const stagedVal =
+                stagedEf[follower] && typeof stagedEf[follower] === 'object'
+                  ? normalizeEfSlotTargets(stagedEf[follower], nextStaged.slots?.length ?? 0)
+                  : undefined;
+              if (stagedVal === undefined || sameNumberArray(stagedVal, prevVal)) {
+                stagedEf[follower] = { slots: nextVal };
+              }
+            }
+            return;
+          }
+          const nextVal = normalizeEfSlotTargets(nextLive.efSlots[index] ?? {}, nextLive.slots?.length ?? 0);
+          const prevVal = normalizeEfSlotTargets(prevEf[index] ?? {}, prevLive.slots?.length ?? 0);
+          const stagedVal =
+            stagedEf[index] && typeof stagedEf[index] === 'object'
+              ? normalizeEfSlotTargets(stagedEf[index], nextStaged.slots?.length ?? 0)
+              : undefined;
+          if (stagedVal === undefined || sameNumberArray(stagedVal, prevVal)) {
+            stagedEf[index] = { slots: nextVal };
           }
         });
         nextStaged.efSlots = stagedEf;

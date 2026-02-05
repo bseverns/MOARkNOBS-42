@@ -832,14 +832,64 @@ label select:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  isolation: isolate;
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 999px;
   border: 1px solid rgba(45, 226, 230, 0.42);
   font-size: 0.68rem;
+  font-weight: 700;
   line-height: 1;
   color: var(--color-accent);
   cursor: help;
+}
+
+.help-badge::before,
+.help-badge::after {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.help-badge::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translate(-50%, 4px);
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(8, 12, 19, 0.95) transparent transparent transparent;
+  z-index: 21;
+}
+
+.help-badge::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 14px);
+  transform: translate(-50%, 6px);
+  width: max-content;
+  max-width: min(320px, 70vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(45, 226, 230, 0.32);
+  background: rgba(8, 12, 19, 0.95);
+  color: var(--text-value);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: var(--shadow-soft);
+  z-index: 22;
+}
+
+.help-badge:hover::before,
+.help-badge:hover::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .schema-control label {
@@ -895,22 +945,37 @@ label select:focus {
 
 .ef-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 84px;
+  grid-template-columns: 54px minmax(0, 1fr);
+  grid-template-areas:
+    'label input'
+    'summary summary';
   gap: 10px;
   align-items: center;
   width: 100%;
   padding: 6px 8px;
 }
 
-.ef-row span {
+.ef-row-label {
+  grid-area: label;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   font-size: 0.78rem;
   color: var(--color-muted);
 }
 
-.ef-row input[type='number'] {
+.ef-row input[type='text'] {
+  grid-area: input;
   width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+}
+
+.ef-row-summary {
+  grid-area: summary;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--color-muted);
+  letter-spacing: 0.04em;
 }
 
 .led-control {

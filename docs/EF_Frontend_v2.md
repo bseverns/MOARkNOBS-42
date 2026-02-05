@@ -2,6 +2,16 @@
 
 This document tracks the Envelope Follower controls exposed to frontends and patch tooling.
 
+## Routing Model (`efSlots`)
+
+Follower routing is represented at top-level as `efSlots` (one entry per follower):
+
+- Preferred shape: `{"slots":[0,7,12]}` for multi-slot targets.
+- Legacy shape: `{"slot":7}` for a single target (still accepted).
+
+Frontends should normalize to `slots` arrays when staging edits. Firmware and runtime still read
+legacy `slot` values for backwards compatibility.
+
 ## EF Modes
 
 Each slot can select an EF mode at runtime. The firmware ships four modes:

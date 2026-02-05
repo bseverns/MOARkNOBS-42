@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   await page.addInitScript(() => {
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__MN42_RUNTIME_OPTIONS = {
       useSimulator: true
     };

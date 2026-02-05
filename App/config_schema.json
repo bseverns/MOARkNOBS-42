@@ -119,21 +119,32 @@
     "efSlots": {
       "type": "array",
       "title": "Envelope Assignments",
-      "description": "Assign each envelope follower to a slot.",
+      "description": "Assign each envelope follower to one or more slots.",
       "minItems": 6,
       "maxItems": 6,
       "items": {
         "type": "object",
-        "required": ["slot"],
         "properties": {
           "slot": {
             "type": "integer",
-            "title": "Target slot",
-            "description": "Slot index to drive (-1 disables assignment).",
+            "title": "Legacy target slot",
+            "description": "Back-compat single-slot assignment (-1 disables assignment).",
             "minimum": -1,
             "maximum": 41
+          },
+          "slots": {
+            "type": "array",
+            "title": "Target slots",
+            "description": "Zero-based slot indices this follower drives.",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 41
+            },
+            "uniqueItems": true
           }
         },
+        "anyOf": [{ "required": ["slot"] }, { "required": ["slots"] }],
         "additionalProperties": false
       }
     },

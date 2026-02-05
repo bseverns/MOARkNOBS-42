@@ -19,7 +19,7 @@ const makeSlots = (mapper) =>
 
 const makeEfSlots = (mapper) =>
   Array.from({ length: EF_COUNT }, (_, idx) => ({
-    slot: mapper ? mapper(idx) : (idx * 7) % SLOT_COUNT
+    slots: [mapper ? mapper(idx) : (idx * 7) % SLOT_COUNT]
   }));
 
 const fetchPreset = (path) => async () => {

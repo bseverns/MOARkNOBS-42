@@ -1540,10 +1540,10 @@ const boot = () => {
     if (!helpText) return;
     const badge = document.createElement('span');
     badge.className = 'help-badge';
-    badge.textContent = 'i';
-    badge.title = helpText;
+    badge.textContent = '?';
+    badge.dataset.tooltip = helpText;
     badge.setAttribute('aria-label', helpText);
-    badge.setAttribute('role', 'img');
+    badge.setAttribute('role', 'note');
     container.appendChild(badge);
   }
 
@@ -1903,25 +1903,79 @@ const boot = () => {
     el.classList.toggle('selected', index === slotState.selected);
   }
 
+  function normalizeFollowerSlotList(item, maxSlotIndex) {
+    const source = Array.isArray(item?.slots)
+      ? item.slots
+      : item?.slot !== undefined && item?.slot !== null
+      ? [item.slot]
+      : [];
+    const seen = new Set();
+    const normalized = [];
+    source.forEach((candidate) => {
+      const numeric = Number(candidate);
+      if (!Number.isFinite(numeric)) return;
+      const rounded = Math.round(numeric);
+      if (rounded < 0) return;
+      const bounded = Math.max(0, Math.min(maxSlotIndex, rounded));
+      if (seen.has(bounded)) return;
+      seen.add(bounded);
+      normalized.push(bounded);
+    });
+    normalized.sort((a, b) => a - b);
+    return normalized;
+  }
+
+  function parseFollowerSlotsInput(text, maxSlotIndex) {
+    if (typeof text !== 'string' || !text.trim()) return [];
+    const tokens = text
+      .split(/[,\s]+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+    return normalizeFollowerSlotList({ slots: tokens }, maxSlotIndex);
+  }
+
+  function formatFollowerSlots(slots) {
+    if (!Array.isArray(slots) || !slots.length) return '';
+    return slots.join(', ');
+  }
+
+  function summarizeFollowerSlots(slots) {
+    if (!Array.isArray(slots) || !slots.length) return 'Unassigned';
+    const labels = slots.slice(0, 4).map((slot) => `S${String(slot + 1).padStart(2, '0')}`);
+    const overflow = slots.length > 4 ? ` +${slots.length - 4}` : '';
+    return `${labels.join(', ')}${overflow}`;
+  }
+
   function renderEfRow(el, index, item) {
     el.className = 'ef-row';
     el.innerHTML = '';
+    const maxSlotIndex = Math.max(0, slotState.slots.length - 1);
+    const normalizedSlots = normalizeFollowerSlotList(item, maxSlotIndex);
     const label = document.createElement('span');
+    label.className = 'ef-row-label';
     label.textContent = `EF ${index + 1}`;
     const input = document.createElement('input');
-    input.type = 'number';
-    input.min = 0;
-    input.max = slotState.slots.length - 1;
-    input.value = item?.slot ?? 0;
+    input.type = 'text';
+    input.placeholder = '0, 7, 12';
+    input.value = formatFollowerSlots(normalizedSlots);
+    const summary = document.createElement('span');
+    summary.className = 'ef-row-summary';
+    summary.textContent = summarizeFollowerSlots(normalizedSlots);
     input.addEventListener('change', () => {
+      const parsed = parseFollowerSlotsInput(input.value, maxSlotIndex);
+      input.value = formatFollowerSlots(parsed);
+      summary.textContent = summarizeFollowerSlots(parsed);
       runtime.stage((draft) => {
         draft.efSlots = draft.efSlots || [];
-        if (!draft.efSlots[index]) draft.efSlots[index] = { slot: 0 };
-        draft.efSlots[index].slot = Number(input.value);
+        if (!draft.efSlots[index] || typeof draft.efSlots[index] !== 'object') {
+          draft.efSlots[index] = { slots: [] };
+        }
+        draft.efSlots[index].slots = parsed;
+        delete draft.efSlots[index].slot;
         return draft;
       });
     });
-    el.append(label, input);
+    el.append(label, input, summary);
   }
 
   function paintTelemetry(frame) {

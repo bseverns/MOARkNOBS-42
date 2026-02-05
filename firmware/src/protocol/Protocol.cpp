@@ -1090,22 +1090,62 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     if (config.containsKey("efSlots") && config["efSlots"].is<JsonArray>()) {
         JsonArray efSlots = config["efSlots"].as<JsonArray>();
         potToEnvelopeMap.clear();
+
+        // Reset all slot->follower wiring first; efSlots repopulates the map below.
+        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+            MIDISlot &slot = configManager.getSlot(slotIndex);
+            slot.setEnvelopeFollowerIndex(-1);
+        }
+
+        auto assignFollowerToSlot = [&](int followerIndex, int slotIndex) {
+            if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
+                return;
+            }
+            if (slotIndex < 0 || slotIndex >= NUM_POTS) {
+                return;
+            }
+            MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
+            slot.setEnvelopeFollowerIndex(static_cast<int8_t>(followerIndex));
+            potToEnvelopeMap[slotIndex] = slot.efSettings;
+        };
+
         for (uint8_t i = 0; i < efSlots.size(); ++i) {
             JsonObject mapping = efSlots[i];
-            if (mapping.isNull())
+            if (mapping.isNull()) {
                 continue;
-            int slotIndex = mapping["slot"].as<int>();
-            if (slotIndex < 0 || slotIndex >= NUM_POTS)
+            }
+
+            int followerIndex = static_cast<int>(i);
+            if (mapping.containsKey("index")) {
+                followerIndex = mapping["index"].as<int>();
+            }
+            if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
                 continue;
+            }
 
-            MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
-            slot.setEnvelopeFollowerIndex(static_cast<int8_t>(i));
-            potToEnvelopeMap[slotIndex] = slot.efSettings;
+            if (mapping.containsKey("slots") && mapping["slots"].is<JsonArray>()) {
+                JsonArray targets = mapping["slots"].as<JsonArray>();
+                for (JsonVariant value : targets) {
+                    assignFollowerToSlot(followerIndex, value.as<int>());
+                }
+            } else if (mapping.containsKey("slot")) {
+                assignFollowerToSlot(followerIndex, mapping["slot"].as<int>());
+            }
+        }
 
-            if (i < envelopeFollowers.size()) {
-                envelopeFollowers[i].setModulationTarget(
-                    potentiometerManager.getCCNumber(slotIndex));
-                applyEfSettingsToFollower(envelopeFollowers[i], slot.efSettings, i);
+        std::array<bool, NUM_ENVELOPES> followerConfigured{};
+        followerConfigured.fill(false);
+        for (const auto &entry : potToEnvelopeMap) {
+            const int followerIndex = entry.second.followerIndex;
+            if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
+                continue;
+            }
+            envelopeFollowers[followerIndex].setModulationTarget(
+                potentiometerManager.getCCNumber(entry.first));
+            if (!followerConfigured[followerIndex]) {
+                applyEfSettingsToFollower(envelopeFollowers[followerIndex], entry.second,
+                                          static_cast<uint8_t>(followerIndex));
+                followerConfigured[followerIndex] = true;
             }
         }
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
@@ -1451,6 +1491,26 @@ void handleGetConfigCommand(const ParsedCommand &cmd) {
         argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
         argObj["sourceA"] = arg.sourceA;
         argObj["sourceB"] = arg.sourceB;
+    }
+
+    JsonArray efSlots = doc.createNestedArray("efSlots");
+    for (uint8_t followerIndex = 0; followerIndex < NUM_ENVELOPES; ++followerIndex) {
+        JsonObject mapping = efSlots.createNestedObject();
+        mapping["index"] = followerIndex;
+        JsonArray targets = mapping.createNestedArray("slots");
+        for (uint8_t slotIndex = 0; slotIndex < NUM_POTS; ++slotIndex) {
+            auto it = potToEnvelopeMap.find(slotIndex);
+            if (it == potToEnvelopeMap.end()) {
+                continue;
+            }
+            if (it->second.followerIndex != static_cast<int8_t>(followerIndex)) {
+                continue;
+            }
+            targets.add(slotIndex);
+        }
+        if (targets.size() == 1) {
+            mapping["slot"] = targets[0].as<uint8_t>();
+        }
     }
 
     JsonObject env = doc.createNestedObject("envelopes");

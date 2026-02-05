@@ -143,7 +143,7 @@ never fall out of sync.
 | `GET_SCHEMA` | – | dump config schema. If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`. |
 | `GET_BROWNOUTS` | – | number of brownouts seen |
 | `GET_MANIFEST` | – | confirm firmware build + schema, plus free RAM/flash stats |
-| `GET_CONFIG` | – | dump the live configuration: pots, slots, envelope routing, ARG/filter state, LEDs, and LFO info |
+| `GET_CONFIG` | – | dump the live configuration: pots, slots, `efSlots` follower routing (including multi-slot targets), ARG/filter state, LEDs, and LFO info |
 | `SET_POT` `<slot>,<chan>,<cc>` | ints | bind slot to channel+CC |
 | `SET_ALL` `<payload>` | JSON or bulk CSV | mass update slots/LED |
 | `GET_ALL` | – | legacy dump of slots + LED (only available when `SERIAL_LOGGING` is enabled) |
@@ -151,7 +151,7 @@ never fall out of sync.
 | `GET_LED` | – | return `bri,r,g,b` |
 | `SET_ARGMETHOD` `<n>` | 0‑13 | choose ARG blend |
 | `GET_ARGMETHOD` | – | spit current ARG blend |
-| `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch envelope follower |
+| `SET_EF` `<slot>,<ef>` | slot 0‑41, ef 0‑5 | patch slot→follower routing (repeat to map one follower across many slots) |
 | `GET_EF` `<slot>` | slot 0‑41 | see follower mapped |
 | `CAL_ENVS` | – | recalibrate all followers |
 | `GET_PROFILE` `<id>` | 0‑3 | dump profile payload JSON (arp/LFO/LED/EF/midi channel/routes/slots) |
@@ -212,12 +212,15 @@ SET_EF <slot>,<ef>
 GET_EF <slot>
 ```
 
-Patch an envelope follower to a slot with `SET_EF`. Ask who’s riding shotgun
+Patch an envelope follower to a slot with `SET_EF`. Repeat it for each slot if
+you want the same follower routed to multiple slots. Ask who’s riding shotgun
 with `GET_EF`, which replies with the follower number or `-1` if nobody showed.
 
 When you need the whole wiring diagram, `GET_CONFIG` is the firehose. It prints
 one JSON line mirroring the firmware’s in-RAM state—slot definitions, pot CC
 bindings, envelope routing, ARG selections, filter coefficients, and LED mood.
+Follower routing lives under `efSlots`: each entry can include `slots` (array)
+or legacy `slot` (single index).
 Parse it once and drive your UI off that single source of truth.
 
 ## Why So Barebones?
@@ -233,7 +236,7 @@ The configurator lets you twist:
 - MIDI type
 - channel
 - data bytes
-- EF routing
+- EF routing (including multi-slot follower targets)
 - ARG settings
 - LED colours
 
