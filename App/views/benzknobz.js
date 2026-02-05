@@ -331,7 +331,7 @@ const boot = () => {
 
   const slotVirtualizer = new VirtualGrid(slotContainer, {
     columns: 6,
-    rowHeight: 72,
+    rowHeight: 100,
     render: renderSlotButton
   });
 
@@ -1214,7 +1214,49 @@ const boot = () => {
       return;
     }
     diffPanel.removeAttribute('hidden');
-    diffOutput.textContent = changes.map(({ path, before, after }) => `${path}: ${JSON.stringify(before)} → ${JSON.stringify(after)}`).join('\n');
+    const maxVisibleChanges = 40;
+    const visibleChanges = changes.slice(0, maxVisibleChanges);
+    const lines = visibleChanges.map(({ path, before, after }) => {
+      const beforeText = summarizeDiffValue(before);
+      const afterText = summarizeDiffValue(after);
+      return `• ${path}\n  before: ${beforeText}\n  after:  ${afterText}`;
+    });
+    if (changes.length > maxVisibleChanges) {
+      lines.push(`… ${changes.length - maxVisibleChanges} additional change(s) hidden.`);
+    }
+    const title = `${changes.length} staged change${changes.length === 1 ? '' : 's'}`;
+    diffOutput.textContent = `${title}\n\n${lines.join('\n\n')}`;
+  }
+
+  function summarizeDiffValue(value) {
+    if (value === undefined) return 'undefined';
+    if (value === null) return 'null';
+    if (typeof value === 'string') return truncateDiffText(JSON.stringify(value), 150);
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+      return `Array(${value.length}) ${truncateDiffText(stringifyDiffValue(value), 150)}`;
+    }
+    if (typeof value === 'object') {
+      const keys = Object.keys(value);
+      const preview = keys.slice(0, 5).join(', ');
+      const suffix = keys.length > 5 ? ', …' : '';
+      return `Object{${preview}${suffix}} ${truncateDiffText(stringifyDiffValue(value), 140)}`;
+    }
+    return truncateDiffText(String(value), 150);
+  }
+
+  function stringifyDiffValue(value) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return '[unserializable]';
+    }
+  }
+
+  function truncateDiffText(text, maxLength) {
+    if (typeof text !== 'string') return '';
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
   }
 
   function updateHeader(config) {

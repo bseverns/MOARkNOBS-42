@@ -227,6 +227,7 @@ export class FormRenderer {
         select.value = next;
       }, select);
     } else if (type === 'number' || type === 'integer') {
+      action.classList.add('schema-action-range');
       const slider = document.createElement('input');
       slider.type = 'range';
       slider.min = schema.minimum ?? 0;
