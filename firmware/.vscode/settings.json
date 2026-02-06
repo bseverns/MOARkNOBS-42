@@ -1,8 +1,12 @@
 {
     "cSpell.words": [
+        "Arpeggiator",
+        "EEPROM",
         "EWMA",
+        "lfos",
         "MIDIHANDLER",
-        "MOARBENZ"
+        "MOARBENZ",
+        "oversample"
     ],
     "C_Cpp.default.configurationProvider": "platformio",
     "C_Cpp.default.includePath": [

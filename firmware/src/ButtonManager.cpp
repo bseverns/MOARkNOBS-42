@@ -60,6 +60,13 @@ static constexpr const char *ARG_METHOD_NAMES[] = {"PLUS", "MIN",  "PECK", "SHAV
 // Active profile index is stored globally so boot can restore it.
 
 namespace {
+constexpr uint8_t maskCtrl0 = 1 << 0;
+constexpr uint8_t maskCtrl1 = 1 << 1;
+constexpr uint8_t maskCtrl2 = 1 << 2;
+constexpr uint8_t maskCtrl3 = 1 << 3;
+constexpr uint8_t maskCtrl4 = 1 << 4;
+constexpr uint8_t maskCtrl5 = 1 << 5;
+
 constexpr uint32_t MUX_SETTLE_US = 5;
 
 inline void waitForMuxSettle() {
@@ -692,13 +699,6 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
 }
 
 void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext &context) {
-    // Define bit masks for the control buttons
-    const uint8_t maskCtrl0 = 1 << 0;
-    const uint8_t maskCtrl1 = 1 << 1;
-    const uint8_t maskCtrl2 = 1 << 2;
-    const uint8_t maskCtrl3 = 1 << 3;
-    const uint8_t maskCtrl4 = 1 << 4;
-    const uint8_t maskCtrl5 = 1 << 5;
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
 
     auto ensureActiveSlot = [&]() -> MIDISlot * {
@@ -964,13 +964,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             mask |= (1 << i);
         }
     }
-    const uint8_t maskCtrl0 = 1 << 0;
-    const uint8_t maskCtrl1 = 1 << 1;
-    const uint8_t maskCtrl2 = 1 << 2;
-    const uint8_t maskCtrl3 = 1 << 3;
-    const uint8_t maskCtrl4 = 1 << 4;
-    const uint8_t maskCtrl5 = 1 << 5;
-    const uint8_t jitterMask = (1 << 0) | (1 << 3) | (1 << 4);
+    const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
     const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
     const uint8_t swingMask = maskCtrl2 | maskCtrl3;
     bool jitterActive = (mask == jitterMask);
