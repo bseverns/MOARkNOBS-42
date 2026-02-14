@@ -9,6 +9,8 @@
 #include "TimeUtils.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <cctype>
+#include <cstring>
 #include "ButtonManager.h"
 #include "MIDIHandler.h"
 #include "Globals.h"
@@ -24,9 +26,9 @@ const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     case MIDISlot::EfSettings::FilterType::Linear:
         return "Linear";
     case MIDISlot::EfSettings::FilterType::OppositeLinear:
-        return "Opp.Lin";
+        return "Opp Linear";
     case MIDISlot::EfSettings::FilterType::Exponential:
-        return "Expo";
+        return "Exponential";
     case MIDISlot::EfSettings::FilterType::Random:
         return "Random";
     case MIDISlot::EfSettings::FilterType::Lowpass:
@@ -37,6 +39,67 @@ const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
         return "Bandpass";
     }
     return "?";
+}
+
+const char *friendlyEnvelopeMode(const char *raw, char *buffer, size_t bufferLen) {
+    if (!raw || raw[0] == '\0') {
+        return "Linear";
+    }
+    if (strcmp(raw, "LINEAR") == 0) {
+        return "Linear";
+    }
+    if (strcmp(raw, "EXPONENTIAL") == 0) {
+        return "Exponential";
+    }
+    if (strcmp(raw, "OPPOSITE_LINEAR") == 0) {
+        return "Opposite Linear";
+    }
+    if (strcmp(raw, "LOWPASS") == 0) {
+        return "Lowpass";
+    }
+    if (strcmp(raw, "HIGHPASS") == 0) {
+        return "Highpass";
+    }
+    if (strcmp(raw, "BANDPASS") == 0) {
+        return "Bandpass";
+    }
+    if (strcmp(raw, "RANDOM") == 0) {
+        return "Random";
+    }
+    if (strcmp(raw, "SEF") == 0 || strcmp(raw, "ARG") == 0 || strcmp(raw, "LOG") == 0 ||
+        strcmp(raw, "RMS") == 0 || strcmp(raw, "GATE") == 0 || strcmp(raw, "PEAK") == 0) {
+        return raw;
+    }
+    if (buffer == nullptr || bufferLen == 0) {
+        return raw;
+    }
+
+    size_t out = 0;
+    bool capNext = true;
+    for (size_t i = 0; raw[i] != '\0'; ++i) {
+        char c = raw[i];
+        if (c == '_' || c == '-') {
+            if (out > 0 && buffer[out - 1] != ' ' && out + 1 < bufferLen) {
+                buffer[out++] = ' ';
+            }
+            capNext = true;
+            continue;
+        }
+
+        if (out + 1 >= bufferLen) {
+            break;
+        }
+        unsigned char uc = static_cast<unsigned char>(c);
+        buffer[out++] = static_cast<char>(capNext ? std::toupper(uc) : std::tolower(uc));
+        capNext = (c == ' ');
+    }
+
+    while (out > 0 && buffer[out - 1] == ' ') {
+        --out;
+    }
+    buffer[out] = '\0';
+
+    return out > 0 ? buffer : raw;
 }
 
 } // namespace
@@ -334,7 +397,8 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const uint8_t *envelope
     _display.println(activeChannel);
     _display.setCursor(0, 20);
     _display.print("Mode: ");
-    _display.println(envelopeMode);
+    char modeLabel[24];
+    _display.println(friendlyEnvelopeMode(envelopeMode, modeLabel, sizeof(modeLabel)));
 
     // Visualize envelope levels as vertical bars along the bottom
     size_t numEnvelopes = 0;

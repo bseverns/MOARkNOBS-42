@@ -33,6 +33,7 @@ const ARG_METHOD_NAMES = [
 
 const localManifest = {
   ui_version: '2025.03.01',
+  device_name: 'MOARkNOBS-42',
   schema_version: 5,
   slot_count: 42,
   pot_count: 42,
@@ -234,6 +235,8 @@ const boot = () => {
   const diffOutput = document.getElementById('diff-output');
   const dirtyBadge = document.getElementById('dirty-badge');
   const connectionPill = document.getElementById('connection-pill');
+  const connectionBanner = document.getElementById('connection-banner');
+  const connectFailHelp = document.getElementById('connect-fail-help');
   const headerStatus = document.getElementById('header-status');
   const exportPresetBtn = document.getElementById('export-preset');
   const importPresetBtn = document.getElementById('import-preset');
@@ -318,6 +321,41 @@ const boot = () => {
   let activeUiMode = normalizeUIMode(readUIModePreference());
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
+
+  function resolveDeviceName(manifest) {
+    const candidate = manifest?.device_name ?? manifest?.product_name ?? localManifest.device_name;
+    if (typeof candidate !== 'string') return localManifest.device_name;
+    const trimmed = candidate.trim();
+    return trimmed || localManifest.device_name;
+  }
+
+  function resolveFirmwareVersion(manifest) {
+    const candidate = manifest?.fw_version;
+    if (typeof candidate !== 'string') return 'unknown';
+    const trimmed = candidate.trim();
+    return trimmed || 'unknown';
+  }
+
+  function setConnectionBanner(stage, manifest) {
+    if (!connectionBanner) return;
+    if (stage === 'live') {
+      const deviceName = resolveDeviceName(manifest);
+      const fwVersion = resolveFirmwareVersion(manifest);
+      connectionBanner.textContent = `Connected to: ${deviceName} (FW ${fwVersion})`;
+      return;
+    }
+    if (stage === 'handshake') {
+      connectionBanner.textContent = `Connecting to: ${resolveDeviceName(manifest)}`;
+      return;
+    }
+    connectionBanner.textContent = 'Connected to: —';
+  }
+
+  function setConnectionPill(stage, text) {
+    if (!connectionPill) return;
+    connectionPill.dataset.stage = stage;
+    connectionPill.textContent = text;
+  }
   const migrationCancel = document.getElementById('migration-cancel');
   const migrationExport = document.getElementById('migration-export');
 
@@ -379,16 +417,13 @@ const boot = () => {
 
   connectBtn?.addEventListener('click', async () => {
     try {
-      if (connectionPill) {
-        connectionPill.dataset.stage = 'handshake';
-        connectionPill.textContent = 'Handshaking…';
-      }
+      setConnectionPill('handshake', 'Handshaking…');
+      setConnectionBanner('handshake', runtime.getState().manifest);
       await runtime.connect();
     } catch (err) {
-      if (connectionPill) {
-        connectionPill.dataset.stage = 'disconnected';
-        connectionPill.textContent = 'Disconnected';
-      }
+      setConnectionPill('disconnected', 'Disconnected');
+      setConnectionBanner('disconnected', runtime.getState().manifest);
+      connectFailHelp?.setAttribute('open', '');
       setStatus('err', 'Connect failed', err.message || String(err));
     }
   });
@@ -655,10 +690,9 @@ const boot = () => {
   });
   runtime.on('connected', ({ manifest }) => {
     // Connection flips the entire toolbar/profile surface into interactive mode.
-    if (connectionPill) {
-      connectionPill.dataset.stage = 'live';
-      connectionPill.textContent = `Connected • ${manifest?.fw_version || 'fw?'}`;
-    }
+    setConnectionPill('live', 'Connected');
+    setConnectionBanner('live', manifest);
+    connectFailHelp?.removeAttribute('open');
     if (applyBtn) applyBtn.disabled = true;
     if (rollbackBtn) rollbackBtn.disabled = true;
     if (exportPresetBtn) exportPresetBtn.disabled = false;
@@ -670,10 +704,8 @@ const boot = () => {
   });
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.
-    if (connectionPill) {
-      connectionPill.dataset.stage = 'disconnected';
-      connectionPill.textContent = 'Disconnected';
-    }
+    setConnectionPill('disconnected', 'Disconnected');
+    setConnectionBanner('disconnected', runtime.getState().manifest);
     if (applyBtn) applyBtn.disabled = true;
     if (rollbackBtn) rollbackBtn.disabled = true;
     if (exportPresetBtn) exportPresetBtn.disabled = true;
@@ -686,10 +718,9 @@ const boot = () => {
   });
   runtime.on('error', (err) => {
     // Runtime errors are treated as hard disconnects from the UI perspective.
-    if (connectionPill) {
-      connectionPill.dataset.stage = 'disconnected';
-      connectionPill.textContent = 'Disconnected';
-    }
+    setConnectionPill('disconnected', 'Disconnected');
+    setConnectionBanner('disconnected', runtime.getState().manifest);
+    connectFailHelp?.setAttribute('open', '');
     setStatus('err', 'Runtime error', err.message || String(err));
     profileInteractable = false;
     profileRpcLocked = false;
@@ -1270,9 +1301,8 @@ const boot = () => {
   }
 
   function updateHeaderManifest(manifest) {
-    if (!connectionPill) return;
-    connectionPill.dataset.stage = 'live';
-    connectionPill.textContent = `Connected • ${manifest.fw_version || 'fw?'}`;
+    setConnectionPill('live', 'Connected');
+    setConnectionBanner('live', manifest);
     updateHeader(runtime.getState().live);
   }
 
@@ -1850,6 +1880,7 @@ const boot = () => {
     if (!deviceMonitor) return;
     deviceMonitor.innerHTML = '';
     const entries = {
+      Device: resolveDeviceName(manifest),
       Firmware: manifest?.fw_version || '—',
       'Git SHA': manifest?.git_sha ? manifest.git_sha.slice(0, 8) : '—',
       'Build time': manifest?.build_time || '—',

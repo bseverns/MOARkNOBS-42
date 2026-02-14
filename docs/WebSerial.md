@@ -15,6 +15,7 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    with a newline-terminated JSON manifest:
    ```json
    {
+     "device_name":"MOARkNOBS-42",
      "fw_version":"1.3.0",
      "git_sha":"012dead",
      "build_time":"2024-05-10 21:37:02",
@@ -33,6 +34,8 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    - Run any adapters found in `firmware/App/migrations/` to lift the preset forward.
    - Render the proposed patch for review; no silent rewrites.
 6. Streaming begins only after both sides agree on versions. Bail out by closing the port or if the manifest validation fails.
+
+`device_name` is intended for UI identity banners (`Connected to: ...`) so users can confirm they are editing the correct rig before applying changes.
 
 The manifest handshake also tells the browser when it needs to fall back to the frozen `config_schema.json` that lives in the app bundle. Once the schema check passes the UI typically asks for `GET_CONFIG` instead of the old `GET_ALL` dump so it can hydrate every pot, slot, envelope, LFO route, and LED color from one well-behaved JSON line. `GET_SCHEMA` is still there for offline editors that want to compare against a stable schema without talking to hardware.
 

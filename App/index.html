@@ -162,11 +162,20 @@
         </div>
         <div class="stack" aria-live="polite">
           <span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span>
+          <span class="connection-banner" id="connection-banner" role="status">Connected to: —</span>
           <span id="dirty-badge" role="status" hidden>Dirty · staged edits</span>
         </div>
         <p class="microcopy">
           First time here? Plug the synth in over USB, slam <strong>Connect</strong>, and let the live meters confirm the handshake.
         </p>
+        <details class="connect-help" id="connect-fail-help">
+          <summary>What to do if connect fails</summary>
+          <ol>
+            <li>Close other serial apps (Arduino Serial Monitor, PlatformIO monitor, bridge scripts).</li>
+            <li>Unplug and replug the USB cable.</li>
+            <li>Refresh this page, then click <strong>Connect</strong> again.</li>
+          </ol>
+        </details>
         <div class="mode-switch" role="group" aria-label="Editing mode">
           <span class="mode-switch-label">Editing mode</span>
           <div class="mode-switch-buttons">

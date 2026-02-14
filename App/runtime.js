@@ -767,6 +767,7 @@ function createSimulator() {
   let resolver;
 
   const manifest = {
+    device_name: 'MOARkNOBS-42',
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
     build_time: new Date().toISOString(),
@@ -1565,6 +1566,7 @@ export function createRuntime({
       remoteManifest = manifestData;
     } else {
       remoteManifest = {
+        device_name: localManifest?.device_name ?? 'MOARkNOBS-42',
         fw_version: 'unknown',
         git_sha: 'offline',
         build_time: new Date().toISOString(),

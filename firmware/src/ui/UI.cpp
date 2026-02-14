@@ -95,7 +95,7 @@ void updateArpTuning() {
 
     uint8_t lengthTicks = map(raw1, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
     int shapeIdx = map(raw2, 0, 1023, 0, 5);
-    static const char *names[] = {"UP", "DOWN", "UPDN", "RAND", "DRUNK", "EUCL"};
+    static const char *names[] = {"Up", "Down", "Up-Down", "Random", "Drunk", "Euclid"};
     Arpeggiator::Shape shapes[] = {Arpeggiator::UP,     Arpeggiator::DOWN,  Arpeggiator::UPDOWN,
                                    Arpeggiator::RANDOM, Arpeggiator::DRUNK, Arpeggiator::EUCLIDEAN};
 

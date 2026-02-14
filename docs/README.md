@@ -66,6 +66,7 @@ flowchart TD
 - [EEPROMLayout.md](EEPROMLayout.md) — where config bytes live and die.
 - [FirmwareUpdate.md](FirmwareUpdate.md) — flash new brains without desoldering.
 - [TESTING.md](TESTING.md) — unit tests to full-stack thrash sessions.
+- [DemoPolish.md](DemoPolish.md) — runbook for final demo soak, EXT clock checks, panic-reset verification, and asset packing.
 - [TODO.md](TODO.md) — post-release wishlist for when the first build is out and you're itching for v2.
 - [ReleaseGuide.md](ReleaseGuide.md) — full release playbook. For quick steps see [Publishing a Release](../README.md#publishing-a-release).
 - [../CONTRIBUTING.md](../CONTRIBUTING.md) — patch etiquette and repo contract.

@@ -16,6 +16,12 @@ Last edited: 2026-02-14
 
 ---
 
+## Recent implementation snapshot (2026-02-14)
+
+- [ ] Remaining work is hardware/demo verification (soak, EXT clock starvation check, panic-path validation on real rig, and asset prep).
+
+---
+
 ## 0) The 10-minute demo (run-of-show)
 
 1) Plug in MN42 → open WebSerial editor → Connect
@@ -155,19 +161,20 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 ## 2) Demo Polish (strongly recommended)
 
 ### 2.1 UX clarity
-- [ ] Add/verify a simple “Connected to: MOARkNOBS-42 (FW x.y)” banner in WebSerial UI
-- [ ] Add/verify a “What to do if connect fails” helper (close other serial clients, replug, refresh)
-- [ ] Ensure OLED labels for EF mode / arp shape / swing are readable and not abbreviated weirdly
+- [x] Add/verify a simple “Connected to: MOARkNOBS-42 (FW x.y)” banner in WebSerial UI
+- [x] Add/verify a “What to do if connect fails” helper (close other serial clients, replug, refresh)
+- [x] Ensure OLED labels for EF mode / arp shape / swing are readable and not abbreviated weirdly
 
 ### 2.2 Reliability / performance
 - [ ] Verify 5-minute soak test: no UI lockups, no serial stalls, no stuck notes
 - [ ] Verify LED/OLED updates don’t starve MIDI/clock handling (esp. with EXT clock)
 - [ ] Verify “panic exit” path: one combo that returns to safe baseline state
+  - Implemented combo: `Ctrl0 + Ctrl1 + Ctrl2` now does panic-safe reset (stop arp, disable EF follow, reload active profile baseline).
 
 ### 2.3 Demo assets
 - [ ] Prepare one short audio loop for EF input (phone file OR DAW loop)
 - [ ] Prepare one DAW project (or MIDI clock source) for clock follow
-- [ ] Prepare two named profiles: `DEMO_A`, `DEMO_B` (or a clear index story)
+- [x] Prepare two named profiles: `DEMO_A`, `DEMO_B` (or a clear index story)
 
 ---
 

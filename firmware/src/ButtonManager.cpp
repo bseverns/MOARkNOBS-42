@@ -66,6 +66,7 @@ constexpr uint8_t maskCtrl2 = 1 << 2;
 constexpr uint8_t maskCtrl3 = 1 << 3;
 constexpr uint8_t maskCtrl4 = 1 << 4;
 constexpr uint8_t maskCtrl5 = 1 << 5;
+constexpr uint8_t panicMask = maskCtrl0 | maskCtrl1 | maskCtrl2;
 
 constexpr uint32_t MUX_SETTLE_US = 5;
 
@@ -713,6 +714,19 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     if (pressedButtons == jitterMask) {
         context.displayManager.displayStatus("Jitter Mode", 1000);
     }
+    // (0.5) Ctrl0 + Ctrl1 + Ctrl2: panic-safe reset to active profile baseline.
+    else if (pressedButtons == panicMask) {
+        arpeggiator.stop();
+        g_arpEditActive = false;
+        context.envelopeFollowMode = false;
+        context.configManager.loadProfile(g_activeProfile);
+        context.potChannels.clear();
+        for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
+            context.potChannels.push_back(context.configManager.getPotChannel(i));
+        }
+        g_profileChangeRequested = true;
+        context.displayManager.displayStatus("Panic: Baseline", 1500);
+    }
     // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
              (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
@@ -1015,7 +1029,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             uint8_t value = swingPresets[swingPreset];
             arpeggiator.setSwingPercent(static_cast<float>(value));
             char buf[24];
-            snprintf(buf, sizeof(buf), "Swing %u%%", value);
+            snprintf(buf, sizeof(buf), "Swing: %u%%", value);
             context.displayManager.displayStatus(buf, 1000);
         }
     }

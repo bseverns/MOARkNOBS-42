@@ -206,10 +206,21 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Ran a deep explainability pass over the post-2025 runtime/protocol/scheduler/config code paths so future contributors can read intent (ordering, recovery, throttling, staging semantics) directly in-source.
 - **Commit summary (current v1.0 prep sweep):** newcomer-friendly App UX, profile-flow hardening, bridge onboarding + packaging docs, release tooling/checklists, and maintainability comments across recent architecture work.
 
+### February — Demo Polish Pass (Identity, Readability, Safety)
+
+- WebSerial identity contract now includes a dedicated `device_name` field in `GET_MANIFEST`, letting host apps show explicit device identity instead of relying on guesswork from firmware version strings alone.
+- The App connect card now carries a clear `Connected to: <device> (FW <version>)` banner, plus an inline "What to do if connect fails" helper that points users to close competing serial clients, replug USB, and refresh.
+- Added focused Playwright coverage (`App/tests/connection_banner.spec.js`) so the identity banner + connect UX path are guarded in CI using the simulator harness.
+- OLED labeling got a readability cleanup for demo scenarios: arp shape names expanded to human-readable terms, filter labels de-abbreviated, and swing preset feedback now reports as `Swing: n%`.
+- Added an explicit panic-safe exit combo (`Ctrl0 + Ctrl1 + Ctrl2`) that stops arp, disables EF follow, and reloads the active profile baseline so demos can recover quickly from bad live state.
+- Added demo-focused App presets (`DEMO_A - Reactive Stack`, `DEMO_B - Clock Contrast`) plus a dedicated runbook (`docs/DemoPolish.md`) covering soak, EXT-clock stress checks, panic-path validation, and asset prep.
+- *This pass shifted the demo story from "we can probably recover" to "we can prove identity, readability, and recovery on command because we are being militant about this for a reason."*
+
 ## Overview
 
-Across roughly nine months of commits, MOARkNOBS‑42 evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB designs, test suites, and detailed usage notes. The repository now houses:
+Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB schematics, test suites, and detailed usage notes. The repository now houses:
 
 - `firmware/` – Teensy‑based C++ code with modular managers and tests.
 - `hardware/` – EasyEDA design files for the `BTN_42` button matrix.
-- Comprehensive README files describing features, wiring, and building instructions.
+- `App/` - Playwright-facilitated configuration app
+- Comprehensive README files describing features, wiring, building instructions, and a bit of mania.

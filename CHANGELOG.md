@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- WebSerial `GET_MANIFEST` now includes `device_name`, allowing host tools to identify the target rig explicitly instead of inferring identity from version/build data.
+- App connect panel now shows a dedicated identity banner (`Connected to: <device> (FW <version>)`) and ships an inline "What to do if connect fails" helper.
+- Added firmware panic-safe baseline combo (`Ctrl0 + Ctrl1 + Ctrl2`): stops arp, disables EF follow, and reloads the active profile.
+- Added App demo presets `DEMO_A - Reactive Stack` and `DEMO_B - Clock Contrast` for show-ready profile switching.
+- Added `docs/DemoPolish.md` runbook covering soak test flow, EXT-clock starvation checks, panic-path verification, and demo asset prep.
+- Added Playwright test `App/tests/connection_banner.spec.js` to guard the new connection identity UX in CI.
 - Added a persisted Basic/Advanced UI mode in the App (plus `ui_mode` Playwright coverage) so newcomers can stay on plain knob->MIDI mapping while power users keep EF/ARG/filter depth visible.
 - Added a guided profile workflow in the App (target slot -> switch/load -> apply -> save), profile import/export staging cues, and tighter profile toolbar behavior around connect/disconnect state.
 - Added glossary-style help badges and layman labels across slot editing + schema-rendered forms so EF/ARG/filter/SysEx terms are explained inline instead of buried in docs.
@@ -40,6 +46,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Planned scene slot support: fixed-size `Scene` records with named slots, `SAVE_SCENE`/`RECALL_SCENE` verbs, and a future WebSerial “Scenes” view that lists saved names and manages EEPROM-backed snapshots without blocking the loop.
 
 ### Changed
+- Connection UI now separates transport state (`Connected`, `Handshaking`, `Disconnected`) from identity details, with device/firmware info moved to the dedicated banner.
+- OLED copy pass improves live readability: expanded arp shape names (`Up-Down`, `Random`, `Euclid`), less-abbreviated EF/filter labels, and explicit swing feedback (`Swing: n%`).
+- Device Monitor now includes a dedicated `Device` field sourced from manifest identity.
 - Bridge and docs indexes now cross-link quickstart/performer/packaging/release-checklist flows, and bridge examples were corrected to the current default OSC ports (`9000` send/listen) so docs match the live bridge behavior.
 - `.gitignore` now excludes local hardware CAD project/autosave artifacts (`*.epro`, `*.eprj`, autosave patterns, and `hardware/*_backup/`) so board iteration files can stay local-only while firmware/app/docs ship cleanly.
 - Runtime simulator and staged-state handling were tightened for profile/testing flows (`set_param` support, staged/live dirty reconciliation), and profile save now auto-applies dirty staged edits before firmware snapshot commands.
@@ -66,6 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   queueing.
 
 ### Fixed
+- Connect-failure path now reveals actionable recovery guidance directly in-app instead of leaving users at a dead-end error state.
+- Corrected demo-facing OLED abbreviations that were too terse for live explanation of EF/arp/swing states.
 - Corrected stale bridge/example docs that still referenced old OSC defaults and legacy bridge verbs; documentation now reflects the current `/mn42/cmd` contract and `--osc/--osc-listen` defaults.
 - Status/diff badges finally clock the `hidden` flag and swap styles instead of
   pretending they’re always visible—badge CSS tweaks landed in the App so the

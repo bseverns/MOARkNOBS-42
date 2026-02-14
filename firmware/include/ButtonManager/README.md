@@ -80,6 +80,7 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 
 | Combo                 | What happens                     |
 | --------------------- | -------------------------------- |
+| Ctrl0 + Ctrl1 + Ctrl2 | Panic-safe baseline reset (stop arp, disable EF follow, reload active profile) |
 | Ctrl3 + Ctrl4 + Ctrl5 | Toggle USB MIDI output           |
 | Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |
 | Ctrl0 + Ctrl2         | Cycle ARG envelope pair          |

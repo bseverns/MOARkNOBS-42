@@ -67,7 +67,53 @@ const aeModularSketch = {
   envelopeMode: 'EXPONENTIAL'
 };
 
+const demoProfileA = {
+  slots: makeSlots((idx) => ({
+    type: idx % 6 === 0 ? 'Note' : 'CC',
+    midiChannel: (idx % 4) + 1,
+    data1: idx % 6 === 0 ? (48 + idx) % 96 : (10 + idx * 3) % 128,
+    active: idx < 24,
+    label: idx < 6 ? `DEMO_A ${idx + 1}` : undefined
+  })),
+  efSlots: makeEfSlots((idx) => (idx * 6) % SLOT_COUNT),
+  filter: { type: 'LOWPASS', freq: 680, q: 1.2 },
+  arg: { method: 'MAXX', a: 1.6, b: 0.45, enable: true },
+  led: {
+    brightness: 78,
+    color: '#27F3B6'
+  },
+  envelopeMode: 'EXPONENTIAL'
+};
+
+const demoProfileB = {
+  slots: makeSlots((idx) => ({
+    type: idx % 5 === 0 ? 'NRPN' : 'CC',
+    midiChannel: ((idx + 2) % 6) + 1,
+    data1: idx % 5 === 0 ? (64 + idx) % 128 : (idx * 5) % 128,
+    active: idx % 3 !== 0,
+    label: idx < 6 ? `DEMO_B ${idx + 1}` : undefined
+  })),
+  efSlots: makeEfSlots((idx) => (idx * 7 + 3) % SLOT_COUNT),
+  filter: { type: 'BANDPASS', freq: 920, q: 1.85 },
+  arg: { method: 'XABS', a: 1.25, b: 0.85, enable: true },
+  led: {
+    brightness: 58,
+    color: '#FF7A3D'
+  },
+  envelopeMode: 'LINEAR'
+};
+
 export const presets = [
+  {
+    id: 'demo-profile-a',
+    label: 'DEMO_A - Reactive Stack',
+    load: async () => clonePreset(demoProfileA)
+  },
+  {
+    id: 'demo-profile-b',
+    label: 'DEMO_B - Clock Contrast',
+    load: async () => clonePreset(demoProfileB)
+  },
   {
     id: 'korg-minilogue-init',
     label: 'Korg Minilogue XD – Layer Launch',

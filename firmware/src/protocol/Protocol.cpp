@@ -1611,6 +1611,7 @@ void handleGetManifestCommand(const ParsedCommand &cmd) {
     // Manifest is the host's capability contract for this session
     // (schema/version/counts/resources).
     StaticJsonDocument<256> doc;
+    doc["device_name"] = "MOARkNOBS-42";
     doc["fw_version"] = FW_VERSION_STR;
     doc["git_sha"] = GIT_SHA_STR;
     doc["build_time"] = __DATE__ " " __TIME__;
