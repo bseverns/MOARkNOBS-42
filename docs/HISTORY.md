@@ -215,13 +215,13 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Added an explicit panic-safe exit combo (`Ctrl0 + Ctrl1 + Ctrl2`) that stops arp, disables EF follow, and reloads the active profile baseline so demos can recover quickly from bad live state.
 - Added demo-focused App presets (`DEMO_A - Reactive Stack`, `DEMO_B - Clock Contrast`) plus a dedicated runbook (`docs/DemoPolish.md`) covering soak, EXT-clock stress checks, panic-path validation, and asset prep.
 - *This pass shifted the demo story from "we can probably recover" to "we can prove identity, readability, and recovery on command because we are being militant about this for a reason."*
--PCBWay reached out and wants to help me make a run of prototypes of the board - motivation to move from simply a cool maker board to something more ornate.
+-PCBWay reached out and wants to help me make a run of prototypes of the board - motivation to move from simply a cool maker project to something a bit more ornate/rugged.
 
 ## Overview
 
 Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB schematics, test suites, and detailed usage notes. The repository now houses:
 
 - `firmware/` – Teensy‑based C++ code with modular managers and tests.
-- `hardware/` – EasyEDA design files for the `BTN_42` button matrix.
+- `hardware/` – Design files for the `MN42` board.
 - `App/` - Playwright-facilitated configuration app
 - Comprehensive README files describing features, wiring, building instructions, and a bit of mania.
