@@ -353,8 +353,8 @@ void TaskScheduler::update() {
     unsigned long now = ::now();
 
     // Stage callbacks and track which one-shot tasks need culling.
-    std::vector<std::function<void()>> dueCallbacks;
-    std::vector<size_t> finished;
+    dueCallbacks.clear();
+    finished.clear();
 
     for (size_t i = 0; i < tasks.size(); ++i) {
         ScheduledTask &task = tasks[i];

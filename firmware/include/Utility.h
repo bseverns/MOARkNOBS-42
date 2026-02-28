@@ -47,6 +47,8 @@ class TaskScheduler {
 
   private:
     std::vector<ScheduledTask> tasks;
+    std::vector<std::function<void()>> dueCallbacks;
+    std::vector<size_t> finished;
 };
 
 /** Collection of miscellaneous helper functions. */
