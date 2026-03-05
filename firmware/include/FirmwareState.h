@@ -4,7 +4,6 @@
 #include <Arduino.h>
 #include <array>
 #include <map>
-#include <queue>
 #include <vector>
 
 #include "Globals.h"
@@ -28,7 +27,6 @@ struct ButtonManagerContext;
 
 extern std::vector<uint8_t> potChannels;
 extern std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
-extern std::queue<String> commandQueue;
 extern MIDIHandler midiHandler;
 extern LEDManager ledManager;
 extern LedAnimator ledAnimator;

@@ -217,6 +217,16 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - *This pass shifted the demo story from "we can probably recover" to "we can prove identity, readability, and recovery on command because we are being militant about this for a reason."*
 -PCBWay reached out and wants to help me make a run of prototypes of the board - motivation to move from simply a cool maker project to something a bit more ornate/rugged.
 
+### March — Bridge Packaging Rollout Plan (Planned)
+
+- Locked the first distribution wave to desktop users on macOS (`arm64` + `x64`), Windows (`x64`), and Linux (`x64`) so we can prioritize predictable installs over broad-but-fragile matrix sprawl.
+- Formalized a packaging bake-off between `pkg` and `nexe`: `pkg` is the likely default path for speed + ecosystem fit, while `nexe` stays as the fallback if we need deeper control over native module embedding.
+- Called out the remaining bundling blockers explicitly: `serialport` native artifacts, static asset inclusion, runtime config path handling, and license payload colocation inside shipped binaries/installers.
+- Defined installer workflow targets per platform so non-technical users do not need Node or npm: signed `.pkg`/`.dmg` for macOS, MSI installer for Windows, and `.deb` + AppImage options for Linux.
+- Set the update architecture to channel-based auto-updates (stable/beta) with signed manifests, in-app version checks, and one-click rollback to last-known-good when post-update health checks fail.
+- Sequenced the work into four release gates: `G1` reproducible cross-platform builds, `G2` installer QA on clean machines, `G3` staged auto-update dogfood, `G4` public release with operator docs and recovery playbook.
+- *Goal: make "download -> install -> connect" feel boringly reliable for performers who should never have to think about JavaScript tooling just to use the bridge.*
+
 ## Overview
 
 Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB schematics, test suites, and detailed usage notes. The repository now houses:

@@ -345,21 +345,33 @@ String Utility::formatAck(const char *checksumValue, uint32_t sequence) {
     return out;
 }
 
+TaskScheduler::TaskScheduler() {
+    tasks.reserve(kReservedTaskCapacity);
+    dueTaskIndices.reserve(kReservedTaskCapacity);
+    finished.reserve(kReservedTaskCapacity);
+}
+
 void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayMs, bool repeat) {
     tasks.emplace_back(callback, delayMs, repeat);
+    if (dueTaskIndices.capacity() < tasks.capacity()) {
+        dueTaskIndices.reserve(tasks.capacity());
+    }
+    if (finished.capacity() < tasks.capacity()) {
+        finished.reserve(tasks.capacity());
+    }
 }
 
 void TaskScheduler::update() {
     unsigned long now = ::now();
 
-    // Stage callbacks and track which one-shot tasks need culling.
-    dueCallbacks.clear();
+    // Stage due task indices and track which one-shot tasks need culling.
+    dueTaskIndices.clear();
     finished.clear();
 
     for (size_t i = 0; i < tasks.size(); ++i) {
         ScheduledTask &task = tasks[i];
         if (now >= task.runAt) {
-            dueCallbacks.push_back(task.callback);
+            dueTaskIndices.push_back(i);
             if (task.repeat) {
                 task.runAt = now + task.interval; // reschedule next run
             } else {
@@ -369,8 +381,10 @@ void TaskScheduler::update() {
     }
 
     // Run callbacks outside of the bookkeeping loop.
-    for (auto &cb : dueCallbacks) {
-        cb();
+    for (size_t index : dueTaskIndices) {
+        if (index < tasks.size()) {
+            tasks[index].callback();
+        }
     }
 
     // Remove completed one-shot tasks, highest index first.

@@ -14,6 +14,7 @@
 #include <EEPROM.h>
 
 #include "ARGMixer.h"
+#include "CommandQueue.h"
 #include "ConfigManager.h"
 #include "EfSettingsUtils.h"
 #include "FirmwareState.h"
@@ -1368,9 +1369,17 @@ bool dispatchCommand(const String &command) {
 } // namespace
 
 void processCommandQueue() {
-    while (!commandQueue.empty()) {
-        String command = commandQueue.front(); // Get the front command
-        commandQueue.pop();                    // Remove it from the queue
+    // Keep one persistent String scratch buffer to avoid per-command heap churn.
+    static String command;
+    static bool commandInitialized = false;
+    if (!commandInitialized) {
+        command.reserve(SERIAL_BUFFER_SIZE - 1);
+        commandInitialized = true;
+    }
+
+    char line[SERIAL_BUFFER_SIZE];
+    while (dequeueSerialCommand(line, sizeof(line))) {
+        command = line;
 
         command.trim();
 

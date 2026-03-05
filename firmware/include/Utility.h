@@ -37,6 +37,8 @@ struct ScheduledTask {
  */
 class TaskScheduler {
   public:
+    TaskScheduler();
+
     void addTask(std::function<void()> callback, unsigned long delayMs, bool repeat = false);
 
     /**
@@ -46,8 +48,9 @@ class TaskScheduler {
     void update();
 
   private:
+    static constexpr size_t kReservedTaskCapacity = 96;
     std::vector<ScheduledTask> tasks;
-    std::vector<std::function<void()>> dueCallbacks;
+    std::vector<size_t> dueTaskIndices;
     std::vector<size_t> finished;
 };
 
