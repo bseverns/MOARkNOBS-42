@@ -49,7 +49,7 @@ jobs:
         run: npm --prefix App install --no-audit --no-fund
 
       - name: Install Playwright browsers
-        run: npx --prefix App playwright install --with-deps chromium
+        run: cd App && npx playwright install --with-deps chromium
 
 
       # Build, flash, and run the Unity suite on real hardware.
