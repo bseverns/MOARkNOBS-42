@@ -254,13 +254,13 @@ void testPots() {
     char result[64];
 
     // --- Main control pot (MUX A index 0) ---
-    sprintf(label, "Main→MIN");
+    snprintf(label, sizeof(label), "Main→MIN");
     Serial.println("\nMain Pot: twist to MIN, then hit a button.");
     displayManager.showText("Pot Test", label);
     waitForAnyButton();
     int mainMin = potentiometerManager.readRawPot(0);
 
-    sprintf(label, "Main→MAX");
+    snprintf(label, sizeof(label), "Main→MAX");
     Serial.println("Main Pot: twist to MAX, then hit a button.");
     displayManager.showText("Pot Test", label);
     waitForAnyButton();
@@ -268,21 +268,21 @@ void testPots() {
 
     int delta = mainMax - mainMin;
     bool pass = (delta >= POT_RANGE_MIN);
-    sprintf(result, "Min=%d Max=%d Δ=%d", mainMin, mainMax, delta);
+    snprintf(result, sizeof(result), "Min=%d Max=%d Δ=%d", mainMin, mainMax, delta);
     Serial.printf("  %s\n", result);
     displayManager.showText(pass ? "Main PASS" : "Main FAIL", result);
     delay(800);
     displayManager.clear();
 
     // --- Filter frequency pot ---
-    sprintf(label, "Freq→MIN");
+    snprintf(label, sizeof(label), "Freq→MIN");
     Serial.println("\nFreq Pot: roll to MIN, button when ready.");
     displayManager.showText("Pot Test", label);
     waitForAnyButton();
     buttonManager.processButtons(bmCtx);
     int freqMin = buttonManager.getControlPotValue(1);
 
-    sprintf(label, "Freq→MAX");
+    snprintf(label, sizeof(label), "Freq→MAX");
     Serial.println("Freq Pot: roll to MAX, button when ready.");
     displayManager.showText("Pot Test", label);
     waitForAnyButton();
@@ -291,21 +291,21 @@ void testPots() {
 
     delta = freqMax - freqMin;
     pass = (delta >= POT_RANGE_MIN);
-    sprintf(result, "Min=%d Max=%d Δ=%d", freqMin, freqMax, delta);
+    snprintf(result, sizeof(result), "Min=%d Max=%d Δ=%d", freqMin, freqMax, delta);
     Serial.printf("  %s\n", result);
     displayManager.showText(pass ? "Freq PASS" : "Freq FAIL", result);
     delay(800);
     displayManager.clear();
 
     // --- Filter Q pot ---
-    sprintf(label, "Q→MIN");
+    snprintf(label, sizeof(label), "Q→MIN");
     Serial.println("\nQ Pot: drop to MIN, button when ready.");
     displayManager.showText("Pot Test", label);
     waitForAnyButton();
     buttonManager.processButtons(bmCtx);
     int qMin = buttonManager.getControlPotValue(2);
 
-    sprintf(label, "Q→MAX");
+    snprintf(label, sizeof(label), "Q→MAX");
     Serial.println("Q Pot: push to MAX, button when ready.");
     displayManager.showText("Pot Test", label);
     waitForAnyButton();
@@ -314,7 +314,7 @@ void testPots() {
 
     delta = qMax - qMin;
     pass = (delta >= POT_RANGE_MIN);
-    sprintf(result, "Min=%d Max=%d Δ=%d", qMin, qMax, delta);
+    snprintf(result, sizeof(result), "Min=%d Max=%d Δ=%d", qMin, qMax, delta);
     Serial.printf("  %s\n", result);
     displayManager.showText(pass ? "Q PASS" : "Q FAIL", result);
     delay(800);
@@ -348,8 +348,8 @@ void testFilterPots() {
     bool freqPass = (minFreq <= 30 && maxFreq >= 4900);
     bool qPass = (minQ <= 0.6 && maxQ >= 3.9);
     char line1[32], line2[32];
-    sprintf(line1, "F %.0f-%.0f %s", minFreq, maxFreq, freqPass ? "OK" : "BAD");
-    sprintf(line2, "Q %.1f-%.1f %s", minQ, maxQ, qPass ? "OK" : "BAD");
+    snprintf(line1, sizeof(line1), "F %.0f-%.0f %s", minFreq, maxFreq, freqPass ? "OK" : "BAD");
+    snprintf(line2, sizeof(line2), "Q %.1f-%.1f %s", minQ, maxQ, qPass ? "OK" : "BAD");
     Serial.printf("Freq range: %.1f-%.1f Hz [%s]\n", minFreq, maxFreq, freqPass ? "PASS" : "FAIL");
     Serial.printf("Q range: %.1f-%.1f [%s]\n", minQ, maxQ, qPass ? "PASS" : "FAIL");
     displayManager.showText("Filter Pots", line1, line2);
@@ -363,7 +363,7 @@ void testEnvelopes() {
         envelopeFollowers[i].toggleActive(true);
         int pin = (int[]){A0, A1, A2, A3, A6, A7}[i];
         char msg[32];
-        sprintf(msg, "EF pin %d", pin);
+        snprintf(msg, sizeof(msg), "EF pin %d", pin);
 
         Serial.printf("EF %u: set MIN, any button.\n", i);
         displayManager.showText("Env Test", msg, "MIN → press");
@@ -381,7 +381,7 @@ void testEnvelopes() {
         bool pass = (delta >= ENV_RANGE_MIN);
 
         char result[64];
-        sprintf(result, "Min=%d Max=%d Δ=%d", vmin, vmax, delta);
+        snprintf(result, sizeof(result), "Min=%d Max=%d Δ=%d", vmin, vmax, delta);
         Serial.printf("  %s\n", result);
         displayManager.showText(pass ? "Env PASS" : "Env FAIL", result);
         delay(800);
