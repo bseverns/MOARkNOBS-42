@@ -17,31 +17,6 @@
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ConfigManager configManager;
 
-// Weak hook lets test firmware skip the heavyweight EF voice refresh logic.
-#if defined(__GNUC__) || defined(__clang__)
-extern void refreshEfVoicesFromConfig() __attribute__((weak));
-#else
-extern void refreshEfVoicesFromConfig();
-#endif
-
-void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings) {
-    if (slotIndex >= NUM_SLOTS) {
-        return;
-    }
-
-    MIDISlot &slot = configManager.getSlot(slotIndex);
-    slot.efSettings = settings;
-    configManager.saveSlot(slotIndex, slot);
-
-#if defined(__GNUC__) || defined(__clang__)
-    if (refreshEfVoicesFromConfig != nullptr) {
-        refreshEfVoicesFromConfig();
-    }
-#else
-    refreshEfVoicesFromConfig();
-#endif
-}
-
 namespace {
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
