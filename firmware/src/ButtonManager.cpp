@@ -345,7 +345,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
             context.envelopes[assigned].toggleActive(true);
         }
         char buf[32];
-        sprintf(buf, "Slot %d -> EF %d", index, assigned);
+        snprintf(buf, sizeof(buf), "Slot %d -> EF %d", index, assigned);
         context.displayManager.displayStatus(buf, 1500);
 
         // Allow an explicit EF pick via control buttons 0-5
@@ -390,7 +390,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
             slot.active = !slot.active;
             context.configManager.saveSlot(context.activePot, slot);
             char buf[32];
-            sprintf(buf, "Slot %d %s", context.activePot, slot.active ? "ON" : "OFF");
+            snprintf(buf, sizeof(buf), "Slot %d %s", context.activePot, slot.active ? "ON" : "OFF");
             context.displayManager.displayStatus(buf, 1500);
             break;
         }
@@ -560,7 +560,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             commitEfSettings(context, _pendingEfSlot, settings);
             context.envelopes[controlIndex].toggleActive(true);
             char buf[32];
-            sprintf(buf, "Slot %d -> EF %d", _pendingEfSlot, controlIndex);
+            snprintf(buf, sizeof(buf), "Slot %d -> EF %d", _pendingEfSlot, controlIndex);
             context.displayManager.displayStatus(buf, 1500);
             streamEnvelopeAssignment(_pendingEfSlot, controlIndex);
         }
@@ -621,7 +621,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
 
         char buf[32];
-        sprintf(buf, "Slot %d -> EF %d", context.activePot, assigned);
+        snprintf(buf, sizeof(buf), "Slot %d -> EF %d", context.activePot, assigned);
         context.displayManager.displayStatus(buf, 1500);
         streamEnvelopeAssignment(context.activePot, assigned);
     } break;
@@ -640,7 +640,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
 
         char buf[32];
-        sprintf(buf, "Slot %d => Ch %d", context.activePot, newChan);
+        snprintf(buf, sizeof(buf), "Slot %d => Ch %d", context.activePot, newChan);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     } break;
@@ -653,8 +653,8 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             param = (param + 1) % 128;
             context.configManager.setSlotData1(context.activePot, param);
             char buf[32];
-            sprintf(buf, "Slot %d => %s %d", context.activePot,
-                    type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
+            snprintf(buf, sizeof(buf), "Slot %d => %s %d", context.activePot,
+                     type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
             context.displayManager.displayStatus(buf, 1500);
             streamSlotPatch(context.configManager, context.activePot);
         } else {
@@ -665,7 +665,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
                 _potentiometerManager->setCCNumber(context.activePot, newCC);
             }
             char buf[32];
-            sprintf(buf, "Slot %d => CC %d", context.activePot, newCC);
+            snprintf(buf, sizeof(buf), "Slot %d => CC %d", context.activePot, newCC);
             context.displayManager.displayStatus(buf, 1500);
             streamSlotPatch(context.configManager, context.activePot);
         }
@@ -799,7 +799,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         currentLightMode = (currentLightMode + 1) % 4;
         context.ledManager.setModeDisplay(currentLightMode);
         char buf[32];
-        sprintf(buf, "LightMode=%d", currentLightMode);
+        snprintf(buf, sizeof(buf), "LightMode=%d", currentLightMode);
         context.displayManager.displayStatus(buf, 1500);
     }
     // (5) Ctrl0 + Ctrl4: Enable EF and randomize settings
@@ -816,7 +816,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         commitEfSettings(context, context.activePot, settings);
         context.envelopes[randomEF].toggleActive(true);
         char buf[32];
-        sprintf(buf, "Slot %d->RandomEF %d", context.activePot, randomEF);
+        snprintf(buf, sizeof(buf), "Slot %d->RandomEF %d", context.activePot, randomEF);
         context.displayManager.displayStatus(buf, 1500);
         streamEnvelopeAssignment(context.activePot, randomEF);
     }
@@ -824,7 +824,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl4 | maskCtrl5)) == (maskCtrl4 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::Note);
         char buf[32];
-        sprintf(buf, "Slot %d => NOTE", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => NOTE", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -832,7 +832,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl3 | maskCtrl5)) == (maskCtrl3 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::ProgramChange);
         char buf[32];
-        sprintf(buf, "Slot %d => PROG", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => PROG", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -840,7 +840,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl0 | maskCtrl5)) == (maskCtrl0 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::PitchBend);
         char buf[32];
-        sprintf(buf, "Slot %d => BEND", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => BEND", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -848,7 +848,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl1 | maskCtrl4)) == (maskCtrl1 | maskCtrl4)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::Aftertouch);
         char buf[32];
-        sprintf(buf, "Slot %d => AFTER", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => AFTER", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -862,7 +862,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl2 | maskCtrl5)) == (maskCtrl2 | maskCtrl5)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::NRPN);
         char buf[32];
-        sprintf(buf, "Slot %d => NRPN", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => NRPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -870,7 +870,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl1 | maskCtrl3)) == (maskCtrl1 | maskCtrl3)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::RPN);
         char buf[32];
-        sprintf(buf, "Slot %d => RPN", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => RPN", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -878,7 +878,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     else if ((pressedButtons & (maskCtrl0 | maskCtrl3)) == (maskCtrl0 | maskCtrl3)) {
         context.configManager.setSlotType(context.activePot, MIDIMessageType::SysEx);
         char buf[32];
-        sprintf(buf, "Slot %d => SYSEX", context.activePot);
+        snprintf(buf, sizeof(buf), "Slot %d => SYSEX", context.activePot);
         context.displayManager.displayStatus(buf, 1500);
         streamSlotPatch(context.configManager, context.activePot);
     }
@@ -898,7 +898,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         slot.arpNote = (slot.arpNote + 1) % 128;
         context.configManager.saveSlot(context.activePot, slot);
         char buf[32];
-        sprintf(buf, "ARP NOTE %d", slot.arpNote);
+        snprintf(buf, sizeof(buf), "ARP NOTE %d", slot.arpNote);
         context.displayManager.displayStatus(buf, 1000);
         streamSlotPatch(context.configManager, context.activePot);
     }
