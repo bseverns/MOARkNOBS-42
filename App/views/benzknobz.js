@@ -951,7 +951,7 @@ const boot = () => {
   }
 
   function updateSceneSlot(slotIndex, { name, available }) {
-    const slotInfo = sceneSlotElements.find((entry) => entry.slot === slotIndex);
+    const slotInfo = sceneSlotElements[slotIndex];
     if (!slotInfo) return;
     const displayName = available
       ? name || `Scene ${slotIndex + 1}`
@@ -985,7 +985,7 @@ const boot = () => {
 
   async function handleSceneSave(slotIndex) {
     if (!profileInteractable || sceneBusy) return;
-    const slotInfo = sceneSlotElements.find((entry) => entry.slot === slotIndex);
+    const slotInfo = sceneSlotElements[slotIndex];
     if (!slotInfo) return;
     const name = slotInfo.nameInput?.value.trim();
     sceneBusy = true;
