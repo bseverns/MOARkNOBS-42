@@ -3,6 +3,7 @@ import { FormRenderer } from './form_renderer.js';
 import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
+import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from '../lib/constants.js';
 
 const localManifest = {
   ui_version: '2025.03.01',
@@ -924,7 +925,7 @@ const boot = () => {
   }
 
   function updateSceneSlot(slotIndex, { name, available }) {
-    const slotInfo = sceneSlotElements.find((entry) => entry.slot === slotIndex);
+    const slotInfo = sceneSlotElements[slotIndex];
     if (!slotInfo) return;
     const displayName = available
       ? name || `Scene ${slotIndex + 1}`
@@ -958,7 +959,7 @@ const boot = () => {
 
   async function handleSceneSave(slotIndex) {
     if (!profileInteractable || sceneBusy) return;
-    const slotInfo = sceneSlotElements.find((entry) => entry.slot === slotIndex);
+    const slotInfo = sceneSlotElements[slotIndex];
     if (!slotInfo) return;
     const name = slotInfo.nameInput?.value.trim();
     sceneBusy = true;
@@ -1334,7 +1335,7 @@ const boot = () => {
     basics.appendChild(
       makeSelect(
         'Knob -> MIDI message',
-        ['OFF', 'CC', 'Note', 'PitchBend', 'ProgramChange', 'Aftertouch', 'ModWheel', 'NRPN', 'RPN', 'SysEx'],
+        SLOT_TYPE_NAMES,
         slot.type,
         (value) => stageSlotField(slotState.selected, 'type', value),
         { help: GLOSSARY.mapping },

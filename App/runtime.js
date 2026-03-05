@@ -1,5 +1,6 @@
 import Ajv from './lib/mini-ajv.js';
 import addFormats from './lib/add-formats.js';
+import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from './lib/constants.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -18,43 +19,6 @@ const SCENE_RESPONSE_KEYS = {
 };
 const STORAGE_KEY = 'moarknobs:last-port';
 const STATE_STORAGE_KEY = 'moarknobs:last-state';
-export const EF_FILTER_NAMES = [
-  'LINEAR',
-  'OPPOSITE_LINEAR',
-  'EXPONENTIAL',
-  'RANDOM',
-  'LOWPASS',
-  'HIGHPASS',
-  'BANDPASS'
-];
-const SLOT_TYPE_NAMES = [
-  'OFF',
-  'CC',
-  'Note',
-  'PitchBend',
-  'ProgramChange',
-  'Aftertouch',
-  'ModWheel',
-  'NRPN',
-  'RPN',
-  'SysEx'
-];
-export const ARG_METHOD_NAMES = [
-  'PLUS',
-  'MIN',
-  'PECK',
-  'SHAV',
-  'SQAR',
-  'BABS',
-  'TABS',
-  'MULT',
-  'DIVI',
-  'AVG',
-  'XABS',
-  'MAXX',
-  'MINN',
-  'XORR'
-];
 
 function makeEmitter() {
   const listeners = new Map();
