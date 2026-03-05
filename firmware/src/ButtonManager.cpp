@@ -654,7 +654,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             context.configManager.setSlotData1(context.activePot, param);
             char buf[32];
             snprintf(buf, sizeof(buf), "Slot %d => %s %d", context.activePot,
-                    type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
+                     type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
             context.displayManager.displayStatus(buf, 1500);
             streamSlotPatch(context.configManager, context.activePot);
         } else {
