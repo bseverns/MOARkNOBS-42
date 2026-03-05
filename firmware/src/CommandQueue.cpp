@@ -37,12 +37,10 @@ void enqueueSerialCommand(const char *line) {
         dropOldestCommand();
     }
 
-    size_t lengthToCopy = std::strlen(line);
-    if (lengthToCopy >= SERIAL_BUFFER_SIZE) {
-        lengthToCopy = SERIAL_BUFFER_SIZE - 1;
-    }
-    std::memcpy(commandQueue.entries[commandQueue.tail], line, lengthToCopy);
-    commandQueue.entries[commandQueue.tail][lengthToCopy] = '\0';
+    char *slot = commandQueue.entries[commandQueue.tail];
+    const size_t copyLen = strnlen(line, SERIAL_BUFFER_SIZE - 1);
+    std::memcpy(slot, line, copyLen);
+    slot[copyLen] = '\0';
     commandQueue.tail = (commandQueue.tail + 1) % kMaxCommandQueueSize;
     ++commandQueue.count;
 }
@@ -53,8 +51,10 @@ bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
         return false;
     }
 
-    std::strncpy(outBuffer, commandQueue.entries[commandQueue.head], outBufferSize - 1);
-    outBuffer[outBufferSize - 1] = '\0';
+    const char *entry = commandQueue.entries[commandQueue.head];
+    const size_t copyLen = strnlen(entry, outBufferSize - 1);
+    std::memcpy(outBuffer, entry, copyLen);
+    outBuffer[copyLen] = '\0';
     commandQueue.head = (commandQueue.head + 1) % kMaxCommandQueueSize;
     --commandQueue.count;
     return true;
