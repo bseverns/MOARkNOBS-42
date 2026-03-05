@@ -201,8 +201,8 @@ void testFilterPots() {
     Serial.printf("Freq range: %.1f-%.1f Hz [%s]\n", minFreq, maxFreq, freqPass ? "PASS" : "FAIL");
     Serial.printf("Q range: %.1f-%.1f [%s]\n", minQ, maxQ, qPass ? "PASS" : "FAIL");
     char line1[32], line2[32];
-    sprintf(line1, "F %.0f-%.0f %s", minFreq, maxFreq, freqPass ? "OK" : "BAD");
-    sprintf(line2, "Q %.1f-%.1f %s", minQ, maxQ, qPass ? "OK" : "BAD");
+    snprintf(line1, sizeof(line1), "F %.0f-%.0f %s", minFreq, maxFreq, freqPass ? "OK" : "BAD");
+    snprintf(line2, sizeof(line2), "Q %.1f-%.1f %s", minQ, maxQ, qPass ? "OK" : "BAD");
     displayManager.showText("Filter Pots", line1, line2);
     delay(1000);
     displayManager.clear();
@@ -245,8 +245,8 @@ void testSystemSuite() {
     displayManager.showText("System Tests", "running...");
     SystemTestSummary summary = runSystemTests();
     char line1[32], line2[32];
-    sprintf(line1, "Total %u", summary.total);
-    sprintf(line2, "Fail %u", summary.failed);
+    snprintf(line1, sizeof(line1), "Total %u", summary.total);
+    snprintf(line2, sizeof(line2), "Fail %u", summary.failed);
     displayManager.showText(summary.failed ? "System FAIL" : "System PASS", line1, line2);
     Serial.printf("System tests: %u total, %u failed\n", summary.total, summary.failed);
     delay(1000);
