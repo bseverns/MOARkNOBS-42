@@ -37,8 +37,12 @@ void enqueueSerialCommand(const char *line) {
         dropOldestCommand();
     }
 
-    std::strncpy(commandQueue.entries[commandQueue.tail], line, SERIAL_BUFFER_SIZE - 1);
-    commandQueue.entries[commandQueue.tail][SERIAL_BUFFER_SIZE - 1] = '\0';
+    size_t lengthToCopy = std::strlen(line);
+    if (lengthToCopy >= SERIAL_BUFFER_SIZE) {
+        lengthToCopy = SERIAL_BUFFER_SIZE - 1;
+    }
+    std::memcpy(commandQueue.entries[commandQueue.tail], line, lengthToCopy);
+    commandQueue.entries[commandQueue.tail][lengthToCopy] = '\0';
     commandQueue.tail = (commandQueue.tail + 1) % kMaxCommandQueueSize;
     ++commandQueue.count;
 }
