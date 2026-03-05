@@ -1,35 +1,8 @@
-import { createRuntime } from '../runtime.js';
+import { createRuntime, ARG_METHOD_NAMES, EF_FILTER_NAMES } from '../runtime.js';
 import { FormRenderer } from './form_renderer.js';
 import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
-
-const EF_FILTER_NAMES = [
-  'LINEAR',
-  'OPPOSITE_LINEAR',
-  'EXPONENTIAL',
-  'RANDOM',
-  'LOWPASS',
-  'HIGHPASS',
-  'BANDPASS'
-];
-
-const ARG_METHOD_NAMES = [
-  'PLUS',
-  'MIN',
-  'PECK',
-  'SHAV',
-  'SQAR',
-  'BABS',
-  'TABS',
-  'MULT',
-  'DIVI',
-  'AVG',
-  'XABS',
-  'MAXX',
-  'MINN',
-  'XORR'
-];
 
 const localManifest = {
   ui_version: '2025.03.01',

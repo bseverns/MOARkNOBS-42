@@ -18,7 +18,7 @@ const SCENE_RESPONSE_KEYS = {
 };
 const STORAGE_KEY = 'moarknobs:last-port';
 const STATE_STORAGE_KEY = 'moarknobs:last-state';
-const EF_FILTER_NAMES = [
+export const EF_FILTER_NAMES = [
   'LINEAR',
   'OPPOSITE_LINEAR',
   'EXPONENTIAL',
@@ -39,7 +39,7 @@ const SLOT_TYPE_NAMES = [
   'RPN',
   'SysEx'
 ];
-const ARG_METHOD_NAMES = [
+export const ARG_METHOD_NAMES = [
   'PLUS',
   'MIN',
   'PECK',
