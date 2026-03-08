@@ -59,7 +59,7 @@ constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildStubArgPa
 } // namespace
 
 const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildStubArgPairs();
-const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
+extern const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
 
 int envelopeAnalogPin(uint8_t index) {
     if (index < ENVELOPE_ANALOG_PINS.size())
@@ -67,7 +67,7 @@ int envelopeAnalogPin(uint8_t index) {
     return -1;
 }
 
-int envelopeIndexFromAnalogPin(int analogPin) {
+extern int envelopeIndexFromAnalogPin(int analogPin) {
     for (uint8_t idx = 0; idx < ENVELOPE_ANALOG_PINS.size(); ++idx) {
         if (ENVELOPE_ANALOG_PINS[idx] == analogPin)
             return idx;
