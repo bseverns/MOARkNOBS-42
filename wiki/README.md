@@ -38,4 +38,5 @@ This folder contains a ready-to-publish wiki for MOARkNOBS-42.
 
 - Keep deep technical detail in canonical docs (`README.md`, `docs/`, `firmware/README.md`, `bridge/README.md`, `App/README.md`).
 - Keep the wiki as a navigation and onboarding layer that points contributors to those sources.
-
+- Every top-level wiki page must include a `Canonical source: \`path\`` line near the top.
+- CI enforces both local markdown link integrity and canonical-source declarations.

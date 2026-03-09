@@ -1,6 +1,7 @@
 # Release Process
 
 Use this as the release checklist summary. Detailed runbooks remain in `docs/ReleaseGuide.md`.
+Canonical source: `docs/ReleaseGuide.md`
 
 ## Firmware release steps
 
@@ -35,4 +36,3 @@ When shipping non-CLI bridge artifacts:
 - `docs/ReleaseGuide.md`
 - `docs/release/bridge-artifacts-checklist.md`
 - `CHANGELOG.md`
-

@@ -4,17 +4,12 @@ import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
 import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from '../lib/constants.js';
+import { createLocalManifest } from '../manifest_contract.js';
 
-const localManifest = {
-  ui_version: '2025.03.01',
-  device_name: 'MOARkNOBS-42',
-  schema_version: 5,
-  slot_count: 42,
-  pot_count: 42,
-  envelope_count: 6,
-  arg_method_count: ARG_METHOD_NAMES.length,
-  led_count: 51
-};
+const localManifest = createLocalManifest({
+  uiVersion: '2026.03.09',
+  argMethodCount: ARG_METHOD_NAMES.length
+});
 
 const runtimeOptions = {
   schemaUrl: './config_schema.json',

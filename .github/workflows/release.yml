@@ -31,6 +31,8 @@ jobs:
           files: |
             dist/mn42_${{ github.event.release.tag_name }}.hex
             dist/fabrication.zip
+            dist/mn42_${{ github.event.release.tag_name }}_source.tar.gz
             dist/manifest.json
+            dist/SHA256SUMS.txt
             dist/THIRD_PARTY_LICENSES.md
             dist/LICENSES/**

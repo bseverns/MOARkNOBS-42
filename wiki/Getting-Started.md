@@ -1,6 +1,7 @@
 # Getting Started
 
 This page gets a new contributor from clone to first successful handshake.
+Canonical source: `docs/ProcessOverview.md`
 
 ## Prerequisites
 
@@ -68,4 +69,3 @@ Replace `/dev/ttyACM0` with your device path.
 - `docs/ProcessOverview.md`
 - `docs/BuildersHandbook.md`
 - `docs/Troubleshooting.md`
-

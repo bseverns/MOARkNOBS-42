@@ -3,6 +3,7 @@
 MOARkNOBS-42 is an open hardware + firmware + software instrument stack built around a Teensy 4.0 MIDI/OSC controller.
 
 Use this wiki as the fast map. Canonical deep docs remain in the repository source tree.
+Canonical source: `README.md`
 
 ## Start here
 
@@ -29,4 +30,3 @@ Use this wiki as the fast map. Canonical deep docs remain in the repository sour
 - Firmware details: `firmware/README.md`
 - Bridge details: `bridge/README.md`
 - App details: `App/README.md`
-

@@ -1,6 +1,7 @@
 # Firmware
 
 Firmware lives under `firmware/` and targets Teensy 4.0.
+Canonical source: `firmware/README.md`
 
 ## Build commands
 
@@ -43,4 +44,3 @@ pio -d firmware run -e teensy40_main -t upload
 - `docs/WebSerial.md`
 - `docs/PinMap.md`
 - `docs/EEPROMLayout.md`
-

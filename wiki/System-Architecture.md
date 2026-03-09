@@ -1,6 +1,7 @@
 # System Architecture
 
 MOARkNOBS-42 has four main layers:
+Canonical source: `README.md`
 
 1. Hardware controller (Teensy + buttons + pots + LEDs + envelope inputs + MIDI I/O)
 2. Firmware runtime (schedulers, protocol, managers, persistence)
@@ -35,4 +36,3 @@ MOARkNOBS-42 has four main layers:
 - `firmware/README.md` (runtime details)
 - `docs/WebSerial.md` (host contract and message flow)
 - `docs/OSCBridge.md` (bridge transport behavior)
-

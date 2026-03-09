@@ -1,6 +1,7 @@
 # Hardware
 
 Hardware artifacts live in `hardware/` and supporting diagrams in `docs/sketch/`.
+Canonical source: `hardware/README.md`
 
 ## Core board characteristics
 

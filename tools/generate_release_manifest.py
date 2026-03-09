@@ -88,6 +88,12 @@ def main() -> None:
     parser.add_argument("--build-env", required=True, help="PlatformIO environment used for the firmware build")
     parser.add_argument("--firmware", required=True, help="Path to the firmware hex artifact")
     parser.add_argument("--fabrication", required=True, help="Path to the fabrication zip artifact")
+    parser.add_argument(
+        "--artifact",
+        action="append",
+        default=[],
+        help="Additional artifact metadata as label=path",
+    )
     parser.add_argument("--pio-home", required=False, help="Explicit PlatformIO home directory")
     parser.add_argument("--test", action="append", default=[], help="Test status entries as name=status")
     parser.add_argument("--step", action="append", default=[], help="Command steps recorded as label=command")
@@ -115,6 +121,16 @@ def main() -> None:
         label, command = entry.split("=", 1)
         steps.append({"label": label.strip(), "command": command.strip()})
 
+    extra_artifacts: Dict[str, pathlib.Path] = {}
+    for entry in args.artifact:
+        if "=" not in entry:
+            parser.error(f"Invalid --artifact value '{entry}'. Expected label=path.")
+        label, artifact_path = entry.split("=", 1)
+        clean_label = label.strip()
+        if not clean_label:
+            parser.error(f"Invalid --artifact label in '{entry}'.")
+        extra_artifacts[clean_label] = pathlib.Path(artifact_path.strip())
+
     try:
         pio_info_output = _run(["pio", "system", "info", "--json-output"], cwd=project_dir).stdout.strip()
         try:
@@ -130,6 +146,13 @@ def main() -> None:
     pkg_inventory = _capture_text(["pio", "pkg", "list", "-d", str(project_dir), "-e", args.build_env], cwd=project_dir)
 
     repo_dir = root if root is not None else project_dir
+
+    artifacts: Dict[str, object] = {
+        "firmware_hex": _file_metadata(firmware_path, root),
+        "fabrication_zip": _file_metadata(fabrication_path, root),
+    }
+    for label, artifact_path in extra_artifacts.items():
+        artifacts[label] = _file_metadata(artifact_path, root)
 
     manifest: Dict[str, object] = {
         "version": args.version,
@@ -151,10 +174,7 @@ def main() -> None:
         },
         "commands": steps,
         "tests": tests,
-        "artifacts": {
-            "firmware_hex": _file_metadata(firmware_path, root),
-            "fabrication_zip": _file_metadata(fabrication_path, root),
-        },
+        "artifacts": artifacts,
     }
 
     if root is not None:

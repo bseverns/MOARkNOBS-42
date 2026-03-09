@@ -1,6 +1,7 @@
 # WebSerial App
 
 The browser configurator lives in `App/` and provides schema-validated editing against the firmware protocol.
+Canonical source: `App/README.md`
 
 ## Architecture
 
@@ -44,4 +45,3 @@ npm --prefix App test
 
 - `App/README.md`
 - `docs/WebSerial.md`
-

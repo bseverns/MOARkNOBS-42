@@ -31,6 +31,14 @@ pio -d firmware test -e teensy40_unity -vvv
 
 Unity screams over a custom `Serial1` transport—do **not** lean on the default Serial or regenerate PlatformIO's unittest transport.
 
+Run docs and contract guards before pushing release/docs changes:
+
+```bash
+python tools/check_markdown_links.py
+python tools/check_wiki_contract.py
+python tools/check_contract_sync.py
+```
+
 ## Code Etiquette
 
 - Globals go `extern` in headers and live in exactly one `.cpp`.

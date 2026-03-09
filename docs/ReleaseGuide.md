@@ -9,6 +9,7 @@ Need to cut a proper drop? Start with the quick steps in [Publishing a Release](
 5. **Tag it loud** – `git tag -a vX.Y.Z -m "vX.Y.Z"` to mark the moment.
 6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into gear. It builds the `.hex` and `sysreport.json`.
 7. **Draft the release** – on GitHub, create a new release from that tag, drop any human‑written notes, and publish.
+   - CI now uploads a deterministic source export (`mn42_<tag>_source.tar.gz`) and `SHA256SUMS.txt` alongside firmware artifacts.
    - Attach `THIRD_PARTY_LICENSES.md` and the `firmware/LICENSES/` folder as release assets so the suits stay off our backs.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 

@@ -23,7 +23,9 @@ BUILD_ENV="teensy40_main"
 UNITY_ENV="teensy40_unity"
 FIRMWARE_NAME="mn42_${VERSION}.hex"
 FABRICATION_NAME="fabrication.zip"
+SOURCE_EXPORT_NAME="mn42_${VERSION}_source.tar.gz"
 MANIFEST_NAME="manifest.json"
+CHECKSUMS_NAME="SHA256SUMS.txt"
 PROJECT_DIR="$ROOT_DIR/firmware"
 FABRICATION_DIR="$ROOT_DIR/hardware/fabrication"
 
@@ -91,6 +93,12 @@ with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             zf.writestr(info, fh.read())
 PY
 
+# Export repository source as a deterministic tarball with a strict file boundary.
+python3 "$ROOT_DIR/tools/export_release_source.py" \
+  --root "$ROOT_DIR" \
+  --version "$VERSION" \
+  --output "$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME"
+
 # Hoard the legal paperwork.
 cp "$ROOT_DIR/THIRD_PARTY_LICENSES.md" "$ROOT_DIR/$OUTPUT_DIR/"  # keep license roster
 rm -rf "$ROOT_DIR/$OUTPUT_DIR/LICENSES"
@@ -109,11 +117,21 @@ python3 "$ROOT_DIR/tools/generate_release_manifest.py" \
   --output "$ROOT_DIR/$OUTPUT_DIR/$MANIFEST_NAME" \
   --firmware "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME" \
   --fabrication "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" \
+  --artifact "source_export=$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME" \
+  --artifact "third_party_licenses=$ROOT_DIR/$OUTPUT_DIR/THIRD_PARTY_LICENSES.md" \
   --pio-home "$PIO_HOME" \
   --test "$UNITY_ENV=passed" \
   --step "tests=$UNITY_CMD_STR" \
   --step "clean=$CLEAN_CMD_STR" \
   --step "build=$BUILD_CMD_STR"
+
+python3 "$ROOT_DIR/tools/write_checksums.py" \
+  --output "$ROOT_DIR/$OUTPUT_DIR/$CHECKSUMS_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/$MANIFEST_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/THIRD_PARTY_LICENSES.md"
 
 echo "Release artifacts ready in $OUTPUT_DIR/"
 ls "$ROOT_DIR/$OUTPUT_DIR"

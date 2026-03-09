@@ -25,14 +25,7 @@
 #include "Modes.h"
 #include "Utility.h"
 #include "SysExTemplate.h"
-
-#if defined(ARDUINO)
-extern "C" {
-extern char _ebss;
-extern char _flashimagelen;
-extern char _estack;
-}
-#endif
+#include "protocol/ManifestReport.h"
 
 #if defined(UNIT_TEST)
 bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
@@ -173,31 +166,6 @@ static bool handleSceneJsonCommand(const String &command) {
     }
 
     return false;
-}
-
-// Rough free-RAM estimate for telemetry; this is stack-pointer minus .bss base, not a full
-// allocator-level accounting.
-size_t computeFreeRAM() {
-#if defined(ARDUINO)
-    char stackDummy = 0;
-    uintptr_t stackPtr = reinterpret_cast<uintptr_t>(&stackDummy);
-    uintptr_t heapBase = reinterpret_cast<uintptr_t>(&_ebss);
-    return (stackPtr > heapBase) ? static_cast<size_t>(stackPtr - heapBase) : 0U;
-#else
-    return 0U;
-#endif
-}
-
-// Report approximate remaining program flash so host tools can surface headroom warnings.
-size_t computeFreeFlash() {
-#if defined(ARDUINO)
-    constexpr size_t kFlashSizeBytes =
-        1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
-    size_t used = reinterpret_cast<uintptr_t>(&_flashimagelen);
-    return (used < kFlashSizeBytes) ? (kFlashSizeBytes - used) : 0U;
-#else
-    return 0U;
-#endif
 }
 
 void initializeProtocol() {
@@ -1620,18 +1588,7 @@ void handleGetManifestCommand(const ParsedCommand &cmd) {
     // Manifest is the host's capability contract for this session
     // (schema/version/counts/resources).
     StaticJsonDocument<256> doc;
-    doc["device_name"] = "MOARkNOBS-42";
-    doc["fw_version"] = FW_VERSION_STR;
-    doc["git_sha"] = GIT_SHA_STR;
-    doc["build_time"] = __DATE__ " " __TIME__;
-    doc["schema_version"] = CONFIG_VERSION;
-    doc["slot_count"] = NUM_SLOTS;
-    doc["pot_count"] = configManager.getNumPots();
-    doc["envelope_count"] = NUM_ENVELOPES;
-    doc["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
-    doc["led_count"] = NUM_LEDS();
-    doc["free_ram"] = computeFreeRAM();
-    doc["free_flash"] = computeFreeFlash();
+    writeManifestFields(doc.to<JsonObject>());
 
     String payload;
     serializeJson(doc, payload);

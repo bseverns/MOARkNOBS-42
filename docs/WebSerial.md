@@ -232,7 +232,7 @@ Less baggage means faster feedback. This protocol exists so you can patch in a b
 
 ## See It in Action
 
-Want a live demo? Fire up the [WebSerial configuration app](../App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep [README_webserial.md](../App/README_webserial.md).
+Want a live demo? Fire up the [WebSerial configuration app](../App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep the [App README](../App/README.md).
 
 The configurator lets you twist:
 

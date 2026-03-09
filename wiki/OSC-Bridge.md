@@ -1,6 +1,7 @@
 # OSC Bridge
 
 The bridge (`bridge/`) is a Node.js CLI that connects firmware serial telemetry to OSC and virtual MIDI.
+Canonical source: `bridge/README.md`
 
 ## Install
 
@@ -41,4 +42,3 @@ npm --prefix bridge test
 - `docs/OSCBridge.md`
 - `docs/BridgeForPerformers.md`
 - `docs/BridgePackaging.md`
-

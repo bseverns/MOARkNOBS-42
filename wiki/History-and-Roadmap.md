@@ -1,6 +1,7 @@
 # History and Roadmap
 
 Project evolution is documented in `docs/HISTORY.md`. This page provides a compact index.
+Canonical source: `docs/HISTORY.md`
 
 ## Timeline summary
 
@@ -22,4 +23,3 @@ Project evolution is documented in `docs/HISTORY.md`. This page provides a compa
 - `CHANGELOG.md`
 - `docs/lineage.md`
 - `docs/TODO.md`
-

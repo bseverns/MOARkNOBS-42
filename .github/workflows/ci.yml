@@ -55,3 +55,18 @@ jobs:
       - name: Run pre-commit
         # any hook yelling here will blow up the build
         run: pre-commit run --all-files
+
+  docs-and-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate docs links + wiki ownership policy
+        run: |
+          python tools/check_markdown_links.py
+          python tools/check_wiki_contract.py
+      - name: Validate app/firmware manifest contract sync
+        run: python tools/check_contract_sync.py

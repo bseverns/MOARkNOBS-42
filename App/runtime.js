@@ -1,6 +1,7 @@
 import Ajv from './lib/mini-ajv.js';
 import addFormats from './lib/add-formats.js';
 import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from './lib/constants.js';
+import { createLocalManifest } from './manifest_contract.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -731,16 +732,10 @@ function createSimulator() {
   let resolver;
 
   const manifest = {
-    device_name: 'MOARkNOBS-42',
+    ...createLocalManifest({ uiVersion: 'simulator', argMethodCount: ARG_METHOD_NAMES.length }),
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
     build_time: new Date().toISOString(),
-    schema_version: 5,
-    slot_count: 42,
-    pot_count: 42,
-    envelope_count: 6,
-    arg_method_count: ARG_METHOD_NAMES.length,
-    led_count: 51,
     free_ram: 48000,
     free_flash: 512000
   };

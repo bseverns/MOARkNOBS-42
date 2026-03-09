@@ -178,6 +178,16 @@ If the boot loader detects EEPROM corruption it now shows a one-shot OLED messag
 2. **“EEPROM corrupted defaults loaded”** – both primary and backup were invalid, so the firmware reset the pot→channel map, CC map, and LED defaults. Reload a profile or redo your slot/channel assignments and save once everything looks right.
 Treat these messages as subtle warnings—if you see one, check the WebSerial snapshot or run the slot mapping routine before you return to performance mode.
 
+## Publishing a Release
+
+1. Run the build/test gate:
+   - `pio -d firmware run -e teensy40_main`
+   - `pio -d firmware test -e teensy40_unity -vvv`
+   - `npm --prefix bridge test`
+2. Tag and push (`git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`).
+3. Let CI run `./release.sh <tag>` and upload deterministic assets (`.hex`, fabrication zip, source export tarball, manifest, checksums, and license files).
+4. Use [docs/ReleaseGuide.md](docs/ReleaseGuide.md) for the full release checklist.
+
 ## License: MIT. 
 See [LICENSE](LICENSE).
 

@@ -1,0 +1,60 @@
+#include "protocol/ManifestReport.h"
+
+#include <Arduino.h>
+#include <imxrt.h>
+#include <cstdint>
+
+#include "ARGMixer.h"
+#include "ConfigManager.h"
+#include "Globals.h"
+#include "protocol/ManifestContract.h"
+#include "version.h"
+
+#if defined(ARDUINO)
+extern "C" {
+extern char _ebss;
+extern char _flashimagelen;
+}
+#endif
+
+namespace {
+// Rough free-RAM estimate for telemetry; this is stack-pointer minus .bss base, not a full
+// allocator-level accounting.
+size_t computeFreeRAM() {
+#if defined(ARDUINO)
+    char stackDummy = 0;
+    uintptr_t stackPtr = reinterpret_cast<uintptr_t>(&stackDummy);
+    uintptr_t heapBase = reinterpret_cast<uintptr_t>(&_ebss);
+    return (stackPtr > heapBase) ? static_cast<size_t>(stackPtr - heapBase) : 0U;
+#else
+    return 0U;
+#endif
+}
+
+// Report approximate remaining program flash so host tools can surface headroom warnings.
+size_t computeFreeFlash() {
+#if defined(ARDUINO)
+    constexpr size_t kFlashSizeBytes =
+        1984U * 1024U; // Teensy 4.0 ships with 1.9375 MB of program flash.
+    size_t used = reinterpret_cast<uintptr_t>(&_flashimagelen);
+    return (used < kFlashSizeBytes) ? (kFlashSizeBytes - used) : 0U;
+#else
+    return 0U;
+#endif
+}
+} // namespace
+
+void writeManifestFields(JsonObject object) {
+    object["device_name"] = ManifestContract::kDeviceName;
+    object["fw_version"] = FW_VERSION_STR;
+    object["git_sha"] = GIT_SHA_STR;
+    object["build_time"] = __DATE__ " " __TIME__;
+    object["schema_version"] = CONFIG_VERSION;
+    object["slot_count"] = NUM_SLOTS;
+    object["pot_count"] = configManager.getNumPots();
+    object["envelope_count"] = NUM_ENVELOPES;
+    object["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
+    object["led_count"] = NUM_LEDS();
+    object["free_ram"] = computeFreeRAM();
+    object["free_flash"] = computeFreeFlash();
+}
