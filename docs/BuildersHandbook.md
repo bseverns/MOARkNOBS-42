@@ -145,6 +145,8 @@ Short press selects the slot. Long press assigns or cycles the Envelope Follower
 
 Learning the combos early means you perform tricks live instead of digging through docs mid‑set.
 
+If you want the combinations grouped by intention instead of by raw button matrix, read [Combo Guide](ComboGuide.md).
+
 ## WebSerial in the Wild
 
 The Teensy screams JSON snapshots over WebSerial so the browser can watch the synth wiggle in real time.
@@ -185,6 +187,8 @@ The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot sto
 The hero banner mirrors those slots: tap A–D to pick the active profile, then use **Save profile**, **Load profile**, or **Reset profile** to call the UI’s RPC helpers. Save will stage the current diff and then invoke `SET_PROFILE` for that slot, while Load clears the diff and re-fetches the stored snapshot via `GET_PROFILE`. Reset restores the slot to factory defaults and pushes them back through `SET_PROFILE` so the desk stays tidy.
 
 For crash recovery and sharing, download the staged profile as JSON or upload a backup file that stages immediately (the UI also mirrors the last staged state to `localStorage`, so a reload keeps unsent edits handy).
+
+If you want curated starting points before you start authoring your own maps, use the browser preset picker and keep [Preset Library](PresetLibrary.md) nearby. That page explains what each shipped preset is trying to teach and which one is best for a first pass.
 
 - **Jump profiles** – mash **Ctrl1 + Ctrl2** to hop to the next profile. It wraps after the fourth.
 - **Save the chaos** – long‑press **Ctrl4** once you've mangled the knobs to taste.

@@ -291,6 +291,8 @@ These are the ground rules for keeping a responsive UI without bricking rigs on 
 - Keep migration adapters next to the App runtime/bootstrap code and register them in the `migrations` map passed to `createRuntime(...)`, keyed as `"fromSchema->toSchema"`.
 - When someone drags in a vintage preset, detect the version mismatch, show the migration plan, and let them preview the transformed diff before writing it to the device.
 
+For the human-facing explanation of the shipped preset collection, see [Preset Library](PresetLibrary.md). That page is meant to keep the picker legible to new users rather than leaving the presets as a set of unexplained names.
+
 ### Deterministic Control IDs
 
 - Represent every control as `{id, human_label, type, range, target}`.

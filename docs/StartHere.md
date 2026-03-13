@@ -4,6 +4,8 @@ If you are new to MOARkNOBS-42, the easiest mistake is to think it is "just a co
 
 This page is the beginner-friendly tour: what the parts are, how they relate, and what to read next when you want to go deeper.
 
+If you already know whether you are here mainly as a builder, learner, or musician, skip ahead to [Guided Routes](GuidedRoutes.md).
+
 ## The elevator version
 
 MOARkNOBS-42 is built around four layers:
@@ -73,11 +75,19 @@ The best time to understand failure modes is before the board is half-built and 
 
 Read [Configurator Tour](Configurator.md), then [WebSerial Walkthrough](ProtocolWalkthrough.md).
 
+If you learn best from concrete examples rather than empty forms, read [Preset Library](PresetLibrary.md) after that. It explains what each shipped preset is actually for and why the picker exists.
+
+If you want the vocabulary before the examples, read [Glossary](Glossary.md).
+
+If you want the reactive-control concepts broken out into small explainers instead of one big system page, follow [Reactive Control Guide](ReactiveControlGuide.md) with [ARG Guide](ARGGuide.md), [Filter Feel Guide](FilterFeelGuide.md), and [LFO Route Guide](LfoRouteGuide.md).
+
 Those pages explain how the browser thinks about staged state, manifests, patches, and apply safety.
 
 ### 4. Learn what the tests actually prove
 
 Read [Testing Story](TestingStory.md), then [Testing](TESTING.md).
+
+If your real question is "how do I get one playable setup tonight?" jump to [Musician-First Guide](MusicianFirstGuide.md).
 
 That page is where the repo stops being mystical about "tested" versus "not yet proven on real hardware."
 

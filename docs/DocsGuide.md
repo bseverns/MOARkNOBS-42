@@ -81,6 +81,8 @@ flowchart TD
 > Need a refresher before you dive? Hit the [MIDI + DSP 101 Primer](Primers/MIDI-DSP101.md) for channel lore, CC etiquette, and the envelope math our modules lean on.
 
 - [BuildersHandbook.md](BuildersHandbook.md) — wire it, flash it, and smoke-test it.
+- [GuidedRoutes.md](GuidedRoutes.md) — audience-specific reading lanes for builders, learners, and musicians.
+- [Glossary.md](Glossary.md) — canonical definitions for presets, profiles, EF, ARG, staged config, and other stack vocabulary.
 - [Troubleshooting.md](Troubleshooting.md) — chase gremlins when the box won't boot or buttons go rogue.
 - [HISTORY.md](HISTORY.md) — chronological ride through the project's evolution. Commit references, design pivots, and the "why" behind the build.
 - [Options_DNI.md](Options_DNI.md) — the optional / Do Not Install cheat sheet. Use this before you lock a BOM or when you're deciding what not to solder.
@@ -99,6 +101,15 @@ flowchart TD
     - [envelopeFE.md](sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
     - Plenty more (midi opto, power antics, board PDFs) for late-night study.
 - [WebSerial.md](WebSerial.md) — how the board chats with browsers, negotiates schema versions, and keeps presets safe.
+- [PresetLibrary.md](PresetLibrary.md) — what each shipped configurator preset is for, what it teaches, and how it differs from the device's saved profiles.
+- [MusicianFirstGuide.md](MusicianFirstGuide.md) — the shortest path from first connection to one trustworthy rehearsal setup.
+- [ProfileWorkflow.md](ProfileWorkflow.md) — how staging, applying, saving, loading, resetting, and exporting fit together.
+- [ReactiveControlGuide.md](ReactiveControlGuide.md) — a human explanation of EF, filter, ARG, and LFO route behavior.
+- [ARGGuide.md](ARGGuide.md) — the ARG methods grouped by feel rather than by raw formula.
+- [FilterFeelGuide.md](FilterFeelGuide.md) — how each follower shape feels in practice and which to learn first.
+- [LfoRouteGuide.md](LfoRouteGuide.md) — what the internal LFO targets actually change musically.
+- [ComboGuide.md](ComboGuide.md) — hardware combos grouped by intention instead of raw matrix order.
+- [FailureFirst.md](FailureFirst.md) — common "what just happened?" situations and what they usually mean.
 - [OSCBridge.md](OSCBridge.md) — quickstart for OSC + virtual MIDI bridge usage, including DAW setup and troubleshooting.
 - [BridgeForPerformers.md](BridgeForPerformers.md) — one-page show-day checklist for running bridge + OSC/DAW fast.
 - [BridgePackaging.md](BridgePackaging.md) — implementation plan for shipping one-click bridge binaries/installers.

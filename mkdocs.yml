@@ -73,14 +73,25 @@ nav:
   - Home: index.md
   - Start Here:
       - New User Story: StartHere.md
+      - Guided Routes: GuidedRoutes.md
+      - Musician-First Guide: MusicianFirstGuide.md
+      - Glossary: Glossary.md
       - Process Overview: ProcessOverview.md
       - Hardware Bring-Up Story: HardwareStory.md
       - Firmware Architecture Story: FirmwareArchitecture.md
+      - Failure-First Guide: FailureFirst.md
       - Builder's Handbook: BuildersHandbook.md
       - Firmware Update: FirmwareUpdate.md
       - Troubleshooting: Troubleshooting.md
   - Using The Rig:
       - Configurator Tour: Configurator.md
+      - Preset Library: PresetLibrary.md
+      - Profile Workflow: ProfileWorkflow.md
+      - Reactive Control Guide: ReactiveControlGuide.md
+      - ARG Guide: ARGGuide.md
+      - Filter Feel Guide: FilterFeelGuide.md
+      - LFO Route Guide: LfoRouteGuide.md
+      - Combo Guide: ComboGuide.md
       - WebSerial Walkthrough: ProtocolWalkthrough.md
       - WebSerial Protocol: WebSerial.md
       - OSC Bridge: OSCBridge.md

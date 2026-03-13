@@ -44,6 +44,18 @@ Most controls do **not** immediately rewrite device state.
 
 Some controls can also issue field-level writes through `set_param`, but even then the runtime stages locally first so the UI never loses track of intent.
 
+## Presets are starting points, profiles are memory
+
+The preset picker is there to help users learn the instrument on purpose instead of by superstition.
+
+- Picking a preset stages a candidate config in the browser.
+- It does **not** persist anything until you apply it.
+- It only becomes long-term device memory when you explicitly save that state into profile A, B, C, or D.
+
+That means you can safely audition mappings, compare ideas, and keep one preset as a teaching scaffold while another becomes your actual stored performance profile.
+
+If you want the human explanation for every shipped preset, read [Preset Library](PresetLibrary.md).
+
 ## What happens when you apply
 
 ```mermaid
@@ -72,6 +84,9 @@ The app is useful because it turns protocol details into visible actions:
 
 ## Where to go next
 
+- Read [Profile Workflow](ProfileWorkflow.md) if you want the save/load/reset flow explained step by step.
+- Read [Failure-First Guide](FailureFirst.md) if your mental model is forming through recovery cases.
 - Read [WebSerial Protocol](WebSerial.md) for the lower-level message model.
+- Read [Preset Library](PresetLibrary.md) for what each shipped preset is trying to teach.
 - Read [Testing](TESTING.md) for what the simulator and Playwright suite actually prove.
 - Read [Bridge For Performers](BridgeForPerformers.md) if your interest is more live workflow than development.

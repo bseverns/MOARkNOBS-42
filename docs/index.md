@@ -12,6 +12,8 @@ This site is organized for three audiences:
 - **Builders** who need wiring, flashing, testing, and recovery instructions that do not hide the ugly parts.
 - **Learners** who want the signal path, the runtime contract, and the history of decisions instead of a pile of unexplained files.
 
+If you want a route designed for your role instead of building one yourself, start with [Guided Routes](GuidedRoutes.md).
+
 ## Start with the story
 
 ```mermaid
@@ -47,6 +49,26 @@ The machine makes the most sense when you treat it like a chain of promises:
 - **I want to use the configurator**
 
   Read [Configurator Tour](Configurator.md), then [WebSerial Walkthrough](ProtocolWalkthrough.md).
+
+- **I want to understand the presets**
+
+  Read [Preset Library](PresetLibrary.md) before you start auditioning mappings.
+
+- **I want the vocabulary first**
+
+  Read [Glossary](Glossary.md), then [Reactive Control Guide](ReactiveControlGuide.md).
+
+- **I want to learn the reactive controls**
+
+  Read [Reactive Control Guide](ReactiveControlGuide.md), then [ARG Guide](ARGGuide.md), [Filter Feel Guide](FilterFeelGuide.md), and [LFO Route Guide](LfoRouteGuide.md).
+
+- **I want a route for builders, learners, or musicians**
+
+  Read [Guided Routes](GuidedRoutes.md).
+
+- **I just want a playable rehearsal setup**
+
+  Read [Musician-First Guide](MusicianFirstGuide.md).
 
 - **I want to verify changes**
 
@@ -91,7 +113,10 @@ If you want the best newcomer path, use this order:
 2. [Process Overview](ProcessOverview.md)
 3. [Configurator Tour](Configurator.md)
 4. [WebSerial Walkthrough](ProtocolWalkthrough.md)
-5. [Testing Story](TestingStory.md)
-6. [Troubleshooting](Troubleshooting.md)
+5. [Preset Library](PresetLibrary.md)
+6. [Glossary](Glossary.md)
+7. [Reactive Control Guide](ReactiveControlGuide.md)
+8. [Testing Story](TestingStory.md)
+9. [Troubleshooting](Troubleshooting.md)
 
 That route gets you from concept to first successful interaction without throwing you straight into the deepest internal docs.

@@ -2,6 +2,8 @@
 
 Use this when you just want the rig working before rehearsal or a set.
 
+If you want the broader rehearsal-first workflow before the bridge-specific details, start with [Musician-First Guide](MusicianFirstGuide.md).
+
 ## 1) Start the bridge
 
 From repo root:
@@ -57,3 +59,5 @@ Bridge MIDI mapping:
 - Full bridge docs: [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md)
 - OSC quickstart: [`docs/OSCBridge.md`](OSCBridge.md)
 - Packaging roadmap: [`docs/BridgePackaging.md`](BridgePackaging.md)
+- Profile/preset behavior: [`docs/ProfileWorkflow.md`](ProfileWorkflow.md)
+- Fast recovery cases: [`docs/FailureFirst.md`](FailureFirst.md)
