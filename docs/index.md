@@ -36,7 +36,7 @@ The machine makes the most sense when you treat it like a chain of promises:
 
 ## Choose your lane
 
-<div class="grid cards" markdown>
+<div class="grid cards" markdown="1">
 
 - **I am new here**
 
