@@ -128,15 +128,5 @@ export const presets = [
     id: 'akai-mpc-performance',
     label: 'Akai MPC – Performance Grid',
     load: fetchPreset('./presets/akai/mpc-performance.json')
-  },
-  {
-    id: 'elektron-analog-rytm',
-    label: 'Elektron Analog Rytm – TODO',
-    load: null
-  },
-  {
-    id: 'roland-mc707',
-    label: 'Roland MC-707 – TODO',
-    load: null
   }
 ];

@@ -146,6 +146,13 @@ class ButtonManager {
      * UNIT_TEST to avoid expanding the runtime API footprint.
      */
     bool readControlButtonForTest(uint8_t buttonIndex) { return readControlButton(buttonIndex); }
+
+    /** Test-only seam for directly seeding the smoothed control-pot cache. */
+    void setControlPotValueForTest(uint8_t idx, int value) {
+        if (idx < 3) {
+            _ctrlPotValues[idx] = value;
+        }
+    }
 #endif
 
   private:

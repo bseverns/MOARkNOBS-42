@@ -44,6 +44,19 @@ void enqueueSerialCommand(const char *line) {
     commandQueue.tail = (commandQueue.tail + 1) % kMaxCommandQueueSize;
     ++commandQueue.count;
 }
+
+void ingestSerialByte(char received) {
+    if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
+        serialBuffer[serialBufferIndex] = '\0';
+        if (serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
+            LOG_PRINTLN("Error: Command too long");
+        }
+        enqueueSerialCommand(serialBuffer);
+        serialBufferIndex = 0;
+    } else if (received != '\r') {
+        serialBuffer[serialBufferIndex++] = received;
+    }
+}
 } // namespace
 
 bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
@@ -62,17 +75,18 @@ bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
 
 void pollSerialInput() {
     while (Serial.available()) {
-        char received = Serial.read();
-
-        if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
-            serialBuffer[serialBufferIndex] = '\0';
-            if (serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
-                LOG_PRINTLN("Error: Command too long");
-            }
-            enqueueSerialCommand(serialBuffer);
-            serialBufferIndex = 0;
-        } else if (received != '\r') {
-            serialBuffer[serialBufferIndex++] = received;
-        }
+        ingestSerialByte(static_cast<char>(Serial.read()));
     }
 }
+
+#if defined(UNIT_TEST)
+void testOnly_resetCommandQueue() {
+    commandQueue = CommandQueueStorage{};
+    std::memset(serialBuffer, 0, sizeof(serialBuffer));
+    serialBufferIndex = 0;
+}
+
+void testOnly_enqueueSerialCommand(const char *line) { enqueueSerialCommand(line); }
+
+void testOnly_ingestSerialByte(char received) { ingestSerialByte(received); }
+#endif

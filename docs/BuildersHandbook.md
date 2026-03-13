@@ -25,15 +25,13 @@ Start with the bare essentials. We'll keep the spaghetti minimal:
 4. **Decoupling** – Drop a 0.1 µF ceramic between 5 V and GND near the Teensy and again at the LED strip. It's cheaper than smoke.
 5. **Wire Gauge** – 22 AWG for power runs, 24 AWG stranded for data. Keep anything carrying bits under 30 cm unless you like debugging antennas.
 
-<!-- TODO: snap of core wiring layout goes here -->
+Reference diagrams are carrying the visual load for now; bench photos will be added once the current prototype boards return from fabrication.
 
 ### Wiring Habits
 
 - Twist power and ground together; the pair that hums together stays quiet together.
 - Heat‑shrink every joint so nothing shorts when the roadies throw the rig in a van.
 - If it bends, give it strain relief—zip ties, hot glue, chewing gum, whatever keeps the Teensy from doing yoga.
-
-<!-- TODO: close‑up pic of heat‑shrunk joint -->
 
 ### Why this matters
 
@@ -47,9 +45,9 @@ The WS2812 strip isn’t just a wiring exercise—the firmware persists brightne
 
 1. **Install PlatformIO** – `pip install -r requirements.txt` or use the VS Code add-on. Old-school? Arduino IDE with Teensyduino works too.
 2. **Plug in the Teensy 4.0** over USB.
-3. **Build and upload** the main firmware from the `firmware/` directory:
+3. **Build and upload** the main firmware from the repo root:
    ```bash
-   pio run -t upload -e teensy40_main
+   pio -d firmware run -t upload -e teensy40_main
    ```
    The loader will yell success when it's done.
 4. **Local library stash** – We archive FastLED and the Adafruit display libs under `firmware/lib/`.
@@ -119,7 +117,7 @@ Once the firmware's on board, make sure the basics don't flake out:
    If that lone pixel blinks, you're in business.
 2. **Button sanity** – Build the hardware test suite:
    ```bash
-   pio run -e teensy40_full_system
+   pio -d firmware run -e teensy40_full_system
    ```
    Follow the serial prompts to poke every switch and LED.
 

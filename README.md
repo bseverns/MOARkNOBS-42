@@ -138,7 +138,7 @@ Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md
    - More setup lore lives in the [Builder's Handbook](docs/BuildersHandbook.md).
 
 2. **Flash the brain**
-   - `pio run -t upload -e teensy40_main`
+   - `pio -d firmware run -t upload -e teensy40_main`
    - The [firmware README](firmware/README.md) digs into build flags and alternate targets.
 
 3. **Say hello over serial**
@@ -153,6 +153,16 @@ Intent: make noise, learn something, and share what you tweak. Don't forget the 
 
 Want the deep cuts? The full chronicles live in [docs/](docs/README.md) and
 the gritty firmware lore is in [firmware/](firmware/README.md).
+
+## Test Strategy
+
+The repo tests in layers because no single pass proves the whole instrument:
+
+- `pio -d firmware test -e teensy40_unity -vvv` is the main automated firmware gate. It now covers core logic plus a good chunk of orchestration: command dispatch, queue parsing, SeedBox handshake flow, scheduler layout, runtime note-off/diagnostic behavior, WebSerial payloads, and the UI tuning helpers.
+- `./test.sh` adds the bridge checks on top of that and is the best "before I tag a release" habit.
+- Manual firmware sketches and the full-system runner still matter for anything tied to real hardware timing, LEDs, OLED behavior, mux noise, EEPROM behavior on a physical board, and the final boot wiring.
+
+Short version: Unity is now broad enough to catch logic drift in the stack, but it is not a substitute for a real Teensy on the bench. The detailed coverage map and test workflow live in [docs/TESTING.md](docs/TESTING.md).
 
 ## Firmware architecture
 

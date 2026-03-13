@@ -8,10 +8,32 @@ Need the fast track from bare board to release? Hit the [Process Overview](Proce
 
 Craving the bird's-eye view? The [systemflow docs](sketch/systemFlow/) rip the machine into subsystems so you can see how every knob, LED, and envelope fits together before you dive into the weeds.
 
+If you only need the canonical operational docs, start here:
+
+- [TESTING.md](TESTING.md) for what the current automated/manual coverage actually proves
+- [ReleaseGuide.md](ReleaseGuide.md) for the human release checklist
+- [../REPRODUCIBILITY.md](../REPRODUCIBILITY.md) for the exact artifact-building recipe
+- [../App/README.md](../App/README.md) for the browser/runtime/schema/Apply contract
+
+## Local site preview
+
+The repo now ships with a MkDocs scaffold so the docs can read like a guided site instead of a loose folder dump.
+
+```bash
+pip install -r requirements.txt
+mkdocs serve
+```
+
+Then open the local URL MkDocs prints in your terminal.
+
 | Doc | Why it exists | Keep it fresh |
 | --- | --- | --- |
 | [Primers/MIDI-DSP101.md](Primers/MIDI-DSP101.md) | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
 | [ProcessOverview.md](ProcessOverview.md) | Full build and release flow | Update when hardware or firmware release steps move |
+| [TESTING.md](TESTING.md) | Canonical test workflow + coverage map | Refresh when test scope or commands move |
+| [ReleaseGuide.md](ReleaseGuide.md) | Human release checklist | Refresh when release ritual or asset list changes |
+| [../REPRODUCIBILITY.md](../REPRODUCIBILITY.md) | Canonical deterministic artifact recipe | Refresh when `release.sh` or artifact shape changes |
+| [../App/README.md](../App/README.md) | App/runtime contract and simulator notes | Refresh when manifest/schema/apply semantics change |
 | [interop/seedbox.md](interop/seedbox.md) | SeedBox handshake + CC contract | Refresh when either repo tweaks the interop map |
 
 ## Accessibility

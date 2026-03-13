@@ -2,15 +2,37 @@
 
 This repo runs tests in layers, from polite unit checks to full-on hardware cage matches. Every layer has a job: make sure the firmware math is sane, prove the bridge still talks, and keep you from hauling a broken controller to a gig. Read this as a teaching map, not just a checklist—if you know why a test exists, you know when to lean on it.
 
+Unless a section says otherwise, commands below assume you are running from the repo root.
+
 ## Layer cheat sheet
 
 | Layer | Command | Hardware needed | What it proves |
 |-------|---------|-----------------|----------------|
 | Full battery | `./test.sh` | Teensy 4.0 for Unity, host machine for Node | Runs everything below, writes clean logs, perfect for CI and pre-commit rituals. |
-| Unity smoke tests | `pio test -e teensy40_unity` | Teensy 4.0 with USB cable | Exercises firmware logic with Unity harness and Serial1 shim. |
-| Manual firmware sketches | `pio run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc. |
+| Unity smoke tests | `pio -d firmware test -e teensy40_unity` | Teensy 4.0 with USB cable | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1. |
+| Manual firmware sketches | `pio -d firmware run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc. |
 | Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
 | System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC ↔ firmware handshake, slot poke, and keep-alive proof with artifact logs. |
+
+## Coverage map
+
+This is the practical answer to "what is actually tested?" for the current stack.
+
+| Surface | Automated status | Primary layer | Notes |
+|-------|----------------|-------------|-------|
+| MIDI slot/config logic, filters, ARG math, LFOs, arpeggiator rules | Strong | Unity | Core firmware logic is covered by the long-running `firmware/test/test_*.cpp` suite. |
+| Command dispatch and serial queue behavior | Strong | Unity | `dispatchCommand`, command parsing, queue overflow, and command buffer flushing are covered. |
+| SeedBox interop handshake and keepalive flow | Strong | Unity | Handshake/ack/timeout paths are covered without needing a live bridge for every edit. |
+| Scheduler wiring and recurring task registration | Covered | Unity | The current suite now asserts task counts, intervals, and repeat flags so scheduler regressions get caught early. |
+| Runtime orchestration | Covered | Unity | Pending note-offs, diagnostic counter reporting, and related runtime state transitions are asserted directly. |
+| WebSerial payload generation | Covered | Unity | Snapshot and slot-patch JSON are checked as emitted payloads, not just by indirect UI behavior. |
+| UI tuning helpers | Covered | Unity | Note dynamics, arp tuning, filter tuning, and streamed active-slot context are now exercised directly. |
+| Bridge CLI parsing/error handling | Covered | Node tests | Host-side sanity only; this does not prove live firmware transport timing. |
+| Full OSC ↔ firmware loop | Partial automated | System runner | Requires real hardware plus the bridge process. Good release gate, not the fastest inner-loop test. |
+| `firmware_main.cpp` boot composition and final hardware bring-up | Not in Unity | Manual / real hardware | Unity does not prove the actual production boot path end-to-end. |
+| OLED rendering, LED electrical behavior, mux noise, pot feel, EEPROM behavior on a real board | Manual only | Manual sketches / bench testing | These need a physical controller and human observation. |
+
+The important distinction: the Unity layer is now broad enough to catch most firmware logic drift, including several orchestration paths that used to be untested, but it still cannot certify the real board by itself.
 
 ## Bench RTL via DAW loop
 
@@ -84,12 +106,12 @@ After a successful swing you’ll have:
 
 - **“Skipping Unity tests”** – no Teensy port was found. Flash the board, double-check cables, or pass `TEST_PORT` explicitly.
 - **“Autogen Unity transport detected”** – PlatformIO regenerated its default Unity transport. Clean your `.pio` tree (`pio run -d firmware -t clean`) and make sure you didn’t delete `firmware/test/unity_output.cpp` or `firmware/test/unittest_transport.cpp`.
-- **Unity timeouts** – usually the board wasn’t flashed with the Unity firmware. Run `pio test -e teensy40_unity` without `--without-uploading` once to seed it.
+- **Unity timeouts** – usually the board wasn’t flashed with the Unity firmware. Run `pio -d firmware test -e teensy40_unity` without `--without-uploading` once to seed it.
 - **Bridge test failures** – run `npm --prefix bridge test -- --watch` locally and fix whatever CLI regression the suite is screaming about.
 
 ```mermaid
 flowchart TD
-  T["`test.sh`"] --> U["Unity tests\n(pio test -e teensy40_unity)"]
+  T["`test.sh`"] --> U["Unity tests\n(pio -d firmware test -e teensy40_unity)"]
   T --> B["Bridge checks\n(npm test)"]
   U --> UL["logs/unity-test.xml\nlogs/unity-test.log"]
   B --> BL["logs/bridge-test.log"]
@@ -100,25 +122,39 @@ flowchart TD
 
 Unity tests are the quick-and-dirty pulse check for the firmware. They run on the Teensy board and stub out anything that would otherwise demand real wires. Fire them up when you’ve tweaked core logic or want receipts before you solder.
 
+What Unity is especially good at right now:
+
+- deterministic firmware logic
+- command/protocol behavior
+- scheduler/runtime/WebSerial/UI orchestration
+- regression checks that should fail before you ever reach for a bench supply
+
+What Unity is not meant to prove:
+
+- the exact `firmware_main.cpp` production boot path
+- OLED/LED behavior on real hardware
+- mux settling, analog noise, and other physical quirks
+- end-to-end "performer touched the board and the whole rig responded" behavior
+
 ### First-time setup
 
 1. Plug the Teensy in and make sure `pio device list` shows the port you expect.
-2. From the repo root: `cd firmware`.
-3. Seed the board with the Unity runner so `test.sh` has something to talk to:
+2. Seed the board with the Unity runner so `test.sh` has something to talk to:
    ```bash
-   pio test -e teensy40_unity
+   pio -d firmware test -e teensy40_unity
    ```
    This compiles, uploads, and executes the suite in one shot. You’ll see Unity scroll by in your terminal. Subsequent invocations via `test.sh` can skip uploading.
 
 The `teensy40_unity` environment speaks over `Serial1` at 115200 baud and leans on the custom `unity_output.cpp` + `unity_config.h` duo in `firmware/test/`. If you need to route output elsewhere (e.g., different UART pins), edit those files—not the PlatformIO defaults.
+
+One practical note: `pio -d firmware test -e teensy40_unity --without-uploading` still expects a flashed board to be present for execution. It is useful when you want fresh test output without reflashing, but it is not the same thing as a hardware-free test run.
 
 ### Running by hand after setup
 
 Once the firmware is already flashed, you can grab fresh logs without re-uploading:
 
 ```bash
-cd firmware
-pio test -e teensy40_unity --without-uploading --test-port /dev/ttyACM0 -vvv --junit-output ../logs/unity-test.xml | tee ../logs/unity-test.log
+pio -d firmware test -e teensy40_unity --without-uploading --test-port /dev/ttyACM0 -vvv --junit-output logs/unity-test.xml | tee logs/unity-test.log
 ```
 
 ### Reading the results
@@ -132,7 +168,7 @@ pio test -e teensy40_unity --without-uploading --test-port /dev/ttyACM0 -vvv --j
 The Unity harness pulls in everything under `firmware/test/test_*.cpp`. To isolate a single test:
 
 1. Edit `firmware/test/test_mainUnity.cpp` and comment out the `RUN_TEST` macros you don’t need.
-2. Re-run `pio test -e teensy40_unity`.
+2. Re-run `pio -d firmware test -e teensy40_unity`.
 3. Restore the macros before you commit so CI sees the full suite.
 
 For a deep dive into what each Unity or manual sketch checks, crack open [`firmware/test/README.md`](../firmware/test/README.md). It catalogs every test file with the subsystem it pokes.
@@ -149,7 +185,7 @@ Unity can only fake so much. When you need to watch real LEDs blink or feel a po
 | `src/eeprom_persistence_t.cpp` | `teensy40_eeprom_persistence` | Ensures EEPROM writes survive reboots. |
 | `src/verify_slots_t.cpp` | `teensy40_slot_verify` | Pounds on MIDISlot storage and reads it back. |
 
-Run them with `pio run -e <env> -t upload`, then open a serial monitor or watch the device directly. These tests need a human watching and pushing buttons; log what you see if something twitches.
+Run them with `pio -d firmware run -e <env> -t upload`, then open a serial monitor or watch the device directly. These tests need a human watching and pushing buttons; log what you see if something twitches.
 
 ## Bridge CLI sanity (`bridge/test/`)
 
@@ -183,7 +219,7 @@ When you need to prove the whole stack plays nice, you move up to the full-syste
 1. Flash the Teensy with the full-system firmware so the bridge sees every subsystem:
 
    ```bash
-   pio run -d firmware -e teensy40_full_system -t upload
+   pio -d firmware run -e teensy40_full_system -t upload
    ```
 
 2. Install bridge dependencies if you haven't already:
@@ -209,4 +245,3 @@ When you need to prove the whole stack plays nice, you move up to the full-syste
 - Real hardware: buttons, LEDs, pots, and EEPROM all get exercised. If the runner times out, fall back to the legacy `test_*.cpp` sketches in the same directory to troubleshoot individual subsystems before re-running the automation.
 
 Run the full-system layer before releases or any time hardware or bridge changes. It’s the last line of defense before you haul gear on stage. Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place—and now they leave a neat paper trail in `logs/system-test.*` every time they do it.
-

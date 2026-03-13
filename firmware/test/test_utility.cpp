@@ -6,6 +6,7 @@
 #include "MIDIHandler.h"
 #include "TimeStub.h"
 #include <ArduinoJson.h>
+#include <limits>
 
 extern bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
                                    MIDIMessageType &type);
@@ -170,4 +171,17 @@ void test_schedule_note_on_off_delivers_note_off_after_delay() {
     TEST_ASSERT_EQUAL_UINT8(60, usbMIDI.lastNoteOff);
     TEST_ASSERT_EQUAL_UINT8(2, MIDI.lastNoteOffChannel);
     TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.lastNoteOffChannel);
+}
+
+void test_exponential_moving_average_clamps_alpha_bounds() {
+    TEST_ASSERT_EQUAL_INT(42, Utility::exponentialMovingAverage(120, 42, -0.25f));
+    TEST_ASSERT_EQUAL_INT(120, Utility::exponentialMovingAverage(120, 42, 1.25f));
+}
+
+void test_exponential_moving_average_rounds_weighted_result() {
+    TEST_ASSERT_EQUAL_INT(18, Utility::exponentialMovingAverage(10, 20, 0.25f));
+    TEST_ASSERT_EQUAL_INT(-18, Utility::exponentialMovingAverage(-10, -20, 0.25f));
+    TEST_ASSERT_EQUAL_INT(std::numeric_limits<int>::max(),
+                          Utility::exponentialMovingAverage(std::numeric_limits<int>::max(),
+                                                            std::numeric_limits<int>::max(), 0.5f));
 }

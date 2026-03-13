@@ -47,6 +47,16 @@ class TaskScheduler {
      */
     void update();
 
+#if defined(UNIT_TEST)
+    size_t taskCountForTest() const { return tasks.size(); }
+    bool taskRepeatsForTest(size_t index) const {
+        return index < tasks.size() ? tasks[index].repeat : false;
+    }
+    unsigned long taskIntervalForTest(size_t index) const {
+        return index < tasks.size() ? tasks[index].interval : 0;
+    }
+#endif
+
   private:
     static constexpr size_t kReservedTaskCapacity = 96;
     std::vector<ScheduledTask> tasks;

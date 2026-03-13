@@ -1,16 +1,19 @@
 # Release Guide
 
-Need to cut a proper drop? Start with the quick steps in [Publishing a Release](../README.md#publishing-a-release), then walk through the gory details below.
+Need to cut a proper drop? Start with the quick steps in [Publishing a Release](../README.md#publishing-a-release), then treat this file as the operator checklist and [REPRODUCIBILITY.md](../REPRODUCIBILITY.md) as the canonical artifact recipe.
 
 1. **Run the gauntlet** – build (`pio -d firmware run -e teensy40_main`) and test (`pio -d firmware test -e teensy40_unity -vvv`, `npm --prefix bridge test`). Don't ship broken noise.
-2. **Bump the version constants** – `firmware/include/Globals.h` holds `FIRMWARE_VERSION`. Update it and any other hard‑coded version strings.
-3. **Update the changelog** – toss your highlights into `CHANGELOG.md` so future you remembers what changed.
-4. **Commit it** – lock in the version bump and changelog with a commit.
+2. **Refresh the human-facing release notes** – update [CHANGELOG.md](../CHANGELOG.md) and the relevant entry in [HISTORY.md](HISTORY.md) so both the terse delta log and the longer narrative are current.
+3. **Confirm version stamping** – firmware version strings come from `FW_VERSION`/`GIT_SHA`, which are stringized in [`firmware/include/version.h`](../firmware/include/version.h) and injected by [`firmware/scripts/version.py`](../firmware/scripts/version.py). For local release builds, export the intended tag before invoking the release script:
+   ```bash
+   FW_VERSION=vX.Y.Z ./release.sh vX.Y.Z
+   ```
+4. **Commit it** – lock in doc updates and any release prep changes with a commit.
 5. **Tag it loud** – `git tag -a vX.Y.Z -m "vX.Y.Z"` to mark the moment.
-6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into gear. It builds the `.hex` and `sysreport.json`.
-7. **Draft the release** – on GitHub, create a new release from that tag, drop any human‑written notes, and publish.
-   - CI now uploads a deterministic source export (`mn42_<tag>_source.tar.gz`) and `SHA256SUMS.txt` alongside firmware artifacts.
-   - Attach `THIRD_PARTY_LICENSES.md` and the `firmware/LICENSES/` folder as release assets so the suits stay off our backs.
+6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into gear and runs the same release script described in [REPRODUCIBILITY.md](../REPRODUCIBILITY.md).
+7. **Draft the release** – on GitHub, create a new release from that tag, drop the human-written notes, and publish.
+   - CI uploads the firmware hex, deterministic fabrication zip, source export tarball, manifest, checksums, and license payloads.
+   - If you ran bridge packaging, attach those assets + checksums too.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 
 

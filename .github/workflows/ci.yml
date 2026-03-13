@@ -64,9 +64,21 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
+      - name: Install docs + validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
       - name: Validate docs links + wiki ownership policy
         run: |
           python tools/check_markdown_links.py
           python tools/check_wiki_contract.py
       - name: Validate app/firmware manifest contract sync
         run: python tools/check_contract_sync.py
+      - name: Build MkDocs site strictly
+        run: mkdocs build --strict
+      - name: Upload docs site artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mkdocs-site
+          path: site

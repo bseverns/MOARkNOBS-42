@@ -1,1 +1,4 @@
 platformio==6.1.18
+mkdocs==1.6.1
+mkdocs-material==9.5.39
+pymdown-extensions==10.14.2

@@ -13,7 +13,7 @@
 void initializeSchedulers() {
     // High-priority timing: keep the MIDI & DSP work snappy without blocking lower tiers.
     // Order high-tier tasks so transport/clock service happens before modulation/render passes.
-    Utility::schedulerHigh.addTask(processMIDI, hwConfig.midiTaskInterval);
+    Utility::schedulerHigh.addTask(processMIDI, hwConfig.midiTaskInterval, true);
     Utility::schedulerHigh.addTask(processLFOs, 1, true);
     Utility::schedulerHigh.addTask(processEnvelopeFollowers, 1, true);
     Utility::schedulerHigh.addTask(processPendingNoteOffs, 1, true);
@@ -22,16 +22,16 @@ void initializeSchedulers() {
             if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
                 processInternalClock();
         },
-        hwConfig.midiTaskInterval);
+        hwConfig.midiTaskInterval, true);
     Utility::schedulerHigh.addTask(
         []() { arpeggiator.update(midiHandler, configManager, potentiometerManager); },
-        hwConfig.midiTaskInterval);
+        hwConfig.midiTaskInterval, true);
 
     // Mid-priority work: build the command queue, parse JSON/RPC payloads, and keep envelopes
     // polished.
-    Utility::schedulerMid.addTask(pollSerialInput, hwConfig.serialTaskInterval);
-    Utility::schedulerMid.addTask(processCommandQueue, hwConfig.serialTaskInterval);
-    Utility::schedulerMid.addTask(processEnvelopes, hwConfig.envelopeTaskInterval);
+    Utility::schedulerMid.addTask(pollSerialInput, hwConfig.serialTaskInterval, true);
+    Utility::schedulerMid.addTask(processCommandQueue, hwConfig.serialTaskInterval, true);
+    Utility::schedulerMid.addTask(processEnvelopes, hwConfig.envelopeTaskInterval, true);
 
     // Low-priority visual updates, diagnostics, and WebSerial telemetry.
     Utility::schedulerLow.addTask(
@@ -46,7 +46,7 @@ void initializeSchedulers() {
             updateArpTuning();
             updateNoteDynamics();
         },
-        hwConfig.ledTaskInterval);
+        hwConfig.ledTaskInterval, true);
 
     Utility::schedulerLow.addTask(
         []() {
@@ -77,11 +77,11 @@ void initializeSchedulers() {
                 displayManager.runIdleScreensaver();
             }
         },
-        50);
+        50, true);
 
     // SeedBox bridge runs slow on purpose; keep interop chatter off the critical paths.
     Utility::schedulerLow.addTask(
-        []() { seedbox::interop::mn42::SeedBoxLink::instance().update(); }, 500);
+        []() { seedbox::interop::mn42::SeedBoxLink::instance().update(); }, 500, true);
 
     // WebSerial stream cadence targets UI responsiveness without saturating USB serial output.
     Utility::schedulerLow.addTask(streamWebSerialState, 100, true);

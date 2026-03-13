@@ -21,7 +21,7 @@ If you crave the latest untagged chaos:
 1. Clone the repo and hop into `firmware/`.
 2. Build and upload straight from source:
    ```bash
-   pio run -t upload -e teensy40_main
+   pio -d firmware run -t upload -e teensy40_main
    ```
 3. Put on headphones. Things might get loud.
 

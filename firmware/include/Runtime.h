@@ -22,4 +22,8 @@ void requestStatusLEDPulse(uint16_t durationMs = 200);
 void serviceStatusLEDPulse();
 void checkDiagnosticsForAlerts();
 
+#if defined(UNIT_TEST)
+void testOnly_resetRuntimeState();
+#endif
+
 #endif // RUNTIME_H

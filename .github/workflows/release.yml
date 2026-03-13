@@ -1,5 +1,5 @@
 name: Release
-# Rebuilds firmware and packages a sysreport whenever a GitHub release goes live.
+# Rebuilds deterministic release artifacts whenever a GitHub release goes live.
 
 on:
   release:
@@ -23,6 +23,8 @@ jobs:
           pip install platformio  # we just need PIO for the build
 
       - name: Package release artifacts
+        env:
+          FW_VERSION: ${{ github.event.release.tag_name }}
         run: ./release.sh ${{ github.event.release.tag_name }}
 
       - name: Upload release assets

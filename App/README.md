@@ -20,7 +20,7 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
 3. Hit <http://localhost:8000/> — that root path is now the canonical deck. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
 4. Click **Connect**, pick the MOARkNOBS port, and let the header pill confirm the firmware, schema version, and memory stats.
 5. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the bundled schema validator.
-6. On Apply the runtime pushes a single `SET_ALL` payload, waits for a `{checksum}` ACK, and only then commits the local snapshot. If the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
+6. On Apply the runtime sends a JSON-RPC `set_config` payload carrying the staged config, schema version, manifest metadata, and a SHA-256 checksum. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
 7. Use the **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. Encoders still stream immediately.
 8. Need hardware-free testing? Toggle the **Start simulator** button—the runtime swaps transports and replays canned manifest/state frames.
 
@@ -34,7 +34,7 @@ Screenshots pending (Teensy hardware is currently in the workshop, so visual cap
 - **Simulator Toggle** – The **Start simulator** switch sits dead-center under transport controls for a reason: it swaps WebSerial for the canned bridge inside `runtime.js` instantly. The log banner flips to “Simulated” and it stays that way until you reconnect a device. Because the simulator obeys the same throttled paint loop documented in [Runtime Contract](#runtime-contract), you can chase layout timing bugs or automation macros without a Teensy on the desk.
 - **Device Monitor Stack** – The telemetry cards (uptime, firmware hash, slot stats) repaint on every animation frame so you can feel live latency. Hover to freeze the ticker when you need to copy numbers into a bug report. Any schema or checksum mismatch slams you back into the [rollback workflow](#quickstart), and the monitor holds onto the last verified frame so you know exactly what state the firmware was in when things went sideways.
 - **Staged Diff Panel** – The right-hand rail wakes up as soon as the staged JSON drifts from the live manifest. Validation errors park directly above the offending field; fix them and **Apply** roars back to life in the same breath. Post-Apply, scroll to the tail to see the runtime commit log—checksum, slot count, and any throttled writes. Tooltips on greyed-out controls punch straight back into the contract notes in [Runtime Contract](#runtime-contract) so you can trace every guardrail.
-- **Schema-driven Forms** – Every control in the right-hand rail is rendered from `config_schema.json` (Filter, ARG, LEDs, EF assignments, and all slot knobs). The `FormRenderer` builds collapsible sections, clamps number fields to the schema’s bounds, and stages each edit immediately; hitting **Apply** batches the staged JSON through `set_config`, while an **Apply Patch** overlay (soon-to-be in the DOM) will allow individual field writes via `set_param`. Keybindings still apply: slot focus follows arrow keys; hold `Shift` for coarse/fine nudging; and the simulator status pill keeps status events in sync even when the board takes a coffee break.
+- **Schema-driven Forms** – Every control in the right-hand rail is rendered from `config_schema.json` (Filter, ARG, LEDs, EF assignments, and all slot knobs). The `FormRenderer` builds collapsible sections, clamps number fields to the schema’s bounds, and stages each edit immediately; hitting **Apply** batches the staged JSON through `set_config`, while field-level writes can still travel through `runtime.applyPatch(...)/set_param` when a control wants an immediate RPC. Keybindings still apply: slot focus follows arrow keys; hold `Shift` for coarse/fine nudging; and the simulator status pill keeps status events in sync even when the board takes a coffee break.
 - **Basic / Advanced Mode** – New sessions start in **Basic** mode, keeping the panel focused on everyday knob-to-MIDI mapping. Flip to **Advanced** to reveal EF/ARG/filter tuning, scope tools, and debug surfaces. The choice is saved in `localStorage`, and glossary-style info badges explain jargon like EF and ARG in-place.
 
 ## MIDI Monitor Panel
@@ -57,11 +57,15 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 
 ## Runtime Contract
 
-- The runtime buffers inbound telemetry and paints on `requestAnimationFrame` (~16 ms).
+- Transport handshake is `hello` → `get_manifest` → `get_config`. The runtime treats the manifest as the device identity and schema contract before it trusts any config payload.
+- The runtime keeps separate `liveConfig` and `stagedConfig` snapshots. The UI only mutates staged state; successful Apply promotes staged state to live state.
+- The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.
+- The runtime buffers inbound telemetry and paints on `requestAnimationFrame` (~16 ms) so frequent state messages do not turn the DOM into soup.
 - Outbound pot changes are debounced to ≥24 ms through a shared utility so every control shares the same cadence.
-- `FormRenderer` now relays staged edits through `runtime.applyPatch`, which stages the field locally and routes a `{rpc:"set_param"}` call through the JSON-RPC kernel to keep the UI and firmware in lockstep.
-- Schema mismatches fire a migration dialog before any live writes. The manifest now includes `fw_version`, `fw_git`, `build_ts`, and `schema_version` so bug reports can pin exact builds.
-- Last-used USB IDs are remembered in `localStorage`; on load the app nudges you to reconnect but never reopens without a user gesture (WebSerial rules).
+- `runtime.applyPatch(path, value)` stages a field locally first, then routes a `{rpc:"set_param"}` call through the JSON-RPC kernel. If the RPC fails, the runtime rolls the staged state back.
+- Full Apply sends `set_config` with schema version, manifest metadata, staged config, and a SHA-256 checksum. A mismatched ACK triggers rollback instead of silently pretending success.
+- Schema mismatches fire a migration-required event before any live writes. Migration adapters live in the App layer as a `migrations` map passed to `createRuntime(...)`, keyed like `"5->6"`.
+- Last-used USB IDs and the last staged snapshot are remembered in `localStorage`; on load the app nudges you to reconnect but never reopens without a user gesture (WebSerial rules).
 
 ## Simulator & CI Hooks
 

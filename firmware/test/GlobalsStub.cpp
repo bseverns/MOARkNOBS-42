@@ -27,6 +27,9 @@ float g_tappedBPM = 120.0f;
 bool g_clockOutEnabled = false;
 bool g_usbMidiOutEnabled = false;
 unsigned long lastClockTime = 0;
+uint8_t midiBeatPosition = 0;
+char serialBuffer[SERIAL_BUFFER_SIZE] = {0};
+uint8_t serialBufferIndex = 0;
 float g_lfoEfGainTrim = 0.0f;
 float g_lfoArpSwing = 0.0f;
 float g_lfoLedBrightness = 0.0f;
@@ -84,6 +87,7 @@ float perlinNoise1D(float x) {
     return 2.0f * phase - 1.0f;
 }
 
+#if !defined(UNIT_TEST_INTEROP_IMPL)
 namespace seedbox {
 namespace interop {
 namespace mn42 {
@@ -115,6 +119,7 @@ void SeedBoxLink::markPeerPulse() {}
 } // namespace mn42
 } // namespace interop
 } // namespace seedbox
+#endif
 
 #if !defined(UNIT_TEST_PROTOCOL_IMPL)
 namespace {

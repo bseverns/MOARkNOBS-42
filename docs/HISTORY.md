@@ -215,7 +215,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Added an explicit panic-safe exit combo (`Ctrl0 + Ctrl1 + Ctrl2`) that stops arp, disables EF follow, and reloads the active profile baseline so demos can recover quickly from bad live state.
 - Added demo-focused App presets (`DEMO_A - Reactive Stack`, `DEMO_B - Clock Contrast`) plus a dedicated runbook (`docs/DemoPolish.md`) covering soak, EXT-clock stress checks, panic-path validation, and asset prep.
 - *This pass shifted the demo story from "we can probably recover" to "we can prove identity, readability, and recovery on command because we are being militant about this for a reason."*
--PCBWay reached out and wants to help me make a run of prototypes of the board - motivation to move from simply a cool maker project to something a bit more ornate/rugged.
+- PCBWay reached out and wants to help me make a run of prototypes of the board - motivation to move from simply a cool maker project to something a bit more ornate/rugged.
 
 ### March — Bridge Packaging Rollout Plan (Planned)
 
@@ -226,6 +226,18 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Set the update architecture to channel-based auto-updates (stable/beta) with signed manifests, in-app version checks, and one-click rollback to last-known-good when post-update health checks fail.
 - Sequenced the work into four release gates: `G1` reproducible cross-platform builds, `G2` installer QA on clean machines, `G3` staged auto-update dogfood, `G4` public release with operator docs and recovery playbook.
 - *Goal: make "download -> install -> connect" feel boringly reliable for performers who should never have to think about JavaScript tooling just to use the bridge.*
+
+### March — Release Hardening, Coverage Sweep, and Prototype Fab Handoff
+
+- Release prep shifted from “probably shippable” to “prove it”: deterministic export checks, contract-sync guards, and release artifact validation now pin the App/firmware handshake down so export bundles stop drifting silently. [`c4f3132`, tag `26_1`]
+- A noisy round of stale security findings forced a real cleanup pass through the firmware formatting paths: remaining `sprintf` calls were replaced with bounded `snprintf`, Unity link issues were straightened out, and the repo now has fewer fake fires to triage during release review. [`77978db` and follow-up March fixes]
+- The configurator stopped advertising unfinished work: the placeholder Elektron Analog Rytm preset entry was pulled from the visible presets list instead of shipping a “TODO” badge in the UI.
+- Unity coverage expanded beyond the core math/slot logic into the orchestration layer: `exponentialMovingAverage`, `LedAnimator::cycleMode`, command queue parsing/overflow handling, SeedBox handshake flow, runtime pending note-offs, WebSerial snapshots/slot patches, and the UI tuning helpers now have direct test coverage.
+- *The useful surprise here was not just “more tests passed”; it was that broader coverage exposed a real scheduler bug hiding in plain sight.*
+- `Scheduler.cpp` had several tasks registered as one-shot work instead of recurring tasks; that behavior is now fixed so MIDI service, envelopes, WebSerial streaming, SeedBox updates, and low-priority UI/LED refreshes actually persist after the first scheduled run.
+- Added a small unit-test logging sink plus targeted seams around runtime state, control-pot values, and task metadata so orchestration code can be asserted clinically without dragging the whole hardware stack into the Unity harness.
+- Hardware momentum crossed a line from CAD iteration to physical commitment: **March 13, 2026:** the prototype PCB run was sent to fabrication, marking the handoff from design churn to waiting on real boards.
+- *There is a different kind of seriousness once copper has been ordered; every doc line and every test starts reading like an instruction to your future self standing at a bench with actual hardware in the mail.*
 
 ## Overview
 

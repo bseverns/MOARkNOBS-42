@@ -19,7 +19,7 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
      "fw_version":"1.3.0",
      "git_sha":"012dead",
      "build_time":"2024-05-10 21:37:02",
-     "schema_version":4,
+    "schema_version":6,
      "slot_count":42,
      "pot_count":42,
      "envelope_count":6,
@@ -31,13 +31,33 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
    ```
 5. The UI diffs that manifest against its baked-in schema definition. When anything smells off, pop a non-destructive migrate dialog:
    - Offer to export the user’s current JSON before touching a byte.
-   - Run any adapters found in `firmware/App/migrations/` to lift the preset forward.
+   - Run any adapters registered in the App runtime `migrations` map (keyed like `"5->6"`) before allowing writes.
    - Render the proposed patch for review; no silent rewrites.
 6. Streaming begins only after both sides agree on versions. Bail out by closing the port or if the manifest validation fails.
 
 `device_name` is intended for UI identity banners (`Connected to: ...`) so users can confirm they are editing the correct rig before applying changes.
 
 The manifest handshake also tells the browser when it needs to fall back to the frozen `config_schema.json` that lives in the app bundle. Once the schema check passes the UI typically asks for `GET_CONFIG` instead of the old `GET_ALL` dump so it can hydrate every pot, slot, envelope, LFO route, and LED color from one well-behaved JSON line. `GET_SCHEMA` is still there for offline editors that want to compare against a stable schema without talking to hardware.
+
+## App runtime state model
+
+The browser does not edit device state in-place. It keeps two snapshots:
+
+- `liveConfig` – the last config the device confirmed
+- `stagedConfig` – the editable draft the user is currently mutating
+
+That split matters because it lets the UI stage changes safely, merge inbound device patches without lying about local edits, and roll back cleanly when a write fails.
+
+Normal flow:
+
+1. `HELLO` / `GET_MANIFEST` establish identity and schema compatibility
+2. `GET_CONFIG` hydrates both `liveConfig` and `stagedConfig`
+3. UI edits mutate only `stagedConfig`
+4. field-level writes can travel through `runtime.applyPatch(path, value)`, which stages locally first and then emits `set_param`
+5. full Apply sends a JSON-RPC `set_config` payload including schema version, manifest build metadata, and a checksum
+6. if the device ACK checksum matches, `liveConfig` advances to staged state; if not, the runtime rolls back
+
+That staged/live split is the real safety rail in the browser. It is why the diff panel can stay truthful, why migration previews can remain non-destructive, and why a bad ACK does not leave the UI pretending a write succeeded.
 
 ## State Messages
 
@@ -268,7 +288,7 @@ These are the ground rules for keeping a responsive UI without bricking rigs on 
 ### Schema-Versioned Presets
 
 - Every exported preset should include `"schema_version": <int>` at the top-level.
-- Stash migration scripts in `/migrations/` as pure JavaScript transforms: `(preset) => nextPreset`.
+- Keep migration adapters next to the App runtime/bootstrap code and register them in the `migrations` map passed to `createRuntime(...)`, keyed as `"fromSchema->toSchema"`.
 - When someone drags in a vintage preset, detect the version mismatch, show the migration plan, and let them preview the transformed diff before writing it to the device.
 
 ### Deterministic Control IDs

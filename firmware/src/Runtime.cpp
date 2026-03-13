@@ -29,6 +29,9 @@ namespace {
 
 volatile uint8_t midiServiceRequestCount = 0;
 constexpr uint8_t kMaxMidiServiceRequestCount = 0xFF;
+uint32_t lastMidiDropAlertCount = 0;
+uint32_t lastMidiTaskOverrunAlertCount = 0;
+uint32_t lastUartOverrunAlertCount = 0;
 
 struct PendingNoteOff {
     uint32_t dueTime = 0;
@@ -87,36 +90,32 @@ void serviceStatusLEDPulse() {
 void checkDiagnosticsForAlerts() {
     // Report any diagnostic counters over Serial and pulse the status LED so students can spot
     // trouble.
-    static uint32_t lastMidiDrop = 0;
-    static uint32_t lastMidiTaskOverrun = 0;
-    static uint32_t lastUartOverrun = 0;
-
     const SystemDiagnostics diag = captureDiagnosticsSnapshot();
 
     const uint32_t midiDrop = diag.midiDropCount;
-    if (midiDrop != lastMidiDrop) {
+    if (midiDrop != lastMidiDropAlertCount) {
         LOG_PRINTF("{\"diagnostic\":\"midi_drop\",\"count\":%lu}\n",
                    static_cast<unsigned long>(midiDrop));
         requestStatusLEDPulse();
-        lastMidiDrop = midiDrop;
+        lastMidiDropAlertCount = midiDrop;
     }
 
     const uint32_t midiTaskOverruns = diag.midiTaskOverrunCount;
     const uint32_t maxMidiMicros = diag.maxProcessMidiMicros;
-    if (midiTaskOverruns != lastMidiTaskOverrun) {
+    if (midiTaskOverruns != lastMidiTaskOverrunAlertCount) {
         LOG_PRINTF("{\"diagnostic\":\"midi_task_overrun\",\"count\":%lu,\"max_us\":%lu}\n",
                    static_cast<unsigned long>(midiTaskOverruns),
                    static_cast<unsigned long>(maxMidiMicros));
         requestStatusLEDPulse();
-        lastMidiTaskOverrun = midiTaskOverruns;
+        lastMidiTaskOverrunAlertCount = midiTaskOverruns;
     }
 
     const uint32_t uartOverruns = diag.uartOverrunCount;
-    if (uartOverruns != lastUartOverrun) {
+    if (uartOverruns != lastUartOverrunAlertCount) {
         LOG_PRINTF("{\"diagnostic\":\"uart_overrun\",\"count\":%lu}\n",
                    static_cast<unsigned long>(uartOverruns));
         requestStatusLEDPulse();
-        lastUartOverrun = uartOverruns;
+        lastUartOverrunAlertCount = uartOverruns;
     }
 }
 
@@ -502,3 +501,14 @@ void monitorSerialHealth() {
     }
 #endif
 }
+
+#if defined(UNIT_TEST)
+void testOnly_resetRuntimeState() {
+    midiServiceRequestCount = 0;
+    pendingNoteOffs = {};
+    statusLedPulseDeadline = 0;
+    lastMidiDropAlertCount = 0;
+    lastMidiTaskOverrunAlertCount = 0;
+    lastUartOverrunAlertCount = 0;
+}
+#endif

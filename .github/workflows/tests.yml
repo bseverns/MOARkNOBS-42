@@ -46,7 +46,7 @@ jobs:
         run: npm --prefix bridge ci  # install JS deps for tests
 
       - name: Install app deps
-        run: npm --prefix App install --no-audit --no-fund
+        run: npm --prefix App ci --no-audit --no-fund
 
       - name: Install Playwright browsers
         run: cd App && npx playwright install --with-deps chromium

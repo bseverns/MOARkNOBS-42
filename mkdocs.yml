@@ -1,0 +1,104 @@
+site_name: MOARkNOBS-42
+site_description: Story-first documentation for builders, performers, and curious learners.
+repo_url: https://github.com/bseverns/benzknober
+repo_name: bseverns/benzknober
+docs_dir: docs
+theme:
+  name: material
+  icon:
+    logo: material/tune-variant
+  features:
+    - announce.dismiss
+    - navigation.sections
+    - navigation.expand
+    - navigation.tabs
+    - navigation.top
+    - navigation.footer
+    - content.action.edit
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  font:
+    text: Barlow Condensed
+    code: JetBrains Mono
+
+extra_css:
+  - mkdocs-overrides.css
+
+extra_javascript:
+  - https://unpkg.com/mermaid@10.9.0/dist/mermaid.min.js
+  - javascripts/mermaid-init.js
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Start Here:
+      - New User Story: StartHere.md
+      - Process Overview: ProcessOverview.md
+      - Hardware Bring-Up Story: HardwareStory.md
+      - Firmware Architecture Story: FirmwareArchitecture.md
+      - Builder's Handbook: BuildersHandbook.md
+      - Firmware Update: FirmwareUpdate.md
+      - Troubleshooting: Troubleshooting.md
+  - Using The Rig:
+      - Configurator Tour: Configurator.md
+      - WebSerial Walkthrough: ProtocolWalkthrough.md
+      - WebSerial Protocol: WebSerial.md
+      - OSC Bridge: OSCBridge.md
+      - Performer Bridge Guide: BridgeForPerformers.md
+      - Parameter Map: parameter-map.md
+  - Build And Verify:
+      - Testing Story: TestingStory.md
+      - Testing: TESTING.md
+      - Release Story: ReleaseStory.md
+      - QC Checklist: qc-checklist.md
+      - Reproducibility: Reproducibility.md
+      - Release Guide: ReleaseGuide.md
+  - Deep Dives:
+      - Pin Map: PinMap.md
+      - EEPROM Layout: EEPROMLayout.md
+      - Envelope Frontend: EF_Frontend_v2.md
+      - SeedBox Interop: interop/seedbox.md
+      - Assumption Ledger: assumption-ledger.md
+  - Project History:
+      - History: HISTORY.md
+      - Lineage: lineage.md
