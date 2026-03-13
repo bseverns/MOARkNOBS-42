@@ -171,7 +171,7 @@ The Unity harness pulls in everything under `firmware/test/test_*.cpp`. To isola
 2. Re-run `pio -d firmware test -e teensy40_unity`.
 3. Restore the macros before you commit so CI sees the full suite.
 
-For a deep dive into what each Unity or manual sketch checks, crack open [`firmware/test/README.md`](../firmware/test/README.md). It catalogs every test file with the subsystem it pokes.
+For a deep dive into what each Unity or manual sketch checks, crack open [firmware/test/README.md](https://github.com/bseverns/benzknober/blob/main/firmware/test/README.md). It catalogs every test file with the subsystem it pokes.
 
 ### Manual hardware rituals (`src/*_t.cpp`)
 

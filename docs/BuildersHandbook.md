@@ -178,7 +178,7 @@ These classics ruin weekends. Keep them in mind and you'll spend more time makin
 
 ## Profiles
 
-The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot stores pot mappings, LED brightness/color, envelope routing (including follower-to-multi-slot mappings), ARG/filter details, and the entire modulation matrix (arpeggiator timing + shape, LFO shapes/depths/routes, and per-slot MIDI channel/EF payloads). The WebSerial [`GET_PROFILE`](WebSerial.md#profiles--modulation-snapshots) response exposes this snapshot so editors can replay the same state in software, and `SET_PROFILE` lets you persist a partial or complete payload back to the board. When you load a profile, the firmware replays the stored LED color, LFO routes, and slot envelope parameters instantly before your pots/docs move again.
+The rig hoards four full configuration profiles (A–D) in EEPROM. Each slot stores pot mappings, LED brightness/color, envelope routing (including follower-to-multi-slot mappings), ARG/filter details, and the entire modulation matrix (arpeggiator timing + shape, LFO shapes/depths/routes, and per-slot MIDI channel/EF payloads). The WebSerial [`GET_PROFILE`](WebSerial.md#profiles-and-modulation-snapshots) response exposes this snapshot so editors can replay the same state in software, and `SET_PROFILE` lets you persist a partial or complete payload back to the board. When you load a profile, the firmware replays the stored LED color, LFO routes, and slot envelope parameters instantly before your pots/docs move again.
 
 ![Profile toolbar](profiles-ui.png)
 

@@ -112,4 +112,4 @@ Keep these in reach when writing docs or firmware:
 - [Audio EQ Cookbook](https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html) — quick coefficients without hunting textbooks.
 - [Open Music Labs: Envelope Followers](http://www.openmusiclabs.com/learning/tutorials/envelopefollower/) — deep-dive with schematics.
 
-Document edits? Drop them here and in the [Docs Index](../README.md) so the tribe knows the primer stayed fresh.
+Document edits? Drop them here and in the [Docs Index](../index.md) so the tribe knows the primer stayed fresh.

@@ -9,7 +9,7 @@
 - Both sides pulse **0x7F** every few seconds. Skip two pulses (~8 s) and the firmware falls back to sending the boot hello again.
 - Identity flex? The firmware coughs up `F0 7D 4D 4E 42 01 F7` via `sendIdentityPing()` so SeedBox can ignore look-alikes.
 
-All the literal numbers live in [`firmware/include/interop/mn42_map.h`](../../firmware/include/interop/mn42_map.h). Copy those constants instead of sprinkling magic values through sketches or scripts.
+All the literal numbers live in [firmware/include/interop/mn42_map.h](https://github.com/bseverns/benzknober/blob/main/firmware/include/interop/mn42_map.h). Copy those constants instead of sprinkling magic values through sketches or scripts.
 
 ## MIDI CC Map Cheat Sheet
 
@@ -62,4 +62,3 @@ Mode flag reference (same layout SeedBox ships with):
 - Sync the mode bit expectations with whatever SeedBox toggles when it exposes debug meters; right now we only document the table.
 - Consider mirroring `peerAlive()` into the OLED status area so performers get a “SeedBox present” badge without opening a laptop.
 - If we ever expose more CCs for interop, document the additions here and extend `mn42_map.h` so both repos stay in lockstep.
-

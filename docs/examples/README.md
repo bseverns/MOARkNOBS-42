@@ -22,11 +22,11 @@ sequenceDiagram
    ```
 3. Open one of the patches below.
 
-If bridge setup is new to you, start with [`docs/OSCBridge.md`](../OSCBridge.md) and then check the full reference in [`bridge/README.md`](../../bridge/README.md).
+If bridge setup is new to you, start with [docs/OSCBridge.md](../OSCBridge.md) and then check the full reference in [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md).
 
 ## Pick your poison
 
-- [max/](max/) - Max patch for slot/envelope OSC monitoring.
-- [puredata/](puredata/) - same idea in Pure Data.
+- [max/README.md](max/README.md) - Max patch for slot/envelope OSC monitoring.
+- [puredata/README.md](puredata/README.md) - same idea in Pure Data.
 
 These are reference patches: validate routing, inspect payloads, then customize.

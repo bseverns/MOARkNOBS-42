@@ -10,7 +10,7 @@ flowchart LR
   Sink --> Air
 ```
 
-Back up one directory to the [docs index](../README.md) for the full paper trail.
+Back up one directory to the [docs index](../index.md) for the full paper trail.
 
 ## Copper Pours & Heatsinks
 

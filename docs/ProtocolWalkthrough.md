@@ -124,4 +124,4 @@ Once you understand those four ideas, the rest of the WebSerial reference become
 
 - [Configurator Tour](Configurator.md) for the UI-facing side of this exchange
 - [WebSerial Protocol](WebSerial.md) for the full command and payload reference
-- [App README](../App/README.md) for the runtime-side implementation model
+- [App README](https://github.com/bseverns/benzknober/blob/main/App/README.md) for the runtime-side implementation model

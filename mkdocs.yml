@@ -93,12 +93,37 @@ nav:
       - QC Checklist: qc-checklist.md
       - Reproducibility: Reproducibility.md
       - Release Guide: ReleaseGuide.md
+      - Bridge Packaging: BridgePackaging.md
+      - Bridge Artifact Checklist: release/bridge-artifacts-checklist.md
   - Deep Dives:
+      - Docs Guide: DocsGuide.md
       - Pin Map: PinMap.md
       - EEPROM Layout: EEPROMLayout.md
       - Envelope Frontend: EF_Frontend_v2.md
       - SeedBox Interop: interop/seedbox.md
       - Assumption Ledger: assumption-ledger.md
+      - Primer: Primers/MIDI-DSP101.md
+      - Demo Polish: DemoPolish.md
+      - Options DNI: Options_DNI.md
+      - TODO: TODO.md
+      - VS Code IntelliSense: vscode-intellisense.md
+      - Bench Logs: bench/README.md
+      - Latency Method: bench/latency/method.md
+      - Oblique RTL Method: bench/latency/oblique_rtl.md
+      - Noise Method: bench/noise/method.md
+      - Thermal Notes: thermal/README.md
+      - Example Patches: examples/README.md
+      - Max Listener Patch: examples/max/README.md
+      - Pure Data Listener: examples/puredata/README.md
+      - Sketchbook: sketchbook/index.md
+      - Button Matrix Sketch: sketch/systemFlow/hw/buttonMatrix.md
+      - Display Sketch: sketch/systemFlow/hw/display.md
+      - Envelope Frontend Sketch: sketch/systemFlow/hw/envelopeFE.md
+      - LED and MIDI Out Sketch: sketch/systemFlow/hw/led&midiOut.md
+      - MIDI Opto Sketch: sketch/systemFlow/hw/midiOpto.md
+      - Power and Protection Sketch: sketch/systemFlow/hw/power&protection.md
+      - Teensy and Headers Sketch: sketch/systemFlow/hw/teensy&headers.md
+      - Changed Files Report: agents/_reports/changed-files.md
   - Project History:
       - History: HISTORY.md
       - Lineage: lineage.md

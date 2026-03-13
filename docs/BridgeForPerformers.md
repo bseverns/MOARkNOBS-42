@@ -54,6 +54,6 @@ Bridge MIDI mapping:
 
 ## 5) Keep nearby
 
-- Full bridge docs: [`bridge/README.md`](../bridge/README.md)
+- Full bridge docs: [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md)
 - OSC quickstart: [`docs/OSCBridge.md`](OSCBridge.md)
 - Packaging roadmap: [`docs/BridgePackaging.md`](BridgePackaging.md)

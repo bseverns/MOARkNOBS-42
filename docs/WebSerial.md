@@ -186,7 +186,7 @@ never fall out of sync.
 | `SET_ARGPAIR` `<on>,<envA>,<envB>` | 0/1,0‑5,0‑5 | wire two envelopes for ARG |
 | `GET_ARGPAIR` | – | echo pair config |
 
-### Profiles & modulation snapshots
+### Profiles and modulation snapshots
 
 `GET_PROFILE <id?>` (defaults to the active EEPROM slot) streams the JSON-safe snapshot the firmware keeps for each profile. The response contains:
 
@@ -252,7 +252,7 @@ Less baggage means faster feedback. This protocol exists so you can patch in a b
 
 ## See It in Action
 
-Want a live demo? Fire up the [WebSerial configuration app](../App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep the [App README](../App/README.md).
+Want a live demo? Fire up the [WebSerial configuration app](https://github.com/bseverns/benzknober/blob/main/App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep the [App README](https://github.com/bseverns/benzknober/blob/main/App/README.md).
 
 The configurator lets you twist:
 

@@ -17,7 +17,7 @@ folder for the gritty context, wiring diagrams, and experiments.
 
 | Path | What's in it |
 | --- | --- |
-| [docs/](docs/README.md) | Build notes, history and assorted rants |
+| [docs/](docs/DocsGuide.md) | Build notes, history and assorted rants |
 | [docs/TESTING.md](docs/TESTING.md) | Test gauntlet from polite to brutal |
 | [docs/PinMap.md](docs/PinMap.md) | Every MCU pin's dirty secret |
 | [docs/EEPROMLayout.md](docs/EEPROMLayout.md) | Where config bytes crash at night |
@@ -89,7 +89,7 @@ the rig when you want to teach a different angle on pointers or data flow.
 
 ## Why these specific parts?
 
-Chasing the SparkFun-backed part rationales? Skip down to the [docs index](docs/README.md#why-these-specific-parts) for the full bullet tour, then hit [hardware/Parts.md](hardware/Parts.md) when you want sourcing receipts.
+Chasing the SparkFun-backed part rationales? Skip down to the [docs guide](docs/DocsGuide.md#why-these-specific-parts) for the full bullet tour, then hit [hardware/Parts.md](hardware/Parts.md) when you want sourcing receipts.
 
 ## Diagram Dump
 
@@ -124,7 +124,7 @@ flowchart LR
   Firmware --> Slot42
 ```
 
-For an even grimier wiring map, the [systemflow docs](docs/sketch/systemFlow/hw/) tear down each hardware module—button matrix, display guts, envelope front-end—so you can trace every signal like a true knob punk.
+For an even grimier wiring map, the [systemflow sketch pages](docs/sketch/systemFlow/hw/buttonMatrix.md) tear down each hardware module—button matrix, display guts, envelope front-end—so you can trace every signal like a true knob punk.
 
 ## Quick Start
 
@@ -151,7 +151,7 @@ Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
 
-Want the deep cuts? The full chronicles live in [docs/](docs/README.md) and
+Want the deep cuts? The full chronicles live in [docs/](docs/DocsGuide.md) and
 the gritty firmware lore is in [firmware/](firmware/README.md).
 
 ## Test Strategy
