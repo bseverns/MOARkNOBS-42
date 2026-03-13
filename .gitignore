@@ -33,3 +33,4 @@ hardware/*.eprj
 hardware/**/*autosave*
 hardware/**/*AutoSave*
 hardware/*_backup/
+firmware/test/__pycache__/test_custom_runner.cpython-314.pyc
