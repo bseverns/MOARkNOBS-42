@@ -2,6 +2,8 @@
 
 The MN42 Bridge is a Node.js CLI that connects MOARkNOBS-42 hardware to OSC apps and virtual MIDI ports.
 
+Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a DAW-facing virtual MIDI port. Start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) if you are deciding between them.
+
 It does three things:
 
 - reads JSON telemetry from the controller over USB serial,
