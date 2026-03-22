@@ -73,8 +73,14 @@ nav:
   - Home: index.md
   - Start Here:
       - New User Story: StartHere.md
+      - Quickstart for Builders: QuickstartForBuilders.md
+      - Quickstart for Performers: QuickstartForPerformers.md
       - Guided Routes: GuidedRoutes.md
       - Musician-First Guide: MusicianFirstGuide.md
+      - Hardware Current Build: HardwareCurrentBuild.md
+      - Hardware Substitutions: HardwareSubstitutions.md
+      - Connectivity Guide: ConnectivityGuide.md
+      - License and Support: LicenseAndSupport.md
       - Glossary: Glossary.md
       - Process Overview: ProcessOverview.md
       - Hardware Bring-Up Story: HardwareStory.md
@@ -106,6 +112,7 @@ nav:
       - Release Guide: ReleaseGuide.md
       - Bridge Packaging: BridgePackaging.md
       - Bridge Artifact Checklist: release/bridge-artifacts-checklist.md
+      - Repo Health Audit 2026-03: repo-health-audit-2026-03.md
   - Deep Dives:
       - Docs Guide: DocsGuide.md
       - Pin Map: PinMap.md
