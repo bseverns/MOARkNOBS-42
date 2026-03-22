@@ -4,7 +4,7 @@ This page explains the repo's license split and support boundary in plain Englis
 
 ## Software and firmware
 
-The repository's software and firmware are covered by the MIT license in [LICENSE](../LICENSE).
+The repository's software and firmware are covered by the MIT license in the repo-root `LICENSE` file.
 
 Plain-English summary:
 
@@ -14,7 +14,7 @@ Plain-English summary:
 
 ## Hardware design files
 
-The hardware documentation/design files are covered by CERN OHL v2 Strongly Reciprocal in [hardware/LICENSE](../hardware/LICENSE).
+The hardware documentation/design files are covered by CERN OHL v2 Strongly Reciprocal in `hardware/LICENSE`.
 
 Plain-English summary:
 

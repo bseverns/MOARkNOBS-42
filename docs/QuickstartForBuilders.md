@@ -16,7 +16,7 @@ MOARkNOBS-42 is a Teensy-based MIDI/OSC controller with onboard controls, LED fe
 
 ## 1. Check the current hardware status
 
-Before ordering boards or parts, read [hardware/CurrentBuild.md](../hardware/CurrentBuild.md).
+Before ordering boards or parts, read [Hardware Current Build](HardwareCurrentBuild.md).
 
 That page is the canonical source for what hardware files are currently verified in the repo and what is still missing or unverified.
 
@@ -64,8 +64,8 @@ pio -d firmware run -e teensy40_full_system
 
 - Start with [Troubleshooting](Troubleshooting.md).
 - Use [Builder's Handbook](BuildersHandbook.md) for wiring and bring-up context.
-- Use [hardware/Substitutions.md](../hardware/Substitutions.md) before swapping parts on instinct.
+- Use [Hardware Substitutions](HardwareSubstitutions.md) before swapping parts on instinct.
 
 ## Builder note
 
-This repo currently documents hardware more clearly than it packages it. If you do not see a verified Gerber zip or versioned BOM in [hardware/CurrentBuild.md](../hardware/CurrentBuild.md), do not infer one from older filenames elsewhere in the docs.
+This repo currently documents hardware more clearly than it packages it. If you do not see a verified Gerber zip or versioned BOM in [Hardware Current Build](HardwareCurrentBuild.md), do not infer one from older filenames elsewhere in the docs.

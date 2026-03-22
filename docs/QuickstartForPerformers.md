@@ -14,12 +14,12 @@ Use the browser configurator when you want direct USB setup, profile management,
 
 Start here:
 
-- [App/README.md](../App/README.md) for local serving and the current configurator workflow
+- [Configurator Tour](Configurator.md) for the current configurator workflow
 - [Connectivity Guide](ConnectivityGuide.md) if you are not sure whether you need the bridge
 
 ## 3. Connect in the configurator
 
-1. Serve the app locally or use the published configurator URL documented in [App/README.md](../App/README.md).
+1. Serve the configurator from `http://localhost` or use the published project URL you normally deploy from.
 2. Open the configurator.
 3. Click **Connect**.
 4. Pick the MOARkNOBS-42 serial device.
@@ -42,7 +42,7 @@ Use the Node bridge when you need one of these:
 - A virtual MIDI port for a DAW
 - A fallback path when the browser/workstation setup is not the right tool
 
-Bridge details: [bridge/README.md](../bridge/README.md).
+Bridge details: [OSC Bridge](OSCBridge.md) and [Performer Bridge Guide](BridgeForPerformers.md).
 
 ## 6. If connection fails
 

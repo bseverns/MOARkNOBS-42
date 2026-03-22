@@ -17,7 +17,7 @@ The browser configurator talks directly to the board over WebSerial. It is the b
 - loading and saving profiles
 - exporting/importing JSON configs
 
-See [App/README.md](../App/README.md).
+See [Configurator Tour](Configurator.md).
 
 ## What the bridge does
 
@@ -27,7 +27,7 @@ The bridge is a Node.js process that sits between the board and other software. 
 - creating a virtual MIDI port for a DAW
 - receiving OSC or MIDI commands and forwarding them back to the board
 
-See [bridge/README.md](../bridge/README.md).
+See [OSC Bridge](OSCBridge.md) and [Performer Bridge Guide](BridgeForPerformers.md).
 
 ## When WebSerial alone is enough
 
