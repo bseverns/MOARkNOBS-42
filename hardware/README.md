@@ -1,6 +1,8 @@
-# BTN_42 Hardware
+# MOARkNOBS-42 Hardware
 
-> ~~The button board that turns the firmware's dreams into something you can actually solder.~~ Pure DIY attitude. Latest layout adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and now drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
+> ~~The button board that turns the firmware's dreams into something you can actually solder.~~ Pure DIY attitude. This board design adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
+
+Start here: [CurrentBuild.md](./CurrentBuild.md) is the canonical source for what hardware files are current, legacy, or still missing from this checkout.
 
 ```mermaid
 flowchart TD
@@ -13,7 +15,7 @@ flowchart TD
 
 ![3D render of MOARkNOBS board with jacks and knobs](../docs/sketch/MOAR_BOARD.png)
 
-Want the whole glam squad—including top and bottom copper layers? Hit the [PCB gallery](../docs/README.md#pcb-gallery) or dive straight into [sketch/](../docs/sketch/).[^logic][^midi][^opamp]
+Want the whole glam squad—including machine drawings and subsystem sketches? Start with [CurrentBuild.md](./CurrentBuild.md), then dive into [docs/sketch/](../docs/sketch/).[^logic][^midi][^opamp]
 
 ## Accessibility
 
@@ -32,13 +34,15 @@ Need a deeper schematic fix? The [systemflow docs](../docs/sketch/systemFlow/hw/
 - **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A. [Why the split rails](./Parts.md#power-rails--fuses).
 - **MIDI I/O**: 5‑pin DIN plus 1/8" TRS Type‑A jacks wired in parallel. [Why the opto + TRS combo](./Parts.md#6n138-optocoupler).
 
-The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will, and grab the [Parts & Rationale](./Parts.md) doc when you need the deeper sourcing story.
+The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will, grab the [Parts & Rationale](./Parts.md) doc when you need the deeper sourcing story, and use [Substitutions.md](./Substitutions.md) before swapping critical parts.
 
 ## Directory Layout
 
-- [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – the parts shopping list.
-- [fabrication/Gerber_MOAR_Board_2025-08-17.zip](fabrication/Gerber_MOAR_Board_2025-08-17.zip) – fab-ready package for the latest spin.
-- [shell/](shell/) – STEP and STL models of the enclosure.
+- [CurrentBuild.md](./CurrentBuild.md) – canonical hardware status page.
+- [Parts.md](./Parts.md) – part rationale and design intent.
+- [Substitutions.md](./Substitutions.md) – conservative sourcing/substitution notes.
+- [MN42-machineDrawings/](./MN42-machineDrawings/) – verified machine-drawing PDFs currently present in the repo.
+- [fabrication/](./fabrication/) – fabrication folder; no versioned Gerber zip was present in this repo audit.
 
 ## Power Rails Need Fat Copper
 
@@ -49,20 +53,24 @@ If you're routing or poking at the LED power network, keep the lifeblood thick:
 - `VLED`
 - any other LED power rail hiding in your design
 
-In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover the trace, and smash **Change Width** until it's **0.5 mm or wider**.  After you push the update, regenerate the Gerbers and crack open `fabrication/Gerber_MOAR_Board_2025-08-17.zip`'s `TopLayer.GTL`—the smallest `%ADD` aperture should scream `0.5` or bigger.  Thin copper means brown‑outs and sad pixels, so keep it beefy.
+In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover the trace, and smash **Change Width** until it's **0.5 mm or wider**. After you push the update, regenerate the Gerbers and verify the top copper export still reflects that minimum width before you send anything to fab. Thin copper means brown-outs and sad pixels, so keep it beefy.
 
 ## Fabrication Package
 
-Everything you need to spin boards is sitting in this repo, no scavenger hunt required:
+Use [CurrentBuild.md](./CurrentBuild.md) as the release-facing source of truth.
 
-- [fabrication/Gerber_MOAR_Board_2025-08-17.zip](fabrication/Gerber_MOAR_Board_2025-08-17.zip) – unzip and punt it straight to your board house.
-- [BOM_MOAR_MOAR_Board_2025-08-02.xlsx](BOM_MOAR_MOAR_Board_2025-08-02.xlsx) – full bill of materials.
-- `shell/` – STL files in `3DShell_btnBRD/` and printable meshes in `stl/`.
+Current repo state from the 2026-03 audit:
+
+- Verified present: `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
+- Verified present: `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
+- `TODO: add a versioned fabrication zip under hardware/fabrication/`
+- `TODO: add a versioned BOM export under hardware/`
+- `TODO: if enclosure CAD is meant to ship in-repo, add a versioned directory and link it from CurrentBuild.md`
 
 Circuit diagrams live in [`sketch/`](../docs/sketch/). System modules have their circuits diagramed to show the board's guts in living color.
 
 ![Schematic for interface and control section](../docs/sketch/Interface%26Cntrl.png)
-![Schematic for power regulation and protection](../docs/sketch/Power%3AReg.png)
+![Schematic for power regulation and protection](../docs/sketch/Power-Reg.png)
 
 ### Sketch Documents
 
@@ -112,7 +120,7 @@ Below is a summary of the schematic sheets:
 
 ### Analog Ground Stitching
 
-The envelope follower front-end is a noise magnet, so we drenched it in a GND pour and pinned that copper down with vias every ~5 mm. Each stitch dives into the main ground plane so the envelope follower keeps quiet. If you mod this section or stretch the board, clone those vias and keep the spacing tight—same net, same vibe. Peek inside `fabrication/Gerber_MOAR_Board_2025-08-17.zip` for `Drill_PTH_Through_Via.DRL` to copy the pattern and march them along your new edge.
+The envelope follower front-end is a noise magnet, so we drenched it in a GND pour and pinned that copper down with vias every ~5 mm. Each stitch dives into the main ground plane so the envelope follower keeps quiet. If you mod this section or stretch the board, clone those vias and keep the spacing tight—same net, same vibe. When a versioned fabrication archive is checked into the repo, mirror its drill pattern during review instead of guessing.
 
 ## Safety & Liability
 
@@ -122,5 +130,4 @@ Build, mod, or rage against this design at your own risk. We’re not your safet
 
 ## License
 
-These board blueprints are under the CERN Open Hardware Licence v2 - Strongly Reciprocal. Remix, fab, and share alike. Scope the [LICENSE](LICENSE) in this folder for the full legal spiel.
-
+These board blueprints are under the CERN Open Hardware Licence v2 - Strongly Reciprocal. Remix, fab, and share alike. Scope the [LICENSE](LICENSE) in this folder for the full legal spiel, and see [docs/LicenseAndSupport.md](../docs/LicenseAndSupport.md) for the plain-English boundary.

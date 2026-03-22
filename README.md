@@ -22,15 +22,23 @@ folder for the gritty context, wiring diagrams, and experiments.
 | [docs/PinMap.md](docs/PinMap.md) | Every MCU pin's dirty secret |
 | [docs/EEPROMLayout.md](docs/EEPROMLayout.md) | Where config bytes crash at night |
 | [firmware/](firmware/README.md) | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
-| [hardware/](hardware/README.md) | Schematics, BOM, enclosure bits and the [Parts & Rationale](hardware/Parts.md) cheat sheet |
+| [hardware/](hardware/README.md) | Hardware docs, with [hardware/CurrentBuild.md](hardware/CurrentBuild.md) as the canonical entry point for what is current vs. stale |
 | [bridge/](bridge/README.md) | Node.js bridge docs for OSC + virtual MIDI setup, command reference, and troubleshooting |
 | [tools/](tools/README.md) | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md) |
+
+## Start Here
+
+- Builder: [docs/QuickstartForBuilders.md](docs/QuickstartForBuilders.md)
+- Performer: [docs/QuickstartForPerformers.md](docs/QuickstartForPerformers.md)
+- Hardware current truth: [hardware/CurrentBuild.md](hardware/CurrentBuild.md)
+- Connectivity decision: [docs/ConnectivityGuide.md](docs/ConnectivityGuide.md)
+- License/support boundary: [docs/LicenseAndSupport.md](docs/LicenseAndSupport.md)
 
 ## Highlights
 
 - 42 virtual slots and six envelope followers ready to hijack any MIDI stream.
 - Built‑in arpeggiator and filter playground.
-- WebSerial editor and OSC bridge for remote tweaking.
+- Browser configurator and OSC bridge for remote tweaking.
 - Button grid that refuses to behave—short, long, double and combo presses are all mapped in the [ButtonManager cheat sheet](firmware/include/ButtonManager/README.md#button-map).
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
 - Dual MIDI jacks—5‑pin DIN for the old heads and 1/8" TRS Type‑A for anyone who left their big cables at home.
@@ -105,7 +113,7 @@ flowchart LR
   end
   subgraph Host
     HostPC((Host))
-    WebSerial[[WebSerial Editor]]
+    WebSerial[[Browser Configurator]]
     Bridge[[OSC Bridge]]
   end
   subgraph Board
@@ -130,6 +138,8 @@ For an even grimier wiring map, the [systemflow sketch pages](docs/sketch/system
 
 Ready to shred? Here's the bare minimum to get the beast humming, provided you have the completed board in-hand.
 Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md)—and if you want a guided lap through the full pipeline, run the [slot tweak lab](docs/ProcessOverview.md#hands-on-lab-tweak-a-slot-ship-it-watch-it-scream).
+
+If you are sourcing or building hardware, stop at [hardware/CurrentBuild.md](hardware/CurrentBuild.md) first. It now carries the repo's hardware current-truth table and explicitly flags missing/unverified fabrication assets instead of implying older filenames are still current.
 
 1. **Prep the dev rig**
    - `pip install -r requirements.txt`
@@ -198,8 +208,9 @@ Treat these messages as subtle warnings—if you see one, check the WebSerial sn
 3. Let CI run `./release.sh <tag>` and upload deterministic assets (`.hex`, fabrication zip, source export tarball, manifest, checksums, and license files).
 4. Use [docs/ReleaseGuide.md](docs/ReleaseGuide.md) for the full release checklist.
 
-## License: MIT. 
-See [LICENSE](LICENSE).
+## License: MIT.
+
+See [LICENSE](LICENSE) for the software/firmware license and [docs/LicenseAndSupport.md](docs/LicenseAndSupport.md) for the plain-English split between software and hardware licensing/support.
 
 ## Contributing
 

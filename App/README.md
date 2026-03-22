@@ -1,4 +1,6 @@
-# WebSerial Configuration App
+# MOARkNOBS-42 Browser Configurator
+
+Use the browser configurator when you want direct USB setup, monitoring, and profile management over WebSerial. If you need OSC or a DAW-facing virtual MIDI port instead, start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) and use the bridge.
 
 [bseverns.github.io/MN42](http://bseverns.github.io/MN42) is the browser-based patch bay for the MOARkNOBS-42 controller. The page is now split between a tiny runtime “kernel” and a BenzKnobz-specific view layer:
 
