@@ -95,7 +95,7 @@ zine. Treat it like a studio notebook, pull apart the sections live, and reroute
 the rig when you want to teach a different angle on pointers or data flow.
 
 ![Approximate board render missing some 3D models](docs/brdF.png)
->EasyEDA won't recognized my shifted 3D models for all my parts, but trust me. All parts simulate correctly.
+>The prototypes are with PCBWay right now. Scheduled for deliver ~4/20
 
 ## Why these specific parts?
 
