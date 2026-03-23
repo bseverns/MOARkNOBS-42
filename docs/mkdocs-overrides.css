@@ -188,6 +188,79 @@
   letter-spacing: 0.03em;
 }
 
+.mn42-landing-hero {
+  max-width: var(--mn42-hero-max);
+  margin: 0 auto 2.5rem;
+  padding: 1.4rem 1.35rem 1.5rem;
+  border: 1px solid rgba(198, 90, 46, 0.2);
+  border-radius: 0.45rem;
+  background:
+    linear-gradient(135deg, rgba(241, 179, 0, 0.08), rgba(198, 90, 46, 0.06)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(238, 241, 243, 0.94));
+  box-shadow: 0 1.25rem 2.5rem rgba(17, 24, 39, 0.1);
+}
+
+.mn42-landing-hero p:first-child {
+  margin: 0 0 0.75rem;
+  color: var(--mn42-rust);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mn42-landing-hero .md-button {
+  margin: 0.35rem 0.6rem 0 0;
+}
+
+.mn42-card-grid {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.mn42-callout {
+  margin: 1rem 0 2rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.45rem;
+  border-left: 0.35rem solid var(--mn42-rust);
+}
+
+.mn42-callout p:last-child {
+  margin-bottom: 0;
+}
+
+.mn42-callout-not {
+  background:
+    linear-gradient(90deg, rgba(143, 148, 153, 0.14), rgba(198, 90, 46, 0.05)),
+    rgba(255, 255, 255, 0.85);
+}
+
+.mn42-callout-support {
+  background:
+    linear-gradient(90deg, rgba(241, 179, 0, 0.12), rgba(198, 90, 46, 0.05)),
+    rgba(255, 255, 255, 0.88);
+}
+
+[data-md-color-scheme="slate"] .mn42-landing-hero {
+  background:
+    linear-gradient(135deg, rgba(241, 179, 0, 0.08), rgba(198, 90, 46, 0.08)),
+    linear-gradient(180deg, rgba(26, 31, 36, 0.96), rgba(21, 26, 31, 0.96));
+  border-color: rgba(241, 179, 0, 0.18);
+  box-shadow: 0 1.25rem 2.5rem rgba(0, 0, 0, 0.3);
+}
+
+[data-md-color-scheme="slate"] .mn42-callout-not {
+  background:
+    linear-gradient(90deg, rgba(143, 148, 153, 0.12), rgba(198, 90, 46, 0.05)),
+    rgba(26, 31, 36, 0.92);
+}
+
+[data-md-color-scheme="slate"] .mn42-callout-support {
+  background:
+    linear-gradient(90deg, rgba(241, 179, 0, 0.12), rgba(198, 90, 46, 0.05)),
+    rgba(26, 31, 36, 0.94);
+}
+
 @media screen and (max-width: 76.2344em) {
   .md-typeset h1 {
     line-height: 1;
@@ -195,5 +268,13 @@
 
   .md-content::before {
     width: 7rem;
+  }
+
+  .mn42-landing-hero {
+    padding: 1.15rem 1rem 1.2rem;
+  }
+
+  .mn42-landing-hero .md-button {
+    margin-right: 0.35rem;
   }
 }
