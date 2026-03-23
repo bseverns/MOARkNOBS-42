@@ -74,6 +74,10 @@ The machine makes the most sense when you treat it like a chain of promises:
 
   Go straight to [Testing Story](TestingStory.md) and [Release Story](ReleaseStory.md).
 
+- **I need a prototype or demo go/no-go call**
+
+  Read [Validation Flow](ValidationFlow.md), then run [Demo Test Punch List](DemoTestPunchList.md).
+
 - **I want the low-level details**
 
   Dive into [Pin Map](PinMap.md), [EEPROM Layout](EEPROMLayout.md), and [Assumption Ledger](assumption-ledger.md).

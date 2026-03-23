@@ -11,6 +11,8 @@ Craving the bird's-eye view? The [systemflow sketch pages](sketch/systemFlow/hw/
 If you only need the canonical operational docs, start here:
 
 - [TESTING.md](TESTING.md) for what the current automated/manual coverage actually proves
+- [ValidationFlow.md](ValidationFlow.md) for the bring-up to demo-ready decision path
+- [DemoTestPunchList.md](DemoTestPunchList.md) for the operator demo pass on a real prototype
 - [ReleaseGuide.md](ReleaseGuide.md) for the human release checklist
 - [REPRODUCIBILITY.md](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) for the exact artifact-building recipe
 - [App/README.md](https://github.com/bseverns/benzknober/blob/main/App/README.md) for the browser/runtime/schema/Apply contract
@@ -90,6 +92,8 @@ flowchart TD
 - [EEPROMLayout.md](EEPROMLayout.md) — where config bytes live and die.
 - [FirmwareUpdate.md](FirmwareUpdate.md) — flash new brains without desoldering.
 - [TESTING.md](TESTING.md) — unit tests to full-stack thrash sessions.
+- [ValidationFlow.md](ValidationFlow.md) — the conservative go/no-go path from first boot to demo-ready status.
+- [DemoTestPunchList.md](DemoTestPunchList.md) — a short real-board punch list for prototype arrival, rehearsal, and public demos.
 - [DemoPolish.md](DemoPolish.md) — runbook for final demo soak, EXT clock checks, panic-reset verification, and asset packing.
 - [TODO.md](TODO.md) — post-release wishlist for when the first build is out and you're itching for v2.
 - [ReleaseGuide.md](ReleaseGuide.md) — full release playbook. For quick steps see [Release Story](ReleaseStory.md).

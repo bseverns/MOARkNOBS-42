@@ -30,6 +30,8 @@ folder for the gritty context, wiring diagrams, and experiments.
 
 - Builder: [docs/QuickstartForBuilders.md](docs/QuickstartForBuilders.md)
 - Performer: [docs/QuickstartForPerformers.md](docs/QuickstartForPerformers.md)
+- Prototype/demo validation: [docs/ValidationFlow.md](docs/ValidationFlow.md)
+- Demo punch list: [docs/DemoTestPunchList.md](docs/DemoTestPunchList.md)
 - Hardware current truth: [hardware/CurrentBuild.md](hardware/CurrentBuild.md)
 - Connectivity decision: [docs/ConnectivityGuide.md](docs/ConnectivityGuide.md)
 - License/support boundary: [docs/LicenseAndSupport.md](docs/LicenseAndSupport.md)
@@ -158,6 +160,7 @@ If you are sourcing or building hardware, stop at [hardware/CurrentBuild.md](har
 
 4. **Beat it up**
    - `./test.sh` slams the Unity and bridge checks, or see [docs/TESTING.md](docs/TESTING.md) for the full ritual.
+   - If the goal is a real prototype or rehearsal sign-off rather than code confidence alone, continue with [docs/ValidationFlow.md](docs/ValidationFlow.md) and [docs/DemoTestPunchList.md](docs/DemoTestPunchList.md).
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
 

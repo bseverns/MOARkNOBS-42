@@ -51,3 +51,8 @@ Bridge details: [OSC Bridge](OSCBridge.md) and [Performer Bridge Guide](BridgeFo
 - Serve the configurator from `http://localhost` or another allowed secure context.
 - If WebSerial is not working in your browser/workflow, switch to the bridge path in [Connectivity Guide](ConnectivityGuide.md).
 - If the board itself is not responding, check [Troubleshooting](Troubleshooting.md).
+
+## 7. Before a rehearsal or public demo
+
+- Run [Demo Test Punch List](DemoTestPunchList.md).
+- Use [Validation Flow](ValidationFlow.md) if you need to decide whether the setup is merely connected, actually demo-ready, or still in bench-only status.

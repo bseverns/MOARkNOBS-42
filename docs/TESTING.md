@@ -14,6 +14,15 @@ Unless a section says otherwise, commands below assume you are running from the 
 | Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
 | System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC ↔ firmware handshake, slot poke, and keep-alive proof with artifact logs. |
 
+## If your goal is demo readiness rather than code confidence
+
+Use these docs alongside the command layers above:
+
+- [ValidationFlow.md](ValidationFlow.md) for the go/no-go path from bring-up to demo-ready
+- [DemoTestPunchList.md](DemoTestPunchList.md) for the operator pass on the actual prototype or rehearsal setup
+
+The automated suite proves a lot, but it does not replace a real-board demo pass.
+
 ## Coverage map
 
 This is the practical answer to "what is actually tested?" for the current stack.

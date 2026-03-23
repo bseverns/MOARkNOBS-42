@@ -75,6 +75,8 @@ nav:
       - New User Story: StartHere.md
       - Quickstart for Builders: QuickstartForBuilders.md
       - Quickstart for Performers: QuickstartForPerformers.md
+      - Validation Flow: ValidationFlow.md
+      - Demo Test Punch List: DemoTestPunchList.md
       - Guided Routes: GuidedRoutes.md
       - Musician-First Guide: MusicianFirstGuide.md
       - Hardware Current Build: HardwareCurrentBuild.md
@@ -106,6 +108,8 @@ nav:
   - Build And Verify:
       - Testing Story: TestingStory.md
       - Testing: TESTING.md
+      - Validation Flow: ValidationFlow.md
+      - Demo Test Punch List: DemoTestPunchList.md
       - Release Story: ReleaseStory.md
       - QC Checklist: qc-checklist.md
       - Reproducibility: Reproducibility.md

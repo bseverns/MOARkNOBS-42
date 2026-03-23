@@ -65,6 +65,12 @@ pio -d firmware run -e teensy40_full_system
 - Start with [Troubleshooting](Troubleshooting.md).
 - Use [Builder's Handbook](BuildersHandbook.md) for wiring and bring-up context.
 - Use [Hardware Substitutions](HardwareSubstitutions.md) before swapping parts on instinct.
+- Use [Validation Flow](ValidationFlow.md) to decide whether the board is still in bring-up, ready for demo work, or blocked on bench fixes.
+
+## 7. Before calling the board demo-ready
+
+- Run [Demo Test Punch List](DemoTestPunchList.md).
+- Record what passed, what was blocked, and what still needs bench validation.
 
 ## Builder note
 
