@@ -1,17 +1,25 @@
-# MOARkNOBS-42
-
-![MOARkNOBS-42 controller on the bench showing the button grid, knob field, and display area.](land.png) { .hero-image }
+---
+hide:
+  - navigation
+  - toc
+---
 
 <div class="mn42-landing-hero" markdown="1">
 
 <p class="mn42-eyebrow">Small-batch MIDI/OSC performance instrument</p>
 
-MOARkNOBS-42 is a documentation-rich hardware instrument for artists, builders, and instrument hackers who want a controller they can understand, modify, and keep learning from. It combines a physical control surface, open firmware, a browser configurator, a bridge for OSC and virtual MIDI, and a public paper trail for how the whole thing works.
+# MOARkNOBS-42
+
+![Front view of the MOARkNOBS-42 board showing the full control surface, display area, and hardware layout.](moarF.png){ .hero-image }
+
+MOARkNOBS-42 is a documented performance instrument for artists, builders, and instrument hackers who want a control surface they can actually understand. It combines the physical board, open firmware, a browser configurator, profile recall, an OSC / virtual MIDI bridge path, and a public paper trail for how the whole system behaves.
+
+It is designed less like a sealed appliance and more like an instrument whose logic stays visible.
 
 <div class="mn42-cta-row">
   <a class="md-button md-button--primary" href="PilotRun.md">Join pilot run / interest list</a>
   <a class="md-button" href="#core-features">See features</a>
-  <a class="md-button" href="GuidedRoutes.md">Start here / learn how it works</a>
+  <a class="md-button" href="WhyMN42.md">Start here / learn how it works</a>
 </div>
 
 </div>
@@ -20,12 +28,23 @@ MOARkNOBS-42 is a documentation-rich hardware instrument for artists, builders, 
 
 MOARkNOBS-42 is a small-batch MIDI/OSC performance instrument with a surrounding ecosystem, not just a bare controller board.
 
-The object in your hands is only part of the story. The repo also supports:
+The object in your hands is only part of the story.
 
-- a browser configurator for setup, monitoring, and profile management
-- on-device profiles so working states can be recalled instead of rebuilt from scratch
-- a bridge path for OSC and DAW-facing virtual MIDI workflows
-- builder, performer, validation, and troubleshooting docs that explain what is actually supported
+<div class="grid cards mn42-card-grid" markdown="1">
+
+- **Surface**
+
+  The hardware is a real performance surface with documented signal flow, MIDI I/O, reactive inputs, and a control layout meant to stay legible.
+
+- **Configurator**
+
+  The browser configurator handles setup, monitoring, staged edits, and profile management without hiding the device contract behind mystery software.
+
+- **Bridge**
+
+  The bridge path opens OSC and DAW-facing virtual MIDI workflows when direct browser connection is not the right fit for the host setup.
+
+</div>
 
 If you want the short outsider-friendly version first, read [Why MN42](WhyMN42.md).
 
@@ -131,6 +150,20 @@ It is not framed here as a sealed appliance, a beginner-friendly consumer gadget
 Support here is docs-first and artist-run.
 
 The repo publishes workflows, validation guidance, and support boundaries clearly, but it does not promise consumer-style warranty handling, substitute-part approval, or universal one-on-one setup support. The practical boundary is described in [License and Support](LicenseAndSupport.md).
+
+</div>
+
+## Interested in the first batch?
+
+<div class="mn42-callout mn42-callout-pilot" markdown="1">
+
+If the instrument makes sense for your setup, the next useful step is not a vague preorder mindset. It is reading the pilot-run framing, checking the support boundary, and choosing the workflow path that matches how you actually work.
+
+<div class="mn42-cta-row">
+  <a class="md-button md-button--primary" href="PilotRun.md">Read pilot run details</a>
+  <a class="md-button" href="LicenseAndSupport.md">Read support boundary</a>
+  <a class="md-button" href="QuickstartForPerformers.md">See performer workflow</a>
+</div>
 
 </div>
 
