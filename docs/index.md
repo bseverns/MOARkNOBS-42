@@ -1,16 +1,18 @@
 # MOARkNOBS-42
 
-![MOARkNOBS-42 controller on the bench showing the button grid, knob field, and display area.](land.png){ .hero-image }
+![MOARkNOBS-42 controller on the bench showing the button grid, knob field, and display area.](land.png) { .hero-image }
 
 <div class="mn42-landing-hero" markdown="1">
 
-Small-batch MIDI/OSC performance instrument
+<p class="mn42-eyebrow">Small-batch MIDI/OSC performance instrument</p>
 
 MOARkNOBS-42 is a documentation-rich hardware instrument for artists, builders, and instrument hackers who want a controller they can understand, modify, and keep learning from. It combines a physical control surface, open firmware, a browser configurator, a bridge for OSC and virtual MIDI, and a public paper trail for how the whole thing works.
 
-[Join pilot run / interest list](PilotRun.md){ .md-button .md-button--primary }
-[See features](#core-features){ .md-button }
-[Start here / learn how it works](GuidedRoutes.md){ .md-button }
+<div class="mn42-cta-row">
+  <a class="md-button md-button--primary" href="PilotRun.md">Join pilot run / interest list</a>
+  <a class="md-button" href="#core-features">See features</a>
+  <a class="md-button" href="GuidedRoutes.md">Start here / learn how it works</a>
+</div>
 
 </div>
 
@@ -164,26 +166,44 @@ The repo publishes workflows, validation guidance, and support boundaries clearl
 
 ## FAQ
 
-??? question "Do I need to code?"
+<details markdown="1">
+  <summary>Do I need to code?</summary>
 
-    Not necessarily. A performer can use the configurator and profile workflow without changing firmware. A builder or remixer will get much more out of the project if they are comfortable reading docs, flashing firmware, and following validation steps.
+Not necessarily. A performer can use the configurator and profile workflow without changing firmware. A builder or remixer will get much more out of the project if they are comfortable reading docs, flashing firmware, and following validation steps.
 
-??? question "Is it open source?"
+</details>
 
-    Yes. The repo publishes firmware, software, hardware documentation, and supporting docs under the licenses described in [License and Support](LicenseAndSupport.md).
+<details markdown="1">
+  <summary>Is it open source?</summary>
 
-??? question "Is this a finished consumer product?"
+Yes. The repo publishes firmware, software, hardware documentation, and supporting docs under the licenses described in [License and Support](LicenseAndSupport.md).
 
-    Not in the sense of a mass-market plug-and-play device with universal compatibility claims. The project is documented, real, and usable, but it is still framed honestly as a small-batch, artist-run instrument ecosystem with explicit validation and support boundaries.
+</details>
 
-??? question "What does the configurator do?"
+<details markdown="1">
+  <summary>Is this a finished consumer product?</summary>
 
-    The browser configurator is the main setup and monitoring surface. It loads manifest/config data, stages edits safely, applies changes, and handles profile save/load workflows over the documented device contract.
+Not in the sense of a mass-market plug-and-play device with universal compatibility claims. The project is documented, real, and usable, but it is still framed honestly as a small-batch, artist-run instrument ecosystem with explicit validation and support boundaries.
 
-??? question "What support is included?"
+</details>
 
-    The main support surface is the documentation itself: quickstarts, connectivity guidance, validation flow, troubleshooting, and license/support boundaries. See [License and Support](LicenseAndSupport.md) and [Pilot Run](PilotRun.md) for the practical limits.
+<details markdown="1">
+  <summary>What does the configurator do?</summary>
 
-??? question "Why would I choose this instead of a generic MIDI controller?"
+The browser configurator is the main setup and monitoring surface. It loads manifest/config data, stages edits safely, applies changes, and handles profile save/load workflows over the documented device contract.
 
-    Because the value here is not just the control surface. It is the combination of hardware, firmware, configurator, bridge, and unusually explicit documentation. If that matters to you, read [Why MN42](WhyMN42.md).
+</details>
+
+<details markdown="1">
+  <summary>What support is included?</summary>
+
+The main support surface is the documentation itself: quickstarts, connectivity guidance, validation flow, troubleshooting, and license/support boundaries. See [License and Support](LicenseAndSupport.md) and [Pilot Run](PilotRun.md) for the practical limits.
+
+</details>
+
+<details markdown="1">
+  <summary>Why would I choose this instead of a generic MIDI controller?</summary>
+
+Because the value here is not just the control surface. It is the combination of hardware, firmware, configurator, bridge, and unusually explicit documentation. If that matters to you, read [Why MN42](WhyMN42.md).
+
+</details>

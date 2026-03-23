@@ -200,7 +200,7 @@
   box-shadow: 0 1.25rem 2.5rem rgba(17, 24, 39, 0.1);
 }
 
-.mn42-landing-hero p:first-child {
+.mn42-eyebrow {
   margin: 0 0 0.75rem;
   color: var(--mn42-rust);
   font-size: 0.92rem;
@@ -211,6 +211,17 @@
 
 .mn42-landing-hero .md-button {
   margin: 0.35rem 0.6rem 0 0;
+}
+
+.mn42-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  margin-top: 1rem;
+}
+
+.mn42-cta-row .md-button {
+  margin: 0;
 }
 
 .mn42-card-grid {
