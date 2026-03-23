@@ -171,7 +171,7 @@ the gritty firmware lore is in [firmware/](firmware/README.md).
 
 The repo tests in layers because no single pass proves the whole instrument:
 
-- `pio -d firmware test -e teensy40_unity -vvv` is the main automated firmware gate. It now covers core logic plus a good chunk of orchestration: command dispatch, queue parsing, SeedBox handshake flow, scheduler layout, runtime note-off/diagnostic behavior, WebSerial payloads, and the UI tuning helpers.
+- `pio -d firmware test -e teensy40_unity -vvv` is the main automated firmware gate. It now covers core logic plus a good chunk of orchestration: command dispatch, queue parsing, scheduler layout, runtime note-off/diagnostic behavior, WebSerial payloads, and the UI tuning helpers.
 - `./test.sh` adds the bridge checks on top of that and is the best "before I tag a release" habit.
 - Manual firmware sketches and the full-system runner still matter for anything tied to real hardware timing, LEDs, OLED behavior, mux noise, EEPROM behavior on a physical board, and the final boot wiring.
 

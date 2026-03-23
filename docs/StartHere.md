@@ -98,7 +98,6 @@ You do **not** need to read these immediately unless you are debugging or extend
 - [EEPROM Layout](EEPROMLayout.md)
 - [Pin Map](PinMap.md)
 - [Assumption Ledger](assumption-ledger.md)
-- [SeedBox Interop](interop/seedbox.md)
 
 They matter, but they are better after you already know the main path through the instrument.
 

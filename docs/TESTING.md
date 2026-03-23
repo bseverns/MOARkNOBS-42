@@ -31,7 +31,7 @@ This is the practical answer to "what is actually tested?" for the current stack
 |-------|----------------|-------------|-------|
 | MIDI slot/config logic, filters, ARG math, LFOs, arpeggiator rules | Strong | Unity | Core firmware logic is covered by the long-running `firmware/test/test_*.cpp` suite. |
 | Command dispatch and serial queue behavior | Strong | Unity | `dispatchCommand`, command parsing, queue overflow, and command buffer flushing are covered. |
-| SeedBox interop handshake and keepalive flow | Strong | Unity | Handshake/ack/timeout paths are covered without needing a live bridge for every edit. |
+| Internal interop and keepalive orchestration | Strong | Unity | Handshake/ack/timeout-style paths are covered without needing a live host bridge for every edit. |
 | Scheduler wiring and recurring task registration | Covered | Unity | The current suite now asserts task counts, intervals, and repeat flags so scheduler regressions get caught early. |
 | Runtime orchestration | Covered | Unity | Pending note-offs, diagnostic counter reporting, and related runtime state transitions are asserted directly. |
 | WebSerial payload generation | Covered | Unity | Snapshot and slot-patch JSON are checked as emitted payloads, not just by indirect UI behavior. |

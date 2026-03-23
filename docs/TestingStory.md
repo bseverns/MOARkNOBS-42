@@ -40,7 +40,7 @@ Unity is the first serious gate because it catches logic drift cheaply:
 - WebSerial payload emission
 - UI-facing helper behavior
 
-That is why recent work focused on broadening Unity coverage into scheduler, runtime, WebSerial, UI, command queue, and SeedBox paths. The suite now checks more of the code that used to hide between "pure logic" and "real hardware."
+That is why recent work focused on broadening Unity coverage into scheduler, runtime, WebSerial, UI, command queue, and interop-oriented orchestration paths. The suite now checks more of the code that used to hide between "pure logic" and "real hardware."
 
 ## Host tests prove the desktop-side tools still behave
 

@@ -42,14 +42,14 @@ The scheduler is the clearest place to understand the runtime model.
 ```mermaid
 flowchart LR
   H[High priority<br>MIDI, LFOs, envelopes, pending note-offs, clock, arp] --> M[Mid priority<br>serial poll, command queue, envelope updates]
-  M --> L[Low priority<br>LEDs, display, diagnostics, SeedBox, WebSerial stream]
+  M --> L[Low priority<br>LEDs, display, diagnostics, interop hooks, WebSerial stream]
 ```
 
 This split is one of the most important architectural decisions in the stack:
 
 - **high priority** protects timing-sensitive musical behavior
 - **mid priority** handles parsing and configuration work
-- **low priority** handles feedback, diagnostics, and slower interop chatter
+- **low priority** handles feedback, diagnostics, and slower host-facing interop chatter
 
 The recent scheduler tests now assert this layout directly so task registration mistakes stop hiding in plain sight.
 

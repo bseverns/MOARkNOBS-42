@@ -124,7 +124,6 @@ nav:
       - Pin Map: PinMap.md
       - EEPROM Layout: EEPROMLayout.md
       - Envelope Frontend: EF_Frontend_v2.md
-      - SeedBox Interop: interop/seedbox.md
       - Assumption Ledger: assumption-ledger.md
       - Primer: Primers/MIDI-DSP101.md
       - Demo Polish: DemoPolish.md

@@ -36,7 +36,6 @@ Then open the local URL MkDocs prints in your terminal.
 | [ReleaseGuide.md](ReleaseGuide.md) | Human release checklist | Refresh when release ritual or asset list changes |
 | [REPRODUCIBILITY.md](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe | Refresh when `release.sh` or artifact shape changes |
 | [App/README.md](https://github.com/bseverns/benzknober/blob/main/App/README.md) | App/runtime contract and simulator notes | Refresh when manifest/schema/apply semantics change |
-| [interop/seedbox.md](interop/seedbox.md) | SeedBox handshake + CC contract | Refresh when either repo tweaks the interop map |
 
 ## Accessibility
 
