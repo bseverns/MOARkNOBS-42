@@ -21,11 +21,12 @@ See [Configurator Tour](Configurator.md).
 
 ## What the bridge does
 
-The bridge is a Node.js process that sits between the board and other software. It is the best path for:
+The bridge is a Node.js process that sits between the board and other software. It now has a browser-driven local console that starts/stops the bridge and opens the configurator over the bridge transport. It is the best path for:
 
 - turning board telemetry into OSC
 - creating a virtual MIDI port for a DAW
 - receiving OSC or MIDI commands and forwarding them back to the board
+- keeping the configurator available while OSC and virtual MIDI are running
 
 See [OSC Bridge](OSCBridge.md) and [Performer Bridge Guide](BridgeForPerformers.md).
 
@@ -45,6 +46,7 @@ Use the bridge when any of these are true:
 - you want OSC in Max, Pure Data, TouchOSC, or another OSC-capable host
 - you want a DAW to see a virtual MIDI port named `MN42 Bridge`
 - your workflow is built around OSC/MIDI software instead of direct browser configuration
+- you want to open the configurator from the bridge console without relying on WebSerial
 
 ## What other software sees
 
@@ -75,6 +77,7 @@ And it accepts commands at:
 | Browser configurator over WebSerial | Browser with WebSerial support plus `http://localhost` or another allowed secure context | Verified documentation path | The repo documents this flow and the app tests run in Chromium-based automation. |
 | Browser configurator in Chromium-based test path | Chromium-based browser | Verified in repo CI/docs | This is based on the Playwright setup and local app docs. |
 | Browser configurator in Firefox or Safari | Browser support for the same WebSerial flow | `TODO — not verified in this repo pass` | Use the bridge if your browser path is uncertain. |
+| Browser-driven bridge console | Node.js 20 plus a desktop browser | Verified in repo code/tests | The bridge UI serves the configurator at `/app/` and exposes the firmware line protocol over `/ws`. |
 | Bridge CLI on desktop host | Node.js plus USB serial access | Verified documentation path | The repo documents macOS, Linux, and Windows serial-port discovery commands, but this pass did not bench-test all three. |
 | OSC host integration | Running bridge plus UDP OSC host | Verified documentation path | Address and port contract are documented in `bridge/README.md`. |
 | DAW integration | Running bridge plus DAW MIDI device enablement | Verified documentation path | The bridge advertises `MN42 Bridge`; this pass did not bench-test DAW-specific behavior. |

@@ -21,6 +21,13 @@ npm test
 
 Run it from inside `bridge/` and watch each script light up. It's the fastest way to prove the bridge still boots, screams OSC, and whines when the serial line ghosts it.
 
+For tighter feedback loops, the package scripts are split by responsibility:
+
+- `npm run test:cli` checks help output and missing-port handling.
+- `npm run test:transport` checks serial-to-OSC, OSC/MIDI-to-serial, validation, and reconnect behavior.
+- `npm run test:browser` checks the browser-driven bridge server, `/app/` serving, and `/ws` transport.
+- `npm run smoke` runs entrypoint smoke checks for both `mn42_bridge.js` and `mn42_bridge_server.js`.
+
 ### Command validation cage match
 
 Need to make sure the bridge slams the door on garbage? `cmd_validation.test.js` hurls oversized JSON and off-the-rails slot/value pairs to confirm anything sketchy gets dropped before it can fry your rig.

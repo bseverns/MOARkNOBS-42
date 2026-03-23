@@ -15,12 +15,14 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
 ## Quickstart
 
 1. Flash the firmware and plug the controller into USB.
-2. From this directory run a quick server (WebSerial refuses to jam over `file://`):
+2. Choose your transport:
+   - direct WebSerial path: from this directory run a quick server (WebSerial refuses to jam over `file://`):
    ```bash
    python3 -m http.server
    ```
-3. Hit <http://localhost:8000/> — that root path is now the canonical deck. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
-4. Click **Connect**, pick the MOARkNOBS port, and let the header pill confirm the firmware, schema version, and memory stats.
+   - bridge path: run `npm --prefix bridge start`, open <http://127.0.0.1:8787/>, then click **Open configurator**
+3. Hit <http://localhost:8000/> for the direct path, or the bridge-served `/app/` URL for the bridge path. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
+4. Click **Connect**, pick the MOARkNOBS port if you are on WebSerial, and let the header pill confirm the firmware, schema version, and memory stats.
 5. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the bundled schema validator.
 6. On Apply the runtime sends a JSON-RPC `set_config` payload carrying the staged config, schema version, manifest metadata, and a SHA-256 checksum. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
 7. Use the **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. Encoders still stream immediately.

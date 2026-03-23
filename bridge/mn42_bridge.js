@@ -1,223 +1,59 @@
 #!/usr/bin/env node
-// Punk-rock bridge connecting MOARkNOBS-42 to the outside world.
-// serialport speaks USB, osc shouts over UDP, jzz slings MIDI.
-// Callbacks and retry loops keep the party alive when links bail.
 
-function usage() {
-  // Show a tiny help banner for the command-line crowd.
-  console.log(
-    `mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n` +
-      `Usage: node mn42_bridge.js [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL]`,
-  );
+const {
+  createBridgeService,
+  parseConfigFromArgv,
+  usageText,
+} = require('./lib/bridge_service');
+
+function printUsage(stream = process.stdout) {
+  stream.write(`${usageText()}\n`);
 }
 
-function getArg(flag, def) {
-  // Walk argv for a flag and grab the value sitting next to it.
-  const idx = process.argv.indexOf(flag);
-  if (idx >= 0 && idx + 1 < process.argv.length) return process.argv[idx + 1];
-  return def;
-}
-
-if (process.argv.includes('--help') || process.argv.includes('-h')) {
-  // Bail early if someone just wants the manual.
-  usage();
-  process.exit(0);
-}
-
-// Pull CLI overrides or fall back to defaults.
-const serialName = getArg('--serial', getArg('-s', '/dev/ttyACM0'));
-const SERIAL_BAUD = 115200; // must sync with Globals.h
-const DEFAULT_OSC_PORT = 9000;
-const oscPort = parseInt(
-  getArg('--osc', getArg('-o', String(DEFAULT_OSC_PORT))),
-  10,
-);
-if (!Number.isInteger(oscPort) || oscPort <= 0) {
-  // parseInt can spit NaN; if so, scream usage and bail.
-  console.error('bad --osc port');
-  usage();
-  process.exit(1);
-}
-let oscListen = parseInt(getArg('--osc-listen', String(DEFAULT_OSC_PORT)), 10);
-if (!Number.isInteger(oscListen) || oscListen <= 0) {
-  // Garbage in? drop a warning and fall back to the stock port.
-  console.warn(`bad --osc-listen port; defaulting to ${DEFAULT_OSC_PORT}`);
-  oscListen = DEFAULT_OSC_PORT;
-}
-const oscHost = getArg('--host', getArg('-H', '127.0.0.1'));
-const oscBind = getArg('--bind', getArg('-b', '127.0.0.1'));
-const midiLabel = getArg('--midi', getArg('-m', 'MN42 Bridge'));
-
-async function main() {
-  // Pull in the heavy lifters.
-  const { SerialPort, ReadlineParser } = require('serialport');
-  const osc = require('osc');
-  const JZZ = require('jzz');
-
-  // Fire up an OSC UDP port. Bind the local port (default 9000, tweak with
-  // --osc-listen) and aim outgoing packets at --host/--osc.
-  const udp = new osc.UDPPort({ localAddress: oscBind, localPort: oscListen });
-  udp.on('error', (err) => {
-    // If the socket coughs, log it, slam it shut, and try again in a sec.
-    console.error('udp error:', err.message);
-    try {
-      udp.close();
-    } catch (err) {
-      void err;
+function bindConsoleLogging(service) {
+  return service.on('log', (entry) => {
+    const line = entry?.message || '';
+    if (!line) return;
+    if (entry.level === 'error') {
+      console.error(line);
+      return;
     }
-    setTimeout(() => udp.open(), 1000);
+    if (entry.level === 'warn') {
+      console.warn(line);
+      return;
+    }
+    console.log(line);
   });
-  udp.open();
+}
 
-  // Wire up the serial link to the hardware.
-  const serial = new SerialPort({ path: serialName, baudRate: SERIAL_BAUD });
-  const parser = serial.pipe(new ReadlineParser({ delimiter: '\n' }));
-  serial.on('open', () => serial.write('HELLO\n'));
-  serial.on('error', (err) => {
-    // Serial trouble? Whine, then poke it again after a beat.
-    console.error('serial error:', err.message);
-    setTimeout(
-      () =>
-        serial.open(
-          (e) => e && console.error('serial reconnect failed:', e.message),
-        ),
-      1000,
-    );
-  });
-  serial.on('close', () => {
-    // Cable yanked? Grumble and try to crawl back after a tick.
-    console.error('serial disconnected');
-    setTimeout(
-      () =>
-        serial.open(
-          (e) => e && console.error('serial reconnect failed:', e.message),
-        ),
-      1000,
-    );
-  });
-
-  // Validate inbound commands before we spew them back out.
-  const MAX_MSG_LEN = 128;
-  function validateCmd(m) {
-    if (
-      !m ||
-      typeof m.cmd !== 'string' ||
-      !Number.isInteger(m.slot) ||
-      !Number.isInteger(m.value)
-    )
-      return null;
-    if (m.slot < 0 || m.slot > 41 || m.value < 0 || m.value > 127) return null;
-    const cmd = { cmd: m.cmd, slot: m.slot, value: m.value };
-    if (JSON.stringify(cmd).length > MAX_MSG_LEN) return null;
-    return cmd;
+async function runCli(argv = process.argv, injected = {}) {
+  if (argv.includes('--help') || argv.includes('-h')) {
+    printUsage();
+    process.exit(0);
   }
 
-  // MIDI setup lives in a reconnect loop because ports come and go.
-  const midi = JZZ();
-  let midiOut, midiIn;
-  function connectMidi() {
-    // Try to grab a MIDI out port.
-    midiOut = midi.openMidiOut(midiLabel).or(() => {
-      console.error('MIDI out failed');
-      setTimeout(connectMidi, 1000);
-    });
-    if (midiOut && typeof midiOut.on === 'function') {
-      midiOut.on('error', (err) => {
-        // If the port dies mid-set, complain and retry.
-        console.error('MIDI out error:', err.message);
-        setTimeout(connectMidi, 1000);
-      });
+  let config;
+  try {
+    config = parseConfigFromArgv(argv);
+  } catch (err) {
+    console.error(err.message);
+    if (err.showUsage) {
+      printUsage(process.stderr);
     }
-    // And the matching MIDI in port.
-    midiIn = midi.openMidiIn(midiLabel).or(() => {
-      console.error('MIDI in failed');
-      setTimeout(connectMidi, 1000);
-    });
-    if (midiIn && typeof midiIn.on === 'function') {
-      midiIn.on('error', (err) => {
-        console.error('MIDI in error:', err.message);
-        setTimeout(connectMidi, 1000);
-      });
-    }
-    // Pipe incoming MIDI CCs back to the hardware.
-    midiIn &&
-      midiIn.connect((msg) => {
-        const arr = msg.toArray();
-        if ((arr[0] & 0xf0) === 0xb0) {
-          const cmd = validateCmd({
-            cmd: 'SET_POT',
-            slot: arr[1],
-            value: arr[2],
-          });
-          if (cmd) serial.write(JSON.stringify(cmd) + '\n');
-          else console.warn('dropping bad MIDI CC', arr);
-        }
-      });
+    process.exit(1);
   }
-  connectMidi();
 
-  // Listen for OSC commands coming in hot.
-  udp.on('message', (msg) => {
-    if (msg.address === '/mn42/cmd' && msg.args.length) {
-      let data = msg.args[0];
-      if (typeof data === 'string') {
-        if (data.length > MAX_MSG_LEN) {
-          console.warn('OSC cmd too big');
-          return;
-        }
-        try {
-          data = JSON.parse(data);
-        } catch {
-          console.warn('bad OSC JSON');
-          return;
-        }
-      }
-      if (JSON.stringify(data).length > MAX_MSG_LEN) {
-        console.warn('OSC cmd too big');
-        return;
-      }
-      const cmd = validateCmd(data);
-      if (cmd) serial.write(JSON.stringify(cmd) + '\n');
-      else console.warn('bad OSC cmd', data);
-    }
-  });
-
-  // Relay serial reports back out over OSC and MIDI.
-  let ready = false;
-  parser.on('data', (line) => {
-    line = line.trim();
-    if (!ready) {
-      if (line === '{"hello":"mn42"}') ready = true;
-      return;
-    }
-    if (line.length > MAX_MSG_LEN) {
-      console.warn('serial packet too big');
-      return;
-    }
-    let data;
-    try {
-      data = JSON.parse(line);
-    } catch {
-      console.warn('bad serial JSON');
-      return;
-    }
-    if (data.slots) {
-      udp.send({ address: '/mn42/slots', args: data.slots }, oscHost, oscPort);
-      midiOut && data.slots.forEach((v, i) => midiOut.send([0xb0, i, v]));
-    }
-    if (data.envelopes) {
-      udp.send(
-        { address: '/mn42/envelopes', args: data.envelopes },
-        oscHost,
-        oscPort,
-      );
-      midiOut && data.envelopes.forEach((v, i) => midiOut.send([0xb1, i, v]));
-    }
-  });
+  const service = createBridgeService(config, injected);
+  bindConsoleLogging(service);
+  await service.start();
+  return service;
 }
 
-// Top-level catch: if all else fails, crash loud.
-main().catch((err) => {
+runCli().catch((err) => {
   console.error('bridge failed:', err.message);
   process.exit(1);
 });
+
+module.exports = {
+  runCli,
+};

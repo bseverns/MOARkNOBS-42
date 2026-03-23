@@ -1,6 +1,6 @@
 # MN42 Bridge
 
-The MN42 Bridge is a Node.js CLI that connects MOARkNOBS-42 hardware to OSC apps and virtual MIDI ports.
+The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows.
 
 Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a DAW-facing virtual MIDI port. Start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) if you are deciding between them.
 
@@ -12,7 +12,7 @@ It does three things:
 
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
-## Quick start (musician-friendly)
+## Quick start (browser console)
 
 ### 1) Install prerequisites
 
@@ -31,13 +31,53 @@ Or from `bridge/`:
 npm ci
 ```
 
-### 2) Find your serial port
+### 2) Start the local bridge console
+
+From repo root:
+
+```bash
+npm --prefix bridge start
+```
+
+Or from `bridge/`:
+
+```bash
+npm start
+```
+
+By default the console is served at <http://127.0.0.1:8787/>.
+
+### 3) Open the bridge console in your browser
+
+Use the browser page to:
+
+- choose or type the serial port,
+- set OSC send/listen ports,
+- set the virtual MIDI label,
+- start or stop the bridge,
+- launch the full configurator over the bridge transport.
+
+The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and virtual MIDI stay active.
+
+### 4) Confirm it is live
+
+After startup, the bridge sends `HELLO` over serial and waits for:
+
+```json
+{ "hello": "mn42" }
+```
+
+When the handshake arrives, slot/envelope updates begin forwarding and the browser console reports the device as ready.
+
+## Quick start (CLI)
+
+### 1) Find your serial port
 
 - macOS: `ls /dev/cu.usbmodem*`
 - Linux: `ls /dev/ttyACM* /dev/ttyUSB*`
 - Windows PowerShell: `Get-CimInstance Win32_SerialPort | Select-Object DeviceID,Name`
 
-### 3) Start the bridge
+### 2) Start the bridge
 
 From repo root:
 
@@ -52,16 +92,6 @@ node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --host 12
 ```
 
 Replace `/dev/ttyACM0` with your device path.
-
-### 4) Confirm it is live
-
-After startup, the bridge sends `HELLO` over serial and waits for:
-
-```json
-{ "hello": "mn42" }
-```
-
-When the handshake arrives, slot/envelope updates begin forwarding.
 
 ## Everyday workflows
 
@@ -146,6 +176,21 @@ The bridge drops messages that do not match the contract.
 | `--bind`       | `-b`  | `127.0.0.1`    | Local interface for inbound OSC listener |
 | `--midi`       | `-m`  | `MN42 Bridge`  | Virtual MIDI port label                  |
 
+## Browser console reference
+
+The browser console uses the same bridge core and adds:
+
+- local control page: `http://127.0.0.1:8787/`
+- bundled configurator: `http://127.0.0.1:8787/app/`
+- bridge transport websocket: `ws://127.0.0.1:8787/ws`
+
+The console accepts the same serial/OSC/MIDI settings as the CLI, plus:
+
+| Flag          | Default     | Purpose                                          |
+| ------------- | ----------- | ------------------------------------------------ |
+| `--http-host` | `127.0.0.1` | Host interface for the browser console           |
+| `--http-port` | `8787`      | Port for the browser console and `/ws` transport |
+
 ### Split send/receive ports
 
 ```bash
@@ -182,7 +227,7 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 
 ## Packaging status (for non-command-line users)
 
-Current state: the bridge is a Node CLI and is not yet shipped as a one-click installer.
+Current state: the bridge has a browser-based local control surface, but it is still launched from Node.js and is not yet shipped as a signed one-click installer.
 
 If demand grows, this is the practical path:
 
@@ -201,6 +246,7 @@ For a show-day quick reference, see [`docs/BridgeForPerformers.md`](../docs/Brid
 From `bridge/`:
 
 ```bash
+npm run ci
 npm run release:prep
 npm run lint
 npm run format
@@ -208,7 +254,7 @@ npm run format
 npm run package:bridge
 ```
 
-`release:prep` runs the bridge test suite and CLI smoke checks before packaging.
+`npm run ci` runs the split bridge coverage lanes plus both entrypoint smoke checks. `release:prep` uses the same path before packaging.
 
 ## License
 
