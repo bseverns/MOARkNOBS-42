@@ -73,6 +73,8 @@ nav:
   - Home: index.md
   - Start Here:
       - New User Story: StartHere.md
+      - Why MN42: WhyMN42.md
+      - Pilot Run / Artist Edition: PilotRun.md
       - Quickstart for Builders: QuickstartForBuilders.md
       - Quickstart for Performers: QuickstartForPerformers.md
       - Validation Flow: ValidationFlow.md
