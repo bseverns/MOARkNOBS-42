@@ -15,6 +15,10 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const osc = require(path.resolve(__dirname, '../../bridge/node_modules/osc'));
+const { SerialPort, ReadlineParser } = require(path.resolve(
+  __dirname,
+  '../../bridge/node_modules/serialport',
+));
 
 const args = process.argv.slice(2);
 function argValue(flag, fallback) {
@@ -23,6 +27,9 @@ function argValue(flag, fallback) {
     return args[index + 1];
   }
   return fallback;
+}
+function hasFlag(flag) {
+  return args.includes(flag);
 }
 
 const envSerial = process.env.MN42_SERIAL || process.env.TEST_PORT;
@@ -35,6 +42,11 @@ const midiLabel = argValue('--midi', process.env.MN42_MIDI || 'MN42 Bridge Syste
 const reportPath = argValue('--report', process.env.MN42_REPORT || '');
 const scenarioTimeoutMs = parseInt(argValue('--timeout', process.env.MN42_SCENARIO_TIMEOUT || '12000'), 10);
 const commandTimeoutMs = parseInt(argValue('--command-timeout', process.env.MN42_COMMAND_TIMEOUT || '8000'), 10);
+const profileSlot = parseInt(argValue('--profile-slot', process.env.MN42_PROFILE_SLOT || '3'), 10);
+const sceneSlot = parseInt(argValue('--scene-slot', process.env.MN42_SCENE_SLOT || '5'), 10);
+const potIndex = parseInt(argValue('--pot-index', process.env.MN42_POT_INDEX || '0'), 10);
+const exerciseStorage = hasFlag('--exercise-storage') || process.env.MN42_EXERCISE_STORAGE === '1';
+const SERIAL_BAUD = 115200;
 
 if (!serialPath) {
   console.error('[system-test] Missing serial port. Pass --serial or set MN42_SERIAL/TEST_PORT.');
@@ -53,6 +65,14 @@ function parseArgs(message) {
     }
     return arg;
   });
+}
+
+function parseJsonLine(line) {
+  try {
+    return JSON.parse(line);
+  } catch (_) {
+    return null;
+  }
 }
 
 function waitForPortReady(port) {
@@ -107,6 +127,354 @@ function waitForMessage(port, address, timeoutMs, predicate) {
 
     port.on('message', handler);
   });
+}
+
+function waitForSerialOpen(port) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Serial port failed to open in time')), 5000);
+    port.once('open', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    port.once('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    port.open();
+  });
+}
+
+function waitForSerialLine(parser, timeoutMs, predicate, description) {
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        parser.removeListener('data', handler);
+        reject(new Error(`Timeout waiting for serial response: ${description}`));
+      }
+    }, timeoutMs);
+
+    function handler(rawLine) {
+      const line = String(rawLine || '').trim();
+      if (!line) return;
+      console.log(`[system-test:serial] ${line}`);
+      try {
+        if (!predicate || predicate(line)) {
+          if (!done) {
+            done = true;
+            clearTimeout(timer);
+            parser.removeListener('data', handler);
+            resolve(line);
+          }
+        }
+      } catch (err) {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          parser.removeListener('data', handler);
+          reject(err);
+        }
+      }
+    }
+
+    parser.on('data', handler);
+  });
+}
+
+async function openSerialClient(portPath) {
+  const serial = new SerialPort({
+    path: portPath,
+    baudRate: SERIAL_BAUD,
+    autoOpen: false,
+  });
+  const parser = serial.pipe(new ReadlineParser({ delimiter: '\n' }));
+  await waitForSerialOpen(serial);
+  return { serial, parser };
+}
+
+function writeSerialLine(serial, line) {
+  return new Promise((resolve, reject) => {
+    serial.write(`${line}\n`, (err) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+async function sendSerialLine(serialClient, line, predicate, timeoutMs = commandTimeoutMs) {
+  const wait = waitForSerialLine(serialClient.parser, timeoutMs, predicate, line);
+  await writeSerialLine(serialClient.serial, line);
+  return wait;
+}
+
+async function sendSerialJson(serialClient, line, predicate, timeoutMs = commandTimeoutMs) {
+  const raw = await sendSerialLine(
+    serialClient,
+    line,
+    (serialLine) => {
+      const json = parseJsonLine(serialLine);
+      return json && (!predicate || predicate(json));
+    },
+    timeoutMs,
+  );
+  return parseJsonLine(raw);
+}
+
+async function closeSerialClient(serialClient) {
+  if (!serialClient || !serialClient.serial) return;
+  await new Promise((resolve) => {
+    serialClient.serial.close(() => resolve());
+  });
+}
+
+async function runStorageScenarios(scenarios) {
+  if (!exerciseStorage) {
+    scenarios.push({
+      id: 'storage-smoke-armed',
+      title: 'EEPROM storage smoke path is available',
+      ok: true,
+      detail:
+        'Skipped destructive storage checks. Re-run with --exercise-storage on sacrificial profile/scene slots to prove profile, macro, and scene persistence.',
+    });
+    return;
+  }
+
+  const serialClient = await openSerialClient(serialPath);
+  let baselinePot = null;
+  let activeProfile = 0;
+  let originalProfile = null;
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    const hello = await sendSerialJson(
+      serialClient,
+      'HELLO',
+      (json) => json.hello === 'mn42',
+      scenarioTimeoutMs,
+    );
+    scenarios.push({
+      id: 'serial-hello',
+      title: 'Direct serial control lane answers HELLO',
+      ok: true,
+      detail: `Device replied with hello=${hello.hello}`,
+    });
+
+    const activeProfileDoc = await sendSerialJson(
+      serialClient,
+      'GET_PROFILE',
+      (json) => Number.isInteger(json.profile) && Array.isArray(json.slots),
+      scenarioTimeoutMs,
+    );
+    activeProfile = activeProfileDoc.profile;
+
+    originalProfile = await sendSerialJson(
+      serialClient,
+      `GET_PROFILE,${profileSlot}`,
+      (json) => json.profile === profileSlot && Array.isArray(json.slots),
+      scenarioTimeoutMs,
+    );
+
+    const baselineConfig = await sendSerialJson(
+      serialClient,
+      'GET_CONFIG',
+      (json) => Array.isArray(json.pots),
+      scenarioTimeoutMs,
+    );
+    baselinePot = baselineConfig.pots[potIndex];
+
+    const savedChannel = baselinePot && Number.isInteger(baselinePot.channel) ? baselinePot.channel : 2;
+    const savedCc = baselinePot && Number.isInteger(baselinePot.cc) ? baselinePot.cc : 74;
+    const altChannel = savedChannel === 16 ? 15 : savedChannel + 1;
+    const altCc = savedCc === 127 ? 0 : savedCc + 1;
+
+    await sendSerialLine(
+      serialClient,
+      `SET_POT,${potIndex},${savedChannel},${savedCc}`,
+      (line) => line === 'Pot configuration updated!',
+    );
+    const saveProfile = await sendSerialJson(
+      serialClient,
+      `SAVE_PROFILE,${profileSlot}`,
+      (json) => json.profile_saved === true && json.profile === profileSlot,
+      scenarioTimeoutMs,
+    );
+
+    await sendSerialLine(
+      serialClient,
+      `SET_POT,${potIndex},${altChannel},${altCc}`,
+      (line) => line === 'Pot configuration updated!',
+    );
+    const loadProfile = await sendSerialJson(
+      serialClient,
+      `LOAD_PROFILE,${profileSlot}`,
+      (json) => json.profile_loaded === true && json.profile === profileSlot,
+      scenarioTimeoutMs,
+    );
+    const loadedConfig = await sendSerialJson(
+      serialClient,
+      'GET_CONFIG',
+      (json) => Array.isArray(json.pots),
+      scenarioTimeoutMs,
+    );
+    const loadedPot = loadedConfig.pots[potIndex];
+    if (!loadedPot || loadedPot.channel !== savedChannel || loadedPot.cc !== savedCc) {
+      throw new Error(
+        `Profile load did not restore pot ${potIndex}; saw ${JSON.stringify(loadedPot)}`,
+      );
+    }
+
+    const resetProfile = await sendSerialJson(
+      serialClient,
+      `RESET_PROFILE,${profileSlot}`,
+      (json) => json.profile_reset === true && json.profile === profileSlot,
+      scenarioTimeoutMs,
+    );
+    const resetConfig = await sendSerialJson(
+      serialClient,
+      'GET_CONFIG',
+      (json) => Array.isArray(json.pots),
+      scenarioTimeoutMs,
+    );
+    const resetPot = resetConfig.pots[potIndex];
+    if (!resetPot || resetPot.channel !== 1 || resetPot.cc !== 0) {
+      throw new Error(`Profile reset did not restore defaults; saw ${JSON.stringify(resetPot)}`);
+    }
+
+    scenarios.push({
+      id: 'profile-storage',
+      title: 'Profile save/load/reset survives a direct serial round-trip',
+      ok: true,
+      detail: `SAVE=${saveProfile.profile_saved} LOAD=${loadProfile.profile_loaded} RESET=${resetProfile.profile_reset} on profile slot ${profileSlot}`,
+    });
+
+    await sendSerialLine(
+      serialClient,
+      `SET_POT,${potIndex},${savedChannel},${savedCc}`,
+      (line) => line === 'Pot configuration updated!',
+    );
+    const savedMacro = await sendSerialJson(
+      serialClient,
+      'SAVE_MACRO_SLOT',
+      (json) => json.macro_saved === true,
+      scenarioTimeoutMs,
+    );
+    await sendSerialLine(
+      serialClient,
+      `SET_POT,${potIndex},${altChannel},${altCc}`,
+      (line) => line === 'Pot configuration updated!',
+    );
+    const recalledMacro = await sendSerialJson(
+      serialClient,
+      'RECALL_MACRO_SLOT',
+      (json) => json.macro_recalled === true,
+      scenarioTimeoutMs,
+    );
+    const macroConfig = await sendSerialJson(
+      serialClient,
+      'GET_CONFIG',
+      (json) => Array.isArray(json.pots),
+      scenarioTimeoutMs,
+    );
+    const macroPot = macroConfig.pots[potIndex];
+    if (!macroPot || macroPot.channel !== savedChannel || macroPot.cc !== savedCc) {
+      throw new Error(`Macro recall did not restore pot ${potIndex}; saw ${JSON.stringify(macroPot)}`);
+    }
+
+    scenarios.push({
+      id: 'macro-storage',
+      title: 'Macro snapshot save/recall restores live state',
+      ok: true,
+      detail: `macro_saved=${savedMacro.macro_saved} macro_recalled=${recalledMacro.macro_recalled}`,
+    });
+
+    const sceneName = `Bench ${sceneSlot + 1}`;
+    const saveScene = await sendSerialJson(
+      serialClient,
+      JSON.stringify({ cmd: 'SAVE_SCENE', slot: sceneSlot, name: sceneName }),
+      (json) => json.cmd === 'SAVE_SCENE' && json.scene_saved === true && json.scene_slot === sceneSlot,
+      scenarioTimeoutMs,
+    );
+    await sendSerialLine(
+      serialClient,
+      `SET_POT,${potIndex},${altChannel},${altCc}`,
+      (line) => line === 'Pot configuration updated!',
+    );
+    const recallScene = await sendSerialJson(
+      serialClient,
+      JSON.stringify({ cmd: 'RECALL_SCENE', slot: sceneSlot }),
+      (json) =>
+        json.cmd === 'RECALL_SCENE' && json.scene_recalled === true && json.scene_slot === sceneSlot,
+      scenarioTimeoutMs,
+    );
+    const sceneList = await sendSerialJson(
+      serialClient,
+      JSON.stringify({ cmd: 'GET_SCENES' }),
+      (json) => json.cmd === 'GET_SCENES' && Array.isArray(json.scenes),
+      scenarioTimeoutMs,
+    );
+    const listedScene = sceneList.scenes.find((entry) => entry.slot === sceneSlot);
+    if (!listedScene || !listedScene.available || listedScene.name !== saveScene.scene_name) {
+      throw new Error(`Scene inventory does not match saved scene slot ${sceneSlot}`);
+    }
+    const sceneConfig = await sendSerialJson(
+      serialClient,
+      'GET_CONFIG',
+      (json) => Array.isArray(json.pots),
+      scenarioTimeoutMs,
+    );
+    const scenePot = sceneConfig.pots[potIndex];
+    if (!scenePot || scenePot.channel !== savedChannel || scenePot.cc !== savedCc) {
+      throw new Error(`Scene recall did not restore pot ${potIndex}; saw ${JSON.stringify(scenePot)}`);
+    }
+
+    scenarios.push({
+      id: 'scene-storage',
+      title: 'Scene save/recall and inventory reporting stay coherent',
+      ok: true,
+      detail: `scene_saved=${saveScene.scene_saved} scene_recalled=${recallScene.scene_recalled} on scene slot ${sceneSlot}`,
+    });
+  } finally {
+    try {
+      if (baselinePot) {
+        await sendSerialLine(
+          serialClient,
+          `SET_POT,${potIndex},${baselinePot.channel},${baselinePot.cc}`,
+          (line) => line === 'Pot configuration updated!',
+          scenarioTimeoutMs,
+        );
+      }
+      if (originalProfile && originalProfile.stored) {
+        const restorePayload = JSON.stringify(originalProfile);
+        await sendSerialLine(
+          serialClient,
+          `SET_PROFILE,${profileSlot},${restorePayload}`,
+          (line) => line === 'OK',
+          scenarioTimeoutMs,
+        );
+      }
+      if (Number.isInteger(activeProfile)) {
+        await sendSerialJson(
+          serialClient,
+          `LOAD_PROFILE,${activeProfile}`,
+          (json) => json.profile_loaded === true && json.profile === activeProfile,
+          scenarioTimeoutMs,
+        );
+      }
+    } catch (err) {
+      scenarios.push({
+        id: 'storage-restore-warning',
+        title: 'Storage smoke cleanup warning',
+        ok: false,
+        detail: err.message,
+      });
+    }
+    await closeSerialClient(serialClient);
+  }
 }
 
 async function main() {
@@ -270,6 +638,18 @@ async function main() {
     rxPort.close();
     bridge.kill('SIGINT');
     await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  try {
+    await runStorageScenarios(scenarios);
+  } catch (err) {
+    scenarios.push({
+      id: `storage-error-${scenarios.length + 1}`,
+      title: 'Storage scenario failure',
+      ok: false,
+      detail: err.message,
+    });
+    console.error(`[system-test] Storage scenarios failed: ${err.message}`);
   }
 
   if (bridgeExitCode !== null) {

@@ -1,6 +1,7 @@
 #include "unity_config.h"
 #include <unity.h>
 
+#include "ConfigManager.h"
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Protocol.h"

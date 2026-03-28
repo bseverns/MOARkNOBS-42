@@ -4,7 +4,7 @@ This page explains what a pilot run means in the context of MOARkNOBS-42.
 
 It is not a pricing page and it is not a promise of public order timing. If a public signup or interest-list URL exists later, it should be added here explicitly.
 
-`TODO — add public interest-list URL when one exists.`
+As of this repo pass, no public interest-list or order URL is published here.
 
 ## What a pilot run means here
 

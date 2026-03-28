@@ -126,7 +126,7 @@ Use one of these statuses in notes, issues, or release prep:
 | `bring-up validated` | Boot, handshake, and basic controls are proven. |
 | `demo-ready` | Intended workflow, stress pass, and recovery path are proven on the actual setup. |
 | `release-readiness candidate` | Demo-ready plus repeatable manufacturing/support evidence is being assembled. |
-| `release-ready` | `TODO — define only after manufacturing package, bench evidence, and support boundaries are explicitly signed off in the repo.` |
+| `release-ready` | Reserved status. Do not use it until the manufacturing package, bench evidence, and support boundaries are explicitly signed off in the repo. |
 
 ## 8. Decide the next action
 

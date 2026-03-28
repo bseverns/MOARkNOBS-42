@@ -13,7 +13,7 @@ Unless a section says otherwise, commands below assume you are running from the 
 | App seam regressions | `npm --prefix App test` | Host machine only | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware. |
 | Manual firmware sketches | `pio -d firmware run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc. |
 | Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
-| System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC/MIDI host-control ↔ firmware handshake, live slot poke, and keep-alive proof with artifact logs. |
+| System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC/MIDI host-control proof plus optional destructive EEPROM smoke checks for profile/macro/scene recovery on real hardware. |
 
 ## If your goal is demo readiness rather than code confidence
 
@@ -40,6 +40,7 @@ This is the practical answer to "what is actually tested?" for the current stack
 | Browser configurator transport + capability gating | Covered | App Playwright | Simulator UX, native `HELLO/GET_*/SET_ALL` adaptation, device-backed profile/macro/scene command mapping, older-firmware capability gating, and browser-local slot metadata are covered without hardware. |
 | Bridge CLI parsing/error handling | Covered | Node tests | Host-side sanity only; this does not prove live firmware transport timing. |
 | Full OSC/MIDI host-control ↔ firmware loop | Partial automated | System runner | Requires real hardware plus the bridge process. Good release gate, not the fastest inner-loop test. |
+| Profile/macro/scene recovery flows on real hardware | Scripted, bench required | System runner with `--exercise-storage` | Uses direct serial commands after the bridge pass to prove EEPROM-backed save/load/reset and snapshot recall. Intentionally destructive unless you point it at sacrificial slots. |
 | `firmware_main.cpp` boot composition and final hardware bring-up | Not in Unity | Manual / real hardware | Unity does not prove the actual production boot path end-to-end. |
 | OLED rendering, LED electrical behavior, mux noise, pot feel, EEPROM behavior on a real board | Manual only | Manual sketches / bench testing | These need a physical controller and human observation. |
 
@@ -272,6 +273,20 @@ When you need to prove the whole stack plays nice, you move up to the full-syste
    ```
 
    Override serial or OSC ports with flags/env vars when your bench rig isn’t on the defaults. The command exits non-zero when any scenario flakes and writes both JSON + text logs so CI (or your lab notebook) can archive the receipts.
+
+4. When you want the destructive storage smoke pass too, re-run with sacrificial slots:
+
+   ```bash
+   node firmware/system_test/mn42_fullstack_runner.js \
+     --serial /dev/ttyACM0 \
+     --exercise-storage \
+     --profile-slot 3 \
+     --scene-slot 5 \
+     --pot-index 0 \
+     --report logs/system-test-storage.json | tee logs/system-test-storage.log
+   ```
+
+   This path overwrites the selected profile slot, the single macro snapshot, and the selected scene slot. Use slots you are willing to burn, or restore them afterward as part of the bench ritual.
 
 ### Environment expectations
 
