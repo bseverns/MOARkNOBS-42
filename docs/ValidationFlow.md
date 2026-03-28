@@ -22,6 +22,7 @@ From the repo root:
 
 ```bash
 pio -d firmware test -e teensy40_unity -vvv
+npm --prefix App test
 npm --prefix bridge test
 python3 tools/check_markdown_links.py
 python3 tools/check_wiki_contract.py
@@ -58,7 +59,8 @@ Required proof:
 - configurator connects
 - manifest/config load succeeds
 - one staged edit applies cleanly
-- one profile save/load cycle succeeds
+- on current firmware, one device-backed profile save/load cycle succeeds
+- if those controls are disabled, treat it as stale firmware, a failed handshake, or an offline device and use download/upload as the fallback backup path
 
 ### Bridge path
 
@@ -69,7 +71,7 @@ Required proof:
 - bridge starts
 - bridge console connects to the board
 - configurator works through the bridge path if that workflow is intended
-- at least one real OSC or virtual MIDI command reaches the board
+- at least one real OSC or virtual MIDI command reaches the board through the live-control command path
 
 Outcome:
 
@@ -106,7 +108,8 @@ Required proof:
 - no stuck-note or stuck-state failure during the intended workflow
 - one deliberate recovery action works:
   - reconnect
-  - reload profile
+  - reload profile through the device-backed path
+  - file import/export restore if you are validating an older firmware build that does not advertise browser profile actions
   - panic/reset path
 
 Outcome:

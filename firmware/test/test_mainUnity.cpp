@@ -26,6 +26,9 @@ void test_profile_bounds_clamp();
 void test_lowpass_highpass_response();
 void test_system_report();
 void test_dispatch_handles_known_command();
+void test_dispatch_handles_live_slot_injection_command();
+void test_dispatch_handles_profile_save_load_reset_commands();
+void test_dispatch_handles_macro_and_scene_snapshot_commands();
 void test_dispatch_rejects_unknown_command();
 void test_scoped_analog_provider_nesting();
 void test_sequence_provider_cycles_values();
@@ -184,6 +187,9 @@ void setup() {
     RUN_TEST(test_lowpass_highpass_response);
     RUN_TEST(test_system_report);
     RUN_TEST(test_dispatch_handles_known_command);
+    RUN_TEST(test_dispatch_handles_live_slot_injection_command);
+    RUN_TEST(test_dispatch_handles_profile_save_load_reset_commands);
+    RUN_TEST(test_dispatch_handles_macro_and_scene_snapshot_commands);
     RUN_TEST(test_dispatch_rejects_unknown_command);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
     RUN_TEST(test_program_change);

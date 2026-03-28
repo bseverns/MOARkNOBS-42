@@ -13,7 +13,7 @@
       "maxItems": 42,
       "items": {
         "type": "object",
-        "required": ["type", "midiChannel", "data1", "efIndex", "active", "pot"],
+        "required": ["type", "midiChannel", "data1", "efIndex", "active"],
         "properties": {
           "type": {
             "type": "string",
@@ -85,9 +85,6 @@
             "additionalProperties": false
           },
           "active": { "type": "boolean", "title": "Enabled" },
-          "pot": { "type": "boolean", "title": "Knob sends MIDI" },
-          "label": { "type": "string", "title": "Slot label" },
-          "takeover": { "type": "boolean", "title": "Take Control (pickup)" },
           "sysexTemplate": {
             "type": "string",
             "title": "SysEx template",

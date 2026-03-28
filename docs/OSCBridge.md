@@ -28,7 +28,7 @@ Then:
 Send one command to set slot 2 to 95:
 
 ```bash
-oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}'
 ```
 
 ## Virtual MIDI example

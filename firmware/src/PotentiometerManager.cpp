@@ -109,6 +109,21 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
+void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue) {
+    if (potIndex >= NUM_POTS) {
+        return;
+    }
+    const uint8_t bounded = static_cast<uint8_t>(constrain(static_cast<int>(midiValue), 0, 127));
+    const uint16_t rawValue =
+        static_cast<uint16_t>(map(static_cast<int>(bounded), 0, 127, 0, 1023));
+    potLastValues[potIndex] = static_cast<int>(rawValue);
+    smoothedValue[potIndex] = static_cast<int>(rawValue);
+    dirtyFlags[potIndex] = true;
+    if (midiCallback) {
+        midiCallback(getCCNumber(potIndex), bounded, rawValue, potIndex);
+    }
+}
+
 void PotentiometerManager::processPots(LedAnimator &ledAnimator,
                                        std::vector<EnvelopeFollower> &envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {

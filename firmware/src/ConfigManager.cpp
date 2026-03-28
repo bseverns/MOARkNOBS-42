@@ -614,6 +614,13 @@ void ConfigManager::setPotChannel(uint8_t potIndex, uint8_t channel) {
 void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
     if (potIndex < _numPots) {
         _stored.potCCNumbers[potIndex] = ccNumber;
+        if (potIndex < slots.size()) {
+            MIDISlot &slot = slots[potIndex];
+            if (slot.data1 != ccNumber) {
+                slot.data1 = ccNumber;
+                saveSlot(potIndex, slot);
+            }
+        }
     }
 }
 

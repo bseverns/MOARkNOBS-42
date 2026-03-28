@@ -61,7 +61,7 @@ async function run() {
   require('../mn42_bridge.js');
   await new Promise((r) => setTimeout(r, 100)); // let UDP and serial settle
 
-  // Fire an OSC command and ensure it becomes a serial JSON line.
+  // Fire an OSC command and ensure it becomes the firmware's live-slot command.
   const udp = new osc.UDPPort({
     localAddress: '127.0.0.1',
     localPort: 0,
@@ -70,24 +70,24 @@ async function run() {
   });
   udp.open();
   await new Promise((resolve) => udp.on('ready', resolve));
-  const cmd = { cmd: 'SET_POT', slot: 2, value: 42 };
+  const cmd = { cmd: 'SET_SLOT_VALUE', slot: 2, value: 42 };
   udp.send({ address: '/mn42/cmd', args: JSON.stringify(cmd) });
   await new Promise((r) => setTimeout(r, 100));
   assert.ok(
-    writes.includes(JSON.stringify(cmd) + '\n'),
-    'OSC cmd should hit serial',
+    writes.includes('SET_SLOT_VALUE,2,42\n'),
+    'OSC cmd should hit serial as a firmware command',
   );
 
-  // Now spoof a MIDI CC that should trigger the same JSON payload.
+  // Now spoof a MIDI CC that should trigger the same firmware command lane.
   midiHandler({ toArray: () => [0xb0, 3, 77] });
   await new Promise((r) => setTimeout(r, 100));
   assert.ok(
-    writes.includes('{"cmd":"SET_POT","slot":3,"value":77}\n'),
-    'MIDI CC should forward SET_POT JSON',
+    writes.includes('SET_SLOT_VALUE,3,77\n'),
+    'MIDI CC should forward SET_SLOT_VALUE',
   );
 
   udp.close();
-  console.log('OSC and MIDI shove JSON at serial like champs');
+  console.log('OSC and MIDI drive the firmware live-value command lane');
   process.exit(0);
 }
 

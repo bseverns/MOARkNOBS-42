@@ -11,8 +11,9 @@ you wire up scripts. Think of these as end-to-end stories the automated runner w
 
 1. **Handshake & heartbeat** – `mn42_bridge.js` should auto-fire `HELLO`, wait for the board’s `{"hello":"mn42"}` reply, and
    stream `/mn42/slots` + `/mn42/envelopes` snapshots. No stream, no party.
-2. **OSC command loop** – sling `/mn42/cmd` with `{ "cmd": "SET_POT", "slot": N, "value": V }`. The bridge must validate the
-   JSON, push it over WebSerial, and the firmware should report the new value in the next `/mn42/slots` burst.
+2. **OSC command loop** – sling `/mn42/cmd` with `{ "cmd": "SET_SLOT_VALUE", "slot": N, "value": V }`. The bridge must validate
+   the JSON, translate it to the firmware text command `SET_SLOT_VALUE,<slot>,<value>`, and the firmware should report the new
+   value in the next `/mn42/slots` burst.
 3. **Keep-alive sanity** – once streaming, periodic snapshots should keep landing without re-sending `HELLO`. If packets stop,
    the bridge should whine in its stdout and attempt a reconnect.
 

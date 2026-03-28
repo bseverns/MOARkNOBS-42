@@ -59,7 +59,7 @@ function parseConfigFromArgv(argv = process.argv) {
 function validateCmd(m) {
   if (
     !m ||
-    typeof m.cmd !== 'string' ||
+    m.cmd !== 'SET_SLOT_VALUE' ||
     !Number.isInteger(m.slot) ||
     !Number.isInteger(m.value)
   ) {
@@ -69,6 +69,10 @@ function validateCmd(m) {
   const cmd = { cmd: m.cmd, slot: m.slot, value: m.value };
   if (JSON.stringify(cmd).length > MAX_MSG_LEN) return null;
   return cmd;
+}
+
+function formatLiveValueCommand(cmd) {
+  return `SET_SLOT_VALUE,${cmd.slot},${cmd.value}`;
 }
 
 function clone(value) {
@@ -338,7 +342,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         pushLog('warn', 'bad OSC cmd', data);
         return;
       }
-      sendLine(JSON.stringify(cmd));
+      sendLine(formatLiveValueCommand(cmd));
     });
 
     udp.open();
@@ -380,7 +384,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         const arr = msg.toArray();
         if ((arr[0] & 0xf0) !== 0xb0) return;
         const cmd = validateCmd({
-          cmd: 'SET_POT',
+          cmd: 'SET_SLOT_VALUE',
           slot: arr[1],
           value: arr[2],
         });
@@ -388,7 +392,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
           pushLog('warn', 'dropping bad MIDI CC', arr);
           return;
         }
-        sendLine(JSON.stringify(cmd));
+        sendLine(formatLiveValueCommand(cmd));
       });
     }
   }
@@ -545,4 +549,5 @@ module.exports = {
   parseConfigFromArgv,
   createBridgeService,
   validateCmd,
+  formatLiveValueCommand,
 };

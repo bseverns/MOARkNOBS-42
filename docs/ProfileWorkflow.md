@@ -61,13 +61,22 @@ flowchart LR
 
 Use this when the current live state is good and you want it to persist in the selected slot.
 
+On current firmware this writes the selected device slot directly over the native `SAVE_PROFILE` path.
+If the browser disables this button, treat that as a stale firmware or disconnected-session clue rather than a hidden feature flag. Use **Download profile** for a file backup until the device reconnects cleanly.
+
 ### Load profile
 
 Use this when you want to recall the saved EEPROM state from the selected slot and make it active again.
 
+On current firmware this recalls the selected device slot through `LOAD_PROFILE` and makes that slot active.
+If this control is disabled, the browser is usually protecting you from stale firmware, a disconnected device, or a failed handshake.
+
 ### Reset profile
 
 Use this when you want to wipe the selected slot back to its baseline/default state.
+
+On current firmware this restores the selected slot to the firmware baseline through `RESET_PROFILE`, then marks that slot active.
+If this control is disabled, reconnect first and confirm the manifest loaded; do not assume the slot was reset remotely.
 
 ### Download profile
 
@@ -108,6 +117,14 @@ Use one slot as a permanent baseline so you always have a clean place to recover
 - export when you want a file
 - save profile when you want on-device recall
 
+### "The profile buttons are disabled even though this repo says they are supported"
+
+That usually means one of three things:
+
+- you are not connected
+- the manifest handshake did not complete
+- the board is running older firmware than the current app/docs expect
+
 ## Suggested slot roles
 
 For many users this simple scheme is enough:
@@ -126,4 +143,4 @@ The point is not the labels themselves. The point is that every slot should have
 - [Musician-First Guide](MusicianFirstGuide.md) for the rehearsal-first version of this workflow
 - [Preset Library](PresetLibrary.md) for browser-side starting points
 - [Failure-First Guide](FailureFirst.md) for what to do when profile actions feel confusing
-- [WebSerial Protocol](WebSerial.md) for the underlying `GET_PROFILE` / `SET_PROFILE` behavior
+- [WebSerial Protocol](WebSerial.md) for the underlying `GET_PROFILE` / `SET_PROFILE` snapshot behavior

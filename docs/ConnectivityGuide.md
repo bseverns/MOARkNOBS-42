@@ -70,6 +70,9 @@ And it accepts commands at:
 
 - `/mn42/cmd`
 
+For live slot control, send JSON shaped like
+`{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}`.
+
 ## Minimal compatibility matrix
 
 | Workflow | What is required | Status in this repo pass | Notes |

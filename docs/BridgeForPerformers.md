@@ -26,7 +26,7 @@ If your serial path differs, replace `/dev/ttyACM0`.
 Example command:
 
 ```bash
-oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}'
 ```
 
 ### DAW workflow (virtual MIDI)
@@ -51,7 +51,7 @@ Bridge MIDI mapping:
 - **No data at all**: wrong serial path or cable; replug and restart bridge.
 - **DAW sees nothing**: relaunch DAW after bridge starts.
 - **OSC not responding**: wrong port or wrong address; use `/mn42/cmd` and port `9000`.
-- **Command ignored**: slot/value out of range; slot must be `0..41`, value `0..127`.
+- **Command ignored**: wrong command shape or slot/value out of range; use `SET_SLOT_VALUE`, slot `0..41`, value `0..127`.
 - **Port already in use**: move ports, for example `--osc 7000 --osc-listen 8000`.
 
 ## 5) Keep nearby

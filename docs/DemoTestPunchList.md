@@ -50,16 +50,17 @@ Pass criteria:
 - Confirm manifest/config data loads
 - Stage one safe edit
 - Apply the edit
-- Save the current state to a profile
-- Load that profile again
+- Save the current state to a profile and load it again on current firmware
+- If those controls are disabled, treat that as stale firmware, failed manifest load, or offline state and export a backup file instead
 - Export a backup if the demo depends on a known restore point
 
 Pass criteria:
 
 - Config loads without schema/manifest confusion
 - Apply succeeds
-- Save/load succeeds
-- Reloaded state matches what you just saved
+- Device-backed save/load succeeds on the current firmware build
+- Disabled profile controls read as stale/offline protection rather than a broken shipped feature
+- Reloaded state matches what you just saved when the save/load path is part of the demo
 
 ## 5. Bridge path
 
@@ -81,15 +82,18 @@ Pass criteria:
 
 ## 6. Profile and scene sanity
 
-- Load the intended demo profile
-- Switch to one other profile and back
+- Load the intended demo profile using the real path for this firmware:
+  - browser device-backed profile controls on current firmware
+  - hardware-side profile switching only when validating an older firmware build
+- Switch to one other profile and back if that path is part of the demo contract
 - Confirm the active profile story is understandable on screen and in behavior
-- If scenes or macro snapshots are part of the demo, save and recall one example
+- If scenes or macro snapshots are part of the demo, save and recall at least one of each on current firmware
 
 Pass criteria:
 
 - You can intentionally explain which profile is active
 - Returning to the primary demo profile restores the expected baseline
+- No disabled browser control looks like a broken shipped feature
 
 ## 7. Stress pass
 

@@ -27,7 +27,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Opens serial connection to MN42
 - [ ] Creates/advertises MIDI device `MN42 Bridge`
 - [ ] OSC `/mn42/slots` stream verified
-- [ ] OSC `/mn42/cmd` round-trip verified
+- [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
 - [ ] Signed/notarized (if release policy requires)
 - Artifact name:
 - SHA256:
@@ -39,7 +39,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Opens serial connection to MN42
 - [ ] Creates/advertises MIDI device `MN42 Bridge`
 - [ ] OSC `/mn42/slots` stream verified
-- [ ] OSC `/mn42/cmd` round-trip verified
+- [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
 - [ ] Signed (if release policy requires)
 - Artifact name:
 - SHA256:
@@ -51,7 +51,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Opens serial connection to MN42
 - [ ] Creates/advertises MIDI device `MN42 Bridge`
 - [ ] OSC `/mn42/slots` stream verified
-- [ ] OSC `/mn42/cmd` round-trip verified
+- [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
 - Artifact name:
 - SHA256:
 

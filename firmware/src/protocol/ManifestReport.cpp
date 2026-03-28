@@ -57,4 +57,10 @@ void writeManifestFields(JsonObject object) {
     object["led_count"] = NUM_LEDS();
     object["free_ram"] = computeFreeRAM();
     object["free_flash"] = computeFreeFlash();
+    JsonObject capabilities = object.createNestedObject("capabilities");
+    capabilities["profile_save"] = true;
+    capabilities["profile_load"] = true;
+    capabilities["profile_reset"] = true;
+    capabilities["macro_snapshot"] = true;
+    capabilities["scenes"] = true;
 }

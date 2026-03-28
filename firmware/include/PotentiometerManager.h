@@ -100,6 +100,9 @@ class PotentiometerManager {
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);
 
+    /** Inject a host-driven 0-127 value through the same callback lane as a live pot move. */
+    void injectMidiValue(uint8_t potIndex, uint8_t midiValue);
+
     /**
      * Read every pot via the muxes and invoke the MIDI callback for changes.
      * Also updates LEDs and envelope followers.

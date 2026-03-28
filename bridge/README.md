@@ -104,7 +104,7 @@ Replace `/dev/ttyACM0` with your device path.
 Example command (liblo/oscsend):
 
 ```bash
-oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_POT","slot":2,"value":95}'
+oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}'
 ```
 
 That sets slot 2 to value 95.
@@ -123,7 +123,7 @@ MIDI mapping used by the bridge:
 Inbound MIDI CC on any channel is converted to:
 
 ```json
-{"cmd":"SET_POT","slot":<cc_number>,"value":<cc_value>}
+{"cmd":"SET_SLOT_VALUE","slot":<cc_number>,"value":<cc_value>}
 ```
 
 ## OSC addresses and payloads
@@ -147,13 +147,13 @@ Inbound MIDI CC on any channel is converted to:
 Valid example:
 
 ```json
-{ "cmd": "SET_POT", "slot": 2, "value": 99 }
+{ "cmd": "SET_SLOT_VALUE", "slot": 2, "value": 99 }
 ```
 
 Rejected example:
 
 ```json
-{ "cmd": "SET_POT", "slot": 99, "value": -1 }
+{ "cmd": "SET_POT", "slot": 2, "value": 99 }
 ```
 
 ## Validation and limits
@@ -161,6 +161,7 @@ Rejected example:
 The bridge drops messages that do not match the contract.
 
 - Max command size: 128 bytes
+- `cmd` must be `SET_SLOT_VALUE`
 - `slot` must be `0..41`
 - `value` must be `0..127`
 - Missing keys (`cmd`, `slot`, `value`) are rejected
@@ -211,7 +212,7 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 ### OSC commands are ignored
 
 - Confirm command is sent to `/mn42/cmd`.
-- Ensure JSON has `cmd`, `slot`, `value`.
+- Ensure JSON has `cmd`, `slot`, `value` with `cmd` set to `SET_SLOT_VALUE`.
 - Confirm `slot` and `value` are in range.
 
 ### DAW cannot find `MN42 Bridge`

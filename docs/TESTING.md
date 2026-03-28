@@ -10,9 +10,10 @@ Unless a section says otherwise, commands below assume you are running from the 
 |-------|---------|-----------------|----------------|
 | Full battery | `./test.sh` | Teensy 4.0 for Unity, host machine for Node | Runs everything below, writes clean logs, perfect for CI and pre-commit rituals. |
 | Unity smoke tests | `pio -d firmware test -e teensy40_unity` | Teensy 4.0 with USB cable | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1. |
+| App seam regressions | `npm --prefix App test` | Host machine only | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware. |
 | Manual firmware sketches | `pio -d firmware run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc. |
 | Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
-| System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC ↔ firmware handshake, slot poke, and keep-alive proof with artifact logs. |
+| System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC/MIDI host-control ↔ firmware handshake, live slot poke, and keep-alive proof with artifact logs. |
 
 ## If your goal is demo readiness rather than code confidence
 
@@ -36,8 +37,9 @@ This is the practical answer to "what is actually tested?" for the current stack
 | Runtime orchestration | Covered | Unity | Pending note-offs, diagnostic counter reporting, and related runtime state transitions are asserted directly. |
 | WebSerial payload generation | Covered | Unity | Snapshot and slot-patch JSON are checked as emitted payloads, not just by indirect UI behavior. |
 | UI tuning helpers | Covered | Unity | Note dynamics, arp tuning, filter tuning, and streamed active-slot context are now exercised directly. |
+| Browser configurator transport + capability gating | Covered | App Playwright | Simulator UX, native `HELLO/GET_*/SET_ALL` adaptation, device-backed profile/macro/scene command mapping, older-firmware capability gating, and browser-local slot metadata are covered without hardware. |
 | Bridge CLI parsing/error handling | Covered | Node tests | Host-side sanity only; this does not prove live firmware transport timing. |
-| Full OSC ↔ firmware loop | Partial automated | System runner | Requires real hardware plus the bridge process. Good release gate, not the fastest inner-loop test. |
+| Full OSC/MIDI host-control ↔ firmware loop | Partial automated | System runner | Requires real hardware plus the bridge process. Good release gate, not the fastest inner-loop test. |
 | `firmware_main.cpp` boot composition and final hardware bring-up | Not in Unity | Manual / real hardware | Unity does not prove the actual production boot path end-to-end. |
 | OLED rendering, LED electrical behavior, mux noise, pot feel, EEPROM behavior on a real board | Manual only | Manual sketches / bench testing | These need a physical controller and human observation. |
 
@@ -91,6 +93,7 @@ If you want everything in one punch, run the orchestrator from the repo root:
 
 - PlatformIO must be installed with the Teensy platform and custom Unity runner available. The script bails on missing executables.
 - `bridge/node_modules` should exist. If not, run `npm install` in `bridge/` once before relying on the script.
+- `App/node_modules` should exist if you want the browser seam tests too. Run `npm install` in `App/` once before relying on the full app suite.
 - Teensy board with the Unity test firmware already on it if you expect hardware tests to actually run; otherwise the script will log that Unity was skipped.
 
 ### Port juggling
@@ -219,9 +222,32 @@ The tests intentionally mock a missing serial port to prove the CLI doesn’t ex
 
 Want to iterate quickly? `npm test -- --watch` reruns on file changes.
 
+## App seam tests (`App/tests/`)
+
+These are the fastest proof that the browser app still tells the truth about the firmware contract.
+
+### Run the suite
+
+```bash
+npm --prefix App test
+```
+
+What this currently proves:
+
+- simulator-driven config, profile, and import/export UX
+- native transport adaptation (`HELLO`, `GET_MANIFEST`, `GET_CONFIG`, `SET_ALL`)
+- capability-aware profile/macro/scene controls on real-firmware manifests
+- browser-local slot metadata staying out of `Apply` and surviving reconnects
+
+What it does not prove:
+
+- a real USB board accepted the session
+- bridge timing on the demo host
+- any hardware-only storage or recovery path
+
 ## Real hardware gauntlet (`bridge/` + `firmware/system_test/`)
 
-When you need to prove the whole stack plays nice, you move up to the full-system runner. It expects real hardware **and** the Node bridge to be awake, then drives the OSC loops the docs keep promising.
+When you need to prove the whole stack plays nice, you move up to the full-system runner. It expects real hardware **and** the Node bridge to be awake, then drives the host-control path the docs keep promising.
 
 ### Scripted flow (no more "coming soon")
 

@@ -196,7 +196,7 @@ async function main() {
     // Scenario 2: OSC command loop
     const targetSlot = 0;
     const newValue = baselineSlots[targetSlot] === 127 ? 0 : 127;
-    const payload = { cmd: 'SET_POT', slot: targetSlot, value: newValue };
+    const payload = { cmd: 'SET_SLOT_VALUE', slot: targetSlot, value: newValue };
     console.log(`[system-test] sending OSC command: ${JSON.stringify(payload)}`);
     txPort.send(
       {
@@ -241,7 +241,7 @@ async function main() {
 
     // Restore baseline to avoid leaving the rig in a weird state.
     if (baselineSlots[targetSlot] !== newValue) {
-      const revert = { cmd: 'SET_POT', slot: targetSlot, value: baselineSlots[targetSlot] };
+      const revert = { cmd: 'SET_SLOT_VALUE', slot: targetSlot, value: baselineSlots[targetSlot] };
       console.log(`[system-test] restoring slot ${targetSlot}: ${JSON.stringify(revert)}`);
       txPort.send(
         {

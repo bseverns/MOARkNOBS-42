@@ -5,7 +5,15 @@ export const MN42_POT_COUNT = 42;
 export const MN42_ENVELOPE_COUNT = 6;
 export const MN42_LED_COUNT = 51;
 
-export function createLocalManifest({ uiVersion, argMethodCount }) {
+const DEFAULT_CAPABILITIES = {
+  profile_save: false,
+  profile_load: false,
+  profile_reset: false,
+  macro_snapshot: false,
+  scenes: false
+};
+
+export function createLocalManifest({ uiVersion, argMethodCount, capabilities } = {}) {
   return {
     ui_version: uiVersion,
     device_name: MN42_DEVICE_NAME,
@@ -14,6 +22,10 @@ export function createLocalManifest({ uiVersion, argMethodCount }) {
     pot_count: MN42_POT_COUNT,
     envelope_count: MN42_ENVELOPE_COUNT,
     arg_method_count: argMethodCount,
-    led_count: MN42_LED_COUNT
+    led_count: MN42_LED_COUNT,
+    capabilities: {
+      ...DEFAULT_CAPABILITIES,
+      ...(capabilities && typeof capabilities === 'object' ? capabilities : {})
+    }
   };
 }

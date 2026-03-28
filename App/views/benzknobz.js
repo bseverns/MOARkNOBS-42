@@ -246,6 +246,7 @@ const boot = () => {
   const profileWizardStatus = document.getElementById('profile-wizard-status');
   const profileDownloadBtn = document.getElementById('profile-download');
   const profileUploadBtn = document.getElementById('profile-upload');
+  const profileHint = document.getElementById('profile-hint');
   const macroSaveBtn = document.getElementById('macro-save');
   const macroRecallBtn = document.getElementById('macro-recall');
   const macroStatusEl = document.getElementById('macro-status');
@@ -266,18 +267,18 @@ const boot = () => {
   const GLOSSARY = {
     mapping: 'Knob to MIDI mapping: choose the message type, channel, and number your synth or DAW expects.',
     takeover: 'Take Control waits for the knob to pass the current value so tweaks do not jump.',
+    browserLocal: 'Stored in this browser only. It is not sent to firmware and will not come back from the device on reconnect.',
     ef: 'EF (Envelope Follower) tracks input level to drive dynamic modulation.',
     arg: 'ARG combines two envelope followers with a math method before mapping to MIDI.',
     filter: 'Filter shape and tuning control how aggressively the envelope follower reacts.',
     sysex: 'SysEx template uses hex bytes; XX, MSB, and LSB placeholders are replaced with live values.'
   };
   const migrationDialog = document.getElementById('migration-dialog');
-  const profileRpcButtons = [profileSaveBtn, profileLoadBtn, profileResetBtn].filter(Boolean);
   let profileInteractable = false;
   let profileRpcLocked = false;
   let profileWizardBusy = false;
   let macroBusy = false;
-  let macroAvailable = true;
+  let macroAvailable = false;
   const SCENE_SLOT_COUNT = 6;
   const sceneSlotState = Array.from({ length: SCENE_SLOT_COUNT }, () => ({
     name: '',
@@ -288,6 +289,7 @@ const boot = () => {
   let activeProfileSlot = clampProfileSlot(readProfileSlotPreference());
   let profileWizardTargetSlot = activeProfileSlot;
   let activeUiMode = normalizeUIMode(readUIModePreference());
+  let deviceCapabilities = resolveCapabilities(localManifest);
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
 
@@ -303,6 +305,88 @@ const boot = () => {
     if (typeof candidate !== 'string') return 'unknown';
     const trimmed = candidate.trim();
     return trimmed || 'unknown';
+  }
+
+  function resolveCapabilities(manifest) {
+    const caps = manifest?.capabilities && typeof manifest.capabilities === 'object' ? manifest.capabilities : {};
+    return {
+      profileSave: Boolean(caps.profile_save),
+      profileLoad: Boolean(caps.profile_load),
+      profileReset: Boolean(caps.profile_reset),
+      macroSnapshot: Boolean(caps.macro_snapshot),
+      scenes: Boolean(caps.scenes)
+    };
+  }
+
+  function supportsAnyProfileAction() {
+    return deviceCapabilities.profileSave || deviceCapabilities.profileLoad || deviceCapabilities.profileReset;
+  }
+
+  function supportsGuidedProfileFlow() {
+    return deviceCapabilities.profileSave && deviceCapabilities.profileLoad;
+  }
+
+  function profileSlotModeCopy() {
+    return supportsAnyProfileAction() ? 'mirrored' : 'local target';
+  }
+
+  function updateProfileHint() {
+    if (!profileHint) return;
+    if (!profileInteractable) {
+      profileHint.textContent =
+        'Download/upload always works as a file backup. Connect to see whether this firmware exposes device-backed profile actions.';
+      return;
+    }
+    if (supportsAnyProfileAction()) {
+      profileHint.textContent =
+        'Device-backed profile actions are enabled for this firmware. Download/upload remains the safest file backup.';
+      return;
+    }
+    profileHint.textContent =
+      'This firmware does not expose browser-driven profile save, switch, or reset yet. Use Download/Upload for file backups.';
+  }
+
+  function unsupportedProfileActionCopy(method) {
+    switch (method) {
+      case 'save_profile':
+        return 'This firmware cannot archive the current deck state into slots A-D from the browser yet. Use Download profile for a file backup.';
+      case 'load_profile':
+        return 'This firmware cannot switch EEPROM profile slots from the browser yet. Use the device controls, then reconnect to inspect the active state.';
+      case 'reset_profile':
+        return 'This firmware cannot wipe a device profile from the browser yet. Load a baseline backup file instead.';
+      default:
+        return 'This firmware does not expose that profile action to the browser yet.';
+    }
+  }
+
+  function supportsProfileMethod(method) {
+    switch (method) {
+      case 'save_profile':
+        return deviceCapabilities.profileSave;
+      case 'load_profile':
+        return deviceCapabilities.profileLoad;
+      case 'reset_profile':
+        return deviceCapabilities.profileReset;
+      default:
+        return false;
+    }
+  }
+
+  function syncRecoverySupportCopy() {
+    updateProfileHint();
+    if (!profileInteractable) {
+      setMacroStatus('muted', 'Connect to see whether macro storage is available.');
+      setSceneStatus('muted', 'Connect to see whether scene storage is available.');
+      return;
+    }
+    if (!deviceCapabilities.macroSnapshot) {
+      setMacroStatus('muted', 'Macro snapshot storage is unavailable on this firmware.');
+    } else if (!macroBusy && !macroAvailable) {
+      setMacroStatus('muted', 'No macro snapshot stored yet.');
+    }
+    if (!deviceCapabilities.scenes) {
+      setSceneStatus('muted', 'Scene storage is unavailable on this firmware.');
+    }
   }
 
   function setConnectionBanner(stage, manifest) {
@@ -634,6 +718,11 @@ const boot = () => {
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
     renderDeviceMonitor(manifest);
+    deviceCapabilities = resolveCapabilities(manifest);
+    macroAvailable = deviceCapabilities.macroSnapshot ? macroAvailable : false;
+    setActiveProfileSlot(activeProfileSlot, { persist: false });
+    syncRecoverySupportCopy();
+    refreshProfileControls();
     const followerCount = Number.isFinite(Number(manifest?.envelope_count))
       ? Number(manifest.envelope_count)
       : localManifest.envelope_count || 0;
@@ -669,7 +758,10 @@ const boot = () => {
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
     profileInteractable = true;
     refreshProfileControls();
-    refreshSceneList();
+    syncRecoverySupportCopy();
+    if (deviceCapabilities.scenes) {
+      refreshSceneList();
+    }
   });
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.
@@ -680,10 +772,13 @@ const boot = () => {
     if (exportPresetBtn) exportPresetBtn.disabled = true;
     if (importPresetBtn) importPresetBtn.disabled = true;
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
+    deviceCapabilities = resolveCapabilities(localManifest);
     profileInteractable = false;
     profileRpcLocked = false;
+    macroAvailable = false;
+    setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
-    setSceneStatus('muted', 'Scenes offline');
+    syncRecoverySupportCopy();
   });
   runtime.on('error', (err) => {
     // Runtime errors are treated as hard disconnects from the UI perspective.
@@ -691,14 +786,21 @@ const boot = () => {
     setConnectionBanner('disconnected', runtime.getState().manifest);
     connectFailHelp?.setAttribute('open', '');
     setStatus('err', 'Runtime error', err.message || String(err));
+    deviceCapabilities = resolveCapabilities(localManifest);
     profileInteractable = false;
     profileRpcLocked = false;
+    macroAvailable = false;
+    setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
-    setSceneStatus('muted', 'Scenes offline');
+    syncRecoverySupportCopy();
   });
   runtime.on('macro', ({ available } = {}) => {
+    if (!deviceCapabilities.macroSnapshot) return;
     if (available === undefined) return;
     macroAvailable = Boolean(available);
+    if (!macroAvailable && !macroBusy) {
+      setMacroStatus('muted', 'No macro snapshot stored yet.');
+    }
     updateMacroControls();
   });
   runtime.on('scene', (payload) => {
@@ -839,7 +941,7 @@ const boot = () => {
       button.setAttribute('aria-pressed', slotValue === bounded ? 'true' : 'false');
     });
     if (profileSlotStatus) {
-      profileSlotStatus.textContent = `${describeSlot(bounded)} • mirrored`;
+      profileSlotStatus.textContent = `${describeSlot(bounded)} • ${profileSlotModeCopy()}`;
     }
     if (persist) {
       persistProfileSlot(bounded);
@@ -848,13 +950,13 @@ const boot = () => {
 
   function refreshProfileControls() {
     const canInteract = profileInteractable && !profileRpcLocked;
-    profileRpcButtons.forEach((button) => {
-      if (!button) return;
-      button.disabled = !canInteract;
-    });
+    if (profileSaveBtn) profileSaveBtn.disabled = !canInteract || !deviceCapabilities.profileSave;
+    if (profileLoadBtn) profileLoadBtn.disabled = !canInteract || !deviceCapabilities.profileLoad;
+    if (profileResetBtn) profileResetBtn.disabled = !canInteract || !deviceCapabilities.profileReset;
     updateProfileWizardControls();
     updateMacroControls();
     updateSceneControls();
+    updateProfileHint();
   }
 
   function setProfileWizardStatus(state, message) {
@@ -867,7 +969,8 @@ const boot = () => {
     // Guided flow state machine: switch to target slot -> apply dirty edits -> save slot.
     const target = clampProfileSlot(Number(profileWizardTarget?.value ?? profileWizardTargetSlot));
     profileWizardTargetSlot = target;
-    const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy;
+    const guidedSupported = supportsGuidedProfileFlow();
+    const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy && guidedSupported;
     if (profileWizardTarget) profileWizardTarget.disabled = !canInteract;
     if (profileWizardSwitchBtn) profileWizardSwitchBtn.disabled = !canInteract;
     const dirtyNow = runtime.getState().dirty;
@@ -881,6 +984,13 @@ const boot = () => {
 
     if (!profileInteractable) {
       setProfileWizardStatus('muted', 'Connect to the device to start the guided flow.');
+      return;
+    }
+    if (!guidedSupported) {
+      setProfileWizardStatus(
+        'muted',
+        'This firmware does not expose browser-driven profile switch/save yet. Use Download/Upload for file backups.',
+      );
       return;
     }
     if (!onTarget) {
@@ -899,8 +1009,9 @@ const boot = () => {
 
   function updateMacroControls() {
     const offline = !profileInteractable;
-    if (macroSaveBtn) macroSaveBtn.disabled = offline || macroBusy;
-    if (macroRecallBtn) macroRecallBtn.disabled = offline || macroBusy || !macroAvailable;
+    const unsupported = !deviceCapabilities.macroSnapshot;
+    if (macroSaveBtn) macroSaveBtn.disabled = offline || macroBusy || unsupported;
+    if (macroRecallBtn) macroRecallBtn.disabled = offline || macroBusy || unsupported || !macroAvailable;
   }
 
   function setMacroStatus(state, message) {
@@ -932,17 +1043,22 @@ const boot = () => {
 
   function updateSceneControls() {
     const offline = !profileInteractable;
+    const unsupported = !deviceCapabilities.scenes;
     sceneSlotElements.forEach((slotInfo) => {
       const state = sceneSlotState[slotInfo.slot];
-      if (slotInfo.saveBtn) slotInfo.saveBtn.disabled = offline || sceneBusy;
+      if (slotInfo.saveBtn) slotInfo.saveBtn.disabled = offline || sceneBusy || unsupported;
       if (slotInfo.recallBtn) {
-        slotInfo.recallBtn.disabled = offline || sceneBusy || !state.available;
+        slotInfo.recallBtn.disabled = offline || sceneBusy || unsupported || !state.available;
       }
     });
   }
 
   async function refreshSceneList() {
     if (!sceneGrid) return;
+    if (!deviceCapabilities.scenes) {
+      setSceneStatus('muted', 'Scene storage is unavailable on this firmware.');
+      return;
+    }
     setSceneStatus('busy', 'Loading scenes…');
     try {
       await runtime.requestScenes();
@@ -953,6 +1069,11 @@ const boot = () => {
   }
 
   async function handleSceneSave(slotIndex) {
+    if (!deviceCapabilities.scenes) {
+      setSceneStatus('muted', 'Scene storage is unavailable on this firmware.');
+      setStatus('warn', 'Scenes unavailable', 'This firmware does not expose scene storage to the browser.');
+      return;
+    }
     if (!profileInteractable || sceneBusy) return;
     const slotInfo = sceneSlotElements[slotIndex];
     if (!slotInfo) return;
@@ -977,6 +1098,11 @@ const boot = () => {
   }
 
   async function handleSceneRecall(slotIndex) {
+    if (!deviceCapabilities.scenes) {
+      setSceneStatus('muted', 'Scene storage is unavailable on this firmware.');
+      setStatus('warn', 'Scenes unavailable', 'This firmware does not expose scene storage to the browser.');
+      return;
+    }
     if (!profileInteractable || sceneBusy) return;
     sceneBusy = true;
     updateSceneControls();
@@ -1003,6 +1129,11 @@ const boot = () => {
   }
 
   async function runMacroCommand(command) {
+    if (!deviceCapabilities.macroSnapshot) {
+      setMacroStatus('muted', 'Macro snapshot storage is unavailable on this firmware.');
+      setStatus('warn', 'Macro unavailable', 'This firmware does not expose macro snapshot storage to the browser.');
+      return;
+    }
     if (!profileInteractable) {
       setMacroStatus('muted', 'Connect to the deck before using macro snapshots.');
       setStatus('warn', 'Macro offline', 'Connect to the deck before using macro snapshots.');
@@ -1041,6 +1172,10 @@ const boot = () => {
 
   async function runProfileRpc(method, { busyLabel, successLabel, successCopy, expectConfig } = {}) {
     // Shared profile RPC lane: one in-flight action at a time to keep slot/apply state coherent.
+    if (!supportsProfileMethod(method)) {
+      setStatus('warn', 'Profile action unavailable', unsupportedProfileActionCopy(method));
+      return;
+    }
     if (!profileInteractable) {
       setStatus('warn', 'Profile offline', 'Connect to the deck before using profiles.');
       return;
@@ -1068,7 +1203,11 @@ const boot = () => {
       const responseSlot = clampProfileSlot(response?.slot ?? response?.profile ?? activeProfileSlot);
       setActiveProfileSlot(responseSlot);
       if (expectConfig) {
-        const payload = response?.config ?? response;
+        let payload = response?.config ?? null;
+        if (!payload || typeof payload !== 'object' || !Array.isArray(payload?.slots)) {
+          const configPayload = await runtime.sendRpc({ rpc: 'get_config' });
+          payload = configPayload?.config ?? configPayload;
+        }
         if (payload && typeof payload === 'object') {
           runtime.replaceConfig(payload);
         }
@@ -1359,7 +1498,13 @@ const boot = () => {
       ),
     );
     basics.appendChild(
-      makeText('Slot label', slot.label ?? '', 'Verse / build / drop cues', (value) => stageSlotField(slotState.selected, 'label', value)),
+      makeText(
+        'Slot label (browser only)',
+        slot.label ?? '',
+        'Verse / build / drop cues',
+        (value) => runtime.setLocalSlotMeta(slotState.selected, { label: value }),
+        { help: GLOSSARY.browserLocal },
+      ),
     );
     if (activeUiMode === 'advanced') {
       basics.appendChild(
@@ -1370,12 +1515,17 @@ const boot = () => {
       makeToggle('Enabled', !!slot.active, (value) => stageSlotField(slotState.selected, 'active', value)),
     );
     basics.appendChild(
-      makeToggle('Knob sends MIDI', !!slot.pot, (value) => stageSlotField(slotState.selected, 'pot', value)),
+      makeToggle(
+        'Knob sends MIDI badge (browser only)',
+        !!slot.pot,
+        (value) => runtime.setLocalSlotMeta(slotState.selected, { pot: value }),
+        { help: GLOSSARY.browserLocal },
+      ),
     );
-    const takeover = makeToggle('Take Control (pickup)', !!slot.takeover, (value) => {
-      stageSlotField(slotState.selected, 'takeover', value);
+    const takeover = makeToggle('Take Control (browser only)', !!slot.takeover, (value) => {
+      runtime.setLocalSlotMeta(slotState.selected, { takeover: value });
       runtime.setPotGuard([slotState.selected], !value);
-    }, { help: GLOSSARY.takeover });
+    }, { help: `${GLOSSARY.takeover} ${GLOSSARY.browserLocal}` });
     basics.appendChild(takeover);
     if (slot.type === 'SysEx') {
       basics.appendChild(
@@ -1888,13 +2038,11 @@ const boot = () => {
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'takeover';
-    toggle.textContent = slot?.takeover ? 'Takeover' : 'Guarded';
+    toggle.textContent = slot?.takeover ? 'Local pickup' : 'Immediate';
+    toggle.title = 'Browser-only pickup guard';
     toggle.onclick = () => {
       const next = !slot?.takeover;
-      runtime.stage((draft) => {
-        draft.slots[index].takeover = next;
-        return draft;
-      });
+      runtime.setLocalSlotMeta(index, { takeover: next });
       runtime.setPotGuard([index], !next);
     };
     el.append(label, state, value, toggle);

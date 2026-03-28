@@ -43,39 +43,403 @@ uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint
 }
 #endif
 
+const char *envelopeModeName(uint8_t mode);
+EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method);
+
 namespace {
 Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
+
+uint16_t crc16Update(uint16_t crc, uint8_t data) {
+    crc ^= static_cast<uint16_t>(data) << 8;
+    for (uint8_t i = 0; i < 8; ++i) {
+        if (crc & 0x8000) {
+            crc = static_cast<uint16_t>((crc << 1) ^ 0x1021);
+        } else {
+            crc <<= 1;
+        }
+    }
+    return crc;
+}
+
+template <typename T> uint16_t computeCrc(const T &value, size_t skipBytes = 0) {
+    uint16_t crc = 0xFFFF;
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
+    for (size_t i = skipBytes; i < sizeof(T); ++i) {
+        crc = crc16Update(crc, bytes[i]);
+    }
+    return crc;
+}
+
+void syncPotentiometerMappingsFromConfig() {
+    potChannels.clear();
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        const uint8_t channel = constrain(configManager.getPotChannel(i), 1, 16);
+        const uint8_t cc = constrain(configManager.getPotCCNumber(i), 0, 127);
+        configManager.setPotChannel(i, channel);
+        configManager.setPotCCNumber(i, cc);
+        potentiometerManager.setChannel(i, channel);
+        potentiometerManager.setCCNumber(i, cc);
+        potChannels.push_back(channel);
+    }
+}
+
+ProfileData defaultProfileSnapshot() {
+    ProfileData profile{};
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        profile.slots[i].midiChannel = 1;
+    }
+    return profile;
+}
+
+bool saveCurrentProfileSlot(uint8_t id) {
+    if (id >= NUM_PROFILES) {
+        return false;
+    }
+    g_activeProfile = id;
+    configManager.setActiveProfile(id);
+    configManager.saveProfile(id);
+    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    return configManager.saveProfileSettings(id, captureProfileSnapshot());
+}
+
+bool loadProfileSlot(uint8_t id) {
+    if (id >= NUM_PROFILES) {
+        return false;
+    }
+
+    ProfileData profile{};
+    const bool stored = configManager.loadProfileSettings(id, profile);
+    g_activeProfile = id;
+    configManager.setActiveProfile(id);
+
+    if (stored) {
+        configManager.loadProfile(id);
+    } else {
+        profile = defaultProfileSnapshot();
+        for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+            configManager.setPotChannel(i, 1);
+            configManager.setPotCCNumber(i, 0);
+        }
+        configManager.saveConfiguration();
+    }
+
+    syncPotentiometerMappingsFromConfig();
+    applyProfileSnapshot(profile, true);
+    refreshEfVoicesFromConfig();
+
+    if (!stored) {
+        configManager.saveProfile(id);
+        configManager.saveProfileSettings(id, profile);
+    }
+    return true;
+}
+
+bool resetProfileSlot(uint8_t id) {
+    if (id >= NUM_PROFILES) {
+        return false;
+    }
+
+    const ProfileData profile = defaultProfileSnapshot();
+    g_activeProfile = id;
+    configManager.setActiveProfile(id);
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        configManager.setPotChannel(i, 1);
+        configManager.setPotCCNumber(i, 0);
+    }
+    configManager.saveConfiguration();
+    syncPotentiometerMappingsFromConfig();
+    applyProfileSnapshot(profile, true);
+    refreshEfVoicesFromConfig();
+    configManager.saveProfile(id);
+    return configManager.saveProfileSettings(id, profile);
+}
 } // namespace
 
-// Scene commands are wired into the protocol now, but persistent scene storage is intentionally
-// stubbed until dedicated EEPROM/flash allocation is finalized.
 namespace SceneStorage {
 struct SceneInfo {
     uint8_t slot = 0;
-    const char *name = nullptr;
+    char name[16] = {0};
     bool available = false;
 };
 
-struct ConfigState {};
+struct ConfigState {
+    uint16_t version = 1;
+    std::array<uint8_t, NUM_POTS> potChannels{};
+    std::array<uint8_t, NUM_POTS> potCCNumbers{};
+    std::array<MIDISlot, NUM_SLOTS> slots{};
+    uint8_t argEnabled = 0;
+    uint8_t argMethod = 0;
+    uint8_t argSourceA = 0;
+    uint8_t argSourceB = 1;
+    uint8_t envelopeMode = 0;
+    uint8_t ledBrightness = 255;
+    uint8_t ledMode = static_cast<uint8_t>(LedMode::Static);
+    uint8_t ledR = 0;
+    uint8_t ledG = 0;
+    uint8_t ledB = 0;
+    uint8_t filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
+    float filterFrequency = 20.0f;
+    float filterQ = 1.0f;
+    std::array<float, NUM_ENVELOPES> baselines{};
+};
 
 struct SceneEntry {
-    const char *name = nullptr;
+    char name[16] = {0};
     ConfigState state{};
 };
 
-constexpr uint8_t kSceneSlotCount = 0;
+struct MacroRecord {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    ConfigState state{};
+};
 
-inline uint8_t listScenes(SceneInfo *, size_t) { return 0; }
-inline ConfigState captureConfigState() { return ConfigState{}; }
-inline bool saveSceneSlot(uint8_t, const ConfigState &, const char *) { return false; }
-inline bool loadSceneSlot(uint8_t, SceneEntry &) { return false; }
-inline bool sceneSlotAvailable(uint8_t) { return false; }
-inline void applyConfigState(const ConfigState &, bool) {}
-inline bool macroSnapshotAvailable() { return false; }
-inline bool loadMacroSnapshot(ConfigState &) { return false; }
-inline bool saveMacroSnapshot(const ConfigState &) { return false; }
+struct SceneRecord {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    char name[16] = {0};
+    ConfigState state{};
+};
+
+constexpr uint8_t kSceneSlotCount = 6;
+constexpr uint16_t kStorageVersion = 1;
+constexpr uint16_t kMacroStorageAddress =
+    EEPROM_PROFILE_SETTINGS_BASE + NUM_PROFILES * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE;
+constexpr uint16_t kSceneStorageBase =
+    static_cast<uint16_t>(kMacroStorageAddress + sizeof(MacroRecord));
+
+uint16_t sceneSlotAddress(uint8_t slot) {
+    return static_cast<uint16_t>(kSceneStorageBase + slot * sizeof(SceneRecord));
+}
+
+bool recordValid(const MacroRecord &record) {
+    return record.version == kStorageVersion && record.occupied != 0 &&
+           record.crc == computeCrc(record, sizeof(record.version) + sizeof(record.crc));
+}
+
+bool recordValid(const SceneRecord &record) {
+    return record.version == kStorageVersion && record.occupied != 0 &&
+           record.crc == computeCrc(record, sizeof(record.version) + sizeof(record.crc));
+}
+
+void copySceneName(char (&dest)[16], const char *name) {
+    std::memset(dest, 0, sizeof(dest));
+    if (!name || name[0] == '\0') {
+        return;
+    }
+    const size_t len = std::min(strlen(name), sizeof(dest) - 1);
+    std::memcpy(dest, name, len);
+}
+
+ConfigState captureConfigState() {
+    ConfigState snapshot{};
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        snapshot.potChannels[i] = constrain(configManager.getPotChannel(i), 1, 16);
+        snapshot.potCCNumbers[i] = constrain(configManager.getPotCCNumber(i), 0, 127);
+    }
+    snapshot.slots = configManager.getSlots();
+    snapshot.argEnabled = configManager.getARGEnable();
+    snapshot.argMethod = configManager.getARGMethod();
+    int envA = static_cast<int>(configManager.getEnvelopeA());
+    int envB = static_cast<int>(configManager.getEnvelopeB());
+    if (envA >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(envA);
+        envA = converted >= 0 ? converted : constrain(envA, 0, NUM_ENVELOPES - 1);
+    }
+    if (envB >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(envB);
+        envB = converted >= 0 ? converted : constrain(envB, 0, NUM_ENVELOPES - 1);
+    }
+    snapshot.argSourceA = static_cast<uint8_t>(envA);
+    snapshot.argSourceB = static_cast<uint8_t>(envB);
+    snapshot.envelopeMode = configManager.getMode();
+    snapshot.ledBrightness = ledManager.getBrightness();
+    snapshot.ledMode = static_cast<uint8_t>(configManager.getLedMode());
+    const CRGB color = ledManager.getColor();
+    snapshot.ledR = color.r;
+    snapshot.ledG = color.g;
+    snapshot.ledB = color.b;
+    if (!envelopeFollowers.empty()) {
+        snapshot.filterType = static_cast<uint8_t>(envelopeFollowers.front().getFilterType());
+    }
+    EEPROM.get(EEPROM_FILTER_FREQ, snapshot.filterFrequency);
+    EEPROM.get(EEPROM_FILTER_Q, snapshot.filterQ);
+    for (uint8_t i = 0; i < NUM_ENVELOPES; ++i) {
+        snapshot.baselines[i] = envelopeConfig.baselines[i];
+    }
+    return snapshot;
+}
+
+void applyConfigState(const ConfigState &state, bool persist) {
+    const auto slotsState = state.slots;
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        MIDISlot slot = slotsState[i];
+        slot.midiChannel = constrain(slot.midiChannel, 1, 16);
+        slot.data1 = constrain(slot.data1, 0, 127);
+        configManager.saveSlot(i, slot);
+    }
+
+    potChannels.clear();
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        const uint8_t channel = constrain(state.potChannels[i], 1, 16);
+        const uint8_t cc = constrain(state.potCCNumbers[i], 0, 127);
+        configManager.setPotChannel(i, channel);
+        configManager.setPotCCNumber(i, cc);
+        potentiometerManager.setChannel(i, channel);
+        potentiometerManager.setCCNumber(i, cc);
+        potChannels.push_back(channel);
+    }
+    if (persist) {
+        configManager.saveConfiguration();
+    }
+
+    potToEnvelopeMap.clear();
+    std::array<bool, NUM_ENVELOPES> followerAssigned{};
+    followerAssigned.fill(false);
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        const int followerIndex = slot.getEnvelopeFollowerIndex();
+        if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
+            continue;
+        }
+        potToEnvelopeMap[slotIndex] = slot.efSettings;
+        followerAssigned[static_cast<size_t>(followerIndex)] = true;
+        envelopeFollowers[followerIndex].setModulationTarget(
+            potentiometerManager.getCCNumber(slotIndex));
+        applyEfSettingsToFollower(envelopeFollowers[followerIndex], slot.efSettings,
+                                  static_cast<uint8_t>(followerIndex));
+    }
+
+    const EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(
+        static_cast<ARGMethod>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
+    const bool argEnabled = state.argEnabled != 0;
+    envelopeFollowMode = argEnabled;
+    configManager.setMode(state.envelopeMode);
+    configManager.setARGEnable(argEnabled ? 1 : 0);
+    configManager.setARGMethod(
+        static_cast<uint8_t>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
+    configManager.setEnvelopePair(state.argSourceA, state.argSourceB);
+    potentiometerManager.setArgEnvelopePair(state.argSourceA, state.argSourceB);
+    updateEnvelopeModeLabel(envelopeModeName(state.envelopeMode));
+
+    SlotEnvelopePayload tailPayload{};
+    tailPayload.filterType = static_cast<uint8_t>(
+        constrain(state.filterType, 0, static_cast<int>(EnvelopeFollower::BANDPASS)));
+    tailPayload.frequency = constrain(state.filterFrequency, 20.0f, 5000.0f);
+    tailPayload.q = constrain(state.filterQ, 0.5f, 4.0f);
+    SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
+    for (uint8_t i = 0; i < envelopeFollowers.size(); ++i) {
+        envelopeFollowers[i].toggleActive(followerAssigned[i]);
+        envelopeFollowers[i].setARGMethod(followerMethod);
+        envelopeFollowers[i].setEnvelopePair(state.argSourceA, state.argSourceB);
+        envelopeFollowers[i].setMode(argEnabled ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
+        envelopeFollowers[i].setFilterType(
+            static_cast<EnvelopeFollower::FilterType>(sanitizedTail.filterType));
+        envelopeFollowers[i].configureFilter(sanitizedTail.frequency, sanitizedTail.q);
+        envelopeFollowers[i].setBaseline(state.baselines[i]);
+        envelopeConfig.baselines[i] = state.baselines[i];
+    }
+
+    const CRGB color(state.ledR, state.ledG, state.ledB);
+    ledManager.setBrightness(state.ledBrightness);
+    ledManager.setColor(color);
+    configManager.saveLEDSettings(state.ledBrightness, color);
+    LedMode ledMode = static_cast<LedMode>(state.ledMode);
+    configManager.setLedMode(ledMode);
+    ledAnimator.setMode(ledMode);
+
+    if (persist) {
+        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+    }
+    refreshEfVoicesFromConfig();
+}
+
+uint8_t listScenes(SceneInfo *scenes, size_t capacity) {
+    if (!scenes || capacity == 0) {
+        return 0;
+    }
+    const uint8_t count = static_cast<uint8_t>(std::min<size_t>(capacity, kSceneSlotCount));
+    for (uint8_t slot = 0; slot < count; ++slot) {
+        scenes[slot].slot = slot;
+        std::snprintf(scenes[slot].name, sizeof(scenes[slot].name), "Scene %u",
+                      static_cast<unsigned>(slot + 1));
+        scenes[slot].available = false;
+        SceneRecord record{};
+        EEPROM.get(sceneSlotAddress(slot), record);
+        if (recordValid(record)) {
+            std::memcpy(scenes[slot].name, record.name, sizeof(scenes[slot].name));
+            scenes[slot].name[sizeof(scenes[slot].name) - 1] = '\0';
+            scenes[slot].available = true;
+        }
+    }
+    return count;
+}
+
+bool saveSceneSlot(uint8_t slot, const ConfigState &state, const char *name) {
+    if (slot >= kSceneSlotCount) {
+        return false;
+    }
+    SceneRecord record{};
+    record.version = kStorageVersion;
+    record.occupied = 1;
+    record.state = state;
+    copySceneName(record.name, name);
+    record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
+    EEPROM.put(sceneSlotAddress(slot), record);
+    return true;
+}
+
+bool loadSceneSlot(uint8_t slot, SceneEntry &entry) {
+    if (slot >= kSceneSlotCount) {
+        return false;
+    }
+    SceneRecord record{};
+    EEPROM.get(sceneSlotAddress(slot), record);
+    if (!recordValid(record)) {
+        return false;
+    }
+    std::memset(entry.name, 0, sizeof(entry.name));
+    std::memcpy(entry.name, record.name, sizeof(entry.name));
+    entry.name[sizeof(entry.name) - 1] = '\0';
+    entry.state = record.state;
+    return true;
+}
+
+bool sceneSlotAvailable(uint8_t slot) {
+    SceneRecord record{};
+    EEPROM.get(sceneSlotAddress(slot), record);
+    return recordValid(record);
+}
+
+bool macroSnapshotAvailable() {
+    MacroRecord record{};
+    EEPROM.get(kMacroStorageAddress, record);
+    return recordValid(record);
+}
+
+bool loadMacroSnapshot(ConfigState &state) {
+    MacroRecord record{};
+    EEPROM.get(kMacroStorageAddress, record);
+    if (!recordValid(record)) {
+        return false;
+    }
+    state = record.state;
+    return true;
+}
+
+bool saveMacroSnapshot(const ConfigState &state) {
+    MacroRecord record{};
+    record.version = kStorageVersion;
+    record.occupied = 1;
+    record.state = state;
+    record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
+    EEPROM.put(kMacroStorageAddress, record);
+    return true;
+}
 } // namespace SceneStorage
 
 template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
@@ -1259,7 +1623,10 @@ void handleGetManifestCommand(const ParsedCommand &cmd);
 void handleGetProfileCommand(const ParsedCommand &cmd);
 void handleGetSchemaCommand(const ParsedCommand &cmd);
 void handleHelloCommand(const ParsedCommand &cmd);
+void handleLoadProfileCommand(const ParsedCommand &cmd);
 void handleRecallMacroSlotCommand(const ParsedCommand &cmd);
+void handleResetProfileCommand(const ParsedCommand &cmd);
+void handleSaveProfileCommand(const ParsedCommand &cmd);
 void handleSaveMacroSlotCommand(const ParsedCommand &cmd);
 void handleSetAllCommand(const ParsedCommand &cmd);
 void handleSetArgMethodCommand(const ParsedCommand &cmd);
@@ -1267,6 +1634,7 @@ void handleSetEfCommand(const ParsedCommand &cmd);
 void handleSetLedCommand(const ParsedCommand &cmd);
 void handleSetPotCommand(const ParsedCommand &cmd);
 void handleSetProfileCommand(const ParsedCommand &cmd);
+void handleSetSlotValueCommand(const ParsedCommand &cmd);
 
 // Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
@@ -1280,14 +1648,18 @@ const CommandHandler kCommandHandlers[] = {
     {"GET_PROFILE", handleGetProfileCommand},
     {"GET_SCHEMA", handleGetSchemaCommand},
     {"HELLO", handleHelloCommand},
+    {"LOAD_PROFILE", handleLoadProfileCommand},
     {"RECALL_MACRO_SLOT", handleRecallMacroSlotCommand},
+    {"RESET_PROFILE", handleResetProfileCommand},
     {"SAVE_MACRO_SLOT", handleSaveMacroSlotCommand},
+    {"SAVE_PROFILE", handleSaveProfileCommand},
     {"SET_ALL", handleSetAllCommand},
     {"SET_ARGMETHOD", handleSetArgMethodCommand},
     {"SET_EF", handleSetEfCommand},
     {"SET_LED", handleSetLedCommand},
     {"SET_POT", handleSetPotCommand},
     {"SET_PROFILE", handleSetProfileCommand},
+    {"SET_SLOT_VALUE", handleSetSlotValueCommand},
 };
 
 constexpr size_t kCommandHandlerCount = sizeof(kCommandHandlers) / sizeof(kCommandHandlers[0]);
@@ -1683,6 +2055,22 @@ void handleHelloCommand(const ParsedCommand &cmd) {
     LOG_PRINTLN("{\"hello\":\"mn42\"}");
 }
 
+void handleLoadProfileCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int comma = command.indexOf(',');
+    int id = comma >= 0 ? command.substring(comma + 1).toInt() : static_cast<int>(g_activeProfile);
+    StaticJsonDocument<160> response;
+    response["profile"] = id;
+    if (id < 0 || id >= NUM_PROFILES || !loadProfileSlot(static_cast<uint8_t>(id))) {
+        response["profile_loaded"] = false;
+        response["error"] = "Profile load failed";
+        sendJsonResponse(response);
+        return;
+    }
+    response["profile_loaded"] = true;
+    sendJsonResponse(response);
+}
+
 void handleRecallMacroSlotCommand(const ParsedCommand &cmd) {
     (void)cmd;
     SceneStorage::ConfigState snapshot{};
@@ -1711,6 +2099,38 @@ void handleSaveMacroSlotCommand(const ParsedCommand &cmd) {
     if (!saved) {
         response["error"] = "Macro snapshot save failed";
     }
+    sendJsonResponse(response);
+}
+
+void handleResetProfileCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int comma = command.indexOf(',');
+    int id = comma >= 0 ? command.substring(comma + 1).toInt() : static_cast<int>(g_activeProfile);
+    StaticJsonDocument<160> response;
+    response["profile"] = id;
+    if (id < 0 || id >= NUM_PROFILES || !resetProfileSlot(static_cast<uint8_t>(id))) {
+        response["profile_reset"] = false;
+        response["error"] = "Profile reset failed";
+        sendJsonResponse(response);
+        return;
+    }
+    response["profile_reset"] = true;
+    sendJsonResponse(response);
+}
+
+void handleSaveProfileCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int comma = command.indexOf(',');
+    int id = comma >= 0 ? command.substring(comma + 1).toInt() : static_cast<int>(g_activeProfile);
+    StaticJsonDocument<160> response;
+    response["profile"] = id;
+    if (id < 0 || id >= NUM_PROFILES || !saveCurrentProfileSlot(static_cast<uint8_t>(id))) {
+        response["profile_saved"] = false;
+        response["error"] = "Profile save failed";
+        sendJsonResponse(response);
+        return;
+    }
+    response["profile_saved"] = true;
     sendJsonResponse(response);
 }
 
@@ -2010,6 +2430,27 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
             applyProfileSnapshot(stored, true);
         }
     }
+    LOG_PRINTLN("OK");
+}
+
+void handleSetSlotValueCommand(const ParsedCommand &cmd) {
+    const String &command = cmd.fullCommand();
+    int firstComma = command.indexOf(',');
+    int lastComma = command.lastIndexOf(',');
+    if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+
+    int slotIndex = command.substring(firstComma + 1, lastComma).toInt();
+    int midiValue = command.substring(lastComma + 1).toInt();
+    if (slotIndex < 0 || slotIndex >= NUM_SLOTS || midiValue < 0 || midiValue > 127) {
+        LOG_PRINTLN("ERR");
+        return;
+    }
+
+    potentiometerManager.injectMidiValue(static_cast<uint8_t>(slotIndex),
+                                         static_cast<uint8_t>(midiValue));
     LOG_PRINTLN("OK");
 }
 
