@@ -823,10 +823,7 @@ function createSimulator() {
           sourceB: (efIndex + 1) % manifest.envelope_count
         },
         active: idx % 2 === 0,
-        pot: true,
-        takeover: idx % 5 === 0,
         arp_note: (idx * 3) % 128,
-        label: `Slot ${idx + 1}`,
         sysexTemplate: ''
       };
     }),
@@ -1774,7 +1771,6 @@ export function createRuntime({
     validator = ajv.compile(schema);
     const configPayload = await sendRpc({ rpc: 'get_config' });
     const config = configPayload?.config ?? configPayload;
-    extractLocalSlotMetaFromConfig(config);
     const normalized = normalizeConfig(config, remoteManifest ?? localManifest ?? {});
     liveConfig = clone(normalized);
     stagedConfig = clone(normalized);
@@ -2062,7 +2058,6 @@ export function createRuntime({
 
   function replaceConfig(configPayload) {
     if (!configPayload || typeof configPayload !== 'object') return false;
-    extractLocalSlotMetaFromConfig(configPayload);
     const normalized = normalizeConfig(configPayload, remoteManifest ?? localManifest ?? {});
     liveConfig = clone(normalized);
     stagedConfig = clone(normalized);
