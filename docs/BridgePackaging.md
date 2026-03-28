@@ -2,6 +2,8 @@
 
 This document defines how to ship the MN42 Bridge for users who do not want to run Node commands manually.
 
+This is a future-facing packaging plan. It is not a current compatibility claim for every desktop host or DAW.
+
 ## Goals
 
 - Ship a double-click install/run path on macOS, Windows, and Linux.
@@ -20,6 +22,8 @@ This document defines how to ship the MN42 Bridge for users who do not want to r
 - Runtime requirement: Node `>=20 <21`
 - Native dependency: `serialport`
 - Tests: `npm --prefix bridge test`
+
+For the current support boundary, see [Host Compatibility](HostCompatibility.md).
 
 ## Packaging options
 

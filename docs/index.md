@@ -24,6 +24,21 @@ It is designed less like a sealed appliance and more like an instrument whose lo
 
 </div>
 
+## Validated host surfaces
+
+<div class="mn42-callout mn42-callout-support" markdown="1">
+
+The broad workflow story is real, but the compatibility claim should be read conservatively.
+
+- strongest direct-browser evidence in this repo: Chromium-based configurator over WebSerial
+- strongest desktop host evidence in this repo: Node 20 bridge with the browser console and `/app/` configurator path
+- documented but still setup-specific: OSC hosts and DAW virtual MIDI workflows
+- not claimed here as a verified production path: Firefox/Safari WebSerial and signed one-click bridge installers
+
+See [Host Compatibility](HostCompatibility.md) and [Connectivity Guide](ConnectivityGuide.md) before treating the project like a universal host/browser promise.
+
+</div>
+
 ## What it is
 
 MOARkNOBS-42 is a small-batch MIDI/OSC performance instrument with a surrounding ecosystem, not just a bare controller board.
@@ -42,7 +57,7 @@ The object in your hands is only part of the story.
 
 - **Bridge**
 
-  The bridge path opens OSC and DAW-facing virtual MIDI workflows when direct browser connection is not the right fit for the host setup.
+  The bridge path opens documented OSC and virtual MIDI workflows when direct browser connection is not the right fit for the host setup.
 
 </div>
 
@@ -81,7 +96,7 @@ The goal is not mass-market smoothness. The goal is an instrument whose control 
 
 - **OSC / virtual MIDI bridge**
 
-  The bridge exposes OSC and a DAW-facing virtual MIDI path, and now includes a browser-driven local console.
+  The bridge exposes documented OSC and virtual MIDI paths, and now includes a browser-driven local console.
 
 - **Dual MIDI hardware formats**
 

@@ -2,7 +2,15 @@
 
 The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows.
 
-Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a DAW-facing virtual MIDI port. Start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) if you are deciding between them.
+Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a virtual MIDI port on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) if you are deciding between them.
+
+Current support boundary:
+
+- strongest repo evidence for this tool: Node.js 20 desktop host plus the browser console or CLI
+- documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
+- not claimed here: a signed one-click installer or broad DAW-by-DAW compatibility proof
+
+See [docs/HostCompatibility.md](../docs/HostCompatibility.md) for the conservative matrix.
 
 It does three things:
 
@@ -114,6 +122,8 @@ That sets slot 2 to value 95.
 1. Start the bridge with `--midi "MN42 Bridge"` (default label).
 2. In your DAW, enable the MIDI device named `MN42 Bridge`.
 3. Record/monitor incoming CC data or send CC data back to the bridge.
+
+This is the documented bridge contract, not a claim that every DAW has already been bench-validated in this repo pass.
 
 MIDI mapping used by the bridge:
 

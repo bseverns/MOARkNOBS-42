@@ -30,7 +30,7 @@ This pass looks at release clarity, firmware/app/bridge contract truth, hardware
 - There is still no versioned BOM export in the repo.
 - There is still no versioned fabrication archive in the repo.
 - The bridge is still a Node-launched desktop tool, not a signed one-click installer.
-- Broad browser and DAW compatibility claims are still narrower than a mass-market product page would imply.
+- Broad browser and DAW compatibility claims are now documented conservatively, but the underlying proof is still narrower than a mass-market product page would imply.
 
 ## Verified repo facts
 
@@ -51,7 +51,7 @@ The bridge works and is documented, but it still assumes a Node-capable operator
 
 3. Browser compatibility should still be described narrowly.
 Reason:
-The repo proves Chromium-based configurator behavior most strongly. Other browser paths should be presented conservatively unless bench evidence exists.
+The repo proves Chromium-based configurator behavior most strongly. Other browser paths should stay conservative unless bench evidence exists; see [Host Compatibility](HostCompatibility.md).
 
 4. Release-ready language should remain gated.
 Reason:
