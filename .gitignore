@@ -20,6 +20,7 @@ firmwareZip.zip
 dist/
 docs/dist/
 logs/
+site/
 
 # Bridge deps live outside git; npm ci resurrects them
 bridge/node_modules/
