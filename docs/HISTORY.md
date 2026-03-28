@@ -239,6 +239,16 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Hardware momentum crossed a line from CAD iteration to physical commitment: **March 13, 2026:** the prototype PCB run was sent to fabrication, marking the handoff from design churn to waiting on real boards.
 - *There is a different kind of seriousness once copper has been ordered; every doc line and every test starts reading like an instruction to your future self standing at a bench with actual hardware in the mail.*
 
+### March — Contract Closure, Recovery Truth, and Orientation Lock
+
+- A fit/finish audit forced the repo to stop treating firmware, bridge, App, and docs like separate projects. The useful work was not “make the UI prettier”; it was closing the seams where one layer was still bluffing about another. [`9143195`, `b6844fc`]
+- Browser-driven profile save/load/reset is now real firmware behavior rather than a simulator flourish, and the same pass landed actual EEPROM-backed macro snapshots plus scene storage so the recovery story finally matches the operator docs. [`9143195`]
+- The bridge/App/firmware command story was tightened until it read like one contract: native transport verbs are the source of truth, bridge live control now uses `SET_SLOT_VALUE`, and the docs stopped narrating old command shapes as if they still shipped. [`9143195`, `b6844fc`]
+- Browser-only slot notes got their own line in the sand. `label`, the MIDI badge, and `Take Control` are now explicitly local browser affordances instead of fake device config, and the reconnect path no longer stomps those notes with whatever the last `get_config` happened to say. [`3d3e595`]
+- The documentation pass turned into an orientation lock for pre-production: host/browser/DAW compatibility claims now show up early and conservatively, `HostCompatibility.md` was added as the plain-English matrix, and MkDocs strict mode is back to green with nav + reference pages made explicit. [`403874e`, `ff60649`, `8e1deb7`]
+- Storage verification also got more honest. Firmware tests grew targeted persistence coverage and the full-system runner learned a destructive `--exercise-storage` path so bench time can prove profile/macro/scene behavior instead of taking the docs on faith. [`b6844fc`]
+- *This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more “does the whole instrument tell the same story when you actually use it?”*
+
 ## Overview
 
 Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB schematics, test suites, and detailed usage notes. The repository now houses:

@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Firmware now exposes real device-backed profile save/load/reset flows plus EEPROM-backed macro snapshot and scene storage, with manifest capability reporting so the App can tell the truth about what the board supports.
+- Added stronger storage/regression coverage in the firmware tests plus a destructive `--exercise-storage` lane in `firmware/system_test/mn42_fullstack_runner.js` for bench validation of profile/macro/scene persistence.
+- Added `docs/HostCompatibility.md` so browser, bridge, OSC, and DAW support claims are split into verified, documented, and not-claimed buckets instead of being implied from skim-level marketing language.
 - WebSerial `GET_MANIFEST` now includes `device_name`, allowing host tools to identify the target rig explicitly instead of inferring identity from version/build data.
 - App connect panel now shows a dedicated identity banner (`Connected to: <device> (FW <version>)`) and ships an inline "What to do if connect fails" helper.
 - Added firmware panic-safe baseline combo (`Ctrl0 + Ctrl1 + Ctrl2`): stops arp, disables EF follow, and reloads the active profile.
@@ -43,9 +46,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `test/test_protocol_dispatch.cpp` and the `firmware/python` shim that makes `python -c ...` resolve to `python3`, keeping the Unity runner happy in environments without a bare `python`. [current change]
 - Macro snapshot controls now expose `SAVE_MACRO_SLOT`/`RECALL_MACRO_SLOT` to the WebSerial UI with inline feedback, disabled save during writes, and optional config reloads after recall so the browser mirrors slot 254 without touching live profiles.
 - Introduced LED animation modes (`Static`, `PeakHold`, `Trail`, `ClockPulse`) plus a scheduler-driven `LedAnimator`, diagnostics override, and RPC hooks so pots/envelopes can emit dynamic feedback safely outside interrupt context.
-- Planned scene slot support: fixed-size `Scene` records with named slots, `SAVE_SCENE`/`RECALL_SCENE` verbs, and a future WebSerial “Scenes” view that lists saved names and manages EEPROM-backed snapshots without blocking the loop.
+- Scene slot support now ships with named EEPROM-backed saves, `SAVE_SCENE`/`RECALL_SCENE`/`GET_SCENES` verbs, and browser controls that sync scene availability from firmware instead of pretending storage exists.
 
 ### Changed
+- App/firmware/bridge seams were closed around real production commands instead of simulator-era assumptions: configurator transport now adapts cleanly onto native firmware verbs, bridge host control uses `SET_SLOT_VALUE`, and operator docs were updated to the same contract.
+- Browser-only slot notes (`label`, MIDI badge, `Take Control`) now stay strictly browser-local: they no longer travel as device truth, the simulator no longer advertises them as firmware-backed config, and reconnects preserve local notes instead of rehydrating stale defaults from `get_config`.
+- Docs now read with a clearer pre-production support boundary: landing pages, connectivity docs, bridge docs, and the repo health audit call out validated host surfaces early, and MkDocs strict build is kept green with the current nav/link structure.
 - Connection UI now separates transport state (`Connected`, `Handshaking`, `Disconnected`) from identity details, with device/firmware info moved to the dedicated banner.
 - OLED copy pass improves live readability: expanded arp shape names (`Up-Down`, `Random`, `Euclid`), less-abbreviated EF/filter labels, and explicit swing feedback (`Swing: n%`).
 - Device Monitor now includes a dedicated `Device` field sourced from manifest identity.
@@ -75,6 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   queueing.
 
 ### Fixed
+- Browser-local slot metadata now survives reconnect/profile-refresh paths correctly instead of getting overwritten by live `get_config` payloads during hydrate/replace flows.
+- MkDocs strict docs build now passes with the host-compatibility page in nav and the formerly off-nav audit/interop pages explicitly labeled as archive/reference material.
 - Connect-failure path now reveals actionable recovery guidance directly in-app instead of leaving users at a dead-end error state.
 - Corrected demo-facing OLED abbreviations that were too terse for live explanation of EF/arp/swing states.
 - Corrected stale bridge/example docs that still referenced old OSC defaults and legacy bridge verbs; documentation now reflects the current `/mn42/cmd` contract and `--osc/--osc-listen` defaults.
