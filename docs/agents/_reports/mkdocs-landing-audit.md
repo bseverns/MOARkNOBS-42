@@ -1,5 +1,9 @@
 # MkDocs Landing Audit
 
+This is an archived planning note from the homepage-orientation pass, kept in the docs site as reference rather than current product truth.
+
+For the current landing-page and support-boundary story, start with [Home](../../index.md), [Host Compatibility](../../HostCompatibility.md), and [Repo Health Audit 2026-03](../../repo-health-audit-2026-03.md).
+
 ## What the current homepage does well
 
 - It immediately presents MOARkNOBS-42 as an instrument and a documentation-rich project, not just a code dump.

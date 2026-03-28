@@ -35,5 +35,5 @@ This is a pre-production compatibility note, not a mass-market promise sheet.
 
 - [Connectivity Guide](ConnectivityGuide.md)
 - [Quickstart for Performers](QuickstartForPerformers.md)
-- [bridge/README.md](../bridge/README.md)
-- [App/README.md](../App/README.md)
+- [OSC Bridge](OSCBridge.md)
+- [Configurator Tour](Configurator.md)

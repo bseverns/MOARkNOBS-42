@@ -84,6 +84,7 @@ nav:
       - Hardware Current Build: HardwareCurrentBuild.md
       - Hardware Substitutions: HardwareSubstitutions.md
       - Connectivity Guide: ConnectivityGuide.md
+      - Host Compatibility: HostCompatibility.md
       - License and Support: LicenseAndSupport.md
       - Glossary: Glossary.md
       - Process Overview: ProcessOverview.md
@@ -138,6 +139,7 @@ nav:
       - Example Patches: examples/README.md
       - Max Listener Patch: examples/max/README.md
       - Pure Data Listener: examples/puredata/README.md
+      - SeedBox Link Notes: interop/seedbox.md
       - Sketchbook: sketchbook/index.md
       - Button Matrix Sketch: sketch/systemFlow/hw/buttonMatrix.md
       - Display Sketch: sketch/systemFlow/hw/display.md
@@ -146,6 +148,7 @@ nav:
       - MIDI Opto Sketch: sketch/systemFlow/hw/midiOpto.md
       - Power and Protection Sketch: sketch/systemFlow/hw/power&protection.md
       - Teensy and Headers Sketch: sketch/systemFlow/hw/teensy&headers.md
+      - Landing Audit Archive: agents/_reports/mkdocs-landing-audit.md
       - Changed Files Report: agents/_reports/changed-files.md
   - Project History:
       - History: HISTORY.md
