@@ -7,6 +7,7 @@
 #include "Arpeggiator.h"
 #include "WebSerial.h"
 
+// Bring up the physical UI modules and play the startup identity sequence.
 void initializeUI() {
     pinMode(hwConfig.statusLedPin, OUTPUT);
     digitalWrite(hwConfig.statusLedPin, LOW);
@@ -29,6 +30,7 @@ void initializeUI() {
     displayManager.runStartupAnimation();
 }
 
+// Read the two control pots as filter-tail tuning for the currently active slot/follower.
 void updateFilterTuning(ButtonManagerContext &context) {
     if (g_jitterTuningActive) {
         return;
@@ -70,6 +72,7 @@ void updateFilterTuning(ButtonManagerContext &context) {
     displayManager.showFilterTuning("Freq", freq, "Q", q);
 }
 
+// Reinterpret the two control pots as arpeggiator timing/shape or gate/octave edits.
 void updateArpTuning() {
     if (g_jitterTuningActive) {
         return;
@@ -105,6 +108,7 @@ void updateArpTuning() {
     displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
 }
 
+// Reinterpret the two control pots as note velocity/probability shaping when arp is idle.
 void updateNoteDynamics() {
     if (g_jitterTuningActive) {
         return;
@@ -123,6 +127,7 @@ void updateNoteDynamics() {
     displayManager.showText("Note Dyn", line2.c_str(), line3.c_str());
 }
 
+// Push the current runtime snapshot out over WebSerial for the browser/editor layer.
 void streamWebSerialState() {
     if (!webSerialStreaming)
         return;

@@ -23,6 +23,7 @@ const STORAGE_KEY = 'moarknobs:last-port';
 const STATE_STORAGE_KEY = 'moarknobs:last-state';
 const LOCAL_SLOT_META_STORAGE_KEY = 'moarknobs:slot-meta';
 
+// Small event bus shared by the runtime and the view layer.
 function makeEmitter() {
   const listeners = new Map();
   return {
@@ -46,14 +47,17 @@ function makeEmitter() {
   };
 }
 
+// Avoid repeated constructor churn when we encode serial/WebSocket payloads.
 function encoder() {
   return new TextEncoder();
 }
 
+// Keep a matching decoder helper beside the encoder for transport adapters.
 function decoder() {
   return new TextDecoder();
 }
 
+// Hash staged config payloads so Apply can demand an explicit firmware ACK.
 async function digest(message) {
   const bytes = typeof message === 'string' ? new TextEncoder().encode(message) : message;
   const hash = await crypto.subtle.digest('SHA-256', bytes);
@@ -66,12 +70,14 @@ async function digest(message) {
   return hex;
 }
 
+// Structured clone when available; JSON clone fallback keeps tests/browser support simple.
 function clone(value) {
   if (value === undefined) return value;
   if (typeof structuredClone === 'function') return structuredClone(value);
   return JSON.parse(JSON.stringify(value));
 }
 
+// Browser-local slot notes are stored outside device config and normalized here.
 function normalizeLocalSlotMetaEntry(entry = {}) {
   return {
     pot: entry?.pot === undefined ? true : Boolean(entry.pot),
@@ -80,11 +86,13 @@ function normalizeLocalSlotMetaEntry(entry = {}) {
   };
 }
 
+// Keep the local slot-meta array aligned with the current slot count.
 function normalizeLocalSlotMeta(meta, slotCount) {
   const count = Math.max(0, Math.floor(Number(slotCount) || 0));
   return Array.from({ length: count }, (_, index) => normalizeLocalSlotMetaEntry(meta?.[index]));
 }
 
+// Diff staged vs live state for the dirty badge and human-readable change panel.
 function shallowDiff(before, after, basePath = '') {
   const changes = [];
   if (before === after) return changes;
@@ -106,6 +114,7 @@ function shallowDiff(before, after, basePath = '') {
   return changes;
 }
 
+// Cheap field-level equality check for tiny metadata records.
 function shallowEqual(a, b) {
   if (a === b) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
@@ -116,11 +125,13 @@ function shallowEqual(a, b) {
   return true;
 }
 
+// Convert dotted paths like `slots.3.data1` into array/object access tokens.
 function parseSegment(segment) {
   const idx = Number(segment);
   return Number.isInteger(idx) && String(idx) === segment ? idx : segment;
 }
 
+// Mutate a nested draft object in place for staged edits and test harness helpers.
 function setNestedValue(target, path, value) {
   if (!path) return;
   const segments = path.split('.').map(parseSegment);
@@ -139,11 +150,13 @@ function setNestedValue(target, path, value) {
   }
 }
 
+// Shared number clamp used throughout config normalization.
 function clamp(value, min, max) {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, value));
 }
 
+// Chunk large native `SET_ALL` bodies so serial transport stays within line limits.
 function chunkString(value, size) {
   const text = typeof value === 'string' ? value : String(value ?? '');
   const chunkSize = Math.max(1, Math.floor(Number(size) || 1));
@@ -154,6 +167,7 @@ function chunkString(value, size) {
   return chunks.length ? chunks : [''];
 }
 
+// UI throttling helper for controls that should feel live without flooding transport.
 function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
   let timer = null;
   let pendingArgs = null;
@@ -176,11 +190,13 @@ function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
   };
 }
 
+// Coerce unknown ids into non-negative integer indices when possible.
 function coerceIndex(value) {
   const num = Number(value);
   return Number.isInteger(num) && num >= 0 ? num : null;
 }
 
+// Accept multiple historical slot-index field names from firmware/bridge payloads.
 function extractSlotIndex(payload, fallback) {
   const candidates = [payload?.index, payload?.slot, payload?.slot_index, payload?.slotIndex, fallback];
   for (const candidate of candidates) {
@@ -190,6 +206,7 @@ function extractSlotIndex(payload, fallback) {
   return null;
 }
 
+// Normalize incoming slot patch frames into one predictable shape before merging.
 function normalizeSlotPatchEntry(entry) {
   if (!entry || typeof entry !== 'object') return null;
   const index = coerceIndex(entry.index ?? entry.id ?? entry.slot);
@@ -279,6 +296,7 @@ function normalizeSlotPatchEntry(entry) {
   return { index, fields };
 }
 
+// Build the per-slot envelope follower payload the App expects to render and stage.
 function normalizeSlotEnvelope(slot) {
   const defaults = {
     index: -1,
@@ -340,6 +358,7 @@ function normalizeSlotEnvelope(slot) {
   return ef;
 }
 
+// Normalize ARG combiner fields and recover sensible defaults from mixed payload styles.
 function normalizeSlotArg(slot, efLimit = 6) {
   const defaults = {
     enabled: false,
@@ -365,6 +384,7 @@ function normalizeSlotArg(slot, efLimit = 6) {
   return arg;
 }
 
+// Reduce all slot payload variants to the canonical App schema shape.
 function normalizeSlotConfig(slot, efLimit = 6) {
   const source = slot && typeof slot === 'object' ? slot : {};
   const efMax = Math.max(-1, Math.round(Number.isFinite(Number(efLimit)) ? Number(efLimit) - 1 : 5));
@@ -408,6 +428,7 @@ function normalizeSlotConfig(slot, efLimit = 6) {
   return normalized;
 }
 
+// Normalize a full config document before it becomes either live or staged state.
 function normalizeConfig(config, manifest = {}) {
   if (!config || typeof config !== 'object') return config;
   const slotCount = Number.isFinite(Number(manifest.slot_count))
@@ -594,6 +615,7 @@ function normalizeConfig(config, manifest = {}) {
   return normalized;
 }
 
+// Keep EF routing lists deduped, sorted, and bounded to real slot indices.
 function normalizeEfSlotTargets(entry, slotCount) {
   const rawSlots = [];
   if (Array.isArray(entry?.slots)) {
@@ -621,6 +643,7 @@ function normalizeEfSlotTargets(entry, slotCount) {
   return normalized;
 }
 
+// Tiny helper for comparing normalized slot-index arrays.
 function sameNumberArray(left, right) {
   if (!Array.isArray(left) || !Array.isArray(right)) return false;
   if (left.length !== right.length) return false;
@@ -630,6 +653,7 @@ function sameNumberArray(left, right) {
   return true;
 }
 
+// Merge a follower-routing patch without losing other assigned slots.
 function applyEfSlotPatch(target, patch, slotCount) {
   if (!Array.isArray(target)) target = [];
   const index = coerceIndex(patch.index);
@@ -682,6 +706,7 @@ function applyEfSlotPatch(target, patch, slotCount) {
   return changed ? copy : target;
 }
 
+// Native serial transport wrapper that exposes the same API as the simulator and WS bridge.
 function createTransportPort(port, options = {}) {
   const textEncoder = encoder();
   const textDecoder = decoder();
@@ -755,6 +780,7 @@ function createTransportPort(port, options = {}) {
   return { open, writeLine, nextLine, close, rawPort: port, protocol: 'native' };
 }
 
+// Simulator transport used by tests and hardware-free UI rehearsal.
 function createSimulator() {
   let opened = false;
   let index = 0;
@@ -1015,6 +1041,7 @@ function createSimulator() {
   };
 }
 
+// Bridge websocket transport shim so the App can reuse the same runtime contract off-WebSerial.
 function createWebSocketTransport(url) {
   let socket = null;
   let queue = [];
@@ -1145,6 +1172,7 @@ function createWebSocketTransport(url) {
   };
 }
 
+// Main App runtime: owns transport, staging, RPC queueing, rollback, and browser-local metadata.
 export function createRuntime({
   schemaUrl = './config_schema.json',
   localManifest,

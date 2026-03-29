@@ -77,6 +77,7 @@ inline void waitForMuxSettle() {
     }
 }
 
+// Fast LUT-based mux writer used in the tight matrix scan loop.
 inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
     static const uint8_t lut[16][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0},
                                        {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0},
@@ -89,23 +90,28 @@ inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
     digitalWriteFast(selPins[3], bits[3]);
 }
 
+// Emit one slot patch so the browser can follow on-device edits.
 inline void streamSlotPatch(ConfigManager &config, uint8_t slotIndex) {
     WebSerial::sendSlotPatch(config, slotIndex);
 }
 
+// Emit one slot-to-envelope assignment patch for the browser/editor layer.
 inline void streamEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     WebSerial::sendEnvelopeAssignment(slotIndex, envelopeIndex);
 }
 
+// Emit updated filter tuning after a control-button gesture changes it.
 inline void streamFilterPatch(const EnvelopeFollower &env) {
     WebSerial::sendFilterPatch(env.getFilterType(), env.getShapingFrequency(), env.getShapingQ());
 }
 
+// Emit current ARG settings after local edits so the browser stays honest.
 inline void streamArgPatch(const ConfigManager &config) {
     WebSerial::sendArgPatch(config.getARGMethod(), config.getARGEnable() != 0,
                             config.getEnvelopeA(), config.getEnvelopeB());
 }
 
+// Accept either raw analog pin ids or normalized follower indices from older call sites.
 inline uint8_t normalizeEnvelopeIndex(uint8_t raw) {
     int idx = envelopeIndexFromAnalogPin(raw);
     if (idx >= 0) {
@@ -117,6 +123,7 @@ inline uint8_t normalizeEnvelopeIndex(uint8_t raw) {
     return static_cast<uint8_t>(raw % NUM_ENVELOPES);
 }
 
+// Map one EF filter enum back to its position in the cycle list.
 inline int filterIndex(MIDISlot::EfSettings::FilterType type) {
     for (int i = 0; i < NUM_FILTER_TYPES; ++i) {
         if (SLOT_FILTERS[i] == type) {
@@ -126,6 +133,7 @@ inline int filterIndex(MIDISlot::EfSettings::FilterType type) {
     return 0;
 }
 
+// Step forward/backward through the supported EF filter list.
 inline MIDISlot::EfSettings::FilterType cycleFilter(MIDISlot::EfSettings::FilterType current,
                                                     int delta) {
     int index = filterIndex(current);
@@ -133,6 +141,7 @@ inline MIDISlot::EfSettings::FilterType cycleFilter(MIDISlot::EfSettings::Filter
     return SLOT_FILTERS[index];
 }
 
+// Persist new EF settings, update the slot cache, and reconfigure the live follower if present.
 inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
                              const MIDISlot::EfSettings &settings) {
     MIDISlot &slot = context.configManager.getSlot(static_cast<uint8_t>(slotIndex));

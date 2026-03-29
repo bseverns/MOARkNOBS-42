@@ -81,6 +81,8 @@ void Arpeggiator::setBaseNote(uint8_t note) {
 void Arpeggiator::setBaseNoteCallback(std::function<uint8_t()> cb) { _baseNoteCb = cb; }
 
 namespace {
+// Convert the user-facing jitter "smoothness" knob into the sampling rate used
+// by the Perlin-noise walker that powers RANDOM mode.
 float jitterRateFromSmoothness(float smoothness) {
     float clamped = constrain(smoothness, 0.0f, 1.0f);
     return Utility::scale(clamped, 0.0f, 1.0f, 2.0f, 0.05f);
@@ -115,6 +117,7 @@ int8_t Arpeggiator::nextDrunkOffset(uint8_t totalSteps) {
 }
 
 // UPDOWN walks up then back down, so we extend the step count.
+// Compute the logical step count after shape-specific path expansion.
 uint8_t Arpeggiator::stepCountForShape(uint8_t totalSteps) const {
     if (totalSteps <= 1) {
         return 1;

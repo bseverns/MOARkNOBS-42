@@ -1,8 +1,10 @@
 const SLOT_COUNT = 42;
 const EF_COUNT = 6;
 
+// Clone static preset objects so loading one preset never mutates the source template.
 const clonePreset = (preset) => JSON.parse(JSON.stringify(preset));
 
+// Generate a full 42-slot preset skeleton and let the caller override each slot.
 const makeSlots = (mapper) =>
   Array.from({ length: SLOT_COUNT }, (_, idx) => {
     const base = {
@@ -17,11 +19,13 @@ const makeSlots = (mapper) =>
     return extra ? { ...base, ...extra } : base;
   });
 
+// Generate the envelope-follower assignment block used by demo presets.
 const makeEfSlots = (mapper) =>
   Array.from({ length: EF_COUNT }, (_, idx) => ({
     slots: [mapper ? mapper(idx) : (idx * 7) % SLOT_COUNT]
   }));
 
+// Wrap a JSON preset file in the async loader shape expected by the preset picker.
 const fetchPreset = (path) => async () => {
   const response = await fetch(path);
   if (!response.ok) {

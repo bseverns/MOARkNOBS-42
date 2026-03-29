@@ -12,6 +12,7 @@
 
 namespace SysExTemplate {
 namespace {
+// Lowercase a token for placeholder matching without mutating the original input slice.
 String makeLowercase(const char *token, std::size_t len) {
     String lowered;
     lowered.reserve(static_cast<unsigned int>(len));
@@ -22,6 +23,7 @@ String makeLowercase(const char *token, std::size_t len) {
 }
 } // namespace
 
+// Parse a human-edited SysEx template string into bytes plus placeholder markers.
 bool parse(const char *input, std::array<uint8_t, kMaxLength> &out, uint8_t &length,
            String &error) {
     out.fill(0);
@@ -101,6 +103,7 @@ bool parse(const char *input, std::array<uint8_t, kMaxLength> &out, uint8_t &len
     return true;
 }
 
+// Format a parsed template back into a readable token string for UI/export use.
 String format(const std::array<uint8_t, kMaxLength> &bytes, uint8_t length) {
     String result;
     if (length == 0) {
@@ -126,6 +129,7 @@ String format(const std::array<uint8_t, kMaxLength> &bytes, uint8_t length) {
     return result;
 }
 
+// Render a parsed template into a concrete SysEx payload using live 7-bit/14-bit values.
 uint8_t render(const std::array<uint8_t, kMaxLength> &bytes, uint8_t length, uint8_t value7,
                uint16_t value14, uint8_t *dest, std::size_t capacity) {
     if (!dest || length == 0 || capacity < length) {
@@ -147,6 +151,7 @@ uint8_t render(const std::array<uint8_t, kMaxLength> &bytes, uint8_t length, uin
     return written;
 }
 
+// Tell callers whether a template needs live substitution before send.
 bool containsValuePlaceholder(const std::array<uint8_t, kMaxLength> &bytes, uint8_t length) {
     for (uint8_t i = 0; i < length; ++i) {
         uint8_t value = bytes[i];

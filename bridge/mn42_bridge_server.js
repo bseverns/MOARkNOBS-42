@@ -6,6 +6,7 @@ const {
 } = require('./lib/bridge_service');
 const { createBrowserBridgeServer } = require('./lib/http_bridge_server');
 
+// Browser-console-specific help text. The core transport flags still come from bridge_service.
 function usageText() {
   return (
     'mn42_bridge_server.js - browser-driven MOARkNOBS-42 bridge\n' +
@@ -13,10 +14,12 @@ function usageText() {
   );
 }
 
+// Print server usage to stdout/stderr without duplicating the text assembly logic.
 function printUsage(stream = process.stdout) {
   stream.write(`${usageText()}\n`);
 }
 
+// Stream bridge logs into the server process console for local operators.
 function bindConsoleLogging(service) {
   return service.on('log', (entry) => {
     const line = entry?.message || '';
@@ -33,6 +36,7 @@ function bindConsoleLogging(service) {
   });
 }
 
+// Start the bridge service plus the HTTP/WebSocket wrapper used by the browser console.
 async function runServer(argv = process.argv, injected = {}) {
   if (argv.includes('--help') || argv.includes('-h')) {
     printUsage();
@@ -62,6 +66,7 @@ async function runServer(argv = process.argv, injected = {}) {
   console.log(`bridge console: ${address.url}`);
 
   let shuttingDown = false;
+  // Shared SIGINT/SIGTERM shutdown path so the HTTP wrapper and bridge stop together.
   const shutdown = async () => {
     if (shuttingDown) return;
     shuttingDown = true;
@@ -79,6 +84,7 @@ async function runServer(argv = process.argv, injected = {}) {
   return { service, server, address };
 }
 
+// Default executable path for the browser-driven bridge server.
 runServer().catch((err) => {
   console.error('bridge server failed:', err.message);
   process.exit(1);

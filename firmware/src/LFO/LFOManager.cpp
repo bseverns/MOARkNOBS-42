@@ -20,6 +20,7 @@ float clampDepth(float depth) {
 }
 } // namespace
 
+// Start with a sane timestamp so the first update computes a small dt.
 LFOManager::LFOManager() {
     // Prime the timestamp so the first update has a sane delta.
     lastUpdateMs_ = now();
@@ -34,8 +35,10 @@ void LFOManager::attachMIDI(MIDIHandler *midi) {
 // Install an OSC callback for external modulation mirrors.
 void LFOManager::setOscCallback(void (*cb)(uint8_t, float)) { oscCallback_ = cb; }
 
+// Mutable access to one LFO slot in the manager's fixed bank.
 LFO &LFOManager::lfo(size_t index) { return lfos_.at(index); }
 
+// Read-only access to one LFO slot in the manager's fixed bank.
 const LFO &LFOManager::lfo(size_t index) const { return lfos_.at(index); }
 
 // Route an LFO to one of the internal modulation bus entries.

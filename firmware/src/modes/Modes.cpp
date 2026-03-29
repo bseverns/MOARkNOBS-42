@@ -14,6 +14,8 @@
 
 std::array<float, NUM_ENVELOPES> efBaseGains{};
 
+// Translate the runtime follower enum back into the persisted profile enum so
+// the config layer never depends on `EnvelopeFollower` internals.
 MIDISlot::EfSettings::FilterType fromEnvelopeFilter(EnvelopeFollower::FilterType type) {
     switch (type) {
     case EnvelopeFollower::LOWPASS:
@@ -27,6 +29,8 @@ MIDISlot::EfSettings::FilterType fromEnvelopeFilter(EnvelopeFollower::FilterType
     }
 }
 
+// Push a slot's stored EF parameters back into a live follower and cache the
+// baseline gain separately so LFO trim can modulate around the saved value.
 void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings &settings,
                                uint8_t followerIndex) {
     ef.configureFromEfSettings(settings);
@@ -36,6 +40,8 @@ void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings 
 }
 
 namespace {
+// Strip the runtime-only parts of `EfSettings` so profile storage keeps only
+// the fields that should travel with a saved profile snapshot.
 ProfileEfSettings profileEfFromSlot(const MIDISlot::EfSettings &settings) {
     ProfileEfSettings profile{};
     profile.mode = settings.efMode;
@@ -53,6 +59,8 @@ ProfileEfSettings profileEfFromSlot(const MIDISlot::EfSettings &settings) {
     return profile;
 }
 
+// Rehydrate the persisted profile subset back into the wider slot settings
+// object before the rest of the firmware starts consuming it.
 void applyProfileEfToSlot(const ProfileEfSettings &profile, MIDISlot::EfSettings &settings) {
     settings.efMode = profile.mode;
     settings.autoBaseline = profile.autoBaseline;
@@ -124,6 +132,8 @@ ProfileData captureProfileSnapshot() {
     return profile;
 }
 
+// Restore a previously captured profile into the live engine state. Callers can
+// choose whether that restore should also be committed back to EEPROM.
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     // `persistSlots` lets callers apply an in-memory profile preview without rewriting EEPROM
     // until the user commits.
@@ -165,6 +175,8 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     }
 }
 
+// Seed the two onboard LFOs with a predictable factory routing so a clean boot
+// still demonstrates movement even before the user edits modulation paths.
 void configureLFOs() {
     lfoManager.clearRoutes();
 
@@ -189,6 +201,8 @@ void configureLFOs() {
     lfoManager.addInternalRoute(1, LFOInternalTarget::EfGainTrim, 1.0f);
 }
 
+// Rebuild the envelope-follower voice cache from the current slot config after
+// profile loads or recovery paths mutate the underlying mappings.
 void refreshEfVoicesFromConfig() {
     for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
         EfVoice &voice = efVoices[slotIndex];
@@ -203,6 +217,8 @@ void refreshEfVoicesFromConfig() {
     }
 }
 
+// Reconstruct all profile-driven runtime state during boot: follower baselines,
+// LFO defaults, active profile selection, and the channel cache used by UI code.
 bool initializeModes() {
     // Load active profile wiring first, then rebuild the channel cache consumed by UI/transport
     // paths that still read `potChannels` directly.
@@ -232,6 +248,8 @@ bool initializeModes() {
     return baselinesLoaded;
 }
 
+// Keep the shared `const char*` label pointer valid by storing edits in the
+// backing `String` and then repointing consumers at its internal buffer.
 void updateEnvelopeModeLabel(const char *label) {
     if (!label || label[0] == '\0') {
         g_envelopeModeLabel = "LINEAR";

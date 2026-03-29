@@ -17,11 +17,13 @@ constexpr unsigned long kPeerTimeoutMs = 8000UL;
 constexpr size_t kIdentityPacketLength = 7;
 } // namespace
 
+// Global singleton used by the runtime and MIDI handler to coordinate the SeedBox link.
 SeedBoxLink &SeedBoxLink::instance() {
     static SeedBoxLink link;
     return link;
 }
 
+// Start the handshake state machine and immediately announce MN42 presence.
 void SeedBoxLink::begin(::MIDIHandler *handler) {
     _midi = handler;
     _hasAck = false;
@@ -32,6 +34,7 @@ void SeedBoxLink::begin(::MIDIHandler *handler) {
     sendIdentityPing();
 }
 
+// Retry hello, send keepalive pulses, and time out the peer when it goes silent.
 void SeedBoxLink::update() {
     if (!_midi)
         return;
@@ -56,6 +59,7 @@ void SeedBoxLink::update() {
     }
 }
 
+// Consume SeedBox handshake CC messages and keep the peer-alive timers up to date.
 bool SeedBoxLink::handleControlChange(uint8_t channel, uint8_t control, uint8_t value) {
     if (channel != kDefaultChannel || control != cc::kHandshake)
         return false;
@@ -82,6 +86,7 @@ bool SeedBoxLink::handleControlChange(uint8_t channel, uint8_t control, uint8_t 
     return true;
 }
 
+// Treat a recognized identity SysEx packet as proof that the peer is still alive.
 void SeedBoxLink::handleSysEx(const uint8_t *data, uint16_t length) {
     if (!data || length < kIdentityPacketLength)
         return;
@@ -97,12 +102,14 @@ void SeedBoxLink::handleSysEx(const uint8_t *data, uint16_t length) {
     markPeerPulse();
 }
 
+// Report whether the peer is still considered alive inside the timeout window.
 bool SeedBoxLink::peerAlive() const {
     if (!_hasAck)
         return false;
     return (now() - _lastPeerPulseMs) <= kPeerTimeoutMs;
 }
 
+// Broadcast the MN42 hello CC used to start or restart the session.
 void SeedBoxLink::sendHello() {
     if (!_midi)
         return;
@@ -110,12 +117,14 @@ void SeedBoxLink::sendHello() {
     _lastHelloMs = now();
 }
 
+// Answer a SeedBox hello with the expected ack CC.
 void SeedBoxLink::sendAck() {
     if (!_midi)
         return;
     _midi->sendControlChange(cc::kHandshake, handshake::kAck, kDefaultChannel);
 }
 
+// Send the periodic keepalive pulse once the session is established.
 void SeedBoxLink::sendKeepAlive() {
     if (!_midi)
         return;
@@ -123,6 +132,7 @@ void SeedBoxLink::sendKeepAlive() {
     _lastKeepAliveMs = now();
 }
 
+// Send the MN42 identity SysEx burst so SeedBox can distinguish this rig from random controllers.
 void SeedBoxLink::sendIdentityPing() {
     if (!_midi)
         return;
@@ -137,6 +147,7 @@ void SeedBoxLink::sendIdentityPing() {
     _midi->sendSysEx(packet.data(), packet.size());
 }
 
+// Record the last time we heard from the peer.
 void SeedBoxLink::markPeerPulse() { _lastPeerPulseMs = now(); }
 
 } // namespace mn42

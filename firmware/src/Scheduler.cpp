@@ -10,6 +10,7 @@
 #include "Utility.h"
 #include "interop/SeedBoxLink.h"
 
+// Register the recurring task tiers that keep transport, DSP, UI, and interop in balance.
 void initializeSchedulers() {
     // High-priority timing: keep the MIDI & DSP work snappy without blocking lower tiers.
     // Order high-tier tasks so transport/clock service happens before modulation/render passes.

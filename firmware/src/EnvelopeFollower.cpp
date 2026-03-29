@@ -22,6 +22,7 @@
  * Constructor
  */
 namespace {
+// Normalize caller-provided envelope identifiers into actual analog pin numbers.
 int resolveEnvelopeInput(int candidate) {
     if (candidate < 0) {
         return candidate;
@@ -44,11 +45,13 @@ int resolveEnvelopeInput(int candidate) {
     return candidate;
 }
 
+// Convert the global jitter smoothness control into a per-step Perlin sample rate.
 float jitterRateFromSmoothness(float smoothness) {
     float clamped = constrain(smoothness, 0.0f, 1.0f);
     return 0.05f + (1.0f - clamped) * 1.95f;
 }
 
+// Read the global jitter depth knob with a safe clamp.
 float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
 } // namespace
 

@@ -3,12 +3,14 @@ const MIN_HISTORY = 64;
 const TARGET_FPS = 30;
 const PEAK_DECAY = 0.003;
 
+// Scope math stays in normalized 0..1 space regardless of the source lane.
 const clamp01 = (value) => {
   const num = Number(value);
   if (!Number.isFinite(num)) return 0;
   return Math.min(1, Math.max(0, num));
 };
 
+// Shared time source for animation and FPS bookkeeping.
 const now = () => (typeof performance === 'object' && typeof performance.now === 'function' ? performance.now() : Date.now());
 
 export class ScopePanel {
@@ -56,6 +58,7 @@ export class ScopePanel {
     this.startRenderLoop();
   }
 
+  // Resize LFO history buffers to match the manifest's advertised modulation lanes.
   applyManifest(manifest = {}) {
     const lfoCountCandidate = Number(manifest?.lfo_count);
     const lfoCount = Number.isFinite(lfoCountCandidate) ? Math.max(0, Math.floor(lfoCountCandidate)) : DEFAULT_LFO_COUNT;
@@ -64,6 +67,7 @@ export class ScopePanel {
     this.initializeBuffers();
   }
 
+  // Rebuild all rolling buffers after a scope-size or manifest change.
   initializeBuffers() {
     this.efHistory = new Float32Array(this.historyLength);
     this.lfoHistory = Array.from({ length: this.lfoCount }, () => new Float32Array(this.historyLength));
@@ -72,6 +76,7 @@ export class ScopePanel {
     this.peakLevel = 0;
   }
 
+  // Match the canvas backing store and history size to the rendered widget dimensions.
   resizeCanvas() {
     if (!this.canvas || !this.ctx) return;
     const rect = this.canvas.getBoundingClientRect();
@@ -95,6 +100,7 @@ export class ScopePanel {
     }
   }
 
+  // Ingest one telemetry frame into the rolling EF/LFO history buffers.
   handleTelemetry(frame = {}) {
     if (!this.ctx) return;
     const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : [];
@@ -114,11 +120,13 @@ export class ScopePanel {
     this.lastTelemetryTimestamp = now();
   }
 
+  // Kick off the scope repaint loop once the panel is live.
   startRenderLoop() {
     if (this.frameRequest) return;
     this.frameRequest = requestAnimationFrame((timestamp) => this.renderFrame(timestamp));
   }
 
+  // Frame limiter that keeps the scope readable without hogging the browser.
   renderFrame(timestamp) {
     this.frameRequest = requestAnimationFrame((next) => this.renderFrame(next));
     if (timestamp - this.lastRender < 1000 / TARGET_FPS) return;
@@ -127,6 +135,7 @@ export class ScopePanel {
     this.updateFps(timestamp);
   }
 
+  // Draw the background grid, EF trace, LFO traces, and peak hold marker.
   draw() {
     if (!this.ctx || !this.renderWidth || !this.renderHeight) return;
     const ctx = this.ctx;
@@ -166,6 +175,7 @@ export class ScopePanel {
     this.updateStatus();
   }
 
+  // Stroke one normalized history buffer across the current canvas dimensions.
   drawLine(ctx, buffer, color, width, height) {
     const sampleCount = Math.min(this.samples, this.historyLength);
     if (sampleCount < 2) return;
@@ -188,11 +198,13 @@ export class ScopePanel {
     ctx.stroke();
   }
 
+  // Decide whether the peak-hold marker should be shown this frame.
   peekPeakLine(width, height) {
     if (!this.hasTelemetry || this.peakLevel <= 0) return false;
     return true;
   }
 
+  // Keep the scope status line truthful about streaming vs stale telemetry.
   updateStatus() {
     if (!this.statusLabel) return;
     if (!this.hasTelemetry) {
@@ -205,6 +217,7 @@ export class ScopePanel {
     this.statusLabel.textContent = age ? `Telemetry ${age} ms ago` : 'Telemetry streaming…';
   }
 
+  // Maintain a simple rolling FPS estimate for the panel footer.
   updateFps(timestamp) {
     this.fpsFrameCount += 1;
     const elapsed = timestamp - this.fpsWindowStart;
@@ -216,6 +229,7 @@ export class ScopePanel {
     }
   }
 
+  // Export the current scope canvas as a PNG snapshot.
   captureSnapshot() {
     if (!this.canvas) return;
     if (typeof this.canvas.toBlob === 'function') {
@@ -230,6 +244,7 @@ export class ScopePanel {
     this.downloadDataUrl(dataUrl);
   }
 
+  // Download a blob-backed snapshot while avoiding URL leaks.
   downloadBlob(blob) {
     const name = `mn42-scope-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
     const url = URL.createObjectURL(blob);
@@ -242,6 +257,7 @@ export class ScopePanel {
     }, 200);
   }
 
+  // Fallback download path for browsers that only expose data URLs.
   downloadDataUrl(dataUrl) {
     const name = `mn42-scope-${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
     const anchor = document.createElement('a');

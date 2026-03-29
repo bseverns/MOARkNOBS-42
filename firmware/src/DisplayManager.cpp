@@ -21,6 +21,7 @@
 
 namespace {
 
+// Human-readable EF filter labels for the OLED detail views.
 const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
@@ -41,6 +42,7 @@ const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     return "?";
 }
 
+// Convert schema/telemetry-style envelope mode names into friendlier OLED copy.
 const char *friendlyEnvelopeMode(const char *raw, char *buffer, size_t bufferLen) {
     if (!raw || raw[0] == '\0') {
         return "Linear";
@@ -114,6 +116,7 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
     _lastInteractionTime = now();
 }
 
+// Bring up the OLED hardware and clear any startup garbage.
 bool DisplayManager::begin() {
     if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
         return false;
@@ -123,6 +126,7 @@ bool DisplayManager::begin() {
     return true;
 }
 
+// Start the temporary fade animation used for status transitions.
 void DisplayManager::triggerFade(uint16_t ms) {
     _fadeAnim.state = AnimState::FADE_IN;
     _fadeAnim.duration = ms;
@@ -130,6 +134,7 @@ void DisplayManager::triggerFade(uint16_t ms) {
     _fadeAnim.brightness = 0;
 }
 
+// Advance the OLED fade animation and translate it into contrast commands.
 void DisplayManager::updateFadeAnimation() {
     if (_fadeAnim.state == AnimState::IDLE || _fadeAnim.state == AnimState::DONE) {
         return;
@@ -174,6 +179,7 @@ void DisplayManager::updateFadeAnimation() {
     _display.ssd1306_command(_fadeAnim.brightness);
 }
 
+// Run the blocking startup animation sequence before normal status rendering takes over.
 void DisplayManager::runStartupAnimation() {
     uint32_t current = now();
 
@@ -229,6 +235,7 @@ void DisplayManager::runStartupAnimation() {
     }
 }
 
+// Draw the simple idle screensaver used when no active UI should be shown.
 void DisplayManager::runIdleScreensaver() {
     _display.clearDisplay();
     for (int i = 0; i < 20; i++) {

@@ -2,6 +2,7 @@ const MIDI_LOG_LIMIT = 1000;
 const LOG_VISIBLE_COUNT = 60;
 const CLOCK_PULSES_PER_QUARTER = 24;
 
+// Render raw MIDI bytes in the familiar hex style musicians expect from monitor tools.
 function formatBytes(bytes) {
   return bytes
     .map((value) => {
@@ -12,6 +13,7 @@ function formatBytes(bytes) {
     .join(' ');
 }
 
+// Turn log timestamps into compact HH:MM:SS labels for the scrolling panel.
 function formatTimestamp(value) {
   const date = new Date(value);
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes()
@@ -19,6 +21,7 @@ function formatTimestamp(value) {
     .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
 }
 
+// Keep the transport clock inside a musically useful BPM range.
 function clampBpm(value) {
   const num = Number(value);
   if (!Number.isFinite(num)) return 120;
@@ -62,6 +65,7 @@ export class MidiMonitor {
     this.updateClockButton();
   }
 
+  // Collapse/expand the monitor so it can live beside the main transport controls.
   togglePanel() {
     if (!this.container || !this.toggleButton) return;
     const expanded = !this.container.classList.toggle('collapsed');
@@ -69,6 +73,7 @@ export class MidiMonitor {
     this.toggleButton.setAttribute('aria-expanded', String(expanded));
   }
 
+  // Ask the browser for Web MIDI access and bind device-refresh hooks once granted.
   async initMidiAccess() {
     if (this.access) return;
     if (!navigator.requestMIDIAccess) {
@@ -88,6 +93,7 @@ export class MidiMonitor {
     }
   }
 
+  // Refresh the visible input/output lists after device changes.
   refreshDevices() {
     if (!this.access) return;
     const inputs = Array.from(this.access.inputs?.values?.() ?? []);
@@ -101,6 +107,7 @@ export class MidiMonitor {
     }
   }
 
+  // Subscribe to incoming MIDI streams exactly once per discovered input.
   populateInputs(inputs) {
     inputs.forEach((input) => {
       if (!input || !input.id) return;
@@ -117,6 +124,7 @@ export class MidiMonitor {
     });
   }
 
+  // Rebuild the output picker whenever Web MIDI reports a topology change.
   populateOutputs(outputs) {
     this.outputs.clear();
     if (this.outputSelect) {
@@ -141,10 +149,12 @@ export class MidiMonitor {
     }
   }
 
+  // Track the output that should receive clock pulses and outbound monitor events.
   selectOutput(id) {
     this.activeOutput = this.outputs.get(id) ?? null;
   }
 
+  // Add one entry to the bounded monitor log and request a UI repaint.
   recordEntry(direction, bytes, label) {
     const safeBytes = Array.isArray(bytes) ? bytes : Array.from(bytes ?? []);
     this.logEntries.push({
@@ -159,6 +169,7 @@ export class MidiMonitor {
     this.scheduleRender();
   }
 
+  // Batch DOM updates onto rAF so dense MIDI traffic does not thrash layout.
   scheduleRender() {
     if (this.pendingRender) return;
     this.pendingRender = true;
@@ -168,6 +179,7 @@ export class MidiMonitor {
     });
   }
 
+  // Paint the most recent slice of the MIDI log into the panel body.
   renderLog() {
     if (!this.logBody) return;
     const start = Math.max(0, this.logEntries.length - this.visibleCount);
@@ -194,6 +206,7 @@ export class MidiMonitor {
     this.logBody.scrollTop = this.logBody.scrollHeight;
   }
 
+  // Toggle the realtime MIDI clock generator on the currently selected output.
   toggleClock() {
     if (this.clockRunning) {
       this.stopClock();
@@ -202,6 +215,7 @@ export class MidiMonitor {
     }
   }
 
+  // Start sending MIDI clock immediately using the current BPM setting.
   startClock() {
     if (!this.activeOutput) {
       this.setStatus('err', 'Select an output before starting the clock.');
@@ -213,6 +227,7 @@ export class MidiMonitor {
     this.setStatus('ok', `Clock running at ${this.clockBpm} BPM`);
   }
 
+  // Stop the clock loop and release any queued timer.
   stopClock() {
     this.clockRunning = false;
     this.updateClockButton();
@@ -223,6 +238,7 @@ export class MidiMonitor {
     this.setStatus('warn', 'Clock stopped');
   }
 
+  // Schedule the next `0xF8` tick at the computed pulse interval.
   schedulePulse() {
     if (!this.clockRunning) return;
     const interval = this.computeInterval();
@@ -232,10 +248,12 @@ export class MidiMonitor {
     }, interval);
   }
 
+  // Convert BPM into the interval for one MIDI clock pulse.
   computeInterval() {
     return 60000 / (this.clockBpm * CLOCK_PULSES_PER_QUARTER);
   }
 
+  // Emit one realtime clock byte and log it like any other outbound event.
   emitClockPulse() {
     if (!this.activeOutput) {
       this.stopClock();
@@ -250,6 +268,7 @@ export class MidiMonitor {
     }
   }
 
+  // Clamp and apply the BPM field, restarting the clock if it is already running.
   updateBpm() {
     if (!this.bpmInput) return;
     this.clockBpm = clampBpm(this.bpmInput.value);

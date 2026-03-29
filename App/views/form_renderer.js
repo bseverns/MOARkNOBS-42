@@ -1,5 +1,6 @@
 const DEFAULT_DEBOUNCE = 150;
 
+// Split dotted schema paths into array/object access tokens.
 function splitPath(path) {
   return path.split('.').map((segment) => {
     if (!segment) return segment;
@@ -8,6 +9,7 @@ function splitPath(path) {
   });
 }
 
+// Read a nested staged value from the runtime state.
 function getValueAt(obj, path) {
   if (!obj) return undefined;
   const segments = splitPath(path);
@@ -19,6 +21,7 @@ function getValueAt(obj, path) {
   return cursor;
 }
 
+// Write a nested staged value into a draft object, creating parents as needed.
 function setValueAt(obj, path, value) {
   const segments = splitPath(path);
   let cursor = obj;
@@ -35,6 +38,7 @@ function setValueAt(obj, path, value) {
   }
 }
 
+// Per-field debounce keeps sliders and number inputs from flooding immediate patches.
 function debounce(fn, delay) {
   let timer;
   return (...args) => {
@@ -43,10 +47,12 @@ function debounce(fn, delay) {
   };
 }
 
+// Build stable DOM ids from schema paths for labels and test selectors.
 function pathToId(path) {
   return `schema-${path.replace(/\./g, '-')}`;
 }
 
+// Turn schema keys like `midiChannel` into human-readable labels.
 function titleize(key) {
   return key
     .replace(/([A-Z])/g, ' $1')
@@ -55,6 +61,7 @@ function titleize(key) {
     .replace(/\w+/g, (word) => word[0].toUpperCase() + word.slice(1));
 }
 
+// Shared tooltip badge used across schema-rendered controls.
 function createHelpBadge(message) {
   if (!message) return null;
   const badge = document.createElement('span');
@@ -77,11 +84,13 @@ export class FormRenderer {
     this._patchSchedule = new Map();
   }
 
+  // Swap in a fresh schema and rebuild the generated control tree.
   updateSchema(schema) {
     this.schema = schema;
     this.renderSections();
   }
 
+  // Render each configured schema section into its target container.
   renderSections() {
     if (!this.schema) return;
     this.sections.forEach((section) => {
@@ -98,6 +107,7 @@ export class FormRenderer {
     });
   }
 
+  // Push current staged values back into existing controls after external state changes.
   updateValues() {
     const staged = this.runtime.getState().staged;
     for (const [path, control] of this.fields) {
@@ -106,6 +116,7 @@ export class FormRenderer {
     }
   }
 
+  // Resolve one schema node from a dotted `properties.*` path.
   lookupNode(path) {
     const segments = path.split('.');
     let cursor = this.schema;
@@ -116,6 +127,7 @@ export class FormRenderer {
     return cursor;
   }
 
+  // Dispatch to the appropriate object/array/leaf renderer for one schema node.
   buildNode(basePath, schema, value, container) {
     if (!schema) return;
     const type = schema.type;
@@ -128,6 +140,7 @@ export class FormRenderer {
     }
   }
 
+  // Render nested object properties as grouped subsections.
   buildObject(basePath, schema, value, container) {
     const entries = Object.entries(schema.properties ?? {}).filter(([, meta]) => meta);
     entries.forEach(([key, meta]) => {
@@ -158,6 +171,7 @@ export class FormRenderer {
     });
   }
 
+  // Render array items as expandable repeated sections.
   buildArray(basePath, schema, value, container) {
     const items = Array.isArray(value) ? value : [];
     const count = Math.max(items.length, schema.minItems ?? 0);
@@ -178,6 +192,7 @@ export class FormRenderer {
     }
   }
 
+  // Create one leaf control and bind it to runtime staging/patch behavior.
   createField(path, schema, value, labelText) {
     const wrapper = document.createElement('div');
     wrapper.className = 'schema-control';

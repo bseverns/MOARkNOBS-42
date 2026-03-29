@@ -16,6 +16,7 @@
 #include "EnvelopeFollower.h"
 #include "Globals.h"
 
+// Clamp and normalize one slot's ARG configuration before runtime math touches it.
 SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
     SlotARGConfig sanitized = candidate;
     sanitized.enabled = candidate.enabled ? 1 : 0;
@@ -45,6 +46,7 @@ SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
     return sanitized;
 }
 
+// Compute one slot's effective ARG level from its chosen follower pair and operator.
 uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFollower> &followers) {
     const SlotARGConfig &cfg = slot.arg;
     auto fetchLevel = [&](uint8_t idx) -> int {

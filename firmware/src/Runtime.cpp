@@ -50,6 +50,7 @@ void queueMidiServiceRequest() {
     }
 }
 
+// Consume the ISR-raised MIDI service flag from task context.
 bool consumeMidiServiceRequest() {
     bool pending = false;
     noInterrupts();
@@ -72,6 +73,7 @@ void requestStatusLEDPulse(uint16_t durationMs) {
     statusLedPulseDeadline = now() + durationMs;
 }
 
+// Keep the status LED pulse alive until its deadline expires.
 void serviceStatusLEDPulse() {
     unsigned long deadline = statusLedPulseDeadline;
     if (deadline == 0) {
@@ -87,6 +89,7 @@ void serviceStatusLEDPulse() {
     }
 }
 
+// Turn monotonically increasing diagnostic counters into one-shot user-visible alerts.
 void checkDiagnosticsForAlerts() {
     // Report any diagnostic counters over Serial and pulse the status LED so students can spot
     // trouble.
@@ -119,6 +122,7 @@ void checkDiagnosticsForAlerts() {
     }
 }
 
+// Wire the runtime managers together once globals, EEPROM, and UI state are ready.
 void initializeRuntime(bool baselinesLoaded) {
     // Initialize runtime services now that the UI and EEPROM-backed state are ready.
     pinMode(VREF_ADC_PIN, INPUT);

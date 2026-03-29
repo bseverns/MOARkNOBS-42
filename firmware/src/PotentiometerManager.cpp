@@ -37,6 +37,7 @@ void PotentiometerManager::attachConfigManager(ConfigManager &cfg) {
     syncChannelCacheFromConfig();
 }
 
+// Select the primary mux bank and avoid redundant GPIO writes when it has not changed.
 void PotentiometerManager::selectMuxBank(uint8_t bank) {
     static uint8_t lastBank = 255; // Track the last selected bank
     if (bank != lastBank) {
@@ -47,6 +48,7 @@ void PotentiometerManager::selectMuxBank(uint8_t bank) {
     }
 }
 
+// Select the secondary mux bank for the active pot inside the current primary group.
 void PotentiometerManager::selectPotBank(uint8_t pot) {
     static uint8_t lastPot = 255; // Track the last selected pot
     if (pot != lastPot) {
@@ -57,6 +59,7 @@ void PotentiometerManager::selectPotBank(uint8_t pot) {
     }
 }
 
+// Average a few analog samples to smooth mux/ADC noise before EWMA kicks in.
 int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
     int total = 0;
     const int numSamples = 4; // Number of samples for averaging
@@ -69,6 +72,7 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
     return total / numSamples; // Return the averaged value
 }
 
+// Update one pot's MIDI channel in both runtime cache and persisted config.
 void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
     if (potIndex < NUM_POTS) {
         if (configManager) {
@@ -78,6 +82,7 @@ void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
     }
 }
 
+// Return the most recent raw-ish reading cached for one pot.
 int PotentiometerManager::getLastValue(int potIndex) const {
     if (potIndex >= 0 && potIndex < NUM_POTS) {
         return potLastValues[potIndex];
@@ -86,6 +91,7 @@ int PotentiometerManager::getLastValue(int potIndex) const {
     }
 }
 
+// Update one pot's CC number in both runtime cache and persisted config.
 void PotentiometerManager::setCCNumber(int potIndex, uint8_t ccNumber) {
     if (potIndex < NUM_POTS) {
         if (configManager) {
@@ -95,6 +101,7 @@ void PotentiometerManager::setCCNumber(int potIndex, uint8_t ccNumber) {
     }
 }
 
+// Resolve the current MIDI channel, preferring ConfigManager when attached.
 uint8_t PotentiometerManager::getChannel(int potIndex) {
     if (configManager) {
         return configManager->getPotChannel(static_cast<uint8_t>(potIndex));
@@ -102,6 +109,7 @@ uint8_t PotentiometerManager::getChannel(int potIndex) {
     return (potIndex < NUM_POTS) ? potChannels[potIndex] : 0;
 }
 
+// Resolve the current CC number, preferring ConfigManager when attached.
 uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     if (configManager) {
         return configManager->getPotCCNumber(static_cast<uint8_t>(potIndex));
@@ -109,6 +117,7 @@ uint8_t PotentiometerManager::getCCNumber(int potIndex) {
     return (potIndex < NUM_POTS) ? potCCNumbers[potIndex] : 0;
 }
 
+// Inject a host-driven MIDI value as if the physical pot had moved there.
 void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue) {
     if (potIndex >= NUM_POTS) {
         return;
@@ -124,6 +133,7 @@ void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue) 
     }
 }
 
+// Scan the full mux tree, update smoothing state, and emit callbacks for meaningful pot moves.
 void PotentiometerManager::processPots(LedAnimator &ledAnimator,
                                        std::vector<EnvelopeFollower> &envelopes) {
     for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
@@ -181,6 +191,7 @@ void PotentiometerManager::processPots(LedAnimator &ledAnimator,
     }
 }
 
+// Pull pot routing state from EEPROM or ConfigManager into the live cache.
 void PotentiometerManager::loadFromEEPROM() {
     LOG_PRINTLN("Loading potentiometer settings from EEPROM...");
     if (configManager) {
@@ -199,6 +210,7 @@ void PotentiometerManager::loadFromEEPROM() {
     }
 }
 
+// Reset pot routing storage back to the simple channel-1 / CC-index baseline.
 void PotentiometerManager::resetEEPROM() {
     LOG_PRINTLN("Resetting EEPROM settings for potentiometers...");
     if (configManager) {
@@ -217,6 +229,7 @@ void PotentiometerManager::resetEEPROM() {
     }
 }
 
+// Persist the current pot routing cache when ConfigManager is not acting as the owner.
 void PotentiometerManager::saveToEEPROM() {
     if (configManager) {
         configManager->saveConfiguration();
@@ -230,16 +243,19 @@ void PotentiometerManager::saveToEEPROM() {
     }
 }
 
+// Store the two envelope followers currently feeding the ARG combiner.
 void PotentiometerManager::setArgEnvelopePair(int a, int b) {
     argEnvA = a;
     argEnvB = b;
 }
 
+// Return the currently selected ARG envelope pair.
 void PotentiometerManager::getArgEnvelopePair(int &a, int &b) const {
     a = argEnvA;
     b = argEnvB;
 }
 
+// Force a direct immediate read of one pot without touching the wider scan loop.
 int PotentiometerManager::readRawPot(uint8_t potIndex) {
     // decode into bank and pot bits
     uint8_t bank = potIndex >> SECONDARY_MUX_PINS;
@@ -252,6 +268,7 @@ int PotentiometerManager::readRawPot(uint8_t potIndex) {
     return hardware::readAnalog(analogPin); // direct raw read
 }
 
+// Refresh the local pot routing caches after config/profile loads.
 void PotentiometerManager::syncChannelCacheFromConfig() {
     if (!configManager) {
         return;

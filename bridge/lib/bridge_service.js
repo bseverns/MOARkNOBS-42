@@ -6,6 +6,7 @@ const DEFAULT_HTTP_PORT = 8787;
 const LOG_LIMIT = 200;
 const MAX_MSG_LEN = 128;
 
+// Shared CLI/server help text so both bridge entrypoints describe the same contract.
 function usageText() {
   return (
     'mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n' +
@@ -13,18 +14,21 @@ function usageText() {
   );
 }
 
+// Minimal argv reader; the bridge keeps parsing intentionally lightweight.
 function getArg(argv, flag, def) {
   const idx = argv.indexOf(flag);
   if (idx >= 0 && idx + 1 < argv.length) return argv[idx + 1];
   return def;
 }
 
+// Parse port-like CLI values and fall back cleanly when they are absent or invalid.
 function parsePositiveInt(raw, fallback) {
   const parsed = parseInt(String(raw), 10);
   if (!Number.isInteger(parsed) || parsed <= 0) return fallback;
   return parsed;
 }
 
+// Translate CLI flags into the bridge's runtime config object.
 function parseConfigFromArgv(argv = process.argv) {
   const oscPort = parsePositiveInt(
     getArg(argv, '--osc', getArg(argv, '-o', String(DEFAULT_OSC_PORT))),
@@ -56,6 +60,7 @@ function parseConfigFromArgv(argv = process.argv) {
   };
 }
 
+// Reject malformed inbound host-control messages before they reach serial.
 function validateCmd(m) {
   if (
     !m ||
@@ -71,14 +76,17 @@ function validateCmd(m) {
   return cmd;
 }
 
+// Native firmware live-control verb used by OSC and MIDI input paths.
 function formatLiveValueCommand(cmd) {
   return `SET_SLOT_VALUE,${cmd.slot},${cmd.value}`;
 }
 
+// Plain JSON clone is enough for bridge state snapshots and log payloads.
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+// Core bridge service used by both the CLI and the browser-driven bridge server.
 function createBridgeService(initialConfig = {}, injected = {}) {
   const events = new EventEmitter();
   const config = {
@@ -118,10 +126,12 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     config: clone(config),
   };
 
+  // Push a fresh state snapshot to UI/CLI listeners after every meaningful change.
   function emitState() {
     events.emit('state', getState());
   }
 
+  // Keep a bounded in-memory log so the browser console can show recent events without growing forever.
   function pushLog(level, message, extra = undefined) {
     const entry = {
       at: new Date().toISOString(),
@@ -137,11 +147,13 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     emitState();
   }
 
+  // Merge partial state updates and notify subscribers immediately.
   function setState(partial) {
     Object.assign(state, partial);
     emitState();
   }
 
+  // Watch firmware hello/manifest traffic and mark the bridge ready once identity is known.
   function inspectManifest(msg) {
     if (!msg || typeof msg !== 'object') return;
     if (msg.hello === 'mn42') {
@@ -157,10 +169,12 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
   }
 
+  // Fan raw serial lines out to any UI/diagnostic listeners.
   function broadcastLine(line) {
     events.emit('line', line);
   }
 
+  // Forward slot/envelope telemetry to OSC listeners using the configured outbound port.
   function sendOscTelemetry(address, args) {
     if (!udp || typeof udp.send !== 'function') return;
     try {
@@ -170,6 +184,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
   }
 
+  // Mirror telemetry onto virtual MIDI CC lanes for DAW/host consumption.
   function sendMidiTelemetry(channelBase, values) {
     if (!midiOut || !Array.isArray(values)) return;
     values.forEach((value, index) => {
@@ -181,6 +196,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     });
   }
 
+  // Parse firmware serial output, update bridge state, and rebroadcast telemetry.
   function handleSerialLine(line) {
     const trimmed = String(line || '').trim();
     if (!trimmed) return;
@@ -216,6 +232,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
   }
 
+  // Lazy-load runtime dependencies so tests can inject fakes without touching require().
   async function loadDeps() {
     if (depsLoaded) return;
     if (!serialApi) serialApi = require('serialport');
@@ -224,6 +241,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     depsLoaded = true;
   }
 
+  // Surface serial choices for the browser console before the bridge starts.
   async function listSerialPorts() {
     await loadDeps();
     const listFn = serialApi?.SerialPort?.list;
@@ -236,6 +254,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
   }
 
+  // Reopen the serial side after transient disconnects unless the operator explicitly stopped the service.
   function scheduleReconnect() {
     if (stopping || manualStop || reconnectTimer) return;
     reconnectTimer = setTimeout(() => {
@@ -251,6 +270,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }, 1000);
   }
 
+  // Wire the serial device and newline parser into the bridge event loop.
   function attachSerial() {
     const { SerialPort, ReadlineParser } = serialApi;
     serial = new SerialPort({
@@ -292,6 +312,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     parser.on('data', handleSerialLine);
   }
 
+  // Bind inbound OSC control and outbound OSC telemetry.
   function attachOsc() {
     udp = new oscApi.UDPPort({
       localAddress: config.oscBind,
@@ -348,6 +369,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     udp.open();
   }
 
+  // Bind the virtual MIDI in/out pair used for DAW-facing workflows.
   function attachMidi() {
     midi = jzzFactory();
     midiOut = midi.openMidiOut(config.midiLabel).or(() => {
@@ -397,6 +419,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
   }
 
+  // Start all bridge transports and publish a fresh runtime snapshot.
   async function start() {
     if (running) return getState();
     await loadDeps();
@@ -415,6 +438,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return getState();
   }
 
+  // Tear down serial, OSC, and MIDI cleanly so the bridge can restart without zombie listeners.
   async function stop() {
     manualStop = true;
     stopping = true;
@@ -489,6 +513,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return getState();
   }
 
+  // Update bridge config and optionally restart live transports to apply it.
   async function configure(nextConfig = {}, { restart = true } = {}) {
     Object.assign(config, nextConfig || {});
     setState({ config: clone(config) });
@@ -499,6 +524,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return getState();
   }
 
+  // Send one native line to firmware, surfacing an immediate error if serial is down.
   function sendLine(line) {
     const normalized = `${String(line).trim()}\n`;
     if (!serial || typeof serial.write !== 'function') {
@@ -510,11 +536,13 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return normalized;
   }
 
+  // Subscribe to bridge state/log/line events with an unsubscribe helper.
   function on(eventName, handler) {
     events.on(eventName, handler);
     return () => events.off(eventName, handler);
   }
 
+  // Return a serializable snapshot for the browser console and CLI status output.
   function getState() {
     return {
       running: state.running,

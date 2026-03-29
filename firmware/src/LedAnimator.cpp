@@ -16,6 +16,7 @@ constexpr size_t kModeCount = sizeof(kModeOrder) / sizeof(kModeOrder[0]);
 
 LedAnimator::LedAnimator(LEDManager &leds) : ledManager(leds) {}
 
+// Switch visualization modes and clear any mode-specific carryover state.
 void LedAnimator::setMode(LedMode newMode) {
     mode = newMode;
     clockPulseStrength = 0.0f;
@@ -23,6 +24,7 @@ void LedAnimator::setMode(LedMode newMode) {
 
 LedMode LedAnimator::getMode() const { return mode; }
 
+// Advance to the next visualization mode in the diagnostic/demo cycle.
 void LedAnimator::cycleMode() {
     for (size_t idx = 0; idx < kModeCount; ++idx) {
         if (kModeOrder[idx] == mode) {
@@ -34,18 +36,22 @@ void LedAnimator::cycleMode() {
     mode = kModeOrder[0];
 }
 
+// Update the requested level for one pot channel; `tick()` handles smoothing.
 void LedAnimator::setPotTarget(uint8_t index, uint8_t value) {
     if (index >= potStates.size())
         return;
     potStates[index].target = value;
 }
 
+// Update the requested level for one envelope-follower channel.
 void LedAnimator::setEnvelopeTarget(uint8_t index, uint8_t value) {
     if (index >= envelopeStates.size())
         return;
     envelopeStates[index].target = value;
 }
 
+// Apply the active animation mode to one logical channel and return the LED
+// level that should be painted this frame.
 uint8_t LedAnimator::computeLevel(ChannelState &state, uint8_t raw, unsigned long nowMs) {
     state.target = raw;
     switch (mode) {
@@ -76,18 +82,22 @@ uint8_t LedAnimator::computeLevel(ChannelState &state, uint8_t raw, unsigned lon
     }
 }
 
+// Write a computed pot level into the shared LED manager.
 void LedAnimator::paintPot(uint8_t index, uint8_t level) {
     if (index >= NUM_POTS)
         return;
     ledManager.setPotValue(index, level);
 }
 
+// Write a computed envelope level into the shared LED manager.
 void LedAnimator::paintEnvelope(uint8_t index, uint8_t level) {
     if (index >= NUM_ENVELOPES)
         return;
     ledManager.setEnvelopeLevel(index, level);
 }
 
+// Advance animation state for all channels, optionally folding in MIDI-clock
+// pulses and the automatic diagnostic mode cycle.
 void LedAnimator::tick(unsigned long nowMs, bool clockTick, bool diagnosticMode) {
     if (clockTick) {
         clockPulseStrength = 1.0f;

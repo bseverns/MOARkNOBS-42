@@ -36,12 +36,17 @@ static const uint8_t perm[512] = {
     121, 50, 45, 127, 4, 150, 254, 138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195,
     78, 66, 215, 61, 156, 180};
 
+// Ease the fractional position so the lattice interpolation stays smooth at
+// cell boundaries instead of producing obvious corners.
 static inline float fade(float t) { return t * t * t * (t * (t * 6 - 15) + 10); }
 
+// Blend between two gradient samples using the eased progress value.
 static inline float lerp(float t, float a, float b) { return a + t * (b - a); }
 
+// Collapse the hash into one of the two 1D gradient directions.
 static inline float grad(int hash, float x) { return (hash & 1) ? -x : x; }
 
+// Evaluate 1D Perlin noise at `x` using the classic permutation table above.
 float perlinNoise1D(float x) {
     int xi = static_cast<int>(floorf(x)) & 255;
     float xf = x - floorf(x);

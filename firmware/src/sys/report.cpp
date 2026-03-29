@@ -8,6 +8,8 @@
 #include "version.h"
 
 namespace sys {
+// Pack the current firmware/build identity into a tiny JSON blob for serial
+// diagnostics, browser tooling, and support captures.
 String report() {
     StaticJsonDocument<256> doc;
     doc["fw_version"] = FW_VERSION_STR; // firmware release tag
@@ -45,5 +47,6 @@ String report() {
     return out;
 }
 
+// Convenience wrapper for streams that want the report as a full line.
 void printReport(Print &out) { out.println(report()); }
 } // namespace sys

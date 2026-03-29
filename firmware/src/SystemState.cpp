@@ -85,6 +85,8 @@ ButtonManagerContext buttonContext = {potChannels,        activePot,      active
                                       ledManager,         displayManager, envelopeFollowers,
                                       potToEnvelopeMap,   diagnosticMode, diagnosticPage};
 
+// Copy the diagnostics struct atomically enough for UI/reporting code to inspect
+// it without racing the ISR and service loops that update the live counters.
 SystemDiagnostics captureDiagnosticsSnapshot() {
     SystemDiagnostics snapshot;
     noInterrupts();

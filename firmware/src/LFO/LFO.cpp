@@ -7,6 +7,7 @@ namespace {
 constexpr float kTwoPi = 6.2831853071795864769f;
 } // namespace
 
+// Seed deterministic random-waveform state so the first rendered value is stable.
 LFO::LFO() {
     // Prime the random-based shapes so they have stable initial values.
     sampleHold_ = nextRandom();
@@ -17,6 +18,7 @@ LFO::LFO() {
 // Choose the waveform; applied on the next render.
 void LFO::setShape(LFOShape shape) { shape_ = shape; }
 
+// Return the currently selected waveform.
 LFOShape LFO::getShape() const { return shape_; }
 
 // Free-run rate in Hz, clamped to non-negative.
@@ -66,6 +68,7 @@ void LFO::setRandomSeed(uint32_t seed) {
 // Enable or disable clock-synced phase advance.
 void LFO::setSyncEnabled(bool enabled) { syncEnabled_ = enabled; }
 
+// Report whether this LFO is currently following MIDI clock.
 bool LFO::isSyncEnabled() const { return syncEnabled_; }
 
 // Set the beat division/multiplication used for sync.

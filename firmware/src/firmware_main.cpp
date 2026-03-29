@@ -8,6 +8,8 @@
 #include "Runtime.h"
 #include "Utility.h"
 
+// Firmware bootstrap stays intentionally small: initialize protocol, recover
+// persisted/profile state, build the UI, then arm the runtime schedulers.
 void setup() {
     initializeProtocol();
     bool baselinesLoaded = initializeModes();
@@ -15,6 +17,8 @@ void setup() {
     initializeRuntime(baselinesLoaded);
 }
 
+// Main loop keeps the hot path readable by delegating the heavy lifting to the
+// schedulers and managers initialized during setup.
 void loop() {
     Utility::schedulerHigh.update();
     Utility::schedulerMid.update();

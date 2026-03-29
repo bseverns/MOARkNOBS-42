@@ -32,6 +32,7 @@ MIDI_CREATE_INSTANCE(HardwareSerial, Serial1, MIDI);
 
 MIDIHandler::MIDIHandler() {}
 
+// Initialize DIN and USB MIDI endpoints before any traffic starts flowing.
 void MIDIHandler::begin() {
     MIDI.begin(); // default Omni channel; stub libs may skip the constant
 #ifndef USB_MIDI_STUB
@@ -39,6 +40,7 @@ void MIDIHandler::begin() {
 #endif
 }
 
+// Send one CC event across every enabled transport.
 void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
     // Validate before sending
     if (control > 127 || value > 127 || channel < 1 || channel > 16)
@@ -53,6 +55,7 @@ void MIDIHandler::sendControlChange(uint8_t control, uint8_t value, uint8_t chan
 #endif
 }
 
+// Send one note-on event while keeping DIN and USB behavior aligned.
 void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
@@ -66,6 +69,7 @@ void MIDIHandler::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
 #endif
 }
 
+// Send one note-off event across every enabled transport.
 void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
     if (note > 127 || velocity > 127 || channel < 1 || channel > 16)
         return;
@@ -79,6 +83,7 @@ void MIDIHandler::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
 #endif
 }
 
+// Emit the four-message NRPN sequence expected by downstream synths.
 void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
     if (channel < 1 || channel > 16)
         return;
@@ -105,6 +110,7 @@ void MIDIHandler::sendNRPN(uint16_t param, uint16_t value, uint8_t channel) {
 #endif
 }
 
+// Emit the four-message RPN sequence expected by downstream synths.
 void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
     if (channel < 1 || channel > 16)
         return;
@@ -131,6 +137,7 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
 #endif
 }
 
+// Forward a SysEx blob when it passes length and pointer sanity checks.
 void MIDIHandler::sendSysEx(const uint8_t *data, uint16_t length) {
     if (!data || length == 0 || length > 1024)
         return;
@@ -171,6 +178,7 @@ void MIDIHandler::handleClockTick() {
     sendClock();
 }
 
+// Drain incoming DIN/USB MIDI, update timing state, and fan events into the rest of the runtime.
 void MIDIHandler::processIncomingMIDI() {
     uint32_t startMicros = micros();
     // Serial MIDI is the crusty hardware port. When it spits out a full

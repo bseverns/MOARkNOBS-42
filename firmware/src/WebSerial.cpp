@@ -11,6 +11,7 @@
 #include <ArduinoJson.h>
 
 namespace {
+// Schema-facing slot type names used by the current browser configurator.
 const char *slotTypeSchemaName(MIDIMessageType type) {
     switch (type) {
     case MIDIMessageType::OFF:
@@ -37,6 +38,7 @@ const char *slotTypeSchemaName(MIDIMessageType type) {
     return "UNKNOWN";
 }
 
+// Legacy slot type names kept for older host tools and migration paths.
 const char *slotTypeLegacyName(MIDIMessageType type) {
     switch (type) {
     case MIDIMessageType::OFF:
@@ -63,6 +65,7 @@ const char *slotTypeLegacyName(MIDIMessageType type) {
     return "UNKNOWN";
 }
 
+// Human-readable filter names for envelope telemetry payloads.
 const char *filterName(EnvelopeFollower::FilterType type) {
     switch (type) {
     case EnvelopeFollower::LINEAR:
@@ -83,6 +86,7 @@ const char *filterName(EnvelopeFollower::FilterType type) {
     return "LINEAR";
 }
 
+// Slot-local EF filter labels used in config/patch payloads.
 const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
@@ -103,6 +107,7 @@ const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     return "LINEAR";
 }
 
+// ARG method labels mirrored into JSON so host UIs do not need their own enum table.
 const char *argMethodLabel(uint8_t method) {
     static constexpr const char *kNames[] = {"PLUS", "MIN",  "PECK", "SHAV", "SQAR",
                                              "BABS", "TABS", "MULT", "DIVI", "AVG",
@@ -113,6 +118,7 @@ const char *argMethodLabel(uint8_t method) {
     return "UNKNOWN";
 }
 
+// Resolve the outgoing `data1` byte, preferring persisted pot CC numbers for CC slots.
 uint8_t resolveDataByte(const ConfigManager &config, uint8_t slotIndex, const MIDISlot &slot) {
     if (slot.type == MIDIMessageType::CC) {
         return config.getPotCCNumber(slotIndex);
@@ -196,6 +202,7 @@ template <size_t Capacity> void emitJson(StaticJsonDocument<Capacity> &doc) {
     LOG_PRINTLN(payload);
 }
 
+// Back-compat patch frame for older host tools that still listen for the legacy config-patch shape.
 void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolvedDataByte) {
     StaticJsonDocument<384> doc;
     doc["type"] = "config-patch";
@@ -213,6 +220,7 @@ void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolv
     emitJson(doc);
 }
 
+// Back-compat envelope assignment patch for hosts that still expect `efSlots` deltas.
 void emitLegacyEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     StaticJsonDocument<192> doc;
     doc["type"] = "config-patch";

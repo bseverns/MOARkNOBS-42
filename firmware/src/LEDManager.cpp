@@ -35,10 +35,12 @@ LEDManager::LEDManager(const HardwareConfig &config)
     startupAnimation();
 }
 
+// Legacy begin hook retained so callers can treat LEDManager like other hardware modules.
 void LEDManager::begin() {
     // Initialization now handled in constructor
 }
 
+// Paint one pot lane from its current MIDI value.
 void LEDManager::setPotValue(uint8_t potIndex, uint8_t value) {
     if (potIndex < leds.size()) {
         leds[potIndex] = CHSV(map(value, 0, 127, 0, 255), 255, 255);
@@ -46,6 +48,7 @@ void LEDManager::setPotValue(uint8_t potIndex, uint8_t value) {
     }
 }
 
+// Paint one envelope lane from its current follower level.
 void LEDManager::setEnvelopeLevel(uint8_t efIndex, uint8_t value) {
     uint16_t idx = EF_LED_OFFSET() + efIndex;
     if (idx < leds.size()) {
@@ -55,6 +58,7 @@ void LEDManager::setEnvelopeLevel(uint8_t efIndex, uint8_t value) {
     }
 }
 
+// Paint the dedicated pot-indicator LEDs that mirror current control values.
 void LEDManager::setPotIndicator(uint8_t potIndex, uint8_t value) {
     uint16_t idx = POT_LED_OFFSET() + potIndex;
     if (idx < leds.size()) {
@@ -63,11 +67,13 @@ void LEDManager::setPotIndicator(uint8_t potIndex, uint8_t value) {
     }
 }
 
+// Trigger the short control-button flash animation.
 void LEDManager::triggerControlButton() {
     controlStart = now();
     controlActive = true;
 }
 
+// Show the currently active mode on the strip.
 void LEDManager::setModeDisplay(uint8_t mode) {
     modeDisplay = mode;
     for (size_t i = 0; i < leds.size(); i++) {
@@ -76,6 +82,7 @@ void LEDManager::setModeDisplay(uint8_t mode) {
     }
 }
 
+// Highlight the active pot and clear the previous highlight.
 void LEDManager::setActivePot(uint8_t potIndex) {
     if (activePot < leds.size()) {
         leds[activePot] = CRGB::Black;
@@ -88,6 +95,7 @@ void LEDManager::setActivePot(uint8_t potIndex) {
     }
 }
 
+// Switch the strip into or out of the envelope-mode visual state.
 void LEDManager::indicateEnvelopeMode(bool isActive) {
     envelopeModeActive = isActive;
     currentState = isActive ? LEDState::ENVELOPE_MODE : LEDState::IDLE;
@@ -97,18 +105,21 @@ void LEDManager::indicateEnvelopeMode(bool isActive) {
     }
 }
 
+// Mark one pixel dirty so `update()` knows it needs to be pushed.
 void LEDManager::markDirty(uint8_t index) {
     if (index < dirtyFlags.size()) {
         dirtyFlags[index] = true;
     }
 }
 
+// Apply a new global brightness immediately.
 void LEDManager::setBrightness(uint8_t b) {
     brightness = b;
     applyBrightness();
     presentFrame();
 }
 
+// Apply a multiplicative brightness modulator for animation and diagnostics.
 void LEDManager::setBrightnessModulator(float scale) {
     // Clamp modulation so brightness stays in a safe range.
     if (scale < 0.0f)
@@ -120,8 +131,10 @@ void LEDManager::setBrightnessModulator(float scale) {
     applyBrightness();
 }
 
+// Return the current brightness modulation factor.
 float LEDManager::getBrightnessModulator() const { return brightnessMod; }
 
+// Flood the strip with one color and push the frame immediately.
 void LEDManager::setColor(CRGB color) {
     for (size_t i = 0; i < leds.size(); i++) {
         leds[i] = color;
@@ -130,8 +143,10 @@ void LEDManager::setColor(CRGB color) {
     presentFrame();
 }
 
+// Return the base strip brightness.
 uint8_t LEDManager::getBrightness() const { return brightness; }
 
+// Return the first LED color as the strip's representative stored color.
 CRGB LEDManager::getColor() const { return leds.empty() ? CRGB::Black : leds[0]; }
 
 /**
@@ -152,6 +167,7 @@ void LEDManager::startupAnimation() {
     presentFrame();
 }
 
+// Swap the strip state machine and repaint around the newly active index.
 void LEDManager::setState(LEDState state, uint8_t index) {
     currentState = state;
     activeIndex = index;
@@ -206,6 +222,7 @@ void LEDManager::beginWarningAnimation(LEDWarning type) {
     warningStart = now();
 }
 
+// Stop any warning animation and clear its bookkeeping state.
 void LEDManager::clearWarningAnimation() {
     if (!warningActive)
         return;

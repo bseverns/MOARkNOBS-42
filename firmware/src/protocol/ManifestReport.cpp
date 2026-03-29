@@ -44,6 +44,7 @@ size_t computeFreeFlash() {
 }
 } // namespace
 
+// Emit the host-facing manifest so the App/bridge can align their UI with firmware truth.
 void writeManifestFields(JsonObject object) {
     object["device_name"] = ManifestContract::kDeviceName;
     object["fw_version"] = FW_VERSION_STR;

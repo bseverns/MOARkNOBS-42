@@ -24,6 +24,8 @@ extern void refreshEfVoicesFromConfig() __attribute__((weak));
 extern void refreshEfVoicesFromConfig();
 #endif
 
+// Update one slot's EF settings, persist them, and notify any runtime cache
+// that mirrors follower assignments.
 void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings) {
     if (slotIndex >= NUM_SLOTS) {
         return;
@@ -67,6 +69,8 @@ static uint16_t crc16_update(uint16_t crc, uint8_t data) {
     return crc;
 }
 
+// Reject obviously corrupt legacy filter coefficients before trying to reuse
+// them during migration.
 bool filterCoefficientsLookSane(float freq, float q) {
     if (!std::isfinite(freq) || !std::isfinite(q)) {
         return false;
@@ -80,6 +84,8 @@ bool filterCoefficientsLookSane(float freq, float q) {
     return true;
 }
 
+// Clamp the profile-level EF subset so saved snapshots stay inside the runtime's
+// supported operating range.
 ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings) {
     // Clamp EF settings so profile loads can't push envelopes out of bounds.
     ProfileEfSettings sanitized = settings;
@@ -100,6 +106,7 @@ ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings) {
     return sanitized;
 }
 
+// Sanitize an entire persisted profile payload before the runtime consumes it.
 ProfileData sanitizeProfileData(const ProfileData &profile) {
     // Clean up profile payloads loaded from EEPROM or JSON.
     ProfileData sanitized = profile;
@@ -165,6 +172,7 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
     return sanitized;
 }
 
+// Compute the checksum for the profile payload fields that are persisted.
 uint16_t computeProfileCrc(const ProfileData &profile) {
     // CRC covers the payload bytes following the crc field.
     constexpr size_t kCrcStart = offsetof(ProfileData, routeCount);
@@ -176,6 +184,8 @@ uint16_t computeProfileCrc(const ProfileData &profile) {
     return crc;
 }
 
+// Clamp the filter payload that gets mirrored into slot storage and the legacy
+// tail region.
 SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &payload) {
     SlotEnvelopePayload sanitized = payload;
     if (sanitized.filterType > static_cast<uint8_t>(EnvelopeFollower::BANDPASS)) {
@@ -192,6 +202,8 @@ SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &paylo
     return sanitized;
 }
 
+// Persist the shared "tail" filter payload used by older layouts and recovery
+// helpers, returning the sanitized version that was actually written.
 SlotEnvelopePayload persistFilterTailImpl(const SlotEnvelopePayload &payload) {
     SlotEnvelopePayload sanitized = sanitizeEnvelopePayloadImpl(payload);
     EEPROM.update(EEPROM_ENVELOPE_TYPES, sanitized.filterType);
@@ -200,6 +212,8 @@ SlotEnvelopePayload persistFilterTailImpl(const SlotEnvelopePayload &payload) {
     return sanitized;
 }
 
+// If the current filter tail looks corrupt, try to repair it from the older
+// EEPROM location before the rest of boot consumes it.
 void maybeRescueFilterTailFromLegacy() {
     float freq = 0.0f;
     float q = 0.0f;
@@ -216,6 +230,8 @@ void maybeRescueFilterTailFromLegacy() {
     persistFilterTailImpl(legacy);
 }
 
+// Validate whether an EF filter enum is one of the persisted values we know how
+// to map back into runtime behavior.
 bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
     case MIDISlot::EfSettings::FilterType::Linear:
@@ -230,6 +246,7 @@ bool filterTypeIsValid(MIDISlot::EfSettings::FilterType type) {
     return false;
 }
 
+// Extract just the persistable filter payload from a full EF settings block.
 SlotEnvelopePayload settingsToPayload(const MIDISlot::EfSettings &settings) {
     SlotEnvelopePayload payload{};
     payload.filterType = static_cast<uint8_t>(settings.filterType);
@@ -238,6 +255,7 @@ SlotEnvelopePayload settingsToPayload(const MIDISlot::EfSettings &settings) {
     return payload;
 }
 
+// Push a persistable filter payload back into a full EF settings block.
 void applyPayloadToSettings(const SlotEnvelopePayload &payload, MIDISlot::EfSettings &settings) {
     settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(
         constrain(payload.filterType, static_cast<uint8_t>(0),
@@ -246,6 +264,8 @@ void applyPayloadToSettings(const SlotEnvelopePayload &payload, MIDISlot::EfSett
     settings.q = payload.q;
 }
 
+// Clamp a full EF settings block so corrupt EEPROM or imported JSON cannot
+// destabilize follower runtime math.
 MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     // Clamp EF settings so corrupt EEPROM data doesn't destabilize runtime.
     MIDISlot::EfSettings sanitized = settings;
@@ -285,6 +305,8 @@ MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     return sanitized;
 }
 
+// Runtime-only EF fields get a lighter sanitization pass because they are not
+// supposed to contain the full persisted tuning set.
 MIDISlot::EfRuntime sanitizeEfRuntime(const MIDISlot::EfRuntime &runtime) {
     MIDISlot::EfRuntime sanitized = runtime;
     if (sanitized.followerIndex < -1) {

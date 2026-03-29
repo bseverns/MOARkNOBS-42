@@ -25,6 +25,7 @@ const PUBLIC_CONFIG_KEYS = [
   'midiLabel',
 ];
 
+// Parse user-provided port values from the browser console without crashing on junk input.
 function normalizePositiveInt(value, fallback) {
   const parsed = parseInt(String(value), 10);
   if (!Number.isInteger(parsed) || parsed <= 0) {
@@ -33,6 +34,7 @@ function normalizePositiveInt(value, fallback) {
   return parsed;
 }
 
+// Minimal websocket text-frame encoder for the one-way bridge log stream.
 function frameText(payload) {
   const body = Buffer.from(String(payload), 'utf8');
   const header =
@@ -42,10 +44,12 @@ function frameText(payload) {
   return Buffer.concat([header, body]);
 }
 
+// Close frame used when the server intentionally tears down a websocket client.
 function closeFrame() {
   return Buffer.from([0x88, 0x00]);
 }
 
+// Join request paths safely so the browser console cannot escape the intended static roots.
 function safeJoin(rootDir, requestPath) {
   const root = path.resolve(rootDir);
   const candidate = path.resolve(root, `.${requestPath}`);
@@ -54,6 +58,7 @@ function safeJoin(rootDir, requestPath) {
   return candidate;
 }
 
+// Read a JSON body for the tiny `/api/*` control surface.
 async function readJson(req) {
   const chunks = [];
   for await (const chunk of req) {
@@ -63,6 +68,7 @@ async function readJson(req) {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 }
 
+// Reduce SerialPort objects to the fields the browser UI actually needs.
 function simplifyPorts(ports) {
   return (ports || []).map((portInfo) => ({
     path: portInfo.path,
@@ -77,6 +83,7 @@ function simplifyPorts(ports) {
   }));
 }
 
+// Whitelist and normalize config fields coming from the browser console.
 function normalizeConfig(body = {}) {
   const nextConfig = {};
   for (const key of PUBLIC_CONFIG_KEYS) {
@@ -96,6 +103,7 @@ function normalizeConfig(body = {}) {
   return nextConfig;
 }
 
+// Serve one static asset from either the bridge UI or bundled App directory.
 async function serveFile(res, rootDir, requestPath) {
   const filePath = safeJoin(rootDir, requestPath);
   if (!filePath) {
@@ -123,6 +131,7 @@ async function serveFile(res, rootDir, requestPath) {
   }
 }
 
+// Tiny HTTP + websocket wrapper that gives the bridge a browser-driven front door.
 function createBrowserBridgeServer({
   service,
   host = '127.0.0.1',
@@ -139,6 +148,7 @@ function createBrowserBridgeServer({
   let unsubscribeState = null;
   const sockets = new Set();
 
+  // Forward raw serial lines to every connected websocket client.
   function broadcastLine(line) {
     const frame = frameText(`${String(line).trim()}\n`);
     for (const socket of sockets) {
@@ -150,6 +160,7 @@ function createBrowserBridgeServer({
     }
   }
 
+  // Remove a websocket client and send a close frame when possible.
   function destroySocket(socket) {
     if (!socket) return;
     sockets.delete(socket);
@@ -160,6 +171,7 @@ function createBrowserBridgeServer({
     }
   }
 
+  // JSON response helper for the browser-facing control API.
   function sendJson(res, statusCode, payload) {
     res.writeHead(statusCode, {
       'cache-control': 'no-store',
@@ -168,6 +180,7 @@ function createBrowserBridgeServer({
     res.end(JSON.stringify(payload));
   }
 
+  // Handle the small REST surface that starts/stops the bridge and exposes status.
   async function handleApi(req, res, pathname) {
     if (pathname === '/api/state' && req.method === 'GET') {
       sendJson(res, 200, { state: service.getState() });
@@ -215,6 +228,7 @@ function createBrowserBridgeServer({
     return true;
   }
 
+  // Upgrade `/ws` requests into a raw websocket feed for serial lines and state updates.
   function handleWebSocket(req, socket) {
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
     if (url.pathname !== '/ws') {

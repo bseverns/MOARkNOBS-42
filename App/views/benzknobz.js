@@ -41,6 +41,8 @@ const sharedResizeObserver =
     : null;
 
 class VirtualGrid {
+  // Reuse a small pool of absolutely positioned nodes so the slot grid stays
+  // responsive even when the full 42-slot deck is being repainted often.
   constructor(container, { columns, rowHeight, render }) {
     this.container = container;
     this.columns = columns;
@@ -62,11 +64,13 @@ class VirtualGrid {
     this.container?.addEventListener('scroll', () => this.render());
   }
 
+  // Replace the backing dataset and recompute how many DOM nodes we need.
   setData(data) {
     this.data = data || [];
     this.compute();
   }
 
+  // Size the viewport and make sure the element pool covers the visible rows.
   compute() {
     if (!this.container) return;
     const visibleRows = Math.ceil(this.container.clientHeight / this.rowHeight) + 2;
@@ -81,6 +85,8 @@ class VirtualGrid {
     this.render();
   }
 
+  // Position pooled elements over the currently visible rows and let the caller
+  // render each logical slot into its assigned node.
   render() {
     if (!this.container) return;
     const scrollTop = this.container.scrollTop;
@@ -104,6 +110,7 @@ class VirtualGrid {
     });
   }
 
+  // Bring a logical slot into view when keyboard navigation changes selection.
   scrollToIndex(index) {
     if (!this.container) return;
     const row = Math.floor(index / this.columns);
@@ -111,12 +118,14 @@ class VirtualGrid {
     this.container.scrollTo({ top: target, behavior: 'smooth' });
   }
 
+  // Mirror the current selection into the pooled DOM nodes.
   highlight(index) {
     this.pool.forEach((el) => {
       el.classList.toggle('selected', Number(el.dataset.index) === index);
     });
   }
 
+  // Refresh the per-slot value badges without rebuilding the whole grid.
   updateTelemetry(values) {
     this.pool.forEach((el) => {
       if (el.dataset.index === undefined) return;
@@ -130,6 +139,8 @@ class VirtualGrid {
 }
 
 class VirtualList {
+  // Virtualize the EF assignment list for the same reason as `VirtualGrid`,
+  // but in a simple single-column layout.
   constructor(container, { itemHeight, render }) {
     this.container = container;
     this.itemHeight = itemHeight;
@@ -150,11 +161,13 @@ class VirtualList {
     this.container?.addEventListener('scroll', () => this.render());
   }
 
+  // Replace the source rows and recompute visible capacity.
   setData(data) {
     this.data = data || [];
     this.compute();
   }
 
+  // Grow the pooled row set to cover the visible viewport.
   compute() {
     if (!this.container) return;
     const visible = Math.ceil(this.container.clientHeight / this.itemHeight) + 2;
@@ -168,6 +181,7 @@ class VirtualList {
     this.render();
   }
 
+  // Repaint only the visible rows in the list viewport.
   render() {
     if (!this.container) return;
     const scrollTop = this.container.scrollTop;
@@ -187,6 +201,8 @@ class VirtualList {
   }
 }
 
+// Page bootstrap owns the full operator shell: transport controls, staged/live
+// config rendering, recovery affordances, and telemetry.
 const boot = () => {
   if (typeof document === 'undefined') return;
   const docRoot = document.documentElement;
@@ -293,6 +309,7 @@ const boot = () => {
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
 
+  // Derive the device label shown in the header/banner from the latest manifest.
   function resolveDeviceName(manifest) {
     const candidate = manifest?.device_name ?? manifest?.product_name ?? localManifest.device_name;
     if (typeof candidate !== 'string') return localManifest.device_name;
@@ -300,6 +317,7 @@ const boot = () => {
     return trimmed || localManifest.device_name;
   }
 
+  // Normalize the reported firmware version so the UI always shows something.
   function resolveFirmwareVersion(manifest) {
     const candidate = manifest?.fw_version;
     if (typeof candidate !== 'string') return 'unknown';
@@ -307,6 +325,7 @@ const boot = () => {
     return trimmed || 'unknown';
   }
 
+  // Collapse manifest capability flags into a simpler UI-facing shape.
   function resolveCapabilities(manifest) {
     const caps = manifest?.capabilities && typeof manifest.capabilities === 'object' ? manifest.capabilities : {};
     return {
@@ -318,18 +337,23 @@ const boot = () => {
     };
   }
 
+  // Some UI paths only need to know whether any device-backed profile action exists.
   function supportsAnyProfileAction() {
     return deviceCapabilities.profileSave || deviceCapabilities.profileLoad || deviceCapabilities.profileReset;
   }
 
+  // Guided save/switch flows only make sense when both load and save are exposed.
   function supportsGuidedProfileFlow() {
     return deviceCapabilities.profileSave && deviceCapabilities.profileLoad;
   }
 
+  // Explain whether the active profile slot reflects real device storage or only
+  // the browser's chosen target.
   function profileSlotModeCopy() {
     return supportsAnyProfileAction() ? 'mirrored' : 'local target';
   }
 
+  // Keep the recovery/profile hint text honest as capabilities and connectivity change.
   function updateProfileHint() {
     if (!profileHint) return;
     if (!profileInteractable) {
@@ -346,6 +370,7 @@ const boot = () => {
       'This firmware does not expose browser-driven profile save, switch, or reset yet. Use Download/Upload for file backups.';
   }
 
+  // Return operator-facing copy for an unsupported profile RPC.
   function unsupportedProfileActionCopy(method) {
     switch (method) {
       case 'save_profile':
@@ -359,6 +384,7 @@ const boot = () => {
     }
   }
 
+  // Gate a specific browser-triggered profile method on manifest support.
   function supportsProfileMethod(method) {
     switch (method) {
       case 'save_profile':
@@ -372,6 +398,7 @@ const boot = () => {
     }
   }
 
+  // Synchronize the macro/scene/profile helper text with the current capability set.
   function syncRecoverySupportCopy() {
     updateProfileHint();
     if (!profileInteractable) {
@@ -389,6 +416,7 @@ const boot = () => {
     }
   }
 
+  // Update the banner line that identifies the connected deck.
   function setConnectionBanner(stage, manifest) {
     if (!connectionBanner) return;
     if (stage === 'live') {
@@ -404,6 +432,7 @@ const boot = () => {
     connectionBanner.textContent = 'Connected to: —';
   }
 
+  // Update the compact connection status pill in the header.
   function setConnectionPill(stage, text) {
     if (!connectionPill) return;
     connectionPill.dataset.stage = stage;
@@ -432,6 +461,7 @@ const boot = () => {
   });
 
   let envMeters = [];
+  // Rebuild the envelope meter widgets whenever the manifest changes follower count.
   const rebuildMeters = (count) => {
     envMeters = initializeMeters(envContainer, count, 'EF');
   };
@@ -848,12 +878,14 @@ const boot = () => {
     statusMessage.textContent = message;
   }
 
+  // Clamp an arbitrary value into the four persistent profile slots.
   function clampProfileSlot(value) {
     const idx = Number(value);
     if (!Number.isFinite(idx)) return 0;
     return Math.max(0, Math.min(PROFILE_LABELS.length - 1, Math.floor(idx)));
   }
 
+  // Restore the last selected profile slot from local browser storage.
   function readProfileSlotPreference() {
     if (typeof localStorage === 'undefined') return 0;
     try {
@@ -868,6 +900,7 @@ const boot = () => {
     return 0;
   }
 
+  // Persist the selected profile slot locally so reconnects reopen on the same target.
   function persistProfileSlot(index) {
     if (typeof localStorage === 'undefined') return;
     try {
@@ -877,10 +910,12 @@ const boot = () => {
     }
   }
 
+  // Limit UI mode to the two supported tiers.
   function normalizeUIMode(mode) {
     return mode === 'advanced' ? 'advanced' : 'basic';
   }
 
+  // Restore the last UI tier selection from local browser storage.
   function readUIModePreference() {
     if (typeof localStorage === 'undefined') return 'basic';
     try {
@@ -891,6 +926,7 @@ const boot = () => {
     }
   }
 
+  // Persist the selected UI tier locally.
   function persistUIMode(mode) {
     if (typeof localStorage === 'undefined') return;
     try {
@@ -900,6 +936,7 @@ const boot = () => {
     }
   }
 
+  // Flip between Basic and Advanced presentation without altering the staged config.
   function setUIMode(mode, { persist = true } = {}) {
     activeUiMode = normalizeUIMode(mode);
     if (docRoot) docRoot.dataset.uiMode = activeUiMode;
@@ -924,14 +961,17 @@ const boot = () => {
     if (slotState.slots.length) renderSlotEditor();
   }
 
+  // Translate a slot index into the A-D label shown in the profile controls.
   function slotLabel(index) {
     return PROFILE_LABELS[index] ?? PROFILE_LABELS[0];
   }
 
+  // User-facing description for the currently targeted profile slot.
   function describeSlot(index = activeProfileSlot) {
     return `Slot ${slotLabel(index)}`;
   }
 
+  // Update the selected profile slot and mirror it into the UI/state badges.
   function setActiveProfileSlot(index, { persist = true } = {}) {
     const bounded = clampProfileSlot(index);
     activeProfileSlot = bounded;
@@ -948,6 +988,7 @@ const boot = () => {
     }
   }
 
+  // Recompute enabled/disabled state for all profile/macro/scene controls.
   function refreshProfileControls() {
     const canInteract = profileInteractable && !profileRpcLocked;
     if (profileSaveBtn) profileSaveBtn.disabled = !canInteract || !deviceCapabilities.profileSave;
@@ -959,12 +1000,14 @@ const boot = () => {
     updateProfileHint();
   }
 
+  // Single sink for the guided profile wizard status line.
   function setProfileWizardStatus(state, message) {
     if (!profileWizardStatus) return;
     profileWizardStatus.dataset.state = state;
     profileWizardStatus.textContent = message;
   }
 
+  // Drive the three-step profile wizard copy and button gating from current state.
   function updateProfileWizardControls() {
     // Guided flow state machine: switch to target slot -> apply dirty edits -> save slot.
     const target = clampProfileSlot(Number(profileWizardTarget?.value ?? profileWizardTargetSlot));
@@ -1007,6 +1050,7 @@ const boot = () => {
     setProfileWizardStatus('ok', `Step 3: save Slot ${slotLabel(target)} to store current mapping.`);
   }
 
+  // Gate macro buttons on capability, connectivity, and pending RPC state.
   function updateMacroControls() {
     const offline = !profileInteractable;
     const unsupported = !deviceCapabilities.macroSnapshot;
@@ -1014,6 +1058,7 @@ const boot = () => {
     if (macroRecallBtn) macroRecallBtn.disabled = offline || macroBusy || unsupported || !macroAvailable;
   }
 
+  // Update the macro status copy line.
   function setMacroStatus(state, message) {
     if (!macroStatusEl) return;
     macroStatusEl.dataset.state = state;
@@ -1022,6 +1067,7 @@ const boot = () => {
     }
   }
 
+  // Update the scene status copy line.
   function setSceneStatus(state, message) {
     if (!sceneStatusEl) return;
     sceneStatusEl.dataset.state = state;
@@ -1030,6 +1076,7 @@ const boot = () => {
     }
   }
 
+  // Mirror one scene slot's saved/empty state into the UI.
   function updateSceneSlot(slotIndex, { name, available }) {
     const slotInfo = sceneSlotElements[slotIndex];
     if (!slotInfo) return;
@@ -1041,6 +1088,7 @@ const boot = () => {
     updateSceneControls();
   }
 
+  // Recompute enabled/disabled state for all scene save/recall buttons.
   function updateSceneControls() {
     const offline = !profileInteractable;
     const unsupported = !deviceCapabilities.scenes;
@@ -1053,6 +1101,7 @@ const boot = () => {
     });
   }
 
+  // Ask the runtime for the latest scene directory so the UI reflects device truth.
   async function refreshSceneList() {
     if (!sceneGrid) return;
     if (!deviceCapabilities.scenes) {
@@ -1068,6 +1117,7 @@ const boot = () => {
     }
   }
 
+  // Save the current deck state into one named scene slot.
   async function handleSceneSave(slotIndex) {
     if (!deviceCapabilities.scenes) {
       setSceneStatus('muted', 'Scene storage is unavailable on this firmware.');
@@ -1097,6 +1147,7 @@ const boot = () => {
     }
   }
 
+  // Recall one saved scene back into the live deck state.
   async function handleSceneRecall(slotIndex) {
     if (!deviceCapabilities.scenes) {
       setSceneStatus('muted', 'Scene storage is unavailable on this firmware.');
@@ -1286,6 +1337,7 @@ const boot = () => {
     }
   }
 
+  // Export the currently targeted profile slot as a standalone JSON file backup.
   function handleProfileDownload() {
     const { staged, live } = runtime.getState();
     const payload = staged ?? live;
@@ -1309,6 +1361,7 @@ const boot = () => {
     setStatus('ok', 'Profile downloaded', `${describeSlot()} saved locally.`);
   }
 
+  // Import a profile JSON file into staged state so the user can review diffs first.
   function handleProfileUpload() {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1337,6 +1390,7 @@ const boot = () => {
     input.click();
   }
 
+  // Toggle the dirty badge and the Apply/Rollback affordances together.
   function markDirty(isDirty) {
     console.debug('[UI] markDirty', isDirty);
     if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
@@ -1344,6 +1398,7 @@ const boot = () => {
     if (rollbackBtn) rollbackBtn.disabled = !isDirty;
   }
 
+  // Render a readable summary of staged changes compared with the live config.
   function updateDiff(isDirty) {
     if (!diffPanel || !diffOutput) return;
     const changes = runtime.diff();
@@ -1367,6 +1422,7 @@ const boot = () => {
     diffOutput.textContent = `${title}\n\n${lines.join('\n\n')}`;
   }
 
+  // Condense arbitrary values so the diff panel stays scannable.
   function summarizeDiffValue(value) {
     if (value === undefined) return 'undefined';
     if (value === null) return 'null';
@@ -1384,6 +1440,7 @@ const boot = () => {
     return truncateDiffText(String(value), 150);
   }
 
+  // Best-effort JSON formatting for diff previews.
   function stringifyDiffValue(value) {
     try {
       return JSON.stringify(value);
@@ -1392,12 +1449,14 @@ const boot = () => {
     }
   }
 
+  // Trim long diff strings without losing the fact that they were truncated.
   function truncateDiffText(text, maxLength) {
     if (typeof text !== 'string') return '';
     if (text.length <= maxLength) return text;
     return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
   }
 
+  // Refresh the compact firmware/schema/memory summary in the page header.
   function updateHeader(config) {
     if (!headerStatus) return;
     const manifest = runtime.getState().manifest;
@@ -1408,12 +1467,14 @@ const boot = () => {
     headerStatus.textContent = [manifest?.fw_version || 'fw?', manifest?.schema_version ?? 'schema?', `${ram} • ${flash}`].join(' • ');
   }
 
+  // Promote the latest manifest into the header and connection chrome.
   function updateHeaderManifest(manifest) {
     setConnectionPill('live', 'Connected');
     setConnectionBanner('live', manifest);
     updateHeader(runtime.getState().live);
   }
 
+  // Change which slot is focused in the inspector/editor pane.
   function selectSlot(index) {
     const maxIndex = Math.max(0, slotState.slots.length - 1);
     slotState.selected = Math.min(Math.max(0, index), maxIndex);
@@ -1422,6 +1483,7 @@ const boot = () => {
     populateDetail();
   }
 
+  // Fill the slot detail card from the selected slot plus latest telemetry.
   function populateDetail() {
     const slot = slotState.slots[slotState.selected];
     const telemetry = slotState.telemetry || {};
@@ -1450,6 +1512,7 @@ const boot = () => {
     renderSlotEditor();
   }
 
+  // Rebuild the right-hand slot editor for the current selection and UI tier.
   function renderSlotEditor() {
     if (!formContainer) return;
     formContainer.innerHTML = '';
@@ -1622,6 +1685,7 @@ const boot = () => {
     formContainer.appendChild(form);
   }
 
+  // Build a labeled `<select>` control with optional inline help.
   function makeSelect(labelText, options, current, onChange, { help } = {}) {
     const wrap = document.createElement('label');
     wrap.appendChild(makeControlLabel(labelText, help));
@@ -1638,6 +1702,7 @@ const boot = () => {
     return wrap;
   }
 
+  // Build a numeric input with keyboard-friendly coarse/fine stepping.
   function makeNumber(labelText, current, min, max, step, onCommit, { help } = {}) {
     const wrap = document.createElement('label');
     wrap.appendChild(makeControlLabel(labelText, help));
@@ -1654,6 +1719,7 @@ const boot = () => {
     return wrap;
   }
 
+  // Build a text input wrapper used for labels and SysEx templates.
   function makeText(labelText, current, placeholder, onCommit, { help } = {}) {
     const wrap = document.createElement('label');
     wrap.appendChild(makeControlLabel(labelText, help));
@@ -1666,6 +1732,7 @@ const boot = () => {
     return wrap;
   }
 
+  // Build a checkbox-based toggle control.
   function makeToggle(labelText, current, onCommit, { help } = {}) {
     const wrap = document.createElement('label');
     wrap.className = 'toggle';
@@ -1677,6 +1744,7 @@ const boot = () => {
     return wrap;
   }
 
+  // Standardize the visible label line used by all form controls.
   function makeControlLabel(text, helpText) {
     const line = document.createElement('span');
     line.className = 'control-label';
@@ -1685,6 +1753,7 @@ const boot = () => {
     return line;
   }
 
+  // Attach the little glossary-driven help badge when a control has explainer copy.
   function appendHelpBadge(container, helpText) {
     if (!helpText) return;
     const badge = document.createElement('span');
@@ -1696,6 +1765,7 @@ const boot = () => {
     container.appendChild(badge);
   }
 
+  // Create one visually consistent fieldset block for the slot editor.
   function makeFieldset(title, hint) {
     const fieldset = document.createElement('fieldset');
     fieldset.className = 'slot-fieldset';
@@ -1711,6 +1781,7 @@ const boot = () => {
     return fieldset;
   }
 
+  // Let number fields use Shift+Arrow for coarse adjustments without extra UI chrome.
   function attachCoarseFine(input, baseStep) {
     input.addEventListener('keydown', (event) => {
       if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
@@ -1722,6 +1793,7 @@ const boot = () => {
     });
   }
 
+  // Stage a top-level slot field into the runtime's draft config.
   function stageSlotField(index, key, value) {
     runtime.stage((draft) => {
       draft.slots = draft.slots || [];
@@ -1735,6 +1807,7 @@ const boot = () => {
     });
   }
 
+  // Stage an envelope-follower subfield into the selected slot draft.
   function stageSlotEnvelopeField(index, key, value) {
     runtime.stage((draft) => {
       draft.slots = draft.slots || [];
@@ -1748,6 +1821,7 @@ const boot = () => {
     });
   }
 
+  // Stage an ARG combiner subfield into the selected slot draft.
   function stageSlotArgField(index, key, value) {
     runtime.stage((draft) => {
       draft.slots = draft.slots || [];
@@ -1758,6 +1832,7 @@ const boot = () => {
     });
   }
 
+  // Format numbers for compact read-only detail labels.
   function formatNumberField(value, fractionDigits = 2) {
     if (value === null || value === undefined) return '—';
     const num = Number(value);
@@ -1766,6 +1841,7 @@ const boot = () => {
     return Number(num.toFixed(fractionDigits)).toString();
   }
 
+  // Render an EF index as the user-facing label shown in the detail card.
   function formatEfIndex(index) {
     if (index === null || index === undefined) return '—';
     const num = Number(index);
@@ -1774,6 +1850,7 @@ const boot = () => {
     return `EF ${String(num + 1).padStart(2, '0')}`;
   }
 
+  // Combine the EF filter name and numeric id into one readable label.
   function formatEfFilter(ef) {
     if (!ef) return '—';
     const index = Number(ef.filter_index);
@@ -1783,6 +1860,7 @@ const boot = () => {
     return idx ? `${name} (${idx})` : name;
   }
 
+  // Summarize EF frequency/Q tuning for the detail card.
   function formatEfTuning(ef) {
     if (!ef) return '—';
     const freq = formatNumberField(ef.frequency, 1);
@@ -1792,6 +1870,7 @@ const boot = () => {
     return `${freqLabel} • Q ${q}`;
   }
 
+  // Summarize EF dynamics-related tuning for the detail card.
   function formatEfDynamics(ef) {
     if (!ef) return '—';
     const oversample = Number.isFinite(Number(ef.oversample)) ? Number(ef.oversample) : null;
@@ -1801,6 +1880,7 @@ const boot = () => {
     return `Oversample ${oversampleLabel} • Smoothing ${smoothing}`;
   }
 
+  // Summarize EF baseline/gain tuning for the detail card.
   function formatEfBaseline(ef) {
     if (!ef) return '—';
     const baseline = formatNumberField(ef.baseline, 2);
@@ -1809,6 +1889,7 @@ const boot = () => {
     return `Baseline ${baseline} • Gain ${gain}`;
   }
 
+  // Resolve the ARG method name from either the saved string or numeric index.
   function resolveArgMethodName(arg) {
     if (!arg || typeof arg !== 'object') return null;
     if (arg.method_name && typeof arg.method_name === 'string') return arg.method_name;
@@ -1819,6 +1900,7 @@ const boot = () => {
     return null;
   }
 
+  // Render the ARG enabled state plus method in one compact label.
   function formatArgMode(arg) {
     if (!arg || typeof arg !== 'object') return '—';
     const methodName = resolveArgMethodName(arg);
@@ -1832,6 +1914,7 @@ const boot = () => {
     return pieces.join(' · ');
   }
 
+  // Convert an EF index into the route label shown by ARG summaries.
   function formatEfRoute(index) {
     if (index === null || index === undefined) return '—';
     const num = Number(index);
@@ -1839,6 +1922,7 @@ const boot = () => {
     return `EF ${String(num + 1).padStart(2, '0')}`;
   }
 
+  // Summarize the two ARG source followers in the detail card.
   function formatArgSources(arg) {
     if (!arg || typeof arg !== 'object') return '—';
     const sourceA = formatEfRoute(arg.sourceA);
@@ -1847,6 +1931,7 @@ const boot = () => {
     return `A → ${sourceA} • B → ${sourceB}`;
   }
 
+  // Fill in missing EF defaults and normalize mixed legacy/current field shapes.
   function normalizeEf(slot) {
     const base = slot?.ef ? { ...slot.ef } : {};
     const defaults = {
@@ -1884,6 +1969,7 @@ const boot = () => {
     return base;
   }
 
+  // Fill in missing ARG defaults and clamp sources against the current manifest.
   function normalizeArg(slot) {
     const base = slot?.arg ? { ...slot.arg } : {};
     if (base.enabled === undefined) base.enabled = false;
@@ -1909,6 +1995,7 @@ const boot = () => {
     return base;
   }
 
+  // Normalize a typed SysEx template into the token format runtime transport expects.
   function normaliseSysexTemplate(value) {
     if (typeof value !== 'string') return '';
     const trimmed = value.trim();
@@ -1924,6 +2011,7 @@ const boot = () => {
       .join(' ');
   }
 
+  // Render the small LED section and throttle slider/color updates into staged state.
   function renderLedControls(staged) {
     if (!ledGrid) return;
     ledGrid.innerHTML = '';
@@ -1983,6 +2071,7 @@ const boot = () => {
     ledGrid.append(brightnessWrap, colorWrap);
   }
 
+  // Reapply browser-only pickup guards after staged/live slot data changes.
   function updateTakeoverGuards(slots) {
     if (!Array.isArray(slots)) return;
     const guardOn = [];
@@ -1995,6 +2084,7 @@ const boot = () => {
     if (guardOff.length) runtime.setPotGuard(guardOff, false);
   }
 
+  // Paint the diagnostics card from the latest manifest/build information.
   function renderDeviceMonitor(manifest) {
     if (!deviceMonitor) return;
     deviceMonitor.innerHTML = '';
@@ -2021,6 +2111,7 @@ const boot = () => {
     });
   }
 
+  // Render one slot tile inside the virtualized grid.
   function renderSlotButton(el, index, slot) {
     el.className = 'slot-button';
     el.tabIndex = -1;
@@ -2051,6 +2142,7 @@ const boot = () => {
     el.classList.toggle('selected', index === slotState.selected);
   }
 
+  // Normalize the follower-assignment list format into a bounded unique slot array.
   function normalizeFollowerSlotList(item, maxSlotIndex) {
     const source = Array.isArray(item?.slots)
       ? item.slots
@@ -2073,6 +2165,7 @@ const boot = () => {
     return normalized;
   }
 
+  // Parse the freeform follower-assignment text input into normalized slot ids.
   function parseFollowerSlotsInput(text, maxSlotIndex) {
     if (typeof text !== 'string' || !text.trim()) return [];
     const tokens = text
@@ -2082,11 +2175,13 @@ const boot = () => {
     return normalizeFollowerSlotList({ slots: tokens }, maxSlotIndex);
   }
 
+  // Convert a follower slot list back into editable text.
   function formatFollowerSlots(slots) {
     if (!Array.isArray(slots) || !slots.length) return '';
     return slots.join(', ');
   }
 
+  // Build the short read-only summary shown beside each follower assignment row.
   function summarizeFollowerSlots(slots) {
     if (!Array.isArray(slots) || !slots.length) return 'Unassigned';
     const labels = slots.slice(0, 4).map((slot) => `S${String(slot + 1).padStart(2, '0')}`);
@@ -2094,6 +2189,7 @@ const boot = () => {
     return `${labels.join(', ')}${overflow}`;
   }
 
+  // Render one row in the EF assignment editor.
   function renderEfRow(el, index, item) {
     el.className = 'ef-row';
     el.innerHTML = '';
@@ -2126,6 +2222,7 @@ const boot = () => {
     el.append(label, input, summary);
   }
 
+  // Push the latest telemetry frame into the slot grid, envelope meters, and detail view.
   function paintTelemetry(frame) {
     if (!Array.isArray(frame.slots)) return;
     slotVirtualizer.updateTelemetry(frame.slots);
@@ -2138,6 +2235,7 @@ const boot = () => {
     slotDetailValue.textContent = frame.slots[slotState.selected] ?? '—';
   }
 
+  // Build a simple progress-meter bank for envelope telemetry.
   function initializeMeters(container, count, labelPrefix) {
     if (!container) return [];
     container.innerHTML = '';

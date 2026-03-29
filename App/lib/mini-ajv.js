@@ -1,17 +1,23 @@
+// Tight object check used throughout the validator so arrays and null do not
+// accidentally pass object-schema branches.
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
+// Escape one JSON Pointer segment for schema/instance paths in validation errors.
 const escapeJsonPointer = (segment) => String(segment).replace(/~/g, '~0').replace(/\//g, '~1');
 
+// Append one path segment using JSON Pointer syntax.
 const joinPath = (base, segment) => {
   if (!segment && segment !== 0) return base;
   const escaped = escapeJsonPointer(segment);
   return `${base}/${escaped}`;
 };
 
+// Push a validation error in roughly the same shape AJV would expose.
 const addError = (errors, { instancePath, schemaPath, keyword, message, params = {} }) => {
   errors.push({ instancePath, schemaPath, keyword, message, params });
 };
 
+// Minimal type matcher covering the schema features this app actually uses.
 const checkType = (type, data) => {
   switch (type) {
     case 'string':
@@ -31,6 +37,8 @@ const checkType = (type, data) => {
   }
 };
 
+// Recursive JSON-schema walker that implements only the keywords used by
+// `config_schema.json`, keeping the app bundle smaller than full AJV.
 const validateSchema = (schema, data, instancePath, schemaPath, errors, options) => {
   if (!schema || typeof schema !== 'object') {
     return;
@@ -189,10 +197,12 @@ const validateSchema = (schema, data, instancePath, schemaPath, errors, options)
 };
 
 export default class MiniAjv {
+  // Store options so `compile()` can mirror AJV's `allErrors` behavior when needed.
   constructor(options = {}) {
     this.options = options;
   }
 
+  // Return a validator function that records `validator.errors` like AJV does.
   compile(schema) {
     const opts = { allErrors: Boolean(this.options.allErrors) };
     const validator = (data) => {
@@ -204,6 +214,7 @@ export default class MiniAjv {
     return validator;
   }
 
+  // Flatten collected errors into one readable string for UI messages/tests.
   errorsText(errors = []) {
     return errors.map((err) => `${err.instancePath || '/'} ${err.message}`).join(', ');
   }

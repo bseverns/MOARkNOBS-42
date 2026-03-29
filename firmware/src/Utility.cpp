@@ -30,18 +30,23 @@
 
 // Default time source; tests can override by defining their own now().
 unsigned long __attribute__((weak)) now() { return millis(); }
+
+// Map a raw analog reading into the 7-bit MIDI range used by most messages.
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
 }
 
+// Map a raw analog reading into the full 14-bit range used by pitch bend/NRPN style payloads.
 uint16_t Utility::mapTo14Bit(int analogValue, int minValue, int maxValue) {
     return static_cast<uint16_t>(map(analogValue, minValue, maxValue, 0, 16383));
 }
 
+// Generic integer remap helper used by UI/firmware code that needs explicit bounds.
 int Utility::mapToRange(int value, int inMin, int inMax, int outMin, int outMax) {
     return map(value, inMin, inMax, outMin, outMax);
 }
 
+// Floating-point version of map() with zero-range protection.
 float Utility::scale(float value, float inMin, float inMax, float outMin, float outMax) {
     const float range = inMax - inMin;
     if (std::fabs(range) <= std::numeric_limits<float>::epsilon()) {
@@ -51,6 +56,7 @@ float Utility::scale(float value, float inMin, float inMax, float outMin, float 
     return outMin + ratio * (outMax - outMin);
 }
 
+// Apply a power curve after normalizing into 0..1, then scale into the target range.
 float Utility::mapExponential(float value, float inMin, float inMax, float outMin, float outMax,
                               float exponent) {
     const float range = inMax - inMin;
@@ -64,6 +70,7 @@ float Utility::mapExponential(float value, float inMin, float inMax, float outMi
 }
 
 // Note On/Off scheduling
+// Fire a note immediately and schedule its note-off on the shared high-priority scheduler.
 void Utility::scheduleNoteOnOff(MIDIHandler &midiHandler, uint8_t note, uint8_t velocity,
                                 uint8_t channel, unsigned long durationMs) {
     midiHandler.sendNoteOn(note, velocity, channel);
@@ -94,11 +101,14 @@ bool Utility::debounce(bool &previousState, bool currentState, unsigned long &la
 }
 
 // EEPROM Operations
+// Read one byte from EEPROM without any extra interpretation.
 uint8_t Utility::readEEPROMByte(int address) { return EEPROM.read(address); }
 
+// Update one EEPROM byte, relying on EEPROM.update() to avoid unnecessary wear.
 void Utility::writeEEPROMByte(int address, uint8_t value) { EEPROM.update(address, value); }
 
 // Timer Helpers
+// Check whether an interval has elapsed and roll the caller's timestamp forward if so.
 bool Utility::isTimeElapsed(unsigned long &lastTime, unsigned long interval) {
     unsigned long currentTime = now();
     if ((currentTime - lastTime) >= interval) {
@@ -109,22 +119,26 @@ bool Utility::isTimeElapsed(unsigned long &lastTime, unsigned long interval) {
 }
 
 // LED Utilities
+// Blend between two colors based on a 7-bit MIDI value.
 CRGB Utility::mapValueToColor(uint8_t value, CRGB lowColor, CRGB highColor) {
     return blend(lowColor, highColor, map(value, 0, 127, 0, 255));
 }
 
 // Debugging
+// Emit a standardized error log line.
 void Utility::logError(const char *errorMessage) {
     LOG_PRINT("[ERROR]: ");
     LOG_PRINTLN(errorMessage);
 }
 
+// Emit a standardized debug log line.
 void Utility::logDebug(const char *debugMessage) {
     LOG_PRINT("[DEBUG]: ");
     LOG_PRINTLN(debugMessage);
 }
 
 // Filtering
+// Simple EWMA used throughout the repo to calm noisy sensor values.
 int Utility::exponentialMovingAverage(int currentValue, int previousValue, float alpha) {
     const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
     const float weighted = (clampedAlpha * static_cast<float>(currentValue)) +
@@ -140,12 +154,14 @@ int Utility::exponentialMovingAverage(int currentValue, int previousValue, float
 }
 
 // System Operations
+// Force a Cortex-M software reset when the firmware needs a clean restart.
 void Utility::rebootTeensy() {
     SCB_AIRCR = 0x05FA0004; // System reset for ARM Cortex-M
     while (1)
         ; // Ensure the system halts
 }
 
+// Center one line of text on the OLED and show it immediately.
 void Utility::displayCenteredText(Adafruit_SSD1306 &display, const char *text) {
     const char *safeText = text ? text : "";
     int16_t x1, y1;
@@ -189,6 +205,7 @@ void Utility::displayStatus(Adafruit_SSD1306 &display, const char *status, unsig
     delay(duration); // Hold the status for the given duration
 }
 
+// Paint the older all-in-one status screen used by some diagnostic and workshop flows.
 void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
                             const std::vector<EnvelopeFollower> &envelopeFollowers,
                             const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
@@ -233,6 +250,7 @@ void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
     display.display();
 }
 
+// Read a little-endian 16-bit word from EEPROM.
 uint16_t Utility::readEEPROMWord(int address) {
     uint8_t low = EEPROM.read(address);
     uint8_t high = EEPROM.read(address + 1);

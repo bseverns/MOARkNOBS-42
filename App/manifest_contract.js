@@ -13,6 +13,8 @@ const DEFAULT_CAPABILITIES = {
   scenes: false
 };
 
+// Build the browser's fallback manifest so the UI still knows slot counts,
+// schema version, and capability defaults before a real device handshakes.
 export function createLocalManifest({ uiVersion, argMethodCount, capabilities } = {}) {
   return {
     ui_version: uiVersion,

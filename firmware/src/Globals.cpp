@@ -101,6 +101,8 @@ constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildArgPairs(
     return pairs;
 }
 
+// Let an SD card override a handful of hardware pins/timings without forcing a
+// custom compile. This keeps bring-up tweaks in data when possible.
 void loadFromJson(HardwareConfig &cfg) {
 #if __has_include(<ArduinoJson.h>)
     if (!kHasSD)
@@ -143,6 +145,8 @@ const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = kEnvelopePins;
 const std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> ARG_PAIRS = buildArgPairs();
 const size_t ARG_PAIRS_LEN = ARG_PAIRS.size();
 
+// Convert a follower index into the corresponding Teensy analog pin so runtime
+// and diagnostics code never hard-codes the wiring table separately.
 int envelopeAnalogPin(uint8_t index) {
     if (index >= kEnvelopePins.size()) {
         return -1;
@@ -150,6 +154,8 @@ int envelopeAnalogPin(uint8_t index) {
     return kEnvelopePins[index];
 }
 
+// Reverse-lookup helper used when code starts from a raw analog pin and needs
+// the follower slot index expected by config and diagnostics layers.
 int envelopeIndexFromAnalogPin(int analogPin) {
     for (size_t i = 0; i < kEnvelopePins.size(); ++i) {
         if (kEnvelopePins[i] == analogPin) {
@@ -163,6 +169,8 @@ int envelopeIndexFromAnalogPin(int analogPin) {
 #include "hardware_config.h"
 #endif
 
+// Apply compile-time and optional SD-card hardware overrides in one place
+// before any hardware manager captures the shared config.
 void loadHardwareConfig() {
 #if __has_include("hardware_config.h")
     applyHardwareConfigOverrides(hwConfig);

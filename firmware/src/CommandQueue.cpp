@@ -18,6 +18,7 @@ struct CommandQueueStorage {
 
 CommandQueueStorage commandQueue;
 
+// Drop the oldest queued command so fresh operator input wins during overload.
 void dropOldestCommand() {
     if (commandQueue.count == 0) {
         return;
@@ -26,6 +27,7 @@ void dropOldestCommand() {
     --commandQueue.count;
 }
 
+// Push one complete serial line into the ring buffer.
 void enqueueSerialCommand(const char *line) {
     if (!line) {
         return;
@@ -45,6 +47,7 @@ void enqueueSerialCommand(const char *line) {
     ++commandQueue.count;
 }
 
+// Accumulate serial bytes into newline-delimited commands.
 void ingestSerialByte(char received) {
     if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
         serialBuffer[serialBufferIndex] = '\0';
@@ -59,6 +62,7 @@ void ingestSerialByte(char received) {
 }
 } // namespace
 
+// Pop the next queued command into the caller-provided buffer.
 bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
     if (!outBuffer || outBufferSize == 0 || commandQueue.count == 0) {
         return false;
@@ -73,6 +77,7 @@ bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
     return true;
 }
 
+// Drain the hardware serial input into the command ring buffer.
 void pollSerialInput() {
     while (Serial.available()) {
         ingestSerialByte(static_cast<char>(Serial.read()));
@@ -80,13 +85,16 @@ void pollSerialInput() {
 }
 
 #if defined(UNIT_TEST)
+// Reset queue storage so tests start from a blank serial-command state.
 void testOnly_resetCommandQueue() {
     commandQueue = CommandQueueStorage{};
     std::memset(serialBuffer, 0, sizeof(serialBuffer));
     serialBufferIndex = 0;
 }
 
+// Inject a full command line directly into the queue for tests.
 void testOnly_enqueueSerialCommand(const char *line) { enqueueSerialCommand(line); }
 
+// Feed one raw serial byte into the queue parser for tests.
 void testOnly_ingestSerialByte(char received) { ingestSerialByte(received); }
 #endif

@@ -51,6 +51,7 @@ Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 
+// CRC helper used by macro/scene/profile records so storage corruption is observable.
 uint16_t crc16Update(uint16_t crc, uint8_t data) {
     crc ^= static_cast<uint16_t>(data) << 8;
     for (uint8_t i = 0; i < 8; ++i) {
@@ -63,6 +64,8 @@ uint16_t crc16Update(uint16_t crc, uint8_t data) {
     return crc;
 }
 
+// Compute CRC over plain structs, optionally skipping header bytes like the stored crc field
+// itself.
 template <typename T> uint16_t computeCrc(const T &value, size_t skipBytes = 0) {
     uint16_t crc = 0xFFFF;
     const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
@@ -72,6 +75,7 @@ template <typename T> uint16_t computeCrc(const T &value, size_t skipBytes = 0) 
     return crc;
 }
 
+// Push persisted pot channel/CC mappings back into the live managers after config/profile changes.
 void syncPotentiometerMappingsFromConfig() {
     potChannels.clear();
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
@@ -85,6 +89,7 @@ void syncPotentiometerMappingsFromConfig() {
     }
 }
 
+// Build the baseline profile used when a slot is empty or gets reset.
 ProfileData defaultProfileSnapshot() {
     ProfileData profile{};
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
@@ -93,6 +98,7 @@ ProfileData defaultProfileSnapshot() {
     return profile;
 }
 
+// Persist the current live deck state into one of the four firmware profile slots.
 bool saveCurrentProfileSlot(uint8_t id) {
     if (id >= NUM_PROFILES) {
         return false;
@@ -104,6 +110,7 @@ bool saveCurrentProfileSlot(uint8_t id) {
     return configManager.saveProfileSettings(id, captureProfileSnapshot());
 }
 
+// Load one profile slot into the live runtime, falling back to a baseline if the slot is blank.
 bool loadProfileSlot(uint8_t id) {
     if (id >= NUM_PROFILES) {
         return false;
@@ -136,6 +143,7 @@ bool loadProfileSlot(uint8_t id) {
     return true;
 }
 
+// Reset a profile slot to the baseline state and immediately apply that baseline live.
 bool resetProfileSlot(uint8_t id) {
     if (id >= NUM_PROFILES) {
         return false;

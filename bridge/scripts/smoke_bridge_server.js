@@ -5,6 +5,8 @@ const path = require('node:path');
 
 const bridgeEntry = path.resolve(__dirname, '..', 'mn42_bridge_server.js');
 
+// Invoke the browser-bridge server entrypoint with a small timeout so smoke
+// checks fail fast in CI.
 function run(args) {
   return spawnSync(process.execPath, [bridgeEntry, ...args], {
     encoding: 'utf8',
@@ -12,6 +14,7 @@ function run(args) {
   });
 }
 
+// Print useful process output before exiting the smoke script on failure.
 function fail(message, proc) {
   console.error(`FAIL: ${message}`);
   if (proc) {

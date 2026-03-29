@@ -23,6 +23,8 @@ const statusNodes = {
   error: document.getElementById('status-error'),
 };
 
+// Restore the last bridge form values so the desktop helper reopens in a
+// familiar state after refreshes or restarts.
 function loadSavedConfig() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -31,6 +33,8 @@ function loadSavedConfig() {
   }
 }
 
+// Persist the current bridge form values locally; this is operator convenience,
+// not shared bridge state.
 function saveConfig(values) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
@@ -39,6 +43,7 @@ function saveConfig(values) {
   }
 }
 
+// Normalize the form into the JSON shape expected by the bridge HTTP API.
 function formValues() {
   const data = new FormData(form);
   return {
@@ -51,6 +56,7 @@ function formValues() {
   };
 }
 
+// Fill the visible form from a stored config or the bridge's live state.
 function populateForm(values) {
   if (!values || typeof values !== 'object') return;
   for (const [key, value] of Object.entries(values)) {
@@ -60,6 +66,7 @@ function populateForm(values) {
   }
 }
 
+// Render ISO timestamps into operator-friendly local time labels.
 function formatWhen(isoString) {
   if (!isoString) return 'none yet';
   const date = new Date(isoString);
@@ -67,6 +74,7 @@ function formatWhen(isoString) {
   return date.toLocaleString();
 }
 
+// Flatten structured bridge logs into a simple scrolling text console.
 function logsToText(logs) {
   if (!Array.isArray(logs) || !logs.length)
     return 'Waiting for bridge activity.';
@@ -81,11 +89,13 @@ function logsToText(logs) {
     .join('\n');
 }
 
+// Point the configurator at this bridge's WebSocket endpoint.
 function wsUrl() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${window.location.host}/ws`;
 }
 
+// Keep the primary controls aligned with whether the background bridge is live.
 function updateButtons(state) {
   const running = Boolean(state?.running);
   startButton.disabled = running;
@@ -93,6 +103,7 @@ function updateButtons(state) {
   openConfiguratorButton.disabled = !running;
 }
 
+// Project the bridge daemon state into the dashboard summary and badges.
 function updateStatus(state) {
   const config = state?.config || {};
   statusNodes.running.textContent = state?.running ? 'running' : 'stopped';
@@ -118,6 +129,8 @@ function updateStatus(state) {
   updateButtons(state);
 }
 
+// Render the currently detected serial ports into both the visible list and the
+// datalist used for typed path completion.
 function renderPorts(ports) {
   portsList.textContent = '';
   portsDatalist.textContent = '';
@@ -141,6 +154,7 @@ function renderPorts(ports) {
   });
 }
 
+// Small JSON fetch helper shared by every control path in this UI.
 async function api(url, options = {}) {
   const response = await fetch(url, {
     headers: { 'content-type': 'application/json' },
@@ -153,6 +167,7 @@ async function api(url, options = {}) {
   return payload;
 }
 
+// Pull the bridge daemon's current status and repaint the dashboard.
 async function refreshState() {
   const payload = await api('/api/state', { method: 'GET' });
   updateStatus(payload.state);
@@ -160,12 +175,14 @@ async function refreshState() {
   return payload.state;
 }
 
+// Refresh the serial-port inventory shown to the operator.
 async function refreshPorts() {
   const payload = await api('/api/ports', { method: 'GET' });
   renderPorts(payload.ports);
   return payload.ports;
 }
 
+// Start the bridge with the current form values.
 async function startBridge() {
   const values = formValues();
   saveConfig(values);
@@ -176,6 +193,7 @@ async function startBridge() {
   updateStatus(payload.state);
 }
 
+// Stop the running bridge process and repaint the dashboard state.
 async function stopBridge() {
   const payload = await api('/api/disconnect', {
     method: 'POST',
@@ -184,12 +202,14 @@ async function stopBridge() {
   updateStatus(payload.state);
 }
 
+// Launch the browser configurator already pointed at this bridge instance.
 function openConfigurator() {
   const target = new URL('/app/', window.location.href);
   target.searchParams.set('ws', wsUrl());
   window.open(target.toString(), '_blank', 'noopener');
 }
 
+// Attach button and form handlers once during page boot.
 function bindEvents() {
   startButton.addEventListener('click', async () => {
     summaryStatus.textContent = 'Starting bridge...';
@@ -226,6 +246,8 @@ function bindEvents() {
   });
 }
 
+// One-shot page bootstrap: restore saved values, wire events, fetch initial
+// state, then keep polling the daemon summary.
 async function boot() {
   populateForm(loadSavedConfig());
   bindEvents();
