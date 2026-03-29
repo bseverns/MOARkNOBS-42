@@ -526,10 +526,10 @@ main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    'label toggle'
-    'state state';
+    'label label'
+    'state toggle';
   align-items: center;
-  gap: 3px 8px;
+  gap: 5px 8px;
   min-height: 58px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
@@ -573,8 +573,10 @@ main {
 .slot-button .takeover {
   grid-area: toggle;
   justify-self: end;
-  min-width: 30px;
-  padding: 3px 6px;
+  align-self: center;
+  min-width: 32px;
+  min-height: 20px;
+  padding: 3px 7px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.18);

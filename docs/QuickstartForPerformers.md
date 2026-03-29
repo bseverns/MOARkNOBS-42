@@ -15,6 +15,7 @@ Use the browser configurator when you want direct USB setup, profile management,
 Start here:
 
 - [Configurator Tour](Configurator.md) for the current configurator workflow
+- [Operator Tutorial](OperatorTutorial.md) for the practical operating model, including `IM` vs `PK`
 - [Connectivity Guide](ConnectivityGuide.md) if you are not sure whether you need the bridge
 
 ## 3. Connect in the configurator

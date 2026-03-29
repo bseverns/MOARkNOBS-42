@@ -4,6 +4,8 @@ The browser app is not just a remote control. It is the safest place to understa
 
 ![Browser configurator screenshot showing staged edits, telemetry, and slot controls.](profiles-ui.png)
 
+TODO: add an annotated version of this screenshot with callouts for staged state, live slots, recovery drawer, and the `IM` / `PK` browser-local mode badge.
+
 ## The core idea
 
 The configurator keeps two versions of the world:
@@ -43,6 +45,27 @@ Most controls do **not** immediately rewrite device state.
 5. Apply becomes available only when the staged payload is valid
 
 Some controls can also issue field-level writes through `set_param`, but even then the runtime stages locally first so the UI never loses track of intent.
+
+## Browser-local slot behavior: `IM` and `PK`
+
+The live slot tiles include a tiny mode badge:
+
+- `IM` means **Immediate local response**
+- `PK` means **Browser-only pickup guard**
+
+This is operator-side behavior, not firmware-backed config.
+
+That means:
+
+- changing it does not require **Apply**
+- changing it does not save anything into device profiles
+- it is remembered by the browser, not by the board
+
+`IM` is the direct mode. If local control input becomes active, the configurator responds immediately.
+
+`PK` is the guarded mode. The configurator waits until the physical control passes through the current effective value before treating it as active again, which helps prevent sudden jumps after reconnects, profile switches, or other state changes.
+
+If you want the operator explanation instead of the contract explanation, read [Operator Tutorial](OperatorTutorial.md).
 
 ## Presets are starting points, profiles are memory
 
@@ -84,6 +107,7 @@ The app is useful because it turns protocol details into visible actions:
 
 ## Where to go next
 
+- Read [Operator Tutorial](OperatorTutorial.md) for the practical “how to operate this machine” walkthrough.
 - Read [Profile Workflow](ProfileWorkflow.md) if you want the save/load/reset flow explained step by step.
 - Read [Failure-First Guide](FailureFirst.md) if your mental model is forming through recovery cases.
 - Read [WebSerial Protocol](WebSerial.md) for the lower-level message model.

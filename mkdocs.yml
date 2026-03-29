@@ -96,6 +96,7 @@ nav:
       - Troubleshooting: Troubleshooting.md
   - Using The Rig:
       - Configurator Tour: Configurator.md
+      - Operator Tutorial: OperatorTutorial.md
       - Preset Library: PresetLibrary.md
       - Profile Workflow: ProfileWorkflow.md
       - Reactive Control Guide: ReactiveControlGuide.md

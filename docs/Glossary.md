@@ -132,7 +132,17 @@ Replace the active profile with its default baseline and push that clean state b
 
 ### Take Control
 
-A UI guardrail used to prevent sudden live-value jumps, especially for physical controls that may not match the currently staged state.
+A browser-local pickup guard used to prevent sudden live-value jumps, especially when a physical control may not match the currently live or staged state.
+
+With the guard on, the configurator waits until the control passes through the current effective value before treating that control as active again.
+
+See: [Operator Tutorial](OperatorTutorial.md)
+
+### Immediate local response
+
+The direct local-control mode used by the configurator when pickup guarding is off.
+
+With immediate response, the browser accepts local control input right away instead of waiting for the control to catch the current value first.
 
 See: [Configurator Tour](Configurator.md)
 
