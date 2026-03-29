@@ -3,7 +3,13 @@ import { FormRenderer } from './form_renderer.js';
 import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
-import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from '../lib/constants.js';
+import {
+  EF_FILTER_NAMES,
+  SLOT_TYPE_NAMES,
+  ARG_METHOD_NAMES,
+  formatArgMethodLabel,
+  describeArgMethod
+} from '../lib/constants.js';
 import { createLocalManifest } from '../manifest_contract.js';
 
 const localManifest = createLocalManifest({
@@ -1778,6 +1784,9 @@ const boot = () => {
           const idx = Math.max(0, ARG_METHOD_NAMES.indexOf(value));
           stageSlotArgField(slotState.selected, 'method', idx);
           stageSlotArgField(slotState.selected, 'method_name', value);
+        }, {
+          formatOptionLabel: formatArgMethodLabel,
+          describeOption: describeArgMethod
         }),
       );
       argFieldset.appendChild(
@@ -1802,14 +1811,15 @@ const boot = () => {
   }
 
   // Build a labeled `<select>` control with optional inline help.
-  function makeSelect(labelText, options, current, onChange, { help } = {}) {
+  function makeSelect(labelText, options, current, onChange, { help, formatOptionLabel, describeOption } = {}) {
     const wrap = document.createElement('label');
     wrap.appendChild(makeControlLabel(labelText, help));
     const select = document.createElement('select');
     options.forEach((opt) => {
       const option = document.createElement('option');
       option.value = opt;
-      option.textContent = opt;
+      option.textContent = formatOptionLabel ? formatOptionLabel(opt) : opt;
+      if (describeOption) option.title = describeOption(opt);
       if (opt === current) option.selected = true;
       select.appendChild(option);
     });

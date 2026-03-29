@@ -1,3 +1,5 @@
+import { ARG_METHOD_NAMES, formatArgMethodLabel, describeArgMethod } from '../lib/constants.js';
+
 const DEFAULT_DEBOUNCE = 150;
 
 // Split dotted schema paths into array/object access tokens.
@@ -233,7 +235,9 @@ export class FormRenderer {
       schema.enum.forEach((opt) => {
         const option = document.createElement('option');
         option.value = opt;
-        option.textContent = opt;
+        const isArgMethod = ARG_METHOD_NAMES.includes(opt);
+        option.textContent = isArgMethod ? formatArgMethodLabel(opt) : opt;
+        if (isArgMethod) option.title = describeArgMethod(opt);
         if (value === opt) option.selected = true;
         select.appendChild(option);
       });
