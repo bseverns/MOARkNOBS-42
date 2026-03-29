@@ -225,7 +225,7 @@ async function run() {
   const appHtml = await appResponse.text();
   assert.match(
     appHtml,
-    /MOARkNOBZ Control Deck/,
+    /MOARkNOBS-42 Browser Configurator[\s\S]*Control Deck/,
     'server should expose the bundled configurator',
   );
 
