@@ -179,10 +179,6 @@
             <p class="microcopy">Tell each follower which slots to stalk — comma-separate zero-based slot indices.</p>
             <div class="ef-grid"></div>
           </fieldset>
-          <details data-ui-tier="advanced">
-            <summary>Debug Log</summary>
-            <pre id="log" aria-live="off"></pre>
-          </details>
         </section>
       </section>
 
@@ -315,6 +311,11 @@
           </section>
         </div>
       </aside>
+
+      <details class="debug-log-bridge" data-ui-tier="advanced">
+        <summary>Debug Log</summary>
+        <pre id="log" aria-live="off"></pre>
+      </details>
     </main>
     <dialog id="migration-dialog">
       <h2 id="migration-title">Migration Needed</h2>

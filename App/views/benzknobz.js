@@ -11,6 +11,9 @@ const localManifest = createLocalManifest({
   argMethodCount: ARG_METHOD_NAMES.length
 });
 
+const SLOT_ROW_HEIGHT = 88;
+const EF_ROW_HEIGHT = 40;
+
 const runtimeOptions = {
   schemaUrl: './config_schema.json',
   localManifest,
@@ -458,12 +461,12 @@ const boot = () => {
 
   const slotVirtualizer = new VirtualGrid(slotContainer, {
     columns: 6,
-    rowHeight: 100,
+    rowHeight: SLOT_ROW_HEIGHT,
     render: renderSlotButton
   });
 
   const efVirtualizer = new VirtualList(efAssignmentGrid, {
-    itemHeight: 48,
+    itemHeight: EF_ROW_HEIGHT,
     render: renderEfRow
   });
 
