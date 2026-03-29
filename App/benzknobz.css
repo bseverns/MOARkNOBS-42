@@ -18,7 +18,7 @@
   --text-label: #97a1b8;
   --text-value: #f7f9ff;
   --page-scale: 1;
-  --slot-row-height: 76px;
+  --slot-row-height: 82px;
   --slot-grid-rows: 7;
   --ef-row-height: 44px;
   --ef-row-count: 6;
@@ -524,13 +524,15 @@ main {
 
 .slot-button {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    'label label'
-    'state toggle';
-  align-items: center;
-  gap: 5px 8px;
-  min-height: 58px;
+    'label'
+    'state'
+    'toggle';
+  align-items: start;
+  justify-items: start;
+  gap: 5px;
+  min-height: 66px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.018);
@@ -568,15 +570,18 @@ main {
   font-size: 0.58rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  width: 100%;
+  min-width: 0;
+  line-height: 1.1;
 }
 
 .slot-button .takeover {
   grid-area: toggle;
-  justify-self: end;
-  align-self: center;
-  min-width: 32px;
+  justify-self: center;
+  align-self: end;
+  min-width: 40px;
   min-height: 20px;
-  padding: 3px 7px;
+  padding: 3px 9px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.18);
@@ -586,6 +591,7 @@ main {
   font-size: 0.52rem;
   font-weight: 700;
   letter-spacing: 0.12em;
+  white-space: nowrap;
 }
 
 .slot-button .takeover[aria-label='Pickup mode'] {

@@ -17,7 +17,7 @@ const localManifest = createLocalManifest({
   argMethodCount: ARG_METHOD_NAMES.length
 });
 
-const SLOT_ROW_HEIGHT = 76;
+const SLOT_ROW_HEIGHT = 82;
 const EF_ROW_HEIGHT = 44;
 
 const SLOT_TYPE_ABBREVIATIONS = {
