@@ -20,7 +20,7 @@
   --page-scale: 1;
   --slot-row-height: 76px;
   --slot-grid-rows: 7;
-  --ef-row-height: 52px;
+  --ef-row-height: 44px;
   --ef-row-count: 6;
   color-scheme: dark;
 }
@@ -1167,12 +1167,12 @@ label select:focus {
 
 .ef-row {
   display: grid;
-  grid-template-columns: 56px minmax(84px, 112px) minmax(0, 1fr);
-  grid-template-areas: 'label summary input';
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-areas: 'label input';
   gap: 10px;
   align-items: center;
   width: 100%;
-  padding: 8px 10px;
+  padding: 6px 10px;
 }
 
 .ef-row-label {
@@ -1190,17 +1190,6 @@ label select:focus {
   font-family: var(--font-mono);
   font-size: 0.84rem;
   padding: 0.45rem 0.65rem;
-}
-
-.ef-row-summary {
-  grid-area: summary;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: rgba(159, 167, 186, 0.8);
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .led-control {
