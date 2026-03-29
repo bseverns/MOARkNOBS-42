@@ -4,7 +4,16 @@ The browser app is not just a remote control. It is the safest place to understa
 
 ![Browser configurator screenshot showing staged edits, telemetry, and slot controls.](profiles-ui.png)
 
-TODO: add an annotated version of this screenshot with callouts for staged state, live slots, recovery drawer, and the `IM` / `PK` browser-local mode badge.
+TODO: add an annotated version of this screenshot with callouts for:
+
+- `Connection banner` — confirms which board and firmware the configurator is actually talking to
+- `Apply / Rollback` — commits staged edits to the device or discards them before they become live
+- `Live Slots` — the slot-selection surface; this picks the target slot for inspection and editing
+- `Selected Slot` — edits only the currently selected slot
+- `Recovery & Profiles` — device profile load/save/reset plus file backup/restore
+- `Utility rail` — status, diff, MIDI monitor, and scope tools used to verify truth and troubleshoot
+- `Staged Diff` — browser-side edits not yet confirmed by the device
+- `IM` / `PK` badge — browser-local local-response mode, not firmware-backed profile memory
 
 ## The core idea
 

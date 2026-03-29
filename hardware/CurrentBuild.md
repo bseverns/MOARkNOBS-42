@@ -8,7 +8,7 @@ Last audited against repo contents: 2026-03-22.
 
 1. Read this page first.
 2. If you need the latest verified files that are actually present in the repo, use the machine-drawing PDFs listed below.
-3. If you need a release-ready Gerber zip or a versioned BOM export, stop and check the TODO items in this file before placing an order.
+3. If you need a release-ready fabrication package, stop and check the status table in this file before placing an order.
 
 ## Status Labels
 
@@ -23,7 +23,7 @@ Last audited against repo contents: 2026-03-22.
 | Board drawing reference | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | `2025-09-03` from filename | `current` | Verified present in repo. Use as a drawing/reference artifact, not as a substitute for a checked fabrication archive. |
 | Schematic reference | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | `2025-08-30` from filename | `current` | Verified present in repo. |
 | Fabrication zip | `hardware/fabrication/` | none present | `experimental` | `TODO: add a versioned fabrication archive under hardware/fabrication/ and update this table with the exact filename.` |
-| BOM export | `hardware/` | none present | `experimental` | `TODO: add a versioned BOM export (for example .xlsx or .csv) and update this table with the exact filename.` |
+| BOM export | `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.xlsx` | `2026-03-17` from filename | `current` | Prototype BOM present in repo as an `.xlsx` export. Confirm it matches the intended board revision before ordering. |
 
 ## Legacy / Stale References Still Found In Older Docs
 
@@ -42,4 +42,4 @@ If you are evaluating the current repo state today:
 1. Read `hardware/CurrentBuild.md`.
 2. Download or open the board drawing PDF and schematic PDF listed in the table above.
 3. Do not assume older BOM/Gerber filenames in docs are current.
-4. If you need an orderable package, wait for the TODO items above to be resolved or confirm the intended release package with the maintainer before spending money.
+4. If you need an orderable package, use the BOM listed above and confirm whether a release-ready fabrication archive exists before spending money.

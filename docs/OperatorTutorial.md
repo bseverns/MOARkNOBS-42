@@ -10,7 +10,15 @@ The browser configurator is not just a settings page. It is the live operating s
 - managing profiles and backups
 - protecting live controls from sudden jumps
 
-TODO: add one annotated screenshot of the full configurator layout with callouts for `Live Slots`, `Selected Slot`, `Apply/Rollback`, `Recovery & Profiles`, and the utility rail.
+TODO: add one annotated screenshot of the full configurator layout with these callouts:
+
+- `Connection + identity` — confirms which board and firmware you are actually talking to
+- `Apply / Rollback` — staged browser changes do not become device truth until Apply succeeds
+- `Live Slots` — select the slot you want to inspect or edit
+- `Selected Slot` — the editor for the currently selected slot only
+- `Recovery & Profiles` — on-device memory plus backup/restore actions
+- `Utility rail` — status, diff, MIDI monitor, and scope tools
+- `Browser-only indicators` — operator aids that do not write into firmware memory
 
 ## The three states you need to keep separate
 
@@ -135,7 +143,14 @@ Use `PK` when:
 
 If you are unsure, default to `PK` for live work and `IM` for deliberate setup work.
 
-TODO: add one close-up screenshot of the live slot tile showing `IM` and `PK` with a short caption explaining that this is browser-local behavior, not firmware storage.
+TODO: add one close-up screenshot of the live slot tile with these callouts:
+
+- `Slot ID` — matches the physical control position on the instrument
+- `Type code` — shows what the slot currently sends, such as `CC` or `NOTE`
+- `IM` — Immediate local response; local control takes effect right away
+- `PK` — Browser-only pickup guard; waits for the control to catch the current value first
+- `Selected tile` — shows which slot is currently loaded into the editor
+- `Browser-only mode badge` — local operator behavior only; it is not saved into firmware or device profiles
 
 ## Editing safely
 
