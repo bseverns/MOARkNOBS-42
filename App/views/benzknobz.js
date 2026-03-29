@@ -475,6 +475,13 @@ const boot = () => {
     selected: 0,
     telemetry: null
   };
+  const ledControlState = {
+    mounted: false,
+    brightnessInput: null,
+    brightnessValue: null,
+    colorInput: null,
+    colorValue: null
+  };
 
   const slotVirtualizer = new VirtualGrid(slotContainer, {
     columns: 6,
@@ -2140,61 +2147,78 @@ const boot = () => {
   // Render the small LED section and throttle slider/color updates into staged state.
   function renderLedControls(staged) {
     if (!ledGrid) return;
-    ledGrid.innerHTML = '';
     const led = staged?.led ?? { brightness: 0, color: '#000000' };
-
-    const brightnessWrap = document.createElement('label');
-    brightnessWrap.className = 'led-control';
-    brightnessWrap.textContent = 'Brightness';
-    const brightnessInput = document.createElement('input');
-    brightnessInput.type = 'range';
-    brightnessInput.min = '0';
-    brightnessInput.max = '255';
     const initialBrightness = Number.isFinite(Number(led.brightness)) ? Number(led.brightness) : 0;
-    brightnessInput.value = String(initialBrightness);
-    const brightnessValue = document.createElement('span');
-    brightnessValue.className = 'led-value';
-    brightnessValue.textContent = String(initialBrightness);
-    const pushBrightness = runtime.createThrottle((value) => {
-      brightnessValue.textContent = String(value);
-      runtime.stage((draft) => {
-        draft.led = draft.led || { brightness: 0, color: '#000000' };
-        draft.led.brightness = value;
-        return draft;
-      });
-    });
-    brightnessInput.addEventListener('input', (event) => {
-      const value = Math.min(255, Math.max(0, Math.round(Number(event.target.value))));
-      event.target.value = String(value);
-      pushBrightness(value);
-    });
-    brightnessWrap.append(brightnessInput, brightnessValue);
-
-    const colorWrap = document.createElement('label');
-    colorWrap.className = 'led-control';
-    colorWrap.textContent = 'Color';
-    const colorInput = document.createElement('input');
-    colorInput.type = 'color';
     const initialColor = typeof led.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(led.color) ? led.color : '#000000';
-    colorInput.value = initialColor;
-    const colorValue = document.createElement('span');
-    colorValue.className = 'led-value';
-    colorValue.textContent = initialColor.toUpperCase();
-    const pushColor = runtime.createThrottle((value) => {
-      const formatted = typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value) ? value.toUpperCase() : '#000000';
-      colorValue.textContent = formatted;
-      runtime.stage((draft) => {
-        draft.led = draft.led || { brightness: 0, color: '#000000' };
-        draft.led.color = formatted;
-        return draft;
-      });
-    });
-    colorInput.addEventListener('input', (event) => {
-      pushColor(event.target.value);
-    });
-    colorWrap.append(colorInput, colorValue);
 
-    ledGrid.append(brightnessWrap, colorWrap);
+    if (!ledControlState.mounted) {
+      ledGrid.innerHTML = '';
+
+      const brightnessWrap = document.createElement('label');
+      brightnessWrap.className = 'led-control';
+      brightnessWrap.textContent = 'Brightness';
+      const brightnessInput = document.createElement('input');
+      brightnessInput.type = 'range';
+      brightnessInput.min = '0';
+      brightnessInput.max = '255';
+      const brightnessValue = document.createElement('span');
+      brightnessValue.className = 'led-value';
+      const pushBrightness = runtime.createThrottle((value) => {
+        brightnessValue.textContent = String(value);
+        runtime.stage((draft) => {
+          draft.led = draft.led || { brightness: 0, color: '#000000' };
+          draft.led.brightness = value;
+          return draft;
+        });
+      });
+      brightnessInput.addEventListener('input', (event) => {
+        const value = Math.min(255, Math.max(0, Math.round(Number(event.target.value))));
+        event.target.value = String(value);
+        pushBrightness(value);
+      });
+      brightnessWrap.append(brightnessInput, brightnessValue);
+
+      const colorWrap = document.createElement('label');
+      colorWrap.className = 'led-control';
+      colorWrap.textContent = 'Color';
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      const colorValue = document.createElement('span');
+      colorValue.className = 'led-value';
+      const pushColor = runtime.createThrottle((value) => {
+        const formatted = typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value) ? value.toUpperCase() : '#000000';
+        colorValue.textContent = formatted;
+        runtime.stage((draft) => {
+          draft.led = draft.led || { brightness: 0, color: '#000000' };
+          draft.led.color = formatted;
+          return draft;
+        });
+      });
+      colorInput.addEventListener('input', (event) => {
+        pushColor(event.target.value);
+      });
+      colorWrap.append(colorInput, colorValue);
+
+      ledGrid.append(brightnessWrap, colorWrap);
+      ledControlState.mounted = true;
+      ledControlState.brightnessInput = brightnessInput;
+      ledControlState.brightnessValue = brightnessValue;
+      ledControlState.colorInput = colorInput;
+      ledControlState.colorValue = colorValue;
+    }
+
+    if (ledControlState.brightnessInput) {
+      ledControlState.brightnessInput.value = String(initialBrightness);
+    }
+    if (ledControlState.brightnessValue) {
+      ledControlState.brightnessValue.textContent = String(initialBrightness);
+    }
+    if (ledControlState.colorValue) {
+      ledControlState.colorValue.textContent = initialColor.toUpperCase();
+    }
+    if (ledControlState.colorInput && document.activeElement !== ledControlState.colorInput) {
+      ledControlState.colorInput.value = initialColor;
+    }
   }
 
   // Reapply browser-only pickup guards after staged/live slot data changes.
