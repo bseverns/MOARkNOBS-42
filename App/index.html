@@ -8,94 +8,111 @@
 </head>
 <body>
   <div id="page-shell">
-    <header class="hero">
-      <div class="hero-top">
-        <h1>MOARkNOBZ Control Deck</h1>
-        <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
+    <header class="hero compact-hero">
+      <div class="hero-top workspace-top">
+        <div class="workspace-identity">
+          <p class="workspace-kicker">MOARkNOBS-42 Browser Configurator</p>
+          <h1>Control Deck</h1>
+          <p class="workspace-subtitle">Slot-first workstation for live editing, recovery, and telemetry.</p>
+        </div>
+        <div class="workspace-toolbar">
+          <div class="workspace-status-line">
+            <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
+            <span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span>
+            <span id="dirty-badge" role="status" hidden>Dirty · staged edits</span>
+          </div>
+          <div class="connect-actions compact-connect-actions">
+            <button id="connect" type="button">Connect</button>
+            <button id="apply" type="button" disabled>Apply</button>
+            <button id="rollback" type="button" disabled>Rollback</button>
+          </div>
+          <span class="connection-banner" id="connection-banner" role="status">Connected to: —</span>
+        </div>
       </div>
-      <p>
-        Equal parts neon basement show and precision lab console. Inspired by the Electra One and Bastl wizards,
-        tuned for tweaking the MOARkNOBZ brain without losing the punk sparks.
-      </p>
       <div class="hero-badges" role="list">
         <span class="badge" role="listitem">Web Serial Powered</span>
         <span class="badge" role="listitem">Real-time Slot Telemetry</span>
         <span class="badge" role="listitem">Patch-safe Writing</span>
       </div>
-      <div class="profile-bar" id="profile-bar" aria-label="Profile manager panel">
-        <div class="profile-switch" role="group" aria-label="Profile slot selector">
-          <strong>Profile slot</strong>
-          <div class="profile-slots">
-            <button type="button" class="profile-slot" data-profile-slot="0" aria-pressed="false">A</button>
-            <button type="button" class="profile-slot" data-profile-slot="1" aria-pressed="false">B</button>
-            <button type="button" class="profile-slot" data-profile-slot="2" aria-pressed="false">C</button>
-            <button type="button" class="profile-slot" data-profile-slot="3" aria-pressed="false">D</button>
+      <details class="recovery-drawer" id="recovery-drawer">
+        <summary>
+          <span>Recovery &amp; Profiles</span>
+          <span class="microcopy profile-slot-meta" id="profile-slot-status">Slot A • local target</span>
+        </summary>
+        <div class="profile-bar" id="profile-bar" aria-label="Profile manager panel">
+          <div class="profile-switch" role="group" aria-label="Profile slot selector">
+            <strong>Profile slot</strong>
+            <div class="profile-slots">
+              <button type="button" class="profile-slot" data-profile-slot="0" aria-pressed="false">A</button>
+              <button type="button" class="profile-slot" data-profile-slot="1" aria-pressed="false">B</button>
+              <button type="button" class="profile-slot" data-profile-slot="2" aria-pressed="false">C</button>
+              <button type="button" class="profile-slot" data-profile-slot="3" aria-pressed="false">D</button>
+            </div>
           </div>
-          <p class="microcopy profile-slot-meta" id="profile-slot-status">Slot A • local target</p>
-        </div>
-        <div class="profile-actions" role="group" aria-label="Device profile actions">
-          <button id="profile-save" type="button" disabled>Save profile</button>
-          <button id="profile-load" type="button" disabled>Switch profile</button>
-          <button id="profile-reset" type="button" disabled>Reset profile</button>
-        </div>
-        <div class="profile-wizard" id="profile-wizard" aria-label="Guided profile save">
-          <strong>Guided profile save</strong>
-          <p class="microcopy">Device-backed switch/save only enables when firmware reports support.</p>
-          <div class="profile-wizard-controls">
-            <label>
-              <span>Target slot</span>
-              <select id="profile-wizard-target">
-                <option value="0">A</option>
-                <option value="1">B</option>
-                <option value="2">C</option>
-                <option value="3">D</option>
-              </select>
-            </label>
-            <button id="profile-wizard-switch" type="button" disabled>1. Switch target</button>
-            <button id="profile-wizard-apply" type="button" disabled>2. Sync edits</button>
-            <button id="profile-wizard-save" type="button" disabled>3. Save profile</button>
+          <div class="profile-actions" role="group" aria-label="Device profile actions">
+            <button id="profile-save" type="button" disabled>Save profile</button>
+            <button id="profile-load" type="button" disabled>Switch profile</button>
+            <button id="profile-reset" type="button" disabled>Reset profile</button>
           </div>
-          <p class="microcopy" id="profile-wizard-status" data-state="muted" aria-live="polite">
-            Connect to the device to start the guided flow.
-          </p>
-        </div>
-        <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls">
-          <div class="macro-card-header">
-            <strong>Macro snapshot</strong>
-            <p class="microcopy">
-              Temporary EEPROM snapshot. Enabled only when firmware reports macro storage support.
+          <div class="profile-wizard" id="profile-wizard" aria-label="Guided profile save">
+            <strong>Guided profile save</strong>
+            <p class="microcopy">Device-backed switch/save only enables when firmware reports support.</p>
+            <div class="profile-wizard-controls">
+              <label>
+                <span>Target slot</span>
+                <select id="profile-wizard-target">
+                  <option value="0">A</option>
+                  <option value="1">B</option>
+                  <option value="2">C</option>
+                  <option value="3">D</option>
+                </select>
+              </label>
+              <button id="profile-wizard-switch" type="button" disabled>1. Switch target</button>
+              <button id="profile-wizard-apply" type="button" disabled>2. Sync edits</button>
+              <button id="profile-wizard-save" type="button" disabled>3. Save profile</button>
+            </div>
+            <p class="microcopy" id="profile-wizard-status" data-state="muted" aria-live="polite">
+              Connect to the device to start the guided flow.
             </p>
           </div>
-          <div class="macro-actions" role="group" aria-label="Macro snapshot actions">
-            <button id="macro-save" type="button" disabled title="Quick save current state for temporary recall during a session.">
-              Save Macro Snapshot
-            </button>
-            <button id="macro-recall" type="button" disabled title="Recall the stored macro snapshot into the live configuration.">
-              Recall Macro Snapshot
-            </button>
-         </div>
-         <p class="microcopy macro-status" id="macro-status" data-state="muted" aria-live="polite">
-           Connect to see whether macro storage is available.
-         </p>
-       </div>
-        <div class="scene-card" id="scene-card" aria-label="Scene snapshots">
-          <div class="scene-card-header">
-            <strong>Scenes</strong>
-            <p class="microcopy">
-              Store six named scene snapshots when firmware reports scene storage support.
-            </p>
+          <div class="recovery-aux-grid">
+            <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls">
+              <div class="macro-card-header">
+                <strong>Macro snapshot</strong>
+                <p class="microcopy">Temporary EEPROM snapshot. Enabled only when firmware reports macro storage support.</p>
+              </div>
+              <div class="macro-actions" role="group" aria-label="Macro snapshot actions">
+                <button id="macro-save" type="button" disabled title="Quick save current state for temporary recall during a session.">
+                  Save Macro Snapshot
+                </button>
+                <button id="macro-recall" type="button" disabled title="Recall the stored macro snapshot into the live configuration.">
+                  Recall Macro Snapshot
+                </button>
+              </div>
+              <p class="microcopy macro-status" id="macro-status" data-state="muted" aria-live="polite">
+                Connect to see whether macro storage is available.
+              </p>
+            </div>
+            <div class="scene-card" id="scene-card" aria-label="Scene snapshots">
+              <div class="scene-card-header">
+                <strong>Scenes</strong>
+                <p class="microcopy">Store six named scene snapshots when firmware reports scene storage support.</p>
+              </div>
+              <div class="scene-grid" id="scene-grid" role="list"></div>
+              <p class="microcopy scene-status" id="scene-status" data-state="muted" aria-live="polite">
+                Connect to see whether scene storage is available.
+              </p>
+            </div>
           </div>
-          <div class="scene-grid" id="scene-grid" role="list"></div>
-          <p class="microcopy scene-status" id="scene-status" data-state="muted" aria-live="polite">
-            Connect to see whether scene storage is available.
+          <div class="profile-backup">
+            <button id="profile-download" type="button">Download profile</button>
+            <button id="profile-upload" type="button">Upload profile</button>
+          </div>
+          <p class="microcopy profile-hint" id="profile-hint">
+            Download/upload always works as a file backup. Device-backed profile save, switch, and reset only enable when firmware reports support.
           </p>
         </div>
-        <div class="profile-backup">
-          <button id="profile-download" type="button">Download profile</button>
-          <button id="profile-upload" type="button">Upload profile</button>
-        </div>
-        <p class="microcopy profile-hint" id="profile-hint">Download/upload always works as a file backup. Device-backed profile save, switch, and reset only enable when firmware reports support.</p>
-      </div>
+      </details>
     </header>
     <main>
       <section id="stage-panel">
@@ -128,54 +145,48 @@
             </dl>
           </section>
         </div>
-        <fieldset id="ef-assignment-card" data-ui-tier="advanced">
-          <legend>Envelope Assignments</legend>
-          <p class="microcopy">Tell each follower which slots to stalk — comma-separate zero-based slot indices.</p>
-          <div class="ef-grid"></div>
-        </fieldset>
-        <div id="form">
-          <section class="schema-section" id="ef-form" data-ui-tier="advanced">
-            <header>
-              <h3>EF Followers</h3>
-              <p class="microcopy">Route each envelope follower to a slot and tweak ahead of showtime.</p>
-            </header>
-            <div class="schema-section-body" data-schema-target="efSlots"></div>
-          </section>
-          <section class="schema-section" id="midi-form">
-            <header>
-              <h3>MIDI Slots</h3>
-              <p class="microcopy">Pick a slot, swap MIDI Type, and rehearse your patch before the crowd spills coffee.</p>
-            </header>
-            <div class="schema-section-body" data-schema-target="slots"></div>
-          </section>
-        </div>
-        <details data-ui-tier="advanced">
-          <summary>Debug Log</summary>
-          <pre id="log" aria-live="off"></pre>
-        </details>
+
+        <section id="editor-panel">
+          <header class="editor-shell-header">
+            <div>
+              <h2>Selected Slot</h2>
+              <p class="microcopy">Keep the slot grid visible while editing one target at a time.</p>
+            </div>
+            <div class="editor-tabbar" role="tablist" aria-label="Selected slot editor sections">
+              <button type="button" class="editor-tab" data-editor-tab="mapping" aria-pressed="true">Mapping</button>
+              <button type="button" class="editor-tab" data-editor-tab="envelope" aria-pressed="false" data-ui-tier="advanced">Envelope</button>
+              <button type="button" class="editor-tab" data-editor-tab="arg" aria-pressed="false" data-ui-tier="advanced">ARG</button>
+            </div>
+          </header>
+          <div id="form">
+            <section class="schema-section" id="ef-form" data-ui-tier="advanced">
+              <header>
+                <h3>EF Followers</h3>
+                <p class="microcopy">Route each envelope follower to a slot and tweak ahead of showtime.</p>
+              </header>
+              <div class="schema-section-body" data-schema-target="efSlots"></div>
+            </section>
+            <section class="schema-section" id="midi-form">
+              <header>
+                <h3>MIDI Slots</h3>
+                <p class="microcopy">Pick a slot, swap MIDI Type, and rehearse your patch before the crowd spills coffee.</p>
+              </header>
+              <div class="schema-section-body" data-schema-target="slots"></div>
+            </section>
+          </div>
+          <fieldset id="ef-assignment-card" data-ui-tier="advanced">
+            <legend>Envelope Assignments</legend>
+            <p class="microcopy">Tell each follower which slots to stalk — comma-separate zero-based slot indices.</p>
+            <div class="ef-grid"></div>
+          </fieldset>
+          <details data-ui-tier="advanced">
+            <summary>Debug Log</summary>
+            <pre id="log" aria-live="off"></pre>
+          </details>
+        </section>
       </section>
+
       <aside id="connect-card">
-        <div class="connect-actions">
-          <button id="connect" type="button">Connect</button>
-          <button id="apply" type="button" disabled>Apply</button>
-          <button id="rollback" type="button" disabled>Rollback</button>
-        </div>
-        <div class="stack" aria-live="polite">
-          <span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span>
-          <span class="connection-banner" id="connection-banner" role="status">Connected to: —</span>
-          <span id="dirty-badge" role="status" hidden>Dirty · staged edits</span>
-        </div>
-        <p class="microcopy">
-          First time here? Plug the synth in over USB, slam <strong>Connect</strong>, and let the live meters confirm the handshake.
-        </p>
-        <details class="connect-help" id="connect-fail-help">
-          <summary>What to do if connect fails</summary>
-          <ol>
-            <li>Close other serial apps (Arduino Serial Monitor, PlatformIO monitor, bridge scripts).</li>
-            <li>Unplug and replug the USB cable.</li>
-            <li>Refresh this page, then click <strong>Connect</strong> again.</li>
-          </ol>
-        </details>
         <div class="mode-switch" role="group" aria-label="Editing mode">
           <span class="mode-switch-label">Editing mode</span>
           <div class="mode-switch-buttons">
@@ -184,95 +195,125 @@
           </div>
         </div>
         <p class="microcopy" id="ui-mode-hint">Basic mode keeps common knob-to-MIDI mapping controls visible.</p>
-        <div id="status" data-state="warn" aria-live="polite">
-          <svg viewBox="0 0 24 24" aria-hidden="true" role="img">
-            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6" />
-          </svg>
-          <span class="label" id="status-label">NOTE</span>
-          <span class="status-message">Waiting for instructions.</span>
+        <div class="utility-tabbar" role="tablist" aria-label="Utility panels">
+          <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true">Console</button>
+          <button type="button" class="utility-tab" data-utility-tab="diff" aria-pressed="false">Diff</button>
+          <button type="button" class="utility-tab" data-utility-tab="midi" aria-pressed="false">MIDI</button>
+          <button type="button" class="utility-tab" data-utility-tab="scope" aria-pressed="false" data-ui-tier="advanced">Scope</button>
         </div>
-        <div class="stack">
-          <button id="export-preset" disabled>Export preset</button>
-          <button id="import-preset" disabled>Import preset</button>
-          <select id="preset-picker">
-            <option value="">Select a preset…</option>
-          </select>
-          <button id="simulator-toggle" type="button">Start simulator</button>
+
+        <div class="utility-panel utility-panel-active" data-utility-panel="console">
+          <div id="status" data-state="warn" aria-live="polite">
+            <svg viewBox="0 0 24 24" aria-hidden="true" role="img">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.6" />
+            </svg>
+            <span class="label" id="status-label">NOTE</span>
+            <span class="status-message">Waiting for instructions.</span>
+          </div>
+          <details class="connect-help" id="connect-fail-help">
+            <summary>What to do if connect fails</summary>
+            <ol>
+              <li>Close other serial apps (Arduino Serial Monitor, PlatformIO monitor, bridge scripts).</li>
+              <li>Unplug and replug the USB cable.</li>
+              <li>Refresh this page, then click <strong>Connect</strong> again.</li>
+            </ol>
+          </details>
+          <div class="stack">
+            <button id="export-preset" disabled>Export preset</button>
+            <button id="import-preset" disabled>Import preset</button>
+            <select id="preset-picker">
+              <option value="">Select a preset…</option>
+            </select>
+            <button id="simulator-toggle" type="button">Start simulator</button>
+          </div>
+          <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
+            <legend>Filter</legend>
+            <div class="schema-section-body" data-schema-target="filter"></div>
+          </fieldset>
+          <fieldset id="arg-settings" class="schema-section" data-schema-section="arg" data-ui-tier="advanced">
+            <legend>ARG Pair</legend>
+            <div class="schema-section-body" data-schema-target="arg"></div>
+          </fieldset>
+          <fieldset id="led-settings" class="schema-section" data-schema-section="led">
+            <legend>LED Colors</legend>
+            <div class="schema-section-body" data-schema-target="led"></div>
+            <div id="led-grid" aria-live="polite"></div>
+          </fieldset>
+          <section aria-labelledby="device-monitor-title">
+            <h2 id="device-monitor-title">Device Monitor</h2>
+            <p class="microcopy">Read-only vitals pulled straight from the firmware handshake.</p>
+            <div class="monitor-grid" id="device-monitor"></div>
+          </section>
         </div>
-        <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
-          <legend>Filter</legend>
-          <div class="schema-section-body" data-schema-target="filter"></div>
-        </fieldset>
-        <fieldset id="arg-settings" class="schema-section" data-schema-section="arg" data-ui-tier="advanced">
-          <legend>ARG Pair</legend>
-          <div class="schema-section-body" data-schema-target="arg"></div>
-        </fieldset>
-        <fieldset id="led-settings" class="schema-section" data-schema-section="led">
-          <legend>LED Colors</legend>
-          <div class="schema-section-body" data-schema-target="led"></div>
-          <div id="led-grid" aria-live="polite"></div>
-        </fieldset>
-        <section aria-labelledby="device-monitor-title">
-          <h2 id="device-monitor-title">Device Monitor</h2>
-          <p class="microcopy">Read-only vitals pulled straight from the firmware handshake.</p>
-          <div class="monitor-grid" id="device-monitor"></div>
-        </section>
-        <section aria-labelledby="diff-title" id="diff-panel" hidden>
-          <h2 id="diff-title">Staged Diff</h2>
-          <pre id="diff-output"></pre>
-        </section>
-        <section id="midi-panel" class="midi-panel collapsed" aria-label="MIDI monitor panel">
-          <header class="midi-panel-header">
-            <div>
-              <h3>MIDI Monitor</h3>
-              <p class="microcopy">Logs incoming/outgoing MIDI bytes and optionally emits a clock.</p>
+
+        <div class="utility-panel" data-utility-panel="diff">
+          <section aria-labelledby="diff-title" id="diff-panel" hidden>
+            <h2 id="diff-title">Staged Diff</h2>
+            <pre id="diff-output"></pre>
+          </section>
+          <section class="utility-empty" id="diff-empty">
+            <h2>Staged Diff</h2>
+            <p class="microcopy">No staged changes yet. Slot edits will appear here once you start patching.</p>
+          </section>
+        </div>
+
+        <div class="utility-panel" data-utility-panel="midi">
+          <section id="midi-panel" class="midi-panel collapsed" aria-label="MIDI monitor panel">
+            <header class="midi-panel-header">
+              <div>
+                <h3>MIDI Monitor</h3>
+                <p class="microcopy">Logs incoming/outgoing MIDI bytes and optionally emits a clock.</p>
+              </div>
+              <button id="midi-panel-toggle" type="button" aria-expanded="false">Show MIDI monitor</button>
+            </header>
+            <div class="midi-panel-body">
+              <div class="midi-panel-status">
+                <button id="midi-enable" type="button">Enable MIDI</button>
+                <span class="microcopy" id="midi-status" aria-live="polite">Web MIDI access inactive.</span>
+              </div>
+              <div class="midi-panel-controls">
+                <label class="midi-control">
+                  <span>Output</span>
+                  <select id="midi-output-select">
+                    <option value="" selected disabled>Select output…</option>
+                  </select>
+                </label>
+                <label class="midi-control">
+                  <span>Clock BPM</span>
+                  <input id="midi-clock-bpm" type="range" min="60" max="220" value="120" />
+                  <span id="midi-clock-bpm-value">120</span>
+                </label>
+                <button id="midi-clock-toggle" type="button" disabled>Start clock</button>
+              </div>
+              <div class="midi-log" role="log" aria-live="polite" aria-label="MIDI message log">
+                <div class="midi-log-body" id="midi-log-body"></div>
+              </div>
             </div>
-            <button id="midi-panel-toggle" type="button" aria-expanded="false">Show MIDI monitor</button>
-          </header>
-          <div class="midi-panel-body">
-            <div class="midi-panel-status">
-              <button id="midi-enable" type="button">Enable MIDI</button>
-              <span class="microcopy" id="midi-status" aria-live="polite">Web MIDI access inactive.</span>
+          </section>
+        </div>
+
+        <div class="utility-panel" data-utility-panel="scope" data-ui-tier="advanced">
+          <section id="scope-panel" class="scope-panel" aria-label="EF scope and LFO canvas" data-ui-tier="advanced">
+            <header class="scope-panel-header">
+              <div>
+                <h3>EF Scope &amp; LFO</h3>
+                <p class="microcopy">Watch the envelope followers and LFOs pulse in real time.</p>
+              </div>
+              <div class="scope-panel-actions">
+                <span id="scope-fps" class="microcopy">0 fps</span>
+                <button id="scope-snapshot" type="button">PNG snapshot</button>
+              </div>
+            </header>
+            <canvas id="scope-canvas" width="600" height="220" aria-label="EF scope display"></canvas>
+            <div class="scope-panel-footer">
+              <span id="scope-status" class="microcopy">Waiting for telemetry…</span>
+              <div class="scope-legend">
+                <span class="scope-legend-item">EF level</span>
+                <span class="scope-legend-item lfo">LFO</span>
+              </div>
             </div>
-            <div class="midi-panel-controls">
-              <label class="midi-control">
-                <span>Output</span>
-                <select id="midi-output-select">
-                  <option value="" selected disabled>Select output…</option>
-                </select>
-              </label>
-              <label class="midi-control">
-                <span>Clock BPM</span>
-                <input id="midi-clock-bpm" type="range" min="60" max="220" value="120" />
-                <span id="midi-clock-bpm-value">120</span>
-              </label>
-              <button id="midi-clock-toggle" type="button" disabled>Start clock</button>
-            </div>
-            <div class="midi-log" role="log" aria-live="polite" aria-label="MIDI message log">
-              <div class="midi-log-body" id="midi-log-body"></div>
-            </div>
-          </div>
-        </section>
-        <section id="scope-panel" class="scope-panel" aria-label="EF scope and LFO canvas" data-ui-tier="advanced">
-          <header class="scope-panel-header">
-            <div>
-              <h3>EF Scope &amp; LFO</h3>
-              <p class="microcopy">Watch the envelope followers and LFOs pulse in real time.</p>
-            </div>
-            <div class="scope-panel-actions">
-              <span id="scope-fps" class="microcopy">0 fps</span>
-              <button id="scope-snapshot" type="button">PNG snapshot</button>
-            </div>
-          </header>
-          <canvas id="scope-canvas" width="600" height="220" aria-label="EF scope display"></canvas>
-          <div class="scope-panel-footer">
-            <span id="scope-status" class="microcopy">Waiting for telemetry…</span>
-            <div class="scope-legend">
-              <span class="scope-legend-item">EF level</span>
-              <span class="scope-legend-item lfo">LFO</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </aside>
     </main>
     <dialog id="migration-dialog">

@@ -43,6 +43,7 @@ test('midi monitor logs and clock without jitter', async ({ page }) => {
   });
 
   await page.goto('/benzknobz.html');
+  await page.getByRole('button', { name: 'MIDI' }).click();
 
   const toggle = page.locator('#midi-panel-toggle');
   await toggle.click();

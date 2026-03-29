@@ -13,6 +13,7 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
   await page.getByRole('button', { name: /simulator/i }).click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.getByRole('button', { name: 'Envelope' }).click();
 
   const efInput = page.locator('#ef-assignment-card .ef-row input[type="text"]').first();
   await expect(efInput).toBeVisible();

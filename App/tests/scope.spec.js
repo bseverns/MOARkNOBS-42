@@ -18,6 +18,7 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   const simulatorToggle = page.getByRole('button', { name: /simulator/i });
   await simulatorToggle.click();
   await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('button', { name: 'Scope' }).click();
 
   await page.waitForFunction(() => {
     const label = document.getElementById('scope-status');

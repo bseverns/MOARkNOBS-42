@@ -229,11 +229,16 @@ const boot = () => {
   const simulatorToggle = document.getElementById('simulator-toggle');
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
+  const editorTabButtons = Array.from(document.querySelectorAll('[data-editor-tab]'));
+  const utilityTabButtons = Array.from(document.querySelectorAll('[data-utility-tab]'));
+  const utilityPanels = Array.from(document.querySelectorAll('[data-utility-panel]'));
+  const diffEmpty = document.getElementById('diff-empty');
   const schemaSections = Array.from(document.querySelectorAll('[data-schema-target]')).map((element) => ({
     target: element,
     schemaPath: element.dataset.schemaTarget
   }));
   const formRenderer = new FormRenderer({ runtime, sections: schemaSections });
+  const efAssignmentCard = document.getElementById('ef-assignment-card');
   const efAssignmentGrid = document.querySelector('#ef-assignment-card .ef-grid');
   const slotDetailIndex = document.getElementById('slot-detail-index');
   const slotDetailStatus = document.getElementById('slot-detail-status');
@@ -305,6 +310,8 @@ const boot = () => {
   let activeProfileSlot = clampProfileSlot(readProfileSlotPreference());
   let profileWizardTargetSlot = activeProfileSlot;
   let activeUiMode = normalizeUIMode(readUIModePreference());
+  let activeEditorTab = 'mapping';
+  let activeUtilityTab = 'console';
   let deviceCapabilities = resolveCapabilities(localManifest);
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
@@ -550,7 +557,19 @@ const boot = () => {
       setUIMode(button.dataset.uiModeBtn);
     });
   });
+  editorTabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      setEditorTab(button.dataset.editorTab);
+    });
+  });
+  utilityTabButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      setUtilityTab(button.dataset.utilityTab);
+    });
+  });
   setUIMode(activeUiMode, { persist: false });
+  setEditorTab(activeEditorTab);
+  setUtilityTab(activeUtilityTab);
 
   profileSlotButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -915,6 +934,16 @@ const boot = () => {
     return mode === 'advanced' ? 'advanced' : 'basic';
   }
 
+  // Limit the slot editor to the supported tabs.
+  function normalizeEditorTab(tab) {
+    return tab === 'envelope' || tab === 'arg' ? tab : 'mapping';
+  }
+
+  // Limit the utility rail to the supported tabs.
+  function normalizeUtilityTab(tab) {
+    return tab === 'diff' || tab === 'midi' || tab === 'scope' ? tab : 'console';
+  }
+
   // Restore the last UI tier selection from local browser storage.
   function readUIModePreference() {
     if (typeof localStorage === 'undefined') return 'basic';
@@ -958,7 +987,65 @@ const boot = () => {
       uiModeHint.textContent = UI_MODE_HINTS[activeUiMode] || UI_MODE_HINTS.basic;
     }
     if (persist) persistUIMode(activeUiMode);
+    if (activeUiMode !== 'advanced' && activeEditorTab !== 'mapping') {
+      activeEditorTab = 'mapping';
+    }
+    if (activeUiMode !== 'advanced' && activeUtilityTab === 'scope') {
+      activeUtilityTab = 'console';
+    }
+    refreshEditorTabs();
+    refreshUtilityTabs();
     if (slotState.slots.length) renderSlotEditor();
+  }
+
+  // Update the selected-slot editor tab chrome and tab-tied helper panels.
+  function refreshEditorTabs() {
+    const effectiveTab =
+      activeUiMode === 'advanced' ? normalizeEditorTab(activeEditorTab) : 'mapping';
+    activeEditorTab = effectiveTab;
+    editorTabButtons.forEach((button) => {
+      const buttonTab = normalizeEditorTab(button.dataset.editorTab);
+      button.setAttribute('aria-pressed', buttonTab === effectiveTab ? 'true' : 'false');
+    });
+    if (efAssignmentCard) {
+      efAssignmentCard.toggleAttribute(
+        'hidden',
+        !(activeUiMode === 'advanced' && effectiveTab === 'envelope'),
+      );
+    }
+  }
+
+  // Update the right-rail utility tab chrome and show only the active panel.
+  function refreshUtilityTabs() {
+    const effectiveTab =
+      activeUiMode === 'advanced'
+        ? normalizeUtilityTab(activeUtilityTab)
+        : normalizeUtilityTab(activeUtilityTab === 'scope' ? 'console' : activeUtilityTab);
+    activeUtilityTab = effectiveTab;
+    utilityTabButtons.forEach((button) => {
+      const buttonTab = normalizeUtilityTab(button.dataset.utilityTab);
+      button.setAttribute('aria-pressed', buttonTab === effectiveTab ? 'true' : 'false');
+    });
+    utilityPanels.forEach((panel) => {
+      const panelTab = normalizeUtilityTab(panel.dataset.utilityPanel);
+      panel.classList.toggle('utility-panel-active', panelTab === effectiveTab);
+      panel.toggleAttribute('hidden', panelTab !== effectiveTab);
+    });
+  }
+
+  // Change the selected-slot editor tab and re-render the editor body.
+  function setEditorTab(tab) {
+    activeEditorTab = normalizeEditorTab(tab);
+    refreshEditorTabs();
+    if (slotState.slots.length) {
+      renderSlotEditor();
+    }
+  }
+
+  // Change the active utility panel in the right rail.
+  function setUtilityTab(tab) {
+    activeUtilityTab = normalizeUtilityTab(tab);
+    refreshUtilityTabs();
   }
 
   // Translate a slot index into the A-D label shown in the profile controls.
@@ -1405,9 +1492,11 @@ const boot = () => {
     if (!isDirty || !changes.length) {
       diffPanel.setAttribute('hidden', '');
       diffOutput.textContent = '';
+      diffEmpty?.removeAttribute('hidden');
       return;
     }
     diffPanel.removeAttribute('hidden');
+    diffEmpty?.setAttribute('hidden', '');
     const maxVisibleChanges = 40;
     const visibleChanges = changes.slice(0, maxVisibleChanges);
     const lines = visibleChanges.map(({ path, before, after }) => {
@@ -1614,7 +1703,9 @@ const boot = () => {
       hint.textContent = 'Need EF or ARG modulation? Switch to Advanced mode.';
       basics.appendChild(hint);
     }
-    form.appendChild(basics);
+    if (activeUiMode !== 'advanced' || activeEditorTab === 'mapping') {
+      form.appendChild(basics);
+    }
 
     if (activeUiMode === 'advanced') {
       const manifest = runtime.getState().manifest ?? localManifest;
@@ -1656,7 +1747,9 @@ const boot = () => {
       efFieldset.appendChild(
         makeNumber('Gain', ef.gain ?? 1, 0, 8, 0.1, (value) => stageSlotEnvelopeField(slotState.selected, 'gain', value)),
       );
-      form.appendChild(efFieldset);
+      if (activeEditorTab === 'envelope') {
+        form.appendChild(efFieldset);
+      }
 
       const arg = normalizeArg(slot);
       const argFieldset = makeFieldset(
@@ -1679,7 +1772,16 @@ const boot = () => {
       argFieldset.appendChild(
         makeNumber('Follower B', arg.sourceB ?? 1, 0, Math.max(0, efSlots - 1), 1, (value) => stageSlotArgField(slotState.selected, 'sourceB', value)),
       );
-      form.appendChild(argFieldset);
+      if (activeEditorTab === 'arg') {
+        form.appendChild(argFieldset);
+      }
+    }
+
+    if (!form.childElementCount) {
+      const hint = document.createElement('p');
+      hint.className = 'slot-hint';
+      hint.textContent = 'Switch tabs to reveal the selected slot section.';
+      form.appendChild(hint);
     }
 
     formContainer.appendChild(form);

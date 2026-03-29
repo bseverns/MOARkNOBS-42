@@ -16,6 +16,7 @@ test.describe('UI mode', () => {
     await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
+    await page.getByRole('button', { name: 'Scope' }).click();
     await expect(page.locator('#scope-panel')).toBeVisible();
 
     await page.reload();
