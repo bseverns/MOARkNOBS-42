@@ -20,7 +20,7 @@
   --page-scale: 1;
   --slot-row-height: 76px;
   --slot-grid-rows: 7;
-  --ef-row-height: 40px;
+  --ef-row-height: 52px;
   --ef-row-count: 6;
   color-scheme: dark;
 }
@@ -1167,37 +1167,40 @@ label select:focus {
 
 .ef-row {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  grid-template-areas:
-    'label input'
-    'summary summary';
+  grid-template-columns: 56px minmax(84px, 112px) minmax(0, 1fr);
+  grid-template-areas: 'label summary input';
   gap: 10px;
   align-items: center;
   width: 100%;
-  padding: 6px 8px;
+  padding: 8px 10px;
 }
 
 .ef-row-label {
   grid-area: label;
-  letter-spacing: 0.06em;
+  font-family: var(--font-mono);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  font-size: 0.78rem;
-  color: var(--color-muted);
+  font-size: 0.76rem;
+  color: rgba(247, 249, 255, 0.86);
 }
 
 .ef-row input[type='text'] {
   grid-area: input;
   width: 100%;
   font-family: var(--font-mono);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
+  padding: 0.45rem 0.65rem;
 }
 
 .ef-row-summary {
   grid-area: summary;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
-  color: var(--color-muted);
-  letter-spacing: 0.04em;
+  font-size: 0.72rem;
+  color: rgba(159, 167, 186, 0.8);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .led-control {
