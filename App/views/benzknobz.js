@@ -11,8 +11,21 @@ const localManifest = createLocalManifest({
   argMethodCount: ARG_METHOD_NAMES.length
 });
 
-const SLOT_ROW_HEIGHT = 88;
+const SLOT_ROW_HEIGHT = 76;
 const EF_ROW_HEIGHT = 40;
+
+const SLOT_TYPE_ABBREVIATIONS = {
+  OFF: 'OFF',
+  CC: 'CC',
+  Note: 'NOTE',
+  PitchBend: 'PB',
+  ProgramChange: 'PC',
+  Aftertouch: 'AT',
+  ModWheel: 'MW',
+  NRPN: 'NRPN',
+  RPN: 'RPN',
+  SysEx: 'SX'
+};
 
 const runtimeOptions = {
   schemaUrl: './config_schema.json',
@@ -135,8 +148,6 @@ class VirtualGrid {
       const idx = Number(el.dataset.index);
       const value = values[idx] ?? 0;
       el.dataset.value = value;
-      const meter = el.querySelector('.slot-value');
-      if (meter) meter.textContent = value;
     });
   }
 }
@@ -2227,21 +2238,22 @@ const boot = () => {
     label.textContent = `S${String(index + 1).padStart(2, '0')}`;
     const state = document.createElement('span');
     state.className = 'slot-state';
-    state.textContent = slot?.type ?? '—';
-    const value = document.createElement('span');
-    value.className = 'slot-value';
-    value.textContent = slotState.telemetry?.slots?.[index] ?? '0';
+    state.textContent = SLOT_TYPE_ABBREVIATIONS[slot?.type] ?? slot?.type ?? '—';
+    state.title = slot?.type ?? 'Unassigned';
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'takeover';
-    toggle.textContent = slot?.takeover ? 'Local pickup' : 'Immediate';
-    toggle.title = 'Browser-only pickup guard';
+    toggle.textContent = slot?.takeover ? 'PK' : 'IM';
+    toggle.title = slot?.takeover
+      ? 'Browser-only pickup guard enabled'
+      : 'Immediate local response';
+    toggle.setAttribute('aria-label', slot?.takeover ? 'Pickup mode' : 'Immediate mode');
     toggle.onclick = () => {
       const next = !slot?.takeover;
       runtime.setLocalSlotMeta(index, { takeover: next });
       runtime.setPotGuard([index], !next);
     };
-    el.append(label, state, value, toggle);
+    el.append(label, state, toggle);
     el.onclick = () => selectSlot(index);
     el.setAttribute('role', 'button');
     el.classList.toggle('selected', index === slotState.selected);
