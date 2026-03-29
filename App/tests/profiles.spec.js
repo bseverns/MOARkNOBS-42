@@ -3,6 +3,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 test.describe('Profiles toolbar', () => {
+  async function openRecoveryDrawer(page) {
+    await page.locator('#recovery-drawer').evaluate((element) => {
+      element.open = true;
+    });
+  }
+
   async function bootWithSimulator(page) {
     await page.addInitScript(() => {
       window.localStorage?.clear?.();
@@ -13,6 +19,7 @@ test.describe('Profiles toolbar', () => {
     const simulatorToggle = page.getByRole('button', { name: /simulator/i });
     await simulatorToggle.click();
     await page.getByRole('button', { name: 'Connect' }).click();
+    await openRecoveryDrawer(page);
   }
 
   test('saving then loading a slot restores staged edits', async ({ page }) => {

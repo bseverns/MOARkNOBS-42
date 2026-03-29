@@ -1,5 +1,11 @@
 import { test, expect } from '@playwright/test';
 
+async function openRecoveryDrawer(page) {
+  await page.locator('#recovery-drawer').evaluate((element) => {
+    element.open = true;
+  });
+}
+
 test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
@@ -298,6 +304,7 @@ test('native transport disables unsupported profile and recovery controls', asyn
   await page.getByRole('button', { name: /simulator/i }).click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await openRecoveryDrawer(page);
 
   await expect(page.getByRole('button', { name: 'Save profile', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeDisabled();
@@ -554,6 +561,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
   await page.getByRole('button', { name: /simulator/i }).click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await openRecoveryDrawer(page);
 
   await expect(page.getByRole('button', { name: 'Save profile', exact: true })).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeEnabled();
