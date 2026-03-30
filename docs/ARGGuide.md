@@ -42,6 +42,14 @@ Use this safest-first setup:
 
 Those four methods teach the concept cleanly.
 
+## ARG matrix overview
+
+The fastest way to understand ARG is to stop thinking about it as a list of names and start looking at what happens when the same two input signals are combined over time.
+
+![Overview chart showing representative ARG methods as multiple colored time-series lines. In each card, a blue-gray A input and magenta B input run across time, while an orange C output line shows the resulting slot value for PLUS, AVG, MAXX, XABS, MULT, and XORR.](assets/signal-shapes/arg-matrix-overview.png)
+
+This is not "audio scope truth." It is a quick map of the mixing math after the firmware clamps the result back into the normal `0..127` envelope range.
+
 ## The ARG families
 
 The firmware supports fourteen ARG methods. The formulas live in the firmware docs; this page groups them by feel.

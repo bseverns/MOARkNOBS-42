@@ -15,6 +15,12 @@ If you are new to routes, start with:
 
 That makes the modulation obvious before it becomes complicated.
 
+## Route overview
+
+The current default routing is simple on purpose: one LFO is easy to see and hear, the other changes how hard the reactive layer bites.
+
+![Overview illustration showing the three internal LFO targets. LedBrightness is shown as a visible pulse, ArpSwing as shifted offbeats, and EfGainTrim as a stronger envelope lane. The title notes that the factory defaults route LFO1 to LedBrightness and ArpSwing, while LFO2 trims envelope-follower gain.](assets/signal-shapes/lfo-route-overview.png)
+
 ## The three internal targets
 
 The current internal route targets are:
@@ -24,6 +30,14 @@ The current internal route targets are:
 - `LedBrightness`
 
 These are not equivalent. Each one changes a different layer of the instrument.
+
+## What the OLED currently shows
+
+The current firmware does not expose a dedicated "LFO edit" page on the OLED. The closest live on-device readout is the debug diagnostics page, which prints normalized `L1` and `L2` values on the bottom row while showing envelope health above it.
+
+![Mock OLED view showing the current debug diagnostics page. The screen reads DBG BPM with clock status, then E0 through E5 envelope baseline/gain/value rows, and ends with L1 and L2 normalized values on the bottom line.](assets/signal-shapes/lfo-oled-preview.png)
+
+That preview is based on the current `DisplayManager` debug-page strings, so it reflects what the firmware is documenting today rather than an invented UI concept.
 
 ## `LedBrightness`
 

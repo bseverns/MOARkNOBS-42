@@ -26,6 +26,9 @@ PANEL_BORDER = "#d8cfbf"
 ACCENT = "#b34f1d"
 BOX_FILL = "#fffdf8"
 BOX_STROKE = "#cbbca2"
+INK_DARK = "#111418"
+OLED_BG = "#050806"
+OLED_FG = "#f4fff6"
 OUT_DIRS = [
     Path("docs/assets/signal-shapes"),
     Path("wiki/assets/signal-shapes"),
@@ -271,6 +274,18 @@ def draw_arrow(draw: ImageDraw.ImageDraw, start: tuple[int, int], end: tuple[int
     draw.polygon([end, left, right], fill=color)
 
 
+def hex_to_rgb(value: str) -> tuple[int, int, int]:
+    value = value.lstrip("#")
+    return tuple(int(value[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def lerp_color(a: str, b: str, amount: float) -> tuple[int, int, int]:
+    start = hex_to_rgb(a)
+    end = hex_to_rgb(b)
+    amount = clamp01(amount)
+    return tuple(int(round(s + (e - s) * amount)) for s, e in zip(start, end))
+
+
 def save_signal_flow_diagram(title_font: ImageFont.ImageFont, body_font: ImageFont.ImageFont) -> None:
     width = 1520
     height = 860
@@ -367,6 +382,330 @@ def save_signal_flow_diagram(title_font: ImageFont.ImageFont, body_font: ImageFo
         image.save(out_dir / "system-signal-flow.png")
 
 
+def compute_arg_value(method: str, a: int, b: int) -> int:
+    if method == "PLUS":
+        result = a + b
+    elif method == "AVG":
+        result = (a + b) / 2
+    elif method == "MAXX":
+        result = max(a, b)
+    elif method == "XABS":
+        result = abs(a - b)
+    elif method == "MULT":
+        result = (a * b) / 127
+    elif method == "XORR":
+        result = a ^ b
+    else:
+        raise ValueError(f"unsupported ARG method: {method}")
+    return int(max(0, min(127, round(result))))
+
+
+def generate_arg_inputs(count: int) -> tuple[list[int], list[int]]:
+    a_values: list[int] = []
+    b_values: list[int] = []
+    for idx in range(count):
+        t = idx / (count - 1)
+        a_signal = (
+            0.82 * math.exp(-((t - 0.18) / 0.07) ** 2)
+            + 0.56 * math.exp(-((t - 0.53) / 0.10) ** 2)
+            + 0.34 * math.exp(-((t - 0.84) / 0.04) ** 2)
+            + 0.04 * math.sin(10 * math.pi * t)
+        )
+        b_signal = (
+            0.28
+            + 0.46 * math.exp(-((t - 0.30) / 0.05) ** 2)
+            + 0.66 * math.exp(-((t - 0.69) / 0.08) ** 2)
+            + 0.08 * math.sin(6 * math.pi * t + 0.8)
+        )
+        a_values.append(int(round(clamp01(a_signal) * 127)))
+        b_values.append(int(round(clamp01(b_signal) * 127)))
+    return a_values, b_values
+
+
+def draw_arg_line_card(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    method: str,
+    formula: str,
+    title_font: ImageFont.ImageFont,
+    body_font: ImageFont.ImageFont,
+) -> None:
+    draw.rounded_rectangle((x, y, x + width, y + height), radius=20, fill=BG, outline=PANEL_BORDER, width=2)
+    draw.text((x + 20, y + 16), method, fill=TITLE, font=title_font)
+    draw.text((x + 20, y + 16 + title_font.size + 4), formula, fill=SUBTITLE, font=body_font)
+
+    left = x + 58
+    top = y + 86
+    right = x + width - 28
+    bottom = y + height - 82
+    usable_w = right - left
+    usable_h = bottom - top
+
+    a_values, b_values = generate_arg_inputs(120)
+    c_values = [compute_arg_value(method, a, b) for a, b in zip(a_values, b_values)]
+
+    for frac in (0.0, 0.25, 0.5, 0.75, 1.0):
+        yy = bottom - usable_h * frac
+        draw.line((left, yy, right, yy), fill=GRID, width=1)
+        draw.text((x + 18, yy - 8), f"{int(frac * 127)}", fill=SUBTITLE, font=body_font)
+
+    time_ticks = [0, 25, 50, 75, 100]
+    for tick in time_ticks:
+        frac = tick / 100.0
+        xx = left + usable_w * frac
+        draw.line((xx, top, xx, bottom), fill=GRID, width=1)
+        label = str(tick)
+        label_x = xx - (len(label) * 4)
+        draw.text((label_x, bottom + 8), label, fill=SUBTITLE, font=body_font)
+
+    draw.line((left, top, left, bottom), fill=AXIS, width=2)
+    draw.line((left, bottom, right, bottom), fill=AXIS, width=2)
+    draw.text((left - 24, top - 22), "val", fill=TITLE, font=body_font)
+    draw.text((right - 22, bottom + 26), "time", fill=TITLE, font=body_font)
+
+    series = [
+        ("A in", "#6b8798", a_values),
+        ("B in", "#c24c6d", b_values),
+        ("C out", "#d4632b", c_values),
+    ]
+    for _, color, values in series:
+        points = []
+        steps = len(values)
+        for idx, value in enumerate(values):
+            px = left + (idx / (steps - 1)) * usable_w
+            py = bottom - (value / 127.0) * usable_h
+            points.append((px, py))
+        for start, end in zip(points, points[1:]):
+            draw.line((*start, *end), fill=color, width=4)
+
+    legend_x = x + 24
+    legend_y = y + height - 52
+    for idx, (label, color, _) in enumerate(series):
+        xx = legend_x + idx * 112
+        draw.line((xx, legend_y + 7, xx + 22, legend_y + 7), fill=color, width=4)
+        draw.text((xx + 30, legend_y), label, fill=SUBTITLE, font=body_font)
+
+
+def draw_arg_heatmap_card(
+    draw: ImageDraw.ImageDraw,
+    x: int,
+    y: int,
+    width: int,
+    height: int,
+    method: str,
+    formula: str,
+    title_font: ImageFont.ImageFont,
+    body_font: ImageFont.ImageFont,
+) -> None:
+    draw_arg_line_card(draw, x, y, width, height, method, formula, title_font, body_font)
+
+
+def save_arg_matrix_overview(title_font: ImageFont.ImageFont, body_font: ImageFont.ImageFont) -> None:
+    width = 1400
+    height = 1020
+    image = Image.new("RGB", (width, height), PANEL_BG)
+    draw = ImageDraw.Draw(image)
+
+    draw.text((40, 24), "ARG matrix overview", fill=TITLE, font=title_font)
+    draw.text(
+        (40, 24 + title_font.size + 8),
+        "Each card shows the same A input over time, the same B input over time, and the resulting C slot value for one ARG method.",
+        fill=SUBTITLE,
+        font=body_font,
+    )
+
+    methods = [
+        ("PLUS", "A + B"),
+        ("AVG", "(A + B) / 2"),
+        ("MAXX", "max(A, B)"),
+        ("XABS", "abs(A - B)"),
+        ("MULT", "(A * B) / 127"),
+        ("XORR", "A ^ B"),
+    ]
+    card_w = 420
+    card_h = 410
+    gap_x = 28
+    gap_y = 28
+    origin_y = 92
+    for idx, (method, formula) in enumerate(methods):
+        row = idx // 3
+        col = idx % 3
+        x = 40 + col * (card_w + gap_x)
+        y = origin_y + row * (card_h + gap_y)
+        draw_arg_heatmap_card(draw, x, y, card_w, card_h, method, formula, title_font, body_font)
+
+    draw.rounded_rectangle((40, 930, width - 40, 980), radius=16, fill=BG, outline=PANEL_BORDER, width=2)
+    draw.text(
+        (58, 944),
+        "Use PLUS/AVG/MAXX first for legible blends, then XABS for contrast. MULT and XORR are the fast route into stranger territory.",
+        fill=SUBTITLE,
+        font=body_font,
+    )
+
+    for out_dir in OUT_DIRS:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        image.save(out_dir / "arg-matrix-overview.png")
+
+
+def draw_wave_icon(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int], color: str, phase: float = 0.0) -> None:
+    x1, y1, x2, y2 = box
+    mid_y = (y1 + y2) / 2
+    amp = (y2 - y1) * 0.32
+    points = []
+    for idx in range(40):
+        t = idx / 39
+        x = x1 + t * (x2 - x1)
+        y = mid_y - math.sin((t + phase) * 2 * math.pi) * amp
+        points.append((x, y))
+    for start, end in zip(points, points[1:]):
+        draw.line((*start, *end), fill=color, width=4)
+
+
+def draw_led_bars(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    count = 8
+    gap = 10
+    bar_w = (x2 - x1 - gap * (count - 1)) / count
+    levels = [0.25, 0.42, 0.63, 0.84, 1.0, 0.76, 0.51, 0.34]
+    for idx, level in enumerate(levels):
+        bx1 = x1 + idx * (bar_w + gap)
+        bx2 = bx1 + bar_w
+        by2 = y2
+        by1 = y2 - level * (y2 - y1)
+        draw.rounded_rectangle((bx1, by1, bx2, by2), radius=8, fill=lerp_color("#593726", OUTPUT, level))
+
+
+def draw_swing_grid(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    baseline = y1 + (y2 - y1) * 0.55
+    draw.line((x1, baseline, x2, baseline), fill=GRID, width=2)
+    steps = 8
+    spacing = (x2 - x1) / steps
+    for idx in range(steps):
+        x = x1 + idx * spacing
+        height = 22 if idx % 2 == 0 else 34
+        shift = 0 if idx % 2 == 0 else 10
+        draw.line((x + shift, baseline - height, x + shift, baseline + 6), fill=OUTPUT if idx % 2 else AXIS, width=4)
+    draw.text((x1, y2 + 6), "straight beats stay put, offbeats lean right", fill=SUBTITLE, font=ImageFont.load_default(size=14))
+
+
+def draw_gain_trim(draw: ImageDraw.ImageDraw, box: tuple[int, int, int, int]) -> None:
+    x1, y1, x2, y2 = box
+    center_x = x1 + (x2 - x1) * 0.28
+    draw.rounded_rectangle((x1, y1, x1 + 46, y2), radius=10, outline=AXIS, width=2)
+    draw.rounded_rectangle((x1 + 74, y1, x1 + 120, y2), radius=10, outline=AXIS, width=2)
+    draw.rectangle((x1 + 8, y2 - 56, x1 + 38, y2 - 4), fill="#6b8798")
+    draw.rectangle((x1 + 82, y2 - 92, x1 + 112, y2 - 4), fill=OUTPUT)
+    draw.text((x1, y2 + 6), "same follower, more bite after trim", fill=SUBTITLE, font=ImageFont.load_default(size=14))
+
+
+def save_lfo_route_overview(title_font: ImageFont.ImageFont, body_font: ImageFont.ImageFont) -> None:
+    width = 1560
+    height = 660
+    image = Image.new("RGB", (width, height), PANEL_BG)
+    draw = ImageDraw.Draw(image)
+
+    draw.text((40, 24), "LFO route overview", fill=TITLE, font=title_font)
+    draw.text(
+        (40, 24 + title_font.size + 8),
+        "Factory defaults route LFO1 to LED brightness and arp swing, while LFO2 trims envelope-follower gain.",
+        fill=SUBTITLE,
+        font=body_font,
+    )
+
+    cards = [
+        ("LedBrightness", "Most legible first route", "Visible pulse on the LED layer"),
+        ("ArpSwing", "Changes timing feel", "Offbeats drift while the groove stays readable"),
+        ("EfGainTrim", "Changes source intensity", "Reactive paths push harder or softer"),
+    ]
+    card_w = 468
+    card_h = 500
+    gap = 28
+    for idx, (name, kicker, body) in enumerate(cards):
+        x = 40 + idx * (card_w + gap)
+        y = 104
+        draw.rounded_rectangle((x, y, x + card_w, y + card_h), radius=24, fill=BG, outline=PANEL_BORDER, width=2)
+        draw.text((x + 24, y + 18), name, fill=TITLE, font=title_font)
+        draw.text((x + 24, y + 18 + title_font.size + 4), kicker, fill=SUBTITLE, font=body_font)
+        draw_wave_icon(draw, (x + 24, y + 86, x + card_w - 24, y + 166), ACCENT, phase=0.08 * idx)
+        draw.text((x + 24, y + 184), body, fill=SUBTITLE, font=body_font)
+
+        preview = (x + 24, y + 230, x + card_w - 24, y + 380)
+        if name == "LedBrightness":
+            draw_led_bars(draw, preview)
+        elif name == "ArpSwing":
+            draw_swing_grid(draw, preview)
+        else:
+            draw_gain_trim(draw, preview)
+
+        draw.rounded_rectangle((x + 24, y + 410, x + card_w - 24, y + 468), radius=14, fill=PANEL_BG, outline=PANEL_BORDER, width=1)
+        explanation = {
+            "LedBrightness": "Best first demo: you can see the cycle instantly.",
+            "ArpSwing": "Best musical demo: it moves feel, not just value.",
+            "EfGainTrim": "Best advanced demo: it changes the source itself.",
+        }[name]
+        draw.text((x + 38, y + 428), explanation, fill=SUBTITLE, font=body_font)
+
+    for out_dir in OUT_DIRS:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        image.save(out_dir / "lfo-route-overview.png")
+
+
+def save_lfo_oled_preview(title_font: ImageFont.ImageFont, body_font: ImageFont.ImageFont) -> None:
+    width = 980
+    height = 560
+    image = Image.new("RGB", (width, height), PANEL_BG)
+    draw = ImageDraw.Draw(image)
+
+    draw.text((40, 24), "OLED LFO diagnostic preview", fill=TITLE, font=title_font)
+    draw.text(
+        (40, 24 + title_font.size + 8),
+        "Current firmware exposes live LFO values on the debug diagnostics page rather than a dedicated LFO editor page.",
+        fill=SUBTITLE,
+        font=body_font,
+    )
+
+    panel = (112, 118, 880, 502)
+    draw.rounded_rectangle(panel, radius=34, fill="#d5d8d1", outline=BOX_STROKE, width=3)
+    px = 160
+    py = 156
+    pw = 672
+    ph = 308
+    draw.rounded_rectangle((px, py, px + pw, py + ph), radius=12, fill=OLED_BG, outline="#7f877f", width=3)
+    draw.rectangle((px + 8, py + 8, px + pw - 8, py + ph - 8), outline=OLED_FG, width=2)
+
+    oled_font = ImageFont.load_default(size=18)
+    lines = [
+        "DBG BPM:120.0 CLK:ON",
+        "E0 B0.08 G1.00 V92",
+        "E1 B0.05 G0.96 V41",
+        "E2 B0.06 G1.04 V12",
+        "E3 B0.04 G1.00 V00",
+        "E4 B0.05 G0.98 V77",
+        "E5 B0.05 G1.02 V18",
+        "L1:0.63 L2:0.22",
+    ]
+    line_y = py + 18
+    for line in lines:
+        draw.text((px + 20, line_y), line, fill=OLED_FG, font=oled_font)
+        line_y += 34
+
+    draw.rounded_rectangle((112, 514, 880, 544), radius=10, fill=BG, outline=PANEL_BORDER, width=1)
+    draw.text(
+        (130, 521),
+        "Labels and line order match DisplayManager diagnostic page `kDiagnosticPageDebug`.",
+        fill=SUBTITLE,
+        font=body_font,
+    )
+
+    for out_dir in OUT_DIRS:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        image.save(out_dir / "lfo-oled-preview.png")
+
+
 def main() -> None:
     base = generate_input_signal(240)
     shapes = build_shapes(base)
@@ -375,7 +714,10 @@ def main() -> None:
     save_individual_charts(base, shapes, title_font, body_font)
     save_overview(base, shapes, title_font, body_font)
     save_signal_flow_diagram(title_font, body_font)
-    print("Generated signal-shape PNGs in docs/ and wiki/ asset folders.")
+    save_arg_matrix_overview(title_font, body_font)
+    save_lfo_route_overview(title_font, body_font)
+    save_lfo_oled_preview(title_font, body_font)
+    print("Generated documentation PNGs in docs/ and wiki/ asset folders.")
 
 
 if __name__ == "__main__":
