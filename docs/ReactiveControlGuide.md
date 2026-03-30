@@ -35,6 +35,10 @@ If you want the analog-to-digital background, the source overview still lives in
 
 These are less about "correct" and more about "what kind of motion do you want?"
 
+![Overview chart comparing the same reference envelope through LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, LOWPASS, HIGHPASS, BANDPASS, and RANDOM response modes so the filter-shape differences are visible before reading the descriptions.](assets/signal-shapes/filter-shapes-overview.png)
+
+The gray line is the same reference input in every panel. The orange line is the illustrative output for that mode.
+
 | Filter type | What it feels like | Good first use |
 | --- | --- | --- |
 | `LINEAR` | direct, literal, unshaped | baseline learning |

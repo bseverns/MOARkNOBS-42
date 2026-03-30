@@ -37,6 +37,12 @@ pio -d firmware run -e teensy40_main -t upload
 - JSON manifest/config handshake drives host UI compatibility.
 - Scheduler separates high/mid/low priority tasks.
 
+## Envelope shape quick look
+
+![Overview chart comparing one reference envelope against LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, LOWPASS, HIGHPASS, BANDPASS, and RANDOM response modes so newcomers can see how the firmware's reactive-control shapes differ.](assets/signal-shapes/filter-shapes-overview.png)
+
+Use this as a fast visual map only. The deeper learner-facing explanations live in `docs/FilterFeelGuide.md` and `docs/ReactiveControlGuide.md`.
+
 ## Reference docs
 
 - `firmware/README.md`

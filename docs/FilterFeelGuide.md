@@ -17,6 +17,14 @@ If you do not yet know what you want, start in this order:
 
 That progression teaches the system without overwhelming the player.
 
+## Signal-shape overview
+
+The labels below get easier once you can see the same input contour passed through each mode.
+
+![Overview chart showing the same reference envelope rendered through LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, LOWPASS, HIGHPASS, BANDPASS, and RANDOM response modes so readers can compare the resulting output shapes at a glance.](assets/signal-shapes/filter-shapes-overview.png)
+
+These are illustrative sketches, not calibration traces. Use them to compare feel and direction, then confirm the exact musical result on your own source material.
+
 ## The shapes by feel
 
 ### LINEAR

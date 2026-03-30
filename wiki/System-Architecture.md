@@ -8,6 +8,8 @@ Canonical source: `README.md`
 3. WebSerial configuration app (`App/`)
 4. Node OSC/MIDI bridge (`bridge/`)
 
+![System diagram showing physical inputs feeding the reactive front end, then modulation buses, then live outputs, with the browser app, OSC/MIDI bridge, and device memory connected as the operator and host-control layers around that path.](assets/signal-shapes/system-signal-flow.png)
+
 ## Data flow
 
 1. Human input enters from button matrix, control buttons, pots, and envelope follower analog inputs.
