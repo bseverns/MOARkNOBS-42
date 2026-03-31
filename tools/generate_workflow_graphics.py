@@ -238,12 +238,12 @@ def annotate_slot_tile() -> None:
     ox, oy = 40, 100
     bf = body_font(16)
     label_x = ox + base.width + 42
-    draw_callout(draw, (ox + 17, oy + 42, ox + 96, oy + 113), (label_x, 112, label_x + 172, 160), "Selected tile", PURPLE, bf, dashed_target=True, line_width=2)
-    draw_callout(draw, (ox + 34, oy + 56, ox + 74, oy + 78), (label_x, 176, label_x + 132, 224), "Slot ID", BLUE, bf, dashed_target=True, line_width=2)
-    draw_callout(draw, (ox + 34, oy + 82, ox + 53, oy + 99), (label_x, 240, label_x + 146, 288), "Type code", GOLD, bf, dashed_target=True, line_width=2)
-    draw_callout(draw, (ox + 31, oy + 100, ox + 71, oy + 124), (label_x, 304, label_x + 130, 352), "PK badge", MINT, bf, dashed_target=True, line_width=2)
-    draw_callout(draw, (ox + 118, oy + 100, ox + 157, oy + 124), (label_x, 368, label_x + 130, 416), "IM badge", CORAL, bf, dashed_target=True, line_width=2)
-    draw_callout(draw, (ox + 27, oy + 98, ox + 224, oy + 124), (label_x - 58, 44, label_x + 210, 92), "Browser-only mode badge", ROSE, bf, dashed_target=True, line_width=2)
+    draw_callout(draw, (ox + 21, oy + 41, ox + 86, oy + 110), (label_x, 112, label_x + 172, 160), "Selected tile", PURPLE, bf, dashed_target=True, line_width=2)
+    draw_callout(draw, (ox + 31, oy + 52, ox + 60, oy + 66), (label_x, 176, label_x + 132, 224), "Slot ID", BLUE, bf, dashed_target=True, line_width=2)
+    draw_callout(draw, (ox + 34, oy + 72, ox + 53, oy + 84), (label_x, 240, label_x + 146, 288), "Type code", GOLD, bf, dashed_target=True, line_width=2)
+    draw_callout(draw, (ox + 38, oy + 88, ox + 73, oy + 103), (label_x, 304, label_x + 130, 352), "PK badge", MINT, bf, dashed_target=True, line_width=2)
+    draw_callout(draw, (ox + 123, oy + 88, ox + 157, oy + 103), (label_x, 368, label_x + 130, 416), "IM badge", CORAL, bf, dashed_target=True, line_width=2)
+    draw_callout(draw, (ox + 30, oy + 87, ox + 180, oy + 104), (label_x - 58, 44, label_x + 210, 92), "Browser-only mode badge", ROSE, bf, dashed_target=True, line_width=2)
     save_ui(canvas, "slot-tile-annotated.png")
 
 
