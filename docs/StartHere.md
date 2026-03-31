@@ -33,7 +33,7 @@ If one layer lies to the next, the whole experience gets weird fast. That is why
 
 ### In the browser
 
-![Browser configurator screenshot showing slot controls, staged changes, and telemetry cards.](profiles-ui.png)
+![Annotated browser configurator screenshot showing live slots, the selected-slot editor, the utility rail, and the staged-diff panel.](assets/ui/configurator-workbench-annotated.png)
 
 - a runtime that connects over WebSerial
 - a schema-driven form system

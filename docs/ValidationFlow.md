@@ -6,6 +6,8 @@ Is this board merely powered on, actually validated, demo-ready, or ready for a 
 
 This flow is conservative on purpose. If a step is not proven, mark it as unverified instead of assuming it is fine.
 
+![Validation gate diagram showing the sequence from target selection and software gate through handshake, intended path, bench behavior, stress and recovery, and final status assignment.](assets/workflows/validation-gates-overview.png)
+
 ## 1. Pick the validation target
 
 Choose one target before you start:
@@ -72,6 +74,8 @@ Required proof:
 - bridge console connects to the board
 - configurator works through the bridge path if that workflow is intended
 - at least one real OSC or virtual MIDI command reaches the board through the live-control command path
+
+![Simulated bridge console screenshot showing a running bridge, connected serial path, confirmed device handshake, detected ports, and bridge log output.](assets/ui/bridge-console-sim.png)
 
 Outcome:
 

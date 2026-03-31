@@ -3,6 +3,8 @@
 The browser configurator lives in `App/` and provides schema-validated editing against the firmware protocol.
 Canonical source: `App/README.md`
 
+![Workflow graphic showing the WebSerial app connect, manifest, config, stage, and apply or rollback steps.](assets/workflows/webserial-workflow-overview.png)
+
 ## Architecture
 
 - `App/runtime.js` - transport, schema validation, staging/diff/rollback, simulator

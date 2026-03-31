@@ -27,6 +27,8 @@ bridge/node_modules/
 App/node_modules/
 App/playwright-report/
 App/test-results/
+tools/__pycache__/
+tools/capture_ui_doc_screenshots.mjs
 
 # Hardware CAD project/autosave artifacts (local-only)
 hardware/*.epro

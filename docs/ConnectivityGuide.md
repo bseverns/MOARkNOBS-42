@@ -4,6 +4,8 @@ Use this page when you are deciding between the browser configurator and the bri
 
 If you need the conservative compatibility matrix first, read [Host Compatibility](HostCompatibility.md).
 
+![Decision graphic comparing the direct configurator path with the bridge path for OSC and DAW workflows.](assets/workflows/connectivity-decision-overview.png)
+
 ## The short version
 
 - Use the `configurator` when you want to talk directly to one board over USB for setup, monitoring, and profile management.

@@ -4,6 +4,8 @@ The raw button/combination table is useful, but it is not the easiest way to lea
 
 This page groups the combos by intention so a new player can memorize the ones that matter first.
 
+![Control-button map highlighting recovery, profile, arp, reactive-control, and mapping combo clusters.](assets/workflows/combo-map-overview.png)
+
 ## Start here if you are new
 
 Memorize these first:

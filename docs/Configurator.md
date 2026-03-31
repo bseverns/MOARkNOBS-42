@@ -2,18 +2,9 @@
 
 The browser app is not just a remote control. It is the safest place to understand the firmware contract because it has to negotiate identity, schema compatibility, staged edits, and confirmation from the device before pretending anything changed.
 
-![Browser configurator screenshot showing staged edits, telemetry, and slot controls.](profiles-ui.png)
+![Annotated browser configurator screenshot showing the connection banner, apply and rollback controls, and the recovery and profile workspace.](assets/ui/configurator-top-annotated.png)
 
-TODO: add an annotated version of this screenshot with callouts for:
-
-- `Connection banner` — confirms which board and firmware the configurator is actually talking to
-- `Apply / Rollback` — commits staged edits to the device or discards them before they become live
-- `Live Slots` — the slot-selection surface; this picks the target slot for inspection and editing
-- `Selected Slot` — edits only the currently selected slot
-- `Recovery & Profiles` — device profile load/save/reset plus file backup/restore
-- `Utility rail` — status, diff, MIDI monitor, and scope tools used to verify truth and troubleshoot
-- `Staged Diff` — browser-side edits not yet confirmed by the device
-- `IM` / `PK` badge — browser-local local-response mode, not firmware-backed profile memory
+![Annotated browser configurator screenshot showing live slots, the selected-slot editor, the utility rail, and the staged-diff panel.](assets/ui/configurator-workbench-annotated.png)
 
 ## The core idea
 

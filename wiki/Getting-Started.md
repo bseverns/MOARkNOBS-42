@@ -3,6 +3,8 @@
 This page gets a new contributor from clone to first successful handshake.
 Canonical source: `docs/ProcessOverview.md`
 
+![Pipeline graphic showing install, build, HELLO handshake, WebSerial app connection, and optional bridge setup.](assets/workflows/getting-started-pipeline.png)
+
 ## Prerequisites
 
 - PlatformIO Core on PATH (`pio`)

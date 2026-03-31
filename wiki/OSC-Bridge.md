@@ -3,6 +3,8 @@
 The bridge (`bridge/`) is a Node.js CLI that connects firmware serial telemetry to OSC and virtual MIDI.
 Canonical source: `bridge/README.md`
 
+![Routing overview showing MN42 hardware feeding the Node bridge, then branching to OSC, virtual MIDI, and the browser app over the bridge path.](assets/workflows/bridge-routing-overview.png)
+
 ## Install
 
 ```bash
