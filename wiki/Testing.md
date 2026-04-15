@@ -1,7 +1,7 @@
 # Testing
 
 Testing is layered from fast firmware checks to full hardware + bridge exercises.
-Canonical source: `docs/TESTING.md`
+Canonical source: `docs/validation/TESTING.md`
 
 ## Canonical command set
 
@@ -59,6 +59,6 @@ node firmware/system_test/mn42_fullstack_runner.js --serial /dev/ttyACM0 --repor
 
 ## Reference docs
 
-- `docs/TESTING.md`
+- `docs/validation/TESTING.md`
 - `firmware/test/README.md`
 - `firmware/system_test/README.md`

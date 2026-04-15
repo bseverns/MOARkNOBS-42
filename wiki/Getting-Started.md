@@ -1,7 +1,7 @@
 # Getting Started
 
 This page gets a new contributor from clone to first successful handshake.
-Canonical source: `docs/ProcessOverview.md`
+Canonical source: `docs/project/ProcessOverview.md`
 
 ![Pipeline graphic showing install, build, HELLO handshake, WebSerial app connection, and optional bridge setup.](assets/workflows/getting-started-pipeline.png)
 
@@ -68,6 +68,6 @@ Replace `/dev/ttyACM0` with your device path.
 
 ## Related docs
 
-- `docs/ProcessOverview.md`
-- `docs/BuildersHandbook.md`
-- `docs/Troubleshooting.md`
+- `docs/project/ProcessOverview.md`
+- `docs/getting-started/BuildersHandbook.md`
+- `docs/validation/Troubleshooting.md`

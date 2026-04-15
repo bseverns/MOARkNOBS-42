@@ -1,7 +1,7 @@
 # Release Process
 
-Use this as the release checklist summary. Detailed runbooks remain in `docs/ReleaseGuide.md`.
-Canonical source: `docs/ReleaseGuide.md`
+Use this as the release checklist summary. Detailed runbooks remain in `docs/release/ReleaseGuide.md`.
+Canonical source: `docs/release/ReleaseGuide.md`
 
 ## Firmware release steps
 
@@ -26,13 +26,13 @@ Canonical source: `docs/ReleaseGuide.md`
 
 When shipping non-CLI bridge artifacts:
 
-1. Follow `docs/BridgePackaging.md`.
+1. Follow `docs/release/BridgePackaging.md`.
 2. Run bridge smoke tests per target OS.
 3. Publish checksums and artifacts.
 4. Complete `docs/release/bridge-artifacts-checklist.md`.
 
 ## Reference docs
 
-- `docs/ReleaseGuide.md`
+- `docs/release/ReleaseGuide.md`
 - `docs/release/bridge-artifacts-checklist.md`
 - `CHANGELOG.md`

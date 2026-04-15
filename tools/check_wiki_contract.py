@@ -11,15 +11,15 @@ import sys
 
 EXPECTED_CANONICAL = {
     "Home.md": "README.md",
-    "Getting-Started.md": "docs/ProcessOverview.md",
+    "Getting-Started.md": "docs/project/ProcessOverview.md",
     "System-Architecture.md": "README.md",
     "Firmware.md": "firmware/README.md",
     "Hardware.md": "hardware/README.md",
     "WebSerial-App.md": "App/README.md",
     "OSC-Bridge.md": "bridge/README.md",
-    "Testing.md": "docs/TESTING.md",
-    "Release-Process.md": "docs/ReleaseGuide.md",
-    "History-and-Roadmap.md": "docs/HISTORY.md",
+    "Testing.md": "docs/validation/TESTING.md",
+    "Release-Process.md": "docs/release/ReleaseGuide.md",
+    "History-and-Roadmap.md": "docs/project/HISTORY.md",
 }
 
 CANONICAL_LINE_RE = re.compile(r"^Canonical source:\s*(.+)$", re.MULTILINE)
