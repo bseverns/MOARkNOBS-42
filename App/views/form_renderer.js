@@ -347,6 +347,13 @@ export class FormRenderer {
     });
   }
 
+  clearPendingPatches() {
+    for (const timer of this._patchSchedule.values()) {
+      clearTimeout(timer);
+    }
+    this._patchSchedule.clear();
+  }
+
   schedulePatch(path, value) {
     const key = path;
     // Last-write-wins per path: replace any pending timer so only the freshest value is sent.

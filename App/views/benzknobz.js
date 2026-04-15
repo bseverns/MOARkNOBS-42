@@ -1349,6 +1349,11 @@ const boot = () => {
     profileRpcLocked = true;
     refreshProfileControls();
     try {
+      if (expectConfig) {
+        // Loading/resetting a profile replaces the staged snapshot, so drop any debounced
+        // field-level patches before they replay stale edits back into the fresh config.
+        formRenderer.clearPendingPatches();
+      }
       // Saving a profile always snapshots firmware state, so stage/apply first to avoid storing
       // stale EEPROM values when local edits are still dirty.
       if (method === 'save_profile' && dirtyBefore) {
