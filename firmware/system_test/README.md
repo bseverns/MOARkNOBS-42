@@ -4,7 +4,7 @@ Welcome to the gauntlet. This folder is where the firmware proves it can survive
 These are **hardware-in-the-loop** tests — they don't fake the MCU or the peripherals.
 We flash the real board and make sure the buttons, LEDs, EEPROM and friends actually do their job.
 
-## OSC↔firmware rodeo (pulled from [`docs/TESTING.md`](../../docs/TESTING.md))
+## OSC↔firmware rodeo (pulled from [`docs/TESTING.md`](../../docs/validation/TESTING.md))
 
 `docs/TESTING.md` keeps teasing the "future black-box trials" that lean on OSC + WebSerial, so we sketched the drill before
 you wire up scripts. Think of these as end-to-end stories the automated runner will rehearse:

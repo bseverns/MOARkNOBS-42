@@ -104,6 +104,9 @@ class LEDManager {
     /** Set every LED on the strip to a single colour now. */
     void setAll(const CRGB &color);
 
+    /** Set a specific LED to an exact colour without value remapping. */
+    void setPixelColor(uint16_t index, const CRGB &color);
+
     /** Set colour for a named group of LEDs. */
     void setGroupColor(const std::string &group, const CRGB &color);
 

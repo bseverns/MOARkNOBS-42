@@ -194,6 +194,13 @@ void LEDManager::setAll(const CRGB &color) {
     presentFrame();
 }
 
+void LEDManager::setPixelColor(uint16_t index, const CRGB &color) {
+    if (index >= leds.size())
+        return;
+    leds[index] = color;
+    markDirty(static_cast<uint8_t>(index));
+}
+
 /**
  * @brief Repaints a named LED group in one shot.
  *

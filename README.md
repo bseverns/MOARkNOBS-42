@@ -1,6 +1,6 @@
 # MOARkNOBS-42
 
-![MOARkNOBS-42 controller with button grid and knob array](docs/land.png)
+![MOARkNOBS-42 controller with button grid and knob array](docs/assets/board/land.png)
 > The button-mashing, knob-twisting controller that refuses to behave.
 
 ## What this is
@@ -17,10 +17,10 @@ folder for the gritty context, wiring diagrams, and experiments.
 
 | Path | What's in it |
 | --- | --- |
-| [docs/](docs/DocsGuide.md) | Build notes, history and assorted rants |
-| [docs/TESTING.md](docs/TESTING.md) | Test gauntlet from polite to brutal |
-| [docs/PinMap.md](docs/PinMap.md) | Every MCU pin's dirty secret |
-| [docs/EEPROMLayout.md](docs/EEPROMLayout.md) | Where config bytes crash at night |
+| [docs/](docs/project/DocsGuide.md) | Build notes, history and assorted rants |
+| [docs/TESTING.md](docs/validation/TESTING.md) | Test gauntlet from polite to brutal |
+| [docs/PinMap.md](docs/reference/PinMap.md) | Every MCU pin's dirty secret |
+| [docs/EEPROMLayout.md](docs/reference/EEPROMLayout.md) | Where config bytes crash at night |
 | [firmware/](firmware/README.md) | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
 | [hardware/](hardware/README.md) | Hardware docs, with [hardware/CurrentBuild.md](hardware/CurrentBuild.md) as the canonical entry point for what is current vs. stale |
 | [bridge/](bridge/README.md) | Node.js bridge docs for OSC + virtual MIDI setup, command reference, and troubleshooting |
@@ -28,13 +28,13 @@ folder for the gritty context, wiring diagrams, and experiments.
 
 ## Start Here
 
-- Builder: [docs/QuickstartForBuilders.md](docs/QuickstartForBuilders.md)
-- Performer: [docs/QuickstartForPerformers.md](docs/QuickstartForPerformers.md)
-- Prototype/demo validation: [docs/ValidationFlow.md](docs/ValidationFlow.md)
-- Demo punch list: [docs/DemoTestPunchList.md](docs/DemoTestPunchList.md)
+- Builder: [docs/QuickstartForBuilders.md](docs/getting-started/QuickstartForBuilders.md)
+- Performer: [docs/QuickstartForPerformers.md](docs/getting-started/QuickstartForPerformers.md)
+- Prototype/demo validation: [docs/ValidationFlow.md](docs/validation/ValidationFlow.md)
+- Demo punch list: [docs/DemoTestPunchList.md](docs/validation/DemoTestPunchList.md)
 - Hardware current truth: [hardware/CurrentBuild.md](hardware/CurrentBuild.md)
-- Connectivity decision: [docs/ConnectivityGuide.md](docs/ConnectivityGuide.md)
-- License/support boundary: [docs/LicenseAndSupport.md](docs/LicenseAndSupport.md)
+- Connectivity decision: [docs/ConnectivityGuide.md](docs/getting-started/ConnectivityGuide.md)
+- License/support boundary: [docs/LicenseAndSupport.md](docs/project/LicenseAndSupport.md)
 
 ## Highlights
 
@@ -94,12 +94,12 @@ intent, and comments name the trade-offs so you can narrate the code like a
 zine. Treat it like a studio notebook, pull apart the sections live, and reroute
 the rig when you want to teach a different angle on pointers or data flow.
 
-![Approximate board render missing some 3D models](docs/brdF.png)
+![Approximate board render missing some 3D models](docs/assets/board/brdF.png)
 >The prototypes are with PCBWay right now. Scheduled for deliver ~4/20
 
 ## Why these specific parts?
 
-Chasing the SparkFun-backed part rationales? Skip down to the [docs guide](docs/DocsGuide.md#why-these-specific-parts) for the full bullet tour, then hit [hardware/Parts.md](hardware/Parts.md) when you want sourcing receipts.
+Chasing the SparkFun-backed part rationales? Skip down to the [docs guide](docs/project/DocsGuide.md#why-these-specific-parts) for the full bullet tour, then hit [hardware/Parts.md](hardware/Parts.md) when you want sourcing receipts.
 
 ## Diagram Dump
 
@@ -139,7 +139,7 @@ For an even grimier wiring map, the [systemflow sketch pages](docs/sketch/system
 ## Quick Start
 
 Ready to shred? Here's the bare minimum to get the beast humming, provided you have the completed board in-hand.
-Want the soup-to-nuts path? Check the [Process Overview](docs/ProcessOverview.md)—and if you want a guided lap through the full pipeline, run the [slot tweak lab](docs/ProcessOverview.md#hands-on-lab-tweak-a-slot-ship-it-watch-it-scream).
+Want the soup-to-nuts path? Check the [Process Overview](docs/project/ProcessOverview.md)—and if you want a guided lap through the full pipeline, run the [slot tweak lab](docs/project/ProcessOverview.md#hands-on-lab-tweak-a-slot-ship-it-watch-it-scream).
 
 If you are sourcing or building hardware, stop at [hardware/CurrentBuild.md](hardware/CurrentBuild.md) first. It now carries the repo's hardware current-truth table and explicitly flags missing/unverified fabrication assets instead of implying older filenames are still current.
 
@@ -147,7 +147,7 @@ If you are sourcing or building hardware, stop at [hardware/CurrentBuild.md](har
    - `pip install -r requirements.txt`
    - `npm --prefix bridge ci`
    - Node 20 LTS and PlatformIO need to be on your PATH.
-   - More setup lore lives in the [Builder's Handbook](docs/BuildersHandbook.md).
+   - More setup lore lives in the [Builder's Handbook](docs/getting-started/BuildersHandbook.md).
 
 2. **Flash the brain**
    - `pio -d firmware run -t upload -e teensy40_main`
@@ -156,15 +156,15 @@ If you are sourcing or building hardware, stop at [hardware/CurrentBuild.md](har
 3. **Say hello over serial**
    - Plug it in, crack a terminal or the [bridge](bridge/README.md).
    - Type `HELLO` and the board coughs up `{"hello":"mn42"}`.
-   - Want the whole WebSerial rant? See [docs/WebSerial.md](docs/WebSerial.md).
+   - Want the whole WebSerial rant? See [docs/WebSerial.md](docs/guides/WebSerial.md).
 
 4. **Beat it up**
-   - `./test.sh` slams the Unity and bridge checks, or see [docs/TESTING.md](docs/TESTING.md) for the full ritual.
-   - If the goal is a real prototype or rehearsal sign-off rather than code confidence alone, continue with [docs/ValidationFlow.md](docs/ValidationFlow.md) and [docs/DemoTestPunchList.md](docs/DemoTestPunchList.md).
+   - `./test.sh` slams the Unity and bridge checks, or see [docs/TESTING.md](docs/validation/TESTING.md) for the full ritual.
+   - If the goal is a real prototype or rehearsal sign-off rather than code confidence alone, continue with [docs/ValidationFlow.md](docs/validation/ValidationFlow.md) and [docs/DemoTestPunchList.md](docs/validation/DemoTestPunchList.md).
 
 Intent: make noise, learn something, and share what you tweak. Don't forget the hardware license obligations.
 
-Want the deep cuts? The full chronicles live in [docs/](docs/DocsGuide.md) and
+Want the deep cuts? The full chronicles live in [docs/](docs/project/DocsGuide.md) and
 the gritty firmware lore is in [firmware/](firmware/README.md).
 
 ## Test Strategy
@@ -175,7 +175,7 @@ The repo tests in layers because no single pass proves the whole instrument:
 - `./test.sh` adds the bridge checks on top of that and is the best "before I tag a release" habit.
 - Manual firmware sketches and the full-system runner still matter for anything tied to real hardware timing, LEDs, OLED behavior, mux noise, EEPROM behavior on a physical board, and the final boot wiring.
 
-Short version: Unity is now broad enough to catch logic drift in the stack, but it is not a substitute for a real Teensy on the bench. The detailed coverage map and test workflow live in [docs/TESTING.md](docs/TESTING.md).
+Short version: Unity is now broad enough to catch logic drift in the stack, but it is not a substitute for a real Teensy on the bench. The detailed coverage map and test workflow live in [docs/TESTING.md](docs/validation/TESTING.md).
 
 ## Firmware architecture
 
@@ -210,11 +210,11 @@ Treat these messages as subtle warnings—if you see one, check the WebSerial sn
    - `npm --prefix bridge test`
 2. Tag and push (`git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`).
 3. Let CI run `./release.sh <tag>` and upload deterministic assets (`.hex`, fabrication zip, source export tarball, manifest, checksums, and license files).
-4. Use [docs/ReleaseGuide.md](docs/ReleaseGuide.md) for the full release checklist.
+4. Use [docs/ReleaseGuide.md](docs/release/ReleaseGuide.md) for the full release checklist.
 
 ## License: MIT.
 
-See [LICENSE](LICENSE) for the software/firmware license and [docs/LicenseAndSupport.md](docs/LicenseAndSupport.md) for the plain-English split between software and hardware licensing/support.
+See [LICENSE](LICENSE) for the software/firmware license and [docs/LicenseAndSupport.md](docs/project/LicenseAndSupport.md) for the plain-English split between software and hardware licensing/support.
 
 ## Contributing
 

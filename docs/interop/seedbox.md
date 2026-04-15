@@ -4,7 +4,7 @@
 
 This page is a focused interop reference for one external rig path, not a broad host-compatibility claim for the main product surface.
 
-For the general browser/bridge support boundary, see [Host Compatibility](../HostCompatibility.md) and [Connectivity Guide](../ConnectivityGuide.md).
+For the general browser/bridge support boundary, see [Host Compatibility](../reference/HostCompatibility.md) and [Connectivity Guide](../getting-started/ConnectivityGuide.md).
 
 ## TL;DR
 

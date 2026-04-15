@@ -2,7 +2,7 @@
 
 > ~~The button board that turns the firmware's dreams into something you can actually solder.~~ Pure DIY attitude. This board design adds ten addressable LEDs—one shadowing each envelope follower input, one glaring at the control buttons, and three haloing the physical pots—and drops in 1/8" Type‑A MIDI jacks alongside the old-school DIN ports.
 
-Start here: [CurrentBuild.md](./CurrentBuild.md) is the canonical source for what hardware files are current, legacy, or still missing from this checkout.
+Start here: [CurrentBuild.md](CurrentBuild.md) is the canonical source for what hardware files are current, legacy, or still missing from this checkout.
 
 ```mermaid
 flowchart TD
@@ -15,7 +15,7 @@ flowchart TD
 
 ![3D render of MOARkNOBS board with jacks and knobs](../docs/sketch/MOAR_BOARD.png)
 
-Want the whole glam squad—including machine drawings and subsystem sketches? Start with [CurrentBuild.md](./CurrentBuild.md), then dive into [docs/sketch/](../docs/sketch/).[^logic][^midi][^opamp]
+Want the whole glam squad—including machine drawings and subsystem sketches? Start with [CurrentBuild.md](CurrentBuild.md), then dive into [docs/sketch/](../docs/sketch).[^logic][^midi][^opamp]
 
 ## Accessibility
 
@@ -23,26 +23,26 @@ Want the whole glam squad—including machine drawings and subsystem sketches? S
 - LEDs shadow inputs and buttons for visual feedback when audio or touch isn't enough.
 - The docs keep alt text and tidy heading levels, so screen readers don't puke trying to parse them.
 
-Need a deeper schematic fix? The [systemflow docs](../docs/sketch/systemFlow/hw/) slice the board into subsystems with all the gnarly traces.
+Need a deeper schematic fix? The [systemflow docs](../docs/sketch/systemFlow/hw) slice the board into subsystems with all the gnarly traces.
 
 ## Specs
 
-- **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show. [Why we picked it](./Parts.md#teensy-40).
-- **Addressable LEDs**: 52 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots. [Why we picked them](./Parts.md#ws2812-leds).
-- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV (+5 V). [Why the op-amp front-end looks this way](./Parts.md#mcp6002-op-amp).
-- **Key Matrix MUX**: Two CD74HC4067s funnel forty‑two switches into a single ADC read. [Why these muxes](./Parts.md#cd74hc4067-analog-mux).
-- **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A. [Why the split rails](./Parts.md#power-rails--fuses).
-- **MIDI I/O**: 5‑pin DIN plus 1/8" TRS Type‑A jacks wired in parallel. [Why the opto + TRS combo](./Parts.md#6n138-optocoupler).
+- **Microcontroller**: Teensy 4.0 — 600 MHz of ARM punk powering the show. [Why we picked it](Parts.md#teensy-40).
+- **Addressable LEDs**: 52 × WS2812-style — six stalk the envelope followers, one heckles the control buttons, and three crown the pots. [Why we picked them](Parts.md#ws2812-leds).
+- **Envelope Follower Inputs**: 6 analog channels ready for audio or CV (+5 V). [Why the op-amp front-end looks this way](Parts.md#mcp6002-op-amp).
+- **Key Matrix MUX**: Two CD74HC4067s funnel forty‑two switches into a single ADC read. [Why these muxes](Parts.md#cd74hc4067-analog-mux).
+- **Power**: 5 V logic rail plus a 5 V LED rail; core fuse at 0.5 A, LED fuse at 2.5 A. [Why the split rails](Parts.md#power-rails--fuses).
+- **MIDI I/O**: 5‑pin DIN plus 1/8" TRS Type‑A jacks wired in parallel. [Why the opto + TRS combo](Parts.md#6n138-optocoupler).
 
-The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will, grab the [Parts & Rationale](./Parts.md) doc when you need the deeper sourcing story, and use [Substitutions.md](./Substitutions.md) before swapping critical parts.
+The firmware slurps up every one of these hooks—animating LEDs, sampling EFs, and watching the rails. Check the [firmware README](../firmware/README.md) for how the code bends the hardware to its will, grab the [Parts & Rationale](Parts.md) doc when you need the deeper sourcing story, and use [Substitutions.md](Substitutions.md) before swapping critical parts.
 
 ## Directory Layout
 
-- [CurrentBuild.md](./CurrentBuild.md) – canonical hardware status page.
-- [Parts.md](./Parts.md) – part rationale and design intent.
-- [Substitutions.md](./Substitutions.md) – conservative sourcing/substitution notes.
-- [MN42-machineDrawings/](./MN42-machineDrawings/) – verified machine-drawing PDFs currently present in the repo.
-- [fabrication/](./fabrication/) – fabrication folder; no versioned Gerber zip was present in this repo audit.
+- [CurrentBuild.md](CurrentBuild.md) – canonical hardware status page.
+- [Parts.md](Parts.md) – part rationale and design intent.
+- [Substitutions.md](Substitutions.md) – conservative sourcing/substitution notes.
+- [MN42-machineDrawings/](MN42-machineDrawings) – verified machine-drawing PDFs currently present in the repo.
+- [fabrication/](fabrication) – fabrication folder; no versioned Gerber zip was present in this repo audit.
 
 ## Power Rails Need Fat Copper
 
@@ -57,7 +57,7 @@ In EasyEDA (or whatever CAD you're rocking), filter on each of those nets, hover
 
 ## Fabrication Package
 
-Use [CurrentBuild.md](./CurrentBuild.md) as the release-facing source of truth.
+Use [CurrentBuild.md](CurrentBuild.md) as the release-facing source of truth.
 
 Current repo state from the 2026-03 audit:
 
@@ -67,7 +67,7 @@ Current repo state from the 2026-03 audit:
 - `TODO: add a versioned BOM export under hardware/`
 - `TODO: if enclosure CAD is meant to ship in-repo, add a versioned directory and link it from CurrentBuild.md`
 
-Circuit diagrams live in [`sketch/`](../docs/sketch/). System modules have their circuits diagramed to show the board's guts in living color.
+Circuit diagrams live in [`sketch/`](../docs/sketch). System modules have their circuits diagramed to show the board's guts in living color.
 
 ![Schematic for interface and control section](../docs/sketch/Interface%26Cntrl.png)
 ![Schematic for power regulation and protection](../docs/sketch/Power-Reg.png)
@@ -130,4 +130,4 @@ Build, mod, or rage against this design at your own risk. We’re not your safet
 
 ## License
 
-These board blueprints are under the CERN Open Hardware Licence v2 - Strongly Reciprocal. Remix, fab, and share alike. Scope the [LICENSE](LICENSE) in this folder for the full legal spiel, and see [docs/LicenseAndSupport.md](../docs/LicenseAndSupport.md) for the plain-English boundary.
+These board blueprints are under the CERN Open Hardware Licence v2 - Strongly Reciprocal. Remix, fab, and share alike. Scope the [LICENSE](LICENSE) in this folder for the full legal spiel, and see [docs/LicenseAndSupport.md](../docs/project/LicenseAndSupport.md) for the plain-English boundary.

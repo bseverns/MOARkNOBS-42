@@ -30,4 +30,4 @@ MIDI IN gets its own electrical bubble via a 6N138. It keeps laptop ground loops
 
 One data pin drives 52 diodes and the timing quirks make for excellent debugging theater. They’re noisy enough to justify the power rail isolation, and the DMA tricks in firmware show exactly how to feed them without starving MIDI. If you want calmer lights, swap the strip, but the WS2812 drama makes the lessons stick.
 
-Need alternate part numbers, footprints, or sourcing links? The shopping list and board notes stay in the [hardware README](./README.md#specs) and the quick reference tables live in [hardware/Parts.md](./Parts.md). Grab those when you’re ordering; come back here when you want to explain why this BOM earns its keep.
+Need alternate part numbers, footprints, or sourcing links? The shopping list and board notes stay in the [hardware README](README.md#specs) and the quick reference tables live in [hardware/Parts.md](Parts.md). Grab those when you’re ordering; come back here when you want to explain why this BOM earns its keep.

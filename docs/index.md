@@ -10,16 +10,16 @@ hide:
 
 # MOARkNOBS-42
 
-![Front view of the MOARkNOBS-42 board showing the full control surface, display area, and hardware layout.](moarF.png){ .hero-image }
+![Front view of the MOARkNOBS-42 board showing the full control surface, display area, and hardware layout.](assets/board/moarF.png){ .hero-image }
 
 MOARkNOBS-42 is a documented performance instrument for artists, builders, and instrument hackers who want a control surface they can actually understand. It combines the physical board, open firmware, a browser configurator, profile recall, an OSC / virtual MIDI bridge path, and a public paper trail for how the whole system behaves.
 
 It is designed less like a sealed appliance and more like an instrument whose logic stays visible.
 
 <div class="mn42-cta-row">
-  <a class="md-button md-button--primary" href="PilotRun.md">Join pilot run / interest list</a>
+  <a class="md-button md-button--primary" href="project/PilotRun.md">Join pilot run / interest list</a>
   <a class="md-button" href="#core-features">See features</a>
-  <a class="md-button" href="WhyMN42.md">Start here / learn how it works</a>
+  <a class="md-button" href="getting-started/WhyMN42.md">Start here / learn how it works</a>
 </div>
 
 </div>
@@ -35,7 +35,7 @@ The broad workflow story is real, but the compatibility claim should be read con
 - documented but still setup-specific: OSC hosts and DAW virtual MIDI workflows
 - not claimed here as a verified production path: Firefox/Safari WebSerial and signed one-click bridge installers
 
-See [Host Compatibility](HostCompatibility.md) and [Connectivity Guide](ConnectivityGuide.md) before treating the project like a universal host/browser promise.
+See [Host Compatibility](reference/HostCompatibility.md) and [Connectivity Guide](getting-started/ConnectivityGuide.md) before treating the project like a universal host/browser promise.
 
 </div>
 
@@ -61,7 +61,7 @@ The object in your hands is only part of the story.
 
 </div>
 
-If you want the short outsider-friendly version first, read [Why MN42](WhyMN42.md).
+If you want the short outsider-friendly version first, read [Why MN42](getting-started/WhyMN42.md).
 
 ## Why it feels different
 
@@ -146,7 +146,7 @@ What it does not mean:
 - undocumented host compatibility guarantees
 - invented timelines, pricing, or bundle promises that are not yet published
 
-See [Pilot Run / Artist Edition](PilotRun.md) for the project-specific explanation.
+See [Pilot Run / Artist Edition](project/PilotRun.md) for the project-specific explanation.
 
 ## What it is not
 
@@ -164,7 +164,7 @@ It is not framed here as a sealed appliance, a beginner-friendly consumer gadget
 
 Support here is docs-first and artist-run.
 
-The repo publishes workflows, validation guidance, and support boundaries clearly, but it does not promise consumer-style warranty handling, substitute-part approval, or universal one-on-one setup support. The practical boundary is described in [License and Support](LicenseAndSupport.md).
+The repo publishes workflows, validation guidance, and support boundaries clearly, but it does not promise consumer-style warranty handling, substitute-part approval, or universal one-on-one setup support. The practical boundary is described in [License and Support](project/LicenseAndSupport.md).
 
 </div>
 
@@ -175,9 +175,9 @@ The repo publishes workflows, validation guidance, and support boundaries clearl
 If the instrument makes sense for your setup, the next useful step is not a vague preorder mindset. It is reading the pilot-run framing, checking the support boundary, and choosing the workflow path that matches how you actually work.
 
 <div class="mn42-cta-row">
-  <a class="md-button md-button--primary" href="PilotRun.md">Read pilot run details</a>
-  <a class="md-button" href="LicenseAndSupport.md">Read support boundary</a>
-  <a class="md-button" href="QuickstartForPerformers.md">See performer workflow</a>
+  <a class="md-button md-button--primary" href="project/PilotRun.md">Read pilot run details</a>
+  <a class="md-button" href="project/LicenseAndSupport.md">Read support boundary</a>
+  <a class="md-button" href="getting-started/QuickstartForPerformers.md">See performer workflow</a>
 </div>
 
 </div>
@@ -188,27 +188,27 @@ If the instrument makes sense for your setup, the next useful step is not a vagu
 
 - **Quickstart for Builders**
 
-  Ordering parts, flashing firmware, and first bring-up: [Quickstart for Builders](QuickstartForBuilders.md)
+  Ordering parts, flashing firmware, and first bring-up: [Quickstart for Builders](getting-started/QuickstartForBuilders.md)
 
 - **Quickstart for Performers**
 
-  Connect the board, use the configurator, and work with profiles: [Quickstart for Performers](QuickstartForPerformers.md)
+  Connect the board, use the configurator, and work with profiles: [Quickstart for Performers](getting-started/QuickstartForPerformers.md)
 
 - **Connectivity Guide**
 
-  Decide between direct WebSerial and the bridge path: [Connectivity Guide](ConnectivityGuide.md)
+  Decide between direct WebSerial and the bridge path: [Connectivity Guide](getting-started/ConnectivityGuide.md)
 
 - **Validation Flow**
 
-  Use the conservative go/no-go path from bring-up to demo-ready: [Validation Flow](ValidationFlow.md)
+  Use the conservative go/no-go path from bring-up to demo-ready: [Validation Flow](validation/ValidationFlow.md)
 
 - **Demo Test Punch List**
 
-  Run a real-world prototype or rehearsal pass: [Demo Test Punch List](DemoTestPunchList.md)
+  Run a real-world prototype or rehearsal pass: [Demo Test Punch List](validation/DemoTestPunchList.md)
 
 - **Guided Routes and deep docs**
 
-  Choose a learning path or dive into the dense technical library: [Guided Routes](GuidedRoutes.md) and [Docs Guide](DocsGuide.md)
+  Choose a learning path or dive into the dense technical library: [Guided Routes](getting-started/GuidedRoutes.md) and [Docs Guide](project/DocsGuide.md)
 
 </div>
 
@@ -224,7 +224,7 @@ Not necessarily. A performer can use the configurator and profile workflow witho
 <details markdown="1">
   <summary>Is it open source?</summary>
 
-Yes. The repo publishes firmware, software, hardware documentation, and supporting docs under the licenses described in [License and Support](LicenseAndSupport.md).
+Yes. The repo publishes firmware, software, hardware documentation, and supporting docs under the licenses described in [License and Support](project/LicenseAndSupport.md).
 
 </details>
 
@@ -245,13 +245,13 @@ The browser configurator is the main setup and monitoring surface. It loads mani
 <details markdown="1">
   <summary>What support is included?</summary>
 
-The main support surface is the documentation itself: quickstarts, connectivity guidance, validation flow, troubleshooting, and license/support boundaries. See [License and Support](LicenseAndSupport.md) and [Pilot Run](PilotRun.md) for the practical limits.
+The main support surface is the documentation itself: quickstarts, connectivity guidance, validation flow, troubleshooting, and license/support boundaries. See [License and Support](project/LicenseAndSupport.md) and [Pilot Run](project/PilotRun.md) for the practical limits.
 
 </details>
 
 <details markdown="1">
   <summary>Why would I choose this instead of a generic MIDI controller?</summary>
 
-Because the value here is not just the control surface. It is the combination of hardware, firmware, configurator, bridge, and unusually explicit documentation. If that matters to you, read [Why MN42](WhyMN42.md).
+Because the value here is not just the control surface. It is the combination of hardware, firmware, configurator, bridge, and unusually explicit documentation. If that matters to you, read [Why MN42](getting-started/WhyMN42.md).
 
 </details>

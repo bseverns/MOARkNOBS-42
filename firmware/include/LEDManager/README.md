@@ -20,6 +20,7 @@ Catch the full scene in the [main firmware README](../../README.md).
 
 - `begin()` – initialize FastLED and blank the strip.
 - `setPotValue(idx, value)` – mirror a slot's value on its halo.
+- `setPixelColor(idx, color)` – paint one exact RGB color onto one LED.
 - `update()` – push any dirty pixels out to the wire.
 
 ## Default State

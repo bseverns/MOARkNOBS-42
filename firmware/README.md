@@ -1,4 +1,4 @@
-![MN42 board render](../docs/brdR.png)
+![MN42 board render](../docs/assets/board/brdR.png)
 
 # MOARkNOBZ MN42 MIDI Controller
 
@@ -12,7 +12,7 @@ Forget fragile GUIs and boutique workflows. This beast lives in the guts: built 
 
 And driving the chaos? Your own automation parameters or six real-time **envelope followers**, each capable of modulating any control slot based on live input audio or CV (+5V). These EFs don't just track amplitude—they shape it through selectable filters, turning your input into living modulation.
 
-Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs/sketch/systemFlow/hw/) to see how the firmware wires into every slab of hardware.
+Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs/sketch/systemFlow/hw) to see how the firmware wires into every slab of hardware.
 
 ## Quickstart: Jam Now, Explain Later
 
@@ -22,7 +22,7 @@ Need the topographic map of all this chaos? Hit up the [systemflow docs](../docs
 4. **Modulate** – Pair any slot with one of six envelope followers. EF modes (Peak/RMS/Gate/Follower) and auto‑calibration now live per slot, while `Freq` and `Q` pots sculpt the filter shape in real time. Filter types live [here](include/EnvelopeFollower/README.md#filter-types).
 5. **Save & Play** – Settings persist in EEPROM, so once it's dialed, yank the cable and go.
 
-Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial dark magic](../docs/WebSerial.md).
+Crave more tweakables? Scope the [MIDI message list](include/MIDIHandler/README.md#supported-message-types), [ARP tricks](include/Arpeggiator/README.md#arp-settings), or dive headfirst into [WebSerial dark magic](../docs/guides/WebSerial.md).
 
 ### Editor Setup That Doesn't Suck
 
@@ -69,7 +69,7 @@ If IntelliSense still chokes, open the repo with the `firmware/benzknobz.code-wo
 - **Extensible Codebase**: Modular OOP C++ with task scheduler and serial debugging.
 - **HTML-Based Editor**: View and update settings via WebSerial (USB) — assign each EF to one or more slots, pick ARG methods, splash LED colours, and fall back to a local `config_schema.json` when the device ghosts you.
   _Note:_ The app fetches its schema from the device; if the device stays silent, it uses the bundled `config_schema.json`.
-- **WebSerial Telemetry**: Streams slot values, envelope levels, and LFO outputs so you can watch every tweak in a browser. See [../docs/WebSerial.md](../docs/WebSerial.md).
+- **WebSerial Telemetry**: Streams slot values, envelope levels, and LFO outputs so you can watch every tweak in a browser. See [../docs/guides/WebSerial.md](../docs/guides/WebSerial.md).
 - **Telemetry Watchdog**: Hardware UART overruns, dropped MIDI frames, and slow loops now bump counters, flash the status LED, and flow out over WebSerial so you know when you're skirting the edge.
 
 ### Slot Anatomy Cheat Sheet
@@ -85,7 +85,7 @@ Those six envelope followers aren't just spectators—they hijack whatever slot 
 
 ## Hardware Redefined
 
-The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/HISTORY.md). But simplicity is for cowards(! they may be more reasonable, however), so here’s what it became:
+The original idea was simple: 42 knobs (built with inspiration the '60 Knobs' from Bastl Instruments [see link in HISTORY.md](../docs/project/HISTORY.md). But simplicity is for cowards(! they may be more reasonable, however), so here’s what it became:
 
 - **1 slot pot**: total recall per slot.
 - **2 filter-tuning pots**: dial in frequency and resonance.
@@ -667,6 +667,8 @@ Test sketches used in the development of this project include:
 
 - `mainTEST.cpp`: step-by-step validation of buttons, LEDs, display, and CC slots.
 - `unified.cpp`: full integration test—just power it on and watch the magic.
+- `led_demo_t.cpp`: dedicated LED bring-up sketch that checks every diode in order, then loops through the shipped animation modes while printing health/status over Serial.
+- `power_burnin_t.cpp`: bench harness for power, thermal, and LED-surface stress with white-load phases, random wash/blast phases, VREF logging, and serial phase-lock commands.
 - `test_biquadfilter.cpp`: mathematically verify the BiquadFilter’s low-pass behavior, coefficient updates, and state handling—without any LEDs or buttons—to catch DSP mistakes when the filter “sounds weird.” - this is for the possibly over-caffeinated audio enthusiast who measures weekend fun by how precisely they can fine-tune a low‑pass filter, and whose idea of a thrilling achievement is confirming the Biquad’s coefficients haven’t mysteriously shifted in the night.
 - `eeprom_persistence.cpp`: multi-stage exercise that saves a full configuration, forces a reboot, then purposely corrupts the primary EEPROM copy to ensure the backup restore logic works.
 - `verify_slots.cpp`: writes known data to every slot, reads it back and prints PASS/FAIL for each one—useful for sanity‑checking EEPROM integrity.
@@ -779,7 +781,7 @@ Processing teensy40_full_system (platform: teensy; board: teensy40; framework: a
 ```
 
 Other test flavors are available for deeper debugging:
-`teensy40_unified_test`, `teensy40_biquad_test`,
+`teensy40_led_demo`, `teensy40_power_burnin`, `teensy40_unified_test`, `teensy40_biquad_test`,
 `teensy40_eeprom_persistence`, and `teensy40_slot_verify`.
 
 Run any of them with `pio run -e <env>` and bask in the compile-time glory.
@@ -969,7 +971,7 @@ All of the constants live in [`interop/mn42_map.h`](include/interop/mn42_map.h),
 ## Development Timeline
 
 Check out the project evolution in the main repo's
-[HISTORY.md](../docs/HISTORY.md).
+[HISTORY.md](../docs/project/HISTORY.md).
 
 ## Support
 
@@ -986,4 +988,4 @@ Passing binaries or pre-flashed boards around? Include this directory's `LICENSE
 
 Build bold. Tweak louder. Modulate everything.
 
-![MN42 in the wild](../docs/land.png)
+![MN42 in the wild](../docs/assets/board/land.png)

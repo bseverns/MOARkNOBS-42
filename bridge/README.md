@@ -2,7 +2,7 @@
 
 The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows.
 
-Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a virtual MIDI port on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) if you are deciding between them.
+Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a virtual MIDI port on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
 
 Current support boundary:
 
@@ -10,7 +10,7 @@ Current support boundary:
 - documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
 - not claimed here: a signed one-click installer or broad DAW-by-DAW compatibility proof
 
-See [docs/HostCompatibility.md](../docs/HostCompatibility.md) for the conservative matrix.
+See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix.
 
 It does three things:
 
@@ -249,8 +249,8 @@ If demand grows, this is the practical path:
 
 Until then, this README is the canonical runbook for daily use.
 
-For rollout planning, see [`docs/BridgePackaging.md`](../docs/BridgePackaging.md).
-For a show-day quick reference, see [`docs/BridgeForPerformers.md`](../docs/BridgeForPerformers.md).
+For rollout planning, see [`docs/BridgePackaging.md`](../docs/release/BridgePackaging.md).
+For a show-day quick reference, see [`docs/BridgeForPerformers.md`](../docs/guides/BridgeForPerformers.md).
 
 ## Development
 

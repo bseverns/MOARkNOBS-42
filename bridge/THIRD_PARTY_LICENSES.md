@@ -1,6 +1,6 @@
 # Third-Party Licenses
 
-This bridge leans on a motley crew of open-source packages. Here's the quick-and-dirty tally of license types. For the full grimoire, see [THIRD_PARTY_LICENSES.json](./THIRD_PARTY_LICENSES.json).
+This bridge leans on a motley crew of open-source packages. Here's the quick-and-dirty tally of license types. For the full grimoire, see [THIRD_PARTY_LICENSES.json](THIRD_PARTY_LICENSES.json).
 
 | License          | Count |
 | ---------------- | ----: |

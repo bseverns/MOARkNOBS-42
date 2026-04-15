@@ -71,67 +71,62 @@ plugins:
 
 nav:
   - Home: index.md
-  - Start Here:
-      - New User Story: StartHere.md
-      - Why MN42: WhyMN42.md
-      - Pilot Run / Artist Edition: PilotRun.md
-      - Quickstart for Builders: QuickstartForBuilders.md
-      - Quickstart for Performers: QuickstartForPerformers.md
-      - Validation Flow: ValidationFlow.md
-      - Demo Test Punch List: DemoTestPunchList.md
-      - Guided Routes: GuidedRoutes.md
-      - Musician-First Guide: MusicianFirstGuide.md
-      - Hardware Current Build: HardwareCurrentBuild.md
-      - Hardware Substitutions: HardwareSubstitutions.md
-      - Connectivity Guide: ConnectivityGuide.md
-      - Host Compatibility: HostCompatibility.md
-      - License and Support: LicenseAndSupport.md
-      - Glossary: Glossary.md
-      - Process Overview: ProcessOverview.md
-      - Hardware Bring-Up Story: HardwareStory.md
-      - Firmware Architecture Story: FirmwareArchitecture.md
-      - Failure-First Guide: FailureFirst.md
-      - Builder's Handbook: BuildersHandbook.md
-      - Firmware Update: FirmwareUpdate.md
-      - Troubleshooting: Troubleshooting.md
-  - Using The Rig:
-      - Configurator Tour: Configurator.md
-      - Operator Tutorial: OperatorTutorial.md
-      - Preset Library: PresetLibrary.md
-      - Profile Workflow: ProfileWorkflow.md
-      - Reactive Control Guide: ReactiveControlGuide.md
-      - ARG Guide: ARGGuide.md
-      - Filter Feel Guide: FilterFeelGuide.md
-      - LFO Route Guide: LfoRouteGuide.md
-      - Combo Guide: ComboGuide.md
-      - WebSerial Walkthrough: ProtocolWalkthrough.md
-      - WebSerial Protocol: WebSerial.md
-      - OSC Bridge: OSCBridge.md
-      - Performer Bridge Guide: BridgeForPerformers.md
-      - Parameter Map: parameter-map.md
-  - Build And Verify:
-      - Testing Story: TestingStory.md
-      - Testing: TESTING.md
-      - Validation Flow: ValidationFlow.md
-      - Demo Test Punch List: DemoTestPunchList.md
-      - Release Story: ReleaseStory.md
-      - QC Checklist: qc-checklist.md
-      - Reproducibility: Reproducibility.md
-      - Release Guide: ReleaseGuide.md
-      - Bridge Packaging: BridgePackaging.md
-      - Bridge Artifact Checklist: release/bridge-artifacts-checklist.md
-      - Repo Health Audit 2026-03: repo-health-audit-2026-03.md
-  - Deep Dives:
-      - Docs Guide: DocsGuide.md
-      - Pin Map: PinMap.md
-      - EEPROM Layout: EEPROMLayout.md
-      - Envelope Frontend: EF_Frontend_v2.md
-      - Assumption Ledger: assumption-ledger.md
+  - Getting Started:
+      - Start Here: getting-started/StartHere.md
+      - Why MN42: getting-started/WhyMN42.md
+      - Guided Routes: getting-started/GuidedRoutes.md
+      - Quickstart for Builders: getting-started/QuickstartForBuilders.md
+      - Quickstart for Performers: getting-started/QuickstartForPerformers.md
+      - Musician-First Guide: getting-started/MusicianFirstGuide.md
+      - Connectivity Guide: getting-started/ConnectivityGuide.md
+      - Hardware Bring-Up Story: getting-started/HardwareStory.md
+      - Builder's Handbook: getting-started/BuildersHandbook.md
+  - Guides:
+      - Configurator Tour: guides/Configurator.md
+      - Operator Tutorial: guides/OperatorTutorial.md
+      - Profile Workflow: guides/ProfileWorkflow.md
+      - Preset Library: guides/PresetLibrary.md
+      - Reactive Control Guide: guides/ReactiveControlGuide.md
+      - ARG Guide: guides/ARGGuide.md
+      - Filter Feel Guide: guides/FilterFeelGuide.md
+      - LFO Route Guide: guides/LfoRouteGuide.md
+      - Combo Guide: guides/ComboGuide.md
+      - WebSerial Walkthrough: guides/ProtocolWalkthrough.md
+      - WebSerial Protocol: guides/WebSerial.md
+      - OSC Bridge: guides/OSCBridge.md
+      - Performer Bridge Guide: guides/BridgeForPerformers.md
+      - Firmware Update: guides/FirmwareUpdate.md
+  - Reference:
+      - Glossary: reference/Glossary.md
+      - Parameter Map: reference/parameter-map.md
+      - Pin Map: reference/PinMap.md
+      - EEPROM Layout: reference/EEPROMLayout.md
+      - Hardware Current Build: reference/HardwareCurrentBuild.md
+      - Hardware Substitutions: reference/HardwareSubstitutions.md
+      - Host Compatibility: reference/HostCompatibility.md
+      - Firmware Architecture Story: reference/FirmwareArchitecture.md
+      - Envelope Frontend: reference/EF_Frontend_v2.md
+      - Options DNI: reference/Options_DNI.md
+      - Assumption Ledger: reference/assumption-ledger.md
       - Primer: Primers/MIDI-DSP101.md
-      - Demo Polish: DemoPolish.md
-      - Options DNI: Options_DNI.md
-      - TODO: TODO.md
       - VS Code IntelliSense: vscode-intellisense.md
+  - Validation:
+      - Testing Story: validation/TestingStory.md
+      - Testing: validation/TESTING.md
+      - Validation Flow: validation/ValidationFlow.md
+      - Demo Test Punch List: validation/DemoTestPunchList.md
+      - Demo Polish: validation/DemoPolish.md
+      - Failure-First Guide: validation/FailureFirst.md
+      - Troubleshooting: validation/Troubleshooting.md
+      - QC Checklist: validation/qc-checklist.md
+      - Repo Health Audit 2026-03: validation/repo-health-audit-2026-03.md
+  - Release:
+      - Release Story: release/ReleaseStory.md
+      - Reproducibility: release/Reproducibility.md
+      - Release Guide: release/ReleaseGuide.md
+      - Bridge Packaging: release/BridgePackaging.md
+      - Bridge Artifact Checklist: release/bridge-artifacts-checklist.md
+  - Bench And Sketches:
       - Bench Logs: bench/README.md
       - Latency Method: bench/latency/method.md
       - Oblique RTL Method: bench/latency/oblique_rtl.md
@@ -149,8 +144,13 @@ nav:
       - MIDI Opto Sketch: sketch/systemFlow/hw/midiOpto.md
       - Power and Protection Sketch: sketch/systemFlow/hw/power&protection.md
       - Teensy and Headers Sketch: sketch/systemFlow/hw/teensy&headers.md
+  - Project:
+      - Docs Guide: project/DocsGuide.md
+      - Process Overview: project/ProcessOverview.md
+      - Pilot Run / Artist Edition: project/PilotRun.md
+      - License and Support: project/LicenseAndSupport.md
+      - TODO: project/TODO.md
+      - History: project/HISTORY.md
+      - Lineage: project/lineage.md
       - Landing Audit Archive: agents/_reports/mkdocs-landing-audit.md
       - Changed Files Report: agents/_reports/changed-files.md
-  - Project History:
-      - History: HISTORY.md
-      - Lineage: lineage.md

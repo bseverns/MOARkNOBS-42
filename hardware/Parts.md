@@ -2,7 +2,7 @@
 
 > The silicon misfits that make this controller sing; this is the canonical stash for why each part earned a seat on the board.
 
-For the current hardware file status, start with [CurrentBuild.md](./CurrentBuild.md). For sourcing risk and conservative alternates, see [Substitutions.md](./Substitutions.md).
+For the current hardware file status, start with [CurrentBuild.md](CurrentBuild.md). For sourcing risk and conservative alternates, see [Substitutions.md](Substitutions.md).
 
 ## Teensy 4.0
 
@@ -32,4 +32,4 @@ Gives MIDI IN its own electrical bubble. SparkFun's [MIDI Tutorial](https://lear
 
 One data pin, a riot of color on 52 diodes. SparkFun's [WS2812 Breakout Hookup Guide](https://learn.sparkfun.com/tutorials/ws2812-breakout-hookup-guide) dives into timing and power decoupling so you don't brown‑out the strip.
 
-Need swap-friendly alternates or board placement notes? Hop back to the [hardware README](./README.md#specs) for the condensed build sheet and layout lore, then check [Substitutions.md](./Substitutions.md) before making part swaps.
+Need swap-friendly alternates or board placement notes? Hop back to the [hardware README](README.md#specs) for the condensed build sheet and layout lore, then check [Substitutions.md](Substitutions.md) before making part swaps.

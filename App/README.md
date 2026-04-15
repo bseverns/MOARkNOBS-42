@@ -1,6 +1,6 @@
 # MOARkNOBS-42 Browser Configurator
 
-Use the browser configurator when you want direct USB setup, monitoring, and profile management over WebSerial. If you need OSC or a virtual MIDI port on a desktop host instead, start with [docs/ConnectivityGuide.md](../docs/ConnectivityGuide.md) and use the bridge.
+Use the browser configurator when you want direct USB setup, monitoring, and profile management over WebSerial. If you need OSC or a virtual MIDI port on a desktop host instead, start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) and use the bridge.
 
 Current support boundary:
 
@@ -8,7 +8,7 @@ Current support boundary:
 - strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 20 desktop host
 - not claimed here as a verified production path: Firefox/Safari WebSerial support or universal browser compatibility
 
-See [docs/HostCompatibility.md](../docs/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.
+See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.
 
 [bseverns.github.io/MN42](http://bseverns.github.io/MN42) is the browser-based patch bay for the MOARkNOBS-42 controller. The page is now split between a tiny runtime “kernel” and a BenzKnobz-specific view layer:
 
@@ -36,7 +36,7 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
 7. Use the browser-only **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. They are local safety guards, not firmware-backed config, so they do not require **Apply**.
 8. Need hardware-free testing? Toggle the **Start simulator** button—the runtime swaps transports and replays canned manifest/state frames.
 
-For the operator-facing explanation of `Immediate local response` versus the browser-only pickup guard, read [docs/OperatorTutorial.md](../docs/OperatorTutorial.md).
+For the operator-facing explanation of `Immediate local response` versus the browser-only pickup guard, read [docs/OperatorTutorial.md](../docs/guides/OperatorTutorial.md).
 
 The written field guide below is the current operator-facing reference; add screenshots when you want a release-ready visual walkthrough, not as a substitute for the contract notes.
 
@@ -50,7 +50,7 @@ The written field guide below is the current operator-facing reference; add scre
 - **Staged Diff Panel** – The right-hand rail wakes up as soon as the staged JSON drifts from the live manifest. Validation errors park directly above the offending field; fix them and **Apply** roars back to life in the same breath. Post-Apply, scroll to the tail to see the runtime commit log—checksum, slot count, and any throttled writes. Tooltips on greyed-out controls punch straight back into the contract notes in [Runtime Contract](#runtime-contract) so you can trace every guardrail.
 - **Schema-driven Forms** – Every control in the right-hand rail is rendered from `config_schema.json` (Filter, ARG, LEDs, EF assignments, and all slot knobs). The `FormRenderer` builds collapsible sections, clamps number fields to the schema’s bounds, and stages each edit immediately; hitting **Apply** batches the staged JSON through `set_config`, while field-level writes can still travel through `runtime.applyPatch(...)/set_param` when a control wants an immediate RPC. Profile save/load/reset and macro/scene actions travel on their own native command paths instead of pretending to be config diffs. Keybindings still apply: slot focus follows arrow keys; hold `Shift` for coarse/fine nudging; and the simulator status pill keeps status events in sync even when the board takes a coffee break.
 - **Browser-only Slot Notes** – `Slot label`, the MIDI badge, and `Take Control` now live outside the device schema. They are stored in local browser state so reconnects keep your operator hints and pickup guards without pretending the firmware persisted them.
-- **Local response modes** – The tiny slot badge in the live grid is an operator aid, not device config. `IM` means the browser responds immediately to local control input; `PK` means the browser waits for the control to catch the current value before activating it again. The deeper operator explanation lives in [docs/OperatorTutorial.md](../docs/OperatorTutorial.md).
+- **Local response modes** – The tiny slot badge in the live grid is an operator aid, not device config. `IM` means the browser responds immediately to local control input; `PK` means the browser waits for the control to catch the current value before activating it again. The deeper operator explanation lives in [docs/OperatorTutorial.md](../docs/guides/OperatorTutorial.md).
 - **Basic / Advanced Mode** – New sessions start in **Basic** mode, keeping the panel focused on everyday knob-to-MIDI mapping. Flip to **Advanced** to reveal EF/ARG/filter tuning, scope tools, and debug surfaces. The choice is saved in `localStorage`, and glossary-style info badges explain jargon like EF and ARG in-place.
 
 ## MIDI Monitor Panel
