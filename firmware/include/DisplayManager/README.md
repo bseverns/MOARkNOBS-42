@@ -43,3 +43,10 @@ void loop() {
 ```
 
 For more pixels see [DisplayManager.h](../DisplayManager.h).
+
+## Build Toggle (A/B)
+
+You can force full-frame OLED transfers at compile time:
+
+- Add `-DMN42_OLED_PARTIAL_UPDATES=0` to `build_flags` in `platformio.ini`.
+- Omit it (or set to `1`) to keep dirty-region partial updates enabled.

@@ -9,7 +9,7 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
     : _display(screenWidth, screenHeight, &Wire), _i2cAddress(i2cAddress) {
     _statusTimeout = 0;
     _isDrawing = false;
-    _updateIntervalMs = 100;
+    _updateIntervalMs = 33;
     _lastInteractionTime = now();
     _activePot = 0;
     _activeChannel = 1;

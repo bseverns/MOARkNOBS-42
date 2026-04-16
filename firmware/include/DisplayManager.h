@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <array>
 #include <cstddef>
 #include "Globals.h" // for OLED_WIDTH, OLED_HEIGHT
 
@@ -207,6 +208,13 @@ class DisplayManager {
 
     bool _isDrawing;
     unsigned long _updateIntervalMs;
+    unsigned long _lastDisplayPushMs = 0;
+    unsigned long _lastFullRefreshMs = 0;
+    std::size_t _frameBufferBytes = 0;
+    bool _shadowValid = false;
+    static constexpr std::size_t kMaxFrameBufferBytes =
+        static_cast<std::size_t>(OLED_WIDTH) * ((static_cast<std::size_t>(OLED_HEIGHT) + 7U) / 8U);
+    std::array<uint8_t, kMaxFrameBufferBytes> _lastPushedFrame{};
     unsigned long _lastInteractionTime;
     uint8_t _activePot;
     uint8_t _activeChannel;
@@ -215,6 +223,8 @@ class DisplayManager {
     StartupAnimation _startupAnim; //!< State tracker for the boot splash
 
     void drawBorder();
+    void present(bool force = false);
+    void syncShadowBuffer();
 };
 
 #endif // DISPLAYMANAGER_H

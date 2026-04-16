@@ -9,6 +9,8 @@
 #include "TimeUtils.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstring>
 #include "ButtonManager.h"
@@ -20,6 +22,18 @@
 // Updates are triggered from the low-priority scheduler in firmware_main.cpp.
 
 namespace {
+
+constexpr uint32_t kDisplayI2CFastHz = 400000UL;
+constexpr uint32_t kDisplayI2CRestoreHz = 100000UL;
+constexpr uint8_t kI2CDataPrefix = 0x40;
+constexpr uint8_t kI2CDataChunkBytes = 16;
+constexpr unsigned long kPeriodicFullRefreshMs = 5000UL;
+constexpr uint8_t kPartialFallbackPercent = 70;
+#if defined(MN42_OLED_PARTIAL_UPDATES) && (MN42_OLED_PARTIAL_UPDATES == 0)
+constexpr bool kEnablePartialRegionUpdates = false;
+#else
+constexpr bool kEnablePartialRegionUpdates = true;
+#endif
 
 // Human-readable EF filter labels for the OLED detail views.
 const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
@@ -108,8 +122,12 @@ const char *friendlyEnvelopeMode(const char *raw, char *buffer, size_t bufferLen
 
 DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight)
     : _display(screenWidth, screenHeight, &Wire), _i2cAddress(i2cAddress) {
+    _statusTimeout = 0;
     _isDrawing = false;
-    _updateIntervalMs = 100;
+    _updateIntervalMs = 33;
+    _frameBufferBytes = std::min<std::size_t>(
+        kMaxFrameBufferBytes, static_cast<std::size_t>(screenWidth) *
+                                  ((static_cast<std::size_t>(screenHeight) + 7U) / 8U));
     _activePot = 0;
     _activeChannel = 0;
     _activeMode = "MIDI";
@@ -123,7 +141,158 @@ bool DisplayManager::begin() {
     }
     _display.clearDisplay();
     _display.display();
+    _shadowValid = false;
+    _lastDisplayPushMs = now();
+    _lastFullRefreshMs = _lastDisplayPushMs;
+    syncShadowBuffer();
     return true;
+}
+
+void DisplayManager::syncShadowBuffer() {
+    if (_frameBufferBytes == 0) {
+        _shadowValid = false;
+        return;
+    }
+    uint8_t *buffer = _display.getBuffer();
+    if (buffer == nullptr) {
+        _shadowValid = false;
+        return;
+    }
+    memcpy(_lastPushedFrame.data(), buffer, _frameBufferBytes);
+    _shadowValid = true;
+}
+
+void DisplayManager::present(bool force) {
+    if (_isDrawing && !force) {
+        return;
+    }
+
+    const unsigned long current = now();
+    if (!force && _updateIntervalMs > 0 &&
+        static_cast<unsigned long>(current - _lastDisplayPushMs) < _updateIntervalMs) {
+        return;
+    }
+
+    uint8_t *buffer = _display.getBuffer();
+    if (!_shadowValid || buffer == nullptr || _frameBufferBytes == 0) {
+        _display.display();
+        syncShadowBuffer();
+        _lastDisplayPushMs = current;
+        _lastFullRefreshMs = current;
+        return;
+    }
+
+    const int16_t width = _display.width();
+    const int16_t height = _display.height();
+    if (width <= 0 || height <= 0) {
+        _display.display();
+        syncShadowBuffer();
+        _lastDisplayPushMs = current;
+        _lastFullRefreshMs = current;
+        return;
+    }
+
+    const uint8_t pages = std::min<uint8_t>(static_cast<uint8_t>((height + 7) / 8),
+                                            static_cast<uint8_t>((OLED_HEIGHT + 7) / 8));
+    std::array<int16_t, (OLED_HEIGHT + 7) / 8> firstChanged;
+    std::array<int16_t, (OLED_HEIGHT + 7) / 8> lastChanged;
+    firstChanged.fill(-1);
+    lastChanged.fill(-1);
+
+    std::size_t changedBytes = 0;
+    std::size_t bytesToSend = 0;
+    for (uint8_t page = 0; page < pages; ++page) {
+        const std::size_t pageOffset =
+            static_cast<std::size_t>(page) * static_cast<std::size_t>(width);
+        for (int16_t col = 0; col < width; ++col) {
+            const std::size_t idx = pageOffset + static_cast<std::size_t>(col);
+            if (idx >= _frameBufferBytes) {
+                break;
+            }
+            if (buffer[idx] == _lastPushedFrame[idx]) {
+                continue;
+            }
+            ++changedBytes;
+            if (firstChanged[page] < 0) {
+                firstChanged[page] = col;
+            }
+            lastChanged[page] = col;
+        }
+        if (firstChanged[page] >= 0) {
+            bytesToSend += static_cast<std::size_t>(lastChanged[page] - firstChanged[page] + 1);
+        }
+    }
+
+    if (changedBytes == 0) {
+        if (static_cast<unsigned long>(current - _lastFullRefreshMs) >= kPeriodicFullRefreshMs) {
+            _display.display();
+            syncShadowBuffer();
+            _lastDisplayPushMs = current;
+            _lastFullRefreshMs = current;
+        }
+        return;
+    }
+
+    if (!kEnablePartialRegionUpdates) {
+        _display.display();
+        syncShadowBuffer();
+        _lastDisplayPushMs = current;
+        _lastFullRefreshMs = current;
+        return;
+    }
+
+    if ((bytesToSend * 100U) >= (_frameBufferBytes * kPartialFallbackPercent)) {
+        _display.display();
+        syncShadowBuffer();
+        _lastDisplayPushMs = current;
+        _lastFullRefreshMs = current;
+        return;
+    }
+
+    Wire.setClock(kDisplayI2CFastHz);
+    bool busOk = true;
+    for (uint8_t page = 0; page < pages && busOk; ++page) {
+        if (firstChanged[page] < 0) {
+            continue;
+        }
+        const uint8_t startCol = static_cast<uint8_t>(firstChanged[page]);
+        const uint8_t endCol = static_cast<uint8_t>(lastChanged[page]);
+
+        _display.ssd1306_command(SSD1306_PAGEADDR);
+        _display.ssd1306_command(page);
+        _display.ssd1306_command(page);
+        _display.ssd1306_command(SSD1306_COLUMNADDR);
+        _display.ssd1306_command(startCol);
+        _display.ssd1306_command(endCol);
+
+        uint8_t col = startCol;
+        while (col <= endCol) {
+            const uint8_t remaining = static_cast<uint8_t>(endCol - col + 1);
+            const uint8_t chunk = std::min<uint8_t>(kI2CDataChunkBytes, remaining);
+            Wire.beginTransmission(_i2cAddress);
+            Wire.write(kI2CDataPrefix);
+            for (uint8_t i = 0; i < chunk; ++i) {
+                const std::size_t idx =
+                    static_cast<std::size_t>(page) * static_cast<std::size_t>(width) +
+                    static_cast<std::size_t>(col + i);
+                Wire.write(buffer[idx]);
+            }
+            if (Wire.endTransmission() != 0) {
+                busOk = false;
+                break;
+            }
+            col = static_cast<uint8_t>(col + chunk);
+        }
+    }
+    Wire.setClock(kDisplayI2CRestoreHz);
+
+    if (!busOk) {
+        _display.display();
+        _lastFullRefreshMs = current;
+    }
+
+    syncShadowBuffer();
+    _lastDisplayPushMs = current;
 }
 
 // Start the temporary fade animation used for status transitions.
@@ -200,7 +369,7 @@ void DisplayManager::runStartupAnimation() {
                 _display.drawLine(_display.width() - 1, _display.height() - 1,
                                   _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
             }
-            _display.display();
+            present(true);
             _startupAnim.lastTime = current;
             if (++_startupAnim.step >= 5) {
                 _startupAnim.phase = StartupPhase::HOLD_LINES;
@@ -215,7 +384,7 @@ void DisplayManager::runStartupAnimation() {
             _display.setTextColor(SSD1306_COLOR_WHITE);
             _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
             _display.println("MOARkNOBS-42");
-            _display.display();
+            present(true);
             _startupAnim.phase = StartupPhase::HOLD_LOGO;
             _startupAnim.lastTime = current;
         }
@@ -224,7 +393,7 @@ void DisplayManager::runStartupAnimation() {
     case StartupPhase::HOLD_LOGO:
         if (current - _startupAnim.lastTime >= 1500) {
             _display.clearDisplay();
-            _display.display();
+            present(true);
             _startupAnim.phase = StartupPhase::DONE;
         }
         break;
@@ -243,7 +412,7 @@ void DisplayManager::runIdleScreensaver() {
         int y = random(0, _display.height());
         _display.drawPixel(x, y, SSD1306_COLOR_WHITE);
     }
-    _display.display();
+    present(false);
 }
 
 void DisplayManager::registerInteraction() { _lastInteractionTime = now(); }
@@ -258,7 +427,7 @@ void DisplayManager::showText(const char *line1, const char *line2, const char *
     if (now() < _statusTimeout)
         return;
 
-    clear();
+    _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
 
@@ -276,7 +445,7 @@ void DisplayManager::showText(const char *line1, const char *line2, const char *
     }
 
     drawBorder();
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
@@ -294,7 +463,7 @@ void DisplayManager::showValue(uint8_t value, bool clearDisplay) {
     _display.println(value);
 
     drawBorder();
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const char *mode,
@@ -321,7 +490,7 @@ void DisplayManager::showEnvelopeAssignment(int potIndex, int efIndex, const cha
         _display.println(argMethod);
     }
     drawBorder();
-    _display.display();
+    present(true);
     _statusTimeout = now() + NORMAL_DISPLAY_TIME;
 }
 
@@ -339,7 +508,7 @@ void DisplayManager::showMode(const char *mode, bool clearDisplay) {
     _display.print("Mode: ");
     _display.println(mode);
     drawBorder();
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::clear() {
@@ -347,7 +516,7 @@ void DisplayManager::clear() {
         return;
 
     _display.clearDisplay();
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::showFilterTuning(const char *labelFreq, float freqValue, const char *labelQ,
@@ -366,7 +535,7 @@ void DisplayManager::showFilterTuning(const char *labelFreq, float freqValue, co
     _display.println(qValue, 2);
 
     drawBorder();
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName) {
@@ -381,7 +550,7 @@ void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName)
     _display.print("Shape: ");
     _display.println(shapeName);
     drawBorder();
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::updateDisplay(uint8_t beatPosition, const uint8_t *envelopeLevels,
@@ -426,7 +595,7 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const uint8_t *envelope
     }
 
     drawBorder();
-    _display.display();
+    present(false);
 
     if (statusMessage && statusMessage[0] != '\0') {
         _statusTimeout = now() + NORMAL_DISPLAY_TIME;
@@ -442,7 +611,7 @@ void DisplayManager::displayStatus(const char *status, unsigned long duration) {
     _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.println(status);
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
@@ -467,7 +636,7 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
         _display.println("F: --   Q: --");
         _display.setCursor(0, 40);
         _display.println("B: --   G: --");
-        _display.display();
+        present(false);
         return;
     }
 
@@ -496,14 +665,14 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
     _display.print("  G:");
     _display.print(settings.gain, 2);
 
-    _display.display();
+    present(false);
 }
 
 void DisplayManager::showARGInfo(const char *methodName, int envA, int envB) {
     if (now() < _statusTimeout)
         return;
 
-    clear();
+    _display.clearDisplay();
 
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
@@ -521,19 +690,19 @@ void DisplayManager::showARGInfo(const char *methodName, int envA, int envB) {
     _display.print(" B=");
     _display.println(envB);
 
-    _display.display();
+    present(true);
     _statusTimeout = now() + NORMAL_DISPLAY_TIME;
 }
 
 void DisplayManager::setTemporaryMessage(const char *message, unsigned long duration) {
     _statusMessage = message;
     _statusTimeout = now() + duration;
-    clear();
+    _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
     _display.println(message);
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel) {
@@ -548,7 +717,7 @@ void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel)
     _display.setCursor(0, 10);
     _display.print("Ch: ");
     _display.println(channel);
-    _display.display();
+    present(true);
     _statusTimeout = now() + SHORT_DISPLAY_TIME;
 }
 
@@ -655,7 +824,7 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
     }
     }
     drawBorder();
-    _display.display();
+    present(false);
 }
 
 void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
@@ -674,7 +843,7 @@ void DisplayManager::updateBeat(uint8_t beatPosition, bool clockRunning) {
         _display.println("No Clock");
     }
 
-    _display.display();
+    present(true);
 }
 
 void DisplayManager::beginDraw() {
@@ -683,8 +852,8 @@ void DisplayManager::beginDraw() {
 }
 
 void DisplayManager::endDraw() {
-    _display.display();
     _isDrawing = false;
+    present(false);
 }
 
 void DisplayManager::showError(const char *errorMessage, bool persistent) {

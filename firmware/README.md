@@ -781,7 +781,7 @@ Processing teensy40_full_system (platform: teensy; board: teensy40; framework: a
 ```
 
 Other test flavors are available for deeper debugging:
-`teensy40_led_demo`, `teensy40_power_burnin`, `teensy40_unified_test`, `teensy40_biquad_test`,
+`teensy40_led_demo`, `teensy40_display_led_hw`, `teensy40_power_burnin`, `teensy40_unified_test`, `teensy40_biquad_test`,
 `teensy40_eeprom_persistence`, and `teensy40_slot_verify`.
 
 Run any of them with `pio run -e <env>` and bask in the compile-time glory.
