@@ -23,7 +23,6 @@
 #include "Scheduler.h"
 #include "interop/SeedBoxLink.h"
 
-#include <EEPROM.h>
 #include <TimerOne.h>
 namespace {
 
@@ -32,6 +31,10 @@ constexpr uint8_t kMaxMidiServiceRequestCount = 0xFF;
 uint32_t lastMidiDropAlertCount = 0;
 uint32_t lastMidiTaskOverrunAlertCount = 0;
 uint32_t lastUartOverrunAlertCount = 0;
+
+template <typename T> void storageGet(int address, T &value) {
+    ConfigManager::getStorageBackend()->readBytes(address, &value, sizeof(T));
+}
 
 struct PendingNoteOff {
     uint32_t dueTime = 0;
@@ -234,8 +237,8 @@ void initializeRuntime(bool baselinesLoaded) {
         }
     }
     float sf, sq;
-    EEPROM.get(EEPROM_FILTER_FREQ, sf);
-    EEPROM.get(EEPROM_FILTER_Q, sq);
+    storageGet(EEPROM_FILTER_FREQ, sf);
+    storageGet(EEPROM_FILTER_Q, sq);
     sf = constrain(sf, 20.0f, 5000.0f);
     sq = constrain(sq, 0.5f, 4.0f);
     for (auto &ef : envelopeFollowers)

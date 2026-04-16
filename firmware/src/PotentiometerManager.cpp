@@ -4,7 +4,6 @@
 // raw ADC reading for richer control surfaces.
 
 #include "PotentiometerManager.h"
-#include <EEPROM.h>
 #include "ConfigManager.h"
 #include "Globals.h"
 #include "Hardware/IO.h"
@@ -205,8 +204,8 @@ void PotentiometerManager::loadFromEEPROM() {
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
         uint16_t ccAddress = EEPROM_POT_CC + i;
-        potChannels[i] = EEPROM.read(channelAddress);
-        potCCNumbers[i] = EEPROM.read(ccAddress);
+        potChannels[i] = ConfigManager::getStorageBackend()->read(channelAddress);
+        potCCNumbers[i] = ConfigManager::getStorageBackend()->read(ccAddress);
     }
 }
 
@@ -224,8 +223,8 @@ void PotentiometerManager::resetEEPROM() {
         potCCNumbers[i] = i; // Default CC number
         uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
         uint16_t ccAddress = EEPROM_POT_CC + i;
-        EEPROM.update(channelAddress, potChannels[i]);
-        EEPROM.update(ccAddress, potCCNumbers[i]);
+        ConfigManager::getStorageBackend()->update(channelAddress, potChannels[i]);
+        ConfigManager::getStorageBackend()->update(ccAddress, potCCNumbers[i]);
     }
 }
 
@@ -238,8 +237,8 @@ void PotentiometerManager::saveToEEPROM() {
     for (uint8_t i = 0; i < NUM_POTS; i++) {
         uint16_t channelAddress = EEPROM_POT_CHANNELS + i;
         uint16_t ccAddress = EEPROM_POT_CC + i;
-        EEPROM.update(channelAddress, potChannels[i]);
-        EEPROM.update(ccAddress, potCCNumbers[i]);
+        ConfigManager::getStorageBackend()->update(channelAddress, potChannels[i]);
+        ConfigManager::getStorageBackend()->update(ccAddress, potCCNumbers[i]);
     }
 }
 

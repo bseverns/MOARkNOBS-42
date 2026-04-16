@@ -786,7 +786,7 @@ Other test flavors are available for deeper debugging:
 
 Run any of them with `pio run -e <env>` and bask in the compile-time glory.
 
-### Calibration & EEPROM sanity check
+### Calibration & storage sanity check
 
 Envelope followers need to know what "silence" smells like before they can
 ride your signal. Do this little dance:
@@ -794,10 +794,10 @@ ride your signal. Do this little dance:
 1. Boot with every audio/CV input quiet so the MCU can sniff `VREF`.
 2. Map a slot to an envelope follower.
 3. While it’s still quiet, mash **Control Button 0**. The follower samples the
-   moment, writes the baseline to EEPROM, and flashes `EF Calibrated` for style.
+   moment, writes the baseline to persistent storage, and flashes `EF Calibrated` for style.
 4. Power cycle. Those offsets reload on boot, no questions asked.
 
-Wanna double-check the EEPROM isn’t gaslighting you? Run the persistence test:
+Wanna double-check persisted storage isn’t gaslighting you? Run the persistence test:
 
 - `pio run -e teensy40_eeprom_persistence -t upload`
 - **Stage 1**: writes known bytes, then nags you to reset.
@@ -805,7 +805,29 @@ Wanna double-check the EEPROM isn’t gaslighting you? Run the persistence test:
   more reboot.
 - **Stage 3**: loads from the backup and shouts PASS if everything survived.
 
-See three green lights? Your EEPROM is road‑ready.
+By default this runs against the active storage backend (LittleFS on prod
+hardware). If you specifically want raw EEPROM-only regression behavior, use
+`teensy40_eeprom_persistence_legacy`.
+
+See three green lights? Your storage path is road‑ready.
+
+### Prod Hardware Validation Checklist
+
+Use this quick runbook before a production hardware session:
+
+1. **Build + flash main firmware (LittleFS default)**
+   - `pio run -e teensy40_main -t upload`
+2. **Verify slot storage capacity on target hardware**
+   - `pio run -e teensy40_slot_verify -t upload`
+   - Confirm monitor output includes `addressableSlots=42/42` and all slots PASS.
+3. **Verify persistence + recovery flow**
+   - `pio run -e teensy40_eeprom_persistence -t upload`
+   - Run through the 3 reboot stages and confirm final `Backup restore PASS`.
+4. **Run full-stack hardware test harness**
+   - `pio run -e teensy40_full_system -t upload`
+   - Walk LEDs, buttons, pots, envelopes, and display checks on real hardware.
+5. **Optional legacy regression path (EEPROM-only)**
+   - `pio run -e teensy40_eeprom_persistence_legacy -t upload`
 
 ### Serial MIDI Sniffer
 

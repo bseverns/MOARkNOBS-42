@@ -23,11 +23,12 @@ If you're trying to grok what a file is supposed to do, jump straight to its man
 Each test rides its own PlatformIO environment. To see one roar, run the matching command from the `firmware/` directory:
 
 ```bash
-pio run -e teensy40_mainTEST           # builds test_main.cpp
-pio run -e teensy40_unified_test       # builds test_Unified.cpp
-pio run -e teensy40_biquad_test        # builds test_biquadfilter.cpp
-pio run -e teensy40_eeprom_persistence # builds test_eeprom_persistence.cpp
-pio run -e teensy40_slot_verify        # builds test_verify_slots.cpp
+pio run -e teensy40_full_system               # builds src/main_t.cpp
+pio run -e teensy40_unified_test              # builds src/unified_t.cpp
+pio run -e teensy40_biquad_test               # builds src/biquadfilter_t.cpp
+pio run -e teensy40_eeprom_persistence        # builds src/eeprom_persistence_t.cpp (LittleFS default)
+pio run -e teensy40_slot_verify               # builds src/verify_slots_t.cpp (LittleFS default)
+pio run -e teensy40_eeprom_persistence_legacy # optional EEPROM-only regression path
 ```
 
 Use these to keep your mods honest. Compile, flash, repeat—no fear, no mercy.

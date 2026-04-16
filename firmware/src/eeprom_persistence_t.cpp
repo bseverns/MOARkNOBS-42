@@ -5,7 +5,7 @@
 #include "LEDManager.h"
 
 // Multi-stage test that verifies configuration data survives reboots and that
-// the backup EEPROM region can restore corrupted primary data.
+// the backup storage region can restore corrupted primary data.
 #include "DisplayManager.h"
 #include "ButtonManager.h"
 #include "PotentiometerManager.h"
@@ -13,7 +13,7 @@
 #include "TestHelpers.h"
 
 /*
- * EEPROM Persistence Test
+ * Storage Persistence Test
  *
  * Exercises configuration save/restore across reboots using the same ConfigManager
  * layer pulled in by `FirmwareState.cpp`, so it mirrors the persistence path that
@@ -49,6 +49,14 @@ ButtonManager buttonManager = createButtonManager(&potentiometerManager);
 std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&potentiometerManager);
 
 static MIDISlot testSlots[NUM_SLOTS];
+
+static StorageBackend *activeStorage() { return ConfigManager::getStorageBackend(); }
+
+static uint8_t readStorageByte(int address) { return activeStorage()->read(address); }
+
+static void writeStorageByte(int address, uint8_t value) {
+    activeStorage()->update(address, value);
+}
 
 // -----------------------------------------------------------------------------
 void fillTestData() {
@@ -111,13 +119,13 @@ void setup() {
         ;
     delay(200);
 
-    uint8_t flag = EEPROM.read(EEPROM_TEST_FLAG_ADDR);
+    uint8_t flag = readStorageByte(EEPROM_TEST_FLAG_ADDR);
     if (flag == TEST_NOT_STARTED) {
-        logLine("EEPROM Test Stage 1: writing data");
+        logLine("Storage Test Stage 1: writing data");
         fillTestData();
         configManager.saveConfiguration();
         configManager.saveMIDISlots(testSlots, NUM_SLOTS);
-        EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_SAVE);
+        writeStorageByte(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_SAVE);
         logLine("Data written. Please reset the board.");
         return;
     }
@@ -126,13 +134,13 @@ void setup() {
     configManager.loadMIDISlots(testSlots, NUM_SLOTS);
 
     if (flag == TEST_STAGE_SAVE) {
-        logLine("EEPROM Test Stage 2: verifying after reboot");
+        logLine("Storage Test Stage 2: verifying after reboot");
         if (verifyTestData()) {
             logLine("Primary load PASS");
             // corrupt primary magic to force backup usage on next boot
-            EEPROM.update(EEPROM_MAGIC_ADDRESS, 0x00);
-            EEPROM.update(EEPROM_MAGIC_ADDRESS + 1, 0x00);
-            EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_VERIFY);
+            writeStorageByte(EEPROM_MAGIC_ADDRESS, 0x00);
+            writeStorageByte(EEPROM_MAGIC_ADDRESS + 1, 0x00);
+            writeStorageByte(EEPROM_TEST_FLAG_ADDR, TEST_STAGE_VERIFY);
             logLine("Corrupted primary. Reset once more to test backup.");
             delay(1000);
             Utility::rebootTeensy();
@@ -143,13 +151,13 @@ void setup() {
     }
 
     if (flag == TEST_STAGE_VERIFY) {
-        logLine("EEPROM Test Stage 3: verifying backup restore");
+        logLine("Storage Test Stage 3: verifying backup restore");
         if (verifyTestData()) {
             logLine("Backup restore PASS");
         } else {
             logLine("Backup restore FAIL");
         }
-        EEPROM.update(EEPROM_TEST_FLAG_ADDR, TEST_NOT_STARTED);
+        writeStorageByte(EEPROM_TEST_FLAG_ADDR, TEST_NOT_STARTED);
     }
 }
 

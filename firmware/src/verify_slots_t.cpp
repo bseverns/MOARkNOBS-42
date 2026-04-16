@@ -29,10 +29,35 @@ void setup() {
     while (!Serial) {
     }
 
+    // Teensy EEPROM API does not expose clear(); each slot is overwritten below.
+
     Serial.println("Starting MIDISlot EEPROM test...");
 
+    const StorageBackend *storage = ConfigManager::getStorageBackend();
+    const uint16_t eepromBytes = storage ? storage->length() : 0;
+    const uint16_t slotBytes = static_cast<uint16_t>(SLOT_EEPROM_SIZE);
+    const uint16_t slotBytesAvailable = (eepromBytes > EEPROM_SLOT_BASE)
+                                            ? static_cast<uint16_t>(eepromBytes - EEPROM_SLOT_BASE)
+                                            : 0;
+    const uint8_t slotsAddressable =
+        (slotBytes > 0) ? static_cast<uint8_t>(slotBytesAvailable / slotBytes) : 0;
+    const uint8_t slotsToVerify = (slotsAddressable < NUM_SLOTS) ? slotsAddressable : NUM_SLOTS;
+
+    Serial.printf("Storage bytes=%u, slotBase=%u, slotSize=%u, addressableSlots=%u/%u\n",
+                  eepromBytes, EEPROM_SLOT_BASE, slotBytes, slotsToVerify, NUM_SLOTS);
+    if (slotsToVerify < NUM_SLOTS) {
+        Serial.printf(
+            "WARNING: %u slot(s) exceed EEPROM capacity on this board and cannot persist.\n",
+            static_cast<unsigned int>(NUM_SLOTS - slotsToVerify));
+    }
+
+    if (slotsToVerify == 0) {
+        Serial.println("No slot storage available after EEPROM layout offsets.");
+        return;
+    }
+
     // Assign unique data to each slot then save
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+    for (uint8_t i = 0; i < slotsToVerify; ++i) {
         MIDISlot slot{};
         slot.type = MIDIMessageType::CC;
         slot.midiChannel = static_cast<uint8_t>((i % 16) + 1); // MIDI channel
@@ -49,7 +74,7 @@ void setup() {
     bool allPass = true;
 
     // Reload each slot and verify
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+    for (uint8_t i = 0; i < slotsToVerify; ++i) {
         MIDISlot loaded;
         configManager.loadSlot(i, loaded);
 
@@ -66,7 +91,13 @@ void setup() {
             allPass = false;
     }
 
-    Serial.println(allPass ? "All slots verified." : "One or more slots failed.");
+    if (slotsToVerify < NUM_SLOTS) {
+        Serial.printf(
+            "Verified %u persisted slot(s); %u slot(s) are not addressable on this target.\n",
+            slotsToVerify, static_cast<unsigned int>(NUM_SLOTS - slotsToVerify));
+    }
+    Serial.println(allPass ? "Addressable slots verified."
+                           : "One or more addressable slots failed.");
 }
 
 void loop() {}

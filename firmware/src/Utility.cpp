@@ -10,7 +10,6 @@
 #include "TimeUtils.h"
 #include "EnvelopeFollower.h"
 #include "LEDManager.h"
-#include "EEPROM.h"
 #include "MIDIHandler.h"
 #include "ConfigManager.h"
 #include <imxrt.h>
@@ -102,10 +101,14 @@ bool Utility::debounce(bool &previousState, bool currentState, unsigned long &la
 
 // EEPROM Operations
 // Read one byte from EEPROM without any extra interpretation.
-uint8_t Utility::readEEPROMByte(int address) { return EEPROM.read(address); }
+uint8_t Utility::readEEPROMByte(int address) {
+    return ConfigManager::getStorageBackend()->read(address);
+}
 
 // Update one EEPROM byte, relying on EEPROM.update() to avoid unnecessary wear.
-void Utility::writeEEPROMByte(int address, uint8_t value) { EEPROM.update(address, value); }
+void Utility::writeEEPROMByte(int address, uint8_t value) {
+    ConfigManager::getStorageBackend()->update(address, value);
+}
 
 // Timer Helpers
 // Check whether an interval has elapsed and roll the caller's timestamp forward if so.
@@ -252,14 +255,14 @@ void Utility::updateDisplay(Adafruit_SSD1306 &display, uint8_t beatPosition,
 
 // Read a little-endian 16-bit word from EEPROM.
 uint16_t Utility::readEEPROMWord(int address) {
-    uint8_t low = EEPROM.read(address);
-    uint8_t high = EEPROM.read(address + 1);
+    uint8_t low = ConfigManager::getStorageBackend()->read(address);
+    uint8_t high = ConfigManager::getStorageBackend()->read(address + 1);
     return (high << 8) | low;
 }
 
 void Utility::writeEEPROMWord(int address, uint16_t value) {
-    EEPROM.update(address, value & 0xFF);     // Write low byte
-    EEPROM.update(address + 1, (value >> 8)); // Write high byte
+    ConfigManager::getStorageBackend()->update(address, value & 0xFF);     // Write low byte
+    ConfigManager::getStorageBackend()->update(address + 1, (value >> 8)); // Write high byte
 }
 
 void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue) {
@@ -267,7 +270,7 @@ void Utility::resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue
         return;
     }
     for (int i = startAddress; i <= endAddress; i++) {
-        EEPROM.update(i, defaultValue);
+        ConfigManager::getStorageBackend()->update(i, defaultValue);
     }
 }
 

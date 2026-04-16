@@ -11,7 +11,6 @@
 #include <cstdio>
 #include <array>
 #include <algorithm>
-#include <EEPROM.h>
 
 #include "ARGMixer.h"
 #include "CommandQueue.h"
@@ -73,6 +72,16 @@ template <typename T> uint16_t computeCrc(const T &value, size_t skipBytes = 0) 
         crc = crc16Update(crc, bytes[i]);
     }
     return crc;
+}
+
+StorageBackend &activeStorageBackend() { return *ConfigManager::getStorageBackend(); }
+
+template <typename T> void storageGet(int address, T &value) {
+    activeStorageBackend().readBytes(address, &value, sizeof(T));
+}
+
+template <typename T> void storagePut(int address, const T &value) {
+    activeStorageBackend().writeBytes(address, &value, sizeof(T));
 }
 
 // Push persisted pot channel/CC mappings back into the live managers after config/profile changes.
@@ -274,8 +283,8 @@ ConfigState captureConfigState() {
     if (!envelopeFollowers.empty()) {
         snapshot.filterType = static_cast<uint8_t>(envelopeFollowers.front().getFilterType());
     }
-    EEPROM.get(EEPROM_FILTER_FREQ, snapshot.filterFrequency);
-    EEPROM.get(EEPROM_FILTER_Q, snapshot.filterQ);
+    storageGet(EEPROM_FILTER_FREQ, snapshot.filterFrequency);
+    storageGet(EEPROM_FILTER_Q, snapshot.filterQ);
     for (uint8_t i = 0; i < NUM_ENVELOPES; ++i) {
         snapshot.baselines[i] = envelopeConfig.baselines[i];
     }
@@ -377,7 +386,7 @@ uint8_t listScenes(SceneInfo *scenes, size_t capacity) {
                       static_cast<unsigned>(slot + 1));
         scenes[slot].available = false;
         SceneRecord record{};
-        EEPROM.get(sceneSlotAddress(slot), record);
+        storageGet(sceneSlotAddress(slot), record);
         if (recordValid(record)) {
             std::memcpy(scenes[slot].name, record.name, sizeof(scenes[slot].name));
             scenes[slot].name[sizeof(scenes[slot].name) - 1] = '\0';
@@ -397,7 +406,7 @@ bool saveSceneSlot(uint8_t slot, const ConfigState &state, const char *name) {
     record.state = state;
     copySceneName(record.name, name);
     record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
-    EEPROM.put(sceneSlotAddress(slot), record);
+    storagePut(sceneSlotAddress(slot), record);
     return true;
 }
 
@@ -406,7 +415,7 @@ bool loadSceneSlot(uint8_t slot, SceneEntry &entry) {
         return false;
     }
     SceneRecord record{};
-    EEPROM.get(sceneSlotAddress(slot), record);
+    storageGet(sceneSlotAddress(slot), record);
     if (!recordValid(record)) {
         return false;
     }
@@ -419,19 +428,19 @@ bool loadSceneSlot(uint8_t slot, SceneEntry &entry) {
 
 bool sceneSlotAvailable(uint8_t slot) {
     SceneRecord record{};
-    EEPROM.get(sceneSlotAddress(slot), record);
+    storageGet(sceneSlotAddress(slot), record);
     return recordValid(record);
 }
 
 bool macroSnapshotAvailable() {
     MacroRecord record{};
-    EEPROM.get(kMacroStorageAddress, record);
+    storageGet(kMacroStorageAddress, record);
     return recordValid(record);
 }
 
 bool loadMacroSnapshot(ConfigState &state) {
     MacroRecord record{};
-    EEPROM.get(kMacroStorageAddress, record);
+    storageGet(kMacroStorageAddress, record);
     if (!recordValid(record)) {
         return false;
     }
@@ -445,7 +454,7 @@ bool saveMacroSnapshot(const ConfigState &state) {
     record.occupied = 1;
     record.state = state;
     record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
-    EEPROM.put(kMacroStorageAddress, record);
+    storagePut(kMacroStorageAddress, record);
     return true;
 }
 } // namespace SceneStorage
@@ -546,14 +555,14 @@ void initializeProtocol() {
     Serial.begin(SERIAL_BAUD);
     Serial.printf("MN42 FW %s %s\n", FW_VERSION_STR, GIT_SHA_STR);
     g_resetCause = SRC_SRSR;
-    EEPROM.get(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    storageGet(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
     if (g_brownoutCount == 0xFFFF) {
         g_brownoutCount = 0;
-        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+        storagePut(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
     }
     if (g_resetCause & 0x40) {
         g_brownoutCount++;
-        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+        storagePut(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
     }
     Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FW_VERSION_STR,
                   CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);
@@ -1907,8 +1916,8 @@ void handleGetConfigCommand(const ParsedCommand &cmd) {
 
     float freq = 0.0f;
     float q = 0.0f;
-    EEPROM.get(EEPROM_FILTER_FREQ, freq);
-    EEPROM.get(EEPROM_FILTER_Q, q);
+    storageGet(EEPROM_FILTER_FREQ, freq);
+    storageGet(EEPROM_FILTER_Q, q);
     JsonObject filter = env.createNestedObject("filter");
     filter["frequency"] = freq;
     filter["q"] = q;

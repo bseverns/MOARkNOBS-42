@@ -9,6 +9,8 @@
 #include "ARGMixer.h" // reuse the shared sanitizeSlotArg implementation
 #include "Arpeggiator.h"
 #include "LFO/LFOManager.h"
+#include "storage/EepromStorageBackend.h"
+#include "storage/LittleFsStorageBackend.h"
 #include <cmath>
 #include <cstddef>
 #include <vector>
@@ -45,6 +47,36 @@ void saveSlotEfSettings(uint8_t slotIndex, const MIDISlot::EfSettings &settings)
 }
 
 namespace {
+StorageBackend *gStorageBackendOverride = nullptr;
+
+StorageBackend &activeStorageBackend() {
+    if (gStorageBackendOverride) {
+        return *gStorageBackendOverride;
+    }
+#if defined(CONFIG_STORAGE_LITTLEFS)
+    static LittleFsStorageBackend littleFsBackend;
+    static EepromStorageBackend eepromFallbackBackend;
+    if (littleFsBackend.ready()) {
+        return littleFsBackend;
+    }
+    return eepromFallbackBackend;
+#else
+    static EepromStorageBackend defaultBackend;
+    return defaultBackend;
+#endif
+}
+
+uint8_t storageRead(int address) { return activeStorageBackend().read(address); }
+
+void storageUpdate(int address, uint8_t value) { activeStorageBackend().update(address, value); }
+
+template <typename T> void storageGet(int address, T &value) {
+    activeStorageBackend().readBytes(address, &value, sizeof(T));
+}
+
+template <typename T> void storagePut(int address, const T &value) {
+    activeStorageBackend().writeBytes(address, &value, sizeof(T));
+}
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
 constexpr uint16_t kProfileSettingsVersion = PROFILE_SETTINGS_VERSION;
@@ -206,9 +238,9 @@ SlotEnvelopePayload sanitizeEnvelopePayloadImpl(const SlotEnvelopePayload &paylo
 // helpers, returning the sanitized version that was actually written.
 SlotEnvelopePayload persistFilterTailImpl(const SlotEnvelopePayload &payload) {
     SlotEnvelopePayload sanitized = sanitizeEnvelopePayloadImpl(payload);
-    EEPROM.update(EEPROM_ENVELOPE_TYPES, sanitized.filterType);
-    EEPROM.put(EEPROM_FILTER_FREQ, sanitized.frequency);
-    EEPROM.put(EEPROM_FILTER_Q, sanitized.q);
+    storageUpdate(EEPROM_ENVELOPE_TYPES, sanitized.filterType);
+    storagePut(EEPROM_FILTER_FREQ, sanitized.frequency);
+    storagePut(EEPROM_FILTER_Q, sanitized.q);
     return sanitized;
 }
 
@@ -217,16 +249,16 @@ SlotEnvelopePayload persistFilterTailImpl(const SlotEnvelopePayload &payload) {
 void maybeRescueFilterTailFromLegacy() {
     float freq = 0.0f;
     float q = 0.0f;
-    EEPROM.get(EEPROM_FILTER_FREQ, freq);
-    EEPROM.get(EEPROM_FILTER_Q, q);
+    storageGet(EEPROM_FILTER_FREQ, freq);
+    storageGet(EEPROM_FILTER_Q, q);
     if (filterCoefficientsLookSane(freq, q)) {
         return;
     }
 
     SlotEnvelopePayload legacy{};
-    legacy.filterType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
-    EEPROM.get(EEPROM_LEGACY_FILTER_FREQ, legacy.frequency);
-    EEPROM.get(EEPROM_LEGACY_FILTER_Q, legacy.q);
+    legacy.filterType = storageRead(EEPROM_ENVELOPE_TYPES);
+    storageGet(EEPROM_LEGACY_FILTER_FREQ, legacy.frequency);
+    storageGet(EEPROM_LEGACY_FILTER_Q, legacy.q);
     persistFilterTailImpl(legacy);
 }
 
@@ -316,6 +348,12 @@ MIDISlot::EfRuntime sanitizeEfRuntime(const MIDISlot::EfRuntime &runtime) {
 }
 } // namespace
 
+void ConfigManager::setStorageBackend(StorageBackend *backend) {
+    gStorageBackendOverride = backend;
+}
+
+StorageBackend *ConfigManager::getStorageBackend() { return &activeStorageBackend(); }
+
 // Constructor
 ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
     : _numPots(numPots), _numButtons(numButtons) {}
@@ -323,7 +361,7 @@ ConfigManager::ConfigManager(uint8_t numPots, uint8_t numButtons)
 // Centralized EEPROM health check
 bool ConfigManager::checkEEPROMHealth(bool backup, uint16_t base) {
     int address = base + (backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS);
-    uint16_t magic = EEPROM.read(address) << 8 | EEPROM.read(address + 1);
+    uint16_t magic = storageRead(address) << 8 | storageRead(address + 1);
     return (magic == (backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY));
 }
 
@@ -331,8 +369,8 @@ bool ConfigManager::checkEEPROMHealth(bool backup, uint16_t base) {
 void ConfigManager::writeMagicNumber(bool backup, uint16_t base) {
     int address = base + (backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS);
     uint16_t magic = backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY;
-    EEPROM.update(address, (magic >> 8) & 0xFF);
-    EEPROM.update(address + 1, magic & 0xFF);
+    storageUpdate(address, (magic >> 8) & 0xFF);
+    storageUpdate(address + 1, magic & 0xFF);
 }
 
 // Save configuration with verification and backup
@@ -435,15 +473,15 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
 void ConfigManager::readEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
     for (uint8_t i = 0; i < _numPots; i++) {
-        _stored.potChannels[i] = EEPROM.read(offset + EEPROM_POT_CHANNELS + i);
-        _stored.potCCNumbers[i] = EEPROM.read(offset + EEPROM_POT_CC + i);
+        _stored.potChannels[i] = storageRead(offset + EEPROM_POT_CHANNELS + i);
+        _stored.potCCNumbers[i] = storageRead(offset + EEPROM_POT_CC + i);
     }
     if (base == EEPROM_PROFILE_START(0)) {
-        _stored.activeProfile = EEPROM.read(offset + EEPROM_ACTIVE_PROFILE);
-        _stored.ledMode = EEPROM.read(offset + EEPROM_LED_MODE);
+        _stored.activeProfile = storageRead(offset + EEPROM_ACTIVE_PROFILE);
+        _stored.ledMode = storageRead(offset + EEPROM_LED_MODE);
     }
-    EEPROM.get(offset + EEPROM_CONFIG_VERSION, _stored.version);
-    EEPROM.get(offset + EEPROM_CONFIG_CRC, _stored.crc);
+    storageGet(offset + EEPROM_CONFIG_VERSION, _stored.version);
+    storageGet(offset + EEPROM_CONFIG_CRC, _stored.crc);
 }
 
 // Internal write to EEPROM
@@ -451,15 +489,15 @@ void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
     uint16_t crc = calculateCRC(base == EEPROM_PROFILE_START(0));
     for (uint8_t i = 0; i < _numPots; i++) {
-        EEPROM.update(offset + EEPROM_POT_CHANNELS + i, _stored.potChannels[i]);
-        EEPROM.update(offset + EEPROM_POT_CC + i, _stored.potCCNumbers[i]);
+        storageUpdate(offset + EEPROM_POT_CHANNELS + i, _stored.potChannels[i]);
+        storageUpdate(offset + EEPROM_POT_CC + i, _stored.potCCNumbers[i]);
     }
     if (base == EEPROM_PROFILE_START(0)) {
-        EEPROM.update(offset + EEPROM_ACTIVE_PROFILE, _stored.activeProfile);
-        EEPROM.update(offset + EEPROM_LED_MODE, _stored.ledMode);
+        storageUpdate(offset + EEPROM_ACTIVE_PROFILE, _stored.activeProfile);
+        storageUpdate(offset + EEPROM_LED_MODE, _stored.ledMode);
     }
-    EEPROM.put(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
-    EEPROM.put(offset + EEPROM_CONFIG_CRC, crc);
+    storagePut(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
+    storagePut(offset + EEPROM_CONFIG_CRC, crc);
     _stored.version = CONFIG_VERSION;
     _stored.crc = crc;
 }
@@ -527,7 +565,7 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
     }
     const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
     ProfileData stored{};
-    EEPROM.get(base, stored);
+    storageGet(base, stored);
     if (stored.version != PROFILE_SETTINGS_VERSION) {
         return false;
     }
@@ -549,7 +587,7 @@ bool ConfigManager::saveProfileSettings(uint8_t id, const ProfileData &profile) 
     ProfileData sanitized = sanitizeProfileData(profile);
     sanitized.crc = computeProfileCrc(sanitized);
     const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
-    EEPROM.put(base, sanitized);
+    storagePut(base, sanitized);
     return true;
 }
 
@@ -580,7 +618,7 @@ void ConfigManager::begin(std::vector<uint8_t> &potChannels) {
 void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
     MIDISlot temp{};
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
-    EEPROM.get(address, temp);
+    storageGet(address, temp);
     if (temp.sysexLength > SysExTemplate::kMaxLength) {
         temp.sysexLength = 0;
         temp.sysexTemplate.fill(0);
@@ -607,7 +645,7 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
     sanitized.setEnvelopeFollowerIndex(sanitized.ef.followerIndex);
     sanitized.arg = sanitizeSlotArg(sanitized.arg);
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
-    EEPROM.put(address, sanitized);
+    storagePut(address, sanitized);
     slots[idx] = sanitized;
 }
 
@@ -653,7 +691,7 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &po
 
     potToEnvelopeMap.clear();
     for (uint8_t potIndex = 0; potIndex < NUM_POTS; ++potIndex) {
-        int storedValue = EEPROM.read(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
+        int storedValue = storageRead(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex);
         int envelopeIndex = (storedValue == 0xFF) ? kUnassignedEnvelope : storedValue;
         MIDISlot::EfSettings settings = {};
         if (potIndex < slots.size()) {
@@ -675,7 +713,7 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &po
 
     for (size_t envIndex = 0; envIndex < envelopes.size(); ++envIndex) {
         float baseline;
-        EEPROM.get(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
+        storageGet(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
 
         envelopes[envIndex].setVref(g_vref); // always refresh Vref
         if (!std::isnan(baseline)) {
@@ -718,7 +756,7 @@ void ConfigManager::saveEnvelopeSettings(
             (envelopeIndex >= 0 && envelopeIndex < static_cast<int>(envelopes.size()))
                 ? static_cast<uint8_t>(envelopeIndex)
                 : kUnassignedMarker;
-        EEPROM.update(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, storedValue);
+        storageUpdate(EEPROM_ENVELOPE_ASSIGNMENTS + potIndex, storedValue);
 
         if (potIndex < slots.size()) {
             MIDISlot &slot = slots[potIndex];
@@ -738,35 +776,35 @@ void ConfigManager::saveEnvelopeSettings(
     }
     for (size_t i = 0; i < envelopes.size(); ++i) {
         envelopeConfig.baselines[i] = envelopes[i].getBaseline();
-        EEPROM.put(EEPROM_EF_BASELINES + i * sizeof(float), envelopeConfig.baselines[i]);
+        storagePut(EEPROM_EF_BASELINES + i * sizeof(float), envelopeConfig.baselines[i]);
     }
 }
 
 void ConfigManager::saveEnvelopeBaseline(uint8_t envIndex, float baseline) {
     if (envIndex < NUM_ENVELOPES) {
         envelopeConfig.baselines[envIndex] = baseline;
-        EEPROM.put(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
+        storagePut(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
     }
 }
 
 // LED settings
 void ConfigManager::loadLEDSettings(uint8_t &brightness, CRGB &color) {
-    brightness = EEPROM.read(EEPROM_LED_BRIGHTNESS);
-    color.r = EEPROM.read(EEPROM_LED_COLOR);
-    color.g = EEPROM.read(EEPROM_LED_COLOR + 1);
-    color.b = EEPROM.read(EEPROM_LED_COLOR + 2);
+    brightness = storageRead(EEPROM_LED_BRIGHTNESS);
+    color.r = storageRead(EEPROM_LED_COLOR);
+    color.g = storageRead(EEPROM_LED_COLOR + 1);
+    color.b = storageRead(EEPROM_LED_COLOR + 2);
 }
 
 void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
-    EEPROM.update(EEPROM_LED_BRIGHTNESS, brightness);
-    EEPROM.update(EEPROM_LED_COLOR, color.r);
-    EEPROM.update(EEPROM_LED_COLOR + 1, color.g);
-    EEPROM.update(EEPROM_LED_COLOR + 2, color.b);
+    storageUpdate(EEPROM_LED_BRIGHTNESS, brightness);
+    storageUpdate(EEPROM_LED_COLOR, color.r);
+    storageUpdate(EEPROM_LED_COLOR + 1, color.g);
+    storageUpdate(EEPROM_LED_COLOR + 2, color.b);
 }
 
 void ConfigManager::setLedMode(LedMode mode) {
     _stored.ledMode = static_cast<uint8_t>(mode);
-    EEPROM.update(EEPROM_LED_MODE, _stored.ledMode);
+    storageUpdate(EEPROM_LED_MODE, _stored.ledMode);
 }
 
 LedMode ConfigManager::getLedMode() const { return static_cast<LedMode>(_stored.ledMode); }
@@ -798,7 +836,7 @@ ConfigManager::RecoveryEvent ConfigManager::consumeRecoveryEvent() {
 // Mode and ARG methods
 void ConfigManager::setMode(uint8_t mode) {
     legacyArg.mode = mode;
-    EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
+    storageUpdate(EEPROM_ARG_MODE, legacyArg.mode);
 }
 
 uint8_t ConfigManager::getMode() const { return legacyArg.mode; }
@@ -812,14 +850,14 @@ void ConfigManager::setARGMethod(uint8_t method) {
     defaults.sourceB = legacyArg.sourceB;
     defaults = sanitizeSlotArg(defaults);
     legacyArg.method = static_cast<uint8_t>(defaults.method);
-    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
 }
 
 uint8_t ConfigManager::getARGMethod() const { return legacyArg.method; }
 
 void ConfigManager::setARGEnable(uint8_t enable) {
     legacyArg.enable = enable ? 1 : 0;
-    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
+    storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
 }
 
 uint8_t ConfigManager::getARGEnable() const { return legacyArg.enable; }
@@ -832,8 +870,8 @@ void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
     }
     legacyArg.sourceA = safeA;
     legacyArg.sourceB = safeB;
-    EEPROM.update(EEPROM_ARG_ENV_A, safeA);
-    EEPROM.update(EEPROM_ARG_ENV_B, safeB);
+    storageUpdate(EEPROM_ARG_ENV_A, safeA);
+    storageUpdate(EEPROM_ARG_ENV_B, safeB);
 }
 
 uint8_t ConfigManager::getEnvelopeA() const {
@@ -973,12 +1011,12 @@ SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &
 }
 
 void ConfigManager::loadLegacyARGSettings() {
-    legacyArg.mode = EEPROM.read(EEPROM_ARG_MODE);
-    legacyArg.method = EEPROM.read(EEPROM_ARG_METHOD);
-    legacyArg.enable = EEPROM.read(EEPROM_ARG_ENABLE);
+    legacyArg.mode = storageRead(EEPROM_ARG_MODE);
+    legacyArg.method = storageRead(EEPROM_ARG_METHOD);
+    legacyArg.enable = storageRead(EEPROM_ARG_ENABLE);
 
-    const uint8_t rawA = EEPROM.read(EEPROM_ARG_ENV_A);
-    const uint8_t rawB = EEPROM.read(EEPROM_ARG_ENV_B);
+    const uint8_t rawA = storageRead(EEPROM_ARG_ENV_A);
+    const uint8_t rawB = storageRead(EEPROM_ARG_ENV_B);
 
     int idxA = envelopeIndexFromAnalogPin(rawA);
     if (idxA < 0) {
@@ -1011,13 +1049,13 @@ void ConfigManager::loadLegacyARGSettings() {
 void ConfigManager::migrateLegacyARGSettings() {
     loadLegacyARGSettings();
 
-    EEPROM.update(EEPROM_ARG_MODE, legacyArg.mode);
-    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
-    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
+    storageUpdate(EEPROM_ARG_MODE, legacyArg.mode);
+    storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
+    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
     setEnvelopePair(legacyArg.sourceA, legacyArg.sourceB);
 
     uint16_t storedVersion = 0;
-    EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
+    storageGet(EEPROM_CONFIG_VERSION, storedVersion);
 
     if (storedVersion == CONFIG_VERSION) {
         return;
@@ -1040,7 +1078,7 @@ void ConfigManager::migrateLegacyARGSettings() {
         for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
             const int legacyAddress =
                 static_cast<int>(EEPROM_SLOT_BASE + i * sizeof(LegacyMIDISlotV3));
-            EEPROM.get(legacyAddress, legacySlots[i]);
+            storageGet(legacyAddress, legacySlots[i]);
         }
 
         SlotARGConfig defaults{};
@@ -1069,7 +1107,7 @@ void ConfigManager::migrateLegacyARGSettings() {
             saveSlot(i, upgraded);
         }
 
-        EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+        storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
     }
 }
 
@@ -1114,14 +1152,14 @@ void ConfigManager::sanitizeSlotArena() {
     loadLegacyARGSettings();
 
     uint16_t storedVersion = 0;
-    EEPROM.get(EEPROM_CONFIG_VERSION, storedVersion);
+    storageGet(EEPROM_CONFIG_VERSION, storedVersion);
 
     migrateLegacyARGSettings();
 
     if (storedVersion == CONFIG_VERSION) {
         maybeRescueFilterTailFromLegacy();
         MIDISlot candidate{};
-        EEPROM.get(static_cast<int>(EEPROM_SLOT_BASE), candidate);
+        storageGet(static_cast<int>(EEPROM_SLOT_BASE), candidate);
         if (!slotLooksSane(candidate)) {
             wipeSlotRegion();
             wipeProfileBlocks();
@@ -1132,7 +1170,7 @@ void ConfigManager::sanitizeSlotArena() {
     if (storedVersion == 0 || storedVersion > CONFIG_VERSION) {
         wipeSlotRegion();
         wipeProfileBlocks();
-        EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+        storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
         return;
     }
 
@@ -1156,17 +1194,17 @@ void ConfigManager::wipeSlotRegion() {
 
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         const int address = static_cast<int>(EEPROM_SLOT_BASE + i * SLOT_EEPROM_SIZE);
-        EEPROM.put(address, blank);
+        storagePut(address, blank);
     }
 
     legacyArg.enable = 0;
     legacyArg.method = static_cast<uint8_t>(ARGMethod::PLUS);
     legacyArg.sourceA = 0;
     legacyArg.sourceB = 1;
-    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
-    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
-    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
-    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+    storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
+    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
+    storageUpdate(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    storageUpdate(EEPROM_ARG_ENV_B, legacyArg.sourceB);
 }
 
 void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
@@ -1205,9 +1243,9 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         static_assert(sizeof(LegacyMIDISlotV3) == 23, "Legacy slot struct size drifted");
 
         SlotEnvelopePayload legacyPayload{};
-        legacyPayload.filterType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
-        EEPROM.get(EEPROM_LEGACY_FILTER_FREQ, legacyPayload.frequency);
-        EEPROM.get(EEPROM_LEGACY_FILTER_Q, legacyPayload.q);
+        legacyPayload.filterType = storageRead(EEPROM_ENVELOPE_TYPES);
+        storageGet(EEPROM_LEGACY_FILTER_FREQ, legacyPayload.frequency);
+        storageGet(EEPROM_LEGACY_FILTER_Q, legacyPayload.q);
         SlotEnvelopePayload sanitizedPayload = sanitizeEnvelopePayload(legacyPayload);
 
         persistFilterTail(sanitizedPayload);
@@ -1216,7 +1254,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             LegacyMIDISlotV3 legacy{};
             const int legacyAddress = static_cast<int>(
                 EEPROM_SLOT_BASE + static_cast<size_t>(i) * sizeof(LegacyMIDISlotV3));
-            EEPROM.get(legacyAddress, legacy);
+            storageGet(legacyAddress, legacy);
 
             MIDISlot upgraded{};
             upgraded.type = legacy.type;
@@ -1235,7 +1273,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
             const int upgradedAddress =
                 static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
-            EEPROM.put(upgradedAddress, upgraded);
+            storagePut(upgradedAddress, upgraded);
         }
     } else { // storedVersion == 0x0004
         struct LegacyMIDISlotV4 {
@@ -1255,7 +1293,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
             const int legacyAddress = static_cast<int>(
                 EEPROM_SLOT_BASE + static_cast<size_t>(i) * sizeof(LegacyMIDISlotV4));
-            EEPROM.get(legacyAddress, legacySlots[i]);
+            storageGet(legacyAddress, legacySlots[i]);
         }
 
         for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
@@ -1279,7 +1317,7 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
             const int upgradedAddress =
                 static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
-            EEPROM.put(upgradedAddress, upgraded);
+            storagePut(upgradedAddress, upgraded);
         }
 
         MIDISlot first{};
@@ -1287,11 +1325,11 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         persistFilterTail(settingsToPayload(first.efSettings));
     }
 
-    EEPROM.update(EEPROM_ARG_ENABLE, legacyArg.enable);
-    EEPROM.update(EEPROM_ARG_METHOD, legacyArg.method);
-    EEPROM.update(EEPROM_ARG_ENV_A, legacyArg.sourceA);
-    EEPROM.update(EEPROM_ARG_ENV_B, legacyArg.sourceB);
-    EEPROM.put(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+    storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
+    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
+    storageUpdate(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    storageUpdate(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+    storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
 
     slots.fill({});
 }
@@ -1325,13 +1363,13 @@ void ConfigManager::wipeProfileBlocks() {
     for (uint8_t id = 1; id < NUM_PROFILES; ++id) {
         const uint16_t base = EEPROM_PROFILE_START(id);
         for (uint16_t offset = 0; offset < EEPROM_PROFILE_BLOCK_SIZE; ++offset) {
-            EEPROM.update(static_cast<int>(base + offset), 0x00);
+            storageUpdate(static_cast<int>(base + offset), 0x00);
         }
     }
     for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
         const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
         for (uint16_t offset = 0; offset < EEPROM_PROFILE_SETTINGS_BLOCK_SIZE; ++offset) {
-            EEPROM.update(static_cast<int>(base + offset), 0x00);
+            storageUpdate(static_cast<int>(base + offset), 0x00);
         }
     }
 }
@@ -1344,11 +1382,11 @@ bool ConfigManager::handleCommand(const String &command) {
         LOG_PRINTLN("OK");
         return true;
     } else if (command.startsWith("GET_FILTER")) {
-        const uint8_t efType = EEPROM.read(EEPROM_ENVELOPE_TYPES);
+        const uint8_t efType = storageRead(EEPROM_ENVELOPE_TYPES);
         (void)efType; // keep the compiler chill
         float freq, q;
-        EEPROM.get(EEPROM_FILTER_FREQ, freq);
-        EEPROM.get(EEPROM_FILTER_Q, q);
+        storageGet(EEPROM_FILTER_FREQ, freq);
+        storageGet(EEPROM_FILTER_Q, q);
         LOG_PRINT(efType);
         LOG_PRINT(",");
         LOG_PRINT(freq, 2);
@@ -1457,12 +1495,12 @@ void test_eeprom_recovery_after_power_cycle() {
     cfg.saveConfiguration();
 
     // Mirror primary data into the backup region and wreck the primary header
-    EEPROM.write(EEPROM_MAGIC_ADDRESS + 2, (EEPROM_MAGIC_BACKUP >> 8) & 0xFF);
-    EEPROM.write(EEPROM_MAGIC_ADDRESS + 3, EEPROM_MAGIC_BACKUP & 0xFF);
-    EEPROM.write(EEPROM_BACKUP_START + EEPROM_POT_CHANNELS, 9);
-    EEPROM.write(EEPROM_BACKUP_START + EEPROM_POT_CC, 77);
-    EEPROM.write(EEPROM_MAGIC_ADDRESS, 0x00);
-    EEPROM.write(EEPROM_MAGIC_ADDRESS + 1, 0x00);
+    storageUpdate(EEPROM_MAGIC_ADDRESS + 2, (EEPROM_MAGIC_BACKUP >> 8) & 0xFF);
+    storageUpdate(EEPROM_MAGIC_ADDRESS + 3, EEPROM_MAGIC_BACKUP & 0xFF);
+    storageUpdate(EEPROM_BACKUP_START + EEPROM_POT_CHANNELS, 9);
+    storageUpdate(EEPROM_BACKUP_START + EEPROM_POT_CC, 77);
+    storageUpdate(EEPROM_MAGIC_ADDRESS, 0x00);
+    storageUpdate(EEPROM_MAGIC_ADDRESS + 1, 0x00);
 
     ConfigManager rebooted(NUM_POTS, NUM_BUTTONS);
     std::vector<uint8_t> pots;

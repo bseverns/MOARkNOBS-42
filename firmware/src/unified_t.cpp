@@ -17,7 +17,6 @@
 
 #include <Arduino.h>
 #include <map>
-#include <EEPROM.h>
 #include <imxrt.h>
 #include <ArduinoJson.h>
 #include "Globals.h"
@@ -407,14 +406,17 @@ void setup() {
 
     // boot-time banner and brownout sniff test
     g_resetCause = SRC_SRSR;
-    EEPROM.get(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+    ConfigManager::getStorageBackend()->readBytes(EEPROM_BROWNOUT_COUNT, &g_brownoutCount,
+                                                  sizeof(g_brownoutCount));
     if (g_brownoutCount == 0xFFFF) {
         g_brownoutCount = 0;
-        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+        ConfigManager::getStorageBackend()->writeBytes(EEPROM_BROWNOUT_COUNT, &g_brownoutCount,
+                                                       sizeof(g_brownoutCount));
     }
     if (g_resetCause & 0x40) {
         g_brownoutCount++;
-        EEPROM.put(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
+        ConfigManager::getStorageBackend()->writeBytes(EEPROM_BROWNOUT_COUNT, &g_brownoutCount,
+                                                       sizeof(g_brownoutCount));
     }
     Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FW_VERSION_STR,
                   CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);

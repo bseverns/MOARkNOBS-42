@@ -9,6 +9,7 @@
 #include "LedMode.h"
 #include "MIDITypes.h"
 #include "PotentiometerManager.h"
+#include "storage/StorageBackend.h"
 #include <Arduino.h>
 #include <EEPROM.h>
 #include <map>
@@ -256,6 +257,12 @@ class ConfigManager {
 
     /** Retrieve the currently stored LED animation mode. */
     LedMode getLedMode() const;
+
+    /** Override the persistence backend used by ConfigManager (tests/migration hooks). */
+    static void setStorageBackend(StorageBackend *backend);
+
+    /** Return the currently active persistence backend. */
+    static StorageBackend *getStorageBackend();
 
     enum class RecoveryEvent {
         kNone,
