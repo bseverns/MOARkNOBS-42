@@ -9,6 +9,7 @@
   --accent-strong: #8d3210;
   --ok: #25603c;
   --warn: #9a6412;
+  --error: #a21c1c;
 }
 
 * {
@@ -55,6 +56,19 @@ input {
   background: #fffdfa;
   color: inherit;
   padding: 0.75rem 0.9rem;
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+}
+
+.checkbox-line input[type='checkbox'] {
+  width: auto;
+  border-radius: 0.25rem;
+  padding: 0;
 }
 
 label,
@@ -172,6 +186,35 @@ dt {
 
 .status-warn {
   color: var(--warn);
+}
+
+.status-error {
+  color: var(--error);
+}
+
+.alerts-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.alerts-empty {
+  color: var(--muted);
+}
+
+.alert-item + .alert-item {
+  margin-top: 0.5rem;
+}
+
+.alert-item.severity-info {
+  color: var(--muted);
+}
+
+.alert-item.severity-warn {
+  color: var(--warn);
+}
+
+.alert-item.severity-error {
+  color: var(--error);
 }
 
 @media (max-width: 720px) {

@@ -42,4 +42,15 @@ if (!badOsc.stderr.includes('bad --osc port')) {
   fail('invalid --osc must print validation error', badOsc);
 }
 
+const badAlertSuppression = run(['--alert-suppression-ms', 'banana']);
+if (badAlertSuppression.status !== 1) {
+  fail('invalid --alert-suppression-ms must exit 1', badAlertSuppression);
+}
+if (!badAlertSuppression.stderr.includes('bad --alert-suppression-ms')) {
+  fail(
+    'invalid --alert-suppression-ms must print validation error',
+    badAlertSuppression,
+  );
+}
+
 console.log('browser bridge server smoke checks passed');

@@ -136,6 +136,8 @@ Inbound MIDI CC on any channel is converted to:
 {"cmd":"SET_SLOT_VALUE","slot":<cc_number>,"value":<cc_value>}
 ```
 
+To prevent MIDI feedback loops by default, the bridge suppresses inbound CC events that match its own freshly emitted telemetry (`status`, `cc`, `value`) within a short guard window (`120 ms` by default). You can disable this with `--allow-feedback-loops` or retune the window with `--feedback-window-ms`.
+
 ## OSC addresses and payloads
 
 ### Outbound (bridge -> OSC)
@@ -153,6 +155,9 @@ Inbound MIDI CC on any channel is converted to:
     - `cmd` (string)
     - `slot` (integer `0..41`)
     - `value` (integer `0..127`)
+  - optional metadata fields (for bridge-local tracing only):
+    - `traceId` (string)
+    - `timestamp` / `timestampMs` / `ts` (number or parseable timestamp string)
 
 Valid example:
 
@@ -175,17 +180,45 @@ The bridge drops messages that do not match the contract.
 - `slot` must be `0..41`
 - `value` must be `0..127`
 - Missing keys (`cmd`, `slot`, `value`) are rejected
+- Browser/API state also reports drop counters:
+  - `serialParseErrors`
+  - `serialOversizeDrops`
+  - `badOscCmdDrops`
+  - `badMidiCmdDrops`
+  - `feedbackSuppressed`
+- Browser/API state also includes operator alerts:
+  - `alerts.active` (currently active warnings/errors)
+  - `alerts.recent` (bounded alert history)
+- Browser/API state now includes translation trace/timing diagnostics:
+  - `timing.lastSerialSourceTimestampMs`
+  - `timing.lastSerialHostTimestampMs`
+  - `timing.lastSerialSkewMs`
+  - `lastRouteAt`
+  - `lastRouteTraceId`
+  - `routes` (bounded recent translation events, max 200)
+- Browser/API state now includes live round-trip metrics:
+  - `performance.roundTrip.sampleCount`, `pending`
+  - `performance.roundTrip.lastMs`, `p50Ms`, `p95Ms`, `meanMs`
+  - `performance.roundTrip.jitterP95Ms`, `jitterMeanMs`
+  - `performance.health.status` (`no_data`, `ok`, `warn`) plus threshold/reason details
+  - `performance.counters.completed`, `expired`
+  - matching counters: `matchedByTrace`, `matchedBySlotValue`
 
 ## CLI reference
 
-| Flag           | Alias | Default        | Purpose                                  |
-| -------------- | ----- | -------------- | ---------------------------------------- |
-| `--serial`     | `-s`  | `/dev/ttyACM0` | Serial device path                       |
-| `--osc`        | `-o`  | `9000`         | UDP port for outbound OSC                |
-| `--osc-listen` | -     | `9000`         | UDP port for inbound OSC commands        |
-| `--host`       | `-H`  | `127.0.0.1`    | Destination host for outbound OSC        |
-| `--bind`       | `-b`  | `127.0.0.1`    | Local interface for inbound OSC listener |
-| `--midi`       | `-m`  | `MN42 Bridge`  | Virtual MIDI port label                  |
+| Flag                        | Alias | Default        | Purpose                                         |
+| --------------------------- | ----- | -------------- | ----------------------------------------------- |
+| `--serial`                  | `-s`  | `/dev/ttyACM0` | Serial device path                              |
+| `--osc`                     | `-o`  | `9000`         | UDP port for outbound OSC                       |
+| `--osc-listen`              | -     | `9000`         | UDP port for inbound OSC commands               |
+| `--host`                    | `-H`  | `127.0.0.1`    | Destination host for outbound OSC               |
+| `--bind`                    | `-b`  | `127.0.0.1`    | Local interface for inbound OSC listener        |
+| `--midi`                    | `-m`  | `MN42 Bridge`  | Virtual MIDI port label                         |
+| `--allow-feedback-loops`    | -     | `false`        | Disable MIDI telemetry-echo suppression         |
+| `--feedback-window-ms`      | -     | `120`          | Echo-suppression match window in milliseconds   |
+| `--rt-p95-target-ms`        | -     | `10`           | Warn threshold for round-trip p95 latency       |
+| `--rt-jitter-p95-target-ms` | -     | `5`            | Warn threshold for round-trip jitter p95        |
+| `--alert-suppression-ms`    | -     | `3000`         | Alert dedupe/suppression window in milliseconds |
 
 ## Browser console reference
 
@@ -194,6 +227,17 @@ The browser console uses the same bridge core and adds:
 - local control page: `http://127.0.0.1:8787/`
 - bundled configurator: `http://127.0.0.1:8787/app/`
 - bridge transport websocket: `ws://127.0.0.1:8787/ws`
+
+The console form also surfaces loop-guard controls (`allowFeedbackLoops`, `feedbackWindowMs`), alert cooldown tuning (`alertSuppressionMs`), and runtime counter diagnostics.
+It now also surfaces recent route/timing fields (`Last route`, `Last trace`, `Source timestamp`, and `Clock skew`) so drift and trace continuity are visible during runs.
+It now surfaces live round-trip diagnostics (`RT samples`, `RT pending`, `RT last`, `RT p50`, `RT p95`, `RT jitter p95`, `RT health`) derived from command→telemetry acknowledgments.
+It also surfaces active alert count and top alert message, plus a one-click clear action for operator triage.
+
+Operator API add-on:
+
+- `POST /api/performance/reset` clears rolling round-trip samples/counters without disconnecting transports.
+- `POST /api/alerts/clear` clears currently active alerts without touching metrics history.
+- `GET /api/state/snapshot` downloads a timestamped JSON snapshot of runtime metadata + current bridge state.
 
 The console accepts the same serial/OSC/MIDI settings as the CLI, plus:
 

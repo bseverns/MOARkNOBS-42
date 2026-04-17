@@ -23,6 +23,11 @@ const PUBLIC_CONFIG_KEYS = [
   'oscHost',
   'oscBind',
   'midiLabel',
+  'allowFeedbackLoops',
+  'feedbackWindowMs',
+  'rtP95TargetMs',
+  'rtJitterP95TargetMs',
+  'alertSuppressionMs',
 ];
 
 // Parse user-provided port values from the browser console without crashing on junk input.
@@ -99,6 +104,40 @@ function normalizeConfig(body = {}) {
   }
   if (nextConfig.oscListen !== undefined) {
     nextConfig.oscListen = normalizePositiveInt(nextConfig.oscListen, 9000);
+  }
+  if (nextConfig.feedbackWindowMs !== undefined) {
+    nextConfig.feedbackWindowMs = normalizePositiveInt(
+      nextConfig.feedbackWindowMs,
+      120,
+    );
+  }
+  if (nextConfig.rtP95TargetMs !== undefined) {
+    nextConfig.rtP95TargetMs = normalizePositiveInt(
+      nextConfig.rtP95TargetMs,
+      10,
+    );
+  }
+  if (nextConfig.rtJitterP95TargetMs !== undefined) {
+    nextConfig.rtJitterP95TargetMs = normalizePositiveInt(
+      nextConfig.rtJitterP95TargetMs,
+      5,
+    );
+  }
+  if (nextConfig.alertSuppressionMs !== undefined) {
+    nextConfig.alertSuppressionMs = normalizePositiveInt(
+      nextConfig.alertSuppressionMs,
+      3000,
+    );
+  }
+  if (nextConfig.allowFeedbackLoops !== undefined) {
+    const raw = nextConfig.allowFeedbackLoops;
+    if (typeof raw === 'string') {
+      nextConfig.allowFeedbackLoops = ['1', 'true', 'yes', 'on'].includes(
+        raw.toLowerCase(),
+      );
+    } else {
+      nextConfig.allowFeedbackLoops = Boolean(raw);
+    }
   }
   return nextConfig;
 }
@@ -187,6 +226,30 @@ function createBrowserBridgeServer({
       return true;
     }
 
+    if (pathname === '/api/state/snapshot' && req.method === 'GET') {
+      const generatedAt = new Date().toISOString();
+      const payload = {
+        generatedAt,
+        runtime: {
+          pid: process.pid,
+          uptimeSeconds: Math.floor(process.uptime()),
+          node: process.version,
+          platform: process.platform,
+        },
+        state: service.getState(),
+      };
+      res.writeHead(200, {
+        'cache-control': 'no-store',
+        'content-type': 'application/json; charset=utf-8',
+        'content-disposition': `attachment; filename="mn42-bridge-state-${generatedAt.replace(
+          /[:.]/g,
+          '-',
+        )}.json"`,
+      });
+      res.end(JSON.stringify(payload, null, 2));
+      return true;
+    }
+
     if (pathname === '/api/ports' && req.method === 'GET') {
       try {
         const ports = await service.listSerialPorts();
@@ -216,6 +279,30 @@ function createBrowserBridgeServer({
     if (pathname === '/api/disconnect' && req.method === 'POST') {
       try {
         await service.stop();
+        sendJson(res, 200, { state: service.getState() });
+      } catch (err) {
+        sendJson(res, 500, { error: err.message, state: service.getState() });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/performance/reset' && req.method === 'POST') {
+      try {
+        if (typeof service.resetPerformance === 'function') {
+          await service.resetPerformance();
+        }
+        sendJson(res, 200, { state: service.getState() });
+      } catch (err) {
+        sendJson(res, 500, { error: err.message, state: service.getState() });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/alerts/clear' && req.method === 'POST') {
+      try {
+        if (typeof service.clearAlerts === 'function') {
+          await service.clearAlerts();
+        }
         sendJson(res, 200, { state: service.getState() });
       } catch (err) {
         sendJson(res, 500, { error: err.message, state: service.getState() });

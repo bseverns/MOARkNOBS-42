@@ -13,7 +13,57 @@ function makeFakeService() {
     manifest: null,
     lastError: null,
     lastTelemetryAt: null,
+    lastRouteAt: null,
+    lastRouteTraceId: null,
     logs: [],
+    routes: [],
+    timing: {
+      lastSerialSourceTimestampMs: null,
+      lastSerialHostTimestampMs: null,
+      lastSerialSkewMs: null,
+    },
+    performance: {
+      roundTrip: {
+        windowSize: 200,
+        pending: 0,
+        sampleCount: 0,
+        minMs: null,
+        maxMs: null,
+        meanMs: null,
+        p50Ms: null,
+        p95Ms: null,
+        lastMs: null,
+        jitterMeanMs: null,
+        jitterP95Ms: null,
+        lastUpdatedAt: null,
+      },
+      counters: {
+        completed: 0,
+        expired: 0,
+        matchedByTrace: 0,
+        matchedBySlotValue: 0,
+      },
+      health: {
+        status: 'no_data',
+        reasons: ['No round-trip samples yet'],
+        thresholds: {
+          p95Ms: 10,
+          jitterP95Ms: 5,
+        },
+        lastEvaluatedAt: null,
+      },
+    },
+    alerts: {
+      active: [],
+      recent: [],
+    },
+    counters: {
+      serialParseErrors: 0,
+      serialOversizeDrops: 0,
+      badOscCmdDrops: 0,
+      badMidiCmdDrops: 0,
+      feedbackSuppressed: 0,
+    },
     config: {
       serialName: '/dev/ttyACM0',
       oscPort: 9000,
@@ -21,6 +71,11 @@ function makeFakeService() {
       oscHost: '127.0.0.1',
       oscBind: '127.0.0.1',
       midiLabel: 'MN42 Bridge',
+      allowFeedbackLoops: false,
+      feedbackWindowMs: 120,
+      rtP95TargetMs: 10,
+      rtJitterP95TargetMs: 5,
+      alertSuppressionMs: 3000,
     },
   };
   const sentLines = [];
@@ -48,6 +103,41 @@ function makeFakeService() {
       state.serialConnected = false;
       state.ready = false;
       return this.getState();
+    },
+    async resetPerformance() {
+      state.performance.roundTrip = {
+        ...state.performance.roundTrip,
+        pending: 0,
+        sampleCount: 0,
+        minMs: null,
+        maxMs: null,
+        meanMs: null,
+        p50Ms: null,
+        p95Ms: null,
+        lastMs: null,
+        jitterMeanMs: null,
+        jitterP95Ms: null,
+      };
+      state.performance.counters = {
+        ...state.performance.counters,
+        completed: 0,
+        expired: 0,
+        matchedByTrace: 0,
+        matchedBySlotValue: 0,
+      };
+      state.performance.health = {
+        ...state.performance.health,
+        status: 'no_data',
+        reasons: ['No round-trip samples yet'],
+      };
+      return this.getState();
+    },
+    async clearAlerts() {
+      state.alerts.active = [];
+      return this.getState();
+    },
+    seedAlert(alert) {
+      state.alerts.active.push(JSON.parse(JSON.stringify(alert)));
     },
     sendLine(line) {
       sentLines.push(line);
@@ -210,6 +300,7 @@ async function run() {
         midiLabel: 'Browser Bridge',
         oscPort: 9100,
         oscListen: 9101,
+        alertSuppressionMs: 2222,
       }),
     },
   );
@@ -220,6 +311,49 @@ async function run() {
     'connect endpoint should start the bridge service',
   );
   assert.equal(connectPayload.state.config.midiLabel, 'Browser Bridge');
+  assert.equal(
+    connectPayload.state.config.alertSuppressionMs,
+    2222,
+    'connect endpoint should apply alert suppression config',
+  );
+
+  const resetResponse = await fetch(
+    `http://127.0.0.1:${address.port}/api/performance/reset`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    },
+  );
+  const resetPayload = await resetResponse.json();
+  assert.equal(
+    resetPayload.state.performance.roundTrip.sampleCount,
+    0,
+    'performance reset endpoint should clear round-trip samples',
+  );
+
+  service.seedAlert({
+    id: 1,
+    at: new Date().toISOString(),
+    code: 'performance_warn',
+    severity: 'warn',
+    message: 'Round-trip p95 too high',
+    details: null,
+  });
+  const clearAlertsResponse = await fetch(
+    `http://127.0.0.1:${address.port}/api/alerts/clear`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    },
+  );
+  const clearAlertsPayload = await clearAlertsResponse.json();
+  assert.equal(
+    clearAlertsPayload.state.alerts.active.length,
+    0,
+    'clear alerts endpoint should clear active alerts',
+  );
 
   const appResponse = await fetch(`http://127.0.0.1:${address.port}/app/`);
   const appHtml = await appResponse.text();
@@ -227,6 +361,27 @@ async function run() {
     appHtml,
     /MOARkNOBS-42 Browser Configurator[\s\S]*Control Deck/,
     'server should expose the bundled configurator',
+  );
+
+  const snapshotResponse = await fetch(
+    `http://127.0.0.1:${address.port}/api/state/snapshot`,
+  );
+  assert.equal(snapshotResponse.status, 200);
+  assert.match(
+    snapshotResponse.headers.get('content-disposition') || '',
+    /attachment; filename="mn42-bridge-state-/,
+    'snapshot endpoint should provide a download filename',
+  );
+  const snapshotPayload = await snapshotResponse.json();
+  assert.equal(
+    snapshotPayload.state.config.midiLabel,
+    'Browser Bridge',
+    'snapshot endpoint should include current bridge state',
+  );
+  assert.equal(
+    typeof snapshotPayload.runtime?.pid,
+    'number',
+    'snapshot endpoint should include runtime metadata',
   );
 
   const client = await connectWebSocket(address.port);

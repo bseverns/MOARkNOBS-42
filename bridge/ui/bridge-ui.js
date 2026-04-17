@@ -6,11 +6,15 @@ const form = document.getElementById('bridge-form');
 const startButton = document.getElementById('start-bridge');
 const stopButton = document.getElementById('stop-bridge');
 const refreshPortsButton = document.getElementById('refresh-ports');
+const resetMetricsButton = document.getElementById('reset-metrics');
+const clearAlertsButton = document.getElementById('clear-alerts');
+const downloadSnapshotButton = document.getElementById('download-snapshot');
 const openConfiguratorButton = document.getElementById('open-configurator');
 const summaryStatus = document.getElementById('summary-status');
 const portsList = document.getElementById('ports');
 const portsDatalist = document.getElementById('serial-port-list');
 const logOutput = document.getElementById('logs');
+const alertHistory = document.getElementById('alert-history');
 
 const statusNodes = {
   running: document.getElementById('status-running'),
@@ -20,7 +24,25 @@ const statusNodes = {
   oscListen: document.getElementById('status-osc-listen'),
   midi: document.getElementById('status-midi'),
   telemetry: document.getElementById('status-telemetry'),
+  lastRoute: document.getElementById('status-last-route'),
+  lastTrace: document.getElementById('status-last-trace'),
+  sourceTs: document.getElementById('status-source-ts'),
+  sourceSkew: document.getElementById('status-source-skew'),
+  roundTripSamples: document.getElementById('status-rt-samples'),
+  roundTripPending: document.getElementById('status-rt-pending'),
+  roundTripLast: document.getElementById('status-rt-last'),
+  roundTripP50: document.getElementById('status-rt-p50'),
+  roundTripP95: document.getElementById('status-rt-p95'),
+  roundTripJitterP95: document.getElementById('status-rt-jitter-p95'),
+  roundTripHealth: document.getElementById('status-rt-health'),
+  alertCount: document.getElementById('status-alert-count'),
+  alertTop: document.getElementById('status-alert-top'),
   error: document.getElementById('status-error'),
+  serialParseDrops: document.getElementById('status-serial-parse-drops'),
+  serialOversizeDrops: document.getElementById('status-serial-oversize-drops'),
+  oscDrops: document.getElementById('status-osc-drops'),
+  midiDrops: document.getElementById('status-midi-drops'),
+  feedbackSuppressed: document.getElementById('status-feedback-suppressed'),
 };
 
 // Restore the last bridge form values so the desktop helper reopens in a
@@ -46,6 +68,7 @@ function saveConfig(values) {
 // Normalize the form into the JSON shape expected by the bridge HTTP API.
 function formValues() {
   const data = new FormData(form);
+  const allowFeedbackLoopsField = form.elements.namedItem('allowFeedbackLoops');
   return {
     serialName: String(data.get('serialName') || '').trim(),
     midiLabel: String(data.get('midiLabel') || '').trim(),
@@ -53,6 +76,13 @@ function formValues() {
     oscPort: Number(data.get('oscPort') || 9000),
     oscListen: Number(data.get('oscListen') || 9000),
     oscBind: String(data.get('oscBind') || '').trim(),
+    feedbackWindowMs: Number(data.get('feedbackWindowMs') || 120),
+    rtP95TargetMs: Number(data.get('rtP95TargetMs') || 10),
+    rtJitterP95TargetMs: Number(data.get('rtJitterP95TargetMs') || 5),
+    alertSuppressionMs: Number(data.get('alertSuppressionMs') || 3000),
+    allowFeedbackLoops:
+      Boolean(allowFeedbackLoopsField) &&
+      Boolean(allowFeedbackLoopsField.checked),
   };
 }
 
@@ -62,6 +92,10 @@ function populateForm(values) {
   for (const [key, value] of Object.entries(values)) {
     const field = form.elements.namedItem(key);
     if (!field || value === undefined || value === null) continue;
+    if (field.type === 'checkbox') {
+      field.checked = Boolean(value);
+      continue;
+    }
     field.value = String(value);
   }
 }
@@ -72,6 +106,20 @@ function formatWhen(isoString) {
   const date = new Date(isoString);
   if (Number.isNaN(date.getTime())) return String(isoString);
   return date.toLocaleString();
+}
+
+function formatTimestampMs(raw) {
+  if (raw === undefined || raw === null) return 'none yet';
+  const asNum = Number(raw);
+  if (!Number.isFinite(asNum)) return String(raw);
+  return `${Math.trunc(asNum)} ms`;
+}
+
+function formatMetricMs(raw) {
+  if (raw === undefined || raw === null) return 'n/a';
+  const asNum = Number(raw);
+  if (!Number.isFinite(asNum)) return 'n/a';
+  return `${Math.trunc(asNum)} ms`;
 }
 
 // Flatten structured bridge logs into a simple scrolling text console.
@@ -103,9 +151,39 @@ function updateButtons(state) {
   openConfiguratorButton.disabled = !running;
 }
 
+function renderAlertHistory(recentAlerts = []) {
+  if (!alertHistory) return;
+  alertHistory.textContent = '';
+  if (!Array.isArray(recentAlerts) || !recentAlerts.length) {
+    const item = document.createElement('li');
+    item.className = 'alerts-empty';
+    item.textContent = 'No alerts yet.';
+    alertHistory.appendChild(item);
+    return;
+  }
+  const latestFirst = [...recentAlerts].slice(-12).reverse();
+  for (const alert of latestFirst) {
+    const item = document.createElement('li');
+    const severity = alert?.severity || 'warn';
+    item.className = `alert-item severity-${severity}`;
+    const when = formatWhen(alert?.at);
+    const code = alert?.code || 'alert';
+    const message = alert?.message || code;
+    item.textContent = `[${severity}] ${when} — ${message} (${code})`;
+    alertHistory.appendChild(item);
+  }
+}
+
 // Project the bridge daemon state into the dashboard summary and badges.
 function updateStatus(state) {
   const config = state?.config || {};
+  const counters = state?.counters || {};
+  const timing = state?.timing || {};
+  const roundTrip = state?.performance?.roundTrip || {};
+  const performanceHealth = state?.performance?.health || {};
+  const activeAlerts = Array.isArray(state?.alerts?.active)
+    ? state.alerts.active
+    : [];
   statusNodes.running.textContent = state?.running ? 'running' : 'stopped';
   statusNodes.serial.textContent = state?.serialConnected
     ? 'connected'
@@ -119,13 +197,63 @@ function updateStatus(state) {
   }`;
   statusNodes.midi.textContent = config.midiLabel || 'MN42 Bridge';
   statusNodes.telemetry.textContent = formatWhen(state?.lastTelemetryAt);
+  statusNodes.lastRoute.textContent = formatWhen(state?.lastRouteAt);
+  statusNodes.lastTrace.textContent = state?.lastRouteTraceId || 'none';
+  statusNodes.sourceTs.textContent = formatTimestampMs(
+    timing.lastSerialSourceTimestampMs,
+  );
+  statusNodes.sourceSkew.textContent =
+    timing.lastSerialSkewMs === null || timing.lastSerialSkewMs === undefined
+      ? 'n/a'
+      : `${Math.trunc(Number(timing.lastSerialSkewMs))} ms`;
+  statusNodes.roundTripSamples.textContent = String(roundTrip.sampleCount || 0);
+  statusNodes.roundTripPending.textContent = String(roundTrip.pending || 0);
+  statusNodes.roundTripLast.textContent = formatMetricMs(roundTrip.lastMs);
+  statusNodes.roundTripP50.textContent = formatMetricMs(roundTrip.p50Ms);
+  statusNodes.roundTripP95.textContent = formatMetricMs(roundTrip.p95Ms);
+  statusNodes.roundTripJitterP95.textContent = formatMetricMs(
+    roundTrip.jitterP95Ms,
+  );
+  statusNodes.roundTripHealth.textContent = performanceHealth.status || 'n/a';
+  statusNodes.alertCount.textContent = String(activeAlerts.length);
+  statusNodes.alertTop.textContent = activeAlerts.length
+    ? `${activeAlerts[0].severity || 'warn'}: ${
+        activeAlerts[0].message || activeAlerts[0].code || 'alert'
+      }`
+    : 'none';
+  statusNodes.alertTop.classList.remove(
+    'status-ok',
+    'status-warn',
+    'status-error',
+  );
+  if (activeAlerts.length) {
+    statusNodes.alertTop.classList.add(
+      activeAlerts[0].severity === 'error'
+        ? 'status-error'
+        : activeAlerts[0].severity === 'warn'
+          ? 'status-warn'
+          : 'status-ok',
+    );
+  }
   statusNodes.error.textContent = state?.lastError || 'none';
+  statusNodes.serialParseDrops.textContent = String(
+    counters.serialParseErrors || 0,
+  );
+  statusNodes.serialOversizeDrops.textContent = String(
+    counters.serialOversizeDrops || 0,
+  );
+  statusNodes.oscDrops.textContent = String(counters.badOscCmdDrops || 0);
+  statusNodes.midiDrops.textContent = String(counters.badMidiCmdDrops || 0);
+  statusNodes.feedbackSuppressed.textContent = String(
+    counters.feedbackSuppressed || 0,
+  );
   summaryStatus.textContent = state?.running
     ? state?.ready
       ? 'Bridge live and device handshake confirmed.'
       : 'Bridge running. Waiting for the board handshake.'
     : 'Bridge idle.';
   logOutput.textContent = logsToText(state?.logs);
+  renderAlertHistory(state?.alerts?.recent);
   updateButtons(state);
 }
 
@@ -202,6 +330,41 @@ async function stopBridge() {
   updateStatus(payload.state);
 }
 
+// Reset rolling latency/jitter measurements without disconnecting the bridge.
+async function resetMetrics() {
+  const payload = await api('/api/performance/reset', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  updateStatus(payload.state);
+}
+
+// Clear currently active alerts while preserving the recent alert history.
+async function clearAlerts() {
+  const payload = await api('/api/alerts/clear', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  updateStatus(payload.state);
+}
+
+async function downloadSnapshot() {
+  const response = await fetch('/api/state/snapshot', { method: 'GET' });
+  if (!response.ok) {
+    throw new Error(`snapshot request failed: ${response.status}`);
+  }
+  const blob = await response.blob();
+  const filenameHeader = response.headers.get('content-disposition') || '';
+  const matched = filenameHeader.match(/filename="([^"]+)"/i);
+  const filename = matched?.[1] || 'mn42-bridge-state.json';
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 // Launch the browser configurator already pointed at this bridge instance.
 function openConfigurator() {
   const target = new URL('/app/', window.location.href);
@@ -236,6 +399,36 @@ function bindEvents() {
       await refreshState();
     } catch (err) {
       summaryStatus.textContent = `Port refresh failed: ${err.message}`;
+    }
+  });
+
+  resetMetricsButton.addEventListener('click', async () => {
+    summaryStatus.textContent = 'Resetting performance metrics...';
+    try {
+      await resetMetrics();
+      summaryStatus.textContent = 'Performance metrics reset.';
+    } catch (err) {
+      summaryStatus.textContent = `Metrics reset failed: ${err.message}`;
+    }
+  });
+
+  clearAlertsButton.addEventListener('click', async () => {
+    summaryStatus.textContent = 'Clearing active alerts...';
+    try {
+      await clearAlerts();
+      summaryStatus.textContent = 'Active alerts cleared.';
+    } catch (err) {
+      summaryStatus.textContent = `Clear alerts failed: ${err.message}`;
+    }
+  });
+
+  downloadSnapshotButton.addEventListener('click', async () => {
+    summaryStatus.textContent = 'Preparing bridge snapshot...';
+    try {
+      await downloadSnapshot();
+      summaryStatus.textContent = 'Snapshot downloaded.';
+    } catch (err) {
+      summaryStatus.textContent = `Snapshot failed: ${err.message}`;
     }
   });
 

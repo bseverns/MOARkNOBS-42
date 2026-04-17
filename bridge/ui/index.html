@@ -19,6 +19,9 @@
         <button id="start-bridge" type="button">Start bridge</button>
         <button id="stop-bridge" type="button">Stop bridge</button>
         <button id="refresh-ports" type="button">Refresh ports</button>
+        <button id="reset-metrics" type="button">Reset metrics</button>
+        <button id="clear-alerts" type="button">Clear alerts</button>
+        <button id="download-snapshot" type="button">Download snapshot</button>
         <button id="open-configurator" type="button">Open configurator</button>
       </div>
       <p class="status-line" id="summary-status" aria-live="polite">Bridge idle.</p>
@@ -52,6 +55,28 @@
 
           <label for="osc-bind">OSC bind address</label>
           <input id="osc-bind" name="oscBind" value="127.0.0.1" autocomplete="off" />
+
+          <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
+          <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
+          
+          <label for="alert-suppression-ms">Alert suppression window (ms)</label>
+          <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
+
+          <label class="checkbox-line" for="allow-feedback-loops">
+            <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
+            Allow feedback loops (disable MIDI echo suppression)
+          </label>
+
+          <div class="grid-two">
+            <div>
+              <label for="rt-p95-target-ms">RT p95 target (ms)</label>
+              <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
+            </div>
+            <div>
+              <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
+              <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1" value="5" />
+            </div>
+          </div>
         </form>
       </section>
 
@@ -65,7 +90,25 @@
           <div><dt>OSC in</dt><dd id="status-osc-listen">127.0.0.1:9000</dd></div>
           <div><dt>MIDI</dt><dd id="status-midi">MN42 Bridge</dd></div>
           <div><dt>Telemetry</dt><dd id="status-telemetry">none yet</dd></div>
+          <div><dt>Last route</dt><dd id="status-last-route">none yet</dd></div>
+          <div><dt>Last trace</dt><dd id="status-last-trace">none</dd></div>
+          <div><dt>Source timestamp</dt><dd id="status-source-ts">none yet</dd></div>
+          <div><dt>Clock skew</dt><dd id="status-source-skew">n/a</dd></div>
+          <div><dt>RT samples</dt><dd id="status-rt-samples">0</dd></div>
+          <div><dt>RT pending</dt><dd id="status-rt-pending">0</dd></div>
+          <div><dt>RT last</dt><dd id="status-rt-last">n/a</dd></div>
+          <div><dt>RT p50</dt><dd id="status-rt-p50">n/a</dd></div>
+          <div><dt>RT p95</dt><dd id="status-rt-p95">n/a</dd></div>
+          <div><dt>RT jitter p95</dt><dd id="status-rt-jitter-p95">n/a</dd></div>
+          <div><dt>RT health</dt><dd id="status-rt-health">no_data</dd></div>
+          <div><dt>Active alerts</dt><dd id="status-alert-count">0</dd></div>
+          <div><dt>Top alert</dt><dd id="status-alert-top">none</dd></div>
           <div><dt>Error</dt><dd id="status-error">none</dd></div>
+          <div><dt>Serial parse drops</dt><dd id="status-serial-parse-drops">0</dd></div>
+          <div><dt>Serial oversize drops</dt><dd id="status-serial-oversize-drops">0</dd></div>
+          <div><dt>OSC command drops</dt><dd id="status-osc-drops">0</dd></div>
+          <div><dt>MIDI command drops</dt><dd id="status-midi-drops">0</dd></div>
+          <div><dt>Feedback suppressed</dt><dd id="status-feedback-suppressed">0</dd></div>
         </dl>
         <p class="hint">
           Once the bridge is running, the configurator talks through WebSocket instead of WebSerial.
@@ -82,6 +125,11 @@
     <section class="panel" aria-labelledby="logs-heading">
       <h2 id="logs-heading">Bridge log</h2>
       <pre id="logs" class="log-output" aria-live="off"></pre>
+    </section>
+
+    <section class="panel" aria-labelledby="alerts-heading">
+      <h2 id="alerts-heading">Recent alerts</h2>
+      <ul id="alert-history" class="alerts-list" aria-live="polite"></ul>
     </section>
   </main>
   <script type="module" src="./bridge-ui.js"></script>
