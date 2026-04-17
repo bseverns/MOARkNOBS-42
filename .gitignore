@@ -91,3 +91,4 @@ hardware/**/*.IntLib
 hardware/**/*.LibPkg
 hardware/**/*.pdf
 firmware/test/__pycache__/test_custom_runner.cpython-314.pyc
+.vscode/c_cpp_properties.json
