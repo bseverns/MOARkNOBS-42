@@ -17,6 +17,30 @@ const addError = (errors, { instancePath, schemaPath, keyword, message, params =
   errors.push({ instancePath, schemaPath, keyword, message, params });
 };
 
+// Lightweight deep equality for array uniqueness checks.
+const deepEqual = (left, right) => {
+  if (left === right) return true;
+  if (Number.isNaN(left) && Number.isNaN(right)) return true;
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length !== right.length) return false;
+    for (let index = 0; index < left.length; index += 1) {
+      if (!deepEqual(left[index], right[index])) return false;
+    }
+    return true;
+  }
+  if (isObject(left) && isObject(right)) {
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    if (leftKeys.length !== rightKeys.length) return false;
+    for (const key of leftKeys) {
+      if (!Object.prototype.hasOwnProperty.call(right, key)) return false;
+      if (!deepEqual(left[key], right[key])) return false;
+    }
+    return true;
+  }
+  return false;
+};
+
 // Minimal type matcher covering the schema features this app actually uses.
 const checkType = (type, data) => {
   switch (type) {
@@ -162,6 +186,22 @@ const validateSchema = (schema, data, instancePath, schemaPath, errors, options)
     }
   }
 
+  if (Array.isArray(schema.anyOf)) {
+    const valid = schema.anyOf.some((subSchema) => {
+      const branchErrors = [];
+      validateSchema(subSchema, data, instancePath, `${schemaPath}/anyOf`, branchErrors, options);
+      return branchErrors.length === 0;
+    });
+    if (!valid) {
+      addError(errors, {
+        instancePath,
+        schemaPath: `${schemaPath}/anyOf`,
+        keyword: 'anyOf',
+        message: 'must match at least one schema in anyOf'
+      });
+    }
+  }
+
   if (schema.type === 'array' && Array.isArray(data)) {
     if (typeof schema.minItems === 'number' && data.length < schema.minItems) {
       addError(errors, {
@@ -192,6 +232,23 @@ const validateSchema = (schema, data, instancePath, schemaPath, errors, options)
           options
         );
       });
+    }
+    if (schema.uniqueItems) {
+      for (let left = 0; left < data.length; left += 1) {
+        for (let right = left + 1; right < data.length; right += 1) {
+          if (deepEqual(data[left], data[right])) {
+            addError(errors, {
+              instancePath,
+              schemaPath: `${schemaPath}/uniqueItems`,
+              keyword: 'uniqueItems',
+              params: { i: left, j: right },
+              message: 'must NOT have duplicate items'
+            });
+            left = data.length;
+            break;
+          }
+        }
+      }
     }
   }
 };

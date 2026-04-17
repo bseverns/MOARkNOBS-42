@@ -126,6 +126,37 @@ uint8_t resolveDataByte(const ConfigManager &config, uint8_t slotIndex, const MI
     return slot.data1;
 }
 
+String nextFrameTraceId(const char *scope, unsigned long timestampMs) {
+    static uint32_t traceCounter = 0;
+    String traceId = scope;
+    traceId += "-";
+    traceId += String(timestampMs);
+    traceId += "-";
+    traceId += String(traceCounter++);
+    return traceId;
+}
+
+struct FrameMeta {
+    uint32_t timestampMs;
+    String traceId;
+};
+
+FrameMeta buildFrameMeta(const char *scope) {
+    const unsigned long timestampMs = millis();
+    FrameMeta meta{
+        static_cast<uint32_t>(timestampMs),
+        nextFrameTraceId(scope, timestampMs),
+    };
+    return meta;
+}
+
+template <size_t Capacity>
+void applyFrameMeta(StaticJsonDocument<Capacity> &doc, const FrameMeta &meta) {
+    doc["timestamp"] = meta.timestampMs;
+    doc["timestampMs"] = meta.timestampMs;
+    doc["traceId"] = meta.traceId;
+}
+
 } // namespace
 
 void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
@@ -139,6 +170,8 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     // scalars, plus misc scalars/strings. Give ArduinoJson ample headroom so it
     // never drops keys when we expand diagnostics.
     StaticJsonDocument<2048> doc;
+    const FrameMeta meta = buildFrameMeta("fw");
+    applyFrameMeta(doc, meta);
     JsonArray slots = doc.createNestedArray("slots");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
@@ -203,8 +236,10 @@ template <size_t Capacity> void emitJson(StaticJsonDocument<Capacity> &doc) {
 }
 
 // Back-compat patch frame for older host tools that still listen for the legacy config-patch shape.
-void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolvedDataByte) {
-    StaticJsonDocument<384> doc;
+void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolvedDataByte,
+                         const FrameMeta &meta) {
+    StaticJsonDocument<448> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "config-patch";
     JsonArray slotArray = doc.createNestedArray("slots");
     JsonObject slotObj = slotArray.createNestedObject();
@@ -221,8 +256,9 @@ void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolv
 }
 
 // Back-compat envelope assignment patch for hosts that still expect `efSlots` deltas.
-void emitLegacyEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
-    StaticJsonDocument<192> doc;
+void emitLegacyEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex, const FrameMeta &meta) {
+    StaticJsonDocument<256> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "config-patch";
     JsonArray ef = doc.createNestedArray("efSlots");
     JsonObject entry = ef.createNestedObject();
@@ -231,8 +267,10 @@ void emitLegacyEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     emitJson(doc);
 }
 
-void emitLegacyFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
-    StaticJsonDocument<192> doc;
+void emitLegacyFilterPatch(EnvelopeFollower::FilterType type, float freq, float q,
+                           const FrameMeta &meta) {
+    StaticJsonDocument<256> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "config-patch";
     JsonObject filter = doc.createNestedObject("filter");
     filter["type"] = filterName(type);
@@ -241,8 +279,10 @@ void emitLegacyFilterPatch(EnvelopeFollower::FilterType type, float freq, float 
     emitJson(doc);
 }
 
-void emitLegacyArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
-    StaticJsonDocument<192> doc;
+void emitLegacyArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB,
+                        const FrameMeta &meta) {
+    StaticJsonDocument<256> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "config-patch";
     JsonObject arg = doc.createNestedObject("arg");
     arg["method"] = argMethodLabel(method);
@@ -265,7 +305,9 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     const MIDISlot &slot = slots[slotIndex];
     const uint8_t resolvedDataByte = resolveDataByte(config, slotIndex, slot);
 
-    StaticJsonDocument<256> doc;
+    const FrameMeta meta = buildFrameMeta("fw-slot-patch");
+    StaticJsonDocument<896> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "slot_patch";
     doc["slot"] = slotIndex;
     JsonObject body = doc.createNestedObject("slot");
@@ -315,25 +357,29 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     arg["sourceB"] = slot.arg.sourceB;
     emitJson(doc);
 
-    emitLegacySlotPatch(slot, slotIndex, resolvedDataByte);
+    emitLegacySlotPatch(slot, slotIndex, resolvedDataByte, meta);
 }
 
 void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     if (!webSerialStreaming)
         return;
-    StaticJsonDocument<128> doc;
+    const FrameMeta meta = buildFrameMeta("fw-envelope-assignment");
+    StaticJsonDocument<192> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "envelope_assignment";
     doc["slot"] = slotIndex;
     doc["envelope"] = envelopeIndex;
     emitJson(doc);
 
-    emitLegacyEnvelopeAssignment(slotIndex, envelopeIndex);
+    emitLegacyEnvelopeAssignment(slotIndex, envelopeIndex, meta);
 }
 
 void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q) {
     if (!webSerialStreaming)
         return;
-    StaticJsonDocument<192> doc;
+    const FrameMeta meta = buildFrameMeta("fw-filter-patch");
+    StaticJsonDocument<256> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "filter_patch";
     JsonObject filter = doc.createNestedObject("filter");
     filter["type_index"] = static_cast<uint8_t>(type);
@@ -342,13 +388,15 @@ void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, f
     filter["q"] = q;
     emitJson(doc);
 
-    emitLegacyFilterPatch(type, freq, q);
+    emitLegacyFilterPatch(type, freq, q, meta);
 }
 
 void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB) {
     if (!webSerialStreaming)
         return;
-    StaticJsonDocument<192> doc;
+    const FrameMeta meta = buildFrameMeta("fw-arg-patch");
+    StaticJsonDocument<256> doc;
+    applyFrameMeta(doc, meta);
     doc["type"] = "arg_patch";
     JsonObject arg = doc.createNestedObject("arg");
     arg["method"] = method;
@@ -358,5 +406,5 @@ void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t 
     arg["b"] = envB;
     emitJson(doc);
 
-    emitLegacyArgPatch(method, enable, envA, envB);
+    emitLegacyArgPatch(method, enable, envA, envB, meta);
 }

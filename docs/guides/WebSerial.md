@@ -37,7 +37,7 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
 
 `device_name` is intended for UI identity banners (`Connected to: ...`) so users can confirm they are editing the correct rig before applying changes.
 
-The manifest handshake also tells the browser when it needs to fall back to the frozen `config_schema.json` that lives in the app bundle. Once the schema check passes the UI typically asks for `GET_CONFIG` instead of the old `GET_ALL` dump so it can hydrate every pot, slot, envelope, LFO route, and LED color from one well-behaved JSON line. `GET_SCHEMA` is still there for offline editors that want to compare against a stable schema without talking to hardware.
+After `GET_MANIFEST`, the runtime probes `GET_SCHEMA`. If the returned schema is compatible with the current editor contract (`slots`, `efSlots`, `filter`, `arg`, `led` roots), it is used directly; otherwise the app falls back to the frozen `config_schema.json` bundled with the UI. Once schema selection passes, the UI asks for `GET_CONFIG` instead of the old `GET_ALL` dump so it can hydrate every pot, slot, envelope, LFO route, and LED color from one well-behaved JSON line.
 
 ## App runtime state model
 
@@ -65,6 +65,9 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 ```json
 {
+  "timestamp":1710000000123,
+  "timestampMs":1710000000123,
+  "traceId":"fw-1710000000123-19",
   "slots":[0,1,2,...,41],
   "envelopes":[0,0,0,0,0,0],
   "lfos":[0.0,0.0],
@@ -88,6 +91,8 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 - `slots` – 42 MIDI‑scaled values (0‑127) for each virtual slot.
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
+- `timestamp` / `timestampMs` – source-clock frame time in milliseconds since boot (both fields mirror each other for compatibility with bridge parsers).
+- `traceId` – per-frame firmware trace token used by bridge route logs and round-trip correlation.
 - `lfos` – normalized 0..1 outputs for each of the two routed LFO engines; the same values feed LED brightness, arp swing, and EF gain trim internally and can also be routed to MIDI/OSC so the editor can animate the modulation bus.
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
@@ -130,6 +135,14 @@ newline-terminated JSON blobs as well, all prefixed with a `type` field so your 
 
 Every patch obeys the same “don’t spam unless streaming” rule as snapshots. If WebSerial streaming is paused, patches quietly bail
 so the USB line isn’t clogged when no one’s listening.
+
+Patch frames now include the same metadata trio as snapshots:
+
+- `timestamp`
+- `timestampMs`
+- `traceId`
+
+That lets host tools correlate both full telemetry frames and micro-patches in one timing/trace model.
 
 When you catch a `slot_patch`, drill into the nested `slot.ef` object if you want the new per-slot envelope follower controls. The
 fields line up with `MIDISlot::EfSettings` in firmware:

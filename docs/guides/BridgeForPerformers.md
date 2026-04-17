@@ -23,12 +23,19 @@ If your serial path differs, replace `/dev/ttyACM0`.
 - Listen on UDP port `9000` for:
   - `/mn42/slots` (42 args)
   - `/mn42/envelopes` (6 args)
-- Send commands to `/mn42/cmd` on UDP `9000`.
+  - `/mn42/telemetry/slots` and `/mn42/telemetry/envelopes` (same payloads, namespaced)
+- Send commands to `/mn42/cmd` (legacy slot lane) or `/mn42/event/*` (typed lane) on UDP `9000`.
 
 Example command:
 
 ```bash
 oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}'
+```
+
+Typed event example:
+
+```bash
+oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":110}'
 ```
 
 ### DAW workflow (virtual MIDI)
@@ -52,7 +59,7 @@ Bridge MIDI mapping:
 
 - **No data at all**: wrong serial path or cable; replug and restart bridge.
 - **DAW sees nothing**: relaunch DAW after bridge starts.
-- **OSC not responding**: wrong port or wrong address; use `/mn42/cmd` and port `9000`.
+- **OSC not responding**: wrong port or wrong address; use `/mn42/cmd` or `/mn42/event/*` on port `9000`.
 - **Command ignored**: wrong command shape or slot/value out of range; use `SET_SLOT_VALUE`, slot `0..41`, value `0..127`.
 - **Port already in use**: move ports, for example `--osc 7000 --osc-listen 8000`.
 

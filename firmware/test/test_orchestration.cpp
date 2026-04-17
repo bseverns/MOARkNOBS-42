@@ -185,6 +185,11 @@ void test_webserial_state_snapshot_emits_expected_json() {
     StaticJsonDocument<4096> doc;
     parseJsonLine(lines[0], doc);
 
+    TEST_ASSERT_TRUE(doc.containsKey("timestamp"));
+    TEST_ASSERT_TRUE(doc.containsKey("timestampMs"));
+    TEST_ASSERT_TRUE(doc.containsKey("traceId"));
+    TEST_ASSERT_EQUAL_UINT32(doc["timestamp"].as<uint32_t>(), doc["timestampMs"].as<uint32_t>());
+    TEST_ASSERT_TRUE(String(doc["traceId"] | "").startsWith("fw-"));
     TEST_ASSERT_EQUAL_UINT(NUM_POTS, doc["slots"].as<JsonArray>().size());
     TEST_ASSERT_EQUAL_UINT(NUM_ENVELOPES, doc["envelopes"].as<JsonArray>().size());
     TEST_ASSERT_EQUAL_UINT(2, doc["lfos"].as<JsonArray>().size());
@@ -221,6 +226,12 @@ void test_webserial_slot_patch_emits_schema_and_legacy_payloads() {
 
     StaticJsonDocument<1024> patchDoc;
     parseJsonLine(lines[0], patchDoc);
+    TEST_ASSERT_TRUE(patchDoc.containsKey("timestamp"));
+    TEST_ASSERT_TRUE(patchDoc.containsKey("timestampMs"));
+    TEST_ASSERT_TRUE(patchDoc.containsKey("traceId"));
+    TEST_ASSERT_EQUAL_UINT32(patchDoc["timestamp"].as<uint32_t>(),
+                             patchDoc["timestampMs"].as<uint32_t>());
+    TEST_ASSERT_TRUE(String(patchDoc["traceId"] | "").startsWith("fw-slot-patch-"));
     TEST_ASSERT_EQUAL_STRING("slot_patch", patchDoc["type"] | "");
     TEST_ASSERT_EQUAL_UINT8(5, patchDoc["slot"].as<uint8_t>());
     TEST_ASSERT_EQUAL_UINT8(74, patchDoc["slot"]["data1"].as<uint8_t>());
@@ -229,6 +240,12 @@ void test_webserial_slot_patch_emits_schema_and_legacy_payloads() {
 
     StaticJsonDocument<512> legacyDoc;
     parseJsonLine(lines[1], legacyDoc);
+    TEST_ASSERT_TRUE(legacyDoc.containsKey("timestamp"));
+    TEST_ASSERT_TRUE(legacyDoc.containsKey("timestampMs"));
+    TEST_ASSERT_TRUE(legacyDoc.containsKey("traceId"));
+    TEST_ASSERT_EQUAL_UINT32(legacyDoc["timestamp"].as<uint32_t>(),
+                             legacyDoc["timestampMs"].as<uint32_t>());
+    TEST_ASSERT_TRUE(String(legacyDoc["traceId"] | "").startsWith("fw-slot-patch-"));
     TEST_ASSERT_EQUAL_STRING("config-patch", legacyDoc["type"] | "");
     TEST_ASSERT_EQUAL_UINT8(5, legacyDoc["slots"][0]["index"].as<uint8_t>());
     TEST_ASSERT_EQUAL_UINT8(74, legacyDoc["slots"][0]["data1"].as<uint8_t>());

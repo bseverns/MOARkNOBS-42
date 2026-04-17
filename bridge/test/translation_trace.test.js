@@ -155,7 +155,14 @@ async function run() {
   const serialToOscRoutes = state.routes.filter(
     (route) => route.flow === 'serial->osc' && route.kind === 'telemetry',
   );
-  assert.equal(serialToOscRoutes.length, 2);
+  assert.equal(serialToOscRoutes.length, 4);
+  const serialToOscAddresses = serialToOscRoutes.map((route) => route.address);
+  assert.deepEqual(serialToOscAddresses.sort(), [
+    '/mn42/envelopes',
+    '/mn42/slots',
+    '/mn42/telemetry/envelopes',
+    '/mn42/telemetry/slots',
+  ]);
   serialToOscRoutes.forEach((route) => {
     assert.equal(route.traceId, 'fw-trace-1');
     assert.equal(route.sourceTimestampMs, 1710000000123);

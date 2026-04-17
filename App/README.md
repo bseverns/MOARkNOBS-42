@@ -31,7 +31,7 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
    - bridge path: run `npm --prefix bridge start`, open <http://127.0.0.1:8787/>, then click **Open configurator**
 3. Hit <http://localhost:8000/> for the direct path, or the bridge-served `/app/` URL for the bridge path. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
 4. Click **Connect**, pick the MOARkNOBS port if you are on WebSerial, and let the header pill confirm the firmware, schema version, and memory stats.
-5. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the bundled schema validator.
+5. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the active schema validator (device schema when compatible, bundled `config_schema.json` fallback otherwise).
 6. On Apply the runtime stages one config payload with schema version, manifest metadata, and a SHA-256 checksum. Simulator mode keeps the JSON-RPC envelope; native WebSerial and bridge sessions adapt that request onto the firmware's `SET_ALL` text protocol. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
 7. Use the browser-only **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. They are local safety guards, not firmware-backed config, so they do not require **Apply**.
 8. Need hardware-free testing? Toggle the **Start simulator** button—the runtime swaps transports and replays canned manifest/state frames.
@@ -73,7 +73,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 
 ## Runtime Contract
 
-- Transport handshake is `hello` → `get_manifest` → `get_config`. On simulator transport those travel as JSON-RPC; on native WebSerial and bridge sessions the runtime maps them to `HELLO`, `GET_MANIFEST`, and `GET_CONFIG` before trusting any config payload.
+- Transport handshake is `hello` → `get_manifest` → `get_schema` → `get_config`. On simulator transport those travel as JSON-RPC; on native WebSerial and bridge sessions the runtime maps them to `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, and `GET_CONFIG` before trusting any config payload.
 - The runtime keeps separate `liveConfig` and `stagedConfig` snapshots. The UI only mutates staged state; successful Apply promotes staged state to live state.
 - The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.
 - The runtime buffers inbound telemetry and paints on `requestAnimationFrame` (~16 ms) so frequent state messages do not turn the DOM into soup.

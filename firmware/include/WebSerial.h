@@ -16,6 +16,9 @@ class WebSerial {
      * Send a JSON snapshot of all slot values and envelope levels.
      * Structure (newline-terminated):
      * {
+     *   "timestamp": <int>,                // source clock (ms since boot)
+     *   "timestampMs": <int>,              // alias of timestamp for host bridges
+     *   "traceId": "fw-<ms>-<n>",          // per-frame trace token for route logs
      *   "slots": [s0, s1, ..., s41],       // 42 values, each 0-127
      *   "envelopes": [e0, e1, ..., e5],    // 6 values, each 0-127
      *   "lfos": [lfo0, lfo1],              // 0..1 normalized values
@@ -49,28 +52,32 @@ class WebSerial {
     /**
      * Emit a compact config patch describing the current state of a slot.
      * Mirrors the schema used by the WebSerial editor so diffs line up.
-     * Also echoes the legacy "config-patch" payload so ancient frontends keep breathing.
+     * Includes timestamp + trace metadata and also echoes the legacy
+     * "config-patch" payload so ancient frontends keep breathing.
      */
     static void sendSlotPatch(const ConfigManager &config, uint8_t slotIndex);
 
     /**
      * Emit an envelope assignment patch for a single slot.
      * Lets the browser repaint routing badges without reloading everything.
-     * Legacy "config-patch" events also fire so dusty dashboards stay in sync.
+     * Includes timestamp + trace metadata. Legacy "config-patch" events also
+     * fire so dusty dashboards stay in sync.
      */
     static void sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex);
 
     /**
      * Emit a filter configuration patch (type/frequency/Q) for the active follower.
      * Keeps the UI in lockstep when filters are tuned from the hardware side.
-     * Echoes the historic config-patch format for any hold-out tooling.
+     * Includes timestamp + trace metadata and echoes the historic config-patch
+     * format for any hold-out tooling.
      */
     static void sendFilterPatch(EnvelopeFollower::FilterType type, float freq, float q);
 
     /**
      * Emit an ARG configuration patch.
      * Broadcasts method, enable flag, and the paired envelopes so remote editors sync up.
-     * Throws a matching config-patch blob for UI fossils that only learned the OG format.
+     * Includes timestamp + trace metadata and throws a matching config-patch
+     * blob for UI fossils that only learned the OG format.
      */
     static void sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB);
 };

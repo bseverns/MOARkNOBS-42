@@ -1190,6 +1190,7 @@ export function createRuntime({
   let queuedTelemetry = null;
   let remoteManifest = null;
   let schema = null;
+  let schemaSource = 'bundled';
   let validator = null;
   let liveConfig = null;
   let stagedConfig = null;
@@ -1355,6 +1356,51 @@ export function createRuntime({
         console.error('runtime status listener error', err);
       }
     }
+  }
+
+  // Ensure device-supplied schemas include the structures this runtime expects.
+  function isRuntimeCompatibleSchema(candidate) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
+    if (candidate.type && candidate.type !== 'object') return false;
+    if (!candidate.properties || typeof candidate.properties !== 'object') return false;
+    const requiredRoots = ['slots', 'efSlots', 'filter', 'arg', 'led'];
+    return requiredRoots.every((key) => {
+      const branch = candidate.properties[key];
+      return branch && typeof branch === 'object';
+    });
+  }
+
+  async function loadBundledSchema() {
+    const response = await fetch(schemaUrl);
+    return response.json();
+  }
+
+  async function selectSchemaForHydration() {
+    let deviceSchema = null;
+    try {
+      const response = await sendRpc({ rpc: 'get_schema' });
+      deviceSchema = response?.schema ?? response ?? null;
+    } catch (err) {
+      console.debug('get_schema RPC failed', err);
+    }
+    if (isRuntimeCompatibleSchema(deviceSchema)) {
+      schemaSource = 'device';
+      return deviceSchema;
+    }
+
+    const bundledSchema = await loadBundledSchema();
+    schemaSource = 'bundled';
+    if (!isRuntimeCompatibleSchema(bundledSchema)) {
+      throw new Error('Bundled schema is incompatible with runtime requirements');
+    }
+    if (deviceSchema) {
+      emit('status', {
+        stage: 'schema',
+        level: 'warn',
+        message: 'Device schema is incompatible; using bundled schema.'
+      });
+    }
+    return bundledSchema;
   }
 
   function onStatus(handler) {
@@ -1795,7 +1841,7 @@ export function createRuntime({
   }
 
   async function hydrate() {
-    schema = await fetch(schemaUrl).then((res) => res.json());
+    schema = await selectSchemaForHydration();
     validator = ajv.compile(schema);
     const configPayload = await sendRpc({ rpc: 'get_config' });
     const config = configPayload?.config ?? configPayload;
@@ -2307,6 +2353,7 @@ export function createRuntime({
     return {
       manifest: remoteManifest,
       schema,
+      schemaSource,
       live: mergeLocalSlotMeta(liveConfig),
       staged: mergeLocalSlotMeta(stagedConfig),
       dirty,

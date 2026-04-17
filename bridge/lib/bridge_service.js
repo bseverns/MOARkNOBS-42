@@ -15,6 +15,9 @@ const PENDING_COMMAND_TTL_MS = 5000;
 const MAX_CMD_LEN = 128;
 const MAX_SERIAL_LINE_LEN = 16 * 1024;
 const MAX_MSG_LEN = MAX_CMD_LEN;
+const MAX_EVENT_JSON_LEN = 4096;
+const OSC_CMD_ADDRESS = '/mn42/cmd';
+const OSC_EVENT_PREFIX = '/mn42/event/';
 
 // Shared CLI/server help text so both bridge entrypoints describe the same contract.
 function usageText() {
@@ -119,8 +122,8 @@ function parseConfigFromArgv(argv = process.argv) {
   };
 }
 
-// Reject malformed inbound host-control messages before they reach serial.
-function validateCmd(m) {
+// Reject malformed inbound live-slot commands before they reach serial.
+function validateSlotValueCommand(m) {
   if (
     !m ||
     m.cmd !== 'SET_SLOT_VALUE' ||
@@ -135,9 +138,399 @@ function validateCmd(m) {
   return cmd;
 }
 
+// Back-compat alias kept for tests and legacy imports.
+function validateCmd(m) {
+  return validateSlotValueCommand(m);
+}
+
 // Native firmware live-control verb used by OSC and MIDI input paths.
 function formatLiveValueCommand(cmd) {
   return `SET_SLOT_VALUE,${cmd.slot},${cmd.value}`;
+}
+
+function normalizeIntegerInRange(raw, min, max) {
+  if (raw === null || raw === undefined) return null;
+  const value =
+    typeof raw === 'number'
+      ? Math.trunc(raw)
+      : Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isInteger(value) || value < min || value > max) return null;
+  return value;
+}
+
+function normalizeChannel(raw, fallback = 1) {
+  const normalized = normalizeIntegerInRange(raw, 1, 16);
+  return normalized === null ? fallback : normalized;
+}
+
+function normalizePitchBend(raw) {
+  if (raw === null || raw === undefined) return 8192;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    const truncated = Math.trunc(raw);
+    if (truncated >= -8192 && truncated <= 8191) return truncated + 8192;
+    if (truncated >= 0 && truncated <= 16383) return truncated;
+  }
+  const parsed = Number.parseInt(String(raw).trim(), 10);
+  if (!Number.isInteger(parsed)) return null;
+  if (parsed >= -8192 && parsed <= 8191) return parsed + 8192;
+  if (parsed >= 0 && parsed <= 16383) return parsed;
+  return null;
+}
+
+function normalizeByteArray(raw, { sevenBit = false } = {}) {
+  const source = Array.isArray(raw) ? raw : null;
+  if (!source || !source.length) return null;
+  const max = sevenBit ? 127 : 255;
+  const normalized = [];
+  for (const value of source) {
+    const byte = normalizeIntegerInRange(value, 0, max);
+    if (byte === null) return null;
+    normalized.push(byte);
+  }
+  return normalized;
+}
+
+function normalizeEventKind(rawKind) {
+  if (typeof rawKind !== 'string') return null;
+  const kind = rawKind.trim().toLowerCase();
+  switch (kind) {
+    case 'cc':
+      return 'cc';
+    case 'note_on':
+    case 'note_onoff':
+    case 'noteon':
+      return 'note_on';
+    case 'note_off':
+    case 'noteoff':
+      return 'note_off';
+    case 'pitch_bend':
+    case 'pitchbend':
+      return 'pitch_bend';
+    case 'channel_aftertouch':
+    case 'channel_pressure':
+    case 'aftertouch':
+      return 'channel_aftertouch';
+    case 'poly_aftertouch':
+    case 'poly_pressure':
+      return 'poly_aftertouch';
+    case 'program_change':
+    case 'program':
+      return 'program_change';
+    case 'nrpn':
+      return 'nrpn';
+    case 'rpn':
+      return 'rpn';
+    case 'sysex':
+      return 'sysex';
+    default:
+      return null;
+  }
+}
+
+function inferEventKindFromAddress(address) {
+  if (typeof address !== 'string' || !address.startsWith(OSC_EVENT_PREFIX)) {
+    return null;
+  }
+  const suffix = address.slice(OSC_EVENT_PREFIX.length);
+  return normalizeEventKind(suffix);
+}
+
+function parseOscPayloadArg(
+  rawArg,
+  { maxJsonLength = MAX_EVENT_JSON_LEN } = {},
+) {
+  if (typeof rawArg === 'string') {
+    if (rawArg.length > maxJsonLength) return null;
+    try {
+      const parsed = JSON.parse(rawArg);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  if (rawArg && typeof rawArg === 'object' && !Array.isArray(rawArg)) {
+    return rawArg;
+  }
+  return null;
+}
+
+function normalizeTypedEvent(kind, payload = {}) {
+  const normalizedKind = normalizeEventKind(kind);
+  if (!normalizedKind || !payload || typeof payload !== 'object') return null;
+  const channel = normalizeChannel(payload.channel, 1);
+  switch (normalizedKind) {
+    case 'cc': {
+      const controller = normalizeIntegerInRange(
+        payload.controller ?? payload.cc,
+        0,
+        127,
+      );
+      const value = normalizeIntegerInRange(payload.value, 0, 127);
+      if (controller === null || value === null) return null;
+      return { kind: 'cc', channel, controller, value };
+    }
+    case 'note_on':
+    case 'note_off': {
+      const note = normalizeIntegerInRange(payload.note, 0, 127);
+      const velocity = normalizeIntegerInRange(payload.velocity ?? 0, 0, 127);
+      if (note === null || velocity === null) return null;
+      return { kind: normalizedKind, channel, note, velocity };
+    }
+    case 'pitch_bend': {
+      const value = normalizePitchBend(payload.value ?? payload.value14);
+      if (value === null) return null;
+      return { kind: 'pitch_bend', channel, value };
+    }
+    case 'channel_aftertouch': {
+      const pressure = normalizeIntegerInRange(
+        payload.pressure ?? payload.value,
+        0,
+        127,
+      );
+      if (pressure === null) return null;
+      return { kind: 'channel_aftertouch', channel, pressure };
+    }
+    case 'poly_aftertouch': {
+      const note = normalizeIntegerInRange(payload.note, 0, 127);
+      const pressure = normalizeIntegerInRange(
+        payload.pressure ?? payload.value,
+        0,
+        127,
+      );
+      if (note === null || pressure === null) return null;
+      return { kind: 'poly_aftertouch', channel, note, pressure };
+    }
+    case 'program_change': {
+      const program = normalizeIntegerInRange(
+        payload.program ?? payload.value,
+        0,
+        127,
+      );
+      if (program === null) return null;
+      return { kind: 'program_change', channel, program };
+    }
+    case 'nrpn':
+    case 'rpn': {
+      const parameter = normalizeIntegerInRange(
+        payload.parameter ?? payload.param,
+        0,
+        16383,
+      );
+      const value = normalizeIntegerInRange(payload.value, 0, 16383);
+      if (parameter === null || value === null) return null;
+      return { kind: normalizedKind, channel, parameter, value };
+    }
+    case 'sysex': {
+      const bytes = normalizeByteArray(payload.bytes, { sevenBit: false });
+      if (!bytes || bytes.length < 2) return null;
+      if (bytes[0] !== 0xf0 || bytes[bytes.length - 1] !== 0xf7) return null;
+      return { kind: 'sysex', bytes };
+    }
+    default:
+      return null;
+  }
+}
+
+function eventAddressForKind(kind) {
+  return `${OSC_EVENT_PREFIX}${kind}`;
+}
+
+function typedEventToMidiPackets(event) {
+  if (!event || typeof event !== 'object') return [];
+  const channelNibble =
+    event.kind === 'sysex'
+      ? 0
+      : normalizeIntegerInRange(event.channel, 1, 16) - 1;
+  switch (event.kind) {
+    case 'cc':
+      return [[0xb0 | channelNibble, event.controller, event.value]];
+    case 'note_on':
+      return [[0x90 | channelNibble, event.note, event.velocity]];
+    case 'note_off':
+      return [[0x80 | channelNibble, event.note, event.velocity]];
+    case 'pitch_bend': {
+      const value = normalizePitchBend(event.value);
+      if (value === null) return [];
+      const lsb = value & 0x7f;
+      const msb = (value >> 7) & 0x7f;
+      return [[0xe0 | channelNibble, lsb, msb]];
+    }
+    case 'channel_aftertouch':
+      return [[0xd0 | channelNibble, event.pressure]];
+    case 'poly_aftertouch':
+      return [[0xa0 | channelNibble, event.note, event.pressure]];
+    case 'program_change':
+      return [[0xc0 | channelNibble, event.program]];
+    case 'nrpn':
+    case 'rpn': {
+      const parameter = normalizeIntegerInRange(event.parameter, 0, 16383);
+      const value = normalizeIntegerInRange(event.value, 0, 16383);
+      if (parameter === null || value === null) return [];
+      const paramMsb = (parameter >> 7) & 0x7f;
+      const paramLsb = parameter & 0x7f;
+      const valueMsb = (value >> 7) & 0x7f;
+      const valueLsb = value & 0x7f;
+      return event.kind === 'nrpn'
+        ? [
+            [0xb0 | channelNibble, 99, paramMsb],
+            [0xb0 | channelNibble, 98, paramLsb],
+            [0xb0 | channelNibble, 6, valueMsb],
+            [0xb0 | channelNibble, 38, valueLsb],
+          ]
+        : [
+            [0xb0 | channelNibble, 101, paramMsb],
+            [0xb0 | channelNibble, 100, paramLsb],
+            [0xb0 | channelNibble, 6, valueMsb],
+            [0xb0 | channelNibble, 38, valueLsb],
+          ];
+    }
+    case 'sysex':
+      return [event.bytes];
+    default:
+      return [];
+  }
+}
+
+function parseMidiMessageToTypedEvents(arr, channelRpnState = new Map()) {
+  if (!Array.isArray(arr) || !arr.length) return [];
+  const bytes = normalizeByteArray(arr, { sevenBit: false });
+  if (!bytes) return [];
+
+  if (bytes[0] === 0xf0 && bytes[bytes.length - 1] === 0xf7) {
+    return [{ kind: 'sysex', bytes }];
+  }
+
+  const status = bytes[0];
+  const kindNibble = status & 0xf0;
+  const channel = (status & 0x0f) + 1;
+
+  if (kindNibble === 0x80 && bytes.length >= 3) {
+    return [
+      {
+        kind: 'note_off',
+        channel,
+        note: bytes[1],
+        velocity: bytes[2],
+      },
+    ];
+  }
+  if (kindNibble === 0x90 && bytes.length >= 3) {
+    if (bytes[2] === 0) {
+      return [{ kind: 'note_off', channel, note: bytes[1], velocity: 0 }];
+    }
+    return [{ kind: 'note_on', channel, note: bytes[1], velocity: bytes[2] }];
+  }
+  if (kindNibble === 0xa0 && bytes.length >= 3) {
+    return [
+      {
+        kind: 'poly_aftertouch',
+        channel,
+        note: bytes[1],
+        pressure: bytes[2],
+      },
+    ];
+  }
+  if (kindNibble === 0xc0 && bytes.length >= 2) {
+    return [{ kind: 'program_change', channel, program: bytes[1] }];
+  }
+  if (kindNibble === 0xd0 && bytes.length >= 2) {
+    return [{ kind: 'channel_aftertouch', channel, pressure: bytes[1] }];
+  }
+  if (kindNibble === 0xe0 && bytes.length >= 3) {
+    const value = ((bytes[2] & 0x7f) << 7) | (bytes[1] & 0x7f);
+    return [{ kind: 'pitch_bend', channel, value }];
+  }
+  if (kindNibble === 0xb0 && bytes.length >= 3) {
+    const controller = bytes[1];
+    const value = bytes[2];
+    const events = [{ kind: 'cc', channel, controller, value }];
+
+    const state = channelRpnState.get(channel) || {
+      mode: null,
+      nrpnMsb: null,
+      nrpnLsb: null,
+      rpnMsb: null,
+      rpnLsb: null,
+      dataMsb: null,
+      dataLsb: null,
+    };
+
+    if (controller === 99) {
+      state.mode = 'nrpn';
+      state.nrpnMsb = value;
+    } else if (controller === 98) {
+      state.mode = 'nrpn';
+      state.nrpnLsb = value;
+    } else if (controller === 101) {
+      state.mode = 'rpn';
+      state.rpnMsb = value;
+    } else if (controller === 100) {
+      state.mode = 'rpn';
+      state.rpnLsb = value;
+    } else if (controller === 6) {
+      state.dataMsb = value;
+    } else if (controller === 38) {
+      state.dataLsb = value;
+    }
+    channelRpnState.set(channel, state);
+
+    if (
+      (controller === 6 || controller === 38) &&
+      state.mode &&
+      state.dataMsb !== null
+    ) {
+      const isNrpn = state.mode === 'nrpn';
+      const paramMsb = isNrpn ? state.nrpnMsb : state.rpnMsb;
+      const paramLsb = isNrpn ? state.nrpnLsb : state.rpnLsb;
+      if (paramMsb !== null && paramLsb !== null) {
+        const parameter = ((paramMsb & 0x7f) << 7) | (paramLsb & 0x7f);
+        const combined = ((state.dataMsb & 0x7f) << 7) | (state.dataLsb || 0);
+        if (parameter !== 0x3fff) {
+          events.push({
+            kind: isNrpn ? 'nrpn' : 'rpn',
+            channel,
+            parameter,
+            value: combined,
+          });
+        }
+      }
+    }
+    return events;
+  }
+  return [];
+}
+
+function normalizeOscTypedEventMessage(msg) {
+  if (
+    !msg ||
+    typeof msg !== 'object' ||
+    typeof msg.address !== 'string' ||
+    !Array.isArray(msg.args)
+  ) {
+    return null;
+  }
+  const kind = inferEventKindFromAddress(msg.address);
+  if (!kind) return null;
+  if (!msg.args.length) return null;
+  const payload = parseOscPayloadArg(msg.args[0]);
+  if (!payload) return null;
+  const event = normalizeTypedEvent(kind, payload);
+  if (!event) return null;
+  return {
+    address: msg.address,
+    event,
+    traceId: extractTraceId(payload),
+    sourceTimestampMs: extractTimestampMs(payload),
+  };
+}
+
+function buildSlotCommandFromCcEvent(event) {
+  if (!event || event.kind !== 'cc') return null;
+  return validateSlotValueCommand({
+    cmd: 'SET_SLOT_VALUE',
+    slot: event.controller,
+    value: event.value,
+  });
 }
 
 // Plain JSON clone is enough for bridge state snapshots and log payloads.
@@ -413,6 +806,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     matchedByTrace: 0,
     matchedBySlotValue: 0,
   };
+  const midiRpnStateByChannel = new Map();
 
   const state = {
     running: false,
@@ -942,13 +1336,14 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     try {
       udp.send({ address, args }, config.oscHost, config.oscPort);
       recordRoute({
-        flow: 'serial->osc',
-        kind: 'telemetry',
+        flow: routeMeta.flow || 'serial->osc',
+        kind: routeMeta.kind || 'telemetry',
         address,
         count: Array.isArray(args) ? args.length : null,
         traceId: routeMeta.traceId,
         sourceTimestampMs: routeMeta.sourceTimestampMs,
         hostTimestampMs: routeMeta.hostTimestampMs,
+        reason: routeMeta.reason || null,
       });
     } catch (err) {
       pushLog('error', `udp send error: ${err.message}`);
@@ -979,6 +1374,61 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         hostTimestampMs: routeMeta.hostTimestampMs,
       });
     }
+  }
+
+  function sendTypedEventToOsc(event, routeMeta = {}) {
+    if (!event || typeof event !== 'object') return false;
+    const payload = { ...event };
+    const traceId = sanitizeTraceId(routeMeta.traceId);
+    if (traceId) payload.traceId = traceId;
+    const sourceTimestampMs = normalizeTimestampMs(routeMeta.sourceTimestampMs);
+    if (sourceTimestampMs !== null) payload.timestampMs = sourceTimestampMs;
+    const json = JSON.stringify(payload);
+    sendOscTelemetry(eventAddressForKind(event.kind), [json], {
+      flow: routeMeta.flow || 'midi->osc',
+      kind: routeMeta.kind || 'event',
+      reason: event.kind,
+      traceId,
+      sourceTimestampMs,
+      hostTimestampMs: routeMeta.hostTimestampMs,
+    });
+    return true;
+  }
+
+  function sendTypedEventToMidi(event, routeMeta = {}) {
+    if (!midiOut || !event || typeof event !== 'object') return 0;
+    const packets = typedEventToMidiPackets(event);
+    if (!packets.length) return 0;
+    let sentCount = 0;
+    packets.forEach((packet) => {
+      try {
+        if (
+          packet.length >= 3 &&
+          Number.isInteger(packet[0]) &&
+          Number.isInteger(packet[1]) &&
+          Number.isInteger(packet[2]) &&
+          (packet[0] & 0xf0) === 0xb0
+        ) {
+          markTelemetryMidi(packet[0], packet[1], packet[2]);
+        }
+        midiOut.send(packet);
+        sentCount += 1;
+      } catch (err) {
+        pushLog('error', `MIDI out error: ${err.message}`);
+      }
+    });
+    if (sentCount) {
+      recordRoute({
+        flow: routeMeta.flow || 'osc->midi',
+        kind: routeMeta.kind || 'event',
+        reason: routeMeta.reason || event.kind,
+        count: sentCount,
+        traceId: routeMeta.traceId,
+        sourceTimestampMs: routeMeta.sourceTimestampMs,
+        hostTimestampMs: routeMeta.hostTimestampMs,
+      });
+    }
+    return sentCount;
   }
 
   // Parse firmware serial output, update bridge state, and rebroadcast telemetry.
@@ -1040,6 +1490,11 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         sourceTimestampMs,
         hostTimestampMs,
       });
+      sendOscTelemetry('/mn42/telemetry/slots', data.slots, {
+        traceId: telemetryTraceId,
+        sourceTimestampMs,
+        hostTimestampMs,
+      });
       sendMidiTelemetry(0xb0, data.slots, {
         traceId: telemetryTraceId,
         sourceTimestampMs,
@@ -1048,6 +1503,11 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
     if (Array.isArray(data.envelopes)) {
       sendOscTelemetry('/mn42/envelopes', data.envelopes, {
+        traceId: telemetryTraceId,
+        sourceTimestampMs,
+        hostTimestampMs,
+      });
+      sendOscTelemetry('/mn42/telemetry/envelopes', data.envelopes, {
         traceId: telemetryTraceId,
         sourceTimestampMs,
         hostTimestampMs,
@@ -1183,59 +1643,126 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     });
 
     udp.on('message', (msg) => {
-      if (
-        !msg ||
-        msg.address !== '/mn42/cmd' ||
-        !Array.isArray(msg.args) ||
-        !msg.args.length
-      ) {
-        return;
-      }
-      let data = msg.args[0];
-      if (typeof data === 'string') {
-        if (data.length > MAX_CMD_LEN) {
+      if (!msg || typeof msg !== 'object') return;
+
+      if (msg.address === OSC_CMD_ADDRESS) {
+        if (!Array.isArray(msg.args) || !msg.args.length) return;
+        let data = msg.args[0];
+        if (typeof data === 'string') {
+          if (data.length > MAX_CMD_LEN) {
+            bumpCounter('badOscCmdDrops');
+            pushLog('warn', 'OSC cmd too big');
+            return;
+          }
+          try {
+            data = JSON.parse(data);
+          } catch (_) {
+            bumpCounter('badOscCmdDrops');
+            pushLog('warn', 'bad OSC JSON');
+            return;
+          }
+        }
+        const cmd = validateSlotValueCommand(data);
+        if (!cmd) {
           bumpCounter('badOscCmdDrops');
-          pushLog('warn', 'OSC cmd too big');
+          recordRoute({
+            flow: 'osc->serial',
+            kind: 'drop_invalid',
+            address: OSC_CMD_ADDRESS,
+            traceId: extractTraceId(data) || nextTraceId('osc'),
+            sourceTimestampMs: extractTimestampMs(data),
+            hostTimestampMs: Date.now(),
+          });
+          pushLog('warn', 'bad OSC cmd', data);
           return;
         }
-        try {
-          data = JSON.parse(data);
-        } catch (_) {
-          bumpCounter('badOscCmdDrops');
-          pushLog('warn', 'bad OSC JSON');
-          return;
-        }
-      }
-      const cmd = validateCmd(data);
-      if (!cmd) {
-        bumpCounter('badOscCmdDrops');
+        const hostTimestampMs = Date.now();
+        const traceId = extractTraceId(data) || nextTraceId('osc');
+        const sourceTimestampMs = extractTimestampMs(data);
         recordRoute({
           flow: 'osc->serial',
-          kind: 'drop_invalid',
-          address: '/mn42/cmd',
-          traceId: extractTraceId(data) || nextTraceId('osc'),
-          sourceTimestampMs: extractTimestampMs(data),
-          hostTimestampMs: Date.now(),
+          kind: 'command',
+          address: OSC_CMD_ADDRESS,
+          slot: cmd.slot,
+          value: cmd.value,
+          traceId,
+          sourceTimestampMs,
+          hostTimestampMs,
         });
-        pushLog('warn', 'bad OSC cmd', data);
+        queuePendingCommand({
+          slot: cmd.slot,
+          value: cmd.value,
+          traceId,
+          hostTimestampMs,
+          source: 'osc',
+        });
+        sendLine(formatLiveValueCommand(cmd));
         return;
       }
+
+      const isTypedEventAddress =
+        typeof msg.address === 'string' &&
+        msg.address.startsWith(OSC_EVENT_PREFIX);
+      const typed = normalizeOscTypedEventMessage(msg);
+      if (!typed) {
+        if (isTypedEventAddress) {
+          bumpCounter('badOscCmdDrops');
+          recordRoute({
+            flow: 'osc->midi',
+            kind: 'drop_invalid',
+            address: msg.address,
+            traceId: nextTraceId('osc-event'),
+            hostTimestampMs: Date.now(),
+            reason: 'bad_event_payload',
+          });
+          pushLog('warn', 'bad OSC event payload', msg.args?.[0]);
+        }
+        return;
+      }
+      const hostTimestampMs = Date.now();
+      const traceId = typed.traceId || nextTraceId('osc-event');
+      const sourceTimestampMs = typed.sourceTimestampMs;
+      const eventSent = sendTypedEventToMidi(typed.event, {
+        flow: 'osc->midi',
+        kind: 'event',
+        reason: typed.event.kind,
+        traceId,
+        sourceTimestampMs,
+        hostTimestampMs,
+      });
+      if (!eventSent) {
+        bumpCounter('badOscCmdDrops');
+        recordRoute({
+          flow: 'osc->midi',
+          kind: 'drop_invalid',
+          address: typed.address,
+          traceId,
+          sourceTimestampMs,
+          hostTimestampMs,
+          reason: 'event_not_sent',
+        });
+        pushLog('warn', 'bad OSC event payload', msg.args[0]);
+        return;
+      }
+
+      const cmd = buildSlotCommandFromCcEvent(typed.event);
+      if (!cmd) return;
       recordRoute({
         flow: 'osc->serial',
         kind: 'command',
-        address: '/mn42/cmd',
+        address: typed.address,
         slot: cmd.slot,
         value: cmd.value,
-        traceId: extractTraceId(data) || nextTraceId('osc'),
-        sourceTimestampMs: extractTimestampMs(data),
-        hostTimestampMs: Date.now(),
+        traceId,
+        sourceTimestampMs,
+        hostTimestampMs,
       });
       queuePendingCommand({
         slot: cmd.slot,
         value: cmd.value,
-        traceId: extractTraceId(data),
-        hostTimestampMs: Date.now(),
-        source: 'osc',
+        traceId,
+        hostTimestampMs,
+        source: 'osc_event',
       });
       sendLine(formatLiveValueCommand(cmd));
     });
@@ -1278,10 +1805,16 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       midiIn.connect((msg) => {
         if (!msg || typeof msg.toArray !== 'function') return;
         const arr = msg.toArray();
-        if ((arr[0] & 0xf0) !== 0xb0) return;
         const midiTraceId = nextTraceId('midi');
         const hostTimestampMs = Date.now();
-        if (shouldSuppressMidiEcho(arr[0], arr[1], arr[2])) {
+        const isCcMessage =
+          Array.isArray(arr) &&
+          arr.length >= 3 &&
+          Number.isInteger(arr[0]) &&
+          (arr[0] & 0xf0) === 0xb0 &&
+          Number.isInteger(arr[1]) &&
+          Number.isInteger(arr[2]);
+        if (isCcMessage && shouldSuppressMidiEcho(arr[0], arr[1], arr[2])) {
           bumpCounter('feedbackSuppressed');
           recordRoute({
             flow: 'midi->serial',
@@ -1295,19 +1828,31 @@ function createBridgeService(initialConfig = {}, injected = {}) {
           });
           return;
         }
-        const cmd = validateCmd({
-          cmd: 'SET_SLOT_VALUE',
-          slot: arr[1],
-          value: arr[2],
+        const typedEvents = parseMidiMessageToTypedEvents(
+          arr,
+          midiRpnStateByChannel,
+        );
+        if (!typedEvents.length) return;
+        typedEvents.forEach((event) => {
+          sendTypedEventToOsc(event, {
+            flow: 'midi->osc',
+            kind: 'event',
+            reason: event.kind,
+            traceId: midiTraceId,
+            hostTimestampMs,
+          });
         });
+        const ccEvent = typedEvents.find((event) => event.kind === 'cc');
+        if (!ccEvent) return;
+        const cmd = buildSlotCommandFromCcEvent(ccEvent);
         if (!cmd) {
           bumpCounter('badMidiCmdDrops');
           recordRoute({
             flow: 'midi->serial',
             kind: 'drop_invalid',
             status: arr[0],
-            slot: arr[1],
-            value: arr[2],
+            slot: ccEvent.controller,
+            value: ccEvent.value,
             traceId: midiTraceId,
             hostTimestampMs,
           });
@@ -1346,6 +1891,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     traceSeq = 0;
     alertSeq = 0;
     recentTelemetryMidi.clear();
+    midiRpnStateByChannel.clear();
     alertLastRaisedByKey.clear();
     clearPerformanceTracking();
     setState({

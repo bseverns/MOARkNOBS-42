@@ -107,7 +107,7 @@ Replace `/dev/ttyACM0` with your device path.
 
 1. Start the bridge.
 2. In your OSC app, listen on your outbound port (`--osc`, default `9000`).
-3. Send control commands to `/mn42/cmd` on the inbound port (`--osc-listen`, default `9000`).
+3. Send control commands to `/mn42/cmd` (legacy slot lane) or `/mn42/event/*` (typed lane) on the inbound port (`--osc-listen`, default `9000`).
 
 Example command (liblo/oscsend):
 
@@ -116,6 +116,12 @@ oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}
 ```
 
 That sets slot 2 to value 95.
+
+Typed note example:
+
+```bash
+oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":110}'
+```
 
 ### DAW workflow (virtual MIDI)
 
@@ -130,7 +136,9 @@ MIDI mapping used by the bridge:
 - Channel 1 CC: slot updates (`CC 0..41`)
 - Channel 2 CC: envelope follower updates (`CC 0..5`)
 
-Inbound MIDI CC on any channel is converted to:
+Inbound MIDI now also feeds typed OSC namespaces (`/mn42/event/cc`, `/mn42/event/note_on`, `/mn42/event/note_off`, `/mn42/event/pitch_bend`, `/mn42/event/channel_aftertouch`, `/mn42/event/poly_aftertouch`, `/mn42/event/program_change`, `/mn42/event/nrpn`, `/mn42/event/rpn`, `/mn42/event/sysex`).
+
+Inbound MIDI CC on any channel is still converted to:
 
 ```json
 {"cmd":"SET_SLOT_VALUE","slot":<cc_number>,"value":<cc_value>}
@@ -145,8 +153,15 @@ To prevent MIDI feedback loops by default, the bridge suppresses inbound CC even
 - `/mn42/slots`
   - OSC args: 42 integers, each `0..127`
   - index 0 maps to slot 0, index 41 maps to slot 41
+- `/mn42/telemetry/slots`
+  - Same payload as `/mn42/slots` with a telemetry namespace for patchers that separate control from monitoring.
 - `/mn42/envelopes`
   - OSC args: 6 integers, each `0..127`
+- `/mn42/telemetry/envelopes`
+  - Same payload as `/mn42/envelopes` with a telemetry namespace.
+- `/mn42/event/<kind>`
+  - Typed MIDI-style events as JSON string in arg 0.
+  - `<kind>` currently includes `cc`, `note_on`, `note_off`, `pitch_bend`, `channel_aftertouch`, `poly_aftertouch`, `program_change`, `nrpn`, `rpn`, `sysex`.
 
 ### Inbound (OSC -> bridge)
 
@@ -155,9 +170,22 @@ To prevent MIDI feedback loops by default, the bridge suppresses inbound CC even
     - `cmd` (string)
     - `slot` (integer `0..41`)
     - `value` (integer `0..127`)
-  - optional metadata fields (for bridge-local tracing only):
-    - `traceId` (string)
-    - `timestamp` / `timestampMs` / `ts` (number or parseable timestamp string)
+- optional metadata fields (for bridge-local tracing only):
+  - `traceId` (string)
+  - `timestamp` / `timestampMs` / `ts` (number or parseable timestamp string)
+- `/mn42/event/<kind>`
+  - first argument must be JSON text or object matching the kind:
+    - `cc`: `channel` (1..16, optional), `controller`/`cc` (0..127), `value` (0..127)
+    - `note_on` / `note_off`: `channel` (optional), `note` (0..127), `velocity` (0..127)
+    - `pitch_bend`: `channel` (optional), `value` (`0..16383` or signed `-8192..8191`)
+    - `channel_aftertouch`: `channel` (optional), `pressure` (0..127)
+    - `poly_aftertouch`: `channel` (optional), `note` (0..127), `pressure` (0..127)
+    - `program_change`: `channel` (optional), `program` (0..127)
+    - `nrpn` / `rpn`: `channel` (optional), `parameter` (0..16383), `value` (0..16383)
+    - `sysex`: `bytes` array (`F0 ... F7`)
+  - optional metadata fields:
+    - `traceId`
+    - `timestamp` / `timestampMs` / `ts`
 
 Valid example:
 
@@ -180,6 +208,8 @@ The bridge drops messages that do not match the contract.
 - `slot` must be `0..41`
 - `value` must be `0..127`
 - Missing keys (`cmd`, `slot`, `value`) are rejected
+- Typed event payloads are limited to 4096-byte JSON arg payloads.
+- Typed `cc` events with `controller` in `0..41` also map to the firmware live slot lane (`SET_SLOT_VALUE`).
 - Browser/API state also reports drop counters:
   - `serialParseErrors`
   - `serialOversizeDrops`

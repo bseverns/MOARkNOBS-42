@@ -20,7 +20,7 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --
 ```
 
 Then:
-- in an OSC monitor, listen on UDP `9000` for `/mn42/slots` and `/mn42/envelopes`
+- in an OSC monitor, listen on UDP `9000` for `/mn42/slots`, `/mn42/envelopes`, and the namespaced mirrors `/mn42/telemetry/slots`, `/mn42/telemetry/envelopes`
 - in your DAW, enable the MIDI input named `MN42 Bridge`
 
 ## OSC command example
@@ -29,6 +29,12 @@ Send one command to set slot 2 to 95:
 
 ```bash
 oscsend localhost 9000 /mn42/cmd s '{"cmd":"SET_SLOT_VALUE","slot":2,"value":95}'
+```
+
+Typed note command example:
+
+```bash
+oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":110}'
 ```
 
 ## Virtual MIDI example
