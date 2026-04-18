@@ -1,7 +1,21 @@
 import Ajv from './lib/mini-ajv.js';
 import addFormats from './lib/add-formats.js';
-import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from './lib/constants.js';
+import { EF_FILTER_NAMES, ARG_METHOD_NAMES } from './lib/constants.js';
 import { createLocalManifest } from './manifest_contract.js';
+import {
+  createTransportPort,
+  createSimulator,
+  createWebSocketTransport
+} from './runtime/transports.js';
+import { createRpcKernel } from './runtime/rpc_kernel.js';
+import {
+  createPatchReconciler,
+  extractSlotIndex
+} from './runtime/patch_reconcile.js';
+import { normalizeConfig } from './runtime/config_normalize.js';
+import { createLocalSlotMetaManager } from './runtime/local_slot_meta.js';
+import { createPortPreferenceStore } from './runtime/port_preference.js';
+import { createStateSnapshotStore } from './runtime/state_snapshot.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -77,21 +91,6 @@ function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-// Browser-local slot notes are stored outside device config and normalized here.
-function normalizeLocalSlotMetaEntry(entry = {}) {
-  return {
-    pot: entry?.pot === undefined ? true : Boolean(entry.pot),
-    label: typeof entry?.label === 'string' ? entry.label : '',
-    takeover: Boolean(entry?.takeover)
-  };
-}
-
-// Keep the local slot-meta array aligned with the current slot count.
-function normalizeLocalSlotMeta(meta, slotCount) {
-  const count = Math.max(0, Math.floor(Number(slotCount) || 0));
-  return Array.from({ length: count }, (_, index) => normalizeLocalSlotMetaEntry(meta?.[index]));
-}
-
 // Diff staged vs live state for the dirty badge and human-readable change panel.
 function shallowDiff(before, after, basePath = '') {
   const changes = [];
@@ -150,12 +149,6 @@ function setNestedValue(target, path, value) {
   }
 }
 
-// Shared number clamp used throughout config normalization.
-function clamp(value, min, max) {
-  if (!Number.isFinite(value)) return min;
-  return Math.min(max, Math.max(min, value));
-}
-
 // Chunk large native `SET_ALL` bodies so serial transport stays within line limits.
 function chunkString(value, size) {
   const text = typeof value === 'string' ? value : String(value ?? '');
@@ -190,989 +183,7 @@ function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
   };
 }
 
-// Coerce unknown ids into non-negative integer indices when possible.
-function coerceIndex(value) {
-  const num = Number(value);
-  return Number.isInteger(num) && num >= 0 ? num : null;
-}
-
-// Accept multiple historical slot-index field names from firmware/bridge payloads.
-function extractSlotIndex(payload, fallback) {
-  const candidates = [payload?.index, payload?.slot, payload?.slot_index, payload?.slotIndex, fallback];
-  for (const candidate of candidates) {
-    const idx = coerceIndex(candidate);
-    if (idx !== null) return idx;
-  }
-  return null;
-}
-
-// Normalize incoming slot patch frames into one predictable shape before merging.
-function normalizeSlotPatchEntry(entry) {
-  if (!entry || typeof entry !== 'object') return null;
-  const index = coerceIndex(entry.index ?? entry.id ?? entry.slot);
-  if (index === null) return null;
-  const fields = {};
-  if (entry.type !== undefined) fields.type = entry.type;
-  else if (entry.type_name !== undefined) fields.type = entry.type_name;
-  if (entry.type_code !== undefined) fields.typeCode = entry.type_code;
-  const midiChannel = entry.midiChannel ?? entry.channel;
-  if (midiChannel !== undefined) {
-    const value = Number(midiChannel);
-    if (Number.isFinite(value)) fields.midiChannel = value;
-  }
-  if (entry.data1 !== undefined) {
-    const value = Number(entry.data1);
-    if (Number.isFinite(value)) fields.data1 = value;
-  }
-  const efIndexValue =
-    entry.efIndex ?? entry.ef_index ?? (entry.ef && typeof entry.ef === 'object' ? entry.ef.index : undefined);
-  if (efIndexValue !== undefined) {
-    const value = Number(efIndexValue);
-    if (Number.isFinite(value)) fields.efIndex = value;
-  }
-  if (entry.ef && typeof entry.ef === 'object') {
-    const ef = {};
-    const coerceNumber = (value) => {
-      const num = Number(value);
-      return Number.isFinite(num) ? num : null;
-    };
-    const pushNumber = (sourceKey, targetKey = sourceKey) => {
-      if (entry.ef[sourceKey] === undefined) return;
-      const num = coerceNumber(entry.ef[sourceKey]);
-      if (num === null) return;
-      ef[targetKey] = num;
-    };
-    if (entry.ef.filter_name !== undefined) {
-      ef.filter_name = String(entry.ef.filter_name);
-    }
-    pushNumber('index');
-    pushNumber('filter_index');
-    pushNumber('frequency');
-    pushNumber('q');
-    pushNumber('oversample');
-    pushNumber('smoothing');
-    pushNumber('baseline');
-    pushNumber('gain');
-    if (Object.keys(ef).length) {
-      fields.ef = ef;
-    }
-  }
-  if (entry.arg && typeof entry.arg === 'object') {
-    const arg = {};
-    if (entry.arg.enabled !== undefined) {
-      const raw = entry.arg.enabled;
-      if (typeof raw === 'string') {
-        arg.enabled = raw === 'true' || raw === '1';
-      } else if (typeof raw === 'number') {
-        arg.enabled = raw !== 0;
-      } else {
-        arg.enabled = Boolean(raw);
-      }
-    }
-    if (entry.arg.method !== undefined) {
-      const methodValue = Number(entry.arg.method);
-      if (Number.isFinite(methodValue)) arg.method = methodValue;
-    }
-    if (entry.arg.method_name !== undefined) {
-      arg.method_name = String(entry.arg.method_name);
-    }
-    if (entry.arg.sourceA !== undefined) {
-      const sourceA = Number(entry.arg.sourceA);
-      if (Number.isFinite(sourceA)) arg.sourceA = sourceA;
-    }
-    if (entry.arg.sourceB !== undefined) {
-      const sourceB = Number(entry.arg.sourceB);
-      if (Number.isFinite(sourceB)) arg.sourceB = sourceB;
-    }
-    if (Object.keys(arg).length) {
-      fields.arg = arg;
-    }
-  }
-  if (entry.active !== undefined) fields.active = Boolean(entry.active);
-  if (entry.arpNote !== undefined) {
-    const value = Number(entry.arpNote);
-    if (Number.isFinite(value)) fields.arpNote = value;
-  }
-  return { index, fields };
-}
-
-// Build the per-slot envelope follower payload the App expects to render and stage.
-function normalizeSlotEnvelope(slot) {
-  const defaults = {
-    index: -1,
-    filter_index: 0,
-    filter_name: EF_FILTER_NAMES[0],
-    frequency: 1000,
-    q: 0.707,
-    oversample: 4,
-    smoothing: 0.2,
-    baseline: 0,
-    gain: 1
-  };
-  const efSource = slot?.ef && typeof slot.ef === 'object' ? slot.ef : {};
-  const ef = {
-    index: defaults.index,
-    filter_index: defaults.filter_index,
-    filter_name: defaults.filter_name,
-    frequency: defaults.frequency,
-    q: defaults.q,
-    oversample: defaults.oversample,
-    smoothing: defaults.smoothing,
-    baseline: defaults.baseline,
-    gain: defaults.gain
-  };
-  if (efSource.index !== undefined) ef.index = efSource.index;
-  if (efSource.filter_index !== undefined) ef.filter_index = efSource.filter_index;
-  if (efSource.filter_name !== undefined) ef.filter_name = efSource.filter_name;
-  if (efSource.frequency !== undefined) ef.frequency = efSource.frequency;
-  if (efSource.q !== undefined) ef.q = efSource.q;
-  if (efSource.oversample !== undefined) ef.oversample = efSource.oversample;
-  if (efSource.smoothing !== undefined) ef.smoothing = efSource.smoothing;
-  if (efSource.baseline !== undefined) ef.baseline = efSource.baseline;
-  if (efSource.gain !== undefined) ef.gain = efSource.gain;
-  const index = Number.isFinite(Number(slot?.efIndex))
-    ? Number(slot.efIndex)
-    : Number.isFinite(Number(ef.index))
-    ? Number(ef.index)
-    : defaults.index;
-  ef.index = index;
-  const resolvedFilterIndex = Number.isFinite(Number(ef.filter_index)) ? Number(ef.filter_index) : null;
-  if (resolvedFilterIndex === null && typeof ef.filter_name === 'string') {
-    const idx = EF_FILTER_NAMES.indexOf(ef.filter_name);
-    ef.filter_index = idx >= 0 ? idx : defaults.filter_index;
-  } else if (resolvedFilterIndex !== null) {
-    ef.filter_index = clamp(resolvedFilterIndex, 0, EF_FILTER_NAMES.length - 1);
-  } else {
-    ef.filter_index = defaults.filter_index;
-  }
-  if (!ef.filter_name || typeof ef.filter_name !== 'string') {
-    ef.filter_name = EF_FILTER_NAMES[ef.filter_index] || defaults.filter_name;
-  }
-  ef.frequency = Number.isFinite(Number(ef.frequency)) ? Math.max(0, Number(ef.frequency)) : defaults.frequency;
-  ef.q = Number.isFinite(Number(ef.q)) ? Math.max(0, Number(ef.q)) : defaults.q;
-  ef.oversample = clamp(Math.round(Number(ef.oversample) || defaults.oversample), 1, 32);
-  const smoothing = Number(ef.smoothing);
-  ef.smoothing = Number.isFinite(smoothing) ? clamp(smoothing, 0, 1) : defaults.smoothing;
-  ef.baseline = Number.isFinite(Number(ef.baseline)) ? Number(ef.baseline) : defaults.baseline;
-  ef.gain = Number.isFinite(Number(ef.gain)) ? Number(ef.gain) : defaults.gain;
-  return ef;
-}
-
-// Normalize ARG combiner fields and recover sensible defaults from mixed payload styles.
-function normalizeSlotArg(slot, efLimit = 6) {
-  const defaults = {
-    enabled: false,
-    method: 0,
-    method_name: ARG_METHOD_NAMES[0],
-    sourceA: 0,
-    sourceB: 1
-  };
-  const argSource = slot?.arg && typeof slot.arg === 'object' ? slot.arg : {};
-  const arg = { ...defaults, ...argSource };
-  arg.enabled = Boolean(arg.enabled);
-  let methodIndex = Number.isFinite(Number(arg.method)) ? Number(arg.method) : -1;
-  if (methodIndex < 0 && typeof arg.method_name === 'string') {
-    methodIndex = ARG_METHOD_NAMES.indexOf(arg.method_name);
-  }
-  if (methodIndex < 0) methodIndex = defaults.method;
-  arg.method = clamp(Math.round(methodIndex), 0, ARG_METHOD_NAMES.length - 1);
-  arg.method_name = ARG_METHOD_NAMES[arg.method] || defaults.method_name;
-  const sourceA = Number.isFinite(Number(arg.sourceA)) ? Math.round(Number(arg.sourceA)) : defaults.sourceA;
-  const sourceB = Number.isFinite(Number(arg.sourceB)) ? Math.round(Number(arg.sourceB)) : defaults.sourceB;
-  arg.sourceA = sourceA;
-  arg.sourceB = sourceB;
-  return arg;
-}
-
-// Reduce all slot payload variants to the canonical App schema shape.
-function normalizeSlotConfig(slot, efLimit = 6) {
-  const source = slot && typeof slot === 'object' ? slot : {};
-  const efMax = Math.max(-1, Math.round(Number.isFinite(Number(efLimit)) ? Number(efLimit) - 1 : 5));
-  const typeCandidate =
-    typeof source.type === 'string'
-      ? source.type
-      : typeof source.type_name === 'string'
-      ? source.type_name
-      : null;
-  const type = SLOT_TYPE_NAMES.includes(typeCandidate) ? typeCandidate : 'OFF';
-
-  const midiChannelCandidate = Number(source.midiChannel ?? source.channel);
-  const midiChannel = Number.isFinite(midiChannelCandidate)
-    ? clamp(Math.round(midiChannelCandidate), 1, 16)
-    : 1;
-
-  const dataCandidate = Number(source.data1 ?? source.cc ?? source.note ?? source.value);
-  const data1 = Number.isFinite(dataCandidate) ? clamp(Math.round(dataCandidate), 0, 127) : 0;
-
-  const efIndexCandidate = Number(source.efIndex ?? source.ef_index ?? source.ef?.index);
-  const efIndex = Number.isFinite(efIndexCandidate)
-    ? clamp(Math.round(efIndexCandidate), -1, Math.max(-1, efMax))
-    : -1;
-
-  const ef = normalizeSlotEnvelope(source);
-  ef.index = efIndex;
-
-  const activeCandidate = source.active ?? source.enabled;
-  const active = typeof activeCandidate === 'boolean' ? activeCandidate : Boolean(activeCandidate);
-
-  const arg = normalizeSlotArg(source, efLimit);
-
-  const normalized = { type, midiChannel, data1, efIndex, ef, active, arg };
-
-  let sysexTemplate = source.sysexTemplate ?? source.sysex_template;
-  if (typeof sysexTemplate === 'string') {
-    sysexTemplate = sysexTemplate.trim().slice(0, 128);
-    normalized.sysexTemplate = sysexTemplate;
-  }
-
-  return normalized;
-}
-
-// Normalize a full config document before it becomes either live or staged state.
-function normalizeConfig(config, manifest = {}) {
-  if (!config || typeof config !== 'object') return config;
-  const slotCount = Number.isFinite(Number(manifest.slot_count))
-    ? Number(manifest.slot_count)
-    : Array.isArray(config.slots)
-    ? config.slots.length
-    : 0;
-  const manifestEf = Number.isFinite(Number(manifest.envelope_count)) ? Number(manifest.envelope_count) : null;
-  const configEf = Array.isArray(config.efSlots) ? config.efSlots.length : null;
-  const followerEf = Array.isArray(config.envelopes?.followers) ? config.envelopes.followers.length : null;
-  const efCount = manifestEf ?? configEf ?? followerEf ?? 0;
-
-  const slots = Array.from({ length: slotCount }, (_, idx) => normalizeSlotConfig(config.slots?.[idx], efCount));
-
-  let efSlots;
-  if (Array.isArray(config.efSlots)) {
-    efSlots = Array.from({ length: efCount }, (_, idx) => {
-      const entry = config.efSlots[idx];
-      return { slots: normalizeEfSlotTargets(entry, slotCount) };
-    });
-  } else {
-    const derived = Array.from({ length: efCount }, () => new Set());
-    const routing = Array.isArray(config.envelopes?.routing) ? config.envelopes.routing : [];
-    routing.forEach((value, potIndex) => {
-      const follower = Number(value);
-      if (!Number.isFinite(follower)) return;
-      if (follower < 0 || follower >= derived.length) return;
-      const capped = clamp(potIndex, 0, Math.max(0, slotCount - 1));
-      derived[follower].add(capped);
-    });
-    slots.forEach((slot, slotIndex) => {
-      const raw = Number.isFinite(Number(slot?.efIndex))
-        ? Number(slot.efIndex)
-        : Number.isFinite(Number(slot?.ef?.index))
-        ? Number(slot.ef.index)
-        : -1;
-      if (!Number.isFinite(raw) || raw < 0 || raw >= derived.length) return;
-      derived[raw].add(clamp(slotIndex, 0, Math.max(0, slotCount - 1)));
-    });
-    efSlots = derived.map((slotsForFollower) => ({
-      slots: Array.from(slotsForFollower).sort((a, b) => a - b)
-    }));
-  }
-
-  let legacyLedColor = null;
-  if (Array.isArray(config.ledColors) && config.ledColors.length) {
-    const swatch = config.ledColors.find((entry) => typeof entry?.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(entry.color));
-    if (swatch) legacyLedColor = swatch.color.toUpperCase();
-  }
-  const env = config.envelopes && typeof config.envelopes === 'object' ? config.envelopes : {};
-
-  const filterSource = config.filter && typeof config.filter === 'object' ? config.filter : {};
-  const envFilter = env.filter && typeof env.filter === 'object' ? env.filter : {};
-  const filter = {};
-  const freqCandidate = Number(filterSource.freq ?? filterSource.frequency);
-  if (Number.isFinite(freqCandidate)) {
-    filter.freq = freqCandidate;
-  } else {
-    const envFreq = Number(envFilter.frequency ?? envFilter.freq);
-    if (Number.isFinite(envFreq)) filter.freq = envFreq;
-  }
-  if (!Number.isFinite(filter.freq)) filter.freq = 20;
-
-  const qCandidate = Number(filterSource.q);
-  if (Number.isFinite(qCandidate)) {
-    filter.q = qCandidate;
-  } else {
-    const envQ = Number(envFilter.q);
-    if (Number.isFinite(envQ)) filter.q = envQ;
-  }
-  if (!Number.isFinite(filter.q)) filter.q = 1;
-
-  if (typeof filterSource.type === 'string' && EF_FILTER_NAMES.includes(filterSource.type)) {
-    filter.type = filterSource.type;
-  } else if (typeof envFilter.type === 'string' && EF_FILTER_NAMES.includes(envFilter.type)) {
-    filter.type = envFilter.type;
-  } else {
-    const followerFilter = env.followers?.find((entry) => typeof entry?.filter === 'string')?.filter;
-    const slotFilter = slots.find((slot) => typeof slot?.ef?.filter_name === 'string')?.ef?.filter_name;
-    const derivedFilter = followerFilter || slotFilter;
-    filter.type = typeof derivedFilter === 'string' && EF_FILTER_NAMES.includes(derivedFilter) ? derivedFilter : 'LINEAR';
-  }
-
-  const argSource = config.arg && typeof config.arg === 'object' ? config.arg : {};
-  const pair = env.arg_pair && typeof env.arg_pair === 'object' ? env.arg_pair : {};
-  const readNumber = (value, fallback) => {
-    const num = Number(value);
-    return Number.isFinite(num) ? num : fallback;
-  };
-
-  let methodName = null;
-  if (typeof argSource.method === 'string' && ARG_METHOD_NAMES.includes(argSource.method)) {
-    methodName = argSource.method;
-  } else if (typeof argSource.method_name === 'string' && ARG_METHOD_NAMES.includes(argSource.method_name)) {
-    methodName = argSource.method_name;
-  } else if (Number.isFinite(Number(argSource.method))) {
-    const idx = Math.max(0, Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(argSource.method))));
-    methodName = ARG_METHOD_NAMES[idx];
-  } else if (typeof env.arg_method_name === 'string' && ARG_METHOD_NAMES.includes(env.arg_method_name)) {
-    methodName = env.arg_method_name;
-  } else if (Number.isFinite(Number(env.arg_method))) {
-    const idx = Math.max(0, Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(env.arg_method))));
-    methodName = ARG_METHOD_NAMES[idx];
-  } else {
-    methodName = ARG_METHOD_NAMES[0];
-  }
-
-  let enabled;
-  if (typeof argSource.enable === 'boolean') enabled = argSource.enable;
-  else if (typeof argSource.enabled === 'boolean') enabled = argSource.enabled;
-  else if (typeof env.arg_enable === 'boolean') enabled = env.arg_enable;
-  else if (typeof env.arg_enabled === 'boolean') enabled = env.arg_enabled;
-  else enabled = true;
-
-  let argA = readNumber(argSource.a ?? argSource.sourceA, undefined);
-  if (argA === undefined) argA = readNumber(pair.a, 0);
-  if (!Number.isFinite(argA)) argA = 0;
-
-  let argB = readNumber(argSource.b ?? argSource.sourceB, undefined);
-  if (argB === undefined) argB = readNumber(pair.b, Math.max(0, Math.min(1, efCount - 1)));
-  if (!Number.isFinite(argB)) argB = Math.max(0, Math.min(1, efCount - 1));
-
-  const arg = { method: methodName, a: argA, b: argB, enable: Boolean(enabled) };
-
-  let led;
-  if (config.led && typeof config.led === 'object') {
-    const ledCandidate = { ...config.led };
-    const brightness = Number(ledCandidate.brightness);
-    const parsed = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
-    let color = ledCandidate.color;
-    if (typeof color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(color)) {
-      if (typeof ledCandidate.hex === 'string' && /^#([0-9a-fA-F]{6})$/.test(ledCandidate.hex)) {
-        color = ledCandidate.hex.toUpperCase();
-      } else if (
-        ledCandidate.rgb &&
-        Number.isFinite(ledCandidate.rgb.r) &&
-        Number.isFinite(ledCandidate.rgb.g) &&
-        Number.isFinite(ledCandidate.rgb.b)
-      ) {
-        color = `#${[ledCandidate.rgb.r, ledCandidate.rgb.g, ledCandidate.rgb.b]
-          .map((value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, '0'))
-          .join('')}`.toUpperCase();
-      } else {
-        color = '#000000';
-      }
-    }
-    led = { brightness: parsed, color: color.toUpperCase?.() || '#000000' };
-  }
-
-  if (!led) {
-    led = { brightness: 0, color: '#000000' };
-  }
-
-  if (legacyLedColor) {
-    if (!led || typeof led !== 'object') {
-      led = { brightness: 0, color: legacyLedColor };
-    } else if (typeof led.color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(led.color)) {
-      led = { ...led, color: legacyLedColor };
-    }
-  }
-
-  if (led && typeof led === 'object') {
-    let ledModeValue = null;
-    if (config.led && typeof config.led === 'object' && typeof config.led.mode === 'string') {
-      ledModeValue = config.led.mode.toUpperCase();
-    } else if (env.led && typeof env.led === 'object' && typeof env.led.mode === 'string') {
-      ledModeValue = env.led.mode.toUpperCase();
-    }
-    if (!ledModeValue) {
-      ledModeValue = 'STATIC';
-    }
-    led.mode = ledModeValue;
-  }
-
-  let envelopeMode = null;
-  if (typeof config.envelopeMode === 'string') envelopeMode = config.envelopeMode;
-  else if (typeof env.mode_name === 'string') envelopeMode = env.mode_name;
-  if (!['LINEAR', 'EXPONENTIAL', 'LOG'].includes(envelopeMode)) {
-    envelopeMode = null;
-  }
-
-  const normalized = { slots, efSlots, filter, arg, led };
-  if (envelopeMode) normalized.envelopeMode = envelopeMode;
-  return normalized;
-}
-
-// Keep EF routing lists deduped, sorted, and bounded to real slot indices.
-function normalizeEfSlotTargets(entry, slotCount) {
-  const rawSlots = [];
-  if (Array.isArray(entry?.slots)) {
-    rawSlots.push(...entry.slots);
-  } else {
-    const single = entry?.slot ?? entry?.value ?? entry?.target;
-    if (single !== undefined && single !== null) rawSlots.push(single);
-  }
-
-  const hasSlotLimit = Number.isFinite(Number(slotCount)) && Number(slotCount) > 0;
-  const maxSlotIndex = hasSlotLimit ? Number(slotCount) - 1 : Number.MAX_SAFE_INTEGER;
-  const seen = new Set();
-  const normalized = [];
-  rawSlots.forEach((candidate) => {
-    const value = Number(candidate);
-    if (!Number.isFinite(value)) return;
-    const rounded = Math.round(value);
-    if (rounded < 0) return;
-    const bounded = clamp(rounded, 0, maxSlotIndex);
-    if (seen.has(bounded)) return;
-    seen.add(bounded);
-    normalized.push(bounded);
-  });
-  normalized.sort((a, b) => a - b);
-  return normalized;
-}
-
-// Tiny helper for comparing normalized slot-index arrays.
-function sameNumberArray(left, right) {
-  if (!Array.isArray(left) || !Array.isArray(right)) return false;
-  if (left.length !== right.length) return false;
-  for (let idx = 0; idx < left.length; idx += 1) {
-    if (Number(left[idx]) !== Number(right[idx])) return false;
-  }
-  return true;
-}
-
-// Merge a follower-routing patch without losing other assigned slots.
-function applyEfSlotPatch(target, patch, slotCount) {
-  if (!Array.isArray(target)) target = [];
-  const index = coerceIndex(patch.index);
-
-  if (Array.isArray(patch.slots)) {
-    if (index === null) return target;
-    const nextSlots = normalizeEfSlotTargets({ slots: patch.slots }, slotCount);
-    const prevSlots = normalizeEfSlotTargets(target[index] ?? {}, slotCount);
-    if (sameNumberArray(prevSlots, nextSlots)) return target;
-    const copy = [...target];
-    copy[index] = { ...(copy[index] ?? {}), slots: nextSlots };
-    return copy;
-  }
-
-  const slotValue = patch.slot ?? patch.value ?? patch.target;
-  if (slotValue === undefined) return target;
-  const value = Number(slotValue);
-  if (!Number.isFinite(value)) return target;
-  const rounded = Math.round(value);
-  const hasSlotLimit = Number.isFinite(Number(slotCount)) && Number(slotCount) > 0;
-  const maxSlotIndex = hasSlotLimit ? Number(slotCount) - 1 : Number.MAX_SAFE_INTEGER;
-  if (rounded < 0) return target;
-  const boundedSlot = clamp(rounded, 0, maxSlotIndex);
-
-  const copy = target.map((entry) => ({
-    ...(entry ?? {}),
-    slots: normalizeEfSlotTargets(entry ?? {}, slotCount)
-  }));
-  let changed = false;
-
-  for (let follower = 0; follower < copy.length; follower += 1) {
-    const slots = copy[follower]?.slots ?? [];
-    if (!slots.includes(boundedSlot)) continue;
-    copy[follower].slots = slots.filter((slot) => slot !== boundedSlot);
-    changed = true;
-  }
-
-  if (index !== null) {
-    const current = copy[index] ?? { slots: [] };
-    const nextSet = new Set(current.slots ?? []);
-    const beforeSize = nextSet.size;
-    nextSet.add(boundedSlot);
-    const nextSlots = Array.from(nextSet).sort((a, b) => a - b);
-    if (!copy[index] || beforeSize !== nextSet.size || !sameNumberArray(current.slots ?? [], nextSlots)) {
-      copy[index] = { ...current, slots: nextSlots };
-      changed = true;
-    }
-  }
-
-  return changed ? copy : target;
-}
-
 // Native serial transport wrapper that exposes the same API as the simulator and WS bridge.
-function createTransportPort(port, options = {}) {
-  const textEncoder = encoder();
-  const textDecoder = decoder();
-  let reader;
-  let writer;
-  let active = true;
-  const lineQueue = [];
-  const waiters = [];
-
-  async function open() {
-    await port.open({ baudRate: 115200, ...options });
-    const decoderStream = new TextDecoderStream();
-    port.readable.pipeTo(decoderStream.writable);
-    reader = decoderStream.readable.getReader();
-    writer = port.writable.getWriter();
-    readLoop();
-  }
-
-  async function readLoop() {
-    let buffer = '';
-    try {
-      while (active) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += value;
-        let idx;
-        while ((idx = buffer.indexOf('\n')) >= 0) {
-          const line = buffer.slice(0, idx).trim();
-          buffer = buffer.slice(idx + 1);
-          if (!line) continue;
-          if (waiters.length) waiters.shift()(line);
-          else lineQueue.push(line);
-        }
-      }
-    } catch (err) {
-      console.error('transport read error', err);
-    } finally {
-      active = false;
-    }
-  }
-
-  async function writeLine(line) {
-    if (!writer) throw new Error('Writer unavailable');
-    await writer.write(textEncoder.encode(line + '\n'));
-  }
-
-  function nextLine() {
-    if (lineQueue.length) return Promise.resolve(lineQueue.shift());
-    return new Promise((resolve) => waiters.push(resolve));
-  }
-
-  async function close() {
-    active = false;
-    try {
-      reader?.cancel();
-    } catch (err) {
-      console.debug('reader cancel', err);
-    }
-    try {
-      writer?.close();
-    } catch (err) {
-      console.debug('writer close', err);
-    }
-    try {
-      await port.close();
-    } catch (err) {
-      console.debug('port close', err);
-    }
-  }
-
-  return { open, writeLine, nextLine, close, rawPort: port, protocol: 'native' };
-}
-
-// Simulator transport used by tests and hardware-free UI rehearsal.
-function createSimulator() {
-  let opened = false;
-  let index = 0;
-  const lines = [];
-  let resolver;
-
-  const manifest = {
-    ...createLocalManifest({
-      uiVersion: 'simulator',
-      argMethodCount: ARG_METHOD_NAMES.length,
-      capabilities: {
-        profile_save: true,
-        profile_load: true,
-        profile_reset: true,
-        macro_snapshot: true,
-        scenes: true
-      }
-    }),
-    fw_version: 'sim-fw',
-    git_sha: 'deadbeef',
-    build_time: new Date().toISOString(),
-    free_ram: 48000,
-    free_flash: 512000
-  };
-
-  let config = {
-    fw_version: manifest.fw_version,
-    schema_version: manifest.schema_version,
-    pots: Array.from({ length: manifest.pot_count }, (_, idx) => ({
-      index: idx,
-      channel: (idx % 16) + 1,
-      cc: (idx * 7) % 128
-    })),
-    slots: Array.from({ length: manifest.slot_count }, (_, idx) => {
-      const efIndex = idx % manifest.envelope_count;
-      const filterIndex = idx % EF_FILTER_NAMES.length;
-      const argMethod = idx % ARG_METHOD_NAMES.length;
-      return {
-        index: idx,
-        type: 'CC',
-        type_name: 'CC',
-        channel: (idx % 16) + 1,
-        data1: (idx % 120) + 1,
-        ef_index: efIndex,
-        ef: {
-          index: efIndex,
-          filter_index: filterIndex,
-          filter_name: EF_FILTER_NAMES[filterIndex],
-          frequency: 400 + (idx % 8) * 50,
-          q: 0.6 + (idx % 5) * 0.1,
-          oversample: 4,
-          smoothing: 0.2 + (idx % 3) * 0.1,
-          baseline: 0,
-          gain: 1
-        },
-        ef_payload: {
-          type: EF_FILTER_NAMES[filterIndex],
-          freq: 400 + (idx % 8) * 50,
-          q: 0.6 + (idx % 5) * 0.1
-        },
-        arg: {
-          enabled: idx % 3 === 0,
-          method: argMethod,
-          method_name: ARG_METHOD_NAMES[argMethod],
-          sourceA: efIndex,
-          sourceB: (efIndex + 1) % manifest.envelope_count
-        },
-        active: idx % 2 === 0,
-        arp_note: (idx * 3) % 128,
-        sysexTemplate: ''
-      };
-    }),
-    envelopes: {
-      routing: Array.from({ length: manifest.pot_count }, (_, idx) => idx % manifest.envelope_count),
-      followers: Array.from({ length: manifest.envelope_count }, (_, idx) => ({
-        index: idx,
-        active: idx % 2 === 0,
-        filter: EF_FILTER_NAMES[idx % EF_FILTER_NAMES.length],
-        baseline: 0,
-        oversample: 4,
-        smoothing: 0.25
-      })),
-      mode: 0,
-      mode_name: 'LINEAR',
-      arg_method: 0,
-      arg_method_name: 'PLUS',
-      arg_enable: true,
-      arg_pair: { a: 0, b: 1 },
-      filter: { frequency: 800, q: 1 }
-    },
-    led: {
-      brightness: 64,
-      hex: '#ff00ff',
-      rgb: { r: 255, g: 0, b: 255 }
-    }
-  };
-  let macroSnapshot = null;
-  const profileSlots = Array.from({ length: 4 }, () => clone(config));
-  const defaultProfile = clone(config);
-
-  const telemetry = () => ({
-    slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
-    slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
-      enabled: idx % 2 === 0,
-      method: idx % ARG_METHOD_NAMES.length,
-      method_name: ARG_METHOD_NAMES[idx % ARG_METHOD_NAMES.length],
-      sourceA: idx % manifest.envelope_count,
-      sourceB: (idx + 1) % manifest.envelope_count
-    })),
-    envelopes: Array.from({ length: manifest.envelope_count }, () => Math.floor(Math.random() * 127)),
-    currentSlot: index++ % manifest.slot_count,
-    argPair: [0, 1],
-    argEnabled: true,
-    efStatus: Array.from({ length: manifest.envelope_count }, (_, idx) => (idx % 2 === 0 ? 1 : 0)),
-    diagnostics: {
-      loop_max_us: 702,
-      loop_last_us: 512,
-      midi_isr_max_us: 320,
-      midi_isr_last_us: 110,
-      midi_drops: 0,
-      uart_overruns: 0,
-      loop_overruns: 0,
-      midi_task_overruns: 0
-    }
-  });
-
-  async function open() {
-    opened = true;
-  }
-
-  function pushLine(payload) {
-    lines.push(JSON.stringify(payload));
-    if (resolver) {
-      const fn = resolver;
-      resolver = null;
-      fn(lines.shift());
-    }
-  }
-
-  function handleSimulatorMacroCommand(command) {
-    if (!command) return false;
-    if (command === 'SAVE_MACRO_SLOT') {
-      macroSnapshot = clone(config);
-      pushLine({ macro_saved: true, macro_available: true });
-      return true;
-    }
-    if (command === 'RECALL_MACRO_SLOT') {
-      const hasSnapshot = Boolean(macroSnapshot);
-      if (hasSnapshot) {
-        config = clone(macroSnapshot);
-      }
-      pushLine({ macro_recalled: hasSnapshot, macro_available: hasSnapshot });
-      return true;
-    }
-    return false;
-  }
-
-  async function writeLine(line) {
-    if (!opened) throw new Error('simulator closed');
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    if (handleSimulatorMacroCommand(trimmed)) return;
-    let request;
-    try {
-      request = JSON.parse(trimmed);
-    } catch (err) {
-      pushLine({ error: { message: err.message } });
-      return;
-    }
-    const rpc = request.rpc ?? request.method;
-    const respond = (result) => {
-      if (request.id === undefined) return;
-      pushLine({ id: request.id, result });
-    };
-    const clampSlot = (value) => {
-      const idx = Number.isFinite(Number(value)) ? Number(value) : 0;
-      return Math.max(0, Math.min(profileSlots.length - 1, Math.floor(idx)));
-    };
-    switch (rpc) {
-      case 'hello':
-        respond({ message: 'hello' });
-        break;
-      case 'get_manifest':
-        respond({ manifest });
-        break;
-      case 'get_config':
-        respond({ config });
-        break;
-      case 'set_config':
-        if (request.config && typeof request.config === 'object') {
-          config = { ...config, ...request.config };
-        }
-        respond({ checksum: request.checksum ?? 'sim-checksum' });
-        break;
-      case 'set_param':
-        if (typeof request.path !== 'string' || !request.path.length) {
-          if (request.id !== undefined) {
-            pushLine({ id: request.id, error: { message: 'set_param requires path' } });
-          }
-          break;
-        }
-        setNestedValue(config, request.path, request.value);
-        respond({ ok: true, path: request.path, value: request.value });
-        break;
-      case 'save_profile': {
-        const slot = clampSlot(request.slot ?? request.id ?? 0);
-        profileSlots[slot] = clone(config);
-        respond({ slot, saved: true });
-        break;
-      }
-      case 'load_profile': {
-        const slot = clampSlot(request.slot ?? request.id ?? 0);
-        const loaded = profileSlots[slot] ?? clone(defaultProfile);
-        config = clone(loaded);
-        respond({ slot, config: clone(config) });
-        break;
-      }
-      case 'reset_profile': {
-        const slot = clampSlot(request.slot ?? request.id ?? 0);
-        profileSlots[slot] = clone(defaultProfile);
-        config = clone(defaultProfile);
-        respond({ slot, config: clone(config) });
-        break;
-      }
-      case 'hang':
-        break;
-      default:
-        if (request.id !== undefined) {
-          pushLine({ id: request.id, error: { message: 'Unsupported RPC' } });
-        }
-        break;
-    }
-  }
-
-  function nextLine() {
-    if (!opened) return Promise.reject(new Error('simulator closed'));
-    if (lines.length) return Promise.resolve(lines.shift());
-    return new Promise((resolve) => {
-      resolver = resolve;
-      setTimeout(() => {
-        if (!resolver) return;
-        pushLine({ type: 'telemetry', ...telemetry() });
-      }, TELEMETRY_FRAME_MS * 4);
-    });
-  }
-
-  async function close() {
-    opened = false;
-  }
-
-  return {
-    open,
-    writeLine,
-    nextLine,
-    close,
-    rawPort: { getInfo: () => ({ usbVendorId: 0xfeed, usbProductId: 0xbeef }) },
-    protocol: 'json-rpc'
-  };
-}
-
-// Bridge websocket transport shim so the App can reuse the same runtime contract off-WebSerial.
-function createWebSocketTransport(url) {
-  let socket = null;
-  let queue = [];
-  let resolver = null;
-  let buffer = '';
-  let closed = false;
-  const decoder = typeof TextDecoder === 'function' ? new TextDecoder() : null;
-
-  const enqueueLine = (line) => {
-    queue.push(line);
-    if (resolver) {
-      const pending = resolver;
-      resolver = null;
-      const next = queue.shift();
-      pending.resolve(next);
-    }
-  };
-
-  const flushBuffer = () => {
-    if (!buffer) return;
-    const trimmed = buffer.trim();
-    buffer = '';
-    if (trimmed) enqueueLine(trimmed);
-  };
-
-  const handleMessage = (event) => {
-    if (!event || closed) return;
-    const data = event.data;
-    const text = typeof data === 'string' ? data : decoder?.decode(data) ?? '';
-    if (!text) return;
-    buffer += text;
-    let index;
-    while ((index = buffer.indexOf('\n')) >= 0) {
-      const segment = buffer.slice(0, index);
-      buffer = buffer.slice(index + 1);
-      const trimmed = segment.trim();
-      if (trimmed) enqueueLine(trimmed);
-    }
-  };
-
-  const handleClose = () => {
-    closed = true;
-    flushBuffer();
-    if (resolver) {
-      const pending = resolver;
-      resolver = null;
-      pending.reject(new Error('WebSocket closed'));
-    }
-  };
-
-  function open() {
-    if (socket) {
-      if (socket.readyState === WebSocket.OPEN) return Promise.resolve();
-      if (socket.readyState === WebSocket.CONNECTING) return new Promise((resolve, reject) => {
-        const cleanup = () => {
-          socket.removeEventListener('open', onOpen);
-          socket.removeEventListener('error', onError);
-        };
-        const onOpen = () => {
-          cleanup();
-          resolve();
-        };
-        const onError = (event) => {
-          cleanup();
-          reject(new Error('WebSocket error'));
-        };
-        socket.addEventListener('open', onOpen);
-        socket.addEventListener('error', onError);
-      });
-    }
-    if (typeof WebSocket === 'undefined') return Promise.reject(new Error('WebSocket unsupported'));
-    closed = false;
-    buffer = '';
-    queue = [];
-    socket = new WebSocket(url);
-    socket.binaryType = 'arraybuffer';
-    return new Promise((resolve, reject) => {
-      const onOpen = () => {
-        socket.addEventListener('message', handleMessage);
-        socket.addEventListener('close', handleClose);
-        resolve();
-      };
-      const onError = (event) => {
-        handleClose();
-        reject(new Error('WebSocket error'));
-      };
-      socket.addEventListener('open', onOpen, { once: true });
-      socket.addEventListener('error', onError, { once: true });
-    });
-  }
-
-  function writeLine(line) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      return Promise.reject(new Error('WebSocket not connected'));
-    }
-    socket.send(`${typeof line === 'string' ? line.trim() : String(line)}\n`);
-    return Promise.resolve();
-  }
-
-  function nextLine() {
-    if (queue.length) {
-      return Promise.resolve(queue.shift());
-    }
-    if (closed) {
-      return Promise.reject(new Error('WebSocket closed'));
-    }
-    return new Promise((resolve, reject) => {
-      resolver = { resolve, reject };
-    });
-  }
-
-  function close() {
-    if (!socket) return Promise.resolve();
-    if (socket.readyState === WebSocket.CLOSING || socket.readyState === WebSocket.CLOSED) {
-      return Promise.resolve();
-    }
-    socket.close();
-    return Promise.resolve();
-  }
-
-  return {
-    open,
-    writeLine,
-    nextLine,
-    close,
-    rawPort: { getInfo: () => null },
-    protocol: 'native'
-  };
-}
-
-// Main App runtime: owns transport, staging, RPC queueing, rollback, and browser-local metadata.
 export function createRuntime({
   schemaUrl = './config_schema.json',
   localManifest,
@@ -1199,16 +210,9 @@ export function createRuntime({
   let lastKnownChecksum = null;
   let potGuard = new Set();
   const statusListeners = new Set();
-  let rpcSeq = 0;
-  const rpcQueue = [];
-  let rpcBusy = false;
-  let lastRpcTimestamp = 0;
-  const pendingRpc = new Map();
-  let activeRpcId = null;
   let macroPending = null;
   let macroAvailability = true;
   let scenePending = null;
-  let localSlotMeta = normalizeLocalSlotMeta([], localManifest?.slot_count ?? 0);
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -1225,54 +229,10 @@ export function createRuntime({
       ? wsUrl.trim()
       : params?.get('ws')?.trim() ?? null;
 
-  function getPortInfo(port) {
-    if (!port?.getInfo) return null;
-    try {
-      const info = port.getInfo();
-      if (!info) return null;
-      return {
-        usbVendorId: info.usbVendorId,
-        usbProductId: info.usbProductId
-      };
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function persistPortInfo(port) {
-    const info = getPortInfo(port);
-    if (!info) return;
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(info));
-    } catch (err) {
-      console.debug('persist port info failed', err);
-    }
-  }
-
-  function readLocalSlotMeta() {
-    if (typeof localStorage === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem(LOCAL_SLOT_META_STORAGE_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw);
-    } catch (err) {
-      console.debug('read local slot meta failed', err);
-      return [];
-    }
-  }
-
-  function persistLocalSlotMeta() {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      if (!localSlotMeta?.length) {
-        localStorage.removeItem(LOCAL_SLOT_META_STORAGE_KEY);
-        return;
-      }
-      localStorage.setItem(LOCAL_SLOT_META_STORAGE_KEY, JSON.stringify(localSlotMeta));
-    } catch (err) {
-      console.debug('persist local slot meta failed', err);
-    }
-  }
+  const portPreferenceStore = createPortPreferenceStore({
+    storage: typeof localStorage === 'undefined' ? null : localStorage,
+    storageKey: STORAGE_KEY
+  });
 
   function currentSlotCount() {
     return (
@@ -1284,66 +244,59 @@ export function createRuntime({
     );
   }
 
-  function ensureLocalSlotMetaCount(slotCount = currentSlotCount()) {
-    const normalized = normalizeLocalSlotMeta(localSlotMeta, slotCount);
-    if (JSON.stringify(normalized) !== JSON.stringify(localSlotMeta)) {
-      localSlotMeta = normalized;
-      persistLocalSlotMeta();
-    }
-  }
+  const localSlotMetaManager = createLocalSlotMetaManager({
+    storageKey: LOCAL_SLOT_META_STORAGE_KEY,
+    initialSlotCount: localManifest?.slot_count ?? 0,
+    getSlotCount: currentSlotCount,
+    cloneValue: clone,
+    shallowEqual
+  });
+  localSlotMetaManager.readFromStorage(localManifest?.slot_count ?? 0);
+  const stateSnapshotStore = createStateSnapshotStore({
+    storage: typeof localStorage === 'undefined' ? null : localStorage,
+    storageKey: STATE_STORAGE_KEY,
+    getSchemaVersion: () => remoteManifest?.schema_version ?? localManifest?.schema_version,
+    now: () => Date.now()
+  });
 
   function extractLocalSlotMetaFromConfig(config) {
-    if (!config || typeof config !== 'object' || !Array.isArray(config.slots)) return;
-    ensureLocalSlotMetaCount(config.slots.length);
-    let changed = false;
-    config.slots.forEach((slot, index) => {
-      if (!slot || typeof slot !== 'object') return;
-      const nextEntry = { ...localSlotMeta[index] };
-      if (slot.pot !== undefined) nextEntry.pot = Boolean(slot.pot);
-      if (slot.label !== undefined && typeof slot.label === 'string') nextEntry.label = slot.label;
-      if (slot.takeover !== undefined) nextEntry.takeover = Boolean(slot.takeover);
-      const normalized = normalizeLocalSlotMetaEntry(nextEntry);
-      if (!shallowEqual(localSlotMeta[index], normalized)) {
-        localSlotMeta[index] = normalized;
-        changed = true;
-      }
-    });
-    if (changed) persistLocalSlotMeta();
+    localSlotMetaManager.extractFromConfig(config);
   }
 
   function mergeLocalSlotMeta(config) {
-    if (!config || typeof config !== 'object') return clone(config);
-    const merged = clone(config);
-    if (!Array.isArray(merged.slots)) return merged;
-    ensureLocalSlotMetaCount(merged.slots.length);
-    merged.slots = merged.slots.map((slot, index) => ({
-      ...(slot ?? {}),
-      ...normalizeLocalSlotMetaEntry(localSlotMeta[index])
-    }));
-    return merged;
+    return localSlotMetaManager.mergeIntoConfig(config);
   }
 
-  localSlotMeta = normalizeLocalSlotMeta(readLocalSlotMeta(), localManifest?.slot_count ?? 0);
-
-  function readPortPreference() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (err) {
-      console.debug('read port preference failed', err);
-      return null;
-    }
+  function createSimulatorTransport() {
+    return createSimulator({
+      createManifest: () =>
+        createLocalManifest({
+          uiVersion: 'simulator',
+          argMethodCount: ARG_METHOD_NAMES.length,
+          capabilities: {
+            profile_save: true,
+            profile_load: true,
+            profile_reset: true,
+            macro_snapshot: true,
+            scenes: true
+          }
+        }),
+      argMethodNames: ARG_METHOD_NAMES,
+      efFilterNames: EF_FILTER_NAMES,
+      cloneValue: clone,
+      setNested: setNestedValue,
+      telemetryFrameMs: TELEMETRY_FRAME_MS
+    });
   }
 
   async function requestPort() {
-    if (useSimulator) return createSimulator();
+    if (useSimulator) return createSimulatorTransport();
     if (!navigator.serial?.requestPort) throw new Error('WebSerial unavailable');
-    const remembered = readPortPreference();
+    const remembered = portPreferenceStore.read();
     const filters = remembered ? [remembered] : undefined;
     const port = await navigator.serial.requestPort(filters ? { filters } : {});
-    persistPortInfo(port);
-    return createTransportPort(port);
+    portPreferenceStore.persist(port);
+    return createTransportPort(port, {}, { makeEncoder: encoder, makeDecoder: decoder });
   }
 
   function notifyStatus(payload) {
@@ -1409,24 +362,6 @@ export function createRuntime({
     return () => statusListeners.delete(handler);
   }
 
-  function createCompletionLatch() {
-    // Serial transport stays strictly ordered, so each queued RPC waits until its response
-    // releases this latch before the next write goes out.
-    let released = false;
-    let resolveLatch = () => {};
-    const promise = new Promise((resolve) => {
-      resolveLatch = resolve;
-    });
-    return {
-      promise,
-      release() {
-        if (released) return;
-        released = true;
-        resolveLatch();
-      }
-    };
-  }
-
   function isJsonRpcTransport() {
     return (transport?.protocol ?? 'json-rpc') === 'json-rpc';
   }
@@ -1454,160 +389,21 @@ export function createRuntime({
     );
   }
 
-  function buildNativeRpcRequest(message) {
-    switch (message.rpc) {
-      case 'hello':
-        return { kind: 'hello', lines: ['HELLO'] };
-      case 'get_manifest':
-        return { kind: 'manifest', lines: ['GET_MANIFEST'] };
-      case 'get_config':
-        return { kind: 'config', lines: ['GET_CONFIG'] };
-      case 'get_schema':
-        return { kind: 'schema', lines: ['GET_SCHEMA'] };
-      case 'save_profile':
-        return { kind: 'profile_save', lines: [`SAVE_PROFILE,${Number(message.slot) || 0}`] };
-      case 'load_profile':
-        return { kind: 'profile_load', lines: [`LOAD_PROFILE,${Number(message.slot) || 0}`] };
-      case 'reset_profile':
-        return { kind: 'profile_reset', lines: [`RESET_PROFILE,${Number(message.slot) || 0}`] };
-      case 'set_config': {
-        const payload = JSON.stringify({
-          seq: message.seq,
-          checksum: message.checksum,
-          config: message.config
-        });
-        return {
-          kind: 'ack',
-          lines: chunkString(payload, NATIVE_SET_ALL_CHUNK_SIZE).map((chunk) => `SET_ALL ${chunk}`)
-        };
-      }
-      default:
-        return null;
+  const rpcKernel = createRpcKernel({
+    getTransport: () => transport,
+    isJsonRpcTransport,
+    chunkString,
+    nativeSetAllChunkSize: NATIVE_SET_ALL_CHUNK_SIZE,
+    rpcTimeoutMs: rpcTimeout,
+    rpcThrottleIntervalMs: RPC_THROTTLE_INTERVAL_MS,
+    onFatalError: (error) => {
+      settleMacroPending(macroPending, { error });
+      settleScenePending(scenePending, { error });
     }
-  }
-
-  function getActivePendingRpc() {
-    if (activeRpcId === null) return null;
-    return pendingRpc.get(activeRpcId) ?? null;
-  }
-
-  async function processRpcQueue() {
-    if (rpcBusy || !transport || !rpcQueue.length) return;
-    rpcBusy = true;
-    try {
-      while (transport && rpcQueue.length) {
-        // Keep one in-flight RPC at a time: firmware responses are line-oriented and keyed by id,
-        // so serialized writes avoid cross-talk when links get jittery.
-        const message = rpcQueue[0];
-        const entry = pendingRpc.get(message.id);
-        if (!entry) {
-          rpcQueue.shift();
-          continue;
-        }
-        const elapsed = performance.now() - lastRpcTimestamp;
-        const wait = Math.max(0, RPC_THROTTLE_INTERVAL_MS - elapsed);
-        if (wait) {
-          await new Promise((resolve) => setTimeout(resolve, wait));
-        }
-        try {
-          activeRpcId = message.id;
-          if (entry.protocolMode === 'native') {
-            entry.nativeRequest = buildNativeRpcRequest(message);
-            if (!entry.nativeRequest) {
-              throw new Error(`Unsupported device RPC: ${message.rpc}`);
-            }
-            for (const line of entry.nativeRequest.lines) {
-              await transport.writeLine(line);
-            }
-          } else {
-            await transport.writeLine(JSON.stringify(message));
-          }
-        } catch (err) {
-          if (activeRpcId === message.id) {
-            activeRpcId = null;
-          }
-          if (entry.timer) {
-            clearTimeout(entry.timer);
-            entry.timer = null;
-          }
-          pendingRpc.delete(message.id);
-          entry.release?.();
-          entry.reject(err);
-          flushRpcPending(err);
-          break;
-        }
-        lastRpcTimestamp = performance.now();
-        entry.timer = setTimeout(() => {
-          const pending = pendingRpc.get(message.id);
-          if (!pending) return;
-          if (activeRpcId === message.id) {
-            activeRpcId = null;
-          }
-          if (pending.timer) {
-            clearTimeout(pending.timer);
-            pending.timer = null;
-          }
-          pending.release?.();
-          pendingRpc.delete(message.id);
-          pending.reject(new Error('RPC timeout'));
-        }, entry.timeoutMs);
-        await entry.completion;
-        rpcQueue.shift();
-      }
-    } finally {
-      rpcBusy = false;
-    }
-  }
-
-  function handleRpcResponse(msg) {
-    const pending = pendingRpc.get(msg.id);
-    if (!pending) return;
-    if (activeRpcId === msg.id) {
-      activeRpcId = null;
-    }
-    if (pending.timer) {
-      clearTimeout(pending.timer);
-      pending.timer = null;
-    }
-    pendingRpc.delete(msg.id);
-    if (msg.error) {
-      const error = new Error(msg.error.message ?? 'RPC error');
-      if (msg.error.code !== undefined) error.code = msg.error.code;
-      pending.reject(error);
-      pending.release?.();
-      return;
-    }
-    const response = Object.prototype.hasOwnProperty.call(msg, 'result') ? msg.result : msg;
-    pending.resolve(response);
-    pending.release?.();
-  }
+  });
 
   function sendRpc(payload, { timeoutMs } = {}) {
-    if (!payload || typeof payload !== 'object' || !payload.rpc) {
-      return Promise.reject(new Error('RPC payload must include rpc property'));
-    }
-    if (!transport) return Promise.reject(new Error('Not connected'));
-    if (!isJsonRpcTransport() && payload.rpc === 'set_param') {
-      return Promise.resolve({ deferred: true, path: payload.path, value: payload.value });
-    }
-    const id = ++rpcSeq;
-    const message = { ...payload, id };
-    const request = new Promise((resolve, reject) => {
-      const completion = createCompletionLatch();
-      const entry = {
-        resolve,
-        reject,
-        timeoutMs: Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : rpcTimeout,
-        timer: null,
-        completion: completion.promise,
-        release: completion.release,
-        protocolMode: isJsonRpcTransport() ? 'json-rpc' : 'native',
-        nativeRequest: null
-      };
-      pendingRpc.set(id, entry);
-      rpcQueue.push(message);
-      processRpcQueue();
-    });
+    const request = rpcKernel.sendRpc(payload, { timeoutMs });
     // Any failed RPC rolls staged edits back to the last known-good live config so the UI does
     // not stay in a half-applied state.
     return request.catch(async (err) => {
@@ -1752,15 +548,10 @@ export function createRuntime({
   }
 
   function flushRpcPending(error) {
-    rpcQueue.length = 0;
-    for (const [id, pending] of pendingRpc) {
-      if (pending.timer) clearTimeout(pending.timer);
-      pending.release?.();
-      pending.reject(error);
-      pendingRpc.delete(id);
-    }
-    settleMacroPending(macroPending, { error: error ?? new Error('Connection lost') });
-    settleScenePending(scenePending, { error: error ?? new Error('Connection lost') });
+    const reason = error ?? new Error('Connection lost');
+    rpcKernel.flushPending(reason);
+    settleMacroPending(macroPending, { error: reason });
+    settleScenePending(scenePending, { error: reason });
   }
 
   async function connect(existingPort) {
@@ -1773,8 +564,7 @@ export function createRuntime({
       transport = candidate;
       hooks?.mutateTransport?.(transport);
       await transport.open();
-      lastRpcTimestamp = 0;
-      persistPortInfo(transport.rawPort);
+      portPreferenceStore.persist(transport.rawPort);
       startReadLoop();
       emit('transport-open', transport);
       await performHandshake();
@@ -1825,7 +615,7 @@ export function createRuntime({
         free_flash: 0
       };
     }
-    ensureLocalSlotMetaCount(remoteManifest?.slot_count ?? localManifest?.slot_count ?? 0);
+    localSlotMetaManager.ensureCount(remoteManifest?.slot_count ?? localManifest?.slot_count ?? 0);
     emit('manifest', remoteManifest);
     if (!remoteManifest.schema_version && remoteManifest.schemaVersion) {
       remoteManifest.schema_version = remoteManifest.schemaVersion;
@@ -1851,7 +641,7 @@ export function createRuntime({
     dirty = false;
     emit('schema', schema);
     broadcastConfig({ persist: false });
-    const snapshot = readStateSnapshot();
+    const snapshot = stateSnapshotStore.read();
     if (snapshot?.staged) {
       stage(() => snapshot.staged);
     }
@@ -1947,14 +737,15 @@ export function createRuntime({
     if (handleSceneLine(msg)) return;
     if (handleMacroLine(msg)) return;
     if (msg?.id !== undefined) {
-      handleRpcResponse(msg);
+      rpcKernel.handleRpcResponse(msg);
       return;
     }
-    const activePending = getActivePendingRpc();
+    const activePending = rpcKernel.getActivePendingRpc();
+    const activePendingId = activePending?.id;
     if (activePending?.protocolMode === 'native' && activePending.nativeRequest) {
       if (msg.type === 'error') {
-        handleRpcResponse({
-          id: activeRpcId,
+        rpcKernel.handleRpcResponse({
+          id: activePendingId,
           error: {
             code: msg.code,
             message: msg.message ?? msg.code ?? 'Device error'
@@ -1965,8 +756,8 @@ export function createRuntime({
       switch (activePending.nativeRequest.kind) {
         case 'hello':
           if (msg.hello !== undefined) {
-            handleRpcResponse({
-              id: activeRpcId,
+            rpcKernel.handleRpcResponse({
+              id: activePendingId,
               result: { message: String(msg.hello) }
             });
             return;
@@ -1974,35 +765,35 @@ export function createRuntime({
           break;
         case 'manifest':
           if (isManifestPayload(msg)) {
-            handleRpcResponse({ id: activeRpcId, result: { manifest: msg } });
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: { manifest: msg } });
             return;
           }
           break;
         case 'config':
           if (isConfigPayload(msg)) {
-            handleRpcResponse({ id: activeRpcId, result: { config: msg } });
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: { config: msg } });
             return;
           }
           break;
         case 'schema':
           if (msg.$schema || msg.type === 'object' || msg.properties) {
-            handleRpcResponse({ id: activeRpcId, result: msg });
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
             return;
           }
           break;
         case 'ack':
           if (msg.type === 'ack') {
-            handleRpcResponse({ id: activeRpcId, result: msg });
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
             return;
           }
           break;
         case 'profile_save':
           if (Object.prototype.hasOwnProperty.call(msg, 'profile_saved')) {
             if (msg.profile_saved) {
-              handleRpcResponse({ id: activeRpcId, result: msg });
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
             } else {
-              handleRpcResponse({
-                id: activeRpcId,
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
                 error: { message: msg.error ?? 'Profile save failed' }
               });
             }
@@ -2012,10 +803,10 @@ export function createRuntime({
         case 'profile_load':
           if (Object.prototype.hasOwnProperty.call(msg, 'profile_loaded')) {
             if (msg.profile_loaded) {
-              handleRpcResponse({ id: activeRpcId, result: msg });
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
             } else {
-              handleRpcResponse({
-                id: activeRpcId,
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
                 error: { message: msg.error ?? 'Profile load failed' }
               });
             }
@@ -2025,10 +816,10 @@ export function createRuntime({
         case 'profile_reset':
           if (Object.prototype.hasOwnProperty.call(msg, 'profile_reset')) {
             if (msg.profile_reset) {
-              handleRpcResponse({ id: activeRpcId, result: msg });
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
             } else {
-              handleRpcResponse({
-                id: activeRpcId,
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
                 error: { message: msg.error ?? 'Profile reset failed' }
               });
             }
@@ -2080,51 +871,19 @@ export function createRuntime({
     queuedTelemetry = null;
   }
 
-  function persistStateSnapshot() {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      if (stagedConfig === null || stagedConfig === undefined) {
-        localStorage.removeItem(STATE_STORAGE_KEY);
-        return;
-      }
-      localStorage.setItem(
-        STATE_STORAGE_KEY,
-        JSON.stringify({
-          schema_version: remoteManifest?.schema_version ?? localManifest?.schema_version,
-          staged: stagedConfig,
-          timestamp: Date.now()
-        })
-      );
-    } catch (err) {
-      console.debug('persist state snapshot failed', err);
-    }
-  }
-
-  function readStateSnapshot() {
-    if (typeof localStorage === 'undefined') return null;
-    try {
-      const raw = localStorage.getItem(STATE_STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (err) {
-      console.debug('read state snapshot failed', err);
-      return null;
-    }
-  }
-
   function broadcastConfig({ persist = true } = {}) {
     const payload = {
       config: mergeLocalSlotMeta(liveConfig),
       staged: mergeLocalSlotMeta(stagedConfig),
       dirty
     };
-    if (persist) persistStateSnapshot();
+    if (persist) stateSnapshotStore.persist(stagedConfig);
     console.debug('[runtime] broadcastConfig dirty=', dirty);
     emit('config', payload);
   }
 
   function restoreLocalState() {
-    const snapshot = readStateSnapshot();
+    const snapshot = stateSnapshotStore.read();
     if (!snapshot?.staged) return false;
     stage(() => snapshot.staged);
     return true;
@@ -2140,189 +899,22 @@ export function createRuntime({
     return true;
   }
 
-  function applyConfigPatch(patch) {
-    // Device-side patches update the live snapshot first, then selectively merge into staged
-    // values only where the user has not diverged locally.
-    if (!patch || typeof patch !== 'object' || !liveConfig) return;
-    const prevLive = clone(liveConfig);
-    const nextLive = clone(liveConfig);
-    let mutated = false;
-
-    if (Array.isArray(patch.slots)) {
-      const slotsSource = Array.isArray(nextLive.slots) ? [...nextLive.slots] : [];
-      let slotsChanged = false;
-      patch.slots.forEach((entry) => {
-        const normalized = normalizeSlotPatchEntry(entry);
-        if (!normalized) return;
-        const { index, fields } = normalized;
-        const current = { ...(slotsSource[index] ?? {}) };
-        let updated = false;
-        Object.entries(fields).forEach(([key, value]) => {
-          if (value === undefined) return;
-          if (value && typeof value === 'object' && !Array.isArray(value)) {
-            const existing = current[key] && typeof current[key] === 'object' ? current[key] : {};
-            const merged = { ...existing, ...value };
-            if (!shallowEqual(existing, merged)) {
-              current[key] = merged;
-              updated = true;
-            }
-            return;
-          }
-          if (current[key] !== value) {
-            current[key] = value;
-            updated = true;
-          }
-        });
-        if (updated) {
-          slotsSource[index] = current;
-          slotsChanged = true;
-        }
-      });
-      if (slotsChanged) {
-        nextLive.slots = slotsSource;
-        mutated = true;
-      }
-    }
-
-    if (Array.isArray(patch.efSlots)) {
-      let efSlots = Array.isArray(nextLive.efSlots) ? nextLive.efSlots : [];
-      let efChanged = false;
-      patch.efSlots.forEach((entry, idx) => {
-        const index = coerceIndex(entry?.index ?? idx);
-        const nextArray = applyEfSlotPatch(
-          efSlots,
-          { ...(entry && typeof entry === 'object' ? entry : {}), index },
-          Array.isArray(nextLive.slots) ? nextLive.slots.length : 0
-        );
-        if (nextArray !== efSlots) {
-          efSlots = nextArray;
-          efChanged = true;
-        }
-      });
-      if (efChanged) {
-        nextLive.efSlots = efSlots;
-        mutated = true;
-      }
-    }
-
-    if (patch.filter && typeof patch.filter === 'object') {
-      const prevFilter = prevLive.filter ?? {};
-      const nextFilter = { ...(nextLive.filter ?? {}), ...patch.filter };
-      if (JSON.stringify(nextFilter) !== JSON.stringify(nextLive.filter ?? {})) {
-        nextLive.filter = nextFilter;
-        mutated = true;
-        patch.__filterMeta = { prev: prevFilter, next: nextFilter }; // stash for staged reconciliation
-      }
-    }
-
-    if (patch.arg && typeof patch.arg === 'object') {
-      const prevArg = prevLive.arg ?? {};
-      const nextArg = { ...(nextLive.arg ?? {}), ...patch.arg };
-      if (JSON.stringify(nextArg) !== JSON.stringify(nextLive.arg ?? {})) {
-        nextLive.arg = nextArg;
-        mutated = true;
-        patch.__argMeta = { prev: prevArg, next: nextArg };
-      }
-    }
-
-    if (!mutated) return;
-
-    let nextStaged;
-    if (!stagedConfig || !dirty) {
-      nextStaged = clone(nextLive);
-    } else {
-      nextStaged = clone(stagedConfig);
-      if (Array.isArray(patch.slots) && Array.isArray(nextLive.slots)) {
-        const prevSlots = Array.isArray(prevLive.slots) ? prevLive.slots : [];
-        const stagedSlots = Array.isArray(nextStaged.slots) ? nextStaged.slots : [];
-        patch.slots.forEach((entry) => {
-          const normalized = normalizeSlotPatchEntry(entry);
-          if (!normalized) return;
-          const { index, fields } = normalized;
-          const prevSlot = prevSlots[index] ?? {};
-          const stagedSlot = stagedSlots[index] ?? {};
-          const nextSlot = nextLive.slots[index] ?? {};
-          const merged = { ...stagedSlot };
-          let stagedChanged = false;
-          Object.keys(fields).forEach((key) => {
-            if (merged[key] === undefined || merged[key] === prevSlot[key]) {
-              if (merged[key] !== nextSlot[key]) {
-                merged[key] = nextSlot[key];
-                stagedChanged = true;
-              }
-            }
-          });
-          if (!stagedSlots[index] && Object.keys(nextSlot).length) {
-            stagedSlots[index] = clone(nextSlot);
-          } else if (stagedChanged) {
-            stagedSlots[index] = merged;
-          }
-        });
-        nextStaged.slots = stagedSlots;
-      }
-
-      if (Array.isArray(patch.efSlots) && Array.isArray(nextLive.efSlots)) {
-        const prevEf = Array.isArray(prevLive.efSlots) ? prevLive.efSlots : [];
-        const stagedEf = Array.isArray(nextStaged.efSlots) ? nextStaged.efSlots : [];
-        patch.efSlots.forEach((entry, idx) => {
-          const index = coerceIndex(entry?.index ?? idx);
-          if (index === null) {
-            for (let follower = 0; follower < nextLive.efSlots.length; follower += 1) {
-              const nextVal = normalizeEfSlotTargets(nextLive.efSlots[follower] ?? {}, nextLive.slots?.length ?? 0);
-              const prevVal = normalizeEfSlotTargets(prevEf[follower] ?? {}, prevLive.slots?.length ?? 0);
-              const stagedVal =
-                stagedEf[follower] && typeof stagedEf[follower] === 'object'
-                  ? normalizeEfSlotTargets(stagedEf[follower], nextStaged.slots?.length ?? 0)
-                  : undefined;
-              if (stagedVal === undefined || sameNumberArray(stagedVal, prevVal)) {
-                stagedEf[follower] = { slots: nextVal };
-              }
-            }
-            return;
-          }
-          const nextVal = normalizeEfSlotTargets(nextLive.efSlots[index] ?? {}, nextLive.slots?.length ?? 0);
-          const prevVal = normalizeEfSlotTargets(prevEf[index] ?? {}, prevLive.slots?.length ?? 0);
-          const stagedVal =
-            stagedEf[index] && typeof stagedEf[index] === 'object'
-              ? normalizeEfSlotTargets(stagedEf[index], nextStaged.slots?.length ?? 0)
-              : undefined;
-          if (stagedVal === undefined || sameNumberArray(stagedVal, prevVal)) {
-            stagedEf[index] = { slots: nextVal };
-          }
-        });
-        nextStaged.efSlots = stagedEf;
-      }
-
-      if (patch.__filterMeta) {
-        const { prev, next } = patch.__filterMeta;
-        nextStaged.filter = nextStaged.filter ?? {};
-        Object.keys(next).forEach((key) => {
-          if (nextStaged.filter[key] === undefined || nextStaged.filter[key] === prev[key]) {
-            nextStaged.filter[key] = next[key];
-          }
-        });
-      }
-
-      if (patch.__argMeta) {
-        const { prev, next } = patch.__argMeta;
-        nextStaged.arg = nextStaged.arg ?? {};
-        Object.keys(next).forEach((key) => {
-          if (nextStaged.arg[key] === undefined || nextStaged.arg[key] === prev[key]) {
-            nextStaged.arg[key] = next[key];
-          }
-        });
-      }
-    }
-
-    if (patch.__filterMeta) delete patch.__filterMeta;
-    if (patch.__argMeta) delete patch.__argMeta;
-
-    const normalizedLive = normalizeConfig(nextLive, remoteManifest ?? localManifest ?? {});
-    const normalizedStaged = normalizeConfig(nextStaged, remoteManifest ?? localManifest ?? {});
-    liveConfig = clone(normalizedLive);
-    stagedConfig = clone(normalizedStaged);
-    broadcastConfig();
-  }
+  const applyConfigPatch = createPatchReconciler({
+    getLiveConfig: () => liveConfig,
+    getStagedConfig: () => stagedConfig,
+    isDirty: () => dirty,
+    setLiveConfig: (next) => {
+      liveConfig = next;
+    },
+    setStagedConfig: (next) => {
+      stagedConfig = next;
+    },
+    clone,
+    normalizeConfig,
+    shallowEqual,
+    getManifest: () => remoteManifest ?? localManifest ?? {},
+    broadcastConfig
+  });
 
   function stage(updater) {
     const next = typeof updater === 'function' ? updater(clone(stagedConfig)) : updater;
@@ -2434,15 +1026,7 @@ export function createRuntime({
   }
 
   function setLocalSlotMeta(index, patch = {}) {
-    const slotCount = currentSlotCount();
-    if (slotCount <= 0) return false;
-    ensureLocalSlotMetaCount(slotCount);
-    const idx = Math.max(0, Math.min(slotCount - 1, Math.floor(Number(index) || 0)));
-    const current = normalizeLocalSlotMetaEntry(localSlotMeta[idx]);
-    const next = normalizeLocalSlotMetaEntry({ ...current, ...patch });
-    if (shallowEqual(current, next)) return false;
-    localSlotMeta[idx] = next;
-    persistLocalSlotMeta();
+    if (!localSlotMetaManager.updateEntry(index, patch)) return false;
     broadcastConfig();
     return true;
   }
