@@ -3,6 +3,15 @@ import { FormRenderer } from './form_renderer.js';
 import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
+import { VirtualGrid, VirtualList } from './virtualizers.js';
+import {
+  clampProfileSlot,
+  normalizeUIMode,
+  persistProfileSlot,
+  persistUIMode,
+  readProfileSlotPreference,
+  readUIModePreference
+} from './state/ui_preferences.js';
 import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
@@ -51,174 +60,6 @@ if (
 const runtime = createRuntime(runtimeOptions);
 if (typeof window !== 'undefined') {
   window.__MN42_RUNTIME = runtime;
-}
-
-const sharedResizeObserver =
-  typeof ResizeObserver === 'function'
-    ? new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          entry.target.__resizeCallback?.(entry);
-        }
-      })
-    : null;
-
-class VirtualGrid {
-  // Reuse a small pool of absolutely positioned nodes so the slot grid stays
-  // responsive even when the full 42-slot deck is being repainted often.
-  constructor(container, { columns, rowHeight, render }) {
-    this.container = container;
-    this.columns = columns;
-    this.rowHeight = rowHeight;
-    this.renderItem = render;
-    this.data = [];
-    this.pool = [];
-    this.viewport = document.createElement('div');
-    this.viewport.className = 'virtual-grid';
-    if (this.container) {
-      this.container.style.position = 'relative';
-      this.container.style.overflowY = 'auto';
-      this.container.appendChild(this.viewport);
-      this.container.__resizeCallback = () => this.compute();
-      sharedResizeObserver?.observe(this.container);
-    }
-    this.viewport.style.position = 'relative';
-    this.viewport.style.width = '100%';
-    this.container?.addEventListener('scroll', () => this.render());
-  }
-
-  // Replace the backing dataset and recompute how many DOM nodes we need.
-  setData(data) {
-    this.data = data || [];
-    this.compute();
-  }
-
-  // Size the viewport and make sure the element pool covers the visible rows.
-  compute() {
-    if (!this.container) return;
-    const visibleRows = Math.ceil(this.container.clientHeight / this.rowHeight) + 2;
-    const needed = visibleRows * this.columns;
-    while (this.pool.length < needed) {
-      const el = document.createElement('div');
-      el.className = 'virtual-item';
-      el.style.position = 'absolute';
-      this.viewport.appendChild(el);
-      this.pool.push(el);
-    }
-    this.render();
-  }
-
-  // Position pooled elements over the currently visible rows and let the caller
-  // render each logical slot into its assigned node.
-  render() {
-    if (!this.container) return;
-    const scrollTop = this.container.scrollTop;
-    const firstRow = Math.max(0, Math.floor(scrollTop / this.rowHeight) - 1);
-    const startIndex = firstRow * this.columns;
-    this.viewport.style.height = `${Math.ceil(this.data.length / this.columns) * this.rowHeight}px`;
-    this.pool.forEach((el, idx) => {
-      const dataIndex = startIndex + idx;
-      if (dataIndex >= this.data.length) {
-        el.style.display = 'none';
-        return;
-      }
-      el.style.display = '';
-      const row = Math.floor(dataIndex / this.columns);
-      const column = dataIndex % this.columns;
-      el.style.width = `${100 / this.columns}%`;
-      el.style.transform = `translate(${column * 100}%, ${row * this.rowHeight}px)`;
-      el.style.height = `${this.rowHeight}px`;
-      el.dataset.index = String(dataIndex);
-      this.renderItem(el, dataIndex, this.data[dataIndex]);
-    });
-  }
-
-  // Bring a logical slot into view when keyboard navigation changes selection.
-  scrollToIndex(index) {
-    if (!this.container) return;
-    const row = Math.floor(index / this.columns);
-    const target = row * this.rowHeight;
-    this.container.scrollTo({ top: target, behavior: 'smooth' });
-  }
-
-  // Mirror the current selection into the pooled DOM nodes.
-  highlight(index) {
-    this.pool.forEach((el) => {
-      el.classList.toggle('selected', Number(el.dataset.index) === index);
-    });
-  }
-
-  // Refresh the per-slot value badges without rebuilding the whole grid.
-  updateTelemetry(values) {
-    this.pool.forEach((el) => {
-      if (el.dataset.index === undefined) return;
-      const idx = Number(el.dataset.index);
-      const value = values[idx] ?? 0;
-      el.dataset.value = value;
-    });
-  }
-}
-
-class VirtualList {
-  // Virtualize the EF assignment list for the same reason as `VirtualGrid`,
-  // but in a simple single-column layout.
-  constructor(container, { itemHeight, render }) {
-    this.container = container;
-    this.itemHeight = itemHeight;
-    this.renderItem = render;
-    this.data = [];
-    this.pool = [];
-    this.viewport = document.createElement('div');
-    this.viewport.className = 'virtual-list';
-    if (this.container) {
-      this.container.style.position = 'relative';
-      this.container.style.overflowY = 'auto';
-      this.container.appendChild(this.viewport);
-      this.container.__resizeCallback = () => this.compute();
-      sharedResizeObserver?.observe(this.container);
-    }
-    this.viewport.style.position = 'relative';
-    this.viewport.style.width = '100%';
-    this.container?.addEventListener('scroll', () => this.render());
-  }
-
-  // Replace the source rows and recompute visible capacity.
-  setData(data) {
-    this.data = data || [];
-    this.compute();
-  }
-
-  // Grow the pooled row set to cover the visible viewport.
-  compute() {
-    if (!this.container) return;
-    const visible = Math.ceil(this.container.clientHeight / this.itemHeight) + 2;
-    while (this.pool.length < visible) {
-      const el = document.createElement('div');
-      el.className = 'virtual-row';
-      el.style.position = 'absolute';
-      this.viewport.appendChild(el);
-      this.pool.push(el);
-    }
-    this.render();
-  }
-
-  // Repaint only the visible rows in the list viewport.
-  render() {
-    if (!this.container) return;
-    const scrollTop = this.container.scrollTop;
-    const first = Math.max(0, Math.floor(scrollTop / this.itemHeight) - 1);
-    this.viewport.style.height = `${this.data.length * this.itemHeight}px`;
-    this.pool.forEach((el, idx) => {
-      const dataIndex = first + idx;
-      if (dataIndex >= this.data.length) {
-        el.style.display = 'none';
-        return;
-      }
-      el.style.display = '';
-      el.style.width = '100%';
-      el.style.transform = `translateY(${dataIndex * this.itemHeight}px)`;
-      this.renderItem(el, dataIndex, this.data[dataIndex]);
-    });
-  }
 }
 
 // Page bootstrap owns the full operator shell: transport controls, staged/live
@@ -299,8 +140,6 @@ const boot = () => {
   const PROFILE_LABELS = ['A', 'B', 'C', 'D'];
   const MACRO_SAVE_COMMAND = 'SAVE_MACRO_SLOT';
   const MACRO_RECALL_COMMAND = 'RECALL_MACRO_SLOT';
-  const PROFILE_STORAGE_KEY = 'moarknobs:selected-profile';
-  const UI_MODE_STORAGE_KEY = 'moarknobs:ui-mode';
   const UI_MODE_HINTS = {
     basic: 'Basic mode keeps common knob-to-MIDI mapping controls visible.',
     advanced: 'Advanced mode reveals EF, ARG, filter tuning, and scope diagnostics.'
@@ -327,9 +166,9 @@ const boot = () => {
   }));
   const sceneSlotElements = [];
   let sceneBusy = false;
-  let activeProfileSlot = clampProfileSlot(readProfileSlotPreference());
+  let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
   let profileWizardTargetSlot = activeProfileSlot;
-  let activeUiMode = normalizeUIMode(readUIModePreference());
+  let activeUiMode = readUIModePreference();
   let activeEditorTab = 'mapping';
   let activeUtilityTab = 'console';
   let deviceCapabilities = resolveCapabilities(localManifest);
@@ -600,14 +439,14 @@ const boot = () => {
 
   profileSlotButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      const slotIndex = clampProfileSlot(Number(button.dataset.profileSlot));
+      const slotIndex = clampProfileSlot(Number(button.dataset.profileSlot), PROFILE_LABELS.length);
       setActiveProfileSlot(slotIndex);
     });
   });
   if (profileWizardTarget) {
     profileWizardTarget.value = String(profileWizardTargetSlot);
     profileWizardTarget.addEventListener('change', () => {
-      profileWizardTargetSlot = clampProfileSlot(Number(profileWizardTarget.value));
+      profileWizardTargetSlot = clampProfileSlot(Number(profileWizardTarget.value), PROFILE_LABELS.length);
       updateProfileWizardControls();
     });
   }
@@ -924,43 +763,6 @@ const boot = () => {
     statusMessage.textContent = message;
   }
 
-  // Clamp an arbitrary value into the four persistent profile slots.
-  function clampProfileSlot(value) {
-    const idx = Number(value);
-    if (!Number.isFinite(idx)) return 0;
-    return Math.max(0, Math.min(PROFILE_LABELS.length - 1, Math.floor(idx)));
-  }
-
-  // Restore the last selected profile slot from local browser storage.
-  function readProfileSlotPreference() {
-    if (typeof localStorage === 'undefined') return 0;
-    try {
-      const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-      const parsed = Number(raw);
-      if (Number.isFinite(parsed) && parsed >= 0 && parsed < PROFILE_LABELS.length) {
-        return parsed;
-      }
-    } catch (err) {
-      console.debug('read profile slot preference failed', err);
-    }
-    return 0;
-  }
-
-  // Persist the selected profile slot locally so reconnects reopen on the same target.
-  function persistProfileSlot(index) {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(PROFILE_STORAGE_KEY, String(index));
-    } catch (err) {
-      console.debug('persist profile slot failed', err);
-    }
-  }
-
-  // Limit UI mode to the two supported tiers.
-  function normalizeUIMode(mode) {
-    return mode === 'advanced' ? 'advanced' : 'basic';
-  }
-
   // Limit the slot editor to the supported tabs.
   function normalizeEditorTab(tab) {
     return tab === 'envelope' || tab === 'arg' ? tab : 'mapping';
@@ -969,27 +771,6 @@ const boot = () => {
   // Limit the utility rail to the supported tabs.
   function normalizeUtilityTab(tab) {
     return tab === 'diff' || tab === 'midi' || tab === 'scope' ? tab : 'console';
-  }
-
-  // Restore the last UI tier selection from local browser storage.
-  function readUIModePreference() {
-    if (typeof localStorage === 'undefined') return 'basic';
-    try {
-      return normalizeUIMode(localStorage.getItem(UI_MODE_STORAGE_KEY));
-    } catch (err) {
-      console.debug('read ui mode preference failed', err);
-      return 'basic';
-    }
-  }
-
-  // Persist the selected UI tier locally.
-  function persistUIMode(mode) {
-    if (typeof localStorage === 'undefined') return;
-    try {
-      localStorage.setItem(UI_MODE_STORAGE_KEY, normalizeUIMode(mode));
-    } catch (err) {
-      console.debug('persist ui mode failed', err);
-    }
   }
 
   // Flip between Basic and Advanced presentation without altering the staged config.
@@ -1087,7 +868,7 @@ const boot = () => {
 
   // Update the selected profile slot and mirror it into the UI/state badges.
   function setActiveProfileSlot(index, { persist = true } = {}) {
-    const bounded = clampProfileSlot(index);
+    const bounded = clampProfileSlot(index, PROFILE_LABELS.length);
     activeProfileSlot = bounded;
     profileSlotButtons.forEach((button) => {
       const slotValue = Number(button.dataset.profileSlot);
@@ -1098,7 +879,7 @@ const boot = () => {
       profileSlotStatus.textContent = `${describeSlot(bounded)} • ${profileSlotModeCopy()}`;
     }
     if (persist) {
-      persistProfileSlot(bounded);
+      persistProfileSlot(bounded, { slotCount: PROFILE_LABELS.length });
     }
   }
 
@@ -1124,7 +905,10 @@ const boot = () => {
   // Drive the three-step profile wizard copy and button gating from current state.
   function updateProfileWizardControls() {
     // Guided flow state machine: switch to target slot -> apply dirty edits -> save slot.
-    const target = clampProfileSlot(Number(profileWizardTarget?.value ?? profileWizardTargetSlot));
+    const target = clampProfileSlot(
+      Number(profileWizardTarget?.value ?? profileWizardTargetSlot),
+      PROFILE_LABELS.length
+    );
     profileWizardTargetSlot = target;
     const guidedSupported = supportsGuidedProfileFlow();
     const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy && guidedSupported;
@@ -1370,7 +1154,10 @@ const boot = () => {
     try {
       const response = await runtime.sendRpc({ rpc: method, slot: activeProfileSlot });
       // Firmware may report an authoritative slot index; trust it and realign local selection.
-      const responseSlot = clampProfileSlot(response?.slot ?? response?.profile ?? activeProfileSlot);
+      const responseSlot = clampProfileSlot(
+        response?.slot ?? response?.profile ?? activeProfileSlot,
+        PROFILE_LABELS.length
+      );
       setActiveProfileSlot(responseSlot);
       if (expectConfig) {
         let payload = response?.config ?? null;
@@ -1495,7 +1282,10 @@ const boot = () => {
         if (!configData || typeof configData !== 'object') {
           throw new Error('File did not contain a config payload');
         }
-        const requestedSlot = clampProfileSlot(documentPayload?.slot ?? documentPayload?.profile_slot ?? documentPayload?.slotIndex);
+        const requestedSlot = clampProfileSlot(
+          documentPayload?.slot ?? documentPayload?.profile_slot ?? documentPayload?.slotIndex,
+          PROFILE_LABELS.length
+        );
         if (Number.isFinite(requestedSlot)) {
           setActiveProfileSlot(requestedSlot);
         }
