@@ -24,7 +24,9 @@
 #include "Modes.h"
 #include "Utility.h"
 #include "protocol/ManifestReport.h"
+#include "protocol/ProfileCommands.h"
 #include "protocol/ProtocolSimpleHandlers.h"
+#include "protocol/SceneCommands.h"
 #include "protocol/SceneStorage.h"
 #include "protocol/SysExTemplateCodec.h"
 
@@ -61,185 +63,12 @@ template <typename T> void storageGet(int address, T &value) {
 template <typename T> void storagePut(int address, const T &value) {
     activeStorageBackend().writeBytes(address, &value, sizeof(T));
 }
-
-// Push persisted pot channel/CC mappings back into the live managers after config/profile changes.
-void syncPotentiometerMappingsFromConfig() {
-    potChannels.clear();
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        const uint8_t channel = constrain(configManager.getPotChannel(i), 1, 16);
-        const uint8_t cc = constrain(configManager.getPotCCNumber(i), 0, 127);
-        configManager.setPotChannel(i, channel);
-        configManager.setPotCCNumber(i, cc);
-        potentiometerManager.setChannel(i, channel);
-        potentiometerManager.setCCNumber(i, cc);
-        potChannels.push_back(channel);
-    }
-}
-
-// Build the baseline profile used when a slot is empty or gets reset.
-ProfileData defaultProfileSnapshot() {
-    ProfileData profile{};
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        profile.slots[i].midiChannel = 1;
-    }
-    return profile;
-}
-
-// Persist the current live deck state into one of the four firmware profile slots.
-bool saveCurrentProfileSlot(uint8_t id) {
-    if (id >= NUM_PROFILES) {
-        return false;
-    }
-    g_activeProfile = id;
-    configManager.setActiveProfile(id);
-    configManager.saveProfile(id);
-    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-    return configManager.saveProfileSettings(id, captureProfileSnapshot());
-}
-
-// Load one profile slot into the live runtime, falling back to a baseline if the slot is blank.
-bool loadProfileSlot(uint8_t id) {
-    if (id >= NUM_PROFILES) {
-        return false;
-    }
-
-    ProfileData profile{};
-    const bool stored = configManager.loadProfileSettings(id, profile);
-    g_activeProfile = id;
-    configManager.setActiveProfile(id);
-
-    if (stored) {
-        configManager.loadProfile(id);
-    } else {
-        profile = defaultProfileSnapshot();
-        for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-            configManager.setPotChannel(i, 1);
-            configManager.setPotCCNumber(i, 0);
-        }
-        configManager.saveConfiguration();
-    }
-
-    syncPotentiometerMappingsFromConfig();
-    applyProfileSnapshot(profile, true);
-    refreshEfVoicesFromConfig();
-
-    if (!stored) {
-        configManager.saveProfile(id);
-        configManager.saveProfileSettings(id, profile);
-    }
-    return true;
-}
-
-// Reset a profile slot to the baseline state and immediately apply that baseline live.
-bool resetProfileSlot(uint8_t id) {
-    if (id >= NUM_PROFILES) {
-        return false;
-    }
-
-    const ProfileData profile = defaultProfileSnapshot();
-    g_activeProfile = id;
-    configManager.setActiveProfile(id);
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        configManager.setPotChannel(i, 1);
-        configManager.setPotCCNumber(i, 0);
-    }
-    configManager.saveConfiguration();
-    syncPotentiometerMappingsFromConfig();
-    applyProfileSnapshot(profile, true);
-    refreshEfVoicesFromConfig();
-    configManager.saveProfile(id);
-    return configManager.saveProfileSettings(id, profile);
-}
 } // namespace
 
 template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
-}
-
-static bool handleSceneJsonCommand(const String &command) {
-    if (command.length() == 0 || command[0] != '{') {
-        return false;
-    }
-    StaticJsonDocument<512> request;
-    DeserializationError err = deserializeJson(request, command);
-    if (err) {
-        return false;
-    }
-    const char *cmd = request["cmd"] | nullptr;
-    if (!cmd) {
-        return false;
-    }
-
-    if (std::strcmp(cmd, "GET_SCENES") == 0) {
-        SceneStorage::SceneInfo scenes[SceneStorage::kSceneSlotCount];
-        uint8_t count = SceneStorage::listScenes(scenes, SceneStorage::kSceneSlotCount);
-        StaticJsonDocument<768> response;
-        response["cmd"] = "GET_SCENES";
-        JsonArray array = response.createNestedArray("scenes");
-        for (uint8_t idx = 0; idx < count; ++idx) {
-            JsonObject scene = array.createNestedObject();
-            scene["slot"] = scenes[idx].slot;
-            scene["name"] = scenes[idx].name;
-            scene["available"] = scenes[idx].available;
-        }
-        sendJsonResponse(response);
-        return true;
-    }
-
-    if (std::strcmp(cmd, "SAVE_SCENE") == 0 || std::strcmp(cmd, "RECALL_SCENE") == 0) {
-        const int slotValue = request["slot"].is<int>() ? request["slot"].as<int>() : -1;
-        if (slotValue < 0 || slotValue >= SceneStorage::kSceneSlotCount) {
-            StaticJsonDocument<256> response;
-            response["cmd"] = cmd;
-            response["scene_slot"] = slotValue;
-            response["success"] = false;
-            response["scene_error"] = "Invalid slot";
-            sendJsonResponse(response);
-            return true;
-        }
-
-        if (std::strcmp(cmd, "SAVE_SCENE") == 0) {
-            const char *name = request["name"] | nullptr;
-            SceneStorage::ConfigState snapshot = SceneStorage::captureConfigState();
-            bool saved =
-                SceneStorage::saveSceneSlot(static_cast<uint8_t>(slotValue), snapshot, name);
-            SceneStorage::SceneEntry entry{};
-            SceneStorage::loadSceneSlot(static_cast<uint8_t>(slotValue), entry);
-            StaticJsonDocument<384> response;
-            response["cmd"] = "SAVE_SCENE";
-            response["scene_saved"] = saved;
-            response["scene_slot"] = slotValue;
-            response["scene_name"] = entry.name;
-            response["scene_available"] =
-                SceneStorage::sceneSlotAvailable(static_cast<uint8_t>(slotValue));
-            if (!saved) {
-                response["scene_error"] = "Snapshot save failed";
-            }
-            sendJsonResponse(response);
-            return true;
-        }
-
-        SceneStorage::SceneEntry entry{};
-        bool loaded = SceneStorage::loadSceneSlot(static_cast<uint8_t>(slotValue), entry);
-        StaticJsonDocument<384> response;
-        response["cmd"] = "RECALL_SCENE";
-        response["scene_slot"] = slotValue;
-        response["scene_name"] = entry.name;
-        response["scene_available"] = loaded;
-        if (loaded) {
-            SceneStorage::applyConfigState(entry.state, true);
-            response["scene_recalled"] = true;
-        } else {
-            response["scene_recalled"] = false;
-            response["scene_error"] = "No snapshot stored in this slot";
-        }
-        sendJsonResponse(response);
-        return true;
-    }
-
-    return false;
 }
 
 void initializeProtocol() {
