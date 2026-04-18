@@ -13,6 +13,9 @@ import { normalizeConfig } from './runtime/config_normalize.js';
 import { createLocalSlotMetaManager } from './runtime/local_slot_meta.js';
 import { createPortPreferenceStore } from './runtime/port_preference.js';
 import { createStateSnapshotStore } from './runtime/state_snapshot.js';
+import { createRuntimeLineHandler } from './runtime/line_router.js';
+import { selectSchemaForHydration } from './runtime/schema_selection.js';
+import { performConnectionHandshake } from './runtime/connection_handshake.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -310,51 +313,6 @@ export function createRuntime({
     }
   }
 
-  // Ensure device-supplied schemas include the structures this runtime expects.
-  function isRuntimeCompatibleSchema(candidate) {
-    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return false;
-    if (candidate.type && candidate.type !== 'object') return false;
-    if (!candidate.properties || typeof candidate.properties !== 'object') return false;
-    const requiredRoots = ['slots', 'efSlots', 'filter', 'arg', 'led'];
-    return requiredRoots.every((key) => {
-      const branch = candidate.properties[key];
-      return branch && typeof branch === 'object';
-    });
-  }
-
-  async function loadBundledSchema() {
-    const response = await fetch(schemaUrl);
-    return response.json();
-  }
-
-  async function selectSchemaForHydration() {
-    let deviceSchema = null;
-    try {
-      const response = await sendRpc({ rpc: 'get_schema' });
-      deviceSchema = response?.schema ?? response ?? null;
-    } catch (err) {
-      console.debug('get_schema RPC failed', err);
-    }
-    if (isRuntimeCompatibleSchema(deviceSchema)) {
-      schemaSource = 'device';
-      return deviceSchema;
-    }
-
-    const bundledSchema = await loadBundledSchema();
-    schemaSource = 'bundled';
-    if (!isRuntimeCompatibleSchema(bundledSchema)) {
-      throw new Error('Bundled schema is incompatible with runtime requirements');
-    }
-    if (deviceSchema) {
-      emit('status', {
-        stage: 'schema',
-        level: 'warn',
-        message: 'Device schema is incompatible; using bundled schema.'
-      });
-    }
-    return bundledSchema;
-  }
-
   function onStatus(handler) {
     if (typeof handler !== 'function') return () => {};
     statusListeners.add(handler);
@@ -569,7 +527,14 @@ export function createRuntime({
       portPreferenceStore.persist(transport.rawPort);
       startReadLoop();
       emit('transport-open', transport);
-      await performHandshake();
+      remoteManifest = await performConnectionHandshake({
+        sendRpc,
+        emit,
+        localManifest,
+        localSlotMetaManager,
+        migrations,
+        argMethodCount: ARG_METHOD_NAMES.length
+      });
       await hydrate();
       emit('connected', {
         manifest: remoteManifest,
@@ -585,55 +550,14 @@ export function createRuntime({
     }
   }
 
-  async function performHandshake() {
-    try {
-      await sendRpc({ rpc: 'hello' });
-    } catch (err) {
-      console.debug('hello RPC failed', err);
-    }
-    let manifestPayload;
-    try {
-      manifestPayload = await sendRpc({ rpc: 'get_manifest' });
-    } catch (err) {
-      console.debug('get_manifest RPC failed', err);
-      manifestPayload = null;
-    }
-    const manifestData = manifestPayload?.manifest ?? manifestPayload;
-    if (manifestData && typeof manifestData === 'object') {
-      remoteManifest = manifestData;
-    } else {
-      remoteManifest = {
-        device_name: localManifest?.device_name ?? 'MOARkNOBS-42',
-        fw_version: 'unknown',
-        git_sha: 'offline',
-        build_time: new Date().toISOString(),
-        schema_version: localManifest?.schema_version,
-        slot_count: localManifest?.slot_count,
-        pot_count: localManifest?.pot_count,
-        envelope_count: localManifest?.envelope_count,
-        arg_method_count: ARG_METHOD_NAMES.length,
-        led_count: localManifest?.led_count ?? 0,
-        free_ram: 0,
-        free_flash: 0
-      };
-    }
-    localSlotMetaManager.ensureCount(remoteManifest?.slot_count ?? localManifest?.slot_count ?? 0);
-    emit('manifest', remoteManifest);
-    if (!remoteManifest.schema_version && remoteManifest.schemaVersion) {
-      remoteManifest.schema_version = remoteManifest.schemaVersion;
-    }
-    if (localManifest && remoteManifest.schema_version !== localManifest.schema_version) {
-      const key = `${remoteManifest.schema_version}->${localManifest.schema_version}`;
-      emit('migration-required', {
-        from: remoteManifest.schema_version,
-        to: localManifest.schema_version,
-        canAdapt: typeof migrations[key] === 'function'
-      });
-    }
-  }
-
   async function hydrate() {
-    schema = await selectSchemaForHydration();
+    const schemaSelection = await selectSchemaForHydration({
+      sendRpc,
+      schemaUrl,
+      emit
+    });
+    schema = schemaSelection.schema;
+    schemaSource = schemaSelection.source;
     validator = ajv.compile(schema);
     const configPayload = await sendRpc({ rpc: 'get_config' });
     const config = configPayload?.config ?? configPayload;
@@ -725,145 +649,27 @@ export function createRuntime({
     return true;
   }
 
-  function handleLine(line) {
-    // Dispatch order matters: scene/macro replies can look like normal JSON payloads, so route
-    // their handlers first before generic RPC/telemetry parsing.
-    if (!line) return;
-    let msg;
-    try {
-      msg = JSON.parse(line);
-    } catch (err) {
-      emit('log', line);
-      return;
+  function queueTelemetryFrame(msg) {
+    queuedTelemetry = { ...(queuedTelemetry || {}), ...msg };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(flushTelemetry);
+    } else {
+      flushTelemetry();
     }
-    if (handleSceneLine(msg)) return;
-    if (handleMacroLine(msg)) return;
-    if (msg?.id !== undefined) {
-      rpcKernel.handleRpcResponse(msg);
-      return;
-    }
-    const activePending = rpcKernel.getActivePendingRpc();
-    const activePendingId = activePending?.id;
-    if (activePending?.protocolMode === 'native' && activePending.nativeRequest) {
-      if (msg.type === 'error') {
-        rpcKernel.handleRpcResponse({
-          id: activePendingId,
-          error: {
-            code: msg.code,
-            message: msg.message ?? msg.code ?? 'Device error'
-          }
-        });
-        return;
-      }
-      switch (activePending.nativeRequest.kind) {
-        case 'hello':
-          if (msg.hello !== undefined) {
-            rpcKernel.handleRpcResponse({
-              id: activePendingId,
-              result: { message: String(msg.hello) }
-            });
-            return;
-          }
-          break;
-        case 'manifest':
-          if (isManifestPayload(msg)) {
-            rpcKernel.handleRpcResponse({ id: activePendingId, result: { manifest: msg } });
-            return;
-          }
-          break;
-        case 'config':
-          if (isConfigPayload(msg)) {
-            rpcKernel.handleRpcResponse({ id: activePendingId, result: { config: msg } });
-            return;
-          }
-          break;
-        case 'schema':
-          if (msg.$schema || msg.type === 'object' || msg.properties) {
-            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
-            return;
-          }
-          break;
-        case 'ack':
-          if (msg.type === 'ack') {
-            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
-            return;
-          }
-          break;
-        case 'profile_save':
-          if (Object.prototype.hasOwnProperty.call(msg, 'profile_saved')) {
-            if (msg.profile_saved) {
-              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
-            } else {
-              rpcKernel.handleRpcResponse({
-                id: activePendingId,
-                error: { message: msg.error ?? 'Profile save failed' }
-              });
-            }
-            return;
-          }
-          break;
-        case 'profile_load':
-          if (Object.prototype.hasOwnProperty.call(msg, 'profile_loaded')) {
-            if (msg.profile_loaded) {
-              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
-            } else {
-              rpcKernel.handleRpcResponse({
-                id: activePendingId,
-                error: { message: msg.error ?? 'Profile load failed' }
-              });
-            }
-            return;
-          }
-          break;
-        case 'profile_reset':
-          if (Object.prototype.hasOwnProperty.call(msg, 'profile_reset')) {
-            if (msg.profile_reset) {
-              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
-            } else {
-              rpcKernel.handleRpcResponse({
-                id: activePendingId,
-                error: { message: msg.error ?? 'Profile reset failed' }
-              });
-            }
-            return;
-          }
-          break;
-        default:
-          break;
-      }
-    }
-    if (msg.type === 'telemetry' || msg.slots || msg.envelopes) {
-      queuedTelemetry = { ...(queuedTelemetry || {}), ...msg };
-      if (typeof requestAnimationFrame === 'function') {
-        requestAnimationFrame(flushTelemetry);
-      } else {
-        flushTelemetry();
-      }
-      return;
-    }
-    if (msg.type === 'config-patch') {
-      applyConfigPatch(msg);
-      return;
-    }
-    if (msg.type === 'slot_patch' && msg.slot && typeof msg.slot === 'object') {
-      const slotBody = { ...msg.slot };
-      const index = extractSlotIndex(slotBody, msg.slot_index ?? msg.index ?? msg.id);
-      if (index !== null) {
-        slotBody.index = index;
-        applyConfigPatch({ slots: [slotBody] });
-      }
-      return;
-    }
-    if (msg.type === 'error') {
-      emit('device-error', msg);
-      return;
-    }
-    if (msg.status || msg.event || msg.type === 'status') {
-      notifyStatus(msg);
-      return;
-    }
-    emit('log', line);
   }
+
+  const handleLine = createRuntimeLineHandler({
+    emit,
+    notifyStatus,
+    rpcKernel,
+    handleSceneLine,
+    handleMacroLine,
+    isManifestPayload,
+    isConfigPayload,
+    applyConfigPatch: (...args) => applyConfigPatch(...args),
+    extractSlotIndex,
+    onTelemetry: queueTelemetryFrame
+  });
 
   function flushTelemetry() {
     if (!queuedTelemetry) return;
@@ -919,8 +725,10 @@ export function createRuntime({
   });
 
   function stage(updater) {
-    const next = typeof updater === 'function' ? updater(clone(stagedConfig)) : updater;
-    if (!next) return;
+    const baseConfig =
+      stagedConfig ?? liveConfig ?? normalizeConfig({}, remoteManifest ?? localManifest ?? {});
+    const next = typeof updater === 'function' ? updater(clone(baseConfig)) : updater;
+    if (!next || typeof next !== 'object') return;
     extractLocalSlotMetaFromConfig(next);
     const normalizedLive = normalizeConfig(liveConfig, remoteManifest ?? localManifest ?? {});
     const normalizedStaged = normalizeConfig(next, remoteManifest ?? localManifest ?? {});

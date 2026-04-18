@@ -42,10 +42,13 @@ test('midi monitor logs and clock without jitter', async ({ page }) => {
     };
   });
 
-  await page.goto('/benzknobz.html');
+  await page.goto('/');
+  await page.waitForFunction(() => document.documentElement?.dataset?.mn42Booted === 'true');
   await page.locator('[data-utility-tab="midi"]').click();
+  await expect(page.locator('[data-utility-panel="midi"]')).toBeVisible();
 
   const toggle = page.locator('#midi-panel-toggle');
+  await expect(toggle).toBeVisible();
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
