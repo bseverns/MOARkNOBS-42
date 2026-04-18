@@ -2,7 +2,7 @@
 
 This page is the friendly quickstart for using MOARkNOBS-42 with OSC apps and DAWs.
 
-For the full CLI reference and message contract, see [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md).
+For the full CLI reference and message contract, see [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md).
 
 ## What you can do with the bridge
 

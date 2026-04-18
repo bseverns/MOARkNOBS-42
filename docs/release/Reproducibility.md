@@ -1,6 +1,6 @@
 # Reproducibility
 
-This page is the short version of the release artifact story. The detailed, root-level operator document still lives in [`REPRODUCIBILITY.md`](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md), but this page keeps the essential flow inside the docs site.
+This page is the short version of the release artifact story. The detailed, root-level operator document still lives in [`REPRODUCIBILITY.md`](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md), but this page keeps the essential flow inside the docs site.
 
 ## Why this matters
 
@@ -62,4 +62,4 @@ Without that manifest, a release is just a pile of files. With it, the release b
 
 ## Read the full operator guide
 
-For the full step-by-step release recipe, troubleshooting notes, and artifact details, read the root-level [Reproducibility Playbook](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md).
+For the full step-by-step release recipe, troubleshooting notes, and artifact details, read the root-level [Reproducibility Playbook](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md).

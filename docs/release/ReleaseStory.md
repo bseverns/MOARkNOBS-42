@@ -100,4 +100,4 @@ If you are shipping a release by hand, think in this order:
 
 - [Release Guide](ReleaseGuide.md) for the operator checklist
 - [Reproducibility](Reproducibility.md) for the short artifact recipe
-- [`REPRODUCIBILITY.md`](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) for the full root-level playbook
+- [`REPRODUCIBILITY.md`](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md) for the full root-level playbook

@@ -22,7 +22,7 @@ sequenceDiagram
    ```
 3. Open one of the patches below.
 
-If bridge setup is new to you, start with [docs/OSCBridge.md](../guides/OSCBridge.md) and then check the full reference in [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md).
+If bridge setup is new to you, start with [docs/OSCBridge.md](../guides/OSCBridge.md) and then check the full reference in [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md).
 
 ## Pick your poison
 

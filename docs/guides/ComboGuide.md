@@ -17,7 +17,7 @@ Memorize these first:
 
 That gives you recovery, timing control, and basic mapping power without having to carry the whole matrix in your head.
 
-The full button table still lives in [firmware/include/ButtonManager/README.md](https://github.com/bseverns/benzknober/blob/main/firmware/include/ButtonManager/README.md#button-map).
+The full button table still lives in [firmware/include/ButtonManager/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/ButtonManager/README.md#button-map).
 
 ## Recovery combos
 

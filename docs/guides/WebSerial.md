@@ -265,7 +265,7 @@ Less baggage means faster feedback. This protocol exists so you can patch in a b
 
 ## See It in Action
 
-Want a live demo? Fire up the [WebSerial configuration app](https://github.com/bseverns/benzknober/blob/main/App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep the [App README](https://github.com/bseverns/benzknober/blob/main/App/README.md).
+Want a live demo? Fire up the [WebSerial configuration app](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md) and watch the slots and envelopes shimmy while you tweak settings. For philosophy and troubleshooting, peep the [App README](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md).
 
 The configurator lets you twist:
 

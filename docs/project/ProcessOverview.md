@@ -6,11 +6,11 @@ Before the microcontroller sings, the chassis and wiring need love. Lay out the 
 
 ## Firmware Flash
 
-Once the hardware is solid, feed the Teensy the latest brain dump. PlatformIO handles the compile and upload, and the firmware README maps all the build flags for custom targets. See the [firmware README](https://github.com/bseverns/benzknober/blob/main/firmware/README.md) for the gory details.
+Once the hardware is solid, feed the Teensy the latest brain dump. PlatformIO handles the compile and upload, and the firmware README maps all the build flags for custom targets. See the [firmware README](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/README.md) for the gory details.
 
 ## Bridge Setup
 
-To chat with browsers or hurl OSC, the Node bridge slings serial data into the right sockets. Install dependencies, fire it up, and you've got WebSerial and OSC both talking to the board. The [bridge README](https://github.com/bseverns/benzknober/blob/main/bridge/README.md) walks through the whole circus.
+To chat with browsers or hurl OSC, the Node bridge slings serial data into the right sockets. Install dependencies, fire it up, and you've got WebSerial and OSC both talking to the board. The [bridge README](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md) walks through the whole circus.
 
 ## Test Run
 
@@ -26,13 +26,13 @@ The fastest way to learn the pipeline is to change something tiny and shove it t
 
 1. **Edit a default in `firmware/src/`**
 
-   - Pop open [firmware/src/ConfigManager.cpp](https://github.com/bseverns/benzknober/blob/main/firmware/src/ConfigManager.cpp) and scroll to the slot defaults called out in the [Annotated Source Field Guide](https://github.com/bseverns/benzknober/blob/main/README.md#annotated-source-field-guide). Those `SlotARGConfig` and `SlotEnvelopePayload` defaults are where the checksum/rollback story begins.
+   - Pop open [firmware/src/ConfigManager.cpp](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/ConfigManager.cpp) and scroll to the slot defaults called out in the [Annotated Source Field Guide](https://github.com/bseverns/MOARkNOBS-42/blob/main/README.md#annotated-source-field-guide). Those `SlotARGConfig` and `SlotEnvelopePayload` defaults are where the checksum/rollback story begins.
    - Nudge one of the default values (e.g., flip a `SlotARGConfig` method or tweak the `SlotEnvelopePayload` filter type) so you can spot the change downstream. Keep the edit small so you can track it end-to-end.
 
 2. **Compile + flash with the Quick Start incantation**
 
    - From repo root, build and upload with: `pio run -t upload -d firmware -e teensy40_main`.
-   - Teensy on USB, PlatformIO on PATH—same ritual as the main [Quick Start](https://github.com/bseverns/benzknober/blob/main/README.md#quick-start). If the board is busy, kill any other serial monitors first.
+   - Teensy on USB, PlatformIO on PATH—same ritual as the main [Quick Start](https://github.com/bseverns/MOARkNOBS-42/blob/main/README.md#quick-start). If the board is busy, kill any other serial monitors first.
 
 3. **Push the tweak over WebSerial (sim then hardware)**
 

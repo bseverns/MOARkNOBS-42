@@ -8,7 +8,7 @@ This is a future-facing packaging plan. It is not a current compatibility claim 
 
 - Ship a double-click install/run path on macOS, Windows, and Linux.
 - Keep the current CLI behavior and flags intact for advanced users.
-- Preserve OSC/MIDI behavior exactly as documented in [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md).
+- Preserve OSC/MIDI behavior exactly as documented in [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md).
 
 ## Non-goals
 
@@ -133,5 +133,5 @@ A release is complete when all are true:
 
 - User quickstart: [`docs/OSCBridge.md`](../guides/OSCBridge.md)
 - Performer cheat sheet: [`docs/BridgeForPerformers.md`](../guides/BridgeForPerformers.md)
-- Bridge reference: [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md)
+- Bridge reference: [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md)
 - Release checklist: [`docs/release/ReleaseGuide.md`](ReleaseGuide.md)

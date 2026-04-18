@@ -58,4 +58,4 @@ through `EEPROM_SLOT_REGION_SIZE` (1512 bytes for 42×36) before
 `EEPROM_PROFILE_START(1)` kicks in at `0x7E6`. Profiles still march forward in
 tight `EEPROM_PROFILE_BLOCK_SIZE` (256 byte) chunks beyond that point.
 
-For the gory details, the code comments in [firmware/include/ConfigManager.h](https://github.com/bseverns/benzknober/blob/main/firmware/include/ConfigManager.h) spill every byte. This table just keeps the map close at hand.
+For the gory details, the code comments in [firmware/include/ConfigManager.h](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/ConfigManager.h) spill every byte. This table just keeps the map close at hand.

@@ -75,7 +75,7 @@ Related reading:
 - [ARG Guide](ARGGuide.md)
 - [Filter Feel Guide](FilterFeelGuide.md)
 
-Source: [App/views/presets.js](https://github.com/bseverns/benzknober/blob/main/App/views/presets.js)
+Source: [App/views/presets.js](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/views/presets.js)
 
 ### DEMO_B - Clock Contrast
 
@@ -99,7 +99,7 @@ Related reading:
 - [ARG Guide](ARGGuide.md)
 - [Filter Feel Guide](FilterFeelGuide.md)
 
-Source: [App/views/presets.js](https://github.com/bseverns/benzknober/blob/main/App/views/presets.js)
+Source: [App/views/presets.js](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/views/presets.js)
 
 ### Korg Minilogue XD - Layer Launch
 
@@ -117,7 +117,7 @@ What to change first:
 2. channel assignments if your synth parts are arranged differently
 3. note-lane positions if you want fewer triggers and more continuous control
 
-Source: [minilogue-init.json](https://github.com/bseverns/benzknober/blob/main/App/presets/korg/minilogue-init.json)
+Source: [minilogue-init.json](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/presets/korg/minilogue-init.json)
 
 ### AE Modular - Probability Sketch
 
@@ -141,7 +141,7 @@ Related reading:
 - [ARG Guide](ARGGuide.md)
 - [Filter Feel Guide](FilterFeelGuide.md)
 
-Source: [App/views/presets.js](https://github.com/bseverns/benzknober/blob/main/App/views/presets.js)
+Source: [App/views/presets.js](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/views/presets.js)
 
 ### Akai MPC - Performance Grid
 
@@ -160,7 +160,7 @@ What to change first:
 2. aftertouch versus CC choices for each bank
 3. the per-bank MIDI channel spread
 
-Source: [mpc-performance.json](https://github.com/bseverns/benzknober/blob/main/App/presets/akai/mpc-performance.json)
+Source: [mpc-performance.json](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/presets/akai/mpc-performance.json)
 
 ## The reference preset that is not currently in the picker
 
@@ -174,7 +174,7 @@ There is one extra preset file on disk that is useful as documentation even thou
 
 This is still worth documenting because hidden files are exactly the sort of thing that create "trust me, it makes sense" architecture debt. If it lives in the repo, a learner should be able to discover what it is for.
 
-Source: [electribe-init.json](https://github.com/bseverns/benzknober/blob/main/App/presets/korg/electribe-init.json)
+Source: [electribe-init.json](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/presets/korg/electribe-init.json)
 
 ## How to choose a preset on purpose
 

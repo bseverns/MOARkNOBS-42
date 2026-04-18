@@ -26,8 +26,8 @@ If you only need the canonical operational docs, start here:
 - [ValidationFlow.md](../validation/ValidationFlow.md) for the bring-up to demo-ready decision path
 - [DemoTestPunchList.md](../validation/DemoTestPunchList.md) for the operator demo pass on a real prototype
 - [ReleaseGuide.md](../release/ReleaseGuide.md) for the human release checklist
-- [REPRODUCIBILITY.md](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) for the exact artifact-building recipe
-- [App/README.md](https://github.com/bseverns/benzknober/blob/main/App/README.md) for the browser/runtime/schema/Apply contract
+- [REPRODUCIBILITY.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md) for the exact artifact-building recipe
+- [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md) for the browser/runtime/schema/Apply contract
 
 ## Local site preview
 
@@ -46,8 +46,8 @@ Then open the local URL MkDocs prints in your terminal.
 | [ProcessOverview.md](ProcessOverview.md)                                                  | Full build and release flow                          | Update when hardware or firmware release steps move   |
 | [TESTING.md](../validation/TESTING.md)                                                    | Canonical test workflow + coverage map               | Refresh when test scope or commands move              |
 | [ReleaseGuide.md](../release/ReleaseGuide.md)                                             | Human release checklist                              | Refresh when release ritual or asset list changes     |
-| [REPRODUCIBILITY.md](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe              | Refresh when `release.sh` or artifact shape changes   |
-| [App/README.md](https://github.com/bseverns/benzknober/blob/main/App/README.md)           | App/runtime contract and simulator notes             | Refresh when manifest/schema/apply semantics change   |
+| [REPRODUCIBILITY.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe              | Refresh when `release.sh` or artifact shape changes   |
+| [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md)           | App/runtime contract and simulator notes             | Refresh when manifest/schema/apply semantics change   |
 
 ## Accessibility
 
@@ -85,9 +85,9 @@ flowchart TD
 
 ## System Capabilities
 
-- [Hardware README](https://github.com/bseverns/benzknober/blob/main/hardware/README.md#sparkfun-shortcut) — final board layout, power rails, and a SparkFun shortcut for the silicon.
-- [Firmware README](https://github.com/bseverns/benzknober/blob/main/firmware/README.md) — how the code slings MIDI, wrangles envelope followers, and keeps the LEDs honest.
-- Firmware reference tables: [button map & combo guide](https://github.com/bseverns/benzknober/blob/main/firmware/include/ButtonManager/README.md#button-map), [filter types](https://github.com/bseverns/benzknober/blob/main/firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](https://github.com/bseverns/benzknober/blob/main/firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](https://github.com/bseverns/benzknober/blob/main/firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](https://github.com/bseverns/benzknober/blob/main/firmware/include/EnvelopeFollower/README.md#arg-methods), [display hooks](https://github.com/bseverns/benzknober/blob/main/firmware/include/DisplayManager/README.md#key-methods).
+- [Hardware README](https://github.com/bseverns/MOARkNOBS-42/blob/main/hardware/README.md#sparkfun-shortcut) — final board layout, power rails, and a SparkFun shortcut for the silicon.
+- [Firmware README](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/README.md) — how the code slings MIDI, wrangles envelope followers, and keeps the LEDs honest.
+- Firmware reference tables: [button map & combo guide](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/ButtonManager/README.md#button-map), [filter types](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/EnvelopeFollower/README.md#arg-methods), [display hooks](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/DisplayManager/README.md#key-methods).
 
 ## Choose Your Adventure
 
@@ -108,7 +108,7 @@ flowchart TD
 - [DemoPolish.md](../validation/DemoPolish.md) — runbook for final demo soak, EXT clock checks, panic-reset verification, and asset packing.
 - [TODO.md](TODO.md) — post-release wishlist for when the first build is out and you're itching for v2.
 - [ReleaseGuide.md](../release/ReleaseGuide.md) — full release playbook. For quick steps see [Release Story](../release/ReleaseStory.md).
-- [CONTRIBUTING.md](https://github.com/bseverns/benzknober/blob/main/CONTRIBUTING.md) — patch etiquette and repo contract.
+- [CONTRIBUTING.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/CONTRIBUTING.md) — patch etiquette and repo contract.
 - [Sketchbook](../sketchbook/index.md) — raw schematics and subsystem scribbles when you need the gory details.
   Highlights:
   - [buttonMatrix.md](../sketch/systemFlow/hw/buttonMatrix.md) — how the 42-button grid scans its soul.
@@ -147,7 +147,7 @@ Pass an alternate output directory as the first argument if you want the PDF els
 ## Why these specific parts?
 
 > Quick hits on why each chunk of silicon shows up and where SparkFun teaches the tricks. Longer sourcing diary still lives in
-> [hardware/Parts.md](https://github.com/bseverns/benzknober/blob/main/hardware/Parts.md) when you want BOM-level receipts.
+> [hardware/Parts.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/hardware/Parts.md) when you want BOM-level receipts.
 
 - **Teensy 4.0** — horsepower with USB baked in. The [Teensy 4.0 Hookup Guide](https://learn.sparkfun.com/tutorials/teensy-40-hookup-guide) covers pinout, power, and programming basics.
 - **CD74HC4067 analog mux** — collapses 42 buttons into one ADC read. The [16‑Channel Mux Breakout Guide](https://learn.sparkfun.com/tutorials/16-channel-analogdigital-multiplexer-breakout-cd74hc4067-hookup-guide) shows how to breadboard the trick.

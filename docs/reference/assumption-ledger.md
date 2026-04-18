@@ -12,7 +12,7 @@ This is a living status sheet split between source-confirmed assumptions and ben
 
 - **Claim:** The current stack is built around schema version `6`.
 - **Why it matters:** App/firmware drift is the fastest way to turn a safe editor into a liar.
-- **Evidence:** [firmware/include/Globals.h](https://github.com/bseverns/benzknober/blob/main/firmware/include/Globals.h) defines `CONFIG_VERSION = 0x0006`, and [App/manifest_contract.js](https://github.com/bseverns/benzknober/blob/main/App/manifest_contract.js) advertises schema version `6`.
+- **Evidence:** [firmware/include/Globals.h](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Globals.h) defines `CONFIG_VERSION = 0x0006`, and [App/manifest_contract.js](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/manifest_contract.js) advertises schema version `6`.
 - **Current status:** Confirmed in source.
 - **If false:** Treat it as a release blocker. Fix the contract or add an explicit migration path before shipping.
 
@@ -20,7 +20,7 @@ This is a living status sheet split between source-confirmed assumptions and ben
 
 - **Claim:** Core task cadence is currently 1 ms MIDI service, 10 ms serial service, 5 ms envelope updates, 50 ms LED/UI refresh, plus slower low-priority interop/streaming tasks.
 - **Why it matters:** This is the runtime pacing model the rest of the firmware assumes.
-- **Evidence:** [firmware/src/Globals.cpp](https://github.com/bseverns/benzknober/blob/main/firmware/src/Globals.cpp) sets the defaults, and [firmware/src/Scheduler.cpp](https://github.com/bseverns/benzknober/blob/main/firmware/src/Scheduler.cpp) registers the high/mid/low task layout that Unity now asserts directly.
+- **Evidence:** [firmware/src/Globals.cpp](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/Globals.cpp) sets the defaults, and [firmware/src/Scheduler.cpp](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/Scheduler.cpp) registers the high/mid/low task layout that Unity now asserts directly.
 - **Current status:** Confirmed in source and covered by automated tests.
 - **If false:** Re-check scheduler ordering and update both the tests and the runtime docs together.
 
@@ -36,7 +36,7 @@ This is a living status sheet split between source-confirmed assumptions and ben
 
 - **Claim:** Config data relies on mirrored/backup EEPROM regions plus recovery messaging rather than a single blind write path.
 - **Why it matters:** The instrument needs to survive bad writes and partial corruption without bricking the rig.
-- **Evidence:** [firmware/include/Globals.h](https://github.com/bseverns/benzknober/blob/main/firmware/include/Globals.h) defines the mirrored EEPROM layout, and [firmware/src/ConfigManager.cpp](https://github.com/bseverns/benzknober/blob/main/firmware/src/ConfigManager.cpp) contains the recovery/migration logic.
+- **Evidence:** [firmware/include/Globals.h](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Globals.h) defines the mirrored EEPROM layout, and [firmware/src/ConfigManager.cpp](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/ConfigManager.cpp) contains the recovery/migration logic.
 - **Current status:** Confirmed in source; broader soak validation still benefits from real hardware.
 - **If false:** Stop treating EEPROM recovery as trustworthy until the layout and boot-path logic agree again.
 

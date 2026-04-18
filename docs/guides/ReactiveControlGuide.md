@@ -29,7 +29,7 @@ An envelope follower turns changing signal level into a usable control signal. I
 - a quieter or decaying source creates a smaller value
 - the firmware can then map that motion to slots, LEDs, or note behavior
 
-If you want the analog-to-digital background, the source overview still lives in [firmware/include/EnvelopeFollower/README.md](https://github.com/bseverns/benzknober/blob/main/firmware/include/EnvelopeFollower/README.md).
+If you want the analog-to-digital background, the source overview still lives in [firmware/include/EnvelopeFollower/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/EnvelopeFollower/README.md).
 
 ## Filter shapes: how the follower feels
 
@@ -82,7 +82,7 @@ Use ARG when:
 
 ## ARG methods: what they do musically
 
-The firmware supports fourteen ARG methods. The official formulas live in [firmware/include/EnvelopeFollower/README.md](https://github.com/bseverns/benzknober/blob/main/firmware/include/EnvelopeFollower/README.md#arg-methods). For learners, the more useful question is what they _feel_ like.
+The firmware supports fourteen ARG methods. The official formulas live in [firmware/include/EnvelopeFollower/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/EnvelopeFollower/README.md#arg-methods). For learners, the more useful question is what they _feel_ like.
 
 | Method | Plain-language behavior          | Good use                         |
 | ------ | -------------------------------- | -------------------------------- |
