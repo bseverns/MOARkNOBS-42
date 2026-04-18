@@ -3,6 +3,7 @@ The DIN jack and its 1/8" TRS sidekick hit an ESD array then a 6N138 optocoupler
 Beware: 6N138s are slow—keep the pull‑up lean or you’ll drop notes.
 
 **References**
+
 - [Schematic](../../MIDI.png)
 - [6N138 datasheet](https://www.vishay.com/docs/83726/6n138.pdf)
 - Snapshot [MIDI.png](../../MIDI.png)
@@ -19,4 +20,3 @@ flowchart LR
     U1 --> GND[GND_Bus]
   end
 ```
-

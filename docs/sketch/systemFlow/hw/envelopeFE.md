@@ -3,6 +3,7 @@ Each channel rectifies and filters around a shared mid‑rail (VREF) before slin
 Watch the op‑amp headroom and diode drop—starve the rails and your envelope will flatline.
 
 **References**
+
 - [Schematic](../../EFpair.png)
 - [1N4148 datasheet](https://www.onsemi.com/pdf/datasheet/1n4148-d.pdf)
 - Snapshot [EFpair.png](../../EFpair.png)
@@ -46,4 +47,3 @@ end
 %% Bias connections
 VREF --> OP1_PLUS
 ```
-

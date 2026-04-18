@@ -20,6 +20,7 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --
 ```
 
 Then:
+
 - in an OSC monitor, listen on UDP `9000` for `/mn42/slots`, `/mn42/envelopes`, and the namespaced mirrors `/mn42/telemetry/slots`, `/mn42/telemetry/envelopes`
 - in your DAW, enable the MIDI input named `MN42 Bridge`
 
@@ -44,6 +45,7 @@ oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":
 - You should see incoming CC data while turning knobs
 
 Bridge MIDI mapping:
+
 - Channel 1 CC 0..41 = slot values
 - Channel 2 CC 0..5 = envelope follower values
 
@@ -57,6 +59,5 @@ Bridge MIDI mapping:
 
 Packaging is not shipped yet. The current bridge is CLI-first.
 If needed, the next step is a per-platform bundle using `pkg` or `nexe` plus signed installers.
-
 
 Performer-friendly one-pager: [`docs/BridgeForPerformers.md`](BridgeForPerformers.md).

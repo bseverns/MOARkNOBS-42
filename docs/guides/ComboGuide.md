@@ -23,11 +23,11 @@ The full button table still lives in [firmware/include/ButtonManager/README.md](
 
 These are the ones worth learning even if you never become a combo wizard.
 
-| Combo | What it does | Why it matters |
-| --- | --- | --- |
-| `Ctrl0 + Ctrl1 + Ctrl2` | panic-safe baseline reset | fastest "get me back to something sane" move |
-| long-press `Ctrl1` | reload profile from EEPROM | recover a stored baseline |
-| long-press `Ctrl3` | reset EEPROM | destructive recovery path; not a casual action |
+| Combo                   | What it does               | Why it matters                                 |
+| ----------------------- | -------------------------- | ---------------------------------------------- |
+| `Ctrl0 + Ctrl1 + Ctrl2` | panic-safe baseline reset  | fastest "get me back to something sane" move   |
+| long-press `Ctrl1`      | reload profile from EEPROM | recover a stored baseline                      |
+| long-press `Ctrl3`      | reset EEPROM               | destructive recovery path; not a casual action |
 
 Recommended to memorize first:
 
@@ -38,10 +38,10 @@ Recommended to memorize first:
 
 These help you move between saved states.
 
-| Combo | What it does |
-| --- | --- |
-| `Ctrl1 + Ctrl2` | cycle profiles A-D |
-| long-press `Ctrl4` | save config |
+| Combo              | What it does           |
+| ------------------ | ---------------------- |
+| `Ctrl1 + Ctrl2`    | cycle profiles A-D     |
+| long-press `Ctrl4` | save config            |
 | long-press `Ctrl1` | reload current profile |
 
 These are the combos that matter most once you start using the rig in rehearsal or live work.
@@ -50,12 +50,12 @@ These are the combos that matter most once you start using the rig in rehearsal 
 
 These control timing and note behavior.
 
-| Combo | What it does |
-| --- | --- |
-| `Ctrl2 + Ctrl4` | toggle arpeggiator |
+| Combo                      | What it does              |
+| -------------------------- | ------------------------- |
+| `Ctrl2 + Ctrl4`            | toggle arpeggiator        |
 | long-press `Ctrl2 + Ctrl4` | enter arp edit while held |
-| `Ctrl2 + Ctrl3` | bump arp base note |
-| long-press `Ctrl2 + Ctrl3` | cycle swing presets |
+| `Ctrl2 + Ctrl3`            | bump arp base note        |
+| long-press `Ctrl2 + Ctrl3` | cycle swing presets       |
 
 Best ones to learn first:
 
@@ -66,17 +66,17 @@ Those two alone let you feel the arp become part of the instrument.
 
 ## Mapping and MIDI-type combos
 
-These are about changing what a slot *is*.
+These are about changing what a slot _is_.
 
-| Combo | What it does |
-| --- | --- |
+| Combo           | What it does               |
+| --------------- | -------------------------- |
 | `Ctrl4 + Ctrl5` | set slot to MIDI Note mode |
 | `Ctrl3 + Ctrl5` | set slot to Program Change |
-| `Ctrl0 + Ctrl5` | set slot to Pitch Bend |
-| `Ctrl1 + Ctrl4` | set slot to Aftertouch |
-| `Ctrl2 + Ctrl5` | set slot to NRPN |
-| `Ctrl1 + Ctrl3` | set slot to RPN |
-| `Ctrl0 + Ctrl3` | set slot to SysEx |
+| `Ctrl0 + Ctrl5` | set slot to Pitch Bend     |
+| `Ctrl1 + Ctrl4` | set slot to Aftertouch     |
+| `Ctrl2 + Ctrl5` | set slot to NRPN           |
+| `Ctrl1 + Ctrl3` | set slot to RPN            |
+| `Ctrl0 + Ctrl3` | set slot to SysEx          |
 
 This is powerful, but it is not the right first thing to memorize. Learn it once the concepts are clear.
 
@@ -84,10 +84,10 @@ This is powerful, but it is not the right first thing to memorize. Learn it once
 
 These are where the deck starts acting more like a reactive instrument.
 
-| Combo | What it does |
-| --- | --- |
-| `Ctrl0 + Ctrl1` | cycle ARG method |
-| `Ctrl0 + Ctrl2` | cycle ARG envelope pair |
+| Combo           | What it does                     |
+| --------------- | -------------------------------- |
+| `Ctrl0 + Ctrl1` | cycle ARG method                 |
+| `Ctrl0 + Ctrl2` | cycle ARG envelope pair          |
 | `Ctrl0 + Ctrl4` | enable EF and randomize settings |
 
 These are great once you already understand EF and ARG, but they are exactly the ones that can feel like "black magic" without context.
@@ -102,11 +102,11 @@ Read these first:
 
 These change broader operating behavior.
 
-| Combo | What it does |
-| --- | --- |
-| `Ctrl3 + Ctrl4 + Ctrl5` | toggle USB MIDI output |
-| `Ctrl3 + Ctrl4` | cycle LED display modes |
-| `Ctrl1 + Ctrl5` | toggle MIDI clock output |
+| Combo                   | What it does             |
+| ----------------------- | ------------------------ |
+| `Ctrl3 + Ctrl4 + Ctrl5` | toggle USB MIDI output   |
+| `Ctrl3 + Ctrl4`         | cycle LED display modes  |
+| `Ctrl1 + Ctrl5`         | toggle MIDI clock output |
 
 These are useful, but most players do not need them on day one.
 

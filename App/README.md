@@ -98,7 +98,7 @@ npm --prefix App test
 
 ## Testing & CI
 
-- `npx playwright test` runs the UI suite (Playwright spins up `App/tests/dev-server.mjs` and targets `/benzknobz.html`).  
+- `npx playwright test` runs the UI suite (Playwright spins up `App/tests/dev-server.mjs` and targets `/benzknobz.html`).
 - The CI pipeline now verifies `npx playwright test` alongside firmware/unit suites; keep this command green before merging.
 
 That spins up a tiny static server, launches Playwright’s headless Chromium, and imports the real `runtime.js` + `views/benzknobz.js`. The script walks through the README workflows—arming the simulator, driving the staged diff validator, forcing an ACK mismatch to trigger rollback, rewriting the manifest on the fly to rehearse the migration dialog, and finally flipping the simulator back off once a clean apply lands. When the test passes you know WebSerial ergonomics (and the migration guardrails) survived without babysitting a browser window.

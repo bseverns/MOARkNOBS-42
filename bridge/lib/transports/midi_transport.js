@@ -2,7 +2,6 @@ function createMidiTransportLifecycle({
   getJzzFactory,
   getConfig,
   getRuntimeState,
-  setMidi,
   setMidiIn,
   setMidiOut,
   pushLog,
@@ -34,7 +33,6 @@ function createMidiTransportLifecycle({
     const jzzFactory = getJzzFactory?.();
     const config = getConfig?.() || {};
     const midi = jzzFactory();
-    setMidi?.(midi);
     cancelRetry();
 
     const midiOut = midi.openMidiOut(config.midiLabel).or(() => {

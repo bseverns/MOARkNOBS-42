@@ -16,7 +16,7 @@ const SUPPORTED = new Set([
   'minItems',
   'maxItems',
   'items',
-  'uniqueItems',
+  'uniqueItems'
 ]);
 
 const NON_VALIDATION = new Set(['$schema', 'title', 'description', 'default', 'schema_version']);
@@ -44,7 +44,9 @@ function walkSchema(node, cursor, used, unknown) {
     }
 
     if (key === 'anyOf' && Array.isArray(value)) {
-      value.forEach((candidate, index) => walkSchema(candidate, `${cursor}/anyOf/${index}`, used, unknown));
+      value.forEach((candidate, index) =>
+        walkSchema(candidate, `${cursor}/anyOf/${index}`, used, unknown)
+      );
     }
   }
 }

@@ -242,9 +242,15 @@ export class FormRenderer {
         select.appendChild(option);
       });
       action.appendChild(select);
-      this.bindInput(path, schema, () => select.value, (next) => {
-        select.value = next;
-      }, select);
+      this.bindInput(
+        path,
+        schema,
+        () => select.value,
+        (next) => {
+          select.value = next;
+        },
+        select
+      );
     } else if (type === 'number' || type === 'integer') {
       action.classList.add('schema-action-range');
       const slider = document.createElement('input');
@@ -264,7 +270,7 @@ export class FormRenderer {
       valueLabel.className = 'schema-value';
       valueLabel.textContent = slider.value;
       action.append(slider, numeric, valueLabel);
-    const applyVisualValue = (next) => {
+      const applyVisualValue = (next) => {
         const numericValue = this.clampValue(schema, next);
         slider.value = String(numericValue);
         numeric.value = String(numericValue);
@@ -286,21 +292,27 @@ export class FormRenderer {
       input.type = 'text';
       input.value = value ?? '';
       action.appendChild(input);
-      this.bindInput(path, schema, () => input.value, (next) => {
-        input.value = next ?? '';
-      }, input);
+      this.bindInput(
+        path,
+        schema,
+        () => input.value,
+        (next) => {
+          input.value = next ?? '';
+        },
+        input
+      );
     }
     return wrapper;
   }
 
   bindInput(path, schema, getter, setter, element) {
-      const control = element ?? document.createElement('div');
-      // Debounce each field so rapid UI gestures stage safely before unit RPCs fire.
-      const update = debounce((nextValue) => {
-        const parsed = this.parseValue(schema, nextValue);
-        this.stageValue(path, parsed);
-        this.schedulePatch(path, parsed);
-      }, this.debounceMs);
+    const control = element ?? document.createElement('div');
+    // Debounce each field so rapid UI gestures stage safely before unit RPCs fire.
+    const update = debounce((nextValue) => {
+      const parsed = this.parseValue(schema, nextValue);
+      this.stageValue(path, parsed);
+      this.schedulePatch(path, parsed);
+    }, this.debounceMs);
     const listener = () => update(getter());
     if (element) {
       element.addEventListener('change', listener);

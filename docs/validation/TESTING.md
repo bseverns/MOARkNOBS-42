@@ -6,14 +6,14 @@ Unless a section says otherwise, commands below assume you are running from the 
 
 ## Layer cheat sheet
 
-| Layer | Command | Hardware needed | What it proves |
-|-------|---------|-----------------|----------------|
-| Full battery | `./test.sh` | Teensy 4.0 for Unity, host machine for Node | Runs everything below, writes clean logs, perfect for CI and pre-commit rituals. |
-| Unity smoke tests | `pio -d firmware test -e teensy40_unity` | Teensy 4.0 with USB cable | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1. |
-| App seam regressions | `npm --prefix App test` | Host machine only | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware. |
-| Manual firmware sketches | `pio -d firmware run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc. |
-| Bridge CLI sanity | `npm --prefix bridge test` | Host machine only (Node ≥ 18) | Keeps the OSC bridge CLI parsing and error handling sharp. |
-| System bridge trials | `node firmware/system_test/mn42_fullstack_runner.js` | Controller + bridge talking | Automated OSC/MIDI host-control proof plus optional destructive EEPROM smoke checks for profile/macro/scene recovery on real hardware. |
+| Layer                    | Command                                                                | Hardware needed                             | What it proves                                                                                                                         |
+| ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Full battery             | `./test.sh`                                                            | Teensy 4.0 for Unity, host machine for Node | Runs everything below, writes clean logs, perfect for CI and pre-commit rituals.                                                       |
+| Unity smoke tests        | `pio -d firmware test -e teensy40_unity`                               | Teensy 4.0 with USB cable                   | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                                           |
+| App seam regressions     | `npm --prefix App test`                                                | Host machine only                           | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware.             |
+| Manual firmware sketches | `pio -d firmware run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller                  | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                            |
+| Bridge CLI sanity        | `npm --prefix bridge test`                                             | Host machine only (Node ≥ 18)               | Keeps the OSC bridge CLI parsing and error handling sharp.                                                                             |
+| System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js`                   | Controller + bridge talking                 | Automated OSC/MIDI host-control proof plus optional destructive EEPROM smoke checks for profile/macro/scene recovery on real hardware. |
 
 ## If your goal is demo readiness rather than code confidence
 
@@ -28,15 +28,15 @@ The automated suite proves a lot, but it does not replace a real-board demo pass
 
 When the goal is to find physical limits rather than just software regressions, run the bench in layers and record receipts instead of vibes.
 
-| Stage | Command | Main observation target | Capture |
-|-------|---------|-------------------------|---------|
-| Firmware baseline | `pio -d firmware run -e teensy40_main` | Build sanity before bench time | Build result |
-| Logic sanity | `pio -d firmware test -e teensy40_unity` | Core firmware behavior before touching hardware limits | Unity log |
-| Manual board check | `pio -d firmware run -e teensy40_unified_test -t upload` | Buttons, pots, OLED, LED chain basic health | Operator notes |
-| LED surface stress | `pio -d firmware run -e teensy40_led_demo -t upload` | Pixel integrity, animation throughput, brownouts under dynamic load | Serial log + visual notes |
-| Power / thermal burn-in | `pio -d firmware run -e teensy40_power_burnin -t upload` | Rail sag, white-load current, thermal rise, long-run stability | Serial log + PSU/thermal data |
-| Persistence abuse | `pio -d firmware run -e teensy40_eeprom_persistence -t upload` | Save/load and reboot resilience | Serial log |
-| Storage verification | `pio -d firmware run -e teensy40_slot_verify -t upload` | Slot data integrity | Serial log |
+| Stage                   | Command                                                        | Main observation target                                             | Capture                       |
+| ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------- |
+| Firmware baseline       | `pio -d firmware run -e teensy40_main`                         | Build sanity before bench time                                      | Build result                  |
+| Logic sanity            | `pio -d firmware test -e teensy40_unity`                       | Core firmware behavior before touching hardware limits              | Unity log                     |
+| Manual board check      | `pio -d firmware run -e teensy40_unified_test -t upload`       | Buttons, pots, OLED, LED chain basic health                         | Operator notes                |
+| LED surface stress      | `pio -d firmware run -e teensy40_led_demo -t upload`           | Pixel integrity, animation throughput, brownouts under dynamic load | Serial log + visual notes     |
+| Power / thermal burn-in | `pio -d firmware run -e teensy40_power_burnin -t upload`       | Rail sag, white-load current, thermal rise, long-run stability      | Serial log + PSU/thermal data |
+| Persistence abuse       | `pio -d firmware run -e teensy40_eeprom_persistence -t upload` | Save/load and reboot resilience                                     | Serial log                    |
+| Storage verification    | `pio -d firmware run -e teensy40_slot_verify -t upload`        | Slot data integrity                                                 | Serial log                    |
 
 Use the burn-in harness when you want the board to sit in one high-load state for minutes or hours. It cycles through `white25`, `white50`, `white100`, `red`, `green`, `blue`, `sweep`, `wash`, and `blast`, and it logs:
 
@@ -104,21 +104,21 @@ tools/run_bench_capture.sh overnight-soak --port /dev/cu.usbmodem1234561 --no-ec
 
 This is the practical answer to "what is actually tested?" for the current stack.
 
-| Surface | Automated status | Primary layer | Notes |
-|-------|----------------|-------------|-------|
-| MIDI slot/config logic, filters, ARG math, LFOs, arpeggiator rules | Strong | Unity | Core firmware logic is covered by the long-running `firmware/test/test_*.cpp` suite. |
-| Command dispatch and serial queue behavior | Strong | Unity | `dispatchCommand`, command parsing, queue overflow, and command buffer flushing are covered. |
-| Internal interop and keepalive orchestration | Strong | Unity | Handshake/ack/timeout-style paths are covered without needing a live host bridge for every edit. |
-| Scheduler wiring and recurring task registration | Covered | Unity | The current suite now asserts task counts, intervals, and repeat flags so scheduler regressions get caught early. |
-| Runtime orchestration | Covered | Unity | Pending note-offs, diagnostic counter reporting, and related runtime state transitions are asserted directly. |
-| WebSerial payload generation | Covered | Unity | Snapshot and slot-patch JSON are checked as emitted payloads, not just by indirect UI behavior. |
-| UI tuning helpers | Covered | Unity | Note dynamics, arp tuning, filter tuning, and streamed active-slot context are now exercised directly. |
-| Browser configurator transport + capability gating | Covered | App Playwright | Simulator UX, native `HELLO/GET_*/SET_ALL` adaptation, device-backed profile/macro/scene command mapping, older-firmware capability gating, and browser-local slot metadata are covered without hardware. |
-| Bridge CLI parsing/error handling | Covered | Node tests | Host-side sanity only; this does not prove live firmware transport timing. |
-| Full OSC/MIDI host-control ↔ firmware loop | Partial automated | System runner | Requires real hardware plus the bridge process. Good release gate, not the fastest inner-loop test. |
-| Profile/macro/scene recovery flows on real hardware | Scripted, bench required | System runner with `--exercise-storage` | Uses direct serial commands after the bridge pass to prove EEPROM-backed save/load/reset and snapshot recall. Intentionally destructive unless you point it at sacrificial slots. |
-| `firmware_main.cpp` boot composition and final hardware bring-up | Not in Unity | Manual / real hardware | Unity does not prove the actual production boot path end-to-end. |
-| OLED rendering, LED electrical behavior, mux noise, pot feel, EEPROM behavior on a real board | Manual only | Manual sketches / bench testing | These need a physical controller and human observation. |
+| Surface                                                                                       | Automated status         | Primary layer                           | Notes                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------------------- | ------------------------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MIDI slot/config logic, filters, ARG math, LFOs, arpeggiator rules                            | Strong                   | Unity                                   | Core firmware logic is covered by the long-running `firmware/test/test_*.cpp` suite.                                                                                                                      |
+| Command dispatch and serial queue behavior                                                    | Strong                   | Unity                                   | `dispatchCommand`, command parsing, queue overflow, and command buffer flushing are covered.                                                                                                              |
+| Internal interop and keepalive orchestration                                                  | Strong                   | Unity                                   | Handshake/ack/timeout-style paths are covered without needing a live host bridge for every edit.                                                                                                          |
+| Scheduler wiring and recurring task registration                                              | Covered                  | Unity                                   | The current suite now asserts task counts, intervals, and repeat flags so scheduler regressions get caught early.                                                                                         |
+| Runtime orchestration                                                                         | Covered                  | Unity                                   | Pending note-offs, diagnostic counter reporting, and related runtime state transitions are asserted directly.                                                                                             |
+| WebSerial payload generation                                                                  | Covered                  | Unity                                   | Snapshot and slot-patch JSON are checked as emitted payloads, not just by indirect UI behavior.                                                                                                           |
+| UI tuning helpers                                                                             | Covered                  | Unity                                   | Note dynamics, arp tuning, filter tuning, and streamed active-slot context are now exercised directly.                                                                                                    |
+| Browser configurator transport + capability gating                                            | Covered                  | App Playwright                          | Simulator UX, native `HELLO/GET_*/SET_ALL` adaptation, device-backed profile/macro/scene command mapping, older-firmware capability gating, and browser-local slot metadata are covered without hardware. |
+| Bridge CLI parsing/error handling                                                             | Covered                  | Node tests                              | Host-side sanity only; this does not prove live firmware transport timing.                                                                                                                                |
+| Full OSC/MIDI host-control ↔ firmware loop                                                   | Partial automated        | System runner                           | Requires real hardware plus the bridge process. Good release gate, not the fastest inner-loop test.                                                                                                       |
+| Profile/macro/scene recovery flows on real hardware                                           | Scripted, bench required | System runner with `--exercise-storage` | Uses direct serial commands after the bridge pass to prove EEPROM-backed save/load/reset and snapshot recall. Intentionally destructive unless you point it at sacrificial slots.                         |
+| `firmware_main.cpp` boot composition and final hardware bring-up                              | Not in Unity             | Manual / real hardware                  | Unity does not prove the actual production boot path end-to-end.                                                                                                                                          |
+| OLED rendering, LED electrical behavior, mux noise, pot feel, EEPROM behavior on a real board | Manual only              | Manual sketches / bench testing         | These need a physical controller and human observation.                                                                                                                                                   |
 
 The important distinction: the Unity layer is now broad enough to catch most firmware logic drift, including several orchestration paths that used to be untested, but it still cannot certify the real board by itself.
 
@@ -205,7 +205,8 @@ flowchart TD
   U --> UL["logs/unity-test.xml\nlogs/unity-test.log"]
   B --> BL["logs/bridge-test.log"]
 ```
-*Alt text: Flowchart of `test.sh` hammering Unity firmware tests and bridge JS checks, each spraying their own log files.*
+
+_Alt text: Flowchart of `test.sh` hammering Unity firmware tests and bridge JS checks, each spraying their own log files._
 
 ## Unity smoke tests (`firmware/test/`)
 
@@ -266,13 +267,13 @@ For a deep dive into what each Unity or manual sketch checks, crack open [firmwa
 
 Unity can only fake so much. When you need to watch real LEDs blink or feel a pot fight back, flash one of the manual sketches:
 
-| Sketch | PlatformIO env | What you verify |
-|--------|----------------|-----------------|
-| `src/main_t.cpp` | `teensy40_full_system` | Step through LEDs, buttons, envelope followers, OLED—all with keyboard prompts. |
-| `src/unified_t.cpp` | `teensy40_unified_test` | Full integration test controlled entirely by the real button matrix. |
-| `src/biquadfilter_t.cpp` | `teensy40_biquad_test` | Pure DSP math, no external hardware. |
-| `src/eeprom_persistence_t.cpp` | `teensy40_eeprom_persistence` | Ensures EEPROM writes survive reboots. |
-| `src/verify_slots_t.cpp` | `teensy40_slot_verify` | Pounds on MIDISlot storage and reads it back. |
+| Sketch                         | PlatformIO env                | What you verify                                                                 |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------- |
+| `src/main_t.cpp`               | `teensy40_full_system`        | Step through LEDs, buttons, envelope followers, OLED—all with keyboard prompts. |
+| `src/unified_t.cpp`            | `teensy40_unified_test`       | Full integration test controlled entirely by the real button matrix.            |
+| `src/biquadfilter_t.cpp`       | `teensy40_biquad_test`        | Pure DSP math, no external hardware.                                            |
+| `src/eeprom_persistence_t.cpp` | `teensy40_eeprom_persistence` | Ensures EEPROM writes survive reboots.                                          |
+| `src/verify_slots_t.cpp`       | `teensy40_slot_verify`        | Pounds on MIDISlot storage and reads it back.                                   |
 
 Run them with `pio -d firmware run -e <env> -t upload`, then open a serial monitor or watch the device directly. These tests need a human watching and pushing buttons; log what you see if something twitches.
 

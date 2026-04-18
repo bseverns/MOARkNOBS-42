@@ -17,21 +17,21 @@ All the literal numbers live in [`firmware/include/interop/mn42_map.h`](https://
 
 ## MIDI CC Map Cheat Sheet
 
-| CC | Constant | Meaning | Notes |
-| --- | --- | --- | --- |
-| 14 | `cc::kHandshake` | Boot hello, ack, keep-alive | Values in `handshake::*` |
-| 15 | `cc::kMode` | Bitfield of clock + debug toggles | Bits in `mode::*` |
-| 16 | `cc::kSeedMorph` | Morph between saved seeds | 0–127 ramp |
-| 17 | `cc::kTransportGate` | Momentary transport gate | 0 = open, >0 = closed |
+| CC  | Constant             | Meaning                           | Notes                    |
+| --- | -------------------- | --------------------------------- | ------------------------ |
+| 14  | `cc::kHandshake`     | Boot hello, ack, keep-alive       | Values in `handshake::*` |
+| 15  | `cc::kMode`          | Bitfield of clock + debug toggles | Bits in `mode::*`        |
+| 16  | `cc::kSeedMorph`     | Morph between saved seeds         | 0–127 ramp               |
+| 17  | `cc::kTransportGate` | Momentary transport gate          | 0 = open, >0 = closed    |
 
 Mode flag reference (same layout SeedBox ships with):
 
-| Bitmask | Constant | Story |
-| --- | --- | --- |
-| `0x01` | `mode::kFollowExternalClock` | SeedBox is clock boss. MN42 follows.
-| `0x02` | `mode::kExposeDebugMeters` | SeedBox dumps raw meters for scope voyeurs.
-| `0x04` | `mode::kArpAccent` | Let the accent lane punch above its weight.
-| `0x08` | `mode::kLatchTransport` | Treat transport as a toggle instead of a momentary gate.
+| Bitmask | Constant                     | Story                                                    |
+| ------- | ---------------------------- | -------------------------------------------------------- |
+| `0x01`  | `mode::kFollowExternalClock` | SeedBox is clock boss. MN42 follows.                     |
+| `0x02`  | `mode::kExposeDebugMeters`   | SeedBox dumps raw meters for scope voyeurs.              |
+| `0x04`  | `mode::kArpAccent`           | Let the accent lane punch above its weight.              |
+| `0x08`  | `mode::kLatchTransport`      | Treat transport as a toggle instead of a momentary gate. |
 
 ## Firmware plumbing
 

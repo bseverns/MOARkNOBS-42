@@ -33,7 +33,7 @@ flowchart LR
   I --> J
 ```
 
-*Alt text: Flowchart showing a release moving from tested source through version stamping, tagging, CI, and final published artifacts including firmware, fabrication files, source export, manifest, and checksums.*
+_Alt text: Flowchart showing a release moving from tested source through version stamping, tagging, CI, and final published artifacts including firmware, fabrication files, source export, manifest, and checksums._
 
 ## Why `FW_VERSION` matters so much
 

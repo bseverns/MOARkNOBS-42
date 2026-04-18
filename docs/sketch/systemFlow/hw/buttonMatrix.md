@@ -3,6 +3,7 @@ The Teensy hurls address lines on A0–A5 (buttons) and A8–A11 (aux stuff) the
 Keep the wiring tight and the logic at 3 V3 or phantom hits will riot across the board.
 
 **References**
+
 - [Schematic](../../ButtonMatrix.png)
 - [CD74HC4067 datasheet](https://www.ti.com/lit/ds/symlink/cd74hc4067.pdf)
 - Snapshot [ButtonMatrix.png](../../ButtonMatrix.png)
@@ -34,4 +35,3 @@ flowchart LR
 - **Sniff the analog line.** Sample `buttonMuxAnalogPin` (A4); low voltage means the switch at that row/column is getting mashed.
 - **Drop the row and move on.** Pull `PIN_ROW_DRV` low, bump the row counter, and keep cruising.
 - **Repeat fast.** Hit all 7×6 combos before the user blinks and they'll think you're psychic.
-

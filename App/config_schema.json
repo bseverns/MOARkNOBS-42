@@ -19,7 +19,18 @@
             "type": "string",
             "title": "Knob -> MIDI message",
             "description": "Select what kind of MIDI message this slot sends.",
-            "enum": ["OFF", "CC", "Note", "PitchBend", "ProgramChange", "Aftertouch", "ModWheel", "NRPN", "RPN", "SysEx"]
+            "enum": [
+              "OFF",
+              "CC",
+              "Note",
+              "PitchBend",
+              "ProgramChange",
+              "Aftertouch",
+              "ModWheel",
+              "NRPN",
+              "RPN",
+              "SysEx"
+            ]
           },
           "midiChannel": {
             "type": "integer",
@@ -46,7 +57,17 @@
             "type": "object",
             "title": "Envelope Follower (EF)",
             "description": "EF tracks signal level for dynamic modulation.",
-            "required": ["index", "filter_index", "filter_name", "frequency", "q", "oversample", "smoothing", "baseline", "gain"],
+            "required": [
+              "index",
+              "filter_index",
+              "filter_name",
+              "frequency",
+              "q",
+              "oversample",
+              "smoothing",
+              "baseline",
+              "gain"
+            ],
             "properties": {
               "index": {
                 "type": "integer",
@@ -63,7 +84,15 @@
               "filter_name": {
                 "type": "string",
                 "title": "Response shape",
-                "enum": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"]
+                "enum": [
+                  "LINEAR",
+                  "OPPOSITE_LINEAR",
+                  "EXPONENTIAL",
+                  "RANDOM",
+                  "LOWPASS",
+                  "HIGHPASS",
+                  "BANDPASS"
+                ]
               },
               "frequency": { "type": "number", "title": "Tracking frequency (Hz)" },
               "q": { "type": "number", "title": "Resonance (Q)" },
@@ -102,7 +131,22 @@
               "method_name": {
                 "type": "string",
                 "title": "Combine method",
-                "enum": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS", "MULT", "DIVI", "AVG", "XABS", "MAXX", "MINN", "XORR"]
+                "enum": [
+                  "PLUS",
+                  "MIN",
+                  "PECK",
+                  "SHAV",
+                  "SQAR",
+                  "BABS",
+                  "TABS",
+                  "MULT",
+                  "DIVI",
+                  "AVG",
+                  "XABS",
+                  "MAXX",
+                  "MINN",
+                  "XORR"
+                ]
               },
               "sourceA": { "type": "integer", "title": "Follower A", "minimum": 0, "maximum": 5 },
               "sourceB": { "type": "integer", "title": "Follower B", "minimum": 0, "maximum": 5 }
@@ -154,7 +198,15 @@
         "type": {
           "type": "string",
           "title": "Response shape",
-          "enum": ["LINEAR", "OPPOSITE_LINEAR", "EXPONENTIAL", "RANDOM", "LOWPASS", "HIGHPASS", "BANDPASS"]
+          "enum": [
+            "LINEAR",
+            "OPPOSITE_LINEAR",
+            "EXPONENTIAL",
+            "RANDOM",
+            "LOWPASS",
+            "HIGHPASS",
+            "BANDPASS"
+          ]
         },
         "freq": {
           "type": "number",
@@ -180,7 +232,22 @@
         "method": {
           "type": "string",
           "title": "Combine method",
-          "enum": ["PLUS", "MIN", "PECK", "SHAV", "SQAR", "BABS", "TABS", "MULT", "DIVI", "AVG", "XABS", "MAXX", "MINN", "XORR"]
+          "enum": [
+            "PLUS",
+            "MIN",
+            "PECK",
+            "SHAV",
+            "SQAR",
+            "BABS",
+            "TABS",
+            "MULT",
+            "DIVI",
+            "AVG",
+            "XABS",
+            "MAXX",
+            "MINN",
+            "XORR"
+          ]
         },
         "a": { "type": "number", "title": "Follower A", "minimum": 0, "maximum": 5 },
         "b": { "type": "number", "title": "Follower B", "minimum": 0, "maximum": 5 },

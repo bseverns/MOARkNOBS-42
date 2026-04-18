@@ -42,10 +42,12 @@ function normalizeSlotEnvelope(slot) {
   const index = Number.isFinite(Number(slot?.efIndex))
     ? Number(slot.efIndex)
     : Number.isFinite(Number(ef.index))
-    ? Number(ef.index)
-    : defaults.index;
+      ? Number(ef.index)
+      : defaults.index;
   ef.index = index;
-  const resolvedFilterIndex = Number.isFinite(Number(ef.filter_index)) ? Number(ef.filter_index) : null;
+  const resolvedFilterIndex = Number.isFinite(Number(ef.filter_index))
+    ? Number(ef.filter_index)
+    : null;
   if (resolvedFilterIndex === null && typeof ef.filter_name === 'string') {
     const idx = EF_FILTER_NAMES.indexOf(ef.filter_name);
     ef.filter_index = idx >= 0 ? idx : defaults.filter_index;
@@ -57,7 +59,9 @@ function normalizeSlotEnvelope(slot) {
   if (!ef.filter_name || typeof ef.filter_name !== 'string') {
     ef.filter_name = EF_FILTER_NAMES[ef.filter_index] || defaults.filter_name;
   }
-  ef.frequency = Number.isFinite(Number(ef.frequency)) ? Math.max(0, Number(ef.frequency)) : defaults.frequency;
+  ef.frequency = Number.isFinite(Number(ef.frequency))
+    ? Math.max(0, Number(ef.frequency))
+    : defaults.frequency;
   ef.q = Number.isFinite(Number(ef.q)) ? Math.max(0, Number(ef.q)) : defaults.q;
   ef.oversample = clamp(Math.round(Number(ef.oversample) || defaults.oversample), 1, 32);
   const smoothing = Number(ef.smoothing);
@@ -85,8 +89,12 @@ function normalizeSlotArg(slot, efLimit = 6) {
   if (methodIndex < 0) methodIndex = defaults.method;
   arg.method = clamp(Math.round(methodIndex), 0, ARG_METHOD_NAMES.length - 1);
   arg.method_name = ARG_METHOD_NAMES[arg.method] || defaults.method_name;
-  const sourceA = Number.isFinite(Number(arg.sourceA)) ? Math.round(Number(arg.sourceA)) : defaults.sourceA;
-  const sourceB = Number.isFinite(Number(arg.sourceB)) ? Math.round(Number(arg.sourceB)) : defaults.sourceB;
+  const sourceA = Number.isFinite(Number(arg.sourceA))
+    ? Math.round(Number(arg.sourceA))
+    : defaults.sourceA;
+  const sourceB = Number.isFinite(Number(arg.sourceB))
+    ? Math.round(Number(arg.sourceB))
+    : defaults.sourceB;
   arg.sourceA = sourceA;
   arg.sourceB = sourceB;
   return arg;
@@ -94,13 +102,16 @@ function normalizeSlotArg(slot, efLimit = 6) {
 
 function normalizeSlotConfig(slot, efLimit = 6) {
   const source = slot && typeof slot === 'object' ? slot : {};
-  const efMax = Math.max(-1, Math.round(Number.isFinite(Number(efLimit)) ? Number(efLimit) - 1 : 5));
+  const efMax = Math.max(
+    -1,
+    Math.round(Number.isFinite(Number(efLimit)) ? Number(efLimit) - 1 : 5)
+  );
   const typeCandidate =
     typeof source.type === 'string'
       ? source.type
       : typeof source.type_name === 'string'
-      ? source.type_name
-      : null;
+        ? source.type_name
+        : null;
   const type = SLOT_TYPE_NAMES.includes(typeCandidate) ? typeCandidate : 'OFF';
 
   const midiChannelCandidate = Number(source.midiChannel ?? source.channel);
@@ -140,14 +151,20 @@ export function normalizeConfig(config, manifest = {}) {
   const slotCount = Number.isFinite(Number(manifest.slot_count))
     ? Number(manifest.slot_count)
     : Array.isArray(config.slots)
-    ? config.slots.length
-    : 0;
-  const manifestEf = Number.isFinite(Number(manifest.envelope_count)) ? Number(manifest.envelope_count) : null;
+      ? config.slots.length
+      : 0;
+  const manifestEf = Number.isFinite(Number(manifest.envelope_count))
+    ? Number(manifest.envelope_count)
+    : null;
   const configEf = Array.isArray(config.efSlots) ? config.efSlots.length : null;
-  const followerEf = Array.isArray(config.envelopes?.followers) ? config.envelopes.followers.length : null;
+  const followerEf = Array.isArray(config.envelopes?.followers)
+    ? config.envelopes.followers.length
+    : null;
   const efCount = manifestEf ?? configEf ?? followerEf ?? 0;
 
-  const slots = Array.from({ length: slotCount }, (_, idx) => normalizeSlotConfig(config.slots?.[idx], efCount));
+  const slots = Array.from({ length: slotCount }, (_, idx) =>
+    normalizeSlotConfig(config.slots?.[idx], efCount)
+  );
 
   let efSlots;
   if (Array.isArray(config.efSlots)) {
@@ -169,8 +186,8 @@ export function normalizeConfig(config, manifest = {}) {
       const raw = Number.isFinite(Number(slot?.efIndex))
         ? Number(slot.efIndex)
         : Number.isFinite(Number(slot?.ef?.index))
-        ? Number(slot.ef.index)
-        : -1;
+          ? Number(slot.ef.index)
+          : -1;
       if (!Number.isFinite(raw) || raw < 0 || raw >= derived.length) return;
       derived[raw].add(clamp(slotIndex, 0, Math.max(0, slotCount - 1)));
     });
@@ -181,7 +198,9 @@ export function normalizeConfig(config, manifest = {}) {
 
   let legacyLedColor = null;
   if (Array.isArray(config.ledColors) && config.ledColors.length) {
-    const swatch = config.ledColors.find((entry) => typeof entry?.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(entry.color));
+    const swatch = config.ledColors.find(
+      (entry) => typeof entry?.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(entry.color)
+    );
     if (swatch) legacyLedColor = swatch.color.toUpperCase();
   }
   const env = config.envelopes && typeof config.envelopes === 'object' ? config.envelopes : {};
@@ -212,10 +231,16 @@ export function normalizeConfig(config, manifest = {}) {
   } else if (typeof envFilter.type === 'string' && EF_FILTER_NAMES.includes(envFilter.type)) {
     filter.type = envFilter.type;
   } else {
-    const followerFilter = env.followers?.find((entry) => typeof entry?.filter === 'string')?.filter;
-    const slotFilter = slots.find((slot) => typeof slot?.ef?.filter_name === 'string')?.ef?.filter_name;
+    const followerFilter = env.followers?.find(
+      (entry) => typeof entry?.filter === 'string'
+    )?.filter;
+    const slotFilter = slots.find((slot) => typeof slot?.ef?.filter_name === 'string')?.ef
+      ?.filter_name;
     const derivedFilter = followerFilter || slotFilter;
-    filter.type = typeof derivedFilter === 'string' && EF_FILTER_NAMES.includes(derivedFilter) ? derivedFilter : 'LINEAR';
+    filter.type =
+      typeof derivedFilter === 'string' && EF_FILTER_NAMES.includes(derivedFilter)
+        ? derivedFilter
+        : 'LINEAR';
   }
 
   const argSource = config.arg && typeof config.arg === 'object' ? config.arg : {};
@@ -228,15 +253,27 @@ export function normalizeConfig(config, manifest = {}) {
   let methodName = null;
   if (typeof argSource.method === 'string' && ARG_METHOD_NAMES.includes(argSource.method)) {
     methodName = argSource.method;
-  } else if (typeof argSource.method_name === 'string' && ARG_METHOD_NAMES.includes(argSource.method_name)) {
+  } else if (
+    typeof argSource.method_name === 'string' &&
+    ARG_METHOD_NAMES.includes(argSource.method_name)
+  ) {
     methodName = argSource.method_name;
   } else if (Number.isFinite(Number(argSource.method))) {
-    const idx = Math.max(0, Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(argSource.method))));
+    const idx = Math.max(
+      0,
+      Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(argSource.method)))
+    );
     methodName = ARG_METHOD_NAMES[idx];
-  } else if (typeof env.arg_method_name === 'string' && ARG_METHOD_NAMES.includes(env.arg_method_name)) {
+  } else if (
+    typeof env.arg_method_name === 'string' &&
+    ARG_METHOD_NAMES.includes(env.arg_method_name)
+  ) {
     methodName = env.arg_method_name;
   } else if (Number.isFinite(Number(env.arg_method))) {
-    const idx = Math.max(0, Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(env.arg_method))));
+    const idx = Math.max(
+      0,
+      Math.min(ARG_METHOD_NAMES.length - 1, Math.round(Number(env.arg_method)))
+    );
     methodName = ARG_METHOD_NAMES[idx];
   } else {
     methodName = ARG_METHOD_NAMES[0];

@@ -1,7 +1,4 @@
-export function createPortPreferenceStore({
-  storage,
-  storageKey
-} = {}) {
+export function createPortPreferenceStore({ storage, storageKey } = {}) {
   function getPortInfo(port) {
     if (!port?.getInfo) return null;
     try {

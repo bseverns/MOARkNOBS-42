@@ -21,7 +21,7 @@ sequenceDiagram
   Firmware-->>Browser: patch or checksum ACK
 ```
 
-*Alt text: Sequence diagram showing a browser sending HELLO, requesting manifest and config, then staging edits and receiving patches or acknowledgements from the firmware.*
+_Alt text: Sequence diagram showing a browser sending HELLO, requesting manifest and config, then staging edits and receiving patches or acknowledgements from the firmware._
 
 That flow is the heart of the configurator.
 

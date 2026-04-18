@@ -6,4 +6,3 @@
 - **Metric:** delta_ms = t_tx_us - t_scan_us printed by firmware
 - **Acceptance:** median 3–5 ms; p95 ≤ 10 ms
 - **Notes:** close DAWs; no other MIDI devices
-

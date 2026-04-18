@@ -45,7 +45,7 @@ python tools/doctor.py
 - Globals go `extern` in headers and live in exactly one `.cpp`.
 - Comments are contracts. Break one? Update it. Touch a public API? Document it in `README.md`.
 - Keep the PlatformIO stuff in `./firmware`; don't treat the root like a project.
-- Tests run in USB_MIDI_SERIAL mode only. Don't sneak in other USB_* defines.
+- Tests run in USB*MIDI_SERIAL mode only. Don't sneak in other USB*\* defines.
 - The unit-test environment is lean: no Adafruit GFX/SSD1306/BusIO or SD/SdFat unless absolutely required.
 
 ## Accessibility Notes

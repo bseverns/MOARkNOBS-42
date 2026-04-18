@@ -40,14 +40,14 @@ mkdocs serve
 
 Then open the local URL MkDocs prints in your terminal.
 
-| Doc | Why it exists | Keep it fresh |
-| --- | --- | --- |
-| [Primers/MIDI-DSP101.md](../Primers/MIDI-DSP101.md) | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
-| [ProcessOverview.md](ProcessOverview.md) | Full build and release flow | Update when hardware or firmware release steps move |
-| [TESTING.md](../validation/TESTING.md) | Canonical test workflow + coverage map | Refresh when test scope or commands move |
-| [ReleaseGuide.md](../release/ReleaseGuide.md) | Human release checklist | Refresh when release ritual or asset list changes |
-| [REPRODUCIBILITY.md](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe | Refresh when `release.sh` or artifact shape changes |
-| [App/README.md](https://github.com/bseverns/benzknober/blob/main/App/README.md) | App/runtime contract and simulator notes | Refresh when manifest/schema/apply semantics change |
+| Doc                                                                                       | Why it exists                                        | Keep it fresh                                         |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------- |
+| [Primers/MIDI-DSP101.md](../Primers/MIDI-DSP101.md)                                       | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
+| [ProcessOverview.md](ProcessOverview.md)                                                  | Full build and release flow                          | Update when hardware or firmware release steps move   |
+| [TESTING.md](../validation/TESTING.md)                                                    | Canonical test workflow + coverage map               | Refresh when test scope or commands move              |
+| [ReleaseGuide.md](../release/ReleaseGuide.md)                                             | Human release checklist                              | Refresh when release ritual or asset list changes     |
+| [REPRODUCIBILITY.md](https://github.com/bseverns/benzknober/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe              | Refresh when `release.sh` or artifact shape changes   |
+| [App/README.md](https://github.com/bseverns/benzknober/blob/main/App/README.md)           | App/runtime contract and simulator notes             | Refresh when manifest/schema/apply semantics change   |
 
 ## Accessibility
 
@@ -111,10 +111,10 @@ flowchart TD
 - [CONTRIBUTING.md](https://github.com/bseverns/benzknober/blob/main/CONTRIBUTING.md) — patch etiquette and repo contract.
 - [Sketchbook](../sketchbook/index.md) — raw schematics and subsystem scribbles when you need the gory details.
   Highlights:
-    - [buttonMatrix.md](../sketch/systemFlow/hw/buttonMatrix.md) — how the 42-button grid scans its soul.
-    - [display.md](../sketch/systemFlow/hw/display.md) — wrangling pixels and I²C.
-    - [envelopeFE.md](../sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
-    - Plenty more (midi opto, power antics, board PDFs) for late-night study.
+  - [buttonMatrix.md](../sketch/systemFlow/hw/buttonMatrix.md) — how the 42-button grid scans its soul.
+  - [display.md](../sketch/systemFlow/hw/display.md) — wrangling pixels and I²C.
+  - [envelopeFE.md](../sketch/systemFlow/hw/envelopeFE.md) — analog envelope follower circuits.
+  - Plenty more (midi opto, power antics, board PDFs) for late-night study.
 - [WebSerial.md](../guides/WebSerial.md) — how the board chats with browsers, negotiates schema versions, and keeps presets safe.
 - [PresetLibrary.md](../guides/PresetLibrary.md) — what each shipped configurator preset is for, what it teaches, and how it differs from the device's saved profiles.
 - [MusicianFirstGuide.md](../getting-started/MusicianFirstGuide.md) — the shortest path from first connection to one trustworthy rehearsal setup.

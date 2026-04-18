@@ -3,6 +3,7 @@ A 5 V feed hits the onboard regulator for 3 V3, while I²C and SWD signals f
 Never back‑feed the 3 V3 rail through the expander unless you like smoke.
 
 **References**
+
 - [Schematic](../../Interface&Cntrl.png)
 - [Teensy 4.0 pinout](https://www.pjrc.com/teensy/pinout.html)
 - Snapshot [Interface&Cntrl.png](../../Interface&Cntrl.png)
@@ -24,7 +25,7 @@ flowchart LR
     Teensy --> EXP["Exp Header<br/>(5V,3V3,SDA,SCL,GND)"]
   end
 
-  %% Ground bus  
+  %% Ground bus
   classDef groundBus fill:none,stroke:#000,stroke-width:3px;
   GND --- groundBusNode((GND Bus))
   groundBusNode:::groundBus

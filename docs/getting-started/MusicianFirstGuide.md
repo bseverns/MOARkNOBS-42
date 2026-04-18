@@ -25,7 +25,7 @@ flowchart LR
   D --> E[Rehearse with one recovery move]
 ```
 
-*Alt text: Flowchart showing a musician-first workflow of connecting the device, choosing one preset, applying and listening, saving a good state into a profile, then rehearsing with one recovery move in hand.*
+_Alt text: Flowchart showing a musician-first workflow of connecting the device, choosing one preset, applying and listening, saving a good state into a profile, then rehearsing with one recovery move in hand._
 
 If you do only that, you already have a useful relationship to the instrument.
 
@@ -90,12 +90,12 @@ The four device profile slots are most useful when they each have a job.
 
 Recommended beginner layout:
 
-| Slot | Role |
-| --- | --- |
-| A | safe baseline |
-| B | current rehearsal map |
-| C | alternate arrangement |
-| D | risky experiment or song-specific variation |
+| Slot | Role                                        |
+| ---- | ------------------------------------------- |
+| A    | safe baseline                               |
+| B    | current rehearsal map                       |
+| C    | alternate arrangement                       |
+| D    | risky experiment or song-specific variation |
 
 This is not sacred. It is just a better starting point than "I guess I saved something somewhere."
 

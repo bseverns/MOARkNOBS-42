@@ -27,10 +27,10 @@ For the current support boundary, see [Host Compatibility](../reference/HostComp
 
 ## Packaging options
 
-| Option | Why use it | Risks / caveats | Recommendation |
-| --- | --- | --- | --- |
-| `pkg` | Mature single-binary workflow, simple output model | Target/runtime support can lag newest Node versions; native modules need validation | Prototype first |
-| `nexe` | Flexible build pipeline, can embed assets | Build setup can be heavier; native dependency handling still needs platform validation | Backup path |
+| Option | Why use it                                         | Risks / caveats                                                                        | Recommendation  |
+| ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------- |
+| `pkg`  | Mature single-binary workflow, simple output model | Target/runtime support can lag newest Node versions; native modules need validation    | Prototype first |
+| `nexe` | Flexible build pipeline, can embed assets          | Build setup can be heavier; native dependency handling still needs platform validation | Backup path     |
 
 Decision rule: start with `pkg`; if target/runtime support blocks Node 20 + serialport reliability, switch to `nexe`.
 
@@ -48,6 +48,7 @@ Decision rule: start with `pkg`; if target/runtime support blocks Node 20 + seri
 - **Linux**: tarball and optional AppImage.
 
 All packages should expose the same defaults:
+
 - OSC out `9000`
 - OSC listen `9000`
 - MIDI label `MN42 Bridge`

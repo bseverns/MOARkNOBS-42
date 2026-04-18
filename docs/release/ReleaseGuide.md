@@ -19,7 +19,6 @@ Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then tre
    - If you ran bridge packaging, attach those assets + checksums too.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 
-
 ## Bridge packaging track (optional but recommended)
 
 If you are shipping to non-CLI users, run the bridge packaging lane too:

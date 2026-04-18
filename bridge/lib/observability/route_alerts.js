@@ -108,10 +108,7 @@ function createRouteAlertPolicy({
 
     state.alerts.recent.push(alert);
     if (state.alerts.recent.length > alertLogLimit) {
-      state.alerts.recent.splice(
-        0,
-        state.alerts.recent.length - alertLogLimit,
-      );
+      state.alerts.recent.splice(0, state.alerts.recent.length - alertLogLimit);
     }
 
     if (sticky) {

@@ -140,11 +140,11 @@ This is not the first stop for a beginner, but it is a good "the instrument can 
 
 ## Which shipped presets demonstrate which feel
 
-| Preset | Main feel lesson |
-| --- | --- |
-| `DEMO_A - Reactive Stack` | `LOWPASS` plus obvious composite motion |
-| `DEMO_B - Clock Contrast` | `BANDPASS` plus stronger contrast |
-| `AE Modular - Probability Sketch` | `LOWPASS` in a patch-lab context |
+| Preset                            | Main feel lesson                        |
+| --------------------------------- | --------------------------------------- |
+| `DEMO_A - Reactive Stack`         | `LOWPASS` plus obvious composite motion |
+| `DEMO_B - Clock Contrast`         | `BANDPASS` plus stronger contrast       |
+| `AE Modular - Probability Sketch` | `LOWPASS` in a patch-lab context        |
 
 See: [Preset Library](PresetLibrary.md)
 

@@ -3,6 +3,7 @@ Teensy pin 6 drives the LED chain; pin 1 handles MIDI through a 220 Ω resis
 The AHCT245 wants 5 V on VCC—starve it and your colors go full anarchy.
 
 **References**
+
 - [LED schematic](../../MainLEDPool.png)
 - [MIDI schematic](../../MIDI.png)
 - [74AHCT245 datasheet](https://www.ti.com/lit/ds/symlink/sn74ahct245.pdf)
@@ -26,4 +27,3 @@ flowchart LR
     R220 --> TRSOut[TRS_Type-A_Out]
   end
 ```
-

@@ -3,12 +3,14 @@
 This app is pure static HTML/JS/CSS, so publishing is a matter of copying `App/` into the branch GitHub Pages is configured to serve (for this repo it is `gh-pages` / the `/App` folder depending on your Pages settings).
 
 1. Ensure dependencies are installed so the dev server works locally (required for sanity checks):
+
    ```bash
    npm --prefix App install
    npm --prefix App test
    ```
 
-2. Choose a Pages branch (`gh-pages` is recommended so `main` stays clean):  
+2. Choose a Pages branch (`gh-pages` is recommended so `main` stays clean):
+
    ```bash
    git worktree add /tmp/gh-pages gh-pages
    rm -rf /tmp/gh-pages/*
@@ -16,6 +18,7 @@ This app is pure static HTML/JS/CSS, so publishing is a matter of copying `App/`
    ```
 
 3. Commit and push the fresh build:
+
    ```bash
    cd /tmp/gh-pages
    git add -A

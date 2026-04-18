@@ -9,7 +9,7 @@ const makeSlots = (mapper) =>
   Array.from({ length: SLOT_COUNT }, (_, idx) => {
     const base = {
       type: 'CC',
-      midiChannel: ((idx % 6) + 1),
+      midiChannel: (idx % 6) + 1,
       data1: idx % 128,
       efIndex: idx % EF_COUNT,
       active: idx < 16,

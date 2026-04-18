@@ -9,7 +9,13 @@ export function coerceIndex(value) {
 }
 
 export function extractSlotIndex(payload, fallback) {
-  const candidates = [payload?.index, payload?.slot, payload?.slot_index, payload?.slotIndex, fallback];
+  const candidates = [
+    payload?.index,
+    payload?.slot,
+    payload?.slot_index,
+    payload?.slotIndex,
+    fallback
+  ];
   for (const candidate of candidates) {
     const idx = coerceIndex(candidate);
     if (idx !== null) return idx;
@@ -35,7 +41,9 @@ export function normalizeSlotPatchEntry(entry) {
     if (Number.isFinite(value)) fields.data1 = value;
   }
   const efIndexValue =
-    entry.efIndex ?? entry.ef_index ?? (entry.ef && typeof entry.ef === 'object' ? entry.ef.index : undefined);
+    entry.efIndex ??
+    entry.ef_index ??
+    (entry.ef && typeof entry.ef === 'object' ? entry.ef.index : undefined);
   if (efIndexValue !== undefined) {
     const value = Number(efIndexValue);
     if (Number.isFinite(value)) fields.efIndex = value;
@@ -185,7 +193,11 @@ export function applyEfSlotPatch(target, patch, slotCount) {
     const beforeSize = nextSet.size;
     nextSet.add(boundedSlot);
     const nextSlots = Array.from(nextSet).sort((a, b) => a - b);
-    if (!copy[index] || beforeSize !== nextSet.size || !sameNumberArray(current.slots ?? [], nextSlots)) {
+    if (
+      !copy[index] ||
+      beforeSize !== nextSet.size ||
+      !sameNumberArray(current.slots ?? [], nextSlots)
+    ) {
       copy[index] = { ...current, slots: nextSlots };
       changed = true;
     }
@@ -336,8 +348,14 @@ export function createPatchReconciler({
           const index = coerceIndex(entry?.index ?? idx);
           if (index === null) {
             for (let follower = 0; follower < nextLive.efSlots.length; follower += 1) {
-              const nextVal = normalizeEfSlotTargets(nextLive.efSlots[follower] ?? {}, nextLive.slots?.length ?? 0);
-              const prevVal = normalizeEfSlotTargets(prevEf[follower] ?? {}, prevLive.slots?.length ?? 0);
+              const nextVal = normalizeEfSlotTargets(
+                nextLive.efSlots[follower] ?? {},
+                nextLive.slots?.length ?? 0
+              );
+              const prevVal = normalizeEfSlotTargets(
+                prevEf[follower] ?? {},
+                prevLive.slots?.length ?? 0
+              );
               const stagedVal =
                 stagedEf[follower] && typeof stagedEf[follower] === 'object'
                   ? normalizeEfSlotTargets(stagedEf[follower], nextStaged.slots?.length ?? 0)
@@ -348,7 +366,10 @@ export function createPatchReconciler({
             }
             return;
           }
-          const nextVal = normalizeEfSlotTargets(nextLive.efSlots[index] ?? {}, nextLive.slots?.length ?? 0);
+          const nextVal = normalizeEfSlotTargets(
+            nextLive.efSlots[index] ?? {},
+            nextLive.slots?.length ?? 0
+          );
           const prevVal = normalizeEfSlotTargets(prevEf[index] ?? {}, prevLive.slots?.length ?? 0);
           const stagedVal =
             stagedEf[index] && typeof stagedEf[index] === 'object'

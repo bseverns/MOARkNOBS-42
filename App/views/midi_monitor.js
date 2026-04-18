@@ -16,7 +16,8 @@ function formatBytes(bytes) {
 // Turn log timestamps into compact HH:MM:SS labels for the scrolling panel.
 function formatTimestamp(value) {
   const date = new Date(value);
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes()
+  return `${date.getHours().toString().padStart(2, '0')}:${date
+    .getMinutes()
     .toString()
     .padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
 }
@@ -191,7 +192,8 @@ export class MidiMonitor {
       row.dataset.direction = entry.direction;
       const dir = document.createElement('span');
       dir.className = 'midi-row-direction';
-      dir.textContent = entry.direction === 'out' ? 'OUT' : entry.direction === 'in' ? 'IN' : 'INFO';
+      dir.textContent =
+        entry.direction === 'out' ? 'OUT' : entry.direction === 'in' ? 'IN' : 'INFO';
       const bytes = document.createElement('span');
       bytes.className = 'midi-row-bytes';
       bytes.textContent = `${formatBytes(entry.bytes)}`;

@@ -41,7 +41,8 @@ function createSerialLineHandler({
 
     inspectManifest(data);
 
-    const hasTelemetry = data.type === 'telemetry' || data.slots || data.envelopes;
+    const hasTelemetry =
+      data.type === 'telemetry' || data.slots || data.envelopes;
     const hostTimestampMs = timestampNow();
     const sourceTimestampMs = extractTimestampMs(data);
     const telemetryTraceId = extractTraceId(data) || nextTraceId('serial');

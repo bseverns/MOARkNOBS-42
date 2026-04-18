@@ -77,8 +77,7 @@ function createOscMessageHandler({
 
   function handleOscTypedEventPayload(msg) {
     const isTypedEventAddress =
-      typeof msg.address === 'string' &&
-      msg.address.startsWith(oscEventPrefix);
+      typeof msg.address === 'string' && msg.address.startsWith(oscEventPrefix);
     const typed = normalizeOscTypedEventMessage(msg);
     if (!typed) {
       if (isTypedEventAddress) {

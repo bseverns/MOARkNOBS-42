@@ -21,7 +21,7 @@ flowchart LR
   D --> E[Save into profile A-D if you want it to persist]
 ```
 
-*Alt text: Flowchart showing a preset being chosen in the browser, staged locally, applied to the device, then optionally saved into one of the device's A-D profile slots.*
+_Alt text: Flowchart showing a preset being chosen in the browser, staged locally, applied to the device, then optionally saved into one of the device's A-D profile slots._
 
 That distinction matters because the picker is safe by design. Choosing a preset does not immediately overwrite the deck. It stages a candidate config so you can review it, then decide whether to apply and archive it.
 
@@ -29,27 +29,27 @@ That distinction matters because the picker is safe by design. Choosing a preset
 
 Even though the entries feel different, the current preset collection is built from the same small vocabulary:
 
-| Piece | What it changes | Why it matters |
-| --- | --- | --- |
-| `slots` | MIDI message type, channel, number, active state, labels | This is the main mapping surface. |
-| `efSlots` | Which envelope follower targets which slot groups | This is where the reactive behavior starts. |
-| `filter` | Envelope follower shaping | Lets the preset feel tight, smooth, bright, or restrained. |
-| `arg` | Arithmetic blend mode and weights | Changes how follower signals combine. |
-| `led` | Global color and brightness mood | Gives each preset an immediate visual identity. |
-| `envelopeMode` | Response curve for follower motion | Changes how "physical" or "snappy" the deck feels. |
+| Piece          | What it changes                                          | Why it matters                                             |
+| -------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| `slots`        | MIDI message type, channel, number, active state, labels | This is the main mapping surface.                          |
+| `efSlots`      | Which envelope follower targets which slot groups        | This is where the reactive behavior starts.                |
+| `filter`       | Envelope follower shaping                                | Lets the preset feel tight, smooth, bright, or restrained. |
+| `arg`          | Arithmetic blend mode and weights                        | Changes how follower signals combine.                      |
+| `led`          | Global color and brightness mood                         | Gives each preset an immediate visual identity.            |
+| `envelopeMode` | Response curve for follower motion                       | Changes how "physical" or "snappy" the deck feels.         |
 
 Once you learn to read those six pieces, the preset library stops looking like magic.
 
 ## Preset map at a glance
 
-| Preset | Best for | What it teaches | Tweak this first |
-| --- | --- | --- | --- |
-| `DEMO_A - Reactive Stack` | First-time browser/demo use | Active-slot density plus obvious reactive motion | LED color, active slot count, ARG method |
-| `DEMO_B - Clock Contrast` | Comparing timing and filter feel | Linear response and a sparser mixed CC/NRPN layout | Filter type/Q and active-slot density |
-| `Korg Minilogue XD - Layer Launch` | Multi-layer synth workflows | Layer-oriented channel spread with note/CC handoff | Which labeled layers stay active |
-| `AE Modular - Probability Sketch` | Patch-lab experimentation | NRPN sequencing rows mixed with note/CC lanes | Which sequence rows are pots versus triggers |
-| `Akai MPC - Performance Grid` | Pad/performance rigs | Macro-bank thinking with aftertouch-heavy groupings | Which macros stay on pots and which become buttons |
-| `Electribe2S Hacktribe Preset` | Advanced reference only | Older hand-authored mapping strategy | Use as a design reference, not a drop-in preset |
+| Preset                             | Best for                         | What it teaches                                     | Tweak this first                                   |
+| ---------------------------------- | -------------------------------- | --------------------------------------------------- | -------------------------------------------------- |
+| `DEMO_A - Reactive Stack`          | First-time browser/demo use      | Active-slot density plus obvious reactive motion    | LED color, active slot count, ARG method           |
+| `DEMO_B - Clock Contrast`          | Comparing timing and filter feel | Linear response and a sparser mixed CC/NRPN layout  | Filter type/Q and active-slot density              |
+| `Korg Minilogue XD - Layer Launch` | Multi-layer synth workflows      | Layer-oriented channel spread with note/CC handoff  | Which labeled layers stay active                   |
+| `AE Modular - Probability Sketch`  | Patch-lab experimentation        | NRPN sequencing rows mixed with note/CC lanes       | Which sequence rows are pots versus triggers       |
+| `Akai MPC - Performance Grid`      | Pad/performance rigs             | Macro-bank thinking with aftertouch-heavy groupings | Which macros stay on pots and which become buttons |
+| `Electribe2S Hacktribe Preset`     | Advanced reference only          | Older hand-authored mapping strategy                | Use as a design reference, not a drop-in preset    |
 
 ## The shipped picker presets
 

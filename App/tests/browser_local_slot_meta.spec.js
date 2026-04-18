@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('browser-local slot metadata does not dirty device config and survives reconnect', async ({ page }) => {
+test('browser-local slot metadata does not dirty device config and survives reconnect', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -12,11 +14,15 @@ test('browser-local slot metadata does not dirty device config and survives reco
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('.slot-editor')).toBeVisible();
 
-  const labelInput = page.locator('.slot-editor label:has-text("Slot label (browser only)") input').first();
+  const labelInput = page
+    .locator('.slot-editor label:has-text("Slot label (browser only)") input')
+    .first();
   await labelInput.fill('Verse cue');
   await labelInput.dispatchEvent('change');
 
-  const takeoverToggle = page.locator('.slot-editor label:has-text("Take Control (browser only)") input').first();
+  const takeoverToggle = page
+    .locator('.slot-editor label:has-text("Take Control (browser only)") input')
+    .first();
   await takeoverToggle.check();
 
   await expect(page.locator('#dirty-badge')).toBeHidden();

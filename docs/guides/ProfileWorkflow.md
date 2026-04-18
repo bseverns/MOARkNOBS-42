@@ -53,7 +53,7 @@ flowchart LR
   C --> D[Save into profile A-D]
 ```
 
-*Alt text: Flowchart showing the profile workflow moving from staged edits to Apply, then verification, then saving into a permanent device profile slot.*
+_Alt text: Flowchart showing the profile workflow moving from staged edits to Apply, then verification, then saving into a permanent device profile slot._
 
 ## What each button is for
 
@@ -129,12 +129,12 @@ That usually means one of three things:
 
 For many users this simple scheme is enough:
 
-| Slot | Role |
-| --- | --- |
-| A | stable baseline |
-| B | current rehearsal build |
-| C | alternate arrangement |
-| D | risky experiment or one-song setup |
+| Slot | Role                               |
+| ---- | ---------------------------------- |
+| A    | stable baseline                    |
+| B    | current rehearsal build            |
+| C    | alternate arrangement              |
+| D    | risky experiment or one-song setup |
 
 The point is not the labels themselves. The point is that every slot should have a job.
 

@@ -22,7 +22,7 @@ flowchart TD
   E --> F[Manual bench proof]
 ```
 
-*Alt text: Flowchart showing confidence building from local checks to Unity, then host tests, then full-system hardware runs, then manual bench proof.*
+_Alt text: Flowchart showing confidence building from local checks to Unity, then host tests, then full-system hardware runs, then manual bench proof._
 
 The important idea is that later layers do not replace earlier ones. They narrow different kinds of doubt.
 
@@ -76,11 +76,11 @@ Those are not test-suite failures waiting to be automated away. They are physica
 
 Use this rule of thumb:
 
-| If you changed... | Start here | Then escalate to... |
-| --- | --- | --- |
-| math, config, routing, scheduler logic | Unity | system run if contract-visible |
-| bridge CLI or host-side parsing | Node tests | system run if transport changed |
-| WebSerial/runtime contract | Unity plus host checks | full system with real board |
+| If you changed...                      | Start here             | Then escalate to...                   |
+| -------------------------------------- | ---------------------- | ------------------------------------- |
+| math, config, routing, scheduler logic | Unity                  | system run if contract-visible        |
+| bridge CLI or host-side parsing        | Node tests             | system run if transport changed       |
+| WebSerial/runtime contract             | Unity plus host checks | full system with real board           |
 | wiring, LEDs, display, EEPROM behavior | manual sketch or bench | full release gauntlet before shipping |
 
 ## What "tested" means in this repo

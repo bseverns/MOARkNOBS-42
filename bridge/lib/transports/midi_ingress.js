@@ -43,7 +43,10 @@ function createMidiMessageHandler({
       return;
     }
 
-    const typedEvents = parseMidiMessageToTypedEvents(arr, midiRpnStateByChannel);
+    const typedEvents = parseMidiMessageToTypedEvents(
+      arr,
+      midiRpnStateByChannel,
+    );
     if (!typedEvents.length) return;
     typedEvents.forEach((event) => {
       sendTypedEventToOsc(event, {

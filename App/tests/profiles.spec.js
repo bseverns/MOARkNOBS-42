@@ -106,15 +106,12 @@ test.describe('Profiles toolbar', () => {
     ]);
     await chooser.setFiles(filePath);
 
-    await page.waitForFunction(
-      (value) => {
-        const runtime = window.__MN42_RUNTIME;
-        if (!runtime) return false;
-        const stagedData = runtime.getState().staged;
-        return stagedData?.slots?.[0]?.data1 === value;
-      },
-      targetValue
-    );
+    await page.waitForFunction((value) => {
+      const runtime = window.__MN42_RUNTIME;
+      if (!runtime) return false;
+      const stagedData = runtime.getState().staged;
+      return stagedData?.slots?.[0]?.data1 === value;
+    }, targetValue);
     await expect(page.locator('#status-label')).toHaveText('Profile imported', { timeout: 5000 });
   });
 });

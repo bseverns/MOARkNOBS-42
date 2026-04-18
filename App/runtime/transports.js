@@ -1,9 +1,7 @@
 // Native serial transport wrapper that exposes the same API as simulator and WS bridge.
 export function createTransportPort(port, options = {}, transportDeps = {}) {
-  const {
-    makeEncoder = () => new TextEncoder(),
-    makeDecoder = () => new TextDecoder()
-  } = transportDeps;
+  const { makeEncoder = () => new TextEncoder(), makeDecoder = () => new TextDecoder() } =
+    transportDeps;
   const textEncoder = makeEncoder();
   const textDecoder = makeDecoder();
   let reader;
@@ -159,7 +157,10 @@ export function createSimulator(simDeps = {}) {
       };
     }),
     envelopes: {
-      routing: Array.from({ length: manifest.pot_count }, (_, idx) => idx % manifest.envelope_count),
+      routing: Array.from(
+        { length: manifest.pot_count },
+        (_, idx) => idx % manifest.envelope_count
+      ),
       followers: Array.from({ length: manifest.envelope_count }, (_, idx) => ({
         index: idx,
         active: idx % 2 === 0,
@@ -195,7 +196,9 @@ export function createSimulator(simDeps = {}) {
       sourceA: idx % manifest.envelope_count,
       sourceB: (idx + 1) % manifest.envelope_count
     })),
-    envelopes: Array.from({ length: manifest.envelope_count }, () => Math.floor(Math.random() * 127)),
+    envelopes: Array.from({ length: manifest.envelope_count }, () =>
+      Math.floor(Math.random() * 127)
+    ),
     currentSlot: index++ % manifest.slot_count,
     argPair: [0, 1],
     argEnabled: true,

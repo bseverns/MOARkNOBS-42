@@ -45,6 +45,7 @@ oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":
 - Record/midi-map as normal.
 
 Bridge MIDI mapping:
+
 - Ch 1 CC `0..41`: slots
 - Ch 2 CC `0..5`: envelopes
 

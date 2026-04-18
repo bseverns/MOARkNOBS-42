@@ -42,20 +42,20 @@ This pass looks at release clarity, firmware/app/bridge contract truth, hardware
 ## Remaining pre-production friction points
 
 1. Hardware ordering is not yet locked from the repo alone.
-Reason:
-There is no versioned BOM or fabrication zip in-tree yet, so a builder still needs to treat the hardware package as pre-production rather than order-ready.
+   Reason:
+   There is no versioned BOM or fabrication zip in-tree yet, so a builder still needs to treat the hardware package as pre-production rather than order-ready.
 
 2. The desktop bridge story is functional but not productized.
-Reason:
-The bridge works and is documented, but it still assumes a Node-capable operator rather than a signed installer flow.
+   Reason:
+   The bridge works and is documented, but it still assumes a Node-capable operator rather than a signed installer flow.
 
 3. Browser compatibility should still be described narrowly.
-Reason:
-The repo proves Chromium-based configurator behavior most strongly. Other browser paths should stay conservative unless bench evidence exists; see [Host Compatibility](../reference/HostCompatibility.md).
+   Reason:
+   The repo proves Chromium-based configurator behavior most strongly. Other browser paths should stay conservative unless bench evidence exists; see [Host Compatibility](../reference/HostCompatibility.md).
 
 4. Release-ready language should remain gated.
-Reason:
-The docs now support demo readiness and pre-production orientation, but broader release language still depends on manufacturing-package truth, bench evidence, and explicit support boundaries.
+   Reason:
+   The docs now support demo readiness and pre-production orientation, but broader release language still depends on manufacturing-package truth, bench evidence, and explicit support boundaries.
 
 ## What changed since the earlier March audit
 

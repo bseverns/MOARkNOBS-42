@@ -6,4 +6,3 @@
 - **Metric:** RMS LSB per channel from raw_counts
 - **Acceptance:** ≤ 2 LSB RMS
 - **Notes:** isolate from vibration; stable PSU
-

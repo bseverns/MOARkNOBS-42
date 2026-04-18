@@ -1,12 +1,13 @@
 # MOARkNOBS-42
 
 ![MOARkNOBS-42 controller with button grid and knob array](docs/assets/board/land.png)
+
 > The button-mashing, knob-twisting controller that refuses to behave.
 
 ## What this is
 
-MOARkNOBS-42 is a microcontroller-based MIDI/OSC controller built as a critical instrument—an interface you 
-can audit, rebuild, and modify to test how control, authorship, and embodiment shape sound and musical labor. 
+MOARkNOBS-42 is a microcontroller-based MIDI/OSC controller built as a critical instrument—an interface you
+can audit, rebuild, and modify to test how control, authorship, and embodiment shape sound and musical labor.
 It is open, meaning you can fork, sell, remix—just credit and share like I have.
 
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
@@ -15,16 +16,16 @@ folder for the gritty context, wiring diagrams, and experiments.
 
 ## Quick Map
 
-| Path | What's in it |
-| --- | --- |
-| [docs/](docs/project/DocsGuide.md) | Build notes, history and assorted rants |
-| [docs/TESTING.md](docs/validation/TESTING.md) | Test gauntlet from polite to brutal |
-| [docs/PinMap.md](docs/reference/PinMap.md) | Every MCU pin's dirty secret |
-| [docs/EEPROMLayout.md](docs/reference/EEPROMLayout.md) | Where config bytes crash at night |
-| [firmware/](firmware/README.md) | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
-| [hardware/](hardware/README.md) | Hardware docs, with [hardware/CurrentBuild.md](hardware/CurrentBuild.md) as the canonical entry point for what is current vs. stale |
-| [bridge/](bridge/README.md) | Node.js bridge docs for OSC + virtual MIDI setup, command reference, and troubleshooting |
-| [tools/](tools/README.md) | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md) |
+| Path                                                   | What's in it                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [docs/](docs/project/DocsGuide.md)                     | Build notes, history and assorted rants                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| [docs/TESTING.md](docs/validation/TESTING.md)          | Test gauntlet from polite to brutal                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| [docs/PinMap.md](docs/reference/PinMap.md)             | Every MCU pin's dirty secret                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [docs/EEPROMLayout.md](docs/reference/EEPROMLayout.md) | Where config bytes crash at night                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| [firmware/](firmware/README.md)                        | Teensy 4.0 codebase. Tables for [buttons](firmware/include/ButtonManager/README.md#button-map), [filters](firmware/include/EnvelopeFollower/README.md#filter-types), [arp settings](firmware/include/Arpeggiator/README.md#arp-settings), [MIDI types](firmware/include/MIDIHandler/README.md#supported-message-types), [ARG methods](firmware/include/EnvelopeFollower/README.md#arg-methods) and [display hooks](firmware/include/DisplayManager/README.md#key-methods) live here |
+| [hardware/](hardware/README.md)                        | Hardware docs, with [hardware/CurrentBuild.md](hardware/CurrentBuild.md) as the canonical entry point for what is current vs. stale                                                                                                                                                                                                                                                                                                                                                 |
+| [bridge/](bridge/README.md)                            | Node.js bridge docs for OSC + virtual MIDI setup, command reference, and troubleshooting                                                                                                                                                                                                                                                                                                                                                                                            |
+| [tools/](tools/README.md)                              | Bench toys and test‑rig scripts—start with the [SerialToCsv logger](tools/serial_logger/README.md)                                                                                                                                                                                                                                                                                                                                                                                  |
 
 ## Start Here
 
@@ -62,7 +63,7 @@ order on a real-time microcontroller. From there:
   enums from going feral when you hand-edit EEPROM dumps.
 - [`PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp) explains
   why we smooth ADC reads, how we select mux banks, and what the MIDI callback
-  signature really delivers (hint: both mapped values *and* raw readings).
+  signature really delivers (hint: both mapped values _and_ raw readings).
 - [`MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp) calls out the transport
   layers and the serial queueing tricks that keep DIN and USB outputs in lock
   step without starving the main loop.
@@ -78,16 +79,16 @@ night builder jam.
 The comment pass is more than hype—it’s a breadcrumb trail. Use this cheat sheet
 when you’re running a workshop or mentoring a new builder:
 
-| File | What to zero in on |
-| --- | --- |
-| [`firmware/src/firmware_main.cpp`](firmware/src/firmware_main.cpp) | Dependency graph narrated in real time: why globals matter for deterministic boot, how task schedulers, managers, and telemetry wire together. |
-| [`firmware/src/ButtonManager.cpp`](firmware/src/ButtonManager.cpp) | Debounce state machines, mux settle delays, and how human gestures translate into slot updates, MIDI calls, and WebSerial pushes. |
-| [`firmware/src/ConfigManager.cpp`](firmware/src/ConfigManager.cpp) | EEPROM schema migrations, pointer-safe handoffs, and the checksum rituals that keep corruption from bricking rigs. |
-| [`firmware/src/EnvelopeFollower.cpp`](firmware/src/EnvelopeFollower.cpp) | Filter maths laid bare: shaping curves, ARG pair logic, and how we keep ADC reads deterministic without extra allocations. |
-| [`firmware/src/MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp) | Queues, transport arbitration, and why serial writes run through explicit FIFOs instead of ad‑hoc `Serial.print` calls. |
-| [`firmware/src/LEDManager.cpp`](firmware/src/LEDManager.cpp) | Dirty-flag batching, DMA lane juggling, and the color math that makes sense to students when you explain CRGB vs CHSV. |
-| [`firmware/src/PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp) | Multiplexer walkthrough plus the callback contract that hands both raw ADC and MIDI-scaled data back to the caller. |
-| [`firmware/src/WebSerial.cpp`](firmware/src/WebSerial.cpp) | JSON schema primer: see how slot metadata gets massaged so browser UIs stay in sync with firmware realities. |
+| File                                                                             | What to zero in on                                                                                                                             |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`firmware/src/firmware_main.cpp`](firmware/src/firmware_main.cpp)               | Dependency graph narrated in real time: why globals matter for deterministic boot, how task schedulers, managers, and telemetry wire together. |
+| [`firmware/src/ButtonManager.cpp`](firmware/src/ButtonManager.cpp)               | Debounce state machines, mux settle delays, and how human gestures translate into slot updates, MIDI calls, and WebSerial pushes.              |
+| [`firmware/src/ConfigManager.cpp`](firmware/src/ConfigManager.cpp)               | EEPROM schema migrations, pointer-safe handoffs, and the checksum rituals that keep corruption from bricking rigs.                             |
+| [`firmware/src/EnvelopeFollower.cpp`](firmware/src/EnvelopeFollower.cpp)         | Filter maths laid bare: shaping curves, ARG pair logic, and how we keep ADC reads deterministic without extra allocations.                     |
+| [`firmware/src/MIDIHandler.cpp`](firmware/src/MIDIHandler.cpp)                   | Queues, transport arbitration, and why serial writes run through explicit FIFOs instead of ad‑hoc `Serial.print` calls.                        |
+| [`firmware/src/LEDManager.cpp`](firmware/src/LEDManager.cpp)                     | Dirty-flag batching, DMA lane juggling, and the color math that makes sense to students when you explain CRGB vs CHSV.                         |
+| [`firmware/src/PotentiometerManager.cpp`](firmware/src/PotentiometerManager.cpp) | Multiplexer walkthrough plus the callback contract that hands both raw ADC and MIDI-scaled data back to the caller.                            |
+| [`firmware/src/WebSerial.cpp`](firmware/src/WebSerial.cpp)                       | JSON schema primer: see how slot metadata gets massaged so browser UIs stay in sync with firmware realities.                                   |
 
 The tl;dr: every manager owns its own buffers, globals just publish shared
 intent, and comments name the trade-offs so you can narrate the code like a
@@ -95,7 +96,8 @@ zine. Treat it like a studio notebook, pull apart the sections live, and reroute
 the rig when you want to teach a different angle on pointers or data flow.
 
 ![Approximate board render missing some 3D models](docs/assets/board/brdF.png)
->The prototypes are with PCBWay right now. Scheduled for deliver ~4/20
+
+> The prototypes are with PCBWay right now. Scheduled for deliver ~4/20
 
 ## Why these specific parts?
 
@@ -144,16 +146,19 @@ Want the soup-to-nuts path? Check the [Process Overview](docs/project/ProcessOve
 If you are sourcing or building hardware, stop at [hardware/CurrentBuild.md](hardware/CurrentBuild.md) first. It now carries the repo's hardware current-truth table and explicitly flags missing/unverified fabrication assets instead of implying older filenames are still current.
 
 1. **Prep the dev rig**
+
    - `pip install -r requirements.txt`
    - `npm --prefix bridge ci`
    - Node 20 LTS and PlatformIO need to be on your PATH.
    - More setup lore lives in the [Builder's Handbook](docs/getting-started/BuildersHandbook.md).
 
 2. **Flash the brain**
+
    - `pio -d firmware run -t upload -e teensy40_main`
    - The [firmware README](firmware/README.md) digs into build flags and alternate targets.
 
 3. **Say hello over serial**
+
    - Plug it in, crack a terminal or the [bridge](bridge/README.md).
    - Type `HELLO` and the board coughs up `{"hello":"mn42"}`.
    - Want the whole WebSerial rant? See [docs/WebSerial.md](docs/guides/WebSerial.md).
@@ -197,10 +202,12 @@ The high-level idea is simple: `setup()` boots each layer, `loop()` ticks the sc
 - **LED behavior** – The WS2812 strip mirrors slot values via `LEDManager`, but the `led` object in `GET_CONFIG` (brightness + RGB + hex code) and the `SET_LED`/`GET_LED` commands let you treat the whole pool as a single color capstone. When diagnostics counters tick (UART overruns, dropped MIDI, slow loops), the status LED pulses and the JSON stream emits the event so you can spot pressure without a scope. The LFO routes above can modulate the LED brightness, so visual cues stay in sync with what the oscillators are doing.
 
 ### Config recovery feedback
+
 If the boot loader detects EEPROM corruption it now shows a one-shot OLED message so you know what kind of recovery just happened:
+
 1. **“Config restored from backup”** – the primary block failed CRC/magic but the backup block was valid. Firmware continues from the backup data, so you can keep playing, rerun `GET_CONFIG`/`GET_PROFILE`, and optionally save the profile again to refresh both slots.
 2. **“EEPROM corrupted defaults loaded”** – both primary and backup were invalid, so the firmware reset the pot→channel map, CC map, and LED defaults. Reload a profile or redo your slot/channel assignments and save once everything looks right.
-Treat these messages as subtle warnings—if you see one, check the WebSerial snapshot or run the slot mapping routine before you return to performance mode.
+   Treat these messages as subtle warnings—if you see one, check the WebSerial snapshot or run the slot mapping routine before you return to performance mode.
 
 ## Publishing a Release
 

@@ -12,7 +12,7 @@ ARG gives you a way to ask a more interesting question:
 
 - what if two signals reinforce each other?
 - what if one should oppose the other?
-- what if the useful control value is the *difference* between them rather than either source alone?
+- what if the useful control value is the _difference_ between them rather than either source alone?
 
 That is why ARG matters. It turns the controller from "reactive" into "comparative."
 
@@ -58,13 +58,13 @@ The firmware supports fourteen ARG methods. The formulas live in the firmware do
 
 These methods make the two inputs feel like they are working together.
 
-| Method | What it feels like | Use it when |
-| --- | --- | --- |
-| `PLUS` | both inputs push in the same direction | you want obvious combined energy |
-| `AVG` | both inputs negotiate a middle path | you want smoother two-source behavior |
+| Method | What it feels like                             | Use it when                                        |
+| ------ | ---------------------------------------------- | -------------------------------------------------- |
+| `PLUS` | both inputs push in the same direction         | you want obvious combined energy                   |
+| `AVG`  | both inputs negotiate a middle path            | you want smoother two-source behavior              |
 | `SQAR` | both inputs create a fuller combined magnitude | you want something bigger than either source alone |
-| `MAXX` | whichever source is stronger wins | you want the dominant signal to take over |
-| `MINN` | whichever source is weaker wins | you want the subtle signal to stay relevant |
+| `MAXX` | whichever source is stronger wins              | you want the dominant signal to take over          |
+| `MINN` | whichever source is weaker wins                | you want the subtle signal to stay relevant        |
 
 Best beginner picks from this family:
 
@@ -76,11 +76,11 @@ Best beginner picks from this family:
 
 These methods make the interaction feel more like tension than cooperation.
 
-| Method | What it feels like | Use it when |
-| --- | --- | --- |
-| `MIN` | A subtracts B | you want ducking or opposition |
-| `PECK` | B subtracts A | same idea, opposite emphasis |
-| `SHAV` | a softer subtraction | you want tension without wild swings |
+| Method | What it feels like                  | Use it when                                                     |
+| ------ | ----------------------------------- | --------------------------------------------------------------- |
+| `MIN`  | A subtracts B                       | you want ducking or opposition                                  |
+| `PECK` | B subtracts A                       | same idea, opposite emphasis                                    |
+| `SHAV` | a softer subtraction                | you want tension without wild swings                            |
 | `XABS` | absolute difference between A and B | you want "how different are they?" to become the control signal |
 
 Best beginner pick from this family:
@@ -93,11 +93,11 @@ Best beginner pick from this family:
 
 These methods are less immediately intuitive.
 
-| Method | What it feels like | Use it when |
-| --- | --- | --- |
-| `BABS` | A measured against absolute B | you want ratio-like behavior |
-| `TABS` | a stronger `BABS` feel | you want that comparison more aggressively |
-| `DIVI` | A divided by B-ish behavior | you want unstable comparative motion |
+| Method | What it feels like            | Use it when                                |
+| ------ | ----------------------------- | ------------------------------------------ |
+| `BABS` | A measured against absolute B | you want ratio-like behavior               |
+| `TABS` | a stronger `BABS` feel        | you want that comparison more aggressively |
+| `DIVI` | A divided by B-ish behavior   | you want unstable comparative motion       |
 
 These are useful, but rarely the right first stop for a learner.
 
@@ -105,10 +105,10 @@ These are useful, but rarely the right first stop for a learner.
 
 These are the "yes, the firmware can do that" methods.
 
-| Method | What it feels like | Use it when |
-| --- | --- | --- |
+| Method | What it feels like                   | Use it when                      |
+| ------ | ------------------------------------ | -------------------------------- |
 | `MULT` | both inputs multiply into each other | you want ring-mod-like intensity |
-| `XORR` | bitwise glitch character | you want deliberate weirdness |
+| `XORR` | bitwise glitch character             | you want deliberate weirdness    |
 
 Treat these as experimental tools, not onboarding tools.
 

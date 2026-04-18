@@ -11,17 +11,18 @@ Start with the bare essentials. We'll keep the spaghetti minimal:
 1. **Power** – Feed the Teensy 5 V through `VUSB` and ground everything like your sanity depends on it.
 
    ![Power hookup: 5V to VUSB, ground shared](../assets/diagrams/power_hookup.svg)
-   *Teensy getting 5 V on VUSB, all grounds bonded.*
+   _Teensy getting 5 V on VUSB, all grounds bonded._
 
 2. **LED Data** – Run Teensy pin `6` through a ~330 Ω resistor into the first WS2812's `DIN`. Chain the rest like dominoes.
 
    ![LED data line: pin 6 → 330 Ω → DIN](../assets/diagrams/led_data_line.svg)
-   *Pin 6 hits a resistor before feeding DIN. If it looks like this, you're golden.*
+   _Pin 6 hits a resistor before feeding DIN. If it looks like this, you're golden._
 
 3. **Buttons/Encoders** – Follow the pin labels on the board. Short wires = less noise.
 
    ![Button harness fanned to labeled pins](../assets/diagrams/button_harness.svg)
-   *Each ribbon lands on its labeled pad; no loose strands, no drama.*
+   _Each ribbon lands on its labeled pad; no loose strands, no drama._
+
 4. **Decoupling** – Drop a 0.1 µF ceramic between 5 V and GND near the Teensy and again at the LED strip. It's cheaper than smoke.
 5. **Wire Gauge** – 22 AWG for power runs, 24 AWG stranded for data. Keep anything carrying bits under 30 cm unless you like debugging antennas.
 
@@ -127,16 +128,16 @@ Catching a dead LED or flaky button now beats reflowing it after the enclosure's
 
 ## Button Controls
 
-Need a crash course in front‑panel mayhem? Here's how the six control buttons misbehave. *EF = Envelope Follower.*
+Need a crash course in front‑panel mayhem? Here's how the six control buttons misbehave. _EF = Envelope Follower._
 
-| Button | Short Press | Long Press | Double Press |
-| ------ | ----------- | ---------- | ------------ |
-| #0 | Toggle EF | Calibrate EF baseline | Cycle EF filter forward |
-| #1 | Next Slot | Reload profile from EEPROM | Cycle EF filter backward |
-| #2 | Cycle EF assignment | Toggle Slot Active | Cycle MIDI Type (CC/Note/etc) |
-| #3 | Cycle MIDI Channel | Reset EEPROM | — |
-| #4 | Cycle registry number (CC/NRPN/RPN) | Save config | — |
-| #5 | Tap BPM | — | — |
+| Button | Short Press                         | Long Press                 | Double Press                  |
+| ------ | ----------------------------------- | -------------------------- | ----------------------------- |
+| #0     | Toggle EF                           | Calibrate EF baseline      | Cycle EF filter forward       |
+| #1     | Next Slot                           | Reload profile from EEPROM | Cycle EF filter backward      |
+| #2     | Cycle EF assignment                 | Toggle Slot Active         | Cycle MIDI Type (CC/Note/etc) |
+| #3     | Cycle MIDI Channel                  | Reset EEPROM               | —                             |
+| #4     | Cycle registry number (CC/NRPN/RPN) | Save config                | —                             |
+| #5     | Tap BPM                             | —                          | —                             |
 
 **Slot Buttons (0–41):**
 Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on; once it’s awake, jab Control 0‑5 to lock to a specific EF.

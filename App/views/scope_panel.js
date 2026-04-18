@@ -11,7 +11,10 @@ const clamp01 = (value) => {
 };
 
 // Shared time source for animation and FPS bookkeeping.
-const now = () => (typeof performance === 'object' && typeof performance.now === 'function' ? performance.now() : Date.now());
+const now = () =>
+  typeof performance === 'object' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
 
 export class ScopePanel {
   constructor({ container, runtime, manifest } = {}) {
@@ -29,7 +32,10 @@ export class ScopePanel {
     this.historyLength = Math.max(MIN_HISTORY, Math.round(this.canvas.width || MIN_HISTORY));
     this.efHistory = new Float32Array(this.historyLength);
     this.lfoCount = DEFAULT_LFO_COUNT;
-    this.lfoHistory = Array.from({ length: this.lfoCount }, () => new Float32Array(this.historyLength));
+    this.lfoHistory = Array.from(
+      { length: this.lfoCount },
+      () => new Float32Array(this.historyLength)
+    );
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
@@ -61,7 +67,9 @@ export class ScopePanel {
   // Resize LFO history buffers to match the manifest's advertised modulation lanes.
   applyManifest(manifest = {}) {
     const lfoCountCandidate = Number(manifest?.lfo_count);
-    const lfoCount = Number.isFinite(lfoCountCandidate) ? Math.max(0, Math.floor(lfoCountCandidate)) : DEFAULT_LFO_COUNT;
+    const lfoCount = Number.isFinite(lfoCountCandidate)
+      ? Math.max(0, Math.floor(lfoCountCandidate))
+      : DEFAULT_LFO_COUNT;
     if (lfoCount === this.lfoCount) return;
     this.lfoCount = Math.max(DEFAULT_LFO_COUNT, lfoCount);
     this.initializeBuffers();
@@ -70,7 +78,10 @@ export class ScopePanel {
   // Rebuild all rolling buffers after a scope-size or manifest change.
   initializeBuffers() {
     this.efHistory = new Float32Array(this.historyLength);
-    this.lfoHistory = Array.from({ length: this.lfoCount }, () => new Float32Array(this.historyLength));
+    this.lfoHistory = Array.from(
+      { length: this.lfoCount },
+      () => new Float32Array(this.historyLength)
+    );
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
@@ -185,7 +196,8 @@ export class ScopePanel {
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let idx = 0; idx < sampleCount; idx += 1) {
-      const bufferIndex = (this.cursor - sampleCount + idx + this.historyLength) % this.historyLength;
+      const bufferIndex =
+        (this.cursor - sampleCount + idx + this.historyLength) % this.historyLength;
       const value = clamp01(buffer[bufferIndex]);
       const x = offsetX + idx * step;
       const y = height - value * height;
@@ -213,7 +225,9 @@ export class ScopePanel {
       return;
     }
     if (this.snapshotButton) this.snapshotButton.disabled = false;
-    const age = this.lastTelemetryTimestamp ? Math.max(0, Math.round(now() - this.lastTelemetryTimestamp)) : 0;
+    const age = this.lastTelemetryTimestamp
+      ? Math.max(0, Math.round(now() - this.lastTelemetryTimestamp))
+      : 0;
     this.statusLabel.textContent = age ? `Telemetry ${age} ms ago` : 'Telemetry streaming…';
   }
 

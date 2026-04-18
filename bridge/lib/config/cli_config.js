@@ -77,11 +77,7 @@ function parseConfigFromArgv(argv = process.argv, defaults = {}) {
     throw error;
   }
   const alertSuppressionMs = parsePositiveInt(
-    getArg(
-      argv,
-      '--alert-suppression-ms',
-      String(defaultAlertSuppressionMs),
-    ),
+    getArg(argv, '--alert-suppression-ms', String(defaultAlertSuppressionMs)),
     null,
   );
   if (alertSuppressionMs === null) {

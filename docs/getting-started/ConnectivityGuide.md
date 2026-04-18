@@ -79,15 +79,15 @@ For live slot control, send JSON shaped like
 
 ## Minimal compatibility matrix
 
-| Workflow | What is required | Status in this repo pass | Notes |
-| --- | --- | --- | --- |
-| Browser configurator over WebSerial | Browser with WebSerial support plus `http://localhost` or another allowed secure context | Verified documentation path | The repo documents this flow and the app tests run in Chromium-based automation. |
-| Browser configurator in Chromium-based test path | Chromium-based browser | Verified in repo CI/docs | This is based on the Playwright setup and local app docs. |
-| Browser configurator in Firefox or Safari | Browser support for the same WebSerial flow | Not claimed in this repo evidence | This repo does not treat Firefox/Safari WebSerial as a verified path. Use Chromium or the bridge when the browser path matters. |
-| Browser-driven bridge console | Node.js 20 plus a desktop browser | Verified in repo code/tests | The bridge UI serves the configurator at `/app/` and exposes the firmware line protocol over `/ws`. |
-| Bridge CLI on desktop host | Node.js plus USB serial access | Verified documentation path | The repo documents macOS, Linux, and Windows serial-port discovery commands, but this pass did not bench-test all three. |
-| OSC host integration | Running bridge plus UDP OSC host | Verified documentation path | Address and port contract are documented in `bridge/README.md`. |
-| DAW integration | Running bridge plus DAW MIDI device enablement | Verified documentation path | The bridge advertises `MN42 Bridge`; this pass did not bench-test DAW-specific behavior. |
+| Workflow                                         | What is required                                                                         | Status in this repo pass          | Notes                                                                                                                           |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Browser configurator over WebSerial              | Browser with WebSerial support plus `http://localhost` or another allowed secure context | Verified documentation path       | The repo documents this flow and the app tests run in Chromium-based automation.                                                |
+| Browser configurator in Chromium-based test path | Chromium-based browser                                                                   | Verified in repo CI/docs          | This is based on the Playwright setup and local app docs.                                                                       |
+| Browser configurator in Firefox or Safari        | Browser support for the same WebSerial flow                                              | Not claimed in this repo evidence | This repo does not treat Firefox/Safari WebSerial as a verified path. Use Chromium or the bridge when the browser path matters. |
+| Browser-driven bridge console                    | Node.js 20 plus a desktop browser                                                        | Verified in repo code/tests       | The bridge UI serves the configurator at `/app/` and exposes the firmware line protocol over `/ws`.                             |
+| Bridge CLI on desktop host                       | Node.js plus USB serial access                                                           | Verified documentation path       | The repo documents macOS, Linux, and Windows serial-port discovery commands, but this pass did not bench-test all three.        |
+| OSC host integration                             | Running bridge plus UDP OSC host                                                         | Verified documentation path       | Address and port contract are documented in `bridge/README.md`.                                                                 |
+| DAW integration                                  | Running bridge plus DAW MIDI device enablement                                           | Verified documentation path       | The bridge advertises `MN42 Bridge`; this pass did not bench-test DAW-specific behavior.                                        |
 
 ## Recommended decision rule
 

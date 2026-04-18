@@ -17,7 +17,7 @@ flowchart LR
   H --> F
 ```
 
-*Alt text: Flowchart showing reactive control moving from input through envelope following, filtering, optional ARG blending, then out into slots, MIDI, LEDs, arpeggiator behavior, and browser telemetry, while LFO routes feed the same output layer.*
+_Alt text: Flowchart showing reactive control moving from input through envelope following, filtering, optional ARG blending, then out into slots, MIDI, LEDs, arpeggiator behavior, and browser telemetry, while LFO routes feed the same output layer._
 
 The easiest mistake is to treat these as "advanced extras." They are really the motion engine of the instrument.
 
@@ -39,15 +39,15 @@ These are less about "correct" and more about "what kind of motion do you want?"
 
 The gray line is the same reference input in every panel. The orange line is the illustrative output for that mode.
 
-| Filter type | What it feels like | Good first use |
-| --- | --- | --- |
-| `LINEAR` | direct, literal, unshaped | baseline learning |
-| `OPPOSITE_LINEAR` | inverted response | when loud should pull values down |
-| `EXPONENTIAL` | sharp on attacks, softer on tails | punchy reactive demos |
-| `RANDOM` | animated and unstable in an intentional way | modular or generative moods |
-| `LOWPASS` | smoother, less fizzy motion | follower cleanup and stable control |
-| `HIGHPASS` | ignores slow drift, reacts to fast change | transient-heavy sources |
-| `BANDPASS` | focused slice of motion | more selective, characterful response |
+| Filter type       | What it feels like                          | Good first use                        |
+| ----------------- | ------------------------------------------- | ------------------------------------- |
+| `LINEAR`          | direct, literal, unshaped                   | baseline learning                     |
+| `OPPOSITE_LINEAR` | inverted response                           | when loud should pull values down     |
+| `EXPONENTIAL`     | sharp on attacks, softer on tails           | punchy reactive demos                 |
+| `RANDOM`          | animated and unstable in an intentional way | modular or generative moods           |
+| `LOWPASS`         | smoother, less fizzy motion                 | follower cleanup and stable control   |
+| `HIGHPASS`        | ignores slow drift, reacts to fast change   | transient-heavy sources               |
+| `BANDPASS`        | focused slice of motion                     | more selective, characterful response |
 
 Rule of thumb:
 
@@ -82,24 +82,24 @@ Use ARG when:
 
 ## ARG methods: what they do musically
 
-The firmware supports fourteen ARG methods. The official formulas live in [firmware/include/EnvelopeFollower/README.md](https://github.com/bseverns/benzknober/blob/main/firmware/include/EnvelopeFollower/README.md#arg-methods). For learners, the more useful question is what they *feel* like.
+The firmware supports fourteen ARG methods. The official formulas live in [firmware/include/EnvelopeFollower/README.md](https://github.com/bseverns/benzknober/blob/main/firmware/include/EnvelopeFollower/README.md#arg-methods). For learners, the more useful question is what they _feel_ like.
 
-| Method | Plain-language behavior | Good use |
-| --- | --- | --- |
-| `PLUS` | both inputs reinforce each other | obvious combined motion |
-| `MIN` | A subtracts B | ducking/contrast experiments |
-| `PECK` | B subtracts A | same contrast, reversed emphasis |
-| `SHAV` | softer subtraction | restrained offset behavior |
-| `SQAR` | combined magnitude | fuller composite energy |
-| `BABS` | A compared against absolute B | ratio-like interaction |
-| `TABS` | stronger version of `BABS` | more aggressive ratio feel |
-| `MULT` | both inputs multiply together | ring-mod-like intensity |
-| `DIVI` | A divided by B-ish behavior | weird comparative motion |
-| `AVG` | compromise blend | smoother two-source behavior |
-| `XABS` | absolute difference | "how different are these?" |
-| `MAXX` | whichever is larger wins | strongest source dominates |
-| `MINN` | whichever is smaller wins | quieter source dominates |
-| `XORR` | bitwise glitch behavior | chaotic or experimental use |
+| Method | Plain-language behavior          | Good use                         |
+| ------ | -------------------------------- | -------------------------------- |
+| `PLUS` | both inputs reinforce each other | obvious combined motion          |
+| `MIN`  | A subtracts B                    | ducking/contrast experiments     |
+| `PECK` | B subtracts A                    | same contrast, reversed emphasis |
+| `SHAV` | softer subtraction               | restrained offset behavior       |
+| `SQAR` | combined magnitude               | fuller composite energy          |
+| `BABS` | A compared against absolute B    | ratio-like interaction           |
+| `TABS` | stronger version of `BABS`       | more aggressive ratio feel       |
+| `MULT` | both inputs multiply together    | ring-mod-like intensity          |
+| `DIVI` | A divided by B-ish behavior      | weird comparative motion         |
+| `AVG`  | compromise blend                 | smoother two-source behavior     |
+| `XABS` | absolute difference              | "how different are these?"       |
+| `MAXX` | whichever is larger wins         | strongest source dominates       |
+| `MINN` | whichever is smaller wins        | quieter source dominates         |
+| `XORR` | bitwise glitch behavior          | chaotic or experimental use      |
 
 Recommended first ARG methods:
 

@@ -24,7 +24,6 @@ const MAX_MSG_LEN = MAX_CMD_LEN;
 const OSC_CMD_ADDRESS = '/mn42/cmd';
 const OSC_EVENT_PREFIX = '/mn42/event/';
 const {
-  normalizeTypedEvent,
   parseMidiMessageToTypedEvents,
   normalizeOscTypedEventMessage,
   buildSlotCommandFromCcEvent,
@@ -35,12 +34,12 @@ const {
 } = require('./codec/live_value_command');
 const { createOscMessageHandler } = require('./transports/osc_ingress');
 const { createMidiMessageHandler } = require('./transports/midi_ingress');
-const { createSerialTransportLifecycle } = require('./transports/serial_transport');
+const {
+  createSerialTransportLifecycle,
+} = require('./transports/serial_transport');
 const { createSerialLineHandler } = require('./transports/serial_ingress');
 const { createOscTransport } = require('./transports/osc_transport');
-const {
-  createMidiTransportLifecycle,
-} = require('./transports/midi_transport');
+const { createMidiTransportLifecycle } = require('./transports/midi_transport');
 const {
   detachListeners,
   closeSerialDevice,
@@ -116,7 +115,6 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   let serial = null;
   let parser = null;
   let udp = null;
-  let midi = null;
   let midiOut = null;
   let midiIn = null;
   let reconnectTimer = null;
@@ -147,19 +145,14 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     config: clone(config),
   };
 
-  const {
-    emitState,
-    pushLog,
-    setState,
-    bumpCounter,
-    getState,
-  } = createBridgeStateStore({
-    events,
-    state,
-    clone,
-    getConfig: () => config,
-    logLimit: LOG_LIMIT,
-  });
+  const { emitState, pushLog, setState, bumpCounter, getState } =
+    createBridgeStateStore({
+      events,
+      state,
+      clone,
+      getConfig: () => config,
+      logLimit: LOG_LIMIT,
+    });
 
   function nextTraceId(prefix = 'trace') {
     traceSeq += 1;
@@ -479,9 +472,6 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     getJzzFactory: () => jzzFactory,
     getConfig: () => config,
     getRuntimeState: () => ({ running, stopping, manualStop }),
-    setMidi: (next) => {
-      midi = next;
-    },
     setMidiIn: (next) => {
       midiIn = next;
     },
@@ -575,9 +565,6 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       setMidiOut: (next) => {
         midiOut = next;
       },
-      setMidi: (next) => {
-        midi = next;
-      },
       detachListeners,
       closeSerialDevice,
       closeQuietly,
@@ -591,26 +578,30 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   // Update bridge config and optionally restart live transports to apply it.
   async function configure(nextConfig = {}, { restart = true } = {}) {
-    await configureBridgeRuntime(nextConfig, { restart }, {
-      config,
-      normalizeConfig: (mutableConfig) => {
-        normalizeBridgeRuntimeConfig(mutableConfig, {
-          parsePositiveInt,
-          defaultFeedbackWindowMs: DEFAULT_FEEDBACK_WINDOW_MS,
-          defaultRtP95TargetMs: DEFAULT_RT_P95_TARGET_MS,
-          defaultRtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
-          defaultAlertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
-        });
+    await configureBridgeRuntime(
+      nextConfig,
+      { restart },
+      {
+        config,
+        normalizeConfig: (mutableConfig) => {
+          normalizeBridgeRuntimeConfig(mutableConfig, {
+            parsePositiveInt,
+            defaultFeedbackWindowMs: DEFAULT_FEEDBACK_WINDOW_MS,
+            defaultRtP95TargetMs: DEFAULT_RT_P95_TARGET_MS,
+            defaultRtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
+            defaultAlertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
+          });
+        },
+        setState,
+        clone,
+        refreshPerformance,
+        isRunning: () => running,
+        stop,
+        start,
+        clearFeedbackGuard: () => feedbackGuard.clear(),
+        now: () => Date.now(),
       },
-      setState,
-      clone,
-      refreshPerformance,
-      isRunning: () => running,
-      stop,
-      start,
-      clearFeedbackGuard: () => feedbackGuard.clear(),
-      now: () => Date.now(),
-    });
+    );
     return getState();
   }
 

@@ -90,7 +90,6 @@ async function stopBridgeRuntime({
   setMidiIn,
   getMidiOut,
   setMidiOut,
-  setMidi,
   detachListeners,
   closeSerialDevice,
   closeQuietly,
@@ -123,7 +122,6 @@ async function stopBridgeRuntime({
 
   closeQuietly(getMidiOut());
   setMidiOut(null);
-  setMidi(null);
 
   setState({
     running: false,

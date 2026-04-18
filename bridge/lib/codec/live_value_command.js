@@ -8,10 +8,19 @@ function validateSlotValueCommand(command, maxCmdLen = 128) {
   ) {
     return null;
   }
-  if (command.slot < 0 || command.slot > 41 || command.value < 0 || command.value > 127) {
+  if (
+    command.slot < 0 ||
+    command.slot > 41 ||
+    command.value < 0 ||
+    command.value > 127
+  ) {
     return null;
   }
-  const normalized = { cmd: command.cmd, slot: command.slot, value: command.value };
+  const normalized = {
+    cmd: command.cmd,
+    slot: command.slot,
+    value: command.value,
+  };
   if (JSON.stringify(normalized).length > maxCmdLen) return null;
   return normalized;
 }

@@ -170,10 +170,7 @@ function createPerformanceTracker({
     if (!Number.isFinite(latencyMs) || latencyMs < 0) return;
     roundTripSamplesMs.push(latencyMs);
     if (roundTripSamplesMs.length > roundTripWindow) {
-      roundTripSamplesMs.splice(
-        0,
-        roundTripSamplesMs.length - roundTripWindow,
-      );
+      roundTripSamplesMs.splice(0, roundTripSamplesMs.length - roundTripWindow);
     }
     roundTripCounters.completed += 1;
     if (matchedBy === 'trace') {

@@ -27,7 +27,9 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
     const row = config?.efSlots?.[0] ?? {};
     return {
       first: row,
-      allRowsUseSlotsArray: Array.isArray(config?.efSlots) && config.efSlots.every((entry) => Array.isArray(entry?.slots))
+      allRowsUseSlotsArray:
+        Array.isArray(config?.efSlots) &&
+        config.efSlots.every((entry) => Array.isArray(entry?.slots))
     };
   });
 

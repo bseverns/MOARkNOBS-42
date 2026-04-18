@@ -60,7 +60,7 @@ test('midi monitor logs and clock without jitter', async ({ page }) => {
   await clockButton.click();
   await expect(clockButton).toHaveText(/Stop clock/i);
   await page.waitForFunction(
-    () => document.querySelectorAll('#midi-log-body .midi-row[data-direction="out"]').length > 0,
+    () => document.querySelectorAll('#midi-log-body .midi-row[data-direction="out"]').length > 0
   );
   const outRows = page.locator('#midi-log-body .midi-row[data-direction="out"]');
   expect(await outRows.count()).toBeGreaterThan(0);

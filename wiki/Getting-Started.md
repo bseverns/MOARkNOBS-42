@@ -47,7 +47,7 @@ HELLO
 Expected response includes:
 
 ```json
-{"hello":"mn42"}
+{ "hello": "mn42" }
 ```
 
 ## 4) Open the WebSerial app

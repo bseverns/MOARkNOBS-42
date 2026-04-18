@@ -8,10 +8,7 @@ import {
   createWebSocketTransport
 } from './runtime/transports.js';
 import { createRpcKernel } from './runtime/rpc_kernel.js';
-import {
-  createPatchReconciler,
-  extractSlotIndex
-} from './runtime/patch_reconcile.js';
+import { createPatchReconciler, extractSlotIndex } from './runtime/patch_reconcile.js';
 import { normalizeConfig } from './runtime/config_normalize.js';
 import { createLocalSlotMetaManager } from './runtime/local_slot_meta.js';
 import { createPortPreferenceStore } from './runtime/port_preference.js';
@@ -221,7 +218,9 @@ export function createRuntime({
     testHooks ?? (typeof globalThis !== 'undefined' ? globalThis.__MN42_TEST_HOOKS : null) ?? null;
   const rpcTimeout = Number.isFinite(Number(rpcTimeoutMs)) ? Number(rpcTimeoutMs) : RPC_TIMEOUT_MS;
   const params =
-    typeof window !== 'undefined' && typeof URLSearchParams === 'function' && typeof window.location === 'object'
+    typeof window !== 'undefined' &&
+    typeof URLSearchParams === 'function' &&
+    typeof window.location === 'object'
       ? new URLSearchParams(window.location.search)
       : null;
   let websocketUrl =
@@ -430,7 +429,9 @@ export function createRuntime({
     });
     const pending = { command, resolve: resolveFn, reject: rejectFn, timer: null };
     macroPending = pending;
-    const timeout = Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : MACRO_COMMAND_TIMEOUT_MS;
+    const timeout = Number.isFinite(Number(timeoutMs))
+      ? Number(timeoutMs)
+      : MACRO_COMMAND_TIMEOUT_MS;
     pending.timer = setTimeout(() => {
       settleMacroPending(pending, { error: new Error('Macro command timed out') });
     }, timeout);
@@ -478,7 +479,9 @@ export function createRuntime({
       timer: null
     };
     scenePending = pending;
-    const timeout = Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : SCENE_COMMAND_TIMEOUT_MS;
+    const timeout = Number.isFinite(Number(timeoutMs))
+      ? Number(timeoutMs)
+      : SCENE_COMMAND_TIMEOUT_MS;
     pending.timer = setTimeout(() => {
       settleScenePending(pending, { error: new Error('Scene command timed out') });
     }, timeout);
@@ -509,8 +512,7 @@ export function createRuntime({
     if (pending) {
       const expectedKey = pending.expectedKey;
       if (Object.prototype.hasOwnProperty.call(msg, expectedKey)) {
-        const success =
-          expectedKey === 'scenes' ? true : Boolean(msg[expectedKey]);
+        const success = expectedKey === 'scenes' ? true : Boolean(msg[expectedKey]);
         if (success) {
           settleScenePending(pending, { response: msg });
         } else {

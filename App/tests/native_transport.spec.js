@@ -6,7 +6,9 @@ async function openRecoveryDrawer(page) {
   });
 }
 
-test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', async ({ page }) => {
+test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -120,7 +122,10 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
             slots: [idx]
           })),
           envelopes: {
-            routing: Array.from({ length: manifest.pot_count }, (_, idx) => idx % manifest.envelope_count),
+            routing: Array.from(
+              { length: manifest.pot_count },
+              (_, idx) => idx % manifest.envelope_count
+            ),
             followers: Array.from({ length: manifest.envelope_count }, (_, idx) => ({
               index: idx,
               active: true,
@@ -171,7 +176,9 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
               window.__nativeSetAllPayload = payload;
               config = payload.config;
               setAllBuffer = '';
-              pushLine(JSON.stringify({ type: 'ack', seq: payload.seq, checksum: payload.checksum }));
+              pushLine(
+                JSON.stringify({ type: 'ack', seq: payload.seq, checksum: payload.checksum })
+              );
             } catch (_) {
               // wait for more chunks
             }
@@ -353,7 +360,9 @@ test('native transport disables unsupported profile and recovery controls', asyn
   await expect(page.locator('#scene-status')).toContainText('unavailable on this firmware');
 });
 
-test('native transport falls back to bundled schema when device schema is incompatible', async ({ page }) => {
+test('native transport falls back to bundled schema when device schema is incompatible', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -461,7 +470,9 @@ test('native transport falls back to bundled schema when device schema is incomp
   expect(state.schema?.properties?.efSlots).toBeTruthy();
 });
 
-test('native transport supports profile, macro, and scene actions when firmware advertises them', async ({ page }) => {
+test('native transport supports profile, macro, and scene actions when firmware advertises them', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -637,7 +648,13 @@ test('native transport supports profile, macro, and scene actions when firmware 
               config = clone(macroSnapshot);
               pushLine(JSON.stringify({ macro_recalled: true, macro_available: true }));
             } else {
-              pushLine(JSON.stringify({ macro_recalled: false, macro_available: false, error: 'No macro stored' }));
+              pushLine(
+                JSON.stringify({
+                  macro_recalled: false,
+                  macro_available: false,
+                  error: 'No macro stored'
+                })
+              );
             }
             return;
           }
@@ -655,7 +672,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
                   scene_slot: payload.slot,
                   scene_name: payload.name ?? '',
                   scene_available: true
-                }),
+                })
               );
               return;
             }
@@ -668,7 +685,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
                     name: entry?.name ?? '',
                     available: Boolean(entry)
                   }))
-                }),
+                })
               );
               return;
             }
@@ -683,7 +700,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
                     scene_name: '',
                     scene_available: false,
                     scene_error: 'No snapshot stored in this slot'
-                  }),
+                  })
                 );
                 return;
               }
@@ -695,7 +712,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
                   scene_slot: payload.slot,
                   scene_name: entry.name,
                   scene_available: true
-                }),
+                })
               );
               return;
             }
