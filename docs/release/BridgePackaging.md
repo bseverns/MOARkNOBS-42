@@ -134,4 +134,4 @@ A release is complete when all are true:
 - User quickstart: [`docs/OSCBridge.md`](../guides/OSCBridge.md)
 - Performer cheat sheet: [`docs/BridgeForPerformers.md`](../guides/BridgeForPerformers.md)
 - Bridge reference: [bridge/README.md](https://github.com/bseverns/benzknober/blob/main/bridge/README.md)
-- Release checklist: [`docs/ReleaseGuide.md`](ReleaseGuide.md)
+- Release checklist: [`docs/release/ReleaseGuide.md`](ReleaseGuide.md)

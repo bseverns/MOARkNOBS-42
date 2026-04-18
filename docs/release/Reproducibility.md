@@ -19,16 +19,18 @@ That matters because this project wants to be teachable and inspectable, not jus
 ```mermaid
 flowchart LR
   A[Tagged source] --> B[release.sh]
-  B --> C[Unity test gate]
+  B --> C[release_verify_hil.sh]
   B --> D[Firmware build]
   B --> E[Deterministic fabrication zip]
   B --> F[Source export tarball]
-  B --> G[Manifest plus SHA256SUMS]
-  C --> H[Release assets]
-  D --> H
-  E --> H
-  F --> H
-  G --> H
+  B --> G[release_verification.json]
+  B --> H[Manifest plus SHA256SUMS]
+  C --> I[Release assets]
+  D --> I
+  E --> I
+  F --> I
+  G --> I
+  H --> I
 ```
 
 ## Local release command
@@ -43,6 +45,7 @@ Two things matter there:
 
 - the positional argument names the artifacts
 - the `FW_VERSION` environment variable ensures the embedded firmware metadata reports the same version as the tagged release
+- HIL execution is recorded in `dist/release_verification.json` (executed, failed, or skipped)
 
 ## What the release manifest is for
 
@@ -53,6 +56,7 @@ The generated `dist/manifest.json` is meant to answer:
 - what PlatformIO/Python environment built it?
 - what commands were run?
 - what hashes do the resulting artifacts have?
+- what verification actually ran vs what was skipped?
 
 Without that manifest, a release is just a pile of files. With it, the release becomes auditable.
 

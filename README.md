@@ -216,7 +216,8 @@ If the boot loader detects EEPROM corruption it now shows a one-shot OLED messag
    - `pio -d firmware test -e teensy40_unity -vvv`
    - `npm --prefix bridge test`
 2. Tag and push (`git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`).
-3. Let CI run `./release.sh <tag>` and upload deterministic assets (`.hex`, fabrication zip, source export tarball, manifest, checksums, and license files).
+3. Let CI run `./release.sh <tag>` and upload deterministic assets (`.hex`, fabrication zip, source export tarball, `release_verification.json`, manifest, checksums, and license files).
+   - Read `release_verification.json` before final publish notes so verification scope is explicit (required HIL vs optional/skip).
 4. Use [docs/ReleaseGuide.md](docs/release/ReleaseGuide.md) for the full release checklist.
 
 ## License: MIT.

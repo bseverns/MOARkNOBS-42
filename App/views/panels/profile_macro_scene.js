@@ -3,6 +3,7 @@ import {
   persistProfileSlot,
   readProfileSlotPreference
 } from '../state/ui_preferences.js';
+import { createProfileFileIO } from './profile_file_io.js';
 
 const PROFILE_LABELS = ['A', 'B', 'C', 'D'];
 const MACRO_SAVE_COMMAND = 'SAVE_MACRO_SLOT';
@@ -52,6 +53,16 @@ export function createProfileMacroScenePanel({
   }));
   const sceneSlotElements = [];
   let bound = false;
+  const profileFileIO = createProfileFileIO({
+    runtime,
+    setStatus,
+    clampSlot: clampProfileSlot,
+    slotCount: PROFILE_LABELS.length,
+    getActiveProfileSlot: () => activeProfileSlot,
+    slotLabel,
+    describeSlot,
+    setActiveProfileSlot
+  });
 
   // Collapse manifest capability flags into a simpler UI-facing shape.
   function resolveCapabilities(manifest) {
@@ -570,68 +581,6 @@ export function createProfileMacroScenePanel({
     }
   }
 
-  // Export the currently targeted profile slot as a standalone JSON file backup.
-  function handleProfileDownload() {
-    const { staged, live } = runtime.getState();
-    const payload = staged ?? live;
-    if (!payload || typeof payload !== 'object') {
-      setStatus('warn', 'Nothing to download', 'Stage a profile before exporting.');
-      return;
-    }
-    const configPayload = {
-      slot: activeProfileSlot,
-      schema_version: runtime.getState().schema?.schema_version,
-      timestamp: new Date().toISOString(),
-      config: payload
-    };
-    const blob = new Blob([JSON.stringify(configPayload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `moarknobz-profile-${slotLabel(activeProfileSlot)}-${new Date()
-      .toISOString()
-      .replace(/[:.]/g, '-')}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setStatus('ok', 'Profile downloaded', `${describeSlot()} saved locally.`);
-  }
-
-  // Import a profile JSON file into staged state so the user can review diffs first.
-  function handleProfileUpload() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const documentPayload = JSON.parse(text);
-        const configData = documentPayload?.config ?? documentPayload?.profile ?? documentPayload;
-        if (!configData || typeof configData !== 'object') {
-          throw new Error('File did not contain a config payload');
-        }
-        const requestedSlot = clampProfileSlot(
-          documentPayload?.slot ?? documentPayload?.profile_slot ?? documentPayload?.slotIndex,
-          PROFILE_LABELS.length
-        );
-        if (Number.isFinite(requestedSlot)) {
-          setActiveProfileSlot(requestedSlot);
-        }
-        // Import is staged-only by design so users can inspect diffs before pushing to hardware.
-        runtime.stage(() => configData);
-        setStatus(
-          'warn',
-          'Profile imported',
-          `${describeSlot()} staged. Apply to push it to the deck.`
-        );
-      } catch (err) {
-        setStatus('err', 'Profile import failed', err.message || String(err));
-      }
-    };
-    input.click();
-  }
-
   function initializeSceneGrid() {
     if (!sceneGrid) return;
     for (let slotIndex = 0; slotIndex < SCENE_SLOT_COUNT; slotIndex++) {
@@ -727,8 +676,8 @@ export function createProfileMacroScenePanel({
         expectConfig: true
       })
     );
-    profileDownloadBtn?.addEventListener('click', () => handleProfileDownload());
-    profileUploadBtn?.addEventListener('click', () => handleProfileUpload());
+    profileDownloadBtn?.addEventListener('click', () => profileFileIO.handleProfileDownload());
+    profileUploadBtn?.addEventListener('click', () => profileFileIO.handleProfileUpload());
   }
 
   function onConfigChanged() {

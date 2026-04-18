@@ -49,10 +49,9 @@ The release path has three kinds of checks:
 
 ### 1. Does the stack still work?
 
-- firmware build passes
-- Unity coverage passes
-- bridge checks pass
-- any release-specific sanity checks pass
+- deterministic firmware build passes
+- the verification lane records exactly what ran (required HIL, optional Unity-only, or skipped)
+- app/bridge/system status is explicit in `release_verification.json` rather than implied
 
 ### 2. Do the docs and notes still match reality?
 
@@ -80,6 +79,11 @@ These are the failures worth remembering:
 - the docs describe an older release path than the CI is actually running
 
 Good release docs exist to make those mismatches obvious before the publish button gets pressed.
+
+For this repo, the fastest mismatch detector is to compare your release notes against two files:
+
+- `dist/release_verification.json` (what verification actually executed)
+- `dist/manifest.json` (artifact hashes + provenance + copied verification summary)
 
 ## The practical sequence
 

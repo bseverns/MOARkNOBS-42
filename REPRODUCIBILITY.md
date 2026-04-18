@@ -26,8 +26,8 @@ ls dist
 jq '.' dist/manifest.json
 ```
 
-Everything lands in `dist/`: the versioned firmware hex, the fabrication bundle, license docs, and the
-manifest that ties them to tool versions and git state.
+Everything lands in `dist/`: the versioned firmware hex, fabrication bundle, deterministic source export,
+release verification summary, license docs, and a manifest that ties all of it to tool versions and git state.
 
 ## Step-by-step with commentary
 
@@ -42,7 +42,7 @@ rm -rf .pio-home/ .pio-cache/ dist/
 
 Fresh clones can skip that nuke—there’s nothing to clean yet.
 
-### 2. Run the deterministic build script
+### 2. Run the release lanes
 
 `release.sh` is the single source of truth for local releases *and* the GitHub workflow. The firmware
 metadata that lands in `GET_MANIFEST` is stringized in `firmware/include/version.h`, while
@@ -53,15 +53,20 @@ The script does the following in order:
 
 1. exports `PLATFORMIO_HOME_DIR`, `PLATFORMIO_PACKAGES_DIR`, etc. so every PlatformIO package lives inside
    the repo rather than your global cache;
-2. runs the Unity test suite (`pio test -e teensy40_unity`), refusing to continue on failure;
+2. runs `release_verify_hil.sh` and writes `.release_verification.json`:
+   - `REQUIRE_HIL=1` runs `./test.sh --require-hil` and fails hard if `TEST_PORT` is missing;
+   - default mode (`REQUIRE_HIL=0`) runs optional Unity HIL only when `TEST_PORT` is set, otherwise records
+     an explicit skip;
 3. cleans the Teensy build output (`pio run -t clean -e teensy40_main`);
 4. rebuilds the firmware (`pio run -e teensy40_main`);
 5. copies `mn42_<version>.hex` into `dist/`;
 6. packs `hardware/fabrication/` into a deterministic `fabrication.zip` (timestamps frozen at 1980-01-01,
    permissions fixed at 0644, and entries sorted);
-7. copies the license docs; and
-8. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, and the
-   exact commands executed.
+7. creates a deterministic source export tarball;
+8. copies license docs;
+9. copies `release_verification.json` into `dist/`; and
+10. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, the
+    verification summary, and the exact commands executed.
 
 You trigger the whole dance with:
 
@@ -77,9 +82,10 @@ Swap `v0.0.0` for whatever tag you intend to cut.
 
 - git commit + branch + dirtiness
 - PlatformIO core/Python versions from `pio system info`
-- the command strings for tests, clean, and build
+- the command strings for clean/build
 - the firmware version string that was injected at build time
-- SHA-256 hashes and byte sizes for `mn42_<version>.hex` and `fabrication.zip`
+- verification truth from `dist/release_verification.json` (what ran vs what was skipped)
+- SHA-256 hashes and byte sizes for the release artifacts
 - the raw output of `pio pkg list` so you know which packages were installed
 
 Peek at the interesting bits:
@@ -108,13 +114,20 @@ With the manifest and hashes in hand you can:
 
 ## How CI mirrors this
 
-`.github/workflows/release.yml` now runs `./release.sh` from the tagged source. That keeps the workflow on
+`.github/workflows/release.yml` runs `./release.sh` from the tagged source. That keeps the workflow on
 the same scripted path as local releases rather than relying on a separate CI-only recipe. The workflow uploads:
 
 - `mn42_<tag>.hex`
 - `fabrication.zip`
+- `mn42_<tag>_source.tar.gz`
+- `release_verification.json`
 - `manifest.json`
+- `SHA256SUMS.txt`
 - the bundled license docs (`THIRD_PARTY_LICENSES.md` and the `LICENSES/` directory)
+
+Important: the hosted CI release lane uses `REQUIRE_HIL=0` by default, so HIL may be skipped unless a
+runner has `TEST_PORT` configured. That skip/execute state is recorded in `release_verification.json`
+and mirrored into `manifest.json`.
 
 Inspect the manifest in CI logs or download it straight from the release page to verify the run.
 
@@ -124,8 +137,8 @@ Inspect the manifest in CI logs or download it straight from the release page to
   your Python install path probably isn’t on `PATH`.
 - **Firmware reports `0.0.0` after a release build** — you probably forgot to export `FW_VERSION=<tag>`
   before running `./release.sh`. Re-run with the version env var set so the build helper emits the right flag.
-- **Tests fail** — the script bails immediately so you don’t accidentally publish busted firmware. Fix the
-  failure (or file an issue) before rerunning.
+- **Verification is skipped** — check `dist/release_verification.json` and `manifest.tests`.
+  If you need hard hardware proof, rerun with `REQUIRE_HIL=1 TEST_PORT=<device>`.
 - **Hash mismatch** — ensure you didn’t edit artifacts after the fact. Re-run `./release.sh` to regenerate
   clean copies.
 

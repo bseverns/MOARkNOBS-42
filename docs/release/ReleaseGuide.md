@@ -11,11 +11,13 @@ Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then tre
    - `release.sh` now runs two explicit lanes:
      - `release_verify_hil.sh` (hardware verification; enforce with `REQUIRE_HIL=1`)
      - `release_build.sh` (deterministic artifact generation)
+   - `release_verify_hil.sh` always emits `release_verification.json` so artifacts explicitly show what verification was executed versus skipped.
 4. **Commit it** – lock in doc updates and any release prep changes with a commit.
 5. **Tag it loud** – `git tag -a vX.Y.Z -m "vX.Y.Z"` to mark the moment.
 6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into gear and runs the same release script described in [Reproducibility](Reproducibility.md).
 7. **Draft the release** – on GitHub, create a new release from that tag, drop the human-written notes, and publish.
-   - CI uploads the firmware hex, deterministic fabrication zip, source export tarball, manifest, checksums, and license payloads.
+   - CI uploads the firmware hex, deterministic fabrication zip, source export tarball, `release_verification.json`, manifest, checksums, and license payloads.
+   - Read `release_verification.json` before publishing notes: default hosted runners use optional HIL mode unless you provide a hardware port.
    - If you ran bridge packaging, attach those assets + checksums too.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 

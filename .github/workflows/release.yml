@@ -25,6 +25,7 @@ jobs:
       - name: Package release artifacts
         env:
           FW_VERSION: ${{ github.event.release.tag_name }}
+          REQUIRE_HIL: "0"
         run: ./release.sh ${{ github.event.release.tag_name }}
 
       - name: Upload release assets
@@ -34,6 +35,7 @@ jobs:
             dist/mn42_${{ github.event.release.tag_name }}.hex
             dist/fabrication.zip
             dist/mn42_${{ github.event.release.tag_name }}_source.tar.gz
+            dist/release_verification.json
             dist/manifest.json
             dist/SHA256SUMS.txt
             dist/THIRD_PARTY_LICENSES.md

@@ -94,6 +94,11 @@ def main() -> None:
         default=[],
         help="Additional artifact metadata as label=path",
     )
+    parser.add_argument(
+        "--verification-file",
+        required=False,
+        help="Optional JSON summary emitted by release verification lane",
+    )
     parser.add_argument("--pio-home", required=False, help="Explicit PlatformIO home directory")
     parser.add_argument("--test", action="append", default=[], help="Test status entries as name=status")
     parser.add_argument("--step", action="append", default=[], help="Command steps recorded as label=command")
@@ -113,6 +118,20 @@ def main() -> None:
             parser.error(f"Invalid --test value '{entry}'. Expected name=status.")
         name, status = entry.split("=", 1)
         tests[name.strip()] = {"status": status.strip()}
+
+    verification_data: Dict[str, object] | None = None
+    if args.verification_file:
+        verification_path = pathlib.Path(args.verification_file).resolve()
+        verification_data = json.loads(verification_path.read_text(encoding="utf-8"))
+        verification_tests = verification_data.get("tests")
+        if isinstance(verification_tests, dict):
+            for name, entry in verification_tests.items():
+                if name in tests:
+                    continue
+                if isinstance(entry, dict) and entry.get("status") is not None:
+                    tests[str(name)] = {"status": str(entry["status"])}
+                elif entry is not None:
+                    tests[str(name)] = {"status": str(entry)}
 
     steps: List[Dict[str, str]] = []
     for entry in args.step:
@@ -176,6 +195,9 @@ def main() -> None:
         "tests": tests,
         "artifacts": artifacts,
     }
+
+    if verification_data is not None:
+        manifest["verification"] = verification_data
 
     if root is not None:
         manifest["root"] = str(root)
