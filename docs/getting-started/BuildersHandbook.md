@@ -204,15 +204,15 @@ Profiles let you keep live, studio, and "what if I break everything" setups with
 Compile the test environments when you want to verify the board outside of the main firmware:
 
 ```bash
-pio run -e teensy40_full_system      # or teensy40_unified_test, etc.
+pio -d firmware run -e teensy40_full_system      # or teensy40_unified_test, etc.
 # Unity harness flexes a different muscle:
-pio test -e teensy40_unity
+pio -d firmware test -e teensy40_unity -vvv
 ```
 
 Available environments:
 
 - `teensy40_full_system` – step-through checks of each subsystem
-- `teensy40_unity` – Unity-driven automated tests (run with `pio test -e teensy40_unity`)
+- `teensy40_unity` – Unity-driven automated tests (run with `pio -d firmware test -e teensy40_unity -vvv`)
 - `teensy40_unified_test` – full integration test
 - `teensy40_biquad_test` – biquad filter calibration
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test

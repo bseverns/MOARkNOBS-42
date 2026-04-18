@@ -35,3 +35,20 @@ This troublemaker prints out two `-D` flags every time the build spins up:
 `FW_VERSION` comes from the environment and `GIT_SHA` tries to grab the short
 commit hash. If Git ghosts us—maybe you're building from a tarball or the repo
 isn't around—it just stamps `GIT_SHA=unknown` and keeps the party going.
+
+## `require_unity_test_target.py`
+
+Loaded only by `[env:teensy40_unity]`. This guard hard-fails if someone runs
+that environment through `pio run` instead of `pio test`.
+
+Why: `teensy40_unity` is assembled for the custom Unity harness and test entry
+points. Running it as a plain build creates noisy, misleading failures that
+look like firmware breakage but are really invocation mistakes.
+
+Accepted commands:
+
+```bash
+pio -d firmware test -e teensy40_unity -vvv
+# or from firmware/
+pio test -e teensy40_unity -vvv
+```
