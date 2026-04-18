@@ -15,4 +15,16 @@ repos:
     rev: v3.1.0  # consistent formatting for JS/JSON/MD
     hooks:
       - id: prettier
-        files: ^bridge/.*\.(js|json|md)$  # tidy code and docs in the bridge
+        files: ^(bridge|App)/.*\.(js|json|md)$|^(docs|wiki)/.*\.md$|^README\.md$|^CONTRIBUTING\.md$  # tidy JS and docs across the stack
+  - repo: local
+    hooks:
+      - id: contract-sync
+        name: contract sync guard
+        entry: python tools/check_contract_sync.py
+        language: system
+        pass_filenames: false
+      - id: schema-keyword-coverage
+        name: schema keyword coverage guard
+        entry: python tools/check_schema_keyword_coverage.py
+        language: system
+        pass_filenames: false

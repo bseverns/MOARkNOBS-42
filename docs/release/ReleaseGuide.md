@@ -8,6 +8,9 @@ Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then tre
    ```bash
    FW_VERSION=vX.Y.Z ./release.sh vX.Y.Z
    ```
+   - `release.sh` now runs two explicit lanes:
+     - `release_verify_hil.sh` (hardware verification; enforce with `REQUIRE_HIL=1`)
+     - `release_build.sh` (deterministic artifact generation)
 4. **Commit it** – lock in doc updates and any release prep changes with a commit.
 5. **Tag it loud** – `git tag -a vX.Y.Z -m "vX.Y.Z"` to mark the moment.
 6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into gear and runs the same release script described in [Reproducibility](Reproducibility.md).

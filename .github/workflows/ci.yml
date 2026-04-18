@@ -82,6 +82,8 @@ jobs:
           python tools/check_wiki_contract.py
       - name: Validate app/firmware manifest contract sync
         run: python tools/check_contract_sync.py
+      - name: Validate schema keyword coverage against mini-ajv
+        run: python tools/check_schema_keyword_coverage.py
       - name: Build MkDocs site strictly
         run: mkdocs build --strict
       - name: Upload docs site artifact

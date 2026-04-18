@@ -4,6 +4,14 @@
 set -euo pipefail  # nuke on first failure, unset var, or pipe mischief
 mkdir -p logs  # stash outputs where CI can snarf them
 
+REQUIRE_HIL="${REQUIRE_HIL:-0}"
+for arg in "$@"; do
+  case "$arg" in
+    --require-hil) REQUIRE_HIL=1 ;;
+    --no-require-hil) REQUIRE_HIL=0 ;;
+  esac
+done
+
 PORT="${TEST_PORT:-}"
 if [ -z "$PORT" ]; then
   # No explicit port? Go spelunking for a likely Teensy serial device.
@@ -14,6 +22,13 @@ if [ -z "$PORT" ]; then
     PORT="${ports[0]}"
     echo "Auto-detected TEST_PORT=$PORT"
   fi
+fi
+
+if [ "$REQUIRE_HIL" = "1" ] && [ -z "$PORT" ]; then
+  echo "HIL required but TEST_PORT is not set and no serial port was auto-detected" | tee logs/unity-test.log
+  : > logs/unity-test.xml
+  echo "HIL required but unavailable; refusing to continue." >&2
+  exit 1
 fi
 
 if [ -n "$PORT" ]; then

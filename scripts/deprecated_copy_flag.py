@@ -1,9 +1,7 @@
-Import("env")
-
-# Match the firmware helper so repo-root PlatformIO shim builds keep the same
-# warning profile and build-dir bootstrap behavior.
-env.Append(CXXFLAGS=["-Wno-deprecated-copy"])
-
 from pathlib import Path
 
-Path(env.subst("$BUILD_DIR")).mkdir(parents=True, exist_ok=True)
+# Root invocations are blocked, but keep this shim so legacy references execute
+# the canonical helper under `firmware/scripts/`.
+helper = Path(__file__).resolve().parents[1] / "firmware" / "scripts" / "deprecated_copy_flag.py"
+code = helper.read_text(encoding="utf-8")
+exec(compile(code, str(helper), "exec"), globals(), locals())

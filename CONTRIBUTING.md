@@ -5,12 +5,11 @@ For the full rulebook see [AGENTS.md](AGENTS.md), but here's the cheat sheet.
 
 ## Build & Flash
 
-The PlatformIO project lives under `firmware/`—the repo root is just a hangout.
+The PlatformIO project lives under `firmware/`—the repo root is intentionally blocked for `pio` commands.
 
 ```bash
-cd firmware
 # Main firmware
-pio run -e teensy40_main
+pio -d firmware run -e teensy40_main
 ```
 
 Other build targets you can flex with:
@@ -37,6 +36,8 @@ Run docs and contract guards before pushing release/docs changes:
 python tools/check_markdown_links.py
 python tools/check_wiki_contract.py
 python tools/check_contract_sync.py
+python tools/check_schema_keyword_coverage.py
+python tools/doctor.py
 ```
 
 ## Code Etiquette
