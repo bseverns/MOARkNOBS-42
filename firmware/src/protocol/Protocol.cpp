@@ -23,8 +23,10 @@
 #include "version.h"
 #include "Modes.h"
 #include "Utility.h"
-#include "SysExTemplate.h"
 #include "protocol/ManifestReport.h"
+#include "protocol/ProtocolSimpleHandlers.h"
+#include "protocol/SceneStorage.h"
+#include "protocol/SysExTemplateCodec.h"
 
 #if defined(UNIT_TEST)
 bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
@@ -49,30 +51,6 @@ namespace {
 Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
-
-// CRC helper used by macro/scene/profile records so storage corruption is observable.
-uint16_t crc16Update(uint16_t crc, uint8_t data) {
-    crc ^= static_cast<uint16_t>(data) << 8;
-    for (uint8_t i = 0; i < 8; ++i) {
-        if (crc & 0x8000) {
-            crc = static_cast<uint16_t>((crc << 1) ^ 0x1021);
-        } else {
-            crc <<= 1;
-        }
-    }
-    return crc;
-}
-
-// Compute CRC over plain structs, optionally skipping header bytes like the stored crc field
-// itself.
-template <typename T> uint16_t computeCrc(const T &value, size_t skipBytes = 0) {
-    uint16_t crc = 0xFFFF;
-    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&value);
-    for (size_t i = skipBytes; i < sizeof(T); ++i) {
-        crc = crc16Update(crc, bytes[i]);
-    }
-    return crc;
-}
 
 StorageBackend &activeStorageBackend() { return *ConfigManager::getStorageBackend(); }
 
@@ -173,291 +151,6 @@ bool resetProfileSlot(uint8_t id) {
     return configManager.saveProfileSettings(id, profile);
 }
 } // namespace
-
-namespace SceneStorage {
-struct SceneInfo {
-    uint8_t slot = 0;
-    char name[16] = {0};
-    bool available = false;
-};
-
-struct ConfigState {
-    uint16_t version = 1;
-    std::array<uint8_t, NUM_POTS> potChannels{};
-    std::array<uint8_t, NUM_POTS> potCCNumbers{};
-    std::array<MIDISlot, NUM_SLOTS> slots{};
-    uint8_t argEnabled = 0;
-    uint8_t argMethod = 0;
-    uint8_t argSourceA = 0;
-    uint8_t argSourceB = 1;
-    uint8_t envelopeMode = 0;
-    uint8_t ledBrightness = 255;
-    uint8_t ledMode = static_cast<uint8_t>(LedMode::Static);
-    uint8_t ledR = 0;
-    uint8_t ledG = 0;
-    uint8_t ledB = 0;
-    uint8_t filterType = static_cast<uint8_t>(EnvelopeFollower::LINEAR);
-    float filterFrequency = 20.0f;
-    float filterQ = 1.0f;
-    std::array<float, NUM_ENVELOPES> baselines{};
-};
-
-struct SceneEntry {
-    char name[16] = {0};
-    ConfigState state{};
-};
-
-struct MacroRecord {
-    uint16_t version = 1;
-    uint16_t crc = 0;
-    uint8_t occupied = 0;
-    ConfigState state{};
-};
-
-struct SceneRecord {
-    uint16_t version = 1;
-    uint16_t crc = 0;
-    uint8_t occupied = 0;
-    char name[16] = {0};
-    ConfigState state{};
-};
-
-constexpr uint8_t kSceneSlotCount = 6;
-constexpr uint16_t kStorageVersion = 1;
-constexpr uint16_t kMacroStorageAddress =
-    EEPROM_PROFILE_SETTINGS_BASE + NUM_PROFILES * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE;
-constexpr uint16_t kSceneStorageBase =
-    static_cast<uint16_t>(kMacroStorageAddress + sizeof(MacroRecord));
-
-uint16_t sceneSlotAddress(uint8_t slot) {
-    return static_cast<uint16_t>(kSceneStorageBase + slot * sizeof(SceneRecord));
-}
-
-bool recordValid(const MacroRecord &record) {
-    return record.version == kStorageVersion && record.occupied != 0 &&
-           record.crc == computeCrc(record, sizeof(record.version) + sizeof(record.crc));
-}
-
-bool recordValid(const SceneRecord &record) {
-    return record.version == kStorageVersion && record.occupied != 0 &&
-           record.crc == computeCrc(record, sizeof(record.version) + sizeof(record.crc));
-}
-
-void copySceneName(char (&dest)[16], const char *name) {
-    std::memset(dest, 0, sizeof(dest));
-    if (!name || name[0] == '\0') {
-        return;
-    }
-    const size_t len = std::min(strlen(name), sizeof(dest) - 1);
-    std::memcpy(dest, name, len);
-}
-
-ConfigState captureConfigState() {
-    ConfigState snapshot{};
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        snapshot.potChannels[i] = constrain(configManager.getPotChannel(i), 1, 16);
-        snapshot.potCCNumbers[i] = constrain(configManager.getPotCCNumber(i), 0, 127);
-    }
-    snapshot.slots = configManager.getSlots();
-    snapshot.argEnabled = configManager.getARGEnable();
-    snapshot.argMethod = configManager.getARGMethod();
-    int envA = static_cast<int>(configManager.getEnvelopeA());
-    int envB = static_cast<int>(configManager.getEnvelopeB());
-    if (envA >= NUM_ENVELOPES) {
-        int converted = envelopeIndexFromAnalogPin(envA);
-        envA = converted >= 0 ? converted : constrain(envA, 0, NUM_ENVELOPES - 1);
-    }
-    if (envB >= NUM_ENVELOPES) {
-        int converted = envelopeIndexFromAnalogPin(envB);
-        envB = converted >= 0 ? converted : constrain(envB, 0, NUM_ENVELOPES - 1);
-    }
-    snapshot.argSourceA = static_cast<uint8_t>(envA);
-    snapshot.argSourceB = static_cast<uint8_t>(envB);
-    snapshot.envelopeMode = configManager.getMode();
-    snapshot.ledBrightness = ledManager.getBrightness();
-    snapshot.ledMode = static_cast<uint8_t>(configManager.getLedMode());
-    const CRGB color = ledManager.getColor();
-    snapshot.ledR = color.r;
-    snapshot.ledG = color.g;
-    snapshot.ledB = color.b;
-    if (!envelopeFollowers.empty()) {
-        snapshot.filterType = static_cast<uint8_t>(envelopeFollowers.front().getFilterType());
-    }
-    storageGet(EEPROM_FILTER_FREQ, snapshot.filterFrequency);
-    storageGet(EEPROM_FILTER_Q, snapshot.filterQ);
-    for (uint8_t i = 0; i < NUM_ENVELOPES; ++i) {
-        snapshot.baselines[i] = envelopeConfig.baselines[i];
-    }
-    return snapshot;
-}
-
-void applyConfigState(const ConfigState &state, bool persist) {
-    const auto slotsState = state.slots;
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        MIDISlot slot = slotsState[i];
-        slot.midiChannel = constrain(slot.midiChannel, 1, 16);
-        slot.data1 = constrain(slot.data1, 0, 127);
-        configManager.saveSlot(i, slot);
-    }
-
-    potChannels.clear();
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        const uint8_t channel = constrain(state.potChannels[i], 1, 16);
-        const uint8_t cc = constrain(state.potCCNumbers[i], 0, 127);
-        configManager.setPotChannel(i, channel);
-        configManager.setPotCCNumber(i, cc);
-        potentiometerManager.setChannel(i, channel);
-        potentiometerManager.setCCNumber(i, cc);
-        potChannels.push_back(channel);
-    }
-    if (persist) {
-        configManager.saveConfiguration();
-    }
-
-    potToEnvelopeMap.clear();
-    std::array<bool, NUM_ENVELOPES> followerAssigned{};
-    followerAssigned.fill(false);
-    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-        MIDISlot &slot = configManager.getSlot(slotIndex);
-        const int followerIndex = slot.getEnvelopeFollowerIndex();
-        if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
-            continue;
-        }
-        potToEnvelopeMap[slotIndex] = slot.efSettings;
-        followerAssigned[static_cast<size_t>(followerIndex)] = true;
-        envelopeFollowers[followerIndex].setModulationTarget(
-            potentiometerManager.getCCNumber(slotIndex));
-        applyEfSettingsToFollower(envelopeFollowers[followerIndex], slot.efSettings,
-                                  static_cast<uint8_t>(followerIndex));
-    }
-
-    const EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(
-        static_cast<ARGMethod>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
-    const bool argEnabled = state.argEnabled != 0;
-    envelopeFollowMode = argEnabled;
-    configManager.setMode(state.envelopeMode);
-    configManager.setARGEnable(argEnabled ? 1 : 0);
-    configManager.setARGMethod(
-        static_cast<uint8_t>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
-    configManager.setEnvelopePair(state.argSourceA, state.argSourceB);
-    potentiometerManager.setArgEnvelopePair(state.argSourceA, state.argSourceB);
-    updateEnvelopeModeLabel(envelopeModeName(state.envelopeMode));
-
-    SlotEnvelopePayload tailPayload{};
-    tailPayload.filterType = static_cast<uint8_t>(
-        constrain(state.filterType, 0, static_cast<int>(EnvelopeFollower::BANDPASS)));
-    tailPayload.frequency = constrain(state.filterFrequency, 20.0f, 5000.0f);
-    tailPayload.q = constrain(state.filterQ, 0.5f, 4.0f);
-    SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
-    for (uint8_t i = 0; i < envelopeFollowers.size(); ++i) {
-        envelopeFollowers[i].toggleActive(followerAssigned[i]);
-        envelopeFollowers[i].setARGMethod(followerMethod);
-        envelopeFollowers[i].setEnvelopePair(state.argSourceA, state.argSourceB);
-        envelopeFollowers[i].setMode(argEnabled ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
-        envelopeFollowers[i].setFilterType(
-            static_cast<EnvelopeFollower::FilterType>(sanitizedTail.filterType));
-        envelopeFollowers[i].configureFilter(sanitizedTail.frequency, sanitizedTail.q);
-        envelopeFollowers[i].setBaseline(state.baselines[i]);
-        envelopeConfig.baselines[i] = state.baselines[i];
-    }
-
-    const CRGB color(state.ledR, state.ledG, state.ledB);
-    ledManager.setBrightness(state.ledBrightness);
-    ledManager.setColor(color);
-    configManager.saveLEDSettings(state.ledBrightness, color);
-    LedMode ledMode = static_cast<LedMode>(state.ledMode);
-    configManager.setLedMode(ledMode);
-    ledAnimator.setMode(ledMode);
-
-    if (persist) {
-        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-    }
-    refreshEfVoicesFromConfig();
-}
-
-uint8_t listScenes(SceneInfo *scenes, size_t capacity) {
-    if (!scenes || capacity == 0) {
-        return 0;
-    }
-    const uint8_t count = static_cast<uint8_t>(std::min<size_t>(capacity, kSceneSlotCount));
-    for (uint8_t slot = 0; slot < count; ++slot) {
-        scenes[slot].slot = slot;
-        std::snprintf(scenes[slot].name, sizeof(scenes[slot].name), "Scene %u",
-                      static_cast<unsigned>(slot + 1));
-        scenes[slot].available = false;
-        SceneRecord record{};
-        storageGet(sceneSlotAddress(slot), record);
-        if (recordValid(record)) {
-            std::memcpy(scenes[slot].name, record.name, sizeof(scenes[slot].name));
-            scenes[slot].name[sizeof(scenes[slot].name) - 1] = '\0';
-            scenes[slot].available = true;
-        }
-    }
-    return count;
-}
-
-bool saveSceneSlot(uint8_t slot, const ConfigState &state, const char *name) {
-    if (slot >= kSceneSlotCount) {
-        return false;
-    }
-    SceneRecord record{};
-    record.version = kStorageVersion;
-    record.occupied = 1;
-    record.state = state;
-    copySceneName(record.name, name);
-    record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
-    storagePut(sceneSlotAddress(slot), record);
-    return true;
-}
-
-bool loadSceneSlot(uint8_t slot, SceneEntry &entry) {
-    if (slot >= kSceneSlotCount) {
-        return false;
-    }
-    SceneRecord record{};
-    storageGet(sceneSlotAddress(slot), record);
-    if (!recordValid(record)) {
-        return false;
-    }
-    std::memset(entry.name, 0, sizeof(entry.name));
-    std::memcpy(entry.name, record.name, sizeof(entry.name));
-    entry.name[sizeof(entry.name) - 1] = '\0';
-    entry.state = record.state;
-    return true;
-}
-
-bool sceneSlotAvailable(uint8_t slot) {
-    SceneRecord record{};
-    storageGet(sceneSlotAddress(slot), record);
-    return recordValid(record);
-}
-
-bool macroSnapshotAvailable() {
-    MacroRecord record{};
-    storageGet(kMacroStorageAddress, record);
-    return recordValid(record);
-}
-
-bool loadMacroSnapshot(ConfigState &state) {
-    MacroRecord record{};
-    storageGet(kMacroStorageAddress, record);
-    if (!recordValid(record)) {
-        return false;
-    }
-    state = record.state;
-    return true;
-}
-
-bool saveMacroSnapshot(const ConfigState &state) {
-    MacroRecord record{};
-    record.version = kStorageVersion;
-    record.occupied = 1;
-    record.state = state;
-    record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
-    storagePut(kMacroStorageAddress, record);
-    return true;
-}
-} // namespace SceneStorage
 
 template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     String payload;
@@ -570,56 +263,6 @@ void initializeProtocol() {
     configManager.begin(potChannels);
     potentiometerManager.attachConfigManager(configManager);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
-}
-
-void clearSysExTemplate(MIDISlot &slot) {
-    slot.sysexLength = 0;
-    slot.sysexTemplate.fill(0);
-}
-
-bool parseSysExTemplateField(JsonVariantConst value, MIDISlot &slot, String &error) {
-    if (value.isNull()) {
-        clearSysExTemplate(slot);
-        return true;
-    }
-    const char *raw = value.as<const char *>();
-    if (!raw || raw[0] == '\0') {
-        clearSysExTemplate(slot);
-        return true;
-    }
-    if (SysExTemplate::parse(raw, slot.sysexTemplate, slot.sysexLength, error)) {
-        return true;
-    }
-    clearSysExTemplate(slot);
-    return false;
-}
-
-String formatSysExTemplate(const MIDISlot &slot) {
-    if (slot.sysexLength == 0) {
-        return String();
-    }
-    return SysExTemplate::format(slot.sysexTemplate, slot.sysexLength);
-}
-
-uint8_t buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint8_t *dest,
-                          std::size_t capacity) {
-    const uint8_t value7 = Utility::mapToMidiValue(static_cast<int>(rawValue));
-    const uint16_t value14 = Utility::mapTo14Bit(static_cast<int>(rawValue));
-    if (slot.sysexLength >= 2) {
-        uint8_t rendered = SysExTemplate::render(slot.sysexTemplate, slot.sysexLength, value7,
-                                                 value14, dest, capacity);
-        if (rendered > 0) {
-            return rendered;
-        }
-    }
-    if (capacity < 4) {
-        return 0;
-    }
-    dest[0] = 0xF0;
-    dest[1] = slot.data1;
-    dest[2] = value7;
-    dest[3] = 0xF7;
-    return 4;
 }
 
 const char *midiMessageTypeName(MIDIMessageType type) {
@@ -1751,237 +1394,31 @@ void processCommandQueue() {
 
 namespace {
 void handleGetAllCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-#ifdef SERIAL_LOGGING
-    // Send all pot settings
-    LOG_PRINT("POTS:");
-    for (int i = 0; i < NUM_POTS; i++) {
-        int envelopeValue = -1;
-        auto it = potToEnvelopeMap.find(i);
-        if (it != potToEnvelopeMap.end()) {
-            envelopeValue = it->second.followerIndex;
-        }
-        LOG_PRINT(configManager.getPotCCNumber(i));
-        LOG_PRINT(",");
-        LOG_PRINT(configManager.getPotChannel(i));
-        LOG_PRINT(",");
-        LOG_PRINT(envelopeValue);
-        LOG_PRINT(";");
-    }
-
-    // Send LED settings
-    CRGB ledColor = ledManager.getColor();
-    LOG_PRINT(" LED:");
-    LOG_PRINT(ledManager.getBrightness());
-    LOG_PRINT(",");
-    LOG_PRINT(ledColor.r);
-    LOG_PRINT(",");
-    LOG_PRINT(ledColor.g);
-    LOG_PRINT(",");
-    LOG_PRINTLN(ledColor.b);
-#endif
+    ProtocolSimpleHandlers::handleGetAllCommand(cmd.fullCommand());
 }
 
 void handleGetArgMethodCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-    LOG_PRINTLN(configManager.getARGMethod());
+    ProtocolSimpleHandlers::handleGetArgMethodCommand(cmd.fullCommand());
 }
 
 void handleGetBrownoutsCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-    LOG_PRINTLN(g_brownoutCount);
+    ProtocolSimpleHandlers::handleGetBrownoutsCommand(cmd.fullCommand());
 }
 
 void handleGetConfigCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-    StaticJsonDocument<8192> doc;
-
-    doc["fw_version"] = FW_VERSION_STR;
-    doc["schema_version"] = CONFIG_VERSION;
-
-    JsonArray pots = doc.createNestedArray("pots");
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        JsonObject pot = pots.createNestedObject();
-        pot["index"] = i;
-        pot["channel"] = configManager.getPotChannel(i);
-        pot["cc"] = configManager.getPotCCNumber(i);
-    }
-
-    JsonArray slots = doc.createNestedArray("slots");
-    const auto &slotDefs = configManager.getSlots();
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        const MIDISlot &slot = slotDefs[i];
-        JsonObject slotObj = slots.createNestedObject();
-        slotObj["index"] = i;
-        slotObj["type"] = static_cast<uint8_t>(slot.type);
-        slotObj["type_name"] = midiMessageTypeName(slot.type);
-        slotObj["channel"] = slot.midiChannel;
-        slotObj["data1"] = slot.data1;
-        slotObj["ef_index"] = slot.ef.followerIndex;
-        JsonObject ef = slotObj.createNestedObject("ef");
-        ef["index"] = slot.ef.followerIndex;
-        ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
-        ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
-        ef["frequency"] = slot.efSettings.frequency;
-        ef["q"] = slot.efSettings.q;
-        ef["oversample"] = slot.efSettings.oversample;
-        ef["smoothing"] = slot.efSettings.smoothing;
-        ef["baseline"] = slot.efSettings.baseline;
-        ef["gain"] = slot.efSettings.gain;
-        ef["mode"] = slot.efSettings.efMode;
-        ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
-        ef["auto_gain"] = slot.efSettings.autoGain != 0;
-        ef["attack_ms"] = slot.efSettings.attackMs;
-        ef["release_ms"] = slot.efSettings.releaseMs;
-        ef["rms_ms"] = slot.efSettings.rmsWindowMs;
-        ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
-        ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
-        ef["gate_threshold"] = slot.efSettings.gateThreshold;
-        ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
-        ef["activity_threshold"] = slot.efSettings.activityThreshold;
-        ef["gain_target"] = slot.efSettings.gainTarget;
-        slotObj["active"] = slot.active;
-        slotObj["arp_note"] = slot.arpNote;
-        slotObj["sysexTemplate"] = formatSysExTemplate(slot);
-        SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
-        JsonObject efPayload = slotObj.createNestedObject("ef_payload");
-        efPayload["type"] = payload.filterType;
-        efPayload["type_name"] =
-            envelopeFilterName(static_cast<EnvelopeFollower::FilterType>(payload.filterType));
-        efPayload["freq"] = payload.frequency;
-        efPayload["q"] = payload.q;
-        SlotARGConfig arg = sanitizeSlotArg(slot.arg);
-        JsonObject argObj = slotObj.createNestedObject("arg");
-        argObj["enabled"] = arg.enabled != 0;
-        argObj["method"] = static_cast<uint8_t>(arg.method);
-        argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
-        argObj["sourceA"] = arg.sourceA;
-        argObj["sourceB"] = arg.sourceB;
-    }
-
-    JsonArray efSlots = doc.createNestedArray("efSlots");
-    for (uint8_t followerIndex = 0; followerIndex < NUM_ENVELOPES; ++followerIndex) {
-        JsonObject mapping = efSlots.createNestedObject();
-        mapping["index"] = followerIndex;
-        JsonArray targets = mapping.createNestedArray("slots");
-        for (uint8_t slotIndex = 0; slotIndex < NUM_POTS; ++slotIndex) {
-            auto it = potToEnvelopeMap.find(slotIndex);
-            if (it == potToEnvelopeMap.end()) {
-                continue;
-            }
-            if (it->second.followerIndex != static_cast<int8_t>(followerIndex)) {
-                continue;
-            }
-            targets.add(slotIndex);
-        }
-        if (targets.size() == 1) {
-            mapping["slot"] = targets[0].as<uint8_t>();
-        }
-    }
-
-    JsonObject env = doc.createNestedObject("envelopes");
-    JsonArray routing = env.createNestedArray("routing");
-    for (uint8_t i = 0; i < NUM_POTS; ++i) {
-        int mapping = -1;
-        auto it = potToEnvelopeMap.find(i);
-        if (it != potToEnvelopeMap.end()) {
-            mapping = it->second.followerIndex;
-        }
-        routing.add(mapping);
-    }
-
-    JsonArray followers = env.createNestedArray("followers");
-    for (size_t i = 0; i < envelopeFollowers.size(); ++i) {
-        JsonObject follower = followers.createNestedObject();
-        follower["index"] = static_cast<uint8_t>(i);
-        follower["active"] = envelopeFollowers[i].getActiveState();
-        follower["filter"] = envelopeFilterName(envelopeFollowers[i].getFilterType());
-        follower["baseline"] = envelopeConfig.baselines[i];
-        follower["oversample"] = envelopeFollowers[i].getOversampleCount();
-        follower["smoothing"] = envelopeFollowers[i].getSmoothingAlpha();
-    }
-
-    uint8_t storedMode = configManager.getMode();
-    env["mode"] = storedMode;
-    env["mode_name"] = envelopeModeName(storedMode);
-
-    uint8_t storedMethod = configManager.getARGMethod();
-    env["arg_method"] = storedMethod;
-    env["arg_method_name"] = argMethodName(storedMethod);
-    env["arg_enable"] = configManager.getARGEnable();
-
-    JsonObject argPair = env.createNestedObject("arg_pair");
-    argPair["a"] = configManager.getEnvelopeA();
-    argPair["b"] = configManager.getEnvelopeB();
-
-    float freq = 0.0f;
-    float q = 0.0f;
-    storageGet(EEPROM_FILTER_FREQ, freq);
-    storageGet(EEPROM_FILTER_Q, q);
-    JsonObject filter = env.createNestedObject("filter");
-    filter["frequency"] = freq;
-    filter["q"] = q;
-
-    JsonObject led = doc.createNestedObject("led");
-    led["brightness"] = ledManager.getBrightness();
-    CRGB color = ledManager.getColor();
-    JsonObject colorObj = led.createNestedObject("rgb");
-    colorObj["r"] = color.r;
-    colorObj["g"] = color.g;
-    colorObj["b"] = color.b;
-    char hex[8];
-    snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
-    led["hex"] = hex;
-    led["mode"] = ledModeToString(configManager.getLedMode());
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    ProtocolSimpleHandlers::handleGetConfigCommand(cmd.fullCommand());
 }
 
 void handleGetEfCommand(const ParsedCommand &cmd) {
-    const String &command = cmd.fullCommand();
-    int potIndex = command.substring(7).toInt();
-    if (potIndex >= 0 && potIndex < NUM_POTS) {
-        int env = -1;
-        auto it = potToEnvelopeMap.find(potIndex);
-        if (it != potToEnvelopeMap.end()) {
-            env = it->second.followerIndex;
-        }
-#ifdef SERIAL_LOGGING
-        LOG_PRINTLN(env);
-#else
-        (void)env;
-#endif
-    } else {
-        LOG_PRINTLN("ERR");
-    }
+    ProtocolSimpleHandlers::handleGetEfCommand(cmd.fullCommand());
 }
 
 void handleGetLedCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-#ifdef SERIAL_LOGGING
-    CRGB c = ledManager.getColor();
-    LOG_PRINT(ledManager.getBrightness());
-    LOG_PRINT(",");
-    LOG_PRINT(c.r);
-    LOG_PRINT(",");
-    LOG_PRINT(c.g);
-    LOG_PRINT(",");
-    LOG_PRINTLN(c.b);
-#endif
+    ProtocolSimpleHandlers::handleGetLedCommand(cmd.fullCommand());
 }
 
 void handleGetManifestCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-    // Manifest is the host's capability contract for this session
-    // (schema/version/counts/resources).
-    StaticJsonDocument<256> doc;
-    writeManifestFields(doc.to<JsonObject>());
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    ProtocolSimpleHandlers::handleGetManifestCommand(cmd.fullCommand());
 }
 
 void handleGetProfileCommand(const ParsedCommand &cmd) {
@@ -2061,15 +1498,11 @@ void handleGetProfileCommand(const ParsedCommand &cmd) {
 }
 
 void handleGetSchemaCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-    LOG_PRINTLN(ConfigManager::makeSchema());
+    ProtocolSimpleHandlers::handleGetSchemaCommand(cmd.fullCommand());
 }
 
 void handleHelloCommand(const ParsedCommand &cmd) {
-    (void)cmd;
-    // HELLO is both identity ping and telemetry opt-in for WebSerial clients.
-    webSerialStreaming = true;
-    LOG_PRINTLN("{\"hello\":\"mn42\"}");
+    ProtocolSimpleHandlers::handleHelloCommand(cmd.fullCommand());
 }
 
 void handleLoadProfileCommand(const ParsedCommand &cmd) {
@@ -2218,96 +1651,19 @@ void handleSetAllCommand(const ParsedCommand &cmd) {
 }
 
 void handleSetArgMethodCommand(const ParsedCommand &cmd) {
-    const String &command = cmd.fullCommand();
-    int method = command.substring(14).toInt();
-    if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {
-        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-            MIDISlot &slot = configManager.getSlot(slotIndex);
-            slot.arg.method = static_cast<ARGMethod>(method);
-            configManager.saveSlot(slotIndex, slot);
-        }
-        configManager.setARGMethod(static_cast<uint8_t>(method));
-        LOG_PRINTLN("OK");
-    } else {
-        LOG_PRINTLN("ERR");
-    }
+    ProtocolSimpleHandlers::handleSetArgMethodCommand(cmd.fullCommand());
 }
 
 void handleSetEfCommand(const ParsedCommand &cmd) {
-    const String &command = cmd.fullCommand();
-    int comma = command.indexOf(',');
-    if (comma == -1) {
-        LOG_PRINTLN("ERR");
-        return;
-    }
-    int potIndex = command.substring(7, comma).toInt();
-    int envIndex = command.substring(comma + 1).toInt();
-    if (potIndex >= 0 && potIndex < NUM_POTS && envIndex >= 0 &&
-        envIndex < static_cast<int>(envelopeFollowers.size())) {
-        MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(potIndex));
-        slot.setEnvelopeFollowerIndex(static_cast<int8_t>(envIndex));
-        potToEnvelopeMap[potIndex] = slot.efSettings;
-        envelopeFollowers[envIndex].toggleActive(true);
-        applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings,
-                                  static_cast<uint8_t>(envIndex));
-        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-        refreshEfVoicesFromConfig();
-        LOG_PRINTLN("OK");
-    } else {
-        LOG_PRINTLN("ERR");
-    }
+    ProtocolSimpleHandlers::handleSetEfCommand(cmd.fullCommand());
 }
 
 void handleSetLedCommand(const ParsedCommand &cmd) {
-    const String &command = cmd.fullCommand();
-    int first = command.indexOf(',');
-    int second = command.indexOf(',', first + 1);
-    int third = command.indexOf(',', second + 1);
-    if (first == -1 || second == -1 || third == -1) {
-        LOG_PRINTLN("ERR");
-        return;
-    }
-    int brightness = command.substring(8, first).toInt();
-    int r = command.substring(first + 1, second).toInt();
-    int g = command.substring(second + 1, third).toInt();
-    int b = command.substring(third + 1).toInt();
-    if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 && g <= 255 &&
-        b >= 0 && b <= 255) {
-        CRGB color(r, g, b);
-        ledManager.setBrightness(brightness);
-        ledManager.setColor(color);
-        configManager.saveLEDSettings(brightness, color);
-        LOG_PRINTLN("OK");
-    } else {
-        LOG_PRINTLN("ERR");
-    }
+    ProtocolSimpleHandlers::handleSetLedCommand(cmd.fullCommand());
 }
 
 void handleSetPotCommand(const ParsedCommand &cmd) {
-    const String &command = cmd.fullCommand();
-    int firstComma = command.indexOf(',');
-    int lastComma = command.lastIndexOf(',');
-    if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
-        LOG_PRINTLN("Error: Malformed SET_POT command");
-        return;
-    }
-    int potIndex = command.substring(8, firstComma).toInt();
-    int channel = command.substring(firstComma + 1, lastComma).toInt();
-    int ccNumber = command.substring(lastComma + 1).toInt();
-    if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 && ccNumber >= 0 &&
-        ccNumber <= 127) {
-        configManager.setPotChannel(potIndex, channel);
-        configManager.setPotCCNumber(potIndex, ccNumber);
-        potentiometerManager.setChannel(potIndex, channel);
-        potentiometerManager.setCCNumber(potIndex, ccNumber);
-        if (static_cast<size_t>(potIndex) < potChannels.size()) {
-            potChannels[potIndex] = channel;
-        }
-        configManager.saveConfiguration();
-        LOG_PRINTLN("Pot configuration updated!");
-    } else {
-        LOG_PRINTLN("Error: Invalid values for SET_POT");
-    }
+    ProtocolSimpleHandlers::handleSetPotCommand(cmd.fullCommand());
 }
 
 void handleSetProfileCommand(const ParsedCommand &cmd) {
@@ -2451,24 +1807,7 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
 }
 
 void handleSetSlotValueCommand(const ParsedCommand &cmd) {
-    const String &command = cmd.fullCommand();
-    int firstComma = command.indexOf(',');
-    int lastComma = command.lastIndexOf(',');
-    if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
-        LOG_PRINTLN("ERR");
-        return;
-    }
-
-    int slotIndex = command.substring(firstComma + 1, lastComma).toInt();
-    int midiValue = command.substring(lastComma + 1).toInt();
-    if (slotIndex < 0 || slotIndex >= NUM_SLOTS || midiValue < 0 || midiValue > 127) {
-        LOG_PRINTLN("ERR");
-        return;
-    }
-
-    potentiometerManager.injectMidiValue(static_cast<uint8_t>(slotIndex),
-                                         static_cast<uint8_t>(midiValue));
-    LOG_PRINTLN("OK");
+    ProtocolSimpleHandlers::handleSetSlotValueCommand(cmd.fullCommand());
 }
 
 } // namespace
