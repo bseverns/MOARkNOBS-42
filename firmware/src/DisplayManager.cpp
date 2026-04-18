@@ -29,11 +29,67 @@ constexpr uint8_t kI2CDataPrefix = 0x40;
 constexpr uint8_t kI2CDataChunkBytes = 16;
 constexpr unsigned long kPeriodicFullRefreshMs = 5000UL;
 constexpr uint8_t kPartialFallbackPercent = 70;
+constexpr unsigned long kStartupSnowDurationMs = 3000UL;
+constexpr unsigned long kStartupLogoRevealDurationMs = 1000UL;
+constexpr unsigned long kStartupFinalHoldDurationMs = 500UL;
+constexpr uint8_t kStartupRevealMinSize = 1;
+constexpr uint8_t kStartupRevealMaxSize = 3;
+constexpr uint8_t kStartupExpandMaxSize = 8;
 #if defined(MN42_OLED_PARTIAL_UPDATES) && (MN42_OLED_PARTIAL_UPDATES == 0)
 constexpr bool kEnablePartialRegionUpdates = false;
 #else
 constexpr bool kEnablePartialRegionUpdates = true;
 #endif
+
+unsigned long startupLogoExpandDurationMs() {
+    const unsigned long ledSweepMs =
+        static_cast<unsigned long>(std::max<uint16_t>(NUM_LEDS(), 1)) * 50UL;
+    return std::max<unsigned long>(ledSweepMs, 600UL);
+}
+
+uint16_t startupSnowHash(int16_t x, int16_t y) {
+    uint32_t hash = static_cast<uint32_t>(x) * 1315423911UL;
+    hash ^= static_cast<uint32_t>(y) * 2654435761UL;
+    hash ^= (hash >> 11);
+    hash ^= (hash << 7);
+    return static_cast<uint16_t>(hash & 0xFFFFU);
+}
+
+void drawSnowFrame(Adafruit_SSD1306 &display, float progress) {
+    const uint16_t threshold = static_cast<uint16_t>(constrain(progress, 0.0f, 1.0f) * 65535.0f);
+    display.clearDisplay();
+    for (int16_t y = 0; y < display.height(); ++y) {
+        for (int16_t x = 0; x < display.width(); ++x) {
+            if (startupSnowHash(x, y) <= threshold) {
+                display.drawPixel(x, y, SSD1306_COLOR_WHITE);
+            }
+        }
+    }
+}
+
+void drawNegativeMn42Frame(Adafruit_SSD1306 &display, uint8_t textSize) {
+    const char *label = "MN42";
+    const uint8_t clampedSize = std::max<uint8_t>(
+        kStartupRevealMinSize, std::min<uint8_t>(textSize, kStartupExpandMaxSize));
+
+    display.clearDisplay();
+    display.fillRect(0, 0, display.width(), display.height(), SSD1306_COLOR_WHITE);
+    display.setTextWrap(false);
+    display.setTextSize(clampedSize);
+    display.setTextColor(SSD1306_COLOR_BLACK, SSD1306_COLOR_WHITE);
+
+    int16_t x1 = 0;
+    int16_t y1 = 0;
+    uint16_t textWidth = 0;
+    uint16_t textHeight = 0;
+    display.getTextBounds(label, 0, 0, &x1, &y1, &textWidth, &textHeight);
+
+    int16_t cursorX = static_cast<int16_t>((display.width() - static_cast<int16_t>(textWidth)) / 2);
+    int16_t cursorY =
+        static_cast<int16_t>((display.height() - static_cast<int16_t>(textHeight)) / 2 - y1);
+    display.setCursor(cursorX, cursorY);
+    display.print(label);
+}
 
 // Human-readable EF filter labels for the OLED detail views.
 const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
@@ -362,58 +418,95 @@ void DisplayManager::updateFadeAnimation() {
     _display.ssd1306_command(_fadeAnim.brightness);
 }
 
-// Run the blocking startup animation sequence before normal status rendering takes over.
+// Run the non-blocking startup animation sequence before normal status rendering takes over.
 void DisplayManager::runStartupAnimation() {
+    if (!_initialized) {
+        _startupAnim.phase = StartupPhase::DONE;
+        return;
+    }
+
     uint32_t current = now();
 
     switch (_startupAnim.phase) {
     case StartupPhase::IDLE:
-        // Kick off the line-drawing frenzy
+        _display.invertDisplay(false);
+        _startupAnim.invertOn = false;
         _display.clearDisplay();
-        _startupAnim.phase = StartupPhase::DRAW_LINES;
-        _startupAnim.step = 0;
-        _startupAnim.lastTime = current; // draw immediately
+        present(true);
+        _startupAnim.phase = StartupPhase::SNOW_FILL;
+        _startupAnim.startedAt = current;
+        _startupAnim.phaseStartedAt = current;
         break;
 
-    case StartupPhase::DRAW_LINES:
-        if (current - _startupAnim.lastTime >= 250 || _startupAnim.step == 0) {
-            _display.clearDisplay();
-            for (int i = 0; i < _display.width(); i += (1 << _startupAnim.step)) {
-                _display.drawLine(0, 0, i, _display.height() - 1, SSD1306_COLOR_WHITE);
-                _display.drawLine(_display.width() - 1, _display.height() - 1,
-                                  _display.width() - 1 - i, 0, SSD1306_COLOR_WHITE);
-            }
-            present(true);
-            _startupAnim.lastTime = current;
-            if (++_startupAnim.step >= 5) {
-                _startupAnim.phase = StartupPhase::HOLD_LINES;
-            }
+    case StartupPhase::SNOW_FILL: {
+        const unsigned long elapsed = current - _startupAnim.phaseStartedAt;
+        const float progress =
+            static_cast<float>(elapsed) / static_cast<float>(kStartupSnowDurationMs);
+        drawSnowFrame(_display, progress);
+        present(true);
+        if (elapsed >= kStartupSnowDurationMs) {
+            _startupAnim.phase = StartupPhase::LOGO_REVEAL;
+            _startupAnim.phaseStartedAt = current;
         }
         break;
+    }
 
-    case StartupPhase::HOLD_LINES:
-        if (current - _startupAnim.lastTime >= 500) {
-            _display.clearDisplay();
-            _display.setTextSize(2);
-            _display.setTextColor(SSD1306_COLOR_WHITE);
-            _display.setCursor((_display.width() - 12 * 6) / 2, _display.height() / 2 - 8);
-            _display.println("MOARkNOBS-42");
-            present(true);
-            _startupAnim.phase = StartupPhase::HOLD_LOGO;
-            _startupAnim.lastTime = current;
+    case StartupPhase::LOGO_REVEAL: {
+        const unsigned long elapsed = current - _startupAnim.phaseStartedAt;
+        const float progress =
+            static_cast<float>(elapsed) / static_cast<float>(kStartupLogoRevealDurationMs);
+        const uint8_t revealSpan =
+            static_cast<uint8_t>(kStartupRevealMaxSize - kStartupRevealMinSize);
+        const uint8_t textSize = static_cast<uint8_t>(
+            kStartupRevealMinSize +
+            static_cast<uint8_t>(constrain(progress, 0.0f, 1.0f) * revealSpan));
+        drawNegativeMn42Frame(_display, textSize);
+        present(true);
+        if (elapsed >= kStartupLogoRevealDurationMs) {
+            _startupAnim.phase = StartupPhase::LOGO_EXPAND;
+            _startupAnim.phaseStartedAt = current;
         }
         break;
+    }
 
-    case StartupPhase::HOLD_LOGO:
-        if (current - _startupAnim.lastTime >= 1500) {
-            _display.clearDisplay();
-            present(true);
+    case StartupPhase::LOGO_EXPAND: {
+        const unsigned long elapsed = current - _startupAnim.phaseStartedAt;
+        const unsigned long expandDuration = startupLogoExpandDurationMs();
+        const float progress = static_cast<float>(elapsed) / static_cast<float>(expandDuration);
+        const uint8_t growthSpan =
+            static_cast<uint8_t>(kStartupExpandMaxSize - kStartupRevealMaxSize);
+        const uint8_t textSize = static_cast<uint8_t>(
+            kStartupRevealMaxSize +
+            static_cast<uint8_t>(constrain(progress, 0.0f, 1.0f) * growthSpan));
+        drawNegativeMn42Frame(_display, textSize);
+        present(true);
+        if (elapsed >= expandDuration) {
+            _startupAnim.phase = StartupPhase::HOLD_FINAL;
+            _startupAnim.phaseStartedAt = current;
+            _display.invertDisplay(false);
+            _startupAnim.invertOn = false;
+        }
+        break;
+    }
+
+    case StartupPhase::HOLD_FINAL: {
+        const bool invertNow = ((current - _startupAnim.phaseStartedAt) / 100UL) % 2UL == 1UL;
+        if (invertNow != _startupAnim.invertOn) {
+            _startupAnim.invertOn = invertNow;
+            _display.invertDisplay(invertNow);
+        }
+    }
+        drawNegativeMn42Frame(_display, kStartupExpandMaxSize);
+        present(true);
+        if (current - _startupAnim.phaseStartedAt >= kStartupFinalHoldDurationMs) {
+            _display.invertDisplay(false);
+            _startupAnim.invertOn = false;
             _startupAnim.phase = StartupPhase::DONE;
         }
         break;
 
     case StartupPhase::DONE:
-        // No-op. We've already made our grand entrance.
+        // No-op. Startup visuals are complete.
         break;
     }
 }

@@ -1,6 +1,8 @@
 #include "UI.h"
 
 #include <Arduino.h>
+#include <algorithm>
+#include <vector>
 
 #include "FirmwareState.h"
 #include "Globals.h"
@@ -8,7 +10,119 @@
 #include "Log.h"
 #include "WebSerial.h"
 
-// Bring up the physical UI modules and play the startup identity sequence.
+namespace {
+
+constexpr unsigned long kStartupRandomDelayMs = 2000UL;
+constexpr unsigned long kStartupRandomWindowMs = 1000UL;
+constexpr unsigned long kStartupRandomFlashInMs = 200UL;
+constexpr unsigned long kStartupRandomFlashOutMs = 300UL;
+constexpr unsigned long kStartupWhiteSweepStartMs = 4000UL;
+constexpr unsigned long kStartupWhiteStepMs = 50UL;
+constexpr unsigned long kStartupHoldMs = 500UL;
+
+enum class StartupRandomPhase : uint8_t { Unknown = 0xFF, Off = 0, Half = 1, Full = 2 };
+
+struct StartupSequenceState {
+    bool active = false;
+    bool displayReady = false;
+    bool started = false;
+    unsigned long startMs = 0;
+    StartupRandomPhase randomPhase = StartupRandomPhase::Unknown;
+    uint16_t whiteLit = 0;
+    std::vector<CRGB> randomColors;
+};
+
+StartupSequenceState gStartupSequence;
+
+CRGB scaleColor(const CRGB &color, uint8_t scale255) {
+    return CRGB(static_cast<uint8_t>((static_cast<uint16_t>(color.r) * scale255) / 255U),
+                static_cast<uint8_t>((static_cast<uint16_t>(color.g) * scale255) / 255U),
+                static_cast<uint8_t>((static_cast<uint16_t>(color.b) * scale255) / 255U));
+}
+
+void seedStartupColors(uint16_t ledCount) {
+    gStartupSequence.randomColors.assign(ledCount, CRGB::Black);
+    for (uint16_t i = 0; i < ledCount; ++i) {
+        gStartupSequence.randomColors[i] = CHSV(static_cast<uint8_t>(random(0, 255)), 255, 255);
+    }
+}
+
+void applyRandomPhase(StartupRandomPhase phase) {
+    if (phase == gStartupSequence.randomPhase) {
+        return;
+    }
+    gStartupSequence.randomPhase = phase;
+
+    if (phase == StartupRandomPhase::Off) {
+        ledManager.setAll(CRGB::Black);
+        return;
+    }
+
+    const uint8_t scale = (phase == StartupRandomPhase::Half) ? 128 : 255;
+    const uint16_t ledCount = static_cast<uint16_t>(gStartupSequence.randomColors.size());
+    for (uint16_t i = 0; i < ledCount; ++i) {
+        ledManager.setPixelColor(i, scaleColor(gStartupSequence.randomColors[i], scale));
+    }
+    ledManager.update();
+}
+
+void updateRandomLedStartup(unsigned long elapsedMs) {
+    if (elapsedMs < kStartupRandomDelayMs) {
+        applyRandomPhase(StartupRandomPhase::Off);
+        return;
+    }
+
+    const unsigned long phaseElapsed = elapsedMs - kStartupRandomDelayMs;
+    if (phaseElapsed >= kStartupRandomWindowMs) {
+        applyRandomPhase(StartupRandomPhase::Off);
+        return;
+    }
+
+    if (phaseElapsed < kStartupRandomFlashInMs) {
+        applyRandomPhase(StartupRandomPhase::Half);
+        return;
+    }
+    if (phaseElapsed < kStartupRandomFlashOutMs) {
+        applyRandomPhase(StartupRandomPhase::Full);
+        return;
+    }
+    applyRandomPhase(StartupRandomPhase::Half);
+}
+
+unsigned long startupSequenceTotalMs(uint16_t ledCount) {
+    return kStartupWhiteSweepStartMs +
+           (static_cast<unsigned long>(std::max<uint16_t>(ledCount, 1)) * kStartupWhiteStepMs) +
+           kStartupHoldMs;
+}
+
+void updateWhiteSweep(unsigned long elapsedMs) {
+    if (elapsedMs < kStartupWhiteSweepStartMs) {
+        return;
+    }
+    const uint16_t ledCount = NUM_LEDS();
+    if (ledCount == 0) {
+        return;
+    }
+
+    const unsigned long sweepElapsed = elapsedMs - kStartupWhiteSweepStartMs;
+    const unsigned long completed = (sweepElapsed / kStartupWhiteStepMs) + 1UL;
+    const uint16_t targetLit = static_cast<uint16_t>(
+        std::min<unsigned long>(completed, static_cast<unsigned long>(ledCount)));
+
+    if (targetLit <= gStartupSequence.whiteLit) {
+        return;
+    }
+
+    for (uint16_t i = gStartupSequence.whiteLit; i < targetLit; ++i) {
+        ledManager.setPixelColor(i, CRGB::White);
+    }
+    ledManager.update();
+    gStartupSequence.whiteLit = targetLit;
+}
+
+} // namespace
+
+// Bring up the physical UI modules and arm the startup sequence state machine.
 void initializeUI() {
     pinMode(hwConfig.statusLedPin, OUTPUT);
     digitalWrite(hwConfig.statusLedPin, LOW);
@@ -28,24 +142,45 @@ void initializeUI() {
     }
 
     buttonManager.initButtons();
-    delay(1000);
-    ledManager.blinkStatusLED(2, 100);
-    if (!displayReady) {
-        return;
+    gStartupSequence = {};
+    gStartupSequence.active = displayReady;
+    gStartupSequence.displayReady = displayReady;
+
+    if (displayReady) {
+        displayManager.clear(); // Start from a blank canvas per startup sequence design.
+    }
+}
+
+bool isStartupSequenceActive() { return gStartupSequence.active; }
+
+bool runStartupSequenceStep() {
+    if (!gStartupSequence.active || !gStartupSequence.displayReady) {
+        return false;
     }
 
-    displayManager.clear();
-    displayManager.showText("MOAR");
-
-    // Drive the non-blocking splash state machine through setup so boot visuals are
-    // deterministic on the OLED before we enter the live scheduler loop.
-    const unsigned long startupBeginMs = millis();
-    const unsigned long startupTimeoutMs = 6000;
-    while (!displayManager.isStartupAnimationDone() &&
-           (millis() - startupBeginMs) < startupTimeoutMs) {
-        displayManager.runStartupAnimation();
-        delay(20);
+    if (!gStartupSequence.started) {
+        gStartupSequence.started = true;
+        gStartupSequence.startMs = millis();
+        gStartupSequence.randomPhase = StartupRandomPhase::Unknown;
+        gStartupSequence.whiteLit = 0;
+        seedStartupColors(NUM_LEDS());
+        ledManager.setAll(CRGB::Black);
+        displayManager.clear();
     }
+
+    const unsigned long elapsedMs = millis() - gStartupSequence.startMs;
+    updateRandomLedStartup(elapsedMs);
+    updateWhiteSweep(elapsedMs);
+    displayManager.runStartupAnimation();
+
+    const uint16_t ledCount = NUM_LEDS();
+    const unsigned long totalMs = startupSequenceTotalMs(ledCount);
+    const bool finished = displayManager.isStartupAnimationDone() && (elapsedMs >= totalMs) &&
+                          (gStartupSequence.whiteLit >= ledCount);
+    if (finished) {
+        gStartupSequence.active = false;
+    }
+    return gStartupSequence.active;
 }
 
 // Read the two control pots as filter-tail tuning for the currently active slot/follower.

@@ -59,8 +59,8 @@ struct Animation {
     uint8_t brightness = 0;            //!< Current display brightness
 };
 
-// Startup splash, non-blocking because we're not monsters.
-enum class StartupPhase { IDLE, DRAW_LINES, HOLD_LINES, HOLD_LOGO, DONE };
+// Startup splash phases used by the non-blocking boot animation.
+enum class StartupPhase { IDLE, SNOW_FILL, LOGO_REVEAL, LOGO_EXPAND, HOLD_FINAL, DONE };
 
 /**
  * Tracks progress of the boot animation so `runStartupAnimation()` can be
@@ -69,8 +69,9 @@ enum class StartupPhase { IDLE, DRAW_LINES, HOLD_LINES, HOLD_LOGO, DONE };
  */
 struct StartupAnimation {
     StartupPhase phase = StartupPhase::IDLE; //!< Current animation phase
-    uint8_t step = 0;                        //!< Line pattern step
-    uint32_t lastTime = 0;                   //!< Time of last phase advance
+    uint32_t startedAt = 0;                  //!< Global animation start time
+    uint32_t phaseStartedAt = 0;             //!< Time current phase began
+    bool invertOn = false;                   //!< Tracks inversion state during final hold
 };
 
 /**

@@ -9,5 +9,7 @@ void updateNoteDynamics();
 void streamWebSerialState();
 
 void initializeUI();
+bool runStartupSequenceStep();
+bool isStartupSequenceActive();
 
 #endif // UI_H

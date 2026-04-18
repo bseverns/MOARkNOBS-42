@@ -286,7 +286,8 @@ void processMIDI() {
     if (tickCount != lastDisplayTick) {
         // Catch-up path: if multiple clock ticks arrive between scheduler slices, advance by the
         // full delta to keep beat position stable.
-        // Keep this section display-free so the high-priority MIDI service path never blocks on I2C.
+        // Keep this section display-free so the high-priority MIDI service path never blocks on
+        // I2C.
         uint32_t diff = tickCount - lastDisplayTick;
         lastDisplayTick = tickCount;
 

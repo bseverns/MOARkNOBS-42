@@ -37,6 +37,9 @@ void initializeSchedulers() {
     // Low-priority visual updates, diagnostics, and WebSerial telemetry.
     Utility::schedulerLow.addTask(
         []() {
+            if (isStartupSequenceActive()) {
+                return;
+            }
             bool clockTick = midiHandler.isClockTick();
             if (clockTick) {
                 midiHandler.clearClockTick();
@@ -51,6 +54,9 @@ void initializeSchedulers() {
 
     Utility::schedulerLow.addTask(
         []() {
+            if (runStartupSequenceStep()) {
+                return;
+            }
             if (diagnosticMode) {
                 displayManager.beginDraw();
                 // Show the latest diagnostics snapshot while the UI task is in control.

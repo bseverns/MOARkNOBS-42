@@ -32,7 +32,6 @@ LEDManager::LEDManager(const HardwareConfig &config)
 
     std::fill(leds.begin(), leds.end(), CRGB::Black);
     presentFrame();
-    startupAnimation();
 }
 
 // Legacy begin hook retained so callers can treat LEDManager like other hardware modules.
