@@ -93,6 +93,8 @@ class DisplayManager {
 
     /** Initialise the underlying display hardware. Call from setup(). */
     bool begin();
+    /** True once `begin()` has successfully initialized the OLED. */
+    bool isReady() const;
 
     // Core display methods ------------------------------------------------
 
@@ -182,6 +184,8 @@ class DisplayManager {
 
     /** Simple splash screen shown at startup. */
     void runStartupAnimation();
+    /** True when the startup animation has completed all phases. */
+    bool isStartupAnimationDone() const;
 
     /** Random pixel screensaver used after long inactivity. */
     void runIdleScreensaver();
@@ -207,6 +211,7 @@ class DisplayManager {
     unsigned long _statusTimeout;
 
     bool _isDrawing;
+    bool _initialized = false;
     unsigned long _updateIntervalMs;
     unsigned long _lastDisplayPushMs = 0;
     unsigned long _lastFullRefreshMs = 0;

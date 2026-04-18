@@ -286,21 +286,12 @@ void processMIDI() {
     if (tickCount != lastDisplayTick) {
         // Catch-up path: if multiple clock ticks arrive between scheduler slices, advance by the
         // full delta to keep beat position stable.
+        // Keep this section display-free so the high-priority MIDI service path never blocks on I2C.
         uint32_t diff = tickCount - lastDisplayTick;
         lastDisplayTick = tickCount;
 
         lastClockTime = now();
         midiBeatPosition = (midiBeatPosition + diff) % 8;
-
-        std::array<uint8_t, NUM_ENVELOPES> envelopeSnapshot{};
-        for (size_t i = 0; i < NUM_ENVELOPES; ++i) {
-            envelopeSnapshot[i] =
-                static_cast<uint8_t>(constrain(envelopeFollowerLevels[i], 0, 127));
-        }
-        displayManager.updateDisplay(
-            midiBeatPosition, envelopeSnapshot.data(), envelopeSnapshot.size(),
-            envelopeFollowMode ? "EF ON" : "EF OFF", activePot, activeChannel, envelopeMode);
-
         lastClockTime = now();
         midiHandler.clearClockTick();
     }

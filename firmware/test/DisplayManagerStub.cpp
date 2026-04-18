@@ -16,7 +16,14 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
     _activeMode = "MIDI";
 }
 
-bool DisplayManager::begin() { return true; }
+bool DisplayManager::begin() {
+    _initialized = true;
+    return true;
+}
+
+bool DisplayManager::isReady() const { return _initialized; }
+
+bool DisplayManager::isStartupAnimationDone() const { return _startupAnim.phase == StartupPhase::DONE; }
 
 void DisplayManager::showText(const char *line1, const char *line2, const char *line3) {
     _statusMessage = line1 ? line1 : "";

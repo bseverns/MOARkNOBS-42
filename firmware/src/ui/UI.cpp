@@ -5,6 +5,7 @@
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Arpeggiator.h"
+#include "Log.h"
 #include "WebSerial.h"
 
 // Bring up the physical UI modules and play the startup identity sequence.
@@ -19,15 +20,32 @@ void initializeUI() {
     ledManager.setBrightness(ledB);
     ledManager.setColor(ledC);
 
-    displayManager.begin();
-    displayManager.showText("Initializing...");
+    const bool displayReady = displayManager.begin();
+    if (displayReady) {
+        displayManager.showText("Initializing...");
+    } else {
+        LOG_PRINTLN("{\"warning\":\"display_init_failed\"}");
+    }
 
     buttonManager.initButtons();
     delay(1000);
+    ledManager.blinkStatusLED(2, 100);
+    if (!displayReady) {
+        return;
+    }
+
     displayManager.clear();
     displayManager.showText("MOAR");
-    ledManager.blinkStatusLED(2, 100);
-    displayManager.runStartupAnimation();
+
+    // Drive the non-blocking splash state machine through setup so boot visuals are
+    // deterministic on the OLED before we enter the live scheduler loop.
+    const unsigned long startupBeginMs = millis();
+    const unsigned long startupTimeoutMs = 6000;
+    while (!displayManager.isStartupAnimationDone() &&
+           (millis() - startupBeginMs) < startupTimeoutMs) {
+        displayManager.runStartupAnimation();
+        delay(20);
+    }
 }
 
 // Read the two control pots as filter-tail tuning for the currently active slot/follower.

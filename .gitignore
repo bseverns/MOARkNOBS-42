@@ -8,6 +8,7 @@ firmwareZip.zip
 .pio/
 .pio-home/
 .pio-cache/
+**/.platformio/
 
 # Ignore editor swap files
 *.swp

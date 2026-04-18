@@ -161,7 +161,6 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     }
 
     for (const auto &entry : potToEnvelopeMap) {
-        const int potIndex = entry.first;
         const int followerIndex = entry.second.followerIndex;
         if (followerIndex >= 0 && followerIndex < static_cast<int>(envelopeFollowers.size())) {
             applyEfSettingsToFollower(envelopeFollowers[followerIndex], entry.second,

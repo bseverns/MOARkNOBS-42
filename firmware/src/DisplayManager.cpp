@@ -137,8 +137,10 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
 // Bring up the OLED hardware and clear any startup garbage.
 bool DisplayManager::begin() {
     if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
+        _initialized = false;
         return false;
     }
+    _initialized = true;
     _display.clearDisplay();
     _display.display();
     _shadowValid = false;
@@ -146,6 +148,12 @@ bool DisplayManager::begin() {
     _lastFullRefreshMs = _lastDisplayPushMs;
     syncShadowBuffer();
     return true;
+}
+
+bool DisplayManager::isReady() const { return _initialized; }
+
+bool DisplayManager::isStartupAnimationDone() const {
+    return !_initialized || _startupAnim.phase == StartupPhase::DONE;
 }
 
 void DisplayManager::syncShadowBuffer() {
@@ -163,6 +171,9 @@ void DisplayManager::syncShadowBuffer() {
 }
 
 void DisplayManager::present(bool force) {
+    if (!_initialized) {
+        return;
+    }
     if (_isDrawing && !force) {
         return;
     }
@@ -305,6 +316,9 @@ void DisplayManager::triggerFade(uint16_t ms) {
 
 // Advance the OLED fade animation and translate it into contrast commands.
 void DisplayManager::updateFadeAnimation() {
+    if (!_initialized) {
+        return;
+    }
     if (_fadeAnim.state == AnimState::IDLE || _fadeAnim.state == AnimState::DONE) {
         return;
     }
@@ -623,7 +637,9 @@ void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
     _display.print("BTN: ");
     _display.print(context.activePot);
     _display.print(" CH: ");
-    _display.println(context.activeChannel);
+    _display.print(context.activeChannel);
+    _display.print(" B:");
+    _display.println(midiBeatPosition);
     _display.setCursor(0, 10);
     _display.print("EF: ");
     _display.println(context.envelopeFollowMode ? "ON" : "OFF");

@@ -181,10 +181,12 @@ void MIDIHandler::handleClockTick() {
 // Drain incoming DIN/USB MIDI, update timing state, and fan events into the rest of the runtime.
 void MIDIHandler::processIncomingMIDI() {
     uint32_t startMicros = micros();
+    bool displayInteractionSeen = false;
     // Serial MIDI is the crusty hardware port. When it spits out a full
     // message, read() returns true and we hurl the parsed bytes at
     // handleMIDI so the rest of the rig can jam.
     if (MIDI.read()) {
+        displayInteractionSeen = true;
         auto type = MIDI.getType();
         if (type == MidiType_Tick) {
             lastExternalClock = lastInternalTick = now();
@@ -201,6 +203,7 @@ void MIDIHandler::processIncomingMIDI() {
     // the old-school wire.
 #ifndef USB_MIDI_STUB
     while (usbMIDI.read()) {
+        displayInteractionSeen = true;
         // Force usbMIDI's raw type into midi::MidiType so isSupportedType doesn't choke
         auto type = static_cast<midi::MidiType>(usbMIDI.getType());
         if (!isSupportedType(type)) {
@@ -233,7 +236,9 @@ void MIDIHandler::processIncomingMIDI() {
         }
     }
 
-    if (_displayManager) {
+    // Treat actual inbound MIDI traffic as operator interaction; avoid refreshing this timer
+    // on empty service cycles so the screensaver can still run when the rig is idle.
+    if (_displayManager && displayInteractionSeen) {
         _displayManager->registerInteraction();
     }
 

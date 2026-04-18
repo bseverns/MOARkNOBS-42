@@ -6,7 +6,8 @@
         "lfos",
         "MIDIHANDLER",
         "MOARBENZ",
-        "oversample"
+        "oversample",
+        "repointing"
     ],
     "C_Cpp.default.configurationProvider": "platformio",
     "C_Cpp.default.includePath": [
