@@ -40,12 +40,12 @@ mkdocs serve
 
 Then open the local URL MkDocs prints in your terminal.
 
-| Doc                                                                                       | Why it exists                                        | Keep it fresh                                         |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------- |
-| [Primers/MIDI-DSP101.md](../Primers/MIDI-DSP101.md)                                       | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
-| [ProcessOverview.md](ProcessOverview.md)                                                  | Full build and release flow                          | Update when hardware or firmware release steps move   |
-| [TESTING.md](../validation/TESTING.md)                                                    | Canonical test workflow + coverage map               | Refresh when test scope or commands move              |
-| [ReleaseGuide.md](../release/ReleaseGuide.md)                                             | Human release checklist                              | Refresh when release ritual or asset list changes     |
+| Doc                                                                                         | Why it exists                                        | Keep it fresh                                         |
+| ------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------- |
+| [Primers/MIDI-DSP101.md](../Primers/MIDI-DSP101.md)                                         | MIDI basics and the DSP tricks our firmware leans on | Sync when firmware MIDI features or filter math shift |
+| [ProcessOverview.md](ProcessOverview.md)                                                    | Full build and release flow                          | Update when hardware or firmware release steps move   |
+| [TESTING.md](../validation/TESTING.md)                                                      | Canonical test workflow + coverage map               | Refresh when test scope or commands move              |
+| [ReleaseGuide.md](../release/ReleaseGuide.md)                                               | Human release checklist                              | Refresh when release ritual or asset list changes     |
 | [REPRODUCIBILITY.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe              | Refresh when `release.sh` or artifact shape changes   |
 | [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md)           | App/runtime contract and simulator notes             | Refresh when manifest/schema/apply semantics change   |
 
