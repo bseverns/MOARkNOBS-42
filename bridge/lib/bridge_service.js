@@ -62,6 +62,13 @@ const {
   createPerformanceTracker,
 } = require('./observability/performance_tracker');
 const { createFeedbackGuard } = require('./transports/feedback_guard');
+const {
+  normalizeBridgeRuntimeConfig,
+  startBridgeRuntime,
+  stopBridgeRuntime,
+  configureBridgeRuntime,
+} = require('./runtime/lifecycle');
+const { createBridgeStateStore } = require('./runtime/state_store');
 
 // Translate CLI flags into the bridge's runtime config object.
 function parseConfigFromArgv(argv = process.argv) {
@@ -140,39 +147,19 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     config: clone(config),
   };
 
-  // Push a fresh state snapshot to UI/CLI listeners after every meaningful change.
-  function emitState() {
-    events.emit('state', getState());
-  }
-
-  // Keep a bounded in-memory log so the browser console can show recent events without growing forever.
-  function pushLog(level, message, extra = undefined) {
-    const entry = {
-      at: new Date().toISOString(),
-      level,
-      message,
-      extra: extra === undefined ? undefined : clone(extra),
-    };
-    state.logs.push(entry);
-    if (state.logs.length > LOG_LIMIT) {
-      state.logs.splice(0, state.logs.length - LOG_LIMIT);
-    }
-    events.emit('log', entry);
-    emitState();
-  }
-
-  // Merge partial state updates and notify subscribers immediately.
-  function setState(partial) {
-    Object.assign(state, partial);
-    emitState();
-  }
-
-  // Keep drop/parse counters in state for browser/CLI diagnostics.
-  function bumpCounter(name, amount = 1) {
-    if (!Object.prototype.hasOwnProperty.call(state.counters, name)) return;
-    state.counters[name] += amount;
-    emitState();
-  }
+  const {
+    emitState,
+    pushLog,
+    setState,
+    bumpCounter,
+    getState,
+  } = createBridgeStateStore({
+    events,
+    state,
+    clone,
+    getConfig: () => config,
+    logLimit: LOG_LIMIT,
+  });
 
   function nextTraceId(prefix = 'trace') {
     traceSeq += 1;
@@ -530,105 +517,100 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   // Start all bridge transports and publish a fresh runtime snapshot.
   async function start() {
-    if (running) return getState();
-    await loadDeps();
-    stopping = false;
-    manualStop = false;
-    running = true;
-    traceSeq = 0;
-    feedbackGuard.clear();
-    midiRpnStateByChannel.clear();
-    routeAlertPolicy.resetForRun();
-    clearPerformanceTracking();
-    setState({
-      running: true,
-      ready: false,
-      lastError: null,
-      lastRouteAt: null,
-      lastRouteTraceId: null,
-      routes: [],
-      timing: createTimingState(),
-      performance: createPerformanceState({
-        rtP95TargetMs: config.rtP95TargetMs,
-        rtJitterP95TargetMs: config.rtJitterP95TargetMs,
-      }),
-      alerts: createAlertState(),
-      config: clone(config),
+    return startBridgeRuntime({
+      isRunning: () => running,
+      getState,
+      loadDeps,
+      setRuntimeFlags: ({ running: r, stopping: s, manualStop: m }) => {
+        if (typeof r === 'boolean') running = r;
+        if (typeof s === 'boolean') stopping = s;
+        if (typeof m === 'boolean') manualStop = m;
+      },
+      resetTraceSeq: () => {
+        traceSeq = 0;
+      },
+      clearFeedbackGuard: () => feedbackGuard.clear(),
+      clearMidiRpnState: () => midiRpnStateByChannel.clear(),
+      resetRouteAlerts: () => routeAlertPolicy.resetForRun(),
+      clearPerformanceTracking,
+      setState,
+      createTimingState,
+      createPerformanceState,
+      createAlertState,
+      config,
+      clone,
+      attachOsc,
+      attachMidi,
+      attachSerial,
     });
-    attachOsc();
-    attachMidi();
-    attachSerial();
-    return getState();
   }
 
   // Tear down serial, OSC, and MIDI cleanly so the bridge can restart without zombie listeners.
   async function stop() {
-    manualStop = true;
-    stopping = true;
-    running = false;
-    serialLifecycle?.cancelReconnect();
-    midiLifecycle?.cancelRetry();
-
-    detachListeners(parser);
-    parser = null;
-
-    detachListeners(serial);
-    await closeSerialDevice(serial, {
-      onCloseError: (err) => {
-        pushLog('error', `serial close failed: ${err.message}`);
+    return stopBridgeRuntime({
+      setRuntimeFlags: ({ running: r, stopping: s, manualStop: m }) => {
+        if (typeof r === 'boolean') running = r;
+        if (typeof s === 'boolean') stopping = s;
+        if (typeof m === 'boolean') manualStop = m;
       },
+      cancelSerialReconnect: () => serialLifecycle?.cancelReconnect(),
+      cancelMidiRetry: () => midiLifecycle?.cancelRetry(),
+      getParser: () => parser,
+      setParser: (next) => {
+        parser = next;
+      },
+      getSerial: () => serial,
+      setSerial: (next) => {
+        serial = next;
+      },
+      getUdp: () => udp,
+      setUdp: (next) => {
+        udp = next;
+      },
+      getMidiIn: () => midiIn,
+      setMidiIn: (next) => {
+        midiIn = next;
+      },
+      getMidiOut: () => midiOut,
+      setMidiOut: (next) => {
+        midiOut = next;
+      },
+      setMidi: (next) => {
+        midi = next;
+      },
+      detachListeners,
+      closeSerialDevice,
+      closeQuietly,
+      pushLog,
+      setState,
+      config,
+      clone,
+      getState,
     });
-    serial = null;
-
-    closeQuietly(udp);
-    udp = null;
-
-    closeQuietly(midiIn);
-    midiIn = null;
-
-    closeQuietly(midiOut);
-    midiOut = null;
-    midi = null;
-
-    setState({
-      running: false,
-      serialConnected: false,
-      ready: false,
-      config: clone(config),
-    });
-    stopping = false;
-    return getState();
   }
 
   // Update bridge config and optionally restart live transports to apply it.
   async function configure(nextConfig = {}, { restart = true } = {}) {
-    Object.assign(config, nextConfig || {});
-    const normalizedWindow = parsePositiveInt(
-      config.feedbackWindowMs,
-      DEFAULT_FEEDBACK_WINDOW_MS,
-    );
-    config.feedbackWindowMs = normalizedWindow;
-    config.rtP95TargetMs = parsePositiveInt(
-      config.rtP95TargetMs,
-      DEFAULT_RT_P95_TARGET_MS,
-    );
-    config.rtJitterP95TargetMs = parsePositiveInt(
-      config.rtJitterP95TargetMs,
-      DEFAULT_RT_JITTER_P95_TARGET_MS,
-    );
-    config.alertSuppressionMs = parsePositiveInt(
-      config.alertSuppressionMs,
-      DEFAULT_ALERT_SUPPRESSION_MS,
-    );
-    if (config.allowFeedbackLoops) {
-      feedbackGuard.clear();
-    }
-    setState({ config: clone(config) });
-    refreshPerformance(Date.now(), false);
-    if (restart && running) {
-      await stop();
-      await start();
-    }
+    await configureBridgeRuntime(nextConfig, { restart }, {
+      config,
+      normalizeConfig: (mutableConfig) => {
+        normalizeBridgeRuntimeConfig(mutableConfig, {
+          parsePositiveInt,
+          defaultFeedbackWindowMs: DEFAULT_FEEDBACK_WINDOW_MS,
+          defaultRtP95TargetMs: DEFAULT_RT_P95_TARGET_MS,
+          defaultRtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
+          defaultAlertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
+        });
+      },
+      setState,
+      clone,
+      refreshPerformance,
+      isRunning: () => running,
+      stop,
+      start,
+      clearFeedbackGuard: () => feedbackGuard.clear(),
+      now: () => Date.now(),
+    });
     return getState();
   }
 
@@ -648,27 +630,6 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   function on(eventName, handler) {
     events.on(eventName, handler);
     return () => events.off(eventName, handler);
-  }
-
-  // Return a serializable snapshot for the browser console and CLI status output.
-  function getState() {
-    return {
-      running: state.running,
-      serialConnected: state.serialConnected,
-      ready: state.ready,
-      manifest: clone(state.manifest),
-      lastError: state.lastError,
-      lastTelemetryAt: state.lastTelemetryAt,
-      lastRouteAt: state.lastRouteAt,
-      lastRouteTraceId: state.lastRouteTraceId,
-      timing: clone(state.timing),
-      performance: clone(state.performance),
-      alerts: clone(state.alerts),
-      logs: clone(state.logs),
-      routes: clone(state.routes),
-      counters: clone(state.counters),
-      config: clone(config),
-    };
   }
 
   return {
