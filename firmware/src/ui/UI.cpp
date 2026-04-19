@@ -33,6 +33,7 @@ struct StartupSequenceState {
 };
 
 StartupSequenceState gStartupSequence;
+enum class ControlUiMode : uint8_t { Filter, Arp, NoteDynamics };
 
 CRGB scaleColor(const CRGB &color, uint8_t scale255) {
     return CRGB(static_cast<uint8_t>((static_cast<uint16_t>(color.r) * scale255) / 255U),
@@ -120,6 +121,17 @@ void updateWhiteSweep(unsigned long elapsedMs) {
     gStartupSequence.whiteLit = targetLit;
 }
 
+ControlUiMode resolveControlUiMode(const ButtonManagerContext &context) {
+    if (arpeggiator.isActive()) {
+        return ControlUiMode::Arp;
+    }
+    if (context.envelopeFollowMode &&
+        context.potToEnvelopeMap.find(context.activePot) != context.potToEnvelopeMap.end()) {
+        return ControlUiMode::Filter;
+    }
+    return ControlUiMode::NoteDynamics;
+}
+
 } // namespace
 
 // Bring up the physical UI modules and arm the startup sequence state machine.
@@ -183,8 +195,27 @@ bool runStartupSequenceStep() {
     return gStartupSequence.active;
 }
 
+void updateControlUi(ButtonManagerContext &context) {
+    if (gStartupSequence.active) {
+        return;
+    }
+
+    const bool allowDisplay = !displayManager.isStatusOverlayActive();
+    switch (resolveControlUiMode(context)) {
+    case ControlUiMode::Filter:
+        updateFilterTuning(context, allowDisplay);
+        break;
+    case ControlUiMode::Arp:
+        updateArpTuning(allowDisplay);
+        break;
+    case ControlUiMode::NoteDynamics:
+        updateNoteDynamics(allowDisplay);
+        break;
+    }
+}
+
 // Read the two control pots as filter-tail tuning for the currently active slot/follower.
-void updateFilterTuning(ButtonManagerContext &context) {
+void updateFilterTuning(ButtonManagerContext &context, bool renderDisplay) {
     if (g_jitterTuningActive) {
         return;
     }
@@ -222,11 +253,13 @@ void updateFilterTuning(ButtonManagerContext &context) {
         configManager.setSlotEnvelopePayload(static_cast<uint8_t>(context.activePot), payload);
         WebSerial::sendSlotPatch(configManager, static_cast<uint8_t>(context.activePot));
     }
-    displayManager.showFilterTuning("Freq", freq, "Q", q);
+    if (renderDisplay) {
+        displayManager.showFilterTuning("Freq", freq, "Q", q);
+    }
 }
 
 // Reinterpret the two control pots as arpeggiator timing/shape or gate/octave edits.
-void updateArpTuning() {
+void updateArpTuning(bool renderDisplay) {
     if (g_jitterTuningActive) {
         return;
     }
@@ -245,7 +278,9 @@ void updateArpTuning() {
         char line3[24];
         snprintf(line2, sizeof(line2), "Gate %u%%", gatePercent);
         snprintf(line3, sizeof(line3), "Oct +%u", octaveRange);
-        displayManager.showText("Arp Edit", line2, line3);
+        if (renderDisplay) {
+            displayManager.showText("Arp Edit", line2, line3);
+        }
         return;
     }
 
@@ -258,11 +293,13 @@ void updateArpTuning() {
     arpeggiator.setLength(lengthTicks);
     arpeggiator.setShape(shapes[shapeIdx]);
 
-    displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
+    if (renderDisplay) {
+        displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
+    }
 }
 
 // Reinterpret the two control pots as note velocity/probability shaping when arp is idle.
-void updateNoteDynamics() {
+void updateNoteDynamics(bool renderDisplay) {
     if (g_jitterTuningActive) {
         return;
     }
@@ -277,7 +314,9 @@ void updateNoteDynamics() {
 
     String line2 = String("Vel ") + String(velocityShift);
     String line3 = String("Prob ") + String(changeProbability) + "%";
-    displayManager.showText("Note Dyn", line2.c_str(), line3.c_str());
+    if (renderDisplay) {
+        displayManager.showText("Note Dyn", line2.c_str(), line3.c_str());
+    }
 }
 
 // Push the current runtime snapshot out over WebSerial for the browser/editor layer.

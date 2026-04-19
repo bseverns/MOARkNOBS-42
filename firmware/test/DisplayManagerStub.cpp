@@ -27,6 +27,8 @@ bool DisplayManager::isStartupAnimationDone() const {
     return _startupAnim.phase == StartupPhase::DONE;
 }
 
+bool DisplayManager::isStatusOverlayActive() const { return now() < _statusTimeout; }
+
 void DisplayManager::showText(const char *line1, const char *line2, const char *line3) {
     _statusMessage = line1 ? line1 : "";
     if (line2 && line2[0] != '\0') {
@@ -56,7 +58,8 @@ void DisplayManager::updateDisplay(uint8_t, const uint8_t *, size_t, const char 
 }
 
 void DisplayManager::displayStatus(const char *status, unsigned long duration) {
-    setTemporaryMessage(status, duration);
+    _statusMessage = status ? status : "";
+    _statusTimeout = now() + duration;
 }
 
 void DisplayManager::updateFromContext(const ButtonManagerContext &context) {

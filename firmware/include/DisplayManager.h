@@ -121,6 +121,8 @@ class DisplayManager {
 
     /** Display a transient message for the given duration. */
     void displayStatus(const char *status, unsigned long duration);
+    /** True while a status/toast overlay owns the OLED. */
+    bool isStatusOverlayActive() const;
 
     /**
      * Refresh the UI using values from a ButtonManagerContext.

@@ -3,9 +3,10 @@
 
 #include "ButtonManager.h"
 
-void updateFilterTuning(ButtonManagerContext &context);
-void updateArpTuning();
-void updateNoteDynamics();
+void updateFilterTuning(ButtonManagerContext &context, bool renderDisplay = true);
+void updateArpTuning(bool renderDisplay = true);
+void updateNoteDynamics(bool renderDisplay = true);
+void updateControlUi(ButtonManagerContext &context);
 void streamWebSerialState();
 
 void initializeUI();

@@ -91,6 +91,41 @@ void drawNegativeMn42Frame(Adafruit_SSD1306 &display, uint8_t textSize) {
     display.print(label);
 }
 
+void drawCenteredStatusLine(Adafruit_SSD1306 &display, const char *text) {
+    int16_t x1 = 0;
+    int16_t y1 = 0;
+    uint16_t width = 0;
+    uint16_t height = 0;
+    display.getTextBounds(text, 0, 0, &x1, &y1, &width, &height);
+    const int16_t x = static_cast<int16_t>((display.width() - static_cast<int16_t>(width)) / 2);
+    const int16_t y =
+        static_cast<int16_t>((display.height() - static_cast<int16_t>(height)) / 2 - y1);
+    display.setCursor(x, y);
+    display.print(text);
+}
+
+void printWrappedStatusText(Adafruit_SSD1306 &display, const char *text, int16_t x, int16_t yStart,
+                            int16_t lineHeight, uint8_t maxLines) {
+    if (text == nullptr || text[0] == '\0' || maxLines == 0) {
+        return;
+    }
+
+    constexpr size_t kBufferSize = 128;
+    char buffer[kBufferSize];
+    strncpy(buffer, text, kBufferSize - 1);
+    buffer[kBufferSize - 1] = '\0';
+
+    char *saveptr = nullptr;
+    char *line = strtok_r(buffer, "\n", &saveptr);
+    uint8_t lineIdx = 0;
+    while (line != nullptr && lineIdx < maxLines) {
+        display.setCursor(x, yStart + static_cast<int16_t>(lineIdx) * lineHeight);
+        display.print(line);
+        ++lineIdx;
+        line = strtok_r(nullptr, "\n", &saveptr);
+    }
+}
+
 // Human-readable EF filter labels for the OLED detail views.
 const char *efFilterLabel(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
@@ -710,16 +745,49 @@ void DisplayManager::updateDisplay(uint8_t beatPosition, const uint8_t *envelope
 }
 
 void DisplayManager::displayStatus(const char *status, unsigned long duration) {
-    _statusMessage = status;
+    _statusMessage = status ? status : "";
     _statusTimeout = now() + duration;
 
+    const char *message = _statusMessage.c_str();
+    const bool hasLineBreak = strchr(message, '\n') != nullptr;
+    const size_t messageLength = strlen(message);
+    const bool shortMessage = !hasLineBreak && messageLength > 0 && messageLength <= 10;
+
     _display.clearDisplay();
-    _display.setTextSize(2);
     _display.setTextColor(SSD1306_COLOR_WHITE);
-    _display.setCursor(0, 0);
-    _display.println(status);
+
+    if (shortMessage) {
+        _display.setTextSize(2);
+        drawCenteredStatusLine(_display, message);
+    } else {
+        _display.setTextSize(1);
+        char titleBuffer[48];
+        const char *title = "Status";
+        const char *detail = message;
+        if (hasLineBreak) {
+            const char *lineBreak = strchr(message, '\n');
+            size_t titleLen = static_cast<size_t>(lineBreak - message);
+            if (titleLen >= sizeof(titleBuffer)) {
+                titleLen = sizeof(titleBuffer) - 1;
+            }
+            memcpy(titleBuffer, message, titleLen);
+            titleBuffer[titleLen] = '\0';
+            title = titleBuffer[0] != '\0' ? titleBuffer : "Status";
+            detail = lineBreak + 1;
+        }
+
+        if (title != nullptr && title[0] != '\0') {
+            _display.setCursor(0, 0);
+            _display.print(title);
+        }
+        _display.drawLine(0, 9, _display.width() - 1, 9, SSD1306_COLOR_WHITE);
+        printWrappedStatusText(_display, detail, 0, 12, 10, 5);
+        drawBorder();
+    }
     present(true);
 }
+
+bool DisplayManager::isStatusOverlayActive() const { return now() < _statusTimeout; }
 
 void DisplayManager::updateFromContext(const ButtonManagerContext &context) {
     if (now() < _statusTimeout)
@@ -804,14 +872,7 @@ void DisplayManager::showARGInfo(const char *methodName, int envA, int envB) {
 }
 
 void DisplayManager::setTemporaryMessage(const char *message, unsigned long duration) {
-    _statusMessage = message;
-    _statusTimeout = now() + duration;
-    _display.clearDisplay();
-    _display.setTextSize(1);
-    _display.setTextColor(SSD1306_COLOR_WHITE);
-    _display.setCursor(0, 0);
-    _display.println(message);
-    present(true);
+    displayStatus(message, duration);
 }
 
 void DisplayManager::showMIDIMessage(uint8_t cc, uint8_t value, uint8_t channel) {
@@ -1017,7 +1078,33 @@ void DisplayManager::updateActiveSelection(uint8_t activePot, uint8_t activeChan
 }
 
 void DisplayManager::highlightActivePot(uint8_t potIndex) {
-    _display.drawRect(5 + potIndex * 10, 50, 8, 8, SSD1306_COLOR_WHITE);
+    constexpr uint8_t kMapCols = BUTTON_COLS;
+    constexpr uint8_t kMapRows = BUTTON_ROWS;
+    constexpr int16_t kCellPitch = 3;
+    constexpr int16_t kSelectedSize = 3;
+
+    const int16_t mapWidth = static_cast<int16_t>(kMapCols * kCellPitch - 1);
+    const int16_t mapHeight = static_cast<int16_t>(kMapRows * kCellPitch - 1);
+    const int16_t mapX = static_cast<int16_t>(_display.width() - mapWidth - 3);
+    const int16_t mapY = static_cast<int16_t>(_display.height() - mapHeight - 3);
+
+    _display.drawRect(mapX - 1, mapY - 1, mapWidth + 2, mapHeight + 2, SSD1306_COLOR_WHITE);
+
+    for (uint8_t slot = 0; slot < NUM_VIRTUAL_BUTTONS; ++slot) {
+        const uint8_t row = static_cast<uint8_t>(slot / kMapCols);
+        const uint8_t col = static_cast<uint8_t>(slot % kMapCols);
+        const int16_t px = static_cast<int16_t>(mapX + col * kCellPitch);
+        const int16_t py = static_cast<int16_t>(mapY + row * kCellPitch);
+        _display.drawPixel(px, py, SSD1306_COLOR_WHITE);
+    }
+
+    if (potIndex < NUM_VIRTUAL_BUTTONS) {
+        const uint8_t row = static_cast<uint8_t>(potIndex / kMapCols);
+        const uint8_t col = static_cast<uint8_t>(potIndex % kMapCols);
+        const int16_t px = static_cast<int16_t>(mapX + col * kCellPitch);
+        const int16_t py = static_cast<int16_t>(mapY + row * kCellPitch);
+        _display.fillRect(px - 1, py - 1, kSelectedSize, kSelectedSize, SSD1306_COLOR_WHITE);
+    }
 }
 
 void DisplayManager::highlightActiveMode(const String &modeName) {

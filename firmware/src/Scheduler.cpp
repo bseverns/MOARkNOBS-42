@@ -46,15 +46,16 @@ void initializeSchedulers() {
             }
             ledAnimator.tick(now(), clockTick, diagnosticMode);
             ledManager.update();
-            updateFilterTuning(buttonContext);
-            updateArpTuning();
-            updateNoteDynamics();
+            updateControlUi(buttonContext);
         },
         hwConfig.ledTaskInterval, true);
 
     Utility::schedulerLow.addTask(
         []() {
             if (runStartupSequenceStep()) {
+                return;
+            }
+            if (displayManager.isStatusOverlayActive()) {
                 return;
             }
             if (diagnosticMode) {
