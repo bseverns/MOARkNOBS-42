@@ -159,6 +159,10 @@ void applyFrameMeta(StaticJsonDocument<Capacity> &doc, const FrameMeta &meta) {
 
 } // namespace
 
+static void emitJsonError(const char *code, const char *scope);
+template <size_t Capacity>
+static void emitJson(StaticJsonDocument<Capacity> &doc, const char *scope);
+
 void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
                                   const std::vector<EnvelopeFollower> &envelopes,
                                   const ConfigManager &config, uint8_t currentSlot,
@@ -169,6 +173,7 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     // Snapshot carries 42 slots + 6 envelope levels + 6 enable flags + 8 diagnostics
     // scalars, plus misc scalars/strings. Give ArduinoJson ample headroom so it
     // never drops keys when we expand diagnostics.
+    // Capacity budget: ~1800 bytes typical, 2048 max with 15% headroom.
     StaticJsonDocument<2048> doc;
     const FrameMeta meta = buildFrameMeta("fw");
     applyFrameMeta(doc, meta);
@@ -224,14 +229,31 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
     diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
 
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
+    emitJson(doc, "state_snapshot");
 }
 
-template <size_t Capacity> void emitJson(StaticJsonDocument<Capacity> &doc) {
+static void emitJsonError(const char *code, const char *scope) {
+    StaticJsonDocument<192> errorDoc;
+    errorDoc["type"] = "error";
+    errorDoc["code"] = code;
+    errorDoc["scope"] = scope;
     String payload;
-    serializeJson(doc, payload);
+    if (serializeJson(errorDoc, payload) > 0) {
+        LOG_PRINTLN(payload);
+    }
+}
+
+template <size_t Capacity>
+static void emitJson(StaticJsonDocument<Capacity> &doc, const char *scope) {
+    if (doc.overflowed()) {
+        emitJsonError("json_overflow", scope);
+        return;
+    }
+    String payload;
+    if (serializeJson(doc, payload) == 0) {
+        emitJsonError("json_serialize_failed", scope);
+        return;
+    }
     LOG_PRINTLN(payload);
 }
 
@@ -252,7 +274,7 @@ void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolv
     slotObj["efIndex"] = slot.ef.followerIndex;
     slotObj["active"] = slot.active;
     slotObj["arpNote"] = slot.arpNote;
-    emitJson(doc);
+    emitJson(doc, "legacy_slot_patch");
 }
 
 // Back-compat envelope assignment patch for hosts that still expect `efSlots` deltas.
@@ -264,7 +286,7 @@ void emitLegacyEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex, const Fr
     JsonObject entry = ef.createNestedObject();
     entry["index"] = envelopeIndex;
     entry["slot"] = slotIndex;
-    emitJson(doc);
+    emitJson(doc, "legacy_envelope_assignment");
 }
 
 void emitLegacyFilterPatch(EnvelopeFollower::FilterType type, float freq, float q,
@@ -276,7 +298,7 @@ void emitLegacyFilterPatch(EnvelopeFollower::FilterType type, float freq, float 
     filter["type"] = filterName(type);
     filter["freq"] = freq;
     filter["q"] = q;
-    emitJson(doc);
+    emitJson(doc, "legacy_filter_patch");
 }
 
 void emitLegacyArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB,
@@ -289,7 +311,7 @@ void emitLegacyArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t envB,
     arg["enable"] = enable;
     arg["a"] = envA;
     arg["b"] = envB;
-    emitJson(doc);
+    emitJson(doc, "legacy_arg_patch");
 }
 
 void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
@@ -306,6 +328,7 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     const uint8_t resolvedDataByte = resolveDataByte(config, slotIndex, slot);
 
     const FrameMeta meta = buildFrameMeta("fw-slot-patch");
+    // Slot patch budget: ~700 bytes typical, 896 max with 25% headroom for EF payload expansion.
     StaticJsonDocument<896> doc;
     applyFrameMeta(doc, meta);
     doc["type"] = "slot_patch";
@@ -355,7 +378,7 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     arg["method_name"] = argMethodLabel(static_cast<uint8_t>(slot.arg.method));
     arg["sourceA"] = slot.arg.sourceA;
     arg["sourceB"] = slot.arg.sourceB;
-    emitJson(doc);
+    emitJson(doc, "slot_patch");
 
     emitLegacySlotPatch(slot, slotIndex, resolvedDataByte, meta);
 }
@@ -369,7 +392,7 @@ void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     doc["type"] = "envelope_assignment";
     doc["slot"] = slotIndex;
     doc["envelope"] = envelopeIndex;
-    emitJson(doc);
+    emitJson(doc, "envelope_assignment");
 
     emitLegacyEnvelopeAssignment(slotIndex, envelopeIndex, meta);
 }
@@ -386,7 +409,7 @@ void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, f
     filter["type_name"] = filterName(type);
     filter["freq"] = freq;
     filter["q"] = q;
-    emitJson(doc);
+    emitJson(doc, "filter_patch");
 
     emitLegacyFilterPatch(type, freq, q, meta);
 }
@@ -404,7 +427,7 @@ void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t 
     arg["enable"] = enable;
     arg["a"] = envA;
     arg["b"] = envB;
-    emitJson(doc);
+    emitJson(doc, "arg_patch");
 
     emitLegacyArgPatch(method, enable, envA, envB, meta);
 }

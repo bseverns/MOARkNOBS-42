@@ -3,7 +3,7 @@
 // Polled by firmware_main.cpp every frame.
 //
 // The button matrix gets hammered one row/column at a time through the
-// multiplexers. A full 7x6 sweep runs every loop, and the 50 ms
+// multiplexers. A full 7x6 sweep runs every loop, and the 50 ms
 // DEBOUNCE_DELAY keeps the ghosts at bay and sets how fast a press can
 // register.
 //
@@ -12,6 +12,70 @@
 // handleDoublePress(), and sustained holds fire onLongPress() once before
 // onRelease() cleans house. Those callbacks are how the rest of the firmware
 // plugs in.
+//
+// UI ACTION LEDGER — Button Actions Reference
+// ===========================================
+// Virtual buttons (0-41): Slot selection and EF assignment
+//   - Short: Select slot as active
+//   - Double: Cycle filter type forward (+1)
+//   - Long+Confirm: Assign EF follower (then pick EF via Ctrl0-5)
+//
+// Control buttons (Ctrl0-Ctrl5):
+//   Ctrl0 (EF Toggle):
+//     - Short: Toggle EF mode ON/OFF
+//     - Double: Cycle filter +1 for active slot
+//     - Long+Confirm: Calibrate assigned EF baseline
+//   Ctrl1 (Next Slot):
+//     - Short: Advance to next slot (0→41→0)
+//     - Double: Cycle filter -1 for active slot
+//     - Long+Confirm: Reset profile from EEPROM
+//   Ctrl2 (EF Cycle / ARP):
+//     - Short: Cycle EF assignment for active slot
+//     - Double: Cycle slot MIDI message type
+//     - Long+Confirm (with Ctrl4): Toggle ARP edit mode
+//     - Long+Confirm (with Ctrl3): Cycle swing presets
+//   Ctrl3 (Channel / Panic):
+//     - Short: Cycle MIDI channel 1-16
+//     - Long+Confirm: EEPROM reset (destructive)
+//     - Combo (Ctrl0+3): Set slot to SysEx
+//     - Combo (Ctrl1+3): Set slot to RPN
+//     - Combo (Ctrl2+3): Increment ARP base note
+//     - Combo (Ctrl3+4): Cycle LED modes
+//     - Combo (Ctrl3+5): Set slot to Program Change
+//   Ctrl4 (CC / Light):
+//     - Short: Cycle CC/NRPN number
+//     - Long+Confirm: Save config to profile
+//     - Combo (Ctrl0+4): Randomize EF assignment
+//     - Combo (Ctrl1+4): Set slot to Aftertouch
+//     - Combo (Ctrl2+4): Toggle ARP on/off
+//     - Combo (Ctrl3+4): Cycle LED modes
+//     - Combo (Ctrl4+5): Set slot to Note mode
+//   Ctrl5 (BPM / Diag):
+//     - Short: Tap BPM (or exit diagnostic mode)
+//     - Long+Confirm: Enter/cycle diagnostic pages
+//     - Combo (Ctrl0+5): Set slot to Pitch Bend
+//     - Combo (Ctrl1+5): Toggle MIDI clock out
+//     - Combo (Ctrl2+5): Set slot to NRPN
+//     - Combo (Ctrl3+4+5): Toggle USB MIDI out
+//
+// Multi-button combos (settle window: 80ms):
+//   - Ctrl0+1+2: Panic reset to profile baseline
+//   - Ctrl0+1: Cycle ARG method (if ARG enabled)
+//   - Ctrl0+2: Cycle ARG envelope pair
+//   - Ctrl0+3: Set slot to SysEx
+//   - Ctrl0+4: Randomize EF assignment
+//   - Ctrl0+5: Set slot to Pitch Bend
+//   - Ctrl1+2: Cycle profiles A-D
+//   - Ctrl1+3: Set slot to RPN
+//   - Ctrl1+4: Set slot to Aftertouch
+//   - Ctrl1+5: Toggle MIDI clock out
+//   - Ctrl2+3: Increment ARP base note
+//   - Ctrl2+4: Toggle ARP on/off
+//   - Ctrl2+5: Set slot to NRPN
+//   - Ctrl3+4: Cycle LED modes
+//   - Ctrl3+5: Set slot to Program Change
+//   - Ctrl4+5: Set slot to Note mode
+//   - Ctrl3+4+5: Toggle USB MIDI out
 
 #ifndef BUTTON_MANAGER_H
 #define BUTTON_MANAGER_H
@@ -215,9 +279,15 @@ class ButtonManager {
     int _ctrlPotValues[3] = {0};
     float _lastJitterDepth = -1.0f;
     float _lastJitterSmoothness = -1.0f;
+    // Chord settle window: allows human fingers to land on multi-button combos reliably.
+    // 80ms accommodates typical finger spread variance without introducing noticeable lag.
+    static constexpr unsigned long COMBO_SETTLE_MS = 80;
     uint8_t _comboHoldMask = 0;            //!< Active combo mask for long-press tracking
     unsigned long _comboHoldTimestamp = 0; //!< When the current combo started
     bool _comboLongPressFired = false;     //!< True once the combo long-press action fired
+    uint8_t _comboCandidateMask = 0;       //!< Candidate short-combo mask while settling
+    unsigned long _comboCandidateSince =
+        0; //!< Timestamp when current short-combo candidate started
 
     // Long‑press confirmation tracking
     static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net

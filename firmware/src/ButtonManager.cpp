@@ -253,6 +253,11 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
         Serial.printf("btn scan avg %luus max %luus\n", (unsigned long)(totalScan / scanCount),
                       (unsigned long)maxScan);
     }
+    // Scan budget reconciliation: flag if we exceed the scheduler slice budget.
+    // Button scan should complete in <2ms to leave room for MIDI/LED work.
+    if (tElapsed > 2000U) {
+        ++g_systemDiagnostics.loopOverrunCount;
+    }
 #endif
 }
 
@@ -1042,11 +1047,21 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             context.displayManager.displayStatus(buf, 1000);
         }
     }
-    if (mask != lastMask) {
-        if (multiPressed && !longPressCombo) { // more than one button pressed
-            handleMultiButtonPress(mask, context);
+    if (multiPressed && !longPressCombo) {
+        if (mask != _comboCandidateMask) {
+            _comboCandidateMask = mask;
+            _comboCandidateSince = now;
         }
-        lastMask = mask;
+        if ((mask != lastMask) && (now - _comboCandidateSince >= COMBO_SETTLE_MS)) {
+            handleMultiButtonPress(mask, context);
+            lastMask = mask;
+        }
+    } else {
+        _comboCandidateMask = 0;
+        _comboCandidateSince = 0;
+        if (mask != lastMask) {
+            lastMask = mask;
+        }
     }
 
     for (uint8_t i = 0; i < 3; ++i) {
@@ -1129,5 +1144,6 @@ void ButtonManager::selectMux(uint8_t row, uint8_t col) {
 }
 
 bool ButtonManager::isMuxButtonPressed(uint8_t index) const {
-    return readMuxButton(index) == LOW; // assuming LOW means pressed
+    // Matrix scan normalizes pressed buttons to HIGH (see processButtons/readMuxButton).
+    return readMuxButton(index) == HIGH;
 }

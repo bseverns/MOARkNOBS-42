@@ -904,7 +904,8 @@ void DisplayManager::showDiagnostic(uint8_t page, const ButtonManager &bm,
         for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
             for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
                 uint8_t idx = r * BUTTON_COLS + c;
-                _display.print(bm.isMuxButtonPressed(idx) ? '1' : '0');
+                // Polarity: '1' = pressed (active-low scan normalized to active-high display)
+                _display.print(bm.isMuxButtonPressed(idx) ? '#' : '.');
             }
             _display.println();
         }

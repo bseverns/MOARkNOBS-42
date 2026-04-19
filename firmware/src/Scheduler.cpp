@@ -18,6 +18,13 @@ void initializeSchedulers() {
     Utility::schedulerHigh.addTask(processLFOs, 1, true);
     Utility::schedulerHigh.addTask(processEnvelopeFollowers, 1, true);
     Utility::schedulerHigh.addTask(processPendingNoteOffs, 1, true);
+    // Periodic high-priority drain ensures note-off queue never starves under load.
+    Utility::schedulerHigh.addTask(
+        []() {
+            // Drain any accumulated note-offs that missed their window during heavy MIDI bursts.
+            processPendingNoteOffs();
+        },
+        5, true);
     Utility::schedulerHigh.addTask(
         []() {
             if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
@@ -55,35 +62,40 @@ void initializeSchedulers() {
             if (runStartupSequenceStep()) {
                 return;
             }
+            displayManager.beginDraw();
             if (displayManager.isStatusOverlayActive()) {
+                displayManager.endDraw();
                 return;
             }
             if (diagnosticMode) {
-                displayManager.beginDraw();
-                // Show the latest diagnostics snapshot while the UI task is in control.
                 const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,
                                               midiHandler, diagSnapshot);
                 displayManager.endDraw();
-            } else if (!displayManager.shouldRunScreensaver()) {
-                displayManager.beginDraw();
-                displayManager.updateFromContext(buttonContext);
-                auto it = potToEnvelopeMap.find(buttonContext.activePot);
-                if (it != potToEnvelopeMap.end()) {
-                    displayManager.showEnvelopeLevel(
-                        efVoices[buttonContext.activePot].latestLevel());
-                    int follower = it->second.followerIndex;
-                    if (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size())) {
-                        displayManager.showEnvelopeLevel(
-                            envelopeFollowers[follower].getEnvelopeLevel());
-                    }
-                }
-                displayManager.highlightActivePot(buttonContext.activePot);
-                displayManager.highlightActiveMode(envelopeMode);
-                displayManager.endDraw();
-            } else {
-                displayManager.runIdleScreensaver();
+                return;
             }
+            if (renderControlOverlayIfActive()) {
+                displayManager.endDraw();
+                return;
+            }
+            if (displayManager.shouldRunScreensaver()) {
+                displayManager.runIdleScreensaver();
+                displayManager.endDraw();
+                return;
+            }
+            displayManager.updateFromContext(buttonContext);
+            auto it = potToEnvelopeMap.find(buttonContext.activePot);
+            if (it != potToEnvelopeMap.end()) {
+                displayManager.showEnvelopeLevel(efVoices[buttonContext.activePot].latestLevel());
+                int follower = it->second.followerIndex;
+                if (follower >= 0 && follower < static_cast<int>(envelopeFollowers.size())) {
+                    displayManager.showEnvelopeLevel(
+                        envelopeFollowers[follower].getEnvelopeLevel());
+                }
+            }
+            displayManager.highlightActivePot(buttonContext.activePot);
+            displayManager.highlightActiveMode(envelopeMode);
+            displayManager.endDraw();
         },
         50, true);
 

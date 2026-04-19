@@ -1,7 +1,10 @@
 #include "UI.h"
 
 #include <Arduino.h>
+#include <array>
 #include <algorithm>
+#include <cmath>
+#include <cstring>
 #include <vector>
 
 #include "FirmwareState.h"
@@ -19,6 +22,25 @@ constexpr unsigned long kStartupRandomFlashOutMs = 300UL;
 constexpr unsigned long kStartupWhiteSweepStartMs = 4000UL;
 constexpr unsigned long kStartupWhiteStepMs = 50UL;
 constexpr unsigned long kStartupHoldMs = 500UL;
+constexpr unsigned long kControlOverlayHoldMs = 900UL;
+constexpr unsigned long kFilterPersistIdleMs = 900UL;
+constexpr unsigned long kFilterPersistMinIntervalMs = 500UL;
+constexpr float kFilterPersistFreqThresholdHz = 2.0f;
+constexpr float kFilterPersistQThreshold = 0.03f;
+constexpr float kFilterDisplayFreqThresholdHz = 0.5f;
+constexpr float kFilterDisplayQThreshold = 0.01f;
+constexpr int kNoteDynamicsDisplayThreshold = 1;
+constexpr uint8_t kNoteProbabilityDisplayThreshold = 1;
+constexpr uint8_t kArpLengthDisplayThreshold = 1;
+constexpr uint8_t kArpOctaveDisplayThreshold = 1;
+constexpr uint8_t kArpGateDisplayThreshold = 1;
+constexpr uint8_t kArpShapeDisplayThreshold = 1;
+constexpr float kFilterMinFreqHz = 20.0f;
+constexpr float kFilterMaxFreqHz = 5000.0f;
+constexpr float kFilterMinQ = 0.5f;
+constexpr float kFilterMaxQ = 4.0f;
+constexpr size_t kArpShapeCount = 6;
+const char *kArpShapeNames[kArpShapeCount] = {"Up", "Down", "Up-Down", "Random", "Drunk", "Euclid"};
 
 enum class StartupRandomPhase : uint8_t { Unknown = 0xFF, Off = 0, Half = 1, Full = 2 };
 
@@ -34,6 +56,32 @@ struct StartupSequenceState {
 
 StartupSequenceState gStartupSequence;
 enum class ControlUiMode : uint8_t { Filter, Arp, NoteDynamics };
+enum class ControlOverlayKind : uint8_t { None, Filter, Arp, ArpEdit, NoteDynamics };
+
+struct ControlOverlayState {
+    ControlOverlayKind kind = ControlOverlayKind::None;
+    unsigned long expiresAt = 0;
+    uint32_t revision = 0;
+    float freq = 0.0f;
+    float q = 0.0f;
+    uint8_t lengthTicks = 0;
+    uint8_t shapeIdx = 0;
+    uint8_t gatePercent = 0;
+    uint8_t octaveRange = 0;
+    int8_t velocityShift = 0;
+    uint8_t changeProbability = 0;
+};
+
+struct FilterPersistState {
+    bool dirty = false;
+    unsigned long lastInputMs = 0;
+    unsigned long lastPersistMs = 0;
+    SlotEnvelopePayload pending{};
+};
+
+ControlOverlayState gControlOverlay;
+std::array<FilterPersistState, NUM_SLOTS> gFilterPersistStates{};
+uint32_t gLastRenderedOverlayRevision = 0;
 
 CRGB scaleColor(const CRGB &color, uint8_t scale255) {
     return CRGB(static_cast<uint8_t>((static_cast<uint16_t>(color.r) * scale255) / 255U),
@@ -121,6 +169,110 @@ void updateWhiteSweep(unsigned long elapsedMs) {
     gStartupSequence.whiteLit = targetLit;
 }
 
+bool hasMeaningfulFloatDelta(float a, float b, float threshold) {
+    return std::fabs(a - b) >= threshold;
+}
+
+bool hasMeaningfulIntDelta(int a, int b, int threshold) { return std::abs(a - b) >= threshold; }
+
+void touchControlOverlay() { gControlOverlay.expiresAt = now() + kControlOverlayHoldMs; }
+
+void setFilterOverlay(float freq, float q) {
+    bool changed =
+        gControlOverlay.kind != ControlOverlayKind::Filter ||
+        hasMeaningfulFloatDelta(gControlOverlay.freq, freq, kFilterDisplayFreqThresholdHz) ||
+        hasMeaningfulFloatDelta(gControlOverlay.q, q, kFilterDisplayQThreshold);
+    if (changed) {
+        gControlOverlay.kind = ControlOverlayKind::Filter;
+        gControlOverlay.freq = freq;
+        gControlOverlay.q = q;
+        ++gControlOverlay.revision;
+    }
+    touchControlOverlay();
+}
+
+void setArpOverlay(uint8_t lengthTicks, uint8_t shapeIdx) {
+    bool changed =
+        gControlOverlay.kind != ControlOverlayKind::Arp ||
+        hasMeaningfulIntDelta(gControlOverlay.lengthTicks, lengthTicks,
+                              kArpLengthDisplayThreshold) ||
+        hasMeaningfulIntDelta(gControlOverlay.shapeIdx, shapeIdx, kArpShapeDisplayThreshold);
+    if (changed) {
+        gControlOverlay.kind = ControlOverlayKind::Arp;
+        gControlOverlay.lengthTicks = lengthTicks;
+        gControlOverlay.shapeIdx = shapeIdx;
+        ++gControlOverlay.revision;
+    }
+    touchControlOverlay();
+}
+
+void setArpEditOverlay(uint8_t gatePercent, uint8_t octaveRange) {
+    bool changed =
+        gControlOverlay.kind != ControlOverlayKind::ArpEdit ||
+        hasMeaningfulIntDelta(gControlOverlay.gatePercent, gatePercent, kArpGateDisplayThreshold) ||
+        hasMeaningfulIntDelta(gControlOverlay.octaveRange, octaveRange, kArpOctaveDisplayThreshold);
+    if (changed) {
+        gControlOverlay.kind = ControlOverlayKind::ArpEdit;
+        gControlOverlay.gatePercent = gatePercent;
+        gControlOverlay.octaveRange = octaveRange;
+        ++gControlOverlay.revision;
+    }
+    touchControlOverlay();
+}
+
+void setNoteDynamicsOverlay(int8_t velocity, uint8_t probability) {
+    bool changed = gControlOverlay.kind != ControlOverlayKind::NoteDynamics ||
+                   hasMeaningfulIntDelta(gControlOverlay.velocityShift, velocity,
+                                         kNoteDynamicsDisplayThreshold) ||
+                   hasMeaningfulIntDelta(gControlOverlay.changeProbability, probability,
+                                         kNoteProbabilityDisplayThreshold);
+    if (changed) {
+        gControlOverlay.kind = ControlOverlayKind::NoteDynamics;
+        gControlOverlay.velocityShift = velocity;
+        gControlOverlay.changeProbability = probability;
+        ++gControlOverlay.revision;
+    }
+    touchControlOverlay();
+}
+
+bool envelopePayloadChangedMeaningfully(const SlotEnvelopePayload &a,
+                                        const SlotEnvelopePayload &b) {
+    return a.filterType != b.filterType ||
+           hasMeaningfulFloatDelta(a.frequency, b.frequency, kFilterPersistFreqThresholdHz) ||
+           hasMeaningfulFloatDelta(a.q, b.q, kFilterPersistQThreshold);
+}
+
+SlotEnvelopePayload sanitizeEnvelopePayload(uint8_t filterType, float freq, float q) {
+    SlotEnvelopePayload payload{};
+    payload.filterType = filterType;
+    payload.frequency = constrain(freq, kFilterMinFreqHz, kFilterMaxFreqHz);
+    payload.q = constrain(q, kFilterMinQ, kFilterMaxQ);
+    return payload;
+}
+
+void flushPendingFilterPersists() {
+    const unsigned long nowMs = now();
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        FilterPersistState &persist = gFilterPersistStates[slot];
+        if (!persist.dirty) {
+            continue;
+        }
+
+        if (nowMs - persist.lastInputMs < kFilterPersistIdleMs) {
+            continue;
+        }
+        if (nowMs - persist.lastPersistMs < kFilterPersistMinIntervalMs) {
+            continue;
+        }
+
+        configManager.setSlotEnvelopePayload(slot, persist.pending);
+        configManager.persistFilterTail(persist.pending);
+        WebSerial::sendSlotPatch(configManager, slot);
+        persist.dirty = false;
+        persist.lastPersistMs = nowMs;
+    }
+}
+
 ControlUiMode resolveControlUiMode(const ButtonManagerContext &context) {
     if (arpeggiator.isActive()) {
         return ControlUiMode::Arp;
@@ -157,6 +309,8 @@ void initializeUI() {
     gStartupSequence = {};
     gStartupSequence.active = displayReady;
     gStartupSequence.displayReady = displayReady;
+    gControlOverlay = {};
+    gFilterPersistStates = {};
 
     if (displayReady) {
         displayManager.clear(); // Start from a blank canvas per startup sequence design.
@@ -200,22 +354,22 @@ void updateControlUi(ButtonManagerContext &context) {
         return;
     }
 
-    const bool allowDisplay = !displayManager.isStatusOverlayActive();
     switch (resolveControlUiMode(context)) {
     case ControlUiMode::Filter:
-        updateFilterTuning(context, allowDisplay);
+        updateFilterTuning(context);
         break;
     case ControlUiMode::Arp:
-        updateArpTuning(allowDisplay);
+        updateArpTuning();
         break;
     case ControlUiMode::NoteDynamics:
-        updateNoteDynamics(allowDisplay);
+        updateNoteDynamics();
         break;
     }
+    flushPendingFilterPersists();
 }
 
 // Read the two control pots as filter-tail tuning for the currently active slot/follower.
-void updateFilterTuning(ButtonManagerContext &context, bool renderDisplay) {
+void updateFilterTuning(ButtonManagerContext &context) {
     if (g_jitterTuningActive) {
         return;
     }
@@ -235,31 +389,28 @@ void updateFilterTuning(ButtonManagerContext &context, bool renderDisplay) {
         return;
     }
 
-    SlotEnvelopePayload tailPayload{};
-    tailPayload.filterType = static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
-    tailPayload.frequency = freq;
-    tailPayload.q = q;
-    SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
-    freq = sanitizedTail.frequency;
-    q = sanitizedTail.q;
+    const uint8_t filterType = static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
+    SlotEnvelopePayload desired = sanitizeEnvelopePayload(filterType, freq, q);
+    freq = desired.frequency;
+    q = desired.q;
     context.envelopes[efIndex].configureFilter(freq, q);
+
     if (context.activePot < NUM_SLOTS) {
-        // Persist the user-tuned filter tail while the UI context still owns the slot metadata.
-        SlotEnvelopePayload payload =
-            configManager.getSlotEnvelopePayload(static_cast<uint8_t>(context.activePot));
-        payload.filterType = static_cast<uint8_t>(context.envelopes[efIndex].getFilterType());
-        payload.frequency = freq;
-        payload.q = q;
-        configManager.setSlotEnvelopePayload(static_cast<uint8_t>(context.activePot), payload);
-        WebSerial::sendSlotPatch(configManager, static_cast<uint8_t>(context.activePot));
+        // Live filter response is immediate; persistence is idle-debounced to avoid flash churn.
+        const uint8_t slotIndex = static_cast<uint8_t>(context.activePot);
+        SlotEnvelopePayload current = configManager.getSlotEnvelopePayload(slotIndex);
+        if (envelopePayloadChangedMeaningfully(current, desired)) {
+            FilterPersistState &persist = gFilterPersistStates[slotIndex];
+            persist.pending = desired;
+            persist.lastInputMs = now();
+            persist.dirty = true;
+        }
     }
-    if (renderDisplay) {
-        displayManager.showFilterTuning("Freq", freq, "Q", q);
-    }
+    setFilterOverlay(freq, q);
 }
 
 // Reinterpret the two control pots as arpeggiator timing/shape or gate/octave edits.
-void updateArpTuning(bool renderDisplay) {
+void updateArpTuning() {
     if (g_jitterTuningActive) {
         return;
     }
@@ -274,32 +425,22 @@ void updateArpTuning(bool renderDisplay) {
         uint8_t octaveRange = map(raw2, 0, 1023, 0, 3);
         arpeggiator.setGatePercent(gatePercent);
         arpeggiator.setOctaveRange(octaveRange);
-        char line2[24];
-        char line3[24];
-        snprintf(line2, sizeof(line2), "Gate %u%%", gatePercent);
-        snprintf(line3, sizeof(line3), "Oct +%u", octaveRange);
-        if (renderDisplay) {
-            displayManager.showText("Arp Edit", line2, line3);
-        }
+        setArpEditOverlay(gatePercent, octaveRange);
         return;
     }
 
     uint8_t lengthTicks = map(raw1, 0, 1023, 1, Arpeggiator::MAX_LENGTH);
-    int shapeIdx = map(raw2, 0, 1023, 0, 5);
-    static const char *names[] = {"Up", "Down", "Up-Down", "Random", "Drunk", "Euclid"};
+    int shapeIdx = map(raw2, 0, 1023, 0, static_cast<int>(kArpShapeCount - 1));
     Arpeggiator::Shape shapes[] = {Arpeggiator::UP,     Arpeggiator::DOWN,  Arpeggiator::UPDOWN,
                                    Arpeggiator::RANDOM, Arpeggiator::DRUNK, Arpeggiator::EUCLIDEAN};
 
     arpeggiator.setLength(lengthTicks);
     arpeggiator.setShape(shapes[shapeIdx]);
-
-    if (renderDisplay) {
-        displayManager.showArpSettings(lengthTicks, names[shapeIdx]);
-    }
+    setArpOverlay(lengthTicks, static_cast<uint8_t>(shapeIdx));
 }
 
 // Reinterpret the two control pots as note velocity/probability shaping when arp is idle.
-void updateNoteDynamics(bool renderDisplay) {
+void updateNoteDynamics() {
     if (g_jitterTuningActive) {
         return;
     }
@@ -311,12 +452,58 @@ void updateNoteDynamics(bool renderDisplay) {
 
     velocityShift = map(rawShift, 0, 1023, -64, 63);
     changeProbability = static_cast<uint8_t>(map(rawProb, 0, 1023, 0, 100));
+    setNoteDynamicsOverlay(static_cast<int8_t>(velocityShift), changeProbability);
+}
 
-    String line2 = String("Vel ") + String(velocityShift);
-    String line3 = String("Prob ") + String(changeProbability) + "%";
-    if (renderDisplay) {
-        displayManager.showText("Note Dyn", line2.c_str(), line3.c_str());
+bool renderControlOverlayIfActive() {
+    if (displayManager.isStatusOverlayActive()) {
+        gLastRenderedOverlayRevision = 0;
+        return false;
     }
+
+    const unsigned long nowMs = now();
+    if (gControlOverlay.kind == ControlOverlayKind::None || nowMs >= gControlOverlay.expiresAt) {
+        gControlOverlay.kind = ControlOverlayKind::None;
+        gLastRenderedOverlayRevision = 0;
+        return false;
+    }
+
+    if (gLastRenderedOverlayRevision == gControlOverlay.revision) {
+        return true;
+    }
+
+    switch (gControlOverlay.kind) {
+    case ControlOverlayKind::Filter:
+        displayManager.showFilterTuning("F", gControlOverlay.freq, "Q", gControlOverlay.q);
+        break;
+    case ControlOverlayKind::Arp: {
+        const uint8_t shapeIdx = static_cast<uint8_t>(gControlOverlay.shapeIdx % kArpShapeCount);
+        displayManager.showArpSettings(gControlOverlay.lengthTicks, kArpShapeNames[shapeIdx]);
+        break;
+    }
+    case ControlOverlayKind::ArpEdit: {
+        char line2[16];
+        char line3[16];
+        snprintf(line2, sizeof(line2), "G%u%%", gControlOverlay.gatePercent);
+        snprintf(line3, sizeof(line3), "O+%u", gControlOverlay.octaveRange);
+        displayManager.showText("Arp", line2, line3);
+        break;
+    }
+    case ControlOverlayKind::NoteDynamics: {
+        char line2[16];
+        char line3[16];
+        snprintf(line2, sizeof(line2), "V%+d", gControlOverlay.velocityShift);
+        snprintf(line3, sizeof(line3), "P%u%%", gControlOverlay.changeProbability);
+        displayManager.showText("Note", line2, line3);
+        break;
+    }
+    case ControlOverlayKind::None:
+    default:
+        return false;
+    }
+
+    gLastRenderedOverlayRevision = gControlOverlay.revision;
+    return true;
 }
 
 // Push the current runtime snapshot out over WebSerial for the browser/editor layer.
