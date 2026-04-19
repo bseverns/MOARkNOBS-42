@@ -209,32 +209,9 @@ If the boot loader detects EEPROM corruption it now shows a one-shot OLED messag
 2. **“EEPROM corrupted defaults loaded”** – both primary and backup were invalid, so the firmware reset the pot→channel map, CC map, and LED defaults. Reload a profile or redo your slot/channel assignments and save once everything looks right.
    Treat these messages as subtle warnings—if you see one, check the WebSerial snapshot or run the slot mapping routine before you return to performance mode.
 
-## Publishing a Release
-
-1. Run the build/test gate:
-   - `pio -d firmware run -e teensy40_main`
-   - `pio -d firmware test -e teensy40_unity -vvv`
-   - `npm --prefix bridge test`
-2. Tag and push (`git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`).
-3. Let CI run `./release.sh <tag>` and upload deterministic assets (`.hex`, fabrication zip, source export tarball, `release_verification.json`, manifest, checksums, and license files).
-   - Read `release_verification.json` before final publish notes so verification scope is explicit (required HIL vs optional/skip).
-4. Use [docs/ReleaseGuide.md](docs/release/ReleaseGuide.md) for the full release checklist.
-
 ## License: MIT.
 
 See [LICENSE](LICENSE) for the software/firmware license and [docs/LicenseAndSupport.md](docs/project/LicenseAndSupport.md) for the plain-English split between software and hardware licensing/support.
-
-## Contributing
-
-I'd love to see what you thought you could fit in here. Bring it, just format the code so it looks pretty like the rest of it. And make comments! That's how we all get better!
-
-Need the fine print? The [CONTRIBUTING guide](CONTRIBUTING.md) spells out the repo contract and patch etiquette.
-
-## Accessibility
-
-- Every image rolls with descriptive alt text so screen readers don't get ghosted.
-- Headings climb in order and tables have headers—no maze, just straight lines.
-- Labels and LEDs keep contrast high and feedback loud for eyes and ears alike.
 
 ## Method (how we work).
 
@@ -251,3 +228,9 @@ Need the fine print? The [CONTRIBUTING guide](CONTRIBUTING.md) spells out the re
 - **Privacy & data**: The instrument does not capture personal data in any way; it emits MIDI/OSC only talks to other MIDI/OSC friends. No analytics, no hidden telemetry.
 - **Safety & repair**: Power and enclosure choices follow basic electrical safety; off-the-shelf components keep repairs local and affordable.
 - **Licensing & credit**: Hardware/design files and firmware are open-licensed; please cite the release tag you used so results are comparable.
+
+## Contributing
+
+I'd love to see what you thought you could fit in here. Bring it, just format the code so it looks pretty like the rest of it. And make comments! That's how we all get better!
+
+Need the fine print? The [CONTRIBUTING guide](CONTRIBUTING.md) spells out the repo contract and patch etiquette.
