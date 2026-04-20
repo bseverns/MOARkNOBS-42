@@ -188,6 +188,7 @@ void test_webserial_state_snapshot_emits_expected_json() {
     StaticJsonDocument<1024> doc_slots;
     StaticJsonDocument<1024> doc_envelopes;
     StaticJsonDocument<1024> doc_diag;
+    uint8_t argCount = 0;
 
     for (const String &line : lines) {
         StaticJsonDocument<2048> doc;
@@ -217,8 +218,14 @@ void test_webserial_state_snapshot_emits_expected_json() {
             doc_envelopes = doc;
         } else if (scope == "state_diagnostics") {
             doc_diag = doc;
+        } else if (scope.startsWith("state_args_")) {
+            JsonArray slotArgs = doc["slotArgs"].as<JsonArray>();
+            TEST_ASSERT_TRUE(slotArgs.size() > 0);
+            argCount += slotArgs.size();
         }
     }
+
+    TEST_ASSERT_EQUAL_UINT(NUM_SLOTS, argCount);
 
     TEST_ASSERT_EQUAL_UINT(NUM_POTS, doc_slots["slots"].as<JsonArray>().size());
     TEST_ASSERT_EQUAL_INT(3, doc_slots["currentSlot"].as<int>());

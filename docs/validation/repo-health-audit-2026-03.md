@@ -27,8 +27,7 @@ This pass looks at release clarity, firmware/app/bridge contract truth, hardware
 
 ### What is still intentionally incomplete
 
-- There is still no versioned BOM export in the repo.
-- There is still no versioned fabrication archive in the repo.
+- The BOM is versioned and present, but there is still no versioned orderable fabrication/Gerber archive in the repo.
 - The bridge is still a Node-launched desktop tool, not a signed one-click installer.
 - Broad browser and DAW compatibility claims are now documented conservatively, but the underlying proof is still narrower than a mass-market product page would imply.
 
@@ -43,7 +42,7 @@ This pass looks at release clarity, firmware/app/bridge contract truth, hardware
 
 1. Hardware ordering is not yet locked from the repo alone.
    Reason:
-   There is no versioned BOM or hardware reference bundle in-tree yet, so a builder still needs to treat the hardware package as pre-production rather than order-ready.
+   Although a versioned BOM and hardware reference bundle are now present, there are no orderable Gerber packages, so a builder still needs to treat the hardware package as pre-production rather than order-ready.
 
 2. The desktop bridge story is functional but not productized.
    Reason:

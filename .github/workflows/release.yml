@@ -71,8 +71,8 @@ jobs:
         with:
           files: |
             dist/mn42_${{ github.event.release.tag_name }}.hex
-            dist/fabrication.zip
-            dist/mn42_${{ github.event.release.tag_name }}_source.tar.gz
+            dist/hardware_reference.zip
+            dist/mn42_${{ github.event.release.tag_name }}_source.zip
             dist/release_verification.json
             dist/manifest.json
             dist/SHA256SUMS.txt

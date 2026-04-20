@@ -186,9 +186,9 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         emitJson(doc, "state_slots");
     }
 
-    // Chunk 2: ARGs (Split into 3 blocks of 14 to avoid 1024b JSON overflow)
+    // Chunk 2: ARGs (Split into 3 blocks of 14 to avoid 2048b JSON overflow)
     auto emitArgsChunk = [&](uint8_t startIdx, uint8_t count, const char *scope) {
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<2048> doc;
         applyFrameMeta(doc, meta);
         doc["type"] = "telemetry";
         doc["scope"] = scope;

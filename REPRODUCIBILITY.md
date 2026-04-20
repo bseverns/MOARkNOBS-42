@@ -4,7 +4,7 @@
 
 MOARkNOBS-42 publishes binaries *and* receipts. This guide walks through the exact commands we use to
 rebuild a release, prove the toolchain version, and verify the artifacts with hashes. Follow it and you’ll
-end up with the same `firmware.hex`, the same `fabrication.zip`, and a `manifest.json` that records every
+end up with the same `firmware.hex`, the same `hardware_reference.zip`, and a `manifest.json` that records every
 step we took.
 
 ## TL;DR — clone, install, release
@@ -26,7 +26,7 @@ ls dist
 jq '.' dist/manifest.json
 ```
 
-Everything lands in `dist/`: the versioned firmware hex, fabrication bundle, deterministic source export,
+Everything lands in `dist/`: the versioned firmware hex, hardware reference bundle, deterministic source export zip,
 release verification summary, license docs, and a manifest that ties all of it to tool versions and git state.
 
 ## Step-by-step with commentary
@@ -60,9 +60,9 @@ The script does the following in order:
 3. cleans the Teensy build output (`pio run -t clean -e teensy40_main`);
 4. rebuilds the firmware (`pio run -e teensy40_main`);
 5. copies `mn42_<version>.hex` into `dist/`;
-6. packs `hardware/fabrication/` into a deterministic `fabrication.zip` (timestamps frozen at 1980-01-01,
+6. packs `hardware/fabrication/` into a deterministic `hardware_reference.zip` (timestamps frozen at 1980-01-01,
    permissions fixed at 0644, and entries sorted);
-7. creates a deterministic source export tarball;
+7. creates a deterministic source export zip;
 8. copies license docs;
 9. copies `release_verification.json` into `dist/`; and
 10. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, the
@@ -98,7 +98,7 @@ Re-run the hash check and compare to the manifest:
 
 ```bash
 sha256sum dist/mn42_v0.0.0.hex
-sha256sum dist/fabrication.zip
+sha256sum dist/hardware_reference.zip
 ```
 
 Both digests should match the `artifacts` block in the manifest exactly.
@@ -108,7 +108,7 @@ Both digests should match the `artifacts` block in the manifest exactly.
 With the manifest and hashes in hand you can:
 
 - flash the board locally using `pio -d firmware run -t upload -e teensy40_main`
-- stash the `fabrication.zip` on the release page alongside the firmware so builders can send boards to
+- stash the `hardware_reference.zip` on the release page alongside the firmware so builders can send boards to
   fab without spelunking the repo
 - archive `manifest.json` anywhere that expects a software BOM or build log
 
@@ -118,8 +118,8 @@ With the manifest and hashes in hand you can:
 the same scripted path as local releases rather than relying on a separate CI-only recipe. The workflow uploads:
 
 - `mn42_<tag>.hex`
-- `fabrication.zip`
-- `mn42_<tag>_source.tar.gz`
+- `hardware_reference.zip`
+- `mn42_<tag>_source.zip`
 - `release_verification.json`
 - `manifest.json`
 - `SHA256SUMS.txt`
