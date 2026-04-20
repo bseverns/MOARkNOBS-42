@@ -63,16 +63,19 @@ def _git_info(root: pathlib.Path) -> Dict[str, object]:
         completed = _run(["git", *args], cwd=root)
         return completed.stdout.strip()
 
-    info: Dict[str, object] = {
-        "commit": run_git(["rev-parse", "HEAD"]),
-        "describe": run_git(["describe", "--tags", "--always"]),
-        "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),
-    }
-    status = _run(["git", "status", "--short"], cwd=root)
-    info["dirty"] = bool(status.stdout.strip())
-    if info["dirty"]:
-        info["status"] = status.stdout.strip()
-    return info
+    try:
+        info: Dict[str, object] = {
+            "commit": run_git(["rev-parse", "HEAD"]),
+            "describe": run_git(["describe", "--tags", "--always"]),
+            "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),
+        }
+        status = _run(["git", "status", "--short"], cwd=root)
+        info["dirty"] = bool(status.stdout.strip())
+        if info["dirty"]:
+            info["status"] = status.stdout.strip()
+        return info
+    except Exception as exc:
+        return {"error": "Not a valid git repository or git not installed", "details": str(exc)}
 
 
 def _collect_env(prefix: str) -> Dict[str, str]:

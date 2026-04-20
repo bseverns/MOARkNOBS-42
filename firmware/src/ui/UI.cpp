@@ -459,14 +459,12 @@ void updateNoteDynamics() {
 
 bool renderControlOverlayIfActive() {
     if (displayManager.isStatusOverlayActive()) {
-        gLastRenderedOverlayRevision = 0;
         return false;
     }
 
     const unsigned long nowMs = now();
     if (gControlOverlay.kind == ControlOverlayKind::None || nowMs >= gControlOverlay.expiresAt) {
         gControlOverlay.kind = ControlOverlayKind::None;
-        gLastRenderedOverlayRevision = 0;
         return false;
     }
 
@@ -500,7 +498,6 @@ bool renderControlOverlayIfActive() {
         return false;
     }
 
-    gLastRenderedOverlayRevision = gControlOverlay.revision;
     return true;
 }
 
