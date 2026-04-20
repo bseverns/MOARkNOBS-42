@@ -11,8 +11,8 @@ can audit, rebuild, and modify to test how control, authorship, and embodiment s
 It is open, meaning you can fork, sell, remix—just credit and share like I have.
 
 This repo is like a studio notebook that mashes firmware, some software, hardware, and docs, into one place.
-This top-level README stays intentionally barebones—treat it like a quick map, then raid the README in each
-folder for the gritty context, wiring diagrams, and experiments.
+This top-level README is a bit of a quick map, but remember to raid the README in each
+folder for the grainy details/context, wiring diagrams, and experiments.
 
 ## Quick Map
 
@@ -40,7 +40,7 @@ folder for the gritty context, wiring diagrams, and experiments.
 ## Highlights
 
 - 42 virtual slots and six envelope followers ready to hijack any MIDI stream.
-- Built‑in arpeggiator and filter playground.
+- Built‑in arpeggiator, digital LFO, and filter playground.
 - Browser configurator and OSC bridge for remote tweaking.
 - Button grid that refuses to behave—short, long, double and combo presses are all mapped in the [ButtonManager cheat sheet](firmware/include/ButtonManager/README.md#button-map).
 - MIDI chops, ARG math, and OLED tricks are mapped out in their own module tables.
@@ -48,7 +48,7 @@ folder for the gritty context, wiring diagrams, and experiments.
 
 ## Fresh to MIDI or DSP?
 
-Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101.md) for a tour of channels, CCs, NRPN/RPN sorcery, SysEx etiquette, envelope follower guts, and the biquad math we abuse. It links out to the canonical specs and street-level explainers so you can ramp from zero to firmware-ready without leaving the repo.
+Need a refresher? Bounce to the [MIDI + DSP 101 Primer](docs/Primers/MIDI-DSP101.md) for a tour of channels, CCs, NRPN/RPN sorcery, SysEx etiquette we are building, envelope follower guts, and the biquad math we use/abuse. It links out to the canonical specs and street-level explainers so you can ramp from zero to firmware-ready without leaving the repo.
 
 ## Firmware Stack Crash Course
 
@@ -76,7 +76,7 @@ night builder jam.
 
 ### Annotated Source Field Guide
 
-The comment pass is more than hype—it’s a breadcrumb trail. Use this cheat sheet
+The comments are more than some kind of flex—they're a breadcrumb trail. Use this cheat sheet
 when you’re running a workshop or mentoring a new builder:
 
 | File                                                                             | What to zero in on                                                                                                                             |
