@@ -27,41 +27,18 @@ namespace ProtocolSimpleHandlers {
 void handleGetAllCommand(const String &command) {
     (void)command;
 #ifdef SERIAL_LOGGING
-    LOG_PRINT("POTS:");
-    for (int i = 0; i < NUM_POTS; i++) {
-        int envelopeValue = -1;
-        auto it = potToEnvelopeMap.find(i);
-        if (it != potToEnvelopeMap.end()) {
-            envelopeValue = it->second.followerIndex;
-        }
-        LOG_PRINT(configManager.getPotCCNumber(i));
-        LOG_PRINT(",");
-        LOG_PRINT(configManager.getPotChannel(i));
-        LOG_PRINT(",");
-        LOG_PRINT(envelopeValue);
-        LOG_PRINT(";");
-    }
-
-    CRGB ledColor = ledManager.getColor();
-    LOG_PRINT(" LED:");
-    LOG_PRINT(ledManager.getBrightness());
-    LOG_PRINT(",");
-    LOG_PRINT(ledColor.r);
-    LOG_PRINT(",");
-    LOG_PRINT(ledColor.g);
-    LOG_PRINT(",");
-    LOG_PRINTLN(ledColor.b);
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_ALL deprecated, use GET_CONFIG\"}");
 #endif
 }
 
 void handleGetArgMethodCommand(const String &command) {
     (void)command;
-    LOG_PRINTLN(configManager.getARGMethod());
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_arg_method deprecated\"}");
 }
 
 void handleGetBrownoutsCommand(const String &command) {
     (void)command;
-    LOG_PRINTLN(g_brownoutCount);
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_brownouts deprecated\"}");
 }
 
 void handleGetConfigCommand(const String &command) {
@@ -220,26 +197,19 @@ void handleGetEfCommand(const String &command) {
             env = it->second.followerIndex;
         }
 #ifdef SERIAL_LOGGING
-        LOG_PRINTLN(env);
+        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_ef deprecated\"}");
 #else
         (void)env;
 #endif
     } else {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
 }
 
 void handleGetLedCommand(const String &command) {
     (void)command;
 #ifdef SERIAL_LOGGING
-    CRGB c = ledManager.getColor();
-    LOG_PRINT(ledManager.getBrightness());
-    LOG_PRINT(",");
-    LOG_PRINT(c.r);
-    LOG_PRINT(",");
-    LOG_PRINT(c.g);
-    LOG_PRINT(",");
-    LOG_PRINTLN(c.b);
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_led deprecated\"}");
 #endif
 }
 
@@ -273,16 +243,16 @@ void handleSetArgMethodCommand(const String &command) {
             configManager.saveSlot(slotIndex, slot);
         }
         configManager.setARGMethod(static_cast<uint8_t>(method));
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
     } else {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
 }
 
 void handleSetEfCommand(const String &command) {
     int comma = command.indexOf(',');
     if (comma == -1) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
         return;
     }
     int potIndex = command.substring(7, comma).toInt();
@@ -297,9 +267,9 @@ void handleSetEfCommand(const String &command) {
                                   static_cast<uint8_t>(envIndex));
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
         refreshEfVoicesFromConfig();
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
     } else {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
 }
 
@@ -308,7 +278,7 @@ void handleSetLedCommand(const String &command) {
     int second = command.indexOf(',', first + 1);
     int third = command.indexOf(',', second + 1);
     if (first == -1 || second == -1 || third == -1) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
         return;
     }
     int brightness = command.substring(8, first).toInt();
@@ -321,9 +291,9 @@ void handleSetLedCommand(const String &command) {
         ledManager.setBrightness(brightness);
         ledManager.setColor(color);
         configManager.saveLEDSettings(brightness, color);
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
     } else {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
 }
 
@@ -331,7 +301,8 @@ void handleSetPotCommand(const String &command) {
     int firstComma = command.indexOf(',');
     int lastComma = command.lastIndexOf(',');
     if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
-        LOG_PRINTLN("Error: Malformed SET_POT command");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"message\":\"Malformed SET_POT "
+                    "command\"}");
         return;
     }
     int potIndex = command.substring(8, firstComma).toInt();
@@ -347,9 +318,11 @@ void handleSetPotCommand(const String &command) {
             potChannels[potIndex] = channel;
         }
         configManager.saveConfiguration();
-        LOG_PRINTLN("Pot configuration updated!");
+        LOG_PRINTLN(
+            "{\"type\":\"response\",\"status\":\"ok\",\"message\":\"Pot configuration updated!\"}");
     } else {
-        LOG_PRINTLN("Error: Invalid values for SET_POT");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"message\":\"Invalid values for "
+                    "SET_POT\"}");
     }
 }
 
@@ -357,19 +330,19 @@ void handleSetSlotValueCommand(const String &command) {
     int firstComma = command.indexOf(',');
     int lastComma = command.lastIndexOf(',');
     if (firstComma == -1 || lastComma == -1 || firstComma == lastComma) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
         return;
     }
 
     int slotIndex = command.substring(firstComma + 1, lastComma).toInt();
     int midiValue = command.substring(lastComma + 1).toInt();
     if (slotIndex < 0 || slotIndex >= NUM_SLOTS || midiValue < 0 || midiValue > 127) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
         return;
     }
 
     potentiometerManager.injectMidiValue(static_cast<uint8_t>(slotIndex),
                                          static_cast<uint8_t>(midiValue));
-    LOG_PRINTLN("OK");
+    LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
 }
 } // namespace ProtocolSimpleHandlers

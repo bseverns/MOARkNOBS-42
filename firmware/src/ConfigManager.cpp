@@ -383,7 +383,8 @@ void ConfigManager::saveConfiguration() {
     // Verify
     std::vector<uint8_t> temp;
     if (!loadConfiguration(temp, base)) {
-        LOG_PRINTLN("Primary EEPROM write failed, saving to backup.");
+        LOG_PRINTLN(
+            "{\"type\":\"info\",\"message\":\"Primary EEPROM write failed, saving to backup.\"}");
         writeEEPROM(true, base);
         writeMagicNumber(true, base);
     }
@@ -399,14 +400,14 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
             if (_stored.version == kLegacyConfigVersion) {
                 needsRewrite = true;
             } else {
-                LOG_PRINTLN("Config version mismatch.");
+                LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Config version mismatch.\"}");
                 resetConfiguration(potChannels, true);
                 return false;
             }
         }
         bool includeProfile = (base == EEPROM_PROFILE_START(0));
         if (_stored.crc != calculateCRC(includeProfile)) {
-            LOG_PRINTLN("Config CRC mismatch.");
+            LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Config CRC mismatch.\"}");
             resetConfiguration(potChannels, true);
             return false;
         }
@@ -424,7 +425,7 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
         }
         return true;
     }
-    LOG_PRINTLN("Primary EEPROM corrupted, trying backup.");
+    LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Primary EEPROM corrupted, trying backup.\"}");
     return loadBackupConfiguration(potChannels, base);
 }
 
@@ -438,14 +439,14 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
             if (_stored.version == kLegacyConfigVersion) {
                 needsRewrite = true;
             } else {
-                LOG_PRINTLN("Backup config version mismatch.");
+                LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Backup config version mismatch.\"}");
                 resetConfiguration(potChannels, true);
                 return false;
             }
         }
         bool includeProfile = (base == EEPROM_PROFILE_START(0));
         if (_stored.crc != calculateCRC(includeProfile)) {
-            LOG_PRINTLN("Backup CRC mismatch.");
+            LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Backup CRC mismatch.\"}");
             resetConfiguration(potChannels, true);
             return false;
         }
@@ -464,7 +465,8 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
         _lastRecoveryEvent = RecoveryEvent::kBackupRestored;
         return true;
     }
-    LOG_PRINTLN("Backup EEPROM corrupted, resetting to defaults.");
+    LOG_PRINTLN(
+        "{\"type\":\"error\",\"message\":\"Backup EEPROM corrupted, resetting to defaults.\"}");
     resetConfiguration(potChannels, true);
     return false;
 }
@@ -527,15 +529,17 @@ void ConfigManager::loadProfile(uint8_t id) {
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC(false)) {
-            LOG_PRINTLN("Profile slot corrupted, using defaults.");
+            LOG_PRINTLN(
+                "{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
         }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
         if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC(false)) {
-            LOG_PRINTLN("Profile slot corrupted, using defaults.");
+            LOG_PRINTLN(
+                "{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
         }
     } else {
-        LOG_PRINTLN("Profile slot corrupted, using defaults.");
+        LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
     }
 }
 
@@ -554,7 +558,8 @@ void ConfigManager::saveProfile(uint8_t id) {
     writeMagicNumber(false, base);
     std::vector<uint8_t> temp;
     if (!loadConfiguration(temp, base)) {
-        LOG_PRINTLN("Primary EEPROM corrupted after save; backup contains latest profile.");
+        LOG_PRINTLN("{\"type\":\"info\",\"message\":\"Primary EEPROM corrupted after save; backup "
+                    "contains latest profile.\"}");
     }
 }
 
@@ -1379,7 +1384,7 @@ bool ConfigManager::handleCommand(const String &command) {
         for (auto &ef : envelopeFollowers) {
             ef.calibrate();
         }
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
         return true;
     } else if (command.startsWith("GET_FILTER")) {
         const uint8_t efType = storageRead(EEPROM_ENVELOPE_TYPES);
@@ -1387,44 +1392,35 @@ bool ConfigManager::handleCommand(const String &command) {
         float freq, q;
         storageGet(EEPROM_FILTER_FREQ, freq);
         storageGet(EEPROM_FILTER_Q, q);
-        LOG_PRINT(efType);
-        LOG_PRINT(",");
-        LOG_PRINT(freq, 2);
-        LOG_PRINT(",");
-        LOG_PRINTLN(q, 2);
+        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_FILTER deprecated\"}");
         return true;
     } else if (command.startsWith("SET_FILTER")) {
         int firstComma = command.indexOf(',');
         int secondComma = command.indexOf(',', firstComma + 1);
         if (firstComma == -1 || secondComma == -1) {
-            LOG_PRINTLN("ERR");
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
             return true;
         }
         uint8_t efType = command.substring(10, firstComma).toInt();
         float freq = command.substring(firstComma + 1, secondComma).toFloat();
         float q = command.substring(secondComma + 1).toFloat();
         seedSlotEnvelopePayloads(efType, freq, q);
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
         return true;
     } else if (command.startsWith("GET_SLOT_FILTER")) {
         int slotIndex = command.substring(16).toInt();
         if (slotIndex < 0 || slotIndex >= static_cast<int>(NUM_SLOTS)) {
-            LOG_PRINTLN("ERR");
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
             return true;
         }
-        SlotEnvelopePayload payload = getSlotEnvelopePayload(static_cast<uint8_t>(slotIndex));
-        LOG_PRINT(payload.filterType);
-        LOG_PRINT(",");
-        LOG_PRINT(payload.frequency, 2);
-        LOG_PRINT(",");
-        LOG_PRINTLN(payload.q, 2);
+        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_SLOT_FILTER deprecated\"}");
         return true;
     } else if (command.startsWith("SET_SLOT_FILTER")) {
         int first = command.indexOf(',');
         int second = command.indexOf(',', first + 1);
         int third = command.indexOf(',', second + 1);
         if (first == -1 || second == -1 || third == -1) {
-            LOG_PRINTLN("ERR");
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
             return true;
         }
         int slotIndex = command.substring(16, first).toInt();
@@ -1432,7 +1428,7 @@ bool ConfigManager::handleCommand(const String &command) {
         float freq = command.substring(second + 1, third).toFloat();
         float q = command.substring(third + 1).toFloat();
         if (slotIndex < 0 || slotIndex >= static_cast<int>(NUM_SLOTS)) {
-            LOG_PRINTLN("ERR");
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
             return true;
         }
         SlotEnvelopePayload payload = getSlotEnvelopePayload(static_cast<uint8_t>(slotIndex));
@@ -1440,20 +1436,16 @@ bool ConfigManager::handleCommand(const String &command) {
         payload.frequency = freq;
         payload.q = q;
         setSlotEnvelopePayload(static_cast<uint8_t>(slotIndex), payload);
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
         return true;
     } else if (command.startsWith("GET_ARGPAIR")) {
-        LOG_PRINT(getARGEnable());
-        LOG_PRINT(",");
-        LOG_PRINT(getEnvelopeA());
-        LOG_PRINT(",");
-        LOG_PRINTLN(getEnvelopeB());
+        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_ARGPAIR deprecated\"}");
         return true;
     } else if (command.startsWith("SET_ARGPAIR")) {
         int first = command.indexOf(',');
         int second = command.indexOf(',', first + 1);
         if (first == -1 || second == -1) {
-            LOG_PRINTLN("ERR");
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
             return true;
         }
         uint8_t enable = command.substring(11, first).toInt();
@@ -1476,7 +1468,7 @@ bool ConfigManager::handleCommand(const String &command) {
             slot.arg.sourceB = static_cast<uint8_t>(idxB);
             saveSlot(slotIndex, slot);
         }
-        LOG_PRINTLN("OK");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
         return true;
     }
     return false;

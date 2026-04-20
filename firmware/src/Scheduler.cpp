@@ -64,11 +64,10 @@ void initializeSchedulers() {
             if (runStartupSequenceStep()) {
                 return;
             }
-            displayManager.beginDraw();
             if (displayManager.isStatusOverlayActive()) {
-                displayManager.endDraw();
                 return;
             }
+            displayManager.beginDraw();
             if (diagnosticMode) {
                 const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,

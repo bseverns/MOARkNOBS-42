@@ -192,7 +192,8 @@ void PotentiometerManager::processPots(LedAnimator &ledAnimator,
 
 // Pull pot routing state from EEPROM or ConfigManager into the live cache.
 void PotentiometerManager::loadFromEEPROM() {
-    LOG_PRINTLN("Loading potentiometer settings from EEPROM...");
+    LOG_PRINTLN(
+        "{\"type\":\"info\",\"message\":\"Loading potentiometer settings from EEPROM...\"}");
     if (configManager) {
         std::vector<uint8_t> channels;
         if (!configManager->loadConfiguration(channels)) {
@@ -211,7 +212,8 @@ void PotentiometerManager::loadFromEEPROM() {
 
 // Reset pot routing storage back to the simple channel-1 / CC-index baseline.
 void PotentiometerManager::resetEEPROM() {
-    LOG_PRINTLN("Resetting EEPROM settings for potentiometers...");
+    LOG_PRINTLN(
+        "{\"type\":\"info\",\"message\":\"Resetting EEPROM settings for potentiometers...\"}");
     if (configManager) {
         std::vector<uint8_t> channels;
         configManager->resetConfiguration(channels);

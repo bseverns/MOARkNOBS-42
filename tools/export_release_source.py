@@ -33,21 +33,14 @@ def should_exclude(rel_path: str) -> bool:
 
 
 def list_tracked_files(root: pathlib.Path) -> list[pathlib.Path]:
-    completed = subprocess.run(
-        ["git", "ls-files", "-z"],
-        cwd=root,
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
     paths = []
-    for raw in completed.stdout.split(b"\x00"):
-        if not raw:
+    for path in root.rglob("*"):
+        if not path.is_file():
             continue
-        rel = raw.decode("utf-8")
+        rel = path.relative_to(root).as_posix()
         if should_exclude(rel):
             continue
-        paths.append(root / rel)
+        paths.append(path)
     return sorted(paths)
 
 

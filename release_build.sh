@@ -55,28 +55,50 @@ if [ ! -d "$FABRICATION_DIR" ]; then
   exit 1
 fi
 
-python3 - "$FABRICATION_DIR" "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" <<'PY'
+python3 - "$ROOT_DIR" "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" <<'PY'
 import pathlib
 import sys
 import zipfile
 
-src = pathlib.Path(sys.argv[1]).resolve()
+root = pathlib.Path(sys.argv[1]).resolve()
 dst = pathlib.Path(sys.argv[2]).resolve()
+src_fab = root / "hardware" / "fabrication"
 
 if dst.exists():
     dst.unlink()
 
+def add_file_to_zip(zf, filepath, arcname):
+    if not filepath.exists() or not filepath.is_file():
+        return
+    info = zipfile.ZipInfo(arcname)
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o100644 << 16
+    with filepath.open("rb") as fh:
+        zf.writestr(info, fh.read())
+
 with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-    for path in sorted(src.rglob("*")):
-        if not path.is_file():
-            continue
-        arcname = path.relative_to(src).as_posix()
-        info = zipfile.ZipInfo(arcname)
-        info.date_time = (1980, 1, 1, 0, 0, 0)
-        info.compress_type = zipfile.ZIP_DEFLATED
-        info.external_attr = 0o100644 << 16
-        with path.open("rb") as fh:
-            zf.writestr(info, fh.read())
+    # Add everything in hardware/fabrication
+    if src_fab.exists():
+        for path in sorted(src_fab.rglob("*")):
+            if not path.is_file():
+                continue
+            arcname = path.relative_to(src_fab).as_posix()
+            add_file_to_zip(zf, path, arcname)
+    
+    # Add explicit references
+    for explicit_path in ["hardware/CurrentBuild.md", "hardware/Parts.md"]:
+        p = root / explicit_path
+        add_file_to_zip(zf, p, explicit_path)
+    
+    # Add schematic and board drawings preserving folder structure
+    src_drawings = root / "hardware" / "MN42-machineDrawings"
+    if src_drawings.exists():
+        for path in sorted(src_drawings.rglob("*")):
+            if not path.is_file():
+                continue
+            arcname = path.relative_to(root).as_posix()
+            add_file_to_zip(zf, path, arcname)
 PY
 
 python3 "$ROOT_DIR/tools/export_release_source.py" \

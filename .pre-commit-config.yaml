@@ -20,11 +20,11 @@ repos:
     hooks:
       - id: contract-sync
         name: contract sync guard
-        entry: python tools/check_contract_sync.py
+        entry: python3 tools/check_contract_sync.py
         language: system
         pass_filenames: false
       - id: schema-keyword-coverage
         name: schema keyword coverage guard
-        entry: python tools/check_schema_keyword_coverage.py
+        entry: python3 tools/check_schema_keyword_coverage.py
         language: system
         pass_filenames: false
