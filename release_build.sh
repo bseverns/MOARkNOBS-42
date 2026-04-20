@@ -87,9 +87,26 @@ with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             add_file_to_zip(zf, path, arcname)
     
     # Add explicit references
-    for explicit_path in ["hardware/CurrentBuild.md", "hardware/Parts.md"]:
+    for explicit_path in [
+        "hardware/CurrentBuild.md",
+        "hardware/Parts.md",
+        "hardware/README.md",
+        "requirements.txt",
+        "mkdocs.yml",
+        "test.sh",
+        "release_build.sh"
+    ]:
         p = root / explicit_path
         add_file_to_zip(zf, p, explicit_path)
+    
+    # Add tools scripts preserving folder structure
+    src_tools = root / "tools"
+    if src_tools.exists():
+        for path in sorted(src_tools.rglob("*")):
+            if not path.is_file():
+                continue
+            arcname = path.relative_to(root).as_posix()
+            add_file_to_zip(zf, path, arcname)
     
     # Add schematic and board drawings preserving folder structure
     src_drawings = root / "hardware" / "MN42-machineDrawings"

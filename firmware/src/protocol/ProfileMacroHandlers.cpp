@@ -11,6 +11,10 @@
 
 namespace {
 template <size_t Capacity> void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
+    if (doc.overflowed()) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\"}");
+        return;
+    }
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
@@ -41,7 +45,7 @@ void handleGetProfileCommand(const String &command) {
         id = static_cast<uint8_t>(command.substring(comma + 1).toInt());
     }
     if (id >= NUM_PROFILES) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_profile\"}");
         return;
     }
     ProfileData profile{};
@@ -102,6 +106,10 @@ void handleGetProfileCommand(const String &command) {
         writeProfileEf(ef, profile.slots[i].ef);
     }
 
+    if (doc.overflowed()) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\"}");
+        return;
+    }
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);

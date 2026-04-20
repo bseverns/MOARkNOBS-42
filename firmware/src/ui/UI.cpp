@@ -187,8 +187,8 @@ void setFilterOverlay(float freq, float q) {
         gControlOverlay.freq = freq;
         gControlOverlay.q = q;
         ++gControlOverlay.revision;
+        touchControlOverlay();
     }
-    touchControlOverlay();
 }
 
 void setArpOverlay(uint8_t lengthTicks, uint8_t shapeIdx) {
@@ -202,8 +202,8 @@ void setArpOverlay(uint8_t lengthTicks, uint8_t shapeIdx) {
         gControlOverlay.lengthTicks = lengthTicks;
         gControlOverlay.shapeIdx = shapeIdx;
         ++gControlOverlay.revision;
+        touchControlOverlay();
     }
-    touchControlOverlay();
 }
 
 void setArpEditOverlay(uint8_t gatePercent, uint8_t octaveRange) {
@@ -216,8 +216,8 @@ void setArpEditOverlay(uint8_t gatePercent, uint8_t octaveRange) {
         gControlOverlay.gatePercent = gatePercent;
         gControlOverlay.octaveRange = octaveRange;
         ++gControlOverlay.revision;
+        touchControlOverlay();
     }
-    touchControlOverlay();
 }
 
 void setNoteDynamicsOverlay(int8_t velocity, uint8_t probability) {
@@ -231,8 +231,8 @@ void setNoteDynamicsOverlay(int8_t velocity, uint8_t probability) {
         gControlOverlay.velocityShift = velocity;
         gControlOverlay.changeProbability = probability;
         ++gControlOverlay.revision;
+        touchControlOverlay();
     }
-    touchControlOverlay();
 }
 
 bool envelopePayloadChangedMeaningfully(const SlotEnvelopePayload &a,
@@ -471,17 +471,13 @@ bool renderControlOverlayIfActive() {
         return false;
     }
 
-    if (gLastRenderedOverlayRevision == gControlOverlay.revision) {
-        return true;
-    }
-
     switch (gControlOverlay.kind) {
     case ControlOverlayKind::Filter:
-        displayManager.showFilterTuning("F", gControlOverlay.freq, "Q", gControlOverlay.q);
+        displayManager.drawFilterTuning("F", gControlOverlay.freq, "Q", gControlOverlay.q);
         break;
     case ControlOverlayKind::Arp: {
         const uint8_t shapeIdx = static_cast<uint8_t>(gControlOverlay.shapeIdx % kArpShapeCount);
-        displayManager.showArpSettings(gControlOverlay.lengthTicks, kArpShapeNames[shapeIdx]);
+        displayManager.drawArpSettings(gControlOverlay.lengthTicks, kArpShapeNames[shapeIdx]);
         break;
     }
     case ControlOverlayKind::ArpEdit: {
@@ -489,7 +485,7 @@ bool renderControlOverlayIfActive() {
         char line3[16];
         snprintf(line2, sizeof(line2), "G%u%%", gControlOverlay.gatePercent);
         snprintf(line3, sizeof(line3), "O+%u", gControlOverlay.octaveRange);
-        displayManager.showText("Arp", line2, line3);
+        displayManager.drawText("Arp", line2, line3);
         break;
     }
     case ControlOverlayKind::NoteDynamics: {
@@ -497,7 +493,7 @@ bool renderControlOverlayIfActive() {
         char line3[16];
         snprintf(line2, sizeof(line2), "V%+d", gControlOverlay.velocityShift);
         snprintf(line3, sizeof(line3), "P%u%%", gControlOverlay.changeProbability);
-        displayManager.showText("Note", line2, line3);
+        displayManager.drawText("Note", line2, line3);
         break;
     }
     case ControlOverlayKind::None:

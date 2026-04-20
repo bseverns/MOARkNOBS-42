@@ -565,11 +565,7 @@ void DisplayManager::drawBorder() {
     _display.drawRect(0, 0, _display.width(), _display.height(), SSD1306_COLOR_WHITE);
 }
 
-void DisplayManager::showText(const char *line1, const char *line2, const char *line3) {
-    if (now() < _statusTimeout)
-        return;
-
-    _display.clearDisplay();
+void DisplayManager::drawText(const char *line1, const char *line2, const char *line3) {
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
 
@@ -585,6 +581,14 @@ void DisplayManager::showText(const char *line1, const char *line2, const char *
         _display.setCursor(0, 20);
         _display.println(line3);
     }
+}
+
+void DisplayManager::showText(const char *line1, const char *line2, const char *line3) {
+    if (now() < _statusTimeout)
+        return;
+
+    _display.clearDisplay();
+    drawText(line1, line2, line3);
 
     drawBorder();
     present(true);
@@ -661,9 +665,8 @@ void DisplayManager::clear() {
     present(true);
 }
 
-void DisplayManager::showFilterTuning(const char *labelFreq, float freqValue, const char *labelQ,
+void DisplayManager::drawFilterTuning(const char *labelFreq, float freqValue, const char *labelQ,
                                       float qValue) {
-    _display.clearDisplay();
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
@@ -675,13 +678,18 @@ void DisplayManager::showFilterTuning(const char *labelFreq, float freqValue, co
     _display.print(labelQ);
     _display.print(": ");
     _display.println(qValue, 2);
+}
+
+void DisplayManager::showFilterTuning(const char *labelFreq, float freqValue, const char *labelQ,
+                                      float qValue) {
+    _display.clearDisplay();
+    drawFilterTuning(labelFreq, freqValue, labelQ, qValue);
 
     drawBorder();
     present(true);
 }
 
-void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName) {
-    _display.clearDisplay();
+void DisplayManager::drawArpSettings(uint8_t lengthTicks, const char *shapeName) {
     _display.setTextSize(1);
     _display.setTextColor(SSD1306_COLOR_WHITE);
     _display.setCursor(0, 0);
@@ -691,6 +699,11 @@ void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName)
     _display.setCursor(0, 10);
     _display.print("Shape: ");
     _display.println(shapeName);
+}
+
+void DisplayManager::showArpSettings(uint8_t lengthTicks, const char *shapeName) {
+    _display.clearDisplay();
+    drawArpSettings(lengthTicks, shapeName);
     drawBorder();
     present(true);
 }

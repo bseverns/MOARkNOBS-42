@@ -102,6 +102,12 @@ class DisplayManager {
     /** Clear the screen and show up to three lines of text. */
     void showText(const char *line1, const char *line2 = "", const char *line3 = "");
 
+    /** Draw up to three lines of text without clearing or presenting. */
+    void drawText(const char *line1, const char *line2 = "", const char *line3 = "");
+
+    void drawFilterTuning(const char *labelFreq, float freqValue, const char *labelQ, float qValue);
+    void drawArpSettings(uint8_t lengthTicks, const char *shapeName);
+
     /** Convenience helper for displaying a single numeric value. */
     void showValue(uint8_t value, bool clearDisplay = true);
 

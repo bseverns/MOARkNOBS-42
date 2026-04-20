@@ -135,57 +135,60 @@ void PotentiometerManager::injectMidiValue(uint8_t potIndex, uint8_t midiValue) 
 // Scan the full mux tree, update smoothing state, and emit callbacks for meaningful pot moves.
 void PotentiometerManager::processPots(LedAnimator &ledAnimator,
                                        std::vector<EnvelopeFollower> &envelopes) {
-    for (uint8_t primaryBank = 0; primaryBank < (1 << PRIMARY_MUX_PINS); primaryBank++) {
-        if ((primaryBank << SECONDARY_MUX_PINS) >= NUM_POTS)
-            break;
+    (void)envelopes; // explicitly marked unused
+
+    static uint8_t currentPotIndex = 0;
+    const uint8_t potsPerFrame = 14;
+
+    for (uint8_t i = 0; i < potsPerFrame; ++i) {
+        uint8_t primaryBank = currentPotIndex >> SECONDARY_MUX_PINS;
+        uint8_t secondaryBank = currentPotIndex & ((1 << SECONDARY_MUX_PINS) - 1);
+
         // Stage 1a: the primary mux selects which gang of pots we're sniffing.
         selectMuxBank(primaryBank);
 
-        for (uint8_t secondaryBank = 0; secondaryBank < (1 << SECONDARY_MUX_PINS);
-             secondaryBank++) {
-            // Stage 1b: secondary mux dials in the exact pot within that gang.
-            selectPotBank(secondaryBank);
+        // Stage 1b: secondary mux dials in the exact pot within that gang.
+        selectPotBank(secondaryBank);
 
-            // Mash the two bank numbers together to get the global pot index.
-            uint8_t potIndex = (primaryBank << SECONDARY_MUX_PINS) | secondaryBank;
+        // Stage 2: snag the raw voltage and run it through our tiny RC filter.
+        int rawValue = readAnalogFiltered(analogPin);
 
-            if (potIndex >= NUM_POTS)
-                break;
+        // EWMA smoothing – ALPHA (see header) leans toward fresh readings.
+        smoothedValue[currentPotIndex] =
+            Utility::exponentialMovingAverage(rawValue, smoothedValue[currentPotIndex], ALPHA);
+        int smoothedReading = smoothedValue[currentPotIndex];
 
-            // Stage 2: snag the raw voltage and run it through our tiny RC filter.
-            int rawValue = readAnalogFiltered(analogPin);
-
-            // EWMA smoothing – ALPHA (see header) leans toward fresh readings.
-            smoothedValue[potIndex] =
-                Utility::exponentialMovingAverage(rawValue, smoothedValue[potIndex], ALPHA);
-            int smoothedReading = smoothedValue[potIndex];
-
-            // Stage 3: bail if the movement is smaller than the noise floor.
-            if (abs(smoothedReading - potLastValues[potIndex]) > CHANGE_THRESHOLD) {
-                potLastValues[potIndex] = smoothedReading; // lock in the latest value
-                dirtyFlags[potIndex] = true;
+        // Stage 3: bail if the movement is smaller than the noise floor.
+        if (abs(smoothedReading - potLastValues[currentPotIndex]) > CHANGE_THRESHOLD) {
+            potLastValues[currentPotIndex] = smoothedReading; // lock in the latest value
+            dirtyFlags[currentPotIndex] = true;
 
 #if BENCH_LATENCY_LOG
-                static bool headerPrinted = false;
-                if (!headerPrinted) {
-                    benchLatencyHeader();
-                    headerPrinted = true;
-                }
-                uint32_t t_scan_us = micros();
-#endif
-
-                // Stage 4: map to MIDI, light the LED, then shout over MIDI.
-                int midiValue = Utility::mapToMidiValue(smoothedReading);
-                ledAnimator.setPotTarget(potIndex, midiValue);
-
-                if (midiCallback) {
-#if BENCH_LATENCY_LOG
-                    benchLatencyLog(potIndex, t_scan_us, "MIDI", "");
-#endif
-                    midiCallback(getCCNumber(potIndex), midiValue,
-                                 static_cast<uint16_t>(smoothedReading), potIndex);
-                }
+            static bool headerPrinted = false;
+            if (!headerPrinted) {
+                benchLatencyHeader();
+                headerPrinted = true;
             }
+            uint32_t t_scan_us = micros();
+#endif
+
+            // Stage 4: map to MIDI, light the LED, then shout over MIDI.
+            int midiValue = Utility::mapToMidiValue(smoothedReading);
+            ledAnimator.setPotTarget(currentPotIndex, midiValue);
+
+            if (midiCallback) {
+#if BENCH_LATENCY_LOG
+                benchLatencyLog(currentPotIndex, t_scan_us, "MIDI", "");
+#endif
+                midiCallback(getCCNumber(currentPotIndex), midiValue,
+                             static_cast<uint16_t>(smoothedReading), currentPotIndex);
+            }
+        }
+
+        currentPotIndex++;
+        if (currentPotIndex >= NUM_POTS) {
+            currentPotIndex = 0;
+            break;
         }
     }
 }

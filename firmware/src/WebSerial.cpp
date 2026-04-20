@@ -170,71 +170,76 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     if (!webSerialStreaming)
         return;
 
-    // Snapshot carries 42 slots + 6 envelope levels + 6 enable flags + 8 diagnostics
-    // scalars, plus misc scalars/strings. Give ArduinoJson ample headroom so it
-    // never drops keys when we expand diagnostics.
-    // Capacity budget: ~1800 bytes typical, 2048 max with 15% headroom.
-    StaticJsonDocument<2048> doc;
     const FrameMeta meta = buildFrameMeta("fw");
-    applyFrameMeta(doc, meta);
-    JsonArray slots = doc.createNestedArray("slots");
-    for (uint8_t i = 0; i < NUM_POTS; ++i) {
-        slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
+
+    // Chunk 1: Slot summary (Pots & active slot)
+    {
+        StaticJsonDocument<1024> doc;
+        applyFrameMeta(doc, meta);
+        JsonArray slots = doc.createNestedArray("slots");
+        for (uint8_t i = 0; i < NUM_POTS; ++i) {
+            slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
+        }
+        doc["currentSlot"] = (currentSlot < NUM_POTS) ? static_cast<int>(currentSlot) : -1;
+        emitJson(doc, "state_slots");
     }
 
-    if (doc.overflowed()) {
-        emitJsonError("json_overflow", "state_snapshot");
-        return;
+    // Chunk 2: ARGs & Diagnostics
+    {
+        StaticJsonDocument<1024> doc;
+        applyFrameMeta(doc, meta);
+        JsonArray slotArgs = doc.createNestedArray("slotArgs");
+        const auto &slotDefs = config.getSlots();
+        for (uint8_t i = 0; i < slotDefs.size(); ++i) {
+            JsonObject arg = slotArgs.createNestedObject();
+            const SlotARGConfig &cfg = slotDefs[i].arg;
+            arg["enabled"] = cfg.enabled != 0;
+            arg["method"] = static_cast<uint8_t>(cfg.method);
+            arg["method_name"] = argMethodLabel(static_cast<uint8_t>(cfg.method));
+            arg["sourceA"] = cfg.sourceA;
+            arg["sourceB"] = cfg.sourceB;
+        }
+
+        doc["argMethod"] = argMethodLabel(config.getARGMethod());
+        doc["argEnabled"] = config.getARGEnable() != 0;
+
+        JsonArray argPair = doc.createNestedArray("argPair");
+        argPair.add(config.getEnvelopeA());
+        argPair.add(config.getEnvelopeB());
+
+        JsonObject diag = doc.createNestedObject("diagnostics");
+        diag["uart_overruns"] = static_cast<uint32_t>(diagnostics.uartOverrunCount);
+        diag["midi_drops"] = static_cast<uint32_t>(diagnostics.midiDropCount);
+        diag["loop_overruns"] = static_cast<uint32_t>(diagnostics.loopOverrunCount);
+        diag["midi_task_overruns"] = static_cast<uint32_t>(diagnostics.midiTaskOverrunCount);
+        diag["loop_max_us"] = static_cast<uint32_t>(diagnostics.maxLoopMicros);
+        diag["loop_last_us"] = static_cast<uint32_t>(diagnostics.lastLoopMicros);
+        diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
+        diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
+
+        emitJson(doc, "state_args_diag");
     }
 
-    JsonArray slotArgs = doc.createNestedArray("slotArgs");
-    const auto &slotDefs = config.getSlots();
-    for (uint8_t i = 0; i < slotDefs.size(); ++i) {
-        JsonObject arg = slotArgs.createNestedObject();
-        const SlotARGConfig &cfg = slotDefs[i].arg;
-        arg["enabled"] = cfg.enabled != 0;
-        arg["method"] = static_cast<uint8_t>(cfg.method);
-        arg["method_name"] = argMethodLabel(static_cast<uint8_t>(cfg.method));
-        arg["sourceA"] = cfg.sourceA;
-        arg["sourceB"] = cfg.sourceB;
+    // Chunk 3: Envelopes & LFOs
+    {
+        StaticJsonDocument<1024> doc;
+        applyFrameMeta(doc, meta);
+        JsonArray envs = doc.createNestedArray("envelopes");
+        for (const auto &env : envelopes) {
+            envs.add(env.getEnvelopeLevel());
+        }
+
+        JsonArray lfos = doc.createNestedArray("lfos");
+        for (float value : g_lfoValues) {
+            lfos.add(value);
+        }
+
+        JsonArray efStatus = doc.createNestedArray("efStatus");
+        for (const auto &env : envelopes) {
+            efStatus.add(env.getActiveState() ? 1 : 0);
+        }
+        emitJson(doc, "state_envelopes");
     }
-
-    JsonArray envs = doc.createNestedArray("envelopes");
-    for (const auto &env : envelopes) {
-        envs.add(env.getEnvelopeLevel());
-    }
-
-    // Stream normalized LFO outputs for UI monitoring.
-    JsonArray lfos = doc.createNestedArray("lfos");
-    for (float value : g_lfoValues) {
-        lfos.add(value);
-    }
-
-    const int slotValue = (currentSlot < NUM_POTS) ? static_cast<int>(currentSlot) : -1;
-    doc["currentSlot"] = slotValue;
-    doc["argMethod"] = argMethodLabel(config.getARGMethod());
-    doc["argEnabled"] = config.getARGEnable() != 0;
-
-    JsonArray argPair = doc.createNestedArray("argPair");
-    argPair.add(config.getEnvelopeA());
-    argPair.add(config.getEnvelopeB());
-
-    JsonArray efStatus = doc.createNestedArray("efStatus");
-    for (const auto &env : envelopes) {
-        efStatus.add(env.getActiveState() ? 1 : 0);
-    }
-
-    JsonObject diag = doc.createNestedObject("diagnostics");
-    diag["uart_overruns"] = static_cast<uint32_t>(diagnostics.uartOverrunCount);
-    diag["midi_drops"] = static_cast<uint32_t>(diagnostics.midiDropCount);
-    diag["loop_overruns"] = static_cast<uint32_t>(diagnostics.loopOverrunCount);
-    diag["midi_task_overruns"] = static_cast<uint32_t>(diagnostics.midiTaskOverrunCount);
-    diag["loop_max_us"] = static_cast<uint32_t>(diagnostics.maxLoopMicros);
-    diag["loop_last_us"] = static_cast<uint32_t>(diagnostics.lastLoopMicros);
-    diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
-    diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
-
-    emitJson(doc, "state_snapshot");
 }
 
 static void emitJsonError(const char *code, const char *scope) {

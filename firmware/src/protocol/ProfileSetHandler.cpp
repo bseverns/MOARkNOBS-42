@@ -62,24 +62,24 @@ void handleSetProfilePayloadCommand(const String &command) {
     int firstComma = command.indexOf(',');
     int secondComma = command.indexOf(',', firstComma + 1);
     if (firstComma < 0 || secondComma < 0) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
         return;
     }
     uint8_t id = static_cast<uint8_t>(command.substring(firstComma + 1, secondComma).toInt());
     if (id >= NUM_PROFILES) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
         return;
     }
     String payload = command.substring(secondComma + 1);
     payload.trim();
     if (payload.length() == 0) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
         return;
     }
     StaticJsonDocument<12288> doc;
     DeserializationError err = deserializeJson(doc, payload);
     if (err) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
         return;
     }
     ProfileData profile = captureProfileSnapshot();
@@ -182,7 +182,7 @@ void handleSetProfilePayloadCommand(const String &command) {
     }
 
     if (!configManager.saveProfileSettings(id, profile)) {
-        LOG_PRINTLN("ERR");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
         return;
     }
     if (id == g_activeProfile) {
@@ -192,5 +192,5 @@ void handleSetProfilePayloadCommand(const String &command) {
             applyProfileSnapshot(stored, true);
         }
     }
-    LOG_PRINTLN("OK");
+    LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
 }
