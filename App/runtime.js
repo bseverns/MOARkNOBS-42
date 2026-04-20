@@ -651,6 +651,27 @@ export function createRuntime({
     return true;
   }
 
+  function mergeTelemetryChunk(current, msg) {
+    const next = { ...(current || {}), ...msg };
+
+    if (Array.isArray(msg.slotArgs)) {
+      const byIndex = new Map();
+
+      for (const arg of current?.slotArgs || []) {
+        if (Number.isInteger(arg.index)) byIndex.set(arg.index, arg);
+      }
+
+      for (const arg of msg.slotArgs) {
+        if (Number.isInteger(arg.index)) byIndex.set(arg.index, arg);
+      }
+
+      next.slotArgs = [...byIndex.entries()].sort(([a], [b]) => a - b).map(([, arg]) => arg);
+    }
+
+    next.scopes = [...(current?.scopes || []), msg.scope].filter(Boolean);
+    return next;
+  }
+
   function queueTelemetryFrame(msg) {
     if (!msg || typeof msg !== 'object') return;
 
@@ -664,7 +685,7 @@ export function createRuntime({
       telemetryTraceId = traceId;
     }
 
-    queuedTelemetry = { ...(queuedTelemetry || {}), ...msg };
+    queuedTelemetry = mergeTelemetryChunk(queuedTelemetry, msg);
 
     if (!telemetryTimer) {
       telemetryTimer = setTimeout(flushTelemetry, 50);

@@ -69,7 +69,23 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
         type: 'telemetry',
         traceId: 'fw-123',
         scope: 'state_args_0_13',
-        slotArgs: [{ enabled: 1 }]
+        slotArgs: Array.from({ length: 14 }, (_, i) => ({ index: i, enabled: 1 }))
+      })
+    );
+    window.__pushLine(
+      JSON.stringify({
+        type: 'telemetry',
+        traceId: 'fw-123',
+        scope: 'state_args_14_27',
+        slotArgs: Array.from({ length: 14 }, (_, i) => ({ index: i + 14, enabled: 1 }))
+      })
+    );
+    window.__pushLine(
+      JSON.stringify({
+        type: 'telemetry',
+        traceId: 'fw-123',
+        scope: 'state_args_28_41',
+        slotArgs: Array.from({ length: 14 }, (_, i) => ({ index: i + 28, enabled: 1 }))
       })
     );
     window.__pushLine(
@@ -91,7 +107,10 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
   const payload = frames[0];
 
   expect(payload.slots).toEqual([1, 2, 3]);
-  expect(payload.slotArgs.length).toBe(1);
+  expect(payload.slotArgs).toHaveLength(42);
+  expect(payload.slotArgs[0].index).toBe(0);
+  expect(payload.slotArgs[14].index).toBe(14);
+  expect(payload.slotArgs[28].index).toBe(28);
   expect(payload.diagnostics.overruns).toBe(0);
 
   // If we shift traceId mid-flight, it immediately flushes old cache
@@ -109,7 +128,7 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
   });
 
   // Wait for the async transport loop inside runtime.js to actually consume those queue strings
-  await page.waitForTimeout(50);
+  await page.waitForTimeout(20);
 
   // Notice we don't wait 150ms since the flush was synchronous on ID-mismatch.
   frames = await page.evaluate(() => window.testTelemetryFrames);
