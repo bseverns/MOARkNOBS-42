@@ -23,6 +23,7 @@ EXCLUDE_GLOBS = (
     "**/__pycache__/**",
     "**/.pytest_cache/**",
     "dist/**",
+    "tmp-slot-grid.png",
     "**/tmp-slot-grid.png",
 )
 

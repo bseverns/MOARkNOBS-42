@@ -196,7 +196,7 @@ export function createRuntime({
   const { emit, on } = makeEmitter();
 
   let transport = null;
-  let readTimer = null;
+  let rpcThrottleTimer = null;
   let readLoopActive = false;
   let queuedTelemetry = null;
   let telemetryTraceId = null;
@@ -845,10 +845,6 @@ export function createRuntime({
       await transport.close();
     } finally {
       transport = null;
-      if (readTimer) {
-        clearTimeout(readTimer);
-        readTimer = null;
-      }
       readLoopActive = false;
       flushRpcPending(new Error('Disconnected'));
       emit('disconnected');

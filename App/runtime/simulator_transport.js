@@ -146,7 +146,7 @@ export function createSimulator(simDeps = {}) {
   function pushLine(payload) {
     lines.push(JSON.stringify(payload));
     if (resolver) {
-      const fn = resolver;
+      const fn = resolver.resolve;
       resolver = null;
       fn(lines.shift());
     }
@@ -250,8 +250,8 @@ export function createSimulator(simDeps = {}) {
   function nextLine() {
     if (!opened) return Promise.reject(new Error('simulator closed'));
     if (lines.length) return Promise.resolve(lines.shift());
-    return new Promise((resolve) => {
-      resolver = resolve;
+    return new Promise((resolve, reject) => {
+      resolver = { resolve, reject };
       setTimeout(() => {
         if (!resolver) return;
         pushLine({ type: 'telemetry', ...telemetry() });
@@ -261,6 +261,10 @@ export function createSimulator(simDeps = {}) {
 
   async function close() {
     opened = false;
+    if (resolver) {
+      resolver.reject(new Error('simulator closed'));
+      resolver = null;
+    }
   }
 
   return {

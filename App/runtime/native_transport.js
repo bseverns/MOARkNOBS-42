@@ -31,7 +31,7 @@ export function createTransportPort(port, options = {}, transportDeps = {}) {
           const line = buffer.slice(0, idx).trim();
           buffer = buffer.slice(idx + 1);
           if (!line) continue;
-          if (waiters.length) waiters.shift()(line);
+          if (waiters.length) waiters.shift().resolve(line);
           else lineQueue.push(line);
         }
       }
@@ -39,6 +39,7 @@ export function createTransportPort(port, options = {}, transportDeps = {}) {
       console.error('transport read error', err);
     } finally {
       active = false;
+      while (waiters.length) waiters.shift().reject(new Error('Native port closed'));
     }
   }
 
@@ -48,12 +49,14 @@ export function createTransportPort(port, options = {}, transportDeps = {}) {
   }
 
   function nextLine() {
+    if (!active) return Promise.reject(new Error('Native port closed'));
     if (lineQueue.length) return Promise.resolve(lineQueue.shift());
-    return new Promise((resolve) => waiters.push(resolve));
+    return new Promise((resolve, reject) => waiters.push({ resolve, reject }));
   }
 
   async function close() {
     active = false;
+    while (waiters.length) waiters.shift().reject(new Error('Native port closed'));
     try {
       reader?.cancel();
     } catch (err) {
