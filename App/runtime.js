@@ -580,25 +580,17 @@ export function createRuntime({
     if (readLoopActive) return;
     readLoopActive = true;
     const pump = async () => {
-      readTimer = null;
-      if (!transport) {
-        readLoopActive = false;
-        return;
-      }
-      try {
-        const line = await transport.nextLine();
-        handleLine(line);
-      } catch (err) {
-        emit('error', err);
-        await disconnect();
-        return;
-      } finally {
-        if (transport) {
-          readTimer = setTimeout(pump, TELEMETRY_FRAME_MS);
-        } else {
-          readLoopActive = false;
+      while (transport) {
+        try {
+          const line = await transport.nextLine();
+          if (line) handleLine(line);
+        } catch (err) {
+          emit('error', err);
+          await disconnect();
+          break;
         }
       }
+      readLoopActive = false;
     };
     pump();
   }
