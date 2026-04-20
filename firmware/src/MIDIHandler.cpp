@@ -468,7 +468,14 @@ bool MIDIHandler::enqueueSerialMessage(const SerialMessage &msg) {
     }
 
     if (_serialQueueFull) {
-        return tryCoalesceSerialMessage(msg);
+        if (!tryCoalesceSerialMessage(msg)) {
+            // Queue overflow: count the drop for diagnostics.
+            if (_diagnostics) {
+                ++_diagnostics->midiDropCount;
+            }
+            return false;
+        }
+        return true;
     }
 
     if (serialQueueSize() >= kSerialQueueSize - 4 && tryCoalesceSerialMessage(msg)) {

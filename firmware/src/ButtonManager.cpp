@@ -330,7 +330,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
 void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
     _confirmIndex = index;
     _confirmDeadline = ::now() + CONFIRM_WINDOW_MS;
-    context.displayManager.displayStatus("Press again to confirm", 1000);
+    context.displayManager.displayStatus("CONFIRM\nTap again", 1000);
     startWarningForIndex(index, context);
 }
 
@@ -408,9 +408,9 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
             context.displayManager.displayStatus(buf, 1500);
             break;
         }
-        case 3: // EEPROM reset now rides here
+        case 3: // EEPROM reload from current profile
             context.configManager.loadConfiguration(context.potChannels);
-            context.displayManager.displayStatus("EEPROM Reset", 1500);
+            context.displayManager.displayStatus("Config Reloaded", 1500);
             break;
         case 4: { // Save configuration to the active profile
             context.configManager.saveProfile(g_activeProfile);

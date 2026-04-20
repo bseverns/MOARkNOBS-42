@@ -25,6 +25,8 @@ void initializeSchedulers() {
             processPendingNoteOffs();
         },
         5, true);
+    // MIDI serial queue drain at 1ms prevents starvation during quiet periods.
+    Utility::schedulerHigh.addTask([]() { midiHandler.serviceSerialQueuePublic(); }, 1, true);
     Utility::schedulerHigh.addTask(
         []() {
             if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
@@ -98,6 +100,9 @@ void initializeSchedulers() {
             displayManager.endDraw();
         },
         50, true);
+
+    // Persistence flush runs at 100ms to batch filter tuning writes and avoid flash churn.
+    Utility::schedulerLow.addTask([]() { flushPendingFilterPersists(); }, 100, true);
 
     // SeedBox bridge runs slow on purpose; keep interop chatter off the critical paths.
     Utility::schedulerLow.addTask(

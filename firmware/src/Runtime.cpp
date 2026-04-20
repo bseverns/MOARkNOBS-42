@@ -471,7 +471,9 @@ void monitorSystemLoad() {
     if (loopDuration > maxLoopDuration) {
         maxLoopDuration = loopDuration;
     }
-    if (loopDuration > 1000UL) {
+    // Scan budget reconciliation: pot scanning alone takes ~1700µs (42 pots × 4 samples × 10µs).
+    // Threshold raised to 2500µs to accommodate full scan + mux settle + MIDI work.
+    if (loopDuration > 2500UL) {
         ++g_systemDiagnostics.loopOverrunCount;
         LOG_PRINTF("{\"diagnostic\":\"loop_overrun\",\"duration_us\":%lu}\n",
                    static_cast<unsigned long>(loopDuration));
@@ -481,7 +483,9 @@ void monitorSystemLoad() {
     taskCounter++;
     unsigned long currentMillis = now();
     if (currentMillis - lastMonitorTime >= 1000UL) {
-        LOG_PRINTF("Tasks per second: %lu\n", taskCounter);
+        // Diagnostic metrics must be JSON for protocol discipline.
+        LOG_PRINTF("{\"type\":\"diag\",\"metric\":\"tasks_per_second\",\"value\":%lu}\n",
+                   taskCounter);
         g_systemDiagnostics.maxLoopMicros = maxLoopDuration;
         maxLoopDuration = 0;
         taskCounter = 0;

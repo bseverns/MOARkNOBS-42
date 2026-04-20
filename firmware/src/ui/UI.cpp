@@ -365,7 +365,6 @@ void updateControlUi(ButtonManagerContext &context) {
         updateNoteDynamics();
         break;
     }
-    flushPendingFilterPersists();
 }
 
 // Read the two control pots as filter-tail tuning for the currently active slot/follower.

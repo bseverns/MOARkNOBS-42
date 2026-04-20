@@ -9,6 +9,7 @@ void updateNoteDynamics();
 void updateControlUi(ButtonManagerContext &context);
 bool renderControlOverlayIfActive();
 void streamWebSerialState();
+void flushPendingFilterPersists();
 
 void initializeUI();
 bool runStartupSequenceStep();

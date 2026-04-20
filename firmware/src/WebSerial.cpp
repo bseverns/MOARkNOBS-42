@@ -182,6 +182,11 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
     }
 
+    if (doc.overflowed()) {
+        emitJsonError("json_overflow", "state_snapshot");
+        return;
+    }
+
     JsonArray slotArgs = doc.createNestedArray("slotArgs");
     const auto &slotDefs = config.getSlots();
     for (uint8_t i = 0; i < slotDefs.size(); ++i) {
@@ -341,6 +346,11 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     body["channel"] = slot.midiChannel;
     body["data1"] = resolvedDataByte;
     body["ef_index"] = slot.ef.followerIndex;
+
+    if (doc.overflowed()) {
+        emitJsonError("json_overflow", "slot_patch");
+        return;
+    }
     JsonObject ef = body.createNestedObject("ef");
     ef["index"] = slot.ef.followerIndex;
     ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
@@ -392,6 +402,10 @@ void WebSerial::sendEnvelopeAssignment(uint8_t slotIndex, int envelopeIndex) {
     doc["type"] = "envelope_assignment";
     doc["slot"] = slotIndex;
     doc["envelope"] = envelopeIndex;
+    if (doc.overflowed()) {
+        emitJsonError("json_overflow", "envelope_assignment");
+        return;
+    }
     emitJson(doc, "envelope_assignment");
 
     emitLegacyEnvelopeAssignment(slotIndex, envelopeIndex, meta);
@@ -409,6 +423,10 @@ void WebSerial::sendFilterPatch(EnvelopeFollower::FilterType type, float freq, f
     filter["type_name"] = filterName(type);
     filter["freq"] = freq;
     filter["q"] = q;
+    if (doc.overflowed()) {
+        emitJsonError("json_overflow", "filter_patch");
+        return;
+    }
     emitJson(doc, "filter_patch");
 
     emitLegacyFilterPatch(type, freq, q, meta);
@@ -427,6 +445,10 @@ void WebSerial::sendArgPatch(uint8_t method, bool enable, uint8_t envA, uint8_t 
     arg["enable"] = enable;
     arg["a"] = envA;
     arg["b"] = envB;
+    if (doc.overflowed()) {
+        emitJsonError("json_overflow", "arg_patch");
+        return;
+    }
     emitJson(doc, "arg_patch");
 
     emitLegacyArgPatch(method, enable, envA, envB, meta);

@@ -98,6 +98,9 @@ class MIDIHandler {
     /** Emit an internal MIDI clock pulse so in-box features stay in sync. */
     void generateClockTick();
 
+    /** Public drain for high-priority scheduler task to prevent queue starvation. */
+    void serviceSerialQueuePublic() { serviceSerialQueue(); }
+
     /** Total MIDI clock pulses observed since boot. */
     uint32_t clockTickCount() const { return _clockTickCount; }
 
