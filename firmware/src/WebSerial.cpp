@@ -176,6 +176,8 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     {
         StaticJsonDocument<1024> doc;
         applyFrameMeta(doc, meta);
+        doc["type"] = "telemetry";
+        doc["scope"] = "state_slots";
         JsonArray slots = doc.createNestedArray("slots");
         for (uint8_t i = 0; i < NUM_POTS; ++i) {
             slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
@@ -188,6 +190,8 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     {
         StaticJsonDocument<1024> doc;
         applyFrameMeta(doc, meta);
+        doc["type"] = "telemetry";
+        doc["scope"] = "state_args_diag";
         JsonArray slotArgs = doc.createNestedArray("slotArgs");
         const auto &slotDefs = config.getSlots();
         for (uint8_t i = 0; i < slotDefs.size(); ++i) {
@@ -224,6 +228,8 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     {
         StaticJsonDocument<1024> doc;
         applyFrameMeta(doc, meta);
+        doc["type"] = "telemetry";
+        doc["scope"] = "state_envelopes";
         JsonArray envs = doc.createNestedArray("envelopes");
         for (const auto &env : envelopes) {
             envs.add(env.getEnvelopeLevel());

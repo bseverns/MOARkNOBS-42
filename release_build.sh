@@ -83,7 +83,7 @@ with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(src_fab.rglob("*")):
             if not path.is_file():
                 continue
-            arcname = path.relative_to(src_fab).as_posix()
+            arcname = path.relative_to(root).as_posix()
             add_file_to_zip(zf, path, arcname)
     
     # Add explicit references

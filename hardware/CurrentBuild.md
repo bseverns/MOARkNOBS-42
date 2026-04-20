@@ -25,16 +25,6 @@ Last audited against repo contents: 2026-03-22.
 | Fabrication zip | `hardware/fabrication/` | none present | `experimental` | `TODO: add a versioned fabrication archive under hardware/fabrication/ and update this table with the exact filename.` |
 | BOM export | `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.xlsx` | `2026-03-17` from filename | `current` | Prototype BOM present in repo as an `.xlsx` export. Confirm it matches the intended board revision before ordering. |
 
-## Legacy / Stale References Still Found In Older Docs
-
-These names appear in older documentation but were not present in this audit:
-
-| Referenced path | Status | Note |
-| --- | --- | --- |
-| `hardware/BOM_MOAR_MOAR_Board_2025-08-02.xlsx` | `legacy` | Referenced in older hardware docs; not present in repo. |
-| `hardware/fabrication/Gerber_MOAR_Board_2025-08-17.zip` | `legacy` | Referenced in older hardware docs; not present in repo. |
-| `hardware/shell/` | `legacy` | Referenced in older hardware docs; not present in repo. |
-
 ## What Builders Should Download First
 
 If you are evaluating the current repo state today:

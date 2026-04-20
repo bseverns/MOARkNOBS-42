@@ -356,6 +356,10 @@ class ConfigManager {
     void setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload);
 
     /** Mirror the most recent global filter tuning into the EEPROM tail. */
+    /**
+     * Persist the legacy global filter tail settings. This is a fallback value
+     * and does not override active slot-specific filter configurations.
+     */
     SlotEnvelopePayload persistFilterTail(const SlotEnvelopePayload &payload);
 
     /** Read a single MIDISlot from EEPROM into the provided struct. */

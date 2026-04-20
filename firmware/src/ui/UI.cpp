@@ -81,7 +81,6 @@ struct FilterPersistState {
 
 ControlOverlayState gControlOverlay;
 std::array<FilterPersistState, NUM_SLOTS> gFilterPersistStates{};
-uint32_t gLastRenderedOverlayRevision = 0;
 
 CRGB scaleColor(const CRGB &color, uint8_t scale255) {
     return CRGB(static_cast<uint8_t>((static_cast<uint16_t>(color.r) * scale255) / 255U),
