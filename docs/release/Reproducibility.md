@@ -7,7 +7,7 @@ This page is the short version of the release artifact story. The detailed, root
 MOARkNOBS-42 does not just ship binaries. It tries to ship receipts:
 
 - the firmware artifact
-- the fabrication bundle
+- the hardware reference bundle
 - a deterministic source export
 - a manifest describing how those artifacts were built
 - checksums so another machine can verify the output
@@ -22,7 +22,7 @@ flowchart LR
   B --> C[release_verify_hil.sh]
   B --> D[Firmware build]
   B --> E[Deterministic hardware reference bundle]
-  B --> F[Source export tarball]
+  B --> F[Source export zip]
   B --> G[release_verification.json]
   B --> H[Manifest plus SHA256SUMS]
   C --> I[Release assets]

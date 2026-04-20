@@ -171,7 +171,7 @@ def main() -> None:
 
     artifacts: Dict[str, object] = {
         "firmware_hex": _file_metadata(firmware_path, root),
-        "fabrication_zip": _file_metadata(fabrication_path, root),
+        "hardware_reference_bundle": _file_metadata(fabrication_path, root),
     }
     for label, artifact_path in extra_artifacts.items():
         artifacts[label] = _file_metadata(artifact_path, root)
