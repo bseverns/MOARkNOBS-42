@@ -250,6 +250,8 @@ SlotEnvelopePayload sanitizeEnvelopePayload(uint8_t filterType, float freq, floa
     return payload;
 }
 
+} // namespace
+
 void flushPendingFilterPersists() {
     const unsigned long nowMs = now();
     for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
@@ -272,6 +274,8 @@ void flushPendingFilterPersists() {
         persist.lastPersistMs = nowMs;
     }
 }
+
+namespace {
 
 ControlUiMode resolveControlUiMode(const ButtonManagerContext &context) {
     if (arpeggiator.isActive()) {
