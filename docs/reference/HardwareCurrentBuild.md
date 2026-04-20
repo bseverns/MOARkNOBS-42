@@ -12,12 +12,12 @@ The repo-root canonical source remains `hardware/CurrentBuild.md`. Use that file
 
 ## Current Status Summary
 
-| Item                    | Version / date cue                    | Status         | Notes                                                                      |
-| ----------------------- | ------------------------------------- | -------------- | -------------------------------------------------------------------------- |
-| Board drawing reference | `PCB_MOAR_Board_2025-09-03.pdf`       | `current`      | Verified present in the repo audit.                                        |
-| Schematic reference     | `SCH_MOAR_Schematic_2025-08-30.pdf`   | `current`      | Verified present in the repo audit.                                        |
-| Fabrication zip         | none present in audited tree          | `experimental` | `TODO: add a versioned fabrication archive under hardware/fabrication/.`   |
-| BOM export              | `BOM_MOAR_MOAR_Board_2026-03-17.xlsx` | `current`      | Present under `hardware/fabrication/` as the current prototype BOM export. |
+| Item                      | Version / date cue                    | Status         | Notes                                                                      |
+| ------------------------- | ------------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| Board drawing reference   | `PCB_MOAR_Board_2025-09-03.pdf`       | `current`      | Verified present in the repo audit.                                        |
+| Firmware hex              | `dist/mn42_{VERSION}.hex`             | `production`   | Requires Teensy Loader or `teensy_loader_cli`.                             |
+| Hardware reference bundle | none present in audited tree          | `experimental` | `TODO: add a versioned fabrication archive under hardware/fabrication/.`   |
+| BOM export                | `BOM_MOAR_MOAR_Board_2026-03-17.xlsx` | `current`      | Present under `hardware/fabrication/` as the current prototype BOM export. |
 
 ## Legacy / stale references called out in the audit
 

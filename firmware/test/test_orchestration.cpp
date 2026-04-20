@@ -180,22 +180,52 @@ void test_webserial_state_snapshot_emits_expected_json() {
                                  diagnostics);
 
     const std::vector<String> lines = splitLogLines();
-    TEST_ASSERT_EQUAL_UINT(1, lines.size());
+    TEST_ASSERT_EQUAL_UINT(6, lines.size());
 
-    StaticJsonDocument<4096> doc;
-    parseJsonLine(lines[0], doc);
+    String traceId = "";
+    uint32_t timestamp = 0;
 
-    TEST_ASSERT_TRUE(doc.containsKey("timestamp"));
-    TEST_ASSERT_TRUE(doc.containsKey("timestampMs"));
-    TEST_ASSERT_TRUE(doc.containsKey("traceId"));
-    TEST_ASSERT_EQUAL_UINT32(doc["timestamp"].as<uint32_t>(), doc["timestampMs"].as<uint32_t>());
-    TEST_ASSERT_TRUE(String(doc["traceId"] | "").startsWith("fw-"));
-    TEST_ASSERT_EQUAL_UINT(NUM_POTS, doc["slots"].as<JsonArray>().size());
-    TEST_ASSERT_EQUAL_UINT(NUM_ENVELOPES, doc["envelopes"].as<JsonArray>().size());
-    TEST_ASSERT_EQUAL_UINT(2, doc["lfos"].as<JsonArray>().size());
-    TEST_ASSERT_EQUAL_INT(3, doc["currentSlot"].as<int>());
-    TEST_ASSERT_EQUAL_UINT32(4, doc["diagnostics"]["loop_overruns"].as<uint32_t>());
-    TEST_ASSERT_EQUAL_UINT32(712, doc["diagnostics"]["loop_max_us"].as<uint32_t>());
+    StaticJsonDocument<1024> doc_slots;
+    StaticJsonDocument<1024> doc_envelopes;
+    StaticJsonDocument<1024> doc_diag;
+
+    for (const String &line : lines) {
+        StaticJsonDocument<2048> doc;
+        parseJsonLine(line, doc);
+
+        TEST_ASSERT_TRUE(doc.containsKey("timestamp"));
+        TEST_ASSERT_TRUE(doc.containsKey("timestampMs"));
+        TEST_ASSERT_TRUE(doc.containsKey("traceId"));
+        TEST_ASSERT_EQUAL_UINT32(doc["timestamp"].as<uint32_t>(),
+                                 doc["timestampMs"].as<uint32_t>());
+
+        String currentTraceId = doc["traceId"].as<String>();
+        TEST_ASSERT_TRUE(currentTraceId.startsWith("fw-"));
+
+        if (traceId.length() == 0) {
+            traceId = currentTraceId;
+            timestamp = doc["timestamp"].as<uint32_t>();
+        } else {
+            TEST_ASSERT_EQUAL_STRING(traceId.c_str(), currentTraceId.c_str());
+            TEST_ASSERT_EQUAL_UINT32(timestamp, doc["timestamp"].as<uint32_t>());
+        }
+
+        String scope = doc["scope"] | "";
+        if (scope == "state_slots") {
+            doc_slots = doc;
+        } else if (scope == "state_envelopes") {
+            doc_envelopes = doc;
+        } else if (scope == "state_diagnostics") {
+            doc_diag = doc;
+        }
+    }
+
+    TEST_ASSERT_EQUAL_UINT(NUM_POTS, doc_slots["slots"].as<JsonArray>().size());
+    TEST_ASSERT_EQUAL_INT(3, doc_slots["currentSlot"].as<int>());
+    TEST_ASSERT_EQUAL_UINT(NUM_ENVELOPES, doc_envelopes["envelopes"].as<JsonArray>().size());
+    TEST_ASSERT_EQUAL_UINT(2, doc_envelopes["lfos"].as<JsonArray>().size());
+    TEST_ASSERT_EQUAL_UINT32(4, doc_diag["diagnostics"]["loop_overruns"].as<uint32_t>());
+    TEST_ASSERT_EQUAL_UINT32(712, doc_diag["diagnostics"]["loop_max_us"].as<uint32_t>());
 }
 
 void test_webserial_slot_patch_emits_schema_and_legacy_payloads() {
@@ -316,9 +346,16 @@ void test_ui_stream_webserial_state_uses_active_slot_context() {
     streamWebSerialState();
 
     const std::vector<String> lines = splitLogLines();
-    TEST_ASSERT_EQUAL_UINT(1, lines.size());
+    TEST_ASSERT_EQUAL_UINT(6, lines.size());
 
-    StaticJsonDocument<4096> doc;
-    parseJsonLine(lines[0], doc);
-    TEST_ASSERT_EQUAL_INT(7, doc["currentSlot"].as<int>());
+    bool foundSlot = false;
+    for (const String &line : lines) {
+        StaticJsonDocument<2048> doc;
+        parseJsonLine(line, doc);
+        if (doc["scope"] == "state_slots") {
+            TEST_ASSERT_EQUAL_INT(7, doc["currentSlot"].as<int>());
+            foundSlot = true;
+        }
+    }
+    TEST_ASSERT_TRUE(foundSlot);
 }

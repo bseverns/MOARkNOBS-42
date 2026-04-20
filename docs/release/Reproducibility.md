@@ -21,7 +21,7 @@ flowchart LR
   A[Tagged source] --> B[release.sh]
   B --> C[release_verify_hil.sh]
   B --> D[Firmware build]
-  B --> E[Deterministic fabrication zip]
+  B --> E[Deterministic hardware reference bundle]
   B --> F[Source export tarball]
   B --> G[release_verification.json]
   B --> H[Manifest plus SHA256SUMS]

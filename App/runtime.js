@@ -199,6 +199,8 @@ export function createRuntime({
   let readTimer = null;
   let readLoopActive = false;
   let queuedTelemetry = null;
+  let telemetryTraceId = null;
+  let telemetryTimer = null;
   let remoteManifest = null;
   let schema = null;
   let schemaSource = 'bundled';
@@ -650,11 +652,22 @@ export function createRuntime({
   }
 
   function queueTelemetryFrame(msg) {
-    queuedTelemetry = { ...(queuedTelemetry || {}), ...msg };
-    if (typeof requestAnimationFrame === 'function') {
-      requestAnimationFrame(flushTelemetry);
-    } else {
+    if (!msg || typeof msg !== 'object') return;
+
+    const traceId = msg.traceId || null;
+
+    if (telemetryTraceId && traceId && traceId !== telemetryTraceId) {
       flushTelemetry();
+    }
+
+    if (traceId) {
+      telemetryTraceId = traceId;
+    }
+
+    queuedTelemetry = { ...(queuedTelemetry || {}), ...msg };
+
+    if (!telemetryTimer) {
+      telemetryTimer = setTimeout(flushTelemetry, 50);
     }
   }
 
@@ -672,7 +685,13 @@ export function createRuntime({
   });
 
   function flushTelemetry() {
+    if (telemetryTimer) {
+      clearTimeout(telemetryTimer);
+      telemetryTimer = null;
+    }
+    telemetryTraceId = null;
     if (!queuedTelemetry) return;
+
     const frame = clone(queuedTelemetry);
     emit('telemetry', frame);
     notifyStatus({ type: 'telemetry', ...frame });

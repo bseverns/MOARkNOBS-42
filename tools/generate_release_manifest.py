@@ -89,8 +89,8 @@ def main() -> None:
     parser.add_argument("--root", required=False, help="Repository root for relative paths")
     parser.add_argument("--project", required=True, help="PlatformIO project directory")
     parser.add_argument("--build-env", required=True, help="PlatformIO environment used for the firmware build")
-    parser.add_argument("--firmware", required=True, help="Path to the firmware hex artifact")
-    parser.add_argument("--fabrication", required=True, help="Path to the fabrication zip artifact")
+    parser.add_argument("--firmware", required=True, help="Path to the compiled Intel HEX firmware artifact")
+    parser.add_argument("--fabrication", required=True, help="Path to the hardware reference bundle artifact")
     parser.add_argument(
         "--artifact",
         action="append",

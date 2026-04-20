@@ -43,7 +43,7 @@ This pass looks at release clarity, firmware/app/bridge contract truth, hardware
 
 1. Hardware ordering is not yet locked from the repo alone.
    Reason:
-   There is no versioned BOM or fabrication zip in-tree yet, so a builder still needs to treat the hardware package as pre-production rather than order-ready.
+   There is no versioned BOM or hardware reference bundle in-tree yet, so a builder still needs to treat the hardware package as pre-production rather than order-ready.
 
 2. The desktop bridge story is functional but not productized.
    Reason:
