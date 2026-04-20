@@ -186,23 +186,37 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         emitJson(doc, "state_slots");
     }
 
-    // Chunk 2: ARGs & Diagnostics
-    {
+    // Chunk 2: ARGs (Split into 3 blocks of 14 to avoid 1024b JSON overflow)
+    auto emitArgsChunk = [&](uint8_t startIdx, uint8_t count, const char *scope) {
         StaticJsonDocument<1024> doc;
         applyFrameMeta(doc, meta);
         doc["type"] = "telemetry";
-        doc["scope"] = "state_args_diag";
+        doc["scope"] = scope;
         JsonArray slotArgs = doc.createNestedArray("slotArgs");
         const auto &slotDefs = config.getSlots();
-        for (uint8_t i = 0; i < slotDefs.size(); ++i) {
+        for (uint8_t i = startIdx; i < startIdx + count && i < slotDefs.size(); ++i) {
             JsonObject arg = slotArgs.createNestedObject();
             const SlotARGConfig &cfg = slotDefs[i].arg;
+            arg["index"] = i;
             arg["enabled"] = cfg.enabled != 0;
             arg["method"] = static_cast<uint8_t>(cfg.method);
             arg["method_name"] = argMethodLabel(static_cast<uint8_t>(cfg.method));
             arg["sourceA"] = cfg.sourceA;
             arg["sourceB"] = cfg.sourceB;
         }
+        emitJson(doc, scope);
+    };
+
+    emitArgsChunk(0, 14, "state_args_0_13");
+    emitArgsChunk(14, 14, "state_args_14_27");
+    emitArgsChunk(28, 14, "state_args_28_41");
+
+    // Chunk 2b: Diagnostics and Global ARG Settings
+    {
+        StaticJsonDocument<512> doc;
+        applyFrameMeta(doc, meta);
+        doc["type"] = "telemetry";
+        doc["scope"] = "state_diagnostics";
 
         doc["argMethod"] = argMethodLabel(config.getARGMethod());
         doc["argEnabled"] = config.getARGEnable() != 0;
@@ -221,7 +235,7 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
         diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
 
-        emitJson(doc, "state_args_diag");
+        emitJson(doc, "state_diagnostics");
     }
 
     // Chunk 3: Envelopes & LFOs

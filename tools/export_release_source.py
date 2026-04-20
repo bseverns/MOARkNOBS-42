@@ -5,10 +5,9 @@ from __future__ import annotations
 
 import argparse
 import fnmatch
-import gzip
 import pathlib
 import subprocess
-import tarfile
+import zipfile
 
 
 EXCLUDE_GLOBS = (
@@ -45,33 +44,25 @@ def list_tracked_files(root: pathlib.Path) -> list[pathlib.Path]:
 
 
 def add_member(
-    tar: tarfile.TarFile,
+    zf: zipfile.ZipFile,
     *,
     source_path: pathlib.Path,
     archive_path: str,
 ) -> None:
     if source_path.is_symlink():
-        info = tarfile.TarInfo(archive_path)
-        info.type = tarfile.SYMTYPE
-        info.linkname = source_path.readlink().as_posix()
-        info.mtime = 0
-        info.uid = 0
-        info.gid = 0
-        info.uname = ""
-        info.gname = ""
-        info.mode = 0o777
-        tar.addfile(info)
+        info = zipfile.ZipInfo(archive_path, (1980, 1, 1, 0, 0, 0))
+        info.create_system = 3 # Unix
+        info.external_attr = (0o120000 | 0o777) << 16 # Symlink
+        zf.writestr(info, source_path.readlink().as_posix())
         return
 
-    info = tar.gettarinfo(str(source_path), arcname=archive_path)
-    info.mtime = 0
-    info.uid = 0
-    info.gid = 0
-    info.uname = ""
-    info.gname = ""
-    info.mode = 0o755 if source_path.stat().st_mode & 0o111 else 0o644
+    # Construct ZipInfo directly to avoid 'timestamp before 1980' crashes caused by deterministic mtimes
+    info = zipfile.ZipInfo(archive_path, (1980, 1, 1, 0, 0, 0))
+    info.create_system = 3 # Unix
+    info.external_attr = (source_path.stat().st_mode & 0xFFFF) << 16
+    info.compress_type = zipfile.ZIP_DEFLATED
     with source_path.open("rb") as handle:
-        tar.addfile(info, handle)
+        zf.writestr(info, handle.read())
 
 
 def create_archive(*, root: pathlib.Path, output: pathlib.Path, version: str) -> None:
@@ -82,19 +73,17 @@ def create_archive(*, root: pathlib.Path, output: pathlib.Path, version: str) ->
     if output.exists():
         output.unlink()
 
-    with output.open("wb") as raw_handle:
-        with gzip.GzipFile(fileobj=raw_handle, mode="wb", mtime=0) as gzip_handle:
-            with tarfile.open(fileobj=gzip_handle, mode="w", format=tarfile.PAX_FORMAT) as tar:
-                for source_path in files:
-                    rel = source_path.relative_to(root).as_posix()
-                    add_member(tar, source_path=source_path, archive_path=f"{prefix}{rel}")
+    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as zf:
+        for source_path in files:
+            rel = source_path.relative_to(root).as_posix()
+            add_member(zf, source_path=source_path, archive_path=f"{prefix}{rel}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create deterministic release source archive")
     parser.add_argument("--root", required=True, help="Repository root")
     parser.add_argument("--version", required=True, help="Release version/tag")
-    parser.add_argument("--output", required=True, help="Destination .tar.gz path")
+    parser.add_argument("--output", required=True, help="Destination .zip path")
     args = parser.parse_args()
 
     root = pathlib.Path(args.root).resolve()
