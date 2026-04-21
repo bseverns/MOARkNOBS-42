@@ -18,7 +18,7 @@ if not targets or not set(targets).issubset(non_test_targets):
         print(
             "\nERROR: [env:teensy40_unity] is test-only.\n"
             "Use:\n"
-            "  pio -d firmware test -e teensy40_unity -vvv\n"
+            "  pio test -d firmware -e teensy40_unity -vvv\n"
             "or from firmware/:\n"
             "  pio test -e teensy40_unity -vvv\n"
         )

@@ -8,8 +8,8 @@ Canonical source: `firmware/README.md`
 Run from repo root:
 
 ```bash
-pio -d firmware run -e teensy40_main
-pio -d firmware run -e teensy40_main -t upload
+pio run -d firmware -e teensy40_main
+pio run -d firmware -e teensy40_main -t upload
 ```
 
 ## Test environments

@@ -156,7 +156,7 @@ echo "Summary:       $SUMMARY_PATH"
 if [[ "$SKIP_UPLOAD" != "1" ]]; then
   echo
   echo "Uploading $ENV_NAME ..."
-  pio -d firmware run -e "$ENV_NAME" -t upload
+  pio run -d firmware -e "$ENV_NAME" -t upload
 fi
 
 CAPTURE_ARGS=(

@@ -96,7 +96,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 ### October — Docs, Discipline, and Demo Energy
 
 - Started the month by re-reading every major README and HISTORY entry, then tightening cross-links so the repo feels more like a synth-building field guide than a junk drawer.
-- Added explicit breadcrumbs from the docs back to the PlatformIO test flow so contributors can jump straight from prose into `pio -d firmware test -e teensy40_unity -vvv` reps without guesswork.
+- Added explicit breadcrumbs from the docs back to the PlatformIO test flow so contributors can jump straight from prose into `pio test -d firmware -e teensy40_unity -vvv` reps without guesswork.
 - Captured the debugging rituals we keep repeating—scoped button-matrix traces, WebSerial console macros, and the “use Serial1, not Serial” mantra—so future us stops spelunking commit logs for the same hints.
 - Logged this update right as it landed because history that isn’t timestamped when the solder fumes are still in the air might as well be fiction.
 - _Documentation isn’t a tombstone; it’s a mosh pit and we just pushed closer to the stage._

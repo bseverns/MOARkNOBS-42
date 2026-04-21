@@ -25,7 +25,7 @@ Fail the board immediately if any rail is shorted.
 Build and upload the main firmware:
 
 ```bash
-pio -d firmware run -e teensy40_main -t upload
+pio run -d firmware -e teensy40_main -t upload
 ```
 
 Open a serial monitor at `115200` and confirm the board enumerates as a Teensy serial device.
@@ -54,7 +54,7 @@ Fail:
 Upload the OLED and LED exerciser:
 
 ```bash
-pio -d firmware run -e teensy40_display_led_hw -t upload
+pio run -d firmware -e teensy40_display_led_hw -t upload
 ```
 
 Expected behavior:
@@ -84,7 +84,7 @@ Fail:
 Use the same `teensy40_display_led_hw` lane first, then the burn-in lane if needed:
 
 ```bash
-pio -d firmware run -e teensy40_power_burnin -t upload
+pio run -d firmware -e teensy40_power_burnin -t upload
 ```
 
 Known-good serial lines from the burn-in lane look like:
@@ -110,7 +110,7 @@ Fail:
 Upload the unified hardware test:
 
 ```bash
-pio -d firmware run -e teensy40_unified_test -t upload
+pio run -d firmware -e teensy40_unified_test -t upload
 ```
 
 Expected serial prompts include:
@@ -159,7 +159,7 @@ Fail:
 For a minimal USB MIDI lane:
 
 ```bash
-pio -d firmware run -e teensy40_button_ef_demo -t upload
+pio run -d firmware -e teensy40_button_ef_demo -t upload
 ```
 
 Known-good startup lines:
@@ -187,7 +187,7 @@ Fail:
 If the prototype hardware includes the DIN/TRS MIDI path, use the production firmware:
 
 ```bash
-pio -d firmware run -e teensy40_main -t upload
+pio run -d firmware -e teensy40_main -t upload
 ```
 
 Pass:

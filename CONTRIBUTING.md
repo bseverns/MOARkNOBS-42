@@ -9,7 +9,7 @@ The PlatformIO project lives under `firmware/`—the repo root is intentionally 
 
 ```bash
 # Main firmware
-pio -d firmware run -e teensy40_main
+pio run -d firmware -e teensy40_main
 ```
 
 Other build targets you can flex with:
@@ -25,7 +25,7 @@ Other build targets you can flex with:
 From the repo root, crank up the Unity tests:
 
 ```bash
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
 Unity screams over a custom `Serial1` transport—do **not** lean on the default Serial or regenerate PlatformIO's unittest transport.

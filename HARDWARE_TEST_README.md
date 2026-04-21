@@ -38,7 +38,7 @@ Current package limitations are tracked in [docs/hardware-test/KnownIssues.md](d
 From a clean checkout, verify the documented firmware build:
 
 ```bash
-pio -d firmware run -e teensy40_main
+pio run -d firmware -e teensy40_main
 ```
 
 That is the package baseline. If this build fails, stop there and fix the toolchain before bench work.

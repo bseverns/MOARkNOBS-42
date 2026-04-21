@@ -393,7 +393,7 @@ def getting_started_pipeline() -> None:
     draw_heading(draw, image, "Getting started pipeline", "From dependencies to first handshake, this is the shortest path from a clone to a live board/app session.")
     boxes = [
         ("Install", "Python deps\nBridge/App deps"),
-        ("Build", "pio -d firmware\nrun -e teensy40_main"),
+        ("Build", "pio run -d firmware\n-e teensy40_main"),
         ("HELLO", "Verify serial\nidentity reply"),
         ("App", "Open WebSerial UI\nand connect"),
         ("Bridge", "Optional OSC / MIDI\nhost path"),

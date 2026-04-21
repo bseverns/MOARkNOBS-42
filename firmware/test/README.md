@@ -29,7 +29,7 @@ PlatformIO's stock Unity runner speaks over the default `Serial` port, which is 
 To take it for a spin from repo root:
 
 ```bash
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
 Or, if you're already inside `firmware/`:
@@ -66,7 +66,7 @@ runner is pure line parsing, so hack away.
 Say the OLED ghosts you mid-jam:
 
 1. Scan the table and spot `test/test_display_manager.cpp`.
-2. Blast the whole Unity suite: `pio -d firmware test -e teensy40_unity -vvv` (or `pio test -e teensy40_unity -vvv` from `firmware/`). `test/test_mainUnity.cpp` will herd every test, including the display check. Want just one? comment out the `RUN_TEST` lines you don't care about and rerun.
+2. Blast the whole Unity suite: `pio test -d firmware -e teensy40_unity -vvv` (or `pio test -e teensy40_unity -vvv` from `firmware/`). `test/test_mainUnity.cpp` will herd every test, including the display check. Want just one? comment out the `RUN_TEST` lines you don't care about and rerun.
 3. If Unity shrugs, flash `src/main_t.cpp` (`pio run -e teensy40_full_system -t upload`) and watch the screen dance.
 4. Still blank? time to chase solder joints.
 
@@ -94,7 +94,7 @@ Example: run the unified gauntlet and see what smokes first.
 We finally caved and wired up a few automated checks in `test/test_*.cpp` for those lonely nights when you want proof without solder burns. Anything in `src/*_t.cpp` still demands real hardware and a steady trigger finger.
 
 ```bash
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
  The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/usb_midi.cpp` and pals hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Instead of playing macro shell games, we drop in a skinny `usb_midi_class` that exposes the same face as the real deal. Any code shouting for `usbMIDI` ends up talking to our stub, the core header never loads, and the linker goes back to sleep. A tiny `MIDI.h` shim rides shotgun so the `midi` namespace exists even when the heavyweight library sits out. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
@@ -114,7 +114,7 @@ That env sets `test_build_src = true`, but we keep the haul lean with a `build_s
 
 ### VS Code's flaky build staging
 
-If VS Code yells about `firmware/test/DisplayManagerStub.cpp` and a missing `.sconsign311.dblite`, that's SCons trying to log its dependency cache before PlatformIO finished birthing the `.pio/build/<env>` directory. We now strong-arm that folder into existence in `firmware/scripts/deprecated_copy_flag.py` (peek [`firmware/scripts/README.md`](../scripts/README.md) for the gritty details), but if you see the error again, nuke `.pio/` and rerun `pio -d firmware test -e teensy40_unity -vvv` so the script can repave the path.
+If VS Code yells about `firmware/test/DisplayManagerStub.cpp` and a missing `.sconsign311.dblite`, that's SCons trying to log its dependency cache before PlatformIO finished birthing the `.pio/build/<env>` directory. We now strong-arm that folder into existence in `firmware/scripts/deprecated_copy_flag.py` (peek [`firmware/scripts/README.md`](../scripts/README.md) for the gritty details), but if you see the error again, nuke `.pio/` and rerun `pio test -d firmware -e teensy40_unity -vvv` so the script can repave the path.
 
 ### test_envelope_follower.cpp
 Snaps the EnvelopeFollower between low-pass and high-pass to make sure DC gets gutted on command.

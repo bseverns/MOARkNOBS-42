@@ -9,9 +9,9 @@ Unless a section says otherwise, commands below assume you are running from the 
 | Layer                    | Command                                                                | Hardware needed                             | What it proves                                                                                                                         |
 | ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Full battery             | `./test.sh`                                                            | Teensy 4.0 for Unity, host machine for Node | Runs everything below, writes clean logs, perfect for CI and pre-commit rituals.                                                       |
-| Unity smoke tests        | `pio -d firmware test -e teensy40_unity`                               | Teensy 4.0 with USB cable                   | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                                           |
+| Unity smoke tests        | `pio test -d firmware -e teensy40_unity`                               | Teensy 4.0 with USB cable                   | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                                           |
 | App seam regressions     | `npm --prefix App test`                                                | Host machine only                           | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware.             |
-| Manual firmware sketches | `pio -d firmware run -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller                  | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                            |
+| Manual firmware sketches | `pio run -d firmware -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller                  | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                            |
 | Bridge CLI sanity        | `npm --prefix bridge test`                                             | Host machine only (Node ≥ 18)               | Keeps the OSC bridge CLI parsing and error handling sharp.                                                                             |
 | System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js`                   | Controller + bridge talking                 | Automated OSC/MIDI host-control proof plus optional destructive EEPROM smoke checks for profile/macro/scene recovery on real hardware. |
 
@@ -30,13 +30,13 @@ When the goal is to find physical limits rather than just software regressions, 
 
 | Stage                   | Command                                                        | Main observation target                                             | Capture                       |
 | ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------- |
-| Firmware baseline       | `pio -d firmware run -e teensy40_main`                         | Build sanity before bench time                                      | Build result                  |
-| Logic sanity            | `pio -d firmware test -e teensy40_unity`                       | Core firmware behavior before touching hardware limits              | Unity log                     |
-| Manual board check      | `pio -d firmware run -e teensy40_unified_test -t upload`       | Buttons, pots, OLED, LED chain basic health                         | Operator notes                |
-| LED surface stress      | `pio -d firmware run -e teensy40_led_demo -t upload`           | Pixel integrity, animation throughput, brownouts under dynamic load | Serial log + visual notes     |
-| Power / thermal burn-in | `pio -d firmware run -e teensy40_power_burnin -t upload`       | Rail sag, white-load current, thermal rise, long-run stability      | Serial log + PSU/thermal data |
-| Persistence abuse       | `pio -d firmware run -e teensy40_eeprom_persistence -t upload` | Save/load and reboot resilience                                     | Serial log                    |
-| Storage verification    | `pio -d firmware run -e teensy40_slot_verify -t upload`        | Slot data integrity                                                 | Serial log                    |
+| Firmware baseline       | `pio run -d firmware -e teensy40_main`                         | Build sanity before bench time                                      | Build result                  |
+| Logic sanity            | `pio test -d firmware -e teensy40_unity`                       | Core firmware behavior before touching hardware limits              | Unity log                     |
+| Manual board check      | `pio run -d firmware -e teensy40_unified_test -t upload`       | Buttons, pots, OLED, LED chain basic health                         | Operator notes                |
+| LED surface stress      | `pio run -d firmware -e teensy40_led_demo -t upload`           | Pixel integrity, animation throughput, brownouts under dynamic load | Serial log + visual notes     |
+| Power / thermal burn-in | `pio run -d firmware -e teensy40_power_burnin -t upload`       | Rail sag, white-load current, thermal rise, long-run stability      | Serial log + PSU/thermal data |
+| Persistence abuse       | `pio run -d firmware -e teensy40_eeprom_persistence -t upload` | Save/load and reboot resilience                                     | Serial log                    |
+| Storage verification    | `pio run -d firmware -e teensy40_slot_verify -t upload`        | Slot data integrity                                                 | Serial log                    |
 
 Use the burn-in harness when you want the board to sit in one high-load state for minutes or hours. It cycles through `white25`, `white50`, `white100`, `red`, `green`, `blue`, `sweep`, `wash`, and `blast`, and it logs:
 
@@ -195,12 +195,12 @@ After a successful swing you’ll have:
 
 - **“Skipping Unity tests”** – no Teensy port was found. Flash the board, double-check cables, or pass `TEST_PORT` explicitly.
 - **“Autogen Unity transport detected”** – PlatformIO regenerated its default Unity transport. Clean your `.pio` tree (`pio run -d firmware -t clean`) and make sure you didn’t delete `firmware/test/unity_output.cpp` or `firmware/test/unittest_transport.cpp`.
-- **Unity timeouts** – usually the board wasn’t flashed with the Unity firmware. Run `pio -d firmware test -e teensy40_unity` without `--without-uploading` once to seed it.
+- **Unity timeouts** – usually the board wasn’t flashed with the Unity firmware. Run `pio test -d firmware -e teensy40_unity` without `--without-uploading` once to seed it.
 - **Bridge test failures** – run `npm --prefix bridge test -- --watch` locally and fix whatever CLI regression the suite is screaming about.
 
 ```mermaid
 flowchart TD
-  T["`test.sh`"] --> U["Unity tests\n(pio -d firmware test -e teensy40_unity)"]
+  T["`test.sh`"] --> U["Unity tests\n(pio test -d firmware -e teensy40_unity)"]
   T --> B["Bridge checks\n(npm test)"]
   U --> UL["logs/unity-test.xml\nlogs/unity-test.log"]
   B --> BL["logs/bridge-test.log"]
@@ -231,20 +231,20 @@ What Unity is not meant to prove:
 1. Plug the Teensy in and make sure `pio device list` shows the port you expect.
 2. Seed the board with the Unity runner so `test.sh` has something to talk to:
    ```bash
-   pio -d firmware test -e teensy40_unity
+   pio test -d firmware -e teensy40_unity
    ```
    This compiles, uploads, and executes the suite in one shot. You’ll see Unity scroll by in your terminal. Subsequent invocations via `test.sh` can skip uploading.
 
 The `teensy40_unity` environment speaks over `Serial1` at 115200 baud and leans on the custom `unity_output.cpp` + `unity_config.h` duo in `firmware/test/`. If you need to route output elsewhere (e.g., different UART pins), edit those files—not the PlatformIO defaults.
 
-One practical note: `pio -d firmware test -e teensy40_unity --without-uploading` still expects a flashed board to be present for execution. It is useful when you want fresh test output without reflashing, but it is not the same thing as a hardware-free test run.
+One practical note: `pio test -d firmware -e teensy40_unity --without-uploading` still expects a flashed board to be present for execution. It is useful when you want fresh test output without reflashing, but it is not the same thing as a hardware-free test run.
 
 ### Running by hand after setup
 
 Once the firmware is already flashed, you can grab fresh logs without re-uploading:
 
 ```bash
-pio -d firmware test -e teensy40_unity --without-uploading --test-port /dev/ttyACM0 -vvv --junit-output logs/unity-test.xml | tee logs/unity-test.log
+pio test -d firmware -e teensy40_unity --without-uploading --test-port /dev/ttyACM0 -vvv --junit-output logs/unity-test.xml | tee logs/unity-test.log
 ```
 
 ### Reading the results
@@ -258,7 +258,7 @@ pio -d firmware test -e teensy40_unity --without-uploading --test-port /dev/ttyA
 The Unity harness pulls in everything under `firmware/test/test_*.cpp`. To isolate a single test:
 
 1. Edit `firmware/test/test_mainUnity.cpp` and comment out the `RUN_TEST` macros you don’t need.
-2. Re-run `pio -d firmware test -e teensy40_unity`.
+2. Re-run `pio test -d firmware -e teensy40_unity`.
 3. Restore the macros before you commit so CI sees the full suite.
 
 For a deep dive into what each Unity or manual sketch checks, crack open [firmware/test/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/test/README.md). It catalogs every test file with the subsystem it pokes.
@@ -275,7 +275,7 @@ Unity can only fake so much. When you need to watch real LEDs blink or feel a po
 | `src/eeprom_persistence_t.cpp` | `teensy40_eeprom_persistence` | Ensures EEPROM writes survive reboots.                                          |
 | `src/verify_slots_t.cpp`       | `teensy40_slot_verify`        | Pounds on MIDISlot storage and reads it back.                                   |
 
-Run them with `pio -d firmware run -e <env> -t upload`, then open a serial monitor or watch the device directly. These tests need a human watching and pushing buttons; log what you see if something twitches.
+Run them with `pio run -d firmware -e <env> -t upload`, then open a serial monitor or watch the device directly. These tests need a human watching and pushing buttons; log what you see if something twitches.
 
 ## Bridge CLI sanity (`bridge/test/`)
 
@@ -332,7 +332,7 @@ When you need to prove the whole stack plays nice, you move up to the full-syste
 1. Flash the Teensy with the full-system firmware so the bridge sees every subsystem:
 
    ```bash
-   pio -d firmware run -e teensy40_full_system -t upload
+   pio run -d firmware -e teensy40_full_system -t upload
    ```
 
 2. Install bridge dependencies if you haven't already:

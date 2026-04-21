@@ -32,7 +32,7 @@ Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md).
 Run PlatformIO from `firmware/`, not the repo root:
 
 ```bash
-pio -d firmware run -e teensy40_main
+pio run -d firmware -e teensy40_main
 ```
 
 ## Hardware Reference Files Present

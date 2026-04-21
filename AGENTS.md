@@ -26,7 +26,7 @@
 ## REPO CONTRACT — MOARkNOBS-42 (strict)
 
 • PlatformIO project root is ./firmware. Never treat repo root as a PIO project.
-• Tests run with: pio -d firmware test -e teensy40_unity -vvv
+• Tests run with: pio test -d firmware -e teensy40_unity -vvv
 • Unity transport is CUSTOM ONLY. Do not rely on or regenerate PlatformIO’s Serial-based transport.
   - Required symbols provided by firmware/test/unity_output.cpp:
     unityOutputStart/Char/Flush/Complete → use Serial1 (NOT Serial).

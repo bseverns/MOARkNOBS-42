@@ -107,7 +107,7 @@ Both digests should match the `artifacts` block in the manifest exactly.
 
 With the manifest and hashes in hand you can:
 
-- flash the board locally using `pio -d firmware run -t upload -e teensy40_main`
+- flash the board locally using `pio run -d firmware -t upload -e teensy40_main`
 - stash the `hardware_reference.zip` on the release page alongside the firmware so builders can send boards to
   fab without spelunking the repo
 - archive `manifest.json` anywhere that expects a software BOM or build log

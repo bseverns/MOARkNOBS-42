@@ -48,7 +48,7 @@ The WS2812 strip isn’t just a wiring exercise—the firmware persists brightne
 2. **Plug in the Teensy 4.0** over USB.
 3. **Build and upload** the main firmware from the repo root:
    ```bash
-   pio -d firmware run -t upload -e teensy40_main
+   pio run -d firmware -t upload -e teensy40_main
    ```
    The loader will yell success when it's done.
 4. **Local library stash** – We archive FastLED and the Adafruit display libs under `firmware/lib/`.
@@ -118,7 +118,7 @@ Once the firmware's on board, make sure the basics don't flake out:
    If that lone pixel blinks, you're in business.
 2. **Button sanity** – Build the hardware test suite:
    ```bash
-   pio -d firmware run -e teensy40_full_system
+   pio run -d firmware -e teensy40_full_system
    ```
    Follow the serial prompts to poke every switch and LED.
 
@@ -204,15 +204,15 @@ Profiles let you keep live, studio, and "what if I break everything" setups with
 Compile the test environments when you want to verify the board outside of the main firmware:
 
 ```bash
-pio -d firmware run -e teensy40_full_system      # or teensy40_unified_test, etc.
+pio run -d firmware -e teensy40_full_system      # or teensy40_unified_test, etc.
 # Unity harness flexes a different muscle:
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
 Available environments:
 
 - `teensy40_full_system` – step-through checks of each subsystem
-- `teensy40_unity` – Unity-driven automated tests (run with `pio -d firmware test -e teensy40_unity -vvv`)
+- `teensy40_unity` – Unity-driven automated tests (run with `pio test -d firmware -e teensy40_unity -vvv`)
 - `teensy40_unified_test` – full integration test
 - `teensy40_biquad_test` – biquad filter calibration
 - `teensy40_eeprom_persistence` – EEPROM backup/restore test

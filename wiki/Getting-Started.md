@@ -27,13 +27,13 @@ npm --prefix App ci
 PlatformIO project root is `firmware/`:
 
 ```bash
-pio -d firmware run -e teensy40_main
+pio run -d firmware -e teensy40_main
 ```
 
 Upload:
 
 ```bash
-pio -d firmware run -e teensy40_main -t upload
+pio run -d firmware -e teensy40_main -t upload
 ```
 
 ## 3) Verify serial handshake

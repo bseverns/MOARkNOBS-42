@@ -2,7 +2,7 @@
 
 Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then treat this file as the operator checklist and [Reproducibility](Reproducibility.md) as the canonical artifact recipe.
 
-1. **Run the gauntlet** – build (`pio -d firmware run -e teensy40_main`) and test (`pio -d firmware test -e teensy40_unity -vvv`, `npm --prefix bridge test`, `npm --prefix App test`). Don't ship broken noise.
+1. **Run the gauntlet** – build (`pio run -d firmware -e teensy40_main`) and test (`pio test -d firmware -e teensy40_unity -vvv`, `npm --prefix bridge test`, `npm --prefix App test`). Don't ship broken noise.
 2. **Refresh the human-facing release notes** – update [CHANGELOG.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/CHANGELOG.md) and the relevant entry in [HISTORY.md](../project/HISTORY.md) so both the terse delta log and the longer narrative are current.
 3. **Confirm version stamping** – firmware version strings come from `FW_VERSION`/`GIT_SHA`, which are stringized in [firmware/include/version.h](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/version.h) and injected by [firmware/scripts/version.py](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/scripts/version.py). For local release builds, export the intended tag before invoking the release script:
    ```bash

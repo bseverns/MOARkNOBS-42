@@ -7,8 +7,8 @@ Canonical source: `docs/release/ReleaseGuide.md`
 
 1. Build and test:
    ```bash
-   pio -d firmware run -e teensy40_main
-   pio -d firmware test -e teensy40_unity -vvv
+   pio run -d firmware -e teensy40_main
+   pio test -d firmware -e teensy40_unity -vvv
    npm --prefix bridge test
    npm --prefix App test
    ```

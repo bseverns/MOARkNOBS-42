@@ -5,7 +5,7 @@ This is the broom closet where we stash little Python gremlins that tweak Platfo
 ## `deprecated_copy_flag.py`
 
 PlatformIO slurps in this script via `extra_scripts = pre:scripts/deprecated_copy_flag.py` in `firmware/platformio.ini`.
-The repo-root `platformio.ini` is a shim that can still trigger extra-script resolution from repo root, so `scripts/deprecated_copy_flag.py` exists there as a tiny forwarder to this canonical helper. Fire `pio` from inside `firmware/` (or use `pio -d firmware …` from anywhere) and you'll still land on this file for the real behavior. When the hook runs it simply calls:
+The repo-root `platformio.ini` is a shim that can still trigger extra-script resolution from repo root, so `scripts/deprecated_copy_flag.py` exists there as a tiny forwarder to this canonical helper. Fire `pio` from inside `firmware/` (or use `pio <command> -d firmware …` from anywhere) and you'll still land on this file for the real behavior. When the hook runs it simply calls:
 
 ```python
 env.Append(CXXFLAGS=["-Wno-deprecated-copy"])
@@ -48,7 +48,7 @@ look like firmware breakage but are really invocation mistakes.
 Accepted commands:
 
 ```bash
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 # or from firmware/
 pio test -e teensy40_unity -vvv
 ```

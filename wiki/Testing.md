@@ -13,11 +13,11 @@ Run from repo root unless noted.
    ```
 2. Unity firmware suite (strict command from repo contract):
    ```bash
-   pio -d firmware test -e teensy40_unity -vvv
+   pio test -d firmware -e teensy40_unity -vvv
    ```
 3. Firmware build sanity:
    ```bash
-   pio -d firmware run -e teensy40_main
+   pio run -d firmware -e teensy40_main
    ```
 4. Bridge tests:
    ```bash
@@ -48,7 +48,7 @@ Run from repo root unless noted.
 Build and upload with:
 
 ```bash
-pio -d firmware run -e <env> -t upload
+pio run -d firmware -e <env> -t upload
 ```
 
 ## Full-stack hardware runner

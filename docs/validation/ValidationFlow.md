@@ -23,7 +23,7 @@ Run the automated checks that do not require the finished prototype first.
 From the repo root:
 
 ```bash
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 npm --prefix App test
 npm --prefix bridge test
 python3 tools/check_markdown_links.py

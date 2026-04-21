@@ -25,7 +25,7 @@ That page is the canonical source for what hardware files are currently verified
 From the repo root:
 
 ```bash
-pio -d firmware run -t upload -e teensy40_main
+pio run -d firmware -t upload -e teensy40_main
 ```
 
 Or from `firmware/`:
@@ -47,7 +47,7 @@ pio run -t upload -e teensy40_main
 From the repo root:
 
 ```bash
-pio -d firmware test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
 This is the main automated firmware check. It does not replace bench validation on a real board.
@@ -57,7 +57,7 @@ This is the main automated firmware check. It does not replace bench validation 
 Use the full-system test environment when you want bring-up help tied to real hardware:
 
 ```bash
-pio -d firmware run -e teensy40_full_system
+pio run -d firmware -e teensy40_full_system
 ```
 
 ## 6. If something fails
