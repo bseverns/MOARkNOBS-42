@@ -1,35 +1,31 @@
 # Current Hardware Build
 
-This is the canonical hardware entry point for the repository. Check this page before ordering boards or parts.
+This is the hardware status page for the hardware-test package.
 
-Last audited against repo contents: 2026-04-20.
+Last audited against repo contents: 2026-04-21.
 
-## Start Here
+## Package Scope
 
-1. Read this page first.
-2. If you need the latest verified files that are actually present in the repo, use the machine-drawing PDFs listed below.
-3. If you need a release-ready fabrication package, stop and check the status table in this file before placing an order.
+This package supports prototype bench validation.
+It does not claim fabrication readiness.
 
-## Status Labels
+## Current Hardware References
 
-- `current` means the file is present in the repo and is the best verified reference available in this checkout.
-- `legacy` means the file name still appears in docs, but the file is not present in this checkout.
-- `experimental` means the repo does not provide enough evidence to call it release-ready.
+| Item | Path | Status | Use in this package |
+| --- | --- | --- | --- |
+| Schematic reference | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present | Current schematic reference for bench validation |
+| PCB/reference drawing | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | present | Current board drawing reference for bench validation |
+| Prototype BOM export | `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.csv` | present | Current BOM export for prototype parts review |
+| Gerber archive | `hardware/fabrication/Gerber_MOAR_Board_1_2026-02-24.zip` | present but unverified | Review-only artifact; not claimed as a verified fabrication bundle |
 
-## Current Status Table
+## How To Use This Folder
 
-| Item | Path | Version / date cue | Status | Notes |
-| --- | --- | --- | --- | --- |
-| Board drawing reference | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | `2025-09-03` from filename | `current` | Verified present in repo. Use as a drawing/reference artifact, not as a substitute for a checked fabrication archive. |
-| Schematic reference | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | `2025-08-30` from filename | `current` | Verified present in repo. |
-| Gerber fabrication archive | `hardware/fabrication/Gerber_MOAR_Board_1_2026-02-24.zip` | `2026-02-24` from filename | `current` | Verified present in repo. Use alongside the BOM and schematic for board ordering. Confirm it matches the intended board revision before sending to fab. |
-| BOM export | `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.xlsx` | `2026-03-17` from filename | `current` | Prototype BOM present in repo as an `.xlsx` export. Confirm it matches the intended board revision before ordering. |
+1. Use the schematic PDF and PCB/reference drawing PDF to confirm the assembled prototype matches the expected wiring and layout.
+2. Use the BOM export, [Parts.md](Parts.md), and [Substitutions.md](Substitutions.md) to review parts and likely substitutions before bench work.
+3. If you are preparing manufacturing files, stop. This package does not certify a fabrication-ready output set.
 
-## What Builders Should Download First
+## What Is Not Verified Yet
 
-If you are evaluating the current repo state today:
-
-1. Read `hardware/CurrentBuild.md`.
-2. Download or open the board drawing PDF and schematic PDF listed in the table above.
-3. Do not assume older BOM/Gerber filenames in docs are current.
-4. For an orderable package, use the Gerber zip and BOM listed above. Confirm both match the intended board revision before spending money.
+- no verified Gerber plus NC-drill release bundle
+- no claim that the current fabrication archive has completed release-level checks
+- no order-ready manufacturing sign-off from this package
