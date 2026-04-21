@@ -885,6 +885,10 @@ void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayloa
     saveSlot(idx, slots[idx]);
 }
 
+SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
+    return sanitizeEnvelopePayloadImpl(payload);
+}
+
 SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &payload) {
     return persistFilterTailImpl(payload);
 }

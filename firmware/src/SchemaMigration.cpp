@@ -27,11 +27,11 @@ void storageUpdate(int address, uint8_t value) {
 }
 
 template <typename T> void storageGet(int address, T &value) {
-    ConfigManager::getStorageBackend()->get(address, value);
+    ConfigManager::getStorageBackend()->readBytes(address, &value, sizeof(T));
 }
 
 template <typename T> void storagePut(int address, const T &value) {
-    ConfigManager::getStorageBackend()->put(address, value);
+    ConfigManager::getStorageBackend()->writeBytes(address, &value, sizeof(T));
 }
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;

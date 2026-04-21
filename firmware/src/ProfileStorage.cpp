@@ -53,8 +53,8 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
     ProfileData sanitized = profile;
     sanitized.version = PROFILE_SETTINGS_VERSION;
     // Arp
-    if (sanitized.arp.shape > static_cast<uint8_t>(Arpeggiator::Shape::Random)) {
-        sanitized.arp.shape = static_cast<uint8_t>(Arpeggiator::Shape::Up);
+    if (sanitized.arp.shape > static_cast<uint8_t>(Arpeggiator::EUCLIDEAN)) {
+        sanitized.arp.shape = static_cast<uint8_t>(Arpeggiator::UP);
     }
     sanitized.arp.swingPercent = constrain(sanitized.arp.swingPercent, 0, 80);
     sanitized.arp.gatePercent = constrain(sanitized.arp.gatePercent, 5, 100);
