@@ -61,7 +61,6 @@ class TaskScheduler {
     static constexpr size_t kReservedTaskCapacity = 96;
     std::vector<ScheduledTask> tasks;
     std::vector<size_t> dueTaskIndices;
-    std::vector<size_t> finished;
 };
 
 /** Collection of miscellaneous helper functions. */

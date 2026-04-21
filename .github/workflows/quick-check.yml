@@ -57,5 +57,5 @@ jobs:
       - name: App tests on Node
         run: |
           npm --prefix App ci --no-audit --no-fund
-          npx --prefix App playwright install --with-deps chromium
-          npm --prefix App test
+          cd App && npx playwright install --with-deps chromium
+          npm test

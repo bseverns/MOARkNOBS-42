@@ -2,7 +2,7 @@
 
 This is the canonical hardware entry point for the repository. Check this page before ordering boards or parts.
 
-Last audited against repo contents: 2026-03-22.
+Last audited against repo contents: 2026-04-20.
 
 ## Start Here
 
@@ -22,7 +22,7 @@ Last audited against repo contents: 2026-03-22.
 | --- | --- | --- | --- | --- |
 | Board drawing reference | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | `2025-09-03` from filename | `current` | Verified present in repo. Use as a drawing/reference artifact, not as a substitute for a checked fabrication archive. |
 | Schematic reference | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | `2025-08-30` from filename | `current` | Verified present in repo. |
-| Hardware reference bundle | `hardware/fabrication/` | none present | `experimental` | `TODO: add a versioned fabrication archive under hardware/fabrication/ and update this table with the exact filename.` |
+| Gerber fabrication archive | `hardware/fabrication/Gerber_MOAR_Board_1_2026-02-24.zip` | `2026-02-24` from filename | `current` | Verified present in repo. Use alongside the BOM and schematic for board ordering. Confirm it matches the intended board revision before sending to fab. |
 | BOM export | `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.xlsx` | `2026-03-17` from filename | `current` | Prototype BOM present in repo as an `.xlsx` export. Confirm it matches the intended board revision before ordering. |
 
 ## What Builders Should Download First
@@ -32,4 +32,4 @@ If you are evaluating the current repo state today:
 1. Read `hardware/CurrentBuild.md`.
 2. Download or open the board drawing PDF and schematic PDF listed in the table above.
 3. Do not assume older BOM/Gerber filenames in docs are current.
-4. If you need an orderable package, use the BOM listed above and confirm whether a release-ready fabrication archive exists before spending money.
+4. For an orderable package, use the Gerber zip and BOM listed above. Confirm both match the intended board revision before spending money.
