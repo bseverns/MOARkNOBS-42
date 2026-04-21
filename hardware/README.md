@@ -64,7 +64,7 @@ Current repo state from the 2026-03 audit:
 - Verified present: `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
 - Verified present: `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
 - Verified present: `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.xlsx`
-- `TODO: add a versioned fabrication payload (Gerbers/NC Drill) under hardware/fabrication/`
+- Verified present: `hardware/fabrication/Gerber_MOAR_Board_1_2026-02-24.zip`
 - `TODO: if enclosure CAD is meant to ship in-repo, add a versioned directory and link it from CurrentBuild.md`
 
 Circuit diagrams live in [`sketch/`](../docs/sketch). System modules have their circuits diagramed to show the board's guts in living color.

@@ -369,7 +369,6 @@ String Utility::formatAck(const char *checksumValue, uint32_t sequence) {
 TaskScheduler::TaskScheduler() {
     tasks.reserve(kReservedTaskCapacity);
     dueTaskIndices.reserve(kReservedTaskCapacity);
-    finished.reserve(kReservedTaskCapacity);
 }
 
 void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayMs, bool repeat) {
@@ -377,17 +376,13 @@ void TaskScheduler::addTask(std::function<void()> callback, unsigned long delayM
     if (dueTaskIndices.capacity() < tasks.capacity()) {
         dueTaskIndices.reserve(tasks.capacity());
     }
-    if (finished.capacity() < tasks.capacity()) {
-        finished.reserve(tasks.capacity());
-    }
 }
 
 void TaskScheduler::update() {
     unsigned long now = ::now();
 
-    // Stage due task indices and track which one-shot tasks need culling.
+    // Stage due task indices and mark which one-shot tasks need culling.
     dueTaskIndices.clear();
-    finished.clear();
 
     for (size_t i = 0; i < tasks.size(); ++i) {
         ScheduledTask &task = tasks[i];
@@ -396,7 +391,7 @@ void TaskScheduler::update() {
             if (task.repeat) {
                 task.runAt = now + task.interval; // reschedule next run
             } else {
-                finished.push_back(i); // mark for removal
+                task.runAt = 0; // sentinel: mark for removal after firing
             }
         }
     }
@@ -408,10 +403,11 @@ void TaskScheduler::update() {
         }
     }
 
-    // Remove completed one-shot tasks, highest index first.
-    for (auto it = finished.rbegin(); it != finished.rend(); ++it) {
-        tasks.erase(tasks.begin() + *it);
-    }
+    // Sweep completed one-shots in O(n) using erase-remove_if instead of
+    // the previous reverse-erase loop that was O(n²) per removal.
+    tasks.erase(std::remove_if(tasks.begin(), tasks.end(),
+                               [](const ScheduledTask &t) { return !t.repeat && t.runAt == 0; }),
+                tasks.end());
 }
 
 TaskScheduler Utility::schedulerHigh;
