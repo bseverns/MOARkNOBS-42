@@ -1,55 +1,118 @@
-const { spawn } = require('node:child_process');
 const { strict: assert } = require('node:assert');
-const path = require('node:path');
-const osc = require('osc');
+const { EventEmitter } = require('node:events');
+
+const { createBridgeService } = require('../lib/bridge_service');
+
+class FakeReadlineParser extends EventEmitter {}
+
+class FakeSerialPort extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+    this.writes = [];
+    this.parser = null;
+    FakeSerialPort.instances.push(this);
+    setImmediate(() => this.emit('open'));
+  }
+
+  pipe(parser) {
+    this.parser = parser;
+    return parser;
+  }
+
+  write(data) {
+    this.writes.push(String(data));
+  }
+
+  close(cb) {
+    if (typeof cb === 'function') cb();
+    this.emit('close');
+  }
+}
+FakeSerialPort.instances = [];
+
+class FakeUdpPort extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+    this.sent = [];
+    FakeUdpPort.instances.push(this);
+  }
+
+  open() {
+    setImmediate(() => this.emit('ready'));
+  }
+
+  send(packet, host, port) {
+    this.sent.push({ packet, host, port });
+  }
+
+  close() {}
+}
+FakeUdpPort.instances = [];
 
 async function run() {
-  // Fire up an OSC listener to catch whatever the bridge screams out.
-  const listenPort = 57121;
-  const udp = new osc.UDPPort({
-    localAddress: '127.0.0.1',
-    localPort: listenPort,
-  });
-  udp.open();
-  await new Promise((resolve) => udp.on('ready', resolve));
+  FakeSerialPort.instances = [];
+  FakeUdpPort.instances = [];
+  const service = createBridgeService(
+    {
+      serialName: '/dev/fake',
+      oscPort: 57121,
+      oscListen: 0,
+      oscHost: '127.0.0.1',
+      oscBind: '127.0.0.1',
+      midiLabel: 'MN42 Bridge Test',
+    },
+    {
+      serialport: {
+        SerialPort: FakeSerialPort,
+        ReadlineParser: FakeReadlineParser,
+      },
+      osc: { UDPPort: FakeUdpPort },
+      jzz: () => ({
+        openMidiOut: () => ({
+          or() {
+            return this;
+          },
+          send() {},
+          on() {},
+        }),
+        openMidiIn: () => ({
+          or() {
+            return this;
+          },
+          connect() {
+            return this;
+          },
+          on() {},
+        }),
+      }),
+    },
+  );
 
-  let slots;
-  udp.on('message', (msg) => {
-    if (msg.address === '/mn42/slots') slots = msg.args;
-  });
+  await service.start();
+  await new Promise((resolve) => setTimeout(resolve, 50));
 
-  const script = path.join(__dirname, '..', 'mn42_bridge.js');
-  const serialMock = path.join(__dirname, 'mock_serial.js');
-  const jzzMock = path.join(__dirname, 'mock_jzz.js');
-  const child = spawn(process.execPath, [
-    '-r',
-    serialMock,
-    '-r',
-    jzzMock,
-    script,
-    '--serial',
-    '/dev/fake',
-    '--osc',
-    String(listenPort),
-    '--host',
-    '127.0.0.1',
-    '--osc-listen',
-    '0',
-  ]);
+  const serial = FakeSerialPort.instances[0];
+  const udp = FakeUdpPort.instances[0];
+  const slots = [];
+  assert.ok(serial && serial.parser, 'serial parser should be connected');
+  assert.ok(udp, 'udp endpoint should be connected');
 
-  // Wait for the bridge to spit out an OSC packet or time out.
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('no OSC data')), 1000);
-    udp.on('message', () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
+  serial.parser.emit('data', '{"hello":"mn42"}');
+  serial.parser.emit('data', '{"slots":[1,2,3]}');
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  const slotsEntry = [...udp.sent]
+    .reverse()
+    .find((entry) => entry.packet?.address === '/mn42/slots');
+  if (slotsEntry) {
+    slots.splice(0, slots.length, ...slotsEntry.packet.args);
+  }
 
   assert.deepEqual(slots, [1, 2, 3], 'bridge should echo slots via OSC');
 
-  child.kill();
-  udp.close();
+  await service.stop();
   console.log('serial JSON turns into OSC, as foretold');
 }
 

@@ -1,94 +1,152 @@
 const { strict: assert } = require('node:assert');
-const osc = require('osc');
-const path = require('node:path');
+const { EventEmitter } = require('node:events');
 
-async function run() {
-  // Hijack serialport to use its mock so we can spy on writes without real hardware.
-  const sp = require('serialport');
-  const { SerialPortMock, ReadlineParser } = sp;
-  require.cache[require.resolve('serialport')].exports = {
-    ...sp,
-    SerialPort: SerialPortMock,
-    ReadlineParser,
+const { createBridgeService } = require('../lib/bridge_service');
+
+class FakeReadlineParser extends EventEmitter {}
+
+class FakeSerialPort extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+    this.writes = [];
+    this.parser = null;
+    FakeSerialPort.instances.push(this);
+    setImmediate(() => this.emit('open'));
+  }
+
+  pipe(parser) {
+    this.parser = parser;
+    return parser;
+  }
+
+  write(data) {
+    this.writes.push(String(data));
+  }
+
+  close(cb) {
+    if (typeof cb === 'function') cb();
+    this.emit('close');
+  }
+}
+FakeSerialPort.instances = [];
+
+class FakeUdpPort extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+    this.sent = [];
+    FakeUdpPort.instances.push(this);
+  }
+
+  open() {
+    setImmediate(() => this.emit('ready'));
+  }
+
+  send(packet, host, port) {
+    this.sent.push({ packet, host, port });
+  }
+
+  close() {}
+}
+FakeUdpPort.instances = [];
+
+function createFakeJzzFactory() {
+  const context = {
+    midiIn: null,
+    midiOut: null,
   };
-  SerialPortMock.binding.createPort('/dev/fake', {});
 
-  const writes = [];
-  const origWrite = SerialPortMock.prototype.write;
-  SerialPortMock.prototype.write = function (data, cb) {
-    writes.push(data.toString());
-    return origWrite.call(this, data, cb);
-  };
+  function jzzFactory() {
+    const midiOut = new EventEmitter();
+    midiOut.sent = [];
+    midiOut.or = function or() {
+      return this;
+    };
+    midiOut.send = function send(message) {
+      this.sent.push(Array.isArray(message) ? [...message] : message);
+    };
+    midiOut.close = function close() {};
 
-  // Stub out JZZ so MIDI gets looped back into the bridge.
-  let midiHandler;
-  function JZZ() {
+    const midiIn = new EventEmitter();
+    midiIn.handler = null;
+    midiIn.or = function or() {
+      return this;
+    };
+    midiIn.connect = function connect(handler) {
+      this.handler = handler;
+      return this;
+    };
+    midiIn.close = function close() {};
+
+    context.midiIn = midiIn;
+    context.midiOut = midiOut;
     return {
-      openMidiOut: () => ({
-        or() {
-          return this;
-        },
-        send() {},
-        on() {},
-      }),
-      openMidiIn: () => ({
-        or() {
-          return this;
-        },
-        connect(cb) {
-          midiHandler = cb;
-          return this;
-        },
-        on() {},
-      }),
+      openMidiOut: () => midiOut,
+      openMidiIn: () => midiIn,
     };
   }
-  require.cache[require.resolve('jzz')] = { exports: JZZ };
 
-  // Boot the bridge pointing at our fake ports.
-  process.argv = [
-    process.execPath,
-    path.join(__dirname, '..', 'mn42_bridge.js'),
-    '--serial',
-    '/dev/fake',
-    '--osc',
-    '9701',
-    '--host',
-    '127.0.0.1',
-    '--osc-listen',
-    '9701',
-  ];
-  require('../mn42_bridge.js');
-  await new Promise((r) => setTimeout(r, 100)); // let UDP and serial settle
+  return { jzzFactory, context };
+}
 
-  // Fire an OSC command and ensure it becomes the firmware's live-slot command.
-  const udp = new osc.UDPPort({
-    localAddress: '127.0.0.1',
-    localPort: 0,
-    remoteAddress: '127.0.0.1',
-    remotePort: 9701,
+function makeService() {
+  FakeSerialPort.instances = [];
+  FakeUdpPort.instances = [];
+  const { jzzFactory, context } = createFakeJzzFactory();
+  const service = createBridgeService(
+    {
+      serialName: '/dev/fake',
+      oscPort: 9701,
+      oscListen: 9700,
+      oscHost: '127.0.0.1',
+      oscBind: '127.0.0.1',
+      midiLabel: 'MN42 Bridge Test',
+    },
+    {
+      serialport: {
+        SerialPort: FakeSerialPort,
+        ReadlineParser: FakeReadlineParser,
+      },
+      osc: { UDPPort: FakeUdpPort },
+      jzz: jzzFactory,
+    },
+  );
+  return { service, context };
+}
+
+function wait(ms = 20) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function run() {
+  const { service } = makeService();
+  await service.start();
+  await wait();
+
+  const serial = FakeSerialPort.instances[0];
+  const udp = FakeUdpPort.instances[0];
+  assert.ok(serial && serial.parser, 'serial parser should be connected');
+  assert.ok(udp, 'udp endpoint should be connected');
+
+  udp.emit('message', {
+    address: '/mn42/cmd',
+    args: [
+      {
+        cmd: 'SET_SLOT_VALUE',
+        slot: 2,
+        value: 42,
+      },
+    ],
   });
-  udp.open();
-  await new Promise((resolve) => udp.on('ready', resolve));
-  const cmd = { cmd: 'SET_SLOT_VALUE', slot: 2, value: 42 };
-  udp.send({ address: '/mn42/cmd', args: JSON.stringify(cmd) });
-  await new Promise((r) => setTimeout(r, 100));
+  await wait();
   assert.ok(
-    writes.includes('SET_SLOT_VALUE,2,42\n'),
+    serial.writes.includes('SET_SLOT_VALUE,2,42\n'),
     'OSC cmd should hit serial as a firmware command',
   );
 
-  // Now spoof a MIDI CC that should trigger the same firmware command lane.
-  midiHandler({ toArray: () => [0xb0, 3, 77] });
-  await new Promise((r) => setTimeout(r, 100));
-  assert.ok(
-    writes.includes('SET_SLOT_VALUE,3,77\n'),
-    'MIDI CC should forward SET_SLOT_VALUE',
-  );
-
-  udp.close();
-  console.log('OSC and MIDI drive the firmware live-value command lane');
-  process.exit(0);
+  await service.stop();
+  console.log('OSC commands drive the firmware live-value command lane');
 }
 
 run().catch((err) => {

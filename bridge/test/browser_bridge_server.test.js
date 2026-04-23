@@ -1,6 +1,6 @@
 const { strict: assert } = require('node:assert');
 const { EventEmitter } = require('node:events');
-const net = require('node:net');
+const { Readable } = require('node:stream');
 
 const { createBrowserBridgeServer } = require('../lib/http_bridge_server');
 
@@ -156,6 +156,54 @@ function makeFakeService() {
   };
 }
 
+function makeFakeHttpApi() {
+  const server = new EventEmitter();
+  server.addressValue = { port: 12345 };
+  server.listen = (port, host, cb) => {
+    server.addressValue = {
+      port: port === 0 ? 12345 : port,
+      family: 'IPv4',
+      address: host,
+    };
+    if (typeof cb === 'function') cb();
+  };
+  server.address = () => server.addressValue;
+  server.close = (cb) => {
+    if (typeof cb === 'function') cb();
+  };
+  const httpApi = {
+    createServer(listener) {
+      server.requestHandler = listener;
+      return server;
+    },
+  };
+  return { httpApi, server };
+}
+
+function makeReq({ method = 'GET', url = '/', headers = {}, body = '' } = {}) {
+  const req = Readable.from(body ? [Buffer.from(body)] : []);
+  req.method = method;
+  req.url = url;
+  req.headers = headers;
+  return req;
+}
+
+function makeRes() {
+  const res = new EventEmitter();
+  res.headers = {};
+  res.statusCode = 0;
+  res.body = Buffer.alloc(0);
+  res.writeHead = (statusCode, headers = {}) => {
+    res.statusCode = statusCode;
+    res.headers = { ...res.headers, ...headers };
+  };
+  res.end = (body = '') => {
+    res.body = Buffer.isBuffer(body) ? body : Buffer.from(String(body));
+    res.emit('finish');
+  };
+  return res;
+}
+
 function encodeClientTextFrame(payload) {
   const body = Buffer.from(payload, 'utf8');
   const mask = Buffer.from([0x11, 0x22, 0x33, 0x44]);
@@ -175,125 +223,47 @@ function encodeClientTextFrame(payload) {
   return Buffer.concat([header, mask, masked]);
 }
 
-async function connectWebSocket(port) {
-  const socket = net.createConnection({ host: '127.0.0.1', port });
-  await new Promise((resolve, reject) => {
-    socket.once('connect', resolve);
-    socket.once('error', reject);
-  });
-
-  let buffer = Buffer.alloc(0);
-  socket.on('data', (chunk) => {
-    buffer = Buffer.concat([buffer, chunk]);
-  });
-
-  socket.write(
-    [
-      'GET /ws HTTP/1.1',
-      'Host: 127.0.0.1',
-      'Upgrade: websocket',
-      'Connection: Upgrade',
-      'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
-      'Sec-WebSocket-Version: 13',
-      '',
-      '',
-    ].join('\r\n'),
-  );
-
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error('websocket handshake timed out')),
-      1000,
-    );
-    const poll = () => {
-      const text = buffer.toString('utf8');
-      if (text.includes('\r\n\r\n')) {
-        clearTimeout(timer);
-        buffer = Buffer.from(
-          text.split('\r\n\r\n').slice(1).join('\r\n\r\n'),
-          'binary',
-        );
-        resolve();
-        return;
-      }
-      setTimeout(poll, 10);
-    };
-    poll();
-  });
-
-  async function nextFrameText() {
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('frame timeout')), 1000);
-      const poll = () => {
-        if (buffer.length >= 2) {
-          clearTimeout(timer);
-          resolve();
-          return;
-        }
-        setTimeout(poll, 10);
-      };
-      poll();
-    });
-
-    const first = buffer[0];
-    const second = buffer[1];
-    assert.equal(first & 0x0f, 0x1, 'expected text frame');
-    let offset = 2;
-    let length = second & 0x7f;
-    if (length === 126) {
-      length = buffer.readUInt16BE(2);
-      offset = 4;
-    }
-    const payload = buffer.subarray(offset, offset + length);
-    buffer = buffer.subarray(offset + length);
-    return payload.toString('utf8');
-  }
-
-  return {
-    socket,
-    sendText(payload) {
-      socket.write(encodeClientTextFrame(payload));
-    },
-    nextFrameText,
-    close() {
-      socket.end();
-    },
-  };
-}
-
 async function run() {
   const service = makeFakeService();
-  const server = createBrowserBridgeServer({
+  const { httpApi, server } = makeFakeHttpApi();
+  const browserServer = createBrowserBridgeServer({
     service,
     host: '127.0.0.1',
     port: 0,
+    httpApi,
   });
-  const address = await server.start();
+  const address = await browserServer.start();
+  assert.equal(address.port, 12345);
 
-  const stateResponse = await fetch(
-    `http://127.0.0.1:${address.port}/api/state`,
+  const stateResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/state' }),
+    stateResponse,
   );
-  const statePayload = await stateResponse.json();
+  const statePayload = JSON.parse(stateResponse.body.toString('utf8'));
   assert.equal(
     statePayload.state.running,
     false,
     'state endpoint should expose idle bridge state',
   );
 
-  const portsResponse = await fetch(
-    `http://127.0.0.1:${address.port}/api/ports`,
+  const portsResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/ports' }),
+    portsResponse,
   );
-  const portsPayload = await portsResponse.json();
+  const portsPayload = JSON.parse(portsResponse.body.toString('utf8'));
   assert.equal(
     portsPayload.ports[0].path,
     '/dev/fake',
     'port listing should be proxied',
   );
 
-  const connectResponse = await fetch(
-    `http://127.0.0.1:${address.port}/api/connect`,
-    {
+  const connectResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
       method: 'POST',
+      url: '/api/connect',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         serialName: '/dev/fake',
@@ -302,9 +272,10 @@ async function run() {
         oscListen: 9101,
         alertSuppressionMs: 2222,
       }),
-    },
+    }),
+    connectResponse,
   );
-  const connectPayload = await connectResponse.json();
+  const connectPayload = JSON.parse(connectResponse.body.toString('utf8'));
   assert.equal(
     connectPayload.state.running,
     true,
@@ -317,15 +288,17 @@ async function run() {
     'connect endpoint should apply alert suppression config',
   );
 
-  const resetResponse = await fetch(
-    `http://127.0.0.1:${address.port}/api/performance/reset`,
-    {
+  const resetResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
       method: 'POST',
+      url: '/api/performance/reset',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({}),
-    },
+    }),
+    resetResponse,
   );
-  const resetPayload = await resetResponse.json();
+  const resetPayload = JSON.parse(resetResponse.body.toString('utf8'));
   assert.equal(
     resetPayload.state.performance.roundTrip.sampleCount,
     0,
@@ -340,39 +313,49 @@ async function run() {
     message: 'Round-trip p95 too high',
     details: null,
   });
-  const clearAlertsResponse = await fetch(
-    `http://127.0.0.1:${address.port}/api/alerts/clear`,
-    {
+  const clearAlertsResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
       method: 'POST',
+      url: '/api/alerts/clear',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({}),
-    },
+    }),
+    clearAlertsResponse,
   );
-  const clearAlertsPayload = await clearAlertsResponse.json();
+  const clearAlertsPayload = JSON.parse(
+    clearAlertsResponse.body.toString('utf8'),
+  );
   assert.equal(
     clearAlertsPayload.state.alerts.active.length,
     0,
     'clear alerts endpoint should clear active alerts',
   );
 
-  const appResponse = await fetch(`http://127.0.0.1:${address.port}/app/`);
-  const appHtml = await appResponse.text();
+  const appResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/app/' }),
+    appResponse,
+  );
+  const appHtml = appResponse.body.toString('utf8');
   assert.match(
     appHtml,
     /MOARkNOBS-42 Browser Configurator[\s\S]*Control Deck/,
     'server should expose the bundled configurator',
   );
 
-  const snapshotResponse = await fetch(
-    `http://127.0.0.1:${address.port}/api/state/snapshot`,
+  const snapshotResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/state/snapshot' }),
+    snapshotResponse,
   );
-  assert.equal(snapshotResponse.status, 200);
+  assert.equal(snapshotResponse.statusCode, 200);
   assert.match(
-    snapshotResponse.headers.get('content-disposition') || '',
+    snapshotResponse.headers['content-disposition'] || '',
     /attachment; filename="mn42-bridge-state-/,
     'snapshot endpoint should provide a download filename',
   );
-  const snapshotPayload = await snapshotResponse.json();
+  const snapshotPayload = JSON.parse(snapshotResponse.body.toString('utf8'));
   assert.equal(
     snapshotPayload.state.config.midiLabel,
     'Browser Bridge',
@@ -384,25 +367,42 @@ async function run() {
     'snapshot endpoint should include runtime metadata',
   );
 
-  const client = await connectWebSocket(address.port);
+  const socket = new EventEmitter();
+  socket.writes = [];
+  socket.write = (chunk) => {
+    socket.writes.push(Buffer.from(chunk));
+  };
+  socket.end = () => {};
+  socket.destroy = () => {};
+  socket.on = socket.addListener.bind(socket);
+  const upgradeReq = {
+    url: '/ws',
+    headers: {
+      host: '127.0.0.1',
+      'sec-websocket-key': 'dGhlIHNhbXBsZSBub25jZQ==',
+      connection: 'Upgrade',
+      upgrade: 'websocket',
+      'sec-websocket-version': '13',
+    },
+  };
+  server.emit('upgrade', upgradeReq, socket);
   service.emitLine('{"hello":"mn42"}');
-  const inbound = await client.nextFrameText();
-  assert.equal(
-    inbound,
-    '{"hello":"mn42"}\n',
-    'websocket should relay serial lines to the browser',
+  const handshakeText = Buffer.concat(socket.writes).toString('utf8');
+  assert.match(
+    handshakeText,
+    /HTTP\/1\.1 101 Switching Protocols/,
+    'websocket upgrade should succeed',
   );
 
-  client.sendText('{"cmd":"PING"}\n');
-  await new Promise((resolve) => setTimeout(resolve, 50));
+  socket.emit('data', encodeClientTextFrame('{"cmd":"PING"}\n'));
+  await new Promise((resolve) => setTimeout(resolve, 20));
   assert.deepEqual(
     service.sentLines,
     ['{"cmd":"PING"}'],
     'websocket should forward browser lines to the service',
   );
 
-  client.close();
-  await server.stop();
+  await browserServer.stop();
   console.log(
     'browser bridge server exposes API, app, and websocket transport',
   );

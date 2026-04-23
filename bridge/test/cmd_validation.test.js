@@ -1,78 +1,106 @@
 const { strict: assert } = require('node:assert');
-const osc = require('osc');
-const path = require('node:path');
+const { EventEmitter } = require('node:events');
+
+const { createBridgeService } = require('../lib/bridge_service');
+
+class FakeReadlineParser extends EventEmitter {}
+
+class FakeSerialPort extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+    this.writes = [];
+    this.parser = null;
+    FakeSerialPort.instances.push(this);
+    setImmediate(() => this.emit('open'));
+  }
+
+  pipe(parser) {
+    this.parser = parser;
+    return parser;
+  }
+
+  write(data) {
+    this.writes.push(String(data));
+  }
+
+  close(cb) {
+    if (typeof cb === 'function') cb();
+    this.emit('close');
+  }
+}
+FakeSerialPort.instances = [];
+
+class FakeUdpPort extends EventEmitter {
+  constructor(options = {}) {
+    super();
+    this.options = options;
+    this.sent = [];
+    FakeUdpPort.instances.push(this);
+  }
+
+  open() {
+    setImmediate(() => this.emit('ready'));
+  }
+
+  send(packet, host, port) {
+    this.sent.push({ packet, host, port });
+  }
+
+  close() {}
+}
+FakeUdpPort.instances = [];
 
 // Hurl a bunch of OSC commands at the bridge and make sure it only forwards
 // the ones that play by the rules. Anything sketchy should get tossed before
 // it ever hits the wire.
 async function run() {
-  // yank in serialport and swap in its mock so we don't touch real hardware
-  const sp = require('serialport');
-  const { SerialPortMock, ReadlineParser } = sp;
-  // patch the module cache so every require('serialport') gets our mock
-  require.cache[require.resolve('serialport')].exports = {
-    ...sp,
-    SerialPort: SerialPortMock,
-    ReadlineParser,
-  };
-  SerialPortMock.binding.createPort('/dev/fake', {}); // fake USB port to keep the bridge happy
-
-  // hijack writes so we can spy on what actually goes out the "serial" line
-  const writes = [];
-  const origWrite = SerialPortMock.prototype.write;
-  SerialPortMock.prototype.write = function (data, cb) {
-    writes.push(data.toString());
-    return origWrite.call(this, data, cb);
-  };
-
-  // ghost out JZZ so the bridge thinks MIDI is alive and well
-  function JZZ() {
-    return {
-      openMidiOut: () => ({
-        or() {
-          return this;
-        },
-        send() {},
-        on() {},
+  FakeSerialPort.instances = [];
+  FakeUdpPort.instances = [];
+  const service = createBridgeService(
+    {
+      serialName: '/dev/fake',
+      oscPort: 9711,
+      oscListen: 9710,
+      oscHost: '127.0.0.1',
+      oscBind: '127.0.0.1',
+      midiLabel: 'MN42 Bridge Test',
+    },
+    {
+      serialport: {
+        SerialPort: FakeSerialPort,
+        ReadlineParser: FakeReadlineParser,
+      },
+      osc: { UDPPort: FakeUdpPort },
+      jzz: () => ({
+        openMidiOut: () => ({
+          or() {
+            return this;
+          },
+          send() {},
+          on() {},
+        }),
+        openMidiIn: () => ({
+          or() {
+            return this;
+          },
+          connect() {
+            return this;
+          },
+          on() {},
+        }),
       }),
-      openMidiIn: () => ({
-        or() {
-          return this;
-        },
-        connect() {
-          return this;
-        },
-        on() {},
-      }),
-    };
-  }
-  require.cache[require.resolve('jzz')] = { exports: JZZ };
+    },
+  );
 
-  // fire up the bridge in serial+OSC mode aimed at our fake port
-  process.argv = [
-    process.execPath,
-    path.join(__dirname, '..', 'mn42_bridge.js'),
-    '--serial',
-    '/dev/fake',
-    '--osc',
-    '9711',
-    '--host',
-    '127.0.0.1',
-    '--osc-listen',
-    '9710',
-  ];
-  require('../mn42_bridge.js');
-  await new Promise((r) => setTimeout(r, 100)); // give it a tick to boot
+  await service.start();
+  await new Promise((r) => setTimeout(r, 100));
 
-  // open a UDP channel so we can lob OSC packets at the bridge
-  const udp = new osc.UDPPort({
-    localAddress: '127.0.0.1',
-    localPort: 0,
-    remoteAddress: '127.0.0.1',
-    remotePort: 9710,
-  });
-  udp.open();
-  await new Promise((resolve) => udp.on('ready', resolve));
+  const serial = FakeSerialPort.instances[0];
+  const udp = FakeUdpPort.instances[0];
+  const writes = serial.writes;
+  assert.ok(serial && serial.parser, 'serial parser should be connected');
+  assert.ok(udp, 'udp endpoint should be connected');
 
   // these commands are squeaky clean and should forward without complaint
   const good = [
@@ -80,7 +108,7 @@ async function run() {
     { cmd: 'SET_SLOT_VALUE', slot: 41, value: 127 },
   ];
   good.forEach((c) =>
-    udp.send({ address: '/mn42/cmd', args: JSON.stringify(c) }),
+    udp.emit('message', { address: '/mn42/cmd', args: [JSON.stringify(c)] }),
   );
 
   // these are mangled in one way or another and should get dropped cold
@@ -92,12 +120,11 @@ async function run() {
     { cmd: 'SET_SLOT_VALUE', slot: 0, value: 0, junk: 'x'.repeat(200) }, // payload over 128B
   ];
   bad.forEach((c) =>
-    udp.send({ address: '/mn42/cmd', args: JSON.stringify(c) }),
+    udp.emit('message', { address: '/mn42/cmd', args: [JSON.stringify(c)] }),
   );
-  udp.send({ address: '/mn42/cmd', args: 'notjson' }); // and one that's not even JSON
+  udp.emit('message', { address: '/mn42/cmd', args: ['notjson'] }); // and one that's not even JSON
 
   await new Promise((r) => setTimeout(r, 100));
-  udp.close();
 
   // Pluck out the live-value writes and make sure only the good ones made it through.
   const forwards = writes.filter((w) => w.startsWith('SET_SLOT_VALUE,'));
@@ -106,8 +133,8 @@ async function run() {
     good.map((c) => `SET_SLOT_VALUE,${c.slot},${c.value}\n`),
     'only in-range cmds should forward',
   );
+  await service.stop();
   console.log('validation clamps size and range before forwarding');
-  process.exit(0);
 }
 
 run().catch((err) => {

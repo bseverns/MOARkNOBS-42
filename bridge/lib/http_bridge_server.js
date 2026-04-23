@@ -177,6 +177,7 @@ function createBrowserBridgeServer({
   port = DEFAULT_HTTP_PORT,
   uiDir = path.resolve(__dirname, '..', 'ui'),
   appDir = path.resolve(__dirname, '..', '..', 'App'),
+  httpApi = http,
 } = {}) {
   if (!service || typeof service.getState !== 'function') {
     throw new Error('bridge service is required');
@@ -415,7 +416,7 @@ function createBrowserBridgeServer({
         destroySocket(socket);
       }
     });
-    server = http.createServer(async (req, res) => {
+    server = httpApi.createServer(async (req, res) => {
       const url = new URL(
         req.url,
         `http://${req.headers.host || `${host}:${port}`}`,
