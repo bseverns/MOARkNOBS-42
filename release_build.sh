@@ -37,6 +37,17 @@ export PLATFORMIO_SETTING_ENABLE_PROMPTS=0
 
 mkdir -p "$ROOT_DIR/$OUTPUT_DIR" "$PIO_HOME" "$PIO_CACHE"
 
+SOURCE_STATUS="$(git -C "$ROOT_DIR" status --short --untracked-files=no)"
+if [ -n "$SOURCE_STATUS" ]; then
+  cat >&2 <<EOF
+Refusing to cut release artifacts from a dirty source tree.
+Commit or stash tracked changes first so dist/manifest.json records a clean source commit.
+
+$SOURCE_STATUS
+EOF
+  exit 1
+fi
+
 pushd "$PROJECT_DIR" >/dev/null
 
 CLEAN_CMD=(pio run -t clean -e "$BUILD_ENV")

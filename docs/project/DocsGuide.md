@@ -4,9 +4,22 @@
 
 Welcome to the MOARkNOBS-42 documentation playground. This page helps you navigate the library of notes, design scraps, and operational docs we keep around to teach ourselves and the next hacker.
 
+```mermaid
+flowchart TB
+  A[Docs root] --> B[Getting started]
+  A --> C[Guides]
+  A --> D[Reference]
+  A --> E[Validation]
+  A --> F[Release]
+  A --> G[Project]
+  A --> H[Assets / sketches / bench]
+```
+
 Need the fast track from bare board to release? Hit the [Process Overview](ProcessOverview.md).
 
 Craving the bird's-eye view? The [systemflow sketch pages](../sketch/systemFlow/hw/buttonMatrix.md) rip the machine into subsystems so you can see how every knob, LED, and envelope fits together before you dive into the weeds.
+
+_A single annotated map of the docs tree would help a lot here: first-boot, validation, release, and reference all compete for attention._
 
 ## Folder layout
 
@@ -20,6 +33,8 @@ The docs tree is organized by function now, so the folder name tells you what ki
 - [`project/`](DocsGuide.md) for repo-level process, history, support boundary, and meta documentation.
 - Supporting material stays in purpose-specific folders: `assets/` for shared images/diagrams, plus [`bench/`](../bench/README.md), [`sketch/`](../sketchbook/index.md), [`examples/`](../examples/README.md), [`interop/`](../interop/seedbox.md), and [`thermal/`](../thermal/README.md).
 
+_A folder-tree graphic or sitemap screenshot would make this section easier to scan than text alone._
+
 If you only need the canonical operational docs, start here:
 
 - [TESTING.md](../validation/TESTING.md) for what the current automated/manual coverage actually proves
@@ -28,6 +43,17 @@ If you only need the canonical operational docs, start here:
 - [ReleaseGuide.md](../release/ReleaseGuide.md) for the human release checklist
 - [REPRODUCIBILITY.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md) for the exact artifact-building recipe
 - [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md) for the browser/runtime/schema/Apply contract
+
+## Visual anchors
+
+Some pages already carry the visual load better than others. Start there when you want the docs stack to explain itself faster than prose can.
+
+- [New User Story](../getting-started/StartHere.md) for the board + configurator overview images and the four-layer system diagram
+- [Configurator Tour](../guides/Configurator.md) for annotated browser screenshots and connect/apply diagrams
+- [Validation Flow](../validation/ValidationFlow.md) for the validation gate flowchart and bridge-console reference image
+- [Profile Workflow](../guides/ProfileWorkflow.md) for the profile-panel screenshot and save/apply flow
+- [Release Story](../release/ReleaseStory.md) for the release pipeline diagram and artifact audit framing
+- [Reproducibility](../release/Reproducibility.md) for the release pipeline diagram plus artifact and `dist/` orientation
 
 ## Local site preview
 

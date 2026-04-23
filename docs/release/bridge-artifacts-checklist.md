@@ -18,6 +18,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Quickstart docs match shipping behavior: `docs/OSCBridge.md`
 - [ ] Performer sheet updated if needed: `docs/BridgeForPerformers.md`
 - [ ] `.github/workflows/release.yml` bridge package matrix passed for all targets
+- [ ] Public/beta bridge packaging used `REQUIRE_BRIDGE_SIGNING=1`
 
 ## Packaging outputs
 
@@ -29,7 +30,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Creates/advertises MIDI device `MN42 Bridge`
 - [ ] OSC `/mn42/slots` stream verified
 - [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
-- [ ] Signed/notarized (if release policy requires)
+- [ ] Signed/notarized
 - Artifact name:
 - SHA256:
 
@@ -41,7 +42,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Creates/advertises MIDI device `MN42 Bridge`
 - [ ] OSC `/mn42/slots` stream verified
 - [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
-- [ ] Signed/notarized (if release policy requires)
+- [ ] Signed/notarized
 - Artifact name:
 - SHA256:
 
@@ -53,7 +54,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] Creates/advertises MIDI device `MN42 Bridge`
 - [ ] OSC `/mn42/slots` stream verified
 - [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
-- [ ] Signed (if release policy requires)
+- [ ] Signed
 - Artifact name:
 - SHA256:
 

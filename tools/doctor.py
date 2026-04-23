@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,13 @@ def run_capture(cmd: list[str], cwd: pathlib.Path | None = None) -> tuple[int, s
 def require_file(path: pathlib.Path, errors: list[str], label: str) -> None:
     if not path.exists():
         errors.append(f"missing {label}: {path}")
+
+
+def parse_node_major(version: str) -> int | None:
+    match = re.match(r"^v(\d+)\.", version.strip())
+    if not match:
+        return None
+    return int(match.group(1))
 
 
 def check_versions(errors: list[str], notes: list[str]) -> None:
@@ -52,10 +60,22 @@ def check_versions(errors: list[str], notes: list[str]) -> None:
         code, out, err = run_capture(["node", "--version"])
         if code != 0:
             errors.append(f"failed to run `node --version`: {err or out}")
-        elif not out.startswith("v20."):
-            errors.append(f"Node.js v20.x required for bridge/app lanes (found {out})")
         else:
-            notes.append(f"node: {out}")
+            node_major = parse_node_major(out)
+            if node_major != 22:
+                errors.append(f"Node.js 22.x required for bridge/app lanes (found {out})")
+            else:
+                notes.append(f"node: {out}")
+
+    npm = shutil.which("npm")
+    if not npm:
+        errors.append("npm not found in PATH")
+    else:
+        code, out, err = run_capture(["npm", "--version"])
+        if code != 0:
+            errors.append(f"failed to run `npm --version`: {err or out}")
+        else:
+            notes.append(f"npm: {out}")
 
 
 def check_repo_contract(root: pathlib.Path, errors: list[str], notes: list[str]) -> None:

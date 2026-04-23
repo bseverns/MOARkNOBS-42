@@ -69,7 +69,7 @@ def _git_info(root: pathlib.Path) -> Dict[str, object]:
             "describe": run_git(["describe", "--tags", "--always"]),
             "branch": run_git(["rev-parse", "--abbrev-ref", "HEAD"]),
         }
-        status = _run(["git", "status", "--short"], cwd=root)
+        status = _run(["git", "status", "--short", "--untracked-files=no"], cwd=root)
         info["dirty"] = bool(status.stdout.strip())
         if info["dirty"]:
             info["status"] = status.stdout.strip()

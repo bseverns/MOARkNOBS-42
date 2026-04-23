@@ -16,6 +16,8 @@ MOARkNOBS-42 is a documented performance instrument for artists, builders, and i
 
 It is designed less like a sealed appliance and more like an instrument whose logic stays visible.
 
+_A top-level system diagram would help here: hardware, browser configurator, bridge, and validation lanes in one glance._
+
 <div class="mn42-cta-row">
   <a class="md-button md-button--primary" href="project/PilotRun.md">Join pilot run / interest list</a>
   <a class="md-button" href="#core-features">See features</a>
@@ -44,6 +46,8 @@ See [Host Compatibility](reference/HostCompatibility.md) and [Connectivity Guide
 MOARkNOBS-42 is a small-batch MIDI/OSC performance instrument with a surrounding ecosystem, not just a bare controller board.
 
 The object in your hands is only part of the story.
+
+_A simple three-panel image would help separate the hardware surface, configurator, and bridge into one mental model._
 
 <div class="grid cards mn42-card-grid" markdown="1">
 

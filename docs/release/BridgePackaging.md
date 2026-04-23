@@ -29,6 +29,7 @@ This is a future-facing packaging plan. It is not a current compatibility claim 
   - `node22-linux-x64`
   - `node22-win-x64`
 - Bridge release uploads are conditional on an existing GitHub release for the tag.
+- Outward bridge builds must set `REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks; otherwise the packaging script fails instead of silently producing unsigned binaries.
 
 For the current support boundary, see [Host Compatibility](../reference/HostCompatibility.md).
 
@@ -100,13 +101,15 @@ Deliverable: platform validation checklist with pass/fail evidence.
 
 Deliverable: non-CLI-friendly launcher experience.
 
-### Phase 4 - Signing and release integration (remaining)
+### Phase 4 - Signing and release integration (implemented as gated hooks)
 
-- Add code-signing steps per OS.
+- Use `REQUIRE_BRIDGE_SIGNING=1` for beta/public bridge artifacts.
+- macOS binaries can be signed with `APPLE_CODESIGN_IDENTITY` and notarized with `APPLE_NOTARY_PROFILE` plus optional `APPLE_NOTARY_TEAM_ID`.
+- Windows/Linux or installer-specific signing can be supplied through `BRIDGE_SIGNING_COMMAND`; notarization/stapling-style post-processing can be supplied through `BRIDGE_NOTARIZE_COMMAND`.
 - Keep current unsigned CI packaging in `.github/workflows/release.yml`.
-- Upgrade the existing release upload lane from unsigned to signed artifacts.
+- Upgrade release upload runs to use those hooks before attaching outward artifacts.
 
-Deliverable: trusted installer/binary assets in each release.
+Deliverable: trusted installer/binary assets in each beta/public release.
 
 ## CI/CD checklist
 
@@ -133,7 +136,7 @@ A release is complete when all are true:
 
 - **Node target mismatch in packager**: keep toolchain matrix pinned and tested in CI.
 - **Native module breakage (`serialport`)**: run platform smoke tests against real hardware each release.
-- **Code-signing friction**: stage unsigned internal builds first, then add signing in a dedicated phase.
+- **Code-signing friction**: keep unsigned internal builds available, but require the signing gate for beta/public artifacts.
 - **Behavior drift from CLI docs**: keep `bridge/README.md` examples in sync as a release gate.
 
 ## Related docs

@@ -12,7 +12,7 @@ Unless a section says otherwise, commands below assume you are running from the 
 | Unity smoke tests        | `pio test -d firmware -e teensy40_unity`                               | Teensy 4.0 with USB cable                   | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                                           |
 | App seam regressions     | `npm --prefix App test`                                                | Host machine only                           | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware.             |
 | Manual firmware sketches | `pio run -d firmware -e teensy40_unified_test -t upload` (and friends) | Fully assembled controller                  | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                            |
-| Bridge CLI sanity        | `npm --prefix bridge test`                                             | Host machine only (Node ≥ 18)               | Keeps the OSC bridge CLI parsing and error handling sharp.                                                                             |
+| Bridge CLI sanity        | `npm --prefix bridge test`                                             | Host machine only (Node 22)                 | Keeps the OSC bridge CLI parsing and error handling sharp.                                                                             |
 | System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js`                   | Controller + bridge talking                 | Automated OSC/MIDI host-control proof plus optional destructive EEPROM smoke checks for profile/macro/scene recovery on real hardware. |
 
 ## If your goal is demo readiness rather than code confidence
@@ -144,7 +144,7 @@ counts so you can spot regressions between firmware changes.
 Before you run anything, make sure you actually have the tools:
 
 - **PlatformIO Core 6+** in your `$PATH`. We call `pio` directly.
-- **Node.js 18 or newer** plus npm for the bridge sanity checks.
+- **Node.js 22** plus npm for the bridge sanity checks.
 - **A Teensy 4.0 wired up** with a USB cable that actually carries data.
 - **Dialed-in udev/serial permissions** so `/dev/ttyACM*` or `/dev/cu.usbmodem*` is readable.
 - **A `logs/` directory**—`test.sh` creates it, but manual runs should too if you want artifacts.
@@ -368,7 +368,7 @@ When you need to prove the whole stack plays nice, you move up to the full-syste
 ### Environment expectations
 
 - `teensy40_full_system` – firmware build that exposes every subsystem and respects the USB MIDI + Serial combo used in production.
-- Node 18+ with the bridge binaries installed. The runner shells out to `node bridge/mn42_bridge.js`, so make sure that CLI can reach your Teensy on `/dev/ttyACM0` (or whatever `TEST_PORT` points at).
+- Node 22 with the bridge binaries installed. The runner shells out to `node bridge/mn42_bridge.js`, so make sure that CLI can reach your Teensy on `/dev/ttyACM0` (or whatever `TEST_PORT` points at).
 - Real hardware: buttons, LEDs, pots, and EEPROM all get exercised. If the runner times out, fall back to the legacy `test_*.cpp` sketches in the same directory to troubleshoot individual subsystems before re-running the automation.
 
 Run the full-system layer before releases or any time hardware or bridge changes. It’s the last line of defense before you haul gear on stage. Bring a board, a cable, and zero fear. These tests waggle LEDs, trash EEPROM, and generally behave like they own the place—and now they leave a neat paper trail in `logs/system-test.*` every time they do it.

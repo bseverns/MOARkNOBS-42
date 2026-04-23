@@ -35,6 +35,8 @@ flowchart LR
 
 _Alt text: Flowchart showing a release moving from tested source through version stamping, tagging, CI, and final published artifacts including firmware, fabrication files, source export, manifest, and checksums._
 
+_A companion screenshot of the actual `dist/` output would help readers connect the flowchart to the files they will see on disk._
+
 ## Why `FW_VERSION` matters so much
 
 The release process now documents and enforces a subtle but important rule: the version in the artifact filename and the version embedded in firmware metadata need to match.
@@ -64,6 +66,8 @@ The release path has three kinds of checks:
 - release artifacts are generated deterministically
 - manifest records provenance
 - checksums allow later verification
+
+_A small table or artifact gallery would help here by pairing each check with the file that proves it._
 
 ## Why the fabrication and source bundles are part of the story
 

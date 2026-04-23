@@ -11,7 +11,7 @@ MOARkNOBS-42 does not just ship binaries. It tries to ship receipts:
 - a deterministic source export
 - a manifest describing how those artifacts were built
 - checksums so another machine can verify the output
-- unsigned bridge binaries (multi-OS) with per-target checksums
+- bridge binaries (multi-OS) with per-target checksums; beta/public bridge assets must pass the signing gate
 
 That matters because this project wants to be teachable and inspectable, not just downloadable.
 
@@ -70,6 +70,7 @@ Without that manifest, a release is just a pile of files. With it, the release b
 
 The workflow always uploads artifacts to the workflow run. GitHub Release asset upload is conditional:
 assets are attached only when a release for the tag already exists.
+Unsigned bridge artifacts are acceptable only for internal workflow evidence. Beta/public bridge assets must be rebuilt or promoted with `REQUIRE_BRIDGE_SIGNING=1`.
 
 ## Read the full operator guide
 

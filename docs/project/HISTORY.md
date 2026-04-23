@@ -250,6 +250,14 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Storage verification also got more honest. Firmware tests grew targeted persistence coverage and the full-system runner learned a destructive `--exercise-storage` path so bench time can prove profile/macro/scene behavior instead of taking the docs on faith. [`b6844fc`]
 - _This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more “does the whole instrument tell the same story when you actually use it?”_
 
+### April — Beta Release Gate Tightening
+
+- Source exports now come from tracked files only, the release manifest ignores generated dirt when it checks git status, and the release build refuses to package from a dirty tracked tree so provenance stays honest. [current change]
+- Doctor and the App bridge path now assume Node 22 instead of the older host baseline, which matches the bridge release lane and stops the docs from pretending Node 20 is still the target. [current change]
+- Release verification now treats bridge and app tests as mandatory, layers in Unity/full-stack HIL when hardware is present, and records the skipped-versus-run split explicitly in `release_verification.json`. [current change]
+- Bridge packaging picked up gated signing/notarization hooks so beta/public artifacts have to prove they are signed before they are treated as outward-facing releases. [current change]
+- _The release path stopped being “build some zips” and became “prove the source, prove the host, and prove the outward binaries are treated like beta assets instead of internal scraps.”_
+
 ## Overview
 
 Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB schematics, test suites, and detailed usage notes. The repository now houses:

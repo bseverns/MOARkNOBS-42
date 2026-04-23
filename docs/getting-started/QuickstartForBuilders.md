@@ -2,6 +2,15 @@
 
 This is the shortest path from checkout to first bring-up.
 
+```mermaid
+flowchart LR
+  A[Check hardware status] --> B[Flash firmware]
+  B --> C[USB power + HELLO]
+  C --> D[Unity test gate]
+  D --> E[Full-system checks]
+  E --> F[Demo-ready or bench fix]
+```
+
 ## What this project is
 
 MOARkNOBS-42 is a Teensy-based MIDI/OSC controller with onboard controls, LED feedback, profile storage, and browser-based configuration.

@@ -7,6 +7,20 @@ rebuild a release, prove the toolchain version, and verify the artifacts with ha
 end up with the same `firmware.hex`, the same `hardware_reference.zip`, and a `manifest.json` that records every
 step we took.
 
+```mermaid
+flowchart LR
+  A[Tagged source] --> B[release.sh]
+  B --> C[Verify lanes]
+  B --> D[Firmware build]
+  B --> E[Hardware bundle]
+  B --> F[Source export]
+  D --> G[Manifest + checksums]
+  E --> G
+  F --> G
+  C --> G
+  G --> H[Release artifacts]
+```
+
 ## TL;DR — clone, install, release
 
 ```bash
@@ -29,6 +43,8 @@ jq '.' dist/manifest.json
 Everything lands in `dist/`: the versioned firmware hex, hardware reference bundle, deterministic source export zip,
 release verification summary, license docs, and a manifest that ties all of it to tool versions and git state.
 
+_A simple file-tree image of `dist/` would help here, because the artifact bundle is easier to understand visually than as a sentence._
+
 ## Step-by-step with commentary
 
 ### 1. Reset the playing field
@@ -49,20 +65,22 @@ metadata that lands in `GET_MANIFEST` is stringized in `firmware/include/version
 `firmware/scripts/version.py` emits the `-DFW_VERSION` / `-DGIT_SHA` build flags. That is why the local
 invocation below exports `FW_VERSION=<tag>` before it runs the script.
 
+_A step-by-step pipeline graphic would help here: clean tree, HIL/app/bridge verification, firmware build, bundle, manifest, checksums._
+
 The script does the following in order:
 
 1. exports `PLATFORMIO_HOME_DIR`, `PLATFORMIO_PACKAGES_DIR`, etc. so every PlatformIO package lives inside
    the repo rather than your global cache;
 2. runs `release_verify_hil.sh` and writes `.release_verification.json`:
-   - `REQUIRE_HIL=1` runs `./test.sh --require-hil` and fails hard if `TEST_PORT` is missing;
-   - default mode (`REQUIRE_HIL=0`) runs optional Unity HIL only when `TEST_PORT` is set, otherwise records
-     an explicit skip;
+   - the bridge and app suites always run;
+   - Unity HIL and the full-stack system runner run when `TEST_PORT` is set or auto-detected;
+   - `REQUIRE_HIL=1` fails hard if no hardware port is available;
 3. cleans the Teensy build output (`pio run -t clean -e teensy40_main`);
 4. rebuilds the firmware (`pio run -e teensy40_main`);
 5. copies `mn42_<version>.hex` into `dist/`;
 6. packs `hardware/fabrication/` into a deterministic `hardware_reference.zip` (timestamps frozen at 1980-01-01,
    permissions fixed at 0644, and entries sorted);
-7. creates a deterministic source export zip;
+7. creates a deterministic source export zip from tracked files only;
 8. copies license docs;
 9. copies `release_verification.json` into `dist/`; and
 10. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, the
@@ -114,7 +132,7 @@ With the manifest and hashes in hand you can:
 
 ## How CI mirrors this
 
-`.github/workflows/release.yml` runs `./release.sh` from tagged/manual inputs, plus an unsigned bridge packaging
+`.github/workflows/release.yml` runs `./release.sh` from tagged/manual inputs, plus a bridge packaging
 matrix (`pkg`) for:
 
 - `node22-macos-x64`
@@ -140,6 +158,9 @@ Bridge uploads (when release exists) include:
 - per-target SHA256 checksum files
 - `bridge/THIRD_PARTY_LICENSES.md`
 - `bridge/THIRD_PARTY_LICENSES.json`
+
+Unsigned bridge workflow artifacts are internal evidence only. For beta/public bridge binaries, package with
+`REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks before attaching assets outward.
 
 Important: the hosted CI release lane uses `REQUIRE_HIL=0` by default, so HIL may be skipped unless a
 runner has `TEST_PORT` configured. That skip/execute state is recorded in `release_verification.json`

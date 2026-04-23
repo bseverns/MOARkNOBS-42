@@ -2,6 +2,16 @@
 
 This is the shortest path from plugging in the board to using it live.
 
+```mermaid
+flowchart LR
+  A[USB connect] --> B[Browser configurator]
+  B --> C[Apply / save profiles]
+  B --> D{Need OSC or DAW MIDI?}
+  D -- No --> E[Stay on WebSerial]
+  D -- Yes --> F[Start bridge]
+  F --> G[Use OSC / virtual MIDI]
+```
+
 ## 1. Connect the board
 
 1. Plug MOARkNOBS-42 into your computer over USB.

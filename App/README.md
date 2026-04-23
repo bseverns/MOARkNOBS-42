@@ -5,7 +5,7 @@ Use the browser configurator when you want direct USB setup, monitoring, and pro
 Current support boundary:
 
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
-- strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 20 desktop host
+- strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 22 desktop host
 - not claimed here as a verified production path: Firefox/Safari WebSerial support or universal browser compatibility
 
 See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.

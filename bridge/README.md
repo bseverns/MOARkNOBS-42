@@ -20,6 +20,8 @@ It does three things:
 
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
+_A screenshot of the browser-driven local console would help here, especially the serial port chooser, OSC port fields, and start/stop controls._
+
 ## Quick start (browser console)
 
 ### 1) Install prerequisites
@@ -66,6 +68,8 @@ Use the browser page to:
 - launch the full configurator over the bridge transport.
 
 The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and virtual MIDI stay active.
+
+_A second screenshot would help show the configurator launched through the bridge transport, because that path is the least obvious one from text alone._
 
 ### 4) Confirm it is live
 
@@ -321,6 +325,8 @@ Current state: unsigned bridge binaries are now built automatically in
 - `node22-win-x64`
 
 When a GitHub release already exists for the tag, the workflow uploads those bridge artifacts plus checksums.
+Those unsigned artifacts are internal evidence only. Beta/public bridge binaries should be packaged with
+`REQUIRE_BRIDGE_SIGNING=1` plus signing/notarization credentials or hooks.
 The bridge is still not shipped as a signed one-click installer.
 
 If demand grows, this is the practical path:
