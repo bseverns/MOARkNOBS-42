@@ -207,8 +207,9 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
   const manifest = await page.evaluate(() => window.__MN42_RUNTIME.getState().manifest);
   expect(manifest.device_name).toBe('MOARkNOBS-42');
   expect(manifest.fw_version).toBe('native-fw');
-  const schemaSource = await page.evaluate(() => window.__MN42_RUNTIME.getState().schemaSource);
-  expect(schemaSource).toBe('device');
+  await expect
+    .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().schemaSource))
+    .toBe('device');
 
   const applyResult = await page.evaluate(async () => {
     window.__MN42_RUNTIME.stage((draft) => {
@@ -464,10 +465,17 @@ test('native transport falls back to bundled schema when device schema is incomp
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  const state = await page.evaluate(() => window.__MN42_RUNTIME.getState());
-  expect(state.schemaSource).toBe('bundled');
-  expect(state.schema?.properties?.slots).toBeTruthy();
-  expect(state.schema?.properties?.efSlots).toBeTruthy();
+  await expect
+    .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().schemaSource))
+    .toBe('bundled');
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const state = window.__MN42_RUNTIME.getState();
+        return Boolean(state.schema?.properties?.slots && state.schema?.properties?.efSlots);
+      })
+    )
+    .toBe(true);
 });
 
 test('native transport supports profile, macro, and scene actions when firmware advertises them', async ({
