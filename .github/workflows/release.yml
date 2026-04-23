@@ -121,7 +121,7 @@ jobs:
         run: |
           FW_VERSION="${RELEASE_TAG}" REQUIRE_HIL=0 ./release.sh "${RELEASE_TAG}"
       - name: Upload release build artifact bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-core-${{ needs.resolve-release-meta.outputs.artifact_tag }}
           path: |
@@ -135,7 +135,7 @@ jobs:
             dist/LICENSES
       - name: Check whether GitHub release exists
         id: release-check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const tag = process.env.RELEASE_TAG;
@@ -246,7 +246,7 @@ jobs:
           done
           "${checksum_cmd[@]}"
       - name: Upload per-target bridge artifact bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bridge-package-${{ matrix.target }}
           path: bridge/dist/release-${{ matrix.target }}
@@ -266,13 +266,13 @@ jobs:
         with:
           ref: ${{ needs.resolve-release-meta.outputs.checkout_ref }}
       - name: Download packaged bridge artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: bridge-package-*
           merge-multiple: true
           path: bridge/dist/release-upload
       - name: Upload combined bridge artifact bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bridge-release-${{ env.ARTIFACT_TAG }}
           path: |
@@ -281,7 +281,7 @@ jobs:
             bridge/THIRD_PARTY_LICENSES.json
       - name: Check whether GitHub release exists
         id: release-check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const tag = process.env.RELEASE_TAG;
