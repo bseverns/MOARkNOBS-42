@@ -17,10 +17,11 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] CLI docs match shipping behavior: `bridge/README.md`
 - [ ] Quickstart docs match shipping behavior: `docs/OSCBridge.md`
 - [ ] Performer sheet updated if needed: `docs/BridgeForPerformers.md`
+- [ ] `.github/workflows/release.yml` bridge package matrix passed for all targets
 
 ## Packaging outputs
 
-### macOS
+### macOS x64
 
 - [ ] Build artifact produced
 - [ ] Launches successfully
@@ -32,7 +33,19 @@ Use this template for each release tag (for example `v1.0.0`).
 - Artifact name:
 - SHA256:
 
-### Windows
+### macOS arm64
+
+- [ ] Build artifact produced
+- [ ] Launches successfully
+- [ ] Opens serial connection to MN42
+- [ ] Creates/advertises MIDI device `MN42 Bridge`
+- [ ] OSC `/mn42/slots` stream verified
+- [ ] OSC `/mn42/cmd` `SET_SLOT_VALUE` round-trip verified
+- [ ] Signed/notarized (if release policy requires)
+- Artifact name:
+- SHA256:
+
+### Windows x64
 
 - [ ] Build artifact produced
 - [ ] Launches successfully
@@ -44,7 +57,7 @@ Use this template for each release tag (for example `v1.0.0`).
 - Artifact name:
 - SHA256:
 
-### Linux
+### Linux x64
 
 - [ ] Build artifact produced
 - [ ] Launches successfully

@@ -114,8 +114,17 @@ With the manifest and hashes in hand you can:
 
 ## How CI mirrors this
 
-`.github/workflows/release.yml` runs `./release.sh` from the tagged source. That keeps the workflow on
-the same scripted path as local releases rather than relying on a separate CI-only recipe. The workflow uploads:
+`.github/workflows/release.yml` runs `./release.sh` from tagged/manual inputs, plus an unsigned bridge packaging
+matrix (`pkg`) for:
+
+- `node22-macos-x64`
+- `node22-macos-arm64`
+- `node22-linux-x64`
+- `node22-win-x64`
+
+That keeps firmware artifacts on the same scripted path as local releases while adding deterministic bridge outputs.
+The workflow always stores bundles as workflow artifacts and uploads assets to a GitHub release only when that tag's
+release already exists. Core uploaded assets are:
 
 - `mn42_<tag>.hex`
 - `hardware_reference.zip`
@@ -125,11 +134,18 @@ the same scripted path as local releases rather than relying on a separate CI-on
 - `SHA256SUMS.txt`
 - the bundled license docs (`THIRD_PARTY_LICENSES.md` and the `LICENSES/` directory)
 
+Bridge uploads (when release exists) include:
+
+- per-target bridge binaries
+- per-target SHA256 checksum files
+- `bridge/THIRD_PARTY_LICENSES.md`
+- `bridge/THIRD_PARTY_LICENSES.json`
+
 Important: the hosted CI release lane uses `REQUIRE_HIL=0` by default, so HIL may be skipped unless a
 runner has `TEST_PORT` configured. That skip/execute state is recorded in `release_verification.json`
 and mirrored into `manifest.json`.
 
-Inspect the manifest in CI logs or download it straight from the release page to verify the run.
+Inspect the manifest in CI logs or download it from workflow artifacts or the release page to verify the run.
 
 ## Troubleshooting vibes
 

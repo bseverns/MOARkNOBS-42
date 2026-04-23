@@ -14,21 +14,22 @@ Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then tre
    - `release_verify_hil.sh` always emits `release_verification.json` so artifacts explicitly show what verification was executed versus skipped.
 4. **Commit it** – lock in doc updates and any release prep changes with a commit.
 5. **Tag it loud** – `git tag -a vX.Y.Z -m "vX.Y.Z"` to mark the moment.
-6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into gear and runs the same release script described in [Reproducibility](Reproducibility.md).
+6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into `.github/workflows/release.yml`.
 7. **Draft the release** – on GitHub, create a new release from that tag, drop the human-written notes, and publish.
-   - CI uploads the firmware hex, deterministic hardware reference bundle, source export zip, `release_verification.json`, manifest, checksums, and license payloads.
+   - The release workflow builds firmware artifacts and unsigned bridge packages (`macOS x64 + arm64`, `Linux x64`, `Windows x64`) and always stores them as workflow artifacts.
    - Release packaging is blocked unless bridge tests, app tests, and `teensy40_main` firmware build pass in the release workflow.
+   - Assets are uploaded to GitHub Releases only when a release for that tag already exists. If not, rerun the workflow (or run manual dispatch) after creating the release.
    - Read `release_verification.json` before publishing notes: default hosted runners use optional HIL mode unless you provide a hardware port.
-   - If you ran bridge packaging, attach those assets + checksums too.
+   - Bridge uploads include per-target checksums and bridge third-party license payloads.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 
-## Bridge packaging track (optional but recommended)
+## Bridge packaging track
 
-If you are shipping to non-CLI users, run the bridge packaging lane too:
+Unsigned bridge packaging now runs automatically in the release workflow. The remaining manual track is signing and installer-grade polish:
 
 1. Follow [`BridgePackaging.md`](BridgePackaging.md) phases for the current release target.
-2. Build platform artifacts and run bridge smoke tests on each OS.
+2. Review the generated bridge artifacts and checksums from CI.
 3. Sign binaries/installers where applicable.
-4. Attach bridge artifacts + checksums to the GitHub release alongside firmware files.
+4. Attach/verify signed bridge artifacts alongside firmware files on the GitHub release.
 5. Verify docs match the shipped UX (`docs/OSCBridge.md`, `docs/BridgeForPerformers.md`, `bridge/README.md`).
 6. Complete the artifact checklist template: [`release/bridge-artifacts-checklist.md`](bridge-artifacts-checklist.md).

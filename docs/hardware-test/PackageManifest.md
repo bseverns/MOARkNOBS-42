@@ -47,7 +47,7 @@ These lanes are intentionally not part of the hardware-test package surface:
 - `teensy40_usb_midi_random_note`
 - `teensy40_usb_midi_random_mixed`
 
-These repository workflows are also out of scope for the hardware-test package and are replaced by a single package-aligned workflow:
+These repository workflows are also out of scope for the hardware-test package surface. The package CI path keeps a single package-aligned workflow:
 
 - docs publishing workflows
 - wiki publishing workflows

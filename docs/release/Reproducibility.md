@@ -11,6 +11,7 @@ MOARkNOBS-42 does not just ship binaries. It tries to ship receipts:
 - a deterministic source export
 - a manifest describing how those artifacts were built
 - checksums so another machine can verify the output
+- unsigned bridge binaries (multi-OS) with per-target checksums
 
 That matters because this project wants to be teachable and inspectable, not just downloadable.
 
@@ -59,6 +60,16 @@ The generated `dist/manifest.json` is meant to answer:
 - what verification actually ran vs what was skipped?
 
 Without that manifest, a release is just a pile of files. With it, the release becomes auditable.
+
+## CI release workflow
+
+`.github/workflows/release.yml` now does two release lanes:
+
+- firmware/core artifact lane via `release.sh`
+- bridge packaging lane (`pkg`) for `macOS x64 + arm64`, `Linux x64`, and `Windows x64`
+
+The workflow always uploads artifacts to the workflow run. GitHub Release asset upload is conditional:
+assets are attached only when a release for the tag already exists.
 
 ## Read the full operator guide
 

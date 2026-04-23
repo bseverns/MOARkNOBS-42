@@ -6,7 +6,7 @@ Use the browser configurator first if you only need direct USB setup and profile
 
 Current support boundary:
 
-- strongest repo evidence for this tool: Node.js 20 desktop host plus the browser console or CLI
+- strongest repo evidence for this tool: Node.js 22 desktop host plus the browser console or CLI
 - documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
 - not claimed here: a signed one-click installer or broad DAW-by-DAW compatibility proof
 
@@ -24,7 +24,7 @@ It does three things:
 
 ### 1) Install prerequisites
 
-- Node.js 20.x (`node --version` must report `v20.*`)
+- Node.js 22.x (`node --version` must report `v22.*`)
 - MN42 connected over USB
 
 From repo root:
@@ -312,14 +312,22 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 
 ## Packaging status (for non-command-line users)
 
-Current state: the bridge has a browser-based local control surface, but it is still launched from Node.js and is not yet shipped as a signed one-click installer.
+Current state: unsigned bridge binaries are now built automatically in
+`.github/workflows/release.yml` for:
+
+- `node22-macos-x64`
+- `node22-macos-arm64`
+- `node22-linux-x64`
+- `node22-win-x64`
+
+When a GitHub release already exists for the tag, the workflow uploads those bridge artifacts plus checksums.
+The bridge is still not shipped as a signed one-click installer.
 
 If demand grows, this is the practical path:
 
-1. Prototype binary packaging with `pkg` or `nexe` per platform.
-2. Include prebuilt native dependencies for `serialport`.
-3. Ship signed installers that launch the bridge with a simple UI wrapper.
-4. Keep advanced flags available for power users.
+1. Add signing/notarization for each platform package.
+2. Ship signed installers that launch the bridge with a simple UI wrapper.
+3. Keep advanced flags available for power users.
 
 Until then, this README is the canonical runbook for daily use.
 

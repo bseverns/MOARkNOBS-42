@@ -20,10 +20,16 @@
 - Live telemetry is a bench aid, not a hard real-time measurement contract.
 - The full-stack bridge runner is hardware-in-the-loop and can fail for host serial-port, permissions, or bench-cabling reasons outside the firmware itself.
 
-## Current Automated-Test Gaps
+## Automated-Test Verification Snapshot (2026-04-23)
 
-- `npm --prefix bridge test` currently fails in `bridge/test/serial_close_reconnect.test.js` because the bridge does not reopen after the mocked close event as the test expects.
-- `npm --prefix App test` currently has one failing Playwright case in `tests/native_transport.spec.js` covering bundled-schema fallback when the device schema is incompatible.
+The previously documented bridge/app test failures are no longer reproducible in current runs.
+
+- Verified passing: `npm --prefix bridge test`
+- Verified passing: `npm --prefix App test`
+- Verified passing targeted native transport case:
+  `npm --prefix App test -- tests/native_transport.spec.js`
+
+No active automated-test failures are currently tracked in this document. Add new failures only with a reproducible command and failing test path.
 
 ## Manufacturing Boundary
 
