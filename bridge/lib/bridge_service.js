@@ -1,10 +1,63 @@
 const { EventEmitter } = require('node:events');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const {
   usageText,
   getArg,
   parsePositiveInt,
   parseConfigFromArgv: parseCliConfigFromArgv,
 } = require('./config/cli_config');
+
+function copyDirectoryRecursive(srcDir, dstDir) {
+  fs.mkdirSync(dstDir, { recursive: true });
+  const entries = fs.readdirSync(srcDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(srcDir, entry.name);
+    const dstPath = path.join(dstDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirectoryRecursive(srcPath, dstPath);
+      continue;
+    }
+    if (entry.isFile()) {
+      fs.copyFileSync(srcPath, dstPath);
+    }
+  }
+}
+
+function preparePackagedSerialportBindings(pushLog) {
+  if (!process.pkg) return;
+
+  const snapshotBindingsRoot = path.resolve(
+    __dirname,
+    '..',
+    'node_modules',
+    '@serialport',
+    'bindings-cpp',
+  );
+  const snapshotPrebuilds = path.join(snapshotBindingsRoot, 'prebuilds');
+  if (!fs.existsSync(snapshotPrebuilds)) {
+    pushLog(
+      'warn',
+      `serialport prebuilds were not packaged (${snapshotPrebuilds})`,
+    );
+    return;
+  }
+
+  const stagedRoot = path.join(
+    os.tmpdir(),
+    'mn42-bridge-native',
+    'serialport-bindings-cpp',
+  );
+  const stagedPrebuilds = path.join(stagedRoot, 'prebuilds');
+  if (!fs.existsSync(stagedPrebuilds)) {
+    copyDirectoryRecursive(snapshotPrebuilds, stagedPrebuilds);
+  }
+
+  // node-gyp-build resolves prebuild paths via "<PACKAGE_NAME>_PREBUILD".
+  process.env['@SERIALPORT/BINDINGS_CPP_PREBUILD'] = stagedRoot;
+  process.env.SERIALPORT_BINDINGS_CPP_PREBUILD = stagedRoot;
+}
 
 const SERIAL_BAUD = 115200;
 const DEFAULT_OSC_PORT = 9000;
@@ -340,7 +393,17 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   // Lazy-load runtime dependencies so tests can inject fakes without touching require().
   async function loadDeps() {
     if (depsLoaded) return;
-    if (!serialApi) serialApi = require('serialport');
+    if (!serialApi) {
+      try {
+        preparePackagedSerialportBindings(pushLog);
+      } catch (err) {
+        pushLog(
+          'warn',
+          `serial native prebuild staging failed: ${err.message}`,
+        );
+      }
+      serialApi = require('serialport');
+    }
     if (!oscApi) oscApi = require('osc');
     if (!jzzFactory) jzzFactory = require('jzz');
     depsLoaded = true;

@@ -51,8 +51,7 @@ cp ".pio/build/${BUILD_ENV}/firmware.hex" "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME"
 popd >/dev/null
 
 if [ ! -d "$FABRICATION_DIR" ]; then
-  echo "Missing fabrication source at $FABRICATION_DIR" >&2
-  exit 1
+  echo "Warning: fabrication source missing at $FABRICATION_DIR; continuing with documentation-only hardware bundle." >&2
 fi
 
 python3 - "$ROOT_DIR" "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" <<'PY'
@@ -77,6 +76,13 @@ def add_file_to_zip(zf, filepath, arcname):
     with filepath.open("rb") as fh:
         zf.writestr(info, fh.read())
 
+def add_text_to_zip(zf, arcname, text):
+    info = zipfile.ZipInfo(arcname)
+    info.date_time = (1980, 1, 1, 0, 0, 0)
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = 0o100644 << 16
+    zf.writestr(info, text.encode("utf-8"))
+
 with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
     # Add everything in hardware/fabrication
     if src_fab.exists():
@@ -85,6 +91,13 @@ with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
                 continue
             arcname = path.relative_to(root).as_posix()
             add_file_to_zip(zf, path, arcname)
+    else:
+        add_text_to_zip(
+            zf,
+            "hardware/fabrication/MISSING.txt",
+            "Fabrication exports are not present in this source checkout.\n"
+            "See hardware/README.md and hardware/CurrentBuild.md for current build guidance.\n",
+        )
     
     # Add explicit references
     for explicit_path in [

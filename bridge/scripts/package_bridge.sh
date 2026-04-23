@@ -8,6 +8,7 @@ OUTPUT_NAME="${OUTPUT_NAME:-mn42-bridge}"
 TARGETS="${TARGETS:-node22-macos-x64,node22-macos-arm64,node22-linux-x64,node22-win-x64}"
 LOCAL_PKG_BIN="${ROOT_DIR}/node_modules/.bin/pkg"
 PKG_BIN="${PKG_BIN:-}"
+PKG_CACHE_PATH="${PKG_CACHE_PATH:-${ROOT_DIR}/.pkg-cache}"
 
 if [[ -z "${PKG_BIN}" && -x "${LOCAL_PKG_BIN}" ]]; then
   PKG_BIN="${LOCAL_PKG_BIN}"
@@ -33,6 +34,8 @@ EOF
 fi
 
 mkdir -p "${DIST_DIR}"
+mkdir -p "${PKG_CACHE_PATH}"
+export PKG_CACHE_PATH
 
 IFS=',' read -r -a TARGET_ARRAY <<< "${TARGETS}"
 packaged_artifacts=()

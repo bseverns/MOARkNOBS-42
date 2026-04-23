@@ -38,5 +38,10 @@
   },
   "devDependencies": {
     "@yao-pkg/pkg": "6.18.2"
+  },
+  "pkg": {
+    "assets": [
+      "node_modules/@serialport/bindings-cpp/prebuilds/**/*.node"
+    ]
   }
 }
