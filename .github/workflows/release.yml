@@ -41,7 +41,7 @@ jobs:
     needs: resolve-release-meta
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install Python dependencies
@@ -92,7 +92,7 @@ jobs:
       RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install Python dependencies
@@ -180,7 +180,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "22.x"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install bridge dependencies
