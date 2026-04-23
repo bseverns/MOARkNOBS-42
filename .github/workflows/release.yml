@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: resolve-release-meta
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -55,8 +55,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: resolve-release-meta
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22.x"
       - name: Install bridge dependencies
@@ -68,8 +68,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: resolve-release-meta
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22.x"
       - name: Install app dependencies
@@ -91,7 +91,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -176,8 +176,8 @@ jobs:
             target: node22-win-x64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22.x"
       - uses: actions/setup-python@v5
@@ -242,7 +242,7 @@ jobs:
       RELEASE_TAG: ${{ needs.resolve-release-meta.outputs.release_tag }}
       ARTIFACT_TAG: ${{ needs.resolve-release-meta.outputs.artifact_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Download packaged bridge artifacts
         uses: actions/download-artifact@v4
         with:
