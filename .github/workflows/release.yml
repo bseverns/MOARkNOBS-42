@@ -24,7 +24,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          input_tag="${{ github.event.inputs.tag || '' }}"
+          input_tag_raw="${{ github.event.inputs.tag || '' }}"
+          input_tag="${input_tag_raw#refs/tags/}"
+          input_tag="${input_tag#refs/heads/}"
+          input_tag="$(echo "${input_tag}" | xargs)"
           if [[ -n "${input_tag}" ]]; then
             release_tag="${input_tag}"
             checkout_ref="${input_tag}"
