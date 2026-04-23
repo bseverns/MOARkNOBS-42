@@ -254,6 +254,18 @@ jobs:
             checksum_cmd+=(--file "${staged_file}")
           done
           "${checksum_cmd[@]}"
+          cat > "${stage_dir}/README.txt" <<'EOF'
+MN42 Bridge release bundle
+
+Contents:
+- one platform-specific bridge binary
+- SHA256SUMS for this target
+- bundled third-party license notices
+
+For install and usage details, see bridge/README.md and the release notes.
+EOF
+          cp bridge/THIRD_PARTY_LICENSES.md "${stage_dir}/THIRD_PARTY_LICENSES.md"
+          cp bridge/THIRD_PARTY_LICENSES.json "${stage_dir}/THIRD_PARTY_LICENSES.json"
       - name: Upload per-target bridge artifact bundle
         uses: actions/upload-artifact@v7
         with:
@@ -280,14 +292,21 @@ jobs:
           pattern: bridge-package-*
           merge-multiple: true
           path: bridge/dist/release-upload
+      - name: Restore Unix executable bits for combined bridge bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          binaries=(bridge/dist/release-upload/mn42-bridge-*-node22-macos-* bridge/dist/release-upload/mn42-bridge-*-node22-linux-*)
+          shopt -u nullglob
+          if [ ${#binaries[@]} -gt 0 ]; then
+            chmod 755 "${binaries[@]}"
+          fi
       - name: Upload combined bridge artifact bundle
         uses: actions/upload-artifact@v7
         with:
           name: bridge-release-${{ env.ARTIFACT_TAG }}
-          path: |
-            bridge/dist/release-upload
-            bridge/THIRD_PARTY_LICENSES.md
-            bridge/THIRD_PARTY_LICENSES.json
+          path: bridge/dist/release-upload
       - name: Check whether GitHub release exists
         id: release-check
         uses: actions/github-script@v8
@@ -320,8 +339,6 @@ jobs:
           set -euo pipefail
           gh release upload "${RELEASE_TAG}" \
             bridge/dist/release-upload/* \
-            bridge/THIRD_PARTY_LICENSES.md \
-            bridge/THIRD_PARTY_LICENSES.json \
             --clobber
       - name: Note skipped bridge release upload
         if: steps.release-check.outputs.exists != 'true'

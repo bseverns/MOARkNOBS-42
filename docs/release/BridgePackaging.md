@@ -28,6 +28,7 @@ This is a future-facing packaging plan. It is not a current compatibility claim 
   - `node22-macos-arm64`
   - `node22-linux-x64`
   - `node22-win-x64`
+- Per-target bundles carry the target binary, checksum file, a tiny README, and the bridge third-party license bundle.
 - Bridge release uploads are conditional on an existing GitHub release for the tag.
 - Outward bridge builds must set `REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks; otherwise the packaging script fails instead of silently producing unsigned binaries.
 

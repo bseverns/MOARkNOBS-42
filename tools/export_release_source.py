@@ -13,6 +13,8 @@ import zipfile
 EXCLUDE_GLOBS = (
     ".git/**",
     ".venv/**",
+    ".vscode/**",
+    "**/.vscode/**",
     ".pio/**",
     ".pio-home/**",
     ".pio-cache/**",
