@@ -10,6 +10,19 @@ It does not claim a verified Gerber and NC-drill release bundle.
 
 Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md).
 
+## Choose Your Path
+
+- **Validating prototype hardware:** start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md), then follow
+  [docs/hardware-test/Bringup.md](docs/hardware-test/Bringup.md) and
+  [docs/hardware-test/TestMatrix.md](docs/hardware-test/TestMatrix.md).
+- **Changing firmware:** use [firmware/README.md](firmware/README.md) for PlatformIO lanes and
+  [CONTRIBUTING.md](CONTRIBUTING.md) for the build/test contract.
+- **Using the controller musically:** start with
+  [docs/getting-started/QuickstartForPerformers.md](docs/getting-started/QuickstartForPerformers.md), then use
+  [docs/getting-started/GuidedRoutes.md](docs/getting-started/GuidedRoutes.md) when you want the broader docs map.
+- **Checking fabrication or release readiness:** read [hardware/CurrentBuild.md](hardware/CurrentBuild.md) and keep the
+  non-release caveats above in mind before treating any hardware artifacts as orderable.
+
 ## Package Entry Points
 
 - [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) explains what the package is, what it is not, and the expected bring-up flow.

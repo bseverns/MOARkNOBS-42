@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Root README now includes a "Choose Your Path" entry point so prototype validators, firmware contributors, performers, and release-readiness reviewers land on the right docs before diving into the hardware-test package.
+
+### Changed
+- Changelog now separates post-`beta0.6.0` documentation edits from the current manifest-backed `dist/` artifact truth.
+
+## [beta0.6.0] - 2026-04-20
+
+### Release/Dist Truth
+- `dist/manifest.json` identifies the current package version as `beta0.6.0`, generated on 2026-04-20. It names `mn42_beta0.6.0.hex`, `mn42_beta0.6.0_source.zip`, `hardware_reference.zip`, `THIRD_PARTY_LICENSES.md`, and `release_verification.json`; pair it with `dist/SHA256SUMS.txt` for artifact hashes.
+- `dist/release_verification.json` records `optional_skipped_no_port`: `TEST_PORT` was unset, HIL Unity was skipped, and the App, bridge, and full-stack system suites were not run for that package. Do not describe this dist set as HIL/system verified.
+- The manifest records branch `main` at commit `5ce01706482a59838e2f1dc390cbdb3b72287577` with `dirty: true` because `.release_verification.json` was untracked at packaging time. Treat the provenance as documented but not a clean tagged release build.
+- `dist/hardware_reference.zip` is a reference bundle for review and bench validation, not an order-ready fabrication package. Other `dist/` firmware/source files and `dist/fabrication.zip` are historical or local artifacts unless a current manifest and checksum file name them explicitly.
+
+### Added
 - Firmware now exposes real device-backed profile save/load/reset flows plus EEPROM-backed macro snapshot and scene storage, with manifest capability reporting so the App can tell the truth about what the board supports.
 - Added stronger storage/regression coverage in the firmware tests plus a destructive `--exercise-storage` lane in `firmware/system_test/mn42_fullstack_runner.js` for bench validation of profile/macro/scene persistence.
 - Added `docs/HostCompatibility.md` so browser, bridge, OSC, and DAW support claims are split into verified, documented, and not-claimed buckets instead of being implied from skim-level marketing language.
