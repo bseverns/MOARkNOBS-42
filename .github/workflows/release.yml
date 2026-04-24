@@ -254,16 +254,16 @@ jobs:
             checksum_cmd+=(--file "${staged_file}")
           done
           "${checksum_cmd[@]}"
-          cat > "${stage_dir}/README.txt" <<'EOF'
-MN42 Bridge release bundle
-
-Contents:
-- one platform-specific bridge binary
-- SHA256SUMS for this target
-- bundled third-party license notices
-
-For install and usage details, see bridge/README.md and the release notes.
-EOF
+          printf '%s\n' \
+            'MN42 Bridge release bundle' \
+            '' \
+            'Contents:' \
+            '- one platform-specific bridge binary' \
+            '- SHA256SUMS for this target' \
+            '- bundled third-party license notices' \
+            '' \
+            'For install and usage details, see bridge/README.md and the release notes.' \
+            > "${stage_dir}/README.txt"
           cp bridge/THIRD_PARTY_LICENSES.md "${stage_dir}/THIRD_PARTY_LICENSES.md"
           cp bridge/THIRD_PARTY_LICENSES.json "${stage_dir}/THIRD_PARTY_LICENSES.json"
       - name: Upload per-target bridge artifact bundle
