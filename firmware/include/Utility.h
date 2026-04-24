@@ -166,7 +166,7 @@ class Utility {
         /** Rough sequence hint scraped from the staged payload. */
         uint32_t sequenceHint() const { return seqHint; }
 
-        /** Best-effort checksum hint scraped from the staged payload. */
+        /** Best-effort config id/checksum hint scraped from the staged payload. */
         const String &checksumHint() const { return checksum; }
 
         /** Current payload size in bytes. */

@@ -41,11 +41,21 @@ ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings) {
     sanitized.gateHysteresis = constrain(sanitized.gateHysteresis, 0, 127);
     sanitized.activityThreshold = constrain(sanitized.activityThreshold, 0, 127);
     sanitized.gainTarget = constrain(sanitized.gainTarget, 0, 127);
-    sanitized.attackMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.attackMs));
-    sanitized.releaseMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.releaseMs));
-    sanitized.rmsWindowMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.rmsWindowMs));
-    sanitized.baselineTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
-    sanitized.gainTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.gainTauMs));
+    sanitized.attackMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.attackMs),
+                                                         static_cast<int>(EF_TIME_MIN_MS),
+                                                         static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.releaseMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.releaseMs),
+                                                          static_cast<int>(EF_TIME_MIN_MS),
+                                                          static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.rmsWindowMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.rmsWindowMs),
+                                                            static_cast<int>(EF_TIME_MIN_MS),
+                                                            static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.baselineTauMs = static_cast<uint16_t>(
+        constrain(static_cast<int>(sanitized.baselineTauMs), static_cast<int>(EF_TIME_MIN_MS),
+                  static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.gainTauMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.gainTauMs),
+                                                          static_cast<int>(EF_TIME_MIN_MS),
+                                                          static_cast<int>(EF_TIME_MAX_MS)));
     return sanitized;
 }
 

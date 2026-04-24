@@ -65,6 +65,38 @@ template <typename T> void storageGet(int address, T &value) {
 template <typename T> void storagePut(int address, const T &value) {
     activeStorageBackend().writeBytes(address, &value, sizeof(T));
 }
+
+int readIntField(JsonObject obj, const char *primary, const char *alternate, int fallback) {
+    if (!obj.isNull() && obj.containsKey(primary)) {
+        return obj[primary].as<int>();
+    }
+    if (!obj.isNull() && obj.containsKey(alternate)) {
+        return obj[alternate].as<int>();
+    }
+    return fallback;
+}
+
+float readFloatField(JsonObject obj, const char *primary, const char *alternate, float fallback) {
+    if (!obj.isNull() && obj.containsKey(primary)) {
+        return obj[primary].as<float>();
+    }
+    if (!obj.isNull() && obj.containsKey(alternate)) {
+        return obj[alternate].as<float>();
+    }
+    return fallback;
+}
+
+uint8_t readClampedU8(JsonObject obj, const char *primary, const char *alternate, int minValue,
+                      int maxValue, uint8_t fallback) {
+    int value = readIntField(obj, primary, alternate, fallback);
+    return static_cast<uint8_t>(constrain(value, minValue, maxValue));
+}
+
+uint16_t readClampedU16(JsonObject obj, const char *primary, const char *alternate, int minValue,
+                        int maxValue, uint16_t fallback) {
+    int value = readIntField(obj, primary, alternate, fallback);
+    return static_cast<uint16_t>(constrain(value, minValue, maxValue));
+}
 } // namespace
 
 template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
@@ -339,8 +371,9 @@ void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out
     }
 
     if (obj.containsKey("oversample")) {
-        int oversample = obj["oversample"].as<int>();
-        out.oversample = static_cast<uint8_t>(constrain(oversample, 1, 32));
+        out.oversample =
+            readClampedU8(obj, "oversample", "oversample", static_cast<int>(EF_OVERSAMPLE_MIN),
+                          static_cast<int>(EF_OVERSAMPLE_MAX), out.oversample);
     }
 
     if (obj.containsKey("smoothing")) {
@@ -379,57 +412,83 @@ void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out
     }
 
     if (obj.containsKey("attack_ms")) {
-        out.attackMs = static_cast<uint16_t>(obj["attack_ms"].as<int>());
+        out.attackMs =
+            readClampedU16(obj, "attack_ms", "attackMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.attackMs);
     } else if (obj.containsKey("attackMs")) {
-        out.attackMs = static_cast<uint16_t>(obj["attackMs"].as<int>());
+        out.attackMs =
+            readClampedU16(obj, "attack_ms", "attackMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.attackMs);
     }
 
     if (obj.containsKey("release_ms")) {
-        out.releaseMs = static_cast<uint16_t>(obj["release_ms"].as<int>());
+        out.releaseMs =
+            readClampedU16(obj, "release_ms", "releaseMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.releaseMs);
     } else if (obj.containsKey("releaseMs")) {
-        out.releaseMs = static_cast<uint16_t>(obj["releaseMs"].as<int>());
+        out.releaseMs =
+            readClampedU16(obj, "release_ms", "releaseMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.releaseMs);
     }
 
     if (obj.containsKey("rms_ms")) {
-        out.rmsWindowMs = static_cast<uint16_t>(obj["rms_ms"].as<int>());
+        out.rmsWindowMs =
+            readClampedU16(obj, "rms_ms", "rmsWindowMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.rmsWindowMs);
     } else if (obj.containsKey("rmsWindowMs")) {
-        out.rmsWindowMs = static_cast<uint16_t>(obj["rmsWindowMs"].as<int>());
+        out.rmsWindowMs =
+            readClampedU16(obj, "rms_ms", "rmsWindowMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.rmsWindowMs);
     }
 
     if (obj.containsKey("baseline_tau_ms")) {
-        out.baselineTauMs = static_cast<uint16_t>(obj["baseline_tau_ms"].as<int>());
+        out.baselineTauMs = readClampedU16(obj, "baseline_tau_ms", "baselineTauMs",
+                                           static_cast<int>(EF_TIME_MIN_MS),
+                                           static_cast<int>(EF_TIME_MAX_MS), out.baselineTauMs);
     } else if (obj.containsKey("baselineTauMs")) {
-        out.baselineTauMs = static_cast<uint16_t>(obj["baselineTauMs"].as<int>());
+        out.baselineTauMs = readClampedU16(obj, "baseline_tau_ms", "baselineTauMs",
+                                           static_cast<int>(EF_TIME_MIN_MS),
+                                           static_cast<int>(EF_TIME_MAX_MS), out.baselineTauMs);
     }
 
     if (obj.containsKey("gain_tau_ms")) {
-        out.gainTauMs = static_cast<uint16_t>(obj["gain_tau_ms"].as<int>());
+        out.gainTauMs =
+            readClampedU16(obj, "gain_tau_ms", "gainTauMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.gainTauMs);
     } else if (obj.containsKey("gainTauMs")) {
-        out.gainTauMs = static_cast<uint16_t>(obj["gainTauMs"].as<int>());
+        out.gainTauMs =
+            readClampedU16(obj, "gain_tau_ms", "gainTauMs", static_cast<int>(EF_TIME_MIN_MS),
+                           static_cast<int>(EF_TIME_MAX_MS), out.gainTauMs);
     }
 
     if (obj.containsKey("gate_threshold")) {
-        out.gateThreshold = static_cast<uint8_t>(obj["gate_threshold"].as<int>());
+        out.gateThreshold =
+            readClampedU8(obj, "gate_threshold", "gateThreshold", 0, 127, out.gateThreshold);
     } else if (obj.containsKey("gateThreshold")) {
-        out.gateThreshold = static_cast<uint8_t>(obj["gateThreshold"].as<int>());
+        out.gateThreshold =
+            readClampedU8(obj, "gate_threshold", "gateThreshold", 0, 127, out.gateThreshold);
     }
 
     if (obj.containsKey("gate_hysteresis")) {
-        out.gateHysteresis = static_cast<uint8_t>(obj["gate_hysteresis"].as<int>());
+        out.gateHysteresis =
+            readClampedU8(obj, "gate_hysteresis", "gateHysteresis", 0, 127, out.gateHysteresis);
     } else if (obj.containsKey("gateHysteresis")) {
-        out.gateHysteresis = static_cast<uint8_t>(obj["gateHysteresis"].as<int>());
+        out.gateHysteresis =
+            readClampedU8(obj, "gate_hysteresis", "gateHysteresis", 0, 127, out.gateHysteresis);
     }
 
     if (obj.containsKey("activity_threshold")) {
-        out.activityThreshold = static_cast<uint8_t>(obj["activity_threshold"].as<int>());
+        out.activityThreshold = readClampedU8(obj, "activity_threshold", "activityThreshold", 0,
+                                              127, out.activityThreshold);
     } else if (obj.containsKey("activityThreshold")) {
-        out.activityThreshold = static_cast<uint8_t>(obj["activityThreshold"].as<int>());
+        out.activityThreshold = readClampedU8(obj, "activity_threshold", "activityThreshold", 0,
+                                              127, out.activityThreshold);
     }
 
     if (obj.containsKey("gain_target")) {
-        out.gainTarget = static_cast<uint8_t>(obj["gain_target"].as<int>());
+        out.gainTarget = readClampedU8(obj, "gain_target", "gainTarget", 0, 127, out.gainTarget);
     } else if (obj.containsKey("gainTarget")) {
-        out.gainTarget = static_cast<uint8_t>(obj["gainTarget"].as<int>());
+        out.gainTarget = readClampedU8(obj, "gain_target", "gainTarget", 0, 127, out.gainTarget);
     }
 
     if (obj.containsKey("index")) {
@@ -600,11 +659,12 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             return false;
         }
 
-        uint8_t midiChannel = constrain(slotObj["midiChannel"].as<int>(), 1, 16);
-        uint8_t data1 = constrain(slotObj["data1"].as<int>(), 0, 127);
+        MIDISlot &slot = configManager.getSlot(i);
+        uint8_t midiChannel =
+            readClampedU8(slotObj, "midiChannel", "channel", 1, 16, slot.midiChannel);
+        uint8_t data1 = readClampedU8(slotObj, "data1", "cc", 0, 127, slot.data1);
         bool active = slotObj["active"].as<bool>();
 
-        MIDISlot &slot = configManager.getSlot(i);
         MIDISlot::EfSettings settings = slot.efSettings;
         settings.followerIndex = slot.getEnvelopeFollowerIndex();
 
@@ -642,8 +702,9 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                 settings.q = efObj["q"].as<float>();
             }
             if (efObj.containsKey("oversample")) {
-                int oversample = efObj["oversample"].as<int>();
-                settings.oversample = static_cast<uint8_t>(constrain(oversample, 1, 32));
+                settings.oversample = readClampedU8(
+                    efObj, "oversample", "oversample", static_cast<int>(EF_OVERSAMPLE_MIN),
+                    static_cast<int>(EF_OVERSAMPLE_MAX), settings.oversample);
             }
             if (efObj.containsKey("smoothing")) {
                 settings.smoothing = efObj["smoothing"].as<float>();
@@ -676,51 +737,79 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                 settings.autoGain = efObj["autoGain"].as<bool>() ? 1 : 0;
             }
             if (efObj.containsKey("attack_ms")) {
-                settings.attackMs = static_cast<uint16_t>(efObj["attack_ms"].as<int>());
+                settings.attackMs =
+                    readClampedU16(efObj, "attack_ms", "attackMs", static_cast<int>(EF_TIME_MIN_MS),
+                                   static_cast<int>(EF_TIME_MAX_MS), settings.attackMs);
             } else if (efObj.containsKey("attackMs")) {
-                settings.attackMs = static_cast<uint16_t>(efObj["attackMs"].as<int>());
+                settings.attackMs =
+                    readClampedU16(efObj, "attack_ms", "attackMs", static_cast<int>(EF_TIME_MIN_MS),
+                                   static_cast<int>(EF_TIME_MAX_MS), settings.attackMs);
             }
             if (efObj.containsKey("release_ms")) {
-                settings.releaseMs = static_cast<uint16_t>(efObj["release_ms"].as<int>());
+                settings.releaseMs = readClampedU16(
+                    efObj, "release_ms", "releaseMs", static_cast<int>(EF_TIME_MIN_MS),
+                    static_cast<int>(EF_TIME_MAX_MS), settings.releaseMs);
             } else if (efObj.containsKey("releaseMs")) {
-                settings.releaseMs = static_cast<uint16_t>(efObj["releaseMs"].as<int>());
+                settings.releaseMs = readClampedU16(
+                    efObj, "release_ms", "releaseMs", static_cast<int>(EF_TIME_MIN_MS),
+                    static_cast<int>(EF_TIME_MAX_MS), settings.releaseMs);
             }
             if (efObj.containsKey("rms_ms")) {
-                settings.rmsWindowMs = static_cast<uint16_t>(efObj["rms_ms"].as<int>());
+                settings.rmsWindowMs =
+                    readClampedU16(efObj, "rms_ms", "rmsWindowMs", static_cast<int>(EF_TIME_MIN_MS),
+                                   static_cast<int>(EF_TIME_MAX_MS), settings.rmsWindowMs);
             } else if (efObj.containsKey("rmsWindowMs")) {
-                settings.rmsWindowMs = static_cast<uint16_t>(efObj["rmsWindowMs"].as<int>());
+                settings.rmsWindowMs =
+                    readClampedU16(efObj, "rms_ms", "rmsWindowMs", static_cast<int>(EF_TIME_MIN_MS),
+                                   static_cast<int>(EF_TIME_MAX_MS), settings.rmsWindowMs);
             }
             if (efObj.containsKey("baseline_tau_ms")) {
-                settings.baselineTauMs = static_cast<uint16_t>(efObj["baseline_tau_ms"].as<int>());
+                settings.baselineTauMs = readClampedU16(
+                    efObj, "baseline_tau_ms", "baselineTauMs", static_cast<int>(EF_TIME_MIN_MS),
+                    static_cast<int>(EF_TIME_MAX_MS), settings.baselineTauMs);
             } else if (efObj.containsKey("baselineTauMs")) {
-                settings.baselineTauMs = static_cast<uint16_t>(efObj["baselineTauMs"].as<int>());
+                settings.baselineTauMs = readClampedU16(
+                    efObj, "baseline_tau_ms", "baselineTauMs", static_cast<int>(EF_TIME_MIN_MS),
+                    static_cast<int>(EF_TIME_MAX_MS), settings.baselineTauMs);
             }
             if (efObj.containsKey("gain_tau_ms")) {
-                settings.gainTauMs = static_cast<uint16_t>(efObj["gain_tau_ms"].as<int>());
+                settings.gainTauMs = readClampedU16(
+                    efObj, "gain_tau_ms", "gainTauMs", static_cast<int>(EF_TIME_MIN_MS),
+                    static_cast<int>(EF_TIME_MAX_MS), settings.gainTauMs);
             } else if (efObj.containsKey("gainTauMs")) {
-                settings.gainTauMs = static_cast<uint16_t>(efObj["gainTauMs"].as<int>());
+                settings.gainTauMs = readClampedU16(
+                    efObj, "gain_tau_ms", "gainTauMs", static_cast<int>(EF_TIME_MIN_MS),
+                    static_cast<int>(EF_TIME_MAX_MS), settings.gainTauMs);
             }
             if (efObj.containsKey("gate_threshold")) {
-                settings.gateThreshold = static_cast<uint8_t>(efObj["gate_threshold"].as<int>());
+                settings.gateThreshold = readClampedU8(efObj, "gate_threshold", "gateThreshold", 0,
+                                                       127, settings.gateThreshold);
             } else if (efObj.containsKey("gateThreshold")) {
-                settings.gateThreshold = static_cast<uint8_t>(efObj["gateThreshold"].as<int>());
+                settings.gateThreshold = readClampedU8(efObj, "gate_threshold", "gateThreshold", 0,
+                                                       127, settings.gateThreshold);
             }
             if (efObj.containsKey("gate_hysteresis")) {
-                settings.gateHysteresis = static_cast<uint8_t>(efObj["gate_hysteresis"].as<int>());
+                settings.gateHysteresis = readClampedU8(efObj, "gate_hysteresis", "gateHysteresis",
+                                                        0, 127, settings.gateHysteresis);
             } else if (efObj.containsKey("gateHysteresis")) {
-                settings.gateHysteresis = static_cast<uint8_t>(efObj["gateHysteresis"].as<int>());
+                settings.gateHysteresis = readClampedU8(efObj, "gate_hysteresis", "gateHysteresis",
+                                                        0, 127, settings.gateHysteresis);
             }
             if (efObj.containsKey("activity_threshold")) {
                 settings.activityThreshold =
-                    static_cast<uint8_t>(efObj["activity_threshold"].as<int>());
+                    readClampedU8(efObj, "activity_threshold", "activityThreshold", 0, 127,
+                                  settings.activityThreshold);
             } else if (efObj.containsKey("activityThreshold")) {
                 settings.activityThreshold =
-                    static_cast<uint8_t>(efObj["activityThreshold"].as<int>());
+                    readClampedU8(efObj, "activity_threshold", "activityThreshold", 0, 127,
+                                  settings.activityThreshold);
             }
             if (efObj.containsKey("gain_target")) {
-                settings.gainTarget = static_cast<uint8_t>(efObj["gain_target"].as<int>());
+                settings.gainTarget =
+                    readClampedU8(efObj, "gain_target", "gainTarget", 0, 127, settings.gainTarget);
             } else if (efObj.containsKey("gainTarget")) {
-                settings.gainTarget = static_cast<uint8_t>(efObj["gainTarget"].as<int>());
+                settings.gainTarget =
+                    readClampedU8(efObj, "gain_target", "gainTarget", 0, 127, settings.gainTarget);
             }
         }
 
@@ -922,8 +1011,11 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                                                    : envelopeFollowers.front().getFilterType();
         EnvelopeFollower::FilterType filterType =
             parseFilterType(filterObj["type"].as<const char *>(), current);
-        float freq = constrain(filterObj["freq"].as<float>(), 20.0f, 5000.0f);
-        float q = constrain(filterObj["q"].as<float>(), 0.5f, 4.0f);
+        float freq =
+            constrain(readFloatField(filterObj, "freq", "frequency", EF_FILTER_FREQ_MIN_HZ),
+                      EF_FILTER_FREQ_MIN_HZ, EF_FILTER_FREQ_MAX_HZ);
+        float q = constrain(readFloatField(filterObj, "q", "q", EF_FILTER_Q_MIN), EF_FILTER_Q_MIN,
+                            EF_FILTER_Q_MAX);
 
         SlotEnvelopePayload tailPayload{};
         tailPayload.filterType = static_cast<uint8_t>(filterType);
@@ -968,14 +1060,25 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
     if (config.containsKey("led") && config["led"].is<JsonObject>()) {
         JsonObject ledObj = config["led"].as<JsonObject>();
-        uint8_t brightness = constrain(ledObj["brightness"].as<int>(), 0, 255);
+        uint8_t brightness = ledManager.getBrightness();
+        if (ledObj.containsKey("brightness")) {
+            brightness = readClampedU8(ledObj, "brightness", "brightness", 0, 255, brightness);
+        }
         CRGB color = ledManager.getColor();
         const char *hex = ledObj["color"].as<const char *>();
+        if (!hex) {
+            hex = ledObj["hex"].as<const char *>();
+        }
         if (hex) {
             CRGB parsed;
             if (parseHexColor(hex, parsed)) {
                 color = parsed;
             }
+        } else if (ledObj.containsKey("rgb") && ledObj["rgb"].is<JsonObject>()) {
+            JsonObject rgb = ledObj["rgb"].as<JsonObject>();
+            color.r = readClampedU8(rgb, "r", "r", 0, 255, color.r);
+            color.g = readClampedU8(rgb, "g", "g", 0, 255, color.g);
+            color.b = readClampedU8(rgb, "b", "b", 0, 255, color.b);
         }
         ledManager.setBrightness(brightness);
         ledManager.setColor(color);
@@ -1263,9 +1366,12 @@ void handleSetAllCommand(const ParsedCommand &cmd) {
     if (seq == 0) {
         seq = bulkConfigAssembler.sequenceHint();
     }
-    const char *checksum = doc["checksum"] | nullptr;
-    if (!checksum || checksum[0] == '\0') {
-        emitBulkError("checksum", "missing checksum", seq);
+    const char *configId = doc["config_id"] | nullptr;
+    if (!configId || configId[0] == '\0') {
+        configId = doc["checksum"] | nullptr;
+    }
+    if (!configId || configId[0] == '\0') {
+        emitBulkError("checksum", "missing checksum/config_id", seq);
         bulkConfigAssembler.reset();
         return;
     }
@@ -1274,8 +1380,8 @@ void handleSetAllCommand(const ParsedCommand &cmd) {
         seq = lastAckSequence + 1;
     }
 
-    if (seq == lastAckSequence && lastAckChecksum == checksum) {
-        LOG_PRINTLN(Utility::formatAck(checksum, seq));
+    if (seq == lastAckSequence && lastAckChecksum == configId) {
+        LOG_PRINTLN(Utility::formatAck(configId, seq));
         bulkConfigAssembler.reset();
         return;
     }
@@ -1287,8 +1393,8 @@ void handleSetAllCommand(const ParsedCommand &cmd) {
     }
 
     lastAckSequence = seq;
-    lastAckChecksum = checksum;
-    LOG_PRINTLN(Utility::formatAck(checksum, seq));
+    lastAckChecksum = configId;
+    LOG_PRINTLN(Utility::formatAck(configId, seq));
     bulkConfigAssembler.reset();
 }
 

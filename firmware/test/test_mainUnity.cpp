@@ -44,6 +44,7 @@ void test_sysex_template_config_mutation_stays_valid();
 void test_bulk_config_assembler_handles_chunks();
 void test_bulk_config_assembler_detects_overflow();
 void test_format_ack_includes_checksum_and_seq();
+void test_device_schema_advertises_runtime_controls();
 void test_bulk_config_accepts_numeric_slot_type();
 void test_bulk_config_accepts_wider_numeric_slot_type();
 void test_bulk_config_accepts_integral_float_slot_type();
@@ -127,6 +128,7 @@ void setup() {
     RUN_TEST(test_bulk_config_assembler_handles_chunks);
     RUN_TEST(test_bulk_config_assembler_detects_overflow);
     RUN_TEST(test_format_ack_includes_checksum_and_seq);
+    RUN_TEST(test_device_schema_advertises_runtime_controls);
     RUN_TEST(test_bulk_config_accepts_numeric_slot_type);
     RUN_TEST(test_bulk_config_accepts_wider_numeric_slot_type);
     RUN_TEST(test_bulk_config_accepts_integral_float_slot_type);

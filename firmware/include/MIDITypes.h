@@ -122,6 +122,14 @@ struct MIDISlot {
 };
 
 constexpr uint8_t NUM_SLOTS = 42;
+inline constexpr uint8_t EF_OVERSAMPLE_MIN = 1;
+inline constexpr uint8_t EF_OVERSAMPLE_MAX = 32;
+inline constexpr uint16_t EF_TIME_MIN_MS = 1;
+inline constexpr uint16_t EF_TIME_MAX_MS = 60000;
+inline constexpr float EF_FILTER_FREQ_MIN_HZ = 20.0f;
+inline constexpr float EF_FILTER_FREQ_MAX_HZ = 5000.0f;
+inline constexpr float EF_FILTER_Q_MIN = 0.5f;
+inline constexpr float EF_FILTER_Q_MAX = 4.0f;
 
 // The slot struct picked up a richer envelope follower payload which nudged it
 // past the original 64-byte budget. We still guard the footprint, but give it a

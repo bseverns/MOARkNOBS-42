@@ -331,7 +331,10 @@ void Utility::BulkConfigAssembler::refreshHints() {
     }
 
     if (checksum.length() == 0) {
-        int key = buffer.indexOf("\"checksum\"");
+        int key = buffer.indexOf("\"config_id\"");
+        if (key < 0) {
+            key = buffer.indexOf("\"checksum\"");
+        }
         if (key >= 0) {
             int colon = buffer.indexOf(':', key);
             if (colon >= 0) {

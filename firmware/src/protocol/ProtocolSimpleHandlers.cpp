@@ -43,7 +43,8 @@ void handleGetBrownoutsCommand(const String &command) {
 
 void handleGetConfigCommand(const String &command) {
     (void)command;
-    StaticJsonDocument<8192> doc;
+    static StaticJsonDocument<16384> doc;
+    doc.clear();
 
     doc["fw_version"] = FW_VERSION_STR;
     doc["schema_version"] = CONFIG_VERSION;
@@ -167,9 +168,25 @@ void handleGetConfigCommand(const String &command) {
     float q = 0.0f;
     ConfigManager::getStorageBackend()->readBytes(EEPROM_FILTER_FREQ, &freq, sizeof(freq));
     ConfigManager::getStorageBackend()->readBytes(EEPROM_FILTER_Q, &q, sizeof(q));
-    JsonObject filter = env.createNestedObject("filter");
-    filter["frequency"] = freq;
-    filter["q"] = q;
+    EnvelopeFollower::FilterType currentFilter = envelopeFollowers.empty()
+                                                     ? EnvelopeFollower::LINEAR
+                                                     : envelopeFollowers.front().getFilterType();
+    JsonObject envFilter = env.createNestedObject("filter");
+    envFilter["type"] = envelopeFilterName(currentFilter);
+    envFilter["frequency"] = freq;
+    envFilter["q"] = q;
+
+    JsonObject rootFilter = doc.createNestedObject("filter");
+    rootFilter["type"] = envelopeFilterName(currentFilter);
+    rootFilter["freq"] = freq;
+    rootFilter["q"] = q;
+
+    JsonObject rootArg = doc.createNestedObject("arg");
+    rootArg["method"] = argMethodName(storedMethod);
+    rootArg["method_index"] = storedMethod;
+    rootArg["a"] = configManager.getEnvelopeA();
+    rootArg["b"] = configManager.getEnvelopeB();
+    rootArg["enable"] = configManager.getARGEnable() != 0;
 
     JsonObject led = doc.createNestedObject("led");
     led["brightness"] = ledManager.getBrightness();
@@ -180,8 +197,14 @@ void handleGetConfigCommand(const String &command) {
     colorObj["b"] = color.b;
     char hex[8];
     snprintf(hex, sizeof(hex), "#%02X%02X%02X", color.r, color.g, color.b);
+    led["color"] = hex;
     led["hex"] = hex;
     led["mode"] = ledModeToString(configManager.getLedMode());
+
+    if (doc.overflowed()) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_CONFIG\"}");
+        return;
+    }
 
     String payload;
     serializeJson(doc, payload);
@@ -215,8 +238,13 @@ void handleGetLedCommand(const String &command) {
 
 void handleGetManifestCommand(const String &command) {
     (void)command;
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<512> doc;
     writeManifestFields(doc.to<JsonObject>());
+
+    if (doc.overflowed()) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_MANIFEST\"}");
+        return;
+    }
 
     String payload;
     serializeJson(doc, payload);

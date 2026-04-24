@@ -64,4 +64,10 @@ void writeManifestFields(JsonObject object) {
     capabilities["profile_reset"] = true;
     capabilities["macro_snapshot"] = true;
     capabilities["scenes"] = true;
+    capabilities["device_schema"] = true;
+    capabilities["bulk_config"] = true;
+
+    JsonObject hostRoles = object.createNestedObject("host_roles");
+    hostRoles["configurator"] = "convenience";
+    hostRoles["bridge"] = "transport_required";
 }

@@ -2,6 +2,7 @@
 #include <unity.h>
 
 #include "Utility.h"
+#include "ConfigManager.h"
 #include "MIDITypes.h"
 #include "MIDIHandler.h"
 #include "TimeStub.h"
@@ -77,6 +78,23 @@ void test_format_ack_includes_checksum_and_seq() {
     String ack = Utility::formatAck("cafebabe", 42);
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"checksum\":\"cafebabe\""));
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"seq\":42"));
+}
+
+void test_device_schema_advertises_runtime_controls() {
+    String schema = ConfigManager::makeSchema();
+    StaticJsonDocument<12288> doc;
+    DeserializationError err = deserializeJson(doc, schema);
+    TEST_ASSERT_FALSE(err);
+    TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, doc["schema_version"].as<uint16_t>());
+
+    JsonObject props = doc["properties"].as<JsonObject>();
+    TEST_ASSERT_TRUE(props["slots"].is<JsonObject>());
+    TEST_ASSERT_TRUE(props["efSlots"].is<JsonObject>());
+    TEST_ASSERT_TRUE(props["filter"].is<JsonObject>());
+    TEST_ASSERT_TRUE(props["arg"].is<JsonObject>());
+    TEST_ASSERT_TRUE(props["led"].is<JsonObject>());
+    TEST_ASSERT_EQUAL_INT(NUM_SLOTS, props["slots"]["minItems"].as<int>());
+    TEST_ASSERT_EQUAL_INT(NUM_ENVELOPES, props["efSlots"]["minItems"].as<int>());
 }
 
 // Slot types can arrive as raw uint8_t values; make sure we preserve the enum

@@ -81,10 +81,10 @@ template <typename T> void storagePut(int address, const T &value) {
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
 constexpr uint16_t kProfileSettingsVersion = PROFILE_SETTINGS_VERSION;
-constexpr float kMinFilterFrequency = 20.0f;
-constexpr float kMaxFilterFrequency = 5000.0f;
-constexpr float kMinFilterQ = 0.5f;
-constexpr float kMaxFilterQ = 4.0f;
+constexpr float kMinFilterFrequency = EF_FILTER_FREQ_MIN_HZ;
+constexpr float kMaxFilterFrequency = EF_FILTER_FREQ_MAX_HZ;
+constexpr float kMinFilterQ = EF_FILTER_Q_MIN;
+constexpr float kMaxFilterQ = EF_FILTER_Q_MAX;
 constexpr int kUnassignedEnvelope = -1;
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
@@ -180,9 +180,9 @@ MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     }
     SlotEnvelopePayload payload = sanitizeEnvelopePayloadImpl(settingsToPayload(sanitized));
     applyPayloadToSettings(payload, sanitized);
-    if (sanitized.oversample == 0) {
-        sanitized.oversample = 1;
-    }
+    sanitized.oversample = static_cast<uint8_t>(constrain(static_cast<int>(sanitized.oversample),
+                                                          static_cast<int>(EF_OVERSAMPLE_MIN),
+                                                          static_cast<int>(EF_OVERSAMPLE_MAX)));
     if (!std::isfinite(sanitized.smoothing)) {
         sanitized.smoothing = 0.2f;
     }
@@ -203,11 +203,21 @@ MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     sanitized.gateHysteresis = constrain(sanitized.gateHysteresis, 0, 127);
     sanitized.activityThreshold = constrain(sanitized.activityThreshold, 0, 127);
     sanitized.gainTarget = constrain(sanitized.gainTarget, 0, 127);
-    sanitized.attackMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.attackMs));
-    sanitized.releaseMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.releaseMs));
-    sanitized.rmsWindowMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.rmsWindowMs));
-    sanitized.baselineTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.baselineTauMs));
-    sanitized.gainTauMs = static_cast<uint16_t>(std::max<uint16_t>(1, sanitized.gainTauMs));
+    sanitized.attackMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.attackMs),
+                                                         static_cast<int>(EF_TIME_MIN_MS),
+                                                         static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.releaseMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.releaseMs),
+                                                          static_cast<int>(EF_TIME_MIN_MS),
+                                                          static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.rmsWindowMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.rmsWindowMs),
+                                                            static_cast<int>(EF_TIME_MIN_MS),
+                                                            static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.baselineTauMs = static_cast<uint16_t>(
+        constrain(static_cast<int>(sanitized.baselineTauMs), static_cast<int>(EF_TIME_MIN_MS),
+                  static_cast<int>(EF_TIME_MAX_MS)));
+    sanitized.gainTauMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.gainTauMs),
+                                                          static_cast<int>(EF_TIME_MIN_MS),
+                                                          static_cast<int>(EF_TIME_MAX_MS)));
     return sanitized;
 }
 
@@ -682,11 +692,13 @@ void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
 }
 
 void ConfigManager::setLedMode(LedMode mode) {
-    _stored.ledMode = static_cast<uint8_t>(mode);
+    _stored.ledMode = static_cast<uint8_t>(sanitizeLedMode(mode));
     storageUpdate(EEPROM_LED_MODE, _stored.ledMode);
 }
 
-LedMode ConfigManager::getLedMode() const { return static_cast<LedMode>(_stored.ledMode); }
+LedMode ConfigManager::getLedMode() const {
+    return sanitizeLedMode(static_cast<LedMode>(_stored.ledMode));
+}
 
 // Reset configuration to defaults
 void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
@@ -768,26 +780,136 @@ uint8_t ConfigManager::getEnvelopeB() const {
 }
 
 String ConfigManager::makeSchema() {
-    const uint8_t count = NUM_POTS;
+    String s;
+    s.reserve(7600);
+    s += "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",";
+    s += "\"schema_version\":";
+    s += String(CONFIG_VERSION);
+    s += ",\"title\":\"MOARkNOBS Runtime Configuration\",";
+    s += "\"type\":\"object\",";
+    s += "\"x_mn42\":{\"authority\":\"device\",";
+    s += "\"configurator\":\"convenience editor for staged user input\",";
+    s += "\"bridge\":\"required when USB/WebSerial transport is unavailable or host integration "
+         "needs it\"},";
+    s += "\"required\":[\"slots\",\"efSlots\",\"filter\",\"arg\",\"led\"],";
+    s += "\"properties\":{";
 
-    String s = "{";
-    s += "\"type\": \"object\",";
-    s += "\"properties\": {";
-    s += "\"pots\": {";
-    s += "\"type\": \"array\",";
-    s += "\"items\": {\"type\": \"number\"},";
-    s += "\"count\": ";
-    s += String(count);
-    s += ",";
-    s += "\"minItems\": ";
-    s += String(count);
-    s += ",";
-    s += "\"maxItems\": ";
-    s += String(count);
-    s += "}";
-    s += "}"; // properties
-    s += "}"; // root object
+    s += "\"slots\":{\"type\":\"array\",\"title\":\"Slot Configuration\",";
+    s += "\"description\":\"Primary knob-to-MIDI mapping for each slot.\",\"minItems\":";
+    s += String(static_cast<int>(NUM_SLOTS));
+    s += ",\"maxItems\":";
+    s += String(static_cast<int>(NUM_SLOTS));
+    s += ",\"items\":{\"type\":\"object\",";
+    s += "\"required\":[\"type\",\"midiChannel\",\"data1\",\"efIndex\",\"active\"],";
+    s += "\"properties\":{";
+    s += "\"type\":{\"type\":\"string\",\"title\":\"Knob -> MIDI message\",";
+    s += "\"enum\":[\"OFF\",\"CC\",\"Note\",\"PitchBend\",\"ProgramChange\",\"Aftertouch\",";
+    s += "\"ModWheel\",\"NRPN\",\"RPN\",\"SysEx\"]},";
+    s += "\"midiChannel\":{\"type\":\"integer\",\"title\":\"MIDI "
+         "channel\",\"minimum\":1,\"maximum\":16},";
+    s += "\"data1\":{\"type\":\"integer\",\"title\":\"CC/Note "
+         "number\",\"minimum\":0,\"maximum\":127},";
+    s += "\"efIndex\":{\"type\":\"integer\",\"title\":\"Envelope follower "
+         "index\",\"minimum\":-1,\"maximum\":";
+    s += String(static_cast<int>(NUM_ENVELOPES - 1));
+    s += "},";
+    s += "\"ef\":{\"type\":\"object\",\"title\":\"Envelope Follower (EF)\",";
+    s += "\"required\":[\"index\",\"filter_index\",\"filter_name\",\"frequency\",\"q\",";
+    s += "\"oversample\",\"smoothing\",\"baseline\",\"gain\"],\"properties\":{";
+    s += "\"index\":{\"type\":\"integer\",\"minimum\":-1,\"maximum\":";
+    s += String(static_cast<int>(NUM_ENVELOPES - 1));
+    s += "},";
+    s += "\"filter_index\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":6},";
+    s += "\"filter_name\":{\"type\":\"string\",\"enum\":[\"LINEAR\",\"OPPOSITE_LINEAR\",";
+    s += "\"EXPONENTIAL\",\"RANDOM\",\"LOWPASS\",\"HIGHPASS\",\"BANDPASS\"]},";
+    s += "\"frequency\":{\"type\":\"number\",\"minimum\":";
+    s += String(EF_FILTER_FREQ_MIN_HZ, 1);
+    s += ",\"maximum\":";
+    s += String(EF_FILTER_FREQ_MAX_HZ, 1);
+    s += "},";
+    s += "\"q\":{\"type\":\"number\",\"minimum\":";
+    s += String(EF_FILTER_Q_MIN, 2);
+    s += ",\"maximum\":";
+    s += String(EF_FILTER_Q_MAX, 1);
+    s += "},";
+    s += "\"oversample\":{\"type\":\"integer\",\"minimum\":";
+    s += String(static_cast<int>(EF_OVERSAMPLE_MIN));
+    s += ",\"maximum\":";
+    s += String(static_cast<int>(EF_OVERSAMPLE_MAX));
+    s += "},";
+    s += "\"smoothing\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1},";
+    s += "\"baseline\":{\"type\":\"number\"},\"gain\":{\"type\":\"number\"}},";
+    s += "\"additionalProperties\":true},";
+    s += "\"active\":{\"type\":\"boolean\",\"title\":\"Enabled\"},";
+    s += "\"sysexTemplate\":{\"type\":\"string\",\"title\":\"SysEx template\",\"maxLength\":128},";
+    s += "\"arg\":{\"type\":\"object\",\"title\":\"Follower Combiner (ARG)\",";
+    s += "\"required\":[\"enabled\",\"method\",\"method_name\",\"sourceA\",\"sourceB\"],";
+    s += "\"properties\":{";
+    s += "\"enabled\":{\"type\":\"boolean\"},";
+    s += "\"method\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(ARGMethod::XORR));
+    s += "},";
+    s += "\"method_name\":{\"type\":\"string\",\"enum\":[\"PLUS\",\"MIN\",\"PECK\",\"SHAV\",";
+    s += "\"SQAR\",\"BABS\",\"TABS\",\"MULT\",\"DIVI\",\"AVG\",\"XABS\",\"MAXX\",";
+    s += "\"MINN\",\"XORR\"]},";
+    s += "\"sourceA\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(NUM_ENVELOPES - 1));
+    s += "},";
+    s += "\"sourceB\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(NUM_ENVELOPES - 1));
+    s += "}},\"additionalProperties\":false}";
+    s += "},\"additionalProperties\":false}},"; // slot properties/items/slots
 
+    s += "\"efSlots\":{\"type\":\"array\",\"title\":\"Envelope Assignments\",\"minItems\":";
+    s += String(static_cast<int>(NUM_ENVELOPES));
+    s += ",\"maxItems\":";
+    s += String(static_cast<int>(NUM_ENVELOPES));
+    s += ",\"items\":{\"type\":\"object\",\"properties\":{";
+    s += "\"slot\":{\"type\":\"integer\",\"minimum\":-1,\"maximum\":";
+    s += String(static_cast<int>(NUM_SLOTS - 1));
+    s += "},";
+    s += "\"slots\":{\"type\":\"array\",\"items\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(NUM_SLOTS - 1));
+    s += "},\"uniqueItems\":true}},";
+    s += "\"anyOf\":[{\"required\":[\"slot\"]},{\"required\":[\"slots\"]}],";
+    s += "\"additionalProperties\":false}},";
+
+    s += "\"filter\":{\"type\":\"object\",\"title\":\"Follower "
+         "Filter\",\"required\":[\"type\",\"freq\",\"q\"],";
+    s += "\"properties\":{\"type\":{\"type\":\"string\",\"enum\":[\"LINEAR\",\"OPPOSITE_LINEAR\",";
+    s += "\"EXPONENTIAL\",\"RANDOM\",\"LOWPASS\",\"HIGHPASS\",\"BANDPASS\"]},";
+    s += "\"freq\":{\"type\":\"number\",\"minimum\":";
+    s += String(EF_FILTER_FREQ_MIN_HZ, 1);
+    s += ",\"maximum\":";
+    s += String(EF_FILTER_FREQ_MAX_HZ, 1);
+    s += "},";
+    s += "\"q\":{\"type\":\"number\",\"minimum\":";
+    s += String(EF_FILTER_Q_MIN, 2);
+    s += ",\"maximum\":";
+    s += String(EF_FILTER_Q_MAX, 1);
+    s += "}},\"additionalProperties\":false},";
+
+    s += "\"arg\":{\"type\":\"object\",\"title\":\"Follower Combiner (ARG)\",";
+    s += "\"required\":[\"method\",\"a\",\"b\"],\"properties\":{";
+    s += "\"method\":{\"type\":\"string\",\"enum\":[\"PLUS\",\"MIN\",\"PECK\",\"SHAV\",\"SQAR\",";
+    s += "\"BABS\",\"TABS\",\"MULT\",\"DIVI\",\"AVG\",\"XABS\",\"MAXX\",\"MINN\",\"XORR\"]},";
+    s += "\"a\":{\"type\":\"number\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(NUM_ENVELOPES - 1));
+    s += "},";
+    s += "\"b\":{\"type\":\"number\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(NUM_ENVELOPES - 1));
+    s += "},";
+    s += "\"enable\":{\"type\":\"boolean\"}},\"additionalProperties\":false},";
+
+    s += "\"led\":{\"type\":\"object\",\"title\":\"LED "
+         "Colors\",\"required\":[\"brightness\",\"color\"],";
+    s += "\"properties\":{\"brightness\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":255},";
+    s += "\"color\":{\"type\":\"string\",\"pattern\":\"^#([0-9a-fA-F]{6})$\"},";
+    s += "\"mode\":{\"type\":\"string\",\"enum\":[\"STATIC\",\"PEAK_HOLD\",\"TRAIL\",";
+    s += "\"CLOCK_PULSE\"],\"default\":\"STATIC\"}},\"additionalProperties\":false},";
+    s += "\"envelopeMode\":{\"type\":\"string\",\"enum\":[\"LINEAR\",\"EXPONENTIAL\",\"LOG\"],";
+    s += "\"default\":\"LINEAR\"}";
+    s += "},\"additionalProperties\":false}";
     return s;
 }
 

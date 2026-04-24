@@ -10,6 +10,21 @@
 #include "Modes.h"
 
 namespace {
+uint8_t clampedU8(JsonObject obj, const char *key, int minValue, int maxValue, uint8_t fallback) {
+    if (!obj.containsKey(key)) {
+        return fallback;
+    }
+    return static_cast<uint8_t>(constrain(obj[key].as<int>(), minValue, maxValue));
+}
+
+uint16_t clampedU16(JsonObject obj, const char *key, int minValue, int maxValue,
+                    uint16_t fallback) {
+    if (!obj.containsKey(key)) {
+        return fallback;
+    }
+    return static_cast<uint16_t>(constrain(obj[key].as<int>(), minValue, maxValue));
+}
+
 bool parseProfileEf(JsonObject obj, ProfileEfSettings &out) {
     if (obj.isNull()) {
         return false;
@@ -26,31 +41,36 @@ bool parseProfileEf(JsonObject obj, ProfileEfSettings &out) {
         out.autoGain = obj["auto_gain"].as<bool>() ? 1 : 0;
     }
     if (obj.containsKey("attack_ms")) {
-        out.attackMs = static_cast<uint16_t>(obj["attack_ms"].as<int>());
+        out.attackMs = clampedU16(obj, "attack_ms", static_cast<int>(EF_TIME_MIN_MS),
+                                  static_cast<int>(EF_TIME_MAX_MS), out.attackMs);
     }
     if (obj.containsKey("release_ms")) {
-        out.releaseMs = static_cast<uint16_t>(obj["release_ms"].as<int>());
+        out.releaseMs = clampedU16(obj, "release_ms", static_cast<int>(EF_TIME_MIN_MS),
+                                   static_cast<int>(EF_TIME_MAX_MS), out.releaseMs);
     }
     if (obj.containsKey("rms_ms")) {
-        out.rmsWindowMs = static_cast<uint16_t>(obj["rms_ms"].as<int>());
+        out.rmsWindowMs = clampedU16(obj, "rms_ms", static_cast<int>(EF_TIME_MIN_MS),
+                                     static_cast<int>(EF_TIME_MAX_MS), out.rmsWindowMs);
     }
     if (obj.containsKey("baseline_tau_ms")) {
-        out.baselineTauMs = static_cast<uint16_t>(obj["baseline_tau_ms"].as<int>());
+        out.baselineTauMs = clampedU16(obj, "baseline_tau_ms", static_cast<int>(EF_TIME_MIN_MS),
+                                       static_cast<int>(EF_TIME_MAX_MS), out.baselineTauMs);
     }
     if (obj.containsKey("gain_tau_ms")) {
-        out.gainTauMs = static_cast<uint16_t>(obj["gain_tau_ms"].as<int>());
+        out.gainTauMs = clampedU16(obj, "gain_tau_ms", static_cast<int>(EF_TIME_MIN_MS),
+                                   static_cast<int>(EF_TIME_MAX_MS), out.gainTauMs);
     }
     if (obj.containsKey("gate_threshold")) {
-        out.gateThreshold = static_cast<uint8_t>(obj["gate_threshold"].as<int>());
+        out.gateThreshold = clampedU8(obj, "gate_threshold", 0, 127, out.gateThreshold);
     }
     if (obj.containsKey("gate_hysteresis")) {
-        out.gateHysteresis = static_cast<uint8_t>(obj["gate_hysteresis"].as<int>());
+        out.gateHysteresis = clampedU8(obj, "gate_hysteresis", 0, 127, out.gateHysteresis);
     }
     if (obj.containsKey("activity_threshold")) {
-        out.activityThreshold = static_cast<uint8_t>(obj["activity_threshold"].as<int>());
+        out.activityThreshold = clampedU8(obj, "activity_threshold", 0, 127, out.activityThreshold);
     }
     if (obj.containsKey("gain_target")) {
-        out.gainTarget = static_cast<uint8_t>(obj["gain_target"].as<int>());
+        out.gainTarget = clampedU8(obj, "gain_target", 0, 127, out.gainTarget);
     }
     return true;
 }
@@ -88,32 +108,35 @@ void handleSetProfilePayloadCommand(const String &command) {
     if (root.containsKey("arp")) {
         JsonObject arp = root["arp"].as<JsonObject>();
         if (arp.containsKey("length_ticks")) {
-            profile.arp.lengthTicks = static_cast<uint8_t>(arp["length_ticks"].as<int>());
+            profile.arp.lengthTicks =
+                clampedU8(arp, "length_ticks", 1, 255, profile.arp.lengthTicks);
         }
         if (arp.containsKey("shape")) {
-            profile.arp.shape = static_cast<uint8_t>(arp["shape"].as<int>());
+            profile.arp.shape = clampedU8(arp, "shape", 0, 255, profile.arp.shape);
         }
         if (arp.containsKey("swing_percent")) {
-            profile.arp.swingPercent = static_cast<uint8_t>(arp["swing_percent"].as<int>());
+            profile.arp.swingPercent =
+                clampedU8(arp, "swing_percent", 0, 80, profile.arp.swingPercent);
         }
         if (arp.containsKey("gate_percent")) {
-            profile.arp.gatePercent = static_cast<uint8_t>(arp["gate_percent"].as<int>());
+            profile.arp.gatePercent =
+                clampedU8(arp, "gate_percent", 5, 100, profile.arp.gatePercent);
         }
         if (arp.containsKey("octave_range")) {
-            profile.arp.octaveRange = static_cast<uint8_t>(arp["octave_range"].as<int>());
+            profile.arp.octaveRange = clampedU8(arp, "octave_range", 0, 3, profile.arp.octaveRange);
         }
     }
 
     if (root.containsKey("led")) {
         JsonObject led = root["led"].as<JsonObject>();
         if (led.containsKey("brightness")) {
-            profile.led.brightness = static_cast<uint8_t>(led["brightness"].as<int>());
+            profile.led.brightness = clampedU8(led, "brightness", 0, 255, profile.led.brightness);
         }
         if (led.containsKey("rgb")) {
             JsonObject rgb = led["rgb"].as<JsonObject>();
-            profile.led.r = static_cast<uint8_t>(rgb["r"].as<int>());
-            profile.led.g = static_cast<uint8_t>(rgb["g"].as<int>());
-            profile.led.b = static_cast<uint8_t>(rgb["b"].as<int>());
+            profile.led.r = clampedU8(rgb, "r", 0, 255, profile.led.r);
+            profile.led.g = clampedU8(rgb, "g", 0, 255, profile.led.g);
+            profile.led.b = clampedU8(rgb, "b", 0, 255, profile.led.b);
         }
     }
 
@@ -172,7 +195,8 @@ void handleSetProfilePayloadCommand(const String &command) {
                 continue;
             }
             if (slot.containsKey("channel")) {
-                profile.slots[index].midiChannel = static_cast<uint8_t>(slot["channel"].as<int>());
+                profile.slots[index].midiChannel =
+                    clampedU8(slot, "channel", 1, 16, profile.slots[index].midiChannel);
             }
             if (slot.containsKey("ef")) {
                 JsonObject ef = slot["ef"].as<JsonObject>();
