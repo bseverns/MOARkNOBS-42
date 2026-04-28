@@ -11,28 +11,7 @@ pio run -e teensy40_main
 
 The repo-root `platformio.ini` is only a guard that rejects accidental root-level builds.
 
-## Configuration Authority
-
-The firmware is the source of truth for user configuration. A user can configure the
-machine with hardware controls and the serial protocol; the browser configurator is
-the convenient editor, and the bridge is only required when the host workflow needs a
-transport the board cannot provide directly.
-
-- `GET_MANIFEST` reports firmware identity, counts, and capabilities.
-- `GET_SCHEMA` reports the device-owned runtime config contract for `slots`,
-  `efSlots`, `filter`, `arg`, and `led`.
-- `GET_CONFIG` reports the current device state in a shape that can be staged,
-  edited, and applied back through `SET_ALL`.
-- `SET_ALL` accepts chunked JSON with a `checksum` or `config_id` acknowledgement
-  token; the firmware still clamps and sanitizes incoming values before persistence.
-- `SET_SLOT_VALUE` is intentionally live-only. Use `SET_POT`, `SET_PROFILE`, or
-  `SET_ALL` for changes that should survive reboot.
-
-Use the configurator when a person benefits from a visual staged editor. Use the
-bridge when WebSerial/USB access is not enough, such as full-stack bench automation,
-host integration, or non-browser transport.
-
-## Kept Firmware Environments
+## Firmware Environments
 
 - `teensy40_main` for the current prototype firmware build
 - `teensy40_full_system` for bridge-connected full-stack bench validation
