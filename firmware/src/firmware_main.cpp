@@ -23,8 +23,6 @@ void loop() {
     Utility::schedulerHigh.update();
     Utility::schedulerMid.update();
     Utility::schedulerLow.update();
-    buttonManager.processButtons(buttonContext);
-    potentiometerManager.processPots(ledAnimator, envelopeFollowers);
     if (g_profileChangeRequested) {
         ProfileData profile{};
         if (configManager.loadProfileSettings(g_activeProfile, profile)) {

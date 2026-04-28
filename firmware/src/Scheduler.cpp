@@ -43,6 +43,14 @@ void initializeSchedulers() {
     Utility::schedulerMid.addTask(processCommandQueue, hwConfig.serialTaskInterval, true);
     Utility::schedulerMid.addTask(processEnvelopes, hwConfig.envelopeTaskInterval, true);
 
+    // Throttle hardware scanning to prevent USB starvation on the unthrottled main loop.
+    Utility::schedulerMid.addTask(
+        []() {
+            buttonManager.processButtons(buttonContext);
+            potentiometerManager.processPots(ledAnimator, envelopeFollowers);
+        },
+        2, true);
+
     // Low-priority visual updates, diagnostics, and WebSerial telemetry.
     Utility::schedulerLow.addTask(
         []() {
