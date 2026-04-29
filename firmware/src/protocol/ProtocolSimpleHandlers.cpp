@@ -43,7 +43,7 @@ void handleGetBrownoutsCommand(const String &command) {
 
 void handleGetConfigCommand(const String &command) {
     (void)command;
-    static StaticJsonDocument<16384> doc;
+    static StaticJsonDocument<65536> doc;
     doc.clear();
 
     doc["fw_version"] = FW_VERSION_STR;

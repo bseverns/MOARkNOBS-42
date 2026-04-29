@@ -144,6 +144,7 @@ class LEDManager {
     uint16_t laneLength = 0;
     std::map<std::string, std::vector<uint16_t>> ledGroups;
     std::vector<bool> dirtyFlags;
+    bool initialized = false;
     uint8_t modeDisplay;
     uint8_t activePot;
     bool envelopeModeActive;

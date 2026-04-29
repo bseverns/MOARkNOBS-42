@@ -22,6 +22,9 @@ constexpr unsigned long kStartupRandomFlashOutMs = 300UL;
 constexpr unsigned long kStartupWhiteSweepStartMs = 4000UL;
 constexpr unsigned long kStartupWhiteStepMs = 50UL;
 constexpr unsigned long kStartupHoldMs = 500UL;
+constexpr bool kLedHardwareEnabled = true;
+constexpr bool kDisplayHardwareEnabled = false;
+constexpr bool kStartupLedAnimationEnabled = true;
 constexpr unsigned long kControlOverlayHoldMs = 900UL;
 constexpr unsigned long kFilterPersistIdleMs = 900UL;
 constexpr unsigned long kFilterPersistMinIntervalMs = 500UL;
@@ -294,14 +297,17 @@ void initializeUI() {
     pinMode(hwConfig.statusLedPin, OUTPUT);
     digitalWrite(hwConfig.statusLedPin, LOW);
 
-    ledManager.begin();
+    if (kLedHardwareEnabled) {
+        ledManager.begin();
+    }
     uint8_t ledB;
     CRGB ledC;
     configManager.loadLEDSettings(ledB, ledC);
-    ledManager.setBrightness(ledB);
+    constexpr uint8_t kUsbSafeStartupBrightness = 8;
+    ledManager.setBrightness(std::min<uint8_t>(ledB, kUsbSafeStartupBrightness));
     ledManager.setColor(ledC);
 
-    const bool displayReady = displayManager.begin();
+    const bool displayReady = kDisplayHardwareEnabled && displayManager.begin();
     if (displayReady) {
         displayManager.showText("Initializing...");
     } else {
@@ -331,15 +337,19 @@ bool runStartupSequenceStep() {
         gStartupSequence.started = true;
         gStartupSequence.startMs = millis();
         gStartupSequence.randomPhase = StartupRandomPhase::Unknown;
-        gStartupSequence.whiteLit = 0;
-        seedStartupColors(NUM_LEDS());
-        ledManager.setAll(CRGB::Black);
+        gStartupSequence.whiteLit = kStartupLedAnimationEnabled ? 0 : NUM_LEDS();
+        if (kStartupLedAnimationEnabled) {
+            seedStartupColors(NUM_LEDS());
+            ledManager.setAll(CRGB::Black);
+        }
         displayManager.clear();
     }
 
     const unsigned long elapsedMs = millis() - gStartupSequence.startMs;
-    updateRandomLedStartup(elapsedMs);
-    updateWhiteSweep(elapsedMs);
+    if (kStartupLedAnimationEnabled) {
+        updateRandomLedStartup(elapsedMs);
+        updateWhiteSweep(elapsedMs);
+    }
     displayManager.runStartupAnimation();
 
     const uint16_t ledCount = NUM_LEDS();

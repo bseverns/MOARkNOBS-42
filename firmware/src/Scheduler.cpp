@@ -69,6 +69,9 @@ void initializeSchedulers() {
 
     Utility::schedulerLow.addTask(
         []() {
+            if (!displayManager.isReady()) {
+                return;
+            }
             if (runStartupSequenceStep()) {
                 return;
             }

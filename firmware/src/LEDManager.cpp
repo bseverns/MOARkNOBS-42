@@ -25,18 +25,21 @@ LEDManager::LEDManager(const HardwareConfig &config)
     constexpr size_t kLaneCount = 8;
     octoLanes.resize(static_cast<size_t>(laneLength) * kLaneCount, CRGB::Black);
 
-    // OctoWS2811 fans data across eight parallel lanes. Only lane 4 is wired
-    // in this rig, but we keep the other slots zeroed so the DMA bus stays
-    // quiet.
-    FastLED.addLeds<OCTOWS2811>(octoLanes.data(), laneLength).setCorrection(TypicalLEDStrip);
-
     std::fill(leds.begin(), leds.end(), CRGB::Black);
-    presentFrame();
 }
 
 // Legacy begin hook retained so callers can treat LEDManager like other hardware modules.
 void LEDManager::begin() {
-    // Initialization now handled in constructor
+    if (initialized) {
+        return;
+    }
+
+    // OctoWS2811 fans data across eight parallel lanes. Only lane 4 is wired
+    // in this rig, but we keep the other slots zeroed so the DMA bus stays
+    // quiet.
+    FastLED.addLeds<OCTOWS2811>(octoLanes.data(), laneLength).setCorrection(TypicalLEDStrip);
+    initialized = true;
+    presentFrame();
 }
 
 // Paint one pot lane from its current MIDI value.
@@ -318,11 +321,15 @@ void LEDManager::syncToOctoBuffer() {
 }
 
 void LEDManager::presentFrame() {
+    if (!initialized)
+        return;
     syncToOctoBuffer();
     FastLED.show();
 }
 
 void LEDManager::applyBrightness() {
+    if (!initialized)
+        return;
     // Convert base brightness plus modulation into a FastLED brightness value.
     float scaled = static_cast<float>(brightness) * brightnessMod;
     if (scaled < 0.0f)
@@ -333,6 +340,8 @@ void LEDManager::applyBrightness() {
 }
 
 void LEDManager::renderWarningFrame() {
+    if (!initialized)
+        return;
     if (octoLanes.empty())
         return;
 

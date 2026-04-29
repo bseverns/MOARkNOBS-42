@@ -20,12 +20,6 @@
 #include "PerlinNoise.h"
 #include "Utility.h"
 
-#if defined(ARDUINO)
-struct HardwareConfigInitializer {
-    HardwareConfigInitializer() { loadHardwareConfig(); }
-} _hwInit;
-#endif
-
 // This source collects every bit of shared state that used to live in firmware_main.cpp.
 // Keeping the definitions here keeps the globals close to their comments while `firmware_main.cpp`
 // becomes a clean bootstrapper. The header `FirmwareState.h` exposes references so other modules
