@@ -15,6 +15,7 @@ const portsList = document.getElementById('ports');
 const portsDatalist = document.getElementById('serial-port-list');
 const logOutput = document.getElementById('logs');
 const alertHistory = document.getElementById('alert-history');
+let latestPorts = [];
 
 const statusNodes = {
   running: document.getElementById('status-running'),
@@ -98,6 +99,49 @@ function populateForm(values) {
     }
     field.value = String(value);
   }
+}
+
+function scoreSerialPort(port) {
+  const path = String(port?.path || '').toLowerCase();
+  const manufacturer = String(port?.manufacturer || '').toLowerCase();
+  const label = `${path} ${manufacturer}`;
+  if (!path) return -1;
+  if (label.includes('teensy')) return 100;
+  if (path.includes('usbmodem')) return 80;
+  if (path.includes('ttyacm') || path.includes('ttyusb')) return 70;
+  if (path.includes('usbserial')) return 60;
+  if (
+    label.includes('bluetooth') ||
+    label.includes('wlan') ||
+    label.includes('debug-console')
+  ) {
+    return 0;
+  }
+  return 10;
+}
+
+function preferredSerialPort(ports = []) {
+  return [...ports]
+    .filter((port) => port?.path)
+    .sort((a, b) => scoreSerialPort(b) - scoreSerialPort(a))[0];
+}
+
+function shouldReplaceSerialPath(current, ports = []) {
+  const value = String(current || '').trim();
+  if (!value) return true;
+  if (value === '/dev/ttyACM0') return true;
+  if (!Array.isArray(ports) || !ports.length) return false;
+  return !ports.some((port) => port?.path === value);
+}
+
+function applyPreferredSerialPort(ports = latestPorts) {
+  const field = form.elements.namedItem('serialName');
+  if (!field || !shouldReplaceSerialPath(field.value, ports)) return false;
+  const preferred = preferredSerialPort(ports);
+  if (!preferred?.path) return false;
+  field.value = preferred.path;
+  saveConfig(formValues());
+  return true;
 }
 
 // Render ISO timestamps into operator-friendly local time labels.
@@ -260,16 +304,17 @@ function updateStatus(state) {
 // Render the currently detected serial ports into both the visible list and the
 // datalist used for typed path completion.
 function renderPorts(ports) {
+  latestPorts = Array.isArray(ports) ? ports : [];
   portsList.textContent = '';
   portsDatalist.textContent = '';
-  if (!Array.isArray(ports) || !ports.length) {
+  if (!latestPorts.length) {
     const item = document.createElement('li');
     item.textContent =
       'No serial ports detected yet. You can still type a port path manually.';
     portsList.appendChild(item);
     return;
   }
-  ports.forEach((port) => {
+  latestPorts.forEach((port) => {
     const option = document.createElement('option');
     option.value = port.path;
     portsDatalist.appendChild(option);
@@ -300,6 +345,7 @@ async function refreshState() {
   const payload = await api('/api/state', { method: 'GET' });
   updateStatus(payload.state);
   populateForm(payload.state?.config);
+  applyPreferredSerialPort();
   return payload.state;
 }
 
@@ -307,11 +353,14 @@ async function refreshState() {
 async function refreshPorts() {
   const payload = await api('/api/ports', { method: 'GET' });
   renderPorts(payload.ports);
+  applyPreferredSerialPort(payload.ports);
   return payload.ports;
 }
 
 // Start the bridge with the current form values.
 async function startBridge() {
+  await refreshPorts().catch(() => {});
+  applyPreferredSerialPort();
   const values = formValues();
   saveConfig(values);
   const payload = await api('/api/connect', {
