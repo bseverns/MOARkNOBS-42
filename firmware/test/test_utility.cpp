@@ -57,6 +57,21 @@ void test_bulk_config_assembler_handles_chunks() {
     TEST_ASSERT_EQUAL_STRING("deadbeef", doc["checksum"]);
 }
 
+void test_bulk_config_assembler_resyncs_on_wrapper_start() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
+
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"seq\":1,\"checksum\":\"stale\",\"config\":", error));
+    TEST_ASSERT_TRUE(assembler.ingestChunk(
+        "{\"seq\":2,\"checksum\":\"fresh\",\"config\":{\"slots\":[]}}", error));
+
+    StaticJsonDocument<256> doc;
+    auto finalErr = deserializeJson(doc, assembler.payload());
+    TEST_ASSERT_FALSE(finalErr);
+    TEST_ASSERT_EQUAL_UINT32(2, doc["seq"].as<uint32_t>());
+    TEST_ASSERT_EQUAL_STRING("fresh", doc["checksum"]);
+}
+
 // Smash the assembler with a payload larger than the advertised capacity and
 // confirm we get a clear overflow flag instead of wrapping the buffer.
 void test_bulk_config_assembler_detects_overflow() {

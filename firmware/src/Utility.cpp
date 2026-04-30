@@ -30,6 +30,13 @@
 // Default time source; tests can override by defining their own now().
 unsigned long __attribute__((weak)) now() { return millis(); }
 
+namespace {
+bool looksLikeBulkConfigFrameStart(const String &chunk) {
+    return chunk.startsWith("{\"seq\"") || chunk.startsWith("{\"checksum\"") ||
+           chunk.startsWith("{\"config_id\"") || chunk.startsWith("{\"config\"");
+}
+} // namespace
+
 // Map a raw analog reading into the 7-bit MIDI range used by most messages.
 uint8_t Utility::mapToMidiValue(int analogValue, int minValue, int maxValue) {
     return map(analogValue, minValue, maxValue, 0, 127);
@@ -286,8 +293,12 @@ bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &erro
         return true; // Ignore empty fragments.
     }
 
-    // Detect the start of a new frame.
-    if (chunk.charAt(0) == '{') {
+    // Detect only top-level frame starts. Later chunks may legitimately begin
+    // with nested JSON objects when the browser splits the upload mid-array.
+    const bool startsObject = chunk.charAt(0) == '{';
+    const bool startsNewFrame = startsObject && (!receiving || buffer.length() == 0 ||
+                                                 looksLikeBulkConfigFrameStart(chunk));
+    if (startsNewFrame) {
         reset();
         receiving = true;
     } else if (!receiving) {

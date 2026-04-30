@@ -154,8 +154,13 @@ function chunkString(value, size) {
   const text = typeof value === 'string' ? value : String(value ?? '');
   const chunkSize = Math.max(1, Math.floor(Number(size) || 1));
   const chunks = [];
-  for (let index = 0; index < text.length; index += chunkSize) {
-    chunks.push(text.slice(index, index + chunkSize));
+  for (let index = 0; index < text.length; ) {
+    let end = Math.min(text.length, index + chunkSize);
+    if (end < text.length && text[end] === '{') {
+      end += 1;
+    }
+    chunks.push(text.slice(index, end));
+    index = end;
   }
   return chunks.length ? chunks : [''];
 }

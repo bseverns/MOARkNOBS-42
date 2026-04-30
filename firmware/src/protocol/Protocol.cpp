@@ -1352,7 +1352,6 @@ void handleSaveProfileCommand(const ParsedCommand &cmd) {
 void handleSetAllCommand(const ParsedCommand &cmd) {
     const String &command = cmd.fullCommand();
     String chunk = command.substring(8);
-    chunk.trim();
     if (chunk.length() == 0) {
         return;
     }
