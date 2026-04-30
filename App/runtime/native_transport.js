@@ -6,14 +6,21 @@ export function createTransportPort(port, options = {}, transportDeps = {}) {
   const textDecoder = makeDecoder();
   let reader;
   let writer;
+  let pipeClosed;
   let active = true;
   const lineQueue = [];
   const waiters = [];
 
   async function open() {
+    if (port.readable || port.writable) {
+      await port.close();
+    }
+    active = true;
     await port.open({ baudRate: 115200, ...options });
     const decoderStream = new TextDecoderStream();
-    port.readable.pipeTo(decoderStream.writable);
+    pipeClosed = port.readable.pipeTo(decoderStream.writable).catch((err) => {
+      if (active) throw err;
+    });
     reader = decoderStream.readable.getReader();
     writer = port.writable.getWriter();
     readLoop();
@@ -58,17 +65,40 @@ export function createTransportPort(port, options = {}, transportDeps = {}) {
     active = false;
     while (waiters.length) waiters.shift().reject(new Error('Native port closed'));
     try {
-      reader?.cancel();
+      await reader?.cancel();
     } catch (err) {
       console.debug('reader cancel', err);
+    } finally {
+      try {
+        reader?.releaseLock?.();
+      } catch (err) {
+        console.debug('reader release', err);
+      }
+      reader = null;
     }
     try {
-      writer?.close();
+      await pipeClosed;
+    } catch (err) {
+      console.debug('decoder pipe close', err);
+    } finally {
+      pipeClosed = null;
+    }
+    try {
+      await writer?.close();
     } catch (err) {
       console.debug('writer close', err);
+    } finally {
+      try {
+        writer?.releaseLock?.();
+      } catch (err) {
+        console.debug('writer release', err);
+      }
+      writer = null;
     }
     try {
-      await port.close();
+      if (port.readable || port.writable) {
+        await port.close();
+      }
     } catch (err) {
       console.debug('port close', err);
     }

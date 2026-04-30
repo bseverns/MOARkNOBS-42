@@ -198,6 +198,7 @@ export function createRuntime({
   let transport = null;
   let rpcThrottleTimer = null;
   let readLoopActive = false;
+  let closingTransport = false;
   let queuedTelemetry = null;
   let telemetryTraceId = null;
   let telemetryTimer = null;
@@ -585,8 +586,10 @@ export function createRuntime({
           const line = await transport.nextLine();
           if (line) handleLine(line);
         } catch (err) {
-          emit('error', err);
-          await disconnect();
+          if (!closingTransport) {
+            emit('error', err);
+            await disconnect();
+          }
           break;
         }
       }
@@ -841,13 +844,52 @@ export function createRuntime({
 
   async function disconnect() {
     if (!transport) return;
+    closingTransport = true;
     try {
       await transport.close();
     } finally {
       transport = null;
       readLoopActive = false;
+      closingTransport = false;
       flushRpcPending(new Error('Disconnected'));
       emit('disconnected');
+    }
+  }
+
+  async function requestConfiguratorBoot() {
+    if (useSimulator) {
+      emit('status', {
+        stage: 'config-boot',
+        level: 'warn',
+        message: 'Config boot is only available on a physical Web Serial device.'
+      });
+      return { requested: false, simulator: true };
+    }
+
+    const ownsConnection = !transport;
+    if (ownsConnection) {
+      transport = websocketUrl ? createWebSocketTransport(websocketUrl) : await requestPort();
+      hooks?.mutateTransport?.(transport);
+      await transport.open();
+      portPreferenceStore.persist(transport.rawPort);
+      startReadLoop();
+    }
+
+    try {
+      emit('status', {
+        stage: 'config-boot',
+        level: 'info',
+        message: 'Requesting one-shot configurator boot…'
+      });
+      await sendRpc({ rpc: 'enter_config_mode' }, { timeoutMs: 1500 });
+      emit('status', {
+        stage: 'config-boot',
+        level: 'ok',
+        message: 'Device is rebooting into configurator mode. Reconnect after USB reappears.'
+      });
+      return { requested: true };
+    } finally {
+      await disconnect();
     }
   }
 
@@ -883,6 +925,7 @@ export function createRuntime({
     sendMacroCommand,
     sendSceneCommand,
     requestScenes,
+    requestConfiguratorBoot,
     applyPatch,
     restoreLocalState,
     replaceConfig,

@@ -189,6 +189,10 @@ inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_START(uint8_t id) {
                                  id * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
 }
 
+inline constexpr uint16_t EEPROM_SYSTEM_FLAGS_BASE =
+    static_cast<uint16_t>(EEPROM_CONFIG_TAIL + (NUM_PROFILES - 1) * EEPROM_PROFILE_BLOCK_SIZE);
+inline constexpr uint16_t EEPROM_USB_CONFIG_BOOT_REQUEST = EEPROM_SYSTEM_FLAGS_BASE;
+
 // clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;

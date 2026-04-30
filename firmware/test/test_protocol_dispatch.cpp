@@ -1,6 +1,7 @@
 #include "unity_config.h"
 #include <unity.h>
 
+#include "BootMode.h"
 #include "ConfigManager.h"
 #include "FirmwareState.h"
 #include "Globals.h"
@@ -10,6 +11,15 @@ void test_dispatch_handles_known_command() {
     webSerialStreaming = false;
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("HELLO"));
     TEST_ASSERT_TRUE(webSerialStreaming);
+}
+
+void test_dispatch_handles_enter_config_mode_command() {
+    clearUsbConfiguratorBootRequest();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("ENTER_CONFIG_MODE"));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(BootMode::UsbConfigurator),
+                            static_cast<uint8_t>(selectBootMode()));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(BootMode::StandaloneRuntime),
+                            static_cast<uint8_t>(selectBootMode()));
 }
 
 void test_dispatch_handles_live_slot_injection_command() {

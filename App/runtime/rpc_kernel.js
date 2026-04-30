@@ -45,6 +45,8 @@ export function createRpcKernel({
         return { kind: 'config', lines: ['GET_CONFIG'] };
       case 'get_schema':
         return { kind: 'schema', lines: ['GET_SCHEMA'] };
+      case 'enter_config_mode':
+        return { kind: 'enter_config_mode', lines: ['ENTER_CONFIG_MODE'] };
       case 'save_profile':
         return { kind: 'profile_save', lines: [`SAVE_PROFILE,${Number(message.slot) || 0}`] };
       case 'load_profile':

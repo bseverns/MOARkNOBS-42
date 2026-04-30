@@ -74,6 +74,19 @@ export function createRuntimeLineHandler({
             return;
           }
           break;
+        case 'enter_config_mode':
+          if (msg.type === 'response' && msg.command === 'ENTER_CONFIG_MODE') {
+            if (msg.status === 'ok') {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            } else {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.message ?? 'Config boot request failed' }
+              });
+            }
+            return;
+          }
+          break;
         case 'profile_save':
           if (Object.prototype.hasOwnProperty.call(msg, 'profile_saved')) {
             if (msg.profile_saved) {

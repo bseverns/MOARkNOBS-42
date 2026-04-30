@@ -68,6 +68,7 @@ const boot = () => {
   const statusLabel = document.getElementById('status-label');
   const statusMessage = statusEl?.querySelector('.status-message');
   const connectBtn = document.getElementById('connect');
+  const configModeBtn = document.getElementById('config-mode');
   const applyBtn = document.getElementById('apply');
   const rollbackBtn = document.getElementById('rollback');
   const slotContainer = document.getElementById('slots');
@@ -242,6 +243,25 @@ const boot = () => {
       setConnectionBanner('disconnected', runtime.getState().manifest);
       connectFailHelp?.setAttribute('open', '');
       setStatus('err', 'Connect failed', err.message || String(err));
+    }
+  });
+
+  configModeBtn?.addEventListener('click', async () => {
+    try {
+      if (configModeBtn) configModeBtn.disabled = true;
+      setConnectionPill('handshake', 'Config boot…');
+      setConnectionBanner('handshake', runtime.getState().manifest);
+      await runtime.requestConfiguratorBoot();
+      setConnectionPill('disconnected', 'Rebooting');
+      setConnectionBanner('disconnected', runtime.getState().manifest);
+      setStatus('ok', 'Config boot', 'Reconnect after the USB device reappears.');
+    } catch (err) {
+      setConnectionPill('disconnected', 'Disconnected');
+      setConnectionBanner('disconnected', runtime.getState().manifest);
+      connectFailHelp?.setAttribute('open', '');
+      setStatus('err', 'Config boot failed', err.message || String(err));
+    } finally {
+      if (configModeBtn) configModeBtn.disabled = false;
     }
   });
 

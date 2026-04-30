@@ -66,6 +66,7 @@ void writeManifestFields(JsonObject object) {
     capabilities["scenes"] = true;
     capabilities["device_schema"] = true;
     capabilities["bulk_config"] = true;
+    capabilities["one_shot_config_boot"] = true;
 
     JsonObject hostRoles = object.createNestedObject("host_roles");
     hostRoles["configurator"] = "convenience";

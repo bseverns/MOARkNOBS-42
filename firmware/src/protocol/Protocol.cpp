@@ -13,6 +13,7 @@
 #include <algorithm>
 
 #include "ARGMixer.h"
+#include "BootMode.h"
 #include "CommandQueue.h"
 #include "ConfigManager.h"
 #include "EfSettingsUtils.h"
@@ -1157,6 +1158,7 @@ void handleGetManifestCommand(const ParsedCommand &cmd);
 void handleGetProfileCommand(const ParsedCommand &cmd);
 void handleGetSchemaCommand(const ParsedCommand &cmd);
 void handleHelloCommand(const ParsedCommand &cmd);
+void handleEnterConfigModeCommand(const ParsedCommand &cmd);
 void handleLoadProfileCommand(const ParsedCommand &cmd);
 void handleRecallMacroSlotCommand(const ParsedCommand &cmd);
 void handleResetProfileCommand(const ParsedCommand &cmd);
@@ -1172,6 +1174,7 @@ void handleSetSlotValueCommand(const ParsedCommand &cmd);
 
 // Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
+    {"ENTER_CONFIG_MODE", handleEnterConfigModeCommand},
     {"GET_ALL", handleGetAllCommand},
     {"GET_ARGMETHOD", handleGetArgMethodCommand},
     {"GET_BROWNOUTS", handleGetBrownoutsCommand},
@@ -1305,6 +1308,23 @@ void handleGetSchemaCommand(const ParsedCommand &cmd) {
 
 void handleHelloCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleHelloCommand(cmd.fullCommand());
+}
+
+void handleEnterConfigModeCommand(const ParsedCommand &cmd) {
+    (void)cmd;
+    if (!requestUsbConfiguratorBoot()) {
+        LOG_PRINTLN(
+            "{\"type\":\"response\",\"status\":\"error\",\"command\":\"ENTER_CONFIG_MODE\"}");
+        return;
+    }
+
+    LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"ENTER_CONFIG_MODE\","
+                "\"rebooting\":true}");
+    Serial.flush();
+#if !defined(UNIT_TEST)
+    delay(50);
+    Utility::rebootTeensy();
+#endif
 }
 
 void handleLoadProfileCommand(const ParsedCommand &cmd) {

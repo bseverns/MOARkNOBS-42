@@ -52,6 +52,17 @@ Full bridge/system lane:
 pio run -e teensy40_full_system -t upload
 ```
 
+Request one-shot configurator boot from a running firmware image:
+
+```text
+ENTER_CONFIG_MODE
+```
+
+`ENTER_CONFIG_MODE` stores a one-shot boot marker and reboots. The next boot enters
+USB configurator mode and consumes the marker; normal power-up defaults to the
+standalone runtime so USB MIDI remains available without opening the configurator
+or bridge first.
+
 ## Important Test Contract
 
 - PlatformIO project root is `firmware/`.
