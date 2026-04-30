@@ -120,6 +120,17 @@ function scoreSerialPort(port) {
   return 10;
 }
 
+function displaySerialPath(path) {
+  const value = String(path || '').trim();
+  if (
+    value.startsWith('/dev/tty.usbmodem') ||
+    value.startsWith('/dev/tty.usbserial')
+  ) {
+    return value.replace('/dev/tty.', '/dev/cu.');
+  }
+  return value;
+}
+
 function preferredSerialPort(ports = []) {
   return [...ports]
     .filter((port) => port?.path)
@@ -131,7 +142,9 @@ function shouldReplaceSerialPath(current, ports = []) {
   if (!value) return true;
   if (value === '/dev/ttyACM0') return true;
   if (!Array.isArray(ports) || !ports.length) return false;
-  return !ports.some((port) => port?.path === value);
+  return !ports.some(
+    (port) => port?.path === value || displaySerialPath(port?.path) === value,
+  );
 }
 
 function applyPreferredSerialPort(ports = latestPorts) {
@@ -139,7 +152,7 @@ function applyPreferredSerialPort(ports = latestPorts) {
   if (!field || !shouldReplaceSerialPath(field.value, ports)) return false;
   const preferred = preferredSerialPort(ports);
   if (!preferred?.path) return false;
-  field.value = preferred.path;
+  field.value = displaySerialPath(preferred.path);
   saveConfig(formValues());
   return true;
 }
@@ -315,12 +328,13 @@ function renderPorts(ports) {
     return;
   }
   latestPorts.forEach((port) => {
+    const value = displaySerialPath(port.path);
     const option = document.createElement('option');
-    option.value = port.path;
+    option.value = value;
     portsDatalist.appendChild(option);
 
     const item = document.createElement('li');
-    item.textContent = `${port.path}${
+    item.textContent = `${value}${
       port.manufacturer ? ` — ${port.manufacturer}` : ''
     }`;
     portsList.appendChild(item);

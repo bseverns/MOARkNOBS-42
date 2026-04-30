@@ -1,3 +1,19 @@
+const fs = require('node:fs');
+
+function normalizeSerialPath(path) {
+  const value = String(path || '').trim();
+  if (
+    value.startsWith('/dev/tty.usbmodem') ||
+    value.startsWith('/dev/tty.usbserial')
+  ) {
+    const calloutPath = value.replace('/dev/tty.', '/dev/cu.');
+    if (fs.existsSync(calloutPath)) {
+      return calloutPath;
+    }
+  }
+  return value;
+}
+
 function createSerialTransportLifecycle({
   getSerialApi,
   config,
@@ -44,8 +60,9 @@ function createSerialTransportLifecycle({
   function attachSerial() {
     const serialApi = getSerialApi();
     const { SerialPort, ReadlineParser } = serialApi || {};
+    const serialPath = normalizeSerialPath(config.serialName);
     const serial = new SerialPort({
-      path: config.serialName,
+      path: serialPath,
       baudRate: serialBaud,
     });
     setSerial(serial);
@@ -77,4 +94,5 @@ function createSerialTransportLifecycle({
 
 module.exports = {
   createSerialTransportLifecycle,
+  normalizeSerialPath,
 };

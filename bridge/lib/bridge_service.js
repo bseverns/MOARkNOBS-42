@@ -459,7 +459,10 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         hostTimestampMs: Date.now(),
       });
       setState({ serialConnected: true, lastError: null });
-      pushLog('info', `serial up on ${config.serialName} @${SERIAL_BAUD}`);
+      pushLog(
+        'info',
+        `serial up on ${serial?.path || config.serialName} @${SERIAL_BAUD}`,
+      );
       try {
         serial.write('HELLO\n');
       } catch (err) {
@@ -471,7 +474,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         code: 'serial_disconnected',
         severity: 'error',
         message: `Serial transport error: ${err.message}`,
-        details: { serialName: config.serialName },
+        details: { serialName: serial?.path || config.serialName },
         hostTimestampMs: Date.now(),
       });
       setState({
@@ -487,7 +490,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         code: 'serial_disconnected',
         severity: 'warn',
         message: 'Serial transport disconnected',
-        details: { serialName: config.serialName },
+        details: { serialName: serial?.path || config.serialName },
         hostTimestampMs: Date.now(),
       });
       setState({
