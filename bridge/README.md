@@ -2,7 +2,7 @@
 
 The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows.
 
-Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or a virtual MIDI port on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
+Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or host MIDI routing on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
 
 Current support boundary:
 
@@ -63,11 +63,11 @@ Use the browser page to:
 
 - choose or type the serial port,
 - set OSC send/listen ports,
-- set the virtual MIDI label,
+- set the MIDI port label,
 - start or stop the bridge,
 - launch the full configurator over the bridge transport.
 
-The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and virtual MIDI stay active.
+The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and MIDI routing stay active.
 
 _A second screenshot would help show the configurator launched through the bridge transport, because that path is the least obvious one from text alone._
 
@@ -127,11 +127,14 @@ Typed note example:
 oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":110}'
 ```
 
-### DAW workflow (virtual MIDI)
+### DAW workflow (host MIDI)
 
-1. Start the bridge with `--midi "MN42 Bridge"` (default label).
-2. In your DAW, enable the MIDI device named `MN42 Bridge`.
-3. Record/monitor incoming CC data or send CC data back to the bridge.
+1. Create or enable a host MIDI loopback port.
+   - macOS: open **Audio MIDI Setup > Window > Show MIDI Studio > IAC Driver**, enable **Device is online**, then add or name a bus such as `MN42 Bridge`.
+   - Windows/Linux: use an installed virtual MIDI loopback driver/port and note its exact port name.
+2. Start the bridge with `--midi "MN42 Bridge"` or set the browser console MIDI port label to the exact loopback port name.
+3. In your DAW, enable that MIDI device.
+4. Record/monitor incoming CC data or send CC data back to the bridge.
 
 This is the documented bridge contract, not a claim that every DAW has already been bench-validated in this repo pass.
 
@@ -247,7 +250,7 @@ The bridge drops messages that do not match the contract.
 | `--osc-listen`              | -     | `9000`         | UDP port for inbound OSC commands               |
 | `--host`                    | `-H`  | `127.0.0.1`    | Destination host for outbound OSC               |
 | `--bind`                    | `-b`  | `127.0.0.1`    | Local interface for inbound OSC listener        |
-| `--midi`                    | `-m`  | `MN42 Bridge`  | Virtual MIDI port label                         |
+| `--midi`                    | `-m`  | `MN42 Bridge`  | Host MIDI port label                            |
 | `--allow-feedback-loops`    | -     | `false`        | Disable MIDI telemetry-echo suppression         |
 | `--feedback-window-ms`      | -     | `120`          | Echo-suppression match window in milliseconds   |
 | `--rt-p95-target-ms`        | -     | `10`           | Warn threshold for round-trip p95 latency       |
@@ -305,9 +308,10 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 
 ### DAW cannot find `MN42 Bridge`
 
-- Restart DAW after bridge launch.
-- Check that bridge has no startup MIDI errors.
-- Try a different `--midi` label and re-scan MIDI devices.
+- Confirm the host MIDI loopback port exists before starting the bridge.
+- In the browser console, check **Detected MIDI ports** and copy the exact matching port label.
+- Restart the DAW after enabling or renaming the loopback port.
+- Check the bridge log for the available input/output names if MIDI still fails.
 
 ### Port in use errors
 

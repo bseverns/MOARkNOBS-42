@@ -131,7 +131,8 @@ dt {
 }
 
 .hero h1,
-.panel h2 {
+.panel h2,
+.panel h3 {
   margin: 0;
   font-family: var(--font-display);
   letter-spacing: 0.04em;
@@ -145,6 +146,11 @@ dt {
 
 .panel h2 {
   font-size: 1.05rem;
+}
+
+.panel h3 {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
 }
 
 .summary,
@@ -217,6 +223,12 @@ dt {
   margin-top: 0.55rem;
 }
 
+.midi-port-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
 .log-output {
   min-height: 16rem;
   max-height: 24rem;
@@ -274,6 +286,7 @@ dt {
   }
 
   .grid-two,
+  .midi-port-grid,
   .status-grid {
     grid-template-columns: 1fr;
   }

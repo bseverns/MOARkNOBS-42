@@ -89,6 +89,26 @@ function makeFakeService() {
         },
       ];
     },
+    async listMidiPorts() {
+      return {
+        inputs: [
+          {
+            id: 'Mock MIDI In',
+            name: 'Mock MIDI In',
+            manufacturer: 'Mock MIDI',
+            engine: 'node',
+          },
+        ],
+        outputs: [
+          {
+            id: 'Mock MIDI Out',
+            name: 'Mock MIDI Out',
+            manufacturer: 'Mock MIDI',
+            engine: 'node',
+          },
+        ],
+      };
+    },
     async configure(nextConfig = {}) {
       state.config = { ...state.config, ...nextConfig };
       return this.getState();
@@ -257,6 +277,23 @@ async function run() {
     portsPayload.ports[0].path,
     '/dev/fake',
     'port listing should be proxied',
+  );
+
+  const midiPortsResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/midi-ports' }),
+    midiPortsResponse,
+  );
+  const midiPortsPayload = JSON.parse(midiPortsResponse.body.toString('utf8'));
+  assert.equal(
+    midiPortsPayload.inputs[0].name,
+    'Mock MIDI In',
+    'MIDI input listing should be proxied',
+  );
+  assert.equal(
+    midiPortsPayload.outputs[0].name,
+    'Mock MIDI Out',
+    'MIDI output listing should be proxied',
   );
 
   const connectResponse = makeRes();

@@ -8,6 +8,7 @@ function createMidiTransportLifecycle({
   createMessageHandler,
 } = {}) {
   let retryTimer = null;
+  const loggedFailureKeys = new Set();
 
   function shouldStayRunning() {
     const runtime = getRuntimeState?.() || {};
@@ -29,15 +30,56 @@ function createMidiTransportLifecycle({
     }, 1000);
   }
 
+  function formatPortNames(ports = []) {
+    if (!Array.isArray(ports) || !ports.length) return 'none';
+    return ports
+      .map((port) => port?.name || port?.id)
+      .filter(Boolean)
+      .join(', ');
+  }
+
+  function midiInfo(midi) {
+    try {
+      return midi && typeof midi.info === 'function' ? midi.info() : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function failureMessage(direction, label, err, info) {
+    const names =
+      direction === 'out'
+        ? formatPortNames(info.outputs)
+        : formatPortNames(info.inputs);
+    const target = label || 'first available port';
+    const detail = err ? `: ${err}` : '';
+    return `MIDI ${direction} "${target}" failed${detail}. Available ${
+      direction === 'out' ? 'outputs' : 'inputs'
+    }: ${names}`;
+  }
+
+  function logOpenFailure(direction, label, err, info) {
+    const message = failureMessage(direction, label, err, info);
+    const key = `${direction}:${label || ''}:${err || ''}:${message}`;
+    if (!loggedFailureKeys.has(key)) {
+      pushLog?.('error', message);
+      loggedFailureKeys.add(key);
+    }
+    scheduleRetry();
+  }
+
   function attachMidi() {
     const jzzFactory = getJzzFactory?.();
     const config = getConfig?.() || {};
     const midi = jzzFactory();
+    const info = midiInfo(midi);
+    const midiLabel = config.midiLabel || undefined;
     cancelRetry();
 
-    const midiOut = midi.openMidiOut(config.midiLabel).or(() => {
-      pushLog?.('error', 'MIDI out failed');
-      scheduleRetry();
+    const midiOut = midi.openMidiOut(midiLabel).or(function onMidiOutError() {
+      setMidiOut?.(null);
+      const err = typeof this?._err === 'function' ? this._err() : '';
+      logOpenFailure('out', midiLabel, err, info);
     });
     setMidiOut?.(midiOut);
     if (midiOut && typeof midiOut.on === 'function') {
@@ -46,9 +88,10 @@ function createMidiTransportLifecycle({
       });
     }
 
-    const midiIn = midi.openMidiIn(config.midiLabel).or(() => {
-      pushLog?.('error', 'MIDI in failed');
-      scheduleRetry();
+    const midiIn = midi.openMidiIn(midiLabel).or(function onMidiInError() {
+      setMidiIn?.(null);
+      const err = typeof this?._err === 'function' ? this._err() : '';
+      logOpenFailure('in', midiLabel, err, info);
     });
     setMidiIn?.(midiIn);
     if (midiIn && typeof midiIn.on === 'function') {

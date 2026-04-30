@@ -13,9 +13,13 @@ const openConfiguratorButton = document.getElementById('open-configurator');
 const summaryStatus = document.getElementById('summary-status');
 const portsList = document.getElementById('ports');
 const portsDatalist = document.getElementById('serial-port-list');
+const midiInputsList = document.getElementById('midi-inputs');
+const midiOutputsList = document.getElementById('midi-outputs');
+const midiPortsDatalist = document.getElementById('midi-port-list');
 const logOutput = document.getElementById('logs');
 const alertHistory = document.getElementById('alert-history');
 let latestPorts = [];
+let latestMidiPorts = { inputs: [], outputs: [] };
 
 const statusNodes = {
   running: document.getElementById('status-running'),
@@ -341,6 +345,103 @@ function renderPorts(ports) {
   });
 }
 
+function describeMidiPort(port) {
+  const parts = [port?.name || port?.id || 'Unknown MIDI port'];
+  if (port?.manufacturer) parts.push(port.manufacturer);
+  if (port?.engine) parts.push(port.engine);
+  return parts.join(' — ');
+}
+
+function midiPortName(port) {
+  return String(port?.name || port?.id || '').trim();
+}
+
+function commonMidiPortNames({ inputs = [], outputs = [] } = {}) {
+  const inputNames = new Set(inputs.map(midiPortName).filter(Boolean));
+  return outputs
+    .map(midiPortName)
+    .filter((name) => name && inputNames.has(name));
+}
+
+function scoreMidiPortName(name) {
+  const value = String(name || '').toLowerCase();
+  if (!value) return -1;
+  if (value.includes('iac')) return 100;
+  if (value.includes('mn42') || value.includes('moarknobs')) return 90;
+  if (value.includes('teensy')) return 20;
+  if (value.includes('dls synth')) return 0;
+  return 50;
+}
+
+function preferredMidiPortName(ports = latestMidiPorts) {
+  return commonMidiPortNames(ports).sort(
+    (a, b) => scoreMidiPortName(b) - scoreMidiPortName(a),
+  )[0];
+}
+
+function shouldReplaceMidiLabel(current, ports = latestMidiPorts) {
+  const value = String(current || '').trim();
+  const available = commonMidiPortNames(ports);
+  if (!available.length) return false;
+  if (!value) return true;
+  return !available.includes(value);
+}
+
+function applyPreferredMidiPort(ports = latestMidiPorts) {
+  const field = form.elements.namedItem('midiLabel');
+  if (!field || !shouldReplaceMidiLabel(field.value, ports)) return false;
+  const preferred = preferredMidiPortName(ports);
+  if (!preferred) return false;
+  field.value = preferred;
+  saveConfig(formValues());
+  return true;
+}
+
+function appendMidiPortList(target, ports, emptyText) {
+  if (!target) return;
+  target.textContent = '';
+  if (!Array.isArray(ports) || !ports.length) {
+    const item = document.createElement('li');
+    item.textContent = emptyText;
+    target.appendChild(item);
+    return;
+  }
+  for (const port of ports) {
+    const item = document.createElement('li');
+    item.textContent = describeMidiPort(port);
+    target.appendChild(item);
+  }
+}
+
+function renderMidiPorts({ inputs = [], outputs = [] } = {}) {
+  latestMidiPorts = {
+    inputs: Array.isArray(inputs) ? inputs : [],
+    outputs: Array.isArray(outputs) ? outputs : [],
+  };
+  appendMidiPortList(
+    midiInputsList,
+    latestMidiPorts.inputs,
+    'No MIDI inputs detected. Enable a virtual input such as a macOS IAC bus.',
+  );
+  appendMidiPortList(
+    midiOutputsList,
+    latestMidiPorts.outputs,
+    'No MIDI outputs detected. Enable a virtual output such as a macOS IAC bus.',
+  );
+  if (!midiPortsDatalist) return;
+  midiPortsDatalist.textContent = '';
+  const names = new Set();
+  for (const port of [...latestMidiPorts.inputs, ...latestMidiPorts.outputs]) {
+    const name = midiPortName(port);
+    if (name) names.add(name);
+  }
+  for (const name of names) {
+    const option = document.createElement('option');
+    option.value = name;
+    midiPortsDatalist.appendChild(option);
+  }
+}
+
 // Small JSON fetch helper shared by every control path in this UI.
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -371,10 +472,19 @@ async function refreshPorts() {
   return payload.ports;
 }
 
+async function refreshMidiPorts() {
+  const payload = await api('/api/midi-ports', { method: 'GET' });
+  renderMidiPorts(payload);
+  applyPreferredMidiPort(payload);
+  return payload;
+}
+
 // Start the bridge with the current form values.
 async function startBridge() {
   await refreshPorts().catch(() => {});
+  await refreshMidiPorts().catch(() => {});
   applyPreferredSerialPort();
+  applyPreferredMidiPort();
   const values = formValues();
   saveConfig(values);
   const payload = await api('/api/connect', {
@@ -459,6 +569,7 @@ function bindEvents() {
     summaryStatus.textContent = 'Refreshing port list...';
     try {
       await refreshPorts();
+      await refreshMidiPorts();
       await refreshState();
     } catch (err) {
       summaryStatus.textContent = `Port refresh failed: ${err.message}`;
@@ -513,6 +624,7 @@ async function boot() {
   await refreshState().catch((err) => {
     summaryStatus.textContent = `State refresh failed: ${err.message}`;
   });
+  await refreshMidiPorts().catch(() => {});
   window.setInterval(() => {
     refreshState().catch(() => {});
   }, 1500);

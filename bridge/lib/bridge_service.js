@@ -422,6 +422,40 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }
   }
 
+  async function listMidiPorts() {
+    await loadDeps();
+    if (typeof jzzFactory !== 'function') {
+      return { inputs: [], outputs: [] };
+    }
+    return new Promise((resolve) => {
+      try {
+        const midi = jzzFactory();
+        midi
+          .and(function onMidiReady() {
+            const info =
+              typeof this.info === 'function'
+                ? this.info()
+                : { inputs: [], outputs: [] };
+            resolve({
+              inputs: Array.isArray(info.inputs) ? clone(info.inputs) : [],
+              outputs: Array.isArray(info.outputs) ? clone(info.outputs) : [],
+            });
+          })
+          .or(function onMidiListError() {
+            const message =
+              typeof this?._err === 'function'
+                ? this._err()
+                : 'unknown MIDI engine error';
+            pushLog('error', `MIDI port list failed: ${message}`);
+            resolve({ inputs: [], outputs: [] });
+          });
+      } catch (err) {
+        pushLog('error', `MIDI port list failed: ${err.message}`);
+        resolve({ inputs: [], outputs: [] });
+      }
+    });
+  }
+
   let serialLifecycle = null;
   let oscTransport = null;
   let midiLifecycle = null;
@@ -699,6 +733,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     getState,
     on,
     listSerialPorts,
+    listMidiPorts,
   };
 }
 

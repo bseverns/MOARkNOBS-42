@@ -88,6 +88,16 @@ function simplifyPorts(ports) {
   }));
 }
 
+function simplifyMidiPorts(ports) {
+  return (ports || []).map((portInfo) => ({
+    id: portInfo.id ?? portInfo.name ?? null,
+    name: portInfo.name ?? portInfo.id ?? 'Unknown MIDI port',
+    manufacturer: portInfo.manufacturer ?? null,
+    version: portInfo.version ?? null,
+    engine: portInfo.engine ?? null,
+  }));
+}
+
 // Whitelist and normalize config fields coming from the browser console.
 function normalizeConfig(body = {}) {
   const nextConfig = {};
@@ -255,6 +265,22 @@ function createBrowserBridgeServer({
       try {
         const ports = await service.listSerialPorts();
         sendJson(res, 200, { ports: simplifyPorts(ports) });
+      } catch (err) {
+        sendJson(res, 500, { error: err.message });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/midi-ports' && req.method === 'GET') {
+      try {
+        const ports =
+          typeof service.listMidiPorts === 'function'
+            ? await service.listMidiPorts()
+            : { inputs: [], outputs: [] };
+        sendJson(res, 200, {
+          inputs: simplifyMidiPorts(ports.inputs),
+          outputs: simplifyMidiPorts(ports.outputs),
+        });
       } catch (err) {
         sendJson(res, 500, { error: err.message });
       }

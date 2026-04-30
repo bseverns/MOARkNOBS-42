@@ -13,7 +13,7 @@
       <h1>Local bridge console</h1>
       <p class="summary">
         Start the bridge from a browser, then launch the full configurator over the same connection.
-        This is the non-CLI front door for OSC, virtual MIDI, profiles, and deep configuration.
+        This is the non-CLI front door for OSC, host MIDI routing, profiles, and deep configuration.
       </p>
       <div class="actions">
         <button id="start-bridge" type="button">Start bridge</button>
@@ -36,8 +36,10 @@
           <datalist id="serial-port-list"></datalist>
           <p class="hint">Choose a detected port or type one manually.</p>
 
-          <label for="midi-label">Virtual MIDI label</label>
-          <input id="midi-label" name="midiLabel" value="MN42 Bridge" autocomplete="off" />
+          <label for="midi-label">MIDI port label</label>
+          <input id="midi-label" name="midiLabel" value="MN42 Bridge" list="midi-port-list" autocomplete="off" />
+          <datalist id="midi-port-list"></datalist>
+          <p class="hint">Use an existing input/output pair, such as a macOS IAC bus.</p>
 
           <label for="osc-host">OSC host</label>
           <input id="osc-host" name="oscHost" value="127.0.0.1" autocomplete="off" />
@@ -112,7 +114,7 @@
         </dl>
         <p class="hint">
           Once the bridge is running, the configurator talks through WebSocket instead of WebSerial.
-          That keeps profile work and deep edits available while OSC and virtual MIDI stay online.
+          That keeps profile work and deep edits available while OSC and MIDI routing stay online.
         </p>
       </section>
     </section>
@@ -120,6 +122,20 @@
     <section class="panel" aria-labelledby="ports-heading">
       <h2 id="ports-heading">Detected serial ports</h2>
       <ul id="ports" class="ports-list" aria-live="polite"></ul>
+    </section>
+
+    <section class="panel" aria-labelledby="midi-ports-heading">
+      <h2 id="midi-ports-heading">Detected MIDI ports</h2>
+      <div class="midi-port-grid">
+        <div>
+          <h3>Inputs</h3>
+          <ul id="midi-inputs" class="ports-list" aria-live="polite"></ul>
+        </div>
+        <div>
+          <h3>Outputs</h3>
+          <ul id="midi-outputs" class="ports-list" aria-live="polite"></ul>
+        </div>
+      </div>
     </section>
 
     <section class="panel" aria-labelledby="logs-heading">
