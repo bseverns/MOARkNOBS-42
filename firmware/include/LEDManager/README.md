@@ -29,6 +29,18 @@ Fresh out of construction, `LEDManager` is chilling in `LEDState::IDLE` with
 `activeIndex` parked at `255` – a sentinel meaning "no LED is currently under
 the spotlight."  It's a clean slate; nothing gets lit until you tell it to.
 
+## Power Safety Note
+
+`LEDManager` now boots with a conservative brightness policy:
+
+- `MN42_DEFAULT_LED_BRIGHTNESS = 48` for normal startup/runtime
+- `MN42_SAFE_BENCH_LED_BRIGHTNESS = 32` for conservative bench phases
+- `MN42_DEMO_LED_BRIGHTNESS = 96` for intentional demo/test visuals
+
+These limits reduce current spikes, but they do not replace correct power
+topology. Full-strip white on 52 WS2812 LEDs can exceed `3 A`, so confirm the
+LED rail fuse branch and use a regulated `5 V` supply before high-current tests.
+
 ## Typical Use
 
 ```cpp

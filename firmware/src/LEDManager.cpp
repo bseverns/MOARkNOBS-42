@@ -17,7 +17,7 @@ LEDManager::~LEDManager() {
 
 LEDManager::LEDManager(const HardwareConfig &config)
     : cfg(config), numLEDs(NUM_LEDS()), modeDisplay(0), activePot(255), envelopeModeActive(false),
-      brightness(255), currentState(LEDState::IDLE), activeIndex(255) {
+      brightness(MN42_DEFAULT_LED_BRIGHTNESS), currentState(LEDState::IDLE), activeIndex(255) {
     leds.resize(numLEDs);
     dirtyFlags.resize(numLEDs, false);
 
@@ -39,6 +39,11 @@ void LEDManager::begin() {
     // quiet.
     FastLED.addLeds<OCTOWS2811>(octoLanes.data(), laneLength).setCorrection(TypicalLEDStrip);
     initialized = true;
+    // Always cap startup brightness conservatively on first bring-up.
+    if (brightness > MN42_DEFAULT_LED_BRIGHTNESS) {
+        brightness = MN42_DEFAULT_LED_BRIGHTNESS;
+    }
+    applyBrightness();
     presentFrame();
 }
 

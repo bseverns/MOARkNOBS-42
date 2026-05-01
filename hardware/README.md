@@ -7,6 +7,41 @@ Do not treat this folder as a fabrication-ready release bundle.
 
 Start with [CurrentBuild.md](CurrentBuild.md).
 
+## External Power Requirement
+
+Use a regulated `5 V DC` external supply at the DC input.
+
+- `5 V / 4 A` is the minimum recommended bench supply.
+- `5 V / 5 A` is preferred for LED-heavy testing (`white100`, `blast`, long soaks).
+- Ground must be common across logic, LED, MIDI, and envelope follower sections.
+
+> [!WARNING]
+> Do not feed `9 V` or `12 V` into this board's VIN path unless a regulator/buck stage is explicitly added and documented. In this project, `VIN_RAW` and `VIN_FUSED` are project rail labels and should not be interpreted as an Arduino-style high-voltage raw VIN input.
+
+## Power Topology Caveat
+
+The intended fuse topology is:
+
+- preferred: `5V_IN -> F1_LOGIC_0.5A -> 5V_LOGIC`
+- preferred: `5V_IN -> F2_LED_2.5A -> 5V_LED`
+
+If the actual board copper instead routes `F2` downstream of `F1`, then `F1` becomes an upstream choke for the entire machine.
+
+> [!WARNING]
+> If `F1` is upstream of the LED branch, the `0.5 A` PTC is the effective whole-system current limit. Firmware brightness caps help, but they are not a substitute for correct rail topology and fuse placement.
+
+## Verify Before High-Current LED Tests
+
+Before `white100`, `blast`, or burn-in phases:
+
+- meter DC jack positive to `F1` input
+- meter DC jack positive to `F1` output
+- meter DC jack positive to `F2` input
+- determine whether `F1` and `F2` are parallel branches or whether `F2` is downstream of `F1`
+- do not run full-strip white or burn-in tests until this is confirmed
+
+Power estimates and quick current math live in [PowerBudget.md](../docs/reference/PowerBudget.md).
+
 ## Current Bench-Validation References
 
 - schematic PDF: `MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`

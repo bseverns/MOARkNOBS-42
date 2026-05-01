@@ -32,8 +32,11 @@ struct BurnPhase {
     CRGB color;
 };
 
+// These high-brightness phases are intentional stress tests.
+// They are not normal operating visuals and assume a verified power path.
 constexpr BurnPhase kBurnPhases[] = {
-    {BurnPhaseStyle::StaticFill, "Idle black settle", "idle", 5000, 32, CRGB::Black},
+    {BurnPhaseStyle::StaticFill, "Idle black settle", "idle", 5000, MN42_SAFE_BENCH_LED_BRIGHTNESS,
+     CRGB::Black},
     {BurnPhaseStyle::StaticFill, "White 25%", "white25", 15000, 64, CRGB::White},
     {BurnPhaseStyle::StaticFill, "White 50%", "white50", 15000, 128, CRGB::White},
     {BurnPhaseStyle::StaticFill, "White 100%", "white100", 15000, 255, CRGB::White},
@@ -226,6 +229,8 @@ void printCommandHelp() {
     Serial.println("[CMD] phase auto");
     Serial.println("[CMD] status");
     Serial.println("[CMD] help");
+    Serial.println("[SAFETY] white100/blast are deliberate high-current tests; verify LED rail "
+                   "topology first.");
 }
 
 void paintAll(const CRGB &color) {
@@ -398,6 +403,8 @@ void setup() {
     sys::printReport();
     Serial.printf("LED pin=%u status pin=%u vrefPin=%u totalLeds=%u\n", hwConfig.ledPin,
                   hwConfig.statusLedPin, hwConfig.vrefAdcPin, NUM_LEDS());
+    Serial.println("[SAFETY] 52x WS2812 full white can exceed 3A; use regulated 5V supply and "
+                   "confirmed fuse topology.");
     printCommandHelp();
 
     burnLeds().begin();

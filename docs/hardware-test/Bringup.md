@@ -2,6 +2,32 @@
 
 This checklist is for the current MOARkNOBS-42 prototype hardware-test package.
 
+## External Power Requirement
+
+Use a regulated `5 V DC` external supply.
+
+- `5 V / 4 A` minimum recommended bench supply
+- `5 V / 5 A` preferred for LED-heavy or long burn-in testing
+- common ground required across logic, LED, MIDI, and EF sections
+
+> [!WARNING]
+> Do not feed `9 V` or `12 V` into VIN unless a regulator/buck stage is added and documented.
+> In this project, `VIN_RAW` and `VIN_FUSED` are net names, not a claim of Arduino-style raw high-voltage VIN handling.
+
+## Verify Rail Topology Before High-Current LED Tests
+
+Before running `white100`, `blast`, or multi-minute LED burn-in:
+
+- meter DC jack positive to `F1` input/output
+- meter DC jack positive to `F2` input
+- determine whether `F1` and `F2` are parallel branches or whether `F2` is downstream of `F1`
+- do not run full-strip white or burn-in tests until this is confirmed
+
+> [!WARNING]
+> If `F1` (0.5 A hold) is upstream of the LED branch, it becomes the effective whole-system limit even if `F2` is 2.5 A. Firmware brightness limits reduce risk but do not replace correct hardware rail topology.
+
+Quick current estimates: [PowerBudget.md](../reference/PowerBudget.md).
+
 ## 1. Power Inspection Before First Boot
 
 Before applying power:
@@ -93,6 +119,13 @@ Known-good serial lines from the burn-in lane look like:
 [BURN] uptime=<ms> phase=<name> ... vref=<volts> ... brownouts=<count> lock=<mode>
 [CMD] phase <idle|white25|white50|white100|red|green|blue|sweep|wash|blast>
 ```
+
+Power-safety note for this step:
+
+- full white on 52 WS2812 LEDs can exceed `3 A`
+- full-strip single-channel primaries can still exceed a `0.5 A` upstream fuse
+- normal operating visuals should stay sparse, dimmed, pulsed, or event-driven
+- high-current phases require confirmed LED rail topology and a suitable regulated `5 V` supply
 
 Pass:
 

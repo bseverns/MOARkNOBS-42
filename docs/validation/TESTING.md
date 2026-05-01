@@ -45,6 +45,10 @@ Use the burn-in harness when you want the board to sit in one high-load state fo
 - peak observed rates over a short sampling window
 - brownout count and current phase lock state
 
+> [!WARNING] > `white100` and `blast` are deliberate stress phases, not normal operating visuals.
+> Full white on 52 WS2812 LEDs can exceed `3 A`, and full-strip primaries can still exceed a `0.5 A` upstream fuse.
+> Run those phases only with a regulated `5 V` supply and confirmed LED rail topology.
+
 The serial monitor also accepts:
 
 ```text

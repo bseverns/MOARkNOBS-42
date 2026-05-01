@@ -12,7 +12,6 @@
 #include "version.h"
 
 namespace {
-constexpr uint8_t kDemoBrightness = 96;
 constexpr unsigned long kSerialWaitMs = 2500;
 constexpr unsigned long kPerLedHoldMs = 65;
 constexpr unsigned long kPhaseGapMs = 250;
@@ -527,7 +526,7 @@ void setup() {
     printCommandHelp();
 
     demoLeds().begin();
-    demoLeds().setBrightness(kDemoBrightness);
+    demoLeds().setBrightness(MN42_DEMO_LED_BRIGHTNESS);
     randomSeed(micros() ^ g_resetCause ^ HW_OCOTP_CFG0);
 
     runSingleLedHealthPass();

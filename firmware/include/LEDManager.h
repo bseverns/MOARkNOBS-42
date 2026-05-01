@@ -16,6 +16,12 @@ struct HardwareConfig;
 //  [48]     : control button LED
 //  [49-51]  : pot halos for the three physical knobs
 
+// Brightness policy constants shared across runtime, demos, and bench workflows.
+// These are firmware-side guardrails, not substitutes for correct power topology.
+constexpr uint8_t MN42_SAFE_BENCH_LED_BRIGHTNESS = 32;
+constexpr uint8_t MN42_DEFAULT_LED_BRIGHTNESS = 48;
+constexpr uint8_t MN42_DEMO_LED_BRIGHTNESS = 96;
+
 /**
  * Possible LED indication states.
  *
@@ -148,7 +154,7 @@ class LEDManager {
     uint8_t modeDisplay;
     uint8_t activePot;
     bool envelopeModeActive;
-    uint8_t brightness = 128;   //!< Base brightness before modulation
+    uint8_t brightness = MN42_DEFAULT_LED_BRIGHTNESS; //!< Base brightness before modulation
     float brightnessMod = 1.0f; //!< Modulator scale (0..2) applied to brightness
     LEDState currentState;
     uint8_t activeIndex;
