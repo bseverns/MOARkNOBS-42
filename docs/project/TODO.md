@@ -10,8 +10,8 @@ Target demo outcomes:
 - Basic clock following
 - Profiles
 
-If a feature already exists in firmware, it still gets a checkbox here as **VERIFY**. Demo risk is not
-“does code exist,” it’s “will it behave on demand.”
+If a feature already exists in firmware, it still gets a checkbox here as **VERIFY**.
+Demo risk is not “does code exist,” it’s “will it behave on demand.”
 
 Last edited: 2026-02-14
 
