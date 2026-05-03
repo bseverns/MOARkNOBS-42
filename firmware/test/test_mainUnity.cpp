@@ -51,6 +51,8 @@ void test_bulk_config_accepts_numeric_slot_type();
 void test_bulk_config_accepts_wider_numeric_slot_type();
 void test_bulk_config_accepts_integral_float_slot_type();
 void test_bulk_config_accepts_type_name_alias();
+void test_debounce_reports_state_change_after_stable_interval();
+void test_debounce_restarts_timer_when_signal_bounces();
 void test_exponential_moving_average_clamps_alpha_bounds();
 void test_exponential_moving_average_rounds_weighted_result();
 void test_arg_sanitize_clamps_sources();
@@ -136,6 +138,8 @@ void setup() {
     RUN_TEST(test_bulk_config_accepts_wider_numeric_slot_type);
     RUN_TEST(test_bulk_config_accepts_integral_float_slot_type);
     RUN_TEST(test_bulk_config_accepts_type_name_alias);
+    RUN_TEST(test_debounce_reports_state_change_after_stable_interval);
+    RUN_TEST(test_debounce_restarts_timer_when_signal_bounces);
     RUN_TEST(test_exponential_moving_average_clamps_alpha_bounds);
     RUN_TEST(test_exponential_moving_average_rounds_weighted_result);
     RUN_TEST(test_arg_sanitize_clamps_sources);

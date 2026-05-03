@@ -8,6 +8,7 @@ const {
   parsePositiveInt,
   parseConfigFromArgv: parseCliConfigFromArgv,
 } = require('./config/cli_config');
+const { normalizeMidiToOscMappings } = require('./config/midi_osc_mappings');
 
 function copyDirectoryRecursive(srcDir, dstDir) {
   fs.mkdirSync(dstDir, { recursive: true });
@@ -146,6 +147,7 @@ function clone(value) {
 function createBridgeService(initialConfig = {}, injected = {}) {
   const events = new EventEmitter();
   const config = {
+    configPath: null,
     serialName: '/dev/ttyACM0',
     oscPort: DEFAULT_OSC_PORT,
     oscListen: DEFAULT_OSC_PORT,
@@ -157,8 +159,12 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     rtP95TargetMs: DEFAULT_RT_P95_TARGET_MS,
     rtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
     alertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
+    midiToOscMappings: [],
     ...initialConfig,
   };
+  config.midiToOscMappings = normalizeMidiToOscMappings(
+    config.midiToOscMappings,
+  );
 
   let depsLoaded = false;
   let serialApi = injected.serialport || null;
@@ -353,6 +359,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     getUdp: () => udp,
     getMidiOut: () => midiOut,
     getOscTarget: () => ({ host: config.oscHost, port: config.oscPort }),
+    getMidiToOscMappings: () => config.midiToOscMappings,
     markTelemetryMidi,
     recordRoute,
     pushLog,
@@ -372,6 +379,10 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   function sendTypedEventToMidi(event, routeMeta = {}) {
     return bridgeEgress.sendTypedEventToMidi(event, routeMeta);
+  }
+
+  function sendMappedMidiEventToOsc(event, routeMeta = {}) {
+    return bridgeEgress.sendMappedMidiEventToOsc(event, routeMeta);
   }
 
   const handleSerialLine = createSerialLineHandler({
@@ -589,6 +600,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         parseMidiMessageToTypedEvents,
         midiRpnStateByChannel,
         sendTypedEventToOsc,
+        sendMappedMidiEventToOsc,
         buildSlotCommandFromCcEvent,
         pushLog,
         queuePendingCommand,
@@ -691,6 +703,9 @@ function createBridgeService(initialConfig = {}, injected = {}) {
             defaultRtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
             defaultAlertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
           });
+          mutableConfig.midiToOscMappings = normalizeMidiToOscMappings(
+            mutableConfig.midiToOscMappings,
+          );
         },
         setState,
         clone,

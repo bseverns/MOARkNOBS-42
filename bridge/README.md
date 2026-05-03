@@ -1,6 +1,6 @@
 # MN42 Bridge
 
-The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows.
+The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows. It also supports a JSON settings file for repeatable host setups.
 
 Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or host MIDI routing on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
 
@@ -17,6 +17,12 @@ It does three things:
 - reads JSON telemetry from the controller over USB serial,
 - publishes that data as OSC and MIDI,
 - accepts OSC or MIDI control messages and forwards them back to the controller.
+
+The bridge is already bidirectional:
+
+- MIDI in can rebroadcast as typed OSC events and still feed the firmware live-control lane.
+- OSC typed events can emit host MIDI messages.
+- A settings file can now add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
 
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
@@ -56,6 +62,12 @@ npm start
 ```
 
 By default the console is served at <http://127.0.0.1:8787/>.
+
+If you want stable settings across launches, copy [`settings.example.json`](settings.example.json) to your own file and start the bridge with `--config`:
+
+```bash
+npm --prefix bridge start -- --config ./bridge/settings.example.json
+```
 
 ### 3) Open the bridge console in your browser
 
@@ -105,6 +117,52 @@ node mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --host 12
 
 Replace `/dev/ttyACM0` with your device path.
 
+If you want the CLI/server to boot with a saved profile of host settings:
+
+```bash
+node mn42_bridge.js --config ./settings.example.json
+node mn42_bridge_server.js --config ./settings.example.json
+```
+
+CLI flags still win over the file when both are provided.
+
+## Settings file
+
+The bridge now accepts `--config path/to/settings.json` in both entrypoints. The file is plain JSON and can include:
+
+- transport settings: `serialName`, `oscHost`, `oscPort`, `oscListen`, `oscBind`, `midiLabel`
+- runtime guardrails: `allowFeedbackLoops`, `feedbackWindowMs`, `rtP95TargetMs`, `rtJitterP95TargetMs`, `alertSuppressionMs`
+- custom inbound MIDI CC -> OSC mappings: `midiToOscMappings`
+
+Example:
+
+```json
+{
+  "serialName": "/dev/ttyACM0",
+  "oscHost": "127.0.0.1",
+  "oscPort": 9000,
+  "midiLabel": "MN42 Bridge",
+  "midiToOscMappings": [
+    {
+      "id": "layer1-opacity",
+      "kind": "cc",
+      "channel": 1,
+      "controller": 20,
+      "address": "/layer1/opacity",
+      "valueMode": "normalized"
+    }
+  ]
+}
+```
+
+Current custom mapping support is intentionally narrow:
+
+- `kind` is currently `cc`
+- `controller` selects the inbound CC number
+- `channel` is optional; omit it to match any channel
+- `address` is the outbound OSC address to emit
+- `valueMode` is `raw` (`0..127`) or `normalized` (`0.0..1.0`)
+
 ## Everyday workflows
 
 ### OSC workflow (TouchOSC, Max, Pd, custom apps)
@@ -144,6 +202,8 @@ MIDI mapping used by the bridge:
 - Channel 2 CC: envelope follower updates (`CC 0..5`)
 
 Inbound MIDI now also feeds typed OSC namespaces (`/mn42/event/cc`, `/mn42/event/note_on`, `/mn42/event/note_off`, `/mn42/event/pitch_bend`, `/mn42/event/channel_aftertouch`, `/mn42/event/poly_aftertouch`, `/mn42/event/program_change`, `/mn42/event/nrpn`, `/mn42/event/rpn`, `/mn42/event/sysex`).
+
+If `midiToOscMappings` is configured, matching inbound CC events also emit user-defined OSC addresses alongside the typed `/mn42/event/cc` traffic.
 
 Inbound MIDI CC on any channel is still converted to:
 
@@ -245,6 +305,7 @@ The bridge drops messages that do not match the contract.
 
 | Flag                        | Alias | Default        | Purpose                                         |
 | --------------------------- | ----- | -------------- | ----------------------------------------------- |
+| `--config`                  | `-c`  | none           | Load bridge settings from a JSON file           |
 | `--serial`                  | `-s`  | `/dev/ttyACM0` | Serial device path                              |
 | `--osc`                     | `-o`  | `9000`         | UDP port for outbound OSC                       |
 | `--osc-listen`              | -     | `9000`         | UDP port for inbound OSC commands               |

@@ -10,8 +10,8 @@ Target demo outcomes:
 - Basic clock following
 - Profiles
 
-If a feature already exists in firmware, it still gets a checkbox here as **VERIFY**.
-Demo risk is not “does code exist,” it’s “will it behave on demand.”
+If a feature already exists in firmware, it still gets a checkbox here as **VERIFY**. Demo risk is not
+“does code exist,” it’s “will it behave on demand.”
 
 Last edited: 2026-02-14
 
@@ -40,22 +40,22 @@ Last edited: 2026-02-14
 
 ### 1.1 WebSerial Editor: connect → edit → apply → rollback
 
-- [ ] **VERIFY:** WebSerial Connect succeeds on first try (no mystery steps)
+- [x] **VERIFY:** WebSerial Connect succeeds on first try (no mystery steps)
   - Acceptance: user sees a clear “Connected to MOARkNOBS-42” state within 10s.
-- [ ] **VERIFY:** Device identity is visible in the app
+- [x] **VERIFY:** Device identity is visible in the app
   - Acceptance: FW version + device name + active profile index/name shown somewhere obvious.
-- [ ] **VERIFY:** Config loads from device into UI correctly
+- [x] **VERIFY:** Config loads from device into UI correctly
   - Acceptance: active profile + slot grid/state matches what the device shows.
-- [ ] **VERIFY:** Staged diff is visible and trustworthy
+- [x] **VERIFY:** Staged diff is visible and trustworthy
   - Acceptance: UI clearly shows “dirty” changes vs device state (no silent edits).
-- [ ] **VERIFY:** Apply writes changes and device acknowledges success
+- [x] **VERIFY:** Apply writes changes and device acknowledges success
   - Acceptance: one edited field changes behavior immediately; no power-cycle required.
-- [ ] **VERIFY:** Rollback / cancel staged changes restores the pre-edit state
+- [x] **VERIFY:** Rollback / cancel staged changes restores the pre-edit state
   - Acceptance: you can safely “undo” before applying; device remains unchanged.
 
 **One “hero edit” we will demo (pick exactly one):**
 
-- [ ] Change a slot’s Type (CC/Note/NRPN/etc)
+- [x] Change a slot’s Type (CC/Note/NRPN/etc)
 - [ ] Change a slot’s CC number or channel
 - [ ] Change an EF parameter (mode/gate/attack/release) and see effect
 

@@ -8,6 +8,10 @@ import { normalizeUIMode, persistUIMode, readUIModePreference } from './state/ui
 import { createProfileMacroScenePanel } from './panels/profile_macro_scene.js';
 import { createSlotEditorPanel } from './panels/slot_editor_panel.js';
 import {
+  getWebSerialCompatibility,
+  explainTransportError
+} from '../runtime/web_serial_diagnostics.js';
+import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
   ARG_METHOD_NAMES,
@@ -68,6 +72,7 @@ const boot = () => {
   const statusLabel = document.getElementById('status-label');
   const statusMessage = statusEl?.querySelector('.status-message');
   const connectBtn = document.getElementById('connect');
+  const checkCompatibilityBtn = document.getElementById('check-compatibility');
   const configModeBtn = document.getElementById('config-mode');
   const applyBtn = document.getElementById('apply');
   const rollbackBtn = document.getElementById('rollback');
@@ -198,6 +203,7 @@ const boot = () => {
   }
   const migrationCancel = document.getElementById('migration-cancel');
   const migrationExport = document.getElementById('migration-export');
+  let lastCompatibilityReport = null;
 
   const slotState = {
     slots: [],
@@ -233,22 +239,148 @@ const boot = () => {
   rebuildMeters(localManifest.envelope_count || 0);
   slotVirtualizer.setData([]);
 
+  function usingSimulatorTransport() {
+    return Boolean(simulatorToggle?.classList.contains('active'));
+  }
+
+  function usingBridgeTransport() {
+    return Boolean(runtimeOptions.wsUrl);
+  }
+
+  function usingDirectWebSerial() {
+    return !usingBridgeTransport() && !usingSimulatorTransport();
+  }
+
+  function runCompatibilityCheck() {
+    if (usingBridgeTransport()) {
+      setStatus(
+        'ok',
+        'Bridge mode active',
+        'This session is using the WebSocket bridge, so direct Web Serial browser checks do not apply.'
+      );
+      return null;
+    }
+    if (usingSimulatorTransport()) {
+      setStatus(
+        'ok',
+        'Simulator active',
+        'Simulator mode skips direct Web Serial requirements until you reconnect to hardware.'
+      );
+      return null;
+    }
+    lastCompatibilityReport = getWebSerialCompatibility();
+    setStatus(
+      lastCompatibilityReport.state,
+      lastCompatibilityReport.label,
+      lastCompatibilityReport.message
+    );
+    return lastCompatibilityReport;
+  }
+
+  function showTransportError(action, err) {
+    const explanation = explainTransportError(err, {
+      action,
+      compatibility: usingDirectWebSerial() ? lastCompatibilityReport : null,
+      usingBridge: usingBridgeTransport(),
+      usingSimulator: usingSimulatorTransport()
+    });
+    connectFailHelp?.setAttribute('open', '');
+    setStatus('err', explanation.label, explanation.message);
+  }
+
+  function syncConfigFileButtons() {
+    const staged = runtime.getState().staged;
+    if (exportPresetBtn) exportPresetBtn.disabled = !staged;
+    if (importPresetBtn) importPresetBtn.disabled = false;
+  }
+
+  function primeCompatibilityStatus() {
+    if (!usingDirectWebSerial()) return;
+    lastCompatibilityReport = getWebSerialCompatibility();
+    if (lastCompatibilityReport.compatible) return;
+    connectFailHelp?.setAttribute('open', '');
+    setStatus(
+      lastCompatibilityReport.state,
+      lastCompatibilityReport.label,
+      lastCompatibilityReport.message
+    );
+  }
+
+  function exportCurrentConfigJson() {
+    const { staged } = runtime.getState();
+    if (!staged) {
+      setStatus(
+        'warn',
+        'Nothing to export',
+        'Connect first or import a configuration before exporting JSON.'
+      );
+      return;
+    }
+    const filename = `moarknobz-config-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    const blob = new Blob([JSON.stringify(staged, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setStatus('ok', 'Config exported', filename);
+  }
+
+  async function importConfigJson(file) {
+    if (!file) return;
+    const text = await file.text();
+    try {
+      const json = JSON.parse(text);
+      runtime.stage(() => json);
+      syncConfigFileButtons();
+      setStatus(
+        'warn',
+        'Config imported',
+        'JSON staged locally. Connect and click Apply when you are ready to write it to the device.'
+      );
+    } catch (err) {
+      setStatus('err', 'Import failed', err.message || String(err));
+    }
+  }
+
   connectBtn?.addEventListener('click', async () => {
     try {
+      if (usingDirectWebSerial()) {
+        const compatibility = runCompatibilityCheck();
+        if (compatibility && !compatibility.compatible) {
+          setConnectionPill('disconnected', 'Disconnected');
+          setConnectionBanner('disconnected', runtime.getState().manifest);
+          connectFailHelp?.setAttribute('open', '');
+          return;
+        }
+      }
       setConnectionPill('handshake', 'Handshaking…');
       setConnectionBanner('handshake', runtime.getState().manifest);
       await runtime.connect();
     } catch (err) {
       setConnectionPill('disconnected', 'Disconnected');
       setConnectionBanner('disconnected', runtime.getState().manifest);
-      connectFailHelp?.setAttribute('open', '');
-      setStatus('err', 'Connect failed', err.message || String(err));
+      showTransportError('connect', err);
     }
+  });
+
+  checkCompatibilityBtn?.addEventListener('click', () => {
+    runCompatibilityCheck();
   });
 
   configModeBtn?.addEventListener('click', async () => {
     try {
       if (configModeBtn) configModeBtn.disabled = true;
+      if (usingDirectWebSerial()) {
+        const compatibility = runCompatibilityCheck();
+        if (compatibility && !compatibility.compatible) {
+          setConnectionPill('disconnected', 'Disconnected');
+          setConnectionBanner('disconnected', runtime.getState().manifest);
+          connectFailHelp?.setAttribute('open', '');
+          return;
+        }
+      }
       setConnectionPill('handshake', 'Config boot…');
       setConnectionBanner('handshake', runtime.getState().manifest);
       await runtime.requestConfiguratorBoot();
@@ -258,8 +390,7 @@ const boot = () => {
     } catch (err) {
       setConnectionPill('disconnected', 'Disconnected');
       setConnectionBanner('disconnected', runtime.getState().manifest);
-      connectFailHelp?.setAttribute('open', '');
-      setStatus('err', 'Config boot failed', err.message || String(err));
+      showTransportError('config-boot', err);
     } finally {
       if (configModeBtn) configModeBtn.disabled = false;
     }
@@ -338,14 +469,7 @@ const boot = () => {
   });
 
   exportPresetBtn?.addEventListener('click', () => {
-    const { staged } = runtime.getState();
-    const blob = new Blob([JSON.stringify(staged, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `moarknobz-preset-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
+    exportCurrentConfigJson();
   });
 
   importPresetBtn?.addEventListener('click', () => {
@@ -354,14 +478,7 @@ const boot = () => {
     input.accept = '.json,application/json';
     input.onchange = async () => {
       const file = input.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      try {
-        const json = JSON.parse(text);
-        runtime.stage(() => json);
-      } catch (err) {
-        setStatus('err', 'Import failed', err.message || String(err));
-      }
+      await importConfigJson(file);
     };
     input.click();
   });
@@ -515,6 +632,7 @@ const boot = () => {
     renderLedControls(staged);
     updateTakeoverGuards(slotState.slots);
     formRenderer.updateValues();
+    syncConfigFileButtons();
     profileMacroScenePanel.onConfigChanged();
   });
   runtime.on('manifest', (manifest) => {
@@ -557,8 +675,7 @@ const boot = () => {
     connectFailHelp?.removeAttribute('open');
     if (applyBtn) applyBtn.disabled = true;
     if (rollbackBtn) rollbackBtn.disabled = true;
-    if (exportPresetBtn) exportPresetBtn.disabled = false;
-    if (importPresetBtn) importPresetBtn.disabled = false;
+    syncConfigFileButtons();
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
     profileMacroScenePanel.onConnected();
   });
@@ -568,8 +685,7 @@ const boot = () => {
     setConnectionBanner('disconnected', runtime.getState().manifest);
     if (applyBtn) applyBtn.disabled = true;
     if (rollbackBtn) rollbackBtn.disabled = true;
-    if (exportPresetBtn) exportPresetBtn.disabled = true;
-    if (importPresetBtn) importPresetBtn.disabled = true;
+    syncConfigFileButtons();
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
     profileMacroScenePanel.onDisconnected();
   });
@@ -590,6 +706,8 @@ const boot = () => {
   });
 
   runtime.restoreLocalState();
+  syncConfigFileButtons();
+  primeCompatibilityStatus();
   new MidiMonitor({ container: document.getElementById('midi-panel') });
   new ScopePanel({
     container: document.getElementById('scope-panel'),

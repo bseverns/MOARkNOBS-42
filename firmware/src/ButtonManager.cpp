@@ -163,6 +163,7 @@ ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *contro
       activeMode(0), _pendingEfSlot(-1), _efAssignDeadline(0) {
     for (int i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; i++) {
         buttonStates[i] = false;
+        lastRawButtonStates[i] = false;
         lastDebounceTimes[i] = 0;
     }
 }
@@ -228,8 +229,8 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
     // Process virtual (multiplexer) buttons using scanned states
     for (uint8_t i = 0; i < NUM_VIRTUAL_BUTTONS; i++) {
         uint8_t rawState = rawStates[i];
-        bool stableReading =
-            Utility::debounce(buttonStates[i], rawState, lastDebounceTimes[i], now, DEBOUNCE_DELAY);
+        bool stableReading = Utility::debounce(buttonStates[i], lastRawButtonStates[i], rawState,
+                                               lastDebounceTimes[i], now, DEBOUNCE_DELAY);
 
         if (stableReading) {
             bool pressed = (buttonStates[i] == HIGH);
@@ -977,9 +978,9 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
         bool pressed = (val < BUTTON_PRESS_THRESHOLD);
         uint8_t idx = ch - 6;
-        bool stable =
-            Utility::debounce(buttonStates[NUM_VIRTUAL_BUTTONS + idx], pressed,
-                              lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now, DEBOUNCE_DELAY);
+        bool stable = Utility::debounce(
+            buttonStates[NUM_VIRTUAL_BUTTONS + idx], lastRawButtonStates[NUM_VIRTUAL_BUTTONS + idx],
+            pressed, lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now, DEBOUNCE_DELAY);
         if (stable) {
             updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
         }

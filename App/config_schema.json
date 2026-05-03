@@ -35,21 +35,21 @@
           "midiChannel": {
             "type": "integer",
             "title": "MIDI channel",
-            "description": "MIDI channel number (1-16).",
+            "description": "MIDI channel number (1-16). Match the synth part, DAW track, or device channel you want this slot to control.",
             "minimum": 1,
             "maximum": 16
           },
           "data1": {
             "type": "integer",
             "title": "CC/Note number",
-            "description": "Controller number or note number used by this slot.",
+            "description": "Primary MIDI number for this slot. For CC slots this is the controller number; for Note slots it is the note number/pitch.",
             "minimum": 0,
             "maximum": 127
           },
           "efIndex": {
             "type": "integer",
             "title": "Envelope follower index",
-            "description": "Envelope follower source for this slot (-1 disables).",
+            "description": "Envelope follower source for this slot. Set -1 to disable EF-driven modulation for the slot.",
             "minimum": -1,
             "maximum": 5
           },
@@ -117,13 +117,13 @@
           "sysexTemplate": {
             "type": "string",
             "title": "SysEx template",
-            "description": "Hex bytes plus xx/MSB/LSB placeholders",
+            "description": "Space-separated hex bytes plus XX, MSB, or LSB placeholders for the live value.",
             "maxLength": 128
           },
           "arg": {
             "type": "object",
             "title": "Follower Combiner (ARG)",
-            "description": "ARG combines two envelope followers before MIDI output.",
+            "description": "ARG combines two envelope followers with a math method before MIDI output.",
             "required": ["enabled", "method", "method_name", "sourceA", "sourceB"],
             "properties": {
               "enabled": { "type": "boolean", "title": "Enable combiner" },

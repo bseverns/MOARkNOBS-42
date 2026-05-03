@@ -10,7 +10,7 @@ const { createBrowserBridgeServer } = require('./lib/http_bridge_server');
 function usageText() {
   return (
     'mn42_bridge_server.js - browser-driven MOARkNOBS-42 bridge\n' +
-    'Usage: node mn42_bridge_server.js [--http-host ADDR] [--http-port PORT] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
+    'Usage: node mn42_bridge_server.js [--config FILE] [--http-host ADDR] [--http-port PORT] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
   );
 }
 

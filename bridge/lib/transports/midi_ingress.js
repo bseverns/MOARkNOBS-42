@@ -7,6 +7,7 @@ function createMidiMessageHandler({
   parseMidiMessageToTypedEvents,
   midiRpnStateByChannel,
   sendTypedEventToOsc,
+  sendMappedMidiEventToOsc,
   buildSlotCommandFromCcEvent,
   pushLog,
   queuePendingCommand,
@@ -52,6 +53,13 @@ function createMidiMessageHandler({
       sendTypedEventToOsc(event, {
         flow: 'midi->osc',
         kind: 'event',
+        reason: event.kind,
+        traceId: midiTraceId,
+        hostTimestampMs,
+      });
+      sendMappedMidiEventToOsc?.(event, {
+        flow: 'midi->osc',
+        kind: 'mapping',
         reason: event.kind,
         traceId: midiTraceId,
         hostTimestampMs,

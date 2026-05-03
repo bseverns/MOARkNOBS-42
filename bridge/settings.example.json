@@ -1,0 +1,23 @@
+{
+  "serialName": "/dev/ttyACM0",
+  "oscHost": "127.0.0.1",
+  "oscPort": 9000,
+  "oscListen": 9000,
+  "oscBind": "127.0.0.1",
+  "midiLabel": "MN42 Bridge",
+  "feedbackWindowMs": 120,
+  "rtP95TargetMs": 10,
+  "rtJitterP95TargetMs": 5,
+  "alertSuppressionMs": 3000,
+  "allowFeedbackLoops": false,
+  "midiToOscMappings": [
+    {
+      "id": "layer1-opacity",
+      "kind": "cc",
+      "channel": 1,
+      "controller": 20,
+      "address": "/layer1/opacity",
+      "valueMode": "normalized"
+    }
+  ]
+}

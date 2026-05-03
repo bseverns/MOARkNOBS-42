@@ -96,9 +96,10 @@ class Utility {
                                 float exponent);
 
     // Debouncing
-    /** Simple digital input debouncing helper. */
-    static bool debounce(bool &previousState, bool currentState, unsigned long &lastDebounceTime,
-                         unsigned long currentTime, unsigned long debounceDelay);
+    /** Debounce one digital input and report when its stable state changes. */
+    static bool debounce(bool &stableState, bool &lastRawState, bool currentState,
+                         unsigned long &lastDebounceTime, unsigned long currentTime,
+                         unsigned long debounceDelay);
 
     // EEPROM Operations
     static uint8_t readEEPROMByte(int address);

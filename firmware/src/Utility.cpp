@@ -87,23 +87,27 @@ void Utility::scheduleNoteOnOff(MIDIHandler &midiHandler, uint8_t note, uint8_t 
 
 // Debouncing
 /*
- * `previousState`   holds the last rock-solid reading and gets clobbered when
- *                    a new state proves itself.
+ * `stableState`     holds the last rock-solid reading.
+ * `lastRawState`    tracks the most recent unconfirmed sample so bouncing
+ *                    edges can restart the timer without losing the stable
+ *                    output state.
  * `currentState`    the raw sample we're checking out right now.
  * `lastDebounceTime` time stamp of the most recent flip.
  * `debounceDelay`   minimum interval the input has to keep screaming the same
  *                    value before we believe it.
  */
-bool Utility::debounce(bool &previousState, bool currentState, unsigned long &lastDebounceTime,
-                       unsigned long currentTime, unsigned long debounceDelay) {
-    if (currentState != previousState) {
-        lastDebounceTime = currentTime; // Update debounce time
+bool Utility::debounce(bool &stableState, bool &lastRawState, bool currentState,
+                       unsigned long &lastDebounceTime, unsigned long currentTime,
+                       unsigned long debounceDelay) {
+    if (currentState != lastRawState) {
+        lastDebounceTime = currentTime;
+        lastRawState = currentState;
     }
-    if ((currentTime - lastDebounceTime) > debounceDelay) {
-        previousState = currentState; // Update state
-        return true;                  // Stable state change
+    if ((currentTime - lastDebounceTime) >= debounceDelay && stableState != lastRawState) {
+        stableState = lastRawState;
+        return true;
     }
-    return false; // Not stable
+    return false;
 }
 
 // EEPROM Operations

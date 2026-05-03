@@ -211,6 +211,39 @@ void test_exponential_moving_average_clamps_alpha_bounds() {
     TEST_ASSERT_EQUAL_INT(120, Utility::exponentialMovingAverage(120, 42, 1.25f));
 }
 
+void test_debounce_reports_state_change_after_stable_interval() {
+    bool stableState = false;
+    bool lastRawState = false;
+    unsigned long lastDebounceTime = 0;
+
+    TEST_ASSERT_FALSE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 10, 50));
+    TEST_ASSERT_FALSE(stableState);
+    TEST_ASSERT_TRUE(lastRawState);
+
+    TEST_ASSERT_FALSE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 59, 50));
+    TEST_ASSERT_FALSE(stableState);
+
+    TEST_ASSERT_TRUE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 60, 50));
+    TEST_ASSERT_TRUE(stableState);
+}
+
+void test_debounce_restarts_timer_when_signal_bounces() {
+    bool stableState = false;
+    bool lastRawState = false;
+    unsigned long lastDebounceTime = 0;
+
+    TEST_ASSERT_FALSE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 10, 50));
+    TEST_ASSERT_FALSE(
+        Utility::debounce(stableState, lastRawState, false, lastDebounceTime, 20, 50));
+    TEST_ASSERT_FALSE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 30, 50));
+
+    TEST_ASSERT_FALSE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 79, 50));
+    TEST_ASSERT_FALSE(stableState);
+
+    TEST_ASSERT_TRUE(Utility::debounce(stableState, lastRawState, true, lastDebounceTime, 80, 50));
+    TEST_ASSERT_TRUE(stableState);
+}
+
 void test_exponential_moving_average_rounds_weighted_result() {
     TEST_ASSERT_EQUAL_INT(18, Utility::exponentialMovingAverage(10, 20, 0.25f));
     TEST_ASSERT_EQUAL_INT(-18, Utility::exponentialMovingAverage(-10, -20, 0.25f));

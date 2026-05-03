@@ -30,11 +30,13 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
    ```
    - bridge path: run `npm --prefix bridge start`, open <http://127.0.0.1:8787/>, then click **Open configurator**
 3. Hit <http://localhost:8000/> for the direct path, or the bridge-served `/app/` URL for the bridge path. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
-4. Click **Connect**, pick the MOARkNOBS port if you are on WebSerial, and let the header pill confirm the firmware, schema version, and memory stats.
-5. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the active schema validator (device schema when compatible, bundled `config_schema.json` fallback otherwise).
-6. On Apply the runtime stages one config payload with schema version, manifest metadata, and a SHA-256 checksum. Simulator mode keeps the JSON-RPC envelope; native WebSerial and bridge sessions adapt that request onto the firmware's `SET_ALL` text protocol. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
-7. Use the browser-only **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. They are local safety guards, not firmware-backed config, so they do not require **Apply**.
-8. Need hardware-free testing? Toggle the **Start simulator** button—the runtime swaps transports and replays canned manifest/state frames.
+4. If you are using the direct USB path, click **Check compatibility** first when you are unsure about browser/OS support. The configurator now calls out unsupported browsers, insecure origins, and cancelled port pickers before you burn time on vague connection failures.
+5. Click **Connect**, pick the MOARkNOBS port if you are on WebSerial, and let the header pill confirm the firmware, schema version, and memory stats.
+6. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the active schema validator (device schema when compatible, bundled `config_schema.json` fallback otherwise).
+7. Use **Import config JSON** and **Export config JSON** in the utility rail for backup, restore, and shareable profiles. Import stages the file locally first; nothing touches the hardware until you click **Apply**.
+8. On Apply the runtime stages one config payload with schema version, manifest metadata, and a SHA-256 checksum. Simulator mode keeps the JSON-RPC envelope; native WebSerial and bridge sessions adapt that request onto the firmware's `SET_ALL` text protocol. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
+9. Use the browser-only **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. They are local safety guards, not firmware-backed config, so they do not require **Apply**.
+10. Need hardware-free testing? Toggle the **Start simulator** button—the runtime swaps transports and replays canned manifest/state frames.
 
 For the operator-facing explanation of `Immediate local response` versus the browser-only pickup guard, read [docs/OperatorTutorial.md](../docs/guides/OperatorTutorial.md).
 
@@ -43,7 +45,7 @@ The written field guide below is the current operator-facing reference; add scre
 ## UI Field Guide
 
 - **LED Color Lab** – Slide the brightness control and watch it punch straight into the staged JSON; the value is clamped to the same 0–255 lane the firmware enforces, so you’re rehearsing reality. Ride the fader slowly and the runtime’s [24 ms throttling](#runtime-contract) keeps chatter to a polite murmur; slam it and the staged hex display still tracks every move so you can screen-cap or copy/paste the exact color code. Hex edits round-trip: type a six-character value, press return, and the slider jumps to the matching luminance. If Apply can’t land (checksum blowout, unplugged cable), the [checksum rollback flow](#quickstart) rewinds both the slider and hex badge so the LED preview never lies.
-- **Preset Import/Export Pad** – Drop a `.json` file or click **Import** and the manifest streams into staging only after the mini-Ajv bundle gives it a clean bill of health—same validation gauntlet called out in [Quickstart](#quickstart). Export takes whatever is staged right now, including unsent tweaks, so you can stash experiments in git or share patches without touching hardware. When Apply sticks, the status pill records the checksum + filename combo so your studio notebook and the controller stay in lockstep.
+- **Config Import/Export Pad** – Use **Import config JSON** to stage a saved configuration locally before you touch the hardware; the file lands in the same staged workspace used by live edits. **Export config JSON** saves whatever is staged right now, including unsent tweaks, so you can stash experiments in git or share patches without touching hardware. When Apply sticks, the status pill records the exported filename or sync result so your studio notebook and the controller stay in lockstep.
 - **Profile Slot Workflow** – The A–D profile picker keeps a browser-side target slot and file backup path available, but current firmware also exposes real device-backed **Switch profile** / **Save profile** / **Reset profile** actions. The manifest still gates those buttons so older firmware builds fail closed instead of pretending support.
 - **Simulator Toggle** – The **Start simulator** switch sits dead-center under transport controls for a reason: it swaps WebSerial for the canned bridge inside `runtime.js` instantly. The log banner flips to “Simulated” and it stays that way until you reconnect a device. Because the simulator obeys the same throttled paint loop documented in [Runtime Contract](#runtime-contract), you can chase layout timing bugs or automation macros without a Teensy on the desk.
 - **Device Monitor Stack** – The telemetry cards (uptime, firmware hash, slot stats) repaint on every animation frame so you can feel live latency. Hover to freeze the ticker when you need to copy numbers into a bug report. Any schema or checksum mismatch slams you back into the [rollback workflow](#quickstart), and the monitor holds onto the last verified frame so you know exactly what state the firmware was in when things went sideways.
@@ -52,6 +54,7 @@ The written field guide below is the current operator-facing reference; add scre
 - **Browser-only Slot Notes** – `Slot label`, the MIDI badge, and `Take Control` now live outside the device schema. They are stored in local browser state so reconnects keep your operator hints and pickup guards without pretending the firmware persisted them.
 - **Local response modes** – The tiny slot badge in the live grid is an operator aid, not device config. `IM` means the browser responds immediately to local control input; `PK` means the browser waits for the control to catch the current value before activating it again. The deeper operator explanation lives in [docs/OperatorTutorial.md](../docs/guides/OperatorTutorial.md).
 - **Basic / Advanced Mode** – New sessions start in **Basic** mode, keeping the panel focused on everyday knob-to-MIDI mapping. Flip to **Advanced** to reveal EF/ARG/filter tuning, scope tools, and debug surfaces. The choice is saved in `localStorage`, and glossary-style info badges explain jargon like EF and ARG in-place.
+- **Compatibility Probe** – The transport bar now includes **Check compatibility**, which reports whether the current browser/session can use Web Serial and explains likely failure modes such as unsupported browsers, insecure origins, or cancelled device pickers.
 
 ## MIDI Monitor Panel
 
@@ -106,6 +109,7 @@ That spins up a tiny static server, launches Playwright’s headless Chromium, a
 ## Troubleshooting
 
 - Serve over HTTPS or `http://localhost` or the browser will block WebSerial.
+- If Connect reports `No device selected`, the browser picker was cancelled before a port was granted. Click **Connect** again and choose the MOARkNOBS device explicitly.
 - If the status pill sulks, open the Debug Log panel to watch the raw JSON feed.
 - Schema validation errors show up in the diff panel—fix them before Apply will enable.
 

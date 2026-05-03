@@ -23,6 +23,7 @@
           </div>
           <div class="connect-actions compact-connect-actions">
             <button id="connect" type="button">Connect</button>
+            <button id="check-compatibility" type="button">Check compatibility</button>
             <button id="config-mode" type="button">Config boot</button>
             <button id="apply" type="button" disabled>Apply</button>
             <button id="rollback" type="button" disabled>Rollback</button>
@@ -210,14 +211,17 @@
           <details class="connect-help" id="connect-fail-help">
             <summary>What to do if connect fails</summary>
             <ol>
+              <li>Use Chrome or Edge from `https://` or `http://localhost` for the direct USB path.</li>
+              <li>If you are unsure, click <strong>Check compatibility</strong> before reconnecting.</li>
+              <li>Put the device in configurator mode if the firmware requires it for setup.</li>
               <li>Close other serial apps (Arduino Serial Monitor, PlatformIO monitor, bridge scripts).</li>
               <li>Unplug and replug the USB cable.</li>
               <li>Refresh this page, then click <strong>Connect</strong> again.</li>
             </ol>
           </details>
           <div class="stack">
-            <button id="export-preset" disabled>Export preset</button>
-            <button id="import-preset" disabled>Import preset</button>
+            <button id="export-preset" disabled>Export config JSON</button>
+            <button id="import-preset">Import config JSON</button>
             <select id="preset-picker">
               <option value="">Select a preset…</option>
             </select>

@@ -6,11 +6,16 @@ const {
   sanitizeTraceId,
   normalizeTimestampMs,
 } = require('../observability/performance');
+const {
+  eventMatchesMidiToOscMapping,
+  buildMappedOscArgs,
+} = require('../config/midi_osc_mappings');
 
 function createBridgeEgress({
   getUdp,
   getMidiOut,
   getOscTarget,
+  getMidiToOscMappings,
   markTelemetryMidi,
   recordRoute,
   pushLog,
@@ -118,11 +123,33 @@ function createBridgeEgress({
     return sentCount;
   }
 
+  function sendMappedMidiEventToOsc(event, routeMeta = {}) {
+    const mappings = getMidiToOscMappings?.() || [];
+    if (!Array.isArray(mappings) || !mappings.length) return 0;
+    let sentCount = 0;
+    mappings.forEach((mapping) => {
+      if (!eventMatchesMidiToOscMapping(event, mapping)) return;
+      const args = buildMappedOscArgs(event, mapping);
+      if (!args) return;
+      sendOscTelemetry(mapping.address, args, {
+        flow: routeMeta.flow || 'midi->osc',
+        kind: routeMeta.kind || 'mapping',
+        reason: routeMeta.reason || mapping.id || 'cc_mapping',
+        traceId: routeMeta.traceId,
+        sourceTimestampMs: routeMeta.sourceTimestampMs,
+        hostTimestampMs: routeMeta.hostTimestampMs,
+      });
+      sentCount += 1;
+    });
+    return sentCount;
+  }
+
   return {
     sendOscTelemetry,
     sendMidiTelemetry,
     sendTypedEventToOsc,
     sendTypedEventToMidi,
+    sendMappedMidiEventToOsc,
   };
 }
 

@@ -229,6 +229,7 @@ class ButtonManager {
 
     // Debounce & last-press tracking for all buttons
     bool buttonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {false};
+    bool lastRawButtonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {false};
     unsigned long lastDebounceTimes[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {0};
 
     // Current UI mode (e.g., CC vs ENV vs ARG)
