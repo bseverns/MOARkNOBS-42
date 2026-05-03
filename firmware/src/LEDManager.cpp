@@ -121,7 +121,7 @@ void LEDManager::markDirty(uint8_t index) {
 
 // Apply a new global brightness immediately.
 void LEDManager::setBrightness(uint8_t b) {
-    brightness = b;
+    brightness = std::min<uint8_t>(b, MN42_MAX_LED_BRIGHTNESS);
     applyBrightness();
     presentFrame();
 }
@@ -339,8 +339,8 @@ void LEDManager::applyBrightness() {
     float scaled = static_cast<float>(brightness) * brightnessMod;
     if (scaled < 0.0f)
         scaled = 0.0f;
-    if (scaled > 255.0f)
-        scaled = 255.0f;
+    if (scaled > static_cast<float>(MN42_MAX_LED_BRIGHTNESS))
+        scaled = static_cast<float>(MN42_MAX_LED_BRIGHTNESS);
     FastLED.setBrightness(static_cast<uint8_t>(scaled));
 }
 

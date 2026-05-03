@@ -35,6 +35,17 @@
 
 static_assert(NUM_BUTTONS == 6, "expect six control buttons");
 
+namespace {
+const CRGB kBringUpLedTestColor = CRGB::Green;
+
+void showBringUpLed(LEDManager &manager, uint16_t index) {
+    manager.setColor(CRGB::Black);
+    manager.setPixelColor(index, kBringUpLedTestColor);
+    manager.update();
+    delay(50);
+}
+} // namespace
+
 // --- Board objects ---
 // potChannels just holds the loaded EEPROM channels
 std::vector<uint8_t> potChannels;
@@ -161,46 +172,38 @@ static const char *resetCauseToString(uint32_t cause) {
 // Walk each set of LEDs in turn, then ask the human if the show looked right.
 void testLEDs() {
     Serial.println("=== LED Test ===");
+    const uint8_t previousBrightness = ledManager.getBrightness();
+    ledManager.setBrightness(MN42_SAFE_BENCH_LED_BRIGHTNESS);
 
-    // Slot LEDs get a rainbow chase via pot values
+    // Slot LEDs walk one at a time in a single low-current test color.
     for (int i = 0; i < SLOT_LED_COUNT; ++i) {
-        ledManager.setColor(CRGB::Black);
-        ledManager.setPotValue(i, 127);
-        ledManager.update();
-        delay(50);
+        showBringUpLed(ledManager, static_cast<uint16_t>(i));
     }
     displayManager.showText("LED Test", "Slots OK?", "Hit btn");
     waitForAnyButton();
 
-    // Envelope follower indicators in grayscale
+    // Envelope follower indicators use the same fixed color and brightness.
     for (int i = 0; i < EF_LED_COUNT; ++i) {
-        ledManager.setColor(CRGB::Black);
-        ledManager.setEnvelopeLevel(i, 127);
-        ledManager.update();
-        delay(50);
+        showBringUpLed(ledManager, static_cast<uint16_t>(EF_LED_OFFSET() + i));
     }
     displayManager.showText("LED Test", "Followers OK?", "Hit btn");
     waitForAnyButton();
 
-    // Control button LED flash
-    ledManager.setColor(CRGB::Black);
-    ledManager.triggerControlButton();
-    ledManager.update();
+    // Control LED gets the same direct single-pixel check.
+    showBringUpLed(ledManager, CONTROL_LED_INDEX());
     displayManager.showText("LED Test", "Ctrl LED?", "Hit btn");
     waitForAnyButton();
 
-    // Pot halo indicators
+    // Pot halo indicators stay on the same low-current path.
     for (int i = 0; i < POT_LED_COUNT; ++i) {
-        ledManager.setColor(CRGB::Black);
-        ledManager.setPotIndicator(i, 127);
-        ledManager.update();
-        delay(50);
+        showBringUpLed(ledManager, static_cast<uint16_t>(POT_LED_OFFSET() + i));
     }
     displayManager.showText("LED Test", "Halos OK?", "Hit btn");
     waitForAnyButton();
 
     ledManager.setColor(CRGB::Black);
     ledManager.update();
+    ledManager.setBrightness(previousBrightness);
     displayManager.clear();
 }
 

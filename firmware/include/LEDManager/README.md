@@ -33,9 +33,10 @@ the spotlight."  It's a clean slate; nothing gets lit until you tell it to.
 
 `LEDManager` now boots with a conservative brightness policy:
 
-- `MN42_DEFAULT_LED_BRIGHTNESS = 48` for normal startup/runtime
-- `MN42_SAFE_BENCH_LED_BRIGHTNESS = 32` for conservative bench phases
-- `MN42_DEMO_LED_BRIGHTNESS = 96` for intentional demo/test visuals
+- `MN42_MAX_LED_BRIGHTNESS = 26` as the current env-wide hard cap for the v1 board
+- `MN42_DEFAULT_LED_BRIGHTNESS = 26` for normal startup/runtime
+- `MN42_SAFE_BENCH_LED_BRIGHTNESS = 26` for conservative bench phases
+- `MN42_DEMO_LED_BRIGHTNESS = 26` until the v2 board lifts the temporary cap
 
 These limits reduce current spikes, but they do not replace correct power
 topology. Full-strip white on 52 WS2812 LEDs can exceed `3 A`, so confirm the

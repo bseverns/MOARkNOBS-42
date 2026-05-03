@@ -35,6 +35,17 @@
 
 SystemTestSummary runSystemTests();
 
+namespace {
+const CRGB kBringUpLedTestColor = CRGB::Green;
+
+void showBringUpLed(uint16_t index) {
+    ledManager.setColor(CRGB::Black);
+    ledManager.setPixelColor(index, kBringUpLedTestColor);
+    ledManager.update();
+    delay(50);
+}
+} // namespace
+
 // Control button used to advance test phases
 const uint8_t phaseButtonPin = 12; // Control Button #0
 
@@ -61,42 +72,34 @@ void waitForButtonPress(const char *prompt = "Press Btn0 to continue") {
 // human if the glow looked good.  Punk rock hardware testing, basically.
 void testLEDManager() {
     Serial.println("\n--- LEDManager Test ---");
+    const uint8_t previousBrightness = ledManager.getBrightness();
+    ledManager.setBrightness(MN42_SAFE_BENCH_LED_BRIGHTNESS);
 
     // --- Slot LEDs ---
     for (int i = 0; i < SLOT_LED_COUNT; i++) {
-        ledManager.setColor(CRGB::Black);
-        ledManager.setPotValue(i, 127);
-        ledManager.update();
-        delay(50);
+        showBringUpLed(static_cast<uint16_t>(i));
     }
     waitForButtonPress("Slots glow in order? Btn0");
 
     // --- Envelope follower LEDs ---
     for (int i = 0; i < EF_LED_COUNT; i++) {
-        ledManager.setColor(CRGB::Black);
-        ledManager.setEnvelopeLevel(i, 127);
-        ledManager.update();
-        delay(50);
+        showBringUpLed(static_cast<uint16_t>(EF_LED_OFFSET() + i));
     }
     waitForButtonPress("Followers shine? Btn0");
 
     // --- Control button LED ---
-    ledManager.setColor(CRGB::Black);
-    ledManager.triggerControlButton();
-    ledManager.update();
+    showBringUpLed(CONTROL_LED_INDEX());
     waitForButtonPress("Control LED pop? Btn0");
 
     // --- Pot halo LEDs ---
     for (int i = 0; i < POT_LED_COUNT; i++) {
-        ledManager.setColor(CRGB::Black);
-        ledManager.setPotIndicator(i, 127);
-        ledManager.update();
-        delay(50);
+        showBringUpLed(static_cast<uint16_t>(POT_LED_OFFSET() + i));
     }
     waitForButtonPress("Halos look righteous? Btn0");
 
     ledManager.setColor(CRGB::Black);
     ledManager.update();
+    ledManager.setBrightness(previousBrightness);
     Serial.println("LEDManager test done.");
 }
 
