@@ -38,7 +38,7 @@ For some users that is overkill. For the right user, it is the reason the instru
 
 ## Profiles, configurator, and bridge are part of the instrument
 
-The physical board is only one layer of the experience.
+The physical board is only one layer of the studio built by the machine.
 
 The repo also supports:
 
@@ -50,9 +50,9 @@ So the instrument is not just the control panel. It is the control panel plus th
 
 ## Open, but not vague
 
-MN42 is open in the practical sense: you can inspect the repo, study the design, and remix parts of the stack under the stated licenses.
+MN42 is open in the practical sense: you can inspect the repo, study the design, and remix parts of the stack under the stated licenses (this project was built on the backs of giants).
 
-Just as important, the repo tries not to be vague about what is current, what is supported, and what is still unverified. That honesty is part of the project's identity.
+Just as important, the repo tries not to be vague about what is current, what is supported, and what is still unverified.
 
 ## Who this matters to
 

@@ -57,7 +57,7 @@ Last edited: 2026-02-14
 
 - [x] Change a slot’s Type (CC/Note/NRPN/etc)
 - [ ] Change a slot’s CC number or channel
-- [ ] Change an EF parameter (mode/gate/attack/release) and see effect
+- [x] Change an EF parameter (mode/gate/attack/release) and see effect
 
 ---
 
@@ -74,7 +74,7 @@ Last edited: 2026-02-14
 
 **EF “one sentence explanation” (write it now):**
 
-- [ ] “EF turns incoming audio amplitude into stable MIDI modulation with gating and calibration.”
+- [x] “EF turns incoming audio amplitude into stable MIDI modulation with gating and calibration.”
 
 ---
 
@@ -91,7 +91,7 @@ Last edited: 2026-02-14
 
 **Arp “one sentence explanation” (write it now):**
 
-- [ ] “Arp is a pattern brain with swing that can run internally or lock to external clock.”
+- [x] “Arp is a pattern brain with swing that can run internally or lock to external clock.”
 
 ---
 
@@ -155,22 +155,22 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 **Clock “one sentence explanation” (write it now):**
 
-- [ ] “MN42 can follow external clock so it stays in time with the session.”
+- [x] “MN42 can follow external clock so it stays in time with the session.”
 
 ---
 
 ### 1.6 Profiles: prove persistence
 
-- [ ] **VERIFY:** Load Profile A vs Profile B shows an obvious difference
+- [x] **VERIFY:** Load Profile A vs Profile B shows an obvious difference
   - Acceptance: a mapping or behavior changes immediately and visibly.
-- [ ] **VERIFY:** Save profile works (from device or app, whichever is canonical)
+- [x] **VERIFY:** Save profile works (from device or app, whichever is canonical)
   - Acceptance: after save + power cycle (or reload), the change persists.
 - [ ] **VERIFY:** Profile identity is visible (index/name)
   - Acceptance: you can say “Profile 2 is the Bridge demo layout” and it’s shown.
 
 **Profiles “one sentence explanation” (write it now):**
 
-- [ ] “Profiles let us swap whole controller behaviors instantly for different classes or rigs.”
+- [x] “Profiles let us swap whole controller behaviors instantly for different classes or rigs.”
 
 ---
 
@@ -243,3 +243,7 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 - [ ] Update screenshots once hardware returns so the docs match the UI
 - [ ] Extend tests as new features land (Poly AT, custom patterns, MPE)
 - [ ] Keep this file honest: prune quarterly, archive dead ideas
+
+### Hardware
+
+- [ ] Properly feed both the logic and LED circuits from input
