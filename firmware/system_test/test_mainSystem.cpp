@@ -18,6 +18,9 @@ void test_channel_and_cc();
 void test_long_press_requires_confirm();
 void test_double_press_ctrl2_cycles_midi_type();
 void test_jitter_combo_updates_settings();
+void test_config_mode_combo_autosaves_dirty_changes();
+void test_clock_source_combo_toggles_follow_external();
+void test_lfo_tuning_combo_and_route_cycle();
 
 #if defined(FULL_SYSTEM_COMBINED)
 SystemTestSummary runSystemTests() {
@@ -26,6 +29,9 @@ SystemTestSummary runSystemTests() {
     RUN_TEST(test_long_press_requires_confirm);
     RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
     RUN_TEST(test_jitter_combo_updates_settings);
+    RUN_TEST(test_config_mode_combo_autosaves_dirty_changes);
+    RUN_TEST(test_clock_source_combo_toggles_follow_external);
+    RUN_TEST(test_lfo_tuning_combo_and_route_cycle);
     RUN_TEST(corrupt_primary_valid_backup);
     RUN_TEST(corrupted_primary_and_backup);
     RUN_TEST(test_eeprom_recovery_after_power_cycle);
@@ -44,6 +50,9 @@ void setup() {
     RUN_TEST(test_long_press_requires_confirm);
     RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
     RUN_TEST(test_jitter_combo_updates_settings);
+    RUN_TEST(test_config_mode_combo_autosaves_dirty_changes);
+    RUN_TEST(test_clock_source_combo_toggles_follow_external);
+    RUN_TEST(test_lfo_tuning_combo_and_route_cycle);
     RUN_TEST(corrupt_primary_valid_backup);
     RUN_TEST(corrupted_primary_and_backup);
     RUN_TEST(test_eeprom_recovery_after_power_cycle);

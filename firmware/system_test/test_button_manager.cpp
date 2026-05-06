@@ -11,6 +11,8 @@ unsigned long now() { return fakeMillis; }
 
 #include "ButtonManager.h"
 #undef private
+#include "FirmwareState.h"
+#include "LFO/LFOManager.h"
 #include "TestHelpers.h"
 #include "SystemTestShim.h"
 
@@ -206,4 +208,122 @@ void test_jitter_combo_updates_settings() {
     TEST_ASSERT_TRUE(g_jitterTuningActive);
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.0f, g_jitterSettings.depth);
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, g_jitterSettings.smoothness);
+}
+
+void test_config_mode_combo_autosaves_dirty_changes() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 0);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 1;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage};
+
+    g_profileSaveRequested = false;
+    const uint8_t ccBefore = cfg.getPotCCNumber(activePot);
+    constexpr uint8_t kConfigMask =
+        static_cast<uint8_t>((1u << 0) | (1u << 2) | (1u << 3) | (1u << 5));
+
+    bm.handleMultiButtonPress(kConfigMask, ctx);
+    TEST_ASSERT_TRUE(bm.isOnDeviceConfigModeActive());
+    TEST_ASSERT_FALSE(g_profileSaveRequested);
+
+    bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 4, ctx); // change CC/data1 + dirty
+    TEST_ASSERT_TRUE(bm._onDeviceConfigModeDirty);
+    TEST_ASSERT_TRUE(ccBefore != cfg.getPotCCNumber(activePot));
+
+    bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 5, ctx); // exit + autosave
+    TEST_ASSERT_FALSE(bm.isOnDeviceConfigModeActive());
+    TEST_ASSERT_FALSE(bm._onDeviceConfigModeDirty);
+    TEST_ASSERT_TRUE(g_profileSaveRequested);
+}
+
+void test_clock_source_combo_toggles_follow_external() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 0);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 1;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage};
+
+    constexpr uint8_t kClockMask = static_cast<uint8_t>((1u << 1) | (1u << 4) | (1u << 5));
+    const bool startFollow = g_followExternalClock;
+
+    bm.handleMultiButtonPress(kClockMask, ctx);
+    TEST_ASSERT_EQUAL(!startFollow, g_followExternalClock);
+
+    bm.handleMultiButtonPress(kClockMask, ctx);
+    TEST_ASSERT_EQUAL(startFollow, g_followExternalClock);
+}
+
+void test_lfo_tuning_combo_and_route_cycle() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 0);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 1;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage};
+
+    constexpr uint8_t kLfoMask = static_cast<uint8_t>((1u << 0) | (1u << 1) | (1u << 3));
+
+    lfoManager.clearRoutes();
+    lfoManager.lfo(0).setShape(LFOShape::Sine);
+    lfoManager.lfo(0).setSyncEnabled(false);
+    lfoManager.lfo(0).setFrequencyHz(1.0f);
+    lfoManager.lfo(0).setDepth(0.5f);
+
+    bm.handleMultiButtonPress(kLfoMask, ctx);
+    TEST_ASSERT_TRUE(bm.isLfoTuningModeActive());
+    TEST_ASSERT_EQUAL_UINT8(0, bm.lfoTuningIndex());
+
+    bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 4, ctx); // add internal route
+    TEST_ASSERT_EQUAL_UINT(1, lfoManager.routeCount());
+    LFOManager::Route route{};
+    TEST_ASSERT_TRUE(lfoManager.getRoute(0, route));
+    TEST_ASSERT_EQUAL_UINT8(0, route.lfoIndex);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOInternalTarget::EfGainTrim),
+                            static_cast<uint8_t>(route.target));
+
+    bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 4, ctx); // cycle target
+    TEST_ASSERT_TRUE(lfoManager.getRoute(0, route));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOInternalTarget::ArpSwing),
+                            static_cast<uint8_t>(route.target));
+
+    bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 1, ctx); // LFO2 select
+    TEST_ASSERT_EQUAL_UINT8(1, bm.lfoTuningIndex());
+
+    bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 5, ctx); // exit
+    TEST_ASSERT_FALSE(bm.isLfoTuningModeActive());
 }

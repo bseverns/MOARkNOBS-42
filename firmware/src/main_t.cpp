@@ -27,6 +27,7 @@
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "LEDManager.h"
+#include "LFO/LFOManager.h"
 #include "MIDIHandler.h"
 #include "Modes.h"
 #include "PotentiometerManager.h"
@@ -37,6 +38,7 @@ SystemTestSummary runSystemTests();
 
 namespace {
 const CRGB kBringUpLedTestColor = CRGB::Green;
+constexpr unsigned long kControlSuiteTimeoutMs = 20000;
 
 void showBringUpLed(uint16_t index) {
     ledManager.setColor(CRGB::Black);
@@ -44,13 +46,175 @@ void showBringUpLed(uint16_t index) {
     ledManager.update();
     delay(50);
 }
+
+const char *configSlotTypeShortName(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROG";
+    case MIDIMessageType::Aftertouch:
+        return "AFT";
+    case MIDIMessageType::ModWheel:
+        return "MOD";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYX";
+    }
+    return "?";
+}
+
+const char *syncRatioLabel(LFOSyncRatio ratio) {
+    switch (ratio) {
+    case LFOSyncRatio::Div1:
+        return "1/1";
+    case LFOSyncRatio::Div2:
+        return "1/2";
+    case LFOSyncRatio::Div4:
+        return "1/4";
+    case LFOSyncRatio::Div8:
+        return "1/8";
+    case LFOSyncRatio::Div16:
+        return "1/16";
+    case LFOSyncRatio::Div32:
+        return "1/32";
+    case LFOSyncRatio::Mul2:
+        return "x2";
+    case LFOSyncRatio::Mul4:
+        return "x4";
+    }
+    return "?";
+}
+
+const char *lfoShapeShortLabel(LFOShape shape) {
+    switch (shape) {
+    case LFOShape::Sine:
+        return "SIN";
+    case LFOShape::Triangle:
+        return "TRI";
+    case LFOShape::Saw:
+        return "SAW";
+    case LFOShape::Square:
+        return "SQR";
+    case LFOShape::SampleHold:
+        return "S&H";
+    case LFOShape::RandomSlew:
+        return "RSL";
+    }
+    return "?";
+}
+
+const char *lfoTargetShortLabel(LFOInternalTarget target) {
+    switch (target) {
+    case LFOInternalTarget::EfGainTrim:
+        return "EFG";
+    case LFOInternalTarget::ArpSwing:
+        return "ARS";
+    case LFOInternalTarget::VelocityShift:
+        return "VEL";
+    case LFOInternalTarget::NoteChance:
+        return "CHN";
+    case LFOInternalTarget::ArpGate:
+        return "GAT";
+    case LFOInternalTarget::JitterDepth:
+        return "JDP";
+    case LFOInternalTarget::JitterSmoothness:
+        return "JSM";
+    }
+    return "?";
+}
+
+bool activeInternalTargetForLfo(uint8_t lfoIndex, LFOInternalTarget &targetOut) {
+    const size_t count = lfoManager.routeCount();
+    LFOManager::Route route{};
+    for (size_t i = 0; i < count; ++i) {
+        if (!lfoManager.getRoute(i, route)) {
+            continue;
+        }
+        if (route.type == LFOManager::Route::Type::Internal && route.lfoIndex == lfoIndex) {
+            targetOut = route.target;
+            return true;
+        }
+    }
+    return false;
+}
+
+void drawInstruction(const char *line1, const char *line2, const char *line3) {
+    displayManager.beginDraw();
+    displayManager.drawText(line1, line2, line3);
+    displayManager.endDraw();
+}
+
+void drawOnDeviceConfigView() {
+    const uint8_t slotIndex = activePot;
+    const MIDISlot &slot = configManager.getSlot(slotIndex);
+    const uint8_t channel = configManager.getPotChannel(slotIndex);
+    uint8_t data1 = configManager.getPotCCNumber(slotIndex);
+    if (slot.type == MIDIMessageType::NRPN || slot.type == MIDIMessageType::RPN) {
+        data1 = configManager.getSlotData1(slotIndex);
+    }
+
+    char line1[20];
+    char line2[24];
+    snprintf(line1, sizeof(line1), "Cfg Slot %u", slotIndex);
+    snprintf(line2, sizeof(line2), "%s Ch%u D1%u", configSlotTypeShortName(slot.type), channel,
+             data1);
+
+    displayManager.beginDraw();
+    displayManager.drawText(line1, line2, "C5 Exit+Save");
+    displayManager.endDraw();
+}
+
+void drawLfoTuningView() {
+    const uint8_t index = buttonManager.lfoTuningIndex() % LFOManager::kMaxLFOs;
+    const LFO &lfo = lfoManager.lfo(index);
+    LFOInternalTarget target = LFOInternalTarget::EfGainTrim;
+    const bool hasTarget = activeInternalTargetForLfo(index, target);
+
+    char line1[20];
+    char line2[24];
+    char line3[24];
+    snprintf(line1, sizeof(line1), "LFO%u T:%s", static_cast<unsigned>(index + 1),
+             hasTarget ? lfoTargetShortLabel(target) : "NONE");
+    snprintf(line2, sizeof(line2), "%s D%.2f", lfoShapeShortLabel(lfo.getShape()), lfo.getDepth());
+    if (lfo.isSyncEnabled()) {
+        snprintf(line3, sizeof(line3), "SYNC %s %s", syncRatioLabel(lfo.getSyncRatio()),
+                 lfo.isBipolar() ? "BI" : "UNI");
+    } else {
+        snprintf(line3, sizeof(line3), "HZ %.2f %s", lfo.getFrequencyHz(),
+                 lfo.isBipolar() ? "BI" : "UNI");
+    }
+
+    displayManager.beginDraw();
+    displayManager.drawText(line1, line2, line3);
+    displayManager.endDraw();
+}
+
+void serviceControlSuiteUi() {
+    buttonManager.processButtons(buttonContext);
+    if (buttonManager.isOnDeviceConfigModeActive()) {
+        drawOnDeviceConfigView();
+    } else if (buttonManager.isLfoTuningModeActive()) {
+        drawLfoTuningView();
+    }
+    delay(2);
+}
 } // namespace
 
 // Control button used to advance test phases
 const uint8_t phaseButtonPin = 12; // Control Button #0
 
 // Ordered test phases
-enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, DISP, SYSTEM, COMPLETE };
+enum class TestPhase { IDLE, LEDS, BUTTONS, POTS, ENVELOPES, CONTROL, DISP, SYSTEM, COMPLETE };
 TestPhase currentPhase = TestPhase::IDLE;
 bool phaseStarted = false;
 
@@ -233,6 +397,122 @@ void testEnvelopeFollowers() {
     Serial.println("EnvelopeFollower test done.");
 }
 
+void testControlSuite() {
+    Serial.println("\n--- On-Board Control Suite Test ---");
+    Serial.println("Validates config mode, clock source toggle, and LFO quick-tune mode.");
+
+    const uint8_t slotBefore = activePot;
+    const uint8_t ccBefore = configManager.getPotCCNumber(slotBefore);
+    const bool clockFollowBefore = g_followExternalClock;
+    bool configEntered = false;
+    bool configEdited = false;
+    bool configExited = false;
+    bool clockToggled = false;
+    bool lfoEntered = false;
+    bool lfoTargetCycled = false;
+    bool lfoExited = false;
+
+    g_profileSaveRequested = false;
+
+    drawInstruction("Control Suite", "Ctrl0+2+3+5", "Enter Config");
+    unsigned long deadline = millis() + kControlSuiteTimeoutMs;
+    while (millis() < deadline) {
+        serviceControlSuiteUi();
+        if (buttonManager.isOnDeviceConfigModeActive()) {
+            configEntered = true;
+            break;
+        }
+    }
+    Serial.printf("Config mode enter: %s\n", configEntered ? "PASS" : "FAIL");
+
+    if (configEntered) {
+        waitForButtonPress("OLED shows Config view? Btn0");
+
+        drawInstruction("Config Edit", "Tap Ctrl4", "Change CC/D1");
+        deadline = millis() + kControlSuiteTimeoutMs;
+        while (millis() < deadline) {
+            serviceControlSuiteUi();
+            const uint8_t ccNow = configManager.getPotCCNumber(activePot);
+            if (ccNow != ccBefore) {
+                configEdited = true;
+                break;
+            }
+        }
+        Serial.printf("Config edit detected: %s\n", configEdited ? "PASS" : "FAIL");
+
+        drawInstruction("Config Exit", "Tap Ctrl5", "Exit+Save");
+        deadline = millis() + kControlSuiteTimeoutMs;
+        while (millis() < deadline) {
+            serviceControlSuiteUi();
+            if (!buttonManager.isOnDeviceConfigModeActive()) {
+                configExited = true;
+                break;
+            }
+        }
+        Serial.printf("Config mode exit: %s\n", configExited ? "PASS" : "FAIL");
+        Serial.printf("Config autosave flag: %s\n",
+                      (configEdited && g_profileSaveRequested) ? "PASS" : "FAIL");
+    }
+
+    drawInstruction("Clock Source", "Ctrl1+4+5", "Toggle source");
+    deadline = millis() + kControlSuiteTimeoutMs;
+    while (millis() < deadline) {
+        serviceControlSuiteUi();
+        if (g_followExternalClock != clockFollowBefore) {
+            clockToggled = true;
+            break;
+        }
+    }
+    Serial.printf("Clock source toggle: %s\n", clockToggled ? "PASS" : "FAIL");
+
+    drawInstruction("LFO Tune", "Ctrl0+1+3", "Enter mode");
+    deadline = millis() + kControlSuiteTimeoutMs;
+    while (millis() < deadline) {
+        serviceControlSuiteUi();
+        if (buttonManager.isLfoTuningModeActive()) {
+            lfoEntered = true;
+            break;
+        }
+    }
+    Serial.printf("LFO mode enter: %s\n", lfoEntered ? "PASS" : "FAIL");
+
+    if (lfoEntered) {
+        waitForButtonPress("OLED shows LFO view? Btn0");
+
+        LFOInternalTarget beforeTarget = LFOInternalTarget::EfGainTrim;
+        const bool hadTargetBefore =
+            activeInternalTargetForLfo(buttonManager.lfoTuningIndex(), beforeTarget);
+        drawInstruction("LFO Route", "Tap Ctrl4", "Cycle target");
+        deadline = millis() + kControlSuiteTimeoutMs;
+        while (millis() < deadline) {
+            serviceControlSuiteUi();
+            LFOInternalTarget currentTarget = LFOInternalTarget::EfGainTrim;
+            if (!activeInternalTargetForLfo(buttonManager.lfoTuningIndex(), currentTarget)) {
+                continue;
+            }
+            if (!hadTargetBefore || currentTarget != beforeTarget) {
+                lfoTargetCycled = true;
+                break;
+            }
+        }
+        Serial.printf("LFO target cycle: %s\n", lfoTargetCycled ? "PASS" : "FAIL");
+
+        drawInstruction("LFO Exit", "Tap Ctrl5", "Exit tune");
+        deadline = millis() + kControlSuiteTimeoutMs;
+        while (millis() < deadline) {
+            serviceControlSuiteUi();
+            if (!buttonManager.isLfoTuningModeActive()) {
+                lfoExited = true;
+                break;
+            }
+        }
+        Serial.printf("LFO mode exit: %s\n", lfoExited ? "PASS" : "FAIL");
+    }
+
+    drawInstruction("Control Suite", "Review Serial", "Btn0 continue");
+    waitForButtonPress("Control suite summary reviewed? Btn0");
+}
+
 void testDisplayManager() {
     Serial.println("\n--- DisplayManager Test ---");
     displayManager.clear();
@@ -296,6 +576,8 @@ static const char *phaseName(TestPhase p) {
         return "Pots";
     case TestPhase::ENVELOPES:
         return "Envelopes";
+    case TestPhase::CONTROL:
+        return "Controls";
     case TestPhase::DISP:
         return "Display";
     case TestPhase::SYSTEM:
@@ -321,6 +603,9 @@ void runPhase(TestPhase phase) {
         break;
     case TestPhase::ENVELOPES:
         testEnvelopeFollowers();
+        break;
+    case TestPhase::CONTROL:
+        testControlSuite();
         break;
     case TestPhase::DISP:
         testDisplayManager();
