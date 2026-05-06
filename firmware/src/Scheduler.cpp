@@ -75,7 +75,12 @@ void initializeSchedulers() {
             if (runStartupSequenceStep()) {
                 return;
             }
-            if (displayManager.isStatusOverlayActive()) {
+            // Let mode-specific views (config/LFO/jitter/diagnostics) remain visible even when
+            // status toasts are active, so control feedback is always explicit on OLED.
+            if (displayManager.isStatusOverlayActive() &&
+                !buttonManager.isOnDeviceConfigModeActive() &&
+                !buttonManager.isLfoTuningModeActive() && !g_jitterTuningActive &&
+                !diagnosticMode) {
                 return;
             }
             displayManager.beginDraw();
@@ -84,6 +89,10 @@ void initializeSchedulers() {
                 return;
             }
             if (renderLfoTuningViewIfActive()) {
+                displayManager.endDraw();
+                return;
+            }
+            if (renderJitterTuningViewIfActive()) {
                 displayManager.endDraw();
                 return;
             }

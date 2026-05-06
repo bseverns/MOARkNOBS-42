@@ -125,6 +125,17 @@ This document captures every user gesture, its conditions, resulting actions, OL
 
 ---
 
+## Control Pot Gestures (LFO Quick-Tune Mode)
+
+| Gesture         | Condition            | Action                                          | OLED Text               | LED Behavior | Persistent Write? | WebSerial Event |
+| --------------- | -------------------- | ----------------------------------------------- | ----------------------- | ------------ | ----------------- | --------------- |
+| Adjust CtrlPot0 | LFO tune mode active | Set selected LFO free-run frequency             | `LFOn Hz N.NN` (short)  | None         | No                | No              |
+| Adjust CtrlPot1 | LFO tune mode active | Set selected LFO depth                          | `LFOn D N.NN` (short)   | None         | No                | No              |
+| Adjust CtrlPot2 | Sync ON              | Set selected LFO sync ratio (quantized 1/1..x4) | `LFOn Sync X` (short)   | None         | No                | No              |
+| Adjust CtrlPot2 | Sync OFF             | Set selected LFO polarity                       | `LFOn Bipolar/Unipolar` | None         | No                | No              |
+
+---
+
 ## Control Pot Gestures (Jitter Mode)
 
 | Gesture         | Condition          | Action                   | OLED Text              | LED Behavior | Persistent Write? | WebSerial Event |
@@ -176,6 +187,21 @@ All OLED messages follow these constraints:
 
 ---
 
+## OLED Dominance Order
+
+When multiple display producers are active at once, OLED ownership resolves in this order:
+
+1. Startup animation
+2. Modal edit views (`on-device config`, `LFO tune`, `jitter tune`, `diagnostics`)
+3. Status overlays / temporary messages (only when no modal edit view is active)
+4. Control overlays (`filter`, `arp`, `arp edit`, `note dynamics`)
+5. Screensaver
+6. Baseline context view
+
+This is enforced in the low-priority display scheduler path.
+
+---
+
 ## Diagnostic Polarity
 
 **Button matrix display:** `#` = pressed, `.` = released
@@ -200,4 +226,4 @@ This ensures the browser-side configurator can parse all output without landmine
 
 ## Last Updated
 
-2026-04-19 — Stabilization Cut v2
+2026-05-05 — Display Priority + Modal Feedback Audit

@@ -111,6 +111,12 @@ These change broader operating behavior.
 | `Ctrl0 + Ctrl1 + Ctrl3`         | toggle LFO quick-tune mode    |
 | `Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5` | enter on-device config mode   |
 
+LFO quick-tune control-pot map:
+
+- `CtrlPot0`: frequency
+- `CtrlPot1`: depth
+- `CtrlPot2`: sync ratio (sync ON) or bipolar/unipolar (sync OFF)
+
 These are useful, but most players do not need them on day one.
 
 ## Dangerous or destructive actions

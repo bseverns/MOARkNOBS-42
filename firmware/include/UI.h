@@ -10,6 +10,7 @@ void updateControlUi(ButtonManagerContext &context);
 bool renderControlOverlayIfActive();
 bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context);
 bool renderLfoTuningViewIfActive();
+bool renderJitterTuningViewIfActive();
 void streamWebSerialState();
 void flushPendingFilterPersists();
 

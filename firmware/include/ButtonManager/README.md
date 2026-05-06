@@ -121,6 +121,7 @@ LFO quick-tune mode remaps control buttons while active:
 | Ctrl2 | Cycle shape |
 | Ctrl3 | Toggle sync |
 | Ctrl4 | Cycle internal route target (EF Gain -> Arp Swing -> Vel Shift -> Note Chance -> Arp Gate -> Jitter Depth -> Jitter Smooth) |
+| CtrlPot2 | Set sync ratio (sync ON) or bipolar/unipolar (sync OFF) |
 | Ctrl5 | Exit LFO quick-tune mode |
 
 For deeper madness see the [firmware README](../../README.md).

@@ -75,6 +75,7 @@ constexpr uint8_t panicMask = maskCtrl0 | maskCtrl1 | maskCtrl2;
 constexpr uint8_t configModeMask = maskCtrl0 | maskCtrl2 | maskCtrl3 | maskCtrl5;
 constexpr uint8_t clockSourceMask = maskCtrl1 | maskCtrl4 | maskCtrl5;
 constexpr uint8_t lfoTuningMask = maskCtrl0 | maskCtrl1 | maskCtrl3;
+constexpr unsigned long kTuningStatusMs = 600;
 
 constexpr uint32_t MUX_SETTLE_US = 5;
 
@@ -193,6 +194,28 @@ const char *lfoShapeLabel(LFOShape shape) {
     return "?";
 }
 
+const char *lfoSyncRatioLabel(LFOSyncRatio ratio) {
+    switch (ratio) {
+    case LFOSyncRatio::Div1:
+        return "1/1";
+    case LFOSyncRatio::Div2:
+        return "1/2";
+    case LFOSyncRatio::Div4:
+        return "1/4";
+    case LFOSyncRatio::Div8:
+        return "1/8";
+    case LFOSyncRatio::Div16:
+        return "1/16";
+    case LFOSyncRatio::Div32:
+        return "1/32";
+    case LFOSyncRatio::Mul2:
+        return "x2";
+    case LFOSyncRatio::Mul4:
+        return "x4";
+    }
+    return "?";
+}
+
 const char *lfoTargetLabel(LFOInternalTarget target) {
     switch (target) {
     case LFOInternalTarget::EfGainTrim:
@@ -304,12 +327,16 @@ void ButtonManager::enterLfoTuningMode(ButtonManagerContext &context) {
     _lfoTuningIndex = 0;
     _lastLfoTuneFreqHz = -1.0f;
     _lastLfoTuneDepth = -1.0f;
+    _lastLfoTuneRatioIndex = -1;
+    _lastLfoTuneBipolarState = -1;
     context.displayManager.displayStatus("LFO Tune ON", 1000);
 }
 
 void ButtonManager::exitLfoTuningMode(ButtonManagerContext &context) {
     cancelPendingConfirm(context);
     _lfoTuningActive = false;
+    _lastLfoTuneRatioIndex = -1;
+    _lastLfoTuneBipolarState = -1;
     context.displayManager.displayStatus("LFO Tune OFF", 1000);
 }
 
@@ -795,10 +822,14 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         switch (controlIndex) {
         case 0:
             _lfoTuningIndex = 0;
+            _lastLfoTuneRatioIndex = -1;
+            _lastLfoTuneBipolarState = -1;
             context.displayManager.displayStatus("LFO1", 800);
             break;
         case 1:
             _lfoTuningIndex = 1;
+            _lastLfoTuneRatioIndex = -1;
+            _lastLfoTuneBipolarState = -1;
             context.displayManager.displayStatus("LFO2", 800);
             break;
         case 2: {
@@ -811,6 +842,8 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
         case 3:
             lfo.setSyncEnabled(!lfo.isSyncEnabled());
+            _lastLfoTuneRatioIndex = -1;
+            _lastLfoTuneBipolarState = -1;
             context.displayManager.displayStatus(lfo.isSyncEnabled() ? "Sync ON" : "Sync OFF", 900);
             break;
         case 4: {
@@ -1405,12 +1438,12 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         if (depthChanged) {
             char buf[32];
             snprintf(buf, sizeof(buf), "Jitter: %.2f", depth);
-            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            context.displayManager.displayStatus(buf, kTuningStatusMs);
             _lastJitterDepth = depth;
         } else if (smoothChanged) {
             char buf[32];
             snprintf(buf, sizeof(buf), "Smooth: %.2f", smooth);
-            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            context.displayManager.displayStatus(buf, kTuningStatusMs);
             _lastJitterSmoothness = smooth;
         }
     }
@@ -1422,6 +1455,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             Utility::scale(static_cast<float>(_ctrlPotValues[0]), 0.0f, 1023.0f, 0.05f, 12.0f);
         float depth =
             Utility::scale(static_cast<float>(_ctrlPotValues[1]), 0.0f, 1023.0f, 0.0f, 1.0f);
+        const int modeRaw = _ctrlPotValues[2];
         freqHz = constrain(freqHz, 0.05f, 12.0f);
         depth = constrain(depth, 0.0f, 1.0f);
         lfo.setFrequencyHz(freqHz);
@@ -1434,13 +1468,39 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         if (freqChanged) {
             char buf[32];
             snprintf(buf, sizeof(buf), "LFO%u Hz %.2f", static_cast<unsigned>(index + 1), freqHz);
-            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            context.displayManager.displayStatus(buf, kTuningStatusMs);
             _lastLfoTuneFreqHz = freqHz;
         } else if (depthChanged) {
             char buf[32];
             snprintf(buf, sizeof(buf), "LFO%u D %.2f", static_cast<unsigned>(index + 1), depth);
-            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            context.displayManager.displayStatus(buf, kTuningStatusMs);
             _lastLfoTuneDepth = depth;
+        }
+
+        if (lfo.isSyncEnabled()) {
+            uint8_t ratioIndex = static_cast<uint8_t>(map(modeRaw, 0, 1023, 0, 7));
+            ratioIndex = constrain(ratioIndex, static_cast<uint8_t>(0), static_cast<uint8_t>(7));
+            lfo.setSyncRatio(static_cast<LFOSyncRatio>(ratioIndex));
+            if (_lastLfoTuneRatioIndex != static_cast<int8_t>(ratioIndex)) {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "LFO%u Sync %s", static_cast<unsigned>(index + 1),
+                         lfoSyncRatioLabel(static_cast<LFOSyncRatio>(ratioIndex)));
+                context.displayManager.displayStatus(buf, kTuningStatusMs);
+                _lastLfoTuneRatioIndex = static_cast<int8_t>(ratioIndex);
+                _lastLfoTuneBipolarState = -1;
+            }
+        } else {
+            bool bipolar = (modeRaw >= 512);
+            lfo.setBipolar(bipolar);
+            int8_t bipolarState = bipolar ? 1 : 0;
+            if (_lastLfoTuneBipolarState != bipolarState) {
+                char buf[24];
+                snprintf(buf, sizeof(buf), "LFO%u %s", static_cast<unsigned>(index + 1),
+                         bipolar ? "Bipolar" : "Unipolar");
+                context.displayManager.displayStatus(buf, kTuningStatusMs);
+                _lastLfoTuneBipolarState = bipolarState;
+                _lastLfoTuneRatioIndex = -1;
+            }
         }
     }
 }

@@ -89,6 +89,7 @@
 //   - Ctrl0+1+3: Toggle LFO quick-tune mode
 //   - Ctrl0+2+3+5: Toggle on-device config mode
 //   - In LFO tune mode, Ctrl4 cycles internal route target for selected LFO
+//   - In LFO tune mode, CtrlPot2 edits sync ratio (sync ON) or bipolar state (sync OFF)
 
 #ifndef BUTTON_MANAGER_H
 #define BUTTON_MANAGER_H
@@ -326,6 +327,8 @@ class ButtonManager {
     uint8_t _lfoTuningIndex = 0;
     float _lastLfoTuneFreqHz = -1.0f;
     float _lastLfoTuneDepth = -1.0f;
+    int8_t _lastLfoTuneRatioIndex = -1;
+    int8_t _lastLfoTuneBipolarState = -1;
 
   public:
     /** Return the latest smoothed value for one of the control pots. */

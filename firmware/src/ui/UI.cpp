@@ -134,6 +134,59 @@ const char *syncRatioLabel(LFOSyncRatio ratio) {
     return "?";
 }
 
+const char *lfoShapeShortLabel(LFOShape shape) {
+    switch (shape) {
+    case LFOShape::Sine:
+        return "SIN";
+    case LFOShape::Triangle:
+        return "TRI";
+    case LFOShape::Saw:
+        return "SAW";
+    case LFOShape::Square:
+        return "SQR";
+    case LFOShape::SampleHold:
+        return "S&H";
+    case LFOShape::RandomSlew:
+        return "RSL";
+    }
+    return "?";
+}
+
+const char *lfoTargetShortLabel(LFOInternalTarget target) {
+    switch (target) {
+    case LFOInternalTarget::EfGainTrim:
+        return "EFG";
+    case LFOInternalTarget::ArpSwing:
+        return "ARS";
+    case LFOInternalTarget::VelocityShift:
+        return "VEL";
+    case LFOInternalTarget::NoteChance:
+        return "CHN";
+    case LFOInternalTarget::ArpGate:
+        return "GAT";
+    case LFOInternalTarget::JitterDepth:
+        return "JDP";
+    case LFOInternalTarget::JitterSmoothness:
+        return "JSM";
+    }
+    return "?";
+}
+
+bool activeInternalTargetForLfo(uint8_t lfoIndex, LFOInternalTarget &targetOut) {
+    const size_t count = lfoManager.routeCount();
+    LFOManager::Route route{};
+    for (size_t i = 0; i < count; ++i) {
+        if (!lfoManager.getRoute(i, route)) {
+            continue;
+        }
+        if (route.type == LFOManager::Route::Type::Internal && route.lfoIndex == lfoIndex) {
+            targetOut = route.target;
+            return true;
+        }
+    }
+    return false;
+}
+
 CRGB scaleColor(const CRGB &color, uint8_t scale255) {
     return CRGB(static_cast<uint8_t>((static_cast<uint16_t>(color.r) * scale255) / 255U),
                 static_cast<uint8_t>((static_cast<uint16_t>(color.g) * scale255) / 255U),
@@ -597,18 +650,45 @@ bool renderLfoTuningViewIfActive() {
 
     const uint8_t index = buttonManager.lfoTuningIndex() % LFOManager::kMaxLFOs;
     const LFO &lfo = lfoManager.lfo(index);
+    const float value = lfoManager.normalizedValue(index);
+    LFOInternalTarget target = LFOInternalTarget::EfGainTrim;
+    const bool hasTarget = activeInternalTargetForLfo(index, target);
 
     char line1[20];
     char line2[24];
     char line3[24];
-    snprintf(line1, sizeof(line1), "LFO Tune %u", static_cast<unsigned>(index + 1));
+    snprintf(line1, sizeof(line1), "LFO%u T:%s", static_cast<unsigned>(index + 1),
+             hasTarget ? lfoTargetShortLabel(target) : "NONE");
+    snprintf(line2, sizeof(line2), "%s D%.2f V%.2f", lfoShapeShortLabel(lfo.getShape()),
+             lfo.getDepth(), value);
     if (lfo.isSyncEnabled()) {
-        snprintf(line2, sizeof(line2), "D %.2f S %s", lfo.getDepth(),
-                 syncRatioLabel(lfo.getSyncRatio()));
+        snprintf(line3, sizeof(line3), "SYNC %s %s", syncRatioLabel(lfo.getSyncRatio()),
+                 lfo.isBipolar() ? "BI" : "UNI");
     } else {
-        snprintf(line2, sizeof(line2), "D %.2f Hz %.2f", lfo.getDepth(), lfo.getFrequencyHz());
+        snprintf(line3, sizeof(line3), "HZ %.2f %s", lfo.getFrequencyHz(),
+                 lfo.isBipolar() ? "BI" : "UNI");
     }
-    snprintf(line3, sizeof(line3), "C2 shp C3 syn C4 tgt");
+    displayManager.drawText(line1, line2, line3);
+    return true;
+}
+
+bool renderJitterTuningViewIfActive() {
+    if (!g_jitterTuningActive) {
+        return false;
+    }
+
+    const float baseDepth = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
+    const float baseSmooth = constrain(g_jitterSettings.smoothness, 0.0f, 1.0f);
+    const float effectiveDepth = constrain(baseDepth + (g_lfoJitterDepth * 0.5f), 0.0f, 1.0f);
+    const float effectiveSmooth =
+        constrain(baseSmooth + (g_lfoJitterSmoothness * 0.5f), 0.0f, 1.0f);
+
+    char line1[20];
+    char line2[24];
+    char line3[24];
+    snprintf(line1, sizeof(line1), "Jitter Tune");
+    snprintf(line2, sizeof(line2), "Base D%.2f S%.2f", baseDepth, baseSmooth);
+    snprintf(line3, sizeof(line3), "Eff  D%.2f S%.2f", effectiveDepth, effectiveSmooth);
     displayManager.drawText(line1, line2, line3);
     return true;
 }

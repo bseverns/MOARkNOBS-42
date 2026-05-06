@@ -2,6 +2,11 @@
 
 Use this checklist to close out `docs/TODO.md` section 2 with repeatable steps.
 
+Related validation artifacts:
+
+- [OLED Dominance Checklist](OledDominanceChecklist.md)
+- [On-Device Control Coverage](OnDeviceControlCoverage.md)
+
 ## 1. Five-Minute Soak Test
 
 1. Flash `teensy40_main` and open `App/index.html`.

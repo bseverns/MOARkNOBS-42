@@ -150,13 +150,32 @@ You can now tune LFO behavior directly on the hardware without opening the app f
 - cycle order: `EfGainTrim -> ArpSwing -> VelocityShift -> NoteChance -> ArpGate -> JitterDepth -> JitterSmoothness`
 - `CtrlPot0` adjusts frequency (used in free-run, stored either way)
 - `CtrlPot1` adjusts depth
+- `CtrlPot2` adjusts sync ratio (when sync is ON) or bipolar/unipolar polarity (when sync is OFF)
 - exit mode: `Ctrl5`
+- OLED live readout now shows:
+  - selected LFO + current internal target
+  - shape, depth, and current normalized output value
+  - sync ratio (if synced) or free-run frequency (if unsynced), plus bipolar/unipolar mode
+  - short target codes: `EFG` (EfGainTrim), `ARS` (ArpSwing), `VEL` (VelocityShift), `CHN` (NoteChance), `GAT` (ArpGate), `JDP` (JitterDepth), `JSM` (JitterSmoothness)
 
 Why this matters:
 
 - it gives LFO the same "reachable from the panel" status as EF/ARG controls
 - you can shape motion during rehearsal without leaving performance posture
 - it makes LFO behavior audibly/visibly testable before deeper route editing in app/bridge tools
+
+### OLED priority for temporary and modal screens
+
+The display now follows a consistent priority stack so "mode" feedback is never accidental:
+
+1. startup animation
+2. modal edit views: on-device config, LFO tune, jitter tune, diagnostics
+3. transient status overlays (when not in modal edit views)
+4. control overlays (filter/arp/note dynamics)
+5. screensaver
+6. baseline context view
+
+This ensures every dominant mode has explicit, persistent OLED representation while active, instead of relying only on audible side effects.
 
 ## How to learn reactive controls without drowning
 
