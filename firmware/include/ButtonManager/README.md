@@ -81,6 +81,7 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Combo                 | What happens                     |
 | --------------------- | -------------------------------- |
 | Ctrl0 + Ctrl1 + Ctrl2 | Panic-safe baseline reset (stop arp, disable EF follow, reload active profile) |
+| Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5 | Toggle on-device config mode |
 | Ctrl3 + Ctrl4 + Ctrl5 | Toggle USB MIDI output           |
 | Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |
 | Ctrl0 + Ctrl2         | Cycle ARG envelope pair          |
@@ -99,5 +100,15 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Ctrl1 + Ctrl2         | Cycle configuration profiles (A-D) |
 
 The ARG combos (`Ctrl0+Ctrl1` / `Ctrl0+Ctrl2`) only light up once the active slot actually owns an envelope follower. If no EF is assigned the firmware flashes “No EF assigned” on the OLED instead of scribbling ghost settings.
+
+On-device config mode remaps control buttons while active:
+
+| Control | Action |
+| ------- | ------ |
+| Ctrl0 / Ctrl1 | Previous / next slot |
+| Ctrl2 | Cycle slot type |
+| Ctrl3 | Cycle channel |
+| Ctrl4 | Cycle data1 (CC/NRPN/RPN) |
+| Ctrl5 | Exit + autosave active profile |
 
 For deeper madness see the [firmware README](../../README.md).

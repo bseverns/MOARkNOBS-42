@@ -79,6 +79,10 @@ void initializeSchedulers() {
                 return;
             }
             displayManager.beginDraw();
+            if (renderOnDeviceConfigViewIfActive(buttonContext)) {
+                displayManager.endDraw();
+                return;
+            }
             if (diagnosticMode) {
                 const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,

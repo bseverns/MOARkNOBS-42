@@ -102,11 +102,12 @@ Read these first:
 
 These change broader operating behavior.
 
-| Combo                   | What it does             |
-| ----------------------- | ------------------------ |
-| `Ctrl3 + Ctrl4 + Ctrl5` | toggle USB MIDI output   |
-| `Ctrl3 + Ctrl4`         | cycle LED display modes  |
-| `Ctrl1 + Ctrl5`         | toggle MIDI clock output |
+| Combo                           | What it does                |
+| ------------------------------- | --------------------------- |
+| `Ctrl3 + Ctrl4 + Ctrl5`         | toggle USB MIDI output      |
+| `Ctrl3 + Ctrl4`                 | cycle LED display modes     |
+| `Ctrl1 + Ctrl5`                 | toggle MIDI clock output    |
+| `Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5` | enter on-device config mode |
 
 These are useful, but most players do not need them on day one.
 

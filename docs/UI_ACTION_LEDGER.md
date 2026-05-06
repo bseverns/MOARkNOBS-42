@@ -100,25 +100,26 @@ This document captures every user gesture, its conditions, resulting actions, OL
 
 ## Multi-Button Combos (Settle Window: 80ms)
 
-| Gesture   | Condition   | Action                     | OLED Text                    | LED Behavior        | Persistent Write?  | WebSerial Event           |
-| --------- | ----------- | -------------------------- | ---------------------------- | ------------------- | ------------------ | ------------------------- |
-| Ctrl0+1+2 | Always      | Panic reset to baseline    | `Panic: Baseline` (1.5s)     | None                | No (reload)        | No                        |
-| Ctrl0+1   | ARG enabled | Cycle ARG method           | `Slot N ARG=METHOD` (1.5s)   | None                | Yes (ARG settings) | `slot_patch`, `arg_patch` |
-| Ctrl0+2   | Always      | Cycle ARG envelope pair    | `Slot N: EF N+EF N` (1.5s)   | None                | Yes (ARG settings) | `slot_patch`, `arg_patch` |
-| Ctrl0+3   | Always      | Set slot to SysEx          | `Slot N => SYSEX` (1.5s)     | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl0+4   | Always      | Randomize EF assignment    | `Slot N->RandomEF N` (1.5s)  | None                | Yes (EF settings)  | `envelope_assignment`     |
-| Ctrl0+5   | Always      | Set slot to Pitch Bend     | `Slot N => BEND` (1.5s)      | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl1+2   | Always      | Cycle profiles A-D         | `PROFILE X` (1.5s)           | None                | No (reload)        | No                        |
-| Ctrl1+3   | Always      | Set slot to RPN            | `Slot N => RPN` (1.5s)       | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl1+4   | Always      | Set slot to Aftertouch     | `Slot N => AFTER` (1.5s)     | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl1+5   | Always      | Toggle MIDI clock out      | `CLK OUT ON` / `OFF` (1s)    | None                | No                 | No                        |
-| Ctrl2+3   | ARP active  | Increment ARP base note    | `ARP NOTE N` (1s)            | None                | Yes (arpNote)      | `slot_patch`              |
-| Ctrl2+4   | Always      | Toggle ARP on/off          | `ARP ON` / `ARP OFF` (1s)    | None                | No                 | No                        |
-| Ctrl2+5   | Always      | Set slot to NRPN           | `Slot N => NRPN` (1.5s)      | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl3+4   | Always      | Cycle LED modes            | `LightMode=N` (1.5s)         | Changes LED pattern | Yes (LED mode)     | No                        |
-| Ctrl3+5   | Always      | Set slot to Program Change | `Slot N => PROG` (1.5s)      | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl4+5   | Always      | Set slot to Note mode      | `Slot N => NOTE` (1.5s)      | None                | Yes (slot type)    | `slot_patch`              |
-| Ctrl3+4+5 | Always      | Toggle USB MIDI out        | `USB MIDI ON` / `OFF` (1.5s) | None                | No                 | No                        |
+| Gesture     | Condition   | Action                       | OLED Text                                             | LED Behavior        | Persistent Write?       | WebSerial Event             |
+| ----------- | ----------- | ---------------------------- | ----------------------------------------------------- | ------------------- | ----------------------- | --------------------------- |
+| Ctrl0+1+2   | Always      | Panic reset to baseline      | `Panic: Baseline` (1.5s)                              | None                | No (reload)             | No                          |
+| Ctrl0+1     | ARG enabled | Cycle ARG method             | `Slot N ARG=METHOD` (1.5s)                            | None                | Yes (ARG settings)      | `slot_patch`, `arg_patch`   |
+| Ctrl0+2     | Always      | Cycle ARG envelope pair      | `Slot N: EF N+EF N` (1.5s)                            | None                | Yes (ARG settings)      | `slot_patch`, `arg_patch`   |
+| Ctrl0+3     | Always      | Set slot to SysEx            | `Slot N => SYSEX` (1.5s)                              | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl0+4     | Always      | Randomize EF assignment      | `Slot N->RandomEF N` (1.5s)                           | None                | Yes (EF settings)       | `envelope_assignment`       |
+| Ctrl0+5     | Always      | Set slot to Pitch Bend       | `Slot N => BEND` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl1+2     | Always      | Cycle profiles A-D           | `PROFILE X` (1.5s)                                    | None                | No (reload)             | No                          |
+| Ctrl1+3     | Always      | Set slot to RPN              | `Slot N => RPN` (1.5s)                                | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl1+4     | Always      | Set slot to Aftertouch       | `Slot N => AFTER` (1.5s)                              | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl1+5     | Always      | Toggle MIDI clock out        | `CLK OUT ON` / `OFF` (1s)                             | None                | No                      | No                          |
+| Ctrl2+3     | ARP active  | Increment ARP base note      | `ARP NOTE N` (1s)                                     | None                | Yes (arpNote)           | `slot_patch`                |
+| Ctrl2+4     | Always      | Toggle ARP on/off            | `ARP ON` / `ARP OFF` (1s)                             | None                | No                      | No                          |
+| Ctrl2+5     | Always      | Set slot to NRPN             | `Slot N => NRPN` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl3+4     | Always      | Cycle LED modes              | `LightMode=N` (1.5s)                                  | Changes LED pattern | Yes (LED mode)          | No                          |
+| Ctrl3+5     | Always      | Set slot to Program Change   | `Slot N => PROG` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl4+5     | Always      | Set slot to Note mode        | `Slot N => NOTE` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |
+| Ctrl3+4+5   | Always      | Toggle USB MIDI out          | `USB MIDI ON` / `OFF` (1.5s)                          | None                | No                      | No                          |
+| Ctrl0+2+3+5 | Always      | Toggle on-device config mode | `Config Mode ON` / `Config Saved` / `Config Mode OFF` | None                | Exit autosaves if dirty | `slot_patch` (during edits) |
 
 ---
 

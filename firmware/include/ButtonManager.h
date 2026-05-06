@@ -57,6 +57,13 @@
 //     - Combo (Ctrl1+5): Toggle MIDI clock out
 //     - Combo (Ctrl2+5): Set slot to NRPN
 //     - Combo (Ctrl3+4+5): Toggle USB MIDI out
+//   On-device config mode:
+//     - Combo (Ctrl0+2+3+5): Enter dedicated slot config editing mode
+//     - Ctrl0/1: Prev/next slot
+//     - Ctrl2: Cycle slot type
+//     - Ctrl3: Cycle channel
+//     - Ctrl4: Cycle data1 (CC/NRPN/RPN)
+//     - Ctrl5: Exit + autosave
 //
 // Multi-button combos (settle window: 80ms):
 //   - Ctrl0+1+2: Panic reset to profile baseline
@@ -76,6 +83,7 @@
 //   - Ctrl3+5: Set slot to Program Change
 //   - Ctrl4+5: Set slot to Note mode
 //   - Ctrl3+4+5: Toggle USB MIDI out
+//   - Ctrl0+2+3+5: Toggle on-device config mode
 
 #ifndef BUTTON_MANAGER_H
 #define BUTTON_MANAGER_H
@@ -189,6 +197,7 @@ class ButtonManager {
      * Invoke this in the main loop with a shared ButtonManagerContext.
      */
     void processButtons(ButtonManagerContext &context);
+    bool isOnDeviceConfigModeActive() const { return _onDeviceConfigModeActive; }
 
     /**
      * Directly read a muxed button's state; useful for unit tests and safe to
@@ -275,6 +284,9 @@ class ButtonManager {
     // ---- New multiplexer-based control scanning ----
     /** Update a single control button state during scanning. */
     void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext &context);
+    void enterOnDeviceConfigMode(ButtonManagerContext &context);
+    void exitOnDeviceConfigMode(ButtonManagerContext &context, bool autosave);
+    void markOnDeviceConfigDirty() { _onDeviceConfigModeDirty = true; }
     void cancelPendingConfirm(ButtonManagerContext &context);
     void startWarningForIndex(uint8_t index, ButtonManagerContext &context);
     int _ctrlPotValues[3] = {0};
@@ -299,6 +311,8 @@ class ButtonManager {
     static constexpr unsigned long EF_ASSIGN_WINDOW_MS = 3000; // window to pick EF 0-5
     int _pendingEfSlot = -1;                                   // slot waiting for EF selection
     unsigned long _efAssignDeadline = 0;                       // cancel time for pending assignment
+    bool _onDeviceConfigModeActive = false;
+    bool _onDeviceConfigModeDirty = false;
 
   public:
     /** Return the latest smoothed value for one of the control pots. */

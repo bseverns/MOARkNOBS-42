@@ -85,6 +85,32 @@ struct FilterPersistState {
 ControlOverlayState gControlOverlay;
 std::array<FilterPersistState, NUM_SLOTS> gFilterPersistStates{};
 
+const char *configSlotTypeShortName(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROG";
+    case MIDIMessageType::Aftertouch:
+        return "AFT";
+    case MIDIMessageType::ModWheel:
+        return "MOD";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYX";
+    }
+    return "?";
+}
+
 CRGB scaleColor(const CRGB &color, uint8_t scale255) {
     return CRGB(static_cast<uint8_t>((static_cast<uint16_t>(color.r) * scale255) / 255U),
                 static_cast<uint8_t>((static_cast<uint16_t>(color.g) * scale255) / 255U),
@@ -366,6 +392,9 @@ void updateControlUi(ButtonManagerContext &context) {
     if (gStartupSequence.active) {
         return;
     }
+    if (buttonManager.isOnDeviceConfigModeActive()) {
+        return;
+    }
 
     switch (resolveControlUiMode(context)) {
     case ControlUiMode::Filter:
@@ -508,6 +537,33 @@ bool renderControlOverlayIfActive() {
         return false;
     }
 
+    return true;
+}
+
+bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context) {
+    if (!buttonManager.isOnDeviceConfigModeActive()) {
+        return false;
+    }
+    if (context.activePot >= NUM_SLOTS) {
+        return false;
+    }
+
+    const uint8_t slotIndex = context.activePot;
+    const MIDISlot &slot = context.configManager.getSlot(slotIndex);
+    const uint8_t channel = context.configManager.getPotChannel(slotIndex);
+    uint8_t data1 = context.configManager.getPotCCNumber(slotIndex);
+    if (slot.type == MIDIMessageType::NRPN || slot.type == MIDIMessageType::RPN) {
+        data1 = context.configManager.getSlotData1(slotIndex);
+    }
+
+    char line1[20];
+    char line2[20];
+    char line3[20];
+    snprintf(line1, sizeof(line1), "Cfg Slot %u", slotIndex);
+    snprintf(line2, sizeof(line2), "%s Ch%u D1%u", configSlotTypeShortName(slot.type), channel,
+             data1);
+    snprintf(line3, sizeof(line3), "C5 Exit+Save");
+    displayManager.drawText(line1, line2, line3);
     return true;
 }
 

@@ -67,6 +67,7 @@ constexpr uint8_t maskCtrl3 = 1 << 3;
 constexpr uint8_t maskCtrl4 = 1 << 4;
 constexpr uint8_t maskCtrl5 = 1 << 5;
 constexpr uint8_t panicMask = maskCtrl0 | maskCtrl1 | maskCtrl2;
+constexpr uint8_t configModeMask = maskCtrl0 | maskCtrl2 | maskCtrl3 | maskCtrl5;
 
 constexpr uint32_t MUX_SETTLE_US = 5;
 
@@ -141,6 +142,32 @@ inline MIDISlot::EfSettings::FilterType cycleFilter(MIDISlot::EfSettings::Filter
     return SLOT_FILTERS[index];
 }
 
+const char *slotTypeLabel(MIDIMessageType type) {
+    switch (type) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROG";
+    case MIDIMessageType::Aftertouch:
+        return "AFT";
+    case MIDIMessageType::ModWheel:
+        return "MOD";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYX";
+    }
+    return "?";
+}
+
 // Persist new EF settings, update the slot cache, and reconfigure the live follower if present.
 inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
                              const MIDISlot::EfSettings &settings) {
@@ -189,6 +216,32 @@ void ButtonManager::initButtons() {
         _buttonMachines[i].longPressFired = false;
         _buttonMachines[i].lastShortRelease = 0;
     }
+}
+
+void ButtonManager::enterOnDeviceConfigMode(ButtonManagerContext &context) {
+    cancelPendingConfirm(context);
+    _pendingEfSlot = -1;
+    _onDeviceConfigModeActive = true;
+    _onDeviceConfigModeDirty = false;
+    if (context.diagnosticMode) {
+        context.diagnosticMode = false;
+        context.ledManager.setDiagnosticMode(false);
+    }
+    context.displayManager.displayStatus("Config Mode ON", 1200);
+}
+
+void ButtonManager::exitOnDeviceConfigMode(ButtonManagerContext &context, bool autosave) {
+    cancelPendingConfirm(context);
+    bool saved = false;
+    if (autosave && _onDeviceConfigModeDirty) {
+        context.configManager.saveProfile(g_activeProfile);
+        context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
+        g_profileSaveRequested = true;
+        saved = true;
+    }
+    _onDeviceConfigModeActive = false;
+    _onDeviceConfigModeDirty = false;
+    context.displayManager.displayStatus(saved ? "Config Saved" : "Config Mode OFF", 1200);
 }
 
 /**
@@ -300,7 +353,8 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
             context.displayManager.registerInteraction();
         } else {
             // still pressed, check for long press
-            if (!sm.longPressFired && (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
+            if (!_onDeviceConfigModeActive && !sm.longPressFired &&
+                (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
                 sm.state = ButtonState::LONG_PRESS;
                 sm.longPressFired = true;
                 onLongPress(index, context); // arm the action, wait for confirm
@@ -472,6 +526,12 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
         return;
     }
 
+    if (_onDeviceConfigModeActive) {
+        doSinglePressAction(index, context);
+        sm.lastShortRelease = 0;
+        return;
+    }
+
     // Double-press detection
     if ((now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
         handleDoublePress(index, context);
@@ -564,6 +624,94 @@ void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext &con
 }
 
 void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context) {
+    if (_onDeviceConfigModeActive) {
+        if (buttonIndex < NUM_VIRTUAL_BUTTONS) {
+            context.activePot = buttonIndex;
+            char buf[24];
+            snprintf(buf, sizeof(buf), "Cfg Slot=%u", context.activePot);
+            context.displayManager.displayStatus(buf, 800);
+            return;
+        }
+
+        const uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
+        switch (controlIndex) {
+        case 0: {
+            context.activePot = (context.activePot + NUM_POTS - 1) % NUM_POTS;
+            char buf[24];
+            snprintf(buf, sizeof(buf), "Cfg Slot=%u", context.activePot);
+            context.displayManager.displayStatus(buf, 800);
+            break;
+        }
+        case 1: {
+            context.activePot = (context.activePot + 1) % NUM_POTS;
+            char buf[24];
+            snprintf(buf, sizeof(buf), "Cfg Slot=%u", context.activePot);
+            context.displayManager.displayStatus(buf, 800);
+            break;
+        }
+        case 2: {
+            MIDISlot &slot = context.configManager.getSlot(context.activePot);
+            slot.type = static_cast<MIDIMessageType>(
+                (static_cast<int>(slot.type) + 1) % (static_cast<int>(MIDIMessageType::SysEx) + 1));
+            context.configManager.saveSlot(context.activePot, slot);
+            markOnDeviceConfigDirty();
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Type=%s", slotTypeLabel(slot.type));
+            context.displayManager.displayStatus(buf, 900);
+            streamSlotPatch(context.configManager, context.activePot);
+            break;
+        }
+        case 3: {
+            uint8_t oldChan = context.configManager.getPotChannel(context.activePot);
+            uint8_t newChan = (oldChan % 16) + 1;
+            context.configManager.setPotChannel(context.activePot, newChan);
+            if (_potentiometerManager != nullptr) {
+                _potentiometerManager->setChannel(context.activePot, newChan);
+            }
+            if (context.activePot < context.potChannels.size()) {
+                context.potChannels[context.activePot] = newChan;
+            }
+            markOnDeviceConfigDirty();
+            char buf[24];
+            snprintf(buf, sizeof(buf), "Ch=%u", newChan);
+            context.displayManager.displayStatus(buf, 900);
+            streamSlotPatch(context.configManager, context.activePot);
+            break;
+        }
+        case 4: {
+            MIDIMessageType type = context.configManager.getSlotType(context.activePot);
+            if (type == MIDIMessageType::NRPN || type == MIDIMessageType::RPN) {
+                uint8_t param = context.configManager.getSlotData1(context.activePot);
+                param = (param + 1) % 128;
+                context.configManager.setSlotData1(context.activePot, param);
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%s=%u", type == MIDIMessageType::NRPN ? "NRPN" : "RPN",
+                         param);
+                context.displayManager.displayStatus(buf, 900);
+            } else {
+                uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
+                uint8_t newCC = (oldCC + 1) % 128;
+                context.configManager.setPotCCNumber(context.activePot, newCC);
+                if (_potentiometerManager != nullptr) {
+                    _potentiometerManager->setCCNumber(context.activePot, newCC);
+                }
+                char buf[24];
+                snprintf(buf, sizeof(buf), "CC=%u", newCC);
+                context.displayManager.displayStatus(buf, 900);
+            }
+            markOnDeviceConfigDirty();
+            streamSlotPatch(context.configManager, context.activePot);
+            break;
+        }
+        case 5:
+            exitOnDeviceConfigMode(context, true);
+            break;
+        default:
+            break;
+        }
+        return;
+    }
+
     // Pending EF selection overrides normal control button behavior
     if (_pendingEfSlot >= 0 && buttonIndex >= NUM_VIRTUAL_BUTTONS) {
         uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
@@ -741,6 +889,16 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         }
         g_profileChangeRequested = true;
         context.displayManager.displayStatus("Panic: Baseline", 1500);
+    }
+    // (0.75) Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5: on-device config mode toggle.
+    else if (pressedButtons == configModeMask) {
+        if (_onDeviceConfigModeActive) {
+            exitOnDeviceConfigMode(context, true);
+        } else {
+            enterOnDeviceConfigMode(context);
+        }
+    } else if (_onDeviceConfigModeActive) {
+        return;
     }
     // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
@@ -996,12 +1154,12 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
     const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
     const uint8_t swingMask = maskCtrl2 | maskCtrl3;
-    bool jitterActive = (mask == jitterMask);
+    bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive;
     g_jitterTuningActive = jitterActive;
     static uint8_t lastMask = 0;
     // Track combos that have long-press behaviors (arp edit, swing presets).
     bool multiPressed = (mask && (mask & (mask - 1)));
-    bool longPressCombo = (mask == arpEditMask || mask == swingMask);
+    bool longPressCombo = !_onDeviceConfigModeActive && (mask == arpEditMask || mask == swingMask);
 
     // Combo transitions: handle short-press fallbacks and release behavior.
     if (mask != _comboHoldMask) {

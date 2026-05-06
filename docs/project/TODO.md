@@ -146,7 +146,7 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 ### 1.5 Clock following: basic, not heroic
 
-- [ ] **VERIFY:** External MIDI clock can be followed (choose one path: USB OR DIN)
+- [x] **VERIFY:** External MIDI clock can be followed (choose one path: USB OR DIN)
   - Acceptance: bpm follows DAW clock; timing doesn’t visibly drift during demo window.
 - [ ] **VERIFY:** Start/Stop works (Continue optional)
   - Acceptance: Start resets pattern coherently; Stop halts without stuck notes.
@@ -191,8 +191,8 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 ### 2.3 Demo assets
 
-- [ ] Prepare one short audio loop for EF input (phone file OR DAW loop)
-- [ ] Prepare one DAW project (or MIDI clock source) for clock follow
+- [x] Prepare one short audio loop for EF input (phone file OR DAW loop)
+- [x] Prepare one DAW project (or MIDI clock source) for clock follow
 - [x] Prepare two named profiles: `DEMO_A`, `DEMO_B` (or a clear index story)
 
 ---
@@ -236,7 +236,9 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 ### On-device “Config Mode”
 
-- [ ] Shallow OLED config menu for per-slot edits (type/channel/CC) + autosave on exit
+- [x] Shallow OLED config menu for per-slot edits (type/channel/CC) + autosave on exit
+  - Combo: `Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5`
+  - Controls in mode: `Ctrl0/1` slot prev/next, `Ctrl2` type, `Ctrl3` channel, `Ctrl4` data1/CC, `Ctrl5` exit+save
 
 ### Docs / tests / meta
 

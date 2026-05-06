@@ -8,6 +8,7 @@ void updateArpTuning();
 void updateNoteDynamics();
 void updateControlUi(ButtonManagerContext &context);
 bool renderControlOverlayIfActive();
+bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context);
 void streamWebSerialState();
 void flushPendingFilterPersists();
 
