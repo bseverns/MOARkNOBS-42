@@ -189,8 +189,10 @@ void MIDIHandler::processIncomingMIDI() {
         displayInteractionSeen = true;
         auto type = MIDI.getType();
         if (type == MidiType_Tick) {
-            lastExternalClock = lastInternalTick = now();
-            handleClockTick();
+            if (g_followExternalClock) {
+                lastExternalClock = lastInternalTick = now();
+                handleClockTick();
+            }
         } else if (type == MidiType_SystemExclusiveStart) {
             handleSysEx(MIDI.getSysExArray(), MIDI.getSysExArrayLength());
         } else {
@@ -214,8 +216,10 @@ void MIDIHandler::processIncomingMIDI() {
             continue;
         }
         if (type == MidiType_Tick) {
-            lastExternalClock = lastInternalTick = now();
-            handleClockTick();
+            if (g_followExternalClock) {
+                lastExternalClock = lastInternalTick = now();
+                handleClockTick();
+            }
         } else if (type == MidiType_SystemExclusiveStart) {
             handleSysEx(usbMIDI.getSysExArray(), usbMIDI.getSysExArrayLength());
         } else {
@@ -227,7 +231,7 @@ void MIDIHandler::processIncomingMIDI() {
     // If the outside world goes quiet, puke out our own clock based on tapped BPM
     if (g_tappedBPM > 0.0f) {
         bool externalHot = (now() - lastExternalClock) < CLOCK_TIMEOUT_MS;
-        if (!externalHot) {
+        if (!g_followExternalClock || !externalHot) {
             float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
             if (now() - lastInternalTick >= msPerTick) {
                 lastInternalTick = now();
@@ -269,17 +273,23 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
     switch (type) {
     case midi::Start:
         // Ensure running flag and timestamps align when a new clock stream begins.
-        _clockRunning = true;
-        lastExternalClock = now();
+        if (g_followExternalClock) {
+            _clockRunning = true;
+            lastExternalClock = now();
+        }
         break;
     case midi::Continue:
         // Continue resumes clock without resetting the counter.
-        _clockRunning = true;
-        lastExternalClock = now();
+        if (g_followExternalClock) {
+            _clockRunning = true;
+            lastExternalClock = now();
+        }
         break;
     case midi::Stop:
         // Stop freezes clock-running state until Start/Continue arrives.
-        _clockRunning = false;
+        if (g_followExternalClock) {
+            _clockRunning = false;
+        }
         break;
     case midi::ControlChange:
         // Peek for NRPN sequences; otherwise just log the CC

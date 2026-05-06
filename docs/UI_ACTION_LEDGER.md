@@ -112,6 +112,7 @@ This document captures every user gesture, its conditions, resulting actions, OL
 | Ctrl1+3     | Always      | Set slot to RPN              | `Slot N => RPN` (1.5s)                                | None                | Yes (slot type)         | `slot_patch`                |
 | Ctrl1+4     | Always      | Set slot to Aftertouch       | `Slot N => AFTER` (1.5s)                              | None                | Yes (slot type)         | `slot_patch`                |
 | Ctrl1+5     | Always      | Toggle MIDI clock out        | `CLK OUT ON` / `OFF` (1s)                             | None                | No                      | No                          |
+| Ctrl1+4+5   | Always      | Toggle clock source          | `CLK SRC EXT` / `CLK SRC INT` (1.2s)                  | None                | No                      | No                          |
 | Ctrl2+3     | ARP active  | Increment ARP base note      | `ARP NOTE N` (1s)                                     | None                | Yes (arpNote)           | `slot_patch`                |
 | Ctrl2+4     | Always      | Toggle ARP on/off            | `ARP ON` / `ARP OFF` (1s)                             | None                | No                      | No                          |
 | Ctrl2+5     | Always      | Set slot to NRPN             | `Slot N => NRPN` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |

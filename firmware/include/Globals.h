@@ -197,6 +197,8 @@ inline constexpr uint16_t EEPROM_USB_CONFIG_BOOT_REQUEST = EEPROM_SYSTEM_FLAGS_B
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback
 extern float g_tappedBPM;
 extern bool g_clockOutEnabled;
+extern bool
+    g_followExternalClock; //!< True: follow external MIDI clock; false: force internal tapped clock
 extern bool g_usbMidiOutEnabled;    //!< USB MIDI stays quiet until these three go down
 extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
 

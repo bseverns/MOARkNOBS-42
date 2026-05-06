@@ -43,20 +43,21 @@ HardwareConfig hwConfig = {
 };
 
 // Global runtime variables
-float g_vref = 1.65f;                            // midpoint voltage reference
-float g_tappedBPM = 120.0f;                      // last tapped tempo
-bool g_clockOutEnabled = false;                  // runtime toggle for MIDI clock out
-bool g_usbMidiOutEnabled = false;                // gated USB MIDI output
-unsigned long lastClockTime = 0;                 // ms timestamp of the last MIDI clock tick
-uint32_t g_resetCause = 0;                       // raw reset cause from SRC_SRSR
-uint16_t g_brownoutCount = 0;                    // persisted brownout counter
-uint8_t midiBeatPosition = 0;                    // 0-7 beat slot; increments on MIDI clock ticks
-char serialBuffer[SERIAL_BUFFER_SIZE] = {0};     // serial line buffer shared across modules
-uint8_t serialBufferIndex = 0;                   // write cursor for `serialBuffer`
-bool webSerialStreaming = false;                 // flipped on when the browser wants JSON telemetry
-float g_lfoEfGainTrim = 0.0f;                    // LFO-modulated gain trim for envelope followers
-float g_lfoArpSwing = 0.0f;                      // LFO-modulated swing amount for the arpeggiator
-float g_lfoLedBrightness = 0.0f;                 // LFO-modulated LED brightness offset
+float g_vref = 1.65f;                        // midpoint voltage reference
+float g_tappedBPM = 120.0f;                  // last tapped tempo
+bool g_clockOutEnabled = false;              // runtime toggle for MIDI clock out
+bool g_followExternalClock = true;           // follow external clock unless performer forces INT
+bool g_usbMidiOutEnabled = false;            // gated USB MIDI output
+unsigned long lastClockTime = 0;             // ms timestamp of the last MIDI clock tick
+uint32_t g_resetCause = 0;                   // raw reset cause from SRC_SRSR
+uint16_t g_brownoutCount = 0;                // persisted brownout counter
+uint8_t midiBeatPosition = 0;                // 0-7 beat slot; increments on MIDI clock ticks
+char serialBuffer[SERIAL_BUFFER_SIZE] = {0}; // serial line buffer shared across modules
+uint8_t serialBufferIndex = 0;               // write cursor for `serialBuffer`
+bool webSerialStreaming = false;             // flipped on when the browser wants JSON telemetry
+float g_lfoEfGainTrim = 0.0f;                // LFO-modulated gain trim for envelope followers
+float g_lfoArpSwing = 0.0f;                  // LFO-modulated swing amount for the arpeggiator
+float g_lfoLedBrightness = 0.0f;             // LFO-modulated LED brightness offset
 std::array<float, 2> g_lfoValues = {0.0f, 0.0f}; // Normalized LFO outputs
 
 // Note dynamics knobs

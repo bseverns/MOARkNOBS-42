@@ -68,6 +68,7 @@ constexpr uint8_t maskCtrl4 = 1 << 4;
 constexpr uint8_t maskCtrl5 = 1 << 5;
 constexpr uint8_t panicMask = maskCtrl0 | maskCtrl1 | maskCtrl2;
 constexpr uint8_t configModeMask = maskCtrl0 | maskCtrl2 | maskCtrl3 | maskCtrl5;
+constexpr uint8_t clockSourceMask = maskCtrl1 | maskCtrl4 | maskCtrl5;
 
 constexpr uint32_t MUX_SETTLE_US = 5;
 
@@ -897,6 +898,12 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         } else {
             enterOnDeviceConfigMode(context);
         }
+    }
+    // (0.8) Ctrl1 + Ctrl4 + Ctrl5: clock source toggle (EXT follow <-> forced INT).
+    else if (pressedButtons == clockSourceMask) {
+        g_followExternalClock = !g_followExternalClock;
+        context.displayManager.displayStatus(g_followExternalClock ? "CLK SRC EXT" : "CLK SRC INT",
+                                             1200);
     } else if (_onDeviceConfigModeActive) {
         return;
     }

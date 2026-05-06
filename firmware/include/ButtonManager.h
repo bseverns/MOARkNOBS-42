@@ -57,6 +57,7 @@
 //     - Combo (Ctrl1+5): Toggle MIDI clock out
 //     - Combo (Ctrl2+5): Set slot to NRPN
 //     - Combo (Ctrl3+4+5): Toggle USB MIDI out
+//     - Combo (Ctrl1+4+5): Toggle clock source (EXT follow / INT forced)
 //   On-device config mode:
 //     - Combo (Ctrl0+2+3+5): Enter dedicated slot config editing mode
 //     - Ctrl0/1: Prev/next slot
@@ -83,6 +84,7 @@
 //   - Ctrl3+5: Set slot to Program Change
 //   - Ctrl4+5: Set slot to Note mode
 //   - Ctrl3+4+5: Toggle USB MIDI out
+//   - Ctrl1+4+5: Toggle clock source (EXT follow / INT forced)
 //   - Ctrl0+2+3+5: Toggle on-device config mode
 
 #ifndef BUTTON_MANAGER_H

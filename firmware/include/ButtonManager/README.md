@@ -92,6 +92,7 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Ctrl0 + Ctrl5         | Set slot to Pitch Bend           |
 | Ctrl1 + Ctrl4         | Set slot to Aftertouch           |
 | Ctrl1 + Ctrl5         | Toggle MIDI clock output         |
+| Ctrl1 + Ctrl4 + Ctrl5 | Toggle clock source (EXT/INT)    |
 | Ctrl2 + Ctrl5         | Set slot to NRPN                 |
 | Ctrl1 + Ctrl3         | Set slot to RPN                  |
 | Ctrl0 + Ctrl3         | Set slot to SysEx                |
