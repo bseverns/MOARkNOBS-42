@@ -110,7 +110,7 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
             route.depth = 0.0f;
         }
         route.depth = constrain(route.depth, 0.0f, 1.0f);
-        if (route.target > static_cast<uint8_t>(LFOInternalTarget::LedBrightness)) {
+        if (route.target > static_cast<uint8_t>(LFOInternalTarget::JitterSmoothness)) {
             route.target = static_cast<uint8_t>(LFOInternalTarget::EfGainTrim);
         }
         route.channel = static_cast<uint8_t>(constrain(route.channel, 1, 16));

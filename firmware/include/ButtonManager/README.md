@@ -81,6 +81,7 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Combo                 | What happens                     |
 | --------------------- | -------------------------------- |
 | Ctrl0 + Ctrl1 + Ctrl2 | Panic-safe baseline reset (stop arp, disable EF follow, reload active profile) |
+| Ctrl0 + Ctrl1 + Ctrl3 | Toggle LFO quick-tune mode |
 | Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5 | Toggle on-device config mode |
 | Ctrl3 + Ctrl4 + Ctrl5 | Toggle USB MIDI output           |
 | Ctrl0 + Ctrl1         | Cycle EF ARG mode method         |
@@ -111,5 +112,15 @@ On-device config mode remaps control buttons while active:
 | Ctrl3 | Cycle channel |
 | Ctrl4 | Cycle data1 (CC/NRPN/RPN) |
 | Ctrl5 | Exit + autosave active profile |
+
+LFO quick-tune mode remaps control buttons while active:
+
+| Control | Action |
+| ------- | ------ |
+| Ctrl0 / Ctrl1 | Select LFO 1 / LFO 2 |
+| Ctrl2 | Cycle shape |
+| Ctrl3 | Toggle sync |
+| Ctrl4 | Cycle internal route target (EF Gain -> Arp Swing -> Vel Shift -> Note Chance -> Arp Gate -> Jitter Depth -> Jitter Smooth) |
+| Ctrl5 | Exit LFO quick-tune mode |
 
 For deeper madness see the [firmware README](../../README.md).

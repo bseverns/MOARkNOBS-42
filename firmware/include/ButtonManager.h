@@ -58,6 +58,7 @@
 //     - Combo (Ctrl2+5): Set slot to NRPN
 //     - Combo (Ctrl3+4+5): Toggle USB MIDI out
 //     - Combo (Ctrl1+4+5): Toggle clock source (EXT follow / INT forced)
+//     - Combo (Ctrl0+1+3): Toggle LFO quick-tune mode
 //   On-device config mode:
 //     - Combo (Ctrl0+2+3+5): Enter dedicated slot config editing mode
 //     - Ctrl0/1: Prev/next slot
@@ -85,7 +86,9 @@
 //   - Ctrl4+5: Set slot to Note mode
 //   - Ctrl3+4+5: Toggle USB MIDI out
 //   - Ctrl1+4+5: Toggle clock source (EXT follow / INT forced)
+//   - Ctrl0+1+3: Toggle LFO quick-tune mode
 //   - Ctrl0+2+3+5: Toggle on-device config mode
+//   - In LFO tune mode, Ctrl4 cycles internal route target for selected LFO
 
 #ifndef BUTTON_MANAGER_H
 #define BUTTON_MANAGER_H
@@ -200,6 +203,8 @@ class ButtonManager {
      */
     void processButtons(ButtonManagerContext &context);
     bool isOnDeviceConfigModeActive() const { return _onDeviceConfigModeActive; }
+    bool isLfoTuningModeActive() const { return _lfoTuningActive; }
+    uint8_t lfoTuningIndex() const { return _lfoTuningIndex; }
 
     /**
      * Directly read a muxed button's state; useful for unit tests and safe to
@@ -289,6 +294,8 @@ class ButtonManager {
     void enterOnDeviceConfigMode(ButtonManagerContext &context);
     void exitOnDeviceConfigMode(ButtonManagerContext &context, bool autosave);
     void markOnDeviceConfigDirty() { _onDeviceConfigModeDirty = true; }
+    void enterLfoTuningMode(ButtonManagerContext &context);
+    void exitLfoTuningMode(ButtonManagerContext &context);
     void cancelPendingConfirm(ButtonManagerContext &context);
     void startWarningForIndex(uint8_t index, ButtonManagerContext &context);
     int _ctrlPotValues[3] = {0};
@@ -315,6 +322,10 @@ class ButtonManager {
     unsigned long _efAssignDeadline = 0;                       // cancel time for pending assignment
     bool _onDeviceConfigModeActive = false;
     bool _onDeviceConfigModeDirty = false;
+    bool _lfoTuningActive = false;
+    uint8_t _lfoTuningIndex = 0;
+    float _lastLfoTuneFreqHz = -1.0f;
+    float _lastLfoTuneDepth = -1.0f;
 
   public:
     /** Return the latest smoothed value for one of the control pots. */

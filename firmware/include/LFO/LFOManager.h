@@ -15,15 +15,27 @@ class MIDIHandler;
 /**
  * Built-in modulation destinations for LFO output.
  */
-enum class LFOInternalTarget : uint8_t { EfGainTrim = 0, ArpSwing, LedBrightness };
+enum class LFOInternalTarget : uint8_t {
+    EfGainTrim = 0,
+    ArpSwing,
+    VelocityShift,
+    NoteChance,
+    ArpGate,
+    JitterDepth,
+    JitterSmoothness
+};
 
 /**
  * Bus values that are consumed by internal modules each loop.
  */
 struct LFOBus {
-    float efGainTrim = 0.0f;    //!< EF gain trim modulation (-1..1)
-    float arpSwing = 0.0f;      //!< Arp swing modulation (-1..1)
-    float ledBrightness = 0.0f; //!< LED brightness modulation (-1..1)
+    float efGainTrim = 0.0f;       //!< EF gain trim modulation (-1..1)
+    float arpSwing = 0.0f;         //!< Arp swing modulation (-1..1)
+    float velocityShift = 0.0f;    //!< Note velocity offset modulation (-1..1)
+    float noteChance = 0.0f;       //!< Note chance modulation (-1..1)
+    float arpGate = 0.0f;          //!< Arp gate percent modulation (-1..1)
+    float jitterDepth = 0.0f;      //!< Jitter depth modulation (-1..1)
+    float jitterSmoothness = 0.0f; //!< Jitter smoothness modulation (-1..1)
 };
 
 /**

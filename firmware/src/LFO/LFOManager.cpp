@@ -152,7 +152,11 @@ void LFOManager::update(unsigned long nowMs) {
     // Clamp bus values to safe modulation ranges.
     bus_.efGainTrim = std::clamp(bus_.efGainTrim, -1.0f, 1.0f);
     bus_.arpSwing = std::clamp(bus_.arpSwing, -1.0f, 1.0f);
-    bus_.ledBrightness = std::clamp(bus_.ledBrightness, -1.0f, 1.0f);
+    bus_.velocityShift = std::clamp(bus_.velocityShift, -1.0f, 1.0f);
+    bus_.noteChance = std::clamp(bus_.noteChance, -1.0f, 1.0f);
+    bus_.arpGate = std::clamp(bus_.arpGate, -1.0f, 1.0f);
+    bus_.jitterDepth = std::clamp(bus_.jitterDepth, -1.0f, 1.0f);
+    bus_.jitterSmoothness = std::clamp(bus_.jitterSmoothness, -1.0f, 1.0f);
 }
 
 // Read the last normalized value for telemetry or external consumers.
@@ -228,8 +232,20 @@ void LFOManager::applyInternalRoute(const Route &route, float value) {
     case LFOInternalTarget::ArpSwing:
         bus_.arpSwing += value;
         break;
-    case LFOInternalTarget::LedBrightness:
-        bus_.ledBrightness += value;
+    case LFOInternalTarget::VelocityShift:
+        bus_.velocityShift += value;
+        break;
+    case LFOInternalTarget::NoteChance:
+        bus_.noteChance += value;
+        break;
+    case LFOInternalTarget::ArpGate:
+        bus_.arpGate += value;
+        break;
+    case LFOInternalTarget::JitterDepth:
+        bus_.jitterDepth += value;
+        break;
+    case LFOInternalTarget::JitterSmoothness:
+        bus_.jitterSmoothness += value;
         break;
     }
 }

@@ -57,7 +57,11 @@ uint8_t serialBufferIndex = 0;               // write cursor for `serialBuffer`
 bool webSerialStreaming = false;             // flipped on when the browser wants JSON telemetry
 float g_lfoEfGainTrim = 0.0f;                // LFO-modulated gain trim for envelope followers
 float g_lfoArpSwing = 0.0f;                  // LFO-modulated swing amount for the arpeggiator
-float g_lfoLedBrightness = 0.0f;             // LFO-modulated LED brightness offset
+float g_lfoVelocityShift = 0.0f;             // LFO-modulated note velocity offset
+float g_lfoNoteChance = 0.0f;                // LFO-modulated note probability offset
+float g_lfoArpGate = 0.0f;                   // LFO-modulated arp gate offset
+float g_lfoJitterDepth = 0.0f;               // LFO-modulated jitter depth offset
+float g_lfoJitterSmoothness = 0.0f;          // LFO-modulated jitter smoothness offset
 std::array<float, 2> g_lfoValues = {0.0f, 0.0f}; // Normalized LFO outputs
 
 // Note dynamics knobs

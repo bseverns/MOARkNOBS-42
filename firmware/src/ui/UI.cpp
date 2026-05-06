@@ -12,6 +12,7 @@
 #include "Arpeggiator.h"
 #include "Log.h"
 #include "WebSerial.h"
+#include "LFO/LFOManager.h"
 
 namespace {
 
@@ -107,6 +108,28 @@ const char *configSlotTypeShortName(MIDIMessageType type) {
         return "RPN";
     case MIDIMessageType::SysEx:
         return "SYX";
+    }
+    return "?";
+}
+
+const char *syncRatioLabel(LFOSyncRatio ratio) {
+    switch (ratio) {
+    case LFOSyncRatio::Div1:
+        return "1/1";
+    case LFOSyncRatio::Div2:
+        return "1/2";
+    case LFOSyncRatio::Div4:
+        return "1/4";
+    case LFOSyncRatio::Div8:
+        return "1/8";
+    case LFOSyncRatio::Div16:
+        return "1/16";
+    case LFOSyncRatio::Div32:
+        return "1/32";
+    case LFOSyncRatio::Mul2:
+        return "x2";
+    case LFOSyncRatio::Mul4:
+        return "x4";
     }
     return "?";
 }
@@ -563,6 +586,29 @@ bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context) {
     snprintf(line2, sizeof(line2), "%s Ch%u D1%u", configSlotTypeShortName(slot.type), channel,
              data1);
     snprintf(line3, sizeof(line3), "C5 Exit+Save");
+    displayManager.drawText(line1, line2, line3);
+    return true;
+}
+
+bool renderLfoTuningViewIfActive() {
+    if (!buttonManager.isLfoTuningModeActive()) {
+        return false;
+    }
+
+    const uint8_t index = buttonManager.lfoTuningIndex() % LFOManager::kMaxLFOs;
+    const LFO &lfo = lfoManager.lfo(index);
+
+    char line1[20];
+    char line2[24];
+    char line3[24];
+    snprintf(line1, sizeof(line1), "LFO Tune %u", static_cast<unsigned>(index + 1));
+    if (lfo.isSyncEnabled()) {
+        snprintf(line2, sizeof(line2), "D %.2f S %s", lfo.getDepth(),
+                 syncRatioLabel(lfo.getSyncRatio()));
+    } else {
+        snprintf(line2, sizeof(line2), "D %.2f Hz %.2f", lfo.getDepth(), lfo.getFrequencyHz());
+    }
+    snprintf(line3, sizeof(line3), "C2 shp C3 syn C4 tgt");
     displayManager.drawText(line1, line2, line3);
     return true;
 }

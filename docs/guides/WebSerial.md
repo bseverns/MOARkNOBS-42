@@ -93,7 +93,7 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 - `envelopes` – live levels from the six envelope followers, also 0‑127.
 - `timestamp` / `timestampMs` – source-clock frame time in milliseconds since boot (both fields mirror each other for compatibility with bridge parsers).
 - `traceId` – per-frame firmware trace token used by bridge route logs and round-trip correlation.
-- `lfos` – normalized 0..1 outputs for each of the two routed LFO engines; the same values feed LED brightness, arp swing, and EF gain trim internally and can also be routed to MIDI/OSC so the editor can animate the modulation bus.
+- `lfos` – normalized 0..1 outputs for each of the two routed LFO engines; the same values feed arp swing, EF gain trim, velocity shift, note chance, arp gate, and jitter-depth/smoothness lanes internally and can also be routed to MIDI/OSC so the editor can animate the modulation bus.
 - `currentSlot` – which slot is currently screaming.
 - `argMethod` – firmware's current ARG calculation mode.
 - `argEnabled` – whether the ARG blender is live or bypassed.
@@ -217,7 +217,7 @@ Use these RPCs to implement Load/Save/Reset buttons in your UI, and remember tha
 
 The same `led` object that shows up in `GET_CONFIG` (brightness, RGB, and hex) also rides along with profile payloads. Use `SET_LED` and `GET_LED` to control the strip’s global color/brightness bond; `SET_ALL` respects `{"led":{"color":"#RRGGBB"}}` fragments so you can push a whole palette from one payload.
 
-Both the status LED and WS2812 strip follow the new LFO bus: the internal routes modulate LED brightness while another route nudges the arpeggiator swing and EF gain trim. Watch the 0..1 values from the `lfos` field in each state message and feed them into your UI’s scope or animators so the desktop mirrors exactly what the firmware is outputting.
+The status LED and WS2812 strip now stay diagnostic-first; internal LFO routes focus on musical modulation lanes (arp swing/gate, EF trim, velocity shift, note chance, jitter depth/smoothness). Watch the 0..1 values from the `lfos` field in each state message and feed them into your UI scope or animators so the desktop mirrors exactly what the firmware is outputting.
 
 ### Paint the LEDs
 

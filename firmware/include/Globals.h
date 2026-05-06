@@ -205,7 +205,11 @@ extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock t
 // LFO modulation buses (range -1..1 unless otherwise noted).
 extern float g_lfoEfGainTrim;
 extern float g_lfoArpSwing;
-extern float g_lfoLedBrightness;
+extern float g_lfoVelocityShift;
+extern float g_lfoNoteChance;
+extern float g_lfoArpGate;
+extern float g_lfoJitterDepth;
+extern float g_lfoJitterSmoothness;
 extern std::array<float, 2> g_lfoValues; //!< Normalized LFO outputs (0..1)
 
 /**

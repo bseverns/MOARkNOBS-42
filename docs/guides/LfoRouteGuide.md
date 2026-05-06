@@ -11,7 +11,7 @@ If you are new to routes, start with:
 - one LFO
 - one internal route
 - moderate depth
-- a visible target like LED brightness
+- a clear target like arp swing or velocity shift
 
 That makes the modulation obvious before it becomes complicated.
 
@@ -19,15 +19,19 @@ That makes the modulation obvious before it becomes complicated.
 
 The current default routing is simple on purpose: one LFO is easy to see and hear, the other changes how hard the reactive layer bites.
 
-![Overview illustration showing the three internal LFO targets. LedBrightness is shown as a visible pulse, ArpSwing as shifted offbeats, and EfGainTrim as a stronger envelope lane. The title notes that the factory defaults route LFO1 to LedBrightness and ArpSwing, while LFO2 trims envelope-follower gain.](../assets/signal-shapes/lfo-route-overview.png)
+![Overview illustration showing internal LFO targets. ArpSwing is shown as shifted offbeats, EfGainTrim as a stronger envelope lane, and velocity/chance as note-shaping routes.](../assets/signal-shapes/lfo-route-overview.png)
 
-## The three internal targets
+## Internal targets
 
 The current internal route targets are:
 
 - `EfGainTrim`
 - `ArpSwing`
-- `LedBrightness`
+- `VelocityShift`
+- `NoteChance`
+- `ArpGate`
+- `JitterDepth`
+- `JitterSmoothness`
 
 These are not equivalent. Each one changes a different layer of the instrument.
 
@@ -39,33 +43,15 @@ The current firmware does not expose a dedicated "LFO edit" page on the OLED. Th
 
 That preview is based on the current `DisplayManager` debug-page strings, so it reflects what the firmware is documenting today rather than an invented UI concept.
 
-## `LedBrightness`
-
-This is the most legible target.
+## `VelocityShift`
 
 What it changes:
 
-- the visible brightness behavior of the LED layer
-
-Why it is good for learning:
-
-- you can see the modulation immediately
-- it does not hide in a musical side effect
-- it teaches route depth clearly
-
-Use low depth when:
-
-- you want subtle pulse or breathing
-
-Use high depth when:
-
-- you want the LEDs to visibly announce the modulation cycle
+- outgoing note velocity offset during note-trigger paths
 
 Best for:
 
-- first demos
-- teaching routes
-- visually linking the browser telemetry to what the hardware is doing
+- making notes breathe in intensity without touching base mappings
 
 ## `ArpSwing`
 
@@ -86,6 +72,40 @@ Best for:
 - demonstrating that modulation can affect feel, not just value
 
 Not the best first target if the player is still learning basic timing behavior.
+
+## `NoteChance`
+
+What it changes:
+
+- probability of note generation in note-trigger paths
+
+What that means musically:
+
+- low depth keeps phrases steady
+- higher depth makes rhythmic density ebb and flow
+
+## `ArpGate`
+
+What it changes:
+
+- note gate percentage in the arpeggiator path
+
+What that means musically:
+
+- shorter values feel percussive
+- longer values feel legato
+
+## `JitterDepth`
+
+What it changes:
+
+- the amplitude of random Perlin-based motion used by random filter/arp modes
+
+## `JitterSmoothness`
+
+What it changes:
+
+- the step-to-step smoothness of random Perlin-based motion
 
 ## `EfGainTrim`
 
@@ -121,9 +141,13 @@ Once those make sense, MIDI/OSC routes become much less mysterious.
 
 ## Safe first route progression
 
-1. `LedBrightness`
+1. `VelocityShift`
 2. `ArpSwing`
 3. `EfGainTrim`
+4. `NoteChance`
+5. `ArpGate`
+6. `JitterDepth`
+7. `JitterSmoothness`
 
 That order moves from visible, to musical, to structurally reactive.
 
@@ -159,9 +183,9 @@ See: [Profile Workflow](ProfileWorkflow.md)
 
 ### Best first demo
 
-- target: `LedBrightness`
+- target: `VelocityShift`
 - depth: moderate
-- goal: visible pulse
+- goal: audible motion in repeated notes
 
 ### Best musical demo
 

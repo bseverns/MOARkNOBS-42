@@ -83,6 +83,10 @@ void initializeSchedulers() {
                 displayManager.endDraw();
                 return;
             }
+            if (renderLfoTuningViewIfActive()) {
+                displayManager.endDraw();
+                return;
+            }
             if (diagnosticMode) {
                 const SystemDiagnostics diagSnapshot = captureDiagnosticsSnapshot();
                 displayManager.showDiagnostic(diagnosticPage, buttonManager, buttonContext,

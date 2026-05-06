@@ -108,6 +108,7 @@ These change broader operating behavior.
 | `Ctrl3 + Ctrl4`                 | cycle LED display modes       |
 | `Ctrl1 + Ctrl5`                 | toggle MIDI clock output      |
 | `Ctrl1 + Ctrl4 + Ctrl5`         | toggle clock source (EXT/INT) |
+| `Ctrl0 + Ctrl1 + Ctrl3`         | toggle LFO quick-tune mode    |
 | `Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5` | enter on-device config mode   |
 
 These are useful, but most players do not need them on day one.

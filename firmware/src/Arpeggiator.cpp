@@ -87,6 +87,16 @@ float jitterRateFromSmoothness(float smoothness) {
     float clamped = constrain(smoothness, 0.0f, 1.0f);
     return Utility::scale(clamped, 0.0f, 1.0f, 2.0f, 0.05f);
 }
+
+float effectiveJitterDepth() {
+    float base = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
+    return constrain(base + (g_lfoJitterDepth * 0.5f), 0.0f, 1.0f);
+}
+
+float effectiveJitterSmoothness() {
+    float base = constrain(g_jitterSettings.smoothness, 0.0f, 1.0f);
+    return constrain(base + (g_lfoJitterSmoothness * 0.5f), 0.0f, 1.0f);
+}
 } // namespace
 
 // Deterministic RNG used for DRUNK steps.
@@ -169,8 +179,8 @@ int8_t Arpeggiator::computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &s
     }
     case Arpeggiator::RANDOM:
     default: {
-        float depth = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
-        float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
+        float depth = effectiveJitterDepth();
+        float rate = jitterRateFromSmoothness(effectiveJitterSmoothness());
         float n = perlinNoise1D(static_cast<float>(stepIndex) * rate);
         float jitter = (n * depth * 0.5f) + 0.5f;
         int val = static_cast<int>(jitter * totalSteps);
@@ -282,7 +292,7 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         msPerTick = static_cast<float>(hwConfig.midiTaskInterval);
     }
     float stepDurationMs = msPerTick * static_cast<float>(_lengthTicks);
-    float gatePercent = constrain(_gatePercent, 5.0f, 100.0f);
+    float gatePercent = constrain(_gatePercent + (g_lfoArpGate * 35.0f), 5.0f, 100.0f);
     // LFO swing modulation nudges swing percent up to +/-30%.
     float swingPercent = constrain(_swingPercent + (g_lfoArpSwing * 30.0f), 0.0f, 80.0f);
     unsigned long baseGateMs = static_cast<unsigned long>(

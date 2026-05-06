@@ -118,17 +118,45 @@ Two routed LFOs live in the stack. The current documented internal targets are:
 
 - `EfGainTrim`
 - `ArpSwing`
-- `LedBrightness`
+- `VelocityShift`
+- `NoteChance`
+- `ArpGate`
+- `JitterDepth`
+- `JitterSmoothness`
 
 That means the same oscillator can:
 
 - change how hard the envelope follower output bites
 - push the arpeggiator away from straight timing
-- make the LED layer visibly pulse with the same motion
+- nudge outgoing note velocity up/down
+- open/close note-generation probability in performance
+- lengthen/shorten arpeggiator note gate
+- broaden/tighten random motion depth
+- smooth/roughen random motion timing feel
 
 The browser and WebSerial telemetry expose these values so the UI can draw what the firmware is actually doing.
 
 For a route-by-route explanation, read [LFO Route Guide](LfoRouteGuide.md).
+
+### On-device LFO quick-tune mode
+
+You can now tune LFO behavior directly on the hardware without opening the app first.
+
+- enter/exit mode: `Ctrl0 + Ctrl1 + Ctrl3`
+- select oscillator: `Ctrl0` = LFO1, `Ctrl1` = LFO2
+- cycle shape: `Ctrl2`
+- toggle sync: `Ctrl3`
+- cycle internal target route: `Ctrl4`
+- cycle order: `EfGainTrim -> ArpSwing -> VelocityShift -> NoteChance -> ArpGate -> JitterDepth -> JitterSmoothness`
+- `CtrlPot0` adjusts frequency (used in free-run, stored either way)
+- `CtrlPot1` adjusts depth
+- exit mode: `Ctrl5`
+
+Why this matters:
+
+- it gives LFO the same "reachable from the panel" status as EF/ARG controls
+- you can shape motion during rehearsal without leaving performance posture
+- it makes LFO behavior audibly/visibly testable before deeper route editing in app/bridge tools
 
 ## How to learn reactive controls without drowning
 
@@ -137,7 +165,7 @@ Use this order:
 1. one envelope follower
 2. `LINEAR` or `LOWPASS`
 3. no ARG yet
-4. one visible output, usually LED brightness or a single slot
+4. one obvious output, usually `ArpSwing` or `VelocityShift`
 5. only then add ARG or LFO routes
 
 That sequence keeps cause and effect visible.
@@ -149,7 +177,7 @@ That sequence keeps cause and effect visible.
 - filter: `LOWPASS`
 - mode: SEF
 - no ARG
-- LFO target: `LedBrightness`
+- LFO target: `VelocityShift`
 
 Best for first demos.
 

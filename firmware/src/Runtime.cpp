@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cstdint>
+#include <cmath>
 #include <imxrt.h>
 #include "ButtonManager.h"
 #include "ConfigManager.h"
@@ -162,12 +163,16 @@ void initializeRuntime(bool baselinesLoaded) {
                                       .getEnvelopeLevel(),
                                   0, 127));
                 }
-                int shifted = velo + velocityShift;
+                int lfoVelocityOffset = static_cast<int>(lroundf(g_lfoVelocityShift * 32.0f));
+                int shifted = velo + velocityShift + lfoVelocityOffset;
                 if (shifted < 0)
                     shifted = 0;
                 if (shifted > 127)
                     shifted = 127;
-                if (random(100U) >= changeProbability)
+                int lfoChanceOffset = static_cast<int>(lroundf(g_lfoNoteChance * 40.0f));
+                int effectiveChance =
+                    constrain(static_cast<int>(changeProbability) + lfoChanceOffset, 0, 100);
+                if (random(100U) >= static_cast<uint8_t>(effectiveChance))
                     break;
                 midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
                 queuePendingNoteOff(note, slot.midiChannel, 100);
@@ -323,13 +328,14 @@ void processLFOs() {
     const LFOBus &bus = lfoManager.bus();
     g_lfoEfGainTrim = bus.efGainTrim;
     g_lfoArpSwing = bus.arpSwing;
-    g_lfoLedBrightness = bus.ledBrightness;
+    g_lfoVelocityShift = bus.velocityShift;
+    g_lfoNoteChance = bus.noteChance;
+    g_lfoArpGate = bus.arpGate;
+    g_lfoJitterDepth = bus.jitterDepth;
+    g_lfoJitterSmoothness = bus.jitterSmoothness;
     g_lfoValues[0] = lfoManager.normalizedValue(0);
     g_lfoValues[1] = lfoManager.normalizedValue(1);
-
-    float brightnessScale = 1.0f + g_lfoLedBrightness;
-    brightnessScale = constrain(brightnessScale, 0.0f, 2.0f);
-    ledManager.setBrightnessModulator(brightnessScale);
+    ledManager.setBrightnessModulator(1.0f);
 }
 
 bool queuePendingNoteOff(uint8_t note, uint8_t channel, unsigned long delayMs) {

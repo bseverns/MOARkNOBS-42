@@ -9,6 +9,7 @@ void updateNoteDynamics();
 void updateControlUi(ButtonManagerContext &context);
 bool renderControlOverlayIfActive();
 bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context);
+bool renderLfoTuningViewIfActive();
 void streamWebSerialState();
 void flushPendingFilterPersists();
 

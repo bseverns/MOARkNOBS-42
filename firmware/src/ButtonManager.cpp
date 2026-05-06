@@ -14,6 +14,10 @@
 #include "TimeUtils.h"
 #include "Arpeggiator.h"
 #include "WebSerial.h"
+#include "LFO/LFOManager.h"
+#include "LFO/LFOShape.h"
+#include "LFO/LFOClock.h"
+#include <array>
 #include <map>
 #include <cmath>
 
@@ -30,6 +34,7 @@
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
 extern ConfigManager configManager;
+extern LFOManager lfoManager;
 
 // Verbose logging rides on BUTTON_MANAGER_DEBUG. See ButtonManager.h for macros.
 
@@ -69,6 +74,7 @@ constexpr uint8_t maskCtrl5 = 1 << 5;
 constexpr uint8_t panicMask = maskCtrl0 | maskCtrl1 | maskCtrl2;
 constexpr uint8_t configModeMask = maskCtrl0 | maskCtrl2 | maskCtrl3 | maskCtrl5;
 constexpr uint8_t clockSourceMask = maskCtrl1 | maskCtrl4 | maskCtrl5;
+constexpr uint8_t lfoTuningMask = maskCtrl0 | maskCtrl1 | maskCtrl3;
 
 constexpr uint32_t MUX_SETTLE_US = 5;
 
@@ -169,6 +175,52 @@ const char *slotTypeLabel(MIDIMessageType type) {
     return "?";
 }
 
+const char *lfoShapeLabel(LFOShape shape) {
+    switch (shape) {
+    case LFOShape::Sine:
+        return "SINE";
+    case LFOShape::Triangle:
+        return "TRI";
+    case LFOShape::Saw:
+        return "SAW";
+    case LFOShape::Square:
+        return "SQR";
+    case LFOShape::SampleHold:
+        return "S/H";
+    case LFOShape::RandomSlew:
+        return "RSLEW";
+    }
+    return "?";
+}
+
+const char *lfoTargetLabel(LFOInternalTarget target) {
+    switch (target) {
+    case LFOInternalTarget::EfGainTrim:
+        return "EF GAIN";
+    case LFOInternalTarget::ArpSwing:
+        return "ARP SWNG";
+    case LFOInternalTarget::VelocityShift:
+        return "VEL SHIFT";
+    case LFOInternalTarget::NoteChance:
+        return "NOTE CHNC";
+    case LFOInternalTarget::ArpGate:
+        return "ARP GATE";
+    case LFOInternalTarget::JitterDepth:
+        return "JIT DEPTH";
+    case LFOInternalTarget::JitterSmoothness:
+        return "JIT SMTH";
+    }
+    return "?";
+}
+
+LFOInternalTarget cycleLfoTarget(LFOInternalTarget current) {
+    uint8_t next = static_cast<uint8_t>(current) + 1;
+    if (next > static_cast<uint8_t>(LFOInternalTarget::JitterSmoothness)) {
+        next = 0;
+    }
+    return static_cast<LFOInternalTarget>(next);
+}
+
 // Persist new EF settings, update the slot cache, and reconfigure the live follower if present.
 inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
                              const MIDISlot::EfSettings &settings) {
@@ -243,6 +295,22 @@ void ButtonManager::exitOnDeviceConfigMode(ButtonManagerContext &context, bool a
     _onDeviceConfigModeActive = false;
     _onDeviceConfigModeDirty = false;
     context.displayManager.displayStatus(saved ? "Config Saved" : "Config Mode OFF", 1200);
+}
+
+void ButtonManager::enterLfoTuningMode(ButtonManagerContext &context) {
+    cancelPendingConfirm(context);
+    _pendingEfSlot = -1;
+    _lfoTuningActive = true;
+    _lfoTuningIndex = 0;
+    _lastLfoTuneFreqHz = -1.0f;
+    _lastLfoTuneDepth = -1.0f;
+    context.displayManager.displayStatus("LFO Tune ON", 1000);
+}
+
+void ButtonManager::exitLfoTuningMode(ButtonManagerContext &context) {
+    cancelPendingConfirm(context);
+    _lfoTuningActive = false;
+    context.displayManager.displayStatus("LFO Tune OFF", 1000);
 }
 
 /**
@@ -354,7 +422,7 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
             context.displayManager.registerInteraction();
         } else {
             // still pressed, check for long press
-            if (!_onDeviceConfigModeActive && !sm.longPressFired &&
+            if (!_onDeviceConfigModeActive && !_lfoTuningActive && !sm.longPressFired &&
                 (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
                 sm.state = ButtonState::LONG_PRESS;
                 sm.longPressFired = true;
@@ -528,6 +596,11 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
     }
 
     if (_onDeviceConfigModeActive) {
+        doSinglePressAction(index, context);
+        sm.lastShortRelease = 0;
+        return;
+    }
+    if (_lfoTuningActive) {
         doSinglePressAction(index, context);
         sm.lastShortRelease = 0;
         return;
@@ -706,6 +779,71 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
         case 5:
             exitOnDeviceConfigMode(context, true);
+            break;
+        default:
+            break;
+        }
+        return;
+    }
+
+    if (_lfoTuningActive) {
+        if (buttonIndex < NUM_VIRTUAL_BUTTONS) {
+            return;
+        }
+        const uint8_t controlIndex = buttonIndex - NUM_VIRTUAL_BUTTONS;
+        LFO &lfo = lfoManager.lfo(_lfoTuningIndex % LFOManager::kMaxLFOs);
+        switch (controlIndex) {
+        case 0:
+            _lfoTuningIndex = 0;
+            context.displayManager.displayStatus("LFO1", 800);
+            break;
+        case 1:
+            _lfoTuningIndex = 1;
+            context.displayManager.displayStatus("LFO2", 800);
+            break;
+        case 2: {
+            uint8_t next = static_cast<uint8_t>((static_cast<uint8_t>(lfo.getShape()) + 1) % 6);
+            lfo.setShape(static_cast<LFOShape>(next));
+            char buf[24];
+            snprintf(buf, sizeof(buf), "Shape %s", lfoShapeLabel(lfo.getShape()));
+            context.displayManager.displayStatus(buf, 900);
+            break;
+        }
+        case 3:
+            lfo.setSyncEnabled(!lfo.isSyncEnabled());
+            context.displayManager.displayStatus(lfo.isSyncEnabled() ? "Sync ON" : "Sync OFF", 900);
+            break;
+        case 4: {
+            std::array<LFOManager::Route, PROFILE_MAX_ROUTES> routes{};
+            const size_t count = std::min(lfoManager.routeCount(), routes.size());
+            size_t internalIndex = routes.size();
+            for (size_t i = 0; i < count; ++i) {
+                if (!lfoManager.getRoute(i, routes[i])) {
+                    continue;
+                }
+                if (routes[i].type == LFOManager::Route::Type::Internal &&
+                    routes[i].lfoIndex == (_lfoTuningIndex % LFOManager::kMaxLFOs)) {
+                    internalIndex = i;
+                    break;
+                }
+            }
+
+            if (internalIndex == routes.size()) {
+                lfoManager.addInternalRoute(_lfoTuningIndex % LFOManager::kMaxLFOs,
+                                            LFOInternalTarget::EfGainTrim, 1.0f);
+                context.displayManager.displayStatus("Target EF GAIN", 900);
+            } else {
+                routes[internalIndex].target = cycleLfoTarget(routes[internalIndex].target);
+                lfoManager.setRoutes(routes.data(), count);
+                char buf[24];
+                snprintf(buf, sizeof(buf), "Target %s",
+                         lfoTargetLabel(routes[internalIndex].target));
+                context.displayManager.displayStatus(buf, 900);
+            }
+            break;
+        }
+        case 5:
+            exitLfoTuningMode(context);
             break;
         default:
             break;
@@ -904,7 +1042,17 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         g_followExternalClock = !g_followExternalClock;
         context.displayManager.displayStatus(g_followExternalClock ? "CLK SRC EXT" : "CLK SRC INT",
                                              1200);
+    }
+    // (0.85) Ctrl0 + Ctrl1 + Ctrl3: toggle LFO quick-tune mode.
+    else if (pressedButtons == lfoTuningMask) {
+        if (_lfoTuningActive) {
+            exitLfoTuningMode(context);
+        } else {
+            enterLfoTuningMode(context);
+        }
     } else if (_onDeviceConfigModeActive) {
+        return;
+    } else if (_lfoTuningActive) {
         return;
     }
     // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
@@ -1161,12 +1309,13 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
     const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
     const uint8_t swingMask = maskCtrl2 | maskCtrl3;
-    bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive;
+    bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive && !_lfoTuningActive;
     g_jitterTuningActive = jitterActive;
     static uint8_t lastMask = 0;
     // Track combos that have long-press behaviors (arp edit, swing presets).
     bool multiPressed = (mask && (mask & (mask - 1)));
-    bool longPressCombo = !_onDeviceConfigModeActive && (mask == arpEditMask || mask == swingMask);
+    bool longPressCombo = !_onDeviceConfigModeActive && !_lfoTuningActive &&
+                          (mask == arpEditMask || mask == swingMask);
 
     // Combo transitions: handle short-press fallbacks and release behavior.
     if (mask != _comboHoldMask) {
@@ -1263,6 +1412,35 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
             snprintf(buf, sizeof(buf), "Smooth: %.2f", smooth);
             context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
             _lastJitterSmoothness = smooth;
+        }
+    }
+
+    if (_lfoTuningActive) {
+        const uint8_t index = _lfoTuningIndex % LFOManager::kMaxLFOs;
+        LFO &lfo = lfoManager.lfo(index);
+        float freqHz =
+            Utility::scale(static_cast<float>(_ctrlPotValues[0]), 0.0f, 1023.0f, 0.05f, 12.0f);
+        float depth =
+            Utility::scale(static_cast<float>(_ctrlPotValues[1]), 0.0f, 1023.0f, 0.0f, 1.0f);
+        freqHz = constrain(freqHz, 0.05f, 12.0f);
+        depth = constrain(depth, 0.0f, 1.0f);
+        lfo.setFrequencyHz(freqHz);
+        lfo.setDepth(depth);
+
+        bool freqChanged =
+            (_lastLfoTuneFreqHz < 0.0f) || (fabsf(freqHz - _lastLfoTuneFreqHz) >= 0.05f);
+        bool depthChanged =
+            (_lastLfoTuneDepth < 0.0f) || (fabsf(depth - _lastLfoTuneDepth) >= 0.02f);
+        if (freqChanged) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "LFO%u Hz %.2f", static_cast<unsigned>(index + 1), freqHz);
+            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            _lastLfoTuneFreqHz = freqHz;
+        } else if (depthChanged) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "LFO%u D %.2f", static_cast<unsigned>(index + 1), depth);
+            context.displayManager.displayStatus(buf, SHORT_DISPLAY_TIME);
+            _lastLfoTuneDepth = depth;
         }
     }
 }

@@ -29,7 +29,15 @@ inline float jitterRateFromSmoothness(float smoothness) {
     return 0.05f + (1.0f - clamped) * 1.95f;
 }
 
-inline float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
+inline float jitterDepth() {
+    float base = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
+    return constrain(base + (g_lfoJitterDepth * 0.5f), 0.0f, 1.0f);
+}
+
+inline float jitterSmoothness() {
+    float base = constrain(g_jitterSettings.smoothness, 0.0f, 1.0f);
+    return constrain(base + (g_lfoJitterSmoothness * 0.5f), 0.0f, 1.0f);
+}
 
 struct EfVoice {
     uint8_t followerIndex = 0xFF; //!< Physical follower index we mirror
@@ -128,7 +136,7 @@ struct EfVoice {
                     shaped = static_cast<uint8_t>(level);
                     break;
                 }
-                float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
+                float rate = jitterRateFromSmoothness(jitterSmoothness());
                 float t = (static_cast<float>(now()) * 0.001f * rate) +
                           (static_cast<float>(followerIndex) * 17.23f);
                 float n = perlinNoise1D(t);

@@ -195,9 +195,9 @@ void configureLFOs() {
     lfo2.setSyncEnabled(false);
     lfo2.setSyncRatio(LFOSyncRatio::Div1);
 
-    lfoManager.addInternalRoute(0, LFOInternalTarget::LedBrightness, 1.0f);
     lfoManager.addInternalRoute(0, LFOInternalTarget::ArpSwing, 1.0f);
     lfoManager.addInternalRoute(1, LFOInternalTarget::EfGainTrim, 1.0f);
+    lfoManager.addInternalRoute(1, LFOInternalTarget::VelocityShift, 0.5f);
 }
 
 // Rebuild the envelope-follower voice cache from the current slot config after

@@ -52,7 +52,15 @@ float jitterRateFromSmoothness(float smoothness) {
 }
 
 // Read the global jitter depth knob with a safe clamp.
-float jitterDepth() { return constrain(g_jitterSettings.depth, 0.0f, 1.0f); }
+float jitterDepth() {
+    float base = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
+    return constrain(base + (g_lfoJitterDepth * 0.5f), 0.0f, 1.0f);
+}
+
+float jitterSmoothness() {
+    float base = constrain(g_jitterSettings.smoothness, 0.0f, 1.0f);
+    return constrain(base + (g_lfoJitterSmoothness * 0.5f), 0.0f, 1.0f);
+}
 } // namespace
 
 /**
@@ -145,7 +153,7 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
                 if (depth <= 0.0f) {
                     return level;
                 }
-                float rate = jitterRateFromSmoothness(g_jitterSettings.smoothness);
+                float rate = jitterRateFromSmoothness(jitterSmoothness());
                 float t = (static_cast<float>(now()) * 0.001f * rate) + (index * 13.37f);
                 float n = perlinNoise1D(t);
                 int swing = static_cast<int>(roundf(n * static_cast<float>(range) * depth));
