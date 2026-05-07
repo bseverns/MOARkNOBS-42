@@ -45,6 +45,7 @@ inline constexpr uint16_t SERIAL_BUFFER_SIZE = 128;  //!< bytes in the serial bu
 inline constexpr unsigned long SERIAL_BAUD = 115200; //!< default USB serial rate
 inline constexpr uint8_t POT_RANGE_MIN = 10;         //!< Min pot delta before acting
 inline constexpr uint8_t ENV_RANGE_MIN = 5;          //!< Min envelope delta threshold
+inline constexpr uint8_t EF_IDLE_FLOOR_DEFAULT = 24; //!< Default EF noise floor clamp (0..127)
 
 extern uint32_t g_resetCause;                 //!< Raw reset cause register
 extern uint16_t g_brownoutCount;              //!< Persistent brownout counter
@@ -234,6 +235,7 @@ extern bool g_arpEditActive;          //!< True while the arp edit combo is held
 extern uint8_t g_activeProfile;       //!< Current profile index (0..NUM_PROFILES-1)
 extern bool g_profileChangeRequested; //!< Signal to reload profile data in main loop
 extern bool g_profileSaveRequested;   //!< Signal to snapshot current settings into profile
+extern uint8_t g_efIdleFloor;         //!< Global EF level at/below which input is treated as idle
 
 // Direct-wired control buttons use separate GPIOs so they don't
 // interfere with the mux select lines.

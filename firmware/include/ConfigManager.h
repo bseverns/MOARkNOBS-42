@@ -77,6 +77,8 @@ inline constexpr uint16_t EEPROM_CONFIG_VERSION = EEPROM_ARG_ENABLE + 1;
 inline constexpr uint16_t EEPROM_CONFIG_CRC = EEPROM_CONFIG_VERSION + 2;
 inline constexpr uint16_t EEPROM_ACTIVE_PROFILE = EEPROM_CONFIG_CRC + 2;
 inline constexpr uint16_t EEPROM_LED_MODE = EEPROM_ACTIVE_PROFILE + 1;
+inline constexpr uint16_t EEPROM_EF_IDLE_FLOOR = EEPROM_LED_MODE + 1;
+inline constexpr uint16_t EEPROM_EF_IDLE_FLOOR_CHECK = EEPROM_EF_IDLE_FLOOR + 1;
 
 class EnvelopeFollower;
 
@@ -85,18 +87,18 @@ class EnvelopeFollower;
  * These structs are packed so EEPROM writes stay compact and predictable.
  */
 struct __attribute__((packed)) ProfileEfSettings {
-    uint8_t mode = 0;               //!< EnvelopeFollower::EFMode
-    uint8_t autoBaseline = 1;       //!< Auto-baseline flag (0/1)
-    uint8_t autoGain = 1;           //!< Auto-gain flag (0/1)
-    uint8_t gateThreshold = 16;     //!< Gate threshold (0-127)
-    uint8_t gateHysteresis = 4;     //!< Gate hysteresis (0-127)
-    uint8_t activityThreshold = 24; //!< Activity/noise-floor threshold (0-127)
-    uint8_t gainTarget = 102;       //!< Auto-gain target (0-127)
-    uint16_t attackMs = 5;          //!< Attack time (ms)
-    uint16_t releaseMs = 20;        //!< Release time (ms)
-    uint16_t rmsWindowMs = 50;      //!< RMS window (ms)
-    uint16_t baselineTauMs = 2000;  //!< Baseline time constant (ms)
-    uint16_t gainTauMs = 3000;      //!< Gain time constant (ms)
+    uint8_t mode = 0;              //!< EnvelopeFollower::EFMode
+    uint8_t autoBaseline = 1;      //!< Auto-baseline flag (0/1)
+    uint8_t autoGain = 1;          //!< Auto-gain flag (0/1)
+    uint8_t gateThreshold = 16;    //!< Gate threshold (0-127)
+    uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
+    uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
+    uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
+    uint16_t attackMs = 5;         //!< Attack time (ms)
+    uint16_t releaseMs = 20;       //!< Release time (ms)
+    uint16_t rmsWindowMs = 50;     //!< RMS window (ms)
+    uint16_t baselineTauMs = 2000; //!< Baseline time constant (ms)
+    uint16_t gainTauMs = 3000;     //!< Gain time constant (ms)
 };
 
 struct __attribute__((packed)) ProfileSlotSettings {
@@ -257,6 +259,12 @@ class ConfigManager {
 
     /** Retrieve the currently stored LED animation mode. */
     LedMode getLedMode() const;
+
+    /** Persist the global EF idle/noise-floor clamp in MIDI units (0-127). */
+    void setEfIdleFloor(uint8_t floor);
+
+    /** Retrieve the current global EF idle/noise-floor clamp. */
+    uint8_t getEfIdleFloor() const;
 
     /** Override the persistence backend used by ConfigManager (tests/migration hooks). */
     static void setStorageBackend(StorageBackend *backend);

@@ -587,6 +587,24 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
         JsonObject filterObj = config["filter"].as<JsonObject>();
         parseEfSettings(filterObj, defaultEfSettings, defaultEfSettings);
+        if (filterObj.containsKey("idle_floor")) {
+            configManager.setEfIdleFloor(readClampedU8(filterObj, "idle_floor", "idleFloor", 0, 127,
+                                                       configManager.getEfIdleFloor()));
+        } else if (filterObj.containsKey("idleFloor")) {
+            configManager.setEfIdleFloor(readClampedU8(filterObj, "idle_floor", "idleFloor", 0, 127,
+                                                       configManager.getEfIdleFloor()));
+        }
+    }
+    if (config.containsKey("efIdleFloor") || config.containsKey("ef_idle_floor")) {
+        configManager.setEfIdleFloor(readClampedU8(config, "ef_idle_floor", "efIdleFloor", 0, 127,
+                                                   configManager.getEfIdleFloor()));
+    }
+    if (config.containsKey("envelopes") && config["envelopes"].is<JsonObject>()) {
+        JsonObject envObj = config["envelopes"].as<JsonObject>();
+        if (envObj.containsKey("idle_floor") || envObj.containsKey("idleFloor")) {
+            configManager.setEfIdleFloor(readClampedU8(envObj, "idle_floor", "idleFloor", 0, 127,
+                                                       configManager.getEfIdleFloor()));
+        }
     }
 
     SlotARGConfig defaultArg{};
@@ -1017,6 +1035,10 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                       EF_FILTER_FREQ_MIN_HZ, EF_FILTER_FREQ_MAX_HZ);
         float q = constrain(readFloatField(filterObj, "q", "q", EF_FILTER_Q_MIN), EF_FILTER_Q_MIN,
                             EF_FILTER_Q_MAX);
+        if (filterObj.containsKey("idle_floor") || filterObj.containsKey("idleFloor")) {
+            configManager.setEfIdleFloor(readClampedU8(filterObj, "idle_floor", "idleFloor", 0, 127,
+                                                       configManager.getEfIdleFloor()));
+        }
 
         SlotEnvelopePayload tailPayload{};
         tailPayload.filterType = static_cast<uint8_t>(filterType);
@@ -1167,6 +1189,7 @@ void handleSaveMacroSlotCommand(const ParsedCommand &cmd);
 void handleSetAllCommand(const ParsedCommand &cmd);
 void handleSetArgMethodCommand(const ParsedCommand &cmd);
 void handleSetEfCommand(const ParsedCommand &cmd);
+void handleSetEfIdleFloorCommand(const ParsedCommand &cmd);
 void handleSetLedCommand(const ParsedCommand &cmd);
 void handleSetPotCommand(const ParsedCommand &cmd);
 void handleSetProfileCommand(const ParsedCommand &cmd);
@@ -1193,6 +1216,7 @@ const CommandHandler kCommandHandlers[] = {
     {"SET_ALL", handleSetAllCommand},
     {"SET_ARGMETHOD", handleSetArgMethodCommand},
     {"SET_EF", handleSetEfCommand},
+    {"SET_EF_IDLE_FLOOR", handleSetEfIdleFloorCommand},
     {"SET_LED", handleSetLedCommand},
     {"SET_POT", handleSetPotCommand},
     {"SET_PROFILE", handleSetProfileCommand},
@@ -1428,6 +1452,25 @@ void handleSetArgMethodCommand(const ParsedCommand &cmd) {
 
 void handleSetEfCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetEfCommand(cmd.fullCommand());
+}
+
+void handleSetEfIdleFloorCommand(const ParsedCommand &cmd) {
+    String valueText = cmd.fullCommand().substring(strlen("SET_EF_IDLE_FLOOR"));
+    valueText.trim();
+    if (valueText.startsWith(",")) {
+        valueText = valueText.substring(1);
+        valueText.trim();
+    }
+    if (valueText.length() == 0) {
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_EF_IDLE_FLOOR\","
+                    "\"message\":\"missing value\"}");
+        return;
+    }
+    int floor = constrain(valueText.toInt(), 0, 127);
+    configManager.setEfIdleFloor(static_cast<uint8_t>(floor));
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_EF_IDLE_FLOOR\","
+               "\"idle_floor\":%d}\n",
+               floor);
 }
 
 void handleSetLedCommand(const ParsedCommand &cmd) {

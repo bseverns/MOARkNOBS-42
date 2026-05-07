@@ -299,6 +299,7 @@ void ButtonManager::enterOnDeviceConfigMode(ButtonManagerContext &context) {
     _pendingEfSlot = -1;
     _onDeviceConfigModeActive = true;
     _onDeviceConfigModeDirty = false;
+    _lastConfigFloorPotBucket = -1;
     if (context.diagnosticMode) {
         context.diagnosticMode = false;
         context.ledManager.setDiagnosticMode(false);
@@ -317,6 +318,7 @@ void ButtonManager::exitOnDeviceConfigMode(ButtonManagerContext &context, bool a
     }
     _onDeviceConfigModeActive = false;
     _onDeviceConfigModeDirty = false;
+    _lastConfigFloorPotBucket = -1;
     context.displayManager.displayStatus(saved ? "Config Saved" : "Config Mode OFF", 1200);
 }
 
@@ -1418,6 +1420,26 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         waitForMuxSettle();
         int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
         _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
+    }
+
+    if (_onDeviceConfigModeActive) {
+        int16_t bucket = static_cast<int16_t>(map(_ctrlPotValues[0], 0, 1023, 0, 127));
+        bucket = constrain(bucket, static_cast<int16_t>(0), static_cast<int16_t>(127));
+        if (_lastConfigFloorPotBucket < 0) {
+            _lastConfigFloorPotBucket = bucket;
+        } else {
+            int16_t delta = bucket - _lastConfigFloorPotBucket;
+            if (abs(delta) >= 2) {
+                int floor = constrain(static_cast<int>(context.configManager.getEfIdleFloor()) +
+                                          static_cast<int>(delta),
+                                      0, 127);
+                context.configManager.setEfIdleFloor(static_cast<uint8_t>(floor));
+                _lastConfigFloorPotBucket = bucket;
+                char buf[24];
+                snprintf(buf, sizeof(buf), "EF Floor=%d", floor);
+                context.displayManager.displayStatus(buf, kTuningStatusMs);
+            }
+        }
     }
 
     if (jitterActive) {

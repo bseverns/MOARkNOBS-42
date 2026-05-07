@@ -76,18 +76,18 @@ class EnvelopeFollower {
      * Per-mode configuration data used by the envelope engine.
      */
     struct EfModeSettings {
-        EFMode mode = EFMode::Peak;     //!< Detection mode to apply
-        uint16_t attackMs = 5;          //!< Attack time for follower/gate
-        uint16_t releaseMs = 20;        //!< Release time for follower/gate
-        uint16_t rmsWindowMs = 50;      //!< Integration window for RMS-ish mode
-        uint16_t baselineTauMs = 2000;  //!< Time constant for baseline tracker
-        uint16_t gainTauMs = 3000;      //!< Time constant for auto-gain
-        uint8_t gateThreshold = 16;     //!< Gate threshold (0..127)
-        uint8_t gateHysteresis = 4;     //!< Gate hysteresis band
-        uint8_t activityThreshold = 24; //!< Activity/noise-floor threshold
-        uint8_t gainTarget = 102;       //!< Auto-gain target (~80% FS)
-        bool autoBaseline = true;       //!< Enable baseline tracking
-        bool autoGain = true;           //!< Enable auto-gain tracking
+        EFMode mode = EFMode::Peak;    //!< Detection mode to apply
+        uint16_t attackMs = 5;         //!< Attack time for follower/gate
+        uint16_t releaseMs = 20;       //!< Release time for follower/gate
+        uint16_t rmsWindowMs = 50;     //!< Integration window for RMS-ish mode
+        uint16_t baselineTauMs = 2000; //!< Time constant for baseline tracker
+        uint16_t gainTauMs = 3000;     //!< Time constant for auto-gain
+        uint8_t gateThreshold = 16;    //!< Gate threshold (0..127)
+        uint8_t gateHysteresis = 4;    //!< Gate hysteresis band
+        uint8_t activityThreshold = 4; //!< Activity detect threshold
+        uint8_t gainTarget = 102;      //!< Auto-gain target (~80% FS)
+        bool autoBaseline = true;      //!< Enable baseline tracking
+        bool autoGain = true;          //!< Enable auto-gain tracking
     };
 
   private:

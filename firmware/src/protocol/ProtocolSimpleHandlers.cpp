@@ -175,11 +175,14 @@ void handleGetConfigCommand(const String &command) {
     envFilter["type"] = envelopeFilterName(currentFilter);
     envFilter["frequency"] = freq;
     envFilter["q"] = q;
+    envFilter["idle_floor"] = configManager.getEfIdleFloor();
+    env["idle_floor"] = configManager.getEfIdleFloor();
 
     JsonObject rootFilter = doc.createNestedObject("filter");
     rootFilter["type"] = envelopeFilterName(currentFilter);
     rootFilter["freq"] = freq;
     rootFilter["q"] = q;
+    rootFilter["idle_floor"] = configManager.getEfIdleFloor();
 
     JsonObject rootArg = doc.createNestedObject("arg");
     rootArg["method"] = argMethodName(storedMethod);

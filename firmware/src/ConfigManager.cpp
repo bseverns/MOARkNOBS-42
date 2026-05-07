@@ -365,6 +365,11 @@ void ConfigManager::readEEPROM(bool backup, uint16_t base) {
     if (base == EEPROM_PROFILE_START(0)) {
         _stored.activeProfile = storageRead(offset + EEPROM_ACTIVE_PROFILE);
         _stored.ledMode = storageRead(offset + EEPROM_LED_MODE);
+        uint8_t idleFloor = storageRead(offset + EEPROM_EF_IDLE_FLOOR);
+        uint8_t idleFloorCheck = storageRead(offset + EEPROM_EF_IDLE_FLOOR_CHECK);
+        g_efIdleFloor = ((idleFloor ^ 0xFF) == idleFloorCheck && idleFloor <= 127)
+                            ? idleFloor
+                            : EF_IDLE_FLOOR_DEFAULT;
     }
     storageGet(offset + EEPROM_CONFIG_VERSION, _stored.version);
     storageGet(offset + EEPROM_CONFIG_CRC, _stored.crc);
@@ -381,6 +386,8 @@ void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
     if (base == EEPROM_PROFILE_START(0)) {
         storageUpdate(offset + EEPROM_ACTIVE_PROFILE, _stored.activeProfile);
         storageUpdate(offset + EEPROM_LED_MODE, _stored.ledMode);
+        storageUpdate(offset + EEPROM_EF_IDLE_FLOOR, g_efIdleFloor);
+        storageUpdate(offset + EEPROM_EF_IDLE_FLOOR_CHECK, g_efIdleFloor ^ 0xFF);
     }
     storagePut(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
     storagePut(offset + EEPROM_CONFIG_CRC, crc);
@@ -700,6 +707,14 @@ LedMode ConfigManager::getLedMode() const {
     return sanitizeLedMode(static_cast<LedMode>(_stored.ledMode));
 }
 
+void ConfigManager::setEfIdleFloor(uint8_t floor) {
+    g_efIdleFloor = static_cast<uint8_t>(constrain(static_cast<int>(floor), 0, 127));
+    storageUpdate(EEPROM_EF_IDLE_FLOOR, g_efIdleFloor);
+    storageUpdate(EEPROM_EF_IDLE_FLOOR_CHECK, g_efIdleFloor ^ 0xFF);
+}
+
+uint8_t ConfigManager::getEfIdleFloor() const { return g_efIdleFloor; }
+
 // Reset configuration to defaults
 void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
                                        bool recordRecoveryEvent) {
@@ -715,6 +730,7 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
                              1.0f);
     _stored.activeProfile = 0;
     _stored.ledMode = static_cast<uint8_t>(LedMode::Static);
+    g_efIdleFloor = EF_IDLE_FLOOR_DEFAULT;
     saveConfiguration();
 }
 
@@ -781,7 +797,7 @@ uint8_t ConfigManager::getEnvelopeB() const {
 
 String ConfigManager::makeSchema() {
     String s;
-    s.reserve(7600);
+    s.reserve(7900);
     s += "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",";
     s += "\"schema_version\":";
     s += String(CONFIG_VERSION);
@@ -887,6 +903,11 @@ String ConfigManager::makeSchema() {
     s += String(EF_FILTER_Q_MIN, 2);
     s += ",\"maximum\":";
     s += String(EF_FILTER_Q_MAX, 1);
+    s += "},";
+    s += "\"idle_floor\":{\"type\":\"integer\",\"title\":\"EF idle floor\",";
+    s += "\"description\":\"Envelope levels at or below this MIDI value are clamped to zero.\",";
+    s += "\"minimum\":0,\"maximum\":127,\"default\":";
+    s += String(static_cast<int>(EF_IDLE_FLOOR_DEFAULT));
     s += "}},\"additionalProperties\":false},";
 
     s += "\"arg\":{\"type\":\"object\",\"title\":\"Follower Combiner (ARG)\",";

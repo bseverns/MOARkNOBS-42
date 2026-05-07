@@ -219,6 +219,14 @@
           "title": "Resonance (Q)",
           "minimum": 0.5,
           "maximum": 4.0
+        },
+        "idle_floor": {
+          "type": "integer",
+          "title": "EF idle floor",
+          "description": "Envelope levels at or below this MIDI value are clamped to zero.",
+          "minimum": 0,
+          "maximum": 127,
+          "default": 24
         }
       },
       "additionalProperties": false

@@ -5,6 +5,7 @@ const EF_FILTER_FREQ_MIN = 20;
 const EF_FILTER_FREQ_MAX = 5000;
 const EF_FILTER_Q_MIN = 0.5;
 const EF_FILTER_Q_MAX = 4.0;
+const EF_IDLE_FLOOR_DEFAULT = 24;
 const LED_MODE_NAMES = ['STATIC', 'PEAK_HOLD', 'TRAIL', 'CLOCK_PULSE'];
 const LEGACY_ENVELOPE_ANALOG_PINS = [14, 15, 16, 17, 20, 21];
 
@@ -251,6 +252,20 @@ export function normalizeConfig(config, manifest = {}) {
     if (Number.isFinite(envQ)) filter.q = clamp(envQ, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX);
   }
   if (!Number.isFinite(filter.q)) filter.q = 1;
+
+  const idleFloorCandidate = Number(
+    filterSource.idle_floor ??
+      filterSource.idleFloor ??
+      config.ef_idle_floor ??
+      config.efIdleFloor ??
+      env.idle_floor ??
+      env.idleFloor ??
+      envFilter.idle_floor ??
+      envFilter.idleFloor
+  );
+  filter.idle_floor = Number.isFinite(idleFloorCandidate)
+    ? clamp(Math.round(idleFloorCandidate), 0, 127)
+    : EF_IDLE_FLOOR_DEFAULT;
 
   if (typeof filterSource.type === 'string' && EF_FILTER_NAMES.includes(filterSource.type)) {
     filter.type = filterSource.type;

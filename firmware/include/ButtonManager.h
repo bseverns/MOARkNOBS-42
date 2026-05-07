@@ -65,6 +65,7 @@
 //     - Ctrl2: Cycle slot type
 //     - Ctrl3: Cycle channel
 //     - Ctrl4: Cycle data1 (CC/NRPN/RPN)
+//     - CtrlPot0: Adjust global EF idle floor
 //     - Ctrl5: Exit + autosave
 //
 // Multi-button combos (settle window: 80ms):
@@ -302,6 +303,7 @@ class ButtonManager {
     int _ctrlPotValues[3] = {0};
     float _lastJitterDepth = -1.0f;
     float _lastJitterSmoothness = -1.0f;
+    int16_t _lastConfigFloorPotBucket = -1;
     // Chord settle window: allows human fingers to land on multi-button combos reliably.
     // 80ms accommodates typical finger spread variance without introducing noticeable lag.
     static constexpr unsigned long COMBO_SETTLE_MS = 80;

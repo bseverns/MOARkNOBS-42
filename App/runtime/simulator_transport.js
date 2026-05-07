@@ -99,7 +99,8 @@ export function createSimulator(simDeps = {}) {
       arg_method_name: 'PLUS',
       arg_enable: true,
       arg_pair: { a: 0, b: 1 },
-      filter: { frequency: 800, q: 1 }
+      filter: { frequency: 800, q: 1, idle_floor: 24 },
+      idle_floor: 24
     },
     led: {
       brightness: 64,
