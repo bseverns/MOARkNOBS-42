@@ -1,13 +1,27 @@
 export function createPortPreferenceStore({ storage, storageKey } = {}) {
+  function normalizeFilter(value) {
+    if (!value || typeof value !== 'object') return null;
+    const filter = {};
+    const usbVendorId = Number(value.usbVendorId);
+    const usbProductId = Number(value.usbProductId);
+    if (Number.isInteger(usbVendorId) && usbVendorId >= 0 && usbVendorId <= 0xffff) {
+      filter.usbVendorId = usbVendorId;
+      if (Number.isInteger(usbProductId) && usbProductId >= 0 && usbProductId <= 0xffff) {
+        filter.usbProductId = usbProductId;
+      }
+      return filter;
+    }
+    if (typeof value.bluetoothServiceClassId === 'string' && value.bluetoothServiceClassId) {
+      filter.bluetoothServiceClassId = value.bluetoothServiceClassId;
+      return filter;
+    }
+    return null;
+  }
+
   function getPortInfo(port) {
     if (!port?.getInfo) return null;
     try {
-      const info = port.getInfo();
-      if (!info) return null;
-      return {
-        usbVendorId: info.usbVendorId,
-        usbProductId: info.usbProductId
-      };
+      return normalizeFilter(port.getInfo());
     } catch (_) {
       return null;
     }
@@ -28,7 +42,9 @@ export function createPortPreferenceStore({ storage, storageKey } = {}) {
     try {
       const raw = storage.getItem(storageKey);
       if (!raw) return null;
-      return JSON.parse(raw);
+      const filter = normalizeFilter(JSON.parse(raw));
+      if (!filter) storage.removeItem?.(storageKey);
+      return filter;
     } catch (err) {
       console.debug('read port preference failed', err);
       return null;
@@ -37,6 +53,7 @@ export function createPortPreferenceStore({ storage, storageKey } = {}) {
 
   return {
     getPortInfo,
+    normalizeFilter,
     persist,
     read
   };

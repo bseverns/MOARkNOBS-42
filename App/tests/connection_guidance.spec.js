@@ -72,6 +72,32 @@ test('connect distinguishes a cancelled device picker from other errors', async 
   await expect(page.locator('.status-message')).toContainText('browser picker');
 });
 
+test('connect ignores malformed remembered port filters so the picker can open', async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem('moarknobs:last-port', JSON.stringify({}));
+    window.__requestPortOptions = null;
+    Object.defineProperty(navigator, 'serial', {
+      configurable: true,
+      value: {
+        requestPort: async (options) => {
+          window.__requestPortOptions = options;
+          throw new DOMException('The chooser was dismissed.', 'NotFoundError');
+        }
+      }
+    });
+  });
+
+  await page.goto('/benzknobz.html');
+  await page.getByRole('button', { name: 'Connect' }).click();
+
+  const options = await page.evaluate(() => window.__requestPortOptions);
+  expect(options).toEqual({});
+  await expect(page.locator('#status-label')).toHaveText('No device selected');
+});
+
 test('config JSON can be imported before connecting and exported afterward', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
