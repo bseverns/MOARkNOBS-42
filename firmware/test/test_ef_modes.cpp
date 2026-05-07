@@ -129,6 +129,24 @@ void test_gate_mode_hysteresis() {
     TEST_ASSERT_EQUAL_INT(0, ef.getEnvelopeLevel());
 }
 
+void test_idle_floor_suppresses_disconnected_float() {
+    EfHarnessGuard guard;
+    PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
+    EnvelopeFollower ef(A0, &pm, 0);
+    ef.setVref(1.65f);
+    EnvelopeFollower::EfModeSettings settings = baseSettings(EnvelopeFollower::EFMode::Peak);
+    settings.activityThreshold = 4; // legacy profiles should still inherit the firmware floor.
+    ef.setModeSettings(settings);
+
+    g_analogValue = adcFromVoltage(1.65f + ((20.0f / 127.0f) * 1.65f));
+    for (int i = 0; i < 20; ++i) {
+        advanceMs(5);
+        ef.update();
+    }
+
+    TEST_ASSERT_EQUAL_INT(0, ef.getEnvelopeLevel());
+}
+
 void test_auto_baseline_converges() {
     EfHarnessGuard guard;
     PotentiometerManager pm(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);

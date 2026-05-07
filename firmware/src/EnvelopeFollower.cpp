@@ -14,6 +14,10 @@
 #include <cmath>
 #include <algorithm>
 
+#ifndef MN42_EF_IDLE_FLOOR_MIDI
+#define MN42_EF_IDLE_FLOOR_MIDI 24
+#endif
+
 // Tracks external audio/CV and converts it to a MIDI-friendly envelope. The
 // value produced here is consumed by PotentiometerManager and the arpeggiator
 // to modulate outgoing MIDI data.
@@ -232,7 +236,7 @@ void EnvelopeFollower::update() {
         dt = 0.005f; // default to the mid-priority scheduler cadence
     }
     int rawLevel = readEnvelopeLevel(dt);
-    currentEnvelopeLevel = processEnvelopeLevel(rawLevel);
+    currentEnvelopeLevel = applyIdleFloor(processEnvelopeLevel(rawLevel));
 }
 
 /**
@@ -445,7 +449,7 @@ int EnvelopeFollower::readEnvelopeLevel(float dtSeconds) {
     env = std::max(0.0f, env);
     int midi = static_cast<int>((env / vref) * 127.0f);
     smoothedLevel = smoothingAlpha * midi + (1.0f - smoothingAlpha) * smoothedLevel;
-    return constrain(smoothedLevel, 0, 127);
+    return applyIdleFloor(constrain(smoothedLevel, 0, 127));
 }
 
 float EnvelopeFollower::detectPeak(float level, float dtSeconds) {
@@ -560,6 +564,16 @@ float EnvelopeFollower::gainScale() const {
         scale = 0.0f;
     }
     return scale;
+}
+
+int EnvelopeFollower::applyIdleFloor(int midiLevel) {
+    const int configuredFloor = static_cast<int>(efSettings.activityThreshold);
+    const int floor = std::max(configuredFloor, static_cast<int>(MN42_EF_IDLE_FLOOR_MIDI));
+    if (midiLevel <= floor) {
+        smoothedLevel = 0;
+        return 0;
+    }
+    return constrain(midiLevel, 0, 127);
 }
 
 /**

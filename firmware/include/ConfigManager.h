@@ -85,18 +85,18 @@ class EnvelopeFollower;
  * These structs are packed so EEPROM writes stay compact and predictable.
  */
 struct __attribute__((packed)) ProfileEfSettings {
-    uint8_t mode = 0;              //!< EnvelopeFollower::EFMode
-    uint8_t autoBaseline = 1;      //!< Auto-baseline flag (0/1)
-    uint8_t autoGain = 1;          //!< Auto-gain flag (0/1)
-    uint8_t gateThreshold = 16;    //!< Gate threshold (0-127)
-    uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
-    uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
-    uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
-    uint16_t attackMs = 5;         //!< Attack time (ms)
-    uint16_t releaseMs = 20;       //!< Release time (ms)
-    uint16_t rmsWindowMs = 50;     //!< RMS window (ms)
-    uint16_t baselineTauMs = 2000; //!< Baseline time constant (ms)
-    uint16_t gainTauMs = 3000;     //!< Gain time constant (ms)
+    uint8_t mode = 0;               //!< EnvelopeFollower::EFMode
+    uint8_t autoBaseline = 1;       //!< Auto-baseline flag (0/1)
+    uint8_t autoGain = 1;           //!< Auto-gain flag (0/1)
+    uint8_t gateThreshold = 16;     //!< Gate threshold (0-127)
+    uint8_t gateHysteresis = 4;     //!< Gate hysteresis (0-127)
+    uint8_t activityThreshold = 24; //!< Activity/noise-floor threshold (0-127)
+    uint8_t gainTarget = 102;       //!< Auto-gain target (0-127)
+    uint16_t attackMs = 5;          //!< Attack time (ms)
+    uint16_t releaseMs = 20;        //!< Release time (ms)
+    uint16_t rmsWindowMs = 50;      //!< RMS window (ms)
+    uint16_t baselineTauMs = 2000;  //!< Baseline time constant (ms)
+    uint16_t gainTauMs = 3000;      //!< Gain time constant (ms)
 };
 
 struct __attribute__((packed)) ProfileSlotSettings {

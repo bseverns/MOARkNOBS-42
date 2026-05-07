@@ -88,6 +88,7 @@ void test_lfo_clock_consumes_ticks();
 void test_peak_mode_rises_and_falls();
 void test_rms_mode_converges();
 void test_gate_mode_hysteresis();
+void test_idle_floor_suppresses_disconnected_float();
 void test_auto_baseline_converges();
 void test_auto_gain_targets_level();
 void test_stats_report_mode_and_value();
@@ -176,6 +177,7 @@ void setup() {
     RUN_TEST(test_peak_mode_rises_and_falls);
     RUN_TEST(test_rms_mode_converges);
     RUN_TEST(test_gate_mode_hysteresis);
+    RUN_TEST(test_idle_floor_suppresses_disconnected_float);
     RUN_TEST(test_auto_baseline_converges);
     RUN_TEST(test_auto_gain_targets_level);
     RUN_TEST(test_stats_report_mode_and_value);

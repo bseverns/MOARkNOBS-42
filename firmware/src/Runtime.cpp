@@ -130,6 +130,13 @@ void checkDiagnosticsForAlerts() {
 void initializeRuntime(bool baselinesLoaded) {
     // Initialize runtime services now that the UI and EEPROM-backed state are ready.
     pinMode(VREF_ADC_PIN, INPUT);
+    for (int pin : ENVELOPE_ANALOG_PINS) {
+#if defined(INPUT_PULLDOWN)
+        pinMode(pin, INPUT_PULLDOWN);
+#else
+        pinMode(pin, INPUT);
+#endif
+    }
     g_vref = Utility::readVrefADC(VREF_ADC_PIN);
 
     midiHandler.begin();
