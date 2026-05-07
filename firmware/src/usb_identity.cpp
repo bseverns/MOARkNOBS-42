@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "usb_names.h"
+#include <stdint.h>
 
 #if defined(ARDUINO) && defined(TEENSYDUINO)
 
@@ -11,10 +11,16 @@
 
 extern "C" {
 
-PROGMEM struct usb_string_descriptor_struct usb_string_manufacturer_name = {
+struct usb_string_descriptor_struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;
+    uint16_t wString[];
+};
+
+PROGMEM extern const struct usb_string_descriptor_struct usb_string_manufacturer_name = {
     2 + MN42_MANUFACTURER_NAME_LEN * 2, 3, MN42_MANUFACTURER_NAME};
 
-PROGMEM struct usb_string_descriptor_struct usb_string_product_name = {
+PROGMEM extern const struct usb_string_descriptor_struct usb_string_product_name = {
     2 + MN42_PRODUCT_NAME_LEN * 2, 3, MN42_PRODUCT_NAME};
 
 } // extern "C"

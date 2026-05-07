@@ -1,6 +1,6 @@
 import Ajv from './lib/mini-ajv.js';
 import addFormats from './lib/add-formats.js';
-import { EF_FILTER_NAMES, ARG_METHOD_NAMES } from './lib/constants.js';
+import { EF_FILTER_NAMES, ARG_METHOD_NAMES, SLOT_TYPE_NAMES } from './lib/constants.js';
 import { createLocalManifest } from './manifest_contract.js';
 import {
   createTransportPort,
@@ -23,7 +23,7 @@ const RPC_THROTTLE_INTERVAL_MS = 1000 / 120;
 const RPC_TIMEOUT_MS = 3000;
 const APPLY_RPC_TIMEOUT_MS = 30000;
 const MACRO_COMMAND_TIMEOUT_MS = 6000;
-const NATIVE_SET_ALL_CHUNK_SIZE = 120;
+const NATIVE_SET_ALL_CHUNK_SIZE = 96;
 const NATIVE_SET_ALL_LINE_PACE_MS = 4;
 const MACRO_RESPONSE_KEYS = {
   SAVE_MACRO_SLOT: 'macro_saved',
@@ -165,6 +165,146 @@ function chunkString(value, size) {
     index = end;
   }
   return chunks.length ? chunks : [''];
+}
+
+function copyDefined(source, keys) {
+  if (!source || typeof source !== 'object') return {};
+  const out = {};
+  for (const key of keys) {
+    if (source[key] !== undefined) out[key] = clone(source[key]);
+  }
+  return out;
+}
+
+function equivalentJson(a, b) {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+function slotTypeForDevice(slot) {
+  if (typeof slot?.type_name === 'string' && SLOT_TYPE_NAMES.includes(slot.type_name)) {
+    return slot.type_name;
+  }
+  if (typeof slot?.type === 'string' && SLOT_TYPE_NAMES.includes(slot.type)) {
+    return slot.type;
+  }
+  const numericType = Number(slot?.type);
+  if (Number.isInteger(numericType) && SLOT_TYPE_NAMES[numericType]) {
+    return SLOT_TYPE_NAMES[numericType];
+  }
+  return 'OFF';
+}
+
+function compactSlotForDevice(slot, previousSlot) {
+  const out = {};
+  out.type = slotTypeForDevice(slot);
+  if (slot?.channel !== undefined) out.channel = clone(slot.channel);
+  else if (slot?.midiChannel !== undefined) out.channel = clone(slot.midiChannel);
+  if (slot?.data1 !== undefined) out.data1 = clone(slot.data1);
+  else if (slot?.cc !== undefined) out.data1 = clone(slot.cc);
+  out.active = Boolean(slot?.active);
+  if (slot?.ef_index !== undefined) out.ef_index = clone(slot.ef_index);
+  else if (slot?.efIndex !== undefined) out.ef_index = clone(slot.efIndex);
+  if (slot?.sysexTemplate !== undefined && slot?.sysexTemplate !== previousSlot?.sysexTemplate) {
+    out.sysexTemplate = clone(slot.sysexTemplate);
+  }
+  if (slot?.ef && typeof slot.ef === 'object' && !equivalentJson(slot.ef, previousSlot?.ef)) {
+    out.ef = copyDefined(slot.ef, [
+      'index',
+      'filter_index',
+      'filter_name',
+      'filter',
+      'frequency',
+      'q',
+      'oversample',
+      'smoothing',
+      'baseline',
+      'gain',
+      'mode',
+      'auto_baseline',
+      'autoBaseline',
+      'auto_gain',
+      'autoGain',
+      'attack_ms',
+      'attackMs',
+      'release_ms',
+      'releaseMs',
+      'rms_ms',
+      'rmsWindowMs',
+      'baseline_tau_ms',
+      'baselineTauMs',
+      'gain_tau_ms',
+      'gainTauMs',
+      'gate_threshold',
+      'gateThreshold',
+      'gate_hysteresis',
+      'gateHysteresis',
+      'activity_threshold',
+      'activityThreshold',
+      'gain_target',
+      'gainTarget'
+    ]);
+  }
+  if (
+    slot?.ef_payload &&
+    typeof slot.ef_payload === 'object' &&
+    !equivalentJson(slot.ef_payload, previousSlot?.ef_payload)
+  ) {
+    out.ef_payload = copyDefined(slot.ef_payload, ['type_index', 'type', 'freq', 'frequency', 'q']);
+  }
+  if (slot?.arg && typeof slot.arg === 'object' && !equivalentJson(slot.arg, previousSlot?.arg)) {
+    out.arg = copyDefined(slot.arg, [
+      'enable',
+      'enabled',
+      'method',
+      'method_name',
+      'a',
+      'b',
+      'sourceA',
+      'sourceB'
+    ]);
+  }
+  return out;
+}
+
+function compactConfigForDevice(config, previousConfig) {
+  if (!config || typeof config !== 'object') return config;
+  const out = {};
+  if (Array.isArray(config.slots)) {
+    out.slots = config.slots.map((slot, index) =>
+      compactSlotForDevice(slot, previousConfig?.slots?.[index])
+    );
+  }
+  if (Array.isArray(config.efSlots) && !equivalentJson(config.efSlots, previousConfig?.efSlots)) {
+    out.efSlots = clone(config.efSlots);
+  }
+  if (
+    config.filter &&
+    typeof config.filter === 'object' &&
+    !equivalentJson(config.filter, previousConfig?.filter)
+  ) {
+    out.filter = clone(config.filter);
+  }
+  if (
+    config.arg &&
+    typeof config.arg === 'object' &&
+    !equivalentJson(config.arg, previousConfig?.arg)
+  ) {
+    out.arg = clone(config.arg);
+  }
+  if (
+    config.led &&
+    typeof config.led === 'object' &&
+    !equivalentJson(config.led, previousConfig?.led)
+  ) {
+    out.led = clone(config.led);
+  }
+  if (
+    config.envelopeMode !== undefined &&
+    !equivalentJson(config.envelopeMode, previousConfig?.envelopeMode)
+  ) {
+    out.envelopeMode = clone(config.envelopeMode);
+  }
+  return out;
 }
 
 // UI throttling helper for controls that should feel live without flooding transport.
@@ -824,7 +964,8 @@ export function createRuntime({
         build_time: remoteManifest?.build_time,
         schema_version: remoteManifest?.schema_version
       },
-      config: clone(stagedConfig)
+      config: clone(stagedConfig),
+      deviceConfig: compactConfigForDevice(stagedConfig, liveConfig)
     };
     const body = JSON.stringify(payload);
     const checksum = await digest(body);

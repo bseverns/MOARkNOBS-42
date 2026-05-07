@@ -150,6 +150,8 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
             mode: 'STATIC'
           }
         };
+        config.slots[9].type = 255;
+        config.slots[9].type_name = 'UNKNOWN';
 
         transport.writeLine = async (line) => {
           const trimmed = String(line ?? '').trim();
@@ -242,8 +244,12 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
   expect(result.writes).toContain('GET_CONFIG');
   expect(result.writes.some((line) => line.startsWith('SET_ALL '))).toBe(true);
   const setAllLines = result.writes.filter((line) => line.startsWith('SET_ALL '));
+  expect(Math.max(...setAllLines.map((line) => line.length))).toBeLessThanOrEqual(126);
   expect(setAllLines.slice(1).every((line) => !line.startsWith('SET_ALL {'))).toBe(true);
   expect(result.payload?.config?.filter?.freq).toBe(321);
+  expect(result.payload?.config?.slots?.[9]?.type).toBe('OFF');
+  expect(result.payload?.config?.pots).toBeUndefined();
+  expect(result.payload?.config?.envelopes).toBeUndefined();
   expect(typeof result.payload?.checksum).toBe('string');
 });
 
@@ -490,6 +496,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__nativeWrites = [];
+    window.__nativeProfileDelayMs = 3500;
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     window.__MN42_TEST_HOOKS = {
       mutateTransport(transport) {
@@ -642,7 +649,10 @@ test('native transport supports profile, macro, and scene actions when firmware 
           if (trimmed === 'LOAD_PROFILE,0') {
             config = clone(profileSlots[0]);
             config.led.brightness = 77;
-            pushLine(JSON.stringify({ profile_loaded: true, profile: 0 }));
+            setTimeout(
+              () => pushLine(JSON.stringify({ profile_loaded: true, profile: 0 })),
+              window.__nativeProfileDelayMs
+            );
             return;
           }
           if (trimmed === 'RESET_PROFILE,0') {
@@ -756,8 +766,11 @@ test('native transport supports profile, macro, and scene actions when firmware 
   await expect(page.locator('.scene-save').first()).toBeEnabled();
 
   await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await expect(page.locator('#status-label')).toHaveText('Profile saved');
   await page.getByRole('button', { name: 'Switch profile', exact: true }).click();
+  await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 10000 });
   await page.getByRole('button', { name: 'Reset profile', exact: true }).click();
+  await expect(page.locator('#status-label')).toHaveText('Profile reset');
 
   await page.evaluate(async () => {
     await window.__MN42_RUNTIME.sendMacroCommand('SAVE_MACRO_SLOT');

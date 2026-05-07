@@ -7,6 +7,7 @@ import { createProfileFileIO } from './profile_file_io.js';
 import { createProfileSceneControls } from './profile_scene_controls.js';
 
 const PROFILE_LABELS = ['A', 'B', 'C', 'D'];
+const PROFILE_RPC_TIMEOUT_MS = 30000;
 const MACRO_SAVE_COMMAND = 'SAVE_MACRO_SLOT';
 const MACRO_RECALL_COMMAND = 'RECALL_MACRO_SLOT';
 const SCENE_SLOT_COUNT = 6;
@@ -364,7 +365,10 @@ export function createProfileMacroScenePanel({
     }
     setStatus('warn', busyLabel, `${describeSlot()} • busy`);
     try {
-      const response = await runtime.sendRpc({ rpc: method, slot: activeProfileSlot });
+      const response = await runtime.sendRpc(
+        { rpc: method, slot: activeProfileSlot },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+      );
       // Firmware may report an authoritative slot index; trust it and realign local selection.
       const responseSlot = clampProfileSlot(
         response?.slot ?? response?.profile ?? activeProfileSlot,
@@ -374,7 +378,10 @@ export function createProfileMacroScenePanel({
       if (expectConfig) {
         let payload = response?.config ?? null;
         if (!payload || typeof payload !== 'object' || !Array.isArray(payload?.slots)) {
-          const configPayload = await runtime.sendRpc({ rpc: 'get_config' });
+          const configPayload = await runtime.sendRpc(
+            { rpc: 'get_config' },
+            { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+          );
           payload = configPayload?.config ?? configPayload;
         }
         if (payload && typeof payload === 'object') {

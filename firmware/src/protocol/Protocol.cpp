@@ -232,6 +232,7 @@ bool parseMIDIType(const char *label, MIDIMessageType &type) {
     };
     static constexpr Entry kMap[] = {
         {"OFF", "OFF", nullptr, MIDIMessageType::OFF},
+        {"UNKNOWN", "UNKNOWN", nullptr, MIDIMessageType::OFF},
         {"CC", "CC", nullptr, MIDIMessageType::CC},
         {"Note", "NOTE", nullptr, MIDIMessageType::Note},
         {"PitchBend", "PITCH_BEND", "PITCHBEND", MIDIMessageType::PitchBend},
@@ -826,7 +827,6 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.efSettings = settings;
         slot.setEnvelopeFollowerIndex(settings.followerIndex);
         slot.active = active;
-        slot.arg = defaultArg;
         if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
             JsonObject slotArgObj = slotObj["arg"].as<JsonObject>();
             SlotARGConfig slotArgConfig = slot.arg;
@@ -871,7 +871,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         } else {
             clearSysExTemplate(slot);
         }
-        SlotARGConfig slotArg = defaultArg;
+        SlotARGConfig slotArg = slot.arg;
         if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
             JsonObject argObj = slotObj["arg"].as<JsonObject>();
             if (argObj.containsKey("enable")) {
@@ -1389,6 +1389,10 @@ void handleSetAllCommand(const ParsedCommand &cmd) {
     const char *configId = doc["config_id"] | nullptr;
     if (!configId || configId[0] == '\0') {
         configId = doc["checksum"] | nullptr;
+    }
+    const String &checksumHint = bulkConfigAssembler.checksumHint();
+    if ((!configId || configId[0] == '\0') && checksumHint.length() > 0) {
+        configId = checksumHint.c_str();
     }
     if (!configId || configId[0] == '\0') {
         emitBulkError("checksum", "missing checksum/config_id", seq);

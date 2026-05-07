@@ -60,7 +60,7 @@ export function createRpcKernel({
         const payload = JSON.stringify({
           seq: message.seq,
           checksum: message.checksum,
-          config: message.config
+          config: message.deviceConfig ?? message.config
         });
         return {
           kind: 'ack',

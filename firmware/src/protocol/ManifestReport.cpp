@@ -12,8 +12,8 @@
 
 #if defined(ARDUINO)
 extern "C" {
-extern char _ebss;
-extern char _flashimagelen;
+extern unsigned long _ebss;
+extern unsigned long _flashimagelen;
 }
 #endif
 
