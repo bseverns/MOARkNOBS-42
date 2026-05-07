@@ -45,16 +45,36 @@ void test_bulk_config_assembler_handles_chunks() {
     TEST_ASSERT_TRUE(
         assembler.ingestChunk("{\"seq\":1,\"checksum\":\"deadbeef\",\"config\":", error));
     TEST_ASSERT_EQUAL_UINT32(1, assembler.sequenceHint());
+    TEST_ASSERT_FALSE(assembler.complete());
 
     StaticJsonDocument<256> partial;
     auto partialErr = deserializeJson(partial, assembler.payload());
     TEST_ASSERT_TRUE(partialErr == DeserializationError::IncompleteInput);
 
     TEST_ASSERT_TRUE(assembler.ingestChunk("{\"slots\":[]}}", error));
+    TEST_ASSERT_TRUE(assembler.complete());
     StaticJsonDocument<256> doc;
     auto finalErr = deserializeJson(doc, assembler.payload());
     TEST_ASSERT_FALSE(finalErr);
     TEST_ASSERT_EQUAL_STRING("deadbeef", doc["checksum"]);
+}
+
+void test_bulk_config_assembler_waits_for_balanced_frame() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
+
+    TEST_ASSERT_TRUE(
+        assembler.ingestChunk("{\"seq\":3,\"checksum\":\"c\",\"config\":{\"slots\":[", error));
+    TEST_ASSERT_FALSE(assembler.complete());
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"label\":\"brace } in string\"}", error));
+    TEST_ASSERT_FALSE(assembler.complete());
+    TEST_ASSERT_TRUE(assembler.ingestChunk("]}}", error));
+    TEST_ASSERT_TRUE(assembler.complete());
+
+    StaticJsonDocument<256> doc;
+    auto finalErr = deserializeJson(doc, assembler.payload());
+    TEST_ASSERT_FALSE(finalErr);
+    TEST_ASSERT_EQUAL_STRING("brace } in string", doc["config"]["slots"][0]["label"]);
 }
 
 void test_bulk_config_assembler_resyncs_on_wrapper_start() {

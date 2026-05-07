@@ -1369,12 +1369,13 @@ void handleSetAllCommand(const ParsedCommand &cmd) {
         return;
     }
 
+    if (!bulkConfigAssembler.complete()) {
+        return;
+    }
+
     static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
     doc.clear();
     DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
-    if (err == DeserializationError::IncompleteInput) {
-        return;
-    }
     if (err) {
         emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
         bulkConfigAssembler.reset();

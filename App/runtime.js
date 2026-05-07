@@ -21,6 +21,7 @@ const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
 const RPC_THROTTLE_INTERVAL_MS = 1000 / 120;
 const RPC_TIMEOUT_MS = 3000;
+const APPLY_RPC_TIMEOUT_MS = 30000;
 const MACRO_COMMAND_TIMEOUT_MS = 6000;
 const NATIVE_SET_ALL_CHUNK_SIZE = 120;
 const NATIVE_SET_ALL_LINE_PACE_MS = 4;
@@ -828,7 +829,15 @@ export function createRuntime({
     const body = JSON.stringify(payload);
     const checksum = await digest(body);
     payload.checksum = checksum;
-    const response = await sendRpc(payload);
+    let response;
+    try {
+      response = await sendRpc(payload, { timeoutMs: APPLY_RPC_TIMEOUT_MS });
+    } catch (err) {
+      if (/RPC timeout/i.test(err?.message ?? '')) {
+        throw new Error('Timed out waiting for firmware ACK');
+      }
+      throw err;
+    }
     const ackChecksum = response?.checksum ?? response?.result?.checksum ?? null;
     if (ackChecksum !== checksum) {
       await rollback();

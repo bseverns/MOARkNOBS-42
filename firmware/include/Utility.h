@@ -173,13 +173,21 @@ class Utility {
         /** Current payload size in bytes. */
         size_t size() const { return buffer.length(); }
 
+        /** True once the staged text contains one balanced top-level JSON object. */
+        bool complete() const { return receiving && sawRootOpen && !inString && braceDepth == 0; }
+
       private:
         void refreshHints();
+        void updateCompletionState(const String &chunk);
 
         bool receiving = false;
         String buffer;
         uint32_t seqHint = 0;
         String checksum;
+        int braceDepth = 0;
+        bool inString = false;
+        bool escaped = false;
+        bool sawRootOpen = false;
     };
 
     /** Format the acknowledgement packet emitted after applying a config. */

@@ -14,6 +14,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__nativeWrites = [];
     window.__nativeSetAllPayload = null;
+    window.__nativeAckDelayMs = 3500;
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     window.__MN42_TEST_HOOKS = {
       mutateTransport(transport) {
@@ -176,9 +177,11 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
               window.__nativeSetAllPayload = payload;
               config = payload.config;
               setAllBuffer = '';
-              pushLine(
-                JSON.stringify({ type: 'ack', seq: payload.seq, checksum: payload.checksum })
-              );
+              setTimeout(() => {
+                pushLine(
+                  JSON.stringify({ type: 'ack', seq: payload.seq, checksum: payload.checksum })
+                );
+              }, window.__nativeAckDelayMs);
             } catch (_) {
               // wait for more chunks
             }

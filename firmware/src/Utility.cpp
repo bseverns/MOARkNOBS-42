@@ -290,6 +290,10 @@ void Utility::BulkConfigAssembler::reset() {
     buffer = "";
     seqHint = 0;
     checksum = "";
+    braceDepth = 0;
+    inString = false;
+    escaped = false;
+    sawRootOpen = false;
 }
 
 bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &error) {
@@ -319,8 +323,35 @@ bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &erro
     buffer.reserve(buffer.length() + chunk.length());
     buffer += chunk;
     receiving = true;
+    updateCompletionState(chunk);
     refreshHints();
     return true;
+}
+
+void Utility::BulkConfigAssembler::updateCompletionState(const String &chunk) {
+    for (size_t i = 0; i < chunk.length(); ++i) {
+        const char c = chunk.charAt(i);
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+        if (inString) {
+            if (c == '\\') {
+                escaped = true;
+            } else if (c == '"') {
+                inString = false;
+            }
+            continue;
+        }
+        if (c == '"') {
+            inString = true;
+        } else if (c == '{') {
+            sawRootOpen = true;
+            ++braceDepth;
+        } else if (c == '}' && braceDepth > 0) {
+            --braceDepth;
+        }
+    }
 }
 
 void Utility::BulkConfigAssembler::refreshHints() {
