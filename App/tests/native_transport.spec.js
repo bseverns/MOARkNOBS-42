@@ -247,6 +247,8 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
   expect(Math.max(...setAllLines.map((line) => line.length))).toBeLessThanOrEqual(126);
   expect(setAllLines.slice(1).every((line) => !line.startsWith('SET_ALL {'))).toBe(true);
   expect(result.payload?.config?.filter?.freq).toBe(321);
+  expect(result.payload?.config?.slots?.[0]?.ef).toBeUndefined();
+  expect(result.payload?.config?.slots?.[0]?.ef_index).toBe(0);
   expect(result.payload?.config?.slots?.[9]?.type).toBe('OFF');
   expect(result.payload?.config?.pots).toBeUndefined();
   expect(result.payload?.config?.envelopes).toBeUndefined();
