@@ -3,6 +3,10 @@ Import("env")
 # Slip -Wno-deprecated-copy in only for C++ builds.
 env.Append(CXXFLAGS=["-Wno-deprecated-copy"])
 
+# Teensy's USB string override symbols use flexible-array descriptors. With LTO,
+# GCC compares our concrete replacement size against the core's incomplete extern.
+env.Append(LINKFLAGS=["-Wno-lto-type-mismatch"])
+
 # PlatformIO normally spins up the variant build directory (`.pio/build/<env>`)
 # before invoking any builders, but some VS Code tasks were tripping over a race
 # where SCons tried to open `.sconsign311.dblite` before the folder existed.
