@@ -1,9 +1,34 @@
 import { EF_FILTER_NAMES, SLOT_TYPE_NAMES, ARG_METHOD_NAMES } from '../lib/constants.js';
 import { normalizeEfSlotTargets } from './patch_reconcile.js';
 
+const EF_FILTER_FREQ_MIN = 20;
+const EF_FILTER_FREQ_MAX = 5000;
+const EF_FILTER_Q_MIN = 0.5;
+const EF_FILTER_Q_MAX = 4.0;
+const LED_MODE_NAMES = ['STATIC', 'PEAK_HOLD', 'TRAIL', 'CLOCK_PULSE'];
+const LEGACY_ENVELOPE_ANALOG_PINS = [14, 15, 16, 17, 20, 21];
+
 function clamp(value, min, max) {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeEnvelopeSelector(value, followerCount, fallback = 0) {
+  const resolvedCount = Math.max(1, Math.floor(Number(followerCount) || 0));
+  const maxIndex = Math.max(0, resolvedCount - 1);
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) {
+    return clamp(Math.round(Number(fallback) || 0), 0, maxIndex);
+  }
+  const rounded = Math.round(raw);
+  if (rounded >= 0 && rounded <= maxIndex) {
+    return rounded;
+  }
+  const mapped = LEGACY_ENVELOPE_ANALOG_PINS.indexOf(rounded);
+  if (mapped >= 0 && mapped <= maxIndex) {
+    return mapped;
+  }
+  return clamp(rounded, 0, maxIndex);
 }
 
 function normalizeSlotEnvelope(slot) {
@@ -58,11 +83,15 @@ function normalizeSlotEnvelope(slot) {
   }
   if (!ef.filter_name || typeof ef.filter_name !== 'string') {
     ef.filter_name = EF_FILTER_NAMES[ef.filter_index] || defaults.filter_name;
+  } else if (!EF_FILTER_NAMES.includes(ef.filter_name)) {
+    ef.filter_name = EF_FILTER_NAMES[ef.filter_index] || defaults.filter_name;
   }
   ef.frequency = Number.isFinite(Number(ef.frequency))
-    ? Math.max(0, Number(ef.frequency))
+    ? clamp(Number(ef.frequency), EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX)
     : defaults.frequency;
-  ef.q = Number.isFinite(Number(ef.q)) ? Math.max(0, Number(ef.q)) : defaults.q;
+  ef.q = Number.isFinite(Number(ef.q))
+    ? clamp(Number(ef.q), EF_FILTER_Q_MIN, EF_FILTER_Q_MAX)
+    : defaults.q;
   ef.oversample = clamp(Math.round(Number(ef.oversample) || defaults.oversample), 1, 32);
   const smoothing = Number(ef.smoothing);
   ef.smoothing = Number.isFinite(smoothing) ? clamp(smoothing, 0, 1) : defaults.smoothing;
@@ -89,14 +118,9 @@ function normalizeSlotArg(slot, efLimit = 6) {
   if (methodIndex < 0) methodIndex = defaults.method;
   arg.method = clamp(Math.round(methodIndex), 0, ARG_METHOD_NAMES.length - 1);
   arg.method_name = ARG_METHOD_NAMES[arg.method] || defaults.method_name;
-  const sourceA = Number.isFinite(Number(arg.sourceA))
-    ? Math.round(Number(arg.sourceA))
-    : defaults.sourceA;
-  const sourceB = Number.isFinite(Number(arg.sourceB))
-    ? Math.round(Number(arg.sourceB))
-    : defaults.sourceB;
-  arg.sourceA = sourceA;
-  arg.sourceB = sourceB;
+  const resolvedFollowerCount = Math.max(1, Math.floor(Number(efLimit) || 0));
+  arg.sourceA = normalizeEnvelopeSelector(arg.sourceA, resolvedFollowerCount, defaults.sourceA);
+  arg.sourceB = normalizeEnvelopeSelector(arg.sourceB, resolvedFollowerCount, defaults.sourceB);
   return arg;
 }
 
@@ -210,19 +234,21 @@ export function normalizeConfig(config, manifest = {}) {
   const filter = {};
   const freqCandidate = Number(filterSource.freq ?? filterSource.frequency);
   if (Number.isFinite(freqCandidate)) {
-    filter.freq = freqCandidate;
+    filter.freq = clamp(freqCandidate, EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX);
   } else {
     const envFreq = Number(envFilter.frequency ?? envFilter.freq);
-    if (Number.isFinite(envFreq)) filter.freq = envFreq;
+    if (Number.isFinite(envFreq)) {
+      filter.freq = clamp(envFreq, EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX);
+    }
   }
-  if (!Number.isFinite(filter.freq)) filter.freq = 20;
+  if (!Number.isFinite(filter.freq)) filter.freq = EF_FILTER_FREQ_MIN;
 
   const qCandidate = Number(filterSource.q);
   if (Number.isFinite(qCandidate)) {
-    filter.q = qCandidate;
+    filter.q = clamp(qCandidate, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX);
   } else {
     const envQ = Number(envFilter.q);
-    if (Number.isFinite(envQ)) filter.q = envQ;
+    if (Number.isFinite(envQ)) filter.q = clamp(envQ, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX);
   }
   if (!Number.isFinite(filter.q)) filter.q = 1;
 
@@ -294,7 +320,17 @@ export function normalizeConfig(config, manifest = {}) {
   if (argB === undefined) argB = readNumber(pair.b, Math.max(0, Math.min(1, efCount - 1)));
   if (!Number.isFinite(argB)) argB = Math.max(0, Math.min(1, efCount - 1));
 
-  const arg = { method: methodName, a: argA, b: argB, enable: Boolean(enabled) };
+  const fallbackFollowerCount = efCount > 0 ? efCount : 6;
+  const arg = {
+    method: methodName,
+    a: normalizeEnvelopeSelector(argA, fallbackFollowerCount, 0),
+    b: normalizeEnvelopeSelector(
+      argB,
+      fallbackFollowerCount,
+      Math.min(1, fallbackFollowerCount - 1)
+    ),
+    enable: Boolean(enabled)
+  };
 
   let led;
   if (config.led && typeof config.led === 'object') {
@@ -343,7 +379,7 @@ export function normalizeConfig(config, manifest = {}) {
     if (!ledModeValue) {
       ledModeValue = 'STATIC';
     }
-    led.mode = ledModeValue;
+    led.mode = LED_MODE_NAMES.includes(ledModeValue) ? ledModeValue : 'STATIC';
   }
 
   let envelopeMode = null;
