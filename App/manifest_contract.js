@@ -3,7 +3,7 @@ export const MN42_SCHEMA_VERSION = 6;
 export const MN42_SLOT_COUNT = 42;
 export const MN42_POT_COUNT = 42;
 export const MN42_ENVELOPE_COUNT = 6;
-export const MN42_LED_COUNT = 51;
+export const MN42_LED_COUNT = 52;
 
 const DEFAULT_CAPABILITIES = {
   profile_save: false,
