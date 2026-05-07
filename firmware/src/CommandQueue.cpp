@@ -7,7 +7,9 @@
 #include "Log.h"
 
 namespace {
-constexpr size_t kMaxCommandQueueSize = 64;
+// Full SET_ALL payloads can span 100+ serial lines; keep enough headroom so
+// chunked apply traffic does not drop older fragments before reassembly.
+constexpr size_t kMaxCommandQueueSize = 192;
 
 struct CommandQueueStorage {
     char entries[kMaxCommandQueueSize][SERIAL_BUFFER_SIZE] = {{0}};

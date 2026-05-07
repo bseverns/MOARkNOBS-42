@@ -22,7 +22,8 @@ const TELEMETRY_FRAME_MS = 16;
 const RPC_THROTTLE_INTERVAL_MS = 1000 / 120;
 const RPC_TIMEOUT_MS = 3000;
 const MACRO_COMMAND_TIMEOUT_MS = 6000;
-const NATIVE_SET_ALL_CHUNK_SIZE = 96;
+const NATIVE_SET_ALL_CHUNK_SIZE = 120;
+const NATIVE_SET_ALL_LINE_PACE_MS = 4;
 const MACRO_RESPONSE_KEYS = {
   SAVE_MACRO_SLOT: 'macro_saved',
   RECALL_MACRO_SLOT: 'macro_recalled'
@@ -359,6 +360,7 @@ export function createRuntime({
     isJsonRpcTransport,
     chunkString,
     nativeSetAllChunkSize: NATIVE_SET_ALL_CHUNK_SIZE,
+    nativeSetAllLinePaceMs: NATIVE_SET_ALL_LINE_PACE_MS,
     rpcTimeoutMs: rpcTimeout,
     rpcThrottleIntervalMs: RPC_THROTTLE_INTERVAL_MS,
     onFatalError: (error) => {

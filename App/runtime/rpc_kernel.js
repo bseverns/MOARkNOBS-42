@@ -3,6 +3,7 @@ export function createRpcKernel({
   isJsonRpcTransport,
   chunkString,
   nativeSetAllChunkSize,
+  nativeSetAllLinePaceMs = 0,
   rpcTimeoutMs,
   rpcThrottleIntervalMs,
   onFatalError
@@ -18,6 +19,8 @@ export function createRpcKernel({
     typeof performance !== 'undefined' && typeof performance.now === 'function'
       ? performance.now()
       : Date.now();
+
+  const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   function createCompletionLatch() {
     let released = false;
@@ -135,8 +138,17 @@ export function createRpcKernel({
             if (!entry.nativeRequest) {
               throw new Error(`Unsupported device RPC: ${message.rpc}`);
             }
-            for (const line of entry.nativeRequest.lines) {
+            const applyLinePaceMs =
+              entry.nativeRequest.kind === 'ack'
+                ? Math.max(0, Number(nativeSetAllLinePaceMs) || 0)
+                : 0;
+            const lines = entry.nativeRequest.lines;
+            for (let index = 0; index < lines.length; index += 1) {
+              const line = lines[index];
               await transport.writeLine(line);
+              if (applyLinePaceMs > 0 && index + 1 < lines.length) {
+                await pause(applyLinePaceMs);
+              }
             }
           } else {
             await transport.writeLine(JSON.stringify(message));
