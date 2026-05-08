@@ -241,7 +241,7 @@ void handleGetLedCommand(const String &command) {
 
 void handleGetManifestCommand(const String &command) {
     (void)command;
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<768> doc;
     writeManifestFields(doc.to<JsonObject>());
 
     if (doc.overflowed()) {

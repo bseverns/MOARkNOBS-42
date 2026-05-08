@@ -4,6 +4,9 @@ export const MN42_SLOT_COUNT = 42;
 export const MN42_POT_COUNT = 42;
 export const MN42_ENVELOPE_COUNT = 6;
 export const MN42_LED_COUNT = 52;
+export const MN42_POWER_PROFILE = 'POWER_CHOKED_V1';
+export const MN42_LED_BRIGHTNESS_CAP = 26;
+export const MN42_RAIL_TOPOLOGY_VERIFIED = false;
 
 const DEFAULT_CAPABILITIES = {
   profile_save: false,
@@ -25,6 +28,9 @@ export function createLocalManifest({ uiVersion, argMethodCount, capabilities } 
     envelope_count: MN42_ENVELOPE_COUNT,
     arg_method_count: argMethodCount,
     led_count: MN42_LED_COUNT,
+    power_profile: MN42_POWER_PROFILE,
+    led_brightness_cap: MN42_LED_BRIGHTNESS_CAP,
+    rail_topology_verified: MN42_RAIL_TOPOLOGY_VERIFIED,
     capabilities: {
       ...DEFAULT_CAPABILITIES,
       ...(capabilities && typeof capabilities === 'object' ? capabilities : {})

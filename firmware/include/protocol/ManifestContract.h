@@ -5,7 +5,7 @@
 
 namespace ManifestContract {
 inline constexpr char kDeviceName[] = "MOARkNOBS-42";
-inline constexpr uint8_t kDefaultLedCount = 51;
+inline constexpr uint8_t kDefaultLedCount = 52;
 } // namespace ManifestContract
 
 #endif // MANIFEST_CONTRACT_H

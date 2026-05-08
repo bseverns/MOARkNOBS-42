@@ -98,8 +98,20 @@ async function run() {
   const slots = [];
   assert.ok(serial && serial.parser, 'serial parser should be connected');
   assert.ok(udp, 'udp endpoint should be connected');
+  assert.ok(
+    serial.writes.includes('HELLO\n'),
+    'bridge should send HELLO on serial open',
+  );
+  assert.ok(
+    serial.writes.includes('GET_MANIFEST\n'),
+    'bridge should request manifest on serial open',
+  );
 
   serial.parser.emit('data', '{"hello":"mn42"}');
+  serial.parser.emit(
+    'data',
+    '{"device_name":"MOARkNOBS-42","schema_version":6,"slot_count":42,"pot_count":42,"envelope_count":6,"led_count":52,"power_profile":"POWER_CHOKED_V1","led_brightness_cap":26,"rail_topology_verified":false}',
+  );
   serial.parser.emit('data', '{"slots":[1,2,3]}');
   await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -111,6 +123,11 @@ async function run() {
   }
 
   assert.deepEqual(slots, [1, 2, 3], 'bridge should echo slots via OSC');
+  assert.equal(
+    service.getState().manifest.power_profile,
+    'POWER_CHOKED_V1',
+    'bridge should retain direct manifest replies for state snapshots',
+  );
 
   await service.stop();
   console.log('serial JSON turns into OSC, as foretold');

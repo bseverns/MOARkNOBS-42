@@ -9,6 +9,7 @@ struct HardwareConfig;
 #include <map>
 #include <string>
 #include <FastLED.h>
+#include "BoardPowerProfile.h"
 
 // Strip layout (see Globals.h):
 //  [0-41]   : slot LEDs mapped to virtual controller slots
@@ -16,28 +17,12 @@ struct HardwareConfig;
 //  [48]     : control button LED
 //  [49-51]  : pot halos for the three physical knobs
 
-#ifndef MN42_LED_BRIGHTNESS_CAP_VALUE
-#define MN42_LED_BRIGHTNESS_CAP_VALUE 255
-#endif
-
-#ifndef MN42_SAFE_BENCH_LED_BRIGHTNESS_VALUE
-#define MN42_SAFE_BENCH_LED_BRIGHTNESS_VALUE 32
-#endif
-
-#ifndef MN42_DEFAULT_LED_BRIGHTNESS_VALUE
-#define MN42_DEFAULT_LED_BRIGHTNESS_VALUE 48
-#endif
-
-#ifndef MN42_DEMO_LED_BRIGHTNESS_VALUE
-#define MN42_DEMO_LED_BRIGHTNESS_VALUE 96
-#endif
-
 // Brightness policy constants shared across runtime, demos, and bench workflows.
 // These are firmware-side guardrails, not substitutes for correct power topology.
-constexpr uint8_t MN42_MAX_LED_BRIGHTNESS = MN42_LED_BRIGHTNESS_CAP_VALUE;
-constexpr uint8_t MN42_SAFE_BENCH_LED_BRIGHTNESS = MN42_SAFE_BENCH_LED_BRIGHTNESS_VALUE;
-constexpr uint8_t MN42_DEFAULT_LED_BRIGHTNESS = MN42_DEFAULT_LED_BRIGHTNESS_VALUE;
-constexpr uint8_t MN42_DEMO_LED_BRIGHTNESS = MN42_DEMO_LED_BRIGHTNESS_VALUE;
+constexpr uint8_t MN42_MAX_LED_BRIGHTNESS = BoardPowerProfile::kLedBrightnessCap;
+constexpr uint8_t MN42_SAFE_BENCH_LED_BRIGHTNESS = BoardPowerProfile::kSafeBenchLedBrightness;
+constexpr uint8_t MN42_DEFAULT_LED_BRIGHTNESS = BoardPowerProfile::kDefaultLedBrightness;
+constexpr uint8_t MN42_DEMO_LED_BRIGHTNESS = BoardPowerProfile::kDemoLedBrightness;
 
 /**
  * Possible LED indication states.

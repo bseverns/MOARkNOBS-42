@@ -239,6 +239,8 @@ function createBrowserBridgeServer({
 
     if (pathname === '/api/state/snapshot' && req.method === 'GET') {
       const generatedAt = new Date().toISOString();
+      const state = service.getState();
+      const manifest = state?.manifest || {};
       const payload = {
         generatedAt,
         runtime: {
@@ -247,7 +249,12 @@ function createBrowserBridgeServer({
           node: process.version,
           platform: process.platform,
         },
-        state: service.getState(),
+        powerSafety: {
+          power_profile: manifest.power_profile ?? null,
+          led_brightness_cap: manifest.led_brightness_cap ?? null,
+          rail_topology_verified: manifest.rail_topology_verified ?? null,
+        },
+        state,
       };
       res.writeHead(200, {
         'cache-control': 'no-store',

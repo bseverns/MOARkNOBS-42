@@ -9,6 +9,7 @@
     "test:cli": "node test/mn42_bridge.test.js && node test/test_missing_port.js && node test/config_file.test.js",
     "test:transport": "node test/serial_to_osc.test.js && node test/serial_large_payload.test.js && node test/osc_to_serial.test.js && node test/cmd_validation.test.js && node test/feedback_loop_guard.test.js && node test/translation_trace.test.js && node test/typed_event_layer.test.js && node test/roundtrip_metrics.test.js && node test/serial_close_reconnect.test.js && node test/midi_transport.test.js",
     "test:browser": "node test/browser_bridge_server.test.js",
+    "test:contract": "python3 ../tools/check_contract_sync.py --root ..",
     "test": "npm run test:cli && npm run test:transport && npm run test:browser",
     "lint": "npx eslint .",
     "format": "npx prettier --write .",

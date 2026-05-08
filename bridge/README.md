@@ -8,9 +8,10 @@ Current support boundary:
 
 - strongest repo evidence for this tool: Node.js 22 desktop host plus the browser console or CLI
 - documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
+- package scripts intentionally pin Node to `>=22 <23`; widening that floor needs explicit test evidence first
 - not claimed here: a signed one-click installer or broad DAW-by-DAW compatibility proof
 
-See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix.
+See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md).
 
 It does three things:
 
@@ -63,6 +64,8 @@ npm start
 
 By default the console is served at <http://127.0.0.1:8787/>.
 
+Security note: the HTTP console is local-only by default. Binding the bridge HTTP server or OSC listener to a public interface is unsupported unless you place it behind intentional network protection. Treat `/api/*`, `/ws`, and `/mn42/cmd` as trusted-local control surfaces.
+
 If you want stable settings across launches, copy [`settings.example.json`](settings.example.json) to your own file and start the bridge with `--config`:
 
 ```bash
@@ -85,13 +88,14 @@ _A second screenshot would help show the configurator launched through the bridg
 
 ### 4) Confirm it is live
 
-After startup, the bridge sends `HELLO` over serial and waits for:
+After startup, the bridge sends `HELLO` and `GET_MANIFEST` over serial, then waits for:
 
 ```json
 { "hello": "mn42" }
 ```
 
 When the handshake arrives, slot/envelope updates begin forwarding and the browser console reports the device as ready.
+When the manifest arrives, the state snapshot includes firmware identity and power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`.
 
 ## Quick start (CLI)
 

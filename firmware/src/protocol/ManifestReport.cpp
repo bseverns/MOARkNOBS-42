@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "ARGMixer.h"
+#include "BoardPowerProfile.h"
 #include "ConfigManager.h"
 #include "Globals.h"
 #include "protocol/ManifestContract.h"
@@ -56,6 +57,9 @@ void writeManifestFields(JsonObject object) {
     object["envelope_count"] = NUM_ENVELOPES;
     object["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
     object["led_count"] = NUM_LEDS();
+    object["power_profile"] = BoardPowerProfile::kName;
+    object["led_brightness_cap"] = BoardPowerProfile::kLedBrightnessCap;
+    object["rail_topology_verified"] = BoardPowerProfile::kRailTopologyVerified;
     object["free_ram"] = computeFreeRAM();
     object["free_flash"] = computeFreeFlash();
     JsonObject capabilities = object.createNestedObject("capabilities");

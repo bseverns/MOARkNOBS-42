@@ -31,16 +31,17 @@ the spotlight."  It's a clean slate; nothing gets lit until you tell it to.
 
 ## Power Safety Note
 
-`LEDManager` now boots with a conservative brightness policy:
+`LEDManager` now boots from the board power profile in
+[`BoardPowerProfile.h`](../BoardPowerProfile.h):
 
-- `MN42_MAX_LED_BRIGHTNESS = 26` as the current env-wide hard cap for the v1 board
-- `MN42_DEFAULT_LED_BRIGHTNESS = 26` for normal startup/runtime
-- `MN42_SAFE_BENCH_LED_BRIGHTNESS = 26` for conservative bench phases
-- `MN42_DEMO_LED_BRIGHTNESS = 26` until the v2 board lifts the temporary cap
+- `-DMN42_BOARD_POWER_PROFILE=POWER_CHOKED_V1` caps all runtime/demo/bench brightness at `26`.
+- `-DMN42_BOARD_POWER_PROFILE=SPLIT_RAIL_REWORK` lifts the hard cap to `255` after the split-rail rework is verified.
 
 These limits reduce current spikes, but they do not replace correct power
 topology. Full-strip white on 52 WS2812 LEDs can exceed `3 A`, so confirm the
 LED rail fuse branch and use a regulated `5 V` supply before high-current tests.
+The active profile is reported through `GET_MANIFEST` as `power_profile`,
+`led_brightness_cap`, and `rail_topology_verified`.
 
 ## Typical Use
 

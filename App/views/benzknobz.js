@@ -7,6 +7,7 @@ import { VirtualGrid, VirtualList } from './virtualizers.js';
 import { normalizeUIMode, persistUIMode, readUIModePreference } from './state/ui_preferences.js';
 import { createProfileMacroScenePanel } from './panels/profile_macro_scene.js';
 import { createSlotEditorPanel } from './panels/slot_editor_panel.js';
+import { createDeviceMonitorController } from './controllers/device_monitor_controller.js';
 import {
   getWebSerialCompatibility,
   explainTransportError
@@ -178,6 +179,11 @@ const boot = () => {
     const trimmed = candidate.trim();
     return trimmed || 'unknown';
   }
+
+  const deviceMonitorController = createDeviceMonitorController({
+    container: deviceMonitor,
+    resolveDeviceName
+  });
 
   // Update the banner line that identifies the connected deck.
   function setConnectionBanner(stage, manifest) {
@@ -637,7 +643,7 @@ const boot = () => {
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
-    renderDeviceMonitor(manifest);
+    deviceMonitorController.render(manifest);
     profileMacroScenePanel.onManifest(manifest);
     const followerCount = Number.isFinite(Number(manifest?.envelope_count))
       ? Number(manifest.envelope_count)
@@ -1021,37 +1027,6 @@ const boot = () => {
     });
     if (guardOn.length) runtime.setPotGuard(guardOn, true);
     if (guardOff.length) runtime.setPotGuard(guardOff, false);
-  }
-
-  // Paint the diagnostics card from the latest manifest/build information.
-  function renderDeviceMonitor(manifest) {
-    if (!deviceMonitor) return;
-    deviceMonitor.innerHTML = '';
-    const entries = {
-      Device: resolveDeviceName(manifest),
-      Firmware: manifest?.fw_version || '—',
-      'Git SHA': manifest?.git_sha ? manifest.git_sha.slice(0, 8) : '—',
-      'Build time': manifest?.build_time || '—',
-      'Schema version': manifest?.schema_version ?? '—',
-      'Free RAM': Number.isFinite(Number(manifest?.free_ram))
-        ? `${Math.round(Number(manifest.free_ram) / 1024)} KiB`
-        : '—',
-      'Free Flash': Number.isFinite(Number(manifest?.free_flash))
-        ? `${Math.round(Number(manifest.free_flash) / 1024)} KiB`
-        : '—'
-    };
-    Object.entries(entries).forEach(([label, value]) => {
-      const row = document.createElement('div');
-      row.className = 'monitor-row';
-      const term = document.createElement('span');
-      term.className = 'monitor-label';
-      term.textContent = label;
-      const val = document.createElement('span');
-      val.className = 'monitor-value';
-      val.textContent = value;
-      row.append(term, val);
-      deviceMonitor.appendChild(row);
-    });
   }
 
   // Render one slot tile inside the virtualized grid.

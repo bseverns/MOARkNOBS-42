@@ -51,6 +51,7 @@ bool g_arpEditActive = false; // Test shim for arp edit toggle
 uint8_t g_activeProfile = 0;
 bool g_profileChangeRequested = false;
 bool g_profileSaveRequested = false;
+uint8_t g_efIdleFloor = EF_IDLE_FLOOR_DEFAULT;
 bool webSerialStreaming = false;
 
 const std::array<int, NUM_ENVELOPES> ENVELOPE_ANALOG_PINS = {A0, A1, A2, A3, A6, A7};

@@ -8,6 +8,7 @@ const {
   parsePositiveInt,
   parseConfigFromArgv: parseCliConfigFromArgv,
 } = require('./config/cli_config');
+const { MN42_MANIFEST_CONTRACT } = require('./manifest_contract');
 const { normalizeMidiToOscMappings } = require('./config/midi_osc_mappings');
 
 function copyDirectoryRecursive(srcDir, dstDir) {
@@ -341,9 +342,16 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       setState({ ready: true });
       return;
     }
+    const directManifest =
+      typeof msg.device_name === 'string' &&
+      Number.isFinite(Number(msg.slot_count)) &&
+      Number.isFinite(Number(msg.pot_count))
+        ? msg
+        : null;
     const manifest =
       (msg.result && typeof msg.result === 'object' && msg.result.manifest) ||
       msg.manifest ||
+      directManifest ||
       null;
     if (manifest && typeof manifest === 'object') {
       setState({ manifest: manifest, ready: true });
@@ -510,8 +518,9 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       );
       try {
         serial.write('HELLO\n');
+        serial.write('GET_MANIFEST\n');
       } catch (err) {
-        pushLog('error', `HELLO write failed: ${err.message}`);
+        pushLog('error', `serial handshake write failed: ${err.message}`);
       }
     },
     onSerialError: (err) => {
@@ -766,6 +775,7 @@ module.exports = {
   MAX_CMD_LEN,
   MAX_SERIAL_LINE_LEN,
   MAX_MSG_LEN,
+  MN42_MANIFEST_CONTRACT,
   usageText,
   getArg,
   parseConfigFromArgv,

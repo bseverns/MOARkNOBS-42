@@ -101,9 +101,13 @@ nav:
       - Parameter Map: reference/parameter-map.md
       - Pin Map: reference/PinMap.md
       - EEPROM Layout: reference/EEPROMLayout.md
+      - Serial Protocol: reference/SerialProtocol.md
+      - MN42 Line Protocol: reference/MN42LineProtocol.md
+      - Manifest Contract: reference/ManifestContract.md
       - Hardware Current Build: reference/HardwareCurrentBuild.md
       - Hardware Substitutions: reference/HardwareSubstitutions.md
       - Host Compatibility: reference/HostCompatibility.md
+      - Known Good Host Recipes: reference/KnownGoodHostRecipes.md
       - Firmware Architecture Story: reference/FirmwareArchitecture.md
       - Envelope Frontend: reference/EF_Frontend_v2.md
       - Options DNI: reference/Options_DNI.md

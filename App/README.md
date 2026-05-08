@@ -6,6 +6,7 @@ Current support boundary:
 
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
 - strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 22 desktop host
+- package scripts intentionally pin Node to `>=22 <23`; widening that floor needs explicit test evidence first
 - not claimed here as a verified production path: Firefox/Safari WebSerial support or universal browser compatibility
 
 See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.

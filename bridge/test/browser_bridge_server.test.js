@@ -10,7 +10,11 @@ function makeFakeService() {
     running: false,
     serialConnected: false,
     ready: false,
-    manifest: null,
+    manifest: {
+      power_profile: 'POWER_CHOKED_V1',
+      led_brightness_cap: 26,
+      rail_topology_verified: false,
+    },
     lastError: null,
     lastTelemetryAt: null,
     lastRouteAt: null,
@@ -402,6 +406,11 @@ async function run() {
     typeof snapshotPayload.runtime?.pid,
     'number',
     'snapshot endpoint should include runtime metadata',
+  );
+  assert.equal(
+    snapshotPayload.powerSafety?.power_profile,
+    'POWER_CHOKED_V1',
+    'snapshot endpoint should include manifest power-safety state',
   );
 
   const socket = new EventEmitter();

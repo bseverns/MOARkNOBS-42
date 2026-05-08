@@ -29,6 +29,9 @@ export function createSimulator(simDeps = {}) {
     fw_version: 'sim-fw',
     git_sha: 'deadbeef',
     build_time: new Date().toISOString(),
+    power_profile: 'POWER_CHOKED_V1',
+    led_brightness_cap: 26,
+    rail_topology_verified: false,
     free_ram: 48000,
     free_flash: 512000
   };
