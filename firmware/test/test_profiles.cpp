@@ -1,6 +1,7 @@
 #include "unity_config.h"
 #include <unity.h>
 
+#include "BoardPowerProfile.h"
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include <EEPROM.h>
@@ -22,7 +23,7 @@ ProfileData makePopulatedProfile() {
     profile.arp.swingPercent = 17;
     profile.arp.gatePercent = 68;
     profile.arp.octaveRange = 2;
-    profile.led.brightness = 201;
+    profile.led.brightness = BoardPowerProfile::kLedBrightnessCap;
     profile.led.r = 12;
     profile.led.g = 34;
     profile.led.b = 56;
@@ -105,6 +106,7 @@ void test_profile_bounds_clamp() {
     ProfileData loaded{};
     TEST_ASSERT_TRUE(cfg.loadProfileSettings(1, loaded));
     TEST_ASSERT_TRUE(loaded.routeCount <= PROFILE_MAX_ROUTES);
+    TEST_ASSERT_TRUE(loaded.led.brightness <= BoardPowerProfile::kLedBrightnessCap);
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel >= 1);
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel <= 16);

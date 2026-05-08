@@ -14,6 +14,7 @@
 
 #include "ARGMixer.h"
 #include "BootMode.h"
+#include "BoardPowerProfile.h"
 #include "CommandQueue.h"
 #include "ConfigManager.h"
 #include "EfSettingsUtils.h"
@@ -1103,6 +1104,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
             color.g = readClampedU8(rgb, "g", "g", 0, 255, color.g);
             color.b = readClampedU8(rgb, "b", "b", 0, 255, color.b);
         }
+        brightness = std::min<uint8_t>(brightness, BoardPowerProfile::kLedBrightnessCap);
         ledManager.setBrightness(brightness);
         ledManager.setColor(color);
         configManager.saveLEDSettings(brightness, color);

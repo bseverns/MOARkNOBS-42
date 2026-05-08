@@ -19,7 +19,7 @@ void test_command_queue_drops_oldest_on_overflow() {
     testOnly_resetCommandQueue();
 
     char line[16];
-    for (int idx = 0; idx < 66; ++idx) {
+    for (int idx = 0; idx < 194; ++idx) {
         snprintf(line, sizeof(line), "cmd%02d", idx);
         testOnly_enqueueSerialCommand(line);
     }

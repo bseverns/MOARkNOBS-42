@@ -1,0 +1,31 @@
+{
+  "combos": [
+    { "id": "panic_baseline", "control": "Ctrl0+Ctrl1+Ctrl2" },
+    { "id": "profile_reload", "control": "long-press Ctrl1" },
+    { "id": "eeprom_reset", "control": "long-press Ctrl3" },
+    { "id": "profile_cycle", "control": "Ctrl1+Ctrl2" },
+    { "id": "profile_save", "control": "long-press Ctrl4" },
+    { "id": "arp_toggle", "control": "Ctrl2+Ctrl4" },
+    { "id": "arp_edit", "control": "hold Ctrl2+Ctrl4" },
+    { "id": "arp_base_note", "control": "Ctrl2+Ctrl3" },
+    { "id": "arp_swing", "control": "hold Ctrl2+Ctrl3" },
+    { "id": "note_mode", "control": "Ctrl4+Ctrl5" },
+    { "id": "program_change", "control": "Ctrl3+Ctrl5" },
+    { "id": "pitch_bend", "control": "Ctrl0+Ctrl5" },
+    { "id": "aftertouch", "control": "Ctrl1+Ctrl4" },
+    { "id": "nrpn", "control": "Ctrl2+Ctrl5" },
+    { "id": "rpn", "control": "Ctrl1+Ctrl3" },
+    { "id": "sysex", "control": "Ctrl0+Ctrl3" },
+    { "id": "arg_method", "control": "Ctrl0+Ctrl1" },
+    { "id": "arg_pair", "control": "Ctrl0+Ctrl2" },
+    { "id": "ef_randomize", "control": "Ctrl0+Ctrl4" },
+    { "id": "usb_midi_out", "control": "Ctrl3+Ctrl4+Ctrl5" },
+    { "id": "led_modes", "control": "Ctrl3+Ctrl4" },
+    { "id": "clock_out", "control": "Ctrl1+Ctrl5" },
+    { "id": "clock_source", "control": "Ctrl1+Ctrl4+Ctrl5" },
+    { "id": "lfo_tune", "control": "Ctrl0+Ctrl1+Ctrl3" },
+    { "id": "config_mode", "control": "Ctrl0+Ctrl2+Ctrl3+Ctrl5" },
+    { "id": "diagnostics", "control": "long-press Ctrl5" },
+    { "id": "jitter_tune", "control": "hold Ctrl0+Ctrl3+Ctrl4" }
+  ]
+}

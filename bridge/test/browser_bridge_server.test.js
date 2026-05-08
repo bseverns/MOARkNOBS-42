@@ -412,6 +412,16 @@ async function run() {
     'POWER_CHOKED_V1',
     'snapshot endpoint should include manifest power-safety state',
   );
+  assert.equal(
+    snapshotPayload.powerSafety?.led_brightness_cap,
+    26,
+    'snapshot endpoint should preserve manifest LED cap',
+  );
+  assert.equal(
+    snapshotPayload.powerSafety?.rail_topology_verified,
+    false,
+    'snapshot endpoint should preserve rail-topology verification state',
+  );
 
   const socket = new EventEmitter();
   socket.writes = [];

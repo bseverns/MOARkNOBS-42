@@ -5,6 +5,7 @@
 // and how legacy migrations keep older builds from bricking.
 
 #include "ConfigManager.h"
+#include "BoardPowerProfile.h"
 #include "ProfileStorage.h"
 #include "EnvelopeFollower.h"
 #include "ARGMixer.h" // reuse the shared sanitizeSlotArg implementation
@@ -12,6 +13,7 @@
 #include "LFO/LFOManager.h"
 #include "storage/EepromStorageBackend.h"
 #include "storage/LittleFsStorageBackend.h"
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <vector>
@@ -685,14 +687,16 @@ void ConfigManager::saveEnvelopeBaseline(uint8_t envIndex, float baseline) {
 
 // LED settings
 void ConfigManager::loadLEDSettings(uint8_t &brightness, CRGB &color) {
-    brightness = storageRead(EEPROM_LED_BRIGHTNESS);
+    brightness =
+        std::min<uint8_t>(storageRead(EEPROM_LED_BRIGHTNESS), BoardPowerProfile::kLedBrightnessCap);
     color.r = storageRead(EEPROM_LED_COLOR);
     color.g = storageRead(EEPROM_LED_COLOR + 1);
     color.b = storageRead(EEPROM_LED_COLOR + 2);
 }
 
 void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
-    storageUpdate(EEPROM_LED_BRIGHTNESS, brightness);
+    storageUpdate(EEPROM_LED_BRIGHTNESS,
+                  std::min<uint8_t>(brightness, BoardPowerProfile::kLedBrightnessCap));
     storageUpdate(EEPROM_LED_COLOR, color.r);
     storageUpdate(EEPROM_LED_COLOR + 1, color.g);
     storageUpdate(EEPROM_LED_COLOR + 2, color.b);

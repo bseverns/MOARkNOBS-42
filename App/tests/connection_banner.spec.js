@@ -18,4 +18,10 @@ test('connection banner shows device identity and firmware version', async ({ pa
   await expect(page.locator('#connection-banner')).toContainText(
     'Connected to: MOARkNOBS-42 (FW sim-fw)'
   );
+  await expect(page.locator('#device-monitor')).toContainText('Power profile');
+  await expect(page.locator('#device-monitor')).toContainText('POWER_CHOKED_V1');
+  await expect(page.locator('#device-monitor')).toContainText('LED cap');
+  await expect(page.locator('#device-monitor')).toContainText('26/255');
+  await expect(page.locator('#device-monitor')).toContainText('Rail verified');
+  await expect(page.locator('#device-monitor')).toContainText('no');
 });

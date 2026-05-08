@@ -5,6 +5,7 @@
 // saveProfileSettings call these helpers.
 
 #include "ProfileStorage.h"
+#include "BoardPowerProfile.h"
 #include "EnvelopeFollower.h"
 #include "Arpeggiator.h"
 #include "LFO/LFOManager.h"
@@ -73,7 +74,8 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
         sanitized.arp.lengthTicks = 12;
     }
     // LED
-    sanitized.led.brightness = constrain(sanitized.led.brightness, 0, 255);
+    sanitized.led.brightness =
+        constrain(sanitized.led.brightness, 0, BoardPowerProfile::kLedBrightnessCap);
     // LFO
     if (sanitized.routeCount > PROFILE_MAX_ROUTES) {
         sanitized.routeCount = PROFILE_MAX_ROUTES;

@@ -2,15 +2,46 @@
 #include <unity.h>
 
 #include "BootMode.h"
+#include "BoardPowerProfile.h"
 #include "ConfigManager.h"
 #include "FirmwareState.h"
 #include "Globals.h"
+#include "Log.h"
 #include "Protocol.h"
 
 void test_dispatch_handles_known_command() {
     webSerialStreaming = false;
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("HELLO"));
     TEST_ASSERT_TRUE(webSerialStreaming);
+}
+
+void test_dispatch_handles_documented_query_commands() {
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MANIFEST"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"power_profile\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"led_brightness_cap\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"rail_topology_verified\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_SCHEMA"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"schema_version\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_CONFIG"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"led\""));
+}
+
+void test_dispatch_set_led_clamps_and_persists_board_cap() {
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_LED,255,1,2,3"));
+    TEST_ASSERT_EQUAL_UINT8(BoardPowerProfile::kLedBrightnessCap, ledManager.getBrightness());
+
+    uint8_t persisted = 0;
+    CRGB color;
+    configManager.loadLEDSettings(persisted, color);
+    TEST_ASSERT_EQUAL_UINT8(BoardPowerProfile::kLedBrightnessCap, persisted);
+    TEST_ASSERT_EQUAL_UINT8(1, color.r);
+    TEST_ASSERT_EQUAL_UINT8(2, color.g);
+    TEST_ASSERT_EQUAL_UINT8(3, color.b);
 }
 
 void test_dispatch_handles_enter_config_mode_command() {
@@ -77,4 +108,19 @@ void test_dispatch_rejects_unknown_command() {
     webSerialStreaming = false;
     TEST_ASSERT_FALSE(testOnly_dispatchCommand("NONEXISTENT_COMMAND"));
     TEST_ASSERT_FALSE(webSerialStreaming);
+}
+
+void test_dispatch_set_all_reports_negative_contract_errors() {
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL orphan"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"orphan\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL {\"seq\":11,\"config\":{\"slots\":[]}}"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"checksum\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL {\"seq\":12,\"checksum\":\"bad\","));
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL bad}"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"parse\""));
 }

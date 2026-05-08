@@ -2,9 +2,11 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <algorithm>
 #include <cstdio>
 #include <cstdint>
 
+#include "BoardPowerProfile.h"
 #include "ConfigManager.h"
 #include "EfSettingsUtils.h"
 #include "EnvelopeFollower.h"
@@ -319,9 +321,10 @@ void handleSetLedCommand(const String &command) {
     if (brightness >= 0 && brightness <= 255 && r >= 0 && r <= 255 && g >= 0 && g <= 255 &&
         b >= 0 && b <= 255) {
         CRGB color(r, g, b);
-        ledManager.setBrightness(brightness);
+        brightness = std::min<int>(brightness, BoardPowerProfile::kLedBrightnessCap);
+        ledManager.setBrightness(static_cast<uint8_t>(brightness));
         ledManager.setColor(color);
-        configManager.saveLEDSettings(brightness, color);
+        configManager.saveLEDSettings(static_cast<uint8_t>(brightness), color);
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");

@@ -2,6 +2,7 @@
 #include <unity.h>
 
 #include "TestHelpers.h"
+#include "BoardPowerProfile.h"
 #include "LedAnimator.h"
 
 void test_led_animator_cycles_mode_order() {
@@ -38,4 +39,12 @@ void test_led_animator_invalid_mode_falls_back_to_static() {
 
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LedMode::Static),
                             static_cast<uint8_t>(animator.getMode()));
+}
+
+void test_led_manager_clamps_brightness_to_board_power_profile() {
+    LEDManager ledManager = createLEDManager();
+
+    ledManager.setBrightness(255);
+
+    TEST_ASSERT_EQUAL_UINT8(BoardPowerProfile::kLedBrightnessCap, ledManager.getBrightness());
 }
