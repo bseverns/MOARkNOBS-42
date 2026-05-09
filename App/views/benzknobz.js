@@ -91,6 +91,7 @@ const boot = () => {
   const exportPresetBtn = document.getElementById('export-preset');
   const importPresetBtn = document.getElementById('import-preset');
   const presetPicker = document.getElementById('preset-picker');
+  const applySaveProfileBtn = document.getElementById('apply-save-profile');
   const simulatorToggle = document.getElementById('simulator-toggle');
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
@@ -472,7 +473,7 @@ const boot = () => {
         setStatus(
           'warn',
           'Preset staged',
-          `${descriptor.label} staged. Hit Apply to push it to the deck.`
+          `${descriptor.label} staged. Use Save staged edits to make it stick.`
         );
       } catch (err) {
         setStatus('err', 'Preset load failed', err.message || String(err));
@@ -511,6 +512,7 @@ const boot = () => {
       profileWizardStatus,
       profileDownloadBtn,
       profileUploadBtn,
+      applySaveProfileBtn,
       profileHint,
       macroSaveBtn,
       macroRecallBtn,

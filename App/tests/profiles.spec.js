@@ -20,6 +20,7 @@ test.describe('Profiles toolbar', () => {
     await simulatorToggle.click();
     await page.getByRole('button', { name: 'Connect' }).click();
     await openRecoveryDrawer(page);
+    await expect(page.locator('.slot-editor')).toBeVisible();
   }
 
   test('saving then loading a slot restores staged edits', async ({ page }) => {
@@ -56,6 +57,18 @@ test.describe('Profiles toolbar', () => {
     await expect(page.locator('#dirty-badge')).toBeVisible();
 
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+  });
+
+  test('preset can be applied and saved into the active profile', async ({ page }) => {
+    await bootWithSimulator(page);
+
+    await page.selectOption('#preset-picker', 'demo-profile-a');
+    await expect(page.locator('#dirty-badge')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Save staged edits' })).toBeEnabled();
+
+    await page.getByRole('button', { name: 'Save staged edits' }).click();
     await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
   });

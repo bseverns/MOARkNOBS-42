@@ -53,13 +53,23 @@ test.describe('Stage mode', () => {
     await page.locator('#performer-panel [data-ui-mode-btn="advanced"]').click();
 
     await expect(page.locator('#performer-panel')).toBeVisible();
-    await expect(page.locator('#stage-panel')).toBeVisible();
+    await expect(page.locator('#live-panel')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
     await expect(page.locator('#led-settings')).toBeVisible();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
     await expect(page.locator('#simulator-toggle')).toBeVisible();
+
+    const liveBox = await page.locator('#live-panel').boundingBox();
+    const editorBox = await page.locator('#editor-panel').boundingBox();
+    const utilityBox = await page.locator('#connect-card').boundingBox();
+    if (!liveBox || !editorBox || !utilityBox) {
+      throw new Error('Advanced workbench columns did not render');
+    }
+    expect(liveBox.x).toBeLessThan(editorBox.x);
+    expect(editorBox.x).toBeLessThan(utilityBox.x);
+    expect(utilityBox.width).toBeGreaterThan(300);
   });
 
   test('switching from Stage to Basic restores the calm editor surface', async ({ page }) => {

@@ -1140,6 +1140,34 @@ html[data-ui-mode='stage'] main {
   grid-template-columns: minmax(0, 1fr);
 }
 
+html[data-ui-mode='advanced'] #page-shell {
+  width: min(1680px, 100%);
+}
+
+html[data-ui-mode='advanced'] main {
+  grid-template-columns:
+    minmax(280px, 0.9fr)
+    minmax(360px, 1.1fr)
+    minmax(320px, 0.95fr);
+}
+
+html[data-ui-mode='advanced'][data-connected='true'] #stage-panel {
+  display: contents;
+}
+
+html[data-ui-mode='advanced'] #live-panel {
+  grid-column: 1;
+}
+
+html[data-ui-mode='advanced'] #editor-panel {
+  grid-column: 2;
+}
+
+html[data-ui-mode='advanced'] #connect-card {
+  grid-column: 3;
+  min-width: 0;
+}
+
 html[data-ui-mode='stage'] #stage-panel,
 html[data-ui-mode='stage'] #editor-panel,
 html[data-ui-mode='stage'] #live-panel,
@@ -1177,8 +1205,12 @@ html[data-ui-mode='stage'] #ui-mode-hint {
 
 html:not([data-ui-mode='stage']) #connect-card > .mode-switch,
 html:not([data-ui-mode='stage']) #ui-mode-hint,
-html:not([data-ui-mode='stage']) .performer-actions {
+html:not([data-ui-mode='stage']) #stage-connect {
   display: none;
+}
+
+html:not([data-ui-mode='stage']) .performer-actions {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 html[data-ui-mode='stage'] #connect-card .utility-panel[data-utility-panel='console'] {
@@ -1924,6 +1956,16 @@ footer {
 @media (max-width: 1024px) {
   main {
     grid-template-columns: 1fr;
+  }
+
+  html[data-ui-mode='advanced'] main {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-ui-mode='advanced'] #live-panel,
+  html[data-ui-mode='advanced'] #editor-panel,
+  html[data-ui-mode='advanced'] #connect-card {
+    grid-column: 1;
   }
 
   #stage-panel {

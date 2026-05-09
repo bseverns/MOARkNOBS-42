@@ -32,6 +32,7 @@ export function createProfileMacroScenePanel({
     profileWizardStatus = null,
     profileDownloadBtn = null,
     profileUploadBtn = null,
+    applySaveProfileBtn = null,
     profileHint = null,
     macroSaveBtn = null,
     macroRecallBtn = null,
@@ -75,10 +76,18 @@ export function createProfileMacroScenePanel({
       manifest?.capabilities && typeof manifest.capabilities === 'object'
         ? manifest.capabilities
         : {};
+    const hasExplicitCapabilities = Object.keys(caps).length > 0;
+    const coreProfileFallback = manifest && !hasExplicitCapabilities;
     return {
-      profileSave: Boolean(caps.profile_save),
-      profileLoad: Boolean(caps.profile_load),
-      profileReset: Boolean(caps.profile_reset),
+      profileSave: hasExplicitCapabilities
+        ? Boolean(caps.profile_save)
+        : Boolean(coreProfileFallback),
+      profileLoad: hasExplicitCapabilities
+        ? Boolean(caps.profile_load)
+        : Boolean(coreProfileFallback),
+      profileReset: hasExplicitCapabilities
+        ? Boolean(caps.profile_reset)
+        : Boolean(coreProfileFallback),
       macroSnapshot: Boolean(caps.macro_snapshot),
       scenes: Boolean(caps.scenes)
     };
@@ -199,6 +208,13 @@ export function createProfileMacroScenePanel({
     if (profileLoadBtn) profileLoadBtn.disabled = !canInteract || !deviceCapabilities.profileLoad;
     if (profileResetBtn)
       profileResetBtn.disabled = !canInteract || !deviceCapabilities.profileReset;
+    if (applySaveProfileBtn) {
+      applySaveProfileBtn.disabled =
+        !canInteract || !deviceCapabilities.profileSave || !runtime.getState().dirty;
+      applySaveProfileBtn.title = deviceCapabilities.profileSave
+        ? 'Apply staged edits, then save the active device profile slot.'
+        : 'This firmware does not expose browser-driven profile save.';
+    }
     updateProfileWizardControls();
     updateMacroControls();
     sceneControls.updateControls();
@@ -536,9 +552,17 @@ export function createProfileMacroScenePanel({
     );
     profileDownloadBtn?.addEventListener('click', () => profileFileIO.handleProfileDownload());
     profileUploadBtn?.addEventListener('click', () => profileFileIO.handleProfileUpload());
+    applySaveProfileBtn?.addEventListener('click', () =>
+      runProfileRpc('save_profile', {
+        busyLabel: 'Saving profile…',
+        successLabel: 'Profile saved',
+        successCopy: `${describeSlot()} applied and archived`
+      })
+    );
   }
 
   function onConfigChanged() {
+    refreshProfileControls();
     updateProfileWizardControls();
   }
 
