@@ -12,6 +12,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#performer-panel [data-ui-mode-btn="basic"]')).toBeVisible();
     await expect(page.locator('#performer-panel [data-ui-mode-btn="advanced"]')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeHidden();
+    await expect(page.locator('#power-safety-pill')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
     await expect(page.locator('#led-settings')).toBeHidden();

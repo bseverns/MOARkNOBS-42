@@ -314,6 +314,13 @@
               <li>Refresh this page, then click <strong>Connect</strong> again.</li>
             </ol>
           </details>
+          <section id="device-monitor-section" aria-labelledby="device-monitor-title" data-ui-tier="advanced">
+            <header class="monitor-header">
+              <h2 id="device-monitor-title">Device Monitor</h2>
+              <p class="microcopy">Read-only firmware handshake vitals.</p>
+            </header>
+            <div class="monitor-grid" id="device-monitor"></div>
+          </section>
           <div class="stack">
             <button id="export-preset" disabled>Export config JSON</button>
             <button id="import-preset">Import config JSON</button>
@@ -324,22 +331,27 @@
           </div>
           <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
             <legend>Filter</legend>
-            <div class="schema-section-body" data-schema-target="filter"></div>
+            <div
+              class="schema-section-body"
+              data-schema-target="filter"
+              data-empty-message="No filter controls reported by current schema."
+              aria-label="No filter controls reported by current schema."
+            ></div>
           </fieldset>
           <fieldset id="arg-settings" class="schema-section" data-schema-section="arg" data-ui-tier="advanced">
             <legend>ARG Pair</legend>
-            <div class="schema-section-body" data-schema-target="arg"></div>
+            <div
+              class="schema-section-body"
+              data-schema-target="arg"
+              data-empty-message="No ARG controls reported by current schema."
+              aria-label="No ARG controls reported by current schema."
+            ></div>
           </fieldset>
           <fieldset id="led-settings" class="schema-section" data-schema-section="led">
             <legend>LED Colors</legend>
             <div class="schema-section-body" data-schema-target="led"></div>
             <div id="led-grid" aria-live="polite"></div>
           </fieldset>
-          <section id="device-monitor-section" aria-labelledby="device-monitor-title" data-ui-tier="advanced">
-            <h2 id="device-monitor-title">Device Monitor</h2>
-            <p class="microcopy">Read-only vitals pulled straight from the firmware handshake.</p>
-            <div class="monitor-grid" id="device-monitor"></div>
-          </section>
         </div>
 
         <div class="utility-panel" data-utility-panel="diff">

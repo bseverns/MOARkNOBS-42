@@ -1186,6 +1186,10 @@ html[data-ui-mode='advanced'] #power-safety-pill {
   display: none;
 }
 
+html[data-ui-mode='stage'] #power-safety-pill {
+  display: none;
+}
+
 .mode-switch {
   display: grid;
   gap: 8px;
@@ -1286,7 +1290,9 @@ label {
 }
 
 label input,
-label select {
+label select,
+.stack select {
+  min-height: 40px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.18);
@@ -1297,8 +1303,19 @@ label select {
   letter-spacing: 0.01em;
 }
 
+.stack select {
+  width: 100%;
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--color-muted) 50%) right 14px center / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--color-muted) 50%, transparent 50%) right 9px center / 6px 6px no-repeat,
+    rgba(0, 0, 0, 0.5);
+  text-transform: none;
+}
+
 label input:focus,
-label select:focus {
+label select:focus,
+.stack select:focus {
   outline: 2px solid rgba(45, 226, 230, 0.35);
   outline-offset: 2px;
 }
@@ -1338,6 +1355,24 @@ label select:focus {
   flex-direction: column;
   gap: 1rem;
   margin-top: 0.85rem;
+}
+
+.schema-section-body[data-empty-message]:empty {
+  min-height: 38px;
+  margin-top: 0.6rem;
+}
+
+.schema-section-body[data-empty-message]:empty::before {
+  content: attr(data-empty-message);
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: var(--radius-xs);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--color-muted);
+  font-size: 0.84rem;
 }
 
 .schema-control {
@@ -1529,21 +1564,46 @@ label select:focus {
   font-size: 0.75rem;
 }
 
+#device-monitor-section {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(45, 226, 230, 0.18);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.monitor-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 0;
+}
+
+.monitor-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 #device-monitor {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .monitor-row {
   display: flex;
   justify-content: space-between;
-  font-size: 0.9rem;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.monitor-row:last-of-type {
-  border-bottom: none;
+  gap: 10px;
+  min-width: 0;
+  font-size: 0.82rem;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .monitor-label {
@@ -1553,7 +1613,10 @@ label select:focus {
 }
 
 .monitor-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-family: var(--font-mono);
+  text-align: right;
 }
 
 #diff-panel {
@@ -1871,7 +1934,8 @@ footer {
   }
 
   .recovery-aux-grid,
-  #slot-details {
+  #slot-details,
+  #device-monitor {
     grid-template-columns: 1fr;
   }
 
