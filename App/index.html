@@ -128,9 +128,16 @@
             <p class="workspace-kicker">Stage Mode</p>
             <h2 id="performer-title">Performance Dashboard</h2>
           </div>
-          <div class="performer-status-strip" aria-live="polite">
-            <span class="pill" id="stage-connection-state">Disconnected</span>
-            <span class="pill" id="stage-dirty-state">Clean</span>
+          <div class="performer-header-controls">
+            <div class="performer-mode-switch" role="group" aria-label="Stage mode switch">
+              <button type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
+              <button type="button" data-ui-mode-btn="basic" aria-pressed="false">Basic</button>
+              <button type="button" data-ui-mode-btn="advanced" aria-pressed="false">Advanced</button>
+            </div>
+            <div class="performer-status-strip" aria-live="polite">
+              <span class="pill" id="stage-connection-state">Disconnected</span>
+              <span class="pill" id="stage-dirty-state">Clean</span>
+            </div>
           </div>
         </header>
 

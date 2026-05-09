@@ -4,11 +4,13 @@ test.describe('Stage mode', () => {
   test('renders without editor and lab panels', async ({ page }) => {
     await page.goto('/?mode=stage');
 
-    await expect(page.getByRole('button', { name: 'Stage' })).toHaveAttribute(
+    await expect(page.locator('#performer-panel [data-ui-mode-btn="stage"]')).toHaveAttribute(
       'aria-pressed',
       'true'
     );
     await expect(page.locator('#performer-panel')).toBeVisible();
+    await expect(page.locator('#performer-panel [data-ui-mode-btn="basic"]')).toBeVisible();
+    await expect(page.locator('#performer-panel [data-ui-mode-btn="advanced"]')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
@@ -47,7 +49,7 @@ test.describe('Stage mode', () => {
     await page.locator('#stage-connect').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
 
-    await page.getByRole('button', { name: 'Advanced' }).click();
+    await page.locator('#performer-panel [data-ui-mode-btn="advanced"]').click();
 
     await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('#stage-panel')).toBeVisible();
@@ -57,6 +59,24 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#led-settings')).toBeVisible();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
     await expect(page.locator('#simulator-toggle')).toBeVisible();
+  });
+
+  test('switching from Stage to Basic restores the calm editor surface', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    });
+    await page.goto('/?mode=stage');
+    await page.locator('#stage-connect').click();
+    await expect(page.locator('#connection-pill')).toHaveText('Connected');
+
+    await page.locator('#performer-panel [data-ui-mode-btn="basic"]').click();
+
+    await expect(page.locator('#performer-panel')).toBeHidden();
+    await expect(page.locator('#stage-panel')).toBeVisible();
+    await expect(page.locator('#editor-panel')).toBeVisible();
+    await expect(page.locator('#filter-settings')).toBeHidden();
+    await expect(page.locator('#arg-settings')).toBeHidden();
+    await expect(page.locator('#scope-panel')).toBeHidden();
   });
 
   test('dirty staged state does not expose editing controls in Stage', async ({ page }) => {

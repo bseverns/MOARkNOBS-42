@@ -497,6 +497,32 @@ main {
   justify-content: flex-end;
 }
 
+.performer-header-controls {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
+.performer-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(78px, 1fr));
+  gap: 7px;
+  width: min(100%, 330px);
+}
+
+.performer-mode-switch button {
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+}
+
+.performer-mode-switch button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: rgba(45, 226, 230, 0.88);
+}
+
 .performer-summary-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1110,7 +1136,7 @@ html[data-connected='true'] #stage-panel {
 }
 
 html[data-ui-mode='stage'] main {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 html[data-ui-mode='stage'] #stage-panel,
@@ -1135,7 +1161,17 @@ html[data-ui-mode='stage'][data-connected='true'] #check-compatibility {
 }
 
 html[data-ui-mode='stage'] #connect-card {
-  align-self: start;
+  order: 2;
+  align-self: stretch;
+  box-shadow: none;
+  padding: 12px;
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(13, 17, 25, 0.62);
+}
+
+html[data-ui-mode='stage'] #connect-card > .mode-switch,
+html[data-ui-mode='stage'] #ui-mode-hint {
+  display: none;
 }
 
 html[data-ui-mode='stage'] #connect-card .utility-panel[data-utility-panel='console'] {
