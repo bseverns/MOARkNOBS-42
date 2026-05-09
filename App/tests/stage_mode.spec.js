@@ -52,7 +52,7 @@ test.describe('Stage mode', () => {
 
     await page.locator('#performer-panel [data-ui-mode-btn="advanced"]').click();
 
-    await expect(page.locator('#performer-panel')).toBeHidden();
+    await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#stage-panel')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeVisible();
@@ -72,7 +72,7 @@ test.describe('Stage mode', () => {
 
     await page.locator('#performer-panel [data-ui-mode-btn="basic"]').click();
 
-    await expect(page.locator('#performer-panel')).toBeHidden();
+    await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#stage-panel')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeHidden();

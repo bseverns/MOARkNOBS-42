@@ -80,7 +80,7 @@ export function createUiModeController({
       activeUtilityTab = 'console';
     }
 
-    setPerformerVisible(activeUiMode === 'stage');
+    setPerformerVisible(true);
     refreshEditorTabs();
     refreshUtilityTabs();
     if (getSlotCount() > 0) renderSlotEditor();

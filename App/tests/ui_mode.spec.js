@@ -8,12 +8,14 @@ test.describe('UI mode', () => {
     const advancedButton = page.getByRole('button', { name: 'Advanced' });
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
     await expect(page.locator('#scope-panel')).toBeHidden();
 
     await advancedButton.click();
     await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
     await page.getByRole('button', { name: 'Scope' }).click();

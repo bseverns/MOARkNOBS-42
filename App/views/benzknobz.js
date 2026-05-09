@@ -162,8 +162,9 @@ const boot = () => {
   const advancedTierNodes = Array.from(document.querySelectorAll('[data-ui-tier="advanced"]'));
   const UI_MODE_HINTS = {
     stage: 'Stage mode is a read-only performance dashboard with only show-safe actions.',
-    basic: 'Basic mode keeps common knob-to-MIDI mapping controls visible.',
-    advanced: 'Advanced mode reveals EF, ARG, filter tuning, and scope diagnostics.'
+    basic: 'Basic mode adds common knob-to-MIDI editing to the Stage dashboard.',
+    advanced:
+      'Advanced mode adds EF, ARG, filter tuning, and scope diagnostics to the Basic surface.'
   };
   const GLOSSARY = {
     mapping:

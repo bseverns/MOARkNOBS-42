@@ -458,6 +458,7 @@ main {
 
 #performer-panel {
   display: grid;
+  grid-column: 1 / -1;
   gap: 16px;
   min-width: 0;
   background: rgba(12, 16, 23, 0.96);
@@ -1174,12 +1175,23 @@ html[data-ui-mode='stage'] #ui-mode-hint {
   display: none;
 }
 
+html:not([data-ui-mode='stage']) #connect-card > .mode-switch,
+html:not([data-ui-mode='stage']) #ui-mode-hint,
+html:not([data-ui-mode='stage']) .performer-actions {
+  display: none;
+}
+
 html[data-ui-mode='stage'] #connect-card .utility-panel[data-utility-panel='console'] {
   display: grid;
 }
 
 html[data-ui-mode='stage'] #status {
   grid-template-columns: auto 1fr;
+}
+
+html[data-ui-mode='basic'] #performer-panel,
+html[data-ui-mode='advanced'] #performer-panel {
+  box-shadow: var(--shadow-soft);
 }
 
 html[data-ui-mode='advanced'] #power-safety-pill {
