@@ -33,11 +33,31 @@ Unity screams over a custom `Serial1` transport—do **not** lean on the default
 Run docs and contract guards before pushing release/docs changes:
 
 ```bash
-python tools/check_markdown_links.py
-python tools/check_wiki_contract.py
-python tools/check_contract_sync.py
-python tools/check_schema_keyword_coverage.py
-python tools/doctor.py
+python3 tools/check_markdown_links.py --root .
+python3 tools/check_wiki_contract.py --root .
+python3 tools/check_schema_keyword_coverage.py --root .
+python3 tools/check_contract_sync.py --root .
+python3 tools/check_control_coverage.py --root .
+python3 tools/check_release_readiness.py --root . --stage hardware-test
+```
+
+Or run the grouped guardrails:
+
+```bash
+python3 tools/doctor.py --docs
+python3 tools/doctor.py --app
+python3 tools/doctor.py --bridge
+python3 tools/doctor.py --release
+python3 tools/doctor.py --full
+```
+
+Use the heavier build/test lanes when the change touches runtime behavior:
+
+```bash
+npm --prefix App test
+npm --prefix bridge test
+pio run -d firmware -e teensy40_main
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
 ## Code Etiquette

@@ -2,10 +2,10 @@
 
 ## Build and Test
 
-- Use [PlatformIO](https://platformio.org/) to compile the firmware. Run builds from the `firmware/` directory.
+- Use [PlatformIO](https://platformio.org/) to compile the firmware. The PlatformIO project root is `firmware/`; from repo root, always pass `-d firmware`.
 - Main firmware build:
   ```bash
-  pio run -e teensy40_main
+  pio run -d firmware -e teensy40_main
   ```
 - Available full machine test environments (build with `pio run -e <env>`):
   - `teensy40_full_system`
@@ -15,7 +15,28 @@
   - `teensy40_slot_verify`
 
 - Software Test:
-  - `teensy40_unity` (for Unity tests)
+  ```bash
+  pio test -d firmware -e teensy40_unity -vvv
+  ```
+
+- Guardrail checks from the repo root:
+  ```bash
+  python3 tools/check_contract_sync.py --root .
+  python3 tools/check_control_coverage.py --root .
+  python3 tools/check_release_readiness.py --root . --stage hardware-test
+  npm --prefix App test
+  npm --prefix bridge test
+  ```
+
+- Grouped local checks:
+  ```bash
+  python3 tools/doctor.py --docs
+  python3 tools/doctor.py --app
+  python3 tools/doctor.py --bridge
+  python3 tools/doctor.py --release
+  python3 tools/doctor.py --firmware
+  python3 tools/doctor.py --full
+  ```
 
 ## Coding Standards
 

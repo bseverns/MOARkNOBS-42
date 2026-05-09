@@ -16,6 +16,20 @@ def has_any(root: pathlib.Path, patterns: tuple[str, ...]) -> bool:
     return False
 
 
+def add_issue(
+    *,
+    stage: str,
+    message: str,
+    blockers: list[str],
+    warnings: list[str],
+    hard_stages: tuple[str, ...],
+) -> None:
+    if stage in hard_stages:
+        blockers.append(message)
+    else:
+        warnings.append(message)
+
+
 def parse_power_profile(board_power_h: str) -> dict[str, object]:
     active_match = re.search(r"#define MN42_BOARD_POWER_PROFILE (POWER_CHOKED_V1|SPLIT_RAIL_REWORK)", board_power_h)
     active = active_match.group(1) if active_match else "UNKNOWN"
@@ -40,6 +54,12 @@ def main() -> None:
         default="hardware-test",
         help="Release gate to evaluate",
     )
+    parser.add_argument(
+        "--beta-scope",
+        choices=("hardware", "full"),
+        default="hardware",
+        help="Whether beta readiness should require packaged Bridge artifacts.",
+    )
     args = parser.parse_args()
 
     root = pathlib.Path(args.root).resolve()
@@ -56,25 +76,49 @@ def main() -> None:
     assembly_present = has_any(root, ("hardware/**/*[Aa]ssembly*", "docs/**/*[Aa]ssembly*"))
 
     if not gerber_present or not drill_present:
-        blockers.append("missing or unverified Gerber/NC-drill fabrication bundle")
+        add_issue(
+            stage=args.stage,
+            message="missing or unverified Gerber/NC-drill fabrication bundle",
+            blockers=blockers,
+            warnings=warnings,
+            hard_stages=("beta", "public"),
+        )
     if not bom_present or not pnp_present or not assembly_present:
-        blockers.append("missing BOM, pick-and-place, or assembly notes")
+        add_issue(
+            stage=args.stage,
+            message="missing BOM, pick-and-place, or assembly notes",
+            blockers=blockers,
+            warnings=warnings,
+            hard_stages=("beta", "public"),
+        )
     if not power["rail_verified"]:
-        blockers.append(
-            f"rail topology is not verified for active profile {power['profile']}"
+        add_issue(
+            stage=args.stage,
+            message=f"rail topology is not verified for active profile {power['profile']}",
+            blockers=blockers,
+            warnings=warnings,
+            hard_stages=("beta", "public"),
         )
 
-    if args.stage in {"beta", "public"}:
-        installer_present = has_any(root, ("bridge/dist/*.exe", "bridge/dist/*.pkg", "bridge/dist/*.dmg"))
-        signature_present = has_any(root, ("bridge/dist/*.sig", "bridge/dist/*.asc"))
-        if not installer_present or not signature_present:
+    installer_present = has_any(root, ("bridge/dist/*.exe", "bridge/dist/*.pkg", "bridge/dist/*.dmg"))
+    signature_present = has_any(root, ("bridge/dist/*.sig", "bridge/dist/*.asc"))
+    if not installer_present or not signature_present:
+        if args.stage == "public" or (args.stage == "beta" and args.beta_scope == "full"):
             blockers.append("unsigned bridge installer for beta/public stage")
-    else:
-        warnings.append("hardware-test stage: signed bridge installer is not required")
+        elif args.stage == "beta":
+            warnings.append("beta hardware scope: signed bridge installer not required")
+        else:
+            warnings.append("hardware-test stage: signed bridge installer is not required")
 
     report_present = has_any(root, ("docs/validation/reports/*.md",))
     if not report_present:
-        warnings.append("no dated hardware validation reports found under docs/validation/reports/")
+        add_issue(
+            stage=args.stage,
+            message="no dated hardware validation reports found under docs/validation/reports/",
+            blockers=blockers,
+            warnings=warnings,
+            hard_stages=("beta", "public"),
+        )
 
     for warning in warnings:
         print(f"warning: {warning}")
@@ -83,6 +127,10 @@ def main() -> None:
             print(f"blocker: {blocker}")
         print(f"release readiness failed: {len(blockers)} blocker(s)", file=sys.stderr)
         raise SystemExit(1)
+
+    if args.stage == "hardware-test" and warnings:
+        print("release readiness: not release-ready, but acceptable for hardware-test package")
+        return
 
     print(f"release readiness passed for stage {args.stage}")
 

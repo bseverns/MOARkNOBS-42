@@ -21,6 +21,10 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#scope-panel')).toBeHidden();
     await expect(page.locator('.debug-log-bridge')).toBeHidden();
     await expect(page.locator('#simulator-toggle')).toBeHidden();
+    await expect(page.locator('#import-preset')).toBeHidden();
+    await expect(page.locator('#export-preset')).toBeHidden();
+    await expect(page.locator('#preset-picker')).toBeHidden();
+    await expect(page.locator('#apply-save-profile')).toBeHidden();
     await expect(page.locator('#status')).toBeVisible();
   });
 
@@ -104,6 +108,7 @@ test.describe('Stage mode', () => {
         return draft;
       });
     });
+    await page.waitForFunction(() => window.__MN42_RUNTIME?.getState?.().dirty === true);
 
     await expect(page.locator('#stage-dirty-state')).toHaveText('Dirty');
     await expect(page.locator('#dirty-badge')).toBeVisible();
@@ -113,5 +118,31 @@ test.describe('Stage mode', () => {
     await expect(page.locator('.slot-editor')).toBeHidden();
     await expect(page.locator('#led-settings')).toBeHidden();
     await expect(page.locator('#export-preset')).toBeHidden();
+  });
+
+  test('panic help only displays the hardware combo text', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__nativeWrites = [];
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+      window.__MN42_TEST_HOOKS = {
+        mutateTransport(transport) {
+          const originalWriteLine = transport.writeLine.bind(transport);
+          transport.writeLine = async (line) => {
+            window.__nativeWrites.push(String(line ?? '').trim());
+            return originalWriteLine(line);
+          };
+        }
+      };
+    });
+    await page.goto('/?mode=stage');
+    await page.locator('#stage-connect').click();
+    await expect(page.locator('#connection-pill')).toHaveText('Connected');
+    const writesBefore = await page.evaluate(() => window.__nativeWrites.length);
+
+    await page.locator('#stage-panic-help').click();
+
+    await expect(page.locator('#status-label')).toHaveText('Panic baseline');
+    await expect(page.locator('.status-message')).toContainText('Ctrl0 + Ctrl1 + Ctrl2');
+    await expect.poll(() => page.evaluate(() => window.__nativeWrites.length)).toBe(writesBefore);
   });
 });
