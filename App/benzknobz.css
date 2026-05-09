@@ -456,6 +456,185 @@ main {
   width: 100%;
 }
 
+#performer-panel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  background: rgba(12, 16, 23, 0.96);
+  border: 1px solid rgba(45, 226, 230, 0.24);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevate);
+  padding: 18px;
+}
+
+#performer-panel[hidden] {
+  display: none !important;
+}
+
+.performer-header,
+.performer-status-strip,
+.performer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.performer-header {
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.performer-header h2,
+.performer-block h3 {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.performer-status-strip {
+  justify-content: flex-end;
+}
+
+.performer-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.performer-metric {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.performer-metric span {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.performer-metric strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.95rem;
+}
+
+.performer-power-row {
+  justify-content: flex-start;
+}
+
+.performer-actions {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+}
+
+.performer-actions label {
+  gap: 5px;
+}
+
+.performer-actions button,
+.performer-actions select {
+  min-height: 42px;
+}
+
+.performer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.performer-block {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.performer-block header {
+  display: grid;
+  gap: 4px;
+}
+
+.stage-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.stage-slot-cell {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'label type'
+    'value value';
+  gap: 3px 6px;
+  min-height: 54px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.stage-slot-cell.active {
+  border-color: rgba(45, 226, 230, 0.35);
+  background: rgba(45, 226, 230, 0.1);
+}
+
+.stage-slot-label {
+  grid-area: label;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.stage-slot-type {
+  grid-area: type;
+  justify-self: end;
+  min-width: 0;
+  color: var(--color-muted);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage-slot-value {
+  grid-area: value;
+  color: rgba(247, 249, 255, 0.72);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+}
+
+.stage-envelope-list .meter {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 32px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.stage-envelope-list progress {
+  width: 100%;
+  height: 14px;
+}
+
+.stage-envelope-list .meter-value {
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
 #stage-panel {
   display: grid;
   grid-template-columns: minmax(420px, 0.92fr) minmax(360px, 0.88fr);
@@ -821,6 +1000,36 @@ button:not(:disabled):focus-visible {
   letter-spacing: 0.02em;
 }
 
+.power-safety-pill,
+.performer-power-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.power-safety-pill span,
+.performer-power-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.power-safety-pill [data-rail-state='unverified'],
+.performer-power-row [data-rail-state='unverified'] {
+  color: var(--color-warn);
+  border-color: rgba(255, 206, 107, 0.42);
+  background: rgba(255, 206, 107, 0.11);
+}
+
 .utility-panel {
   display: none;
   gap: 12px;
@@ -888,6 +1097,59 @@ button:not(:disabled):focus-visible {
   display: none !important;
 }
 
+html:not([data-connected='true']) #stage-panel {
+  display: none;
+}
+
+html:not([data-connected='true']) #led-settings {
+  display: none;
+}
+
+html[data-connected='true'] #stage-panel {
+  display: grid;
+}
+
+html[data-ui-mode='stage'] main {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+}
+
+html[data-ui-mode='stage'] #stage-panel,
+html[data-ui-mode='stage'] #editor-panel,
+html[data-ui-mode='stage'] #live-panel,
+html[data-ui-mode='stage'] #recovery-drawer,
+html[data-ui-mode='stage'] .hero-badges,
+html[data-ui-mode='stage'] .utility-tabbar,
+html[data-ui-mode='stage'] .stack,
+html[data-ui-mode='stage'] #filter-settings,
+html[data-ui-mode='stage'] #arg-settings,
+html[data-ui-mode='stage'] #led-settings,
+html[data-ui-mode='stage'] #device-monitor-section,
+html[data-ui-mode='stage'] [data-utility-panel='diff'],
+html[data-ui-mode='stage'] [data-utility-panel='midi'],
+html[data-ui-mode='stage'] [data-utility-panel='scope'],
+html[data-ui-mode='stage'] .debug-log-bridge,
+html[data-ui-mode='stage'] #apply,
+html[data-ui-mode='stage'] #rollback,
+html[data-ui-mode='stage'][data-connected='true'] #check-compatibility {
+  display: none !important;
+}
+
+html[data-ui-mode='stage'] #connect-card {
+  align-self: start;
+}
+
+html[data-ui-mode='stage'] #connect-card .utility-panel[data-utility-panel='console'] {
+  display: grid;
+}
+
+html[data-ui-mode='stage'] #status {
+  grid-template-columns: auto 1fr;
+}
+
+html[data-ui-mode='advanced'] #power-safety-pill {
+  display: none;
+}
+
 .mode-switch {
   display: grid;
   gap: 8px;
@@ -906,7 +1168,7 @@ button:not(:disabled):focus-visible {
 
 .mode-switch-buttons {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1557,6 +1819,13 @@ footer {
     grid-template-columns: 1fr;
   }
 
+  html[data-ui-mode='stage'] main,
+  .performer-grid,
+  .performer-summary-grid,
+  .performer-actions {
+    grid-template-columns: 1fr;
+  }
+
   #slots {
     height: calc(var(--slot-row-height) * var(--slot-grid-rows));
   }
@@ -1598,6 +1867,10 @@ footer {
   .profile-actions,
   .connect-actions {
     grid-template-columns: 1fr;
+  }
+
+  .stage-slot-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   #page-shell {

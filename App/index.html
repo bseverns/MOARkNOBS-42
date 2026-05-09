@@ -29,6 +29,11 @@
             <button id="rollback" type="button" disabled>Rollback</button>
           </div>
           <span class="connection-banner" id="connection-banner" role="status">Connected to: —</span>
+          <div class="power-safety-pill" id="power-safety-pill" role="status" aria-live="polite">
+            <span>Power: —</span>
+            <span>LED cap: —</span>
+            <span data-rail-state="unknown">Rail: —</span>
+          </div>
         </div>
       </div>
       <div class="hero-badges" role="list">
@@ -117,6 +122,88 @@
       </details>
     </header>
     <main>
+      <section id="performer-panel" aria-labelledby="performer-title" hidden>
+        <header class="performer-header">
+          <div>
+            <p class="workspace-kicker">Stage Mode</p>
+            <h2 id="performer-title">Performance Dashboard</h2>
+          </div>
+          <div class="performer-status-strip" aria-live="polite">
+            <span class="pill" id="stage-connection-state">Disconnected</span>
+            <span class="pill" id="stage-dirty-state">Clean</span>
+          </div>
+        </header>
+
+        <div class="performer-summary-grid">
+          <div class="performer-metric">
+            <span>Device</span>
+            <strong id="stage-device-name">MOARkNOBS-42</strong>
+          </div>
+          <div class="performer-metric">
+            <span>Firmware</span>
+            <strong id="stage-fw-version">unknown</strong>
+          </div>
+          <div class="performer-metric">
+            <span>Profile</span>
+            <strong id="stage-profile-summary">Slot A • local target</strong>
+          </div>
+          <div class="performer-metric">
+            <span>Last Event</span>
+            <strong id="stage-last-event">Waiting</strong>
+          </div>
+        </div>
+
+        <div class="performer-power-row" id="stage-power-summary" aria-live="polite">
+          <span>Power: —</span>
+          <span>LED cap: —</span>
+          <span data-rail-state="unknown">Rail: —</span>
+        </div>
+
+        <div class="performer-actions" aria-label="Stage-safe controls">
+          <button id="stage-connect" type="button">Connect</button>
+          <label>
+            <span>Load Profile</span>
+            <select id="stage-profile-select">
+              <option value="0">Profile A</option>
+              <option value="1">Profile B</option>
+              <option value="2">Profile C</option>
+              <option value="3">Profile D</option>
+            </select>
+          </label>
+          <button id="stage-profile-load" type="button" disabled>Switch Profile</button>
+          <label>
+            <span>Recall Scene</span>
+            <select id="stage-scene-select">
+              <option value="0">Scene 1</option>
+              <option value="1">Scene 2</option>
+              <option value="2">Scene 3</option>
+              <option value="3">Scene 4</option>
+              <option value="4">Scene 5</option>
+              <option value="5">Scene 6</option>
+            </select>
+          </label>
+          <button id="stage-scene-recall" type="button" disabled>Recall Scene</button>
+          <button id="stage-panic-help" type="button">Panic Help</button>
+        </div>
+
+        <div class="performer-grid">
+          <section class="performer-block" aria-labelledby="stage-slots-title">
+            <header>
+              <h3 id="stage-slots-title">Slots</h3>
+              <p class="microcopy">42 slots</p>
+            </header>
+            <div id="stage-slots" class="stage-slot-grid" aria-label="Stage slot activity"></div>
+          </section>
+          <section class="performer-block" aria-labelledby="stage-env-title">
+            <header>
+              <h3 id="stage-env-title">Envelopes</h3>
+              <p class="microcopy">6 followers</p>
+            </header>
+            <div id="stage-envelopes" class="stage-envelope-list"></div>
+          </section>
+        </div>
+      </section>
+
       <section id="stage-panel">
         <div id="live-panel">
           <header class="live-header">
@@ -185,9 +272,10 @@
       </section>
 
       <aside id="connect-card">
-        <div class="mode-switch" role="group" aria-label="Editing mode">
-          <span class="mode-switch-label">Editing mode</span>
+        <div class="mode-switch" role="group" aria-label="UI mode">
+          <span class="mode-switch-label">UI mode</span>
           <div class="mode-switch-buttons">
+            <button id="ui-mode-stage" type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
             <button id="ui-mode-basic" type="button" data-ui-mode-btn="basic" aria-pressed="false">Basic</button>
             <button id="ui-mode-advanced" type="button" data-ui-mode-btn="advanced" aria-pressed="false">Advanced</button>
           </div>
@@ -240,7 +328,7 @@
             <div class="schema-section-body" data-schema-target="led"></div>
             <div id="led-grid" aria-live="polite"></div>
           </fieldset>
-          <section aria-labelledby="device-monitor-title">
+          <section id="device-monitor-section" aria-labelledby="device-monitor-title" data-ui-tier="advanced">
             <h2 id="device-monitor-title">Device Monitor</h2>
             <p class="microcopy">Read-only vitals pulled straight from the firmware handshake.</p>
             <div class="monitor-grid" id="device-monitor"></div>

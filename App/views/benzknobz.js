@@ -4,14 +4,16 @@ import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
 import { VirtualGrid, VirtualList } from './virtualizers.js';
-import { normalizeUIMode, persistUIMode, readUIModePreference } from './state/ui_preferences.js';
+import { normalizeUIMode, readUIModePreference } from './state/ui_preferences.js';
 import { createProfileMacroScenePanel } from './panels/profile_macro_scene.js';
 import { createSlotEditorPanel } from './panels/slot_editor_panel.js';
 import { createDeviceMonitorController } from './controllers/device_monitor_controller.js';
-import {
-  getWebSerialCompatibility,
-  explainTransportError
-} from '../runtime/web_serial_diagnostics.js';
+import { createPowerSafetySummary } from './controllers/power_safety_summary.js';
+import { createPerformerPanelController } from './controllers/performer_panel_controller.js';
+import { createLedControlsController } from './controllers/led_controls_controller.js';
+import { createTransportToolbarController } from './controllers/transport_toolbar_controller.js';
+import { createUiModeController } from './controllers/ui_mode_controller.js';
+import { createDiffStatusController } from './controllers/diff_status_controller.js';
 import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
@@ -119,6 +121,23 @@ const boot = () => {
   const slotDetailArgSources = document.getElementById('slot-detail-arg-sources');
   const slotDetailValue = document.getElementById('slot-detail-value');
   const deviceMonitor = document.getElementById('device-monitor');
+  const powerSafetyPill = document.getElementById('power-safety-pill');
+  const performerPanel = document.getElementById('performer-panel');
+  const stageConnectBtn = document.getElementById('stage-connect');
+  const stageConnectionState = document.getElementById('stage-connection-state');
+  const stageDirtyState = document.getElementById('stage-dirty-state');
+  const stageDeviceName = document.getElementById('stage-device-name');
+  const stageFwVersion = document.getElementById('stage-fw-version');
+  const stageProfileSummary = document.getElementById('stage-profile-summary');
+  const stageLastEvent = document.getElementById('stage-last-event');
+  const stagePowerSummary = document.getElementById('stage-power-summary');
+  const stageProfileSelect = document.getElementById('stage-profile-select');
+  const stageProfileLoadBtn = document.getElementById('stage-profile-load');
+  const stageSceneSelect = document.getElementById('stage-scene-select');
+  const stageSceneRecallBtn = document.getElementById('stage-scene-recall');
+  const stagePanicHelpBtn = document.getElementById('stage-panic-help');
+  const stageSlotGrid = document.getElementById('stage-slots');
+  const stageEnvelopeContainer = document.getElementById('stage-envelopes');
   const logEl = document.getElementById('log');
   const profileSlotButtons = Array.from(document.querySelectorAll('[data-profile-slot]'));
   const profileSlotStatus = document.getElementById('profile-slot-status');
@@ -142,6 +161,7 @@ const boot = () => {
   const uiModeHint = document.getElementById('ui-mode-hint');
   const advancedTierNodes = Array.from(document.querySelectorAll('[data-ui-tier="advanced"]'));
   const UI_MODE_HINTS = {
+    stage: 'Stage mode is a read-only performance dashboard with only show-safe actions.',
     basic: 'Basic mode keeps common knob-to-MIDI mapping controls visible.',
     advanced: 'Advanced mode reveals EF, ARG, filter tuning, and scope diagnostics.'
   };
@@ -158,9 +178,11 @@ const boot = () => {
       'SysEx template uses hex bytes; XX, MSB, and LSB placeholders are replaced with live values.'
   };
   const migrationDialog = document.getElementById('migration-dialog');
-  let activeUiMode = readUIModePreference();
-  let activeEditorTab = 'mapping';
-  let activeUtilityTab = 'console';
+  const requestedUiMode =
+    typeof window !== 'undefined' && typeof window.location === 'object'
+      ? new URLSearchParams(window.location.search).get('mode')
+      : null;
+  const initialUiMode = requestedUiMode ? normalizeUIMode(requestedUiMode) : readUIModePreference();
   const migrationPreview = document.getElementById('migration-preview');
   const migrationApply = document.getElementById('migration-apply');
 
@@ -180,36 +202,106 @@ const boot = () => {
     return trimmed || 'unknown';
   }
 
+  const diffStatusController = createDiffStatusController({
+    runtime,
+    onDirtyChanged: updateStagePanel,
+    elements: {
+      statusEl,
+      statusLabel,
+      statusMessage,
+      diffPanel,
+      diffOutput,
+      diffEmpty,
+      dirtyBadge,
+      applyBtn,
+      rollbackBtn
+    }
+  });
+  const { setStatus } = diffStatusController;
+
   const deviceMonitorController = createDeviceMonitorController({
     container: deviceMonitor,
     resolveDeviceName
   });
-
-  // Update the banner line that identifies the connected deck.
-  function setConnectionBanner(stage, manifest) {
-    if (!connectionBanner) return;
-    if (stage === 'live') {
-      const deviceName = resolveDeviceName(manifest);
-      const fwVersion = resolveFirmwareVersion(manifest);
-      connectionBanner.textContent = `Connected to: ${deviceName} (FW ${fwVersion})`;
-      return;
+  const powerSafetySummary = createPowerSafetySummary({
+    containers: [powerSafetyPill, stagePowerSummary]
+  });
+  const performerPanelController = createPerformerPanelController({
+    runtime,
+    localManifest,
+    resolveDeviceName,
+    resolveFirmwareVersion,
+    slotTypeAbbreviations: SLOT_TYPE_ABBREVIATIONS,
+    connect: () => connectBtn?.click(),
+    getConnectionStage: () => connectionPill?.dataset.stage || 'disconnected',
+    getConnectionText: () => connectionPill?.textContent || 'Disconnected',
+    getProfileText: () => profileSlotStatus?.textContent || 'Slot A - local target',
+    getActiveProfileSlot: () => {
+      const activeButton = profileSlotButtons.find(
+        (button) => button.getAttribute('aria-pressed') === 'true'
+      );
+      return Number(activeButton?.dataset.profileSlot ?? 0);
+    },
+    setActiveProfileSlot: (slot) => {
+      const selected = Number(slot);
+      const button = profileSlotButtons.find(
+        (candidate) => Number(candidate.dataset.profileSlot) === selected
+      );
+      button?.click();
+    },
+    loadProfile: () => profileLoadBtn?.click(),
+    recallScene: (slot) => {
+      const selected = Number(slot);
+      const recallButton = sceneGrid?.querySelector(
+        `[data-scene-slot="${selected}"] .scene-recall`
+      );
+      recallButton?.click();
+    },
+    setStatus,
+    elements: {
+      panel: performerPanel,
+      connectBtn: stageConnectBtn,
+      connectionState: stageConnectionState,
+      dirtyState: stageDirtyState,
+      deviceName: stageDeviceName,
+      fwVersion: stageFwVersion,
+      profileSummary: stageProfileSummary,
+      lastEvent: stageLastEvent,
+      profileSelect: stageProfileSelect,
+      profileLoadBtn: stageProfileLoadBtn,
+      sceneSelect: stageSceneSelect,
+      sceneRecallBtn: stageSceneRecallBtn,
+      panicHelpBtn: stagePanicHelpBtn,
+      slotGrid: stageSlotGrid,
+      envelopeContainer: stageEnvelopeContainer
     }
-    if (stage === 'handshake') {
-      connectionBanner.textContent = `Connecting to: ${resolveDeviceName(manifest)}`;
-      return;
+  });
+  const transportToolbarController = createTransportToolbarController({
+    runtime,
+    runtimeOptions,
+    resolveDeviceName,
+    resolveFirmwareVersion,
+    setStatus,
+    syncConfigFileButtons,
+    onConnectionPillChanged: updateStagePanel,
+    elements: {
+      docRoot,
+      connectBtn,
+      checkCompatibilityBtn,
+      configModeBtn,
+      applyBtn,
+      rollbackBtn,
+      simulatorToggle,
+      connectionPill,
+      connectionBanner,
+      connectFailHelp
     }
-    connectionBanner.textContent = 'Connected to: —';
-  }
+  });
+  const { setConnectionBanner, setConnectionPill, primeCompatibilityStatus } =
+    transportToolbarController;
 
-  // Update the compact connection status pill in the header.
-  function setConnectionPill(stage, text) {
-    if (!connectionPill) return;
-    connectionPill.dataset.stage = stage;
-    connectionPill.textContent = text;
-  }
   const migrationCancel = document.getElementById('migration-cancel');
   const migrationExport = document.getElementById('migration-export');
-  let lastCompatibilityReport = null;
 
   const slotState = {
     slots: [],
@@ -218,13 +310,25 @@ const boot = () => {
     selected: 0,
     telemetry: null
   };
-  const ledControlState = {
-    mounted: false,
-    brightnessInput: null,
-    brightnessValue: null,
-    colorInput: null,
-    colorValue: null
-  };
+  const ledControlsController = createLedControlsController({ container: ledGrid, runtime });
+  const uiModeController = createUiModeController({
+    docRoot,
+    initialMode: initialUiMode,
+    hints: UI_MODE_HINTS,
+    getSlotCount: () => slotState.slots.length,
+    renderSlotEditor,
+    setPerformerVisible: (visible) => performerPanelController.setVisible(visible),
+    onModeChanged: updateStagePanel,
+    elements: {
+      uiModeButtons,
+      uiModeHint,
+      advancedTierNodes,
+      editorTabButtons,
+      utilityTabButtons,
+      utilityPanels,
+      efAssignmentCard
+    }
+  });
 
   const slotVirtualizer = new VirtualGrid(slotContainer, {
     columns: 6,
@@ -241,75 +345,15 @@ const boot = () => {
   // Rebuild the envelope meter widgets whenever the manifest changes follower count.
   const rebuildMeters = (count) => {
     envMeters = initializeMeters(envContainer, count, 'EF');
+    performerPanelController.rebuildMeters(count);
   };
   rebuildMeters(localManifest.envelope_count || 0);
   slotVirtualizer.setData([]);
-
-  function usingSimulatorTransport() {
-    return Boolean(simulatorToggle?.classList.contains('active'));
-  }
-
-  function usingBridgeTransport() {
-    return Boolean(runtimeOptions.wsUrl);
-  }
-
-  function usingDirectWebSerial() {
-    return !usingBridgeTransport() && !usingSimulatorTransport();
-  }
-
-  function runCompatibilityCheck() {
-    if (usingBridgeTransport()) {
-      setStatus(
-        'ok',
-        'Bridge mode active',
-        'This session is using the WebSocket bridge, so direct Web Serial browser checks do not apply.'
-      );
-      return null;
-    }
-    if (usingSimulatorTransport()) {
-      setStatus(
-        'ok',
-        'Simulator active',
-        'Simulator mode skips direct Web Serial requirements until you reconnect to hardware.'
-      );
-      return null;
-    }
-    lastCompatibilityReport = getWebSerialCompatibility();
-    setStatus(
-      lastCompatibilityReport.state,
-      lastCompatibilityReport.label,
-      lastCompatibilityReport.message
-    );
-    return lastCompatibilityReport;
-  }
-
-  function showTransportError(action, err) {
-    const explanation = explainTransportError(err, {
-      action,
-      compatibility: usingDirectWebSerial() ? lastCompatibilityReport : null,
-      usingBridge: usingBridgeTransport(),
-      usingSimulator: usingSimulatorTransport()
-    });
-    connectFailHelp?.setAttribute('open', '');
-    setStatus('err', explanation.label, explanation.message);
-  }
 
   function syncConfigFileButtons() {
     const staged = runtime.getState().staged;
     if (exportPresetBtn) exportPresetBtn.disabled = !staged;
     if (importPresetBtn) importPresetBtn.disabled = false;
-  }
-
-  function primeCompatibilityStatus() {
-    if (!usingDirectWebSerial()) return;
-    lastCompatibilityReport = getWebSerialCompatibility();
-    if (lastCompatibilityReport.compatible) return;
-    connectFailHelp?.setAttribute('open', '');
-    setStatus(
-      lastCompatibilityReport.state,
-      lastCompatibilityReport.label,
-      lastCompatibilityReport.message
-    );
   }
 
   function exportCurrentConfigJson() {
@@ -350,113 +394,12 @@ const boot = () => {
     }
   }
 
-  connectBtn?.addEventListener('click', async () => {
-    try {
-      if (usingDirectWebSerial()) {
-        const compatibility = runCompatibilityCheck();
-        if (compatibility && !compatibility.compatible) {
-          setConnectionPill('disconnected', 'Disconnected');
-          setConnectionBanner('disconnected', runtime.getState().manifest);
-          connectFailHelp?.setAttribute('open', '');
-          return;
-        }
-      }
-      setConnectionPill('handshake', 'Handshaking…');
-      setConnectionBanner('handshake', runtime.getState().manifest);
-      await runtime.connect();
-    } catch (err) {
-      setConnectionPill('disconnected', 'Disconnected');
-      setConnectionBanner('disconnected', runtime.getState().manifest);
-      showTransportError('connect', err);
-    }
-  });
-
-  checkCompatibilityBtn?.addEventListener('click', () => {
-    runCompatibilityCheck();
-  });
-
-  configModeBtn?.addEventListener('click', async () => {
-    try {
-      if (configModeBtn) configModeBtn.disabled = true;
-      if (usingDirectWebSerial()) {
-        const compatibility = runCompatibilityCheck();
-        if (compatibility && !compatibility.compatible) {
-          setConnectionPill('disconnected', 'Disconnected');
-          setConnectionBanner('disconnected', runtime.getState().manifest);
-          connectFailHelp?.setAttribute('open', '');
-          return;
-        }
-      }
-      setConnectionPill('handshake', 'Config boot…');
-      setConnectionBanner('handshake', runtime.getState().manifest);
-      await runtime.requestConfiguratorBoot();
-      setConnectionPill('disconnected', 'Rebooting');
-      setConnectionBanner('disconnected', runtime.getState().manifest);
-      setStatus('ok', 'Config boot', 'Reconnect after the USB device reappears.');
-    } catch (err) {
-      setConnectionPill('disconnected', 'Disconnected');
-      setConnectionBanner('disconnected', runtime.getState().manifest);
-      showTransportError('config-boot', err);
-    } finally {
-      if (configModeBtn) configModeBtn.disabled = false;
-    }
-  });
-
-  applyBtn?.addEventListener('click', async () => {
-    try {
-      setStatus('warn', 'Applying…', 'Waiting for firmware ACK');
-      await runtime.apply();
-      setStatus('ok', 'Synced', 'Device acknowledged the staged edits.');
-    } catch (err) {
-      setStatus('err', 'Apply failed', err.message || String(err));
-    }
-  });
-
-  rollbackBtn?.addEventListener('click', async () => {
-    await runtime.rollback();
-    setStatus('warn', 'Rolled back', 'Local edits were discarded.');
-  });
-
-  if (simulatorToggle) {
-    simulatorToggle.setAttribute(
-      'aria-pressed',
-      simulatorToggle.classList.contains('active') ? 'true' : 'false'
-    );
-  }
-
-  if (simulatorToggle && !simulatorToggle.dataset.booted) {
-    simulatorToggle.dataset.booted = 'true';
-    simulatorToggle.addEventListener('click', () => {
-      const toggled = simulatorToggle.classList.toggle('active');
-      runtime.useSimulator(toggled);
-      simulatorToggle.textContent = toggled ? 'Stop simulator' : 'Start simulator';
-      simulatorToggle.setAttribute('aria-pressed', toggled ? 'true' : 'false');
-      setStatus(
-        toggled ? 'ok' : 'warn',
-        toggled ? 'Simulator armed' : 'Simulator idle',
-        toggled ? 'Replay frames without hardware.' : 'Connect to the physical deck.'
-      );
-    });
-  }
-
-  uiModeButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      setUIMode(button.dataset.uiModeBtn);
-    });
-  });
-  editorTabButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      setEditorTab(button.dataset.editorTab);
-    });
-  });
-  utilityTabButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      setUtilityTab(button.dataset.utilityTab);
-    });
-  });
-  setUIMode(activeUiMode, { persist: false });
-  setEditorTab(activeEditorTab);
-  setUtilityTab(activeUtilityTab);
+  transportToolbarController.bind();
+  performerPanelController.bind();
+  uiModeController.bind();
+  uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
+  uiModeController.setEditorTab(uiModeController.getEditorTab());
+  uiModeController.setUtilityTab('console');
 
   slotContainer?.addEventListener('keydown', (event) => {
     if (!slotState.slots.length) return;
@@ -602,8 +545,8 @@ const boot = () => {
     argMethodNames: ARG_METHOD_NAMES,
     formatArgMethodLabel,
     describeArgMethod,
-    getUiMode: () => activeUiMode,
-    getEditorTab: () => activeEditorTab
+    getUiMode: () => uiModeController.getUiMode(),
+    getEditorTab: () => uiModeController.getEditorTab()
   });
 
   runtime.on('status', ({ level, message }) => {
@@ -632,38 +575,37 @@ const boot = () => {
     slotVirtualizer.setData(slotState.slots);
     slotVirtualizer.highlight(slotState.selected);
     efVirtualizer.setData(slotState.efSlots);
-    updateDiff(dirty);
-    markDirty(dirty);
+    diffStatusController.updateDiff(dirty);
+    diffStatusController.markDirty(dirty);
     populateDetail();
-    renderLedControls(staged);
+    ledControlsController.render(staged);
+    performerPanelController.renderSlots(slotState.slots);
     updateTakeoverGuards(slotState.slots);
     formRenderer.updateValues();
     syncConfigFileButtons();
     profileMacroScenePanel.onConfigChanged();
+    updateStagePanel();
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
     deviceMonitorController.render(manifest);
+    updatePowerSafetySummary(manifest);
     profileMacroScenePanel.onManifest(manifest);
     const followerCount = Number.isFinite(Number(manifest?.envelope_count))
       ? Number(manifest.envelope_count)
       : localManifest.envelope_count || 0;
     rebuildMeters(followerCount);
+    updateStagePanel();
   });
   runtime.on('log', (line) => {
     if (!logEl) return;
     logEl.textContent += `${line}\n`;
   });
   runtime.on('validation-error', (errors) => {
-    diffPanel?.removeAttribute('hidden');
-    diffOutput.textContent = `Schema violations:\n${errors
-      .map((e) => `• ${e.instancePath || '/'} ${e.message}`)
-      .join('\n')}`;
+    diffStatusController.showValidationErrors(errors);
   });
   runtime.on('applied', ({ checksum }) => {
-    diffPanel?.setAttribute('hidden', '');
-    diffOutput.textContent = '';
-    setStatus('ok', 'Device synced', `Checksum ${checksum.slice(0, 8)}…`);
+    diffStatusController.clearApplied(checksum);
   });
   runtime.on('migration-required', ({ from, to, canAdapt }) => {
     if (!migrationDialog || !migrationPreview) return;
@@ -684,6 +626,7 @@ const boot = () => {
     syncConfigFileButtons();
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
     profileMacroScenePanel.onConnected();
+    updateStagePanel();
   });
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.
@@ -694,6 +637,7 @@ const boot = () => {
     syncConfigFileButtons();
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
     profileMacroScenePanel.onDisconnected();
+    updateStagePanel();
   });
   runtime.on('error', (err) => {
     // Runtime errors are treated as hard disconnects from the UI perspective.
@@ -702,16 +646,22 @@ const boot = () => {
     connectFailHelp?.setAttribute('open', '');
     setStatus('err', 'Runtime error', err.message || String(err));
     profileMacroScenePanel.onRuntimeError();
+    updateStagePanel();
   });
   runtime.on('macro', (payload) => profileMacroScenePanel.onMacro(payload));
-  runtime.on('scene', (payload) => profileMacroScenePanel.onScene(payload));
+  runtime.on('scene', (payload) => {
+    profileMacroScenePanel.onScene(payload);
+    updateStagePanel();
+  });
   runtime.on('rollback', () => {
-    updateDiff(false);
-    markDirty(false);
+    diffStatusController.updateDiff(false);
+    diffStatusController.markDirty(false);
     setStatus('warn', 'Rollback', 'Local edits were discarded.');
   });
 
   runtime.restoreLocalState();
+  updatePowerSafetySummary(runtime.getState().manifest ?? localManifest);
+  updateStagePanel();
   syncConfigFileButtons();
   primeCompatibilityStatus();
   new MidiMonitor({ container: document.getElementById('midi-panel') });
@@ -721,173 +671,8 @@ const boot = () => {
     manifest: localManifest
   });
 
-  function setStatus(state, label, message) {
-    // Single status sink used by transport, schema, profile, macro, and scene flows.
-    if (!statusEl || !statusLabel || !statusMessage) return;
-    statusEl.dataset.state = state;
-    statusLabel.textContent = label;
-    statusMessage.textContent = message;
-  }
-
-  // Limit the slot editor to the supported tabs.
-  function normalizeEditorTab(tab) {
-    return tab === 'envelope' || tab === 'arg' ? tab : 'mapping';
-  }
-
-  // Limit the utility rail to the supported tabs.
-  function normalizeUtilityTab(tab) {
-    return tab === 'diff' || tab === 'midi' || tab === 'scope' ? tab : 'console';
-  }
-
-  // Flip between Basic and Advanced presentation without altering the staged config.
-  function setUIMode(mode, { persist = true } = {}) {
-    activeUiMode = normalizeUIMode(mode);
-    if (docRoot) docRoot.dataset.uiMode = activeUiMode;
-    // Basic mode is presentational only: it hides advanced cards but preserves full runtime state.
-    const hideAdvanced = activeUiMode !== 'advanced';
-    advancedTierNodes.forEach((node) => {
-      node.classList.toggle('ui-tier-hidden', hideAdvanced);
-      if (hideAdvanced) {
-        node.setAttribute('aria-hidden', 'true');
-      } else {
-        node.removeAttribute('aria-hidden');
-      }
-    });
-    uiModeButtons.forEach((button) => {
-      const buttonMode = normalizeUIMode(button.dataset.uiModeBtn);
-      button.setAttribute('aria-pressed', buttonMode === activeUiMode ? 'true' : 'false');
-    });
-    if (uiModeHint) {
-      uiModeHint.textContent = UI_MODE_HINTS[activeUiMode] || UI_MODE_HINTS.basic;
-    }
-    if (persist) persistUIMode(activeUiMode);
-    if (activeUiMode !== 'advanced' && activeEditorTab !== 'mapping') {
-      activeEditorTab = 'mapping';
-    }
-    if (activeUiMode !== 'advanced' && activeUtilityTab === 'scope') {
-      activeUtilityTab = 'console';
-    }
-    refreshEditorTabs();
-    refreshUtilityTabs();
-    if (slotState.slots.length) renderSlotEditor();
-  }
-
-  // Update the selected-slot editor tab chrome and tab-tied helper panels.
-  function refreshEditorTabs() {
-    const effectiveTab =
-      activeUiMode === 'advanced' ? normalizeEditorTab(activeEditorTab) : 'mapping';
-    activeEditorTab = effectiveTab;
-    editorTabButtons.forEach((button) => {
-      const buttonTab = normalizeEditorTab(button.dataset.editorTab);
-      button.setAttribute('aria-pressed', buttonTab === effectiveTab ? 'true' : 'false');
-    });
-    if (efAssignmentCard) {
-      efAssignmentCard.toggleAttribute(
-        'hidden',
-        !(activeUiMode === 'advanced' && effectiveTab === 'envelope')
-      );
-    }
-  }
-
-  // Update the right-rail utility tab chrome and show only the active panel.
-  function refreshUtilityTabs() {
-    const effectiveTab =
-      activeUiMode === 'advanced'
-        ? normalizeUtilityTab(activeUtilityTab)
-        : normalizeUtilityTab(activeUtilityTab === 'scope' ? 'console' : activeUtilityTab);
-    activeUtilityTab = effectiveTab;
-    utilityTabButtons.forEach((button) => {
-      const buttonTab = normalizeUtilityTab(button.dataset.utilityTab);
-      button.setAttribute('aria-pressed', buttonTab === effectiveTab ? 'true' : 'false');
-    });
-    utilityPanels.forEach((panel) => {
-      const panelTab = normalizeUtilityTab(panel.dataset.utilityPanel);
-      panel.classList.toggle('utility-panel-active', panelTab === effectiveTab);
-      panel.toggleAttribute('hidden', panelTab !== effectiveTab);
-    });
-  }
-
-  // Change the selected-slot editor tab and re-render the editor body.
-  function setEditorTab(tab) {
-    activeEditorTab = normalizeEditorTab(tab);
-    refreshEditorTabs();
-    if (slotState.slots.length) {
-      renderSlotEditor();
-    }
-  }
-
-  // Change the active utility panel in the right rail.
-  function setUtilityTab(tab) {
-    activeUtilityTab = normalizeUtilityTab(tab);
-    refreshUtilityTabs();
-  }
-
-  // Toggle the dirty badge and the Apply/Rollback affordances together.
-  function markDirty(isDirty) {
-    console.debug('[UI] markDirty', isDirty);
-    if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
-    if (applyBtn) applyBtn.disabled = !isDirty;
-    if (rollbackBtn) rollbackBtn.disabled = !isDirty;
-  }
-
-  // Render a readable summary of staged changes compared with the live config.
-  function updateDiff(isDirty) {
-    if (!diffPanel || !diffOutput) return;
-    const changes = runtime.diff();
-    if (!isDirty || !changes.length) {
-      diffPanel.setAttribute('hidden', '');
-      diffOutput.textContent = '';
-      diffEmpty?.removeAttribute('hidden');
-      return;
-    }
-    diffPanel.removeAttribute('hidden');
-    diffEmpty?.setAttribute('hidden', '');
-    const maxVisibleChanges = 40;
-    const visibleChanges = changes.slice(0, maxVisibleChanges);
-    const lines = visibleChanges.map(({ path, before, after }) => {
-      const beforeText = summarizeDiffValue(before);
-      const afterText = summarizeDiffValue(after);
-      return `• ${path}\n  before: ${beforeText}\n  after:  ${afterText}`;
-    });
-    if (changes.length > maxVisibleChanges) {
-      lines.push(`… ${changes.length - maxVisibleChanges} additional change(s) hidden.`);
-    }
-    const title = `${changes.length} staged change${changes.length === 1 ? '' : 's'}`;
-    diffOutput.textContent = `${title}\n\n${lines.join('\n\n')}`;
-  }
-
-  // Condense arbitrary values so the diff panel stays scannable.
-  function summarizeDiffValue(value) {
-    if (value === undefined) return 'undefined';
-    if (value === null) return 'null';
-    if (typeof value === 'string') return truncateDiffText(JSON.stringify(value), 150);
-    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-    if (Array.isArray(value)) {
-      return `Array(${value.length}) ${truncateDiffText(stringifyDiffValue(value), 150)}`;
-    }
-    if (typeof value === 'object') {
-      const keys = Object.keys(value);
-      const preview = keys.slice(0, 5).join(', ');
-      const suffix = keys.length > 5 ? ', …' : '';
-      return `Object{${preview}${suffix}} ${truncateDiffText(stringifyDiffValue(value), 140)}`;
-    }
-    return truncateDiffText(String(value), 150);
-  }
-
-  // Best-effort JSON formatting for diff previews.
-  function stringifyDiffValue(value) {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return '[unserializable]';
-    }
-  }
-
-  // Trim long diff strings without losing the fact that they were truncated.
-  function truncateDiffText(text, maxLength) {
-    if (typeof text !== 'string') return '';
-    if (text.length <= maxLength) return text;
-    return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
+  function updatePowerSafetySummary(manifest) {
+    powerSafetySummary.render(manifest);
   }
 
   // Refresh the compact firmware/schema/memory summary in the page header.
@@ -911,7 +696,19 @@ const boot = () => {
   function updateHeaderManifest(manifest) {
     setConnectionPill('live', 'Connected');
     setConnectionBanner('live', manifest);
+    updatePowerSafetySummary(manifest);
     updateHeader(runtime.getState().live);
+    updateStagePanel();
+  }
+
+  function updateStagePanel() {
+    const selected = Number(stageSceneSelect?.value ?? 0);
+    const recallButton = sceneGrid?.querySelector(`[data-scene-slot="${selected}"] .scene-recall`);
+    performerPanelController.refresh({
+      connected: connectionPill?.dataset.stage === 'live',
+      profileLoadDisabled: Boolean(profileLoadBtn?.disabled),
+      sceneRecallDisabled: !recallButton || Boolean(recallButton.disabled)
+    });
   }
 
   // Change which slot is focused in the inspector/editor pane.
@@ -931,89 +728,6 @@ const boot = () => {
   // Rebuild the right-hand slot editor for the current selection and UI tier.
   function renderSlotEditor() {
     slotEditorPanel.renderSlotEditor();
-  }
-
-  // Render the small LED section and throttle slider/color updates into staged state.
-  function renderLedControls(staged) {
-    if (!ledGrid) return;
-    const led = staged?.led ?? { brightness: 0, color: '#000000' };
-    const initialBrightness = Number.isFinite(Number(led.brightness)) ? Number(led.brightness) : 0;
-    const initialColor =
-      typeof led.color === 'string' && /^#([0-9a-fA-F]{6})$/.test(led.color)
-        ? led.color
-        : '#000000';
-
-    if (!ledControlState.mounted) {
-      ledGrid.innerHTML = '';
-
-      const brightnessWrap = document.createElement('label');
-      brightnessWrap.className = 'led-control';
-      brightnessWrap.textContent = 'Brightness';
-      const brightnessInput = document.createElement('input');
-      brightnessInput.type = 'range';
-      brightnessInput.min = '0';
-      brightnessInput.max = '255';
-      const brightnessValue = document.createElement('span');
-      brightnessValue.className = 'led-value';
-      const pushBrightness = runtime.createThrottle((value) => {
-        brightnessValue.textContent = String(value);
-        runtime.stage((draft) => {
-          draft.led = draft.led || { brightness: 0, color: '#000000' };
-          draft.led.brightness = value;
-          return draft;
-        });
-      });
-      brightnessInput.addEventListener('input', (event) => {
-        const value = Math.min(255, Math.max(0, Math.round(Number(event.target.value))));
-        event.target.value = String(value);
-        pushBrightness(value);
-      });
-      brightnessWrap.append(brightnessInput, brightnessValue);
-
-      const colorWrap = document.createElement('label');
-      colorWrap.className = 'led-control';
-      colorWrap.textContent = 'Color';
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      const colorValue = document.createElement('span');
-      colorValue.className = 'led-value';
-      const pushColor = runtime.createThrottle((value) => {
-        const formatted =
-          typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value)
-            ? value.toUpperCase()
-            : '#000000';
-        colorValue.textContent = formatted;
-        runtime.stage((draft) => {
-          draft.led = draft.led || { brightness: 0, color: '#000000' };
-          draft.led.color = formatted;
-          return draft;
-        });
-      });
-      colorInput.addEventListener('input', (event) => {
-        pushColor(event.target.value);
-      });
-      colorWrap.append(colorInput, colorValue);
-
-      ledGrid.append(brightnessWrap, colorWrap);
-      ledControlState.mounted = true;
-      ledControlState.brightnessInput = brightnessInput;
-      ledControlState.brightnessValue = brightnessValue;
-      ledControlState.colorInput = colorInput;
-      ledControlState.colorValue = colorValue;
-    }
-
-    if (ledControlState.brightnessInput) {
-      ledControlState.brightnessInput.value = String(initialBrightness);
-    }
-    if (ledControlState.brightnessValue) {
-      ledControlState.brightnessValue.textContent = String(initialBrightness);
-    }
-    if (ledControlState.colorValue) {
-      ledControlState.colorValue.textContent = initialColor.toUpperCase();
-    }
-    if (ledControlState.colorInput && document.activeElement !== ledControlState.colorInput) {
-      ledControlState.colorInput.value = initialColor;
-    }
   }
 
   // Reapply browser-only pickup guards after staged/live slot data changes.
@@ -1139,6 +853,7 @@ const boot = () => {
       entry.progress.value = value;
       entry.value.textContent = String(value);
     });
+    performerPanelController.paintTelemetry(frame);
     slotDetailValue.textContent = frame.slots[slotState.selected] ?? '—';
   }
 

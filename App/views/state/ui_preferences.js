@@ -37,7 +37,9 @@ export function persistProfileSlot(index, { storage, slotCount = 4 } = {}) {
 }
 
 export function normalizeUIMode(mode) {
-  return mode === 'advanced' ? 'advanced' : 'basic';
+  if (mode === 'stage') return 'stage';
+  if (mode === 'advanced') return 'advanced';
+  return 'basic';
 }
 
 export function readUIModePreference({ storage } = {}) {

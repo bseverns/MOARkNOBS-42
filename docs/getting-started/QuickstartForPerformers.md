@@ -22,6 +22,12 @@ flowchart LR
 
 Use the browser configurator when you want direct USB setup, profile management, and live monitoring without extra routing software.
 
+Use **Stage** mode at a gig. It keeps connection state, firmware identity, active profile, power safety, slot activity, envelope levels, scene recall, and the documented panic-baseline help visible without exposing raw schema forms or lab panels.
+
+Use **Basic** or **Advanced** mode when preparing mappings. Basic keeps everyday slot mapping visible; Advanced restores the full bench with EF/ARG/filter/LED editors, import/export, monitor, scope, MIDI monitor, and debug surfaces.
+
+Use **Advanced** tools for debugging. Treat those as bench/lab surfaces, not the normal show screen.
+
 Start here:
 
 - [Configurator Tour](../guides/Configurator.md) for the current configurator workflow
@@ -31,7 +37,7 @@ Start here:
 ## 3. Connect in the configurator
 
 1. Serve the configurator from `http://localhost` or use the published project URL you normally deploy from.
-2. Open the configurator.
+2. Open the configurator. Add `?mode=stage` when you want the performer dashboard first.
 3. Click **Connect**.
 4. Pick the MOARkNOBS-42 serial device.
 5. Wait for the connection banner to show the device identity and firmware details.
