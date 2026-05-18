@@ -25,6 +25,7 @@ Each test rides its own PlatformIO environment. To see one roar, run the matchin
 ```bash
 pio run -e teensy40_full_system               # builds src/main_t.cpp
 pio run -e teensy40_unified_test              # builds src/unified_t.cpp
+pio run -e teensy40_display_alive             # builds src/display_alive_t.cpp
 pio run -e teensy40_biquad_test               # builds src/biquadfilter_t.cpp
 pio run -e teensy40_eeprom_persistence        # builds src/eeprom_persistence_t.cpp (LittleFS default)
 pio run -e teensy40_slot_verify               # builds src/verify_slots_t.cpp (LittleFS default)

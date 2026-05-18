@@ -20,6 +20,7 @@ The repo-root `platformio.ini` is only a guard that rejects accidental root-leve
 - `teensy40_eeprom_persistence` for staged persistence and backup-restore validation
 - `teensy40_slot_verify` for slot-storage integrity checks
 - `teensy40_button_ef_demo` for simple button plus envelope USB MIDI validation
+- `teensy40_display_alive` for an OLED-only "is the panel alive?" check
 - `teensy40_display_led_hw` for OLED and LED hardware bring-up
 - `teensy40_power_burnin` for LED load and power-rail soak testing
 - `teensy40_unity` for the custom Unity smoke suite
