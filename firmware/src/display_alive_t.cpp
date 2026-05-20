@@ -13,26 +13,39 @@ constexpr unsigned long kSerialBaud = 115200UL;
 constexpr unsigned long kSerialWaitMs = 1500UL;
 constexpr unsigned long kFrameIntervalMs = 80UL;
 constexpr unsigned long kFailBlinkMs = 80UL;
+constexpr unsigned long kNoBusBlinkMs = 600UL;
+constexpr unsigned long kNoBusScanMs = 5000UL;
+constexpr unsigned long kNoBusReportMs = 1000UL;
 constexpr unsigned long kPhaseDurationMs = 1600UL;
 constexpr uint8_t kStatusLedPin = 23;
 constexpr uint8_t kMaxContrast = 0xFF;
+constexpr uint8_t kSdaPin = 18;
+constexpr uint8_t kSclPin = 19;
 
 enum class DisplayPhase : uint8_t { AllOn, InvertAllOn, Framebuffer, Motion };
+enum class LaneMode : uint8_t { NoBusAck, DisplayOk, InitFailed };
 
 Adafruit_SSD1306 gDisplay(kDisplayWidth, kDisplayHeight, &Wire);
 unsigned long gBootMs = 0;
 unsigned long gLastFrameMs = 0;
+unsigned long gLastNoBusBlinkMs = 0;
+unsigned long gLastNoBusScanMs = 0;
+unsigned long gLastNoBusReportMs = 0;
 uint8_t gActiveAddress = kPrimaryDisplayAddress;
 DisplayPhase gLastLoggedPhase = DisplayPhase::Motion;
+LaneMode gLaneMode = LaneMode::NoBusAck;
+bool gStatusLedOn = false;
 
 unsigned long nowMs() { return millis(); }
+
+const char *lineLevelLabel(int level) { return level == HIGH ? "HIGH" : "LOW"; }
 
 bool probeAddress(uint8_t address) {
     Wire.beginTransmission(address);
     return Wire.endTransmission() == 0;
 }
 
-void logDetectedAddresses() {
+bool logDetectedAddresses() {
     bool foundAny = false;
     Serial.print("[DISPLAY ALIVE] I2C scan:");
     for (uint8_t address = 0x03; address < 0x78; ++address) {
@@ -50,6 +63,14 @@ void logDetectedAddresses() {
         Serial.print(" none");
     }
     Serial.println();
+    return foundAny;
+}
+
+void logBusLevels() {
+    Serial.print("[DISPLAY ALIVE] bus levels SDA=");
+    Serial.print(lineLevelLabel(digitalRead(kSdaPin)));
+    Serial.print(" SCL=");
+    Serial.println(lineLevelLabel(digitalRead(kSclPin)));
 }
 
 bool beginDisplayAt(uint8_t address) {
@@ -82,6 +103,31 @@ void restoreFramebufferMode(bool invert) {
         delay(kFailBlinkMs);
         digitalWrite(kStatusLedPin, LOW);
         delay(kFailBlinkMs);
+    }
+}
+
+void serviceNoBusBlink(unsigned long currentMs) {
+    if ((currentMs - gLastNoBusBlinkMs) < kNoBusBlinkMs) {
+        return;
+    }
+    gLastNoBusBlinkMs = currentMs;
+    gStatusLedOn = !gStatusLedOn;
+    digitalWrite(kStatusLedPin, gStatusLedOn ? HIGH : LOW);
+}
+
+void serviceNoBusReporting(unsigned long currentMs) {
+    if ((currentMs - gLastNoBusReportMs) >= kNoBusReportMs) {
+        gLastNoBusReportMs = currentMs;
+        logBusLevels();
+    }
+    if ((currentMs - gLastNoBusScanMs) >= kNoBusScanMs) {
+        gLastNoBusScanMs = currentMs;
+        Serial.println("[DISPLAY ALIVE] quiet window ended, rescanning I2C");
+        const bool foundAny = logDetectedAddresses();
+        if (foundAny) {
+            Serial.println("[DISPLAY ALIVE] device ACK appeared on bus");
+        }
+        Serial.println("[DISPLAY ALIVE] quiet window restarted for meter checks");
     }
 }
 
@@ -181,6 +227,8 @@ void drawFrame(unsigned long elapsedMs) {
 void setup() {
     pinMode(kStatusLedPin, OUTPUT);
     digitalWrite(kStatusLedPin, LOW);
+    pinMode(kSdaPin, INPUT);
+    pinMode(kSclPin, INPUT);
 
     Serial.begin(kSerialBaud);
     const unsigned long serialStartMs = nowMs();
@@ -189,10 +237,25 @@ void setup() {
     }
 
     Wire.begin();
-    logDetectedAddresses();
+    const bool foundAny = logDetectedAddresses();
+    logBusLevels();
 
     const bool primaryFound = probeAddress(kPrimaryDisplayAddress);
     const bool alternateFound = probeAddress(kAlternateDisplayAddress);
+
+    gBootMs = nowMs();
+    gLastFrameMs = gBootMs;
+    gLastNoBusBlinkMs = gBootMs;
+    gLastNoBusScanMs = gBootMs;
+    gLastNoBusReportMs = gBootMs;
+
+    if (!foundAny) {
+        gLaneMode = LaneMode::NoBusAck;
+        Serial.println("[DISPLAY ALIVE] no device ACK on I2C; leaving bus quiet between rescans");
+        Serial.println("[DISPLAY ALIVE] status LED slow-blink means no bus ACK");
+        Serial.println("[DISPLAY ALIVE] meter target: SDA and SCL should both idle HIGH");
+        return;
+    }
 
     bool initialized = false;
     if (primaryFound) {
@@ -201,17 +264,14 @@ void setup() {
     if (!initialized && alternateFound) {
         initialized = beginDisplayAt(kAlternateDisplayAddress);
     }
-    if (!initialized && !primaryFound && !alternateFound) {
-        initialized = beginDisplayAt(kPrimaryDisplayAddress);
-    }
 
     if (!initialized) {
-        Serial.println("[DISPLAY ALIVE] init failed at 0x3C and 0x3D");
+        gLaneMode = LaneMode::InitFailed;
+        Serial.println("[DISPLAY ALIVE] panel ACKed but init failed at 0x3C/0x3D");
         failLoop();
     }
 
-    gBootMs = nowMs();
-    gLastFrameMs = gBootMs;
+    gLaneMode = LaneMode::DisplayOk;
     digitalWrite(kStatusLedPin, HIGH);
 
     Serial.print("[DISPLAY ALIVE] display initialized at 0x");
@@ -226,6 +286,11 @@ void setup() {
 
 void loop() {
     const unsigned long currentMs = nowMs();
+    if (gLaneMode == LaneMode::NoBusAck) {
+        serviceNoBusBlink(currentMs);
+        serviceNoBusReporting(currentMs);
+        return;
+    }
     if ((currentMs - gLastFrameMs) < kFrameIntervalMs) {
         return;
     }
