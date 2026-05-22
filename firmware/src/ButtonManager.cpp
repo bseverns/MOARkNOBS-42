@@ -351,6 +351,8 @@ void ButtonManager::exitLfoTuningMode(ButtonManagerContext &context) {
  */
 void ButtonManager::processButtons(ButtonManagerContext &context) {
     unsigned long now = ::now();
+    static uint8_t rawStates[NUM_VIRTUAL_BUTTONS] = {LOW};
+    static uint8_t currentRow = 0;
 
     // Drop pending EF assignment if the window expired
     if (_pendingEfSlot >= 0 && now > _efAssignDeadline) {
@@ -362,23 +364,24 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
     uint32_t tStart = micros();
 #endif
 
-    // Scan mux matrix row by row
-    uint8_t rawStates[NUM_VIRTUAL_BUTTONS];
-    for (uint8_t r = 0; r < BUTTON_ROWS; ++r) {
-        digitalWrite(_cfg.rowDriverPin, HIGH);
-        setMuxFast(_cfg.muxrPins, r);
+    // Scan one matrix row per pass. This keeps button latency under control while shaving the
+    // worst-case loop time enough that other schedulers can still run on schedule.
+    digitalWrite(_cfg.rowDriverPin, HIGH);
+    setMuxFast(_cfg.muxrPins, currentRow);
+    waitForMuxSettle();
+    for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
+        setMuxFast(_cfg.muxcPins, c);
         waitForMuxSettle();
-        for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-            setMuxFast(_cfg.muxcPins, c);
-            waitForMuxSettle();
-            int v = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
-            rawStates[r * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
-        }
-        digitalWrite(_cfg.rowDriverPin, LOW);
+        int v = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
+        rawStates[currentRow * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
     }
+    digitalWrite(_cfg.rowDriverPin, LOW);
 
-    // Process virtual (multiplexer) buttons using scanned states
-    for (uint8_t i = 0; i < NUM_VIRTUAL_BUTTONS; i++) {
+    // Process only the freshly scanned row; remaining rows retain their previous debounced state
+    // until their turn comes around.
+    const uint8_t rowStart = currentRow * BUTTON_COLS;
+    const uint8_t rowEnd = rowStart + BUTTON_COLS;
+    for (uint8_t i = rowStart; i < rowEnd; ++i) {
         uint8_t rawState = rawStates[i];
         bool stableReading = Utility::debounce(buttonStates[i], lastRawButtonStates[i], rawState,
                                                lastDebounceTimes[i], now, DEBOUNCE_DELAY);
@@ -388,6 +391,8 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
             updateButtonStateMachine(i, pressed, context);
         }
     }
+
+    currentRow = static_cast<uint8_t>((currentRow + 1) % BUTTON_ROWS);
 
     // Control buttons & pots via spare mux channels
     scanControlInputs(context);
@@ -783,15 +788,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         }
         case 4: {
             MIDIMessageType type = context.configManager.getSlotType(context.activePot);
-            if (type == MIDIMessageType::NRPN || type == MIDIMessageType::RPN) {
-                uint8_t param = context.configManager.getSlotData1(context.activePot);
-                param = (param + 1) % 128;
-                context.configManager.setSlotData1(context.activePot, param);
-                char buf[32];
-                snprintf(buf, sizeof(buf), "%s=%u", type == MIDIMessageType::NRPN ? "NRPN" : "RPN",
-                         param);
-                context.displayManager.displayStatus(buf, 900);
-            } else {
+            if (type == MIDIMessageType::CC) {
                 uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
                 uint8_t newCC = (oldCC + 1) % 128;
                 context.configManager.setPotCCNumber(context.activePot, newCC);
@@ -800,6 +797,23 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
                 }
                 char buf[24];
                 snprintf(buf, sizeof(buf), "CC=%u", newCC);
+                context.displayManager.displayStatus(buf, 900);
+            } else {
+                uint8_t param = context.configManager.getSlotData1(context.activePot);
+                param = (param + 1) % 128;
+                context.configManager.setSlotData1(context.activePot, param);
+                const char *label = "D1";
+                if (type == MIDIMessageType::Note) {
+                    label = "NOTE";
+                } else if (type == MIDIMessageType::NRPN) {
+                    label = "NRPN";
+                } else if (type == MIDIMessageType::RPN) {
+                    label = "RPN";
+                } else if (type == MIDIMessageType::ProgramChange) {
+                    label = "PROG";
+                }
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%s=%u", label, param);
                 context.displayManager.displayStatus(buf, 900);
             }
             markOnDeviceConfigDirty();
@@ -985,16 +999,7 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
     case 4: {
         // Short Press (Control Button #4): Cycle the active slot’s registry number
         MIDIMessageType type = context.configManager.getSlotType(context.activePot);
-        if (type == MIDIMessageType::NRPN || type == MIDIMessageType::RPN) {
-            uint8_t param = context.configManager.getSlotData1(context.activePot);
-            param = (param + 1) % 128;
-            context.configManager.setSlotData1(context.activePot, param);
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Slot %d => %s %d", context.activePot,
-                     type == MIDIMessageType::NRPN ? "NRPN" : "RPN", param);
-            context.displayManager.displayStatus(buf, 1500);
-            streamSlotPatch(context.configManager, context.activePot);
-        } else {
+        if (type == MIDIMessageType::CC) {
             uint8_t oldCC = context.configManager.getPotCCNumber(context.activePot);
             uint8_t newCC = (oldCC + 1) % 128; // 0..127
             context.configManager.setPotCCNumber(context.activePot, newCC);
@@ -1003,6 +1008,24 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
             }
             char buf[32];
             snprintf(buf, sizeof(buf), "Slot %d => CC %d", context.activePot, newCC);
+            context.displayManager.displayStatus(buf, 1500);
+            streamSlotPatch(context.configManager, context.activePot);
+        } else {
+            uint8_t param = context.configManager.getSlotData1(context.activePot);
+            param = (param + 1) % 128;
+            context.configManager.setSlotData1(context.activePot, param);
+            const char *label = "D1";
+            if (type == MIDIMessageType::Note) {
+                label = "NOTE";
+            } else if (type == MIDIMessageType::NRPN) {
+                label = "NRPN";
+            } else if (type == MIDIMessageType::RPN) {
+                label = "RPN";
+            } else if (type == MIDIMessageType::ProgramChange) {
+                label = "PROG";
+            }
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Slot %d => %s %d", context.activePot, label, param);
             context.displayManager.displayStatus(buf, 1500);
             streamSlotPatch(context.configManager, context.activePot);
         }

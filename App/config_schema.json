@@ -46,6 +46,13 @@
             "minimum": 0,
             "maximum": 127
           },
+          "arpNote": {
+            "type": "integer",
+            "title": "Arp root note",
+            "description": "Base note used by the arpeggiator for this slot when arp mode is active.",
+            "minimum": 0,
+            "maximum": 127
+          },
           "efIndex": {
             "type": "integer",
             "title": "Envelope follower index",

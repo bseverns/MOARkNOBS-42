@@ -138,7 +138,7 @@ void PotentiometerManager::processPots(LedAnimator &ledAnimator,
     (void)envelopes; // explicitly marked unused
 
     static uint8_t currentPotIndex = 0;
-    const uint8_t potsPerFrame = 14;
+    const uint8_t potsPerFrame = 7;
 
     for (uint8_t i = 0; i < potsPerFrame; ++i) {
         uint8_t primaryBank = currentPotIndex >> SECONDARY_MUX_PINS;

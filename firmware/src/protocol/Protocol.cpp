@@ -684,6 +684,12 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         uint8_t midiChannel =
             readClampedU8(slotObj, "midiChannel", "channel", 1, 16, slot.midiChannel);
         uint8_t data1 = readClampedU8(slotObj, "data1", "cc", 0, 127, slot.data1);
+        uint8_t arpNote = slot.arpNote;
+        if (slotObj.containsKey("arpNote")) {
+            arpNote = readClampedU8(slotObj, "arpNote", "arp_note", 0, 127, slot.arpNote);
+        } else if (slotObj.containsKey("arp_note")) {
+            arpNote = readClampedU8(slotObj, "arpNote", "arp_note", 0, 127, slot.arpNote);
+        }
         bool active = slotObj["active"].as<bool>();
 
         MIDISlot::EfSettings settings = slot.efSettings;
@@ -843,6 +849,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.type = midiType;
         slot.midiChannel = midiChannel;
         slot.data1 = data1;
+        slot.arpNote = arpNote;
         slot.efSettings = settings;
         slot.setEnvelopeFollowerIndex(settings.followerIndex);
         slot.active = active;

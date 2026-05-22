@@ -109,6 +109,10 @@ class MIDIHandler {
     void clearClockTick();
     /** Return true when a MIDI Start/Continue has been seen without Stop. */
     bool isClockRunning() const { return _clockRunning; }
+    /** Return true when fresh external MIDI clock ticks have been observed recently. */
+    bool hasExternalClockSignal() const;
+    /** Smoothed BPM estimate derived from incoming external MIDI clock ticks. */
+    float externalClockBpm() const;
 
     /** How many MIDI messages we've heard and blasted. */
     uint32_t getRxCount() const { return _rxCount; }
@@ -140,7 +144,9 @@ class MIDIHandler {
     bool clockTick = false;
     uint32_t _clockTickCount = 0;
     unsigned long lastExternalClock = 0;
+    unsigned long lastObservedExternalTick = 0;
     unsigned long lastInternalTick = 0;
+    float externalMsPerTick = 0.0f;
     bool _clockRunning = false; //!< Track Start/Continue vs Stop for sync-aware modules
     DisplayManager *_displayManager = nullptr;
     SystemDiagnostics *_diagnostics = nullptr;
@@ -198,6 +204,7 @@ class MIDIHandler {
     void receiveRPN(uint8_t channel, uint16_t param, uint16_t value);
     void handleSysEx(const uint8_t *data, uint16_t length);
     void handleClockTick();
+    void observeExternalClockTick(unsigned long timestampMs);
 };
 
 #endif

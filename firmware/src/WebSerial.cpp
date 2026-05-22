@@ -304,6 +304,7 @@ void emitLegacySlotPatch(const MIDISlot &slot, uint8_t slotIndex, uint8_t resolv
     slotObj["efIndex"] = slot.ef.followerIndex;
     slotObj["active"] = slot.active;
     slotObj["arpNote"] = slot.arpNote;
+    slotObj["arp_note"] = slot.arpNote;
     emitJson(doc, "legacy_slot_patch");
 }
 
@@ -400,6 +401,7 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     ef["gain_target"] = slot.efSettings.gainTarget;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
+    body["arpNote"] = slot.arpNote;
     SlotEnvelopePayload payload = config.getSlotEnvelopePayload(slotIndex);
     JsonObject efPayload = body.createNestedObject("ef_payload");
     efPayload["type_index"] = payload.filterType;

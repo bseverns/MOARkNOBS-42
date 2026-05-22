@@ -94,6 +94,7 @@ void handleGetConfigCommand(const String &command) {
         ef["gain_target"] = slot.efSettings.gainTarget;
         slotObj["active"] = slot.active;
         slotObj["arp_note"] = slot.arpNote;
+        slotObj["arpNote"] = slot.arpNote;
         slotObj["sysexTemplate"] = formatSysExTemplate(slot);
         SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
         JsonObject efPayload = slotObj.createNestedObject("ef_payload");
@@ -214,6 +215,8 @@ void handleGetConfigCommand(const String &command) {
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
+    // Start high-rate WebSerial telemetry only after the configurator has successfully hydrated.
+    webSerialStreaming = true;
 }
 
 void handleGetEfCommand(const String &command) {
@@ -263,7 +266,6 @@ void handleGetSchemaCommand(const String &command) {
 
 void handleHelloCommand(const String &command) {
     (void)command;
-    webSerialStreaming = true;
     LOG_PRINTLN("{\"hello\":\"mn42\"}");
 }
 

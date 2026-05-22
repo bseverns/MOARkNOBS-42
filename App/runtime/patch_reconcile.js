@@ -107,8 +107,9 @@ export function normalizeSlotPatchEntry(entry) {
     }
   }
   if (entry.active !== undefined) fields.active = Boolean(entry.active);
-  if (entry.arpNote !== undefined) {
-    const value = Number(entry.arpNote);
+  const arpNoteValue = entry.arpNote ?? entry.arp_note;
+  if (arpNoteValue !== undefined) {
+    const value = Number(arpNoteValue);
     if (Number.isFinite(value)) fields.arpNote = value;
   }
   return { index, fields };

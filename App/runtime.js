@@ -222,6 +222,7 @@ function compactSlotForDevice(slot, previousSlot) {
   else if (slot?.midiChannel !== undefined) out.channel = clone(slot.midiChannel);
   if (slot?.data1 !== undefined) out.data1 = clone(slot.data1);
   else if (slot?.cc !== undefined) out.data1 = clone(slot.cc);
+  if (slot?.arpNote !== undefined) out.arpNote = clone(slot.arpNote);
   out.active = Boolean(slot?.active);
   if (slot?.ef_index !== undefined) out.ef_index = clone(slot.ef_index);
   else if (slot?.efIndex !== undefined) out.ef_index = clone(slot.efIndex);

@@ -16,7 +16,9 @@ void initializeSchedulers() {
     // Order high-tier tasks so transport/clock service happens before modulation/render passes.
     Utility::schedulerHigh.addTask(processMIDI, hwConfig.midiTaskInterval, true);
     Utility::schedulerHigh.addTask(processLFOs, 1, true);
-    Utility::schedulerHigh.addTask(processEnvelopeFollowers, 1, true);
+    // Update a couple of followers per pass so the full bank refreshes every ~6ms without
+    // dropping a multi-millisecond slab onto one loop iteration.
+    Utility::schedulerHigh.addTask(processEnvelopeFollowers, 2, true);
     Utility::schedulerHigh.addTask(processPendingNoteOffs, 1, true);
     // Periodic high-priority drain ensures note-off queue never starves under load.
     Utility::schedulerHigh.addTask(
@@ -43,7 +45,8 @@ void initializeSchedulers() {
     Utility::schedulerMid.addTask(processCommandQueue, hwConfig.serialTaskInterval, true);
     Utility::schedulerMid.addTask(processEnvelopes, hwConfig.envelopeTaskInterval, true);
 
-    // Throttle hardware scanning to prevent USB starvation on the unthrottled main loop.
+    // Scan one matrix row plus a pot slice per pass so the full panel still refreshes quickly
+    // without monopolizing a single loop iteration.
     Utility::schedulerMid.addTask(
         []() {
             buttonManager.processButtons(buttonContext);

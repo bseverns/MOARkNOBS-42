@@ -70,6 +70,13 @@ bool consumeMidiServiceRequest() {
 
 namespace {
 volatile unsigned long statusLedPulseDeadline = 0;
+unsigned long statusLedBootDeadline = 0;
+unsigned long statusLedBeatPulseDeadline = 0;
+uint32_t statusLedLastClockTickCount = 0;
+
+constexpr unsigned long kStatusLedBootHoldMs = 3000UL;
+constexpr unsigned long kStatusLedHeartbeatHalfPeriodMs = 1000UL;
+constexpr unsigned long kStatusLedClockPulseMs = 120UL;
 } // namespace
 
 void requestStatusLEDPulse(uint16_t durationMs) {
@@ -77,20 +84,52 @@ void requestStatusLEDPulse(uint16_t durationMs) {
     statusLedPulseDeadline = now() + durationMs;
 }
 
-// Keep the status LED pulse alive until its deadline expires.
+namespace {
+bool deadlineStillActive(unsigned long deadline, unsigned long current) {
+    return deadline != 0 && static_cast<long>(current - deadline) < 0;
+}
+
+bool externalClockDominant() {
+    return g_followExternalClock && midiHandler.isClockRunning() &&
+           midiHandler.hasExternalClockSignal();
+}
+
+bool internalClockDominant() { return g_tappedBPM > 0.0f && !externalClockDominant(); }
+} // namespace
+
+// Keep the status LED pulse alive until its deadline expires, layered on top of a base liveness
+// pattern that is meaningful on the bench.
 void serviceStatusLEDPulse() {
-    unsigned long deadline = statusLedPulseDeadline;
-    if (deadline == 0) {
-        ledManager.setStatusLED(false);
-        return;
-    }
-    unsigned long current = now();
-    if (static_cast<long>(current - deadline) >= 0) {
-        statusLedPulseDeadline = 0;
-        ledManager.setStatusLED(false);
+    const unsigned long current = now();
+    const bool bootHoldActive = deadlineStillActive(statusLedBootDeadline, current);
+    const bool diagnosticPulseActive = deadlineStillActive(statusLedPulseDeadline, current);
+    const bool clockActive = externalClockDominant() || internalClockDominant();
+    const uint32_t currentClockTickCount = midiHandler.clockTickCount();
+
+    if (clockActive) {
+        if (currentClockTickCount != statusLedLastClockTickCount) {
+            if ((currentClockTickCount / 24U) != (statusLedLastClockTickCount / 24U)) {
+                statusLedBeatPulseDeadline = current + kStatusLedClockPulseMs;
+            }
+            statusLedLastClockTickCount = currentClockTickCount;
+        }
     } else {
-        ledManager.setStatusLED(true);
+        statusLedLastClockTickCount = currentClockTickCount;
     }
+
+    const bool beatPulseActive = deadlineStillActive(statusLedBeatPulseDeadline, current);
+    const bool heartbeatActive = ((current / kStatusLedHeartbeatHalfPeriodMs) % 2UL) == 0UL;
+
+    if (!diagnosticPulseActive) {
+        statusLedPulseDeadline = 0;
+    }
+    if (!beatPulseActive) {
+        statusLedBeatPulseDeadline = 0;
+    }
+
+    const bool ledOn = bootHoldActive || diagnosticPulseActive || beatPulseActive ||
+                       (!clockActive && heartbeatActive);
+    ledManager.setStatusLED(ledOn);
 }
 
 // Turn monotonically increasing diagnostic counters into one-shot user-visible alerts.
@@ -145,6 +184,10 @@ void initializeRuntime(bool baselinesLoaded) {
     seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
     lfoManager.attachMIDI(&midiHandler);
     ledAnimator.setMode(configManager.getLedMode());
+    statusLedBootDeadline = now() + kStatusLedBootHoldMs;
+    statusLedPulseDeadline = 0;
+    statusLedBeatPulseDeadline = 0;
+    statusLedLastClockTickCount = midiHandler.clockTickCount();
 
     potentiometerManager.setMidiCallback(
         [&](uint8_t /*ccNumber*/, uint8_t value, uint16_t rawValue, uint8_t potIdx) {
@@ -158,8 +201,7 @@ void initializeRuntime(bool baselinesLoaded) {
                 break;
 
             case MIDIMessageType::Note: {
-                uint8_t note = Utility::mapToMidiValue(rawValue) % 128;
-                slot.arpNote = note; // stash for the arpeggiator
+                const uint8_t note = static_cast<uint8_t>(slot.data1 % 128);
                 uint8_t velo = 125;
                 if (potIdx < efVoices.size() && efVoices[potIdx].hasRendered()) {
                     velo = efVoices[potIdx].latestLevel();
@@ -315,9 +357,17 @@ void processMIDI() {
 void processEnvelopeFollowers() {
     // Fast follower pass runs in the high-tier scheduler; downstream MIDI mapping happens in
     // `processEnvelopes()` on the mid tier.
+    constexpr size_t kFollowersPerPass = 1;
+    static size_t nextFollowerIndex = 0;
     float gainTrim = 1.0f + g_lfoEfGainTrim;
     gainTrim = constrain(gainTrim, 0.0f, 2.0f);
-    for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
+    const size_t followerCount = envelopeFollowers.size();
+    if (followerCount == 0) {
+        return;
+    }
+    const size_t passes = std::min(kFollowersPerPass, followerCount);
+    for (size_t offset = 0; offset < passes; ++offset) {
+        const size_t idx = (nextFollowerIndex + offset) % followerCount;
         EnvelopeFollower &follower = envelopeFollowers[idx];
         if (!follower.getActiveState()) {
             envelopeFollowerReady[idx] = false;
@@ -328,6 +378,7 @@ void processEnvelopeFollowers() {
         envelopeFollowerLevels[idx] = follower.getEnvelopeLevel();
         envelopeFollowerReady[idx] = true;
     }
+    nextFollowerIndex = (nextFollowerIndex + passes) % followerCount;
 }
 
 void processLFOs() {
@@ -475,6 +526,8 @@ void monitorSystemLoad() {
     static unsigned long taskCounter = 0;
     static unsigned long maxLoopDuration = 0;
     static unsigned long lastLoopStart = micros();
+    static unsigned long lastLoopOverrunLogMs = 0;
+    static unsigned long suppressedLoopOverruns = 0;
 
     unsigned long currentMicros = micros();
     unsigned long loopDuration = currentMicros - lastLoopStart;
@@ -488,8 +541,18 @@ void monitorSystemLoad() {
     // Threshold raised to 2500µs to accommodate full scan + mux settle + MIDI work.
     if (loopDuration > 2500UL) {
         ++g_systemDiagnostics.loopOverrunCount;
-        LOG_PRINTF("{\"diagnostic\":\"loop_overrun\",\"duration_us\":%lu}\n",
-                   static_cast<unsigned long>(loopDuration));
+        const unsigned long currentMillis = now();
+        if ((currentMillis - lastLoopOverrunLogMs) >= 1000UL) {
+            LOG_PRINTF("{\"diagnostic\":\"loop_overrun\",\"duration_us\":%lu,\"count\":%lu,"
+                       "\"suppressed\":%lu}\n",
+                       static_cast<unsigned long>(loopDuration),
+                       static_cast<unsigned long>(g_systemDiagnostics.loopOverrunCount),
+                       static_cast<unsigned long>(suppressedLoopOverruns));
+            lastLoopOverrunLogMs = currentMillis;
+            suppressedLoopOverruns = 0;
+        } else {
+            ++suppressedLoopOverruns;
+        }
         requestStatusLEDPulse();
     }
 

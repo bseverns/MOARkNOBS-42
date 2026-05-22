@@ -41,6 +41,12 @@ constexpr bool kEnablePartialRegionUpdates = false;
 constexpr bool kEnablePartialRegionUpdates = true;
 #endif
 
+bool displayAddressAcked(uint8_t address) {
+    Wire.begin();
+    Wire.beginTransmission(address);
+    return Wire.endTransmission() == 0;
+}
+
 unsigned long startupLogoExpandDurationMs() {
     const unsigned long ledSweepMs =
         static_cast<unsigned long>(std::max<uint16_t>(NUM_LEDS(), 1)) * 50UL;
@@ -227,6 +233,10 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
 
 // Bring up the OLED hardware and clear any startup garbage.
 bool DisplayManager::begin() {
+    if (!displayAddressAcked(_i2cAddress)) {
+        _initialized = false;
+        return false;
+    }
     if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
         _initialized = false;
         return false;

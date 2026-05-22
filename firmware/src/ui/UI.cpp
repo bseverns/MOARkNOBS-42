@@ -627,8 +627,10 @@ bool renderOnDeviceConfigViewIfActive(const ButtonManagerContext &context) {
     const uint8_t slotIndex = context.activePot;
     const MIDISlot &slot = context.configManager.getSlot(slotIndex);
     const uint8_t channel = context.configManager.getPotChannel(slotIndex);
-    uint8_t data1 = context.configManager.getPotCCNumber(slotIndex);
-    if (slot.type == MIDIMessageType::NRPN || slot.type == MIDIMessageType::RPN) {
+    uint8_t data1 = context.configManager.getSlotData1(slotIndex);
+    if (slot.type == MIDIMessageType::CC) {
+        data1 = context.configManager.getPotCCNumber(slotIndex);
+    } else if (slot.type == MIDIMessageType::NRPN || slot.type == MIDIMessageType::RPN) {
         data1 = context.configManager.getSlotData1(slotIndex);
     }
 

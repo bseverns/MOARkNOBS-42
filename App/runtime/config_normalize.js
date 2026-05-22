@@ -162,6 +162,11 @@ function normalizeSlotConfig(slot, efLimit = 6) {
 
   const normalized = { type, midiChannel, data1, efIndex, ef, active, arg };
 
+  const arpNoteCandidate = Number(source.arpNote ?? source.arp_note);
+  if (Number.isFinite(arpNoteCandidate)) {
+    normalized.arpNote = clamp(Math.round(arpNoteCandidate), 0, 127);
+  }
+
   let sysexTemplate = source.sysexTemplate ?? source.sysex_template;
   if (typeof sysexTemplate === 'string') {
     sysexTemplate = sysexTemplate.trim().slice(0, 128);

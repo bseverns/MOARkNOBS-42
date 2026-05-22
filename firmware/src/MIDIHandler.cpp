@@ -178,6 +178,22 @@ void MIDIHandler::handleClockTick() {
     sendClock();
 }
 
+void MIDIHandler::observeExternalClockTick(unsigned long timestampMs) {
+    if (lastObservedExternalTick != 0 && timestampMs > lastObservedExternalTick) {
+        const float sampleMs = static_cast<float>(timestampMs - lastObservedExternalTick);
+        if (sampleMs > 0.0f && sampleMs < 1000.0f) {
+            if (externalMsPerTick <= 0.0f ||
+                (timestampMs - lastExternalClock) >= CLOCK_TIMEOUT_MS) {
+                externalMsPerTick = sampleMs;
+            } else {
+                externalMsPerTick = (externalMsPerTick * 0.8f) + (sampleMs * 0.2f);
+            }
+        }
+    }
+    lastObservedExternalTick = timestampMs;
+    lastExternalClock = timestampMs;
+}
+
 // Drain incoming DIN/USB MIDI, update timing state, and fan events into the rest of the runtime.
 void MIDIHandler::processIncomingMIDI() {
     uint32_t startMicros = micros();
@@ -189,8 +205,9 @@ void MIDIHandler::processIncomingMIDI() {
         displayInteractionSeen = true;
         auto type = MIDI.getType();
         if (type == MidiType_Tick) {
+            observeExternalClockTick(now());
             if (g_followExternalClock) {
-                lastExternalClock = lastInternalTick = now();
+                lastInternalTick = now();
                 handleClockTick();
             }
         } else if (type == MidiType_SystemExclusiveStart) {
@@ -216,8 +233,9 @@ void MIDIHandler::processIncomingMIDI() {
             continue;
         }
         if (type == MidiType_Tick) {
+            observeExternalClockTick(now());
             if (g_followExternalClock) {
-                lastExternalClock = lastInternalTick = now();
+                lastInternalTick = now();
                 handleClockTick();
             }
         } else if (type == MidiType_SystemExclusiveStart) {
@@ -701,6 +719,17 @@ MIDIHandler::SerialMessage MIDIHandler::makeClock() const {
 void MIDIHandler::generateClockTick() {
     lastInternalTick = now();
     handleClockTick();
+}
+
+bool MIDIHandler::hasExternalClockSignal() const {
+    return (millis() - lastExternalClock) < CLOCK_TIMEOUT_MS;
+}
+
+float MIDIHandler::externalClockBpm() const {
+    if (externalMsPerTick <= 0.0f) {
+        return 0.0f;
+    }
+    return 60000.0f / (externalMsPerTick * 24.0f);
 }
 
 void MIDIHandler::receiveNRPN(uint8_t channel, uint16_t param, uint16_t value) {

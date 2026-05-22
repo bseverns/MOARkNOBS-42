@@ -419,15 +419,18 @@ void ConfigManager::loadProfile(uint8_t id) {
         id = 0;
     }
     uint16_t base = EEPROM_PROFILE_START(id);
+    const bool includeProfileFields = (base == EEPROM_PROFILE_START(0));
     if (checkEEPROMHealth(false, base)) {
         readEEPROM(false, base);
-        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC(false)) {
+        if (_stored.version != CONFIG_VERSION ||
+            _stored.crc != calculateCRC(includeProfileFields)) {
             LOG_PRINTLN(
                 "{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
         }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
-        if (_stored.version != CONFIG_VERSION || _stored.crc != calculateCRC(false)) {
+        if (_stored.version != CONFIG_VERSION ||
+            _stored.crc != calculateCRC(includeProfileFields)) {
             LOG_PRINTLN(
                 "{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
         }
@@ -829,6 +832,8 @@ String ConfigManager::makeSchema() {
          "channel\",\"minimum\":1,\"maximum\":16},";
     s += "\"data1\":{\"type\":\"integer\",\"title\":\"CC/Note "
          "number\",\"minimum\":0,\"maximum\":127},";
+    s += "\"arpNote\":{\"type\":\"integer\",\"title\":\"Arp root "
+         "note\",\"minimum\":0,\"maximum\":127},";
     s += "\"efIndex\":{\"type\":\"integer\",\"title\":\"Envelope follower "
          "index\",\"minimum\":-1,\"maximum\":";
     s += String(static_cast<int>(NUM_ENVELOPES - 1));
