@@ -126,6 +126,14 @@ export function createSimulator(simDeps = {}) {
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
   const activeArpSlots = new Set();
   let usbMidiOutEnabled = false;
+  let velocityShift = 0;
+  let changeProbability = 100;
+  let jitterDepth = 1;
+  let jitterSmoothness = 0.5;
+  let followExternalClock = true;
+  let clockOutEnabled = false;
+  let tappedBpm = 120;
+  let externalBpm = 123.4;
 
   const telemetry = () => ({
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
@@ -152,6 +160,23 @@ export function createSimulator(simDeps = {}) {
       uart_overruns: 0,
       loop_overruns: 0,
       midi_task_overruns: 0
+    },
+    note_dynamics: {
+      velocity_shift: velocityShift,
+      change_probability: changeProbability
+    },
+    jitter: {
+      depth: jitterDepth,
+      smoothness: jitterSmoothness
+    },
+    clock: {
+      follow_external: followExternalClock,
+      clock_out_enabled: clockOutEnabled,
+      tapped_bpm: tappedBpm,
+      external_bpm: externalBpm,
+      external_signal: true,
+      running: true,
+      source: followExternalClock ? 'external' : 'internal'
     }
   });
 
@@ -227,6 +252,23 @@ export function createSimulator(simDeps = {}) {
         });
         break;
       }
+      case 'get_clock':
+        respond({
+          follow_external: followExternalClock,
+          clock_out_enabled: clockOutEnabled,
+          tapped_bpm: tappedBpm,
+          external_bpm: externalBpm,
+          external_signal: true,
+          running: true,
+          source: followExternalClock ? 'external' : 'internal'
+        });
+        break;
+      case 'get_jitter':
+        respond({ depth: jitterDepth, smoothness: jitterSmoothness });
+        break;
+      case 'get_note_dynamics':
+        respond({ velocity_shift: velocityShift, change_probability: changeProbability });
+        break;
       case 'get_usb_midi':
         respond({ usb_midi_out: usbMidiOutEnabled });
         break;
@@ -248,6 +290,45 @@ export function createSimulator(simDeps = {}) {
         respond({ profile: slot, profile_set: true });
         break;
       }
+      case 'set_clock':
+        followExternalClock = Boolean(request.followExternal);
+        clockOutEnabled = Boolean(request.clockOutEnabled);
+        tappedBpm = Math.max(20, Math.min(300, Number(request.tappedBpm) || 120));
+        respond({
+          command: 'SET_CLOCK',
+          status: 'ok',
+          follow_external: followExternalClock,
+          clock_out_enabled: clockOutEnabled,
+          tapped_bpm: tappedBpm,
+          external_bpm: externalBpm,
+          external_signal: true,
+          running: true,
+          source: followExternalClock ? 'external' : 'internal'
+        });
+        break;
+      case 'set_jitter':
+        jitterDepth = Math.max(0, Math.min(1, Number(request.depth) || 0));
+        jitterSmoothness = Math.max(0, Math.min(1, Number(request.smoothness) || 0));
+        respond({
+          command: 'SET_JITTER',
+          status: 'ok',
+          depth: jitterDepth,
+          smoothness: jitterSmoothness
+        });
+        break;
+      case 'set_note_dynamics':
+        velocityShift = Math.max(-64, Math.min(63, Math.round(Number(request.velocityShift) || 0)));
+        changeProbability = Math.max(
+          0,
+          Math.min(100, Math.round(Number(request.changeProbability) || 0))
+        );
+        respond({
+          command: 'SET_NOTE_DYNAMICS',
+          status: 'ok',
+          velocity_shift: velocityShift,
+          change_probability: changeProbability
+        });
+        break;
       case 'set_usb_midi':
         usbMidiOutEnabled = Boolean(request.enabled);
         respond({ command: 'SET_USB_MIDI', status: 'ok', usb_midi_out: usbMidiOutEnabled });

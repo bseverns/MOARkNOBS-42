@@ -13,6 +13,7 @@
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Log.h"
+#include "MIDIHandler.h"
 #include "Modes.h"
 #include "Protocol.h"
 #include "protocol/ManifestReport.h"
@@ -41,6 +42,25 @@ void handleGetArgMethodCommand(const String &command) {
 void handleGetBrownoutsCommand(const String &command) {
     (void)command;
     LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_brownouts deprecated\"}");
+}
+
+void handleGetClockCommand(const String &command) {
+    (void)command;
+    const bool externalSignal = midiHandler.hasExternalClockSignal();
+    const bool running = midiHandler.isClockRunning();
+    const float externalBpm = midiHandler.externalClockBpm();
+    const char *source = "idle";
+    if (g_followExternalClock && externalSignal) {
+        source = "external";
+    } else if (g_tappedBPM > 0.0f) {
+        source = "internal";
+    }
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_CLOCK\",\"follow_external\":%s,"
+               "\"clock_out_enabled\":%s,\"tapped_bpm\":%.2f,\"external_bpm\":%.2f,"
+               "\"external_signal\":%s,\"running\":%s,\"source\":\"%s\"}\n",
+               g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
+               static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
+               externalSignal ? "true" : "false", running ? "true" : "false", source);
 }
 
 void handleGetConfigCommand(const String &command) {
@@ -237,6 +257,14 @@ void handleGetEfCommand(const String &command) {
     }
 }
 
+void handleGetJitterCommand(const String &command) {
+    (void)command;
+    LOG_PRINTF(
+        "{\"type\":\"response\",\"command\":\"GET_JITTER\",\"depth\":%.3f,\"smoothness\":%.3f}\n",
+        static_cast<double>(constrain(g_jitterSettings.depth, 0.0f, 1.0f)),
+        static_cast<double>(constrain(g_jitterSettings.smoothness, 0.0f, 1.0f)));
+}
+
 void handleGetLedCommand(const String &command) {
     (void)command;
 #ifdef SERIAL_LOGGING
@@ -257,6 +285,13 @@ void handleGetManifestCommand(const String &command) {
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
+}
+
+void handleGetNoteDynamicsCommand(const String &command) {
+    (void)command;
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_NOTE_DYNAMICS\",\"velocity_shift\":%d,"
+               "\"change_probability\":%u}\n",
+               static_cast<int>(velocityShift), static_cast<unsigned>(changeProbability));
 }
 
 void handleGetSchemaCommand(const String &command) {
@@ -288,6 +323,42 @@ void handleSetArgMethodCommand(const String &command) {
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
+}
+
+void handleSetClockCommand(const String &command) {
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+    int thirdComma = command.indexOf(',', secondComma + 1);
+    if (firstComma < 0 || secondComma < 0 || thirdComma < 0) {
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_CLOCK\","
+                    "\"message\":\"missing values\"}");
+        return;
+    }
+
+    const bool followExternal = command.substring(firstComma + 1, secondComma).toInt() != 0;
+    const bool clockOutEnabled = command.substring(secondComma + 1, thirdComma).toInt() != 0;
+    const float tappedBpm = constrain(command.substring(thirdComma + 1).toFloat(), 20.0f, 300.0f);
+
+    g_followExternalClock = followExternal;
+    g_clockOutEnabled = clockOutEnabled;
+    g_tappedBPM = tappedBpm;
+
+    const bool externalSignal = midiHandler.hasExternalClockSignal();
+    const bool running = midiHandler.isClockRunning();
+    const float externalBpm = midiHandler.externalClockBpm();
+    const char *source = "idle";
+    if (g_followExternalClock && externalSignal) {
+        source = "external";
+    } else if (g_tappedBPM > 0.0f) {
+        source = "internal";
+    }
+
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_CLOCK\","
+               "\"follow_external\":%s,\"clock_out_enabled\":%s,\"tapped_bpm\":%.2f,"
+               "\"external_bpm\":%.2f,\"external_signal\":%s,\"running\":%s,\"source\":\"%s\"}\n",
+               g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
+               static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
+               externalSignal ? "true" : "false", running ? "true" : "false", source);
 }
 
 void handleSetEfCommand(const String &command) {
@@ -339,6 +410,28 @@ void handleSetLedCommand(const String &command) {
     }
 }
 
+void handleSetJitterCommand(const String &command) {
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+    if (firstComma < 0 || secondComma < 0) {
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_JITTER\","
+                    "\"message\":\"missing values\"}");
+        return;
+    }
+
+    const float depth =
+        constrain(command.substring(firstComma + 1, secondComma).toFloat(), 0.0f, 1.0f);
+    const float smoothness = constrain(command.substring(secondComma + 1).toFloat(), 0.0f, 1.0f);
+    g_jitterSettings.depth = depth;
+    g_jitterSettings.smoothness = smoothness;
+    g_jitterRemoteControlActive = true;
+    g_jitterDepthLatched = false;
+    g_jitterSmoothnessLatched = false;
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_JITTER\",\"depth\":%.3f,"
+               "\"smoothness\":%.3f}\n",
+               static_cast<double>(depth), static_cast<double>(smoothness));
+}
+
 void handleSetPotCommand(const String &command) {
     int firstComma = command.indexOf(',');
     int lastComma = command.lastIndexOf(',');
@@ -366,6 +459,27 @@ void handleSetPotCommand(const String &command) {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"message\":\"Invalid values for "
                     "SET_POT\"}");
     }
+}
+
+void handleSetNoteDynamicsCommand(const String &command) {
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+    if (firstComma < 0 || secondComma < 0) {
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_NOTE_DYNAMICS\","
+                    "\"message\":\"missing values\"}");
+        return;
+    }
+
+    const int velocity = constrain(command.substring(firstComma + 1, secondComma).toInt(), -64, 63);
+    const int probability = constrain(command.substring(secondComma + 1).toInt(), 0, 100);
+    velocityShift = static_cast<int8_t>(velocity);
+    changeProbability = static_cast<uint8_t>(probability);
+    g_noteDynamicsRemoteControlActive = true;
+    g_noteDynamicsShiftLatched = false;
+    g_noteDynamicsProbabilityLatched = false;
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_NOTE_DYNAMICS\","
+               "\"velocity_shift\":%d,\"change_probability\":%u}\n",
+               velocity, static_cast<unsigned>(changeProbability));
 }
 
 void handleSetUsbMidiCommand(const String &command) {

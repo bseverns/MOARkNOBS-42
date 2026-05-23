@@ -5,6 +5,7 @@ const EF_FILTER_FREQ_MIN = 20;
 const EF_FILTER_FREQ_MAX = 5000;
 const EF_FILTER_Q_MIN = 0.5;
 const EF_FILTER_Q_MAX = 4.0;
+const EF_MODE_NAMES = ['PEAK', 'RMS', 'GATE', 'FOLLOWER'];
 const EF_IDLE_FLOOR_DEFAULT = 24;
 const LED_MODE_NAMES = ['STATIC', 'PEAK_HOLD', 'TRAIL', 'CLOCK_PULSE'];
 const LEGACY_ENVELOPE_ANALOG_PINS = [14, 15, 16, 17, 20, 21];
@@ -42,7 +43,19 @@ function normalizeSlotEnvelope(slot) {
     oversample: 4,
     smoothing: 0.2,
     baseline: 0,
-    gain: 1
+    gain: 1,
+    mode: 0,
+    autoBaseline: true,
+    autoGain: true,
+    attackMs: 5,
+    releaseMs: 20,
+    rmsWindowMs: 50,
+    baselineTauMs: 2000,
+    gainTauMs: 3000,
+    gateThreshold: 16,
+    gateHysteresis: 4,
+    activityThreshold: 4,
+    gainTarget: 102
   };
   const efSource = slot?.ef && typeof slot.ef === 'object' ? slot.ef : {};
   const ef = {
@@ -54,7 +67,19 @@ function normalizeSlotEnvelope(slot) {
     oversample: defaults.oversample,
     smoothing: defaults.smoothing,
     baseline: defaults.baseline,
-    gain: defaults.gain
+    gain: defaults.gain,
+    mode: defaults.mode,
+    autoBaseline: defaults.autoBaseline,
+    autoGain: defaults.autoGain,
+    attackMs: defaults.attackMs,
+    releaseMs: defaults.releaseMs,
+    rmsWindowMs: defaults.rmsWindowMs,
+    baselineTauMs: defaults.baselineTauMs,
+    gainTauMs: defaults.gainTauMs,
+    gateThreshold: defaults.gateThreshold,
+    gateHysteresis: defaults.gateHysteresis,
+    activityThreshold: defaults.activityThreshold,
+    gainTarget: defaults.gainTarget
   };
   if (efSource.index !== undefined) ef.index = efSource.index;
   if (efSource.filter_index !== undefined) ef.filter_index = efSource.filter_index;
@@ -65,6 +90,29 @@ function normalizeSlotEnvelope(slot) {
   if (efSource.smoothing !== undefined) ef.smoothing = efSource.smoothing;
   if (efSource.baseline !== undefined) ef.baseline = efSource.baseline;
   if (efSource.gain !== undefined) ef.gain = efSource.gain;
+  if (efSource.mode !== undefined) ef.mode = efSource.mode;
+  if (efSource.autoBaseline !== undefined) ef.autoBaseline = efSource.autoBaseline;
+  if (efSource.auto_baseline !== undefined) ef.autoBaseline = efSource.auto_baseline;
+  if (efSource.autoGain !== undefined) ef.autoGain = efSource.autoGain;
+  if (efSource.auto_gain !== undefined) ef.autoGain = efSource.auto_gain;
+  if (efSource.attackMs !== undefined) ef.attackMs = efSource.attackMs;
+  if (efSource.attack_ms !== undefined) ef.attackMs = efSource.attack_ms;
+  if (efSource.releaseMs !== undefined) ef.releaseMs = efSource.releaseMs;
+  if (efSource.release_ms !== undefined) ef.releaseMs = efSource.release_ms;
+  if (efSource.rmsWindowMs !== undefined) ef.rmsWindowMs = efSource.rmsWindowMs;
+  if (efSource.rms_ms !== undefined) ef.rmsWindowMs = efSource.rms_ms;
+  if (efSource.baselineTauMs !== undefined) ef.baselineTauMs = efSource.baselineTauMs;
+  if (efSource.baseline_tau_ms !== undefined) ef.baselineTauMs = efSource.baseline_tau_ms;
+  if (efSource.gainTauMs !== undefined) ef.gainTauMs = efSource.gainTauMs;
+  if (efSource.gain_tau_ms !== undefined) ef.gainTauMs = efSource.gain_tau_ms;
+  if (efSource.gateThreshold !== undefined) ef.gateThreshold = efSource.gateThreshold;
+  if (efSource.gate_threshold !== undefined) ef.gateThreshold = efSource.gate_threshold;
+  if (efSource.gateHysteresis !== undefined) ef.gateHysteresis = efSource.gateHysteresis;
+  if (efSource.gate_hysteresis !== undefined) ef.gateHysteresis = efSource.gate_hysteresis;
+  if (efSource.activityThreshold !== undefined) ef.activityThreshold = efSource.activityThreshold;
+  if (efSource.activity_threshold !== undefined) ef.activityThreshold = efSource.activity_threshold;
+  if (efSource.gainTarget !== undefined) ef.gainTarget = efSource.gainTarget;
+  if (efSource.gain_target !== undefined) ef.gainTarget = efSource.gain_target;
   const index = Number.isFinite(Number(slot?.efIndex))
     ? Number(slot.efIndex)
     : Number.isFinite(Number(ef.index))
@@ -98,6 +146,34 @@ function normalizeSlotEnvelope(slot) {
   ef.smoothing = Number.isFinite(smoothing) ? clamp(smoothing, 0, 1) : defaults.smoothing;
   ef.baseline = Number.isFinite(Number(ef.baseline)) ? Number(ef.baseline) : defaults.baseline;
   ef.gain = Number.isFinite(Number(ef.gain)) ? Number(ef.gain) : defaults.gain;
+  if (typeof ef.mode === 'string') {
+    const index = EF_MODE_NAMES.indexOf(ef.mode.toUpperCase());
+    ef.mode = index >= 0 ? index : defaults.mode;
+  }
+  ef.mode = clamp(Math.round(Number(ef.mode) || defaults.mode), 0, EF_MODE_NAMES.length - 1);
+  ef.autoBaseline = Boolean(ef.autoBaseline);
+  ef.autoGain = Boolean(ef.autoGain);
+  ef.attackMs = clamp(Math.round(Number(ef.attackMs) || defaults.attackMs), 1, 60000);
+  ef.releaseMs = clamp(Math.round(Number(ef.releaseMs) || defaults.releaseMs), 1, 60000);
+  ef.rmsWindowMs = clamp(Math.round(Number(ef.rmsWindowMs) || defaults.rmsWindowMs), 1, 60000);
+  ef.baselineTauMs = clamp(
+    Math.round(Number(ef.baselineTauMs) || defaults.baselineTauMs),
+    1,
+    60000
+  );
+  ef.gainTauMs = clamp(Math.round(Number(ef.gainTauMs) || defaults.gainTauMs), 1, 60000);
+  ef.gateThreshold = clamp(Math.round(Number(ef.gateThreshold) || defaults.gateThreshold), 0, 127);
+  ef.gateHysteresis = clamp(
+    Math.round(Number(ef.gateHysteresis) || defaults.gateHysteresis),
+    0,
+    127
+  );
+  ef.activityThreshold = clamp(
+    Math.round(Number(ef.activityThreshold) || defaults.activityThreshold),
+    0,
+    127
+  );
+  ef.gainTarget = clamp(Math.round(Number(ef.gainTarget) || defaults.gainTarget), 0, 127);
   return ef;
 }
 

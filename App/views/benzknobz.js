@@ -29,7 +29,7 @@ const localManifest = createLocalManifest({
 });
 
 const SLOT_ROW_HEIGHT = 82;
-const EF_ROW_HEIGHT = 44;
+const EF_ROW_HEIGHT = 108;
 
 const SLOT_TYPE_ABBREVIATIONS = {
   OFF: 'OFF',
@@ -43,6 +43,11 @@ const SLOT_TYPE_ABBREVIATIONS = {
   RPN: 'RPN',
   SysEx: 'SX'
 };
+
+function slotTypeCssToken(type) {
+  if (typeof type !== 'string' || !type.trim()) return 'off';
+  return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
 
 const runtimeOptions = {
   schemaUrl: './config_schema.json',
@@ -95,6 +100,15 @@ const boot = () => {
   const simulatorToggle = document.getElementById('simulator-toggle');
   const usbMidiToggleBtn = document.getElementById('usb-midi-toggle');
   const usbMidiStatusEl = document.getElementById('usb-midi-status');
+  const noteDynamicsVelocityInput = document.getElementById('note-dynamics-velocity');
+  const noteDynamicsProbabilityInput = document.getElementById('note-dynamics-probability');
+  const noteDynamicsApplyBtn = document.getElementById('note-dynamics-apply');
+  const noteDynamicsStatusEl = document.getElementById('note-dynamics-status');
+  const deviceClockSourceSelect = document.getElementById('device-clock-source');
+  const deviceClockBpmInput = document.getElementById('device-clock-bpm');
+  const deviceClockOutSelect = document.getElementById('device-clock-out');
+  const deviceClockApplyBtn = document.getElementById('device-clock-apply');
+  const deviceClockStatusEl = document.getElementById('device-clock-status');
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
   const editorTabButtons = Array.from(document.querySelectorAll('[data-editor-tab]'));
@@ -167,6 +181,10 @@ const boot = () => {
   const arpSwingInput = document.getElementById('arp-swing');
   const arpGateInput = document.getElementById('arp-gate');
   const arpOctaveInput = document.getElementById('arp-octave');
+  const jitterDepthInput = document.getElementById('jitter-depth');
+  const jitterSmoothnessInput = document.getElementById('jitter-smoothness');
+  const jitterApplyBtn = document.getElementById('jitter-apply');
+  const jitterStatusEl = document.getElementById('jitter-status');
   const lfoCard = document.getElementById('lfo-profile-card');
   const lfoEditor = document.getElementById('lfo-editor');
   const lfoRouteAddBtn = document.getElementById('lfo-route-add');
@@ -316,7 +334,20 @@ const boot = () => {
       connectionBanner,
       connectFailHelp,
       usbMidiToggleBtn,
-      usbMidiStatusEl
+      usbMidiStatusEl,
+      noteDynamicsVelocityInput,
+      noteDynamicsProbabilityInput,
+      noteDynamicsApplyBtn,
+      noteDynamicsStatusEl,
+      deviceClockSourceSelect,
+      deviceClockBpmInput,
+      deviceClockOutSelect,
+      deviceClockApplyBtn,
+      deviceClockStatusEl,
+      jitterDepthInput,
+      jitterSmoothnessInput,
+      jitterApplyBtn,
+      jitterStatusEl
     }
   });
   const { setConnectionBanner, setConnectionPill, primeCompatibilityStatus } =
@@ -601,6 +632,8 @@ const boot = () => {
   runtime.on('telemetry', (frame) => {
     slotState.telemetry = frame;
     paintTelemetry(frame);
+    transportToolbarController.onTelemetry(frame);
+    deviceMonitorController.renderTelemetry(frame);
   });
   runtime.on('config', ({ staged, config, dirty }) => {
     // `staged` is the single source of truth for editor controls; keep all derived UI panes in
@@ -628,7 +661,7 @@ const boot = () => {
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
-    deviceMonitorController.render(manifest);
+    deviceMonitorController.renderManifest(manifest);
     updatePowerSafetySummary(manifest);
     profileMacroScenePanel.onManifest(manifest);
     transportToolbarController.onManifest(manifest);
@@ -800,6 +833,7 @@ const boot = () => {
     state.className = 'slot-state';
     state.textContent = SLOT_TYPE_ABBREVIATIONS[slot?.type] ?? slot?.type ?? '—';
     state.title = slot?.type ?? 'Unassigned';
+    el.dataset.slotType = slotTypeCssToken(slot?.type);
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'takeover';
@@ -842,20 +876,20 @@ const boot = () => {
     return normalized;
   }
 
-  // Parse the freeform follower-assignment text input into normalized slot ids.
-  function parseFollowerSlotsInput(text, maxSlotIndex) {
-    if (typeof text !== 'string' || !text.trim()) return [];
-    const tokens = text
-      .split(/[,\s]+/)
-      .map((token) => token.trim())
-      .filter(Boolean);
-    return normalizeFollowerSlotList({ slots: tokens }, maxSlotIndex);
-  }
-
-  // Convert a follower slot list back into editable text.
-  function formatFollowerSlots(slots) {
-    if (!Array.isArray(slots) || !slots.length) return '';
-    return slots.join(', ');
+  function toggleFollowerSlotAssignment(followerIndex, slotIndex, maxSlotIndex) {
+    runtime.stage((draft) => {
+      draft.efSlots = draft.efSlots || [];
+      if (!draft.efSlots[followerIndex] || typeof draft.efSlots[followerIndex] !== 'object') {
+        draft.efSlots[followerIndex] = { slots: [] };
+      }
+      const current = normalizeFollowerSlotList(draft.efSlots[followerIndex], maxSlotIndex);
+      const next = current.includes(slotIndex)
+        ? current.filter((value) => value !== slotIndex)
+        : [...current, slotIndex].sort((a, b) => a - b);
+      draft.efSlots[followerIndex].slots = next;
+      delete draft.efSlots[followerIndex].slot;
+      return draft;
+    });
   }
 
   // Render one row in the EF assignment editor.
@@ -867,24 +901,31 @@ const boot = () => {
     const label = document.createElement('span');
     label.className = 'ef-row-label';
     label.textContent = `EF ${index + 1}`;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = '3, 10, 17';
-    input.value = formatFollowerSlots(normalizedSlots);
-    input.addEventListener('change', () => {
-      const parsed = parseFollowerSlotsInput(input.value, maxSlotIndex);
-      input.value = formatFollowerSlots(parsed);
-      runtime.stage((draft) => {
-        draft.efSlots = draft.efSlots || [];
-        if (!draft.efSlots[index] || typeof draft.efSlots[index] !== 'object') {
-          draft.efSlots[index] = { slots: [] };
-        }
-        draft.efSlots[index].slots = parsed;
-        delete draft.efSlots[index].slot;
-        return draft;
-      });
-    });
-    el.append(label, input);
+    const summary = document.createElement('span');
+    summary.className = 'ef-row-summary';
+    summary.textContent = normalizedSlots.length
+      ? `${normalizedSlots.length} assigned`
+      : 'Unassigned';
+    const chipGrid = document.createElement('div');
+    chipGrid.className = 'ef-chip-grid';
+    for (let slotIndex = 0; slotIndex <= maxSlotIndex; slotIndex += 1) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ef-slot-chip';
+      chip.dataset.slotType = slotTypeCssToken(slotState.slots[slotIndex]?.type);
+      chip.dataset.slotIndex = String(slotIndex);
+      chip.classList.toggle('assigned', normalizedSlots.includes(slotIndex));
+      chip.setAttribute('aria-pressed', normalizedSlots.includes(slotIndex) ? 'true' : 'false');
+      chip.textContent = `S${String(slotIndex + 1).padStart(2, '0')}`;
+      chip.title = slotState.slots[slotIndex]?.type
+        ? `Toggle ${slotState.slots[slotIndex].type} slot ${slotIndex + 1}`
+        : `Toggle slot ${slotIndex + 1}`;
+      chip.addEventListener('click', () =>
+        toggleFollowerSlotAssignment(index, slotIndex, maxSlotIndex)
+      );
+      chipGrid.appendChild(chip);
+    }
+    el.append(label, summary, chipGrid);
   }
 
   // Push the latest telemetry frame into the slot grid, envelope meters, and detail view.

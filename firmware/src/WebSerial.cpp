@@ -8,6 +8,7 @@
 #include "Log.h"
 #include "ConfigManager.h"
 #include "Globals.h"
+#include "MIDIHandler.h"
 #include <ArduinoJson.h>
 
 namespace {
@@ -211,9 +212,9 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     emitArgsChunk(14, 14, "state_args_14_27");
     emitArgsChunk(28, 14, "state_args_28_41");
 
-    // Chunk 2b: Diagnostics and Global ARG Settings
+    // Chunk 2b: Diagnostics and runtime-global controls
     {
-        StaticJsonDocument<512> doc;
+        StaticJsonDocument<768> doc;
         applyFrameMeta(doc, meta);
         doc["type"] = "telemetry";
         doc["scope"] = "state_diagnostics";
@@ -234,6 +235,31 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         diag["loop_last_us"] = static_cast<uint32_t>(diagnostics.lastLoopMicros);
         diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
         diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
+
+        JsonObject noteDynamics = doc.createNestedObject("note_dynamics");
+        noteDynamics["velocity_shift"] = static_cast<int>(velocityShift);
+        noteDynamics["change_probability"] = static_cast<unsigned>(changeProbability);
+
+        JsonObject jitter = doc.createNestedObject("jitter");
+        jitter["depth"] = constrain(g_jitterSettings.depth, 0.0f, 1.0f);
+        jitter["smoothness"] = constrain(g_jitterSettings.smoothness, 0.0f, 1.0f);
+
+        JsonObject clock = doc.createNestedObject("clock");
+        const bool externalSignal = midiHandler.hasExternalClockSignal();
+        const bool running = midiHandler.isClockRunning();
+        clock["follow_external"] = g_followExternalClock;
+        clock["clock_out_enabled"] = g_clockOutEnabled;
+        clock["tapped_bpm"] = g_tappedBPM;
+        clock["external_bpm"] = midiHandler.externalClockBpm();
+        clock["external_signal"] = externalSignal;
+        clock["running"] = running;
+        if (g_followExternalClock && externalSignal) {
+            clock["source"] = "external";
+        } else if (g_tappedBPM > 0.0f) {
+            clock["source"] = "internal";
+        } else {
+            clock["source"] = "idle";
+        }
 
         emitJson(doc, "state_diagnostics");
     }

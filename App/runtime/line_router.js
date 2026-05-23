@@ -66,6 +66,58 @@ export function createRuntimeLineHandler({
             return;
           }
           break;
+        case 'clock_get':
+        case 'clock_set':
+          if (
+            Object.prototype.hasOwnProperty.call(msg, 'follow_external') &&
+            Object.prototype.hasOwnProperty.call(msg, 'clock_out_enabled') &&
+            Object.prototype.hasOwnProperty.call(msg, 'tapped_bpm')
+          ) {
+            if (activePending.nativeRequest.kind === 'clock_set' && msg.status !== 'ok') {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.message ?? 'Clock update failed' }
+              });
+            } else {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            }
+            return;
+          }
+          break;
+        case 'jitter_get':
+        case 'jitter_set':
+          if (
+            Object.prototype.hasOwnProperty.call(msg, 'depth') &&
+            Object.prototype.hasOwnProperty.call(msg, 'smoothness')
+          ) {
+            if (activePending.nativeRequest.kind === 'jitter_set' && msg.status !== 'ok') {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.message ?? 'Jitter update failed' }
+              });
+            } else {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            }
+            return;
+          }
+          break;
+        case 'note_dynamics_get':
+        case 'note_dynamics_set':
+          if (
+            Object.prototype.hasOwnProperty.call(msg, 'velocity_shift') &&
+            Object.prototype.hasOwnProperty.call(msg, 'change_probability')
+          ) {
+            if (activePending.nativeRequest.kind === 'note_dynamics_set' && msg.status !== 'ok') {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.message ?? 'Note dynamics update failed' }
+              });
+            } else {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            }
+            return;
+          }
+          break;
         case 'profile_set':
           if (msg.type === 'response' && msg.status) {
             if (msg.status === 'ok') {

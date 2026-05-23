@@ -29,6 +29,13 @@ export function createSlotEditorPanel({
     slotDetailArgSources = null,
     slotDetailValue = null
   } = detailElements;
+  const efModeNames = ['PEAK', 'RMS', 'GATE', 'FOLLOWER'];
+  const efModeDescriptions = {
+    PEAK: 'Peak detector with attack and release timing.',
+    RMS: 'Energy detector using a leaky RMS-style integration window.',
+    GATE: 'Threshold gate with hysteresis for on/off style dynamics.',
+    FOLLOWER: 'Attack/release follower for smooth contour tracking.'
+  };
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
   function populateDetail() {
@@ -259,6 +266,84 @@ export function createSlotEditorPanel({
       efFieldset.appendChild(
         makeNumber('Smoothing', ef.smoothing ?? 0.2, 0, 1, 0.01, (value) =>
           stageSlotEnvelopeField(slotState.selected, 'smoothing', value)
+        )
+      );
+      const efModeName = resolveEfModeName(ef) ?? efModeNames[0];
+      efFieldset.appendChild(
+        makeSelect(
+          'Detection mode',
+          efModeNames,
+          efModeName,
+          (value) => {
+            const idx = Math.max(0, efModeNames.indexOf(value));
+            stageSlotEnvelopeField(slotState.selected, 'mode', idx);
+          },
+          {
+            help: 'Choose how the follower detects level before modulation.',
+            formatOptionLabel: formatEfModeLabel,
+            describeOption: (value) => efModeDescriptions[value] ?? value
+          }
+        )
+      );
+      if (efModeName === 'PEAK' || efModeName === 'FOLLOWER') {
+        efFieldset.appendChild(
+          makeNumber('Attack time (ms)', ef.attackMs ?? 5, 1, 60000, 1, (value) =>
+            stageSlotEnvelopeField(slotState.selected, 'attackMs', value)
+          )
+        );
+        efFieldset.appendChild(
+          makeNumber('Release time (ms)', ef.releaseMs ?? 20, 1, 60000, 1, (value) =>
+            stageSlotEnvelopeField(slotState.selected, 'releaseMs', value)
+          )
+        );
+      }
+      if (efModeName === 'RMS') {
+        efFieldset.appendChild(
+          makeNumber('RMS window (ms)', ef.rmsWindowMs ?? 50, 1, 60000, 1, (value) =>
+            stageSlotEnvelopeField(slotState.selected, 'rmsWindowMs', value)
+          )
+        );
+      }
+      if (efModeName === 'GATE') {
+        efFieldset.appendChild(
+          makeNumber('Gate threshold', ef.gateThreshold ?? 16, 0, 127, 1, (value) =>
+            stageSlotEnvelopeField(slotState.selected, 'gateThreshold', value)
+          )
+        );
+        efFieldset.appendChild(
+          makeNumber('Gate hysteresis', ef.gateHysteresis ?? 4, 0, 127, 1, (value) =>
+            stageSlotEnvelopeField(slotState.selected, 'gateHysteresis', value)
+          )
+        );
+      }
+      efFieldset.appendChild(
+        makeToggle('Auto-baseline', !!ef.autoBaseline, (value) =>
+          stageSlotEnvelopeField(slotState.selected, 'autoBaseline', value)
+        )
+      );
+      efFieldset.appendChild(
+        makeToggle('Auto-gain', !!ef.autoGain, (value) =>
+          stageSlotEnvelopeField(slotState.selected, 'autoGain', value)
+        )
+      );
+      efFieldset.appendChild(
+        makeNumber('Activity threshold', ef.activityThreshold ?? 4, 0, 127, 1, (value) =>
+          stageSlotEnvelopeField(slotState.selected, 'activityThreshold', value)
+        )
+      );
+      efFieldset.appendChild(
+        makeNumber('Baseline time constant (ms)', ef.baselineTauMs ?? 2000, 1, 60000, 1, (value) =>
+          stageSlotEnvelopeField(slotState.selected, 'baselineTauMs', value)
+        )
+      );
+      efFieldset.appendChild(
+        makeNumber('Gain time constant (ms)', ef.gainTauMs ?? 3000, 1, 60000, 1, (value) =>
+          stageSlotEnvelopeField(slotState.selected, 'gainTauMs', value)
+        )
+      );
+      efFieldset.appendChild(
+        makeNumber('Auto-gain target', ef.gainTarget ?? 102, 0, 127, 1, (value) =>
+          stageSlotEnvelopeField(slotState.selected, 'gainTarget', value)
         )
       );
       efFieldset.appendChild(
@@ -562,11 +647,14 @@ export function createSlotEditorPanel({
   // Summarize EF dynamics-related tuning for the detail card.
   function formatEfDynamics(ef) {
     if (!ef) return '—';
+    const modeName = resolveEfModeName(ef);
     const oversample = Number.isFinite(Number(ef.oversample)) ? Number(ef.oversample) : null;
     const smoothing = formatNumberField(ef.smoothing, 2);
-    const oversampleLabel = oversample !== null ? `×${oversample}` : '—';
-    if (oversampleLabel === '—' && smoothing === '—') return '—';
-    return `Oversample ${oversampleLabel} • Smoothing ${smoothing}`;
+    const pieces = [];
+    if (modeName) pieces.push(formatEfModeLabel(modeName));
+    if (oversample !== null) pieces.push(`Oversample ×${oversample}`);
+    if (smoothing !== '—') pieces.push(`Smoothing ${smoothing}`);
+    return pieces.length ? pieces.join(' • ') : '—';
   }
 
   // Summarize EF baseline/gain tuning for the detail card.
@@ -629,7 +717,19 @@ export function createSlotEditorPanel({
       oversample: 4,
       smoothing: 0.2,
       baseline: 0,
-      gain: 1
+      gain: 1,
+      mode: 0,
+      autoBaseline: true,
+      autoGain: true,
+      attackMs: 5,
+      releaseMs: 20,
+      rmsWindowMs: 50,
+      baselineTauMs: 2000,
+      gainTauMs: 3000,
+      gateThreshold: 16,
+      gateHysteresis: 4,
+      activityThreshold: 4,
+      gainTarget: 102
     };
     const index = Number.isFinite(slot?.efIndex)
       ? Number(slot.efIndex)
@@ -662,8 +762,84 @@ export function createSlotEditorPanel({
       ? Number(base.baseline)
       : defaults.baseline;
     base.gain = Number.isFinite(Number(base.gain)) ? Number(base.gain) : defaults.gain;
+    if (base.autoBaseline === undefined) base.autoBaseline = base.auto_baseline;
+    if (base.autoGain === undefined) base.autoGain = base.auto_gain;
+    if (base.attackMs === undefined) base.attackMs = base.attack_ms;
+    if (base.releaseMs === undefined) base.releaseMs = base.release_ms;
+    if (base.rmsWindowMs === undefined) base.rmsWindowMs = base.rms_ms;
+    if (base.baselineTauMs === undefined) base.baselineTauMs = base.baseline_tau_ms;
+    if (base.gainTauMs === undefined) base.gainTauMs = base.gain_tau_ms;
+    if (base.gateThreshold === undefined) base.gateThreshold = base.gate_threshold;
+    if (base.gateHysteresis === undefined) base.gateHysteresis = base.gate_hysteresis;
+    if (base.activityThreshold === undefined) base.activityThreshold = base.activity_threshold;
+    if (base.gainTarget === undefined) base.gainTarget = base.gain_target;
+    if (typeof base.mode === 'string') {
+      const idx = efModeNames.indexOf(base.mode.toUpperCase());
+      base.mode = idx >= 0 ? idx : defaults.mode;
+    }
+    base.mode = Number.isFinite(Number(base.mode))
+      ? Math.max(0, Math.min(efModeNames.length - 1, Math.round(Number(base.mode))))
+      : defaults.mode;
+    base.autoBaseline =
+      base.autoBaseline === undefined ? defaults.autoBaseline : Boolean(base.autoBaseline);
+    base.autoGain = base.autoGain === undefined ? defaults.autoGain : Boolean(base.autoGain);
+    base.attackMs = Number.isFinite(Number(base.attackMs))
+      ? Math.max(1, Math.min(60000, Math.round(Number(base.attackMs))))
+      : defaults.attackMs;
+    base.releaseMs = Number.isFinite(Number(base.releaseMs))
+      ? Math.max(1, Math.min(60000, Math.round(Number(base.releaseMs))))
+      : defaults.releaseMs;
+    base.rmsWindowMs = Number.isFinite(Number(base.rmsWindowMs))
+      ? Math.max(1, Math.min(60000, Math.round(Number(base.rmsWindowMs))))
+      : defaults.rmsWindowMs;
+    base.baselineTauMs = Number.isFinite(Number(base.baselineTauMs))
+      ? Math.max(1, Math.min(60000, Math.round(Number(base.baselineTauMs))))
+      : defaults.baselineTauMs;
+    base.gainTauMs = Number.isFinite(Number(base.gainTauMs))
+      ? Math.max(1, Math.min(60000, Math.round(Number(base.gainTauMs))))
+      : defaults.gainTauMs;
+    base.gateThreshold = Number.isFinite(Number(base.gateThreshold))
+      ? Math.max(0, Math.min(127, Math.round(Number(base.gateThreshold))))
+      : defaults.gateThreshold;
+    base.gateHysteresis = Number.isFinite(Number(base.gateHysteresis))
+      ? Math.max(0, Math.min(127, Math.round(Number(base.gateHysteresis))))
+      : defaults.gateHysteresis;
+    base.activityThreshold = Number.isFinite(Number(base.activityThreshold))
+      ? Math.max(0, Math.min(127, Math.round(Number(base.activityThreshold))))
+      : defaults.activityThreshold;
+    base.gainTarget = Number.isFinite(Number(base.gainTarget))
+      ? Math.max(0, Math.min(127, Math.round(Number(base.gainTarget))))
+      : defaults.gainTarget;
     base.index = index;
     return base;
+  }
+
+  function resolveEfModeName(ef) {
+    if (!ef) return null;
+    if (typeof ef.mode === 'string') {
+      const upper = ef.mode.toUpperCase();
+      return efModeNames.includes(upper) ? upper : null;
+    }
+    const index = Number(ef.mode);
+    if (Number.isFinite(index)) {
+      return efModeNames[index] || null;
+    }
+    return null;
+  }
+
+  function formatEfModeLabel(mode) {
+    switch (mode) {
+      case 'PEAK':
+        return 'Peak';
+      case 'RMS':
+        return 'RMS';
+      case 'GATE':
+        return 'Gate';
+      case 'FOLLOWER':
+        return 'Follower';
+      default:
+        return mode ?? 'Mode';
+    }
   }
 
   // Fill in missing ARG defaults and clamp sources against the current manifest.

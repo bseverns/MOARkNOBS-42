@@ -116,7 +116,76 @@
                 "maximum": 1
               },
               "baseline": { "type": "number", "title": "Baseline offset" },
-              "gain": { "type": "number", "title": "Gain" }
+              "gain": { "type": "number", "title": "Gain" },
+              "mode": {
+                "type": "integer",
+                "title": "Detection mode",
+                "description": "Envelope detection mode: Peak, RMS, Gate, or Follower.",
+                "minimum": 0,
+                "maximum": 3
+              },
+              "autoBaseline": {
+                "type": "boolean",
+                "title": "Auto-baseline"
+              },
+              "autoGain": {
+                "type": "boolean",
+                "title": "Auto-gain"
+              },
+              "attackMs": {
+                "type": "integer",
+                "title": "Attack time (ms)",
+                "minimum": 1,
+                "maximum": 60000
+              },
+              "releaseMs": {
+                "type": "integer",
+                "title": "Release time (ms)",
+                "minimum": 1,
+                "maximum": 60000
+              },
+              "rmsWindowMs": {
+                "type": "integer",
+                "title": "RMS window (ms)",
+                "minimum": 1,
+                "maximum": 60000
+              },
+              "baselineTauMs": {
+                "type": "integer",
+                "title": "Baseline time constant (ms)",
+                "minimum": 1,
+                "maximum": 60000
+              },
+              "gainTauMs": {
+                "type": "integer",
+                "title": "Gain time constant (ms)",
+                "minimum": 1,
+                "maximum": 60000
+              },
+              "gateThreshold": {
+                "type": "integer",
+                "title": "Gate threshold",
+                "minimum": 0,
+                "maximum": 127
+              },
+              "gateHysteresis": {
+                "type": "integer",
+                "title": "Gate hysteresis",
+                "minimum": 0,
+                "maximum": 127
+              },
+              "activityThreshold": {
+                "type": "integer",
+                "title": "Activity threshold",
+                "minimum": 0,
+                "maximum": 127
+              },
+              "gainTarget": {
+                "type": "integer",
+                "title": "Auto-gain target",
+                "minimum": 0,
+                "maximum": 127
+              }
             },
             "additionalProperties": false
           },

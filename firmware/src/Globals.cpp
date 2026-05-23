@@ -68,6 +68,9 @@ std::array<float, 2> g_lfoValues = {0.0f, 0.0f}; // Normalized LFO outputs
 // Note dynamics knobs
 int8_t velocityShift = 0;
 uint8_t changeProbability = 100;
+bool g_noteDynamicsRemoteControlActive = false;
+bool g_noteDynamicsShiftLatched = false;
+bool g_noteDynamicsProbabilityLatched = false;
 
 // Display timing defaults (overridden by firmware_main.cpp when linked).
 int NORMAL_DISPLAY_TIME __attribute__((weak)) = 30000;
@@ -79,6 +82,9 @@ JitterSettings g_jitterSettings = {
     0.5f,
 };
 bool g_jitterTuningActive = false;
+bool g_jitterRemoteControlActive = false;
+bool g_jitterDepthLatched = false;
+bool g_jitterSmoothnessLatched = false;
 bool g_arpEditActive = false;                  // Arp edit mode held by combo in ButtonManager
 uint8_t g_activeProfile = 0;                   // Active profile index (persisted in EEPROM)
 bool g_profileChangeRequested = false;         // Flag for main loop profile reload

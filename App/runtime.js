@@ -475,7 +475,11 @@ export function createRuntime({
             profile_load: true,
             profile_reset: true,
             macro_snapshot: true,
-            scenes: true
+            scenes: true,
+            clock_live: true,
+            usb_midi_toggle: true,
+            note_dynamics_live: true,
+            jitter_live: true
           }
         }),
       argMethodNames: ARG_METHOD_NAMES,

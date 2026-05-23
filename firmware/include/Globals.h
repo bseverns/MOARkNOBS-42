@@ -223,6 +223,9 @@ extern bool webSerialStreaming;
 // Note dynamics from the "Freq" and "Q" control pots
 extern int8_t velocityShift;      //!< -64..+63 shove applied to outgoing note velocity
 extern uint8_t changeProbability; //!< 0-100% chance a moved pot actually slings a new note
+extern bool g_noteDynamicsRemoteControlActive;
+extern bool g_noteDynamicsShiftLatched;
+extern bool g_noteDynamicsProbabilityLatched;
 
 // Global Perlin jitter controls shared by arpeggiator + random EF filters.
 struct JitterSettings {
@@ -232,6 +235,9 @@ struct JitterSettings {
 
 extern JitterSettings g_jitterSettings;
 extern bool g_jitterTuningActive;
+extern bool g_jitterRemoteControlActive;
+extern bool g_jitterDepthLatched;
+extern bool g_jitterSmoothnessLatched;
 extern bool g_arpEditActive;          //!< True while the arp edit combo is held
 extern uint8_t g_activeProfile;       //!< Current profile index (0..NUM_PROFILES-1)
 extern bool g_profileChangeRequested; //!< Signal to reload profile data in main loop

@@ -64,6 +64,24 @@ USB configurator mode and consumes the marker; normal power-up defaults to the
 standalone runtime so USB MIDI remains available without opening the configurator
 or bridge first.
 
+Live runtime controls exposed over the configurator/native protocol:
+
+```text
+GET_NOTE_DYNAMICS
+SET_NOTE_DYNAMICS,<velocityShift>,<changeProbability>
+GET_JITTER
+SET_JITTER,<depth>,<smoothness>
+GET_CLOCK
+SET_CLOCK,<followExternal>,<clockOutEnabled>,<tappedBpm>
+GET_USB_MIDI
+SET_USB_MIDI,<0|1>
+```
+
+`SET_NOTE_DYNAMICS` clamps to `-64..63` and `0..100`. `SET_JITTER` clamps both
+values to `0.0..1.0`. `SET_CLOCK` clamps the internal tempo to `20..300 BPM`.
+The firmware advertises these lanes in the manifest so the browser configurator
+can fail closed on older builds.
+
 ## Important Test Contract
 
 - PlatformIO project root is `firmware/`.

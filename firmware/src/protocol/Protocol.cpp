@@ -1184,10 +1184,13 @@ void handleArpStartCommand(const ParsedCommand &cmd);
 void handleArpStopCommand(const ParsedCommand &cmd);
 void handleGetArgMethodCommand(const ParsedCommand &cmd);
 void handleGetBrownoutsCommand(const ParsedCommand &cmd);
+void handleGetClockCommand(const ParsedCommand &cmd);
 void handleGetConfigCommand(const ParsedCommand &cmd);
 void handleGetEfCommand(const ParsedCommand &cmd);
+void handleGetJitterCommand(const ParsedCommand &cmd);
 void handleGetLedCommand(const ParsedCommand &cmd);
 void handleGetManifestCommand(const ParsedCommand &cmd);
+void handleGetNoteDynamicsCommand(const ParsedCommand &cmd);
 void handleGetProfileCommand(const ParsedCommand &cmd);
 void handleGetSchemaCommand(const ParsedCommand &cmd);
 void handleGetUsbMidiCommand(const ParsedCommand &cmd);
@@ -1200,9 +1203,12 @@ void handleSaveProfileCommand(const ParsedCommand &cmd);
 void handleSaveMacroSlotCommand(const ParsedCommand &cmd);
 void handleSetAllCommand(const ParsedCommand &cmd);
 void handleSetArgMethodCommand(const ParsedCommand &cmd);
+void handleSetClockCommand(const ParsedCommand &cmd);
 void handleSetEfCommand(const ParsedCommand &cmd);
 void handleSetEfIdleFloorCommand(const ParsedCommand &cmd);
+void handleSetJitterCommand(const ParsedCommand &cmd);
 void handleSetLedCommand(const ParsedCommand &cmd);
+void handleSetNoteDynamicsCommand(const ParsedCommand &cmd);
 void handleSetPotCommand(const ParsedCommand &cmd);
 void handleSetProfileCommand(const ParsedCommand &cmd);
 void handleSetSlotValueCommand(const ParsedCommand &cmd);
@@ -1216,10 +1222,13 @@ const CommandHandler kCommandHandlers[] = {
     {"GET_ALL", handleGetAllCommand},
     {"GET_ARGMETHOD", handleGetArgMethodCommand},
     {"GET_BROWNOUTS", handleGetBrownoutsCommand},
+    {"GET_CLOCK", handleGetClockCommand},
     {"GET_CONFIG", handleGetConfigCommand},
     {"GET_EF", handleGetEfCommand},
+    {"GET_JITTER", handleGetJitterCommand},
     {"GET_LED", handleGetLedCommand},
     {"GET_MANIFEST", handleGetManifestCommand},
+    {"GET_NOTE_DYNAMICS", handleGetNoteDynamicsCommand},
     {"GET_PROFILE", handleGetProfileCommand},
     {"GET_SCHEMA", handleGetSchemaCommand},
     {"GET_USB_MIDI", handleGetUsbMidiCommand},
@@ -1231,9 +1240,12 @@ const CommandHandler kCommandHandlers[] = {
     {"SAVE_PROFILE", handleSaveProfileCommand},
     {"SET_ALL", handleSetAllCommand},
     {"SET_ARGMETHOD", handleSetArgMethodCommand},
+    {"SET_CLOCK", handleSetClockCommand},
     {"SET_EF", handleSetEfCommand},
     {"SET_EF_IDLE_FLOOR", handleSetEfIdleFloorCommand},
+    {"SET_JITTER", handleSetJitterCommand},
     {"SET_LED", handleSetLedCommand},
+    {"SET_NOTE_DYNAMICS", handleSetNoteDynamicsCommand},
     {"SET_POT", handleSetPotCommand},
     {"SET_PROFILE", handleSetProfileCommand},
     {"SET_SLOT_VALUE", handleSetSlotValueCommand},
@@ -1327,6 +1339,10 @@ void handleGetBrownoutsCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetBrownoutsCommand(cmd.fullCommand());
 }
 
+void handleGetClockCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetClockCommand(cmd.fullCommand());
+}
+
 void handleGetConfigCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetConfigCommand(cmd.fullCommand());
 }
@@ -1335,12 +1351,20 @@ void handleGetEfCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetEfCommand(cmd.fullCommand());
 }
 
+void handleGetJitterCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetJitterCommand(cmd.fullCommand());
+}
+
 void handleGetLedCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetLedCommand(cmd.fullCommand());
 }
 
 void handleGetManifestCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetManifestCommand(cmd.fullCommand());
+}
+
+void handleGetNoteDynamicsCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetNoteDynamicsCommand(cmd.fullCommand());
 }
 
 void handleGetProfileCommand(const ParsedCommand &cmd) {
@@ -1475,6 +1499,10 @@ void handleSetArgMethodCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetArgMethodCommand(cmd.fullCommand());
 }
 
+void handleSetClockCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleSetClockCommand(cmd.fullCommand());
+}
+
 void handleSetEfCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetEfCommand(cmd.fullCommand());
 }
@@ -1498,8 +1526,16 @@ void handleSetEfIdleFloorCommand(const ParsedCommand &cmd) {
                floor);
 }
 
+void handleSetJitterCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleSetJitterCommand(cmd.fullCommand());
+}
+
 void handleSetLedCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetLedCommand(cmd.fullCommand());
+}
+
+void handleSetNoteDynamicsCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleSetNoteDynamicsCommand(cmd.fullCommand());
 }
 
 void handleSetPotCommand(const ParsedCommand &cmd) {

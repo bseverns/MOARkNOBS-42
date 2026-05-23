@@ -1,5 +1,10 @@
 const PROFILE_SLOT_LABELS = ['A', 'B', 'C', 'D'];
 
+function slotTypeCssToken(type) {
+  if (typeof type !== 'string' || !type.trim()) return 'off';
+  return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
 function initializeMeters(container, count, labelPrefix) {
   if (!container) return [];
   container.innerHTML = '';
@@ -94,6 +99,7 @@ export function createPerformerPanelController({
         const slot = source[index];
         const state = cell.querySelector('.stage-slot-type');
         if (state) state.textContent = slotTypeAbbreviations[slot?.type] ?? slot?.type ?? '-';
+        cell.dataset.slotType = slotTypeCssToken(slot?.type);
       });
       return;
     }
@@ -103,6 +109,7 @@ export function createPerformerPanelController({
       const cell = document.createElement('div');
       cell.className = 'stage-slot-cell';
       cell.dataset.index = String(index);
+      cell.dataset.slotType = slotTypeCssToken(slot?.type);
 
       const label = document.createElement('span');
       label.className = 'stage-slot-label';

@@ -566,9 +566,27 @@ void updateNoteDynamics() {
 
     int rawShift = buttonManager.getControlPotValue(1);
     int rawProb = buttonManager.getControlPotValue(2);
+    const int mappedShift = map(rawShift, 0, 1023, -64, 63);
+    const uint8_t mappedProbability = static_cast<uint8_t>(map(rawProb, 0, 1023, 0, 100));
 
-    velocityShift = map(rawShift, 0, 1023, -64, 63);
-    changeProbability = static_cast<uint8_t>(map(rawProb, 0, 1023, 0, 100));
+    if (g_noteDynamicsRemoteControlActive) {
+        if (!g_noteDynamicsShiftLatched &&
+            abs(mappedShift - static_cast<int>(velocityShift)) <= 2) {
+            g_noteDynamicsShiftLatched = true;
+        }
+        if (!g_noteDynamicsProbabilityLatched &&
+            abs(static_cast<int>(mappedProbability) - static_cast<int>(changeProbability)) <= 2) {
+            g_noteDynamicsProbabilityLatched = true;
+        }
+        if (!(g_noteDynamicsShiftLatched && g_noteDynamicsProbabilityLatched)) {
+            setNoteDynamicsOverlay(static_cast<int8_t>(velocityShift), changeProbability);
+            return;
+        }
+        g_noteDynamicsRemoteControlActive = false;
+    }
+
+    velocityShift = static_cast<int8_t>(mappedShift);
+    changeProbability = mappedProbability;
     setNoteDynamicsOverlay(static_cast<int8_t>(velocityShift), changeProbability);
 }
 

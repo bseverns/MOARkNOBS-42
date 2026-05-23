@@ -207,6 +207,15 @@
               <p class="microcopy">42 slots</p>
             </header>
             <div id="stage-slots" class="stage-slot-grid" aria-label="Stage slot activity"></div>
+            <div class="slot-type-legend" aria-label="Slot type legend">
+              <span class="slot-type-key" data-slot-type="off">OFF</span>
+              <span class="slot-type-key" data-slot-type="cc">CC</span>
+              <span class="slot-type-key" data-slot-type="note">NOTE</span>
+              <span class="slot-type-key" data-slot-type="programchange">PC</span>
+              <span class="slot-type-key" data-slot-type="pitchbend">PB</span>
+              <span class="slot-type-key" data-slot-type="nrpn">NRPN</span>
+              <span class="slot-type-key" data-slot-type="sysex">SX</span>
+            </div>
           </section>
           <section class="performer-block" aria-labelledby="stage-env-title">
             <header>
@@ -225,6 +234,15 @@
             <p class="microcopy">Six columns to mirror the PCB. Click a slot or ride the arrow keys to roam.</p>
           </header>
           <div id="slots" class="button-grid" tabindex="0" aria-label="Slot overview"></div>
+          <div class="slot-type-legend" aria-label="Slot type legend">
+            <span class="slot-type-key" data-slot-type="off">OFF</span>
+            <span class="slot-type-key" data-slot-type="cc">CC</span>
+            <span class="slot-type-key" data-slot-type="note">NOTE</span>
+            <span class="slot-type-key" data-slot-type="programchange">PC</span>
+            <span class="slot-type-key" data-slot-type="pitchbend">PB</span>
+            <span class="slot-type-key" data-slot-type="nrpn">NRPN</span>
+            <span class="slot-type-key" data-slot-type="sysex">SX</span>
+          </div>
           <section class="live-block" aria-labelledby="envelope-heading">
             <h3 id="envelope-heading">Envelope Levels</h3>
             <div id="envelopes"></div>
@@ -321,7 +339,7 @@
           </div>
           <fieldset id="ef-assignment-card" data-ui-tier="advanced">
             <legend>Envelope Assignments</legend>
-            <p class="microcopy">Tell each follower which slots to stalk — comma-separate zero-based slot indices.</p>
+            <p class="microcopy">Click slot chips to assign or unassign each follower. One follower can stalk multiple slots.</p>
             <div class="ef-grid"></div>
           </fieldset>
         </section>
@@ -397,6 +415,28 @@
               Connect to inspect USB MIDI output state.
             </p>
           </section>
+          <section class="live-toggle-card" aria-labelledby="note-dynamics-title">
+            <header class="live-toggle-card-header">
+              <h3 id="note-dynamics-title">Note Dynamics</h3>
+              <p class="microcopy">Live note velocity and note-chance controls. Hardware pots use soft takeover after browser updates.</p>
+            </header>
+            <div class="live-control-grid">
+              <label>
+                <span>Velocity shift</span>
+                <input id="note-dynamics-velocity" type="number" min="-64" max="63" step="1" disabled />
+              </label>
+              <label>
+                <span>Chance %</span>
+                <input id="note-dynamics-probability" type="number" min="0" max="100" step="1" disabled />
+              </label>
+            </div>
+            <div class="live-toggle-actions">
+              <button id="note-dynamics-apply" type="button" disabled>Push note dynamics</button>
+            </div>
+            <p class="microcopy macro-status" id="note-dynamics-status" data-state="muted" aria-live="polite">
+              Connect to inspect live note dynamics.
+            </p>
+          </section>
           <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
             <legend>Filter</legend>
             <div class="schema-section-body" data-schema-target="filter"
@@ -455,6 +495,38 @@
                 </label>
                 <button id="midi-clock-toggle" type="button" disabled>Start clock</button>
               </div>
+              <section class="live-toggle-card" aria-labelledby="device-clock-title">
+                <header class="live-toggle-card-header">
+                  <h3 id="device-clock-title">Device Clock</h3>
+                  <p class="microcopy">Live firmware clock source, internal BPM, and clock-out settings.</p>
+                </header>
+                <div class="live-control-grid">
+                  <label>
+                    <span>Clock source</span>
+                    <select id="device-clock-source" disabled>
+                      <option value="external">Follow External</option>
+                      <option value="internal">Force Internal</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Internal BPM</span>
+                    <input id="device-clock-bpm" type="number" min="20" max="300" step="0.1" disabled />
+                  </label>
+                  <label>
+                    <span>Clock out</span>
+                    <select id="device-clock-out" disabled>
+                      <option value="on">On</option>
+                      <option value="off">Off</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="live-toggle-actions">
+                  <button id="device-clock-apply" type="button" disabled>Push clock settings</button>
+                </div>
+                <p class="microcopy macro-status" id="device-clock-status" data-state="muted" aria-live="polite">
+                  Connect to inspect live device clock state.
+                </p>
+              </section>
               <div class="midi-log" role="log" aria-live="polite" aria-label="MIDI message log">
                 <div class="midi-log-body" id="midi-log-body"></div>
               </div>
@@ -521,6 +593,28 @@
                 <input id="arp-octave" type="number" min="0" max="3" step="1" />
               </label>
             </div>
+            <section class="live-toggle-card" aria-labelledby="jitter-title">
+              <header class="live-toggle-card-header">
+                <h3 id="jitter-title">Jitter</h3>
+                <p class="microcopy">Live Perlin jitter tuning shared by random EF shapes and arpeggiator behavior.</p>
+              </header>
+              <div class="live-control-grid">
+                <label>
+                  <span>Depth</span>
+                  <input id="jitter-depth" type="number" min="0" max="1" step="0.01" disabled />
+                </label>
+                <label>
+                  <span>Smoothness</span>
+                  <input id="jitter-smoothness" type="number" min="0" max="1" step="0.01" disabled />
+                </label>
+              </div>
+              <div class="live-toggle-actions">
+                <button id="jitter-apply" type="button" disabled>Push jitter</button>
+              </div>
+              <p class="microcopy macro-status" id="jitter-status" data-state="muted" aria-live="polite">
+                Connect to inspect live jitter tuning.
+              </p>
+            </section>
             <div class="arp-actions" role="group" aria-label="Arpeggiator profile actions">
               <button id="arp-refresh" type="button" disabled>Load slot arp</button>
               <button id="arp-save" type="button" disabled>Save slot arp</button>

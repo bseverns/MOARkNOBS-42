@@ -52,6 +52,12 @@ export function createRpcKernel({
         return { kind: 'manifest', lines: ['GET_MANIFEST'] };
       case 'get_profile':
         return { kind: 'profile_get', lines: [`GET_PROFILE,${Number(message.slot) || 0}`] };
+      case 'get_clock':
+        return { kind: 'clock_get', lines: ['GET_CLOCK'] };
+      case 'get_jitter':
+        return { kind: 'jitter_get', lines: ['GET_JITTER'] };
+      case 'get_note_dynamics':
+        return { kind: 'note_dynamics_get', lines: ['GET_NOTE_DYNAMICS'] };
       case 'get_usb_midi':
         return { kind: 'usb_midi_get', lines: ['GET_USB_MIDI'] };
       case 'get_config':
@@ -73,6 +79,33 @@ export function createRpcKernel({
           lines: [`SET_PROFILE,${Number(message.slot) || 0},${payload}`]
         };
       }
+      case 'set_clock':
+        return {
+          kind: 'clock_set',
+          lines: [
+            `SET_CLOCK,${message.followExternal ? 1 : 0},${
+              message.clockOutEnabled ? 1 : 0
+            },${Number(message.tappedBpm ?? 120).toFixed(2)}`
+          ]
+        };
+      case 'set_jitter':
+        return {
+          kind: 'jitter_set',
+          lines: [
+            `SET_JITTER,${Number(message.depth ?? 0).toFixed(3)},${Number(
+              message.smoothness ?? 0
+            ).toFixed(3)}`
+          ]
+        };
+      case 'set_note_dynamics':
+        return {
+          kind: 'note_dynamics_set',
+          lines: [
+            `SET_NOTE_DYNAMICS,${Math.round(Number(message.velocityShift) || 0)},${Math.round(
+              Number(message.changeProbability) || 0
+            )}`
+          ]
+        };
       case 'set_usb_midi':
         return {
           kind: 'usb_midi_set',

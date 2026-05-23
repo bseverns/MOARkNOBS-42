@@ -20,7 +20,7 @@
   --page-scale: 1;
   --slot-row-height: 82px;
   --slot-grid-rows: 7;
-  --ef-row-height: 44px;
+  --ef-row-height: 108px;
   --ef-row-count: 6;
   color-scheme: dark;
 }
@@ -368,6 +368,26 @@ body {
 
 .live-toggle-actions button {
   flex: 1;
+}
+
+.live-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.live-control-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.live-control-grid input,
+.live-control-grid select {
+  width: 100%;
 }
 
 .scene-card {
@@ -784,6 +804,40 @@ main {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.stage-slot-cell[data-slot-type='off'] {
+  border-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.stage-slot-cell[data-slot-type='cc'] {
+  border-color: rgba(45, 226, 230, 0.18);
+  background: rgba(45, 226, 230, 0.06);
+}
+
+.stage-slot-cell[data-slot-type='note'] {
+  border-color: rgba(255, 206, 107, 0.24);
+  background: rgba(255, 206, 107, 0.08);
+}
+
+.stage-slot-cell[data-slot-type='programchange'],
+.stage-slot-cell[data-slot-type='pitchbend'],
+.stage-slot-cell[data-slot-type='aftertouch'],
+.stage-slot-cell[data-slot-type='modwheel'] {
+  border-color: rgba(125, 208, 255, 0.2);
+  background: rgba(125, 208, 255, 0.07);
+}
+
+.stage-slot-cell[data-slot-type='nrpn'],
+.stage-slot-cell[data-slot-type='rpn'] {
+  border-color: rgba(255, 95, 150, 0.2);
+  background: rgba(255, 95, 150, 0.07);
+}
+
+.stage-slot-cell[data-slot-type='sysex'] {
+  border-color: rgba(126, 255, 160, 0.2);
+  background: rgba(126, 255, 160, 0.07);
+}
+
 .stage-slot-cell.active {
   border-color: rgba(45, 226, 230, 0.35);
   background: rgba(45, 226, 230, 0.1);
@@ -918,6 +972,40 @@ main {
   transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
+.slot-button[data-slot-type='off'] {
+  border-color: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.014);
+}
+
+.slot-button[data-slot-type='cc'] {
+  border-color: rgba(45, 226, 230, 0.16);
+  background: rgba(45, 226, 230, 0.045);
+}
+
+.slot-button[data-slot-type='note'] {
+  border-color: rgba(255, 206, 107, 0.18);
+  background: rgba(255, 206, 107, 0.05);
+}
+
+.slot-button[data-slot-type='programchange'],
+.slot-button[data-slot-type='pitchbend'],
+.slot-button[data-slot-type='aftertouch'],
+.slot-button[data-slot-type='modwheel'] {
+  border-color: rgba(125, 208, 255, 0.18);
+  background: rgba(125, 208, 255, 0.05);
+}
+
+.slot-button[data-slot-type='nrpn'],
+.slot-button[data-slot-type='rpn'] {
+  border-color: rgba(255, 95, 150, 0.18);
+  background: rgba(255, 95, 150, 0.05);
+}
+
+.slot-button[data-slot-type='sysex'] {
+  border-color: rgba(126, 255, 160, 0.18);
+  background: rgba(126, 255, 160, 0.05);
+}
+
 .slot-button:hover,
 .slot-button:focus-visible {
   transform: translateY(-1px);
@@ -977,6 +1065,57 @@ main {
 
 .slot-button .takeover[aria-label='Immediate mode'] {
   color: rgba(247, 249, 255, 0.72);
+}
+
+.slot-type-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slot-type-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(247, 249, 255, 0.82);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.slot-type-key[data-slot-type='off'] {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.slot-type-key[data-slot-type='cc'] {
+  border-color: rgba(45, 226, 230, 0.24);
+  background: rgba(45, 226, 230, 0.08);
+}
+
+.slot-type-key[data-slot-type='note'] {
+  border-color: rgba(255, 206, 107, 0.24);
+  background: rgba(255, 206, 107, 0.08);
+}
+
+.slot-type-key[data-slot-type='programchange'],
+.slot-type-key[data-slot-type='pitchbend'] {
+  border-color: rgba(125, 208, 255, 0.24);
+  background: rgba(125, 208, 255, 0.08);
+}
+
+.slot-type-key[data-slot-type='nrpn'] {
+  border-color: rgba(255, 95, 150, 0.24);
+  background: rgba(255, 95, 150, 0.08);
+}
+
+.slot-type-key[data-slot-type='sysex'] {
+  border-color: rgba(126, 255, 160, 0.24);
+  background: rgba(126, 255, 160, 0.08);
 }
 
 .live-block {
@@ -1743,9 +1882,11 @@ label select:focus,
 .ef-row {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr);
-  grid-template-areas: 'label input';
-  gap: 10px;
-  align-items: center;
+  grid-template-areas:
+    'label summary'
+    'chips chips';
+  gap: 8px 10px;
+  align-items: start;
   width: 100%;
   padding: 6px 10px;
 }
@@ -1759,12 +1900,91 @@ label select:focus,
   color: rgba(247, 249, 255, 0.86);
 }
 
-.ef-row input[type='text'] {
-  grid-area: input;
-  width: 100%;
+.ef-row-summary {
+  grid-area: summary;
+  justify-self: end;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ef-chip-grid {
+  grid-area: chips;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ef-slot-chip {
+  min-height: 24px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(247, 249, 255, 0.76);
   font-family: var(--font-mono);
-  font-size: 0.84rem;
-  padding: 0.45rem 0.65rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.ef-slot-chip.assigned {
+  box-shadow: inset 0 0 0 1px rgba(247, 249, 255, 0.08);
+  color: rgba(247, 249, 255, 0.96);
+}
+
+.ef-slot-chip[data-slot-type='cc'] {
+  border-color: rgba(45, 226, 230, 0.22);
+  background: rgba(45, 226, 230, 0.07);
+}
+
+.ef-slot-chip[data-slot-type='note'] {
+  border-color: rgba(255, 206, 107, 0.22);
+  background: rgba(255, 206, 107, 0.07);
+}
+
+.ef-slot-chip[data-slot-type='programchange'],
+.ef-slot-chip[data-slot-type='pitchbend'],
+.ef-slot-chip[data-slot-type='aftertouch'],
+.ef-slot-chip[data-slot-type='modwheel'] {
+  border-color: rgba(125, 208, 255, 0.22);
+  background: rgba(125, 208, 255, 0.07);
+}
+
+.ef-slot-chip[data-slot-type='nrpn'],
+.ef-slot-chip[data-slot-type='rpn'] {
+  border-color: rgba(255, 95, 150, 0.22);
+  background: rgba(255, 95, 150, 0.07);
+}
+
+.ef-slot-chip[data-slot-type='sysex'] {
+  border-color: rgba(126, 255, 160, 0.22);
+  background: rgba(126, 255, 160, 0.07);
+}
+
+.ef-slot-chip.assigned[data-slot-type='cc'] {
+  background: rgba(45, 226, 230, 0.16);
+}
+
+.ef-slot-chip.assigned[data-slot-type='note'] {
+  background: rgba(255, 206, 107, 0.16);
+}
+
+.ef-slot-chip.assigned[data-slot-type='programchange'],
+.ef-slot-chip.assigned[data-slot-type='pitchbend'],
+.ef-slot-chip.assigned[data-slot-type='aftertouch'],
+.ef-slot-chip.assigned[data-slot-type='modwheel'] {
+  background: rgba(125, 208, 255, 0.16);
+}
+
+.ef-slot-chip.assigned[data-slot-type='nrpn'],
+.ef-slot-chip.assigned[data-slot-type='rpn'] {
+  background: rgba(255, 95, 150, 0.16);
+}
+
+.ef-slot-chip.assigned[data-slot-type='sysex'] {
+  background: rgba(126, 255, 160, 0.16);
 }
 
 .led-control {

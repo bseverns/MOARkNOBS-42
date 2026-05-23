@@ -1473,6 +1473,20 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         depth = constrain(depth, 0.0f, 1.0f);
         smooth = constrain(smooth, 0.0f, 1.0f);
 
+        if (g_jitterRemoteControlActive) {
+            if (!g_jitterDepthLatched && fabsf(depth - g_jitterSettings.depth) <= 0.02f) {
+                g_jitterDepthLatched = true;
+            }
+            if (!g_jitterSmoothnessLatched &&
+                fabsf(smooth - g_jitterSettings.smoothness) <= 0.02f) {
+                g_jitterSmoothnessLatched = true;
+            }
+            if (!(g_jitterDepthLatched && g_jitterSmoothnessLatched)) {
+                return;
+            }
+            g_jitterRemoteControlActive = false;
+        }
+
         bool depthChanged = (_lastJitterDepth < 0.0f) || (fabsf(depth - _lastJitterDepth) >= 0.01f);
         bool smoothChanged =
             (_lastJitterSmoothness < 0.0f) || (fabsf(smooth - _lastJitterSmoothness) >= 0.01f);

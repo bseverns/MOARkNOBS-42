@@ -25,13 +25,43 @@ export function createTransportToolbarController({
     connectionBanner = null,
     connectFailHelp = null,
     usbMidiToggleBtn = null,
-    usbMidiStatusEl = null
+    usbMidiStatusEl = null,
+    noteDynamicsVelocityInput = null,
+    noteDynamicsProbabilityInput = null,
+    noteDynamicsApplyBtn = null,
+    noteDynamicsStatusEl = null,
+    jitterDepthInput = null,
+    jitterSmoothnessInput = null,
+    jitterApplyBtn = null,
+    jitterStatusEl = null,
+    deviceClockSourceSelect = null,
+    deviceClockBpmInput = null,
+    deviceClockOutSelect = null,
+    deviceClockApplyBtn = null,
+    deviceClockStatusEl = null
   } = elements;
 
   let lastCompatibilityReport = null;
   let usbMidiToggleSupported = false;
   let usbMidiBusy = false;
   let usbMidiOutEnabled = false;
+  let noteDynamicsSupported = false;
+  let noteDynamicsBusy = false;
+  let velocityShift = 0;
+  let changeProbability = 100;
+  let jitterSupported = false;
+  let jitterBusy = false;
+  let jitterDepth = 1;
+  let jitterSmoothness = 0.5;
+  let clockSupported = false;
+  let clockBusy = false;
+  let clockFollowExternal = true;
+  let clockOutEnabled = false;
+  let clockTappedBpm = 120;
+  let clockExternalBpm = 0;
+  let clockSource = 'idle';
+  let clockRunning = false;
+  let clockExternalSignal = false;
 
   function usingSimulatorTransport() {
     return Boolean(simulatorToggle?.classList.contains('active'));
@@ -123,11 +153,71 @@ export function createTransportToolbarController({
     usbMidiStatusEl.textContent = message;
   }
 
+  function setNoteDynamicsStatus(state, message) {
+    if (!noteDynamicsStatusEl) return;
+    noteDynamicsStatusEl.dataset.state = state;
+    noteDynamicsStatusEl.textContent = message;
+  }
+
+  function setJitterStatus(state, message) {
+    if (!jitterStatusEl) return;
+    jitterStatusEl.dataset.state = state;
+    jitterStatusEl.textContent = message;
+  }
+
+  function setClockStatus(state, message) {
+    if (!deviceClockStatusEl) return;
+    deviceClockStatusEl.dataset.state = state;
+    deviceClockStatusEl.textContent = message;
+  }
+
+  function syncInputValue(input, value) {
+    if (!input) return;
+    if (typeof document !== 'undefined' && document.activeElement === input) return;
+    input.value = String(value);
+  }
+
   function updateUsbMidiControls() {
     if (!usbMidiToggleBtn) return;
     const connected = connectionPill?.dataset.stage === 'live';
     usbMidiToggleBtn.disabled = !connected || usbMidiBusy || !usbMidiToggleSupported;
     usbMidiToggleBtn.textContent = usbMidiOutEnabled ? 'USB MIDI On' : 'USB MIDI Off';
+  }
+
+  function updateNoteDynamicsControls() {
+    const connected = connectionPill?.dataset.stage === 'live';
+    const disabled = !connected || noteDynamicsBusy || !noteDynamicsSupported;
+    if (noteDynamicsVelocityInput) noteDynamicsVelocityInput.disabled = disabled;
+    if (noteDynamicsProbabilityInput) noteDynamicsProbabilityInput.disabled = disabled;
+    if (noteDynamicsApplyBtn) noteDynamicsApplyBtn.disabled = disabled;
+    syncInputValue(noteDynamicsVelocityInput, velocityShift);
+    syncInputValue(noteDynamicsProbabilityInput, changeProbability);
+  }
+
+  function updateJitterControls() {
+    const connected = connectionPill?.dataset.stage === 'live';
+    const disabled = !connected || jitterBusy || !jitterSupported;
+    if (jitterDepthInput) jitterDepthInput.disabled = disabled;
+    if (jitterSmoothnessInput) jitterSmoothnessInput.disabled = disabled;
+    if (jitterApplyBtn) jitterApplyBtn.disabled = disabled;
+    syncInputValue(jitterDepthInput, jitterDepth.toFixed(2));
+    syncInputValue(jitterSmoothnessInput, jitterSmoothness.toFixed(2));
+  }
+
+  function updateClockControls() {
+    const connected = connectionPill?.dataset.stage === 'live';
+    const disabled = !connected || clockBusy || !clockSupported;
+    if (deviceClockSourceSelect) deviceClockSourceSelect.disabled = disabled;
+    if (deviceClockBpmInput) deviceClockBpmInput.disabled = disabled;
+    if (deviceClockOutSelect) deviceClockOutSelect.disabled = disabled;
+    if (deviceClockApplyBtn) deviceClockApplyBtn.disabled = disabled;
+    if (deviceClockSourceSelect && document.activeElement !== deviceClockSourceSelect) {
+      deviceClockSourceSelect.value = clockFollowExternal ? 'external' : 'internal';
+    }
+    syncInputValue(deviceClockBpmInput, clockTappedBpm.toFixed(1));
+    if (deviceClockOutSelect && document.activeElement !== deviceClockOutSelect) {
+      deviceClockOutSelect.value = clockOutEnabled ? 'on' : 'off';
+    }
   }
 
   async function refreshUsbMidiState() {
@@ -159,6 +249,123 @@ export function createTransportToolbarController({
     }
   }
 
+  async function refreshNoteDynamicsState() {
+    if (!noteDynamicsSupported) {
+      setNoteDynamicsStatus('muted', 'This firmware does not expose live note dynamics.');
+      updateNoteDynamicsControls();
+      return;
+    }
+    if (connectionPill?.dataset.stage !== 'live') {
+      setNoteDynamicsStatus('muted', 'Connect to inspect live note dynamics.');
+      updateNoteDynamicsControls();
+      return;
+    }
+    noteDynamicsBusy = true;
+    updateNoteDynamicsControls();
+    setNoteDynamicsStatus('busy', 'Reading live note dynamics…');
+    try {
+      const response = await runtime.sendRpc(
+        { rpc: 'get_note_dynamics' },
+        { rollbackOnError: false }
+      );
+      velocityShift = Math.max(
+        -64,
+        Math.min(63, Math.round(Number(response?.velocity_shift) || 0))
+      );
+      changeProbability = Math.max(
+        0,
+        Math.min(100, Math.round(Number(response?.change_probability) || 0))
+      );
+      setNoteDynamicsStatus(
+        'ok',
+        `Velocity ${velocityShift >= 0 ? '+' : ''}${velocityShift} • Chance ${changeProbability}%`
+      );
+    } catch (err) {
+      setNoteDynamicsStatus('err', `Note dynamics read failed: ${err.message || String(err)}`);
+    } finally {
+      noteDynamicsBusy = false;
+      updateNoteDynamicsControls();
+    }
+  }
+
+  async function refreshJitterState() {
+    if (!jitterSupported) {
+      setJitterStatus('muted', 'This firmware does not expose live jitter tuning.');
+      updateJitterControls();
+      return;
+    }
+    if (connectionPill?.dataset.stage !== 'live') {
+      setJitterStatus('muted', 'Connect to inspect live jitter tuning.');
+      updateJitterControls();
+      return;
+    }
+    jitterBusy = true;
+    updateJitterControls();
+    setJitterStatus('busy', 'Reading live jitter tuning…');
+    try {
+      const response = await runtime.sendRpc({ rpc: 'get_jitter' }, { rollbackOnError: false });
+      jitterDepth = Math.max(0, Math.min(1, Number(response?.depth) || 0));
+      jitterSmoothness = Math.max(0, Math.min(1, Number(response?.smoothness) || 0));
+      setJitterStatus(
+        'ok',
+        `Depth ${jitterDepth.toFixed(2)} • Smoothness ${jitterSmoothness.toFixed(2)}`
+      );
+    } catch (err) {
+      setJitterStatus('err', `Jitter read failed: ${err.message || String(err)}`);
+    } finally {
+      jitterBusy = false;
+      updateJitterControls();
+    }
+  }
+
+  function formatClockStatus() {
+    const sourceLabel = clockSource || (clockFollowExternal ? 'external' : 'internal');
+    const extPart =
+      Number.isFinite(clockExternalBpm) && clockExternalBpm > 0
+        ? `Ext ${clockExternalBpm.toFixed(1)} BPM`
+        : 'Ext -';
+    return `${sourceLabel} • Int ${clockTappedBpm.toFixed(1)} BPM • ${extPart} • Out ${
+      clockOutEnabled ? 'on' : 'off'
+    }`;
+  }
+
+  async function refreshClockState() {
+    if (!clockSupported) {
+      setClockStatus('muted', 'This firmware does not expose live clock control.');
+      updateClockControls();
+      return;
+    }
+    if (connectionPill?.dataset.stage !== 'live') {
+      setClockStatus('muted', 'Connect to inspect live device clock state.');
+      updateClockControls();
+      return;
+    }
+    clockBusy = true;
+    updateClockControls();
+    setClockStatus('busy', 'Reading device clock state…');
+    try {
+      const response = await runtime.sendRpc({ rpc: 'get_clock' }, { rollbackOnError: false });
+      clockFollowExternal = Boolean(response?.follow_external);
+      clockOutEnabled = Boolean(response?.clock_out_enabled);
+      clockTappedBpm = Math.max(20, Math.min(300, Number(response?.tapped_bpm) || 120));
+      clockExternalBpm = Math.max(0, Number(response?.external_bpm) || 0);
+      clockSource =
+        typeof response?.source === 'string'
+          ? response.source
+          : clockFollowExternal
+            ? 'external'
+            : 'internal';
+      clockRunning = Boolean(response?.running);
+      clockExternalSignal = Boolean(response?.external_signal);
+      setClockStatus('ok', formatClockStatus());
+    } catch (err) {
+      setClockStatus('err', `Clock read failed: ${err.message || String(err)}`);
+    } finally {
+      clockBusy = false;
+      updateClockControls();
+    }
+  }
+
   async function toggleUsbMidi() {
     if (!usbMidiToggleSupported || usbMidiBusy) return;
     usbMidiBusy = true;
@@ -185,6 +392,118 @@ export function createTransportToolbarController({
     } finally {
       usbMidiBusy = false;
       updateUsbMidiControls();
+    }
+  }
+
+  async function applyNoteDynamics() {
+    if (!noteDynamicsSupported || noteDynamicsBusy) return;
+    const nextVelocity = Math.max(
+      -64,
+      Math.min(63, Math.round(Number(noteDynamicsVelocityInput?.value) || 0))
+    );
+    const nextProbability = Math.max(
+      0,
+      Math.min(100, Math.round(Number(noteDynamicsProbabilityInput?.value) || 0))
+    );
+    noteDynamicsBusy = true;
+    updateNoteDynamicsControls();
+    setNoteDynamicsStatus('busy', 'Updating live note dynamics…');
+    try {
+      const response = await runtime.sendRpc({
+        rpc: 'set_note_dynamics',
+        velocityShift: nextVelocity,
+        changeProbability: nextProbability
+      });
+      velocityShift = Math.max(
+        -64,
+        Math.min(63, Math.round(Number(response?.velocity_shift) || 0))
+      );
+      changeProbability = Math.max(
+        0,
+        Math.min(100, Math.round(Number(response?.change_probability) || 0))
+      );
+      setNoteDynamicsStatus(
+        'ok',
+        `Velocity ${velocityShift >= 0 ? '+' : ''}${velocityShift} • Chance ${changeProbability}%`
+      );
+      setStatus(
+        'ok',
+        'Note dynamics updated',
+        'Live note velocity and chance updated on the device.'
+      );
+    } catch (err) {
+      setNoteDynamicsStatus('err', `Note dynamics update failed: ${err.message || String(err)}`);
+      setStatus('err', 'Note dynamics update failed', err.message || String(err));
+    } finally {
+      noteDynamicsBusy = false;
+      updateNoteDynamicsControls();
+    }
+  }
+
+  async function applyJitter() {
+    if (!jitterSupported || jitterBusy) return;
+    const nextDepth = Math.max(0, Math.min(1, Number(jitterDepthInput?.value) || 0));
+    const nextSmoothness = Math.max(0, Math.min(1, Number(jitterSmoothnessInput?.value) || 0));
+    jitterBusy = true;
+    updateJitterControls();
+    setJitterStatus('busy', 'Updating live jitter tuning…');
+    try {
+      const response = await runtime.sendRpc({
+        rpc: 'set_jitter',
+        depth: nextDepth,
+        smoothness: nextSmoothness
+      });
+      jitterDepth = Math.max(0, Math.min(1, Number(response?.depth) || 0));
+      jitterSmoothness = Math.max(0, Math.min(1, Number(response?.smoothness) || 0));
+      setJitterStatus(
+        'ok',
+        `Depth ${jitterDepth.toFixed(2)} • Smoothness ${jitterSmoothness.toFixed(2)}`
+      );
+      setStatus('ok', 'Jitter updated', 'Live jitter tuning updated on the device.');
+    } catch (err) {
+      setJitterStatus('err', `Jitter update failed: ${err.message || String(err)}`);
+      setStatus('err', 'Jitter update failed', err.message || String(err));
+    } finally {
+      jitterBusy = false;
+      updateJitterControls();
+    }
+  }
+
+  async function applyClockSettings() {
+    if (!clockSupported || clockBusy) return;
+    const followExternal = deviceClockSourceSelect?.value !== 'internal';
+    const nextClockOutEnabled = deviceClockOutSelect?.value === 'on';
+    const nextTappedBpm = Math.max(20, Math.min(300, Number(deviceClockBpmInput?.value) || 120));
+    clockBusy = true;
+    updateClockControls();
+    setClockStatus('busy', 'Updating device clock state…');
+    try {
+      const response = await runtime.sendRpc({
+        rpc: 'set_clock',
+        followExternal,
+        clockOutEnabled: nextClockOutEnabled,
+        tappedBpm: nextTappedBpm
+      });
+      clockFollowExternal = Boolean(response?.follow_external);
+      clockOutEnabled = Boolean(response?.clock_out_enabled);
+      clockTappedBpm = Math.max(20, Math.min(300, Number(response?.tapped_bpm) || nextTappedBpm));
+      clockExternalBpm = Math.max(0, Number(response?.external_bpm) || 0);
+      clockSource =
+        typeof response?.source === 'string'
+          ? response.source
+          : clockFollowExternal
+            ? 'external'
+            : 'internal';
+      clockRunning = Boolean(response?.running);
+      clockExternalSignal = Boolean(response?.external_signal);
+      setClockStatus('ok', formatClockStatus());
+      setStatus('ok', 'Clock updated', 'Live device clock settings updated.');
+    } catch (err) {
+      setClockStatus('err', `Clock update failed: ${err.message || String(err)}`);
+      setStatus('err', 'Clock update failed', err.message || String(err));
+    } finally {
+      clockBusy = false;
+      updateClockControls();
     }
   }
 
@@ -279,8 +598,14 @@ export function createTransportToolbarController({
     applyBtn?.addEventListener('click', () => apply());
     rollbackBtn?.addEventListener('click', () => rollback());
     usbMidiToggleBtn?.addEventListener('click', () => toggleUsbMidi());
+    noteDynamicsApplyBtn?.addEventListener('click', () => applyNoteDynamics());
+    jitterApplyBtn?.addEventListener('click', () => applyJitter());
+    deviceClockApplyBtn?.addEventListener('click', () => applyClockSettings());
     initializeSimulatorToggle();
     updateUsbMidiControls();
+    updateNoteDynamicsControls();
+    updateJitterControls();
+    updateClockControls();
   }
 
   function onManifest(manifest) {
@@ -288,22 +613,98 @@ export function createTransportToolbarController({
       manifest?.capabilities && typeof manifest.capabilities === 'object'
         ? manifest.capabilities
         : {};
+    clockSupported = Boolean(capabilities.clock_live);
+    noteDynamicsSupported = Boolean(capabilities.note_dynamics_live);
+    jitterSupported = Boolean(capabilities.jitter_live);
     usbMidiToggleSupported = Boolean(capabilities.usb_midi_toggle);
     if (!usbMidiToggleSupported) {
       setUsbMidiStatus('muted', 'This firmware does not expose USB MIDI toggling.');
     }
+    if (!noteDynamicsSupported) {
+      setNoteDynamicsStatus('muted', 'This firmware does not expose live note dynamics.');
+    }
+    if (!jitterSupported) {
+      setJitterStatus('muted', 'This firmware does not expose live jitter tuning.');
+    }
+    if (!clockSupported) {
+      setClockStatus('muted', 'This firmware does not expose live clock control.');
+    }
     updateUsbMidiControls();
+    updateNoteDynamicsControls();
+    updateJitterControls();
+    updateClockControls();
   }
 
   function onConnected() {
     void refreshUsbMidiState();
+    void refreshNoteDynamicsState();
+    void refreshJitterState();
+    void refreshClockState();
   }
 
   function onDisconnected() {
     usbMidiBusy = false;
     usbMidiOutEnabled = false;
+    noteDynamicsBusy = false;
+    jitterBusy = false;
+    clockBusy = false;
     setUsbMidiStatus('muted', 'Connect to inspect USB MIDI output state.');
+    setNoteDynamicsStatus('muted', 'Connect to inspect live note dynamics.');
+    setJitterStatus('muted', 'Connect to inspect live jitter tuning.');
+    setClockStatus('muted', 'Connect to inspect live device clock state.');
     updateUsbMidiControls();
+    updateNoteDynamicsControls();
+    updateJitterControls();
+    updateClockControls();
+  }
+
+  function onTelemetry(frame) {
+    if (frame?.note_dynamics && typeof frame.note_dynamics === 'object') {
+      velocityShift = Math.max(
+        -64,
+        Math.min(63, Math.round(Number(frame.note_dynamics.velocity_shift) || 0))
+      );
+      changeProbability = Math.max(
+        0,
+        Math.min(100, Math.round(Number(frame.note_dynamics.change_probability) || 0))
+      );
+      if (!noteDynamicsBusy && noteDynamicsSupported && connectionPill?.dataset.stage === 'live') {
+        setNoteDynamicsStatus(
+          'ok',
+          `Velocity ${velocityShift >= 0 ? '+' : ''}${velocityShift} • Chance ${changeProbability}%`
+        );
+      }
+      updateNoteDynamicsControls();
+    }
+    if (frame?.jitter && typeof frame.jitter === 'object') {
+      jitterDepth = Math.max(0, Math.min(1, Number(frame.jitter.depth) || 0));
+      jitterSmoothness = Math.max(0, Math.min(1, Number(frame.jitter.smoothness) || 0));
+      if (!jitterBusy && jitterSupported && connectionPill?.dataset.stage === 'live') {
+        setJitterStatus(
+          'ok',
+          `Depth ${jitterDepth.toFixed(2)} • Smoothness ${jitterSmoothness.toFixed(2)}`
+        );
+      }
+      updateJitterControls();
+    }
+    if (frame?.clock && typeof frame.clock === 'object') {
+      clockFollowExternal = Boolean(frame.clock.follow_external);
+      clockOutEnabled = Boolean(frame.clock.clock_out_enabled);
+      clockTappedBpm = Math.max(20, Math.min(300, Number(frame.clock.tapped_bpm) || 120));
+      clockExternalBpm = Math.max(0, Number(frame.clock.external_bpm) || 0);
+      clockSource =
+        typeof frame.clock.source === 'string'
+          ? frame.clock.source
+          : clockFollowExternal
+            ? 'external'
+            : 'internal';
+      clockRunning = Boolean(frame.clock.running);
+      clockExternalSignal = Boolean(frame.clock.external_signal);
+      if (!clockBusy && clockSupported && connectionPill?.dataset.stage === 'live') {
+        setClockStatus('ok', formatClockStatus());
+      }
+      updateClockControls();
+    }
   }
 
   return {
@@ -312,6 +713,7 @@ export function createTransportToolbarController({
     onManifest,
     onConnected,
     onDisconnected,
+    onTelemetry,
     setConnectionBanner,
     setConnectionPill,
     primeCompatibilityStatus,

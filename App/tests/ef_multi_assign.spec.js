@@ -13,13 +13,26 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
   await page.getByRole('button', { name: /simulator/i }).click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.evaluate(() => {
+    const runtime = window.__MN42_RUNTIME;
+    runtime?.stage?.((draft) => {
+      draft.efSlots = draft.efSlots || [];
+      draft.efSlots[0] = { slots: [] };
+      return draft;
+    });
+  });
   await page.getByRole('button', { name: 'Envelope' }).click();
 
-  const efInput = page.locator('#ef-assignment-card .ef-row input[type="text"]').first();
-  await expect(efInput).toBeVisible();
-  await efInput.fill('41, 7, 41, foo, -1, 7');
-  await efInput.dispatchEvent('change');
-  await expect(efInput).toHaveValue('7, 41');
+  const efRow = page.locator('#ef-assignment-card .ef-row').first();
+  await expect(efRow).toBeVisible();
+  const slot08 = efRow.getByRole('button', { name: 'S08' });
+  const slot42 = efRow.getByRole('button', { name: 'S42' });
+  const slot01 = efRow.getByRole('button', { name: 'S01' });
+  await slot42.click();
+  await slot08.click();
+  await slot01.click();
+  await slot01.click();
+  await expect(efRow.locator('.ef-row-summary')).toHaveText('2 assigned');
 
   const staged = await page.evaluate(() => {
     const runtime = window.__MN42_RUNTIME;
