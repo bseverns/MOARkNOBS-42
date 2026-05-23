@@ -637,9 +637,18 @@ export function createTransportToolbarController({
 
   function onConnected() {
     void refreshUsbMidiState();
-    void refreshNoteDynamicsState();
-    void refreshJitterState();
-    void refreshClockState();
+    if (noteDynamicsSupported) {
+      setNoteDynamicsStatus('muted', 'Waiting for live note dynamics telemetry…');
+      updateNoteDynamicsControls();
+    }
+    if (jitterSupported) {
+      setJitterStatus('muted', 'Waiting for live jitter telemetry…');
+      updateJitterControls();
+    }
+    if (clockSupported) {
+      setClockStatus('muted', 'Waiting for live device clock telemetry…');
+      updateClockControls();
+    }
   }
 
   function onDisconnected() {
