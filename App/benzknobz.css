@@ -36,7 +36,7 @@ body {
 
 body {
   margin: 0;
-  height: 100vh;
+  min-height: 100vh;
   font-family: var(--font-display);
   line-height: 1.45;
   background:
@@ -44,9 +44,8 @@ body {
     radial-gradient(circle at bottom, rgba(255, 95, 150, 0.12), transparent 64%),
     var(--color-bg);
   color: var(--color-text);
-  overflow: hidden;
-  display: flex;
-  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #page-shell {
@@ -54,7 +53,7 @@ body {
   flex-direction: column;
   gap: clamp(12px, 2vh, 20px);
   width: min(1440px, 100%);
-  height: 100%;
+  min-height: 100vh;
   margin: 0 auto;
   padding: clamp(12px, 2vh, 24px) clamp(16px, 3vw, 32px);
   transform-origin: top center;
@@ -626,15 +625,6 @@ main {
   width: 100%;
 }
 
-#performer-panel,
-#stage-panel,
-#live-panel,
-#editor-panel,
-#connect-card {
-  max-height: 100%;
-  overflow-y: auto;
-}
-
 #performer-panel {
   display: grid;
   grid-column: 1 / -1;
@@ -1130,6 +1120,10 @@ main {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  position: sticky;
+  top: clamp(12px, 2vh, 24px);
+  max-height: calc(100vh - (2 * clamp(12px, 2vh, 24px)));
+  overflow-y: auto;
   background: var(--color-surface-alt);
   border-radius: var(--radius-lg);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2166,6 +2160,12 @@ footer {
 
   #stage-panel {
     grid-template-columns: 1fr;
+  }
+
+  #connect-card {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 
   html[data-ui-mode='stage'] main,
