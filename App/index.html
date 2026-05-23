@@ -247,63 +247,6 @@
             <h3 id="envelope-heading">Envelope Levels</h3>
             <div id="envelopes"></div>
           </section>
-          <section class="live-block" aria-labelledby="slot-detail-heading">
-            <h3 id="slot-detail-heading">Slot Details</h3>
-            <dl id="slot-details" aria-live="polite">
-              <div>
-                <dt>Slot</dt>
-                <dd id="slot-detail-index">—</dd>
-              </div>
-              <div>
-                <dt>Status</dt>
-                <dd id="slot-detail-status">—</dd>
-              </div>
-              <div>
-                <dt>MIDI Type</dt>
-                <dd id="slot-detail-type">—</dd>
-              </div>
-              <div>
-                <dt>Channel</dt>
-                <dd id="slot-detail-channel">—</dd>
-              </div>
-              <div>
-                <dt>Data</dt>
-                <dd id="slot-detail-data">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>EF Index</dt>
-                <dd id="slot-detail-ef-index">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>EF Filter</dt>
-                <dd id="slot-detail-ef-filter">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>EF Tuning</dt>
-                <dd id="slot-detail-ef-tuning">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>EF Dynamics</dt>
-                <dd id="slot-detail-ef-dynamics">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>EF Baseline</dt>
-                <dd id="slot-detail-ef-baseline">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>ARG Mode</dt>
-                <dd id="slot-detail-arg">—</dd>
-              </div>
-              <div data-ui-tier="advanced">
-                <dt>ARG Sources</dt>
-                <dd id="slot-detail-arg-sources">—</dd>
-              </div>
-              <div>
-                <dt>Last Value</dt>
-                <dd id="slot-detail-value">—</dd>
-              </div>
-            </dl>
-          </section>
         </div>
 
         <section id="editor-panel">
@@ -648,6 +591,69 @@
           </div>
         </div>
       </aside>
+
+      <section id="slot-detail-panel" aria-labelledby="slot-detail-heading">
+        <header class="slot-detail-panel-header">
+          <div>
+            <h2 id="slot-detail-heading">Slot Details</h2>
+            <p class="microcopy">Focused snapshot of the currently selected slot without repeating the live slot wall.</p>
+          </div>
+        </header>
+        <dl id="slot-details" aria-live="polite">
+          <div>
+            <dt>Slot</dt>
+            <dd id="slot-detail-index">—</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd id="slot-detail-status">—</dd>
+          </div>
+          <div>
+            <dt>MIDI Type</dt>
+            <dd id="slot-detail-type">—</dd>
+          </div>
+          <div>
+            <dt>Channel</dt>
+            <dd id="slot-detail-channel">—</dd>
+          </div>
+          <div>
+            <dt>Data</dt>
+            <dd id="slot-detail-data">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>EF Index</dt>
+            <dd id="slot-detail-ef-index">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>EF Filter</dt>
+            <dd id="slot-detail-ef-filter">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>EF Tuning</dt>
+            <dd id="slot-detail-ef-tuning">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>EF Dynamics</dt>
+            <dd id="slot-detail-ef-dynamics">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>EF Baseline</dt>
+            <dd id="slot-detail-ef-baseline">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>ARG Mode</dt>
+            <dd id="slot-detail-arg">—</dd>
+          </div>
+          <div data-ui-tier="advanced">
+            <dt>ARG Sources</dt>
+            <dd id="slot-detail-arg-sources">—</dd>
+          </div>
+          <div>
+            <dt>Last Value</dt>
+            <dd id="slot-detail-value">—</dd>
+          </div>
+        </dl>
+      </section>
 
       <details class="debug-log-bridge" data-ui-tier="advanced">
         <summary>Debug Log</summary>
