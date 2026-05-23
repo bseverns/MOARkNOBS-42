@@ -295,6 +295,8 @@ const boot = () => {
       );
       recallButton?.click();
     },
+    getSelectedSlot: () => slotState.selected,
+    selectSlot: (index) => selectSlot(index),
     setStatus,
     elements: {
       panel: performerPanel,
@@ -794,6 +796,7 @@ const boot = () => {
     slotState.selected = Math.min(Math.max(0, index), maxIndex);
     slotVirtualizer.highlight(slotState.selected);
     slotVirtualizer.scrollToIndex(slotState.selected);
+    performerPanelController.highlightSelectedSlot();
     populateDetail();
   }
 

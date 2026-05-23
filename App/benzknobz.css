@@ -791,17 +791,39 @@ main {
 }
 
 .stage-slot-cell {
+  appearance: none;
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-areas:
     'label type'
     'value value';
   gap: 3px 6px;
+  width: 100%;
   min-height: 54px;
   padding: 8px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(255, 255, 255, 0.025);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.stage-slot-cell:hover,
+.stage-slot-cell:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: var(--shadow-soft);
+}
+
+.stage-slot-cell.selected {
+  border-color: var(--color-accent);
+  background: rgba(45, 226, 230, 0.14);
+  box-shadow:
+    inset 0 0 0 1px rgba(45, 226, 230, 0.2),
+    0 0 0 1px rgba(45, 226, 230, 0.08);
 }
 
 .stage-slot-cell[data-slot-type='off'] {
