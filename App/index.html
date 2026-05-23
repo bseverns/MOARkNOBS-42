@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MOARkNOBS-42 Browser Configurator</title>
   <link rel="stylesheet" href="benzknobz.css" />
 </head>
+
 <body>
   <div id="page-shell">
     <header class="hero compact-hero">
@@ -86,13 +88,16 @@
             <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls">
               <div class="macro-card-header">
                 <strong>Macro snapshot</strong>
-                <p class="microcopy">Temporary EEPROM snapshot. Enabled only when firmware reports macro storage support.</p>
+                <p class="microcopy">Temporary EEPROM snapshot. Enabled only when firmware reports macro storage
+                  support.</p>
               </div>
               <div class="macro-actions" role="group" aria-label="Macro snapshot actions">
-                <button id="macro-save" type="button" disabled title="Quick save current state for temporary recall during a session.">
+                <button id="macro-save" type="button" disabled
+                  title="Quick save current state for temporary recall during a session.">
                   Save Macro Snapshot
                 </button>
-                <button id="macro-recall" type="button" disabled title="Recall the stored macro snapshot into the live configuration.">
+                <button id="macro-recall" type="button" disabled
+                  title="Recall the stored macro snapshot into the live configuration.">
                   Recall Macro Snapshot
                 </button>
               </div>
@@ -100,48 +105,7 @@
                 Connect to see whether macro storage is available.
               </p>
             </div>
-            <div class="macro-card arp-card" id="arp-profile-card" aria-label="Arpeggiator profile controls">
-              <div class="macro-card-header">
-                <strong>Arpeggiator</strong>
-                <p class="microcopy">Edit saved arp timing and shape for the selected profile slot. Use the Selected Slot editor for each slot&apos;s arp root note.</p>
-              </div>
-              <div class="arp-form-grid">
-                <label>
-                  <span>Length ticks</span>
-                  <input id="arp-length" type="number" min="1" max="24" step="1" />
-                </label>
-                <label>
-                  <span>Shape</span>
-                  <select id="arp-shape">
-                    <option value="0">Up</option>
-                    <option value="1">Down</option>
-                    <option value="2">Up/Down</option>
-                    <option value="3">Random</option>
-                    <option value="4">Drunk</option>
-                    <option value="5">Euclidean</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Swing %</span>
-                  <input id="arp-swing" type="number" min="0" max="80" step="1" />
-                </label>
-                <label>
-                  <span>Gate %</span>
-                  <input id="arp-gate" type="number" min="5" max="100" step="1" />
-                </label>
-                <label>
-                  <span>Octaves</span>
-                  <input id="arp-octave" type="number" min="0" max="3" step="1" />
-                </label>
-              </div>
-              <div class="arp-actions" role="group" aria-label="Arpeggiator profile actions">
-                <button id="arp-refresh" type="button" disabled>Load slot arp</button>
-                <button id="arp-save" type="button" disabled>Save slot arp</button>
-              </div>
-              <p class="microcopy macro-status" id="arp-status" data-state="muted" aria-live="polite">
-                Connect to inspect the selected profile slot&apos;s arp settings.
-              </p>
-            </div>
+
             <div class="scene-card" id="scene-card" aria-label="Scene snapshots">
               <div class="scene-card-header">
                 <strong>Scenes</strong>
@@ -158,7 +122,8 @@
             <button id="profile-upload" type="button">Upload profile</button>
           </div>
           <p class="microcopy profile-hint" id="profile-hint">
-            Download/upload always works as a file backup. Device-backed profile save, switch, and reset only enable when firmware reports support.
+            Download/upload always works as a file backup. Device-backed profile save, switch, and reset only enable
+            when firmware reports support.
           </p>
         </div>
       </details>
@@ -267,19 +232,58 @@
           <section class="live-block" aria-labelledby="slot-detail-heading">
             <h3 id="slot-detail-heading">Slot Details</h3>
             <dl id="slot-details" aria-live="polite">
-              <div><dt>Slot</dt><dd id="slot-detail-index">—</dd></div>
-              <div><dt>Status</dt><dd id="slot-detail-status">—</dd></div>
-              <div><dt>MIDI Type</dt><dd id="slot-detail-type">—</dd></div>
-              <div><dt>Channel</dt><dd id="slot-detail-channel">—</dd></div>
-              <div><dt>Data</dt><dd id="slot-detail-data">—</dd></div>
-              <div data-ui-tier="advanced"><dt>EF Index</dt><dd id="slot-detail-ef-index">—</dd></div>
-              <div data-ui-tier="advanced"><dt>EF Filter</dt><dd id="slot-detail-ef-filter">—</dd></div>
-              <div data-ui-tier="advanced"><dt>EF Tuning</dt><dd id="slot-detail-ef-tuning">—</dd></div>
-              <div data-ui-tier="advanced"><dt>EF Dynamics</dt><dd id="slot-detail-ef-dynamics">—</dd></div>
-              <div data-ui-tier="advanced"><dt>EF Baseline</dt><dd id="slot-detail-ef-baseline">—</dd></div>
-              <div data-ui-tier="advanced"><dt>ARG Mode</dt><dd id="slot-detail-arg">—</dd></div>
-              <div data-ui-tier="advanced"><dt>ARG Sources</dt><dd id="slot-detail-arg-sources">—</dd></div>
-              <div><dt>Last Value</dt><dd id="slot-detail-value">—</dd></div>
+              <div>
+                <dt>Slot</dt>
+                <dd id="slot-detail-index">—</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd id="slot-detail-status">—</dd>
+              </div>
+              <div>
+                <dt>MIDI Type</dt>
+                <dd id="slot-detail-type">—</dd>
+              </div>
+              <div>
+                <dt>Channel</dt>
+                <dd id="slot-detail-channel">—</dd>
+              </div>
+              <div>
+                <dt>Data</dt>
+                <dd id="slot-detail-data">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>EF Index</dt>
+                <dd id="slot-detail-ef-index">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>EF Filter</dt>
+                <dd id="slot-detail-ef-filter">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>EF Tuning</dt>
+                <dd id="slot-detail-ef-tuning">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>EF Dynamics</dt>
+                <dd id="slot-detail-ef-dynamics">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>EF Baseline</dt>
+                <dd id="slot-detail-ef-baseline">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>ARG Mode</dt>
+                <dd id="slot-detail-arg">—</dd>
+              </div>
+              <div data-ui-tier="advanced">
+                <dt>ARG Sources</dt>
+                <dd id="slot-detail-arg-sources">—</dd>
+              </div>
+              <div>
+                <dt>Last Value</dt>
+                <dd id="slot-detail-value">—</dd>
+              </div>
             </dl>
           </section>
         </div>
@@ -292,8 +296,10 @@
             </div>
             <div class="editor-tabbar" role="tablist" aria-label="Selected slot editor sections">
               <button type="button" class="editor-tab" data-editor-tab="mapping" aria-pressed="true">Mapping</button>
-              <button type="button" class="editor-tab" data-editor-tab="envelope" aria-pressed="false" data-ui-tier="advanced">Envelope</button>
-              <button type="button" class="editor-tab" data-editor-tab="arg" aria-pressed="false" data-ui-tier="advanced">ARG</button>
+              <button type="button" class="editor-tab" data-editor-tab="envelope" aria-pressed="false"
+                data-ui-tier="advanced">Envelope</button>
+              <button type="button" class="editor-tab" data-editor-tab="arg" aria-pressed="false"
+                data-ui-tier="advanced">ARG</button>
             </div>
           </header>
           <div id="form">
@@ -307,7 +313,8 @@
             <section class="schema-section" id="midi-form">
               <header>
                 <h3>MIDI Slots</h3>
-                <p class="microcopy">Pick a slot, swap MIDI Type, and rehearse your patch before the crowd spills coffee.</p>
+                <p class="microcopy">Pick a slot, swap MIDI Type, and rehearse your patch before the crowd spills
+                  coffee.</p>
               </header>
               <div class="schema-section-body" data-schema-target="slots"></div>
             </section>
@@ -326,7 +333,8 @@
           <div class="mode-switch-buttons">
             <button id="ui-mode-stage" type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
             <button id="ui-mode-basic" type="button" data-ui-mode-btn="basic" aria-pressed="false">Basic</button>
-            <button id="ui-mode-advanced" type="button" data-ui-mode-btn="advanced" aria-pressed="false">Advanced</button>
+            <button id="ui-mode-advanced" type="button" data-ui-mode-btn="advanced"
+              aria-pressed="false">Advanced</button>
           </div>
         </div>
         <p class="microcopy" id="ui-mode-hint">Basic mode keeps common knob-to-MIDI mapping controls visible.</p>
@@ -334,7 +342,12 @@
           <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true">Console</button>
           <button type="button" class="utility-tab" data-utility-tab="diff" aria-pressed="false">Diff</button>
           <button type="button" class="utility-tab" data-utility-tab="midi" aria-pressed="false">MIDI</button>
-          <button type="button" class="utility-tab" data-utility-tab="scope" aria-pressed="false" data-ui-tier="advanced">Scope</button>
+          <button type="button" class="utility-tab" data-utility-tab="scope" aria-pressed="false"
+            data-ui-tier="advanced">Scope</button>
+          <button type="button" class="utility-tab" data-utility-tab="arp" aria-pressed="false"
+            data-ui-tier="advanced">Arp</button>
+          <button type="button" class="utility-tab" data-utility-tab="lfo" aria-pressed="false"
+            data-ui-tier="advanced">LFO</button>
         </div>
 
         <div class="utility-panel utility-panel-active" data-utility-panel="console">
@@ -386,21 +399,15 @@
           </section>
           <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
             <legend>Filter</legend>
-            <div
-              class="schema-section-body"
-              data-schema-target="filter"
+            <div class="schema-section-body" data-schema-target="filter"
               data-empty-message="No filter controls reported by current schema."
-              aria-label="No filter controls reported by current schema."
-            ></div>
+              aria-label="No filter controls reported by current schema."></div>
           </fieldset>
           <fieldset id="arg-settings" class="schema-section" data-schema-section="arg" data-ui-tier="advanced">
             <legend>ARG Pair</legend>
-            <div
-              class="schema-section-body"
-              data-schema-target="arg"
+            <div class="schema-section-body" data-schema-target="arg"
               data-empty-message="No ARG controls reported by current schema."
-              aria-label="No ARG controls reported by current schema."
-            ></div>
+              aria-label="No ARG controls reported by current schema."></div>
           </fieldset>
           <fieldset id="led-settings" class="schema-section" data-schema-section="led">
             <legend>LED Colors</legend>
@@ -477,6 +484,73 @@
             </div>
           </section>
         </div>
+        <div class="utility-panel" data-utility-panel="arp" data-ui-tier="advanced">
+          <div class="macro-card arp-card" id="arp-profile-card" aria-label="Arpeggiator profile controls"
+            style="height: auto; min-height: 0;">
+            <div class="macro-card-header">
+              <strong>Arpeggiator</strong>
+              <p class="microcopy">Edit saved arp timing and shape for the selected profile slot. Use the Selected Slot
+                editor for each slot&apos;s arp root note.</p>
+            </div>
+            <div class="arp-form-grid">
+              <label>
+                <span>Length ticks</span>
+                <input id="arp-length" type="number" min="1" max="24" step="1" />
+              </label>
+              <label>
+                <span>Shape</span>
+                <select id="arp-shape">
+                  <option value="0">Up</option>
+                  <option value="1">Down</option>
+                  <option value="2">Up/Down</option>
+                  <option value="3">Random</option>
+                  <option value="4">Drunk</option>
+                  <option value="5">Euclidean</option>
+                </select>
+              </label>
+              <label>
+                <span>Swing %</span>
+                <input id="arp-swing" type="number" min="0" max="80" step="1" />
+              </label>
+              <label>
+                <span>Gate %</span>
+                <input id="arp-gate" type="number" min="5" max="100" step="1" />
+              </label>
+              <label>
+                <span>Octaves</span>
+                <input id="arp-octave" type="number" min="0" max="3" step="1" />
+              </label>
+            </div>
+            <div class="arp-actions" role="group" aria-label="Arpeggiator profile actions">
+              <button id="arp-refresh" type="button" disabled>Load slot arp</button>
+              <button id="arp-save" type="button" disabled>Save slot arp</button>
+            </div>
+            <p class="microcopy macro-status" id="arp-status" data-state="muted" aria-live="polite">
+              Connect to inspect the selected profile slot&apos;s arp settings.
+            </p>
+          </div>
+        </div>
+
+        <div class="utility-panel" data-utility-panel="lfo" data-ui-tier="advanced">
+          <div class="macro-card lfo-card" id="lfo-profile-card" aria-label="LFO profile controls">
+            <div class="macro-card-header">
+              <strong>LFOs &amp; Assignments</strong>
+              <p class="microcopy">Edit the two saved LFOs and assign their routes for the selected profile slot.</p>
+            </div>
+            <div id="lfo-editor" class="lfo-editor" aria-live="polite"></div>
+            <div class="arp-actions" role="group" aria-label="LFO profile actions">
+              <button id="lfo-route-add" type="button" disabled>Add route</button>
+              <button id="lfo-routes-clear" type="button" disabled>Clear routes</button>
+            </div>
+            <div class="arp-actions" role="group" aria-label="LFO profile load save actions">
+              <button id="lfo-refresh" type="button" disabled>Load slot LFOs</button>
+              <button id="lfo-save" type="button" disabled>Save slot LFOs</button>
+            </div>
+            <p class="microcopy macro-status" id="lfo-status" data-state="muted" aria-live="polite">
+              Connect to inspect the selected profile slot&apos;s LFO settings.
+            </p>
+          </div>
+        </div>
       </aside>
 
       <details class="debug-log-bridge" data-ui-tier="advanced">
@@ -498,9 +572,11 @@
       </footer>
     </dialog>
     <footer>
-      Built as a living notebook: part punk scene zine, part future-lab interface. If you break something, capture the story and share it back.
+      Built as a living notebook: part punk scene zine, part future-lab interface. If you break something, capture the
+      story and share it back.
     </footer>
   </div>
   <script type="module" src="./views/benzknobz.js" defer></script>
 </body>
+
 </html>

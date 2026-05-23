@@ -126,6 +126,7 @@ ProfileData captureProfileSnapshot() {
     const auto &slots = configManager.getSlots();
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         profile.slots[i].midiChannel = slots[i].midiChannel;
+        profile.slots[i].followerIndex = slots[i].getEnvelopeFollowerIndex();
         profile.slots[i].ef = profileEfFromSlot(slots[i].efSettings);
     }
 
@@ -148,15 +149,17 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
 
     lfoManager.applyProfile(profile);
 
+    potToEnvelopeMap.clear();
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot &slot = configManager.getSlot(i);
         slot.midiChannel = profile.slots[i].midiChannel;
         applyProfileEfToSlot(profile.slots[i].ef, slot.efSettings);
-        if (persistSlots) {
-            configManager.saveSlot(i, slot);
-        }
+        slot.setEnvelopeFollowerIndex(profile.slots[i].followerIndex);
         if (slot.getEnvelopeFollowerIndex() >= 0) {
             potToEnvelopeMap[i] = slot.efSettings;
+        }
+        if (persistSlots) {
+            configManager.saveSlot(i, slot);
         }
     }
 

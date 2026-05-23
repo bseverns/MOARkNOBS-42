@@ -121,6 +121,9 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
         if (slot.midiChannel < 1 || slot.midiChannel > 16) {
             slot.midiChannel = 1;
         }
+        if (slot.followerIndex < -1 || slot.followerIndex >= static_cast<int8_t>(NUM_ENVELOPES)) {
+            slot.followerIndex = -1;
+        }
         slot.ef = sanitizeProfileEfSettings(slot.ef);
     }
     return sanitized;

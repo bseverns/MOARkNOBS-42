@@ -102,8 +102,9 @@ struct __attribute__((packed)) ProfileEfSettings {
 };
 
 struct __attribute__((packed)) ProfileSlotSettings {
-    uint8_t midiChannel = 1; //!< Per-slot MIDI channel
-    ProfileEfSettings ef{};  //!< Per-slot EF mode settings
+    uint8_t midiChannel = 1;   //!< Per-slot MIDI channel
+    int8_t followerIndex = -1; //!< Saved EF follower assignment for this slot
+    ProfileEfSettings ef{};    //!< Per-slot EF mode settings
 };
 
 struct __attribute__((packed)) ProfileArpSettings {
@@ -142,7 +143,7 @@ struct __attribute__((packed)) ProfileLfoRoute {
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0001;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0002;
 
 struct __attribute__((packed)) ProfileData {
     uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version

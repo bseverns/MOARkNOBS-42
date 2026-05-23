@@ -215,6 +215,24 @@ function slotTypeForDevice(slot) {
   return 'OFF';
 }
 
+function resolveEfIndexForDevice(slot) {
+  const topLevel = Number(slot?.ef_index ?? slot?.efIndex);
+  const nested = Number(slot?.ef?.index);
+  if (Number.isFinite(topLevel) && Math.round(topLevel) >= 0) {
+    return Math.round(topLevel);
+  }
+  if (Number.isFinite(nested) && Math.round(nested) >= 0) {
+    return Math.round(nested);
+  }
+  if (Number.isFinite(topLevel)) {
+    return Math.round(topLevel);
+  }
+  if (Number.isFinite(nested)) {
+    return Math.round(nested);
+  }
+  return -1;
+}
+
 function compactSlotForDevice(slot, previousSlot) {
   const out = {};
   out.type = slotTypeForDevice(slot);
@@ -224,8 +242,7 @@ function compactSlotForDevice(slot, previousSlot) {
   else if (slot?.cc !== undefined) out.data1 = clone(slot.cc);
   if (slot?.arpNote !== undefined) out.arpNote = clone(slot.arpNote);
   out.active = Boolean(slot?.active);
-  if (slot?.ef_index !== undefined) out.ef_index = clone(slot.ef_index);
-  else if (slot?.efIndex !== undefined) out.ef_index = clone(slot.efIndex);
+  out.ef_index = resolveEfIndexForDevice(slot);
   if (slot?.sysexTemplate !== undefined && slot?.sysexTemplate !== previousSlot?.sysexTemplate) {
     out.sysexTemplate = clone(slot.sysexTemplate);
   }

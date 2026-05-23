@@ -167,6 +167,13 @@ const boot = () => {
   const arpSwingInput = document.getElementById('arp-swing');
   const arpGateInput = document.getElementById('arp-gate');
   const arpOctaveInput = document.getElementById('arp-octave');
+  const lfoCard = document.getElementById('lfo-profile-card');
+  const lfoEditor = document.getElementById('lfo-editor');
+  const lfoRouteAddBtn = document.getElementById('lfo-route-add');
+  const lfoRoutesClearBtn = document.getElementById('lfo-routes-clear');
+  const lfoRefreshBtn = document.getElementById('lfo-refresh');
+  const lfoSaveBtn = document.getElementById('lfo-save');
+  const lfoStatusEl = document.getElementById('lfo-status');
   const sceneGrid = document.getElementById('scene-grid');
   const sceneStatusEl = document.getElementById('scene-status');
   const uiModeButtons = Array.from(document.querySelectorAll('[data-ui-mode-btn]'));
@@ -539,6 +546,13 @@ const boot = () => {
       arpSwingInput,
       arpGateInput,
       arpOctaveInput,
+      lfoCard,
+      lfoEditor,
+      lfoRouteAddBtn,
+      lfoRoutesClearBtn,
+      lfoRefreshBtn,
+      lfoSaveBtn,
+      lfoStatusEl,
       sceneGrid,
       sceneStatusEl
     }

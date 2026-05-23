@@ -12,6 +12,20 @@ const MACRO_SAVE_COMMAND = 'SAVE_MACRO_SLOT';
 const MACRO_RECALL_COMMAND = 'RECALL_MACRO_SLOT';
 const SCENE_SLOT_COUNT = 6;
 const ARP_SHAPE_OPTIONS = ['Up', 'Down', 'Up/Down', 'Random', 'Drunk', 'Euclidean'];
+const LFO_SHAPE_OPTIONS = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold', 'Random Slew'];
+const LFO_SYNC_RATIO_OPTIONS = ['1/1', '1/2', '1/4', '1/8', '1/16', '1/32', 'x2', 'x4'];
+const LFO_ROUTE_TYPE_OPTIONS = ['Internal', 'MIDI CC 7-bit', 'MIDI CC 14-bit', 'OSC'];
+const LFO_INTERNAL_TARGET_OPTIONS = [
+  'EF Gain Trim',
+  'Arp Swing',
+  'Velocity Shift',
+  'Note Chance',
+  'Arp Gate',
+  'Jitter Depth',
+  'Jitter Smoothness'
+];
+const PROFILE_LFO_COUNT = 2;
+const PROFILE_MAX_ROUTES = 8;
 
 function createDefaultArpDraft() {
   return {
@@ -27,6 +41,81 @@ function clampInteger(value, min, max, fallback) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return fallback;
   return Math.min(max, Math.max(min, Math.round(numeric)));
+}
+
+function clampFloat(value, min, max, fallback, precision = 3) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  const clamped = Math.min(max, Math.max(min, numeric));
+  return Number(clamped.toFixed(precision));
+}
+
+function createDefaultLfoEntry(index) {
+  if (index === 1) {
+    return {
+      index,
+      shape: 1,
+      frequency_hz: 0.5,
+      depth: 0,
+      bipolar: true,
+      sync: false,
+      sync_ratio: 0
+    };
+  }
+  return {
+    index,
+    shape: 0,
+    frequency_hz: 1,
+    depth: 0,
+    bipolar: false,
+    sync: false,
+    sync_ratio: 0
+  };
+}
+
+function createDefaultRouteDrafts() {
+  return [
+    { type: 0, lfo: 0, depth: 1, target: 1, channel: 1, cc_msb: 0, cc_lsb: 32 },
+    { type: 0, lfo: 1, depth: 1, target: 0, channel: 1, cc_msb: 0, cc_lsb: 32 },
+    { type: 0, lfo: 1, depth: 0.5, target: 2, channel: 1, cc_msb: 0, cc_lsb: 32 }
+  ];
+}
+
+function createDefaultLfoDraft() {
+  return {
+    lfos: Array.from({ length: PROFILE_LFO_COUNT }, (_, index) => createDefaultLfoEntry(index)),
+    routes: createDefaultRouteDrafts()
+  };
+}
+
+function normalizeLfoEntry(entry, index) {
+  const fallback = createDefaultLfoEntry(index);
+  return {
+    index,
+    shape: clampInteger(entry?.shape, 0, LFO_SHAPE_OPTIONS.length - 1, fallback.shape),
+    frequency_hz: clampFloat(entry?.frequency_hz, 0.01, 100, fallback.frequency_hz, 2),
+    depth: clampFloat(entry?.depth, 0, 1, fallback.depth, 3),
+    bipolar: Boolean(entry?.bipolar),
+    sync: Boolean(entry?.sync),
+    sync_ratio: clampInteger(
+      entry?.sync_ratio,
+      0,
+      LFO_SYNC_RATIO_OPTIONS.length - 1,
+      fallback.sync_ratio
+    )
+  };
+}
+
+function normalizeRouteEntry(entry = {}) {
+  return {
+    type: clampInteger(entry.type, 0, LFO_ROUTE_TYPE_OPTIONS.length - 1, 0),
+    lfo: clampInteger(entry.lfo, 0, PROFILE_LFO_COUNT - 1, 0),
+    depth: clampFloat(entry.depth, 0, 1, 1, 3),
+    target: clampInteger(entry.target, 0, LFO_INTERNAL_TARGET_OPTIONS.length - 1, 0),
+    channel: clampInteger(entry.channel, 1, 16, 1),
+    cc_msb: clampInteger(entry.cc_msb, 0, 127, 0),
+    cc_lsb: clampInteger(entry.cc_lsb, 0, 127, 32)
+  };
 }
 
 export function createProfileMacroScenePanel({
@@ -63,6 +152,13 @@ export function createProfileMacroScenePanel({
     arpSwingInput = null,
     arpGateInput = null,
     arpOctaveInput = null,
+    lfoCard = null,
+    lfoEditor = null,
+    lfoRouteAddBtn = null,
+    lfoRoutesClearBtn = null,
+    lfoRefreshBtn = null,
+    lfoSaveBtn = null,
+    lfoStatusEl = null,
     sceneGrid = null,
     sceneStatusEl = null
   } = elements;
@@ -73,7 +169,9 @@ export function createProfileMacroScenePanel({
   let macroBusy = false;
   let macroAvailable = false;
   let arpBusy = false;
+  let lfoBusy = false;
   let arpDraft = createDefaultArpDraft();
+  let lfoDraft = createDefaultLfoDraft();
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
   let profileWizardTargetSlot = activeProfileSlot;
   let deviceCapabilities = resolveCapabilities(localManifest);
@@ -164,6 +262,12 @@ export function createProfileMacroScenePanel({
     arpStatusEl.textContent = message;
   }
 
+  function setLfoStatus(state, message) {
+    if (!lfoStatusEl) return;
+    lfoStatusEl.dataset.state = state;
+    lfoStatusEl.textContent = message;
+  }
+
   function syncArpForm() {
     if (arpLengthInput) arpLengthInput.value = String(arpDraft.length_ticks);
     if (arpShapeSelect) arpShapeSelect.value = String(arpDraft.shape);
@@ -191,6 +295,343 @@ export function createProfileMacroScenePanel({
       gate_percent: arpGateInput?.value ?? arpDraft.gate_percent,
       octave_range: arpOctaveInput?.value ?? arpDraft.octave_range
     });
+  }
+
+  function createLfoControl(labelText, control) {
+    const label = document.createElement('label');
+    const title = document.createElement('span');
+    title.textContent = labelText;
+    label.append(title, control);
+    return label;
+  }
+
+  function createSelect(options, value, onChange) {
+    const select = document.createElement('select');
+    options.forEach((label, index) => {
+      const option = document.createElement('option');
+      option.value = String(index);
+      option.textContent = label;
+      option.selected = index === value;
+      select.appendChild(option);
+    });
+    select.addEventListener('change', () => onChange(select.value));
+    return select;
+  }
+
+  function createBooleanSelect(value, onChange) {
+    const select = document.createElement('select');
+    [
+      { value: '0', label: 'Off' },
+      { value: '1', label: 'On' }
+    ].forEach((entry) => {
+      const option = document.createElement('option');
+      option.value = entry.value;
+      option.textContent = entry.label;
+      option.selected = Boolean(Number(entry.value)) === Boolean(value);
+      select.appendChild(option);
+    });
+    select.addEventListener('change', () => onChange(select.value === '1'));
+    return select;
+  }
+
+  function createNumberInput({ value, min, max, step, onChange }) {
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    input.addEventListener('change', () => onChange(input.value));
+    return input;
+  }
+
+  function markLfoDraftDirty() {
+    setLfoStatus('busy', `${describeSlot()} edited locally. Save slot LFOs to persist changes.`);
+  }
+
+  function summarizeLfoDraft() {
+    const activeRoutes = lfoDraft.routes.length;
+    return `${describeSlot()} • ${PROFILE_LFO_COUNT} LFOs • ${activeRoutes} route${
+      activeRoutes === 1 ? '' : 's'
+    }`;
+  }
+
+  function setLfoDraft(nextDraft = {}) {
+    const nextLfos = Array.from({ length: PROFILE_LFO_COUNT }, (_, index) => {
+      const entries = Array.isArray(nextDraft?.lfos) ? nextDraft.lfos : [];
+      const match =
+        entries.find?.((entry) => Number(entry?.index) === index) ??
+        entries[index] ??
+        createDefaultLfoEntry(index);
+      return normalizeLfoEntry(match, index);
+    });
+    const nextRoutes = Array.isArray(nextDraft?.routes)
+      ? nextDraft.routes.slice(0, PROFILE_MAX_ROUTES).map((route) => normalizeRouteEntry(route))
+      : [];
+    lfoDraft = { lfos: nextLfos, routes: nextRoutes };
+    renderLfoEditor();
+    updateLfoControls();
+  }
+
+  function updateLfoEntry(index, patch = {}) {
+    lfoDraft = {
+      ...lfoDraft,
+      lfos: lfoDraft.lfos.map((entry, entryIndex) =>
+        entryIndex === index ? normalizeLfoEntry({ ...entry, ...patch }, index) : entry
+      )
+    };
+    markLfoDraftDirty();
+  }
+
+  function updateRouteEntry(index, patch = {}, { rerender = false } = {}) {
+    lfoDraft = {
+      ...lfoDraft,
+      routes: lfoDraft.routes.map((entry, entryIndex) =>
+        entryIndex === index ? normalizeRouteEntry({ ...entry, ...patch }) : entry
+      )
+    };
+    markLfoDraftDirty();
+    if (rerender) renderLfoEditor();
+  }
+
+  function addLfoRoute() {
+    if (lfoDraft.routes.length >= PROFILE_MAX_ROUTES) return;
+    const nextRoute =
+      lfoDraft.routes.length > 0
+        ? normalizeRouteEntry(lfoDraft.routes[lfoDraft.routes.length - 1])
+        : normalizeRouteEntry(createDefaultRouteDrafts()[0]);
+    lfoDraft = {
+      ...lfoDraft,
+      routes: [...lfoDraft.routes, nextRoute]
+    };
+    markLfoDraftDirty();
+    renderLfoEditor();
+    updateLfoControls();
+  }
+
+  function removeLfoRoute(index) {
+    lfoDraft = {
+      ...lfoDraft,
+      routes: lfoDraft.routes.filter((_, routeIndex) => routeIndex !== index)
+    };
+    markLfoDraftDirty();
+    renderLfoEditor();
+    updateLfoControls();
+  }
+
+  function clearLfoRoutes() {
+    lfoDraft = {
+      ...lfoDraft,
+      routes: []
+    };
+    markLfoDraftDirty();
+    renderLfoEditor();
+    updateLfoControls();
+  }
+
+  function renderLfoEditor() {
+    if (!lfoEditor) return;
+    lfoEditor.innerHTML = '';
+
+    const lfoGrid = document.createElement('div');
+    lfoGrid.className = 'lfo-grid';
+    lfoDraft.lfos.forEach((entry, index) => {
+      const section = document.createElement('section');
+      section.className = 'lfo-section';
+      const heading = document.createElement('h4');
+      heading.textContent = `LFO ${index + 1}`;
+      section.appendChild(heading);
+
+      const grid = document.createElement('div');
+      grid.className = 'lfo-control-grid';
+      grid.appendChild(
+        createLfoControl(
+          'Shape',
+          createSelect(LFO_SHAPE_OPTIONS, entry.shape, (value) =>
+            updateLfoEntry(index, { shape: value })
+          )
+        )
+      );
+      grid.appendChild(
+        createLfoControl(
+          'Frequency (Hz)',
+          createNumberInput({
+            value: entry.frequency_hz,
+            min: 0.01,
+            max: 100,
+            step: 0.01,
+            onChange: (value) => updateLfoEntry(index, { frequency_hz: value })
+          })
+        )
+      );
+      grid.appendChild(
+        createLfoControl(
+          'Depth',
+          createNumberInput({
+            value: entry.depth,
+            min: 0,
+            max: 1,
+            step: 0.01,
+            onChange: (value) => updateLfoEntry(index, { depth: value })
+          })
+        )
+      );
+      grid.appendChild(
+        createLfoControl(
+          'Bipolar',
+          createBooleanSelect(entry.bipolar, (value) => updateLfoEntry(index, { bipolar: value }))
+        )
+      );
+      grid.appendChild(
+        createLfoControl(
+          'Clock Sync',
+          createBooleanSelect(entry.sync, (value) => updateLfoEntry(index, { sync: value }))
+        )
+      );
+      grid.appendChild(
+        createLfoControl(
+          'Sync Ratio',
+          createSelect(LFO_SYNC_RATIO_OPTIONS, entry.sync_ratio, (value) =>
+            updateLfoEntry(index, { sync_ratio: value })
+          )
+        )
+      );
+      section.appendChild(grid);
+      lfoGrid.appendChild(section);
+    });
+    lfoEditor.appendChild(lfoGrid);
+
+    const routeSection = document.createElement('section');
+    routeSection.className = 'lfo-route-section';
+    const routeHeading = document.createElement('h4');
+    routeHeading.textContent = 'Assignments';
+    routeSection.appendChild(routeHeading);
+
+    if (!lfoDraft.routes.length) {
+      const empty = document.createElement('p');
+      empty.className = 'lfo-empty';
+      empty.textContent =
+        'No routes saved. Add one to assign an LFO to an internal target, MIDI CC, or OSC.';
+      routeSection.appendChild(empty);
+    } else {
+      const routeList = document.createElement('div');
+      routeList.className = 'lfo-route-list';
+      lfoDraft.routes.forEach((route, routeIndex) => {
+        const card = document.createElement('article');
+        card.className = 'lfo-route-card';
+
+        const header = document.createElement('header');
+        const title = document.createElement('strong');
+        title.textContent = `Route ${routeIndex + 1}`;
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'lfo-route-remove';
+        removeBtn.textContent = 'Remove';
+        removeBtn.disabled =
+          !profileInteractable || profileRpcLocked || profileWizardBusy || lfoBusy;
+        removeBtn.addEventListener('click', () => removeLfoRoute(routeIndex));
+        header.append(title, removeBtn);
+        card.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'lfo-route-grid';
+        grid.appendChild(
+          createLfoControl(
+            'Type',
+            createSelect(LFO_ROUTE_TYPE_OPTIONS, route.type, (value) =>
+              updateRouteEntry(
+                routeIndex,
+                {
+                  type: value,
+                  target: 0,
+                  channel: 1,
+                  cc_msb: 0,
+                  cc_lsb: 32
+                },
+                { rerender: true }
+              )
+            )
+          )
+        );
+        grid.appendChild(
+          createLfoControl(
+            'Source LFO',
+            createSelect(
+              Array.from({ length: PROFILE_LFO_COUNT }, (_, index) => `LFO ${index + 1}`),
+              route.lfo,
+              (value) => updateRouteEntry(routeIndex, { lfo: value })
+            )
+          )
+        );
+        grid.appendChild(
+          createLfoControl(
+            'Depth',
+            createNumberInput({
+              value: route.depth,
+              min: 0,
+              max: 1,
+              step: 0.01,
+              onChange: (value) => updateRouteEntry(routeIndex, { depth: value })
+            })
+          )
+        );
+        if (route.type === 0) {
+          grid.appendChild(
+            createLfoControl(
+              'Target',
+              createSelect(LFO_INTERNAL_TARGET_OPTIONS, route.target, (value) =>
+                updateRouteEntry(routeIndex, { target: value })
+              )
+            )
+          );
+        }
+        if (route.type === 1 || route.type === 2) {
+          grid.appendChild(
+            createLfoControl(
+              'MIDI Channel',
+              createNumberInput({
+                value: route.channel,
+                min: 1,
+                max: 16,
+                step: 1,
+                onChange: (value) => updateRouteEntry(routeIndex, { channel: value })
+              })
+            )
+          );
+          grid.appendChild(
+            createLfoControl(
+              'CC MSB',
+              createNumberInput({
+                value: route.cc_msb,
+                min: 0,
+                max: 127,
+                step: 1,
+                onChange: (value) => updateRouteEntry(routeIndex, { cc_msb: value })
+              })
+            )
+          );
+        }
+        if (route.type === 2) {
+          grid.appendChild(
+            createLfoControl(
+              'CC LSB',
+              createNumberInput({
+                value: route.cc_lsb,
+                min: 0,
+                max: 127,
+                step: 1,
+                onChange: (value) => updateRouteEntry(routeIndex, { cc_lsb: value })
+              })
+            )
+          );
+        }
+        card.appendChild(grid);
+        routeList.appendChild(card);
+      });
+      routeSection.appendChild(routeList);
+    }
+
+    lfoEditor.appendChild(routeSection);
   }
 
   // Return operator-facing copy for an unsupported profile RPC.
@@ -281,6 +722,7 @@ export function createProfileMacroScenePanel({
     updateProfileWizardControls();
     updateMacroControls();
     updateArpControls();
+    updateLfoControls();
     sceneControls.updateControls();
     updateProfileHint();
   }
@@ -296,6 +738,19 @@ export function createProfileMacroScenePanel({
     );
     if (arpCard) {
       arpCard.dataset.state = canInteract ? 'ready' : 'muted';
+    }
+  }
+
+  function updateLfoControls() {
+    const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy && !lfoBusy;
+    if (lfoRefreshBtn) lfoRefreshBtn.disabled = !canInteract;
+    if (lfoSaveBtn) lfoSaveBtn.disabled = !canInteract;
+    if (lfoRouteAddBtn) {
+      lfoRouteAddBtn.disabled = !canInteract || lfoDraft.routes.length >= PROFILE_MAX_ROUTES;
+    }
+    if (lfoRoutesClearBtn) lfoRoutesClearBtn.disabled = !canInteract || !lfoDraft.routes.length;
+    if (lfoCard) {
+      lfoCard.dataset.state = canInteract ? 'ready' : 'muted';
     }
   }
 
@@ -423,30 +878,58 @@ export function createProfileMacroScenePanel({
     }
   }
 
-  async function refreshArpProfile({ silent = false } = {}) {
+  function applyProfileUtilityDrafts(response = {}) {
+    setArpDraft(response?.arp ?? createDefaultArpDraft());
+    setLfoDraft({
+      lfos: Array.isArray(response?.lfos) ? response.lfos : createDefaultLfoDraft().lfos,
+      routes: Array.isArray(response?.routes) ? response.routes : createDefaultLfoDraft().routes
+    });
+  }
+
+  async function refreshProfileUtilities({ silent = false, focus = 'all' } = {}) {
     if (!profileInteractable) {
       setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+      setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
       return;
     }
-    if (profileRpcLocked || arpBusy) return;
+    if (profileRpcLocked || arpBusy || lfoBusy) return;
     arpBusy = true;
-    updateArpControls();
+    lfoBusy = true;
+    refreshProfileControls();
     if (!silent) {
-      setArpStatus('busy', `Loading arp settings from ${describeSlot()}…`);
+      if (focus === 'arp') {
+        setArpStatus('busy', `Loading arp settings from ${describeSlot()}…`);
+      } else if (focus === 'lfo') {
+        setLfoStatus('busy', `Loading LFO settings from ${describeSlot()}…`);
+      } else {
+        setArpStatus('busy', `Loading profile modulation from ${describeSlot()}…`);
+        setLfoStatus('busy', `Loading profile modulation from ${describeSlot()}…`);
+      }
     }
     try {
       const response = await runtime.sendRpc(
         { rpc: 'get_profile', slot: activeProfileSlot },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
       );
-      setArpDraft(response?.arp ?? createDefaultArpDraft());
+      applyProfileUtilityDrafts(response);
       const shapeLabel = ARP_SHAPE_OPTIONS[arpDraft.shape] ?? `Shape ${arpDraft.shape}`;
       setArpStatus('ok', `${describeSlot()} • ${shapeLabel} • ${arpDraft.length_ticks} ticks`);
+      setLfoStatus('ok', summarizeLfoDraft());
     } catch (err) {
-      setArpStatus('err', `Arp read failed: ${err.message || String(err)}`);
+      const message = err.message || String(err);
+      if (focus === 'lfo') {
+        setLfoStatus('err', `LFO read failed: ${message}`);
+      } else if (focus === 'arp') {
+        setArpStatus('err', `Arp read failed: ${message}`);
+      } else {
+        setArpStatus('err', `Profile modulation read failed: ${message}`);
+        setLfoStatus('err', `Profile modulation read failed: ${message}`);
+      }
     } finally {
       arpBusy = false;
-      updateArpControls();
+      lfoBusy = false;
+      refreshProfileControls();
+      renderLfoEditor();
     }
   }
 
@@ -454,7 +937,7 @@ export function createProfileMacroScenePanel({
     if (!profileInteractable || profileRpcLocked || arpBusy) return;
     readArpFormIntoDraft();
     arpBusy = true;
-    updateArpControls();
+    refreshProfileControls();
     setArpStatus('busy', `Saving arp settings to ${describeSlot()}…`);
     try {
       await runtime.sendRpc(
@@ -471,7 +954,52 @@ export function createProfileMacroScenePanel({
       setStatus('err', 'Arp profile save failed', err.message || String(err));
     } finally {
       arpBusy = false;
-      updateArpControls();
+      refreshProfileControls();
+    }
+  }
+
+  async function saveLfoProfile() {
+    if (!profileInteractable || profileRpcLocked || lfoBusy) return;
+    lfoBusy = true;
+    refreshProfileControls();
+    setLfoStatus('busy', `Saving LFO settings to ${describeSlot()}…`);
+    try {
+      await runtime.sendRpc(
+        {
+          rpc: 'set_profile',
+          slot: activeProfileSlot,
+          profile: {
+            lfos: lfoDraft.lfos.map((entry, index) => ({
+              index,
+              shape: entry.shape,
+              frequency_hz: entry.frequency_hz,
+              depth: entry.depth,
+              bipolar: entry.bipolar,
+              sync: entry.sync,
+              sync_ratio: entry.sync_ratio
+            })),
+            routes: lfoDraft.routes.map((route) => ({
+              type: route.type,
+              lfo: route.lfo,
+              depth: route.depth,
+              target: route.target,
+              channel: route.channel,
+              cc_msb: route.cc_msb,
+              cc_lsb: route.cc_lsb
+            }))
+          }
+        },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+      );
+      setLfoStatus('ok', `${describeSlot()} saved with ${lfoDraft.routes.length} routes.`);
+      setStatus('ok', 'LFO profile saved', describeSlot());
+    } catch (err) {
+      setLfoStatus('err', `LFO save failed: ${err.message || String(err)}`);
+      setStatus('err', 'LFO profile save failed', err.message || String(err));
+    } finally {
+      lfoBusy = false;
+      refreshProfileControls();
+      renderLfoEditor();
     }
   }
 
@@ -510,7 +1038,7 @@ export function createProfileMacroScenePanel({
       return;
     }
     setStatus('warn', busyLabel, `${describeSlot()} • busy`);
-    let arpRefreshNeeded = false;
+    let utilityRefreshNeeded = false;
     try {
       const response = await runtime.sendRpc(
         { rpc: method, slot: activeProfileSlot },
@@ -535,15 +1063,15 @@ export function createProfileMacroScenePanel({
           runtime.replaceConfig(payload);
         }
       }
-      arpRefreshNeeded = true;
+      utilityRefreshNeeded = true;
       setStatus('ok', successLabel, successCopy ?? describeSlot());
     } catch (err) {
       setStatus('err', `${successLabel ?? 'Profile'} failed`, err.message || String(err));
     } finally {
       profileRpcLocked = false;
       refreshProfileControls();
-      if (arpRefreshNeeded) {
-        void refreshArpProfile({ silent: true });
+      if (utilityRefreshNeeded) {
+        void refreshProfileUtilities({ silent: true });
       }
     }
   }
@@ -633,7 +1161,7 @@ export function createProfileMacroScenePanel({
           PROFILE_LABELS.length
         );
         setActiveProfileSlot(slotIndex);
-        void refreshArpProfile({ silent: true });
+        void refreshProfileUtilities({ silent: true });
       });
     });
     if (profileWizardTarget) {
@@ -663,12 +1191,18 @@ export function createProfileMacroScenePanel({
     macroRecallBtn?.addEventListener('click', () => runMacroCommand(MACRO_RECALL_COMMAND));
     setMacroStatus('muted', 'Awaiting the first snapshot.');
     setArpDraft(createDefaultArpDraft());
+    setLfoDraft(createDefaultLfoDraft());
     setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
     [arpLengthInput, arpShapeSelect, arpSwingInput, arpGateInput, arpOctaveInput].forEach(
       (control) => control?.addEventListener('change', () => readArpFormIntoDraft())
     );
-    arpRefreshBtn?.addEventListener('click', () => refreshArpProfile());
+    arpRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'arp' }));
     arpSaveBtn?.addEventListener('click', () => saveArpProfile());
+    lfoRouteAddBtn?.addEventListener('click', () => addLfoRoute());
+    lfoRoutesClearBtn?.addEventListener('click', () => clearLfoRoutes());
+    lfoRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'lfo' }));
+    lfoSaveBtn?.addEventListener('click', () => saveLfoProfile());
 
     profileSaveBtn?.addEventListener('click', () =>
       runProfileRpc('save_profile', {
@@ -720,8 +1254,9 @@ export function createProfileMacroScenePanel({
   function onConnected() {
     profileInteractable = true;
     refreshProfileControls();
+    renderLfoEditor();
     syncRecoverySupportCopy();
-    void refreshArpProfile({ silent: true });
+    void refreshProfileUtilities({ silent: true });
     if (deviceCapabilities.scenes) {
       sceneControls.refreshSceneList();
     }
@@ -732,10 +1267,14 @@ export function createProfileMacroScenePanel({
     profileInteractable = false;
     profileRpcLocked = false;
     macroAvailable = false;
+    arpBusy = false;
+    lfoBusy = false;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
+    renderLfoEditor();
     syncRecoverySupportCopy();
     setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
   }
 
   function onRuntimeError() {
@@ -743,10 +1282,14 @@ export function createProfileMacroScenePanel({
     profileInteractable = false;
     profileRpcLocked = false;
     macroAvailable = false;
+    arpBusy = false;
+    lfoBusy = false;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
+    renderLfoEditor();
     syncRecoverySupportCopy();
     setArpStatus('muted', 'Reconnect to inspect or save arp settings.');
+    setLfoStatus('muted', 'Reconnect to inspect or save LFO settings.');
   }
 
   function onMacro({ available } = {}) {

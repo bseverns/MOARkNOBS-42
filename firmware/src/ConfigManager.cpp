@@ -82,12 +82,29 @@ template <typename T> void storagePut(int address, const T &value) {
 }
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
+constexpr uint16_t kLegacyProfileSettingsVersion = 0x0001;
 constexpr uint16_t kProfileSettingsVersion = PROFILE_SETTINGS_VERSION;
 constexpr float kMinFilterFrequency = EF_FILTER_FREQ_MIN_HZ;
 constexpr float kMaxFilterFrequency = EF_FILTER_FREQ_MAX_HZ;
 constexpr float kMinFilterQ = EF_FILTER_Q_MIN;
 constexpr float kMaxFilterQ = EF_FILTER_Q_MAX;
 constexpr int kUnassignedEnvelope = -1;
+
+struct __attribute__((packed)) LegacyProfileSlotSettings {
+    uint8_t midiChannel = 1;
+    ProfileEfSettings ef{};
+};
+
+struct __attribute__((packed)) LegacyProfileData {
+    uint16_t version = kLegacyProfileSettingsVersion;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    ProfileArpSettings arp{};
+    ProfileLedSettings led{};
+    std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{};
+    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
+    std::array<LegacyProfileSlotSettings, NUM_SLOTS> slots{};
+};
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
 // saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
@@ -100,6 +117,16 @@ static uint16_t crc16_update(uint16_t crc, uint8_t data) {
         } else {
             crc >>= 1;
         }
+    }
+    return crc;
+}
+
+uint16_t computeLegacyProfileCrc(const LegacyProfileData &profile) {
+    constexpr size_t kCrcStart = offsetof(LegacyProfileData, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(LegacyProfileData); ++i) {
+        crc = crc16_update(crc, bytes[i]);
     }
     return crc;
 }
@@ -476,17 +503,42 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
     const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
     ProfileData stored{};
     storageGet(base, stored);
-    if (stored.version != PROFILE_SETTINGS_VERSION) {
-        return false;
+    if (stored.version == PROFILE_SETTINGS_VERSION) {
+        uint16_t crc = computeProfileCrc(stored);
+        if (crc != stored.crc) {
+            return false;
+        }
+        // Sanitize on load so bad data never reaches runtime.
+        profile = sanitizeProfileData(stored);
+        profile.crc = computeProfileCrc(profile);
+        return true;
     }
-    uint16_t crc = computeProfileCrc(stored);
-    if (crc != stored.crc) {
-        return false;
+
+    if (stored.version == kLegacyProfileSettingsVersion) {
+        LegacyProfileData legacy{};
+        storageGet(base, legacy);
+        uint16_t crc = computeLegacyProfileCrc(legacy);
+        if (crc != legacy.crc) {
+            return false;
+        }
+        ProfileData migrated{};
+        migrated.version = PROFILE_SETTINGS_VERSION;
+        migrated.routeCount = legacy.routeCount;
+        migrated.arp = legacy.arp;
+        migrated.led = legacy.led;
+        migrated.lfos = legacy.lfos;
+        migrated.routes = legacy.routes;
+        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+            migrated.slots[i].midiChannel = legacy.slots[i].midiChannel;
+            migrated.slots[i].followerIndex = slots[i].getEnvelopeFollowerIndex();
+            migrated.slots[i].ef = legacy.slots[i].ef;
+        }
+        profile = sanitizeProfileData(migrated);
+        profile.crc = computeProfileCrc(profile);
+        return true;
     }
-    // Sanitize on load so bad data never reaches runtime.
-    profile = sanitizeProfileData(stored);
-    profile.crc = computeProfileCrc(profile);
-    return true;
+
+    return false;
 }
 
 bool ConfigManager::saveProfileSettings(uint8_t id, const ProfileData &profile) {
