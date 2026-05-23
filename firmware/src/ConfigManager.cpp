@@ -311,7 +311,8 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
         }
         return true;
     }
-    LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Primary EEPROM corrupted, trying backup.\"}");
+    LOG_PRINTLN("{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Primary EEPROM corrupted, "
+                "trying backup.\"}");
     return loadBackupConfiguration(potChannels, base);
 }
 
@@ -344,6 +345,10 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
         for (uint8_t i = 0; i < _numPots; i++) {
             potChannels.push_back(_stored.potChannels[i]);
         }
+        // A successful backup load should repair the primary copy so future boots/profile swaps
+        // stop tripping the same recovery path.
+        writeEEPROM(false, base);
+        writeMagicNumber(false, base);
         if (needsRewrite) {
             _stored.version = CONFIG_VERSION;
             saveConfiguration();
@@ -425,17 +430,21 @@ void ConfigManager::loadProfile(uint8_t id) {
         if (_stored.version != CONFIG_VERSION ||
             _stored.crc != calculateCRC(includeProfileFields)) {
             LOG_PRINTLN(
-                "{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
+                "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, "
+                "using defaults.\"}");
         }
     } else if (checkEEPROMHealth(true, base)) {
         readEEPROM(true, base);
         if (_stored.version != CONFIG_VERSION ||
             _stored.crc != calculateCRC(includeProfileFields)) {
             LOG_PRINTLN(
-                "{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
+                "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, "
+                "using defaults.\"}");
         }
     } else {
-        LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Profile slot corrupted, using defaults.\"}");
+        LOG_PRINTLN(
+            "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, using "
+            "defaults.\"}");
     }
 }
 

@@ -714,6 +714,7 @@ export function createRuntime({
         migrations,
         argMethodCount: ARG_METHOD_NAMES.length
       });
+      emit('manifest', remoteManifest);
       await hydrate();
       emit('connected', {
         manifest: remoteManifest,

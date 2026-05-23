@@ -79,6 +79,28 @@ export function createRuntimeLineHandler({
             return;
           }
           break;
+        case 'usb_midi_get':
+          if (Object.prototype.hasOwnProperty.call(msg, 'usb_midi_out')) {
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            return;
+          }
+          break;
+        case 'usb_midi_set':
+          if (
+            msg.command === 'SET_USB_MIDI' &&
+            Object.prototype.hasOwnProperty.call(msg, 'usb_midi_out')
+          ) {
+            if (msg.status === 'ok') {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            } else {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.message ?? 'USB MIDI update failed' }
+              });
+            }
+            return;
+          }
+          break;
         case 'config':
           if (isConfigPayload(msg)) {
             rpcKernel.handleRpcResponse({ id: activePendingId, result: { config: msg } });

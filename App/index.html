@@ -372,6 +372,18 @@
             <button id="apply-save-profile" type="button" disabled>Save staged edits</button>
             <button id="simulator-toggle" type="button">Start simulator</button>
           </div>
+          <section class="live-toggle-card" aria-labelledby="usb-midi-toggle-title">
+            <header class="live-toggle-card-header">
+              <h3 id="usb-midi-toggle-title">USB MIDI Output</h3>
+              <p class="microcopy">Live device toggle. This does not use Apply/Rollback.</p>
+            </header>
+            <div class="live-toggle-actions">
+              <button id="usb-midi-toggle" type="button" disabled>USB MIDI —</button>
+            </div>
+            <p class="microcopy macro-status" id="usb-midi-status" data-state="muted" aria-live="polite">
+              Connect to inspect USB MIDI output state.
+            </p>
+          </section>
           <fieldset id="filter-settings" class="schema-section" data-schema-section="filter" data-ui-tier="advanced">
             <legend>Filter</legend>
             <div

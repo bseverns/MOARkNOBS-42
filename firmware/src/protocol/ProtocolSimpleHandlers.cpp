@@ -264,6 +264,12 @@ void handleGetSchemaCommand(const String &command) {
     LOG_PRINTLN(ConfigManager::makeSchema());
 }
 
+void handleGetUsbMidiCommand(const String &command) {
+    (void)command;
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_USB_MIDI\",\"usb_midi_out\":%s}\n",
+               g_usbMidiOutEnabled ? "true" : "false");
+}
+
 void handleHelloCommand(const String &command) {
     (void)command;
     LOG_PRINTLN("{\"hello\":\"mn42\"}");
@@ -360,6 +366,22 @@ void handleSetPotCommand(const String &command) {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"message\":\"Invalid values for "
                     "SET_POT\"}");
     }
+}
+
+void handleSetUsbMidiCommand(const String &command) {
+    int comma = command.indexOf(',');
+    if (comma < 0) {
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_USB_MIDI\","
+                    "\"message\":\"missing value\"}");
+        return;
+    }
+
+    String valueText = command.substring(comma + 1);
+    valueText.trim();
+    g_usbMidiOutEnabled = valueText.toInt() != 0;
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_USB_MIDI\","
+               "\"usb_midi_out\":%s}\n",
+               g_usbMidiOutEnabled ? "true" : "false");
 }
 
 void handleSetSlotValueCommand(const String &command) {

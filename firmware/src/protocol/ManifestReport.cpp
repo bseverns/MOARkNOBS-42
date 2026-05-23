@@ -8,6 +8,7 @@
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
 #include "Globals.h"
+#include "MIDIHandler.h"
 #include "protocol/ManifestContract.h"
 #include "version.h"
 
@@ -68,6 +69,7 @@ void writeManifestFields(JsonObject object) {
     capabilities["profile_reset"] = true;
     capabilities["macro_snapshot"] = true;
     capabilities["scenes"] = true;
+    capabilities["usb_midi_toggle"] = HAS_USB_MIDI;
     capabilities["device_schema"] = true;
     capabilities["bulk_config"] = true;
     capabilities["one_shot_config_boot"] = true;

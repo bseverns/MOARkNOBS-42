@@ -1190,6 +1190,7 @@ void handleGetLedCommand(const ParsedCommand &cmd);
 void handleGetManifestCommand(const ParsedCommand &cmd);
 void handleGetProfileCommand(const ParsedCommand &cmd);
 void handleGetSchemaCommand(const ParsedCommand &cmd);
+void handleGetUsbMidiCommand(const ParsedCommand &cmd);
 void handleHelloCommand(const ParsedCommand &cmd);
 void handleEnterConfigModeCommand(const ParsedCommand &cmd);
 void handleLoadProfileCommand(const ParsedCommand &cmd);
@@ -1205,6 +1206,7 @@ void handleSetLedCommand(const ParsedCommand &cmd);
 void handleSetPotCommand(const ParsedCommand &cmd);
 void handleSetProfileCommand(const ParsedCommand &cmd);
 void handleSetSlotValueCommand(const ParsedCommand &cmd);
+void handleSetUsbMidiCommand(const ParsedCommand &cmd);
 
 // Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
@@ -1220,6 +1222,7 @@ const CommandHandler kCommandHandlers[] = {
     {"GET_MANIFEST", handleGetManifestCommand},
     {"GET_PROFILE", handleGetProfileCommand},
     {"GET_SCHEMA", handleGetSchemaCommand},
+    {"GET_USB_MIDI", handleGetUsbMidiCommand},
     {"HELLO", handleHelloCommand},
     {"LOAD_PROFILE", handleLoadProfileCommand},
     {"RECALL_MACRO_SLOT", handleRecallMacroSlotCommand},
@@ -1234,6 +1237,7 @@ const CommandHandler kCommandHandlers[] = {
     {"SET_POT", handleSetPotCommand},
     {"SET_PROFILE", handleSetProfileCommand},
     {"SET_SLOT_VALUE", handleSetSlotValueCommand},
+    {"SET_USB_MIDI", handleSetUsbMidiCommand},
 };
 
 constexpr size_t kCommandHandlerCount = sizeof(kCommandHandlers) / sizeof(kCommandHandlers[0]);
@@ -1345,6 +1349,10 @@ void handleGetProfileCommand(const ParsedCommand &cmd) {
 
 void handleGetSchemaCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetSchemaCommand(cmd.fullCommand());
+}
+
+void handleGetUsbMidiCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetUsbMidiCommand(cmd.fullCommand());
 }
 
 void handleHelloCommand(const ParsedCommand &cmd) {
@@ -1504,6 +1512,10 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
 
 void handleSetSlotValueCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetSlotValueCommand(cmd.fullCommand());
+}
+
+void handleSetUsbMidiCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleSetUsbMidiCommand(cmd.fullCommand());
 }
 
 } // namespace

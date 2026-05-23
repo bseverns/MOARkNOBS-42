@@ -125,6 +125,7 @@ export function createSimulator(simDeps = {}) {
   };
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
   let activeArpSlot = null;
+  let usbMidiOutEnabled = false;
 
   const telemetry = () => ({
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
@@ -226,6 +227,9 @@ export function createSimulator(simDeps = {}) {
         });
         break;
       }
+      case 'get_usb_midi':
+        respond({ usb_midi_out: usbMidiOutEnabled });
+        break;
       case 'set_config':
         if (request.config && typeof request.config === 'object') {
           config = { ...config, ...request.config };
@@ -244,6 +248,10 @@ export function createSimulator(simDeps = {}) {
         respond({ profile: slot, profile_set: true });
         break;
       }
+      case 'set_usb_midi':
+        usbMidiOutEnabled = Boolean(request.enabled);
+        respond({ command: 'SET_USB_MIDI', status: 'ok', usb_midi_out: usbMidiOutEnabled });
+        break;
       case 'set_param':
         if (typeof request.path !== 'string' || !request.path.length) {
           if (request.id !== undefined) {

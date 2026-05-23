@@ -93,6 +93,8 @@ const boot = () => {
   const presetPicker = document.getElementById('preset-picker');
   const applySaveProfileBtn = document.getElementById('apply-save-profile');
   const simulatorToggle = document.getElementById('simulator-toggle');
+  const usbMidiToggleBtn = document.getElementById('usb-midi-toggle');
+  const usbMidiStatusEl = document.getElementById('usb-midi-status');
   const ledGrid = document.getElementById('led-grid');
   const formContainer = document.getElementById('form');
   const editorTabButtons = Array.from(document.querySelectorAll('[data-editor-tab]'));
@@ -305,7 +307,9 @@ const boot = () => {
       simulatorToggle,
       connectionPill,
       connectionBanner,
-      connectFailHelp
+      connectFailHelp,
+      usbMidiToggleBtn,
+      usbMidiStatusEl
     }
   });
   const { setConnectionBanner, setConnectionPill, primeCompatibilityStatus } =
@@ -613,6 +617,7 @@ const boot = () => {
     deviceMonitorController.render(manifest);
     updatePowerSafetySummary(manifest);
     profileMacroScenePanel.onManifest(manifest);
+    transportToolbarController.onManifest(manifest);
     const followerCount = Number.isFinite(Number(manifest?.envelope_count))
       ? Number(manifest.envelope_count)
       : localManifest.envelope_count || 0;
@@ -648,6 +653,7 @@ const boot = () => {
     syncConfigFileButtons();
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
     profileMacroScenePanel.onConnected();
+    transportToolbarController.onConnected();
     updateStagePanel();
   });
   runtime.on('disconnected', () => {
@@ -659,6 +665,7 @@ const boot = () => {
     syncConfigFileButtons();
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
     profileMacroScenePanel.onDisconnected();
+    transportToolbarController.onDisconnected();
     updateStagePanel();
   });
   runtime.on('error', (err) => {
@@ -668,6 +675,7 @@ const boot = () => {
     connectFailHelp?.setAttribute('open', '');
     setStatus('err', 'Runtime error', err.message || String(err));
     profileMacroScenePanel.onRuntimeError();
+    transportToolbarController.onDisconnected();
     updateStagePanel();
   });
   runtime.on('macro', (payload) => profileMacroScenePanel.onMacro(payload));

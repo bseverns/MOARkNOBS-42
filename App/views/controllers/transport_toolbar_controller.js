@@ -23,10 +23,15 @@ export function createTransportToolbarController({
     simulatorToggle = null,
     connectionPill = null,
     connectionBanner = null,
-    connectFailHelp = null
+    connectFailHelp = null,
+    usbMidiToggleBtn = null,
+    usbMidiStatusEl = null
   } = elements;
 
   let lastCompatibilityReport = null;
+  let usbMidiToggleSupported = false;
+  let usbMidiBusy = false;
+  let usbMidiOutEnabled = false;
 
   function usingSimulatorTransport() {
     return Boolean(simulatorToggle?.classList.contains('active'));
@@ -110,6 +115,77 @@ export function createTransportToolbarController({
       lastCompatibilityReport.label,
       lastCompatibilityReport.message
     );
+  }
+
+  function setUsbMidiStatus(state, message) {
+    if (!usbMidiStatusEl) return;
+    usbMidiStatusEl.dataset.state = state;
+    usbMidiStatusEl.textContent = message;
+  }
+
+  function updateUsbMidiControls() {
+    if (!usbMidiToggleBtn) return;
+    const connected = connectionPill?.dataset.stage === 'live';
+    usbMidiToggleBtn.disabled = !connected || usbMidiBusy || !usbMidiToggleSupported;
+    usbMidiToggleBtn.textContent = usbMidiOutEnabled ? 'USB MIDI On' : 'USB MIDI Off';
+  }
+
+  async function refreshUsbMidiState() {
+    if (!usbMidiToggleSupported) {
+      setUsbMidiStatus('muted', 'This firmware does not expose USB MIDI toggling.');
+      updateUsbMidiControls();
+      return;
+    }
+    if (connectionPill?.dataset.stage !== 'live') {
+      setUsbMidiStatus('muted', 'Connect to inspect USB MIDI output state.');
+      updateUsbMidiControls();
+      return;
+    }
+    usbMidiBusy = true;
+    updateUsbMidiControls();
+    setUsbMidiStatus('busy', 'Reading USB MIDI output state…');
+    try {
+      const response = await runtime.sendRpc({ rpc: 'get_usb_midi' });
+      usbMidiOutEnabled = Boolean(response?.usb_midi_out);
+      setUsbMidiStatus(
+        'ok',
+        usbMidiOutEnabled ? 'USB MIDI output is enabled.' : 'USB MIDI output is disabled.'
+      );
+    } catch (err) {
+      setUsbMidiStatus('err', `USB MIDI read failed: ${err.message || String(err)}`);
+    } finally {
+      usbMidiBusy = false;
+      updateUsbMidiControls();
+    }
+  }
+
+  async function toggleUsbMidi() {
+    if (!usbMidiToggleSupported || usbMidiBusy) return;
+    usbMidiBusy = true;
+    updateUsbMidiControls();
+    setUsbMidiStatus(
+      'busy',
+      usbMidiOutEnabled ? 'Disabling USB MIDI output…' : 'Enabling USB MIDI output…'
+    );
+    try {
+      const response = await runtime.sendRpc({ rpc: 'set_usb_midi', enabled: !usbMidiOutEnabled });
+      usbMidiOutEnabled = Boolean(response?.usb_midi_out);
+      setUsbMidiStatus(
+        'ok',
+        usbMidiOutEnabled ? 'USB MIDI output enabled.' : 'USB MIDI output disabled.'
+      );
+      setStatus(
+        'ok',
+        'USB MIDI updated',
+        usbMidiOutEnabled ? 'USB MIDI output enabled.' : 'USB MIDI output disabled.'
+      );
+    } catch (err) {
+      setUsbMidiStatus('err', `USB MIDI update failed: ${err.message || String(err)}`);
+      setStatus('err', 'USB MIDI update failed', err.message || String(err));
+    } finally {
+      usbMidiBusy = false;
+      updateUsbMidiControls();
+    }
   }
 
   async function connect() {
@@ -202,12 +278,40 @@ export function createTransportToolbarController({
     configModeBtn?.addEventListener('click', () => requestConfigBoot());
     applyBtn?.addEventListener('click', () => apply());
     rollbackBtn?.addEventListener('click', () => rollback());
+    usbMidiToggleBtn?.addEventListener('click', () => toggleUsbMidi());
     initializeSimulatorToggle();
+    updateUsbMidiControls();
+  }
+
+  function onManifest(manifest) {
+    const capabilities =
+      manifest?.capabilities && typeof manifest.capabilities === 'object'
+        ? manifest.capabilities
+        : {};
+    usbMidiToggleSupported = Boolean(capabilities.usb_midi_toggle);
+    if (!usbMidiToggleSupported) {
+      setUsbMidiStatus('muted', 'This firmware does not expose USB MIDI toggling.');
+    }
+    updateUsbMidiControls();
+  }
+
+  function onConnected() {
+    void refreshUsbMidiState();
+  }
+
+  function onDisconnected() {
+    usbMidiBusy = false;
+    usbMidiOutEnabled = false;
+    setUsbMidiStatus('muted', 'Connect to inspect USB MIDI output state.');
+    updateUsbMidiControls();
   }
 
   return {
     bind,
     connect,
+    onManifest,
+    onConnected,
+    onDisconnected,
     setConnectionBanner,
     setConnectionPill,
     primeCompatibilityStatus,

@@ -50,6 +50,8 @@ export function createRpcKernel({
         return { kind: 'manifest', lines: ['GET_MANIFEST'] };
       case 'get_profile':
         return { kind: 'profile_get', lines: [`GET_PROFILE,${Number(message.slot) || 0}`] };
+      case 'get_usb_midi':
+        return { kind: 'usb_midi_get', lines: ['GET_USB_MIDI'] };
       case 'get_config':
         return { kind: 'config', lines: ['GET_CONFIG'] };
       case 'get_schema':
@@ -69,6 +71,11 @@ export function createRpcKernel({
           lines: [`SET_PROFILE,${Number(message.slot) || 0},${payload}`]
         };
       }
+      case 'set_usb_midi':
+        return {
+          kind: 'usb_midi_set',
+          lines: [`SET_USB_MIDI,${message.enabled ? 1 : 0}`]
+        };
       case 'set_config': {
         const payload = JSON.stringify({
           seq: message.seq,

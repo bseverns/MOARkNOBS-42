@@ -342,6 +342,35 @@ body {
   color: var(--color-muted);
 }
 
+.live-toggle-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.live-toggle-card-header {
+  display: grid;
+  gap: 4px;
+}
+
+.live-toggle-card-header h3 {
+  margin: 0;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.live-toggle-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.live-toggle-actions button {
+  flex: 1;
+}
+
 .scene-card {
   display: flex;
   flex-direction: column;

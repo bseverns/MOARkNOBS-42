@@ -13,7 +13,8 @@ const DEFAULT_CAPABILITIES = {
   profile_load: false,
   profile_reset: false,
   macro_snapshot: false,
-  scenes: false
+  scenes: false,
+  usb_midi_toggle: false
 };
 
 // Build the browser's fallback manifest so the UI still knows slot counts,
