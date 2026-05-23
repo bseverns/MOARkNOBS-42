@@ -50,6 +50,7 @@ inline constexpr uint8_t EF_IDLE_FLOOR_DEFAULT = 24; //!< Default EF noise floor
 extern uint32_t g_resetCause;                 //!< Raw reset cause register
 extern uint16_t g_brownoutCount;              //!< Persistent brownout counter
 extern uint8_t midiBeatPosition;              //!< Current MIDI beat slot (0..7)
+extern bool g_seedboxInteropEnabled;          //!< Opt-in bridge chatter; off for normal MIDI use
 extern char serialBuffer[SERIAL_BUFFER_SIZE]; //!< Serial input buffer
 extern uint8_t serialBufferIndex;             //!< Cursor into `serialBuffer`
 

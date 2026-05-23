@@ -24,31 +24,63 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 // when the arp idles.
 
 Arpeggiator::Arpeggiator()
-    : _active(false), _slotIdx(0), _lengthTicks(12), _tickCounter(0), _shape(UP), _step(0),
-      _patternLength(4), _swingPercent(0.0f), _gatePercent(50.0f), _octaveRange(0), _baseNote(0),
-      _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false), _baseNoteCb(nullptr), _clock(),
-      _rngState(0x12345678u), _drunkPosition(0) {}
+    : _lengthTicks(12), _shape(UP), _patternLength(4), _swingPercent(0.0f), _gatePercent(50.0f),
+      _octaveRange(0), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false),
+      _baseNoteCb(nullptr), _slots{}, _primarySlot(0) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
 
 void Arpeggiator::start(uint8_t slotIdx) {
-    _slotIdx = slotIdx;
-    _active = true;
-    _tickCounter = 0;
-    _step = 0;
-    _clock.reset();
-    // Seed per-slot RNG so DRUNK mode stays deterministic.
-    _rngState = 0x12345678u ^ static_cast<uint32_t>(slotIdx);
-    _drunkPosition = 0;
+    if (slotIdx >= NUM_SLOTS) {
+        return;
+    }
+    SlotState &state = _slots[slotIdx];
+    state.active = true;
+    state.tickCounter = 0;
+    state.step = 0;
+    state.clock.reset();
+    state.rngState = 0x12345678u ^ static_cast<uint32_t>(slotIdx);
+    state.drunkPosition = 0;
+    _primarySlot = slotIdx;
 }
 
 // Stop arpeggiation immediately. update() will simply return once inactive.
-void Arpeggiator::stop() { _active = false; }
+void Arpeggiator::stop() {
+    for (SlotState &state : _slots) {
+        state.active = false;
+        state.tickCounter = 0;
+        state.step = 0;
+        state.drunkPosition = 0;
+    }
+}
 
-bool Arpeggiator::isActive() const { return _active; }
+void Arpeggiator::stop(uint8_t slotIdx) {
+    if (slotIdx >= NUM_SLOTS) {
+        return;
+    }
+    SlotState &state = _slots[slotIdx];
+    state.active = false;
+    state.tickCounter = 0;
+    state.step = 0;
+    state.drunkPosition = 0;
+    _primarySlot = resolvePrimarySlot();
+}
 
-uint8_t Arpeggiator::getSlot() const { return _slotIdx; }
+bool Arpeggiator::isActive() const {
+    for (const SlotState &state : _slots) {
+        if (state.active) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Arpeggiator::isActive(uint8_t slotIdx) const {
+    return slotIdx < NUM_SLOTS && _slots[slotIdx].active;
+}
+
+uint8_t Arpeggiator::getSlot() const { return resolvePrimarySlot(); }
 
 void Arpeggiator::setLength(uint8_t ticks) { _lengthTicks = constrain(ticks, 1, MAX_LENGTH); }
 
@@ -100,18 +132,32 @@ float effectiveJitterSmoothness() {
 } // namespace
 
 // Deterministic RNG used for DRUNK steps.
-uint32_t Arpeggiator::nextRng() {
-    _rngState = (_rngState * 1664525u) + 1013904223u;
-    return _rngState;
+uint8_t Arpeggiator::resolvePrimarySlot() const {
+    if (_primarySlot < NUM_SLOTS && _slots[_primarySlot].active) {
+        return _primarySlot;
+    }
+    for (uint8_t slotIdx = 0; slotIdx < NUM_SLOTS; ++slotIdx) {
+        if (_slots[slotIdx].active) {
+            return slotIdx;
+        }
+    }
+    return 0;
+}
+
+uint32_t Arpeggiator::nextRng(uint8_t slotIdx) {
+    SlotState &state = _slots[slotIdx];
+    state.rngState = (state.rngState * 1664525u) + 1013904223u;
+    return state.rngState;
 }
 
 // Random walk that nudges the step position by +/-1 each hit.
-int8_t Arpeggiator::nextDrunkOffset(uint8_t totalSteps) {
+int8_t Arpeggiator::nextDrunkOffset(uint8_t slotIdx, uint8_t totalSteps) {
     if (totalSteps == 0) {
         return 0;
     }
-    uint8_t pos = static_cast<uint8_t>(_drunkPosition);
-    uint32_t r = nextRng();
+    SlotState &state = _slots[slotIdx];
+    uint8_t pos = static_cast<uint8_t>(state.drunkPosition);
+    uint32_t r = nextRng(slotIdx);
     int delta = (r & 0x1u) ? 1 : -1;
     int nextPos = static_cast<int>(pos) + delta;
     if (nextPos < 0) {
@@ -122,8 +168,8 @@ int8_t Arpeggiator::nextDrunkOffset(uint8_t totalSteps) {
     if (nextPos < 0) {
         nextPos = 0;
     }
-    _drunkPosition = static_cast<int8_t>(constrain(nextPos, 0, totalSteps - 1));
-    return _drunkPosition;
+    state.drunkPosition = static_cast<int8_t>(constrain(nextPos, 0, totalSteps - 1));
+    return state.drunkPosition;
 }
 
 // UPDOWN walks up then back down, so we extend the step count.
@@ -162,7 +208,7 @@ int8_t Arpeggiator::computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &s
         break;
     }
     case Arpeggiator::DRUNK:
-        pos = static_cast<uint8_t>(nextDrunkOffset(totalSteps));
+        pos = static_cast<uint8_t>(nextDrunkOffset(resolvePrimarySlot(), totalSteps));
         break;
     case Arpeggiator::EUCLIDEAN: {
         // Euclidean-lite hit/rest: fire on evenly distributed steps.
@@ -206,38 +252,38 @@ int8_t Arpeggiator::computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &s
 //  * `pots`  → cached ADC readings so we don’t block on fresh analog reads.
 // Each is passed by reference so we mutate the shared, long-lived singletons
 // instead of cloning state each frame.
-void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerManager &pots) {
-    if (!_active)
-        return;
-
+void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &midi,
+                             ConfigManager &cfg, PotentiometerManager &pots) {
     unsigned long nowMs = now();
-    _clock.observe(midi.clockTickCount(), nowMs, midi.isClockRunning());
+    state.clock.observe(midi.clockTickCount(), nowMs, midi.isClockRunning());
 
-    if (_clock.justResumed()) {
-        _tickCounter = 0;
-        _step = 0;
-        _drunkPosition = 0;
-        _clock.clearResumeFlag();
+    if (state.clock.justResumed()) {
+        state.tickCounter = 0;
+        state.step = 0;
+        state.drunkPosition = 0;
+        state.clock.clearResumeFlag();
     }
 
-    if (_clock.driftDetected()) {
-        _tickCounter = 0;
-        _step = 0;
-        _drunkPosition = 0;
-        _clock.clearDriftFlag();
+    if (state.clock.driftDetected()) {
+        state.tickCounter = 0;
+        state.step = 0;
+        state.drunkPosition = 0;
+        state.clock.clearDriftFlag();
     }
 
-    uint32_t elapsed = _clock.consumeTicks();
-    if (elapsed == 0)
+    uint32_t elapsed = state.clock.consumeTicks();
+    if (elapsed == 0) {
         return;
+    }
 
-    uint32_t ticks = static_cast<uint32_t>(_tickCounter) + elapsed;
+    uint32_t ticks = static_cast<uint32_t>(state.tickCounter) + elapsed;
     uint32_t events = ticks / _lengthTicks;
-    _tickCounter = static_cast<uint8_t>(ticks % _lengthTicks);
-    if (events == 0)
+    state.tickCounter = static_cast<uint8_t>(ticks % _lengthTicks);
+    if (events == 0) {
         return;
+    }
 
-    MIDISlot &slot = cfg.getSlot(_slotIdx);
+    MIDISlot &slot = cfg.getSlot(slotIdx);
     if (!slot.active)
         return;
 
@@ -249,7 +295,7 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     int potRaw = 0;
 
     auto readPot = [&]() {
-        potRaw = pots.getLastValue(_slotIdx);
+        potRaw = pots.getLastValue(slotIdx);
         if (potRaw < 0)
             potRaw = 0;
         root = Utility::mapToMidiValue(potRaw) % 128;
@@ -284,7 +330,7 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     slot.arpNote = root; // keep last root around for anyone else who cares
     uint8_t potVal = root;
     // Derive per-step timing in ms; fall back to tapped BPM when needed.
-    float msPerTick = _clock.msPerTick();
+    float msPerTick = state.clock.msPerTick();
     if (msPerTick <= 0.0f && g_tappedBPM > 0.0f) {
         msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
     }
@@ -302,11 +348,14 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
     uint8_t stepCount = stepCountForShape(totalSteps);
 
     for (uint16_t i = 0; i < events; ++i) {
-        uint8_t stepIndex = _step;
-        _step = (stepCount > 0) ? static_cast<uint8_t>((_step + 1) % stepCount) : 0;
+        uint8_t stepIndex = state.step;
+        state.step = (stepCount > 0) ? static_cast<uint8_t>((state.step + 1) % stepCount) : 0;
 
         bool stepEnabled = true;
+        const uint8_t priorPrimary = _primarySlot;
+        _primarySlot = slotIdx;
         int8_t offset = computeOffset(stepIndex, totalSteps, stepEnabled);
+        _primarySlot = priorPrimary;
         if (!stepEnabled) {
             continue;
         }
@@ -394,5 +443,18 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         default:
             break;
         }
+    }
+}
+
+void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerManager &pots) {
+    if (!isActive()) {
+        return;
+    }
+    for (uint8_t slotIdx = 0; slotIdx < NUM_SLOTS; ++slotIdx) {
+        SlotState &state = _slots[slotIdx];
+        if (!state.active) {
+            continue;
+        }
+        updateSlot(slotIdx, state, midi, cfg, pots);
     }
 }

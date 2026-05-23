@@ -6,8 +6,10 @@
 #define ARPEGGIATOR_H
 
 #include <Arduino.h>
+#include <array>
 #include <functional>
 #include "ClockDiscipline.h"
+#include "Globals.h"
 #include "MIDITypes.h"
 
 class MIDIHandler;
@@ -48,8 +50,12 @@ class Arpeggiator {
      * from being triggered.
      */
     void stop();
+    /** Stop one slot while leaving any other active arp lanes running. */
+    void stop(uint8_t slotIdx);
     /** True while the arpeggiator is actively stepping. */
     bool isActive() const;
+    /** True when a specific slot is currently being arpeggiated. */
+    bool isActive(uint8_t slotIdx) const;
     /** Return the slot currently being arpeggiated. */
     uint8_t getSlot() const;
 
@@ -61,7 +67,7 @@ class Arpeggiator {
     /** Return the current step length in MIDI ticks. */
     uint8_t getLength() const { return _lengthTicks; }
     /** Expose the current ms-per-tick estimate (for tests/insights). */
-    float msPerTickEstimate() const { return _clock.msPerTick(); }
+    float msPerTickEstimate() const { return _slots[resolvePrimarySlot()].clock.msPerTick(); }
     /**
      * Choose how the offsets are ordered.
      * @param s Pattern of note movement—UP, DOWN, UPDOWN or RANDOM—which
@@ -121,32 +127,41 @@ class Arpeggiator {
     void update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerManager &pots);
 
   private:
+    struct SlotState {
+        bool active = false;
+        uint8_t tickCounter = 0;
+        uint8_t step = 0;
+        ClockDiscipline clock{};
+        uint32_t rngState = 0x12345678u;
+        int8_t drunkPosition = 0;
+    };
+
     /** Compute semitone offset for the given step, honoring shape rules. */
     int8_t computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &stepEnabled);
     /** Return the total step count for the active shape. */
     uint8_t stepCountForShape(uint8_t totalSteps) const;
     /** Advance and return the deterministic RNG state. */
-    uint32_t nextRng();
+    uint32_t nextRng(uint8_t slotIdx);
     /** Compute the next offset in the "drunk" random walk. */
-    int8_t nextDrunkOffset(uint8_t totalSteps);
+    int8_t nextDrunkOffset(uint8_t slotIdx, uint8_t totalSteps);
+    /** Run one active slot forward against the shared clocked-arp settings. */
+    void updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &midi, ConfigManager &cfg,
+                    PotentiometerManager &pots);
+    /** Pick a stable slot to act as the "primary" one for UI overlays. */
+    uint8_t resolvePrimarySlot() const;
 
-    bool _active;
-    uint8_t _slotIdx;
     uint8_t _lengthTicks;
-    uint8_t _tickCounter;
     Shape _shape;
-    uint8_t _step;
     uint8_t _patternLength;
-    float _swingPercent;                  //!< Swing in percent of step duration
-    float _gatePercent;                   //!< Gate in percent of step duration
-    uint8_t _octaveRange;                 //!< Number of extra octaves above the root
-    uint8_t _baseNote;                    //!< Root note for the pattern
-    BaseNoteSource _baseNoteSrc;          //!< Who owns the root
-    bool _baseNoteIsSet;                  //!< True once setBaseNote() has been called
-    std::function<uint8_t()> _baseNoteCb; //!< Optional external hook for fresh roots
-    ClockDiscipline _clock;               //!< Tracks PPQN-derived ticks and drift
-    uint32_t _rngState;                   //!< Deterministic RNG state
-    int8_t _drunkPosition;                //!< Random walk position in steps
+    float _swingPercent;                     //!< Swing in percent of step duration
+    float _gatePercent;                      //!< Gate in percent of step duration
+    uint8_t _octaveRange;                    //!< Number of extra octaves above the root
+    uint8_t _baseNote;                       //!< Root note for the pattern
+    BaseNoteSource _baseNoteSrc;             //!< Who owns the root
+    bool _baseNoteIsSet;                     //!< True once setBaseNote() has been called
+    std::function<uint8_t()> _baseNoteCb;    //!< Optional external hook for fresh roots
+    std::array<SlotState, NUM_SLOTS> _slots; //!< Per-slot transport/step state
+    uint8_t _primarySlot;                    //!< Last slot armed for arp; used for overlays
 };
 
 #endif // ARPEGGIATOR_H

@@ -143,7 +143,7 @@ export function createSlotEditorPanel({
             },
             {
               label: 'Stop arp',
-              onClick: () => runArpCommand('arp_stop')
+              onClick: () => runArpCommand('arp_stop', slotState.selected)
             }
           ])
         );
@@ -504,13 +504,17 @@ export function createSlotEditorPanel({
     const slotLabel = slotIndex === null ? 'selected slot' : `Slot ${Number(slotIndex) + 1}`;
     setStatus('warn', rpc === 'arp_start' ? 'Starting arp…' : 'Stopping arp…', slotLabel);
     try {
-      const payload = rpc === 'arp_start' ? { rpc, slot: slotIndex } : { rpc };
+      const payload = slotIndex === null ? { rpc } : { rpc, slot: slotIndex };
       const response = await runtime.sendRpc(payload);
       if (rpc === 'arp_start') {
         const startedSlot = Number(response?.slot ?? slotIndex ?? 0) + 1;
         setStatus('ok', 'Arp running', `Slot ${startedSlot}`);
       } else {
-        setStatus('ok', 'Arp stopped', 'Clock-driven note playback halted.');
+        const stoppedSlot = Number(response?.slot ?? slotIndex);
+        const detail = Number.isFinite(stoppedSlot)
+          ? `Slot ${stoppedSlot + 1}`
+          : 'Clock-driven note playback halted.';
+        setStatus('ok', 'Arp stopped', detail);
       }
     } catch (err) {
       setStatus('err', 'Arp command failed', err.message || String(err));

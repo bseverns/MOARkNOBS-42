@@ -311,7 +311,8 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
         break;
     case midi::ControlChange:
         // Peek for NRPN sequences; otherwise just log the CC
-        if (seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1,
+        if (g_seedboxInteropEnabled &&
+            seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1,
                                                                                 data2)) {
             break;
         }
@@ -775,7 +776,9 @@ void MIDIHandler::handleSysEx(const uint8_t *data, uint16_t length) {
     }
 
     _rxCount++;
-    seedbox::interop::mn42::SeedBoxLink::instance().handleSysEx(data, length);
+    if (g_seedboxInteropEnabled) {
+        seedbox::interop::mn42::SeedBoxLink::instance().handleSysEx(data, length);
+    }
     bool isIdentityRequest = length >= 6 && data[0] == 0xF0 && data[length - 1] == 0xF7 &&
                              data[1] == 0x7E && data[3] == 0x06 && data[4] == 0x01;
     if (isIdentityRequest) {

@@ -43,7 +43,9 @@ export function createRpcKernel({
       case 'arp_start':
         return { kind: 'arp_start', lines: [`ARP_START,${Number(message.slot) || 0}`] };
       case 'arp_stop':
-        return { kind: 'arp_stop', lines: ['ARP_STOP'] };
+        return message.slot === undefined || message.slot === null
+          ? { kind: 'arp_stop', lines: ['ARP_STOP'] }
+          : { kind: 'arp_stop', lines: [`ARP_STOP,${Number(message.slot) || 0}`] };
       case 'hello':
         return { kind: 'hello', lines: ['HELLO'] };
       case 'get_manifest':

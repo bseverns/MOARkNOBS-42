@@ -1270,8 +1270,8 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
     // (14) Ctrl2 + Ctrl4: Toggle arpeggiator for active slot
     else if ((pressedButtons & (maskCtrl2 | maskCtrl4)) == (maskCtrl2 | maskCtrl4)) {
-        if (arpeggiator.isActive() && arpeggiator.getSlot() == context.activePot) {
-            arpeggiator.stop();
+        if (arpeggiator.isActive(context.activePot)) {
+            arpeggiator.stop(context.activePot);
             context.displayManager.displayStatus("ARP OFF", 1000);
         } else {
             arpeggiator.start(context.activePot);
@@ -1401,7 +1401,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         (now - _comboHoldTimestamp >= LONG_PRESS_DELAY)) {
         _comboLongPressFired = true;
         if (mask == arpEditMask) {
-            if (arpeggiator.isActive()) {
+            if (arpeggiator.isActive(context.activePot)) {
                 g_arpEditActive = true;
                 context.displayManager.displayStatus("Arp Edit", 1000);
             } else {

@@ -136,7 +136,12 @@ void initializeSchedulers() {
 
     // SeedBox bridge runs slow on purpose; keep interop chatter off the critical paths.
     Utility::schedulerLow.addTask(
-        []() { seedbox::interop::mn42::SeedBoxLink::instance().update(); }, 500, true);
+        []() {
+            if (g_seedboxInteropEnabled) {
+                seedbox::interop::mn42::SeedBoxLink::instance().update();
+            }
+        },
+        500, true);
 
     // WebSerial stream cadence targets UI responsiveness without saturating USB serial output.
     Utility::schedulerLow.addTask(streamWebSerialState, 100, true);

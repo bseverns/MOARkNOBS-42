@@ -44,7 +44,7 @@ struct PendingNoteOff {
     bool active = false;
 };
 
-constexpr size_t kPendingNoteOffCapacity = 32;
+constexpr size_t kPendingNoteOffCapacity = 64;
 std::array<PendingNoteOff, kPendingNoteOffCapacity> pendingNoteOffs{};
 
 void queueMidiServiceRequest() {
@@ -67,6 +67,8 @@ bool consumeMidiServiceRequest() {
 }
 
 } // namespace
+
+bool queuePendingNoteOff(uint8_t note, uint8_t channel, unsigned long delayMs);
 
 namespace {
 volatile unsigned long statusLedPulseDeadline = 0;
@@ -95,6 +97,66 @@ bool externalClockDominant() {
 }
 
 bool internalClockDominant() { return g_tappedBPM > 0.0f && !externalClockDominant(); }
+
+bool performanceClockActive() { return externalClockDominant() || internalClockDominant(); }
+
+uint8_t resolveSlotNoteVelocity(uint8_t slotIndex, const MIDISlot &slot) {
+    uint8_t velo = 125;
+    if (slotIndex < efVoices.size() && efVoices[slotIndex].hasRendered()) {
+        velo = efVoices[slotIndex].latestLevel();
+    } else if (slot.ef.followerIndex >= 0 &&
+               static_cast<size_t>(slot.ef.followerIndex) < envelopeFollowers.size()) {
+        velo = static_cast<uint8_t>(constrain(
+            envelopeFollowers[static_cast<size_t>(slot.ef.followerIndex)].getEnvelopeLevel(), 0,
+            127));
+    }
+    int lfoVelocityOffset = static_cast<int>(lroundf(g_lfoVelocityShift * 32.0f));
+    return static_cast<uint8_t>(constrain(velo + velocityShift + lfoVelocityOffset, 0, 127));
+}
+
+uint16_t resolveClockedNoteGateMs() {
+    float bpm = 0.0f;
+    if (externalClockDominant()) {
+        bpm = midiHandler.externalClockBpm();
+    }
+    if (bpm <= 0.0f) {
+        bpm = g_tappedBPM;
+    }
+    if (bpm <= 0.0f) {
+        return 120;
+    }
+    const float quarterNoteMs = 60000.0f / bpm;
+    return static_cast<uint16_t>(constrain(lroundf(quarterNoteMs * 0.45f), 40L, 400L));
+}
+
+void emitNoteSlot(uint8_t slotIndex, MIDISlot &slot, unsigned long gateMs) {
+    const uint8_t note = static_cast<uint8_t>(slot.data1 % 128);
+    const uint8_t velocity = resolveSlotNoteVelocity(slotIndex, slot);
+    int lfoChanceOffset = static_cast<int>(lroundf(g_lfoNoteChance * 40.0f));
+    int effectiveChance = constrain(static_cast<int>(changeProbability) + lfoChanceOffset, 0, 100);
+    if (random(100U) >= static_cast<uint8_t>(effectiveChance)) {
+        return;
+    }
+    midiHandler.sendNoteOn(note, velocity, slot.midiChannel);
+    queuePendingNoteOff(note, slot.midiChannel, gateMs);
+}
+
+void emitClockedNoteSlots(uint32_t quarterEvents) {
+    if (quarterEvents == 0 || !performanceClockActive()) {
+        return;
+    }
+    const unsigned long gateMs = resolveClockedNoteGateMs();
+    for (uint32_t beat = 0; beat < quarterEvents; ++beat) {
+        for (uint8_t slotIndex = 0; slotIndex < NUM_POTS; ++slotIndex) {
+            MIDISlot &slot = configManager.getSlot(slotIndex);
+            if (!slot.active || slot.type != MIDIMessageType::Note ||
+                arpeggiator.isActive(slotIndex)) {
+                continue;
+            }
+            emitNoteSlot(slotIndex, slot, gateMs);
+        }
+    }
+}
 } // namespace
 
 // Keep the status LED pulse alive until its deadline expires, layered on top of a base liveness
@@ -181,7 +243,9 @@ void initializeRuntime(bool baselinesLoaded) {
     midiHandler.begin();
     midiHandler.setDiagnostics(&g_systemDiagnostics);
     midiHandler.setDisplayManager(&displayManager);
-    seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
+    if (g_seedboxInteropEnabled) {
+        seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
+    }
     lfoManager.attachMIDI(&midiHandler);
     ledAnimator.setMode(configManager.getLedMode());
     statusLedBootDeadline = now() + kStatusLedBootHoldMs;
@@ -200,33 +264,12 @@ void initializeRuntime(bool baselinesLoaded) {
                 midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
                 break;
 
-            case MIDIMessageType::Note: {
-                const uint8_t note = static_cast<uint8_t>(slot.data1 % 128);
-                uint8_t velo = 125;
-                if (potIdx < efVoices.size() && efVoices[potIdx].hasRendered()) {
-                    velo = efVoices[potIdx].latestLevel();
-                } else if (slot.ef.followerIndex >= 0 &&
-                           static_cast<size_t>(slot.ef.followerIndex) < envelopeFollowers.size()) {
-                    velo = static_cast<uint8_t>(
-                        constrain(envelopeFollowers[static_cast<size_t>(slot.ef.followerIndex)]
-                                      .getEnvelopeLevel(),
-                                  0, 127));
-                }
-                int lfoVelocityOffset = static_cast<int>(lroundf(g_lfoVelocityShift * 32.0f));
-                int shifted = velo + velocityShift + lfoVelocityOffset;
-                if (shifted < 0)
-                    shifted = 0;
-                if (shifted > 127)
-                    shifted = 127;
-                int lfoChanceOffset = static_cast<int>(lroundf(g_lfoNoteChance * 40.0f));
-                int effectiveChance =
-                    constrain(static_cast<int>(changeProbability) + lfoChanceOffset, 0, 100);
-                if (random(100U) >= static_cast<uint8_t>(effectiveChance))
+            case MIDIMessageType::Note:
+                if (performanceClockActive()) {
                     break;
-                midiHandler.sendNoteOn(note, shifted, slot.midiChannel);
-                queuePendingNoteOff(note, slot.midiChannel, 100);
+                }
+                emitNoteSlot(potIdx, slot, 100);
                 break;
-            }
             case MIDIMessageType::PitchBend: {
                 int16_t bend = map(static_cast<int>(rawValue), 0, 1023, -8192, 8191);
                 midiHandler.sendPitchBend(bend, slot.midiChannel);
@@ -336,6 +379,7 @@ void processMIDI() {
     midiHandler.processIncomingMIDI();
 
     static uint32_t lastDisplayTick = 0;
+    static uint32_t lastQuarterNoteTick = 0;
     uint32_t tickCount = midiHandler.clockTickCount();
     if (tickCount != lastDisplayTick) {
         // Catch-up path: if multiple clock ticks arrive between scheduler slices, advance by the
@@ -349,6 +393,12 @@ void processMIDI() {
         midiBeatPosition = (midiBeatPosition + diff) % 8;
         lastClockTime = now();
         midiHandler.clearClockTick();
+
+        const uint32_t currentQuarterNoteTick = tickCount / 24U;
+        if (currentQuarterNoteTick != lastQuarterNoteTick) {
+            emitClockedNoteSlots(currentQuarterNoteTick - lastQuarterNoteTick);
+            lastQuarterNoteTick = currentQuarterNoteTick;
+        }
     }
 
     monitorSerialHealth();

@@ -136,8 +136,18 @@ void handleArpStartCommand(const String &command) {
 }
 
 void handleArpStopCommand(const String &command) {
-    (void)command;
-    arpeggiator.stop();
+    int comma = command.indexOf(',');
+    if (comma >= 0) {
+        int slot = command.substring(comma + 1).toInt();
+        if (slot >= 0 && slot < NUM_SLOTS) {
+            arpeggiator.stop(static_cast<uint8_t>(slot));
+        } else {
+            LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_slot\"}");
+            return;
+        }
+    } else {
+        arpeggiator.stop();
+    }
     StaticJsonDocument<128> response;
     response["arp_stopped"] = true;
     response["active"] = arpeggiator.isActive();

@@ -124,7 +124,7 @@ export function createSimulator(simDeps = {}) {
     }
   };
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
-  let activeArpSlot = null;
+  const activeArpSlots = new Set();
   let usbMidiOutEnabled = false;
 
   const telemetry = () => ({
@@ -284,15 +284,29 @@ export function createSimulator(simDeps = {}) {
         break;
       }
       case 'arp_start':
-        activeArpSlot = Math.max(
-          0,
-          Math.min(manifest.slot_count - 1, Math.floor(Number(request.slot) || 0))
-        );
-        respond({ slot: activeArpSlot, arp_started: true, active: true });
+        {
+          const slot = Math.max(
+            0,
+            Math.min(manifest.slot_count - 1, Math.floor(Number(request.slot) || 0))
+          );
+          activeArpSlots.add(slot);
+          respond({ slot, arp_started: true, active: activeArpSlots.size > 0 });
+        }
         break;
       case 'arp_stop':
-        activeArpSlot = null;
-        respond({ arp_stopped: true, active: false });
+        if (request.slot === undefined || request.slot === null) {
+          activeArpSlots.clear();
+          respond({ arp_stopped: true, active: false });
+          break;
+        }
+        {
+          const slot = Math.max(
+            0,
+            Math.min(manifest.slot_count - 1, Math.floor(Number(request.slot) || 0))
+          );
+          activeArpSlots.delete(slot);
+          respond({ slot, arp_stopped: true, active: activeArpSlots.size > 0 });
+        }
         break;
       case 'hang':
         break;
