@@ -40,10 +40,16 @@ export function createRpcKernel({
 
   function buildNativeRpcRequest(message) {
     switch (message.rpc) {
+      case 'arp_start':
+        return { kind: 'arp_start', lines: [`ARP_START,${Number(message.slot) || 0}`] };
+      case 'arp_stop':
+        return { kind: 'arp_stop', lines: ['ARP_STOP'] };
       case 'hello':
         return { kind: 'hello', lines: ['HELLO'] };
       case 'get_manifest':
         return { kind: 'manifest', lines: ['GET_MANIFEST'] };
+      case 'get_profile':
+        return { kind: 'profile_get', lines: [`GET_PROFILE,${Number(message.slot) || 0}`] };
       case 'get_config':
         return { kind: 'config', lines: ['GET_CONFIG'] };
       case 'get_schema':
@@ -56,6 +62,13 @@ export function createRpcKernel({
         return { kind: 'profile_load', lines: [`LOAD_PROFILE,${Number(message.slot) || 0}`] };
       case 'reset_profile':
         return { kind: 'profile_reset', lines: [`RESET_PROFILE,${Number(message.slot) || 0}`] };
+      case 'set_profile': {
+        const payload = JSON.stringify(message.profile ?? message.payload ?? {});
+        return {
+          kind: 'profile_set',
+          lines: [`SET_PROFILE,${Number(message.slot) || 0},${payload}`]
+        };
+      }
       case 'set_config': {
         const payload = JSON.stringify({
           seq: message.seq,

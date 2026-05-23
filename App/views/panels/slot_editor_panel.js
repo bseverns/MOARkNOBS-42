@@ -10,6 +10,7 @@ export function createSlotEditorPanel({
   argMethodNames = [],
   formatArgMethodLabel,
   describeArgMethod,
+  setStatus = () => {},
   getUiMode = () => 'basic',
   getEditorTab = () => 'mapping'
 } = {}) {
@@ -128,6 +129,25 @@ export function createSlotEditorPanel({
           stageSlotField(slotState.selected, 'arpNote', value)
         )
       );
+      if (slot.type === 'Note') {
+        const arpHint = document.createElement('p');
+        arpHint.className = 'slot-hint';
+        arpHint.textContent =
+          'Arpeggiator: start or stop clock-driven note playback here. Saved shape and timing live in Recovery & Profiles.';
+        basics.appendChild(arpHint);
+        basics.appendChild(
+          makeActionRow([
+            {
+              label: 'Start arp on slot',
+              onClick: () => runArpCommand('arp_start', slotState.selected)
+            },
+            {
+              label: 'Stop arp',
+              onClick: () => runArpCommand('arp_stop')
+            }
+          ])
+        );
+      }
     }
     basics.appendChild(
       makeToggle('Enabled', !!slot.active, (value) =>
@@ -375,6 +395,19 @@ export function createSlotEditorPanel({
     return wrap;
   }
 
+  function makeActionRow(actions = []) {
+    const row = document.createElement('div');
+    row.className = 'slot-action-row';
+    actions.forEach(({ label, onClick }) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.addEventListener('click', onClick);
+      row.appendChild(button);
+    });
+    return row;
+  }
+
   // Standardize the visible label line used by all form controls.
   function makeControlLabel(text, helpText) {
     const line = document.createElement('span');
@@ -465,6 +498,23 @@ export function createSlotEditorPanel({
       draft.slots[index].arg[key] = value;
       return draft;
     });
+  }
+
+  async function runArpCommand(rpc, slotIndex = null) {
+    const slotLabel = slotIndex === null ? 'selected slot' : `Slot ${Number(slotIndex) + 1}`;
+    setStatus('warn', rpc === 'arp_start' ? 'Starting arp…' : 'Stopping arp…', slotLabel);
+    try {
+      const payload = rpc === 'arp_start' ? { rpc, slot: slotIndex } : { rpc };
+      const response = await runtime.sendRpc(payload);
+      if (rpc === 'arp_start') {
+        const startedSlot = Number(response?.slot ?? slotIndex ?? 0) + 1;
+        setStatus('ok', 'Arp running', `Slot ${startedSlot}`);
+      } else {
+        setStatus('ok', 'Arp stopped', 'Clock-driven note playback halted.');
+      }
+    } catch (err) {
+      setStatus('err', 'Arp command failed', err.message || String(err));
+    }
   }
 
   // Format numbers for compact read-only detail labels.

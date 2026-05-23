@@ -114,6 +114,17 @@ export function createSimulator(simDeps = {}) {
   let macroSnapshot = null;
   const profileSlots = Array.from({ length: 4 }, () => cloneValue(config));
   const defaultProfile = cloneValue(config);
+  const defaultProfileSettings = {
+    arp: {
+      length_ticks: 12,
+      shape: 0,
+      swing_percent: 0,
+      gate_percent: 50,
+      octave_range: 0
+    }
+  };
+  const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
+  let activeArpSlot = null;
 
   const telemetry = () => ({
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
@@ -205,12 +216,34 @@ export function createSimulator(simDeps = {}) {
       case 'get_config':
         respond({ config });
         break;
+      case 'get_profile': {
+        const slot = clampSlot(request.slot ?? request.id ?? 0);
+        respond({
+          profile: slot,
+          stored: true,
+          arp: cloneValue(profileSettingsSlots[slot].arp),
+          slots: []
+        });
+        break;
+      }
       case 'set_config':
         if (request.config && typeof request.config === 'object') {
           config = { ...config, ...request.config };
         }
         respond({ checksum: request.checksum ?? 'sim-checksum' });
         break;
+      case 'set_profile': {
+        const slot = clampSlot(request.slot ?? request.id ?? 0);
+        const next = request.profile && typeof request.profile === 'object' ? request.profile : {};
+        if (next.arp && typeof next.arp === 'object') {
+          profileSettingsSlots[slot].arp = {
+            ...profileSettingsSlots[slot].arp,
+            ...cloneValue(next.arp)
+          };
+        }
+        respond({ profile: slot, profile_set: true });
+        break;
+      }
       case 'set_param':
         if (typeof request.path !== 'string' || !request.path.length) {
           if (request.id !== undefined) {
@@ -237,10 +270,22 @@ export function createSimulator(simDeps = {}) {
       case 'reset_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
         profileSlots[slot] = cloneValue(defaultProfile);
+        profileSettingsSlots[slot] = cloneValue(defaultProfileSettings);
         config = cloneValue(defaultProfile);
         respond({ slot, config: cloneValue(config) });
         break;
       }
+      case 'arp_start':
+        activeArpSlot = Math.max(
+          0,
+          Math.min(manifest.slot_count - 1, Math.floor(Number(request.slot) || 0))
+        );
+        respond({ slot: activeArpSlot, arp_started: true, active: true });
+        break;
+      case 'arp_stop':
+        activeArpSlot = null;
+        respond({ arp_stopped: true, active: false });
+        break;
       case 'hang':
         break;
       default:

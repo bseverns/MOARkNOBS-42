@@ -156,6 +156,15 @@ const boot = () => {
   const macroSaveBtn = document.getElementById('macro-save');
   const macroRecallBtn = document.getElementById('macro-recall');
   const macroStatusEl = document.getElementById('macro-status');
+  const arpCard = document.getElementById('arp-profile-card');
+  const arpRefreshBtn = document.getElementById('arp-refresh');
+  const arpSaveBtn = document.getElementById('arp-save');
+  const arpStatusEl = document.getElementById('arp-status');
+  const arpLengthInput = document.getElementById('arp-length');
+  const arpShapeSelect = document.getElementById('arp-shape');
+  const arpSwingInput = document.getElementById('arp-swing');
+  const arpGateInput = document.getElementById('arp-gate');
+  const arpOctaveInput = document.getElementById('arp-octave');
   const sceneGrid = document.getElementById('scene-grid');
   const sceneStatusEl = document.getElementById('scene-status');
   const uiModeButtons = Array.from(document.querySelectorAll('[data-ui-mode-btn]'));
@@ -517,6 +526,15 @@ const boot = () => {
       macroSaveBtn,
       macroRecallBtn,
       macroStatusEl,
+      arpCard,
+      arpRefreshBtn,
+      arpSaveBtn,
+      arpStatusEl,
+      arpLengthInput,
+      arpShapeSelect,
+      arpSwingInput,
+      arpGateInput,
+      arpOctaveInput,
       sceneGrid,
       sceneStatusEl
     }
@@ -548,6 +566,7 @@ const boot = () => {
     argMethodNames: ARG_METHOD_NAMES,
     formatArgMethodLabel,
     describeArgMethod,
+    setStatus,
     getUiMode: () => uiModeController.getUiMode(),
     getEditorTab: () => uiModeController.getEditorTab()
   });

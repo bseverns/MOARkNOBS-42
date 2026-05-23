@@ -11,6 +11,23 @@ const PROFILE_RPC_TIMEOUT_MS = 30000;
 const MACRO_SAVE_COMMAND = 'SAVE_MACRO_SLOT';
 const MACRO_RECALL_COMMAND = 'RECALL_MACRO_SLOT';
 const SCENE_SLOT_COUNT = 6;
+const ARP_SHAPE_OPTIONS = ['Up', 'Down', 'Up/Down', 'Random', 'Drunk', 'Euclidean'];
+
+function createDefaultArpDraft() {
+  return {
+    length_ticks: 12,
+    shape: 0,
+    swing_percent: 0,
+    gate_percent: 50,
+    octave_range: 0
+  };
+}
+
+function clampInteger(value, min, max, fallback) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(numeric)));
+}
 
 export function createProfileMacroScenePanel({
   runtime,
@@ -37,6 +54,15 @@ export function createProfileMacroScenePanel({
     macroSaveBtn = null,
     macroRecallBtn = null,
     macroStatusEl = null,
+    arpCard = null,
+    arpRefreshBtn = null,
+    arpSaveBtn = null,
+    arpStatusEl = null,
+    arpLengthInput = null,
+    arpShapeSelect = null,
+    arpSwingInput = null,
+    arpGateInput = null,
+    arpOctaveInput = null,
     sceneGrid = null,
     sceneStatusEl = null
   } = elements;
@@ -46,6 +72,8 @@ export function createProfileMacroScenePanel({
   let profileWizardBusy = false;
   let macroBusy = false;
   let macroAvailable = false;
+  let arpBusy = false;
+  let arpDraft = createDefaultArpDraft();
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
   let profileWizardTargetSlot = activeProfileSlot;
   let deviceCapabilities = resolveCapabilities(localManifest);
@@ -128,6 +156,41 @@ export function createProfileMacroScenePanel({
     }
     profileHint.textContent =
       'This firmware does not expose browser-driven profile save, switch, or reset yet. Use Download/Upload for file backups.';
+  }
+
+  function setArpStatus(state, message) {
+    if (!arpStatusEl) return;
+    arpStatusEl.dataset.state = state;
+    arpStatusEl.textContent = message;
+  }
+
+  function syncArpForm() {
+    if (arpLengthInput) arpLengthInput.value = String(arpDraft.length_ticks);
+    if (arpShapeSelect) arpShapeSelect.value = String(arpDraft.shape);
+    if (arpSwingInput) arpSwingInput.value = String(arpDraft.swing_percent);
+    if (arpGateInput) arpGateInput.value = String(arpDraft.gate_percent);
+    if (arpOctaveInput) arpOctaveInput.value = String(arpDraft.octave_range);
+  }
+
+  function setArpDraft(nextDraft = {}) {
+    arpDraft = {
+      length_ticks: clampInteger(nextDraft.length_ticks, 1, 24, arpDraft.length_ticks),
+      shape: clampInteger(nextDraft.shape, 0, ARP_SHAPE_OPTIONS.length - 1, arpDraft.shape),
+      swing_percent: clampInteger(nextDraft.swing_percent, 0, 80, arpDraft.swing_percent),
+      gate_percent: clampInteger(nextDraft.gate_percent, 5, 100, arpDraft.gate_percent),
+      octave_range: clampInteger(nextDraft.octave_range, 0, 3, arpDraft.octave_range)
+    };
+    syncArpForm();
+  }
+
+  function readArpFormIntoDraft() {
+    setArpDraft({
+      length_ticks: arpLengthInput?.value ?? arpDraft.length_ticks,
+      shape: arpShapeSelect?.value ?? arpDraft.shape,
+      swing_percent: arpSwingInput?.value ?? arpDraft.swing_percent,
+      gate_percent: arpGateInput?.value ?? arpDraft.gate_percent,
+      octave_range: arpOctaveInput?.value ?? arpDraft.octave_range
+    });
   }
 
   // Return operator-facing copy for an unsupported profile RPC.
@@ -217,8 +280,23 @@ export function createProfileMacroScenePanel({
     }
     updateProfileWizardControls();
     updateMacroControls();
+    updateArpControls();
     sceneControls.updateControls();
     updateProfileHint();
+  }
+
+  function updateArpControls() {
+    const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy && !arpBusy;
+    if (arpRefreshBtn) arpRefreshBtn.disabled = !canInteract;
+    if (arpSaveBtn) arpSaveBtn.disabled = !canInteract;
+    [arpLengthInput, arpShapeSelect, arpSwingInput, arpGateInput, arpOctaveInput].forEach(
+      (control) => {
+        if (control) control.disabled = !canInteract;
+      }
+    );
+    if (arpCard) {
+      arpCard.dataset.state = canInteract ? 'ready' : 'muted';
+    }
   }
 
   // Single sink for the guided profile wizard status line.
@@ -345,6 +423,58 @@ export function createProfileMacroScenePanel({
     }
   }
 
+  async function refreshArpProfile({ silent = false } = {}) {
+    if (!profileInteractable) {
+      setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+      return;
+    }
+    if (profileRpcLocked || arpBusy) return;
+    arpBusy = true;
+    updateArpControls();
+    if (!silent) {
+      setArpStatus('busy', `Loading arp settings from ${describeSlot()}…`);
+    }
+    try {
+      const response = await runtime.sendRpc(
+        { rpc: 'get_profile', slot: activeProfileSlot },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+      );
+      setArpDraft(response?.arp ?? createDefaultArpDraft());
+      const shapeLabel = ARP_SHAPE_OPTIONS[arpDraft.shape] ?? `Shape ${arpDraft.shape}`;
+      setArpStatus('ok', `${describeSlot()} • ${shapeLabel} • ${arpDraft.length_ticks} ticks`);
+    } catch (err) {
+      setArpStatus('err', `Arp read failed: ${err.message || String(err)}`);
+    } finally {
+      arpBusy = false;
+      updateArpControls();
+    }
+  }
+
+  async function saveArpProfile() {
+    if (!profileInteractable || profileRpcLocked || arpBusy) return;
+    readArpFormIntoDraft();
+    arpBusy = true;
+    updateArpControls();
+    setArpStatus('busy', `Saving arp settings to ${describeSlot()}…`);
+    try {
+      await runtime.sendRpc(
+        { rpc: 'set_profile', slot: activeProfileSlot, profile: { arp: arpDraft } },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+      );
+      setArpStatus(
+        'ok',
+        `${describeSlot()} saved. If this slot is active, the runtime updates now.`
+      );
+      setStatus('ok', 'Arp profile saved', describeSlot());
+    } catch (err) {
+      setArpStatus('err', `Arp save failed: ${err.message || String(err)}`);
+      setStatus('err', 'Arp profile save failed', err.message || String(err));
+    } finally {
+      arpBusy = false;
+      updateArpControls();
+    }
+  }
+
   async function runProfileRpc(
     method,
     { busyLabel, successLabel, successCopy, expectConfig } = {}
@@ -380,6 +510,7 @@ export function createProfileMacroScenePanel({
       return;
     }
     setStatus('warn', busyLabel, `${describeSlot()} • busy`);
+    let arpRefreshNeeded = false;
     try {
       const response = await runtime.sendRpc(
         { rpc: method, slot: activeProfileSlot },
@@ -404,12 +535,16 @@ export function createProfileMacroScenePanel({
           runtime.replaceConfig(payload);
         }
       }
+      arpRefreshNeeded = true;
       setStatus('ok', successLabel, successCopy ?? describeSlot());
     } catch (err) {
       setStatus('err', `${successLabel ?? 'Profile'} failed`, err.message || String(err));
     } finally {
       profileRpcLocked = false;
       refreshProfileControls();
+      if (arpRefreshNeeded) {
+        void refreshArpProfile({ silent: true });
+      }
     }
   }
 
@@ -498,6 +633,7 @@ export function createProfileMacroScenePanel({
           PROFILE_LABELS.length
         );
         setActiveProfileSlot(slotIndex);
+        void refreshArpProfile({ silent: true });
       });
     });
     if (profileWizardTarget) {
@@ -526,6 +662,13 @@ export function createProfileMacroScenePanel({
     });
     macroRecallBtn?.addEventListener('click', () => runMacroCommand(MACRO_RECALL_COMMAND));
     setMacroStatus('muted', 'Awaiting the first snapshot.');
+    setArpDraft(createDefaultArpDraft());
+    setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    [arpLengthInput, arpShapeSelect, arpSwingInput, arpGateInput, arpOctaveInput].forEach(
+      (control) => control?.addEventListener('change', () => readArpFormIntoDraft())
+    );
+    arpRefreshBtn?.addEventListener('click', () => refreshArpProfile());
+    arpSaveBtn?.addEventListener('click', () => saveArpProfile());
 
     profileSaveBtn?.addEventListener('click', () =>
       runProfileRpc('save_profile', {
@@ -578,6 +721,7 @@ export function createProfileMacroScenePanel({
     profileInteractable = true;
     refreshProfileControls();
     syncRecoverySupportCopy();
+    void refreshArpProfile({ silent: true });
     if (deviceCapabilities.scenes) {
       sceneControls.refreshSceneList();
     }
@@ -591,6 +735,7 @@ export function createProfileMacroScenePanel({
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     syncRecoverySupportCopy();
+    setArpStatus('muted', 'Connect to inspect the selected profile slot.');
   }
 
   function onRuntimeError() {
@@ -601,6 +746,7 @@ export function createProfileMacroScenePanel({
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     syncRecoverySupportCopy();
+    setArpStatus('muted', 'Reconnect to inspect or save arp settings.');
   }
 
   function onMacro({ available } = {}) {

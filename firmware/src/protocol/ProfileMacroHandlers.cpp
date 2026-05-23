@@ -2,6 +2,7 @@
 
 #include <ArduinoJson.h>
 
+#include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "Globals.h"
 #include "Log.h"
@@ -113,6 +114,34 @@ void handleGetProfileCommand(const String &command) {
     String payload;
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
+}
+
+void handleArpStartCommand(const String &command) {
+    int comma = command.indexOf(',');
+    if (comma < 0) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"missing_slot\"}");
+        return;
+    }
+    int slot = command.substring(comma + 1).toInt();
+    if (slot < 0 || slot >= NUM_SLOTS) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_slot\"}");
+        return;
+    }
+    arpeggiator.start(static_cast<uint8_t>(slot));
+    StaticJsonDocument<160> response;
+    response["arp_started"] = true;
+    response["slot"] = slot;
+    response["active"] = arpeggiator.isActive();
+    sendJsonResponse(response);
+}
+
+void handleArpStopCommand(const String &command) {
+    (void)command;
+    arpeggiator.stop();
+    StaticJsonDocument<128> response;
+    response["arp_stopped"] = true;
+    response["active"] = arpeggiator.isActive();
+    sendJsonResponse(response);
 }
 
 void handleLoadProfileCommand(const String &command) {

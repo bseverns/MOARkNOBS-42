@@ -259,7 +259,7 @@ body {
 
 .recovery-aux-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 12px;
   align-items: start;
 }
@@ -351,6 +351,42 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.16);
+}
+
+.arp-card {
+  gap: 14px;
+}
+
+.arp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.arp-form-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.arp-form-grid input,
+.arp-form-grid select {
+  width: 100%;
+}
+
+.arp-actions,
+.slot-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.arp-actions button,
+.slot-action-row button {
+  flex: 1;
 }
 
 .scene-card-header {

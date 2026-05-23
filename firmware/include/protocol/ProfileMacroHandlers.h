@@ -3,6 +3,8 @@
 
 #include <Arduino.h>
 
+void handleArpStartCommand(const String &command);
+void handleArpStopCommand(const String &command);
 void handleGetProfileCommand(const String &command);
 void handleLoadProfileCommand(const String &command);
 void handleSaveProfileCommand(const String &command);

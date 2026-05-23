@@ -56,6 +56,29 @@ export function createRuntimeLineHandler({
             return;
           }
           break;
+        case 'profile_get':
+          if (
+            Object.prototype.hasOwnProperty.call(msg, 'profile') &&
+            msg.arp &&
+            typeof msg.arp === 'object'
+          ) {
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            return;
+          }
+          break;
+        case 'profile_set':
+          if (msg.type === 'response' && msg.status) {
+            if (msg.status === 'ok') {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            } else {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.message ?? 'Profile update failed' }
+              });
+            }
+            return;
+          }
+          break;
         case 'config':
           if (isConfigPayload(msg)) {
             rpcKernel.handleRpcResponse({ id: activePendingId, result: { config: msg } });
@@ -82,6 +105,32 @@ export function createRuntimeLineHandler({
               rpcKernel.handleRpcResponse({
                 id: activePendingId,
                 error: { message: msg.message ?? 'Config boot request failed' }
+              });
+            }
+            return;
+          }
+          break;
+        case 'arp_start':
+          if (Object.prototype.hasOwnProperty.call(msg, 'arp_started')) {
+            if (msg.arp_started) {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            } else {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.error ?? 'Arp start failed' }
+              });
+            }
+            return;
+          }
+          break;
+        case 'arp_stop':
+          if (Object.prototype.hasOwnProperty.call(msg, 'arp_stopped')) {
+            if (msg.arp_stopped) {
+              rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            } else {
+              rpcKernel.handleRpcResponse({
+                id: activePendingId,
+                error: { message: msg.error ?? 'Arp stop failed' }
               });
             }
             return;

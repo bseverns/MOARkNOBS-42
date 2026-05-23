@@ -1180,6 +1180,8 @@ struct CommandHandler {
 };
 
 void handleGetAllCommand(const ParsedCommand &cmd);
+void handleArpStartCommand(const ParsedCommand &cmd);
+void handleArpStopCommand(const ParsedCommand &cmd);
 void handleGetArgMethodCommand(const ParsedCommand &cmd);
 void handleGetBrownoutsCommand(const ParsedCommand &cmd);
 void handleGetConfigCommand(const ParsedCommand &cmd);
@@ -1206,6 +1208,8 @@ void handleSetSlotValueCommand(const ParsedCommand &cmd);
 
 // Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
+    {"ARP_START", handleArpStartCommand},
+    {"ARP_STOP", handleArpStopCommand},
     {"ENTER_CONFIG_MODE", handleEnterConfigModeCommand},
     {"GET_ALL", handleGetAllCommand},
     {"GET_ARGMETHOD", handleGetArgMethodCommand},
@@ -1306,6 +1310,10 @@ namespace {
 void handleGetAllCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetAllCommand(cmd.fullCommand());
 }
+
+void handleArpStartCommand(const ParsedCommand &cmd) { ::handleArpStartCommand(cmd.fullCommand()); }
+
+void handleArpStopCommand(const ParsedCommand &cmd) { ::handleArpStopCommand(cmd.fullCommand()); }
 
 void handleGetArgMethodCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetArgMethodCommand(cmd.fullCommand());

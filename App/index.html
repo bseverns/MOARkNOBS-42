@@ -100,6 +100,48 @@
                 Connect to see whether macro storage is available.
               </p>
             </div>
+            <div class="macro-card arp-card" id="arp-profile-card" aria-label="Arpeggiator profile controls">
+              <div class="macro-card-header">
+                <strong>Arpeggiator</strong>
+                <p class="microcopy">Edit saved arp timing and shape for the selected profile slot. Use the Selected Slot editor for each slot&apos;s arp root note.</p>
+              </div>
+              <div class="arp-form-grid">
+                <label>
+                  <span>Length ticks</span>
+                  <input id="arp-length" type="number" min="1" max="24" step="1" />
+                </label>
+                <label>
+                  <span>Shape</span>
+                  <select id="arp-shape">
+                    <option value="0">Up</option>
+                    <option value="1">Down</option>
+                    <option value="2">Up/Down</option>
+                    <option value="3">Random</option>
+                    <option value="4">Drunk</option>
+                    <option value="5">Euclidean</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Swing %</span>
+                  <input id="arp-swing" type="number" min="0" max="80" step="1" />
+                </label>
+                <label>
+                  <span>Gate %</span>
+                  <input id="arp-gate" type="number" min="5" max="100" step="1" />
+                </label>
+                <label>
+                  <span>Octaves</span>
+                  <input id="arp-octave" type="number" min="0" max="3" step="1" />
+                </label>
+              </div>
+              <div class="arp-actions" role="group" aria-label="Arpeggiator profile actions">
+                <button id="arp-refresh" type="button" disabled>Load slot arp</button>
+                <button id="arp-save" type="button" disabled>Save slot arp</button>
+              </div>
+              <p class="microcopy macro-status" id="arp-status" data-state="muted" aria-live="polite">
+                Connect to inspect the selected profile slot&apos;s arp settings.
+              </p>
+            </div>
             <div class="scene-card" id="scene-card" aria-label="Scene snapshots">
               <div class="scene-card-header">
                 <strong>Scenes</strong>

@@ -209,12 +209,16 @@ void handleSetProfilePayloadCommand(const String &command) {
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
         return;
     }
+    bool activeApplied = false;
     if (id == g_activeProfile) {
         // Keep runtime state in lockstep when the active profile slot is edited remotely.
         ProfileData stored{};
         if (configManager.loadProfileSettings(id, stored)) {
             applyProfileSnapshot(stored, true);
+            activeApplied = true;
         }
     }
-    LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_PROFILE\","
+               "\"profile\":%u,\"profile_updated\":true,\"active_applied\":%s}\n",
+               static_cast<unsigned>(id), activeApplied ? "true" : "false");
 }
