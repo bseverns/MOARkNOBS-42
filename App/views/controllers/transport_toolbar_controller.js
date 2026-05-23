@@ -145,7 +145,7 @@ export function createTransportToolbarController({
     updateUsbMidiControls();
     setUsbMidiStatus('busy', 'Reading USB MIDI output state…');
     try {
-      const response = await runtime.sendRpc({ rpc: 'get_usb_midi' });
+      const response = await runtime.sendRpc({ rpc: 'get_usb_midi' }, { rollbackOnError: false });
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus(
         'ok',

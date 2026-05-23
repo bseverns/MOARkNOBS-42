@@ -538,8 +538,11 @@ export function createRuntime({
     }
   });
 
-  function sendRpc(payload, { timeoutMs } = {}) {
+  function sendRpc(payload, { timeoutMs, rollbackOnError = true } = {}) {
     const request = rpcKernel.sendRpc(payload, { timeoutMs });
+    if (!rollbackOnError) {
+      return request;
+    }
     // Any failed RPC rolls staged edits back to the last known-good live config so the UI does
     // not stay in a half-applied state.
     return request.catch(async (err) => {

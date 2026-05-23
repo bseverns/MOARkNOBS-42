@@ -437,7 +437,7 @@ export function createProfileMacroScenePanel({
     try {
       const response = await runtime.sendRpc(
         { rpc: 'get_profile', slot: activeProfileSlot },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
       );
       setArpDraft(response?.arp ?? createDefaultArpDraft());
       const shapeLabel = ARP_SHAPE_OPTIONS[arpDraft.shape] ?? `Shape ${arpDraft.shape}`;
