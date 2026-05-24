@@ -16,6 +16,7 @@ import { createStateSnapshotStore } from './runtime/state_snapshot.js';
 import { createRuntimeLineHandler } from './runtime/line_router.js';
 import { selectSchemaForHydration } from './runtime/schema_selection.js';
 import { performConnectionHandshake } from './runtime/connection_handshake.js';
+import { createConfigSession } from './runtime/config_session.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -167,191 +168,6 @@ function chunkString(value, size) {
   return chunks.length ? chunks : [''];
 }
 
-function copyDefined(source, keys) {
-  if (!source || typeof source !== 'object') return {};
-  const out = {};
-  for (const key of keys) {
-    if (source[key] !== undefined) out[key] = clone(source[key]);
-  }
-  return out;
-}
-
-function equivalentJson(a, b) {
-  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
-}
-
-function isDefaultSlotEfForDevice(ef, efIndex) {
-  if (!ef || typeof ef !== 'object') return true;
-  const expectedIndex = Number.isFinite(Number(efIndex)) ? Math.round(Number(efIndex)) : -1;
-  const expected = {
-    index: expectedIndex,
-    filter_index: 0,
-    filter_name: 'LINEAR',
-    frequency: 1000,
-    q: 0.707,
-    oversample: 4,
-    smoothing: 0.2,
-    baseline: 0,
-    gain: 1
-  };
-  return Object.entries(expected).every(([key, value]) => {
-    if (ef[key] === undefined) return true;
-    if (typeof value === 'number') return Math.abs(Number(ef[key]) - value) < 0.00001;
-    return ef[key] === value;
-  });
-}
-
-function slotTypeForDevice(slot) {
-  if (typeof slot?.type_name === 'string' && SLOT_TYPE_NAMES.includes(slot.type_name)) {
-    return slot.type_name;
-  }
-  if (typeof slot?.type === 'string' && SLOT_TYPE_NAMES.includes(slot.type)) {
-    return slot.type;
-  }
-  const numericType = Number(slot?.type);
-  if (Number.isInteger(numericType) && SLOT_TYPE_NAMES[numericType]) {
-    return SLOT_TYPE_NAMES[numericType];
-  }
-  return 'OFF';
-}
-
-function resolveEfIndexForDevice(slot) {
-  const topLevel = Number(slot?.ef_index ?? slot?.efIndex);
-  const nested = Number(slot?.ef?.index);
-  if (Number.isFinite(topLevel) && Math.round(topLevel) >= 0) {
-    return Math.round(topLevel);
-  }
-  if (Number.isFinite(nested) && Math.round(nested) >= 0) {
-    return Math.round(nested);
-  }
-  if (Number.isFinite(topLevel)) {
-    return Math.round(topLevel);
-  }
-  if (Number.isFinite(nested)) {
-    return Math.round(nested);
-  }
-  return -1;
-}
-
-function compactSlotForDevice(slot, previousSlot) {
-  const out = {};
-  out.type = slotTypeForDevice(slot);
-  if (slot?.channel !== undefined) out.channel = clone(slot.channel);
-  else if (slot?.midiChannel !== undefined) out.channel = clone(slot.midiChannel);
-  if (slot?.data1 !== undefined) out.data1 = clone(slot.data1);
-  else if (slot?.cc !== undefined) out.data1 = clone(slot.cc);
-  if (slot?.arpNote !== undefined) out.arpNote = clone(slot.arpNote);
-  out.active = Boolean(slot?.active);
-  out.ef_index = resolveEfIndexForDevice(slot);
-  if (slot?.sysexTemplate !== undefined && slot?.sysexTemplate !== previousSlot?.sysexTemplate) {
-    out.sysexTemplate = clone(slot.sysexTemplate);
-  }
-  const efIndexForDevice = out.ef_index ?? slot?.efIndex ?? slot?.ef_index ?? slot?.ef?.index;
-  if (
-    slot?.ef &&
-    typeof slot.ef === 'object' &&
-    !isDefaultSlotEfForDevice(slot.ef, efIndexForDevice) &&
-    !equivalentJson(slot.ef, previousSlot?.ef)
-  ) {
-    out.ef = copyDefined(slot.ef, [
-      'index',
-      'filter_index',
-      'filter_name',
-      'filter',
-      'frequency',
-      'q',
-      'oversample',
-      'smoothing',
-      'baseline',
-      'gain',
-      'mode',
-      'auto_baseline',
-      'autoBaseline',
-      'auto_gain',
-      'autoGain',
-      'attack_ms',
-      'attackMs',
-      'release_ms',
-      'releaseMs',
-      'rms_ms',
-      'rmsWindowMs',
-      'baseline_tau_ms',
-      'baselineTauMs',
-      'gain_tau_ms',
-      'gainTauMs',
-      'gate_threshold',
-      'gateThreshold',
-      'gate_hysteresis',
-      'gateHysteresis',
-      'activity_threshold',
-      'activityThreshold',
-      'gain_target',
-      'gainTarget'
-    ]);
-  }
-  if (
-    slot?.ef_payload &&
-    typeof slot.ef_payload === 'object' &&
-    !equivalentJson(slot.ef_payload, previousSlot?.ef_payload)
-  ) {
-    out.ef_payload = copyDefined(slot.ef_payload, ['type_index', 'type', 'freq', 'frequency', 'q']);
-  }
-  if (slot?.arg && typeof slot.arg === 'object' && !equivalentJson(slot.arg, previousSlot?.arg)) {
-    out.arg = copyDefined(slot.arg, [
-      'enable',
-      'enabled',
-      'method',
-      'method_name',
-      'a',
-      'b',
-      'sourceA',
-      'sourceB'
-    ]);
-  }
-  return out;
-}
-
-function compactConfigForDevice(config, previousConfig) {
-  if (!config || typeof config !== 'object') return config;
-  const out = {};
-  if (Array.isArray(config.slots)) {
-    out.slots = config.slots.map((slot, index) =>
-      compactSlotForDevice(slot, previousConfig?.slots?.[index])
-    );
-  }
-  if (Array.isArray(config.efSlots) && !equivalentJson(config.efSlots, previousConfig?.efSlots)) {
-    out.efSlots = clone(config.efSlots);
-  }
-  if (
-    config.filter &&
-    typeof config.filter === 'object' &&
-    !equivalentJson(config.filter, previousConfig?.filter)
-  ) {
-    out.filter = clone(config.filter);
-  }
-  if (
-    config.arg &&
-    typeof config.arg === 'object' &&
-    !equivalentJson(config.arg, previousConfig?.arg)
-  ) {
-    out.arg = clone(config.arg);
-  }
-  if (
-    config.led &&
-    typeof config.led === 'object' &&
-    !equivalentJson(config.led, previousConfig?.led)
-  ) {
-    out.led = clone(config.led);
-  }
-  if (
-    config.envelopeMode !== undefined &&
-    !equivalentJson(config.envelopeMode, previousConfig?.envelopeMode)
-  ) {
-    out.envelopeMode = clone(config.envelopeMode);
-  }
-  return out;
-}
-
 // UI throttling helper for controls that should feel live without flooding transport.
 function createThrottle(fn, delay = DEFAULT_DEBOUNCE) {
   let timer = null;
@@ -398,16 +214,13 @@ export function createRuntime({
   let schema = null;
   let schemaSource = 'bundled';
   let validator = null;
-  let liveConfig = null;
-  let stagedConfig = null;
-  let dirty = false;
   let seq = 0;
-  let lastKnownChecksum = null;
   let potGuard = new Set();
   const statusListeners = new Set();
   let macroPending = null;
   let macroAvailability = true;
   let scenePending = null;
+  let configSession = null;
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -433,8 +246,8 @@ export function createRuntime({
 
   function currentSlotCount() {
     return (
-      liveConfig?.slots?.length ??
-      stagedConfig?.slots?.length ??
+      configSession?.getLiveConfig()?.slots?.length ??
+      configSession?.getStagedConfig()?.slots?.length ??
       remoteManifest?.slot_count ??
       localManifest?.slot_count ??
       0
@@ -455,14 +268,6 @@ export function createRuntime({
     getSchemaVersion: () => remoteManifest?.schema_version ?? localManifest?.schema_version,
     now: () => Date.now()
   });
-
-  function extractLocalSlotMetaFromConfig(config) {
-    localSlotMetaManager.extractFromConfig(config);
-  }
-
-  function mergeLocalSlotMeta(config) {
-    return localSlotMetaManager.mergeIntoConfig(config);
-  }
 
   function createSimulatorTransport() {
     return createSimulator({
@@ -568,13 +373,32 @@ export function createRuntime({
     // not stay in a half-applied state.
     return request.catch(async (err) => {
       try {
-        await rollback();
+        await configSession?.rollback();
       } catch (rollbackErr) {
         console.debug('rollback failed', rollbackErr);
       }
       throw err;
     });
   }
+
+  configSession = createConfigSession({
+    normalizeConfig,
+    clone,
+    shallowDiff,
+    digest,
+    emit,
+    sendRpc,
+    nextSeq: () => ++seq,
+    applyRpcTimeoutMs: APPLY_RPC_TIMEOUT_MS,
+    slotTypeNames: SLOT_TYPE_NAMES,
+    localSlotMetaManager,
+    stateSnapshotStore,
+    getManifest: () => remoteManifest ?? localManifest ?? {},
+    getRemoteManifest: () => remoteManifest,
+    getSchema: () => schema,
+    getSchemaSource: () => schemaSource,
+    getValidator: () => validator
+  });
 
   function sendMacroCommand(command, { timeoutMs } = {}) {
     if (!command || !MACRO_RESPONSE_KEYS[command]) {
@@ -743,7 +567,7 @@ export function createRuntime({
       emit('connected', {
         manifest: remoteManifest,
         schema,
-        config: mergeLocalSlotMeta(liveConfig)
+        config: configSession.mergeLocalSlotMeta(configSession.getLiveConfig())
       });
     } catch (err) {
       emit('error', err);
@@ -765,16 +589,10 @@ export function createRuntime({
     validator = ajv.compile(schema);
     const configPayload = await sendRpc({ rpc: 'get_config' });
     const config = configPayload?.config ?? configPayload;
-    const normalized = normalizeConfig(config, remoteManifest ?? localManifest ?? {});
-    liveConfig = clone(normalized);
-    stagedConfig = clone(normalized);
-    dirty = false;
+    configSession.syncFromDevice(config);
     emit('schema', schema);
-    broadcastConfig({ persist: false });
-    const snapshot = stateSnapshotStore.read();
-    if (snapshot?.staged) {
-      stage(() => snapshot.staged);
-    }
+    configSession.broadcastConfig({ persist: false });
+    configSession.restoreLocalState();
     startReadLoop();
   }
 
@@ -915,141 +733,30 @@ export function createRuntime({
     queuedTelemetry = null;
   }
 
-  function broadcastConfig({ persist = true } = {}) {
-    const payload = {
-      config: mergeLocalSlotMeta(liveConfig),
-      staged: mergeLocalSlotMeta(stagedConfig),
-      dirty
-    };
-    if (persist) stateSnapshotStore.persist(stagedConfig);
-    console.debug('[runtime] broadcastConfig dirty=', dirty);
-    emit('config', payload);
-  }
-
-  function restoreLocalState() {
-    const snapshot = stateSnapshotStore.read();
-    if (!snapshot?.staged) return false;
-    stage(() => snapshot.staged);
-    return true;
-  }
-
-  function replaceConfig(configPayload) {
-    if (!configPayload || typeof configPayload !== 'object') return false;
-    const normalized = normalizeConfig(configPayload, remoteManifest ?? localManifest ?? {});
-    liveConfig = clone(normalized);
-    stagedConfig = clone(normalized);
-    dirty = false;
-    broadcastConfig();
-    return true;
-  }
-
   const applyConfigPatch = createPatchReconciler({
-    getLiveConfig: () => liveConfig,
-    getStagedConfig: () => stagedConfig,
-    isDirty: () => dirty,
-    setLiveConfig: (next) => {
-      liveConfig = next;
-    },
-    setStagedConfig: (next) => {
-      stagedConfig = next;
-    },
+    getLiveConfig: configSession.getLiveConfig,
+    getStagedConfig: configSession.getStagedConfig,
+    isDirty: configSession.isDirty,
+    setLiveConfig: configSession.setLiveConfig,
+    setStagedConfig: configSession.setStagedConfig,
     clone,
     normalizeConfig,
     shallowEqual,
     getManifest: () => remoteManifest ?? localManifest ?? {},
-    broadcastConfig
+    broadcastConfig: configSession.broadcastConfig
   });
-
-  function stage(updater) {
-    const baseConfig =
-      stagedConfig ?? liveConfig ?? normalizeConfig({}, remoteManifest ?? localManifest ?? {});
-    const next = typeof updater === 'function' ? updater(clone(baseConfig)) : updater;
-    if (!next || typeof next !== 'object') return;
-    extractLocalSlotMetaFromConfig(next);
-    const normalizedLive = normalizeConfig(liveConfig, remoteManifest ?? localManifest ?? {});
-    const normalizedStaged = normalizeConfig(next, remoteManifest ?? localManifest ?? {});
-    liveConfig = clone(normalizedLive);
-    stagedConfig = clone(normalizedStaged);
-    dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
-    broadcastConfig();
-  }
 
   function applyPatch(path, value) {
     if (!path || typeof path !== 'string') {
       return Promise.reject(new Error('Invalid patch path'));
     }
     // Stage the payload locally so the UI stays in sync while we hit the device.
-    stage((draft) => {
+    configSession.stage((draft) => {
       setNestedValue(draft, path, value);
       return draft;
     });
     // Apply the patch with the JSON-RPC kernel so we can reuse the same timeout/throttle.
     return sendRpc({ rpc: 'set_param', path, value });
-  }
-
-  function getState() {
-    return {
-      manifest: remoteManifest,
-      schema,
-      schemaSource,
-      live: mergeLocalSlotMeta(liveConfig),
-      staged: mergeLocalSlotMeta(stagedConfig),
-      dirty,
-      lastChecksum: lastKnownChecksum
-    };
-  }
-
-  async function apply() {
-    if (!dirty) return { applied: false };
-    if (!validator(stagedConfig)) {
-      const error = new Error('Schema validation failed');
-      error.validation = validator.errors;
-      emit('validation-error', validator.errors);
-      throw error;
-    }
-    const payload = {
-      rpc: 'set_config',
-      seq: ++seq,
-      schema_version: schema?.schema_version || schema?.properties?.schema_version?.default,
-      manifest: {
-        fw_version: remoteManifest?.fw_version,
-        git_sha: remoteManifest?.git_sha,
-        build_time: remoteManifest?.build_time,
-        schema_version: remoteManifest?.schema_version
-      },
-      config: clone(stagedConfig),
-      deviceConfig: compactConfigForDevice(stagedConfig, liveConfig)
-    };
-    const body = JSON.stringify(payload);
-    const checksum = await digest(body);
-    payload.checksum = checksum;
-    let response;
-    try {
-      response = await sendRpc(payload, { timeoutMs: APPLY_RPC_TIMEOUT_MS });
-    } catch (err) {
-      if (/RPC timeout/i.test(err?.message ?? '')) {
-        throw new Error('Timed out waiting for firmware ACK');
-      }
-      throw err;
-    }
-    const ackChecksum = response?.checksum ?? response?.result?.checksum ?? null;
-    if (ackChecksum !== checksum) {
-      await rollback();
-      throw new Error('Device failed to acknowledge apply');
-    }
-    liveConfig = clone(stagedConfig);
-    dirty = false;
-    lastKnownChecksum = checksum;
-    broadcastConfig();
-    emit('applied', { checksum });
-    return { applied: true, checksum };
-  }
-
-  async function rollback() {
-    stagedConfig = clone(liveConfig);
-    dirty = false;
-    broadcastConfig();
-    emit('rollback', {});
   }
 
   async function disconnect() {
@@ -1103,10 +810,6 @@ export function createRuntime({
     }
   }
 
-  function diff() {
-    return shallowDiff(liveConfig ?? {}, stagedConfig ?? {});
-  }
-
   function setPotGuard(indices, enabled) {
     indices.forEach((idx) => {
       if (enabled) potGuard.add(idx);
@@ -1115,20 +818,14 @@ export function createRuntime({
     emit('pot-guard', { guards: new Set(potGuard) });
   }
 
-  function setLocalSlotMeta(index, patch = {}) {
-    if (!localSlotMetaManager.updateEntry(index, patch)) return false;
-    broadcastConfig();
-    return true;
-  }
-
   return {
     connect,
     disconnect,
-    stage,
-    apply,
-    rollback,
-    diff,
-    getState,
+    stage: configSession.stage,
+    apply: configSession.apply,
+    rollback: configSession.rollback,
+    diff: configSession.diff,
+    getState: configSession.getState,
     on,
     onStatus,
     sendRpc,
@@ -1137,10 +834,10 @@ export function createRuntime({
     requestScenes,
     requestConfiguratorBoot,
     applyPatch,
-    restoreLocalState,
-    replaceConfig,
+    restoreLocalState: configSession.restoreLocalState,
+    replaceConfig: configSession.replaceConfig,
     setPotGuard,
-    setLocalSlotMeta,
+    setLocalSlotMeta: configSession.setLocalSlotMeta,
     createThrottle,
     requestPort,
     useSimulator(toggle) {

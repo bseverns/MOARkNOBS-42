@@ -76,6 +76,23 @@ test.describe('Stage mode', () => {
     expect(utilityBox.width).toBeGreaterThan(300);
   });
 
+  test('device monitor shows EEPROM health from the manifest', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    });
+    await page.goto('/benzknobz.html');
+    await page.getByRole('button', { name: /simulator/i }).click();
+    await page.getByRole('button', { name: 'Connect' }).click();
+
+    await expect(page.locator('#device-monitor')).toContainText('Brownouts');
+    await expect(page.locator('#device-monitor')).toContainText('2');
+    await expect(page.locator('#device-monitor')).toContainText('EEPROM primary');
+    await expect(page.locator('#device-monitor')).toContainText('EEPROM backup');
+    await expect(page.locator('#device-monitor')).toContainText('EEPROM load');
+    await expect(page.locator('#device-monitor')).toContainText('Primary');
+  });
+
   test('switching from Stage to Basic restores the calm editor surface', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };

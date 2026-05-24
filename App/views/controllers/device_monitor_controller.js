@@ -24,6 +24,15 @@ function formatBpm(value) {
   return Number.isFinite(numeric) && numeric > 0 ? numeric.toFixed(1) : '-';
 }
 
+function formatEepromLoadSource(value) {
+  if (typeof value !== 'string' || !value.trim()) return '-';
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'primary') return 'Primary';
+  if (normalized === 'backup') return 'Backup restore';
+  if (normalized === 'defaults') return 'Defaults loaded';
+  return value;
+}
+
 export function createDeviceMonitorController({ container, resolveDeviceName } = {}) {
   let lastManifest = {};
   let lastTelemetry = {};
@@ -50,6 +59,10 @@ export function createDeviceMonitorController({ container, resolveDeviceName } =
       'Rail verified': formatBoolean(lastManifest?.rail_topology_verified),
       'Free RAM': formatKiB(lastManifest?.free_ram),
       'Free Flash': formatKiB(lastManifest?.free_flash),
+      Brownouts: lastManifest?.brownout_count ?? '-',
+      'EEPROM primary': formatBoolean(lastManifest?.eeprom_primary_valid),
+      'EEPROM backup': formatBoolean(lastManifest?.eeprom_backup_valid),
+      'EEPROM load': formatEepromLoadSource(lastManifest?.eeprom_last_load),
       'Clock source': typeof clock?.source === 'string' ? clock.source : '-',
       'Follow ext': formatBoolean(clock?.follow_external),
       'Clock out': formatBoolean(clock?.clock_out_enabled),

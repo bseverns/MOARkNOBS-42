@@ -278,6 +278,10 @@ bool ConfigManager::checkEEPROMHealth(bool backup, uint16_t base) {
     return (magic == (backup ? EEPROM_MAGIC_BACKUP : EEPROM_MAGIC_PRIMARY));
 }
 
+bool ConfigManager::hasHealthyConfigurationCopy(bool backup, uint16_t base) const {
+    return const_cast<ConfigManager *>(this)->checkEEPROMHealth(backup, base);
+}
+
 // Write magic number to EEPROM
 void ConfigManager::writeMagicNumber(bool backup, uint16_t base) {
     int address = base + (backup ? EEPROM_MAGIC_ADDRESS + 2 : EEPROM_MAGIC_ADDRESS);
@@ -336,6 +340,7 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
             _stored.version = CONFIG_VERSION;
             saveConfiguration();
         }
+        _lastLoadSource = LoadSource::kPrimary;
         return true;
     }
     LOG_PRINTLN("{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Primary EEPROM corrupted, "
@@ -381,6 +386,7 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
             saveConfiguration();
         }
         _lastRecoveryEvent = RecoveryEvent::kBackupRestored;
+        _lastLoadSource = LoadSource::kBackup;
         return true;
     }
     LOG_PRINTLN(
@@ -788,6 +794,7 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
                                        bool recordRecoveryEvent) {
     if (recordRecoveryEvent) {
         _lastRecoveryEvent = RecoveryEvent::kDefaultsLoaded;
+        _lastLoadSource = LoadSource::kDefaults;
     }
     potChannels.clear();
     for (uint8_t i = 0; i < _numPots; i++) {

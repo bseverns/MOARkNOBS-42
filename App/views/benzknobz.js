@@ -14,6 +14,8 @@ import { createLedControlsController } from './controllers/led_controls_controll
 import { createTransportToolbarController } from './controllers/transport_toolbar_controller.js';
 import { createUiModeController } from './controllers/ui_mode_controller.js';
 import { createDiffStatusController } from './controllers/diff_status_controller.js';
+import { createSessionLogController } from './controllers/session_log_controller.js';
+import { createServicePanelController } from './controllers/service_panel_controller.js';
 import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
@@ -156,6 +158,26 @@ const boot = () => {
   const stageSlotGrid = document.getElementById('stage-slots');
   const stageEnvelopeContainer = document.getElementById('stage-envelopes');
   const logEl = document.getElementById('log');
+  const sessionLogCount = document.getElementById('session-log-count');
+  const sessionLogExportBtn = document.getElementById('session-log-export');
+  const sessionLogClearBtn = document.getElementById('session-log-clear');
+  const serviceVerdict = document.getElementById('service-verdict');
+  const serviceVerdictLabel = document.getElementById('service-verdict-label');
+  const serviceVerdictMessage = document.getElementById('service-verdict-message');
+  const serviceConnectionState = document.getElementById('service-connection-state');
+  const serviceConnectionDetail = document.getElementById('service-connection-detail');
+  const serviceFirmwareState = document.getElementById('service-firmware-state');
+  const serviceFirmwareDetail = document.getElementById('service-firmware-detail');
+  const serviceDirtyState = document.getElementById('service-dirty-state');
+  const serviceDirtyDetail = document.getElementById('service-dirty-detail');
+  const serviceBackupState = document.getElementById('service-backup-state');
+  const serviceBackupDetail = document.getElementById('service-backup-detail');
+  const serviceLogState = document.getElementById('service-log-state');
+  const serviceLogDetail = document.getElementById('service-log-detail');
+  const serviceVerifyTarget = document.getElementById('service-verify-target');
+  const serviceExportConfigBtn = document.getElementById('service-export-config');
+  const serviceExportLogBtn = document.getElementById('service-export-log');
+  const serviceConfigBootBtn = document.getElementById('service-config-boot');
   const profileSlotButtons = Array.from(document.querySelectorAll('[data-profile-slot]'));
   const profileSlotStatus = document.getElementById('profile-slot-status');
   const profileSaveBtn = document.getElementById('profile-save');
@@ -255,7 +277,61 @@ const boot = () => {
       rollbackBtn
     }
   });
-  const { setStatus } = diffStatusController;
+  const baseSetStatus = diffStatusController.setStatus;
+  let servicePanelController;
+  const sessionLogController = createSessionLogController({
+    logEl,
+    countEl: sessionLogCount,
+    storage: typeof localStorage === 'undefined' ? null : localStorage,
+    exportBtn: sessionLogExportBtn,
+    clearBtn: sessionLogClearBtn,
+    onChange: () => servicePanelController?.render()
+  });
+  function exportSessionLogFromService() {
+    const filename = sessionLogController.exportLog();
+    if (!filename) return;
+    sessionLogController.recordEvent('SESSION', 'Log exported', filename, 'ok');
+    servicePanelController?.render();
+  }
+  servicePanelController = createServicePanelController({
+    runtime,
+    localManifest,
+    resolveDeviceName,
+    resolveFirmwareVersion,
+    getConnectionStage: () => connectionPill?.dataset.stage || 'disconnected',
+    getSessionLogCount: () => sessionLogController.getCount(),
+    isSimulatorActive: () => Boolean(simulatorToggle?.classList.contains('active')),
+    getConfigBootDisabled: () => Boolean(configModeBtn?.disabled),
+    onExportConfig: () => exportCurrentConfigJson(),
+    onExportSessionLog: () => exportSessionLogFromService(),
+    onRequestConfiguratorBoot: () => configModeBtn?.click(),
+    elements: {
+      verdict: serviceVerdict,
+      verdictLabel: serviceVerdictLabel,
+      verdictMessage: serviceVerdictMessage,
+      connectionState: serviceConnectionState,
+      connectionDetail: serviceConnectionDetail,
+      firmwareState: serviceFirmwareState,
+      firmwareDetail: serviceFirmwareDetail,
+      dirtyState: serviceDirtyState,
+      dirtyDetail: serviceDirtyDetail,
+      backupState: serviceBackupState,
+      backupDetail: serviceBackupDetail,
+      logState: serviceLogState,
+      logDetail: serviceLogDetail,
+      verifyTarget: serviceVerifyTarget,
+      exportConfigBtn: serviceExportConfigBtn,
+      exportLogBtn: serviceExportLogBtn,
+      configBootBtn: serviceConfigBootBtn
+    }
+  });
+  function setStatus(state, label, message) {
+    sessionLogController.recordStatus(state, label, message);
+    baseSetStatus(state, label, message);
+    servicePanelController.render();
+  }
+  sessionLogController.bind();
+  servicePanelController.bind();
 
   const deviceMonitorController = createDeviceMonitorController({
     container: deviceMonitor,
@@ -660,6 +736,7 @@ const boot = () => {
     syncConfigFileButtons();
     profileMacroScenePanel.onConfigChanged();
     updateStagePanel();
+    servicePanelController.render();
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
@@ -672,18 +749,40 @@ const boot = () => {
       : localManifest.envelope_count || 0;
     rebuildMeters(followerCount);
     updateStagePanel();
+    servicePanelController.render();
   });
   runtime.on('log', (line) => {
-    if (!logEl) return;
-    logEl.textContent += `${line}\n`;
+    sessionLogController.recordEvent('RUNTIME', 'Raw line', line, 'info');
+    servicePanelController.render();
   });
   runtime.on('validation-error', (errors) => {
     diffStatusController.showValidationErrors(errors);
+    sessionLogController.recordEvent(
+      'VALIDATION',
+      'Schema validation failed',
+      `${Array.isArray(errors) ? errors.length : 0} error(s)`,
+      'err'
+    );
+    servicePanelController.render();
   });
   runtime.on('applied', ({ checksum }) => {
     diffStatusController.clearApplied(checksum);
+    sessionLogController.recordEvent(
+      'APPLY',
+      'Device acknowledged staged edits',
+      `Checksum ${String(checksum).slice(0, 8)}...`,
+      'ok'
+    );
+    servicePanelController.render();
   });
   runtime.on('migration-required', ({ from, to, canAdapt }) => {
+    sessionLogController.recordEvent(
+      'MIGRATION',
+      'Schema migration required',
+      `${from} -> ${to}${canAdapt ? ' (adapter available)' : ''}`,
+      'warn'
+    );
+    servicePanelController.render();
     if (!migrationDialog || !migrationPreview) return;
     migrationPreview.textContent = `Firmware schema ${from} vs UI ${to}. ${
       canAdapt
@@ -701,9 +800,18 @@ const boot = () => {
     if (rollbackBtn) rollbackBtn.disabled = true;
     syncConfigFileButtons();
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
+    sessionLogController.recordEvent(
+      'CONNECTION',
+      'Connected',
+      `${resolveDeviceName(manifest)} • fw ${resolveFirmwareVersion(manifest)} • schema ${
+        manifest?.schema_version ?? '?'
+      }`,
+      'ok'
+    );
     profileMacroScenePanel.onConnected();
     transportToolbarController.onConnected();
     updateStagePanel();
+    servicePanelController.render();
   });
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.
@@ -713,9 +821,11 @@ const boot = () => {
     if (rollbackBtn) rollbackBtn.disabled = true;
     syncConfigFileButtons();
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
+    sessionLogController.recordEvent('CONNECTION', 'Disconnected', '', 'warn');
     profileMacroScenePanel.onDisconnected();
     transportToolbarController.onDisconnected();
     updateStagePanel();
+    servicePanelController.render();
   });
   runtime.on('error', (err) => {
     // Runtime errors are treated as hard disconnects from the UI perspective.
@@ -723,9 +833,11 @@ const boot = () => {
     setConnectionBanner('disconnected', runtime.getState().manifest);
     connectFailHelp?.setAttribute('open', '');
     setStatus('err', 'Runtime error', err.message || String(err));
+    sessionLogController.recordEvent('RUNTIME', 'Error', err.message || String(err), 'err');
     profileMacroScenePanel.onRuntimeError();
     transportToolbarController.onDisconnected();
     updateStagePanel();
+    servicePanelController.render();
   });
   runtime.on('macro', (payload) => profileMacroScenePanel.onMacro(payload));
   runtime.on('scene', (payload) => {
@@ -736,12 +848,14 @@ const boot = () => {
     diffStatusController.updateDiff(false);
     diffStatusController.markDirty(false);
     setStatus('warn', 'Rollback', 'Local edits were discarded.');
+    servicePanelController.render();
   });
 
   runtime.restoreLocalState();
   updatePowerSafetySummary(runtime.getState().manifest ?? localManifest);
   updateStagePanel();
   syncConfigFileButtons();
+  servicePanelController.render();
   primeCompatibilityStatus();
   new MidiMonitor({ container: document.getElementById('midi-panel') });
   new ScopePanel({

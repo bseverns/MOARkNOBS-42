@@ -279,11 +279,24 @@ class ConfigManager {
         kBackupRestored,
     };
 
+    enum class LoadSource {
+        kUnknown,
+        kPrimary,
+        kBackup,
+        kDefaults,
+    };
+
     /** Reset configuration to factory defaults. */
     void resetConfiguration(std::vector<uint8_t> &potChannels, bool recordRecoveryEvent = false);
 
     /** Consume the latest recovery event (backup or defaults). */
     RecoveryEvent consumeRecoveryEvent();
+
+    /** Report which EEPROM path produced the currently loaded configuration. */
+    LoadSource getLastLoadSource() const { return _lastLoadSource; }
+
+    /** Check whether the primary or backup configuration header is currently valid. */
+    bool hasHealthyConfigurationCopy(bool backup, uint16_t base = EEPROM_PROFILE_START(0)) const;
 
     // Envelope follower configuration -----------------------------------
 
@@ -418,6 +431,7 @@ class ConfigManager {
         uint8_t sourceB = 1;
     } legacyArg{};
     RecoveryEvent _lastRecoveryEvent = RecoveryEvent::kNone;
+    LoadSource _lastLoadSource = LoadSource::kUnknown;
     void loadLegacyARGSettings();
     void migrateLegacyARGSettings();
 };

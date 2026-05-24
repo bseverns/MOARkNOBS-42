@@ -82,6 +82,10 @@ values to `0.0..1.0`. `SET_CLOCK` clamps the internal tempo to `20..300 BPM`.
 The firmware advertises these lanes in the manifest so the browser configurator
 can fail closed on older builds.
 
+`GET_MANIFEST` also reports a small persistence-health snapshot for host tools:
+`brownout_count`, `eeprom_primary_valid`, `eeprom_backup_valid`, and
+`eeprom_last_load` (`primary`, `backup`, or `defaults`).
+
 ## Important Test Contract
 
 - PlatformIO project root is `firmware/`.

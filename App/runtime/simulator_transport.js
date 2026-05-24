@@ -33,7 +33,11 @@ export function createSimulator(simDeps = {}) {
     led_brightness_cap: 26,
     rail_topology_verified: false,
     free_ram: 48000,
-    free_flash: 512000
+    free_flash: 512000,
+    brownout_count: 2,
+    eeprom_primary_valid: true,
+    eeprom_backup_valid: true,
+    eeprom_last_load: 'primary'
   };
 
   let config = {

@@ -44,6 +44,19 @@ size_t computeFreeFlash() {
     return 0U;
 #endif
 }
+
+const char *describeEepromLoadSource(ConfigManager::LoadSource source) {
+    switch (source) {
+    case ConfigManager::LoadSource::kPrimary:
+        return "primary";
+    case ConfigManager::LoadSource::kBackup:
+        return "backup";
+    case ConfigManager::LoadSource::kDefaults:
+        return "defaults";
+    default:
+        return "unknown";
+    }
+}
 } // namespace
 
 // Emit the host-facing manifest so the App/bridge can align their UI with firmware truth.
@@ -63,6 +76,10 @@ void writeManifestFields(JsonObject object) {
     object["rail_topology_verified"] = BoardPowerProfile::kRailTopologyVerified;
     object["free_ram"] = computeFreeRAM();
     object["free_flash"] = computeFreeFlash();
+    object["brownout_count"] = g_brownoutCount;
+    object["eeprom_primary_valid"] = configManager.hasHealthyConfigurationCopy(false);
+    object["eeprom_backup_valid"] = configManager.hasHealthyConfigurationCopy(true);
+    object["eeprom_last_load"] = describeEepromLoadSource(configManager.getLastLoadSource());
     JsonObject capabilities = object.createNestedObject("capabilities");
     capabilities["profile_save"] = true;
     capabilities["profile_load"] = true;

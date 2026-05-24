@@ -1470,6 +1470,133 @@ button:not(:disabled):focus-visible {
   color: var(--color-muted);
 }
 
+.service-card,
+.service-playbook-section,
+.service-health-card {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.service-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.service-card-header h2,
+.service-playbook-section h3 {
+  margin: 0;
+}
+
+.service-card-header {
+  display: grid;
+  gap: 6px;
+}
+
+.service-verdict {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 206, 107, 0.28);
+  background: rgba(255, 206, 107, 0.08);
+}
+
+.service-verdict strong {
+  font-size: 0.86rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.service-verdict p {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.service-verdict[data-state='ok'] {
+  border-color: rgba(45, 226, 230, 0.3);
+  background: rgba(45, 226, 230, 0.1);
+}
+
+.service-verdict[data-state='warn'] {
+  border-color: rgba(255, 206, 107, 0.28);
+  background: rgba(255, 206, 107, 0.08);
+}
+
+.service-verdict[data-state='err'] {
+  border-color: rgba(255, 95, 150, 0.34);
+  background: rgba(255, 95, 150, 0.08);
+}
+
+.service-health-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.service-health-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.service-health-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.service-health-card strong {
+  font-size: 0.98rem;
+}
+
+.service-health-card p {
+  margin: 0;
+}
+
+.service-actions {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.service-playbook {
+  display: grid;
+  gap: 12px;
+}
+
+.service-playbook-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.service-command {
+  margin: 0;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(9, 12, 19, 0.88);
+}
+
+.service-command code {
+  font-family: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.84rem;
+  color: var(--color-text);
+}
+
+.service-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+}
+
 #dirty-badge {
   display: inline-flex;
   align-items: center;
@@ -2247,6 +2374,20 @@ label select:focus,
   justify-self: center;
 }
 
+.debug-log-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0 10px;
+}
+
+.debug-log-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 #log {
   max-height: 160px;
   overflow-y: auto;
@@ -2491,6 +2632,19 @@ footer {
   #slot-detail-panel,
   .debug-log-bridge {
     width: min(100%, calc(100% - 32px));
+  }
+
+  .debug-log-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .debug-log-actions {
+    width: 100%;
+  }
+
+  .debug-log-actions button {
+    width: 100%;
   }
 
   .workspace-toolbar {

@@ -215,6 +215,11 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
   await expect
     .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().schemaSource))
     .toBe('device');
+  await expect
+    .poll(async () =>
+      page.evaluate(() => window.__MN42_RUNTIME.getState().staged?.slots?.[0]?.efIndex)
+    )
+    .toBe(0);
 
   const applyResult = await page.evaluate(async () => {
     window.__MN42_RUNTIME.stage((draft) => {

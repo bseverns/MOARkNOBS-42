@@ -315,6 +315,7 @@
         <p class="microcopy" id="ui-mode-hint">Basic mode keeps common knob-to-MIDI mapping controls visible.</p>
         <div class="utility-tabbar" role="tablist" aria-label="Utility panels">
           <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true">Console</button>
+          <button type="button" class="utility-tab" data-utility-tab="service" aria-pressed="false">Service</button>
           <button type="button" class="utility-tab" data-utility-tab="diff" aria-pressed="false">Diff</button>
           <button type="button" class="utility-tab" data-utility-tab="midi" aria-pressed="false">MIDI</button>
           <button type="button" class="utility-tab" data-utility-tab="scope" aria-pressed="false"
@@ -399,6 +400,86 @@
             <div class="schema-section-body" data-schema-target="led"></div>
             <div id="led-grid" aria-live="polite"></div>
           </fieldset>
+        </div>
+
+        <div class="utility-panel" data-utility-panel="service">
+          <section class="service-card" aria-labelledby="service-title">
+            <header class="service-card-header">
+              <div>
+                <h2 id="service-title">Firmware Service</h2>
+                <p class="microcopy">Prep the deck for a flash, export rollback data, and use the documented firmware lanes.</p>
+              </div>
+            </header>
+            <div class="service-verdict" id="service-verdict" data-state="warn" aria-live="polite">
+              <strong id="service-verdict-label">Flash handoff</strong>
+              <p id="service-verdict-message">Connect to a device or arm the simulator to rehearse the update path.</p>
+            </div>
+            <div class="service-health-grid">
+              <article class="service-health-card">
+                <span class="service-health-label">Connection</span>
+                <strong id="service-connection-state">Offline</strong>
+                <p class="microcopy" id="service-connection-detail">No device handshake yet.</p>
+              </article>
+              <article class="service-health-card">
+                <span class="service-health-label">Firmware</span>
+                <strong id="service-firmware-state">unknown • schema ?</strong>
+                <p class="microcopy" id="service-firmware-detail">Firmware identity will refresh after the next handshake.</p>
+              </article>
+              <article class="service-health-card">
+                <span class="service-health-label">Staged State</span>
+                <strong id="service-dirty-state">No config</strong>
+                <p class="microcopy" id="service-dirty-detail">Connect or import before exporting a browser backup.</p>
+              </article>
+              <article class="service-health-card">
+                <span class="service-health-label">Backup</span>
+                <strong id="service-backup-state">Unavailable</strong>
+                <p class="microcopy" id="service-backup-detail">No staged snapshot is loaded in this browser yet.</p>
+              </article>
+              <article class="service-health-card">
+                <span class="service-health-label">Session Log</span>
+                <strong id="service-log-state">0 entries</strong>
+                <p class="microcopy" id="service-log-detail">No session events captured yet.</p>
+              </article>
+            </div>
+            <div class="service-actions" role="group" aria-label="Firmware service actions">
+              <button id="service-export-config" type="button" disabled>Backup config JSON</button>
+              <button id="service-export-log" type="button" disabled>Export session log</button>
+              <button id="service-config-boot" type="button">Request configurator reboot</button>
+            </div>
+            <p class="microcopy">The browser cannot flash firmware directly. Use one of the lanes below. `ENTER_CONFIG_MODE` is a configurator reboot, not the Teensy bootloader.</p>
+            <div class="service-playbook">
+              <section class="service-playbook-section" aria-labelledby="service-release-title">
+                <h3 id="service-release-title">Release Hex Lane</h3>
+                <p class="microcopy">Use a tagged release when you want the fastest field update path.</p>
+                <pre class="service-command"><code>teensy_loader_cli -mmcu=teensy40 -w mn42-firmware.hex</code></pre>
+                <ol class="service-steps">
+                  <li>Download the release `.hex` file.</li>
+                  <li>Plug the controller into USB and close other serial tools.</li>
+                  <li>Press the Teensy program button if the loader does not auto-detect the board.</li>
+                  <li>Wait for the device to reboot, then reconnect here and verify the new handshake.</li>
+                </ol>
+              </section>
+              <section class="service-playbook-section" aria-labelledby="service-source-title">
+                <h3 id="service-source-title">PlatformIO Lane</h3>
+                <p class="microcopy">Use the source lane when you are flashing the current repo state.</p>
+                <pre class="service-command"><code>pio run -d firmware -t upload -e teensy40_main</code></pre>
+                <ol class="service-steps">
+                  <li>Run the command from the repo root or from `firmware/` with the same environment.</li>
+                  <li>Kill any bridge, monitor, or serial console that might hold the port open.</li>
+                  <li>Let PlatformIO upload, then return here and reconnect.</li>
+                </ol>
+              </section>
+              <section class="service-playbook-section" aria-labelledby="service-verify-title">
+                <h3 id="service-verify-title">After Flash</h3>
+                <ol class="service-steps">
+                  <li>Reconnect and confirm <span id="service-verify-target">MOARkNOBS-42 • fw unknown • schema ?</span>.</li>
+                  <li>Check the Device Monitor and Service preflight cards for brownouts, EEPROM health, and schema match.</li>
+                  <li>If you exported a backup, keep it with the session log until the bench check is clean.</li>
+                </ol>
+                <p class="microcopy">Full written procedures also live in `docs/guides/FirmwareUpdate.md` and `firmware/README.md`.</p>
+              </section>
+            </div>
+          </section>
         </div>
 
         <div class="utility-panel" data-utility-panel="diff">
@@ -657,6 +738,13 @@
 
       <details class="debug-log-bridge" data-ui-tier="advanced">
         <summary>Debug Log</summary>
+        <div class="debug-log-toolbar">
+          <p class="microcopy" id="session-log-count">0 entries stored in this browser</p>
+          <div class="debug-log-actions">
+            <button id="session-log-export" type="button" disabled>Export session log</button>
+            <button id="session-log-clear" type="button" disabled>Clear session log</button>
+          </div>
+        </div>
         <pre id="log" aria-live="off"></pre>
       </details>
     </main>

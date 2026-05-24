@@ -5,7 +5,12 @@ function normalizeEditorTab(tab) {
 }
 
 function normalizeUtilityTab(tab) {
-  return tab === 'diff' || tab === 'midi' || tab === 'scope' || tab === 'arp' || tab === 'lfo'
+  return tab === 'service' ||
+    tab === 'diff' ||
+    tab === 'midi' ||
+    tab === 'scope' ||
+    tab === 'arp' ||
+    tab === 'lfo'
     ? tab
     : 'console';
 }
@@ -78,7 +83,9 @@ export function createUiModeController({
     if (activeUiMode !== 'advanced' && activeEditorTab !== 'mapping') {
       activeEditorTab = 'mapping';
     }
-    if (
+    if (activeUiMode === 'stage') {
+      activeUtilityTab = 'console';
+    } else if (
       activeUiMode !== 'advanced' &&
       (activeUtilityTab === 'scope' || activeUtilityTab === 'arp' || activeUtilityTab === 'lfo')
     ) {
