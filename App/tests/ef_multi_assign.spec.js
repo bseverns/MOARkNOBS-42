@@ -21,6 +21,11 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
       return draft;
     });
   });
+  await page.waitForFunction(() => {
+    const runtime = window.__MN42_RUNTIME;
+    const slots = runtime?.getState?.().staged?.efSlots?.[0]?.slots;
+    return Array.isArray(slots) && slots.length === 0;
+  });
   await page.getByRole('button', { name: 'Envelope' }).click();
 
   const efRow = page.locator('#ef-assignment-card .ef-row').first();
