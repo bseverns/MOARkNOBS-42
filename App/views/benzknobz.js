@@ -15,7 +15,7 @@ import { createTransportToolbarController } from './controllers/transport_toolba
 import { createUiModeController } from './controllers/ui_mode_controller.js';
 import { createDiffStatusController } from './controllers/diff_status_controller.js';
 import { createSessionLogController } from './controllers/session_log_controller.js';
-import { createServicePanelController } from './controllers/service_panel_controller.js';
+import { createPanicHelpController } from './controllers/panic_help_controller.js';
 import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
@@ -161,23 +161,14 @@ const boot = () => {
   const sessionLogCount = document.getElementById('session-log-count');
   const sessionLogExportBtn = document.getElementById('session-log-export');
   const sessionLogClearBtn = document.getElementById('session-log-clear');
-  const serviceVerdict = document.getElementById('service-verdict');
-  const serviceVerdictLabel = document.getElementById('service-verdict-label');
-  const serviceVerdictMessage = document.getElementById('service-verdict-message');
-  const serviceConnectionState = document.getElementById('service-connection-state');
-  const serviceConnectionDetail = document.getElementById('service-connection-detail');
-  const serviceFirmwareState = document.getElementById('service-firmware-state');
-  const serviceFirmwareDetail = document.getElementById('service-firmware-detail');
-  const serviceDirtyState = document.getElementById('service-dirty-state');
-  const serviceDirtyDetail = document.getElementById('service-dirty-detail');
-  const serviceBackupState = document.getElementById('service-backup-state');
-  const serviceBackupDetail = document.getElementById('service-backup-detail');
-  const serviceLogState = document.getElementById('service-log-state');
-  const serviceLogDetail = document.getElementById('service-log-detail');
-  const serviceVerifyTarget = document.getElementById('service-verify-target');
-  const serviceExportConfigBtn = document.getElementById('service-export-config');
-  const serviceExportLogBtn = document.getElementById('service-export-log');
-  const serviceConfigBootBtn = document.getElementById('service-config-boot');
+  const panicHelpDialog = document.getElementById('panic-help-dialog');
+  const panicHelpCloseBtn = document.getElementById('panic-help-close');
+  const panicHelpContext = document.getElementById('panic-help-context');
+  const panicHelpPreflight = document.getElementById('panic-help-preflight');
+  const panicHelpVerifyTarget = document.getElementById('panic-help-verify-target');
+  const panicHelpExportConfigBtn = document.getElementById('panic-help-export-config');
+  const panicHelpExportLogBtn = document.getElementById('panic-help-export-log');
+  const panicHelpConfigBootBtn = document.getElementById('panic-help-config-boot');
   const profileSlotButtons = Array.from(document.querySelectorAll('[data-profile-slot]'));
   const profileSlotStatus = document.getElementById('profile-slot-status');
   const profileSaveBtn = document.getElementById('profile-save');
@@ -278,60 +269,54 @@ const boot = () => {
     }
   });
   const baseSetStatus = diffStatusController.setStatus;
-  let servicePanelController;
   const sessionLogController = createSessionLogController({
     logEl,
     countEl: sessionLogCount,
     storage: typeof localStorage === 'undefined' ? null : localStorage,
     exportBtn: sessionLogExportBtn,
-    clearBtn: sessionLogClearBtn,
-    onChange: () => servicePanelController?.render()
+    clearBtn: sessionLogClearBtn
   });
-  function exportSessionLogFromService() {
+  let panicHelpController;
+  function exportSessionLogFromPanicHelp() {
     const filename = sessionLogController.exportLog();
     if (!filename) return;
     sessionLogController.recordEvent('SESSION', 'Log exported', filename, 'ok');
-    servicePanelController?.render();
+    panicHelpController?.render();
   }
-  servicePanelController = createServicePanelController({
+  panicHelpController = createPanicHelpController({
     runtime,
     localManifest,
     resolveDeviceName,
     resolveFirmwareVersion,
     getConnectionStage: () => connectionPill?.dataset.stage || 'disconnected',
-    getSessionLogCount: () => sessionLogController.getCount(),
+    getSessionLogCount: () => {
+      const countText = sessionLogCount?.textContent || '';
+      const parsed = Number.parseInt(countText, 10);
+      return Number.isFinite(parsed) ? parsed : 0;
+    },
     isSimulatorActive: () => Boolean(simulatorToggle?.classList.contains('active')),
     getConfigBootDisabled: () => Boolean(configModeBtn?.disabled),
     onExportConfig: () => exportCurrentConfigJson(),
-    onExportSessionLog: () => exportSessionLogFromService(),
+    onExportSessionLog: () => exportSessionLogFromPanicHelp(),
     onRequestConfiguratorBoot: () => configModeBtn?.click(),
     elements: {
-      verdict: serviceVerdict,
-      verdictLabel: serviceVerdictLabel,
-      verdictMessage: serviceVerdictMessage,
-      connectionState: serviceConnectionState,
-      connectionDetail: serviceConnectionDetail,
-      firmwareState: serviceFirmwareState,
-      firmwareDetail: serviceFirmwareDetail,
-      dirtyState: serviceDirtyState,
-      dirtyDetail: serviceDirtyDetail,
-      backupState: serviceBackupState,
-      backupDetail: serviceBackupDetail,
-      logState: serviceLogState,
-      logDetail: serviceLogDetail,
-      verifyTarget: serviceVerifyTarget,
-      exportConfigBtn: serviceExportConfigBtn,
-      exportLogBtn: serviceExportLogBtn,
-      configBootBtn: serviceConfigBootBtn
+      dialog: panicHelpDialog,
+      closeBtn: panicHelpCloseBtn,
+      contextEl: panicHelpContext,
+      preflightEl: panicHelpPreflight,
+      verifyTargetEl: panicHelpVerifyTarget,
+      exportConfigBtn: panicHelpExportConfigBtn,
+      exportLogBtn: panicHelpExportLogBtn,
+      configBootBtn: panicHelpConfigBootBtn
     }
   });
   function setStatus(state, label, message) {
     sessionLogController.recordStatus(state, label, message);
     baseSetStatus(state, label, message);
-    servicePanelController.render();
+    panicHelpController.render();
   }
   sessionLogController.bind();
-  servicePanelController.bind();
+  panicHelpController.bind();
 
   const deviceMonitorController = createDeviceMonitorController({
     container: deviceMonitor,
@@ -374,6 +359,7 @@ const boot = () => {
     getSelectedSlot: () => slotState.selected,
     selectSlot: (index) => selectSlot(index),
     setStatus,
+    openPanicHelp: () => panicHelpController.open(),
     elements: {
       panel: performerPanel,
       connectBtn: stageConnectBtn,
@@ -736,7 +722,7 @@ const boot = () => {
     syncConfigFileButtons();
     profileMacroScenePanel.onConfigChanged();
     updateStagePanel();
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
@@ -749,11 +735,11 @@ const boot = () => {
       : localManifest.envelope_count || 0;
     rebuildMeters(followerCount);
     updateStagePanel();
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('log', (line) => {
     sessionLogController.recordEvent('RUNTIME', 'Raw line', line, 'info');
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('validation-error', (errors) => {
     diffStatusController.showValidationErrors(errors);
@@ -763,7 +749,7 @@ const boot = () => {
       `${Array.isArray(errors) ? errors.length : 0} error(s)`,
       'err'
     );
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('applied', ({ checksum }) => {
     diffStatusController.clearApplied(checksum);
@@ -773,7 +759,7 @@ const boot = () => {
       `Checksum ${String(checksum).slice(0, 8)}...`,
       'ok'
     );
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('migration-required', ({ from, to, canAdapt }) => {
     sessionLogController.recordEvent(
@@ -782,7 +768,7 @@ const boot = () => {
       `${from} -> ${to}${canAdapt ? ' (adapter available)' : ''}`,
       'warn'
     );
-    servicePanelController.render();
+    panicHelpController.render();
     if (!migrationDialog || !migrationPreview) return;
     migrationPreview.textContent = `Firmware schema ${from} vs UI ${to}. ${
       canAdapt
@@ -811,7 +797,7 @@ const boot = () => {
     profileMacroScenePanel.onConnected();
     transportToolbarController.onConnected();
     updateStagePanel();
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('disconnected', () => {
     // Mirror the connected handler in reverse so stale controls cannot issue RPCs offline.
@@ -825,7 +811,7 @@ const boot = () => {
     profileMacroScenePanel.onDisconnected();
     transportToolbarController.onDisconnected();
     updateStagePanel();
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('error', (err) => {
     // Runtime errors are treated as hard disconnects from the UI perspective.
@@ -837,7 +823,7 @@ const boot = () => {
     profileMacroScenePanel.onRuntimeError();
     transportToolbarController.onDisconnected();
     updateStagePanel();
-    servicePanelController.render();
+    panicHelpController.render();
   });
   runtime.on('macro', (payload) => profileMacroScenePanel.onMacro(payload));
   runtime.on('scene', (payload) => {
@@ -848,14 +834,14 @@ const boot = () => {
     diffStatusController.updateDiff(false);
     diffStatusController.markDirty(false);
     setStatus('warn', 'Rollback', 'Local edits were discarded.');
-    servicePanelController.render();
+    panicHelpController.render();
   });
 
   runtime.restoreLocalState();
   updatePowerSafetySummary(runtime.getState().manifest ?? localManifest);
   updateStagePanel();
   syncConfigFileButtons();
-  servicePanelController.render();
+  panicHelpController.render();
   primeCompatibilityStatus();
   new MidiMonitor({ container: document.getElementById('midi-panel') });
   new ScopePanel({

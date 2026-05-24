@@ -137,7 +137,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#export-preset')).toBeHidden();
   });
 
-  test('panic help only displays the hardware combo text', async ({ page }) => {
+  test('panic help opens the recovery dialog without writing to the device', async ({ page }) => {
     await page.addInitScript(() => {
       window.__nativeWrites = [];
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
@@ -154,12 +154,33 @@ test.describe('Stage mode', () => {
     await page.goto('/?mode=stage');
     await page.locator('#stage-connect').click();
     await expect(page.locator('#connection-pill')).toHaveText('Connected');
-    const writesBefore = await page.evaluate(() => window.__nativeWrites.length);
+    const writesBefore = await page.evaluate(async () => {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      let last = window.__nativeWrites.length;
+      let stableReads = 0;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        await sleep(100);
+        const next = window.__nativeWrites.length;
+        if (next === last) {
+          stableReads += 1;
+          if (stableReads >= 2) return next;
+        } else {
+          stableReads = 0;
+          last = next;
+        }
+      }
+      return window.__nativeWrites.length;
+    });
 
     await page.locator('#stage-panic-help').click();
 
-    await expect(page.locator('#status-label')).toHaveText('Panic baseline');
-    await expect(page.locator('.status-message')).toContainText('Ctrl0 + Ctrl1 + Ctrl2');
+    await expect(page.locator('#status-label')).toHaveText('Panic & recovery');
+    await expect(page.locator('#panic-help-dialog')).toHaveAttribute('open', '');
+    await expect(page.locator('#panic-help-dialog')).toContainText('Ctrl0 + Ctrl1 + Ctrl2');
+    await expect(page.locator('#panic-help-dialog')).toContainText(
+      'pio run -d firmware -t upload -e teensy40_main'
+    );
+    await page.waitForTimeout(300);
     await expect.poll(() => page.evaluate(() => window.__nativeWrites.length)).toBe(writesBefore);
   });
 });

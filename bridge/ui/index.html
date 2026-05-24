@@ -10,10 +10,11 @@
   <main class="shell">
     <header class="hero">
       <p class="eyebrow">MOARkNOBS-42 bridge</p>
-      <h1>Local bridge console</h1>
+      <h1>Desktop session runtime</h1>
       <p class="summary">
-        Start the bridge from a browser, then launch the full configurator over the same connection.
-        This is the non-CLI front door for OSC, host MIDI routing, profiles, and deep configuration.
+        Use this console when you need desktop-side routing, a cached device session, and operator-safe
+        visibility into what the bridge knows about the hardware. Raw serial and WebSocket debugging still
+        exist, but they stay in Advanced where they belong.
       </p>
       <div class="actions">
         <button id="start-bridge" type="button">Start bridge</button>
@@ -25,127 +26,227 @@
         <button id="open-configurator" type="button">Open configurator</button>
       </div>
       <p class="status-line" id="summary-status" aria-live="polite">Bridge idle.</p>
+      <nav class="mode-tabs" aria-label="Console modes">
+        <button class="mode-tab is-active" data-mode="setup" type="button">Setup</button>
+        <button class="mode-tab" data-mode="stage" type="button">Stage</button>
+        <button class="mode-tab" data-mode="advanced" type="button">Advanced</button>
+      </nav>
     </header>
 
-    <section class="panel-grid" aria-label="Bridge controls">
-      <section class="panel" aria-labelledby="connection-heading">
-        <h2 id="connection-heading">Connection</h2>
-        <form id="bridge-form">
-          <label for="serial-name">Serial port</label>
-          <input id="serial-name" name="serialName" list="serial-port-list" autocomplete="off" required />
-          <datalist id="serial-port-list"></datalist>
-          <p class="hint">Choose a detected port or type one manually.</p>
+    <section class="mode-view is-active" data-mode-view="setup" aria-labelledby="setup-heading">
+      <h2 id="setup-heading" class="sr-only">Setup mode</h2>
+      <section class="panel-grid" aria-label="Setup panels">
+        <section class="panel" aria-labelledby="connection-heading">
+          <h2 id="connection-heading">Connection setup</h2>
+          <form id="bridge-form">
+            <label for="serial-name">Serial port</label>
+            <input id="serial-name" name="serialName" list="serial-port-list" autocomplete="off" required />
+            <datalist id="serial-port-list"></datalist>
+            <p class="hint">Choose a detected port or type one manually.</p>
 
-          <label for="midi-label">MIDI port label</label>
-          <input id="midi-label" name="midiLabel" value="MN42 Bridge" list="midi-port-list" autocomplete="off" />
-          <datalist id="midi-port-list"></datalist>
-          <p class="hint">Use an existing input/output pair, such as a macOS IAC bus.</p>
+            <label for="midi-label">MIDI port label</label>
+            <input id="midi-label" name="midiLabel" value="MN42 Bridge" list="midi-port-list" autocomplete="off" />
+            <datalist id="midi-port-list"></datalist>
+            <p class="hint">Match the host loopback port you actually intend to use.</p>
 
-          <label for="osc-host">OSC host</label>
-          <input id="osc-host" name="oscHost" value="127.0.0.1" autocomplete="off" />
+            <label for="osc-host">OSC host</label>
+            <input id="osc-host" name="oscHost" value="127.0.0.1" autocomplete="off" />
 
-          <div class="grid-two">
-            <div>
-              <label for="osc-port">OSC send port</label>
-              <input id="osc-port" name="oscPort" type="number" min="1" step="1" value="9000" />
+            <div class="grid-two">
+              <div>
+                <label for="osc-port">OSC send port</label>
+                <input id="osc-port" name="oscPort" type="number" min="1" step="1" value="9000" />
+              </div>
+              <div>
+                <label for="osc-listen">OSC listen port</label>
+                <input id="osc-listen" name="oscListen" type="number" min="1" step="1" value="9000" />
+              </div>
             </div>
-            <div>
-              <label for="osc-listen">OSC listen port</label>
-              <input id="osc-listen" name="oscListen" type="number" min="1" step="1" value="9000" />
+
+            <label for="osc-bind">OSC bind address</label>
+            <input id="osc-bind" name="oscBind" value="127.0.0.1" autocomplete="off" />
+
+            <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
+            <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
+
+            <label for="alert-suppression-ms">Alert suppression window (ms)</label>
+            <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
+
+            <label class="checkbox-line" for="allow-feedback-loops">
+              <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
+              Allow feedback loops (disable MIDI echo suppression)
+            </label>
+
+            <div class="grid-two">
+              <div>
+                <label for="rt-p95-target-ms">RT p95 target (ms)</label>
+                <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
+              </div>
+              <div>
+                <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
+                <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1" value="5" />
+              </div>
             </div>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="recipe-heading">
+          <h2 id="recipe-heading">Known-good recipe</h2>
+          <label for="preset-select">Recipe</label>
+          <select id="preset-select" name="presetSelect"></select>
+          <p class="hint" id="recipe-summary">Pick a documented host path and the console will prefill the expected bridge ports.</p>
+          <div class="recipe-block">
+            <h3>Requirements</h3>
+            <ul id="recipe-requirements" class="ports-list"></ul>
           </div>
-
-          <label for="osc-bind">OSC bind address</label>
-          <input id="osc-bind" name="oscBind" value="127.0.0.1" autocomplete="off" />
-
-          <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
-          <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
-          
-          <label for="alert-suppression-ms">Alert suppression window (ms)</label>
-          <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
-
-          <label class="checkbox-line" for="allow-feedback-loops">
-            <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
-            Allow feedback loops (disable MIDI echo suppression)
-          </label>
-
-          <div class="grid-two">
-            <div>
-              <label for="rt-p95-target-ms">RT p95 target (ms)</label>
-              <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
-            </div>
-            <div>
-              <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
-              <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1" value="5" />
-            </div>
+          <div class="recipe-block">
+            <h3>Validation checklist</h3>
+            <ul id="recipe-checklist" class="ports-list"></ul>
           </div>
-        </form>
+        </section>
       </section>
 
-      <section class="panel" aria-labelledby="runtime-heading">
-        <h2 id="runtime-heading">Runtime status</h2>
-        <dl class="status-grid" id="runtime-status">
-          <div><dt>Bridge</dt><dd id="status-running">stopped</dd></div>
-          <div><dt>Serial</dt><dd id="status-serial">disconnected</dd></div>
-          <div><dt>Device</dt><dd id="status-ready">awaiting HELLO</dd></div>
-          <div><dt>OSC out</dt><dd id="status-osc">127.0.0.1:9000</dd></div>
-          <div><dt>OSC in</dt><dd id="status-osc-listen">127.0.0.1:9000</dd></div>
-          <div><dt>MIDI</dt><dd id="status-midi">MN42 Bridge</dd></div>
-          <div><dt>Telemetry</dt><dd id="status-telemetry">none yet</dd></div>
-          <div><dt>Last route</dt><dd id="status-last-route">none yet</dd></div>
-          <div><dt>Last trace</dt><dd id="status-last-trace">none</dd></div>
-          <div><dt>Source timestamp</dt><dd id="status-source-ts">none yet</dd></div>
-          <div><dt>Clock skew</dt><dd id="status-source-skew">n/a</dd></div>
-          <div><dt>RT samples</dt><dd id="status-rt-samples">0</dd></div>
-          <div><dt>RT pending</dt><dd id="status-rt-pending">0</dd></div>
-          <div><dt>RT last</dt><dd id="status-rt-last">n/a</dd></div>
-          <div><dt>RT p50</dt><dd id="status-rt-p50">n/a</dd></div>
-          <div><dt>RT p95</dt><dd id="status-rt-p95">n/a</dd></div>
-          <div><dt>RT jitter p95</dt><dd id="status-rt-jitter-p95">n/a</dd></div>
-          <div><dt>RT health</dt><dd id="status-rt-health">no_data</dd></div>
-          <div><dt>Active alerts</dt><dd id="status-alert-count">0</dd></div>
-          <div><dt>Top alert</dt><dd id="status-alert-top">none</dd></div>
-          <div><dt>Error</dt><dd id="status-error">none</dd></div>
-          <div><dt>Serial parse drops</dt><dd id="status-serial-parse-drops">0</dd></div>
-          <div><dt>Serial oversize drops</dt><dd id="status-serial-oversize-drops">0</dd></div>
-          <div><dt>OSC command drops</dt><dd id="status-osc-drops">0</dd></div>
-          <div><dt>MIDI command drops</dt><dd id="status-midi-drops">0</dd></div>
-          <div><dt>Feedback suppressed</dt><dd id="status-feedback-suppressed">0</dd></div>
-        </dl>
-        <p class="hint">
-          Once the bridge is running, the configurator talks through WebSocket instead of WebSerial.
-          That keeps profile work and deep edits available while OSC and MIDI routing stay online.
-        </p>
+      <section class="panel-grid" aria-label="Detected hosts">
+        <section class="panel" aria-labelledby="ports-heading">
+          <h2 id="ports-heading">Detected serial ports</h2>
+          <ul id="ports" class="ports-list" aria-live="polite"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="midi-ports-heading">
+          <h2 id="midi-ports-heading">Detected MIDI ports</h2>
+          <div class="midi-port-grid">
+            <div>
+              <h3>Inputs</h3>
+              <ul id="midi-inputs" class="ports-list" aria-live="polite"></ul>
+            </div>
+            <div>
+              <h3>Outputs</h3>
+              <ul id="midi-outputs" class="ports-list" aria-live="polite"></ul>
+            </div>
+          </div>
+        </section>
       </section>
     </section>
 
-    <section class="panel" aria-labelledby="ports-heading">
-      <h2 id="ports-heading">Detected serial ports</h2>
-      <ul id="ports" class="ports-list" aria-live="polite"></ul>
+    <section class="mode-view" data-mode-view="stage" aria-labelledby="stage-heading" hidden>
+      <h2 id="stage-heading" class="sr-only">Stage mode</h2>
+      <section class="panel-grid" aria-label="Stage panels">
+        <section class="panel" aria-labelledby="stage-status-heading">
+          <h2 id="stage-status-heading">Connection health</h2>
+          <div class="stage-card-grid" id="stage-summary-cards">
+            <article class="stage-card">
+              <span class="stage-label">Bridge</span>
+              <strong id="status-running">stopped</strong>
+            </article>
+            <article class="stage-card">
+              <span class="stage-label">Serial</span>
+              <strong id="status-serial">disconnected</strong>
+            </article>
+            <article class="stage-card">
+              <span class="stage-label">Device</span>
+              <strong id="status-ready">awaiting HELLO</strong>
+            </article>
+            <article class="stage-card">
+              <span class="stage-label">Telemetry</span>
+              <strong id="status-telemetry">none yet</strong>
+            </article>
+            <article class="stage-card">
+              <span class="stage-label">RT p95</span>
+              <strong id="status-rt-p95">n/a</strong>
+            </article>
+            <article class="stage-card">
+              <span class="stage-label">Jitter p95</span>
+              <strong id="status-rt-jitter-p95">n/a</strong>
+            </article>
+          </div>
+          <p class="hint">This is the compact operator view: enough to decide whether the bridge and the device are still healthy without reading a cockpit during a show.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="device-session-heading">
+          <h2 id="device-session-heading">Cached device session</h2>
+          <dl class="status-grid compact-grid" id="device-session-grid">
+            <div><dt>Device</dt><dd id="device-name">-</dd></div>
+            <div><dt>Firmware</dt><dd id="device-fw">-</dd></div>
+            <div><dt>Schema</dt><dd id="device-schema">-</dd></div>
+            <div><dt>Schema source</dt><dd id="device-schema-source">-</dd></div>
+            <div><dt>Power</dt><dd id="device-power">-</dd></div>
+            <div><dt>LED cap</dt><dd id="device-led-cap">-</dd></div>
+            <div><dt>Rail state</dt><dd id="device-rail">-</dd></div>
+            <div><dt>Dirty</dt><dd id="device-dirty">false</dd></div>
+            <div><dt>Last apply</dt><dd id="device-last-apply">none</dd></div>
+            <div><dt>Last trace</dt><dd id="status-last-trace">none</dd></div>
+          </dl>
+        </section>
+
+        <section class="panel" aria-labelledby="stage-ops-heading">
+          <h2 id="stage-ops-heading">Operator actions</h2>
+          <div class="actions stacked-actions">
+            <button id="stage-open-configurator" type="button">Open configurator</button>
+            <button id="stage-download-snapshot" type="button">Download snapshot</button>
+            <button id="stage-refresh-state" type="button">Refresh state</button>
+          </div>
+          <p class="hint">
+            Use the configurator if you need staged edits, recovery guidance, or deep profile work. This bridge console stays focused on desktop routing and session health.
+          </p>
+          <h3>Active alerts</h3>
+          <ul id="alert-history" class="alerts-list" aria-live="polite"></ul>
+        </section>
+      </section>
     </section>
 
-    <section class="panel" aria-labelledby="midi-ports-heading">
-      <h2 id="midi-ports-heading">Detected MIDI ports</h2>
-      <div class="midi-port-grid">
-        <div>
-          <h3>Inputs</h3>
-          <ul id="midi-inputs" class="ports-list" aria-live="polite"></ul>
-        </div>
-        <div>
-          <h3>Outputs</h3>
-          <ul id="midi-outputs" class="ports-list" aria-live="polite"></ul>
-        </div>
-      </div>
-    </section>
+    <section class="mode-view" data-mode-view="advanced" aria-labelledby="advanced-heading" hidden>
+      <h2 id="advanced-heading" class="sr-only">Advanced mode</h2>
+      <section class="panel-grid" aria-label="Advanced panels">
+        <section class="panel" aria-labelledby="runtime-heading">
+          <h2 id="runtime-heading">Runtime status</h2>
+          <dl class="status-grid" id="runtime-status">
+            <div><dt>OSC out</dt><dd id="status-osc">127.0.0.1:9000</dd></div>
+            <div><dt>OSC in</dt><dd id="status-osc-listen">127.0.0.1:9000</dd></div>
+            <div><dt>MIDI</dt><dd id="status-midi">MN42 Bridge</dd></div>
+            <div><dt>Last route</dt><dd id="status-last-route">none yet</dd></div>
+            <div><dt>Source timestamp</dt><dd id="status-source-ts">none yet</dd></div>
+            <div><dt>Clock skew</dt><dd id="status-source-skew">n/a</dd></div>
+            <div><dt>RT samples</dt><dd id="status-rt-samples">0</dd></div>
+            <div><dt>RT pending</dt><dd id="status-rt-pending">0</dd></div>
+            <div><dt>RT last</dt><dd id="status-rt-last">n/a</dd></div>
+            <div><dt>RT p50</dt><dd id="status-rt-p50">n/a</dd></div>
+            <div><dt>RT health</dt><dd id="status-rt-health">no_data</dd></div>
+            <div><dt>Active alerts</dt><dd id="status-alert-count">0</dd></div>
+            <div><dt>Top alert</dt><dd id="status-alert-top">none</dd></div>
+            <div><dt>Error</dt><dd id="status-error">none</dd></div>
+            <div><dt>Serial parse drops</dt><dd id="status-serial-parse-drops">0</dd></div>
+            <div><dt>Serial oversize drops</dt><dd id="status-serial-oversize-drops">0</dd></div>
+            <div><dt>OSC command drops</dt><dd id="status-osc-drops">0</dd></div>
+            <div><dt>MIDI command drops</dt><dd id="status-midi-drops">0</dd></div>
+            <div><dt>Feedback suppressed</dt><dd id="status-feedback-suppressed">0</dd></div>
+          </dl>
+        </section>
 
-    <section class="panel" aria-labelledby="logs-heading">
-      <h2 id="logs-heading">Bridge log</h2>
-      <pre id="logs" class="log-output" aria-live="off"></pre>
-    </section>
+        <section class="panel" aria-labelledby="mapping-heading">
+          <h2 id="mapping-heading">Mappings and guards</h2>
+          <pre id="mapping-output" class="log-output compact-log" aria-live="off"></pre>
+        </section>
 
-    <section class="panel" aria-labelledby="alerts-heading">
-      <h2 id="alerts-heading">Recent alerts</h2>
-      <ul id="alert-history" class="alerts-list" aria-live="polite"></ul>
+        <section class="panel" aria-labelledby="routes-heading">
+          <h2 id="routes-heading">Route traces</h2>
+          <pre id="route-output" class="log-output compact-log" aria-live="off"></pre>
+        </section>
+
+        <section class="panel" aria-labelledby="raw-serial-heading">
+          <h2 id="raw-serial-heading">Raw serial / debug lane</h2>
+          <pre id="raw-serial-output" class="log-output" aria-live="off"></pre>
+        </section>
+
+        <section class="panel" aria-labelledby="logs-heading">
+          <h2 id="logs-heading">Bridge log</h2>
+          <pre id="logs" class="log-output" aria-live="off"></pre>
+        </section>
+
+        <section class="panel" aria-labelledby="state-json-heading">
+          <h2 id="state-json-heading">State JSON</h2>
+          <pre id="state-json-output" class="log-output" aria-live="off"></pre>
+        </section>
+      </section>
     </section>
   </main>
   <script type="module" src="./bridge-ui.js"></script>

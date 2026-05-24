@@ -47,7 +47,6 @@ export function createSessionLogController({
   storageKey = 'moarknobs:session-log',
   exportBtn,
   clearBtn,
-  onChange = () => {},
   now = () => new Date()
 } = {}) {
   let entries = [];
@@ -79,7 +78,6 @@ export function createSessionLogController({
     }
     if (exportBtn) exportBtn.disabled = entries.length === 0;
     if (clearBtn) clearBtn.disabled = entries.length === 0;
-    onChange(entries);
   }
 
   function load() {
@@ -175,7 +173,6 @@ export function createSessionLogController({
     bind,
     clear,
     exportLog,
-    getCount: () => entries.length,
     load,
     recordEvent,
     recordStatus

@@ -1,46 +1,82 @@
 # Known Good Host Recipes
 
-These are setup recipes for bench validation. They are not a promise that every host version is fully certified.
+These are setup recipes for bench validation. They are not a promise that every host version is fully certified. The browser bridge console now exposes matching recipe presets under `bridge/presets/`.
 
-## macOS IAC + Ableton
+## Preset-backed recipes
 
-1. Open Audio MIDI Setup.
-2. Choose Window > Show MIDI Studio.
-3. Open IAC Driver and enable Device is online.
-4. Add or rename a bus to `MN42 Bridge`.
-5. Start the bridge with `--midi "MN42 Bridge"`.
-6. In Ableton Live, enable the IAC bus for Track and Remote input.
-7. Map or monitor incoming CC traffic from the bridge.
+### `macos-iac-ableton-basic`
 
-## macOS IAC + Logic
+Use when:
+
+- macOS host
+- IAC Driver is available
+- Ableton Live is the MIDI consumer
+
+Checklist:
+
+1. Open Audio MIDI Setup and enable the IAC Driver.
+2. Create or rename a bus to `MN42 Bridge`.
+3. In the bridge console Setup mode, pick `macOS IAC + Ableton Basic`.
+4. Confirm the MIDI label matches the actual IAC bus name.
+5. In Ableton Live, enable that bus for Track and Remote input.
+6. Validate one inbound knob move and one return CC without disabling feedback suppression unless you are intentionally testing loopback.
+
+### `max-osc-localhost`
+
+Use when:
+
+- Max/MSP is running on the same host as the bridge
+- you want localhost OSC without a network hop
+
+Checklist:
+
+1. Pick `Max OSC Localhost` in the bridge console.
+2. Receive `/mn42/slots`, `/mn42/envelopes`, or `/mn42/telemetry/slots` in Max.
+3. If you send control back, keep it on `/mn42/cmd` or `/mn42/event/*`.
+4. Verify the bridge Advanced mode route traces match what the Max patch sees.
+
+### `touchosc-performance-local`
+
+Use when:
+
+- the bridge host and tablet share a trusted local network
+- the goal is performance monitoring first, control second
+
+Checklist:
+
+1. Pick `TouchOSC Performance Local`.
+2. Confirm the OSC bind address is intentional for your network boundary.
+3. Start with receive-only layouts and verify telemetry stability.
+4. Only add control widgets after bench-confirming the route and alert posture.
+
+### `windows-loopmidi-reaper-basic`
+
+Use when:
+
+- Windows host
+- loopMIDI or equivalent virtual MIDI loopback is installed
+- Reaper is the MIDI consumer
+
+Checklist:
+
+1. Create a loopMIDI port named `MN42 Bridge` or update the preset-applied MIDI label to the exact port name.
+2. Start the bridge and verify the browser console reaches device-ready state.
+3. Enable the same loopback port in Reaper.
+4. Validate one recorded CC lane from live hardware movement and one inbound CC from Reaper.
+
+## Manual recipes that remain documented
+
+### Logic on macOS
 
 1. Enable the IAC bus in Audio MIDI Setup.
-2. Start the bridge with `--midi "MN42 Bridge"`.
+2. Start the bridge with `--midi "MN42 Bridge"` or the browser console equivalent.
 3. In Logic, open MIDI Environment or Controller Assignments.
 4. Learn incoming CC messages from the IAC bus.
-5. Keep feedback loop suppression enabled unless testing bidirectional mappings intentionally.
+5. Keep feedback loop suppression enabled unless you are intentionally testing bidirectional mappings.
 
-## Max/MSP OSC
-
-1. Start the bridge with OSC output to localhost:
-
-   ```bash
-   node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --host 127.0.0.1
-   ```
-
-2. In Max, receive `/mn42/slots`, `/mn42/envelopes`, or `/mn42/telemetry/slots` on UDP port `9000`.
-3. Send commands to `/mn42/cmd` only from trusted local patches.
-
-## Pure Data OSC
+### Pure Data OSC
 
 1. Start the bridge with OSC output enabled.
 2. Use `netreceive -u -b 9000` or the existing Pure Data example under `docs/examples/puredata/`.
-3. Decode the OSC paths `/mn42/slots` and `/mn42/envelopes`.
+3. Decode `/mn42/slots` and `/mn42/envelopes`.
 4. Keep command traffic local while testing.
-
-## TouchOSC
-
-1. Put TouchOSC on the same trusted local network as the bridge host.
-2. Point TouchOSC input at the bridge OSC host and port.
-3. Map controls to `/mn42/cmd` only if the bridge bind address and network are intentionally secured.
-4. Prefer receive-only layouts for first validation passes.

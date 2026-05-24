@@ -187,6 +187,7 @@ function createBrowserBridgeServer({
   port = DEFAULT_HTTP_PORT,
   uiDir = path.resolve(__dirname, '..', 'ui'),
   appDir = path.resolve(__dirname, '..', '..', 'App'),
+  presetDir = path.resolve(__dirname, '..', 'presets'),
   httpApi = http,
 } = {}) {
   if (!service || typeof service.getState !== 'function') {
@@ -196,24 +197,39 @@ function createBrowserBridgeServer({
   let server = null;
   let unsubscribeLine = null;
   let unsubscribeState = null;
-  const sockets = new Set();
+  let unsubscribeStructured = null;
+  const rawSockets = new Set();
+  const eventSockets = new Set();
 
   // Forward raw serial lines to every connected websocket client.
+  function writeFrame(socket, payload) {
+    if (!socket) return;
+    try {
+      socket.write(frameText(payload));
+    } catch (_) {
+      socket.destroy();
+    }
+  }
+
   function broadcastLine(line) {
-    const frame = frameText(`${String(line).trim()}\n`);
-    for (const socket of sockets) {
-      try {
-        socket.write(frame);
-      } catch (_) {
-        socket.destroy();
-      }
+    const payload = `${String(line).trim()}\n`;
+    for (const socket of rawSockets) {
+      writeFrame(socket, payload);
+    }
+  }
+
+  function broadcastStructuredEvent(message) {
+    const payload = `${JSON.stringify(message)}\n`;
+    for (const socket of eventSockets) {
+      writeFrame(socket, payload);
     }
   }
 
   // Remove a websocket client and send a close frame when possible.
   function destroySocket(socket) {
     if (!socket) return;
-    sockets.delete(socket);
+    rawSockets.delete(socket);
+    eventSockets.delete(socket);
     try {
       socket.end(closeFrame());
     } catch (_) {
@@ -234,6 +250,15 @@ function createBrowserBridgeServer({
   async function handleApi(req, res, pathname) {
     if (pathname === '/api/state' && req.method === 'GET') {
       sendJson(res, 200, { state: service.getState() });
+      return true;
+    }
+
+    if (pathname === '/api/device/session' && req.method === 'GET') {
+      const session =
+        typeof service.getDeviceSessionState === 'function'
+          ? service.getDeviceSessionState()
+          : service.getState()?.deviceSession ?? null;
+      sendJson(res, 200, { session });
       return true;
     }
 
@@ -294,6 +319,33 @@ function createBrowserBridgeServer({
       return true;
     }
 
+    if (pathname === '/api/presets' && req.method === 'GET') {
+      try {
+        const entries = await fs.readdir(presetDir, { withFileTypes: true });
+        const presets = [];
+        for (const entry of entries) {
+          if (
+            !entry.isFile() ||
+            path.extname(entry.name).toLowerCase() !== '.json'
+          ) {
+            continue;
+          }
+          const filePath = path.join(presetDir, entry.name);
+          const payload = JSON.parse(await fs.readFile(filePath, 'utf8'));
+          presets.push({
+            id: entry.name.replace(/\.json$/i, ''),
+            filename: entry.name,
+            label: payload?.label ?? entry.name,
+            preset: payload,
+          });
+        }
+        sendJson(res, 200, { presets });
+      } catch (err) {
+        sendJson(res, 500, { error: err.message });
+      }
+      return true;
+    }
+
     if (pathname === '/api/connect' && req.method === 'POST') {
       try {
         const body = await readJson(req);
@@ -316,6 +368,83 @@ function createBrowserBridgeServer({
         sendJson(res, 200, { state: service.getState() });
       } catch (err) {
         sendJson(res, 500, { error: err.message, state: service.getState() });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/device/stage' && req.method === 'POST') {
+      try {
+        const body = await readJson(req);
+        const payload = Object.prototype.hasOwnProperty.call(body, 'config')
+          ? body.config
+          : body;
+        const result =
+          typeof service.stageDeviceConfig === 'function'
+            ? await service.stageDeviceConfig(payload)
+            : null;
+        sendJson(res, 200, {
+          result,
+          state: service.getState(),
+        });
+      } catch (err) {
+        sendJson(res, err.statusCode || 500, {
+          error: {
+            code: err.code || 'bridge_error',
+            message: err.message,
+            details: err.details ?? null,
+          },
+          state: service.getState(),
+        });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/device/apply' && req.method === 'POST') {
+      try {
+        const body = await readJson(req);
+        const result =
+          typeof service.applyDeviceConfig === 'function'
+            ? await service.applyDeviceConfig(body || {})
+            : null;
+        sendJson(res, 200, {
+          result,
+          state: service.getState(),
+        });
+      } catch (err) {
+        sendJson(res, err.statusCode || 500, {
+          error: {
+            code: err.code || 'bridge_error',
+            message: err.message,
+            details: err.details ?? null,
+          },
+          state: service.getState(),
+        });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/device/rollback' && req.method === 'POST') {
+      try {
+        const body = await readJson(req);
+        const result =
+          typeof service.rollbackDeviceConfig === 'function'
+            ? await service.rollbackDeviceConfig(
+                body?.reason || 'operator_request',
+              )
+            : null;
+        sendJson(res, 200, {
+          result,
+          state: service.getState(),
+        });
+      } catch (err) {
+        sendJson(res, err.statusCode || 500, {
+          error: {
+            code: err.code || 'bridge_error',
+            message: err.message,
+            details: err.details ?? null,
+          },
+          state: service.getState(),
+        });
       }
       return true;
     }
@@ -352,7 +481,7 @@ function createBrowserBridgeServer({
   // Upgrade `/ws` requests into a raw websocket feed for serial lines and state updates.
   function handleWebSocket(req, socket) {
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
-    if (url.pathname !== '/ws') {
+    if (url.pathname !== '/ws' && url.pathname !== '/ws/events') {
       socket.destroy();
       return;
     }
@@ -379,10 +508,73 @@ function createBrowserBridgeServer({
       ].join('\r\n'),
     );
 
-    sockets.add(socket);
+    const isRawSocket = url.pathname === '/ws';
+    const socketSet = isRawSocket ? rawSockets : eventSockets;
+    socketSet.add(socket);
     let buffered = Buffer.alloc(0);
 
+    if (!isRawSocket) {
+      const bridgeState = service.getState();
+      const session =
+        bridgeState?.deviceSession ||
+        (typeof service.getDeviceSessionState === 'function'
+          ? service.getDeviceSessionState()
+          : null);
+      const bootstrapMessages = [
+        {
+          version: 1,
+          event: 'device.config.live',
+          at: new Date().toISOString(),
+          payload: {
+            config: session?.liveConfig ?? null,
+            lastApplyResult: session?.lastApplyResult ?? null,
+          },
+        },
+        {
+          version: 1,
+          event: 'device.config.staged',
+          at: new Date().toISOString(),
+          payload: {
+            config: session?.stagedConfig ?? null,
+          },
+        },
+        {
+          version: 1,
+          event: 'device.config.dirty',
+          at: new Date().toISOString(),
+          payload: {
+            dirty: Boolean(session?.dirty),
+          },
+        },
+        {
+          version: 1,
+          event: 'bridge.performance',
+          at: new Date().toISOString(),
+          payload: {
+            performance: bridgeState?.performance ?? null,
+          },
+        },
+      ];
+      if (session?.ready) {
+        bootstrapMessages.push({
+          version: 1,
+          event: 'device.ready',
+          at: new Date().toISOString(),
+          payload: {
+            manifest: session?.manifest ?? null,
+            firmwareIdentity: session?.firmwareIdentity ?? null,
+            powerSafety: session?.powerSafety ?? null,
+            schemaSource: session?.schemaSource ?? null,
+          },
+        });
+      }
+      bootstrapMessages.forEach((message) => {
+        writeFrame(socket, `${JSON.stringify(message)}\n`);
+      });
+    }
+
     socket.on('data', (chunk) => {
+      if (!isRawSocket) return;
       buffered = Buffer.concat([buffered, chunk]);
       while (buffered.length >= 2) {
         const first = buffered[0];
@@ -434,18 +626,22 @@ function createBrowserBridgeServer({
       }
     });
 
-    socket.on('close', () => sockets.delete(socket));
-    socket.on('end', () => sockets.delete(socket));
-    socket.on('error', () => sockets.delete(socket));
+    socket.on('close', () => socketSet.delete(socket));
+    socket.on('end', () => socketSet.delete(socket));
+    socket.on('error', () => socketSet.delete(socket));
   }
 
   async function start() {
     if (server) return { host, port: server.address().port };
 
     unsubscribeLine = service.on('line', broadcastLine);
+    unsubscribeStructured = service.on(
+      'structured-event',
+      broadcastStructuredEvent,
+    );
     unsubscribeState = service.on('state', (state) => {
       if (state && state.running) return;
-      for (const socket of [...sockets]) {
+      for (const socket of [...rawSockets, ...eventSockets]) {
         destroySocket(socket);
       }
     });
@@ -508,7 +704,11 @@ function createBrowserBridgeServer({
       unsubscribeState();
       unsubscribeState = null;
     }
-    for (const socket of [...sockets]) {
+    if (unsubscribeStructured) {
+      unsubscribeStructured();
+      unsubscribeStructured = null;
+    }
+    for (const socket of [...rawSockets, ...eventSockets]) {
       destroySocket(socket);
     }
     if (!server) return;

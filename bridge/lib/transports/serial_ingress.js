@@ -5,6 +5,7 @@ function createSerialLineHandler({
   bumpCounter,
   pushLog,
   inspectManifest,
+  deviceSession,
   extractTimestampMs,
   extractTraceId,
   nextTraceId,
@@ -35,6 +36,7 @@ function createSerialLineHandler({
     } catch (_) {
       if (looksJson) {
         bumpCounter('serialParseErrors');
+        deviceSession?.handleMalformedMessage?.(trimmed, _);
       }
       return;
     }
@@ -46,6 +48,16 @@ function createSerialLineHandler({
     const hostTimestampMs = timestampNow();
     const sourceTimestampMs = extractTimestampMs(data);
     const telemetryTraceId = extractTraceId(data) || nextTraceId('serial');
+    Promise.resolve(
+      deviceSession?.handleMessage?.(data, {
+        rawLine: trimmed,
+        hostTimestampMs,
+        sourceTimestampMs,
+        traceId: telemetryTraceId,
+      }),
+    ).catch((err) => {
+      pushLog('error', `device session parse failed: ${err.message}`);
+    });
 
     if (hasTelemetry) {
       setState({

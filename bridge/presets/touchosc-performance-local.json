@@ -1,0 +1,33 @@
+{
+  "id": "touchosc-performance-local",
+  "label": "TouchOSC Performance Local",
+  "host": "Trusted Local Network",
+  "requirements": [
+    "Node.js 22.x bridge host on the same trusted network as the tablet",
+    "TouchOSC configured for local host/port addressing",
+    "Operator understands that this remains a bench-validated path, not a signed/public deployment"
+  ],
+  "ports": {
+    "serialNameHint": "/dev/ttyACM* or /dev/cu.usbmodem*",
+    "midiLabel": "MN42 Bridge",
+    "oscHost": "127.0.0.1",
+    "oscPort": 9000,
+    "oscListen": 9000,
+    "oscBind": "0.0.0.0"
+  },
+  "mappings": {
+    "recommendedUse": [
+      "Receive-only dashboards first",
+      "Add /mn42/cmd controls only after telemetry is stable"
+    ]
+  },
+  "expectedTelemetry": [
+    "TouchOSC meters update from /mn42/slots and /mn42/envelopes",
+    "The bridge console keeps active-alert count visible in Stage mode"
+  ],
+  "manualValidationChecklist": [
+    "Verify the host firewall only exposes this lane on the trusted LAN",
+    "Confirm telemetry updates on the tablet without packet storms",
+    "Use the snapshot export before and after rehearsal changes"
+  ]
+}

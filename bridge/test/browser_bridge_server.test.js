@@ -81,6 +81,29 @@ function makeFakeService() {
       rtJitterP95TargetMs: 5,
       alertSuppressionMs: 3000,
     },
+    deviceSession: {
+      connected: false,
+      helloSeen: false,
+      ready: false,
+      schemaSource: 'bundled',
+      manifest: null,
+      schema: { schema_version: 6, type: 'object', properties: {} },
+      liveConfig: null,
+      stagedConfig: null,
+      dirty: false,
+      lastApplyResult: null,
+      powerSafety: {
+        power_profile: 'POWER_CHOKED_V1',
+        led_brightness_cap: 26,
+        rail_topology_verified: false,
+      },
+      firmwareIdentity: {
+        device_name: 'MOARkNOBS-42',
+        fw_version: 'mock-fw',
+        schema_version: 6,
+      },
+      lastError: null,
+    },
   };
   const sentLines = [];
   return {
@@ -120,13 +143,60 @@ function makeFakeService() {
     async start() {
       state.running = true;
       state.serialConnected = true;
+      state.deviceSession.connected = true;
       return this.getState();
     },
     async stop() {
       state.running = false;
       state.serialConnected = false;
       state.ready = false;
+      state.deviceSession.connected = false;
+      state.deviceSession.ready = false;
       return this.getState();
+    },
+    async stageDeviceConfig(config) {
+      state.deviceSession.stagedConfig = JSON.parse(JSON.stringify(config));
+      state.deviceSession.dirty = true;
+      events.emit('structured-event', {
+        version: 1,
+        event: 'device.config.staged',
+        at: new Date().toISOString(),
+        payload: { config: state.deviceSession.stagedConfig },
+      });
+      return { staged: state.deviceSession.stagedConfig, dirty: true };
+    },
+    async applyDeviceConfig() {
+      state.deviceSession.liveConfig = JSON.parse(
+        JSON.stringify(state.deviceSession.stagedConfig),
+      );
+      state.deviceSession.dirty = false;
+      state.deviceSession.lastApplyResult = {
+        status: 'ack',
+        checksum: 'mock-checksum',
+      };
+      events.emit('structured-event', {
+        version: 1,
+        event: 'device.apply.ack',
+        at: new Date().toISOString(),
+        payload: { checksum: 'mock-checksum', seq: 1 },
+      });
+      return { applied: true, checksum: 'mock-checksum' };
+    },
+    async rollbackDeviceConfig(reason = 'operator_request') {
+      state.deviceSession.stagedConfig = JSON.parse(
+        JSON.stringify(state.deviceSession.liveConfig),
+      );
+      state.deviceSession.dirty = false;
+      events.emit('structured-event', {
+        version: 1,
+        event: 'device.apply.rollback',
+        at: new Date().toISOString(),
+        payload: { reason },
+      });
+      return { rolledBack: true, reason };
+    },
+    getDeviceSessionState() {
+      return JSON.parse(JSON.stringify(state.deviceSession));
     },
     async resetPerformance() {
       state.performance.roundTrip = {
@@ -271,6 +341,18 @@ async function run() {
     'state endpoint should expose idle bridge state',
   );
 
+  const sessionResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/device/session' }),
+    sessionResponse,
+  );
+  const sessionPayload = JSON.parse(sessionResponse.body.toString('utf8'));
+  assert.equal(
+    sessionPayload.session?.firmwareIdentity?.device_name,
+    'MOARkNOBS-42',
+    'device session endpoint should expose cached firmware identity',
+  );
+
   const portsResponse = makeRes();
   await server.requestHandler(
     makeReq({ method: 'GET', url: '/api/ports' }),
@@ -300,6 +382,18 @@ async function run() {
     'MIDI output listing should be proxied',
   );
 
+  const presetsResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/presets' }),
+    presetsResponse,
+  );
+  const presetsPayload = JSON.parse(presetsResponse.body.toString('utf8'));
+  assert.equal(
+    Array.isArray(presetsPayload.presets) && presetsPayload.presets.length > 0,
+    true,
+    'preset endpoint should expose known-good host recipes',
+  );
+
   const connectResponse = makeRes();
   await server.requestHandler(
     makeReq({
@@ -327,6 +421,61 @@ async function run() {
     connectPayload.state.config.alertSuppressionMs,
     2222,
     'connect endpoint should apply alert suppression config',
+  );
+
+  const stageResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/device/stage',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        config: {
+          slots: [{ midiChannel: 2 }],
+        },
+      }),
+    }),
+    stageResponse,
+  );
+  const stagePayload = JSON.parse(stageResponse.body.toString('utf8'));
+  assert.equal(
+    stagePayload.result?.dirty,
+    true,
+    'device stage endpoint should route config drafts into the session cache',
+  );
+
+  const applyResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/device/apply',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({}),
+    }),
+    applyResponse,
+  );
+  const applyPayload = JSON.parse(applyResponse.body.toString('utf8'));
+  assert.equal(
+    applyPayload.result?.checksum,
+    'mock-checksum',
+    'device apply endpoint should expose structured apply results',
+  );
+
+  const rollbackResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/device/rollback',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ reason: 'browser_test' }),
+    }),
+    rollbackResponse,
+  );
+  const rollbackPayload = JSON.parse(rollbackResponse.body.toString('utf8'));
+  assert.equal(
+    rollbackPayload.result?.reason,
+    'browser_test',
+    'device rollback endpoint should pass through operator reason strings',
   );
 
   const resetResponse = makeRes();
@@ -456,6 +605,39 @@ async function run() {
     service.sentLines,
     ['{"cmd":"PING"}'],
     'websocket should forward browser lines to the service',
+  );
+
+  const eventSocket = new EventEmitter();
+  eventSocket.writes = [];
+  eventSocket.write = (chunk) => {
+    eventSocket.writes.push(Buffer.from(chunk));
+  };
+  eventSocket.end = () => {};
+  eventSocket.destroy = () => {};
+  eventSocket.on = eventSocket.addListener.bind(eventSocket);
+  server.emit(
+    'upgrade',
+    {
+      ...upgradeReq,
+      url: '/ws/events',
+    },
+    eventSocket,
+  );
+  const eventHandshakeText = Buffer.concat(eventSocket.writes).toString('utf8');
+  assert.match(
+    eventHandshakeText,
+    /HTTP\/1\.1 101 Switching Protocols/,
+    'structured websocket upgrade should succeed',
+  );
+  service.emitLine('{"hello":"mn42"}');
+  service.on('structured-event', () => {});
+  const structuredFrameText = Buffer.concat(eventSocket.writes).toString(
+    'utf8',
+  );
+  assert.match(
+    structuredFrameText,
+    /device\.config\.live[\s\S]*bridge\.performance/,
+    'structured websocket should send session/bootstrap events',
   );
 
   await browserServer.stop();

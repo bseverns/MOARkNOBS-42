@@ -145,7 +145,7 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
   return out;
 }
 
-function compactConfigForDevice(config, previousConfig, options) {
+export function compactConfigForDevice(config, previousConfig, options) {
   if (!config || typeof config !== 'object') return config;
   const { clone } = options;
   const out = {};

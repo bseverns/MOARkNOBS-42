@@ -1,0 +1,36 @@
+{
+  "id": "windows-loopmidi-reaper-basic",
+  "label": "Windows loopMIDI + Reaper Basic",
+  "host": "Windows",
+  "requirements": [
+    "Node.js 22.x on the Windows bridge host",
+    "loopMIDI or equivalent virtual MIDI loopback installed",
+    "Reaper configured to listen to the same virtual port name"
+  ],
+  "ports": {
+    "serialNameHint": "COM*",
+    "midiLabel": "MN42 Bridge",
+    "oscHost": "127.0.0.1",
+    "oscPort": 9000,
+    "oscListen": 9000,
+    "oscBind": "127.0.0.1"
+  },
+  "mappings": {
+    "outboundMidi": [
+      "Channel 1 CC 0..41 slot telemetry",
+      "Channel 2 CC 0..5 envelope telemetry"
+    ],
+    "inboundMidi": [
+      "Host CC feedback enters the bridge on the same named loopMIDI port"
+    ]
+  },
+  "expectedTelemetry": [
+    "Reaper sees incoming CC changes on the loopMIDI port",
+    "The bridge console shows connected serial and ready device state"
+  ],
+  "manualValidationChecklist": [
+    "Confirm the exact loopMIDI port name matches the bridge MIDI label",
+    "Record one CC automation lane in Reaper from live knob movement",
+    "Send one CC back from Reaper and verify feedback suppression prevents immediate loops"
+  ]
+}

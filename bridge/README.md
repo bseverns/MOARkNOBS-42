@@ -1,33 +1,49 @@
 # MN42 Bridge
 
-The MN42 Bridge now has a browser-driven local console for everyday use, plus the original CLI for advanced/manual workflows. It also supports a JSON settings file for repeatable host setups.
+The MN42 Bridge is the desktop-side companion to `App/`. It still preserves the original CLI and the raw WebSocket/serial debug lane, but it now also keeps a cached device session with manifest, schema, live config, staged config, dirty state, apply results, and power-safety identity.
 
-Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC or host MIDI routing on a desktop host. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
+Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC routing, host MIDI routing, a desktop session cache, or an App-over-bridge lane that does not depend on browser WebSerial support. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
 
 Current support boundary:
 
 - strongest repo evidence for this tool: Node.js 22 desktop host plus the browser console or CLI
 - documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
 - package scripts intentionally pin Node to `>=22 <23`; widening that floor needs explicit test evidence first
-- not claimed here: a signed one-click installer or broad DAW-by-DAW compatibility proof
+- CI currently generates unsigned bridge artifacts only; this repo does not yet claim a signed/public installer path
+- not claimed here: broad DAW-by-DAW certification or a production installer/export story
 
-See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md).
+See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md). The bridge session/runtime transport is documented in [Bridge Transport Contract](../docs/bridge/BridgeTransportContract.md).
 
-It does three things:
+## Operating paths
+
+- `CLI path`
+  `node bridge/mn42_bridge.js ...` stays the lowest-level operator lane and remains line-oriented.
+- `Browser-console path`
+  `npm --prefix bridge start` serves the local console at `http://127.0.0.1:8787/`.
+- `App-over-bridge path`
+  `/app/` still launches the full configurator over the raw bridge WebSocket lane.
+- `Raw debug transport`
+  `/ws` keeps the newline-oriented serial bridge for back-compat and debugging.
+- `Structured bridge transport`
+  `/api/device/*` plus `/ws/events` expose cached session state and named bridge/device events for App-facing or tooling-facing consumers.
+
+It does four things:
 
 - reads JSON telemetry from the controller over USB serial,
 - publishes that data as OSC and MIDI,
-- accepts OSC or MIDI control messages and forwards them back to the controller.
+- accepts OSC or MIDI control messages and forwards them back to the controller,
+- maintains a desktop-side device session so staged apply and operator tooling do not have to infer state from raw lines alone.
 
-The bridge is already bidirectional:
+The bridge remains bidirectional:
 
 - MIDI in can rebroadcast as typed OSC events and still feed the firmware live-control lane.
 - OSC typed events can emit host MIDI messages.
-- A settings file can now add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
+- A settings file can add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
+- The cached device session validates staged config before apply and only promotes staged to live after a verified ACK.
 
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
-_A screenshot of the browser-driven local console would help here, especially the serial port chooser, OSC port fields, and start/stop controls._
+_Screenshot placeholder: browser console Setup mode with serial chooser, host recipe selector, and connect controls._
 
 ## Quick start (browser console)
 
@@ -77,25 +93,28 @@ npm --prefix bridge start -- --config ./bridge/settings.example.json
 Use the browser page to:
 
 - choose or type the serial port,
+- pick a known-good host recipe,
 - set OSC send/listen ports,
 - set the MIDI port label,
 - start or stop the bridge,
+- inspect cached session health in Stage mode,
+- keep raw serial, route traces, and state JSON in Advanced mode,
 - launch the full configurator over the bridge transport.
 
 The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and MIDI routing stay active.
 
-_A second screenshot would help show the configurator launched through the bridge transport, because that path is the least obvious one from text alone._
+_Screenshot placeholder: browser console Stage mode showing device-ready, RT p95, power-safety state, and active alerts._
 
 ### 4) Confirm it is live
 
-After startup, the bridge sends `HELLO` and `GET_MANIFEST` over serial, then waits for:
+After startup, the bridge sends `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, and `GET_CONFIG` over serial, then waits for:
 
 ```json
 { "hello": "mn42" }
 ```
 
-When the handshake arrives, slot/envelope updates begin forwarding and the browser console reports the device as ready.
-When the manifest arrives, the state snapshot includes firmware identity and power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`.
+When `HELLO`, manifest, schema, and config are cached, the browser console reports the device session as ready.
+The session snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus live/staged config state and the last apply result.
 
 ## Quick start (CLI)
 
@@ -385,7 +404,7 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 
 ## Packaging status (for non-command-line users)
 
-Current state: unsigned bridge binaries are now built automatically in
+Current state: unsigned bridge binaries are built automatically in
 `.github/workflows/release.yml` for:
 
 - `node22-macos-x64`
@@ -393,10 +412,17 @@ Current state: unsigned bridge binaries are now built automatically in
 - `node22-linux-x64`
 - `node22-win-x64`
 
-When a GitHub release already exists for the tag, the workflow uploads those bridge artifacts plus checksums.
-Those unsigned artifacts are internal evidence only. Beta/public bridge binaries should be packaged with
-`REQUIRE_BRIDGE_SIGNING=1` plus signing/notarization credentials or hooks.
-The bridge is still not shipped as a signed one-click installer.
+Each per-target bundle now includes:
+
+- one packaged bridge binary
+- a SHA-256 checksum file
+- a per-target `README.txt`
+- bundled third-party license notices
+- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, timestamp, and `signingStatus: "unsigned-ci-artifact"`
+
+When a GitHub release already exists for the tag, the workflow uploads those unsigned bundles as release assets. That is an evidence/distribution convenience, not a claim that the bridge is now a signed public installer.
+
+Beta/public bridge binaries should be packaged with `REQUIRE_BRIDGE_SIGNING=1` plus signing/notarization credentials or wrapper hooks. The bridge is still not shipped as a signed one-click installer.
 
 If demand grows, this is the practical path:
 
@@ -407,6 +433,7 @@ If demand grows, this is the practical path:
 Until then, this README is the canonical runbook for daily use.
 
 For rollout planning, see [`docs/BridgePackaging.md`](../docs/release/BridgePackaging.md).
+For signing readiness, see [`docs/release/BridgeSigningPlan.md`](../docs/release/BridgeSigningPlan.md).
 For a show-day quick reference, see [`docs/BridgeForPerformers.md`](../docs/guides/BridgeForPerformers.md).
 
 ## Development

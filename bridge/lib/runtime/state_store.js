@@ -11,6 +11,7 @@ function createBridgeStateStore({
       serialConnected: state.serialConnected,
       ready: state.ready,
       manifest: clone(state.manifest),
+      deviceSession: clone(state.deviceSession),
       lastError: state.lastError,
       lastTelemetryAt: state.lastTelemetryAt,
       lastRouteAt: state.lastRouteAt,

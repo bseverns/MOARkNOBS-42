@@ -1,6 +1,9 @@
 /* eslint-env browser */
 
 const STORAGE_KEY = 'mn42-bridge-console';
+const MODE_KEY = 'mn42-bridge-console-mode';
+const RAW_LINE_LIMIT = 200;
+const STRUCTURED_EVENT_LIMIT = 120;
 
 const form = document.getElementById('bridge-form');
 const startButton = document.getElementById('start-bridge');
@@ -18,8 +21,24 @@ const midiOutputsList = document.getElementById('midi-outputs');
 const midiPortsDatalist = document.getElementById('midi-port-list');
 const logOutput = document.getElementById('logs');
 const alertHistory = document.getElementById('alert-history');
-let latestPorts = [];
-let latestMidiPorts = { inputs: [], outputs: [] };
+const presetSelect = document.getElementById('preset-select');
+const recipeSummary = document.getElementById('recipe-summary');
+const recipeRequirements = document.getElementById('recipe-requirements');
+const recipeChecklist = document.getElementById('recipe-checklist');
+const routeOutput = document.getElementById('route-output');
+const rawSerialOutput = document.getElementById('raw-serial-output');
+const stateJsonOutput = document.getElementById('state-json-output');
+const mappingOutput = document.getElementById('mapping-output');
+const stageOpenConfiguratorButton = document.getElementById(
+  'stage-open-configurator',
+);
+const stageDownloadSnapshotButton = document.getElementById(
+  'stage-download-snapshot',
+);
+const stageRefreshStateButton = document.getElementById('stage-refresh-state');
+
+const modeTabs = [...document.querySelectorAll('.mode-tab')];
+const modeViews = [...document.querySelectorAll('[data-mode-view]')];
 
 const statusNodes = {
   running: document.getElementById('status-running'),
@@ -50,8 +69,32 @@ const statusNodes = {
   feedbackSuppressed: document.getElementById('status-feedback-suppressed'),
 };
 
-// Restore the last bridge form values so the desktop helper reopens in a
-// familiar state after refreshes or restarts.
+const sessionNodes = {
+  deviceName: document.getElementById('device-name'),
+  firmware: document.getElementById('device-fw'),
+  schema: document.getElementById('device-schema'),
+  schemaSource: document.getElementById('device-schema-source'),
+  power: document.getElementById('device-power'),
+  ledCap: document.getElementById('device-led-cap'),
+  rail: document.getElementById('device-rail'),
+  dirty: document.getElementById('device-dirty'),
+  lastApply: document.getElementById('device-last-apply'),
+};
+
+const consoleState = {
+  bridge: null,
+  rawLines: [],
+  structuredEvents: [],
+  presets: [],
+  activePresetId: '',
+};
+window.__MN42_BRIDGE_CONSOLE_STATE = consoleState;
+
+let latestPorts = [];
+let latestMidiPorts = { inputs: [], outputs: [] };
+let rawSocket = null;
+let eventSocket = null;
+
 function loadSavedConfig() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -60,8 +103,6 @@ function loadSavedConfig() {
   }
 }
 
-// Persist the current bridge form values locally; this is operator convenience,
-// not shared bridge state.
 function saveConfig(values) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(values));
@@ -70,7 +111,33 @@ function saveConfig(values) {
   }
 }
 
-// Normalize the form into the JSON shape expected by the bridge HTTP API.
+function saveMode(mode) {
+  try {
+    localStorage.setItem(MODE_KEY, mode);
+  } catch (_) {
+    // no-op
+  }
+}
+
+function loadMode() {
+  try {
+    return localStorage.getItem(MODE_KEY) || 'setup';
+  } catch (_) {
+    return 'setup';
+  }
+}
+
+function clone(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function pushLimited(list, value, limit) {
+  list.push(value);
+  if (list.length > limit) {
+    list.splice(0, list.length - limit);
+  }
+}
+
 function formValues() {
   const data = new FormData(form);
   const allowFeedbackLoopsField = form.elements.namedItem('allowFeedbackLoops');
@@ -91,7 +158,6 @@ function formValues() {
   };
 }
 
-// Fill the visible form from a stored config or the bridge's live state.
 function populateForm(values) {
   if (!values || typeof values !== 'object') return;
   for (const [key, value] of Object.entries(values)) {
@@ -105,63 +171,6 @@ function populateForm(values) {
   }
 }
 
-function scoreSerialPort(port) {
-  const path = String(port?.path || '').toLowerCase();
-  const manufacturer = String(port?.manufacturer || '').toLowerCase();
-  const label = `${path} ${manufacturer}`;
-  if (!path) return -1;
-  if (label.includes('teensy')) return 100;
-  if (path.includes('usbmodem')) return 80;
-  if (path.includes('ttyacm') || path.includes('ttyusb')) return 70;
-  if (path.includes('usbserial')) return 60;
-  if (
-    label.includes('bluetooth') ||
-    label.includes('wlan') ||
-    label.includes('debug-console')
-  ) {
-    return 0;
-  }
-  return 10;
-}
-
-function displaySerialPath(path) {
-  const value = String(path || '').trim();
-  if (
-    value.startsWith('/dev/tty.usbmodem') ||
-    value.startsWith('/dev/tty.usbserial')
-  ) {
-    return value.replace('/dev/tty.', '/dev/cu.');
-  }
-  return value;
-}
-
-function preferredSerialPort(ports = []) {
-  return [...ports]
-    .filter((port) => port?.path)
-    .sort((a, b) => scoreSerialPort(b) - scoreSerialPort(a))[0];
-}
-
-function shouldReplaceSerialPath(current, ports = []) {
-  const value = String(current || '').trim();
-  if (!value) return true;
-  if (value === '/dev/ttyACM0') return true;
-  if (!Array.isArray(ports) || !ports.length) return false;
-  return !ports.some(
-    (port) => port?.path === value || displaySerialPath(port?.path) === value,
-  );
-}
-
-function applyPreferredSerialPort(ports = latestPorts) {
-  const field = form.elements.namedItem('serialName');
-  if (!field || !shouldReplaceSerialPath(field.value, ports)) return false;
-  const preferred = preferredSerialPort(ports);
-  if (!preferred?.path) return false;
-  field.value = displaySerialPath(preferred.path);
-  saveConfig(formValues());
-  return true;
-}
-
-// Render ISO timestamps into operator-friendly local time labels.
 function formatWhen(isoString) {
   if (!isoString) return 'none yet';
   const date = new Date(isoString);
@@ -171,22 +180,24 @@ function formatWhen(isoString) {
 
 function formatTimestampMs(raw) {
   if (raw === undefined || raw === null) return 'none yet';
-  const asNum = Number(raw);
-  if (!Number.isFinite(asNum)) return String(raw);
-  return `${Math.trunc(asNum)} ms`;
+  const value = Number(raw);
+  return Number.isFinite(value) ? `${Math.trunc(value)} ms` : String(raw);
 }
 
 function formatMetricMs(raw) {
   if (raw === undefined || raw === null) return 'n/a';
-  const asNum = Number(raw);
-  if (!Number.isFinite(asNum)) return 'n/a';
-  return `${Math.trunc(asNum)} ms`;
+  const value = Number(raw);
+  return Number.isFinite(value) ? `${Math.trunc(value)} ms` : 'n/a';
 }
 
-// Flatten structured bridge logs into a simple scrolling text console.
+function formatJson(value) {
+  return JSON.stringify(value ?? null, null, 2);
+}
+
 function logsToText(logs) {
-  if (!Array.isArray(logs) || !logs.length)
+  if (!Array.isArray(logs) || !logs.length) {
     return 'Waiting for bridge activity.';
+  }
   return logs
     .map((entry) => {
       const prefix = `[${entry.level || 'info'}]`;
@@ -198,18 +209,68 @@ function logsToText(logs) {
     .join('\n');
 }
 
-// Point the configurator at this bridge's WebSocket endpoint.
-function wsUrl() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}/ws`;
+function formatRoute(route) {
+  if (!route || typeof route !== 'object') return '';
+  const head = `${route.hostTimestampMs || ''} ${route.flow || 'route'} ${
+    route.kind || ''
+  }`;
+  const tail = [route.traceId, route.source, route.destination]
+    .filter(Boolean)
+    .join(' · ');
+  return [head, tail].filter(Boolean).join(' — ');
 }
 
-// Keep the primary controls aligned with whether the background bridge is live.
+function renderRouteOutput(routes = []) {
+  if (!routeOutput) return;
+  if (!Array.isArray(routes) || !routes.length) {
+    routeOutput.textContent = 'No route traces yet.';
+    return;
+  }
+  routeOutput.textContent = routes
+    .slice(-40)
+    .map((entry) => formatRoute(entry))
+    .join('\n');
+}
+
+function renderRawSerialOutput() {
+  if (!rawSerialOutput) return;
+  rawSerialOutput.textContent = consoleState.rawLines.length
+    ? consoleState.rawLines.join('\n')
+    : 'Raw serial lane idle.';
+}
+
+function renderStateJson(state) {
+  if (!stateJsonOutput) return;
+  stateJsonOutput.textContent = formatJson({
+    bridge: state,
+    structuredEvents: consoleState.structuredEvents.slice(-12),
+  });
+}
+
+function renderMappingOutput(state = {}) {
+  if (!mappingOutput) return;
+  const config = state.config || {};
+  mappingOutput.textContent = formatJson({
+    feedbackWindowMs: config.feedbackWindowMs ?? null,
+    allowFeedbackLoops: Boolean(config.allowFeedbackLoops),
+    midiLabel: config.midiLabel ?? null,
+    midiToOscMappings: config.midiToOscMappings ?? [],
+  });
+}
+
+function wsUrl(pathname = '/ws') {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${protocol}//${window.location.host}${pathname}`;
+}
+
 function updateButtons(state) {
   const running = Boolean(state?.running);
   startButton.disabled = running;
   stopButton.disabled = !running;
   openConfiguratorButton.disabled = !running;
+  if (stageOpenConfiguratorButton) {
+    stageOpenConfiguratorButton.disabled = !running;
+  }
 }
 
 function renderAlertHistory(recentAlerts = []) {
@@ -222,21 +283,72 @@ function renderAlertHistory(recentAlerts = []) {
     alertHistory.appendChild(item);
     return;
   }
-  const latestFirst = [...recentAlerts].slice(-12).reverse();
-  for (const alert of latestFirst) {
-    const item = document.createElement('li');
-    const severity = alert?.severity || 'warn';
-    item.className = `alert-item severity-${severity}`;
-    const when = formatWhen(alert?.at);
-    const code = alert?.code || 'alert';
-    const message = alert?.message || code;
-    item.textContent = `[${severity}] ${when} — ${message} (${code})`;
-    alertHistory.appendChild(item);
-  }
+  recentAlerts
+    .slice(-12)
+    .reverse()
+    .forEach((alert) => {
+      const item = document.createElement('li');
+      const severity = alert?.severity || 'warn';
+      item.className = `alert-item severity-${severity}`;
+      item.textContent = `[${severity}] ${formatWhen(alert?.at)} — ${
+        alert?.message || alert?.code || 'alert'
+      }`;
+      alertHistory.appendChild(item);
+    });
 }
 
-// Project the bridge daemon state into the dashboard summary and badges.
+function updateMode(mode) {
+  modeTabs.forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.mode === mode);
+  });
+  modeViews.forEach((view) => {
+    const active = view.dataset.modeView === mode;
+    view.classList.toggle('is-active', active);
+    view.hidden = !active;
+  });
+  saveMode(mode);
+}
+
+function updateSession(session = {}) {
+  sessionNodes.deviceName.textContent =
+    session?.firmwareIdentity?.device_name ||
+    session?.manifest?.device_name ||
+    '-';
+  sessionNodes.firmware.textContent =
+    session?.firmwareIdentity?.fw_version ||
+    session?.manifest?.fw_version ||
+    '-';
+  sessionNodes.schema.textContent = String(
+    session?.firmwareIdentity?.schema_version ??
+      session?.manifest?.schema_version ??
+      session?.schema?.schema_version ??
+      '-',
+  );
+  sessionNodes.schemaSource.textContent = session?.schemaSource || '-';
+  sessionNodes.power.textContent = session?.powerSafety?.power_profile || '-';
+  sessionNodes.ledCap.textContent =
+    session?.powerSafety?.led_brightness_cap ?? '-';
+  sessionNodes.rail.textContent =
+    session?.powerSafety?.rail_topology_verified === true
+      ? 'verified'
+      : session?.powerSafety?.rail_topology_verified === false
+        ? 'unverified'
+        : '-';
+  sessionNodes.dirty.textContent = String(Boolean(session?.dirty));
+  const lastApply = session?.lastApplyResult;
+  sessionNodes.lastApply.textContent = lastApply
+    ? `${lastApply.status || 'unknown'}${
+        lastApply.checksum
+          ? ` (${String(lastApply.checksum).slice(0, 8)}…)`
+          : ''
+      }`
+    : 'none';
+}
+
 function updateStatus(state) {
+  consoleState.bridge = clone(state);
+  window.__MN42_BRIDGE_CONSOLE_STATE = consoleState;
+
   const config = state?.config || {};
   const counters = state?.counters || {};
   const timing = state?.timing || {};
@@ -245,11 +357,12 @@ function updateStatus(state) {
   const activeAlerts = Array.isArray(state?.alerts?.active)
     ? state.alerts.active
     : [];
+
   statusNodes.running.textContent = state?.running ? 'running' : 'stopped';
   statusNodes.serial.textContent = state?.serialConnected
     ? 'connected'
     : 'disconnected';
-  statusNodes.ready.textContent = state?.ready ? 'ready' : 'awaiting HELLO';
+  statusNodes.ready.textContent = state?.ready ? 'ready' : 'awaiting handshake';
   statusNodes.osc.textContent = `${config.oscHost || '127.0.0.1'}:${
     config.oscPort || 9000
   }`;
@@ -282,20 +395,6 @@ function updateStatus(state) {
         activeAlerts[0].message || activeAlerts[0].code || 'alert'
       }`
     : 'none';
-  statusNodes.alertTop.classList.remove(
-    'status-ok',
-    'status-warn',
-    'status-error',
-  );
-  if (activeAlerts.length) {
-    statusNodes.alertTop.classList.add(
-      activeAlerts[0].severity === 'error'
-        ? 'status-error'
-        : activeAlerts[0].severity === 'warn'
-          ? 'status-warn'
-          : 'status-ok',
-    );
-  }
   statusNodes.error.textContent = state?.lastError || 'none';
   statusNodes.serialParseDrops.textContent = String(
     counters.serialParseErrors || 0,
@@ -308,18 +407,72 @@ function updateStatus(state) {
   statusNodes.feedbackSuppressed.textContent = String(
     counters.feedbackSuppressed || 0,
   );
+
   summaryStatus.textContent = state?.running
     ? state?.ready
-      ? 'Bridge live and device handshake confirmed.'
-      : 'Bridge running. Waiting for the board handshake.'
+      ? 'Bridge live and cached device session ready.'
+      : 'Bridge running. Waiting for handshake/schema/config cache.'
     : 'Bridge idle.';
+
   logOutput.textContent = logsToText(state?.logs);
   renderAlertHistory(state?.alerts?.recent);
   updateButtons(state);
+  updateSession(state?.deviceSession || {});
+  renderRouteOutput(state?.routes || []);
+  renderRawSerialOutput();
+  renderStateJson(state);
+  renderMappingOutput(state);
 }
 
-// Render the currently detected serial ports into both the visible list and the
-// datalist used for typed path completion.
+function scoreSerialPort(port) {
+  const path = String(port?.path || '').toLowerCase();
+  const manufacturer = String(port?.manufacturer || '').toLowerCase();
+  const label = `${path} ${manufacturer}`;
+  if (!path) return -1;
+  if (label.includes('teensy')) return 100;
+  if (path.includes('usbmodem')) return 80;
+  if (path.includes('ttyacm') || path.includes('ttyusb')) return 70;
+  if (path.includes('usbserial')) return 60;
+  if (label.includes('bluetooth') || label.includes('wlan')) return 0;
+  return 10;
+}
+
+function displaySerialPath(pathname) {
+  const value = String(pathname || '').trim();
+  if (
+    value.startsWith('/dev/tty.usbmodem') ||
+    value.startsWith('/dev/tty.usbserial')
+  ) {
+    return value.replace('/dev/tty.', '/dev/cu.');
+  }
+  return value;
+}
+
+function preferredSerialPort(ports = []) {
+  return [...ports]
+    .filter((port) => port?.path)
+    .sort((a, b) => scoreSerialPort(b) - scoreSerialPort(a))[0];
+}
+
+function shouldReplaceSerialPath(current, ports = []) {
+  const value = String(current || '').trim();
+  if (!value) return true;
+  if (value === '/dev/ttyACM0') return true;
+  return !ports.some(
+    (port) => port?.path === value || displaySerialPath(port?.path) === value,
+  );
+}
+
+function applyPreferredSerialPort(ports = latestPorts) {
+  const field = form.elements.namedItem('serialName');
+  if (!field || !shouldReplaceSerialPath(field.value, ports)) return false;
+  const preferred = preferredSerialPort(ports);
+  if (!preferred?.path) return false;
+  field.value = displaySerialPath(preferred.path);
+  saveConfig(formValues());
+  return true;
+}
+
 function renderPorts(ports) {
   latestPorts = Array.isArray(ports) ? ports : [];
   portsList.textContent = '';
@@ -336,7 +489,6 @@ function renderPorts(ports) {
     const option = document.createElement('option');
     option.value = value;
     portsDatalist.appendChild(option);
-
     const item = document.createElement('li');
     item.textContent = `${value}${
       port.manufacturer ? ` — ${port.manufacturer}` : ''
@@ -368,6 +520,7 @@ function scoreMidiPortName(name) {
   if (!value) return -1;
   if (value.includes('iac')) return 100;
   if (value.includes('mn42') || value.includes('moarknobs')) return 90;
+  if (value.includes('loopmidi')) return 85;
   if (value.includes('teensy')) return 20;
   if (value.includes('dls synth')) return 0;
   return 50;
@@ -406,11 +559,11 @@ function appendMidiPortList(target, ports, emptyText) {
     target.appendChild(item);
     return;
   }
-  for (const port of ports) {
+  ports.forEach((port) => {
     const item = document.createElement('li');
     item.textContent = describeMidiPort(port);
     target.appendChild(item);
-  }
+  });
 }
 
 function renderMidiPorts({ inputs = [], outputs = [] } = {}) {
@@ -421,28 +574,26 @@ function renderMidiPorts({ inputs = [], outputs = [] } = {}) {
   appendMidiPortList(
     midiInputsList,
     latestMidiPorts.inputs,
-    'No MIDI inputs detected. Enable a virtual input such as a macOS IAC bus.',
+    'No MIDI inputs detected yet.',
   );
   appendMidiPortList(
     midiOutputsList,
     latestMidiPorts.outputs,
-    'No MIDI outputs detected. Enable a virtual output such as a macOS IAC bus.',
+    'No MIDI outputs detected yet.',
   );
-  if (!midiPortsDatalist) return;
   midiPortsDatalist.textContent = '';
   const names = new Set();
-  for (const port of [...latestMidiPorts.inputs, ...latestMidiPorts.outputs]) {
+  [...latestMidiPorts.inputs, ...latestMidiPorts.outputs].forEach((port) => {
     const name = midiPortName(port);
     if (name) names.add(name);
-  }
-  for (const name of names) {
+  });
+  names.forEach((name) => {
     const option = document.createElement('option');
     option.value = name;
     midiPortsDatalist.appendChild(option);
-  }
+  });
 }
 
-// Small JSON fetch helper shared by every control path in this UI.
 async function api(url, options = {}) {
   const response = await fetch(url, {
     headers: { 'content-type': 'application/json' },
@@ -450,21 +601,90 @@ async function api(url, options = {}) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error || `request failed: ${response.status}`);
+    throw new Error(
+      payload?.error?.message ||
+        payload.error ||
+        `request failed: ${response.status}`,
+    );
   }
   return payload;
 }
 
-// Pull the bridge daemon's current status and repaint the dashboard.
+function renderPreset(preset) {
+  if (!preset) {
+    recipeSummary.textContent = 'No preset selected.';
+    recipeRequirements.textContent = '';
+    recipeChecklist.textContent = '';
+    return;
+  }
+  recipeSummary.textContent = [
+    preset.host ? `${preset.host} recipe.` : '',
+    ...(Array.isArray(preset.expectedTelemetry)
+      ? preset.expectedTelemetry.slice(0, 1)
+      : []),
+  ]
+    .filter(Boolean)
+    .join(' ');
+  recipeRequirements.textContent = '';
+  recipeChecklist.textContent = '';
+  (preset.requirements || []).forEach((text) => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    recipeRequirements.appendChild(item);
+  });
+  (preset.manualValidationChecklist || []).forEach((text) => {
+    const item = document.createElement('li');
+    item.textContent = text;
+    recipeChecklist.appendChild(item);
+  });
+}
+
+function applyPreset(preset) {
+  if (!preset?.ports) return;
+  populateForm({
+    serialName:
+      preset.ports.serialNameHint ||
+      form.elements.namedItem('serialName')?.value,
+    midiLabel: preset.ports.midiLabel,
+    oscHost: preset.ports.oscHost,
+    oscPort: preset.ports.oscPort,
+    oscListen: preset.ports.oscListen,
+    oscBind: preset.ports.oscBind,
+  });
+  saveConfig(formValues());
+}
+
+async function refreshPresets() {
+  const payload = await api('/api/presets', { method: 'GET' });
+  consoleState.presets = Array.isArray(payload.presets) ? payload.presets : [];
+  presetSelect.textContent = '';
+  consoleState.presets.forEach((entry, index) => {
+    const option = document.createElement('option');
+    option.value = entry.id;
+    option.textContent = entry.label;
+    if (!consoleState.activePresetId && index === 0) {
+      consoleState.activePresetId = entry.id;
+    }
+    presetSelect.appendChild(option);
+  });
+  if (consoleState.activePresetId) {
+    presetSelect.value = consoleState.activePresetId;
+  }
+  const selected = consoleState.presets.find(
+    (entry) => entry.id === presetSelect.value,
+  );
+  renderPreset(selected?.preset);
+  return consoleState.presets;
+}
+
 async function refreshState() {
   const payload = await api('/api/state', { method: 'GET' });
-  updateStatus(payload.state);
   populateForm(payload.state?.config);
   applyPreferredSerialPort();
+  updateStatus(payload.state);
   return payload.state;
 }
 
-// Refresh the serial-port inventory shown to the operator.
 async function refreshPorts() {
   const payload = await api('/api/ports', { method: 'GET' });
   renderPorts(payload.ports);
@@ -479,12 +699,9 @@ async function refreshMidiPorts() {
   return payload;
 }
 
-// Start the bridge with the current form values.
 async function startBridge() {
   await refreshPorts().catch(() => {});
   await refreshMidiPorts().catch(() => {});
-  applyPreferredSerialPort();
-  applyPreferredMidiPort();
   const values = formValues();
   saveConfig(values);
   const payload = await api('/api/connect', {
@@ -494,7 +711,6 @@ async function startBridge() {
   updateStatus(payload.state);
 }
 
-// Stop the running bridge process and repaint the dashboard state.
 async function stopBridge() {
   const payload = await api('/api/disconnect', {
     method: 'POST',
@@ -503,7 +719,6 @@ async function stopBridge() {
   updateStatus(payload.state);
 }
 
-// Reset rolling latency/jitter measurements without disconnecting the bridge.
 async function resetMetrics() {
   const payload = await api('/api/performance/reset', {
     method: 'POST',
@@ -512,7 +727,6 @@ async function resetMetrics() {
   updateStatus(payload.state);
 }
 
-// Clear currently active alerts while preserving the recent alert history.
 async function clearAlerts() {
   const payload = await api('/api/alerts/clear', {
     method: 'POST',
@@ -538,21 +752,54 @@ async function downloadSnapshot() {
   URL.revokeObjectURL(url);
 }
 
-// Launch the browser configurator already pointed at this bridge instance.
 function openConfigurator() {
   const target = new URL('/app/', window.location.href);
-  target.searchParams.set('ws', wsUrl());
+  target.searchParams.set('ws', wsUrl('/ws'));
   window.open(target.toString(), '_blank', 'noopener');
 }
 
-// Attach button and form handlers once during page boot.
+function connectRawSocket() {
+  if (rawSocket && rawSocket.readyState <= 1) return;
+  rawSocket = new WebSocket(wsUrl('/ws'));
+  rawSocket.addEventListener('message', (event) => {
+    const text = String(event.data || '').trim();
+    if (!text) return;
+    pushLimited(consoleState.rawLines, text, RAW_LINE_LIMIT);
+    renderRawSerialOutput();
+  });
+  rawSocket.addEventListener('close', () => {
+    window.setTimeout(connectRawSocket, 1500);
+  });
+}
+
+function connectStructuredSocket() {
+  if (eventSocket && eventSocket.readyState <= 1) return;
+  eventSocket = new WebSocket(wsUrl('/ws/events'));
+  eventSocket.addEventListener('message', (event) => {
+    try {
+      const payload = JSON.parse(String(event.data || '').trim());
+      pushLimited(
+        consoleState.structuredEvents,
+        payload,
+        STRUCTURED_EVENT_LIMIT,
+      );
+      renderStateJson(consoleState.bridge);
+    } catch (_) {
+      // ignore malformed structured frames in the UI
+    }
+  });
+  eventSocket.addEventListener('close', () => {
+    window.setTimeout(connectStructuredSocket, 1500);
+  });
+}
+
 function bindEvents() {
   startButton.addEventListener('click', async () => {
     summaryStatus.textContent = 'Starting bridge...';
     try {
       await startBridge();
-    } catch (err) {
-      summaryStatus.textContent = `Bridge start failed: ${err.message}`;
+    } catch (error) {
+      summaryStatus.textContent = `Bridge start failed: ${error.message}`;
     }
   });
 
@@ -560,71 +807,91 @@ function bindEvents() {
     summaryStatus.textContent = 'Stopping bridge...';
     try {
       await stopBridge();
-    } catch (err) {
-      summaryStatus.textContent = `Bridge stop failed: ${err.message}`;
+    } catch (error) {
+      summaryStatus.textContent = `Bridge stop failed: ${error.message}`;
     }
   });
 
   refreshPortsButton.addEventListener('click', async () => {
-    summaryStatus.textContent = 'Refreshing port list...';
+    summaryStatus.textContent = 'Refreshing host inventory...';
     try {
       await refreshPorts();
       await refreshMidiPorts();
       await refreshState();
-    } catch (err) {
-      summaryStatus.textContent = `Port refresh failed: ${err.message}`;
+      summaryStatus.textContent = 'Host inventory refreshed.';
+    } catch (error) {
+      summaryStatus.textContent = `Port refresh failed: ${error.message}`;
     }
   });
 
   resetMetricsButton.addEventListener('click', async () => {
-    summaryStatus.textContent = 'Resetting performance metrics...';
     try {
       await resetMetrics();
       summaryStatus.textContent = 'Performance metrics reset.';
-    } catch (err) {
-      summaryStatus.textContent = `Metrics reset failed: ${err.message}`;
+    } catch (error) {
+      summaryStatus.textContent = `Metrics reset failed: ${error.message}`;
     }
   });
 
   clearAlertsButton.addEventListener('click', async () => {
-    summaryStatus.textContent = 'Clearing active alerts...';
     try {
       await clearAlerts();
       summaryStatus.textContent = 'Active alerts cleared.';
-    } catch (err) {
-      summaryStatus.textContent = `Clear alerts failed: ${err.message}`;
+    } catch (error) {
+      summaryStatus.textContent = `Clear alerts failed: ${error.message}`;
     }
   });
 
   downloadSnapshotButton.addEventListener('click', async () => {
-    summaryStatus.textContent = 'Preparing bridge snapshot...';
     try {
       await downloadSnapshot();
       summaryStatus.textContent = 'Snapshot downloaded.';
-    } catch (err) {
-      summaryStatus.textContent = `Snapshot failed: ${err.message}`;
+    } catch (error) {
+      summaryStatus.textContent = `Snapshot failed: ${error.message}`;
     }
   });
 
+  stageDownloadSnapshotButton?.addEventListener('click', () => {
+    downloadSnapshot().catch(() => {});
+  });
+  stageRefreshStateButton?.addEventListener('click', () => {
+    refreshState().catch(() => {});
+  });
   openConfiguratorButton.addEventListener('click', openConfigurator);
+  stageOpenConfiguratorButton?.addEventListener('click', openConfigurator);
 
   form.addEventListener('input', () => {
     saveConfig(formValues());
   });
+
+  presetSelect?.addEventListener('change', () => {
+    consoleState.activePresetId = presetSelect.value;
+    const selected = consoleState.presets.find(
+      (entry) => entry.id === presetSelect.value,
+    );
+    renderPreset(selected?.preset);
+    applyPreset(selected?.preset);
+  });
+
+  modeTabs.forEach((button) => {
+    button.addEventListener('click', () => updateMode(button.dataset.mode));
+  });
 }
 
-// One-shot page bootstrap: restore saved values, wire events, fetch initial
-// state, then keep polling the daemon summary.
 async function boot() {
   populateForm(loadSavedConfig());
+  updateMode(loadMode());
   bindEvents();
-  await refreshPorts().catch((err) => {
-    summaryStatus.textContent = `Port refresh failed: ${err.message}`;
-  });
-  await refreshState().catch((err) => {
-    summaryStatus.textContent = `State refresh failed: ${err.message}`;
+  await refreshPorts().catch((error) => {
+    summaryStatus.textContent = `Port refresh failed: ${error.message}`;
   });
   await refreshMidiPorts().catch(() => {});
+  await refreshPresets().catch(() => {});
+  await refreshState().catch((error) => {
+    summaryStatus.textContent = `State refresh failed: ${error.message}`;
+  });
+  connectRawSocket();
+  connectStructuredSocket();
   window.setInterval(() => {
     refreshState().catch(() => {});
   }, 1500);

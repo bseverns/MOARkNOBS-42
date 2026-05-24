@@ -44,7 +44,8 @@ export function createPerformerPanelController({
   recallScene = () => {},
   getSelectedSlot = () => 0,
   selectSlot = () => {},
-  setStatus = () => {}
+  setStatus = () => {},
+  openPanicHelp = () => {}
 } = {}) {
   const {
     panel = null,
@@ -88,9 +89,10 @@ export function createPerformerPanelController({
     panicHelpBtn?.addEventListener('click', () => {
       setStatus(
         'warn',
-        'Panic baseline',
-        'Hardware combo only: press Ctrl0 + Ctrl1 + Ctrl2 to stop arp, disable EF follow, and reload the active profile baseline.'
+        'Panic & recovery',
+        'Press Ctrl0 + Ctrl1 + Ctrl2 for the hardware panic baseline. Flash and recovery guidance is open on screen.'
       );
+      openPanicHelp();
     });
   }
 

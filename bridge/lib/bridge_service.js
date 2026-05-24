@@ -74,7 +74,9 @@ const ALERT_LOG_LIMIT = 200;
 const ROUND_TRIP_WINDOW = 200;
 const PENDING_COMMAND_TTL_MS = 5000;
 const MAX_CMD_LEN = 128;
-const MAX_SERIAL_LINE_LEN = 16 * 1024;
+// Full GET_CONFIG payloads can exceed 16 kB once 42 slots, EF metadata, and LED
+// state are serialized, so keep the debug guard comfortably above normal config frames.
+const MAX_SERIAL_LINE_LEN = 128 * 1024;
 const MAX_MSG_LEN = MAX_CMD_LEN;
 const OSC_CMD_ADDRESS = '/mn42/cmd';
 const OSC_EVENT_PREFIX = '/mn42/event/';
@@ -123,6 +125,8 @@ const {
   configureBridgeRuntime,
 } = require('./runtime/lifecycle');
 const { createBridgeStateStore } = require('./runtime/state_store');
+const { createDeviceSession } = require('./device/session');
+const { createStructuredEvent } = require('./device/transport_contract');
 
 // Translate CLI flags into the bridge's runtime config object.
 function parseConfigFromArgv(argv = process.argv) {
@@ -182,6 +186,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   let stopping = false;
   let manualStop = false;
   let traceSeq = 0;
+  let deviceSeq = 0;
   const midiRpnStateByChannel = new Map();
 
   const state = {
@@ -189,6 +194,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     serialConnected: false,
     ready: false,
     manifest: null,
+    deviceSession: null,
     lastError: null,
     lastTelemetryAt: null,
     lastRouteAt: null,
@@ -213,6 +219,33 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       getConfig: () => config,
       logLimit: LOG_LIMIT,
     });
+
+  function emitStructuredEvent(eventName, payload) {
+    events.emit('structured-event', createStructuredEvent(eventName, payload));
+  }
+
+  const deviceSession = createDeviceSession({
+    sendLine: (line) => sendLine(line),
+    pushLog,
+    nextSeq: () => {
+      deviceSeq += 1;
+      return deviceSeq;
+    },
+    onStateChange: (nextSessionState) => {
+      setState({
+        ready: Boolean(nextSessionState?.ready),
+        manifest: clone(nextSessionState?.manifest),
+        deviceSession: clone(nextSessionState),
+        lastError:
+          nextSessionState?.lastError === undefined
+            ? state.lastError
+            : nextSessionState.lastError,
+      });
+    },
+    onStructuredEvent: (event) => {
+      events.emit('structured-event', event);
+    },
+  });
 
   function nextTraceId(prefix = 'trace') {
     traceSeq += 1;
@@ -260,6 +293,9 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   const performanceTracker = createPerformanceTracker({
     setPerformanceState: (nextPerformance) => {
       setState({ performance: nextPerformance });
+      emitStructuredEvent('bridge.performance', {
+        performance: nextPerformance,
+      });
     },
     getPerformanceState: () => state.performance,
     getTargets: () => ({
@@ -335,13 +371,9 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return feedbackGuard.shouldSuppressMidiEcho(status, cc, value);
   }
 
-  // Watch firmware hello/manifest traffic and mark the bridge ready once identity is known.
+  // Mirror manifest packets into the legacy top-level bridge snapshot for back-compat consumers.
   function inspectManifest(msg) {
     if (!msg || typeof msg !== 'object') return;
-    if (msg.hello === 'mn42') {
-      setState({ ready: true });
-      return;
-    }
     const directManifest =
       typeof msg.device_name === 'string' &&
       Number.isFinite(Number(msg.slot_count)) &&
@@ -354,7 +386,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       directManifest ||
       null;
     if (manifest && typeof manifest === 'object') {
-      setState({ manifest: manifest, ready: true });
+      setState({ manifest: manifest });
     }
   }
 
@@ -400,6 +432,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     bumpCounter,
     pushLog,
     inspectManifest,
+    deviceSession,
     extractTimestampMs,
     extractTraceId,
     nextTraceId,
@@ -516,12 +549,9 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         'info',
         `serial up on ${serial?.path || config.serialName} @${SERIAL_BAUD}`,
       );
-      try {
-        serial.write('HELLO\n');
-        serial.write('GET_MANIFEST\n');
-      } catch (err) {
-        pushLog('error', `serial handshake write failed: ${err.message}`);
-      }
+      Promise.resolve(deviceSession.handleOpen()).catch((err) => {
+        pushLog('error', `device session handshake failed: ${err.message}`);
+      });
     },
     onSerialError: (err) => {
       raiseAlert({
@@ -536,6 +566,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         ready: false,
         lastError: err.message,
       });
+      deviceSession.handleDisconnect(err.message);
       pushLog('error', `serial error: ${err.message}`);
       scheduleReconnect();
     },
@@ -551,6 +582,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
         serialConnected: false,
         ready: false,
       });
+      deviceSession.handleDisconnect('serial_close');
       if (manualStop || stopping) return;
       pushLog('error', 'serial disconnected');
       scheduleReconnect();
@@ -628,7 +660,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   // Start all bridge transports and publish a fresh runtime snapshot.
   async function start() {
-    return startBridgeRuntime({
+    const startedState = await startBridgeRuntime({
       isRunning: () => running,
       getState,
       loadDeps,
@@ -654,6 +686,10 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       attachMidi,
       attachSerial,
     });
+    emitStructuredEvent('bridge.performance', {
+      performance: getState().performance,
+    });
+    return startedState;
   }
 
   // Tear down serial, OSC, and MIDI cleanly so the bridge can restart without zombie listeners.
@@ -729,6 +765,18 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return getState();
   }
 
+  async function stageDeviceConfig(configPayload) {
+    return deviceSession.stageConfig(configPayload);
+  }
+
+  async function applyDeviceConfig(options = {}) {
+    return deviceSession.applyStagedConfig(options);
+  }
+
+  async function rollbackDeviceConfig(reason = 'operator_request') {
+    return deviceSession.rollback(reason);
+  }
+
   // Send one native line to firmware, surfacing an immediate error if serial is down.
   function sendLine(line) {
     const normalized = `${String(line).trim()}\n`;
@@ -748,13 +796,17 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   }
 
   return {
+    applyDeviceConfig,
     start,
+    stageDeviceConfig,
     stop,
     configure,
+    rollbackDeviceConfig,
     resetPerformance,
     clearAlerts,
     sendLine,
     getState,
+    getDeviceSessionState: () => deviceSession.getState(),
     on,
     listSerialPorts,
     listMidiPorts,

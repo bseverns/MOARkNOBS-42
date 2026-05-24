@@ -1,0 +1,37 @@
+{
+  "id": "macos-iac-ableton-basic",
+  "label": "macOS IAC + Ableton Basic",
+  "host": "macOS",
+  "requirements": [
+    "Node.js 22.x on the bridge host",
+    "Audio MIDI Setup with IAC Driver enabled",
+    "Ableton Live with the IAC bus enabled for Track and Remote input"
+  ],
+  "ports": {
+    "serialNameHint": "/dev/cu.usbmodem*",
+    "midiLabel": "MN42 Bridge",
+    "oscHost": "127.0.0.1",
+    "oscPort": 9000,
+    "oscListen": 9000,
+    "oscBind": "127.0.0.1"
+  },
+  "mappings": {
+    "outboundMidi": [
+      "Channel 1 CC 0..41 mirrors slot values",
+      "Channel 2 CC 0..5 mirrors envelope followers"
+    ],
+    "inboundMidi": [
+      "DAW or control-surface CC traffic on the same virtual port feeds the live slot-value lane"
+    ]
+  },
+  "expectedTelemetry": [
+    "Bridge console reaches device.ready after connect",
+    "Ableton sees incoming CC movement on the IAC bus",
+    "Round-trip p95 remains within the configured threshold during idle monitoring"
+  ],
+  "manualValidationChecklist": [
+    "Move one hardware knob and confirm a matching CC lane arrives in Ableton",
+    "Send one CC from Ableton and confirm the bridge logs a routed inbound command",
+    "Keep feedback suppression enabled unless intentionally testing loopback"
+  ]
+}

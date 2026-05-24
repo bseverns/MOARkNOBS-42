@@ -5,12 +5,7 @@ function normalizeEditorTab(tab) {
 }
 
 function normalizeUtilityTab(tab) {
-  return tab === 'service' ||
-    tab === 'diff' ||
-    tab === 'midi' ||
-    tab === 'scope' ||
-    tab === 'arp' ||
-    tab === 'lfo'
+  return tab === 'diff' || tab === 'midi' || tab === 'scope' || tab === 'arp' || tab === 'lfo'
     ? tab
     : 'console';
 }
