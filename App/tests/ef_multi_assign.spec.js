@@ -10,7 +10,10 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.waitForFunction(() => Boolean(window.__MN42_RUNTIME));
+  await page.evaluate(() => {
+    window.__MN42_RUNTIME?.useSimulator?.(true);
+  });
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await page.evaluate(() => {

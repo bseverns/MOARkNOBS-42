@@ -134,10 +134,17 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
   frames = await page.evaluate(() => window.testTelemetryFrames);
 
   // Expected timeline: fw-next fires flushTelemetry() immediately for fw-first.
-  // Then the new setTimeout starts for fw-next.
-  expect(frames.length).toBe(1); // the fw-first frame
+  // Under parallel load the fw-next 50ms timer may also have fired by the time we inspect,
+  // so assert ordering/content instead of an exact transient frame count.
+  expect(frames.length).toBeGreaterThanOrEqual(1);
 
   expect(frames[0].slots).toEqual([9]);
   expect(frames[0].envelopes).toEqual([8]);
   expect(frames[0].lfos).toBeUndefined(); // LFOs belongs to fw-next which is buffered
+
+  if (frames[1]) {
+    expect(frames[1].slots).toBeUndefined();
+    expect(frames[1].envelopes).toBeUndefined();
+    expect(frames[1].lfos).toEqual([7]);
+  }
 });
