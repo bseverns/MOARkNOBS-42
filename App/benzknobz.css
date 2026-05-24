@@ -1576,10 +1576,6 @@ button:not(:disabled):focus-visible {
   display: none !important;
 }
 
-html:not([data-connected='true']) #stage-panel {
-  display: none;
-}
-
 html:not([data-connected='true']) #slot-detail-panel {
   display: none;
 }
@@ -1604,28 +1600,6 @@ html[data-ui-mode='advanced'] main {
   grid-template-columns:
     minmax(620px, 1.45fr)
     minmax(320px, 0.95fr);
-}
-
-html[data-ui-mode='advanced'][data-connected='true'] #stage-panel {
-  display: contents;
-}
-
-html[data-ui-mode='basic'][data-connected='true'] #stage-panel {
-  display: contents;
-}
-
-html[data-ui-mode='basic'] #live-panel,
-html[data-ui-mode='advanced'] #live-panel {
-  display: none;
-}
-
-html[data-ui-mode='advanced'] #editor-panel {
-  grid-column: 1;
-}
-
-html[data-ui-mode='advanced'] #connect-card {
-  grid-column: 2;
-  min-width: 0;
 }
 
 html[data-ui-mode='stage'] #stage-panel,

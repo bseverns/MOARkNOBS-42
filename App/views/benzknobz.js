@@ -294,7 +294,13 @@ const boot = () => {
       const parsed = Number.parseInt(countText, 10);
       return Number.isFinite(parsed) ? parsed : 0;
     },
-    isSimulatorActive: () => Boolean(simulatorToggle?.classList.contains('active')),
+    isSimulatorActive: () => {
+      const state = runtime?.getState?.() ?? {};
+      return (
+        Boolean(simulatorToggle?.classList.contains('active')) ||
+        state?.manifest?.fw_version === 'sim-fw'
+      );
+    },
     getConfigBootDisabled: () => Boolean(configModeBtn?.disabled),
     onExportConfig: () => exportCurrentConfigJson(),
     onExportSessionLog: () => exportSessionLogFromPanicHelp(),
