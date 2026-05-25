@@ -3,7 +3,7 @@
   "label": "Windows loopMIDI + Reaper Basic",
   "host": "Windows",
   "requirements": [
-    "Node.js 22.x on the Windows bridge host",
+    "Node.js 24.x on the Windows bridge host",
     "loopMIDI or equivalent virtual MIDI loopback installed",
     "Reaper configured to listen to the same virtual port name"
   ],

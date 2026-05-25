@@ -203,7 +203,11 @@ export function createConfigSession({
   getRemoteManifest,
   getSchema,
   getSchemaSource,
-  getValidator
+  getValidator,
+  isBridgeSessionActive = () => false,
+  stageBridgeConfig = null,
+  applyBridgeConfig = null,
+  rollbackBridgeConfig = null
 } = {}) {
   let liveConfig = null;
   let stagedConfig = null;
@@ -236,6 +240,21 @@ export function createConfigSession({
     dirty = false;
   }
 
+  function syncFromSession(sessionPayload = {}) {
+    const normalizedLive = normalizeConfig(sessionPayload.liveConfig ?? {}, getManifest());
+    const normalizedStaged = normalizeConfig(
+      sessionPayload.stagedConfig ?? sessionPayload.liveConfig ?? {},
+      getManifest()
+    );
+    liveConfig = clone(normalizedLive);
+    stagedConfig = clone(normalizedStaged);
+    if (sessionPayload.dirty === undefined) {
+      dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
+    } else {
+      dirty = Boolean(sessionPayload.dirty);
+    }
+  }
+
   function stage(updater) {
     const baseConfig = stagedConfig ?? liveConfig ?? normalizeConfig({}, getManifest());
     const next = typeof updater === 'function' ? updater(clone(baseConfig)) : updater;
@@ -257,6 +276,38 @@ export function createConfigSession({
       error.validation = validator.errors;
       emit('validation-error', validator.errors);
       throw error;
+    }
+    if (isBridgeSessionActive()) {
+      try {
+        if (typeof stageBridgeConfig === 'function') {
+          await stageBridgeConfig(clone(stagedConfig));
+        }
+      } catch (err) {
+        if (err?.code === 'schema_validation_failed' && Array.isArray(err?.details?.errors)) {
+          err.validation = err.details.errors;
+          emit('validation-error', err.validation);
+        }
+        throw err;
+      }
+      try {
+        const response =
+          typeof applyBridgeConfig === 'function' ? await applyBridgeConfig() : { applied: false };
+        const checksum = response?.checksum ?? response?.result?.checksum ?? null;
+        liveConfig = clone(stagedConfig);
+        dirty = false;
+        lastKnownChecksum = checksum;
+        broadcastConfig();
+        emit('applied', { checksum });
+        return { applied: true, checksum };
+      } catch (err) {
+        if (err?.code !== 'schema_validation_failed') {
+          stagedConfig = clone(liveConfig);
+          dirty = false;
+          broadcastConfig();
+          emit('rollback', {});
+        }
+        throw err;
+      }
     }
     const schema = getSchema();
     const remoteManifest = getRemoteManifest();
@@ -302,6 +353,9 @@ export function createConfigSession({
   }
 
   async function rollback() {
+    if (isBridgeSessionActive() && typeof rollbackBridgeConfig === 'function') {
+      await rollbackBridgeConfig('operator_request');
+    }
     stagedConfig = clone(liveConfig);
     dirty = false;
     broadcastConfig();
@@ -367,6 +421,7 @@ export function createConfigSession({
       stagedConfig = next;
     },
     stage,
+    syncFromSession,
     syncFromDevice
   };
 }

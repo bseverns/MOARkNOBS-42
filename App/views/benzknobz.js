@@ -93,6 +93,7 @@ const boot = () => {
   const dirtyBadge = document.getElementById('dirty-badge');
   const connectionPill = document.getElementById('connection-pill');
   const connectionBanner = document.getElementById('connection-banner');
+  const transportLaneChip = document.getElementById('transport-lane-chip');
   const connectFailHelp = document.getElementById('connect-fail-help');
   const headerStatus = document.getElementById('header-status');
   const exportPresetBtn = document.getElementById('export-preset');
@@ -402,6 +403,7 @@ const boot = () => {
       simulatorToggle,
       connectionPill,
       connectionBanner,
+      transportLaneChip,
       connectFailHelp,
       usbMidiToggleBtn,
       usbMidiStatusEl,

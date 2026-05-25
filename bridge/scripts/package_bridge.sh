@@ -2,10 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENTRY="${ROOT_DIR}/mn42_bridge.js"
 DIST_DIR="${ROOT_DIR}/dist"
 OUTPUT_NAME="${OUTPUT_NAME:-mn42-bridge}"
-TARGETS="${TARGETS:-node22-macos-x64,node22-macos-arm64,node22-linux-x64,node22-win-x64}"
+TARGETS="${TARGETS:-node24-macos-x64,node24-macos-arm64,node24-linux-x64,node24-win-x64}"
 LOCAL_PKG_BIN="${ROOT_DIR}/node_modules/.bin/pkg"
 PKG_BIN="${PKG_BIN:-}"
 PKG_CACHE_PATH="${PKG_CACHE_PATH:-${ROOT_DIR}/.pkg-cache}"
@@ -24,10 +23,18 @@ if [[ -z "${PKG_BIN}" ]]; then
   PKG_BIN="$(command -v pkg || true)"
 fi
 
-if [[ ! -f "${ENTRY}" ]]; then
-  echo "Bridge entrypoint not found: ${ENTRY}" >&2
-  exit 1
-fi
+declare -a ENTRY_SPECS=(
+  "cli:${ROOT_DIR}/mn42_bridge.js"
+  "console:${ROOT_DIR}/mn42_bridge_server.js"
+)
+
+for entry_spec in "${ENTRY_SPECS[@]}"; do
+  IFS=':' read -r entry_kind entry_path <<< "${entry_spec}"
+  if [[ ! -f "${entry_path}" ]]; then
+    echo "Bridge ${entry_kind} entrypoint not found: ${entry_path}" >&2
+    exit 1
+  fi
+done
 
 if [[ -z "${PKG_BIN}" ]]; then
   cat >&2 <<'EOF'
@@ -54,7 +61,7 @@ sign_artifact() {
   if [[ -n "${BRIDGE_SIGNING_COMMAND}" ]]; then
     "${BRIDGE_SIGNING_COMMAND}" "${artifact}" "${target}"
     signed=1
-  elif [[ "${target}" == node22-macos-* && -n "${APPLE_CODESIGN_IDENTITY}" ]]; then
+  elif [[ "${target}" == node24-macos-* && -n "${APPLE_CODESIGN_IDENTITY}" ]]; then
     codesign --force --timestamp --options runtime --sign "${APPLE_CODESIGN_IDENTITY}" "${artifact}"
     signed=1
   fi
@@ -62,7 +69,7 @@ sign_artifact() {
   if [[ -n "${BRIDGE_NOTARIZE_COMMAND}" ]]; then
     "${BRIDGE_NOTARIZE_COMMAND}" "${artifact}" "${target}"
     notarized=1
-  elif [[ "${target}" == node22-macos-* && -n "${APPLE_NOTARY_PROFILE}" ]]; then
+  elif [[ "${target}" == node24-macos-* && -n "${APPLE_NOTARY_PROFILE}" ]]; then
     notary_zip="${artifact}.notary.zip"
     ditto -c -k --keepParent "${artifact}" "${notary_zip}"
     notary_cmd=(xcrun notarytool submit "${notary_zip}" --keychain-profile "${APPLE_NOTARY_PROFILE}")
@@ -79,7 +86,7 @@ sign_artifact() {
     exit 1
   fi
 
-  if [[ "${REQUIRE_BRIDGE_SIGNING}" == "1" && "${target}" == node22-macos-* && "${notarized}" -ne 1 ]]; then
+  if [[ "${REQUIRE_BRIDGE_SIGNING}" == "1" && "${target}" == node24-macos-* && "${notarized}" -ne 1 ]]; then
     echo "macOS notarization required but no notarization method ran for ${artifact}" >&2
     exit 1
   fi
@@ -98,27 +105,31 @@ for target in "${TARGET_ARRAY[@]}"; do
   if [[ -z "${target_trimmed}" ]]; then
     continue
   fi
-  out_path="${DIST_DIR}/${OUTPUT_NAME}-${target_trimmed}"
-  echo "Packaging ${target_trimmed} -> ${out_path}"
-  "${PKG_BIN}" "${ENTRY}" --targets "${target_trimmed}" --output "${out_path}"
 
-  shopt -s nullglob
-  target_artifacts=( "${out_path}"* )
-  shopt -u nullglob
+  for entry_spec in "${ENTRY_SPECS[@]}"; do
+    IFS=':' read -r entry_kind entry_path <<< "${entry_spec}"
+    out_path="${DIST_DIR}/${OUTPUT_NAME}-${entry_kind}-${target_trimmed}"
+    echo "Packaging ${entry_kind} ${target_trimmed} -> ${out_path}"
+    "${PKG_BIN}" "${entry_path}" --targets "${target_trimmed}" --output "${out_path}"
 
-  found_any=0
-  for artifact in "${target_artifacts[@]}"; do
-    if [[ -f "${artifact}" ]]; then
-      sign_artifact "${artifact}" "${target_trimmed}"
-      packaged_artifacts+=( "${artifact}" )
-      found_any=1
+    shopt -s nullglob
+    target_artifacts=( "${out_path}"* )
+    shopt -u nullglob
+
+    found_any=0
+    for artifact in "${target_artifacts[@]}"; do
+      if [[ -f "${artifact}" ]]; then
+        sign_artifact "${artifact}" "${target_trimmed}"
+        packaged_artifacts+=( "${artifact}" )
+        found_any=1
+      fi
+    done
+
+    if [[ "${found_any}" -eq 0 ]]; then
+      echo "No packaged ${entry_kind} artifact produced for ${target_trimmed}" >&2
+      exit 1
     fi
   done
-
-  if [[ "${found_any}" -eq 0 ]]; then
-    echo "No packaged artifact produced for ${target_trimmed}" >&2
-    exit 1
-  fi
 done
 
 echo "Packaging complete. Artifacts in ${DIST_DIR}"

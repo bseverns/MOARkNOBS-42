@@ -145,6 +145,70 @@ body {
   justify-content: flex-start;
 }
 
+.runtime-lane-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.runtime-lane-chip,
+.lane-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.runtime-lane-chip[data-runtime-lane='staged'],
+.lane-tag[data-runtime-lane='staged'] {
+  border-color: rgba(255, 95, 150, 0.45);
+  background: rgba(255, 95, 150, 0.12);
+}
+
+.runtime-lane-chip[data-runtime-lane='live'],
+.lane-tag[data-runtime-lane='live'] {
+  border-color: rgba(45, 226, 230, 0.38);
+  background: rgba(45, 226, 230, 0.1);
+}
+
+.runtime-lane-chip[data-runtime-lane='browser'],
+.lane-tag[data-runtime-lane='browser'] {
+  border-color: rgba(255, 206, 107, 0.38);
+  background: rgba(255, 206, 107, 0.08);
+}
+
+#transport-lane-chip[data-transport='bridge-session'] {
+  border-color: rgba(45, 226, 230, 0.46);
+  background: rgba(45, 226, 230, 0.16);
+}
+
+#transport-lane-chip[data-transport='bridge-raw'] {
+  border-color: rgba(159, 167, 186, 0.4);
+  background: rgba(159, 167, 186, 0.12);
+}
+
+#transport-lane-chip[data-transport='simulator'] {
+  border-color: rgba(123, 231, 173, 0.42);
+  background: rgba(123, 231, 173, 0.12);
+}
+
+.section-lane-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .compact-connect-actions {
   width: min(100%, 420px);
 }
@@ -351,8 +415,11 @@ body {
 }
 
 .live-toggle-card-header {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .live-toggle-card-header h3 {
@@ -1655,6 +1722,7 @@ html[data-ui-mode='stage'] #live-panel,
 html[data-ui-mode='stage'] #slot-detail-panel,
 html[data-ui-mode='stage'] #recovery-drawer,
 html[data-ui-mode='stage'] .hero-badges,
+html[data-ui-mode='stage'] .runtime-lane-strip,
 html[data-ui-mode='stage'] .utility-tabbar,
 html[data-ui-mode='stage'] .stack,
 html[data-ui-mode='stage'] #filter-settings,
@@ -2660,6 +2728,13 @@ footer {
   .hero-top,
   .editor-shell-header {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-lane-tags,
+  .live-toggle-card-header,
+  .monitor-header {
+    justify-content: flex-start;
     align-items: stretch;
   }
 

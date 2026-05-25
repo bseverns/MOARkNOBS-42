@@ -38,6 +38,14 @@ function main() {
       !name.endsWith('.json') &&
       !name.endsWith('.md'),
   );
+  const packagedPrograms = packagedBinaries.map((name) => ({
+    filename: name,
+    role: name.includes('-console-')
+      ? 'console'
+      : name.includes('-cli-')
+        ? 'cli'
+        : 'unknown',
+  }));
 
   const manifest = {
     target,
@@ -47,6 +55,7 @@ function main() {
     createdAt: new Date().toISOString(),
     checksumPaths: checksumFiles,
     packagedBinaries,
+    packagedPrograms,
     signingStatus,
   };
 

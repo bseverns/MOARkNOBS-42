@@ -43,6 +43,12 @@
         <span class="badge" role="listitem">Real-time Slot Telemetry</span>
         <span class="badge" role="listitem">Patch-safe Writing</span>
       </div>
+      <div class="runtime-lane-strip" aria-label="Runtime lanes">
+        <span class="runtime-lane-chip" id="transport-lane-chip" role="status">Transport · Direct USB</span>
+        <span class="runtime-lane-chip" data-runtime-lane="staged">Staged config · Apply required</span>
+        <span class="runtime-lane-chip" data-runtime-lane="live">Live firmware · Writes now</span>
+        <span class="runtime-lane-chip" data-runtime-lane="browser">Browser only · Local hints</span>
+      </div>
       <details class="recovery-drawer" id="recovery-drawer">
         <summary>
           <span>Recovery &amp; Profiles</span>
@@ -255,6 +261,10 @@
               <h2>Selected Slot</h2>
               <p class="microcopy">Keep the slot grid visible while editing one target at a time.</p>
             </div>
+            <div class="section-lane-tags" aria-label="Selected slot boundaries">
+              <span class="lane-tag" data-runtime-lane="staged">Staged config</span>
+              <span class="lane-tag" data-runtime-lane="browser">Labels stay local</span>
+            </div>
             <div class="editor-tabbar" role="tablist" aria-label="Selected slot editor sections">
               <button type="button" class="editor-tab" data-editor-tab="mapping" aria-pressed="true">Mapping</button>
               <button type="button" class="editor-tab" data-editor-tab="envelope" aria-pressed="false"
@@ -346,8 +356,11 @@
           </details>
           <section id="device-monitor-section" aria-labelledby="device-monitor-title" data-ui-tier="advanced">
             <header class="monitor-header">
-              <h2 id="device-monitor-title">Device Monitor</h2>
-              <p class="microcopy">Read-only firmware handshake vitals.</p>
+              <div>
+                <h2 id="device-monitor-title">Device Monitor</h2>
+                <p class="microcopy">Read-only firmware handshake vitals.</p>
+              </div>
+              <span class="lane-tag" data-runtime-lane="live">Read-only firmware</span>
             </header>
             <div class="monitor-grid" id="device-monitor"></div>
           </section>
@@ -362,8 +375,11 @@
           </div>
           <section class="live-toggle-card" aria-labelledby="usb-midi-toggle-title">
             <header class="live-toggle-card-header">
-              <h3 id="usb-midi-toggle-title">USB MIDI Output</h3>
-              <p class="microcopy">Live device toggle. This does not use Apply/Rollback.</p>
+              <div>
+                <h3 id="usb-midi-toggle-title">USB MIDI Output</h3>
+                <p class="microcopy">Live device toggle. This does not use Apply/Rollback.</p>
+              </div>
+              <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
             </header>
             <div class="live-toggle-actions">
               <button id="usb-midi-toggle" type="button" disabled>USB MIDI —</button>
@@ -374,8 +390,11 @@
           </section>
           <section class="live-toggle-card" aria-labelledby="note-dynamics-title">
             <header class="live-toggle-card-header">
-              <h3 id="note-dynamics-title">Note Dynamics</h3>
-              <p class="microcopy">Live note velocity and note-chance controls. Hardware pots use soft takeover after browser updates.</p>
+              <div>
+                <h3 id="note-dynamics-title">Note Dynamics</h3>
+                <p class="microcopy">Live note velocity and note-chance controls. Hardware pots use soft takeover after browser updates.</p>
+              </div>
+              <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
             </header>
             <div class="live-control-grid">
               <label>
@@ -442,8 +461,11 @@
               </div>
               <section class="live-toggle-card" aria-labelledby="device-clock-title">
                 <header class="live-toggle-card-header">
-                  <h3 id="device-clock-title">Device Clock</h3>
-                  <p class="microcopy">Live firmware clock source, internal BPM, and clock-out settings.</p>
+                  <div>
+                    <h3 id="device-clock-title">Device Clock</h3>
+                    <p class="microcopy">Live firmware clock source, internal BPM, and clock-out settings.</p>
+                  </div>
+                  <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
                 </header>
                 <div class="live-control-grid">
                   <label>
@@ -540,8 +562,11 @@
             </div>
             <section class="live-toggle-card" aria-labelledby="jitter-title">
               <header class="live-toggle-card-header">
-                <h3 id="jitter-title">Jitter</h3>
-                <p class="microcopy">Live Perlin jitter tuning shared by random EF shapes and arpeggiator behavior.</p>
+                <div>
+                  <h3 id="jitter-title">Jitter</h3>
+                  <p class="microcopy">Live Perlin jitter tuning shared by random EF shapes and arpeggiator behavior.</p>
+                </div>
+                <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
               </header>
               <div class="live-control-grid">
                 <label>

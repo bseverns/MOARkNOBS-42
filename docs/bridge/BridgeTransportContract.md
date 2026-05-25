@@ -6,7 +6,7 @@ This document describes the desktop-side transport surfaces exposed by `bridge/`
 
 - `Raw debug transport`
   `/ws`
-  Newline-delimited firmware lines. This is the compatibility/debug lane used by the current App-over-bridge path.
+  Newline-delimited firmware lines. This is the compatibility/debug lane and the fallback App-over-bridge path.
 - `Structured event transport`
   `/ws/events`
   Newline-delimited JSON event envelopes for session-aware consumers.
@@ -16,6 +16,8 @@ This document describes the desktop-side transport surfaces exposed by `bridge/`
 - `Structured staged-config API`
   `/api/device/stage`, `/api/device/apply`, `/api/device/rollback`
   Bridge-side staging, validation, apply, and rollback discipline.
+
+The App now prefers `/api/device/session` plus `/ws/events` when it is opened from the bridge. Raw `/ws` remains available both for compatibility and for the current live-control RPC lane.
 
 ## Structured event envelope
 
@@ -271,4 +273,4 @@ Success response:
 
 ## Compatibility note
 
-The raw `/ws` line transport remains intentionally unchanged for back-compat and deep debugging. The structured transport is the preferred path for future bridge-aware tooling, but the current App still uses the raw lane while the session runtime is phased in.
+The raw `/ws` line transport remains intentionally unchanged for back-compat and deep debugging. The App-over-bridge path now prefers the structured session surfaces (`/api/device/*` plus `/ws/events`) and keeps raw `/ws` as a compatibility fallback plus the current live-control lane.

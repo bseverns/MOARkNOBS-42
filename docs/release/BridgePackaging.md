@@ -16,19 +16,26 @@ This is a future-facing packaging plan. It is not a current compatibility claim 
 - Changing bridge protocol or message schema.
 - Replacing the existing CLI for development workflows.
 
-## Current state (as of 2026-04-23)
+## Current state (as of 2026-05-25)
 
-- Bridge entrypoint: `bridge/mn42_bridge.js`
-- Runtime requirement: Node `>=22 <23`
+- Bridge entrypoints:
+  - `bridge/mn42_bridge.js` for the CLI lane
+  - `bridge/mn42_bridge_server.js` for the browser-console/App-over-bridge lane
+- Runtime requirement: Node `>=24 <25`
 - Native dependency: `serialport`
 - Tests: `npm --prefix bridge test`
 - `pkg` is pinned in `bridge/package.json` (`devDependencies`)
 - `.github/workflows/release.yml` builds unsigned bridge artifacts for:
-  - `node22-macos-x64`
-  - `node22-macos-arm64`
-  - `node22-linux-x64`
-  - `node22-win-x64`
-- Per-target bundles carry the target binary, checksum file, a tiny README, and the bridge third-party license bundle.
+  - `node24-macos-x64`
+  - `node24-macos-arm64`
+  - `node24-linux-x64`
+  - `node24-win-x64`
+- Per-target bundles now carry both packaged programs, checksum file, a target README, artifact manifest metadata, and the bridge third-party license bundle.
+- CI now does an artifact-realism smoke pass against the packaged console binary:
+  - `/` serves the bridge UI
+  - `/app/` serves the App shell
+  - `/api/presets` returns bundled recipes
+  - `/api/device/session?warm=1` proves the App-derived schema authority can load inside the packaged artifact
 - Bridge release uploads are conditional on an existing GitHub release for the tag.
 - Outward bridge builds must set `REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks; otherwise the packaging script fails instead of silently producing unsigned binaries.
 
@@ -41,7 +48,7 @@ For the current support boundary, see [Host Compatibility](../reference/HostComp
 | `pkg`  | Mature single-binary workflow, simple output model | Target/runtime support can lag newest Node versions; native modules need validation    | Prototype first |
 | `nexe` | Flexible build pipeline, can embed assets          | Build setup can be heavier; native dependency handling still needs platform validation | Backup path     |
 
-Decision rule: start with `pkg`; if target/runtime support blocks Node 22 + serialport reliability, switch to `nexe`.
+Decision rule: start with `pkg`; if target/runtime support blocks Node 24 + serialport reliability, switch to `nexe`.
 
 ## Release architecture
 
@@ -69,9 +76,10 @@ All packages should expose the same defaults:
 - Freeze bridge behavior with test coverage:
   - `npm --prefix bridge run release:prep`
 - Smoke checks validate:
-  - binary launches,
+  - CLI and console binaries launch,
   - `--help` works,
-  - invalid args fail predictably.
+  - invalid args fail predictably,
+  - the packaged console artifact can serve the browser console, `/app/`, presets, and warmed schema authority.
 
 Deliverable: reproducible baseline before packaging changes.
 

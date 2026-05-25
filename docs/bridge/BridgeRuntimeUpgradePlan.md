@@ -4,7 +4,7 @@
 
 `bridge/` already proves the MOARkNOBS-42 desktop path can:
 
-- attach to the device over USB serial on a Node 22 host,
+- attach to the device over USB serial on a Node 24 host,
 - forward telemetry to OSC and host MIDI,
 - accept OSC or MIDI control input and translate it back onto the device line protocol,
 - serve a local browser console at `http://127.0.0.1:8787/`,
@@ -33,7 +33,7 @@ This is intentionally conservative and should stay intact:
 
 - CLI entrypoints remain valid.
 - raw serial/WebSocket behavior remains available.
-- Node 22 stays the tested support boundary.
+- Node 24 stays the tested support boundary.
 - CI remains the source of unsigned packaged artifacts.
 
 ## App contract the bridge should align with
@@ -166,7 +166,7 @@ Release workflow behavior should stay conservative:
 - no broad DAW compatibility claims beyond recipe/docs/test evidence
 - no removal of raw `/ws` or line-oriented debug behavior
 - no change to the `http://127.0.0.1:8787/` console address
-- no widening of the Node support boundary beyond 22.x without new proof
+- no widening of the Node support boundary beyond 24.x without new proof
 
 ## Implementation order
 

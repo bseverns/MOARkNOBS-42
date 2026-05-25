@@ -33,7 +33,7 @@ _A top-level system diagram would help here: hardware, browser configurator, bri
 The broad workflow story is real, but the compatibility claim should be read conservatively.
 
 - strongest direct-browser evidence in this repo: Chromium-based configurator over WebSerial
-- strongest desktop host evidence in this repo: Node 22 bridge with the browser console and `/app/` configurator path
+- strongest desktop host evidence in this repo: Node 24 bridge with the browser console and `/app/` configurator path
 - documented but still setup-specific: OSC hosts and DAW virtual MIDI workflows
 - not claimed here as a verified production path: Firefox/Safari WebSerial and signed one-click bridge installers
 

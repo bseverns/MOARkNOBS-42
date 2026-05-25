@@ -72,7 +72,7 @@ jobs:
           ref: ${{ needs.resolve-release-meta.outputs.checkout_ref }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "22.x"
+          node-version: "24.x"
       - name: Install bridge dependencies
         run: npm --prefix bridge ci
       - name: Run bridge release preflight
@@ -87,7 +87,7 @@ jobs:
           ref: ${{ needs.resolve-release-meta.outputs.checkout_ref }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "22.x"
+          node-version: "24.x"
       - name: Install app dependencies
         run: npm --prefix App ci --no-audit --no-fund
       - name: Install Playwright browsers
@@ -112,7 +112,7 @@ jobs:
           ref: ${{ needs.resolve-release-meta.outputs.checkout_ref }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "22.x"
+          node-version: "24.x"
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -194,13 +194,13 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            target: node22-macos-x64
+            target: node24-macos-x64
           - os: macos-latest
-            target: node22-macos-arm64
+            target: node24-macos-arm64
           - os: ubuntu-latest
-            target: node22-linux-x64
+            target: node24-linux-x64
           - os: windows-latest
-            target: node22-win-x64
+            target: node24-win-x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
@@ -208,7 +208,7 @@ jobs:
           ref: ${{ needs.resolve-release-meta.outputs.checkout_ref }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "22.x"
+          node-version: "24.x"
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -228,7 +228,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          prefix="bridge/dist/mn42-bridge-${{ needs.resolve-release-meta.outputs.artifact_tag }}-${{ matrix.target }}"
+          prefix="bridge/dist/mn42-bridge-"
           files=( "${prefix}"* )
           shopt -u nullglob
           if [[ ${#files[@]} -eq 0 ]]; then
@@ -254,30 +254,47 @@ jobs:
             checksum_cmd+=(--file "${staged_file}")
           done
           "${checksum_cmd[@]}"
-          binary=""
+          cli_binary=""
+          console_binary=""
           for staged_file in "${staged_files[@]}"; do
             case "${staged_file}" in
               *.txt|*.json|*.md) continue ;;
             esac
-            binary="${staged_file}"
-            break
+            if [[ "${staged_file}" == *"-cli-${{ matrix.target }}"* ]]; then
+              cli_binary="${staged_file}"
+            elif [[ "${staged_file}" == *"-console-${{ matrix.target }}"* ]]; then
+              console_binary="${staged_file}"
+            fi
           done
-          if [[ -z "${binary}" ]]; then
-            echo "No packaged bridge binary found in ${stage_dir}" >&2
+          if [[ -z "${cli_binary}" || -z "${console_binary}" ]]; then
+            echo "Expected packaged CLI and console bridge binaries in ${stage_dir}" >&2
             exit 1
           fi
-          if [[ ! "${binary}" =~ \.exe$ ]]; then
-            chmod 755 "${binary}"
-          fi
-          "${binary}" --help >/dev/null
+          shopt -s nullglob
+          unix_binaries=( "${stage_dir}/mn42-bridge-"* )
+          shopt -u nullglob
+          for candidate in "${unix_binaries[@]}"; do
+            case "${candidate}" in
+              *.txt|*.json|*.md|*.exe) continue ;;
+            esac
+            chmod 755 "${candidate}"
+          done
+          "${cli_binary}" --help >/dev/null
+          "${console_binary}" --help >/dev/null
+          node bridge/scripts/smoke_packaged_bridge_server.js \
+            --binary "${console_binary}"
           printf '%s\n' \
             'MN42 Bridge unsigned CI artifact' \
             '' \
             'Contents:' \
-            '- one platform-specific bridge binary' \
+            '- one platform-specific bridge CLI binary' \
+            '- one platform-specific bridge console/server binary' \
             '- SHA256SUMS for this target' \
             '- bundled third-party license notices' \
             '- bridge_artifact_manifest.json' \
+            '' \
+            'The console binary is the desktop session runtime path.' \
+            'The CLI binary preserves the shell-first bridge workflow.' \
             '' \
             'This bundle is intentionally unsigned.' \
             'For install and usage details, see bridge/README.md and docs/release/BridgeSigningPlan.md.' \
@@ -323,7 +340,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          binaries=(bridge/dist/release-upload/mn42-bridge-*-node22-macos-* bridge/dist/release-upload/mn42-bridge-*-node22-linux-*)
+          binaries=(bridge/dist/release-upload/mn42-bridge-*-node24-macos-* bridge/dist/release-upload/mn42-bridge-*-node24-linux-*)
           shopt -u nullglob
           if [ ${#binaries[@]} -gt 0 ]; then
             chmod 755 "${binaries[@]}"

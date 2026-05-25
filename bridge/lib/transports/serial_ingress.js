@@ -15,12 +15,18 @@ function createSerialLineHandler({
   now,
 }) {
   const timestampNow = typeof now === 'function' ? now : () => Date.now();
+  const isNumericVector = (value) =>
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every((entry) => typeof entry === 'number' && Number.isFinite(entry));
 
   return function handleSerialLine(line) {
     const trimmed = String(line || '').trim();
     if (!trimmed) return;
     if (trimmed === '{"hello":"mn42"}') {
-      setState({ ready: true, serialConnected: true, lastError: null });
+      // A raw HELLO proves the serial lane is alive, but bridge-ready requires
+      // the cached device session to finish manifest/schema/config hydration.
+      setState({ serialConnected: true, lastError: null });
     }
     broadcastLine(trimmed);
     if (trimmed.length > maxSerialLineLen) {
@@ -43,8 +49,10 @@ function createSerialLineHandler({
 
     inspectManifest(data);
 
+    const slotTelemetry = isNumericVector(data.slots);
+    const envelopeTelemetry = isNumericVector(data.envelopes);
     const hasTelemetry =
-      data.type === 'telemetry' || data.slots || data.envelopes;
+      data.type === 'telemetry' || slotTelemetry || envelopeTelemetry;
     const hostTimestampMs = timestampNow();
     const sourceTimestampMs = extractTimestampMs(data);
     const telemetryTraceId = extractTraceId(data) || nextTraceId('serial');
@@ -73,7 +81,7 @@ function createSerialLineHandler({
       });
     }
 
-    if (Array.isArray(data.slots)) {
+    if (slotTelemetry) {
       matchPendingRoundTrips({
         slots: data.slots,
         telemetryTraceId,
@@ -96,7 +104,7 @@ function createSerialLineHandler({
         hostTimestampMs,
       });
     }
-    if (Array.isArray(data.envelopes)) {
+    if (envelopeTelemetry) {
       sendOscTelemetry('/mn42/envelopes', data.envelopes, {
         traceId: telemetryTraceId,
         sourceTimestampMs,

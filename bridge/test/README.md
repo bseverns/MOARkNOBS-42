@@ -1,6 +1,6 @@
 # MN42 Bridge Test Rig
 
-~~Before you smash that keyboard, make sure you've knocked out the setup in the [bridge README](../README.md).~~ Node 22, deps installed, the whole prep talk.
+~~Before you smash that keyboard, make sure you've knocked out the setup in the [bridge README](../README.md).~~ Node 24, deps installed, the whole prep talk.
 
 ```mermaid
 flowchart LR

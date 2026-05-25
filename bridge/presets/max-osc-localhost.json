@@ -3,7 +3,7 @@
   "label": "Max OSC Localhost",
   "host": "Desktop",
   "requirements": [
-    "Node.js 22.x on the same host as Max/MSP",
+    "Node.js 24.x on the same host as Max/MSP",
     "Max patch listening on localhost UDP"
   ],
   "ports": {

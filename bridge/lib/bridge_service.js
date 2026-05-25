@@ -777,6 +777,11 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return deviceSession.rollback(reason);
   }
 
+  async function prewarmDeviceSession() {
+    await deviceSession.ensureAuthority();
+    return deviceSession.getState();
+  }
+
   // Send one native line to firmware, surfacing an immediate error if serial is down.
   function sendLine(line) {
     const normalized = `${String(line).trim()}\n`;
@@ -801,6 +806,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     stageDeviceConfig,
     stop,
     configure,
+    prewarmDeviceSession,
     rollbackDeviceConfig,
     resetPerformance,
     clearAlerts,

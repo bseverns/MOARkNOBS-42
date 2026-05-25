@@ -25,6 +25,7 @@ site/
 
 # Bridge deps live outside git; npm ci resurrects them
 bridge/node_modules/
+bridge/.pkg-cache/
 App/node_modules/
 App/playwright-report/
 App/test-results/
@@ -93,3 +94,6 @@ hardware/**/*.LibPkg
 hardware/**/*.pdf
 firmware/test/__pycache__/test_custom_runner.cpython-314.pyc
 .vscode/c_cpp_properties.json
+docs/app/AppRuntimeActionPlan.md
+docs/bridge/BridgeRuntimeUpgradePlan.md
+docs/firmware/FirmwareRuntimeActionPlan.md

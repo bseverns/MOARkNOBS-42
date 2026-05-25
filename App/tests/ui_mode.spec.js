@@ -9,6 +9,10 @@ test.describe('UI mode', () => {
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#performer-panel')).toBeVisible();
+    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Direct USB');
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeVisible();
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
     await expect(page.locator('#scope-panel')).toBeHidden();
@@ -33,6 +37,7 @@ test.describe('UI mode', () => {
     await page.goto('/benzknobz.html');
 
     await page.getByRole('button', { name: /simulator/i }).click();
+    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
     await page.getByRole('button', { name: 'Connect' }).click();
     await expect(page.locator('.slot-editor')).toBeVisible();
 

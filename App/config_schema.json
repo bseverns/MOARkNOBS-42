@@ -101,8 +101,18 @@
                   "BANDPASS"
                 ]
               },
-              "frequency": { "type": "number", "title": "Tracking frequency (Hz)" },
-              "q": { "type": "number", "title": "Resonance (Q)" },
+              "frequency": {
+                "type": "number",
+                "title": "Tracking frequency (Hz)",
+                "minimum": 20,
+                "maximum": 5000
+              },
+              "q": {
+                "type": "number",
+                "title": "Resonance (Q)",
+                "minimum": 0.5,
+                "maximum": 4.0
+              },
               "oversample": {
                 "type": "integer",
                 "title": "Oversample amount",

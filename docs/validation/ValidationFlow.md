@@ -31,7 +31,7 @@ python3 tools/check_wiki_contract.py
 python3 tools/check_contract_sync.py
 ```
 
-If these fail, fix them before using board time to chase symptoms that may already be explained by a known software regression.
+If these fail, fix them before using board time to chase symptoms that may already be explained by a known software regression. `check_contract_sync.py` is now a real host-contract gate: it checks manifest fallbacks and the shared App/firmware schema semantics that staged config, Bridge validation, and direct-WebSerial editing rely on.
 
 ## 3. Confirm the board can boot and identify itself
 

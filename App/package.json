@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=24 <25"
   },
   "scripts": {
     "test:contract": "python3 ../tools/check_contract_sync.py --root ..",

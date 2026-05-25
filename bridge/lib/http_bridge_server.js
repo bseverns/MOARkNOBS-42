@@ -200,6 +200,7 @@ function createBrowserBridgeServer({
   let unsubscribeStructured = null;
   const rawSockets = new Set();
   const eventSockets = new Set();
+  let wasRunning = Boolean(service.getState()?.running);
 
   // Forward raw serial lines to every connected websocket client.
   function writeFrame(socket, payload) {
@@ -254,6 +255,24 @@ function createBrowserBridgeServer({
     }
 
     if (pathname === '/api/device/session' && req.method === 'GET') {
+      const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+      if (
+        url.searchParams.get('warm') === '1' &&
+        typeof service.prewarmDeviceSession === 'function'
+      ) {
+        try {
+          await service.prewarmDeviceSession();
+        } catch (err) {
+          sendJson(res, 500, {
+            error: err.message,
+            session:
+              typeof service.getDeviceSessionState === 'function'
+                ? service.getDeviceSessionState()
+                : service.getState()?.deviceSession ?? null,
+          });
+          return true;
+        }
+      }
       const session =
         typeof service.getDeviceSessionState === 'function'
           ? service.getDeviceSessionState()
@@ -640,7 +659,12 @@ function createBrowserBridgeServer({
       broadcastStructuredEvent,
     );
     unsubscribeState = service.on('state', (state) => {
-      if (state && state.running) return;
+      const running = Boolean(state && state.running);
+      if (!wasRunning || running) {
+        wasRunning = running;
+        return;
+      }
+      wasRunning = running;
       for (const socket of [...rawSockets, ...eventSockets]) {
         destroySocket(socket);
       }

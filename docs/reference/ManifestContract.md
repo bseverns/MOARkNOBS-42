@@ -28,7 +28,7 @@ The firmware clamps runtime LED brightness through `LEDManager` regardless of Ap
 
 ## Host Fallbacks
 
-The App fallback constants live in `App/manifest_contract.js`. Bridge fallback/documented constants live in `bridge/lib/manifest_contract.js`. `tools/check_contract_sync.py` compares those host fallbacks against firmware constants and the Globals-derived LED count.
+The App fallback constants live in `App/manifest_contract.js`. Bridge fallback/documented constants live in `bridge/lib/manifest_contract.js`. `tools/check_contract_sync.py` compares those host fallbacks against firmware constants, the Globals-derived LED count, and the shared firmware/App schema semantics that the configurator and bridge depend on.
 
 Run it from the repo root:
 

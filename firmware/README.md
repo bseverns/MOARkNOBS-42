@@ -53,6 +53,18 @@ Full bridge/system lane:
 pio run -e teensy40_full_system -t upload
 ```
 
+Production boot contract proof:
+
+```bash
+node system_test/mn42_boot_contract_runner.js --serial /dev/cu.usbmodemXXXX --flash --report ../logs/boot-contract.json
+```
+
+Attach-live hardware proof when the board is already running firmware and you only need the real configurator/apply lane:
+
+```bash
+node system_test/mn42_boot_contract_runner.js --serial /dev/cu.usbmodemXXXX --attach-live --report ../logs/boot-contract-attach-live.json
+```
+
 Request one-shot configurator boot from a running firmware image:
 
 ```text

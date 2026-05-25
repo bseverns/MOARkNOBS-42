@@ -23,6 +23,7 @@ export function createTransportToolbarController({
     simulatorToggle = null,
     connectionPill = null,
     connectionBanner = null,
+    transportLaneChip = null,
     connectFailHelp = null,
     usbMidiToggleBtn = null,
     usbMidiStatusEl = null,
@@ -63,12 +64,22 @@ export function createTransportToolbarController({
   let clockRunning = false;
   let clockExternalSignal = false;
 
+  function currentTransportMode() {
+    return (
+      runtime?.getState?.()?.transportMode ??
+      (runtimeOptions.wsUrl ? 'bridge-raw' : 'direct-webserial')
+    );
+  }
+
   function usingSimulatorTransport() {
-    return Boolean(simulatorToggle?.classList.contains('active'));
+    return (
+      currentTransportMode() === 'simulator' ||
+      Boolean(simulatorToggle?.classList.contains('active'))
+    );
   }
 
   function usingBridgeTransport() {
-    return Boolean(runtimeOptions.wsUrl);
+    return currentTransportMode().startsWith('bridge');
   }
 
   function usingDirectWebSerial() {
@@ -77,17 +88,39 @@ export function createTransportToolbarController({
 
   function setConnectionBanner(stage, manifest) {
     if (!connectionBanner) return;
+    const transportMode = currentTransportMode();
+    const transportLabel =
+      transportMode === 'bridge-session'
+        ? ' via Bridge session'
+        : transportMode === 'bridge-raw'
+          ? ' via Bridge raw transport'
+          : '';
     if (stage === 'live') {
       const deviceName = resolveDeviceName(manifest);
       const fwVersion = resolveFirmwareVersion(manifest);
-      connectionBanner.textContent = `Connected to: ${deviceName} (FW ${fwVersion})`;
+      connectionBanner.textContent = `Connected to: ${deviceName} (FW ${fwVersion})${transportLabel}`;
       return;
     }
     if (stage === 'handshake') {
-      connectionBanner.textContent = `Connecting to: ${resolveDeviceName(manifest)}`;
+      connectionBanner.textContent = `Connecting to: ${resolveDeviceName(
+        manifest
+      )}${transportLabel}`;
       return;
     }
     connectionBanner.textContent = 'Connected to: —';
+  }
+
+  function updateTransportLaneChip() {
+    if (!transportLaneChip) return;
+    const transportMode = currentTransportMode();
+    const labels = {
+      'direct-webserial': 'Transport · Direct USB',
+      simulator: 'Transport · Simulator',
+      'bridge-raw': 'Transport · Bridge raw',
+      'bridge-session': 'Transport · Bridge session'
+    };
+    transportLaneChip.dataset.transport = transportMode;
+    transportLaneChip.textContent = labels[transportMode] ?? 'Transport · Direct USB';
   }
 
   function setConnectionPill(stage, text) {
@@ -96,15 +129,16 @@ export function createTransportToolbarController({
     connectionPill.textContent = text;
     if (docRoot) docRoot.dataset.connected = stage === 'live' ? 'true' : 'false';
     onConnectionPillChanged();
+    updateTransportLaneChip();
   }
 
   function runCompatibilityCheck() {
     if (usingBridgeTransport()) {
-      setStatus(
-        'ok',
-        'Bridge mode active',
-        'This session is using the WebSocket bridge, so direct Web Serial browser checks do not apply.'
-      );
+      const bridgeModeMessage =
+        currentTransportMode() === 'bridge-session'
+          ? 'This session is using the bridge runtime and structured session cache, so direct Web Serial browser checks do not apply.'
+          : 'This session is using the WebSocket bridge, so direct Web Serial browser checks do not apply.';
+      setStatus('ok', 'Bridge mode active', bridgeModeMessage);
       return null;
     }
     if (usingSimulatorTransport()) {
@@ -583,6 +617,7 @@ export function createTransportToolbarController({
       runtime.useSimulator(toggled);
       simulatorToggle.textContent = toggled ? 'Stop simulator' : 'Start simulator';
       simulatorToggle.setAttribute('aria-pressed', toggled ? 'true' : 'false');
+      updateTransportLaneChip();
       setStatus(
         toggled ? 'ok' : 'warn',
         toggled ? 'Simulator armed' : 'Simulator idle',
@@ -606,6 +641,7 @@ export function createTransportToolbarController({
     updateNoteDynamicsControls();
     updateJitterControls();
     updateClockControls();
+    updateTransportLaneChip();
   }
 
   function onManifest(manifest) {
@@ -725,6 +761,7 @@ export function createTransportToolbarController({
     onTelemetry,
     setConnectionBanner,
     setConnectionPill,
+    updateTransportLaneChip,
     primeCompatibilityStatus,
     syncConfigFileButtons
   };

@@ -3,7 +3,7 @@
   "label": "TouchOSC Performance Local",
   "host": "Trusted Local Network",
   "requirements": [
-    "Node.js 22.x bridge host on the same trusted network as the tablet",
+    "Node.js 24.x bridge host on the same trusted network as the tablet",
     "TouchOSC configured for local host/port addressing",
     "Operator understands that this remains a bench-validated path, not a signed/public deployment"
   ],

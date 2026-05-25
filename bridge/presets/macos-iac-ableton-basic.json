@@ -3,7 +3,7 @@
   "label": "macOS IAC + Ableton Basic",
   "host": "macOS",
   "requirements": [
-    "Node.js 22.x on the bridge host",
+    "Node.js 24.x on the bridge host",
     "Audio MIDI Setup with IAC Driver enabled",
     "Ableton Live with the IAC bus enabled for Track and Remote input"
   ],

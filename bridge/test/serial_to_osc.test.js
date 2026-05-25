@@ -112,6 +112,10 @@ async function run() {
     'data',
     '{"device_name":"MOARkNOBS-42","schema_version":6,"slot_count":42,"pot_count":42,"envelope_count":6,"led_count":52,"power_profile":"POWER_CHOKED_V1","led_brightness_cap":26,"rail_topology_verified":false}',
   );
+  serial.parser.emit(
+    'data',
+    '{"slots":[{"index":0,"type":"CC","midiChannel":1,"data1":74}]}',
+  );
   serial.parser.emit('data', '{"slots":[1,2,3]}');
   await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -123,6 +127,16 @@ async function run() {
   }
 
   assert.deepEqual(slots, [1, 2, 3], 'bridge should echo slots via OSC');
+  assert.equal(
+    udp.sent.some(
+      (entry) =>
+        entry.packet?.address === '/mn42/slots' &&
+        Array.isArray(entry.packet?.args) &&
+        entry.packet.args.some((arg) => typeof arg === 'object'),
+    ),
+    false,
+    'bridge should not treat config-shaped slot objects as OSC telemetry',
+  );
   assert.equal(
     service.getState().manifest.power_profile,
     'POWER_CHOKED_V1',

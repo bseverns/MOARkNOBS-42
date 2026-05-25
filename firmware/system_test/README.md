@@ -27,6 +27,11 @@ proving the board, bridge, and OSC stack stay in lockstep.
 
 - `mn42_fullstack_runner.js` – Node-based system smoke test that orchestrates the OSC ↔ bridge ↔ firmware handshake above, and
   can optionally run the destructive EEPROM storage smoke pass after the bridge phase.
+- `mn42_bridge_session_runner.js` – Node-based bridge-session proof for the upgraded browser-console path:
+  `/api/connect`, `/api/device/session`, `/api/device/stage`, `/api/device/apply`, cleanup apply, and `/ws/events`.
+- `mn42_boot_contract_runner.js` – Node-based direct-serial proof for the exact `teensy40_main` boot path: standalone boot
+  banner, `ENTER_CONFIG_MODE` reboot, configurator handshake, one staged `SET_ALL` apply/ACK, and cleanup back to the original
+  config.
 - `test_*.cpp` – legacy manual sketches you can still flash for subsystem debugging until every edge case is automated.
 - `TestHelpers.cpp` – shared glue for those sketches.
 
@@ -78,6 +83,38 @@ proving the board, bridge, and OSC stack stay in lockstep.
    The runner restores the active live profile and rewrites the selected profile slot if it had an existing stored payload, but it
    cannot non-destructively back up the macro snapshot or an occupied scene slot. Pick bench-only storage targets.
 
+## Running the structured bridge-session proof
+
+Use this when you want hardware evidence for the modern bridge runtime rather than the older raw OSC heartbeat story.
+
+1. Put `teensy40_main` into USB configurator mode first. The simplest repeatable lane is:
+
+   ```bash
+   node firmware/system_test/mn42_boot_contract_runner.js \
+     --serial /dev/cu.usbmodemXXXX \
+     --attach-live \
+     --report logs/boot-contract-attach-live.json
+   ```
+
+2. Run the bridge-session proof:
+
+   ```bash
+   node firmware/system_test/mn42_bridge_session_runner.js \
+     --serial /dev/cu.usbmodemXXXX \
+     --http-port 8791 \
+     --report logs/bridge-session-test.json
+   ```
+
+The runner proves:
+
+- the browser-console server starts
+- `/api/connect` starts the bridge against the real USB serial port
+- `/api/device/session` reaches `ready`
+- `/ws/events` emits `device.ready`
+- `/api/device/stage` marks the session dirty
+- `/api/device/apply` returns an ACK/checksum and promotes staged config to live
+- cleanup apply restores the original live config
+
 ## When to reach for the older sketches
 
 Those `test_*.cpp` binaries still have a place when you’re chasing electrical gremlins—buttons, LEDs, or the envelope follower
@@ -85,3 +122,47 @@ baseline. Use `pio run -d firmware -e teensy40_eeprom_persistence` and friends f
 runner once the solder smoke clears.
 
 Rock it, break it, then make it better.
+
+## Running the production boot contract runner
+
+Use this when you need evidence for the real `teensy40_main` boot/configurator handoff instead of the bridge demo lane.
+
+1. Install bridge deps if you have not already:
+
+   ```bash
+   npm --prefix bridge ci
+   ```
+
+2. Run the boot contract proof against the attached board. Add `--flash` when you want the runner to upload `teensy40_main`
+   first:
+
+   ```bash
+   node firmware/system_test/mn42_boot_contract_runner.js \
+     --serial /dev/cu.usbmodemXXXX \
+     --flash \
+     --report logs/boot-contract.json | tee logs/boot-contract.log
+   ```
+
+   If the board is already running the current firmware and you cannot reliably attach before the one-shot standalone boot
+   banner, use the attach-live lane instead:
+
+   ```bash
+   node firmware/system_test/mn42_boot_contract_runner.js \
+     --serial /dev/cu.usbmodemXXXX \
+     --attach-live \
+     --report logs/boot-contract-attach-live.json | tee logs/boot-contract-attach-live.log
+   ```
+
+The runner proves:
+
+- standalone boot emits the boot banner plus `{"type":"boot_mode","mode":"standalone_runtime"}`
+- direct serial answers `HELLO` while the standalone runtime is alive
+- `ENTER_CONFIG_MODE` reboots into `{"type":"boot_mode","mode":"usb_configurator"}`
+- configurator mode completes `HELLO` -> `GET_MANIFEST` -> `GET_SCHEMA` -> `GET_CONFIG`
+- one small `SET_ALL` change receives a matching ACK/checksum and readback
+- cleanup restores the original config unless `--skip-cleanup` is set
+
+In `--attach-live` mode, the runner still proves the real `HELLO` -> `ENTER_CONFIG_MODE` -> configurator handshake ->
+`SET_ALL`/ACK/cleanup path, but it does not require capturing the cold-boot standalone banner from byte zero.
+
+Note: after the configurator-mode proof, the board remains in USB configurator mode until the next manual reset or power cycle.

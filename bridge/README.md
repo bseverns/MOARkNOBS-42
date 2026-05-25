@@ -6,10 +6,10 @@ Use the browser configurator first if you only need direct USB setup and profile
 
 Current support boundary:
 
-- strongest repo evidence for this tool: Node.js 22 desktop host plus the browser console or CLI
+- strongest repo evidence for this tool: Node.js 24 desktop host plus the browser console or CLI
 - documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
-- package scripts intentionally pin Node to `>=22 <23`; widening that floor needs explicit test evidence first
-- CI currently generates unsigned bridge artifacts only; this repo does not yet claim a signed/public installer path
+- package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first
+- CI currently generates unsigned bridge artifacts only; those bundles now carry both a CLI binary and a console/server binary, but this repo still does not claim a signed/public installer path
 - not claimed here: broad DAW-by-DAW certification or a production installer/export story
 
 See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md). The bridge session/runtime transport is documented in [Bridge Transport Contract](../docs/bridge/BridgeTransportContract.md).
@@ -21,7 +21,7 @@ See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conserv
 - `Browser-console path`
   `npm --prefix bridge start` serves the local console at `http://127.0.0.1:8787/`.
 - `App-over-bridge path`
-  `/app/` still launches the full configurator over the raw bridge WebSocket lane.
+  `/app/` now prefers the structured bridge session/runtime and falls back to the raw bridge WebSocket lane for compatibility.
 - `Raw debug transport`
   `/ws` keeps the newline-oriented serial bridge for back-compat and debugging.
 - `Structured bridge transport`
@@ -41,6 +41,8 @@ The bridge remains bidirectional:
 - A settings file can add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
 - The cached device session validates staged config before apply and only promotes staged to live after a verified ACK.
 
+Important boundary: the OSC/MIDI `SET_SLOT_VALUE` path and typed event writes are live performance control, not staged config mutation. Bridge-side staged config changes still go through `/api/device/stage` plus `/api/device/apply`, schema validation, and verified ACK/rollback discipline.
+
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
 
 _Screenshot placeholder: browser console Setup mode with serial chooser, host recipe selector, and connect controls._
@@ -49,7 +51,7 @@ _Screenshot placeholder: browser console Setup mode with serial chooser, host re
 
 ### 1) Install prerequisites
 
-- Node.js 22.x (`node --version` must report `v22.*`)
+- Node.js 24.x (`node --version` must report `v24.*`)
 - MN42 connected over USB
 
 From repo root:
@@ -407,18 +409,26 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 7000 --osc-listen 8000
 Current state: unsigned bridge binaries are built automatically in
 `.github/workflows/release.yml` for:
 
-- `node22-macos-x64`
-- `node22-macos-arm64`
-- `node22-linux-x64`
-- `node22-win-x64`
+- `node24-macos-x64`
+- `node24-macos-arm64`
+- `node24-linux-x64`
+- `node24-win-x64`
 
 Each per-target bundle now includes:
 
-- one packaged bridge binary
+- one packaged bridge CLI binary
+- one packaged bridge console/server binary
 - a SHA-256 checksum file
 - a per-target `README.txt`
 - bundled third-party license notices
-- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, timestamp, and `signingStatus: "unsigned-ci-artifact"`
+- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, packaged program roles, timestamp, and `signingStatus: "unsigned-ci-artifact"`
+
+The release workflow now also boots the packaged console binary and checks:
+
+- `/` serves the bridge browser console,
+- `/app/` serves the packaged App shell,
+- `/api/presets` returns the bundled host recipes,
+- `/api/device/session?warm=1` can load the bundled App-derived schema authority.
 
 When a GitHub release already exists for the tag, the workflow uploads those unsigned bundles as release assets. That is an evidence/distribution convenience, not a claim that the bridge is now a signed public installer.
 

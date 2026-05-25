@@ -755,6 +755,7 @@ async function downloadSnapshot() {
 function openConfigurator() {
   const target = new URL('/app/', window.location.href);
   target.searchParams.set('ws', wsUrl('/ws'));
+  target.searchParams.set('bridgeTransport', 'session');
   window.open(target.toString(), '_blank', 'noopener');
 }
 

@@ -5,8 +5,8 @@ Use the browser configurator when you want direct USB setup, monitoring, and pro
 Current support boundary:
 
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
-- strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 22 desktop host
-- package scripts intentionally pin Node to `>=22 <23`; widening that floor needs explicit test evidence first
+- strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 24 desktop host
+- package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first
 - not claimed here as a verified production path: Firefox/Safari WebSerial support or universal browser compatibility
 
 See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.
@@ -35,13 +35,15 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
 5. Click **Connect**, pick the MOARkNOBS port if you are on WebSerial, and let the header pill confirm the firmware, schema version, and memory stats.
 6. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the active schema validator (device schema when compatible, bundled `config_schema.json` fallback otherwise).
 7. Use **Import config JSON** and **Export config JSON** in the utility rail for backup, restore, and shareable profiles. Import stages the file locally first; nothing touches the hardware until you click **Apply**.
-8. On Apply the runtime stages one config payload with schema version, manifest metadata, and a SHA-256 checksum. Simulator mode keeps the JSON-RPC envelope; native WebSerial and bridge sessions adapt that request onto the firmware's `SET_ALL` text protocol. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
+8. On Apply the runtime stages one config payload with schema version, manifest metadata, and a SHA-256 checksum. Simulator mode keeps the JSON-RPC envelope; native WebSerial adapts that request onto the firmware's `SET_ALL` text protocol directly. When opened from the bridge, the configurator now prefers the bridge's structured device session/runtime and falls back to the raw `/ws` lane only when the structured bridge path is unavailable. Only a matching device ACK promotes staged state to live state; if the ACK is missing or mismatched the UI auto-rolls back and re-opens the diff panel.
 9. Use the browser-only **Take Control** toggles per slot before sending live pot data to avoid on-stage jumps. They are local safety guards, not firmware-backed config, so they do not require **Apply**.
 10. Need hardware-free testing? Toggle the **Start simulator** button—the runtime swaps transports and replays canned manifest/state frames.
 
 For the operator-facing explanation of `Immediate local response` versus the browser-only pickup guard, read [docs/OperatorTutorial.md](../docs/guides/OperatorTutorial.md).
 
 The written field guide below is the current operator-facing reference; add screenshots when you want a release-ready visual walkthrough, not as a substitute for the contract notes.
+
+The next implementation sequence is tracked in [docs/app/AppRuntimeActionPlan.md](../docs/app/AppRuntimeActionPlan.md).
 
 ## UI Field Guide
 
@@ -81,7 +83,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 
 ## Runtime Contract
 
-- Transport handshake is `hello` → `get_manifest` → `get_schema` → `get_config`. On simulator transport those travel as JSON-RPC; on native WebSerial and bridge sessions the runtime maps them to `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, and `GET_CONFIG` before trusting any config payload.
+- Transport handshake is `hello` → `get_manifest` → `get_schema` → `get_config`. On simulator transport those travel as JSON-RPC; on native WebSerial and raw bridge transport the runtime maps them to `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, and `GET_CONFIG` before trusting any config payload. When a structured bridge session is available, the runtime hydrates from `/api/device/session` and `/ws/events` first, with raw `/ws` retained for compatibility and live-control RPCs.
 - Live runtime RPCs are separate from staged config writes: the configurator now uses `GET_NOTE_DYNAMICS` / `SET_NOTE_DYNAMICS`, `GET_JITTER` / `SET_JITTER`, `GET_CLOCK` / `SET_CLOCK`, and `GET_USB_MIDI` / `SET_USB_MIDI` for direct-control lanes.
 - The runtime keeps separate `liveConfig` and `stagedConfig` snapshots. The UI only mutates staged state; successful Apply promotes staged state to live state.
 - The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.

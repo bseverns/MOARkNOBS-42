@@ -138,12 +138,14 @@ function makeFakeService() {
     },
     async configure(nextConfig = {}) {
       state.config = { ...state.config, ...nextConfig };
+      events.emit('state', this.getState());
       return this.getState();
     },
     async start() {
       state.running = true;
       state.serialConnected = true;
       state.deviceSession.connected = true;
+      events.emit('state', this.getState());
       return this.getState();
     },
     async stop() {
@@ -152,6 +154,7 @@ function makeFakeService() {
       state.ready = false;
       state.deviceSession.connected = false;
       state.deviceSession.ready = false;
+      events.emit('state', this.getState());
       return this.getState();
     },
     async stageDeviceConfig(config) {
@@ -197,6 +200,15 @@ function makeFakeService() {
     },
     getDeviceSessionState() {
       return JSON.parse(JSON.stringify(state.deviceSession));
+    },
+    async prewarmDeviceSession() {
+      state.deviceSession.schema = {
+        schema_version: 6,
+        type: 'object',
+        properties: { slots: { type: 'array' } },
+      };
+      state.deviceSession.schemaSource = 'bundled';
+      return this.getDeviceSessionState();
     },
     async resetPerformance() {
       state.performance.roundTrip = {
@@ -246,6 +258,9 @@ function makeFakeService() {
     },
     emitLine(line) {
       events.emit('line', line);
+    },
+    emitStructuredEvent(message) {
+      events.emit('structured-event', JSON.parse(JSON.stringify(message)));
     },
   };
 }
@@ -353,6 +368,25 @@ async function run() {
     'device session endpoint should expose cached firmware identity',
   );
 
+  const warmedSessionResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/device/session?warm=1' }),
+    warmedSessionResponse,
+  );
+  const warmedSessionPayload = JSON.parse(
+    warmedSessionResponse.body.toString('utf8'),
+  );
+  assert.equal(
+    warmedSessionPayload.session?.schema?.type,
+    'object',
+    'warmed device session endpoint should expose bundled schema metadata',
+  );
+  assert.equal(
+    warmedSessionPayload.session?.schemaSource,
+    'bundled',
+    'warmed device session endpoint should report bundled schema source',
+  );
+
   const portsResponse = makeRes();
   await server.requestHandler(
     makeReq({ method: 'GET', url: '/api/ports' }),
@@ -394,6 +428,39 @@ async function run() {
     'preset endpoint should expose known-good host recipes',
   );
 
+  const eventSocket = new EventEmitter();
+  eventSocket.writes = [];
+  eventSocket.write = (chunk) => {
+    eventSocket.writes.push(Buffer.from(chunk));
+  };
+  eventSocket.end = () => {};
+  eventSocket.destroy = () => {};
+  eventSocket.on = eventSocket.addListener.bind(eventSocket);
+  const eventUpgradeReq = {
+    url: '/ws',
+    headers: {
+      host: '127.0.0.1',
+      'sec-websocket-key': 'dGhlIHNhbXBsZSBub25jZQ==',
+      connection: 'Upgrade',
+      upgrade: 'websocket',
+      'sec-websocket-version': '13',
+    },
+  };
+  server.emit(
+    'upgrade',
+    {
+      ...eventUpgradeReq,
+      url: '/ws/events',
+    },
+    eventSocket,
+  );
+  const eventHandshakeText = Buffer.concat(eventSocket.writes).toString('utf8');
+  assert.match(
+    eventHandshakeText,
+    /HTTP\/1\.1 101 Switching Protocols/,
+    'structured websocket upgrade should succeed',
+  );
+
   const connectResponse = makeRes();
   await server.requestHandler(
     makeReq({
@@ -421,6 +488,20 @@ async function run() {
     connectPayload.state.config.alertSuppressionMs,
     2222,
     'connect endpoint should apply alert suppression config',
+  );
+  service.emitStructuredEvent({
+    version: 1,
+    event: 'device.ready',
+    at: new Date().toISOString(),
+    payload: { manifest: { device_name: 'MOARkNOBS-42' } },
+  });
+  const eventFrameTextAfterConnect = Buffer.concat(eventSocket.writes).toString(
+    'utf8',
+  );
+  assert.match(
+    eventFrameTextAfterConnect,
+    /device\.ready/,
+    'structured websocket should survive connect and receive later events',
   );
 
   const stageResponse = makeRes();
@@ -605,29 +686,6 @@ async function run() {
     service.sentLines,
     ['{"cmd":"PING"}'],
     'websocket should forward browser lines to the service',
-  );
-
-  const eventSocket = new EventEmitter();
-  eventSocket.writes = [];
-  eventSocket.write = (chunk) => {
-    eventSocket.writes.push(Buffer.from(chunk));
-  };
-  eventSocket.end = () => {};
-  eventSocket.destroy = () => {};
-  eventSocket.on = eventSocket.addListener.bind(eventSocket);
-  server.emit(
-    'upgrade',
-    {
-      ...upgradeReq,
-      url: '/ws/events',
-    },
-    eventSocket,
-  );
-  const eventHandshakeText = Buffer.concat(eventSocket.writes).toString('utf8');
-  assert.match(
-    eventHandshakeText,
-    /HTTP\/1\.1 101 Switching Protocols/,
-    'structured websocket upgrade should succeed',
   );
   service.emitLine('{"hello":"mn42"}');
   service.on('structured-event', () => {});

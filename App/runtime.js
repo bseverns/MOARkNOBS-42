@@ -17,6 +17,7 @@ import { createRuntimeLineHandler } from './runtime/line_router.js';
 import { selectSchemaForHydration } from './runtime/schema_selection.js';
 import { performConnectionHandshake } from './runtime/connection_handshake.js';
 import { createConfigSession } from './runtime/config_session.js';
+import { createBridgeSessionClient } from './runtime/bridge_session_client.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -152,6 +153,17 @@ function setNestedValue(target, path, value) {
   }
 }
 
+function deriveWebSocketUrl(baseUrl, path) {
+  if (!baseUrl || !path) return null;
+  try {
+    const base = new URL(baseUrl, typeof window !== 'undefined' ? window.location.href : undefined);
+    const protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+    return new URL(path, `${protocol}//${base.host}`).toString();
+  } catch (_) {
+    return null;
+  }
+}
+
 // Chunk large native `SET_ALL` bodies so serial transport stays within line limits.
 function chunkString(value, size) {
   const text = typeof value === 'string' ? value : String(value ?? '');
@@ -199,7 +211,9 @@ export function createRuntime({
   useSimulator = false,
   rpcTimeoutMs = RPC_TIMEOUT_MS,
   testHooks,
-  wsUrl
+  wsUrl,
+  bridgeApiBaseUrl,
+  bridgeTransportMode
 } = {}) {
   const { emit, on } = makeEmitter();
 
@@ -221,6 +235,11 @@ export function createRuntime({
   let macroAvailability = true;
   let scenePending = null;
   let configSession = null;
+  let bridgeSessionClient = null;
+  let bridgeSessionActive = false;
+  let bridgeSessionCache = null;
+  let bridgeStageSyncTimer = null;
+  let bridgeStageSyncPromise = null;
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -234,10 +253,29 @@ export function createRuntime({
     typeof window.location === 'object'
       ? new URLSearchParams(window.location.search)
       : null;
+  const locationHref =
+    typeof window !== 'undefined' && typeof window.location === 'object'
+      ? window.location.href
+      : undefined;
+  const currentLocation =
+    typeof window !== 'undefined' && typeof window.location === 'object'
+      ? new URL(window.location.href)
+      : null;
+  const inferredBridgeBaseUrl =
+    currentLocation && currentLocation.pathname.startsWith('/app/') ? currentLocation.origin : null;
+  const structuredBridgePreference =
+    bridgeTransportMode ??
+    params?.get('bridgeTransport')?.trim() ??
+    (inferredBridgeBaseUrl ? 'session' : null);
+  const resolvedBridgeApiBaseUrl =
+    typeof bridgeApiBaseUrl === 'string' && bridgeApiBaseUrl.trim().length
+      ? new URL(bridgeApiBaseUrl, locationHref).toString()
+      : inferredBridgeBaseUrl;
   let websocketUrl =
     typeof wsUrl === 'string' && wsUrl.trim().length
       ? wsUrl.trim()
-      : params?.get('ws')?.trim() ?? null;
+      : params?.get('ws')?.trim() ?? deriveWebSocketUrl(resolvedBridgeApiBaseUrl, '/ws') ?? null;
+  const bridgeEventsUrl = deriveWebSocketUrl(resolvedBridgeApiBaseUrl, '/ws/events');
 
   const portPreferenceStore = createPortPreferenceStore({
     storage: typeof localStorage === 'undefined' ? null : localStorage,
@@ -303,6 +341,27 @@ export function createRuntime({
     const port = await navigator.serial.requestPort(filters ? { filters } : {});
     portPreferenceStore.persist(port);
     return createTransportPort(port, {}, { makeEncoder: encoder, makeDecoder: decoder });
+  }
+
+  function wantsStructuredBridgeSession() {
+    return !useSimulator && structuredBridgePreference === 'session' && !!resolvedBridgeApiBaseUrl;
+  }
+
+  function getTransportMode() {
+    if (useSimulator) return 'simulator';
+    if (bridgeSessionActive) return 'bridge-session';
+    if (websocketUrl) return 'bridge-raw';
+    return 'direct-webserial';
+  }
+
+  function ensureBridgeSessionClient() {
+    if (!resolvedBridgeApiBaseUrl) return null;
+    if (bridgeSessionClient) return bridgeSessionClient;
+    bridgeSessionClient = createBridgeSessionClient({
+      baseUrl: resolvedBridgeApiBaseUrl,
+      eventUrl: bridgeEventsUrl
+    });
+    return bridgeSessionClient;
   }
 
   function notifyStatus(payload) {
@@ -397,7 +456,23 @@ export function createRuntime({
     getRemoteManifest: () => remoteManifest,
     getSchema: () => schema,
     getSchemaSource: () => schemaSource,
-    getValidator: () => validator
+    getValidator: () => validator,
+    isBridgeSessionActive: () => bridgeSessionActive,
+    stageBridgeConfig: async (config) => {
+      const client = ensureBridgeSessionClient();
+      if (!client) throw new Error('Bridge session unavailable');
+      return client.stageConfig(config);
+    },
+    applyBridgeConfig: async () => {
+      const client = ensureBridgeSessionClient();
+      if (!client) throw new Error('Bridge session unavailable');
+      return client.applyConfig({});
+    },
+    rollbackBridgeConfig: async (reason) => {
+      const client = ensureBridgeSessionClient();
+      if (!client) return { rolledBack: false };
+      return client.rollbackConfig(reason);
+    }
   });
 
   function sendMacroCommand(command, { timeoutMs } = {}) {
@@ -534,6 +609,159 @@ export function createRuntime({
     return sendSceneCommand({ cmd: 'GET_SCENES' }, options);
   }
 
+  function applyBridgeSessionSnapshot(sessionPayload = {}, { emitConnectedConfig = true } = {}) {
+    bridgeSessionCache = clone(sessionPayload);
+
+    const manifest = sessionPayload.manifest;
+    if (manifest && typeof manifest === 'object') {
+      remoteManifest = manifest;
+      localSlotMetaManager.ensureCount(
+        remoteManifest?.slot_count ?? localManifest?.slot_count ?? currentSlotCount()
+      );
+      emit('manifest', remoteManifest);
+    }
+
+    if (sessionPayload.schema && typeof sessionPayload.schema === 'object') {
+      schema = sessionPayload.schema;
+      schemaSource = sessionPayload.schemaSource ?? 'bundled';
+      validator = ajv.compile(schema);
+      emit('schema', schema);
+    } else if (sessionPayload.schemaSource) {
+      schemaSource = sessionPayload.schemaSource;
+    }
+
+    if (sessionPayload.liveConfig || sessionPayload.stagedConfig) {
+      configSession.syncFromSession(sessionPayload);
+      configSession.broadcastConfig({ persist: false });
+    }
+
+    if (emitConnectedConfig) {
+      emit('connected', {
+        manifest: remoteManifest,
+        schema,
+        config: configSession.mergeLocalSlotMeta(configSession.getLiveConfig())
+      });
+    }
+  }
+
+  async function refreshBridgeSessionSnapshot({ warm = false, emitConnectedConfig = false } = {}) {
+    const client = ensureBridgeSessionClient();
+    if (!client) throw new Error('Bridge session unavailable');
+    const session = await client.getSession({ warm });
+    if (!session || typeof session !== 'object') {
+      throw new Error('Bridge session unavailable');
+    }
+    if (!session.schema || typeof session.schema !== 'object') {
+      throw new Error('Bridge session did not provide a schema');
+    }
+    applyBridgeSessionSnapshot(session, { emitConnectedConfig });
+    return session;
+  }
+
+  async function flushBridgeStageSync() {
+    if (!bridgeSessionActive || !ensureBridgeSessionClient()) return null;
+    if (bridgeStageSyncTimer) {
+      clearTimeout(bridgeStageSyncTimer);
+      bridgeStageSyncTimer = null;
+    }
+    if (bridgeStageSyncPromise) return bridgeStageSyncPromise;
+    const stagedConfig = clone(configSession.getStagedConfig());
+    bridgeStageSyncPromise = ensureBridgeSessionClient()
+      .stageConfig(stagedConfig)
+      .finally(() => {
+        bridgeStageSyncPromise = null;
+      });
+    return bridgeStageSyncPromise;
+  }
+
+  function scheduleBridgeStageSync() {
+    if (!bridgeSessionActive) return;
+    if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
+    bridgeStageSyncTimer = setTimeout(() => {
+      void flushBridgeStageSync().catch((err) => {
+        emit('status', {
+          stage: 'bridge-session',
+          level: 'warn',
+          message: `Bridge stage sync failed: ${err.message || String(err)}`
+        });
+      });
+    }, 120);
+  }
+
+  async function openBridgeStructuredEvents() {
+    const client = ensureBridgeSessionClient();
+    if (!client) throw new Error('Bridge session unavailable');
+    await client.openEvents({
+      onEvent(message) {
+        if (!message || typeof message !== 'object') return;
+        const payload = message.payload ?? {};
+        switch (message.event) {
+          case 'device.ready':
+            if (payload.manifest && typeof payload.manifest === 'object') {
+              remoteManifest = payload.manifest;
+              emit('manifest', remoteManifest);
+            }
+            if (payload.schemaSource) schemaSource = payload.schemaSource;
+            void refreshBridgeSessionSnapshot({ warm: false, emitConnectedConfig: false }).catch(
+              () => {}
+            );
+            break;
+          case 'device.config.live':
+            bridgeSessionCache = bridgeSessionCache ?? {};
+            bridgeSessionCache.liveConfig = payload.config ?? null;
+            bridgeSessionCache.lastApplyResult = payload.lastApplyResult ?? null;
+            configSession.syncFromSession({
+              ...bridgeSessionCache,
+              liveConfig: bridgeSessionCache.liveConfig,
+              stagedConfig: bridgeSessionCache.stagedConfig,
+              dirty: bridgeSessionCache.dirty
+            });
+            configSession.broadcastConfig({ persist: false });
+            break;
+          case 'device.config.staged':
+            bridgeSessionCache = bridgeSessionCache ?? {};
+            bridgeSessionCache.stagedConfig = payload.config ?? null;
+            configSession.syncFromSession({
+              ...bridgeSessionCache,
+              liveConfig: bridgeSessionCache.liveConfig,
+              stagedConfig: bridgeSessionCache.stagedConfig,
+              dirty: bridgeSessionCache.dirty
+            });
+            configSession.broadcastConfig({ persist: false });
+            break;
+          case 'device.config.dirty':
+            bridgeSessionCache = bridgeSessionCache ?? {};
+            bridgeSessionCache.dirty = Boolean(payload.dirty);
+            configSession.syncFromSession({
+              ...bridgeSessionCache,
+              liveConfig: bridgeSessionCache.liveConfig,
+              stagedConfig: bridgeSessionCache.stagedConfig,
+              dirty: bridgeSessionCache.dirty
+            });
+            configSession.broadcastConfig({ persist: false });
+            break;
+          case 'device.telemetry':
+            if (payload.telemetry && typeof payload.telemetry === 'object') {
+              queueTelemetryFrame(payload.telemetry);
+            }
+            break;
+          default:
+            break;
+        }
+      },
+      onClose() {
+        // Raw /ws stays connected for compatibility and live RPC lanes.
+      },
+      onError(err) {
+        emit('status', {
+          stage: 'bridge-session',
+          level: 'warn',
+          message: `Bridge event stream error: ${err?.message || 'event stream failed'}`
+        });
+      }
+    });
+  }
+
   function flushRpcPending(error) {
     const reason = error ?? new Error('Connection lost');
     rpcKernel.flushPending(reason);
@@ -554,6 +782,36 @@ export function createRuntime({
       portPreferenceStore.persist(transport.rawPort);
       startReadLoop();
       emit('transport-open', transport);
+      if (wantsStructuredBridgeSession()) {
+        try {
+          await refreshBridgeSessionSnapshot({ warm: true, emitConnectedConfig: false });
+          await openBridgeStructuredEvents();
+          bridgeSessionActive = true;
+          emit('status', {
+            stage: 'bridge-session',
+            level: 'ok',
+            message:
+              'Bridge session cache is active. Raw bridge WebSocket remains available for compatibility.'
+          });
+          emit('connected', {
+            manifest: remoteManifest,
+            schema,
+            config: configSession.mergeLocalSlotMeta(configSession.getLiveConfig())
+          });
+          return;
+        } catch (err) {
+          bridgeSessionActive = false;
+          bridgeSessionCache = null;
+          ensureBridgeSessionClient()?.closeEvents();
+          emit('status', {
+            stage: 'bridge-session',
+            level: 'warn',
+            message: `Structured bridge session unavailable, falling back to raw bridge transport: ${
+              err.message || String(err)
+            }`
+          });
+        }
+      }
       remoteManifest = await performConnectionHandshake({
         sendRpc,
         emit,
@@ -592,7 +850,9 @@ export function createRuntime({
     configSession.syncFromDevice(config);
     emit('schema', schema);
     configSession.broadcastConfig({ persist: false });
-    configSession.restoreLocalState();
+    if (!bridgeSessionActive) {
+      configSession.restoreLocalState();
+    }
     startReadLoop();
   }
 
@@ -760,7 +1020,17 @@ export function createRuntime({
   }
 
   async function disconnect() {
-    if (!transport) return;
+    if (bridgeStageSyncTimer) {
+      clearTimeout(bridgeStageSyncTimer);
+      bridgeStageSyncTimer = null;
+    }
+    ensureBridgeSessionClient()?.closeEvents();
+    bridgeSessionActive = false;
+    bridgeSessionCache = null;
+    if (!transport) {
+      emit('disconnected');
+      return;
+    }
     closingTransport = true;
     try {
       await transport.close();
@@ -818,14 +1088,43 @@ export function createRuntime({
     emit('pot-guard', { guards: new Set(potGuard) });
   }
 
+  function stage(updater) {
+    configSession.stage(updater);
+    scheduleBridgeStageSync();
+  }
+
+  async function apply() {
+    if (bridgeSessionActive) {
+      await flushBridgeStageSync();
+    }
+    return configSession.apply();
+  }
+
+  async function rollback() {
+    if (bridgeStageSyncTimer) {
+      clearTimeout(bridgeStageSyncTimer);
+      bridgeStageSyncTimer = null;
+    }
+    return configSession.rollback();
+  }
+
+  function getState() {
+    return {
+      ...configSession.getState(),
+      transportMode: getTransportMode(),
+      bridgeSessionActive,
+      bridgeApiBaseUrl: resolvedBridgeApiBaseUrl
+    };
+  }
+
   return {
     connect,
     disconnect,
-    stage: configSession.stage,
-    apply: configSession.apply,
-    rollback: configSession.rollback,
+    stage,
+    apply,
+    rollback,
     diff: configSession.diff,
-    getState: configSession.getState,
+    getState,
     on,
     onStatus,
     sendRpc,
