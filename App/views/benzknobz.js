@@ -3,7 +3,6 @@ import { FormRenderer } from './form_renderer.js';
 import { MidiMonitor } from './midi_monitor.js';
 import { presets } from './presets.js';
 import { ScopePanel } from './scope_panel.js';
-import { VirtualGrid, VirtualList } from './virtualizers.js';
 import { normalizeUIMode, readUIModePreference } from './state/ui_preferences.js';
 import { createProfileMacroScenePanel } from './panels/profile_macro_scene.js';
 import { createSlotEditorPanel } from './panels/slot_editor_panel.js';
@@ -16,6 +15,7 @@ import { createUiModeController } from './controllers/ui_mode_controller.js';
 import { createDiffStatusController } from './controllers/diff_status_controller.js';
 import { createSessionLogController } from './controllers/session_log_controller.js';
 import { createPanicHelpController } from './controllers/panic_help_controller.js';
+import { createSlotWorkspaceController } from './controllers/slot_workspace_controller.js';
 import {
   EF_FILTER_NAMES,
   SLOT_TYPE_NAMES,
@@ -30,9 +30,6 @@ const localManifest = createLocalManifest({
   argMethodCount: ARG_METHOD_NAMES.length
 });
 
-const SLOT_ROW_HEIGHT = 82;
-const EF_ROW_HEIGHT = 108;
-
 const SLOT_TYPE_ABBREVIATIONS = {
   OFF: 'OFF',
   CC: 'CC',
@@ -45,11 +42,6 @@ const SLOT_TYPE_ABBREVIATIONS = {
   RPN: 'RPN',
   SysEx: 'SX'
 };
-
-function slotTypeCssToken(type) {
-  if (typeof type !== 'string' || !type.trim()) return 'off';
-  return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
 
 const runtimeOptions = {
   schemaUrl: './config_schema.json',
@@ -455,26 +447,6 @@ const boot = () => {
     }
   });
 
-  const slotVirtualizer = new VirtualGrid(slotContainer, {
-    columns: 6,
-    rowHeight: SLOT_ROW_HEIGHT,
-    render: renderSlotButton
-  });
-
-  const efVirtualizer = new VirtualList(efAssignmentGrid, {
-    itemHeight: EF_ROW_HEIGHT,
-    render: renderEfRow
-  });
-
-  let envMeters = [];
-  // Rebuild the envelope meter widgets whenever the manifest changes follower count.
-  const rebuildMeters = (count) => {
-    envMeters = initializeMeters(envContainer, count, 'EF');
-    performerPanelController.rebuildMeters(count);
-  };
-  rebuildMeters(localManifest.envelope_count || 0);
-  slotVirtualizer.setData([]);
-
   function syncConfigFileButtons() {
     const staged = runtime.getState().staged;
     if (exportPresetBtn) exportPresetBtn.disabled = !staged;
@@ -518,29 +490,6 @@ const boot = () => {
       setStatus('err', 'Import failed', err.message || String(err));
     }
   }
-
-  transportToolbarController.bind();
-  performerPanelController.bind();
-  uiModeController.bind();
-  uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
-  uiModeController.setEditorTab(uiModeController.getEditorTab());
-  uiModeController.setUtilityTab('console');
-
-  slotContainer?.addEventListener('keydown', (event) => {
-    if (!slotState.slots.length) return;
-    const { key } = event;
-    const columns = slotVirtualizer.columns;
-    let next = slotState.selected;
-    if (key === 'ArrowRight') next += 1;
-    else if (key === 'ArrowLeft') next -= 1;
-    else if (key === 'ArrowUp') next -= columns;
-    else if (key === 'ArrowDown') next += columns;
-    else if (key === 'Home') next = 0;
-    else if (key === 'End') next = slotState.slots.length - 1;
-    else return;
-    event.preventDefault();
-    selectSlot(Math.max(0, Math.min(slotState.slots.length - 1, next)));
-  });
 
   exportPresetBtn?.addEventListener('click', () => {
     exportCurrentConfigJson();
@@ -691,6 +640,31 @@ const boot = () => {
     getUiMode: () => uiModeController.getUiMode(),
     getEditorTab: () => uiModeController.getEditorTab()
   });
+  const slotWorkspaceController = createSlotWorkspaceController({
+    runtime,
+    slotState,
+    slotContainer,
+    efAssignmentGrid,
+    envelopeContainer: envContainer,
+    slotTypeAbbreviations: SLOT_TYPE_ABBREVIATIONS,
+    performerPanel: performerPanelController,
+    onSelectSlot: () => populateDetail(),
+    onTelemetryPainted: () => populateDetail(),
+    onSlotsChanged: () => performerPanelController.renderSlots(slotState.slots)
+  });
+  const rebuildMeters = (count) => {
+    slotWorkspaceController.rebuildMeters(count, 'EF');
+    performerPanelController.rebuildMeters(count);
+  };
+  rebuildMeters(localManifest.envelope_count || 0);
+
+  transportToolbarController.bind();
+  performerPanelController.bind();
+  slotWorkspaceController.bind();
+  uiModeController.bind();
+  uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
+  uiModeController.setEditorTab(uiModeController.getEditorTab());
+  uiModeController.setUtilityTab('console');
 
   runtime.on('status', ({ level, message }) => {
     // Normalize transport/runtime status levels onto the small UI state palette.
@@ -702,30 +676,20 @@ const boot = () => {
     formRenderer.updateSchema(schema);
   });
   runtime.on('telemetry', (frame) => {
-    slotState.telemetry = frame;
-    paintTelemetry(frame);
+    slotWorkspaceController.paintTelemetry(frame);
     transportToolbarController.onTelemetry(frame);
     deviceMonitorController.renderTelemetry(frame);
   });
   runtime.on('config', ({ staged, config, dirty }) => {
     // `staged` is the single source of truth for editor controls; keep all derived UI panes in
     // sync from this one event to avoid mixed snapshots.
-    slotState.slots = staged?.slots ?? [];
-    slotState.efSlots = staged?.efSlots ?? [];
-    slotState.staged = staged;
-    if (slotState.selected >= slotState.slots.length) {
-      slotState.selected = Math.max(0, slotState.slots.length - 1);
-    }
+    slotWorkspaceController.syncConfig(staged);
     updateHeader(config);
-    slotVirtualizer.setData(slotState.slots);
-    slotVirtualizer.highlight(slotState.selected);
-    efVirtualizer.setData(slotState.efSlots);
     diffStatusController.updateDiff(dirty);
     diffStatusController.markDirty(dirty);
     populateDetail();
     ledControlsController.render(staged);
-    performerPanelController.renderSlots(slotState.slots);
-    updateTakeoverGuards(slotState.slots);
+    slotWorkspaceController.updateTakeoverGuards(slotState.slots);
     formRenderer.updateValues();
     syncConfigFileButtons();
     profileMacroScenePanel.onConfigChanged();
@@ -900,12 +864,7 @@ const boot = () => {
 
   // Change which slot is focused in the inspector/editor pane.
   function selectSlot(index) {
-    const maxIndex = Math.max(0, slotState.slots.length - 1);
-    slotState.selected = Math.min(Math.max(0, index), maxIndex);
-    slotVirtualizer.highlight(slotState.selected);
-    slotVirtualizer.scrollToIndex(slotState.selected);
-    performerPanelController.highlightSelectedSlot();
-    populateDetail();
+    slotWorkspaceController.selectSlot(index);
   }
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
@@ -916,164 +875,6 @@ const boot = () => {
   // Rebuild the right-hand slot editor for the current selection and UI tier.
   function renderSlotEditor() {
     slotEditorPanel.renderSlotEditor();
-  }
-
-  // Reapply browser-only pickup guards after staged/live slot data changes.
-  function updateTakeoverGuards(slots) {
-    if (!Array.isArray(slots)) return;
-    const guardOn = [];
-    const guardOff = [];
-    slots.forEach((slot, idx) => {
-      if (slot?.takeover) guardOff.push(idx);
-      else guardOn.push(idx);
-    });
-    if (guardOn.length) runtime.setPotGuard(guardOn, true);
-    if (guardOff.length) runtime.setPotGuard(guardOff, false);
-  }
-
-  // Render one slot tile inside the virtualized grid.
-  function renderSlotButton(el, index, slot) {
-    el.className = 'slot-button';
-    el.tabIndex = -1;
-    el.innerHTML = '';
-    el.dataset.index = String(index);
-    const label = document.createElement('span');
-    label.className = 'slot-label';
-    label.textContent = `S${String(index + 1).padStart(2, '0')}`;
-    const state = document.createElement('span');
-    state.className = 'slot-state';
-    state.textContent = SLOT_TYPE_ABBREVIATIONS[slot?.type] ?? slot?.type ?? '—';
-    state.title = slot?.type ?? 'Unassigned';
-    el.dataset.slotType = slotTypeCssToken(slot?.type);
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'takeover';
-    toggle.textContent = slot?.takeover ? 'PK' : 'IM';
-    toggle.title = slot?.takeover
-      ? 'Browser-only pickup guard enabled'
-      : 'Immediate local response';
-    toggle.setAttribute('aria-label', slot?.takeover ? 'Pickup mode' : 'Immediate mode');
-    toggle.onclick = () => {
-      const next = !slot?.takeover;
-      runtime.setLocalSlotMeta(index, { takeover: next });
-      runtime.setPotGuard([index], !next);
-    };
-    el.append(label, state, toggle);
-    el.onclick = () => selectSlot(index);
-    el.setAttribute('role', 'button');
-    el.classList.toggle('selected', index === slotState.selected);
-  }
-
-  // Normalize the follower-assignment list format into a bounded unique slot array.
-  function normalizeFollowerSlotList(item, maxSlotIndex) {
-    const source = Array.isArray(item?.slots)
-      ? item.slots
-      : item?.slot !== undefined && item?.slot !== null
-        ? [item.slot]
-        : [];
-    const seen = new Set();
-    const normalized = [];
-    source.forEach((candidate) => {
-      const numeric = Number(candidate);
-      if (!Number.isFinite(numeric)) return;
-      const rounded = Math.round(numeric);
-      if (rounded < 0) return;
-      const bounded = Math.max(0, Math.min(maxSlotIndex, rounded));
-      if (seen.has(bounded)) return;
-      seen.add(bounded);
-      normalized.push(bounded);
-    });
-    normalized.sort((a, b) => a - b);
-    return normalized;
-  }
-
-  function toggleFollowerSlotAssignment(followerIndex, slotIndex, maxSlotIndex) {
-    runtime.stage((draft) => {
-      draft.efSlots = draft.efSlots || [];
-      if (!draft.efSlots[followerIndex] || typeof draft.efSlots[followerIndex] !== 'object') {
-        draft.efSlots[followerIndex] = { slots: [] };
-      }
-      const current = normalizeFollowerSlotList(draft.efSlots[followerIndex], maxSlotIndex);
-      const next = current.includes(slotIndex)
-        ? current.filter((value) => value !== slotIndex)
-        : [...current, slotIndex].sort((a, b) => a - b);
-      draft.efSlots[followerIndex].slots = next;
-      delete draft.efSlots[followerIndex].slot;
-      return draft;
-    });
-  }
-
-  // Render one row in the EF assignment editor.
-  function renderEfRow(el, index, item) {
-    el.className = 'ef-row';
-    el.innerHTML = '';
-    const maxSlotIndex = Math.max(0, slotState.slots.length - 1);
-    const normalizedSlots = normalizeFollowerSlotList(item, maxSlotIndex);
-    const label = document.createElement('span');
-    label.className = 'ef-row-label';
-    label.textContent = `EF ${index + 1}`;
-    const summary = document.createElement('span');
-    summary.className = 'ef-row-summary';
-    summary.textContent = normalizedSlots.length
-      ? `${normalizedSlots.length} assigned`
-      : 'Unassigned';
-    const chipGrid = document.createElement('div');
-    chipGrid.className = 'ef-chip-grid';
-    for (let slotIndex = 0; slotIndex <= maxSlotIndex; slotIndex += 1) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'ef-slot-chip';
-      chip.dataset.slotType = slotTypeCssToken(slotState.slots[slotIndex]?.type);
-      chip.dataset.slotIndex = String(slotIndex);
-      chip.classList.toggle('assigned', normalizedSlots.includes(slotIndex));
-      chip.setAttribute('aria-pressed', normalizedSlots.includes(slotIndex) ? 'true' : 'false');
-      chip.textContent = `S${String(slotIndex + 1).padStart(2, '0')}`;
-      chip.title = slotState.slots[slotIndex]?.type
-        ? `Toggle ${slotState.slots[slotIndex].type} slot ${slotIndex + 1}`
-        : `Toggle slot ${slotIndex + 1}`;
-      chip.addEventListener('click', () =>
-        toggleFollowerSlotAssignment(index, slotIndex, maxSlotIndex)
-      );
-      chipGrid.appendChild(chip);
-    }
-    el.append(label, summary, chipGrid);
-  }
-
-  // Push the latest telemetry frame into the slot grid, envelope meters, and detail view.
-  function paintTelemetry(frame) {
-    if (!Array.isArray(frame.slots)) return;
-    slotVirtualizer.updateTelemetry(frame.slots);
-    frame.envelopes?.forEach((value, idx) => {
-      const entry = envMeters[idx];
-      if (!entry) return;
-      entry.progress.value = value;
-      entry.value.textContent = String(value);
-    });
-    performerPanelController.paintTelemetry(frame);
-    slotDetailValue.textContent = frame.slots[slotState.selected] ?? '—';
-  }
-
-  // Build a simple progress-meter bank for envelope telemetry.
-  function initializeMeters(container, count, labelPrefix) {
-    if (!container) return [];
-    container.innerHTML = '';
-    const meters = [];
-    for (let i = 0; i < count; i += 1) {
-      const wrap = document.createElement('div');
-      wrap.className = 'meter';
-      const label = document.createElement('span');
-      label.textContent = `${labelPrefix} ${String(i + 1).padStart(2, '0')}`;
-      const progress = document.createElement('progress');
-      progress.max = 127;
-      progress.value = 0;
-      const value = document.createElement('span');
-      value.className = 'meter-value';
-      value.textContent = '0';
-      wrap.append(label, progress, value);
-      container.appendChild(wrap);
-      meters.push({ wrap, progress, value });
-    }
-    return meters;
   }
 };
 
