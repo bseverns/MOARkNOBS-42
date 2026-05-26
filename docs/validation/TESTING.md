@@ -22,10 +22,6 @@ Use these docs alongside the command layers above:
 - [ValidationFlow.md](ValidationFlow.md) for the go/no-go path from bring-up to demo-ready
 - [DemoTestPunchList.md](DemoTestPunchList.md) for the operator pass on the actual prototype or rehearsal setup
 
-The automated suite proves a lot, but it does not replace a real-board demo pass.
-
-The next firmware-proof sequence is tracked in [docs/firmware/FirmwareRuntimeActionPlan.md](../firmware/FirmwareRuntimeActionPlan.md).
-
 ## Bench matrix
 
 When the goal is to find physical limits rather than just software regressions, run the bench in layers and record receipts instead of vibes.
