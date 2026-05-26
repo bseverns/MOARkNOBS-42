@@ -1,5 +1,7 @@
 # Project History
 
+This page is historical narrative, not the source of current contract or support truth. When it disagrees with current README/reference/testing pages, the current contract pages win. See [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 This file summarizes the development of the MOARkNOBS-42 project based on commit history with a few inserts re: design choices
 
 ## How to Read this History
@@ -77,7 +79,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - _If you ever wanted a synth to show you its source and its soul, this is the moment._
 - Wired up the filter‑tuning pot and roughed up the arpeggiator—hands‑on analog control meets sequencer swagger, plus a reminder that drift and off‑by‑ones are always lurking.
 - **August 6:** First public drop lands as `v0.1.0`, bundling filter‑tuning pots, a self‑driving arpeggiator, WebSerial telemetry, NRPN/RPN/SysEx support, and the project's inaugural `CHANGELOG`. [v0.1.0]
-- **August 8:** Merged PR #286, hauling in the full FastLED arsenal and scribbling teachable comments all over `firmware/App/benzknobz.html`. [956069c]
+- **August 8:** Merged PR #286, hauling in the full FastLED arsenal and scribbling teachable comments all over the early browser configurator path. [956069c]
 - **August 11** My ears are still ringing because I went to a metal show in the basement of an American Legion. I am scrambling to make these Unity testers work for the codebase as well as actual builds of the firmware.
 - _Standards are not optional; often the best lessons come from coloring off the page._
 - **Late August:** CI kept flaking out, so the build scripts took a beating. Swapped the MIDI library, chased phantom `usb_midi` ghosts, and bolted on a Unity test rig so every commit has to prove itself.
@@ -253,7 +255,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 ### April — Beta Release Gate Tightening
 
 - Source exports now come from tracked files only, the release manifest ignores generated dirt when it checks git status, and the release build refuses to package from a dirty tracked tree so provenance stays honest. [current change]
-- Doctor and the App bridge path now assume Node 22 instead of the older host baseline, which matches the bridge release lane and stops the docs from pretending Node 20 is still the target. [current change]
+- Doctor and the App bridge path now assume Node 24 instead of the older host baseline, which matches the bridge release lane and stops the docs from pretending Node 20 or Node 22 are still the target. [current change]
 - Release verification now treats bridge and app tests as mandatory, layers in Unity/full-stack HIL when hardware is present, and records the skipped-versus-run split explicitly in `release_verification.json`. [current change]
 - Bridge packaging picked up gated signing/notarization hooks so beta/public artifacts have to prove they are signed before they are treated as outward-facing releases. [current change]
 - _The release path stopped being “build some zips” and became “prove the source, prove the host, and prove the outward binaries are treated like beta assets instead of internal scraps.”_

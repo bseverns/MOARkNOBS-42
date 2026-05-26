@@ -2,7 +2,9 @@
 
 This document defines how to ship the MN42 Bridge for users who do not want to run Node commands manually.
 
-This is a future-facing packaging plan. It is not a current compatibility claim for every desktop host or DAW.
+This is a release-planning doc, not the source of current bridge/runtime truth.
+
+For what is true now, defer to [bridge/README.md](../../bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Bridge Signing Plan](BridgeSigningPlan.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ## Goals
 
@@ -41,18 +43,18 @@ This is a future-facing packaging plan. It is not a current compatibility claim 
 
 For the current support boundary, see [Host Compatibility](../reference/HostCompatibility.md).
 
-## Packaging options
+## Packaging options considered
 
-| Option | Why use it                                         | Risks / caveats                                                                        | Recommendation  |
-| ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------- |
-| `pkg`  | Mature single-binary workflow, simple output model | Target/runtime support can lag newest Node versions; native modules need validation    | Prototype first |
-| `nexe` | Flexible build pipeline, can embed assets          | Build setup can be heavier; native dependency handling still needs platform validation | Backup path     |
+| Option | Why use it                                         | Risks / caveats                                                                        | Status        |
+| ------ | -------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------- |
+| `pkg`  | Mature single-binary workflow, simple output model | Target/runtime support can lag newest Node versions; native modules need validation    | current path  |
+| `nexe` | Flexible build pipeline, can embed assets          | Build setup can be heavier; native dependency handling still needs platform validation | fallback only |
 
-Decision rule: start with `pkg`; if target/runtime support blocks Node 24 + serialport reliability, switch to `nexe`.
+Decision rule: keep `pkg` as the active path unless target/runtime support blocks Node 24 + `serialport` reliability badly enough to justify switching.
 
-## Release architecture
+## Release architecture to preserve
 
-- Keep `mn42_bridge.js` as the source of truth.
+- Keep `mn42_bridge.js` and `mn42_bridge_server.js` as the source entrypoints for the packaged CLI and console lanes.
 - Add packaging scripts under `bridge/scripts/`.
 - Emit per-platform artifacts into `bridge/dist/` during build.
 - Keep a plain CLI distribution path for developers.
@@ -86,8 +88,8 @@ Deliverable: reproducible baseline before packaging changes.
 ### Phase 1 - Packaging prototype (implemented)
 
 - Build candidate artifacts with `npm --prefix bridge run package:bridge`.
-- Try `pkg` first; keep target strings configurable (tool support changes over time).
-- Produce unsigned local builds for all three platforms.
+- Keep `pkg` as the active packager path and keep target strings configurable (tool support changes over time).
+- Produce unsigned local builds for the current release targets.
 
 Deliverable: locally runnable binaries on macOS, Windows, Linux.
 

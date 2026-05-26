@@ -1,5 +1,9 @@
 # Bridge Runtime Upgrade Plan
 
+This is a planning document, not the source of current bridge/runtime truth.
+
+For current bridge behavior and support claims, defer to [bridge/README.md](../../bridge/README.md), [Bridge Transport Contract](BridgeTransportContract.md), [Host Compatibility](../reference/HostCompatibility.md), [TESTING](../validation/TESTING.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 ## Why this exists
 
 `bridge/` already proves the MOARkNOBS-42 desktop path can:

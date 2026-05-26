@@ -1,5 +1,7 @@
 # Firmware Architecture Story
 
+This page explains architecture shape, not the canonical host/device contract. For current protocol truth, defer to [Manifest Contract](ManifestContract.md), [MN42 Line Protocol](MN42LineProtocol.md), [Serial Protocol](SerialProtocol.md), and [Documentation Truth Map](DocumentationTruthMap.md).
+
 The firmware is easiest to understand if you read it as a choreography problem rather than a loose collection of modules.
 
 The job is not just "handle MIDI." The real job is:
@@ -110,9 +112,11 @@ sequenceDiagram
   Host->>Firmware: hello
   Host->>Firmware: get_manifest
   Firmware-->>Host: manifest
+  Host->>Firmware: get_schema
+  Firmware-->>Host: schema
   Host->>Firmware: get_config
   Firmware-->>Host: config
-  Host->>Firmware: set_param / set_config
+  Host->>Firmware: live patch lane / full apply lane
   Firmware-->>Host: patch or checksum ACK
 ```
 

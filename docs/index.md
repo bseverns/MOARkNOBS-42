@@ -39,6 +39,8 @@ The broad workflow story is real, but the compatibility claim should be read con
 
 See [Host Compatibility](reference/HostCompatibility.md) and [Connectivity Guide](getting-started/ConnectivityGuide.md) before treating the project like a universal host/browser promise.
 
+If you want the repo's document tie-break rules before you go deeper, read [Documentation Truth Map](reference/DocumentationTruthMap.md).
+
 </div>
 
 ## What it is
@@ -205,6 +207,10 @@ If the instrument makes sense for your setup, the next useful step is not a vagu
 - **Validation Flow**
 
   Use the conservative go/no-go path from bring-up to demo-ready: [Validation Flow](validation/ValidationFlow.md)
+
+- **Documentation Truth Map**
+
+  See which pages define current truth versus plans, evidence, or historical context: [Documentation Truth Map](reference/DocumentationTruthMap.md)
 
 - **Demo Test Punch List**
 

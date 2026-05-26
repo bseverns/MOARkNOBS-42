@@ -1,6 +1,8 @@
 # WebSerial Groove
 
-The Teensy screams JSON snapshots over WebSerial so the browser can watch the synth wiggle in real time. It's dead‑simple and a little rowdy.
+This page explains the direct WebSerial lane. For current contract and support-boundary tie-breaks, defer to [App/README.md](../../App/README.md), [MN42 Line Protocol](../reference/MN42LineProtocol.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
+The direct USB lane is line-oriented and intentionally pragmatic: newline-delimited firmware messages, conservative host validation, and staged/apply discipline in the browser.
 
 ## Handshake
 
@@ -37,7 +39,7 @@ The Teensy screams JSON snapshots over WebSerial so the browser can watch the sy
 
 `device_name` is intended for UI identity banners (`Connected to: ...`) so users can confirm they are editing the correct rig before applying changes.
 
-After `GET_MANIFEST`, the runtime probes `GET_SCHEMA`. If the returned schema is compatible with the current editor contract (`slots`, `efSlots`, `filter`, `arg`, `led` roots), it is used directly; otherwise the app falls back to the frozen `config_schema.json` bundled with the UI. Once schema selection passes, the UI asks for `GET_CONFIG` instead of the old `GET_ALL` dump so it can hydrate every pot, slot, envelope, LFO route, and LED color from one well-behaved JSON line.
+After `GET_MANIFEST`, the runtime probes `GET_SCHEMA`. If the returned schema is compatible with the current editor contract (`slots`, `efSlots`, `filter`, `arg`, `led` roots), it is used directly; otherwise the app falls back to the bundled `config_schema.json`. Once schema selection passes, the UI asks for `GET_CONFIG` so it can hydrate every pot, slot, envelope, LFO route, and LED color from one config snapshot.
 
 ## App runtime state model
 
@@ -53,8 +55,8 @@ Normal flow:
 1. `HELLO` / `GET_MANIFEST` establish identity and schema compatibility
 2. `GET_CONFIG` hydrates both `liveConfig` and `stagedConfig`
 3. UI edits mutate only `stagedConfig`
-4. field-level writes can travel through `runtime.applyPatch(path, value)`, which stages locally first and then emits `set_param`
-5. full Apply sends a JSON-RPC `set_config` payload including schema version, manifest build metadata, and a checksum
+4. field-level writes can travel through `runtime.applyPatch(path, value)`, which stages locally first and emits a `set_param` RPC only on JSON-RPC transports; native WebSerial treats that lane as deferred
+5. full Apply stages one complete config payload, then native WebSerial adapts it onto `SET_ALL` with checksum verification
 6. if the device ACK checksum matches, `liveConfig` advances to staged state; if not, the runtime rolls back
 
 That staged/live split is the real safety rail in the browser. It is why the diff panel can stay truthful, why migration previews can remain non-destructive, and why a bad ACK does not leave the UI pretending a write succeeded.
@@ -109,7 +111,7 @@ Every ~100 ms the firmware spits a newline‑terminated JSON blob:
 
 When any of those counters tick upward the status LED on the board pulses and the JSON stream logs an event, so you get both a visual scream and structured telemetry.
 
-Parse each line as JSON and redraw your UI. There’s no framing besides the newline, because who needs more ceremony?
+Parse each line as JSON and redraw your UI. The framing is intentionally just one JSON object per newline.
 
 ### Diagnostics panel for power users
 
@@ -170,34 +172,41 @@ terminated with a newline and the firmware snaps back with either `OK` or `ERR`.
 
 ### Command Roster
 
-This table mirrors the shout list in `firmware_main.cpp` so the code and docs
-never fall out of sync.
+This table mirrors the direct line-protocol lane. For the stricter current contract, cross-check [MN42 Line Protocol](../reference/MN42LineProtocol.md).
 
-| Command                                      | Arguments                   | What it pokes                                                                                                                             |
-| -------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `HELLO`                                      | –                           | start WebSerial streaming                                                                                                                 |
-| `GET_SCHEMA`                                 | –                           | dump config schema. If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`.                                   |
-| `GET_BROWNOUTS`                              | –                           | number of brownouts seen                                                                                                                  |
-| `GET_MANIFEST`                               | –                           | confirm firmware build + schema, plus free RAM/flash stats                                                                                |
-| `GET_CONFIG`                                 | –                           | dump the live configuration: pots, slots, `efSlots` follower routing (including multi-slot targets), ARG/filter state, LEDs, and LFO info |
-| `SET_POT` `<slot>,<chan>,<cc>`               | ints                        | bind slot to channel+CC                                                                                                                   |
-| `SET_ALL` `<payload>`                        | JSON or bulk CSV            | mass update slots/LED                                                                                                                     |
-| `GET_ALL`                                    | –                           | legacy dump of slots + LED (only available when `SERIAL_LOGGING` is enabled)                                                              |
-| `SET_LED` `<bri>,<r>,<g>,<b>`                | 0‑255 each                  | paint LED strip                                                                                                                           |
-| `GET_LED`                                    | –                           | return `bri,r,g,b`                                                                                                                        |
-| `SET_ARGMETHOD` `<n>`                        | 0‑13                        | choose ARG blend                                                                                                                          |
-| `GET_ARGMETHOD`                              | –                           | spit current ARG blend                                                                                                                    |
-| `SET_EF` `<slot>,<ef>`                       | slot 0‑41, ef 0‑5           | patch slot→follower routing (repeat to map one follower across many slots)                                                                |
-| `GET_EF` `<slot>`                            | slot 0‑41                   | see follower mapped                                                                                                                       |
-| `CAL_ENVS`                                   | –                           | recalibrate all followers                                                                                                                 |
-| `GET_PROFILE` `<id>`                         | 0‑3                         | dump profile payload JSON (arp/LFO/LED/EF/midi channel/routes/slots)                                                                      |
-| `SET_PROFILE` `<id>,<payload>`               | 0‑3, JSON                   | store profile payload JSON into EEPROM (partial payloads merge)                                                                           |
-| `SET_FILTER` `<type>,<freq>,<q>`             | type 0‑?, floats            | blast the legacy global filter (and mirror those values into every slot payload for backward compatibility)                               |
-| `GET_FILTER`                                 | –                           | return `type,freq,q` using the legacy global stash                                                                                        |
-| `SET_SLOT_FILTER` `<slot>,<type>,<freq>,<q>` | slot 0‑41, type 0‑?, floats | surgically edit one slot’s envelope payload without touching the others                                                                   |
-| `GET_SLOT_FILTER` `<slot>`                   | slot 0‑41                   | read back one slot’s envelope payload as `type,freq,q`                                                                                    |
-| `SET_ARGPAIR` `<on>,<envA>,<envB>`           | 0/1,0‑5,0‑5                 | wire two envelopes for ARG                                                                                                                |
-| `GET_ARGPAIR`                                | –                           | echo pair config                                                                                                                          |
+| Command                                                      | Arguments                   | What it pokes                                                                                                                             |
+| ------------------------------------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| `HELLO`                                                      | –                           | start WebSerial streaming                                                                                                                 |
+| `GET_SCHEMA`                                                 | –                           | dump config schema. If the device ghosts you, the HTML app drags out its baked-in `config_schema.json`.                                   |
+| `GET_BROWNOUTS`                                              | –                           | number of brownouts seen                                                                                                                  |
+| `GET_MANIFEST`                                               | –                           | confirm firmware build + schema, plus free RAM/flash stats                                                                                |
+| `GET_CONFIG`                                                 | –                           | dump the live configuration: pots, slots, `efSlots` follower routing (including multi-slot targets), ARG/filter state, LEDs, and LFO info |
+| `SET_POT` `<slot>,<chan>,<cc>`                               | ints                        | bind slot to channel+CC                                                                                                                   |
+| `SET_ALL` `<payload>`                                        | JSON or bulk CSV            | mass update slots/LED                                                                                                                     |
+| `GET_ALL`                                                    | –                           | legacy dump of slots + LED (only available when `SERIAL_LOGGING` is enabled)                                                              |
+| `SET_LED` `<bri>,<r>,<g>,<b>`                                | 0‑255 each                  | paint LED strip                                                                                                                           |
+| `GET_LED`                                                    | –                           | return `bri,r,g,b`                                                                                                                        |
+| `SET_ARGMETHOD` `<n>`                                        | 0‑13                        | choose ARG blend                                                                                                                          |
+| `GET_ARGMETHOD`                                              | –                           | spit current ARG blend                                                                                                                    |
+| `SET_EF` `<slot>,<ef>`                                       | slot 0‑41, ef 0‑5           | patch slot→follower routing (repeat to map one follower across many slots)                                                                |
+| `GET_EF` `<slot>`                                            | slot 0‑41                   | see follower mapped                                                                                                                       |
+| `CAL_ENVS`                                                   | –                           | recalibrate all followers                                                                                                                 |
+| `GET_PROFILE` `<id>`                                         | 0‑3                         | dump profile payload JSON (arp/LFO/LED/EF/midi channel/routes/slots)                                                                      |
+| `SET_PROFILE` `<id>,<payload>`                               | 0‑3, JSON                   | store profile payload JSON into EEPROM (partial payloads merge)                                                                           |
+| `GET_NOTE_DYNAMICS`                                          | –                           | read live note-dynamics state                                                                                                             |
+| `SET_NOTE_DYNAMICS` `<velocityShift>,<changeProbability>`    | int,int                     | update live note-dynamics state                                                                                                           |
+| `GET_JITTER`                                                 | –                           | read live jitter state                                                                                                                    |
+| `SET_JITTER` `<depth>,<smoothness>`                          | floats                      | update live jitter state                                                                                                                  |
+| `GET_CLOCK`                                                  | –                           | read live firmware clock state                                                                                                            |
+| `SET_CLOCK` `<followExternal>,<clockOutEnabled>,<tappedBpm>` | 0/1,0/1,float               | update live firmware clock state                                                                                                          |
+| `GET_USB_MIDI`                                               | –                           | read live USB MIDI enable state                                                                                                           |
+| `SET_USB_MIDI` `<0                                           | 1>`                         | int                                                                                                                                       | update live USB MIDI enable state |
+| `SET_FILTER` `<type>,<freq>,<q>`                             | type 0‑?, floats            | blast the legacy global filter (and mirror those values into every slot payload for backward compatibility)                               |
+| `GET_FILTER`                                                 | –                           | return `type,freq,q` using the legacy global stash                                                                                        |
+| `SET_SLOT_FILTER` `<slot>,<type>,<freq>,<q>`                 | slot 0‑41, type 0‑?, floats | surgically edit one slot’s envelope payload without touching the others                                                                   |
+| `GET_SLOT_FILTER` `<slot>`                                   | slot 0‑41                   | read back one slot’s envelope payload as `type,freq,q`                                                                                    |
+| `SET_ARGPAIR` `<on>,<envA>,<envB>`                           | 0/1,0‑5,0‑5                 | wire two envelopes for ARG                                                                                                                |
+| `GET_ARGPAIR`                                                | –                           | echo pair config                                                                                                                          |
 
 ### Profiles and modulation snapshots
 

@@ -36,6 +36,8 @@ const stageDownloadSnapshotButton = document.getElementById(
   'stage-download-snapshot',
 );
 const stageRefreshStateButton = document.getElementById('stage-refresh-state');
+const addMappingForm = document.getElementById('add-mapping-form');
+const mappingListBody = document.getElementById('mapping-list-body');
 
 const modeTabs = [...document.querySelectorAll('.mode-tab')];
 const modeViews = [...document.querySelectorAll('[data-mode-view]')];
@@ -87,6 +89,7 @@ const consoleState = {
   structuredEvents: [],
   presets: [],
   activePresetId: '',
+  midiToOscMappings: [],
 };
 window.__MN42_BRIDGE_CONSOLE_STATE = consoleState;
 
@@ -155,6 +158,7 @@ function formValues() {
     allowFeedbackLoops:
       Boolean(allowFeedbackLoopsField) &&
       Boolean(allowFeedbackLoopsField.checked),
+    midiToOscMappings: clone(consoleState.midiToOscMappings),
   };
 }
 
@@ -168,6 +172,11 @@ function populateForm(values) {
       continue;
     }
     field.value = String(value);
+  }
+  if (Array.isArray(values.midiToOscMappings)) {
+    consoleState.midiToOscMappings = clone(values.midiToOscMappings);
+    renderMappingList();
+    renderMappingOutput(consoleState.bridge || {});
   }
 }
 
@@ -254,7 +263,48 @@ function renderMappingOutput(state = {}) {
     feedbackWindowMs: config.feedbackWindowMs ?? null,
     allowFeedbackLoops: Boolean(config.allowFeedbackLoops),
     midiLabel: config.midiLabel ?? null,
-    midiToOscMappings: config.midiToOscMappings ?? [],
+    midiToOscMappings: consoleState.midiToOscMappings || [],
+  });
+}
+
+function renderMappingList() {
+  if (!mappingListBody) return;
+  mappingListBody.textContent = '';
+  const mappings = consoleState.midiToOscMappings || [];
+  if (!mappings.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 5;
+    cell.style.textAlign = 'center';
+    cell.textContent = 'No mappings configured yet.';
+    row.appendChild(cell);
+    mappingListBody.appendChild(row);
+    return;
+  }
+  mappings.forEach((mapping, index) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${mapping.id || `mapping-${index + 1}`}</td>
+      <td>CC ${mapping.controller}${
+        mapping.channel ? ` (Ch ${mapping.channel})` : ''
+      }</td>
+      <td>${mapping.address}</td>
+      <td>${mapping.valueMode}</td>
+      <td class="actions">
+        <button class="remove-mapping" data-index="${index}" type="button">Remove</button>
+      </td>
+    `;
+    mappingListBody.appendChild(row);
+  });
+
+  mappingListBody.querySelectorAll('.remove-mapping').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const index = parseInt(btn.dataset.index, 10);
+      consoleState.midiToOscMappings.splice(index, 1);
+      renderMappingList();
+      renderMappingOutput(consoleState.bridge || {});
+      saveConfig(formValues());
+    });
   });
 }
 
@@ -651,6 +701,11 @@ function applyPreset(preset) {
     oscListen: preset.ports.oscListen,
     oscBind: preset.ports.oscBind,
   });
+  if (Array.isArray(preset.midiToOscMappings)) {
+    consoleState.midiToOscMappings = clone(preset.midiToOscMappings);
+    renderMappingList();
+    renderMappingOutput(consoleState.bridge || {});
+  }
   saveConfig(formValues());
 }
 
@@ -682,6 +737,10 @@ async function refreshState() {
   populateForm(payload.state?.config);
   applyPreferredSerialPort();
   updateStatus(payload.state);
+  consoleState.midiToOscMappings = clone(
+    payload.state?.config?.midiToOscMappings || [],
+  );
+  renderMappingList();
   return payload.state;
 }
 
@@ -795,6 +854,26 @@ function connectStructuredSocket() {
 }
 
 function bindEvents() {
+  addMappingForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const data = new FormData(addMappingForm);
+    const mapping = {
+      id: String(data.get('id') || '').trim(),
+      controller: parseInt(data.get('controller'), 10),
+      channel: data.get('channel') ? parseInt(data.get('channel'), 10) : null,
+      address: String(data.get('address') || '').trim(),
+      valueMode: data.get('valueMode') || 'raw',
+    };
+    if (!mapping.id || Number.isNaN(mapping.controller) || !mapping.address) {
+      return;
+    }
+    consoleState.midiToOscMappings.push(mapping);
+    renderMappingList();
+    renderMappingOutput(consoleState.bridge || {});
+    saveConfig(formValues());
+    addMappingForm.reset();
+  });
+
   startButton.addEventListener('click', async () => {
     summaryStatus.textContent = 'Starting bridge...';
     try {

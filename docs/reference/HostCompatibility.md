@@ -4,6 +4,8 @@ Use this page when you need the conservative answer to "what host paths are actu
 
 This is a pre-production compatibility note, not a mass-market promise sheet.
 
+For document tie-break rules, see [Documentation Truth Map](DocumentationTruthMap.md).
+
 ## Compatibility buckets
 
 - `Verified in repo evidence`
@@ -18,8 +20,8 @@ This is a pre-production compatibility note, not a mass-market promise sheet.
 | Surface                                                        | Current status                                   | Why                                                                                                                                                       |
 | -------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Browser configurator in Chromium-based browsers over WebSerial | Verified in repo evidence                        | Playwright coverage and the configurator docs treat this as the strongest direct-browser path.                                                            |
-| Browser configurator served through the bridge at `/app/`      | Verified in repo evidence                        | The bridge UI and app tests cover the browser-driven bridge path and shared configurator runtime.                                                         |
-| Structured bridge session API (`/api/device/*`, `/ws/events`)  | Verified in repo evidence                        | Bridge contract tests now cover the cached session state, staged apply flow, and structured event envelope.                                               |
+| Browser configurator served through the bridge at `/app/`      | Verified in repo evidence                        | The bridge UI and App tests cover the browser-driven bridge path, and the bridge/runtime HIL lane now exercises the structured session-backed apply path. |
+| Structured bridge session API (`/api/device/*`, `/ws/events`)  | Verified in repo evidence                        | Bridge contract tests cover the cached session state and event envelope, and the HIL bridge-session runner proves staged apply/ACK on real hardware.      |
 | Browser configurator in Firefox or Safari over WebSerial       | Not claimed                                      | This repo does not present Firefox/Safari WebSerial as a verified production path.                                                                        |
 | Bridge on a Node.js 24 desktop host                            | Verified in repo evidence                        | The bridge runtime, docs, and test suite are aligned around the Node 24 desktop path.                                                                     |
 | OSC host integration through the bridge                        | Documented path, bench validation still required | The OSC command and telemetry contract are documented and tested at the software seam, but host-specific bench proof still depends on the operator setup. |

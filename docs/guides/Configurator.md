@@ -1,5 +1,7 @@
 # Configurator Tour
 
+This is an orientation page. For the current runtime contract and support boundary, defer to [App/README.md](../../App/README.md), [Host Compatibility](../reference/HostCompatibility.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 The browser app is not just a remote control. It is the safest place to understand the firmware contract because it has to negotiate identity, schema compatibility, staged edits, and confirmation from the device before pretending anything changed.
 
 ![Annotated browser configurator screenshot showing the connection banner, apply and rollback controls, and the recovery and profile workspace.](../assets/ui/configurator-top-annotated.png)
@@ -27,6 +29,8 @@ sequenceDiagram
   App->>Device: get_manifest
   Device-->>App: manifest
   App->>App: compare schema versions
+  App->>Device: get_schema
+  Device-->>App: schema
   App->>Device: get_config
   Device-->>App: config
   App->>App: seed liveConfig and stagedConfig
@@ -44,7 +48,7 @@ Most controls do **not** immediately rewrite device state.
 4. the diff panel compares `stagedConfig` to `liveConfig`
 5. Apply becomes available only when the staged payload is valid
 
-Some controls can also issue field-level writes through `set_param`, but even then the runtime stages locally first so the UI never loses track of intent.
+Some controls can also issue field-level writes through the runtime patch lane, but even then the runtime stages locally first so the UI never loses track of intent. On native WebSerial, the production contract is still full Apply with verified ACK.
 
 ## Browser-local slot behavior: `IM` and `PK`
 
@@ -84,7 +88,7 @@ If you want the human explanation for every shipped preset, read [Preset Library
 ```mermaid
 flowchart TD
   A[User presses Apply] --> B[Runtime validates staged config]
-  B --> C[Runtime sends set_config with checksum]
+  B --> C[Runtime sends full staged payload with checksum]
   C --> D{ACK checksum matches?}
   D -- Yes --> E[promote staged to live]
   D -- No --> F[rollback staged state]

@@ -4,16 +4,18 @@ This repo runs tests in layers, from polite unit checks to full-on hardware cage
 
 Unless a section says otherwise, commands below assume you are running from the repo root.
 
+This page is an evidence doc. For document tie-break rules, see [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 ## Layer cheat sheet
 
-| Layer                    | Command                                                                                                           | Hardware needed                             | What it proves                                                                                                             |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Full battery             | `./test.sh`                                                                                                       | Teensy 4.0 for Unity, host machine for Node | Runs everything below, writes clean logs, perfect for CI and pre-commit rituals.                                           |
-| Unity smoke tests        | `pio test -d firmware -e teensy40_unity`                                                                          | Teensy 4.0 with USB cable                   | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                               |
-| App seam regressions     | `npm --prefix App test`                                                                                           | Host machine only                           | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware. |
-| Manual firmware sketches | `pio run -d firmware -e teensy40_unified_test -t upload` (and friends)                                            | Fully assembled controller                  | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                |
-| Bridge CLI sanity        | `npm --prefix bridge test`                                                                                        | Host machine only (Node 24)                 | Keeps the OSC bridge CLI parsing and error handling sharp.                                                                 |
-| System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js` or `node firmware/system_test/mn42_bridge_session_runner.js` | Controller + bridge talking                 | Legacy OSC/MIDI heartbeat proof plus the newer structured bridge-session HIL proof for staged apply/ACK on real hardware.  |
+| Layer                    | Command                                                                                                           | Hardware needed                                     | What it proves                                                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Full battery             | `./test.sh`                                                                                                       | Host machine, plus Teensy 4.0 when HIL is available | Runs the JS suites every time and adds Unity/full-stack lanes when a board is present.                                     |
+| Unity smoke tests        | `pio test -d firmware -e teensy40_unity`                                                                          | Teensy 4.0 with USB cable                           | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                               |
+| App seam regressions     | `npm --prefix App test`                                                                                           | Host machine only                                   | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware. |
+| Manual firmware sketches | `pio run -d firmware -e teensy40_unified_test -t upload` (and friends)                                            | Fully assembled controller                          | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                |
+| Bridge software suite    | `npm --prefix bridge test`                                                                                        | Host machine only (Node 24)                         | Covers CLI, device session, simulator, transport, app-contract, and browser-server seams without hardware.                 |
+| System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js` or `node firmware/system_test/mn42_bridge_session_runner.js` | Controller + bridge talking                         | Legacy OSC/MIDI heartbeat proof plus the newer structured bridge-session HIL proof for staged apply/ACK on real hardware.  |
 
 ## If your goal is demo readiness rather than code confidence
 
@@ -279,28 +281,25 @@ Unity can only fake so much. When you need to watch real LEDs blink or feel a po
 
 Run them with `pio run -d firmware -e <env> -t upload`, then open a serial monitor or watch the device directly. These tests need a human watching and pushing buttons; log what you see if something twitches.
 
-## Bridge CLI sanity (`bridge/test/`)
+## Bridge software suite (`bridge/test/`)
 
-The bridge is the glue between the controller and the outside world. Its tests keep the CLI parser and error handling ruthless.
+The bridge is the glue between the controller and the outside world. Its software suite covers the CLI, cached device session, structured transport contract, simulator behavior, browser server, and transport edges.
 
 ### Setup
 
 ```bash
-cd bridge
-npm install
+npm --prefix bridge ci
 ```
 
-Do this once per machine so `npm test` has everything it needs.
+Do this once per machine so the pinned bridge toolchain is installed.
 
 ### Run the suite
 
 ```bash
-npm test
+npm --prefix bridge test
 ```
 
-The tests intentionally mock a missing serial port to prove the CLI doesn’t explode when the controller isn’t connected. When they pass, you’ll see Jest exit cleanly with green checkmarks. Failures print stack traces in the terminal and bubble all the way up to `test.sh`.
-
-Want to iterate quickly? `npm test -- --watch` reruns on file changes.
+The tests intentionally mock a missing serial port to prove the CLI doesn’t explode when the controller isn’t connected. The suite is plain Node/Python process execution, not a Jest harness. Failures print stack traces or assertion output directly in the terminal and bubble all the way up to `test.sh`.
 
 ## App seam tests (`App/tests/`)
 

@@ -1,5 +1,7 @@
 # WebSerial Walkthrough
 
+This is an explanatory guide, not the canonical protocol reference. For the current line-level contract, defer to [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Serial Protocol](../reference/SerialProtocol.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 The raw WebSerial reference tells you what messages exist. This page explains why the conversation is structured that way and what a newcomer should expect to happen from the moment the browser connects.
 
 The short version is: the browser does not blindly trust the device, and the device does not blindly trust the browser.
@@ -14,10 +16,12 @@ sequenceDiagram
   Firmware-->>Browser: {"hello":"mn42"}
   Browser->>Firmware: GET_MANIFEST
   Firmware-->>Browser: manifest JSON
+  Browser->>Firmware: GET_SCHEMA
+  Firmware-->>Browser: schema JSON
   Browser->>Firmware: GET_CONFIG
   Firmware-->>Browser: full config JSON
   Browser->>Browser: clone into liveConfig and stagedConfig
-  Browser->>Firmware: set_param or set_config
+  Browser->>Firmware: live patch lane or full apply lane
   Firmware-->>Browser: patch or checksum ACK
 ```
 
@@ -66,8 +70,8 @@ Without staged state, the browser would have to pretend every local change was a
 
 There are two common write shapes:
 
-- `set_param` for narrow, field-level edits
-- `set_config` for a broader apply action that carries more complete state and a checksum
+- a narrow patch lane for field-level edits when the active transport supports it
+- a broader staged apply lane that carries complete state and a checksum
 
 The right mental model is not "the browser streams every keystroke forever." The right model is "the browser tries to send the smallest truthful mutation and waits for device confirmation."
 

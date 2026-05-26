@@ -2,6 +2,8 @@
 
 The MN42 Bridge is the desktop-side companion to `App/`. It still preserves the original CLI and the raw WebSocket/serial debug lane, but it now also keeps a cached device session with manifest, schema, live config, staged config, dirty state, apply results, and power-safety identity.
 
+For document tie-break rules, see [Documentation Truth Map](../docs/reference/DocumentationTruthMap.md).
+
 Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC routing, host MIDI routing, a desktop session cache, or an App-over-bridge lane that does not depend on browser WebSerial support. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
 
 Current support boundary:
@@ -219,7 +221,7 @@ oscsend localhost 9000 /mn42/event/note_on s '{"channel":1,"note":60,"velocity":
 3. In your DAW, enable that MIDI device.
 4. Record/monitor incoming CC data or send CC data back to the bridge.
 
-This is the documented bridge contract, not a claim that every DAW has already been bench-validated in this repo pass.
+This is the documented bridge contract, not a claim that every DAW has already been bench-validated in this repo.
 
 MIDI mapping used by the bridge:
 

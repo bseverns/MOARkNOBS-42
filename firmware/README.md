@@ -3,6 +3,8 @@
 This `firmware/` directory is the real PlatformIO project for the current MOARkNOBS-42 hardware-test package.
 Run PlatformIO here, not from the repo root.
 
+For document tie-break rules, see [Documentation Truth Map](../docs/reference/DocumentationTruthMap.md).
+
 ## Baseline Build
 
 ```bash
@@ -19,6 +21,7 @@ The repo-root `platformio.ini` is only a guard that rejects accidental root-leve
 - `teensy40_biquad_test` for filter verification
 - `teensy40_eeprom_persistence` for staged persistence and backup-restore validation
 - `teensy40_slot_verify` for slot-storage integrity checks
+- `teensy40_led_demo` for LED pattern and load-surface checks
 - `teensy40_button_ef_demo` for simple button plus envelope USB MIDI validation
 - `teensy40_display_alive` for an OLED-only "is the panel alive?" check
 - `teensy40_display_led_hw` for OLED and LED hardware bring-up
@@ -45,6 +48,12 @@ Unified bench sketch:
 
 ```bash
 pio run -e teensy40_unified_test -t upload
+```
+
+LED surface stress sketch:
+
+```bash
+pio run -e teensy40_led_demo -t upload
 ```
 
 Full bridge/system lane:

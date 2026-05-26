@@ -28,6 +28,7 @@ const PUBLIC_CONFIG_KEYS = [
   'rtP95TargetMs',
   'rtJitterP95TargetMs',
   'alertSuppressionMs',
+  'midiToOscMappings',
 ];
 
 // Parse user-provided port values from the browser console without crashing on junk input.

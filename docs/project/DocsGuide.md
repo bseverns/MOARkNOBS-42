@@ -4,6 +4,8 @@
 
 Welcome to the MOARkNOBS-42 documentation playground. This page helps you navigate the library of notes, design scraps, and operational docs we keep around to teach ourselves and the next hacker.
 
+Before you treat any page as canonical, read the [Documentation Truth Map](../reference/DocumentationTruthMap.md). It defines which docs are current contract, which docs are evidence, and which docs are plans or historical context.
+
 ```mermaid
 flowchart TB
   A[Docs root] --> B[Getting started]
@@ -37,6 +39,7 @@ _A folder-tree graphic or sitemap screenshot would make this section easier to s
 
 If you only need the canonical operational docs, start here:
 
+- [DocumentationTruthMap.md](../reference/DocumentationTruthMap.md) for which pages are authoritative
 - [TESTING.md](../validation/TESTING.md) for what the current automated/manual coverage actually proves
 - [ValidationFlow.md](../validation/ValidationFlow.md) for the bring-up to demo-ready decision path
 - [DemoTestPunchList.md](../validation/DemoTestPunchList.md) for the operator demo pass on a real prototype
@@ -74,6 +77,7 @@ Then open the local URL MkDocs prints in your terminal.
 | [ReleaseGuide.md](../release/ReleaseGuide.md)                                               | Human release checklist                              | Refresh when release ritual or asset list changes     |
 | [REPRODUCIBILITY.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/REPRODUCIBILITY.md) | Canonical deterministic artifact recipe              | Refresh when `release.sh` or artifact shape changes   |
 | [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md)           | App/runtime contract and simulator notes             | Refresh when manifest/schema/apply semantics change   |
+| [DocumentationTruthMap.md](../reference/DocumentationTruthMap.md)                           | Tie-break rules for doc truth                        | Refresh when doc ownership or support surfaces change |
 
 ## Accessibility
 

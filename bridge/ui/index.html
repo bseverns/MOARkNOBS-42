@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MOARkNOBS-42 Bridge Console</title>
   <link rel="stylesheet" href="./bridge-ui.css" />
 </head>
+
 <body>
   <main class="shell">
     <header class="hero">
@@ -28,6 +30,7 @@
       <p class="status-line" id="summary-status" aria-live="polite">Bridge idle.</p>
       <nav class="mode-tabs" aria-label="Console modes">
         <button class="mode-tab is-active" data-mode="setup" type="button">Setup</button>
+        <button class="mode-tab" data-mode="mappings" type="button">Mappings</button>
         <button class="mode-tab" data-mode="stage" type="button">Stage</button>
         <button class="mode-tab" data-mode="advanced" type="button">Advanced</button>
       </nav>
@@ -84,7 +87,8 @@
               </div>
               <div>
                 <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
-                <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1" value="5" />
+                <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1"
+                  value="5" />
               </div>
             </div>
           </form>
@@ -94,7 +98,8 @@
           <h2 id="recipe-heading">Known-good recipe</h2>
           <label for="preset-select">Recipe</label>
           <select id="preset-select" name="presetSelect"></select>
-          <p class="hint" id="recipe-summary">Pick a documented host path and the console will prefill the expected bridge ports.</p>
+          <p class="hint" id="recipe-summary">Pick a documented host path and the console will prefill the expected
+            bridge ports.</p>
           <div class="recipe-block">
             <h3>Requirements</h3>
             <ul id="recipe-requirements" class="ports-list"></ul>
@@ -124,6 +129,63 @@
               <ul id="midi-outputs" class="ports-list" aria-live="polite"></ul>
             </div>
           </div>
+        </section>
+      </section>
+    </section>
+
+    <section class="mode-view" data-mode-view="mappings" aria-labelledby="mappings-heading" hidden>
+      <h2 id="mappings-heading" class="sr-only">Mappings mode</h2>
+      <section class="panel-grid">
+        <section class="panel" aria-labelledby="mapping-list-heading">
+          <h2 id="mapping-list-heading">Active MIDI-to-OSC Mappings</h2>
+          <table class="mapping-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>CC</th>
+                <th>Address</th>
+                <th>Mode</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="mapping-list-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+          <p class="hint">These mappings translate inbound MIDI CC events from host loopback ports into outbound OSC
+            messages.</p>
+        </section>
+
+        <section class="panel" aria-labelledby="add-mapping-heading">
+          <h2 id="add-mapping-heading">Add Mapping</h2>
+          <form id="add-mapping-form">
+            <label for="map-id">Mapping ID</label>
+            <input id="map-id" name="id" placeholder="e.g. master-filter" required />
+
+            <div class="grid-two">
+              <div>
+                <label for="map-cc">MIDI CC (0-127)</label>
+                <input id="map-cc" name="controller" type="number" min="0" max="127" value="20" required />
+              </div>
+              <div>
+                <label for="map-channel">Channel (Optional)</label>
+                <input id="map-channel" name="channel" type="number" min="1" max="16" placeholder="Any" />
+              </div>
+            </div>
+
+            <label for="map-address">OSC Address</label>
+            <input id="map-address" name="address" placeholder="/filter/cutoff" required />
+
+            <label for="map-value-mode">Value Mode</label>
+            <select id="map-value-mode" name="valueMode">
+              <option value="raw">Raw (0-127)</option>
+              <option value="normalized">Normalized (0.0-1.0)</option>
+            </select>
+
+            <div class="actions">
+              <button type="submit">Add mapping</button>
+            </div>
+          </form>
         </section>
       </section>
     </section>
@@ -159,22 +221,53 @@
               <strong id="status-rt-jitter-p95">n/a</strong>
             </article>
           </div>
-          <p class="hint">This is the compact operator view: enough to decide whether the bridge and the device are still healthy without reading a cockpit during a show.</p>
+          <p class="hint">This is the compact operator view: enough to decide whether the bridge and the device are
+            still healthy without reading a cockpit during a show.</p>
         </section>
 
         <section class="panel" aria-labelledby="device-session-heading">
           <h2 id="device-session-heading">Cached device session</h2>
           <dl class="status-grid compact-grid" id="device-session-grid">
-            <div><dt>Device</dt><dd id="device-name">-</dd></div>
-            <div><dt>Firmware</dt><dd id="device-fw">-</dd></div>
-            <div><dt>Schema</dt><dd id="device-schema">-</dd></div>
-            <div><dt>Schema source</dt><dd id="device-schema-source">-</dd></div>
-            <div><dt>Power</dt><dd id="device-power">-</dd></div>
-            <div><dt>LED cap</dt><dd id="device-led-cap">-</dd></div>
-            <div><dt>Rail state</dt><dd id="device-rail">-</dd></div>
-            <div><dt>Dirty</dt><dd id="device-dirty">false</dd></div>
-            <div><dt>Last apply</dt><dd id="device-last-apply">none</dd></div>
-            <div><dt>Last trace</dt><dd id="status-last-trace">none</dd></div>
+            <div>
+              <dt>Device</dt>
+              <dd id="device-name">-</dd>
+            </div>
+            <div>
+              <dt>Firmware</dt>
+              <dd id="device-fw">-</dd>
+            </div>
+            <div>
+              <dt>Schema</dt>
+              <dd id="device-schema">-</dd>
+            </div>
+            <div>
+              <dt>Schema source</dt>
+              <dd id="device-schema-source">-</dd>
+            </div>
+            <div>
+              <dt>Power</dt>
+              <dd id="device-power">-</dd>
+            </div>
+            <div>
+              <dt>LED cap</dt>
+              <dd id="device-led-cap">-</dd>
+            </div>
+            <div>
+              <dt>Rail state</dt>
+              <dd id="device-rail">-</dd>
+            </div>
+            <div>
+              <dt>Dirty</dt>
+              <dd id="device-dirty">false</dd>
+            </div>
+            <div>
+              <dt>Last apply</dt>
+              <dd id="device-last-apply">none</dd>
+            </div>
+            <div>
+              <dt>Last trace</dt>
+              <dd id="status-last-trace">none</dd>
+            </div>
           </dl>
         </section>
 
@@ -186,7 +279,8 @@
             <button id="stage-refresh-state" type="button">Refresh state</button>
           </div>
           <p class="hint">
-            Use the configurator if you need staged edits, recovery guidance, or deep profile work. This bridge console stays focused on desktop routing and session health.
+            Use the configurator if you need staged edits, recovery guidance, or deep profile work. This bridge console
+            stays focused on desktop routing and session health.
           </p>
           <h3>Active alerts</h3>
           <ul id="alert-history" class="alerts-list" aria-live="polite"></ul>
@@ -200,25 +294,82 @@
         <section class="panel" aria-labelledby="runtime-heading">
           <h2 id="runtime-heading">Runtime status</h2>
           <dl class="status-grid" id="runtime-status">
-            <div><dt>OSC out</dt><dd id="status-osc">127.0.0.1:9000</dd></div>
-            <div><dt>OSC in</dt><dd id="status-osc-listen">127.0.0.1:9000</dd></div>
-            <div><dt>MIDI</dt><dd id="status-midi">MN42 Bridge</dd></div>
-            <div><dt>Last route</dt><dd id="status-last-route">none yet</dd></div>
-            <div><dt>Source timestamp</dt><dd id="status-source-ts">none yet</dd></div>
-            <div><dt>Clock skew</dt><dd id="status-source-skew">n/a</dd></div>
-            <div><dt>RT samples</dt><dd id="status-rt-samples">0</dd></div>
-            <div><dt>RT pending</dt><dd id="status-rt-pending">0</dd></div>
-            <div><dt>RT last</dt><dd id="status-rt-last">n/a</dd></div>
-            <div><dt>RT p50</dt><dd id="status-rt-p50">n/a</dd></div>
-            <div><dt>RT health</dt><dd id="status-rt-health">no_data</dd></div>
-            <div><dt>Active alerts</dt><dd id="status-alert-count">0</dd></div>
-            <div><dt>Top alert</dt><dd id="status-alert-top">none</dd></div>
-            <div><dt>Error</dt><dd id="status-error">none</dd></div>
-            <div><dt>Serial parse drops</dt><dd id="status-serial-parse-drops">0</dd></div>
-            <div><dt>Serial oversize drops</dt><dd id="status-serial-oversize-drops">0</dd></div>
-            <div><dt>OSC command drops</dt><dd id="status-osc-drops">0</dd></div>
-            <div><dt>MIDI command drops</dt><dd id="status-midi-drops">0</dd></div>
-            <div><dt>Feedback suppressed</dt><dd id="status-feedback-suppressed">0</dd></div>
+            <div>
+              <dt>OSC out</dt>
+              <dd id="status-osc">127.0.0.1:9000</dd>
+            </div>
+            <div>
+              <dt>OSC in</dt>
+              <dd id="status-osc-listen">127.0.0.1:9000</dd>
+            </div>
+            <div>
+              <dt>MIDI</dt>
+              <dd id="status-midi">MN42 Bridge</dd>
+            </div>
+            <div>
+              <dt>Last route</dt>
+              <dd id="status-last-route">none yet</dd>
+            </div>
+            <div>
+              <dt>Source timestamp</dt>
+              <dd id="status-source-ts">none yet</dd>
+            </div>
+            <div>
+              <dt>Clock skew</dt>
+              <dd id="status-source-skew">n/a</dd>
+            </div>
+            <div>
+              <dt>RT samples</dt>
+              <dd id="status-rt-samples">0</dd>
+            </div>
+            <div>
+              <dt>RT pending</dt>
+              <dd id="status-rt-pending">0</dd>
+            </div>
+            <div>
+              <dt>RT last</dt>
+              <dd id="status-rt-last">n/a</dd>
+            </div>
+            <div>
+              <dt>RT p50</dt>
+              <dd id="status-rt-p50">n/a</dd>
+            </div>
+            <div>
+              <dt>RT health</dt>
+              <dd id="status-rt-health">no_data</dd>
+            </div>
+            <div>
+              <dt>Active alerts</dt>
+              <dd id="status-alert-count">0</dd>
+            </div>
+            <div>
+              <dt>Top alert</dt>
+              <dd id="status-alert-top">none</dd>
+            </div>
+            <div>
+              <dt>Error</dt>
+              <dd id="status-error">none</dd>
+            </div>
+            <div>
+              <dt>Serial parse drops</dt>
+              <dd id="status-serial-parse-drops">0</dd>
+            </div>
+            <div>
+              <dt>Serial oversize drops</dt>
+              <dd id="status-serial-oversize-drops">0</dd>
+            </div>
+            <div>
+              <dt>OSC command drops</dt>
+              <dd id="status-osc-drops">0</dd>
+            </div>
+            <div>
+              <dt>MIDI command drops</dt>
+              <dd id="status-midi-drops">0</dd>
+            </div>
+            <div>
+              <dt>Feedback suppressed</dt>
+              <dd id="status-feedback-suppressed">0</dd>
+            </div>
           </dl>
         </section>
 
@@ -251,4 +402,5 @@
   </main>
   <script type="module" src="./bridge-ui.js"></script>
 </body>
+
 </html>

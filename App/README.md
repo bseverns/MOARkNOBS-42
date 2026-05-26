@@ -2,6 +2,8 @@
 
 Use the browser configurator when you want direct USB setup, monitoring, and profile management over WebSerial. If you need OSC or a virtual MIDI port on a desktop host instead, start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) and use the bridge.
 
+For document tie-break rules, see [Documentation Truth Map](../docs/reference/DocumentationTruthMap.md).
+
 Current support boundary:
 
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
@@ -30,7 +32,7 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
    python3 -m http.server
    ```
    - bridge path: run `npm --prefix bridge start`, open <http://127.0.0.1:8787/>, then click **Open configurator**
-3. Hit <http://localhost:8000/> for the direct path, or the bridge-served `/app/` URL for the bridge path. The legacy `/benzknobz.html` URL sticks around as a redirect for old bookmarks.
+3. Hit <http://localhost:8000/> for the direct path, or the bridge-served `/app/` URL for the bridge path. For local testing and older bookmarks, `benzknobz.html` remains a supported entry page.
 4. If you are using the direct USB path, click **Check compatibility** first when you are unsure about browser/OS support. The configurator now calls out unsupported browsers, insecure origins, and cancelled port pickers before you burn time on vague connection failures.
 5. Click **Connect**, pick the MOARkNOBS port if you are on WebSerial, and let the header pill confirm the firmware, schema version, and memory stats.
 6. Stage edits in the right-hand column. The **Apply** button only lights up after the JSON passes the active schema validator (device schema when compatible, bundled `config_schema.json` fallback otherwise).
@@ -105,8 +107,9 @@ npm --prefix App test
 
 ## Testing & CI
 
-- `npx playwright test` runs the UI suite (Playwright spins up `App/tests/dev-server.mjs` and targets `/benzknobz.html`).
-- The CI pipeline now verifies `npx playwright test` alongside firmware/unit suites; keep this command green before merging.
+- `npm --prefix App test` runs the UI suite.
+- Playwright spins up `App/tests/dev-server.mjs` and currently targets `/benzknobz.html` as the stable harness entry.
+- The CI pipeline verifies `npm --prefix App test` alongside the firmware and bridge checks; keep this command green before merging.
 
 That spins up a tiny static server, launches Playwright’s headless Chromium, and imports the real `runtime.js` + `views/benzknobz.js`. The script walks through the README workflows—arming the simulator, driving the staged diff validator, forcing an ACK mismatch to trigger rollback, rewriting the manifest on the fly to rehearse the migration dialog, and finally flipping the simulator back off once a clean apply lands. When the test passes you know WebSerial ergonomics (and the migration guardrails) survived without babysitting a browser window.
 
