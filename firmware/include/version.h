@@ -6,7 +6,7 @@
 
 // Default version identifiers; build system stamps real values via build flags.
 #ifndef FW_VERSION
-#define FW_VERSION 0.8.7
+#define FW_VERSION 0.9.5
 #endif
 
 #ifndef GIT_SHA

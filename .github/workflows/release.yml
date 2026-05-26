@@ -228,11 +228,14 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          prefix="bridge/dist/mn42-bridge-"
-          files=( "${prefix}"* )
+          prefix="bridge/dist/mn42-bridge-${{ needs.resolve-release-meta.outputs.artifact_tag }}-"
+          files=(
+            "${prefix}"cli-"${{ matrix.target }}"*
+            "${prefix}"console-"${{ matrix.target }}"*
+          )
           shopt -u nullglob
           if [[ ${#files[@]} -eq 0 ]]; then
-            echo "No packaged bridge artifact found for ${prefix}" >&2
+            echo "No packaged bridge artifact found for ${prefix}*${{ matrix.target }}" >&2
             exit 1
           fi
           stage_dir="bridge/dist/release-${{ matrix.target }}"
@@ -243,7 +246,7 @@ jobs:
             fi
           done
           shopt -s nullglob
-          staged_files=( "${stage_dir}/mn42-bridge-${{ needs.resolve-release-meta.outputs.artifact_tag }}-${{ matrix.target }}"* )
+          staged_files=( "${stage_dir}/mn42-bridge-${{ needs.resolve-release-meta.outputs.artifact_tag }}-"*"-${{ matrix.target }}"* )
           shopt -u nullglob
           if [[ ${#staged_files[@]} -eq 0 ]]; then
             echo "No staged bridge artifacts found in ${stage_dir}" >&2
