@@ -434,9 +434,9 @@ When a GitHub release already exists for the tag, the workflow uploads those uns
 
 Beta/public bridge binaries should be packaged with `REQUIRE_BRIDGE_SIGNING=1` plus signing/notarization credentials or wrapper hooks. The bridge is still not shipped as a signed one-click installer.
 
-If demand grows, this is the practical path:
+As time passes, this is the practical path:
 
-1. Add signing/notarization for each platform package.
+1. Add signing/notarization for each platform package. This is something to be done quickly.
 2. Ship signed installers that launch the bridge with a simple UI wrapper.
 3. Keep advanced flags available for power users.
 

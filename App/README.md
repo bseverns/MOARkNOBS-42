@@ -41,10 +41,6 @@ The repo deliberately feels like half studio notebook, half field guide. Snag th
 
 For the operator-facing explanation of `Immediate local response` versus the browser-only pickup guard, read [docs/OperatorTutorial.md](../docs/guides/OperatorTutorial.md).
 
-The written field guide below is the current operator-facing reference; add screenshots when you want a release-ready visual walkthrough, not as a substitute for the contract notes.
-
-The next implementation sequence is tracked in [docs/app/AppRuntimeActionPlan.md](../docs/app/AppRuntimeActionPlan.md).
-
 ## UI Field Guide
 
 - **LED Color Lab** – Slide the brightness control and watch it punch straight into the staged JSON; the value is clamped to the same 0–255 lane the firmware enforces, so you’re rehearsing reality. Ride the fader slowly and the runtime’s [24 ms throttling](#runtime-contract) keeps chatter to a polite murmur; slam it and the staged hex display still tracks every move so you can screen-cap or copy/paste the exact color code. Hex edits round-trip: type a six-character value, press return, and the slider jumps to the matching luminance. If Apply can’t land (checksum blowout, unplugged cable), the [checksum rollback flow](#quickstart) rewinds both the slider and hex badge so the LED preview never lies.
