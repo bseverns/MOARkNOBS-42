@@ -1,6 +1,6 @@
 # WebSerial Groove
 
-This page explains the direct WebSerial lane. For current contract and support-boundary tie-breaks, defer to [App/README.md](../../App/README.md), [MN42 Line Protocol](../reference/MN42LineProtocol.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current direct-USB contract: [App/README.md](../../App/README.md), [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 The direct USB lane is line-oriented and intentionally pragmatic: newline-delimited firmware messages, conservative host validation, and staged/apply discipline in the browser.
 

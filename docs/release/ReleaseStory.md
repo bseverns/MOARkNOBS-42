@@ -1,5 +1,9 @@
 # How A Release Becomes Real
 
+This page is release narrative, not the canonical release procedure or support-boundary source.
+
+For current release steps and artifact truth, defer to [Release Guide](ReleaseGuide.md), [Reproducibility](Reproducibility.md), [Host Compatibility](../reference/HostCompatibility.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 A release in this repo is not just a firmware hex with a tag on it. It is a chain of evidence that the artifact, the source tree, and the published notes still point at the same thing.
 
 This page is the story-first version. The exact operator steps still live in [Release Guide](ReleaseGuide.md) and the artifact recipe still lives in [Reproducibility](Reproducibility.md) plus the root-level playbook.

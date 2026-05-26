@@ -2,6 +2,8 @@
 
 Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then treat this file as the operator checklist and [Reproducibility](Reproducibility.md) as the canonical artifact recipe.
 
+Current release/support boundary: [Host Compatibility](../reference/HostCompatibility.md), [bridge/README.md](../../bridge/README.md), [Bridge Signing Plan](BridgeSigningPlan.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 ```mermaid
 flowchart LR
   A[Build + tests] --> B[Update notes]
@@ -31,16 +33,16 @@ flowchart LR
    - Release packaging is blocked unless bridge tests, app tests, and `teensy40_main` firmware build pass in the release workflow.
    - Assets are uploaded to GitHub Releases only when a release for that tag already exists. If not, rerun the workflow (or run manual dispatch) after creating the release.
    - Read `release_verification.json` before publishing notes: default hosted runners use optional HIL mode unless you provide a hardware port.
-   - Bridge uploads include per-target checksums and bridge third-party license payloads.
+   - Bridge uploads include per-target checksums, bridge third-party license payloads, and artifact manifest metadata.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 
 ## Bridge packaging track
 
-Unsigned bridge packaging now runs automatically in the release workflow. The remaining manual track is signing and installer-grade polish:
+Unsigned bridge packaging now runs automatically in the release workflow. The remaining manual track is signing and installer-grade polish for beta/public outward artifacts:
 
 1. Follow [`BridgePackaging.md`](BridgePackaging.md) phases for the current release target.
 2. Review the generated bridge artifacts and checksums from CI.
 3. For beta/public artifacts, package with `REQUIRE_BRIDGE_SIGNING=1` and provide either platform credentials (`APPLE_CODESIGN_IDENTITY`, `APPLE_NOTARY_PROFILE`) or signing hooks (`BRIDGE_SIGNING_COMMAND`, `BRIDGE_NOTARIZE_COMMAND`).
-4. Attach/verify signed bridge artifacts alongside firmware files on the GitHub release.
+4. Attach/verify signed bridge artifacts alongside firmware files on the GitHub release when you are producing a signed outward-facing release.
 5. Verify docs match the shipped UX (`docs/OSCBridge.md`, `docs/BridgeForPerformers.md`, `bridge/README.md`).
 6. Complete the artifact checklist template: [`release/bridge-artifacts-checklist.md`](bridge-artifacts-checklist.md).

@@ -1,5 +1,9 @@
 # Repo Health Audit - 2026-03
 
+This page is an archived audit snapshot from March 2026. It is historical context, not a current contract or support-boundary page.
+
+For current repo truth, defer to [Documentation Truth Map](../reference/DocumentationTruthMap.md), [Host Compatibility](../reference/HostCompatibility.md), [TESTING](TESTING.md), and [License and Support](../project/LicenseAndSupport.md).
+
 Date refreshed: 2026-03-28
 
 This file is now a pre-production orientation lock for the repo. It records what is already coherent, what is still intentionally unfinished, and what should not be overstated before a broader release.

@@ -1,6 +1,6 @@
 # Configurator Tour
 
-This is an orientation page. For the current runtime contract and support boundary, defer to [App/README.md](../../App/README.md), [Host Compatibility](../reference/HostCompatibility.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current App contract/support boundary: [App/README.md](../../App/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 The browser app is not just a remote control. It is the safest place to understand the firmware contract because it has to negotiate identity, schema compatibility, staged edits, and confirmation from the device before pretending anything changed.
 

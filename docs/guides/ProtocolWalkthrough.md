@@ -1,6 +1,6 @@
 # WebSerial Walkthrough
 
-This is an explanatory guide, not the canonical protocol reference. For the current line-level contract, defer to [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Serial Protocol](../reference/SerialProtocol.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current line-level contract: [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Serial Protocol](../reference/SerialProtocol.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 The raw WebSerial reference tells you what messages exist. This page explains why the conversation is structured that way and what a newcomer should expect to happen from the moment the browser connects.
 

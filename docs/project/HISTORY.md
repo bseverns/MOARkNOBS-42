@@ -252,7 +252,7 @@ This file summarizes the development of the MOARkNOBS-42 project based on commit
 - Storage verification also got more honest. Firmware tests grew targeted persistence coverage and the full-system runner learned a destructive `--exercise-storage` path so bench time can prove profile/macro/scene behavior instead of taking the docs on faith. [`b6844fc`]
 - _This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more “does the whole instrument tell the same story when you actually use it?”_
 
-### April — Beta Release Gate Tightening
+### April/May — Beta Release Gate Tightening
 
 - Source exports now come from tracked files only, the release manifest ignores generated dirt when it checks git status, and the release build refuses to package from a dirty tracked tree so provenance stays honest. [current change]
 - Doctor and the App bridge path now assume Node 24 instead of the older host baseline, which matches the bridge release lane and stops the docs from pretending Node 20 or Node 22 are still the target. [current change]
@@ -266,5 +266,6 @@ Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of un
 
 - `firmware/` – Teensy‑based C++ code with modular managers and tests.
 - `hardware/` – Design files for the `MN42` board.
-- `App/` - Playwright-facilitated configuration app
+- `App/` - Playwright-facilitated configuration app - accessible from the web via bseverns.github.io/MN42
+- `Bridge/` - MIDI<->OSC translation matrrix application (currently unsigned)
 - Comprehensive README files describing features, wiring, building instructions, and a bit of mania.

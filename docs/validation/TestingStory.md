@@ -1,5 +1,9 @@
 # How To Trust The Stack
 
+This page is testing narrative, not the canonical coverage map or validation gate.
+
+For current test commands, proof boundaries, and validation steps, defer to [TESTING](TESTING.md), [Validation Flow](ValidationFlow.md), [Test Matrix](../hardware-test/TestMatrix.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+
 Testing in MOARkNOBS-42 works best when you stop asking "did the tests pass?" and start asking "what layer of reality did this change just threaten?"
 
 This stack has more than one truth surface:

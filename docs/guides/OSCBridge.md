@@ -2,7 +2,7 @@
 
 This page is the friendly quickstart for using MOARkNOBS-42 with OSC apps and DAWs.
 
-For the full CLI reference and message contract, see [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md).
+Current bridge contract/support boundary: [bridge/README.md](../../bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ## What you can do with the bridge
 
@@ -55,9 +55,9 @@ Bridge MIDI mapping:
 - Sending OSC to the wrong port (`--osc-listen`)
 - Sending invalid JSON or out-of-range slot/value
 
-## If you want one-click install later
+## If you want packaged artifacts later
 
-Packaging is not shipped yet. The current bridge is CLI-first.
-If needed, the next step is a per-platform bundle using `pkg` or `nexe` plus signed installers.
+CI now generates unsigned per-target bridge artifacts, but this repo still does not present them as a signed/public installer path.
+If you need installer/signing details, see [Bridge Packaging Plan](../release/BridgePackaging.md) and [Bridge Signing Plan](../release/BridgeSigningPlan.md).
 
 Performer-friendly one-pager: [`docs/BridgeForPerformers.md`](BridgeForPerformers.md).
