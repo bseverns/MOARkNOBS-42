@@ -7,6 +7,11 @@ Welcome to the belly of the beast. This folder splits into two gangs:
 
 ## Source ↔ Docs Fast Lane
 
+If you're trying to understand the firmware as a machine instead of chasing one
+module in isolation, start with
+[firmware_main.cpp](firmware_main.cpp) and the ordered walkthrough in
+[../../docs/firmware/FirmwareMainReadingPath.md](../../docs/firmware/FirmwareMainReadingPath.md).
+
 If you're trying to grok what a file is supposed to do, jump straight to its manifesto:
 
 - [Arpeggiator.cpp](Arpeggiator.cpp) → [../include/Arpeggiator/README.md](../include/Arpeggiator/README.md)
@@ -17,6 +22,7 @@ If you're trying to grok what a file is supposed to do, jump straight to its man
 - [LEDManager.cpp](LEDManager.cpp) → [../include/LEDManager/README.md](../include/LEDManager/README.md)
 - [MIDIHandler.cpp](MIDIHandler.cpp) → [../include/MIDIHandler/README.md](../include/MIDIHandler/README.md)
 - [PotentiometerManager.cpp](PotentiometerManager.cpp) → [../include/PotentiometerManager/README.md](../include/PotentiometerManager/README.md)
+- [protocol/Protocol.cpp](protocol/Protocol.cpp) → [protocol/README.md](protocol/README.md)
 
 ## Run the Tests
 

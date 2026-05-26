@@ -6,6 +6,13 @@
 #include "Log.h"
 #include "protocol/SceneStorage.h"
 
+// SceneCommands.cpp is the structured JSON front door for scene operations.
+//
+// Reading order:
+// 1. tiny JSON response helper
+// 2. JSON command decoder
+// 3. command fan-out into scene listing, save, and recall operations
+
 template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     String payload;
     serializeJson(doc, payload);

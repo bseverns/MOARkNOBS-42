@@ -4,9 +4,22 @@
 from __future__ import annotations
 
 import argparse
+import os
 import pathlib
 import re
+import subprocess
 import sys
+
+
+WINDOWS_RESERVED_NAMES = {
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+}
+WINDOWS_INVALID_CHARS = set('<>:"\\|?*')
 
 
 def has_any(root: pathlib.Path, patterns: tuple[str, ...]) -> bool:
@@ -45,6 +58,38 @@ def parse_power_profile(board_power_h: str) -> dict[str, object]:
     }
 
 
+def tracked_paths(root: pathlib.Path) -> list[str]:
+    result = subprocess.run(
+        ["git", "ls-files", "-z"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    return [
+        path.decode("utf-8", "surrogateescape")
+        for path in result.stdout.split(b"\0")
+        if path
+    ]
+
+
+def windows_path_issues(path: str) -> list[str]:
+    issues: list[str] = []
+    normalized = path.replace("/", os.sep)
+    for segment in pathlib.PurePosixPath(path).parts:
+        if segment in {".", ".."}:
+            continue
+        if segment.endswith(" ") or segment.endswith("."):
+            issues.append(f"segment '{segment}' ends with a Windows-invalid trailing space/dot")
+        if any(char in WINDOWS_INVALID_CHARS for char in segment):
+            issues.append(f"segment '{segment}' contains a Windows-invalid character")
+        stem = segment.split(".", 1)[0].upper()
+        if stem in WINDOWS_RESERVED_NAMES:
+            issues.append(f"segment '{segment}' uses reserved Windows device name '{stem}'")
+    if "\\" in path:
+        issues.append(f"path '{normalized}' contains backslashes in tracked name")
+    return issues
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="Repository root")
@@ -65,6 +110,15 @@ def main() -> None:
     root = pathlib.Path(args.root).resolve()
     blockers: list[str] = []
     warnings: list[str] = []
+
+    bad_windows_paths: list[str] = []
+    for tracked in tracked_paths(root):
+        issues = windows_path_issues(tracked)
+        for issue in issues:
+            bad_windows_paths.append(f"{tracked}: {issue}")
+    if bad_windows_paths:
+        for issue in bad_windows_paths:
+            blockers.append(f"windows checkout hazard: {issue}")
 
     board_power_h = (root / "firmware/include/BoardPowerProfile.h").read_text(encoding="utf-8")
     power = parse_power_profile(board_power_h)

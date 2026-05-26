@@ -10,6 +10,16 @@
 #include "protocol/ProfileCommands.h"
 #include "protocol/SceneStorage.h"
 
+// ProfileMacroHandlers.cpp is the host-facing wrapper around profile slots,
+// macro snapshots, and a few arp utility commands.
+//
+// Reading order:
+// 1. JSON response helpers
+// 2. profile export (`GET_PROFILE`)
+// 3. arp utility commands
+// 4. profile save/load/reset command wrappers
+// 5. macro snapshot save/recall wrappers
+
 namespace {
 template <size_t Capacity> void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     if (doc.overflowed()) {
@@ -35,45 +45,43 @@ void writeProfileEf(JsonObject obj, const ProfileEfSettings &settings) {
     obj["activity_threshold"] = settings.activityThreshold;
     obj["gain_target"] = settings.gainTarget;
 }
-} // namespace
 
-void handleGetProfileCommand(const String &command) {
-    // If a profile slot has never been persisted, fall back to a live runtime snapshot so hosts
-    // still receive a complete payload.
+int readOptionalCommandValue(const String &command, int fallback) {
     int comma = command.indexOf(',');
-    uint8_t id = g_activeProfile;
-    if (comma >= 0) {
-        id = static_cast<uint8_t>(command.substring(comma + 1).toInt());
-    }
-    if (id >= NUM_PROFILES) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_profile\"}");
-        return;
-    }
-    ProfileData profile{};
-    bool stored = configManager.loadProfileSettings(id, profile);
-    if (!stored) {
-        profile = captureProfileSnapshot();
-    }
+    return comma >= 0 ? command.substring(comma + 1).toInt() : fallback;
+}
 
-    StaticJsonDocument<12288> doc;
-    doc["profile"] = id;
-    doc["stored"] = stored;
+bool readProfileSlotArgument(const String &command, uint8_t fallback, int &id) {
+    id = readOptionalCommandValue(command, static_cast<int>(fallback));
+    return id >= 0 && id < NUM_PROFILES;
+}
 
-    JsonObject arp = doc.createNestedObject("arp");
+bool readRequiredPotSlotArgument(const String &command, int &slot) {
+    int comma = command.indexOf(',');
+    if (comma < 0) {
+        return false;
+    }
+    slot = command.substring(comma + 1).toInt();
+    return slot >= 0 && slot < NUM_SLOTS;
+}
+
+void writeProfileArp(JsonObject arp, const ProfileData &profile) {
     arp["length_ticks"] = profile.arp.lengthTicks;
     arp["shape"] = profile.arp.shape;
     arp["swing_percent"] = profile.arp.swingPercent;
     arp["gate_percent"] = profile.arp.gatePercent;
     arp["octave_range"] = profile.arp.octaveRange;
+}
 
-    JsonObject led = doc.createNestedObject("led");
+void writeProfileLed(JsonObject led, const ProfileData &profile) {
     led["brightness"] = profile.led.brightness;
     JsonObject rgb = led.createNestedObject("rgb");
     rgb["r"] = profile.led.r;
     rgb["g"] = profile.led.g;
     rgb["b"] = profile.led.b;
+}
 
-    JsonArray lfos = doc.createNestedArray("lfos");
+void writeProfileLfos(JsonArray lfos, const ProfileData &profile) {
     for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
         JsonObject lfo = lfos.createNestedObject();
         lfo["index"] = i;
@@ -84,8 +92,9 @@ void handleGetProfileCommand(const String &command) {
         lfo["sync"] = profile.lfos[i].syncEnabled != 0;
         lfo["sync_ratio"] = profile.lfos[i].syncRatio;
     }
+}
 
-    JsonArray routes = doc.createNestedArray("routes");
+void writeProfileRoutes(JsonArray routes, const ProfileData &profile) {
     for (uint8_t i = 0; i < profile.routeCount && i < PROFILE_MAX_ROUTES; ++i) {
         JsonObject route = routes.createNestedObject();
         route["index"] = i;
@@ -97,8 +106,9 @@ void handleGetProfileCommand(const String &command) {
         route["cc_msb"] = profile.routes[i].ccMsb;
         route["cc_lsb"] = profile.routes[i].ccLsb;
     }
+}
 
-    JsonArray slots = doc.createNestedArray("slots");
+void writeProfileSlots(JsonArray slots, const ProfileData &profile) {
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         JsonObject slot = slots.createNestedObject();
         slot["index"] = i;
@@ -106,6 +116,42 @@ void handleGetProfileCommand(const String &command) {
         JsonObject ef = slot.createNestedObject("ef");
         writeProfileEf(ef, profile.slots[i].ef);
     }
+}
+} // namespace
+
+// 2. Profile export lane.
+void handleGetProfileCommand(const String &command) {
+    // If a profile slot has never been persisted, fall back to a live runtime snapshot so hosts
+    // still receive a complete payload.
+    int id = 0;
+    if (!readProfileSlotArgument(command, g_activeProfile, id)) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_profile\"}");
+        return;
+    }
+    ProfileData profile{};
+    bool stored = configManager.loadProfileSettings(static_cast<uint8_t>(id), profile);
+    if (!stored) {
+        profile = captureProfileSnapshot();
+    }
+
+    StaticJsonDocument<12288> doc;
+    doc["profile"] = id;
+    doc["stored"] = stored;
+
+    JsonObject arp = doc.createNestedObject("arp");
+    writeProfileArp(arp, profile);
+
+    JsonObject led = doc.createNestedObject("led");
+    writeProfileLed(led, profile);
+
+    JsonArray lfos = doc.createNestedArray("lfos");
+    writeProfileLfos(lfos, profile);
+
+    JsonArray routes = doc.createNestedArray("routes");
+    writeProfileRoutes(routes, profile);
+
+    JsonArray slots = doc.createNestedArray("slots");
+    writeProfileSlots(slots, profile);
 
     if (doc.overflowed()) {
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\"}");
@@ -116,15 +162,11 @@ void handleGetProfileCommand(const String &command) {
     LOG_PRINTLN(payload);
 }
 
+// 3. Arp utility commands.
 void handleArpStartCommand(const String &command) {
-    int comma = command.indexOf(',');
-    if (comma < 0) {
+    int slot = -1;
+    if (!readRequiredPotSlotArgument(command, slot)) {
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"missing_slot\"}");
-        return;
-    }
-    int slot = command.substring(comma + 1).toInt();
-    if (slot < 0 || slot >= NUM_SLOTS) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_slot\"}");
         return;
     }
     arpeggiator.start(static_cast<uint8_t>(slot));
@@ -138,13 +180,12 @@ void handleArpStartCommand(const String &command) {
 void handleArpStopCommand(const String &command) {
     int comma = command.indexOf(',');
     if (comma >= 0) {
-        int slot = command.substring(comma + 1).toInt();
-        if (slot >= 0 && slot < NUM_SLOTS) {
-            arpeggiator.stop(static_cast<uint8_t>(slot));
-        } else {
+        int slot = -1;
+        if (!readRequiredPotSlotArgument(command, slot)) {
             LOG_PRINTLN("{\"type\":\"error\",\"code\":\"invalid_slot\"}");
             return;
         }
+        arpeggiator.stop(static_cast<uint8_t>(slot));
     } else {
         arpeggiator.stop();
     }
@@ -154,12 +195,13 @@ void handleArpStopCommand(const String &command) {
     sendJsonResponse(response);
 }
 
+// 4. Profile lifecycle command wrappers.
 void handleLoadProfileCommand(const String &command) {
-    int comma = command.indexOf(',');
-    int id = comma >= 0 ? command.substring(comma + 1).toInt() : static_cast<int>(g_activeProfile);
+    int id = 0;
+    bool valid = readProfileSlotArgument(command, g_activeProfile, id);
     StaticJsonDocument<160> response;
     response["profile"] = id;
-    if (id < 0 || id >= NUM_PROFILES || !loadProfileSlot(static_cast<uint8_t>(id))) {
+    if (!valid || !loadProfileSlot(static_cast<uint8_t>(id))) {
         response["profile_loaded"] = false;
         response["error"] = "Profile load failed";
         sendJsonResponse(response);
@@ -169,6 +211,37 @@ void handleLoadProfileCommand(const String &command) {
     sendJsonResponse(response);
 }
 
+void handleResetProfileCommand(const String &command) {
+    int id = 0;
+    bool valid = readProfileSlotArgument(command, g_activeProfile, id);
+    StaticJsonDocument<160> response;
+    response["profile"] = id;
+    if (!valid || !resetProfileSlot(static_cast<uint8_t>(id))) {
+        response["profile_reset"] = false;
+        response["error"] = "Profile reset failed";
+        sendJsonResponse(response);
+        return;
+    }
+    response["profile_reset"] = true;
+    sendJsonResponse(response);
+}
+
+void handleSaveProfileCommand(const String &command) {
+    int id = 0;
+    bool valid = readProfileSlotArgument(command, g_activeProfile, id);
+    StaticJsonDocument<160> response;
+    response["profile"] = id;
+    if (!valid || !saveCurrentProfileSlot(static_cast<uint8_t>(id))) {
+        response["profile_saved"] = false;
+        response["error"] = "Profile save failed";
+        sendJsonResponse(response);
+        return;
+    }
+    response["profile_saved"] = true;
+    sendJsonResponse(response);
+}
+
+// 5. Macro snapshot wrappers.
 void handleRecallMacroSlotCommand() {
     SceneStorage::ConfigState snapshot{};
     bool available = SceneStorage::macroSnapshotAvailable();
@@ -195,35 +268,5 @@ void handleSaveMacroSlotCommand() {
     if (!saved) {
         response["error"] = "Macro snapshot save failed";
     }
-    sendJsonResponse(response);
-}
-
-void handleResetProfileCommand(const String &command) {
-    int comma = command.indexOf(',');
-    int id = comma >= 0 ? command.substring(comma + 1).toInt() : static_cast<int>(g_activeProfile);
-    StaticJsonDocument<160> response;
-    response["profile"] = id;
-    if (id < 0 || id >= NUM_PROFILES || !resetProfileSlot(static_cast<uint8_t>(id))) {
-        response["profile_reset"] = false;
-        response["error"] = "Profile reset failed";
-        sendJsonResponse(response);
-        return;
-    }
-    response["profile_reset"] = true;
-    sendJsonResponse(response);
-}
-
-void handleSaveProfileCommand(const String &command) {
-    int comma = command.indexOf(',');
-    int id = comma >= 0 ? command.substring(comma + 1).toInt() : static_cast<int>(g_activeProfile);
-    StaticJsonDocument<160> response;
-    response["profile"] = id;
-    if (id < 0 || id >= NUM_PROFILES || !saveCurrentProfileSlot(static_cast<uint8_t>(id))) {
-        response["profile_saved"] = false;
-        response["error"] = "Profile save failed";
-        sendJsonResponse(response);
-        return;
-    }
-    response["profile_saved"] = true;
     sendJsonResponse(response);
 }

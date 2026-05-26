@@ -24,12 +24,16 @@
 // Keeping the definitions here keeps the globals close to their comments while `firmware_main.cpp`
 // becomes a clean bootstrapper. The header `FirmwareState.h` exposes references so other modules
 // can reach the same instances without replicating the constructors.
+//
+// Keep this file aligned with FirmwareState.h. A good reading rhythm is:
+// declaration in FirmwareState.h -> definition here -> first runtime use in
+// Runtime.cpp, UI.cpp, or the protocol handlers.
 
-// Shared routing tables that every slot reader/writer expects to reach.
+// 1. Slot-routing tables and shared caches.
 std::vector<uint8_t> potChannels;
 std::map<int, MIDISlot::EfSettings> potToEnvelopeMap;
 
-// Hardware managers that stay alive for the lifetime of the firmware.
+// 2. Long-lived managers and services instantiated once for the life of the board.
 MIDIHandler midiHandler;
 LEDManager ledManager(hwConfig);
 LedAnimator ledAnimator(ledManager);
@@ -41,12 +45,12 @@ Arpeggiator arpeggiator;
 LFOManager lfoManager;
 std::array<EfVoice, NUM_SLOTS> efVoices;
 
-// GPIO wiring for the front-panel controls.
+// 3. Front-panel input wiring and the managers that read it.
 const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {12, 13, 14, 15, 24, 25};
 PotentiometerManager potentiometerManager(primaryMuxPins, secondaryMuxPins, potMuxAnalogPin);
 ButtonManager buttonManager(hwConfig, controlPins, &potentiometerManager);
 
-// Envelope follower instances and their cached telemetry.
+// 4. Signal-processing runtime state: follower instances plus cached telemetry.
 std::vector<EnvelopeFollower> envelopeFollowers = {
     EnvelopeFollower(A0, &potentiometerManager, 0), EnvelopeFollower(A1, &potentiometerManager, 1),
     EnvelopeFollower(A2, &potentiometerManager, 2), EnvelopeFollower(A3, &potentiometerManager, 3),
@@ -55,7 +59,7 @@ std::vector<EnvelopeFollower> envelopeFollowers = {
 std::array<int, NUM_ENVELOPES> envelopeFollowerLevels{};
 std::array<bool, NUM_ENVELOPES> envelopeFollowerReady{};
 
-// Runtime UI knobs shared across the OLED, button context, and WebSerial.
+// 5. On-device UI and runtime control state shared across OLED, buttons, and host telemetry.
 uint8_t activePot = 0xFF;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
@@ -66,21 +70,22 @@ int SHORT_DISPLAY_TIME = 10000;
 bool diagnosticMode = false;
 uint8_t diagnosticPage = 0;
 
-// Timing reports used by `monitorSystemLoad()` and diagnostics.
+// 6. Timing scratch values used by runtime diagnostics and load monitoring.
 unsigned long lastMIDIProcess = 0;
 unsigned long lastSerialProcess = 0;
 unsigned long lastLEDUpdate = 0;
 unsigned long lastEnvelopeProcess = 0;
 unsigned long lastDisplayUpdate = 0;
 
-// Shared context object passed to `ButtonManager` so button handlers can mutate UI state.
+// 7. Shared context object passed into ButtonManager so button handlers mutate the same state the
+// rest of the runtime sees.
 ButtonManagerContext buttonContext = {potChannels,        activePot,      activeChannel,
                                       envelopeFollowMode, envelopeMode,   configManager,
                                       ledManager,         displayManager, envelopeFollowers,
                                       potToEnvelopeMap,   diagnosticMode, diagnosticPage};
 
-// Copy the diagnostics struct atomically enough for UI/reporting code to inspect
-// it without racing the ISR and service loops that update the live counters.
+// 8. Diagnostics snapshot helper used by UI/reporting code so it can inspect counters without
+// racing the ISR and service loops that update them.
 SystemDiagnostics captureDiagnosticsSnapshot() {
     SystemDiagnostics snapshot;
     noInterrupts();

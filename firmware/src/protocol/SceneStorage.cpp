@@ -17,6 +17,16 @@
 #include "Modes.h"
 #include "Utility.h"
 
+// SceneStorage.cpp is the whole-machine snapshot layer shared by scenes and
+// the one-slot macro buffer.
+//
+// Reading order:
+// 1. local CRC/storage helpers
+// 2. full live-state capture
+// 3. full live-state apply
+// 4. named scene slot list/save/load helpers
+// 5. macro snapshot save/load helpers
+
 const char *envelopeModeName(uint8_t mode);
 EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method);
 
@@ -96,37 +106,41 @@ void copySceneName(char (&dest)[16], const char *name) {
     std::memcpy(dest, name, len);
 }
 
-} // namespace
+uint8_t normalizeEnvelopeSourceIndex(int rawSource) {
+    if (rawSource >= NUM_ENVELOPES) {
+        int converted = envelopeIndexFromAnalogPin(rawSource);
+        rawSource = converted >= 0 ? converted : constrain(rawSource, 0, NUM_ENVELOPES - 1);
+    }
+    return static_cast<uint8_t>(constrain(rawSource, 0, NUM_ENVELOPES - 1));
+}
 
-namespace SceneStorage {
-ConfigState captureConfigState() {
-    ConfigState snapshot{};
+void capturePotMappings(SceneStorage::ConfigState &snapshot) {
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
         snapshot.potChannels[i] = constrain(configManager.getPotChannel(i), 1, 16);
         snapshot.potCCNumbers[i] = constrain(configManager.getPotCCNumber(i), 0, 127);
     }
-    snapshot.slots = configManager.getSlots();
+}
+
+void captureArgAndModeState(SceneStorage::ConfigState &snapshot) {
     snapshot.argEnabled = configManager.getARGEnable();
     snapshot.argMethod = configManager.getARGMethod();
-    int envA = static_cast<int>(configManager.getEnvelopeA());
-    int envB = static_cast<int>(configManager.getEnvelopeB());
-    if (envA >= NUM_ENVELOPES) {
-        int converted = envelopeIndexFromAnalogPin(envA);
-        envA = converted >= 0 ? converted : constrain(envA, 0, NUM_ENVELOPES - 1);
-    }
-    if (envB >= NUM_ENVELOPES) {
-        int converted = envelopeIndexFromAnalogPin(envB);
-        envB = converted >= 0 ? converted : constrain(envB, 0, NUM_ENVELOPES - 1);
-    }
-    snapshot.argSourceA = static_cast<uint8_t>(envA);
-    snapshot.argSourceB = static_cast<uint8_t>(envB);
+    snapshot.argSourceA =
+        normalizeEnvelopeSourceIndex(static_cast<int>(configManager.getEnvelopeA()));
+    snapshot.argSourceB =
+        normalizeEnvelopeSourceIndex(static_cast<int>(configManager.getEnvelopeB()));
     snapshot.envelopeMode = configManager.getMode();
+}
+
+void captureLedState(SceneStorage::ConfigState &snapshot) {
     snapshot.ledBrightness = ledManager.getBrightness();
     snapshot.ledMode = static_cast<uint8_t>(configManager.getLedMode());
     const CRGB color = ledManager.getColor();
     snapshot.ledR = color.r;
     snapshot.ledG = color.g;
     snapshot.ledB = color.b;
+}
+
+void captureFilterAndBaselineState(SceneStorage::ConfigState &snapshot) {
     if (!envelopeFollowers.empty()) {
         snapshot.filterType = static_cast<uint8_t>(envelopeFollowers.front().getFilterType());
     }
@@ -135,10 +149,9 @@ ConfigState captureConfigState() {
     for (uint8_t i = 0; i < NUM_ENVELOPES; ++i) {
         snapshot.baselines[i] = envelopeConfig.baselines[i];
     }
-    return snapshot;
 }
 
-void applyConfigState(const ConfigState &state, bool persist) {
+void applySlotState(const SceneStorage::ConfigState &state) {
     const auto slotsState = state.slots;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot slot = slotsState[i];
@@ -146,7 +159,9 @@ void applyConfigState(const ConfigState &state, bool persist) {
         slot.data1 = constrain(slot.data1, 0, 127);
         configManager.saveSlot(i, slot);
     }
+}
 
+void applyPotMappings(const SceneStorage::ConfigState &state, bool persist) {
     potChannels.clear();
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
         const uint8_t channel = constrain(state.potChannels[i], 1, 16);
@@ -160,10 +175,13 @@ void applyConfigState(const ConfigState &state, bool persist) {
     if (persist) {
         configManager.saveConfiguration();
     }
+}
 
+std::array<bool, NUM_ENVELOPES> rebuildFollowerAssignmentsFromSlots() {
     potToEnvelopeMap.clear();
     std::array<bool, NUM_ENVELOPES> followerAssigned{};
     followerAssigned.fill(false);
+
     for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
         MIDISlot &slot = configManager.getSlot(slotIndex);
         const int followerIndex = slot.getEnvelopeFollowerIndex();
@@ -178,24 +196,37 @@ void applyConfigState(const ConfigState &state, bool persist) {
                                   static_cast<uint8_t>(followerIndex));
     }
 
-    const EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(
-        static_cast<ARGMethod>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
+    return followerAssigned;
+}
+
+void applyArgAndEnvelopeModeState(const SceneStorage::ConfigState &state) {
+    const uint8_t argMethod =
+        static_cast<uint8_t>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR)));
     const bool argEnabled = state.argEnabled != 0;
     envelopeFollowMode = argEnabled;
     configManager.setMode(state.envelopeMode);
     configManager.setARGEnable(argEnabled ? 1 : 0);
-    configManager.setARGMethod(
-        static_cast<uint8_t>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
+    configManager.setARGMethod(argMethod);
     configManager.setEnvelopePair(state.argSourceA, state.argSourceB);
     potentiometerManager.setArgEnvelopePair(state.argSourceA, state.argSourceB);
     updateEnvelopeModeLabel(envelopeModeName(state.envelopeMode));
+}
 
+SlotEnvelopePayload applyGlobalFollowerFilterState(const SceneStorage::ConfigState &state) {
     SlotEnvelopePayload tailPayload{};
     tailPayload.filterType = static_cast<uint8_t>(
         constrain(state.filterType, 0, static_cast<int>(EnvelopeFollower::BANDPASS)));
     tailPayload.frequency = constrain(state.filterFrequency, 20.0f, 5000.0f);
     tailPayload.q = constrain(state.filterQ, 0.5f, 4.0f);
-    SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
+    return configManager.persistFilterTail(tailPayload);
+}
+
+void applyFollowerRuntimeState(const SceneStorage::ConfigState &state,
+                               const std::array<bool, NUM_ENVELOPES> &followerAssigned,
+                               const SlotEnvelopePayload &sanitizedTail) {
+    const auto followerMethod = toFollowerArgMethod(
+        static_cast<ARGMethod>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR))));
+    const bool argEnabled = state.argEnabled != 0;
     for (uint8_t i = 0; i < envelopeFollowers.size(); ++i) {
         envelopeFollowers[i].toggleActive(followerAssigned[i]);
         envelopeFollowers[i].setARGMethod(followerMethod);
@@ -207,7 +238,9 @@ void applyConfigState(const ConfigState &state, bool persist) {
         envelopeFollowers[i].setBaseline(state.baselines[i]);
         envelopeConfig.baselines[i] = state.baselines[i];
     }
+}
 
+void applyLedState(const SceneStorage::ConfigState &state) {
     const CRGB color(state.ledR, state.ledG, state.ledB);
     ledManager.setBrightness(state.ledBrightness);
     ledManager.setColor(color);
@@ -215,6 +248,31 @@ void applyConfigState(const ConfigState &state, bool persist) {
     LedMode ledMode = static_cast<LedMode>(state.ledMode);
     configManager.setLedMode(ledMode);
     ledAnimator.setMode(ledMode);
+}
+
+} // namespace
+
+namespace SceneStorage {
+// 2. Full live-state capture.
+ConfigState captureConfigState() {
+    ConfigState snapshot{};
+    capturePotMappings(snapshot);
+    snapshot.slots = configManager.getSlots();
+    captureArgAndModeState(snapshot);
+    captureLedState(snapshot);
+    captureFilterAndBaselineState(snapshot);
+    return snapshot;
+}
+
+// 3. Full live-state apply.
+void applyConfigState(const ConfigState &state, bool persist) {
+    applySlotState(state);
+    applyPotMappings(state, persist);
+    const auto followerAssigned = rebuildFollowerAssignmentsFromSlots();
+    applyArgAndEnvelopeModeState(state);
+    const SlotEnvelopePayload sanitizedTail = applyGlobalFollowerFilterState(state);
+    applyFollowerRuntimeState(state, followerAssigned, sanitizedTail);
+    applyLedState(state);
 
     if (persist) {
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
@@ -222,6 +280,7 @@ void applyConfigState(const ConfigState &state, bool persist) {
     refreshEfVoicesFromConfig();
 }
 
+// 4. Named scene slot helpers.
 uint8_t listScenes(SceneInfo *scenes, size_t capacity) {
     if (!scenes || capacity == 0) {
         return 0;
@@ -279,6 +338,7 @@ bool sceneSlotAvailable(uint8_t slot) {
     return recordValid(record);
 }
 
+// 5. Macro snapshot helpers.
 bool macroSnapshotAvailable() {
     MacroRecord record{};
     storageGet(kMacroStorageAddress, record);

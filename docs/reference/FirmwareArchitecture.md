@@ -4,6 +4,9 @@ This page explains architecture shape, not the canonical host/device contract. F
 
 The firmware is easiest to understand if you read it as a choreography problem rather than a loose collection of modules.
 
+If you want the code-reading path rather than the architecture summary, start
+with [Firmware Main Reading Path](../firmware/FirmwareMainReadingPath.md).
+
 The job is not just "handle MIDI." The real job is:
 
 - scan physical inputs
@@ -135,6 +138,7 @@ The result is a stack that is somewhat more defensive and verbose than a toy con
 
 ## Read next
 
+- [Firmware Main Reading Path](../firmware/FirmwareMainReadingPath.md) for the intended top-down source walk
 - [Testing](../validation/TESTING.md) for what the current automated suite proves
 - [WebSerial Protocol](../guides/WebSerial.md) for the contract the firmware exposes to hosts
 - [Assumption Ledger](assumption-ledger.md) for what is confirmed in source versus what still needs bench receipts

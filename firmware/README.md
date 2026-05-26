@@ -30,6 +30,13 @@ The repo-root `platformio.ini` is only a guard that rejects accidental root-leve
 
 The full lane summary lives in [../docs/hardware-test/TestMatrix.md](../docs/hardware-test/TestMatrix.md).
 
+## First Reading Path
+
+If you are learning this firmware by reading code, start with
+[src/firmware_main.cpp](src/firmware_main.cpp), then follow the ordered header
+walkthrough in [../docs/firmware/FirmwareMainReadingPath.md](../docs/firmware/FirmwareMainReadingPath.md).
+That path is the repo's intended "top-down" introduction to the machine.
+
 ## Core Commands
 
 Firmware build:

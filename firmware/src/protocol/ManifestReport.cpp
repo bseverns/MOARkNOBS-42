@@ -12,6 +12,13 @@
 #include "protocol/ManifestContract.h"
 #include "version.h"
 
+// ManifestReport.cpp is the firmware's identity/capability reporter for host tools.
+//
+// Reading order:
+// 1. tiny telemetry helpers for free RAM/flash and EEPROM load source
+// 2. one manifest writer that serializes identity, counts, capability gates,
+//    and a small operational-health snapshot
+
 #if defined(ARDUINO)
 extern "C" {
 extern unsigned long _ebss;
@@ -57,20 +64,27 @@ const char *describeEepromLoadSource(ConfigManager::LoadSource source) {
         return "unknown";
     }
 }
-} // namespace
 
-// Emit the host-facing manifest so the App/bridge can align their UI with firmware truth.
-void writeManifestFields(JsonObject object) {
+// Identity fields answer the first host question: "which exact firmware am I talking to?"
+void writeManifestIdentity(JsonObject object) {
     object["device_name"] = ManifestContract::kDeviceName;
     object["fw_version"] = FW_VERSION_STR;
     object["git_sha"] = GIT_SHA_STR;
     object["build_time"] = __DATE__ " " __TIME__;
     object["schema_version"] = CONFIG_VERSION;
+}
+
+// Shape fields tell the host how large the musical machine is before any config is requested.
+void writeManifestHardwareShape(JsonObject object) {
     object["slot_count"] = NUM_SLOTS;
     object["pot_count"] = configManager.getNumPots();
     object["envelope_count"] = NUM_ENVELOPES;
     object["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
     object["led_count"] = NUM_LEDS();
+}
+
+// Power and health fields let a host surface operational warnings without guessing from symptoms.
+void writeManifestOperationalHealth(JsonObject object) {
     object["power_profile"] = BoardPowerProfile::kName;
     object["led_brightness_cap"] = BoardPowerProfile::kLedBrightnessCap;
     object["rail_topology_verified"] = BoardPowerProfile::kRailTopologyVerified;
@@ -80,6 +94,10 @@ void writeManifestFields(JsonObject object) {
     object["eeprom_primary_valid"] = configManager.hasHealthyConfigurationCopy(false);
     object["eeprom_backup_valid"] = configManager.hasHealthyConfigurationCopy(true);
     object["eeprom_last_load"] = describeEepromLoadSource(configManager.getLastLoadSource());
+}
+
+// Capability fields are the firmware's promise about which host controls are safe to expose.
+void writeManifestCapabilities(JsonObject object) {
     JsonObject capabilities = object.createNestedObject("capabilities");
     capabilities["profile_save"] = true;
     capabilities["profile_load"] = true;
@@ -93,8 +111,21 @@ void writeManifestFields(JsonObject object) {
     capabilities["device_schema"] = true;
     capabilities["bulk_config"] = true;
     capabilities["one_shot_config_boot"] = true;
+}
 
+// Host-role hints remind students that different desktop tools meet the same firmware differently.
+void writeManifestHostRoles(JsonObject object) {
     JsonObject hostRoles = object.createNestedObject("host_roles");
     hostRoles["configurator"] = "convenience";
     hostRoles["bridge"] = "transport_required";
+}
+} // namespace
+
+// Emit the host-facing manifest so the App/bridge can align their UI with firmware truth.
+void writeManifestFields(JsonObject object) {
+    writeManifestIdentity(object);
+    writeManifestHardwareShape(object);
+    writeManifestOperationalHealth(object);
+    writeManifestCapabilities(object);
+    writeManifestHostRoles(object);
 }

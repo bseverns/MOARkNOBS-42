@@ -7,6 +7,12 @@
 #include <cstddef>
 #include <cstring>
 
+// ProtocolDispatch is the command-router submachine.
+//
+// ParsedCommand gives the protocol layer a cheap view over one complete serial
+// line: command name plus payload. The dispatch table then routes that line to
+// the correct handler family without forcing every caller to re-split strings.
+
 namespace ProtocolDispatchHandlers {
 struct ParsedCommand {
     explicit ParsedCommand(const String &source)

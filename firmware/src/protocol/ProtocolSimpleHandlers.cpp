@@ -20,6 +20,15 @@
 #include "protocol/SysExTemplateCodec.h"
 #include "version.h"
 
+// ProtocolSimpleHandlers.cpp is the direct GET/SET lane for host requests that
+// do not need the heavier profile, scene, or bulk-config submachines.
+//
+// Reading order:
+// 1. deprecated compatibility shims
+// 2. identity/config export reads
+// 3. live runtime inspection reads
+// 4. direct live-control writes
+
 const char *midiMessageTypeName(MIDIMessageType type);
 const char *envelopeFilterName(EnvelopeFollower::FilterType type);
 const char *efFilterLabel(MIDISlot::EfSettings::FilterType type);
@@ -27,112 +36,82 @@ const char *argMethodName(uint8_t method);
 const char *envelopeModeName(uint8_t mode);
 
 namespace ProtocolSimpleHandlers {
-void handleGetAllCommand(const String &command) {
-    (void)command;
-#ifdef SERIAL_LOGGING
-    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_ALL deprecated, use GET_CONFIG\"}");
-#endif
-}
-
-void handleGetArgMethodCommand(const String &command) {
-    (void)command;
-    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_arg_method deprecated\"}");
-}
-
-void handleGetBrownoutsCommand(const String &command) {
-    (void)command;
-    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_brownouts deprecated\"}");
-}
-
-void handleGetClockCommand(const String &command) {
-    (void)command;
-    const bool externalSignal = midiHandler.hasExternalClockSignal();
-    const bool running = midiHandler.isClockRunning();
-    const float externalBpm = midiHandler.externalClockBpm();
-    const char *source = "idle";
-    if (g_followExternalClock && externalSignal) {
-        source = "external";
-    } else if (g_tappedBPM > 0.0f) {
-        source = "internal";
-    }
-    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_CLOCK\",\"follow_external\":%s,"
-               "\"clock_out_enabled\":%s,\"tapped_bpm\":%.2f,\"external_bpm\":%.2f,"
-               "\"external_signal\":%s,\"running\":%s,\"source\":\"%s\"}\n",
-               g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
-               static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
-               externalSignal ? "true" : "false", running ? "true" : "false", source);
-}
-
-void handleGetConfigCommand(const String &command) {
-    (void)command;
-    static StaticJsonDocument<65536> doc;
-    doc.clear();
-
-    doc["fw_version"] = FW_VERSION_STR;
-    doc["schema_version"] = CONFIG_VERSION;
-
-    JsonArray pots = doc.createNestedArray("pots");
+namespace {
+// Pot mappings are the simplest "physical controls -> MIDI lane" truth a host can inspect.
+void writePotMappings(JsonArray pots) {
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
         JsonObject pot = pots.createNestedObject();
         pot["index"] = i;
         pot["channel"] = configManager.getPotChannel(i);
         pot["cc"] = configManager.getPotCCNumber(i);
     }
+}
 
-    JsonArray slots = doc.createNestedArray("slots");
-    const auto &slotDefs = configManager.getSlots();
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        const MIDISlot &slot = slotDefs[i];
-        JsonObject slotObj = slots.createNestedObject();
-        slotObj["index"] = i;
-        slotObj["type"] = static_cast<uint8_t>(slot.type);
-        slotObj["type_name"] = midiMessageTypeName(slot.type);
-        slotObj["channel"] = slot.midiChannel;
-        slotObj["data1"] = slot.data1;
-        slotObj["ef_index"] = slot.ef.followerIndex;
-        JsonObject ef = slotObj.createNestedObject("ef");
-        ef["index"] = slot.ef.followerIndex;
-        ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
-        ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
-        ef["frequency"] = slot.efSettings.frequency;
-        ef["q"] = slot.efSettings.q;
-        ef["oversample"] = slot.efSettings.oversample;
-        ef["smoothing"] = slot.efSettings.smoothing;
-        ef["baseline"] = slot.efSettings.baseline;
-        ef["gain"] = slot.efSettings.gain;
-        ef["mode"] = slot.efSettings.efMode;
-        ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
-        ef["auto_gain"] = slot.efSettings.autoGain != 0;
-        ef["attack_ms"] = slot.efSettings.attackMs;
-        ef["release_ms"] = slot.efSettings.releaseMs;
-        ef["rms_ms"] = slot.efSettings.rmsWindowMs;
-        ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
-        ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
-        ef["gate_threshold"] = slot.efSettings.gateThreshold;
-        ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
-        ef["activity_threshold"] = slot.efSettings.activityThreshold;
-        ef["gain_target"] = slot.efSettings.gainTarget;
-        slotObj["active"] = slot.active;
-        slotObj["arp_note"] = slot.arpNote;
-        slotObj["arpNote"] = slot.arpNote;
-        slotObj["sysexTemplate"] = formatSysExTemplate(slot);
-        SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
-        JsonObject efPayload = slotObj.createNestedObject("ef_payload");
-        efPayload["type"] = payload.filterType;
-        efPayload["type_name"] =
-            envelopeFilterName(static_cast<EnvelopeFollower::FilterType>(payload.filterType));
-        efPayload["freq"] = payload.frequency;
-        efPayload["q"] = payload.q;
-        SlotARGConfig arg = sanitizeSlotArg(slot.arg);
-        JsonObject argObj = slotObj.createNestedObject("arg");
-        argObj["enabled"] = arg.enabled != 0;
-        argObj["method"] = static_cast<uint8_t>(arg.method);
-        argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
-        argObj["sourceA"] = arg.sourceA;
-        argObj["sourceB"] = arg.sourceB;
-    }
+// Each slot export answers "what message does this control send, and what modulation owns it?"
+void writeSlotEfConfig(JsonObject ef, const MIDISlot &slot) {
+    ef["index"] = slot.ef.followerIndex;
+    ef["filter_index"] = static_cast<uint8_t>(slot.efSettings.filterType);
+    ef["filter_name"] = efFilterLabel(slot.efSettings.filterType);
+    ef["frequency"] = slot.efSettings.frequency;
+    ef["q"] = slot.efSettings.q;
+    ef["oversample"] = slot.efSettings.oversample;
+    ef["smoothing"] = slot.efSettings.smoothing;
+    ef["baseline"] = slot.efSettings.baseline;
+    ef["gain"] = slot.efSettings.gain;
+    ef["mode"] = slot.efSettings.efMode;
+    ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
+    ef["auto_gain"] = slot.efSettings.autoGain != 0;
+    ef["attack_ms"] = slot.efSettings.attackMs;
+    ef["release_ms"] = slot.efSettings.releaseMs;
+    ef["rms_ms"] = slot.efSettings.rmsWindowMs;
+    ef["baseline_tau_ms"] = slot.efSettings.baselineTauMs;
+    ef["gain_tau_ms"] = slot.efSettings.gainTauMs;
+    ef["gate_threshold"] = slot.efSettings.gateThreshold;
+    ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
+    ef["activity_threshold"] = slot.efSettings.activityThreshold;
+    ef["gain_target"] = slot.efSettings.gainTarget;
+}
 
-    JsonArray efSlots = doc.createNestedArray("efSlots");
+void writeSlotEnvelopePayload(JsonObject efPayload, uint8_t slotIndex) {
+    SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(slotIndex);
+    efPayload["type"] = payload.filterType;
+    efPayload["type_name"] =
+        envelopeFilterName(static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+    efPayload["freq"] = payload.frequency;
+    efPayload["q"] = payload.q;
+}
+
+void writeSlotArgConfig(JsonObject argObj, const MIDISlot &slot) {
+    SlotARGConfig arg = sanitizeSlotArg(slot.arg);
+    argObj["enabled"] = arg.enabled != 0;
+    argObj["method"] = static_cast<uint8_t>(arg.method);
+    argObj["method_name"] = argMethodName(static_cast<uint8_t>(arg.method));
+    argObj["sourceA"] = arg.sourceA;
+    argObj["sourceB"] = arg.sourceB;
+}
+
+void writeSlotConfig(JsonArray slots, uint8_t slotIndex, const MIDISlot &slot) {
+    JsonObject slotObj = slots.createNestedObject();
+    slotObj["index"] = slotIndex;
+    slotObj["type"] = static_cast<uint8_t>(slot.type);
+    slotObj["type_name"] = midiMessageTypeName(slot.type);
+    slotObj["channel"] = slot.midiChannel;
+    slotObj["data1"] = slot.data1;
+    slotObj["ef_index"] = slot.ef.followerIndex;
+    JsonObject ef = slotObj.createNestedObject("ef");
+    writeSlotEfConfig(ef, slot);
+    slotObj["active"] = slot.active;
+    slotObj["arp_note"] = slot.arpNote;
+    slotObj["arpNote"] = slot.arpNote;
+    slotObj["sysexTemplate"] = formatSysExTemplate(slot);
+    JsonObject efPayload = slotObj.createNestedObject("ef_payload");
+    writeSlotEnvelopePayload(efPayload, slotIndex);
+    JsonObject argObj = slotObj.createNestedObject("arg");
+    writeSlotArgConfig(argObj, slot);
+}
+
+// EF slot mappings tell the host which knobs are currently feeding each follower voice.
+void writeEfSlotMappings(JsonArray efSlots) {
     for (uint8_t followerIndex = 0; followerIndex < NUM_ENVELOPES; ++followerIndex) {
         JsonObject mapping = efSlots.createNestedObject();
         mapping["index"] = followerIndex;
@@ -151,8 +130,10 @@ void handleGetConfigCommand(const String &command) {
             mapping["slot"] = targets[0].as<uint8_t>();
         }
     }
+}
 
-    JsonObject env = doc.createNestedObject("envelopes");
+// Runtime follower state gives a host the live modulation weather, not just the saved setup.
+void writeEnvelopeRuntime(JsonObject env) {
     JsonArray routing = env.createNestedArray("routing");
     for (uint8_t i = 0; i < NUM_POTS; ++i) {
         int mapping = -1;
@@ -186,7 +167,9 @@ void handleGetConfigCommand(const String &command) {
     JsonObject argPair = env.createNestedObject("arg_pair");
     argPair["a"] = configManager.getEnvelopeA();
     argPair["b"] = configManager.getEnvelopeB();
+}
 
+void writeEnvelopeFilterViews(JsonObject env, JsonObject rootFilter) {
     float freq = 0.0f;
     float q = 0.0f;
     ConfigManager::getStorageBackend()->readBytes(EEPROM_FILTER_FREQ, &freq, sizeof(freq));
@@ -201,20 +184,22 @@ void handleGetConfigCommand(const String &command) {
     envFilter["idle_floor"] = configManager.getEfIdleFloor();
     env["idle_floor"] = configManager.getEfIdleFloor();
 
-    JsonObject rootFilter = doc.createNestedObject("filter");
     rootFilter["type"] = envelopeFilterName(currentFilter);
     rootFilter["freq"] = freq;
     rootFilter["q"] = q;
     rootFilter["idle_floor"] = configManager.getEfIdleFloor();
+}
 
-    JsonObject rootArg = doc.createNestedObject("arg");
+void writeRootArgConfig(JsonObject rootArg) {
+    uint8_t storedMethod = configManager.getARGMethod();
     rootArg["method"] = argMethodName(storedMethod);
     rootArg["method_index"] = storedMethod;
     rootArg["a"] = configManager.getEnvelopeA();
     rootArg["b"] = configManager.getEnvelopeB();
     rootArg["enable"] = configManager.getARGEnable() != 0;
+}
 
-    JsonObject led = doc.createNestedObject("led");
+void writeLedConfig(JsonObject led) {
     led["brightness"] = ledManager.getBrightness();
     CRGB color = ledManager.getColor();
     JsonObject colorObj = led.createNestedObject("rgb");
@@ -226,6 +211,86 @@ void handleGetConfigCommand(const String &command) {
     led["color"] = hex;
     led["hex"] = hex;
     led["mode"] = ledModeToString(configManager.getLedMode());
+}
+} // namespace
+
+// 1. Deprecated compatibility shims kept for older host tooling.
+void handleGetAllCommand(const String &command) {
+    (void)command;
+#ifdef SERIAL_LOGGING
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_ALL deprecated, use GET_CONFIG\"}");
+#endif
+}
+
+void handleGetArgMethodCommand(const String &command) {
+    (void)command;
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_arg_method deprecated\"}");
+}
+
+void handleGetBrownoutsCommand(const String &command) {
+    (void)command;
+    LOG_PRINTLN("{\"type\":\"response\",\"message\":\"get_brownouts deprecated\"}");
+}
+
+// 2. Identity/config export reads.
+void handleHelloCommand(const String &command) {
+    (void)command;
+    LOG_PRINTLN("{\"hello\":\"mn42\"}");
+}
+
+void handleGetManifestCommand(const String &command) {
+    (void)command;
+    StaticJsonDocument<768> doc;
+    writeManifestFields(doc.to<JsonObject>());
+
+    if (doc.overflowed()) {
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_MANIFEST\"}");
+        return;
+    }
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
+}
+
+void handleGetSchemaCommand(const String &command) {
+    (void)command;
+    LOG_PRINTLN(ConfigManager::makeSchema());
+}
+
+// Full config export is intentionally the longest simple handler because it is
+// the canonical "describe the current machine state" reply used by hosts.
+void handleGetConfigCommand(const String &command) {
+    (void)command;
+    static StaticJsonDocument<65536> doc;
+    doc.clear();
+
+    doc["fw_version"] = FW_VERSION_STR;
+    doc["schema_version"] = CONFIG_VERSION;
+
+    JsonArray pots = doc.createNestedArray("pots");
+    writePotMappings(pots);
+
+    JsonArray slots = doc.createNestedArray("slots");
+    const auto &slotDefs = configManager.getSlots();
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        writeSlotConfig(slots, i, slotDefs[i]);
+    }
+
+    JsonArray efSlots = doc.createNestedArray("efSlots");
+    writeEfSlotMappings(efSlots);
+
+    JsonObject env = doc.createNestedObject("envelopes");
+    writeEnvelopeRuntime(env);
+
+    JsonObject rootFilter = doc.createNestedObject("filter");
+    writeEnvelopeFilterViews(env, rootFilter);
+
+    JsonObject rootArg = doc.createNestedObject("arg");
+    writeRootArgConfig(rootArg);
+
+    JsonObject led = doc.createNestedObject("led");
+    writeLedConfig(led);
 
     if (doc.overflowed()) {
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_CONFIG\"}");
@@ -237,6 +302,26 @@ void handleGetConfigCommand(const String &command) {
     LOG_PRINTLN(payload);
     // Start high-rate WebSerial telemetry only after the configurator has successfully hydrated.
     webSerialStreaming = true;
+}
+
+// 3. Live runtime inspection reads.
+void handleGetClockCommand(const String &command) {
+    (void)command;
+    const bool externalSignal = midiHandler.hasExternalClockSignal();
+    const bool running = midiHandler.isClockRunning();
+    const float externalBpm = midiHandler.externalClockBpm();
+    const char *source = "idle";
+    if (g_followExternalClock && externalSignal) {
+        source = "external";
+    } else if (g_tappedBPM > 0.0f) {
+        source = "internal";
+    }
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_CLOCK\",\"follow_external\":%s,"
+               "\"clock_out_enabled\":%s,\"tapped_bpm\":%.2f,\"external_bpm\":%.2f,"
+               "\"external_signal\":%s,\"running\":%s,\"source\":\"%s\"}\n",
+               g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
+               static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
+               externalSignal ? "true" : "false", running ? "true" : "false", source);
 }
 
 void handleGetEfCommand(const String &command) {
@@ -272,31 +357,11 @@ void handleGetLedCommand(const String &command) {
 #endif
 }
 
-void handleGetManifestCommand(const String &command) {
-    (void)command;
-    StaticJsonDocument<768> doc;
-    writeManifestFields(doc.to<JsonObject>());
-
-    if (doc.overflowed()) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_MANIFEST\"}");
-        return;
-    }
-
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
-}
-
 void handleGetNoteDynamicsCommand(const String &command) {
     (void)command;
     LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_NOTE_DYNAMICS\",\"velocity_shift\":%d,"
                "\"change_probability\":%u}\n",
                static_cast<int>(velocityShift), static_cast<unsigned>(changeProbability));
-}
-
-void handleGetSchemaCommand(const String &command) {
-    (void)command;
-    LOG_PRINTLN(ConfigManager::makeSchema());
 }
 
 void handleGetUsbMidiCommand(const String &command) {
@@ -305,11 +370,7 @@ void handleGetUsbMidiCommand(const String &command) {
                g_usbMidiOutEnabled ? "true" : "false");
 }
 
-void handleHelloCommand(const String &command) {
-    (void)command;
-    LOG_PRINTLN("{\"hello\":\"mn42\"}");
-}
-
+// 4. Direct live-control writes.
 void handleSetArgMethodCommand(const String &command) {
     int method = command.substring(14).toInt();
     if (method >= 0 && method <= static_cast<int>(ARGMethod::XORR)) {

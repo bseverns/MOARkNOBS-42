@@ -23,7 +23,7 @@ PASS with hardware caveats.
 [boot-contract:host] HELLO
 [boot-contract:serial] 0729D7500100B200420002
 [boot-contract:serial] Reset 0x00000001 Brownouts 0
-[boot-contract:serial] {"type":"boot_mode","mode":"standalone_runtime"}
+[boot-contract:serial] {"type":"boot*mode","mode":"standalone_runtime"}
 [boot-contract:serial] {"warning":"display_init_failed"}
 [boot-contract:serial] {"type":"info","message":"Loading potentiometer settings from EEPROM..."}
 [boot-contract:serial] {"hello":"mn42"}
@@ -61,8 +61,8 @@ PASS with hardware caveats.
 [boot-contract:host] SET_ALL channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"d
 [boot-contract:host] SET_ALL ata1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arp
 [boot-contract:host] SET_ALL Note":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"act
-[boot-contract:host] SET_ALL ive":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_
-[boot-contract:host] SET_ALL index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"t
+[boot-contract:host] SET_ALL ive":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef*
+[boot-contract:host] SET*ALL index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"t
 [boot-contract:host] SET_ALL ype":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","ch
 [boot-contract:host] SET_ALL annel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"dat
 [boot-contract:host] SET_ALL a1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNo
@@ -115,8 +115,8 @@ PASS with hardware caveats.
 [boot-contract:host] SET_ALL "oversample":4,"smoothing":0.200000003,"baseline":0,"gain":1,"mode":0,"autoBaseline":true,"autoG
 [boot-contract:host] SET_ALL ain":true,"attackMs":5,"releaseMs":20,"rmsWindowMs":50,"baselineTauMs":2000,"gainTauMs":3000,"ga
 [boot-contract:host] SET_ALL teThreshold":16,"gateHysteresis":4,"activityThreshold":4,"gainTarget":102}},{"type":"CC","channe
-[boot-contract:host] SET_ALL l":3,"data1":21,"arpNote":0,"active":true,"ef_index":1,"ef":{"index":1,"filter_index":5,"filter_
-[boot-contract:host] SET_ALL name":"HIGHPASS","frequency":1680,"q":1.100000024,"oversample":4,"smoothing":0.200000003,"baseli
+[boot-contract:host] SET_ALL l":3,"data1":21,"arpNote":0,"active":true,"ef_index":1,"ef":{"index":1,"filter_index":5,"filter*
+[boot-contract:host] SET*ALL name":"HIGHPASS","frequency":1680,"q":1.100000024,"oversample":4,"smoothing":0.200000003,"baseli
 [boot-contract:host] SET_ALL ne":0,"gain":1,"mode":0,"autoBaseline":true,"autoGain":true,"attackMs":5,"releaseMs":20,"rmsWind
 [boot-contract:host] SET_ALL owMs":50,"baselineTauMs":2000,"gainTauMs":3000,"gateThreshold":16,"gateHysteresis":4,"activityTh
 [boot-contract:host] SET_ALL reshold":4,"gainTarget":102}},{"type":"OFF","channel":4,"data1":56,"arpNote":56,"active":true,"e
@@ -125,7 +125,7 @@ PASS with hardware caveats.
 [boot-contract:host] SET_ALL channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"d
 [boot-contract:host] SET_ALL ata1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arp
 [boot-contract:host] SET_ALL Note":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"act
-[boot-contract:host] SET_ALL ive":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_
+[boot-contract:host] SET_ALL ive":true,"ef_index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef*
 [boot-contract:host] SET_ALL index":-1},{"type":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"t
 [boot-contract:host] SET_ALL ype":"OFF","channel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","ch
 [boot-contract:host] SET_ALL annel":16,"data1":127,"arpNote":127,"active":true,"ef_index":-1},{"type":"OFF","channel":16,"dat

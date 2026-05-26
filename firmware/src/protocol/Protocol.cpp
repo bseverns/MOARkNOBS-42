@@ -37,6 +37,22 @@
 #include "protocol/SceneStorage.h"
 #include "protocol/SysExTemplateCodec.h"
 
+// Protocol.cpp is the top-level host/configurator execution layer.
+//
+// Reading order:
+// 1. protocol-local helpers and boot/startup behavior
+// 2. small shared naming/encoding helpers reused by response emitters
+// 3. command-queue ingestion from the serial transport
+// 4. handler fan-out into protocol submachines:
+//    - ProtocolSimpleHandlers for direct GET/SET lanes
+//    - ProtocolDispatch for command routing
+//    - ConfigJsonApply for bulk `SET_ALL`
+//    - profile / scene / macro helpers for stateful storage actions
+//
+// This file should answer "how does a host line enter the firmware and where
+// does it go next?" while the heavier behavior lives in the dedicated
+// submodules.
+
 #if defined(UNIT_TEST)
 bool testOnly_parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
                             MIDIMessageType &type) {
@@ -74,6 +90,8 @@ template <size_t Capacity> static void sendJsonResponse(const StaticJsonDocument
     LOG_PRINTLN(payload);
 }
 
+// 1. Boot-time protocol bring-up: banners, brownout diagnostics, and the
+// earliest config/cache hydration needed before host RPCs begin.
 void initializeProtocol() {
     // Boot banner + reset diagnostics are emitted early so host tooling can log reset cause and
     // brownout history before config RPCs begin.
@@ -205,6 +223,8 @@ void processCommandQueue() {
     }
 }
 
+// 4. Handler fan-out layer. These adapters keep ProtocolDispatch.cpp focused on
+// command lookup while this file defines which submachine owns each command.
 namespace ProtocolDispatchHandlers {
 void handleGetAllCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetAllCommand(cmd.fullCommand());

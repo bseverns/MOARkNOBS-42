@@ -1,6 +1,13 @@
 /**
  * Global juice for the MOAR kNOBS firmware.
  *
+ * Reading role:
+ *   - If a learner starts at `firmware_main.cpp`, this is the first header to
+ *     read for the machine's physical contract: counts, pins, EEPROM layout,
+ *     timing defaults, and cross-cutting scalar state.
+ *   - `FirmwareState.h` is the companion header for the instantiated runtime
+ *     objects that operate on these facts.
+ *
  * LED gangs:
  *   - `SLOT_LED_COUNT`, `EF_LED_COUNT`, and `POT_LED_COUNT` define the three
  *     clans of pixels on the strip.  Offsets like `EF_LED_OFFSET` and
@@ -111,9 +118,9 @@ inline uint16_t NUM_LEDS() {
     return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount;
 }
 
-inline constexpr uint8_t NUM_POTS = 42;     //!< Analog pot count driving the ARG
-inline constexpr uint8_t NUM_BUTTONS = 6;   //!< Number of direct control buttons
-inline constexpr uint8_t NUM_ENVELOPES = 6; //!< Envelope followers stalking your signal
+inline constexpr uint8_t NUM_POTS = 42;     // Analog pot count driving the ARG
+inline constexpr uint8_t NUM_BUTTONS = 6;   // Number of direct control buttons
+inline constexpr uint8_t NUM_ENVELOPES = 6; // Envelope followers stalking your signal
 
 /**
  * Baseline offsets for each envelope follower.  These numbers get learned

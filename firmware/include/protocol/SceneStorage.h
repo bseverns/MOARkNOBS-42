@@ -9,6 +9,11 @@
 #include "MIDITypes.h"
 
 namespace SceneStorage {
+// SceneStorage is the "capture and restore whole machine state" submachine.
+//
+// `ConfigState` is the portable snapshot format used by both named scenes and
+// the single macro scratch slot.
+
 struct SceneInfo {
     uint8_t slot = 0;
     char name[16] = {0};
@@ -43,15 +48,18 @@ struct SceneEntry {
 
 constexpr uint8_t kSceneSlotCount = 6;
 
+// Named scene slots.
 uint8_t listScenes(SceneInfo *scenes, size_t capacity);
 bool saveSceneSlot(uint8_t slot, const ConfigState &state, const char *name);
 bool loadSceneSlot(uint8_t slot, SceneEntry &entry);
 bool sceneSlotAvailable(uint8_t slot);
 
+// Single scratch macro snapshot.
 bool macroSnapshotAvailable();
 bool loadMacroSnapshot(ConfigState &state);
 bool saveMacroSnapshot(const ConfigState &state);
 
+// Full live-state capture/apply helpers shared by scenes and macros.
 ConfigState captureConfigState();
 void applyConfigState(const ConfigState &state, bool persist);
 } // namespace SceneStorage

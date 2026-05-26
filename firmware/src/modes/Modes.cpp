@@ -12,6 +12,16 @@
 #include "LEDManager.h"
 #include "EnvelopeFollower.h"
 
+// Modes.cpp is the bridge between persisted profile/config state and the live
+// runtime objects that actually make sound, light, and movement.
+//
+// Reading order:
+// 1. tiny enum/shape translation helpers
+// 2. profile snapshot encode/decode helpers
+// 3. profile capture/apply
+// 4. default modulation-state reconstruction during boot
+// 5. small shared label/cache maintenance
+
 std::array<float, NUM_ENVELOPES> efBaseGains{};
 
 // Translate the runtime follower enum back into the persisted profile enum so
@@ -77,7 +87,7 @@ void applyProfileEfToSlot(const ProfileEfSettings &profile, MIDISlot::EfSettings
 }
 } // namespace
 
-// Capture the subset of runtime state that should travel with profile slots (A-D).
+// 3a. Capture the subset of live runtime state that should travel with profile slots (A-D).
 ProfileData captureProfileSnapshot() {
     ProfileData profile{};
     profile.routeCount = 0;
@@ -133,8 +143,8 @@ ProfileData captureProfileSnapshot() {
     return profile;
 }
 
-// Restore a previously captured profile into the live engine state. Callers can
-// choose whether that restore should also be committed back to EEPROM.
+// 3b. Restore a previously captured profile into the live engine state. Callers can choose
+// whether that restore should also be committed back to EEPROM.
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     // `persistSlots` lets callers apply an in-memory profile preview without rewriting EEPROM
     // until the user commits.
@@ -177,8 +187,8 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     }
 }
 
-// Seed the two onboard LFOs with a predictable factory routing so a clean boot
-// still demonstrates movement even before the user edits modulation paths.
+// 4a. Seed the two onboard LFOs with a predictable default routing so a clean boot still has a
+// coherent modulation story before any profile or host edits arrive.
 void configureLFOs() {
     lfoManager.clearRoutes();
 
@@ -203,8 +213,8 @@ void configureLFOs() {
     lfoManager.addInternalRoute(1, LFOInternalTarget::VelocityShift, 0.5f);
 }
 
-// Rebuild the envelope-follower voice cache from the current slot config after
-// profile loads or recovery paths mutate the underlying mappings.
+// 4b. Rebuild the envelope-follower voice cache after profile loads or recovery paths mutate the
+// underlying slot-to-follower mappings.
 void refreshEfVoicesFromConfig() {
     for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
         EfVoice &voice = efVoices[slotIndex];
@@ -219,8 +229,9 @@ void refreshEfVoicesFromConfig() {
     }
 }
 
-// Reconstruct all profile-driven runtime state during boot: follower baselines,
-// LFO defaults, active profile selection, and the channel cache used by UI code.
+// 4c. Reconstruct all profile-driven runtime state during boot: follower baselines, default LFO
+// state, active profile selection, and the channel cache still read directly by some UI/transport
+// paths.
 bool initializeModes() {
     // Load active profile wiring first, then rebuild the channel cache consumed by UI/transport
     // paths that still read `potChannels` directly.
@@ -250,8 +261,8 @@ bool initializeModes() {
     return baselinesLoaded;
 }
 
-// Keep the shared `const char*` label pointer valid by storing edits in the
-// backing `String` and then repointing consumers at its internal buffer.
+// 5. Keep the shared `const char*` label pointer valid by storing edits in the backing `String`
+// and then repointing consumers at its internal buffer.
 void updateEnvelopeModeLabel(const char *label) {
     if (!label || label[0] == '\0') {
         g_envelopeModeLabel = "LINEAR";

@@ -4,6 +4,14 @@
 #include "Log.h"
 #include "Protocol.h"
 
+// ProtocolDispatch.cpp is the routing table for one fully assembled host line.
+//
+// It should stay mechanically simple:
+// - parse the command name once
+// - binary-search the sorted handler table
+// - hand the request to the owning protocol submachine
+// - fall back to ConfigManager's legacy command lane only if no named handler matches
+
 namespace {
 using ProtocolDispatchHandlers::ParsedCommand;
 

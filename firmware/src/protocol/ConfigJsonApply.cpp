@@ -27,6 +27,11 @@ Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 
+struct BulkApplyIdentity {
+    uint32_t sequence = 0;
+    String configId;
+};
+
 int readIntField(JsonObject obj, const char *primary, const char *alternate, int fallback) {
     if (!obj.isNull() && obj.containsKey(primary)) {
         return obj[primary].as<int>();
@@ -348,27 +353,29 @@ bool parseHexColor(const char *hex, CRGB &color) {
     return true;
 }
 
-bool applyConfigObject(JsonObject config, uint32_t seq) {
+bool parseSlotsArray(JsonObject config, uint32_t seq, JsonArray &slotsJson) {
     if (config.isNull()) {
         emitBulkError("config_missing", "config object absent", seq);
         return false;
     }
-
     if (!config.containsKey("slots") || !config["slots"].is<JsonArray>()) {
         emitBulkError("slots_missing", "config.slots missing", seq);
         return false;
     }
-
-    JsonArray slotsJson = config["slots"].as<JsonArray>();
+    slotsJson = config["slots"].as<JsonArray>();
     if (slotsJson.size() != NUM_SLOTS) {
         emitBulkError("slots_size", "unexpected slot count", seq);
         return false;
     }
+    return true;
+}
 
+EfSettings readDefaultEfSettingsFromConfig(JsonObject config) {
     EfSettings defaultEfSettings{};
     defaultEfSettings.filterType = encodeFilterType(EnvelopeFollower::LINEAR);
     defaultEfSettings.frequency = 1000.0f;
     defaultEfSettings.q = 0.707f;
+
     if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
         JsonObject filterObj = config["filter"].as<JsonObject>();
         parseEfSettings(filterObj, defaultEfSettings, defaultEfSettings);
@@ -391,7 +398,10 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
                                                        configManager.getEfIdleFloor()));
         }
     }
+    return defaultEfSettings;
+}
 
+SlotARGConfig readDefaultArgConfigFromConfig(JsonObject config) {
     SlotARGConfig defaultArg{};
     defaultArg.enabled = configManager.getARGEnable();
     defaultArg.method = static_cast<ARGMethod>(configManager.getARGMethod());
@@ -449,8 +459,376 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 
         defaultArg = sanitizeSlotArg(incoming);
     }
+    return defaultArg;
+}
 
-    bool anySlotPayloadSpecified = false;
+MIDISlot::EfSettings readSlotEfSettings(JsonObject slotObj, const MIDISlot &slot) {
+    MIDISlot::EfSettings settings = slot.efSettings;
+    settings.followerIndex = slot.getEnvelopeFollowerIndex();
+
+    int rawEfIndex = settings.followerIndex;
+    if (slotObj.containsKey("efIndex")) {
+        rawEfIndex = slotObj["efIndex"].as<int>();
+    } else if (slotObj.containsKey("ef_index")) {
+        rawEfIndex = slotObj["ef_index"].as<int>();
+    }
+
+    JsonObject efObj =
+        slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
+    if (!efObj.isNull()) {
+        parseEfSettings(efObj, settings, settings);
+        rawEfIndex = settings.followerIndex;
+    }
+
+    if (rawEfIndex >= 0 && rawEfIndex < static_cast<int>(envelopeFollowers.size())) {
+        settings.followerIndex = static_cast<int8_t>(rawEfIndex);
+    } else {
+        settings.followerIndex = -1;
+    }
+    return settings;
+}
+
+SlotARGConfig parseSlotArgConfig(JsonObject slotArgObj, const SlotARGConfig &fallback,
+                                 bool allowAnalogPinRouting) {
+    SlotARGConfig slotArgConfig = fallback;
+    if (slotArgObj.isNull()) {
+        return slotArgConfig;
+    }
+
+    if (slotArgObj.containsKey("enable")) {
+        slotArgConfig.enabled = slotArgObj["enable"].as<bool>() ? 1 : 0;
+    } else if (slotArgObj.containsKey("enabled")) {
+        slotArgConfig.enabled = slotArgObj["enabled"].as<bool>() ? 1 : 0;
+    }
+
+    if (slotArgObj.containsKey("method")) {
+        if (slotArgObj["method"].is<const char *>()) {
+            ARGMethod parsed =
+                parseArgMethod(slotArgObj["method"].as<const char *>(), slotArgConfig.method);
+            slotArgConfig.method = parsed;
+        } else {
+            int raw = slotArgObj["method"].as<int>();
+            raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
+            slotArgConfig.method = static_cast<ARGMethod>(raw);
+        }
+    }
+
+    auto parseSource = [&](const char *primary, const char *alternate, uint8_t current) {
+        if (!(slotArgObj.containsKey(primary) || slotArgObj.containsKey(alternate))) {
+            return current;
+        }
+        int raw = readIntField(slotArgObj, primary, alternate, current);
+        if (allowAnalogPinRouting) {
+            int mapped = envelopeIndexFromAnalogPin(raw);
+            if (mapped >= 0) {
+                raw = mapped;
+            }
+        }
+        return static_cast<uint8_t>(constrain(raw, 0, NUM_ENVELOPES - 1));
+    };
+
+    slotArgConfig.sourceA = parseSource("a", "sourceA", slotArgConfig.sourceA);
+    slotArgConfig.sourceB = parseSource("b", "sourceB", slotArgConfig.sourceB);
+    return sanitizeSlotArg(slotArgConfig);
+}
+
+bool applySlotSysExTemplate(JsonObject slotObj, MIDISlot &slot, uint32_t seq) {
+    if (slot.type == MIDIMessageType::SysEx) {
+        String templateError;
+        if (!parseSysExTemplateField(slotObj["sysexTemplate"], slot, templateError)) {
+            emitBulkError("sysex_template", templateError.c_str(), seq);
+            return false;
+        }
+        return true;
+    }
+
+    clearSysExTemplate(slot);
+    return true;
+}
+
+void applySlotEnvelopePayload(JsonObject slotObj, uint8_t slotIndex,
+                              bool &anySlotPayloadSpecified) {
+    if (!(slotObj.containsKey("ef_payload") && slotObj["ef_payload"].is<JsonObject>())) {
+        return;
+    }
+
+    JsonObject efPayload = slotObj["ef_payload"].as<JsonObject>();
+    SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(slotIndex);
+
+    if (efPayload.containsKey("type_index")) {
+        payload.filterType = static_cast<uint8_t>(efPayload["type_index"].as<int>());
+    } else if (efPayload.containsKey("type")) {
+        const char *label = efPayload["type"].as<const char *>();
+        EnvelopeFollower::FilterType mapped =
+            parseFilterType(label, static_cast<EnvelopeFollower::FilterType>(payload.filterType));
+        payload.filterType = static_cast<uint8_t>(mapped);
+    }
+    if (efPayload.containsKey("freq")) {
+        payload.frequency = efPayload["freq"].as<float>();
+    }
+    if (efPayload.containsKey("q")) {
+        payload.q = efPayload["q"].as<float>();
+    }
+
+    configManager.setSlotEnvelopePayload(slotIndex, payload);
+    anySlotPayloadSpecified = true;
+}
+
+void persistSlotPotRouting(uint8_t slotIndex, uint8_t midiChannel, uint8_t data1) {
+    configManager.setPotChannel(slotIndex, midiChannel);
+    configManager.setPotCCNumber(slotIndex, data1);
+    potentiometerManager.setChannel(slotIndex, midiChannel);
+    potentiometerManager.setCCNumber(slotIndex, data1);
+    if (static_cast<size_t>(slotIndex) < potChannels.size()) {
+        potChannels[slotIndex] = midiChannel;
+    }
+}
+
+void clearEfSlotAssignments() {
+    potToEnvelopeMap.clear();
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.setEnvelopeFollowerIndex(-1);
+    }
+}
+
+void assignFollowerToSlot(int followerIndex, int slotIndex) {
+    if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
+        return;
+    }
+    if (slotIndex < 0 || slotIndex >= NUM_POTS) {
+        return;
+    }
+    MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
+    slot.setEnvelopeFollowerIndex(static_cast<int8_t>(followerIndex));
+    potToEnvelopeMap[slotIndex] = slot.efSettings;
+}
+
+void applyEfSlotMappingEntry(JsonObject mapping, uint8_t defaultFollowerIndex) {
+    if (mapping.isNull()) {
+        return;
+    }
+
+    int followerIndex = static_cast<int>(defaultFollowerIndex);
+    if (mapping.containsKey("index")) {
+        followerIndex = mapping["index"].as<int>();
+    }
+    if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
+        return;
+    }
+
+    if (mapping.containsKey("slots") && mapping["slots"].is<JsonArray>()) {
+        JsonArray targets = mapping["slots"].as<JsonArray>();
+        for (JsonVariant value : targets) {
+            assignFollowerToSlot(followerIndex, value.as<int>());
+        }
+        return;
+    }
+
+    if (mapping.containsKey("slot")) {
+        assignFollowerToSlot(followerIndex, mapping["slot"].as<int>());
+    }
+}
+
+void applyFollowerSettingsFromPotMap() {
+    std::array<bool, NUM_ENVELOPES> followerConfigured{};
+    followerConfigured.fill(false);
+
+    for (const auto &entry : potToEnvelopeMap) {
+        const int followerIndex = entry.second.followerIndex;
+        if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
+            continue;
+        }
+
+        envelopeFollowers[followerIndex].setModulationTarget(
+            potentiometerManager.getCCNumber(entry.first));
+        if (!followerConfigured[followerIndex]) {
+            applyEfSettingsToFollower(envelopeFollowers[followerIndex], entry.second,
+                                      static_cast<uint8_t>(followerIndex));
+            followerConfigured[followerIndex] = true;
+        }
+    }
+}
+
+SlotEnvelopePayload readGlobalFilterPayload(JsonObject filterObj) {
+    EnvelopeFollower::FilterType current = envelopeFollowers.empty()
+                                               ? EnvelopeFollower::LINEAR
+                                               : envelopeFollowers.front().getFilterType();
+    EnvelopeFollower::FilterType filterType =
+        parseFilterType(filterObj["type"].as<const char *>(), current);
+    float freq = constrain(readFloatField(filterObj, "freq", "frequency", EF_FILTER_FREQ_MIN_HZ),
+                           EF_FILTER_FREQ_MIN_HZ, EF_FILTER_FREQ_MAX_HZ);
+    float q = constrain(readFloatField(filterObj, "q", "q", EF_FILTER_Q_MIN), EF_FILTER_Q_MIN,
+                        EF_FILTER_Q_MAX);
+    if (filterObj.containsKey("idle_floor") || filterObj.containsKey("idleFloor")) {
+        configManager.setEfIdleFloor(readClampedU8(filterObj, "idle_floor", "idleFloor", 0, 127,
+                                                   configManager.getEfIdleFloor()));
+    }
+
+    SlotEnvelopePayload tailPayload{};
+    tailPayload.filterType = static_cast<uint8_t>(filterType);
+    tailPayload.frequency = freq;
+    tailPayload.q = q;
+    return configManager.persistFilterTail(tailPayload);
+}
+
+void applyGlobalFilterToFollowers(const SlotEnvelopePayload &payload) {
+    EnvelopeFollower::FilterType filterType =
+        static_cast<EnvelopeFollower::FilterType>(payload.filterType);
+    for (auto &ef : envelopeFollowers) {
+        ef.setFilterType(filterType);
+        ef.configureFilter(payload.frequency, payload.q);
+    }
+}
+
+void backfillSlotEnvelopePayloads(const SlotEnvelopePayload &payload) {
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        SlotEnvelopePayload slotPayload = configManager.getSlotEnvelopePayload(i);
+        slotPayload.filterType = payload.filterType;
+        slotPayload.frequency = payload.frequency;
+        slotPayload.q = payload.q;
+        configManager.setSlotEnvelopePayload(i, slotPayload);
+    }
+}
+
+void applyGlobalArgRouting(const SlotARGConfig &defaultArg) {
+    envelopeFollowMode = defaultArg.enabled != 0;
+    configManager.setARGEnable(defaultArg.enabled);
+    configManager.setARGMethod(static_cast<uint8_t>(defaultArg.method));
+    configManager.setEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
+    potentiometerManager.setArgEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
+}
+
+void applyGlobalArgFollowerModes(const SlotARGConfig &defaultArg) {
+    EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(defaultArg.method);
+    for (auto &ef : envelopeFollowers) {
+        ef.setARGMethod(followerMethod);
+        ef.setMode(envelopeFollowMode ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
+    }
+}
+
+void applyEnvelopeModeLabel(JsonObject config) {
+    if (config.containsKey("envelopeMode")) {
+        updateEnvelopeModeLabel(config["envelopeMode"].as<const char *>());
+    }
+}
+
+uint8_t readLedBrightness(JsonObject ledObj) {
+    uint8_t brightness = ledManager.getBrightness();
+    if (ledObj.containsKey("brightness")) {
+        brightness = readClampedU8(ledObj, "brightness", "brightness", 0, 255, brightness);
+    }
+    return std::min<uint8_t>(brightness, BoardPowerProfile::kLedBrightnessCap);
+}
+
+CRGB readLedColor(JsonObject ledObj) {
+    CRGB color = ledManager.getColor();
+    const char *hex = ledObj["color"].as<const char *>();
+    if (!hex) {
+        hex = ledObj["hex"].as<const char *>();
+    }
+
+    if (hex) {
+        CRGB parsed;
+        if (parseHexColor(hex, parsed)) {
+            color = parsed;
+        }
+        return color;
+    }
+
+    if (ledObj.containsKey("rgb") && ledObj["rgb"].is<JsonObject>()) {
+        JsonObject rgb = ledObj["rgb"].as<JsonObject>();
+        color.r = readClampedU8(rgb, "r", "r", 0, 255, color.r);
+        color.g = readClampedU8(rgb, "g", "g", 0, 255, color.g);
+        color.b = readClampedU8(rgb, "b", "b", 0, 255, color.b);
+    }
+    return color;
+}
+
+void applyLedMode(JsonObject ledObj) {
+    if (!ledObj.containsKey("mode")) {
+        return;
+    }
+
+    const char *modeStr = ledObj["mode"].as<const char *>();
+    LedMode newMode = ledModeFromString(modeStr, configManager.getLedMode());
+    configManager.setLedMode(newMode);
+    ledAnimator.setMode(newMode);
+}
+
+void emitBulkIngestError(const String &ingestError, uint32_t hint) {
+    if (ingestError == "overflow") {
+        emitBulkError("overflow", "config payload too large", hint);
+    } else if (ingestError == "orphan") {
+        emitBulkError("orphan", "chunk missing frame start", hint);
+    } else {
+        emitBulkError("ingest", "failed to stage chunk", hint);
+    }
+}
+
+bool parseBulkConfigDocument(StaticJsonDocument<Utility::kMaxBulkConfigSize> &doc) {
+    doc.clear();
+    DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
+    if (err) {
+        emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
+        bulkConfigAssembler.reset();
+        return false;
+    }
+    return true;
+}
+
+bool resolveBulkApplyIdentity(JsonDocument &doc, BulkApplyIdentity &identity) {
+    identity.sequence = doc["seq"].as<uint32_t>();
+    if (identity.sequence == 0) {
+        identity.sequence = bulkConfigAssembler.sequenceHint();
+    }
+
+    const char *configId = doc["config_id"] | nullptr;
+    if (!configId || configId[0] == '\0') {
+        configId = doc["checksum"] | nullptr;
+    }
+
+    const String &checksumHint = bulkConfigAssembler.checksumHint();
+    if ((!configId || configId[0] == '\0') && checksumHint.length() > 0) {
+        identity.configId = checksumHint;
+    } else if (configId) {
+        identity.configId = configId;
+    } else {
+        identity.configId = "";
+    }
+
+    if (identity.sequence == 0) {
+        identity.sequence = lastAckSequence + 1;
+    }
+
+    if (identity.configId.length() == 0) {
+        emitBulkError("checksum", "missing checksum/config_id", identity.sequence);
+        bulkConfigAssembler.reset();
+        return false;
+    }
+
+    return true;
+}
+
+bool emitDuplicateBulkAckIfNeeded(const BulkApplyIdentity &identity) {
+    if (identity.sequence != lastAckSequence || lastAckChecksum != identity.configId) {
+        return false;
+    }
+
+    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence));
+    bulkConfigAssembler.reset();
+    return true;
+}
+
+void commitBulkApplyAck(const BulkApplyIdentity &identity) {
+    lastAckSequence = identity.sequence;
+    lastAckChecksum = identity.configId;
+    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence));
+    bulkConfigAssembler.reset();
+}
+
+bool applySlotDefinitions(JsonArray slotsJson, uint32_t seq, bool &anySlotPayloadSpecified) {
+    anySlotPayloadSpecified = false;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         JsonObject slotObj = slotsJson[i];
         if (slotObj.isNull()) {
@@ -476,159 +854,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         }
         bool active = slotObj["active"].as<bool>();
 
-        MIDISlot::EfSettings settings = slot.efSettings;
-        settings.followerIndex = slot.getEnvelopeFollowerIndex();
-
-        int rawEfIndex = settings.followerIndex;
-        if (slotObj.containsKey("efIndex")) {
-            rawEfIndex = slotObj["efIndex"].as<int>();
-        } else if (slotObj.containsKey("ef_index")) {
-            rawEfIndex = slotObj["ef_index"].as<int>();
-        }
-
-        JsonObject efObj =
-            slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
-        if (!efObj.isNull()) {
-            if (efObj.containsKey("index")) {
-                rawEfIndex = efObj["index"].as<int>();
-            }
-            if (efObj.containsKey("filter_index")) {
-                int idx = constrain(efObj["filter_index"].as<int>(), 0, 6);
-                settings.filterType = static_cast<MIDISlot::EfSettings::FilterType>(idx);
-            } else if (efObj.containsKey("filter_name")) {
-                const char *label = efObj["filter_name"].as<const char *>();
-                EnvelopeFollower::FilterType parsed =
-                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
-                settings.filterType = fromEnvelopeFilter(parsed);
-            } else if (efObj.containsKey("filter")) {
-                const char *label = efObj["filter"].as<const char *>();
-                EnvelopeFollower::FilterType parsed =
-                    parseFilterType(label, EnvelopeFollower::filterFromEfType(settings.filterType));
-                settings.filterType = fromEnvelopeFilter(parsed);
-            }
-            if (efObj.containsKey("frequency")) {
-                settings.frequency = efObj["frequency"].as<float>();
-            }
-            if (efObj.containsKey("q")) {
-                settings.q = efObj["q"].as<float>();
-            }
-            if (efObj.containsKey("oversample")) {
-                settings.oversample = readClampedU8(
-                    efObj, "oversample", "oversample", static_cast<int>(EF_OVERSAMPLE_MIN),
-                    static_cast<int>(EF_OVERSAMPLE_MAX), settings.oversample);
-            }
-            if (efObj.containsKey("smoothing")) {
-                settings.smoothing = efObj["smoothing"].as<float>();
-            }
-            if (efObj.containsKey("baseline")) {
-                settings.baseline = efObj["baseline"].as<float>();
-            }
-            if (efObj.containsKey("gain")) {
-                settings.gain = efObj["gain"].as<float>();
-            }
-            if (efObj.containsKey("mode")) {
-                if (efObj["mode"].is<const char *>()) {
-                    settings.efMode = static_cast<uint8_t>(
-                        parseEfMode(efObj["mode"].as<const char *>(),
-                                    static_cast<EnvelopeFollower::EFMode>(settings.efMode)));
-                } else {
-                    int raw = efObj["mode"].as<int>();
-                    settings.efMode = static_cast<uint8_t>(
-                        constrain(raw, 0, static_cast<int>(EnvelopeFollower::EFMode::Follower)));
-                }
-            }
-            if (efObj.containsKey("auto_baseline")) {
-                settings.autoBaseline = efObj["auto_baseline"].as<bool>() ? 1 : 0;
-            } else if (efObj.containsKey("autoBaseline")) {
-                settings.autoBaseline = efObj["autoBaseline"].as<bool>() ? 1 : 0;
-            }
-            if (efObj.containsKey("auto_gain")) {
-                settings.autoGain = efObj["auto_gain"].as<bool>() ? 1 : 0;
-            } else if (efObj.containsKey("autoGain")) {
-                settings.autoGain = efObj["autoGain"].as<bool>() ? 1 : 0;
-            }
-            if (efObj.containsKey("attack_ms")) {
-                settings.attackMs =
-                    readClampedU16(efObj, "attack_ms", "attackMs", static_cast<int>(EF_TIME_MIN_MS),
-                                   static_cast<int>(EF_TIME_MAX_MS), settings.attackMs);
-            } else if (efObj.containsKey("attackMs")) {
-                settings.attackMs =
-                    readClampedU16(efObj, "attack_ms", "attackMs", static_cast<int>(EF_TIME_MIN_MS),
-                                   static_cast<int>(EF_TIME_MAX_MS), settings.attackMs);
-            }
-            if (efObj.containsKey("release_ms")) {
-                settings.releaseMs = readClampedU16(
-                    efObj, "release_ms", "releaseMs", static_cast<int>(EF_TIME_MIN_MS),
-                    static_cast<int>(EF_TIME_MAX_MS), settings.releaseMs);
-            } else if (efObj.containsKey("releaseMs")) {
-                settings.releaseMs = readClampedU16(
-                    efObj, "release_ms", "releaseMs", static_cast<int>(EF_TIME_MIN_MS),
-                    static_cast<int>(EF_TIME_MAX_MS), settings.releaseMs);
-            }
-            if (efObj.containsKey("rms_ms")) {
-                settings.rmsWindowMs =
-                    readClampedU16(efObj, "rms_ms", "rmsWindowMs", static_cast<int>(EF_TIME_MIN_MS),
-                                   static_cast<int>(EF_TIME_MAX_MS), settings.rmsWindowMs);
-            } else if (efObj.containsKey("rmsWindowMs")) {
-                settings.rmsWindowMs =
-                    readClampedU16(efObj, "rms_ms", "rmsWindowMs", static_cast<int>(EF_TIME_MIN_MS),
-                                   static_cast<int>(EF_TIME_MAX_MS), settings.rmsWindowMs);
-            }
-            if (efObj.containsKey("baseline_tau_ms")) {
-                settings.baselineTauMs = readClampedU16(
-                    efObj, "baseline_tau_ms", "baselineTauMs", static_cast<int>(EF_TIME_MIN_MS),
-                    static_cast<int>(EF_TIME_MAX_MS), settings.baselineTauMs);
-            } else if (efObj.containsKey("baselineTauMs")) {
-                settings.baselineTauMs = readClampedU16(
-                    efObj, "baseline_tau_ms", "baselineTauMs", static_cast<int>(EF_TIME_MIN_MS),
-                    static_cast<int>(EF_TIME_MAX_MS), settings.baselineTauMs);
-            }
-            if (efObj.containsKey("gain_tau_ms")) {
-                settings.gainTauMs = readClampedU16(
-                    efObj, "gain_tau_ms", "gainTauMs", static_cast<int>(EF_TIME_MIN_MS),
-                    static_cast<int>(EF_TIME_MAX_MS), settings.gainTauMs);
-            } else if (efObj.containsKey("gainTauMs")) {
-                settings.gainTauMs = readClampedU16(
-                    efObj, "gain_tau_ms", "gainTauMs", static_cast<int>(EF_TIME_MIN_MS),
-                    static_cast<int>(EF_TIME_MAX_MS), settings.gainTauMs);
-            }
-            if (efObj.containsKey("gate_threshold")) {
-                settings.gateThreshold = readClampedU8(efObj, "gate_threshold", "gateThreshold", 0,
-                                                       127, settings.gateThreshold);
-            } else if (efObj.containsKey("gateThreshold")) {
-                settings.gateThreshold = readClampedU8(efObj, "gate_threshold", "gateThreshold", 0,
-                                                       127, settings.gateThreshold);
-            }
-            if (efObj.containsKey("gate_hysteresis")) {
-                settings.gateHysteresis = readClampedU8(efObj, "gate_hysteresis", "gateHysteresis",
-                                                        0, 127, settings.gateHysteresis);
-            } else if (efObj.containsKey("gateHysteresis")) {
-                settings.gateHysteresis = readClampedU8(efObj, "gate_hysteresis", "gateHysteresis",
-                                                        0, 127, settings.gateHysteresis);
-            }
-            if (efObj.containsKey("activity_threshold")) {
-                settings.activityThreshold =
-                    readClampedU8(efObj, "activity_threshold", "activityThreshold", 0, 127,
-                                  settings.activityThreshold);
-            } else if (efObj.containsKey("activityThreshold")) {
-                settings.activityThreshold =
-                    readClampedU8(efObj, "activity_threshold", "activityThreshold", 0, 127,
-                                  settings.activityThreshold);
-            }
-            if (efObj.containsKey("gain_target")) {
-                settings.gainTarget =
-                    readClampedU8(efObj, "gain_target", "gainTarget", 0, 127, settings.gainTarget);
-            } else if (efObj.containsKey("gainTarget")) {
-                settings.gainTarget =
-                    readClampedU8(efObj, "gain_target", "gainTarget", 0, 127, settings.gainTarget);
-            }
-        }
-
-        if (rawEfIndex >= 0 && rawEfIndex < static_cast<int>(envelopeFollowers.size())) {
-            settings.followerIndex = static_cast<int8_t>(rawEfIndex);
-        } else {
-            settings.followerIndex = -1;
-        }
+        MIDISlot::EfSettings settings = readSlotEfSettings(slotObj, slot);
 
         slot.type = midiType;
         slot.midiChannel = midiChannel;
@@ -637,275 +863,91 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         slot.efSettings = settings;
         slot.setEnvelopeFollowerIndex(settings.followerIndex);
         slot.active = active;
-        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
-            JsonObject slotArgObj = slotObj["arg"].as<JsonObject>();
-            SlotARGConfig slotArgConfig = slot.arg;
-            if (slotArgObj.containsKey("enable")) {
-                slotArgConfig.enabled = slotArgObj["enable"].as<bool>() ? 1 : 0;
-            } else if (slotArgObj.containsKey("enabled")) {
-                slotArgConfig.enabled = slotArgObj["enabled"].as<bool>() ? 1 : 0;
-            }
-            if (slotArgObj.containsKey("method")) {
-                if (slotArgObj["method"].is<const char *>()) {
-                    ARGMethod parsed = parseArgMethod(slotArgObj["method"].as<const char *>(),
-                                                      slotArgConfig.method);
-                    slotArgConfig.method = parsed;
-                } else {
-                    int raw = slotArgObj["method"].as<int>();
-                    raw = constrain(raw, 0, static_cast<int>(ARGMethod::XORR));
-                    slotArgConfig.method = static_cast<ARGMethod>(raw);
-                }
-            }
-            if (slotArgObj.containsKey("a")) {
-                slotArgConfig.sourceA = static_cast<uint8_t>(
-                    constrain(slotArgObj["a"].as<int>(), 0, NUM_ENVELOPES - 1));
-            } else if (slotArgObj.containsKey("sourceA")) {
-                slotArgConfig.sourceA = static_cast<uint8_t>(
-                    constrain(slotArgObj["sourceA"].as<int>(), 0, NUM_ENVELOPES - 1));
-            }
-            if (slotArgObj.containsKey("b")) {
-                slotArgConfig.sourceB = static_cast<uint8_t>(
-                    constrain(slotArgObj["b"].as<int>(), 0, NUM_ENVELOPES - 1));
-            } else if (slotArgObj.containsKey("sourceB")) {
-                slotArgConfig.sourceB = static_cast<uint8_t>(
-                    constrain(slotArgObj["sourceB"].as<int>(), 0, NUM_ENVELOPES - 1));
-            }
-            slot.arg = sanitizeSlotArg(slotArgConfig);
+        JsonObject slotArgObj =
+            slotObj["arg"].is<JsonObject>() ? slotObj["arg"].as<JsonObject>() : JsonObject();
+        if (!slotArgObj.isNull()) {
+            slot.arg = parseSlotArgConfig(slotArgObj, slot.arg, false);
         }
-        if (slot.type == MIDIMessageType::SysEx) {
-            String templateError;
-            if (!parseSysExTemplateField(slotObj["sysexTemplate"], slot, templateError)) {
-                emitBulkError("sysex_template", templateError.c_str(), seq);
-                return false;
-            }
-        } else {
-            clearSysExTemplate(slot);
+        if (!applySlotSysExTemplate(slotObj, slot, seq)) {
+            return false;
         }
-        SlotARGConfig slotArg = slot.arg;
-        if (slotObj.containsKey("arg") && slotObj["arg"].is<JsonObject>()) {
-            JsonObject argObj = slotObj["arg"].as<JsonObject>();
-            if (argObj.containsKey("enable")) {
-                slotArg.enabled = argObj["enable"].as<bool>() ? 1 : 0;
-            } else if (argObj.containsKey("enabled")) {
-                slotArg.enabled = argObj["enabled"].as<bool>() ? 1 : 0;
-            }
-            if (argObj.containsKey("method")) {
-                if (argObj["method"].is<const char *>()) {
-                    slotArg.method =
-                        parseArgMethod(argObj["method"].as<const char *>(), slotArg.method);
-                } else {
-                    slotArg.method = static_cast<ARGMethod>(constrain(
-                        argObj["method"].as<int>(), 0, static_cast<int>(ARGMethod::XORR)));
-                }
-            }
-            if (argObj.containsKey("a")) {
-                int rawA = argObj["a"].as<int>();
-                int idxA = envelopeIndexFromAnalogPin(rawA);
-                if (idxA < 0)
-                    idxA = constrain(rawA, 0, NUM_ENVELOPES - 1);
-                slotArg.sourceA = static_cast<uint8_t>(idxA);
-            }
-            if (argObj.containsKey("b")) {
-                int rawB = argObj["b"].as<int>();
-                int idxB = envelopeIndexFromAnalogPin(rawB);
-                if (idxB < 0)
-                    idxB = constrain(rawB, 0, NUM_ENVELOPES - 1);
-                slotArg.sourceB = static_cast<uint8_t>(idxB);
-            }
-            slotArg = sanitizeSlotArg(slotArg);
-        }
-        slot.arg = slotArg;
+        slot.arg = parseSlotArgConfig(slotArgObj, slot.arg, true);
         configManager.saveSlot(i, slot);
+        applySlotEnvelopePayload(slotObj, i, anySlotPayloadSpecified);
+        persistSlotPotRouting(i, midiChannel, data1);
+    }
+    return true;
+}
 
-        if (slotObj.containsKey("ef_payload") && slotObj["ef_payload"].is<JsonObject>()) {
-            JsonObject efPayload = slotObj["ef_payload"].as<JsonObject>();
-            SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
+void applyEfSlotMappingsFromConfig(JsonObject config) {
+    if (!(config.containsKey("efSlots") && config["efSlots"].is<JsonArray>())) {
+        return;
+    }
 
-            if (efPayload.containsKey("type_index")) {
-                payload.filterType = static_cast<uint8_t>(efPayload["type_index"].as<int>());
-            } else if (efPayload.containsKey("type")) {
-                const char *label = efPayload["type"].as<const char *>();
-                EnvelopeFollower::FilterType mapped = parseFilterType(
-                    label, static_cast<EnvelopeFollower::FilterType>(payload.filterType));
-                payload.filterType = static_cast<uint8_t>(mapped);
-            }
-            if (efPayload.containsKey("freq")) {
-                payload.frequency = efPayload["freq"].as<float>();
-            }
-            if (efPayload.containsKey("q")) {
-                payload.q = efPayload["q"].as<float>();
-            }
+    JsonArray efSlots = config["efSlots"].as<JsonArray>();
+    clearEfSlotAssignments();
 
-            configManager.setSlotEnvelopePayload(i, payload);
-            anySlotPayloadSpecified = true;
-        }
+    for (uint8_t i = 0; i < efSlots.size(); ++i) {
+        applyEfSlotMappingEntry(efSlots[i].as<JsonObject>(), i);
+    }
 
-        configManager.setPotChannel(i, midiChannel);
-        configManager.setPotCCNumber(i, data1);
-        potentiometerManager.setChannel(i, midiChannel);
-        potentiometerManager.setCCNumber(i, data1);
-        if (static_cast<size_t>(i) < potChannels.size()) {
-            potChannels[i] = midiChannel;
-        }
+    applyFollowerSettingsFromPotMap();
+    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+}
+
+void applyGlobalFilterState(JsonObject config, bool anySlotPayloadSpecified) {
+    if (!(config.containsKey("filter") && config["filter"].is<JsonObject>())) {
+        return;
+    }
+
+    JsonObject filterObj = config["filter"].as<JsonObject>();
+    const SlotEnvelopePayload filterPayload = readGlobalFilterPayload(filterObj);
+    applyGlobalFilterToFollowers(filterPayload);
+
+    if (!anySlotPayloadSpecified) {
+        backfillSlotEnvelopePayloads(filterPayload);
+    }
+}
+
+void applyGlobalArgAndModeState(JsonObject config, const SlotARGConfig &defaultArg) {
+    applyGlobalArgRouting(defaultArg);
+    applyGlobalArgFollowerModes(defaultArg);
+    applyEnvelopeModeLabel(config);
+}
+
+void applyLedStateFromConfig(JsonObject config) {
+    if (!(config.containsKey("led") && config["led"].is<JsonObject>())) {
+        return;
+    }
+
+    JsonObject ledObj = config["led"].as<JsonObject>();
+    uint8_t brightness = readLedBrightness(ledObj);
+    CRGB color = readLedColor(ledObj);
+    ledManager.setBrightness(brightness);
+    ledManager.setColor(color);
+    configManager.saveLEDSettings(brightness, color);
+    applyLedMode(ledObj);
+}
+
+bool applyConfigObject(JsonObject config, uint32_t seq) {
+    JsonArray slotsJson;
+    if (!parseSlotsArray(config, seq, slotsJson)) {
+        return false;
+    }
+
+    (void)readDefaultEfSettingsFromConfig(config);
+    const SlotARGConfig defaultArg = readDefaultArgConfigFromConfig(config);
+
+    bool anySlotPayloadSpecified = false;
+    if (!applySlotDefinitions(slotsJson, seq, anySlotPayloadSpecified)) {
+        return false;
     }
 
     configManager.saveConfiguration();
-
-    if (config.containsKey("efSlots") && config["efSlots"].is<JsonArray>()) {
-        JsonArray efSlots = config["efSlots"].as<JsonArray>();
-        potToEnvelopeMap.clear();
-
-        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-            MIDISlot &slot = configManager.getSlot(slotIndex);
-            slot.setEnvelopeFollowerIndex(-1);
-        }
-
-        auto assignFollowerToSlot = [&](int followerIndex, int slotIndex) {
-            if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
-                return;
-            }
-            if (slotIndex < 0 || slotIndex >= NUM_POTS) {
-                return;
-            }
-            MIDISlot &slot = configManager.getSlot(static_cast<uint8_t>(slotIndex));
-            slot.setEnvelopeFollowerIndex(static_cast<int8_t>(followerIndex));
-            potToEnvelopeMap[slotIndex] = slot.efSettings;
-        };
-
-        for (uint8_t i = 0; i < efSlots.size(); ++i) {
-            JsonObject mapping = efSlots[i];
-            if (mapping.isNull()) {
-                continue;
-            }
-
-            int followerIndex = static_cast<int>(i);
-            if (mapping.containsKey("index")) {
-                followerIndex = mapping["index"].as<int>();
-            }
-            if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
-                continue;
-            }
-
-            if (mapping.containsKey("slots") && mapping["slots"].is<JsonArray>()) {
-                JsonArray targets = mapping["slots"].as<JsonArray>();
-                for (JsonVariant value : targets) {
-                    assignFollowerToSlot(followerIndex, value.as<int>());
-                }
-            } else if (mapping.containsKey("slot")) {
-                assignFollowerToSlot(followerIndex, mapping["slot"].as<int>());
-            }
-        }
-
-        std::array<bool, NUM_ENVELOPES> followerConfigured{};
-        followerConfigured.fill(false);
-        for (const auto &entry : potToEnvelopeMap) {
-            const int followerIndex = entry.second.followerIndex;
-            if (followerIndex < 0 || followerIndex >= static_cast<int>(envelopeFollowers.size())) {
-                continue;
-            }
-            envelopeFollowers[followerIndex].setModulationTarget(
-                potentiometerManager.getCCNumber(entry.first));
-            if (!followerConfigured[followerIndex]) {
-                applyEfSettingsToFollower(envelopeFollowers[followerIndex], entry.second,
-                                          static_cast<uint8_t>(followerIndex));
-                followerConfigured[followerIndex] = true;
-            }
-        }
-        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-    }
-
-    if (config.containsKey("filter") && config["filter"].is<JsonObject>()) {
-        JsonObject filterObj = config["filter"].as<JsonObject>();
-        EnvelopeFollower::FilterType current = envelopeFollowers.empty()
-                                                   ? EnvelopeFollower::LINEAR
-                                                   : envelopeFollowers.front().getFilterType();
-        EnvelopeFollower::FilterType filterType =
-            parseFilterType(filterObj["type"].as<const char *>(), current);
-        float freq =
-            constrain(readFloatField(filterObj, "freq", "frequency", EF_FILTER_FREQ_MIN_HZ),
-                      EF_FILTER_FREQ_MIN_HZ, EF_FILTER_FREQ_MAX_HZ);
-        float q = constrain(readFloatField(filterObj, "q", "q", EF_FILTER_Q_MIN), EF_FILTER_Q_MIN,
-                            EF_FILTER_Q_MAX);
-        if (filterObj.containsKey("idle_floor") || filterObj.containsKey("idleFloor")) {
-            configManager.setEfIdleFloor(readClampedU8(filterObj, "idle_floor", "idleFloor", 0, 127,
-                                                       configManager.getEfIdleFloor()));
-        }
-
-        SlotEnvelopePayload tailPayload{};
-        tailPayload.filterType = static_cast<uint8_t>(filterType);
-        tailPayload.frequency = freq;
-        tailPayload.q = q;
-        SlotEnvelopePayload sanitizedTail = configManager.persistFilterTail(tailPayload);
-        filterType = static_cast<EnvelopeFollower::FilterType>(sanitizedTail.filterType);
-        freq = sanitizedTail.frequency;
-        q = sanitizedTail.q;
-
-        for (auto &ef : envelopeFollowers) {
-            ef.setFilterType(filterType);
-            ef.configureFilter(freq, q);
-        }
-
-        if (!anySlotPayloadSpecified) {
-            for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-                SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(i);
-                payload.filterType = static_cast<uint8_t>(filterType);
-                payload.frequency = freq;
-                payload.q = q;
-                configManager.setSlotEnvelopePayload(i, payload);
-            }
-        }
-    }
-
-    envelopeFollowMode = defaultArg.enabled != 0;
-    configManager.setARGEnable(defaultArg.enabled);
-    configManager.setARGMethod(static_cast<uint8_t>(defaultArg.method));
-    configManager.setEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
-    potentiometerManager.setArgEnvelopePair(defaultArg.sourceA, defaultArg.sourceB);
-
-    EnvelopeFollower::ARG_Method followerMethod = toFollowerArgMethod(defaultArg.method);
-    for (auto &ef : envelopeFollowers) {
-        ef.setARGMethod(followerMethod);
-        ef.setMode(envelopeFollowMode ? EnvelopeFollower::ARG : EnvelopeFollower::SEF);
-    }
-
-    if (config.containsKey("envelopeMode")) {
-        updateEnvelopeModeLabel(config["envelopeMode"].as<const char *>());
-    }
-
-    if (config.containsKey("led") && config["led"].is<JsonObject>()) {
-        JsonObject ledObj = config["led"].as<JsonObject>();
-        uint8_t brightness = ledManager.getBrightness();
-        if (ledObj.containsKey("brightness")) {
-            brightness = readClampedU8(ledObj, "brightness", "brightness", 0, 255, brightness);
-        }
-        CRGB color = ledManager.getColor();
-        const char *hex = ledObj["color"].as<const char *>();
-        if (!hex) {
-            hex = ledObj["hex"].as<const char *>();
-        }
-        if (hex) {
-            CRGB parsed;
-            if (parseHexColor(hex, parsed)) {
-                color = parsed;
-            }
-        } else if (ledObj.containsKey("rgb") && ledObj["rgb"].is<JsonObject>()) {
-            JsonObject rgb = ledObj["rgb"].as<JsonObject>();
-            color.r = readClampedU8(rgb, "r", "r", 0, 255, color.r);
-            color.g = readClampedU8(rgb, "g", "g", 0, 255, color.g);
-            color.b = readClampedU8(rgb, "b", "b", 0, 255, color.b);
-        }
-        brightness = std::min<uint8_t>(brightness, BoardPowerProfile::kLedBrightnessCap);
-        ledManager.setBrightness(brightness);
-        ledManager.setColor(color);
-        configManager.saveLEDSettings(brightness, color);
-        if (ledObj.containsKey("mode")) {
-            const char *modeStr = ledObj["mode"].as<const char *>();
-            LedMode newMode = ledModeFromString(modeStr, configManager.getLedMode());
-            configManager.setLedMode(newMode);
-            ledAnimator.setMode(newMode);
-        }
-    }
-
+    applyEfSlotMappingsFromConfig(config);
+    applyGlobalFilterState(config, anySlotPayloadSpecified);
+    applyGlobalArgAndModeState(config, defaultArg);
+    applyLedStateFromConfig(config);
     return true;
 }
 } // namespace
@@ -963,14 +1005,7 @@ void handleSetAllBulkCommand(const String &command) {
 
     String ingestError;
     if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
-        uint32_t hint = bulkConfigAssembler.sequenceHint();
-        if (ingestError == "overflow") {
-            emitBulkError("overflow", "config payload too large", hint);
-        } else if (ingestError == "orphan") {
-            emitBulkError("orphan", "chunk missing frame start", hint);
-        } else {
-            emitBulkError("ingest", "failed to stage chunk", hint);
-        }
+        emitBulkIngestError(ingestError, bulkConfigAssembler.sequenceHint());
         return;
     }
 
@@ -979,50 +1014,24 @@ void handleSetAllBulkCommand(const String &command) {
     }
 
     static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
-    doc.clear();
-    DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
-    if (err) {
-        emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
-        bulkConfigAssembler.reset();
+    if (!parseBulkConfigDocument(doc)) {
         return;
     }
 
-    uint32_t seq = doc["seq"].as<uint32_t>();
-    if (seq == 0) {
-        seq = bulkConfigAssembler.sequenceHint();
-    }
-    const char *configId = doc["config_id"] | nullptr;
-    if (!configId || configId[0] == '\0') {
-        configId = doc["checksum"] | nullptr;
-    }
-    const String &checksumHint = bulkConfigAssembler.checksumHint();
-    if ((!configId || configId[0] == '\0') && checksumHint.length() > 0) {
-        configId = checksumHint.c_str();
-    }
-    if (!configId || configId[0] == '\0') {
-        emitBulkError("checksum", "missing checksum/config_id", seq);
-        bulkConfigAssembler.reset();
+    BulkApplyIdentity identity;
+    if (!resolveBulkApplyIdentity(doc, identity)) {
         return;
     }
 
-    if (seq == 0) {
-        seq = lastAckSequence + 1;
-    }
-
-    if (seq == lastAckSequence && lastAckChecksum == configId) {
-        LOG_PRINTLN(Utility::formatAck(configId, seq));
-        bulkConfigAssembler.reset();
+    if (emitDuplicateBulkAckIfNeeded(identity)) {
         return;
     }
 
     JsonObject configObj = doc["config"].as<JsonObject>();
-    if (!applyConfigObject(configObj, seq)) {
+    if (!applyConfigObject(configObj, identity.sequence)) {
         bulkConfigAssembler.reset();
         return;
     }
 
-    lastAckSequence = seq;
-    lastAckChecksum = configId;
-    LOG_PRINTLN(Utility::formatAck(configId, seq));
-    bulkConfigAssembler.reset();
+    commitBulkApplyAck(identity);
 }

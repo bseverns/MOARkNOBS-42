@@ -25,6 +25,19 @@
 #include "interop/SeedBoxLink.h"
 
 #include <TimerOne.h>
+
+// Runtime.cpp is the execution layer for the standalone instrument path.
+//
+// Reading order:
+// 1. small private queues/flags and clock helpers
+// 2. boot-time bring-up in initializeRuntime()
+// 3. high-frequency service lanes (MIDI, followers, LFOs)
+// 4. mid-tier musical processing (envelopes, note-offs, internal clock)
+// 5. diagnostics and health reporting
+//
+// This keeps the file aligned with Runtime.h and with the scheduler-driven
+// shape named in firmware_main.cpp.
+
 namespace {
 
 volatile uint8_t midiServiceRequestCount = 0;
@@ -367,11 +380,11 @@ void initializeRuntime(bool baselinesLoaded) {
     initializeSchedulers();
 }
 
-void midiTimerISR() {
-    // Timer1 ISR only drops a service token; all real MIDI work stays in task context.
-    queueMidiServiceRequest();
-}
+// Timer ISR is intentionally tiny: it only requests service and leaves real work to task
+// context.
+void midiTimerISR() { queueMidiServiceRequest(); }
 
+// High-frequency MIDI ingress/service lane.
 void processMIDI() {
     if (!consumeMidiServiceRequest()) {
         return;
@@ -404,6 +417,7 @@ void processMIDI() {
     monitorSerialHealth();
 }
 
+// High-tier follower sampling lane.
 void processEnvelopeFollowers() {
     // Fast follower pass runs in the high-tier scheduler; downstream MIDI mapping happens in
     // `processEnvelopes()` on the mid tier.
@@ -431,6 +445,7 @@ void processEnvelopeFollowers() {
     nextFollowerIndex = (nextFollowerIndex + passes) % followerCount;
 }
 
+// High-tier LFO update lane.
 void processLFOs() {
     lfoManager.update(now());
     const LFOBus &bus = lfoManager.bus();
@@ -446,6 +461,7 @@ void processLFOs() {
     ledManager.setBrightnessModulator(1.0f);
 }
 
+// Shared delayed note-off queue used by both direct pot gestures and clocked note emission.
 bool queuePendingNoteOff(uint8_t note, uint8_t channel, unsigned long delayMs) {
     uint32_t due = now() + delayMs;
     for (auto &entry : pendingNoteOffs) {
@@ -463,6 +479,7 @@ bool queuePendingNoteOff(uint8_t note, uint8_t channel, unsigned long delayMs) {
     return false;
 }
 
+// Deferred cleanup lane for scheduled note endings.
 void processPendingNoteOffs() {
     unsigned long current = now();
     for (auto &entry : pendingNoteOffs) {
@@ -475,6 +492,7 @@ void processPendingNoteOffs() {
     }
 }
 
+// Mid-tier envelope-to-MIDI modulation lane.
 void processEnvelopes() {
     // Track last emitted values so EF modulation sends CC only on change.
     static std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
@@ -557,6 +575,7 @@ void processEnvelopes() {
     }
 }
 
+// Internal transport clock lane when the device is not following external MIDI clock.
 void processInternalClock() {
     static unsigned long lastInternalTick = 0;
     if (g_tappedBPM <= 0.0f)
@@ -571,6 +590,7 @@ void processInternalClock() {
     }
 }
 
+// Runtime diagnostics, overrun reporting, and status LED maintenance.
 void monitorSystemLoad() {
     static unsigned long lastMonitorTime = 0;
     static unsigned long taskCounter = 0;
@@ -622,6 +642,7 @@ void monitorSystemLoad() {
     serviceStatusLEDPulse();
 }
 
+// Hardware serial health probe used by the configurator/runtime serial lane.
 void monitorSerialHealth() {
 #if defined(__IMXRT1062__)
     if (IMXRT_LPUART6.STAT & LPUART_STAT_OR) {

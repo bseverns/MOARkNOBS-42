@@ -44,18 +44,7 @@ These pages help humans choose a path through the project.
 
 Rule: orientation docs must defer to contract docs for specifics. They explain; they do not redefine protocol or support truth.
 
-### 4. Planning docs
-
-These pages are intentionally not current-state truth.
-
-- [App Runtime Action Plan](../app/AppRuntimeActionPlan.md)
-- [Bridge Runtime Upgrade Plan](../bridge/BridgeRuntimeUpgradePlan.md)
-- [Firmware Runtime Action Plan](../firmware/FirmwareRuntimeActionPlan.md)
-- packaging or roadmap notes that describe future work
-
-Rule: planning docs can describe desired future state, but they must link back to the current contract/evidence pages for what is already true.
-
-### 5. Historical and archived docs
+### 4. Historical and archived docs
 
 These pages preserve narrative, prior reasoning, or audit snapshots.
 

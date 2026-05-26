@@ -5,6 +5,14 @@
 #include "Globals.h"
 #include "Modes.h"
 
+// ProfileCommands.cpp is the lifecycle layer for stored profile slots.
+//
+// Reading order:
+// 1. local helpers for syncing pot/channel mappings and building a default profile
+// 2. save current live state into one profile slot
+// 3. load one slot back into live runtime state
+// 4. reset one slot to the baseline profile
+
 namespace {
 // Push persisted pot channel/CC mappings back into the live managers after config/profile changes.
 void syncPotentiometerMappingsFromConfig() {
@@ -28,6 +36,36 @@ ProfileData defaultProfileSnapshot() {
     }
     return profile;
 }
+
+// Every profile transition begins by declaring which slot the firmware now considers "active."
+void selectActiveProfileSlot(uint8_t id) {
+    g_activeProfile = id;
+    configManager.setActiveProfile(id);
+}
+
+// A blank/reset profile returns pots to the simplest safe baseline: channel 1, CC 0.
+void applyBaselinePotMappings() {
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        configManager.setPotChannel(i, 1);
+        configManager.setPotCCNumber(i, 0);
+    }
+    configManager.saveConfiguration();
+}
+
+// After profile/config state changes, rebuild the live runtime so the stored snapshot becomes
+// audible.
+void rebuildRuntimeFromProfile(const ProfileData &profile) {
+    syncPotentiometerMappingsFromConfig();
+    applyProfileSnapshot(profile, true);
+    refreshEfVoicesFromConfig();
+}
+
+// When a slot was blank, we immediately persist the baseline so future loads see a concrete
+// profile.
+void persistMaterializedProfileSlot(uint8_t id, const ProfileData &profile) {
+    configManager.saveProfile(id);
+    configManager.saveProfileSettings(id, profile);
+}
 } // namespace
 
 // Persist the current live deck state into one of the four firmware profile slots.
@@ -35,8 +73,8 @@ bool saveCurrentProfileSlot(uint8_t id) {
     if (id >= NUM_PROFILES) {
         return false;
     }
-    g_activeProfile = id;
-    configManager.setActiveProfile(id);
+
+    selectActiveProfileSlot(id);
     configManager.saveProfile(id);
     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     return configManager.saveProfileSettings(id, captureProfileSnapshot());
@@ -50,27 +88,19 @@ bool loadProfileSlot(uint8_t id) {
 
     ProfileData profile{};
     const bool stored = configManager.loadProfileSettings(id, profile);
-    g_activeProfile = id;
-    configManager.setActiveProfile(id);
+    selectActiveProfileSlot(id);
 
     if (stored) {
         configManager.loadProfile(id);
     } else {
         profile = defaultProfileSnapshot();
-        for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-            configManager.setPotChannel(i, 1);
-            configManager.setPotCCNumber(i, 0);
-        }
-        configManager.saveConfiguration();
+        applyBaselinePotMappings();
     }
 
-    syncPotentiometerMappingsFromConfig();
-    applyProfileSnapshot(profile, true);
-    refreshEfVoicesFromConfig();
+    rebuildRuntimeFromProfile(profile);
 
     if (!stored) {
-        configManager.saveProfile(id);
-        configManager.saveProfileSettings(id, profile);
+        persistMaterializedProfileSlot(id, profile);
     }
     return true;
 }
@@ -82,16 +112,9 @@ bool resetProfileSlot(uint8_t id) {
     }
 
     const ProfileData profile = defaultProfileSnapshot();
-    g_activeProfile = id;
-    configManager.setActiveProfile(id);
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        configManager.setPotChannel(i, 1);
-        configManager.setPotCCNumber(i, 0);
-    }
-    configManager.saveConfiguration();
-    syncPotentiometerMappingsFromConfig();
-    applyProfileSnapshot(profile, true);
-    refreshEfVoicesFromConfig();
+    selectActiveProfileSlot(id);
+    applyBaselinePotMappings();
+    rebuildRuntimeFromProfile(profile);
     configManager.saveProfile(id);
     return configManager.saveProfileSettings(id, profile);
 }
