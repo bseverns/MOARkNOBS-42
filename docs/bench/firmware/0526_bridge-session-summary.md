@@ -1,3 +1,36 @@
+# Firmware Bench Summary: Bridge Session
+
+Date:
+Commit:
+Firmware git_sha: 8113ff6
+Firmware version: 0.0.0
+Schema version: 6
+Board revision: Rev A prototype
+Serial port: /dev/cu.usbmodem192460701
+Host: Republican-Hivemind
+Node:
+Runner: firmware/system_test/mn42_bridge_session_runner.js
+Report artifact: logs/bridge-session-test.json
+
+## Result
+
+PASS
+
+## Proven
+
+- Bridge console starts.
+- Structured session becomes ready using device schema.
+- /ws/events emits device.ready.
+- /api/device/stage accepts live config mutation.
+- /api/device/apply returns checksum ACK.
+- Staged config is promoted.
+- Cleanup restores original idle_floor.
+
+## Caveats
+
+- Board has known OLED/SDA instability.
+- Board power topology under review; do not treat LED full-brightness behavior as validated.
+
 [bridge-session:server] bridge console: http://127.0.0.1:8791/
 [bridge-session:server] serial up on /dev/cu.usbmodem192460701 @115200
 [bridge-session] wrote report to logs/bridge-session-test.json

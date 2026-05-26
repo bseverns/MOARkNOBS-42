@@ -1,3 +1,25 @@
+## Result
+
+PASS with hardware caveats.
+
+## Proven
+
+- Production firmware starts in standalone_runtime.
+- ENTER_CONFIG_MODE command is accepted.
+- Device reboots into usb_configurator.
+- HELLO, GET_MANIFEST, GET_SCHEMA, GET_CONFIG succeed.
+- SET_ALL chunked apply returns checksum ACK.
+- GET_CONFIG readback confirms applied mutation.
+
+## Observed warnings
+
+- display_init_failed during standalone boot.
+
+## Caveats
+
+- Manifest reported SPLIT_RAIL_REWORK / rail_topology_verified=true, but current Rev A hardware inspection suggests the LED fuse branch is downstream of the 0.5 A fuse.
+- Existing config contained UNKNOWN/255 slot values before apply; SET_ALL path normalized many of these to OFF/channel 16/data1 127.
+
 [boot-contract:host] HELLO
 [boot-contract:serial] 0729D7500100B200420002
 [boot-contract:serial] Reset 0x00000001 Brownouts 0
