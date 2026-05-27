@@ -1,1 +1,1 @@
-# Firmware version will be logged here at boot.
+v0.0.0
