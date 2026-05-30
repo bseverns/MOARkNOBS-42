@@ -7,6 +7,7 @@
 #include "Utility.h"
 #include "Log.h"
 #include "ConfigManager.h"
+#include "FirmwareState.h"
 #include "Globals.h"
 #include "MIDIHandler.h"
 #include <ArduinoJson.h>
@@ -235,6 +236,10 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         diag["loop_last_us"] = static_cast<uint32_t>(diagnostics.lastLoopMicros);
         diag["midi_isr_max_us"] = static_cast<uint32_t>(diagnostics.maxProcessMidiMicros);
         diag["midi_isr_last_us"] = static_cast<uint32_t>(diagnostics.lastProcessMidiMicros);
+        diag["display_present"] = displayManager.isPresent();
+        diag["display_ok"] = displayManager.isReady();
+        diag["display_init_failures"] = displayManager.getInitFailureCount();
+        diag["display_status"] = displayManager.getLastInitCode();
 
         JsonObject noteDynamics = doc.createNestedObject("note_dynamics");
         noteDynamics["velocity_shift"] = static_cast<int>(velocityShift);

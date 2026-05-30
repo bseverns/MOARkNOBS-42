@@ -329,6 +329,7 @@ test('bridge-served app prefers the structured bridge session when available', a
 
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
   await expect(page.locator('#connection-banner')).toContainText('via Bridge session');
+  await expect(page.locator('#connection-banner')).not.toContainText('via Bridge raw transport');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Bridge session');
   await expect
     .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
@@ -538,6 +539,7 @@ test('bridge-served app falls back to the raw bridge websocket when structured s
 
   await expect(page.locator('#connection-pill')).toHaveText('Connected');
   await expect(page.locator('#connection-banner')).toContainText('via Bridge raw transport');
+  await expect(page.locator('#connection-banner')).not.toContainText('via Bridge session');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Bridge raw');
   await expect
     .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))

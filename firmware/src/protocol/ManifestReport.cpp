@@ -7,6 +7,7 @@
 #include "ARGMixer.h"
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
+#include "FirmwareState.h"
 #include "Globals.h"
 #include "MIDIHandler.h"
 #include "protocol/ManifestContract.h"
@@ -88,6 +89,10 @@ void writeManifestOperationalHealth(JsonObject object) {
     object["power_profile"] = BoardPowerProfile::kName;
     object["led_brightness_cap"] = BoardPowerProfile::kLedBrightnessCap;
     object["rail_topology_verified"] = BoardPowerProfile::kRailTopologyVerified;
+    object["display_present"] = displayManager.isPresent();
+    object["display_ok"] = displayManager.isReady();
+    object["display_init_failures"] = displayManager.getInitFailureCount();
+    object["display_status"] = displayManager.getLastInitCode();
     object["free_ram"] = computeFreeRAM();
     object["free_flash"] = computeFreeFlash();
     object["brownout_count"] = g_brownoutCount;

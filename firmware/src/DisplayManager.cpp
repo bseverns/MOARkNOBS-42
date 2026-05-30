@@ -6,6 +6,7 @@
 
 #include <Arduino.h>
 #include "DisplayManager.h"
+#include "Log.h"
 #include "TimeUtils.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -32,6 +33,7 @@ constexpr uint8_t kPartialFallbackPercent = 70;
 constexpr unsigned long kStartupSnowDurationMs = 3000UL;
 constexpr unsigned long kStartupLogoRevealDurationMs = 1000UL;
 constexpr unsigned long kStartupFinalHoldDurationMs = 500UL;
+constexpr unsigned long kDisplayInitBudgetMs = 120UL;
 constexpr uint8_t kStartupRevealMinSize = 1;
 constexpr uint8_t kStartupRevealMaxSize = 3;
 constexpr uint8_t kStartupExpandMaxSize = 8;
@@ -215,6 +217,22 @@ const char *friendlyEnvelopeMode(const char *raw, char *buffer, size_t bufferLen
     return out > 0 ? buffer : raw;
 }
 
+const char *displayInitResultCode(DisplayInitResult result) {
+    switch (result) {
+    case DisplayInitResult::NeverAttempted:
+        return "not_attempted";
+    case DisplayInitResult::Ok:
+        return "ok";
+    case DisplayInitResult::NoI2CAck:
+        return "no_i2c_ack";
+    case DisplayInitResult::DriverBeginFailed:
+        return "driver_begin_failed";
+    case DisplayInitResult::Timeout:
+        return "timeout";
+    }
+    return "unknown";
+}
+
 } // namespace
 
 DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight)
@@ -233,25 +251,82 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
 
 // Bring up the OLED hardware and clear any startup garbage.
 bool DisplayManager::begin() {
-    if (!displayAddressAcked(_i2cAddress)) {
-        _initialized = false;
+    const unsigned long startedAt = now();
+    const DisplayInitResult previousResult = _lastInitResult;
+    const uint32_t previousFailures = _displayInitFailureCount;
+
+    _lastInitAttemptMs = startedAt;
+    _initialized = false;
+    _displayPresent = false;
+    _shadowValid = false;
+
+    DisplayInitResult result = DisplayInitResult::DriverBeginFailed;
+    bool ready = false;
+
+    const bool acked = displayAddressAcked(_i2cAddress);
+    _displayPresent = acked;
+    if (!acked) {
+        result = DisplayInitResult::NoI2CAck;
+    } else if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
+        result = DisplayInitResult::DriverBeginFailed;
+    } else {
+        const unsigned long elapsed = now() - startedAt;
+        if (elapsed > kDisplayInitBudgetMs) {
+            result = DisplayInitResult::Timeout;
+            _display.clearDisplay();
+            _display.display();
+        } else {
+            ready = true;
+            result = DisplayInitResult::Ok;
+        }
+    }
+
+    _lastInitDurationMs = static_cast<uint32_t>(now() - startedAt);
+    _lastInitResult = result;
+
+    if (!ready) {
+        ++_displayInitFailureCount;
+        if (_displayInitFailureCount == 1 || previousResult != result) {
+            LOG_PRINTF("{\"type\":\"warning\",\"code\":\"display_init_failed\",\"reason\":\"%s\","
+                       "\"display_present\":%s,\"display_ok\":false,\"display_init_failures\":%lu,"
+                       "\"display_init_ms\":%lu}\n",
+                       displayInitResultCode(result), _displayPresent ? "true" : "false",
+                       static_cast<unsigned long>(_displayInitFailureCount),
+                       static_cast<unsigned long>(_lastInitDurationMs));
+        }
         return false;
     }
-    if (!_display.begin(SSD1306_SWITCHCAPVCC, _i2cAddress)) {
-        _initialized = false;
-        return false;
-    }
+
     _initialized = true;
     _display.clearDisplay();
     _display.display();
-    _shadowValid = false;
     _lastDisplayPushMs = now();
     _lastFullRefreshMs = _lastDisplayPushMs;
     syncShadowBuffer();
+
+    if (previousFailures > 0 && previousResult != DisplayInitResult::Ok) {
+        LOG_PRINTF("{\"type\":\"info\",\"code\":\"display_recovered\",\"display_present\":true,"
+                   "\"display_ok\":true,\"display_init_failures\":%lu,\"display_init_ms\":%lu}\n",
+                   static_cast<unsigned long>(_displayInitFailureCount),
+                   static_cast<unsigned long>(_lastInitDurationMs));
+    }
+
     return true;
 }
 
 bool DisplayManager::isReady() const { return _initialized; }
+
+bool DisplayManager::isPresent() const { return _displayPresent; }
+
+const char *DisplayManager::getLastInitCode() const {
+    return displayInitResultCode(_lastInitResult);
+}
+
+uint32_t DisplayManager::getInitFailureCount() const { return _displayInitFailureCount; }
+
+uint32_t DisplayManager::getLastInitDurationMs() const { return _lastInitDurationMs; }
+
+unsigned long DisplayManager::getLastInitAttemptMs() const { return _lastInitAttemptMs; }
 
 bool DisplayManager::isStartupAnimationDone() const {
     return !_initialized || _startupAnim.phase == StartupPhase::DONE;

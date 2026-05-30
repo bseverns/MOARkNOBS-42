@@ -1,6 +1,6 @@
 # Manifest Contract
 
-`GET_MANIFEST` is the first source of device truth for the App and Bridge. Fallback constants exist only so host tools can render before a device answers.
+`GET_MANIFEST` is the first source of device truth for the App and Bridge. Host fallbacks stay pinned to the conservative safe profile so tools can render before a device answers without overstating board power readiness.
 
 ## Required Fields
 
@@ -17,12 +17,31 @@
 | `led_brightness_cap`     | `26`              | Active board power profile                              |
 | `rail_topology_verified` | `false`           | Active board power profile                              |
 
+## Operational Health Fields
+
+These fields are host-visible diagnostics, not a fabrication or release-readiness claim.
+
+| Field                   | Meaning                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `display_present`       | `true` when the most recent OLED init probe saw an I2C ACK at `0x3C`.                         |
+| `display_ok`            | `true` when the OLED driver actually initialized and is ready to paint.                       |
+| `display_init_failures` | Count of failed OLED init attempts since boot.                                                |
+| `display_status`        | Stable result code: `not_attempted`, `ok`, `no_i2c_ack`, `driver_begin_failed`, or `timeout`. |
+| `free_ram`              | Approximate free RAM snapshot for host diagnostics.                                           |
+| `free_flash`            | Approximate remaining program flash for host diagnostics.                                     |
+| `brownout_count`        | Brownout counter observed since boot.                                                         |
+| `eeprom_primary_valid`  | Whether the primary EEPROM copy passed validation.                                            |
+| `eeprom_backup_valid`   | Whether the backup EEPROM copy passed validation.                                             |
+| `eeprom_last_load`      | Last EEPROM source used: `primary`, `backup`, `defaults`, or `unknown`.                       |
+
+Display health is intentionally observable because OLED bring-up can fail on the bench without invalidating the core configurator contract. Host tools should treat `display_ok=false` as a degraded-mode warning, not as proof that protocol lanes are unavailable.
+
 ## Board Power Profiles
 
-| Profile        | Compile define                                 | LED cap | Rail verified | Intended use                                                        |
-| -------------- | ---------------------------------------------- | ------: | ------------- | ------------------------------------------------------------------- |
-| Safe board     | `-DMN42_BOARD_POWER_PROFILE=POWER_CHOKED_V1`   |    `26` | `false`       | Current v1 board with conservative shared-rail power safety.        |
-| Reworked board | `-DMN42_BOARD_POWER_PROFILE=SPLIT_RAIL_REWORK` |   `255` | `true`        | Split-rail rework after topology and thermal behavior are verified. |
+| Profile        | PlatformIO env           | Compile define                                 | LED cap | Rail verified | Intended use                                                         |
+| -------------- | ------------------------ | ---------------------------------------------- | ------: | ------------- | -------------------------------------------------------------------- |
+| Safe board     | `teensy40_main`          | `-DMN42_BOARD_POWER_PROFILE=POWER_CHOKED_V1`   |    `26` | `false`       | Rev A or any board whose LED rail topology is still unverified.      |
+| Reworked board | `teensy40_main_reworked` | `-DMN42_BOARD_POWER_PROFILE=SPLIT_RAIL_REWORK` |   `255` | `true`        | Only for boards whose split-rail rework and validation are complete. |
 
 The firmware clamps runtime LED brightness through `LEDManager` regardless of App or Bridge input. The manifest reports the active cap so host tools can show the operator whether the firmware is in a safe or reworked power profile.
 

@@ -2,6 +2,8 @@
 
 PASS with hardware caveats.
 
+Historical note: this receipt predates the newer structured display diagnostics now exposed by `GET_MANIFEST` and WebSerial telemetry. The raw boot output below is preserved as captured.
+
 ## Proven
 
 - Production firmware starts in standalone_runtime.
@@ -13,11 +15,12 @@ PASS with hardware caveats.
 
 ## Observed warnings
 
-- display_init_failed during standalone boot.
+- Historical standalone-boot warning: `{"warning":"display_init_failed"}`.
 
 ## Caveats
 
 - Manifest reported SPLIT_RAIL_REWORK / rail_topology_verified=true, but current Rev A hardware inspection suggests the LED fuse branch is downstream of the 0.5 A fuse.
+- Current firmware now reports display degraded mode with explicit `display_present`, `display_ok`, `display_init_failures`, and `display_status` fields. This historical receipt does not include those manifest fields because it was captured before that contract update.
 - Existing config contained UNKNOWN/255 slot values before apply; SET_ALL path normalized many of these to OFF/channel 16/data1 127.
 
 [boot-contract:host] HELLO

@@ -18,6 +18,7 @@ This document describes the desktop-side transport surfaces exposed by `bridge/`
   Bridge-side staging, validation, apply, and rollback discipline.
 
 The App now prefers `/api/device/session` plus `/ws/events` when it is opened from the bridge. Raw `/ws` remains available both for compatibility and for the current live-control RPC lane.
+For the App-side meaning of `Direct USB`, `Bridge session`, `Bridge raw`, and `Simulator`, see [App Transport Truth Table](../app/AppTransportTruthTable.md).
 
 ## Structured event envelope
 

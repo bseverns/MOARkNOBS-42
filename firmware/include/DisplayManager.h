@@ -61,6 +61,13 @@ struct Animation {
 
 // Startup splash phases used by the non-blocking boot animation.
 enum class StartupPhase { IDLE, SNOW_FILL, LOGO_REVEAL, LOGO_EXPAND, HOLD_FINAL, DONE };
+enum class DisplayInitResult : uint8_t {
+    NeverAttempted = 0,
+    Ok,
+    NoI2CAck,
+    DriverBeginFailed,
+    Timeout,
+};
 
 /**
  * Tracks progress of the boot animation so `runStartupAnimation()` can be
@@ -96,6 +103,16 @@ class DisplayManager {
     bool begin();
     /** True once `begin()` has successfully initialized the OLED. */
     bool isReady() const;
+    /** True when the last init probe observed an OLED ACK on the bus. */
+    bool isPresent() const;
+    /** Stable machine-readable code for the most recent display init result. */
+    const char *getLastInitCode() const;
+    /** Count of failed init attempts since boot. */
+    uint32_t getInitFailureCount() const;
+    /** Duration of the most recent init attempt. */
+    uint32_t getLastInitDurationMs() const;
+    /** Millisecond timestamp of the most recent init attempt. */
+    unsigned long getLastInitAttemptMs() const;
 
     // Core display methods ------------------------------------------------
 
@@ -211,6 +228,11 @@ class DisplayManager {
     /** Display helper for arpeggiator length (in MIDI clock ticks) and shape. */
     void showArpSettings(uint8_t lengthTicks, const char *shapeName);
 
+#if defined(UNIT_TEST)
+    /** Unity seam for simulating a missing or failed OLED bring-up. */
+    void setTestInitializationResult(bool present, bool ok);
+#endif
+
   private:
     Animation _fadeAnim;
     Adafruit_SSD1306 _display;
@@ -221,9 +243,14 @@ class DisplayManager {
 
     bool _isDrawing;
     bool _initialized = false;
+    bool _displayPresent = false;
     unsigned long _updateIntervalMs;
     unsigned long _lastDisplayPushMs = 0;
     unsigned long _lastFullRefreshMs = 0;
+    unsigned long _lastInitAttemptMs = 0;
+    uint32_t _lastInitDurationMs = 0;
+    uint32_t _displayInitFailureCount = 0;
+    DisplayInitResult _lastInitResult = DisplayInitResult::NeverAttempted;
     std::size_t _frameBufferBytes = 0;
     bool _shadowValid = false;
     static constexpr std::size_t kMaxFrameBufferBytes =
@@ -235,6 +262,11 @@ class DisplayManager {
     String _activeMode;
 
     StartupAnimation _startupAnim; //!< State tracker for the boot splash
+
+#if defined(UNIT_TEST)
+    bool _testInitPresent = true;
+    bool _testInitOk = true;
+#endif
 
     void drawBorder();
     void present(bool force = false);

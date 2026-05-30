@@ -26,6 +26,9 @@ namespace {
 Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
+// Bulk SET_ALL parse state is large by design; keep the reusable document in
+// RAM2 so unit-test and runtime stacks keep more RAM1 headroom.
+DMAMEM StaticJsonDocument<Utility::kMaxBulkConfigSize> bulkApplyDoc;
 
 struct BulkApplyIdentity {
     uint32_t sequence = 0;
@@ -1013,7 +1016,7 @@ void handleSetAllBulkCommand(const String &command) {
         return;
     }
 
-    static StaticJsonDocument<Utility::kMaxBulkConfigSize> doc;
+    auto &doc = bulkApplyDoc;
     if (!parseBulkConfigDocument(doc)) {
         return;
     }

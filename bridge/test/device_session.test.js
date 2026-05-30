@@ -115,6 +115,28 @@ async function run() {
   }
 
   {
+    const harness = createHarness({ simulator: { ackDelayMs: 30 } });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[4].data1 = 91;
+    await harness.session.stageConfig(staged);
+    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 500 });
+    await wait(5);
+    assert.equal(
+      harness.session.getState().dirty,
+      true,
+      'dirty should remain set until the ACK is observed',
+    );
+    await applyPromise;
+    assert.equal(
+      harness.session.getState().dirty,
+      false,
+      'dirty should clear after the ACK promotes staged config to live',
+    );
+  }
+
+  {
     const harness = createHarness({ simulator: { ackMode: 'timeout' } });
     await harness.session.handleOpen();
     await waitFor(() => harness.session.getState().ready);

@@ -37,6 +37,10 @@ const char *envelopeModeName(uint8_t mode);
 
 namespace ProtocolSimpleHandlers {
 namespace {
+// GET_CONFIG materializes the full live config tree, which is much larger than
+// the hot state we want to keep in RAM1. Park the scratch document in RAM2.
+DMAMEM StaticJsonDocument<65536> getConfigDoc;
+
 // Pot mappings are the simplest "physical controls -> MIDI lane" truth a host can inspect.
 void writePotMappings(JsonArray pots) {
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
@@ -262,7 +266,7 @@ void handleGetSchemaCommand(const String &command) {
 // the canonical "describe the current machine state" reply used by hosts.
 void handleGetConfigCommand(const String &command) {
     (void)command;
-    static StaticJsonDocument<65536> doc;
+    auto &doc = getConfigDoc;
     doc.clear();
 
     doc["fw_version"] = FW_VERSION_STR;

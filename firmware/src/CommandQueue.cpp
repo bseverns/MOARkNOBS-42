@@ -18,7 +18,10 @@ struct CommandQueueStorage {
     size_t count = 0;
 };
 
-CommandQueueStorage commandQueue;
+// The queue is large because chunked SET_ALL frames can arrive as many serial
+// lines. Keep it in RAM2 so it doesn't crowd out the tighter RAM1 budget used
+// by the Unity test image and hot runtime state.
+DMAMEM CommandQueueStorage commandQueue;
 
 // Drop the oldest queued command so fresh operator input wins during overload.
 void dropOldestCommand() {

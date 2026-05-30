@@ -1,4 +1,4 @@
-# MOARkNOBS-42 Hardware References
+The # MOARkNOBS-42 Hardware References
 
 This folder contains the hardware references used by the hardware-test package.
 Use these files to validate the current prototype on the bench.
@@ -41,6 +41,11 @@ Before `white100`, `blast`, or burn-in phases:
 - do not run full-strip white or burn-in tests until this is confirmed
 
 Power estimates and quick current math live in [PowerBudget.md](../docs/reference/PowerBudget.md).
+
+## Firmware Env Boundary
+
+- Flash `teensy40_main` on Rev A or any board whose LED rail topology is still unverified.
+- Flash `teensy40_main_reworked` only after the board has been reworked and that split-rail topology has its own dated validation evidence.
 
 ## Current Bench-Validation References
 

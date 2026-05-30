@@ -12,6 +12,10 @@
 
 - The current OLED expectation is address `0x3C`.
 - OLED validation is based on the included hardware-test lanes, not a generic bus-scanner utility.
+- Some bench receipts have observed `display_init_failed` during boot. Current firmware treats that as a controlled degraded mode instead of a boot blocker.
+- When OLED bring-up fails, `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, `GET_CONFIG`, and `SET_ALL` remain available so the App and Bridge can still inspect or restore the board.
+- `GET_MANIFEST` and WebSerial diagnostics now expose `display_present`, `display_ok`, `display_init_failures`, and `display_status` for machine-readable operator evidence.
+- The firmware performs a safe periodic re-init attempt for a missing or failed OLED, but this is still not a claim of universal compatibility across every SSD1306 module variant.
 - The package does not claim display performance tuning across every module variant.
 
 ## Telemetry And Runtime Notes

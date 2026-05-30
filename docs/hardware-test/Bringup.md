@@ -48,10 +48,16 @@ Fail the board immediately if any rail is shorted.
 
 ## 2. Teensy Detection And USB Serial Check
 
-Build and upload the main firmware:
+For the current safe boundary, build and upload `teensy40_main` on Rev A or any board whose rail topology is still unverified:
 
 ```bash
 pio run -d firmware -e teensy40_main -t upload
+```
+
+Use `teensy40_main_reworked` only after the board has been deliberately reworked and the split-rail topology has been validated and documented:
+
+```bash
+pio run -d firmware -e teensy40_main_reworked -t upload
 ```
 
 Open a serial monitor at `115200` and confirm the board enumerates as a Teensy serial device.

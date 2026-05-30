@@ -11,6 +11,9 @@ Current support boundary:
 - package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first
 - not claimed here as a verified production path: Firefox/Safari WebSerial support or universal browser compatibility
 
+Bench receipts and receipt templates for operator-facing App HIL lanes live in [../docs/bench/app/README.md](../docs/bench/app/README.md).
+Transport-mode truth and UI labeling rules live in [../docs/app/AppTransportTruthTable.md](../docs/app/AppTransportTruthTable.md).
+
 See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.
 
 [bseverns.github.io/MN42](http://bseverns.github.io/MN42) is the browser-based patch bay for the MOARkNOBS-42 controller. The page is now split between a tiny runtime “kernel” and a BenzKnobz-specific view layer:
@@ -46,6 +49,7 @@ For the operator-facing explanation of `Immediate local response` versus the bro
 ## UI Field Guide
 
 - **LED Color Lab** – Slide the brightness control and watch it punch straight into the staged JSON; the value is clamped to the same 0–255 lane the firmware enforces, so you’re rehearsing reality. Ride the fader slowly and the runtime’s [24 ms throttling](#runtime-contract) keeps chatter to a polite murmur; slam it and the staged hex display still tracks every move so you can screen-cap or copy/paste the exact color code. Hex edits round-trip: type a six-character value, press return, and the slider jumps to the matching luminance. If Apply can’t land (checksum blowout, unplugged cable), the [checksum rollback flow](#quickstart) rewinds both the slider and hex badge so the LED preview never lies.
+- **Power Safety Summary** – Stage and Advanced modes mirror the manifest’s `power_profile`, `led_brightness_cap`, and `rail_topology_verified` fields. When firmware reports `SPLIT_RAIL_REWORK` or `rail_topology_verified=true` on a board that still sits inside the repo’s conservative Rev A / unverified release boundary, the App shows a visible `Release boundary mismatch` warning. The warning is informational only: it does not modify firmware, does not dirty staged config, and should be read as “validation evidence does not match the current release boundary,” not as a blanket unsafe-board claim. Until the rail topology is documented, avoid full-brightness LED tests.
 - **Config Import/Export Pad** – Use **Import config JSON** to stage a saved configuration locally before you touch the hardware; the file lands in the same staged workspace used by live edits. **Export config JSON** saves whatever is staged right now, including unsent tweaks, so you can stash experiments in git or share patches without touching hardware. When Apply sticks, the status pill records the exported filename or sync result so your studio notebook and the controller stay in lockstep.
 - **Profile Slot Workflow** – The A–D profile picker keeps a browser-side target slot and file backup path available, but current firmware also exposes real device-backed **Switch profile** / **Save profile** / **Reset profile** actions. The manifest still gates those buttons so older firmware builds fail closed instead of pretending support.
 - **Simulator Toggle** – The **Start simulator** switch sits dead-center under transport controls for a reason: it swaps WebSerial for the canned bridge inside `runtime.js` instantly. The log banner flips to “Simulated” and it stays that way until you reconnect a device. Because the simulator obeys the same throttled paint loop documented in [Runtime Contract](#runtime-contract), you can chase layout timing bugs or automation macros without a Teensy on the desk.
@@ -82,7 +86,9 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 ## Runtime Contract
 
 - Transport handshake is `hello` → `get_manifest` → `get_schema` → `get_config`. On simulator transport those travel as JSON-RPC; on native WebSerial and raw bridge transport the runtime maps them to `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, and `GET_CONFIG` before trusting any config payload. When a structured bridge session is available, the runtime hydrates from `/api/device/session` and `/ws/events` first, with raw `/ws` retained for compatibility and live-control RPCs.
+- The transport-mode truth table for direct WebSerial, bridge session, bridge raw `/ws`, and simulator lives in [../docs/app/AppTransportTruthTable.md](../docs/app/AppTransportTruthTable.md).
 - Live runtime RPCs are separate from staged config writes: the configurator now uses `GET_NOTE_DYNAMICS` / `SET_NOTE_DYNAMICS`, `GET_JITTER` / `SET_JITTER`, `GET_CLOCK` / `SET_CLOCK`, and `GET_USB_MIDI` / `SET_USB_MIDI` for direct-control lanes.
+- For the bridge path, staged config writes versus live performance writes are documented in [../docs/bridge/BridgeWriteLanes.md](../docs/bridge/BridgeWriteLanes.md).
 - The runtime keeps separate `liveConfig` and `stagedConfig` snapshots. The UI only mutates staged state; successful Apply promotes staged state to live state.
 - The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.
 - The runtime buffers inbound telemetry and paints on `requestAnimationFrame` (~16 ms) so frequent state messages do not turn the DOM into soup.

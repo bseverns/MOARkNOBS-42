@@ -1505,6 +1505,19 @@ button:not(:disabled):focus-visible {
   background: rgba(255, 206, 107, 0.11);
 }
 
+.power-safety-warning {
+  flex: 1 1 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 206, 107, 0.42);
+  background: rgba(255, 206, 107, 0.11);
+  color: var(--color-text);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  line-height: 1.45;
+}
+
 .utility-panel {
   display: none;
   gap: 12px;

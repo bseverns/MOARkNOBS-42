@@ -170,6 +170,8 @@ void test_webserial_state_snapshot_emits_expected_json() {
     clearTestLogBuffer();
     webSerialStreaming = true;
     g_lfoValues = {0.25f, 0.75f};
+    displayManager.setTestInitializationResult(true, true);
+    TEST_ASSERT_TRUE(displayManager.begin());
 
     SystemDiagnostics diagnostics{};
     diagnostics.loopOverrunCount = 4;
@@ -233,6 +235,10 @@ void test_webserial_state_snapshot_emits_expected_json() {
     TEST_ASSERT_EQUAL_UINT(2, doc_envelopes["lfos"].as<JsonArray>().size());
     TEST_ASSERT_EQUAL_UINT32(4, doc_diag["diagnostics"]["loop_overruns"].as<uint32_t>());
     TEST_ASSERT_EQUAL_UINT32(712, doc_diag["diagnostics"]["loop_max_us"].as<uint32_t>());
+    TEST_ASSERT_TRUE(doc_diag["diagnostics"]["display_present"].as<bool>());
+    TEST_ASSERT_TRUE(doc_diag["diagnostics"]["display_ok"].as<bool>());
+    TEST_ASSERT_EQUAL_UINT32(0, doc_diag["diagnostics"]["display_init_failures"].as<uint32_t>());
+    TEST_ASSERT_EQUAL_STRING("ok", doc_diag["diagnostics"]["display_status"] | "");
 }
 
 void test_webserial_slot_patch_emits_schema_and_legacy_payloads() {

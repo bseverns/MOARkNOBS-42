@@ -10,6 +10,10 @@ test.describe('UI mode', () => {
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Direct USB');
+    await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
+    await expect
+      .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
+      .toBe('direct-webserial');
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeVisible();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeVisible();
@@ -39,6 +43,10 @@ test.describe('UI mode', () => {
     await page.getByRole('button', { name: /simulator/i }).click();
     await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
     await page.getByRole('button', { name: 'Connect' }).click();
+    await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
+    await expect
+      .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
+      .toBe('simulator');
     await expect(page.locator('.slot-editor')).toBeVisible();
 
     const ccInput = page.locator('.slot-editor label:has-text("CC/Note number") input').first();

@@ -6,16 +6,18 @@ Unless a section says otherwise, commands below assume you are running from the 
 
 This page is an evidence doc. For document tie-break rules, see [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
+Bridge hardware receipts and receipt templates live in [../bench/bridge/README.md](../bench/bridge/README.md). App HIL receipts and templates live in [../bench/app/README.md](../bench/app/README.md). Keep firmware boot-contract receipts under `docs/bench/firmware/`, App-facing receipts under `docs/bench/app/`, and bridge-runtime receipts under `docs/bench/bridge/`.
+
 ## Layer cheat sheet
 
-| Layer                    | Command                                                                                                           | Hardware needed                                     | What it proves                                                                                                             |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Full battery             | `./test.sh`                                                                                                       | Host machine, plus Teensy 4.0 when HIL is available | Runs the JS suites every time and adds Unity/full-stack lanes when a board is present.                                     |
-| Unity smoke tests        | `pio test -d firmware -e teensy40_unity`                                                                          | Teensy 4.0 with USB cable                           | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1.                               |
-| App seam regressions     | `npm --prefix App test`                                                                                           | Host machine only                                   | Proves simulator UX, native transport adaptation, capability gating, and browser-local metadata behavior without hardware. |
-| Manual firmware sketches | `pio run -d firmware -e teensy40_unified_test -t upload` (and friends)                                            | Fully assembled controller                          | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                |
-| Bridge software suite    | `npm --prefix bridge test`                                                                                        | Host machine only (Node 24)                         | Covers CLI, device session, simulator, transport, app-contract, and browser-server seams without hardware.                 |
-| System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js` or `node firmware/system_test/mn42_bridge_session_runner.js` | Controller + bridge talking                         | Legacy OSC/MIDI heartbeat proof plus the newer structured bridge-session HIL proof for staged apply/ACK on real hardware.  |
+| Layer                    | Command                                                                                                           | Hardware needed                                     | What it proves                                                                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Full battery             | `./test.sh`                                                                                                       | Host machine, plus Teensy 4.0 when HIL is available | Runs the JS suites every time and adds Unity/full-stack lanes when a board is present.                                                                                   |
+| Unity smoke tests        | `pio test -d firmware -e teensy40_unity`                                                                          | Teensy 4.0 with USB cable                           | Exercises firmware logic and orchestration paths with the custom Unity harness over Serial1, including degraded OLED paths.                                              |
+| App seam regressions     | `npm --prefix App test`                                                                                           | Host machine only                                   | Proves simulator UX, native transport adaptation, transport labeling, power-boundary warnings, and browser-local metadata without hardware.                              |
+| Manual firmware sketches | `pio run -d firmware -e teensy40_unified_test -t upload` (and friends)                                            | Fully assembled controller                          | Human-driven end-to-end testing of LEDs, pots, EEPROM, etc.                                                                                                              |
+| Bridge software suite    | `npm --prefix bridge test`                                                                                        | Host machine only (Node 24)                         | Covers CLI, device session, simulator, transport, app-contract, and browser-server seams without hardware.                                                               |
+| System bridge trials     | `node firmware/system_test/mn42_fullstack_runner.js` or `node firmware/system_test/mn42_bridge_session_runner.js` | Controller + bridge talking                         | Legacy OSC/MIDI heartbeat proof plus the newer structured bridge-session HIL proof for staged apply/ACK on real hardware; summarize those runs as bridge bench receipts. |
 
 ## If your goal is demo readiness rather than code confidence
 
@@ -30,7 +32,7 @@ When the goal is to find physical limits rather than just software regressions, 
 
 | Stage                   | Command                                                        | Main observation target                                             | Capture                       |
 | ----------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------- | ----------------------------- |
-| Firmware baseline       | `pio run -d firmware -e teensy40_main`                         | Build sanity before bench time                                      | Build result                  |
+| Firmware baseline       | `pio run -d firmware -e teensy40_main`                         | Build sanity before bench time for Rev A / unverified rail boards   | Build result                  |
 | Logic sanity            | `pio test -d firmware -e teensy40_unity`                       | Core firmware behavior before touching hardware limits              | Unity log                     |
 | Manual board check      | `pio run -d firmware -e teensy40_unified_test -t upload`       | Buttons, pots, OLED, LED chain basic health                         | Operator notes                |
 | LED surface stress      | `pio run -d firmware -e teensy40_led_demo -t upload`           | Pixel integrity, animation throughput, brownouts under dynamic load | Serial log + visual notes     |
@@ -221,6 +223,8 @@ What Unity is especially good at right now:
 - deterministic firmware logic
 - command/protocol behavior
 - scheduler/runtime/WebSerial/UI orchestration
+- degraded-mode proof that OLED init failure does not block manifest/schema/config/apply protocol lanes
+- manifest/WebSerial diagnostic coverage for `display_present`, `display_ok`, `display_init_failures`, and `display_status`
 - regression checks that should fail before you ever reach for a bench supply
 
 What Unity is not meant to prove:
@@ -315,6 +319,9 @@ What this currently proves:
 
 - simulator-driven config, profile, and import/export UX
 - native transport adaptation (`HELLO`, `GET_MANIFEST`, `GET_CONFIG`, `SET_ALL`)
+- transport labels stay aligned with the active direct, bridge-session, bridge-raw, or simulator mode
+- release-boundary mismatch warnings render when the manifest reports `SPLIT_RAIL_REWORK` or `rail_topology_verified=true`
+- power mismatch warnings do not dirty staged config or block ordinary hydration
 - capability-aware profile/macro/scene controls on real-firmware manifests
 - browser-local slot metadata staying out of `Apply` and surviving reconnects
 

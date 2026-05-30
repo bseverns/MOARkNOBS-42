@@ -38,6 +38,8 @@ For what is true now, defer to [bridge/README.md](../../bridge/README.md), [Host
   - `/app/` serves the App shell
   - `/api/presets` returns bundled recipes
   - `/api/device/session?warm=1` proves the App-derived schema authority can load inside the packaged artifact
+  - `/api/device/stage` rejects bad writes with a machine-readable error object
+  - valid staged-config acceptance still depends on a real manifest/live-config handshake, so that proof remains HIL-only unless the smoke run is given a working serial device
 - Bridge release uploads are conditional on an existing GitHub release for the tag.
 - Outward bridge builds must set `REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks; otherwise the packaging script fails instead of silently producing unsigned binaries.
 
@@ -81,7 +83,7 @@ All packages should expose the same defaults:
   - CLI and console binaries launch,
   - `--help` works,
   - invalid args fail predictably,
-  - the packaged console artifact can serve the browser console, `/app/`, presets, and warmed schema authority.
+  - the packaged console artifact can serve the browser console, `/app/`, presets, warmed schema authority, and fail-closed staged-write errors without hardware.
 
 Deliverable: reproducible baseline before packaging changes.
 

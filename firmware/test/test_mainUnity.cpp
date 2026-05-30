@@ -35,6 +35,7 @@ void test_dispatch_handles_profile_save_load_reset_commands();
 void test_dispatch_handles_macro_and_scene_snapshot_commands();
 void test_dispatch_rejects_unknown_command();
 void test_dispatch_set_all_reports_negative_contract_errors();
+void test_display_init_failure_leaves_protocol_responsive();
 void test_profile_storage_commands_restore_and_reset_live_state();
 void test_macro_and_scene_storage_commands_report_inventory_and_restore_state();
 void test_scoped_analog_provider_nesting();
@@ -233,6 +234,7 @@ void setup() {
     RUN_TEST(test_dispatch_handles_macro_and_scene_snapshot_commands);
     RUN_TEST(test_dispatch_rejects_unknown_command);
     RUN_TEST(test_dispatch_set_all_reports_negative_contract_errors);
+    RUN_TEST(test_display_init_failure_leaves_protocol_responsive);
     RUN_TEST(test_profile_storage_commands_restore_and_reset_live_state);
     RUN_TEST(test_macro_and_scene_storage_commands_report_inventory_and_restore_state);
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)

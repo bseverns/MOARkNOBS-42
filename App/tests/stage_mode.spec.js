@@ -46,6 +46,121 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-envelopes .meter')).toHaveCount(6);
   });
 
+  test('shows release-boundary mismatch warning without dirtying config hydration', async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+      window.__MN42_TEST_HOOKS = {
+        mutateTransport(transport) {
+          transport.protocol = 'native';
+          const manifest = {
+            device_name: 'MOARkNOBS-42',
+            fw_version: 'sim-fw',
+            git_sha: 'mismatch01',
+            build_time: '2026-05-30T12:00:00Z',
+            schema_version: 6,
+            slot_count: 42,
+            pot_count: 42,
+            envelope_count: 6,
+            arg_method_count: 14,
+            led_count: 52,
+            power_profile: 'SPLIT_RAIL_REWORK',
+            led_brightness_cap: 255,
+            rail_topology_verified: true,
+            capabilities: {
+              profile_save: false,
+              profile_load: false,
+              profile_reset: false,
+              macro_snapshot: false,
+              scenes: false
+            }
+          };
+          const schema = {
+            schema_version: 6,
+            type: 'object',
+            required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
+            properties: {
+              slots: { type: 'array', items: { type: 'object' } },
+              efSlots: { type: 'array', items: { type: 'object' } },
+              filter: { type: 'object' },
+              arg: { type: 'object' },
+              led: { type: 'object' }
+            }
+          };
+          const config = {
+            schema_version: 6,
+            pots: Array.from({ length: 42 }, (_, idx) => ({ index: idx, channel: 1, cc: idx })),
+            slots: Array.from({ length: 42 }, (_, idx) => ({
+              index: idx,
+              type: 'CC',
+              type_name: 'CC',
+              channel: 1,
+              data1: idx,
+              active: true,
+              ef_index: idx % 6,
+              arg: { enabled: false, method: 0, sourceA: 0, sourceB: 1 }
+            })),
+            efSlots: Array.from({ length: 6 }, (_, idx) => ({ index: idx, slots: [idx] })),
+            filter: { type: 'LOWPASS', freq: 800, q: 1, idle_floor: 24 },
+            arg: { method: 'PLUS', a: 0, b: 1, enable: false },
+            led: { brightness: 64, rgb: { r: 16, g: 32, b: 48 }, hex: '#102030', mode: 'STATIC' }
+          };
+          const queue = [];
+          let resolver = null;
+          const pushLine = (line) => {
+            if (resolver) {
+              const pending = resolver;
+              resolver = null;
+              pending(line);
+              return;
+            }
+            queue.push(line);
+          };
+          transport.writeLine = async (line) => {
+            const trimmed = String(line ?? '').trim();
+            if (trimmed === 'HELLO') {
+              pushLine(JSON.stringify({ hello: 'mn42' }));
+              return;
+            }
+            if (trimmed === 'GET_MANIFEST') {
+              pushLine(JSON.stringify(manifest));
+              return;
+            }
+            if (trimmed === 'GET_SCHEMA') {
+              pushLine(JSON.stringify(schema));
+              return;
+            }
+            if (trimmed === 'GET_CONFIG') {
+              pushLine(JSON.stringify(config));
+            }
+          };
+          transport.nextLine = async () => {
+            if (queue.length) return queue.shift();
+            return new Promise((resolve) => {
+              resolver = resolve;
+            });
+          };
+        }
+      };
+    });
+    await page.goto('/?mode=stage');
+
+    await page.locator('#stage-connect').click();
+
+    await expect(page.locator('#connection-pill')).toHaveText('Connected');
+    await expect(page.locator('#stage-dirty-state')).toHaveText('Clean');
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+    await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
+    await expect(page.locator('#stage-power-summary')).toContainText('Release boundary mismatch');
+    await expect(page.locator('#stage-power-summary')).toContainText('SPLIT_RAIL_REWORK');
+    await expect(page.locator('#stage-power-summary')).toContainText('26/255');
+
+    await page.locator('#performer-panel [data-ui-mode-btn="advanced"]').click();
+    await expect(page.locator('#performer-panel')).toBeVisible();
+    await expect(page.locator('#stage-power-summary')).toContainText('Release boundary mismatch');
+  });
+
   test('switching from Stage to Advanced restores bench tools', async ({ page }) => {
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };

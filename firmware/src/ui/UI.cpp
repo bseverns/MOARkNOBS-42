@@ -25,6 +25,7 @@ constexpr unsigned long kStartupWhiteStepMs = 50UL;
 constexpr unsigned long kStartupHoldMs = 500UL;
 constexpr bool kLedHardwareEnabled = true;
 constexpr bool kDisplayHardwareEnabled = true;
+constexpr unsigned long kDisplayRetryIntervalMs = 5000UL;
 constexpr bool kStartupLedAnimationEnabled = true;
 constexpr unsigned long kControlOverlayHoldMs = 900UL;
 constexpr unsigned long kFilterPersistIdleMs = 900UL;
@@ -412,8 +413,6 @@ void initializeUI() {
     const bool displayReady = kDisplayHardwareEnabled && displayManager.begin();
     if (displayReady) {
         displayManager.showText("Initializing...");
-    } else {
-        LOG_PRINTLN("{\"warning\":\"display_init_failed\"}");
     }
 
     buttonManager.initButtons();
@@ -429,6 +428,28 @@ void initializeUI() {
 }
 
 bool isStartupSequenceActive() { return gStartupSequence.active; }
+
+void serviceDisplayDegradedMode() {
+    if (!kDisplayHardwareEnabled || displayManager.isReady()) {
+        return;
+    }
+
+    const unsigned long currentMs = millis();
+    const unsigned long lastAttemptMs = displayManager.getLastInitAttemptMs();
+    if (lastAttemptMs != 0 &&
+        static_cast<unsigned long>(currentMs - lastAttemptMs) < kDisplayRetryIntervalMs) {
+        return;
+    }
+
+    if (!displayManager.begin()) {
+        return;
+    }
+
+    gStartupSequence = {};
+    gStartupSequence.displayReady = true;
+    displayManager.clear();
+    displayManager.displayStatus("Display restored", 1500);
+}
 
 bool runStartupSequenceStep() {
     if (!gStartupSequence.active || !gStartupSequence.displayReady) {

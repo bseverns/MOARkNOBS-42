@@ -10,7 +10,7 @@ test('browser-local slot metadata does not dirty device config and survives reco
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('.slot-editor')).toBeVisible();
 

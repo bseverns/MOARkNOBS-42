@@ -14,7 +14,9 @@ Current support boundary:
 - CI currently generates unsigned bridge artifacts only; those bundles now carry both a CLI binary and a console/server binary, but this repo still does not claim a signed/public installer path
 - not claimed here: broad DAW-by-DAW certification or a production installer/export story
 
-See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md). The bridge session/runtime transport is documented in [Bridge Transport Contract](../docs/bridge/BridgeTransportContract.md).
+See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md). The bridge session/runtime transport is documented in [Bridge Transport Contract](../docs/bridge/BridgeTransportContract.md). Bench receipts for bridge HIL lanes live in [docs/bench/bridge/README.md](../docs/bench/bridge/README.md).
+Bridge write-lane boundaries are documented in [Bridge Write Lanes](../docs/bridge/BridgeWriteLanes.md).
+App transport-mode truth and UI labeling rules live in [App Transport Truth Table](../docs/app/AppTransportTruthTable.md).
 
 ## Operating paths
 
@@ -23,7 +25,7 @@ See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conserv
 - `Browser-console path`
   `npm --prefix bridge start` serves the local console at `http://127.0.0.1:8787/`.
 - `App-over-bridge path`
-  `/app/` now prefers the structured bridge session/runtime and falls back to the raw bridge WebSocket lane for compatibility.
+  `/app/` now prefers the structured bridge session/runtime and falls back to the raw bridge WebSocket lane for compatibility. The App-side transport labels for that split are documented in [App Transport Truth Table](../docs/app/AppTransportTruthTable.md).
 - `Raw debug transport`
   `/ws` keeps the newline-oriented serial bridge for back-compat and debugging.
 - `Structured bridge transport`
@@ -430,7 +432,10 @@ The release workflow now also boots the packaged console binary and checks:
 - `/` serves the bridge browser console,
 - `/app/` serves the packaged App shell,
 - `/api/presets` returns the bundled host recipes,
-- `/api/device/session?warm=1` can load the bundled App-derived schema authority.
+- `/api/device/session?warm=1` can load the bundled App-derived schema authority,
+- `/api/device/stage` rejects bad requests with a machine-readable error body.
+
+Without a real device handshake, the packaged smoke test only proves warmed schema authority and fail-closed staged-write behavior. Accepting a valid staged config still requires a cached device manifest and live config from hardware.
 
 When a GitHub release already exists for the tag, the workflow uploads those unsigned bundles as release assets. That is an evidence/distribution convenience, not a claim that the bridge is now a signed public installer.
 

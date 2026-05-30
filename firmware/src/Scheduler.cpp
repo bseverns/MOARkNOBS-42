@@ -72,6 +72,7 @@ void initializeSchedulers() {
 
     Utility::schedulerLow.addTask(
         []() {
+            serviceDisplayDegradedMode();
             if (!displayManager.isReady()) {
                 return;
             }

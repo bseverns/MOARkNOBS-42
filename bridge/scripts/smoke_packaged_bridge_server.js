@@ -17,6 +17,17 @@ function resolveBinaryPath() {
   return path.resolve(__dirname, '..', 'mn42_bridge_server.js');
 }
 
+async function requestJson(url, init = {}) {
+  const response = await fetch(url, init);
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (_) {
+    payload = null;
+  }
+  return { response, payload };
+}
+
 async function reservePort() {
   const server = net.createServer();
   server.listen(0, '127.0.0.1');
@@ -48,6 +59,27 @@ async function waitForServerReady(baseUrl, timeoutMs = 8000) {
   throw new Error(`server did not become ready within ${timeoutMs}ms`);
 }
 
+async function waitForSessionWarmState(baseUrl, timeoutMs = 8000) {
+  const startedAt = Date.now();
+  let lastPayload = null;
+  while (Date.now() - startedAt < timeoutMs) {
+    const { response, payload } = await requestJson(
+      `${baseUrl}/api/device/session?warm=1`,
+    );
+    if (!response.ok) {
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      continue;
+    }
+    lastPayload = payload;
+    const session = payload?.session ?? {};
+    if (session.manifest && session.liveConfig) {
+      return payload;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+  return lastPayload;
+}
+
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
@@ -56,10 +88,14 @@ function assert(condition, message) {
 
 async function main() {
   const binaryPath = resolveBinaryPath();
+  const serialPort = getArg('--serial');
   const port = await reservePort();
   const host = '127.0.0.1';
   const baseUrl = `http://${host}:${port}`;
   const launchArgs = ['--http-host', host, '--http-port', String(port)];
+  if (serialPort) {
+    launchArgs.push('--serial', serialPort);
+  }
   const launchCommand = binaryPath.endsWith('.js')
     ? process.execPath
     : binaryPath;
@@ -82,6 +118,20 @@ async function main() {
 
   try {
     await waitForServerReady(baseUrl);
+
+    if (serialPort) {
+      const { response: connectResponse, payload: connectPayload } =
+        await requestJson(`${baseUrl}/api/connect`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ serialName: serialPort }),
+        });
+      assert(connectResponse.ok, 'serial-backed smoke connect must return 200');
+      assert(
+        Boolean(connectPayload?.state?.running),
+        'serial-backed smoke connect must start the bridge runtime',
+      );
+    }
 
     const rootResponse = await fetch(`${baseUrl}/`);
     assert(rootResponse.ok, 'console root must return 200');
@@ -108,18 +158,81 @@ async function main() {
       '/api/presets must expose packaged known-good recipes',
     );
 
-    const sessionResponse = await fetch(`${baseUrl}/api/device/session?warm=1`);
-    assert(sessionResponse.ok, '/api/device/session?warm=1 must return 200');
-    const sessionPayload = await sessionResponse.json();
+    const sessionPayload = serialPort
+      ? await waitForSessionWarmState(baseUrl)
+      : (await requestJson(`${baseUrl}/api/device/session?warm=1`)).payload;
+    assert(sessionPayload, '/api/device/session?warm=1 must return JSON');
     assert(
       sessionPayload?.session?.schema &&
         sessionPayload.session.schema.type === 'object',
       'warmed device session must expose bundled schema authority',
     );
     assert(
-      sessionPayload?.session?.schemaSource === 'bundled',
-      'warmed device session must report bundled schema source',
+      typeof sessionPayload?.session?.schemaSource === 'string',
+      'warmed device session must report a schema source',
     );
+
+    const { response: invalidStageResponse, payload: invalidStagePayload } =
+      await requestJson(`${baseUrl}/api/device/stage`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          config: { slots: 'not-an-array' },
+        }),
+      });
+    assert(
+      !invalidStageResponse.ok,
+      '/api/device/stage must reject invalid or premature staged config writes',
+    );
+    assert(
+      typeof invalidStagePayload?.error?.code === 'string' &&
+        invalidStagePayload.error.code.length > 0,
+      '/api/device/stage rejection must expose a machine-readable error code',
+    );
+    assert(
+      typeof invalidStagePayload?.error?.message === 'string' &&
+        invalidStagePayload.error.message.length > 0,
+      '/api/device/stage rejection must expose a machine-readable error message',
+    );
+
+    const warmedSession = sessionPayload?.session ?? {};
+    const canStageValidConfig = Boolean(
+      warmedSession.manifest && warmedSession.liveConfig,
+    );
+    if (canStageValidConfig) {
+      const validConfig = JSON.parse(
+        JSON.stringify(warmedSession.stagedConfig ?? warmedSession.liveConfig),
+      );
+      const nextFreq = Number(validConfig?.filter?.freq);
+      validConfig.filter = {
+        ...(validConfig.filter || {}),
+        freq: Number.isFinite(nextFreq) ? nextFreq + 1 : 801,
+      };
+      const { response: validStageResponse, payload: validStagePayload } =
+        await requestJson(`${baseUrl}/api/device/stage`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ config: validConfig }),
+        });
+      assert(
+        validStageResponse.ok,
+        'hardware-backed packaged smoke stage must accept a valid staged config',
+      );
+      assert(
+        typeof validStagePayload?.result === 'object' &&
+          validStagePayload.result !== null,
+        'hardware-backed packaged smoke stage must return a structured result',
+      );
+      await requestJson(`${baseUrl}/api/device/rollback`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ reason: 'artifact_smoke_cleanup' }),
+      });
+    } else {
+      console.log(
+        'packaged bridge smoke note: valid /api/device/stage acceptance remains HIL-only because warm=1 loads schema authority but does not synthesize a device manifest/live config',
+      );
+    }
 
     console.log('packaged bridge server smoke checks passed');
   } finally {

@@ -21,6 +21,10 @@ void test_dispatch_handles_documented_query_commands() {
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"power_profile\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"led_brightness_cap\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"rail_topology_verified\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_present\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_ok\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_init_failures\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_status\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"brownout_count\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_primary_valid\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_backup_valid\""));
@@ -127,4 +131,41 @@ void test_dispatch_set_all_reports_negative_contract_errors() {
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL {\"seq\":12,\"checksum\":\"bad\","));
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL bad}"));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"parse\""));
+}
+
+void test_display_init_failure_leaves_protocol_responsive() {
+    clearTestLogBuffer();
+    displayManager.setTestInitializationResult(false, false);
+    TEST_ASSERT_FALSE(displayManager.begin());
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"display_init_failed\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_present\":false"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_ok\":false"));
+
+    clearTestLogBuffer();
+    webSerialStreaming = false;
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("HELLO"));
+    TEST_ASSERT_TRUE(webSerialStreaming);
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MANIFEST"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_present\":false"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_ok\":false"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_init_failures\":1"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"display_status\":\"no_i2c_ack\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_SCHEMA"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"schema_version\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_CONFIG"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"led\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL orphan"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"orphan\""));
+
+    displayManager.setTestInitializationResult(true, true);
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(displayManager.begin());
 }

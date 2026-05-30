@@ -15,7 +15,8 @@ The repo-root `platformio.ini` is only a guard that rejects accidental root-leve
 
 ## Firmware Environments
 
-- `teensy40_main` for the current prototype firmware build
+- `teensy40_main` for Rev A / unverified-rail boards; this is the conservative default build
+- `teensy40_main_reworked` only for boards whose split-rail rework has been validated and documented
 - `teensy40_full_system` for bridge-connected full-stack bench validation
 - `teensy40_unified_test` for manual bench verification of buttons, pots, OLED, LEDs, and envelope inputs
 - `teensy40_biquad_test` for filter verification
@@ -29,6 +30,8 @@ The repo-root `platformio.ini` is only a guard that rejects accidental root-leve
 - `teensy40_unity` for the custom Unity smoke suite
 
 The full lane summary lives in [../docs/hardware-test/TestMatrix.md](../docs/hardware-test/TestMatrix.md).
+
+`GET_MANIFEST` reports the active board power profile, LED cap, and rail-verification bit from the selected env, so do not flash `teensy40_main_reworked` unless the physical board actually matches that claim.
 
 ## First Reading Path
 

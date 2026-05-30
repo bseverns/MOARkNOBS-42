@@ -14,15 +14,19 @@ This repository is currently a hardware-test package. Public or beta release sta
 
 ## Current Boundary
 
-- Active power profile: `POWER_CHOKED_V1`
+- Default firmware env: `teensy40_main`
+- Active power profile for that default env: `POWER_CHOKED_V1`
 - LED brightness cap: `26`
 - Rail topology verified: `false`
-- `SPLIT_RAIL_REWORK` is not release-safe until the topology is deliberately verified and documented.
+- Reworked-only env: `teensy40_main_reworked`
+- `SPLIT_RAIL_REWORK` is not release-safe until the topology is deliberately verified and documented in a dated receipt.
+- Host tools may warn when the manifest reports `SPLIT_RAIL_REWORK` or `rail_topology_verified=true` outside that documented boundary, but the warning is not evidence by itself.
+- Beta/public use of `teensy40_main_reworked` stays blocked unless a report under `docs/validation/reports/` explicitly includes `Reworked rail validation: PASS`.
 
 Run:
 
 ```bash
-python3 tools/check_release_readiness.py --root . --stage hardware-test
+python3 tools/check_release_readiness.py --root . --stage hardware-test --env teensy40_main
 ```
 
-Use `--stage beta` or `--stage public` only when preparing an actual release gate. The tool reports blockers; it does not verify electrical correctness.
+Use `--stage beta` or `--stage public` only when preparing an actual release gate. Pass `--env teensy40_main_reworked` only when the physical board actually matches that reworked topology. The tool reports blockers; it does not verify electrical correctness.

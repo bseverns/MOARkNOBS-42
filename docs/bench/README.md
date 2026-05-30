@@ -10,6 +10,8 @@ rigs, quick runs, reproducible numbers.
 - `noise/` — ADC raw counts while the board chills
 - `environment/` — ambient conditions, PSU notes, moon phase
 - `firmware/` — build stamp so we know what bits were on the board
+- `app/` — operator-facing App bench receipts and summary templates
+- `bridge/` — bridge/runtime bench receipts and summary templates
 
 ## Flow
 

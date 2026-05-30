@@ -15,6 +15,7 @@ void streamWebSerialState();
 void flushPendingFilterPersists();
 
 void initializeUI();
+void serviceDisplayDegradedMode();
 bool runStartupSequenceStep();
 bool isStartupSequenceActive();
 

@@ -16,9 +16,15 @@ test.describe('Profiles toolbar', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/benzknobz.html');
+    await expect(page.getByRole('button', { name: 'Advanced' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
     const simulatorToggle = page.getByRole('button', { name: /simulator/i });
     await simulatorToggle.click();
+    await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
     await page.getByRole('button', { name: 'Connect' }).click();
+    await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
     await openRecoveryDrawer(page);
     await expect(page.locator('.slot-editor')).toBeVisible();
   }

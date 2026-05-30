@@ -158,6 +158,15 @@ function makeFakeService() {
       return this.getState();
     },
     async stageDeviceConfig(config) {
+      if (config?.slots === 'invalid') {
+        const error = new Error('Staged config failed schema validation');
+        error.code = 'schema_validation_failed';
+        error.statusCode = 422;
+        error.details = {
+          errors: [{ instancePath: '/slots', message: 'must be array' }],
+        };
+        throw error;
+      }
       state.deviceSession.stagedConfig = JSON.parse(JSON.stringify(config));
       state.deviceSession.dirty = true;
       events.emit('structured-event', {
@@ -523,6 +532,39 @@ async function run() {
     stagePayload.result?.dirty,
     true,
     'device stage endpoint should route config drafts into the session cache',
+  );
+
+  const invalidStageResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/device/stage',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        config: {
+          slots: 'invalid',
+        },
+      }),
+    }),
+    invalidStageResponse,
+  );
+  const invalidStagePayload = JSON.parse(
+    invalidStageResponse.body.toString('utf8'),
+  );
+  assert.equal(
+    invalidStageResponse.statusCode,
+    422,
+    'device stage endpoint should preserve structured validation status codes',
+  );
+  assert.equal(
+    invalidStagePayload.error?.code,
+    'schema_validation_failed',
+    'device stage endpoint should expose machine-readable validation errors',
+  );
+  assert.equal(
+    Array.isArray(invalidStagePayload.error?.details?.errors),
+    true,
+    'device stage endpoint should preserve validation error details',
   );
 
   const applyResponse = makeRes();

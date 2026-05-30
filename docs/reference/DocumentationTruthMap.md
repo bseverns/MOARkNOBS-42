@@ -17,6 +17,7 @@ These pages define current behavior and support boundaries. They are the first p
 - [Manifest Contract](ManifestContract.md) for `GET_MANIFEST` semantics
 - [MN42 Line Protocol](MN42LineProtocol.md) and [Serial Protocol](SerialProtocol.md) for the line-level command/response contract
 - [Bridge Transport Contract](../bridge/BridgeTransportContract.md) for structured bridge event and API shapes
+- [Bridge Write Lanes](../bridge/BridgeWriteLanes.md) for staged config writes versus live bridge performance writes
 
 Rule: these pages describe what is true now, not what is planned later.
 

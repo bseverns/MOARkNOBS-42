@@ -1,9 +1,28 @@
 #include "DisplayManager.h"
 
 #include "ButtonManager.h"
+#include "Log.h"
 #include "TimeUtils.h"
 
 #include <climits>
+
+namespace {
+const char *displayInitResultCode(DisplayInitResult result) {
+    switch (result) {
+    case DisplayInitResult::NeverAttempted:
+        return "not_attempted";
+    case DisplayInitResult::Ok:
+        return "ok";
+    case DisplayInitResult::NoI2CAck:
+        return "no_i2c_ack";
+    case DisplayInitResult::DriverBeginFailed:
+        return "driver_begin_failed";
+    case DisplayInitResult::Timeout:
+        return "timeout";
+    }
+    return "unknown";
+}
+} // namespace
 
 DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight)
     : _display(screenWidth, screenHeight, &Wire), _i2cAddress(i2cAddress) {
@@ -17,11 +36,51 @@ DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_
 }
 
 bool DisplayManager::begin() {
-    _initialized = true;
+    const DisplayInitResult previousResult = _lastInitResult;
+    const uint32_t previousFailures = _displayInitFailureCount;
+
+    _lastInitAttemptMs = now();
+    _lastInitDurationMs = 0;
+    _displayPresent = _testInitPresent;
+    _initialized = _testInitPresent && _testInitOk;
+    _lastInitResult = _initialized ? DisplayInitResult::Ok
+                                   : (_displayPresent ? DisplayInitResult::DriverBeginFailed
+                                                      : DisplayInitResult::NoI2CAck);
+
+    if (!_initialized) {
+        ++_displayInitFailureCount;
+        if (_displayInitFailureCount == 1 || previousResult != _lastInitResult) {
+            LOG_PRINTF("{\"type\":\"warning\",\"code\":\"display_init_failed\",\"reason\":\"%s\","
+                       "\"display_present\":%s,\"display_ok\":false,\"display_init_failures\":%lu,"
+                       "\"display_init_ms\":0}\n",
+                       displayInitResultCode(_lastInitResult), _displayPresent ? "true" : "false",
+                       static_cast<unsigned long>(_displayInitFailureCount));
+        }
+        return false;
+    }
+
+    if (previousFailures > 0 && previousResult != DisplayInitResult::Ok) {
+        LOG_PRINTF("{\"type\":\"info\",\"code\":\"display_recovered\",\"display_present\":true,"
+                   "\"display_ok\":true,\"display_init_failures\":%lu,\"display_init_ms\":0}\n",
+                   static_cast<unsigned long>(_displayInitFailureCount));
+    }
+
     return true;
 }
 
 bool DisplayManager::isReady() const { return _initialized; }
+
+bool DisplayManager::isPresent() const { return _displayPresent; }
+
+const char *DisplayManager::getLastInitCode() const {
+    return displayInitResultCode(_lastInitResult);
+}
+
+uint32_t DisplayManager::getInitFailureCount() const { return _displayInitFailureCount; }
+
+uint32_t DisplayManager::getLastInitDurationMs() const { return _lastInitDurationMs; }
+
+unsigned long DisplayManager::getLastInitAttemptMs() const { return _lastInitAttemptMs; }
 
 bool DisplayManager::isStartupAnimationDone() const {
     return _startupAnim.phase == StartupPhase::DONE;
@@ -123,3 +182,10 @@ bool DisplayManager::shouldRunScreensaver() const {
 void DisplayManager::showFilterTuning(const char *, float, const char *, float) {}
 
 void DisplayManager::showArpSettings(uint8_t, const char *) {}
+
+#if defined(UNIT_TEST)
+void DisplayManager::setTestInitializationResult(bool present, bool ok) {
+    _testInitPresent = present;
+    _testInitOk = ok;
+}
+#endif
