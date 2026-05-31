@@ -19,8 +19,15 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
   await page.evaluate(() => {
     const runtime = window.__MN42_RUNTIME;
     runtime?.stage?.((draft) => {
-      draft.efSlots = draft.efSlots || [];
-      draft.efSlots[0] = { slots: [] };
+      draft.slots = Array.isArray(draft.slots)
+        ? draft.slots.map((slot) => ({
+            ...(slot ?? {}),
+            ef_index: -1,
+            ef: { ...(slot?.ef ?? {}), index: -1 }
+          }))
+        : [];
+      const followerCount = Array.isArray(draft.efSlots) ? draft.efSlots.length : 6;
+      draft.efSlots = Array.from({ length: followerCount }, () => ({ slots: [] }));
       return draft;
     });
   });

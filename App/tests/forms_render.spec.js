@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('forms render, dirty badge toggles, and apply syncs', async ({ page }) => {
+test('firmware-backed staged config edits enable Apply and clear only after ACK', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -10,9 +12,9 @@ test('forms render, dirty badge toggles, and apply syncs', async ({ page }) => {
   });
 
   await page.goto('/benzknobz.html');
-  const simulatorToggle = page.getByRole('button', { name: /simulator/i });
-  await simulatorToggle.click();
+  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
   await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();
   await expect(freqInput).toHaveCount(1);
@@ -22,6 +24,8 @@ test('forms render, dirty badge toggles, and apply syncs', async ({ page }) => {
   await expect(page.locator('#dirty-badge')).toBeVisible();
   const apply = page.getByRole('button', { name: 'Apply' });
   await expect(apply).toBeEnabled();
+  const diffBeforeApply = await page.evaluate(() => window.__MN42_RUNTIME.diff());
+  expect(diffBeforeApply.length).toBeGreaterThan(0);
 
   await apply.click();
   await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });

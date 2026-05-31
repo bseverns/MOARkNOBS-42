@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test('bridge-served app prefers the structured bridge session when available', async ({ page }) => {
+test('bridge-served app prefers the structured bridge session and promotes staged config only after ACK', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -13,6 +15,8 @@ test('bridge-served app prefers the structured bridge session when available', a
     window.__bridgeWrites = [];
     window.__bridgeApiCalls = [];
     window.__bridgeStageBodies = [];
+    window.__bridgeApplyStarted = false;
+    window.__releaseBridgeApply = null;
 
     const sessionState = {
       connected: true,
@@ -138,27 +142,34 @@ test('bridge-served app prefers the structured bridge session when available', a
       }
 
       if (url.pathname === '/api/device/apply') {
-        sessionState.liveConfig = JSON.parse(JSON.stringify(sessionState.stagedConfig));
-        sessionState.dirty = false;
-        sessionState.lastApplyResult = {
-          status: 'ack',
-          checksum: 'bridge-checksum-1'
-        };
-        broadcast('device.apply.ack', { checksum: 'bridge-checksum-1', seq: 1 });
-        broadcast('device.config.live', {
-          config: sessionState.liveConfig,
-          lastApplyResult: sessionState.lastApplyResult
+        window.__bridgeApplyStarted = true;
+        return new Promise((resolve) => {
+          window.__releaseBridgeApply = () => {
+            sessionState.liveConfig = JSON.parse(JSON.stringify(sessionState.stagedConfig));
+            sessionState.dirty = false;
+            sessionState.lastApplyResult = {
+              status: 'ack',
+              checksum: 'bridge-checksum-1'
+            };
+            broadcast('device.apply.ack', { checksum: 'bridge-checksum-1', seq: 1 });
+            broadcast('device.config.live', {
+              config: sessionState.liveConfig,
+              lastApplyResult: sessionState.lastApplyResult
+            });
+            broadcast('device.config.dirty', { dirty: false });
+            resolve(
+              new Response(
+                JSON.stringify({
+                  result: { applied: true, checksum: 'bridge-checksum-1', seq: 1 }
+                }),
+                {
+                  status: 200,
+                  headers: { 'content-type': 'application/json' }
+                }
+              )
+            );
+          };
         });
-        broadcast('device.config.dirty', { dirty: false });
-        return new Response(
-          JSON.stringify({
-            result: { applied: true, checksum: 'bridge-checksum-1', seq: 1 }
-          }),
-          {
-            status: 200,
-            headers: { 'content-type': 'application/json' }
-          }
-        );
       }
 
       if (url.pathname === '/api/device/rollback') {
@@ -346,7 +357,24 @@ test('bridge-served app prefers the structured bridge session when available', a
     .poll(async () => page.evaluate(() => window.__bridgeStageBodies.length))
     .toBeGreaterThan(0);
 
-  const applyResult = await page.evaluate(async () => window.__MN42_RUNTIME.apply());
+  await page.evaluate(() => {
+    window.__bridgeApplyPromise = window.__MN42_RUNTIME.apply();
+  });
+  await expect.poll(async () => page.evaluate(() => window.__bridgeApplyStarted)).toBe(true);
+
+  const duringApply = await page.evaluate(() => ({
+    dirty: window.__MN42_RUNTIME.getState().dirty,
+    liveFreq: window.__MN42_RUNTIME.getState().live?.filter?.freq,
+    stagedFreq: window.__MN42_RUNTIME.getState().staged?.filter?.freq
+  }));
+  expect(duringApply.dirty).toBe(true);
+  expect(duringApply.liveFreq).toBe(800);
+  expect(duringApply.stagedFreq).toBe(321);
+
+  const applyResult = await page.evaluate(async () => {
+    window.__releaseBridgeApply();
+    return window.__bridgeApplyPromise;
+  });
   expect(applyResult).toEqual(
     expect.objectContaining({ applied: true, checksum: 'bridge-checksum-1' })
   );
@@ -364,7 +392,7 @@ test('bridge-served app prefers the structured bridge session when available', a
   expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/device/apply');
 });
 
-test('bridge-served app falls back to the raw bridge websocket when structured session is unavailable', async ({
+test('raw bridge fallback preserves staged and live config discipline without bridge-session writes', async ({
   page
 }) => {
   await page.addInitScript(() => {
@@ -377,7 +405,6 @@ test('bridge-served app falls back to the raw bridge websocket when structured s
 
     window.__bridgeWrites = [];
     window.__bridgeApiCalls = [];
-
     const manifest = {
       device_name: 'MOARkNOBS-42',
       fw_version: 'raw-bridge-fw',
@@ -408,7 +435,7 @@ test('bridge-served app falls back to the raw bridge websocket when structured s
         led: { type: 'object' }
       }
     };
-    const config = {
+    let config = {
       pots: Array.from({ length: 42 }, (_, index) => ({
         index,
         channel: (index % 16) + 1,
@@ -459,7 +486,6 @@ test('bridge-served app falls back to the raw bridge websocket when structured s
         this.readyState = MockWebSocket.CONNECTING;
         this.binaryType = 'arraybuffer';
         this.listeners = new Map();
-        this.buffer = [];
         setTimeout(() => {
           this.readyState = MockWebSocket.OPEN;
           this.__emit('open', {});
@@ -545,13 +571,46 @@ test('bridge-served app falls back to the raw bridge websocket when structured s
     .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
     .toBe('bridge-raw');
 
+  await page.evaluate(() => {
+    window.__MN42_RUNTIME.stage((draft) => {
+      draft.filter = { ...(draft.filter ?? {}), freq: 654 };
+      return draft;
+    });
+  });
+  await expect(page.locator('#dirty-badge')).toBeVisible();
+
+  const duringApply = await page.evaluate(() => ({
+    dirty: window.__MN42_RUNTIME.getState().dirty,
+    liveFreq: window.__MN42_RUNTIME.getState().live?.filter?.freq,
+    stagedFreq: window.__MN42_RUNTIME.getState().staged?.filter?.freq
+  }));
+  expect(duringApply.dirty).toBe(true);
+  expect(duringApply.liveFreq).toBe(800);
+  expect(duringApply.stagedFreq).toBe(654);
+
+  await page.evaluate(async () => {
+    await window.__MN42_RUNTIME.rollback();
+  });
+  await expect(page.locator('#dirty-badge')).toBeHidden();
+  await expect(page.locator('#status-label')).toHaveText('Rollback');
+
   const bridgeState = await page.evaluate(() => ({
     writes: window.__bridgeWrites,
-    apiCalls: window.__bridgeApiCalls
+    apiCalls: window.__bridgeApiCalls,
+    dirty: window.__MN42_RUNTIME.getState().dirty,
+    liveFreq: window.__MN42_RUNTIME.getState().live?.filter?.freq,
+    stagedFreq: window.__MN42_RUNTIME.getState().staged?.filter?.freq,
+    diff: window.__MN42_RUNTIME.diff()
   }));
   expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/device/session?warm=1');
   expect(bridgeState.writes).toContain('HELLO');
   expect(bridgeState.writes).toContain('GET_MANIFEST');
   expect(bridgeState.writes).toContain('GET_SCHEMA');
   expect(bridgeState.writes).toContain('GET_CONFIG');
+  expect(bridgeState.apiCalls.map((entry) => entry.path)).not.toContain('/api/device/stage');
+  expect(bridgeState.apiCalls.map((entry) => entry.path)).not.toContain('/api/device/apply');
+  expect(bridgeState.dirty).toBe(false);
+  expect(bridgeState.liveFreq).toBe(800);
+  expect(bridgeState.stagedFreq).toBe(800);
+  expect(bridgeState.diff).toEqual([]);
 });

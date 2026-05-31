@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('browser-local slot metadata does not dirty device config and survives reconnect', async ({
+test('browser-only slot labels and Take Control metadata do not dirty staged firmware config', async ({
   page
 }) => {
   await page.addInitScript(() => {
@@ -28,7 +28,12 @@ test('browser-local slot metadata does not dirty device config and survives reco
   await expect(page.locator('#dirty-badge')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
 
-  const diffAfterLocalOnlyEdit = await page.evaluate(() => window.__MN42_RUNTIME.diff());
+  const stateAfterLocalOnlyEdit = await page.evaluate(() => ({
+    dirty: window.__MN42_RUNTIME.getState().dirty,
+    diff: window.__MN42_RUNTIME.diff()
+  }));
+  expect(stateAfterLocalOnlyEdit.dirty).toBe(false);
+  const diffAfterLocalOnlyEdit = stateAfterLocalOnlyEdit.diff;
   expect(diffAfterLocalOnlyEdit).toEqual([]);
 
   await page.evaluate(async () => {

@@ -32,6 +32,8 @@ proving the board, bridge, and OSC stack stay in lockstep.
 - `mn42_boot_contract_runner.js` – Node-based direct-serial proof for the exact `teensy40_main` boot path: standalone boot
   banner, `ENTER_CONFIG_MODE` reboot, configurator handshake, one staged `SET_ALL` apply/ACK, and cleanup back to the original
   config.
+- `mn42_persistence_abuse_runner.js` – Evidence wrapper for persistence abuse. Safe by default: it runs the non-destructive
+  boot/apply/readback proof and only runs destructive profile/macro/scene storage checks when `--exercise-storage` is passed.
 - `test_*.cpp` – legacy manual sketches you can still flash for subsystem debugging until every edge case is automated.
 - `TestHelpers.cpp` – shared glue for those sketches.
 
@@ -114,6 +116,38 @@ The runner proves:
 - `/api/device/stage` marks the session dirty
 - `/api/device/apply` returns an ACK/checksum and promotes staged config to live
 - cleanup apply restores the original live config
+
+## Running the persistence abuse wrapper
+
+Use this when you want one JSON receipt that separates:
+
+- safe automated HIL proof
+- opt-in destructive storage proof
+- Unity-covered corruption scenarios
+- manual-only fault-injection cases
+
+Safe default run:
+
+```bash
+node firmware/system_test/mn42_persistence_abuse_runner.js \
+  --serial /dev/cu.usbmodemXXXX \
+  --report logs/persistence-abuse-safe.json
+```
+
+Destructive storage run on sacrificial slots:
+
+```bash
+node firmware/system_test/mn42_persistence_abuse_runner.js \
+  --serial /dev/cu.usbmodemXXXX \
+  --exercise-storage \
+  --profile-slot 3 \
+  --scene-slot 5 \
+  --pot-index 0 \
+  --report logs/persistence-abuse-storage.json
+```
+
+The wrapper does not fake real-board corruption. It reports primary/backup/default recovery from the Unity suite and leaves
+power-cut or raw-corruption fault injection in the manual bench lane until there is an explicit safe hook.
 
 ## When to reach for the older sketches
 

@@ -239,6 +239,30 @@ Fail:
 - no downstream MIDI output
 - unstable board behavior when the DIN path is active
 
+## 9. Persistence Abuse And Recovery
+
+Start with the safe persistence receipt:
+
+```bash
+node firmware/system_test/mn42_persistence_abuse_runner.js \
+  --serial /dev/cu.usbmodemXXXX \
+  --report logs/persistence-abuse-safe.json
+```
+
+Use the destructive storage lane only on sacrificial slots:
+
+```bash
+node firmware/system_test/mn42_persistence_abuse_runner.js \
+  --serial /dev/cu.usbmodemXXXX \
+  --exercise-storage \
+  --profile-slot 3 \
+  --scene-slot 5 \
+  --pot-index 0 \
+  --report logs/persistence-abuse-storage.json
+```
+
+For primary/backup corruption drills or manual reboot timing tests, use the bench guide in [../bench/firmware/PersistenceAbuse.md](../bench/firmware/PersistenceAbuse.md). Do not script raw corruption against the production firmware lane unless the repo grows an explicit safe fault-injection hook.
+
 Known limitation:
 
 - this package does not claim broad external-device compatibility testing across all MIDI receivers
