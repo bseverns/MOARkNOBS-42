@@ -75,6 +75,8 @@ EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method);
 namespace {
 StorageBackend &activeStorageBackend() { return *ConfigManager::getStorageBackend(); }
 
+char gQueuedCommandLine[SERIAL_BUFFER_SIZE] = {0};
+
 template <typename T> void storageGet(int address, T &value) {
     activeStorageBackend().readBytes(address, &value, sizeof(T));
 }
@@ -200,17 +202,15 @@ EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method) {
 }
 
 void processCommandQueue() {
-    // Keep one persistent String scratch buffer to avoid per-command heap churn.
+    // Keep persistent scratch storage so the idle path doesn't spend stack or heap.
     static String command;
     static bool commandInitialized = false;
-    if (!commandInitialized) {
-        command.reserve(SERIAL_BUFFER_SIZE - 1);
-        commandInitialized = true;
-    }
-
-    char line[SERIAL_BUFFER_SIZE];
-    while (dequeueSerialCommand(line, sizeof(line))) {
-        command = line;
+    while (dequeueSerialCommand(gQueuedCommandLine, sizeof(gQueuedCommandLine))) {
+        if (!commandInitialized) {
+            command.reserve(SERIAL_BUFFER_SIZE - 1);
+            commandInitialized = true;
+        }
+        command = gQueuedCommandLine;
 
         command.trim();
 
