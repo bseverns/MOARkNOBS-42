@@ -64,3 +64,24 @@ void test_command_queue_flushes_when_buffer_limit_is_hit() {
         TEST_ASSERT_EQUAL_CHAR('A', buffer[idx]);
     }
 }
+
+void test_command_queue_initialize_clears_stale_dmame_state() {
+    testOnly_resetCommandQueue();
+    testOnly_enqueueSerialCommand("STALE");
+    testOnly_corruptCommandQueueState(999, 999, 999);
+
+    initializeCommandQueue();
+
+    char buffer[SERIAL_BUFFER_SIZE] = {0};
+    TEST_ASSERT_FALSE(dequeueSerialCommand(buffer, sizeof(buffer)));
+    TEST_ASSERT_EQUAL_UINT8(0, serialBufferIndex);
+}
+
+void test_command_queue_dequeue_sanitizes_invalid_dmame_state() {
+    testOnly_resetCommandQueue();
+    testOnly_corruptCommandQueueState(999, 999, 999);
+
+    char buffer[SERIAL_BUFFER_SIZE] = {0};
+    TEST_ASSERT_FALSE(dequeueSerialCommand(buffer, sizeof(buffer)));
+    TEST_ASSERT_EQUAL_UINT8(0, serialBufferIndex);
+}

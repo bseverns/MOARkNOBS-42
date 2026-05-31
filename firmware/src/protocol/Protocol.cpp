@@ -98,6 +98,7 @@ void initializeProtocol() {
     // Boot banner + reset diagnostics are emitted early so host tooling can log reset cause and
     // brownout history before config RPCs begin.
     Serial.begin(SERIAL_BAUD);
+    initializeCommandQueue();
     Serial.printf("MN42 FW %s %s\n", FW_VERSION_STR, GIT_SHA_STR);
     g_resetCause = SRC_SRSR;
     storageGet(EEPROM_BROWNOUT_COUNT, g_brownoutCount);

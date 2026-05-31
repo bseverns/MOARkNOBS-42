@@ -23,8 +23,29 @@ struct CommandQueueStorage {
 // by the Unity test image and hot runtime state.
 DMAMEM CommandQueueStorage commandQueue;
 
+void resetCommandQueueState() {
+    commandQueue = CommandQueueStorage{};
+    std::memset(serialBuffer, 0, sizeof(serialBuffer));
+    serialBufferIndex = 0;
+}
+
+bool commandQueueStateLooksValid() {
+    return commandQueue.head < kMaxCommandQueueSize && commandQueue.tail < kMaxCommandQueueSize &&
+           commandQueue.count <= kMaxCommandQueueSize;
+}
+
+void sanitizeCommandQueueState() {
+    if (commandQueueStateLooksValid()) {
+        return;
+    }
+    LOG_PRINTLN("{\"type\":\"warning\",\"code\":\"command_queue_state_reset\",\"reason\":\"invalid_"
+                "queue_metadata\"}");
+    resetCommandQueueState();
+}
+
 // Drop the oldest queued command so fresh operator input wins during overload.
 void dropOldestCommand() {
+    sanitizeCommandQueueState();
     if (commandQueue.count == 0) {
         return;
     }
@@ -37,6 +58,7 @@ void enqueueSerialCommand(const char *line) {
     if (!line) {
         return;
     }
+    sanitizeCommandQueueState();
     if (commandQueue.count >= kMaxCommandQueueSize) {
         // Keep newest commands under overload; interactive control is more useful than
         // preserving stale backlog lines.
@@ -54,6 +76,7 @@ void enqueueSerialCommand(const char *line) {
 
 // Accumulate serial bytes into newline-delimited commands.
 void ingestSerialByte(char received) {
+    sanitizeCommandQueueState();
     if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
         serialBuffer[serialBufferIndex] = '\0';
         if (serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
@@ -67,8 +90,11 @@ void ingestSerialByte(char received) {
 }
 } // namespace
 
+void initializeCommandQueue() { resetCommandQueueState(); }
+
 // Pop the next queued command into the caller-provided buffer.
 bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
+    sanitizeCommandQueueState();
     if (!outBuffer || outBufferSize == 0 || commandQueue.count == 0) {
         return false;
     }
@@ -91,15 +117,17 @@ void pollSerialInput() {
 
 #if defined(UNIT_TEST)
 // Reset queue storage so tests start from a blank serial-command state.
-void testOnly_resetCommandQueue() {
-    commandQueue = CommandQueueStorage{};
-    std::memset(serialBuffer, 0, sizeof(serialBuffer));
-    serialBufferIndex = 0;
-}
+void testOnly_resetCommandQueue() { resetCommandQueueState(); }
 
 // Inject a full command line directly into the queue for tests.
 void testOnly_enqueueSerialCommand(const char *line) { enqueueSerialCommand(line); }
 
 // Feed one raw serial byte into the queue parser for tests.
 void testOnly_ingestSerialByte(char received) { ingestSerialByte(received); }
+
+void testOnly_corruptCommandQueueState(size_t head, size_t tail, size_t count) {
+    commandQueue.head = head;
+    commandQueue.tail = tail;
+    commandQueue.count = count;
+}
 #endif

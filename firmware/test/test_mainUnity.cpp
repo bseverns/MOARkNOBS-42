@@ -82,6 +82,8 @@ void test_command_queue_drops_oldest_on_overflow();
 void test_command_queue_ingests_newline_terminated_input();
 void test_command_queue_ignores_carriage_returns();
 void test_command_queue_flushes_when_buffer_limit_is_hit();
+void test_command_queue_initialize_clears_stale_dmame_state();
+void test_command_queue_dequeue_sanitizes_invalid_dmame_state();
 void test_scheduler_initializes_recurring_task_layout();
 void test_runtime_pending_note_off_fires_when_due();
 void test_runtime_pending_note_off_overflow_tracks_drop();
@@ -181,6 +183,8 @@ void setup() {
     RUN_TEST(test_command_queue_ingests_newline_terminated_input);
     RUN_TEST(test_command_queue_ignores_carriage_returns);
     RUN_TEST(test_command_queue_flushes_when_buffer_limit_is_hit);
+    RUN_TEST(test_command_queue_initialize_clears_stale_dmame_state);
+    RUN_TEST(test_command_queue_dequeue_sanitizes_invalid_dmame_state);
     RUN_TEST(test_scheduler_initializes_recurring_task_layout);
     RUN_TEST(test_runtime_pending_note_off_fires_when_due);
     RUN_TEST(test_runtime_pending_note_off_overflow_tracks_drop);
