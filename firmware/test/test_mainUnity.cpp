@@ -86,6 +86,7 @@ void test_scheduler_initializes_recurring_task_layout();
 void test_runtime_pending_note_off_fires_when_due();
 void test_runtime_pending_note_off_overflow_tracks_drop();
 void test_runtime_diagnostics_log_only_on_counter_changes();
+void test_display_no_ack_suppresses_runtime_retry();
 void test_webserial_state_snapshot_emits_expected_json();
 void test_webserial_slot_patch_emits_schema_and_legacy_payloads();
 void test_ui_update_note_dynamics_maps_control_pots();
@@ -184,6 +185,7 @@ void setup() {
     RUN_TEST(test_runtime_pending_note_off_fires_when_due);
     RUN_TEST(test_runtime_pending_note_off_overflow_tracks_drop);
     RUN_TEST(test_runtime_diagnostics_log_only_on_counter_changes);
+    RUN_TEST(test_display_no_ack_suppresses_runtime_retry);
     RUN_TEST(test_webserial_state_snapshot_emits_expected_json);
     RUN_TEST(test_webserial_slot_patch_emits_schema_and_legacy_payloads);
     RUN_TEST(test_ui_update_note_dynamics_maps_control_pots);

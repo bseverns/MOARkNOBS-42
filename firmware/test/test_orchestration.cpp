@@ -241,6 +241,25 @@ void test_webserial_state_snapshot_emits_expected_json() {
     TEST_ASSERT_EQUAL_STRING("ok", doc_diag["diagnostics"]["display_status"] | "");
 }
 
+void test_display_no_ack_suppresses_runtime_retry() {
+    g_fakeNowMs = 0;
+    clearTestLogBuffer();
+    displayManager.setTestInitializationResult(false, false);
+    TEST_ASSERT_FALSE(displayManager.begin());
+    TEST_ASSERT_EQUAL_UINT32(1, displayManager.getInitFailureCount());
+
+    advanceMs(6000);
+    displayManager.setTestInitializationResult(true, true);
+    clearTestLogBuffer();
+    serviceDisplayDegradedMode();
+    TEST_ASSERT_FALSE(displayManager.isReady());
+    TEST_ASSERT_EQUAL_UINT32(1, displayManager.getInitFailureCount());
+    TEST_ASSERT_EQUAL_UINT(0, peekTestLogBuffer().length());
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(displayManager.begin());
+}
+
 void test_webserial_slot_patch_emits_schema_and_legacy_payloads() {
     clearTestLogBuffer();
     webSerialStreaming = true;

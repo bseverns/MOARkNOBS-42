@@ -23,10 +23,26 @@ constexpr unsigned long kStartupRandomFlashOutMs = 300UL;
 constexpr unsigned long kStartupWhiteSweepStartMs = 4000UL;
 constexpr unsigned long kStartupWhiteStepMs = 50UL;
 constexpr unsigned long kStartupHoldMs = 500UL;
+#if (defined(MN42_DIAG_DISABLE_LED_UI) && (MN42_DIAG_DISABLE_LED_UI != 0)) ||                      \
+    (defined(MN42_DIAG_DISABLE_LED_INIT) && (MN42_DIAG_DISABLE_LED_INIT != 0))
+constexpr bool kLedHardwareEnabled = false;
+#else
 constexpr bool kLedHardwareEnabled = true;
+#endif
+
+#if (defined(MN42_DIAG_DISABLE_LED_UI) && (MN42_DIAG_DISABLE_LED_UI != 0)) ||                      \
+    (defined(MN42_DIAG_DISABLE_DISPLAY_INIT) && (MN42_DIAG_DISABLE_DISPLAY_INIT != 0))
+constexpr bool kDisplayHardwareEnabled = false;
+#else
 constexpr bool kDisplayHardwareEnabled = true;
-constexpr unsigned long kDisplayRetryIntervalMs = 5000UL;
+#endif
+
+#if defined(MN42_DIAG_DISABLE_LED_UI) && (MN42_DIAG_DISABLE_LED_UI != 0)
+constexpr bool kStartupLedAnimationEnabled = false;
+#else
 constexpr bool kStartupLedAnimationEnabled = true;
+#endif
+constexpr unsigned long kDisplayRetryIntervalMs = 5000UL;
 constexpr unsigned long kControlOverlayHoldMs = 900UL;
 constexpr unsigned long kFilterPersistIdleMs = 900UL;
 constexpr unsigned long kFilterPersistMinIntervalMs = 500UL;
@@ -400,6 +416,19 @@ void initializeUI() {
     pinMode(hwConfig.statusLedPin, OUTPUT);
     digitalWrite(hwConfig.statusLedPin, LOW);
 
+#if defined(MN42_DIAG_DISABLE_LED_UI) && (MN42_DIAG_DISABLE_LED_UI != 0)
+    LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"ui_startup_disabled\"}");
+#endif
+#if defined(MN42_DIAG_DISABLE_LED_INIT) && (MN42_DIAG_DISABLE_LED_INIT != 0)
+    LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"ui_led_init_disabled\"}");
+#endif
+#if defined(MN42_DIAG_DISABLE_DISPLAY_INIT) && (MN42_DIAG_DISABLE_DISPLAY_INIT != 0)
+    LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"ui_display_init_disabled\"}");
+#endif
+#if defined(MN42_DIAG_DISABLE_BUTTON_INIT) && (MN42_DIAG_DISABLE_BUTTON_INIT != 0)
+    LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"ui_button_init_disabled\"}");
+#endif
+
     if (kLedHardwareEnabled) {
         ledManager.begin();
     }
@@ -415,7 +444,10 @@ void initializeUI() {
         displayManager.showText("Initializing...");
     }
 
+#if defined(MN42_DIAG_DISABLE_BUTTON_INIT) && (MN42_DIAG_DISABLE_BUTTON_INIT != 0)
+#else
     buttonManager.initButtons();
+#endif
     gStartupSequence = {};
     gStartupSequence.active = displayReady;
     gStartupSequence.displayReady = displayReady;
@@ -434,7 +466,13 @@ void serviceDisplayDegradedMode() {
         return;
     }
 
-    const unsigned long currentMs = millis();
+    const bool displayNeverAcked =
+        !displayManager.isPresent() && strcmp(displayManager.getLastInitCode(), "no_i2c_ack") == 0;
+    if (displayNeverAcked) {
+        return;
+    }
+
+    const unsigned long currentMs = now();
     const unsigned long lastAttemptMs = displayManager.getLastInitAttemptMs();
     if (lastAttemptMs != 0 &&
         static_cast<unsigned long>(currentMs - lastAttemptMs) < kDisplayRetryIntervalMs) {

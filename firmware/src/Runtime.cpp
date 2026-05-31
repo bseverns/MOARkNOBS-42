@@ -335,8 +335,12 @@ void initializeRuntime(bool baselinesLoaded) {
 
     potentiometerManager.loadFromEEPROM();
 
+#if defined(MN42_DIAG_DISABLE_TIMER1_ISR) && (MN42_DIAG_DISABLE_TIMER1_ISR != 0)
+    LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"timer1_isr_disabled\"}");
+#else
     Timer1.initialize(1000);
     Timer1.attachInterrupt(midiTimerISR);
+#endif
 
     filter.configure(BiquadFilter::LOWPASS, 1000, 44100);
 
@@ -377,7 +381,11 @@ void initializeRuntime(bool baselinesLoaded) {
         break;
     }
 
+#if defined(MN42_DIAG_DISABLE_SCHEDULERS) && (MN42_DIAG_DISABLE_SCHEDULERS != 0)
+    LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"schedulers_disabled\"}");
+#else
     initializeSchedulers();
+#endif
 }
 
 // Timer ISR is intentionally tiny: it only requests service and leaves real work to task
