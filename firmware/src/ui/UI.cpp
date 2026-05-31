@@ -31,7 +31,8 @@ constexpr bool kLedHardwareEnabled = true;
 #endif
 
 #if (defined(MN42_DIAG_DISABLE_LED_UI) && (MN42_DIAG_DISABLE_LED_UI != 0)) ||                      \
-    (defined(MN42_DIAG_DISABLE_DISPLAY_INIT) && (MN42_DIAG_DISABLE_DISPLAY_INIT != 0))
+    (defined(MN42_DIAG_DISABLE_DISPLAY_INIT) && (MN42_DIAG_DISABLE_DISPLAY_INIT != 0)) ||          \
+    (defined(MN42_DISABLE_DISPLAY_BOOT_PROBE) && (MN42_DISABLE_DISPLAY_BOOT_PROBE != 0))
 constexpr bool kDisplayHardwareEnabled = false;
 #else
 constexpr bool kDisplayHardwareEnabled = true;
@@ -424,6 +425,11 @@ void initializeUI() {
 #endif
 #if defined(MN42_DIAG_DISABLE_DISPLAY_INIT) && (MN42_DIAG_DISABLE_DISPLAY_INIT != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"ui_display_init_disabled\"}");
+#endif
+#if defined(MN42_DISABLE_DISPLAY_BOOT_PROBE) && (MN42_DISABLE_DISPLAY_BOOT_PROBE != 0)
+    LOG_PRINTLN("{\"type\":\"warning\",\"code\":\"display_init_deferred\",\"reason\":\"boot_probe_"
+                "disabled\","
+                "\"display_present\":false,\"display_ok\":false,\"display_init_failures\":0}");
 #endif
 #if defined(MN42_DIAG_DISABLE_BUTTON_INIT) && (MN42_DIAG_DISABLE_BUTTON_INIT != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"ui_button_init_disabled\"}");

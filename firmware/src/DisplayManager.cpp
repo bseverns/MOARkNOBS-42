@@ -28,6 +28,7 @@ constexpr uint32_t kDisplayI2CFastHz = 400000UL;
 constexpr uint32_t kDisplayI2CRestoreHz = 100000UL;
 constexpr uint8_t kI2CDataPrefix = 0x40;
 constexpr uint8_t kI2CDataChunkBytes = 16;
+constexpr unsigned long kDisplayBusSettleUs = 50UL;
 constexpr unsigned long kPeriodicFullRefreshMs = 5000UL;
 constexpr uint8_t kPartialFallbackPercent = 70;
 constexpr unsigned long kStartupSnowDurationMs = 3000UL;
@@ -43,8 +44,51 @@ constexpr bool kEnablePartialRegionUpdates = false;
 constexpr bool kEnablePartialRegionUpdates = true;
 #endif
 
-bool displayAddressAcked(uint8_t address) {
+bool gDisplayWireStarted = false;
+
+bool displayBusLooksIdle() {
+#if defined(SDA) && defined(SCL)
+    pinMode(SDA, INPUT_PULLUP);
+    pinMode(SCL, INPUT_PULLUP);
+    delayMicroseconds(kDisplayBusSettleUs);
+    return digitalRead(SDA) == HIGH && digitalRead(SCL) == HIGH;
+#else
+    return true;
+#endif
+}
+
+bool ensureDisplayWireReady() {
+    if (!displayBusLooksIdle()) {
+        return false;
+    }
+    if (gDisplayWireStarted) {
+        return true;
+    }
+
     Wire.begin();
+    Wire.setClock(kDisplayI2CRestoreHz);
+    delayMicroseconds(kDisplayBusSettleUs);
+    gDisplayWireStarted = true;
+    return true;
+}
+
+void shutdownDisplayWire() {
+    if (!gDisplayWireStarted) {
+        return;
+    }
+    Wire.end();
+    gDisplayWireStarted = false;
+#if defined(SDA) && defined(SCL)
+    pinMode(SDA, INPUT_PULLUP);
+    pinMode(SCL, INPUT_PULLUP);
+#endif
+}
+
+bool displayAddressAcked(uint8_t address) {
+    if (!ensureDisplayWireReady()) {
+        return false;
+    }
+    Wire.setClock(kDisplayI2CRestoreHz);
     Wire.beginTransmission(address);
     return Wire.endTransmission() == 0;
 }
@@ -285,6 +329,7 @@ bool DisplayManager::begin() {
     _lastInitResult = result;
 
     if (!ready) {
+        shutdownDisplayWire();
         ++_displayInitFailureCount;
         if (_displayInitFailureCount == 1 || previousResult != result) {
             LOG_PRINTF("{\"type\":\"warning\",\"code\":\"display_init_failed\",\"reason\":\"%s\","
