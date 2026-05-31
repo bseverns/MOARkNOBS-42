@@ -11,6 +11,7 @@
 #include "ARGMixer.h"
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
+#include "DiagnosticRecord.h"
 #include "EfSettingsUtils.h"
 #include "EnvelopeFollower.h"
 #include "FirmwareState.h"
@@ -760,6 +761,7 @@ void applyLedMode(JsonObject ledObj) {
 }
 
 void emitBulkIngestError(const String &ingestError, uint32_t hint) {
+    DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error, nullptr);
     if (ingestError == "overflow") {
         emitBulkError("overflow", "config payload too large", hint);
     } else if (ingestError == "orphan") {
@@ -773,6 +775,8 @@ bool parseBulkConfigDocument(StaticJsonDocument<Utility::kMaxBulkConfigSize> &do
     doc.clear();
     DeserializationError err = deserializeJson(doc, bulkConfigAssembler.payload());
     if (err) {
+        DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
+                                                  nullptr);
         emitBulkError("parse", err.c_str(), bulkConfigAssembler.sequenceHint());
         bulkConfigAssembler.reset();
         return false;
@@ -805,6 +809,8 @@ bool resolveBulkApplyIdentity(JsonDocument &doc, BulkApplyIdentity &identity) {
     }
 
     if (identity.configId.length() == 0) {
+        DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
+                                                  nullptr);
         emitBulkError("checksum", "missing checksum/config_id", identity.sequence);
         bulkConfigAssembler.reset();
         return false;
@@ -826,6 +832,8 @@ bool emitDuplicateBulkAckIfNeeded(const BulkApplyIdentity &identity) {
 void commitBulkApplyAck(const BulkApplyIdentity &identity) {
     lastAckSequence = identity.sequence;
     lastAckChecksum = identity.configId;
+    DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Acked,
+                                              identity.configId.c_str());
     LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence));
     bulkConfigAssembler.reset();
 }
@@ -1032,6 +1040,8 @@ void handleSetAllBulkCommand(const String &command) {
 
     JsonObject configObj = doc["config"].as<JsonObject>();
     if (!applyConfigObject(configObj, identity.sequence)) {
+        DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Error,
+                                                  identity.configId.c_str());
         bulkConfigAssembler.reset();
         return;
     }

@@ -17,6 +17,7 @@
 #include "BoardPowerProfile.h"
 #include "CommandQueue.h"
 #include "ConfigManager.h"
+#include "DiagnosticRecord.h"
 #include "EfSettingsUtils.h"
 #include "FirmwareState.h"
 #include "Globals.h"
@@ -110,10 +111,14 @@ void initializeProtocol() {
         g_brownoutCount++;
         storagePut(EEPROM_BROWNOUT_COUNT, g_brownoutCount);
     }
+    DiagnosticRecord::initialize();
+    DiagnosticRecord::recordResetSnapshot(g_resetCause, g_brownoutCount);
     Serial.printf("MN42 FW %s schema %04X UID %08lX%08lX%08lX%08lX\n", FW_VERSION_STR,
                   CONFIG_VERSION, HW_OCOTP_CFG0, HW_OCOTP_CFG1, HW_OCOTP_CFG2, HW_OCOTP_CFG3);
     Serial.printf("Reset 0x%08lX Brownouts %u\n", g_resetCause, g_brownoutCount);
     configManager.begin(potChannels);
+    DiagnosticRecord::recordConfigLoadSource(
+        static_cast<uint8_t>(configManager.getLastLoadSource()));
     potentiometerManager.attachConfigManager(configManager);
     configManager.loadMIDISlots(&configManager.getSlot(0), NUM_SLOTS);
 }
@@ -265,6 +270,10 @@ void handleGetLedCommand(const ParsedCommand &cmd) {
 
 void handleGetManifestCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetManifestCommand(cmd.fullCommand());
+}
+
+void handleGetDiagnosticsCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetDiagnosticsCommand(cmd.fullCommand());
 }
 
 void handleGetNoteDynamicsCommand(const ParsedCommand &cmd) {

@@ -4,6 +4,7 @@
 #include "BootMode.h"
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
+#include "DiagnosticRecord.h"
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Log.h"
@@ -29,6 +30,26 @@ void test_dispatch_handles_documented_query_commands() {
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_primary_valid\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_backup_valid\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_last_load\""));
+
+    clearTestLogBuffer();
+    DiagnosticRecord::recordResetSnapshot(0x00000003UL, 1);
+    DiagnosticRecord::recordBootMode(static_cast<uint8_t>(BootMode::StandaloneRuntime));
+    DiagnosticRecord::recordConfigLoadSource(
+        static_cast<uint8_t>(ConfigManager::LoadSource::kPrimary));
+    DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Acked,
+                                              "diag-123");
+    DiagnosticRecord::recordProtocolError("checksum");
+    DiagnosticRecord::recordDisplayInitFailures(2);
+    DiagnosticRecord::recordLoopOverrunHighWater(3100);
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_DIAGNOSTICS"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"type\":\"diagnostics\""));
+    TEST_ASSERT_NOT_EQUAL(-1,
+                          peekTestLogBuffer().indexOf("\"last_boot_mode\":\"standalone_runtime\""));
+    TEST_ASSERT_NOT_EQUAL(
+        -1, peekTestLogBuffer().indexOf("\"last_config_apply_checksum\":\"diag-123\""));
+    TEST_ASSERT_NOT_EQUAL(-1,
+                          peekTestLogBuffer().indexOf("\"last_protocol_error_code\":\"checksum\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"max_loop_overrun_us\":3100"));
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_SCHEMA"));

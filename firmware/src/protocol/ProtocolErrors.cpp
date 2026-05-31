@@ -1,8 +1,10 @@
 #include "protocol/ProtocolErrors.h"
 
+#include "DiagnosticRecord.h"
 #include "Log.h"
 
 void emitBulkError(const char *code, const char *message, uint32_t seq) {
+    DiagnosticRecord::recordProtocolError(code);
     String out = "{\"type\":\"error\"";
     if (code && code[0] != '\0') {
         out += ",\"code\":\"";

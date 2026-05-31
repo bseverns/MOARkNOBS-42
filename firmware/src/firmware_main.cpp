@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "BootMode.h"
+#include "DiagnosticRecord.h"
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Protocol.h"
@@ -33,6 +34,7 @@ bool gFirstStandaloneLoop = true;
 void setup() {
     gBootMode = selectBootMode();
     initializeProtocol();
+    DiagnosticRecord::recordBootMode(static_cast<uint8_t>(gBootMode));
     if (gBootMode == BootMode::UsbConfigurator) {
         LOG_PRINTLN("{\"type\":\"boot_mode\",\"mode\":\"usb_configurator\"}");
         return;

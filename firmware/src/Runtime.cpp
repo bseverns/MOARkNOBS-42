@@ -8,6 +8,7 @@
 #include <imxrt.h>
 #include "ButtonManager.h"
 #include "ConfigManager.h"
+#include "DiagnosticRecord.h"
 #include "DisplayManager.h"
 #include "LEDManager.h"
 #include "MIDIHandler.h"
@@ -619,6 +620,7 @@ void monitorSystemLoad() {
     // Threshold raised to 2500µs to accommodate full scan + mux settle + MIDI work.
     if (loopDuration > 2500UL) {
         ++g_systemDiagnostics.loopOverrunCount;
+        DiagnosticRecord::recordLoopOverrunHighWater(loopDuration);
         const unsigned long currentMillis = now();
         if ((currentMillis - lastLoopOverrunLogMs) >= 1000UL) {
             LOG_PRINTF("{\"diagnostic\":\"loop_overrun\",\"duration_us\":%lu,\"count\":%lu,"

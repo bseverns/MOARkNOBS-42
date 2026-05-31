@@ -1,6 +1,7 @@
 #include "protocol/ProtocolDispatch.h"
 
 #include "ConfigManager.h"
+#include "DiagnosticRecord.h"
 #include "Log.h"
 #include "Protocol.h"
 
@@ -30,6 +31,7 @@ const CommandHandler kCommandHandlers[] = {
     {"GET_BROWNOUTS", ProtocolDispatchHandlers::handleGetBrownoutsCommand},
     {"GET_CLOCK", ProtocolDispatchHandlers::handleGetClockCommand},
     {"GET_CONFIG", ProtocolDispatchHandlers::handleGetConfigCommand},
+    {"GET_DIAGNOSTICS", ProtocolDispatchHandlers::handleGetDiagnosticsCommand},
     {"GET_EF", ProtocolDispatchHandlers::handleGetEfCommand},
     {"GET_JITTER", ProtocolDispatchHandlers::handleGetJitterCommand},
     {"GET_LED", ProtocolDispatchHandlers::handleGetLedCommand},
@@ -79,6 +81,7 @@ const CommandHandler *findCommandHandler(const ParsedCommand &cmd) {
 }
 
 void logUnknownCommand(const String &command) {
+    DiagnosticRecord::recordProtocolError("unknown_command");
     LOG_PRINTLN("Unknown command: " + command);
     LOG_PRINT("Available commands: ");
     for (size_t i = 0; i < kCommandHandlerCount; ++i) {

@@ -72,6 +72,7 @@ Bulk errors include `overflow`, `orphan`, `ingest`, `parse`, `checksum`, `config
 | ------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | `HELLO`             | `HELLO`                                        | `{"hello":"mn42"}`                                                                     | Enables telemetry/config patch streaming.                                       |
 | `GET_MANIFEST`      | `GET_MANIFEST`                                 | Manifest JSON                                                                          | See [Manifest Contract](ManifestContract.md).                                   |
+| `GET_DIAGNOSTICS`   | `GET_DIAGNOSTICS`                              | Persistent or volatile diagnostics JSON                                                | Black-box style boot/apply/error summary. Unknown fields must be tolerated.     |
 | `GET_SCHEMA`        | `GET_SCHEMA`                                   | JSON schema                                                                            | Returns `ConfigManager::makeSchema()`.                                          |
 | `GET_CONFIG`        | `GET_CONFIG`                                   | Full config JSON                                                                       | Includes pots, slots, EF routing, ARG, filter, LED state.                       |
 | `GET_PROFILE`       | `GET_PROFILE` or `GET_PROFILE,<id>`            | Profile JSON                                                                           | `id` is `0..3`; omitted uses active profile.                                    |
@@ -171,3 +172,12 @@ Save and recall a scene:
 > {"cmd":"RECALL_SCENE","slot":0}
 < {"cmd":"RECALL_SCENE","scene_slot":0,"scene_name":"Verse","scene_available":true,"scene_recalled":true}
 ```
+
+Diagnostics snapshot:
+
+```text
+> GET_DIAGNOSTICS
+< {"type":"diagnostics","storage_mode":"persistent","last_reset_reason_raw":3,"last_reset_reason_hex":"0x00000003","last_boot_mode":"standalone_runtime","last_config_load_source":"primary","last_config_apply_status":"acked","last_config_apply_checksum":"abc123","last_protocol_error_code":"checksum","brownout_count":0,"display_init_failures":1,"max_loop_overrun_us":3100,"watchdog_reset_marker_available":false}
+```
+
+`GET_DIAGNOSTICS` is intentionally additive. Bridge/App consumers should ignore unknown fields until they explicitly adopt a richer diagnostics UI.

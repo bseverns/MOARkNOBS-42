@@ -23,6 +23,7 @@ void handleHelloCommand(const String &command);
 void handleGetManifestCommand(const String &command);
 void handleGetSchemaCommand(const String &command);
 void handleGetConfigCommand(const String &command);
+void handleGetDiagnosticsCommand(const String &command);
 
 // Live runtime inspection reads.
 void handleGetClockCommand(const String &command);

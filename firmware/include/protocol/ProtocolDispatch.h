@@ -68,6 +68,7 @@ void handleGetArgMethodCommand(const ParsedCommand &cmd);
 void handleGetBrownoutsCommand(const ParsedCommand &cmd);
 void handleGetClockCommand(const ParsedCommand &cmd);
 void handleGetConfigCommand(const ParsedCommand &cmd);
+void handleGetDiagnosticsCommand(const ParsedCommand &cmd);
 void handleGetEfCommand(const ParsedCommand &cmd);
 void handleGetJitterCommand(const ParsedCommand &cmd);
 void handleGetLedCommand(const ParsedCommand &cmd);

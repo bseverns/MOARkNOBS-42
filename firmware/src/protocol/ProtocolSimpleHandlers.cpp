@@ -8,6 +8,7 @@
 
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
+#include "DiagnosticRecord.h"
 #include "EfSettingsUtils.h"
 #include "EnvelopeFollower.h"
 #include "FirmwareState.h"
@@ -248,6 +249,7 @@ void handleGetManifestCommand(const String &command) {
     writeManifestFields(doc.to<JsonObject>());
 
     if (doc.overflowed()) {
+        DiagnosticRecord::recordProtocolError("json_overflow");
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_MANIFEST\"}");
         return;
     }
@@ -260,6 +262,23 @@ void handleGetManifestCommand(const String &command) {
 void handleGetSchemaCommand(const String &command) {
     (void)command;
     LOG_PRINTLN(ConfigManager::makeSchema());
+}
+
+void handleGetDiagnosticsCommand(const String &command) {
+    (void)command;
+    StaticJsonDocument<512> doc;
+    DiagnosticRecord::writeJson(doc.to<JsonObject>());
+
+    if (doc.overflowed()) {
+        DiagnosticRecord::recordProtocolError("json_overflow");
+        LOG_PRINTLN(
+            "{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_DIAGNOSTICS\"}");
+        return;
+    }
+
+    String payload;
+    serializeJson(doc, payload);
+    LOG_PRINTLN(payload);
 }
 
 // Full config export is intentionally the longest simple handler because it is
@@ -297,6 +316,7 @@ void handleGetConfigCommand(const String &command) {
     writeLedConfig(led);
 
     if (doc.overflowed()) {
+        DiagnosticRecord::recordProtocolError("json_overflow");
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_CONFIG\"}");
         return;
     }

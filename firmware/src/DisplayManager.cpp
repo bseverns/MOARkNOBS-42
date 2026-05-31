@@ -6,6 +6,7 @@
 
 #include <Arduino.h>
 #include "DisplayManager.h"
+#include "DiagnosticRecord.h"
 #include "Log.h"
 #include "TimeUtils.h"
 #include <Adafruit_GFX.h>
@@ -331,6 +332,7 @@ bool DisplayManager::begin() {
     if (!ready) {
         shutdownDisplayWire();
         ++_displayInitFailureCount;
+        DiagnosticRecord::recordDisplayInitFailures(_displayInitFailureCount);
         if (_displayInitFailureCount == 1 || previousResult != result) {
             LOG_PRINTF("{\"type\":\"warning\",\"code\":\"display_init_failed\",\"reason\":\"%s\","
                        "\"display_present\":%s,\"display_ok\":false,\"display_init_failures\":%lu,"
