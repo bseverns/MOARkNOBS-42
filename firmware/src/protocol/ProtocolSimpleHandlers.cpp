@@ -199,6 +199,19 @@ void writeRouteRange(JsonObject route, uint8_t minValue = 0, uint8_t maxValue = 
     range["max"] = maxValue;
 }
 
+int lfoRouteLastValue7(const LFOManager::Route &route, float normalized) {
+    float amount = std::clamp(static_cast<float>(route.amount) / 100.0f, -1.0f, 1.0f);
+    float shaped = 0.5f + (normalized - 0.5f) * std::fabs(amount);
+    if (amount < 0.0f) {
+        shaped = 1.0f - shaped;
+    }
+    shaped = std::clamp(shaped, 0.0f, 1.0f);
+    return std::clamp(
+        static_cast<int>(std::lround(static_cast<float>(route.minValue) +
+                                     shaped * static_cast<float>(route.maxValue - route.minValue))),
+        0, 127);
+}
+
 void writeSlotMidiDestination(JsonObject midi, const MIDISlot &slot) {
     midi["type"] = midiMessageTypeName(slot.type);
     midi["channel"] = slot.midiChannel;
@@ -341,12 +354,13 @@ void writeLfoRoutes(JsonArray routes) {
         routeObj["route_type"] = lfoRouteTypeName(route.type);
         writeLfoTransform(routeObj, lfo, route);
         routeObj["depth"] = route.depth;
+        routeObj["amount"] = route.amount;
         routeObj["rateLimitMs"] = 9;
         routeObj["persisted"] = true;
         routeObj["active"] = true;
         routeObj["last_value"] =
-            static_cast<int>(std::lround(lfoManager.normalizedValue(route.lfoIndex) * 127.0f));
-        writeRouteRange(routeObj);
+            lfoRouteLastValue7(route, lfoManager.normalizedValue(route.lfoIndex));
+        writeRouteRange(routeObj, route.minValue, route.maxValue);
 
         switch (route.type) {
         case LFOManager::Route::Type::Internal: {

@@ -82,13 +82,24 @@ template <typename T> void storagePut(int address, const T &value) {
 }
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
-constexpr uint16_t kLegacyProfileSettingsVersion = 0x0001;
 constexpr uint16_t kProfileSettingsVersion = PROFILE_SETTINGS_VERSION;
 constexpr float kMinFilterFrequency = EF_FILTER_FREQ_MIN_HZ;
 constexpr float kMaxFilterFrequency = EF_FILTER_FREQ_MAX_HZ;
 constexpr float kMinFilterQ = EF_FILTER_Q_MIN;
 constexpr float kMaxFilterQ = EF_FILTER_Q_MAX;
 constexpr int kUnassignedEnvelope = -1;
+constexpr uint16_t kProfileSettingsVersionV1 = 0x0001;
+constexpr uint16_t kProfileSettingsVersionV2 = 0x0002;
+
+struct __attribute__((packed)) LegacyProfileLfoRoute {
+    uint8_t type = 0;
+    uint8_t lfoIndex = 0;
+    float depth = 1.0f;
+    uint8_t target = 0;
+    uint8_t channel = 1;
+    uint8_t ccMsb = 0;
+    uint8_t ccLsb = 32;
+};
 
 struct __attribute__((packed)) LegacyProfileSlotSettings {
     uint8_t midiChannel = 1;
@@ -96,14 +107,25 @@ struct __attribute__((packed)) LegacyProfileSlotSettings {
 };
 
 struct __attribute__((packed)) LegacyProfileData {
-    uint16_t version = kLegacyProfileSettingsVersion;
+    uint16_t version = kProfileSettingsVersionV1;
     uint16_t crc = 0;
     uint8_t routeCount = 0;
     ProfileArpSettings arp{};
     ProfileLedSettings led{};
     std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{};
-    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
+    std::array<LegacyProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
     std::array<LegacyProfileSlotSettings, NUM_SLOTS> slots{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV2 {
+    uint16_t version = kProfileSettingsVersionV2;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    ProfileArpSettings arp{};
+    ProfileLedSettings led{};
+    std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{};
+    std::array<LegacyProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
+    std::array<ProfileSlotSettings, NUM_SLOTS> slots{};
 };
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
@@ -129,6 +151,31 @@ uint16_t computeLegacyProfileCrc(const LegacyProfileData &profile) {
         crc = crc16_update(crc, bytes[i]);
     }
     return crc;
+}
+
+uint16_t computeLegacyProfileCrc(const LegacyProfileDataV2 &profile) {
+    constexpr size_t kCrcStart = offsetof(LegacyProfileDataV2, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(LegacyProfileDataV2); ++i) {
+        crc = crc16_update(crc, bytes[i]);
+    }
+    return crc;
+}
+
+ProfileLfoRoute migrateLegacyRoute(const LegacyProfileLfoRoute &legacy) {
+    ProfileLfoRoute route{};
+    route.type = legacy.type;
+    route.lfoIndex = legacy.lfoIndex;
+    route.depth = legacy.depth;
+    route.target = legacy.target;
+    route.channel = legacy.channel;
+    route.ccMsb = legacy.ccMsb;
+    route.ccLsb = legacy.ccLsb;
+    route.amount = 100;
+    route.minValue = 0;
+    route.maxValue = 127;
+    return route;
 }
 
 // filterCoefficientsLookSane and maybeRescueFilterTailFromLegacy live in
@@ -520,7 +567,29 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         return true;
     }
 
-    if (stored.version == kLegacyProfileSettingsVersion) {
+    if (stored.version == kProfileSettingsVersionV2) {
+        LegacyProfileDataV2 legacy{};
+        storageGet(base, legacy);
+        uint16_t crc = computeLegacyProfileCrc(legacy);
+        if (crc != legacy.crc) {
+            return false;
+        }
+        ProfileData migrated{};
+        migrated.version = PROFILE_SETTINGS_VERSION;
+        migrated.routeCount = legacy.routeCount;
+        migrated.arp = legacy.arp;
+        migrated.led = legacy.led;
+        migrated.lfos = legacy.lfos;
+        for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {
+            migrated.routes[i] = migrateLegacyRoute(legacy.routes[i]);
+        }
+        migrated.slots = legacy.slots;
+        profile = sanitizeProfileData(migrated);
+        profile.crc = computeProfileCrc(profile);
+        return true;
+    }
+
+    if (stored.version == kProfileSettingsVersionV1) {
         LegacyProfileData legacy{};
         storageGet(base, legacy);
         uint16_t crc = computeLegacyProfileCrc(legacy);
@@ -533,7 +602,9 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         migrated.arp = legacy.arp;
         migrated.led = legacy.led;
         migrated.lfos = legacy.lfos;
-        migrated.routes = legacy.routes;
+        for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {
+            migrated.routes[i] = migrateLegacyRoute(legacy.routes[i]);
+        }
         for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
             migrated.slots[i].midiChannel = legacy.slots[i].midiChannel;
             migrated.slots[i].followerIndex = slots[i].getEnvelopeFollowerIndex();

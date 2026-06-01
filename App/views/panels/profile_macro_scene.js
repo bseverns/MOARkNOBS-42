@@ -110,10 +110,15 @@ function normalizeLfoEntry(entry, index) {
 function normalizeRouteEntry(entry = {}) {
   const type = clampInteger(entry.type, 0, LFO_ROUTE_TYPE_OPTIONS.length - 1, 0);
   const slot = clampInteger(entry.slot ?? entry.target, 0, SLOT_COUNT - 1, 0);
+  const minValue = clampInteger(entry.min ?? entry.minValue, 0, 127, 0);
+  const maxValue = clampInteger(entry.max ?? entry.maxValue, 0, 127, 127);
   return {
     type,
     lfo: clampInteger(entry.lfo, 0, PROFILE_LFO_COUNT - 1, 0),
     depth: clampFloat(entry.depth, 0, 1, 1, 3),
+    amount: clampInteger(entry.amount, -100, 100, 100),
+    min: Math.min(minValue, maxValue),
+    max: Math.max(minValue, maxValue),
     target:
       type === 4 ? slot : clampInteger(entry.target, 0, LFO_INTERNAL_TARGET_OPTIONS.length - 1, 0),
     slot,
@@ -651,6 +656,9 @@ export function createProfileMacroScenePanel({
                   type: value,
                   target: 0,
                   slot: 0,
+                  amount: 100,
+                  min: 0,
+                  max: 127,
                   channel: 1,
                   cc_msb: 0,
                   cc_lsb: 32
@@ -679,6 +687,42 @@ export function createProfileMacroScenePanel({
               max: 1,
               step: 0.01,
               onChange: (value) => updateRouteEntry(routeIndex, { depth: value })
+            })
+          )
+        );
+        grid.appendChild(
+          createLfoControl(
+            'Amount',
+            createNumberInput({
+              value: route.amount,
+              min: -100,
+              max: 100,
+              step: 1,
+              onChange: (value) => updateRouteEntry(routeIndex, { amount: value })
+            })
+          )
+        );
+        grid.appendChild(
+          createLfoControl(
+            'Min',
+            createNumberInput({
+              value: route.min,
+              min: 0,
+              max: 127,
+              step: 1,
+              onChange: (value) => updateRouteEntry(routeIndex, { min: value })
+            })
+          )
+        );
+        grid.appendChild(
+          createLfoControl(
+            'Max',
+            createNumberInput({
+              value: route.max,
+              min: 0,
+              max: 127,
+              step: 1,
+              onChange: (value) => updateRouteEntry(routeIndex, { max: value })
             })
           )
         );
@@ -1112,6 +1156,9 @@ export function createProfileMacroScenePanel({
               type: route.type,
               lfo: route.lfo,
               depth: route.depth,
+              amount: route.amount,
+              min: route.min,
+              max: route.max,
               target: route.type === 4 ? route.slot : route.target,
               ...(route.type === 4 ? { slot: route.slot } : {}),
               channel: route.channel,

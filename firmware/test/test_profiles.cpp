@@ -47,6 +47,9 @@ ProfileData makePopulatedProfile() {
     profile.routes[0].channel = 6;
     profile.routes[0].ccMsb = 74;
     profile.routes[0].ccLsb = 42;
+    profile.routes[0].amount = -75;
+    profile.routes[0].minValue = 12;
+    profile.routes[0].maxValue = 96;
     profile.routes[1].type = 2;
     profile.routes[1].lfoIndex = 1;
     profile.routes[1].depth = 0.4f;
@@ -143,6 +146,9 @@ void test_profile_round_trip_preserves_profile_payload() {
     TEST_ASSERT_EQUAL_UINT8(saved.lfos[1].syncRatio, loaded.lfos[1].syncRatio);
     TEST_ASSERT_EQUAL_UINT8(saved.routes[0].channel, loaded.routes[0].channel);
     TEST_ASSERT_EQUAL_UINT8(saved.routes[0].ccMsb, loaded.routes[0].ccMsb);
+    TEST_ASSERT_EQUAL_INT8(saved.routes[0].amount, loaded.routes[0].amount);
+    TEST_ASSERT_EQUAL_UINT8(saved.routes[0].minValue, loaded.routes[0].minValue);
+    TEST_ASSERT_EQUAL_UINT8(saved.routes[0].maxValue, loaded.routes[0].maxValue);
     TEST_ASSERT_EQUAL_UINT8(saved.routes[1].target, loaded.routes[1].target);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.routes[1].depth, loaded.routes[1].depth);
     TEST_ASSERT_EQUAL_UINT8(saved.slots[0].midiChannel, loaded.slots[0].midiChannel);

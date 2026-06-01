@@ -133,6 +133,9 @@ ProfileData captureProfileSnapshot() {
         profile.routes[i].channel = route.channel;
         profile.routes[i].ccMsb = route.ccMsb;
         profile.routes[i].ccLsb = route.ccLsb;
+        profile.routes[i].amount = route.amount;
+        profile.routes[i].minValue = route.minValue;
+        profile.routes[i].maxValue = route.maxValue;
     }
 
     const auto &slots = configManager.getSlots();

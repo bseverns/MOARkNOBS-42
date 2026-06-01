@@ -147,8 +147,31 @@ export function createSimulator(simDeps = {}) {
       }
     ],
     routes: [
-      { type: 4, lfo: 0, depth: 0.5, target: 6, slot: 6, channel: 1, cc_msb: 74, cc_lsb: 32 },
-      { type: 2, lfo: 1, depth: 1, target: 0, channel: 1, cc_msb: 16, cc_lsb: 48 }
+      {
+        type: 4,
+        lfo: 0,
+        depth: 0.5,
+        amount: 100,
+        min: 20,
+        max: 110,
+        target: 6,
+        slot: 6,
+        channel: 1,
+        cc_msb: 74,
+        cc_lsb: 32
+      },
+      {
+        type: 2,
+        lfo: 1,
+        depth: 1,
+        amount: -75,
+        min: 0,
+        max: 127,
+        target: 0,
+        channel: 1,
+        cc_msb: 16,
+        cc_lsb: 48
+      }
     ]
   };
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
@@ -330,11 +353,12 @@ export function createSimulator(simDeps = {}) {
         mode: 'replace',
         exit: route.type === 4 ? 'midi' : 'midi_cc14',
         depth: route.depth ?? 1,
+        amount: route.amount ?? 100,
         rateLimitMs: 9,
         active: true,
         persisted: true,
         last_value: 64,
-        range: { min: 0, max: 127 }
+        range: { min: route.min ?? 0, max: route.max ?? 127 }
       };
       if (midi) matrixRoute.midi = midi;
       if (route.type === 2) {

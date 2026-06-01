@@ -18,6 +18,20 @@ float clampDepth(float depth) {
         return 1.0f;
     return depth;
 }
+
+int8_t clampAmount(int amount) { return static_cast<int8_t>(std::clamp(amount, -100, 100)); }
+
+void applyRouteTransform(LFOManager::Route &route, int8_t amount, uint8_t minValue,
+                         uint8_t maxValue) {
+    route.amount = clampAmount(amount);
+    if (minValue <= maxValue) {
+        route.minValue = minValue;
+        route.maxValue = maxValue;
+    } else {
+        route.minValue = maxValue;
+        route.maxValue = minValue;
+    }
+}
 } // namespace
 
 // Start with a sane timestamp so the first update computes a small dt.
@@ -47,29 +61,33 @@ LFO &LFOManager::lfo(size_t index) { return lfos_.at(index); }
 const LFO &LFOManager::lfo(size_t index) const { return lfos_.at(index); }
 
 // Route an LFO to one of the internal modulation bus entries.
-void LFOManager::addInternalRoute(uint8_t lfoIndex, LFOInternalTarget target, float depth) {
+void LFOManager::addInternalRoute(uint8_t lfoIndex, LFOInternalTarget target, float depth,
+                                  int8_t amount, uint8_t minValue, uint8_t maxValue) {
     Route route;
     route.type = Route::Type::Internal;
     route.lfoIndex = lfoIndex;
     route.target = target;
     route.depth = clampDepth(depth);
+    applyRouteTransform(route, amount, minValue, maxValue);
     routes_.push_back(route);
 }
 
 // Route an LFO to a 7-bit CC, on the given channel.
-void LFOManager::addMidiCC7Route(uint8_t lfoIndex, uint8_t cc, uint8_t channel, float depth) {
+void LFOManager::addMidiCC7Route(uint8_t lfoIndex, uint8_t cc, uint8_t channel, float depth,
+                                 int8_t amount, uint8_t minValue, uint8_t maxValue) {
     Route route;
     route.type = Route::Type::MidiCC7;
     route.lfoIndex = lfoIndex;
     route.ccMsb = cc;
     route.channel = channel;
     route.depth = clampDepth(depth);
+    applyRouteTransform(route, amount, minValue, maxValue);
     routes_.push_back(route);
 }
 
 // Route an LFO to a 14-bit CC pair (MSB/LSB).
 void LFOManager::addMidiCC14Route(uint8_t lfoIndex, uint8_t ccMsb, uint8_t ccLsb, uint8_t channel,
-                                  float depth) {
+                                  float depth, int8_t amount, uint8_t minValue, uint8_t maxValue) {
     Route route;
     route.type = Route::Type::MidiCC14;
     route.lfoIndex = lfoIndex;
@@ -77,25 +95,30 @@ void LFOManager::addMidiCC14Route(uint8_t lfoIndex, uint8_t ccMsb, uint8_t ccLsb
     route.ccLsb = ccLsb;
     route.channel = channel;
     route.depth = clampDepth(depth);
+    applyRouteTransform(route, amount, minValue, maxValue);
     routes_.push_back(route);
 }
 
 // Route an LFO to the OSC callback.
-void LFOManager::addOscRoute(uint8_t lfoIndex, float depth) {
+void LFOManager::addOscRoute(uint8_t lfoIndex, float depth, int8_t amount, uint8_t minValue,
+                             uint8_t maxValue) {
     Route route;
     route.type = Route::Type::Osc;
     route.lfoIndex = lfoIndex;
     route.depth = clampDepth(depth);
+    applyRouteTransform(route, amount, minValue, maxValue);
     routes_.push_back(route);
 }
 
 // Route an LFO through a slot's configured MIDI parameter.
-void LFOManager::addSlotValueRoute(uint8_t lfoIndex, uint8_t slotIndex, float depth) {
+void LFOManager::addSlotValueRoute(uint8_t lfoIndex, uint8_t slotIndex, float depth, int8_t amount,
+                                   uint8_t minValue, uint8_t maxValue) {
     Route route;
     route.type = Route::Type::SlotValue;
     route.lfoIndex = lfoIndex;
     route.slotIndex = slotIndex;
     route.depth = clampDepth(depth);
+    applyRouteTransform(route, amount, minValue, maxValue);
     routes_.push_back(route);
 }
 
@@ -200,7 +223,9 @@ void LFOManager::setRoutes(const Route *routes, size_t count) {
         return;
     }
     for (size_t i = 0; i < count; ++i) {
-        routes_.push_back(routes[i]);
+        Route route = routes[i];
+        applyRouteTransform(route, route.amount, route.minValue, route.maxValue);
+        routes_.push_back(route);
     }
 }
 
@@ -226,19 +251,22 @@ void LFOManager::applyProfile(const ProfileData &profile) {
         switch (static_cast<LFOManager::Route::Type>(route.type)) {
         case LFOManager::Route::Type::Internal:
             addInternalRoute(route.lfoIndex, static_cast<LFOInternalTarget>(route.target),
-                             route.depth);
+                             route.depth, route.amount, route.minValue, route.maxValue);
             break;
         case LFOManager::Route::Type::MidiCC7:
-            addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth);
+            addMidiCC7Route(route.lfoIndex, route.ccMsb, route.channel, route.depth, route.amount,
+                            route.minValue, route.maxValue);
             break;
         case LFOManager::Route::Type::MidiCC14:
-            addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel, route.depth);
+            addMidiCC14Route(route.lfoIndex, route.ccMsb, route.ccLsb, route.channel, route.depth,
+                             route.amount, route.minValue, route.maxValue);
             break;
         case LFOManager::Route::Type::Osc:
-            addOscRoute(route.lfoIndex, route.depth);
+            addOscRoute(route.lfoIndex, route.depth, route.amount, route.minValue, route.maxValue);
             break;
         case LFOManager::Route::Type::SlotValue:
-            addSlotValueRoute(route.lfoIndex, route.target, route.depth);
+            addSlotValueRoute(route.lfoIndex, route.target, route.depth, route.amount,
+                              route.minValue, route.maxValue);
             break;
         }
     }
@@ -246,6 +274,7 @@ void LFOManager::applyProfile(const ProfileData &profile) {
 
 // Accumulate the value into the appropriate internal bus lane.
 void LFOManager::applyInternalRoute(const Route &route, float value) {
+    value *= static_cast<float>(route.amount) / 100.0f;
     switch (route.target) {
     case LFOInternalTarget::EfGainTrim:
         bus_.efGainTrim += value;
@@ -271,6 +300,31 @@ void LFOManager::applyInternalRoute(const Route &route, float value) {
     }
 }
 
+float LFOManager::shapeRouteNormalized(const Route &route, float normalized) const {
+    float amount = std::clamp(static_cast<float>(route.amount) / 100.0f, -1.0f, 1.0f);
+    float shaped = 0.5f + (normalized - 0.5f) * std::fabs(amount);
+    if (amount < 0.0f) {
+        shaped = 1.0f - shaped;
+    }
+    return std::clamp(shaped, 0.0f, 1.0f);
+}
+
+uint8_t LFOManager::routeMidiValue7(const Route &route, float normalized) const {
+    const float shaped = shapeRouteNormalized(route, normalized);
+    const float minValue = static_cast<float>(route.minValue);
+    const float maxValue = static_cast<float>(route.maxValue);
+    return static_cast<uint8_t>(std::clamp(
+        static_cast<int>(std::lround(minValue + shaped * (maxValue - minValue))), 0, 127));
+}
+
+int LFOManager::routeMidiValue14(const Route &route, float normalized) const {
+    const float shaped = shapeRouteNormalized(route, normalized);
+    const float minValue = static_cast<float>(route.minValue) * 129.0f;
+    const float maxValue = static_cast<float>(route.maxValue) * 129.0f;
+    return std::clamp(static_cast<int>(std::lround(minValue + shaped * (maxValue - minValue))), 0,
+                      16383);
+}
+
 // Emit MIDI CC values if the route is due and the value changed.
 void LFOManager::maybeSendMidi(Route &route, float normalized, unsigned long nowMs) {
     if (!midi_)
@@ -282,7 +336,7 @@ void LFOManager::maybeSendMidi(Route &route, float normalized, unsigned long now
     int midiValue = 0;
     // 14-bit CC uses MSB/LSB; clamp to 0..16383.
     if (route.type == Route::Type::MidiCC14) {
-        midiValue = static_cast<int>(std::lround(normalized * 16383.0f));
+        midiValue = routeMidiValue14(route, normalized);
         if (midiValue != route.lastValue) {
             route.lastValue = midiValue;
             route.lastSendMs = nowMs;
@@ -295,7 +349,7 @@ void LFOManager::maybeSendMidi(Route &route, float normalized, unsigned long now
     }
 
     // 7-bit CC maps to 0..127.
-    midiValue = static_cast<int>(std::lround(normalized * 127.0f));
+    midiValue = routeMidiValue7(route, normalized);
     if (midiValue != route.lastValue) {
         route.lastValue = midiValue;
         route.lastSendMs = nowMs;
@@ -310,7 +364,7 @@ void LFOManager::maybeSendSlotValue(Route &route, float normalized, unsigned lon
     if (nowMs - route.lastSendMs < kMinSendIntervalMs)
         return;
 
-    int midiValue = static_cast<int>(std::lround(normalized * 127.0f));
+    int midiValue = routeMidiValue7(route, normalized);
     if (midiValue != route.lastValue) {
         route.lastValue = midiValue;
         route.lastSendMs = nowMs;
@@ -322,5 +376,5 @@ void LFOManager::maybeSendSlotValue(Route &route, float normalized, unsigned lon
 void LFOManager::maybeSendOsc(const Route &route, float normalized) {
     if (!oscCallback_)
         return;
-    oscCallback_(route.lfoIndex, normalized);
+    oscCallback_(route.lfoIndex, static_cast<float>(routeMidiValue7(route, normalized)) / 127.0f);
 }

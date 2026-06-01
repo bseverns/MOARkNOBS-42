@@ -109,6 +109,9 @@ void writeProfileRoutes(JsonArray routes, const ProfileData &profile) {
         route["channel"] = profile.routes[i].channel;
         route["cc_msb"] = profile.routes[i].ccMsb;
         route["cc_lsb"] = profile.routes[i].ccLsb;
+        route["amount"] = profile.routes[i].amount;
+        route["min"] = profile.routes[i].minValue;
+        route["max"] = profile.routes[i].maxValue;
     }
 }
 

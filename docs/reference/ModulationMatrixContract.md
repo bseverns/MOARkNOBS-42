@@ -30,6 +30,7 @@ The response is JSON:
       "destination": "slot7.value",
       "mode": "replace",
       "exit": "midi",
+      "amount": 100,
       "range": { "min": 0, "max": 127 },
       "rateLimitMs": 9,
       "persisted": true,
@@ -69,9 +70,20 @@ Example:
 }
 ```
 
+## Route Amount And Range
+
+LFO routes persist the first transform controls in profile payload version 3:
+
+- `amount`: signed percent from `-100..100`; negative values invert the route
+  around center, and smaller absolute values reduce modulation travel.
+- `range.min` / `range.max`: the outgoing transport range in MIDI units
+  `0..127`.
+
+Older profile payloads migrate as `amount: 100`, `range.min: 0`, and
+`range.max: 127`.
+
 ## Planned Extensions
 
-Future profile versions should add signed amount and output range to persisted
-routes first, then optional offset, slew, and curve. EF destination behavior
-should keep today&apos;s `add_clamp` default but expose explicit `add`,
-`subtract`, `replace`, `scale`, and `centered` modes.
+Future profile versions should add optional offset, slew, and curve. EF
+destination behavior should keep today&apos;s `add_clamp` default but expose
+explicit `add`, `subtract`, `replace`, `scale`, and `centered` modes.

@@ -61,9 +61,12 @@ class LFOManager {
         LFOInternalTarget target = LFOInternalTarget::EfGainTrim; //!< Internal target
         uint8_t slotIndex = 0; //!< Slot target for SlotValue routes
 
-        uint8_t channel = 1; //!< MIDI channel for CC routes
-        uint8_t ccMsb = 0;   //!< CC MSB for 14-bit routes
-        uint8_t ccLsb = 32;  //!< CC LSB for 14-bit routes
+        uint8_t channel = 1;    //!< MIDI channel for CC routes
+        uint8_t ccMsb = 0;      //!< CC MSB for 14-bit routes
+        uint8_t ccLsb = 32;     //!< CC LSB for 14-bit routes
+        int8_t amount = 100;    //!< Signed route amount (-100..100)
+        uint8_t minValue = 0;   //!< Output floor for transport routes
+        uint8_t maxValue = 127; //!< Output ceiling for transport routes
 
         unsigned long lastSendMs = 0; //!< Last send time for throttling
         int lastValue = -1;           //!< Last sent integer value to avoid repeats
@@ -85,16 +88,21 @@ class LFOManager {
     const LFO &lfo(size_t index) const;
 
     /** Route an LFO to an internal modulation target. */
-    void addInternalRoute(uint8_t lfoIndex, LFOInternalTarget target, float depth = 1.0f);
+    void addInternalRoute(uint8_t lfoIndex, LFOInternalTarget target, float depth = 1.0f,
+                          int8_t amount = 100, uint8_t minValue = 0, uint8_t maxValue = 127);
     /** Route an LFO to a 7-bit MIDI CC. */
-    void addMidiCC7Route(uint8_t lfoIndex, uint8_t cc, uint8_t channel, float depth = 1.0f);
+    void addMidiCC7Route(uint8_t lfoIndex, uint8_t cc, uint8_t channel, float depth = 1.0f,
+                         int8_t amount = 100, uint8_t minValue = 0, uint8_t maxValue = 127);
     /** Route an LFO to a 14-bit MIDI CC pair. */
     void addMidiCC14Route(uint8_t lfoIndex, uint8_t ccMsb, uint8_t ccLsb, uint8_t channel,
-                          float depth = 1.0f);
+                          float depth = 1.0f, int8_t amount = 100, uint8_t minValue = 0,
+                          uint8_t maxValue = 127);
     /** Route an LFO to the OSC callback. */
-    void addOscRoute(uint8_t lfoIndex, float depth = 1.0f);
+    void addOscRoute(uint8_t lfoIndex, float depth = 1.0f, int8_t amount = 100,
+                     uint8_t minValue = 0, uint8_t maxValue = 127);
     /** Route an LFO through a slot's configured MIDI parameter. */
-    void addSlotValueRoute(uint8_t lfoIndex, uint8_t slotIndex, float depth = 1.0f);
+    void addSlotValueRoute(uint8_t lfoIndex, uint8_t slotIndex, float depth = 1.0f,
+                           int8_t amount = 100, uint8_t minValue = 0, uint8_t maxValue = 127);
 
     /** Clear all configured routes. */
     void clearRoutes();
@@ -117,6 +125,12 @@ class LFOManager {
   private:
     /** Apply an internal route to the modulation bus. */
     void applyInternalRoute(const Route &route, float value);
+    /** Map normalized route output through signed amount and min/max. */
+    float shapeRouteNormalized(const Route &route, float normalized) const;
+    /** Map normalized route output to a 7-bit MIDI value. */
+    uint8_t routeMidiValue7(const Route &route, float normalized) const;
+    /** Map normalized route output to a 14-bit MIDI value. */
+    int routeMidiValue14(const Route &route, float normalized) const;
     /** Conditionally send MIDI data with throttling. */
     void maybeSendMidi(Route &route, float normalized, unsigned long nowMs);
     /** Conditionally emit slot-targeted modulation with throttling. */

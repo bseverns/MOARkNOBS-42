@@ -207,3 +207,22 @@ void test_lfo_slot_value_route_emits_slot_callback() {
     TEST_ASSERT_EQUAL_UINT8(7, observedSlot);
     TEST_ASSERT_EQUAL_UINT8(127, observedValue);
 }
+
+void test_lfo_slot_value_route_applies_signed_amount_and_range() {
+    LFOManager manager;
+    uint8_t observedValue = 0;
+    manager.setSlotValueCallback(
+        [&](uint8_t /*slotIndex*/, uint8_t value) { observedValue = value; });
+
+    LFO &lfo = manager.lfo(0);
+    lfo.setShape(LFOShape::Square);
+    lfo.setFrequencyHz(0.0f);
+    lfo.setDepth(1.0f);
+    lfo.setBipolar(false);
+    lfo.setPhase(0.0f);
+    manager.addSlotValueRoute(0, 7, 1.0f, -100, 10, 20);
+
+    manager.update(10);
+
+    TEST_ASSERT_EQUAL_UINT8(10, observedValue);
+}

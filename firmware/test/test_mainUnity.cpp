@@ -109,6 +109,7 @@ void test_sample_hold_length();
 void test_golden_stats();
 void test_lfo_clock_consumes_ticks();
 void test_lfo_slot_value_route_emits_slot_callback();
+void test_lfo_slot_value_route_applies_signed_amount_and_range();
 void test_peak_mode_rises_and_falls();
 void test_rms_mode_converges();
 void test_gate_mode_hysteresis();
@@ -214,6 +215,7 @@ void setup() {
     RUN_TEST(test_golden_stats);
     RUN_TEST(test_lfo_clock_consumes_ticks);
     RUN_TEST(test_lfo_slot_value_route_emits_slot_callback);
+    RUN_TEST(test_lfo_slot_value_route_applies_signed_amount_and_range);
     RUN_TEST(test_peak_mode_rises_and_falls);
     RUN_TEST(test_rms_mode_converges);
     RUN_TEST(test_gate_mode_hysteresis);

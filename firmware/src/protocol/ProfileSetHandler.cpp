@@ -206,6 +206,12 @@ void applyRouteProfilePatch(JsonObject root, ProfileData &profile) {
         out.channel = static_cast<uint8_t>(route["channel"].as<int>());
         out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
         out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());
+        out.amount = route.containsKey("amount") ? static_cast<int8_t>(route["amount"].as<int>())
+                                                 : static_cast<int8_t>(100);
+        out.minValue = route.containsKey("min") ? static_cast<uint8_t>(route["min"].as<int>())
+                                                : static_cast<uint8_t>(0);
+        out.maxValue = route.containsKey("max") ? static_cast<uint8_t>(route["max"].as<int>())
+                                                : static_cast<uint8_t>(127);
         profile.routeCount++;
     }
 }

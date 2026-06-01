@@ -132,18 +132,21 @@ struct __attribute__((packed)) ProfileLfoSettings {
 };
 
 struct __attribute__((packed)) ProfileLfoRoute {
-    uint8_t type = 0;     //!< LFOManager::Route::Type
-    uint8_t lfoIndex = 0; //!< LFO index
-    float depth = 1.0f;   //!< Route depth
-    uint8_t target = 0;   //!< LFOInternalTarget
-    uint8_t channel = 1;  //!< MIDI channel
-    uint8_t ccMsb = 0;    //!< CC MSB
-    uint8_t ccLsb = 32;   //!< CC LSB
+    uint8_t type = 0;       //!< LFOManager::Route::Type
+    uint8_t lfoIndex = 0;   //!< LFO index
+    float depth = 1.0f;     //!< Route depth
+    uint8_t target = 0;     //!< LFOInternalTarget
+    uint8_t channel = 1;    //!< MIDI channel
+    uint8_t ccMsb = 0;      //!< CC MSB
+    uint8_t ccLsb = 32;     //!< CC LSB
+    int8_t amount = 100;    //!< Signed route amount (-100..100)
+    uint8_t minValue = 0;   //!< Output floor for transport routes
+    uint8_t maxValue = 127; //!< Output ceiling for transport routes
 };
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0002;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0003;
 
 struct __attribute__((packed)) ProfileData {
     uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version
