@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 const PORT = Number(process.env.APP_PORT ?? process.env.PORT ?? 4173);
 const appDir = fileURLToPath(new URL('.', import.meta.url));
+const useSystemChrome = process.env.PLAYWRIGHT_SYSTEM_CHROME === '1';
 
 export default defineConfig({
   testDir: './tests',
@@ -10,7 +11,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
-    trace: 'on-first-retry'
+    trace: 'on-first-retry',
+    ...(useSystemChrome ? { channel: 'chrome' } : {})
   },
   webServer: {
     command: 'node ./tests/dev-server.mjs',

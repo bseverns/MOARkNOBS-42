@@ -94,62 +94,21 @@ jobs:
           cache-dependency-path: App/package-lock.json
       - name: Install app dependencies
         run: npm --prefix App ci --no-audit --no-fund
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('App/package-lock.json') }}
-      - name: Install Playwright system dependencies
+      - name: Show system Chrome
         shell: bash
         run: |
           set -euo pipefail
-          start_ts=$(date +%s)
-          npx --prefix App playwright install-deps chromium
-          end_ts=$(date +%s)
-          echo "Playwright system dependency install duration: $((end_ts - start_ts))s"
-      - name: Install Playwright browsers
-        shell: bash
-        env:
-          DEBUG: pw:install
-        run: |
-          set -euo pipefail
-          cache_dir="${HOME}/.cache/ms-playwright"
-          echo "Playwright cache hit: ${{ steps.playwright-cache.outputs.cache-hit }}"
-          echo "Playwright cache dir: ${cache_dir}"
-          if [[ -d "${cache_dir}" ]]; then
-            echo "Browsers present before install:"
-            ls -la "${cache_dir}" || true
+          if command -v google-chrome >/dev/null 2>&1; then
+            google-chrome --version
+          elif command -v google-chrome-stable >/dev/null 2>&1; then
+            google-chrome-stable --version
           else
-            echo "No cached browsers present before install."
+            echo "System Chrome not found on runner." >&2
+            exit 1
           fi
-          (
-            while true; do
-              sleep 30
-              echo "Playwright install heartbeat: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-            done
-          ) &
-          heartbeat_pid=$!
-          cleanup() {
-            kill "${heartbeat_pid}" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-          start_ts=$(date +%s)
-          if timeout --foreground 20m npx --prefix App playwright install chromium; then
-            true
-          else
-            status=$?
-            end_ts=$(date +%s)
-            echo "Playwright install failed after $((end_ts - start_ts))s with status ${status}"
-            echo "Playwright cache dir contents at failure:"
-            ls -la "${cache_dir}" || true
-            exit "${status}"
-          fi
-          end_ts=$(date +%s)
-          echo "Playwright install duration: $((end_ts - start_ts))s"
-          echo "Browsers present after install:"
-          ls -la "${cache_dir}" || true
       - name: Run app tests
+        env:
+          PLAYWRIGHT_SYSTEM_CHROME: "1"
         run: npm --prefix App test
 
   release-artifacts:
@@ -183,61 +142,6 @@ jobs:
         run: npm --prefix bridge ci
       - name: Install app dependencies
         run: npm --prefix App ci --no-audit --no-fund
-      - name: Cache Playwright browsers
-        id: playwright-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('App/package-lock.json') }}
-      - name: Install Playwright system dependencies
-        shell: bash
-        run: |
-          set -euo pipefail
-          start_ts=$(date +%s)
-          npx --prefix App playwright install-deps chromium
-          end_ts=$(date +%s)
-          echo "Playwright system dependency install duration: $((end_ts - start_ts))s"
-      - name: Install Playwright browsers
-        shell: bash
-        env:
-          DEBUG: pw:install
-        run: |
-          set -euo pipefail
-          cache_dir="${HOME}/.cache/ms-playwright"
-          echo "Playwright cache hit: ${{ steps.playwright-cache.outputs.cache-hit }}"
-          echo "Playwright cache dir: ${cache_dir}"
-          if [[ -d "${cache_dir}" ]]; then
-            echo "Browsers present before install:"
-            ls -la "${cache_dir}" || true
-          else
-            echo "No cached browsers present before install."
-          fi
-          (
-            while true; do
-              sleep 30
-              echo "Playwright install heartbeat: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-            done
-          ) &
-          heartbeat_pid=$!
-          cleanup() {
-            kill "${heartbeat_pid}" >/dev/null 2>&1 || true
-          }
-          trap cleanup EXIT
-          start_ts=$(date +%s)
-          if timeout --foreground 20m npx --prefix App playwright install chromium; then
-            true
-          else
-            status=$?
-            end_ts=$(date +%s)
-            echo "Playwright install failed after $((end_ts - start_ts))s with status ${status}"
-            echo "Playwright cache dir contents at failure:"
-            ls -la "${cache_dir}" || true
-            exit "${status}"
-          fi
-          end_ts=$(date +%s)
-          echo "Playwright install duration: $((end_ts - start_ts))s"
-          echo "Browsers present after install:"
-          ls -la "${cache_dir}" || true
       - name: Build release artifacts
         run: |
           FW_VERSION="${RELEASE_TAG}" REQUIRE_HIL=0 ./release.sh "${RELEASE_TAG}"
