@@ -607,6 +607,73 @@ body {
   flex: 0 0 auto;
 }
 
+.mod-matrix-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mod-matrix-body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mod-matrix-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mod-matrix-summary span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(247, 249, 255, 0.78);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mod-matrix-conflicts {
+  margin: 0;
+  padding: 10px 12px 10px 26px;
+  border: 1px solid rgba(255, 206, 107, 0.22);
+  border-radius: var(--radius-sm);
+  color: var(--color-warn);
+  background: rgba(255, 206, 107, 0.06);
+  font-size: 0.78rem;
+}
+
+.mod-matrix-table-wrap {
+  overflow-x: auto;
+}
+
+.mod-matrix-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.mod-matrix-table th,
+.mod-matrix-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  text-align: left;
+  vertical-align: top;
+}
+
+.mod-matrix-table th {
+  color: var(--color-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+}
+
 .scene-card-header {
   display: flex;
   flex-direction: column;

@@ -36,6 +36,7 @@ const CommandHandler kCommandHandlers[] = {
     {"GET_JITTER", ProtocolDispatchHandlers::handleGetJitterCommand},
     {"GET_LED", ProtocolDispatchHandlers::handleGetLedCommand},
     {"GET_MANIFEST", ProtocolDispatchHandlers::handleGetManifestCommand},
+    {"GET_MOD_MATRIX", ProtocolDispatchHandlers::handleGetModMatrixCommand},
     {"GET_NOTE_DYNAMICS", ProtocolDispatchHandlers::handleGetNoteDynamicsCommand},
     {"GET_PROFILE", ProtocolDispatchHandlers::handleGetProfileCommand},
     {"GET_SCHEMA", ProtocolDispatchHandlers::handleGetSchemaCommand},

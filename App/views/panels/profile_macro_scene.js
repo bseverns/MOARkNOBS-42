@@ -164,6 +164,9 @@ export function createProfileMacroScenePanel({
     lfoRefreshBtn = null,
     lfoSaveBtn = null,
     lfoStatusEl = null,
+    modMatrixRefreshBtn = null,
+    modMatrixBody = null,
+    modMatrixStatusEl = null,
     sceneGrid = null,
     sceneStatusEl = null
   } = elements;
@@ -175,6 +178,8 @@ export function createProfileMacroScenePanel({
   let macroAvailable = false;
   let arpBusy = false;
   let lfoBusy = false;
+  let modMatrixBusy = false;
+  let modMatrixReport = null;
   let arpDraft = createDefaultArpDraft();
   let lfoDraft = createDefaultLfoDraft();
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
@@ -271,6 +276,102 @@ export function createProfileMacroScenePanel({
     if (!lfoStatusEl) return;
     lfoStatusEl.dataset.state = state;
     lfoStatusEl.textContent = message;
+  }
+
+  function setModMatrixStatus(state, message) {
+    if (!modMatrixStatusEl) return;
+    modMatrixStatusEl.dataset.state = state;
+    modMatrixStatusEl.textContent = message;
+  }
+
+  function formatRouteRange(route) {
+    const min = route?.range?.min;
+    const max = route?.range?.max;
+    if (Number.isFinite(Number(min)) && Number.isFinite(Number(max))) {
+      return `${min}-${max}`;
+    }
+    return '-';
+  }
+
+  function formatRouteDepth(route) {
+    if (Number.isFinite(Number(route?.depth))) return Number(route.depth).toFixed(2);
+    if (Number.isFinite(Number(route?.amount))) return Number(route.amount).toFixed(2);
+    return '-';
+  }
+
+  function formatRouteLastValue(route) {
+    if (Number.isFinite(Number(route?.last_value))) return String(route.last_value);
+    return '-';
+  }
+
+  function renderModMatrix(report = modMatrixReport) {
+    if (!modMatrixBody) return;
+    modMatrixBody.innerHTML = '';
+    const routes = Array.isArray(report?.routes) ? report.routes : [];
+    const conflicts = Array.isArray(report?.conflicts) ? report.conflicts : [];
+    if (!report) {
+      const empty = document.createElement('p');
+      empty.className = 'lfo-empty';
+      empty.textContent = 'No modulation matrix loaded.';
+      modMatrixBody.appendChild(empty);
+      return;
+    }
+
+    const summary = document.createElement('div');
+    summary.className = 'mod-matrix-summary';
+    [`Routes ${routes.length}`, `Conflicts ${conflicts.length}`].forEach((text) => {
+      const item = document.createElement('span');
+      item.textContent = text;
+      summary.appendChild(item);
+    });
+    modMatrixBody.appendChild(summary);
+
+    if (conflicts.length) {
+      const list = document.createElement('ul');
+      list.className = 'mod-matrix-conflicts';
+      conflicts.forEach((conflict) => {
+        const item = document.createElement('li');
+        item.textContent = conflict.message ?? `${conflict.target ?? 'target'} collision`;
+        list.appendChild(item);
+      });
+      modMatrixBody.appendChild(list);
+    }
+
+    const tableWrap = document.createElement('div');
+    tableWrap.className = 'mod-matrix-table-wrap';
+    const table = document.createElement('table');
+    table.className = 'mod-matrix-table';
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    ['Source', 'Transform', 'Destination', 'Depth', 'Range', 'Active', 'Last'].forEach((label) => {
+      const th = document.createElement('th');
+      th.textContent = label;
+      headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    routes.slice(0, 80).forEach((route) => {
+      const row = document.createElement('tr');
+      [
+        route.source ?? '-',
+        route.transform ?? route.mode ?? '-',
+        route.destination ?? '-',
+        formatRouteDepth(route),
+        formatRouteRange(route),
+        route.active === false ? 'No' : 'Yes',
+        formatRouteLastValue(route)
+      ].forEach((value) => {
+        const td = document.createElement('td');
+        td.textContent = String(value);
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    modMatrixBody.appendChild(tableWrap);
   }
 
   function syncArpForm() {
@@ -746,6 +847,7 @@ export function createProfileMacroScenePanel({
     updateMacroControls();
     updateArpControls();
     updateLfoControls();
+    updateModMatrixControls();
     sceneControls.updateControls();
     updateProfileHint();
   }
@@ -775,6 +877,11 @@ export function createProfileMacroScenePanel({
     if (lfoCard) {
       lfoCard.dataset.state = canInteract ? 'ready' : 'muted';
     }
+  }
+
+  function updateModMatrixControls() {
+    const canInteract = profileInteractable && !profileRpcLocked && !modMatrixBusy;
+    if (modMatrixRefreshBtn) modMatrixRefreshBtn.disabled = !canInteract;
   }
 
   // Single sink for the guided profile wizard status line.
@@ -1027,6 +1134,34 @@ export function createProfileMacroScenePanel({
     }
   }
 
+  async function refreshModMatrix() {
+    if (!profileInteractable || profileRpcLocked || modMatrixBusy) return;
+    modMatrixBusy = true;
+    updateModMatrixControls();
+    setModMatrixStatus('busy', 'Reading modulation matrix…');
+    try {
+      modMatrixReport = await runtime.sendRpc(
+        { rpc: 'get_mod_matrix' },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+      );
+      renderModMatrix(modMatrixReport);
+      const conflictCount = Array.isArray(modMatrixReport?.conflicts)
+        ? modMatrixReport.conflicts.length
+        : 0;
+      setModMatrixStatus(
+        conflictCount ? 'busy' : 'ok',
+        conflictCount
+          ? `${conflictCount} modulation collision${conflictCount === 1 ? '' : 's'} reported.`
+          : 'Modulation matrix loaded.'
+      );
+    } catch (err) {
+      setModMatrixStatus('err', `Matrix read failed: ${err.message || String(err)}`);
+    } finally {
+      modMatrixBusy = false;
+      updateModMatrixControls();
+    }
+  }
+
   async function runProfileRpc(
     method,
     { busyLabel, successLabel, successCopy, expectConfig } = {}
@@ -1227,6 +1362,9 @@ export function createProfileMacroScenePanel({
     lfoRoutesClearBtn?.addEventListener('click', () => clearLfoRoutes());
     lfoRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'lfo' }));
     lfoSaveBtn?.addEventListener('click', () => saveLfoProfile());
+    modMatrixRefreshBtn?.addEventListener('click', () => refreshModMatrix());
+    renderModMatrix();
+    setModMatrixStatus('muted', 'Connect to inspect modulation routes.');
 
     profileSaveBtn?.addEventListener('click', () =>
       runProfileRpc('save_profile', {
@@ -1293,12 +1431,16 @@ export function createProfileMacroScenePanel({
     macroAvailable = false;
     arpBusy = false;
     lfoBusy = false;
+    modMatrixBusy = false;
+    modMatrixReport = null;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     renderLfoEditor();
+    renderModMatrix();
     syncRecoverySupportCopy();
     setArpStatus('muted', 'Connect to inspect the selected profile slot.');
     setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
+    setModMatrixStatus('muted', 'Connect to inspect modulation routes.');
   }
 
   function onRuntimeError() {
@@ -1308,12 +1450,16 @@ export function createProfileMacroScenePanel({
     macroAvailable = false;
     arpBusy = false;
     lfoBusy = false;
+    modMatrixBusy = false;
+    modMatrixReport = null;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     renderLfoEditor();
+    renderModMatrix();
     syncRecoverySupportCopy();
     setArpStatus('muted', 'Reconnect to inspect or save arp settings.');
     setLfoStatus('muted', 'Reconnect to inspect or save LFO settings.');
+    setModMatrixStatus('muted', 'Reconnect to inspect modulation routes.');
   }
 
   function onMacro({ available } = {}) {

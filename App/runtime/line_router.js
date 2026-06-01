@@ -56,6 +56,17 @@ export function createRuntimeLineHandler({
             return;
           }
           break;
+        case 'mod_matrix':
+          if (
+            msg.command === 'GET_MOD_MATRIX' &&
+            Array.isArray(msg.routes) &&
+            msg.sources &&
+            typeof msg.sources === 'object'
+          ) {
+            rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+            return;
+          }
+          break;
         case 'profile_get':
           if (
             Object.prototype.hasOwnProperty.call(msg, 'profile') &&

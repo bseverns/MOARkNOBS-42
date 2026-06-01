@@ -73,6 +73,7 @@ void handleGetEfCommand(const ParsedCommand &cmd);
 void handleGetJitterCommand(const ParsedCommand &cmd);
 void handleGetLedCommand(const ParsedCommand &cmd);
 void handleGetManifestCommand(const ParsedCommand &cmd);
+void handleGetModMatrixCommand(const ParsedCommand &cmd);
 void handleGetNoteDynamicsCommand(const ParsedCommand &cmd);
 void handleGetProfileCommand(const ParsedCommand &cmd);
 void handleGetSchemaCommand(const ParsedCommand &cmd);

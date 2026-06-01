@@ -198,6 +198,9 @@ const boot = () => {
   const lfoRefreshBtn = document.getElementById('lfo-refresh');
   const lfoSaveBtn = document.getElementById('lfo-save');
   const lfoStatusEl = document.getElementById('lfo-status');
+  const modMatrixRefreshBtn = document.getElementById('mod-matrix-refresh');
+  const modMatrixBody = document.getElementById('mod-matrix-body');
+  const modMatrixStatusEl = document.getElementById('mod-matrix-status');
   const sceneGrid = document.getElementById('scene-grid');
   const sceneStatusEl = document.getElementById('scene-status');
   const uiModeButtons = Array.from(document.querySelectorAll('[data-ui-mode-btn]'));
@@ -605,6 +608,9 @@ const boot = () => {
       lfoRefreshBtn,
       lfoSaveBtn,
       lfoStatusEl,
+      modMatrixRefreshBtn,
+      modMatrixBody,
+      modMatrixStatusEl,
       sceneGrid,
       sceneStatusEl
     }

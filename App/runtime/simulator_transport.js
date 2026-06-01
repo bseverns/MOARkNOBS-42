@@ -125,7 +125,31 @@ export function createSimulator(simDeps = {}) {
       swing_percent: 0,
       gate_percent: 50,
       octave_range: 0
-    }
+    },
+    lfos: [
+      {
+        index: 0,
+        shape: 0,
+        frequency_hz: 1,
+        depth: 1,
+        bipolar: true,
+        sync: false,
+        sync_ratio: 0
+      },
+      {
+        index: 1,
+        shape: 3,
+        frequency_hz: 0.5,
+        depth: 0.5,
+        bipolar: false,
+        sync: true,
+        sync_ratio: 3
+      }
+    ],
+    routes: [
+      { type: 4, lfo: 0, depth: 0.5, target: 6, slot: 6, channel: 1, cc_msb: 74, cc_lsb: 32 },
+      { type: 2, lfo: 1, depth: 1, target: 0, channel: 1, cc_msb: 16, cc_lsb: 48 }
+    ]
   };
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
   const activeArpSlots = new Set();
@@ -215,6 +239,142 @@ export function createSimulator(simDeps = {}) {
     return false;
   }
 
+  function buildSimulatorModMatrix() {
+    const routes = [];
+    const ccWriters = new Map();
+    const registerCc = (channel, cc, writer) => {
+      const key = `${channel}:${cc}`;
+      const list = ccWriters.get(key) ?? [];
+      list.push(writer);
+      ccWriters.set(key, list);
+    };
+    const slotMidi = (slot = {}) => ({
+      type: slot.type_name ?? slot.type ?? 'CC',
+      channel: slot.channel ?? slot.midiChannel ?? 1,
+      data1: slot.data1 ?? slot.cc ?? 0,
+      ...(String(slot.type_name ?? slot.type).toUpperCase() === 'CC'
+        ? { cc: slot.data1 ?? slot.cc ?? 0 }
+        : {})
+    });
+
+    (config.slots ?? []).forEach((slot, index) => {
+      if (!slot?.active) return;
+      const id = `pot${index}`;
+      const midi = slotMidi(slot);
+      routes.push({
+        id,
+        source: id,
+        source_type: 'pot',
+        transform: 'direct 0-127',
+        destination: `slot${index}.value`,
+        mode: 'replace',
+        exit: 'midi',
+        active: true,
+        persisted: true,
+        range: { min: 0, max: 127 },
+        midi
+      });
+      if (midi.type === 'CC' && Number.isFinite(Number(midi.cc)))
+        registerCc(midi.channel, midi.cc, id);
+
+      const efIndex = Number(slot.ef_index ?? slot.ef?.index);
+      if (Number.isFinite(efIndex) && efIndex >= 0) {
+        const efId = `ef${efIndex}_slot${index}`;
+        const cc = config.pots?.[index]?.cc ?? midi.cc ?? 0;
+        const channel = config.pots?.[index]?.channel ?? midi.channel ?? 1;
+        routes.push({
+          id: efId,
+          source: `ef${efIndex}`,
+          source_type: 'ef',
+          transform: `${slot.ef?.filter_name ?? 'Linear'} gain ${slot.ef?.gain ?? 1}`,
+          destination: `slot${index}.value`,
+          mode: 'add_clamp',
+          exit: 'midi_cc',
+          active: Boolean(slot.active),
+          persisted: true,
+          amount: 1,
+          range: { min: 0, max: 127 },
+          midi: { type: 'CC', channel, cc }
+        });
+        registerCc(channel, cc, efId);
+      }
+      if (slot.arg?.enabled) {
+        routes.push({
+          id: `arg_slot${index}`,
+          source: `ef${slot.arg.sourceA}+ef${slot.arg.sourceB}`,
+          source_type: 'arg',
+          transform: slot.arg.method_name ?? 'PLUS',
+          destination: `slot${index}.value`,
+          mode: 'pre_add_arg',
+          exit: 'internal_to_ef',
+          active: Boolean(slot.active),
+          persisted: true,
+          range: { min: 0, max: 127 }
+        });
+      }
+    });
+
+    (profileSettingsSlots[0].routes ?? []).forEach((route, index) => {
+      const source = `lfo${route.lfo ?? 0}`;
+      const id = `${source}_route${index}`;
+      const slot = config.slots?.[route.slot ?? route.target];
+      const midi = slot ? slotMidi(slot) : null;
+      const matrixRoute = {
+        id,
+        source,
+        source_type: 'lfo',
+        route_type:
+          ['internal', 'midi_cc7', 'midi_cc14', 'osc', 'slot_value'][route.type] ?? 'unknown',
+        transform: `sim depth ${route.depth ?? 1}`,
+        destination: route.type === 4 ? `slot${route.slot ?? route.target}.value` : 'midi.cc14',
+        mode: 'replace',
+        exit: route.type === 4 ? 'midi' : 'midi_cc14',
+        depth: route.depth ?? 1,
+        rateLimitMs: 9,
+        active: true,
+        persisted: true,
+        last_value: 64,
+        range: { min: 0, max: 127 }
+      };
+      if (midi) matrixRoute.midi = midi;
+      if (route.type === 2) {
+        matrixRoute.channel = route.channel ?? 1;
+        matrixRoute.cc_msb = route.cc_msb ?? 0;
+        matrixRoute.cc_lsb = route.cc_lsb ?? 32;
+        registerCc(matrixRoute.channel, matrixRoute.cc_msb, id);
+        registerCc(matrixRoute.channel, matrixRoute.cc_lsb, id);
+      } else if (midi?.type === 'CC' && Number.isFinite(Number(midi.cc))) {
+        registerCc(midi.channel, midi.cc, id);
+      }
+      routes.push(matrixRoute);
+    });
+
+    const conflicts = Array.from(ccWriters.entries())
+      .filter(([, writers]) => writers.length > 1)
+      .map(([key, writers]) => {
+        const [channel, cc] = key.split(':').map(Number);
+        return {
+          target: 'midi.cc',
+          channel,
+          cc,
+          writers: writers.join(', '),
+          message: `${writers.length} live modulators write CC ${cc} on channel ${channel}`
+        };
+      });
+
+    return {
+      command: 'GET_MOD_MATRIX',
+      contract_version: 1,
+      sources: {
+        ef: Array.from({ length: manifest.envelope_count }, (_, idx) => idx),
+        lfo: Array.from({ length: manifest.lfo_count ?? 2 }, (_, idx) => idx),
+        pot: Array.from({ length: manifest.slot_count }, (_, idx) => idx)
+      },
+      routes,
+      conflicts
+    };
+  }
+
   async function writeLine(line) {
     if (!opened) throw new Error('simulator closed');
     const trimmed = line.trim();
@@ -246,12 +406,17 @@ export function createSimulator(simDeps = {}) {
       case 'get_config':
         respond({ config });
         break;
+      case 'get_mod_matrix':
+        respond(buildSimulatorModMatrix());
+        break;
       case 'get_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
         respond({
           profile: slot,
           stored: true,
           arp: cloneValue(profileSettingsSlots[slot].arp),
+          lfos: cloneValue(profileSettingsSlots[slot].lfos),
+          routes: cloneValue(profileSettingsSlots[slot].routes),
           slots: []
         });
         break;
@@ -290,6 +455,12 @@ export function createSimulator(simDeps = {}) {
             ...profileSettingsSlots[slot].arp,
             ...cloneValue(next.arp)
           };
+        }
+        if (Array.isArray(next.lfos)) {
+          profileSettingsSlots[slot].lfos = cloneValue(next.lfos);
+        }
+        if (Array.isArray(next.routes)) {
+          profileSettingsSlots[slot].routes = cloneValue(next.routes);
         }
         respond({ profile: slot, profile_set: true });
         break;

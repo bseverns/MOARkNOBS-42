@@ -24,6 +24,7 @@ void handleGetManifestCommand(const String &command);
 void handleGetSchemaCommand(const String &command);
 void handleGetConfigCommand(const String &command);
 void handleGetDiagnosticsCommand(const String &command);
+void handleGetModMatrixCommand(const String &command);
 
 // Live runtime inspection reads.
 void handleGetClockCommand(const String &command);

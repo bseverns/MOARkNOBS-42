@@ -613,6 +613,22 @@
             <p class="microcopy macro-status" id="lfo-status" data-state="muted" aria-live="polite">
               Connect to inspect the selected profile slot&apos;s LFO settings.
             </p>
+            <section class="mod-matrix-card" aria-labelledby="mod-matrix-title">
+              <header class="live-toggle-card-header">
+                <div>
+                  <h3 id="mod-matrix-title">Modulation Matrix</h3>
+                  <p class="microcopy">One report for EF, ARG, LFO, slot, MIDI, and OSC routes.</p>
+                </div>
+                <span class="lane-tag" data-runtime-lane="live">Read-only firmware</span>
+              </header>
+              <div class="arp-actions" role="group" aria-label="Modulation matrix actions">
+                <button id="mod-matrix-refresh" type="button" disabled>Refresh matrix</button>
+              </div>
+              <div id="mod-matrix-body" class="mod-matrix-body" aria-live="polite"></div>
+              <p class="microcopy macro-status" id="mod-matrix-status" data-state="muted" aria-live="polite">
+                Connect to inspect modulation routes.
+              </p>
+            </section>
           </div>
         </div>
       </aside>

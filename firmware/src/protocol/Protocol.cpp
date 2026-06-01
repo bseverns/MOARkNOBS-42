@@ -276,6 +276,10 @@ void handleGetDiagnosticsCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetDiagnosticsCommand(cmd.fullCommand());
 }
 
+void handleGetModMatrixCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetModMatrixCommand(cmd.fullCommand());
+}
+
 void handleGetNoteDynamicsCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetNoteDynamicsCommand(cmd.fullCommand());
 }

@@ -50,6 +50,8 @@ export function createRpcKernel({
         return { kind: 'hello', lines: ['HELLO'] };
       case 'get_manifest':
         return { kind: 'manifest', lines: ['GET_MANIFEST'] };
+      case 'get_mod_matrix':
+        return { kind: 'mod_matrix', lines: ['GET_MOD_MATRIX'] };
       case 'get_profile':
         return { kind: 'profile_get', lines: [`GET_PROFILE,${Number(message.slot) || 0}`] };
       case 'get_clock':
