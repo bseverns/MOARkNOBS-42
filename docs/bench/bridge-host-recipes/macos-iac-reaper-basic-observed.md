@@ -9,7 +9,7 @@ DAW/app/version: REAPER `7.59.0_ae874bau`
 OSC ports: send `9000`, listen `9000`, host `127.0.0.1`, bind `127.0.0.1`
 MIDI port label: `IAC 1 Bus 1`
 Serial device or simulator: `/dev/tty.usbmodem192460701`
-Artifact paths: [logs/bridge-host-recipe-macos-iac-reaper-20260531-220724.json](/Users/bseverns/Documents/GitHub/benzknober/logs/bridge-host-recipe-macos-iac-reaper-20260531-220724.json)
+Artifact paths: local run artifact `logs/bridge-host-recipe-macos-iac-reaper-20260531-220724.json`
 
 ## Actions tested
 
@@ -45,5 +45,5 @@ PARTIAL
 
 ## Artifact notes
 
-- Local artifact JSON: [logs/bridge-host-recipe-macos-iac-reaper-20260531-220724.json](/Users/bseverns/Documents/GitHub/benzknober/logs/bridge-host-recipe-macos-iac-reaper-20260531-220724.json)
+- Local artifact JSON: `logs/bridge-host-recipe-macos-iac-reaper-20260531-220724.json` (not committed to the repo)
 - The artifact includes the Bridge `ready` snapshot, live manifest/session state, route-count summary, and the observed REAPER version metadata.

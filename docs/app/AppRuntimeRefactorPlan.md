@@ -2,7 +2,7 @@
 
 ## Goal
 
-Thin [App/runtime.js](/Users/bseverns/Documents/GitHub/benzknober/App/runtime.js) into smaller runtime modules without changing operator-facing behavior, transport semantics, staged/live config rules, or existing Bridge/WebSerial/simulator support boundaries.
+Thin [`App/runtime.js`](../../App/runtime.js) into smaller runtime modules without changing operator-facing behavior, transport semantics, staged/live config rules, or existing Bridge/WebSerial/simulator support boundaries.
 
 ## Current Responsibilities In `runtime.js`
 
@@ -94,9 +94,9 @@ This reduces non-transport state in `runtime.js` and makes telemetry behavior in
 
 The most relevant existing coverage is in:
 
-- [App/tests/bridge_structured_transport.spec.js](/Users/bseverns/Documents/GitHub/benzknober/App/tests/bridge_structured_transport.spec.js)
-- [App/tests/ui_mode.spec.js](/Users/bseverns/Documents/GitHub/benzknober/App/tests/ui_mode.spec.js)
-- [App/tests/connection_banner.spec.js](/Users/bseverns/Documents/GitHub/benzknober/App/tests/connection_banner.spec.js)
-- [App/tests/native_transport.spec.js](/Users/bseverns/Documents/GitHub/benzknober/App/tests/native_transport.spec.js)
-- [App/tests/state_boundary.spec.js](/Users/bseverns/Documents/GitHub/benzknober/App/tests/state_boundary.spec.js)
-- [docs/app/AppTransportTruthTable.md](/Users/bseverns/Documents/GitHub/benzknober/docs/app/AppTransportTruthTable.md)
+- [`App/tests/bridge_structured_transport.spec.js`](../../App/tests/bridge_structured_transport.spec.js)
+- [`App/tests/ui_mode.spec.js`](../../App/tests/ui_mode.spec.js)
+- [`App/tests/connection_banner.spec.js`](../../App/tests/connection_banner.spec.js)
+- [`App/tests/native_transport.spec.js`](../../App/tests/native_transport.spec.js)
+- [`App/tests/state_boundary.spec.js`](../../App/tests/state_boundary.spec.js)
+- [App Transport Truth Table](./AppTransportTruthTable.md)

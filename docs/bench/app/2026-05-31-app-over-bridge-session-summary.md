@@ -16,7 +16,7 @@ Board rework state: unknown/not captured
 Serial port: `/dev/cu.usbmodem192460701`
 Transport mode reported by App: `bridge-session`
 Raw fallback used: no
-Artifact paths: [logs/app-bridge-session-20260531-215356.json](/Users/bseverns/Documents/GitHub/benzknober/logs/app-bridge-session-20260531-215356.json), [app-bridge-session-live.png](/Users/bseverns/Documents/GitHub/benzknober/docs/images/app-bridge-session-live.png)
+Artifact paths: local run artifact `logs/app-bridge-session-20260531-215356.json`, committed screenshot [app-bridge-session-live.png](../../images/app-bridge-session-live.png)
 
 ![Bridge-served App in Advanced mode connected via Bridge session with synced status and power boundary fields](../../images/app-bridge-session-live.png)
 
@@ -71,6 +71,6 @@ PASS
 
 ## Artifact notes
 
-- JSON artifact: [logs/app-bridge-session-20260531-215356.json](/Users/bseverns/Documents/GitHub/benzknober/logs/app-bridge-session-20260531-215356.json)
-- Screenshot artifact: [app-bridge-session-live.png](/Users/bseverns/Documents/GitHub/benzknober/docs/images/app-bridge-session-live.png)
+- JSON artifact: local run artifact `logs/app-bridge-session-20260531-215356.json` (not committed to the repo)
+- Screenshot artifact: [app-bridge-session-live.png](../../images/app-bridge-session-live.png)
 - The JSON artifact includes the initial hydrated App state, the pre-apply diff, the first apply checksum, the cleanup checksum, and a Bridge `/api/state` subset captured at the end of the run.
