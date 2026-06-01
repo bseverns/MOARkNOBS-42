@@ -12,6 +12,7 @@ This is an evidence folder. For tie-break rules, see [Documentation Truth Map](.
 
 ## Current references
 
+- [2026-05-31 live App-over-Bridge-session receipt](2026-05-31-app-over-bridge-session-summary.md)
 - [App-over-Bridge-session template](TEMPLATE_app-over-bridge-session-summary.md)
 - [Direct WebSerial template](TEMPLATE_direct-webserial-summary.md)
 - [Historical bridge-session supporting receipt](../firmware/0526_bridge-session-summary.md)

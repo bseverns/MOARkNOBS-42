@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('firmware-backed staged config edits enable Apply and clear only after ACK', async ({
+test('a real staged firmware config edit enables Apply and clears only after ACK', async ({
   page
 }) => {
   await page.addInitScript(() => {

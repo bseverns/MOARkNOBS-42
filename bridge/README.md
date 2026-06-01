@@ -14,9 +14,10 @@ Current support boundary:
 - CI currently generates unsigned bridge artifacts only; those bundles now carry both a CLI binary and a console/server binary, but this repo still does not claim a signed/public installer path
 - not claimed here: broad DAW-by-DAW certification or a production installer/export story
 
-See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md). The bridge session/runtime transport is documented in [Bridge Transport Contract](../docs/bridge/BridgeTransportContract.md). Bench receipts for bridge HIL lanes live in [docs/bench/bridge/README.md](../docs/bench/bridge/README.md).
+See [Host Compatibility](../docs/reference/HostCompatibility.md) for the conservative matrix. Host setup recipes live in [Known Good Host Recipes](../docs/reference/KnownGoodHostRecipes.md), and host-specific recipe receipts live in [docs/bench/bridge-host-recipes/README.md](../docs/bench/bridge-host-recipes/README.md). Recipes are setup guides; only receipt-backed combinations should be treated as repo evidence for a specific host/app/version path. The bridge session/runtime transport is documented in [Bridge Transport Contract](../docs/bridge/BridgeTransportContract.md). Bench receipts for bridge HIL lanes live in [docs/bench/bridge/README.md](../docs/bench/bridge/README.md).
 Bridge write-lane boundaries are documented in [Bridge Write Lanes](../docs/bridge/BridgeWriteLanes.md).
 App transport-mode truth and UI labeling rules live in [App Transport Truth Table](../docs/app/AppTransportTruthTable.md).
+Non-developer operator walkthrough and screenshots live in [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md).
 
 ## Operating paths
 
@@ -48,8 +49,7 @@ The bridge remains bidirectional:
 Important boundary: the OSC/MIDI `SET_SLOT_VALUE` path and typed event writes are live performance control, not staged config mutation. Bridge-side staged config changes still go through `/api/device/stage` plus `/api/device/apply`, schema validation, and verified ACK/rollback discipline.
 
 ![Bridge CLI showing startup handshake and port bindings](mn42_bridge_cli.svg)
-
-_Screenshot placeholder: browser console Setup mode with serial chooser, host recipe selector, and connect controls._
+Bridge console walkthrough and screenshots: [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md).
 
 ## Quick start (browser console)
 
@@ -108,8 +108,7 @@ Use the browser page to:
 - launch the full configurator over the bridge transport.
 
 The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and MIDI routing stay active.
-
-_Screenshot placeholder: browser console Stage mode showing device-ready, RT p95, power-safety state, and active alerts._
+See [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md) for Setup, Stage, and Advanced console screenshots captured from a real ready-session host, with operator-oriented explanations.
 
 ### 4) Confirm it is live
 

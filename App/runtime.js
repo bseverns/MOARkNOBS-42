@@ -18,6 +18,14 @@ import { selectSchemaForHydration } from './runtime/schema_selection.js';
 import { performConnectionHandshake } from './runtime/connection_handshake.js';
 import { createConfigSession } from './runtime/config_session.js';
 import { createBridgeSessionClient } from './runtime/bridge_session_client.js';
+import { createBridgeSessionRuntime } from './runtime/bridge_session_runtime.js';
+import { createLiveControlsRuntime } from './runtime/live_controls_runtime.js';
+import { createTelemetryRuntime } from './runtime/telemetry_runtime.js';
+import {
+  getTransportMode,
+  resolveTransportModeOptions,
+  wantsStructuredBridgeSession
+} from './runtime/transport_mode.js';
 
 const DEFAULT_DEBOUNCE = 24;
 const TELEMETRY_FRAME_MS = 16;
@@ -153,17 +161,6 @@ function setNestedValue(target, path, value) {
   }
 }
 
-function deriveWebSocketUrl(baseUrl, path) {
-  if (!baseUrl || !path) return null;
-  try {
-    const base = new URL(baseUrl, typeof window !== 'undefined' ? window.location.href : undefined);
-    const protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
-    return new URL(path, `${protocol}//${base.host}`).toString();
-  } catch (_) {
-    return null;
-  }
-}
-
 // Chunk large native `SET_ALL` bodies so serial transport stays within line limits.
 function chunkString(value, size) {
   const text = typeof value === 'string' ? value : String(value ?? '');
@@ -218,28 +215,18 @@ export function createRuntime({
   const { emit, on } = makeEmitter();
 
   let transport = null;
-  let rpcThrottleTimer = null;
   let readLoopActive = false;
   let closingTransport = false;
-  let queuedTelemetry = null;
-  let telemetryTraceId = null;
-  let telemetryTimer = null;
   let remoteManifest = null;
   let schema = null;
   let schemaSource = 'bundled';
   let validator = null;
   let seq = 0;
-  let potGuard = new Set();
   const statusListeners = new Set();
-  let macroPending = null;
-  let macroAvailability = true;
-  let scenePending = null;
   let configSession = null;
-  let bridgeSessionClient = null;
   let bridgeSessionActive = false;
-  let bridgeSessionCache = null;
-  let bridgeStageSyncTimer = null;
-  let bridgeStageSyncPromise = null;
+  let bridgeSessionRuntime = null;
+  let liveControlsRuntime = null;
 
   const ajv = new Ajv({ strict: false, allErrors: true });
   addFormats(ajv);
@@ -247,35 +234,17 @@ export function createRuntime({
   const hooks =
     testHooks ?? (typeof globalThis !== 'undefined' ? globalThis.__MN42_TEST_HOOKS : null) ?? null;
   const rpcTimeout = Number.isFinite(Number(rpcTimeoutMs)) ? Number(rpcTimeoutMs) : RPC_TIMEOUT_MS;
-  const params =
-    typeof window !== 'undefined' &&
-    typeof URLSearchParams === 'function' &&
-    typeof window.location === 'object'
-      ? new URLSearchParams(window.location.search)
-      : null;
   const locationHref =
     typeof window !== 'undefined' && typeof window.location === 'object'
       ? window.location.href
       : undefined;
-  const currentLocation =
-    typeof window !== 'undefined' && typeof window.location === 'object'
-      ? new URL(window.location.href)
-      : null;
-  const inferredBridgeBaseUrl =
-    currentLocation && currentLocation.pathname.startsWith('/app/') ? currentLocation.origin : null;
-  const structuredBridgePreference =
-    bridgeTransportMode ??
-    params?.get('bridgeTransport')?.trim() ??
-    (inferredBridgeBaseUrl ? 'session' : null);
-  const resolvedBridgeApiBaseUrl =
-    typeof bridgeApiBaseUrl === 'string' && bridgeApiBaseUrl.trim().length
-      ? new URL(bridgeApiBaseUrl, locationHref).toString()
-      : inferredBridgeBaseUrl;
-  let websocketUrl =
-    typeof wsUrl === 'string' && wsUrl.trim().length
-      ? wsUrl.trim()
-      : params?.get('ws')?.trim() ?? deriveWebSocketUrl(resolvedBridgeApiBaseUrl, '/ws') ?? null;
-  const bridgeEventsUrl = deriveWebSocketUrl(resolvedBridgeApiBaseUrl, '/ws/events');
+  const { structuredBridgePreference, resolvedBridgeApiBaseUrl, websocketUrl, bridgeEventsUrl } =
+    resolveTransportModeOptions({
+      locationHref,
+      bridgeApiBaseUrl,
+      bridgeTransportMode,
+      wsUrl
+    });
 
   const portPreferenceStore = createPortPreferenceStore({
     storage: typeof localStorage === 'undefined' ? null : localStorage,
@@ -343,27 +312,6 @@ export function createRuntime({
     return createTransportPort(port, {}, { makeEncoder: encoder, makeDecoder: decoder });
   }
 
-  function wantsStructuredBridgeSession() {
-    return !useSimulator && structuredBridgePreference === 'session' && !!resolvedBridgeApiBaseUrl;
-  }
-
-  function getTransportMode() {
-    if (useSimulator) return 'simulator';
-    if (bridgeSessionActive) return 'bridge-session';
-    if (websocketUrl) return 'bridge-raw';
-    return 'direct-webserial';
-  }
-
-  function ensureBridgeSessionClient() {
-    if (!resolvedBridgeApiBaseUrl) return null;
-    if (bridgeSessionClient) return bridgeSessionClient;
-    bridgeSessionClient = createBridgeSessionClient({
-      baseUrl: resolvedBridgeApiBaseUrl,
-      eventUrl: bridgeEventsUrl
-    });
-    return bridgeSessionClient;
-  }
-
   function notifyStatus(payload) {
     if (!payload || !statusListeners.size) return;
     const snapshot = clone(payload);
@@ -381,6 +329,12 @@ export function createRuntime({
     statusListeners.add(handler);
     return () => statusListeners.delete(handler);
   }
+
+  const telemetryRuntime = createTelemetryRuntime({
+    clone,
+    emit,
+    notifyStatus
+  });
 
   function isJsonRpcTransport() {
     return (transport?.protocol ?? 'json-rpc') === 'json-rpc';
@@ -418,8 +372,7 @@ export function createRuntime({
     rpcTimeoutMs: rpcTimeout,
     rpcThrottleIntervalMs: RPC_THROTTLE_INTERVAL_MS,
     onFatalError: (error) => {
-      settleMacroPending(macroPending, { error });
-      settleScenePending(scenePending, { error });
+      liveControlsRuntime?.onFatalError(error);
     }
   });
 
@@ -459,314 +412,82 @@ export function createRuntime({
     getValidator: () => validator,
     isBridgeSessionActive: () => bridgeSessionActive,
     stageBridgeConfig: async (config) => {
-      const client = ensureBridgeSessionClient();
+      const client = bridgeSessionRuntime?.ensureClient();
       if (!client) throw new Error('Bridge session unavailable');
       return client.stageConfig(config);
     },
     applyBridgeConfig: async () => {
-      const client = ensureBridgeSessionClient();
+      const client = bridgeSessionRuntime?.ensureClient();
       if (!client) throw new Error('Bridge session unavailable');
       return client.applyConfig({});
     },
     rollbackBridgeConfig: async (reason) => {
-      const client = ensureBridgeSessionClient();
+      const client = bridgeSessionRuntime?.ensureClient();
       if (!client) return { rolledBack: false };
       return client.rollbackConfig(reason);
     }
   });
 
-  function sendMacroCommand(command, { timeoutMs } = {}) {
-    if (!command || !MACRO_RESPONSE_KEYS[command]) {
-      return Promise.reject(new Error('Unknown macro command'));
-    }
-    if (!transport) return Promise.reject(new Error('Not connected'));
-    if (macroPending) return Promise.reject(new Error('Macro command already in progress'));
-    let resolveFn;
-    let rejectFn;
-    const promise = new Promise((resolve, reject) => {
-      resolveFn = resolve;
-      rejectFn = reject;
-    });
-    const pending = { command, resolve: resolveFn, reject: rejectFn, timer: null };
-    macroPending = pending;
-    const timeout = Number.isFinite(Number(timeoutMs))
-      ? Number(timeoutMs)
-      : MACRO_COMMAND_TIMEOUT_MS;
-    pending.timer = setTimeout(() => {
-      settleMacroPending(pending, { error: new Error('Macro command timed out') });
-    }, timeout);
-    transport.writeLine(command).catch((err) => {
-      settleMacroPending(pending, { error: err });
-    });
-    return promise;
-  }
+  bridgeSessionRuntime = createBridgeSessionRuntime({
+    baseUrl: resolvedBridgeApiBaseUrl,
+    eventUrl: bridgeEventsUrl,
+    clone,
+    emit,
+    createClient: ({ baseUrl, eventUrl }) =>
+      createBridgeSessionClient({
+        baseUrl,
+        eventUrl
+      }),
+    compileSchema(nextSchema) {
+      validator = ajv.compile(nextSchema);
+    },
+    configSession,
+    localManifest,
+    currentSlotCount,
+    localSlotMetaManager,
+    getConnectedPayload: () => ({
+      manifest: remoteManifest,
+      schema,
+      config: configSession.mergeLocalSlotMeta(configSession.getLiveConfig())
+    }),
+    setRemoteManifest(nextManifest) {
+      remoteManifest = nextManifest;
+    },
+    setSchema(nextSchema) {
+      schema = nextSchema;
+    },
+    setSchemaSource(nextSource) {
+      schemaSource = nextSource;
+    },
+    onTelemetry: telemetryRuntime.queueTelemetryFrame
+  });
 
-  function settleScenePending(pending, { error, response } = {}) {
-    if (!pending) return;
-    if (pending.timer) {
-      clearTimeout(pending.timer);
-      pending.timer = null;
-    }
-    if (scenePending === pending) {
-      scenePending = null;
-    }
-    if (error) {
-      pending.reject(error);
-      return;
-    }
-    pending.resolve(response);
-  }
-
-  function sendSceneCommand(payload, { timeoutMs } = {}) {
-    if (!payload || typeof payload !== 'object' || typeof payload.cmd !== 'string') {
-      return Promise.reject(new Error('Scene command requires cmd property'));
-    }
-    if (!transport) return Promise.reject(new Error('Not connected'));
-    if (scenePending) return Promise.reject(new Error('Scene command already in progress'));
-    const expectedKey = SCENE_RESPONSE_KEYS[payload.cmd];
-    if (!expectedKey) return Promise.reject(new Error('Unknown scene command'));
-    let resolveFn;
-    let rejectFn;
-    const promise = new Promise((resolve, reject) => {
-      resolveFn = resolve;
-      rejectFn = reject;
-    });
-    const pending = {
-      command: payload.cmd,
-      expectedKey,
-      resolve: resolveFn,
-      reject: rejectFn,
-      timer: null
-    };
-    scenePending = pending;
-    const timeout = Number.isFinite(Number(timeoutMs))
-      ? Number(timeoutMs)
-      : SCENE_COMMAND_TIMEOUT_MS;
-    pending.timer = setTimeout(() => {
-      settleScenePending(pending, { error: new Error('Scene command timed out') });
-    }, timeout);
-    transport.writeLine(JSON.stringify(payload)).catch((err) => {
-      settleScenePending(pending, { error: err });
-    });
-    return promise;
-  }
-
-  function handleSceneLine(msg) {
-    if (!msg || typeof msg !== 'object') return false;
-    const hasSceneField =
-      Object.prototype.hasOwnProperty.call(msg, 'scene_saved') ||
-      Object.prototype.hasOwnProperty.call(msg, 'scene_recalled') ||
-      Array.isArray(msg.scenes);
-    if (!hasSceneField) return false;
-
-    if (Array.isArray(msg.scenes)) {
-      const scenes = msg.scenes.map((entry) => ({
-        slot: Number.isFinite(Number(entry?.slot)) ? Number(entry.slot) : 0,
-        name: typeof entry?.name === 'string' ? entry.name : '',
-        available: Boolean(entry?.available)
-      }));
-      emit('scene', { type: 'list', scenes });
-    }
-
-    const pending = scenePending;
-    if (pending) {
-      const expectedKey = pending.expectedKey;
-      if (Object.prototype.hasOwnProperty.call(msg, expectedKey)) {
-        const success = expectedKey === 'scenes' ? true : Boolean(msg[expectedKey]);
-        if (success) {
-          settleScenePending(pending, { response: msg });
-        } else {
-          const errorMessage =
-            msg.scene_error?.message ?? msg.scene_error ?? `${pending.command} failed`;
-          settleScenePending(pending, { error: new Error(errorMessage) });
-        }
-      }
-    }
-
-    if (Object.prototype.hasOwnProperty.call(msg, 'scene_saved')) {
-      emit('scene', {
-        type: 'saved',
-        slot: Number.isFinite(Number(msg.scene_slot)) ? Number(msg.scene_slot) : -1,
-        name: typeof msg.scene_name === 'string' ? msg.scene_name : '',
-        available: Boolean(msg.scene_available),
-        raw: msg
-      });
-    }
-    if (Object.prototype.hasOwnProperty.call(msg, 'scene_recalled')) {
-      emit('scene', {
-        type: 'recalled',
-        slot: Number.isFinite(Number(msg.scene_slot)) ? Number(msg.scene_slot) : -1,
-        name: typeof msg.scene_name === 'string' ? msg.scene_name : '',
-        available: Boolean(msg.scene_available),
-        raw: msg
-      });
-    }
-
-    return true;
-  }
-
-  function requestScenes(options = {}) {
-    return sendSceneCommand({ cmd: 'GET_SCENES' }, options);
-  }
-
-  function applyBridgeSessionSnapshot(sessionPayload = {}, { emitConnectedConfig = true } = {}) {
-    bridgeSessionCache = clone(sessionPayload);
-
-    const manifest = sessionPayload.manifest;
-    if (manifest && typeof manifest === 'object') {
-      remoteManifest = manifest;
-      localSlotMetaManager.ensureCount(
-        remoteManifest?.slot_count ?? localManifest?.slot_count ?? currentSlotCount()
-      );
-      emit('manifest', remoteManifest);
-    }
-
-    if (sessionPayload.schema && typeof sessionPayload.schema === 'object') {
-      schema = sessionPayload.schema;
-      schemaSource = sessionPayload.schemaSource ?? 'bundled';
-      validator = ajv.compile(schema);
-      emit('schema', schema);
-    } else if (sessionPayload.schemaSource) {
-      schemaSource = sessionPayload.schemaSource;
-    }
-
-    if (sessionPayload.liveConfig || sessionPayload.stagedConfig) {
-      configSession.syncFromSession(sessionPayload);
-      configSession.broadcastConfig({ persist: false });
-    }
-
-    if (emitConnectedConfig) {
-      emit('connected', {
-        manifest: remoteManifest,
-        schema,
-        config: configSession.mergeLocalSlotMeta(configSession.getLiveConfig())
-      });
-    }
-  }
-
-  async function refreshBridgeSessionSnapshot({ warm = false, emitConnectedConfig = false } = {}) {
-    const client = ensureBridgeSessionClient();
-    if (!client) throw new Error('Bridge session unavailable');
-    const session = await client.getSession({ warm });
-    if (!session || typeof session !== 'object') {
-      throw new Error('Bridge session unavailable');
-    }
-    if (!session.schema || typeof session.schema !== 'object') {
-      throw new Error('Bridge session did not provide a schema');
-    }
-    applyBridgeSessionSnapshot(session, { emitConnectedConfig });
-    return session;
-  }
-
-  async function flushBridgeStageSync() {
-    if (!bridgeSessionActive || !ensureBridgeSessionClient()) return null;
-    if (bridgeStageSyncTimer) {
-      clearTimeout(bridgeStageSyncTimer);
-      bridgeStageSyncTimer = null;
-    }
-    if (bridgeStageSyncPromise) return bridgeStageSyncPromise;
-    const stagedConfig = clone(configSession.getStagedConfig());
-    bridgeStageSyncPromise = ensureBridgeSessionClient()
-      .stageConfig(stagedConfig)
-      .finally(() => {
-        bridgeStageSyncPromise = null;
-      });
-    return bridgeStageSyncPromise;
-  }
-
-  function scheduleBridgeStageSync() {
-    if (!bridgeSessionActive) return;
-    if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
-    bridgeStageSyncTimer = setTimeout(() => {
-      void flushBridgeStageSync().catch((err) => {
-        emit('status', {
-          stage: 'bridge-session',
-          level: 'warn',
-          message: `Bridge stage sync failed: ${err.message || String(err)}`
-        });
-      });
-    }, 120);
-  }
-
-  async function openBridgeStructuredEvents() {
-    const client = ensureBridgeSessionClient();
-    if (!client) throw new Error('Bridge session unavailable');
-    await client.openEvents({
-      onEvent(message) {
-        if (!message || typeof message !== 'object') return;
-        const payload = message.payload ?? {};
-        switch (message.event) {
-          case 'device.ready':
-            if (payload.manifest && typeof payload.manifest === 'object') {
-              remoteManifest = payload.manifest;
-              emit('manifest', remoteManifest);
-            }
-            if (payload.schemaSource) schemaSource = payload.schemaSource;
-            void refreshBridgeSessionSnapshot({ warm: false, emitConnectedConfig: false }).catch(
-              () => {}
-            );
-            break;
-          case 'device.config.live':
-            bridgeSessionCache = bridgeSessionCache ?? {};
-            bridgeSessionCache.liveConfig = payload.config ?? null;
-            bridgeSessionCache.lastApplyResult = payload.lastApplyResult ?? null;
-            configSession.syncFromSession({
-              ...bridgeSessionCache,
-              liveConfig: bridgeSessionCache.liveConfig,
-              stagedConfig: bridgeSessionCache.stagedConfig,
-              dirty: bridgeSessionCache.dirty
-            });
-            configSession.broadcastConfig({ persist: false });
-            break;
-          case 'device.config.staged':
-            bridgeSessionCache = bridgeSessionCache ?? {};
-            bridgeSessionCache.stagedConfig = payload.config ?? null;
-            configSession.syncFromSession({
-              ...bridgeSessionCache,
-              liveConfig: bridgeSessionCache.liveConfig,
-              stagedConfig: bridgeSessionCache.stagedConfig,
-              dirty: bridgeSessionCache.dirty
-            });
-            configSession.broadcastConfig({ persist: false });
-            break;
-          case 'device.config.dirty':
-            bridgeSessionCache = bridgeSessionCache ?? {};
-            bridgeSessionCache.dirty = Boolean(payload.dirty);
-            configSession.syncFromSession({
-              ...bridgeSessionCache,
-              liveConfig: bridgeSessionCache.liveConfig,
-              stagedConfig: bridgeSessionCache.stagedConfig,
-              dirty: bridgeSessionCache.dirty
-            });
-            configSession.broadcastConfig({ persist: false });
-            break;
-          case 'device.telemetry':
-            if (payload.telemetry && typeof payload.telemetry === 'object') {
-              queueTelemetryFrame(payload.telemetry);
-            }
-            break;
-          default:
-            break;
-        }
-      },
-      onClose() {
-        // Raw /ws stays connected for compatibility and live RPC lanes.
-      },
-      onError(err) {
-        emit('status', {
-          stage: 'bridge-session',
-          level: 'warn',
-          message: `Bridge event stream error: ${err?.message || 'event stream failed'}`
-        });
-      }
-    });
-  }
+  liveControlsRuntime = createLiveControlsRuntime({
+    emit,
+    sendRpc,
+    getTransport: () => transport,
+    configSession,
+    setNestedValue,
+    async ensureConfigBootTransport() {
+      if (transport) return;
+      transport = websocketUrl ? createWebSocketTransport(websocketUrl) : await requestPort();
+      hooks?.mutateTransport?.(transport);
+      await transport.open();
+      portPreferenceStore.persist(transport.rawPort);
+      startReadLoop();
+    },
+    disconnect,
+    getUseSimulator: () => useSimulator,
+    macroResponseKeys: MACRO_RESPONSE_KEYS,
+    macroCommandTimeoutMs: MACRO_COMMAND_TIMEOUT_MS,
+    sceneResponseKeys: SCENE_RESPONSE_KEYS,
+    sceneCommandTimeoutMs: SCENE_COMMAND_TIMEOUT_MS
+  });
 
   function flushRpcPending(error) {
     const reason = error ?? new Error('Connection lost');
     rpcKernel.flushPending(reason);
-    settleMacroPending(macroPending, { error: reason });
-    settleScenePending(scenePending, { error: reason });
+    liveControlsRuntime?.onFatalError(reason);
   }
 
   async function connect(existingPort) {
@@ -782,10 +503,19 @@ export function createRuntime({
       portPreferenceStore.persist(transport.rawPort);
       startReadLoop();
       emit('transport-open', transport);
-      if (wantsStructuredBridgeSession()) {
+      if (
+        wantsStructuredBridgeSession({
+          useSimulator,
+          structuredBridgePreference,
+          resolvedBridgeApiBaseUrl
+        })
+      ) {
         try {
-          await refreshBridgeSessionSnapshot({ warm: true, emitConnectedConfig: false });
-          await openBridgeStructuredEvents();
+          await bridgeSessionRuntime.refreshSessionSnapshot({
+            warm: true,
+            emitConnectedConfig: false
+          });
+          await bridgeSessionRuntime.openStructuredEvents();
           bridgeSessionActive = true;
           emit('status', {
             stage: 'bridge-session',
@@ -801,8 +531,7 @@ export function createRuntime({
           return;
         } catch (err) {
           bridgeSessionActive = false;
-          bridgeSessionCache = null;
-          ensureBridgeSessionClient()?.closeEvents();
+          bridgeSessionRuntime.reset();
           emit('status', {
             stage: 'bridge-session',
             level: 'warn',
@@ -877,121 +606,18 @@ export function createRuntime({
     pump();
   }
 
-  function settleMacroPending(pending, { error, response } = {}) {
-    if (!pending) return;
-    if (pending.timer) {
-      clearTimeout(pending.timer);
-      pending.timer = null;
-    }
-    if (macroPending === pending) {
-      macroPending = null;
-    }
-    if (error) {
-      pending.reject(error);
-    } else {
-      pending.resolve(response);
-    }
-  }
-
-  function handleMacroLine(msg) {
-    if (!msg || typeof msg !== 'object') return false;
-    const hasMacroField =
-      Object.prototype.hasOwnProperty.call(msg, 'macro_saved') ||
-      Object.prototype.hasOwnProperty.call(msg, 'macro_recalled') ||
-      Object.prototype.hasOwnProperty.call(msg, 'macro_available');
-    if (!hasMacroField) return false;
-    if (Object.prototype.hasOwnProperty.call(msg, 'macro_available')) {
-      macroAvailability = Boolean(msg.macro_available);
-    }
-    emit('macro', {
-      saved: Boolean(msg.macro_saved),
-      recalled: Boolean(msg.macro_recalled),
-      available: macroAvailability,
-      raw: msg
-    });
-    const pending = macroPending;
-    if (pending) {
-      const expectedKey = MACRO_RESPONSE_KEYS[pending.command];
-      if (expectedKey && Object.prototype.hasOwnProperty.call(msg, expectedKey)) {
-        const success = Boolean(msg[expectedKey]);
-        if (success) {
-          settleMacroPending(pending, { response: msg });
-        } else {
-          const errorMessage = msg.error?.message ?? `${pending.command} failed`;
-          settleMacroPending(pending, { error: new Error(errorMessage) });
-        }
-      }
-    }
-    return true;
-  }
-
-  function mergeTelemetryChunk(current, msg) {
-    const next = { ...(current || {}), ...msg };
-
-    if (Array.isArray(msg.slotArgs)) {
-      const byIndex = new Map();
-
-      for (const arg of current?.slotArgs || []) {
-        if (Number.isInteger(arg.index)) byIndex.set(arg.index, arg);
-      }
-
-      for (const arg of msg.slotArgs) {
-        if (Number.isInteger(arg.index)) byIndex.set(arg.index, arg);
-      }
-
-      next.slotArgs = [...byIndex.entries()].sort(([a], [b]) => a - b).map(([, arg]) => arg);
-    }
-
-    next.scopes = [...(current?.scopes || []), msg.scope].filter(Boolean);
-    return next;
-  }
-
-  function queueTelemetryFrame(msg) {
-    if (!msg || typeof msg !== 'object') return;
-
-    const traceId = msg.traceId || null;
-
-    if (telemetryTraceId && traceId && traceId !== telemetryTraceId) {
-      flushTelemetry();
-    }
-
-    if (traceId) {
-      telemetryTraceId = traceId;
-    }
-
-    queuedTelemetry = mergeTelemetryChunk(queuedTelemetry, msg);
-
-    if (!telemetryTimer) {
-      telemetryTimer = setTimeout(flushTelemetry, 50);
-    }
-  }
-
   const handleLine = createRuntimeLineHandler({
     emit,
     notifyStatus,
     rpcKernel,
-    handleSceneLine,
-    handleMacroLine,
+    handleSceneLine: liveControlsRuntime.handleSceneLine,
+    handleMacroLine: liveControlsRuntime.handleMacroLine,
     isManifestPayload,
     isConfigPayload,
     applyConfigPatch: (...args) => applyConfigPatch(...args),
     extractSlotIndex,
-    onTelemetry: queueTelemetryFrame
+    onTelemetry: telemetryRuntime.queueTelemetryFrame
   });
-
-  function flushTelemetry() {
-    if (telemetryTimer) {
-      clearTimeout(telemetryTimer);
-      telemetryTimer = null;
-    }
-    telemetryTraceId = null;
-    if (!queuedTelemetry) return;
-
-    const frame = clone(queuedTelemetry);
-    emit('telemetry', frame);
-    notifyStatus({ type: 'telemetry', ...frame });
-    queuedTelemetry = null;
-  }
 
   const applyConfigPatch = createPatchReconciler({
     getLiveConfig: configSession.getLiveConfig,
@@ -1006,27 +632,11 @@ export function createRuntime({
     broadcastConfig: configSession.broadcastConfig
   });
 
-  function applyPatch(path, value) {
-    if (!path || typeof path !== 'string') {
-      return Promise.reject(new Error('Invalid patch path'));
-    }
-    // Stage the payload locally so the UI stays in sync while we hit the device.
-    configSession.stage((draft) => {
-      setNestedValue(draft, path, value);
-      return draft;
-    });
-    // Apply the patch with the JSON-RPC kernel so we can reuse the same timeout/throttle.
-    return sendRpc({ rpc: 'set_param', path, value });
-  }
+  const applyPatch = (...args) => liveControlsRuntime.applyPatch(...args);
 
   async function disconnect() {
-    if (bridgeStageSyncTimer) {
-      clearTimeout(bridgeStageSyncTimer);
-      bridgeStageSyncTimer = null;
-    }
-    ensureBridgeSessionClient()?.closeEvents();
+    bridgeSessionRuntime.reset();
     bridgeSessionActive = false;
-    bridgeSessionCache = null;
     if (!transport) {
       emit('disconnected');
       return;
@@ -1043,75 +653,30 @@ export function createRuntime({
     }
   }
 
-  async function requestConfiguratorBoot() {
-    if (useSimulator) {
-      emit('status', {
-        stage: 'config-boot',
-        level: 'warn',
-        message: 'Config boot is only available on a physical Web Serial device.'
-      });
-      return { requested: false, simulator: true };
-    }
-
-    const ownsConnection = !transport;
-    if (ownsConnection) {
-      transport = websocketUrl ? createWebSocketTransport(websocketUrl) : await requestPort();
-      hooks?.mutateTransport?.(transport);
-      await transport.open();
-      portPreferenceStore.persist(transport.rawPort);
-      startReadLoop();
-    }
-
-    try {
-      emit('status', {
-        stage: 'config-boot',
-        level: 'info',
-        message: 'Requesting one-shot configurator boot…'
-      });
-      await sendRpc({ rpc: 'enter_config_mode' }, { timeoutMs: 1500 });
-      emit('status', {
-        stage: 'config-boot',
-        level: 'ok',
-        message: 'Device is rebooting into configurator mode. Reconnect after USB reappears.'
-      });
-      return { requested: true };
-    } finally {
-      await disconnect();
-    }
-  }
-
-  function setPotGuard(indices, enabled) {
-    indices.forEach((idx) => {
-      if (enabled) potGuard.add(idx);
-      else potGuard.delete(idx);
-    });
-    emit('pot-guard', { guards: new Set(potGuard) });
-  }
+  const requestConfiguratorBoot = () => liveControlsRuntime.requestConfiguratorBoot();
+  const setPotGuard = (...args) => liveControlsRuntime.setPotGuard(...args);
 
   function stage(updater) {
     configSession.stage(updater);
-    scheduleBridgeStageSync();
+    bridgeSessionRuntime.scheduleStageSync({ active: bridgeSessionActive });
   }
 
   async function apply() {
     if (bridgeSessionActive) {
-      await flushBridgeStageSync();
+      await bridgeSessionRuntime.flushStageSync({ active: bridgeSessionActive });
     }
     return configSession.apply();
   }
 
   async function rollback() {
-    if (bridgeStageSyncTimer) {
-      clearTimeout(bridgeStageSyncTimer);
-      bridgeStageSyncTimer = null;
-    }
+    bridgeSessionRuntime.cancelStageSync();
     return configSession.rollback();
   }
 
   function getState() {
     return {
       ...configSession.getState(),
-      transportMode: getTransportMode(),
+      transportMode: getTransportMode({ useSimulator, bridgeSessionActive, websocketUrl }),
       bridgeSessionActive,
       bridgeApiBaseUrl: resolvedBridgeApiBaseUrl
     };
@@ -1128,9 +693,9 @@ export function createRuntime({
     on,
     onStatus,
     sendRpc,
-    sendMacroCommand,
-    sendSceneCommand,
-    requestScenes,
+    sendMacroCommand: liveControlsRuntime.sendMacroCommand,
+    sendSceneCommand: liveControlsRuntime.sendSceneCommand,
+    requestScenes: liveControlsRuntime.requestScenes,
     requestConfiguratorBoot,
     applyPatch,
     restoreLocalState: configSession.restoreLocalState,

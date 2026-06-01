@@ -40,7 +40,6 @@ test.describe('UI mode', () => {
     });
     await page.goto('/benzknobz.html');
 
-    await page.getByRole('button', { name: /simulator/i }).click();
     await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
     await page.getByRole('button', { name: 'Connect' }).click();
     await expect(page.locator('#connection-banner')).not.toContainText('Bridge');

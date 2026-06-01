@@ -2,9 +2,13 @@
 
 These are setup recipes for bench validation. They are not a promise that every host version is fully certified. The browser bridge console now exposes matching recipe presets under `bridge/presets/`.
 
+Recipe receipts live in [../bench/bridge-host-recipes/README.md](../bench/bridge-host-recipes/README.md). Treat a recipe as evidence-backed only when a matching receipt exists.
+
 ## Preset-backed recipes
 
 ### `macos-iac-ableton-basic`
+
+Receipt status: no matching receipt committed yet
 
 Use when:
 
@@ -23,6 +27,8 @@ Checklist:
 
 ### `max-osc-localhost`
 
+Receipt status: no matching receipt committed yet
+
 Use when:
 
 - Max/MSP is running on the same host as the bridge
@@ -36,6 +42,8 @@ Checklist:
 4. Verify the bridge Advanced mode route traces match what the Max patch sees.
 
 ### `touchosc-performance-local`
+
+Receipt status: no matching receipt committed yet
 
 Use when:
 
@@ -51,6 +59,8 @@ Checklist:
 
 ### `windows-loopmidi-reaper-basic`
 
+Receipt status: no matching receipt committed yet
+
 Use when:
 
 - Windows host
@@ -63,6 +73,11 @@ Checklist:
 2. Start the bridge and verify the browser console reaches device-ready state.
 3. Enable the same loopback port in Reaper.
 4. Validate one recorded CC lane from live hardware movement and one inbound CC from Reaper.
+
+## Observation-only receipts
+
+- [2026-05-31 macOS IAC + REAPER basic observed](../bench/bridge-host-recipes/macos-iac-reaper-basic-observed.md)
+  - This is not a verified recipe receipt. It records that REAPER was present on the host while the Bridge reached `ready` on `IAC 1 Bus 1`, but it does not prove DAW-side CC capture or return traffic yet.
 
 ## Manual recipes that remain documented
 

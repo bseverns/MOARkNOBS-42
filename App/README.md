@@ -11,7 +11,7 @@ Current support boundary:
 - package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first
 - not claimed here as a verified production path: Firefox/Safari WebSerial support or universal browser compatibility
 
-Bench receipts and receipt templates for operator-facing App HIL lanes live in [../docs/bench/app/README.md](../docs/bench/app/README.md).
+Bench receipts and receipt templates for operator-facing App HIL lanes live in [../docs/bench/app/README.md](../docs/bench/app/README.md). The latest live Bridge-served proof is [2026-05-31 App-over-Bridge-session summary](../docs/bench/app/2026-05-31-app-over-bridge-session-summary.md).
 Transport-mode truth and UI labeling rules live in [../docs/app/AppTransportTruthTable.md](../docs/app/AppTransportTruthTable.md).
 
 See [docs/HostCompatibility.md](../docs/reference/HostCompatibility.md) for the conservative matrix before treating this as a broad browser-support promise.

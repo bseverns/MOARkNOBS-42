@@ -29,7 +29,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   expect(state.diff).toEqual([]);
 });
 
-test('failed direct apply rolls staged config back to live truth and shows error state', async ({
+test('failed Apply restores staged and live truth and updates error status UI', async ({
   page
 }) => {
   await page.addInitScript(() => {
@@ -162,12 +162,16 @@ test('failed direct apply rolls staged config back to live truth and shows error
   await expect(page.locator('#dirty-badge')).toBeVisible();
   await page.getByRole('button', { name: 'Apply' }).click();
   await expect(page.locator('#status-label')).toHaveText('Apply failed');
+  await expect(page.locator('#status .status-message')).toContainText('ACK');
   await expect(page.locator('#dirty-badge')).toBeHidden();
 
   const state = await page.evaluate(() => ({
     dirty: window.__MN42_RUNTIME.getState().dirty,
-    diff: window.__MN42_RUNTIME.diff()
+    diff: window.__MN42_RUNTIME.diff(),
+    live: window.__MN42_RUNTIME.getState().live,
+    staged: window.__MN42_RUNTIME.getState().staged
   }));
   expect(state.dirty).toBe(false);
   expect(state.diff).toEqual([]);
+  expect(state.live).toEqual(state.staged);
 });
