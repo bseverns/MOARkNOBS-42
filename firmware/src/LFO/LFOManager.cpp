@@ -32,6 +32,11 @@ void LFOManager::attachMIDI(MIDIHandler *midi) {
     clock_.attach(midi);
 }
 
+// Install a callback for slot-routed modulation values.
+void LFOManager::setSlotValueCallback(std::function<void(uint8_t, uint8_t)> cb) {
+    slotValueCallback_ = cb;
+}
+
 // Install an OSC callback for external modulation mirrors.
 void LFOManager::setOscCallback(void (*cb)(uint8_t, float)) { oscCallback_ = cb; }
 
@@ -80,6 +85,16 @@ void LFOManager::addOscRoute(uint8_t lfoIndex, float depth) {
     Route route;
     route.type = Route::Type::Osc;
     route.lfoIndex = lfoIndex;
+    route.depth = clampDepth(depth);
+    routes_.push_back(route);
+}
+
+// Route an LFO through a slot's configured MIDI parameter.
+void LFOManager::addSlotValueRoute(uint8_t lfoIndex, uint8_t slotIndex, float depth) {
+    Route route;
+    route.type = Route::Type::SlotValue;
+    route.lfoIndex = lfoIndex;
+    route.slotIndex = slotIndex;
     route.depth = clampDepth(depth);
     routes_.push_back(route);
 }
@@ -145,6 +160,9 @@ void LFOManager::update(unsigned long nowMs) {
             break;
         case Route::Type::Osc:
             maybeSendOsc(route, normalized);
+            break;
+        case Route::Type::SlotValue:
+            maybeSendSlotValue(route, normalized, nowMs);
             break;
         }
     }
@@ -219,6 +237,9 @@ void LFOManager::applyProfile(const ProfileData &profile) {
         case LFOManager::Route::Type::Osc:
             addOscRoute(route.lfoIndex, route.depth);
             break;
+        case LFOManager::Route::Type::SlotValue:
+            addSlotValueRoute(route.lfoIndex, route.target, route.depth);
+            break;
         }
     }
 }
@@ -279,6 +300,21 @@ void LFOManager::maybeSendMidi(Route &route, float normalized, unsigned long now
         route.lastValue = midiValue;
         route.lastSendMs = nowMs;
         midi_->sendControlChange(route.ccMsb, static_cast<uint8_t>(midiValue), route.channel);
+    }
+}
+
+// Emit a slot-routed MIDI value if the route is due and the value changed.
+void LFOManager::maybeSendSlotValue(Route &route, float normalized, unsigned long nowMs) {
+    if (!slotValueCallback_)
+        return;
+    if (nowMs - route.lastSendMs < kMinSendIntervalMs)
+        return;
+
+    int midiValue = static_cast<int>(std::lround(normalized * 127.0f));
+    if (midiValue != route.lastValue) {
+        route.lastValue = midiValue;
+        route.lastSendMs = nowMs;
+        slotValueCallback_(route.slotIndex, static_cast<uint8_t>(midiValue));
     }
 }
 

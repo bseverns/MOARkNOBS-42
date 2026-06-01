@@ -6,6 +6,7 @@
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include "Globals.h"
+#include "LFO/LFOManager.h"
 #include "Log.h"
 #include "Modes.h"
 
@@ -196,7 +197,12 @@ void applyRouteProfilePatch(JsonObject root, ProfileData &profile) {
         out.type = static_cast<uint8_t>(route["type"].as<int>());
         out.lfoIndex = static_cast<uint8_t>(route["lfo"].as<int>());
         out.depth = route["depth"].as<float>();
-        out.target = static_cast<uint8_t>(route["target"].as<int>());
+        if (out.type == static_cast<uint8_t>(LFOManager::Route::Type::SlotValue) &&
+            route.containsKey("slot")) {
+            out.target = static_cast<uint8_t>(route["slot"].as<int>());
+        } else {
+            out.target = static_cast<uint8_t>(route["target"].as<int>());
+        }
         out.channel = static_cast<uint8_t>(route["channel"].as<int>());
         out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
         out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());

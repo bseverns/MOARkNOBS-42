@@ -14,7 +14,7 @@ const SCENE_SLOT_COUNT = 6;
 const ARP_SHAPE_OPTIONS = ['Up', 'Down', 'Up/Down', 'Random', 'Drunk', 'Euclidean'];
 const LFO_SHAPE_OPTIONS = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold', 'Random Slew'];
 const LFO_SYNC_RATIO_OPTIONS = ['1/1', '1/2', '1/4', '1/8', '1/16', '1/32', 'x2', 'x4'];
-const LFO_ROUTE_TYPE_OPTIONS = ['Internal', 'MIDI CC 7-bit', 'MIDI CC 14-bit', 'OSC'];
+const LFO_ROUTE_TYPE_OPTIONS = ['Internal', 'MIDI CC 7-bit', 'MIDI CC 14-bit', 'OSC', 'Slot'];
 const LFO_INTERNAL_TARGET_OPTIONS = [
   'EF Gain Trim',
   'Arp Swing',
@@ -26,6 +26,7 @@ const LFO_INTERNAL_TARGET_OPTIONS = [
 ];
 const PROFILE_LFO_COUNT = 2;
 const PROFILE_MAX_ROUTES = 8;
+const SLOT_COUNT = 42;
 
 function createDefaultArpDraft() {
   return {
@@ -107,11 +108,15 @@ function normalizeLfoEntry(entry, index) {
 }
 
 function normalizeRouteEntry(entry = {}) {
+  const type = clampInteger(entry.type, 0, LFO_ROUTE_TYPE_OPTIONS.length - 1, 0);
+  const slot = clampInteger(entry.slot ?? entry.target, 0, SLOT_COUNT - 1, 0);
   return {
-    type: clampInteger(entry.type, 0, LFO_ROUTE_TYPE_OPTIONS.length - 1, 0),
+    type,
     lfo: clampInteger(entry.lfo, 0, PROFILE_LFO_COUNT - 1, 0),
     depth: clampFloat(entry.depth, 0, 1, 1, 3),
-    target: clampInteger(entry.target, 0, LFO_INTERNAL_TARGET_OPTIONS.length - 1, 0),
+    target:
+      type === 4 ? slot : clampInteger(entry.target, 0, LFO_INTERNAL_TARGET_OPTIONS.length - 1, 0),
+    slot,
     channel: clampInteger(entry.channel, 1, 16, 1),
     cc_msb: clampInteger(entry.cc_msb, 0, 127, 0),
     cc_lsb: clampInteger(entry.cc_lsb, 0, 127, 32)
@@ -511,7 +516,7 @@ export function createProfileMacroScenePanel({
       const empty = document.createElement('p');
       empty.className = 'lfo-empty';
       empty.textContent =
-        'No routes saved. Add one to assign an LFO to an internal target, MIDI CC, or OSC.';
+        'No routes saved. Add one to assign an LFO to an internal target, slot, MIDI CC, or OSC.';
       routeSection.appendChild(empty);
     } else {
       const routeList = document.createElement('div');
@@ -544,6 +549,7 @@ export function createProfileMacroScenePanel({
                 {
                   type: value,
                   target: 0,
+                  slot: 0,
                   channel: 1,
                   cc_msb: 0,
                   cc_lsb: 32
@@ -621,6 +627,23 @@ export function createProfileMacroScenePanel({
                 max: 127,
                 step: 1,
                 onChange: (value) => updateRouteEntry(routeIndex, { cc_lsb: value })
+              })
+            )
+          );
+        }
+        if (route.type === 4) {
+          grid.appendChild(
+            createLfoControl(
+              'Slot',
+              createNumberInput({
+                value: route.slot + 1,
+                min: 1,
+                max: SLOT_COUNT,
+                step: 1,
+                onChange: (value) => {
+                  const slotIndex = clampInteger(value, 1, SLOT_COUNT, 1) - 1;
+                  updateRouteEntry(routeIndex, { slot: slotIndex, target: slotIndex });
+                }
               })
             )
           );
@@ -982,7 +1005,8 @@ export function createProfileMacroScenePanel({
               type: route.type,
               lfo: route.lfo,
               depth: route.depth,
-              target: route.target,
+              target: route.type === 4 ? route.slot : route.target,
+              ...(route.type === 4 ? { slot: route.slot } : {}),
               channel: route.channel,
               cc_msb: route.cc_msb,
               cc_lsb: route.cc_lsb

@@ -127,7 +127,9 @@ ProfileData captureProfileSnapshot() {
         profile.routes[i].type = static_cast<uint8_t>(route.type);
         profile.routes[i].lfoIndex = route.lfoIndex;
         profile.routes[i].depth = route.depth;
-        profile.routes[i].target = static_cast<uint8_t>(route.target);
+        profile.routes[i].target = route.type == LFOManager::Route::Type::SlotValue
+                                       ? route.slotIndex
+                                       : static_cast<uint8_t>(route.target);
         profile.routes[i].channel = route.channel;
         profile.routes[i].ccMsb = route.ccMsb;
         profile.routes[i].ccLsb = route.ccLsb;

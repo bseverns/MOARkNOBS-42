@@ -155,6 +155,77 @@ void emitNoteSlot(uint8_t slotIndex, MIDISlot &slot, unsigned long gateMs) {
     queuePendingNoteOff(note, slot.midiChannel, gateMs);
 }
 
+uint16_t midiValueToRawAdc(uint8_t value) {
+    return static_cast<uint16_t>((static_cast<uint32_t>(value) * 1023U + 63U) / 127U);
+}
+
+int16_t midiValueToPitchBend(uint8_t value) {
+    const int bend =
+        static_cast<int>(lroundf((static_cast<float>(value) / 127.0f) * 16383.0f)) - 8192;
+    return static_cast<int16_t>(constrain(bend, -8192, 8191));
+}
+
+void emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
+    if (slotIndex >= NUM_SLOTS) {
+        return;
+    }
+    MIDISlot &slot = configManager.getSlot(slotIndex);
+    if (!slot.active) {
+        return;
+    }
+
+    switch (slot.type) {
+    case MIDIMessageType::CC:
+        midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
+        break;
+    case MIDIMessageType::Note: {
+        const uint8_t note = static_cast<uint8_t>(slot.data1 % 128);
+        midiHandler.sendNoteOn(note, value, slot.midiChannel);
+        queuePendingNoteOff(note, slot.midiChannel, 100);
+        break;
+    }
+    case MIDIMessageType::PitchBend:
+        midiHandler.sendPitchBend(midiValueToPitchBend(value), slot.midiChannel);
+        break;
+    case MIDIMessageType::ProgramChange:
+        midiHandler.sendProgramChange(value, slot.midiChannel);
+        break;
+    case MIDIMessageType::Aftertouch:
+        midiHandler.sendAftertouch(value, slot.midiChannel);
+        break;
+    case MIDIMessageType::ModWheel:
+        midiHandler.sendModWheel(value, slot.midiChannel);
+        break;
+    case MIDIMessageType::NRPN: {
+        const uint16_t param = static_cast<uint16_t>(slot.data1) << 7;
+        const uint16_t paramValue = static_cast<uint16_t>(value) << 7;
+        midiHandler.sendNRPN(param, paramValue, slot.midiChannel);
+        break;
+    }
+    case MIDIMessageType::RPN: {
+        const uint16_t param = static_cast<uint16_t>(slot.data1) << 7;
+        const uint16_t paramValue = static_cast<uint16_t>(value) << 7;
+        midiHandler.sendRPN(param, paramValue, slot.midiChannel);
+        break;
+    }
+    case MIDIMessageType::SysEx: {
+        std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+        uint8_t length = buildSysExPayload(slot, midiValueToRawAdc(value), msg.data(), msg.size());
+        if (length > 0) {
+            midiHandler.sendSysEx(msg.data(), length);
+        }
+        break;
+    }
+    case MIDIMessageType::OFF:
+    default:
+        break;
+    }
+
+    if (slotIndex < NUM_POTS) {
+        ledAnimator.setPotTarget(slotIndex, value);
+    }
+}
+
 void emitClockedNoteSlots(uint32_t quarterEvents) {
     if (quarterEvents == 0 || !performanceClockActive()) {
         return;
@@ -261,6 +332,8 @@ void initializeRuntime(bool baselinesLoaded) {
         seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
     }
     lfoManager.attachMIDI(&midiHandler);
+    lfoManager.setSlotValueCallback(
+        [](uint8_t slotIndex, uint8_t value) { emitSlotModulationValue(slotIndex, value); });
     ledAnimator.setMode(configManager.getLedMode());
     statusLedBootDeadline = now() + kStatusLedBootHoldMs;
     statusLedPulseDeadline = 0;

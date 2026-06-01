@@ -3,6 +3,7 @@
 
 #include "LFO/LFO.h"
 #include "LFO/LFOClock.h"
+#include "LFO/LFOManager.h"
 #include "MIDIHandler.h"
 #include <cmath>
 
@@ -179,4 +180,30 @@ void test_lfo_clock_consumes_ticks() {
     midi.generateClockTick();
     midi.generateClockTick();
     TEST_ASSERT_EQUAL_UINT32(2u, clock.consumeTickDelta());
+}
+
+void test_lfo_slot_value_route_emits_slot_callback() {
+    LFOManager manager;
+    uint8_t observedSlot = 0xFF;
+    uint8_t observedValue = 0;
+    uint8_t callbackCount = 0;
+    manager.setSlotValueCallback([&](uint8_t slotIndex, uint8_t value) {
+        observedSlot = slotIndex;
+        observedValue = value;
+        callbackCount++;
+    });
+
+    LFO &lfo = manager.lfo(0);
+    lfo.setShape(LFOShape::Square);
+    lfo.setFrequencyHz(0.0f);
+    lfo.setDepth(1.0f);
+    lfo.setBipolar(false);
+    lfo.setPhase(0.0f);
+    manager.addSlotValueRoute(0, 7, 1.0f);
+
+    manager.update(10);
+
+    TEST_ASSERT_EQUAL_UINT8(1, callbackCount);
+    TEST_ASSERT_EQUAL_UINT8(7, observedSlot);
+    TEST_ASSERT_EQUAL_UINT8(127, observedValue);
 }

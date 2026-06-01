@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include "LFO.h"
@@ -52,12 +53,13 @@ class LFOManager {
      * Includes throttling state so outbound MIDI stays under 120 msgs/sec.
      */
     struct Route {
-        enum class Type : uint8_t { Internal = 0, MidiCC7, MidiCC14, Osc };
+        enum class Type : uint8_t { Internal = 0, MidiCC7, MidiCC14, Osc, SlotValue };
         Type type = Type::Internal; //!< Route destination type
         uint8_t lfoIndex = 0;       //!< Which LFO to read
         float depth = 1.0f;         //!< Depth applied to the LFO output
 
         LFOInternalTarget target = LFOInternalTarget::EfGainTrim; //!< Internal target
+        uint8_t slotIndex = 0; //!< Slot target for SlotValue routes
 
         uint8_t channel = 1; //!< MIDI channel for CC routes
         uint8_t ccMsb = 0;   //!< CC MSB for 14-bit routes
@@ -72,6 +74,8 @@ class LFOManager {
 
     /** Attach MIDI handler for outbound CC routes. */
     void attachMIDI(MIDIHandler *midi);
+    /** Provide a callback that emits a slot-routed LFO value. */
+    void setSlotValueCallback(std::function<void(uint8_t slotIndex, uint8_t value)> cb);
     /** Provide an OSC callback for external routing. */
     void setOscCallback(void (*cb)(uint8_t index, float value));
 
@@ -89,6 +93,8 @@ class LFOManager {
                           float depth = 1.0f);
     /** Route an LFO to the OSC callback. */
     void addOscRoute(uint8_t lfoIndex, float depth = 1.0f);
+    /** Route an LFO through a slot's configured MIDI parameter. */
+    void addSlotValueRoute(uint8_t lfoIndex, uint8_t slotIndex, float depth = 1.0f);
 
     /** Clear all configured routes. */
     void clearRoutes();
@@ -113,13 +119,16 @@ class LFOManager {
     void applyInternalRoute(const Route &route, float value);
     /** Conditionally send MIDI data with throttling. */
     void maybeSendMidi(Route &route, float normalized, unsigned long nowMs);
+    /** Conditionally emit slot-targeted modulation with throttling. */
+    void maybeSendSlotValue(Route &route, float normalized, unsigned long nowMs);
     /** Send OSC callback if installed. */
     void maybeSendOsc(const Route &route, float normalized);
 
-    std::array<LFO, kMaxLFOs> lfos_{};              //!< LFO instances
-    std::vector<Route> routes_;                     //!< Active routes
-    LFOClock clock_;                                //!< Shared clock sync adapter
-    MIDIHandler *midi_ = nullptr;                   //!< MIDI output (not owned)
+    std::array<LFO, kMaxLFOs> lfos_{}; //!< LFO instances
+    std::vector<Route> routes_;        //!< Active routes
+    LFOClock clock_;                   //!< Shared clock sync adapter
+    MIDIHandler *midi_ = nullptr;      //!< MIDI output (not owned)
+    std::function<void(uint8_t, uint8_t)> slotValueCallback_ = nullptr;
     void (*oscCallback_)(uint8_t, float) = nullptr; //!< OSC callback hook
     unsigned long lastUpdateMs_ = 0;                //!< Last update timestamp (ms)
     LFOBus bus_{};                                  //!< Current internal bus values

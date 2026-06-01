@@ -5,6 +5,7 @@
 #include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "Globals.h"
+#include "LFO/LFOManager.h"
 #include "Log.h"
 #include "Modes.h"
 #include "protocol/ProfileCommands.h"
@@ -102,6 +103,9 @@ void writeProfileRoutes(JsonArray routes, const ProfileData &profile) {
         route["lfo"] = profile.routes[i].lfoIndex;
         route["depth"] = profile.routes[i].depth;
         route["target"] = profile.routes[i].target;
+        if (profile.routes[i].type == static_cast<uint8_t>(LFOManager::Route::Type::SlotValue)) {
+            route["slot"] = profile.routes[i].target;
+        }
         route["channel"] = profile.routes[i].channel;
         route["cc_msb"] = profile.routes[i].ccMsb;
         route["cc_lsb"] = profile.routes[i].ccLsb;

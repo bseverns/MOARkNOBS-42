@@ -102,7 +102,7 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
     }
     for (uint8_t i = 0; i < sanitized.routeCount; ++i) {
         ProfileLfoRoute &route = sanitized.routes[i];
-        if (route.type > static_cast<uint8_t>(LFOManager::Route::Type::Osc)) {
+        if (route.type > static_cast<uint8_t>(LFOManager::Route::Type::SlotValue)) {
             route.type = static_cast<uint8_t>(LFOManager::Route::Type::Internal);
         }
         if (route.lfoIndex >= PROFILE_LFO_COUNT) {
@@ -112,7 +112,9 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
             route.depth = 0.0f;
         }
         route.depth = constrain(route.depth, 0.0f, 1.0f);
-        if (route.target > static_cast<uint8_t>(LFOInternalTarget::JitterSmoothness)) {
+        if (route.type == static_cast<uint8_t>(LFOManager::Route::Type::SlotValue)) {
+            route.target = static_cast<uint8_t>(constrain(route.target, 0, NUM_SLOTS - 1));
+        } else if (route.target > static_cast<uint8_t>(LFOInternalTarget::JitterSmoothness)) {
             route.target = static_cast<uint8_t>(LFOInternalTarget::EfGainTrim);
         }
         route.channel = static_cast<uint8_t>(constrain(route.channel, 1, 16));
