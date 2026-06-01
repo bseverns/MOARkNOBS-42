@@ -159,6 +159,27 @@ EnvelopeFollower::EFMode parseEfMode(const char *label, EnvelopeFollower::EFMode
     return fallback;
 }
 
+EfDestinationMode parseEfDestinationMode(const char *label, EfDestinationMode fallback) {
+    if (!label) {
+        return fallback;
+    }
+    struct Entry {
+        const char *name;
+        EfDestinationMode value;
+    };
+    static constexpr Entry kMap[] = {
+        {"ADD", EfDestinationMode::AddClamp},      {"ADD_CLAMP", EfDestinationMode::AddClamp},
+        {"SUBTRACT", EfDestinationMode::Subtract}, {"REPLACE", EfDestinationMode::Replace},
+        {"SCALE", EfDestinationMode::Scale},       {"CENTERED", EfDestinationMode::Centered},
+    };
+    for (const auto &entry : kMap) {
+        if (equalsIgnoreCase(label, entry.name)) {
+            return entry.value;
+        }
+    }
+    return fallback;
+}
+
 void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out) {
     out = defaults;
     if (obj.isNull()) {
@@ -202,6 +223,32 @@ void parseEfSettings(JsonObject obj, const EfSettings &defaults, EfSettings &out
 
     if (obj.containsKey("gain")) {
         out.gain = obj["gain"].as<float>();
+    }
+
+    if (obj.containsKey("destination_mode")) {
+        if (obj["destination_mode"].is<const char *>()) {
+            out.destinationMode = static_cast<uint8_t>(
+                parseEfDestinationMode(obj["destination_mode"].as<const char *>(),
+                                       static_cast<EfDestinationMode>(out.destinationMode)));
+        } else {
+            out.destinationMode =
+                readClampedU8(obj, "destination_mode", "destinationMode", 0,
+                              static_cast<int>(EfDestinationMode::Centered), out.destinationMode);
+        }
+    } else if (obj.containsKey("destinationMode")) {
+        if (obj["destinationMode"].is<const char *>()) {
+            out.destinationMode = static_cast<uint8_t>(
+                parseEfDestinationMode(obj["destinationMode"].as<const char *>(),
+                                       static_cast<EfDestinationMode>(out.destinationMode)));
+        } else {
+            out.destinationMode =
+                readClampedU8(obj, "destination_mode", "destinationMode", 0,
+                              static_cast<int>(EfDestinationMode::Centered), out.destinationMode);
+        }
+    } else if (obj.containsKey("destination_mode_name")) {
+        out.destinationMode = static_cast<uint8_t>(
+            parseEfDestinationMode(obj["destination_mode_name"].as<const char *>(),
+                                   static_cast<EfDestinationMode>(out.destinationMode)));
     }
 
     if (obj.containsKey("mode")) {

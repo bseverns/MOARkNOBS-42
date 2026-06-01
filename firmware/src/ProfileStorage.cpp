@@ -42,6 +42,9 @@ ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings) {
     sanitized.gateHysteresis = constrain(sanitized.gateHysteresis, 0, 127);
     sanitized.activityThreshold = constrain(sanitized.activityThreshold, 0, 127);
     sanitized.gainTarget = constrain(sanitized.gainTarget, 0, 127);
+    if (sanitized.destinationMode > static_cast<uint8_t>(EfDestinationMode::Centered)) {
+        sanitized.destinationMode = static_cast<uint8_t>(EfDestinationMode::AddClamp);
+    }
     sanitized.attackMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.attackMs),
                                                          static_cast<int>(EF_TIME_MIN_MS),
                                                          static_cast<int>(EF_TIME_MAX_MS)));

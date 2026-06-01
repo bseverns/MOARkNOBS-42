@@ -90,6 +90,22 @@ constexpr float kMaxFilterQ = EF_FILTER_Q_MAX;
 constexpr int kUnassignedEnvelope = -1;
 constexpr uint16_t kProfileSettingsVersionV1 = 0x0001;
 constexpr uint16_t kProfileSettingsVersionV2 = 0x0002;
+constexpr uint16_t kProfileSettingsVersionV3 = 0x0003;
+
+struct __attribute__((packed)) LegacyProfileEfSettings {
+    uint8_t mode = 0;
+    uint8_t autoBaseline = 1;
+    uint8_t autoGain = 1;
+    uint8_t gateThreshold = 16;
+    uint8_t gateHysteresis = 4;
+    uint8_t activityThreshold = 4;
+    uint8_t gainTarget = 102;
+    uint16_t attackMs = 5;
+    uint16_t releaseMs = 20;
+    uint16_t rmsWindowMs = 50;
+    uint16_t baselineTauMs = 2000;
+    uint16_t gainTauMs = 3000;
+};
 
 struct __attribute__((packed)) LegacyProfileLfoRoute {
     uint8_t type = 0;
@@ -103,7 +119,13 @@ struct __attribute__((packed)) LegacyProfileLfoRoute {
 
 struct __attribute__((packed)) LegacyProfileSlotSettings {
     uint8_t midiChannel = 1;
-    ProfileEfSettings ef{};
+    LegacyProfileEfSettings ef{};
+};
+
+struct __attribute__((packed)) LegacyProfileSlotSettingsV2 {
+    uint8_t midiChannel = 1;
+    int8_t followerIndex = -1;
+    LegacyProfileEfSettings ef{};
 };
 
 struct __attribute__((packed)) LegacyProfileData {
@@ -125,7 +147,18 @@ struct __attribute__((packed)) LegacyProfileDataV2 {
     ProfileLedSettings led{};
     std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{};
     std::array<LegacyProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
-    std::array<ProfileSlotSettings, NUM_SLOTS> slots{};
+    std::array<LegacyProfileSlotSettingsV2, NUM_SLOTS> slots{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV3 {
+    uint16_t version = kProfileSettingsVersionV3;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    ProfileArpSettings arp{};
+    ProfileLedSettings led{};
+    std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{};
+    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
+    std::array<LegacyProfileSlotSettingsV2, NUM_SLOTS> slots{};
 };
 
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
@@ -161,6 +194,34 @@ uint16_t computeLegacyProfileCrc(const LegacyProfileDataV2 &profile) {
         crc = crc16_update(crc, bytes[i]);
     }
     return crc;
+}
+
+uint16_t computeLegacyProfileCrc(const LegacyProfileDataV3 &profile) {
+    constexpr size_t kCrcStart = offsetof(LegacyProfileDataV3, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(LegacyProfileDataV3); ++i) {
+        crc = crc16_update(crc, bytes[i]);
+    }
+    return crc;
+}
+
+ProfileEfSettings migrateLegacyProfileEf(const LegacyProfileEfSettings &legacy) {
+    ProfileEfSettings ef{};
+    ef.mode = legacy.mode;
+    ef.autoBaseline = legacy.autoBaseline;
+    ef.autoGain = legacy.autoGain;
+    ef.gateThreshold = legacy.gateThreshold;
+    ef.gateHysteresis = legacy.gateHysteresis;
+    ef.activityThreshold = legacy.activityThreshold;
+    ef.gainTarget = legacy.gainTarget;
+    ef.destinationMode = static_cast<uint8_t>(EfDestinationMode::AddClamp);
+    ef.attackMs = legacy.attackMs;
+    ef.releaseMs = legacy.releaseMs;
+    ef.rmsWindowMs = legacy.rmsWindowMs;
+    ef.baselineTauMs = legacy.baselineTauMs;
+    ef.gainTauMs = legacy.gainTauMs;
+    return ef;
 }
 
 ProfileLfoRoute migrateLegacyRoute(const LegacyProfileLfoRoute &legacy) {
@@ -279,6 +340,9 @@ MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings) {
     sanitized.gateHysteresis = constrain(sanitized.gateHysteresis, 0, 127);
     sanitized.activityThreshold = constrain(sanitized.activityThreshold, 0, 127);
     sanitized.gainTarget = constrain(sanitized.gainTarget, 0, 127);
+    if (sanitized.destinationMode > static_cast<uint8_t>(EfDestinationMode::Centered)) {
+        sanitized.destinationMode = static_cast<uint8_t>(EfDestinationMode::AddClamp);
+    }
     sanitized.attackMs = static_cast<uint16_t>(constrain(static_cast<int>(sanitized.attackMs),
                                                          static_cast<int>(EF_TIME_MIN_MS),
                                                          static_cast<int>(EF_TIME_MAX_MS)));
@@ -567,6 +631,30 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         return true;
     }
 
+    if (stored.version == kProfileSettingsVersionV3) {
+        LegacyProfileDataV3 legacy{};
+        storageGet(base, legacy);
+        uint16_t crc = computeLegacyProfileCrc(legacy);
+        if (crc != legacy.crc) {
+            return false;
+        }
+        ProfileData migrated{};
+        migrated.version = PROFILE_SETTINGS_VERSION;
+        migrated.routeCount = legacy.routeCount;
+        migrated.arp = legacy.arp;
+        migrated.led = legacy.led;
+        migrated.lfos = legacy.lfos;
+        migrated.routes = legacy.routes;
+        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+            migrated.slots[i].midiChannel = legacy.slots[i].midiChannel;
+            migrated.slots[i].followerIndex = legacy.slots[i].followerIndex;
+            migrated.slots[i].ef = migrateLegacyProfileEf(legacy.slots[i].ef);
+        }
+        profile = sanitizeProfileData(migrated);
+        profile.crc = computeProfileCrc(profile);
+        return true;
+    }
+
     if (stored.version == kProfileSettingsVersionV2) {
         LegacyProfileDataV2 legacy{};
         storageGet(base, legacy);
@@ -583,7 +671,11 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {
             migrated.routes[i] = migrateLegacyRoute(legacy.routes[i]);
         }
-        migrated.slots = legacy.slots;
+        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+            migrated.slots[i].midiChannel = legacy.slots[i].midiChannel;
+            migrated.slots[i].followerIndex = legacy.slots[i].followerIndex;
+            migrated.slots[i].ef = migrateLegacyProfileEf(legacy.slots[i].ef);
+        }
         profile = sanitizeProfileData(migrated);
         profile.crc = computeProfileCrc(profile);
         return true;
@@ -608,7 +700,7 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
             migrated.slots[i].midiChannel = legacy.slots[i].midiChannel;
             migrated.slots[i].followerIndex = slots[i].getEnvelopeFollowerIndex();
-            migrated.slots[i].ef = legacy.slots[i].ef;
+            migrated.slots[i].ef = migrateLegacyProfileEf(legacy.slots[i].ef);
         }
         profile = sanitizeProfileData(migrated);
         profile.crc = computeProfileCrc(profile);

@@ -23,7 +23,8 @@ function isDefaultSlotEfForDevice(ef, efIndex) {
     oversample: 4,
     smoothing: 0.2,
     baseline: 0,
-    gain: 1
+    gain: 1,
+    destination_mode: 'add_clamp'
   };
   return Object.entries(expected).every(([key, value]) => {
     if (ef[key] === undefined) return true;
@@ -119,7 +120,10 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
         'activity_threshold',
         'activityThreshold',
         'gain_target',
-        'gainTarget'
+        'gainTarget',
+        'destination_mode',
+        'destinationMode',
+        'destination_mode_name'
       ],
       clone
     );

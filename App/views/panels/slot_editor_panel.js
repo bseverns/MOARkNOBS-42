@@ -36,6 +36,14 @@ export function createSlotEditorPanel({
     GATE: 'Threshold gate with hysteresis for on/off style dynamics.',
     FOLLOWER: 'Attack/release follower for smooth contour tracking.'
   };
+  const efDestinationOptions = [
+    { value: 'add_clamp', label: 'Add' },
+    { value: 'subtract', label: 'Subtract' },
+    { value: 'replace', label: 'Replace' },
+    { value: 'scale', label: 'Scale' },
+    { value: 'centered', label: 'Centered' }
+  ];
+  const efDestinationValues = efDestinationOptions.map((option) => option.value);
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
   function populateDetail() {
@@ -354,6 +362,19 @@ export function createSlotEditorPanel({
       efFieldset.appendChild(
         makeNumber('Gain', ef.gain ?? 1, 0, 8, 0.1, (value) =>
           stageSlotEnvelopeField(slotState.selected, 'gain', value)
+        )
+      );
+      efFieldset.appendChild(
+        makeSelect(
+          'Destination mode',
+          efDestinationValues,
+          resolveEfDestinationMode(ef),
+          (value) => stageSlotEnvelopeField(slotState.selected, 'destination_mode', value),
+          {
+            help: 'Choose how EF modulation combines with the base MIDI value.',
+            formatOptionLabel: (value) =>
+              efDestinationOptions.find((option) => option.value === value)?.label ?? value
+          }
         )
       );
       if (activeEditorTab === 'envelope') {
@@ -729,7 +750,8 @@ export function createSlotEditorPanel({
       gateThreshold: 16,
       gateHysteresis: 4,
       activityThreshold: 4,
-      gainTarget: 102
+      gainTarget: 102,
+      destination_mode: 'add_clamp'
     };
     const index = Number.isFinite(slot?.efIndex)
       ? Number(slot.efIndex)
@@ -773,6 +795,10 @@ export function createSlotEditorPanel({
     if (base.gateHysteresis === undefined) base.gateHysteresis = base.gate_hysteresis;
     if (base.activityThreshold === undefined) base.activityThreshold = base.activity_threshold;
     if (base.gainTarget === undefined) base.gainTarget = base.gain_target;
+    if (base.destination_mode === undefined) {
+      base.destination_mode =
+        base.destinationMode ?? base.destination_mode_name ?? base.destinationModeName;
+    }
     if (typeof base.mode === 'string') {
       const idx = efModeNames.indexOf(base.mode.toUpperCase());
       base.mode = idx >= 0 ? idx : defaults.mode;
@@ -810,8 +836,27 @@ export function createSlotEditorPanel({
     base.gainTarget = Number.isFinite(Number(base.gainTarget))
       ? Math.max(0, Math.min(127, Math.round(Number(base.gainTarget))))
       : defaults.gainTarget;
+    base.destination_mode = resolveEfDestinationMode(base);
     base.index = index;
     return base;
+  }
+
+  function resolveEfDestinationMode(ef) {
+    const raw =
+      ef?.destination_mode ??
+      ef?.destinationMode ??
+      ef?.destination_mode_name ??
+      ef?.destinationModeName;
+    if (typeof raw === 'string') {
+      const normalized = raw.toLowerCase();
+      if (normalized === 'add') return 'add_clamp';
+      if (efDestinationValues.includes(normalized)) return normalized;
+    }
+    const index = Number(raw);
+    if (Number.isFinite(index)) {
+      return efDestinationValues[Math.max(0, Math.min(efDestinationValues.length - 1, index))];
+    }
+    return 'add_clamp';
   }
 
   function resolveEfModeName(ef) {

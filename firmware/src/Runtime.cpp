@@ -114,6 +114,29 @@ bool internalClockDominant() { return g_tappedBPM > 0.0f && !externalClockDomina
 
 bool performanceClockActive() { return externalClockDominant() || internalClockDominant(); }
 
+uint8_t applyEfDestinationMode(uint8_t baseline, uint8_t contribution, EfDestinationMode mode) {
+    int value = baseline;
+    switch (mode) {
+    case EfDestinationMode::AddClamp:
+        value = static_cast<int>(baseline) + static_cast<int>(contribution);
+        break;
+    case EfDestinationMode::Subtract:
+        value = static_cast<int>(baseline) - static_cast<int>(contribution);
+        break;
+    case EfDestinationMode::Replace:
+        value = contribution;
+        break;
+    case EfDestinationMode::Scale:
+        value = static_cast<int>(std::lround(
+            (static_cast<float>(baseline) * static_cast<float>(contribution)) / 127.0f));
+        break;
+    case EfDestinationMode::Centered:
+        value = static_cast<int>(baseline) + static_cast<int>(contribution) - 64;
+        break;
+    }
+    return static_cast<uint8_t>(constrain(value, 0, 127));
+}
+
 uint8_t resolveSlotNoteVelocity(uint8_t slotIndex, const MIDISlot &slot) {
     uint8_t velo = 125;
     if (slotIndex < efVoices.size() && efVoices[slotIndex].hasRendered()) {
@@ -631,8 +654,12 @@ void processEnvelopes() {
             if (potIndex >= NUM_SLOTS)
                 continue;
             uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
-            int modulatedInt = static_cast<int>(baselineMidi) + envelopeContribution;
-            uint8_t modulatedValue = static_cast<uint8_t>(constrain(modulatedInt, 0, 127));
+            const auto destinationMode =
+                settings.destinationMode <= static_cast<uint8_t>(EfDestinationMode::Centered)
+                    ? static_cast<EfDestinationMode>(settings.destinationMode)
+                    : EfDestinationMode::AddClamp;
+            uint8_t modulatedValue =
+                applyEfDestinationMode(baselineMidi, envelopeContribution, destinationMode);
 
             bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
             if (valueChanged) {

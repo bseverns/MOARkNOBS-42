@@ -68,7 +68,9 @@ export function createSimulator(simDeps = {}) {
           oversample: 4,
           smoothing: 0.2 + (idx % 3) * 0.1,
           baseline: 0,
-          gain: 1
+          gain: 1,
+          destination_mode: 'add_clamp',
+          destination_mode_name: 'add_clamp'
         },
         ef_payload: {
           type: efFilterNames[filterIndex],
@@ -311,7 +313,7 @@ export function createSimulator(simDeps = {}) {
           source_type: 'ef',
           transform: `${slot.ef?.filter_name ?? 'Linear'} gain ${slot.ef?.gain ?? 1}`,
           destination: `slot${index}.value`,
-          mode: 'add_clamp',
+          mode: slot.ef?.destination_mode ?? 'add_clamp',
           exit: 'midi_cc',
           active: Boolean(slot.active),
           persisted: true,

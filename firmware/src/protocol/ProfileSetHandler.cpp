@@ -85,6 +85,11 @@ bool parseProfileEf(JsonObject obj, ProfileEfSettings &out) {
     if (obj.containsKey("gain_target")) {
         out.gainTarget = clampedU8(obj, "gain_target", 0, 127, out.gainTarget);
     }
+    if (obj.containsKey("destination_mode")) {
+        out.destinationMode =
+            clampedU8(obj, "destination_mode", 0, static_cast<int>(EfDestinationMode::Centered),
+                      out.destinationMode);
+    }
     return true;
 }
 

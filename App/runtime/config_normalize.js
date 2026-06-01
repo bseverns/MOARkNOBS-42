@@ -6,6 +6,7 @@ const EF_FILTER_FREQ_MAX = 5000;
 const EF_FILTER_Q_MIN = 0.5;
 const EF_FILTER_Q_MAX = 4.0;
 const EF_MODE_NAMES = ['PEAK', 'RMS', 'GATE', 'FOLLOWER'];
+const EF_DESTINATION_MODE_NAMES = ['add_clamp', 'subtract', 'replace', 'scale', 'centered'];
 const EF_IDLE_FLOOR_DEFAULT = 24;
 const LED_MODE_NAMES = ['STATIC', 'PEAK_HOLD', 'TRAIL', 'CLOCK_PULSE'];
 const LEGACY_ENVELOPE_ANALOG_PINS = [14, 15, 16, 17, 20, 21];
@@ -55,7 +56,8 @@ function normalizeSlotEnvelope(slot) {
     gateThreshold: 16,
     gateHysteresis: 4,
     activityThreshold: 4,
-    gainTarget: 102
+    gainTarget: 102,
+    destination_mode: 'add_clamp'
   };
   const efSource = slot?.ef && typeof slot.ef === 'object' ? slot.ef : {};
   const ef = {
@@ -79,7 +81,8 @@ function normalizeSlotEnvelope(slot) {
     gateThreshold: defaults.gateThreshold,
     gateHysteresis: defaults.gateHysteresis,
     activityThreshold: defaults.activityThreshold,
-    gainTarget: defaults.gainTarget
+    gainTarget: defaults.gainTarget,
+    destination_mode: defaults.destination_mode
   };
   if (efSource.index !== undefined) ef.index = efSource.index;
   if (efSource.filter_index !== undefined) ef.filter_index = efSource.filter_index;
@@ -113,6 +116,11 @@ function normalizeSlotEnvelope(slot) {
   if (efSource.activity_threshold !== undefined) ef.activityThreshold = efSource.activity_threshold;
   if (efSource.gainTarget !== undefined) ef.gainTarget = efSource.gainTarget;
   if (efSource.gain_target !== undefined) ef.gainTarget = efSource.gain_target;
+  if (efSource.destination_mode !== undefined) ef.destination_mode = efSource.destination_mode;
+  if (efSource.destinationMode !== undefined) ef.destination_mode = efSource.destinationMode;
+  if (efSource.destination_mode_name !== undefined) {
+    ef.destination_mode = efSource.destination_mode_name;
+  }
   const index = Number.isFinite(Number(slot?.efIndex))
     ? Number(slot.efIndex)
     : Number.isFinite(Number(ef.index))
@@ -174,6 +182,29 @@ function normalizeSlotEnvelope(slot) {
     127
   );
   ef.gainTarget = clamp(Math.round(Number(ef.gainTarget) || defaults.gainTarget), 0, 127);
+  if (typeof ef.destination_mode === 'string') {
+    const normalized = ef.destination_mode.toLowerCase();
+    if (normalized === 'add') {
+      ef.destination_mode = 'add_clamp';
+    } else if (EF_DESTINATION_MODE_NAMES.includes(normalized)) {
+      ef.destination_mode = normalized;
+    } else if (Number.isFinite(Number(normalized))) {
+      ef.destination_mode =
+        EF_DESTINATION_MODE_NAMES[
+          clamp(Math.round(Number(normalized)), 0, EF_DESTINATION_MODE_NAMES.length - 1)
+        ];
+    } else {
+      ef.destination_mode = defaults.destination_mode;
+    }
+  } else if (Number.isFinite(Number(ef.destination_mode))) {
+    ef.destination_mode =
+      EF_DESTINATION_MODE_NAMES[
+        clamp(Math.round(Number(ef.destination_mode)), 0, EF_DESTINATION_MODE_NAMES.length - 1)
+      ];
+  }
+  if (!EF_DESTINATION_MODE_NAMES.includes(ef.destination_mode)) {
+    ef.destination_mode = defaults.destination_mode;
+  }
   return ef;
 }
 

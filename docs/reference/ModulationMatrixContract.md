@@ -44,8 +44,10 @@ The response is JSON:
 ## Route Semantics
 
 - `mode: "replace"` means the source writes the outgoing destination value.
-- `mode: "add_clamp"` is the current EF behavior: EF contribution is added to
+- `mode: "add_clamp"` is the default EF behavior: EF contribution is added to
   the baseline pot MIDI value and clamped to `0..127`.
+- EF routes may also report `subtract`, `replace`, `scale`, or `centered`.
+  These destination modes are persisted with the slot EF profile settings.
 - `mode: "pre_add_arg"` means ARG math is shaping the EF contribution before the
   final EF add/clamp destination.
 - `mode: "add_bus"` means an LFO is summed into an internal runtime modulation
@@ -55,8 +57,9 @@ The response is JSON:
 
 ## Conflicts
 
-`conflicts` currently reports shared MIDI CC writers. A warning is not a failure:
-collisions can be musically useful, but the device must make them visible.
+`conflicts` currently reports shared MIDI CC writers and shared slot-value
+writers. A warning is not a failure: collisions can be musically useful, but
+the device must make them visible.
 
 Example:
 
@@ -84,6 +87,4 @@ Older profile payloads migrate as `amount: 100`, `range.min: 0`, and
 
 ## Planned Extensions
 
-Future profile versions should add optional offset, slew, and curve. EF
-destination behavior should keep today&apos;s `add_clamp` default but expose
-explicit `add`, `subtract`, `replace`, `scale`, and `centered` modes.
+Future profile versions should add optional offset, slew, and curve.

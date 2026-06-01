@@ -71,6 +71,13 @@ export function normalizeSlotPatchEntry(entry) {
     pushNumber('smoothing');
     pushNumber('baseline');
     pushNumber('gain');
+    if (entry.ef.destination_mode !== undefined) {
+      ef.destination_mode = entry.ef.destination_mode;
+    } else if (entry.ef.destinationMode !== undefined) {
+      ef.destination_mode = entry.ef.destinationMode;
+    } else if (entry.ef.destination_mode_name !== undefined) {
+      ef.destination_mode = String(entry.ef.destination_mode_name);
+    }
     if (Object.keys(ef).length) {
       fields.ef = ef;
     }

@@ -46,6 +46,15 @@ enum class ARGMethod : uint8_t {
     XORR,
 };
 
+/** How a slot-local EF contribution is folded into the outgoing MIDI value. */
+enum class EfDestinationMode : uint8_t {
+    AddClamp = 0, //!< Current default: base pot value + EF contribution, clamped 0..127
+    Subtract,     //!< Base pot value - EF contribution, clamped 0..127
+    Replace,      //!< EF contribution replaces the base pot value
+    Scale,        //!< EF contribution scales the base pot value
+    Centered,     //!< EF contribution is treated as a centered bipolar offset
+};
+
 /** Envelope follower payload persisted alongside the slot definition. */
 struct SlotEnvelopePayload {
     uint8_t filterType = 0; //!< EnvelopeFollower::FilterType value
@@ -85,6 +94,8 @@ struct MIDISlot {
         uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
         uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
         uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
+        uint8_t destinationMode =
+            static_cast<uint8_t>(EfDestinationMode::AddClamp); //!< EfDestinationMode value
         uint16_t attackMs = 5;         //!< Attack time for Peak/Follower modes
         uint16_t releaseMs = 20;       //!< Release time for Peak/Follower modes
         uint16_t rmsWindowMs = 50;     //!< RMS integration window

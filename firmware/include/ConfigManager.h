@@ -94,11 +94,13 @@ struct __attribute__((packed)) ProfileEfSettings {
     uint8_t gateHysteresis = 4;    //!< Gate hysteresis (0-127)
     uint8_t activityThreshold = 4; //!< Activity threshold (0-127)
     uint8_t gainTarget = 102;      //!< Auto-gain target (0-127)
-    uint16_t attackMs = 5;         //!< Attack time (ms)
-    uint16_t releaseMs = 20;       //!< Release time (ms)
-    uint16_t rmsWindowMs = 50;     //!< RMS window (ms)
-    uint16_t baselineTauMs = 2000; //!< Baseline time constant (ms)
-    uint16_t gainTauMs = 3000;     //!< Gain time constant (ms)
+    uint8_t destinationMode =
+        static_cast<uint8_t>(EfDestinationMode::AddClamp); //!< EfDestinationMode value
+    uint16_t attackMs = 5;                                 //!< Attack time (ms)
+    uint16_t releaseMs = 20;                               //!< Release time (ms)
+    uint16_t rmsWindowMs = 50;                             //!< RMS window (ms)
+    uint16_t baselineTauMs = 2000;                         //!< Baseline time constant (ms)
+    uint16_t gainTauMs = 3000;                             //!< Gain time constant (ms)
 };
 
 struct __attribute__((packed)) ProfileSlotSettings {
@@ -146,7 +148,7 @@ struct __attribute__((packed)) ProfileLfoRoute {
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0003;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0004;
 
 struct __attribute__((packed)) ProfileData {
     uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version

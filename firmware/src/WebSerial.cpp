@@ -430,6 +430,7 @@ void WebSerial::sendSlotPatch(const ConfigManager &config, uint8_t slotIndex) {
     ef["gate_hysteresis"] = slot.efSettings.gateHysteresis;
     ef["activity_threshold"] = slot.efSettings.activityThreshold;
     ef["gain_target"] = slot.efSettings.gainTarget;
+    ef["destination_mode"] = slot.efSettings.destinationMode;
     body["active"] = slot.active;
     body["arp_note"] = slot.arpNote;
     body["arpNote"] = slot.arpNote;

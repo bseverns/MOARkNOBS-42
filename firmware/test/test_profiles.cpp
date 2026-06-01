@@ -66,6 +66,8 @@ ProfileData makePopulatedProfile() {
         profile.slots[i].ef.autoGain = static_cast<uint8_t>((i + 1) % 2);
         profile.slots[i].ef.gateThreshold = static_cast<uint8_t>(20 + i);
         profile.slots[i].ef.gainTarget = static_cast<uint8_t>(64 + i);
+        profile.slots[i].ef.destinationMode =
+            static_cast<uint8_t>(i % (static_cast<uint8_t>(EfDestinationMode::Centered) + 1));
         profile.slots[i].ef.attackMs = static_cast<uint16_t>(10 + i);
         profile.slots[i].ef.releaseMs = static_cast<uint16_t>(30 + i);
     }
@@ -101,6 +103,7 @@ void test_profile_bounds_clamp() {
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         profile.slots[i].midiChannel = 0;
         profile.slots[i].ef.mode = 99;
+        profile.slots[i].ef.destinationMode = 99;
         profile.slots[i].ef.attackMs = 0;
         profile.slots[i].ef.releaseMs = 65535;
     }
@@ -115,6 +118,8 @@ void test_profile_bounds_clamp() {
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel <= 16);
         TEST_ASSERT_TRUE(loaded.slots[i].ef.mode <=
                          static_cast<uint8_t>(EnvelopeFollower::EFMode::Follower));
+        TEST_ASSERT_TRUE(loaded.slots[i].ef.destinationMode <=
+                         static_cast<uint8_t>(EfDestinationMode::Centered));
         TEST_ASSERT_EQUAL_UINT16(EF_TIME_MIN_MS, loaded.slots[i].ef.attackMs);
         TEST_ASSERT_EQUAL_UINT16(EF_TIME_MAX_MS, loaded.slots[i].ef.releaseMs);
     }
@@ -153,6 +158,7 @@ void test_profile_round_trip_preserves_profile_payload() {
     TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.routes[1].depth, loaded.routes[1].depth);
     TEST_ASSERT_EQUAL_UINT8(saved.slots[0].midiChannel, loaded.slots[0].midiChannel);
     TEST_ASSERT_EQUAL_UINT8(saved.slots[0].ef.mode, loaded.slots[0].ef.mode);
+    TEST_ASSERT_EQUAL_UINT8(saved.slots[0].ef.destinationMode, loaded.slots[0].ef.destinationMode);
     TEST_ASSERT_EQUAL_UINT8(saved.slots[0].ef.gainTarget, loaded.slots[0].ef.gainTarget);
     TEST_ASSERT_EQUAL_UINT8(saved.slots[NUM_SLOTS - 1].midiChannel,
                             loaded.slots[NUM_SLOTS - 1].midiChannel);

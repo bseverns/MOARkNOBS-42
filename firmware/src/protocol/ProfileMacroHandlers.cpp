@@ -45,6 +45,7 @@ void writeProfileEf(JsonObject obj, const ProfileEfSettings &settings) {
     obj["gate_hysteresis"] = settings.gateHysteresis;
     obj["activity_threshold"] = settings.activityThreshold;
     obj["gain_target"] = settings.gainTarget;
+    obj["destination_mode"] = settings.destinationMode;
 }
 
 int readOptionalCommandValue(const String &command, int fallback) {

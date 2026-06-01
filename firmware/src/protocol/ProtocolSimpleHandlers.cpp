@@ -45,7 +45,7 @@ namespace {
 // GET_CONFIG materializes the full live config tree, which is much larger than
 // the hot state we want to keep in RAM1. Park the scratch document in RAM2.
 DMAMEM StaticJsonDocument<65536> getConfigDoc;
-DMAMEM StaticJsonDocument<24576> modMatrixDoc;
+DMAMEM StaticJsonDocument<32768> modMatrixDoc;
 
 struct MidiCcWriterBucket {
     uint8_t channel = 0;
@@ -56,6 +56,31 @@ struct MidiCcWriterBucket {
 
 std::array<MidiCcWriterBucket, 96> midiCcWriters{};
 size_t midiCcWriterCount = 0;
+
+struct SlotWriterBucket {
+    uint8_t slot = 0;
+    uint8_t count = 0;
+    char writers[192] = {0};
+};
+
+std::array<SlotWriterBucket, NUM_SLOTS> slotWriters{};
+size_t slotWriterCount = 0;
+
+const char *efDestinationModeName(uint8_t mode) {
+    switch (static_cast<EfDestinationMode>(mode)) {
+    case EfDestinationMode::AddClamp:
+        return "add_clamp";
+    case EfDestinationMode::Subtract:
+        return "subtract";
+    case EfDestinationMode::Replace:
+        return "replace";
+    case EfDestinationMode::Scale:
+        return "scale";
+    case EfDestinationMode::Centered:
+        return "centered";
+    }
+    return "add_clamp";
+}
 
 const char *lfoShapeName(LFOShape shape) {
     switch (shape) {
@@ -138,9 +163,13 @@ void resetMidiCcWriterBuckets() {
     for (auto &bucket : midiCcWriters) {
         bucket = MidiCcWriterBucket{};
     }
+    slotWriterCount = 0;
+    for (auto &bucket : slotWriters) {
+        bucket = SlotWriterBucket{};
+    }
 }
 
-void appendWriter(MidiCcWriterBucket &bucket, const char *writer) {
+template <typename Bucket> void appendWriter(Bucket &bucket, const char *writer) {
     if (!writer || writer[0] == '\0') {
         return;
     }
@@ -174,6 +203,29 @@ void registerMidiCcWriter(uint8_t channel, uint8_t cc, const char *writer) {
     MidiCcWriterBucket &bucket = midiCcWriters[midiCcWriterCount++];
     bucket.channel = channel;
     bucket.cc = cc;
+    bucket.count = 1;
+    appendWriter(bucket, writer);
+}
+
+void registerSlotWriter(uint8_t slot, const char *writer) {
+    if (slot >= NUM_SLOTS) {
+        return;
+    }
+    for (size_t i = 0; i < slotWriterCount; ++i) {
+        SlotWriterBucket &bucket = slotWriters[i];
+        if (bucket.slot == slot) {
+            if (bucket.count < 0xFF) {
+                ++bucket.count;
+            }
+            appendWriter(bucket, writer);
+            return;
+        }
+    }
+    if (slotWriterCount >= slotWriters.size()) {
+        return;
+    }
+    SlotWriterBucket &bucket = slotWriters[slotWriterCount++];
+    bucket.slot = slot;
     bucket.count = 1;
     appendWriter(bucket, writer);
 }
@@ -258,6 +310,7 @@ void writePotRoutes(JsonArray routes) {
         writeRouteRange(route);
         JsonObject midi = route.createNestedObject("midi");
         writeSlotMidiDestination(midi, slot);
+        registerSlotWriter(slotIndex, id);
         registerSlotCcWriter(slot, id);
     }
 }
@@ -289,9 +342,10 @@ void writeEfRoutes(JsonArray routes) {
         route["source_type"] = "ef";
         route["transform"] = transform;
         route["destination"] = destination;
-        route["mode"] = "add_clamp";
+        route["mode"] = efDestinationModeName(settings.destinationMode);
         route["exit"] = "midi_cc";
-        route["active"] = slot.active && envelopeFollowers[followerIndex].getActiveState();
+        const bool active = slot.active && envelopeFollowers[followerIndex].getActiveState();
+        route["active"] = active;
         route["persisted"] = true;
         route["amount"] = 1.0f;
         writeRouteRange(route);
@@ -299,7 +353,10 @@ void writeEfRoutes(JsonArray routes) {
         midi["type"] = "CC";
         midi["channel"] = potentiometerManager.getChannel(static_cast<uint8_t>(slotIndex));
         midi["cc"] = potentiometerManager.getCCNumber(static_cast<uint8_t>(slotIndex));
-        registerMidiCcWriter(midi["channel"].as<uint8_t>(), midi["cc"].as<uint8_t>(), id);
+        if (active) {
+            registerSlotWriter(static_cast<uint8_t>(slotIndex), id);
+            registerMidiCcWriter(midi["channel"].as<uint8_t>(), midi["cc"].as<uint8_t>(), id);
+        }
 
         SlotARGConfig arg = sanitizeSlotArg(slot.arg);
         if (arg.enabled != 0) {
@@ -405,9 +462,13 @@ void writeLfoRoutes(JsonArray routes) {
             routeObj["slot"] = slotIndex;
             routeObj["mode"] = "replace";
             routeObj["exit"] = "midi";
+            routeObj["active"] = slot.active;
             JsonObject midi = routeObj.createNestedObject("midi");
             writeSlotMidiDestination(midi, slot);
-            registerSlotCcWriter(slot, id);
+            if (slot.active) {
+                registerSlotWriter(slotIndex, id);
+                registerSlotCcWriter(slot, id);
+            }
             break;
         }
         }
@@ -429,6 +490,23 @@ void writeMidiCcConflicts(JsonArray conflicts) {
         std::snprintf(message, sizeof(message), "%u live modulators write CC %u on channel %u",
                       static_cast<unsigned>(bucket.count), static_cast<unsigned>(bucket.cc),
                       static_cast<unsigned>(bucket.channel));
+        conflict["message"] = message;
+    }
+}
+
+void writeSlotValueConflicts(JsonArray conflicts) {
+    for (size_t i = 0; i < slotWriterCount; ++i) {
+        const SlotWriterBucket &bucket = slotWriters[i];
+        if (bucket.count < 2) {
+            continue;
+        }
+        JsonObject conflict = conflicts.createNestedObject();
+        conflict["target"] = "slot.value";
+        conflict["slot"] = bucket.slot;
+        conflict["writers"] = bucket.writers;
+        char message[96];
+        std::snprintf(message, sizeof(message), "%u live modulators write slot %u value",
+                      static_cast<unsigned>(bucket.count), static_cast<unsigned>(bucket.slot));
         conflict["message"] = message;
     }
 }
@@ -455,6 +533,8 @@ void writeSlotEfConfig(JsonObject ef, const MIDISlot &slot) {
     ef["baseline"] = slot.efSettings.baseline;
     ef["gain"] = slot.efSettings.gain;
     ef["mode"] = slot.efSettings.efMode;
+    ef["destination_mode"] = slot.efSettings.destinationMode;
+    ef["destination_mode_name"] = efDestinationModeName(slot.efSettings.destinationMode);
     ef["auto_baseline"] = slot.efSettings.autoBaseline != 0;
     ef["auto_gain"] = slot.efSettings.autoGain != 0;
     ef["attack_ms"] = slot.efSettings.attackMs;
@@ -692,6 +772,7 @@ void handleGetModMatrixCommand(const String &command) {
 
     JsonArray conflicts = doc.createNestedArray("conflicts");
     writeMidiCcConflicts(conflicts);
+    writeSlotValueConflicts(conflicts);
 
     if (doc.overflowed()) {
         DiagnosticRecord::recordProtocolError("json_overflow");

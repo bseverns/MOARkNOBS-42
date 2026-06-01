@@ -61,6 +61,7 @@ ProfileEfSettings profileEfFromSlot(const MIDISlot::EfSettings &settings) {
     profile.gateHysteresis = settings.gateHysteresis;
     profile.activityThreshold = settings.activityThreshold;
     profile.gainTarget = settings.gainTarget;
+    profile.destinationMode = settings.destinationMode;
     profile.attackMs = settings.attackMs;
     profile.releaseMs = settings.releaseMs;
     profile.rmsWindowMs = settings.rmsWindowMs;
@@ -79,6 +80,7 @@ void applyProfileEfToSlot(const ProfileEfSettings &profile, MIDISlot::EfSettings
     settings.gateHysteresis = profile.gateHysteresis;
     settings.activityThreshold = profile.activityThreshold;
     settings.gainTarget = profile.gainTarget;
+    settings.destinationMode = profile.destinationMode;
     settings.attackMs = profile.attackMs;
     settings.releaseMs = profile.releaseMs;
     settings.rmsWindowMs = profile.rmsWindowMs;
