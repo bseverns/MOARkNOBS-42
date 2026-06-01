@@ -142,7 +142,21 @@ jobs:
         run: npm --prefix bridge ci
       - name: Install app dependencies
         run: npm --prefix App ci --no-audit --no-fund
+      - name: Show system Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          if command -v google-chrome >/dev/null 2>&1; then
+            google-chrome --version
+          elif command -v google-chrome-stable >/dev/null 2>&1; then
+            google-chrome-stable --version
+          else
+            echo "System Chrome not found on runner." >&2
+            exit 1
+          fi
       - name: Build release artifacts
+        env:
+          PLAYWRIGHT_SYSTEM_CHROME: "1"
         run: |
           FW_VERSION="${RELEASE_TAG}" REQUIRE_HIL=0 ./release.sh "${RELEASE_TAG}"
       - name: Upload release build artifact bundle
