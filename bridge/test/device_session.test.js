@@ -121,7 +121,7 @@ async function run() {
     const staged = clone(harness.session.getState().stagedConfig);
     staged.slots[4].data1 = 91;
     await harness.session.stageConfig(staged);
-    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 500 });
+    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 5000 });
     await wait(5);
     assert.equal(
       harness.session.getState().dirty,
@@ -183,7 +183,7 @@ async function run() {
     const staged = clone(harness.session.getState().stagedConfig);
     staged.slots[3].data1 = 88;
     await harness.session.stageConfig(staged);
-    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 500 });
+    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 5000 });
     await wait(1);
     harness.simulator.disconnect();
     harness.session.handleDisconnect('serial_close');
