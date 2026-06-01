@@ -110,6 +110,8 @@ jobs:
           echo "Playwright system dependency install duration: $((end_ts - start_ts))s"
       - name: Install Playwright browsers
         shell: bash
+        env:
+          DEBUG: pw:install
         run: |
           set -euo pipefail
           cache_dir="${HOME}/.cache/ms-playwright"
@@ -121,8 +123,28 @@ jobs:
           else
             echo "No cached browsers present before install."
           fi
+          (
+            while true; do
+              sleep 30
+              echo "Playwright install heartbeat: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            done
+          ) &
+          heartbeat_pid=$!
+          cleanup() {
+            kill "${heartbeat_pid}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
           start_ts=$(date +%s)
-          npx --prefix App playwright install chromium
+          if timeout --foreground 20m npx --prefix App playwright install chromium; then
+            true
+          else
+            status=$?
+            end_ts=$(date +%s)
+            echo "Playwright install failed after $((end_ts - start_ts))s with status ${status}"
+            echo "Playwright cache dir contents at failure:"
+            ls -la "${cache_dir}" || true
+            exit "${status}"
+          fi
           end_ts=$(date +%s)
           echo "Playwright install duration: $((end_ts - start_ts))s"
           echo "Browsers present after install:"
@@ -177,6 +199,8 @@ jobs:
           echo "Playwright system dependency install duration: $((end_ts - start_ts))s"
       - name: Install Playwright browsers
         shell: bash
+        env:
+          DEBUG: pw:install
         run: |
           set -euo pipefail
           cache_dir="${HOME}/.cache/ms-playwright"
@@ -188,8 +212,28 @@ jobs:
           else
             echo "No cached browsers present before install."
           fi
+          (
+            while true; do
+              sleep 30
+              echo "Playwright install heartbeat: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+            done
+          ) &
+          heartbeat_pid=$!
+          cleanup() {
+            kill "${heartbeat_pid}" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
           start_ts=$(date +%s)
-          npx --prefix App playwright install chromium
+          if timeout --foreground 20m npx --prefix App playwright install chromium; then
+            true
+          else
+            status=$?
+            end_ts=$(date +%s)
+            echo "Playwright install failed after $((end_ts - start_ts))s with status ${status}"
+            echo "Playwright cache dir contents at failure:"
+            ls -la "${cache_dir}" || true
+            exit "${status}"
+          fi
           end_ts=$(date +%s)
           echo "Playwright install duration: $((end_ts - start_ts))s"
           echo "Browsers present after install:"
