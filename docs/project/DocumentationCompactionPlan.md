@@ -154,7 +154,7 @@ These should remain intact, but only the index or story pages should be prominen
 - `docs/agents/_reports/`
 - `docs/validation/repo-health-audit-2026-03.md`
 - `docs/project/TODO.md`
-- old app/bridge/runtime upgrade plans
+- old app/runtime upgrade plans and release-packaging plans
 
 ## May Be Merged Later, But Not Yet
 
@@ -178,6 +178,7 @@ These gaps from the first compaction pass now have short reader-facing pages or 
 - `docs/bridge/BridgeDocsMap.md` maps performer, console, contract, packaging, and evidence Bridge docs.
 - `docs/project/RepositoryContents.md` maps source, evidence, generated, and archive areas.
 - `docs/project/AdjacentControllerLessons.md` records the OpenDeck/16n/MIDIBox comparison as a hardening backlog.
+- `docs/bridge/BridgeDocsMap.md` now records the completed Bridge runtime upgrade status, replacing the stale upgrade plan.
 
 ## Missing Recommended Pages
 

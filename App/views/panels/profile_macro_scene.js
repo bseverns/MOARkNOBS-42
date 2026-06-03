@@ -5,6 +5,12 @@ import {
 } from '../state/ui_preferences.js';
 import { createProfileFileIO } from './profile_file_io.js';
 import { createProfileSceneControls } from './profile_scene_controls.js';
+import {
+  createProfileWorkflow,
+  resolveProfileCapabilities,
+  supportsAnyProfileAction as supportsAnyProfileActionForCapabilities,
+  supportsGuidedProfileFlow as supportsGuidedProfileFlowForCapabilities
+} from './profile_workflow.js';
 
 const PROFILE_LABELS = ['A', 'B', 'C', 'D'];
 const PROFILE_RPC_TIMEOUT_MS = 30000;
@@ -177,7 +183,6 @@ export function createProfileMacroScenePanel({
   } = elements;
 
   let profileInteractable = false;
-  let profileRpcLocked = false;
   let profileWizardBusy = false;
   let macroBusy = false;
   let macroAvailable = false;
@@ -189,7 +194,7 @@ export function createProfileMacroScenePanel({
   let lfoDraft = createDefaultLfoDraft();
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
   let profileWizardTargetSlot = activeProfileSlot;
-  let deviceCapabilities = resolveCapabilities(localManifest);
+  let deviceCapabilities = resolveProfileCapabilities(localManifest);
   let bound = false;
   const profileFileIO = createProfileFileIO({
     runtime,
@@ -210,42 +215,31 @@ export function createProfileMacroScenePanel({
     isInteractable: () => profileInteractable,
     supportsScenes: () => deviceCapabilities.scenes
   });
-
-  // Collapse manifest capability flags into a simpler UI-facing shape.
-  function resolveCapabilities(manifest) {
-    const caps =
-      manifest?.capabilities && typeof manifest.capabilities === 'object'
-        ? manifest.capabilities
-        : {};
-    const hasExplicitCapabilities = Object.keys(caps).length > 0;
-    const coreProfileFallback = manifest && !hasExplicitCapabilities;
-    return {
-      profileSave: hasExplicitCapabilities
-        ? Boolean(caps.profile_save)
-        : Boolean(coreProfileFallback),
-      profileLoad: hasExplicitCapabilities
-        ? Boolean(caps.profile_load)
-        : Boolean(coreProfileFallback),
-      profileReset: hasExplicitCapabilities
-        ? Boolean(caps.profile_reset)
-        : Boolean(coreProfileFallback),
-      macroSnapshot: Boolean(caps.macro_snapshot),
-      scenes: Boolean(caps.scenes)
-    };
-  }
+  const profileWorkflow = createProfileWorkflow({
+    runtime,
+    formRenderer,
+    setStatus,
+    clampSlot: clampProfileSlot,
+    slotCount: PROFILE_LABELS.length,
+    getCapabilities: () => deviceCapabilities,
+    isInteractable: () => profileInteractable,
+    getActiveProfileSlot: () => activeProfileSlot,
+    setActiveProfileSlot,
+    describeSlot,
+    refreshProfileControls,
+    refreshProfileUtilities,
+    timeoutMs: PROFILE_RPC_TIMEOUT_MS
+  });
+  const runProfileRpc = (...args) => profileWorkflow.runProfileRpc(...args);
 
   // Some UI paths only need to know whether any device-backed profile action exists.
   function supportsAnyProfileAction() {
-    return (
-      deviceCapabilities.profileSave ||
-      deviceCapabilities.profileLoad ||
-      deviceCapabilities.profileReset
-    );
+    return supportsAnyProfileActionForCapabilities(deviceCapabilities);
   }
 
   // Guided save/switch flows only make sense when both load and save are exposed.
   function supportsGuidedProfileFlow() {
-    return deviceCapabilities.profileSave && deviceCapabilities.profileLoad;
+    return supportsGuidedProfileFlowForCapabilities(deviceCapabilities);
   }
 
   // Explain whether the active profile slot reflects real device storage or only
@@ -639,7 +633,7 @@ export function createProfileMacroScenePanel({
         removeBtn.className = 'lfo-route-remove';
         removeBtn.textContent = 'Remove';
         removeBtn.disabled =
-          !profileInteractable || profileRpcLocked || profileWizardBusy || lfoBusy;
+          !profileInteractable || profileWorkflow.isLocked() || profileWizardBusy || lfoBusy;
         removeBtn.addEventListener('click', () => removeLfoRoute(routeIndex));
         header.append(title, removeBtn);
         card.appendChild(header);
@@ -802,34 +796,6 @@ export function createProfileMacroScenePanel({
     lfoEditor.appendChild(routeSection);
   }
 
-  // Return operator-facing copy for an unsupported profile RPC.
-  function unsupportedProfileActionCopy(method) {
-    switch (method) {
-      case 'save_profile':
-        return 'This firmware cannot archive the current deck state into slots A-D from the browser yet. Use Download profile for a file backup.';
-      case 'load_profile':
-        return 'This firmware cannot switch EEPROM profile slots from the browser yet. Use the device controls, then reconnect to inspect the active state.';
-      case 'reset_profile':
-        return 'This firmware cannot wipe a device profile from the browser yet. Load a baseline backup file instead.';
-      default:
-        return 'This firmware does not expose that profile action to the browser yet.';
-    }
-  }
-
-  // Gate a specific browser-triggered profile method on manifest support.
-  function supportsProfileMethod(method) {
-    switch (method) {
-      case 'save_profile':
-        return deviceCapabilities.profileSave;
-      case 'load_profile':
-        return deviceCapabilities.profileLoad;
-      case 'reset_profile':
-        return deviceCapabilities.profileReset;
-      default:
-        return false;
-    }
-  }
-
   // Synchronize the macro/scene/profile helper text with the current capability set.
   function syncRecoverySupportCopy() {
     updateProfileHint();
@@ -875,7 +841,7 @@ export function createProfileMacroScenePanel({
 
   // Recompute enabled/disabled state for all profile/macro/scene controls.
   function refreshProfileControls() {
-    const canInteract = profileInteractable && !profileRpcLocked;
+    const canInteract = profileInteractable && !profileWorkflow.isLocked();
     if (profileSaveBtn) profileSaveBtn.disabled = !canInteract || !deviceCapabilities.profileSave;
     if (profileLoadBtn) profileLoadBtn.disabled = !canInteract || !deviceCapabilities.profileLoad;
     if (profileResetBtn)
@@ -897,7 +863,8 @@ export function createProfileMacroScenePanel({
   }
 
   function updateArpControls() {
-    const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy && !arpBusy;
+    const canInteract =
+      profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && !arpBusy;
     if (arpRefreshBtn) arpRefreshBtn.disabled = !canInteract;
     if (arpSaveBtn) arpSaveBtn.disabled = !canInteract;
     [arpLengthInput, arpShapeSelect, arpSwingInput, arpGateInput, arpOctaveInput].forEach(
@@ -911,7 +878,8 @@ export function createProfileMacroScenePanel({
   }
 
   function updateLfoControls() {
-    const canInteract = profileInteractable && !profileRpcLocked && !profileWizardBusy && !lfoBusy;
+    const canInteract =
+      profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && !lfoBusy;
     if (lfoRefreshBtn) lfoRefreshBtn.disabled = !canInteract;
     if (lfoSaveBtn) lfoSaveBtn.disabled = !canInteract;
     if (lfoRouteAddBtn) {
@@ -924,7 +892,7 @@ export function createProfileMacroScenePanel({
   }
 
   function updateModMatrixControls() {
-    const canInteract = profileInteractable && !profileRpcLocked && !modMatrixBusy;
+    const canInteract = profileInteractable && !profileWorkflow.isLocked() && !modMatrixBusy;
     if (modMatrixRefreshBtn) modMatrixRefreshBtn.disabled = !canInteract;
   }
 
@@ -945,7 +913,7 @@ export function createProfileMacroScenePanel({
     profileWizardTargetSlot = target;
     const guidedSupported = supportsGuidedProfileFlow();
     const canInteract =
-      profileInteractable && !profileRpcLocked && !profileWizardBusy && guidedSupported;
+      profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && guidedSupported;
     if (profileWizardTarget) profileWizardTarget.disabled = !canInteract;
     if (profileWizardSwitchBtn) profileWizardSwitchBtn.disabled = !canInteract;
     const dirtyNow = runtime.getState().dirty;
@@ -1066,7 +1034,7 @@ export function createProfileMacroScenePanel({
       setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
       return;
     }
-    if (profileRpcLocked || arpBusy || lfoBusy) return;
+    if (profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
     arpBusy = true;
     lfoBusy = true;
     refreshProfileControls();
@@ -1108,7 +1076,7 @@ export function createProfileMacroScenePanel({
   }
 
   async function saveArpProfile() {
-    if (!profileInteractable || profileRpcLocked || arpBusy) return;
+    if (!profileInteractable || profileWorkflow.isLocked() || arpBusy) return;
     readArpFormIntoDraft();
     arpBusy = true;
     refreshProfileControls();
@@ -1133,7 +1101,7 @@ export function createProfileMacroScenePanel({
   }
 
   async function saveLfoProfile() {
-    if (!profileInteractable || profileRpcLocked || lfoBusy) return;
+    if (!profileInteractable || profileWorkflow.isLocked() || lfoBusy) return;
     lfoBusy = true;
     refreshProfileControls();
     setLfoStatus('busy', `Saving LFO settings to ${describeSlot()}…`);
@@ -1182,7 +1150,7 @@ export function createProfileMacroScenePanel({
   }
 
   async function refreshModMatrix() {
-    if (!profileInteractable || profileRpcLocked || modMatrixBusy) return;
+    if (!profileInteractable || profileWorkflow.isLocked() || modMatrixBusy) return;
     modMatrixBusy = true;
     updateModMatrixControls();
     setModMatrixStatus('busy', 'Reading modulation matrix…');
@@ -1209,82 +1177,9 @@ export function createProfileMacroScenePanel({
     }
   }
 
-  async function runProfileRpc(
-    method,
-    { busyLabel, successLabel, successCopy, expectConfig } = {}
-  ) {
-    // Shared profile RPC lane: one in-flight action at a time to keep slot/apply state coherent.
-    if (!supportsProfileMethod(method)) {
-      setStatus('warn', 'Profile action unavailable', unsupportedProfileActionCopy(method));
-      return;
-    }
-    if (!profileInteractable) {
-      setStatus('warn', 'Profile offline', 'Connect to the deck before using profiles.');
-      return;
-    }
-    const dirtyBefore = runtime.getState().dirty;
-    profileRpcLocked = true;
-    refreshProfileControls();
-    try {
-      if (expectConfig) {
-        // Loading/resetting a profile replaces the staged snapshot, so drop any debounced
-        // field-level patches before they replay stale edits back into the fresh config.
-        formRenderer.clearPendingPatches();
-      }
-      // Saving a profile always snapshots firmware state, so stage/apply first to avoid storing
-      // stale EEPROM values when local edits are still dirty.
-      if (method === 'save_profile' && dirtyBefore) {
-        setStatus('warn', 'Applying staged edits…', `${describeSlot()} • syncing before save`);
-        await runtime.apply();
-      }
-    } catch (err) {
-      profileRpcLocked = false;
-      refreshProfileControls();
-      setStatus('err', 'Apply failed', err.message || String(err));
-      return;
-    }
-    setStatus('warn', busyLabel, `${describeSlot()} • busy`);
-    let utilityRefreshNeeded = false;
-    try {
-      const response = await runtime.sendRpc(
-        { rpc: method, slot: activeProfileSlot },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
-      );
-      // Firmware may report an authoritative slot index; trust it and realign local selection.
-      const responseSlot = clampProfileSlot(
-        response?.slot ?? response?.profile ?? activeProfileSlot,
-        PROFILE_LABELS.length
-      );
-      setActiveProfileSlot(responseSlot);
-      if (expectConfig) {
-        let payload = response?.config ?? null;
-        if (!payload || typeof payload !== 'object' || !Array.isArray(payload?.slots)) {
-          const configPayload = await runtime.sendRpc(
-            { rpc: 'get_config' },
-            { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
-          );
-          payload = configPayload?.config ?? configPayload;
-        }
-        if (payload && typeof payload === 'object') {
-          runtime.replaceConfig(payload);
-        }
-      }
-      utilityRefreshNeeded = true;
-      setStatus('ok', successLabel, successCopy ?? describeSlot());
-    } catch (err) {
-      setStatus('err', `${successLabel ?? 'Profile'} failed`, err.message || String(err));
-    } finally {
-      profileRpcLocked = false;
-      refreshProfileControls();
-      if (utilityRefreshNeeded) {
-        void refreshProfileUtilities({ silent: true });
-      }
-    }
-  }
-
   async function handleWizardSwitchProfile() {
     // Step 1: bind the UI to the selected slot and pull that slot's config into staged/live state.
-    if (!profileInteractable || profileRpcLocked || profileWizardBusy) return;
+    if (!profileInteractable || profileWorkflow.isLocked() || profileWizardBusy) return;
     profileWizardBusy = true;
     refreshProfileControls();
     try {
@@ -1303,7 +1198,7 @@ export function createProfileMacroScenePanel({
 
   async function handleWizardApplyEdits() {
     // Step 2: commit staged edits to firmware (without persisting profile slot yet).
-    if (!profileInteractable || profileRpcLocked || profileWizardBusy) return;
+    if (!profileInteractable || profileWorkflow.isLocked() || profileWizardBusy) return;
     if (activeProfileSlot !== profileWizardTargetSlot) {
       setStatus(
         'warn',
@@ -1332,7 +1227,7 @@ export function createProfileMacroScenePanel({
 
   async function handleWizardSaveProfile() {
     // Step 3: persist the currently active slot after Step 2 succeeds.
-    if (!profileInteractable || profileRpcLocked || profileWizardBusy) return;
+    if (!profileInteractable || profileWorkflow.isLocked() || profileWizardBusy) return;
     if (activeProfileSlot !== profileWizardTargetSlot) {
       setStatus(
         'warn',
@@ -1453,7 +1348,7 @@ export function createProfileMacroScenePanel({
   }
 
   function onManifest(manifest) {
-    deviceCapabilities = resolveCapabilities(manifest);
+    deviceCapabilities = resolveProfileCapabilities(manifest);
     macroAvailable = deviceCapabilities.macroSnapshot ? macroAvailable : false;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     syncRecoverySupportCopy();
@@ -1472,9 +1367,9 @@ export function createProfileMacroScenePanel({
   }
 
   function onDisconnected() {
-    deviceCapabilities = resolveCapabilities(localManifest);
+    deviceCapabilities = resolveProfileCapabilities(localManifest);
     profileInteractable = false;
-    profileRpcLocked = false;
+    profileWorkflow.reset();
     macroAvailable = false;
     arpBusy = false;
     lfoBusy = false;
@@ -1491,9 +1386,9 @@ export function createProfileMacroScenePanel({
   }
 
   function onRuntimeError() {
-    deviceCapabilities = resolveCapabilities(localManifest);
+    deviceCapabilities = resolveProfileCapabilities(localManifest);
     profileInteractable = false;
-    profileRpcLocked = false;
+    profileWorkflow.reset();
     macroAvailable = false;
     arpBusy = false;
     lfoBusy = false;

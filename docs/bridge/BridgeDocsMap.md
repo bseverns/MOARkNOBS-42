@@ -24,6 +24,27 @@ The Bridge docs are intentionally split because the Bridge serves several audien
 - **Packaging docs** explain artifacts, signing, and release boundaries.
 - **Evidence docs** record what was actually observed on a host, browser, Bridge, or board.
 
+## Upgrade Status
+
+The old Bridge runtime upgrade plan has been retired because its relevant work is now represented by current code and contract docs.
+
+| Upgrade Area                    | Current Home                                                                                    | Status                                                                                                                                  |
+| ------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Device session layer            | `bridge/lib/device/session.js`, [Bridge Transport Contract](BridgeTransportContract.md)         | Implemented as cached manifest/schema/live/staged/dirty/apply state.                                                                    |
+| Bridge simulator                | `bridge/lib/device/simulator.js`, `bridge/test/simulator.test.js`                               | Implemented for handshake, ACK modes, and reconnect coverage.                                                                           |
+| Structured App-facing transport | `/api/device/*`, `/ws/events`, [Bridge Transport Contract](BridgeTransportContract.md)          | Implemented and contract-tested.                                                                                                        |
+| Staged apply/write discipline   | [Bridge Write Lanes](BridgeWriteLanes.md), `bridge/test/device_session.test.js`                 | Implemented as schema-validated staged writes with ACK/rollback boundaries.                                                             |
+| Browser console role split      | [Bridge Console Tour](BridgeConsoleTour.md)                                                     | Implemented as Setup, Stage, and Advanced operator modes.                                                                               |
+| Artifact hardening              | [bridge README](../../bridge/README.md), [Bridge Signing Plan](../release/BridgeSigningPlan.md) | Unsigned CI artifacts now include checksums, README, license payload, manifest metadata, and smoke checks. Signing remains future work. |
+
+The remaining Bridge work should live in focused docs instead of a broad upgrade plan:
+
+- signing and installer readiness belong in [Bridge Signing Plan](../release/BridgeSigningPlan.md)
+- transport/API behavior belongs in [Bridge Transport Contract](BridgeTransportContract.md)
+- staged/live write behavior belongs in [Bridge Write Lanes](BridgeWriteLanes.md)
+- operator workflow belongs in [Bridge Console Tour](BridgeConsoleTour.md)
+- host evidence belongs in [Bench Receipts](../bench/README.md)
+
 ## What Not To Merge Yet
 
 Do not merge the Bridge docs into one giant handbook until the current simplified nav has had time to prove itself. The current split keeps three boundaries visible:

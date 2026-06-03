@@ -151,8 +151,6 @@ nav:
           - Repo Health Audit 2026-03: validation/repo-health-audit-2026-03.md
       - Planning Notes:
           - TODO: project/TODO.md
-          - App Runtime Refactor Plan: app/AppRuntimeRefactorPlan.md
-          - Bridge Runtime Upgrade Plan: bridge/BridgeRuntimeUpgradePlan.md
           - Bridge Packaging: release/BridgePackaging.md
           - Bridge Signing Plan: release/BridgeSigningPlan.md
       - Sketches And Examples:

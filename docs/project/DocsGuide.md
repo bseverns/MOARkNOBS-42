@@ -70,7 +70,7 @@ Historical and planning docs are useful context, not current truth:
 - [TODO](TODO.md)
 - `docs/agents/_reports/`
 - dated audits such as [Repo Health Audit 2026-03](../validation/repo-health-audit-2026-03.md)
-- old app, bridge, and runtime upgrade plans
+- old app/runtime upgrade plans and release-packaging plans
 
 If a historical page conflicts with a contract or evidence doc, the historical page loses.
 

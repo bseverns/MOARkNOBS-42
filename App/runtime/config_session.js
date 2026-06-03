@@ -367,9 +367,12 @@ export function createConfigSession({
   }
 
   function restoreLocalState() {
-    const snapshot = stateSnapshotStore.read();
-    if (!snapshot?.staged) return false;
-    stage(() => snapshot.staged);
+    const staged =
+      typeof stateSnapshotStore.readStagedConfig === 'function'
+        ? stateSnapshotStore.readStagedConfig()
+        : stateSnapshotStore.read()?.staged;
+    if (!staged) return false;
+    stage(() => staged);
     return true;
   }
 
