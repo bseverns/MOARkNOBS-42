@@ -1,5 +1,7 @@
 # Validation Flow
 
+> **Doc class:** Evidence doc. This page is the go/no-go flow for board, demo, and release-readiness validation.
+
 Use this page when you need a repeatable answer to one question:
 
 Is this board merely powered on, actually validated, demo-ready, or ready for a broader supported release?

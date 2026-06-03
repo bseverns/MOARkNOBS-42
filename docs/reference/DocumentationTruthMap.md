@@ -55,6 +55,22 @@ These pages preserve narrative, prior reasoning, or audit snapshots.
 
 Rule: historical docs are useful context, but they lose tie-break authority whenever they conflict with a contract or evidence page.
 
+## Reader categories
+
+The MkDocs site uses reader-facing categories. These categories do not change the truth hierarchy above; they only help readers choose a path.
+
+| Category  | Purpose                                         | Typical truth class                  |
+| --------- | ----------------------------------------------- | ------------------------------------ |
+| Learn     | conceptual and educational docs                 | orientation                          |
+| Use       | performer/operator workflows                    | orientation, with links to contracts |
+| Build     | hardware/firmware bring-up docs                 | orientation or evidence              |
+| Prove     | validation, bench, release-readiness docs       | evidence                             |
+| Reference | protocol, manifest, pinout, bridge contracts    | contract                             |
+| Project   | support, process, history, pilot-run framing    | orientation or historical            |
+| Archive   | generated reports, old audits, historical plans | historical                           |
+
+If a category and a truth class seem to disagree, the truth class wins.
+
 ## Tie-break order
 
 When two pages disagree, use this order:

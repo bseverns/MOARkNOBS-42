@@ -1,5 +1,7 @@
 # Manifest Contract
 
+> **Doc class:** Contract doc. This page defines host-visible firmware manifest fields and conservative fallback behavior.
+
 `GET_MANIFEST` is the first source of device truth for the App and Bridge. Host fallbacks stay pinned to the conservative safe profile so tools can render before a device answers without overstating board power readiness.
 
 ## Required Fields

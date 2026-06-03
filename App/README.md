@@ -1,5 +1,7 @@
 # MOARkNOBS-42 Browser Configurator
 
+> **Doc class:** Contract doc. This is the App-facing behavior and support boundary for the browser configurator; use the linked evidence docs before widening compatibility claims.
+
 Use the browser configurator when you want direct USB setup, monitoring, and profile management over WebSerial. If you need OSC or a virtual MIDI port on a desktop host instead, start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) and use the bridge.
 
 For document tie-break rules, see [Documentation Truth Map](../docs/reference/DocumentationTruthMap.md).

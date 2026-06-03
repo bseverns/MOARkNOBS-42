@@ -2,7 +2,7 @@
 
 Need to cut a proper drop? Start with [Release Story](ReleaseStory.md), then treat this file as the operator checklist and [Reproducibility](Reproducibility.md) as the canonical artifact recipe.
 
-Current release/support boundary: [Host Compatibility](../reference/HostCompatibility.md), [bridge/README.md](../../bridge/README.md), [Bridge Signing Plan](BridgeSigningPlan.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current release/support boundary: [Release Boundary Index](ReleaseBoundaryIndex.md), [Host Compatibility](../reference/HostCompatibility.md), [bridge/README.md](../../bridge/README.md), [Bridge Signing Plan](BridgeSigningPlan.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ```mermaid
 flowchart LR

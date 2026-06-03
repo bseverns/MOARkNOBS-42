@@ -16,7 +16,7 @@ MOARkNOBS-42 is a documented performance instrument for artists, builders, and i
 
 It is designed less like a sealed appliance and more like an instrument whose logic stays visible.
 
-_A top-level system diagram would help here: hardware, browser configurator, bridge, and validation lanes in one glance._
+For the whole object-to-software picture in one glance, read the [System Map](getting-started/SystemMap.md).
 
 <div class="mn42-cta-row">
   <a class="md-button md-button--primary" href="project/PilotRun.md">Join pilot run / interest list</a>

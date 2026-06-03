@@ -9,6 +9,7 @@ It is not a fabrication-ready manufacturing package.
 It does not claim a verified Gerber and NC-drill release bundle.
 
 Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md).
+For a repo-level contents map, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
 
 ## Choose Your Path
 
@@ -31,6 +32,7 @@ Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md).
 - [docs/hardware-test/KnownIssues.md](docs/hardware-test/KnownIssues.md) records current package limits.
 - [docs/hardware-test/PackageManifest.md](docs/hardware-test/PackageManifest.md) lists included and excluded lanes.
 - [hardware/CurrentBuild.md](hardware/CurrentBuild.md) identifies the current hardware reference files.
+- [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md) explains which repo areas are source truth, evidence, generated output, or archive.
 
 ## Included Test Surfaces
 

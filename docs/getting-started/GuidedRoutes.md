@@ -1,96 +1,95 @@
 # Guided Routes
 
-This site now has enough material that a new reader can get lost just by having too many good options. This page fixes that by giving three intentional routes through the docs depending on who you are and what you want from the rig.
+Pick one route, finish it, then come back for the others.
 
-Pick one lane, finish it, then come back for the others.
+## Builder Route
 
-## Builder route
+**Best for:** someone assembling, flashing, or proving hardware.
 
-**Best for:** someone assembling, flashing, and proving the hardware.
+**Time estimate:** 45-60 minutes for reading, not counting bench work.
 
-**Time:** about 45-60 minutes for the first read-through, not counting soldering or bench work.
+**Outcome:** you know the bring-up order, flashing lane, and proof boundary.
 
-**Outcome:** you understand how to bring the board up in a sane order and what needs real hardware proof.
+Primary links:
 
-1. [New User Story](StartHere.md)
-2. [Hardware Bring-Up Story](HardwareStory.md)
-3. [Builder's Handbook](BuildersHandbook.md)
-4. [Testing Story](../validation/TestingStory.md)
-5. [Troubleshooting](../validation/Troubleshooting.md)
-6. [Failure-First Guide](../validation/FailureFirst.md)
+1. [Object Card](ObjectCard.md)
+2. [Quickstart for Builders](QuickstartForBuilders.md)
+3. [Hardware Story](HardwareStory.md)
+4. [Builder's Handbook](BuildersHandbook.md)
+5. [Bringup](../hardware-test/Bringup.md)
 
-What this route teaches:
+Go deeper:
 
-- how the hardware comes alive in stages
-- what to flash and test first
-- what "working" means on a real board
-- how to recover when bring-up goes sideways
+- [Testing Story](../validation/TestingStory.md)
+- [Hardware Test Matrix](../hardware-test/TestMatrix.md)
+- [Release Criteria](../release/ReleaseCriteria.md)
 
-## Learner route
+## Learner Route
 
-**Best for:** someone trying to understand the architecture, vocabulary, and contract without immediately performing on it.
+**Best for:** someone trying to understand the architecture and vocabulary.
 
-**Time:** about 35-50 minutes.
+**Time estimate:** 35-45 minutes.
 
-**Outcome:** you can explain the firmware/app/browser model in plain language and know where the main concepts live.
+**Outcome:** you can explain the object, signal path, and main contracts in plain language.
 
-1. [New User Story](StartHere.md)
-2. [Glossary](../reference/Glossary.md)
-3. [Firmware Architecture Story](../reference/FirmwareArchitecture.md)
-4. [Configurator Tour](../guides/Configurator.md)
-5. [WebSerial Walkthrough](../guides/ProtocolWalkthrough.md)
-6. [Reactive Control Guide](../guides/ReactiveControlGuide.md)
-7. [ARG Guide](../guides/ARGGuide.md)
-8. [Filter Feel Guide](../guides/FilterFeelGuide.md)
-9. [LFO Route Guide](../guides/LfoRouteGuide.md)
-10. [Preset Library](../guides/PresetLibrary.md)
+Primary links:
 
-What this route teaches:
+1. [Start Here](StartHere.md)
+2. [Why MN42](WhyMN42.md)
+3. [One Signal Path](../learn/OneSignalPath.md)
+4. [Glossary](../reference/Glossary.md)
+5. [Reactive Control Guide](../guides/ReactiveControlGuide.md)
 
-- the shared vocabulary of the stack
-- staged versus live state
-- where presets, profiles, filters, EF, ARG, and LFO routes fit
-- why the browser behaves more carefully than a toy editor
+Go deeper:
 
-## Musician route
+- [ARG Guide](../guides/ARGGuide.md)
+- [Filter Feel Guide](../guides/FilterFeelGuide.md)
+- [LFO Route Guide](../guides/LfoRouteGuide.md)
 
-**Best for:** someone who wants a playable rig fast, without pretending they need to read every firmware page first.
+## Musician Route
 
-**Time:** about 20-30 minutes.
+**Best for:** someone who wants a playable rig without reading every firmware page first.
 
-**Outcome:** you can connect the deck, choose a preset or profile intentionally, and recover from common live-state mistakes.
+**Time estimate:** 20-30 minutes.
 
-1. [Configurator Tour](../guides/Configurator.md)
-2. [Musician-First Guide](MusicianFirstGuide.md)
-3. [Preset Library](../guides/PresetLibrary.md)
-4. [Profile Workflow](../guides/ProfileWorkflow.md)
-5. [Combo Guide](../guides/ComboGuide.md)
-6. [Bridge for Performers](../guides/BridgeForPerformers.md)
-7. [Failure-First Guide](../validation/FailureFirst.md)
+**Outcome:** you can connect, configure, use profiles, and recover from common show-day mistakes.
 
-What this route teaches:
+Primary links:
 
-- which starting configuration to choose
-- when to stage, apply, save, load, or reset
-- when to use the bridge instead of the browser
-- what the most likely pre-show failures look like
-
-## If you are teaching someone else
-
-Use this mixed route:
-
-1. [New User Story](StartHere.md)
-2. [Preset Library](../guides/PresetLibrary.md)
+1. [Quickstart for Performers](QuickstartForPerformers.md)
+2. [Configurator Tour](../guides/Configurator.md)
 3. [Profile Workflow](../guides/ProfileWorkflow.md)
+4. [Connectivity Guide](ConnectivityGuide.md)
+5. [Failure-First Guide](../validation/FailureFirst.md)
+
+Go deeper:
+
+- [Bridge for Performers](../guides/BridgeForPerformers.md)
+- [Preset Library](../guides/PresetLibrary.md)
+- [Configure Without Recompiling](ConfigureWithoutRecompiling.md)
+
+## Teaching Route
+
+**Best for:** workshops, studios, and classrooms.
+
+**Time estimate:** 30-45 minutes.
+
+**Outcome:** a learner can move from concrete behavior to modulation concepts without drowning in implementation detail.
+
+Primary links:
+
+1. [Object Card](ObjectCard.md)
+2. [One Signal Path](../learn/OneSignalPath.md)
+3. [Configure Without Recompiling](ConfigureWithoutRecompiling.md)
 4. [Reactive Control Guide](../guides/ReactiveControlGuide.md)
-5. [ARG Guide](../guides/ARGGuide.md)
-6. [Filter Feel Guide](../guides/FilterFeelGuide.md)
-7. [Combo Guide](../guides/ComboGuide.md)
-8. [Testing Story](../validation/TestingStory.md)
+5. [Testing Story](../validation/TestingStory.md)
 
-That path works well for workshops because it starts with concrete examples, then introduces the deeper system model only after the learner has something tactile to attach it to.
+Go deeper:
 
-## Read next
+- [MIDI + DSP 101](../Primers/MIDI-DSP101.md)
+- [Firmware Main Reading Path](../firmware/FirmwareMainReadingPath.md)
+- [Documentation Truth Map](../reference/DocumentationTruthMap.md)
 
-- [Glossary](../reference/Glossary.md) if any term in these routes feels too insider-heavy
-- [Docs Guide](../project/DocsGuide.md) if you want the full map instead of a guided lane
+## If You Are Lost
+
+Read [Docs Guide](../project/DocsGuide.md). It explains which pages are canonical, which pages are evidence, and where historical notes live.

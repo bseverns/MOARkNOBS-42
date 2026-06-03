@@ -4,9 +4,20 @@
 
 Thin [`App/runtime.js`](../../App/runtime.js) into smaller runtime modules without changing operator-facing behavior, transport semantics, staged/live config rules, or existing Bridge/WebSerial/simulator support boundaries.
 
+## Current Status
+
+The first extraction pass is complete. `runtime.js` now imports focused helpers from:
+
+- [`runtime/transport_mode.js`](../../App/runtime/transport_mode.js)
+- [`runtime/telemetry_runtime.js`](../../App/runtime/telemetry_runtime.js)
+- [`runtime/bridge_session_runtime.js`](../../App/runtime/bridge_session_runtime.js)
+- [`runtime/live_controls_runtime.js`](../../App/runtime/live_controls_runtime.js)
+
+The remaining work is not to repeat those cuts. The next useful pass is to re-evaluate emitter, diff, snapshot, and command-lifecycle helpers while preserving the transport labels and staged/live boundaries documented below.
+
 ## Current Responsibilities In `runtime.js`
 
-`runtime.js` still owns these distinct responsibilities:
+`runtime.js` still coordinates these distinct responsibilities:
 
 | Responsibility                | Current Shape In `runtime.js`                                                                                       | Primary Collaborators                                                                          |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -72,11 +83,11 @@ This reduces non-transport state in `runtime.js` and makes telemetry behavior in
 
 ## Suggested Order
 
-1. Extract `runtime/transport_mode.js`.
-2. Extract `runtime/telemetry_runtime.js`.
-3. Extract `runtime/bridge_session_runtime.js`.
-4. Extract `runtime/live_controls_runtime.js`.
-5. Re-evaluate whether the local emitter/diff helpers should stay in `runtime.js` or move to utility modules.
+1. Keep the existing extracted modules stable and covered by App tests.
+2. Re-evaluate whether local emitter helpers should stay in `runtime.js` or move to a utility module.
+3. Re-evaluate whether diff/snapshot helpers should stay in `runtime.js`, move into `config_session.js`, or become pure utility functions.
+4. Re-evaluate command-lifecycle helpers for macro, scene, and profile calls after transport/session behavior is stable.
+5. Update this plan after each extraction so completed work does not look like an open gap.
 
 ## Guardrails
 

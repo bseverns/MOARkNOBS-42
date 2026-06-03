@@ -1,5 +1,7 @@
 # MN42 Line Protocol
 
+> **Doc class:** Contract doc. This page mirrors the host-facing serial command and response contract for firmware.
+
 This is the host-facing serial contract for MOARkNOBS-42 firmware. The transport is newline-delimited UTF-8 text over USB serial at `115200` baud. Commands are one line each. Responses are one JSON object per line unless the command is explicitly documented as a legacy text diagnostic.
 
 ## Transport Rules

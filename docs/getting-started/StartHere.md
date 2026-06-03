@@ -4,6 +4,8 @@ If you are new to MOARkNOBS-42, the easiest mistake is to think it is "just a co
 
 This page is the beginner-friendly tour: what the parts are, how they relate, and what to read next when you want to go deeper.
 
+If you want the whole hardware/App/Bridge/firmware/evidence picture before the tour, open the [System Map](SystemMap.md).
+
 If you already know whether you are here mainly as a builder, learner, or musician, skip ahead to [Guided Routes](GuidedRoutes.md).
 
 ## The elevator version

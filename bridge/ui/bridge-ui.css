@@ -14,9 +14,9 @@
   --ok: #25603c;
   --warn: #9a6412;
   --error: #a21c1c;
-  --radius-xs: 6px;
-  --radius-sm: 8px;
-  --radius-lg: 14px;
+  --radius-xs: 3.3px;
+  --radius-sm: 4.4px;
+  --radius-lg: 7.7px;
   --shadow-elevate: 0 24px 50px rgba(58, 38, 18, 0.14);
   --shadow-soft: 0 10px 22px rgba(58, 38, 18, 0.1);
   --font-display: "Space Grotesk", "Avenir Next", "Segoe UI", system-ui, sans-serif;
@@ -92,7 +92,7 @@ input {
 
 .checkbox-line input[type='checkbox'] {
   width: auto;
-  border-radius: 0.25rem;
+  border-radius: 0.1375rem;
   padding: 0;
 }
 

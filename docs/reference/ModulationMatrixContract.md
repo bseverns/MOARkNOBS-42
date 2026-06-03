@@ -1,5 +1,7 @@
 # Modulation Matrix Contract
 
+> **Doc class:** Contract doc. This page defines the canonical structured report for EF, ARG, LFO, slot, MIDI, and OSC modulation routing.
+
 `GET_MOD_MATRIX` is the canonical read-only report for live modulation routing.
 It names the current firmware behavior across EF, ARG, LFO, slot, MIDI, and OSC
 lanes without requiring hosts to infer routing from profiles plus runtime code.

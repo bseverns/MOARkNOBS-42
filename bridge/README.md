@@ -1,8 +1,11 @@
 # MN42 Bridge
 
+> **Doc class:** Contract doc. This is the Bridge-facing behavior and support boundary for desktop host/session work; use the linked receipts before treating a host setup as broadly verified.
+
 The MN42 Bridge is the desktop-side companion to `App/`. It still preserves the original CLI and the raw WebSocket/serial debug lane, but it now also keeps a cached device session with manifest, schema, live config, staged config, dirty state, apply results, and power-safety identity.
 
 For document tie-break rules, see [Documentation Truth Map](../docs/reference/DocumentationTruthMap.md).
+For a map of performer, console, contract, packaging, and evidence Bridge docs, see [Bridge Docs Map](../docs/bridge/BridgeDocsMap.md).
 
 Use the browser configurator first if you only need direct USB setup and profile editing. Use the bridge when you need OSC routing, host MIDI routing, a desktop session cache, or an App-over-bridge lane that does not depend on browser WebSerial support. Start with [docs/ConnectivityGuide.md](../docs/getting-started/ConnectivityGuide.md) if you are deciding between them.
 
@@ -424,7 +427,7 @@ Each per-target bundle now includes:
 - a SHA-256 checksum file
 - a per-target `README.txt`
 - bundled third-party license notices
-- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, packaged program roles, timestamp, and `signingStatus: "unsigned-ci-artifact"`
+- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, packaged program roles, timestamp, `signingStatus: "unsigned-ci-artifact"`, and a nested `signing` metadata object
 
 The release workflow now also boots the packaged console binary and checks:
 
@@ -437,6 +440,8 @@ The release workflow now also boots the packaged console binary and checks:
 Without a real device handshake, the packaged smoke test only proves warmed schema authority and fail-closed staged-write behavior. Accepting a valid staged config still requires a cached device manifest and live config from hardware.
 
 When a GitHub release already exists for the tag, the workflow uploads those unsigned bundles as release assets. That is an evidence/distribution convenience, not a claim that the bridge is now a signed public installer.
+
+The top-level `signingStatus` field is retained for existing readers. New tooling should prefer the manifest's `signing` object, which records status, identity when provided, notarization status, and a support-boundary note.
 
 Beta/public bridge binaries should be packaged with `REQUIRE_BRIDGE_SIGNING=1` plus signing/notarization credentials or wrapper hooks. The bridge is still not shipped as a signed one-click installer.
 

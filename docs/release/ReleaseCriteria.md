@@ -1,6 +1,10 @@
 # Release Criteria
 
+> **Doc class:** Evidence doc. This page defines release gates and required artifacts; it does not claim release readiness by itself.
+
 This repository is currently a hardware-test package. Public or beta release status requires explicit evidence, not inference from passing software tests.
+
+For a reader-facing split between hardware-test, demo, beta, and public claims, start with [Release Boundary Index](ReleaseBoundaryIndex.md).
 
 ## Required Artifacts
 

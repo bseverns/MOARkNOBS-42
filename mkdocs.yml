@@ -1,7 +1,7 @@
 site_name: MOARkNOBS-42
 site_description: Story-first documentation for builders, performers, and curious learners.
-repo_url: https://github.com/bseverns/benzknober
-repo_name: bseverns/benzknober
+repo_url: https://github.com/bseverns/MOARkNOBS-42
+repo_name: bseverns/MOARkNOBS-42
 docs_dir: docs
 theme:
   name: material
@@ -71,90 +71,89 @@ plugins:
 
 nav:
   - Home: index.md
-  - Getting Started:
+  - Learn:
       - Start Here: getting-started/StartHere.md
+      - Object Card: getting-started/ObjectCard.md
+      - System Map: getting-started/SystemMap.md
       - Why MN42: getting-started/WhyMN42.md
       - Guided Routes: getting-started/GuidedRoutes.md
-      - Quickstart for Builders: getting-started/QuickstartForBuilders.md
-      - Quickstart for Performers: getting-started/QuickstartForPerformers.md
-      - Musician-First Guide: getting-started/MusicianFirstGuide.md
-      - Connectivity Guide: getting-started/ConnectivityGuide.md
-      - Hardware Bring-Up Story: getting-started/HardwareStory.md
-      - Builder's Handbook: getting-started/BuildersHandbook.md
-  - Guides:
-      - Configurator Tour: guides/Configurator.md
-      - Operator Tutorial: guides/OperatorTutorial.md
-      - Profile Workflow: guides/ProfileWorkflow.md
-      - Preset Library: guides/PresetLibrary.md
+      - Glossary: reference/Glossary.md
+      - One Signal Path: learn/OneSignalPath.md
+      - Configure Without Recompiling: getting-started/ConfigureWithoutRecompiling.md
+      - Reactive Modulation Matrix: guides/ReactiveModulationMatrix.md
       - Reactive Control Guide: guides/ReactiveControlGuide.md
       - ARG Guide: guides/ARGGuide.md
       - Filter Feel Guide: guides/FilterFeelGuide.md
       - LFO Route Guide: guides/LfoRouteGuide.md
+  - Use:
+      - Quickstart for Performers: getting-started/QuickstartForPerformers.md
+      - Configurator Tour: guides/Configurator.md
+      - Profile Workflow: guides/ProfileWorkflow.md
+      - Connectivity Guide: getting-started/ConnectivityGuide.md
+      - Bridge for Performers: guides/BridgeForPerformers.md
+      - Bridge Docs Map: bridge/BridgeDocsMap.md
+      - Failure-First Guide: validation/FailureFirst.md
+      - Musician-First Guide: getting-started/MusicianFirstGuide.md
+      - Preset Library: guides/PresetLibrary.md
       - Combo Guide: guides/ComboGuide.md
-      - WebSerial Walkthrough: guides/ProtocolWalkthrough.md
-      - WebSerial Protocol: guides/WebSerial.md
-      - OSC Bridge: guides/OSCBridge.md
-      - Performer Bridge Guide: guides/BridgeForPerformers.md
+  - Build:
+      - Quickstart for Builders: getting-started/QuickstartForBuilders.md
+      - Hardware Story: getting-started/HardwareStory.md
+      - Builder's Handbook: getting-started/BuildersHandbook.md
+      - Bringup: hardware-test/Bringup.md
       - Firmware Update: guides/FirmwareUpdate.md
-  - Reference:
-      - Glossary: reference/Glossary.md
-      - Parameter Map: reference/parameter-map.md
       - Pin Map: reference/PinMap.md
-      - EEPROM Layout: reference/EEPROMLayout.md
+      - Current Hardware Build: reference/HardwareCurrentBuild.md
+      - Hardware Test Matrix: hardware-test/TestMatrix.md
+  - Prove:
+      - Testing Story: validation/TestingStory.md
+      - TESTING: validation/TESTING.md
+      - Validation Flow: validation/ValidationFlow.md
+      - Release Boundary Index: release/ReleaseBoundaryIndex.md
+      - Release Criteria: release/ReleaseCriteria.md
+      - Release Guide: release/ReleaseGuide.md
+      - Bench Receipts: bench/README.md
+      - Known Issues: hardware-test/KnownIssues.md
+      - Demo Test Punch List: validation/DemoTestPunchList.md
+      - QC Checklist: validation/qc-checklist.md
+  - Reference:
       - Serial Protocol: reference/SerialProtocol.md
       - MN42 Line Protocol: reference/MN42LineProtocol.md
       - Manifest Contract: reference/ManifestContract.md
-      - Hardware Current Build: reference/HardwareCurrentBuild.md
-      - Hardware Substitutions: reference/HardwareSubstitutions.md
+      - Modulation Matrix Contract: reference/ModulationMatrixContract.md
+      - Bridge Transport Contract: bridge/BridgeTransportContract.md
+      - Bridge Write Lanes: bridge/BridgeWriteLanes.md
+      - App Transport Truth Table: app/AppTransportTruthTable.md
+      - EEPROM Layout: reference/EEPROMLayout.md
       - Host Compatibility: reference/HostCompatibility.md
       - Known Good Host Recipes: reference/KnownGoodHostRecipes.md
-      - Firmware Architecture Story: reference/FirmwareArchitecture.md
-      - Envelope Frontend: reference/EF_Frontend_v2.md
-      - Options DNI: reference/Options_DNI.md
-      - Assumption Ledger: reference/assumption-ledger.md
-      - Primer: Primers/MIDI-DSP101.md
-      - VS Code IntelliSense: vscode-intellisense.md
-  - Validation:
-      - Testing Story: validation/TestingStory.md
-      - Testing: validation/TESTING.md
-      - Validation Flow: validation/ValidationFlow.md
-      - Demo Test Punch List: validation/DemoTestPunchList.md
-      - Demo Polish: validation/DemoPolish.md
-      - Failure-First Guide: validation/FailureFirst.md
-      - Troubleshooting: validation/Troubleshooting.md
-      - QC Checklist: validation/qc-checklist.md
-      - Repo Health Audit 2026-03: validation/repo-health-audit-2026-03.md
-  - Release:
-      - Release Story: release/ReleaseStory.md
-      - Reproducibility: release/Reproducibility.md
-      - Release Guide: release/ReleaseGuide.md
-      - Bridge Packaging: release/BridgePackaging.md
-      - Bridge Artifact Checklist: release/bridge-artifacts-checklist.md
-  - Bench And Sketches:
-      - Bench Logs: bench/README.md
-      - Latency Method: bench/latency/method.md
-      - Oblique RTL Method: bench/latency/oblique_rtl.md
-      - Noise Method: bench/noise/method.md
-      - Thermal Notes: thermal/README.md
-      - Example Patches: examples/README.md
-      - Max Listener Patch: examples/max/README.md
-      - Pure Data Listener: examples/puredata/README.md
-      - SeedBox Link Notes: interop/seedbox.md
-      - Sketchbook: sketchbook/index.md
-      - Button Matrix Sketch: sketch/systemFlow/hw/buttonMatrix.md
-      - Display Sketch: sketch/systemFlow/hw/display.md
-      - Envelope Frontend Sketch: sketch/systemFlow/hw/envelopeFE.md
-      - LED and MIDI Out Sketch: sketch/systemFlow/hw/led&midiOut.md
-      - MIDI Opto Sketch: sketch/systemFlow/hw/midiOpto.md
-      - Power and Protection Sketch: sketch/systemFlow/hw/power&protection.md
-      - Teensy and Headers Sketch: sketch/systemFlow/hw/teensy&headers.md
+      - Parameter Map: reference/parameter-map.md
+      - Firmware Architecture: reference/FirmwareArchitecture.md
+      - Documentation Truth Map: reference/DocumentationTruthMap.md
   - Project:
       - Docs Guide: project/DocsGuide.md
-      - Process Overview: project/ProcessOverview.md
+      - Repository Contents: project/RepositoryContents.md
+      - Documentation Compaction Plan: project/DocumentationCompactionPlan.md
+      - Adjacent Controller Lessons: project/AdjacentControllerLessons.md
       - Pilot Run / Artist Edition: project/PilotRun.md
       - License and Support: project/LicenseAndSupport.md
-      - TODO: project/TODO.md
+      - Process Overview: project/ProcessOverview.md
       - History: project/HISTORY.md
       - Lineage: project/lineage.md
-      - Landing Audit Archive: agents/_reports/mkdocs-landing-audit.md
-      - Changed Files Report: agents/_reports/changed-files.md
+  - Archive:
+      - Agent Reports:
+          - Landing Audit Archive: agents/_reports/mkdocs-landing-audit.md
+          - Changed Files Report: agents/_reports/changed-files.md
+      - Old Audits:
+          - Repo Health Audit 2026-03: validation/repo-health-audit-2026-03.md
+      - Planning Notes:
+          - TODO: project/TODO.md
+          - App Runtime Refactor Plan: app/AppRuntimeRefactorPlan.md
+          - Bridge Runtime Upgrade Plan: bridge/BridgeRuntimeUpgradePlan.md
+          - Bridge Packaging: release/BridgePackaging.md
+          - Bridge Signing Plan: release/BridgeSigningPlan.md
+      - Sketches And Examples:
+          - Sketchbook: sketchbook/index.md
+          - Examples: examples/README.md
+          - Thermal Notes: thermal/README.md
+          - SeedBox Link Notes: interop/seedbox.md

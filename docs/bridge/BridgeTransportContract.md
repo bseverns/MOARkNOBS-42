@@ -1,5 +1,7 @@
 # Bridge Transport Contract
 
+> **Doc class:** Contract doc. This page defines the Bridge HTTP/WebSocket surfaces and App-facing session transport behavior.
+
 This document describes the desktop-side transport surfaces exposed by `bridge/` after the bridge runtime upgrade. It is intentionally conservative: it documents what the repo now exposes, not a promise that every external tool should depend on every field forever.
 
 ## Surfaces

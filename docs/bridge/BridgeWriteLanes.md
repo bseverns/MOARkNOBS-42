@@ -1,8 +1,10 @@
 # Bridge Write Lanes
 
+> **Doc class:** Contract doc. This page defines which Bridge write surfaces are staged configuration lanes and which are live performance lanes.
+
 This page defines the bridge write surfaces and clarifies which ones are staged configuration lanes versus live performance lanes.
 
-This is a contract doc. For tie-break rules, see [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+For tie-break rules, see [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ## Summary
 

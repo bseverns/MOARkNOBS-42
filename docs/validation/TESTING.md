@@ -1,10 +1,12 @@
 # Testing the Beast
 
+> **Doc class:** Evidence doc. This page maps the automated, manual, and hardware-test lanes used to prove repo behavior.
+
 This repo runs tests in layers, from polite unit checks to full-on hardware cage matches. Every layer has a job: make sure the firmware math is sane, prove the bridge still talks, and keep you from hauling a broken controller to a gig. Read this as a teaching map, not just a checklist—if you know why a test exists, you know when to lean on it.
 
 Unless a section says otherwise, commands below assume you are running from the repo root.
 
-This page is an evidence doc. For document tie-break rules, see [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+For document tie-break rules, see [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 Bridge hardware receipts and receipt templates live in [../bench/bridge/README.md](../bench/bridge/README.md). App HIL receipts and templates live in [../bench/app/README.md](../bench/app/README.md). Keep firmware boot-contract receipts under `docs/bench/firmware/`, App-facing receipts under `docs/bench/app/`, and bridge-runtime receipts under `docs/bench/bridge/`.
 

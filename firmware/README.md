@@ -1,5 +1,7 @@
 # MOARkNOBS-42 Firmware Hardware-Test Guide
 
+> **Doc class:** Contract doc. This is the firmware build/test boundary for the current hardware-test package; release and hardware-readiness claims still require the validation docs.
+
 This `firmware/` directory is the real PlatformIO project for the current MOARkNOBS-42 hardware-test package.
 Run PlatformIO here, not from the repo root.
 

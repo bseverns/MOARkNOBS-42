@@ -2,6 +2,7 @@
 
 The Bridge console is the operator-facing desktop view for `MN42 Bridge`. Use it when you need desktop OSC/MIDI routing, a cached device session, or an App-over-bridge path that does not depend on browser WebSerial support.
 
+For the full Bridge doc split, see [Bridge Docs Map](BridgeDocsMap.md).
 For transport and support-boundary tie-breaks, see [Bridge README](../../bridge/README.md), [Bridge Transport Contract](./BridgeTransportContract.md), and [Bridge Write Lanes](./BridgeWriteLanes.md).
 
 ## Before You Start

@@ -5,7 +5,7 @@ This is a signing-ready plan, not a claim that the bridge is currently shipped a
 ## Current state
 
 - CI builds unsigned per-target bridge artifacts.
-- Those artifacts are tagged as `signingStatus: "unsigned-ci-artifact"` in the bridge artifact manifest.
+- Those artifacts are tagged as `signingStatus: "unsigned-ci-artifact"` and include a nested `signing` metadata object in the bridge artifact manifest.
 - The release workflow now treats those bundles as internal/operator evidence, not polished consumer installers.
 
 ## Intended future path
@@ -45,8 +45,10 @@ Every packaged bridge target should continue to publish:
 
 The signing path should add:
 
-- signing identity metadata
-- notarization metadata where relevant
+- `signing.status`
+- `signing.identity` when an identity is available
+- `signing.notarizationStatus` where relevant
+- `signing.note` with the support boundary for signed or unsigned artifacts
 - a signed-vs-unsigned support note in the release text
 
 ## Non-goals right now

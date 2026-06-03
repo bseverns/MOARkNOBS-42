@@ -17,6 +17,16 @@ function requiredArg(name) {
   return value;
 }
 
+function defaultSigningNote(signingStatus) {
+  if (signingStatus === 'unsigned-ci-artifact') {
+    return 'Unsigned CI artifact; not a signed public installer.';
+  }
+  if (signingStatus === 'signed') {
+    return 'Artifact reports a signed status; verify signature evidence before public release.';
+  }
+  return 'Signing status was provided by the packaging lane.';
+}
+
 function main() {
   const stageDir = requiredArg('--stage-dir');
   const target = requiredArg('--target');
@@ -24,6 +34,12 @@ function main() {
   const commitSha = requiredArg('--commit-sha');
   const nodeTarget = getArg('--node-target') || target;
   const signingStatus = getArg('--signing-status') || 'unsigned-ci-artifact';
+  const signingIdentity = getArg('--signing-identity') || null;
+  const notarizationStatus =
+    getArg('--notarization-status') ||
+    (signingStatus === 'unsigned-ci-artifact' ? 'not-requested' : 'unknown');
+  const signingNote =
+    getArg('--signing-note') || defaultSigningNote(signingStatus);
 
   const entries = fs
     .readdirSync(stageDir, { withFileTypes: true })
@@ -57,6 +73,12 @@ function main() {
     packagedBinaries,
     packagedPrograms,
     signingStatus,
+    signing: {
+      status: signingStatus,
+      identity: signingIdentity,
+      notarizationStatus,
+      note: signingNote,
+    },
   };
 
   const outPath = path.join(stageDir, 'bridge_artifact_manifest.json');
