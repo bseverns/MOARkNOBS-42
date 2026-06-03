@@ -409,7 +409,10 @@ export function createTransportToolbarController({
       usbMidiOutEnabled ? 'Disabling USB MIDI output…' : 'Enabling USB MIDI output…'
     );
     try {
-      const response = await runtime.sendRpc({ rpc: 'set_usb_midi', enabled: !usbMidiOutEnabled });
+      const response = await runtime.sendRpc(
+        { rpc: 'set_usb_midi', enabled: !usbMidiOutEnabled },
+        { rollbackOnError: false }
+      );
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus(
         'ok',
@@ -443,11 +446,14 @@ export function createTransportToolbarController({
     updateNoteDynamicsControls();
     setNoteDynamicsStatus('busy', 'Updating live note dynamics…');
     try {
-      const response = await runtime.sendRpc({
-        rpc: 'set_note_dynamics',
-        velocityShift: nextVelocity,
-        changeProbability: nextProbability
-      });
+      const response = await runtime.sendRpc(
+        {
+          rpc: 'set_note_dynamics',
+          velocityShift: nextVelocity,
+          changeProbability: nextProbability
+        },
+        { rollbackOnError: false }
+      );
       velocityShift = Math.max(
         -64,
         Math.min(63, Math.round(Number(response?.velocity_shift) || 0))
@@ -482,11 +488,14 @@ export function createTransportToolbarController({
     updateJitterControls();
     setJitterStatus('busy', 'Updating live jitter tuning…');
     try {
-      const response = await runtime.sendRpc({
-        rpc: 'set_jitter',
-        depth: nextDepth,
-        smoothness: nextSmoothness
-      });
+      const response = await runtime.sendRpc(
+        {
+          rpc: 'set_jitter',
+          depth: nextDepth,
+          smoothness: nextSmoothness
+        },
+        { rollbackOnError: false }
+      );
       jitterDepth = Math.max(0, Math.min(1, Number(response?.depth) || 0));
       jitterSmoothness = Math.max(0, Math.min(1, Number(response?.smoothness) || 0));
       setJitterStatus(
@@ -512,12 +521,15 @@ export function createTransportToolbarController({
     updateClockControls();
     setClockStatus('busy', 'Updating device clock state…');
     try {
-      const response = await runtime.sendRpc({
-        rpc: 'set_clock',
-        followExternal,
-        clockOutEnabled: nextClockOutEnabled,
-        tappedBpm: nextTappedBpm
-      });
+      const response = await runtime.sendRpc(
+        {
+          rpc: 'set_clock',
+          followExternal,
+          clockOutEnabled: nextClockOutEnabled,
+          tappedBpm: nextTappedBpm
+        },
+        { rollbackOnError: false }
+      );
       clockFollowExternal = Boolean(response?.follow_external);
       clockOutEnabled = Boolean(response?.clock_out_enabled);
       clockTappedBpm = Math.max(20, Math.min(300, Number(response?.tapped_bpm) || nextTappedBpm));

@@ -90,6 +90,28 @@ void test_dispatch_handles_live_slot_injection_command() {
     TEST_ASSERT_EQUAL_INT(map(77, 0, 127, 0, 1023), after);
 }
 
+void test_dispatch_handles_live_note_dynamics_command_without_boot_request() {
+    clearTestLogBuffer();
+    clearUsbConfiguratorBootRequest();
+    velocityShift = 0;
+    changeProbability = 100;
+    g_noteDynamicsRemoteControlActive = false;
+    g_noteDynamicsShiftLatched = true;
+    g_noteDynamicsProbabilityLatched = true;
+
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_NOTE_DYNAMICS,-12,83"));
+
+    TEST_ASSERT_EQUAL_INT8(-12, velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(83, changeProbability);
+    TEST_ASSERT_TRUE(g_noteDynamicsRemoteControlActive);
+    TEST_ASSERT_FALSE(g_noteDynamicsShiftLatched);
+    TEST_ASSERT_FALSE(g_noteDynamicsProbabilityLatched);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(BootMode::StandaloneRuntime),
+                            static_cast<uint8_t>(selectBootMode()));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"SET_NOTE_DYNAMICS\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"status\":\"ok\""));
+}
+
 void test_dispatch_handles_profile_save_load_reset_commands() {
     g_activeProfile = 0;
     configManager.setActiveProfile(0);

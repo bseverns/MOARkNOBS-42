@@ -35,6 +35,7 @@ void test_dispatch_handles_documented_query_commands();
 void test_dispatch_set_led_clamps_and_persists_board_cap();
 void test_dispatch_handles_enter_config_mode_command();
 void test_dispatch_handles_live_slot_injection_command();
+void test_dispatch_handles_live_note_dynamics_command_without_boot_request();
 void test_dispatch_handles_profile_save_load_reset_commands();
 void test_dispatch_handles_macro_and_scene_snapshot_commands();
 void test_dispatch_rejects_unknown_command();
@@ -254,6 +255,7 @@ void setup() {
     RUN_TEST(test_dispatch_set_led_clamps_and_persists_board_cap);
     RUN_TEST(test_dispatch_handles_enter_config_mode_command);
     RUN_TEST(test_dispatch_handles_live_slot_injection_command);
+    RUN_TEST(test_dispatch_handles_live_note_dynamics_command_without_boot_request);
     RUN_TEST(test_dispatch_handles_profile_save_load_reset_commands);
     RUN_TEST(test_dispatch_handles_macro_and_scene_snapshot_commands);
     RUN_TEST(test_dispatch_rejects_unknown_command);
