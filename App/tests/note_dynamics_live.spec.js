@@ -54,7 +54,7 @@ function installNativeHarness() {
         })),
         slots: Array.from({ length: 42 }, (_, index) => ({
           index,
-          type_name: 'CC',
+          type_name: index === 0 ? 'Note' : 'CC',
           channel: (index % 16) + 1,
           data1: index % 128,
           active: true,

@@ -72,6 +72,7 @@ test('profile workflow derives capability gates from explicit manifest flags', (
     profileLoad: false,
     profileReset: true,
     macroSnapshot: true,
+    arpLive: false,
     scenes: false
   });
   expect(supportsGuidedProfileFlow({ profileSave: true, profileLoad: false })).toBe(false);

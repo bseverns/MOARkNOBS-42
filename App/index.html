@@ -388,31 +388,6 @@
               Connect to inspect USB MIDI output state.
             </p>
           </section>
-          <section class="live-toggle-card" aria-labelledby="note-dynamics-title">
-            <header class="live-toggle-card-header">
-              <div>
-                <h3 id="note-dynamics-title">Note Dynamics</h3>
-                <p class="microcopy">Live note and arp-note velocity/chance controls. Hardware pots use soft takeover after browser updates.</p>
-              </div>
-              <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
-            </header>
-            <div class="live-control-grid">
-              <label>
-                <span>Velocity shift</span>
-                <input id="note-dynamics-velocity" type="number" min="-64" max="63" step="1" disabled />
-              </label>
-              <label>
-                <span>Chance %</span>
-                <input id="note-dynamics-probability" type="number" min="0" max="100" step="1" disabled />
-              </label>
-            </div>
-            <div class="live-toggle-actions">
-              <button id="note-dynamics-apply" type="button" disabled>Push note dynamics</button>
-            </div>
-            <p class="microcopy macro-status" id="note-dynamics-status" data-state="muted" aria-live="polite">
-              Connect to inspect live note dynamics.
-            </p>
-          </section>
           <fieldset id="led-settings" class="schema-section" data-schema-section="led">
             <legend>LED Colors</legend>
             <div class="schema-section-body" data-schema-target="led"></div>
@@ -805,6 +780,34 @@
       Built as a living notebook: part punk scene zine, part future-lab interface. If you break something, capture the
       story and share it back.
     </footer>
+  </div>
+  <div id="note-dynamics-parking" hidden>
+    <section class="live-toggle-card slot-note-dynamics-card" id="note-dynamics-card"
+      aria-labelledby="note-dynamics-title" hidden>
+      <header class="live-toggle-card-header">
+        <div>
+          <h3 id="note-dynamics-title">Note Dynamics</h3>
+          <p class="microcopy">Live note and arp-note velocity/chance controls. Hardware pots use soft takeover after browser updates.</p>
+        </div>
+        <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
+      </header>
+      <div class="live-control-grid">
+        <label>
+          <span>Velocity shift</span>
+          <input id="note-dynamics-velocity" type="number" min="-64" max="63" step="1" disabled />
+        </label>
+        <label>
+          <span>Chance %</span>
+          <input id="note-dynamics-probability" type="number" min="0" max="100" step="1" disabled />
+        </label>
+      </div>
+      <div class="live-toggle-actions">
+        <button id="note-dynamics-apply" type="button" disabled>Push note dynamics</button>
+      </div>
+      <p class="microcopy macro-status" id="note-dynamics-status" data-state="muted" aria-live="polite">
+        Select a Note slot to tune live note dynamics.
+      </p>
+    </section>
   </div>
   <script type="module" src="./views/benzknobz.js" defer></script>
 </body>

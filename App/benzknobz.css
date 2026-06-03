@@ -439,6 +439,12 @@ body {
   flex: 1;
 }
 
+.live-toggle-actions button[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: rgba(45, 226, 230, 0.88);
+}
+
 .live-control-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

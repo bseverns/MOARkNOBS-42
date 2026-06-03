@@ -3,6 +3,8 @@ export function createSlotEditorPanel({
   localManifest,
   slotState,
   formContainer,
+  noteDynamicsCard = null,
+  noteDynamicsParking = null,
   detailElements = {},
   glossary = {},
   slotTypeNames = [],
@@ -82,6 +84,7 @@ export function createSlotEditorPanel({
   // Rebuild the right-hand slot editor for the current selection and UI tier.
   function renderSlotEditor() {
     if (!formContainer) return;
+    parkNoteDynamicsCard();
     formContainer.innerHTML = '';
     const slot = slotState.slots[slotState.selected];
     if (!slot) {
@@ -148,20 +151,9 @@ export function createSlotEditorPanel({
         const arpHint = document.createElement('p');
         arpHint.className = 'slot-hint';
         arpHint.textContent =
-          'Arpeggiator: start or stop clock-driven note playback here. Saved shape and timing live in Recovery & Profiles.';
+          'Arpeggiator start/stop and live timing controls live in the Arp panel.';
         basics.appendChild(arpHint);
-        basics.appendChild(
-          makeActionRow([
-            {
-              label: 'Start arp on slot',
-              onClick: () => runArpCommand('arp_start', slotState.selected)
-            },
-            {
-              label: 'Stop arp',
-              onClick: () => runArpCommand('arp_stop', slotState.selected)
-            }
-          ])
-        );
+        attachNoteDynamicsCard(basics);
       }
     }
     basics.appendChild(
@@ -501,17 +493,18 @@ export function createSlotEditorPanel({
     return wrap;
   }
 
-  function makeActionRow(actions = []) {
-    const row = document.createElement('div');
-    row.className = 'slot-action-row';
-    actions.forEach(({ label, onClick }) => {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.textContent = label;
-      button.addEventListener('click', onClick);
-      row.appendChild(button);
-    });
-    return row;
+  function parkNoteDynamicsCard() {
+    if (!noteDynamicsCard) return;
+    noteDynamicsCard.hidden = true;
+    if (noteDynamicsParking && noteDynamicsCard.parentElement !== noteDynamicsParking) {
+      noteDynamicsParking.appendChild(noteDynamicsCard);
+    }
+  }
+
+  function attachNoteDynamicsCard(container) {
+    if (!noteDynamicsCard || !container) return;
+    noteDynamicsCard.hidden = false;
+    container.appendChild(noteDynamicsCard);
   }
 
   // Standardize the visible label line used by all form controls.
@@ -604,27 +597,6 @@ export function createSlotEditorPanel({
       draft.slots[index].arg[key] = value;
       return draft;
     });
-  }
-
-  async function runArpCommand(rpc, slotIndex = null) {
-    const slotLabel = slotIndex === null ? 'selected slot' : `Slot ${Number(slotIndex) + 1}`;
-    setStatus('warn', rpc === 'arp_start' ? 'Starting arp…' : 'Stopping arp…', slotLabel);
-    try {
-      const payload = slotIndex === null ? { rpc } : { rpc, slot: slotIndex };
-      const response = await runtime.sendRpc(payload);
-      if (rpc === 'arp_start') {
-        const startedSlot = Number(response?.slot ?? slotIndex ?? 0) + 1;
-        setStatus('ok', 'Arp running', `Slot ${startedSlot}`);
-      } else {
-        const stoppedSlot = Number(response?.slot ?? slotIndex);
-        const detail = Number.isFinite(stoppedSlot)
-          ? `Slot ${stoppedSlot + 1}`
-          : 'Clock-driven note playback halted.';
-        setStatus('ok', 'Arp stopped', detail);
-      }
-    } catch (err) {
-      setStatus('err', 'Arp command failed', err.message || String(err));
-    }
   }
 
   // Format numbers for compact read-only detail labels.

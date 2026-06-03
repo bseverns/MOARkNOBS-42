@@ -99,6 +99,8 @@ const boot = () => {
   const noteDynamicsProbabilityInput = document.getElementById('note-dynamics-probability');
   const noteDynamicsApplyBtn = document.getElementById('note-dynamics-apply');
   const noteDynamicsStatusEl = document.getElementById('note-dynamics-status');
+  const noteDynamicsCard = document.getElementById('note-dynamics-card');
+  const noteDynamicsParking = document.getElementById('note-dynamics-parking');
   const deviceClockSourceSelect = document.getElementById('device-clock-source');
   const deviceClockBpmInput = document.getElementById('device-clock-bpm');
   const deviceClockOutSelect = document.getElementById('device-clock-out');
@@ -635,7 +637,8 @@ const boot = () => {
       modMatrixStatusEl,
       sceneGrid,
       sceneStatusEl
-    }
+    },
+    getSelectedSlot: () => slotState.selected
   });
   profileMacroScenePanel.bind();
   const slotEditorPanel = createSlotEditorPanel({
@@ -643,6 +646,8 @@ const boot = () => {
     localManifest,
     slotState,
     formContainer,
+    noteDynamicsCard,
+    noteDynamicsParking,
     detailElements: {
       slotDetailIndex,
       slotDetailStatus,
@@ -897,6 +902,7 @@ const boot = () => {
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
   function populateDetail() {
+    profileMacroScenePanel.setLiveArpSlot(slotState.selected);
     slotEditorPanel.populateDetail();
   }
 

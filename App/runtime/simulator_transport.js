@@ -52,10 +52,11 @@ export function createSimulator(simDeps = {}) {
       const efIndex = idx % manifest.envelope_count;
       const filterIndex = idx % efFilterNames.length;
       const argMethod = idx % argMethodNames.length;
+      const type = idx === 1 ? 'Note' : 'CC';
       return {
         index: idx,
-        type: 'CC',
-        type_name: 'CC',
+        type,
+        type_name: type,
         channel: (idx % 16) + 1,
         data1: (idx % 120) + 1,
         ef_index: efIndex,
@@ -89,6 +90,7 @@ export function createSimulator(simDeps = {}) {
         sysexTemplate: ''
       };
     }),
+    efSlots: Array.from({ length: manifest.envelope_count }, () => ({ slots: [] })),
     envelopes: {
       routing: Array.from(
         { length: manifest.pot_count },

@@ -139,7 +139,8 @@ export function createProfileMacroScenePanel({
   formRenderer,
   localManifest,
   setStatus,
-  elements = {}
+  elements = {},
+  getSelectedSlot = () => 0
 } = {}) {
   const {
     profileSlotButtons = [],
@@ -209,6 +210,7 @@ export function createProfileMacroScenePanel({
     octave_range: 0,
     pattern_length: 4
   };
+  let liveArpSlotFollowsSelection = true;
   let lfoBusy = false;
   let modMatrixBusy = false;
   let modMatrixReport = null;
@@ -453,10 +455,34 @@ export function createProfileMacroScenePanel({
     syncLiveArpForm();
   }
 
+  function setLiveArpSlot(slotIndex = getSelectedSlot()) {
+    if (liveArpDraft.active) {
+      refreshProfileControls();
+      return;
+    }
+    if (!liveArpSlotFollowsSelection) {
+      refreshProfileControls();
+      return;
+    }
+    const nextSlot = clampInteger(slotIndex, 0, SLOT_COUNT - 1, liveArpDraft.slot);
+    if (nextSlot === liveArpDraft.slot) return;
+    setLiveArpDraft({ ...liveArpDraft, slot: nextSlot });
+    setLiveArpStatus('muted', `Selected slot ${nextSlot}. Push or start live arp from here.`);
+    refreshProfileControls();
+  }
+
   function readLiveArpFormIntoDraft() {
+    const nextSlot = clampInteger(
+      liveArpSlotInput?.value ?? liveArpDraft.slot,
+      0,
+      SLOT_COUNT - 1,
+      liveArpDraft.slot
+    );
+    liveArpSlotFollowsSelection =
+      nextSlot === clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, 0);
     setLiveArpDraft({
       ...liveArpDraft,
-      slot: liveArpSlotInput?.value ?? liveArpDraft.slot,
+      slot: nextSlot,
       length_ticks: liveArpLengthInput?.value ?? liveArpDraft.length_ticks,
       shape: liveArpShapeSelect?.value ?? liveArpDraft.shape,
       swing_percent: liveArpSwingInput?.value ?? liveArpDraft.swing_percent,
@@ -960,7 +986,13 @@ export function createProfileMacroScenePanel({
     });
     if (liveArpRefreshBtn) liveArpRefreshBtn.disabled = !canInteract;
     if (liveArpApplyBtn) liveArpApplyBtn.disabled = !canInteract;
-    if (liveArpStartBtn) liveArpStartBtn.disabled = !canInteract;
+    if (liveArpStartBtn) {
+      liveArpStartBtn.disabled = !canInteract;
+      liveArpStartBtn.setAttribute('aria-pressed', liveArpDraft.active ? 'true' : 'false');
+      liveArpStartBtn.textContent = liveArpDraft.active
+        ? `Running slot ${liveArpDraft.slot}`
+        : `Start slot ${liveArpDraft.slot}`;
+    }
     if (liveArpStopBtn) liveArpStopBtn.disabled = !canInteract || !liveArpDraft.active;
   }
 
@@ -1203,7 +1235,14 @@ export function createProfileMacroScenePanel({
         { rpc: 'get_arp' },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
       );
-      setLiveArpDraft(response);
+      setLiveArpDraft({
+        ...response,
+        slot: response?.active
+          ? response.slot
+          : liveArpSlotFollowsSelection
+            ? getSelectedSlot()
+            : liveArpDraft.slot
+      });
       setLiveArpStatus('ok', summarizeLiveArp());
     } catch (err) {
       setLiveArpStatus('err', `Live arp read failed: ${err.message || String(err)}`);
@@ -1275,7 +1314,11 @@ export function createProfileMacroScenePanel({
         { rpc: 'arp_stop' },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
       );
-      setLiveArpDraft({ ...liveArpDraft, active: false });
+      setLiveArpDraft({
+        ...liveArpDraft,
+        active: false,
+        slot: liveArpSlotFollowsSelection ? getSelectedSlot() : liveArpDraft.slot
+      });
       setLiveArpStatus('ok', summarizeLiveArp());
     } catch (err) {
       setLiveArpStatus('err', `Arp stop failed: ${err.message || String(err)}`);
@@ -1557,6 +1600,7 @@ export function createProfileMacroScenePanel({
 
   function onConnected() {
     profileInteractable = true;
+    setLiveArpSlot(getSelectedSlot());
     refreshProfileControls();
     renderLfoEditor();
     syncRecoverySupportCopy();
@@ -1625,6 +1669,7 @@ export function createProfileMacroScenePanel({
 
   return {
     bind,
+    setLiveArpSlot,
     onConfigChanged,
     onManifest,
     onConnected,

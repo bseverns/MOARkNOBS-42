@@ -11,6 +11,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
+  await page.locator('#slots [data-index="1"]').click();
 
   await expect(page.locator('#note-dynamics-apply')).toBeEnabled();
   await page.locator('#note-dynamics-velocity').fill('12');
