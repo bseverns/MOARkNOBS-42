@@ -128,6 +128,8 @@ void test_device_schema_advertises_runtime_controls() {
     TEST_ASSERT_TRUE(props["filter"].is<JsonObject>());
     TEST_ASSERT_TRUE(props["arg"].is<JsonObject>());
     TEST_ASSERT_TRUE(props["led"].is<JsonObject>());
+    TEST_ASSERT_TRUE(props["slots"]["items"]["properties"]["ef"]["properties"]["destination_mode"]
+                         .is<JsonObject>());
     TEST_ASSERT_TRUE(props["filter"]["properties"]["idle_floor"].is<JsonObject>());
     TEST_ASSERT_EQUAL_INT(NUM_SLOTS, props["slots"]["minItems"].as<int>());
     TEST_ASSERT_EQUAL_INT(NUM_ENVELOPES, props["efSlots"]["minItems"].as<int>());

@@ -195,6 +195,13 @@
                 "title": "Auto-gain target",
                 "minimum": 0,
                 "maximum": 127
+              },
+              "destination_mode": {
+                "type": "string",
+                "title": "EF destination behavior",
+                "description": "How the envelope follower contribution is applied at the destination.",
+                "enum": ["add_clamp", "subtract", "replace", "scale", "centered"],
+                "default": "add_clamp"
               }
             },
             "additionalProperties": false

@@ -1126,7 +1126,9 @@ String ConfigManager::makeSchema() {
     s += "\"gateThreshold\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127},";
     s += "\"gateHysteresis\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127},";
     s += "\"activityThreshold\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127},";
-    s += "\"gainTarget\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127}},";
+    s += "\"gainTarget\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127},";
+    s += "\"destination_mode\":{\"type\":\"string\",\"enum\":[\"add_clamp\",\"subtract\",";
+    s += "\"replace\",\"scale\",\"centered\"],\"default\":\"add_clamp\"}},";
     s += "\"additionalProperties\":false},";
     s += "\"active\":{\"type\":\"boolean\",\"title\":\"Enabled\"},";
     s += "\"sysexTemplate\":{\"type\":\"string\",\"title\":\"SysEx template\",\"maxLength\":128},";
