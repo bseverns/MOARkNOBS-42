@@ -64,6 +64,7 @@ struct ParsedCommand {
 void handleGetAllCommand(const ParsedCommand &cmd);
 void handleArpStartCommand(const ParsedCommand &cmd);
 void handleArpStopCommand(const ParsedCommand &cmd);
+void handleGetArpCommand(const ParsedCommand &cmd);
 void handleGetArgMethodCommand(const ParsedCommand &cmd);
 void handleGetBrownoutsCommand(const ParsedCommand &cmd);
 void handleGetClockCommand(const ParsedCommand &cmd);
@@ -87,6 +88,7 @@ void handleSaveProfileCommand(const ParsedCommand &cmd);
 void handleSaveMacroSlotCommand(const ParsedCommand &cmd);
 void handleSetAllCommand(const ParsedCommand &cmd);
 void handleSetArgMethodCommand(const ParsedCommand &cmd);
+void handleSetArpCommand(const ParsedCommand &cmd);
 void handleSetClockCommand(const ParsedCommand &cmd);
 void handleSetEfCommand(const ParsedCommand &cmd);
 void handleSetEfIdleFloorCommand(const ParsedCommand &cmd);

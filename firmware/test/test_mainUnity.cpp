@@ -10,6 +10,7 @@
 
 void test_start_stop_cycle();
 void test_pot_root_drives_default();
+void test_note_dynamics_shape_arp_note_velocity_and_probability();
 void test_slot_root_wins_over_pot();
 void test_external_callback_sets_root();
 void test_external_base_note_without_callback();
@@ -36,6 +37,7 @@ void test_dispatch_set_led_clamps_and_persists_board_cap();
 void test_dispatch_handles_enter_config_mode_command();
 void test_dispatch_handles_live_slot_injection_command();
 void test_dispatch_handles_live_note_dynamics_command_without_boot_request();
+void test_dispatch_handles_live_arp_runtime_commands();
 void test_dispatch_handles_profile_save_load_reset_commands();
 void test_dispatch_handles_macro_and_scene_snapshot_commands();
 void test_dispatch_rejects_unknown_command();
@@ -230,6 +232,7 @@ void setup() {
     RUN_TEST(test_no_heap_growth_over_fake_runtime);
     RUN_TEST(test_start_stop_cycle);
     RUN_TEST(test_pot_root_drives_default);
+    RUN_TEST(test_note_dynamics_shape_arp_note_velocity_and_probability);
     RUN_TEST(test_slot_root_wins_over_pot);
     RUN_TEST(test_external_callback_sets_root);
     RUN_TEST(test_external_base_note_without_callback);
@@ -256,6 +259,7 @@ void setup() {
     RUN_TEST(test_dispatch_handles_enter_config_mode_command);
     RUN_TEST(test_dispatch_handles_live_slot_injection_command);
     RUN_TEST(test_dispatch_handles_live_note_dynamics_command_without_boot_request);
+    RUN_TEST(test_dispatch_handles_live_arp_runtime_commands);
     RUN_TEST(test_dispatch_handles_profile_save_load_reset_commands);
     RUN_TEST(test_dispatch_handles_macro_and_scene_snapshot_commands);
     RUN_TEST(test_dispatch_rejects_unknown_command);

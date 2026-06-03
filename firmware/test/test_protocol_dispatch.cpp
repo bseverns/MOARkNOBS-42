@@ -2,6 +2,7 @@
 #include <unity.h>
 
 #include "BootMode.h"
+#include "Arpeggiator.h"
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
 #include "DiagnosticRecord.h"
@@ -110,6 +111,43 @@ void test_dispatch_handles_live_note_dynamics_command_without_boot_request() {
                             static_cast<uint8_t>(selectBootMode()));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"SET_NOTE_DYNAMICS\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"status\":\"ok\""));
+}
+
+void test_dispatch_handles_live_arp_runtime_commands() {
+    clearTestLogBuffer();
+    arpeggiator.stop();
+    arpeggiator.setLength(12);
+    arpeggiator.setShape(Arpeggiator::UP);
+    arpeggiator.setSwingPercent(0.0f);
+    arpeggiator.setGatePercent(50.0f);
+    arpeggiator.setOctaveRange(0);
+
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ARP,6,4,30,75,2"));
+
+    TEST_ASSERT_EQUAL_UINT8(6, arpeggiator.getLength());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(Arpeggiator::DRUNK),
+                            static_cast<uint8_t>(arpeggiator.getShape()));
+    TEST_ASSERT_EQUAL_FLOAT(30.0f, arpeggiator.getSwingPercent());
+    TEST_ASSERT_EQUAL_FLOAT(75.0f, arpeggiator.getGatePercent());
+    TEST_ASSERT_EQUAL_UINT8(2, arpeggiator.getOctaveRange());
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"SET_ARP\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"status\":\"ok\""));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_ARP"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"GET_ARP\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"length_ticks\":6"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"shape\":4"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"shape_name\":\"drunk\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"gate_percent\":75"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"octave_range\":2"));
+
+    arpeggiator.stop();
+    arpeggiator.setLength(12);
+    arpeggiator.setShape(Arpeggiator::UP);
+    arpeggiator.setSwingPercent(0.0f);
+    arpeggiator.setGatePercent(50.0f);
+    arpeggiator.setOctaveRange(0);
 }
 
 void test_dispatch_handles_profile_save_load_reset_commands() {

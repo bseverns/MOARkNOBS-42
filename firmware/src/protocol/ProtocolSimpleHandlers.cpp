@@ -10,6 +10,7 @@
 #include <cstring>
 
 #include "BoardPowerProfile.h"
+#include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "DiagnosticRecord.h"
 #include "EfSettingsUtils.h"
@@ -80,6 +81,24 @@ const char *efDestinationModeName(uint8_t mode) {
         return "centered";
     }
     return "add_clamp";
+}
+
+const char *arpShapeName(Arpeggiator::Shape shape) {
+    switch (shape) {
+    case Arpeggiator::UP:
+        return "up";
+    case Arpeggiator::DOWN:
+        return "down";
+    case Arpeggiator::UPDOWN:
+        return "up_down";
+    case Arpeggiator::RANDOM:
+        return "random";
+    case Arpeggiator::DRUNK:
+        return "drunk";
+    case Arpeggiator::EUCLIDEAN:
+        return "euclidean";
+    }
+    return "up";
 }
 
 const char *lfoShapeName(LFOShape shape) {
@@ -852,6 +871,23 @@ void handleGetClockCommand(const String &command) {
                externalSignal ? "true" : "false", running ? "true" : "false", source);
 }
 
+void handleGetArpCommand(const String &command) {
+    (void)command;
+    const Arpeggiator::Shape shape = arpeggiator.getShape();
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_ARP\",\"active\":%s,\"slot\":%u,"
+               "\"length_ticks\":%u,\"shape\":%u,\"shape_name\":\"%s\","
+               "\"swing_percent\":%u,\"gate_percent\":%u,\"octave_range\":%u,"
+               "\"pattern_length\":%u}\n",
+               arpeggiator.isActive() ? "true" : "false",
+               static_cast<unsigned>(arpeggiator.getSlot()),
+               static_cast<unsigned>(arpeggiator.getLength()), static_cast<unsigned>(shape),
+               arpShapeName(shape),
+               static_cast<unsigned>(constrain(arpeggiator.getSwingPercent(), 0.0f, 80.0f)),
+               static_cast<unsigned>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f)),
+               static_cast<unsigned>(arpeggiator.getOctaveRange()),
+               static_cast<unsigned>(arpeggiator.getPatternLength()));
+}
+
 void handleGetEfCommand(const String &command) {
     int potIndex = command.substring(7).toInt();
     if (potIndex >= 0 && potIndex < NUM_POTS) {
@@ -912,6 +948,50 @@ void handleSetArgMethodCommand(const String &command) {
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
+}
+
+void handleSetArpCommand(const String &command) {
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+    int thirdComma = command.indexOf(',', secondComma + 1);
+    int fourthComma = command.indexOf(',', thirdComma + 1);
+    int fifthComma = command.indexOf(',', fourthComma + 1);
+    if (firstComma < 0 || secondComma < 0 || thirdComma < 0 || fourthComma < 0 || fifthComma < 0) {
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_ARP\","
+                    "\"message\":\"missing values\"}");
+        return;
+    }
+
+    const uint8_t lengthTicks =
+        static_cast<uint8_t>(constrain(command.substring(firstComma + 1, secondComma).toInt(), 1,
+                                       static_cast<int>(Arpeggiator::MAX_LENGTH)));
+    const uint8_t shape =
+        static_cast<uint8_t>(constrain(command.substring(secondComma + 1, thirdComma).toInt(), 0,
+                                       static_cast<int>(Arpeggiator::EUCLIDEAN)));
+    const float swingPercent =
+        constrain(command.substring(thirdComma + 1, fourthComma).toFloat(), 0.0f, 80.0f);
+    const float gatePercent =
+        constrain(command.substring(fourthComma + 1, fifthComma).toFloat(), 5.0f, 100.0f);
+    const uint8_t octaveRange =
+        static_cast<uint8_t>(constrain(command.substring(fifthComma + 1).toInt(), 0, 3));
+
+    arpeggiator.setLength(lengthTicks);
+    arpeggiator.setShape(static_cast<Arpeggiator::Shape>(shape));
+    arpeggiator.setSwingPercent(swingPercent);
+    arpeggiator.setGatePercent(gatePercent);
+    arpeggiator.setOctaveRange(octaveRange);
+
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_ARP\","
+               "\"active\":%s,\"slot\":%u,\"length_ticks\":%u,\"shape\":%u,"
+               "\"shape_name\":\"%s\",\"swing_percent\":%u,\"gate_percent\":%u,"
+               "\"octave_range\":%u,\"pattern_length\":%u}\n",
+               arpeggiator.isActive() ? "true" : "false",
+               static_cast<unsigned>(arpeggiator.getSlot()), static_cast<unsigned>(lengthTicks),
+               static_cast<unsigned>(shape), arpShapeName(static_cast<Arpeggiator::Shape>(shape)),
+               static_cast<unsigned>(constrain(swingPercent, 0.0f, 80.0f)),
+               static_cast<unsigned>(constrain(gatePercent, 5.0f, 100.0f)),
+               static_cast<unsigned>(octaveRange),
+               static_cast<unsigned>(arpeggiator.getPatternLength()));
 }
 
 void handleSetClockCommand(const String &command) {

@@ -74,6 +74,25 @@ export function handleNativePendingResponse({
         return true;
       }
       break;
+    case 'arp_get':
+    case 'arp_set':
+      if (
+        Object.prototype.hasOwnProperty.call(msg, 'length_ticks') &&
+        Object.prototype.hasOwnProperty.call(msg, 'shape') &&
+        Object.prototype.hasOwnProperty.call(msg, 'gate_percent') &&
+        Object.prototype.hasOwnProperty.call(msg, 'octave_range')
+      ) {
+        if (activePending.nativeRequest.kind === 'arp_set' && msg.status !== 'ok') {
+          rpcKernel.handleRpcResponse({
+            id: activePendingId,
+            error: { message: msg.message ?? 'Arp update failed' }
+          });
+        } else {
+          rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+        }
+        return true;
+      }
+      break;
     case 'jitter_get':
     case 'jitter_set':
       if (

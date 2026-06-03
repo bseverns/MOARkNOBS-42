@@ -109,6 +109,7 @@ void writeManifestCapabilities(JsonObject object) {
     capabilities["profile_reset"] = true;
     capabilities["macro_snapshot"] = true;
     capabilities["scenes"] = true;
+    capabilities["arp_live"] = true;
     capabilities["clock_live"] = true;
     capabilities["note_dynamics_live"] = true;
     capabilities["jitter_live"] = true;

@@ -168,6 +168,17 @@ export function createProfileMacroScenePanel({
     arpSwingInput = null,
     arpGateInput = null,
     arpOctaveInput = null,
+    liveArpSlotInput = null,
+    liveArpLengthInput = null,
+    liveArpShapeSelect = null,
+    liveArpSwingInput = null,
+    liveArpGateInput = null,
+    liveArpOctaveInput = null,
+    liveArpRefreshBtn = null,
+    liveArpApplyBtn = null,
+    liveArpStartBtn = null,
+    liveArpStopBtn = null,
+    liveArpStatusEl = null,
     lfoCard = null,
     lfoEditor = null,
     lfoRouteAddBtn = null,
@@ -187,6 +198,17 @@ export function createProfileMacroScenePanel({
   let macroBusy = false;
   let macroAvailable = false;
   let arpBusy = false;
+  let liveArpBusy = false;
+  let liveArpDraft = {
+    active: false,
+    slot: 0,
+    length_ticks: 12,
+    shape: 0,
+    swing_percent: 0,
+    gate_percent: 50,
+    octave_range: 0,
+    pattern_length: 4
+  };
   let lfoBusy = false;
   let modMatrixBusy = false;
   let modMatrixReport = null;
@@ -269,6 +291,12 @@ export function createProfileMacroScenePanel({
     if (!arpStatusEl) return;
     arpStatusEl.dataset.state = state;
     arpStatusEl.textContent = message;
+  }
+
+  function setLiveArpStatus(state, message) {
+    if (!liveArpStatusEl) return;
+    liveArpStatusEl.dataset.state = state;
+    liveArpStatusEl.textContent = message;
   }
 
   function setLfoStatus(state, message) {
@@ -399,6 +427,41 @@ export function createProfileMacroScenePanel({
       swing_percent: arpSwingInput?.value ?? arpDraft.swing_percent,
       gate_percent: arpGateInput?.value ?? arpDraft.gate_percent,
       octave_range: arpOctaveInput?.value ?? arpDraft.octave_range
+    });
+  }
+
+  function syncLiveArpForm() {
+    if (liveArpSlotInput) liveArpSlotInput.value = String(liveArpDraft.slot);
+    if (liveArpLengthInput) liveArpLengthInput.value = String(liveArpDraft.length_ticks);
+    if (liveArpShapeSelect) liveArpShapeSelect.value = String(liveArpDraft.shape);
+    if (liveArpSwingInput) liveArpSwingInput.value = String(liveArpDraft.swing_percent);
+    if (liveArpGateInput) liveArpGateInput.value = String(liveArpDraft.gate_percent);
+    if (liveArpOctaveInput) liveArpOctaveInput.value = String(liveArpDraft.octave_range);
+  }
+
+  function setLiveArpDraft(nextDraft = {}) {
+    liveArpDraft = {
+      active: Boolean(nextDraft.active),
+      slot: clampInteger(nextDraft.slot, 0, SLOT_COUNT - 1, liveArpDraft.slot),
+      length_ticks: clampInteger(nextDraft.length_ticks, 1, 24, liveArpDraft.length_ticks),
+      shape: clampInteger(nextDraft.shape, 0, ARP_SHAPE_OPTIONS.length - 1, liveArpDraft.shape),
+      swing_percent: clampInteger(nextDraft.swing_percent, 0, 80, liveArpDraft.swing_percent),
+      gate_percent: clampInteger(nextDraft.gate_percent, 5, 100, liveArpDraft.gate_percent),
+      octave_range: clampInteger(nextDraft.octave_range, 0, 3, liveArpDraft.octave_range),
+      pattern_length: clampInteger(nextDraft.pattern_length, 2, 16, liveArpDraft.pattern_length)
+    };
+    syncLiveArpForm();
+  }
+
+  function readLiveArpFormIntoDraft() {
+    setLiveArpDraft({
+      ...liveArpDraft,
+      slot: liveArpSlotInput?.value ?? liveArpDraft.slot,
+      length_ticks: liveArpLengthInput?.value ?? liveArpDraft.length_ticks,
+      shape: liveArpShapeSelect?.value ?? liveArpDraft.shape,
+      swing_percent: liveArpSwingInput?.value ?? liveArpDraft.swing_percent,
+      gate_percent: liveArpGateInput?.value ?? liveArpDraft.gate_percent,
+      octave_range: liveArpOctaveInput?.value ?? liveArpDraft.octave_range
     });
   }
 
@@ -856,6 +919,7 @@ export function createProfileMacroScenePanel({
     updateProfileWizardControls();
     updateMacroControls();
     updateArpControls();
+    updateLiveArpControls();
     updateLfoControls();
     updateModMatrixControls();
     sceneControls.updateControls();
@@ -875,6 +939,29 @@ export function createProfileMacroScenePanel({
     if (arpCard) {
       arpCard.dataset.state = canInteract ? 'ready' : 'muted';
     }
+  }
+
+  function updateLiveArpControls() {
+    const canInteract =
+      profileInteractable &&
+      !profileWorkflow.isLocked() &&
+      !profileWizardBusy &&
+      !liveArpBusy &&
+      deviceCapabilities.arpLive;
+    [
+      liveArpSlotInput,
+      liveArpLengthInput,
+      liveArpShapeSelect,
+      liveArpSwingInput,
+      liveArpGateInput,
+      liveArpOctaveInput
+    ].forEach((control) => {
+      if (control) control.disabled = !canInteract;
+    });
+    if (liveArpRefreshBtn) liveArpRefreshBtn.disabled = !canInteract;
+    if (liveArpApplyBtn) liveArpApplyBtn.disabled = !canInteract;
+    if (liveArpStartBtn) liveArpStartBtn.disabled = !canInteract;
+    if (liveArpStopBtn) liveArpStopBtn.disabled = !canInteract || !liveArpDraft.active;
   }
 
   function updateLfoControls() {
@@ -1100,6 +1187,105 @@ export function createProfileMacroScenePanel({
     }
   }
 
+  function summarizeLiveArp() {
+    const shapeLabel = ARP_SHAPE_OPTIONS[liveArpDraft.shape] ?? `Shape ${liveArpDraft.shape}`;
+    const active = liveArpDraft.active ? `Slot ${liveArpDraft.slot}` : 'Idle';
+    return `${active} • ${shapeLabel} • ${liveArpDraft.length_ticks} ticks`;
+  }
+
+  async function refreshLiveArp({ silent = false } = {}) {
+    if (!profileInteractable || !deviceCapabilities.arpLive || liveArpBusy) return;
+    liveArpBusy = true;
+    refreshProfileControls();
+    if (!silent) setLiveArpStatus('busy', 'Reading live arp state…');
+    try {
+      const response = await runtime.sendRpc(
+        { rpc: 'get_arp' },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+      );
+      setLiveArpDraft(response);
+      setLiveArpStatus('ok', summarizeLiveArp());
+    } catch (err) {
+      setLiveArpStatus('err', `Live arp read failed: ${err.message || String(err)}`);
+    } finally {
+      liveArpBusy = false;
+      refreshProfileControls();
+    }
+  }
+
+  async function pushLiveArp() {
+    if (!profileInteractable || !deviceCapabilities.arpLive || liveArpBusy) return;
+    readLiveArpFormIntoDraft();
+    liveArpBusy = true;
+    refreshProfileControls();
+    setLiveArpStatus('busy', 'Pushing live arp controls…');
+    try {
+      const response = await runtime.sendRpc(
+        {
+          rpc: 'set_arp',
+          lengthTicks: liveArpDraft.length_ticks,
+          shape: liveArpDraft.shape,
+          swingPercent: liveArpDraft.swing_percent,
+          gatePercent: liveArpDraft.gate_percent,
+          octaveRange: liveArpDraft.octave_range
+        },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+      );
+      setLiveArpDraft({ ...response, slot: liveArpDraft.slot });
+      setLiveArpStatus('ok', summarizeLiveArp());
+      setStatus('ok', 'Live arp updated', summarizeLiveArp());
+    } catch (err) {
+      setLiveArpStatus('err', `Live arp update failed: ${err.message || String(err)}`);
+      setStatus('err', 'Live arp update failed', err.message || String(err));
+    } finally {
+      liveArpBusy = false;
+      refreshProfileControls();
+    }
+  }
+
+  async function startLiveArp() {
+    if (!profileInteractable || !deviceCapabilities.arpLive || liveArpBusy) return;
+    readLiveArpFormIntoDraft();
+    liveArpBusy = true;
+    refreshProfileControls();
+    setLiveArpStatus('busy', `Starting arp on slot ${liveArpDraft.slot}…`);
+    try {
+      await runtime.sendRpc(
+        { rpc: 'arp_start', slot: liveArpDraft.slot },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+      );
+      setLiveArpDraft({ ...liveArpDraft, active: true });
+      setLiveArpStatus('ok', summarizeLiveArp());
+    } catch (err) {
+      setLiveArpStatus('err', `Arp start failed: ${err.message || String(err)}`);
+      setStatus('err', 'Arp start failed', err.message || String(err));
+    } finally {
+      liveArpBusy = false;
+      refreshProfileControls();
+    }
+  }
+
+  async function stopLiveArp() {
+    if (!profileInteractable || !deviceCapabilities.arpLive || liveArpBusy) return;
+    liveArpBusy = true;
+    refreshProfileControls();
+    setLiveArpStatus('busy', 'Stopping arp…');
+    try {
+      await runtime.sendRpc(
+        { rpc: 'arp_stop' },
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+      );
+      setLiveArpDraft({ ...liveArpDraft, active: false });
+      setLiveArpStatus('ok', summarizeLiveArp());
+    } catch (err) {
+      setLiveArpStatus('err', `Arp stop failed: ${err.message || String(err)}`);
+      setStatus('err', 'Arp stop failed', err.message || String(err));
+    } finally {
+      liveArpBusy = false;
+      refreshProfileControls();
+    }
+  }
+
   async function saveLfoProfile() {
     if (!profileInteractable || profileWorkflow.isLocked() || lfoBusy) return;
     lfoBusy = true;
@@ -1294,12 +1480,26 @@ export function createProfileMacroScenePanel({
     setArpDraft(createDefaultArpDraft());
     setLfoDraft(createDefaultLfoDraft());
     setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    setLiveArpDraft(liveArpDraft);
+    setLiveArpStatus('muted', 'Connect to inspect live arpeggiator state.');
     setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
     [arpLengthInput, arpShapeSelect, arpSwingInput, arpGateInput, arpOctaveInput].forEach(
       (control) => control?.addEventListener('change', () => readArpFormIntoDraft())
     );
+    [
+      liveArpSlotInput,
+      liveArpLengthInput,
+      liveArpShapeSelect,
+      liveArpSwingInput,
+      liveArpGateInput,
+      liveArpOctaveInput
+    ].forEach((control) => control?.addEventListener('change', () => readLiveArpFormIntoDraft()));
     arpRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'arp' }));
     arpSaveBtn?.addEventListener('click', () => saveArpProfile());
+    liveArpRefreshBtn?.addEventListener('click', () => refreshLiveArp());
+    liveArpApplyBtn?.addEventListener('click', () => pushLiveArp());
+    liveArpStartBtn?.addEventListener('click', () => startLiveArp());
+    liveArpStopBtn?.addEventListener('click', () => stopLiveArp());
     lfoRouteAddBtn?.addEventListener('click', () => addLfoRoute());
     lfoRoutesClearBtn?.addEventListener('click', () => clearLfoRoutes());
     lfoRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'lfo' }));
@@ -1361,6 +1561,11 @@ export function createProfileMacroScenePanel({
     renderLfoEditor();
     syncRecoverySupportCopy();
     void refreshProfileUtilities({ silent: true });
+    if (deviceCapabilities.arpLive) {
+      void refreshLiveArp({ silent: true });
+    } else {
+      setLiveArpStatus('muted', 'This firmware does not expose live arp controls.');
+    }
     if (deviceCapabilities.scenes) {
       sceneControls.refreshSceneList();
     }
@@ -1375,12 +1580,14 @@ export function createProfileMacroScenePanel({
     lfoBusy = false;
     modMatrixBusy = false;
     modMatrixReport = null;
+    liveArpBusy = false;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     renderLfoEditor();
     renderModMatrix();
     syncRecoverySupportCopy();
     setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    setLiveArpStatus('muted', 'Connect to inspect live arpeggiator state.');
     setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
     setModMatrixStatus('muted', 'Connect to inspect modulation routes.');
   }
@@ -1394,12 +1601,14 @@ export function createProfileMacroScenePanel({
     lfoBusy = false;
     modMatrixBusy = false;
     modMatrixReport = null;
+    liveArpBusy = false;
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     renderLfoEditor();
     renderModMatrix();
     syncRecoverySupportCopy();
     setArpStatus('muted', 'Reconnect to inspect or save arp settings.');
+    setLiveArpStatus('muted', 'Reconnect to inspect live arpeggiator state.');
     setLfoStatus('muted', 'Reconnect to inspect or save LFO settings.');
     setModMatrixStatus('muted', 'Reconnect to inspect modulation routes.');
   }

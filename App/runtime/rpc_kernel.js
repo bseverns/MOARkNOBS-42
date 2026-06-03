@@ -52,6 +52,8 @@ export function createRpcKernel({
         return { kind: 'manifest', lines: ['GET_MANIFEST'] };
       case 'get_mod_matrix':
         return { kind: 'mod_matrix', lines: ['GET_MOD_MATRIX'] };
+      case 'get_arp':
+        return { kind: 'arp_get', lines: ['GET_ARP'] };
       case 'get_profile':
         return { kind: 'profile_get', lines: [`GET_PROFILE,${Number(message.slot) || 0}`] };
       case 'get_clock':
@@ -88,6 +90,17 @@ export function createRpcKernel({
             `SET_CLOCK,${message.followExternal ? 1 : 0},${
               message.clockOutEnabled ? 1 : 0
             },${Number(message.tappedBpm ?? 120).toFixed(2)}`
+          ]
+        };
+      case 'set_arp':
+        return {
+          kind: 'arp_set',
+          lines: [
+            `SET_ARP,${Math.round(Number(message.lengthTicks) || 12)},${Math.round(
+              Number(message.shape) || 0
+            )},${Math.round(Number(message.swingPercent) || 0)},${Math.round(
+              Number(message.gatePercent) || 50
+            )},${Math.round(Number(message.octaveRange) || 0)}`
           ]
         };
       case 'set_jitter':

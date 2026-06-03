@@ -28,6 +28,7 @@ void handleGetModMatrixCommand(const String &command);
 
 // Live runtime inspection reads.
 void handleGetClockCommand(const String &command);
+void handleGetArpCommand(const String &command);
 void handleGetEfCommand(const String &command);
 void handleGetJitterCommand(const String &command);
 void handleGetLedCommand(const String &command);
@@ -36,6 +37,7 @@ void handleGetUsbMidiCommand(const String &command);
 
 // Direct live-control writes.
 void handleSetArgMethodCommand(const String &command);
+void handleSetArpCommand(const String &command);
 void handleSetClockCommand(const String &command);
 void handleSetEfCommand(const String &command);
 void handleSetJitterCommand(const String &command);

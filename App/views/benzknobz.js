@@ -187,6 +187,17 @@ const boot = () => {
   const arpSwingInput = document.getElementById('arp-swing');
   const arpGateInput = document.getElementById('arp-gate');
   const arpOctaveInput = document.getElementById('arp-octave');
+  const liveArpSlotInput = document.getElementById('live-arp-slot');
+  const liveArpLengthInput = document.getElementById('live-arp-length');
+  const liveArpShapeSelect = document.getElementById('live-arp-shape');
+  const liveArpSwingInput = document.getElementById('live-arp-swing');
+  const liveArpGateInput = document.getElementById('live-arp-gate');
+  const liveArpOctaveInput = document.getElementById('live-arp-octave');
+  const liveArpRefreshBtn = document.getElementById('live-arp-refresh');
+  const liveArpApplyBtn = document.getElementById('live-arp-apply');
+  const liveArpStartBtn = document.getElementById('live-arp-start');
+  const liveArpStopBtn = document.getElementById('live-arp-stop');
+  const liveArpStatusEl = document.getElementById('live-arp-status');
   const jitterDepthInput = document.getElementById('jitter-depth');
   const jitterSmoothnessInput = document.getElementById('jitter-smoothness');
   const jitterApplyBtn = document.getElementById('jitter-apply');
@@ -601,6 +612,17 @@ const boot = () => {
       arpSwingInput,
       arpGateInput,
       arpOctaveInput,
+      liveArpSlotInput,
+      liveArpLengthInput,
+      liveArpShapeSelect,
+      liveArpSwingInput,
+      liveArpGateInput,
+      liveArpOctaveInput,
+      liveArpRefreshBtn,
+      liveArpApplyBtn,
+      liveArpStartBtn,
+      liveArpStopBtn,
+      liveArpStatusEl,
       lfoCard,
       lfoEditor,
       lfoRouteAddBtn,

@@ -18,6 +18,7 @@ export function resolveProfileCapabilities(manifest) {
       ? Boolean(caps.profile_reset)
       : Boolean(coreProfileFallback),
     macroSnapshot: Boolean(caps.macro_snapshot),
+    arpLive: Boolean(caps.arp_live),
     scenes: Boolean(caps.scenes)
   };
 }

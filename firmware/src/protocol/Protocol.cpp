@@ -240,6 +240,10 @@ void handleArpStartCommand(const ParsedCommand &cmd) { ::handleArpStartCommand(c
 
 void handleArpStopCommand(const ParsedCommand &cmd) { ::handleArpStopCommand(cmd.fullCommand()); }
 
+void handleGetArpCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetArpCommand(cmd.fullCommand());
+}
+
 void handleGetArgMethodCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetArgMethodCommand(cmd.fullCommand());
 }
@@ -343,6 +347,10 @@ void handleSetAllCommand(const ParsedCommand &cmd) { handleSetAllBulkCommand(cmd
 
 void handleSetArgMethodCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetArgMethodCommand(cmd.fullCommand());
+}
+
+void handleSetArpCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleSetArpCommand(cmd.fullCommand());
 }
 
 void handleSetClockCommand(const ParsedCommand &cmd) {

@@ -121,6 +121,47 @@ void test_pot_root_drives_default() {
     TEST_ASSERT_EQUAL_UINT8(127, cfg.getSlot(0).arpNote);
 }
 
+void test_note_dynamics_shape_arp_note_velocity_and_probability() {
+    MidiUsbGuard guard;
+    velocityShift = -12;
+    changeProbability = 100;
+    g_lfoVelocityShift = 0.0f;
+    g_lfoNoteChance = 0.0f;
+
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(1);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Pot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 2, 10);
+
+    auto pots = makePots();
+    pots.potLastValues[0] = 1023;
+
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots);
+    midi._clockTickCount++;
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT8(127, usbMIDI.lastNoteOn);
+    TEST_ASSERT_EQUAL_UINT8(115, usbMIDI.lastNoteOnVelocity);
+    TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.lastNoteOnChannel);
+
+    guard.reset();
+    const uint32_t beforeTx = midi._txCount;
+    changeProbability = 0;
+    midi._clockTickCount++;
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTx, midi._txCount);
+    TEST_ASSERT_EQUAL_UINT8(0, usbMIDI.lastNoteOn);
+
+    velocityShift = 0;
+    changeProbability = 100;
+}
+
 void test_slot_root_wins_over_pot() {
     MidiUsbGuard guard;
     Arpeggiator arp;

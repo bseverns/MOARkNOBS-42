@@ -14,6 +14,7 @@ const DEFAULT_CAPABILITIES = {
   profile_reset: false,
   macro_snapshot: false,
   scenes: false,
+  arp_live: false,
   usb_midi_toggle: false
 };
 

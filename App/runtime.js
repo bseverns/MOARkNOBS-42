@@ -148,6 +148,7 @@ export function createRuntime({
             profile_reset: true,
             macro_snapshot: true,
             scenes: true,
+            arp_live: true,
             clock_live: true,
             usb_midi_toggle: true,
             note_dynamics_live: true,

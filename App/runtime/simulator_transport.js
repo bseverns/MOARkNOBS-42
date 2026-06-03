@@ -178,6 +178,17 @@ export function createSimulator(simDeps = {}) {
   };
   const profileSettingsSlots = Array.from({ length: 4 }, () => cloneValue(defaultProfileSettings));
   const activeArpSlots = new Set();
+  let liveArp = {
+    active: false,
+    slot: 0,
+    length_ticks: 12,
+    shape: 0,
+    shape_name: 'up',
+    swing_percent: 0,
+    gate_percent: 50,
+    octave_range: 0,
+    pattern_length: 4
+  };
   let usbMidiOutEnabled = false;
   let velocityShift = 0;
   let changeProbability = 100;
@@ -458,6 +469,9 @@ export function createSimulator(simDeps = {}) {
           source: followExternalClock ? 'external' : 'internal'
         });
         break;
+      case 'get_arp':
+        respond({ ...liveArp, active: activeArpSlots.size > 0 });
+        break;
       case 'get_jitter':
         respond({ depth: jitterDepth, smoothness: jitterSmoothness });
         break;
@@ -507,6 +521,21 @@ export function createSimulator(simDeps = {}) {
           source: followExternalClock ? 'external' : 'internal'
         });
         break;
+      case 'set_arp': {
+        const shapeNames = ['up', 'down', 'up_down', 'random', 'drunk', 'euclidean'];
+        liveArp = {
+          ...liveArp,
+          active: activeArpSlots.size > 0,
+          length_ticks: Math.max(1, Math.min(24, Math.round(Number(request.lengthTicks) || 12))),
+          shape: Math.max(0, Math.min(5, Math.round(Number(request.shape) || 0))),
+          swing_percent: Math.max(0, Math.min(80, Math.round(Number(request.swingPercent) || 0))),
+          gate_percent: Math.max(5, Math.min(100, Math.round(Number(request.gatePercent) || 50))),
+          octave_range: Math.max(0, Math.min(3, Math.round(Number(request.octaveRange) || 0)))
+        };
+        liveArp.shape_name = shapeNames[liveArp.shape] ?? 'up';
+        respond({ command: 'SET_ARP', status: 'ok', ...liveArp });
+        break;
+      }
       case 'set_jitter':
         jitterDepth = Math.max(0, Math.min(1, Number(request.depth) || 0));
         jitterSmoothness = Math.max(0, Math.min(1, Number(request.smoothness) || 0));
@@ -572,12 +601,14 @@ export function createSimulator(simDeps = {}) {
             Math.min(manifest.slot_count - 1, Math.floor(Number(request.slot) || 0))
           );
           activeArpSlots.add(slot);
+          liveArp = { ...liveArp, active: true, slot };
           respond({ slot, arp_started: true, active: activeArpSlots.size > 0 });
         }
         break;
       case 'arp_stop':
         if (request.slot === undefined || request.slot === null) {
           activeArpSlots.clear();
+          liveArp = { ...liveArp, active: false };
           respond({ arp_stopped: true, active: false });
           break;
         }
@@ -587,6 +618,7 @@ export function createSimulator(simDeps = {}) {
             Math.min(manifest.slot_count - 1, Math.floor(Number(request.slot) || 0))
           );
           activeArpSlots.delete(slot);
+          liveArp = { ...liveArp, active: activeArpSlots.size > 0 };
           respond({ slot, arp_stopped: true, active: activeArpSlots.size > 0 });
         }
         break;

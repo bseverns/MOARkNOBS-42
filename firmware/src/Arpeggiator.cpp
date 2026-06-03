@@ -382,13 +382,22 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
         case MIDIMessageType::Note: {
             // Notes schedule a NoteOff based on gate length.
             uint8_t note = constrain(root + offset, 0, 127);
+            int lfoVelocityOffset = static_cast<int>(lroundf(g_lfoVelocityShift * 32.0f));
+            uint8_t velocity = static_cast<uint8_t>(
+                constrain(static_cast<int>(potVal) + velocityShift + lfoVelocityOffset, 0, 127));
+            int lfoChanceOffset = static_cast<int>(lroundf(g_lfoNoteChance * 40.0f));
+            int effectiveChance =
+                constrain(static_cast<int>(changeProbability) + lfoChanceOffset, 0, 100);
+            if (random(100U) >= static_cast<uint8_t>(effectiveChance)) {
+                break;
+            }
             if (delayMs == 0) {
-                midi.sendNoteOn(note, potVal, slot.midiChannel);
+                midi.sendNoteOn(note, velocity, slot.midiChannel);
                 Utility::schedulerHigh.addTask(
                     [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
                     baseGateMs, false);
             } else {
-                Utility::schedulerHigh.addTask([note, vel = potVal, ch = slot.midiChannel,
+                Utility::schedulerHigh.addTask([note, vel = velocity, ch = slot.midiChannel,
                                                 &midi]() { midi.sendNoteOn(note, vel, ch); },
                                                delayMs, false);
                 Utility::schedulerHigh.addTask(

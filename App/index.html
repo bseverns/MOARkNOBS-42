@@ -392,7 +392,7 @@
             <header class="live-toggle-card-header">
               <div>
                 <h3 id="note-dynamics-title">Note Dynamics</h3>
-                <p class="microcopy">Live note velocity and note-chance controls. Hardware pots use soft takeover after browser updates.</p>
+                <p class="microcopy">Live note and arp-note velocity/chance controls. Hardware pots use soft takeover after browser updates.</p>
               </div>
               <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
             </header>
@@ -560,6 +560,57 @@
                 <input id="arp-octave" type="number" min="0" max="3" step="1" />
               </label>
             </div>
+            <section class="live-toggle-card" aria-labelledby="live-arp-title">
+              <header class="live-toggle-card-header">
+                <div>
+                  <h3 id="live-arp-title">Live Arp</h3>
+                  <p class="microcopy">Inspect and push the arpeggiator runtime controls without saving a profile.</p>
+                </div>
+                <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
+              </header>
+              <div class="live-control-grid">
+                <label>
+                  <span>Slot</span>
+                  <input id="live-arp-slot" type="number" min="0" max="41" step="1" disabled />
+                </label>
+                <label>
+                  <span>Length ticks</span>
+                  <input id="live-arp-length" type="number" min="1" max="24" step="1" disabled />
+                </label>
+                <label>
+                  <span>Shape</span>
+                  <select id="live-arp-shape" disabled>
+                    <option value="0">Up</option>
+                    <option value="1">Down</option>
+                    <option value="2">Up/Down</option>
+                    <option value="3">Random</option>
+                    <option value="4">Drunk</option>
+                    <option value="5">Euclidean</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Swing %</span>
+                  <input id="live-arp-swing" type="number" min="0" max="80" step="1" disabled />
+                </label>
+                <label>
+                  <span>Gate %</span>
+                  <input id="live-arp-gate" type="number" min="5" max="100" step="1" disabled />
+                </label>
+                <label>
+                  <span>Octaves</span>
+                  <input id="live-arp-octave" type="number" min="0" max="3" step="1" disabled />
+                </label>
+              </div>
+              <div class="live-toggle-actions">
+                <button id="live-arp-refresh" type="button" disabled>Refresh live arp</button>
+                <button id="live-arp-apply" type="button" disabled>Push live arp</button>
+                <button id="live-arp-start" type="button" disabled>Start slot</button>
+                <button id="live-arp-stop" type="button" disabled>Stop arp</button>
+              </div>
+              <p class="microcopy macro-status" id="live-arp-status" data-state="muted" aria-live="polite">
+                Connect to inspect live arpeggiator state.
+              </p>
+            </section>
             <section class="live-toggle-card" aria-labelledby="jitter-title">
               <header class="live-toggle-card-header">
                 <div>
