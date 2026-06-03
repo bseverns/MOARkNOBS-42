@@ -1,8 +1,11 @@
 site_name: MOARkNOBS-42
 site_description: Story-first documentation for builders, performers, and curious learners.
+site_url: https://bseverns.github.io/MOARkNOBS-42/
 repo_url: https://github.com/bseverns/MOARkNOBS-42
 repo_name: bseverns/MOARkNOBS-42
+edit_uri: edit/main/docs/
 docs_dir: docs
+use_directory_urls: true
 theme:
   name: material
   icon:

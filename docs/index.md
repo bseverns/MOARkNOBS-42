@@ -19,9 +19,9 @@ It is designed less like a sealed appliance and more like an instrument whose lo
 For the whole object-to-software picture in one glance, read the [System Map](getting-started/SystemMap.md).
 
 <div class="mn42-cta-row">
-  <a class="md-button md-button--primary" href="project/PilotRun.md">Join pilot run / interest list</a>
+  <a class="md-button md-button--primary" href="project/PilotRun/">Join pilot run / interest list</a>
   <a class="md-button" href="#core-features">See features</a>
-  <a class="md-button" href="getting-started/WhyMN42.md">Start here / learn how it works</a>
+  <a class="md-button" href="getting-started/WhyMN42/">Start here / learn how it works</a>
 </div>
 
 </div>
@@ -181,9 +181,9 @@ The repo publishes workflows, validation guidance, and support boundaries clearl
 If the instrument makes sense for your setup, the next useful step is not a vague preorder mindset. It is reading the pilot-run framing, checking the support boundary, and choosing the workflow path that matches how you actually work.
 
 <div class="mn42-cta-row">
-  <a class="md-button md-button--primary" href="project/PilotRun.md">Read pilot run details</a>
-  <a class="md-button" href="project/LicenseAndSupport.md">Read support boundary</a>
-  <a class="md-button" href="getting-started/QuickstartForPerformers.md">See performer workflow</a>
+  <a class="md-button md-button--primary" href="project/PilotRun/">Read pilot run details</a>
+  <a class="md-button" href="project/LicenseAndSupport/">Read support boundary</a>
+  <a class="md-button" href="getting-started/QuickstartForPerformers/">See performer workflow</a>
 </div>
 
 </div>
