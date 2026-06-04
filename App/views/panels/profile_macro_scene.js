@@ -546,7 +546,10 @@ export function createProfileMacroScenePanel({
 
   function markLfoDraftDirty() {
     lfoDraftDirty = true;
-    setLfoStatus('busy', `${describeSlot()} edited locally. Save slot LFOs to persist changes.`);
+    setLfoStatus(
+      'busy',
+      `${describeSlot()} edited locally. Push & save LFO changes to hear and scope them.`
+    );
     updateLfoControls();
   }
 
@@ -1017,9 +1020,9 @@ export function createProfileMacroScenePanel({
     if (lfoRefreshBtn) lfoRefreshBtn.disabled = !canInteract;
     if (lfoSaveBtn) {
       lfoSaveBtn.disabled = !canInteract || !lfoDraftDirty;
-      lfoSaveBtn.textContent = lfoDraftDirty ? 'Save LFO changes' : 'Save slot LFOs';
+      lfoSaveBtn.textContent = lfoDraftDirty ? 'Push & save LFO changes' : 'Save slot LFOs';
       lfoSaveBtn.title = lfoDraftDirty
-        ? `Persist local LFO edits to ${describeSlot()}.`
+        ? `Apply local LFO edits live and persist them to ${describeSlot()}.`
         : `No unsaved LFO edits for ${describeSlot()}.`;
     }
     if (lfoRouteAddBtn) {

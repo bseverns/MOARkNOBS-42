@@ -25,6 +25,11 @@ export class ScopePanel {
     this.statusLabel = container.querySelector('#scope-status');
     this.fpsLabel = container.querySelector('#scope-fps');
     this.snapshotButton = container.querySelector('#scope-snapshot');
+    this.lfoValueLabels = [
+      container.querySelector('#scope-lfo-1'),
+      container.querySelector('#scope-lfo-2')
+    ];
+    this.clockLabel = container.querySelector('#scope-clock');
     if (!this.canvas || !this.canvas.getContext) return;
 
     this.ctx = this.canvas.getContext('2d');
@@ -41,6 +46,8 @@ export class ScopePanel {
     this.peakLevel = 0;
     this.hasTelemetry = false;
     this.lastTelemetryTimestamp = null;
+    this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
+    this.lastClock = null;
     this.frameRequest = null;
     this.lastRender = 0;
     this.fpsWindowStart = now();
@@ -82,6 +89,7 @@ export class ScopePanel {
       { length: this.lfoCount },
       () => new Float32Array(this.historyLength)
     );
+    this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
@@ -124,7 +132,11 @@ export class ScopePanel {
     this.lfoHistory.forEach((buffer, idx) => {
       const value = clamp01(Number(lfos[idx]) || 0);
       buffer[this.cursor] = value;
+      this.lastLfoValues[idx] = value;
     });
+    if (frame.clock && typeof frame.clock === 'object') {
+      this.lastClock = frame.clock;
+    }
     this.cursor = (this.cursor + 1) % this.historyLength;
     this.samples = Math.min(this.samples + 1, this.historyLength);
     this.hasTelemetry = true;
@@ -165,12 +177,29 @@ export class ScopePanel {
       ctx.stroke();
     });
 
-    this.drawLine(ctx, this.efHistory, 'rgba(45, 226, 230, 0.8)', w, h);
-    const lfoColors = ['rgba(255, 95, 150, 0.8)', 'rgba(255, 255, 255, 0.65)'];
+    const efColor = 'rgba(45, 226, 230, 0.8)';
+    const lfoColors = ['rgba(255, 95, 150, 0.85)', 'rgba(255, 255, 255, 0.72)'];
+    this.drawLine(ctx, this.efHistory, efColor, w, h);
     this.lfoHistory.forEach((buffer, idx) => {
       const color = lfoColors[idx % lfoColors.length];
       this.drawLine(ctx, buffer, color, w, h);
     });
+    this.drawTraceLabels(
+      ctx,
+      [
+        {
+          label: 'EF',
+          value: this.efHistory[(this.cursor - 1 + this.historyLength) % this.historyLength],
+          color: efColor
+        },
+        ...this.lastLfoValues.map((value, idx) => ({
+          label: `LFO ${idx + 1}`,
+          value,
+          color: lfoColors[idx % lfoColors.length]
+        }))
+      ],
+      h
+    );
 
     if (this.peekPeakLine(w, h)) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
@@ -184,6 +213,7 @@ export class ScopePanel {
     }
 
     this.updateStatus();
+    this.updateReadouts();
   }
 
   // Stroke one normalized history buffer across the current canvas dimensions.
@@ -214,6 +244,38 @@ export class ScopePanel {
   peekPeakLine(width, height) {
     if (!this.hasTelemetry || this.peakLevel <= 0) return false;
     return true;
+  }
+
+  drawTraceLabels(ctx, traces, height) {
+    ctx.save();
+    ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    ctx.textBaseline = 'middle';
+    traces.forEach((trace, idx) => {
+      const value = clamp01(trace.value);
+      const y = Math.max(12 + idx * 14, Math.min(height - 12, height - value * height));
+      ctx.fillStyle = trace.color;
+      ctx.fillText(`${trace.label} ${value.toFixed(2)}`, 10, y);
+    });
+    ctx.restore();
+  }
+
+  updateReadouts() {
+    this.lfoValueLabels.forEach((label, idx) => {
+      if (!label) return;
+      const value = this.lastLfoValues[idx];
+      label.textContent = Number.isFinite(value) ? value.toFixed(2) : '--';
+    });
+    if (!this.clockLabel) return;
+    const clock = this.lastClock;
+    if (!clock) {
+      this.clockLabel.textContent = 'Clock --';
+      this.clockLabel.dataset.state = 'muted';
+      return;
+    }
+    const source = clock.source ? String(clock.source) : 'idle';
+    const running = Boolean(clock.running || clock.external_signal);
+    this.clockLabel.textContent = `Clock ${source}`;
+    this.clockLabel.dataset.state = running ? 'running' : 'idle';
   }
 
   // Keep the scope status line truthful about streaming vs stale telemetry.

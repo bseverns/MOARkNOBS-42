@@ -25,6 +25,9 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
     return label && /Telemetry/i.test(label.textContent ?? '');
   });
   await expect(page.locator('#scope-status')).toHaveText(/Telemetry/i, { timeout: 10000 });
+  await expect(page.locator('#scope-lfo-1')).not.toHaveText('--');
+  await expect(page.locator('#scope-lfo-2')).not.toHaveText('--');
+  await expect(page.locator('#scope-clock')).toHaveText(/Clock (external|internal)/);
 
   await page.getByRole('button', { name: 'PNG snapshot' }).click();
   await page.waitForFunction(() => window.__mn42ScopeBlob instanceof Blob, { timeout: 5000 });

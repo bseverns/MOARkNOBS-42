@@ -25,7 +25,7 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   await firstDepth.dispatchEvent('change');
 
   await expect(page.locator('#lfo-status')).toContainText('edited locally');
-  await expect(save).toHaveText('Save LFO changes');
+  await expect(save).toHaveText('Push & save LFO changes');
   await expect(save).toBeEnabled();
 
   await save.click();

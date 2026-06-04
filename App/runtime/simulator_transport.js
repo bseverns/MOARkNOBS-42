@@ -213,6 +213,7 @@ export function createSimulator(simDeps = {}) {
     envelopes: Array.from({ length: manifest.envelope_count }, () =>
       Math.floor(Math.random() * 127)
     ),
+    lfos: [((index % 40) / 39).toFixed(3), (((index + 20) % 40) / 39).toFixed(3)].map(Number),
     currentSlot: index++ % manifest.slot_count,
     argPair: [0, 1],
     argEnabled: true,
