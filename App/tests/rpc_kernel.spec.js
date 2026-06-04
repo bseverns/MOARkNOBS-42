@@ -53,6 +53,16 @@ test('native set_profile uses chunked serial lines under firmware buffer limit',
   expect(writes.every((line) => line.length < 128)).toBe(true);
   expect(writes.every((line) => line.startsWith('SET_PROFILE_CHUNK,0,'))).toBe(true);
   expect(writes.some((line) => line.startsWith('SET_PROFILE,0,'))).toBe(false);
+  const rebuilt = writes
+    .map((line) => {
+      const first = line.indexOf(',');
+      const second = line.indexOf(',', first + 1);
+      const third = line.indexOf(',', second + 1);
+      const fourth = line.indexOf(',', third + 1);
+      return line.slice(fourth + 1);
+    })
+    .join('');
+  expect(JSON.parse(rebuilt)).toEqual(profile);
 
   const active = kernel.getActivePendingRpc();
   kernel.handleRpcResponse({

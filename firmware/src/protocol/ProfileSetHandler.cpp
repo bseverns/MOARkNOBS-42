@@ -22,6 +22,7 @@ namespace {
 struct ProfileSetRequest {
     uint8_t id = 0;
     String payload;
+    bool chunked = false;
 };
 
 constexpr size_t kMaxProfilePatchPayloadBytes = 12288;
@@ -49,6 +50,18 @@ void logProfileSetError(const char *message) {
     LOG_PRINTF("{\"type\":\"error\",\"code\":\"bad_request\",\"command\":\"SET_PROFILE\","
                "\"message\":\"%s\"}\n",
                message ? message : "Profile update rejected");
+}
+
+void logProfileJsonParseError(const ProfileSetRequest &request, const char *reason) {
+    const unsigned len = static_cast<unsigned>(request.payload.length());
+    const unsigned firstCode = len > 0 ? static_cast<unsigned>(request.payload.charAt(0)) : 0U;
+    const unsigned lastCode =
+        len > 0 ? static_cast<unsigned>(request.payload.charAt(request.payload.length() - 1)) : 0U;
+    LOG_PRINTF("{\"type\":\"error\",\"code\":\"bad_request\",\"command\":\"SET_PROFILE\","
+               "\"message\":\"Profile JSON did not parse\",\"reason\":\"%s\","
+               "\"source\":\"%s\",\"payload_length\":%u,\"first_code\":%u,\"last_code\":%u}\n",
+               reason ? reason : "unknown", request.chunked ? "chunked" : "direct", len, firstCode,
+               lastCode);
 }
 
 uint8_t clampedU8(JsonObject obj, const char *key, int minValue, int maxValue, uint8_t fallback) {
@@ -223,6 +236,7 @@ bool parseProfileSetRequest(const String &command, ProfileSetRequest &request) {
 
     request.payload = command.substring(secondComma + 1);
     request.payload.trim();
+    request.chunked = false;
     return request.payload.length() > 0;
 }
 
@@ -284,13 +298,15 @@ bool parseProfileSetChunkRequest(const String &command, ProfileSetRequest &reque
     request.id = profileChunkState.id;
     request.payload = profileChunkState.payload;
     request.payload.trim();
+    request.chunked = true;
     profileChunkState.reset();
     complete = request.payload.length() > 0;
     return complete;
 }
 
-bool parseProfilePayloadDocument(const String &payload, StaticJsonDocument<12288> &doc) {
-    DeserializationError err = deserializeJson(doc, payload);
+bool parseProfilePayloadDocument(const String &payload, StaticJsonDocument<12288> &doc,
+                                 DeserializationError &err) {
+    err = deserializeJson(doc, payload);
     return !err;
 }
 
@@ -520,8 +536,9 @@ void handleSetProfilePayloadCommand(const String &command) {
     }
 
     StaticJsonDocument<12288> doc;
-    if (!parseProfilePayloadDocument(request.payload, doc)) {
-        logProfileSetError("Profile JSON did not parse");
+    DeserializationError jsonError;
+    if (!parseProfilePayloadDocument(request.payload, doc, jsonError)) {
+        logProfileJsonParseError(request, jsonError.c_str());
         return;
     }
 
