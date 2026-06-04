@@ -4,6 +4,7 @@
 #include "LFO/LFO.h"
 #include "LFO/LFOClock.h"
 #include "LFO/LFOManager.h"
+#include "ConfigManager.h"
 #include "MIDIHandler.h"
 #include <cmath>
 
@@ -180,6 +181,29 @@ void test_lfo_clock_consumes_ticks() {
     midi.generateClockTick();
     midi.generateClockTick();
     TEST_ASSERT_EQUAL_UINT32(2u, clock.consumeTickDelta());
+}
+
+void test_lfo_apply_profile_resets_sync_timing_baseline() {
+    MIDIHandler midi;
+    LFOManager manager;
+    manager.attachMIDI(&midi);
+
+    for (int i = 0; i < 12; ++i) {
+        midi.generateClockTick();
+    }
+
+    ProfileData profile{};
+    profile.lfos[0].shape = static_cast<uint8_t>(LFOShape::Saw);
+    profile.lfos[0].frequencyHz = 1.0f;
+    profile.lfos[0].depth = 1.0f;
+    profile.lfos[0].bipolar = 0;
+    profile.lfos[0].syncEnabled = 1;
+    profile.lfos[0].syncRatio = static_cast<uint8_t>(LFOSyncRatio::Div1);
+
+    manager.applyProfile(profile);
+    manager.update(100);
+
+    TEST_ASSERT_FLOAT_WITHIN(kEpsilon, 0.0f, manager.normalizedValue(0));
 }
 
 void test_lfo_slot_value_route_emits_slot_callback() {

@@ -708,7 +708,7 @@ void processEnvelopes() {
 // Internal transport clock lane when the device is not following external MIDI clock.
 void processInternalClock() {
     static unsigned long lastInternalTick = 0;
-    if (g_tappedBPM <= 0.0f)
+    if (g_tappedBPM <= 0.0f || externalClockDominant())
         return;
 
     float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);

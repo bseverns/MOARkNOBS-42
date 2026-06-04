@@ -187,6 +187,24 @@ void test_process_midi_polls_usb_clock_without_timer_isr_gate() {
     TEST_ASSERT_TRUE(midiHandler.hasExternalClockSignal());
 }
 
+void test_internal_clock_ticks_continue_without_timeout_gap() {
+    g_fakeNowMs = 100000;
+    g_tappedBPM = 120.0f;
+    g_followExternalClock = false;
+    g_clockOutEnabled = false;
+    lastClockTime = 0;
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    const uint32_t beforeTicks = midiHandler.clockTickCount();
+    processInternalClock();
+    TEST_ASSERT_EQUAL_UINT32(beforeTicks + 1, midiHandler.clockTickCount());
+
+    g_fakeNowMs += 22;
+    processInternalClock();
+    TEST_ASSERT_EQUAL_UINT32(beforeTicks + 2, midiHandler.clockTickCount());
+}
+
 void test_clocked_feed_emits_non_arp_slots_while_arp_runs() {
     g_fakeNowMs = 0;
     g_tappedBPM = 120.0f;

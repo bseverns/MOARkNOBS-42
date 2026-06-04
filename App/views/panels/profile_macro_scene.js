@@ -1360,7 +1360,7 @@ export function createProfileMacroScenePanel({
     refreshProfileControls();
     setLfoStatus('busy', `Saving LFO settings to ${describeSlot()}…`);
     try {
-      await runtime.sendRpc(
+      const response = await runtime.sendRpc(
         {
           rpc: 'set_profile',
           slot: activeProfileSlot,
@@ -1391,9 +1391,19 @@ export function createProfileMacroScenePanel({
         },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
       );
-      setLfoStatus('ok', `${describeSlot()} saved with ${lfoDraft.routes.length} routes.`);
+      const liveApplied = response?.active_applied !== false;
+      setLfoStatus(
+        liveApplied ? 'ok' : 'busy',
+        liveApplied
+          ? `${describeSlot()} saved and applied live with ${lfoDraft.routes.length} routes.`
+          : `${describeSlot()} saved, but that profile is not active on the board. Switch to it to hear and scope the LFOs.`
+      );
       lfoDraftDirty = false;
-      setStatus('ok', 'LFO profile saved', describeSlot());
+      setStatus(
+        liveApplied ? 'ok' : 'warn',
+        liveApplied ? 'LFO profile saved' : 'LFO profile saved, not active',
+        describeSlot()
+      );
     } catch (err) {
       setLfoStatus('err', `LFO save failed: ${err.message || String(err)}`);
       setStatus('err', 'LFO profile save failed', err.message || String(err));

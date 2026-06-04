@@ -9,6 +9,7 @@
 #include "ConfigManager.h"
 #include "FirmwareState.h"
 #include "Globals.h"
+#include "LFO/LFOManager.h"
 #include "MIDIHandler.h"
 #include <ArduinoJson.h>
 
@@ -120,6 +121,48 @@ const char *argMethodLabel(uint8_t method) {
     return "UNKNOWN";
 }
 
+const char *lfoShapeLabel(LFOShape shape) {
+    switch (shape) {
+    case LFOShape::Sine:
+        return "Sine";
+    case LFOShape::Triangle:
+        return "Triangle";
+    case LFOShape::Saw:
+        return "Saw";
+    case LFOShape::Square:
+        return "Square";
+    case LFOShape::SampleHold:
+        return "Sample & Hold";
+    case LFOShape::RandomSlew:
+        return "Random Slew";
+    default:
+        return "Unknown";
+    }
+}
+
+const char *lfoSyncRatioLabel(LFOSyncRatio ratio) {
+    switch (ratio) {
+    case LFOSyncRatio::Div1:
+        return "1/1";
+    case LFOSyncRatio::Div2:
+        return "1/2";
+    case LFOSyncRatio::Div4:
+        return "1/4";
+    case LFOSyncRatio::Div8:
+        return "1/8";
+    case LFOSyncRatio::Div16:
+        return "1/16";
+    case LFOSyncRatio::Div32:
+        return "1/32";
+    case LFOSyncRatio::Mul2:
+        return "x2";
+    case LFOSyncRatio::Mul4:
+        return "x4";
+    default:
+        return "-";
+    }
+}
+
 // Resolve the outgoing `data1` byte, preferring persisted pot CC numbers for CC slots.
 uint8_t resolveDataByte(const ConfigManager &config, uint8_t slotIndex, const MIDISlot &slot) {
     if (slot.type == MIDIMessageType::CC) {
@@ -176,7 +219,7 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
 
     // Chunk 1: Slot summary (Pots & active slot)
     {
-        StaticJsonDocument<1024> doc;
+        StaticJsonDocument<1536> doc;
         applyFrameMeta(doc, meta);
         doc["type"] = "telemetry";
         doc["scope"] = "state_slots";
@@ -252,6 +295,7 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         JsonObject clock = doc.createNestedObject("clock");
         const bool externalSignal = midiHandler.hasExternalClockSignal();
         const bool running = midiHandler.isClockRunning();
+        doc["active_profile"] = g_activeProfile;
         clock["follow_external"] = g_followExternalClock;
         clock["clock_out_enabled"] = g_clockOutEnabled;
         clock["tapped_bpm"] = g_tappedBPM;
@@ -283,6 +327,21 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         JsonArray lfos = doc.createNestedArray("lfos");
         for (float value : g_lfoValues) {
             lfos.add(value);
+        }
+
+        JsonArray lfoConfig = doc.createNestedArray("lfo_config");
+        for (uint8_t i = 0; i < LFOManager::kMaxLFOs; ++i) {
+            const LFO &lfo = lfoManager.lfo(i);
+            JsonObject entry = lfoConfig.createNestedObject();
+            entry["index"] = i;
+            entry["shape"] = static_cast<uint8_t>(lfo.getShape());
+            entry["shape_name"] = lfoShapeLabel(lfo.getShape());
+            entry["frequency_hz"] = lfo.getFrequencyHz();
+            entry["depth"] = lfo.getDepth();
+            entry["bipolar"] = lfo.isBipolar();
+            entry["sync"] = lfo.isSyncEnabled();
+            entry["sync_ratio"] = static_cast<uint8_t>(lfo.getSyncRatio());
+            entry["sync_ratio_name"] = lfoSyncRatioLabel(lfo.getSyncRatio());
         }
 
         JsonArray efStatus = doc.createNestedArray("efStatus");

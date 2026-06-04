@@ -64,12 +64,8 @@ void initializeSchedulers() {
     (MN42_DIAG_DISABLE_PROCESS_INTERNAL_CLOCK != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"process_internal_clock_disabled\"}");
 #else
-    Utility::schedulerHigh.addTask(
-        []() {
-            if (now() - lastClockTime > CLOCK_TIMEOUT_MS)
-                processInternalClock();
-        },
-        hwConfig.midiTaskInterval, true);
+    Utility::schedulerHigh.addTask([]() { processInternalClock(); }, hwConfig.midiTaskInterval,
+                                   true);
 #endif
 
 #if defined(MN42_DIAG_DISABLE_ARPEGGIATOR_UPDATE) && (MN42_DIAG_DISABLE_ARPEGGIATOR_UPDATE != 0)

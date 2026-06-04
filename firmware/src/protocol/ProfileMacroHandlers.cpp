@@ -180,6 +180,8 @@ void handleGetProfileCommand(const String &command) {
 
     StaticJsonDocument<12288> doc;
     doc["profile"] = id;
+    doc["active_profile"] = g_activeProfile;
+    doc["active"] = static_cast<uint8_t>(id) == g_activeProfile;
     doc["stored"] = stored;
 
     JsonObject arp = doc.createNestedObject("arp");
@@ -253,6 +255,7 @@ void handleLoadProfileCommand(const String &command) {
     bool valid = readProfileSlotArgument(command, g_activeProfile, id);
     StaticJsonDocument<160> response;
     response["profile"] = id;
+    response["active_profile"] = g_activeProfile;
     if (!valid || !loadProfileSlot(static_cast<uint8_t>(id))) {
         response["profile_loaded"] = false;
         response["error"] = "Profile load failed";
@@ -260,6 +263,7 @@ void handleLoadProfileCommand(const String &command) {
         return;
     }
     response["profile_loaded"] = true;
+    response["active_profile"] = g_activeProfile;
     sendJsonResponse(response);
 }
 
@@ -268,6 +272,7 @@ void handleResetProfileCommand(const String &command) {
     bool valid = readProfileSlotArgument(command, g_activeProfile, id);
     StaticJsonDocument<160> response;
     response["profile"] = id;
+    response["active_profile"] = g_activeProfile;
     if (!valid || !resetProfileSlot(static_cast<uint8_t>(id))) {
         response["profile_reset"] = false;
         response["error"] = "Profile reset failed";
@@ -275,6 +280,7 @@ void handleResetProfileCommand(const String &command) {
         return;
     }
     response["profile_reset"] = true;
+    response["active_profile"] = g_activeProfile;
     sendJsonResponse(response);
 }
 
@@ -283,6 +289,7 @@ void handleSaveProfileCommand(const String &command) {
     bool valid = readProfileSlotArgument(command, g_activeProfile, id);
     StaticJsonDocument<160> response;
     response["profile"] = id;
+    response["active_profile"] = g_activeProfile;
     if (!valid || !saveCurrentProfileSlot(static_cast<uint8_t>(id))) {
         response["profile_saved"] = false;
         response["error"] = "Profile save failed";
@@ -290,6 +297,7 @@ void handleSaveProfileCommand(const String &command) {
         return;
     }
     response["profile_saved"] = true;
+    response["active_profile"] = g_activeProfile;
     sendJsonResponse(response);
 }
 

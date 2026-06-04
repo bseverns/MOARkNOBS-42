@@ -229,6 +229,14 @@ void LFOManager::setRoutes(const Route *routes, size_t count) {
     }
 }
 
+void LFOManager::resetTiming() {
+    clock_.reset();
+    lastUpdateMs_ = now();
+    for (LFO &lfo : lfos_) {
+        lfo.resetPhase();
+    }
+}
+
 void LFOManager::applyProfile(const ProfileData &profile) {
     // Apply the LFO state snapshot collected from ConfigManager/firmware_main.
     const size_t lfoLimit = std::min<size_t>(PROFILE_LFO_COUNT, kMaxLFOs);
@@ -270,6 +278,8 @@ void LFOManager::applyProfile(const ProfileData &profile) {
             break;
         }
     }
+
+    resetTiming();
 }
 
 // Accumulate the value into the appropriate internal bus lane.

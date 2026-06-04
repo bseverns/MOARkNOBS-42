@@ -121,6 +121,8 @@ class LFOManager {
     void setRoutes(const Route *routes, size_t count);
     /** Apply profile-derived snapshot data (LFO state + routes). */
     void applyProfile(const ProfileData &profile);
+    /** Reset phase and timing baselines after loading a new LFO profile. */
+    void resetTiming();
 
   private:
     /** Apply an internal route to the modulation bus. */

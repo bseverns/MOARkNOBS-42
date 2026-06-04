@@ -38,3 +38,62 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   expect(snapshot.size).toBeGreaterThan(0);
   expect(snapshot.type).toBe('image/png');
 });
+
+test('scope panel keeps LFO readouts across partial telemetry frames', async ({ page }) => {
+  await page.goto('/views/scope_panel.js');
+
+  const readouts = await page.evaluate(async () => {
+    const { ScopePanel } = await import('/views/scope_panel.js');
+    document.body.innerHTML = `
+      <section id="scope-panel" style="width: 420px">
+        <button id="scope-snapshot">PNG snapshot</button>
+        <span id="scope-status"></span>
+        <span id="scope-fps"></span>
+        <canvas id="scope-canvas" style="width: 420px; height: 180px"></canvas>
+        <span id="scope-lfo-1"></span>
+        <span id="scope-lfo-2"></span>
+        <span id="scope-clock"></span>
+      </section>
+    `;
+
+    const listeners = new Map();
+    const runtime = {
+      on(event, callback) {
+        listeners.set(event, callback);
+        return () => listeners.delete(event);
+      },
+      getState() {
+        return { manifest: { lfo_count: 2 } };
+      }
+    };
+
+    const panel = new ScopePanel({
+      container: document.getElementById('scope-panel'),
+      runtime
+    });
+    const pushTelemetry = listeners.get('telemetry');
+
+    pushTelemetry({
+      envelopes: [0],
+      lfos: [0.75, 0.25],
+      clock: { source: 'internal', running: true }
+    });
+    panel.draw();
+    const first = {
+      lfo1: document.getElementById('scope-lfo-1').textContent,
+      lfo2: document.getElementById('scope-lfo-2').textContent
+    };
+
+    pushTelemetry({ envelopes: [80] });
+    panel.draw();
+    const afterPartial = {
+      lfo1: document.getElementById('scope-lfo-1').textContent,
+      lfo2: document.getElementById('scope-lfo-2').textContent
+    };
+
+    return { first, afterPartial };
+  });
+
+  expect(readouts.first).toEqual({ lfo1: '0.75', lfo2: '0.25' });
+  expect(readouts.afterPartial).toEqual({ lfo1: '0.75', lfo2: '0.25' });
+});

@@ -80,6 +80,8 @@ void writeManifestHardwareShape(JsonObject object) {
     object["slot_count"] = NUM_SLOTS;
     object["pot_count"] = configManager.getNumPots();
     object["envelope_count"] = NUM_ENVELOPES;
+    object["profile_count"] = NUM_PROFILES;
+    object["active_profile"] = g_activeProfile;
     object["arg_method_count"] = static_cast<uint8_t>(ARGMethod::XORR) + 1;
     object["led_count"] = NUM_LEDS();
 }

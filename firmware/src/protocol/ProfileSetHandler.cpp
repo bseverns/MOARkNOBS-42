@@ -557,6 +557,8 @@ void handleSetProfilePayloadCommand(const String &command) {
     }
 
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_PROFILE\","
-               "\"profile\":%u,\"profile_updated\":true,\"active_applied\":%s}\n",
-               static_cast<unsigned>(request.id), activeApplied ? "true" : "false");
+               "\"profile\":%u,\"active_profile\":%u,\"profile_updated\":true,"
+               "\"active_applied\":%s}\n",
+               static_cast<unsigned>(request.id), static_cast<unsigned>(g_activeProfile),
+               activeApplied ? "true" : "false");
 }

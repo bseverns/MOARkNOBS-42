@@ -123,14 +123,16 @@ export class ScopePanel {
   handleTelemetry(frame = {}) {
     if (!this.ctx) return;
     const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : [];
-    const lfos = Array.isArray(frame.lfos) ? frame.lfos : [];
+    const lfos = Array.isArray(frame.lfos) ? frame.lfos : null;
     const aggregated = envelopes.length
       ? Math.max(...envelopes.map((value) => clamp01((Number(value) || 0) / 127)))
       : 0;
     this.efHistory[this.cursor] = aggregated;
     this.peakLevel = Math.max(this.peakLevel, aggregated);
     this.lfoHistory.forEach((buffer, idx) => {
-      const value = clamp01(Number(lfos[idx]) || 0);
+      const candidate = lfos?.[idx];
+      const hasLfoValue = Number.isFinite(Number(candidate));
+      const value = hasLfoValue ? clamp01(candidate) : this.lastLfoValues[idx] ?? 0;
       buffer[this.cursor] = value;
       this.lastLfoValues[idx] = value;
     });

@@ -2672,54 +2672,55 @@ label select:focus,
 
 .scope-panel-footer {
   display: grid;
-  grid-template-columns: minmax(128px, 1fr) minmax(0, auto);
-  align-items: center;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  align-items: start;
+  gap: 8px;
   padding: 0 16px;
 }
 
 .scope-legend {
-  display: grid;
-  grid-template-columns: repeat(4, max-content);
-  justify-content: end;
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 4px 8px;
   min-width: 0;
 }
 
 .scope-legend-item {
-  min-width: 92px;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 0;
+  padding: 1px 0;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.1em;
-  text-align: center;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
+.scope-legend-item:not(:last-child)::after {
+  content: '·';
+  margin-left: 8px;
+  color: rgba(255, 255, 255, 0.28);
+}
+
 .scope-legend-item b {
   display: inline-block;
-  margin-left: 4px;
-  min-width: 4ch;
+  margin-left: 3px;
+  min-width: 3.5ch;
   color: var(--color-text);
   font-weight: 700;
   text-align: right;
 }
 
 .scope-legend-item.ef {
-  border-color: rgba(45, 226, 230, 0.7);
   color: var(--color-accent);
 }
 
 .scope-legend-item.lfo-one {
-  border-color: rgba(255, 95, 150, 0.72);
   color: rgb(255, 150, 190);
 }
 
 .scope-legend-item.lfo-two {
-  border-color: rgba(255, 255, 255, 0.42);
   color: rgba(255, 255, 255, 0.82);
 }
 
