@@ -9,6 +9,7 @@
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Log.h"
+#include "MIDIHandler.h"
 #include "Protocol.h"
 
 void test_dispatch_handles_known_command() {
@@ -89,6 +90,18 @@ void test_dispatch_handles_live_slot_injection_command() {
     const int after = potentiometerManager.getLastValue(2);
     TEST_ASSERT_NOT_EQUAL(before, after);
     TEST_ASSERT_EQUAL_INT(map(77, 0, 127, 0, 1023), after);
+}
+
+void test_dispatch_handles_midi_test_command() {
+    clearTestLogBuffer();
+    g_usbMidiOutEnabled = false;
+    const uint32_t before = midiHandler.getTxCount();
+
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("MIDI_TEST"));
+
+    TEST_ASSERT_TRUE(g_usbMidiOutEnabled);
+    TEST_ASSERT_EQUAL_UINT32(before + 3, midiHandler.getTxCount());
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"MIDI_TEST\""));
 }
 
 void test_dispatch_handles_live_note_dynamics_command_without_boot_request() {

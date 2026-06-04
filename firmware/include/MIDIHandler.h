@@ -94,6 +94,7 @@ class MIDIHandler {
     void sendModWheel(uint8_t value, uint8_t channel);
     void sendPitchBend(int16_t bend, uint8_t channel);
     void sendClock();
+    void flushUsbMidi();
 
     /** Emit an internal MIDI clock pulse so in-box features stay in sync. */
     void generateClockTick();

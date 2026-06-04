@@ -935,8 +935,42 @@ void handleGetNoteDynamicsCommand(const String &command) {
 
 void handleGetUsbMidiCommand(const String &command) {
     (void)command;
-    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_USB_MIDI\",\"usb_midi_out\":%s}\n",
-               g_usbMidiOutEnabled ? "true" : "false");
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_USB_MIDI\",\"usb_midi_out\":%s,"
+               "\"rx_count\":%lu,\"tx_count\":%lu,\"clock_ticks\":%lu,"
+               "\"clock_running\":%s,\"external_signal\":%s,\"midi_drops\":%lu}\n",
+               g_usbMidiOutEnabled ? "true" : "false",
+               static_cast<unsigned long>(midiHandler.getRxCount()),
+               static_cast<unsigned long>(midiHandler.getTxCount()),
+               static_cast<unsigned long>(midiHandler.clockTickCount()),
+               midiHandler.isClockRunning() ? "true" : "false",
+               midiHandler.hasExternalClockSignal() ? "true" : "false",
+               static_cast<unsigned long>(g_systemDiagnostics.midiDropCount));
+}
+
+void handleMidiTestCommand(const String &command) {
+    (void)command;
+    if (!g_usbMidiOutEnabled) {
+        configManager.setUsbMidiOutEnabled(true);
+    }
+
+    const uint32_t before = midiHandler.getTxCount();
+    midiHandler.sendNoteOn(60, 100, 1);
+    midiHandler.sendControlChange(1, 64, 1);
+    midiHandler.sendNoteOff(60, 0, 1);
+    midiHandler.flushUsbMidi();
+
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"MIDI_TEST\","
+               "\"usb_midi_out\":%s,\"rx_count\":%lu,\"tx_before\":%lu,\"tx_after\":%lu,"
+               "\"clock_ticks\":%lu,\"clock_running\":%s,\"external_signal\":%s,"
+               "\"midi_drops\":%lu}\n",
+               g_usbMidiOutEnabled ? "true" : "false",
+               static_cast<unsigned long>(midiHandler.getRxCount()),
+               static_cast<unsigned long>(before),
+               static_cast<unsigned long>(midiHandler.getTxCount()),
+               static_cast<unsigned long>(midiHandler.clockTickCount()),
+               midiHandler.isClockRunning() ? "true" : "false",
+               midiHandler.hasExternalClockSignal() ? "true" : "false",
+               static_cast<unsigned long>(g_systemDiagnostics.midiDropCount));
 }
 
 // 4. Direct live-control writes.

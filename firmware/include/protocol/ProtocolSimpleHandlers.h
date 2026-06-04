@@ -34,6 +34,7 @@ void handleGetJitterCommand(const String &command);
 void handleGetLedCommand(const String &command);
 void handleGetNoteDynamicsCommand(const String &command);
 void handleGetUsbMidiCommand(const String &command);
+void handleMidiTestCommand(const String &command);
 
 // Direct live-control writes.
 void handleSetArgMethodCommand(const String &command);

@@ -146,6 +146,19 @@ export function handleNativePendingResponse({
         return true;
       }
       break;
+    case 'midi_test':
+      if (msg.command === 'MIDI_TEST' && Object.prototype.hasOwnProperty.call(msg, 'tx_after')) {
+        if (msg.status === 'ok') {
+          rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
+        } else {
+          rpcKernel.handleRpcResponse({
+            id: activePendingId,
+            error: { message: msg.message ?? 'MIDI test failed' }
+          });
+        }
+        return true;
+      }
+      break;
     case 'usb_midi_set':
       if (
         msg.command === 'SET_USB_MIDI' &&

@@ -44,6 +44,7 @@ const CommandHandler kCommandHandlers[] = {
     {"GET_USB_MIDI", ProtocolDispatchHandlers::handleGetUsbMidiCommand},
     {"HELLO", ProtocolDispatchHandlers::handleHelloCommand},
     {"LOAD_PROFILE", ProtocolDispatchHandlers::handleLoadProfileCommand},
+    {"MIDI_TEST", ProtocolDispatchHandlers::handleMidiTestCommand},
     {"RECALL_MACRO_SLOT", ProtocolDispatchHandlers::handleRecallMacroSlotCommand},
     {"RESET_PROFILE", ProtocolDispatchHandlers::handleResetProfileCommand},
     {"SAVE_MACRO_SLOT", ProtocolDispatchHandlers::handleSaveMacroSlotCommand},

@@ -81,6 +81,7 @@ void handleGetSchemaCommand(const ParsedCommand &cmd);
 void handleGetUsbMidiCommand(const ParsedCommand &cmd);
 void handleHelloCommand(const ParsedCommand &cmd);
 void handleEnterConfigModeCommand(const ParsedCommand &cmd);
+void handleMidiTestCommand(const ParsedCommand &cmd);
 void handleLoadProfileCommand(const ParsedCommand &cmd);
 void handleRecallMacroSlotCommand(const ParsedCommand &cmd);
 void handleResetProfileCommand(const ParsedCommand &cmd);

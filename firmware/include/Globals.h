@@ -208,7 +208,7 @@ extern float g_tappedBPM;
 extern bool g_clockOutEnabled;
 extern bool
     g_followExternalClock; //!< True: follow external MIDI clock; false: force internal tapped clock
-extern bool g_usbMidiOutEnabled;    //!< USB MIDI stays quiet until these three go down
+extern bool g_usbMidiOutEnabled;    //!< USB MIDI output gate, persisted by ConfigManager.
 extern unsigned long lastClockTime; // Timestamp of the most recent MIDI clock tick
 
 // LFO modulation buses (range -1..1 unless otherwise noted).

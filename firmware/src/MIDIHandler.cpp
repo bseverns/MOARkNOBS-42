@@ -487,6 +487,14 @@ void MIDIHandler::sendClock() {
     _txCount++;
 }
 
+void MIDIHandler::flushUsbMidi() {
+#ifndef USB_MIDI_STUB
+    if (g_usbMidiOutEnabled) {
+        usbMIDI.send_now();
+    }
+#endif
+}
+
 bool MIDIHandler::enqueueSerialMessage(const SerialMessage &msg) {
     // Serial writes are staged in a ring buffer so the main loop never blocks on
     // `Serial1.write`. Teaching tip: sketch the ring on a whiteboard and have

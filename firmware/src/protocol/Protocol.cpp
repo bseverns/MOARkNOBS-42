@@ -304,6 +304,10 @@ void handleHelloCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleHelloCommand(cmd.fullCommand());
 }
 
+void handleMidiTestCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleMidiTestCommand(cmd.fullCommand());
+}
+
 void handleEnterConfigModeCommand(const ParsedCommand &cmd) {
     (void)cmd;
     if (!requestUsbConfiguratorBoot()) {

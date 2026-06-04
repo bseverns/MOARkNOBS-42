@@ -64,6 +64,8 @@ export function createRpcKernel({
         return { kind: 'note_dynamics_get', lines: ['GET_NOTE_DYNAMICS'] };
       case 'get_usb_midi':
         return { kind: 'usb_midi_get', lines: ['GET_USB_MIDI'] };
+      case 'midi_test':
+        return { kind: 'midi_test', lines: ['MIDI_TEST'] };
       case 'get_config':
         return { kind: 'config', lines: ['GET_CONFIG'] };
       case 'get_schema':
