@@ -205,6 +205,7 @@ void MIDIHandler::processIncomingMIDI() {
         displayInteractionSeen = true;
         auto type = MIDI.getType();
         if (type == MidiType_Tick) {
+            ++_rxCount;
             observeExternalClockTick(now());
             if (g_followExternalClock) {
                 lastInternalTick = now();
@@ -233,6 +234,7 @@ void MIDIHandler::processIncomingMIDI() {
             continue;
         }
         if (type == MidiType_Tick) {
+            ++_rxCount;
             observeExternalClockTick(now());
             if (g_followExternalClock) {
                 lastInternalTick = now();

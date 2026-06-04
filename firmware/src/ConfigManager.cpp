@@ -403,8 +403,11 @@ void ConfigManager::writeMagicNumber(bool backup, uint16_t base) {
 
 // Save configuration with verification and backup
 void ConfigManager::saveConfiguration() {
-    // Write primary first, then read-verify; backup is refreshed only when verification fails.
+    // Refresh backup first so an interrupted or partially verified primary write cannot leave
+    // recovery with only a stale/corrupt copy.
     uint16_t base = EEPROM_PROFILE_START(0);
+    writeEEPROM(true, base);
+    writeMagicNumber(true, base);
     writeEEPROM(false, base); // Write primary
     writeMagicNumber(false, base);
 
@@ -428,16 +431,17 @@ bool ConfigManager::loadConfiguration(std::vector<uint8_t> &potChannels, uint16_
             if (_stored.version == kLegacyConfigVersion) {
                 needsRewrite = true;
             } else {
-                LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Config version mismatch.\"}");
-                resetConfiguration(potChannels, true);
-                return false;
+                LOG_PRINTLN("{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Config version "
+                            "mismatch, trying backup.\"}");
+                return loadBackupConfiguration(potChannels, base);
             }
         }
         bool includeProfile = (base == EEPROM_PROFILE_START(0));
         if (_stored.crc != calculateCRC(includeProfile)) {
-            LOG_PRINTLN("{\"type\":\"error\",\"message\":\"Config CRC mismatch.\"}");
-            resetConfiguration(potChannels, true);
-            return false;
+            LOG_PRINTLN(
+                "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Config CRC mismatch, "
+                "trying backup.\"}");
+            return loadBackupConfiguration(potChannels, base);
         }
         if (_stored.activeProfile >= NUM_PROFILES) {
             _stored.activeProfile = 0;

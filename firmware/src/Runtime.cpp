@@ -511,9 +511,10 @@ void midiTimerISR() { queueMidiServiceRequest(); }
 
 // High-frequency MIDI ingress/service lane.
 void processMIDI() {
-    if (!consumeMidiServiceRequest()) {
-        return;
-    }
+    // The high-tier scheduler already paces this lane. Keep the Timer1 request as an interrupt
+    // breadcrumb, but do not make USB/DIN polling depend on that interrupt firing; otherwise USB
+    // clock can be visible to the host while the firmware never drains it.
+    (void)consumeMidiServiceRequest();
     midiHandler.processIncomingMIDI();
 
     static uint32_t lastDisplayTick = 0;

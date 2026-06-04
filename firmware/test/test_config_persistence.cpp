@@ -60,6 +60,10 @@ class MemoryStorageBackend final : public StorageBackend {
         update(base + EEPROM_MAGIC_ADDRESS + 3, 0x00);
     }
 
+    void corruptPrimaryPotCc(uint16_t base, uint8_t index, uint8_t value) {
+        update(base + EEPROM_START_ADDRESS + EEPROM_POT_CC + index, value);
+    }
+
     void copyPrimaryConfigToBackup(uint16_t base) {
         for (uint16_t offset = EEPROM_START_ADDRESS; offset < EEPROM_BACKUP_START; ++offset) {
             update(base + EEPROM_BACKUP_START + offset, read(base + offset));
@@ -133,6 +137,29 @@ void test_config_load_restores_from_backup_and_repairs_primary() {
     TEST_ASSERT_TRUE(rebooted.loadConfiguration(pots));
     TEST_ASSERT_EQUAL_UINT8(9, pots[0]);
     TEST_ASSERT_EQUAL_UINT8(88, rebooted.getPotCCNumber(0));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ConfigManager::LoadSource::kBackup),
+                            static_cast<uint8_t>(rebooted.getLastLoadSource()));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ConfigManager::RecoveryEvent::kBackupRestored),
+                            static_cast<uint8_t>(rebooted.consumeRecoveryEvent()));
+    TEST_ASSERT_TRUE(rebooted.hasHealthyConfigurationCopy(false));
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_config_load_restores_from_backup_when_primary_crc_is_invalid() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    configureStoredValues(cfg, 6, 81);
+    cfg.saveConfiguration();
+    storage.corruptPrimaryPotCc(EEPROM_PROFILE_START(0), 0, 12);
+
+    ConfigManager rebooted(NUM_POTS, NUM_BUTTONS);
+    std::vector<uint8_t> pots;
+    TEST_ASSERT_TRUE(rebooted.loadConfiguration(pots));
+    TEST_ASSERT_EQUAL_UINT8(6, pots[0]);
+    TEST_ASSERT_EQUAL_UINT8(81, rebooted.getPotCCNumber(0));
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ConfigManager::LoadSource::kBackup),
                             static_cast<uint8_t>(rebooted.getLastLoadSource()));
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ConfigManager::RecoveryEvent::kBackupRestored),

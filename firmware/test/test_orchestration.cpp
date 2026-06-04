@@ -167,6 +167,26 @@ void test_runtime_diagnostics_log_only_on_counter_changes() {
     TEST_ASSERT_EQUAL_UINT(0, peekTestLogBuffer().length());
 }
 
+void test_process_midi_polls_usb_clock_without_timer_isr_gate() {
+    g_fakeNowMs = 1000;
+    g_followExternalClock = true;
+    g_clockOutEnabled = false;
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    const uint32_t beforeTicks = midiHandler.clockTickCount();
+    const uint32_t beforeRx = midiHandler.getRxCount();
+    usbMIDI.nextRead = true;
+    usbMIDI.nextType = midi::Tick;
+
+    processMIDI();
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTicks + 1, midiHandler.clockTickCount());
+    TEST_ASSERT_EQUAL_UINT32(beforeRx + 1, midiHandler.getRxCount());
+    TEST_ASSERT_TRUE(midiHandler.isClockRunning());
+    TEST_ASSERT_TRUE(midiHandler.hasExternalClockSignal());
+}
+
 void test_clocked_feed_emits_non_arp_slots_while_arp_runs() {
     g_fakeNowMs = 0;
     g_tappedBPM = 120.0f;
