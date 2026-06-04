@@ -1,5 +1,25 @@
 import { handleNativePendingResponse } from './native_response_router.js';
 
+function nativeTextErrorForPending(line, activePending) {
+  if (activePending?.protocolMode !== 'native' || !activePending.nativeRequest) return null;
+  const text = String(line ?? '').trim();
+  if (!text) return null;
+  if (text.includes('Unknown command: SET_PROFILE_CHUNK')) {
+    return new Error(
+      'Firmware does not support chunked profile saves. Flash the latest firmware, then reconnect.'
+    );
+  }
+  if (text.includes('Error: Command too long')) {
+    return new Error(
+      'Profile save command exceeded the firmware serial buffer. Refresh the App and flash the latest firmware.'
+    );
+  }
+  if (text.startsWith('Unknown command:') || text.startsWith('Error:')) {
+    return new Error(text);
+  }
+  return null;
+}
+
 export function createRuntimeLineHandler({
   emit,
   notifyStatus,
@@ -20,6 +40,15 @@ export function createRuntimeLineHandler({
     try {
       msg = JSON.parse(line);
     } catch (err) {
+      const activePending = rpcKernel.getActivePendingRpc();
+      const textError = nativeTextErrorForPending(line, activePending);
+      if (textError) {
+        rpcKernel.handleRpcResponse({
+          id: activePending.id,
+          error: { message: textError.message }
+        });
+        return;
+      }
       emit('log', line);
       return;
     }

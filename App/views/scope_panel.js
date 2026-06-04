@@ -252,7 +252,7 @@ export class ScopePanel {
     ctx.textBaseline = 'middle';
     traces.forEach((trace, idx) => {
       const value = clamp01(trace.value);
-      const y = Math.max(12 + idx * 14, Math.min(height - 12, height - value * height));
+      const y = Math.min(height - 12, 14 + idx * 15);
       ctx.fillStyle = trace.color;
       ctx.fillText(`${trace.label} ${value.toFixed(2)}`, 10, y);
     });

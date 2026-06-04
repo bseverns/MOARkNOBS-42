@@ -98,6 +98,7 @@ void handleSetLedCommand(const ParsedCommand &cmd);
 void handleSetNoteDynamicsCommand(const ParsedCommand &cmd);
 void handleSetPotCommand(const ParsedCommand &cmd);
 void handleSetProfileCommand(const ParsedCommand &cmd);
+void handleSetProfileChunkCommand(const ParsedCommand &cmd);
 void handleSetSlotValueCommand(const ParsedCommand &cmd);
 void handleSetUsbMidiCommand(const ParsedCommand &cmd);
 } // namespace ProtocolDispatchHandlers

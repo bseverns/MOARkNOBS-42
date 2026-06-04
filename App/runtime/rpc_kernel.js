@@ -80,9 +80,22 @@ export function createRpcKernel({
         return { kind: 'profile_reset', lines: [`RESET_PROFILE,${Number(message.slot) || 0}`] };
       case 'set_profile': {
         const payload = JSON.stringify(message.profile ?? message.payload ?? {});
+        const chunkSize = Math.min(
+          80,
+          Math.max(1, Math.floor(Number(nativeSetAllChunkSize) || 80))
+        );
+        const chunks = chunkString(payload, chunkSize);
+        const slot = Number(message.slot) || 0;
+        const lines =
+          chunks.length <= 1
+            ? [`SET_PROFILE,${slot},${payload}`]
+            : chunks.map(
+                (chunk, seq) => `SET_PROFILE_CHUNK,${slot},${seq},${chunks.length},${chunk}`
+              );
         return {
           kind: 'profile_set',
-          lines: [`SET_PROFILE,${Number(message.slot) || 0},${payload}`]
+          linePaceMs: Math.max(0, Number(nativeSetAllLinePaceMs) || 0),
+          lines
         };
       }
       case 'set_clock':
@@ -210,8 +223,9 @@ export function createRpcKernel({
             if (!entry.nativeRequest) {
               throw new Error(`Unsupported device RPC: ${message.rpc}`);
             }
-            const applyLinePaceMs =
-              entry.nativeRequest.kind === 'ack'
+            const applyLinePaceMs = Number.isFinite(Number(entry.nativeRequest.linePaceMs))
+              ? Math.max(0, Number(entry.nativeRequest.linePaceMs) || 0)
+              : entry.nativeRequest.kind === 'ack'
                 ? Math.max(0, Number(nativeSetAllLinePaceMs) || 0)
                 : 0;
             const lines = entry.nativeRequest.lines;

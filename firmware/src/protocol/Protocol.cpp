@@ -404,6 +404,10 @@ void handleSetProfileCommand(const ParsedCommand &cmd) {
     ::handleSetProfilePayloadCommand(cmd.fullCommand());
 }
 
+void handleSetProfileChunkCommand(const ParsedCommand &cmd) {
+    ::handleSetProfilePayloadCommand(cmd.fullCommand());
+}
+
 void handleSetSlotValueCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetSlotValueCommand(cmd.fullCommand());
 }

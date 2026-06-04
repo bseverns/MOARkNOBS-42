@@ -60,6 +60,7 @@ const CommandHandler kCommandHandlers[] = {
     {"SET_NOTE_DYNAMICS", ProtocolDispatchHandlers::handleSetNoteDynamicsCommand},
     {"SET_POT", ProtocolDispatchHandlers::handleSetPotCommand},
     {"SET_PROFILE", ProtocolDispatchHandlers::handleSetProfileCommand},
+    {"SET_PROFILE_CHUNK", ProtocolDispatchHandlers::handleSetProfileChunkCommand},
     {"SET_SLOT_VALUE", ProtocolDispatchHandlers::handleSetSlotValueCommand},
     {"SET_USB_MIDI", ProtocolDispatchHandlers::handleSetUsbMidiCommand},
 };

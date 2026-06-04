@@ -2671,33 +2671,41 @@ label select:focus,
 }
 
 .scope-panel-footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(128px, 1fr) minmax(0, auto);
   align-items: center;
   gap: 12px;
   padding: 0 16px;
 }
 
 .scope-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(4, max-content);
+  justify-content: end;
   gap: 10px;
+  min-width: 0;
 }
 
 .scope-legend-item {
+  min-width: 92px;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.1em;
+  text-align: center;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .scope-legend-item b {
+  display: inline-block;
   margin-left: 4px;
+  min-width: 4ch;
   color: var(--color-text);
   font-weight: 700;
+  text-align: right;
 }
 
 .scope-legend-item.ef {
@@ -2723,6 +2731,22 @@ label select:focus,
 .scope-legend-item.clock[data-state='idle'],
 .scope-legend-item.clock[data-state='muted'] {
   color: var(--color-muted);
+}
+
+@media (max-width: 740px) {
+  .scope-panel-footer {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .scope-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .scope-legend-item {
+    min-width: 0;
+  }
 }
 
 footer {

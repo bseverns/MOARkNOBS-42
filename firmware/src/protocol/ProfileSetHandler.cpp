@@ -24,6 +24,33 @@ struct ProfileSetRequest {
     String payload;
 };
 
+constexpr size_t kMaxProfilePatchPayloadBytes = 12288;
+constexpr uint16_t kMaxProfilePatchChunks = 256;
+
+struct ProfileChunkState {
+    bool active = false;
+    uint8_t id = 0;
+    uint16_t total = 0;
+    uint16_t nextSeq = 0;
+    String payload;
+
+    void reset() {
+        active = false;
+        id = 0;
+        total = 0;
+        nextSeq = 0;
+        payload = "";
+    }
+};
+
+ProfileChunkState profileChunkState;
+
+void logProfileSetError(const char *message) {
+    LOG_PRINTF("{\"type\":\"error\",\"code\":\"bad_request\",\"command\":\"SET_PROFILE\","
+               "\"message\":\"%s\"}\n",
+               message ? message : "Profile update rejected");
+}
+
 uint8_t clampedU8(JsonObject obj, const char *key, int minValue, int maxValue, uint8_t fallback) {
     if (!obj.containsKey(key)) {
         return fallback;
@@ -197,6 +224,69 @@ bool parseProfileSetRequest(const String &command, ProfileSetRequest &request) {
     request.payload = command.substring(secondComma + 1);
     request.payload.trim();
     return request.payload.length() > 0;
+}
+
+bool parseProfileSetChunkRequest(const String &command, ProfileSetRequest &request,
+                                 bool &complete) {
+    complete = false;
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+    int thirdComma = command.indexOf(',', secondComma + 1);
+    int fourthComma = command.indexOf(',', thirdComma + 1);
+    if (firstComma < 0 || secondComma < 0 || thirdComma < 0 || fourthComma < 0) {
+        profileChunkState.reset();
+        return false;
+    }
+
+    const int rawId = command.substring(firstComma + 1, secondComma).toInt();
+    const int rawSeq = command.substring(secondComma + 1, thirdComma).toInt();
+    const int rawTotal = command.substring(thirdComma + 1, fourthComma).toInt();
+    if (rawId < 0 || rawId >= NUM_PROFILES || rawSeq < 0 || rawTotal <= 0 ||
+        rawTotal > kMaxProfilePatchChunks) {
+        profileChunkState.reset();
+        return false;
+    }
+
+    const uint8_t id = static_cast<uint8_t>(rawId);
+    const uint16_t seq = static_cast<uint16_t>(rawSeq);
+    const uint16_t total = static_cast<uint16_t>(rawTotal);
+    const String chunk = command.substring(fourthComma + 1);
+
+    if (seq == 0) {
+        profileChunkState.reset();
+        profileChunkState.active = true;
+        profileChunkState.id = id;
+        profileChunkState.total = total;
+        profileChunkState.nextSeq = 0;
+        const size_t estimatedBytes = static_cast<size_t>(total) * 80U;
+        profileChunkState.payload.reserve(estimatedBytes < kMaxProfilePatchPayloadBytes
+                                              ? estimatedBytes
+                                              : kMaxProfilePatchPayloadBytes);
+    }
+
+    if (!profileChunkState.active || profileChunkState.id != id ||
+        profileChunkState.total != total || profileChunkState.nextSeq != seq) {
+        profileChunkState.reset();
+        return false;
+    }
+
+    if (profileChunkState.payload.length() + chunk.length() > kMaxProfilePatchPayloadBytes) {
+        profileChunkState.reset();
+        return false;
+    }
+
+    profileChunkState.payload += chunk;
+    profileChunkState.nextSeq++;
+    if (profileChunkState.nextSeq < profileChunkState.total) {
+        return true;
+    }
+
+    request.id = profileChunkState.id;
+    request.payload = profileChunkState.payload;
+    request.payload.trim();
+    profileChunkState.reset();
+    complete = request.payload.length() > 0;
+    return complete;
 }
 
 bool parseProfilePayloadDocument(const String &payload, StaticJsonDocument<12288> &doc) {
@@ -413,14 +503,25 @@ void handleSetProfilePayloadCommand(const String &command) {
     // Merge incoming JSON onto a captured snapshot so callers may send sparse profile patches
     // instead of a full profile document every time.
     ProfileSetRequest request;
-    if (!parseProfileSetRequest(command, request)) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
-        return;
+    if (command.startsWith("SET_PROFILE_CHUNK")) {
+        bool complete = false;
+        if (!parseProfileSetChunkRequest(command, request, complete)) {
+            logProfileSetError("Malformed SET_PROFILE_CHUNK frame");
+            return;
+        }
+        if (!complete) {
+            return;
+        }
+    } else {
+        if (!parseProfileSetRequest(command, request)) {
+            logProfileSetError("Malformed SET_PROFILE request");
+            return;
+        }
     }
 
     StaticJsonDocument<12288> doc;
     if (!parseProfilePayloadDocument(request.payload, doc)) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
+        logProfileSetError("Profile JSON did not parse");
         return;
     }
 
@@ -434,7 +535,7 @@ void handleSetProfilePayloadCommand(const String &command) {
 
     bool activeApplied = false;
     if (!persistPatchedProfile(request.id, profile, activeApplied)) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"bad_request\"}");
+        logProfileSetError("Profile patch could not be persisted");
         return;
     }
 

@@ -186,6 +186,38 @@ void test_dispatch_handles_profile_save_load_reset_commands() {
     TEST_ASSERT_EQUAL_UINT8(0, configManager.getPotCCNumber(0));
 }
 
+void test_dispatch_reassembles_chunked_profile_patch() {
+    clearTestLogBuffer();
+    const uint8_t profileId = 3;
+    const String payload =
+        "{\"lfos\":[{\"index\":0,\"shape\":4,\"frequency_hz\":3.5,\"depth\":0.65,\"bipolar\":true,"
+        "\"sync\":false,\"sync_ratio\":2},{\"index\":1,\"shape\":1,\"frequency_hz\":0.5,"
+        "\"depth\":0.25,\"bipolar\":false,\"sync\":true,\"sync_ratio\":6}],\"routes\":[{\"lfo\":0,"
+        "\"type\":0,\"target\":2,\"depth\":0.5,\"amount\":100,\"min\":0,\"max\":127}]}";
+    const int chunkSize = 64;
+    const int total = (payload.length() + chunkSize - 1) / chunkSize;
+
+    for (int seq = 0; seq < total; ++seq) {
+        const int start = seq * chunkSize;
+        const String command = "SET_PROFILE_CHUNK," + String(profileId) + "," + String(seq) + "," +
+                               String(total) + "," + payload.substring(start, start + chunkSize);
+        TEST_ASSERT_TRUE(testOnly_dispatchCommand(command));
+    }
+
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"SET_PROFILE\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"status\":\"ok\""));
+
+    ProfileData loaded{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, loaded));
+    TEST_ASSERT_EQUAL_UINT8(4, loaded.lfos[0].shape);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.5f, loaded.lfos[0].frequencyHz);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.65f, loaded.lfos[0].depth);
+    TEST_ASSERT_EQUAL_UINT8(1, loaded.lfos[0].bipolar);
+    TEST_ASSERT_EQUAL_UINT8(1, loaded.routeCount);
+    TEST_ASSERT_EQUAL_UINT8(0, loaded.routes[0].type);
+    TEST_ASSERT_EQUAL_UINT8(2, loaded.routes[0].target);
+}
+
 void test_dispatch_handles_macro_and_scene_snapshot_commands() {
     configManager.setPotChannel(0, 3);
     configManager.setPotCCNumber(0, 91);
