@@ -47,6 +47,7 @@ export class ScopePanel {
     this.hasTelemetry = false;
     this.lastTelemetryTimestamp = null;
     this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
+    this.lastLfoConfigs = Array.from({ length: this.lfoCount }, () => null);
     this.lastClock = null;
     this.frameRequest = null;
     this.lastRender = 0;
@@ -90,6 +91,7 @@ export class ScopePanel {
       () => new Float32Array(this.historyLength)
     );
     this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
+    this.lastLfoConfigs = Array.from({ length: this.lfoCount }, () => null);
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
@@ -124,6 +126,14 @@ export class ScopePanel {
     if (!this.ctx) return;
     const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : [];
     const lfos = Array.isArray(frame.lfos) ? frame.lfos : null;
+    if (Array.isArray(frame.lfo_config)) {
+      frame.lfo_config.forEach((entry, idx) => {
+        const index = Number.isFinite(Number(entry?.index)) ? Number(entry.index) : idx;
+        if (index >= 0 && index < this.lastLfoConfigs.length) {
+          this.lastLfoConfigs[index] = entry;
+        }
+      });
+    }
     const aggregated = envelopes.length
       ? Math.max(...envelopes.map((value) => clamp01((Number(value) || 0) / 127)))
       : 0;
@@ -195,7 +205,9 @@ export class ScopePanel {
           color: efColor
         },
         ...this.lastLfoValues.map((value, idx) => ({
-          label: `LFO ${idx + 1}`,
+          label: `LFO ${idx + 1} ${this.formatLfoConfig(this.lastLfoConfigs[idx], {
+            compact: true
+          })}`,
           value,
           color: lfoColors[idx % lfoColors.length]
         }))
@@ -265,6 +277,7 @@ export class ScopePanel {
     this.lfoValueLabels.forEach((label, idx) => {
       if (!label) return;
       const value = this.lastLfoValues[idx];
+      this.updateLfoLegendLabel(label, idx, this.lastLfoConfigs[idx]);
       label.textContent = Number.isFinite(value) ? value.toFixed(2) : '--';
     });
     if (!this.clockLabel) return;
@@ -278,6 +291,41 @@ export class ScopePanel {
     const running = Boolean(clock.running || clock.external_signal);
     this.clockLabel.textContent = `Clock ${source}`;
     this.clockLabel.dataset.state = running ? 'running' : 'idle';
+  }
+
+  formatLfoConfig(config, { compact = false } = {}) {
+    if (!config || typeof config !== 'object') return '';
+    const shape = String(config.shape_name || `S${Number(config.shape) || 0}`).replace(
+      'Sample & Hold',
+      compact ? 'S&H' : 'Sample & Hold'
+    );
+    const depth = Number(config.depth);
+    const depthLabel = Number.isFinite(depth) ? `D${depth.toFixed(2).replace(/0$/, '')}` : '';
+    const sync = Boolean(config.sync);
+    const rate = sync
+      ? String(config.sync_ratio_name || '')
+      : Number.isFinite(Number(config.frequency_hz))
+        ? `${Number(config.frequency_hz)
+            .toFixed(2)
+            .replace(/\.?0+$/, '')}Hz`
+        : '';
+    return [shape, depthLabel, rate].filter(Boolean).join(compact ? ' ' : ' · ');
+  }
+
+  updateLfoLegendLabel(valueLabel, idx, config) {
+    const legend = valueLabel.closest?.('.scope-legend-item');
+    if (!legend) return;
+    const descriptor = this.formatLfoConfig(config, { compact: true });
+    const prefix = descriptor ? `LFO ${idx + 1} ${descriptor} ` : `LFO ${idx + 1} `;
+    const firstNode = Array.from(legend.childNodes).find(
+      (node) => node.nodeType === Node.TEXT_NODE
+    );
+    if (firstNode) {
+      firstNode.nodeValue = prefix;
+    }
+    legend.title = descriptor
+      ? `LFO ${idx + 1}: ${this.formatLfoConfig(config)}`
+      : `LFO ${idx + 1}`;
   }
 
   // Keep the scope status line truthful about streaming vs stale telemetry.

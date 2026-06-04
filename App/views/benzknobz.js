@@ -714,6 +714,7 @@ const boot = () => {
     slotWorkspaceController.paintTelemetry(frame);
     transportToolbarController.onTelemetry(frame);
     deviceMonitorController.renderTelemetry(frame);
+    profileMacroScenePanel.onTelemetry(frame);
   });
   runtime.on('config', ({ staged, config, dirty }) => {
     // `staged` is the single source of truth for editor controls; keep all derived UI panes in

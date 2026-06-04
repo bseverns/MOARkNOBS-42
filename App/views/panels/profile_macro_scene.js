@@ -930,6 +930,22 @@ export function createProfileMacroScenePanel({
     return `Slot ${slotLabel(index)}`;
   }
 
+  function readActiveProfileIndex(payload = {}) {
+    const candidate = Number(payload?.active_profile ?? payload?.activeProfile);
+    if (!Number.isFinite(candidate)) return null;
+    return clampProfileSlot(candidate, PROFILE_LABELS.length);
+  }
+
+  function syncDeviceActiveProfile(payload = {}, { refresh = false } = {}) {
+    const nextActive = readActiveProfileIndex(payload);
+    if (nextActive === null || nextActive === activeProfileSlot) return false;
+    setActiveProfileSlot(nextActive, { persist: false });
+    if (refresh && profileInteractable && !lfoDraftDirty && !arpBusy && !lfoBusy) {
+      void refreshProfileUtilities({ silent: true });
+    }
+    return true;
+  }
+
   // Update the selected profile slot and mirror it into the UI/state badges.
   function setActiveProfileSlot(index, { persist = true } = {}) {
     const bounded = clampProfileSlot(index, PROFILE_LABELS.length);
@@ -1357,6 +1373,7 @@ export function createProfileMacroScenePanel({
   async function saveLfoProfile() {
     if (!profileInteractable || profileWorkflow.isLocked() || lfoBusy) return;
     lfoBusy = true;
+    let refreshAfterSave = false;
     refreshProfileControls();
     setLfoStatus('busy', `Saving LFO settings to ${describeSlot()}…`);
     try {
@@ -1392,6 +1409,9 @@ export function createProfileMacroScenePanel({
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
       );
       const liveApplied = response?.active_applied !== false;
+      if (!liveApplied) {
+        refreshAfterSave = syncDeviceActiveProfile(response);
+      }
       setLfoStatus(
         liveApplied ? 'ok' : 'busy',
         liveApplied
@@ -1411,6 +1431,9 @@ export function createProfileMacroScenePanel({
       lfoBusy = false;
       refreshProfileControls();
       renderLfoEditor();
+      if (refreshAfterSave) {
+        void refreshProfileUtilities({ silent: true, focus: 'lfo' });
+      }
     }
   }
 
@@ -1629,9 +1652,15 @@ export function createProfileMacroScenePanel({
   function onManifest(manifest) {
     deviceCapabilities = resolveProfileCapabilities(manifest);
     macroAvailable = deviceCapabilities.macroSnapshot ? macroAvailable : false;
+    syncDeviceActiveProfile(manifest);
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     syncRecoverySupportCopy();
     refreshProfileControls();
+  }
+
+  function onTelemetry(frame = {}) {
+    if (lfoDraftDirty || profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
+    syncDeviceActiveProfile(frame, { refresh: true });
   }
 
   function onConnected() {
@@ -1708,6 +1737,7 @@ export function createProfileMacroScenePanel({
     setLiveArpSlot,
     onConfigChanged,
     onManifest,
+    onTelemetry,
     onConnected,
     onDisconnected,
     onRuntimeError,

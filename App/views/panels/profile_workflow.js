@@ -123,10 +123,10 @@ export function createProfileWorkflow({
         { timeoutMs }
       );
       const responseSlot = clampSlot(
-        response?.slot ?? response?.profile ?? getActiveProfileSlot(),
+        response?.active_profile ?? response?.slot ?? response?.profile ?? getActiveProfileSlot(),
         slotCount
       );
-      setActiveProfileSlot(responseSlot);
+      setActiveProfileSlot(responseSlot, { persist: false });
 
       if (expectConfig) {
         let payload = response?.config ?? null;

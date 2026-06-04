@@ -72,7 +72,7 @@ export function createRuntimeLineHandler({
     ) {
       return;
     }
-    if (msg.type === 'telemetry' || msg.slots || msg.envelopes || msg.lfos) {
+    if (msg.type === 'telemetry' || msg.slots || msg.envelopes || msg.lfos || msg.lfo_config) {
       onTelemetry(msg);
       return;
     }

@@ -23,6 +23,7 @@ export function createSimulator(simDeps = {}) {
   let index = 0;
   const lines = [];
   let resolver;
+  let activeProfile = 0;
 
   const manifest = {
     ...createManifest(),
@@ -37,7 +38,9 @@ export function createSimulator(simDeps = {}) {
     brownout_count: 2,
     eeprom_primary_valid: true,
     eeprom_backup_valid: true,
-    eeprom_last_load: 'primary'
+    eeprom_last_load: 'primary',
+    profile_count: 4,
+    active_profile: activeProfile
   };
 
   let config = {
@@ -200,8 +203,23 @@ export function createSimulator(simDeps = {}) {
   let clockOutEnabled = false;
   let tappedBpm = 120;
   let externalBpm = 123.4;
+  const lfoShapeNames = ['Sine', 'Triangle', 'Saw', 'Square', 'Sample & Hold', 'Random Slew'];
+  const lfoSyncRatioNames = ['1/1', '1/2', '1/4', '1/8', '1/16', '1/32', 'x2', 'x4'];
+  const currentLfoConfig = () =>
+    profileSettingsSlots[activeProfile].lfos.map((entry, idx) => ({
+      index: idx,
+      shape: entry.shape,
+      shape_name: lfoShapeNames[entry.shape] ?? `Shape ${entry.shape}`,
+      frequency_hz: entry.frequency_hz,
+      depth: entry.depth,
+      bipolar: Boolean(entry.bipolar),
+      sync: Boolean(entry.sync),
+      sync_ratio: entry.sync_ratio,
+      sync_ratio_name: lfoSyncRatioNames[entry.sync_ratio] ?? '-'
+    }));
 
   const telemetry = () => ({
+    active_profile: activeProfile,
     slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
     slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
       enabled: idx % 2 === 0,
@@ -214,6 +232,7 @@ export function createSimulator(simDeps = {}) {
       Math.floor(Math.random() * 127)
     ),
     lfos: [((index % 40) / 39).toFixed(3), (((index + 20) % 40) / 39).toFixed(3)].map(Number),
+    lfo_config: currentLfoConfig(),
     currentSlot: index++ % manifest.slot_count,
     argPair: [0, 1],
     argEnabled: true,
@@ -441,6 +460,7 @@ export function createSimulator(simDeps = {}) {
         respond({ message: 'hello' });
         break;
       case 'get_manifest':
+        manifest.active_profile = activeProfile;
         respond({ manifest });
         break;
       case 'get_config':
@@ -453,6 +473,8 @@ export function createSimulator(simDeps = {}) {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
         respond({
           profile: slot,
+          active_profile: activeProfile,
+          active: slot === activeProfile,
           stored: true,
           arp: cloneValue(profileSettingsSlots[slot].arp),
           lfos: cloneValue(profileSettingsSlots[slot].lfos),
@@ -505,7 +527,12 @@ export function createSimulator(simDeps = {}) {
         if (Array.isArray(next.routes)) {
           profileSettingsSlots[slot].routes = cloneValue(next.routes);
         }
-        respond({ profile: slot, profile_set: true });
+        respond({
+          profile: slot,
+          active_profile: activeProfile,
+          profile_set: true,
+          active_applied: slot === activeProfile
+        });
         break;
       }
       case 'set_clock':
@@ -578,23 +605,29 @@ export function createSimulator(simDeps = {}) {
         break;
       case 'save_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
+        activeProfile = slot;
+        manifest.active_profile = activeProfile;
         profileSlots[slot] = cloneValue(config);
-        respond({ slot, saved: true });
+        respond({ slot, active_profile: activeProfile, saved: true });
         break;
       }
       case 'load_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
+        activeProfile = slot;
+        manifest.active_profile = activeProfile;
         const loaded = profileSlots[slot] ?? cloneValue(defaultProfile);
         config = cloneValue(loaded);
-        respond({ slot, config: cloneValue(config) });
+        respond({ slot, active_profile: activeProfile, config: cloneValue(config) });
         break;
       }
       case 'reset_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);
+        activeProfile = slot;
+        manifest.active_profile = activeProfile;
         profileSlots[slot] = cloneValue(defaultProfile);
         profileSettingsSlots[slot] = cloneValue(defaultProfileSettings);
         config = cloneValue(defaultProfile);
-        respond({ slot, config: cloneValue(config) });
+        respond({ slot, active_profile: activeProfile, config: cloneValue(config) });
         break;
       }
       case 'arp_start':

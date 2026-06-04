@@ -50,8 +50,8 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
         <span id="scope-status"></span>
         <span id="scope-fps"></span>
         <canvas id="scope-canvas" style="width: 420px; height: 180px"></canvas>
-        <span id="scope-lfo-1"></span>
-        <span id="scope-lfo-2"></span>
+        <span class="scope-legend-item lfo-one">LFO 1 <b id="scope-lfo-1"></b></span>
+        <span class="scope-legend-item lfo-two">LFO 2 <b id="scope-lfo-2"></b></span>
         <span id="scope-clock"></span>
       </section>
     `;
@@ -76,12 +76,26 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
     pushTelemetry({
       envelopes: [0],
       lfos: [0.75, 0.25],
+      lfo_config: [
+        {
+          index: 0,
+          shape: 2,
+          shape_name: 'Saw',
+          frequency_hz: 1,
+          depth: 0.75,
+          bipolar: false,
+          sync: true,
+          sync_ratio: 3,
+          sync_ratio_name: '1/8'
+        }
+      ],
       clock: { source: 'internal', running: true }
     });
     panel.draw();
     const first = {
       lfo1: document.getElementById('scope-lfo-1').textContent,
-      lfo2: document.getElementById('scope-lfo-2').textContent
+      lfo2: document.getElementById('scope-lfo-2').textContent,
+      lfo1Legend: document.querySelector('.scope-legend-item.lfo-one').textContent
     };
 
     pushTelemetry({ envelopes: [80] });
@@ -94,6 +108,9 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
     return { first, afterPartial };
   });
 
-  expect(readouts.first).toEqual({ lfo1: '0.75', lfo2: '0.25' });
+  expect(readouts.first.lfo1).toBe('0.75');
+  expect(readouts.first.lfo2).toBe('0.25');
+  expect(readouts.first.lfo1Legend).toContain('Saw');
+  expect(readouts.first.lfo1Legend).toContain('1/8');
   expect(readouts.afterPartial).toEqual({ lfo1: '0.75', lfo2: '0.25' });
 });
