@@ -909,6 +909,8 @@ bool applySlotDefinitions(JsonArray slotsJson, uint32_t seq, bool &anySlotPayloa
             arpNote = readClampedU8(slotObj, "arpNote", "arp_note", 0, 127, slot.arpNote);
         } else if (slotObj.containsKey("arp_note")) {
             arpNote = readClampedU8(slotObj, "arpNote", "arp_note", 0, 127, slot.arpNote);
+        } else if (midiType == MIDIMessageType::Note) {
+            arpNote = data1;
         }
         bool active = slotObj["active"].as<bool>();
 

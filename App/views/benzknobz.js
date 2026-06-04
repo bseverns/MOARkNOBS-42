@@ -561,7 +561,7 @@ const boot = () => {
         setStatus(
           'warn',
           'Preset staged',
-          `${descriptor.label} staged. Use Save staged edits to make it stick.`
+          `${descriptor.label} staged locally. Click Apply to send it to the device.`
         );
       } catch (err) {
         setStatus('err', 'Preset load failed', err.message || String(err));

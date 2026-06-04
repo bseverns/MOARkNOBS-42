@@ -521,6 +521,10 @@ void ConfigManager::readEEPROM(bool backup, uint16_t base) {
         g_efIdleFloor = ((idleFloor ^ 0xFF) == idleFloorCheck && idleFloor <= 127)
                             ? idleFloor
                             : EF_IDLE_FLOOR_DEFAULT;
+        uint8_t usbMidiOut = storageRead(offset + EEPROM_USB_MIDI_OUT);
+        uint8_t usbMidiOutCheck = storageRead(offset + EEPROM_USB_MIDI_OUT_CHECK);
+        g_usbMidiOutEnabled =
+            ((usbMidiOut ^ 0xFF) == usbMidiOutCheck && usbMidiOut <= 1) ? (usbMidiOut != 0) : true;
     }
     storageGet(offset + EEPROM_CONFIG_VERSION, _stored.version);
     storageGet(offset + EEPROM_CONFIG_CRC, _stored.crc);
@@ -539,6 +543,8 @@ void ConfigManager::writeEEPROM(bool backup, uint16_t base) {
         storageUpdate(offset + EEPROM_LED_MODE, _stored.ledMode);
         storageUpdate(offset + EEPROM_EF_IDLE_FLOOR, g_efIdleFloor);
         storageUpdate(offset + EEPROM_EF_IDLE_FLOOR_CHECK, g_efIdleFloor ^ 0xFF);
+        storageUpdate(offset + EEPROM_USB_MIDI_OUT, g_usbMidiOutEnabled ? 1 : 0);
+        storageUpdate(offset + EEPROM_USB_MIDI_OUT_CHECK, (g_usbMidiOutEnabled ? 1 : 0) ^ 0xFF);
     }
     storagePut(offset + EEPROM_CONFIG_VERSION, (uint16_t)CONFIG_VERSION);
     storagePut(offset + EEPROM_CONFIG_CRC, crc);
@@ -952,6 +958,12 @@ void ConfigManager::setEfIdleFloor(uint8_t floor) {
 
 uint8_t ConfigManager::getEfIdleFloor() const { return g_efIdleFloor; }
 
+void ConfigManager::setUsbMidiOutEnabled(bool enabled) {
+    g_usbMidiOutEnabled = enabled;
+    storageUpdate(EEPROM_USB_MIDI_OUT, enabled ? 1 : 0);
+    storageUpdate(EEPROM_USB_MIDI_OUT_CHECK, (enabled ? 1 : 0) ^ 0xFF);
+}
+
 // Reset configuration to defaults
 void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
                                        bool recordRecoveryEvent) {
@@ -969,6 +981,7 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
     _stored.activeProfile = 0;
     _stored.ledMode = static_cast<uint8_t>(LedMode::Static);
     g_efIdleFloor = EF_IDLE_FLOOR_DEFAULT;
+    g_usbMidiOutEnabled = true;
     saveConfiguration();
 }
 

@@ -346,20 +346,30 @@ void applySlotProfilePatch(JsonObject root, ProfileData &profile, bool applyLive
                 liveSlotChanged = true;
             }
         }
+        const bool hasExplicitArpNote = slot.containsKey("arpNote") || slot.containsKey("arp_note");
         if (slot.containsKey("data1") || slot.containsKey("cc")) {
             const uint8_t data1 =
                 clampedU8(slot, "data1", "cc", 0, 127, liveSlot ? liveSlot->data1 : 0);
             if (liveSlot) {
                 liveSlot->data1 = data1;
+                if (!hasExplicitArpNote && liveSlot->type == MIDIMessageType::Note) {
+                    liveSlot->arpNote = data1;
+                }
                 liveSlotChanged = true;
             }
         }
-        if (!slot.containsKey("data1") && !slot.containsKey("cc") &&
-            (slot.containsKey("arpNote") || slot.containsKey("arp_note"))) {
+        if (!slot.containsKey("data1") && !slot.containsKey("cc") && hasExplicitArpNote) {
             const uint8_t note =
                 clampedU8(slot, "arpNote", "arp_note", 0, 127, liveSlot ? liveSlot->data1 : 0);
             if (liveSlot) {
                 liveSlot->data1 = note;
+                liveSlot->arpNote = note;
+                liveSlotChanged = true;
+            }
+        } else if (hasExplicitArpNote) {
+            const uint8_t note =
+                clampedU8(slot, "arpNote", "arp_note", 0, 127, liveSlot ? liveSlot->arpNote : 0);
+            if (liveSlot) {
                 liveSlot->arpNote = note;
                 liveSlotChanged = true;
             }

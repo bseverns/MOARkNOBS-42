@@ -41,6 +41,7 @@ class MIDIHandler;
  * 4*NUM_POTS + 9  Config version                   2
  * 4*NUM_POTS + 11 CRC                              2
  * 4*NUM_POTS + 13 Active profile index             1
+ * 4*NUM_POTS + 17 USB MIDI out flag/check          2
  * 200             Primary magic (0xABCD)           2
  * 202             Backup magic  (0xDCBA)           2
  * EEPROM_EF_BASELINES (204) EF baselines          EEPROM_EF_BASELINES_SIZE
@@ -79,6 +80,8 @@ inline constexpr uint16_t EEPROM_ACTIVE_PROFILE = EEPROM_CONFIG_CRC + 2;
 inline constexpr uint16_t EEPROM_LED_MODE = EEPROM_ACTIVE_PROFILE + 1;
 inline constexpr uint16_t EEPROM_EF_IDLE_FLOOR = EEPROM_LED_MODE + 1;
 inline constexpr uint16_t EEPROM_EF_IDLE_FLOOR_CHECK = EEPROM_EF_IDLE_FLOOR + 1;
+inline constexpr uint16_t EEPROM_USB_MIDI_OUT = EEPROM_EF_IDLE_FLOOR_CHECK + 1;
+inline constexpr uint16_t EEPROM_USB_MIDI_OUT_CHECK = EEPROM_USB_MIDI_OUT + 1;
 
 class EnvelopeFollower;
 
@@ -271,6 +274,9 @@ class ConfigManager {
 
     /** Retrieve the current global EF idle/noise-floor clamp. */
     uint8_t getEfIdleFloor() const;
+
+    /** Persist and apply the USB MIDI output gate. */
+    void setUsbMidiOutEnabled(bool enabled);
 
     /** Override the persistence backend used by ConfigManager (tests/migration hooks). */
     static void setStorageBackend(StorageBackend *backend);

@@ -129,6 +129,28 @@ float effectiveJitterSmoothness() {
     float base = constrain(g_jitterSettings.smoothness, 0.0f, 1.0f);
     return constrain(base + (g_lfoJitterSmoothness * 0.5f), 0.0f, 1.0f);
 }
+
+uint8_t euclideanPulseCount(uint8_t totalSteps) {
+    if (totalSteps <= 1) {
+        return 1;
+    }
+    uint8_t pulses = static_cast<uint8_t>((static_cast<uint16_t>(totalSteps) * 5U + 11U) / 12U);
+    return static_cast<uint8_t>(constrain(pulses, 1, totalSteps - 1));
+}
+
+bool euclideanHit(uint8_t stepIndex, uint8_t totalSteps, uint8_t pulses) {
+    return totalSteps > 0 && ((stepIndex * pulses) % totalSteps) < pulses;
+}
+
+uint8_t euclideanHitOrdinal(uint8_t stepIndex, uint8_t totalSteps, uint8_t pulses) {
+    uint8_t ordinal = 0;
+    for (uint8_t i = 0; i < stepIndex; ++i) {
+        if (euclideanHit(i, totalSteps, pulses)) {
+            ++ordinal;
+        }
+    }
+    return ordinal;
+}
 } // namespace
 
 // Deterministic RNG used for DRUNK steps.
@@ -150,25 +172,27 @@ uint32_t Arpeggiator::nextRng(uint8_t slotIdx) {
     return state.rngState;
 }
 
-// Random walk that nudges the step position by +/-1 each hit.
+// Random walk that nudges the step position by a jitter-scaled amount each hit.
 int8_t Arpeggiator::nextDrunkOffset(uint8_t slotIdx, uint8_t totalSteps) {
-    if (totalSteps == 0) {
+    if (totalSteps <= 1) {
         return 0;
     }
     SlotState &state = _slots[slotIdx];
     uint8_t pos = static_cast<uint8_t>(state.drunkPosition);
     uint32_t r = nextRng(slotIdx);
-    int delta = (r & 0x1u) ? 1 : -1;
-    int nextPos = static_cast<int>(pos) + delta;
-    if (nextPos < 0) {
-        nextPos = 1;
-    } else if (nextPos >= static_cast<int>(totalSteps)) {
-        nextPos = static_cast<int>(totalSteps) - 2;
+
+    const uint8_t maxUsefulJump = static_cast<uint8_t>((totalSteps - 1 < 6) ? totalSteps - 1 : 6);
+    const uint8_t maxJump = static_cast<uint8_t>(
+        1 + lroundf(effectiveJitterDepth() * static_cast<float>(maxUsefulJump - 1)));
+    const uint8_t magnitude = static_cast<uint8_t>(((r >> 16) % maxJump) + 1);
+    const int direction = (r & 0x80000000UL) ? 1 : -1;
+
+    int nextPos = static_cast<int>(pos) + direction * static_cast<int>(magnitude);
+    while (nextPos < 0) {
+        nextPos += totalSteps;
     }
-    if (nextPos < 0) {
-        nextPos = 0;
-    }
-    state.drunkPosition = static_cast<int8_t>(constrain(nextPos, 0, totalSteps - 1));
+    nextPos %= totalSteps;
+    state.drunkPosition = static_cast<int8_t>(nextPos);
     return state.drunkPosition;
 }
 
@@ -211,16 +235,13 @@ int8_t Arpeggiator::computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &s
         pos = static_cast<uint8_t>(nextDrunkOffset(resolvePrimarySlot(), totalSteps));
         break;
     case Arpeggiator::EUCLIDEAN: {
-        // Euclidean-lite hit/rest: fire on evenly distributed steps.
-        uint8_t pulses = static_cast<uint8_t>(totalSteps / 2);
-        if (pulses == 0) {
-            pulses = 1;
-        }
-        bool hit = ((stepIndex * pulses) % totalSteps) < pulses;
-        if (!hit) {
+        // Rhythm chooses hit positions; melody advances only on those hits.
+        const uint8_t pulses = euclideanPulseCount(totalSteps);
+        if (!euclideanHit(stepIndex, totalSteps, pulses)) {
             stepEnabled = false;
             return 0;
         }
+        pos = static_cast<uint8_t>(euclideanHitOrdinal(stepIndex, totalSteps, pulses) % totalSteps);
         break;
     }
     case Arpeggiator::RANDOM:

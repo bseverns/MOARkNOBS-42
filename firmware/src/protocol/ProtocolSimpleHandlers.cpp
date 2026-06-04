@@ -874,18 +874,23 @@ void handleGetClockCommand(const String &command) {
 void handleGetArpCommand(const String &command) {
     (void)command;
     const Arpeggiator::Shape shape = arpeggiator.getShape();
+    const uint8_t slotIndex = arpeggiator.getSlot();
+    const MIDISlot &slot = configManager.getSlot(slotIndex);
     LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_ARP\",\"active\":%s,\"slot\":%u,"
                "\"length_ticks\":%u,\"shape\":%u,\"shape_name\":\"%s\","
                "\"swing_percent\":%u,\"gate_percent\":%u,\"octave_range\":%u,"
-               "\"pattern_length\":%u}\n",
-               arpeggiator.isActive() ? "true" : "false",
-               static_cast<unsigned>(arpeggiator.getSlot()),
+               "\"pattern_length\":%u,\"slot_active\":%s,\"slot_type\":\"%s\","
+               "\"channel\":%u,\"data1\":%u,\"arp_note\":%u,\"arpNote\":%u}\n",
+               arpeggiator.isActive() ? "true" : "false", static_cast<unsigned>(slotIndex),
                static_cast<unsigned>(arpeggiator.getLength()), static_cast<unsigned>(shape),
                arpShapeName(shape),
                static_cast<unsigned>(constrain(arpeggiator.getSwingPercent(), 0.0f, 80.0f)),
                static_cast<unsigned>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f)),
                static_cast<unsigned>(arpeggiator.getOctaveRange()),
-               static_cast<unsigned>(arpeggiator.getPatternLength()));
+               static_cast<unsigned>(arpeggiator.getPatternLength()),
+               slot.active ? "true" : "false", midiMessageTypeName(slot.type),
+               static_cast<unsigned>(slot.midiChannel), static_cast<unsigned>(slot.data1),
+               static_cast<unsigned>(slot.arpNote), static_cast<unsigned>(slot.arpNote));
 }
 
 void handleGetEfCommand(const String &command) {
@@ -1161,7 +1166,7 @@ void handleSetUsbMidiCommand(const String &command) {
 
     String valueText = command.substring(comma + 1);
     valueText.trim();
-    g_usbMidiOutEnabled = valueText.toInt() != 0;
+    configManager.setUsbMidiOutEnabled(valueText.toInt() != 0);
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_USB_MIDI\","
                "\"usb_midi_out\":%s}\n",
                g_usbMidiOutEnabled ? "true" : "false");

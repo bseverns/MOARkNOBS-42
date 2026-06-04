@@ -1116,7 +1116,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     // (1) Ctrl3 + Ctrl4 + Ctrl5: toggle USB MIDI output
     else if ((pressedButtons & (maskCtrl3 | maskCtrl4 | maskCtrl5)) ==
              (maskCtrl3 | maskCtrl4 | maskCtrl5)) {
-        g_usbMidiOutEnabled = !g_usbMidiOutEnabled;
+        context.configManager.setUsbMidiOutEnabled(!g_usbMidiOutEnabled);
         context.displayManager.displayStatus(g_usbMidiOutEnabled ? "USB MIDI ON" : "USB MIDI OFF",
                                              1500);
     }

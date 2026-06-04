@@ -5,6 +5,7 @@
 #include "ConfigManager.h"
 #include "FirmwareState.h"
 #include "Log.h"
+#include "MIDIHandler.h"
 #include "Runtime.h"
 #include "Scheduler.h"
 #include "TimeStub.h"
@@ -164,6 +165,59 @@ void test_runtime_diagnostics_log_only_on_counter_changes() {
     clearTestLogBuffer();
     checkDiagnosticsForAlerts();
     TEST_ASSERT_EQUAL_UINT(0, peekTestLogBuffer().length());
+}
+
+void test_clocked_feed_emits_non_arp_slots_while_arp_runs() {
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_followExternalClock = false;
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+    arpeggiator.stop();
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.active = true;
+        slot.type = (slotIndex % 4 == 0) ? MIDIMessageType::Note : MIDIMessageType::CC;
+        slot.midiChannel = static_cast<uint8_t>((slotIndex % 6) + 1);
+        slot.data1 =
+            static_cast<uint8_t>((slotIndex % 4 == 0) ? (48 + slotIndex) : ((slotIndex * 3) % 128));
+        slot.arpNote = slot.data1;
+    }
+
+    arpeggiator.start(0);
+    const uint32_t beforeTx = midiHandler.getTxCount();
+    testOnly_emitClockedSlots(1);
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTx + (NUM_SLOTS - 1), midiHandler.getTxCount());
+
+    arpeggiator.stop();
+    g_followExternalClock = true;
+}
+
+void test_clocked_feed_ignores_unconfigured_default_slots() {
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_followExternalClock = false;
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+    arpeggiator.stop();
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.active = true;
+        slot.type = (slotIndex % 2 == 0) ? MIDIMessageType::Note : MIDIMessageType::CC;
+        slot.midiChannel = 1;
+        slot.data1 = 0;
+        slot.arpNote = 0;
+    }
+
+    const uint32_t beforeTx = midiHandler.getTxCount();
+    testOnly_emitClockedSlots(1);
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTx, midiHandler.getTxCount());
+
+    g_followExternalClock = true;
 }
 
 void test_webserial_state_snapshot_emits_expected_json() {

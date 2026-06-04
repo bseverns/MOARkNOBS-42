@@ -347,6 +347,7 @@ void test_drunk_shape_is_deterministic() {
     g_fakeNowMs = 0;
     g_tappedBPM = 120.0f;
     g_lfoArpSwing = 0.0f;
+    g_jitterSettings.depth = 1.0f;
 
     auto cfg = makeConfig();
     prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
@@ -395,7 +396,40 @@ void test_drunk_shape_is_deterministic() {
     }
 }
 
-void test_euclidean_lite_skips_steps() {
+void test_drunk_shape_jitter_depth_expands_walk() {
+    MidiUsbGuard guard;
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_lfoArpSwing = 0.0f;
+    g_jitterSettings.depth = 1.0f;
+
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(4);
+    arp.setOctaveRange(2);
+    arp.setShape(Arpeggiator::DRUNK);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots);
+
+    uint8_t lowest = 127;
+    uint8_t highest = 0;
+    for (uint8_t i = 0; i < 12; ++i) {
+        tickAndUpdate(arp, midi, cfg, pots, 20, false);
+        lowest = min(lowest, usbMIDI.lastNoteOn);
+        highest = max(highest, usbMIDI.lastNoteOn);
+    }
+
+    TEST_ASSERT_TRUE(highest - lowest >= 12);
+}
+
+void test_euclidean_advances_pitch_by_hit_not_rest_position() {
     MidiUsbGuard guard;
     resetScheduler();
     g_fakeNowMs = 0;
@@ -404,7 +438,8 @@ void test_euclidean_lite_skips_steps() {
 
     Arpeggiator arp;
     arp.setLength(1);
-    arp.setPatternLength(8);
+    arp.setPatternLength(4);
+    arp.setOctaveRange(2);
     arp.setShape(Arpeggiator::EUCLIDEAN);
     arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
     arp.start(0);
@@ -415,14 +450,25 @@ void test_euclidean_lite_skips_steps() {
     MIDIHandler midi = primeMidi();
     arp.update(midi, cfg, pots);
 
-    // The euclidean pattern should skip some steps (not all, not none).
+    uint8_t firedNotes[5] = {};
+    uint8_t firedCount = 0;
     uint32_t beforeTx = midi._txCount;
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 12; ++i) {
         tickAndUpdate(arp, midi, cfg, pots, 20, false);
+        if (midi._txCount != beforeTx) {
+            beforeTx = midi._txCount;
+            if (firedCount < 5) {
+                firedNotes[firedCount] = usbMIDI.lastNoteOn;
+            }
+            ++firedCount;
+        }
     }
-    uint32_t fired = midi._txCount - beforeTx;
-    TEST_ASSERT_TRUE(fired > 0);
-    TEST_ASSERT_TRUE(fired < 8);
+
+    const uint8_t expected[] = {60, 61, 62, 63, 72};
+    TEST_ASSERT_EQUAL_UINT8(5, firedCount);
+    for (uint8_t i = 0; i < 5; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(expected[i], firedNotes[i]);
+    }
 }
 
 void test_swing_delays_offbeat_notes() {

@@ -213,11 +213,19 @@ void handleArpStartCommand(const String &command) {
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"missing_slot\"}");
         return;
     }
+    const MIDISlot &slotConfig = configManager.getSlot(static_cast<uint8_t>(slot));
+    arpeggiator.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
     arpeggiator.start(static_cast<uint8_t>(slot));
-    StaticJsonDocument<160> response;
+    StaticJsonDocument<288> response;
     response["arp_started"] = true;
     response["slot"] = slot;
     response["active"] = arpeggiator.isActive();
+    response["slot_active"] = slotConfig.active;
+    response["slot_type"] = profileSlotTypeName(static_cast<uint8_t>(slotConfig.type));
+    response["channel"] = slotConfig.midiChannel;
+    response["data1"] = slotConfig.data1;
+    response["arp_note"] = slotConfig.arpNote;
+    response["arpNote"] = slotConfig.arpNote;
     sendJsonResponse(response);
 }
 

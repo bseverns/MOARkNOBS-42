@@ -48,6 +48,7 @@ export function createTransportToolbarController({
   let usbMidiOutEnabled = false;
   let noteDynamicsSupported = false;
   let noteDynamicsBusy = false;
+  let noteDynamicsDraftDirty = false;
   let velocityShift = 0;
   let changeProbability = 100;
   let jitterSupported = false;
@@ -224,8 +225,10 @@ export function createTransportToolbarController({
     if (noteDynamicsVelocityInput) noteDynamicsVelocityInput.disabled = disabled;
     if (noteDynamicsProbabilityInput) noteDynamicsProbabilityInput.disabled = disabled;
     if (noteDynamicsApplyBtn) noteDynamicsApplyBtn.disabled = disabled;
-    syncInputValue(noteDynamicsVelocityInput, velocityShift);
-    syncInputValue(noteDynamicsProbabilityInput, changeProbability);
+    if (!noteDynamicsDraftDirty) {
+      syncInputValue(noteDynamicsVelocityInput, velocityShift);
+      syncInputValue(noteDynamicsProbabilityInput, changeProbability);
+    }
   }
 
   function updateJitterControls() {
@@ -310,6 +313,7 @@ export function createTransportToolbarController({
         0,
         Math.min(100, Math.round(Number(response?.change_probability) || 0))
       );
+      noteDynamicsDraftDirty = false;
       setNoteDynamicsStatus(
         'ok',
         `Velocity ${velocityShift >= 0 ? '+' : ''}${velocityShift} • Chance ${changeProbability}%`
@@ -462,6 +466,7 @@ export function createTransportToolbarController({
         0,
         Math.min(100, Math.round(Number(response?.change_probability) || 0))
       );
+      noteDynamicsDraftDirty = false;
       setNoteDynamicsStatus(
         'ok',
         `Velocity ${velocityShift >= 0 ? '+' : ''}${velocityShift} • Chance ${changeProbability}%`
@@ -646,6 +651,14 @@ export function createTransportToolbarController({
     rollbackBtn?.addEventListener('click', () => rollback());
     usbMidiToggleBtn?.addEventListener('click', () => toggleUsbMidi());
     noteDynamicsApplyBtn?.addEventListener('click', () => applyNoteDynamics());
+    noteDynamicsVelocityInput?.addEventListener('input', () => {
+      noteDynamicsDraftDirty = true;
+      updateNoteDynamicsControls();
+    });
+    noteDynamicsProbabilityInput?.addEventListener('input', () => {
+      noteDynamicsDraftDirty = true;
+      updateNoteDynamicsControls();
+    });
     jitterApplyBtn?.addEventListener('click', () => applyJitter());
     deviceClockApplyBtn?.addEventListener('click', () => applyClockSettings());
     initializeSimulatorToggle();
@@ -686,8 +699,7 @@ export function createTransportToolbarController({
   function onConnected() {
     void refreshUsbMidiState();
     if (noteDynamicsSupported) {
-      setNoteDynamicsStatus('muted', 'Waiting for live note dynamics telemetry…');
-      updateNoteDynamicsControls();
+      void refreshNoteDynamicsState();
     }
     if (jitterSupported) {
       setJitterStatus('muted', 'Waiting for live jitter telemetry…');
@@ -703,6 +715,7 @@ export function createTransportToolbarController({
     usbMidiBusy = false;
     usbMidiOutEnabled = false;
     noteDynamicsBusy = false;
+    noteDynamicsDraftDirty = false;
     jitterBusy = false;
     clockBusy = false;
     setUsbMidiStatus('muted', 'Connect to inspect USB MIDI output state.');
@@ -717,15 +730,22 @@ export function createTransportToolbarController({
 
   function onTelemetry(frame) {
     if (frame?.note_dynamics && typeof frame.note_dynamics === 'object') {
-      velocityShift = Math.max(
-        -64,
-        Math.min(63, Math.round(Number(frame.note_dynamics.velocity_shift) || 0))
-      );
-      changeProbability = Math.max(
-        0,
-        Math.min(100, Math.round(Number(frame.note_dynamics.change_probability) || 0))
-      );
-      if (!noteDynamicsBusy && noteDynamicsSupported && connectionPill?.dataset.stage === 'live') {
+      if (!noteDynamicsDraftDirty) {
+        velocityShift = Math.max(
+          -64,
+          Math.min(63, Math.round(Number(frame.note_dynamics.velocity_shift) || 0))
+        );
+        changeProbability = Math.max(
+          0,
+          Math.min(100, Math.round(Number(frame.note_dynamics.change_probability) || 0))
+        );
+      }
+      if (
+        !noteDynamicsBusy &&
+        !noteDynamicsDraftDirty &&
+        noteDynamicsSupported &&
+        connectionPill?.dataset.stage === 'live'
+      ) {
         setNoteDynamicsStatus(
           'ok',
           `Velocity ${velocityShift >= 0 ? '+' : ''}${velocityShift} • Chance ${changeProbability}%`

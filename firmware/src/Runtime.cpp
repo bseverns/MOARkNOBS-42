@@ -249,19 +249,39 @@ void emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
     }
 }
 
+bool isUnconfiguredClockedSlot(const MIDISlot &slot) {
+    if (slot.midiChannel != 1 || slot.data1 != 0) {
+        return false;
+    }
+    return slot.type == MIDIMessageType::CC || slot.type == MIDIMessageType::Note;
+}
+
 void emitClockedNoteSlots(uint32_t quarterEvents) {
     if (quarterEvents == 0 || !performanceClockActive()) {
         return;
     }
     const unsigned long gateMs = resolveClockedNoteGateMs();
     for (uint32_t beat = 0; beat < quarterEvents; ++beat) {
-        for (uint8_t slotIndex = 0; slotIndex < NUM_POTS; ++slotIndex) {
-            MIDISlot &slot = configManager.getSlot(slotIndex);
-            if (!slot.active || slot.type != MIDIMessageType::Note ||
-                arpeggiator.isActive(slotIndex)) {
+        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+            if (arpeggiator.isActive(slotIndex)) {
                 continue;
             }
-            emitNoteSlot(slotIndex, slot, gateMs);
+            MIDISlot &slot = configManager.getSlot(slotIndex);
+            if (!slot.active) {
+                continue;
+            }
+            if (isUnconfiguredClockedSlot(slot)) {
+                continue;
+            }
+            if (slot.type == MIDIMessageType::Note) {
+                emitNoteSlot(slotIndex, slot, gateMs);
+                continue;
+            }
+
+            int rawValue = slotIndex < NUM_POTS ? potentiometerManager.getLastValue(slotIndex) : -1;
+            const uint8_t value = rawValue >= 0 ? Utility::mapToMidiValue(rawValue)
+                                                : static_cast<uint8_t>(slot.data1);
+            emitSlotModulationValue(slotIndex, value);
         }
     }
 }
@@ -771,4 +791,6 @@ void testOnly_resetRuntimeState() {
     lastMidiTaskOverrunAlertCount = 0;
     lastUartOverrunAlertCount = 0;
 }
+
+void testOnly_emitClockedSlots(uint32_t quarterEvents) { emitClockedNoteSlots(quarterEvents); }
 #endif

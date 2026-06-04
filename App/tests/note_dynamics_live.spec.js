@@ -85,6 +85,17 @@ function installNativeHarness() {
           pushLine(JSON.stringify(config));
           return;
         }
+        if (trimmed === 'GET_NOTE_DYNAMICS') {
+          pushLine(
+            JSON.stringify({
+              type: 'response',
+              command: 'GET_NOTE_DYNAMICS',
+              velocity_shift: 0,
+              change_probability: 100
+            })
+          );
+          return;
+        }
         if (trimmed === 'SET_NOTE_DYNAMICS,-12,83') {
           pushLine(
             JSON.stringify({

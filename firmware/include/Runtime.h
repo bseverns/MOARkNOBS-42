@@ -39,6 +39,7 @@ void checkDiagnosticsForAlerts();
 
 #if defined(UNIT_TEST)
 void testOnly_resetRuntimeState();
+void testOnly_emitClockedSlots(uint32_t quarterEvents);
 #endif
 
 #endif // RUNTIME_H
