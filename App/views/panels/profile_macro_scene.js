@@ -216,6 +216,7 @@ export function createProfileMacroScenePanel({
   let modMatrixReport = null;
   let arpDraft = createDefaultArpDraft();
   let lfoDraft = createDefaultLfoDraft();
+  let lfoDraftDirty = false;
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
   let profileWizardTargetSlot = activeProfileSlot;
   let deviceCapabilities = resolveProfileCapabilities(localManifest);
@@ -539,8 +540,21 @@ export function createProfileMacroScenePanel({
     return input;
   }
 
+  function canEditLfoDraft() {
+    return profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && !lfoBusy;
+  }
+
   function markLfoDraftDirty() {
+    lfoDraftDirty = true;
     setLfoStatus('busy', `${describeSlot()} edited locally. Save slot LFOs to persist changes.`);
+    updateLfoControls();
+  }
+
+  function updateLfoEditorEnabled(canInteract = canEditLfoDraft()) {
+    if (!lfoEditor) return;
+    lfoEditor.querySelectorAll('input, select, button').forEach((control) => {
+      control.disabled = !canInteract;
+    });
   }
 
   function summarizeLfoDraft() {
@@ -563,6 +577,7 @@ export function createProfileMacroScenePanel({
       ? nextDraft.routes.slice(0, PROFILE_MAX_ROUTES).map((route) => normalizeRouteEntry(route))
       : [];
     lfoDraft = { lfos: nextLfos, routes: nextRoutes };
+    lfoDraftDirty = false;
     renderLfoEditor();
     updateLfoControls();
   }
@@ -883,6 +898,7 @@ export function createProfileMacroScenePanel({
     }
 
     lfoEditor.appendChild(routeSection);
+    updateLfoEditorEnabled();
   }
 
   // Synchronize the macro/scene/profile helper text with the current capability set.
@@ -997,10 +1013,15 @@ export function createProfileMacroScenePanel({
   }
 
   function updateLfoControls() {
-    const canInteract =
-      profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && !lfoBusy;
+    const canInteract = canEditLfoDraft();
     if (lfoRefreshBtn) lfoRefreshBtn.disabled = !canInteract;
-    if (lfoSaveBtn) lfoSaveBtn.disabled = !canInteract;
+    if (lfoSaveBtn) {
+      lfoSaveBtn.disabled = !canInteract || !lfoDraftDirty;
+      lfoSaveBtn.textContent = lfoDraftDirty ? 'Save LFO changes' : 'Save slot LFOs';
+      lfoSaveBtn.title = lfoDraftDirty
+        ? `Persist local LFO edits to ${describeSlot()}.`
+        : `No unsaved LFO edits for ${describeSlot()}.`;
+    }
     if (lfoRouteAddBtn) {
       lfoRouteAddBtn.disabled = !canInteract || lfoDraft.routes.length >= PROFILE_MAX_ROUTES;
     }
@@ -1008,6 +1029,7 @@ export function createProfileMacroScenePanel({
     if (lfoCard) {
       lfoCard.dataset.state = canInteract ? 'ready' : 'muted';
     }
+    updateLfoEditorEnabled(canInteract);
   }
 
   function updateModMatrixControls() {
@@ -1367,6 +1389,7 @@ export function createProfileMacroScenePanel({
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
       );
       setLfoStatus('ok', `${describeSlot()} saved with ${lfoDraft.routes.length} routes.`);
+      lfoDraftDirty = false;
       setStatus('ok', 'LFO profile saved', describeSlot());
     } catch (err) {
       setLfoStatus('err', `LFO save failed: ${err.message || String(err)}`);

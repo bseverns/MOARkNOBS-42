@@ -383,6 +383,7 @@
             </header>
             <div class="live-toggle-actions">
               <button id="usb-midi-toggle" type="button" disabled>USB MIDI —</button>
+              <button id="usb-midi-test" type="button" disabled>Run MIDI test</button>
             </div>
             <p class="microcopy macro-status" id="usb-midi-status" data-state="muted" aria-live="polite">
               Connect to inspect USB MIDI output state.
@@ -627,14 +628,14 @@
               <strong>LFOs &amp; Assignments</strong>
               <p class="microcopy">Edit the two saved LFOs and assign their routes for the selected profile slot.</p>
             </div>
+            <div class="arp-actions" role="group" aria-label="LFO profile load save actions">
+              <button id="lfo-refresh" type="button" disabled>Load slot LFOs</button>
+              <button id="lfo-save" type="button" disabled>Save slot LFOs</button>
+            </div>
             <div id="lfo-editor" class="lfo-editor" aria-live="polite"></div>
             <div class="arp-actions" role="group" aria-label="LFO profile actions">
               <button id="lfo-route-add" type="button" disabled>Add route</button>
               <button id="lfo-routes-clear" type="button" disabled>Clear routes</button>
-            </div>
-            <div class="arp-actions" role="group" aria-label="LFO profile load save actions">
-              <button id="lfo-refresh" type="button" disabled>Load slot LFOs</button>
-              <button id="lfo-save" type="button" disabled>Save slot LFOs</button>
             </div>
             <p class="microcopy macro-status" id="lfo-status" data-state="muted" aria-live="polite">
               Connect to inspect the selected profile slot&apos;s LFO settings.

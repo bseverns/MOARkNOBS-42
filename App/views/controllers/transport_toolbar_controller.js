@@ -26,6 +26,7 @@ export function createTransportToolbarController({
     transportLaneChip = null,
     connectFailHelp = null,
     usbMidiToggleBtn = null,
+    usbMidiTestBtn = null,
     usbMidiStatusEl = null,
     noteDynamicsVelocityInput = null,
     noteDynamicsProbabilityInput = null,
@@ -213,10 +214,28 @@ export function createTransportToolbarController({
   }
 
   function updateUsbMidiControls() {
-    if (!usbMidiToggleBtn) return;
     const connected = connectionPill?.dataset.stage === 'live';
-    usbMidiToggleBtn.disabled = !connected || usbMidiBusy || !usbMidiToggleSupported;
-    usbMidiToggleBtn.textContent = usbMidiOutEnabled ? 'USB MIDI On' : 'USB MIDI Off';
+    const disabled = !connected || usbMidiBusy || !usbMidiToggleSupported;
+    if (usbMidiToggleBtn) {
+      usbMidiToggleBtn.disabled = disabled;
+      usbMidiToggleBtn.textContent = usbMidiOutEnabled ? 'USB MIDI On' : 'USB MIDI Off';
+    }
+    if (usbMidiTestBtn) {
+      usbMidiTestBtn.disabled = disabled;
+    }
+  }
+
+  function formatUsbMidiCounters(response) {
+    const tx = Number(response?.tx_count ?? response?.tx_after);
+    const rx = Number(response?.rx_count);
+    const ticks = Number(response?.clock_ticks);
+    const drops = Number(response?.midi_drops);
+    const parts = [];
+    if (Number.isFinite(tx)) parts.push(`tx ${tx}`);
+    if (Number.isFinite(rx)) parts.push(`rx ${rx}`);
+    if (Number.isFinite(ticks)) parts.push(`clock ${ticks}`);
+    if (Number.isFinite(drops)) parts.push(`drops ${drops}`);
+    return parts.length ? ` (${parts.join(' · ')})` : '';
   }
 
   function updateNoteDynamicsControls() {
@@ -276,7 +295,9 @@ export function createTransportToolbarController({
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus(
         'ok',
-        usbMidiOutEnabled ? 'USB MIDI output is enabled.' : 'USB MIDI output is disabled.'
+        `${
+          usbMidiOutEnabled ? 'USB MIDI output is enabled.' : 'USB MIDI output is disabled.'
+        }${formatUsbMidiCounters(response)}`
       );
     } catch (err) {
       setUsbMidiStatus('err', `USB MIDI read failed: ${err.message || String(err)}`);
@@ -420,7 +441,9 @@ export function createTransportToolbarController({
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus(
         'ok',
-        usbMidiOutEnabled ? 'USB MIDI output enabled.' : 'USB MIDI output disabled.'
+        `${
+          usbMidiOutEnabled ? 'USB MIDI output enabled.' : 'USB MIDI output disabled.'
+        }${formatUsbMidiCounters(response)}`
       );
       setStatus(
         'ok',
@@ -430,6 +453,29 @@ export function createTransportToolbarController({
     } catch (err) {
       setUsbMidiStatus('err', `USB MIDI update failed: ${err.message || String(err)}`);
       setStatus('err', 'USB MIDI update failed', err.message || String(err));
+    } finally {
+      usbMidiBusy = false;
+      updateUsbMidiControls();
+    }
+  }
+
+  async function runMidiTest() {
+    if (!usbMidiToggleSupported || usbMidiBusy) return;
+    if (connectionPill?.dataset.stage !== 'live') {
+      setUsbMidiStatus('muted', 'Connect before running the MIDI test.');
+      return;
+    }
+    usbMidiBusy = true;
+    updateUsbMidiControls();
+    setUsbMidiStatus('busy', 'Sending C4, CC1, and note-off over USB MIDI…');
+    try {
+      const response = await runtime.sendRpc({ rpc: 'midi_test' }, { rollbackOnError: false });
+      usbMidiOutEnabled = Boolean(response?.usb_midi_out);
+      setUsbMidiStatus('ok', `MIDI test sent.${formatUsbMidiCounters(response)}`);
+      setStatus('ok', 'MIDI test sent', formatUsbMidiCounters(response).trim());
+    } catch (err) {
+      setUsbMidiStatus('err', `MIDI test failed: ${err.message || String(err)}`);
+      setStatus('err', 'MIDI test failed', err.message || String(err));
     } finally {
       usbMidiBusy = false;
       updateUsbMidiControls();
@@ -650,6 +696,7 @@ export function createTransportToolbarController({
     applyBtn?.addEventListener('click', () => apply());
     rollbackBtn?.addEventListener('click', () => rollback());
     usbMidiToggleBtn?.addEventListener('click', () => toggleUsbMidi());
+    usbMidiTestBtn?.addEventListener('click', () => runMidiTest());
     noteDynamicsApplyBtn?.addEventListener('click', () => applyNoteDynamics());
     noteDynamicsVelocityInput?.addEventListener('input', () => {
       noteDynamicsDraftDirty = true;

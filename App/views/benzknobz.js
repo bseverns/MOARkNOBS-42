@@ -94,6 +94,7 @@ const boot = () => {
   const applySaveProfileBtn = document.getElementById('apply-save-profile');
   const simulatorToggle = document.getElementById('simulator-toggle');
   const usbMidiToggleBtn = document.getElementById('usb-midi-toggle');
+  const usbMidiTestBtn = document.getElementById('usb-midi-test');
   const usbMidiStatusEl = document.getElementById('usb-midi-status');
   const noteDynamicsVelocityInput = document.getElementById('note-dynamics-velocity');
   const noteDynamicsProbabilityInput = document.getElementById('note-dynamics-probability');
@@ -414,6 +415,7 @@ const boot = () => {
       transportLaneChip,
       connectFailHelp,
       usbMidiToggleBtn,
+      usbMidiTestBtn,
       usbMidiStatusEl,
       noteDynamicsVelocityInput,
       noteDynamicsProbabilityInput,
