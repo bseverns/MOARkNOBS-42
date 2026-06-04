@@ -48,6 +48,33 @@ void writeProfileEf(JsonObject obj, const ProfileEfSettings &settings) {
     obj["destination_mode"] = settings.destinationMode;
 }
 
+const char *profileSlotTypeName(uint8_t type) {
+    switch (static_cast<MIDIMessageType>(type)) {
+    case MIDIMessageType::OFF:
+        return "OFF";
+    case MIDIMessageType::CC:
+        return "CC";
+    case MIDIMessageType::Note:
+        return "NOTE";
+    case MIDIMessageType::PitchBend:
+        return "PITCH_BEND";
+    case MIDIMessageType::ProgramChange:
+        return "PROGRAM";
+    case MIDIMessageType::Aftertouch:
+        return "AFTERTOUCH";
+    case MIDIMessageType::ModWheel:
+        return "MOD_WHEEL";
+    case MIDIMessageType::NRPN:
+        return "NRPN";
+    case MIDIMessageType::RPN:
+        return "RPN";
+    case MIDIMessageType::SysEx:
+        return "SYSEX";
+    default:
+        return "OFF";
+    }
+}
+
 int readOptionalCommandValue(const String &command, int fallback) {
     int comma = command.indexOf(',');
     return comma >= 0 ? command.substring(comma + 1).toInt() : fallback;
@@ -118,9 +145,18 @@ void writeProfileRoutes(JsonArray routes, const ProfileData &profile) {
 
 void writeProfileSlots(JsonArray slots, const ProfileData &profile) {
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        const MIDISlot &runtimeSlot = configManager.getSlot(i);
         JsonObject slot = slots.createNestedObject();
         slot["index"] = i;
+        const uint8_t type = static_cast<uint8_t>(runtimeSlot.type);
+        slot["type"] = type;
+        slot["type_name"] = profileSlotTypeName(type);
         slot["channel"] = profile.slots[i].midiChannel;
+        slot["midiChannel"] = profile.slots[i].midiChannel;
+        slot["data1"] = runtimeSlot.data1;
+        slot["active"] = runtimeSlot.active;
+        slot["arp_note"] = runtimeSlot.arpNote;
+        slot["arpNote"] = runtimeSlot.arpNote;
         JsonObject ef = slot.createNestedObject("ef");
         writeProfileEf(ef, profile.slots[i].ef);
     }

@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <cctype>
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
@@ -36,6 +37,94 @@ uint16_t clampedU16(JsonObject obj, const char *key, int minValue, int maxValue,
         return fallback;
     }
     return static_cast<uint16_t>(constrain(obj[key].as<int>(), minValue, maxValue));
+}
+
+int readIntField(JsonObject obj, const char *primary, const char *alternate, int fallback) {
+    if (!obj.isNull() && obj.containsKey(primary)) {
+        return obj[primary].as<int>();
+    }
+    if (!obj.isNull() && alternate && obj.containsKey(alternate)) {
+        return obj[alternate].as<int>();
+    }
+    return fallback;
+}
+
+uint8_t clampedU8(JsonObject obj, const char *primary, const char *alternate, int minValue,
+                  int maxValue, uint8_t fallback) {
+    return static_cast<uint8_t>(
+        constrain(readIntField(obj, primary, alternate, fallback), minValue, maxValue));
+}
+
+bool equalsIgnoreCase(const char *lhs, const char *rhs) {
+    if (!lhs || !rhs) {
+        return false;
+    }
+    while (*lhs && *rhs) {
+        if (tolower(static_cast<unsigned char>(*lhs)) !=
+            tolower(static_cast<unsigned char>(*rhs))) {
+            return false;
+        }
+        ++lhs;
+        ++rhs;
+    }
+    return *lhs == '\0' && *rhs == '\0';
+}
+
+bool parseMIDITypeLabel(const char *label, MIDIMessageType &type) {
+    if (!label) {
+        return false;
+    }
+    struct Entry {
+        const char *legacy;
+        const char *canonical;
+        const char *alt;
+        MIDIMessageType value;
+    };
+    static constexpr Entry kMap[] = {
+        {"OFF", "OFF", nullptr, MIDIMessageType::OFF},
+        {"UNKNOWN", "UNKNOWN", nullptr, MIDIMessageType::OFF},
+        {"CC", "CC", nullptr, MIDIMessageType::CC},
+        {"Note", "NOTE", nullptr, MIDIMessageType::Note},
+        {"PitchBend", "PITCH_BEND", "PITCHBEND", MIDIMessageType::PitchBend},
+        {"ProgramChange", "PROGRAM", "PROGRAM_CHANGE", MIDIMessageType::ProgramChange},
+        {"Aftertouch", "AFTERTOUCH", nullptr, MIDIMessageType::Aftertouch},
+        {"ModWheel", "MOD_WHEEL", "MODWHEEL", MIDIMessageType::ModWheel},
+        {"NRPN", "NRPN", nullptr, MIDIMessageType::NRPN},
+        {"RPN", "RPN", nullptr, MIDIMessageType::RPN},
+        {"SysEx", "SYSEX", "SYS_EX", MIDIMessageType::SysEx},
+    };
+    for (const auto &entry : kMap) {
+        if ((entry.legacy && equalsIgnoreCase(label, entry.legacy)) ||
+            (entry.canonical && equalsIgnoreCase(label, entry.canonical)) ||
+            (entry.alt && equalsIgnoreCase(label, entry.alt))) {
+            type = entry.value;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool parseProfileSlotType(JsonObject slot, MIDIMessageType &type) {
+    JsonVariant typeValue = slot["type"];
+    if (!typeValue.isNull()) {
+        if (typeValue.is<const char *>()) {
+            return parseMIDITypeLabel(typeValue.as<const char *>(), type);
+        }
+        const int raw = typeValue.as<int>();
+        if (raw >= static_cast<int>(MIDIMessageType::OFF) &&
+            raw <= static_cast<int>(MIDIMessageType::SysEx)) {
+            type = static_cast<MIDIMessageType>(raw);
+            return true;
+        }
+        return false;
+    }
+    if (slot.containsKey("type_name")) {
+        return parseMIDITypeLabel(slot["type_name"].as<const char *>(), type);
+    }
+    if (slot.containsKey("schema_name")) {
+        return parseMIDITypeLabel(slot["schema_name"].as<const char *>(), type);
+    }
+    return false;
 }
 
 bool parseProfileEf(JsonObject obj, ProfileEfSettings &out) {
@@ -221,7 +310,7 @@ void applyRouteProfilePatch(JsonObject root, ProfileData &profile) {
     }
 }
 
-void applySlotProfilePatch(JsonObject root, ProfileData &profile) {
+void applySlotProfilePatch(JsonObject root, ProfileData &profile, bool applyLiveSlots) {
     if (!root.containsKey("slots")) {
         return;
     }
@@ -232,13 +321,61 @@ void applySlotProfilePatch(JsonObject root, ProfileData &profile) {
         if (index >= NUM_SLOTS) {
             continue;
         }
+        MIDISlot *liveSlot = applyLiveSlots ? &configManager.getSlot(index) : nullptr;
+        bool liveSlotChanged = false;
         if (slot.containsKey("channel")) {
             profile.slots[index].midiChannel =
                 clampedU8(slot, "channel", 1, 16, profile.slots[index].midiChannel);
+            if (liveSlot) {
+                liveSlot->midiChannel = profile.slots[index].midiChannel;
+                liveSlotChanged = true;
+            }
+        }
+        if (slot.containsKey("midiChannel")) {
+            profile.slots[index].midiChannel =
+                clampedU8(slot, "midiChannel", 1, 16, profile.slots[index].midiChannel);
+            if (liveSlot) {
+                liveSlot->midiChannel = profile.slots[index].midiChannel;
+                liveSlotChanged = true;
+            }
+        }
+        MIDIMessageType midiType = liveSlot ? liveSlot->type : MIDIMessageType::OFF;
+        if (parseProfileSlotType(slot, midiType)) {
+            if (liveSlot) {
+                liveSlot->type = midiType;
+                liveSlotChanged = true;
+            }
+        }
+        if (slot.containsKey("data1") || slot.containsKey("cc")) {
+            const uint8_t data1 =
+                clampedU8(slot, "data1", "cc", 0, 127, liveSlot ? liveSlot->data1 : 0);
+            if (liveSlot) {
+                liveSlot->data1 = data1;
+                liveSlotChanged = true;
+            }
+        }
+        if (!slot.containsKey("data1") && !slot.containsKey("cc") &&
+            (slot.containsKey("arpNote") || slot.containsKey("arp_note"))) {
+            const uint8_t note =
+                clampedU8(slot, "arpNote", "arp_note", 0, 127, liveSlot ? liveSlot->data1 : 0);
+            if (liveSlot) {
+                liveSlot->data1 = note;
+                liveSlot->arpNote = note;
+                liveSlotChanged = true;
+            }
+        }
+        if (slot.containsKey("active")) {
+            if (liveSlot) {
+                liveSlot->active = slot["active"].as<bool>();
+                liveSlotChanged = true;
+            }
         }
         if (slot.containsKey("ef")) {
             JsonObject ef = slot["ef"].as<JsonObject>();
             parseProfileEf(ef, profile.slots[index].ef);
+        }
+        if (liveSlotChanged) {
+            configManager.saveSlot(index, *liveSlot);
         }
     }
 }
@@ -283,7 +420,7 @@ void handleSetProfilePayloadCommand(const String &command) {
     applyLedProfilePatch(root, profile);
     applyLfoProfilePatch(root, profile);
     applyRouteProfilePatch(root, profile);
-    applySlotProfilePatch(root, profile);
+    applySlotProfilePatch(root, profile, request.id == g_activeProfile);
 
     bool activeApplied = false;
     if (!persistPatchedProfile(request.id, profile, activeApplied)) {
