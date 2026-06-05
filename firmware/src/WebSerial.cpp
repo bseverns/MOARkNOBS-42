@@ -352,6 +352,66 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
     }
 }
 
+void WebSerial::sendScopeSnapshot(const std::vector<EnvelopeFollower> &envelopes) {
+    if (!webSerialStreaming)
+        return;
+
+    const FrameMeta meta = buildFrameMeta("scope");
+    StaticJsonDocument<1280> doc;
+    applyFrameMeta(doc, meta);
+    doc["type"] = "telemetry";
+    doc["scope"] = "scope_envelopes";
+
+    JsonArray envs = doc.createNestedArray("envelopes");
+    for (const auto &env : envelopes) {
+        envs.add(env.getEnvelopeLevel());
+    }
+
+    JsonArray lfos = doc.createNestedArray("lfos");
+    for (float value : g_lfoValues) {
+        lfos.add(value);
+    }
+
+    JsonArray lfoConfig = doc.createNestedArray("lfo_config");
+    for (uint8_t i = 0; i < LFOManager::kMaxLFOs; ++i) {
+        const LFO &lfo = lfoManager.lfo(i);
+        JsonObject entry = lfoConfig.createNestedObject();
+        entry["index"] = i;
+        entry["shape"] = static_cast<uint8_t>(lfo.getShape());
+        entry["shape_name"] = lfoShapeLabel(lfo.getShape());
+        entry["frequency_hz"] = lfo.getFrequencyHz();
+        entry["depth"] = lfo.getDepth();
+        entry["bipolar"] = lfo.isBipolar();
+        entry["sync"] = lfo.isSyncEnabled();
+        entry["sync_ratio"] = static_cast<uint8_t>(lfo.getSyncRatio());
+        entry["sync_ratio_name"] = lfoSyncRatioLabel(lfo.getSyncRatio());
+    }
+
+    JsonArray efStatus = doc.createNestedArray("efStatus");
+    for (const auto &env : envelopes) {
+        efStatus.add(env.getActiveState() ? 1 : 0);
+    }
+
+    JsonObject clock = doc.createNestedObject("clock");
+    const bool externalSignal = midiHandler.hasExternalClockSignal();
+    const bool running = midiHandler.isClockRunning();
+    clock["follow_external"] = g_followExternalClock;
+    clock["clock_out_enabled"] = g_clockOutEnabled;
+    clock["tapped_bpm"] = g_tappedBPM;
+    clock["external_bpm"] = midiHandler.externalClockBpm();
+    clock["external_signal"] = externalSignal;
+    clock["running"] = running;
+    if (g_followExternalClock && externalSignal) {
+        clock["source"] = "external";
+    } else if (g_tappedBPM > 0.0f) {
+        clock["source"] = "internal";
+    } else {
+        clock["source"] = "idle";
+    }
+
+    emitJson(doc, "scope_envelopes");
+}
+
 static void emitJsonError(const char *code, const char *scope) {
     StaticJsonDocument<192> errorDoc;
     errorDoc["type"] = "error";

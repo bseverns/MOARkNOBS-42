@@ -506,11 +506,8 @@ bool persistPatchedProfile(uint8_t id, ProfileData &profile, bool &activeApplied
         return true;
     }
 
-    ProfileData stored{};
-    if (configManager.loadProfileSettings(id, stored)) {
-        applyProfileSnapshot(stored, true);
-        activeApplied = true;
-    }
+    applyProfileSnapshot(profile, true);
+    activeApplied = true;
     return true;
 }
 } // namespace

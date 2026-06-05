@@ -779,6 +779,12 @@ bool renderJitterTuningViewIfActive() {
 }
 
 // Push the current runtime snapshot out over WebSerial for the browser/editor layer.
+void streamWebSerialScope() {
+    if (!webSerialStreaming)
+        return;
+    WebSerial::sendScopeSnapshot(envelopeFollowers);
+}
+
 void streamWebSerialState() {
     if (!webSerialStreaming)
         return;

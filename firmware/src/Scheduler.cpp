@@ -208,7 +208,8 @@ void initializeSchedulers() {
         },
         500, true);
 
-    // WebSerial stream cadence targets UI responsiveness without saturating USB serial output.
-    Utility::schedulerLow.addTask(streamWebSerialState, 100, true);
+    // Scope gets compact high-cadence frames; full dashboard snapshots are heavier and slower.
+    Utility::schedulerLow.addTask(streamWebSerialScope, 50, true);
+    Utility::schedulerLow.addTask(streamWebSerialState, 500, true);
 #endif
 }

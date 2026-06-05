@@ -79,11 +79,9 @@ void resetMidiTransports() {
 }
 } // namespace
 
-// MIDIHandler has a ridiculous number of responsibilities—USB mirror writes,
-// serial fan-out, NRPN parsing, SysEx scratch buffers, and the internal clock
-// tick bookkeeping that keeps the arpeggiator honest.  These Unity specs lean
-// on the stub transport to make sure every leg of that routing table still
-// behaves with the same swagger the hardware build expects.
+// MIDIHandler owns USB mirror writes, serial fan-out, NRPN parsing, SysEx scratch
+// buffers, and clock tick bookkeeping. Internal clock scheduling lives in Runtime;
+// these specs lean on the stub transport to keep each routing leg stable.
 
 // Smoke the Program Change path and ensure both DIN and USB mirrors agree.
 void test_program_change() {

@@ -1432,24 +1432,36 @@ export function createProfileMacroScenePanel({
         },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
       );
-      const liveApplied = response?.active_applied !== false;
+      const responseActiveSlot = readActiveProfileIndex(response);
       syncDeviceActiveProfile(response);
+      const targetIsBoardActive =
+        responseActiveSlot === targetSlot || deviceActiveProfileSlot === targetSlot;
+      const liveApplyAckMissing = response?.active_applied === false && targetIsBoardActive;
+      const liveApplied = response?.active_applied !== false || targetIsBoardActive;
       setLfoStatus(
         liveApplied ? 'ok' : 'busy',
-        liveApplied
+        liveApplied && !liveApplyAckMissing
           ? `${describeSlot(targetSlot)} saved and applied live with ${
               lfoDraft.routes.length
             } routes.`
-          : `${describeSlot(
-              targetSlot
-            )} saved, but ${describeBoardActiveSlot()} is active on the board. Switch to ${describeSlot(
-              targetSlot
-            )} to hear and scope these LFOs.`
+          : liveApplyAckMissing
+            ? `${describeSlot(
+                targetSlot
+              )} saved to the active board profile. Reopen or refresh the scope if the LFOs do not move.`
+            : `${describeSlot(
+                targetSlot
+              )} saved, but ${describeBoardActiveSlot()} is active on the board. Switch to ${describeSlot(
+                targetSlot
+              )} to hear and scope these LFOs.`
       );
       lfoDraftDirty = false;
       setStatus(
         liveApplied ? 'ok' : 'warn',
-        liveApplied ? 'LFO profile saved' : 'LFO profile saved, not active',
+        liveApplied
+          ? liveApplyAckMissing
+            ? 'LFO profile saved to active slot'
+            : 'LFO profile saved'
+          : 'LFO profile saved, not active',
         liveApplied
           ? describeSlot(targetSlot)
           : `${describeSlot(targetSlot)} saved • board active ${slotLabel(deviceActiveProfileSlot)}`

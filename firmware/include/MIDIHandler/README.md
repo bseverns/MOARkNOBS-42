@@ -44,12 +44,13 @@ More context lives in the [main firmware README](../../README.md).
 - `sendClock()` – spit out a raw 0xF8 when you want to be the metronome.
 - `generateClockTick()` – stamp an internal clock pulse that also mirrors out over MIDI.
 - `clockTickCount()` – running tally of every pulse heard or generated so arpeggiators can stay glued to the grid.
-- `processIncomingMIDI()` – keep an ear on incoming bytes **and** spew MIDI clock when `g_tappedBPM` says so.
+- `processIncomingMIDI()` – keep an ear on incoming bytes and update clock state for external ticks.
 - `handleMIDI(type, channel, data1, data2)` – strong-typed dispatch using `midi::MidiType` so stray bytes don't crash the party.
 
-Clock out defers to any incoming tempo; if the outside world goes dark for `CLOCK_TIMEOUT_MS`
-the tapped BPM drags the beat back to life. Smash Control #1 + #2 to toggle that clock stream
-whenever you feel like it.
+Clock out is scheduled by the runtime internal-clock lane via `generateClockTick()`. It defers
+to any incoming tempo; if the outside world goes dark for `CLOCK_TIMEOUT_MS`, the tapped BPM
+drags the beat back to life. Smash Control #1 + #2 to toggle that clock stream whenever you feel
+like it.
 
 ## DIN MIDI pacing (a.k.a. stop drop-and-hope)
 

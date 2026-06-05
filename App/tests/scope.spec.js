@@ -29,6 +29,9 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   await expect(page.locator('#scope-lfo-2')).not.toHaveText('--');
   await expect(page.locator('#scope-clock')).toHaveText(/Clock (external|internal)/);
 
+  await page.getByRole('button', { name: 'Refresh scope' }).click();
+  await expect(page.locator('#scope-status')).toHaveText(/Waiting for telemetry|Telemetry/i);
+
   await page.getByRole('button', { name: 'PNG snapshot' }).click();
   await page.waitForFunction(() => window.__mn42ScopeBlob instanceof Blob, { timeout: 5000 });
   const snapshot = await page.evaluate(() => ({
@@ -47,6 +50,7 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
     document.body.innerHTML = `
       <section id="scope-panel" style="width: 420px">
         <button id="scope-snapshot">PNG snapshot</button>
+        <button id="scope-refresh">Refresh scope</button>
         <span id="scope-status"></span>
         <span id="scope-fps"></span>
         <canvas id="scope-canvas" style="width: 420px; height: 180px"></canvas>

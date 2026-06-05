@@ -50,6 +50,12 @@ class WebSerial {
                                   const SystemDiagnostics &diagnostics);
 
     /**
+     * Emit the compact high-cadence telemetry needed by the scope.
+     * This keeps LFO/EF visualization fresh without serializing the full dashboard payload.
+     */
+    static void sendScopeSnapshot(const std::vector<EnvelopeFollower> &envelopes);
+
+    /**
      * Emit a compact config patch describing the current state of a slot.
      * Mirrors the schema used by the WebSerial editor so diffs line up.
      * Includes timestamp + trace metadata and also echoes the legacy

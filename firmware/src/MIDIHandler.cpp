@@ -248,18 +248,6 @@ void MIDIHandler::processIncomingMIDI() {
     }
 #endif
 
-    // If the outside world goes quiet, puke out our own clock based on tapped BPM
-    if (g_tappedBPM > 0.0f) {
-        bool externalHot = (now() - lastExternalClock) < CLOCK_TIMEOUT_MS;
-        if (!g_followExternalClock || !externalHot) {
-            float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
-            if (now() - lastInternalTick >= msPerTick) {
-                lastInternalTick = now();
-                handleClockTick();
-            }
-        }
-    }
-
     // Treat actual inbound MIDI traffic as operator interaction; avoid refreshing this timer
     // on empty service cycles so the screensaver can still run when the rig is idle.
     if (_displayManager && displayInteractionSeen) {

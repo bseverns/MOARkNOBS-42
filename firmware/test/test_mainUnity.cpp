@@ -43,6 +43,7 @@ void test_dispatch_handles_live_note_dynamics_command_without_boot_request();
 void test_dispatch_handles_live_arp_runtime_commands();
 void test_dispatch_handles_profile_save_load_reset_commands();
 void test_dispatch_reassembles_chunked_profile_patch();
+void test_dispatch_active_profile_lfo_patch_applies_live();
 void test_dispatch_handles_macro_and_scene_snapshot_commands();
 void test_dispatch_rejects_unknown_command();
 void test_dispatch_set_all_reports_negative_contract_errors();
@@ -279,6 +280,7 @@ void setup() {
     RUN_TEST(test_dispatch_handles_live_arp_runtime_commands);
     RUN_TEST(test_dispatch_handles_profile_save_load_reset_commands);
     RUN_TEST(test_dispatch_reassembles_chunked_profile_patch);
+    RUN_TEST(test_dispatch_active_profile_lfo_patch_applies_live);
     RUN_TEST(test_dispatch_handles_macro_and_scene_snapshot_commands);
     RUN_TEST(test_dispatch_rejects_unknown_command);
     RUN_TEST(test_dispatch_set_all_reports_negative_contract_errors);

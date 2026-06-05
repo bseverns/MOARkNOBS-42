@@ -10,6 +10,7 @@
 #include "Globals.h"
 #include "Log.h"
 #include "MIDIHandler.h"
+#include "LFO/LFOManager.h"
 #include "Protocol.h"
 
 void test_dispatch_handles_known_command() {
@@ -216,6 +217,33 @@ void test_dispatch_reassembles_chunked_profile_patch() {
     TEST_ASSERT_EQUAL_UINT8(1, loaded.routeCount);
     TEST_ASSERT_EQUAL_UINT8(0, loaded.routes[0].type);
     TEST_ASSERT_EQUAL_UINT8(2, loaded.routes[0].target);
+}
+
+void test_dispatch_active_profile_lfo_patch_applies_live() {
+    clearTestLogBuffer();
+    const uint8_t profileId = 1;
+    g_activeProfile = profileId;
+    lfoManager.lfo(0).setShape(LFOShape::Sine);
+    lfoManager.lfo(0).setFrequencyHz(1.0f);
+    lfoManager.lfo(0).setDepth(0.10f);
+    lfoManager.lfo(0).setBipolar(true);
+    lfoManager.lfo(0).setSyncEnabled(false);
+
+    const String payload =
+        "{\"lfos\":[{\"index\":0,\"shape\":2,\"frequency_hz\":4.0,\"depth\":0.80,"
+        "\"bipolar\":false,\"sync\":true,\"sync_ratio\":3}],\"routes\":[]}";
+    const String command = "SET_PROFILE," + String(profileId) + "," + payload;
+
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand(command));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"active_applied\":true"));
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOShape::Saw),
+                            static_cast<uint8_t>(lfoManager.lfo(0).getShape()));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 4.0f, lfoManager.lfo(0).getFrequencyHz());
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.80f, lfoManager.lfo(0).getDepth());
+    TEST_ASSERT_FALSE(lfoManager.lfo(0).isBipolar());
+    TEST_ASSERT_TRUE(lfoManager.lfo(0).isSyncEnabled());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOSyncRatio::Div8),
+                            static_cast<uint8_t>(lfoManager.lfo(0).getSyncRatio()));
 }
 
 void test_dispatch_handles_macro_and_scene_snapshot_commands() {

@@ -24,6 +24,7 @@ export class ScopePanel {
     this.canvas = container.querySelector('#scope-canvas');
     this.statusLabel = container.querySelector('#scope-status');
     this.fpsLabel = container.querySelector('#scope-fps');
+    this.refreshButton = container.querySelector('#scope-refresh');
     this.snapshotButton = container.querySelector('#scope-snapshot');
     this.lfoValueLabels = [
       container.querySelector('#scope-lfo-1'),
@@ -54,6 +55,7 @@ export class ScopePanel {
     this.fpsWindowStart = now();
     this.fpsFrameCount = 0;
 
+    this.refreshButton?.addEventListener('click', () => this.refreshScope());
     this.snapshotButton?.addEventListener('click', () => this.captureSnapshot());
 
     this.telemetrySubscription = runtime?.on('telemetry', (frame) => this.handleTelemetry(frame));
@@ -95,6 +97,19 @@ export class ScopePanel {
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
+  }
+
+  // Clear the rolling traces without tearing down the live telemetry subscription.
+  refreshScope() {
+    this.initializeBuffers();
+    this.hasTelemetry = false;
+    this.lastTelemetryTimestamp = null;
+    this.lastClock = null;
+    if (this.statusLabel) {
+      this.statusLabel.textContent = 'Waiting for telemetry…';
+    }
+    this.updateReadouts();
+    this.draw();
   }
 
   // Match the canvas backing store and history size to the rendered widget dimensions.
