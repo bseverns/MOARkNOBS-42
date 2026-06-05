@@ -218,6 +218,7 @@ export function createProfileMacroScenePanel({
   let lfoDraft = createDefaultLfoDraft();
   let lfoDraftDirty = false;
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
+  let deviceActiveProfileSlot = activeProfileSlot;
   let profileWizardTargetSlot = activeProfileSlot;
   let deviceCapabilities = resolveProfileCapabilities(localManifest);
   let bound = false;
@@ -267,10 +268,12 @@ export function createProfileMacroScenePanel({
     return supportsGuidedProfileFlowForCapabilities(deviceCapabilities);
   }
 
-  // Explain whether the active profile slot reflects real device storage or only
+  // Explain whether the selected profile slot reflects real device storage or only
   // the browser's chosen target.
   function profileSlotModeCopy() {
-    return supportsAnyProfileAction() ? 'mirrored' : 'local target';
+    if (!supportsAnyProfileAction()) return 'local target';
+    if (deviceActiveProfileSlot === activeProfileSlot) return 'active on board';
+    return `editing target • board active ${slotLabel(deviceActiveProfileSlot)}`;
   }
 
   // Keep the recovery/profile hint text honest as capabilities and connectivity change.
@@ -930,20 +933,40 @@ export function createProfileMacroScenePanel({
     return `Slot ${slotLabel(index)}`;
   }
 
+  function describeBoardActiveSlot() {
+    return describeSlot(deviceActiveProfileSlot);
+  }
+
   function readActiveProfileIndex(payload = {}) {
     const candidate = Number(payload?.active_profile ?? payload?.activeProfile);
     if (!Number.isFinite(candidate)) return null;
     return clampProfileSlot(candidate, PROFILE_LABELS.length);
   }
 
-  function syncDeviceActiveProfile(payload = {}, { refresh = false } = {}) {
+  function syncDeviceActiveProfile(payload = {}, { refresh = false, alignTarget = false } = {}) {
     const nextActive = readActiveProfileIndex(payload);
-    if (nextActive === null || nextActive === activeProfileSlot) return false;
-    setActiveProfileSlot(nextActive, { persist: false });
-    if (refresh && profileInteractable && !lfoDraftDirty && !arpBusy && !lfoBusy) {
+    if (nextActive === null) return false;
+    const changed = nextActive !== deviceActiveProfileSlot;
+    deviceActiveProfileSlot = nextActive;
+    if (alignTarget && nextActive !== activeProfileSlot) {
+      setActiveProfileSlot(nextActive, { persist: false });
+    } else if (changed && profileSlotStatus) {
+      profileSlotStatus.textContent = `${describeSlot(
+        activeProfileSlot
+      )} • ${profileSlotModeCopy()}`;
+    }
+    if (
+      refresh &&
+      changed &&
+      activeProfileSlot === nextActive &&
+      profileInteractable &&
+      !lfoDraftDirty &&
+      !arpBusy &&
+      !lfoBusy
+    ) {
       void refreshProfileUtilities({ silent: true });
     }
-    return true;
+    return changed;
   }
 
   // Update the selected profile slot and mirror it into the UI/state badges.
@@ -1213,6 +1236,7 @@ export function createProfileMacroScenePanel({
         { rpc: 'get_profile', slot: activeProfileSlot, scope: 'modulation' },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
       );
+      syncDeviceActiveProfile(response);
       applyProfileUtilityDrafts(response);
       const shapeLabel = ARP_SHAPE_OPTIONS[arpDraft.shape] ?? `Shape ${arpDraft.shape}`;
       setArpStatus('ok', `${describeSlot()} • ${shapeLabel} • ${arpDraft.length_ticks} ticks`);
@@ -1373,14 +1397,14 @@ export function createProfileMacroScenePanel({
   async function saveLfoProfile() {
     if (!profileInteractable || profileWorkflow.isLocked() || lfoBusy) return;
     lfoBusy = true;
-    let refreshAfterSave = false;
+    const targetSlot = activeProfileSlot;
     refreshProfileControls();
-    setLfoStatus('busy', `Saving LFO settings to ${describeSlot()}…`);
+    setLfoStatus('busy', `Saving LFO settings to ${describeSlot(targetSlot)}…`);
     try {
       const response = await runtime.sendRpc(
         {
           rpc: 'set_profile',
-          slot: activeProfileSlot,
+          slot: targetSlot,
           profile: {
             lfos: lfoDraft.lfos.map((entry, index) => ({
               index,
@@ -1409,20 +1433,26 @@ export function createProfileMacroScenePanel({
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
       );
       const liveApplied = response?.active_applied !== false;
-      if (!liveApplied) {
-        refreshAfterSave = syncDeviceActiveProfile(response);
-      }
+      syncDeviceActiveProfile(response);
       setLfoStatus(
         liveApplied ? 'ok' : 'busy',
         liveApplied
-          ? `${describeSlot()} saved and applied live with ${lfoDraft.routes.length} routes.`
-          : `${describeSlot()} saved, but that profile is not active on the board. Switch to it to hear and scope the LFOs.`
+          ? `${describeSlot(targetSlot)} saved and applied live with ${
+              lfoDraft.routes.length
+            } routes.`
+          : `${describeSlot(
+              targetSlot
+            )} saved, but ${describeBoardActiveSlot()} is active on the board. Switch to ${describeSlot(
+              targetSlot
+            )} to hear and scope these LFOs.`
       );
       lfoDraftDirty = false;
       setStatus(
         liveApplied ? 'ok' : 'warn',
         liveApplied ? 'LFO profile saved' : 'LFO profile saved, not active',
-        describeSlot()
+        liveApplied
+          ? describeSlot(targetSlot)
+          : `${describeSlot(targetSlot)} saved • board active ${slotLabel(deviceActiveProfileSlot)}`
       );
     } catch (err) {
       setLfoStatus('err', `LFO save failed: ${err.message || String(err)}`);
@@ -1431,9 +1461,6 @@ export function createProfileMacroScenePanel({
       lfoBusy = false;
       refreshProfileControls();
       renderLfoEditor();
-      if (refreshAfterSave) {
-        void refreshProfileUtilities({ silent: true, focus: 'lfo' });
-      }
     }
   }
 
@@ -1652,7 +1679,7 @@ export function createProfileMacroScenePanel({
   function onManifest(manifest) {
     deviceCapabilities = resolveProfileCapabilities(manifest);
     macroAvailable = deviceCapabilities.macroSnapshot ? macroAvailable : false;
-    syncDeviceActiveProfile(manifest);
+    syncDeviceActiveProfile(manifest, { alignTarget: true });
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     syncRecoverySupportCopy();
     refreshProfileControls();
