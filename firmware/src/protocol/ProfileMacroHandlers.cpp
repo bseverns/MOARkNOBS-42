@@ -22,6 +22,14 @@
 // 5. macro snapshot save/recall wrappers
 
 namespace {
+constexpr size_t kProfileFullJsonCapacity = 24576;
+constexpr size_t kProfileModulationJsonCapacity = 4096;
+
+// Full profile export includes 42 slots with EF state and can exceed RAM1 stack budget.
+// Keep the scratch documents in RAM2, matching the heavier config/matrix exports.
+DMAMEM StaticJsonDocument<kProfileFullJsonCapacity> profileFullDoc;
+DMAMEM StaticJsonDocument<kProfileModulationJsonCapacity> profileModulationDoc;
+
 template <size_t Capacity> void sendJsonResponse(const StaticJsonDocument<Capacity> &doc) {
     if (doc.overflowed()) {
         LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\"}");
@@ -83,6 +91,22 @@ int readOptionalCommandValue(const String &command, int fallback) {
 bool readProfileSlotArgument(const String &command, uint8_t fallback, int &id) {
     id = readOptionalCommandValue(command, static_cast<int>(fallback));
     return id >= 0 && id < NUM_PROFILES;
+}
+
+bool isModulationProfileRequest(const String &command) {
+    int firstComma = command.indexOf(',');
+    if (firstComma < 0) {
+        return false;
+    }
+    int secondComma = command.indexOf(',', firstComma + 1);
+    if (secondComma < 0) {
+        return false;
+    }
+    String mode = command.substring(secondComma + 1);
+    mode.trim();
+    return mode.equalsIgnoreCase("mod") || mode.equalsIgnoreCase("modulation") ||
+           mode.equalsIgnoreCase("utilities") || mode.equalsIgnoreCase("lfo") ||
+           mode.equalsIgnoreCase("arp");
 }
 
 bool readRequiredPotSlotArgument(const String &command, int &slot) {
@@ -161,6 +185,33 @@ void writeProfileSlots(JsonArray slots, const ProfileData &profile) {
         writeProfileEf(ef, profile.slots[i].ef);
     }
 }
+
+template <size_t Capacity>
+void writeProfileResponse(StaticJsonDocument<Capacity> &doc, uint8_t id, bool stored,
+                          const ProfileData &profile, bool includeSlots) {
+    doc.clear();
+    doc["profile"] = id;
+    doc["active_profile"] = g_activeProfile;
+    doc["active"] = id == g_activeProfile;
+    doc["stored"] = stored;
+
+    JsonObject arp = doc.createNestedObject("arp");
+    writeProfileArp(arp, profile);
+
+    JsonObject led = doc.createNestedObject("led");
+    writeProfileLed(led, profile);
+
+    JsonArray lfos = doc.createNestedArray("lfos");
+    writeProfileLfos(lfos, profile);
+
+    JsonArray routes = doc.createNestedArray("routes");
+    writeProfileRoutes(routes, profile);
+
+    if (includeSlots) {
+        JsonArray slots = doc.createNestedArray("slots");
+        writeProfileSlots(slots, profile);
+    }
+}
 } // namespace
 
 // 2. Profile export lane.
@@ -178,34 +229,14 @@ void handleGetProfileCommand(const String &command) {
         profile = captureProfileSnapshot();
     }
 
-    StaticJsonDocument<12288> doc;
-    doc["profile"] = id;
-    doc["active_profile"] = g_activeProfile;
-    doc["active"] = static_cast<uint8_t>(id) == g_activeProfile;
-    doc["stored"] = stored;
-
-    JsonObject arp = doc.createNestedObject("arp");
-    writeProfileArp(arp, profile);
-
-    JsonObject led = doc.createNestedObject("led");
-    writeProfileLed(led, profile);
-
-    JsonArray lfos = doc.createNestedArray("lfos");
-    writeProfileLfos(lfos, profile);
-
-    JsonArray routes = doc.createNestedArray("routes");
-    writeProfileRoutes(routes, profile);
-
-    JsonArray slots = doc.createNestedArray("slots");
-    writeProfileSlots(slots, profile);
-
-    if (doc.overflowed()) {
-        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\"}");
-        return;
+    const uint8_t profileId = static_cast<uint8_t>(id);
+    if (isModulationProfileRequest(command)) {
+        writeProfileResponse(profileModulationDoc, profileId, stored, profile, false);
+        sendJsonResponse(profileModulationDoc);
+    } else {
+        writeProfileResponse(profileFullDoc, profileId, stored, profile, true);
+        sendJsonResponse(profileFullDoc);
     }
-    String payload;
-    serializeJson(doc, payload);
-    LOG_PRINTLN(payload);
 }
 
 // 3. Arp utility commands.

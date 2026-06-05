@@ -55,7 +55,14 @@ export function createRpcKernel({
       case 'get_arp':
         return { kind: 'arp_get', lines: ['GET_ARP'] };
       case 'get_profile':
-        return { kind: 'profile_get', lines: [`GET_PROFILE,${Number(message.slot) || 0}`] };
+        return {
+          kind: 'profile_get',
+          lines: [
+            `GET_PROFILE,${Number(message.slot) || 0}${
+              message.scope ? `,${String(message.scope)}` : ''
+            }`
+          ]
+        };
       case 'get_clock':
         return { kind: 'clock_get', lines: ['GET_CLOCK'] };
       case 'get_jitter':

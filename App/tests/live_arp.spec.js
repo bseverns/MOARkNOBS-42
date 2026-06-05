@@ -98,7 +98,7 @@ function installNativeArpHarness() {
           pushLine(JSON.stringify(config));
           return;
         }
-        if (trimmed === 'GET_PROFILE,0') {
+        if (trimmed.startsWith('GET_PROFILE,0')) {
           pushLine(
             JSON.stringify({
               profile: 0,

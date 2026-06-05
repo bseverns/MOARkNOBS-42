@@ -1210,7 +1210,7 @@ export function createProfileMacroScenePanel({
     }
     try {
       const response = await runtime.sendRpc(
-        { rpc: 'get_profile', slot: activeProfileSlot },
+        { rpc: 'get_profile', slot: activeProfileSlot, scope: 'modulation' },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
       );
       applyProfileUtilityDrafts(response);
