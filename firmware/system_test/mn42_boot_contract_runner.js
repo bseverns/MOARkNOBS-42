@@ -300,6 +300,13 @@ function summarizeManifest(manifest) {
   };
 }
 
+function summarizeConfigValue(config, pathLabel) {
+  if (pathLabel === 'filter.idle_floor') {
+    return Number(config?.filter?.idle_floor);
+  }
+  return null;
+}
+
 function ensureSchemaRoots(schema) {
   const requiredRoots = ['slots', 'efSlots', 'filter', 'arg', 'led'];
   const missing = requiredRoots.filter((key) => !(schema?.properties && schema.properties[key]));
@@ -432,6 +439,10 @@ async function main() {
   const { compactConfigForDevice, normalizeConfig } = await loadAppConfigHelpers();
   const serialLog = [];
   const scenarios = [];
+  const safePersistence = {
+    path: 'filter.idle_floor',
+    steps: []
+  };
   const report = {
     generated_at_utc: now(),
     lane: attachLive ? 'teensy40_main_attach_live_contract' : 'teensy40_main_boot_contract',
@@ -439,6 +450,7 @@ async function main() {
     firmware_env: firmwareEnv,
     flashed: shouldFlash,
     attach_live: attachLive,
+    safe_persistence: safePersistence,
     scenarios,
     serial_log: serialLog
   };
@@ -543,6 +555,7 @@ async function main() {
       commandTimeoutMs,
       serialLog,
     );
+    report.manifest = summarizeManifest(manifest);
     schema = await sendSerialJson(
       serialClient,
       'GET_SCHEMA',
@@ -559,6 +572,15 @@ async function main() {
       serialLog,
     );
     baselineConfig = normalizeConfig(baselineConfigRaw, manifest);
+    safePersistence.baseline = {
+      value: summarizeConfigValue(baselineConfig, safePersistence.path)
+    };
+    safePersistence.steps.push({
+      id: 'read-baseline-config',
+      title: 'Read baseline config',
+      ok: true,
+      detail: `${safePersistence.path}=${safePersistence.baseline.value}`
+    });
     scenarios.push({
       id: 'configurator-handshake',
       title: 'Configurator lane completes HELLO -> manifest -> schema -> config',
@@ -568,6 +590,16 @@ async function main() {
 
     const mutatedConfig = clone(baselineConfig);
     mutatedConfig.filter.idle_floor = nextIdleFloorValue(baselineConfig);
+    safePersistence.mutation = {
+      before: safePersistence.baseline.value,
+      staged: summarizeConfigValue(mutatedConfig, safePersistence.path)
+    };
+    safePersistence.steps.push({
+      id: 'stage-safe-mutation',
+      title: 'Stage one safe config mutation',
+      ok: true,
+      detail: `${safePersistence.path} ${safePersistence.mutation.before} -> ${safePersistence.mutation.staged}`
+    });
     const applyResult = await applyConfig(
       serialClient,
       baselineConfig,
@@ -578,6 +610,20 @@ async function main() {
       compactConfigForDevice,
       serialLog,
     );
+    report.apply = {
+      seq: applyResult.ack?.seq ?? 1,
+      checksum: applyResult.checksum
+    };
+    safePersistence.apply = {
+      seq: applyResult.ack?.seq ?? 1,
+      checksum: applyResult.checksum
+    };
+    safePersistence.steps.push({
+      id: 'apply-ack',
+      title: 'Apply and confirm checksum ACK',
+      ok: true,
+      detail: `seq=${safePersistence.apply.seq} checksum=${safePersistence.apply.checksum}`
+    });
     const appliedConfigRaw = await sendSerialJson(
       serialClient,
       'GET_CONFIG',
@@ -586,6 +632,15 @@ async function main() {
       serialLog,
     );
     const appliedConfig = normalizeConfig(appliedConfigRaw, manifest);
+    safePersistence.readback = {
+      value: summarizeConfigValue(appliedConfig, safePersistence.path)
+    };
+    safePersistence.steps.push({
+      id: 'readback-mutation',
+      title: 'Read back and confirm mutation',
+      ok: safePersistence.readback.value === safePersistence.mutation.staged,
+      detail: `${safePersistence.path}=${safePersistence.readback.value}`
+    });
     scenarios.push({
       id: 'set-all-ack',
       title: 'SET_ALL apply returns matching ACK and persists the staged change',
@@ -604,13 +659,38 @@ async function main() {
         compactConfigForDevice,
         serialLog,
       );
-      await sendSerialJson(
+      report.cleanup = {
+        seq: revertResult.ack?.seq ?? 2,
+        checksum: revertResult.checksum
+      };
+      safePersistence.restore = {
+        seq: revertResult.ack?.seq ?? 2,
+        checksum: revertResult.checksum,
+        restored: safePersistence.baseline.value
+      };
+      safePersistence.steps.push({
+        id: 'restore-original',
+        title: 'Restore original value',
+        ok: true,
+        detail: `seq=${safePersistence.restore.seq} checksum=${safePersistence.restore.checksum} ${safePersistence.path}=${safePersistence.restore.restored}`
+      });
+      const cleanedConfigRaw = await sendSerialJson(
         serialClient,
         'GET_CONFIG',
         (json) => Number(json?.filter?.idle_floor) === baselineConfig.filter.idle_floor,
         commandTimeoutMs,
         serialLog,
       );
+      const cleanedConfig = normalizeConfig(cleanedConfigRaw, manifest);
+      safePersistence.cleanup = {
+        value: summarizeConfigValue(cleanedConfig, safePersistence.path)
+      };
+      safePersistence.steps.push({
+        id: 'readback-cleanup',
+        title: 'Read back and confirm cleanup',
+        ok: safePersistence.cleanup.value === safePersistence.baseline.value,
+        detail: `${safePersistence.path}=${safePersistence.cleanup.value}`
+      });
       scenarios.push({
         id: 'cleanup',
         title: 'Runner restores the original config after the apply proof',
@@ -619,10 +699,12 @@ async function main() {
       });
     }
 
+    safePersistence.ok = safePersistence.steps.every((step) => step.ok === true);
     report.result = 'passed';
   } catch (err) {
     report.result = 'failed';
     report.error = err.message;
+    safePersistence.ok = false;
     scenarios.push({
       id: 'failure',
       title: 'Boot contract runner failed',

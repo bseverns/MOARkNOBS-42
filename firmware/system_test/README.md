@@ -134,6 +134,11 @@ node firmware/system_test/mn42_persistence_abuse_runner.js \
   --report logs/persistence-abuse-safe.json
 ```
 
+The safe run writes two artifacts:
+
+- the requested JSON report
+- a dated Markdown receipt at `docs/bench/firmware/YYYY-MM-DD_persistence-safe-summary.md`
+
 Destructive storage run on sacrificial slots:
 
 ```bash

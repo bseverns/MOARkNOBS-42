@@ -249,6 +249,9 @@ node firmware/system_test/mn42_persistence_abuse_runner.js \
   --report logs/persistence-abuse-safe.json
 ```
 
+This safe lane also writes a dated bench receipt under
+`docs/bench/firmware/YYYY-MM-DD_persistence-safe-summary.md`.
+
 Use the destructive storage lane only on sacrificial slots:
 
 ```bash

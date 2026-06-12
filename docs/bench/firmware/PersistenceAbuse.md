@@ -42,6 +42,11 @@ What it proves:
 - readback matches the applied config
 - cleanup restores the original config
 
+Artifacts written:
+
+- JSON report at the requested `--report` path
+- Markdown receipt at `docs/bench/firmware/YYYY-MM-DD_persistence-safe-summary.md`
+
 ## Destructive storage command
 
 Only use sacrificial storage targets:
