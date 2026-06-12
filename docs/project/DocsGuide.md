@@ -32,9 +32,9 @@ Use these categories when deciding where a doc belongs:
 
 Canonical behavior and support boundaries live in contract docs:
 
-- [App README](../../App/README.md)
-- [Bridge README](../../bridge/README.md)
-- [Firmware README](../../firmware/README.md)
+- [App README](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md)
+- [Bridge README](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md)
+- [Firmware README](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/README.md)
 - [Host Compatibility](../reference/HostCompatibility.md)
 - [Manifest Contract](../reference/ManifestContract.md)
 - [MN42 Line Protocol](../reference/MN42LineProtocol.md)

@@ -10,9 +10,9 @@ The goal is simple: if two pages disagree, contributors should know which one wi
 
 These pages define current behavior and support boundaries. They are the first place to update when code, protocol shape, or release posture changes.
 
-- [App README](../../App/README.md) for App runtime behavior, transport paths, staged/apply semantics, and the browser support boundary
-- [Bridge README](../../bridge/README.md) for bridge operating modes, structured vs raw transport, and unsigned artifact posture
-- [Firmware README](../../firmware/README.md) for firmware build/run behavior and the host/device contract from the firmware side
+- [App README](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md) for App runtime behavior, transport paths, staged/apply semantics, and the browser support boundary
+- [Bridge README](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md) for bridge operating modes, structured vs raw transport, and unsigned artifact posture
+- [Firmware README](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/README.md) for firmware build/run behavior and the host/device contract from the firmware side
 - [Host Compatibility](HostCompatibility.md) for conservative supported-path claims
 - [Manifest Contract](ManifestContract.md) for `GET_MANIFEST` semantics
 - [MN42 Line Protocol](MN42LineProtocol.md) and [Serial Protocol](SerialProtocol.md) for the line-level command/response contract

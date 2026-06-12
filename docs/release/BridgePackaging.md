@@ -4,7 +4,7 @@ This document defines how to ship the MN42 Bridge for users who do not want to r
 
 This is a release-planning doc, not the source of current bridge/runtime truth.
 
-For what is true now, defer to [bridge/README.md](../../bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Bridge Signing Plan](BridgeSigningPlan.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+For what is true now, defer to [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Bridge Signing Plan](BridgeSigningPlan.md), and [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ## Goals
 

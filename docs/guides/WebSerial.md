@@ -1,6 +1,6 @@
 # WebSerial Groove
 
-Current direct-USB contract: [App/README.md](../../App/README.md), [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current direct-USB contract: [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md), [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 The direct USB lane is line-oriented and intentionally pragmatic: newline-delimited firmware messages, conservative host validation, and staged/apply discipline in the browser.
 

@@ -25,8 +25,8 @@ Read the stack in this order if you want to keep answering these questions:
 
 ## Start Here
 
-Begin with [`firmware/include/Protocol.h`](../../firmware/include/Protocol.h)
-and [`firmware/src/protocol/Protocol.cpp`](../../firmware/src/protocol/Protocol.cpp).
+Begin with [`firmware/include/Protocol.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Protocol.h)
+and [`firmware/src/protocol/Protocol.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/Protocol.cpp).
 
 That pair defines the public host surface and the top-level execution flow.
 
@@ -68,8 +68,8 @@ scene storage._
 
 Files:
 
-- [`firmware/include/protocol/ProtocolDispatch.h`](../../firmware/include/protocol/ProtocolDispatch.h)
-- [`firmware/src/protocol/ProtocolDispatch.cpp`](../../firmware/src/protocol/ProtocolDispatch.cpp)
+- [`firmware/include/protocol/ProtocolDispatch.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolDispatch.h)
+- [`firmware/src/protocol/ProtocolDispatch.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolDispatch.cpp)
 
 Question answered: how does one complete line get routed?
 
@@ -86,8 +86,8 @@ Read this before the deeper handlers so you know the routing policy first.
 
 Files:
 
-- [`firmware/include/protocol/ConfigJsonApply.h`](../../firmware/include/protocol/ConfigJsonApply.h)
-- [`firmware/src/protocol/ConfigJsonApply.cpp`](../../firmware/src/protocol/ConfigJsonApply.cpp)
+- [`firmware/include/protocol/ConfigJsonApply.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ConfigJsonApply.h)
+- [`firmware/src/protocol/ConfigJsonApply.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigJsonApply.cpp)
 
 Question answered: how does `SET_ALL` become a safe whole-machine mutation?
 
@@ -105,8 +105,8 @@ This is the heaviest protocol path because it is the full staged-apply lane.
 
 Files:
 
-- [`firmware/include/protocol/ProtocolSimpleHandlers.h`](../../firmware/include/protocol/ProtocolSimpleHandlers.h)
-- [`firmware/src/protocol/ProtocolSimpleHandlers.cpp`](../../firmware/src/protocol/ProtocolSimpleHandlers.cpp)
+- [`firmware/include/protocol/ProtocolSimpleHandlers.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolSimpleHandlers.h)
+- [`firmware/src/protocol/ProtocolSimpleHandlers.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolSimpleHandlers.cpp)
 
 Question answered: which host requests are simple direct reads/writes?
 
@@ -123,8 +123,8 @@ This is where most narrow `GET_*` and `SET_*` commands live.
 
 Files:
 
-- [`firmware/include/protocol/ProtocolErrors.h`](../../firmware/include/protocol/ProtocolErrors.h)
-- [`firmware/src/protocol/ProtocolErrors.cpp`](../../firmware/src/protocol/ProtocolErrors.cpp)
+- [`firmware/include/protocol/ProtocolErrors.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolErrors.h)
+- [`firmware/src/protocol/ProtocolErrors.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolErrors.cpp)
 
 Question answered: how are host-visible error packets formatted consistently?
 
@@ -135,8 +135,8 @@ failure language stable.
 
 Files:
 
-- [`firmware/include/protocol/ManifestReport.h`](../../firmware/include/protocol/ManifestReport.h)
-- [`firmware/src/protocol/ManifestReport.cpp`](../../firmware/src/protocol/ManifestReport.cpp)
+- [`firmware/include/protocol/ManifestReport.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ManifestReport.h)
+- [`firmware/src/protocol/ManifestReport.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ManifestReport.cpp)
 
 Question answered: how does the firmware describe its identity and capabilities
 to hosts?
@@ -155,12 +155,12 @@ become one host-visible manifest.
 
 Files:
 
-- [`firmware/include/protocol/ProfileCommands.h`](../../firmware/include/protocol/ProfileCommands.h)
-- [`firmware/src/protocol/ProfileCommands.cpp`](../../firmware/src/protocol/ProfileCommands.cpp)
-- [`firmware/include/protocol/ProfileSetHandler.h`](../../firmware/include/protocol/ProfileSetHandler.h)
-- [`firmware/src/protocol/ProfileSetHandler.cpp`](../../firmware/src/protocol/ProfileSetHandler.cpp)
-- [`firmware/include/protocol/ProfileMacroHandlers.h`](../../firmware/include/protocol/ProfileMacroHandlers.h)
-- [`firmware/src/protocol/ProfileMacroHandlers.cpp`](../../firmware/src/protocol/ProfileMacroHandlers.cpp)
+- [`firmware/include/protocol/ProfileCommands.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProfileCommands.h)
+- [`firmware/src/protocol/ProfileCommands.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProfileCommands.cpp)
+- [`firmware/include/protocol/ProfileSetHandler.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProfileSetHandler.h)
+- [`firmware/src/protocol/ProfileSetHandler.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProfileSetHandler.cpp)
+- [`firmware/include/protocol/ProfileMacroHandlers.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProfileMacroHandlers.h)
+- [`firmware/src/protocol/ProfileMacroHandlers.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProfileMacroHandlers.cpp)
 
 Question answered: how do stored profile slots and macro snapshots interact
 with live runtime state?
@@ -179,10 +179,10 @@ Read these in order:
 
 Files:
 
-- [`firmware/include/protocol/SceneCommands.h`](../../firmware/include/protocol/SceneCommands.h)
-- [`firmware/src/protocol/SceneCommands.cpp`](../../firmware/src/protocol/SceneCommands.cpp)
-- [`firmware/include/protocol/SceneStorage.h`](../../firmware/include/protocol/SceneStorage.h)
-- [`firmware/src/protocol/SceneStorage.cpp`](../../firmware/src/protocol/SceneStorage.cpp)
+- [`firmware/include/protocol/SceneCommands.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/SceneCommands.h)
+- [`firmware/src/protocol/SceneCommands.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/SceneCommands.cpp)
+- [`firmware/include/protocol/SceneStorage.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/SceneStorage.h)
+- [`firmware/src/protocol/SceneStorage.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/SceneStorage.cpp)
 
 Question answered: how does the firmware capture and restore whole-machine
 snapshots outside the profile-slot model?
@@ -242,11 +242,11 @@ state become important.
 
 The protocol stack is not isolated. It crosses into:
 
-- [`FirmwareState.h`](../../firmware/include/FirmwareState.h) for live managers
+- [`FirmwareState.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/FirmwareState.h) for live managers
   and runtime objects
-- [`Modes.h`](../../firmware/include/Modes.h) for profile/state rehydration
-- [`ConfigManager.h`](../../firmware/include/ConfigManager.h) for persistence
-- [`Runtime.h`](../../firmware/include/Runtime.h) indirectly through live state
+- [`Modes.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Modes.h) for profile/state rehydration
+- [`ConfigManager.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/ConfigManager.h) for persistence
+- [`Runtime.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Runtime.h) indirectly through live state
   changes the runtime then consumes
 
 That means protocol code is best understood as an adapter into the rest of the
@@ -256,9 +256,9 @@ machine, not as a sealed subsystem.
 
 - [Firmware Main Reading Path](FirmwareMainReadingPath.md) for the full
   firmware entry path
-- [Protocol Source README](../../firmware/src/protocol/README.md) for the local
+- [Protocol Source README](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/README.md) for the local
   source-folder order
-- [Protocol Header README](../../firmware/include/protocol/README.md) for the
+- [Protocol Header README](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/README.md) for the
   local declaration-first path
 - [Protocol Walkthrough](../guides/ProtocolWalkthrough.md) for the host-facing
   narrative rather than the source layout

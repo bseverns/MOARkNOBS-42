@@ -4,7 +4,7 @@ This is an orientation doc. For document tie-break rules, see
 [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 If someone wants to learn the firmware by reading code in order, start at
-[`firmware/src/firmware_main.cpp`](../../firmware/src/firmware_main.cpp).
+[`firmware/src/firmware_main.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/firmware_main.cpp).
 That file is intentionally small enough to show the machine's top-level
 composition before the deeper modules take over.
 
@@ -52,7 +52,7 @@ This is the runtime inventory:
 Read this header as the cast list for the running firmware.
 
 After the header, read
-[`firmware/src/SystemState.cpp`](../../firmware/src/SystemState.cpp) to see
+[`firmware/src/SystemState.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/SystemState.cpp) to see
 where that cast is actually instantiated and wired together.
 
 ### 3. `Globals.h`
@@ -86,11 +86,11 @@ control to this stack.
 
 After the header, read the protocol machine in this order:
 
-1. [`firmware/src/protocol/Protocol.cpp`](../../firmware/src/protocol/Protocol.cpp)
-2. [`firmware/include/protocol/ProtocolDispatch.h`](../../firmware/include/protocol/ProtocolDispatch.h)
-3. [`firmware/src/protocol/ProtocolDispatch.cpp`](../../firmware/src/protocol/ProtocolDispatch.cpp)
-4. [`firmware/include/protocol/ConfigJsonApply.h`](../../firmware/include/protocol/ConfigJsonApply.h)
-5. [`firmware/src/protocol/ConfigJsonApply.cpp`](../../firmware/src/protocol/ConfigJsonApply.cpp)
+1. [`firmware/src/protocol/Protocol.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/Protocol.cpp)
+2. [`firmware/include/protocol/ProtocolDispatch.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolDispatch.h)
+3. [`firmware/src/protocol/ProtocolDispatch.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolDispatch.cpp)
+4. [`firmware/include/protocol/ConfigJsonApply.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ConfigJsonApply.h)
+5. [`firmware/src/protocol/ConfigJsonApply.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ConfigJsonApply.cpp)
 
 That preserves the real flow:
 
@@ -127,7 +127,7 @@ This header is the bridge between persistence and behavior:
 - startup mode restoration
 
 After the header, read
-[`firmware/src/modes/Modes.cpp`](../../firmware/src/modes/Modes.cpp) in this
+[`firmware/src/modes/Modes.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/modes/Modes.cpp) in this
 order:
 
 1. translation helpers between stored and live state
@@ -159,7 +159,7 @@ If `firmware_main.cpp` is the conductor, `Runtime.h` is the score the band
 plays every frame.
 
 After the header, read
-[`firmware/src/Runtime.cpp`](../../firmware/src/Runtime.cpp) as:
+[`firmware/src/Runtime.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/Runtime.cpp) as:
 
 1. private queues and timing helpers
 2. runtime bring-up
@@ -231,12 +231,12 @@ not written inline in `loop()`.
 
 After reading the headers above, use this order:
 
-1. [`firmware/src/firmware_main.cpp`](../../firmware/src/firmware_main.cpp)
-2. [`firmware/src/BootMode.cpp`](../../firmware/src/BootMode.cpp)
-3. [`firmware/src/Runtime.cpp`](../../firmware/src/Runtime.cpp)
-4. [`firmware/src/modes/Modes.cpp`](../../firmware/src/modes/Modes.cpp)
-5. [`firmware/src/protocol/Protocol.cpp`](../../firmware/src/protocol/Protocol.cpp)
-6. [`firmware/src/Globals.cpp`](../../firmware/src/Globals.cpp)
+1. [`firmware/src/firmware_main.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/firmware_main.cpp)
+2. [`firmware/src/BootMode.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/BootMode.cpp)
+3. [`firmware/src/Runtime.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/Runtime.cpp)
+4. [`firmware/src/modes/Modes.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/modes/Modes.cpp)
+5. [`firmware/src/protocol/Protocol.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/Protocol.cpp)
+6. [`firmware/src/Globals.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/Globals.cpp)
 
 That order preserves the top-level story:
 

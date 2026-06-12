@@ -2,7 +2,7 @@
 
 Use this when you just want the rig working before rehearsal or a set.
 
-Current bridge contract/support boundary: [bridge/README.md](../../bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current bridge contract/support boundary: [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 For the full Bridge doc split, see [Bridge Docs Map](../bridge/BridgeDocsMap.md).
 

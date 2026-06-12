@@ -4,7 +4,7 @@ Current line-level contract: [MN42 Line Protocol](../reference/MN42LineProtocol.
 
 If you want to learn the firmware source behind this conversation, pair this
 guide with [Firmware Main Reading Path](../firmware/FirmwareMainReadingPath.md)
-and [firmware/src/protocol/README.md](../../firmware/src/protocol/README.md).
+and [firmware/src/protocol/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/README.md).
 
 The raw WebSerial reference tells you what messages exist. This page explains why the conversation is structured that way and what a newcomer should expect to happen from the moment the browser connects.
 

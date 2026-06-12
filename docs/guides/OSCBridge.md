@@ -2,7 +2,7 @@
 
 This page is the friendly quickstart for using MOARkNOBS-42 with OSC apps and DAWs.
 
-Current bridge contract/support boundary: [bridge/README.md](../../bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current bridge contract/support boundary: [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md), [Host Compatibility](../reference/HostCompatibility.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ## What you can do with the bridge
 

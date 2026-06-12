@@ -6,15 +6,15 @@ MN42 is a hardware-test package around a specific reactive performance instrumen
 
 ## Current Working Areas
 
-| Path                 | Owns                                                                                                   | Status                                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `firmware/`          | Teensy 4.0 PlatformIO project, firmware source, Unity tests, full-system test runners                  | Canonical firmware project root. Build with `pio ... -d firmware`.                                                          |
-| `App/`               | Browser configurator, runtime modules, views, tests, presets                                           | Canonical browser/App implementation. Support boundary is in [App README](../../App/README.md).                             |
-| `bridge/`            | Desktop Bridge CLI, console/server, device session cache, OSC/MIDI transport, tests, packaging scripts | Canonical Bridge implementation. Support boundary is in [Bridge README](../../bridge/README.md).                            |
-| `hardware/`          | Current hardware reference PDFs, fabrication exports, current-build notes                              | Reference and hardware-test evidence. Not a public fabrication-ready package by itself.                                     |
-| `docs/`              | MkDocs site source: Learn, Use, Build, Prove, Reference, Project, Archive                              | Canonical reader-facing documentation. Truth rules are in [Documentation Truth Map](../reference/DocumentationTruthMap.md). |
-| `tools/`             | Repo checks, contract checks, release-readiness checks, serial/logging helpers                         | Guardrails and automation. Prefer these over manual interpretation when they exist.                                         |
-| `.github/workflows/` | CI, release, package, and preflight automation                                                         | Evidence automation. Passing CI does not automatically widen release status.                                                |
+| Path                 | Owns                                                                                                   | Status                                                                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `firmware/`          | Teensy 4.0 PlatformIO project, firmware source, Unity tests, full-system test runners                  | Canonical firmware project root. Build with `pio ... -d firmware`.                                                                            |
+| `App/`               | Browser configurator, runtime modules, views, tests, presets                                           | Canonical browser/App implementation. Support boundary is in [App README](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md).  |
+| `bridge/`            | Desktop Bridge CLI, console/server, device session cache, OSC/MIDI transport, tests, packaging scripts | Canonical Bridge implementation. Support boundary is in [Bridge README](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md). |
+| `hardware/`          | Current hardware reference PDFs, fabrication exports, current-build notes                              | Reference and hardware-test evidence. Not a public fabrication-ready package by itself.                                                       |
+| `docs/`              | MkDocs site source: Learn, Use, Build, Prove, Reference, Project, Archive                              | Canonical reader-facing documentation. Truth rules are in [Documentation Truth Map](../reference/DocumentationTruthMap.md).                   |
+| `tools/`             | Repo checks, contract checks, release-readiness checks, serial/logging helpers                         | Guardrails and automation. Prefer these over manual interpretation when they exist.                                                           |
+| `.github/workflows/` | CI, release, package, and preflight automation                                                         | Evidence automation. Passing CI does not automatically widen release status.                                                                  |
 
 ## Evidence And Generated Areas
 

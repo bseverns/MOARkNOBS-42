@@ -72,6 +72,41 @@ markdown_extensions:
 plugins:
   - search
 
+not_in_nav: |
+  /UI_ACTION_LEDGER.md
+  /vscode-intellisense.md
+  /Primers/*.md
+  /bench/app/*.md
+  /bench/bridge/*.md
+  /bench/bridge-host-recipes/*.md
+  /bench/firmware/*.md
+  /bench/latency/*.md
+  /bench/noise/*.md
+  /bridge/BridgeConsoleTour.md
+  /examples/max/*.md
+  /examples/puredata/*.md
+  /firmware/*.md
+  /guides/OSCBridge.md
+  /guides/OperatorTutorial.md
+  /guides/ProtocolWalkthrough.md
+  /guides/WebSerial.md
+  /hardware-test/PackageManifest.md
+  /reference/EF_Frontend_v2.md
+  /reference/HardwareSubstitutions.md
+  /reference/Options_DNI.md
+  /reference/PowerBudget.md
+  /reference/assumption-ledger.md
+  /release/ReleaseStory.md
+  /release/Reproducibility.md
+  /release/bridge-artifacts-checklist.md
+  /sketch/systemFlow/hw/*.md
+  /tools/*report-template.md
+  /validation/DemoPolish.md
+  /validation/OledDominanceChecklist.md
+  /validation/OnDeviceControlCoverage.md
+  /validation/Troubleshooting.md
+  /validation/reports/*.md
+
 nav:
   - Home: index.md
   - Learn:

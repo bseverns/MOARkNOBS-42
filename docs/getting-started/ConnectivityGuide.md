@@ -2,7 +2,7 @@
 
 Use this page when you are deciding between the browser configurator and the bridge.
 
-Current contract/support boundary: [Host Compatibility](../reference/HostCompatibility.md), [App/README.md](../../App/README.md), [bridge/README.md](../../bridge/README.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+Current contract/support boundary: [Host Compatibility](../reference/HostCompatibility.md), [App/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/README.md), [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md), [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
 ![Decision graphic comparing the direct configurator path with the bridge path for OSC and DAW workflows.](../assets/workflows/connectivity-decision-overview.png)
 
