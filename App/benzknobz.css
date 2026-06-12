@@ -580,6 +580,21 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-sm);
   background: rgba(0, 0, 0, 0.18);
+  transition:
+    border-color 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
+}
+
+.lfo-route-card[data-selected='true'] {
+  border-color: rgba(45, 226, 230, 0.58);
+  background: rgba(45, 226, 230, 0.08);
+  box-shadow: 0 0 0 1px rgba(45, 226, 230, 0.2);
+}
+
+.lfo-route-card:focus-visible {
+  outline: 2px solid rgba(45, 226, 230, 0.7);
+  outline-offset: 2px;
 }
 
 .lfo-route-card header {
@@ -680,6 +695,22 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.62rem;
+}
+
+.mod-matrix-row-actionable {
+  cursor: pointer;
+}
+
+.mod-matrix-row-actionable:hover,
+.mod-matrix-row-actionable:focus-visible,
+.mod-matrix-row-actionable[data-selected='true'] {
+  background: rgba(45, 226, 230, 0.1);
+}
+
+.mod-matrix-limit {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.76rem;
 }
 
 .scene-card-header {

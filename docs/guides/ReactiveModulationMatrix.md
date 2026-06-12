@@ -50,6 +50,10 @@ The matrix should warn, not automatically block, when:
 - EF and LFO CC routes share the same channel/CC
 - Bridge live input enters a lane already driven by local modulation
 
+The firmware contract now also reports when the structured matrix is truncated.
+If `limits.lfo_route_truncated` is true, treat the report as bounded-but-partial
+instead of assuming every configured LFO route made it into the JSON payload.
+
 ## Operator View
 
 A production App view should eventually show:

@@ -270,6 +270,15 @@ void writeRouteRange(JsonObject route, uint8_t minValue = 0, uint8_t maxValue = 
     range["max"] = maxValue;
 }
 
+void writeLfoRouteLimits(JsonObject limits) {
+    const size_t total = lfoManager.routeCount();
+    const size_t reported = std::min(total, static_cast<size_t>(PROFILE_MAX_ROUTES));
+    limits["lfo_route_capacity"] = PROFILE_MAX_ROUTES;
+    limits["lfo_route_total"] = total;
+    limits["lfo_route_reported"] = reported;
+    limits["lfo_route_truncated"] = total > reported;
+}
+
 int lfoRouteLastValue7(const LFOManager::Route &route, float normalized) {
     float amount = std::clamp(static_cast<float>(route.amount) / 100.0f, -1.0f, 1.0f);
     float shaped = 0.5f + (normalized - 0.5f) * std::fabs(amount);
@@ -431,6 +440,8 @@ void writeLfoRoutes(JsonArray routes) {
         writeLfoTransform(routeObj, lfo, route);
         routeObj["depth"] = route.depth;
         routeObj["amount"] = route.amount;
+        routeObj["minValue"] = route.minValue;
+        routeObj["maxValue"] = route.maxValue;
         routeObj["rateLimitMs"] = 9;
         routeObj["persisted"] = true;
         routeObj["active"] = true;
@@ -777,12 +788,15 @@ void handleGetModMatrixCommand(const String &command) {
     doc.clear();
     resetMidiCcWriterBuckets();
 
+    doc["type"] = "mod_matrix";
     doc["command"] = "GET_MOD_MATRIX";
     doc["contract_version"] = 1;
     doc["fw_version"] = FW_VERSION_STR;
 
     JsonObject sources = doc.createNestedObject("sources");
     writeSourceLists(sources);
+    JsonObject limits = doc.createNestedObject("limits");
+    writeLfoRouteLimits(limits);
 
     JsonArray routes = doc.createNestedArray("routes");
     writePotRoutes(routes);

@@ -16,8 +16,15 @@ The response is JSON:
 
 ```json
 {
+  "type": "mod_matrix",
   "command": "GET_MOD_MATRIX",
   "contract_version": 1,
+  "limits": {
+    "lfo_route_capacity": 8,
+    "lfo_route_total": 3,
+    "lfo_route_reported": 3,
+    "lfo_route_truncated": false
+  },
   "sources": {
     "ef": [0, 1, 2, 3, 4, 5],
     "lfo": [0, 1],
@@ -33,6 +40,8 @@ The response is JSON:
       "mode": "replace",
       "exit": "midi",
       "amount": 100,
+      "minValue": 0,
+      "maxValue": 127,
       "range": { "min": 0, "max": 127 },
       "rateLimitMs": 9,
       "persisted": true,
@@ -81,11 +90,24 @@ LFO routes persist the first transform controls in profile payload version 3:
 
 - `amount`: signed percent from `-100..100`; negative values invert the route
   around center, and smaller absolute values reduce modulation travel.
+- `minValue` / `maxValue`: direct aliases for the persisted profile route fields.
 - `range.min` / `range.max`: the outgoing transport range in MIDI units
   `0..127`.
 
 Older profile payloads migrate as `amount: 100`, `range.min: 0`, and
 `range.max: 127`.
+
+## Validation And Truncation
+
+- `SET_PROFILE` route patches reject unsupported route types, LFO indexes,
+  slot indexes, internal targets, MIDI channels, and CC indexes before the
+  profile is persisted.
+- Route scalar fields are normalized at the command boundary:
+  `depth` clamps to `0..1`, `amount` clamps to `-100..100`, and
+  `minValue` / `maxValue` are clamped to `0..127` then reordered ascending.
+- `limits.lfo_route_truncated` reports when live firmware state contains more
+  LFO routes than the current structured report emits, so hosts do not mistake
+  the matrix for a complete list.
 
 ## Planned Extensions
 

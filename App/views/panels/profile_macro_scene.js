@@ -33,6 +33,7 @@ const LFO_INTERNAL_TARGET_OPTIONS = [
 const PROFILE_LFO_COUNT = 2;
 const PROFILE_MAX_ROUTES = 8;
 const SLOT_COUNT = 42;
+const MOD_MATRIX_ROUTE_PREVIEW_LIMIT = 80;
 
 function createDefaultArpDraft() {
   return {
@@ -217,6 +218,7 @@ export function createProfileMacroScenePanel({
   let arpDraft = createDefaultArpDraft();
   let lfoDraft = createDefaultLfoDraft();
   let lfoDraftDirty = false;
+  let selectedLfoRouteIndex = null;
   let activeProfileSlot = readProfileSlotPreference({ slotCount: PROFILE_LABELS.length });
   let deviceActiveProfileSlot = activeProfileSlot;
   let profileWizardTargetSlot = activeProfileSlot;
@@ -337,11 +339,64 @@ export function createProfileMacroScenePanel({
     return '-';
   }
 
+  function clearSelectedLfoRoute() {
+    selectedLfoRouteIndex = null;
+  }
+
+  function readMatrixRouteIndex(route = {}) {
+    const idMatch = /(?:^|_)route(\d+)$/.exec(String(route.id ?? ''));
+    if (idMatch) return Number(idMatch[1]);
+    return null;
+  }
+
+  function isLfoMatrixRoute(route = {}) {
+    if (route?.source_type === 'lfo') return true;
+    return /^lfo\d+$/i.test(String(route?.source ?? ''));
+  }
+
+  function canSelectMatrixRoute() {
+    return !lfoDraftDirty && activeProfileSlot === deviceActiveProfileSlot;
+  }
+
+  function focusSelectedLfoRouteCard() {
+    if (!lfoEditor || selectedLfoRouteIndex === null) return;
+    const card = lfoEditor.querySelector(`[data-route-index="${selectedLfoRouteIndex}"]`);
+    if (!card) return;
+    card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (typeof card.focus === 'function') {
+      card.focus({ preventScroll: true });
+    }
+  }
+
+  function handleModMatrixRouteSelection(route = {}) {
+    if (!isLfoMatrixRoute(route)) return;
+    const routeIndex = readMatrixRouteIndex(route);
+    if (routeIndex === null || routeIndex < 0 || routeIndex >= lfoDraft.routes.length) {
+      setModMatrixStatus('busy', 'Reload slot LFOs to inspect this matrix row.');
+      return;
+    }
+    if (!canSelectMatrixRoute()) {
+      setModMatrixStatus(
+        'busy',
+        activeProfileSlot !== deviceActiveProfileSlot
+          ? `Matrix reflects ${describeBoardActiveSlot()}. Switch to that slot to inspect matching LFO routes.`
+          : 'Push & save or reload the slot before using matrix row selection.'
+      );
+      return;
+    }
+    selectedLfoRouteIndex = routeIndex;
+    renderLfoEditor();
+    renderModMatrix();
+    focusSelectedLfoRouteCard();
+    setModMatrixStatus('ok', `Selected Route ${routeIndex + 1} in ${describeSlot()}.`);
+  }
+
   function renderModMatrix(report = modMatrixReport) {
     if (!modMatrixBody) return;
     modMatrixBody.innerHTML = '';
     const routes = Array.isArray(report?.routes) ? report.routes : [];
     const conflicts = Array.isArray(report?.conflicts) ? report.conflicts : [];
+    const visibleRoutes = routes.slice(0, MOD_MATRIX_ROUTE_PREVIEW_LIMIT);
     if (!report) {
       const empty = document.createElement('p');
       empty.className = 'lfo-empty';
@@ -357,6 +412,11 @@ export function createProfileMacroScenePanel({
       item.textContent = text;
       summary.appendChild(item);
     });
+    if (routes.length > MOD_MATRIX_ROUTE_PREVIEW_LIMIT) {
+      const item = document.createElement('span');
+      item.textContent = `Showing ${visibleRoutes.length} of ${routes.length}`;
+      summary.appendChild(item);
+    }
     modMatrixBody.appendChild(summary);
 
     if (conflicts.length) {
@@ -385,8 +445,25 @@ export function createProfileMacroScenePanel({
     table.appendChild(thead);
 
     const tbody = document.createElement('tbody');
-    routes.slice(0, 80).forEach((route) => {
+    visibleRoutes.forEach((route) => {
       const row = document.createElement('tr');
+      const routeIndex = readMatrixRouteIndex(route);
+      const actionable = isLfoMatrixRoute(route) && routeIndex !== null;
+      if (actionable) {
+        row.classList.add('mod-matrix-row-actionable');
+        row.tabIndex = 0;
+        row.setAttribute('role', 'button');
+        row.setAttribute('aria-label', `Inspect Route ${routeIndex + 1}`);
+        if (selectedLfoRouteIndex === routeIndex) {
+          row.dataset.selected = 'true';
+        }
+        row.addEventListener('click', () => handleModMatrixRouteSelection(route));
+        row.addEventListener('keydown', (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          handleModMatrixRouteSelection(route);
+        });
+      }
       [
         route.source ?? '-',
         route.transform ?? route.mode ?? '-',
@@ -405,6 +482,12 @@ export function createProfileMacroScenePanel({
     table.appendChild(tbody);
     tableWrap.appendChild(table);
     modMatrixBody.appendChild(tableWrap);
+    if (routes.length > MOD_MATRIX_ROUTE_PREVIEW_LIMIT) {
+      const note = document.createElement('p');
+      note.className = 'mod-matrix-limit';
+      note.textContent = `Showing ${visibleRoutes.length} of ${routes.length} routes. Refresh after filtering once export support lands.`;
+      modMatrixBody.appendChild(note);
+    }
   }
 
   function syncArpForm() {
@@ -548,6 +631,7 @@ export function createProfileMacroScenePanel({
   }
 
   function markLfoDraftDirty() {
+    clearSelectedLfoRoute();
     lfoDraftDirty = true;
     setLfoStatus(
       'busy',
@@ -583,6 +667,7 @@ export function createProfileMacroScenePanel({
       ? nextDraft.routes.slice(0, PROFILE_MAX_ROUTES).map((route) => normalizeRouteEntry(route))
       : [];
     lfoDraft = { lfos: nextLfos, routes: nextRoutes };
+    clearSelectedLfoRoute();
     lfoDraftDirty = false;
     renderLfoEditor();
     updateLfoControls();
@@ -734,6 +819,11 @@ export function createProfileMacroScenePanel({
       lfoDraft.routes.forEach((route, routeIndex) => {
         const card = document.createElement('article');
         card.className = 'lfo-route-card';
+        card.dataset.routeIndex = String(routeIndex);
+        card.tabIndex = -1;
+        if (selectedLfoRouteIndex === routeIndex) {
+          card.dataset.selected = 'true';
+        }
 
         const header = document.createElement('header');
         const title = document.createElement('strong');

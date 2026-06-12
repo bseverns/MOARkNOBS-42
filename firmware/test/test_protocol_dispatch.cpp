@@ -13,6 +13,133 @@
 #include "LFO/LFOManager.h"
 #include "Protocol.h"
 
+namespace {
+
+String latestLogLine() {
+    const String &buffer = peekTestLogBuffer();
+    int end = buffer.length();
+    while (end > 0 && (buffer[end - 1] == '\n' || buffer[end - 1] == '\r')) {
+        --end;
+    }
+    int start = end - 1;
+    while (start >= 0 && buffer[start] != '\n' && buffer[start] != '\r') {
+        --start;
+    }
+    return buffer.substring(start + 1, end);
+}
+
+void assertContains(const String &text, const char *snippet) {
+    TEST_ASSERT_NOT_EQUAL_MESSAGE(-1, text.indexOf(snippet), snippet);
+}
+
+void assertLooksLikeJsonObject(const String &text) {
+    int start = 0;
+    int end = text.length() - 1;
+    while (start <= end && isspace(static_cast<unsigned char>(text[start]))) {
+        ++start;
+    }
+    while (end >= start && isspace(static_cast<unsigned char>(text[end]))) {
+        --end;
+    }
+    TEST_ASSERT_TRUE(start <= end);
+    TEST_ASSERT_EQUAL_CHAR('{', text[start]);
+    TEST_ASSERT_EQUAL_CHAR('}', text[end]);
+
+    bool inString = false;
+    bool escaped = false;
+    int objectDepth = 0;
+    int arrayDepth = 0;
+    for (int i = start; i <= end; ++i) {
+        const char ch = text[i];
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+        if (inString) {
+            if (ch == '\\') {
+                escaped = true;
+            } else if (ch == '"') {
+                inString = false;
+            }
+            continue;
+        }
+        if (ch == '"') {
+            inString = true;
+            continue;
+        }
+        if (ch == '{') {
+            ++objectDepth;
+        } else if (ch == '}') {
+            --objectDepth;
+            TEST_ASSERT_TRUE(objectDepth >= 0);
+        } else if (ch == '[') {
+            ++arrayDepth;
+        } else if (ch == ']') {
+            --arrayDepth;
+            TEST_ASSERT_TRUE(arrayDepth >= 0);
+        }
+    }
+
+    TEST_ASSERT_FALSE(inString);
+    TEST_ASSERT_FALSE(escaped);
+    TEST_ASSERT_EQUAL_INT(0, objectDepth);
+    TEST_ASSERT_EQUAL_INT(0, arrayDepth);
+}
+
+void resetModMatrixFixture() {
+    lfoManager.clearRoutes();
+    potToEnvelopeMap.clear();
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        configManager.getSlot(i) = MIDISlot{};
+    }
+}
+
+String windowFrom(const String &text, const char *anchor, unsigned span = 320) {
+    const int start = text.indexOf(anchor);
+    TEST_ASSERT_NOT_EQUAL_MESSAGE(-1, start, anchor);
+    const int end = min(text.length(), start + static_cast<int>(span));
+    return text.substring(start, end);
+}
+
+int countOccurrences(const String &text, const char *snippet) {
+    int count = 0;
+    int index = text.indexOf(snippet);
+    while (index >= 0) {
+        ++count;
+        index = text.indexOf(snippet, index + 1);
+    }
+    return count;
+}
+
+void seedStoredProfile(uint8_t profileId, const ProfileData &profile) {
+    TEST_ASSERT_TRUE(configManager.saveProfileSettings(profileId, profile));
+}
+
+void assertProfilePatchRejected(const String &command, uint8_t profileId,
+                                const ProfileData &before) {
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand(command));
+    const String line = latestLogLine();
+    TEST_ASSERT_NOT_EQUAL(-1, line.indexOf("\"code\":\"bad_request\""));
+    ProfileData after{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, after));
+    TEST_ASSERT_EQUAL_UINT8(before.routeCount, after.routeCount);
+    for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].type, after.routes[i].type);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].lfoIndex, after.routes[i].lfoIndex);
+        TEST_ASSERT_FLOAT_WITHIN(0.0001f, before.routes[i].depth, after.routes[i].depth);
+        TEST_ASSERT_EQUAL_INT8(before.routes[i].amount, after.routes[i].amount);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].target, after.routes[i].target);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].channel, after.routes[i].channel);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].ccMsb, after.routes[i].ccMsb);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].ccLsb, after.routes[i].ccLsb);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].minValue, after.routes[i].minValue);
+        TEST_ASSERT_EQUAL_UINT8(before.routes[i].maxValue, after.routes[i].maxValue);
+    }
+}
+
+} // namespace
+
 void test_dispatch_handles_known_command() {
     webSerialStreaming = false;
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("HELLO"));
@@ -164,6 +291,90 @@ void test_dispatch_handles_live_arp_runtime_commands() {
     arpeggiator.setOctaveRange(0);
 }
 
+void test_dispatch_get_mod_matrix_reports_routes_and_conflicts() {
+    resetModMatrixFixture();
+
+    MIDISlot &slot = configManager.getSlot(5);
+    slot.type = MIDIMessageType::CC;
+    slot.active = true;
+    slot.midiChannel = 2;
+    slot.data1 = 74;
+
+    MIDISlot &efSlot = configManager.getSlot(3);
+    efSlot.type = MIDIMessageType::CC;
+    efSlot.active = true;
+    efSlot.midiChannel = 4;
+    efSlot.data1 = 11;
+    efSlot.efSettings.destinationMode = static_cast<uint8_t>(EfDestinationMode::Replace);
+    efSlot.setEnvelopeFollowerIndex(0);
+    potToEnvelopeMap[3] = efSlot.efSettings;
+
+    lfoManager.lfo(0).setShape(LFOShape::Triangle);
+    lfoManager.lfo(0).setDepth(0.8f);
+    lfoManager.lfo(0).setBipolar(true);
+    lfoManager.lfo(0).setSyncEnabled(true);
+    lfoManager.lfo(0).setSyncRatio(LFOSyncRatio::Div4);
+    lfoManager.lfo(1).setShape(LFOShape::Saw);
+    lfoManager.lfo(1).setDepth(0.4f);
+    lfoManager.lfo(1).setBipolar(false);
+    lfoManager.clearRoutes();
+    lfoManager.addSlotValueRoute(0, 5, 0.5f, -75, 20, 96);
+    lfoManager.addMidiCC7Route(1, 74, 2, 0.7f, 100, 5, 105);
+    lfoManager.update(10);
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MOD_MATRIX"));
+    const String response = latestLogLine();
+    assertLooksLikeJsonObject(response);
+    assertContains(response, "\"type\":\"mod_matrix\"");
+    assertContains(response, "\"command\":\"GET_MOD_MATRIX\"");
+    assertContains(response, "\"contract_version\":1");
+    assertContains(response, "\"sources\":{\"ef\":[");
+    assertContains(response, "\"lfo\":[");
+    assertContains(response, "\"pot\":[");
+    assertContains(response, "\"id\":\"pot5\"");
+    assertContains(response, "\"destination\":\"slot5.value\"");
+
+    const String lfoRoute = windowFrom(response, "\"id\":\"lfo0_route0\"");
+    assertContains(lfoRoute, "\"source_type\":\"lfo\"");
+    assertContains(lfoRoute, "\"route_type\":\"slot_value\"");
+    assertContains(lfoRoute, "\"destination\":\"slot5.value\"");
+    assertContains(lfoRoute, "\"depth\":0.5");
+    assertContains(lfoRoute, "\"amount\":-75");
+    assertContains(lfoRoute, "\"minValue\":20");
+    assertContains(lfoRoute, "\"maxValue\":96");
+    assertContains(lfoRoute, "\"range\":{\"min\":20,\"max\":96}");
+
+    const String efRoute = windowFrom(response, "\"id\":\"ef0_slot3\"");
+    assertContains(efRoute, "\"mode\":\"replace\"");
+
+    const String midiConflict = windowFrom(response, "\"target\":\"midi.cc\"");
+    assertContains(midiConflict, "\"channel\":2");
+    assertContains(midiConflict, "\"cc\":74");
+
+    const String slotConflict = windowFrom(response, "\"target\":\"slot.value\"");
+    assertContains(slotConflict, "\"slot\":5");
+}
+
+void test_dispatch_get_mod_matrix_reports_lfo_route_truncation() {
+    resetModMatrixFixture();
+    lfoManager.clearRoutes();
+    for (uint8_t i = 0; i < PROFILE_MAX_ROUTES + 1; ++i) {
+        lfoManager.addInternalRoute(0, LFOInternalTarget::EfGainTrim, 0.25f + 0.01f * i);
+    }
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MOD_MATRIX"));
+    const String response = latestLogLine();
+    assertLooksLikeJsonObject(response);
+    assertContains(response, "\"lfo_route_capacity\":8");
+    assertContains(response, "\"lfo_route_total\":9");
+    assertContains(response, "\"lfo_route_reported\":8");
+    assertContains(response, "\"lfo_route_truncated\":true");
+    TEST_ASSERT_EQUAL_INT(PROFILE_MAX_ROUTES,
+                          countOccurrences(response, "\"source_type\":\"lfo\""));
+}
+
 void test_dispatch_handles_profile_save_load_reset_commands() {
     g_activeProfile = 0;
     configManager.setActiveProfile(0);
@@ -244,6 +455,64 @@ void test_dispatch_active_profile_lfo_patch_applies_live() {
     TEST_ASSERT_TRUE(lfoManager.lfo(0).isSyncEnabled());
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOSyncRatio::Div8),
                             static_cast<uint8_t>(lfoManager.lfo(0).getSyncRatio()));
+}
+
+void test_dispatch_profile_patch_normalizes_route_scalars() {
+    const uint8_t profileId = 2;
+    ProfileData baseline{};
+    seedStoredProfile(profileId, baseline);
+
+    clearTestLogBuffer();
+    const String payload =
+        "{\"routes\":[{\"type\":4,\"lfo\":1,\"slot\":7,\"depth\":1.7,\"amount\":130,"
+        "\"minValue\":110,\"maxValue\":10}]}";
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_PROFILE," + String(profileId) + "," + payload));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"status\":\"ok\""));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_EQUAL_UINT8(1, stored.routeCount);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOManager::Route::Type::SlotValue),
+                            stored.routes[0].type);
+    TEST_ASSERT_EQUAL_UINT8(1, stored.routes[0].lfoIndex);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, stored.routes[0].depth);
+    TEST_ASSERT_EQUAL_INT8(100, stored.routes[0].amount);
+    TEST_ASSERT_EQUAL_UINT8(10, stored.routes[0].minValue);
+    TEST_ASSERT_EQUAL_UINT8(110, stored.routes[0].maxValue);
+    TEST_ASSERT_EQUAL_UINT8(7, stored.routes[0].target);
+}
+
+void test_dispatch_profile_patch_rejects_invalid_route_fields() {
+    const uint8_t profileId = 3;
+    ProfileData baseline{};
+    baseline.routeCount = 1;
+    baseline.routes[0].type = static_cast<uint8_t>(LFOManager::Route::Type::Internal);
+    baseline.routes[0].lfoIndex = 0;
+    baseline.routes[0].depth = 0.5f;
+    baseline.routes[0].target = static_cast<uint8_t>(LFOInternalTarget::ArpSwing);
+    baseline.routes[0].amount = 50;
+    baseline.routes[0].minValue = 0;
+    baseline.routes[0].maxValue = 127;
+    seedStoredProfile(profileId, baseline);
+
+    assertProfilePatchRejected("SET_PROFILE,3,{\"routes\":[{\"type\":9,\"lfo\":0,\"target\":0}]}",
+                               profileId, baseline);
+    assertProfilePatchRejected("SET_PROFILE,3,{\"routes\":[{\"type\":0,\"lfo\":9,\"target\":0}]}",
+                               profileId, baseline);
+    assertProfilePatchRejected("SET_PROFILE,3,{\"routes\":[{\"type\":4,\"lfo\":0,\"slot\":99}]}",
+                               profileId, baseline);
+    assertProfilePatchRejected("SET_PROFILE,3,{\"routes\":[{\"type\":0,\"lfo\":0,\"target\":99}]}",
+                               profileId, baseline);
+    assertProfilePatchRejected(
+        "SET_PROFILE,3,{\"routes\":[{\"type\":1,\"lfo\":0,\"channel\":0,\"cc\":74}]}", profileId,
+        baseline);
+    assertProfilePatchRejected(
+        "SET_PROFILE,3,{\"routes\":[{\"type\":1,\"lfo\":0,\"channel\":1,\"cc\":200}]}", profileId,
+        baseline);
+    assertProfilePatchRejected(
+        "SET_PROFILE,3,{\"routes\":[{\"type\":2,\"lfo\":0,\"channel\":1,\"cc_msb\":74,"
+        "\"cc_lsb\":200}]}",
+        profileId, baseline);
 }
 
 void test_dispatch_handles_macro_and_scene_snapshot_commands() {

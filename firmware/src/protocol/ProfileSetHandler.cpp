@@ -2,7 +2,9 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <array>
 #include <cctype>
+#include <cmath>
 
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
@@ -52,6 +54,8 @@ void logProfileSetError(const char *message) {
                message ? message : "Profile update rejected");
 }
 
+void logProfileSetError(const String &message) { logProfileSetError(message.c_str()); }
+
 void logProfileJsonParseError(const ProfileSetRequest &request, const char *reason) {
     const unsigned len = static_cast<unsigned>(request.payload.length());
     const unsigned firstCode = len > 0 ? static_cast<unsigned>(request.payload.charAt(0)) : 0U;
@@ -93,6 +97,16 @@ uint8_t clampedU8(JsonObject obj, const char *primary, const char *alternate, in
                   int maxValue, uint8_t fallback) {
     return static_cast<uint8_t>(
         constrain(readIntField(obj, primary, alternate, fallback), minValue, maxValue));
+}
+
+String invalidRouteFieldMessage(size_t routeIndex, const char *field, const char *detail) {
+    String message = "Route ";
+    message += String(static_cast<unsigned>(routeIndex));
+    message += " ";
+    message += field ? field : "field";
+    message += " ";
+    message += detail ? detail : "is invalid";
+    return message;
 }
 
 bool equalsIgnoreCase(const char *lhs, const char *rhs) {
@@ -382,38 +396,136 @@ void applyLfoProfilePatch(JsonObject root, ProfileData &profile) {
     }
 }
 
-void applyRouteProfilePatch(JsonObject root, ProfileData &profile) {
-    profile.routeCount = 0;
+bool parseProfileRoute(JsonObject route, size_t routeIndex, ProfileLfoRoute &out, String &error) {
+    const int rawType = readIntField(route, "type", nullptr, 0);
+    if (rawType < 0 || rawType > static_cast<int>(LFOManager::Route::Type::SlotValue)) {
+        error = invalidRouteFieldMessage(routeIndex, "type", "is out of range");
+        return false;
+    }
+    out.type = static_cast<uint8_t>(rawType);
+
+    const int rawLfo = readIntField(route, "lfo", "lfoIndex", 0);
+    if (rawLfo < 0 || rawLfo >= PROFILE_LFO_COUNT) {
+        error = invalidRouteFieldMessage(routeIndex, "lfo index", "is out of range");
+        return false;
+    }
+    out.lfoIndex = static_cast<uint8_t>(rawLfo);
+
+    const float rawDepth = route.containsKey("depth") ? route["depth"].as<float>() : 1.0f;
+    out.depth = std::isfinite(rawDepth) ? constrain(rawDepth, 0.0f, 1.0f) : 1.0f;
+
+    const int rawAmount = readIntField(route, "amount", nullptr, 100);
+    out.amount = static_cast<int8_t>(constrain(rawAmount, -100, 100));
+
+    const int rawMin = readIntField(route, "min", "minValue", 0);
+    const int rawMax = readIntField(route, "max", "maxValue", 127);
+    out.minValue = static_cast<uint8_t>(constrain(rawMin, 0, 127));
+    out.maxValue = static_cast<uint8_t>(constrain(rawMax, 0, 127));
+    if (out.minValue > out.maxValue) {
+        const uint8_t swapped = out.minValue;
+        out.minValue = out.maxValue;
+        out.maxValue = swapped;
+    }
+
+    const auto routeType = static_cast<LFOManager::Route::Type>(out.type);
+    switch (routeType) {
+    case LFOManager::Route::Type::Internal: {
+        const int rawTarget = readIntField(route, "target", nullptr, 0);
+        if (rawTarget < 0 || rawTarget > static_cast<int>(LFOInternalTarget::JitterSmoothness)) {
+            error = invalidRouteFieldMessage(routeIndex, "internal target", "is out of range");
+            return false;
+        }
+        out.target = static_cast<uint8_t>(rawTarget);
+        out.channel = 1;
+        out.ccMsb = 0;
+        out.ccLsb = 32;
+        return true;
+    }
+    case LFOManager::Route::Type::SlotValue: {
+        const int rawSlot = readIntField(route, "slot", "target", 0);
+        if (rawSlot < 0 || rawSlot >= NUM_SLOTS) {
+            error = invalidRouteFieldMessage(routeIndex, "slot index", "is out of range");
+            return false;
+        }
+        out.target = static_cast<uint8_t>(rawSlot);
+        out.channel = 1;
+        out.ccMsb = 0;
+        out.ccLsb = 32;
+        return true;
+    }
+    case LFOManager::Route::Type::MidiCC7:
+    case LFOManager::Route::Type::MidiCC14: {
+        const int rawChannel = readIntField(route, "channel", nullptr, 1);
+        if (rawChannel < 1 || rawChannel > 16) {
+            error = invalidRouteFieldMessage(routeIndex, "MIDI channel", "is out of range");
+            return false;
+        }
+        const int rawCcMsb = readIntField(route, "cc_msb", "cc", 0);
+        if (rawCcMsb < 0 || rawCcMsb > 127) {
+            error = invalidRouteFieldMessage(routeIndex, "CC MSB", "is out of range");
+            return false;
+        }
+        out.channel = static_cast<uint8_t>(rawChannel);
+        out.ccMsb = static_cast<uint8_t>(rawCcMsb);
+        out.target = 0;
+        out.ccLsb = 32;
+        if (routeType == LFOManager::Route::Type::MidiCC14) {
+            const int rawCcLsb = readIntField(route, "cc_lsb", nullptr, 32);
+            if (rawCcLsb < 0 || rawCcLsb > 127) {
+                error = invalidRouteFieldMessage(routeIndex, "CC LSB", "is out of range");
+                return false;
+            }
+            out.ccLsb = static_cast<uint8_t>(rawCcLsb);
+        }
+        return true;
+    }
+    case LFOManager::Route::Type::Osc:
+        out.target = 0;
+        out.channel = 1;
+        out.ccMsb = 0;
+        out.ccLsb = 32;
+        return true;
+    }
+    error = invalidRouteFieldMessage(routeIndex, "type", "is unsupported");
+    return false;
+}
+
+bool applyRouteProfilePatch(JsonObject root, ProfileData &profile, String &error) {
     if (!root.containsKey("routes")) {
-        return;
+        return true;
+    }
+    if (!root["routes"].is<JsonArray>()) {
+        error = "routes must be an array";
+        return false;
     }
 
     JsonArray routes = root["routes"].as<JsonArray>();
-    for (JsonObject route : routes) {
-        if (profile.routeCount >= PROFILE_MAX_ROUTES) {
-            break;
-        }
-        ProfileLfoRoute &out = profile.routes[profile.routeCount];
-        out.type = static_cast<uint8_t>(route["type"].as<int>());
-        out.lfoIndex = static_cast<uint8_t>(route["lfo"].as<int>());
-        out.depth = route["depth"].as<float>();
-        if (out.type == static_cast<uint8_t>(LFOManager::Route::Type::SlotValue) &&
-            route.containsKey("slot")) {
-            out.target = static_cast<uint8_t>(route["slot"].as<int>());
-        } else {
-            out.target = static_cast<uint8_t>(route["target"].as<int>());
-        }
-        out.channel = static_cast<uint8_t>(route["channel"].as<int>());
-        out.ccMsb = static_cast<uint8_t>(route["cc_msb"].as<int>());
-        out.ccLsb = static_cast<uint8_t>(route["cc_lsb"].as<int>());
-        out.amount = route.containsKey("amount") ? static_cast<int8_t>(route["amount"].as<int>())
-                                                 : static_cast<int8_t>(100);
-        out.minValue = route.containsKey("min") ? static_cast<uint8_t>(route["min"].as<int>())
-                                                : static_cast<uint8_t>(0);
-        out.maxValue = route.containsKey("max") ? static_cast<uint8_t>(route["max"].as<int>())
-                                                : static_cast<uint8_t>(127);
-        profile.routeCount++;
+    if (routes.size() > PROFILE_MAX_ROUTES) {
+        error = "routes exceeds max entries";
+        return false;
     }
+
+    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> parsedRoutes{};
+    uint8_t parsedCount = 0;
+    size_t routeIndex = 0;
+    for (JsonVariant routeValue : routes) {
+        if (!routeValue.is<JsonObject>()) {
+            error = invalidRouteFieldMessage(routeIndex, "entry", "must be an object");
+            return false;
+        }
+        if (!parseProfileRoute(routeValue.as<JsonObject>(), routeIndex, parsedRoutes[parsedCount],
+                               error)) {
+            return false;
+        }
+        ++parsedCount;
+        ++routeIndex;
+    }
+
+    profile.routeCount = parsedCount;
+    for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {
+        profile.routes[i] = i < parsedCount ? parsedRoutes[i] : ProfileLfoRoute{};
+    }
+    return true;
 }
 
 void applySlotProfilePatch(JsonObject root, ProfileData &profile, bool applyLiveSlots) {
@@ -544,7 +656,11 @@ void handleSetProfilePayloadCommand(const String &command) {
     applyArpProfilePatch(root, profile);
     applyLedProfilePatch(root, profile);
     applyLfoProfilePatch(root, profile);
-    applyRouteProfilePatch(root, profile);
+    String routeError;
+    if (!applyRouteProfilePatch(root, profile, routeError)) {
+        logProfileSetError(routeError);
+        return;
+    }
     applySlotProfilePatch(root, profile, request.id == g_activeProfile);
 
     bool activeApplied = false;
