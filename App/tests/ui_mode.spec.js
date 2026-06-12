@@ -17,6 +17,17 @@ test.describe('UI mode', () => {
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeVisible();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeVisible();
+    await expect(page.locator('#check-compatibility')).toBeHidden();
+    await expect(page.locator('#config-mode')).toBeHidden();
+    await expect(page.locator('#rollback')).toBeHidden();
+    await expect(page.locator('#profile-wizard')).toBeHidden();
+    await expect(page.locator('#macro-card')).toBeHidden();
+    await expect(page.locator('#scene-card')).toBeHidden();
+    await expect(page.locator('#stage-power-summary')).toBeHidden();
+    await expect(page.locator('#stage-scene-recall')).toBeHidden();
+    await expect(page.locator('#stage-panic-help')).toBeHidden();
+    await expect(page.locator('#usb-midi-toggle')).toBeHidden();
+    await expect(page.locator('#simulator-toggle')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
     await expect(page.locator('#scope-panel')).toBeHidden();
@@ -47,6 +58,13 @@ test.describe('UI mode', () => {
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
       .toBe('simulator');
     await expect(page.locator('.slot-editor')).toBeVisible();
+    await expect(page.locator('#export-preset')).toBeVisible();
+    await expect(page.locator('#import-preset')).toBeVisible();
+    await page.locator('#recovery-drawer > summary').click();
+    await expect(page.locator('#profile-save')).toBeVisible();
+    await expect(page.locator('#profile-load')).toBeVisible();
+    await expect(page.locator('#profile-download')).toBeVisible();
+    await expect(page.locator('#profile-upload')).toBeVisible();
 
     const ccInput = page.locator('.slot-editor label:has-text("CC/Note number") input').first();
     await ccInput.fill('45');

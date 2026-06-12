@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test('rpc hello handshake exposes status stream', async ({ page }) => {
   await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     window.__mn42StatusLog = [];
   });

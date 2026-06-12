@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test('midi monitor logs and clock without jitter', async ({ page }) => {
   await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     class MidiPort extends EventTarget {
       constructor(params) {

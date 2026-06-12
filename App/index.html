@@ -23,15 +23,15 @@
             <span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span>
             <span id="dirty-badge" role="status" hidden>Dirty · staged edits</span>
           </div>
-          <div class="connect-actions compact-connect-actions">
+          <div class="connect-actions compact-connect-actions" data-ui-modes="basic advanced">
             <button id="connect" type="button">Connect</button>
-            <button id="check-compatibility" type="button">Check compatibility</button>
-            <button id="config-mode" type="button">Config boot</button>
+            <button id="check-compatibility" type="button" data-ui-modes="advanced">Check compatibility</button>
+            <button id="config-mode" type="button" data-ui-modes="advanced">Config boot</button>
             <button id="apply" type="button" disabled>Apply</button>
-            <button id="rollback" type="button" disabled>Rollback</button>
+            <button id="rollback" type="button" disabled data-ui-modes="advanced">Rollback</button>
           </div>
           <span class="connection-banner" id="connection-banner" role="status">Connected to: —</span>
-          <div class="power-safety-pill" id="power-safety-pill" role="status" aria-live="polite">
+          <div class="power-safety-pill" id="power-safety-pill" role="status" aria-live="polite" data-ui-modes="basic">
             <span>Power: —</span>
             <span>LED cap: —</span>
             <span data-rail-state="unknown">Rail: —</span>
@@ -49,7 +49,7 @@
         <span class="runtime-lane-chip" data-runtime-lane="live">Live firmware · Writes now</span>
         <span class="runtime-lane-chip" data-runtime-lane="browser">Browser only · Local hints</span>
       </div>
-      <details class="recovery-drawer" id="recovery-drawer">
+      <details class="recovery-drawer" id="recovery-drawer" data-ui-modes="basic advanced">
         <summary>
           <span>Recovery &amp; Profiles</span>
           <span class="microcopy profile-slot-meta" id="profile-slot-status">Slot A • local target</span>
@@ -69,7 +69,7 @@
             <button id="profile-load" type="button" disabled>Switch profile</button>
             <button id="profile-reset" type="button" disabled>Reset profile</button>
           </div>
-          <div class="profile-wizard" id="profile-wizard" aria-label="Guided profile save">
+          <div class="profile-wizard" id="profile-wizard" aria-label="Guided profile save" data-ui-modes="advanced">
             <strong>Guided profile save</strong>
             <p class="microcopy">Device-backed switch/save only enables when firmware reports support.</p>
             <div class="profile-wizard-controls">
@@ -91,7 +91,7 @@
             </p>
           </div>
           <div class="recovery-aux-grid">
-            <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls">
+            <div class="macro-card" id="macro-card" aria-label="Macro snapshot controls" data-ui-modes="advanced">
               <div class="macro-card-header">
                 <strong>Macro snapshot</strong>
                 <p class="microcopy">Temporary EEPROM snapshot. Enabled only when firmware reports macro storage
@@ -112,7 +112,7 @@
               </p>
             </div>
 
-            <div class="scene-card" id="scene-card" aria-label="Scene snapshots">
+            <div class="scene-card" id="scene-card" aria-label="Scene snapshots" data-ui-modes="advanced">
               <div class="scene-card-header">
                 <strong>Scenes</strong>
                 <p class="microcopy">Store six named scene snapshots when firmware reports scene storage support.</p>
@@ -173,7 +173,7 @@
           </div>
         </div>
 
-        <div class="performer-power-row" id="stage-power-summary" aria-live="polite">
+        <div class="performer-power-row" id="stage-power-summary" aria-live="polite" data-ui-modes="stage advanced">
           <span>Power: —</span>
           <span>LED cap: —</span>
           <span data-rail-state="unknown">Rail: —</span>
@@ -191,7 +191,7 @@
             </select>
           </label>
           <button id="stage-profile-load" type="button" disabled>Load Profile</button>
-          <label>
+          <label data-ui-modes="stage advanced">
             <span>Recall Scene</span>
             <select id="stage-scene-select">
               <option value="0">Scene 1</option>
@@ -202,8 +202,8 @@
               <option value="5">Scene 6</option>
             </select>
           </label>
-          <button id="stage-scene-recall" type="button" disabled>Recall Scene</button>
-          <button id="stage-panic-help" type="button">Panic Help</button>
+          <button id="stage-scene-recall" type="button" disabled data-ui-modes="stage advanced">Recall Scene</button>
+          <button id="stage-panic-help" type="button" data-ui-modes="stage advanced">Panic Help</button>
         </div>
 
         <div class="performer-grid">
@@ -233,8 +233,8 @@
         </div>
       </section>
 
-      <section id="stage-panel">
-        <div id="live-panel">
+      <section id="stage-panel" data-ui-modes="basic advanced">
+        <div id="live-panel" data-ui-modes="basic advanced">
           <header class="live-header">
             <h2>Live Slots</h2>
             <p class="microcopy">Six columns to mirror the PCB. Click a slot or ride the arrow keys to roam.</p>
@@ -255,7 +255,7 @@
           </section>
         </div>
 
-        <section id="editor-panel">
+        <section id="editor-panel" data-ui-modes="basic advanced">
           <header class="editor-shell-header">
             <div>
               <h2>Selected Slot</h2>
@@ -312,7 +312,7 @@
         </section>
       </section>
 
-      <aside id="connect-card">
+      <aside id="connect-card" data-ui-modes="basic advanced">
         <div class="mode-switch" role="group" aria-label="UI mode">
           <span class="mode-switch-label">UI mode</span>
           <div class="mode-switch-buttons">
@@ -323,10 +323,10 @@
           </div>
         </div>
         <p class="microcopy" id="ui-mode-hint">Basic mode keeps common knob-to-MIDI mapping controls visible.</p>
-        <div class="utility-tabbar" role="tablist" aria-label="Utility panels">
-          <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true">Console</button>
-          <button type="button" class="utility-tab" data-utility-tab="diff" aria-pressed="false">Diff</button>
-          <button type="button" class="utility-tab" data-utility-tab="midi" aria-pressed="false">MIDI</button>
+        <div class="utility-tabbar" role="tablist" aria-label="Utility panels" data-ui-modes="advanced">
+          <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true" data-ui-modes="advanced">Console</button>
+          <button type="button" class="utility-tab" data-utility-tab="diff" aria-pressed="false" data-ui-modes="advanced">Diff</button>
+          <button type="button" class="utility-tab" data-utility-tab="midi" aria-pressed="false" data-ui-modes="advanced">MIDI</button>
           <button type="button" class="utility-tab" data-utility-tab="scope" aria-pressed="false"
             data-ui-tier="advanced">Scope</button>
           <button type="button" class="utility-tab" data-utility-tab="arp" aria-pressed="false"
@@ -371,9 +371,9 @@
               <option value="">Select a preset…</option>
             </select>
             <button id="apply-save-profile" type="button" disabled>Save staged edits</button>
-            <button id="simulator-toggle" type="button">Start simulator</button>
+            <button id="simulator-toggle" type="button" data-ui-modes="advanced">Start simulator</button>
           </div>
-          <section class="live-toggle-card" aria-labelledby="usb-midi-toggle-title">
+          <section class="live-toggle-card" aria-labelledby="usb-midi-toggle-title" data-ui-modes="advanced">
             <header class="live-toggle-card-header">
               <div>
                 <h3 id="usb-midi-toggle-title">USB MIDI Output</h3>
@@ -389,14 +389,14 @@
               Connect to inspect USB MIDI output state.
             </p>
           </section>
-          <fieldset id="led-settings" class="schema-section" data-schema-section="led">
+          <fieldset id="led-settings" class="schema-section" data-schema-section="led" data-ui-modes="advanced">
             <legend>LED Colors</legend>
             <div class="schema-section-body" data-schema-target="led"></div>
             <div id="led-grid" aria-live="polite"></div>
           </fieldset>
         </div>
 
-        <div class="utility-panel" data-utility-panel="diff">
+        <div class="utility-panel" data-utility-panel="diff" data-ui-modes="advanced">
           <section aria-labelledby="diff-title" id="diff-panel" hidden>
             <h2 id="diff-title">Staged Diff</h2>
             <pre id="diff-output"></pre>
@@ -407,7 +407,7 @@
           </section>
         </div>
 
-        <div class="utility-panel" data-utility-panel="midi">
+        <div class="utility-panel" data-utility-panel="midi" data-ui-modes="advanced">
           <section id="midi-panel" class="midi-panel collapsed" aria-label="MIDI monitor panel">
             <header class="midi-panel-header">
               <div>
@@ -651,8 +651,30 @@
                 </div>
                 <span class="lane-tag" data-runtime-lane="live">Read-only firmware</span>
               </header>
-              <div class="arp-actions" role="group" aria-label="Modulation matrix actions">
-                <button id="mod-matrix-refresh" type="button" disabled>Refresh matrix</button>
+              <div class="mod-matrix-toolbar">
+                <div class="mod-matrix-filterbar" role="group" aria-label="Modulation matrix filters">
+                  <label class="mod-matrix-toggle">
+                    <input id="mod-matrix-filter-conflicts" type="checkbox" disabled />
+                    <span>Conflicts only</span>
+                  </label>
+                  <label class="mod-matrix-toggle">
+                    <input id="mod-matrix-filter-lfo" type="checkbox" disabled />
+                    <span>LFO routes</span>
+                  </label>
+                  <label class="mod-matrix-toggle">
+                    <input id="mod-matrix-filter-slot" type="checkbox" disabled />
+                    <span>Slot routes</span>
+                  </label>
+                  <label class="mod-matrix-toggle">
+                    <input id="mod-matrix-filter-active" type="checkbox" disabled />
+                    <span>Active only</span>
+                  </label>
+                </div>
+                <div class="arp-actions" role="group" aria-label="Modulation matrix actions">
+                  <button id="mod-matrix-refresh" type="button" disabled>Refresh matrix</button>
+                  <button id="mod-matrix-export" type="button" disabled>Export report</button>
+                  <button id="mod-matrix-copy-conflicts" type="button" disabled>Copy conflicts</button>
+                </div>
               </div>
               <div id="mod-matrix-body" class="mod-matrix-body" aria-live="polite"></div>
               <p class="microcopy macro-status" id="mod-matrix-status" data-state="muted" aria-live="polite">
@@ -785,9 +807,9 @@
       story and share it back.
     </footer>
   </div>
-  <div id="note-dynamics-parking" hidden>
+  <div id="note-dynamics-parking" hidden data-ui-modes="advanced">
     <section class="live-toggle-card slot-note-dynamics-card" id="note-dynamics-card"
-      aria-labelledby="note-dynamics-title" hidden>
+      aria-labelledby="note-dynamics-title" hidden data-ui-modes="advanced">
       <header class="live-toggle-card-header">
         <div>
           <h3 id="note-dynamics-title">Note Dynamics</h3>

@@ -639,6 +639,37 @@ body {
   background: rgba(255, 255, 255, 0.03);
 }
 
+.mod-matrix-toolbar {
+  display: grid;
+  gap: 10px;
+}
+
+.mod-matrix-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mod-matrix-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(247, 249, 255, 0.82);
+  font-size: 0.72rem;
+}
+
+.mod-matrix-toggle input {
+  margin: 0;
+}
+
+.mod-matrix-toggle:has(input:disabled) {
+  opacity: 0.55;
+}
+
 .mod-matrix-body {
   display: grid;
   gap: 10px;

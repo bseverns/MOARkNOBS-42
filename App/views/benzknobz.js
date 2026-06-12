@@ -212,19 +212,28 @@ const boot = () => {
   const lfoRefreshBtn = document.getElementById('lfo-refresh');
   const lfoSaveBtn = document.getElementById('lfo-save');
   const lfoStatusEl = document.getElementById('lfo-status');
+  const modMatrixConflictFilter = document.getElementById('mod-matrix-filter-conflicts');
+  const modMatrixLfoFilter = document.getElementById('mod-matrix-filter-lfo');
+  const modMatrixSlotFilter = document.getElementById('mod-matrix-filter-slot');
+  const modMatrixActiveFilter = document.getElementById('mod-matrix-filter-active');
   const modMatrixRefreshBtn = document.getElementById('mod-matrix-refresh');
+  const modMatrixExportBtn = document.getElementById('mod-matrix-export');
+  const modMatrixCopyConflictsBtn = document.getElementById('mod-matrix-copy-conflicts');
   const modMatrixBody = document.getElementById('mod-matrix-body');
   const modMatrixStatusEl = document.getElementById('mod-matrix-status');
   const sceneGrid = document.getElementById('scene-grid');
   const sceneStatusEl = document.getElementById('scene-status');
   const uiModeButtons = Array.from(document.querySelectorAll('[data-ui-mode-btn]'));
   const uiModeHint = document.getElementById('ui-mode-hint');
+  const uiModeNodes = Array.from(document.querySelectorAll('[data-ui-modes], [data-ui-tier]'));
   const advancedTierNodes = Array.from(document.querySelectorAll('[data-ui-tier="advanced"]'));
   const UI_MODE_HINTS = {
-    stage: 'Stage mode is a read-only performance dashboard with only show-safe actions.',
-    basic: 'Basic mode adds common knob-to-MIDI editing to the Stage dashboard.',
+    stage:
+      'Stage mode keeps only stage-safe connect, profile, scene, power, slot, envelope, and panic controls.',
+    basic:
+      'Basic mode keeps common connect, slot mapping, apply, import/export, and profile controls.',
     advanced:
-      'Advanced mode adds EF, ARG, filter tuning, and scope diagnostics to the Basic surface.'
+      'Advanced mode unlocks diagnostics, live-only control lanes, modulation tools, and recovery extras.'
   };
   const GLOSSARY = {
     mapping:
@@ -457,6 +466,7 @@ const boot = () => {
     elements: {
       uiModeButtons,
       uiModeHint,
+      uiModeNodes,
       advancedTierNodes,
       editorTabButtons,
       utilityTabButtons,
@@ -634,7 +644,13 @@ const boot = () => {
       lfoRefreshBtn,
       lfoSaveBtn,
       lfoStatusEl,
+      modMatrixConflictFilter,
+      modMatrixLfoFilter,
+      modMatrixSlotFilter,
+      modMatrixActiveFilter,
       modMatrixRefreshBtn,
+      modMatrixExportBtn,
+      modMatrixCopyConflictsBtn,
       modMatrixBody,
       modMatrixStatusEl,
       sceneGrid,

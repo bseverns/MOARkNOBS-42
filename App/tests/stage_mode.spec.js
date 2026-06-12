@@ -11,6 +11,8 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#performer-panel [data-ui-mode-btn="basic"]')).toBeVisible();
     await expect(page.locator('#performer-panel [data-ui-mode-btn="advanced"]')).toBeVisible();
+    await expect(page.locator('.connect-actions')).toBeHidden();
+    await expect(page.locator('#connect-card')).toBeHidden();
     await expect(page.locator('#editor-panel')).toBeHidden();
     await expect(page.locator('#power-safety-pill')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
@@ -25,7 +27,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#export-preset')).toBeHidden();
     await expect(page.locator('#preset-picker')).toBeHidden();
     await expect(page.locator('#apply-save-profile')).toBeHidden();
-    await expect(page.locator('#status')).toBeVisible();
+    await expect(page.locator('#status')).toBeHidden();
   });
 
   test('shows simulator manifest power fields in the performer panel', async ({ page }) => {
@@ -221,9 +223,16 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#stage-panel')).toBeVisible();
     await expect(page.locator('#editor-panel')).toBeVisible();
+    await expect(page.locator('#connect-card')).toBeVisible();
+    await expect(page.locator('#check-compatibility')).toBeHidden();
+    await expect(page.locator('#config-mode')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
     await expect(page.locator('#scope-panel')).toBeHidden();
+    await expect(page.locator('#stage-power-summary')).toBeHidden();
+    await expect(page.locator('#stage-scene-recall')).toBeHidden();
+    await expect(page.locator('#stage-panic-help')).toBeHidden();
+    await expect(page.locator('#usb-midi-toggle')).toBeHidden();
   });
 
   test('dirty staged state does not expose editing controls in Stage', async ({ page }) => {

@@ -43,6 +43,7 @@ function buildImportConfig() {
 test('compatibility check reports when Web Serial is unavailable', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     Object.defineProperty(navigator, 'serial', {
       configurable: true,
       value: undefined

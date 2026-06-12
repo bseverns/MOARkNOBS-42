@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test('rpc queue throttles and respects single-flight ordering', async ({ page }) => {
   await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__mn42WriteTimes = [];
     window.__mn42NextLineDelay = 150;
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true, rpcTimeoutMs: 600 };
