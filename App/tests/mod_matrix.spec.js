@@ -8,9 +8,15 @@ function useSimulator(page) {
   });
 }
 
+async function bootWithSimulator(page) {
+  await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
+  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
+}
+
 test('matrix LFO rows select the matching route card', async ({ page }) => {
   await useSimulator(page);
   await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
@@ -38,6 +44,7 @@ test('matrix LFO rows select the matching route card', async ({ page }) => {
 test('matrix discloses when the route preview is capped', async ({ page }) => {
   await useSimulator(page);
   await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 

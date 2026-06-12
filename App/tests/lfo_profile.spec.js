@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+async function bootWithSimulator(page) {
+  await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
+  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
+}
+
 test('LFO edits expose a save action and persist through set_profile', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
@@ -8,7 +13,7 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   });
 
   await page.goto('/benzknobz.html');
-  await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
+  await bootWithSimulator(page);
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
@@ -47,6 +52,7 @@ test('inactive slot LFO save keeps the edited slot visible', async ({ page }) =>
   });
 
   await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
@@ -87,6 +93,7 @@ test('active slot LFO save does not warn to switch to itself', async ({ page }) 
   });
 
   await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 

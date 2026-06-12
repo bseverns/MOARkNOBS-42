@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test';
 import { promises as fs } from 'fs';
 import path from 'path';
 
+async function waitForBoot(page) {
+  await page.waitForFunction(() => document.documentElement.dataset.mn42Booted === 'true');
+}
+
 function buildImportConfig() {
   return {
     slots: Array.from({ length: 42 }, (_, index) => ({
@@ -111,6 +115,7 @@ test('config JSON can be imported before connecting and exported afterward', asy
   });
 
   await page.goto('/benzknobz.html');
+  await waitForBoot(page);
 
   const importButton = page.getByRole('button', { name: 'Import config JSON' });
   const exportButton = page.getByRole('button', { name: 'Export config JSON' });
