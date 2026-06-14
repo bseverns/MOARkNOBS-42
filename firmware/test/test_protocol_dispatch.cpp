@@ -11,6 +11,7 @@
 #include "Log.h"
 #include "MIDIHandler.h"
 #include "LFO/LFOManager.h"
+#include "Modes.h"
 #include "Protocol.h"
 
 namespace {
@@ -455,6 +456,207 @@ void test_dispatch_active_profile_lfo_patch_applies_live() {
     TEST_ASSERT_TRUE(lfoManager.lfo(0).isSyncEnabled());
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(LFOSyncRatio::Div8),
                             static_cast<uint8_t>(lfoManager.lfo(0).getSyncRatio()));
+}
+
+void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot() {
+    const uint8_t profileId = 2;
+    ProfileData profile{};
+    profile.arp.lengthTicks = 19;
+    profile.arp.shape = static_cast<uint8_t>(Arpeggiator::Shape::UPDOWN);
+    profile.arp.swingPercent = 23;
+    profile.arp.gatePercent = 61;
+    profile.arp.octaveRange = 2;
+    profile.led.brightness = 77;
+    profile.led.r = 10;
+    profile.led.g = 20;
+    profile.led.b = 30;
+    profile.clock.tappedBpm = 88.5f;
+    profile.clock.clockOutEnabled = 1;
+    profile.clock.followExternalClock = 0;
+    profile.noteDynamics.velocityShift = -9;
+    profile.noteDynamics.changeProbability = 57;
+    profile.jitter.depth = 0.28f;
+    profile.jitter.smoothness = 0.74f;
+    profile.lfos[0].shape = static_cast<uint8_t>(LFOShape::Square);
+    profile.lfos[0].frequencyHz = 3.25f;
+    profile.lfos[0].depth = 0.55f;
+    profile.lfos[0].bipolar = 0;
+    profile.lfos[0].syncEnabled = 1;
+    profile.lfos[0].syncRatio = static_cast<uint8_t>(LFOSyncRatio::Div4);
+    profile.routeCount = 1;
+    profile.routes[0].type = static_cast<uint8_t>(LFOManager::Route::Type::Internal);
+    profile.routes[0].lfoIndex = 0;
+    profile.routes[0].target = static_cast<uint8_t>(LFOInternalTarget::ArpSwing);
+
+    configManager.setActiveProfile(profileId);
+    seedStoredProfile(profileId, profile);
+
+    arpeggiator.setLength(7);
+    arpeggiator.setShape(Arpeggiator::Shape::UP);
+    arpeggiator.setSwingPercent(0.0f);
+    arpeggiator.setGatePercent(50.0f);
+    arpeggiator.setOctaveRange(0);
+    ledManager.setBrightness(5);
+    ledManager.setColor(CRGB(1, 2, 3));
+    g_tappedBPM = 123.0f;
+    g_clockOutEnabled = false;
+    g_followExternalClock = true;
+    velocityShift = 12;
+    changeProbability = 99;
+    g_noteDynamicsRemoteControlActive = true;
+    g_noteDynamicsShiftLatched = true;
+    g_noteDynamicsProbabilityLatched = true;
+    g_jitterSettings.depth = 0.91f;
+    g_jitterSettings.smoothness = 0.11f;
+    g_jitterRemoteControlActive = true;
+    g_jitterDepthLatched = true;
+    g_jitterSmoothnessLatched = true;
+    lfoManager.lfo(0).setShape(LFOShape::Sine);
+    lfoManager.lfo(0).setFrequencyHz(0.5f);
+    lfoManager.lfo(0).setDepth(0.1f);
+    lfoManager.lfo(0).setBipolar(true);
+    lfoManager.lfo(0).setSyncEnabled(false);
+    lfoManager.clearRoutes();
+
+    restoreActiveProfileRuntime(false);
+
+    TEST_ASSERT_EQUAL_UINT8(profileId, g_activeProfile);
+    TEST_ASSERT_EQUAL_UINT8(profile.arp.lengthTicks, arpeggiator.getLength());
+    TEST_ASSERT_EQUAL_UINT8(profile.arp.shape, static_cast<uint8_t>(arpeggiator.getShape()));
+    TEST_ASSERT_EQUAL_UINT8(profile.arp.swingPercent,
+                            static_cast<uint8_t>(arpeggiator.getSwingPercent()));
+    TEST_ASSERT_EQUAL_UINT8(profile.arp.gatePercent,
+                            static_cast<uint8_t>(arpeggiator.getGatePercent()));
+    TEST_ASSERT_EQUAL_UINT8(profile.arp.octaveRange, arpeggiator.getOctaveRange());
+    TEST_ASSERT_EQUAL_UINT8(profile.led.brightness, ledManager.getBrightness());
+    TEST_ASSERT_EQUAL_UINT8(profile.led.r, ledManager.getColor().r);
+    TEST_ASSERT_EQUAL_UINT8(profile.led.g, ledManager.getColor().g);
+    TEST_ASSERT_EQUAL_UINT8(profile.led.b, ledManager.getColor().b);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.clock.tappedBpm, g_tappedBPM);
+    TEST_ASSERT_TRUE(g_clockOutEnabled);
+    TEST_ASSERT_FALSE(g_followExternalClock);
+    TEST_ASSERT_EQUAL_INT8(profile.noteDynamics.velocityShift, velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(profile.noteDynamics.changeProbability, changeProbability);
+    TEST_ASSERT_FALSE(g_noteDynamicsRemoteControlActive);
+    TEST_ASSERT_FALSE(g_noteDynamicsShiftLatched);
+    TEST_ASSERT_FALSE(g_noteDynamicsProbabilityLatched);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.jitter.depth, g_jitterSettings.depth);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.jitter.smoothness, g_jitterSettings.smoothness);
+    TEST_ASSERT_FALSE(g_jitterRemoteControlActive);
+    TEST_ASSERT_FALSE(g_jitterDepthLatched);
+    TEST_ASSERT_FALSE(g_jitterSmoothnessLatched);
+    TEST_ASSERT_EQUAL_UINT8(profile.lfos[0].shape,
+                            static_cast<uint8_t>(lfoManager.lfo(0).getShape()));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.lfos[0].frequencyHz,
+                             lfoManager.lfo(0).getFrequencyHz());
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.lfos[0].depth, lfoManager.lfo(0).getDepth());
+    TEST_ASSERT_FALSE(lfoManager.lfo(0).isBipolar());
+    TEST_ASSERT_TRUE(lfoManager.lfo(0).isSyncEnabled());
+    TEST_ASSERT_EQUAL_UINT8(profile.lfos[0].syncRatio,
+                            static_cast<uint8_t>(lfoManager.lfo(0).getSyncRatio()));
+    TEST_ASSERT_EQUAL_UINT8(1, lfoManager.routeCount());
+}
+
+void test_dispatch_set_arp_persists_active_profile_snapshot() {
+    const uint8_t profileId = 1;
+    configManager.setActiveProfile(profileId);
+    g_activeProfile = profileId;
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ARP,17,4,21,67,3"));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_EQUAL_UINT8(17, stored.arp.lengthTicks);
+    TEST_ASSERT_EQUAL_UINT8(4, stored.arp.shape);
+    TEST_ASSERT_EQUAL_UINT8(21, stored.arp.swingPercent);
+    TEST_ASSERT_EQUAL_UINT8(67, stored.arp.gatePercent);
+    TEST_ASSERT_EQUAL_UINT8(3, stored.arp.octaveRange);
+}
+
+void test_dispatch_set_clock_persists_active_profile_snapshot() {
+    const uint8_t profileId = 2;
+    configManager.setActiveProfile(profileId);
+    g_activeProfile = profileId;
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_CLOCK,0,1,98.5"));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 98.5f, stored.clock.tappedBpm);
+    TEST_ASSERT_EQUAL_UINT8(1, stored.clock.clockOutEnabled);
+    TEST_ASSERT_EQUAL_UINT8(0, stored.clock.followExternalClock);
+}
+
+void test_dispatch_set_jitter_persists_active_profile_snapshot() {
+    const uint8_t profileId = 3;
+    configManager.setActiveProfile(profileId);
+    g_activeProfile = profileId;
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_JITTER,0.625,0.375"));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.625f, stored.jitter.depth);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.375f, stored.jitter.smoothness);
+}
+
+void test_dispatch_set_note_dynamics_persists_active_profile_snapshot() {
+    const uint8_t profileId = 1;
+    configManager.setActiveProfile(profileId);
+    g_activeProfile = profileId;
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_NOTE_DYNAMICS,-14,61"));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_EQUAL_INT8(-14, stored.noteDynamics.velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(61, stored.noteDynamics.changeProbability);
+}
+
+void test_dispatch_inactive_profile_patch_merges_with_stored_profile_snapshot() {
+    const uint8_t profileId = 3;
+    g_activeProfile = 0;
+    configManager.setActiveProfile(g_activeProfile);
+
+    ProfileData baseline{};
+    baseline.arp.lengthTicks = 21;
+    baseline.clock.tappedBpm = 122.0f;
+    baseline.noteDynamics.velocityShift = -6;
+    baseline.noteDynamics.changeProbability = 48;
+    baseline.jitter.depth = 0.42f;
+    baseline.jitter.smoothness = 0.66f;
+    seedStoredProfile(profileId, baseline);
+
+    arpeggiator.setLength(7);
+    g_tappedBPM = 88.0f;
+    velocityShift = 13;
+    changeProbability = 91;
+    g_jitterSettings.depth = 0.17f;
+    g_jitterSettings.smoothness = 0.23f;
+
+    clearTestLogBuffer();
+    const String payload =
+        "{\"clock\":{\"tapped_bpm\":96.0},\"jitter\":{\"depth\":0.75},\"note_dynamics\":{"
+        "\"change_probability\":77}}";
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_PROFILE," + String(profileId) + "," + payload));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"active_applied\":false"));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_EQUAL_UINT8(21, stored.arp.lengthTicks);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 96.0f, stored.clock.tappedBpm);
+    TEST_ASSERT_EQUAL_INT8(-6, stored.noteDynamics.velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(77, stored.noteDynamics.changeProbability);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.75f, stored.jitter.depth);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.66f, stored.jitter.smoothness);
 }
 
 void test_dispatch_profile_patch_normalizes_route_scalars() {

@@ -91,6 +91,7 @@ constexpr int kUnassignedEnvelope = -1;
 constexpr uint16_t kProfileSettingsVersionV1 = 0x0001;
 constexpr uint16_t kProfileSettingsVersionV2 = 0x0002;
 constexpr uint16_t kProfileSettingsVersionV3 = 0x0003;
+constexpr uint16_t kProfileSettingsVersionV4 = 0x0004;
 
 struct __attribute__((packed)) LegacyProfileEfSettings {
     uint8_t mode = 0;
@@ -161,6 +162,17 @@ struct __attribute__((packed)) LegacyProfileDataV3 {
     std::array<LegacyProfileSlotSettingsV2, NUM_SLOTS> slots{};
 };
 
+struct __attribute__((packed)) LegacyProfileDataV4 {
+    uint16_t version = kProfileSettingsVersionV4;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    ProfileArpSettings arp{};
+    ProfileLedSettings led{};
+    std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{};
+    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{};
+    std::array<ProfileSlotSettings, NUM_SLOTS> slots{};
+};
+
 // Computes CRC-16 with the Modbus-flavored 0xA001 polynomial to keep our
 // saved configuration blocks honest. Peek at docs/EEPROMLayout.md to see
 // where the checksum bunkers down.
@@ -201,6 +213,16 @@ uint16_t computeLegacyProfileCrc(const LegacyProfileDataV3 &profile) {
     const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
     uint16_t crc = 0xFFFF;
     for (size_t i = kCrcStart; i < sizeof(LegacyProfileDataV3); ++i) {
+        crc = crc16_update(crc, bytes[i]);
+    }
+    return crc;
+}
+
+uint16_t computeLegacyProfileCrc(const LegacyProfileDataV4 &profile) {
+    constexpr size_t kCrcStart = offsetof(LegacyProfileDataV4, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(LegacyProfileDataV4); ++i) {
         crc = crc16_update(crc, bytes[i]);
     }
     return crc;
@@ -637,6 +659,26 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         }
         // Sanitize on load so bad data never reaches runtime.
         profile = sanitizeProfileData(stored);
+        profile.crc = computeProfileCrc(profile);
+        return true;
+    }
+
+    if (stored.version == kProfileSettingsVersionV4) {
+        LegacyProfileDataV4 legacy{};
+        storageGet(base, legacy);
+        uint16_t crc = computeLegacyProfileCrc(legacy);
+        if (crc != legacy.crc) {
+            return false;
+        }
+        ProfileData migrated{};
+        migrated.version = PROFILE_SETTINGS_VERSION;
+        migrated.routeCount = legacy.routeCount;
+        migrated.arp = legacy.arp;
+        migrated.led = legacy.led;
+        migrated.lfos = legacy.lfos;
+        migrated.routes = legacy.routes;
+        migrated.slots = legacy.slots;
+        profile = sanitizeProfileData(migrated);
         profile.crc = computeProfileCrc(profile);
         return true;
     }

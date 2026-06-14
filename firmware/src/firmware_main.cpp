@@ -35,14 +35,15 @@ void setup() {
     gBootMode = selectBootMode();
     initializeProtocol();
     DiagnosticRecord::recordBootMode(static_cast<uint8_t>(gBootMode));
-    if (gBootMode == BootMode::UsbConfigurator) {
-        LOG_PRINTLN("{\"type\":\"boot_mode\",\"mode\":\"usb_configurator\"}");
-        return;
-    }
 #if defined(MN42_DIAG_BOOT_MARKERS) && (MN42_DIAG_BOOT_MARKERS != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"setup_before_load_hardware\"}");
 #endif
     loadHardwareConfig();
+    if (gBootMode == BootMode::UsbConfigurator) {
+        restoreActiveProfileRuntime(false);
+        LOG_PRINTLN("{\"type\":\"boot_mode\",\"mode\":\"usb_configurator\"}");
+        return;
+    }
     LOG_PRINTLN("{\"type\":\"boot_mode\",\"mode\":\"standalone_runtime\"}");
 #if defined(MN42_DIAG_BOOT_MARKERS) && (MN42_DIAG_BOOT_MARKERS != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"setup_before_initialize_modes\"}");

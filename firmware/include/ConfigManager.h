@@ -127,6 +127,22 @@ struct __attribute__((packed)) ProfileLedSettings {
     uint8_t b = 0;            //!< LED color B
 };
 
+struct __attribute__((packed)) ProfileClockSettings {
+    float tappedBpm = 120.0f;    //!< Internal tapped tempo used when not following external clock
+    uint8_t clockOutEnabled = 0; //!< MIDI clock output gate (0/1)
+    uint8_t followExternalClock = 1; //!< External clock follow flag (0/1)
+};
+
+struct __attribute__((packed)) ProfileNoteDynamicsSettings {
+    int8_t velocityShift = 0;        //!< -64..+63 note velocity offset
+    uint8_t changeProbability = 100; //!< 0..100% note trigger probability
+};
+
+struct __attribute__((packed)) ProfileJitterSettings {
+    float depth = 1.0f;      //!< 0..1 jitter depth
+    float smoothness = 0.5f; //!< 0..1 jitter smoothness
+};
+
 struct __attribute__((packed)) ProfileLfoSettings {
     uint8_t shape = 0;        //!< LFOShape value
     float frequencyHz = 1.0f; //!< Free-run frequency
@@ -151,7 +167,7 @@ struct __attribute__((packed)) ProfileLfoRoute {
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0004;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0005;
 
 struct __attribute__((packed)) ProfileData {
     uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version
@@ -159,6 +175,9 @@ struct __attribute__((packed)) ProfileData {
     uint8_t routeCount = 0;                                   //!< Active route count
     ProfileArpSettings arp{};                                 //!< Arp settings snapshot
     ProfileLedSettings led{};                                 //!< LED brightness/color
+    ProfileClockSettings clock{};                             //!< Clock source/output snapshot
+    ProfileNoteDynamicsSettings noteDynamics{};               //!< Live note dynamics snapshot
+    ProfileJitterSettings jitter{};                           //!< Live jitter snapshot
     std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{}; //!< LFO state snapshot
     std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{}; //!< LFO route table
     std::array<ProfileSlotSettings, NUM_SLOTS> slots{};       //!< Per-slot MIDI/EF settings

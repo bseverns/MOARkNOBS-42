@@ -1033,18 +1033,19 @@ void handleSetArpCommand(const String &command) {
     arpeggiator.setSwingPercent(swingPercent);
     arpeggiator.setGatePercent(gatePercent);
     arpeggiator.setOctaveRange(octaveRange);
+    const bool persisted = persistActiveProfileSnapshot();
 
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_ARP\","
                "\"active\":%s,\"slot\":%u,\"length_ticks\":%u,\"shape\":%u,"
                "\"shape_name\":\"%s\",\"swing_percent\":%u,\"gate_percent\":%u,"
-               "\"octave_range\":%u,\"pattern_length\":%u}\n",
+               "\"octave_range\":%u,\"pattern_length\":%u,\"persisted\":%s}\n",
                arpeggiator.isActive() ? "true" : "false",
                static_cast<unsigned>(arpeggiator.getSlot()), static_cast<unsigned>(lengthTicks),
                static_cast<unsigned>(shape), arpShapeName(static_cast<Arpeggiator::Shape>(shape)),
                static_cast<unsigned>(constrain(swingPercent, 0.0f, 80.0f)),
                static_cast<unsigned>(constrain(gatePercent, 5.0f, 100.0f)),
                static_cast<unsigned>(octaveRange),
-               static_cast<unsigned>(arpeggiator.getPatternLength()));
+               static_cast<unsigned>(arpeggiator.getPatternLength()), persisted ? "true" : "false");
 }
 
 void handleSetClockCommand(const String &command) {
@@ -1064,6 +1065,7 @@ void handleSetClockCommand(const String &command) {
     g_followExternalClock = followExternal;
     g_clockOutEnabled = clockOutEnabled;
     g_tappedBPM = tappedBpm;
+    const bool persisted = persistActiveProfileSnapshot();
 
     const bool externalSignal = midiHandler.hasExternalClockSignal();
     const bool running = midiHandler.isClockRunning();
@@ -1077,10 +1079,12 @@ void handleSetClockCommand(const String &command) {
 
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_CLOCK\","
                "\"follow_external\":%s,\"clock_out_enabled\":%s,\"tapped_bpm\":%.2f,"
-               "\"external_bpm\":%.2f,\"external_signal\":%s,\"running\":%s,\"source\":\"%s\"}\n",
+               "\"external_bpm\":%.2f,\"external_signal\":%s,\"running\":%s,"
+               "\"source\":\"%s\",\"persisted\":%s}\n",
                g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
                static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
-               externalSignal ? "true" : "false", running ? "true" : "false", source);
+               externalSignal ? "true" : "false", running ? "true" : "false", source,
+               persisted ? "true" : "false");
 }
 
 void handleSetEfCommand(const String &command) {
@@ -1101,7 +1105,12 @@ void handleSetEfCommand(const String &command) {
                                   static_cast<uint8_t>(envIndex));
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
         refreshEfVoicesFromConfig();
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
+        if (persistActiveProfileSnapshot()) {
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
+        } else {
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\","
+                        "\"message\":\"active profile snapshot save failed\"}");
+        }
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
@@ -1126,7 +1135,12 @@ void handleSetLedCommand(const String &command) {
         ledManager.setBrightness(static_cast<uint8_t>(brightness));
         ledManager.setColor(color);
         configManager.saveLEDSettings(static_cast<uint8_t>(brightness), color);
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
+        if (persistActiveProfileSnapshot()) {
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
+        } else {
+            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\","
+                        "\"message\":\"active profile snapshot save failed\"}");
+        }
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
@@ -1149,9 +1163,11 @@ void handleSetJitterCommand(const String &command) {
     g_jitterRemoteControlActive = true;
     g_jitterDepthLatched = false;
     g_jitterSmoothnessLatched = false;
+    const bool persisted = persistActiveProfileSnapshot();
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_JITTER\",\"depth\":%.3f,"
-               "\"smoothness\":%.3f}\n",
-               static_cast<double>(depth), static_cast<double>(smoothness));
+               "\"smoothness\":%.3f,\"persisted\":%s}\n",
+               static_cast<double>(depth), static_cast<double>(smoothness),
+               persisted ? "true" : "false");
 }
 
 void handleSetPotCommand(const String &command) {
@@ -1199,9 +1215,10 @@ void handleSetNoteDynamicsCommand(const String &command) {
     g_noteDynamicsRemoteControlActive = true;
     g_noteDynamicsShiftLatched = false;
     g_noteDynamicsProbabilityLatched = false;
+    const bool persisted = persistActiveProfileSnapshot();
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_NOTE_DYNAMICS\","
-               "\"velocity_shift\":%d,\"change_probability\":%u}\n",
-               velocity, static_cast<unsigned>(changeProbability));
+               "\"velocity_shift\":%d,\"change_probability\":%u,\"persisted\":%s}\n",
+               velocity, static_cast<unsigned>(changeProbability), persisted ? "true" : "false");
 }
 
 void handleSetUsbMidiCommand(const String &command) {

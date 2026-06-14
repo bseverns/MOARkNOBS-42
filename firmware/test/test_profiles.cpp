@@ -1,5 +1,6 @@
 #include "unity_config.h"
 #include <unity.h>
+#include <cmath>
 
 #include "BoardPowerProfile.h"
 #include "ConfigManager.h"
@@ -27,6 +28,13 @@ ProfileData makePopulatedProfile() {
     profile.led.r = 12;
     profile.led.g = 34;
     profile.led.b = 56;
+    profile.clock.tappedBpm = 97.5f;
+    profile.clock.clockOutEnabled = 1;
+    profile.clock.followExternalClock = 0;
+    profile.noteDynamics.velocityShift = -11;
+    profile.noteDynamics.changeProbability = 72;
+    profile.jitter.depth = 0.33f;
+    profile.jitter.smoothness = 0.81f;
     profile.lfos[0].shape = 3;
     profile.lfos[0].frequencyHz = 2.5f;
     profile.lfos[0].depth = 0.75f;
@@ -100,6 +108,13 @@ void test_profile_bounds_clamp() {
 
     ProfileData profile{};
     profile.routeCount = static_cast<uint8_t>(PROFILE_MAX_ROUTES + 3);
+    profile.clock.tappedBpm = NAN;
+    profile.clock.clockOutEnabled = 9;
+    profile.clock.followExternalClock = 3;
+    profile.noteDynamics.velocityShift = 127;
+    profile.noteDynamics.changeProbability = 255;
+    profile.jitter.depth = INFINITY;
+    profile.jitter.smoothness = -1.0f;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         profile.slots[i].midiChannel = 0;
         profile.slots[i].ef.mode = 99;
@@ -113,6 +128,13 @@ void test_profile_bounds_clamp() {
     TEST_ASSERT_TRUE(cfg.loadProfileSettings(1, loaded));
     TEST_ASSERT_TRUE(loaded.routeCount <= PROFILE_MAX_ROUTES);
     TEST_ASSERT_TRUE(loaded.led.brightness <= BoardPowerProfile::kLedBrightnessCap);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 120.0f, loaded.clock.tappedBpm);
+    TEST_ASSERT_EQUAL_UINT8(1, loaded.clock.clockOutEnabled);
+    TEST_ASSERT_EQUAL_UINT8(1, loaded.clock.followExternalClock);
+    TEST_ASSERT_EQUAL_INT8(63, loaded.noteDynamics.velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(100, loaded.noteDynamics.changeProbability);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, loaded.jitter.depth);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, loaded.jitter.smoothness);
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel >= 1);
         TEST_ASSERT_TRUE(loaded.slots[i].midiChannel <= 16);
@@ -145,6 +167,14 @@ void test_profile_round_trip_preserves_profile_payload() {
     TEST_ASSERT_EQUAL_UINT8(saved.led.r, loaded.led.r);
     TEST_ASSERT_EQUAL_UINT8(saved.led.g, loaded.led.g);
     TEST_ASSERT_EQUAL_UINT8(saved.led.b, loaded.led.b);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.clock.tappedBpm, loaded.clock.tappedBpm);
+    TEST_ASSERT_EQUAL_UINT8(saved.clock.clockOutEnabled, loaded.clock.clockOutEnabled);
+    TEST_ASSERT_EQUAL_UINT8(saved.clock.followExternalClock, loaded.clock.followExternalClock);
+    TEST_ASSERT_EQUAL_INT8(saved.noteDynamics.velocityShift, loaded.noteDynamics.velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(saved.noteDynamics.changeProbability,
+                            loaded.noteDynamics.changeProbability);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.jitter.depth, loaded.jitter.depth);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.jitter.smoothness, loaded.jitter.smoothness);
     TEST_ASSERT_EQUAL_UINT8(saved.lfos[0].shape, loaded.lfos[0].shape);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.lfos[0].frequencyHz, loaded.lfos[0].frequencyHz);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, saved.lfos[0].depth, loaded.lfos[0].depth);

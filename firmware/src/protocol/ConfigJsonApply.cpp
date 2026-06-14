@@ -1008,6 +1008,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     applyGlobalFilterState(config, anySlotPayloadSpecified);
     applyGlobalArgAndModeState(config, defaultArg);
     applyLedStateFromConfig(config);
+    persistActiveProfileSnapshot();
     return true;
 }
 } // namespace

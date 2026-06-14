@@ -19,6 +19,8 @@ void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings 
 // Profile snapshot capture and restore.
 ProfileData captureProfileSnapshot();
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots);
+bool persistActiveProfileSnapshot();
+void restoreActiveProfileRuntime(bool persistSnapshot);
 
 // Boot/default reconstruction of modulation state.
 void configureLFOs();

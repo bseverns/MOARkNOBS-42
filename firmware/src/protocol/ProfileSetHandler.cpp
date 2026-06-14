@@ -364,6 +364,59 @@ void applyLedProfilePatch(JsonObject root, ProfileData &profile) {
     }
 }
 
+void applyClockProfilePatch(JsonObject root, ProfileData &profile) {
+    if (!root.containsKey("clock")) {
+        return;
+    }
+
+    JsonObject clock = root["clock"].as<JsonObject>();
+    if (clock.containsKey("follow_external")) {
+        profile.clock.followExternalClock = clock["follow_external"].as<bool>() ? 1 : 0;
+    }
+    if (clock.containsKey("clock_out_enabled")) {
+        profile.clock.clockOutEnabled = clock["clock_out_enabled"].as<bool>() ? 1 : 0;
+    }
+    if (clock.containsKey("tapped_bpm")) {
+        const float tappedBpm = clock["tapped_bpm"].as<float>();
+        profile.clock.tappedBpm = std::isfinite(tappedBpm) ? constrain(tappedBpm, 20.0f, 300.0f)
+                                                           : profile.clock.tappedBpm;
+    }
+}
+
+void applyNoteDynamicsProfilePatch(JsonObject root, ProfileData &profile) {
+    if (!root.containsKey("note_dynamics")) {
+        return;
+    }
+
+    JsonObject noteDynamics = root["note_dynamics"].as<JsonObject>();
+    if (noteDynamics.containsKey("velocity_shift")) {
+        profile.noteDynamics.velocityShift =
+            static_cast<int8_t>(constrain(noteDynamics["velocity_shift"].as<int>(), -64, 63));
+    }
+    if (noteDynamics.containsKey("change_probability")) {
+        profile.noteDynamics.changeProbability = clampedU8(
+            noteDynamics, "change_probability", 0, 100, profile.noteDynamics.changeProbability);
+    }
+}
+
+void applyJitterProfilePatch(JsonObject root, ProfileData &profile) {
+    if (!root.containsKey("jitter")) {
+        return;
+    }
+
+    JsonObject jitter = root["jitter"].as<JsonObject>();
+    if (jitter.containsKey("depth")) {
+        const float depth = jitter["depth"].as<float>();
+        profile.jitter.depth =
+            std::isfinite(depth) ? constrain(depth, 0.0f, 1.0f) : profile.jitter.depth;
+    }
+    if (jitter.containsKey("smoothness")) {
+        const float smoothness = jitter["smoothness"].as<float>();
+        profile.jitter.smoothness = std::isfinite(smoothness) ? constrain(smoothness, 0.0f, 1.0f)
+                                                              : profile.jitter.smoothness;
+    }
+}
+
 void applyLfoProfilePatch(JsonObject root, ProfileData &profile) {
     if (!root.containsKey("lfos")) {
         return;
@@ -622,6 +675,16 @@ bool persistPatchedProfile(uint8_t id, ProfileData &profile, bool &activeApplied
     activeApplied = true;
     return true;
 }
+
+ProfileData buildPatchedProfileBaseline(uint8_t id) {
+    if (id == g_activeProfile) {
+        return captureProfileSnapshot();
+    }
+
+    ProfileData profile{};
+    configManager.loadProfileSettings(id, profile);
+    return profile;
+}
 } // namespace
 
 void handleSetProfilePayloadCommand(const String &command) {
@@ -651,10 +714,13 @@ void handleSetProfilePayloadCommand(const String &command) {
         return;
     }
 
-    ProfileData profile = captureProfileSnapshot();
+    ProfileData profile = buildPatchedProfileBaseline(request.id);
     JsonObject root = doc.as<JsonObject>();
     applyArpProfilePatch(root, profile);
     applyLedProfilePatch(root, profile);
+    applyClockProfilePatch(root, profile);
+    applyNoteDynamicsProfilePatch(root, profile);
+    applyJitterProfilePatch(root, profile);
     applyLfoProfilePatch(root, profile);
     String routeError;
     if (!applyRouteProfilePatch(root, profile, routeError)) {

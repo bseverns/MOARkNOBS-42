@@ -134,6 +134,22 @@ void writeProfileLed(JsonObject led, const ProfileData &profile) {
     rgb["b"] = profile.led.b;
 }
 
+void writeProfileClock(JsonObject clock, const ProfileData &profile) {
+    clock["follow_external"] = profile.clock.followExternalClock != 0;
+    clock["clock_out_enabled"] = profile.clock.clockOutEnabled != 0;
+    clock["tapped_bpm"] = profile.clock.tappedBpm;
+}
+
+void writeProfileNoteDynamics(JsonObject noteDynamics, const ProfileData &profile) {
+    noteDynamics["velocity_shift"] = static_cast<int>(profile.noteDynamics.velocityShift);
+    noteDynamics["change_probability"] = profile.noteDynamics.changeProbability;
+}
+
+void writeProfileJitter(JsonObject jitter, const ProfileData &profile) {
+    jitter["depth"] = profile.jitter.depth;
+    jitter["smoothness"] = profile.jitter.smoothness;
+}
+
 void writeProfileLfos(JsonArray lfos, const ProfileData &profile) {
     for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
         JsonObject lfo = lfos.createNestedObject();
@@ -200,6 +216,15 @@ void writeProfileResponse(StaticJsonDocument<Capacity> &doc, uint8_t id, bool st
 
     JsonObject led = doc.createNestedObject("led");
     writeProfileLed(led, profile);
+
+    JsonObject clock = doc.createNestedObject("clock");
+    writeProfileClock(clock, profile);
+
+    JsonObject noteDynamics = doc.createNestedObject("note_dynamics");
+    writeProfileNoteDynamics(noteDynamics, profile);
+
+    JsonObject jitter = doc.createNestedObject("jitter");
+    writeProfileJitter(jitter, profile);
 
     JsonArray lfos = doc.createNestedArray("lfos");
     writeProfileLfos(lfos, profile);

@@ -107,6 +107,13 @@ ProfileData captureProfileSnapshot() {
     profile.led.r = color.r;
     profile.led.g = color.g;
     profile.led.b = color.b;
+    profile.clock.tappedBpm = g_tappedBPM;
+    profile.clock.clockOutEnabled = g_clockOutEnabled ? 1 : 0;
+    profile.clock.followExternalClock = g_followExternalClock ? 1 : 0;
+    profile.noteDynamics.velocityShift = velocityShift;
+    profile.noteDynamics.changeProbability = changeProbability;
+    profile.jitter.depth = g_jitterSettings.depth;
+    profile.jitter.smoothness = g_jitterSettings.smoothness;
 
     for (uint8_t i = 0; i < PROFILE_LFO_COUNT; ++i) {
         LFO &lfo = lfoManager.lfo(i);
@@ -150,6 +157,10 @@ ProfileData captureProfileSnapshot() {
     return profile;
 }
 
+bool persistActiveProfileSnapshot() {
+    return configManager.saveProfileSettings(g_activeProfile, captureProfileSnapshot());
+}
+
 // 3b. Restore a previously captured profile into the live engine state. Callers can choose
 // whether that restore should also be committed back to EEPROM.
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
@@ -163,6 +174,19 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
 
     ledManager.setBrightness(profile.led.brightness);
     ledManager.setColor(CRGB(profile.led.r, profile.led.g, profile.led.b));
+    g_tappedBPM = profile.clock.tappedBpm;
+    g_clockOutEnabled = profile.clock.clockOutEnabled != 0;
+    g_followExternalClock = profile.clock.followExternalClock != 0;
+    velocityShift = profile.noteDynamics.velocityShift;
+    changeProbability = profile.noteDynamics.changeProbability;
+    g_noteDynamicsRemoteControlActive = false;
+    g_noteDynamicsShiftLatched = false;
+    g_noteDynamicsProbabilityLatched = false;
+    g_jitterSettings.depth = profile.jitter.depth;
+    g_jitterSettings.smoothness = profile.jitter.smoothness;
+    g_jitterRemoteControlActive = false;
+    g_jitterDepthLatched = false;
+    g_jitterSmoothnessLatched = false;
 
     lfoManager.applyProfile(profile);
 
@@ -220,6 +244,27 @@ void configureLFOs() {
     lfoManager.addInternalRoute(1, LFOInternalTarget::VelocityShift, 0.5f);
 }
 
+void restoreActiveProfileRuntime(bool persistSnapshot) {
+    configureLFOs();
+
+    g_activeProfile = configManager.getActiveProfile();
+    if (g_activeProfile >= NUM_PROFILES) {
+        g_activeProfile = 0;
+        configManager.setActiveProfile(g_activeProfile);
+    }
+    configManager.loadProfile(g_activeProfile);
+    potChannels.clear();
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        potChannels.push_back(configManager.getPotChannel(i));
+    }
+
+    ProfileData storedProfile{};
+    if (configManager.loadProfileSettings(g_activeProfile, storedProfile)) {
+        applyProfileSnapshot(storedProfile, persistSnapshot);
+    }
+    refreshEfVoicesFromConfig();
+}
+
 // 4b. Rebuild the envelope-follower voice cache after profile loads or recovery paths mutate the
 // underlying slot-to-follower mappings.
 void refreshEfVoicesFromConfig() {
@@ -249,22 +294,7 @@ bool initializeModes() {
             efBaseGains[i] = envelopeFollowers[i].getGain();
         }
     }
-    configureLFOs();
-
-    g_activeProfile = configManager.getActiveProfile();
-    if (g_activeProfile >= NUM_PROFILES) {
-        g_activeProfile = 0;
-        configManager.setActiveProfile(g_activeProfile);
-    }
-    configManager.loadProfile(g_activeProfile);
-    potChannels.clear();
-    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
-        potChannels.push_back(configManager.getPotChannel(i));
-    }
-    ProfileData storedProfile{};
-    if (configManager.loadProfileSettings(g_activeProfile, storedProfile)) {
-        applyProfileSnapshot(storedProfile, true);
-    }
+    restoreActiveProfileRuntime(true);
     return baselinesLoaded;
 }
 

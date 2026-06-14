@@ -79,6 +79,27 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
     // LED
     sanitized.led.brightness =
         constrain(sanitized.led.brightness, 0, BoardPowerProfile::kLedBrightnessCap);
+    // Clock
+    if (!std::isfinite(sanitized.clock.tappedBpm)) {
+        sanitized.clock.tappedBpm = 120.0f;
+    }
+    sanitized.clock.tappedBpm = constrain(sanitized.clock.tappedBpm, 20.0f, 300.0f);
+    sanitized.clock.clockOutEnabled = sanitized.clock.clockOutEnabled ? 1 : 0;
+    sanitized.clock.followExternalClock = sanitized.clock.followExternalClock ? 1 : 0;
+    // Note dynamics
+    sanitized.noteDynamics.velocityShift = static_cast<int8_t>(
+        constrain(static_cast<int>(sanitized.noteDynamics.velocityShift), -64, 63));
+    sanitized.noteDynamics.changeProbability =
+        static_cast<uint8_t>(constrain(sanitized.noteDynamics.changeProbability, 0, 100));
+    // Jitter
+    if (!std::isfinite(sanitized.jitter.depth)) {
+        sanitized.jitter.depth = 1.0f;
+    }
+    if (!std::isfinite(sanitized.jitter.smoothness)) {
+        sanitized.jitter.smoothness = 0.5f;
+    }
+    sanitized.jitter.depth = constrain(sanitized.jitter.depth, 0.0f, 1.0f);
+    sanitized.jitter.smoothness = constrain(sanitized.jitter.smoothness, 0.0f, 1.0f);
     // LFO
     if (sanitized.routeCount > PROFILE_MAX_ROUTES) {
         sanitized.routeCount = PROFILE_MAX_ROUTES;
