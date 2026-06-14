@@ -113,6 +113,7 @@ export class FormRenderer {
   updateValues() {
     const staged = this.runtime.getState().staged;
     for (const [path, control] of this.fields) {
+      if (this.isControlActive(control)) continue;
       const value = getValueAt(staged, path);
       control.set(value);
     }
@@ -286,7 +287,11 @@ export class FormRenderer {
       slider.addEventListener('input', () => commit(slider.value));
       numeric.addEventListener('change', () => commit(numeric.value));
       const initial = applyVisualValue(value ?? schema.default ?? slider.min);
-      this.fields.set(path, { set: (next) => applyVisualValue(next ?? initial) });
+      this.fields.set(path, {
+        element: numeric,
+        peers: [slider],
+        set: (next) => applyVisualValue(next ?? initial)
+      });
     } else {
       const input = document.createElement('input');
       input.type = 'text';
@@ -321,7 +326,18 @@ export class FormRenderer {
       control.addEventListener('change', listener);
       control.addEventListener('input', listener);
     }
-    this.fields.set(path, { set: setter || (() => {}) });
+    this.fields.set(path, { element, set: setter || (() => {}) });
+  }
+
+  isControlActive(control) {
+    const active = document.activeElement;
+    if (!active || !control) return false;
+    if (control.element && (active === control.element || control.element.contains?.(active))) {
+      return true;
+    }
+    return Array.isArray(control.peers)
+      ? control.peers.some((peer) => active === peer || peer.contains?.(active))
+      : false;
   }
 
   parseValue(schema, raw) {

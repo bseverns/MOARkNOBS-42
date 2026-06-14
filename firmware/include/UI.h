@@ -14,6 +14,10 @@ bool renderJitterTuningViewIfActive();
 void streamWebSerialScope();
 void streamWebSerialState();
 void flushPendingFilterPersists();
+void cancelPendingFilterPersists();
+void markFilterTuningRemoteControlActive(uint8_t slotIndex);
+void markAllFilterTuningRemoteControlActive();
+void clearFilterTuningRemoteControl();
 
 void initializeUI();
 void serviceDisplayDegradedMode();

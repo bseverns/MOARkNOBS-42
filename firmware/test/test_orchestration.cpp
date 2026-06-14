@@ -72,7 +72,26 @@ void resetUiGlobals() {
     changeProbability = 100;
     webSerialStreaming = false;
     potToEnvelopeMap.clear();
+    cancelPendingFilterPersists();
+    clearFilterTuningRemoteControl();
     arpeggiator.stop();
+}
+
+void assignEfSlotForUiTest(uint8_t slotIndex, int8_t followerIndex) {
+    buttonContext.activePot = slotIndex;
+    MIDISlot::EfSettings settings{};
+    settings.followerIndex = followerIndex;
+    potToEnvelopeMap[slotIndex] = settings;
+    MIDISlot &slot = configManager.getSlot(slotIndex);
+    slot.efSettings = settings;
+    slot.setEnvelopeFollowerIndex(followerIndex);
+}
+
+void setFilterPotsForPayload(float frequency, float q) {
+    const int rawFreq = static_cast<int>(((frequency - 20.0f) * 1023.0f) / (5000.0f - 20.0f));
+    const int rawQ = static_cast<int>(((q - 0.5f) * 1023.0f) / (4.0f - 0.5f));
+    buttonManager.setControlPotValueForTest(1, constrain(rawFreq, 0, 1023));
+    buttonManager.setControlPotValueForTest(2, constrain(rawQ, 0, 1023));
 }
 
 } // namespace
@@ -446,19 +465,76 @@ void test_ui_update_arp_tuning_edit_mode_updates_gate_and_octave() {
 void test_ui_update_filter_tuning_persists_slot_payload() {
     resetUiGlobals();
 
-    buttonContext.activePot = 0;
-    MIDISlot::EfSettings settings{};
-    settings.followerIndex = 0;
-    potToEnvelopeMap[0] = settings;
+    assignEfSlotForUiTest(0, 0);
 
     buttonManager.setControlPotValueForTest(1, 0);
     buttonManager.setControlPotValueForTest(2, 1023);
 
     updateFilterTuning(buttonContext);
+    advanceMs(1000);
+    flushPendingFilterPersists();
 
     const SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(0);
     TEST_ASSERT_EQUAL_FLOAT(20.0f, payload.frequency);
     TEST_ASSERT_EQUAL_FLOAT(4.0f, payload.q);
+}
+
+void test_ui_filter_tuning_remote_payload_blocks_mismatched_control_pots() {
+    resetUiGlobals();
+    assignEfSlotForUiTest(0, 0);
+
+    SlotEnvelopePayload appPayload{};
+    appPayload.filterType = static_cast<uint8_t>(EnvelopeFollower::LOWPASS);
+    appPayload.frequency = 2500.0f;
+    appPayload.q = 1.25f;
+    configManager.setSlotEnvelopePayload(0, appPayload);
+    markFilterTuningRemoteControlActive(0);
+
+    buttonManager.setControlPotValueForTest(1, 0);
+    buttonManager.setControlPotValueForTest(2, 1023);
+    updateFilterTuning(buttonContext);
+    advanceMs(1000);
+    flushPendingFilterPersists();
+
+    SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(0);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 2500.0f, payload.frequency);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.25f, payload.q);
+
+    setFilterPotsForPayload(2500.0f, 1.25f);
+    updateFilterTuning(buttonContext);
+
+    buttonManager.setControlPotValueForTest(1, 0);
+    buttonManager.setControlPotValueForTest(2, 1023);
+    updateFilterTuning(buttonContext);
+    advanceMs(1000);
+    flushPendingFilterPersists();
+
+    payload = configManager.getSlotEnvelopePayload(0);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 20.0f, payload.frequency);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 4.0f, payload.q);
+}
+
+void test_ui_filter_tuning_remote_payload_cancels_pending_local_persist() {
+    resetUiGlobals();
+    assignEfSlotForUiTest(1, 0);
+
+    buttonManager.setControlPotValueForTest(1, 0);
+    buttonManager.setControlPotValueForTest(2, 1023);
+    updateFilterTuning(buttonContext);
+
+    SlotEnvelopePayload appPayload{};
+    appPayload.filterType = static_cast<uint8_t>(EnvelopeFollower::HIGHPASS);
+    appPayload.frequency = 3200.0f;
+    appPayload.q = 0.9f;
+    configManager.setSlotEnvelopePayload(1, appPayload);
+    markFilterTuningRemoteControlActive(1);
+
+    advanceMs(1000);
+    flushPendingFilterPersists();
+
+    const SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(1);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3200.0f, payload.frequency);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.9f, payload.q);
 }
 
 void test_ui_stream_webserial_state_uses_active_slot_context() {

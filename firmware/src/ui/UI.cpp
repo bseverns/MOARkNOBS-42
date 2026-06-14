@@ -49,6 +49,8 @@ constexpr unsigned long kFilterPersistIdleMs = 900UL;
 constexpr unsigned long kFilterPersistMinIntervalMs = 500UL;
 constexpr float kFilterPersistFreqThresholdHz = 2.0f;
 constexpr float kFilterPersistQThreshold = 0.03f;
+constexpr float kFilterPickupFreqThresholdHz = 15.0f;
+constexpr float kFilterPickupQThreshold = 0.05f;
 constexpr float kFilterDisplayFreqThresholdHz = 0.5f;
 constexpr float kFilterDisplayQThreshold = 0.01f;
 constexpr int kNoteDynamicsDisplayThreshold = 1;
@@ -101,8 +103,15 @@ struct FilterPersistState {
     SlotEnvelopePayload pending{};
 };
 
+struct FilterRemoteControlState {
+    bool active = false;
+    bool freqLatched = false;
+    bool qLatched = false;
+};
+
 ControlOverlayState gControlOverlay;
 std::array<FilterPersistState, NUM_SLOTS> gFilterPersistStates{};
+std::array<FilterRemoteControlState, NUM_SLOTS> gFilterRemoteControlStates{};
 
 const char *configSlotTypeShortName(MIDIMessageType type) {
     switch (type) {
@@ -397,6 +406,38 @@ void flushPendingFilterPersists() {
     }
 }
 
+void cancelPendingFilterPersists() {
+    for (FilterPersistState &persist : gFilterPersistStates) {
+        persist.dirty = false;
+    }
+}
+
+void markFilterTuningRemoteControlActive(uint8_t slotIndex) {
+    if (slotIndex >= NUM_SLOTS) {
+        return;
+    }
+    gFilterPersistStates[slotIndex].dirty = false;
+    FilterRemoteControlState &remote = gFilterRemoteControlStates[slotIndex];
+    remote.active = true;
+    remote.freqLatched = false;
+    remote.qLatched = false;
+}
+
+void markAllFilterTuningRemoteControlActive() {
+    cancelPendingFilterPersists();
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        markFilterTuningRemoteControlActive(slotIndex);
+    }
+}
+
+void clearFilterTuningRemoteControl() {
+    for (FilterRemoteControlState &remote : gFilterRemoteControlStates) {
+        remote.active = false;
+        remote.freqLatched = false;
+        remote.qLatched = false;
+    }
+}
+
 namespace {
 
 ControlUiMode resolveControlUiMode(const ButtonManagerContext &context) {
@@ -575,11 +616,28 @@ void updateFilterTuning(ButtonManagerContext &context) {
     SlotEnvelopePayload desired = sanitizeEnvelopePayload(filterType, freq, q);
     freq = desired.frequency;
     q = desired.q;
-    context.envelopes[efIndex].configureFilter(freq, q);
 
     if (context.activePot < NUM_SLOTS) {
-        // Live filter response is immediate; persistence is idle-debounced to avoid flash churn.
         const uint8_t slotIndex = static_cast<uint8_t>(context.activePot);
+        FilterRemoteControlState &remote = gFilterRemoteControlStates[slotIndex];
+        if (remote.active) {
+            const SlotEnvelopePayload current = configManager.getSlotEnvelopePayload(slotIndex);
+            if (!remote.freqLatched &&
+                fabsf(desired.frequency - current.frequency) <= kFilterPickupFreqThresholdHz) {
+                remote.freqLatched = true;
+            }
+            if (!remote.qLatched && fabsf(desired.q - current.q) <= kFilterPickupQThreshold) {
+                remote.qLatched = true;
+            }
+            if (!(remote.freqLatched && remote.qLatched)) {
+                setFilterOverlay(current.frequency, current.q);
+                return;
+            }
+            remote.active = false;
+        }
+
+        context.envelopes[efIndex].configureFilter(freq, q);
+        // Live filter response is immediate; persistence is idle-debounced to avoid flash churn.
         SlotEnvelopePayload current = configManager.getSlotEnvelopePayload(slotIndex);
         if (envelopePayloadChangedMeaningfully(current, desired)) {
             FilterPersistState &persist = gFilterPersistStates[slotIndex];
@@ -587,6 +645,8 @@ void updateFilterTuning(ButtonManagerContext &context) {
             persist.lastInputMs = now();
             persist.dirty = true;
         }
+    } else {
+        context.envelopes[efIndex].configureFilter(freq, q);
     }
     setFilterOverlay(freq, q);
 }

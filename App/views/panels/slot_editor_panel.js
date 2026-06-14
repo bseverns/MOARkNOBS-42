@@ -46,6 +46,26 @@ export function createSlotEditorPanel({
     { value: 'centered', label: 'Centered' }
   ];
   const efDestinationValues = efDestinationOptions.map((option) => option.value);
+  let slotEditorRenderPending = false;
+  let slotEditorFocusGuardBound = false;
+
+  function bindSlotEditorFocusGuard() {
+    if (!formContainer || slotEditorFocusGuardBound) return;
+    slotEditorFocusGuardBound = true;
+    formContainer.addEventListener('focusout', () => {
+      setTimeout(() => {
+        if (!slotEditorRenderPending || isSlotEditorEditing()) return;
+        slotEditorRenderPending = false;
+        renderSlotEditor();
+      }, 0);
+    });
+  }
+
+  function isSlotEditorEditing() {
+    const active = document.activeElement;
+    if (!formContainer || !active || !formContainer.contains(active)) return false;
+    return ['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(active.tagName);
+  }
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
   function populateDetail() {
@@ -84,6 +104,12 @@ export function createSlotEditorPanel({
   // Rebuild the right-hand slot editor for the current selection and UI tier.
   function renderSlotEditor() {
     if (!formContainer) return;
+    bindSlotEditorFocusGuard();
+    if (isSlotEditorEditing()) {
+      slotEditorRenderPending = true;
+      return;
+    }
+    slotEditorRenderPending = false;
     parkNoteDynamicsCard();
     formContainer.innerHTML = '';
     const slot = slotState.slots[slotState.selected];

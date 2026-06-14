@@ -12,6 +12,7 @@
 #include "LFO/LFOManager.h"
 #include "Log.h"
 #include "Modes.h"
+#include "UI.h"
 
 // ProfileSetHandler.cpp is the structured `SET_PROFILE` patching layer.
 //
@@ -733,6 +734,9 @@ void handleSetProfilePayloadCommand(const String &command) {
     if (!persistPatchedProfile(request.id, profile, activeApplied)) {
         logProfileSetError("Profile patch could not be persisted");
         return;
+    }
+    if (activeApplied && root.containsKey("slots")) {
+        markAllFilterTuningRemoteControlActive();
     }
 
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_PROFILE\","

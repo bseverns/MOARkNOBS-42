@@ -120,6 +120,8 @@ void test_ui_update_note_dynamics_maps_control_pots();
 void test_ui_update_arp_tuning_updates_length_and_shape();
 void test_ui_update_arp_tuning_edit_mode_updates_gate_and_octave();
 void test_ui_update_filter_tuning_persists_slot_payload();
+void test_ui_filter_tuning_remote_payload_blocks_mismatched_control_pots();
+void test_ui_filter_tuning_remote_payload_cancels_pending_local_persist();
 void test_ui_stream_webserial_state_uses_active_slot_context();
 void test_wait_guard_clamps_when_threshold_exceeds_wait();
 void test_wait_guard_preserves_positive_delta();
@@ -231,6 +233,8 @@ void setup() {
     RUN_TEST(test_ui_update_arp_tuning_updates_length_and_shape);
     RUN_TEST(test_ui_update_arp_tuning_edit_mode_updates_gate_and_octave);
     RUN_TEST(test_ui_update_filter_tuning_persists_slot_payload);
+    RUN_TEST(test_ui_filter_tuning_remote_payload_blocks_mismatched_control_pots);
+    RUN_TEST(test_ui_filter_tuning_remote_payload_cancels_pending_local_persist);
     RUN_TEST(test_ui_stream_webserial_state_uses_active_slot_context);
     RUN_TEST(test_wait_guard_clamps_when_threshold_exceeds_wait);
     RUN_TEST(test_wait_guard_preserves_positive_delta);

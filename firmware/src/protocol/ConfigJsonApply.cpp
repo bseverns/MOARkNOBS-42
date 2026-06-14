@@ -19,6 +19,7 @@
 #include "Log.h"
 #include "Modes.h"
 #include "Protocol.h"
+#include "UI.h"
 #include "Utility.h"
 #include "protocol/ProtocolErrors.h"
 #include "protocol/SysExTemplateCodec.h"
@@ -1009,6 +1010,7 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     applyGlobalArgAndModeState(config, defaultArg);
     applyLedStateFromConfig(config);
     persistActiveProfileSnapshot();
+    markAllFilterTuningRemoteControlActive();
     return true;
 }
 } // namespace
