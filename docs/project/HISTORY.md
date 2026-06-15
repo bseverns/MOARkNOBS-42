@@ -1,271 +1,208 @@
 # Project History
 
-This page is historical narrative, not the source of current contract or support truth. When it disagrees with current README/reference/testing pages, the current contract pages win. See [Documentation Truth Map](../reference/DocumentationTruthMap.md).
+> **Doc class:** Historical narrative. This page is not the source of current contract, support, release, or test truth. When this page disagrees with current README, reference, validation, or release pages, the current contract and evidence pages win. See [Documentation Truth Map](../reference/DocumentationTruthMap.md).
 
-This file summarizes the development of the MOARkNOBS-42 project based on commit history with a few inserts re: design choices
+This file tells the development story of MOARkNOBS-42: why the repo sprawled, when the hardware got serious, and how the project turned from a pile of firmware experiments into a documented hardware-test package. It is based on commit history with a few first-person design notes left intact on purpose.
 
-## How to Read this History
+## Short Version
 
-- **Start with the focus tags.** Each block pairs a time range with the main obsession so you know whether you're about to read about PCB copper or MIDI voodoo.
-- **Skim the italic callouts** for the "why" behind the commits—they're the diary fragments that explain decisions better than dry hashes ever could.
-- **Use the bracketed references** to chase the actual commits or tags if you want to see the gritty diffs.
-- **Bridge notes** flag the `bridge/` tooling so you can wire telemetry without cobbling your own serial hacks.
+MOARkNOBS-42 started in late 2024 as an attempt to build more instruments, learn MIDI deeply, and push microcontroller work past one-function sketches. Through 2025 it became a real Teensy-based MIDI controller project with a PCB, display, EEPROM-backed configuration, envelope followers, arpeggiator behavior, WebSerial telemetry, and an expanding test harness.
 
-## 2024
+By early 2026, the center of gravity moved from "can the firmware do this?" to "can the whole instrument prove this?" Firmware, App, Bridge, docs, release tooling, and bench evidence started being treated as one product surface. The current repo posture is a hardware-test / beta-candidate package, not a public fabrication-ready release.
 
-- _I decided I wanted to build more instruments and wanted to explore MIDI and microcontrollers more expansively. Heavy early research around simple machines, 1-function mock ups, and C++ best-practices began. Initial functional inspiration: Bastl Instruments '60 Knobs' ([repo](https://github.com/bastl-instruments/60knobs)) and their wild [experimental playground](https://github.com/bastl-instruments/60knobs-experimental)_
-- **December 10:** Initial commit introduces the firmware source tree with modules for button scanning, MIDI handling, display control, and EEPROM support. [58ef040]
-- **Mid December:** Early work on display management and multiplexed button matrix ("mux management" and "display/managers").
-- _More complicated in areas that I didn't anticipate complexity in than in the outright complicated parts_
-- **Late December:** Adds EEPROM and USB MIDI functionality, debounce logic, and second revision of the display code. [dbf3c21, 788a1ba]
+The useful arc is:
 
-## 2025
+- **2024 to early 2025:** exploration, firmware scaffolding, KiCad/EasyEDA hardware starts.
+- **Spring and summer 2025:** first board spins, firmware baseline, MIDI expansion, WebSerial, first public drops.
+- **Fall 2025:** CI, diagnostics, docs, teaching structure, and bridge/test discipline.
+- **Winter 2025 to early 2026:** browser configurator, LFOs, macro/scene storage, and safer live recovery.
+- **March to May 2026:** release hardening, prototype fabrication handoff, contract cleanup, Node 24 bridge path, and evidence-driven release gates.
 
+## How to Read This History
+
+- **Read phases, not every hash.** Each phase names the main obsession so you know whether you are in copper, firmware, browser, Bridge, or release-proof territory.
+- **Treat "Turning point" callouts as the story spine.** They mark moments where the project changed shape, not just moments where code landed.
+- **Use commit references as trailheads.** Short hashes and tags are included where they already existed in the old history; missing hashes are labeled with durable topic names instead of volatile placeholders.
+- **Read reflections as diary fragments.** The italic sections keep the first-person design voice, grouped away from the factual bullets so the page scans without losing its pulse.
+- **Use contract docs for current truth.** This page remembers the path. It does not define today's protocol, support boundary, release status, or test requirements.
+
+## Completed History
+
+### Phase 1: Origin, Firmware Skeleton, and Board Curiosity (Late 2024 - March 2025)
+
+The project begins as a hands-on MIDI and microcontroller study, with Bastl Instruments' [60 Knobs](https://github.com/bastl-instruments/60knobs) and [60knobs-experimental](https://github.com/bastl-instruments/60knobs-experimental) acting as early sparks.
+
+- **December 10, 2024:** The initial commit introduces the firmware source tree with modules for button scanning, MIDI handling, display control, and EEPROM support. [58ef040]
+- **Mid December 2024:** Early display management, multiplexed button matrix work, "mux management," and display managers start forming the first runtime shape.
+- **Late December 2024:** EEPROM, USB MIDI functionality, debounce logic, and a second display-code revision land. [dbf3c21, 788a1ba]
+- **January - March 2025:** Hardware design starts in KiCad, then shifts into repeated board iteration. Firmware cleanup and configuration handling continue alongside the first serious PCB files. [70665ff, 4c22a8b]
+- **Late January 2025:** The EasyEDA project appears, the firmware tree moves under `firmware/`, and substantial board files arrive. [20e518a]
+- **February - March 2025:** Board revisions, button routing, and resistor pull-up improvements keep cycling. [f36d220, dd0ebb6]
+
+> **Turning point:** The project stops being only a firmware experiment once the repo has to care about physical layout, not just whether a sketch compiles.
+
+**Reflections from this stretch**
+
+- _I decided I wanted to build more instruments and wanted to explore MIDI and microcontrollers more expansively. Heavy early research around simple machines, one-function mockups, and C++ best practices began._
+- _More complicated in areas that I didn't anticipate complexity in than in the outright complicated parts._
 - _How is this thing supposed to happen, as more than just a simple experiment?_
+- _My old workstation only ran up to KiCad 6._
 
-### January – March — Hardware Layout Bootstrapping
+### Phase 2: First Board Spin and Firmware Baseline (April - June 2025)
 
-- Hardware design begins in KiCad. Multiple board iterations are committed along with early firmware clean‑ups and configuration handling. [70665ff, 4c22a8b]
-- _My old workstation only runs up to kiCAD 6_
-- By late January the "easyeda" project is created and the firmware tree moves under `firmware/` with substantial PCB files added. [20e518a]
-- February and March see continual board revisions (`brd`, `brd v2`), button routing tweaks, and resistor pull-up improvements. [f36d220, dd0ebb6]
+Spring turns the repo into something with named hardware, testable firmware pieces, and enough documentation to begin carrying intent forward instead of relying on memory.
 
-### April — Repo Reorg & First Board Spin
+- **April 2025:** Repository reorganization and the first official PCB revision, `MN42-1`, land in EasyEDA. [174b516, f5916a7]
+- **May 2025:** Firmware refactors focus on display timing, envelope follower behavior, and general stability. README updates start documenting actual use. [44e89dc, ec7edb3]
+- **May 2025:** The initial testing framework appears with incremental fixes. [ed357da, 6a4e54a]
+- **Early June 2025:** Unit tests for `BiquadFilter` arrive, along with fade-animation fixes. [b050f4f, 69fd0db]
+- **June 17, 2025:** Tag `firmware1.0` marks a stable firmware baseline before the feature set widens. [04f6b72]
+- **Late June 2025:** MIDI message support expands beyond plain CCs, slot verification appears, filter feedback improves, and docs explain envelope filters, ARG mode, and test approaches. [6cef527, 0e5c9d9, 2615616, ab8078a, 43b1d33, b14ef44]
+- **June 25 - 28, 2025:** Pin assignments are consolidated, old files are removed, the MIT license lands, hardware docs improve, DSP/control-button tests expand, and README cleanup wraps the documented state. [bfbfbaf, cb39705, b703f1f, 1a2b239, 8ed5568]
 
-- Repository reorganization and creation of the first official PCB revision `MN42-1` in EasyEDA. [174b516, f5916a7]
-- _Work just a little at a time, and eventually you have a whole castle_
+> **Turning point:** `firmware1.0` is less "done" than "stable enough to mutate." After this, the project has a baseline to branch from instead of a fog bank.
 
-### May — Firmware Refine & Test Harness
+**Reflections from this stretch**
 
-- Firmware refactors focus on display timing, envelope follower behavior, and general stability. README updates document usage. [44e89dc, ec7edb3]
-- Initial testing framework appears along with incremental fixes. [ed357da, 6a4e54a]
-- _Getting onto breadboards for timing testing/display/midi/etc._
-
-### June — Filters, MIDI Depth, & Documentation
-
-- Early June introduces unit tests for the BiquadFilter and bug fixes around fade animations. [b050f4f, 69fd0db]
-- **June 17:** Tagged as `firmware1.0`, marking a stable baseline before adding more features. [04f6b72]
-- _I bet this can do so much more than CC really easy_
-- Following this, MIDI capabilities expand significantly with new message types and slot verification. [6cef527, 0e5c9d9]
-- **June 23:** MIDI type combos and filter tuning feedback are implemented, and documentation is expanded. [2615616, ab8078a]
+- _Work just a little at a time, and eventually you have a whole castle._
+- _Getting onto breadboards for timing testing/display/MIDI/etc._
+- _I bet this can do so much more than CC really easy._
 - _Decided to give AI tools a try because who am I to say no to a perfectly good tool?_
-- Extensive cleanup on June 25 consolidates pin assignments, removes old files, adds the MIT license, and updates hardware docs. [bfbfbaf, cb39705]
-- Additional DSP tests and control button wiring verification land on June 26. [b703f1f, 1a2b239]
-- Late June brings documentation improvements describing envelope filters, ARG mode, and exhaustive testing approaches. [43b1d33, b14ef44]
-- **June 28:** Final `readme tweaks` commit wraps up the documented state of the project. [8ed5568]
-- _^^^ see what I mean? I am tyring to get better at documentation as I go, but this helps explain what is happening so much more than my drafts alone. I just have an assistant now._
+- _I am trying to get better at documentation as I go, but this helps explain what is happening so much more than my drafts alone. I just have an assistant now._
 
-### July — Arpeggiator Expansion & Testing Discipline
+### Phase 3: Feature Expansion, Public Drops, and Test Discipline (July - August 2025)
 
-- Arpeggiator mode added with base note support and full MIDI type coverage. [850b4e9, 60abd55, e03466d]
-- PlatformIO build updated to include the arpeggiator sources. [6b81ed0, 1e9a015]
-- README explains new arpeggiator behavior. [09ffda2]
-- Test suite expanded: biquad filter modes and EEPROM slot verification. [2716465, 9a8733b]
-- Button-driven navigation simplifies test phases. [8716674]
-- Helper functions unify test initialization. [bf1936f, 109a1b8]
-- Variables clarified for easier maintenance. [6d769ec]
-- Documentation overhaul adds flashing instructions, diagrams, and links back to this history. Firmware comments and tests gain more clarity. [822a1ea, 5f3e34b, e25622e, 0941fcb]
+Summer is where MOARkNOBS-42 starts acting like an instrument instead of a hardware exercise. The arpeggiator, deeper MIDI types, WebSerial telemetry, diagnostics, and CI/test expectations all arrive in a noisy cluster.
 
-### August — Release, CI Discipline, and Telemetry
+- **July 2025:** Arpeggiator mode lands with base-note support and full MIDI type coverage. PlatformIO builds pick up the arpeggiator sources, README behavior gets documented, and tests expand across biquad filter modes and EEPROM slot verification. [850b4e9, 60abd55, e03466d, 6b81ed0, 1e9a015, 09ffda2, 2716465, 9a8733b]
+- **July 2025:** Button-driven navigation simplifies test phases, helper functions unify test initialization, variables get clearer, and docs add flashing instructions, diagrams, and links back to this history. [8716674, bf1936f, 109a1b8, 6d769ec, 822a1ea, 5f3e34b, e25622e, 0941fcb]
+- **Early August 2025:** Hardware v1.02 work completes, `Utility::processBulkUpdate` is refactored around a raw char buffer, and `MN42_v2` design assets arrive under hardware references. `fea338e` calls for thicker LED power traces so the LEDs do not sag or cook when current rises.
+- **Early August 2025:** NRPN, RPN, and raw SysEx support widen the MIDI story; WebSerial starts streaming runtime state to the browser.
+- **August 6, 2025:** First public drop `v0.1.0` bundles filter-tuning pots, a self-driving arpeggiator, WebSerial telemetry, NRPN/RPN/SysEx support, and the first `CHANGELOG`. [v0.1.0]
+- **August 8, 2025:** PR #286 brings in FastLED and adds teachable comments around the early browser configurator path. [956069c]
+- **Late August 2025:** CI flakes force build-script hardening. The MIDI library changes, `usb_midi` ghosts get chased down, and a Unity test rig makes commits prove themselves.
+- **August 22 - 23, 2025:** Diagnostic mode lands with self-test pages, compact matrix view, reset-cause boot banner, system report, release workflow, pre-commit lint, and CI pinned to Node 20 at the time. [0215e43, 00af0f1, 399b17, b7c126a, 19fbe9b, 7ee46c7, 702c107]
+- **August 25, 2025:** SparkFun reference sidebars join the docs as learning links from the source. [4e4cf22]
 
-- Finalizing helpers and test suites.
-- Hardware v1.02 design completed.
-- Clarifications added to language and comments expanded throughout the repo.
-- Refactored `Utility::processBulkUpdate` in `firmware/src/Utility.cpp` to chew through bulk updates with a raw char buffer.
-- Dropped the gritty `MN42_v2` hardware rev with fresh design assets under `hardware/MN42-1/`.
-- `fea338e` calls for thicker LED power traces in `hardware/MN42-1/`—beefier copper keeps the LEDs from sagging or cooking when you crank the current.
-- NRPN, RPN, and raw SysEx support crash the party, ditching vanilla CCs for full‑fat MIDI mojo and teaching us how deep the protocol rabbit hole really goes.
-- WebSerial begins streaming the synth's guts straight to the browser; the editor's rough edges prove the web can be a lab bench if you don't mind a little chaos.
+> **Turning point:** `v0.1.0` is the first public signal that the project is not just private bench noise. The repo now has releases, browser telemetry, deeper MIDI, and a test culture that can hurt your feelings usefully.
+
+**Reflections from this stretch**
+
 - _If you ever wanted a synth to show you its source and its soul, this is the moment._
-- Wired up the filter‑tuning pot and roughed up the arpeggiator—hands‑on analog control meets sequencer swagger, plus a reminder that drift and off‑by‑ones are always lurking.
-- **August 6:** First public drop lands as `v0.1.0`, bundling filter‑tuning pots, a self‑driving arpeggiator, WebSerial telemetry, NRPN/RPN/SysEx support, and the project's inaugural `CHANGELOG`. [v0.1.0]
-- **August 8:** Merged PR #286, hauling in the full FastLED arsenal and scribbling teachable comments all over the early browser configurator path. [956069c]
-- **August 11** My ears are still ringing because I went to a metal show in the basement of an American Legion. I am scrambling to make these Unity testers work for the codebase as well as actual builds of the firmware.
+- _My ears are still ringing because I went to a metal show in the basement of an American Legion. I am scrambling to make these Unity testers work for the codebase as well as actual builds of the firmware._
 - _Standards are not optional; often the best lessons come from coloring off the page._
-- **Late August:** CI kept flaking out, so the build scripts took a beating. Swapped the MIDI library, chased phantom `usb_midi` ghosts, and bolted on a Unity test rig so every commit has to prove itself.
-- **August 22–23:** Diagnostic mode lands with self-test pages and a compact matrix view, the boot banner decodes reset causes and spills a system report, and a release workflow with pre-commit lint locks CI to Node 20. [0215e43, 00af0f1, 399b17, b7c126a, 19fbe9b, 7ee46c7, 702c107]
-- **August 25:** SparkFun reference sidebars crash the docs, curating learning links straight from the source. [4e4cf22]
 - _Because a README that teaches you nothing is just wall art._
 
-### September — Hardening, Bridge Docs, and Next Spin Prep
+### Phase 4: Diagnostics, Bridge Notes, and Teaching Repo (September - December 2025)
 
-- **Early September:** Documented the `bridge/` scripts so serial telemetry nerds can plug in without reverse engineering the handshake.
-- Firmware clean-up blitz: reorganized diagnostic docs, annotated the boot banner logic, and dialed in Unity test expectations so the CI lights stay green.
-- Hardware planning notes capture the tweaks for a potential `MN42-1.1` spin—beefier regulator headroom and tidier pot footprints are on deck.
-- Wrote this "how to read" primer and restructured the month blocks so new contributors can ramp faster than we did.
+Fall turns the repo into a field guide. The work is still technical, but the bigger shift is that bring-up rituals, bridge behavior, annotated source, and repeatable tests become first-class material.
+
+- **September 2025:** `bridge/` scripts get documented so serial telemetry can be wired without reverse-engineering the handshake. Diagnostic docs, boot banner logic, and Unity expectations are cleaned up.
+- **September 2025:** Hardware planning notes capture possible `MN42-1.1` changes: regulator headroom, pot footprints, and related spin prep.
+- **October 2025:** Major README and HISTORY passes tighten cross-links, PlatformIO test breadcrumbs, scoped button-matrix rituals, WebSerial console macros, and the "use Serial1, not Serial" Unity transport lesson.
+- **Mid October 2025:** `ConfigManager` pushes stored MIDI channel maps into live managers, `PotentiometerManager` tracks the same EEPROM offsets, the globals JSON loader gets more room for hardware presets, and `test_system_report.cpp` routes Unity chatter through the same `PrintTarget`/`Serial1` combo as the rest of the harness.
+- **Late October 2025:** `demo_button_ef_usb_midi.cpp` provides a button-plus-envelope USB MIDI sanity sketch.
+- **October 31, 2025:** `v0.2.0` ships diagnostic boot pages, verbose reset banner, USB MIDI demo, and release/CI discipline.
+- **November 2025:** Firmware comments get a teaching pass across major `.cpp` files. Slot ownership, EEPROM layout, SysEx templates, schema page reservations, source tour material, and lesson headers turn the repo into half notebook, half lab.
+- **Mid November 2025:** The Playwright-driven simulator rehearses handshake, schema validation failure, checksum/ACK rollback, and simulator toggles. `npm --prefix App test` gets wired into `test.sh` and CI.
+- **Late November 2025:** WebSerial aligns with `CONFIG_VERSION` `0x0004`; the browser reads `git_sha`, `build_time`, `free_ram`, and `free_flash` from the handshake. The LED editor moves from a 42-cell color grid to brightness plus hex color, and runtime normalization keeps staged diff/apply behavior aligned with firmware slot patches.
+- **December 2025:** `firmware/system_test/mn42_fullstack_runner.js` starts spawning the Bridge, confirming `HELLO`, sending slot patches over OSC, tailing telemetry, and writing JSON/text logs. Docs describe the upload-to-runner flow, and Playwright migration coverage grows teeth.
+
+> **Turning point:** The repo stops treating docs as a recap and starts treating them as part of the instrument. A future builder can learn from source comments, tours, tests, and runner evidence instead of spelunking old commits.
+
+**Reflections from this stretch**
+
 - _Next milestone: line up the manufacturing quote without losing the DIY ethos._
+- _Documentation isn't a tombstone; it's a mosh pit and we just pushed closer to the stage._
+- _Feels good when the tooling jams as hard as the hardware: documentation, tests, and demo riffs all screaming through the same signal chain._
 
-### October — Docs, Discipline, and Demo Energy
+### Phase 5: Configurable Instrument and Live-Recovery Shape (January - February 2026)
 
-- Started the month by re-reading every major README and HISTORY entry, then tightening cross-links so the repo feels more like a synth-building field guide than a junk drawer.
-- Added explicit breadcrumbs from the docs back to the PlatformIO test flow so contributors can jump straight from prose into `pio test -d firmware -e teensy40_unity -vvv` reps without guesswork.
-- Captured the debugging rituals we keep repeating—scoped button-matrix traces, WebSerial console macros, and the “use Serial1, not Serial” mantra—so future us stops spelunking commit logs for the same hints.
-- Logged this update right as it landed because history that isn’t timestamped when the solder fumes are still in the air might as well be fiction.
-- _Documentation isn’t a tombstone; it’s a mosh pit and we just pushed closer to the stage._
-- **Mid October:** ConfigManager now pushes its stored MIDI channel map straight into the live managers, PotentiometerManager tracks the same EEPROM offsets, and the globals JSON loader grabbed extra breathing room so oversized hardware presets stop choking the boot sequence.
-- **Mid October:** `test_system_report.cpp` pipes its Unity chatter through the same `PrintTarget`/`Serial1` combo the rest of the harness uses, dodging the phantom output problem that kept us guessing.
-- **Late October:** Dropped `demo_button_ef_usb_midi.cpp`, a button-plus-envelope USB MIDI sketch that shoves note-ons at your DAW while the envelope follower breathes CC sweeps—perfect for sanity checking the transport without hauling in the full rig.
-- **October 31:** Punched `v0.2.0` out the door with the diagnostic boot pages, verbose reset banner, USB MIDI demo, and the fresh release/CI discipline baked into the repo so contributors inherit a rig that actually proves itself.
-- _Feels good when the tooling jams as hard as the hardware—documentation, tests, and demo riffs all screaming through the same signal chain._
+Early 2026 is where the system starts behaving like a configurable performance object. LFO routing, browser-side editing, serial dispatch cleanup, macro/scene storage, onboarding UX, and demo safety all move forward together.
 
-### November — Teaching Pass & Crash Course Maps
+- **January 2026:** Firmware instantiates a dedicated `LFOManager`, seeds two routed oscillators for LED brightness, arp swing, EF gain trim, and shared diagnostics/telemetry globals. Unity/LFO tests cover shapes, clock sync ratios, normalized outputs, MIDI-clock loss, and EEPROM-backed route snapshots. [2fe3c15]
+- **January 2026:** The App splits the runtime kernel from the BenzKnobz view layer, adding schema-driven forms, staged diff/rollback UI, telemetry cards, MIDI monitor, simulator toggle, and Playwright coverage for config forms, bridge handshake, MIDI monitor, and migration flow. [2fe3c15]
+- **January 2026:** Serial command handling is refactored from a massive `processCommandQueue` ladder into a sorted dispatch table with dedicated handlers, `dispatchCommand`, unknown-command logging, and Unity coverage through `testOnly_dispatchCommand`. [dispatch-refactor-2026-01]
+- **January 2026:** `test/test_protocol_dispatch.cpp` covers known `HELLO` dispatch and unknown commands. A small `firmware/python` shim points `python` to `python3` for PlatformIO helper compatibility in `python3`-only environments. [dispatch-refactor-2026-01]
+- **February 2026:** Macro and scene snapshot plumbing starts: `SAVE_MACRO_SLOT`, `RECALL_MACRO_SLOT`, richer LED mode planning, scheduler-driven LED animation, fixed-size scene records, EEPROM-backed slots, and browser controls begin taking shape.
+- **February 2026:** The App gains persisted Basic/Advanced UI modes, glossary/help cues, safer profile workflow, RPC gating, and clearer connect/disconnect behavior across profile, macro, and scene controls.
+- **February 2026:** Bridge onboarding docs get rebuilt with quickstart, performer one-sheet, operator reference, packaging roadmap, release artifact checklist, smoke scripts, package scripts, and npm aliases.
+- **February 2026:** CAD iteration files such as `.epro`, `.eprj`, autosave, and backup outputs are ignored by default so release surfaces stay focused.
+- **February 2026:** Demo polish adds a `device_name` manifest field, clear "Connected to" banner, connect-failure help, Playwright coverage for connection UX, more readable OLED labels, a panic-safe exit combo (`Ctrl0 + Ctrl1 + Ctrl2`), demo presets, and a runbook in `docs/validation/DemoPolish.md`.
 
-- Pulled a comment pass across the entire firmware stack so every major `.cpp`
-  reads like a guided lab—why we clamp enums, how the mux settle time works,
-  what "ownership" means for vectors living in global scope.
-- Locked in the new slot-ownership ledger and EEPROM layout: slots now declare
-  which manager owns them, their SysEx templates ship with each record, and the
-  `0x0004` schema reserves dedicated pages so migrations don't trample saved
-  presets.
-- Root README sprouted a "Firmware Stack Crash Course" pointing straight at the
-  annotated sources. The firmware README now unpacks the pointer/ownership
-  philosophy for folks learning embedded design by building weird instruments.
-- CHANGELOG and HISTORY entries (this one!) flag the documentation shift so
-  future builders know exactly when the repo turned into half notebook, half
-  teaching guide.
-- Follow-up docs drop a Field Guide + tour script so mentors can walk builders
-  through the annotated files in a single sitting—think of it as office-hours
-  crib notes baked into the repo.
-- Lesson headers now call out the subjects each annotated block covers: boot
-  choreography, mux scanning, EEPROM hygiene, signal flow math, and MIDI queue
-  arbitration all get their own riffs so teachers can stitch together bespoke
-  labs.
+> **Turning point:** The browser is no longer only a log window. It becomes a guarded editor that can rehearse changes, validate schemas, recover from bad live state, and expose the instrument to less-technical users without lying about what is happening underneath.
 
-#### Mid November — Playwright Dress Rehearsal
+**Reflections from this stretch**
 
-- Ran the Playwright-driven simulator through a full dress rehearsal so the
-  teaching tour has a live lab to point at, not just screenshots. The script
-  walks the handshake, forces the schema validation failure branch, replays a
-  checksum/ACK rollback, and slaps the simulator toggle to prove each flow in
-  the new spec actually screams in the browser.
-- Logged the win right in the tooling: `npm --prefix App test` is now wired into
-  `test.sh` and the CI workflows, so the same command new contributors run on
-  their laptops is the guardrail that keeps the rig honest. Pull it up when you
-  teach the module—the prose invites, the command gives them a riff to play.
-
-#### Late November — WebSerial Parity Check
-
-- The WebSerial dashboard now speaks the same manifest dialect as
-  `CONFIG_VERSION` `0x0004`: the browser reads `git_sha`, `build_time`,
-  `free_ram`, and `free_flash` straight from the handshake so the migration
-  dialog stops screaming false mismatches.
-- The editor ditched the 42-cell LED colour grid in favour of a brightness +
-  hex picker that mirrors the firmware’s single `led` payload, and the local
-  schema advertises version `4` to match the firmware’s `GET_MANIFEST` story.
-- Runtime normalization backfills follower assignments from slot payloads and
-  the new `envelopes` block, keeping the staged diff/apply loop locked in step
-  with the slot patches the firmware now emits.
-
-### December — Full-stack Autopilot & Migration Drills
-
-- The `firmware/system_test/mn42_fullstack_runner.js` script graduates from
-  prophecy to practice: it now spawns the bridge for you, confirms the HELLO
-  handshake, slings a slot patch over OSC, and tails the telemetry stream
-  before handing back JSON + text logs (`logs/system-test.*`) you can stash in
-  CI artifacts or your lab notebook.
-- Docs finally admit the automation exists—`docs/TESTING.md` spells out the
-  upload → runner flow so workshop crews don’t have to reverse engineer the
-  gauntlet.
-- Playwright coverage grows teeth: the headless simulator now rewrites the
-  manifest mid-run to trigger the migration dialog, rehearses rollback, and
-  proves a clean apply clears the diff badge. `npm --prefix App test` doubles as
-  a migration-fire drill you can run without touching hardware.
-
-## 2026
-
-### January — Dual LFO Engines & Routing
-
-- Firmware now instantiates a dedicated `LFOManager` inside `firmware_main.cpp`, seeds two routed oscillators (LED brightness, arp swing, EF gain trim), and mirrors the normalized bus onto shared globals so OLED diagnostics and WebSerial telemetry see the same heartbeat. [2fe3c15]
-- _The rig finally has the pulse I imagined—two synced modulators that can flow into LEDs, the arpeggiator, MIDI CCs, or every envelope follower tweak without the scheduler hitching a beat._
-- Unity/LFO tests now cover shapes, clock sync ratios, and normalized outputs so the oscillators stay honest even when MIDI clock vanishes, and EEPROM-backed profile payloads save the shape/sync/route snapshots between boots. [2fe3c15]
-
-### January — Web Configurator Build-Out
-
-- The App now splits the runtime kernel from the BenzKnobz view layer, introducing schema-driven forms, a staged diff+rollback panel, telemetry cards, a MIDI monitor, and a simulator toggle rooted in the refreshed `runtime.js`. [2fe3c15]
-- _With the simulator standing in for the Teensy and schema validation guarding every Apply, the browser is no longer just a read-only log—it edits profiles, replays slot patches, and rehearses checksum rollbacks before you touch the hardware._
-- Playwright specs now vet the config forms, MIDI monitor, bridge handshake, and migration dance so CI can prove the UI without a human in Chromium. [2fe3c15]
-- Docs (README, Builder’s Handbook, new `docs/profiles-ui.png`) now explain the runtime contract and UI affordances so field labs can riff off the browser without reverse-engineering the glue code. [2fe3c15]
-
-### January — Serial Command Dispatch Refactor
-
-- Replaced the massive `processCommandQueue` ladder with a sorted dispatch table, dedicated handler functions, and a reentrant `dispatchCommand` so serial commands stay heap-free and easy to extend; the dispatcher now logs unknown commands along with the available list and is exposed to Unity tests via `testOnly_dispatchCommand`. [current change]
-- Added `test/test_protocol_dispatch.cpp` plus Unity hooks that hit both a known `HELLO` command and an unknown command to keep the dispatch layer covered even when the rest of the firmware sleeps. [current change]
-- Introduced a tiny `firmware/python` shim that points `python` to `python3` so PlatformIO’s `-c` helper and CI-generated test scripts keep running even in environments that only ship `python3`. [current change]
-
-### February — Macro & Scene Snapshots
-
-- Drafted the WebSerial and firmware plumbing so slot 254 can host a macro snapshot: new `SAVE_MACRO_SLOT`/`RECALL_MACRO_SLOT` commands, UI buttons near the profile panel, inline success/failure cues, and optional `GET_CONFIG` refreshes keep the browser in sync without overwriting the active profile.
-- Spec'd richer LED feedback with `LedMode` (Static/PeakHold/Trail/ClockPulse), a scheduler-driven `LedAnimator`, diagnostics overrides, and RPC/UI controls so pots and envelopes can pulse, hold, or trail visually without touching interrupt context.
-- Laid out the scene recall system: fixed-size `Scene` records that bundle a saved `ConfigState` plus a 16‑byte name, EEPROM-backed slots (4–8), `SAVE_SCENE`/`RECALL_SCENE` verbs, and a planned “Scenes” WebSerial tab so performers can snapshot complete state safely and recall by name.
-
-### February — Onboarding UX, Bridge Usability, and v1.0 Release Prep
-
-- Introduced a persisted Basic/Advanced App UI mode so first-time users can focus on plain knob-to-MIDI mapping while experienced users still get full EF/ARG/filter tooling.
-- Added glossary/help cues directly in slot editors and schema-rendered forms so terms like EF, ARG, and SysEx placeholders are explained where users actually click.
-- Profile workflow got a guided lane (switch target slot -> apply staged edits -> save slot), plus safer RPC gating and clearer connect/disconnect behavior across profile, macro, and scene controls.
-- Bridge docs were rebuilt for real-world onboarding: quickstart, performer one-sheet, full operator reference, packaging roadmap, and release artifact checklist now cross-link from docs index and release guide.
-- Added bridge release-prep scripts (`smoke_bridge_cli.js`, `package_bridge.sh`) and npm aliases so packaging work can start from repeatable commands instead of ad-hoc shell history.
-- Hardware CAD iteration files are now ignored by default (`.epro/.eprj/autosave/_backup`) to keep repository release surfaces focused on firmware/app/docs while local board iteration remains private.
-- Ran a deep explainability pass over the post-2025 runtime/protocol/scheduler/config code paths so future contributors can read intent (ordering, recovery, throttling, staging semantics) directly in-source.
-- **Commit summary (current v1.0 prep sweep):** newcomer-friendly App UX, profile-flow hardening, bridge onboarding + packaging docs, release tooling/checklists, and maintainability comments across recent architecture work.
-
-### February — Demo Polish Pass (Identity, Readability, Safety)
-
-- WebSerial identity contract now includes a dedicated `device_name` field in `GET_MANIFEST`, letting host apps show explicit device identity instead of relying on guesswork from firmware version strings alone.
-- The App connect card now carries a clear `Connected to: <device> (FW <version>)` banner, plus an inline "What to do if connect fails" helper that points users to close competing serial clients, replug USB, and refresh.
-- Added focused Playwright coverage (`App/tests/connection_banner.spec.js`) so the identity banner + connect UX path are guarded in CI using the simulator harness.
-- OLED labeling got a readability cleanup for demo scenarios: arp shape names expanded to human-readable terms, filter labels de-abbreviated, and swing preset feedback now reports as `Swing: n%`.
-- Added an explicit panic-safe exit combo (`Ctrl0 + Ctrl1 + Ctrl2`) that stops arp, disables EF follow, and reloads the active profile baseline so demos can recover quickly from bad live state.
-- Added demo-focused App presets (`DEMO_A - Reactive Stack`, `DEMO_B - Clock Contrast`) plus a dedicated runbook (`docs/DemoPolish.md`) covering soak, EXT-clock stress checks, panic-path validation, and asset prep.
+- _The rig finally has the pulse I imagined: two synced modulators that can flow into LEDs, the arpeggiator, MIDI CCs, or every envelope follower tweak without the scheduler hitching a beat._
+- _With the simulator standing in for the Teensy and schema validation guarding every Apply, the browser is no longer just a read-only log; it edits profiles, replays slot patches, and rehearses checksum rollbacks before you touch the hardware._
 - _This pass shifted the demo story from "we can probably recover" to "we can prove identity, readability, and recovery on command because we are being militant about this for a reason."_
-- PCBWay reached out and wants to help me make a run of prototypes of the board - motivation to move from simply a cool maker project to something a bit more ornate/rugged.
+- _PCBWay reached out and wants to help me make a run of prototypes of the board: motivation to move from simply a cool maker project to something a bit more ornate and rugged._
 
-### March — Bridge Packaging Rollout Plan (Planned)
+### Phase 6: Release Hardening, Contract Closure, and Prototype Handoff (March - May 2026)
 
-- Locked the first distribution wave to desktop users on macOS (`arm64` + `x64`), Windows (`x64`), and Linux (`x64`) so we can prioritize predictable installs over broad-but-fragile matrix sprawl.
-- Formalized a packaging bake-off between `pkg` and `nexe`: `pkg` is the likely default path for speed + ecosystem fit, while `nexe` stays as the fallback if we need deeper control over native module embedding.
-- Called out the remaining bundling blockers explicitly: `serialport` native artifacts, static asset inclusion, runtime config path handling, and license payload colocation inside shipped binaries/installers.
-- Defined installer workflow targets per platform so non-technical users do not need Node or npm: signed `.pkg`/`.dmg` for macOS, MSI installer for Windows, and `.deb` + AppImage options for Linux.
-- Set the update architecture to channel-based auto-updates (stable/beta) with signed manifests, in-app version checks, and one-click rollback to last-known-good when post-update health checks fail.
-- Sequenced the work into four release gates: `G1` reproducible cross-platform builds, `G2` installer QA on clean machines, `G3` staged auto-update dogfood, `G4` public release with operator docs and recovery playbook.
-- _Goal: make "download -> install -> connect" feel boringly reliable for performers who should never have to think about JavaScript tooling just to use the bridge._
+Spring 2026 is the "prove it" season. The project tightens export provenance, test coverage, Bridge, App, and firmware contracts, storage truth, host compatibility, and hardware evidence.
 
-### March — Release Hardening, Coverage Sweep, and Prototype Fab Handoff
+- **March 2026:** Release prep shifts from "probably shippable" to "prove it" through deterministic export checks, contract-sync guards, and release artifact validation. [`c4f3132`, tag `26_1`]
+- **March 2026:** Stale security findings force cleanup in firmware formatting paths: remaining `sprintf` calls are replaced with bounded `snprintf`, Unity link issues are straightened out, and false-positive triage noise drops. [`77978db` and March follow-ups]
+- **March 2026:** The configurator stops advertising unfinished placeholder presets, including the visible Elektron Analog Rytm stub.
+- **March 2026:** Unity coverage expands into orchestration: `exponentialMovingAverage`, `LedAnimator::cycleMode`, command queue parsing and overflow, SeedBox handshake flow, runtime pending note-offs, WebSerial snapshots/slot patches, and UI tuning helpers.
+- **March 2026:** A scheduler bug is exposed and fixed: MIDI service, envelopes, WebSerial streaming, SeedBox updates, and low-priority UI/LED refreshes are registered as recurring work instead of one-shot tasks.
+- **March 13, 2026:** The prototype PCB run is sent to fabrication, marking the handoff from design churn to real boards in the mail.
+- **March 2026:** A fit/finish audit forces firmware, Bridge, App, and docs to tell one story. Browser-driven profile save/load/reset becomes real firmware behavior, EEPROM-backed macro snapshots and scene storage land, native transport verbs become the source of truth, and Bridge live control moves to `SET_SLOT_VALUE`. [`9143195`, `b6844fc`]
+- **March 2026:** Browser-only slot notes such as `label`, the MIDI badge, and `Take Control` are explicitly local browser affordances instead of fake device config. Reconnect behavior stops stomping local notes with the last `GET_CONFIG` response. [`3d3e595`]
+- **March 2026:** `HostCompatibility.md` is added, MkDocs strict mode returns to green, and navigation/reference pages become explicit. [`403874e`, `ff60649`, `8e1deb7`]
+- **March 2026:** Firmware tests gain targeted persistence coverage, and the full-system runner gets a destructive `--exercise-storage` path for profile/macro/scene proof. [`b6844fc`]
+- **April - May 2026:** Source exports come from tracked files only; release manifests ignore generated dirt while still refusing dirty tracked trees. [release-gate-tightening-2026-04]
+- **April - May 2026:** Doctor and App bridge paths align around Node 24, matching the Bridge release lane and current host evidence. [node24-bridge-alignment-2026-04]
+- **April - May 2026:** Release verification treats Bridge and App tests as mandatory, layers in Unity and full-stack HIL when hardware is present, and records skipped-versus-run evidence in `release_verification.json`. [release-verification-evidence-2026-04]
+- **April - May 2026:** Bridge packaging adds gated signing/notarization hooks so beta/public artifacts must prove signing before being treated as outward-facing releases. [bridge-signing-gates-2026-04]
 
-- Release prep shifted from “probably shippable” to “prove it”: deterministic export checks, contract-sync guards, and release artifact validation now pin the App/firmware handshake down so export bundles stop drifting silently. [`c4f3132`, tag `26_1`]
-- A noisy round of stale security findings forced a real cleanup pass through the firmware formatting paths: remaining `sprintf` calls were replaced with bounded `snprintf`, Unity link issues were straightened out, and the repo now has fewer fake fires to triage during release review. [`77978db` and follow-up March fixes]
-- The configurator stopped advertising unfinished work: the placeholder Elektron Analog Rytm preset entry was pulled from the visible presets list instead of shipping a “TODO” badge in the UI.
-- Unity coverage expanded beyond the core math/slot logic into the orchestration layer: `exponentialMovingAverage`, `LedAnimator::cycleMode`, command queue parsing/overflow handling, SeedBox handshake flow, runtime pending note-offs, WebSerial snapshots/slot patches, and the UI tuning helpers now have direct test coverage.
-- _The useful surprise here was not just “more tests passed”; it was that broader coverage exposed a real scheduler bug hiding in plain sight._
-- `Scheduler.cpp` had several tasks registered as one-shot work instead of recurring tasks; that behavior is now fixed so MIDI service, envelopes, WebSerial streaming, SeedBox updates, and low-priority UI/LED refreshes actually persist after the first scheduled run.
-- Added a small unit-test logging sink plus targeted seams around runtime state, control-pot values, and task metadata so orchestration code can be asserted clinically without dragging the whole hardware stack into the Unity harness.
-- Hardware momentum crossed a line from CAD iteration to physical commitment: **March 13, 2026:** the prototype PCB run was sent to fabrication, marking the handoff from design churn to waiting on real boards.
+> **Turning point:** Once copper is ordered and release artifacts are gated, the project has to stop narrating intentions as if they are proof. The repo starts saying what is verified, what is planned, and what is merely historical.
+
+**Reflections from this stretch**
+
+- _The useful surprise here was not just "more tests passed"; it was that broader coverage exposed a real scheduler bug hiding in plain sight._
 - _There is a different kind of seriousness once copper has been ordered; every doc line and every test starts reading like an instruction to your future self standing at a bench with actual hardware in the mail._
+- _This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more "does the whole instrument tell the same story when you actually use it?"_
+- _The release path stopped being "build some zips" and became "prove the source, prove the host, and prove the outward binaries are treated like beta assets instead of internal scraps."_
 
-### March — Contract Closure, Recovery Truth, and Orientation Lock
+## Current Repository Shape
 
-- A fit/finish audit forced the repo to stop treating firmware, bridge, App, and docs like separate projects. The useful work was not “make the UI prettier”; it was closing the seams where one layer was still bluffing about another. [`9143195`, `b6844fc`]
-- Browser-driven profile save/load/reset is now real firmware behavior rather than a simulator flourish, and the same pass landed actual EEPROM-backed macro snapshots plus scene storage so the recovery story finally matches the operator docs. [`9143195`]
-- The bridge/App/firmware command story was tightened until it read like one contract: native transport verbs are the source of truth, bridge live control now uses `SET_SLOT_VALUE`, and the docs stopped narrating old command shapes as if they still shipped. [`9143195`, `b6844fc`]
-- Browser-only slot notes got their own line in the sand. `label`, the MIDI badge, and `Take Control` are now explicitly local browser affordances instead of fake device config, and the reconnect path no longer stomps those notes with whatever the last `get_config` happened to say. [`3d3e595`]
-- The documentation pass turned into an orientation lock for pre-production: host/browser/DAW compatibility claims now show up early and conservatively, `HostCompatibility.md` was added as the plain-English matrix, and MkDocs strict mode is back to green with nav + reference pages made explicit. [`403874e`, `ff60649`, `8e1deb7`]
-- Storage verification also got more honest. Firmware tests grew targeted persistence coverage and the full-system runner learned a destructive `--exercise-storage` path so bench time can prove profile/macro/scene behavior instead of taking the docs on faith. [`b6844fc`]
-- _This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more “does the whole instrument tell the same story when you actually use it?”_
+This is an orientation snapshot, not a contract. For current status, use [Repository Contents](RepositoryContents.md), [Release Boundary Index](../release/ReleaseBoundaryIndex.md), and [TESTING](../validation/TESTING.md).
 
-### April/May — Beta Release Gate Tightening
+- `firmware/`: Teensy 4.0 PlatformIO project with modular firmware managers, Unity tests, and hardware/system test runners.
+- `hardware/`: current hardware references, substitutions, parts rationale, and current-build notes. Historical PCB source exports are not the same thing as a public fabrication-ready hardware package.
+- `App/`: browser configurator with Playwright coverage, runtime kernel, BenzKnobz view layer, simulator support, and WebSerial plus Bridge paths.
+- `bridge/`: unsigned desktop Bridge CLI/server for serial, OSC, MIDI, and browser-served workflows.
+- `docs/`: MkDocs source for learning, use, build, proof, reference, project, and archive material.
+- `tools/`: guardrails for contract sync, release readiness, documentation checks, and repo health.
 
-- Source exports now come from tracked files only, the release manifest ignores generated dirt when it checks git status, and the release build refuses to package from a dirty tracked tree so provenance stays honest. [current change]
-- Doctor and the App bridge path now assume Node 24 instead of the older host baseline, which matches the bridge release lane and stops the docs from pretending Node 20 or Node 22 are still the target. [current change]
-- Release verification now treats bridge and app tests as mandatory, layers in Unity/full-stack HIL when hardware is present, and records the skipped-versus-run split explicitly in `release_verification.json`. [current change]
-- Bridge packaging picked up gated signing/notarization hooks so beta/public artifacts have to prove they are signed before they are treated as outward-facing releases. [current change]
-- _The release path stopped being “build some zips” and became “prove the source, prove the host, and prove the outward binaries are treated like beta assets instead of internal scraps.”_
+## Planned Roadmap
 
-## Overview
+This section is deliberately separate from completed history. It records direction, not shipped truth.
 
-Across roughly 18 months of commits, MOARkNOBS‑42 has evolved from a set of untested firmware files into a documented DIY MIDI controller complete with hardware PCB schematics, test suites, and detailed usage notes. The repository now houses:
+### Bridge Packaging Rollout
 
-- `firmware/` – Teensy‑based C++ code with modular managers and tests.
-- `hardware/` – Design files for the `MN42` board.
-- `App/` - Playwright-facilitated configuration app - accessible from the web via bseverns.github.io/MN42
-- `Bridge/` - MIDI<->OSC translation matrrix application (currently unsigned)
-- Comprehensive README files describing features, wiring, building instructions, and a bit of mania.
+- Keep the first distribution wave focused on desktop users: macOS (`arm64` and `x64`), Windows (`x64`), and Linux (`x64`).
+- Continue the `pkg` versus `nexe` bake-off. `pkg` remains the likely default path for speed and ecosystem fit; `nexe` stays as fallback if native module embedding needs deeper control.
+- Resolve bundling blockers around `serialport` native artifacts, static asset inclusion, runtime config paths, and license payload colocation.
+- Target installer workflows that do not require non-technical users to install Node or npm: signed `.pkg`/`.dmg` for macOS, MSI for Windows, and `.deb` plus AppImage options for Linux.
+- Build toward channel-based signed updates with stable/beta lanes, in-app version checks, and rollback to last-known-good after failed health checks.
+- Keep the release gates explicit: `G1` reproducible cross-platform builds, `G2` installer QA on clean machines, `G3` staged auto-update dogfood, and `G4` public release with operator docs and recovery playbook.
+
+### Hardware-Test to Beta Evidence
+
+- Continue turning bench receipts into dated evidence instead of broad claims.
+- Keep hardware-in-the-loop checks honest about what board, power profile, host OS, browser, and Bridge path were actually used.
+- Avoid widening public support language until release criteria and validation docs have the proof to back it.
+
+### Operator Experience
+
+- Keep reducing the gap between performer language and protocol language without hiding the protocol.
+- Continue polishing profile, macro, scene, and panic-recovery flows around real hardware behavior.
+- Make "download, install, connect" boringly reliable for performers who should never have to think about JavaScript tooling just to use the Bridge.
+
+**Roadmap reflection**
+
+- _Goal: make the setup feel boringly reliable without sanding off the handmade instrument underneath._
