@@ -159,6 +159,49 @@ dt {
   color: var(--muted);
 }
 
+.first-run-path {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.55rem;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.first-run-path li {
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid rgba(56, 42, 26, 0.14);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.first-run-path strong,
+.first-run-path span {
+  display: block;
+}
+
+.first-run-path strong {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.first-run-path span {
+  margin-top: 0.2rem;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.security-note {
+  margin: 0;
+  padding: 0.72rem 0.85rem;
+  border: 1px solid rgba(154, 100, 18, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(154, 100, 18, 0.08);
+  color: var(--muted);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -226,6 +269,31 @@ dt {
 #bridge-form {
   display: grid;
   gap: 0.65rem;
+}
+
+.advanced-setup {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(56, 42, 26, 0.14);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.advanced-setup[open] {
+  gap: 0.65rem;
+}
+
+.advanced-setup summary {
+  cursor: pointer;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.advanced-setup > * + * {
+  margin-top: 0.65rem;
 }
 
 .grid-two {

@@ -657,6 +657,28 @@ async function run() {
     'server should expose the bundled configurator',
   );
 
+  const consoleResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/' }),
+    consoleResponse,
+  );
+  const consoleHtml = consoleResponse.body.toString('utf8');
+  assert.match(
+    consoleHtml,
+    /Bridge command center/,
+    'server should expose the simplified first-run console copy',
+  );
+  assert.match(
+    consoleHtml,
+    /Choose device[\s\S]*Choose recipe[\s\S]*Open App[\s\S]*Snapshot/,
+    'console should explain the default five-step bridge path',
+  );
+  assert.match(
+    consoleHtml,
+    /Advanced setup: guard and timing controls/,
+    'console should keep guard and timing controls available behind advanced setup',
+  );
+
   const snapshotResponse = makeRes();
   await server.requestHandler(
     makeReq({ method: 'GET', url: '/api/state/snapshot' }),

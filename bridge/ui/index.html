@@ -12,11 +12,22 @@
   <main class="shell">
     <header class="hero">
       <p class="eyebrow">MOARkNOBS-42 bridge</p>
-      <h1>Desktop session runtime</h1>
+      <h1>Bridge command center</h1>
       <p class="summary">
-        Use this console when you need desktop-side routing, a cached device session, and operator-safe
-        visibility into what the bridge knows about the hardware. Raw serial and WebSocket debugging still
-        exist, but they stay in Advanced where they belong.
+        Default path: choose device, choose host recipe, start the bridge, open the App, then download a
+        snapshot if something fails. Raw serial and WebSocket debugging still exist, but they stay in
+        Advanced where they belong.
+      </p>
+      <ol class="first-run-path" aria-label="First-run path">
+        <li><strong>Choose device</strong><span>Pick the detected serial port.</span></li>
+        <li><strong>Choose recipe</strong><span>Prefill the host routing lane.</span></li>
+        <li><strong>Start</strong><span>Wait for cached session ready.</span></li>
+        <li><strong>Open App</strong><span>Use the Bridge transport.</span></li>
+        <li><strong>Snapshot</strong><span>Export state if anything fails.</span></li>
+      </ol>
+      <p class="security-note">
+        Local-only by default. Keep this console, `/api/*`, `/ws`, OSC, and MIDI command lanes on a trusted
+        host/network unless you have deliberate network protection.
       </p>
       <div class="actions">
         <button id="start-bridge" type="button">Start bridge</button>
@@ -69,37 +80,42 @@
             <label for="osc-bind">OSC bind address</label>
             <input id="osc-bind" name="oscBind" value="127.0.0.1" autocomplete="off" />
 
-            <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
-            <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
+            <details class="advanced-setup">
+              <summary>Advanced setup: guard and timing controls</summary>
+              <p class="hint">Leave these at defaults unless a host recipe or bench note tells you to change them.</p>
 
-            <label for="alert-suppression-ms">Alert suppression window (ms)</label>
-            <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
+              <label for="feedback-window-ms">MIDI feedback guard window (ms)</label>
+              <input id="feedback-window-ms" name="feedbackWindowMs" type="number" min="1" step="1" value="120" />
 
-            <label class="checkbox-line" for="allow-feedback-loops">
-              <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
-              Allow feedback loops (disable MIDI echo suppression)
-            </label>
+              <label for="alert-suppression-ms">Alert suppression window (ms)</label>
+              <input id="alert-suppression-ms" name="alertSuppressionMs" type="number" min="1" step="1" value="3000" />
 
-            <div class="grid-two">
-              <div>
-                <label for="rt-p95-target-ms">RT p95 target (ms)</label>
-                <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
+              <label class="checkbox-line" for="allow-feedback-loops">
+                <input id="allow-feedback-loops" name="allowFeedbackLoops" type="checkbox" />
+                Allow feedback loops (disable MIDI echo suppression)
+              </label>
+
+              <div class="grid-two">
+                <div>
+                  <label for="rt-p95-target-ms">RT p95 target (ms)</label>
+                  <input id="rt-p95-target-ms" name="rtP95TargetMs" type="number" min="1" step="1" value="10" />
+                </div>
+                <div>
+                  <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
+                  <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1"
+                    value="5" />
+                </div>
               </div>
-              <div>
-                <label for="rt-jitter-p95-target-ms">RT jitter p95 target (ms)</label>
-                <input id="rt-jitter-p95-target-ms" name="rtJitterP95TargetMs" type="number" min="1" step="1"
-                  value="5" />
-              </div>
-            </div>
+            </details>
           </form>
         </section>
 
         <section class="panel" aria-labelledby="recipe-heading">
-          <h2 id="recipe-heading">Known-good recipe</h2>
+          <h2 id="recipe-heading">Choose host recipe</h2>
           <label for="preset-select">Recipe</label>
           <select id="preset-select" name="presetSelect"></select>
-          <p class="hint" id="recipe-summary">Pick a documented host path and the console will prefill the expected
-            bridge ports.</p>
+          <p class="hint" id="recipe-summary">Pick the host path first. The console will prefill expected OSC/MIDI
+            settings; only adjust fields when your local host differs.</p>
           <div class="recipe-block">
             <h3>Requirements</h3>
             <ul id="recipe-requirements" class="ports-list"></ul>
