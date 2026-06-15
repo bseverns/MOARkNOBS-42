@@ -2,6 +2,8 @@
 
 Pick one route, finish it, then come back for the others.
 
+If you only need the next five minutes, use [First Five Minutes](FirstFiveMinutes.md). This page is the longer reading map after that first choice.
+
 ## Builder Route
 
 **Best for:** someone assembling, flashing, or proving hardware.

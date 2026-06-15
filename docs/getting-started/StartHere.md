@@ -4,9 +4,11 @@ If you are new to MOARkNOBS-42, the easiest mistake is to think it is "just a co
 
 This page is the beginner-friendly tour: what the parts are, how they relate, and what to read next when you want to go deeper.
 
+If you need a brutally short first path, start with [First Five Minutes](FirstFiveMinutes.md). It sorts the first step into four choices: play it, configure it, build/test it, or understand it.
+
 If you want the whole hardware/App/Bridge/firmware/evidence picture before the tour, open the [System Map](SystemMap.md).
 
-If you already know whether you are here mainly as a builder, learner, or musician, skip ahead to [Guided Routes](GuidedRoutes.md).
+If you already know you want a longer role-based reading path, skip ahead to [Guided Routes](GuidedRoutes.md).
 
 ## The elevator version
 
@@ -59,7 +61,7 @@ That is why the configurator can safely support staging, diff views, rollback, a
 
 ## The first practical walk
 
-If you want the shortest route to understanding, follow this order:
+If you want the shortest role-based route, use [First Five Minutes](FirstFiveMinutes.md). If you want the learning tour, follow this order:
 
 ### 1. Learn the high-level workflow
 

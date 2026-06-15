@@ -28,6 +28,8 @@ test.describe('UI mode', () => {
     await expect(page.locator('#stage-panic-help')).toBeHidden();
     await expect(page.locator('#usb-midi-toggle')).toBeHidden();
     await expect(page.locator('#simulator-toggle')).toBeHidden();
+    await expect(page.locator('#device-monitor-section')).toBeHidden();
+    await expect(page.locator('#slot-detail-panel')).toBeHidden();
     await expect(page.locator('#filter-settings')).toBeHidden();
     await expect(page.locator('#arg-settings')).toBeHidden();
     await expect(page.locator('#scope-panel')).toBeHidden();
@@ -37,6 +39,7 @@ test.describe('UI mode', () => {
     await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
+    await expect(page.locator('#device-monitor-section')).toBeVisible();
     await page.getByRole('button', { name: 'Scope' }).click();
     await expect(page.locator('#scope-panel')).toBeVisible();
 
@@ -58,6 +61,7 @@ test.describe('UI mode', () => {
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
       .toBe('simulator');
     await expect(page.locator('.slot-editor')).toBeVisible();
+    await expect(page.locator('#slot-detail-panel')).toBeHidden();
     await expect(page.locator('#export-preset')).toBeVisible();
     await expect(page.locator('#import-preset')).toBeVisible();
     await page.locator('#recovery-drawer > summary').click();

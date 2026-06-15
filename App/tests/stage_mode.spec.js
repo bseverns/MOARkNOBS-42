@@ -11,6 +11,13 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#performer-panel')).toBeVisible();
     await expect(page.locator('#performer-panel [data-ui-mode-btn="basic"]')).toBeVisible();
     await expect(page.locator('#performer-panel [data-ui-mode-btn="advanced"]')).toBeVisible();
+    await expect(page.locator('#performer-panel')).toContainText(
+      'Performance-safe status and recovery. No staged editors or Apply controls here.'
+    );
+    await expect(page.locator('#stage-profile-summary')).toBeVisible();
+    await expect(page.locator('#stage-profile-load')).toBeVisible();
+    await expect(page.locator('#stage-scene-recall')).toBeVisible();
+    await expect(page.locator('#stage-panic-help')).toBeVisible();
     await expect(page.locator('.connect-actions')).toBeHidden();
     await expect(page.locator('#connect-card')).toBeHidden();
     await expect(page.locator('#editor-panel')).toBeHidden();
@@ -180,6 +187,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#arg-settings')).toBeVisible();
     await expect(page.locator('#led-settings')).toBeVisible();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
+    await expect(page.locator('#slot-detail-panel')).toBeVisible();
     await expect(page.locator('#simulator-toggle')).toBeVisible();
 
     const liveBox = await page.locator('#live-panel').boundingBox();

@@ -111,6 +111,7 @@ nav:
   - Home: index.md
   - Learn:
       - Start Here: getting-started/StartHere.md
+      - First Five Minutes: getting-started/FirstFiveMinutes.md
       - Object Card: getting-started/ObjectCard.md
       - System Map: getting-started/SystemMap.md
       - Why MN42: getting-started/WhyMN42.md

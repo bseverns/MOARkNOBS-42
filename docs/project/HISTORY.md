@@ -8,12 +8,12 @@ This file tells the development story of MOARkNOBS-42: why the repo sprawled, wh
 
 MOARkNOBS-42 started in late 2024 as an attempt to build more instruments, learn MIDI deeply, and push microcontroller work past one-function sketches. Through 2025 it became a real Teensy-based MIDI controller project with a PCB, display, EEPROM-backed configuration, envelope followers, arpeggiator behavior, WebSerial telemetry, and an expanding test harness.
 
-By early 2026, the center of gravity moved from "can the firmware do this?" to "can the whole instrument prove this?" Firmware, App, Bridge, docs, release tooling, and bench evidence started being treated as one product surface. The current repo posture is a hardware-test / beta-candidate package, not a public fabrication-ready release.
+By early 2026, the center of gravity moved from "can the firmware do this?" to "can the whole instrument prove this?" Firmware, App, Bridge, docs, release tooling, and bench evidence started being treated as one product surface. The current repo posture is a hardware-test package, not a beta, public, or fabrication-ready release.
 
 The useful arc is:
 
 - **2024 to early 2025:** exploration, firmware scaffolding, KiCad/EasyEDA hardware starts.
-- **Spring and summer 2025:** first board spins, firmware baseline, MIDI expansion, WebSerial, first public drops.
+- **Spring and summer 2025:** first board spins, firmware baseline, MIDI expansion, WebSerial, and early tagged drops.
 - **Fall 2025:** CI, diagnostics, docs, teaching structure, and bridge/test discipline.
 - **Winter 2025 to early 2026:** browser configurator, LFOs, macro/scene storage, and safer live recovery.
 - **March to May 2026:** release hardening, prototype fabrication handoff, contract cleanup, Node 24 bridge path, and evidence-driven release gates.
@@ -78,13 +78,13 @@ Summer is where MOARkNOBS-42 starts acting like an instrument instead of a hardw
 - **July 2025:** Button-driven navigation simplifies test phases, helper functions unify test initialization, variables get clearer, and docs add flashing instructions, diagrams, and links back to this history. [8716674, bf1936f, 109a1b8, 6d769ec, 822a1ea, 5f3e34b, e25622e, 0941fcb]
 - **Early August 2025:** Hardware v1.02 work completes, `Utility::processBulkUpdate` is refactored around a raw char buffer, and `MN42_v2` design assets arrive under hardware references. `fea338e` calls for thicker LED power traces so the LEDs do not sag or cook when current rises.
 - **Early August 2025:** NRPN, RPN, and raw SysEx support widen the MIDI story; WebSerial starts streaming runtime state to the browser.
-- **August 6, 2025:** First public drop `v0.1.0` bundles filter-tuning pots, a self-driving arpeggiator, WebSerial telemetry, NRPN/RPN/SysEx support, and the first `CHANGELOG`. [v0.1.0]
+- **August 6, 2025:** Early tagged drop `v0.1.0` bundles filter-tuning pots, a self-driving arpeggiator, WebSerial telemetry, NRPN/RPN/SysEx support, and the first `CHANGELOG`. [v0.1.0]
 - **August 8, 2025:** PR #286 brings in FastLED and adds teachable comments around the early browser configurator path. [956069c]
 - **Late August 2025:** CI flakes force build-script hardening. The MIDI library changes, `usb_midi` ghosts get chased down, and a Unity test rig makes commits prove themselves.
 - **August 22 - 23, 2025:** Diagnostic mode lands with self-test pages, compact matrix view, reset-cause boot banner, system report, release workflow, pre-commit lint, and CI pinned to Node 20 at the time. [0215e43, 00af0f1, 399b17, b7c126a, 19fbe9b, 7ee46c7, 702c107]
 - **August 25, 2025:** SparkFun reference sidebars join the docs as learning links from the source. [4e4cf22]
 
-> **Turning point:** `v0.1.0` is the first public signal that the project is not just private bench noise. The repo now has releases, browser telemetry, deeper MIDI, and a test culture that can hurt your feelings usefully.
+> **Turning point:** `v0.1.0` is the first outward signal that the project is not just private bench noise. The repo now has tags, browser telemetry, deeper MIDI, and a test culture that can hurt your feelings usefully.
 
 **Reflections from this stretch**
 
@@ -165,7 +165,7 @@ Spring 2026 is the "prove it" season. The project tightens export provenance, te
 - _The useful surprise here was not just "more tests passed"; it was that broader coverage exposed a real scheduler bug hiding in plain sight._
 - _There is a different kind of seriousness once copper has been ordered; every doc line and every test starts reading like an instruction to your future self standing at a bench with actual hardware in the mail._
 - _This was the month the repo got less romantic and more trustworthy: fewer implied capabilities, fewer simulator ghosts, more "does the whole instrument tell the same story when you actually use it?"_
-- _The release path stopped being "build some zips" and became "prove the source, prove the host, and prove the outward binaries are treated like beta assets instead of internal scraps."_
+- _The release path stopped being "build some zips" and became "prove the source, prove the host, and prove the outward-facing binaries are treated like evidence artifacts instead of internal scraps."_
 
 ## Current Repository Shape
 
