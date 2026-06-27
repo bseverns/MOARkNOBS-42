@@ -11,6 +11,42 @@ It does not claim a verified Gerber and NC-drill release bundle.
 Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md).
 For a repo-level contents map, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
 
+## PCB Progress Snapshot
+
+The prototype PCB run has moved from design files into physical boards that are now part of the hardware-test loop.
+The current goal is bring-up evidence: power-rail checks, display and control validation, MIDI path testing, envelope follower
+behavior, LED load testing, and host connectivity through the WebSerial app and bridge.
+
+This is the first public breadcrumb for the fabricated boards, not a release claim. The boards are being inspected and
+validated against the hardware references below, and the repo will keep fabrication packages clearly labeled until a
+revision has completed release-level checks.
+
+So far, the physical board quality has been good enough to make the prototype review useful: the PCB itself gives a
+stable target for probing, assembly, and trace inspection, and the issues found during bring-up appear to be design
+iteration problems in this machine rather than fabrication-quality problems with the boards.
+
+![Top side of the MOARkNOBS-42 prototype PCB from the recent fabrication run.](docs/assets/board/prodTOP.jpg)
+
+![Bottom side of the MOARkNOBS-42 prototype PCB from the recent fabrication run.](docs/assets/board/prodBTM.jpg)
+
+![Close-up trace inspection photo from the MOARkNOBS-42 prototype PCB bring-up work.](docs/assets/board/trace.jpg)
+
+Photo TODOs before the full project post:
+
+- TODO image: assembled front panel with knobs, buttons, OLED, and LEDs installed
+- TODO image: bench setup during first-power and rail-topology validation
+- TODO image: MIDI, USB, and WebSerial/bridge test session with the board connected
+- TODO image: any required rework close-up, or a clear "no rework required" board close-up after validation
+
+## PCB Fabrication Notes
+
+- Existing photos live under [docs/assets/board](docs/assets/board).
+- Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
+- Fabrication caveats live in [hardware/fabrication/README.md](hardware/fabrication/README.md).
+- Fabhouse experience note: the boards arrived cleanly enough that the current prototype faults are being treated as
+  my own design and integration findings unless future evidence says otherwise. That is exactly what this prototype
+  run needed to answer.
+
 ## Choose Your Path
 
 - **Validating prototype hardware:** start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md), then follow
