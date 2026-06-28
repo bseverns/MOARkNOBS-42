@@ -1,29 +1,28 @@
 # MOARkNOBS-42 Hardware-Test Package
 
 This repository is currently packaged as a hardware-test bundle for the MOARkNOBS-42 prototype.
-It is meant for bench validation of the current board, firmware, OLED, controls, MIDI paths,
+At this point, it is meant for bench validation of the current board, firmware, OLED, controls, MIDI paths,
 LEDs, envelope followers, WebSerial telemetry, and bridge/configurator connectivity.
 
-It is not a public v1.0 release.
-It is not a fabrication-ready manufacturing package.
-It does not claim a verified Gerber and NC-drill release bundle.
+It is not a public v1.0 release, but that will happen.
+It does not claim a verified Gerber and NC-drill release bundle - though the current repo supplies this that very nearly work perfectly.
 
-Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md).
-For a repo-level contents map, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
+Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) for a bit of what the current road to 1.0 looks like.
+For a repo-level contents map of the whole project, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
 
 ## PCB Progress Snapshot
 
-The prototype PCB run has moved from design files into physical boards that are now part of the hardware-test loop.
-The current goal is bring-up evidence: power-rail checks, display and control validation, MIDI path testing, envelope follower
+The MN42 prototype PCB run has moved from design files into physical boards that are now part of the hardware-test loop.
+The current goal is documented bring-up evidence: power-rail checks, display and control validation, MIDI path testing, envelope follower
 behavior, LED load testing, and host connectivity through the WebSerial app and bridge.
 
-This is the first public breadcrumb for the fabricated boards, not a release claim. The boards are being inspected and
+This is the current public breadcrumb trail for the fabricated boards, not a release claim. The boards are being inspected and
 validated against the hardware references below, and the repo will keep fabrication packages clearly labeled until a
-revision has completed release-level checks.
+revision has completed release-level checks and everything can be made right.
 
 So far, the physical board quality has been good enough to make the prototype review useful: the PCB itself gives a
 stable target for probing, assembly, and trace inspection, and the issues found during bring-up appear to be design
-iteration problems in this machine rather than fabrication-quality problems with the boards.
+iteration problems in this machine rather than fabrication-quality problems with the boards. PCBWay managed an excellent level of detail with these boards - I had 0.5mm test pads throughout the design and all function as intended.
 
 ![Top side of the MOARkNOBS-42 prototype PCB from the recent fabrication run.](docs/assets/board/prodTOP.jpg)
 
