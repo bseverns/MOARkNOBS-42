@@ -42,7 +42,8 @@ Photo TODOs before the full project post:
 
 - Existing photos live under [docs/assets/board](docs/assets/board).
 - Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
-- Fabrication caveats live in [hardware/fabrication/README.md](hardware/fabrication/README.md).
+- Fabrication caveats are summarized in [hardware/CurrentBuild.md](hardware/CurrentBuild.md), which is the canonical
+  hardware status page for this package.
 - Fabhouse experience note: the boards arrived cleanly enough that the current prototype faults are being treated as
   my own design and integration findings unless future evidence says otherwise. That is exactly what this prototype
   run needed to answer.

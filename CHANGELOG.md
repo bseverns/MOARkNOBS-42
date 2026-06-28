@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Firmware now exposes real device-backed profile save/load/reset flows plus EEPROM-backed macro snapshot and scene storage, with manifest capability reporting so the App can tell the truth about what the board supports.
 - Added stronger storage/regression coverage in the firmware tests plus a destructive `--exercise-storage` lane in `firmware/system_test/mn42_fullstack_runner.js` for bench validation of profile/macro/scene persistence.
-- Added `docs/HostCompatibility.md` so browser, bridge, OSC, and DAW support claims are split into verified, documented, and not-claimed buckets instead of being implied from skim-level marketing language.
+- Added `docs/reference/HostCompatibility.md` so browser, bridge, OSC, and DAW support claims are split into verified, documented, and not-claimed buckets instead of being implied from skim-level marketing language.
 - WebSerial `GET_MANIFEST` now includes `device_name`, allowing host tools to identify the target rig explicitly instead of inferring identity from version/build data.
 - App connect panel now shows a dedicated identity banner (`Connected to: <device> (FW <version>)`) and ships an inline "What to do if connect fails" helper.
 - Added firmware panic-safe baseline combo (`Ctrl0 + Ctrl1 + Ctrl2`): stops arp, disables EF follow, and reloads the active profile.
@@ -56,8 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schema to `0x0004` so stored patches remember their curves.
 - Dual LFO engines now live in `firmware_main.cpp` via `LFOManager`, routing LED brightness, arp swing, and EF gain trim while persisting shapes/routes inside the profile payload so both UART telemetry and WebSerial keep the same modulation state. Unity LFO tests guard the shapes and clock sync math. [2fe3c15]
 - The Web Configurator was rebuilt around a split runtime kernel and BenzKnobz view layer: schema-driven forms, staged diff/rollback controls, telemetry cards, a MIDI monitor, and a simulator toggle all live in `runtime.js`/`views/*` plus new Playwright specs that exercise every panel without a human in Chromium. [2fe3c15]
-- Serial commands now route through a sorted dispatch table with standalone handler functions, an exposed `dispatchCommand` for Unity, and an "unknown command" log that also prints the available verbs; new Unity tests hit both a known and unknown command so the glue layer stays covered. [current change]
-- Added `test/test_protocol_dispatch.cpp` and the `firmware/python` shim that makes `python -c ...` resolve to `python3`, keeping the Unity runner happy in environments without a bare `python`. [current change]
+- Serial commands now route through a sorted dispatch table with standalone handler functions, an exposed `dispatchCommand` for Unity, and an "unknown command" log that also prints the available verbs; new Unity tests hit both a known and unknown command so the glue layer stays covered. [unreleased mainline]
+- Added `test/test_protocol_dispatch.cpp` and the `firmware/python` shim that makes `python -c ...` resolve to `python3`, keeping the Unity runner happy in environments without a bare `python`. [unreleased mainline]
 - Macro snapshot controls now expose `SAVE_MACRO_SLOT`/`RECALL_MACRO_SLOT` to the WebSerial UI with inline feedback, disabled save during writes, and optional config reloads after recall so the browser mirrors slot 254 without touching live profiles.
 - Introduced LED animation modes (`Static`, `PeakHold`, `Trail`, `ClockPulse`) plus a scheduler-driven `LedAnimator`, diagnostics override, and RPC hooks so pots/envelopes can emit dynamic feedback safely outside interrupt context.
 - Scene slot support now ships with named EEPROM-backed saves, `SAVE_SCENE`/`RECALL_SCENE`/`GET_SCENES` verbs, and browser controls that sync scene availability from firmware instead of pretending storage exists.
@@ -87,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Root and firmware READMEs map the control stack with new "crash course" and
   "stack philosophy" sections, pointing students toward the annotated modules
   and the docs they feed.
-- Testing docs call their shot: `docs/TESTING.md` now walks through the
+- Testing docs call their shot: `docs/validation/TESTING.md` now walks through the
   full-stack runner flags so contributors can actually reproduce the OSC↔firmware
   handshake the release notes keep hyping.
 - Added an "Annotated Source Field Guide" and guided-tour curriculum so mentors
