@@ -4,8 +4,30 @@ set -euo pipefail
 IFS=$'\n\t'
 umask 022
 
-if [ "$#" -ne 1 ]; then
+usage() {
   echo "Usage: $0 <version>" >&2
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 1
+fi
+
+case "$1" in
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  -*)
+    usage
+    echo "error: version must not start with '-'" >&2
+    exit 1
+    ;;
+esac
+
+if [ -z "$1" ]; then
+  usage
+  echo "error: version must not be empty" >&2
   exit 1
 fi
 

@@ -137,6 +137,27 @@ async function run() {
   }
 
   {
+    const harness = createHarness({ simulator: { ackDelayMs: 30 } });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[5].data1 = 92;
+    await harness.session.stageConfig(staged);
+    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 5000 });
+    await assert.rejects(
+      () => harness.session.applyStagedConfig({ timeoutMs: 5000 }),
+      (error) => error?.code === 'apply_in_progress',
+      'overlapping staged applies should fail without replacing the pending ACK',
+    );
+    await applyPromise;
+    assert.equal(
+      harness.session.getState().dirty,
+      false,
+      'first apply should still complete after a rejected overlapping apply',
+    );
+  }
+
+  {
     const harness = createHarness({ simulator: { ackMode: 'timeout' } });
     await harness.session.handleOpen();
     await waitFor(() => harness.session.getState().ready);

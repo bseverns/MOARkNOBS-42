@@ -525,6 +525,14 @@ function createDeviceSession({
         state: getState(),
       };
     }
+    if (applyPending) {
+      throw createSessionError(
+        'apply_in_progress',
+        'A staged apply is already in progress',
+        { checksum: applyPending.checksum, seq: applyPending.seq },
+        409,
+      );
+    }
 
     const validation = authority.validateConfig(state.stagedConfig);
     if (!validation.valid) {

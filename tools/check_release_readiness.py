@@ -27,6 +27,12 @@ BUILD_FLAG_PROFILE_RE = re.compile(
     r"(?<!\S)-DMN42_BOARD_POWER_PROFILE=(POWER_CHOKED_V1|SPLIT_RAIL_REWORK)\b"
 )
 REWORKED_VALIDATION_MARKER = "Reworked rail validation: PASS"
+REQUIRED_BETA_PUBLIC_VALIDATIONS = {
+    "soak": "Soak validation: PASS",
+    "EF stability": "EF stability validation: PASS",
+    "EXT clock starvation": "EXT clock starvation validation: PASS",
+    "panic baseline": "Panic baseline validation: PASS",
+}
 
 
 def has_any(root: pathlib.Path, patterns: tuple[str, ...]) -> bool:
@@ -170,6 +176,17 @@ def has_reworked_validation_evidence(root: pathlib.Path) -> bool:
     return False
 
 
+def missing_release_validation_markers(root: pathlib.Path) -> list[str]:
+    reports_dir = root / "docs" / "validation" / "reports"
+    seen = {label: False for label in REQUIRED_BETA_PUBLIC_VALIDATIONS}
+    for path in reports_dir.glob("*.md"):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for label, marker in REQUIRED_BETA_PUBLIC_VALIDATIONS.items():
+            if marker in text:
+                seen[label] = True
+    return [label for label, present in seen.items() if not present]
+
+
 def tracked_paths(root: pathlib.Path) -> list[str]:
     result = subprocess.run(
         ["git", "ls-files", "-z"],
@@ -304,6 +321,15 @@ def main() -> None:
             warnings=warnings,
             hard_stages=("beta", "public"),
         )
+    elif args.stage in {"beta", "public"}:
+        missing_validations = missing_release_validation_markers(root)
+        if missing_validations:
+            blockers.append(
+                "missing beta/public validation report markers: "
+                + ", ".join(missing_validations)
+                + "; expected markers: "
+                + ", ".join(REQUIRED_BETA_PUBLIC_VALIDATIONS.values())
+            )
 
     for warning in warnings:
         print(f"warning: {warning}")

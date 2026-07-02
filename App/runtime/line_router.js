@@ -72,12 +72,12 @@ export function createRuntimeLineHandler({
     ) {
       return;
     }
-    if (msg.type === 'telemetry' || msg.slots || msg.envelopes || msg.lfos || msg.lfo_config) {
-      onTelemetry(msg);
-      return;
-    }
     if (msg.type === 'config-patch') {
       applyConfigPatch(msg);
+      return;
+    }
+    if (msg.type === 'telemetry' || msg.slots || msg.envelopes || msg.lfos || msg.lfo_config) {
+      onTelemetry(msg);
       return;
     }
     if (msg.type === 'slot_patch' && msg.slot && typeof msg.slot === 'object') {

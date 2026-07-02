@@ -43,10 +43,22 @@ function normalizePositiveInt(value, fallback) {
 // Minimal websocket text-frame encoder for the one-way bridge log stream.
 function frameText(payload) {
   const body = Buffer.from(String(payload), 'utf8');
-  const header =
-    body.length < 126
-      ? Buffer.from([0x81, body.length])
-      : Buffer.from([0x81, 126, (body.length >> 8) & 0xff, body.length & 0xff]);
+  let header;
+  if (body.length < 126) {
+    header = Buffer.from([0x81, body.length]);
+  } else if (body.length <= 0xffff) {
+    header = Buffer.from([
+      0x81,
+      126,
+      (body.length >> 8) & 0xff,
+      body.length & 0xff,
+    ]);
+  } else {
+    header = Buffer.alloc(10);
+    header[0] = 0x81;
+    header[1] = 127;
+    header.writeBigUInt64BE(BigInt(body.length), 2);
+  }
   return Buffer.concat([header, body]);
 }
 

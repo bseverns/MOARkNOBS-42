@@ -341,6 +341,23 @@ function encodeClientTextFrame(payload) {
   return Buffer.concat([header, mask, masked]);
 }
 
+function decodeServerFrame(frame) {
+  let offset = 2;
+  let length = frame[1] & 0x7f;
+  if (length === 126) {
+    length = frame.readUInt16BE(2);
+    offset = 4;
+  } else if (length === 127) {
+    length = Number(frame.readBigUInt64BE(2));
+    offset = 10;
+  }
+  return {
+    opcode: frame[0] & 0x0f,
+    length,
+    payload: frame.subarray(offset, offset + length).toString('utf8'),
+  };
+}
+
 async function run() {
   const service = makeFakeService();
   const { httpApi, server } = makeFakeHttpApi();
@@ -750,6 +767,24 @@ async function run() {
     service.sentLines,
     ['{"cmd":"PING"}'],
     'websocket should forward browser lines to the service',
+  );
+  const largePayload = 'x'.repeat(70000);
+  service.emitLine(largePayload);
+  const largeFrame = decodeServerFrame(socket.writes.at(-1));
+  assert.equal(
+    largeFrame.opcode,
+    1,
+    'large server frame should be a text frame',
+  );
+  assert.equal(
+    largeFrame.length,
+    largePayload.length + 1,
+    'large server frame should use the full 64-bit payload length',
+  );
+  assert.equal(
+    largeFrame.payload,
+    `${largePayload}\n`,
+    'large server frame should preserve the full payload',
   );
   service.emitLine('{"hello":"mn42"}');
   service.on('structured-event', () => {});

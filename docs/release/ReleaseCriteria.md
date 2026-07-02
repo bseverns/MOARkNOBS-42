@@ -14,7 +14,7 @@ For a reader-facing split between hardware-test, demo, beta, and public claims, 
 | Assembly         | BOM, pick-and-place data, and assembly notes                                   | artifact presence only           |
 | Power topology   | `rail_topology_verified=true` only after documented hardware validation        | manifest/docs consistency only   |
 | Bridge packaging | signed bridge installer for public/beta stages                                 | signature/artifact presence only |
-| Validation       | dated reports for soak, EF stability, EXT clock starvation, and panic baseline | report presence only             |
+| Validation       | dated reports for soak, EF stability, EXT clock starvation, and panic baseline | explicit report markers only     |
 
 ## Current Boundary
 
@@ -26,6 +26,7 @@ For a reader-facing split between hardware-test, demo, beta, and public claims, 
 - `SPLIT_RAIL_REWORK` is not release-safe until the topology is deliberately verified and documented in a dated receipt.
 - Host tools may warn when the manifest reports `SPLIT_RAIL_REWORK` or `rail_topology_verified=true` outside that documented boundary, but the warning is not evidence by itself.
 - Beta/public use of `teensy40_main_reworked` stays blocked unless a report under `docs/validation/reports/` explicitly includes `Reworked rail validation: PASS`.
+- Beta/public gates require dated validation reports with explicit pass markers: `Soak validation: PASS`, `EF stability validation: PASS`, `EXT clock starvation validation: PASS`, and `Panic baseline validation: PASS`.
 
 Run:
 

@@ -8,7 +8,7 @@ Canonical source: `docs/project/ProcessOverview.md`
 ## Prerequisites
 
 - PlatformIO Core on PATH (`pio`)
-- Node.js 20.x for bridge/app tooling
+- Node.js 24.x for bridge/app tooling
 - Python 3 for helper scripts and local HTTP serving
 - Teensy 4.0 connected over USB
 
