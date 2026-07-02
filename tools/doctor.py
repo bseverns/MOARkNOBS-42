@@ -79,8 +79,8 @@ def check_versions(
                 errors.append(f"failed to run `node --version`: {err or out}")
             else:
                 node_major = parse_node_major(out)
-                if node_major != 22:
-                    errors.append(f"Node.js 22.x required for bridge/app lanes (found {out})")
+                if node_major != 24:
+                    errors.append(f"Node.js 24.x required for bridge/app lanes (found {out})")
                 else:
                     notes.append(f"node: {out}")
 

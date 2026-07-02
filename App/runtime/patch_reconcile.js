@@ -333,7 +333,18 @@ export function createPatchReconciler({
           const merged = { ...stagedSlot };
           let stagedChanged = false;
           Object.keys(fields).forEach((key) => {
-            if (merged[key] === undefined || merged[key] === prevSlot[key]) {
+            const stagedValue = merged[key];
+            const prevValue = prevSlot[key];
+            const stagedMatchesPrev =
+              stagedValue === prevValue ||
+              (stagedValue &&
+                prevValue &&
+                typeof stagedValue === 'object' &&
+                typeof prevValue === 'object' &&
+                !Array.isArray(stagedValue) &&
+                !Array.isArray(prevValue) &&
+                shallowEqual(stagedValue, prevValue));
+            if (stagedValue === undefined || stagedMatchesPrev) {
               if (merged[key] !== nextSlot[key]) {
                 merged[key] = nextSlot[key];
                 stagedChanged = true;
