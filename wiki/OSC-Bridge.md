@@ -41,6 +41,6 @@ npm --prefix bridge test
 ## Reference docs
 
 - `bridge/README.md`
-- `docs/OSCBridge.md`
-- `docs/BridgeForPerformers.md`
-- `docs/BridgePackaging.md`
+- `docs/guides/OSCBridge.md`
+- `docs/guides/BridgeForPerformers.md`
+- `docs/release/BridgePackaging.md`

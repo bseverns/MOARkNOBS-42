@@ -3,6 +3,7 @@
 ## Current Package Limits
 
 - No verified Gerber and NC-drill archive is claimed by this package yet.
+- No current BOM export is tracked in `hardware/fabrication/`.
 - The hardware reference bundle is for review and testing only, not fabrication sign-off.
 - A signed bridge installer is not included.
 - Browser validation is scoped to the included `App/` assets and a local host flow, not a broad browser-support claim.
@@ -39,4 +40,4 @@ No active automated-test failures are currently tracked in this document. Add ne
 ## Manufacturing Boundary
 
 - Present hardware PDFs and BOM exports are prototype references.
-- Any fabrication archive present in the repository should be treated as unverified review material unless separately validated.
+- The current fabrication folder is a boundary note only; no orderable BOM, Gerber, or NC-drill package is enclosed.

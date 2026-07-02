@@ -46,4 +46,4 @@ npm --prefix App test
 ## Reference docs
 
 - `App/README.md`
-- `docs/WebSerial.md`
+- `docs/guides/WebSerial.md`

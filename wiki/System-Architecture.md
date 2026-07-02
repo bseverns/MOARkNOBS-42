@@ -36,5 +36,5 @@ Canonical source: `README.md`
 
 - `README.md` (root architecture narrative)
 - `firmware/README.md` (runtime details)
-- `docs/WebSerial.md` (host contract and message flow)
-- `docs/OSCBridge.md` (bridge transport behavior)
+- `docs/guides/WebSerial.md` (host contract and message flow)
+- `docs/guides/OSCBridge.md` (bridge transport behavior)

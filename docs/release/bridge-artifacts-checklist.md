@@ -15,8 +15,8 @@ Use this template for each release tag (for example `v1.0.0`).
 - [ ] `npm --prefix bridge test`
 - [ ] `npm --prefix bridge run smoke`
 - [ ] CLI docs match shipping behavior: `bridge/README.md`
-- [ ] Quickstart docs match shipping behavior: `docs/OSCBridge.md`
-- [ ] Performer sheet updated if needed: `docs/BridgeForPerformers.md`
+- [ ] Quickstart docs match shipping behavior: `docs/guides/OSCBridge.md`
+- [ ] Performer sheet updated if needed: `docs/guides/BridgeForPerformers.md`
 - [ ] `.github/workflows/release.yml` bridge package matrix passed for all targets
 - [ ] Public/beta bridge packaging used `REQUIRE_BRIDGE_SIGNING=1`
 

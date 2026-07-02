@@ -17,14 +17,14 @@ Canonical source: `hardware/README.md`
 - Machine drawings: `hardware/MN42-machineDrawings/`
 - PCB package PDF: `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
 - Schematic PDF: `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
-- Fabrication workspace: `hardware/fabrication/` (populate with current Gerber/BOM exports per release)
+- Fabrication boundary note: `hardware/fabrication/README.md` (no orderable Gerber/BOM package is currently enclosed)
 
 ## Design docs
 
 - Hardware overview: `hardware/README.md`
 - Part rationale: `hardware/Parts.md`
 - System flow sketches: `docs/sketch/systemFlow/hw/`
-- Pin mapping: `docs/PinMap.md`
+- Pin mapping: `docs/reference/PinMap.md`
 
 ## Electrical and safety notes
 

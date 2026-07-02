@@ -41,12 +41,12 @@ pio run -d firmware -e teensy40_main -t upload
 
 ![Overview chart comparing one reference envelope against LINEAR, OPPOSITE_LINEAR, EXPONENTIAL, LOWPASS, HIGHPASS, BANDPASS, and RANDOM response modes so newcomers can see how the firmware's reactive-control shapes differ.](assets/signal-shapes/filter-shapes-overview.png)
 
-Use this as a fast visual map only. The deeper learner-facing explanations live in `docs/FilterFeelGuide.md` and `docs/ReactiveControlGuide.md`.
+Use this as a fast visual map only. The deeper learner-facing explanations live in `docs/guides/FilterFeelGuide.md` and `docs/guides/ReactiveControlGuide.md`.
 
 ## Reference docs
 
 - `firmware/README.md`
 - `firmware/include/*/README.md`
-- `docs/WebSerial.md`
-- `docs/PinMap.md`
-- `docs/EEPROMLayout.md`
+- `docs/guides/WebSerial.md`
+- `docs/reference/PinMap.md`
+- `docs/reference/EEPROMLayout.md`

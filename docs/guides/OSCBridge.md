@@ -60,4 +60,4 @@ Bridge MIDI mapping:
 CI now generates unsigned per-target bridge artifacts, but this repo still does not present them as a signed/public installer path.
 If you need installer/signing details, see [Bridge Packaging Plan](../release/BridgePackaging.md) and [Bridge Signing Plan](../release/BridgeSigningPlan.md).
 
-Performer-friendly one-pager: [`docs/BridgeForPerformers.md`](BridgeForPerformers.md).
+Performer-friendly one-pager: [`docs/guides/BridgeForPerformers.md`](BridgeForPerformers.md).

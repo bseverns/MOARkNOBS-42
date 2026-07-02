@@ -154,7 +154,7 @@ A release is complete when all are true:
 
 ## Related docs
 
-- User quickstart: [`docs/OSCBridge.md`](../guides/OSCBridge.md)
-- Performer cheat sheet: [`docs/BridgeForPerformers.md`](../guides/BridgeForPerformers.md)
+- User quickstart: [`docs/guides/OSCBridge.md`](../guides/OSCBridge.md)
+- Performer cheat sheet: [`docs/guides/BridgeForPerformers.md`](../guides/BridgeForPerformers.md)
 - Bridge reference: [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md)
 - Release checklist: [`docs/release/ReleaseGuide.md`](ReleaseGuide.md)

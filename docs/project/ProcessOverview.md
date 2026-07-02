@@ -36,7 +36,7 @@ The fastest way to learn the pipeline is to change something tiny and shove it t
 
 3. **Push the tweak over WebSerial (sim then hardware)**
 
-   - Launch the WebSerial configurator (see [docs/WebSerial.md](../guides/WebSerial.md)) and start in the simulator mode to confirm your edited default shows up. The simulator runs the same JSON schema but never touches hardware—great for sanity checks.
+   - Launch the WebSerial configurator (see [docs/guides/WebSerial.md](../guides/WebSerial.md)) and start in the simulator mode to confirm your edited default shows up. The simulator runs the same JSON schema but never touches hardware—great for sanity checks.
    - Flip to the real device, hit `HELLO` → `GET_MANIFEST`, and let the app stream. Your changed slot should land with a fresh checksum; if the firmware rejects it, you’ll see rollback chatter in the console. That’s the ConfigManager guardrails doing their job.
 
 4. **Spy on the change stream over OSC**

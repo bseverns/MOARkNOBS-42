@@ -23,6 +23,15 @@ Last edited: 2026-02-14
 
 ---
 
+## Public README Photo Backlog
+
+- [ ] Assembled front panel with knobs, buttons, OLED, and LEDs installed.
+- [ ] Bench setup during first-power and rail-topology validation.
+- [ ] MIDI, USB, and WebSerial/bridge test session with the board connected.
+- [ ] Required rework close-up, or a clear "no rework required" board close-up after validation.
+
+---
+
 ## 0) The 10-minute demo (run-of-show)
 
 1. Plug in MN42 → open WebSerial editor → Connect

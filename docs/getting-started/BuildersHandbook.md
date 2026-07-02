@@ -26,7 +26,7 @@ Start with the bare essentials. We'll keep the spaghetti minimal:
 4. **Decoupling** – Drop a 0.1 µF ceramic between 5 V and GND near the Teensy and again at the LED strip. It's cheaper than smoke.
 5. **Wire Gauge** – 22 AWG for power runs, 24 AWG stranded for data. Keep anything carrying bits under 30 cm unless you like debugging antennas.
 
-Reference diagrams are carrying the visual load for now; bench photos will be added once the current prototype boards return from fabrication.
+Reference diagrams still carry the wiring examples. Current prototype board photos live under `docs/assets/board/`; assembled-panel and bench-session photos are still pending.
 
 ### Wiring Habits
 

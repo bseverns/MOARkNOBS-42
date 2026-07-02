@@ -71,7 +71,7 @@ Bridge MIDI mapping:
 ## 5) Keep nearby
 
 - Full bridge docs: [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md)
-- OSC quickstart: [`docs/OSCBridge.md`](OSCBridge.md)
-- Packaging roadmap: [`docs/BridgePackaging.md`](../release/BridgePackaging.md)
-- Profile/preset behavior: [`docs/ProfileWorkflow.md`](ProfileWorkflow.md)
-- Fast recovery cases: [`docs/FailureFirst.md`](../validation/FailureFirst.md)
+- OSC quickstart: [`docs/guides/OSCBridge.md`](OSCBridge.md)
+- Packaging roadmap: [`docs/release/BridgePackaging.md`](../release/BridgePackaging.md)
+- Profile/preset behavior: [`docs/guides/ProfileWorkflow.md`](ProfileWorkflow.md)
+- Fast recovery cases: [`docs/validation/FailureFirst.md`](../validation/FailureFirst.md)

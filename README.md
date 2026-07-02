@@ -4,8 +4,8 @@ This repository is currently packaged as a hardware-test bundle for the MOARkNOB
 At this point, it is meant for bench validation of the current board, firmware, OLED, controls, MIDI paths,
 LEDs, envelope followers, WebSerial telemetry, and bridge/configurator connectivity.
 
-It is not a public v1.0 release, but that will happen.
-It does not claim a verified Gerber and NC-drill release bundle - though the current repo supplies this that very nearly work perfectly.
+It is not a public v1.0 release and it is not an orderable fabrication package.
+The current tracked fabrication folder documents that no verified Gerber, NC-drill, or BOM release bundle is enclosed.
 
 Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) for a bit of what the current road to 1.0 looks like.
 For a repo-level contents map of the whole project, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
@@ -22,7 +22,8 @@ revision has completed release-level checks and everything can be made right.
 
 So far, the physical board quality has been good enough to make the prototype review useful: the PCB itself gives a
 stable target for probing, assembly, and trace inspection, and the issues found during bring-up appear to be design
-iteration problems in this machine rather than fabrication-quality problems with the boards. PCBWay managed an excellent level of detail with these boards - I had 0.5mm test pads throughout the design and all function as intended.
+iteration problems in this machine rather than fabrication-quality problems with the boards. PCBWay managed an excellent
+level of detail with these boards; the 0.5 mm test pads throughout the design are usable for the current bench review.
 
 ![Top side of the MOARkNOBS-42 prototype PCB from the recent fabrication run.](docs/assets/board/prodTOP.jpg)
 
@@ -30,17 +31,11 @@ iteration problems in this machine rather than fabrication-quality problems with
 
 ![Close-up trace inspection photo from the MOARkNOBS-42 prototype PCB bring-up work.](docs/assets/board/trace.jpg)
 
-Photo TODOs before the full project post:
-
-- TODO image: assembled front panel with knobs, buttons, OLED, and LEDs installed
-- TODO image: bench setup during first-power and rail-topology validation
-- TODO image: MIDI, USB, and WebSerial/bridge test session with the board connected
-- TODO image: any required rework close-up, or a clear "no rework required" board close-up after validation
-
 ## PCB Fabrication Notes
 
 - Existing photos live under [docs/assets/board](docs/assets/board).
 - Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
+- Fabrication folder status lives in [hardware/fabrication/README.md](hardware/fabrication/README.md).
 - Fabrication caveats are summarized in [hardware/CurrentBuild.md](hardware/CurrentBuild.md), which is the canonical
   hardware status page for this package.
 - Fabhouse experience note: the boards arrived cleanly enough that the current prototype faults are being treated as
@@ -90,7 +85,7 @@ pio run -d firmware -e teensy40_main
 
 - Schematic PDF: `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
 - PCB/reference drawing PDF: `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
-- Prototype BOM export: `hardware/fabrication/BOM_MOAR_MOAR_Board_2026-03-17.csv`
+- Fabrication status note: `hardware/fabrication/README.md`
 
 Use those as bench-validation references only. See [hardware/CurrentBuild.md](hardware/CurrentBuild.md)
 for the current status notes.

@@ -1,4 +1,4 @@
-The # MOARkNOBS-42 Hardware References
+# MOARkNOBS-42 Hardware References
 
 This folder contains the hardware references used by the hardware-test package.
 Use these files to validate the current prototype on the bench.
@@ -51,9 +51,9 @@ Power estimates and quick current math live in [PowerBudget.md](../docs/referenc
 
 - schematic PDF: `MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
 - PCB/reference drawing PDF: `MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
-- prototype BOM export: `fabrication/BOM_MOAR_MOAR_Board_2026-03-17.csv`
+- fabrication status note: `fabrication/README.md`
 
-These files are included to support bench validation, wiring review, and parts review.
+These files are included to support bench validation and wiring review. No current BOM, Gerber, or NC-drill release bundle is tracked in `fabrication/`.
 
 ## Included Notes
 
@@ -65,6 +65,6 @@ These files are included to support bench validation, wiring review, and parts r
 ## Status Boundary
 
 - current schematic and drawing PDFs are present and usable as hardware references
-- current BOM export is present and usable as a prototype parts list
+- no current BOM export is tracked in `fabrication/`
 - no verified fabrication-ready Gerber and NC-drill bundle is claimed by this package
-- any fabrication archive present in this folder should be treated as review material only
+- the fabrication folder is a boundary note until verified manufacturing files are added
