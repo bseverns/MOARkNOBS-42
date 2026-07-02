@@ -170,17 +170,17 @@ inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
 inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0005;
 
 struct __attribute__((packed)) ProfileData {
-    uint16_t version = PROFILE_SETTINGS_VERSION;              //!< Profile payload version
-    uint16_t crc = 0;                                         //!< CRC over payload bytes
-    uint8_t routeCount = 0;                                   //!< Active route count
-    ProfileArpSettings arp{};                                 //!< Arp settings snapshot
-    ProfileLedSettings led{};                                 //!< LED brightness/color
-    ProfileClockSettings clock{};                             //!< Clock source/output snapshot
-    ProfileNoteDynamicsSettings noteDynamics{};               //!< Live note dynamics snapshot
-    ProfileJitterSettings jitter{};                           //!< Live jitter snapshot
-    std::array<ProfileLfoSettings, PROFILE_LFO_COUNT> lfos{}; //!< LFO state snapshot
-    std::array<ProfileLfoRoute, PROFILE_MAX_ROUTES> routes{}; //!< LFO route table
-    std::array<ProfileSlotSettings, NUM_SLOTS> slots{};       //!< Per-slot MIDI/EF settings
+    uint16_t version = PROFILE_SETTINGS_VERSION;  //!< Profile payload version
+    uint16_t crc = 0;                             //!< CRC over payload bytes
+    uint8_t routeCount = 0;                       //!< Active route count
+    ProfileArpSettings arp{};                     //!< Arp settings snapshot
+    ProfileLedSettings led{};                     //!< LED brightness/color
+    ProfileClockSettings clock{};                 //!< Clock source/output snapshot
+    ProfileNoteDynamicsSettings noteDynamics{};   //!< Live note dynamics snapshot
+    ProfileJitterSettings jitter{};               //!< Live jitter snapshot
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{}; //!< LFO state snapshot
+    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{}; //!< LFO route table
+    ProfileSlotSettings slots[NUM_SLOTS]{};       //!< Per-slot MIDI/EF settings
 };
 
 static_assert(sizeof(ProfileData) <= EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
