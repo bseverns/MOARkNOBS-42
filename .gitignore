@@ -43,6 +43,7 @@ hardware/*_backup/
 # If we intentionally ship one of these as a release artifact, add it with `git add -f`.
 hardware/MN42-machineDrawings/**
 hardware/fabrication/**
+!hardware/fabrication/README.md
 hardware/**/*.epro
 hardware/**/*.eprj
 hardware/**/*.json
