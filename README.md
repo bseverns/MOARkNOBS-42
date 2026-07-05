@@ -23,7 +23,7 @@ revision has completed release-level checks and everything can be made right.
 So far, the physical board quality has been good enough to make the prototype review useful: the PCB itself gives a
 stable target for probing, assembly, and trace inspection, and the issues found during bring-up appear to be design
 iteration problems in this machine rather than fabrication-quality problems with the boards. PCBWay managed an excellent
-level of detail with these boards; the 0.5 mm test pads throughout the design are usable for the current bench review.
+level of detail with these boards; the 0.5 mm test pads throughout the design are very usable for the current bench review.
 
 ![Top side of the MOARkNOBS-42 prototype PCB from the recent fabrication run.](docs/assets/board/prodTOP.jpg)
 
@@ -33,9 +33,9 @@ level of detail with these boards; the 0.5 mm test pads throughout the design ar
 
 ## PCB Fabrication Notes
 
-- Existing photos live under [docs/assets/board](docs/assets/board).
-- Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
-- Fabrication folder status lives in [hardware/fabrication/README.md](hardware/fabrication/README.md).
+- Existing photos live under [docs/assets/board](docs/assets/board) and you would look at those if you'd like to see the current test-objects.
+- Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md) for notes regarding what parts/where/why.
+- Fabrication folder status lives in [hardware/fabrication/README.md](hardware/fabrication/README.md) and you can see where I've gotten with things so far, and whawt v1/1.5 would look like.
 - Fabrication caveats are summarized in [hardware/CurrentBuild.md](hardware/CurrentBuild.md), which is the canonical
   hardware status page for this package.
 - Fabhouse experience note: the boards arrived cleanly enough that the current prototype faults are being treated as
