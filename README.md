@@ -1,29 +1,36 @@
 # MOARkNOBS-42 Hardware-Test Package
 
 This repository is currently packaged as a hardware-test bundle for the MOARkNOBS-42 prototype.
-At this point, it is meant for bench validation of the current board, firmware, OLED, controls, MIDI paths,
-LEDs, envelope followers, WebSerial telemetry, and bridge/configurator connectivity.
 
-It is not a public v1.0 release and it is not an orderable fabrication package.
-The current tracked fabrication folder documents that no verified Gerber, NC-drill, or BOM release bundle is enclosed.
+It is not a public v1.0 release.
+It is not an orderable fabrication package.
+No verified Gerber, NC-drill, or release BOM bundle is enclosed.
 
-Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) for a bit of what the current road to 1.0 looks like.
-For a repo-level contents map of the whole project, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
+MN42 is a hardware-test-stage open MIDI/OSC performance instrument ecosystem: prototype hardware, Teensy firmware,
+browser configurator, Bridge, and validation docs moving together toward a supported small-batch instrument.
+
+Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) for the current hardware-test flow.
+For a repo-level contents map, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
+
+## Current Hardware-Test Status
+
+The prototype PCB run has moved MN42 from design-file speculation into physical bring-up evidence. Current boards have
+been received and are now part of the hardware-test loop for power rails, OLED/display behavior, controls, MIDI paths,
+LED load, envelope followers, WebSerial App connectivity, and Bridge connectivity.
+
+The current boards appear useful for probing, assembly review, trace inspection, and bring-up. Current faults and
+caveats are being treated as design and integration findings unless later bench evidence points to fabrication quality.
+The canonical hardware status page is [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
 
 ## PCB Progress Snapshot
 
-The MN42 prototype PCB run has moved from design files into physical boards that are now part of the hardware-test loop.
-The current goal is documented bring-up evidence: power-rail checks, display and control validation, MIDI path testing, envelope follower
-behavior, LED load testing, and host connectivity through the WebSerial app and bridge.
+This is the current public breadcrumb trail for the fabricated prototype boards, not a release claim. The boards are being
+inspected and validated against the hardware references below, and fabrication packages will stay clearly labeled until a
+revision has completed release-level checks and the remaining design findings are resolved.
 
-This is the current public breadcrumb trail for the fabricated boards, not a release claim. The boards are being inspected and
-validated against the hardware references below, and the repo will keep fabrication packages clearly labeled until a
-revision has completed release-level checks and everything can be made right.
-
-So far, the physical board quality has been good enough to make the prototype review useful: the PCB itself gives a
-stable target for probing, assembly, and trace inspection, and the issues found during bring-up appear to be design
-iteration problems in this machine rather than fabrication-quality problems with the boards. PCBWay managed an excellent
-level of detail with these boards; the 0.5 mm test pads throughout the design are very usable for the current bench review.
+PCBWay's prototype support gave MN42 a real board set to inspect and bring up. The useful claim at this stage is
+specific: the boards arrived cleanly enough for the current bench review, and the 0.5 mm test pads are usable for
+probing.
 
 ![Top side of the MOARkNOBS-42 prototype PCB from the recent fabrication run.](docs/assets/board/prodTOP.jpg)
 
@@ -31,16 +38,56 @@ level of detail with these boards; the 0.5 mm test pads throughout the design ar
 
 ![Close-up trace inspection photo from the MOARkNOBS-42 prototype PCB bring-up work.](docs/assets/board/trace.jpg)
 
+## Hardware Test Review Snapshot
+
+| Area                    | Current observation                                                                                            | Status               | Next evidence needed                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
+| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and close-up photos |
+| Power rails             | Bring-up testing in progress. No release-level rail validation claimed yet.                                    | Under review         | Capture voltage/current/thermal receipt           |
+| OLED/display            | Needs dedicated validation through hardware-test lanes.                                                        | Under review         | Record display bring-up pass/fail notes           |
+| Controls                | Board is now suitable for button/pot/control validation.                                                       | Under review         | Capture control scan and MIDI output receipt      |
+| MIDI paths              | MIDI testing is part of the current bring-up target.                                                           | Under review         | Capture filmed MIDI validation receipt            |
+| LEDs/load               | LED behavior and current draw still require bench evidence.                                                    | Under review         | Capture LED load/power receipt                    |
+| Fabrication readiness   | No orderable fabrication package is enclosed.                                                                  | Not ready            | Verified Gerber/NC-drill/BOM release bundle       |
+
+## What This Prototype Run Enabled
+
+This prototype PCB run moved MN42 from design-file speculation into real bench review. It gives the project a stable
+physical target for:
+
+- probing
+- assembly checks
+- trace inspection
+- power-rail validation
+- control testing
+- MIDI-path verification
+- LED-load testing
+- envelope follower bring-up
+- WebSerial App and Bridge host connectivity
+
+## What Is Not Claimed Yet
+
+> This prototype run is useful evidence, not manufacturing sign-off.
+>
+> This repository does not currently include an orderable fabrication package, a verified Gerber / NC-drill / release BOM
+> bundle, release-level rail or power validation, or any public v1.0 claim.
+
+## Next Evidence To Capture
+
+- filmed MIDI validation receipt
+- power-rail receipt
+- display/control bring-up receipt
+- host-connectivity receipt
+- revision findings list
+
 ## PCB Fabrication Notes
 
-- Existing photos live under [docs/assets/board](docs/assets/board) and you would look at those if you'd like to see the current test-objects.
-- Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md) for notes regarding what parts/where/why.
-- Fabrication folder status lives in [hardware/fabrication/README.md](hardware/fabrication/README.md) and you can see where I've gotten with things so far, and whawt v1/1.5 would look like.
-- Fabrication caveats are summarized in [hardware/CurrentBuild.md](hardware/CurrentBuild.md), which is the canonical
-  hardware status page for this package.
-- Fabhouse experience note: the boards arrived cleanly enough that the current prototype faults are being treated as
-  my own design and integration findings unless future evidence says otherwise. That is exactly what this prototype
-  run needed to answer.
+- Existing board photos live under [docs/assets/board](docs/assets/board).
+- Current hardware status lives in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
+- Fabrication folder status lives in [hardware/fabrication/README.md](hardware/fabrication/README.md).
+- Current package limits are summarized in [docs/hardware-test/KnownIssues.md](docs/hardware-test/KnownIssues.md).
+- Fabhouse experience note: the boards arrived cleanly enough that current prototype faults are being treated as design
+  and integration findings unless future evidence says otherwise. That is what this prototype run needed to answer.
 
 ## Choose Your Path
 
@@ -52,30 +99,20 @@ level of detail with these boards; the 0.5 mm test pads throughout the design ar
 - **Using the controller musically:** start with
   [docs/getting-started/QuickstartForPerformers.md](docs/getting-started/QuickstartForPerformers.md), then use
   [docs/getting-started/GuidedRoutes.md](docs/getting-started/GuidedRoutes.md) when you want the broader docs map.
-- **Checking fabrication or release readiness:** read [hardware/CurrentBuild.md](hardware/CurrentBuild.md) and keep the
-  non-release caveats above in mind before treating any hardware artifacts as orderable.
+- **Checking fabrication or release readiness:** read [hardware/CurrentBuild.md](hardware/CurrentBuild.md) before treating
+  any hardware artifact as orderable or release-ready.
 
 ## Package Entry Points
 
 - [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) explains what the package is, what it is not, and the expected bring-up flow.
 - [docs/hardware-test/Bringup.md](docs/hardware-test/Bringup.md) is the first-boot checklist.
-- [docs/hardware-test/TestMatrix.md](docs/hardware-test/TestMatrix.md) lists the supported test lanes and commands.
+- [docs/hardware-test/TestMatrix.md](docs/hardware-test/TestMatrix.md) lists supported test lanes and commands.
 - [docs/hardware-test/KnownIssues.md](docs/hardware-test/KnownIssues.md) records current package limits.
-- [docs/hardware-test/PackageManifest.md](docs/hardware-test/PackageManifest.md) lists included and excluded lanes.
-- [hardware/CurrentBuild.md](hardware/CurrentBuild.md) identifies the current hardware reference files.
-- [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md) explains which repo areas are source truth, evidence, generated output, or archive.
-
-## Included Test Surfaces
-
-- `firmware/` for the Teensy 4.0 firmware and test environments
-- `hardware/` for the current schematic, PCB drawing, BOM, and hardware notes
-- `App/` for WebSerial configurator validation
-- `bridge/` for OSC and virtual MIDI bridge validation
-- `tools/` for link checks, bench capture, and package export
+- [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md) maps current source, evidence, generated, and archive areas.
 
 ## Primary Build Command
 
-Run PlatformIO from `firmware/`, not the repo root:
+Run PlatformIO from the repo root with `-d firmware`; the repo root itself is not the PlatformIO project:
 
 ```bash
 pio run -d firmware -e teensy40_main
@@ -83,9 +120,14 @@ pio run -d firmware -e teensy40_main
 
 ## Hardware Reference Files Present
 
-- Schematic PDF: `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
-- PCB/reference drawing PDF: `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
-- Fabrication status note: `hardware/fabrication/README.md`
+These match the current hardware status page in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
 
-Use those as bench-validation references only. See [hardware/CurrentBuild.md](hardware/CurrentBuild.md)
-for the current status notes.
+| Item                    | Path                                                              | Status  | Use in this package                                         |
+| ----------------------- | ----------------------------------------------------------------- | ------- | ----------------------------------------------------------- |
+| Schematic reference     | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present | Current schematic reference for bench validation            |
+| PCB/reference drawing   | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`     | present | Current board drawing reference for bench validation        |
+| Fabrication status note | `hardware/fabrication/README.md`                                  | present | States that no orderable fabrication package is enclosed    |
+| Physical board photos   | `docs/assets/board/`                                              | present | Public breadcrumb images for current prototype board review |
+
+No current BOM file is tracked in `hardware/fabrication/`, and no verified Gerber / NC-drill archive is present or
+claimed. Use the files above as bench-validation references only.
