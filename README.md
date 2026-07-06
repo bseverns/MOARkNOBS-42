@@ -42,7 +42,7 @@ probing.
 
 | Area                    | Current observation                                                                                            | Status               | Next evidence needed                              |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
-| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and close-up photos |
+| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and close-up photos from my phone |
 | Power rails             | Bring-up testing in progress. No release-level rail validation claimed yet.                                    | Under review         | Capture voltage/current/thermal receipt           |
 | OLED/display            | Needs dedicated validation through hardware-test lanes.                                                        | Under review         | Record display bring-up pass/fail notes           |
 | Controls                | Board is now suitable for button/pot/control validation.                                                       | Under review         | Capture control scan and MIDI output receipt      |
