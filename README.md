@@ -42,12 +42,12 @@ probing.
 
 | Area                    | Current observation                                                                                            | Status               | Next evidence needed                              |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
-| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and close-up photos |
-| Power rails             | Bring-up testing in progress. No release-level rail validation claimed yet.                                    | Under review         | Capture voltage/current/thermal receipt           |
-| OLED/display            | Needs dedicated validation through hardware-test lanes.                                                        | Under review         | Record display bring-up pass/fail notes           |
-| Controls                | Board is now suitable for button/pot/control validation.                                                       | Under review         | Capture control scan and MIDI output receipt      |
-| MIDI paths              | MIDI testing is part of the current bring-up target.                                                           | Under review         | Capture filmed MIDI validation receipt            |
-| LEDs/load               | LED behavior and current draw still require bench evidence.                                                    | Under review         | Capture LED load/power receipt                    |
+| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and close-up photos from my phone |
+| Power rails             | Bring-up testing in progress. No release-level rail validation claimed yet.                                    | Under review         | Capture voltage/current/thermal receipt - current testing indicates a mis-routing in the design on input fuses          |
+| OLED/display            | Needs dedicated validation through hardware-test lanes.                                                        | Under review         | Record display bring-up pass/fail notes - after power surgery           |
+| Controls                | Board is now suitable for button/pot/control validation.                                                       | Under review         | Capture control scan and MIDI output receipt on DIN/USB      |
+| MIDI paths              | MIDI testing is part of the current bring-up target.                                                           | Under review         | Capture filmed MIDI validation receipt via transport           |
+| LEDs/load               | LED behavior and current draw still require bench evidence once power routing is made solid.                                                    | Under review         | Capture LED load/power receipt                    |
 | Fabrication readiness   | No orderable fabrication package is enclosed.                                                                  | Not ready            | Verified Gerber/NC-drill/BOM release bundle       |
 
 ## What This Prototype Run Enabled
