@@ -98,3 +98,6 @@ firmware/test/__pycache__/test_custom_runner.cpython-314.pyc
 docs/app/AppRuntimeActionPlan.md
 docs/bridge/BridgeRuntimeUpgradePlan.md
 docs/firmware/FirmwareRuntimeActionPlan.md
+docs/project/verified-calendar-events-mn42-phase1.json
+docs/project/pending-calendar-events-mn42-phase1.json
+docs/project/created-calendar-events-mn42-phase1.json
