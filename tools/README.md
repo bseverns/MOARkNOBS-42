@@ -24,6 +24,10 @@ JSON so you can compare baseline (256 buffer) against tuned (64 buffer) sessions
 without hand math. Think of it as a drummer with a calculator: loud, precise,
 and painfully honest.
 
+## Docs Link Checker
+
+Run `python3 tools/check_docs_links.py` before you ship docs-heavy changes. It checks local Markdown links and heading anchors so learners don't fall through trapdoors.
+
 ## Bring Your Own Hacks
 
 Got a script that makes debugging less dull? Park it here with a README and keep dependencies light. No binaries, no mystery jars—just plain text mischief that others can remix.

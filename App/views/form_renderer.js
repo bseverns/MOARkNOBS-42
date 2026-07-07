@@ -1,5 +1,7 @@
 import { ARG_METHOD_NAMES, formatArgMethodLabel, describeArgMethod } from '../lib/constants.js';
 
+// Schema-to-controls glue. The JSON schema is the boss; this file just turns it
+// into boring inputs and sends tiny patches back to the runtime.
 const DEFAULT_DEBOUNCE = 150;
 
 // Split dotted schema paths into array/object access tokens.
@@ -75,6 +77,8 @@ function createHelpBadge(message) {
   return badge;
 }
 
+// Renders each requested schema branch into its target DOM node. No custom form
+// framework, no magic: path in, field out, patch on change.
 export class FormRenderer {
   constructor({ runtime, sections = [], debounceMs = DEFAULT_DEBOUNCE }) {
     this.runtime = runtime;

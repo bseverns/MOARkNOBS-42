@@ -25,6 +25,8 @@ import {
 } from '../lib/constants.js';
 import { createLocalManifest } from '../manifest_contract.js';
 
+// BenzKnobz skin over the shared runtime. Runtime owns the protocol; this file
+// owns the stage props: slots, profiles, LEDs, logs, and the workshop simulator.
 const localManifest = createLocalManifest({
   uiVersion: '2026.03.09',
   argMethodCount: ARG_METHOD_NAMES.length
@@ -64,7 +66,8 @@ if (typeof window !== 'undefined') {
 }
 
 // Page bootstrap owns the full operator shell: transport controls, staged/live
-// config rendering, recovery affordances, and telemetry.
+// config rendering, recovery affordances, and telemetry. Start here, then jump
+// to runtime.js when a button crosses the serial line.
 const boot = () => {
   if (typeof document === 'undefined') return;
   const docRoot = document.documentElement;

@@ -1,3 +1,5 @@
+// Tiny oscilloscope for firmware telemetry. The device sends normalized EF/LFO
+// values; this file just keeps enough history to make the wobble visible.
 const DEFAULT_LFO_COUNT = 2;
 const MIN_HISTORY = 64;
 const TARGET_FPS = 30;
@@ -16,6 +18,8 @@ const now = () =>
     ? performance.now()
     : Date.now();
 
+// Canvas painter, not a data owner. Runtime pushes frames; the panel stores the
+// last screenful and redraws at a boring fixed cadence.
 export class ScopePanel {
   constructor({ container, runtime, manifest } = {}) {
     this.container = container;

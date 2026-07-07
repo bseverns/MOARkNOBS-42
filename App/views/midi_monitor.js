@@ -1,3 +1,5 @@
+// Web MIDI bench spy. It listens without rewriting the main runtime so learners
+// can sniff bytes, send clock, and still close the panel when it gets loud.
 const MIDI_LOG_LIMIT = 1000;
 const LOG_VISIBLE_COUNT = 60;
 const CLOCK_PULSES_PER_QUARTER = 24;
@@ -29,6 +31,8 @@ function clampBpm(value) {
   return Math.min(220, Math.max(60, num));
 }
 
+// Thin wrapper around navigator.requestMIDIAccess: ask once, log hard, cap the
+// DOM so a MIDI clock storm doesn't melt the browser.
 export class MidiMonitor {
   constructor({ container } = {}) {
     this.container = container;

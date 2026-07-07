@@ -118,6 +118,7 @@ nav:
       - Guided Routes: getting-started/GuidedRoutes.md
       - Glossary: reference/Glossary.md
       - One Signal Path: learn/OneSignalPath.md
+      - Learner Paths: learn/LearnerPaths.md
       - Configure Without Recompiling: getting-started/ConfigureWithoutRecompiling.md
       - Reactive Modulation Matrix: guides/ReactiveModulationMatrix.md
       - Reactive Control Guide: guides/ReactiveControlGuide.md
@@ -190,6 +191,9 @@ nav:
           - Bridge Packaging: release/BridgePackaging.md
           - Bridge Signing Plan: release/BridgeSigningPlan.md
       - Sketches And Examples:
+          - Sketch Rack: sketch/README.md
+          - System Flow: sketch/systemFlow/README.md
+          - Hardware System Flow: sketch/systemFlow/hw/README.md
           - Sketchbook: sketchbook/index.md
           - Examples: examples/README.md
           - Thermal Notes: thermal/README.md

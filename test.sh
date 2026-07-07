@@ -47,6 +47,9 @@ fi
 npm --prefix bridge test | tee logs/bridge-test.log
 npm --prefix App test | tee logs/app-test.log
 
+# Docs are code here; dead breadcrumbs make learner brains sad.
+python3 tools/check_docs_links.py | tee logs/docs-link-check.log
+
 if [ -n "$PORT" ]; then
   # Full-stack OSC↔firmware shakedown. Writes JSON + text logs for CI artifacts.
   node firmware/system_test/mn42_fullstack_runner.js \

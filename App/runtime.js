@@ -39,6 +39,8 @@ import {
   shallowEqual
 } from './runtime/runtime_utils.js';
 
+// Browser-side firmware translator. It keeps three stories in tune: live device
+// state, staged editor state, and the simulator state learners can abuse safely.
 const TELEMETRY_FRAME_MS = 16;
 const RPC_THROTTLE_INTERVAL_MS = 1000 / 120;
 const RPC_TIMEOUT_MS = 3000;
@@ -60,7 +62,8 @@ const STORAGE_KEY = 'moarknobs:last-port';
 const STATE_STORAGE_KEY = 'moarknobs:last-state';
 const LOCAL_SLOT_META_STORAGE_KEY = 'moarknobs:slot-meta';
 
-// Native serial transport wrapper that exposes the same API as the simulator and WS bridge.
+// Runtime shell. Views call this, then mostly listen for events instead of
+// poking transport guts directly.
 export function createRuntime({
   schemaUrl = './config_schema.json',
   localManifest,

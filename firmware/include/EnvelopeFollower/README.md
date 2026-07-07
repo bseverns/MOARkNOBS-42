@@ -91,4 +91,4 @@ Here’s the bag of tricks—fourteen ways to mash envelopes:
 | `MINN` | `min(A, B)` | Stick with the wallflower |
 | `XORR` | `A ^ B` | Bitwise glitch punk |
 
-Deep dive into ARG routing in the [main firmware README](../../README.md#arg-mode).
+Deep dive into ARG routing in the [ARG guide](../../../docs/guides/ARGGuide.md).
