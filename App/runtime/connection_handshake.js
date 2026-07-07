@@ -10,6 +10,13 @@ function buildFallbackManifest(localManifest, argMethodCount) {
     envelope_count: localManifest?.envelope_count,
     arg_method_count: argMethodCount,
     led_count: localManifest?.led_count ?? 0,
+    power_profile: localManifest?.power_profile,
+    led_brightness_cap: localManifest?.led_brightness_cap,
+    rail_topology_verified: localManifest?.rail_topology_verified,
+    capabilities:
+      localManifest?.capabilities && typeof localManifest.capabilities === 'object'
+        ? { ...localManifest.capabilities }
+        : {},
     free_ram: 0,
     free_flash: 0
   };

@@ -155,7 +155,10 @@ export function createRuntime({
             clock_live: true,
             usb_midi_toggle: true,
             note_dynamics_live: true,
-            jitter_live: true
+            jitter_live: true,
+            device_schema: true,
+            bulk_config: true,
+            one_shot_config_boot: false
           }
         }),
       argMethodNames: ARG_METHOD_NAMES,

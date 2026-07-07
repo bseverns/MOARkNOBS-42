@@ -15,7 +15,13 @@ const DEFAULT_CAPABILITIES = {
   macro_snapshot: false,
   scenes: false,
   arp_live: false,
-  usb_midi_toggle: false
+  clock_live: false,
+  note_dynamics_live: false,
+  jitter_live: false,
+  usb_midi_toggle: false,
+  device_schema: false,
+  bulk_config: false,
+  one_shot_config_boot: false
 };
 
 // Build the browser's fallback manifest so the UI still knows slot counts,
