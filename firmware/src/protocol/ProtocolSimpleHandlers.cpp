@@ -55,7 +55,7 @@ struct MidiCcWriterBucket {
     char writers[192] = {0};
 };
 
-std::array<MidiCcWriterBucket, 96> midiCcWriters{};
+DMAMEM std::array<MidiCcWriterBucket, 96> midiCcWriters{};
 size_t midiCcWriterCount = 0;
 
 struct SlotWriterBucket {
@@ -64,7 +64,7 @@ struct SlotWriterBucket {
     char writers[192] = {0};
 };
 
-std::array<SlotWriterBucket, NUM_SLOTS> slotWriters{};
+DMAMEM std::array<SlotWriterBucket, NUM_SLOTS> slotWriters{};
 size_t slotWriterCount = 0;
 
 const char *efDestinationModeName(uint8_t mode) {
