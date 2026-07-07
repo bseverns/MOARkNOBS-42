@@ -1,17 +1,17 @@
 #if !defined(UNIT_TEST)
 /*
- * Button + Envelope demo sketch
- * ------------------------------
- * Flash this when you want a barebones hardware riff: one control button
- * and one envelope follower slinging USB MIDI without the rest of the rig.
- *
- * Wiring assumptions:
- *   - Control button on pin 12, active LOW (use the board's stock control btn 0)
- *   - Envelope follower output patched into A0
- *
- * Upload with:
- *   pio run -d firmware -e teensy40_button_ef_demo -t upload
- */
+Button + Envelope demo sketch
+------------------------------
+Flash this when you want a barebones hardware riff: one control button
+and one envelope follower slinging USB MIDI without the rest of the rig.
+
+Wiring assumptions:
+  - Control button on pin 12, active LOW (use the board's stock control btn 0)
+  - Envelope follower output patched into A0
+
+Upload with:
+  pio run -d firmware -e teensy40_button_ef_demo -t upload
+*/
 
 #include <Arduino.h>
 #include <math.h>

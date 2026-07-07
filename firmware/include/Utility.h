@@ -18,7 +18,7 @@
 class MIDIHandler;
 class EnvelopeFollower;
 
-/** Small structure representing a scheduled callback. */
+// Small structure representing a scheduled callback.
 struct ScheduledTask {
     std::function<void()> callback;
     unsigned long runAt;
@@ -29,22 +29,22 @@ struct ScheduledTask {
         : callback(cb), runAt(now() + delayMs), repeat(rpt), interval(delayMs) {}
 };
 
-/**
- * Simple cooperative task scheduler used by Utility.
- *
- * Callbacks get collected and fired later, so they must not try to
- * monkey with the scheduler's task list directly.
- */
+/*
+Simple cooperative task scheduler used by Utility.
+
+Callbacks get collected and fired later, so they must not try to
+monkey with the scheduler's task list directly.
+*/
 class TaskScheduler {
   public:
     TaskScheduler();
 
     void addTask(std::function<void()> callback, unsigned long delayMs, bool repeat = false);
 
-    /**
-     * Tick the scheduler: collect due tasks, fire callbacks, and then
-     * wipe finished one-shots.
-     */
+    /*
+    Tick the scheduler: collect due tasks, fire callbacks, and then
+    wipe finished one-shots.
+    */
     void update();
 
 #if defined(UNIT_TEST)
@@ -63,40 +63,40 @@ class TaskScheduler {
     std::vector<size_t> dueTaskIndices;
 };
 
-/** Collection of miscellaneous helper functions. */
+// Collection of miscellaneous helper functions.
 class Utility {
   public:
-    /**
-     * Schedule a Note On immediately followed by a delayed Note Off.
-     *
-     * @param midiHandler  Reference to the MIDI handler used to send messages.
-     * @param note         MIDI note number.
-     * @param velocity     Note on velocity.
-     * @param channel      MIDI channel (1‑16).
-     * @param durationMs   Duration in milliseconds before the Note Off is sent.
-     */
+    /*
+    Schedule a Note On immediately followed by a delayed Note Off.
+
+    - midiHandler: Reference to the MIDI handler used to send messages.
+    - note: MIDI note number.
+    - velocity: Note on velocity.
+    - channel: MIDI channel (1‑16).
+    - durationMs: Duration in milliseconds before the Note Off is sent.
+    */
     static void scheduleNoteOnOff(MIDIHandler &midiHandler, uint8_t note, uint8_t velocity,
                                   uint8_t channel, unsigned long durationMs);
 
     // Mapping and Value Transformations
-    /** Map a raw analog reading to the 0‑127 MIDI range. */
+    // Map a raw analog reading to the 0‑127 MIDI range.
     static uint8_t mapToMidiValue(int analogValue, int minValue = 0, int maxValue = 1023);
 
-    /** Map a raw analog reading to the full 14-bit 0‑16383 span. */
+    // Map a raw analog reading to the full 14-bit 0‑16383 span.
     static uint16_t mapTo14Bit(int analogValue, int minValue = 0, int maxValue = 1023);
 
-    /** Generic integer mapping helper. */
+    // Generic integer mapping helper.
     static int mapToRange(int value, int inMin, int inMax, int outMin, int outMax);
 
-    /** Map a value from one float range to another. */
+    // Map a value from one float range to another.
     static float scale(float value, float inMin, float inMax, float outMin, float outMax);
 
-    /** Exponential scaling used for envelope shaping. */
+    // Exponential scaling used for envelope shaping.
     static float mapExponential(float value, float inMin, float inMax, float outMin, float outMax,
                                 float exponent);
 
     // Debouncing
-    /** Debounce one digital input and report when its stable state changes. */
+    // Debounce one digital input and report when its stable state changes.
     static bool debounce(bool &stableState, bool &lastRawState, bool currentState,
                          unsigned long &lastDebounceTime, unsigned long currentTime,
                          unsigned long debounceDelay);
@@ -132,48 +132,48 @@ class Utility {
         const char *statusMessage, uint8_t activePot, uint8_t activeChannel,
         const char *envelopeMode);
 
-    /** Maximum JSON payload we accept for chunked configuration pushes. */
+    // Maximum JSON payload we accept for chunked configuration pushes.
     static constexpr size_t kMaxBulkConfigSize = 32768;
 
-    /**
-     * Incremental assembler for chunked configuration uploads. Each
-     * `SET_ALL` frame feeds a substring of the final JSON blob into this
-     * buffer until ArduinoJson can deserialize the full payload.
-     */
+    /*
+    Incremental assembler for chunked configuration uploads. Each
+    `SET_ALL` frame feeds a substring of the final JSON blob into this
+    buffer until ArduinoJson can deserialize the full payload.
+    */
     class BulkConfigAssembler {
       public:
-        /** Reset state so the next chunk is treated as a brand-new frame. */
+        // Reset state so the next chunk is treated as a brand-new frame.
         void reset();
 
-        /**
-         * Append a chunk of JSON to the working buffer.
-         *
-         * @param chunk  Raw substring captured after the `SET_ALL ` prefix.
-         * @param error  Populated with a short error code when ingestion fails.
-         * @return       true if the chunk was accepted, false on overflow or
-         *               orphaned fragments.
-         */
+        /*
+        Append a chunk of JSON to the working buffer.
+
+        - chunk: Raw substring captured after the `SET_ALL ` prefix.
+        - error: Populated with a short error code when ingestion fails.
+        Returns true if the chunk was accepted, false on overflow or
+                      orphaned fragments.
+        */
         bool ingestChunk(const String &chunk, String &error);
 
-        /** Return true when a frame is currently being assembled. */
+        // Return true when a frame is currently being assembled.
         bool inProgress() const { return receiving; }
 
-        /** Expose the buffered JSON so callers can hand it to ArduinoJson. */
+        // Expose the buffered JSON so callers can hand it to ArduinoJson.
         const String &payload() const { return buffer; }
 
-        /** True when no bytes are staged. */
+        // True when no bytes are staged.
         bool empty() const { return buffer.length() == 0; }
 
-        /** Rough sequence hint scraped from the staged payload. */
+        // Rough sequence hint scraped from the staged payload.
         uint32_t sequenceHint() const { return seqHint; }
 
-        /** Best-effort config id/checksum hint scraped from the staged payload. */
+        // Best-effort config id/checksum hint scraped from the staged payload.
         const String &checksumHint() const { return checksum; }
 
-        /** Current payload size in bytes. */
+        // Current payload size in bytes.
         size_t size() const { return buffer.length(); }
 
-        /** True once the staged text contains one balanced top-level JSON object. */
+        // True once the staged text contains one balanced top-level JSON object.
         bool complete() const { return receiving && sawRootOpen && !inString && braceDepth == 0; }
 
       private:
@@ -190,13 +190,13 @@ class Utility {
         bool sawRootOpen = false;
     };
 
-    /** Format the acknowledgement packet emitted after applying a config. */
+    // Format the acknowledgement packet emitted after applying a config.
     static String formatAck(const char *checksum, uint32_t sequence);
 
-    /** Sample the hardware VREF divider and return the measured voltage. */
+    // Sample the hardware VREF divider and return the measured voltage.
     static float readVrefADC(uint8_t pin = VREF_ADC_PIN);
 
-    /** High, medium and low priority schedulers used globally. */
+    // High, medium and low priority schedulers used globally.
     static TaskScheduler schedulerHigh;
     static TaskScheduler schedulerMid;
     static TaskScheduler schedulerLow;
@@ -206,12 +206,12 @@ class Utility {
     static void resetEEPROM(int startAddress, int endAddress, uint8_t defaultValue = 0xFF);
 };
 
-/**
- * @brief Drive a 4-bit multiplexer select bus.
- *
- * Convenience helper used by both the button and potentiometer scanners
- * to update the CD74HC4067 address lines.
- */
+/*
+Drive a 4-bit multiplexer select bus.
+
+Convenience helper used by both the button and potentiometer scanners
+to update the CD74HC4067 address lines.
+*/
 inline void setMux(const uint8_t selPins[4], uint8_t index) {
     for (uint8_t i = 0; i < 4; ++i) {
         digitalWrite(selPins[i], (index >> i) & 1);

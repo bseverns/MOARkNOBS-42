@@ -87,15 +87,15 @@ void Utility::scheduleNoteOnOff(MIDIHandler &midiHandler, uint8_t note, uint8_t 
 
 // Debouncing
 /*
- * `stableState`     holds the last rock-solid reading.
- * `lastRawState`    tracks the most recent unconfirmed sample so bouncing
- *                    edges can restart the timer without losing the stable
- *                    output state.
- * `currentState`    the raw sample we're checking out right now.
- * `lastDebounceTime` time stamp of the most recent flip.
- * `debounceDelay`   minimum interval the input has to keep screaming the same
- *                    value before we believe it.
- */
+`stableState`     holds the last rock-solid reading.
+`lastRawState`    tracks the most recent unconfirmed sample so bouncing
+                   edges can restart the timer without losing the stable
+                   output state.
+`currentState`    the raw sample we're checking out right now.
+`lastDebounceTime` time stamp of the most recent flip.
+`debounceDelay`   minimum interval the input has to keep screaming the same
+                   value before we believe it.
+*/
 bool Utility::debounce(bool &stableState, bool &lastRawState, bool currentState,
                        unsigned long &lastDebounceTime, unsigned long currentTime,
                        unsigned long debounceDelay) {

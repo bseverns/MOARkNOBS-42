@@ -82,6 +82,8 @@ not_in_nav: |
   /bench/firmware/*.md
   /bench/latency/*.md
   /bench/noise/*.md
+  /app/AppModeAudit.md
+  /bridge/BridgeFirstRunAudit.md
   /bridge/BridgeConsoleTour.md
   /examples/max/*.md
   /examples/puredata/*.md
@@ -168,6 +170,7 @@ nav:
       - Host Compatibility: reference/HostCompatibility.md
       - Known Good Host Recipes: reference/KnownGoodHostRecipes.md
       - Parameter Map: reference/parameter-map.md
+      - Comment Style: reference/CommentStyle.md
       - Firmware Architecture: reference/FirmwareArchitecture.md
       - Documentation Truth Map: reference/DocumentationTruthMap.md
   - Project:

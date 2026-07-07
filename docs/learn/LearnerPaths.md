@@ -9,9 +9,9 @@ Each path has a safe read, a tiny poke, and one check. No hardware? Use the app 
 **Open these:**
 
 1. [`docs/sketch/systemFlow/hw/buttonMatrix.md`](../sketch/systemFlow/hw/buttonMatrix.md) — what the rows, columns, muxes, and diodes are doing.
-2. [`firmware/include/ButtonManager/README.md`](../../firmware/include/ButtonManager/README.md) — the human-facing button map.
-3. [`firmware/src/ButtonManager.cpp`](../../firmware/src/ButtonManager.cpp) — debounce, long press, double press, combo goblins.
-4. [`firmware/src/MIDIHandler.cpp`](../../firmware/src/MIDIHandler.cpp) — where the press finally becomes a MIDI message.
+2. [`firmware/include/ButtonManager/README.md`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/ButtonManager/README.md) — the human-facing button map.
+3. [`firmware/src/ButtonManager.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/ButtonManager.cpp) — debounce, long press, double press, combo actions.
+4. [`firmware/src/MIDIHandler.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/MIDIHandler.cpp) — where the press finally becomes a MIDI message.
 
 **Tiny poke:** change one label or comment in the button map, not behavior. Learners get oriented without risking the scan loop.
 
@@ -21,17 +21,17 @@ Each path has a safe read, a tiny poke, and one check. No hardware? Use the app 
 pio -d firmware test -e teensy40_unity -vvv
 ```
 
-Expected: Unity runs over the custom `Serial1` transport. If PlatformIO tries to invent its own transport, back away slowly and read [`AGENTS.md`](../../AGENTS.md).
+Expected: Unity runs over the custom `Serial1` transport. If PlatformIO tries to invent its own transport, back away slowly and read [`AGENTS.md`](https://github.com/bseverns/MOARkNOBS-42/blob/main/AGENTS.md).
 
 ## 2. Envelope path: voltage wiggle to slot modulation
 
 **Open these:**
 
 1. [`docs/sketch/systemFlow/hw/envelopeFE.md`](../sketch/systemFlow/hw/envelopeFE.md) — rectifier/front-end reality before the ADC fantasy.
-2. [`firmware/include/EnvelopeFollower/README.md`](../../firmware/include/EnvelopeFollower/README.md) — filter and ARG cheat sheets.
-3. [`firmware/src/EnvelopeFollower.cpp`](../../firmware/src/EnvelopeFollower.cpp) — smoothing, filters, and calibration.
-4. [`firmware/src/ARGMixer.cpp`](../../firmware/src/ARGMixer.cpp) — where followers start fighting creatively.
-5. [`firmware/src/ConfigManager.cpp`](../../firmware/src/ConfigManager.cpp) — why the chosen settings survive power cycles.
+2. [`firmware/include/EnvelopeFollower/README.md`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/EnvelopeFollower/README.md) — filter and ARG cheat sheets.
+3. [`firmware/src/EnvelopeFollower.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/EnvelopeFollower.cpp) — smoothing, filters, and calibration.
+4. [`firmware/src/ARGMixer.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/ARGMixer.cpp) — where followers combine and reshape control signals.
+5. [`firmware/src/ConfigManager.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/ConfigManager.cpp) — why the chosen settings survive power cycles.
 
 **Tiny poke:** tweak one documented default in a branch, then undo it after the tour. The point is to watch where the value travels.
 
@@ -47,10 +47,10 @@ Expected: firmware compiles. Hardware readings still need a real bench, because 
 
 **Open these:**
 
-1. [`App/config_schema.json`](../../App/config_schema.json) — what the browser is allowed to edit.
-2. [`App/views/form_renderer.js`](../../App/views/form_renderer.js) — schema becomes boring inputs.
-3. [`App/views/benzknobz.js`](../../App/views/benzknobz.js) — buttons, profile toolbar, and stage props.
-4. [`App/runtime.js`](../../App/runtime.js) — transport selection, staged state, rollback, checksum.
+1. [`App/config_schema.json`](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/config_schema.json) — what the browser is allowed to edit.
+2. [`App/views/form_renderer.js`](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/views/form_renderer.js) — schema becomes boring inputs.
+3. [`App/views/benzknobz.js`](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/views/benzknobz.js) — buttons, profile toolbar, and stage props.
+4. [`App/runtime.js`](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/runtime.js) — transport selection, staged state, rollback, checksum.
 5. [`docs/guides/WebSerial.md`](../guides/WebSerial.md) — the wire words the board expects.
 
 **Tiny poke:** run the simulator, edit one numeric field, hit Apply, then watch the dirty badge disappear.

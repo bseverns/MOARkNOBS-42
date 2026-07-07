@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
- * Hardware-in-the-loop bridge session proof for the upgraded browser-console
- * lane. This runner exercises the bridge the way the App now prefers to use
- * it: start the HTTP server, connect the service over USB serial, wait for the
- * cached device session to become ready, then prove stage/apply/cleanup over
- * `/api/device/*` while watching `/ws/events`.
- */
+Hardware-in-the-loop bridge session proof for the upgraded browser-console
+lane. This runner exercises the bridge the way the App now prefers to use
+it: start the HTTP server, connect the service over USB serial, wait for the
+cached device session to become ready, then prove stage/apply/cleanup over
+`/api/device/*` while watching `/ws/events`.
+*/
 
 'use strict';
 

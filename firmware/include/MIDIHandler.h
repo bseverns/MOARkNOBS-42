@@ -27,63 +27,63 @@ inline constexpr bool HAS_USB_MIDI = false;
 
 struct SystemDiagnostics;
 
-/**
- * @brief Thin wrapper around the Arduino and USB MIDI libraries.
- */
+/*
+Thin wrapper around the Arduino and USB MIDI libraries.
+*/
 class MIDIHandler {
   public:
-    /** Assign a DisplayManager so MIDI traffic can be displayed. */
+    // Assign a DisplayManager so MIDI traffic can be displayed.
     void setDisplayManager(DisplayManager *dm) { _displayManager = dm; }
 
-    /** Hook in a diagnostics block so we can count dropped bytes and overruns. */
+    // Hook in a diagnostics block so we can count dropped bytes and overruns.
     void setDiagnostics(SystemDiagnostics *diag) { _diagnostics = diag; }
 
-    /** Create a new MIDI handler with no side effects. */
+    // Create a new MIDI handler with no side effects.
     MIDIHandler();
 
-    /** Set up the serial and USB MIDI interfaces. Call from setup(). */
+    // Set up the serial and USB MIDI interfaces. Call from setup().
     void begin();
 
-    /** Send a standard Control Change message. */
+    // Send a standard Control Change message.
     void sendControlChange(uint8_t control, uint8_t value, uint8_t channel);
 
-    /** Send a MIDI Note On message. */
+    // Send a MIDI Note On message.
     void sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel);
 
-    /** Send a MIDI Note Off message. */
+    // Send a MIDI Note Off message.
     void sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel);
 
-    /** Sling a raw NRPN sequence (CC99/98 + CC6/38). */
+    // Sling a raw NRPN sequence (CC99/98 + CC6/38).
     void sendNRPN(uint16_t param, uint16_t value, uint8_t channel);
 
-    /** Sling a Registered Parameter Number sequence (CC101/100 + CC6/38). */
+    // Sling a Registered Parameter Number sequence (CC101/100 + CC6/38).
     void sendRPN(uint16_t param, uint16_t value, uint8_t channel);
 
-    /** Last NRPN parsed from the wire. */
+    // Last NRPN parsed from the wire.
     uint16_t lastNRPNParam() const { return _lastNRPNParam; }
     uint16_t lastNRPNValue() const { return _lastNRPNValue; }
 
-    /** Last RPN parsed from the wire. */
+    // Last RPN parsed from the wire.
     uint16_t lastRPNParam() const { return _lastRPNParam; }
     uint16_t lastRPNValue() const { return _lastRPNValue; }
 
-    /** Fire off a System Exclusive packet. `data` should include F0/F7. */
+    // Fire off a System Exclusive packet. `data` should include F0/F7.
     void sendSysEx(const uint8_t *data, uint16_t length);
 
-    /** Snapshot of the most recent SysEx payload. */
+    // Snapshot of the most recent SysEx payload.
     uint16_t lastSysExLength() const { return _lastSysExLength; }
     const uint8_t *lastSysExData() const { return _lastSysEx; }
     SysExType lastSysExType() const { return _lastSysExType; }
     uint8_t lastSysExSubId1() const { return _lastSysExSubId1; }
     uint8_t lastSysExSubId2() const { return _lastSysExSubId2; }
 
-    /** Poll both serial and USB for incoming MIDI bytes. */
+    // Poll both serial and USB for incoming MIDI bytes.
     void processIncomingMIDI();
 
-    /** Dispatch a parsed MIDI message to the appropriate handler. */
+    // Dispatch a parsed MIDI message to the appropriate handler.
     void handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1, uint8_t data2);
 
-    /** Convenience helpers for specific message types. */
+    // Convenience helpers for specific message types.
     void handleNoteOn(uint8_t channel, uint8_t note, uint8_t velocity);
     void handleNoteOff(uint8_t channel, uint8_t note, uint8_t velocity);
     void handleProgramChange(uint8_t channel, uint8_t program);
@@ -96,26 +96,26 @@ class MIDIHandler {
     void sendClock();
     void flushUsbMidi();
 
-    /** Emit an internal MIDI clock pulse so in-box features stay in sync. */
+    // Emit an internal MIDI clock pulse so in-box features stay in sync.
     void generateClockTick();
 
-    /** Public drain for high-priority scheduler task to prevent queue starvation. */
+    // Public drain for high-priority scheduler task to prevent queue starvation.
     void serviceSerialQueuePublic() { serviceSerialQueue(); }
 
-    /** Total MIDI clock pulses observed since boot. */
+    // Total MIDI clock pulses observed since boot.
     uint32_t clockTickCount() const { return _clockTickCount; }
 
-    /** MIDI clock helpers. */
+    // MIDI clock helpers.
     bool isClockTick();
     void clearClockTick();
-    /** Return true when a MIDI Start/Continue has been seen without Stop. */
+    // Return true when a MIDI Start/Continue has been seen without Stop.
     bool isClockRunning() const { return _clockRunning; }
-    /** Return true when fresh external MIDI clock ticks have been observed recently. */
+    // Return true when fresh external MIDI clock ticks have been observed recently.
     bool hasExternalClockSignal() const;
-    /** Smoothed BPM estimate derived from incoming external MIDI clock ticks. */
+    // Smoothed BPM estimate derived from incoming external MIDI clock ticks.
     float externalClockBpm() const;
 
-    /** How many MIDI messages we've heard and blasted. */
+    // How many MIDI messages we've heard and blasted.
     uint32_t getRxCount() const { return _rxCount; }
     uint32_t getTxCount() const { return _txCount; }
 
@@ -148,7 +148,7 @@ class MIDIHandler {
     unsigned long lastObservedExternalTick = 0;
     unsigned long lastInternalTick = 0;
     float externalMsPerTick = 0.0f;
-    bool _clockRunning = false; //!< Track Start/Continue vs Stop for sync-aware modules
+    bool _clockRunning = false; // Track Start/Continue vs Stop for sync-aware modules
     DisplayManager *_displayManager = nullptr;
     SystemDiagnostics *_diagnostics = nullptr;
 

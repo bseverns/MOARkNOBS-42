@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /*
- * Persistence abuse evidence wrapper for the current MN42 hardware-test stack.
- *
- * Safe-by-default behavior:
- *  - runs the non-destructive boot/apply/readback proof when a serial port is
- *    provided
- *  - only runs destructive profile/macro/scene storage checks when
- *    --exercise-storage is explicitly passed
- *
- * Corruption and interrupted-write scenarios that require fault injection are
- * reported as Unity-covered or manual-only until the repo has explicit safe
- * hooks for them.
- */
+Persistence abuse evidence wrapper for the current MN42 hardware-test stack.
+
+Safe-by-default behavior:
+ - runs the non-destructive boot/apply/readback proof when a serial port is
+   provided
+ - only runs destructive profile/macro/scene storage checks when
+   --exercise-storage is explicitly passed
+
+Corruption and interrupted-write scenarios that require fault injection are
+reported as Unity-covered or manual-only until the repo has explicit safe
+hooks for them.
+*/
 
 'use strict';
 

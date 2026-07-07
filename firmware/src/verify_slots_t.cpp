@@ -1,20 +1,20 @@
 /*
- * MIDISlot EEPROM Verification
- *
- * Writes known data to every slot and reloads it to confirm EEPROM integrity.
- * It uses the same ConfigManager path that `FirmwareState.cpp` exposes so
- * you can demonstrate how `initializeModes()` and `initializeRuntime()` rely
- * on those saved slots.
- *
- * PASS/FAIL results print to the Serial monitor.
- *
- * Build with PlatformIO environment `teensy40_slot_verify`
- * (e.g. `pio run -e teensy40_slot_verify -t upload`). Requires
- * a Teensy 4.0 with the MOARkNOBS wiring.
- *
- * See `firmware/README.md` under "Test Philosophy (and Real Talk)" for
- * additional notes on the test suite.
- */
+MIDISlot EEPROM Verification
+
+Writes known data to every slot and reloads it to confirm EEPROM integrity.
+It uses the same ConfigManager path that `FirmwareState.cpp` exposes so
+you can demonstrate how `initializeModes()` and `initializeRuntime()` rely
+on those saved slots.
+
+PASS/FAIL results print to the Serial monitor.
+
+Build with PlatformIO environment `teensy40_slot_verify`
+(e.g. `pio run -e teensy40_slot_verify -t upload`). Requires
+a Teensy 4.0 with the MOARkNOBS wiring.
+
+See `firmware/README.md` under "Test Philosophy (and Real Talk)" for
+additional notes on the test suite.
+*/
 
 #include <Arduino.h>
 #include "ConfigManager.h"

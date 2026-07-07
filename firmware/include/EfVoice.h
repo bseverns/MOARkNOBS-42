@@ -40,7 +40,7 @@ inline float jitterSmoothness() {
 }
 
 struct EfVoice {
-    uint8_t followerIndex = 0xFF; //!< Physical follower index we mirror
+    uint8_t followerIndex = 0xFF; // Physical follower index we mirror
     EnvelopeFollower::FilterType filterType = EnvelopeFollower::LINEAR;
     float frequency = 1000.0f;
     float q = 0.707f;

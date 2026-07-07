@@ -1,24 +1,24 @@
 /*
- * MOARkNOBS Hardware Smoke Test
- *
- * Mirrors the production firmware stack: boot sequence, scheduler rhythm,
- * and per-manager checks happen in order so you can trace the same flow you
- * teach in `firmware_main.cpp` (protocol → modes → UI → runtime).
- * Each test phase simply exercises the managers that `FirmwareState.cpp`
- * keeps alive while the scheduler would normally choreograph their callbacks.
- *
- * Validates LEDs, the button matrix, one slot pot plus two filter-tuning pots,
- * envelope followers and the OLED display. Use Control Button #0 to advance
- * through each phase.
- *
- * Build and upload with PlatformIO environment `teensy40_full_system`
- * (e.g. `platformio run -e teensy40_full_system -t upload`).
- * Requires a Teensy 4.0 wired with the full MOARkNOBS hardware
- * (button matrix, LED strip, OLED, envelope circuits).
- *
- * See `firmware/README.md` under "Test Philosophy (and Real Talk)"
- * for additional context and a list of all available test sketches.
- */
+MOARkNOBS Hardware Smoke Test
+
+Mirrors the production firmware stack: boot sequence, scheduler rhythm,
+and per-manager checks happen in order so you can trace the same flow you
+teach in `firmware_main.cpp` (protocol → modes → UI → runtime).
+Each test phase simply exercises the managers that `FirmwareState.cpp`
+keeps alive while the scheduler would normally choreograph their callbacks.
+
+Validates LEDs, the button matrix, one slot pot plus two filter-tuning pots,
+envelope followers and the OLED display. Use Control Button #0 to advance
+through each phase.
+
+Build and upload with PlatformIO environment `teensy40_full_system`
+(e.g. `platformio run -e teensy40_full_system -t upload`).
+Requires a Teensy 4.0 wired with the full MOARkNOBS hardware
+(button matrix, LED strip, OLED, envelope circuits).
+
+See `firmware/README.md` under "Test Philosophy (and Real Talk)"
+for additional context and a list of all available test sketches.
+*/
 
 #include <Arduino.h>
 #include "Arduino.h"
@@ -219,7 +219,7 @@ TestPhase currentPhase = TestPhase::IDLE;
 bool phaseStarted = false;
 
 // --- Utility ---
-/** Wait for Control Button #0 to be pressed and released. */
+// Wait for Control Button #0 to be pressed and released.
 void waitForButtonPress(const char *prompt = "Press Btn0 to continue") {
     Serial.println(prompt);
     displayManager.showText(prompt, "", "Btn0");

@@ -132,19 +132,19 @@ inline constexpr uint8_t BUTTON_COLS = 6;
 // Analog read threshold for detecting a pressed button
 inline constexpr int BUTTON_PRESS_THRESHOLD = 512;
 
-/**
- * States for each button in the debounce & press state machine.
- */
+/*
+States for each button in the debounce & press state machine.
+*/
 enum class ButtonState {
-    IDLE,       //!< No press detected
-    PRESSED,    //!< Button is pressed but not yet long-pressed
-    LONG_PRESS, //!< Long press threshold reached
-    RELEASED    //!< Button has been released
+    IDLE,       // No press detected
+    PRESSED,    // Button is pressed but not yet long-pressed
+    LONG_PRESS, // Long press threshold reached
+    RELEASED    // Button has been released
 };
 
-/**
- * @brief Per-button state machine data.
- */
+/*
+Per-button state machine data.
+*/
 struct ButtonStateMachine {
     ButtonState state = ButtonState::IDLE;
     unsigned long pressTimestamp = 0;   // When button first pressed
@@ -153,14 +153,14 @@ struct ButtonStateMachine {
     unsigned long lastShortRelease = 0; // Timestamp of last release for double-press detection
 };
 
-/**
- * @brief Aggregated references passed to ::processButtons().
- *
- * The context contains all mutable state shared between the
- * ButtonManager and the rest of the application so that button events
- * can modify system behaviour without the class needing global
- * variables.
- */
+/*
+Aggregated references passed to ::processButtons().
+
+The context contains all mutable state shared between the
+ButtonManager and the rest of the application so that button events
+can modify system behaviour without the class needing global
+variables.
+*/
 struct ButtonManagerContext {
     std::vector<uint8_t> &potChannels;        // Mapping of pot indices to MIDI channels
     uint8_t &activePot;                       // Currently selected potentiometer index
@@ -176,60 +176,60 @@ struct ButtonManagerContext {
     uint8_t &diagnosticPage;                               // Which diagnostic page to show
 };
 
-/**
- * @brief Handles scanning and interpreting all physical and virtual buttons.
- *
- * The manager abstracts away the multiplexing hardware and exposes a
- * high level event interface.  Use ::processButtons regularly in the
- * main loop to update the state machines for every button.
- */
+/*
+Handles scanning and interpreting all physical and virtual buttons.
+
+The manager abstracts away the multiplexing hardware and exposes a
+high level event interface.  Use ::processButtons regularly in the
+main loop to update the state machines for every button.
+*/
 class ButtonManager {
   public:
-    /**
-     * Create a manager for all button inputs.
-     * The mux pin arrays define the scanning hardware and the
-     * PotentiometerManager link allows button presses to change slots.
-     */
+    /*
+    Create a manager for all button inputs.
+    The mux pin arrays define the scanning hardware and the
+    PotentiometerManager link allows button presses to change slots.
+    */
     ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                   PotentiometerManager *potentiometerManager);
 
-    /**
-     * Configure the GPIO directions for all buttons.
-     * Call once from setup() before processButtons() is used.
-     */
+    /*
+    Configure the GPIO directions for all buttons.
+    Call once from setup() before processButtons() is used.
+    */
     void initButtons();
 
-    /**
-     * Poll the button matrix, update state machines and fire callbacks.
-     * Invoke this in the main loop with a shared ButtonManagerContext.
-     */
+    /*
+    Poll the button matrix, update state machines and fire callbacks.
+    Invoke this in the main loop with a shared ButtonManagerContext.
+    */
     void processButtons(ButtonManagerContext &context);
     bool isOnDeviceConfigModeActive() const { return _onDeviceConfigModeActive; }
     bool isLfoTuningModeActive() const { return _lfoTuningActive; }
     uint8_t lfoTuningIndex() const { return _lfoTuningIndex; }
 
-    /**
-     * Directly read a muxed button's state; useful for unit tests and safe to
-     * call on a const ButtonManager.
-     */
+    /*
+    Directly read a muxed button's state; useful for unit tests and safe to
+    call on a const ButtonManager.
+    */
     bool isMuxButtonPressed(uint8_t index) const;
 
-    /**
-     * Peek at the control pots and buttons without running the whole
-     * ::processButtons loop.  Handy for tests, but normal code should
-     * let processButtons() do the heavy lifting.
-     */
+    /*
+    Peek at the control pots and buttons without running the whole
+    ::processButtons loop.  Handy for tests, but normal code should
+    let processButtons() do the heavy lifting.
+    */
     void scanControlInputs(ButtonManagerContext &context);
 
 #if defined(UNIT_TEST)
-    /**
-     * Test-only shim that exposes the private control button reader so Unity
-     * specs can assert on the currently installed digital provider. Wrapped in
-     * UNIT_TEST to avoid expanding the runtime API footprint.
-     */
+    /*
+    Test-only shim that exposes the private control button reader so Unity
+    specs can assert on the currently installed digital provider. Wrapped in
+    UNIT_TEST to avoid expanding the runtime API footprint.
+    */
     bool readControlButtonForTest(uint8_t buttonIndex) { return readControlButton(buttonIndex); }
 
-    /** Test-only seam for directly seeding the smoothed control-pot cache. */
+    // Test-only seam for directly seeding the smoothed control-pot cache.
     void setControlPotValueForTest(uint8_t idx, int value) {
         if (idx < 3) {
             _ctrlPotValues[idx] = value;
@@ -256,42 +256,42 @@ class ButtonManager {
     // State machines for each button detection
     ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
 
-    /** Set the multiplexer address lines so a given row/column can be read. */
+    // Set the multiplexer address lines so a given row/column can be read.
     void selectMux(uint8_t row, uint8_t col);
 
-    /** Return the digital state for a multiplexed button. */
+    // Return the digital state for a multiplexed button.
     uint8_t readMuxButton(uint8_t buttonIndex) const;
 
-    /** Read a direct control button pin (legacy non-mux input). */
+    // Read a direct control button pin (legacy non-mux input).
     bool readControlButton(uint8_t buttonIndex);
 
-    /** Handle the action for a single short press after debouncing. */
+    // Handle the action for a single short press after debouncing.
     void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context);
 
-    /** Optional hook for combination presses (e.g. SHIFT + button). */
+    // Optional hook for combination presses (e.g. SHIFT + button).
     void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext &context);
 
-    /** Internal state machine driving press/hold/release detection. */
+    // Internal state machine driving press/hold/release detection.
     void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext &context);
 
-    /** Arm a long‑press action and wait for a confirm tap. */
+    // Arm a long‑press action and wait for a confirm tap.
     void onLongPress(uint8_t index, ButtonManagerContext &context);
 
-    /** Actually perform the long‑press action once confirmed. */
+    // Actually perform the long‑press action once confirmed.
     void performLongPressAction(uint8_t index, ButtonManagerContext &context);
 
-    /** Called when the button is released after press or long-press. */
+    // Called when the button is released after press or long-press.
     void onRelease(uint8_t index, ButtonManagerContext &context);
 
-    /** Detect and dispatch short vs double presses based on timing. */
+    // Detect and dispatch short vs double presses based on timing.
     void handleShortPress(uint8_t index, ButtonManagerContext &context);
     void handleDoublePress(uint8_t index, ButtonManagerContext &context);
 
-    /** Perform the mapped action for a simple press. */
+    // Perform the mapped action for a simple press.
     void doSinglePressAction(uint8_t index, ButtonManagerContext &context);
 
     // ---- New multiplexer-based control scanning ----
-    /** Update a single control button state during scanning. */
+    // Update a single control button state during scanning.
     void updateCtrlButton(uint8_t index, bool pressed, ButtonManagerContext &context);
     void enterOnDeviceConfigMode(ButtonManagerContext &context);
     void exitOnDeviceConfigMode(ButtonManagerContext &context, bool autosave);
@@ -307,12 +307,11 @@ class ButtonManager {
     // Chord settle window: allows human fingers to land on multi-button combos reliably.
     // 80ms accommodates typical finger spread variance without introducing noticeable lag.
     static constexpr unsigned long COMBO_SETTLE_MS = 80;
-    uint8_t _comboHoldMask = 0;            //!< Active combo mask for long-press tracking
-    unsigned long _comboHoldTimestamp = 0; //!< When the current combo started
-    bool _comboLongPressFired = false;     //!< True once the combo long-press action fired
-    uint8_t _comboCandidateMask = 0;       //!< Candidate short-combo mask while settling
-    unsigned long _comboCandidateSince =
-        0; //!< Timestamp when current short-combo candidate started
+    uint8_t _comboHoldMask = 0;             // Active combo mask for long-press tracking
+    unsigned long _comboHoldTimestamp = 0;  // When the current combo started
+    bool _comboLongPressFired = false;      // True once the combo long-press action fired
+    uint8_t _comboCandidateMask = 0;        // Candidate short-combo mask while settling
+    unsigned long _comboCandidateSince = 0; // Timestamp when current short-combo candidate started
 
     // Long‑press confirmation tracking
     static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net
@@ -333,7 +332,7 @@ class ButtonManager {
     int8_t _lastLfoTuneBipolarState = -1;
 
   public:
-    /** Return the latest smoothed value for one of the control pots. */
+    // Return the latest smoothed value for one of the control pots.
     int getControlPotValue(uint8_t idx) const { return (idx < 3) ? _ctrlPotValues[idx] : 0; }
 };
 

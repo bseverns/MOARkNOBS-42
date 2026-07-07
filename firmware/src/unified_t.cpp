@@ -1,19 +1,19 @@
 /*
- * MOARkNOBS Unified Hardware Test
- *
- * Runs an end-to-end check of LEDs, buttons, pots, envelope followers
- * and the OLED display immediately at boot. Like the production firmware,
- * it walks through protocol/modes/UI/runtime layers sequentially: the test
- * harness wires the same managers that `FirmwareState.cpp` exposes so you can
- * describe how scheduler tasks would normally pick up the slack.
- *
- * Build and upload with PlatformIO environment `teensy40_unified_test`
- * (e.g. `platformio run -e teensy40_unified_test -t upload`).
- * Requires a Teensy 4.0 wired with the MOARkNOBS hardware.
- *
- * See `firmware/README.md` under "Test Philosophy (and Real Talk)"
- * for context and the list of available tests.
- */
+MOARkNOBS Unified Hardware Test
+
+Runs an end-to-end check of LEDs, buttons, pots, envelope followers
+and the OLED display immediately at boot. Like the production firmware,
+it walks through protocol/modes/UI/runtime layers sequentially: the test
+harness wires the same managers that `FirmwareState.cpp` exposes so you can
+describe how scheduler tasks would normally pick up the slack.
+
+Build and upload with PlatformIO environment `teensy40_unified_test`
+(e.g. `platformio run -e teensy40_unified_test -t upload`).
+Requires a Teensy 4.0 wired with the MOARkNOBS hardware.
+
+See `firmware/README.md` under "Test Philosophy (and Real Talk)"
+for context and the list of available tests.
+*/
 
 #include <Arduino.h>
 #include <map>

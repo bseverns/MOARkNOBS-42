@@ -18,9 +18,9 @@
 // value produced here is consumed by PotentiometerManager and the arpeggiator
 // to modulate outgoing MIDI data.
 
-/**
- * Constructor
- */
+/*
+Constructor
+*/
 namespace {
 // Normalize caller-provided envelope identifiers into actual analog pin numbers.
 int resolveEnvelopeInput(int candidate) {
@@ -63,10 +63,10 @@ float jitterSmoothness() {
 }
 } // namespace
 
-/**
- * Convert the serialized EF filter enum into the runtime filter selection.
- * Keeping this one place prevents subtle drift when we add new filters later.
- */
+/*
+Convert the serialized EF filter enum into the runtime filter selection.
+Keeping this one place prevents subtle drift when we add new filters later.
+*/
 EnvelopeFollower::FilterType
 EnvelopeFollower::filterFromEfType(MIDISlot::EfSettings::FilterType type) {
     switch (type) {
@@ -98,10 +98,10 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id
     efSettings.mode = efMode;
 }
 
-/**
- * configureFilter()
- * - Keep the function that was used elsewhere for dynamic changes to freq & Q
- */
+/*
+configureFilter()
+- Keep the function that was used elsewhere for dynamic changes to freq & Q
+*/
 void EnvelopeFollower::configureFilter(float frequency, float q) {
     shapingFreq = frequency;
     shapingQ = q;
@@ -122,10 +122,10 @@ void EnvelopeFollower::configureFilter(float frequency, float q) {
     }
 }
 
-/**
- * Convert a raw ADC reading into an envelope value using the configured filter
- * or shaping curve.
- */
+/*
+Convert a raw ADC reading into an envelope value using the configured filter
+or shaping curve.
+*/
 int EnvelopeFollower::processEnvelopeLevel(int level) {
     level = constrain(level, 0, 127);
 
@@ -214,10 +214,10 @@ int EnvelopeFollower::processEnvelopeLevel(int level) {
     return constrain(A + B, 0, 127);
 }
 
-/**
- * update()
- * updates envelope level each loop if active
- */
+/*
+update()
+updates envelope level each loop if active
+*/
 void EnvelopeFollower::update() {
     if (!isActive) {
         return;
@@ -235,12 +235,12 @@ void EnvelopeFollower::update() {
     currentEnvelopeLevel = applyIdleFloor(processEnvelopeLevel(rawLevel));
 }
 
-/**
- * applyToCC()
- * final step where envelope modifies CC
- * - Just adds or subtracts the new envelope level
- * - Avoids redundant MIDI messages
- */
+/*
+applyToCC()
+final step where envelope modifies CC
+- Just adds or subtracts the new envelope level
+- Avoids redundant MIDI messages
+*/
 // Adjust the given CC value with the current envelope. The caller is
 // responsible for deciding whether to transmit the updated value.
 void EnvelopeFollower::applyToCC(int potIndex, uint8_t &ccValue) {
@@ -253,28 +253,28 @@ void EnvelopeFollower::applyToCC(int potIndex, uint8_t &ccValue) {
     ccValue = constrain(modulatedValue, 0, 127);
 }
 
-/**
- * toggleActive()
- */
+/*
+toggleActive()
+*/
 void EnvelopeFollower::toggleActive(bool state) {
     if (isActive != state) {
         isActive = state;
     }
 }
 
-/**
- * getActiveState()
- */
+/*
+getActiveState()
+*/
 bool EnvelopeFollower::getActiveState() const { return isActive; }
 
-/**
- * setModulationTarget()
- */
+/*
+setModulationTarget()
+*/
 void EnvelopeFollower::setModulationTarget(int cc) { modulationTargetCC = cc; }
 
-/**
- * setFilterType()
- */
+/*
+setFilterType()
+*/
 void EnvelopeFollower::setFilterType(FilterType type) {
     filterType = type;
     // Reapply default config based on new filter type
@@ -293,9 +293,9 @@ void EnvelopeFollower::setFilterType(FilterType type) {
     }
 }
 
-/**
- * getFilterType()
- */
+/*
+getFilterType()
+*/
 EnvelopeFollower::FilterType EnvelopeFollower::getFilterType() const { return filterType; }
 
 float EnvelopeFollower::getShapingFrequency() const { return shapingFreq; }
@@ -414,11 +414,11 @@ void EnvelopeFollower::setSmoothingAlpha(float alpha) {
 
 float EnvelopeFollower::getSmoothingAlpha() const { return smoothingAlpha; }
 
-/**
- * readEnvelopeLevel()
- * Helper used by update() to read the raw envelope value
- * from the configured analog pin and map it to a MIDI range.
- */
+/*
+readEnvelopeLevel()
+Helper used by update() to read the raw envelope value
+from the configured analog pin and map it to a MIDI range.
+*/
 int EnvelopeFollower::readEnvelopeLevel(float dtSeconds) {
     // Oversample the ADC to reduce noise and promote stability.
     uint32_t total = 0;
@@ -572,7 +572,7 @@ int EnvelopeFollower::applyIdleFloor(int midiLevel) {
     return constrain(midiLevel, 0, 127);
 }
 
-/**
- * getEnvelopeLevel()
- */
+/*
+getEnvelopeLevel()
+*/
 int EnvelopeFollower::getEnvelopeLevel() const { return currentEnvelopeLevel; }

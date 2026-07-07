@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /*
- * Hardware proof for the exact teensy40_main boot/configurator contract.
- *
- * This runner targets the production firmware image, not the bridge/system
- * demo lane. It proves:
- *  - standalone boot banner + boot_mode marker
- *  - direct serial HELLO while standalone runtime is alive
- *  - ENTER_CONFIG_MODE reboot handoff
- *  - configurator-mode HELLO -> manifest -> schema -> config hydrate
- *  - one small staged SET_ALL apply with matching ACK/checksum
- *  - cleanup back to the original config
- */
+Hardware proof for the exact teensy40_main boot/configurator contract.
+
+This runner targets the production firmware image, not the bridge/system
+demo lane. It proves:
+ - standalone boot banner + boot_mode marker
+ - direct serial HELLO while standalone runtime is alive
+ - ENTER_CONFIG_MODE reboot handoff
+ - configurator-mode HELLO -> manifest -> schema -> config hydrate
+ - one small staged SET_ALL apply with matching ACK/checksum
+ - cleanup back to the original config
+*/
 
 'use strict';
 

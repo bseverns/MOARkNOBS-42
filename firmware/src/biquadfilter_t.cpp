@@ -3,23 +3,24 @@
 #include "Globals.h"
 
 /*
- * BiquadFilter math test
- *
- * Confirms coefficient calculations and internal state for low-, high-
- * and band-pass modes—the same filters that EnvelopeFollower and EfVoice
- * lean on when `initializeRuntime()` spins up the DSP chain.
- *
- * Build and upload with PlatformIO environment `teensy40_biquad_test`.
- * Requires only a board capable of Serial output (Teensy 4.0 recommended);
- * no other hardware is needed.
- *
- * See `firmware/README.md` under "Test Philosophy (and Real Talk)" for
- * the full list of available test sketches.
- */
+BiquadFilter math test
+
+Confirms coefficient calculations and internal state for low-, high-
+and band-pass modes—the same filters that EnvelopeFollower and EfVoice
+lean on when `initializeRuntime()` spins up the DSP chain.
+
+Build and upload with PlatformIO environment `teensy40_biquad_test`.
+Requires only a board capable of Serial output (Teensy 4.0 recommended);
+no other hardware is needed.
+
+See `firmware/README.md` under "Test Philosophy (and Real Talk)" for
+the full list of available test sketches.
+*/
 
 void setup() {
     Serial.begin(SERIAL_BAUD);
-    while (!Serial) { /* wait for serial */
+    while (!Serial) {
+        // wait for serial
     }
     Serial.println("=== BiquadFilter Test ===");
 

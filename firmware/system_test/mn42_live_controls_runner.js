@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 /*
- * Hardware receipt runner for direct firmware live-control lanes.
- *
- * Proves on an attached teensy40_main board:
- *  - USB MIDI output toggle round-trip
- *  - note dynamics live lane round-trip
- *  - jitter live lane round-trip
- *  - clock live lane round-trip
- *  - live-only controls do not mutate the normalized GET_CONFIG snapshot
- *  - normalized GET_CONFIG remains stable before/after the live-only changes
- */
+Hardware receipt runner for direct firmware live-control lanes.
+
+Proves on an attached teensy40_main board:
+ - USB MIDI output toggle round-trip
+ - note dynamics live lane round-trip
+ - jitter live lane round-trip
+ - clock live lane round-trip
+ - live-only controls do not mutate the normalized GET_CONFIG snapshot
+ - normalized GET_CONFIG remains stable before/after the live-only changes
+*/
 
 'use strict';
 

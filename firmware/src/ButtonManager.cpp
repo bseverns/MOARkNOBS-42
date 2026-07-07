@@ -342,13 +342,13 @@ void ButtonManager::exitLfoTuningMode(ButtonManagerContext &context) {
     context.displayManager.displayStatus("LFO Tune OFF", 1000);
 }
 
-/**
- * One unified processButtons loop:
- *  - For each virtual (mux) button, read & debounce
- *    -> update state machine
- *  - For each control (direct) button, read & debounce
- *    -> update state machine
- */
+/*
+One unified processButtons loop:
+ - For each virtual (mux) button, read & debounce
+   -> update state machine
+ - For each control (direct) button, read & debounce
+   -> update state machine
+*/
 void ButtonManager::processButtons(ButtonManagerContext &context) {
     unsigned long now = ::now();
     static uint8_t rawStates[NUM_VIRTUAL_BUTTONS] = {LOW};
@@ -418,9 +418,9 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
 #endif
 }
 
-/**
- * The new state machine approach for short vs. long press.
- */
+/*
+The new state machine approach for short vs. long press.
+*/
 void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
                                              ButtonManagerContext &context) {
     ButtonStateMachine &sm = _buttonMachines[index];
@@ -482,9 +482,9 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
     }
 }
 
-/**
- * Called when a long press crosses the threshold; we just arm it.
- */
+/*
+Called when a long press crosses the threshold; we just arm it.
+*/
 void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
     _confirmIndex = index;
     _confirmDeadline = ::now() + CONFIRM_WINDOW_MS;
@@ -492,9 +492,9 @@ void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
     startWarningForIndex(index, context);
 }
 
-/**
- * Fire the actual long‑press payload after confirmation.
- */
+/*
+Fire the actual long‑press payload after confirmation.
+*/
 void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &context) {
     // Slot buttons (0-41)
     if (index < NUM_VIRTUAL_BUTTONS) {
@@ -597,10 +597,10 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
     }
 }
 
-/**
- * Called after the user releases (short or long). If it wasn't a long press, we treat it as short
- * press.
- */
+/*
+Called after the user releases (short or long). If it wasn't a long press, we treat it as short
+press.
+*/
 void ButtonManager::onRelease(uint8_t index, ButtonManagerContext &context) {
     auto &sm = _buttonMachines[index];
     if (!sm.longPressFired) {
@@ -612,9 +612,9 @@ void ButtonManager::onRelease(uint8_t index, ButtonManagerContext &context) {
     }
 }
 
-/**
- * If short press, we see if it's a double press or single press.
- */
+/*
+If short press, we see if it's a double press or single press.
+*/
 void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &context) {
     auto &sm = _buttonMachines[index];
     unsigned long now = ::now();
@@ -650,9 +650,9 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
     }
 }
 
-/**
- * Double press logic
- */
+/*
+Double press logic
+*/
 void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &context) {
     auto cycleFilterForSlot = [&](uint8_t slotIndex, int delta) -> bool {
         auto it = context.potToEnvelopeMap.find(slotIndex);
@@ -722,10 +722,10 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
     }
 }
 
-/**
- * Dispatch a confirmed short press. The helper `handleSingleButtonPress` keeps
- * the actual per-button actions so other parts of the firmware can reuse them.
- */
+/*
+Dispatch a confirmed short press. The helper `handleSingleButtonPress` keeps
+the actual per-button actions so other parts of the firmware can reuse them.
+*/
 void ButtonManager::doSinglePressAction(uint8_t index, ButtonManagerContext &context) {
     BM_DBG_PRINTLN("Single Press on button " + String(index));
     handleSingleButtonPress(index, context);
@@ -1304,11 +1304,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
 }
 
-/**
- * Read a single button using the row-driven scanning method.
- * Caches the most recently scanned row so repeated calls within the
- * same row do not trigger additional ADC reads.
- */
+/*
+Read a single button using the row-driven scanning method.
+Caches the most recently scanned row so repeated calls within the
+same row do not trigger additional ADC reads.
+*/
 uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
     static uint8_t lastRow = 0xFF;
     static uint8_t rowValues[BUTTON_COLS] = {0};
@@ -1333,10 +1333,10 @@ uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
     return rowValues[col];
 }
 
-/**
- * Read a direct-wired control button. These inputs are active LOW and bypass
- * the multiplexer used for slot buttons.
- */
+/*
+Read a direct-wired control button. These inputs are active LOW and bypass
+the multiplexer used for slot buttons.
+*/
 bool ButtonManager::readControlButton(uint8_t buttonIndex) {
     return (hardware::readDigital(_controlPins[buttonIndex]) == LOW);
 }

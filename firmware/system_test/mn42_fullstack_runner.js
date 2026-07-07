@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /*
- * Hardware-in-the-loop smoke test for the MN42 stack.
- *
- * This script spawns `bridge/mn42_bridge.js`, drives it over OSC, and waits for
- * the Teensy (flashed with `teensy40_full_system`) to stream WebSerial JSON.
- * Each scenario mirrors the stories outlined in docs/TESTING.md so CI can
- * prove the bridge, firmware, and OSC plumbing still play nice when real
- * hardware is bolted on.
- */
+Hardware-in-the-loop smoke test for the MN42 stack.
+
+This script spawns `bridge/mn42_bridge.js`, drives it over OSC, and waits for
+the Teensy (flashed with `teensy40_full_system`) to stream WebSerial JSON.
+Each scenario mirrors the stories outlined in docs/TESTING.md so CI can
+prove the bridge, firmware, and OSC plumbing still play nice when real
+hardware is bolted on.
+*/
 
 'use strict';
 

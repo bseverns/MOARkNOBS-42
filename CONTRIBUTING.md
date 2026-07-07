@@ -36,6 +36,7 @@ Run docs and contract guards before pushing release/docs changes:
 python3 tools/check_markdown_links.py --root .
 python3 tools/check_wiki_contract.py --root .
 python3 tools/check_schema_keyword_coverage.py --root .
+python3 tools/check_comment_style.py --root .
 python3 tools/check_contract_sync.py --root .
 python3 tools/check_control_coverage.py --root .
 python3 tools/check_release_readiness.py --root . --stage hardware-test
@@ -63,7 +64,7 @@ pio test -d firmware -e teensy40_unity -vvv
 ## Code Etiquette
 
 - Globals go `extern` in headers and live in exactly one `.cpp`.
-- Comments are contracts. Break one? Update it. Touch a public API? Document it in `README.md`.
+- Comments are contracts. Break one? Update it. Follow the [comment style](docs/reference/CommentStyle.md) for new comments. Touch a public API? Document it in `README.md`.
 - Keep the PlatformIO stuff in `./firmware`; don't treat the root like a project.
 - Tests run in USB*MIDI_SERIAL mode only. Don't sneak in other USB*\* defines.
 - The unit-test environment is lean: no Adafruit GFX/SSD1306/BusIO or SD/SdFat unless absolutely required.

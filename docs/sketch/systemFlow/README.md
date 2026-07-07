@@ -6,7 +6,7 @@ This folder is the bridge between “cool controller” and “I know what every
 
 ## Where to go
 
-- [`hw/`](hw/) — physical subsystems: button matrix, display, envelope front end, MIDI, power, Teensy headers.
+- [`hw/README.md`](hw/README.md) — physical subsystems: button matrix, display, envelope front end, MIDI, power, Teensy headers.
 
 ## Good workshop order
 

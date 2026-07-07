@@ -21,10 +21,10 @@ inline constexpr uint8_t PRIMARY_MUX_PINS =
 inline constexpr uint8_t SECONDARY_MUX_PINS =
     4; // Address lines for the "downstream" mux choosing a single pot within that bank
 
-/**
- * @brief Reads all potentiometers via a pair of analog multiplexers and
- *        forwards the values as MIDI messages.
- */
+/*
+Reads all potentiometers via a pair of analog multiplexers and
+       forwards the values as MIDI messages.
+*/
 class PotentiometerManager {
   private:
     const uint8_t *primaryMuxPins; // Drives the primary mux: pick which secondary mux is talking
@@ -61,61 +61,61 @@ class PotentiometerManager {
     void syncChannelCacheFromConfig();
 
   public:
-    /**
-     * Construct the manager with the mux address pin arrays and analog input.
-     */
+    /*
+    Construct the manager with the mux address pin arrays and analog input.
+    */
     PotentiometerManager(const uint8_t *primaryPins, const uint8_t *secondaryPins,
                          uint8_t analogPin);
 
-    /** Link the manager with ConfigManager so channels/CCs stay in sync. */
+    // Link the manager with ConfigManager so channels/CCs stay in sync.
     void attachConfigManager(ConfigManager &cfg);
 
-    /**
-     * Register a callback to send MIDI when a pot changes.
-     * The callback receives the slot's CC number, the mapped MIDI value,
-     * the smoothed ADC reading (0-1023-ish depending on calibration), and
-     * the slot index. If you need the MIDI channel, grab it from your slot
-     * configuration rather than expecting it here.
-     */
+    /*
+    Register a callback to send MIDI when a pot changes.
+    The callback receives the slot's CC number, the mapped MIDI value,
+    the smoothed ADC reading (0-1023-ish depending on calibration), and
+    the slot index. If you need the MIDI channel, grab it from your slot
+    configuration rather than expecting it here.
+    */
     void setMidiCallback(std::function<void(uint8_t /*ccNumber*/, uint8_t /*mappedValue*/,
                                             uint16_t /*smoothedAdc*/, uint8_t /*slotIndex*/
                                             )>
                              callback);
 
-    /** Read pot/channel settings from EEPROM. */
+    // Read pot/channel settings from EEPROM.
     void loadFromEEPROM();
-    /** Persist current pot settings to EEPROM. */
+    // Persist current pot settings to EEPROM.
     void saveToEEPROM();
-    /** Reset EEPROM mappings to defaults. */
+    // Reset EEPROM mappings to defaults.
     void resetEEPROM();
 
-    /** Return the last raw value read from a pot. */
+    // Return the last raw value read from a pot.
     int getLastValue(int potIndex) const;
 
-    /** Set the MIDI channel for a pot. */
+    // Set the MIDI channel for a pot.
     void setChannel(int potIndex, uint8_t channel);
-    /** Set the CC number for a pot. */
+    // Set the CC number for a pot.
     void setCCNumber(int potIndex, uint8_t ccNumber);
 
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);
 
-    /** Inject a host-driven 0-127 value through the same callback lane as a live pot move. */
+    // Inject a host-driven 0-127 value through the same callback lane as a live pot move.
     void injectMidiValue(uint8_t potIndex, uint8_t midiValue);
 
-    /**
-     * Read every pot via the muxes and invoke the MIDI callback for changes.
-     * Also updates LEDs and envelope followers.
-     */
+    /*
+    Read every pot via the muxes and invoke the MIDI callback for changes.
+    Also updates LEDs and envelope followers.
+    */
     void processPots(LedAnimator &ledAnimator, std::vector<EnvelopeFollower> &envelopes);
 
-    /** Specify the envelope pair used for ARG operations. */
+    // Specify the envelope pair used for ARG operations.
     void setArgEnvelopePair(int a, int b);
 
-    /** Retrieve the current envelope pair selection. */
+    // Retrieve the current envelope pair selection.
     void getArgEnvelopePair(int &a, int &b) const;
 
-    /** Direct raw ADC read helper used in tests. */
+    // Direct raw ADC read helper used in tests.
     int readRawPot(uint8_t potIndex);
 };
 

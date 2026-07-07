@@ -1,8 +1,8 @@
 /*
- * sys::report() spits out a JSON blob stuffed with firmware and build trivia
- * for anyone poking around in diagnostics. Public API lives in
- * firmware/include/sys/report.h, go party there.
- */
+sys::report() spits out a JSON blob stuffed with firmware and build trivia
+for anyone poking around in diagnostics. Public API lives in
+firmware/include/sys/report.h, go party there.
+*/
 #include "sys/report.h"
 #include <ArduinoJson.h>
 #include "version.h"
