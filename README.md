@@ -38,17 +38,25 @@ probing.
 
 ![Close-up trace inspection photo from the MOARkNOBS-42 prototype PCB bring-up work.](docs/assets/board/trace.jpg)
 
+The static PCB photos are now paired with bench-context photos. These show the board entering the practical bring-up loop:
+parts on the bench, power attached, controls populated, and visible status LEDs. Treat them as story and inspection context,
+not as release-level pass/fail receipts.
+
+![Assembled MOARkNOBS-42 prototype board on the electronics bench before bring-up validation.](docs/assets/board/bench.jpg)
+
+![Powered MOARkNOBS-42 prototype board with button caps installed and status LEDs visible during bring-up.](docs/assets/board/bringup.jpg)
+
 ## Hardware Test Review Snapshot
 
-| Area                    | Current observation                                                                                            | Status               | Next evidence needed                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------------------- |
-| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and close-up photos from my phone |
-| Power rails             | Bring-up testing in progress. No release-level rail validation claimed yet.                                    | Under review         | Capture voltage/current/thermal receipt - current testing indicates a mis-routing in the design on input fuses          |
-| OLED/display            | Needs dedicated validation through hardware-test lanes.                                                        | Under review         | Record display bring-up pass/fail notes - after power surgery           |
-| Controls                | Board is now suitable for button/pot/control validation.                                                       | Under review         | Capture control scan and MIDI output receipt on DIN/USB      |
-| MIDI paths              | MIDI testing is part of the current bring-up target.                                                           | Under review         | Capture filmed MIDI validation receipt via transport           |
-| LEDs/load               | LED behavior and current draw still require bench evidence once power routing is made solid.                                                    | Under review         | Capture LED load/power receipt                    |
-| Fabrication readiness   | No orderable fabrication package is enclosed.                                                                  | Not ready            | Verified Gerber/NC-drill/BOM release bundle       |
+| Area                    | Current observation                                                                                            | Status               | Next evidence needed                                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection. 0.5 mm test pads are usable. | Useful prototype run | Add measured inspection notes and dated rail measurements                                                      |
+| Power rails             | Bring-up testing in progress. No release-level rail validation claimed yet.                                    | Under review         | Capture voltage/current/thermal receipt - current testing indicates a mis-routing in the design on input fuses |
+| OLED/display            | Needs dedicated validation through hardware-test lanes.                                                        | Under review         | Record display bring-up pass/fail notes - after power surgery                                                  |
+| Controls                | Board is now suitable for button/pot/control validation.                                                       | Under review         | Capture control scan and MIDI output receipt on DIN/USB                                                        |
+| MIDI paths              | MIDI testing is part of the current bring-up target.                                                           | Under review         | Capture filmed MIDI validation receipt via transport                                                           |
+| LEDs/load               | LED behavior and current draw still require bench evidence once power routing is made solid.                   | Under review         | Capture LED load/power receipt                                                                                 |
+| Fabrication readiness   | No orderable fabrication package is enclosed.                                                                  | Not ready            | Verified Gerber/NC-drill/BOM release bundle                                                                    |
 
 ## What This Prototype Run Enabled
 

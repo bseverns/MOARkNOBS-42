@@ -2,7 +2,7 @@
 
 This is the hardware status page for the hardware-test package.
 
-Last audited against repo contents: 2026-07-02.
+Last audited against repo contents: 2026-07-07.
 
 ## Package Scope
 
@@ -24,8 +24,12 @@ Board photos currently present:
 - top-side photo: `docs/assets/board/prodTOP.jpg`
 - bottom-side photo: `docs/assets/board/prodBTM.jpg`
 - trace-inspection photo: `docs/assets/board/trace.jpg`
+- assembled bench-context photo: `docs/assets/board/bench.jpg`
+- powered bring-up context photo: `docs/assets/board/bringup.jpg`
+- early Teensy breadboard harness photo: `docs/assets/board/test.jpg`
 
-Remaining public-photo needs are tracked in `docs/project/TODO.md`, not treated as hardware evidence.
+These images are public breadcrumbs for the prototype story. They do not replace measured inspection notes, serial logs,
+or dated bench receipts.
 
 ## Current Hardware References
 

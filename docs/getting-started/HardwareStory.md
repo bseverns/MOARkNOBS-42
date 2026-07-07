@@ -26,6 +26,12 @@ The board combines:
 
 The point is not simply "many controls." The point is to turn a compact physical interface into a controller that can remember, modulate, and report its own state clearly.
 
+Before the full control surface became the main test object, the project moved through smaller Teensy harnesses. That
+matters because the finished board is not a mystery slab; it is a consolidation of firmware, power, MIDI, LED, and input
+experiments into one physical target.
+
+![Early Teensy breadboard harness used to prove small hardware paths before full-board bring-up.](../assets/board/test.jpg)
+
 ## The hardware signal story
 
 ```mermaid
@@ -44,6 +50,8 @@ Everything that feels "smart" in the finished instrument depends on that physica
 ## Stage 1: prove the rails
 
 Start here because everything else depends on it.
+
+![MOARkNOBS-42 prototype board on the electronics bench before rail and control bring-up checks.](../assets/board/bench.jpg)
 
 - confirm 5 V is where it should be
 - confirm 3V3 is stable under load
@@ -83,6 +91,8 @@ Once the Teensy can read inputs reliably, prove it can speak back.
 ### LEDs
 
 ![Annotated LED chain failure diagram showing a healthy start of chain and a dead segment after a bad data connection.](../bench/mn42-led-data-break.svg)
+
+![Powered MOARkNOBS-42 prototype with button caps installed and status LEDs visible during bring-up.](../assets/board/bringup.jpg)
 
 The LEDs are more than decoration:
 

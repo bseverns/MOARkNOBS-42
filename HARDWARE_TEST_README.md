@@ -24,6 +24,18 @@ It is intended to validate:
 
 Current package limitations are tracked in [docs/hardware-test/KnownIssues.md](docs/hardware-test/KnownIssues.md).
 
+## Evidence Photo Trail
+
+The package now includes a small photo trail for the hardware story. These photos are useful for orientation and
+storytelling; the pass/fail evidence still comes from the bring-up checklist, serial logs, measurements, and dated bench
+receipts.
+
+![Early Teensy breadboard harness used before the full MOARkNOBS-42 board became the main validation target.](docs/assets/board/test.jpg)
+
+![Assembled MOARkNOBS-42 prototype board on the bench with controls, LEDs, and support hardware visible.](docs/assets/board/bench.jpg)
+
+![Powered MOARkNOBS-42 prototype board during bring-up with button caps installed and status LEDs visible.](docs/assets/board/bringup.jpg)
+
 ## Package Layout
 
 - `firmware/` contains the real PlatformIO project and all kept firmware test lanes.

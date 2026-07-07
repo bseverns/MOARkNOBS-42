@@ -32,6 +32,8 @@ Quick current estimates: [PowerBudget.md](../reference/PowerBudget.md).
 
 Before applying power:
 
+![Assembled MOARkNOBS-42 prototype board on the bench before first-boot validation.](../assets/board/bench.jpg)
+
 - inspect for shorts, reversed polarized parts, missing regulator parts, and solder bridges
 - confirm Teensy 4.0 orientation and header seating
 - confirm LED power injection and ground continuity
@@ -90,6 +92,8 @@ pio run -d firmware -e teensy40_display_led_hw -t upload
 ```
 
 Expected behavior:
+
+![Powered MOARkNOBS-42 prototype board with visible status LEDs during bring-up.](../assets/board/bringup.jpg)
 
 - the OLED initializes and shows the hardware-test intro screen
 - pressing control button 0 advances phases

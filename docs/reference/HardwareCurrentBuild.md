@@ -12,7 +12,7 @@ The repo-root canonical source remains `hardware/CurrentBuild.md`. Use that file
 
 ## Current Status Summary
 
-Last mirrored from the canonical hardware page: 2026-07-02.
+Last mirrored from the canonical hardware page: 2026-07-07.
 
 | Item                      | Version / date cue                                  | Status              | Notes                                                                                                                                  |
 | ------------------------- | --------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -27,7 +27,7 @@ Last mirrored from the canonical hardware page: 2026-07-02.
 
 - The boards are clean enough for useful probing, assembly, and trace inspection.
 - Current prototype faults are being treated as design and integration findings unless later measurements identify a fabrication issue.
-- The current board photos and trace-inspection image are public breadcrumbs, not release-level validation receipts.
+- The current board, trace-inspection, bench-context, and powered bring-up photos are public breadcrumbs, not release-level validation receipts.
 - Rail topology and high-current LED behavior still need dated bench evidence before release-level hardware claims.
 - This repo still does not claim an order-ready Gerber plus NC-drill bundle.
 
