@@ -97,6 +97,18 @@ function makeFakeService() {
         led_brightness_cap: 26,
         rail_topology_verified: false,
       },
+      hardwareHealth: {
+        display_present: true,
+        display_ok: true,
+        display_init_failures: 0,
+        display_status: 'ok',
+        brownout_count: 0,
+        eeprom_primary_valid: true,
+        eeprom_backup_valid: true,
+        eeprom_last_load: 'primary',
+        free_ram: 32768,
+        free_flash: 1048576,
+      },
       firmwareIdentity: {
         device_name: 'MOARkNOBS-42',
         fw_version: 'mock-fw',
@@ -732,6 +744,11 @@ async function run() {
     snapshotPayload.powerSafety?.rail_topology_verified,
     false,
     'snapshot endpoint should preserve rail-topology verification state',
+  );
+  assert.equal(
+    snapshotPayload.hardwareHealth?.display_ok,
+    true,
+    'snapshot endpoint should include manifest-backed display health',
   );
 
   const socket = new EventEmitter();

@@ -75,6 +75,16 @@ async function run() {
     assert.equal(state.helloSeen, true, 'session should cache HELLO state');
     assert.equal(state.manifest?.device_name, 'MOARkNOBS-42');
     assert.equal(state.schema?.schema_version, 6);
+    assert.equal(
+      state.hardwareHealth?.display_ok,
+      true,
+      'session should expose manifest-backed display health',
+    );
+    assert.equal(
+      state.hardwareHealth?.eeprom_primary_valid,
+      true,
+      'session should expose manifest-backed EEPROM health',
+    );
     assert.equal(Array.isArray(state.liveConfig?.slots), true);
     assert.equal(Array.isArray(state.stagedConfig?.slots), true);
     assert.deepEqual(harness.writtenLines.slice(0, 4), [

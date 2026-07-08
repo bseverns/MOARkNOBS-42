@@ -48,6 +48,10 @@ The bridge remains bidirectional:
 - OSC typed events can emit host MIDI messages.
 - A settings file can add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
 - The cached device session validates staged config before apply and only promotes staged to live after a verified ACK.
+- Firmware telemetry is mirrored beyond raw slot/envelope values: current slot, LFOs, EF status, ARG chunks,
+  diagnostics, clock state, note dynamics, jitter, and active profile are available over OSC and structured events.
+- Manifest-backed hardware health is cached in the session so the console can show OLED status, brownouts, EEPROM copy
+  state, memory headroom, and power-safety identity without making the operator parse raw JSON.
 
 Important boundary: the OSC/MIDI `SET_SLOT_VALUE` path and typed event writes are live performance control, not staged config mutation. Bridge-side staged config changes still go through `/api/device/stage` plus `/api/device/apply`, schema validation, and verified ACK/rollback discipline.
 

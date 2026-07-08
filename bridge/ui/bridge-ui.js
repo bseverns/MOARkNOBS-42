@@ -79,6 +79,10 @@ const sessionNodes = {
   power: document.getElementById('device-power'),
   ledCap: document.getElementById('device-led-cap'),
   rail: document.getElementById('device-rail'),
+  display: document.getElementById('device-display'),
+  brownouts: document.getElementById('device-brownouts'),
+  eeprom: document.getElementById('device-eeprom'),
+  freeRam: document.getElementById('device-free-ram'),
   dirty: document.getElementById('device-dirty'),
   lastApply: document.getElementById('device-last-apply'),
 };
@@ -197,6 +201,12 @@ function formatMetricMs(raw) {
   if (raw === undefined || raw === null) return 'n/a';
   const value = Number(raw);
   return Number.isFinite(value) ? `${Math.trunc(value)} ms` : 'n/a';
+}
+
+function formatBooleanStatus(value, trueLabel = 'ok', falseLabel = 'warn') {
+  if (value === true) return trueLabel;
+  if (value === false) return falseLabel;
+  return '-';
 }
 
 function formatJson(value) {
@@ -384,6 +394,29 @@ function updateSession(session = {}) {
       : session?.powerSafety?.rail_topology_verified === false
         ? 'unverified'
         : '-';
+  const health = session?.hardwareHealth || {};
+  const displayOk = formatBooleanStatus(health.display_ok, 'ok', 'degraded');
+  const displayStatus = health.display_status || '-';
+  sessionNodes.display.textContent =
+    displayOk === '-' && displayStatus === '-'
+      ? '-'
+      : `${displayOk} (${displayStatus})`;
+  sessionNodes.brownouts.textContent = health.brownout_count ?? '-';
+  const primary = formatBooleanStatus(
+    health.eeprom_primary_valid,
+    'primary ok',
+    'primary bad',
+  );
+  const backup = formatBooleanStatus(
+    health.eeprom_backup_valid,
+    'backup ok',
+    'backup bad',
+  );
+  sessionNodes.eeprom.textContent =
+    primary === '-' && backup === '-'
+      ? health.eeprom_last_load || '-'
+      : `${primary}, ${backup}`;
+  sessionNodes.freeRam.textContent = health.free_ram ?? '-';
   sessionNodes.dirty.textContent = String(Boolean(session?.dirty));
   const lastApply = session?.lastApplyResult;
   sessionNodes.lastApply.textContent = lastApply

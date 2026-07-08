@@ -15,10 +15,102 @@ function createSerialLineHandler({
   now,
 }) {
   const timestampNow = typeof now === 'function' ? now : () => Date.now();
+  const isObject = (value) =>
+    Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  const isFiniteNumber = (value) =>
+    typeof value === 'number' && Number.isFinite(value);
   const isNumericVector = (value) =>
-    Array.isArray(value) &&
-    value.length > 0 &&
-    value.every((entry) => typeof entry === 'number' && Number.isFinite(entry));
+    Array.isArray(value) && value.length > 0 && value.every(isFiniteNumber);
+
+  function sendJsonOsc(address, payload, routeMeta) {
+    if (payload === undefined || payload === null) return;
+    sendOscTelemetry(address, [JSON.stringify(payload)], {
+      ...routeMeta,
+      kind: 'telemetry_json',
+    });
+  }
+
+  function sendNumberOsc(address, value, routeMeta) {
+    if (!isFiniteNumber(value)) return;
+    sendOscTelemetry(address, [value], routeMeta);
+  }
+
+  function sendBooleanOsc(address, value, routeMeta) {
+    if (typeof value !== 'boolean') return;
+    sendOscTelemetry(address, [value ? 1 : 0], routeMeta);
+  }
+
+  function forwardRichTelemetry(data, routeMeta) {
+    if (isFiniteNumber(data.currentSlot)) {
+      sendNumberOsc('/mn42/current-slot', data.currentSlot, routeMeta);
+      sendNumberOsc(
+        '/mn42/telemetry/current-slot',
+        data.currentSlot,
+        routeMeta,
+      );
+    }
+
+    if (isNumericVector(data.lfos)) {
+      sendOscTelemetry('/mn42/lfos', data.lfos, routeMeta);
+      sendOscTelemetry('/mn42/telemetry/lfos', data.lfos, routeMeta);
+    }
+
+    if (isNumericVector(data.efStatus)) {
+      sendOscTelemetry('/mn42/ef/status', data.efStatus, routeMeta);
+      sendOscTelemetry('/mn42/telemetry/ef-status', data.efStatus, routeMeta);
+    }
+
+    if (Array.isArray(data.lfo_config)) {
+      sendJsonOsc('/mn42/lfo/config', data.lfo_config, routeMeta);
+      sendJsonOsc('/mn42/telemetry/lfo-config', data.lfo_config, routeMeta);
+    }
+
+    if (Array.isArray(data.slotArgs)) {
+      const payload = {
+        scope: typeof data.scope === 'string' ? data.scope : null,
+        slotArgs: data.slotArgs,
+      };
+      sendJsonOsc('/mn42/arg/slots', payload, routeMeta);
+      sendJsonOsc('/mn42/telemetry/slot-args', payload, routeMeta);
+    }
+
+    if (Array.isArray(data.argPair)) {
+      sendOscTelemetry('/mn42/arg/pair', data.argPair, routeMeta);
+      sendOscTelemetry('/mn42/telemetry/arg-pair', data.argPair, routeMeta);
+    }
+
+    sendBooleanOsc('/mn42/arg/enabled', data.argEnabled, routeMeta);
+    if (typeof data.argMethod === 'string') {
+      sendOscTelemetry('/mn42/arg/method', [data.argMethod], routeMeta);
+    }
+
+    if (isFiniteNumber(data.active_profile)) {
+      sendNumberOsc('/mn42/profile/active', data.active_profile, routeMeta);
+      sendNumberOsc(
+        '/mn42/telemetry/active-profile',
+        data.active_profile,
+        routeMeta,
+      );
+    }
+
+    if (isObject(data.diagnostics)) {
+      sendJsonOsc('/mn42/diagnostics', data.diagnostics, routeMeta);
+      sendJsonOsc('/mn42/telemetry/diagnostics', data.diagnostics, routeMeta);
+    }
+
+    if (isObject(data.clock)) {
+      sendJsonOsc('/mn42/clock', data.clock, routeMeta);
+      sendJsonOsc('/mn42/telemetry/clock', data.clock, routeMeta);
+    }
+
+    if (isObject(data.note_dynamics)) {
+      sendJsonOsc('/mn42/note-dynamics', data.note_dynamics, routeMeta);
+    }
+
+    if (isObject(data.jitter)) {
+      sendJsonOsc('/mn42/jitter', data.jitter, routeMeta);
+    }
+  }
 
   return function handleSerialLine(line) {
     const trimmed = String(line || '').trim();
@@ -56,6 +148,12 @@ function createSerialLineHandler({
     const hostTimestampMs = timestampNow();
     const sourceTimestampMs = extractTimestampMs(data);
     const telemetryTraceId = extractTraceId(data) || nextTraceId('serial');
+    const telemetryRouteMeta = {
+      traceId: telemetryTraceId,
+      sourceTimestampMs,
+      hostTimestampMs,
+      reason: typeof data.scope === 'string' ? data.scope : null,
+    };
     Promise.resolve(
       deviceSession?.handleMessage?.(data, {
         rawLine: trimmed,
@@ -89,37 +187,28 @@ function createSerialLineHandler({
         sourceTimestampMs,
       });
       sendOscTelemetry('/mn42/slots', data.slots, {
-        traceId: telemetryTraceId,
-        sourceTimestampMs,
-        hostTimestampMs,
+        ...telemetryRouteMeta,
       });
       sendOscTelemetry('/mn42/telemetry/slots', data.slots, {
-        traceId: telemetryTraceId,
-        sourceTimestampMs,
-        hostTimestampMs,
+        ...telemetryRouteMeta,
       });
       sendMidiTelemetry(0xb0, data.slots, {
-        traceId: telemetryTraceId,
-        sourceTimestampMs,
-        hostTimestampMs,
+        ...telemetryRouteMeta,
       });
     }
     if (envelopeTelemetry) {
       sendOscTelemetry('/mn42/envelopes', data.envelopes, {
-        traceId: telemetryTraceId,
-        sourceTimestampMs,
-        hostTimestampMs,
+        ...telemetryRouteMeta,
       });
       sendOscTelemetry('/mn42/telemetry/envelopes', data.envelopes, {
-        traceId: telemetryTraceId,
-        sourceTimestampMs,
-        hostTimestampMs,
+        ...telemetryRouteMeta,
       });
       sendMidiTelemetry(0xb1, data.envelopes, {
-        traceId: telemetryTraceId,
-        sourceTimestampMs,
-        hostTimestampMs,
+        ...telemetryRouteMeta,
       });
+    }
+    if (hasTelemetry) {
+      forwardRichTelemetry(data, telemetryRouteMeta);
     }
   };
 }

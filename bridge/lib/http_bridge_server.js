@@ -311,6 +311,18 @@ function createBrowserBridgeServer({
           led_brightness_cap: manifest.led_brightness_cap ?? null,
           rail_topology_verified: manifest.rail_topology_verified ?? null,
         },
+        hardwareHealth: state?.deviceSession?.hardwareHealth ?? {
+          display_present: manifest.display_present ?? null,
+          display_ok: manifest.display_ok ?? null,
+          display_init_failures: manifest.display_init_failures ?? null,
+          display_status: manifest.display_status ?? null,
+          brownout_count: manifest.brownout_count ?? null,
+          eeprom_primary_valid: manifest.eeprom_primary_valid ?? null,
+          eeprom_backup_valid: manifest.eeprom_backup_valid ?? null,
+          eeprom_last_load: manifest.eeprom_last_load ?? null,
+          free_ram: manifest.free_ram ?? null,
+          free_flash: manifest.free_flash ?? null,
+        },
         state,
       };
       res.writeHead(200, {
@@ -596,6 +608,7 @@ function createBrowserBridgeServer({
             manifest: session?.manifest ?? null,
             firmwareIdentity: session?.firmwareIdentity ?? null,
             powerSafety: session?.powerSafety ?? null,
+            hardwareHealth: session?.hardwareHealth ?? null,
             schemaSource: session?.schemaSource ?? null,
           },
         });

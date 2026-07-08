@@ -110,13 +110,25 @@ async function run() {
   serial.parser.emit('data', '{"hello":"mn42"}');
   serial.parser.emit(
     'data',
-    '{"device_name":"MOARkNOBS-42","schema_version":6,"slot_count":42,"pot_count":42,"envelope_count":6,"led_count":52,"power_profile":"POWER_CHOKED_V1","led_brightness_cap":26,"rail_topology_verified":false}',
+    '{"device_name":"MOARkNOBS-42","schema_version":6,"slot_count":42,"pot_count":42,"envelope_count":6,"led_count":52,"power_profile":"POWER_CHOKED_V1","led_brightness_cap":26,"rail_topology_verified":false,"display_ok":true,"display_status":"ok","brownout_count":0,"eeprom_primary_valid":true,"eeprom_backup_valid":true}',
   );
   serial.parser.emit(
     'data',
     '{"slots":[{"index":0,"type":"CC","midiChannel":1,"data1":74}]}',
   );
   serial.parser.emit('data', '{"slots":[1,2,3]}');
+  serial.parser.emit(
+    'data',
+    '{"type":"telemetry","scope":"state_slots","slots":[1,2,3],"currentSlot":4}',
+  );
+  serial.parser.emit(
+    'data',
+    '{"type":"telemetry","scope":"state_envelopes","envelopes":[7,8],"lfos":[0.5,0.25],"efStatus":[1,0]}',
+  );
+  serial.parser.emit(
+    'data',
+    '{"type":"telemetry","scope":"state_diagnostics","diagnostics":{"display_ok":true},"clock":{"source":"internal","running":true},"argPair":[0,1],"argEnabled":true,"argMethod":"PLUS","active_profile":1}',
+  );
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   const slotsEntry = [...udp.sent]
@@ -127,6 +139,26 @@ async function run() {
   }
 
   assert.deepEqual(slots, [1, 2, 3], 'bridge should echo slots via OSC');
+  assert.equal(
+    udp.sent.some((entry) => entry.packet?.address === '/mn42/current-slot'),
+    true,
+    'bridge should expose firmware current-slot telemetry via OSC',
+  );
+  assert.equal(
+    udp.sent.some((entry) => entry.packet?.address === '/mn42/lfos'),
+    true,
+    'bridge should expose firmware LFO telemetry via OSC',
+  );
+  assert.equal(
+    udp.sent.some((entry) => entry.packet?.address === '/mn42/diagnostics'),
+    true,
+    'bridge should expose firmware diagnostics telemetry via OSC',
+  );
+  assert.equal(
+    udp.sent.some((entry) => entry.packet?.address === '/mn42/clock'),
+    true,
+    'bridge should expose firmware clock telemetry via OSC',
+  );
   assert.equal(
     udp.sent.some(
       (entry) =>
@@ -141,6 +173,11 @@ async function run() {
     service.getState().manifest.power_profile,
     'POWER_CHOKED_V1',
     'bridge should retain direct manifest replies for state snapshots',
+  );
+  assert.equal(
+    service.getState().deviceSession?.hardwareHealth?.display_ok,
+    true,
+    'bridge session should retain manifest-backed hardware health',
   );
 
   await service.stop();

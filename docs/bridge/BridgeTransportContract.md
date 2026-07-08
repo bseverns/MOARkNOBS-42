@@ -59,7 +59,8 @@ Payload:
   "manifest": {},
   "schemaSource": "device",
   "firmwareIdentity": {},
-  "powerSafety": {}
+  "powerSafety": {},
+  "hardwareHealth": {}
 }
 ```
 
@@ -177,11 +178,16 @@ Response:
     "dirty": false,
     "lastApplyResult": {},
     "powerSafety": {},
+    "hardwareHealth": {},
     "firmwareIdentity": {},
     "lastError": null
   }
 }
 ```
+
+`hardwareHealth` mirrors the manifest-backed physical-board health fields when the firmware reports them: OLED presence
+and driver status, brownout count, EEPROM primary/backup validity, last EEPROM load source, and memory headroom. Unknown
+fields remain `null`; display degraded mode is not treated as a bridge-transport failure by itself.
 
 ### `POST /api/device/stage`
 
@@ -273,6 +279,29 @@ Success response:
   "state": {}
 }
 ```
+
+## OSC telemetry mirrors
+
+The bridge forwards firmware telemetry to OSC using stable legacy addresses plus richer scoped addresses for current
+firmware packets.
+
+| Firmware field / scope                                                           | OSC address                                                       |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Slot values from `state_slots` or legacy `slots`                                 | `/mn42/slots`, `/mn42/telemetry/slots`                            |
+| Current slot from `state_slots`                                                  | `/mn42/current-slot`, `/mn42/telemetry/current-slot`              |
+| Envelope levels from `state_envelopes`, `scope_envelopes`, or legacy `envelopes` | `/mn42/envelopes`, `/mn42/telemetry/envelopes`                    |
+| LFO values                                                                       | `/mn42/lfos`, `/mn42/telemetry/lfos`                              |
+| EF active flags                                                                  | `/mn42/ef/status`, `/mn42/telemetry/ef-status`                    |
+| LFO config array                                                                 | `/mn42/lfo/config`, `/mn42/telemetry/lfo-config` as JSON string   |
+| ARG slot chunks                                                                  | `/mn42/arg/slots`, `/mn42/telemetry/slot-args` as JSON string     |
+| Global ARG pair / enable / method                                                | `/mn42/arg/pair`, `/mn42/arg/enabled`, `/mn42/arg/method`         |
+| Active profile                                                                   | `/mn42/profile/active`, `/mn42/telemetry/active-profile`          |
+| Runtime diagnostics                                                              | `/mn42/diagnostics`, `/mn42/telemetry/diagnostics` as JSON string |
+| Clock state                                                                      | `/mn42/clock`, `/mn42/telemetry/clock` as JSON string             |
+| Note dynamics and jitter                                                         | `/mn42/note-dynamics`, `/mn42/jitter` as JSON string              |
+
+MIDI telemetry remains intentionally narrow: slot values are mirrored as channel 1 CCs and envelope values as channel 2
+CCs. Richer machine state stays on OSC and the structured bridge event/session surfaces.
 
 ## Compatibility note
 

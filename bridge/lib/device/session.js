@@ -76,6 +76,21 @@ function extractPowerSafety(manifest) {
   };
 }
 
+function extractHardwareHealth(manifest) {
+  return {
+    display_present: manifest?.display_present ?? null,
+    display_ok: manifest?.display_ok ?? null,
+    display_init_failures: manifest?.display_init_failures ?? null,
+    display_status: manifest?.display_status ?? null,
+    brownout_count: manifest?.brownout_count ?? null,
+    eeprom_primary_valid: manifest?.eeprom_primary_valid ?? null,
+    eeprom_backup_valid: manifest?.eeprom_backup_valid ?? null,
+    eeprom_last_load: manifest?.eeprom_last_load ?? null,
+    free_ram: manifest?.free_ram ?? null,
+    free_flash: manifest?.free_flash ?? null,
+  };
+}
+
 function extractFirmwareIdentity(manifest) {
   return {
     device_name: manifest?.device_name ?? null,
@@ -113,6 +128,7 @@ function createDeviceSession({
     dirty: false,
     lastApplyResult: null,
     powerSafety: extractPowerSafety(null),
+    hardwareHealth: extractHardwareHealth(null),
     firmwareIdentity: extractFirmwareIdentity(null),
     lastError: null,
   };
@@ -140,6 +156,7 @@ function createDeviceSession({
 
   function syncIdentityFromManifest() {
     state.powerSafety = extractPowerSafety(state.manifest);
+    state.hardwareHealth = extractHardwareHealth(state.manifest);
     state.firmwareIdentity = extractFirmwareIdentity(state.manifest);
   }
 
@@ -200,6 +217,7 @@ function createDeviceSession({
         schemaSource: state.schemaSource,
         firmwareIdentity: state.firmwareIdentity,
         powerSafety: state.powerSafety,
+        hardwareHealth: state.hardwareHealth,
       });
     }
   }
@@ -307,6 +325,7 @@ function createDeviceSession({
           schemaSource: state.schemaSource,
           firmwareIdentity: state.firmwareIdentity,
           powerSafety: state.powerSafety,
+          hardwareHealth: state.hardwareHealth,
         });
       }
     }
@@ -322,6 +341,7 @@ function createDeviceSession({
           schemaSource: state.schemaSource,
           firmwareIdentity: state.firmwareIdentity,
           powerSafety: state.powerSafety,
+          hardwareHealth: state.hardwareHealth,
         });
       }
     } else if (
@@ -338,6 +358,7 @@ function createDeviceSession({
           schemaSource: state.schemaSource,
           firmwareIdentity: state.firmwareIdentity,
           powerSafety: state.powerSafety,
+          hardwareHealth: state.hardwareHealth,
         });
       }
     }
@@ -353,6 +374,7 @@ function createDeviceSession({
           schemaSource: state.schemaSource,
           firmwareIdentity: state.firmwareIdentity,
           powerSafety: state.powerSafety,
+          hardwareHealth: state.hardwareHealth,
         });
       }
     }
