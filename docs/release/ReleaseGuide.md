@@ -23,17 +23,18 @@ flowchart LR
    - `release.sh` now runs two explicit lanes:
      - `release_verify_hil.sh` (hardware verification; enforce with `REQUIRE_HIL=1`)
      - `release_build.sh` (deterministic artifact generation)
-   - `release_verify_hil.sh` always emits `release_verification.json` so artifacts explicitly show what verification was executed versus skipped.
-   - `release_build.sh` refuses tracked source changes before packaging so `dist/manifest.json` records a clean source commit.
+   - `release_verify_hil.sh` feeds the generated `dist/mn42_vX.Y.Z_hardware-test_verification.json` so artifacts explicitly show what verification was executed versus skipped.
+   - `release_build.sh` refuses tracked source changes before packaging so `dist/mn42_vX.Y.Z_hardware-test_manifest.json` records a clean source commit.
 4. **Commit it** – lock in doc updates and any release prep changes with a commit.
 5. **Tag it loud** – `git tag -a vX.Y.Z -m "vX.Y.Z"` to mark the moment.
 6. **Push the tag** – `git push origin vX.Y.Z` kicks CI into `.github/workflows/release.yml`.
 7. **Draft the release** – on GitHub, create a new release from that tag, drop the human-written notes, and publish.
-   - The release workflow builds firmware artifacts and unsigned bridge packages (`macOS x64 + arm64`, `Linux x64`, `Windows x64`) and always stores them as workflow artifacts.
+   - The release workflow builds hardware-test firmware artifacts and unsigned hardware-test bridge packages (`macOS x64 + arm64`, `Linux x64`, `Windows x64`) and always stores them as workflow artifacts.
    - Release packaging is blocked unless bridge tests, app tests, and `teensy40_main` firmware build pass in the release workflow.
    - Assets are uploaded to GitHub Releases only when a release for that tag already exists. If not, rerun the workflow (or run manual dispatch) after creating the release.
-   - Read `release_verification.json` before publishing notes: default hosted runners use optional HIL mode unless you provide a hardware port.
-   - Bridge uploads include per-target checksums, bridge third-party license payloads, and artifact manifest metadata.
+   - GitHub Release asset labels must keep the current boundary visible: hardware-test/prerelease, not beta/public.
+   - Read `mn42_vX.Y.Z_hardware-test_verification.json` before publishing notes: default hosted runners use optional HIL mode unless you provide a hardware port.
+   - Bridge uploads include per-target checksums, bridge third-party license payloads, artifact manifest metadata, and hardware-test/prerelease labels.
 8. **Celebrate or debug** – if CI faceplants, fix it and retag. If it works, cue the lights.
 
 ## Bridge packaging track

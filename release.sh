@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Release orchestrator: optional HIL verification + deterministic artifact build.
+# Release orchestrator: optional HIL verification + deterministic hardware-test/prerelease artifact build.
 set -euo pipefail
 
 usage() {
@@ -35,5 +35,5 @@ ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 "$ROOT_DIR/release_verify_hil.sh"
 "$ROOT_DIR/release_build.sh" "$VERSION"
 
-echo "Release artifacts ready in dist/"
-echo "Push a tag and let CI upload the goods to GitHub releases."
+echo "Hardware-test/prerelease artifacts ready in dist/"
+echo "Push a tag and let CI upload labeled hardware-test assets to an existing GitHub release."

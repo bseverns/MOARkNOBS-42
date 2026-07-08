@@ -154,22 +154,22 @@ jobs:
             echo "System Chrome not found on runner." >&2
             exit 1
           fi
-      - name: Build release artifacts
+      - name: Build hardware-test/prerelease artifacts
         env:
           PLAYWRIGHT_SYSTEM_CHROME: "1"
         run: |
           FW_VERSION="${RELEASE_TAG}" REQUIRE_HIL=0 ./release.sh "${RELEASE_TAG}"
-      - name: Upload release build artifact bundle
+      - name: Upload hardware-test core artifact bundle
         uses: actions/upload-artifact@v7
         with:
-          name: release-core-${{ needs.resolve-release-meta.outputs.artifact_tag }}
+          name: hardware-test-core-${{ needs.resolve-release-meta.outputs.artifact_tag }}
           path: |
-            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}.hex
-            dist/hardware_reference.zip
-            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_source.zip
-            dist/release_verification.json
-            dist/manifest.json
-            dist/SHA256SUMS.txt
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_firmware.hex
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_hardware-reference.zip
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_source.zip
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_verification.json
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_manifest.json
+            dist/mn42_${{ needs.resolve-release-meta.outputs.release_tag }}_hardware-test_SHA256SUMS.txt
             dist/THIRD_PARTY_LICENSES.md
             dist/LICENSES
       - name: Check whether GitHub release exists
@@ -195,7 +195,7 @@ jobs:
             }
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
-      - name: Upload core release assets when release exists
+      - name: Upload labeled hardware-test core assets when release exists
         if: steps.release-check.outputs.exists == 'true'
         shell: bash
         env:
@@ -203,17 +203,17 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload "${RELEASE_TAG}" \
-            "dist/mn42_${RELEASE_TAG}.hex" \
-            "dist/hardware_reference.zip" \
-            "dist/mn42_${RELEASE_TAG}_source.zip" \
-            "dist/release_verification.json" \
-            "dist/manifest.json" \
-            "dist/SHA256SUMS.txt" \
-            "dist/THIRD_PARTY_LICENSES.md" \
+            "dist/mn42_${RELEASE_TAG}_hardware-test_firmware.hex#MN42 hardware-test firmware HEX (prototype/prerelease)" \
+            "dist/mn42_${RELEASE_TAG}_hardware-test_hardware-reference.zip#MN42 hardware-test hardware reference bundle (not fabrication-ready)" \
+            "dist/mn42_${RELEASE_TAG}_hardware-test_source.zip#MN42 hardware-test source export" \
+            "dist/mn42_${RELEASE_TAG}_hardware-test_verification.json#MN42 hardware-test verification receipt" \
+            "dist/mn42_${RELEASE_TAG}_hardware-test_manifest.json#MN42 hardware-test provenance manifest" \
+            "dist/mn42_${RELEASE_TAG}_hardware-test_SHA256SUMS.txt#MN42 hardware-test checksums" \
+            "dist/THIRD_PARTY_LICENSES.md#Third-party license notices" \
             --clobber
       - name: Note skipped core release upload
         if: steps.release-check.outputs.exists != 'true'
-        run: echo "No GitHub release found for tag '${RELEASE_TAG}'. Core assets kept as workflow artifacts only."
+        run: echo "No GitHub release found for tag '${RELEASE_TAG}'. Hardware-test core assets kept as workflow artifacts only."
 
   bridge-package-artifacts:
     needs:
@@ -317,7 +317,7 @@ jobs:
           node bridge/scripts/smoke_packaged_bridge_server.js \
             --binary "${console_binary}"
           printf '%s\n' \
-            'MN42 Bridge unsigned CI artifact' \
+            'MN42 Bridge hardware-test / prerelease unsigned CI artifact' \
             '' \
             'Contents:' \
             '- one platform-specific bridge CLI binary' \
@@ -330,6 +330,7 @@ jobs:
             'The CLI binary preserves the shell-first bridge workflow.' \
             '' \
             'This bundle is intentionally unsigned.' \
+            'It is a hardware-test/prerelease artifact, not a signed beta/public installer.' \
             'For install and usage details, see bridge/README.md and docs/release/BridgeSigningPlan.md.' \
             > "${stage_dir}/README.txt"
           cp bridge/THIRD_PARTY_LICENSES.md "${stage_dir}/THIRD_PARTY_LICENSES.md"
@@ -378,10 +379,10 @@ jobs:
           if [ ${#binaries[@]} -gt 0 ]; then
             chmod 755 "${binaries[@]}"
           fi
-      - name: Upload combined bridge artifact bundle
+      - name: Upload combined hardware-test bridge artifact bundle
         uses: actions/upload-artifact@v7
         with:
-          name: bridge-release-${{ env.ARTIFACT_TAG }}
+          name: hardware-test-bridge-${{ env.ARTIFACT_TAG }}
           path: bridge/dist/release-upload
       - name: Check whether GitHub release exists
         id: release-check
@@ -406,16 +407,49 @@ jobs:
             }
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
-      - name: Upload bridge assets to existing GitHub release
+      - name: Upload labeled hardware-test bridge assets to existing GitHub release
         if: steps.release-check.outputs.exists == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          gh release upload "${RELEASE_TAG}" \
-            bridge/dist/release-upload/* \
-            --clobber
+          upload_args=()
+          for asset in bridge/dist/release-upload/*; do
+            if [[ ! -f "${asset}" ]]; then
+              continue
+            fi
+            filename="$(basename "${asset}")"
+            case "${filename}" in
+              mn42-bridge-*-cli-*)
+                label="MN42 Bridge hardware-test CLI (${filename}; unsigned prerelease)"
+                ;;
+              mn42-bridge-*-console-*)
+                label="MN42 Bridge hardware-test console/server (${filename}; unsigned prerelease)"
+                ;;
+              SHA256SUMS-*)
+                label="MN42 Bridge hardware-test checksums (${filename})"
+                ;;
+              bridge_artifact_manifest.json)
+                label="MN42 Bridge hardware-test artifact manifest"
+                ;;
+              README.txt)
+                label="MN42 Bridge hardware-test prerelease notes"
+                ;;
+              THIRD_PARTY_LICENSES.*)
+                label="MN42 Bridge third-party license notices (${filename})"
+                ;;
+              *)
+                label="MN42 Bridge hardware-test support file (${filename})"
+                ;;
+            esac
+            upload_args+=("${asset}#${label}")
+          done
+          if [[ ${#upload_args[@]} -eq 0 ]]; then
+            echo "No bridge release-upload files found to attach." >&2
+            exit 1
+          fi
+          gh release upload "${RELEASE_TAG}" "${upload_args[@]}" --clobber
       - name: Note skipped bridge release upload
         if: steps.release-check.outputs.exists != 'true'
-        run: echo "No GitHub release found for tag '${RELEASE_TAG}'. Bridge assets kept as workflow artifacts only."
+        run: echo "No GitHub release found for tag '${RELEASE_TAG}'. Hardware-test bridge assets kept as workflow artifacts only."

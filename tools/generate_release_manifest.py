@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Emit a reproducibility manifest for release artifacts."""
+"""Emit a reproducibility manifest for hardware-test/prerelease artifacts."""
 
 from __future__ import annotations
 
@@ -83,14 +83,20 @@ def _collect_env(prefix: str) -> Dict[str, str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate a deterministic build manifest")
+    parser = argparse.ArgumentParser(description="Generate a deterministic hardware-test build manifest")
     parser.add_argument("--version", required=True, help="Release version/tag")
     parser.add_argument("--output", required=True, help="Manifest destination path")
     parser.add_argument("--root", required=False, help="Repository root for relative paths")
     parser.add_argument("--project", required=True, help="PlatformIO project directory")
     parser.add_argument("--build-env", required=True, help="PlatformIO environment used for the firmware build")
     parser.add_argument("--firmware", required=True, help="Path to the compiled Intel HEX firmware artifact")
-    parser.add_argument("--fabrication", required=True, help="Path to the hardware reference bundle artifact")
+    parser.add_argument(
+        "--hardware-reference",
+        "--fabrication",
+        dest="hardware_reference",
+        required=True,
+        help="Path to the hardware-test reference bundle artifact",
+    )
     parser.add_argument(
         "--artifact",
         action="append",
@@ -111,7 +117,7 @@ def main() -> None:
     root = pathlib.Path(args.root).resolve() if args.root else None
     project_dir = pathlib.Path(args.project).resolve()
     firmware_path = pathlib.Path(args.firmware)
-    fabrication_path = pathlib.Path(args.fabrication)
+    hardware_reference_path = pathlib.Path(args.hardware_reference)
 
     now = _dt.datetime.now(tz=_dt.timezone.utc)
 
@@ -171,13 +177,18 @@ def main() -> None:
 
     artifacts: Dict[str, object] = {
         "firmware_hex": _file_metadata(firmware_path, root),
-        "hardware_reference_bundle": _file_metadata(fabrication_path, root),
+        "hardware_test_hardware_reference_bundle": _file_metadata(hardware_reference_path, root),
     }
     for label, artifact_path in extra_artifacts.items():
         artifacts[label] = _file_metadata(artifact_path, root)
 
     manifest: Dict[str, object] = {
         "version": args.version,
+        "release_boundary": {
+            "stage": "hardware-test",
+            "description": "Prerelease prototype artifact set; not a beta/public release claim.",
+            "boundary_doc": "docs/release/ReleaseBoundaryIndex.md",
+        },
         "generated_at_utc": now.isoformat(),
         "python": {
             "executable": sys.executable,

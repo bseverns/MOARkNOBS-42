@@ -4,12 +4,12 @@ So you've got a MOARkNOBS-42 that already made it off the bench and into the wil
 
 ## Quick and Dirty
 
-1. **Grab a release** – hit the [GitHub releases page](https://github.com/bseverns/MOARkNOBS-42/releases) and snag the latest `.hex` file.
+1. **Grab a hardware-test firmware asset** – hit the [GitHub releases page](https://github.com/bseverns/MOARkNOBS-42/releases) and snag the matching `*_hardware-test_firmware.hex` file. Treat it as a prerelease/prototype artifact unless the release notes explicitly say otherwise.
 2. **Jack in** – plug the controller into your machine over USB. Fire up the Teensy Loader GUI or the command-line `teensy_loader_cli`.
 3. **Kick it into program mode** – if the loader just stares at you, tap the Teensy's button to nudge the bootloader awake.
 4. **Flash it** – feed the hex to the loader or run:
    ```bash
-   teensy_loader_cli -mmcu=teensy40 -w mn42-firmware.hex
+   teensy_loader_cli -mmcu=teensy40 -w mn42_vX.Y.Z_hardware-test_firmware.hex
    ```
 5. **Wait for the rave** – the LEDs should chase, the loader will holler `reboot`, and the unit restarts itself.
 6. **Smoke test** – power cycle and make sure the slot LEDs still dance and the buttons misbehave.

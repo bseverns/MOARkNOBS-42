@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deterministic build + packaging lane for release artifacts.
+# Deterministic build + packaging lane for hardware-test/prerelease artifacts.
 set -euo pipefail
 IFS=$'\n\t'
 umask 022
@@ -35,14 +35,14 @@ VERSION="$1"
 OUTPUT_DIR="dist"
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_ENV="teensy40_main"
-FIRMWARE_NAME="mn42_${VERSION}.hex"
-FABRICATION_NAME="hardware_reference.zip"
-SOURCE_EXPORT_NAME="mn42_${VERSION}_source.zip"
-MANIFEST_NAME="manifest.json"
-CHECKSUMS_NAME="SHA256SUMS.txt"
-VERIFICATION_NAME="release_verification.json"
+FIRMWARE_NAME="mn42_${VERSION}_hardware-test_firmware.hex"
+HARDWARE_REFERENCE_NAME="mn42_${VERSION}_hardware-test_hardware-reference.zip"
+SOURCE_EXPORT_NAME="mn42_${VERSION}_hardware-test_source.zip"
+MANIFEST_NAME="mn42_${VERSION}_hardware-test_manifest.json"
+CHECKSUMS_NAME="mn42_${VERSION}_hardware-test_SHA256SUMS.txt"
+VERIFICATION_NAME="mn42_${VERSION}_hardware-test_verification.json"
 PROJECT_DIR="$ROOT_DIR/firmware"
-FABRICATION_DIR="$ROOT_DIR/hardware/fabrication"
+HARDWARE_REFERENCE_DIR="$ROOT_DIR/hardware/fabrication"
 VERIFICATION_SOURCE_FILE="${RELEASE_VERIFICATION_FILE:-$ROOT_DIR/.release_verification.json}"
 VERIFICATION_DIST_FILE="$ROOT_DIR/$OUTPUT_DIR/$VERIFICATION_NAME"
 
@@ -62,8 +62,8 @@ mkdir -p "$ROOT_DIR/$OUTPUT_DIR" "$PIO_HOME" "$PIO_CACHE"
 SOURCE_STATUS="$(git -C "$ROOT_DIR" status --short --untracked-files=no)"
 if [ -n "$SOURCE_STATUS" ]; then
   cat >&2 <<EOF
-Refusing to cut release artifacts from a dirty source tree.
-Commit or stash tracked changes first so dist/manifest.json records a clean source commit.
+Refusing to cut hardware-test/prerelease artifacts from a dirty source tree.
+Commit or stash tracked changes first so dist/$MANIFEST_NAME records a clean source commit.
 
 $SOURCE_STATUS
 EOF
@@ -83,11 +83,11 @@ echo "Building firmware..."
 cp ".pio/build/${BUILD_ENV}/firmware.hex" "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME"
 popd >/dev/null
 
-if [ ! -d "$FABRICATION_DIR" ]; then
-  echo "Warning: fabrication source missing at $FABRICATION_DIR; continuing with documentation-only hardware bundle." >&2
+if [ ! -d "$HARDWARE_REFERENCE_DIR" ]; then
+  echo "Warning: hardware reference source missing at $HARDWARE_REFERENCE_DIR; continuing with documentation-only hardware-test bundle." >&2
 fi
 
-python3 - "$ROOT_DIR" "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" <<'PY'
+python3 - "$ROOT_DIR" "$ROOT_DIR/$OUTPUT_DIR/$HARDWARE_REFERENCE_NAME" <<'PY'
 import pathlib
 import sys
 import zipfile
@@ -117,6 +117,15 @@ def add_text_to_zip(zf, arcname, text):
     zf.writestr(info, text.encode("utf-8"))
 
 with zipfile.ZipFile(dst, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+    add_text_to_zip(
+        zf,
+        "RELEASE_BOUNDARY.txt",
+        "MN42 hardware-test reference bundle.\n"
+        "This is a prerelease/prototype evidence artifact, not an orderable fabrication package.\n"
+        "No verified Gerber, NC-drill, release BOM, pick-and-place, or assembly package is claimed here.\n"
+        "See hardware/CurrentBuild.md and docs/release/ReleaseBoundaryIndex.md.\n",
+    )
+
     # Add everything in hardware/fabrication
     if src_fab.exists():
         for path in sorted(src_fab.rglob("*")):
@@ -210,7 +219,7 @@ python3 "$ROOT_DIR/tools/generate_release_manifest.py" \
   --build-env "$BUILD_ENV" \
   --output "$ROOT_DIR/$OUTPUT_DIR/$MANIFEST_NAME" \
   --firmware "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME" \
-  --fabrication "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" \
+  --hardware-reference "$ROOT_DIR/$OUTPUT_DIR/$HARDWARE_REFERENCE_NAME" \
   --artifact "source_export=$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME" \
   --artifact "verification=$VERIFICATION_DIST_FILE" \
   --artifact "third_party_licenses=$ROOT_DIR/$OUTPUT_DIR/THIRD_PARTY_LICENSES.md" \
@@ -222,7 +231,7 @@ python3 "$ROOT_DIR/tools/generate_release_manifest.py" \
 python3 "$ROOT_DIR/tools/write_checksums.py" \
   --output "$ROOT_DIR/$OUTPUT_DIR/$CHECKSUMS_NAME" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$FIRMWARE_NAME" \
-  --file "$ROOT_DIR/$OUTPUT_DIR/$FABRICATION_NAME" \
+  --file "$ROOT_DIR/$OUTPUT_DIR/$HARDWARE_REFERENCE_NAME" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$SOURCE_EXPORT_NAME" \
   --file "$VERIFICATION_DIST_FILE" \
   --file "$ROOT_DIR/$OUTPUT_DIR/$MANIFEST_NAME" \

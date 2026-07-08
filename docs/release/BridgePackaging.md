@@ -40,7 +40,7 @@ For what is true now, defer to [bridge/README.md](https://github.com/bseverns/MO
   - `/api/device/session?warm=1` proves the App-derived schema authority can load inside the packaged artifact
   - `/api/device/stage` rejects bad writes with a machine-readable error object
   - valid staged-config acceptance still depends on a real manifest/live-config handshake, so that proof remains HIL-only unless the smoke run is given a working serial device
-- Bridge release uploads are conditional on an existing GitHub release for the tag.
+- Bridge release uploads are conditional on an existing GitHub release for the tag, and current CI uploads are labeled as hardware-test/prerelease assets.
 - Outward bridge builds must set `REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks; otherwise the packaging script fails instead of silently producing unsigned binaries.
 
 For the current support boundary, see [Host Compatibility](../reference/HostCompatibility.md).

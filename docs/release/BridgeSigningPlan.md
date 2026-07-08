@@ -5,7 +5,7 @@ This is a signing-ready plan, not a claim that the bridge is currently shipped a
 ## Current state
 
 - CI builds unsigned per-target bridge artifacts.
-- Those artifacts are tagged as `signingStatus: "unsigned-ci-artifact"` and include a nested `signing` metadata object in the bridge artifact manifest.
+- Those artifacts are tagged as `releaseBoundary.stage: "hardware-test"` and `signingStatus: "unsigned-ci-artifact"` and include nested `releaseBoundary` and `signing` metadata objects in the bridge artifact manifest.
 - The release workflow now treats those bundles as internal/operator evidence, not polished consumer installers.
 
 ## Intended future path

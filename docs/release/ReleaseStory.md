@@ -15,7 +15,7 @@ When someone downloads a release, they should be able to answer:
 - what source produced this artifact?
 - what firmware version does the device report internally?
 - what checks proved it before publishing?
-- what fabrication and source bundles belong to that exact drop?
+- what hardware-test reference and source bundles belong to that exact drop?
 
 If those answers drift apart, the release stops being trustworthy.
 
@@ -28,7 +28,7 @@ flowchart LR
   C --> D[Tagged commit]
   D --> E[release.sh and CI]
   E --> F[Firmware hex]
-  E --> G[Fabrication bundle]
+  E --> G[Hardware-test reference bundle]
   E --> H[Source export]
   E --> I[Manifest and checksums]
   F --> J[Published release]
@@ -37,7 +37,7 @@ flowchart LR
   I --> J
 ```
 
-_Alt text: Flowchart showing a release moving from tested source through version stamping, tagging, CI, and final published artifacts including firmware, fabrication files, source export, manifest, and checksums._
+_Alt text: Flowchart showing a release moving from tested source through version stamping, tagging, CI, and final published hardware-test artifacts including firmware, hardware reference files, source export, manifest, and checksums._
 
 _A companion screenshot of the actual `dist/` output would help readers connect the flowchart to the files they will see on disk._
 
@@ -57,7 +57,7 @@ The release path has three kinds of checks:
 
 - deterministic firmware build passes
 - the verification lane records exactly what ran (required HIL, optional Unity-only, or skipped)
-- app/bridge/system status is explicit in `release_verification.json` rather than implied
+- app/bridge/system status is explicit in the hardware-test verification JSON rather than implied
 
 ### 2. Do the docs and notes still match reality?
 
@@ -67,15 +67,15 @@ The release path has three kinds of checks:
 
 ### 3. Can the output be audited later?
 
-- release artifacts are generated deterministically
+- hardware-test/prerelease artifacts are generated deterministically
 - manifest records provenance
 - checksums allow later verification
 
 _A small table or artifact gallery would help here by pairing each check with the file that proves it._
 
-## Why the fabrication and source bundles are part of the story
+## Why the hardware reference and source bundles are part of the story
 
-This project is not only software. The release also needs to say, clearly, what board files and source snapshot belong to the published firmware. That is what turns the release from "download this binary" into "rebuild this instrument and understand where it came from."
+This project is not only software. The release also needs to say, clearly, what board reference files and source snapshot belong to the published firmware. At the current boundary, those files are hardware-test references rather than orderable fabrication outputs. That is what turns the release from "download this binary" into "audit this prototype artifact set and understand where it came from."
 
 ## Common ways releases go wrong
 
@@ -90,8 +90,8 @@ Good release docs exist to make those mismatches obvious before the publish butt
 
 For this repo, the fastest mismatch detector is to compare your release notes against two files:
 
-- `dist/release_verification.json` (what verification actually executed)
-- `dist/manifest.json` (artifact hashes + provenance + copied verification summary)
+- `dist/mn42_vX.Y.Z_hardware-test_verification.json` (what verification actually executed)
+- `dist/mn42_vX.Y.Z_hardware-test_manifest.json` (artifact hashes + provenance + copied verification summary)
 
 ## The practical sequence
 

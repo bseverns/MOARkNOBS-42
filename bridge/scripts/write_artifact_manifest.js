@@ -19,7 +19,7 @@ function requiredArg(name) {
 
 function defaultSigningNote(signingStatus) {
   if (signingStatus === 'unsigned-ci-artifact') {
-    return 'Unsigned CI artifact; not a signed public installer.';
+    return 'Unsigned hardware-test/prerelease CI artifact; not a signed beta/public installer.';
   }
   if (signingStatus === 'signed') {
     return 'Artifact reports a signed status; verify signature evidence before public release.';
@@ -66,6 +66,12 @@ function main() {
   const manifest = {
     target,
     versionTag: releaseTag,
+    releaseBoundary: {
+      stage: 'hardware-test',
+      description:
+        'Prerelease bridge package for prototype validation; not a signed beta/public installer.',
+      boundaryDoc: 'docs/release/ReleaseBoundaryIndex.md',
+    },
     nodeTarget,
     commitSha,
     createdAt: new Date().toISOString(),

@@ -71,7 +71,7 @@ Use this template for each release tag (for example `v1.0.0`).
 
 ## Release attachments
 
-- [ ] Bridge artifacts uploaded to GitHub release
+- [ ] Bridge artifacts uploaded to GitHub release with hardware-test/prerelease labels unless this is an explicitly signed beta/public release
 - [ ] `THIRD_PARTY_LICENSES.md` attached or linked
 - [ ] `bridge/THIRD_PARTY_LICENSES.json` attached or linked
 - [ ] Checksums file uploaded

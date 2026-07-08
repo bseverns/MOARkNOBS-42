@@ -29,7 +29,7 @@ These pages describe what has been tested, observed, or bench-validated.
 - [Validation Flow](../validation/ValidationFlow.md)
 - [Test Matrix](../hardware-test/TestMatrix.md)
 - `docs/bench/` summaries and measurements
-- release verification artifacts such as `dist/release_verification.json`
+- release verification artifacts such as `dist/mn42_vX.Y.Z_hardware-test_verification.json`
 
 Rule: evidence docs may be narrower than the contract docs, but they should never imply broader support than the evidence actually proves.
 

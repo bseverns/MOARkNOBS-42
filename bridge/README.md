@@ -431,7 +431,7 @@ Each per-target bundle now includes:
 - a SHA-256 checksum file
 - a per-target `README.txt`
 - bundled third-party license notices
-- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, packaged program roles, timestamp, `signingStatus: "unsigned-ci-artifact"`, and a nested `signing` metadata object
+- `bridge_artifact_manifest.json` with target, commit SHA, checksum paths, node target, packaged program roles, timestamp, `releaseBoundary.stage: "hardware-test"`, `signingStatus: "unsigned-ci-artifact"`, and a nested `signing` metadata object
 
 The release workflow now also boots the packaged console binary and checks:
 
@@ -443,7 +443,7 @@ The release workflow now also boots the packaged console binary and checks:
 
 Without a real device handshake, the packaged smoke test only proves warmed schema authority and fail-closed staged-write behavior. Accepting a valid staged config still requires a cached device manifest and live config from hardware.
 
-When a GitHub release already exists for the tag, the workflow uploads those unsigned bundles as release assets. That is an evidence/distribution convenience, not a claim that the bridge is now a signed public installer.
+When a GitHub release already exists for the tag, the workflow uploads those unsigned bundles as hardware-test/prerelease release assets with matching GitHub asset labels. That is an evidence/distribution convenience, not a claim that the bridge is now a signed public installer.
 
 The top-level `signingStatus` field is retained for existing readers. New tooling should prefer the manifest's `signing` object, which records status, identity when provided, notarization status, and a support-boundary note.
 

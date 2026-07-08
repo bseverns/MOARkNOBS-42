@@ -4,14 +4,14 @@ This page is the short version of the release artifact story. The detailed, root
 
 ## Why this matters
 
-MOARkNOBS-42 does not just ship binaries. It tries to ship receipts:
+MOARkNOBS-42 does not just ship binaries. It tries to ship receipts. At the current boundary, these are **hardware-test/prerelease** receipts, not beta/public release claims:
 
-- the firmware artifact
-- the hardware reference bundle
-- a deterministic source export
-- a manifest describing how those artifacts were built
-- checksums so another machine can verify the output
-- bridge binaries (multi-OS) with per-target checksums; beta/public bridge assets must pass the signing gate
+- the hardware-test firmware artifact
+- the hardware-test hardware reference bundle, not an orderable fabrication bundle
+- a deterministic hardware-test source export
+- a hardware-test manifest describing how those artifacts were built
+- hardware-test checksums so another machine can verify the output
+- unsigned bridge binaries with per-target checksums; beta/public bridge assets must pass the signing gate
 
 That matters because this project wants to be teachable and inspectable, not just downloadable.
 
@@ -24,9 +24,9 @@ flowchart LR
   B --> D[Firmware build]
   B --> E[Deterministic hardware reference bundle]
   B --> F[Source export zip]
-  B --> G[release_verification.json]
-  B --> H[Manifest plus SHA256SUMS]
-  C --> I[Release assets]
+  B --> G[hardware-test verification JSON]
+  B --> H[hardware-test manifest plus SHA256SUMS]
+  C --> I[Hardware-test / prerelease assets]
   D --> I
   E --> I
   F --> I
@@ -46,11 +46,11 @@ Two things matter there:
 
 - the positional argument names the artifacts
 - the `FW_VERSION` environment variable ensures the embedded firmware metadata reports the same version as the tagged release
-- HIL execution is recorded in `dist/release_verification.json` (executed, failed, or skipped)
+- HIL execution is recorded in `dist/mn42_vX.Y.Z_hardware-test_verification.json` (executed, failed, or skipped)
 
 ## What the release manifest is for
 
-The generated `dist/manifest.json` is meant to answer:
+The generated `dist/mn42_vX.Y.Z_hardware-test_manifest.json` is meant to answer:
 
 - what commit was this built from?
 - was the tree dirty?
@@ -65,12 +65,12 @@ Without that manifest, a release is just a pile of files. With it, the release b
 
 `.github/workflows/release.yml` now does two release lanes:
 
-- firmware/core artifact lane via `release.sh`
-- bridge packaging lane (`pkg`) for `macOS x64 + arm64`, `Linux x64`, and `Windows x64`
+- hardware-test firmware/core artifact lane via `release.sh`
+- hardware-test bridge packaging lane (`pkg`) for `macOS x64 + arm64`, `Linux x64`, and `Windows x64`
 
 The workflow always uploads artifacts to the workflow run. GitHub Release asset upload is conditional:
-assets are attached only when a release for the tag already exists.
-Unsigned bridge artifacts are acceptable only for internal workflow evidence. Beta/public bridge assets must be rebuilt or promoted with `REQUIRE_BRIDGE_SIGNING=1`.
+assets are attached only when a release for the tag already exists, and those upload labels identify them as hardware-test/prerelease artifacts.
+Unsigned bridge artifacts are acceptable only for internal/operator evidence. Beta/public bridge assets must be rebuilt or promoted with `REQUIRE_BRIDGE_SIGNING=1`.
 
 ## Read the full operator guide
 
