@@ -210,6 +210,10 @@ test.describe('Stage mode', () => {
     await page.getByRole('button', { name: /simulator/i }).click();
     await page.getByRole('button', { name: 'Connect' }).click();
 
+    await expect(page.locator('#device-monitor')).toContainText('OLED present');
+    await expect(page.locator('#device-monitor')).toContainText('OLED ready');
+    await expect(page.locator('#device-monitor')).toContainText('OLED status');
+    await expect(page.locator('#device-monitor')).toContainText('ok');
     await expect(page.locator('#device-monitor')).toContainText('Brownouts');
     await expect(page.locator('#device-monitor')).toContainText('2');
     await expect(page.locator('#device-monitor')).toContainText('EEPROM primary');

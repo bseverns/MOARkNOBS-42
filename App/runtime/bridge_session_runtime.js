@@ -43,7 +43,15 @@ export function createBridgeSessionRuntime({
   function applySessionSnapshot(sessionPayload = {}, { emitConnectedConfig = true } = {}) {
     bridgeSessionCache = clone(sessionPayload);
 
-    const manifest = sessionPayload.manifest;
+    const manifest =
+      sessionPayload.manifest && typeof sessionPayload.manifest === 'object'
+        ? {
+            ...sessionPayload.manifest,
+            ...(sessionPayload.hardwareHealth && typeof sessionPayload.hardwareHealth === 'object'
+              ? sessionPayload.hardwareHealth
+              : {})
+          }
+        : null;
     if (manifest && typeof manifest === 'object') {
       setRemoteManifest(manifest);
       localSlotMetaManager.ensureCount(
@@ -125,8 +133,14 @@ export function createBridgeSessionRuntime({
         switch (message.event) {
           case 'device.ready':
             if (payload.manifest && typeof payload.manifest === 'object') {
-              setRemoteManifest(payload.manifest);
-              emit('manifest', payload.manifest);
+              const manifest = {
+                ...payload.manifest,
+                ...(payload.hardwareHealth && typeof payload.hardwareHealth === 'object'
+                  ? payload.hardwareHealth
+                  : {})
+              };
+              setRemoteManifest(manifest);
+              emit('manifest', manifest);
             }
             if (payload.schemaSource) setSchemaSource(payload.schemaSource);
             void refreshSessionSnapshot({ warm: false, emitConnectedConfig: false }).catch(

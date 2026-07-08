@@ -80,6 +80,18 @@ test('bridge-served app prefers the structured bridge session and promotes stage
         led_brightness_cap: 26,
         rail_topology_verified: false
       },
+      hardwareHealth: {
+        display_present: true,
+        display_ok: false,
+        display_init_failures: 2,
+        display_status: 'driver_begin_failed',
+        brownout_count: 3,
+        eeprom_primary_valid: true,
+        eeprom_backup_valid: false,
+        eeprom_last_load: 'backup',
+        free_ram: 24576,
+        free_flash: 512000
+      },
       firmwareIdentity: {
         device_name: 'MOARkNOBS-42',
         fw_version: 'bridge-fw',
@@ -232,6 +244,7 @@ test('bridge-served app prefers the structured bridge session and promotes stage
                 manifest: sessionState.manifest,
                 firmwareIdentity: sessionState.firmwareIdentity,
                 powerSafety: sessionState.powerSafety,
+                hardwareHealth: sessionState.hardwareHealth,
                 schemaSource: sessionState.schemaSource
               })
             });
@@ -342,6 +355,10 @@ test('bridge-served app prefers the structured bridge session and promotes stage
   await expect(page.locator('#connection-banner')).toContainText('via Bridge session');
   await expect(page.locator('#connection-banner')).not.toContainText('via Bridge raw transport');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Bridge session');
+  await expect(page.locator('#device-monitor')).toContainText('OLED status');
+  await expect(page.locator('#device-monitor')).toContainText('driver_begin_failed');
+  await expect(page.locator('#device-monitor')).toContainText('Brownouts');
+  await expect(page.locator('#device-monitor')).toContainText('3');
   await expect
     .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
     .toBe('bridge-session');
