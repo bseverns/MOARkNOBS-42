@@ -12,22 +12,24 @@ The repo-root canonical source remains `hardware/CurrentBuild.md`. Use that file
 
 ## Current Status Summary
 
-Last mirrored from the canonical hardware page: 2026-07-07.
+Last mirrored from the canonical hardware page: 2026-07-08.
 
-| Item                      | Version / date cue                                  | Status              | Notes                                                                                                                                  |
-| ------------------------- | --------------------------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Physical prototype boards | received, photos present under `docs/assets/board/` | `bring-up`          | Boards are in the hardware-test loop; current findings are treated as design/integration issues unless evidence points to fabrication. |
-| Schematic reference       | `SCH_MOAR_Schematic_2025-08-30.pdf`                 | `current reference` | Bench-validation reference.                                                                                                            |
-| Board drawing reference   | `PCB_MOAR_Board_2025-09-03.pdf`                     | `current reference` | Bench-validation reference.                                                                                                            |
-| Fabrication status note   | `hardware/fabrication/README.md`                    | `current boundary`  | States that no orderable fabrication package is enclosed.                                                                              |
-| BOM export                | none tracked in `hardware/fabrication/`             | `absent`            | No current BOM file is present in this checkout; do not rely on older BOM names.                                                       |
-| Gerber / NC-drill archive | none tracked in `hardware/fabrication/`             | `absent`            | No verified fabrication bundle is present or claimed.                                                                                  |
+| Item                      | Version / date cue                                    | Status               | Notes                                                                                                                                  |
+| ------------------------- | ----------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Physical prototype boards | received, photos present under `docs/assets/board/`   | `bring-up`           | Boards are in the hardware-test loop; current findings are treated as design/integration issues unless evidence points to fabrication. |
+| Schematic reference       | `SCH_MOAR_Schematic_2025-08-30.pdf`                   | `current reference`  | Bench-validation reference.                                                                                                            |
+| PCB overview PDF          | `PCB_MOAR_Board_2025-09-03.pdf`                       | `current reference`  | Board drawing overview for bench validation.                                                                                           |
+| PCB drawing detail set    | `PCB_MOAR_Board_2025-09-03/`                          | `reference only`     | Assembly, hole, drill-drawing, and trace-reference PDFs for inspection and review; not a Gerber / NC-drill manufacturing archive.      |
+| Fabrication directory     | tracked contents are `hardware/fabrication/README.md` | `boundary note only` | States that no orderable fabrication package is enclosed.                                                                              |
+| BOM export                | none tracked in `hardware/fabrication/`               | `absent`             | No current BOM file is present in this checkout; do not rely on older BOM names.                                                       |
+| Gerber / NC-drill archive | none tracked in `hardware/fabrication/`               | `absent`             | No verified fabrication bundle is present or claimed.                                                                                  |
 
 ## Bring-Up Boundary
 
 - The boards are clean enough for useful probing, assembly, and trace inspection.
 - Current prototype faults are being treated as design and integration findings unless later measurements identify a fabrication issue.
 - The current board, trace-inspection, bench-context, and powered bring-up photos are public breadcrumbs, not release-level validation receipts.
+- `hardware/fabrication/` is a boundary-note directory only until verified manufacturing artifacts are added.
 - Rail topology and high-current LED behavior still need dated bench evidence before release-level hardware claims.
 - This repo still does not claim an order-ready Gerber plus NC-drill bundle.
 

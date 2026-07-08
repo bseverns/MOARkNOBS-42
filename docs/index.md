@@ -125,7 +125,7 @@ The goal is not mass-market smoothness. The goal is an instrument whose control 
 
 - **Advanced builders**
 
-  For people comfortable with fabrication files, flashing firmware, and validating real hardware behavior on the bench.
+  For people comfortable with hardware reference files, flashing firmware, and validating real hardware behavior on the bench.
 
 - **Educators and instrument hackers**
 

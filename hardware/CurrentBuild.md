@@ -2,12 +2,13 @@
 
 This is the hardware status page for the hardware-test package.
 
-Last audited against repo contents: 2026-07-07.
+Last audited against repo contents: 2026-07-08.
 
 ## Package Scope
 
 This package supports prototype bench validation.
 It does not claim fabrication readiness.
+The tracked `hardware/fabrication/` tree currently contains only `README.md`, which is a boundary note rather than a manufacturing artifact.
 
 ## Physical Board Status
 
@@ -36,15 +37,16 @@ or dated bench receipts.
 | Item | Path | Status | Use in this package |
 | --- | --- | --- | --- |
 | Schematic reference | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present | Current schematic reference for bench validation |
-| PCB/reference drawing | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | present | Current board drawing reference for bench validation |
-| Fabrication status note | `hardware/fabrication/README.md` | present | States that no orderable fabrication package is enclosed |
+| PCB overview PDF | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | present | Current board drawing overview for bench validation |
+| PCB drawing detail set | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03/` | present | Assembly, hole, drill-drawing, and trace-reference PDFs for inspection and review; not a Gerber / NC-drill manufacturing archive |
+| Fabrication directory contents | `hardware/fabrication/README.md` only | boundary note only | States that no orderable fabrication package is enclosed |
 | Prototype BOM export | none tracked in `hardware/fabrication/` | absent | No current BOM file is present in this checkout; do not rely on older BOM names |
 | Gerber / NC-drill archive | none tracked in `hardware/fabrication/` | absent | No verified fabrication bundle is present or claimed |
 | Physical board photos | `docs/assets/board/` | present | Public breadcrumb images for current prototype board review |
 
 ## How To Use This Folder
 
-1. Use the schematic PDF and PCB/reference drawing PDF to confirm the assembled prototype matches the expected wiring and layout.
+1. Use the schematic PDF, PCB overview PDF, and PCB drawing detail set to confirm the assembled prototype matches the expected wiring and layout.
 2. Use [Parts.md](Parts.md) and [Substitutions.md](Substitutions.md) to review parts and likely substitutions before bench work.
 3. If you are preparing manufacturing files, stop. This package does not certify a fabrication-ready output set.
 
@@ -52,6 +54,7 @@ or dated bench receipts.
 
 - The physical boards are suitable for probing and bring-up; no fabrication-quality blocker is claimed from the current
   photo and trace-inspection evidence.
+- The tracked `hardware/fabrication/` directory is only a status note until verified manufacturing artifacts are added.
 - Rail topology and high-current LED behavior still need dated bench evidence before this prototype can be described as
   release-ready.
 - Any fault found during bring-up should be logged as a design/integration finding first, then reclassified only if direct
@@ -61,6 +64,7 @@ or dated bench receipts.
 
 - no verified Gerber plus NC-drill release bundle
 - no tracked current BOM export in `hardware/fabrication/`
+- no tracked fabrication artifact in `hardware/fabrication/` beyond the boundary README
 - no claim that any fabrication archive has completed release-level checks
 - no order-ready manufacturing sign-off from this package
 - no claim that the physical prototype has completed full release-level hardware validation

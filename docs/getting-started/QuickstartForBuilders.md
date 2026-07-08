@@ -83,4 +83,4 @@ pio run -d firmware -e teensy40_full_system
 
 ## Builder note
 
-This repo currently documents hardware more clearly than it packages it. If you do not see a verified Gerber zip or versioned BOM in [Hardware Current Build](../reference/HardwareCurrentBuild.md), do not infer one from older filenames elsewhere in the docs.
+This repo currently documents hardware more clearly than it packages it. If [Hardware Current Build](../reference/HardwareCurrentBuild.md) does not list a verified Gerber / NC-drill archive and current BOM, do not infer them from older filenames elsewhere in the docs.

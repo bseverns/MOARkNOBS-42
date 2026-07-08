@@ -130,12 +130,13 @@ pio run -d firmware -e teensy40_main
 
 These match the current hardware status page in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
 
-| Item                    | Path                                                              | Status  | Use in this package                                         |
-| ----------------------- | ----------------------------------------------------------------- | ------- | ----------------------------------------------------------- |
-| Schematic reference     | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present | Current schematic reference for bench validation            |
-| PCB/reference drawing   | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`     | present | Current board drawing reference for bench validation        |
-| Fabrication status note | `hardware/fabrication/README.md`                                  | present | States that no orderable fabrication package is enclosed    |
-| Physical board photos   | `docs/assets/board/`                                              | present | Public breadcrumb images for current prototype board review |
+| Item                   | Path                                                              | Status    | Use in this package                                         |
+| ---------------------- | ----------------------------------------------------------------- | --------- | ----------------------------------------------------------- |
+| Schematic reference    | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present   | Current schematic reference for bench validation            |
+| PCB overview PDF       | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`     | present   | Current board drawing overview for bench validation         |
+| PCB drawing detail set | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03/`        | present   | Reference PDFs for inspection and review, not fab outputs   |
+| Fabrication directory  | `hardware/fabrication/README.md` only                             | note only | States that no orderable fabrication package is enclosed    |
+| Physical board photos  | `docs/assets/board/`                                              | present   | Public breadcrumb images for current prototype board review |
 
 No current BOM file is tracked in `hardware/fabrication/`, and no verified Gerber / NC-drill archive is present or
 claimed. Use the files above as bench-validation references only.

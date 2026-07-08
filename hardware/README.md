@@ -50,8 +50,9 @@ Power estimates and quick current math live in [PowerBudget.md](../docs/referenc
 ## Current Bench-Validation References
 
 - schematic PDF: `MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
-- PCB/reference drawing PDF: `MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
-- fabrication status note: `fabrication/README.md`
+- PCB overview PDF: `MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
+- PCB drawing detail set: `MN42-machineDrawings/PCB_MOAR_Board_2025-09-03/`
+- fabrication boundary note: `fabrication/README.md`
 
 These files are included to support bench validation and wiring review. No current BOM, Gerber, or NC-drill release bundle is tracked in `fabrication/`.
 

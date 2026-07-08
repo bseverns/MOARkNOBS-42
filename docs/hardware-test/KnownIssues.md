@@ -39,5 +39,5 @@ No active automated-test failures are currently tracked in this document. Add ne
 
 ## Manufacturing Boundary
 
-- Present hardware PDFs and BOM exports are prototype references.
+- Present hardware PDFs and parts notes are prototype references.
 - The current fabrication folder is a boundary note only; no orderable BOM, Gerber, or NC-drill package is enclosed.

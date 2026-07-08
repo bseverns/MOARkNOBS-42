@@ -19,7 +19,7 @@ It is intended to validate:
 
 - not a public release package
 - not a fabrication-ready manufacturing bundle
-- not a claim that the current Gerber archive or NC-drill outputs are verified
+- not a claim that any Gerber archive or NC-drill outputs are verified
 - not a signed desktop-installer package
 
 Current package limitations are tracked in [docs/hardware-test/KnownIssues.md](docs/hardware-test/KnownIssues.md).
@@ -39,7 +39,7 @@ receipts.
 ## Package Layout
 
 - `firmware/` contains the real PlatformIO project and all kept firmware test lanes.
-- `hardware/` contains the current schematic PDF, PCB/reference drawing PDF, BOM export, and parts notes.
+- `hardware/` contains the current schematic PDF, PCB/reference drawing PDFs, parts notes, and the fabrication boundary note.
 - `App/` is included because WebSerial telemetry validation is part of this package.
 - `bridge/` is included because bridge validation is part of this package.
 - `docs/hardware-test/` contains the hardware-test operator docs.
