@@ -3,7 +3,7 @@ const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
 
-const { DEFAULT_HTTP_PORT } = require('./bridge_service');
+const { DEFAULT_HTTP_PORT, MAX_SERIAL_LINE_LEN } = require('./bridge_service');
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -31,6 +31,16 @@ const PUBLIC_CONFIG_KEYS = [
   'midiToOscMappings',
 ];
 
+// Browser-originated config/session payloads are normally far smaller than this,
+// but a hard cap prevents unbounded API reads.
+const DEFAULT_JSON_API_BODY_LIMIT_BYTES = 1024 * 1024;
+// Raw browser websocket input ultimately becomes one native serial line; keep
+// the browser ingress ceiling aligned with the bridge serial-line guard.
+const DEFAULT_RAW_WEBSOCKET_MESSAGE_LIMIT_BYTES = MAX_SERIAL_LINE_LEN;
+// The bridge UI is localhost-first; this caps accidental tab/client fan-out.
+const DEFAULT_MAX_BROWSER_WEBSOCKET_CLIENTS = 16;
+const WEBSOCKET_CLOSE_MESSAGE_TOO_BIG = 1009;
+
 // Parse user-provided port values from the browser console without crashing on junk input.
 function normalizePositiveInt(value, fallback) {
   const parsed = parseInt(String(value), 10);
@@ -38,6 +48,14 @@ function normalizePositiveInt(value, fallback) {
     return fallback;
   }
   return parsed;
+}
+
+function normalizeLimit(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
 }
 
 // Minimal websocket text-frame encoder for the one-way bridge log stream.
@@ -63,8 +81,14 @@ function frameText(payload) {
 }
 
 // Close frame used when the server intentionally tears down a websocket client.
-function closeFrame() {
-  return Buffer.from([0x88, 0x00]);
+function closeFrame(code, reason = '') {
+  if (!code) return Buffer.from([0x88, 0x00]);
+  const reasonBody = Buffer.from(String(reason), 'utf8');
+  const maxReasonBytes = Math.max(0, 123 - 2);
+  const payload = Buffer.alloc(2 + Math.min(reasonBody.length, maxReasonBytes));
+  payload.writeUInt16BE(code, 0);
+  reasonBody.copy(payload, 2, 0, payload.length - 2);
+  return Buffer.concat([Buffer.from([0x88, payload.length]), payload]);
 }
 
 // Join request paths safely so the browser console cannot escape the intended static roots.
@@ -76,10 +100,40 @@ function safeJoin(rootDir, requestPath) {
   return candidate;
 }
 
-// Read a JSON body for the tiny `/api/*` control surface.
-async function readJson(req) {
+function createBodyLimitError(limitBytes) {
+  const error = new Error(
+    `JSON API request body exceeds ${limitBytes} byte limit`,
+  );
+  error.code = 'request_body_too_large';
+  error.statusCode = 413;
+  error.limitBytes = limitBytes;
+  return error;
+}
+
+function readContentLength(headers = {}) {
+  const value = headers['content-length'];
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+// Read a bounded JSON body for the tiny `/api/*` control surface.
+async function readJson(
+  req,
+  { maxBytes = DEFAULT_JSON_API_BODY_LIMIT_BYTES } = {},
+) {
+  const contentLength = readContentLength(req.headers);
+  if (contentLength !== null && contentLength > maxBytes) {
+    throw createBodyLimitError(maxBytes);
+  }
   const chunks = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > maxBytes) {
+      throw createBodyLimitError(maxBytes);
+    }
     chunks.push(chunk);
   }
   if (!chunks.length) return {};
@@ -202,11 +256,26 @@ function createBrowserBridgeServer({
   appDir = path.resolve(__dirname, '..', '..', 'App'),
   presetDir = path.resolve(__dirname, '..', 'presets'),
   httpApi = http,
+  maxJsonApiBodyBytes = DEFAULT_JSON_API_BODY_LIMIT_BYTES,
+  maxRawWebSocketMessageBytes = DEFAULT_RAW_WEBSOCKET_MESSAGE_LIMIT_BYTES,
+  maxBrowserWebSocketClients = DEFAULT_MAX_BROWSER_WEBSOCKET_CLIENTS,
 } = {}) {
   if (!service || typeof service.getState !== 'function') {
     throw new Error('bridge service is required');
   }
 
+  const jsonApiBodyLimit = normalizeLimit(
+    maxJsonApiBodyBytes,
+    DEFAULT_JSON_API_BODY_LIMIT_BYTES,
+  );
+  const rawWebSocketMessageLimit = normalizeLimit(
+    maxRawWebSocketMessageBytes,
+    DEFAULT_RAW_WEBSOCKET_MESSAGE_LIMIT_BYTES,
+  );
+  const browserWebSocketClientLimit = normalizeLimit(
+    maxBrowserWebSocketClients,
+    DEFAULT_MAX_BROWSER_WEBSOCKET_CLIENTS,
+  );
   let server = null;
   let unsubscribeLine = null;
   let unsubscribeState = null;
@@ -240,12 +309,12 @@ function createBrowserBridgeServer({
   }
 
   // Remove a websocket client and send a close frame when possible.
-  function destroySocket(socket) {
+  function destroySocket(socket, closeCode, closeReason = '') {
     if (!socket) return;
     rawSockets.delete(socket);
     eventSockets.delete(socket);
     try {
-      socket.end(closeFrame());
+      socket.end(closeFrame(closeCode, closeReason));
     } catch (_) {
       socket.destroy();
     }
@@ -258,6 +327,25 @@ function createBrowserBridgeServer({
       'content-type': 'application/json; charset=utf-8',
     });
     res.end(JSON.stringify(payload));
+  }
+
+  function sendBodyLimitError(res, err) {
+    if (err?.code !== 'request_body_too_large') return false;
+    res.writeHead(413, {
+      'cache-control': 'no-store',
+      connection: 'close',
+      'content-type': 'application/json; charset=utf-8',
+    });
+    res.end(
+      JSON.stringify({
+        error: {
+          code: err.code,
+          message: err.message,
+          limitBytes: err.limitBytes,
+        },
+      }),
+    );
+    return true;
   }
 
   // Handle the small REST surface that starts/stops the bridge and exposes status.
@@ -392,7 +480,7 @@ function createBrowserBridgeServer({
 
     if (pathname === '/api/connect' && req.method === 'POST') {
       try {
-        const body = await readJson(req);
+        const body = await readJson(req, { maxBytes: jsonApiBodyLimit });
         const nextConfig = normalizeConfig(body);
         const running = Boolean(service.getState().running);
         await service.configure(nextConfig, { restart: running });
@@ -401,6 +489,7 @@ function createBrowserBridgeServer({
         }
         sendJson(res, 200, { state: service.getState() });
       } catch (err) {
+        if (sendBodyLimitError(res, err)) return true;
         sendJson(res, 500, { error: err.message, state: service.getState() });
       }
       return true;
@@ -418,7 +507,7 @@ function createBrowserBridgeServer({
 
     if (pathname === '/api/device/stage' && req.method === 'POST') {
       try {
-        const body = await readJson(req);
+        const body = await readJson(req, { maxBytes: jsonApiBodyLimit });
         const payload = Object.prototype.hasOwnProperty.call(body, 'config')
           ? body.config
           : body;
@@ -431,6 +520,7 @@ function createBrowserBridgeServer({
           state: service.getState(),
         });
       } catch (err) {
+        if (sendBodyLimitError(res, err)) return true;
         sendJson(res, err.statusCode || 500, {
           error: {
             code: err.code || 'bridge_error',
@@ -445,7 +535,7 @@ function createBrowserBridgeServer({
 
     if (pathname === '/api/device/apply' && req.method === 'POST') {
       try {
-        const body = await readJson(req);
+        const body = await readJson(req, { maxBytes: jsonApiBodyLimit });
         const result =
           typeof service.applyDeviceConfig === 'function'
             ? await service.applyDeviceConfig(body || {})
@@ -455,6 +545,7 @@ function createBrowserBridgeServer({
           state: service.getState(),
         });
       } catch (err) {
+        if (sendBodyLimitError(res, err)) return true;
         sendJson(res, err.statusCode || 500, {
           error: {
             code: err.code || 'bridge_error',
@@ -469,7 +560,7 @@ function createBrowserBridgeServer({
 
     if (pathname === '/api/device/rollback' && req.method === 'POST') {
       try {
-        const body = await readJson(req);
+        const body = await readJson(req, { maxBytes: jsonApiBodyLimit });
         const result =
           typeof service.rollbackDeviceConfig === 'function'
             ? await service.rollbackDeviceConfig(
@@ -481,6 +572,7 @@ function createBrowserBridgeServer({
           state: service.getState(),
         });
       } catch (err) {
+        if (sendBodyLimitError(res, err)) return true;
         sendJson(res, err.statusCode || 500, {
           error: {
             code: err.code || 'bridge_error',
@@ -533,6 +625,19 @@ function createBrowserBridgeServer({
     const key = req.headers['sec-websocket-key'];
     if (!key) {
       socket.destroy();
+      return;
+    }
+
+    if (rawSockets.size + eventSockets.size >= browserWebSocketClientLimit) {
+      socket.end(
+        [
+          'HTTP/1.1 503 Service Unavailable',
+          'Connection: close',
+          'Content-Type: text/plain; charset=utf-8',
+          '',
+          'browser websocket client limit reached',
+        ].join('\r\n'),
+      );
       return;
     }
 
@@ -633,7 +738,28 @@ function createBrowserBridgeServer({
           length = buffered.readUInt16BE(2);
           offset = 4;
         } else if (length === 127) {
-          destroySocket(socket);
+          if (buffered.length < 10) return;
+          const wideLength = buffered.readBigUInt64BE(2);
+          if (
+            wideLength > BigInt(rawWebSocketMessageLimit) ||
+            wideLength > BigInt(Number.MAX_SAFE_INTEGER)
+          ) {
+            destroySocket(
+              socket,
+              WEBSOCKET_CLOSE_MESSAGE_TOO_BIG,
+              'message too big',
+            );
+            return;
+          }
+          length = Number(wideLength);
+          offset = 10;
+        }
+        if (length > rawWebSocketMessageLimit) {
+          destroySocket(
+            socket,
+            WEBSOCKET_CLOSE_MESSAGE_TOO_BIG,
+            'message too big',
+          );
           return;
         }
         const maskLength = masked ? 4 : 0;
@@ -668,6 +794,13 @@ function createBrowserBridgeServer({
             // The UI can query /api/state for transport health; raw transport stays line-oriented.
           }
         }
+      }
+      if (buffered.length > rawWebSocketMessageLimit + 14) {
+        destroySocket(
+          socket,
+          WEBSOCKET_CLOSE_MESSAGE_TOO_BIG,
+          'message too big',
+        );
       }
     });
 

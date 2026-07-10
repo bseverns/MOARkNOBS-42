@@ -26,7 +26,9 @@
 
 namespace {
 BootMode gBootMode = BootMode::StandaloneRuntime;
+#if defined(MN42_DIAG_BOOT_MARKERS) && (MN42_DIAG_BOOT_MARKERS != 0)
 bool gFirstStandaloneLoop = true;
+#endif
 } // namespace
 
 // Firmware bootstrap stays intentionally small: initialize protocol, recover

@@ -334,6 +334,42 @@ function makeRes() {
   return res;
 }
 
+function makeSocket() {
+  const socket = new EventEmitter();
+  socket.writes = [];
+  socket.ended = false;
+  socket.destroyed = false;
+  socket.write = (chunk) => {
+    socket.writes.push(
+      Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk)),
+    );
+  };
+  socket.end = (chunk = '') => {
+    if (chunk) socket.write(chunk);
+    socket.ended = true;
+    socket.emit('end');
+  };
+  socket.destroy = () => {
+    socket.destroyed = true;
+    socket.emit('close');
+  };
+  socket.on = socket.addListener.bind(socket);
+  return socket;
+}
+
+function makeUpgradeReq(url = '/ws') {
+  return {
+    url,
+    headers: {
+      host: '127.0.0.1',
+      'sec-websocket-key': 'dGhlIHNhbXBsZSBub25jZQ==',
+      connection: 'Upgrade',
+      upgrade: 'websocket',
+      'sec-websocket-version': '13',
+    },
+  };
+}
+
 function encodeClientTextFrame(payload) {
   const body = Buffer.from(payload, 'utf8');
   const mask = Buffer.from([0x11, 0x22, 0x33, 0x44]);
@@ -363,11 +399,103 @@ function decodeServerFrame(frame) {
     length = Number(frame.readBigUInt64BE(2));
     offset = 10;
   }
+  const payload = frame.subarray(offset, offset + length);
   return {
     opcode: frame[0] & 0x0f,
     length,
-    payload: frame.subarray(offset, offset + length).toString('utf8'),
+    payload: payload.toString('utf8'),
+    payloadBuffer: payload,
   };
+}
+
+async function startBrowserServer(options = {}) {
+  const service = makeFakeService();
+  const { httpApi, server } = makeFakeHttpApi();
+  const browserServer = createBrowserBridgeServer({
+    service,
+    host: '127.0.0.1',
+    port: 0,
+    httpApi,
+    ...options,
+  });
+  await browserServer.start();
+  return { browserServer, server, service };
+}
+
+async function assertJsonApiBodyLimit() {
+  const { browserServer, server, service } = await startBrowserServer({
+    maxJsonApiBodyBytes: 32,
+  });
+  const response = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/connect',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ serialName: 'x'.repeat(64) }),
+    }),
+    response,
+  );
+  const payload = JSON.parse(response.body.toString('utf8'));
+  assert.equal(response.statusCode, 413);
+  assert.equal(payload.error?.code, 'request_body_too_large');
+  assert.equal(payload.error?.limitBytes, 32);
+  assert.match(payload.error?.message || '', /32 byte limit/);
+  assert.equal(
+    service.getState().running,
+    false,
+    'oversized API body should not start the bridge service',
+  );
+  await browserServer.stop();
+}
+
+async function assertRawWebSocketMessageLimit() {
+  const { browserServer, server, service } = await startBrowserServer({
+    maxRawWebSocketMessageBytes: 8,
+  });
+  const socket = makeSocket();
+  server.emit('upgrade', makeUpgradeReq('/ws'), socket);
+  assert.match(
+    Buffer.concat(socket.writes).toString('utf8'),
+    /HTTP\/1\.1 101 Switching Protocols/,
+    'raw websocket upgrade should succeed before message limit enforcement',
+  );
+
+  socket.emit('data', encodeClientTextFrame('123456789\n'));
+  const close = decodeServerFrame(socket.writes.at(-1));
+  assert.equal(close.opcode, 8, 'oversized raw websocket message should close');
+  assert.equal(
+    close.payloadBuffer.readUInt16BE(0),
+    1009,
+    'oversized raw websocket message should use message-too-big close code',
+  );
+  assert.deepEqual(
+    service.sentLines,
+    [],
+    'oversized raw websocket message should not reach the bridge service',
+  );
+  await browserServer.stop();
+}
+
+async function assertWebSocketClientLimit() {
+  const { browserServer, server } = await startBrowserServer({
+    maxBrowserWebSocketClients: 1,
+  });
+  const firstSocket = makeSocket();
+  server.emit('upgrade', makeUpgradeReq('/ws'), firstSocket);
+  assert.match(
+    Buffer.concat(firstSocket.writes).toString('utf8'),
+    /HTTP\/1\.1 101 Switching Protocols/,
+    'first websocket client should be accepted',
+  );
+
+  const secondSocket = makeSocket();
+  server.emit('upgrade', makeUpgradeReq('/ws/events'), secondSocket);
+  const secondText = Buffer.concat(secondSocket.writes).toString('utf8');
+  assert.match(secondText, /HTTP\/1\.1 503 Service Unavailable/);
+  assert.match(secondText, /browser websocket client limit reached/);
+  assert.equal(secondSocket.ended, true);
+  await browserServer.stop();
 }
 
 async function run() {
@@ -815,6 +943,9 @@ async function run() {
   );
 
   await browserServer.stop();
+  await assertJsonApiBodyLimit();
+  await assertRawWebSocketMessageLimit();
+  await assertWebSocketClientLimit();
   console.log(
     'browser bridge server exposes API, app, and websocket transport',
   );
