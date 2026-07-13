@@ -120,7 +120,7 @@ function installNativeArpHarness() {
           pushLine(JSON.stringify(liveArp));
           return;
         }
-        if (trimmed === 'SET_ARP,6,4,30,75,2') {
+        if (trimmed === 'SET_ARP,6,4,30,75,2,8') {
           liveArp = {
             ...liveArp,
             type: 'response',
@@ -131,7 +131,8 @@ function installNativeArpHarness() {
             shape_name: 'drunk',
             swing_percent: 30,
             gate_percent: 75,
-            octave_range: 2
+            octave_range: 2,
+            pattern_length: 8
           };
           pushLine(JSON.stringify(liveArp));
           return;
@@ -199,6 +200,28 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
 });
 
+test('profile arp GET and SET round-trip pattern length in the App payload', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/benzknobz.html');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+
+  await page.locator('[data-utility-tab="arp"]').click();
+  await expect(page.locator('#arp-save')).toBeEnabled();
+  await page.locator('#arp-pattern-length').fill('9');
+  await page.locator('#arp-save').click();
+  await expect(page.locator('#status-label')).toHaveText('Arp profile saved');
+
+  await page.locator('#arp-pattern-length').fill('2');
+  await page.locator('#arp-refresh').click();
+  await expect(page.locator('#arp-pattern-length')).toHaveValue('9');
+});
+
 test('live arp controls use native runtime commands without config boot', async ({ page }) => {
   await page.addInitScript(installNativeArpHarness);
 
@@ -216,6 +239,7 @@ test('live arp controls use native runtime commands without config boot', async 
   await page.locator('#live-arp-swing').fill('30');
   await page.locator('#live-arp-gate').fill('75');
   await page.locator('#live-arp-octave').fill('2');
+  await page.locator('#live-arp-pattern-length').fill('8');
   await page.locator('#live-arp-apply').click();
   await expect(page.locator('#status-label')).toHaveText('Live arp updated');
 
@@ -226,7 +250,7 @@ test('live arp controls use native runtime commands without config boot', async 
 
   const writes = await page.evaluate(() => window.__nativeWrites);
   expect(writes).toContain('GET_ARP');
-  expect(writes).toContain('SET_ARP,6,4,30,75,2');
+  expect(writes).toContain('SET_ARP,6,4,30,75,2,8');
   expect(writes).toContain('ARP_START,7');
   expect(writes).toContain('ARP_STOP');
   expect(writes).not.toContain('ENTER_CONFIG_MODE');

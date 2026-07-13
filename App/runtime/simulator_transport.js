@@ -135,7 +135,8 @@ export function createSimulator(simDeps = {}) {
       shape: 0,
       swing_percent: 0,
       gate_percent: 50,
-      octave_range: 0
+      octave_range: 0,
+      pattern_length: 4
     },
     lfos: [
       {
@@ -564,7 +565,13 @@ export function createSimulator(simDeps = {}) {
           shape: Math.max(0, Math.min(5, Math.round(Number(request.shape) || 0))),
           swing_percent: Math.max(0, Math.min(80, Math.round(Number(request.swingPercent) || 0))),
           gate_percent: Math.max(5, Math.min(100, Math.round(Number(request.gatePercent) || 50))),
-          octave_range: Math.max(0, Math.min(3, Math.round(Number(request.octaveRange) || 0)))
+          octave_range: Math.max(0, Math.min(3, Math.round(Number(request.octaveRange) || 0))),
+          pattern_length:
+            Number.isFinite(Number(request.patternLength)) &&
+            Number(request.patternLength) >= 2 &&
+            Number(request.patternLength) <= 16
+              ? Math.round(Number(request.patternLength))
+              : liveArp.pattern_length
         };
         liveArp.shape_name = shapeNames[liveArp.shape] ?? 'up';
         respond({ command: 'SET_ARP', status: 'ok', ...liveArp });

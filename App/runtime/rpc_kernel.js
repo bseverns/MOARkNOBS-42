@@ -114,7 +114,12 @@ export function createRpcKernel({
             },${Number(message.tappedBpm ?? 120).toFixed(2)}`
           ]
         };
-      case 'set_arp':
+      case 'set_arp': {
+        const patternLength = Number(message.patternLength);
+        const patternLengthSuffix =
+          Number.isFinite(patternLength) && patternLength >= 2 && patternLength <= 16
+            ? `,${Math.round(patternLength)}`
+            : '';
         return {
           kind: 'arp_set',
           lines: [
@@ -122,9 +127,10 @@ export function createRpcKernel({
               Number(message.shape) || 0
             )},${Math.round(Number(message.swingPercent) || 0)},${Math.round(
               Number(message.gatePercent) || 50
-            )},${Math.round(Number(message.octaveRange) || 0)}`
+            )},${Math.round(Number(message.octaveRange) || 0)}${patternLengthSuffix}`
           ]
         };
+      }
       case 'set_jitter':
         return {
           kind: 'jitter_set',

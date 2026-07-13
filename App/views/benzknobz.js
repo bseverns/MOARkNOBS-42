@@ -193,12 +193,14 @@ const boot = () => {
   const arpSwingInput = document.getElementById('arp-swing');
   const arpGateInput = document.getElementById('arp-gate');
   const arpOctaveInput = document.getElementById('arp-octave');
+  const arpPatternLengthInput = document.getElementById('arp-pattern-length');
   const liveArpSlotInput = document.getElementById('live-arp-slot');
   const liveArpLengthInput = document.getElementById('live-arp-length');
   const liveArpShapeSelect = document.getElementById('live-arp-shape');
   const liveArpSwingInput = document.getElementById('live-arp-swing');
   const liveArpGateInput = document.getElementById('live-arp-gate');
   const liveArpOctaveInput = document.getElementById('live-arp-octave');
+  const liveArpPatternLengthInput = document.getElementById('live-arp-pattern-length');
   const liveArpRefreshBtn = document.getElementById('live-arp-refresh');
   const liveArpApplyBtn = document.getElementById('live-arp-apply');
   const liveArpStartBtn = document.getElementById('live-arp-start');
@@ -629,12 +631,14 @@ const boot = () => {
       arpSwingInput,
       arpGateInput,
       arpOctaveInput,
+      arpPatternLengthInput,
       liveArpSlotInput,
       liveArpLengthInput,
       liveArpShapeSelect,
       liveArpSwingInput,
       liveArpGateInput,
       liveArpOctaveInput,
+      liveArpPatternLengthInput,
       liveArpRefreshBtn,
       liveArpApplyBtn,
       liveArpStartBtn,
