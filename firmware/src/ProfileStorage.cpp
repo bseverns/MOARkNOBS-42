@@ -73,6 +73,9 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
     sanitized.arp.swingPercent = constrain(sanitized.arp.swingPercent, 0, 80);
     sanitized.arp.gatePercent = constrain(sanitized.arp.gatePercent, 5, 100);
     sanitized.arp.octaveRange = constrain(sanitized.arp.octaveRange, 0, 3);
+    sanitized.arp.patternLength =
+        constrain(sanitized.arp.patternLength, Arpeggiator::MIN_PATTERN_LENGTH,
+                  Arpeggiator::MAX_PATTERN_LENGTH);
     if (sanitized.arp.lengthTicks == 0) {
         sanitized.arp.lengthTicks = 12;
     }

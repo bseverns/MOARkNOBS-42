@@ -101,6 +101,7 @@ ProfileData captureProfileSnapshot() {
     profile.arp.gatePercent =
         static_cast<uint8_t>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f));
     profile.arp.octaveRange = arpeggiator.getOctaveRange();
+    profile.arp.patternLength = arpeggiator.getPatternLength();
 
     profile.led.brightness = ledManager.getBrightness();
     CRGB color = ledManager.getColor();
@@ -171,6 +172,7 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     arpeggiator.setSwingPercent(profile.arp.swingPercent);
     arpeggiator.setGatePercent(profile.arp.gatePercent);
     arpeggiator.setOctaveRange(profile.arp.octaveRange);
+    arpeggiator.setPatternLength(profile.arp.patternLength);
 
     ledManager.setBrightness(profile.led.brightness);
     ledManager.setColor(CRGB(profile.led.r, profile.led.g, profile.led.b));

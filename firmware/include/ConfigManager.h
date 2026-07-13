@@ -5,6 +5,7 @@
 #ifndef CONFIGMANAGER_H
 #define CONFIGMANAGER_H
 
+#include "Arpeggiator.h"
 #include "Globals.h"
 #include "LedMode.h"
 #include "MIDITypes.h"
@@ -113,11 +114,12 @@ struct __attribute__((packed)) ProfileSlotSettings {
 };
 
 struct __attribute__((packed)) ProfileArpSettings {
-    uint8_t lengthTicks = 12; // Step length in MIDI ticks
-    uint8_t shape = 0;        // Arpeggiator::Shape
-    uint8_t swingPercent = 0; // Swing percent (0..80)
-    uint8_t gatePercent = 50; // Gate percent (5..100)
-    uint8_t octaveRange = 0;  // Extra octaves (0..3)
+    uint8_t lengthTicks = 12;                                    // Step length in MIDI ticks
+    uint8_t shape = 0;                                           // Arpeggiator::Shape
+    uint8_t swingPercent = 0;                                    // Swing percent (0..80)
+    uint8_t gatePercent = 50;                                    // Gate percent (5..100)
+    uint8_t octaveRange = 0;                                     // Extra octaves (0..3)
+    uint8_t patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH; // Pattern steps (2..16)
 };
 
 struct __attribute__((packed)) ProfileLedSettings {
@@ -167,7 +169,7 @@ struct __attribute__((packed)) ProfileLfoRoute {
 
 inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0005;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0006;
 
 struct __attribute__((packed)) ProfileData {
     uint16_t version = PROFILE_SETTINGS_VERSION;  // Profile payload version

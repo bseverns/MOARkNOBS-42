@@ -33,6 +33,11 @@ class Arpeggiator {
 
     // Max ticks allowed between note hits so the riff never drifts past a beat.
     static constexpr uint8_t MAX_LENGTH = 24;
+    static constexpr uint8_t MIN_PATTERN_LENGTH = 2;
+    static constexpr uint8_t MAX_PATTERN_LENGTH = 16;
+    static constexpr uint8_t DEFAULT_PATTERN_LENGTH = 4;
+    // Bound historical step emissions from one slot update after a delayed main loop.
+    static constexpr uint8_t MAX_CATCH_UP_EMISSIONS_PER_UPDATE = 8;
 
     // Construct a stopped arpeggiator with default settings.
     Arpeggiator();

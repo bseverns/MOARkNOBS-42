@@ -14,7 +14,6 @@
 #include "Globals.h"
 #include <cmath>
 
-constexpr uint8_t MAX_STEPS = 16;
 // Longest span between notes, in MIDI clock ticks. Anything longer loses the groove.
 constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 
@@ -24,9 +23,9 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 // when the arp idles.
 
 Arpeggiator::Arpeggiator()
-    : _lengthTicks(12), _shape(UP), _patternLength(4), _swingPercent(0.0f), _gatePercent(50.0f),
-      _octaveRange(0), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot), _baseNoteIsSet(false),
-      _baseNoteCb(nullptr), _slots{}, _primarySlot(0) {}
+    : _lengthTicks(12), _shape(UP), _patternLength(DEFAULT_PATTERN_LENGTH), _swingPercent(0.0f),
+      _gatePercent(50.0f), _octaveRange(0), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot),
+      _baseNoteIsSet(false), _baseNoteCb(nullptr), _slots{}, _primarySlot(0) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -87,7 +86,7 @@ void Arpeggiator::setLength(uint8_t ticks) { _lengthTicks = constrain(ticks, 1, 
 void Arpeggiator::setShape(Shape s) { _shape = s; }
 
 void Arpeggiator::setPatternLength(uint8_t steps) {
-    steps = constrain(steps, 2, MAX_STEPS);
+    steps = constrain(steps, MIN_PATTERN_LENGTH, MAX_PATTERN_LENGTH);
     _patternLength = steps;
 }
 
@@ -302,6 +301,9 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
     state.tickCounter = static_cast<uint8_t>(ticks % _lengthTicks);
     if (events == 0) {
         return;
+    }
+    if (events > MAX_CATCH_UP_EMISSIONS_PER_UPDATE) {
+        events = MAX_CATCH_UP_EMISSIONS_PER_UPDATE;
     }
 
     MIDISlot &slot = cfg.getSlot(slotIdx);

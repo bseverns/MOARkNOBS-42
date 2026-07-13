@@ -286,6 +286,38 @@ void test_catches_up_when_ticks_pile_up() {
     TEST_ASSERT_EQUAL_UINT8(1, usbMIDI.lastNoteOn);        // second note in the UP pattern
 }
 
+void test_large_tick_backlog_is_bounded_and_not_replayed() {
+    MidiUsbGuard guard;
+    resetScheduler();
+
+    Arpeggiator arp;
+    arp.setLength(1);
+    arp.setPatternLength(4);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Pot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 0);
+
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots); // latch the current clock snapshot
+
+    midi._clockTickCount += Arpeggiator::MAX_CATCH_UP_EMISSIONS_PER_UPDATE + 32U;
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT32(Arpeggiator::MAX_CATCH_UP_EMISSIONS_PER_UPDATE, midi._txCount);
+    TEST_ASSERT_EQUAL_UINT(Arpeggiator::MAX_CATCH_UP_EMISSIONS_PER_UPDATE,
+                           Utility::schedulerHigh.taskCountForTest());
+
+    const uint32_t afterBacklogTx = midi._txCount;
+    const size_t afterBacklogTasks = Utility::schedulerHigh.taskCountForTest();
+    arp.update(midi, cfg, pots); // no new tick: discarded backlog must not replay
+
+    TEST_ASSERT_EQUAL_UINT32(afterBacklogTx, midi._txCount);
+    TEST_ASSERT_EQUAL_UINT(afterBacklogTasks, Utility::schedulerHigh.taskCountForTest());
+}
+
 void test_random_shape_respects_jitter_depth() {
     MidiUsbGuard guard;
     Arpeggiator arp;

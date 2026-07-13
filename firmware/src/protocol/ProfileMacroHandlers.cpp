@@ -124,6 +124,7 @@ void writeProfileArp(JsonObject arp, const ProfileData &profile) {
     arp["swing_percent"] = profile.arp.swingPercent;
     arp["gate_percent"] = profile.arp.gatePercent;
     arp["octave_range"] = profile.arp.octaveRange;
+    arp["pattern_length"] = profile.arp.patternLength;
 }
 
 void writeProfileLed(JsonObject led, const ProfileData &profile) {

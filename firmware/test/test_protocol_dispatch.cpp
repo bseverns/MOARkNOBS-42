@@ -466,6 +466,7 @@ void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot() 
     profile.arp.swingPercent = 23;
     profile.arp.gatePercent = 61;
     profile.arp.octaveRange = 2;
+    profile.arp.patternLength = 9;
     profile.led.brightness = 77;
     profile.led.r = 10;
     profile.led.g = 20;
@@ -496,6 +497,7 @@ void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot() 
     arpeggiator.setSwingPercent(0.0f);
     arpeggiator.setGatePercent(50.0f);
     arpeggiator.setOctaveRange(0);
+    arpeggiator.setPatternLength(3);
     ledManager.setBrightness(5);
     ledManager.setColor(CRGB(1, 2, 3));
     g_tappedBPM = 123.0f;
@@ -528,6 +530,7 @@ void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot() 
     TEST_ASSERT_EQUAL_UINT8(profile.arp.gatePercent,
                             static_cast<uint8_t>(arpeggiator.getGatePercent()));
     TEST_ASSERT_EQUAL_UINT8(profile.arp.octaveRange, arpeggiator.getOctaveRange());
+    TEST_ASSERT_EQUAL_UINT8(profile.arp.patternLength, arpeggiator.getPatternLength());
     TEST_ASSERT_EQUAL_UINT8(profile.led.brightness, ledManager.getBrightness());
     TEST_ASSERT_EQUAL_UINT8(profile.led.r, ledManager.getColor().r);
     TEST_ASSERT_EQUAL_UINT8(profile.led.g, ledManager.getColor().g);
@@ -563,8 +566,9 @@ void test_dispatch_set_arp_persists_active_profile_snapshot() {
     g_activeProfile = profileId;
 
     clearTestLogBuffer();
-    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ARP,17,4,21,67,3"));
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ARP,17,4,21,67,3,8"));
     TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"pattern_length\":8"));
 
     ProfileData stored{};
     TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
@@ -573,6 +577,28 @@ void test_dispatch_set_arp_persists_active_profile_snapshot() {
     TEST_ASSERT_EQUAL_UINT8(21, stored.arp.swingPercent);
     TEST_ASSERT_EQUAL_UINT8(67, stored.arp.gatePercent);
     TEST_ASSERT_EQUAL_UINT8(3, stored.arp.octaveRange);
+    TEST_ASSERT_EQUAL_UINT8(8, stored.arp.patternLength);
+    TEST_ASSERT_EQUAL_UINT8(8, arpeggiator.getPatternLength());
+}
+
+void test_dispatch_set_profile_arp_pattern_length_applies_and_persists() {
+    const uint8_t profileId = 2;
+    configManager.setActiveProfile(profileId);
+    g_activeProfile = profileId;
+
+    clearTestLogBuffer();
+    const String payload = "{\"arp\":{\"pattern_length\":99}}";
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_PROFILE," + String(profileId) + "," + payload));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"active_applied\":true"));
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_EQUAL_UINT8(Arpeggiator::MAX_PATTERN_LENGTH, stored.arp.patternLength);
+    TEST_ASSERT_EQUAL_UINT8(Arpeggiator::MAX_PATTERN_LENGTH, arpeggiator.getPatternLength());
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_PROFILE," + String(profileId)));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"pattern_length\":16"));
 }
 
 void test_dispatch_set_clock_persists_active_profile_snapshot() {

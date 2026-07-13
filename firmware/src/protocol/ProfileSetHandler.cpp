@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cmath>
 
+#include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
 #include "Globals.h"
@@ -345,6 +346,11 @@ void applyArpProfilePatch(JsonObject root, ProfileData &profile) {
     }
     if (arp.containsKey("octave_range")) {
         profile.arp.octaveRange = clampedU8(arp, "octave_range", 0, 3, profile.arp.octaveRange);
+    }
+    if (arp.containsKey("pattern_length")) {
+        profile.arp.patternLength =
+            clampedU8(arp, "pattern_length", Arpeggiator::MIN_PATTERN_LENGTH,
+                      Arpeggiator::MAX_PATTERN_LENGTH, profile.arp.patternLength);
     }
 }
 

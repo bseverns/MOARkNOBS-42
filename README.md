@@ -72,6 +72,7 @@ physical target for:
 - LED-load testing
 - envelope follower bring-up
 - WebSerial App and Bridge host connectivity
+- profile-backed arpeggiator pattern length through `SET_ARP` and `SET_PROFILE`
 
 ## What Is Not Claimed Yet
 

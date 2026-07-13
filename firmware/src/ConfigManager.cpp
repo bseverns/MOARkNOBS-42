@@ -92,6 +92,15 @@ constexpr uint16_t kProfileSettingsVersionV1 = 0x0001;
 constexpr uint16_t kProfileSettingsVersionV2 = 0x0002;
 constexpr uint16_t kProfileSettingsVersionV3 = 0x0003;
 constexpr uint16_t kProfileSettingsVersionV4 = 0x0004;
+constexpr uint16_t kProfileSettingsVersionV5 = 0x0005;
+
+struct __attribute__((packed)) LegacyProfileArpSettings {
+    uint8_t lengthTicks = 12;
+    uint8_t shape = 0;
+    uint8_t swingPercent = 0;
+    uint8_t gatePercent = 50;
+    uint8_t octaveRange = 0;
+};
 
 struct __attribute__((packed)) LegacyProfileEfSettings {
     uint8_t mode = 0;
@@ -133,7 +142,7 @@ struct __attribute__((packed)) LegacyProfileData {
     uint16_t version = kProfileSettingsVersionV1;
     uint16_t crc = 0;
     uint8_t routeCount = 0;
-    ProfileArpSettings arp{};
+    LegacyProfileArpSettings arp{};
     ProfileLedSettings led{};
     ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
     LegacyProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
@@ -144,7 +153,7 @@ struct __attribute__((packed)) LegacyProfileDataV2 {
     uint16_t version = kProfileSettingsVersionV2;
     uint16_t crc = 0;
     uint8_t routeCount = 0;
-    ProfileArpSettings arp{};
+    LegacyProfileArpSettings arp{};
     ProfileLedSettings led{};
     ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
     LegacyProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
@@ -155,7 +164,7 @@ struct __attribute__((packed)) LegacyProfileDataV3 {
     uint16_t version = kProfileSettingsVersionV3;
     uint16_t crc = 0;
     uint8_t routeCount = 0;
-    ProfileArpSettings arp{};
+    LegacyProfileArpSettings arp{};
     ProfileLedSettings led{};
     ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
     ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
@@ -166,8 +175,22 @@ struct __attribute__((packed)) LegacyProfileDataV4 {
     uint16_t version = kProfileSettingsVersionV4;
     uint16_t crc = 0;
     uint8_t routeCount = 0;
-    ProfileArpSettings arp{};
+    LegacyProfileArpSettings arp{};
     ProfileLedSettings led{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
+    ProfileSlotSettings slots[NUM_SLOTS]{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV5 {
+    uint16_t version = kProfileSettingsVersionV5;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettings arp{};
+    ProfileLedSettings led{};
+    ProfileClockSettings clock{};
+    ProfileNoteDynamicsSettings noteDynamics{};
+    ProfileJitterSettings jitter{};
     ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
     ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
     ProfileSlotSettings slots[NUM_SLOTS]{};
@@ -232,6 +255,27 @@ uint16_t computeLegacyProfileCrc(const LegacyProfileDataV4 &profile) {
         crc = crc16_update(crc, bytes[i]);
     }
     return crc;
+}
+
+uint16_t computeLegacyProfileCrc(const LegacyProfileDataV5 &profile) {
+    constexpr size_t kCrcStart = offsetof(LegacyProfileDataV5, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(LegacyProfileDataV5); ++i) {
+        crc = crc16_update(crc, bytes[i]);
+    }
+    return crc;
+}
+
+ProfileArpSettings migrateLegacyArp(const LegacyProfileArpSettings &legacy) {
+    ProfileArpSettings arp{};
+    arp.lengthTicks = legacy.lengthTicks;
+    arp.shape = legacy.shape;
+    arp.swingPercent = legacy.swingPercent;
+    arp.gatePercent = legacy.gatePercent;
+    arp.octaveRange = legacy.octaveRange;
+    arp.patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH;
+    return arp;
 }
 
 ProfileEfSettings migrateLegacyProfileEf(const LegacyProfileEfSettings &legacy) {
@@ -669,6 +713,29 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         return true;
     }
 
+    if (stored.version == kProfileSettingsVersionV5) {
+        LegacyProfileDataV5 legacy{};
+        storageGet(base, legacy);
+        uint16_t crc = computeLegacyProfileCrc(legacy);
+        if (crc != legacy.crc) {
+            return false;
+        }
+        ProfileData migrated{};
+        migrated.version = PROFILE_SETTINGS_VERSION;
+        migrated.routeCount = legacy.routeCount;
+        migrated.arp = migrateLegacyArp(legacy.arp);
+        migrated.led = legacy.led;
+        migrated.clock = legacy.clock;
+        migrated.noteDynamics = legacy.noteDynamics;
+        migrated.jitter = legacy.jitter;
+        copyFixedArray(migrated.lfos, legacy.lfos);
+        copyFixedArray(migrated.routes, legacy.routes);
+        copyFixedArray(migrated.slots, legacy.slots);
+        profile = sanitizeProfileData(migrated);
+        profile.crc = computeProfileCrc(profile);
+        return true;
+    }
+
     if (stored.version == kProfileSettingsVersionV4) {
         LegacyProfileDataV4 legacy{};
         storageGet(base, legacy);
@@ -679,7 +746,7 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         ProfileData migrated{};
         migrated.version = PROFILE_SETTINGS_VERSION;
         migrated.routeCount = legacy.routeCount;
-        migrated.arp = legacy.arp;
+        migrated.arp = migrateLegacyArp(legacy.arp);
         migrated.led = legacy.led;
         copyFixedArray(migrated.lfos, legacy.lfos);
         copyFixedArray(migrated.routes, legacy.routes);
@@ -699,7 +766,7 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         ProfileData migrated{};
         migrated.version = PROFILE_SETTINGS_VERSION;
         migrated.routeCount = legacy.routeCount;
-        migrated.arp = legacy.arp;
+        migrated.arp = migrateLegacyArp(legacy.arp);
         migrated.led = legacy.led;
         copyFixedArray(migrated.lfos, legacy.lfos);
         copyFixedArray(migrated.routes, legacy.routes);
@@ -723,7 +790,7 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         ProfileData migrated{};
         migrated.version = PROFILE_SETTINGS_VERSION;
         migrated.routeCount = legacy.routeCount;
-        migrated.arp = legacy.arp;
+        migrated.arp = migrateLegacyArp(legacy.arp);
         migrated.led = legacy.led;
         copyFixedArray(migrated.lfos, legacy.lfos);
         for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {
@@ -749,7 +816,7 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         ProfileData migrated{};
         migrated.version = PROFILE_SETTINGS_VERSION;
         migrated.routeCount = legacy.routeCount;
-        migrated.arp = legacy.arp;
+        migrated.arp = migrateLegacyArp(legacy.arp);
         migrated.led = legacy.led;
         copyFixedArray(migrated.lfos, legacy.lfos);
         for (uint8_t i = 0; i < PROFILE_MAX_ROUTES; ++i) {

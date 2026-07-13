@@ -1009,6 +1009,7 @@ void handleSetArpCommand(const String &command) {
     int thirdComma = command.indexOf(',', secondComma + 1);
     int fourthComma = command.indexOf(',', thirdComma + 1);
     int fifthComma = command.indexOf(',', fourthComma + 1);
+    int sixthComma = command.indexOf(',', fifthComma + 1);
     if (firstComma < 0 || secondComma < 0 || thirdComma < 0 || fourthComma < 0 || fifthComma < 0) {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"command\":\"SET_ARP\","
                     "\"message\":\"missing values\"}");
@@ -1025,14 +1026,23 @@ void handleSetArpCommand(const String &command) {
         constrain(command.substring(thirdComma + 1, fourthComma).toFloat(), 0.0f, 80.0f);
     const float gatePercent =
         constrain(command.substring(fourthComma + 1, fifthComma).toFloat(), 5.0f, 100.0f);
-    const uint8_t octaveRange =
-        static_cast<uint8_t>(constrain(command.substring(fifthComma + 1).toInt(), 0, 3));
+    const int rawOctaveRange = sixthComma < 0
+                                   ? command.substring(fifthComma + 1).toInt()
+                                   : command.substring(fifthComma + 1, sixthComma).toInt();
+    const uint8_t octaveRange = static_cast<uint8_t>(constrain(rawOctaveRange, 0, 3));
+    const uint8_t patternLength =
+        sixthComma < 0
+            ? arpeggiator.getPatternLength()
+            : static_cast<uint8_t>(constrain(command.substring(sixthComma + 1).toInt(),
+                                             static_cast<int>(Arpeggiator::MIN_PATTERN_LENGTH),
+                                             static_cast<int>(Arpeggiator::MAX_PATTERN_LENGTH)));
 
     arpeggiator.setLength(lengthTicks);
     arpeggiator.setShape(static_cast<Arpeggiator::Shape>(shape));
     arpeggiator.setSwingPercent(swingPercent);
     arpeggiator.setGatePercent(gatePercent);
     arpeggiator.setOctaveRange(octaveRange);
+    arpeggiator.setPatternLength(patternLength);
     const bool persisted = persistActiveProfileSnapshot();
 
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_ARP\","
