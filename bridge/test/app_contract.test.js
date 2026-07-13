@@ -107,6 +107,15 @@ async function waitFor(predicate, timeoutMs = 1500) {
 }
 
 async function run() {
+  const [
+    { createRpcKernel },
+    { handleNativePendingResponse },
+    { chunkString },
+  ] = await Promise.all([
+    import('../../App/runtime/rpc_kernel.js'),
+    import('../../App/runtime/native_response_router.js'),
+    import('../../App/runtime/runtime_utils.js'),
+  ]);
   FakeSerialPort.device = createSimulatedMn42Device({ ackDelayMs: 30 });
   FakeUdpPort.instances = [];
   const { jzzFactory, context } = createFakeJzzFactory();
@@ -203,6 +212,92 @@ async function run() {
     false,
     'device ACK should clear dirty state after apply',
   );
+
+  const nativeTransport = {
+    protocol: 'native',
+    writeLine: async (line) => service.sendLine(line),
+  };
+  const rpcKernel = createRpcKernel({
+    getTransport: () => nativeTransport,
+    isJsonRpcTransport: () => false,
+    chunkString,
+    nativeSetAllChunkSize: 24,
+    nativeSetAllLinePaceMs: 0,
+    rpcTimeoutMs: 1000,
+    rpcThrottleIntervalMs: 0,
+  });
+  const unsubscribeRpc = service.on('line', (line) => {
+    let msg;
+    try {
+      msg = JSON.parse(line);
+    } catch (_) {
+      return;
+    }
+    const activePending = rpcKernel.getActivePendingRpc();
+    handleNativePendingResponse({
+      msg,
+      activePending,
+      activePendingId: activePending?.id,
+      rpcKernel,
+      isManifestPayload: (payload) =>
+        typeof payload?.device_name === 'string' &&
+        Number.isFinite(Number(payload?.slot_count)),
+      isConfigPayload: (payload) =>
+        Array.isArray(payload?.pots) && Array.isArray(payload?.slots),
+    });
+  });
+
+  const profileReceipt = await rpcKernel.sendRpc({
+    rpc: 'set_profile',
+    slot: 0,
+    profile: {
+      arp: { pattern_length: 9 },
+      lfos: [{ index: 0, shape: 5, frequency_hz: 1.25 }],
+    },
+  });
+  assert.equal(profileReceipt.command, 'SET_PROFILE');
+  assert.equal(profileReceipt.status, 'ok');
+  assert.equal(
+    FakeSerialPort.device.getManifest().capabilities.arp_live,
+    true,
+    'simulator should advertise the implemented live arp protocol',
+  );
+  const storedProfile = await rpcKernel.sendRpc({
+    rpc: 'get_profile',
+    slot: 0,
+  });
+  assert.equal(
+    storedProfile.arp.pattern_length,
+    9,
+    'chunked native profile writes should round trip through the bridge and simulator',
+  );
+
+  const extendedArp = await rpcKernel.sendRpc({
+    rpc: 'set_arp',
+    lengthTicks: 6,
+    shape: 4,
+    swingPercent: 30,
+    gatePercent: 75,
+    octaveRange: 2,
+    patternLength: 14,
+  });
+  assert.equal(extendedArp.pattern_length, 14);
+  const legacyArp = await rpcKernel.sendRpc({
+    rpc: 'set_arp',
+    lengthTicks: 12,
+    shape: 1,
+    swingPercent: 10,
+    gatePercent: 50,
+    octaveRange: 1,
+  });
+  assert.equal(
+    legacyArp.pattern_length,
+    14,
+    'legacy five-field SET_ARP should retain the live pattern length',
+  );
+  const liveArp = await rpcKernel.sendRpc({ rpc: 'get_arp' });
+  assert.equal(liveArp.pattern_length, 14);
+  unsubscribeRpc();
 
   const names = new Set(events.map((entry) => entry.event));
   for (const requiredName of [

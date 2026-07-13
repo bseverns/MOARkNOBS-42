@@ -33,8 +33,9 @@ function createDefaultManifest(overrides = {}) {
       profile_save: true,
       profile_load: true,
       profile_reset: true,
-      macro_snapshot: true,
-      scenes: true,
+      macro_snapshot: false,
+      scenes: false,
+      arp_live: true,
     },
     ...overrides,
   };
@@ -133,7 +134,77 @@ function createSimulatedMn42Device(options = {}) {
   let ackMode = options.ackMode ?? 'good';
   let ackDelayMs = Number(options.ackDelayMs ?? 0);
   let setAllBuffer = '';
+  const defaultArp = {
+    active: false,
+    slot: 0,
+    length_ticks: 12,
+    shape: 0,
+    shape_name: 'up',
+    swing_percent: 0,
+    gate_percent: 50,
+    octave_range: 0,
+    pattern_length: 4,
+  };
+  const defaultProfile = {
+    arp: clone(defaultArp),
+    lfos: [],
+    routes: [],
+  };
+  const profiles = Array.from({ length: 4 }, () => clone(defaultProfile));
+  const profileChunkBuffers = new Map();
+  let activeProfile = 0;
+  let arp = clone(defaultArp);
   let connected = true;
+
+  function clamp(value, minimum, maximum, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? Math.max(minimum, Math.min(maximum, Math.round(number)))
+      : fallback;
+  }
+
+  function profileId(value) {
+    return clamp(value, 0, profiles.length - 1, 0);
+  }
+
+  function patchProfile(id, patch) {
+    const current = profiles[id];
+    const next = clone(current);
+    for (const [key, value] of Object.entries(patch || {})) {
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        next[key] = { ...(next[key] || {}), ...clone(value) };
+      } else {
+        next[key] = clone(value);
+      }
+    }
+    next.arp.pattern_length = clamp(
+      next.arp.pattern_length,
+      2,
+      16,
+      current.arp.pattern_length,
+    );
+    profiles[id] = next;
+    if (id === activeProfile) {
+      arp = { ...arp, ...clone(next.arp) };
+    }
+  }
+
+  function emitProfileSetReceipt(id) {
+    emitJson({
+      type: 'response',
+      status: 'ok',
+      command: 'SET_PROFILE',
+      profile: id,
+      active_profile: activeProfile,
+      profile_updated: true,
+      active_applied: id === activeProfile,
+    });
+  }
+
+  function applyProfilePayload(id, payload) {
+    patchProfile(id, JSON.parse(payload));
+    emitProfileSetReceipt(id);
+  }
 
   function emitJson(payload) {
     events.emit('line', JSON.stringify(payload));
@@ -157,6 +228,119 @@ function createSimulatedMn42Device(options = {}) {
     }
     if (trimmed === 'GET_CONFIG') {
       emitJson(config);
+      return;
+    }
+    if (trimmed.startsWith('GET_PROFILE,')) {
+      const id = profileId(trimmed.split(',')[1]);
+      emitJson({
+        type: 'response',
+        command: 'GET_PROFILE',
+        profile: id,
+        active_profile: activeProfile,
+        active: id === activeProfile,
+        stored: true,
+        ...clone(profiles[id]),
+      });
+      return;
+    }
+    if (trimmed.startsWith('SET_PROFILE,')) {
+      const firstComma = trimmed.indexOf(',');
+      const secondComma = trimmed.indexOf(',', firstComma + 1);
+      const id = profileId(trimmed.slice(firstComma + 1, secondComma));
+      applyProfilePayload(id, trimmed.slice(secondComma + 1));
+      return;
+    }
+    if (trimmed.startsWith('SET_PROFILE_CHUNK,')) {
+      const parts = trimmed.split(',', 5);
+      const id = profileId(parts[1]);
+      const sequence = Number(parts[2]);
+      const total = Number(parts[3]);
+      const payloadOffset = parts
+        .slice(0, 4)
+        .reduce((offset, part) => offset + part.length + 1, 0);
+      const entry = profileChunkBuffers.get(id) || {
+        total,
+        chunks: Array.from({ length: total }),
+      };
+      entry.chunks[sequence] = trimmed.slice(payloadOffset);
+      profileChunkBuffers.set(id, entry);
+      if (
+        entry.chunks.filter((chunk) => chunk !== undefined).length ===
+        entry.total
+      ) {
+        profileChunkBuffers.delete(id);
+        applyProfilePayload(id, entry.chunks.join(''));
+      }
+      return;
+    }
+    if (trimmed === 'GET_ARP') {
+      emitJson({ type: 'response', command: 'GET_ARP', ...clone(arp) });
+      return;
+    }
+    if (trimmed.startsWith('SET_ARP,')) {
+      const values = trimmed.split(',').slice(1);
+      const shapeNames = [
+        'up',
+        'down',
+        'up_down',
+        'random',
+        'drunk',
+        'euclidean',
+      ];
+      arp = {
+        ...arp,
+        length_ticks: clamp(values[0], 1, 24, arp.length_ticks),
+        shape: clamp(values[1], 0, 5, arp.shape),
+        swing_percent: clamp(values[2], 0, 80, arp.swing_percent),
+        gate_percent: clamp(values[3], 5, 100, arp.gate_percent),
+        octave_range: clamp(values[4], 0, 3, arp.octave_range),
+        pattern_length:
+          values.length >= 6
+            ? clamp(values[5], 2, 16, arp.pattern_length)
+            : arp.pattern_length,
+      };
+      arp.shape_name = shapeNames[arp.shape] || 'up';
+      profiles[activeProfile].arp = clone(arp);
+      emitJson({
+        type: 'response',
+        status: 'ok',
+        command: 'SET_ARP',
+        ...clone(arp),
+        persisted: true,
+      });
+      return;
+    }
+    if (trimmed.startsWith('SAVE_PROFILE,')) {
+      const id = profileId(trimmed.split(',')[1]);
+      profiles[activeProfile].arp = clone(arp);
+      profiles[id] = clone(profiles[activeProfile]);
+      emitJson({
+        profile_saved: true,
+        profile: id,
+        active_profile: activeProfile,
+      });
+      return;
+    }
+    if (trimmed.startsWith('LOAD_PROFILE,')) {
+      const id = profileId(trimmed.split(',')[1]);
+      activeProfile = id;
+      arp = clone(profiles[id].arp);
+      emitJson({
+        profile_loaded: true,
+        profile: id,
+        active_profile: activeProfile,
+      });
+      return;
+    }
+    if (trimmed.startsWith('RESET_PROFILE,')) {
+      const id = profileId(trimmed.split(',')[1]);
+      profiles[id] = clone(defaultProfile);
+      if (id === activeProfile) arp = clone(defaultArp);
+      emitJson({
+        profile_reset: true,
+        profile: id,
+        active_profile: activeProfile,
+      });
       return;
     }
     if (!trimmed.startsWith('SET_ALL ')) return;
