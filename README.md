@@ -108,6 +108,9 @@ physical target for:
 - **Using the controller musically:** start with
   [docs/getting-started/QuickstartForPerformers.md](docs/getting-started/QuickstartForPerformers.md), then use
   [docs/getting-started/GuidedRoutes.md](docs/getting-started/GuidedRoutes.md) when you want the broader docs map.
+- **Configuring over USB, OSC, or a DAW:** compare the direct and Bridge paths in
+  [docs/getting-started/ConnectivityGuide.md](docs/getting-started/ConnectivityGuide.md), then use the
+  [App README](App/README.md) or [Bridge README](bridge/README.md) for the chosen lane.
 - **Checking fabrication or release readiness:** read [hardware/CurrentBuild.md](hardware/CurrentBuild.md) before treating
   any hardware artifact as orderable or release-ready.
 

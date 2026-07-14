@@ -33,7 +33,14 @@ Question answered: which personality should this boot become?
 
 This is the first fork in the machine.
 
-### 2. `FirmwareState.h`
+### 2. `DiagnosticRecord.h`
+
+Question answered: what boot and configuration diagnostics survive for later inspection?
+
+This is the persistent record for reset causes, boot mode, configuration-apply
+results, and runtime health markers.
+
+### 3. `FirmwareState.h`
 
 Question answered: which long-lived objects exist once the machine is alive?
 
@@ -55,7 +62,7 @@ After the header, read
 [`firmware/src/SystemState.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/SystemState.cpp) to see
 where that cast is actually instantiated and wired together.
 
-### 3. `Globals.h`
+### 4. `Globals.h`
 
 Question answered: which physical and persisted facts shape the machine?
 
@@ -70,7 +77,7 @@ This is the firmware's "world contract":
 Read this header as the machine's constants, memory map, and shared scalar
 state.
 
-### 4. `Protocol.h`
+### 5. `Protocol.h`
 
 Question answered: how does the host talk to the firmware?
 
@@ -102,20 +109,20 @@ That preserves the real flow:
 For the fuller protocol-machine walkthrough, continue into
 [Protocol Stack Reading Path](ProtocolStackReadingPath.md).
 
-### 5. `CommandQueue.h`
+### 6. `CommandQueue.h`
 
 Question answered: how do serial bytes become whole commands?
 
 This is a small but important seam between transport noise and protocol logic.
 
-### 6. `Log.h`
+### 7. `Log.h`
 
 Question answered: how does the firmware speak back out?
 
 Use this to understand where structured responses, debug lines, and boot/status
 messages leave the board.
 
-### 7. `Modes.h`
+### 8. `Modes.h`
 
 Question answered: how is stored musical state restored into live runtime state?
 
@@ -136,14 +143,14 @@ order:
 4. boot-time reconstruction of modulation/runtime state
 5. shared label/cache maintenance
 
-### 8. `UI.h`
+### 9. `UI.h`
 
 Question answered: what is the on-device operator surface?
 
 This is the OLED/button/control-overlay lane, not the browser configurator
 lane.
 
-### 9. `Runtime.h`
+### 10. `Runtime.h`
 
 Question answered: what work repeats while the instrument is running?
 
@@ -167,7 +174,7 @@ After the header, read
 4. mid-tier musical processing
 5. diagnostics and health reporting
 
-### 10. `Utility.h`
+### 11. `Utility.h`
 
 Question answered: which low-level helpers and schedulers support everything
 above?
@@ -189,8 +196,10 @@ It is broad by design, so it should usually be read last in this path.
 
 1. decide boot mode
 2. initialize protocol
-3. emit configurator boot marker
-4. stop before runtime/UI/scheduler bring-up
+3. record boot diagnostics
+4. load hardware configuration
+5. restore the active profile into runtime state
+6. emit configurator boot marker and stop before runtime/UI/scheduler bring-up
 
 This path exists so host tools can get a quiet, controlled configuration lane.
 

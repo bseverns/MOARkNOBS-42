@@ -20,9 +20,9 @@ For the whole object-to-software picture in one glance, read the [System Map](ge
 Teaching a newcomer? Throw them into [Learner Paths](learn/LearnerPaths.md) so they can chase one signal at a time.
 
 <div class="mn42-cta-row">
-  <a class="md-button md-button--primary" href="project/PilotRun/">Join pilot run / interest list</a>
+  <a class="md-button md-button--primary" href="project/PilotRun/">Read pilot-run framing</a>
   <a class="md-button" href="#core-features">See features</a>
-  <a class="md-button" href="getting-started/WhyMN42/">Start here / learn how it works</a>
+  <a class="md-button" href="getting-started/StartHere/">Start here / learn how it works</a>
 </div>
 
 </div>
@@ -49,8 +49,6 @@ If you want the repo's document tie-break rules before you go deeper, read [Docu
 MOARkNOBS-42 is a small-batch MIDI/OSC performance instrument with a surrounding ecosystem, not just a bare controller board.
 
 The object in your hands is only part of the story.
-
-_A simple three-panel image would help separate the hardware surface, configurator, and bridge into one mental model._
 
 <div class="grid cards mn42-card-grid" markdown="1">
 

@@ -1,6 +1,5 @@
 // Oversees reading all analog pots via multiplexers.
 // Calls a user-supplied callback for MIDI output and drives the LEDManager.
-// Used continuously by firmware_main.cpp.
 #ifndef POTENTIOMETER_MANAGER_H
 #define POTENTIOMETER_MANAGER_H
 

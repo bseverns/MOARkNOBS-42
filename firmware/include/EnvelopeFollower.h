@@ -1,6 +1,5 @@
 // Provides envelope following for modulation.
 // Can combine two inputs or filter a single input in various shapes.
-// Called by firmware_main.cpp; ButtonManager adjusts its settings.
 #ifndef ENVELOPE_FOLLOWER_H
 #define ENVELOPE_FOLLOWER_H
 

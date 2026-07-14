@@ -14,13 +14,14 @@
 
 // Reading path for new contributors:
 // 1. BootMode.h      -> which personality boots: standalone instrument or USB configurator
-// 2. FirmwareState.h -> which long-lived managers and runtime objects exist
-// 3. Globals.h       -> hardware constants, EEPROM layout, and shared scalar state
-// 4. Protocol.h      -> host/configurator command lane
-// 5. Modes.h         -> persisted musical state and profile snapshot logic
-// 6. UI.h            -> on-device OLED/button control surface
-// 7. Runtime.h       -> scheduled hot path used once the instrument is alive
-// 8. Utility.h       -> shared schedulers plus low-level helpers used by the layers above
+// 2. DiagnosticRecord.h -> persistent boot/configuration diagnostics
+// 3. FirmwareState.h -> which long-lived managers and runtime objects exist
+// 4. Globals.h       -> hardware constants, EEPROM layout, and shared scalar state
+// 5. Protocol.h      -> host/configurator command lane
+// 6. Modes.h         -> persisted musical state and profile snapshot logic
+// 7. UI.h            -> on-device OLED/button control surface
+// 8. Runtime.h       -> scheduled hot path used once the instrument is alive
+// 9. Utility.h       -> shared schedulers plus low-level helpers used by the layers above
 //
 // The dedicated walkthrough for this file lives in docs/firmware/FirmwareMainReadingPath.md.
 

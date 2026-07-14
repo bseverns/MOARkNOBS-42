@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 ROOT = Path(__file__).resolve().parents[1]
-SKIP_DIRS = {".git", ".pio", "node_modules", "site"}
+SKIP_DIRS = {".git", ".pio", ".pio-home", ".platformio", "node_modules", "site"}
 LINK_RE = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)|!\[[^\]]*\]\(([^)]+)\)")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$", re.M)
 

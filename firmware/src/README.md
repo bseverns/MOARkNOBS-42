@@ -3,7 +3,7 @@
 Welcome to the belly of the beast. This folder splits into two gangs:
 
 - **Core firmware** — the `.cpp` files that actually make the MN42 sing. Stuff like `Arpeggiator.cpp`, `ButtonManager.cpp`, and `firmware_main.cpp` get baked into the shipping build.
-- **Machine tests** — files named `test_*.cpp`. They're not here to cuddle; they exist to punch the firmware in the face and make sure it still behaves. These builds mirror the final hardware and yank in the same headers from `../include/`, so you're throwing real punches.
+- **Machine tests** — `*_t.cpp` hardware harnesses you flash and exercise manually. Unity smoke tests live separately in `../test/test_*.cpp`.
 
 ## Source ↔ Docs Fast Lane
 
@@ -35,7 +35,6 @@ pio run -e teensy40_display_alive             # builds src/display_alive_t.cpp
 pio run -e teensy40_biquad_test               # builds src/biquadfilter_t.cpp
 pio run -e teensy40_eeprom_persistence        # builds src/eeprom_persistence_t.cpp (LittleFS default)
 pio run -e teensy40_slot_verify               # builds src/verify_slots_t.cpp (LittleFS default)
-pio run -e teensy40_eeprom_persistence_legacy # optional EEPROM-only regression path
 ```
 
 Use these to keep your mods honest. Compile, flash, repeat—no fear, no mercy.

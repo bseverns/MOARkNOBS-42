@@ -114,7 +114,7 @@ Use the browser page to:
 - keep raw serial, route traces, and state JSON in Advanced mode,
 - launch the full configurator over the bridge transport.
 
-The configurator opened from this page uses the bridge WebSocket path instead of WebSerial, so profile management, config RPCs, and telemetry still work while OSC and MIDI routing stay active.
+The configurator opened from this page uses the bridge session (`/api/device/*` and `/ws/events`) instead of WebSerial, retaining raw `/ws` for compatibility and live RPCs while OSC and MIDI routing stay active.
 See [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md) for Setup, Stage, and Advanced console screenshots captured from a real ready-session host, with operator-oriented explanations.
 
 ### 4) Confirm it is live

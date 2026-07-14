@@ -25,7 +25,7 @@ For tighter feedback loops, the package scripts are split by responsibility:
 
 - `npm run test:cli` checks help output and missing-port handling.
 - `npm run test:transport` checks serial-to-OSC, OSC/MIDI-to-serial, validation, and reconnect behavior.
-- `npm run test:browser` checks the browser-driven bridge server, `/app/` serving, and `/ws` transport.
+- `npm run test:browser` checks the browser-driven bridge server, `/app/` serving, raw `/ws` transport, structured session API, and `/ws/events`.
 - `npm run smoke` runs entrypoint smoke checks for both `mn42_bridge.js` and `mn42_bridge_server.js`.
 
 ### Command validation cage match

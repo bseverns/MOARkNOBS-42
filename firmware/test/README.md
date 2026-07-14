@@ -106,11 +106,11 @@ pio test -d firmware -e teensy40_unity -vvv
 Vendor libs love to yammer over `Serial` even when there's no UART in sight. Host-side builds don't drag in the Arduino core, so `test/SerialStub.h` fakes just enough of `Print` and `HardwareSerial` to keep `Adafruit BusIO` and friends from choking. When you compile for a Teensy, the stub backs off and the real UARTs take over.
 
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
-There's a lean version sitting in `../include/` that just sprays bytes
+There's a lean version in `test/unity_config.h` that just sprays bytes
 over `Serial1`. If you need different output, crack that file open and
 remix the macros.
 
-That env sets `test_build_src = true`, but we keep the haul lean with a `build_src_filter`. Only the bits we actually test hitch a ride—`test_mainUnity.cpp`, `Arpeggiator.cpp`, `MIDIHandler.cpp`, plus `Globals.cpp` and `Utility.cpp` so the clock math and tapped BPM global keep time. `DisplayManager::registerInteraction()` gets faked in `test/DisplayManagerStub.cpp` so the UI stays out of the link step. If anything in that pile won't compile, Unity will scream before you ever flash a board.
+That env sets `test_build_src = true`, but we keep the haul lean with a `build_src_filter`. Only the bits we actually test hitch a ride—`test_mainUnity.cpp`, `Arpeggiator.cpp`, `MIDIHandler.cpp`, plus `GlobalsStub.cpp` and `Utility.cpp` so the clock math and tapped BPM global keep time. `DisplayManager::registerInteraction()` gets faked in `test/DisplayManagerStub.cpp` so the UI stays out of the link step. If anything in that pile won't compile, Unity will scream before you ever flash a board.
 
 ### VS Code's flaky build staging
 

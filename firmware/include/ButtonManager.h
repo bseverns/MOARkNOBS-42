@@ -1,6 +1,5 @@
 // Handles all button scanning and debouncing.
 // Works with DisplayManager and ConfigManager to drive UI actions.
-// Polled by firmware_main.cpp every frame.
 //
 // The button matrix gets hammered one row/column at a time through the
 // multiplexers. A full 7x6 sweep runs every loop, and the 50 ms

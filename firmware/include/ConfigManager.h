@@ -1,6 +1,5 @@
 // Manages reading and writing of configuration data in EEPROM.
 // Other managers query this class for slot definitions and LED settings.
-// Initialised by firmware_main.cpp at startup.
 
 #ifndef CONFIGMANAGER_H
 #define CONFIGMANAGER_H
