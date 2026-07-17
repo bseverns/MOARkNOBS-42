@@ -447,12 +447,12 @@ When a GitHub release already exists for the tag, the workflow uploads those uns
 
 The top-level `signingStatus` field is retained for existing readers. New tooling should prefer the manifest's `signing` object, which records status, identity when provided, notarization status, and a support-boundary note.
 
-Beta/public bridge binaries should be packaged with `REQUIRE_BRIDGE_SIGNING=1` plus signing/notarization credentials or wrapper hooks. The bridge is still not shipped as a signed one-click installer.
+The macOS package path now emits a double-clickable `.app`, DMG, and signing-verification receipt. Packaged console binaries open the browser by default; pass `--no-open-browser` for headless smoke checks. Beta/public builds still require real Developer ID credentials and notarization before release.
 
 As time passes, this is the practical path:
 
-1. Add signing/notarization for each platform package. This is something to be done quickly.
-2. Ship signed installers that launch the bridge with a simple UI wrapper.
+1. Prove the macOS signing/notarization path with release credentials.
+2. Add the equivalent signed Windows installer.
 3. Keep advanced flags available for power users.
 
 Until then, this README is the canonical runbook for daily use.
@@ -472,6 +472,10 @@ npm run lint
 npm run format
 # optional packaging step
 npm run package:bridge
+# after building macOS raw binaries
+npm run package:macos
+# macOS-only package structure check
+npm run test:package:macos
 ```
 
 `npm run ci` runs the split bridge coverage lanes plus both entrypoint smoke checks. `release:prep` uses the same path before packaging.

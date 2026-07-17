@@ -11,7 +11,7 @@
     "test:app-contract": "node ../tools/require_node_24.js && node test/app_contract.test.js",
     "test:simulator": "node ../tools/require_node_24.js && node test/simulator.test.js",
     "test:transport": "node ../tools/require_node_24.js && node test/serial_ingress.test.js && node test/serial_to_osc.test.js && node test/serial_large_payload.test.js && node test/osc_to_serial.test.js && node test/cmd_validation.test.js && node test/feedback_loop_guard.test.js && node test/translation_trace.test.js && node test/typed_event_layer.test.js && node test/roundtrip_metrics.test.js && node test/serial_close_reconnect.test.js && node test/midi_transport.test.js",
-    "test:browser": "node ../tools/require_node_24.js && node test/browser_bridge_server.test.js",
+    "test:browser": "node ../tools/require_node_24.js && node test/open_browser.test.js && node test/browser_bridge_server.test.js",
     "test:contract": "node ../tools/require_node_24.js && python3 ../tools/check_contract_sync.py --root ..",
     "test": "node ../tools/require_node_24.js && npm run test:cli && npm run test:device-session && npm run test:app-contract && npm run test:simulator && npm run test:transport && npm run test:browser",
     "lint": "npx eslint .",
@@ -22,6 +22,8 @@
     "smoke": "npm run smoke:cli && npm run smoke:server",
     "ci": "node ../tools/require_node_24.js && npm test && npm run test:contract && npm run smoke",
     "package:bridge": "bash scripts/package_bridge.sh",
+    "package:macos": "bash scripts/package_macos.sh",
+    "test:package:macos": "node test/macos_package.test.js",
     "release:prep": "node ../tools/require_node_24.js && npm run ci"
   },
   "keywords": [

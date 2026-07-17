@@ -43,7 +43,7 @@ Unsigned bridge packaging now runs automatically in the release workflow. The re
 
 1. Follow [`BridgePackaging.md`](BridgePackaging.md) phases for the current release target.
 2. Review the generated bridge artifacts and checksums from CI.
-3. For beta/public artifacts, package with `REQUIRE_BRIDGE_SIGNING=1` and provide either platform credentials (`APPLE_CODESIGN_IDENTITY`, `APPLE_NOTARY_PROFILE`) or signing hooks (`BRIDGE_SIGNING_COMMAND`, `BRIDGE_NOTARIZE_COMMAND`).
+3. For a beta/public macOS artifact, run `npm --prefix bridge run package:macos` with `REQUIRE_BRIDGE_SIGNING=1`, `APPLE_CODESIGN_IDENTITY`, `APPLE_NOTARY_KEY`, `APPLE_NOTARY_KEY_ID`, and `APPLE_NOTARY_ISSUER_ID`.
 4. Attach/verify signed bridge artifacts alongside firmware files on the GitHub release when you are producing a signed outward-facing release.
 5. Verify docs match the shipped UX (`docs/guides/OSCBridge.md`, `docs/guides/BridgeForPerformers.md`, `bridge/README.md`).
 6. Complete the artifact checklist template: [`release/bridge-artifacts-checklist.md`](bridge-artifacts-checklist.md).

@@ -5,12 +5,13 @@ const {
   parseConfigFromArgv,
 } = require('./lib/bridge_service');
 const { createBrowserBridgeServer } = require('./lib/http_bridge_server');
+const { openBrowser, shouldOpenBrowser } = require('./lib/open_browser');
 
 // Browser-console-specific help text. The core transport flags still come from bridge_service.
 function usageText() {
   return (
     'mn42_bridge_server.js - browser-driven MOARkNOBS-42 bridge\n' +
-    'Usage: node mn42_bridge_server.js [--config FILE] [--http-host ADDR] [--http-port PORT] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
+    'Usage: node mn42_bridge_server.js [--open-browser|--no-open-browser] [--config FILE] [--http-host ADDR] [--http-port PORT] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
   );
 }
 
@@ -64,6 +65,9 @@ async function runServer(argv = process.argv, injected = {}) {
 
   const address = await server.start();
   console.log(`bridge console: ${address.url}`);
+  if (shouldOpenBrowser(argv, injected.packaged)) {
+    (injected.openBrowser || openBrowser)(address.url);
+  }
 
   let shuttingDown = false;
   // Shared SIGINT/SIGTERM shutdown path so the HTTP wrapper and bridge stop together.

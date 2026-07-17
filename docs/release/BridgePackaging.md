@@ -117,7 +117,7 @@ Deliverable: non-CLI-friendly launcher experience.
 ### Phase 4 - Signing and release integration (implemented as gated hooks)
 
 - Use `REQUIRE_BRIDGE_SIGNING=1` for beta/public bridge artifacts.
-- macOS binaries can be signed with `APPLE_CODESIGN_IDENTITY` and notarized with `APPLE_NOTARY_PROFILE` plus optional `APPLE_NOTARY_TEAM_ID`.
+- macOS DMGs are built with `npm --prefix bridge run package:macos`; signed builds require `APPLE_CODESIGN_IDENTITY`, `APPLE_NOTARY_KEY`, `APPLE_NOTARY_KEY_ID`, and `APPLE_NOTARY_ISSUER_ID`.
 - Windows/Linux or installer-specific signing can be supplied through `BRIDGE_SIGNING_COMMAND`; notarization/stapling-style post-processing can be supplied through `BRIDGE_NOTARIZE_COMMAND`.
 - Keep current unsigned CI packaging in `.github/workflows/release.yml`.
 - Upgrade release upload runs to use those hooks before attaching outward artifacts.

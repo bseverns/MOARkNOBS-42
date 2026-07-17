@@ -92,7 +92,13 @@ async function main() {
   const port = await reservePort();
   const host = '127.0.0.1';
   const baseUrl = `http://${host}:${port}`;
-  const launchArgs = ['--http-host', host, '--http-port', String(port)];
+  const launchArgs = [
+    '--no-open-browser',
+    '--http-host',
+    host,
+    '--http-port',
+    String(port),
+  ];
   if (serialPort) {
     launchArgs.push('--serial', serialPort);
   }
@@ -137,7 +143,7 @@ async function main() {
     assert(rootResponse.ok, 'console root must return 200');
     const rootHtml = await rootResponse.text();
     assert(
-      rootHtml.includes('Desktop session runtime'),
+      rootHtml.includes('Bridge command center'),
       'console root must include browser console content',
     );
 
