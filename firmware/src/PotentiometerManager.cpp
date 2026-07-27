@@ -27,6 +27,7 @@ PotentiometerManager::PotentiometerManager(const uint8_t *primaryPins, const uin
         potCCNumbers[i] = i;   // Default MIDI CC number
         potLastValues[i] = -1; // Ensure the first read updates
         smoothedValue[i] = 0;  // EWMA starting point
+        scanInitialized[i] = false;
         dirtyFlags[i] = false; // Nothing dirty yet
     }
 }
@@ -73,10 +74,16 @@ int PotentiometerManager::readAnalogFiltered(uint8_t pin) {
 
 // Update one pot's MIDI channel in both runtime cache and persisted config.
 void PotentiometerManager::setChannel(int potIndex, uint8_t channel) {
-    if (potIndex < NUM_POTS) {
+    if (potIndex >= 0 && potIndex < NUM_POTS) {
         if (configManager) {
             configManager->setPotChannel(static_cast<uint8_t>(potIndex), channel);
         }
+        potChannels[potIndex] = channel;
+    }
+}
+
+void PotentiometerManager::setChannelLive(int potIndex, uint8_t channel) {
+    if (potIndex >= 0 && potIndex < NUM_POTS) {
         potChannels[potIndex] = channel;
     }
 }
@@ -92,10 +99,16 @@ int PotentiometerManager::getLastValue(int potIndex) const {
 
 // Update one pot's CC number in both runtime cache and persisted config.
 void PotentiometerManager::setCCNumber(int potIndex, uint8_t ccNumber) {
-    if (potIndex < NUM_POTS) {
+    if (potIndex >= 0 && potIndex < NUM_POTS) {
         if (configManager) {
             configManager->setPotCCNumber(static_cast<uint8_t>(potIndex), ccNumber);
         }
+        potCCNumbers[potIndex] = ccNumber;
+    }
+}
+
+void PotentiometerManager::setCCNumberLive(int potIndex, uint8_t ccNumber) {
+    if (potIndex >= 0 && potIndex < NUM_POTS) {
         potCCNumbers[potIndex] = ccNumber;
     }
 }
@@ -150,8 +163,23 @@ void PotentiometerManager::processPots(LedAnimator &ledAnimator,
         // Stage 1b: secondary mux dials in the exact pot within that gang.
         selectPotBank(secondaryBank);
 
+        // The analog mux output needs to settle after either address changes.
+        // `readRawPot()` already did this; the normal scan must observe the
+        // same electrical contract.
+        delayMicroseconds(5);
+
         // Stage 2: snag the raw voltage and run it through our tiny RC filter.
         int rawValue = readAnalogFiltered(analogPin);
+
+        // Seed the filter from a real reading.  Starting EWMA at zero creates
+        // a false movement ramp for every untouched pot after boot.
+        if (!scanInitialized[currentPotIndex]) {
+            smoothedValue[currentPotIndex] = rawValue;
+            potLastValues[currentPotIndex] = rawValue;
+            scanInitialized[currentPotIndex] = true;
+            currentPotIndex = (currentPotIndex + 1) % NUM_POTS;
+            continue;
+        }
 
         // EWMA smoothing – ALPHA (see header) leans toward fresh readings.
         smoothedValue[currentPotIndex] =

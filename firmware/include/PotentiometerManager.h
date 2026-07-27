@@ -39,6 +39,7 @@ class PotentiometerManager {
     // keeps analog jitter down without killing responsiveness.
     static constexpr float ALPHA = 0.1f; // weight of the newest sample
     int smoothedValue[NUM_POTS];         // running EWMA for each pot
+    bool scanInitialized[NUM_POTS];      // first physical sample seeds the filter, never a gesture
 
     bool dirtyFlags[NUM_POTS]; // pots that moved enough to matter
 
@@ -93,8 +94,10 @@ class PotentiometerManager {
 
     // Set the MIDI channel for a pot.
     void setChannel(int potIndex, uint8_t channel);
+    void setChannelLive(int potIndex, uint8_t channel);
     // Set the CC number for a pot.
     void setCCNumber(int potIndex, uint8_t ccNumber);
+    void setCCNumberLive(int potIndex, uint8_t ccNumber);
 
     uint8_t getChannel(int potIndex);
     uint8_t getCCNumber(int potIndex);

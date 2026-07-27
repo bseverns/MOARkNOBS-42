@@ -22,11 +22,13 @@ struct CommandQueueStorage {
 // lines. Keep it in RAM2 so it doesn't crowd out the tighter RAM1 budget used
 // by the Unity test image and hot runtime state.
 DMAMEM CommandQueueStorage commandQueue;
+bool discardingOverlongLine = false;
 
 void resetCommandQueueState() {
     commandQueue = CommandQueueStorage{};
     std::memset(serialBuffer, 0, sizeof(serialBuffer));
     serialBufferIndex = 0;
+    discardingOverlongLine = false;
 }
 
 bool commandQueueStateLooksValid() {
@@ -77,13 +79,22 @@ void enqueueSerialCommand(const char *line) {
 // Accumulate serial bytes into newline-delimited commands.
 void ingestSerialByte(char received) {
     sanitizeCommandQueueState();
-    if (received == '\n' || serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
-        serialBuffer[serialBufferIndex] = '\0';
-        if (serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
-            LOG_PRINTLN("Error: Command too long");
+    if (discardingOverlongLine) {
+        if (received == '\n') {
+            discardingOverlongLine = false;
         }
+        return;
+    }
+    if (received == '\n') {
+        serialBuffer[serialBufferIndex] = '\0';
         enqueueSerialCommand(serialBuffer);
         serialBufferIndex = 0;
+    } else if (serialBufferIndex >= SERIAL_BUFFER_SIZE - 1) {
+        // A truncated line is not a command.  Discard until its delimiter so
+        // the tail cannot be interpreted as unrelated protocol commands.
+        serialBufferIndex = 0;
+        discardingOverlongLine = true;
+        LOG_PRINTLN("Error: Command too long");
     } else if (received != '\r') {
         serialBuffer[serialBufferIndex++] = received;
     }
@@ -110,8 +121,11 @@ bool dequeueSerialCommand(char *outBuffer, size_t outBufferSize) {
 
 // Drain the hardware serial input into the command ring buffer.
 void pollSerialInput() {
-    while (Serial.available()) {
+    constexpr uint16_t kMaxSerialBytesPerPass = 256;
+    uint16_t consumed = 0;
+    while (consumed < kMaxSerialBytesPerPass && Serial.available()) {
         ingestSerialByte(static_cast<char>(Serial.read()));
+        ++consumed;
     }
 }
 

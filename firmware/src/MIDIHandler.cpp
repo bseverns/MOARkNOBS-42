@@ -222,7 +222,12 @@ void MIDIHandler::processIncomingMIDI() {
     // so nothing gets stale, feeding each packet through the same handler as
     // the old-school wire.
 #ifndef USB_MIDI_STUB
-    while (usbMIDI.read()) {
+    // Do not let a busy USB host monopolize the high-priority service lane.
+    // Remaining packets stay queued for the next slice.
+    constexpr uint8_t kMaxUsbPacketsPerService = 16;
+    uint8_t usbPacketsProcessed = 0;
+    while (usbPacketsProcessed < kMaxUsbPacketsPerService && usbMIDI.read()) {
+        ++usbPacketsProcessed;
         displayInteractionSeen = true;
         // Force usbMIDI's raw type into midi::MidiType so isSupportedType doesn't choke
         auto type = static_cast<midi::MidiType>(usbMIDI.getType());
@@ -306,37 +311,48 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
                                                                                 data2)) {
             break;
         }
+        if (channel < 1 || channel > 16) {
+            break;
+        }
+        ParameterDecodeState &parameterState = _parameterState[channel - 1];
         switch (data1) {
         case 101: // RPN parameter MSB
-            _rpnParam = (data2 & 0x7F) << 7;
-            _rpnParamReady = false;
+            parameterState.param = static_cast<uint16_t>(data2 & 0x7F) << 7;
+            parameterState.paramMsbReceived = true;
+            parameterState.selection = ParameterSelection::Rpn;
             break;
         case 100: // RPN parameter LSB
-            _rpnParam |= (data2 & 0x7F);
-            _rpnParamReady = true;
+            if (parameterState.selection == ParameterSelection::Rpn &&
+                parameterState.paramMsbReceived) {
+                parameterState.param |= data2 & 0x7F;
+                parameterState.paramMsbReceived = false;
+                // 127/127 is the standardized RPN null selection.
+                if (parameterState.param == 0x3FFF) {
+                    parameterState.selection = ParameterSelection::None;
+                }
+            }
             break;
         case 99: // NRPN parameter MSB
-            _nrpnParam = (data2 & 0x7F) << 7;
-            _nrpnParamReady = false;
+            parameterState.param = static_cast<uint16_t>(data2 & 0x7F) << 7;
+            parameterState.paramMsbReceived = true;
+            parameterState.selection = ParameterSelection::Nrpn;
             break;
         case 98: // NRPN parameter LSB
-            _nrpnParam |= (data2 & 0x7F);
-            _nrpnParamReady = true;
+            if (parameterState.selection == ParameterSelection::Nrpn &&
+                parameterState.paramMsbReceived) {
+                parameterState.param |= data2 & 0x7F;
+                parameterState.paramMsbReceived = false;
+            }
             break;
         case 6: // Data entry MSB
-            _nrpnValue = (data2 & 0x7F) << 7;
-            _rpnValue = (data2 & 0x7F) << 7;
+            parameterState.value = static_cast<uint16_t>(data2 & 0x7F) << 7;
             break;
         case 38: // Data entry LSB
-            _nrpnValue |= (data2 & 0x7F);
-            _rpnValue |= (data2 & 0x7F);
-            if (_nrpnParamReady) {
-                receiveNRPN(channel, _nrpnParam, _nrpnValue);
-                _nrpnParamReady = false;
-            }
-            if (_rpnParamReady) {
-                receiveRPN(channel, _rpnParam, _rpnValue);
-                _rpnParamReady = false;
+            parameterState.value |= data2 & 0x7F;
+            if (parameterState.selection == ParameterSelection::Nrpn) {
+                receiveNRPN(channel, parameterState.param, parameterState.value);
+            } else if (parameterState.selection == ParameterSelection::Rpn) {
+                receiveRPN(channel, parameterState.param, parameterState.value);
             }
             break;
         default:

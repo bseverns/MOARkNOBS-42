@@ -151,19 +151,21 @@ class MIDIHandler {
     DisplayManager *_displayManager = nullptr;
     SystemDiagnostics *_diagnostics = nullptr;
 
-    // NRPN decode state
-    uint16_t _nrpnParam = 0;
-    uint16_t _nrpnValue = 0;
-    bool _nrpnParamReady = false;
+    enum class ParameterSelection : uint8_t { None, Nrpn, Rpn };
+    struct ParameterDecodeState {
+        uint16_t param = 0;
+        uint16_t value = 0;
+        bool paramMsbReceived = false;
+        ParameterSelection selection = ParameterSelection::None;
+    };
+
+    // Parameter selection and data-entry state is isolated per MIDI channel.
+    // Interleaved RPN/NRPN traffic must never borrow another channel's MSB.
+    std::array<ParameterDecodeState, 16> _parameterState{};
 
     // Last fully received NRPN for external inspection
     uint16_t _lastNRPNParam = 0;
     uint16_t _lastNRPNValue = 0;
-
-    // RPN decode state
-    uint16_t _rpnParam = 0;
-    uint16_t _rpnValue = 0;
-    bool _rpnParamReady = false;
 
     // Last fully received RPN for external inspection
     uint16_t _lastRPNParam = 0;

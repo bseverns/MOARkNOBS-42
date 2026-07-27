@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cctype>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 
 #include "ARGMixer.h"
@@ -28,6 +29,7 @@ namespace {
 Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
+String lastAppliedChecksum;
 // Bulk SET_ALL parse state is large by design; keep the reusable document in
 // RAM2 so unit-test and runtime stacks keep more RAM1 headroom.
 DMAMEM StaticJsonDocument<Utility::kMaxBulkConfigSize> bulkApplyDoc;
@@ -36,6 +38,21 @@ struct BulkApplyIdentity {
     uint32_t sequence = 0;
     String configId;
 };
+
+// Device-owned digest of the normalized, applied state.  The host checksum is
+// retained as a correlation token, but must never be represented as proof of
+// what the firmware actually accepted.
+String appliedStateChecksum() {
+    const String canonical = configManager.serializeAll();
+    uint32_t hash = 2166136261UL; // FNV-1a, stable and small enough for Teensy.
+    for (size_t i = 0; i < canonical.length(); ++i) {
+        hash ^= static_cast<uint8_t>(canonical[i]);
+        hash *= 16777619UL;
+    }
+    char hex[9] = {0};
+    snprintf(hex, sizeof(hex), "%08lx", static_cast<unsigned long>(hash));
+    return String(hex);
+}
 
 int readIntField(JsonObject obj, const char *primary, const char *alternate, int fallback) {
     if (!obj.isNull() && obj.containsKey(primary)) {
@@ -872,7 +889,8 @@ bool emitDuplicateBulkAckIfNeeded(const BulkApplyIdentity &identity) {
         return false;
     }
 
-    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence));
+    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence,
+                                   lastAppliedChecksum.c_str()));
     bulkConfigAssembler.reset();
     return true;
 }
@@ -880,9 +898,11 @@ bool emitDuplicateBulkAckIfNeeded(const BulkApplyIdentity &identity) {
 void commitBulkApplyAck(const BulkApplyIdentity &identity) {
     lastAckSequence = identity.sequence;
     lastAckChecksum = identity.configId;
+    lastAppliedChecksum = appliedStateChecksum();
     DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Acked,
                                               identity.configId.c_str());
-    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence));
+    LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence,
+                                   lastAppliedChecksum.c_str()));
     bulkConfigAssembler.reset();
 }
 
@@ -940,6 +960,51 @@ bool applySlotDefinitions(JsonArray slotsJson, uint32_t seq, bool &anySlotPayloa
     return true;
 }
 
+// Validate every slot against a local candidate before changing either the
+// runtime slot arena or persistent storage.  SET_ALL used to discover an
+// invalid SysEx template only after earlier slots had already been saved.
+// This is the first transaction boundary: later commit work only receives a
+// document whose complete slot section has passed parsing and validation.
+bool validateSlotDefinitions(JsonArray slotsJson, uint32_t seq) {
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        JsonObject slotObj = slotsJson[i];
+        if (slotObj.isNull()) {
+            emitBulkError("slot_null", "slot entry missing", seq);
+            return false;
+        }
+
+        MIDIMessageType midiType = MIDIMessageType::OFF;
+        if (!parseSlotType(slotObj["type"], slotObj["type_name"], midiType)) {
+            emitBulkError("slot_type", "unknown slot type", seq);
+            return false;
+        }
+
+        MIDISlot candidate = configManager.getSlot(i);
+        candidate.type = midiType;
+        candidate.midiChannel =
+            readClampedU8(slotObj, "midiChannel", "channel", 1, 16, candidate.midiChannel);
+        candidate.data1 = readClampedU8(slotObj, "data1", "cc", 0, 127, candidate.data1);
+        if (slotObj.containsKey("arpNote")) {
+            candidate.arpNote =
+                readClampedU8(slotObj, "arpNote", "arp_note", 0, 127, candidate.arpNote);
+        } else if (slotObj.containsKey("arp_note")) {
+            candidate.arpNote =
+                readClampedU8(slotObj, "arpNote", "arp_note", 0, 127, candidate.arpNote);
+        } else if (midiType == MIDIMessageType::Note) {
+            candidate.arpNote = candidate.data1;
+        }
+        candidate.efSettings = readSlotEfSettings(slotObj, candidate);
+        candidate.setEnvelopeFollowerIndex(candidate.efSettings.followerIndex);
+        JsonObject slotArgObj =
+            slotObj["arg"].is<JsonObject>() ? slotObj["arg"].as<JsonObject>() : JsonObject();
+        candidate.arg = parseSlotArgConfig(slotArgObj, candidate.arg, true);
+        if (!applySlotSysExTemplate(slotObj, candidate, seq)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void applyEfSlotMappingsFromConfig(JsonObject config) {
     if (!(config.containsKey("efSlots") && config["efSlots"].is<JsonArray>())) {
         return;
@@ -993,6 +1058,10 @@ void applyLedStateFromConfig(JsonObject config) {
 bool applyConfigObject(JsonObject config, uint32_t seq) {
     JsonArray slotsJson;
     if (!parseSlotsArray(config, seq, slotsJson)) {
+        return false;
+    }
+
+    if (!validateSlotDefinitions(slotsJson, seq)) {
         return false;
     }
 

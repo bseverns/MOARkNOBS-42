@@ -1043,7 +1043,6 @@ void handleSetArpCommand(const String &command) {
     arpeggiator.setGatePercent(gatePercent);
     arpeggiator.setOctaveRange(octaveRange);
     arpeggiator.setPatternLength(patternLength);
-    const bool persisted = persistActiveProfileSnapshot();
 
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_ARP\","
                "\"active\":%s,\"slot\":%u,\"length_ticks\":%u,\"shape\":%u,"
@@ -1055,7 +1054,7 @@ void handleSetArpCommand(const String &command) {
                static_cast<unsigned>(constrain(swingPercent, 0.0f, 80.0f)),
                static_cast<unsigned>(constrain(gatePercent, 5.0f, 100.0f)),
                static_cast<unsigned>(octaveRange),
-               static_cast<unsigned>(arpeggiator.getPatternLength()), persisted ? "true" : "false");
+               static_cast<unsigned>(arpeggiator.getPatternLength()), "false");
 }
 
 void handleSetClockCommand(const String &command) {
@@ -1075,7 +1074,6 @@ void handleSetClockCommand(const String &command) {
     g_followExternalClock = followExternal;
     g_clockOutEnabled = clockOutEnabled;
     g_tappedBPM = tappedBpm;
-    const bool persisted = persistActiveProfileSnapshot();
 
     const bool externalSignal = midiHandler.hasExternalClockSignal();
     const bool running = midiHandler.isClockRunning();
@@ -1094,7 +1092,7 @@ void handleSetClockCommand(const String &command) {
                g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
                static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
                externalSignal ? "true" : "false", running ? "true" : "false", source,
-               persisted ? "true" : "false");
+               "false");
 }
 
 void handleSetEfCommand(const String &command) {
@@ -1113,14 +1111,8 @@ void handleSetEfCommand(const String &command) {
         envelopeFollowers[envIndex].toggleActive(true);
         applyEfSettingsToFollower(envelopeFollowers[envIndex], slot.efSettings,
                                   static_cast<uint8_t>(envIndex));
-        configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
         refreshEfVoicesFromConfig();
-        if (persistActiveProfileSnapshot()) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
-        } else {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\","
-                        "\"message\":\"active profile snapshot save failed\"}");
-        }
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\",\"persisted\":false}");
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
@@ -1144,13 +1136,7 @@ void handleSetLedCommand(const String &command) {
         brightness = std::min<int>(brightness, BoardPowerProfile::kLedBrightnessCap);
         ledManager.setBrightness(static_cast<uint8_t>(brightness));
         ledManager.setColor(color);
-        configManager.saveLEDSettings(static_cast<uint8_t>(brightness), color);
-        if (persistActiveProfileSnapshot()) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
-        } else {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\","
-                        "\"message\":\"active profile snapshot save failed\"}");
-        }
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\",\"persisted\":false}");
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
@@ -1173,11 +1159,10 @@ void handleSetJitterCommand(const String &command) {
     g_jitterRemoteControlActive = true;
     g_jitterDepthLatched = false;
     g_jitterSmoothnessLatched = false;
-    const bool persisted = persistActiveProfileSnapshot();
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_JITTER\",\"depth\":%.3f,"
                "\"smoothness\":%.3f,\"persisted\":%s}\n",
                static_cast<double>(depth), static_cast<double>(smoothness),
-               persisted ? "true" : "false");
+               "false");
 }
 
 void handleSetPotCommand(const String &command) {
@@ -1193,16 +1178,15 @@ void handleSetPotCommand(const String &command) {
     int ccNumber = command.substring(lastComma + 1).toInt();
     if (potIndex >= 0 && potIndex < NUM_POTS && channel >= 1 && channel <= 16 && ccNumber >= 0 &&
         ccNumber <= 127) {
-        configManager.setPotChannel(potIndex, channel);
-        configManager.setPotCCNumber(potIndex, ccNumber);
-        potentiometerManager.setChannel(potIndex, channel);
-        potentiometerManager.setCCNumber(potIndex, ccNumber);
+        configManager.setPotChannelLive(potIndex, channel);
+        configManager.setPotCCNumberLive(potIndex, ccNumber);
+        potentiometerManager.setChannelLive(potIndex, channel);
+        potentiometerManager.setCCNumberLive(potIndex, ccNumber);
         if (static_cast<size_t>(potIndex) < potChannels.size()) {
             potChannels[potIndex] = channel;
         }
-        configManager.saveConfiguration();
-        LOG_PRINTLN(
-            "{\"type\":\"response\",\"status\":\"ok\",\"message\":\"Pot configuration updated!\"}");
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\",\"persisted\":false,"
+                    "\"message\":\"Pot configuration updated in live state.\"}");
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\",\"message\":\"Invalid values for "
                     "SET_POT\"}");
@@ -1225,10 +1209,9 @@ void handleSetNoteDynamicsCommand(const String &command) {
     g_noteDynamicsRemoteControlActive = true;
     g_noteDynamicsShiftLatched = false;
     g_noteDynamicsProbabilityLatched = false;
-    const bool persisted = persistActiveProfileSnapshot();
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_NOTE_DYNAMICS\","
                "\"velocity_shift\":%d,\"change_probability\":%u,\"persisted\":%s}\n",
-               velocity, static_cast<unsigned>(changeProbability), persisted ? "true" : "false");
+               velocity, static_cast<unsigned>(changeProbability), "false");
 }
 
 void handleSetUsbMidiCommand(const String &command) {

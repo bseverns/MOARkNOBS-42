@@ -46,6 +46,7 @@ constexpr uint8_t kMaxMidiServiceRequestCount = 0xFF;
 uint32_t lastMidiDropAlertCount = 0;
 uint32_t lastMidiTaskOverrunAlertCount = 0;
 uint32_t lastUartOverrunAlertCount = 0;
+unsigned long internalClockNextTick = 0;
 
 template <typename T> void storageGet(int address, T &value) {
     ConfigManager::getStorageBackend()->readBytes(address, &value, sizeof(T));
@@ -174,8 +175,12 @@ void emitNoteSlot(uint8_t slotIndex, MIDISlot &slot, unsigned long gateMs) {
     if (random(100U) >= static_cast<uint8_t>(effectiveChance)) {
         return;
     }
-    midiHandler.sendNoteOn(note, velocity, slot.midiChannel);
-    queuePendingNoteOff(note, slot.midiChannel, gateMs);
+    // Admit the note only after its release has a reserved queue entry.  A
+    // dropped Note Off is worse than a dropped trigger: it can leave a voice
+    // stuck indefinitely.
+    if (queuePendingNoteOff(note, slot.midiChannel, gateMs)) {
+        midiHandler.sendNoteOn(note, velocity, slot.midiChannel);
+    }
 }
 
 uint16_t midiValueToRawAdc(uint8_t value) {
@@ -203,8 +208,9 @@ void emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
         break;
     case MIDIMessageType::Note: {
         const uint8_t note = static_cast<uint8_t>(slot.data1 % 128);
-        midiHandler.sendNoteOn(note, value, slot.midiChannel);
-        queuePendingNoteOff(note, slot.midiChannel, 100);
+        if (queuePendingNoteOff(note, slot.midiChannel, 100)) {
+            midiHandler.sendNoteOn(note, value, slot.midiChannel);
+        }
         break;
     }
     case MIDIMessageType::PitchBend:
@@ -707,16 +713,31 @@ void processEnvelopes() {
 
 // Internal transport clock lane when the device is not following external MIDI clock.
 void processInternalClock() {
-    static unsigned long lastInternalTick = 0;
     if (g_tappedBPM <= 0.0f || externalClockDominant())
         return;
 
-    float msPerTick = 60000.0f / (g_tappedBPM * 24.0f);
-    unsigned long now = ::now();
-    if (now - lastInternalTick >= msPerTick) {
-        lastInternalTick = now;
-        lastClockTime = now;
+    const unsigned long tickInterval =
+        std::max<unsigned long>(1, static_cast<unsigned long>(lroundf(60000.0f /
+                                                                         (g_tappedBPM * 24.0f))));
+    const unsigned long current = ::now();
+    if (internalClockNextTick == 0) {
+        internalClockNextTick = current;
+    }
+
+    constexpr uint8_t kMaxInternalClockCatchup = 4;
+    uint8_t emitted = 0;
+    while (static_cast<long>(current - internalClockNextTick) >= 0 &&
+           emitted < kMaxInternalClockCatchup) {
+        lastClockTime = internalClockNextTick;
         midiHandler.generateClockTick();
+        internalClockNextTick += tickInterval;
+        ++emitted;
+    }
+    // Preserve phase for ordinary jitter, but bound worst-case recovery work.
+    // Once the cap is exceeded, restart from now instead of replaying an
+    // unbounded historical clock burst.
+    if (static_cast<long>(current - internalClockNextTick) >= 0) {
+        internalClockNextTick = current + tickInterval;
     }
 }
 
@@ -786,6 +807,7 @@ void monitorSerialHealth() {
 #if defined(UNIT_TEST)
 void testOnly_resetRuntimeState() {
     midiServiceRequestCount = 0;
+    internalClockNextTick = 0;
     pendingNoteOffs = {};
     statusLedPulseDeadline = 0;
     lastMidiDropAlertCount = 0;

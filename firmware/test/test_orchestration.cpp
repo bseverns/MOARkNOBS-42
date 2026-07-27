@@ -157,11 +157,38 @@ void test_runtime_pending_note_off_overflow_tracks_drop() {
     g_systemDiagnostics = {};
     testOnly_resetRuntimeState();
 
-    for (size_t idx = 0; idx < 32; ++idx) {
+    for (size_t idx = 0; idx < 64; ++idx) {
         TEST_ASSERT_TRUE(queuePendingNoteOff(static_cast<uint8_t>(idx), 1, 10));
     }
 
     TEST_ASSERT_FALSE(queuePendingNoteOff(99, 1, 10));
+    TEST_ASSERT_EQUAL_UINT32(1, g_systemDiagnostics.midiDropCount);
+}
+
+void test_runtime_note_admission_drops_note_when_release_queue_is_full() {
+    g_fakeNowMs = 0;
+    g_systemDiagnostics = {};
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+    arpeggiator.stop();
+
+    for (size_t idx = 0; idx < 64; ++idx) {
+        TEST_ASSERT_TRUE(queuePendingNoteOff(static_cast<uint8_t>(idx), 1, 1000));
+    }
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        configManager.getSlot(slotIndex).active = false;
+    }
+    MIDISlot &slot = configManager.getSlot(0);
+    slot.active = true;
+    slot.type = MIDIMessageType::Note;
+    slot.midiChannel = 1;
+    slot.data1 = 60;
+    slot.arpNote = 60;
+
+    const uint32_t beforeTx = midiHandler.getTxCount();
+    testOnly_emitClockedSlots(1);
+
+    TEST_ASSERT_EQUAL_UINT32(beforeTx, midiHandler.getTxCount());
     TEST_ASSERT_EQUAL_UINT32(1, g_systemDiagnostics.midiDropCount);
 }
 
@@ -222,6 +249,23 @@ void test_internal_clock_ticks_continue_without_timeout_gap() {
     g_fakeNowMs += 22;
     processInternalClock();
     TEST_ASSERT_EQUAL_UINT32(beforeTicks + 2, midiHandler.clockTickCount());
+}
+
+void test_internal_clock_catchup_is_phase_preserving_and_bounded() {
+    g_fakeNowMs = 1000;
+    g_tappedBPM = 120.0f;
+    g_followExternalClock = false;
+    g_clockOutEnabled = false;
+    testOnly_resetRuntimeState();
+
+    const uint32_t beforeTicks = midiHandler.clockTickCount();
+    processInternalClock();
+    g_fakeNowMs += 100;
+    processInternalClock();
+
+    // 120 BPM is about 21 ms/tick.  A delayed pass may catch up, but it must
+    // never run an unbounded number of historical ticks in one scheduler slice.
+    TEST_ASSERT_EQUAL_UINT32(beforeTicks + 5, midiHandler.clockTickCount());
 }
 
 void test_clocked_feed_emits_non_arp_slots_while_arp_runs() {

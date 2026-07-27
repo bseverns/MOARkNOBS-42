@@ -241,9 +241,13 @@ class ConfigManager {
 
     // Assign a MIDI channel to a pot.
     void setPotChannel(uint8_t potIndex, uint8_t channel);
+    // Update the live model without touching storage.  SAVE_PROFILE is the
+    // explicit persistence boundary for host-driven performance controls.
+    void setPotChannelLive(uint8_t potIndex, uint8_t channel);
 
     // Assign a CC number to a pot.
     void setPotCCNumber(uint8_t potIndex, uint8_t ccNumber);
+    void setPotCCNumberLive(uint8_t potIndex, uint8_t ccNumber);
 
     // Persistence --------------------------------------------------------
 

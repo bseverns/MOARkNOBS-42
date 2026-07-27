@@ -211,7 +211,11 @@ void processCommandQueue() {
     // Keep persistent scratch storage so the idle path doesn't spend stack or heap.
     static String command;
     static bool commandInitialized = false;
-    while (dequeueSerialCommand(gQueuedCommandLine, sizeof(gQueuedCommandLine))) {
+    constexpr uint8_t kMaxCommandsPerPass = 4;
+    uint8_t commandsProcessed = 0;
+    while (commandsProcessed < kMaxCommandsPerPass &&
+           dequeueSerialCommand(gQueuedCommandLine, sizeof(gQueuedCommandLine))) {
+        ++commandsProcessed;
         if (!commandInitialized) {
             command.reserve(SERIAL_BUFFER_SIZE - 1);
             commandInitialized = true;

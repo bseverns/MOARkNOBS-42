@@ -700,6 +700,11 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         return false;
     }
     const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+    if (!activeStorageBackend().contains(base, sizeof(ProfileData))) {
+        LOG_PRINTLN("{\"type\":\"status\",\"level\":\"error\",\"message\":\"Profile storage "
+                    "capacity is insufficient.\"}");
+        return false;
+    }
     ProfileData stored{};
     storageGet(base, stored);
     if (stored.version == PROFILE_SETTINGS_VERSION) {
@@ -843,8 +848,16 @@ bool ConfigManager::saveProfileSettings(uint8_t id, const ProfileData &profile) 
     ProfileData sanitized = sanitizeProfileData(profile);
     sanitized.crc = computeProfileCrc(sanitized);
     const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+    if (!activeStorageBackend().contains(base, sizeof(sanitized))) {
+        LOG_PRINTLN("{\"type\":\"status\",\"level\":\"error\",\"message\":\"Profile storage "
+                    "capacity is insufficient.\"}");
+        return false;
+    }
     storagePut(base, sanitized);
-    return true;
+    ProfileData verified{};
+    storageGet(base, verified);
+    return verified.version == PROFILE_SETTINGS_VERSION &&
+           verified.crc == computeProfileCrc(verified);
 }
 
 void ConfigManager::setActiveProfile(uint8_t id) {
@@ -927,6 +940,15 @@ void ConfigManager::setPotChannel(uint8_t potIndex, uint8_t channel) {
     }
 }
 
+void ConfigManager::setPotChannelLive(uint8_t potIndex, uint8_t channel) {
+    if (potIndex < _numPots) {
+        _stored.potChannels[potIndex] = channel;
+        if (potIndex < slots.size()) {
+            slots[potIndex].midiChannel = channel;
+        }
+    }
+}
+
 void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
     if (potIndex < _numPots) {
         _stored.potCCNumbers[potIndex] = ccNumber;
@@ -936,6 +958,15 @@ void ConfigManager::setPotCCNumber(uint8_t potIndex, uint8_t ccNumber) {
                 slot.data1 = ccNumber;
                 saveSlot(potIndex, slot);
             }
+        }
+    }
+}
+
+void ConfigManager::setPotCCNumberLive(uint8_t potIndex, uint8_t ccNumber) {
+    if (potIndex < _numPots) {
+        _stored.potCCNumbers[potIndex] = ccNumber;
+        if (potIndex < slots.size()) {
+            slots[potIndex].data1 = ccNumber;
         }
     }
 }
@@ -972,7 +1003,7 @@ bool ConfigManager::loadEnvelopeSettings(std::map<int, MIDISlot::EfSettings> &po
         storageGet(EEPROM_EF_BASELINES + envIndex * sizeof(float), baseline);
 
         envelopes[envIndex].setVref(g_vref); // always refresh Vref
-        if (!std::isnan(baseline)) {
+        if (std::isfinite(baseline)) {
             envelopes[envIndex].setBaseline(baseline);
             envelopeConfig.baselines[envIndex] = baseline;
         } else {

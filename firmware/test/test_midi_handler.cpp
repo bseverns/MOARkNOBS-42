@@ -195,6 +195,29 @@ void test_receive_nrpn() {
     TEST_ASSERT_EQUAL_UINT16(value, mh.lastNRPNValue());
 }
 
+void test_parameter_decoders_are_isolated_per_channel() {
+    MIDIHandler mh;
+    const uint16_t nrpnParam = 0x1234;
+    const uint16_t nrpnValue = 0x4567;
+    const uint16_t rpnParam = 0x0235;
+    const uint16_t rpnValue = 0x1678;
+
+    mh.handleMIDI(midi::ControlChange, 1, 99, (nrpnParam >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, 2, 101, (rpnParam >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, 1, 98, nrpnParam & 0x7F);
+    mh.handleMIDI(midi::ControlChange, 2, 100, rpnParam & 0x7F);
+
+    mh.handleMIDI(midi::ControlChange, 1, 6, (nrpnValue >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, 1, 38, nrpnValue & 0x7F);
+    TEST_ASSERT_EQUAL_UINT16(nrpnParam, mh.lastNRPNParam());
+    TEST_ASSERT_EQUAL_UINT16(nrpnValue, mh.lastNRPNValue());
+
+    mh.handleMIDI(midi::ControlChange, 2, 6, (rpnValue >> 7) & 0x7F);
+    mh.handleMIDI(midi::ControlChange, 2, 38, rpnValue & 0x7F);
+    TEST_ASSERT_EQUAL_UINT16(rpnParam, mh.lastRPNParam());
+    TEST_ASSERT_EQUAL_UINT16(rpnValue, mh.lastRPNValue());
+}
+
 // SysEx is our bulk config escape hatch.  Make sure the handler copies the
 // payload byte-for-byte so higher layers can rehydrate it later.
 void test_send_sysex() {

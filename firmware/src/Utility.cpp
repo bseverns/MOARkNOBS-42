@@ -401,7 +401,8 @@ void Utility::BulkConfigAssembler::refreshHints() {
     }
 }
 
-String Utility::formatAck(const char *checksumValue, uint32_t sequence) {
+String Utility::formatAck(const char *checksumValue, uint32_t sequence,
+                          const char *appliedChecksum) {
     String out = "{\"type\":\"ack\"";
     if (sequence != 0) {
         out += ",\"seq\":";
@@ -411,7 +412,18 @@ String Utility::formatAck(const char *checksumValue, uint32_t sequence) {
     if (checksumValue) {
         out += checksumValue;
     }
-    out += "\"}";
+    out += "\"";
+    if (checksumValue) {
+        out += ",\"request_checksum\":\"";
+        out += checksumValue;
+        out += "\"";
+    }
+    if (appliedChecksum) {
+        out += ",\"applied_checksum\":\"";
+        out += appliedChecksum;
+        out += "\"";
+    }
+    out += "}";
     return out;
 }
 

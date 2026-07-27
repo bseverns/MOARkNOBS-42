@@ -58,12 +58,9 @@ class LittleFsStorageBackend final : public StorageBackend {
             return;
         }
 
-        if (!addressInRange(address)) {
+        if (!contains(address, len)) {
             return;
         }
-
-        const size_t readable = std::min(
-            len, static_cast<size_t>(kVirtualAddressSpace - static_cast<uint16_t>(address)));
 
         File file = fs_.open(kStorageBlobPath, FILE_READ);
         if (!file) {
@@ -73,7 +70,7 @@ class LittleFsStorageBackend final : public StorageBackend {
             file.close();
             return;
         }
-        file.read(out, readable);
+        file.read(out, len);
         file.close();
     }
 
@@ -87,13 +84,11 @@ class LittleFsStorageBackend final : public StorageBackend {
             return;
         }
 
-        if (!addressInRange(address)) {
+        if (!contains(address, len)) {
             return;
         }
 
         const auto *in = static_cast<const uint8_t *>(src);
-        const size_t writable = std::min(
-            len, static_cast<size_t>(kVirtualAddressSpace - static_cast<uint16_t>(address)));
 
         File file = fs_.open(kStorageBlobPath, FILE_WRITE);
         if (!file) {
@@ -103,7 +98,7 @@ class LittleFsStorageBackend final : public StorageBackend {
             file.close();
             return;
         }
-        file.write(in, writable);
+        file.write(in, len);
         file.flush();
         file.close();
     }

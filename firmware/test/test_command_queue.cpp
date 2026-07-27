@@ -50,19 +50,23 @@ void test_command_queue_ignores_carriage_returns() {
     expectQueueEntry("SAVE");
 }
 
-void test_command_queue_flushes_when_buffer_limit_is_hit() {
+void test_command_queue_discards_overlong_input_until_newline() {
     testOnly_resetCommandQueue();
 
     for (size_t idx = 0; idx < SERIAL_BUFFER_SIZE - 1; ++idx) {
         testOnly_ingestSerialByte('A');
     }
+    testOnly_ingestSerialByte('B');
+    testOnly_ingestSerialByte('\n');
 
     char buffer[SERIAL_BUFFER_SIZE] = {0};
-    TEST_ASSERT_TRUE(dequeueSerialCommand(buffer, sizeof(buffer)));
-    TEST_ASSERT_EQUAL_UINT(SERIAL_BUFFER_SIZE - 1, strlen(buffer));
-    for (size_t idx = 0; idx < strlen(buffer); ++idx) {
-        TEST_ASSERT_EQUAL_CHAR('A', buffer[idx]);
+    TEST_ASSERT_FALSE(dequeueSerialCommand(buffer, sizeof(buffer)));
+
+    const char *nextLine = "HELLO\n";
+    for (const char *cursor = nextLine; *cursor != '\0'; ++cursor) {
+        testOnly_ingestSerialByte(*cursor);
     }
+    expectQueueEntry("HELLO");
 }
 
 void test_command_queue_initialize_clears_stale_dmame_state() {

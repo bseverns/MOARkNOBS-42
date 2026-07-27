@@ -560,24 +560,16 @@ void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot() 
     TEST_ASSERT_EQUAL_UINT8(1, lfoManager.routeCount());
 }
 
-void test_dispatch_set_arp_persists_active_profile_snapshot() {
+void test_dispatch_set_arp_updates_live_state_without_persisting() {
     const uint8_t profileId = 1;
     configManager.setActiveProfile(profileId);
     g_activeProfile = profileId;
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ARP,17,4,21,67,3,8"));
-    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":false"));
     TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"pattern_length\":8"));
 
-    ProfileData stored{};
-    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
-    TEST_ASSERT_EQUAL_UINT8(17, stored.arp.lengthTicks);
-    TEST_ASSERT_EQUAL_UINT8(4, stored.arp.shape);
-    TEST_ASSERT_EQUAL_UINT8(21, stored.arp.swingPercent);
-    TEST_ASSERT_EQUAL_UINT8(67, stored.arp.gatePercent);
-    TEST_ASSERT_EQUAL_UINT8(3, stored.arp.octaveRange);
-    TEST_ASSERT_EQUAL_UINT8(8, stored.arp.patternLength);
     TEST_ASSERT_EQUAL_UINT8(8, arpeggiator.getPatternLength());
 }
 
@@ -601,50 +593,41 @@ void test_dispatch_set_profile_arp_pattern_length_applies_and_persists() {
     TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"pattern_length\":16"));
 }
 
-void test_dispatch_set_clock_persists_active_profile_snapshot() {
+void test_dispatch_set_clock_updates_live_state_without_persisting() {
     const uint8_t profileId = 2;
     configManager.setActiveProfile(profileId);
     g_activeProfile = profileId;
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_CLOCK,0,1,98.5"));
-    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
-
-    ProfileData stored{};
-    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 98.5f, stored.clock.tappedBpm);
-    TEST_ASSERT_EQUAL_UINT8(1, stored.clock.clockOutEnabled);
-    TEST_ASSERT_EQUAL_UINT8(0, stored.clock.followExternalClock);
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":false"));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 98.5f, g_tappedBPM);
+    TEST_ASSERT_TRUE(g_clockOutEnabled);
+    TEST_ASSERT_FALSE(g_followExternalClock);
 }
 
-void test_dispatch_set_jitter_persists_active_profile_snapshot() {
+void test_dispatch_set_jitter_updates_live_state_without_persisting() {
     const uint8_t profileId = 3;
     configManager.setActiveProfile(profileId);
     g_activeProfile = profileId;
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_JITTER,0.625,0.375"));
-    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
-
-    ProfileData stored{};
-    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.625f, stored.jitter.depth);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.375f, stored.jitter.smoothness);
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":false"));
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.625f, g_jitterSettings.depth);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.375f, g_jitterSettings.smoothness);
 }
 
-void test_dispatch_set_note_dynamics_persists_active_profile_snapshot() {
+void test_dispatch_set_note_dynamics_updates_live_state_without_persisting() {
     const uint8_t profileId = 1;
     configManager.setActiveProfile(profileId);
     g_activeProfile = profileId;
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_NOTE_DYNAMICS,-14,61"));
-    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":true"));
-
-    ProfileData stored{};
-    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
-    TEST_ASSERT_EQUAL_INT8(-14, stored.noteDynamics.velocityShift);
-    TEST_ASSERT_EQUAL_UINT8(61, stored.noteDynamics.changeProbability);
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"persisted\":false"));
+    TEST_ASSERT_EQUAL_INT8(-14, velocityShift);
+    TEST_ASSERT_EQUAL_UINT8(61, changeProbability);
 }
 
 void test_dispatch_inactive_profile_patch_merges_with_stored_profile_snapshot() {
