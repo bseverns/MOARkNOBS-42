@@ -11,9 +11,13 @@ function createHarness({ sendRpc } = {}) {
       lines.push(line);
     }
   };
+  const rpcPayloads = [];
   const runtime = createLiveControlsRuntime({
     emit: (event, payload) => events.push({ event, payload }),
-    sendRpc: sendRpc ?? (async () => ({ ok: true })),
+    sendRpc: sendRpc ?? (async (payload) => {
+      rpcPayloads.push(payload);
+      return { ok: true };
+    }),
     getTransport: () => transport,
     configSession: {
       stage: (updater) => updater(staged)
@@ -35,18 +39,19 @@ function createHarness({ sendRpc } = {}) {
     sceneCommandTimeoutMs: 500
   });
 
-  return { events, lines, runtime, staged };
+  return { events, lines, rpcPayloads, runtime, staged };
 }
 
-test('live controls runtime resolves macro commands from firmware receipt lines', async () => {
-  const { events, lines, runtime } = createHarness();
+test('live controls runtime queues macro commands through the shared RPC lane', async () => {
+  const { events, lines, rpcPayloads, runtime } = createHarness();
 
   const pending = runtime.sendMacroCommand('SAVE_MACRO_SLOT');
 
-  expect(lines).toEqual(['SAVE_MACRO_SLOT']);
+  expect(lines).toEqual([]);
+  expect(rpcPayloads).toEqual([{ rpc: 'macro_command', command: 'SAVE_MACRO_SLOT' }]);
   expect(runtime.handleMacroLine({ macro_saved: true, macro_available: true })).toBe(true);
 
-  await expect(pending).resolves.toEqual({ macro_saved: true, macro_available: true });
+  await expect(pending).resolves.toEqual({ ok: true });
   expect(events).toEqual([
     {
       event: 'macro',
@@ -60,33 +65,34 @@ test('live controls runtime resolves macro commands from firmware receipt lines'
   ]);
 });
 
-test('live controls runtime enforces single-flight macro commands', async () => {
-  const { runtime } = createHarness();
+test('live controls runtime delegates macro serialization to the shared RPC lane', async () => {
+  const { rpcPayloads, runtime } = createHarness();
 
   const pending = runtime.sendMacroCommand('SAVE_MACRO_SLOT');
 
-  await expect(runtime.sendMacroCommand('RECALL_MACRO_SLOT')).rejects.toThrow(
-    'Macro command already in progress'
-  );
+  await runtime.sendMacroCommand('RECALL_MACRO_SLOT');
+  expect(rpcPayloads).toEqual([
+    { rpc: 'macro_command', command: 'SAVE_MACRO_SLOT' },
+    { rpc: 'macro_command', command: 'RECALL_MACRO_SLOT' }
+  ]);
   runtime.handleMacroLine({ macro_saved: true });
   await pending;
 });
 
-test('live controls runtime normalizes scene list receipts', async () => {
-  const { events, lines, runtime } = createHarness();
+test('live controls runtime queues scene requests through the shared RPC lane', async () => {
+  const { events, lines, rpcPayloads, runtime } = createHarness();
 
   const pending = runtime.requestScenes();
 
-  expect(lines).toEqual([JSON.stringify({ cmd: 'GET_SCENES' })]);
+  expect(lines).toEqual([]);
+  expect(rpcPayloads).toEqual([{ rpc: 'scene_command', payload: { cmd: 'GET_SCENES' } }]);
   expect(
     runtime.handleSceneLine({
       scenes: [{ slot: '2', name: 'Intro', available: 1 }, { slot: 'bad' }]
     })
   ).toBe(true);
 
-  await expect(pending).resolves.toEqual({
-    scenes: [{ slot: '2', name: 'Intro', available: 1 }, { slot: 'bad' }]
-  });
+  await expect(pending).resolves.toEqual({ ok: true });
   expect(events).toEqual([
     {
       event: 'scene',

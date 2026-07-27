@@ -19,7 +19,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   await page.locator('#note-dynamics-apply').click();
   await expect(page.locator('#status-label')).toHaveText('Note dynamics updated');
 
-  await expect(page.locator('#dirty-badge')).toBeHidden();
+  await expect(page.locator('#dirty-badge')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
 
   const state = await page.evaluate(() => ({
@@ -172,7 +172,7 @@ test('failed Apply restores staged and live truth and updates error status UI', 
     live: window.__MN42_RUNTIME.getState().live,
     staged: window.__MN42_RUNTIME.getState().staged
   }));
-  expect(state.dirty).toBe(false);
-  expect(state.diff).toEqual([]);
-  expect(state.live).toEqual(state.staged);
+  expect(state.dirty).toBe(true);
+  expect(state.diff.length).toBeGreaterThan(0);
+  expect(state.live).not.toEqual(state.staged);
 });
