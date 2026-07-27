@@ -4,7 +4,9 @@ function createBridgeStateStore({
   clone,
   getConfig,
   logLimit = 200,
+  stateEmitIntervalMs = 100,
 } = {}) {
+  let stateEmitTimer = null;
   function getState() {
     return {
       running: state.running,
@@ -26,8 +28,20 @@ function createBridgeStateStore({
     };
   }
 
-  function emitState() {
+  function emitStateNow() {
     events.emit('state', getState());
+  }
+
+  // Route/metric traffic can arrive far faster than a browser can consume a
+  // deep-cloned full snapshot. Coalesce snapshots to 10 Hz; structured route
+  // and log events are still emitted immediately by their owning modules.
+  function emitState() {
+    if (stateEmitTimer) return;
+    stateEmitTimer = setTimeout(() => {
+      stateEmitTimer = null;
+      emitStateNow();
+    }, stateEmitIntervalMs);
+    stateEmitTimer.unref?.();
   }
 
   function pushLog(level, message, extra = undefined) {
@@ -58,6 +72,7 @@ function createBridgeStateStore({
 
   return {
     emitState,
+    emitStateNow,
     pushLog,
     setState,
     bumpCounter,
