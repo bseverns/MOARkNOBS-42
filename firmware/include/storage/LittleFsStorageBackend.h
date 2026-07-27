@@ -20,6 +20,36 @@ class LittleFsStorageBackend final : public StorageBackend {
     uint16_t length() const override { return kVirtualAddressSpace; }
 
     bool ready() const { return ensureReady(); }
+    bool supportsTransactions() const override { return ensureReady(); }
+
+    bool beginTransaction() override {
+        if (!ensureReady() || transactionActive_) return false;
+        if (!copyFile(kStorageBlobPath, kStagingBlobPath)) return false;
+        transactionActive_ = true;
+        return true;
+    }
+
+    bool commitTransaction() override {
+        if (!transactionActive_) return false;
+        transactionActive_ = false;
+        if (!fileHasExpectedSize(kStagingBlobPath)) return false;
+        fs_.remove(kPreviousBlobPath);
+        // If power fails after the first rename, boot recovery restores the
+        // previous complete generation.  If it fails after the second, the
+        // new complete generation is already active.
+        if (!fs_.rename(kStorageBlobPath, kPreviousBlobPath)) return false;
+        if (!fs_.rename(kStagingBlobPath, kStorageBlobPath)) {
+            fs_.rename(kPreviousBlobPath, kStorageBlobPath);
+            return false;
+        }
+        fs_.remove(kPreviousBlobPath);
+        return true;
+    }
+
+    void abortTransaction() override {
+        transactionActive_ = false;
+        if (ensureMounted()) fs_.remove(kStagingBlobPath);
+    }
 
     uint8_t read(int address) const override {
         if (!ensureReady()) {
@@ -62,7 +92,7 @@ class LittleFsStorageBackend final : public StorageBackend {
             return;
         }
 
-        File file = fs_.open(kStorageBlobPath, FILE_READ);
+        File file = fs_.open(currentBlobPath(), FILE_READ);
         if (!file) {
             return;
         }
@@ -90,7 +120,7 @@ class LittleFsStorageBackend final : public StorageBackend {
 
         const auto *in = static_cast<const uint8_t *>(src);
 
-        File file = fs_.open(kStorageBlobPath, FILE_WRITE);
+        File file = fs_.open(currentBlobPath(), FILE_WRITE);
         if (!file) {
             return;
         }
@@ -105,6 +135,8 @@ class LittleFsStorageBackend final : public StorageBackend {
 
   private:
     static constexpr const char *kStorageBlobPath = "/config_storage.bin";
+    static constexpr const char *kStagingBlobPath = "/config_storage.staging.bin";
+    static constexpr const char *kPreviousBlobPath = "/config_storage.previous.bin";
     static constexpr const char *kStorageMetaPath = "/config_storage.meta";
     static constexpr uint32_t kMetaMagic = 0x4D4B425A; // "MKBZ"
     static constexpr uint16_t kMetaVersion = 1;
@@ -157,6 +189,20 @@ class LittleFsStorageBackend final : public StorageBackend {
     bool ensureStorageFile() const {
         if (!ensureMounted()) {
             return false;
+        }
+
+        // Recover an interrupted generation switch before considering a new
+        // transaction.  The previous file is never removed until the new one
+        // has become the active complete blob.
+        File active = fs_.open(kStorageBlobPath, FILE_READ);
+        if (!active) {
+            File previous = fs_.open(kPreviousBlobPath, FILE_READ);
+            if (previous) {
+                previous.close();
+                fs_.rename(kPreviousBlobPath, kStorageBlobPath);
+            }
+        } else {
+            active.close();
         }
 
         File existing = fs_.open(kStorageBlobPath, FILE_READ);
@@ -317,12 +363,47 @@ class LittleFsStorageBackend final : public StorageBackend {
         return true;
     }
 
+    const char *currentBlobPath() const {
+        return transactionActive_ ? kStagingBlobPath : kStorageBlobPath;
+    }
+
+    bool fileHasExpectedSize(const char *path) const {
+        File file = fs_.open(path, FILE_READ);
+        if (!file) return false;
+        const bool valid = file.size() == kVirtualAddressSpace;
+        file.close();
+        return valid;
+    }
+
+    bool copyFile(const char *source, const char *destination) const {
+        File in = fs_.open(source, FILE_READ);
+        File out = fs_.open(destination, FILE_WRITE);
+        if (!in || !out) {
+            if (in) in.close();
+            if (out) out.close();
+            return false;
+        }
+        uint8_t chunk[128];
+        size_t remaining = kVirtualAddressSpace;
+        while (remaining > 0) {
+            const size_t wanted = std::min(remaining, sizeof(chunk));
+            if (in.read(chunk, wanted) != wanted || out.write(chunk, wanted) != wanted) {
+                in.close(); out.close(); return false;
+            }
+            remaining -= wanted;
+        }
+        out.flush();
+        in.close(); out.close();
+        return true;
+    }
+
     mutable EepromStorageBackend fallback_;
     mutable LittleFS_Program fs_;
     mutable bool readyChecked_ = false;
     mutable bool littlefsReady_ = false;
     mutable bool mountAttempted_ = false;
     mutable bool mounted_ = false;
+    mutable bool transactionActive_ = false;
 };
 
 #endif // LITTLEFS_STORAGE_BACKEND_H

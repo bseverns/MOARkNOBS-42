@@ -1065,11 +1065,26 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         return false;
     }
 
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (!storage->supportsTransactions() || !storage->beginTransaction()) {
+        emitBulkError("storage_transaction", "atomic storage generation unavailable", seq);
+        return false;
+    }
+
     (void)readDefaultEfSettingsFromConfig(config);
     const SlotARGConfig defaultArg = readDefaultArgConfigFromConfig(config);
 
+    auto rollbackRuntimeFromActiveGeneration = [&]() {
+        storage->abortTransaction();
+        // The staged generation was never activated. Rehydrate the runtime
+        // from the still-active generation so a failed Apply has no live
+        // effect either.
+        restoreActiveProfileRuntime(false);
+    };
+
     bool anySlotPayloadSpecified = false;
     if (!applySlotDefinitions(slotsJson, seq, anySlotPayloadSpecified)) {
+        rollbackRuntimeFromActiveGeneration();
         return false;
     }
 
@@ -1078,7 +1093,11 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
     applyGlobalFilterState(config, anySlotPayloadSpecified);
     applyGlobalArgAndModeState(config, defaultArg);
     applyLedStateFromConfig(config);
-    persistActiveProfileSnapshot();
+    if (!persistActiveProfileSnapshot() || !storage->commitTransaction()) {
+        rollbackRuntimeFromActiveGeneration();
+        emitBulkError("storage_commit", "configuration generation was not activated", seq);
+        return false;
+    }
     markAllFilterTuningRemoteControlActive();
     return true;
 }

@@ -19,6 +19,13 @@ class StorageBackend {
     virtual void update(int address, uint8_t value) = 0;
     virtual void readBytes(int address, void *dest, size_t len) const = 0;
     virtual void writeBytes(int address, const void *src, size_t len) = 0;
+
+    // Optional inactive-generation transaction support.  Hardware Apply uses
+    // this rather than writing the active generation in place.
+    virtual bool supportsTransactions() const { return false; }
+    virtual bool beginTransaction() { return false; }
+    virtual bool commitTransaction() { return false; }
+    virtual void abortTransaction() {}
 };
 
 #endif // STORAGE_BACKEND_H

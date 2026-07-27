@@ -54,6 +54,54 @@ void Arpeggiator::stop() {
     }
 }
 
+bool Arpeggiator::queueEvent(const PendingEvent &event) {
+    for (PendingEvent &entry : _pendingEvents) {
+        if (!entry.active) {
+            entry = event;
+            entry.active = true;
+            return true;
+        }
+    }
+    ++g_systemDiagnostics.midiDropCount;
+    return false;
+}
+
+bool Arpeggiator::queueNotePair(uint8_t note, uint8_t velocity, uint8_t channel, uint32_t onDue,
+                                uint32_t offDue) {
+    PendingEvent *first = nullptr;
+    PendingEvent *second = nullptr;
+    for (PendingEvent &entry : _pendingEvents) {
+        if (!entry.active) {
+            if (!first) first = &entry;
+            else { second = &entry; break; }
+        }
+    }
+    if (!first || !second) {
+        ++g_systemDiagnostics.midiDropCount;
+        return false;
+    }
+    *first = {onDue, PendingEventType::NoteOn, channel, note, velocity, 0, true};
+    *second = {offDue, PendingEventType::NoteOff, channel, note, 0, 0, true};
+    return true;
+}
+
+void Arpeggiator::processPendingEvents(MIDIHandler &midi) {
+    const uint32_t current = now();
+    for (PendingEvent &event : _pendingEvents) {
+        if (!event.active || static_cast<long>(current - event.due) < 0) continue;
+        switch (event.type) {
+        case PendingEventType::NoteOn: midi.sendNoteOn(event.data1, event.data2, event.channel); break;
+        case PendingEventType::NoteOff: midi.sendNoteOff(event.data1, 0, event.channel); break;
+        case PendingEventType::CC: midi.sendControlChange(event.data1, event.data2, event.channel); break;
+        case PendingEventType::PitchBend: midi.sendPitchBend(event.bend, event.channel); break;
+        case PendingEventType::Program: midi.sendProgramChange(event.data1, event.channel); break;
+        case PendingEventType::Aftertouch: midi.sendAftertouch(event.data1, event.channel); break;
+        case PendingEventType::ModWheel: midi.sendModWheel(event.data1, event.channel); break;
+        }
+        event.active = false;
+    }
+}
+
 void Arpeggiator::stop(uint8_t slotIdx) {
     if (slotIdx >= NUM_SLOTS) {
         return;
@@ -397,9 +445,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
                                        slot.midiChannel);
             } else {
                 uint8_t value = constrain(potVal + offset, 0, 127);
-                Utility::schedulerHigh.addTask([cc = slot.data1, value, ch = slot.midiChannel,
-                                                &midi]() { midi.sendControlChange(cc, value, ch); },
-                                               delayMs, false);
+                queueEvent({nowMs + delayMs, PendingEventType::CC, slot.midiChannel, slot.data1,
+                            value, 0, false});
             }
             break;
         case MIDIMessageType::Note: {
@@ -414,19 +461,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             if (random(100U) >= static_cast<uint8_t>(effectiveChance)) {
                 break;
             }
-            if (delayMs == 0) {
-                midi.sendNoteOn(note, velocity, slot.midiChannel);
-                Utility::schedulerHigh.addTask(
-                    [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
-                    baseGateMs, false);
-            } else {
-                Utility::schedulerHigh.addTask([note, vel = velocity, ch = slot.midiChannel,
-                                                &midi]() { midi.sendNoteOn(note, vel, ch); },
-                                               delayMs, false);
-                Utility::schedulerHigh.addTask(
-                    [note, ch = slot.midiChannel, &midi]() { midi.sendNoteOff(note, 0, ch); },
-                    delayMs + baseGateMs, false);
-            }
+            queueNotePair(note, velocity, slot.midiChannel, nowMs + delayMs,
+                          nowMs + delayMs + baseGateMs);
             break;
         }
         case MIDIMessageType::PitchBend: {
@@ -436,9 +472,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             if (delayMs == 0) {
                 midi.sendPitchBend(bend, slot.midiChannel);
             } else {
-                Utility::schedulerHigh.addTask(
-                    [bend, ch = slot.midiChannel, &midi]() { midi.sendPitchBend(bend, ch); },
-                    delayMs, false);
+                queueEvent({nowMs + delayMs, PendingEventType::PitchBend, slot.midiChannel, 0, 0,
+                            bend, false});
             }
             break;
         }
@@ -447,9 +482,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
                 midi.sendProgramChange(constrain(root + offset, 0, 127), slot.midiChannel);
             } else {
                 uint8_t program = constrain(root + offset, 0, 127);
-                Utility::schedulerHigh.addTask([program, ch = slot.midiChannel,
-                                                &midi]() { midi.sendProgramChange(program, ch); },
-                                               delayMs, false);
+                queueEvent({nowMs + delayMs, PendingEventType::Program, slot.midiChannel, program,
+                            0, 0, false});
             }
             break;
         case MIDIMessageType::Aftertouch:
@@ -457,9 +491,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
                 midi.sendAftertouch(constrain(potVal + offset, 0, 127), slot.midiChannel);
             } else {
                 uint8_t pressure = constrain(potVal + offset, 0, 127);
-                Utility::schedulerHigh.addTask([pressure, ch = slot.midiChannel,
-                                                &midi]() { midi.sendAftertouch(pressure, ch); },
-                                               delayMs, false);
+                queueEvent({nowMs + delayMs, PendingEventType::Aftertouch, slot.midiChannel,
+                            pressure, 0, 0, false});
             }
             break;
         case MIDIMessageType::ModWheel:
@@ -467,9 +500,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
                 midi.sendModWheel(constrain(potVal + offset, 0, 127), slot.midiChannel);
             } else {
                 uint8_t mod = constrain(potVal + offset, 0, 127);
-                Utility::schedulerHigh.addTask(
-                    [mod, ch = slot.midiChannel, &midi]() { midi.sendModWheel(mod, ch); }, delayMs,
-                    false);
+                queueEvent({nowMs + delayMs, PendingEventType::ModWheel, slot.midiChannel, mod, 0,
+                            0, false});
             }
             break;
         default:
@@ -479,9 +511,8 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
 }
 
 void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerManager &pots) {
-    if (!isActive()) {
-        return;
-    }
+    processPendingEvents(midi);
+    if (!isActive()) return;
     for (uint8_t slotIdx = 0; slotIdx < NUM_SLOTS; ++slotIdx) {
         SlotState &state = _slots[slotIdx];
         if (!state.active) {
@@ -489,4 +520,5 @@ void Arpeggiator::update(MIDIHandler &midi, ConfigManager &cfg, PotentiometerMan
         }
         updateSlot(slotIdx, state, midi, cfg, pots);
     }
+    processPendingEvents(midi);
 }

@@ -141,6 +141,18 @@ class Arpeggiator {
         int8_t drunkPosition = 0;
     };
 
+    enum class PendingEventType : uint8_t { NoteOn, NoteOff, CC, PitchBend, Program, Aftertouch, ModWheel };
+    struct PendingEvent {
+        uint32_t due = 0;
+        PendingEventType type = PendingEventType::CC;
+        uint8_t channel = 1;
+        uint8_t data1 = 0;
+        uint8_t data2 = 0;
+        int16_t bend = 0;
+        bool active = false;
+    };
+    static constexpr size_t kPendingEventCapacity = 128;
+
     // Compute semitone offset for the given step, honoring shape rules.
     int8_t computeOffset(uint8_t stepIndex, uint8_t totalSteps, bool &stepEnabled);
     // Return the total step count for the active shape.
@@ -154,6 +166,10 @@ class Arpeggiator {
                     PotentiometerManager &pots);
     // Pick a stable slot to act as the "primary" one for UI overlays.
     uint8_t resolvePrimarySlot() const;
+    bool queueEvent(const PendingEvent &event);
+    bool queueNotePair(uint8_t note, uint8_t velocity, uint8_t channel, uint32_t onDue,
+                       uint32_t offDue);
+    void processPendingEvents(MIDIHandler &midi);
 
     uint8_t _lengthTicks;
     Shape _shape;
@@ -166,6 +182,7 @@ class Arpeggiator {
     bool _baseNoteIsSet;                     // True once setBaseNote() has been called
     std::function<uint8_t()> _baseNoteCb;    // Optional external hook for fresh roots
     std::array<SlotState, NUM_SLOTS> _slots; // Per-slot transport/step state
+    std::array<PendingEvent, kPendingEventCapacity> _pendingEvents{};
     uint8_t _primarySlot;                    // Last slot armed for arp; used for overlays
 };
 

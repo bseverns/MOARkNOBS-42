@@ -307,8 +307,7 @@ void test_large_tick_backlog_is_bounded_and_not_replayed() {
     arp.update(midi, cfg, pots);
 
     TEST_ASSERT_EQUAL_UINT32(Arpeggiator::MAX_CATCH_UP_EMISSIONS_PER_UPDATE, midi._txCount);
-    TEST_ASSERT_EQUAL_UINT(Arpeggiator::MAX_CATCH_UP_EMISSIONS_PER_UPDATE,
-                           Utility::schedulerHigh.taskCountForTest());
+    TEST_ASSERT_EQUAL_UINT(0, Utility::schedulerHigh.taskCountForTest());
 
     const uint32_t afterBacklogTx = midi._txCount;
     const size_t afterBacklogTasks = Utility::schedulerHigh.taskCountForTest();
@@ -534,10 +533,10 @@ void test_swing_delays_offbeat_notes() {
     tickAndUpdate(arp, midi, cfg, pots, 21, false);
     TEST_ASSERT_EQUAL_UINT8(priorNote, usbMIDI.lastNoteOn);
     advanceMs(19);
-    Utility::schedulerHigh.update();
+    arp.update(midi, cfg, pots);
     TEST_ASSERT_EQUAL_UINT8(priorNote, usbMIDI.lastNoteOn);
     advanceMs(2);
-    Utility::schedulerHigh.update();
+    arp.update(midi, cfg, pots);
     TEST_ASSERT_EQUAL_UINT8(61, usbMIDI.lastNoteOn);
 }
 
