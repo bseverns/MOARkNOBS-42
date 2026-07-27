@@ -364,8 +364,7 @@ void handleRecallMacroSlotCommand() {
     bool available = SceneStorage::macroSnapshotAvailable();
     bool recalled = false;
     if (available && SceneStorage::loadMacroSnapshot(snapshot)) {
-        SceneStorage::applyConfigState(snapshot, true);
-        recalled = true;
+        recalled = SceneStorage::applyConfigState(snapshot, true);
     }
     StaticJsonDocument<128> response;
     response["macro_recalled"] = recalled;

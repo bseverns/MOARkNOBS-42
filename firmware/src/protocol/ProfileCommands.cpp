@@ -4,6 +4,7 @@
 #include "FirmwareState.h"
 #include "Globals.h"
 #include "Modes.h"
+#include "protocol/SceneStorage.h"
 
 // ProfileCommands.cpp is the lifecycle layer for stored profile slots.
 //
@@ -136,9 +137,23 @@ bool resetProfileSlot(uint8_t id) {
     }
 
     const ProfileData profile = defaultProfileSnapshot();
+    const SceneStorage::ConfigState prior = SceneStorage::captureConfigState();
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (storage->supportsTransactions() && !storage->beginTransaction()) {
+        return false;
+    }
     selectActiveProfileSlot(id);
     applyBaselinePotMappings();
     rebuildRuntimeFromProfile(profile);
     configManager.saveProfile(id);
-    return configManager.saveProfileSettings(id, profile);
+    if (!configManager.saveProfileSettings(id, profile)) {
+        storage->abortTransaction();
+        SceneStorage::applyConfigState(prior, false);
+        return false;
+    }
+    if (!storage->supportsTransactions()) return true;
+    if (storage->commitTransaction()) return true;
+    storage->abortTransaction();
+    SceneStorage::applyConfigState(prior, false);
+    return false;
 }

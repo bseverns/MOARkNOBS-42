@@ -270,12 +270,13 @@ ConfigState captureConfigState() {
 }
 
 // 3. Full live-state apply.
-void applyConfigState(const ConfigState &state, bool persist) {
+bool applyConfigState(const ConfigState &state, bool persist) {
     StorageBackend &storage = activeStorageBackend();
     const bool transactionalPersist = persist && storage.supportsTransactions();
     if (transactionalPersist && !storage.beginTransaction()) {
-        return;
+        return false;
     }
+    const ConfigState prior = captureConfigState();
     applySlotState(state);
     applyPotMappings(state, persist);
     const auto followerAssigned = rebuildFollowerAssignmentsFromSlots();
@@ -290,7 +291,13 @@ void applyConfigState(const ConfigState &state, bool persist) {
     refreshEfVoicesFromConfig();
     if (transactionalPersist && !storage.commitTransaction()) {
         storage.abortTransaction();
+        // Storage truth remains the prior active generation. Restore runtime
+        // from the in-memory snapshot so a failed recall never leaves a
+        // partially-applied live scene behind.
+        applyConfigState(prior, false);
+        return false;
     }
+    return true;
 }
 
 // 4. Named scene slot helpers.

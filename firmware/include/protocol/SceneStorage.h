@@ -82,7 +82,7 @@ bool saveMacroSnapshot(const ConfigState &state);
 
 // Full live-state capture/apply helpers shared by scenes and macros.
 ConfigState captureConfigState();
-void applyConfigState(const ConfigState &state, bool persist);
+bool applyConfigState(const ConfigState &state, bool persist);
 } // namespace SceneStorage
 
 #endif // MN42_PROTOCOL_SCENE_STORAGE_H

@@ -90,8 +90,7 @@ bool handleSceneJsonCommand(const String &command) {
         response["scene_name"] = entry.name;
         response["scene_available"] = loaded;
         if (loaded) {
-            SceneStorage::applyConfigState(entry.state, true);
-            response["scene_recalled"] = true;
+            response["scene_recalled"] = SceneStorage::applyConfigState(entry.state, true);
         } else {
             response["scene_recalled"] = false;
             response["scene_error"] = "No snapshot stored in this slot";
