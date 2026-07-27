@@ -188,6 +188,8 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   let manualStop = false;
   let traceSeq = 0;
   let deviceSeq = 0;
+  let applyExclusive = false;
+  const deferredLiveLines = [];
   const midiRpnStateByChannel = new Map();
 
   const state = {
@@ -783,7 +785,14 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   }
 
   async function applyDeviceConfig(options = {}) {
-    return deviceSession.applyStagedConfig(options);
+    if (applyExclusive) throw new Error('configuration Apply already owns the outbound serial lane');
+    applyExclusive = true;
+    try {
+      return await deviceSession.applyStagedConfig(options);
+    } finally {
+      applyExclusive = false;
+      flushDeferredLiveLines();
+    }
   }
 
   async function rollbackDeviceConfig(reason = 'operator_request') {
@@ -803,8 +812,23 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       setState({ lastError: error.message });
       throw error;
     }
+    const command = normalized.trim();
+    const safeRead = command.startsWith('GET_') || command === 'HELLO';
+    const transactionFrame = command.startsWith('SET_ALL ');
+    if (applyExclusive && !safeRead && !transactionFrame) {
+      // Preserve ordering at the Apply boundary. Performance controls are
+      // deferred, while raw mutating input cannot interleave a bulk frame.
+      if (deferredLiveLines.length < 128) deferredLiveLines.push(normalized);
+      else pushLog('warn', 'dropping live serial command while Apply queue is full');
+      return normalized;
+    }
     serial.write(normalized);
     return normalized;
+  }
+
+  function flushDeferredLiveLines() {
+    if (!serial || typeof serial.write !== 'function') return;
+    while (deferredLiveLines.length) serial.write(deferredLiveLines.shift());
   }
 
   // Subscribe to bridge state/log/line events with an unsubscribe helper.
