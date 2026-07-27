@@ -91,6 +91,27 @@ test('native response router maps generic native errors with code and message', 
   ]);
 });
 
+test('sequence-correlated native reads ignore shape-matching unsolicited telemetry', () => {
+  const harness = createHarness('jitter_get');
+  harness.activePending.nativeRequest.expectedSequence = 42;
+  const common = {
+    activePending: harness.activePending,
+    activePendingId: 42,
+    rpcKernel: harness.rpcKernel,
+    isManifestPayload: () => false,
+    isConfigPayload: () => false
+  };
+  expect(handleNativePendingResponse({
+    ...common,
+    msg: { command: 'GET_JITTER', seq: 41, depth: 0.2, smoothness: 0.5 }
+  })).toBe(false);
+  expect(handleNativePendingResponse({
+    ...common,
+    msg: { command: 'GET_JITTER', seq: 42, depth: 0.2, smoothness: 0.5 }
+  })).toBe(true);
+  expect(harness.responses).toEqual([{ id: 42, result: expect.objectContaining({ seq: 42 }) }]);
+});
+
 function fnv1a(value) {
   let hash = 2166136261;
   for (const byte of new TextEncoder().encode(value)) {

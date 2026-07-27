@@ -75,6 +75,10 @@ export function handleNativePendingResponse({
   chunkedReadAssembler
 } = {}) {
   if (activePending?.protocolMode !== 'native' || !activePending.nativeRequest) return false;
+  const expectedSequence = activePending.nativeRequest.expectedSequence;
+  const isExpectedResponse = (command) =>
+    msg.command === command &&
+    (expectedSequence === undefined || Number(msg.seq) === Number(expectedSequence));
 
   if (msg.type === 'error') {
     rpcKernel.handleRpcResponse({
@@ -163,7 +167,8 @@ export function handleNativePendingResponse({
       if (
         Object.prototype.hasOwnProperty.call(msg, 'follow_external') &&
         Object.prototype.hasOwnProperty.call(msg, 'clock_out_enabled') &&
-        Object.prototype.hasOwnProperty.call(msg, 'tapped_bpm')
+        Object.prototype.hasOwnProperty.call(msg, 'tapped_bpm') &&
+        (activePending.nativeRequest.kind !== 'clock_get' || isExpectedResponse('GET_CLOCK'))
       ) {
         if (activePending.nativeRequest.kind === 'clock_set' && msg.status !== 'ok') {
           rpcKernel.handleRpcResponse({
@@ -199,7 +204,8 @@ export function handleNativePendingResponse({
     case 'jitter_set':
       if (
         Object.prototype.hasOwnProperty.call(msg, 'depth') &&
-        Object.prototype.hasOwnProperty.call(msg, 'smoothness')
+        Object.prototype.hasOwnProperty.call(msg, 'smoothness') &&
+        (activePending.nativeRequest.kind !== 'jitter_get' || isExpectedResponse('GET_JITTER'))
       ) {
         if (activePending.nativeRequest.kind === 'jitter_set' && msg.status !== 'ok') {
           rpcKernel.handleRpcResponse({
@@ -216,7 +222,8 @@ export function handleNativePendingResponse({
     case 'note_dynamics_set':
       if (
         Object.prototype.hasOwnProperty.call(msg, 'velocity_shift') &&
-        Object.prototype.hasOwnProperty.call(msg, 'change_probability')
+        Object.prototype.hasOwnProperty.call(msg, 'change_probability') &&
+        (activePending.nativeRequest.kind !== 'note_dynamics_get' || isExpectedResponse('GET_NOTE_DYNAMICS'))
       ) {
         if (activePending.nativeRequest.kind === 'note_dynamics_set' && msg.status !== 'ok') {
           rpcKernel.handleRpcResponse({
@@ -257,7 +264,7 @@ export function handleNativePendingResponse({
       }
       break;
     case 'usb_midi_get':
-      if (Object.prototype.hasOwnProperty.call(msg, 'usb_midi_out')) {
+      if (Object.prototype.hasOwnProperty.call(msg, 'usb_midi_out') && isExpectedResponse('GET_USB_MIDI')) {
         rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });
         return true;
       }

@@ -70,6 +70,18 @@ uint32_t fnv1a(const String &value) {
     return hash;
 }
 
+// Optional native request correlation suffix: GET_CLOCK,SEQ,42.  Older hosts
+// omit it and retain the legacy response shape.
+uint32_t requestSequence(const String &command) {
+    const int marker = command.lastIndexOf(",SEQ,");
+    if (marker < 0) return 0;
+    const String value = command.substring(marker + 5);
+    for (size_t index = 0; index < value.length(); ++index) {
+        if (!isDigit(value[index])) return 0;
+    }
+    return static_cast<uint32_t>(value.toInt());
+}
+
 void emitChunkedRead(const char *command, const String &payload) {
     pendingChunkedRead.payload = payload;
     pendingChunkedRead.command = command;
@@ -978,7 +990,7 @@ void handleGetConfigChunkedCommand(const String &command) {
 
 // 3. Live runtime inspection reads.
 void handleGetClockCommand(const String &command) {
-    (void)command;
+    const uint32_t seq = requestSequence(command);
     const bool externalSignal = midiHandler.hasExternalClockSignal();
     const bool running = midiHandler.isClockRunning();
     const float externalBpm = midiHandler.externalClockBpm();
@@ -988,10 +1000,10 @@ void handleGetClockCommand(const String &command) {
     } else if (g_tappedBPM > 0.0f) {
         source = "internal";
     }
-    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_CLOCK\",\"follow_external\":%s,"
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_CLOCK\",\"seq\":%lu,\"follow_external\":%s,"
                "\"clock_out_enabled\":%s,\"tapped_bpm\":%.2f,\"external_bpm\":%.2f,"
                "\"external_signal\":%s,\"running\":%s,\"source\":\"%s\"}\n",
-               g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
+               static_cast<unsigned long>(seq), g_followExternalClock ? "true" : "false", g_clockOutEnabled ? "true" : "false",
                static_cast<double>(g_tappedBPM), static_cast<double>(externalBpm),
                externalSignal ? "true" : "false", running ? "true" : "false", source);
 }
@@ -1037,9 +1049,10 @@ void handleGetEfCommand(const String &command) {
 }
 
 void handleGetJitterCommand(const String &command) {
-    (void)command;
+    const uint32_t seq = requestSequence(command);
     LOG_PRINTF(
-        "{\"type\":\"response\",\"command\":\"GET_JITTER\",\"depth\":%.3f,\"smoothness\":%.3f}\n",
+        "{\"type\":\"response\",\"command\":\"GET_JITTER\",\"seq\":%lu,\"depth\":%.3f,\"smoothness\":%.3f}\n",
+        static_cast<unsigned long>(seq),
         static_cast<double>(constrain(g_jitterSettings.depth, 0.0f, 1.0f)),
         static_cast<double>(constrain(g_jitterSettings.smoothness, 0.0f, 1.0f)));
 }
@@ -1052,18 +1065,18 @@ void handleGetLedCommand(const String &command) {
 }
 
 void handleGetNoteDynamicsCommand(const String &command) {
-    (void)command;
-    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_NOTE_DYNAMICS\",\"velocity_shift\":%d,"
+    const uint32_t seq = requestSequence(command);
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_NOTE_DYNAMICS\",\"seq\":%lu,\"velocity_shift\":%d,"
                "\"change_probability\":%u}\n",
-               static_cast<int>(velocityShift), static_cast<unsigned>(changeProbability));
+               static_cast<unsigned long>(seq), static_cast<int>(velocityShift), static_cast<unsigned>(changeProbability));
 }
 
 void handleGetUsbMidiCommand(const String &command) {
-    (void)command;
-    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_USB_MIDI\",\"usb_midi_out\":%s,"
+    const uint32_t seq = requestSequence(command);
+    LOG_PRINTF("{\"type\":\"response\",\"command\":\"GET_USB_MIDI\",\"seq\":%lu,\"usb_midi_out\":%s,"
                "\"rx_count\":%lu,\"tx_count\":%lu,\"clock_ticks\":%lu,"
                "\"clock_running\":%s,\"external_signal\":%s,\"midi_drops\":%lu}\n",
-               g_usbMidiOutEnabled ? "true" : "false",
+               static_cast<unsigned long>(seq), g_usbMidiOutEnabled ? "true" : "false",
                static_cast<unsigned long>(midiHandler.getRxCount()),
                static_cast<unsigned long>(midiHandler.getTxCount()),
                static_cast<unsigned long>(midiHandler.clockTickCount()),

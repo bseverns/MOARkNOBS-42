@@ -66,13 +66,13 @@ export function createRpcKernel({
           ]
         };
       case 'get_clock':
-        return { kind: 'clock_get', lines: ['GET_CLOCK'] };
+        return { kind: 'clock_get', expectedSequence: message.id, lines: [`GET_CLOCK,SEQ,${message.id}`] };
       case 'get_jitter':
-        return { kind: 'jitter_get', lines: ['GET_JITTER'] };
+        return { kind: 'jitter_get', expectedSequence: message.id, lines: [`GET_JITTER,SEQ,${message.id}`] };
       case 'get_note_dynamics':
-        return { kind: 'note_dynamics_get', lines: ['GET_NOTE_DYNAMICS'] };
+        return { kind: 'note_dynamics_get', expectedSequence: message.id, lines: [`GET_NOTE_DYNAMICS,SEQ,${message.id}`] };
       case 'get_usb_midi':
-        return { kind: 'usb_midi_get', lines: ['GET_USB_MIDI'] };
+        return { kind: 'usb_midi_get', expectedSequence: message.id, lines: [`GET_USB_MIDI,SEQ,${message.id}`] };
       case 'midi_test':
         return { kind: 'midi_test', lines: ['MIDI_TEST'] };
       case 'get_config':
