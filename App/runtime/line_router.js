@@ -53,8 +53,8 @@ export function createRuntimeLineHandler({
       emit('log', line);
       return;
     }
-    if (handleSceneLine(msg)) return;
-    if (handleMacroLine(msg)) return;
+    const sceneHandled = handleSceneLine(msg);
+    const macroHandled = handleMacroLine(msg);
     if (msg?.id !== undefined) {
       rpcKernel.handleRpcResponse(msg);
       return;
@@ -74,6 +74,7 @@ export function createRuntimeLineHandler({
     ) {
       return;
     }
+    if (sceneHandled || macroHandled) return;
     if (msg.type === 'config-patch') {
       applyConfigPatch(msg);
       return;

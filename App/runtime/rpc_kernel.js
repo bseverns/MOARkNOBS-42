@@ -109,6 +109,10 @@ export function createRpcKernel({
           lines
         };
       }
+      case 'macro_command':
+        return { kind: 'macro_command', lines: [String(message.command ?? '')] };
+      case 'scene_command':
+        return { kind: 'scene_command', lines: [JSON.stringify(message.payload ?? {})] };
       case 'set_clock':
         return {
           kind: 'clock_set',

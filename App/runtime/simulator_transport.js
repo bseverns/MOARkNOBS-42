@@ -461,6 +461,28 @@ export function createSimulator(simDeps = {}) {
       return Math.max(0, Math.min(profileSlots.length - 1, Math.floor(idx)));
     };
     switch (rpc) {
+      case 'macro_command': {
+        const command = String(request.command ?? '');
+        if (command === 'SAVE_MACRO_SLOT') {
+          macroSnapshot = cloneValue(config);
+          respond({ macro_saved: true, macro_available: true });
+        } else if (command === 'RECALL_MACRO_SLOT') {
+          const hasSnapshot = Boolean(macroSnapshot);
+          if (hasSnapshot) config = cloneValue(macroSnapshot);
+          respond({ macro_recalled: hasSnapshot, macro_available: hasSnapshot });
+        } else {
+          respond({ error: 'Unknown macro command' });
+        }
+        break;
+      }
+      case 'scene_command': {
+        const command = request.payload?.cmd;
+        if (command === 'GET_SCENES') respond({ scenes: [] });
+        else if (command === 'SAVE_SCENE') respond({ scene_saved: true, scene_slot: request.payload?.slot ?? 0 });
+        else if (command === 'RECALL_SCENE') respond({ scene_recalled: true, scene_slot: request.payload?.slot ?? 0 });
+        else respond({ scene_error: 'Unknown scene command' });
+        break;
+      }
       case 'hello':
         respond({ message: 'hello' });
         break;

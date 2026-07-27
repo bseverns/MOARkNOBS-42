@@ -242,6 +242,20 @@ export function handleNativePendingResponse({
         return true;
       }
       break;
+    case 'macro_command':
+      if (Object.prototype.hasOwnProperty.call(msg, 'macro_saved') || Object.prototype.hasOwnProperty.call(msg, 'macro_recalled')) {
+        const ok = Boolean(msg.macro_saved ?? msg.macro_recalled);
+        rpcKernel.handleRpcResponse(ok ? { id: activePendingId, result: msg } : { id: activePendingId, error: { message: msg.error ?? 'Macro command failed' } });
+        return true;
+      }
+      break;
+    case 'scene_command':
+      if (Array.isArray(msg.scenes) || Object.prototype.hasOwnProperty.call(msg, 'scene_saved') || Object.prototype.hasOwnProperty.call(msg, 'scene_recalled')) {
+        const ok = Array.isArray(msg.scenes) || Boolean(msg.scene_saved ?? msg.scene_recalled);
+        rpcKernel.handleRpcResponse(ok ? { id: activePendingId, result: msg } : { id: activePendingId, error: { message: msg.scene_error ?? 'Scene command failed' } });
+        return true;
+      }
+      break;
     case 'usb_midi_get':
       if (Object.prototype.hasOwnProperty.call(msg, 'usb_midi_out')) {
         rpcKernel.handleRpcResponse({ id: activePendingId, result: msg });

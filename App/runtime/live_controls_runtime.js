@@ -58,25 +58,9 @@ export function createLiveControlsRuntime({
     if (!command || !macroResponseKeys[command]) {
       return Promise.reject(new Error('Unknown macro command'));
     }
-    const transport = getTransport();
-    if (!transport) return Promise.reject(new Error('Not connected'));
-    if (macroPending) return Promise.reject(new Error('Macro command already in progress'));
-    let resolveFn;
-    let rejectFn;
-    const promise = new Promise((resolve, reject) => {
-      resolveFn = resolve;
-      rejectFn = reject;
+    return sendRpc({ rpc: 'macro_command', command }, {
+      timeoutMs: Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : macroCommandTimeoutMs
     });
-    const pending = { command, resolve: resolveFn, reject: rejectFn, timer: null };
-    macroPending = pending;
-    const timeout = Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : macroCommandTimeoutMs;
-    pending.timer = setTimeout(() => {
-      settleMacroPending(pending, { error: new Error('Macro command timed out') });
-    }, timeout);
-    transport.writeLine(command).catch((err) => {
-      settleMacroPending(pending, { error: err });
-    });
-    return promise;
   }
 
   function handleMacroLine(msg) {
@@ -115,33 +99,11 @@ export function createLiveControlsRuntime({
     if (!payload || typeof payload !== 'object' || typeof payload.cmd !== 'string') {
       return Promise.reject(new Error('Scene command requires cmd property'));
     }
-    const transport = getTransport();
-    if (!transport) return Promise.reject(new Error('Not connected'));
-    if (scenePending) return Promise.reject(new Error('Scene command already in progress'));
     const expectedKey = sceneResponseKeys[payload.cmd];
     if (!expectedKey) return Promise.reject(new Error('Unknown scene command'));
-    let resolveFn;
-    let rejectFn;
-    const promise = new Promise((resolve, reject) => {
-      resolveFn = resolve;
-      rejectFn = reject;
+    return sendRpc({ rpc: 'scene_command', payload }, {
+      timeoutMs: Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : sceneCommandTimeoutMs
     });
-    const pending = {
-      command: payload.cmd,
-      expectedKey,
-      resolve: resolveFn,
-      reject: rejectFn,
-      timer: null
-    };
-    scenePending = pending;
-    const timeout = Number.isFinite(Number(timeoutMs)) ? Number(timeoutMs) : sceneCommandTimeoutMs;
-    pending.timer = setTimeout(() => {
-      settleScenePending(pending, { error: new Error('Scene command timed out') });
-    }, timeout);
-    transport.writeLine(JSON.stringify(payload)).catch((err) => {
-      settleScenePending(pending, { error: err });
-    });
-    return promise;
   }
 
   function handleSceneLine(msg) {
