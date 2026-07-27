@@ -50,6 +50,16 @@ DMAMEM StaticJsonDocument<32768> modMatrixDoc;
 // Headers consume roughly 80 bytes and JSON escaping can double the payload.
 // Keep every response comfortably inside the native serial line guard.
 constexpr size_t kChunkedReadPayloadBytes = 20;
+constexpr uint8_t kChunkedReadFramesPerService = 2;
+
+struct PendingChunkedRead {
+    String payload;
+    String command;
+    uint32_t checksum = 0;
+    size_t index = 0;
+    size_t total = 0;
+    bool active = false;
+} pendingChunkedRead;
 
 uint32_t fnv1a(const String &value) {
     uint32_t hash = 2166136261UL;
@@ -61,20 +71,37 @@ uint32_t fnv1a(const String &value) {
 }
 
 void emitChunkedRead(const char *command, const String &payload) {
-    const size_t total = (payload.length() + kChunkedReadPayloadBytes - 1) / kChunkedReadPayloadBytes;
-    const uint32_t checksum = fnv1a(payload);
-    for (size_t index = 0; index < total; ++index) {
+    pendingChunkedRead.payload = payload;
+    pendingChunkedRead.command = command;
+    pendingChunkedRead.checksum = fnv1a(payload);
+    pendingChunkedRead.index = 0;
+    pendingChunkedRead.total =
+        (payload.length() + kChunkedReadPayloadBytes - 1) / kChunkedReadPayloadBytes;
+    pendingChunkedRead.active = pendingChunkedRead.total > 0;
+}
+
+void servicePendingChunkedRead() {
+    if (!pendingChunkedRead.active) return;
+    for (uint8_t emitted = 0; emitted < kChunkedReadFramesPerService &&
+                              pendingChunkedRead.index < pendingChunkedRead.total;
+         ++emitted, ++pendingChunkedRead.index) {
         StaticJsonDocument<192> frame;
         frame["type"] = "read_chunk";
-        frame["command"] = command;
-        frame["index"] = index;
-        frame["total"] = total;
-        frame["checksum"] = checksum;
-        frame["data"] = payload.substring(index * kChunkedReadPayloadBytes,
-                                            std::min(payload.length(), (index + 1) * kChunkedReadPayloadBytes));
+        frame["command"] = pendingChunkedRead.command;
+        frame["index"] = pendingChunkedRead.index;
+        frame["total"] = pendingChunkedRead.total;
+        frame["checksum"] = pendingChunkedRead.checksum;
+        frame["data"] = pendingChunkedRead.payload.substring(
+            pendingChunkedRead.index * kChunkedReadPayloadBytes,
+            std::min(pendingChunkedRead.payload.length(),
+                     (pendingChunkedRead.index + 1) * kChunkedReadPayloadBytes));
         String line;
         serializeJson(frame, line);
         LOG_PRINTLN(line);
+    }
+    if (pendingChunkedRead.index >= pendingChunkedRead.total) {
+        pendingChunkedRead.payload = "";
+        pendingChunkedRead.active = false;
     }
 }
 
@@ -749,6 +776,8 @@ void writeLedConfig(JsonObject led) {
     led["mode"] = ledModeToString(configManager.getLedMode());
 }
 } // namespace
+
+void serviceChunkedReadOutput() { servicePendingChunkedRead(); }
 
 // 1. Deprecated compatibility shims kept for older host tooling.
 void handleGetAllCommand(const String &command) {

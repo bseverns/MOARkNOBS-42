@@ -452,6 +452,27 @@ function createDeviceSession({
     }
   }
 
+  function completePendingApply(pending, verifiedConfig = pending.stagedConfig) {
+    const appliedAt = new Date().toISOString();
+    state.liveConfig = clone(verifiedConfig);
+    state.stagedConfig = clone(verifiedConfig);
+    state.dirty = false;
+    setApplyResult({
+      status: 'ack', checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
+      storageGeneration: pending.storageGeneration ?? null, seq: pending.seq, at: appliedAt,
+    });
+    applyPending = null;
+    clearTimeout(pending.timer);
+    updateReadyState();
+    emitState(); emitConfigState();
+    emitStructured('device.apply.ack', {
+      checksum: pending.checksum, applied_checksum: pending.appliedChecksum ?? null,
+      storage_generation: pending.storageGeneration ?? null, seq: pending.seq, appliedAt,
+    });
+    pending.resolve({ applied: true, checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
+      storageGeneration: pending.storageGeneration ?? null, seq: pending.seq });
+  }
+
   async function handleMessage(msg, meta = {}) {
     if (!isObject(msg)) return;
     await ensureAuthority();
@@ -558,6 +579,22 @@ function createDeviceSession({
         clone(msg),
         state.manifest ?? {},
       );
+      if (applyPending?.awaitingReadback) {
+        const pending = applyPending;
+        if (JSON.stringify(normalized) !== JSON.stringify(pending.stagedConfig)) {
+          const error = createSessionError('apply_readback_mismatch',
+            'Committed device configuration differs from the staged configuration', null, 409);
+          finishRollback('readback_mismatch');
+          rejectPendingApply(error);
+          state.liveConfig = clone(normalized);
+          state.stagedConfig = clone(normalized);
+          state.dirty = false;
+          emitState(); emitConfigState();
+          return;
+        }
+        completePendingApply(pending, normalized);
+        return;
+      }
       replaceLiveAndStaged(normalized);
     }
 
@@ -613,6 +650,13 @@ function createDeviceSession({
           message: receiptError.message,
           details: receiptError.details,
         });
+        return;
+      }
+      if (requiresIntegrityReceipt) {
+        applyPending.awaitingReadback = true;
+        applyPending.appliedChecksum = msg.applied_checksum;
+        applyPending.storageGeneration = msg.storage_generation;
+        sendLine(state.manifest?.capabilities?.chunked_reads?.config ? 'GET_CONFIG_CHUNKED' : 'GET_CONFIG');
         return;
       }
       const appliedAt = new Date().toISOString();

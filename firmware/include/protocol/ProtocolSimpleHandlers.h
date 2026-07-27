@@ -27,6 +27,7 @@ void handleGetConfigChunkedCommand(const String &command);
 void handleGetDiagnosticsCommand(const String &command);
 void handleGetModMatrixCommand(const String &command);
 void handleGetModMatrixChunkedCommand(const String &command);
+void serviceChunkedReadOutput();
 
 // Live runtime inspection reads.
 void handleGetClockCommand(const String &command);

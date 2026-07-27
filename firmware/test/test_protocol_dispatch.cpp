@@ -13,6 +13,7 @@
 #include "LFO/LFOManager.h"
 #include "Modes.h"
 #include "Protocol.h"
+#include "protocol/ProtocolSimpleHandlers.h"
 
 namespace {
 
@@ -193,12 +194,14 @@ void test_dispatch_handles_documented_query_commands() {
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_CONFIG_CHUNKED"));
+    ProtocolSimpleHandlers::serviceChunkedReadOutput();
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"type\":\"read_chunk\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"GET_CONFIG\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"checksum\":"));
 
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MOD_MATRIX_CHUNKED"));
+    ProtocolSimpleHandlers::serviceChunkedReadOutput();
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"type\":\"read_chunk\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"GET_MOD_MATRIX\""));
 }

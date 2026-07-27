@@ -5,6 +5,7 @@
 #include "FirmwareState.h"
 #include "MIDIHandler.h"
 #include "Protocol.h"
+#include "protocol/ProtocolSimpleHandlers.h"
 #include "Runtime.h"
 #include "UI.h"
 #include "Utility.h"
@@ -119,6 +120,9 @@ void initializeSchedulers() {
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"scheduler_low_disabled\"}");
 #else
     // Low-priority visual updates, diagnostics, and WebSerial telemetry.
+    Utility::schedulerLow.addTask(
+        []() { ProtocolSimpleHandlers::serviceChunkedReadOutput(); }, 1, true);
+
     Utility::schedulerLow.addTask(
         []() {
             if (isStartupSequenceActive()) {
