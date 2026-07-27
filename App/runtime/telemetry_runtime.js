@@ -89,9 +89,26 @@ export function createTelemetryRuntime({
     }
   }
 
+  function reset({ freshness: nextFreshness = 'stale' } = {}) {
+    if (telemetryTimer) clearTimeoutFn(telemetryTimer);
+    if (freshnessTimer) clearTimeoutFn(freshnessTimer);
+    telemetryTimer = null;
+    freshnessTimer = null;
+    queuedTelemetry = null;
+    telemetryTraceId = null;
+    receivedAt = null;
+    if (freshness !== nextFreshness) {
+      freshness = nextFreshness;
+      emit('telemetry-health', { freshness, receivedAt: null, ageMs: null });
+    } else {
+      freshness = nextFreshness;
+    }
+  }
+
   return {
     flushTelemetry,
     queueTelemetryFrame,
+    reset,
     getHealth: () => ({ freshness, receivedAt, ageMs: receivedAt === null ? null : now() - receivedAt })
   };
 }

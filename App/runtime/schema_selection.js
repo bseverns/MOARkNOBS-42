@@ -14,7 +14,11 @@ export function isRuntimeCompatibleSchema(candidate) {
 }
 
 const MINI_AJV_KEYWORDS = new Set([
-  '$schema', '$id', 'title', 'description', 'default', 'examples', 'deprecated', 'readOnly', 'writeOnly',
+  // These are schema/document metadata, not validation constraints.  In
+  // particular schema_version is part of the firmware contract and must not
+  // make an otherwise compatible device schema look unsupported.
+  '$schema', '$id', '$comment', 'title', 'description', 'default', 'examples', 'deprecated', 'readOnly', 'writeOnly',
+  'schema_version',
   'type', 'enum', 'minimum', 'maximum', 'maxLength', 'pattern', 'required', 'additionalProperties',
   'properties', 'anyOf', 'minItems', 'maxItems', 'items', 'uniqueItems'
 ]);

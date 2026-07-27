@@ -4,13 +4,21 @@ export function createStateSnapshotStore({
   getSchemaVersion,
   getDeviceIdentity = () => ({}),
   now = () => Date.now(),
-  maxAgeMs = 7 * 24 * 60 * 60 * 1000
+  maxAgeMs = 7 * 24 * 60 * 60 * 1000,
+  persistDelayMs = 350,
+  setTimeoutFn = setTimeout,
+  clearTimeoutFn = clearTimeout
 } = {}) {
+  let persistTimer = null;
+  let pendingStagedConfig = null;
   function currentSchemaVersion() {
     return getSchemaVersion?.() ?? null;
   }
 
   function clear() {
+    if (persistTimer) clearTimeoutFn(persistTimer);
+    persistTimer = null;
+    pendingStagedConfig = null;
     if (!storage) return;
     try {
       storage.removeItem(storageKey);
@@ -82,6 +90,30 @@ export function createStateSnapshotStore({
     }
   }
 
+  function schedulePersist(stagedConfig) {
+    if (stagedConfig === null || stagedConfig === undefined) {
+      clear();
+      return;
+    }
+    pendingStagedConfig = stagedConfig;
+    if (persistTimer) clearTimeoutFn(persistTimer);
+    persistTimer = setTimeoutFn(() => {
+      persistTimer = null;
+      const next = pendingStagedConfig;
+      pendingStagedConfig = null;
+      persist(next);
+    }, Math.max(0, Number(persistDelayMs) || 0));
+  }
+
+  function flushPersist() {
+    if (!persistTimer) return;
+    clearTimeoutFn(persistTimer);
+    persistTimer = null;
+    const next = pendingStagedConfig;
+    pendingStagedConfig = null;
+    persist(next);
+  }
+
   function read() {
     if (!storage) return null;
     try {
@@ -103,7 +135,9 @@ export function createStateSnapshotStore({
 
   return {
     clear,
+    flushPersist,
     persist,
+    schedulePersist,
     read,
     identityDecision,
     readStagedConfig

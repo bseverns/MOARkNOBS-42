@@ -53,6 +53,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
           }
         };
         const schema = {
+          schema_version: 6,
           type: 'object',
           required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
           properties: {

@@ -220,6 +220,7 @@ export function createPatchReconciler({
   isDirty,
   setLiveConfig,
   setStagedConfig,
+  reconcileDevicePatch,
   clone,
   normalizeConfig,
   shallowEqual,
@@ -425,8 +426,12 @@ export function createPatchReconciler({
     const manifest = getManifest?.() ?? {};
     const normalizedLive = normalizeConfig(nextLive, manifest);
     const normalizedStaged = normalizeConfig(nextStaged, manifest);
-    setLiveConfig(clone(normalizedLive));
-    setStagedConfig(clone(normalizedStaged));
+    if (typeof reconcileDevicePatch === 'function') {
+      reconcileDevicePatch(clone(normalizedLive), clone(normalizedStaged));
+    } else {
+      setLiveConfig(clone(normalizedLive));
+      setStagedConfig(clone(normalizedStaged));
+    }
     broadcastConfig?.();
   };
 }

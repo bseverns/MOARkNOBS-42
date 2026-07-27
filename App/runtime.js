@@ -125,6 +125,17 @@ export function createRuntime({
     );
   }
 
+  function schemaMigrationRequired() {
+    if (useSimulator) return false;
+    const deviceVersion = remoteManifest?.schema_version;
+    const appVersion = localManifest?.schema_version;
+    return (
+      deviceVersion !== null && deviceVersion !== undefined &&
+      appVersion !== null && appVersion !== undefined &&
+      String(deviceVersion) !== String(appVersion)
+    );
+  }
+
   const localSlotMetaManager = createLocalSlotMetaManager({
     storageKey: LOCAL_SLOT_META_STORAGE_KEY,
     initialSlotCount: localManifest?.slot_count ?? 0,
@@ -144,6 +155,11 @@ export function createRuntime({
     }),
     now: () => Date.now()
   });
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') stateSnapshotStore.flushPersist();
+    });
+  }
 
   function createSimulatorTransport() {
     return createSimulator({
@@ -375,6 +391,7 @@ export function createRuntime({
 
   async function connect(existingPort) {
     try {
+      telemetryRuntime.reset();
       emit('status', { stage: 'handshake', level: 'info', message: 'Negotiating manifest…' });
       let candidate = existingPort ?? null;
       if (!candidate) {
@@ -400,7 +417,11 @@ export function createRuntime({
           });
           await bridgeSessionRuntime.openStructuredEvents();
           bridgeSessionActive = true;
-          contractQuality = schemaSource === 'device' ? 'verified' : 'fallback-schema';
+          contractQuality = schemaMigrationRequired()
+            ? 'migration-required'
+            : schemaSource === 'device'
+              ? 'verified'
+              : 'fallback-schema';
           emit('contract-quality', {
             quality: contractQuality,
             applyAllowed: contractQuality === 'verified'
@@ -446,6 +467,7 @@ export function createRuntime({
         config: configSession.mergeLocalSlotMeta(configSession.getLiveConfig())
       });
     } catch (err) {
+      telemetryRuntime.reset();
       emit('error', err);
       await transport?.close().catch(() => {});
       transport = null;
@@ -464,9 +486,11 @@ export function createRuntime({
     schemaSource = schemaSelection.source;
     contractQuality = useSimulator
       ? 'simulator'
-      : handshakeQuality !== 'verified'
-        ? handshakeQuality
-        : schemaSelection.quality;
+      : schemaMigrationRequired()
+        ? 'migration-required'
+        : handshakeQuality !== 'verified'
+          ? handshakeQuality
+          : schemaSelection.quality;
     if (remoteManifest) remoteManifest.contract_quality = contractQuality;
     emit('contract-quality', { quality: contractQuality, applyAllowed: ['verified', 'simulator'].includes(contractQuality) });
     validator = ajv.compile(schema);
@@ -526,6 +550,7 @@ export function createRuntime({
     isDirty: configSession.isDirty,
     setLiveConfig: configSession.setLiveConfig,
     setStagedConfig: configSession.setStagedConfig,
+    reconcileDevicePatch: configSession.reconcileDevicePatch,
     clone,
     normalizeConfig,
     shallowEqual,
@@ -538,6 +563,7 @@ export function createRuntime({
   async function disconnect() {
     bridgeSessionRuntime.reset();
     bridgeSessionActive = false;
+    telemetryRuntime.reset();
     if (!transport) {
       emit('disconnected');
       return;
@@ -580,6 +606,10 @@ export function createRuntime({
     return configSession.rollback();
   }
 
+  async function resynchronize() {
+    return configSession.resynchronize();
+  }
+
   function getState() {
     return {
       ...configSession.getState(),
@@ -598,6 +628,7 @@ export function createRuntime({
     stage,
     apply,
     rollback,
+    resynchronize,
     diff: configSession.diff,
     getState,
     on,

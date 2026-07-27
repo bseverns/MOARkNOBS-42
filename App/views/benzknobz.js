@@ -804,6 +804,16 @@ const boot = () => {
     );
     panicHelpController.render();
   });
+  runtime.on('apply-uncertain', ({ reason }) => {
+    setStatus('warn', 'Apply outcome uncertain', 'Waiting for authoritative device configuration readback.');
+    sessionLogController.recordEvent('APPLY', 'Outcome uncertain', String(reason ?? 'unknown'), 'warn');
+    panicHelpController.render();
+  });
+  runtime.on('resynchronized', () => {
+    setStatus('ok', 'Resynchronized', 'Browser state now matches the controller readback.');
+    sessionLogController.recordEvent('APPLY', 'Resynchronized from device', '', 'ok');
+    panicHelpController.render();
+  });
   runtime.on('migration-required', ({ from, to, canAdapt }) => {
     sessionLogController.recordEvent(
       'MIGRATION',
@@ -815,9 +825,10 @@ const boot = () => {
     if (!migrationDialog || !migrationPreview) return;
     migrationPreview.textContent = `Firmware schema ${from} vs UI ${to}. ${
       canAdapt
-        ? 'An adapter is available; stage edits then apply.'
+        ? 'An adapter is registered, but automatic migration is not yet implemented. Export the preset and use a matching App/firmware pair.'
         : 'Export your preset and update firmware/UI to continue.'
     }`;
+    if (migrationApply) migrationApply.disabled = true;
     migrationDialog.showModal();
   });
   runtime.on('snapshot-restore-required', ({ snapshot }) => {

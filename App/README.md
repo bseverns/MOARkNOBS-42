@@ -95,10 +95,10 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.
 - The runtime buffers inbound telemetry into approximately 50 ms state frames so frequent state messages do not turn the DOM into soup; visual panels may animate those snapshots independently.
 - Outbound pot changes are debounced to ≥24 ms through a shared utility so every control shares the same cadence.
-- `runtime.applyPatch(path, value)` stages a field locally first, then routes a `{rpc:"set_param"}` call through the same RPC lane. The simulator applies it immediately; native firmware defers those fine-grained writes until the next full Apply because the production contract is config-oriented. If the RPC path fails, the runtime rolls the staged state back.
-- Full Apply sends `set_config` with schema version, manifest metadata, staged config, and a SHA-256 checksum. A mismatched ACK triggers rollback instead of silently pretending success.
+- `runtime.applyPatch(path, value)` stages a field locally first, then routes a `{rpc:"set_param"}` call through the same RPC lane. The simulator applies it immediately; native firmware defers those fine-grained writes until the next full Apply because the production contract is config-oriented. If live preview fails, the intentional edit remains staged and the failure is reported.
+- Full Apply sends `set_config` with schema version, manifest metadata, staged config, and a SHA-256 checksum. Once any Apply bytes have been transmitted, a missing or malformed receipt enters an uncertain/resynchronizing state and reads device configuration back; it never claims a local rollback restored hardware.
 - Browser-only slot metadata (`label`, pickup guard, and the MIDI badge) is stored separately in `localStorage`, merged back into the UI on read, and never included in `Apply` or schema diffing.
-- Schema mismatches fire a migration-required event before any live writes. Migration adapters live in the App layer as a `migrations` map passed to `createRuntime(...)`, keyed like `"5->6"`.
+- Schema mismatches put the device contract into `migration-required` and block Apply. The App currently supports export and inspection only; do not register or advertise migration adapters until their transform, validation, diff, and operator-confirmation flow is implemented.
 - Last-used USB IDs and the last staged snapshot are remembered in `localStorage`; on load the app nudges you to reconnect but never reopens without a user gesture (WebSerial rules).
 
 ## Simulator & CI Hooks

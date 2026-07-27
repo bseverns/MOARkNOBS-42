@@ -217,6 +217,13 @@ export function createConfigSession({
   let stagedConfig = null;
   let dirty = false;
   let lastKnownChecksum = null;
+  let transactionState = 'clean';
+  let attemptedApply = null;
+
+  function setTransactionState(next, details = {}) {
+    transactionState = next;
+    emit('config-transaction', { state: next, ...details });
+  }
 
   function extractLocalSlotMetaFromConfig(config) {
     localSlotMetaManager.extractFromConfig(config);
@@ -232,7 +239,14 @@ export function createConfigSession({
       staged: mergeLocalSlotMeta(stagedConfig),
       dirty
     };
-    if (persist) stateSnapshotStore.persist(stagedConfig);
+    if (persist) {
+      if (dirty) {
+        const persistDraft = stateSnapshotStore.schedulePersist ?? stateSnapshotStore.persist;
+        persistDraft.call(stateSnapshotStore, stagedConfig);
+      } else {
+        stateSnapshotStore.clear?.();
+      }
+    }
     console.debug('[runtime] broadcastConfig dirty=', dirty);
     emit('config', payload);
   }
@@ -242,6 +256,7 @@ export function createConfigSession({
     liveConfig = clone(normalized);
     stagedConfig = clone(normalized);
     dirty = false;
+    setTransactionState('verified');
   }
 
   function syncFromSession(sessionPayload = {}) {
@@ -257,6 +272,7 @@ export function createConfigSession({
     } else {
       dirty = Boolean(sessionPayload.dirty);
     }
+    setTransactionState(dirty ? 'dirty' : 'verified');
   }
 
   function stage(updater) {
@@ -269,11 +285,59 @@ export function createConfigSession({
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
     dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
+    setTransactionState(dirty ? 'dirty' : 'clean');
     broadcastConfig();
+  }
+
+  async function resynchronizeAfterUncertain(reason) {
+    setTransactionState('resynchronizing', { reason, attemptedApply });
+    broadcastConfig({ persist: false });
+    try {
+      const remoteManifest = getRemoteManifest();
+      const response = await sendRpc(
+        {
+          rpc: remoteManifest?.capabilities?.chunked_reads?.config
+            ? 'get_config_chunked'
+            : 'get_config'
+        },
+        { timeoutMs: applyRpcTimeoutMs }
+      );
+      const deviceConfig = normalizeConfig(response?.config ?? response, getManifest());
+      liveConfig = clone(deviceConfig);
+      stagedConfig = clone(deviceConfig);
+      dirty = false;
+      setTransactionState('verified', { reason: 'resynchronized', attemptedApply });
+      broadcastConfig();
+      emit('resynchronized', { attemptedApply });
+      return deviceConfig;
+    } catch (resyncError) {
+      setTransactionState('uncertain', { reason, attemptedApply, resyncError });
+      broadcastConfig({ persist: false });
+      emit('apply-uncertain', { reason, attemptedApply, error: resyncError });
+      return null;
+    }
+  }
+
+  async function markApplyUncertain(reason, payload, checksum) {
+    attemptedApply = {
+      seq: payload.seq,
+      checksum,
+      reason,
+      timestamp: Date.now()
+    };
+    setTransactionState('uncertain', { reason, attemptedApply });
+    // Keep the candidate visible until an authoritative device read succeeds.
+    // A transmitted Apply must never be represented as a local rollback.
+    broadcastConfig({ persist: false });
+    emit('apply-uncertain', { reason, attemptedApply });
+    return resynchronizeAfterUncertain(reason);
   }
 
   async function apply() {
     if (!dirty) return { applied: false };
+    if (['uncertain', 'resynchronizing'].includes(transactionState)) {
+      throw new Error('Apply is blocked until the previous transmitted configuration is resynchronized.');
+    }
     const validator = getValidator();
     if (!validator(stagedConfig)) {
       const error = new Error('Schema validation failed');
@@ -335,16 +399,13 @@ export function createConfigSession({
     const checksum = await digest(body);
     payload.checksum = checksum;
     let response;
+    setTransactionState('applying', { seq: payload.seq, checksum });
     try {
       response = await sendRpc(payload, { timeoutMs: applyRpcTimeoutMs });
     } catch (err) {
-      try {
-        await rollback();
-      } catch (rollbackErr) {
-        console.debug('rollback failed', rollbackErr);
-      }
+      await markApplyUncertain('transport-failure', payload, checksum);
       if (/RPC timeout/i.test(err?.message ?? '')) {
-        throw new Error('Timed out waiting for firmware ACK');
+        throw new Error('Timed out waiting for firmware ACK; device state is being resynchronized.');
       }
       throw err;
     }
@@ -352,7 +413,7 @@ export function createConfigSession({
     const appliedChecksum = response?.applied_checksum ?? response?.result?.applied_checksum ?? null;
     const storageGeneration = response?.storage_generation ?? response?.result?.storage_generation ?? null;
     if (ackChecksum !== checksum) {
-      await rollback();
+      await markApplyUncertain('malformed-ack', payload, checksum);
       throw new Error('Device failed to acknowledge apply');
     }
     // Hardware bulk Apply is durable only when firmware confirms its own
@@ -360,7 +421,7 @@ export function createConfigSession({
     // older manifests retain their compatibility path.
     const requiresHardwareIntegrity = remoteManifest?.persistence?.backend === 'littlefs';
     if (requiresHardwareIntegrity && (!appliedChecksum || storageGeneration === null)) {
-      await rollback();
+      await markApplyUncertain('missing-integrity-receipt', payload, checksum);
       throw new Error('Device ACK omitted applied-state integrity receipt');
     }
     if (requiresHardwareIntegrity) {
@@ -376,6 +437,7 @@ export function createConfigSession({
         );
         readback = normalizeConfig(readbackResponse?.config ?? readbackResponse, getManifest());
       } catch (err) {
+        await markApplyUncertain('readback-failure', payload, checksum);
         throw new Error(`Device applied configuration but readback verification failed: ${err?.message ?? err}`);
       }
       const expected = normalizeConfig(stagedConfig, getManifest());
@@ -385,6 +447,7 @@ export function createConfigSession({
         liveConfig = clone(readback);
         stagedConfig = clone(readback);
         dirty = false;
+        setTransactionState('verified', { reason: 'readback-mismatch', attemptedApply: { seq: payload.seq, checksum } });
         broadcastConfig();
         throw new Error('Device readback differs from the applied configuration');
       }
@@ -392,17 +455,23 @@ export function createConfigSession({
     liveConfig = clone(stagedConfig);
     dirty = false;
     lastKnownChecksum = checksum;
+    attemptedApply = null;
+    setTransactionState('verified', { seq: payload.seq, checksum });
     broadcastConfig();
     emit('applied', { checksum, appliedChecksum, storageGeneration });
     return { applied: true, checksum, appliedChecksum, storageGeneration };
   }
 
   async function rollback() {
+    if (['uncertain', 'resynchronizing'].includes(transactionState)) {
+      throw new Error('Cannot discard a transmitted configuration while device state is uncertain. Resynchronize first.');
+    }
     if (isBridgeSessionActive() && typeof rollbackBridgeConfig === 'function') {
       await rollbackBridgeConfig('operator_request');
     }
     stagedConfig = clone(liveConfig);
     dirty = false;
+    setTransactionState('clean');
     broadcastConfig();
     emit('rollback', {});
   }
@@ -429,6 +498,7 @@ export function createConfigSession({
     liveConfig = clone(normalized);
     stagedConfig = clone(normalized);
     dirty = false;
+    setTransactionState('verified');
     broadcastConfig();
     return true;
   }
@@ -445,7 +515,9 @@ export function createConfigSession({
       live: mergeLocalSlotMeta(liveConfig),
       staged: mergeLocalSlotMeta(stagedConfig),
       dirty,
-      lastChecksum: lastKnownChecksum
+      lastChecksum: lastKnownChecksum,
+      transactionState,
+      attemptedApply: attemptedApply ? clone(attemptedApply) : null
     };
   }
 
@@ -453,6 +525,13 @@ export function createConfigSession({
     if (!localSlotMetaManager.updateEntry(index, patch)) return false;
     broadcastConfig();
     return true;
+  }
+
+  function reconcileDevicePatch(nextLive, nextStaged) {
+    liveConfig = clone(nextLive);
+    stagedConfig = clone(nextStaged);
+    dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    setTransactionState(dirty ? 'dirty' : 'verified');
   }
 
   return {
@@ -465,15 +544,19 @@ export function createConfigSession({
     isDirty: () => dirty,
     mergeLocalSlotMeta,
     replaceConfig,
+    reconcileDevicePatch,
     restoreLocalState,
     rollback,
     setLiveConfig: (next) => {
       liveConfig = next;
+      dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     },
     setLocalSlotMeta,
     setStagedConfig: (next) => {
       stagedConfig = next;
+      dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     },
+    resynchronize: () => resynchronizeAfterUncertain('operator-request'),
     stage,
     syncFromSession,
     syncFromDevice

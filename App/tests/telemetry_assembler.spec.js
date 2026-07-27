@@ -147,4 +147,9 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
     expect(frames[1].envelopes).toBeUndefined();
     expect(frames[1].lfos).toEqual([7]);
   }
+
+  await page.evaluate(() => window.__MN42_RUNTIME.disconnect());
+  await expect
+    .poll(() => page.evaluate(() => window.__MN42_RUNTIME.getState().telemetryHealth.freshness))
+    .toBe('stale');
 });

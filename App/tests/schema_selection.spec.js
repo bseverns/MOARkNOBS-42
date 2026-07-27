@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   findUnsupportedSchemaKeywords,
   selectSchemaForHydration
@@ -48,4 +50,19 @@ test('failed device-schema retrieval is visibly classified as fallback schema', 
   expect(status).toContainEqual(
     expect.objectContaining({ type: 'status', payload: expect.objectContaining({ level: 'warn' }) })
   );
+});
+
+test('the bundled firmware schema metadata is accepted by the device-schema gate', async () => {
+  const bundled = JSON.parse(
+    fs.readFileSync(path.resolve(process.cwd(), 'config_schema.json'), 'utf8')
+  );
+  expect(bundled.schema_version).toBeDefined();
+  expect(findUnsupportedSchemaKeywords(bundled)).toEqual([]);
+
+  const selection = await selectSchemaForHydration({
+    sendRpc: async () => ({ schema: bundled }),
+    schemaUrl: 'unused',
+    fetchJson: async () => bundled
+  });
+  expect(selection).toMatchObject({ source: 'device', quality: 'verified' });
 });

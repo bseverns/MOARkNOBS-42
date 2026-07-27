@@ -125,6 +125,29 @@ test('state snapshot store clears snapshots when persisting null staged config',
   expect(storage.snapshot()).toEqual({});
 });
 
+test('state snapshot persistence coalesces rapid staged edits until explicitly flushed', () => {
+  const storage = createMemoryStorage();
+  let scheduled = null;
+  const store = createStateSnapshotStore({
+    storage,
+    storageKey: 'state',
+    getSchemaVersion: () => 6,
+    setTimeoutFn: (callback) => {
+      scheduled = callback;
+      return 1;
+    },
+    clearTimeoutFn: () => {
+      scheduled = null;
+    }
+  });
+
+  store.schedulePersist({ slots: [{ value: 1 }] });
+  store.schedulePersist({ slots: [{ value: 2 }] });
+  expect(storage.snapshot().state).toBeUndefined();
+  store.flushPersist();
+  expect(JSON.parse(storage.snapshot().state).staged).toEqual({ slots: [{ value: 2 }] });
+});
+
 test('config session restores only validated staged snapshots', () => {
   const emitted = [];
   const liveConfig = { slots: [{ value: 12 }], pots: [], led: {} };
