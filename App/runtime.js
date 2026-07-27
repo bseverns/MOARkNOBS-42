@@ -83,6 +83,7 @@ export function createRuntime({
   let remoteManifest = null;
   let schema = null;
   let schemaSource = 'bundled';
+  let contractQuality = useSimulator ? 'simulator' : 'incompatible';
   let validator = null;
   let seq = 0;
   const statusListeners = new Set();
@@ -136,6 +137,11 @@ export function createRuntime({
     storage: typeof localStorage === 'undefined' ? null : localStorage,
     storageKey: STATE_STORAGE_KEY,
     getSchemaVersion: () => remoteManifest?.schema_version ?? localManifest?.schema_version,
+    getDeviceIdentity: () => ({
+      device_name: remoteManifest?.device_name ?? null,
+      firmware_git_sha: remoteManifest?.git_sha ?? null,
+      slot_count: remoteManifest?.slot_count ?? null
+    }),
     now: () => Date.now()
   });
 
@@ -243,13 +249,14 @@ export function createRuntime({
     }
   });
 
-  function sendRpc(payload, { timeoutMs, rollbackOnError = true } = {}) {
-    const request = rpcKernel.sendRpc(payload, { timeoutMs });
-    if (!rollbackOnError) {
-      return request;
+  function sendRpc(payload, { timeoutMs, rollbackPolicy = 'none' } = {}) {
+    if (!['none', 'staged-config'].includes(rollbackPolicy)) {
+      throw new Error(`Unsupported RPC rollback policy: ${rollbackPolicy}`);
     }
-    // Any failed RPC rolls staged edits back to the last known-good live config so the UI does
-    // not stay in a half-applied state.
+    const request = rpcKernel.sendRpc(payload, { timeoutMs });
+    if (rollbackPolicy === 'none') return request;
+    // Staged-config rollback is deliberately opt-in. Profile, live-control, and read RPCs
+    // must not discard unrelated configuration edits when they fail.
     return request.catch(async (err) => {
       try {
         await configSession?.rollback();
@@ -384,6 +391,11 @@ export function createRuntime({
           });
           await bridgeSessionRuntime.openStructuredEvents();
           bridgeSessionActive = true;
+          contractQuality = schemaSource === 'device' ? 'verified' : 'fallback-schema';
+          emit('contract-quality', {
+            quality: contractQuality,
+            applyAllowed: contractQuality === 'verified'
+          });
           emit('status', {
             stage: 'bridge-session',
             level: 'ok',
@@ -408,7 +420,7 @@ export function createRuntime({
           });
         }
       }
-      remoteManifest = await performConnectionHandshake({
+      const handshake = await performConnectionHandshake({
         sendRpc,
         emit,
         localManifest,
@@ -416,8 +428,9 @@ export function createRuntime({
         migrations,
         argMethodCount: ARG_METHOD_NAMES.length
       });
+      remoteManifest = handshake.manifest;
       emit('manifest', remoteManifest);
-      await hydrate();
+      await hydrate({ handshakeQuality: handshake.quality });
       emit('connected', {
         manifest: remoteManifest,
         schema,
@@ -432,7 +445,7 @@ export function createRuntime({
     }
   }
 
-  async function hydrate() {
+  async function hydrate({ handshakeQuality = 'verified' } = {}) {
     const schemaSelection = await selectSchemaForHydration({
       sendRpc,
       schemaUrl,
@@ -440,6 +453,13 @@ export function createRuntime({
     });
     schema = schemaSelection.schema;
     schemaSource = schemaSelection.source;
+    contractQuality = useSimulator
+      ? 'simulator'
+      : handshakeQuality !== 'verified'
+        ? handshakeQuality
+        : schemaSelection.quality;
+    if (remoteManifest) remoteManifest.contract_quality = contractQuality;
+    emit('contract-quality', { quality: contractQuality, applyAllowed: ['verified', 'simulator'].includes(contractQuality) });
     validator = ajv.compile(schema);
     const configPayload = await sendRpc({ rpc: 'get_config' });
     const config = configPayload?.config ?? configPayload;
@@ -529,6 +549,9 @@ export function createRuntime({
   }
 
   async function apply() {
+    if (!['verified', 'simulator'].includes(contractQuality)) {
+      throw new Error(`Apply is blocked until the device contract is verified (current: ${contractQuality}).`);
+    }
     if (bridgeSessionActive) {
       await bridgeSessionRuntime.flushStageSync({ active: bridgeSessionActive });
     }
@@ -544,6 +567,7 @@ export function createRuntime({
     return {
       ...configSession.getState(),
       transportMode: getTransportMode({ useSimulator, bridgeSessionActive, websocketUrl }),
+      contractQuality,
       bridgeSessionActive,
       bridgeApiBaseUrl: resolvedBridgeApiBaseUrl
     };
@@ -566,6 +590,7 @@ export function createRuntime({
     requestConfiguratorBoot,
     applyPatch,
     restoreLocalState: configSession.restoreLocalState,
+    discardSavedWorkspace: stateSnapshotStore.clear,
     replaceConfig: configSession.replaceConfig,
     setPotGuard,
     setLocalSlotMeta: configSession.setLocalSlotMeta,

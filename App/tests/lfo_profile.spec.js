@@ -44,6 +44,51 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   expect(profile.lfos[0].depth).toBe(0.42);
 });
 
+test('failed LFO profile save preserves unrelated staged configuration', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page.locator('#connection-pill')).toContainText('Connected');
+
+  const stagedDiff = await page.evaluate(() => {
+    const runtime = window.__MN42_RUNTIME;
+    runtime.stage((draft) => {
+      draft.filter = { ...(draft.filter ?? {}), freq: 321 };
+      return draft;
+    });
+    const diff = runtime.diff();
+    const originalSendRpc = runtime.sendRpc.bind(runtime);
+    runtime.sendRpc = async (message, options) => {
+      if (message?.rpc === 'set_profile') {
+        throw new Error('profile storage offline');
+      }
+      return originalSendRpc(message, options);
+    };
+    return diff;
+  });
+  expect(stagedDiff.length).toBeGreaterThan(0);
+
+  await page.locator('[data-utility-tab="lfo"]').click();
+  const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
+  await firstDepth.fill('0.42');
+  await firstDepth.dispatchEvent('change');
+  await page.locator('#lfo-save').click();
+
+  await expect(page.locator('#lfo-status')).toContainText('LFO save failed: profile storage offline');
+  const state = await page.evaluate(() => ({
+    dirty: window.__MN42_RUNTIME.getState().dirty,
+    diff: window.__MN42_RUNTIME.diff()
+  }));
+  expect(state.dirty).toBe(true);
+  expect(state.diff).toEqual(stagedDiff);
+});
+
 test('inactive slot LFO save keeps the edited slot visible', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();

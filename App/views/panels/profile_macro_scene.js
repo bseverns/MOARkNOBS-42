@@ -1580,7 +1580,7 @@ export function createProfileMacroScenePanel({
     try {
       const response = await runtime.sendRpc(
         { rpc: 'get_profile', slot: activeProfileSlot, scope: 'modulation' },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       syncDeviceActiveProfile(response);
       applyProfileUtilityDrafts(response);
@@ -1614,7 +1614,7 @@ export function createProfileMacroScenePanel({
     try {
       await runtime.sendRpc(
         { rpc: 'set_profile', slot: activeProfileSlot, profile: { arp: arpDraft } },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       setArpStatus(
         'ok',
@@ -1644,7 +1644,7 @@ export function createProfileMacroScenePanel({
     try {
       const response = await runtime.sendRpc(
         { rpc: 'get_arp' },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       setLiveArpDraft({
         ...response,
@@ -1680,7 +1680,7 @@ export function createProfileMacroScenePanel({
           octaveRange: liveArpDraft.octave_range,
           patternLength: liveArpDraft.pattern_length
         },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       setLiveArpDraft({ ...response, slot: liveArpDraft.slot });
       setLiveArpStatus('ok', summarizeLiveArp());
@@ -1703,7 +1703,7 @@ export function createProfileMacroScenePanel({
     try {
       await runtime.sendRpc(
         { rpc: 'arp_start', slot: liveArpDraft.slot },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       setLiveArpDraft({ ...liveArpDraft, active: true });
       setLiveArpStatus('ok', summarizeLiveArp());
@@ -1724,7 +1724,7 @@ export function createProfileMacroScenePanel({
     try {
       await runtime.sendRpc(
         { rpc: 'arp_stop' },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       setLiveArpDraft({
         ...liveArpDraft,
@@ -1777,7 +1777,7 @@ export function createProfileMacroScenePanel({
             }))
           }
         },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       const responseActiveSlot = readActiveProfileIndex(response);
       syncDeviceActiveProfile(response);
@@ -1831,7 +1831,7 @@ export function createProfileMacroScenePanel({
     try {
       modMatrixReport = await runtime.sendRpc(
         { rpc: 'get_mod_matrix' },
-        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackOnError: false }
+        { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       renderModMatrix(modMatrixReport);
       const { routes, conflicts, filteredRoutes, filteredConflicts } =

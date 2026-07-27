@@ -2,8 +2,9 @@ export function createStateSnapshotStore({
   storage,
   storageKey,
   getSchemaVersion,
+  getDeviceIdentity = () => ({}),
   now = () => Date.now(),
-  maxAgeMs = null
+  maxAgeMs = 7 * 24 * 60 * 60 * 1000
 } = {}) {
   function currentSchemaVersion() {
     return getSchemaVersion?.() ?? null;
@@ -47,6 +48,13 @@ export function createStateSnapshotStore({
     );
   }
 
+  function identityDecision(snapshot) {
+    const current = getDeviceIdentity?.() ?? {};
+    const saved = snapshot?.device ?? {};
+    if (!saved.firmware_git_sha || !current.firmware_git_sha) return 'compatible';
+    return saved.firmware_git_sha === current.firmware_git_sha ? 'same-device' : 'different-firmware';
+  }
+
   function persist(stagedConfig) {
     if (!storage) return;
     try {
@@ -54,12 +62,19 @@ export function createStateSnapshotStore({
         clear();
         return;
       }
+      const identity = getDeviceIdentity?.() ?? {};
       storage.setItem(
         storageKey,
         JSON.stringify({
           schema_version: currentSchemaVersion(),
+          device: {
+            device_name: identity.device_name ?? null,
+            firmware_git_sha: identity.firmware_git_sha ?? null,
+            slot_count: identity.slot_count ?? null
+          },
           staged: stagedConfig,
-          timestamp: now()
+          timestamp: now(),
+          saved_at: new Date(now()).toISOString()
         })
       );
     } catch (err) {
@@ -82,6 +97,7 @@ export function createStateSnapshotStore({
   function readStagedConfig() {
     const snapshot = read();
     if (!isRestorableSnapshot(snapshot)) return null;
+    if (identityDecision(snapshot) === 'different-firmware') return null;
     return snapshot.staged;
   }
 
@@ -89,6 +105,7 @@ export function createStateSnapshotStore({
     clear,
     persist,
     read,
+    identityDecision,
     readStagedConfig
   };
 }

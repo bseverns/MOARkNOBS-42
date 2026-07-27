@@ -34,7 +34,7 @@ test('handshake fallback preserves the local firmware capability shape', async (
   console.debug = () => {};
 
   try {
-    const manifest = await performConnectionHandshake({
+    const handshake = await performConnectionHandshake({
       sendRpc: async ({ rpc }) => {
         if (rpc === 'hello') return { hello: 'mn42' };
         throw new Error('manifest unavailable');
@@ -45,7 +45,9 @@ test('handshake fallback preserves the local firmware capability shape', async (
       argMethodCount: 14
     });
 
-    expect(manifest.capabilities).toEqual(localManifest.capabilities);
+    expect(handshake.quality).toBe('fallback-manifest');
+    expect(handshake.manifest.build_time).toBeNull();
+    expect(handshake.manifest.capabilities).toEqual(localManifest.capabilities);
     expect(emitted.find((entry) => entry.type === 'manifest')?.payload.capabilities).toEqual(
       localManifest.capabilities
     );

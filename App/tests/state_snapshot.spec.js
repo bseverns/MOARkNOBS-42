@@ -25,10 +25,32 @@ test('state snapshot store persists and restores staged config for matching sche
 
   expect(JSON.parse(storage.snapshot().state)).toEqual({
     schema_version: 6,
+    device: { device_name: null, firmware_git_sha: null, slot_count: null },
     staged: { slots: [{ value: 64 }] },
-    timestamp: 1000
+    timestamp: 1000,
+    saved_at: '1970-01-01T00:00:01.000Z'
   });
   expect(store.readStagedConfig()).toEqual({ slots: [{ value: 64 }] });
+});
+
+test('state snapshot does not auto-restore across firmware identities', () => {
+  const storage = createMemoryStorage({
+    state: JSON.stringify({
+      schema_version: 6,
+      device: { device_name: 'MOARkNOBS-42', firmware_git_sha: 'old-sha', slot_count: 42 },
+      staged: { slots: [{ value: 64 }] },
+      timestamp: 1000
+    })
+  });
+  const store = createStateSnapshotStore({
+    storage,
+    storageKey: 'state',
+    getSchemaVersion: () => 6,
+    getDeviceIdentity: () => ({ firmware_git_sha: 'new-sha' })
+  });
+
+  expect(store.identityDecision(store.read())).toBe('different-firmware');
+  expect(store.readStagedConfig()).toBeNull();
 });
 
 test('state snapshot store ignores corrupt snapshots', () => {

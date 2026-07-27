@@ -56,7 +56,10 @@ export function createDiffStatusController({
   function markDirty(isDirty) {
     console.debug('[UI] markDirty', isDirty);
     if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
-    if (applyBtn) applyBtn.disabled = !isDirty;
+    const applyAllowed = ['verified', 'simulator'].includes(
+      runtime?.getState?.()?.contractQuality
+    );
+    if (applyBtn) applyBtn.disabled = !isDirty || !applyAllowed;
     if (rollbackBtn) rollbackBtn.disabled = !isDirty;
     onDirtyChanged(Boolean(isDirty));
   }

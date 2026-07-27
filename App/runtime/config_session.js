@@ -338,6 +338,11 @@ export function createConfigSession({
     try {
       response = await sendRpc(payload, { timeoutMs: applyRpcTimeoutMs });
     } catch (err) {
+      try {
+        await rollback();
+      } catch (rollbackErr) {
+        console.debug('rollback failed', rollbackErr);
+      }
       if (/RPC timeout/i.test(err?.message ?? '')) {
         throw new Error('Timed out waiting for firmware ACK');
       }
@@ -367,6 +372,12 @@ export function createConfigSession({
   }
 
   function restoreLocalState() {
+    const snapshot = stateSnapshotStore.read?.();
+    const identity = stateSnapshotStore.identityDecision?.(snapshot);
+    if (identity === 'different-firmware') {
+      emit('snapshot-restore-required', { snapshot, identity });
+      return false;
+    }
     const staged =
       typeof stateSnapshotStore.readStagedConfig === 'function'
         ? stateSnapshotStore.readStagedConfig()

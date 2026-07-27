@@ -24,6 +24,7 @@ export function createTransportToolbarController({
     connectionPill = null,
     connectionBanner = null,
     transportLaneChip = null,
+    contractQualityChip = null,
     connectFailHelp = null,
     usbMidiToggleBtn = null,
     usbMidiTestBtn = null,
@@ -123,6 +124,21 @@ export function createTransportToolbarController({
     };
     transportLaneChip.dataset.transport = transportMode;
     transportLaneChip.textContent = labels[transportMode] ?? 'Transport · Direct USB';
+    updateContractQualityChip();
+  }
+
+  function updateContractQualityChip() {
+    if (!contractQualityChip) return;
+    const quality = runtime?.getState?.()?.contractQuality ?? 'incompatible';
+    const labels = {
+      verified: 'Contract · Verified',
+      'fallback-manifest': 'Contract · Fallback manifest',
+      'fallback-schema': 'Contract · Fallback schema',
+      incompatible: 'Contract · Incompatible',
+      simulator: 'Contract · Simulator'
+    };
+    contractQualityChip.dataset.quality = quality;
+    contractQualityChip.textContent = labels[quality] ?? 'Contract · Incompatible';
   }
 
   function setConnectionPill(stage, text) {
@@ -291,7 +307,7 @@ export function createTransportToolbarController({
     updateUsbMidiControls();
     setUsbMidiStatus('busy', 'Reading USB MIDI output state…');
     try {
-      const response = await runtime.sendRpc({ rpc: 'get_usb_midi' }, { rollbackOnError: false });
+      const response = await runtime.sendRpc({ rpc: 'get_usb_midi' }, { rollbackPolicy: 'none' });
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus(
         'ok',
@@ -324,7 +340,7 @@ export function createTransportToolbarController({
     try {
       const response = await runtime.sendRpc(
         { rpc: 'get_note_dynamics' },
-        { rollbackOnError: false }
+        { rollbackPolicy: 'none' }
       );
       velocityShift = Math.max(
         -64,
@@ -362,7 +378,7 @@ export function createTransportToolbarController({
     updateJitterControls();
     setJitterStatus('busy', 'Reading live jitter tuning…');
     try {
-      const response = await runtime.sendRpc({ rpc: 'get_jitter' }, { rollbackOnError: false });
+      const response = await runtime.sendRpc({ rpc: 'get_jitter' }, { rollbackPolicy: 'none' });
       jitterDepth = Math.max(0, Math.min(1, Number(response?.depth) || 0));
       jitterSmoothness = Math.max(0, Math.min(1, Number(response?.smoothness) || 0));
       setJitterStatus(
@@ -403,7 +419,7 @@ export function createTransportToolbarController({
     updateClockControls();
     setClockStatus('busy', 'Reading device clock state…');
     try {
-      const response = await runtime.sendRpc({ rpc: 'get_clock' }, { rollbackOnError: false });
+      const response = await runtime.sendRpc({ rpc: 'get_clock' }, { rollbackPolicy: 'none' });
       clockFollowExternal = Boolean(response?.follow_external);
       clockOutEnabled = Boolean(response?.clock_out_enabled);
       clockTappedBpm = Math.max(20, Math.min(300, Number(response?.tapped_bpm) || 120));
@@ -436,7 +452,7 @@ export function createTransportToolbarController({
     try {
       const response = await runtime.sendRpc(
         { rpc: 'set_usb_midi', enabled: !usbMidiOutEnabled },
-        { rollbackOnError: false }
+        { rollbackPolicy: 'none' }
       );
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus(
@@ -469,7 +485,7 @@ export function createTransportToolbarController({
     updateUsbMidiControls();
     setUsbMidiStatus('busy', 'Sending C4, CC1, and note-off over USB MIDI…');
     try {
-      const response = await runtime.sendRpc({ rpc: 'midi_test' }, { rollbackOnError: false });
+      const response = await runtime.sendRpc({ rpc: 'midi_test' }, { rollbackPolicy: 'none' });
       usbMidiOutEnabled = Boolean(response?.usb_midi_out);
       setUsbMidiStatus('ok', `MIDI test sent.${formatUsbMidiCounters(response)}`);
       setStatus('ok', 'MIDI test sent', formatUsbMidiCounters(response).trim());
@@ -502,7 +518,7 @@ export function createTransportToolbarController({
           velocityShift: nextVelocity,
           changeProbability: nextProbability
         },
-        { rollbackOnError: false }
+        { rollbackPolicy: 'none' }
       );
       velocityShift = Math.max(
         -64,
@@ -545,7 +561,7 @@ export function createTransportToolbarController({
           depth: nextDepth,
           smoothness: nextSmoothness
         },
-        { rollbackOnError: false }
+        { rollbackPolicy: 'none' }
       );
       jitterDepth = Math.max(0, Math.min(1, Number(response?.depth) || 0));
       jitterSmoothness = Math.max(0, Math.min(1, Number(response?.smoothness) || 0));
@@ -579,7 +595,7 @@ export function createTransportToolbarController({
           clockOutEnabled: nextClockOutEnabled,
           tappedBpm: nextTappedBpm
         },
-        { rollbackOnError: false }
+        { rollbackPolicy: 'none' }
       );
       clockFollowExternal = Boolean(response?.follow_external);
       clockOutEnabled = Boolean(response?.clock_out_enabled);
@@ -835,6 +851,7 @@ export function createTransportToolbarController({
     bind,
     connect,
     onManifest,
+    onContractQuality: updateContractQualityChip,
     onConnected,
     onDisconnected,
     onTelemetry,

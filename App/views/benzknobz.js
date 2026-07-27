@@ -89,6 +89,7 @@ const boot = () => {
   const connectionPill = document.getElementById('connection-pill');
   const connectionBanner = document.getElementById('connection-banner');
   const transportLaneChip = document.getElementById('transport-lane-chip');
+  const contractQualityChip = document.getElementById('contract-quality-chip');
   const connectFailHelp = document.getElementById('connect-fail-help');
   const headerStatus = document.getElementById('header-status');
   const exportPresetBtn = document.getElementById('export-preset');
@@ -427,6 +428,7 @@ const boot = () => {
       connectionPill,
       connectionBanner,
       transportLaneChip,
+      contractQualityChip,
       connectFailHelp,
       usbMidiToggleBtn,
       usbMidiTestBtn,
@@ -767,6 +769,13 @@ const boot = () => {
     rebuildMeters(followerCount);
     updateStagePanel();
     panicHelpController.render();
+  });
+  runtime.on('contract-quality', ({ quality, applyAllowed }) => {
+    transportToolbarController.onContractQuality();
+    if (!applyAllowed && applyBtn) applyBtn.disabled = true;
+    if (!applyAllowed) {
+      setStatus('warn', 'Degraded device contract', `Apply is blocked: ${quality}.`);
+    }
   });
   runtime.on('log', (line) => {
     sessionLogController.recordEvent('RUNTIME', 'Raw line', line, 'info');
