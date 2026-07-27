@@ -79,8 +79,9 @@ void hashSlot(uint32_t &hash, const MIDISlot &slot) {
     hashByte(hash, slot.arg.sourceA); hashByte(hash, slot.arg.sourceB);
 }
 
-// Device-owned digest over the full normalized slot arena and persisted profile
-// snapshot. The host checksum remains only a correlation token.
+// Device-owned digest over the normalized slot arena and every byte of the
+// profile snapshot written by persistActiveProfileSnapshot(). The host
+// checksum remains only a correlation token.
 String appliedStateChecksum() {
     uint32_t hash = 2166136261UL; // FNV-1a, stable and small enough for Teensy.
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
@@ -89,13 +90,16 @@ String appliedStateChecksum() {
     }
     for (const MIDISlot &slot : configManager.getSlots()) hashSlot(hash, slot);
     const ProfileData profile = captureProfileSnapshot();
-    hashByte(hash, profile.arp.lengthTicks); hashByte(hash, profile.arp.shape);
-    hashByte(hash, profile.arp.swingPercent); hashByte(hash, profile.arp.gatePercent);
-    hashByte(hash, profile.arp.octaveRange); hashByte(hash, profile.arp.patternLength);
-    hashByte(hash, profile.led.brightness); hashByte(hash, profile.led.r); hashByte(hash, profile.led.g); hashByte(hash, profile.led.b);
-    hashFloat(hash, profile.clock.tappedBpm); hashByte(hash, profile.clock.clockOutEnabled); hashByte(hash, profile.clock.followExternalClock);
-    hashByte(hash, static_cast<uint8_t>(profile.noteDynamics.velocityShift)); hashByte(hash, profile.noteDynamics.changeProbability);
-    hashFloat(hash, profile.jitter.depth); hashFloat(hash, profile.jitter.smoothness);
+    const auto *profileBytes = reinterpret_cast<const uint8_t *>(&profile);
+    for (size_t i = 0; i < sizeof(profile); ++i) hashByte(hash, profileBytes[i]);
+    hashByte(hash, g_activeProfile);
+    hashByte(hash, configManager.getARGEnable());
+    hashByte(hash, configManager.getARGMethod());
+    hashByte(hash, configManager.getEnvelopeA());
+    hashByte(hash, configManager.getEnvelopeB());
+    hashByte(hash, configManager.getMode());
+    hashByte(hash, configManager.getEfIdleFloor());
+    hashByte(hash, g_usbMidiOutEnabled ? 1 : 0);
     char hex[9] = {0};
     snprintf(hex, sizeof(hex), "%08lx", static_cast<unsigned long>(hash));
     return String(hex);
@@ -1200,6 +1204,12 @@ void handleSetAllBulkCommand(const String &command) {
     String chunk = command.substring(8);
     if (chunk.length() == 0) {
         return;
+    }
+
+    if (bulkConfigAssembler.expired(millis())) {
+        const uint32_t staleSequence = bulkConfigAssembler.sequenceHint();
+        bulkConfigAssembler.reset();
+        emitBulkIngestError("timeout", staleSequence);
     }
 
     String ingestError;

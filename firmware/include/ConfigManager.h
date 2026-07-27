@@ -295,12 +295,16 @@ class ConfigManager {
 
     // Persist the global EF idle/noise-floor clamp in MIDI units (0-127).
     void setEfIdleFloor(uint8_t floor);
+    // Apply the EF floor without writing storage; protocol live-control path.
+    void setEfIdleFloorLive(uint8_t floor);
 
     // Retrieve the current global EF idle/noise-floor clamp.
     uint8_t getEfIdleFloor() const;
 
     // Persist and apply the USB MIDI output gate.
     void setUsbMidiOutEnabled(bool enabled);
+    // Apply the USB MIDI output gate without writing storage.
+    void setUsbMidiOutEnabledLive(bool enabled);
 
     // Override the persistence backend used by ConfigManager (tests/migration hooks).
     static void setStorageBackend(StorageBackend *backend);
@@ -361,6 +365,7 @@ class ConfigManager {
 
     // Save which ARG combination method is currently selected (legacy compatibility).
     void setARGMethod(uint8_t method);
+    void setARGMethodLive(uint8_t method);
 
     // Retrieve the stored ARG method (legacy compatibility).
     uint8_t getARGMethod() const;

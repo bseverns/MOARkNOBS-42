@@ -52,6 +52,11 @@ void Arpeggiator::stop() {
         state.step = 0;
         state.drunkPosition = 0;
     }
+    // Never emit a delayed musical event after an operator Stop. Note Offs
+    // remain queued so a note which already started cannot be left hanging.
+    for (PendingEvent &event : _pendingEvents) {
+        if (event.active && event.type != PendingEventType::NoteOff) event.active = false;
+    }
 }
 
 bool Arpeggiator::queueEvent(const PendingEvent &event) {
@@ -66,8 +71,8 @@ bool Arpeggiator::queueEvent(const PendingEvent &event) {
     return false;
 }
 
-bool Arpeggiator::queueNotePair(uint8_t note, uint8_t velocity, uint8_t channel, uint32_t onDue,
-                                uint32_t offDue) {
+bool Arpeggiator::queueNotePair(uint8_t slotIndex, uint8_t note, uint8_t velocity,
+                                uint8_t channel, uint32_t onDue, uint32_t offDue) {
     PendingEvent *first = nullptr;
     PendingEvent *second = nullptr;
     for (PendingEvent &entry : _pendingEvents) {
@@ -80,9 +85,18 @@ bool Arpeggiator::queueNotePair(uint8_t note, uint8_t velocity, uint8_t channel,
         ++g_systemDiagnostics.midiDropCount;
         return false;
     }
-    *first = {onDue, PendingEventType::NoteOn, channel, note, velocity, 0, true};
-    *second = {offDue, PendingEventType::NoteOff, channel, note, 0, 0, true};
+    *first = {onDue, PendingEventType::NoteOn, channel, note, velocity, 0, slotIndex, true};
+    *second = {offDue, PendingEventType::NoteOff, channel, note, 0, 0, slotIndex, true};
     return true;
+}
+
+void Arpeggiator::cancelFutureEvents(uint8_t slotIndex) {
+    for (PendingEvent &event : _pendingEvents) {
+        if (event.active && event.slotIndex == slotIndex &&
+            event.type != PendingEventType::NoteOff) {
+            event.active = false;
+        }
+    }
 }
 
 void Arpeggiator::processPendingEvents(MIDIHandler &midi) {
@@ -111,6 +125,7 @@ void Arpeggiator::stop(uint8_t slotIdx) {
     state.tickCounter = 0;
     state.step = 0;
     state.drunkPosition = 0;
+    cancelFutureEvents(slotIdx);
     _primarySlot = resolvePrimarySlot();
 }
 
@@ -446,7 +461,7 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             } else {
                 uint8_t value = constrain(potVal + offset, 0, 127);
                 queueEvent({nowMs + delayMs, PendingEventType::CC, slot.midiChannel, slot.data1,
-                            value, 0, false});
+                            value, 0, slotIdx, false});
             }
             break;
         case MIDIMessageType::Note: {
@@ -461,7 +476,7 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             if (random(100U) >= static_cast<uint8_t>(effectiveChance)) {
                 break;
             }
-            queueNotePair(note, velocity, slot.midiChannel, nowMs + delayMs,
+            queueNotePair(slotIdx, note, velocity, slot.midiChannel, nowMs + delayMs,
                           nowMs + delayMs + baseGateMs);
             break;
         }
@@ -473,7 +488,7 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
                 midi.sendPitchBend(bend, slot.midiChannel);
             } else {
                 queueEvent({nowMs + delayMs, PendingEventType::PitchBend, slot.midiChannel, 0, 0,
-                            bend, false});
+                            bend, slotIdx, false});
             }
             break;
         }
@@ -483,7 +498,7 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             } else {
                 uint8_t program = constrain(root + offset, 0, 127);
                 queueEvent({nowMs + delayMs, PendingEventType::Program, slot.midiChannel, program,
-                            0, 0, false});
+                            0, 0, slotIdx, false});
             }
             break;
         case MIDIMessageType::Aftertouch:
@@ -492,7 +507,7 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             } else {
                 uint8_t pressure = constrain(potVal + offset, 0, 127);
                 queueEvent({nowMs + delayMs, PendingEventType::Aftertouch, slot.midiChannel,
-                            pressure, 0, 0, false});
+                            pressure, 0, 0, slotIdx, false});
             }
             break;
         case MIDIMessageType::ModWheel:
@@ -501,7 +516,7 @@ void Arpeggiator::updateSlot(uint8_t slotIdx, SlotState &state, MIDIHandler &mid
             } else {
                 uint8_t mod = constrain(potVal + offset, 0, 127);
                 queueEvent({nowMs + delayMs, PendingEventType::ModWheel, slot.midiChannel, mod, 0,
-                            0, false});
+                            0, slotIdx, false});
             }
             break;
         default:

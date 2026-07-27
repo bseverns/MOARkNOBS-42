@@ -48,6 +48,27 @@ struct SceneEntry {
 
 constexpr uint8_t kSceneSlotCount = 6;
 
+// Keep the persistence layout visible to storage and manifest code. These
+// record sizes include the ARM alignment padding used by the on-disk structs
+// in SceneStorage.cpp; the static_asserts beside those structs keep this
+// contract honest if ConfigState changes.
+constexpr size_t kMacroStorageAddress = EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+constexpr size_t kMacroRecordBytes = sizeof(ConfigState) + 8;
+constexpr size_t kSceneStorageBase = kMacroStorageAddress + kMacroRecordBytes;
+constexpr size_t kSceneRecordBytes = sizeof(ConfigState) + 24;
+constexpr size_t kRequiredStorageBytes =
+    kSceneStorageBase + static_cast<size_t>(kSceneSlotCount) * kSceneRecordBytes;
+
+constexpr uint8_t sceneCapacityForStorage(size_t bytes) {
+    if (bytes <= kSceneStorageBase) return 0;
+    const size_t available = (bytes - kSceneStorageBase) / kSceneRecordBytes;
+    return static_cast<uint8_t>(available < kSceneSlotCount ? available : kSceneSlotCount);
+}
+
+constexpr bool macroFitsInStorage(size_t bytes) {
+    return bytes >= kSceneStorageBase;
+}
+
 // Named scene slots.
 uint8_t listScenes(SceneInfo *scenes, size_t capacity);
 bool saveSceneSlot(uint8_t slot, const ConfigState &state, const char *name);

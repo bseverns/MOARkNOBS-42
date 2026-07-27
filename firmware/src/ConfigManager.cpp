@@ -1123,18 +1123,24 @@ LedMode ConfigManager::getLedMode() const {
 }
 
 void ConfigManager::setEfIdleFloor(uint8_t floor) {
-    g_efIdleFloor = static_cast<uint8_t>(constrain(static_cast<int>(floor), 0, 127));
+    setEfIdleFloorLive(floor);
     storageUpdate(EEPROM_EF_IDLE_FLOOR, g_efIdleFloor);
     storageUpdate(EEPROM_EF_IDLE_FLOOR_CHECK, g_efIdleFloor ^ 0xFF);
+}
+
+void ConfigManager::setEfIdleFloorLive(uint8_t floor) {
+    g_efIdleFloor = static_cast<uint8_t>(constrain(static_cast<int>(floor), 0, 127));
 }
 
 uint8_t ConfigManager::getEfIdleFloor() const { return g_efIdleFloor; }
 
 void ConfigManager::setUsbMidiOutEnabled(bool enabled) {
-    g_usbMidiOutEnabled = enabled;
+    setUsbMidiOutEnabledLive(enabled);
     storageUpdate(EEPROM_USB_MIDI_OUT, enabled ? 1 : 0);
     storageUpdate(EEPROM_USB_MIDI_OUT_CHECK, (enabled ? 1 : 0) ^ 0xFF);
 }
+
+void ConfigManager::setUsbMidiOutEnabledLive(bool enabled) { g_usbMidiOutEnabled = enabled; }
 
 // Reset configuration to defaults
 void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
@@ -1172,6 +1178,11 @@ void ConfigManager::setMode(uint8_t mode) {
 uint8_t ConfigManager::getMode() const { return legacyArg.mode; }
 
 void ConfigManager::setARGMethod(uint8_t method) {
+    setARGMethodLive(method);
+    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
+}
+
+void ConfigManager::setARGMethodLive(uint8_t method) {
     legacyArg.method = method;
     SlotARGConfig defaults{};
     defaults.enabled = legacyArg.enable;
@@ -1180,7 +1191,6 @@ void ConfigManager::setARGMethod(uint8_t method) {
     defaults.sourceB = legacyArg.sourceB;
     defaults = sanitizeSlotArg(defaults);
     legacyArg.method = static_cast<uint8_t>(defaults.method);
-    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
 }
 
 uint8_t ConfigManager::getARGMethod() const { return legacyArg.method; }

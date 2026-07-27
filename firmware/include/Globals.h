@@ -86,6 +86,7 @@ struct SystemDiagnostics {
     volatile uint8_t midiServiceMaxBacklog = 0;  // high-water mark before a pass
     volatile uint32_t schedulerMissedRuns = 0;   // periodic deadlines skipped by cooperative lanes
     volatile uint32_t schedulerMaxTaskMicros = 0; // longest individual scheduler callback
+    volatile uint32_t droppedClockedQuarterEvents = 0; // historical clock beats discarded after a stall
 };
 
 extern SystemDiagnostics g_systemDiagnostics;

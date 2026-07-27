@@ -149,6 +149,7 @@ class Arpeggiator {
         uint8_t data1 = 0;
         uint8_t data2 = 0;
         int16_t bend = 0;
+        uint8_t slotIndex = 0;
         bool active = false;
     };
     static constexpr size_t kPendingEventCapacity = 128;
@@ -167,8 +168,9 @@ class Arpeggiator {
     // Pick a stable slot to act as the "primary" one for UI overlays.
     uint8_t resolvePrimarySlot() const;
     bool queueEvent(const PendingEvent &event);
-    bool queueNotePair(uint8_t note, uint8_t velocity, uint8_t channel, uint32_t onDue,
-                       uint32_t offDue);
+    bool queueNotePair(uint8_t slotIndex, uint8_t note, uint8_t velocity, uint8_t channel,
+                       uint32_t onDue, uint32_t offDue);
+    void cancelFutureEvents(uint8_t slotIndex);
     void processPendingEvents(MIDIHandler &midi);
 
     uint8_t _lengthTicks;

@@ -77,11 +77,16 @@ struct SceneRecord {
     SceneStorage::ConfigState state{};
 };
 
+static_assert(sizeof(MacroRecord) == SceneStorage::kMacroRecordBytes,
+              "Macro persistence layout constant is stale");
+static_assert(sizeof(SceneRecord) == SceneStorage::kSceneRecordBytes,
+              "Scene persistence layout constant is stale");
+
 constexpr uint16_t kStorageVersion = 1;
 constexpr uint16_t kMacroStorageAddress =
-    EEPROM_PROFILE_SETTINGS_BASE + NUM_PROFILES * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE;
+    static_cast<uint16_t>(SceneStorage::kMacroStorageAddress);
 constexpr uint16_t kSceneStorageBase =
-    static_cast<uint16_t>(kMacroStorageAddress + sizeof(MacroRecord));
+    static_cast<uint16_t>(SceneStorage::kSceneStorageBase);
 
 uint16_t sceneSlotAddress(uint8_t slot) {
     return static_cast<uint16_t>(kSceneStorageBase + slot * sizeof(SceneRecord));

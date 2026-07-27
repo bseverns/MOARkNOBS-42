@@ -1,4 +1,5 @@
 #include "protocol/ManifestReport.h"
+#include "protocol/SceneStorage.h"
 
 #include <Arduino.h>
 #include <imxrt.h>
@@ -102,7 +103,7 @@ void writeManifestOperationalHealth(JsonObject object) {
     object["eeprom_backup_valid"] = configManager.hasHealthyConfigurationCopy(true);
     object["eeprom_last_load"] = describeEepromLoadSource(configManager.getLastLoadSource());
     StorageBackend *storage = ConfigManager::getStorageBackend();
-    const uint16_t required = EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+    const size_t required = SceneStorage::kRequiredStorageBytes;
     JsonObject persistence = object.createNestedObject("persistence");
     persistence["backend"] = storage->supportsTransactions() ? "littlefs" : "unavailable";
     persistence["capacity"] = storage->length();
@@ -116,20 +117,25 @@ void writeManifestOperationalHealth(JsonObject object) {
 void writeManifestCapabilities(JsonObject object) {
     JsonObject capabilities = object.createNestedObject("capabilities");
     StorageBackend *storage = ConfigManager::getStorageBackend();
-    const bool persistent = storage->supportsTransactions() &&
-                            storage->length() >= EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
-    capabilities["profile_save"] = persistent;
-    capabilities["profile_load"] = persistent;
+    const size_t capacity = storage->length();
+    const bool transactional = storage->supportsTransactions();
+    const bool profiles = transactional && capacity >= EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+    const bool macro = transactional && SceneStorage::macroFitsInStorage(capacity);
+    const uint8_t sceneCapacity = transactional ? SceneStorage::sceneCapacityForStorage(capacity) : 0;
+    const bool completeScenes = sceneCapacity == SceneStorage::kSceneSlotCount;
+    capabilities["profile_save"] = profiles;
+    capabilities["profile_load"] = profiles;
     capabilities["profile_reset"] = true;
-    capabilities["macro_snapshot"] = persistent;
-    capabilities["scenes"] = persistent;
+    capabilities["macro_snapshot"] = macro;
+    capabilities["scenes"] = completeScenes;
+    capabilities["scene_capacity"] = sceneCapacity;
     capabilities["arp_live"] = true;
     capabilities["clock_live"] = true;
     capabilities["note_dynamics_live"] = true;
     capabilities["jitter_live"] = true;
     capabilities["usb_midi_toggle"] = HAS_USB_MIDI;
     capabilities["device_schema"] = true;
-    capabilities["bulk_config"] = persistent;
+    capabilities["bulk_config"] = profiles;
     JsonObject chunkedReads = capabilities.createNestedObject("chunked_reads");
     chunkedReads["config"] = true;
     chunkedReads["mod_matrix"] = true;

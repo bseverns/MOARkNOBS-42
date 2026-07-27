@@ -294,6 +294,7 @@ void Utility::BulkConfigAssembler::reset() {
     inString = false;
     escaped = false;
     sawRootOpen = false;
+    lastChunkAtMs = 0;
 }
 
 bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &error) {
@@ -323,6 +324,7 @@ bool Utility::BulkConfigAssembler::ingestChunk(const String &chunk, String &erro
     buffer.reserve(buffer.length() + chunk.length());
     buffer += chunk;
     receiving = true;
+    lastChunkAtMs = millis();
     updateCompletionState(chunk);
     refreshHints();
     return true;

@@ -268,8 +268,13 @@ void emitClockedNoteSlots(uint32_t quarterEvents) {
     if (quarterEvents == 0 || !performanceClockActive()) {
         return;
     }
+    constexpr uint32_t kMaxClockedQuarterEventsPerPass = 4;
+    const uint32_t boundedEvents = std::min(quarterEvents, kMaxClockedQuarterEventsPerPass);
+    if (quarterEvents > boundedEvents) {
+        g_systemDiagnostics.droppedClockedQuarterEvents += quarterEvents - boundedEvents;
+    }
     const unsigned long gateMs = resolveClockedNoteGateMs();
-    for (uint32_t beat = 0; beat < quarterEvents; ++beat) {
+    for (uint32_t beat = 0; beat < boundedEvents; ++beat) {
         for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
             if (arpeggiator.isActive(slotIndex)) {
                 continue;

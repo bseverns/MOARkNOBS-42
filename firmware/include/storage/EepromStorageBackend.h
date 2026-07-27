@@ -14,10 +14,10 @@ class EepromStorageBackend final : public StorageBackend {
         return contains(address) ? EEPROM.read(address) : 0xFF;
     }
 
-    void update(int address, uint8_t value) override {
-        if (contains(address)) {
-            EEPROM.update(address, value);
-        }
+    bool update(int address, uint8_t value) override {
+        if (!contains(address)) return false;
+        EEPROM.update(address, value);
+        return true;
     }
 
     void readBytes(int address, void *dest, size_t len) const override {
@@ -33,14 +33,15 @@ class EepromStorageBackend final : public StorageBackend {
         }
     }
 
-    void writeBytes(int address, const void *src, size_t len) override {
+    bool writeBytes(int address, const void *src, size_t len) override {
         if (!src || !contains(address, len)) {
-            return;
+            return false;
         }
         const auto *in = static_cast<const uint8_t *>(src);
         for (size_t i = 0; i < len; ++i) {
             EEPROM.update(address + static_cast<int>(i), in[i]);
         }
+        return true;
     }
 };
 

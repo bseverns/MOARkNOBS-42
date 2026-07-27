@@ -203,17 +203,23 @@ void test_dispatch_handles_documented_query_commands() {
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"GET_MOD_MATRIX\""));
 }
 
-void test_dispatch_set_led_clamps_and_persists_board_cap() {
+void test_dispatch_set_led_clamps_without_persisting() {
+    uint8_t persistedBefore = 0;
+    CRGB colorBefore;
+    configManager.loadLEDSettings(persistedBefore, colorBefore);
+
+    clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_LED,255,1,2,3"));
     TEST_ASSERT_EQUAL_UINT8(BoardPowerProfile::kLedBrightnessCap, ledManager.getBrightness());
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"persisted\":false"));
 
     uint8_t persisted = 0;
     CRGB color;
     configManager.loadLEDSettings(persisted, color);
-    TEST_ASSERT_EQUAL_UINT8(BoardPowerProfile::kLedBrightnessCap, persisted);
-    TEST_ASSERT_EQUAL_UINT8(1, color.r);
-    TEST_ASSERT_EQUAL_UINT8(2, color.g);
-    TEST_ASSERT_EQUAL_UINT8(3, color.b);
+    TEST_ASSERT_EQUAL_UINT8(persistedBefore, persisted);
+    TEST_ASSERT_EQUAL_UINT8(colorBefore.r, color.r);
+    TEST_ASSERT_EQUAL_UINT8(colorBefore.g, color.g);
+    TEST_ASSERT_EQUAL_UINT8(colorBefore.b, color.b);
 }
 
 void test_dispatch_handles_enter_config_mode_command() {

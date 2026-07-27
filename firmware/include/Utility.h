@@ -176,6 +176,12 @@ class Utility {
         // True once the staged text contains one balanced top-level JSON object.
         bool complete() const { return receiving && sawRootOpen && !inString && braceDepth == 0; }
 
+        // A dropped final chunk must not leave the parser accepting arbitrary
+        // later fragments forever.
+        bool expired(uint32_t nowMs, uint32_t timeoutMs = 5000) const {
+            return receiving && static_cast<uint32_t>(nowMs - lastChunkAtMs) > timeoutMs;
+        }
+
       private:
         void refreshHints();
         void updateCompletionState(const String &chunk);
@@ -188,6 +194,7 @@ class Utility {
         bool inString = false;
         bool escaped = false;
         bool sawRootOpen = false;
+        uint32_t lastChunkAtMs = 0;
     };
 
     // Format the acknowledgement packet emitted after applying a config.

@@ -1,6 +1,7 @@
 #ifndef LITTLEFS_STORAGE_BACKEND_H
 #define LITTLEFS_STORAGE_BACKEND_H
 
+#include "protocol/SceneStorage.h"
 #include "storage/EepromStorageBackend.h"
 #include "storage/StorageBackend.h"
 
@@ -10,25 +11,31 @@
 #include <cstdint>
 #include <cstring>
 
+// A/B persistence backend. The data blobs are permanent; a pair of small,
+// checksummed metadata records selects the committed blob. Interrupted writes
+// can only damage the inactive blob or inactive metadata record.
 class LittleFsStorageBackend final : public StorageBackend {
   public:
-    static constexpr uint16_t kVirtualAddressSpace = 16384;
+    static constexpr uint16_t kVirtualAddressSpace = 49152;
     static constexpr uint32_t kProgramDiskSize = 1024 * 1024;
-
-    LittleFsStorageBackend() = default;
+    static_assert(kVirtualAddressSpace >= SceneStorage::kRequiredStorageBytes,
+                  "LittleFS virtual storage cannot contain the declared scene layout");
 
     uint16_t length() const override { return kVirtualAddressSpace; }
-
     bool ready() const { return ensureReady(); }
     bool supportsTransactions() const override { return ensureReady(); }
     uint32_t generation() const override {
         MetaRecord meta{};
-        return readMetaRecord(meta) ? meta.generation : 0;
+        return activeMeta(meta, nullptr) ? meta.generation : 0;
     }
 
     bool beginTransaction() override {
         if (!ensureReady() || transactionActive_) return false;
-        if (!copyFile(kStorageBlobPath, kStagingBlobPath)) return false;
+        MetaRecord meta{};
+        if (!activeMeta(meta, nullptr)) return false;
+        transactionBlob_ = static_cast<uint8_t>(1U - meta.activeBlob);
+        if (!copyFile(blobPath(meta.activeBlob), blobPath(transactionBlob_))) return false;
+        transactionWriteFailed_ = false;
         transactionActive_ = true;
         return true;
     }
@@ -36,387 +43,248 @@ class LittleFsStorageBackend final : public StorageBackend {
     bool commitTransaction() override {
         if (!transactionActive_) return false;
         transactionActive_ = false;
-        if (!fileHasExpectedSize(kStagingBlobPath)) return false;
-        fs_.remove(kPreviousBlobPath);
-        // If power fails after the first rename, boot recovery restores the
-        // previous complete generation.  If it fails after the second, the
-        // new complete generation is already active.
-        if (!fs_.rename(kStorageBlobPath, kPreviousBlobPath)) return false;
-        if (!fs_.rename(kStagingBlobPath, kStorageBlobPath)) {
-            fs_.rename(kPreviousBlobPath, kStorageBlobPath);
+        if (transactionWriteFailed_ || !fileHasExpectedSize(blobPath(transactionBlob_))) return false;
+
+        MetaRecord current{};
+        uint8_t currentSlot = 0;
+        if (!activeMeta(current, &currentSlot)) return false;
+        MetaRecord next{};
+        next.flags = current.flags;
+        next.generation = current.generation + 1;
+        next.activeBlob = transactionBlob_;
+        next.blobChecksum = fileChecksum(blobPath(transactionBlob_));
+        if (!writeMetaSlot(static_cast<uint8_t>(1U - currentSlot), next)) return false;
+
+        MetaRecord verified{};
+        if (!readMetaSlot(static_cast<uint8_t>(1U - currentSlot), verified) ||
+            verified.generation != next.generation || verified.activeBlob != next.activeBlob ||
+            verified.blobChecksum != next.blobChecksum ||
+            fileChecksum(blobPath(verified.activeBlob)) != verified.blobChecksum) {
             return false;
         }
-        MetaRecord meta{};
-        if (!readMetaRecord(meta)) {
-            meta = MetaRecord{};
-        }
-        ++meta.generation;
-        if (!writeMetaRecord(meta)) {
-            return false;
-        }
-        fs_.remove(kPreviousBlobPath);
+        transactionWriteFailed_ = false;
         return true;
     }
 
     void abortTransaction() override {
         transactionActive_ = false;
-        if (ensureMounted()) fs_.remove(kStagingBlobPath);
+        transactionWriteFailed_ = false;
     }
 
     uint8_t read(int address) const override {
-        if (!ensureReady()) {
-            return fallback_.read(address);
-        }
         uint8_t value = 0xFF;
         readBytes(address, &value, sizeof(value));
         return value;
     }
 
-    void update(int address, uint8_t value) override {
-        if (!ensureReady()) {
-            fallback_.update(address, value);
-            return;
-        }
-        if (!addressInRange(address)) {
-            return;
-        }
-        const uint8_t current = read(address);
-        if (current == value) {
-            return;
-        }
-        writeBytes(address, &value, sizeof(value));
+    bool update(int address, uint8_t value) override {
+        if (!ensureReady()) return fallback_.update(address, value);
+        if (!contains(address)) return failWrite();
+        if (read(address) == value) return true;
+        return writeBytes(address, &value, sizeof(value));
     }
 
     void readBytes(int address, void *dest, size_t len) const override {
-        if (!dest || len == 0) {
-            return;
-        }
-
-        auto *out = static_cast<uint8_t *>(dest);
-        std::memset(out, 0xFF, len);
-
+        if (!dest || !len) return;
+        std::memset(dest, 0xFF, len);
         if (!ensureReady()) {
             fallback_.readBytes(address, dest, len);
             return;
         }
-
-        if (!contains(address, len)) {
-            return;
-        }
-
+        if (!contains(address, len)) return;
         File file = fs_.open(currentBlobPath(), FILE_READ);
-        if (!file) {
+        if (!file || !file.seek(static_cast<uint64_t>(address), SeekSet) ||
+            file.read(static_cast<uint8_t *>(dest), len) != len) {
+            if (file) file.close();
             return;
         }
-        if (!file.seek(static_cast<uint64_t>(address), SeekSet)) {
-            file.close();
-            return;
-        }
-        file.read(out, len);
         file.close();
     }
 
-    void writeBytes(int address, const void *src, size_t len) override {
-        if (!src || len == 0) {
-            return;
-        }
-
-        if (!ensureReady()) {
-            fallback_.writeBytes(address, src, len);
-            return;
-        }
-
-        if (!contains(address, len)) {
-            return;
-        }
-
-        const auto *in = static_cast<const uint8_t *>(src);
-
+    bool writeBytes(int address, const void *src, size_t len) override {
+        if (!src || !len) return failWrite();
+        if (!ensureReady()) return fallback_.writeBytes(address, src, len);
+        if (!contains(address, len)) return failWrite();
         File file = fs_.open(currentBlobPath(), FILE_WRITE);
-        if (!file) {
-            return;
+        if (!file || !file.seek(static_cast<uint64_t>(address), SeekSet)) {
+            if (file) file.close();
+            return failWrite();
         }
-        if (!file.seek(static_cast<uint64_t>(address), SeekSet)) {
-            file.close();
-            return;
-        }
-        file.write(in, len);
+        const bool ok = file.write(static_cast<const uint8_t *>(src), len) == len;
         file.flush();
         file.close();
+        return ok ? true : failWrite();
     }
 
   private:
-    static constexpr const char *kStorageBlobPath = "/config_storage.bin";
-    static constexpr const char *kStagingBlobPath = "/config_storage.staging.bin";
-    static constexpr const char *kPreviousBlobPath = "/config_storage.previous.bin";
-    static constexpr const char *kStorageMetaPath = "/config_storage.meta";
-    static constexpr uint32_t kMetaMagic = 0x4D4B425A; // "MKBZ"
-    static constexpr uint16_t kMetaVersion = 2;
+    static constexpr const char *kBlobAPath = "/config_A.bin";
+    static constexpr const char *kBlobBPath = "/config_B.bin";
+    static constexpr const char *kMetaAPath = "/config.meta.A";
+    static constexpr const char *kMetaBPath = "/config.meta.B";
+    static constexpr const char *kLegacyBlobPath = "/config_storage.bin";
+    static constexpr uint32_t kMetaMagic = 0x4D4B425A;
+    static constexpr uint16_t kMetaVersion = 3;
     static constexpr uint16_t kMetaFlagMigratedFromEeprom = 0x0001;
 
-    struct MetaRecord {
+    struct __attribute__((packed)) MetaRecord {
         uint32_t magic = kMetaMagic;
         uint16_t version = kMetaVersion;
         uint16_t flags = 0;
         uint32_t generation = 0;
+        uint8_t activeBlob = 0;
+        uint32_t blobChecksum = 0;
+        uint32_t recordChecksum = 0;
     };
 
-    bool addressInRange(int address) const {
-        return address >= 0 && address < static_cast<int>(kVirtualAddressSpace);
-    }
+    static const char *blobPath(uint8_t index) { return index == 0 ? kBlobAPath : kBlobBPath; }
+    static const char *metaPath(uint8_t index) { return index == 0 ? kMetaAPath : kMetaBPath; }
+    bool failWrite() { if (transactionActive_) transactionWriteFailed_ = true; return false; }
 
     bool ensureReady() const {
-        if (readyChecked_) {
-            return littlefsReady_;
-        }
-
+        if (readyChecked_) return littlefsReady_;
         readyChecked_ = true;
-
-        if (!ensureMounted()) {
-            littlefsReady_ = false;
-            return false;
-        }
-        if (!ensureStorageFile()) {
-            littlefsReady_ = false;
-            return false;
-        }
-        if (!ensureMigrationMarker()) {
-            littlefsReady_ = false;
-            return false;
-        }
-
-        littlefsReady_ = true;
-        return true;
+        littlefsReady_ = ensureMounted() && ensureStorageFiles();
+        return littlefsReady_;
     }
 
     bool ensureMounted() const {
-        if (mountAttempted_) {
-            return mounted_;
-        }
-
+        if (mountAttempted_) return mounted_;
         mountAttempted_ = true;
         mounted_ = fs_.begin(kProgramDiskSize);
         return mounted_;
     }
 
-    bool ensureStorageFile() const {
-        if (!ensureMounted()) {
-            return false;
+    bool ensureStorageFiles() const {
+        if (!fileHasExpectedSize(kBlobAPath)) {
+            if (!migrateLegacyBlob() && !createBlankBlob(kBlobAPath)) return false;
         }
+        bool hasData = false;
+        if (!blobHasNonFFData(kBlobAPath, hasData)) return false;
+        if (!hasData && !migrateFromEeprom()) return false;
+        if (!fileHasExpectedSize(kBlobBPath) && !copyFile(kBlobAPath, kBlobBPath)) return false;
 
-        // Recover an interrupted generation switch before considering a new
-        // transaction.  The previous file is never removed until the new one
-        // has become the active complete blob.
-        File active = fs_.open(kStorageBlobPath, FILE_READ);
-        if (!active) {
-            File previous = fs_.open(kPreviousBlobPath, FILE_READ);
-            if (previous) {
-                previous.close();
-                fs_.rename(kPreviousBlobPath, kStorageBlobPath);
-            }
-        } else {
-            active.close();
-        }
-
-        File existing = fs_.open(kStorageBlobPath, FILE_READ);
-        if (existing) {
-            const uint64_t size = existing.size();
-            existing.close();
-            if (size >= kVirtualAddressSpace) {
-                return true;
-            }
-        }
-
-        File file = fs_.open(kStorageBlobPath, FILE_WRITE);
-        if (!file) {
-            return false;
-        }
-
-        uint64_t size = file.size();
-        if (size > kVirtualAddressSpace) {
-            file.truncate(kVirtualAddressSpace);
-            size = kVirtualAddressSpace;
-        }
-
-        if (!file.seek(size, SeekSet)) {
-            file.close();
-            return false;
-        }
-
-        uint8_t fill[64];
-        std::memset(fill, 0xFF, sizeof(fill));
-
-        while (size < kVirtualAddressSpace) {
-            const size_t chunk = std::min<uint64_t>(
-                sizeof(fill), static_cast<uint64_t>(kVirtualAddressSpace) - size);
-            if (file.write(fill, chunk) != chunk) {
-                file.close();
-                return false;
-            }
-            size += chunk;
-        }
-
-        file.flush();
-        file.close();
-        return true;
-    }
-
-    bool ensureMigrationMarker() const {
         MetaRecord meta{};
-        if (readMetaRecord(meta) && meta.magic == kMetaMagic && meta.version == kMetaVersion) {
-            return true;
-        }
-
-        bool migratedFromEeprom = false;
-        bool blobHasData = false;
-        if (!blobHasNonFFData(blobHasData)) {
-            return false;
-        }
-        if (!blobHasData) {
-            if (!migrateFromEeprom()) {
-                return false;
-            }
-            migratedFromEeprom = true;
-        }
-
-        MetaRecord updated{};
-        if (migratedFromEeprom) {
-            updated.flags |= kMetaFlagMigratedFromEeprom;
-        }
-        return writeMetaRecord(updated);
+        if (activeMeta(meta, nullptr)) return true;
+        meta.blobChecksum = fileChecksum(kBlobAPath);
+        return writeMetaSlot(0, meta);
     }
 
-    bool readMetaRecord(MetaRecord &meta) const {
-        File file = fs_.open(kStorageMetaPath, FILE_READ);
-        if (!file) {
-            return false;
+    bool migrateLegacyBlob() const {
+        File legacy = fs_.open(kLegacyBlobPath, FILE_READ);
+        if (!legacy) return false;
+        File target = fs_.open(kBlobAPath, FILE_WRITE);
+        if (!target) { legacy.close(); return false; }
+        target.truncate(0);
+        uint8_t chunk[128];
+        size_t copied = 0;
+        while (legacy.available() && copied < kVirtualAddressSpace) {
+            const size_t wanted = std::min(sizeof(chunk), static_cast<size_t>(kVirtualAddressSpace - copied));
+            const size_t got = legacy.read(chunk, wanted);
+            if (got == 0 || target.write(chunk, got) != got) { legacy.close(); target.close(); return false; }
+            copied += got;
         }
-        if (file.size() < sizeof(MetaRecord)) {
-            file.close();
-            return false;
-        }
-        const size_t readCount = file.read(reinterpret_cast<uint8_t *>(&meta), sizeof(MetaRecord));
-        file.close();
-        return readCount == sizeof(MetaRecord);
+        legacy.close();
+        const bool filled = fillToExpectedSize(target, copied);
+        target.flush(); target.close();
+        return filled;
     }
 
-    bool writeMetaRecord(const MetaRecord &meta) const {
-        File file = fs_.open(kStorageMetaPath, FILE_WRITE);
-        if (!file) {
-            return false;
-        }
-        if (!file.seek(0, SeekSet)) {
-            file.close();
-            return false;
-        }
-        const size_t written =
-            file.write(reinterpret_cast<const uint8_t *>(&meta), sizeof(MetaRecord));
-        if (written != sizeof(MetaRecord)) {
-            file.close();
-            return false;
-        }
-        file.truncate(sizeof(MetaRecord));
-        file.flush();
-        file.close();
-        return true;
+    bool createBlankBlob(const char *path) const {
+        File file = fs_.open(path, FILE_WRITE);
+        if (!file) return false;
+        file.truncate(0);
+        const bool ok = fillToExpectedSize(file, 0);
+        file.flush(); file.close();
+        return ok;
     }
 
-    bool blobHasNonFFData(bool &hasData) const {
-        hasData = false;
-        File file = fs_.open(kStorageBlobPath, FILE_READ);
-        if (!file) {
-            return false;
+    bool fillToExpectedSize(File &file, size_t size) const {
+        uint8_t fill[128]; std::memset(fill, 0xFF, sizeof(fill));
+        while (size < kVirtualAddressSpace) {
+            const size_t count = std::min(sizeof(fill), static_cast<size_t>(kVirtualAddressSpace - size));
+            if (file.write(fill, count) != count) return false;
+            size += count;
         }
-        uint8_t chunk[64];
-        while (file.available()) {
-            const size_t readCount = file.read(chunk, sizeof(chunk));
-            if (readCount == 0) {
-                break;
-            }
-            for (size_t i = 0; i < readCount; ++i) {
-                if (chunk[i] != 0xFF) {
-                    hasData = true;
-                    file.close();
-                    return true;
-                }
-            }
-        }
-        file.close();
         return true;
     }
 
     bool migrateFromEeprom() const {
-        File file = fs_.open(kStorageBlobPath, FILE_WRITE);
-        if (!file) {
-            return false;
-        }
-        if (!file.seek(0, SeekSet)) {
-            file.close();
-            return false;
-        }
-
-        const uint16_t bytesToCopy = std::min<uint16_t>(fallback_.length(), kVirtualAddressSpace);
-        uint8_t chunk[64];
-        uint16_t offset = 0;
-        while (offset < bytesToCopy) {
-            const uint16_t remaining = static_cast<uint16_t>(bytesToCopy - offset);
-            const uint16_t chunkSize = std::min<uint16_t>(remaining, sizeof(chunk));
-            for (uint16_t i = 0; i < chunkSize; ++i) {
-                chunk[i] = fallback_.read(offset + i);
-            }
-            if (file.write(chunk, chunkSize) != chunkSize) {
-                file.close();
-                return false;
-            }
-            offset = static_cast<uint16_t>(offset + chunkSize);
-        }
-
-        file.flush();
-        file.close();
-        return true;
+        File file = fs_.open(kBlobAPath, FILE_WRITE);
+        if (!file || !file.seek(0, SeekSet)) { if (file) file.close(); return false; }
+        const uint16_t count = std::min<uint16_t>(fallback_.length(), kVirtualAddressSpace);
+        for (uint16_t i = 0; i < count; ++i) if (file.write(fallback_.read(i)) != 1) { file.close(); return false; }
+        file.flush(); file.close();
+        return copyFile(kBlobAPath, kBlobBPath);
     }
 
-    const char *currentBlobPath() const {
-        return transactionActive_ ? kStagingBlobPath : kStorageBlobPath;
-    }
-
-    bool fileHasExpectedSize(const char *path) const {
+    uint32_t fnvFile(const char *path) const {
         File file = fs_.open(path, FILE_READ);
-        if (!file) return false;
-        const bool valid = file.size() == kVirtualAddressSpace;
-        file.close();
-        return valid;
-    }
-
-    bool copyFile(const char *source, const char *destination) const {
-        File in = fs_.open(source, FILE_READ);
-        File out = fs_.open(destination, FILE_WRITE);
-        if (!in || !out) {
-            if (in) in.close();
-            if (out) out.close();
-            return false;
-        }
-        uint8_t chunk[128];
+        if (!file) return 0;
+        uint32_t hash = 2166136261UL; uint8_t chunk[128];
         size_t remaining = kVirtualAddressSpace;
-        while (remaining > 0) {
-            const size_t wanted = std::min(remaining, sizeof(chunk));
-            if (in.read(chunk, wanted) != wanted || out.write(chunk, wanted) != wanted) {
-                in.close(); out.close(); return false;
-            }
-            remaining -= wanted;
+        while (remaining) {
+            const size_t count = std::min(remaining, sizeof(chunk));
+            if (file.read(chunk, count) != count) { file.close(); return 0; }
+            for (size_t i = 0; i < count; ++i) { hash ^= chunk[i]; hash *= 16777619UL; }
+            remaining -= count;
         }
-        out.flush();
-        in.close(); out.close();
-        return true;
+        file.close(); return hash;
+    }
+    uint32_t fileChecksum(const char *path) const { return fileHasExpectedSize(path) ? fnvFile(path) : 0; }
+    uint32_t metaChecksum(const MetaRecord &meta) const {
+        uint32_t hash = 2166136261UL; const auto *bytes = reinterpret_cast<const uint8_t *>(&meta);
+        for (size_t i = 0; i < offsetof(MetaRecord, recordChecksum); ++i) { hash ^= bytes[i]; hash *= 16777619UL; }
+        return hash;
+    }
+    bool readMetaSlot(uint8_t slot, MetaRecord &meta) const {
+        File file = fs_.open(metaPath(slot), FILE_READ);
+        if (!file || file.size() != sizeof(meta) || file.read(reinterpret_cast<uint8_t *>(&meta), sizeof(meta)) != sizeof(meta)) { if (file) file.close(); return false; }
+        file.close();
+        return meta.magic == kMetaMagic && meta.version == kMetaVersion && meta.activeBlob < 2 &&
+               meta.recordChecksum == metaChecksum(meta);
+    }
+    bool writeMetaSlot(uint8_t slot, MetaRecord meta) const {
+        meta.recordChecksum = metaChecksum(meta);
+        File file = fs_.open(metaPath(slot), FILE_WRITE);
+        if (!file || !file.seek(0, SeekSet)) { if (file) file.close(); return false; }
+        const bool ok = file.write(reinterpret_cast<const uint8_t *>(&meta), sizeof(meta)) == sizeof(meta);
+        if (ok) file.truncate(sizeof(meta));
+        file.flush(); file.close();
+        return ok;
+    }
+    bool activeMeta(MetaRecord &out, uint8_t *slotOut) const {
+        MetaRecord a{}, b{}; const bool validA = readMetaSlot(0, a) && fileChecksum(blobPath(a.activeBlob)) == a.blobChecksum;
+        const bool validB = readMetaSlot(1, b) && fileChecksum(blobPath(b.activeBlob)) == b.blobChecksum;
+        if (!validA && !validB) return false;
+        const bool useB = validB && (!validA || b.generation > a.generation);
+        out = useB ? b : a; if (slotOut) *slotOut = useB ? 1 : 0; return true;
+    }
+    const char *currentBlobPath() const {
+        if (transactionActive_) return blobPath(transactionBlob_);
+        MetaRecord meta{}; return activeMeta(meta, nullptr) ? blobPath(meta.activeBlob) : kBlobAPath;
+    }
+    bool fileHasExpectedSize(const char *path) const {
+        File file = fs_.open(path, FILE_READ); if (!file) return false;
+        const bool ok = file.size() == kVirtualAddressSpace; file.close(); return ok;
+    }
+    bool blobHasNonFFData(const char *path, bool &hasData) const {
+        hasData = false; File file = fs_.open(path, FILE_READ); if (!file) return false;
+        uint8_t chunk[128]; while (file.available()) { const size_t n = file.read(chunk, sizeof(chunk)); for (size_t i = 0; i < n; ++i) if (chunk[i] != 0xFF) { hasData = true; file.close(); return true; } }
+        file.close(); return true;
+    }
+    bool copyFile(const char *source, const char *destination) const {
+        File in = fs_.open(source, FILE_READ); File out = fs_.open(destination, FILE_WRITE);
+        if (!in || !out) { if (in) in.close(); if (out) out.close(); return false; }
+        out.truncate(0); uint8_t chunk[128]; size_t remaining = kVirtualAddressSpace;
+        while (remaining) { const size_t n = std::min(remaining, sizeof(chunk)); if (in.read(chunk, n) != n || out.write(chunk, n) != n) { in.close(); out.close(); return false; } remaining -= n; }
+        out.flush(); in.close(); out.close(); return true;
     }
 
     mutable EepromStorageBackend fallback_;
     mutable LittleFS_Program fs_;
-    mutable bool readyChecked_ = false;
-    mutable bool littlefsReady_ = false;
-    mutable bool mountAttempted_ = false;
-    mutable bool mounted_ = false;
-    mutable bool transactionActive_ = false;
+    mutable bool readyChecked_ = false, littlefsReady_ = false, mountAttempted_ = false, mounted_ = false;
+    mutable bool transactionActive_ = false, transactionWriteFailed_ = false;
+    mutable uint8_t transactionBlob_ = 0;
 };
 
-#endif // LITTLEFS_STORAGE_BACKEND_H
+#endif

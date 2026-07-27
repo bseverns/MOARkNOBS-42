@@ -1076,10 +1076,9 @@ void handleSetArgMethodCommand(const String &command) {
         for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
             MIDISlot &slot = configManager.getSlot(slotIndex);
             slot.arg.method = static_cast<ARGMethod>(method);
-            configManager.saveSlot(slotIndex, slot);
         }
-        configManager.setARGMethod(static_cast<uint8_t>(method));
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
+        configManager.setARGMethodLive(static_cast<uint8_t>(method));
+        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\",\"persisted\":false}");
     } else {
         LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
     }
@@ -1306,9 +1305,9 @@ void handleSetUsbMidiCommand(const String &command) {
 
     String valueText = command.substring(comma + 1);
     valueText.trim();
-    configManager.setUsbMidiOutEnabled(valueText.toInt() != 0);
+    configManager.setUsbMidiOutEnabledLive(valueText.toInt() != 0);
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_USB_MIDI\","
-               "\"usb_midi_out\":%s}\n",
+               "\"usb_midi_out\":%s,\"persisted\":false}\n",
                g_usbMidiOutEnabled ? "true" : "false");
 }
 

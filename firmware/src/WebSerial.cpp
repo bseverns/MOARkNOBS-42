@@ -284,6 +284,8 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
         diag["midi_service_coalesced"] = static_cast<uint32_t>(diagnostics.midiServiceCoalesced);
         diag["midi_service_max_backlog"] = diagnostics.midiServiceMaxBacklog;
         diag["scheduler_missed_runs"] = static_cast<uint32_t>(diagnostics.schedulerMissedRuns);
+        diag["dropped_clocked_quarter_events"] =
+            static_cast<uint32_t>(diagnostics.droppedClockedQuarterEvents);
         diag["scheduler_max_task_us"] = static_cast<uint32_t>(diagnostics.schedulerMaxTaskMicros);
         diag["display_present"] = displayManager.isPresent();
         diag["display_ok"] = displayManager.isReady();

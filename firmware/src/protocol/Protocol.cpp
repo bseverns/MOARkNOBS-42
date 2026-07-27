@@ -390,9 +390,9 @@ void handleSetEfIdleFloorCommand(const ParsedCommand &cmd) {
         return;
     }
     int floor = constrain(valueText.toInt(), 0, 127);
-    configManager.setEfIdleFloor(static_cast<uint8_t>(floor));
+    configManager.setEfIdleFloorLive(static_cast<uint8_t>(floor));
     LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"SET_EF_IDLE_FLOOR\","
-               "\"idle_floor\":%d}\n",
+               "\"idle_floor\":%d,\"persisted\":false}\n",
                floor);
 }
 

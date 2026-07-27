@@ -540,6 +540,38 @@ void test_swing_delays_offbeat_notes() {
     TEST_ASSERT_EQUAL_UINT8(61, usbMIDI.lastNoteOn);
 }
 
+void test_stop_cancels_delayed_note_on() {
+    MidiUsbGuard guard;
+    resetScheduler();
+    g_fakeNowMs = 0;
+    g_tappedBPM = 120.0f;
+    g_lfoArpSwing = 0.0f;
+
+    Arpeggiator arp;
+    arp.setLength(6);
+    arp.setPatternLength(2);
+    arp.setShape(Arpeggiator::UP);
+    arp.setGatePercent(50.0f);
+    arp.setSwingPercent(16.0f);
+    arp.setBaseNoteSource(Arpeggiator::BaseNoteSource::Slot);
+    arp.start(0);
+
+    auto cfg = makeConfig();
+    prepSlot(cfg, 0, MIDIMessageType::Note, 1, 60);
+    auto pots = makePots();
+    MIDIHandler midi = primeMidi();
+    arp.update(midi, cfg, pots);
+    tickAndUpdate(arp, midi, cfg, pots, 21, true); // first, immediate note
+    const uint8_t priorNote = usbMIDI.lastNoteOn;
+
+    tickAndUpdate(arp, midi, cfg, pots, 21, false); // second, delayed by swing
+    arp.stop(0);
+    advanceMs(50);
+    arp.update(midi, cfg, pots);
+
+    TEST_ASSERT_EQUAL_UINT8(priorNote, usbMIDI.lastNoteOn);
+}
+
 void test_tempo_change_updates_tick_ms() {
     resetScheduler();
     g_fakeNowMs = 0;

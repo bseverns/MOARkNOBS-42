@@ -597,12 +597,32 @@ function createDeviceSession({
         });
         return;
       }
+      const requiresIntegrityReceipt = state.manifest?.persistence?.backend === 'littlefs';
+      if (requiresIntegrityReceipt && (!msg.applied_checksum || msg.storage_generation === undefined)) {
+        const receiptError = createSessionError(
+          'apply_integrity_receipt_missing',
+          'Device ACK omitted the applied-state checksum or storage generation',
+          { checksum: msg.checksum, seq: msg.seq ?? null },
+          409,
+        );
+        finishRollback('integrity_receipt_missing', receiptError.details);
+        rejectPendingApply(receiptError);
+        emitStructured('bridge.alert', {
+          code: receiptError.code,
+          severity: 'error',
+          message: receiptError.message,
+          details: receiptError.details,
+        });
+        return;
+      }
       const appliedAt = new Date().toISOString();
       state.liveConfig = clone(applyPending.stagedConfig);
       state.dirty = false;
       setApplyResult({
         status: 'ack',
         checksum: msg.checksum,
+        appliedChecksum: msg.applied_checksum ?? null,
+        storageGeneration: msg.storage_generation ?? null,
         seq: msg.seq ?? applyPending.seq,
         at: appliedAt,
       });
@@ -614,12 +634,16 @@ function createDeviceSession({
       emitConfigState();
       emitStructured('device.apply.ack', {
         checksum: msg.checksum,
+        applied_checksum: msg.applied_checksum ?? null,
+        storage_generation: msg.storage_generation ?? null,
         seq: msg.seq ?? pending.seq,
         appliedAt,
       });
       pending.resolve({
         applied: true,
         checksum: msg.checksum,
+        appliedChecksum: msg.applied_checksum ?? null,
+        storageGeneration: msg.storage_generation ?? null,
         seq: msg.seq ?? pending.seq,
       });
       return;

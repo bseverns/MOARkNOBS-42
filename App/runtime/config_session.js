@@ -349,16 +349,52 @@ export function createConfigSession({
       throw err;
     }
     const ackChecksum = response?.checksum ?? response?.result?.checksum ?? null;
+    const appliedChecksum = response?.applied_checksum ?? response?.result?.applied_checksum ?? null;
+    const storageGeneration = response?.storage_generation ?? response?.result?.storage_generation ?? null;
     if (ackChecksum !== checksum) {
       await rollback();
       throw new Error('Device failed to acknowledge apply');
+    }
+    // Hardware bulk Apply is durable only when firmware confirms its own
+    // applied-state digest and committed storage generation. Simulators and
+    // older manifests retain their compatibility path.
+    const requiresHardwareIntegrity = remoteManifest?.persistence?.backend === 'littlefs';
+    if (requiresHardwareIntegrity && (!appliedChecksum || storageGeneration === null)) {
+      await rollback();
+      throw new Error('Device ACK omitted applied-state integrity receipt');
+    }
+    if (requiresHardwareIntegrity) {
+      let readback;
+      try {
+        const readbackResponse = await sendRpc(
+          {
+            rpc: remoteManifest?.capabilities?.chunked_reads?.config
+              ? 'get_config_chunked'
+              : 'get_config'
+          },
+          { timeoutMs: applyRpcTimeoutMs }
+        );
+        readback = normalizeConfig(readbackResponse?.config ?? readbackResponse, getManifest());
+      } catch (err) {
+        throw new Error(`Device applied configuration but readback verification failed: ${err?.message ?? err}`);
+      }
+      const expected = normalizeConfig(stagedConfig, getManifest());
+      if (JSON.stringify(readback) !== JSON.stringify(expected)) {
+        // The device is the authority after an ACK. Preserve its truth instead
+        // of promoting an unverified browser-side candidate.
+        liveConfig = clone(readback);
+        stagedConfig = clone(readback);
+        dirty = false;
+        broadcastConfig();
+        throw new Error('Device readback differs from the applied configuration');
+      }
     }
     liveConfig = clone(stagedConfig);
     dirty = false;
     lastKnownChecksum = checksum;
     broadcastConfig();
-    emit('applied', { checksum });
-    return { applied: true, checksum };
+    emit('applied', { checksum, appliedChecksum, storageGeneration });
+    return { applied: true, checksum, appliedChecksum, storageGeneration };
   }
 
   async function rollback() {

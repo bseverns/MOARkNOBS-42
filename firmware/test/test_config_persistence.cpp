@@ -24,14 +24,15 @@ class MemoryStorageBackend final : public StorageBackend {
         return bytes_[static_cast<size_t>(address)];
     }
 
-    void update(int address, uint8_t value) override {
+    bool update(int address, uint8_t value) override {
         if (address < 0 || static_cast<size_t>(address) >= bytes_.size()) {
-            return;
+            return false;
         }
         if (dropPrimaryWrites_ && isBlockedPrimaryAddress(address)) {
-            return;
+            return false;
         }
         bytes_[static_cast<size_t>(address)] = value;
+        return true;
     }
 
     void readBytes(int address, void *dest, size_t len) const override {
@@ -41,11 +42,13 @@ class MemoryStorageBackend final : public StorageBackend {
         }
     }
 
-    void writeBytes(int address, const void *src, size_t len) override {
+    bool writeBytes(int address, const void *src, size_t len) override {
         const auto *in = static_cast<const uint8_t *>(src);
+        bool written = true;
         for (size_t i = 0; i < len; ++i) {
-            update(address + static_cast<int>(i), in[i]);
+            written = update(address + static_cast<int>(i), in[i]) && written;
         }
+        return written;
     }
 
     void fill(uint8_t value) { std::fill(bytes_.begin(), bytes_.end(), value); }
