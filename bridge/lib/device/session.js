@@ -5,6 +5,8 @@ const { loadSchemaAuthority } = require('./schema_authority');
 const { createStructuredEvent } = require('./transport_contract');
 
 const APPLY_TIMEOUT_MS = 30000;
+const HANDSHAKE_TIMEOUT_MS = 8000;
+const MAX_HANDSHAKE_RETRIES = 2;
 const NATIVE_SET_ALL_CHUNK_SIZE = 96;
 const NATIVE_SET_ALL_LINE_PACE_MS = 4;
 
@@ -110,6 +112,7 @@ function createDeviceSession({
   onStateChange = () => {},
   onStructuredEvent = () => {},
   nextSeq = () => 1,
+  handshakeTimeoutMs = HANDSHAKE_TIMEOUT_MS,
 } = {}) {
   if (typeof sendLine !== 'function') {
     throw new Error('device session requires sendLine');
@@ -117,13 +120,17 @@ function createDeviceSession({
 
   const events = new EventEmitter();
   const state = {
+    sessionId: null,
     connected: false,
+    handshakeState: 'disconnected',
     helloSeen: false,
     ready: false,
-    schemaSource: 'bundled',
+    schemaSource: 'pending',
     manifest: null,
     schema: null,
     liveConfig: null,
+    validationAuthority: null,
+    compatibility: { status: 'pending', reason: null },
     stagedConfig: null,
     dirty: false,
     lastApplyResult: null,
@@ -136,6 +143,50 @@ function createDeviceSession({
   let authority = null;
   let authorityPromise = null;
   let applyPending = null;
+  let handshakeTimer = null;
+  let handshakeRetryCount = 0;
+
+  function clearHandshakeTimer() {
+    if (!handshakeTimer) return;
+    clearTimeout(handshakeTimer);
+    handshakeTimer = null;
+  }
+
+  function scheduleHandshakeTimeout() {
+    clearHandshakeTimer();
+    handshakeTimer = setTimeout(() => {
+      if (state.ready || !state.connected) return;
+      const waitingFor = state.handshakeState;
+      const requestByState = {
+        'hello-wait': 'HELLO',
+        'manifest-wait': 'GET_MANIFEST',
+        'schema-wait': 'GET_SCHEMA',
+        'config-wait': 'GET_CONFIG',
+      };
+      const retry = requestByState[waitingFor];
+      if (retry && handshakeRetryCount < MAX_HANDSHAKE_RETRIES) {
+        handshakeRetryCount += 1;
+        state.lastError = `Handshake waiting for ${waitingFor}; retrying ${retry} (${handshakeRetryCount}/${MAX_HANDSHAKE_RETRIES})`;
+        emitState();
+        emitStructured('bridge.alert', {
+          code: 'handshake_retry',
+          severity: 'warn',
+          message: state.lastError,
+        });
+        sendLine(retry);
+        scheduleHandshakeTimeout();
+        return;
+      }
+      state.handshakeState = 'timeout';
+      state.lastError = `Handshake timed out while ${waitingFor}`;
+      emitState();
+      emitStructured('bridge.alert', {
+        code: 'handshake_timeout',
+        severity: 'error',
+        message: 'Device handshake timed out; reconnect or verify config-mode firmware.',
+      });
+    }, handshakeTimeoutMs);
+  }
 
   function getState() {
     return clone(state);
@@ -167,6 +218,7 @@ function createDeviceSession({
         state.helloSeen &&
         state.manifest &&
         state.schema &&
+        state.compatibility?.status === 'verified' &&
         state.liveConfig,
     );
     return !previousReady && state.ready;
@@ -178,13 +230,24 @@ function createDeviceSession({
       authorityPromise = loadSchemaAuthority();
     }
     authority = await authorityPromise;
-    if (!state.schema) {
-      state.schema = clone(authority.schema);
-      state.schemaSource = 'bundled';
-      updateReadyState();
-      emitState();
-    }
+    state.validationAuthority = {
+      source: 'bundled-app',
+      schemaVersion: authority.schemaVersion ?? null,
+    };
     return authority;
+  }
+
+  function evaluateSchemaCompatibility(reportedSchema) {
+    const requiredRoots = ['slots', 'efSlots', 'filter', 'arg', 'led'];
+    const hasRoots = requiredRoots.every(
+      (key) => reportedSchema?.properties?.[key] && reportedSchema?.required?.includes?.(key),
+    );
+    const reportedVersion = reportedSchema?.schema_version ?? null;
+    if (!hasRoots) return { status: 'incompatible', reason: 'missing_required_roots' };
+    if (authority?.schemaVersion != null && reportedVersion != null && Number(reportedVersion) !== Number(authority.schemaVersion)) {
+      return { status: 'incompatible', reason: 'schema_version_mismatch' };
+    }
+    return { status: 'verified', reason: null };
   }
 
   function setApplyResult(result) {
@@ -212,6 +275,9 @@ function createDeviceSession({
     emitState();
     emitConfigState();
     if (becameReady) {
+      clearHandshakeTimer();
+      handshakeRetryCount = 0;
+      state.handshakeState = 'ready';
       emitStructured('device.ready', {
         manifest: state.manifest,
         schemaSource: state.schemaSource,
@@ -224,6 +290,8 @@ function createDeviceSession({
 
   async function startHandshake() {
     await ensureAuthority();
+    handshakeRetryCount = 0;
+    scheduleHandshakeTimeout();
     sendLine('HELLO');
     sendLine('GET_MANIFEST');
     sendLine('GET_SCHEMA');
@@ -231,13 +299,22 @@ function createDeviceSession({
   }
 
   async function handleOpen() {
+    // Every serial open is a distinct authority epoch. Never let a prior device's
+    // schema or apply receipt satisfy readiness for the newly opened transport.
+    state.sessionId = crypto.randomUUID();
     state.connected = true;
+    handshakeRetryCount = 0;
+    state.handshakeState = 'hello-wait';
     state.helloSeen = false;
     state.ready = false;
     state.manifest = null;
+    state.schema = null;
+    state.schemaSource = 'pending';
+    state.compatibility = { status: 'pending', reason: null };
     state.liveConfig = null;
     state.stagedConfig = null;
     state.dirty = false;
+    state.lastApplyResult = null;
     state.lastError = null;
     syncIdentityFromManifest();
     emitState();
@@ -270,6 +347,8 @@ function createDeviceSession({
   }
 
   function handleDisconnect(reason = 'disconnect') {
+    clearHandshakeTimer();
+    handshakeRetryCount = 0;
     if (applyPending) {
       finishRollback(reason, {
         checksum: applyPending.checksum,
@@ -285,6 +364,7 @@ function createDeviceSession({
       );
     }
     state.connected = false;
+    state.handshakeState = 'disconnected';
     state.helloSeen = false;
     state.ready = false;
     state.lastError = reason === 'disconnect' ? null : reason;
@@ -315,6 +395,7 @@ function createDeviceSession({
     await ensureAuthority();
 
     if (msg.hello === 'mn42') {
+      state.handshakeState = state.manifest ? (state.schema ? 'config-wait' : 'schema-wait') : 'manifest-wait';
       state.helloSeen = true;
       state.lastError = null;
       const becameReady = updateReadyState();
@@ -331,6 +412,7 @@ function createDeviceSession({
     }
 
     if (isManifestPayload(msg)) {
+      state.handshakeState = state.schema ? 'config-wait' : 'schema-wait';
       state.manifest = clone(msg);
       syncIdentityFromManifest();
       const becameReady = updateReadyState();
@@ -364,8 +446,21 @@ function createDeviceSession({
     }
 
     if (isSchemaPayload(msg)) {
+      state.handshakeState = state.liveConfig ? 'ready' : 'config-wait';
       state.schema = clone(msg);
       state.schemaSource = 'device';
+      state.compatibility = evaluateSchemaCompatibility(msg);
+      if (state.compatibility.status === 'incompatible') {
+        clearHandshakeTimer();
+        handshakeRetryCount = 0;
+        state.handshakeState = 'degraded';
+        emitStructured('bridge.alert', {
+          code: 'device_schema_incompatible',
+          severity: 'error',
+          message: 'Reported device schema is incompatible with the bundled validation authority.',
+          details: clone(state.compatibility),
+        });
+      }
       const becameReady = updateReadyState();
       emitState();
       if (becameReady) {
@@ -401,13 +496,14 @@ function createDeviceSession({
     }
 
     if (applyPending && msg.type === 'ack') {
-      if (msg.checksum !== applyPending.checksum) {
+      if (msg.checksum !== applyPending.checksum || msg.seq !== applyPending.seq) {
         const mismatchError = createSessionError(
           'apply_checksum_mismatch',
           'Device ACK checksum did not match the staged payload',
           {
             expected: applyPending.checksum,
             received: msg.checksum ?? null,
+            expectedSeq: applyPending.seq,
             seq: msg.seq ?? null,
           },
           409,
@@ -423,7 +519,7 @@ function createDeviceSession({
         return;
       }
       const appliedAt = new Date().toISOString();
-      state.liveConfig = clone(state.stagedConfig);
+      state.liveConfig = clone(applyPending.stagedConfig);
       state.dirty = false;
       setApplyResult({
         status: 'ack',
@@ -509,6 +605,14 @@ function createDeviceSession({
   }
 
   async function rollback(reason = 'operator_request') {
+    if (applyPending) {
+      throw createSessionError(
+        'apply_in_progress',
+        'Cannot roll back while a transmitted apply is awaiting its ACK; the write is non-cancellable.',
+        { checksum: applyPending.checksum, seq: applyPending.seq },
+        409,
+      );
+    }
     finishRollback(reason);
     return {
       rolledBack: true,
@@ -538,6 +642,14 @@ function createDeviceSession({
         'Cannot apply until handshake, schema, and config cache are ready',
         null,
         503,
+      );
+    }
+    if (state.compatibility?.status !== 'verified') {
+      throw createSessionError(
+        'device_schema_incompatible',
+        'Cannot apply because the reported device schema is not compatible with the bundled validation authority',
+        clone(state.compatibility),
+        409,
       );
     }
     if (!state.dirty) {
@@ -633,6 +745,7 @@ function createDeviceSession({
       applyPending = {
         checksum,
         seq,
+        stagedConfig: clone(state.stagedConfig),
         timer,
         resolve,
         reject,

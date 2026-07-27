@@ -9,17 +9,30 @@ export function deriveWebSocketUrl(baseUrl, path) {
   }
 }
 
+function withControlToken(url, token) {
+  if (!url || !token) return url;
+  try {
+    const target = new URL(url);
+    target.searchParams.set('token', token);
+    return target.toString();
+  } catch (_) {
+    return url;
+  }
+}
+
 export function resolveTransportModeOptions({
   locationHref,
   bridgeApiBaseUrl,
   bridgeTransportMode,
   wsUrl
 } = {}) {
-  const currentLocation =
-    typeof window !== 'undefined' && typeof window.location === 'object'
+  const currentLocation = locationHref
+    ? new URL(locationHref)
+    : typeof window !== 'undefined' && typeof window.location === 'object'
       ? new URL(window.location.href)
       : null;
   const params = locationHref ? new URL(locationHref).searchParams : null;
+  const bridgeControlToken = params?.get('token')?.trim() || null;
   const inferredBridgeBaseUrl =
     currentLocation && currentLocation.pathname.startsWith('/app/') ? currentLocation.origin : null;
   const structuredBridgePreference =
@@ -38,8 +51,9 @@ export function resolveTransportModeOptions({
   return {
     structuredBridgePreference,
     resolvedBridgeApiBaseUrl,
-    websocketUrl,
-    bridgeEventsUrl: deriveWebSocketUrl(resolvedBridgeApiBaseUrl, '/ws/events')
+    websocketUrl: withControlToken(websocketUrl, bridgeControlToken),
+    bridgeEventsUrl: withControlToken(deriveWebSocketUrl(resolvedBridgeApiBaseUrl, '/ws/events'), bridgeControlToken),
+    bridgeControlToken
   };
 }
 

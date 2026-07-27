@@ -416,6 +416,7 @@ async function startBrowserServer(options = {}) {
     host: '127.0.0.1',
     port: 0,
     httpApi,
+    requireControlToken: false,
     ...options,
   });
   await browserServer.start();
@@ -477,6 +478,19 @@ async function assertRawWebSocketMessageLimit() {
   await browserServer.stop();
 }
 
+async function assertRawWebSocketProtocolGuard() {
+  const { browserServer, server, service } = await startBrowserServer();
+  const socket = makeSocket();
+  server.emit('upgrade', makeUpgradeReq('/ws'), socket);
+  // Client-to-server WebSocket frames are required to be masked and final.
+  socket.emit('data', Buffer.from([0x81, 0x03, 0x50, 0x49, 0x4e]));
+  const close = decodeServerFrame(socket.writes.at(-1));
+  assert.equal(close.opcode, 8);
+  assert.equal(close.payloadBuffer.readUInt16BE(0), 1002);
+  assert.deepEqual(service.sentLines, []);
+  await browserServer.stop();
+}
+
 async function assertWebSocketClientLimit() {
   const { browserServer, server } = await startBrowserServer({
     maxBrowserWebSocketClients: 1,
@@ -498,6 +512,44 @@ async function assertWebSocketClientLimit() {
   await browserServer.stop();
 }
 
+async function assertControlTokenBoundary() {
+  const service = makeFakeService();
+  const { httpApi, server } = makeFakeHttpApi();
+  const browserServer = createBrowserBridgeServer({
+    service,
+    host: '127.0.0.1',
+    port: 0,
+    httpApi,
+    controlToken: 'test-control-token',
+  });
+  const address = await browserServer.start();
+  assert.match(address.url, /token=test-control-token/);
+
+  const denied = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'POST', url: '/api/connect', headers: { host: '127.0.0.1:12345' }, body: '{}' }),
+    denied,
+  );
+  assert.equal(denied.statusCode, 401, 'Bridge mutations require the launch token');
+
+  const allowed = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/connect',
+      headers: { host: '127.0.0.1:12345', authorization: 'Bearer test-control-token' },
+      body: '{}',
+    }),
+    allowed,
+  );
+  assert.equal(allowed.statusCode, 200, 'the launch token authorizes Bridge control');
+
+  const socket = makeSocket();
+  server.emit('upgrade', makeUpgradeReq('/ws'), socket);
+  assert.match(Buffer.concat(socket.writes).toString('utf8'), /401 Unauthorized/);
+  await browserServer.stop();
+}
+
 async function run() {
   const service = makeFakeService();
   const { httpApi, server } = makeFakeHttpApi();
@@ -506,6 +558,7 @@ async function run() {
     host: '127.0.0.1',
     port: 0,
     httpApi,
+    requireControlToken: false,
   });
   const address = await browserServer.start();
   assert.equal(address.port, 12345);
@@ -520,6 +573,26 @@ async function run() {
     statePayload.state.running,
     false,
     'state endpoint should expose idle bridge state',
+  );
+
+  const crossOriginApply = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/device/apply',
+      headers: {
+        host: '127.0.0.1:12345',
+        origin: 'https://untrusted.example',
+        'content-type': 'application/json',
+      },
+      body: '{}',
+    }),
+    crossOriginApply,
+  );
+  assert.equal(
+    crossOriginApply.statusCode,
+    403,
+    'cross-origin browser control requests must not reach Bridge mutation endpoints',
   );
 
   const sessionResponse = makeRes();
@@ -945,7 +1018,9 @@ async function run() {
   await browserServer.stop();
   await assertJsonApiBodyLimit();
   await assertRawWebSocketMessageLimit();
+  await assertRawWebSocketProtocolGuard();
   await assertWebSocketClientLimit();
+  await assertControlTokenBoundary();
   console.log(
     'browser bridge server exposes API, app, and websocket transport',
   );

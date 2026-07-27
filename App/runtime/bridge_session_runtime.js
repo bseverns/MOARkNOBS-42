@@ -19,6 +19,20 @@ export function createBridgeSessionRuntime({
   let bridgeSessionCache = null;
   let bridgeStageSyncTimer = null;
   let bridgeStageSyncPromise = null;
+  let eventReconnectTimer = null;
+  let eventReconnectAttempt = 0;
+  let eventsWanted = false;
+  let sessionHealth = 'disconnected';
+  let lastEventAt = null;
+
+  function setSessionHealth(next, details = {}) {
+    sessionHealth = next;
+    emit('bridge-session-health', {
+      health: next,
+      lastEventAt,
+      ...details
+    });
+  }
 
   function ensureClient() {
     if (!baseUrl) return null;
@@ -126,8 +140,11 @@ export function createBridgeSessionRuntime({
   async function openStructuredEvents() {
     const client = ensureClient();
     if (!client) throw new Error('Bridge session unavailable');
+    eventsWanted = true;
     await client.openEvents({
       onEvent(message) {
+        lastEventAt = Date.now();
+        if (sessionHealth !== 'healthy') setSessionHealth('healthy');
         if (!message || typeof message !== 'object') return;
         const payload = message.payload ?? {};
         switch (message.event) {
@@ -173,7 +190,9 @@ export function createBridgeSessionRuntime({
         }
       },
       onClose() {
-        // Raw /ws stays connected for compatibility and live RPC lanes.
+        if (!eventsWanted) return;
+        setSessionHealth('reconnecting');
+        scheduleEventReconnect();
       },
       onError(err) {
         emit('status', {
@@ -183,6 +202,26 @@ export function createBridgeSessionRuntime({
         });
       }
     });
+    eventReconnectAttempt = 0;
+    lastEventAt = Date.now();
+    setSessionHealth('healthy');
+  }
+
+  function scheduleEventReconnect() {
+    if (!eventsWanted || eventReconnectTimer) return;
+    const delayMs = Math.min(15000, 500 * 2 ** Math.min(eventReconnectAttempt, 5));
+    eventReconnectAttempt += 1;
+    eventReconnectTimer = setTimeout(async () => {
+      eventReconnectTimer = null;
+      try {
+        await openStructuredEvents();
+        // Events alone can arrive as individual cache fields; refresh gives one atomic truth.
+        await refreshSessionSnapshot({ warm: false, emitConnectedConfig: false });
+      } catch (err) {
+        setSessionHealth('stale', { reason: err.message || String(err) });
+        scheduleEventReconnect();
+      }
+    }, delayMs);
   }
 
   function cancelStageSync() {
@@ -193,6 +232,10 @@ export function createBridgeSessionRuntime({
   }
 
   function closeEvents() {
+    eventsWanted = false;
+    if (eventReconnectTimer) clearTimeout(eventReconnectTimer);
+    eventReconnectTimer = null;
+    setSessionHealth('disconnected');
     ensureClient()?.closeEvents();
   }
 
@@ -210,6 +253,8 @@ export function createBridgeSessionRuntime({
     openStructuredEvents,
     cancelStageSync,
     closeEvents,
-    reset
+    reset,
+    isHealthy: () => sessionHealth === 'healthy',
+    getHealth: () => ({ health: sessionHealth, lastEventAt })
   };
 }

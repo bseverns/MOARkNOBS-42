@@ -94,10 +94,10 @@ export function createStateSnapshotStore({
     }
   }
 
-  function readStagedConfig() {
+  function readStagedConfig({ allowDifferentFirmware = false } = {}) {
     const snapshot = read();
     if (!isRestorableSnapshot(snapshot)) return null;
-    if (identityDecision(snapshot) === 'different-firmware') return null;
+    if (identityDecision(snapshot) === 'different-firmware' && !allowDifferentFirmware) return null;
     return snapshot.staged;
   }
 

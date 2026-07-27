@@ -18,6 +18,7 @@ function resolveUrl(url, base) {
 export function createBridgeSessionClient({
   baseUrl,
   eventUrl,
+  controlToken = null,
   fetchImpl = typeof fetch === 'function' ? fetch.bind(globalThis) : null,
   WebSocketImpl = typeof WebSocket === 'function' ? WebSocket : null
 } = {}) {
@@ -41,7 +42,13 @@ export function createBridgeSessionClient({
   async function requestJson(path, { method = 'GET', body } = {}) {
     const response = await fetchImpl(resolveUrl(path, base), {
       method,
-      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+      headers:
+        body === undefined && !controlToken
+          ? undefined
+          : {
+              ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+              ...(controlToken ? { authorization: `Bearer ${controlToken}` } : {})
+            },
       body: body === undefined ? undefined : JSON.stringify(body)
     });
 
@@ -115,7 +122,9 @@ export function createBridgeSessionClient({
 
     socketClosed = false;
     buffer = '';
-    socket = new WebSocketImpl(resolvedEventUrl);
+    const socketUrl = new URL(resolvedEventUrl);
+    if (controlToken) socketUrl.searchParams.set('token', controlToken);
+    socket = new WebSocketImpl(socketUrl.toString());
     socket.binaryType = 'arraybuffer';
 
     const flushBufferedEvent = () => {

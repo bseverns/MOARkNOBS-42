@@ -65,14 +65,13 @@ function createOscMessageHandler({
       sourceTimestampMs,
       hostTimestampMs,
     });
-    queuePendingCommand({
-      slot: cmd.slot,
-      value: cmd.value,
-      traceId,
-      hostTimestampMs,
-      source: 'osc',
-    });
-    sendLine(formatLiveValueCommand(cmd));
+    try {
+      sendLine(formatLiveValueCommand(cmd));
+      queuePendingCommand({ slot: cmd.slot, value: cmd.value, traceId, hostTimestampMs, source: 'osc' });
+    } catch (err) {
+      bumpCounter('badOscCmdDrops');
+      pushLog('warn', `OSC command dropped: serial unavailable (${err.message || err})`);
+    }
   }
 
   function handleOscTypedEventPayload(msg) {
@@ -133,14 +132,13 @@ function createOscMessageHandler({
       sourceTimestampMs,
       hostTimestampMs,
     });
-    queuePendingCommand({
-      slot: cmd.slot,
-      value: cmd.value,
-      traceId,
-      hostTimestampMs,
-      source: 'osc_event',
-    });
-    sendLine(formatLiveValueCommand(cmd));
+    try {
+      sendLine(formatLiveValueCommand(cmd));
+      queuePendingCommand({ slot: cmd.slot, value: cmd.value, traceId, hostTimestampMs, source: 'osc_event' });
+    } catch (err) {
+      bumpCounter('badOscCmdDrops');
+      pushLog('warn', `OSC event dropped: serial unavailable (${err.message || err})`);
+    }
   }
 
   return function handleOscMessage(msg) {

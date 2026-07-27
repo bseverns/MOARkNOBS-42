@@ -16,6 +16,13 @@ const MIME_TYPES = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
+const SECURITY_HEADERS = {
+  'x-content-type-options': 'nosniff',
+  'x-frame-options': 'DENY',
+  'referrer-policy': 'no-referrer',
+  'cross-origin-resource-policy': 'same-origin'
+};
+
 const PUBLIC_CONFIG_KEYS = [
   'serialName',
   'oscPort',
@@ -40,6 +47,7 @@ const DEFAULT_RAW_WEBSOCKET_MESSAGE_LIMIT_BYTES = MAX_SERIAL_LINE_LEN;
 // The bridge UI is localhost-first; this caps accidental tab/client fan-out.
 const DEFAULT_MAX_BROWSER_WEBSOCKET_CLIENTS = 16;
 const WEBSOCKET_CLOSE_MESSAGE_TOO_BIG = 1009;
+const WEBSOCKET_CLOSE_PROTOCOL_ERROR = 1002;
 
 // Parse user-provided port values from the browser console without crashing on junk input.
 function normalizePositiveInt(value, fallback) {
@@ -56,6 +64,27 @@ function normalizeLimit(value, fallback) {
     return fallback;
   }
   return Math.floor(parsed);
+}
+
+function isLoopbackHostHeader(hostHeader = '') {
+  if (!hostHeader) return true;
+  const raw = String(hostHeader).toLowerCase();
+  if (raw === '::1' || raw === '[::1]' || raw.startsWith('[::1]:')) return true;
+  const host = raw.split(':')[0];
+  return host === '127.0.0.1' || host === 'localhost';
+}
+
+function isSameOriginRequest(req) {
+  const origin = req.headers?.origin;
+  // Non-browser clients (the packaged launcher and tests) do not send Origin.
+  if (!origin) return true;
+  try {
+    const parsed = new URL(origin);
+    const host = String(req.headers?.host || '').toLowerCase();
+    return parsed.protocol === 'http:' && parsed.host.toLowerCase() === host;
+  } catch (_) {
+    return false;
+  }
 }
 
 // Minimal websocket text-frame encoder for the one-way bridge log stream.
@@ -89,6 +118,12 @@ function closeFrame(code, reason = '') {
   payload.writeUInt16BE(code, 0);
   reasonBody.copy(payload, 2, 0, payload.length - 2);
   return Buffer.concat([Buffer.from([0x88, payload.length]), payload]);
+}
+
+function controlFrame(opcode, payload = Buffer.alloc(0)) {
+  const body = Buffer.from(payload);
+  if (body.length > 125) return closeFrame(WEBSOCKET_CLOSE_PROTOCOL_ERROR, 'control frame too large');
+  return Buffer.concat([Buffer.from([0x80 | opcode, body.length]), body]);
 }
 
 // Join request paths safely so the browser console cannot escape the intended static roots.
@@ -237,6 +272,7 @@ async function serveFile(res, rootDir, requestPath) {
     const ext = path.extname(resolvedPath).toLowerCase();
     res.writeHead(200, {
       'cache-control': 'no-store',
+      ...SECURITY_HEADERS,
       'content-type': MIME_TYPES[ext] || 'application/octet-stream',
     });
     res.end(body);
@@ -259,6 +295,9 @@ function createBrowserBridgeServer({
   maxJsonApiBodyBytes = DEFAULT_JSON_API_BODY_LIMIT_BYTES,
   maxRawWebSocketMessageBytes = DEFAULT_RAW_WEBSOCKET_MESSAGE_LIMIT_BYTES,
   maxBrowserWebSocketClients = DEFAULT_MAX_BROWSER_WEBSOCKET_CLIENTS,
+  controlToken = crypto.randomBytes(32).toString('base64url'),
+  requireControlToken = true,
+  allowNetworkHost = false,
 } = {}) {
   if (!service || typeof service.getState !== 'function') {
     throw new Error('bridge service is required');
@@ -283,6 +322,13 @@ function createBrowserBridgeServer({
   const rawSockets = new Set();
   const eventSockets = new Set();
   let wasRunning = Boolean(service.getState()?.running);
+
+  function hasControlToken(req, url) {
+    if (!requireControlToken) return true;
+    const authorization = String(req.headers?.authorization || '');
+    const bearer = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
+    return bearer === controlToken || url?.searchParams?.get('token') === controlToken;
+  }
 
   // Forward raw serial lines to every connected websocket client.
   function writeFrame(socket, payload) {
@@ -324,9 +370,14 @@ function createBrowserBridgeServer({
   function sendJson(res, statusCode, payload) {
     res.writeHead(statusCode, {
       'cache-control': 'no-store',
+      ...SECURITY_HEADERS,
       'content-type': 'application/json; charset=utf-8',
     });
     res.end(JSON.stringify(payload));
+  }
+
+  function rejectForbidden(res) {
+    sendJson(res, 403, { error: { code: 'forbidden', message: 'Bridge control requires same-origin loopback access.' } });
   }
 
   function sendBodyLimitError(res, err) {
@@ -617,6 +668,14 @@ function createBrowserBridgeServer({
   // Upgrade `/ws` requests into a raw websocket feed for serial lines and state updates.
   function handleWebSocket(req, socket) {
     const url = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+    if (!isLoopbackHostHeader(req.headers?.host) || !isSameOriginRequest(req)) {
+      socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
+      return;
+    }
+    if (!hasControlToken(req, url)) {
+      socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+      return;
+    }
     if (url.pathname !== '/ws' && url.pathname !== '/ws/events') {
       socket.destroy();
       return;
@@ -729,8 +788,14 @@ function createBrowserBridgeServer({
       while (buffered.length >= 2) {
         const first = buffered[0];
         const second = buffered[1];
+        const fin = (first & 0x80) !== 0;
+        const reserved = first & 0x70;
         const opcode = first & 0x0f;
         const masked = (second & 0x80) !== 0;
+        if (!fin || reserved !== 0 || !masked) {
+          destroySocket(socket, WEBSOCKET_CLOSE_PROTOCOL_ERROR, 'unsupported websocket frame');
+          return;
+        }
         let offset = 2;
         let length = second & 0x7f;
         if (length === 126) {
@@ -769,20 +834,20 @@ function createBrowserBridgeServer({
         const payload = Buffer.from(buffered.subarray(offset, offset + length));
         buffered = buffered.subarray(offset + length);
 
+        for (let i = 0; i < payload.length; i += 1) {
+          payload[i] ^= mask[i % 4];
+        }
+
         if (opcode === 0x8) {
           destroySocket(socket);
           return;
         }
         if (opcode === 0x9) {
-          socket.write(Buffer.from([0x8a, 0x00]));
+          socket.write(controlFrame(0x0a, payload));
           continue;
         }
+        if (opcode === 0x0a) continue;
         if (opcode !== 0x1) continue;
-        if (mask) {
-          for (let i = 0; i < payload.length; i += 1) {
-            payload[i] ^= mask[i % 4];
-          }
-        }
         const text = payload.toString('utf8');
         const lines = text.split('\n');
         for (const rawLine of lines) {
@@ -811,6 +876,9 @@ function createBrowserBridgeServer({
 
   async function start() {
     if (server) return { host, port: server.address().port };
+    if (!isLoopbackHostHeader(host) && !allowNetworkHost) {
+      throw new Error('Refusing non-loopback Bridge HTTP host without explicit allowNetworkHost.');
+    }
 
     unsubscribeLine = service.on('line', broadcastLine);
     unsubscribeStructured = service.on(
@@ -836,6 +904,15 @@ function createBrowserBridgeServer({
       const pathname = url.pathname;
 
       if (pathname.startsWith('/api/')) {
+        if (!isLoopbackHostHeader(req.headers?.host) ||
+            (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !isSameOriginRequest(req))) {
+          rejectForbidden(res);
+          return;
+        }
+        if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && !hasControlToken(req, url)) {
+          sendJson(res, 401, { error: { code: 'unauthorized', message: 'Bridge control token is required.' } });
+          return;
+        }
         await handleApi(req, res, pathname);
         return;
       }
@@ -874,7 +951,7 @@ function createBrowserBridgeServer({
     return {
       host,
       port: server.address().port,
-      url: `http://${host}:${server.address().port}/`,
+      url: `http://${host}:${server.address().port}/?token=${encodeURIComponent(controlToken)}`,
     };
   }
 

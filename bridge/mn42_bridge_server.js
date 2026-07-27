@@ -11,7 +11,7 @@ const { openBrowser, shouldOpenBrowser } = require('./lib/open_browser');
 function usageText() {
   return (
     'mn42_bridge_server.js - browser-driven MOARkNOBS-42 bridge\n' +
-    'Usage: node mn42_bridge_server.js [--open-browser|--no-open-browser] [--config FILE] [--http-host ADDR] [--http-port PORT] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
+    'Usage: node mn42_bridge_server.js [--open-browser|--no-open-browser] [--config FILE] [--http-host ADDR] [--http-port PORT] [--unsafe-network-http] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
   );
 }
 
@@ -61,6 +61,7 @@ async function runServer(argv = process.argv, injected = {}) {
     service,
     host: config.httpHost,
     port: config.httpPort,
+    allowNetworkHost: config.allowNetworkHttp,
   });
 
   const address = await server.start();

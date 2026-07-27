@@ -209,6 +209,19 @@ async function run() {
     [0xb0, 38, 127],
   ]);
 
+  // Inbound RPN/NRPN data-entry CCs must not double as implicit slot writes.
+  const serialBeforeParameter = serial.writes.length;
+  context.midiIn.handler({ toArray: () => [0xb0, 99, 4] });
+  context.midiIn.handler({ toArray: () => [0xb0, 98, 1] });
+  context.midiIn.handler({ toArray: () => [0xb0, 6, 15] });
+  context.midiIn.handler({ toArray: () => [0xb0, 38, 127] });
+  await wait();
+  assert.equal(
+    serial.writes.slice(serialBeforeParameter).some((line) => line.startsWith('SET_SLOT_VALUE,6,') || line.startsWith('SET_SLOT_VALUE,38,')),
+    false,
+    'RPN/NRPN selectors and data-entry controllers must not mutate live slots',
+  );
+
   // MIDI inbound should rebroadcast into typed OSC namespaces.
   context.midiIn.handler({ toArray: () => [0x90, 64, 100] });
   await wait();

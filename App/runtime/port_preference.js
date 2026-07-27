@@ -51,10 +51,19 @@ export function createPortPreferenceStore({ storage, storageKey } = {}) {
     }
   }
 
+  function clear() {
+    try {
+      storage?.removeItem?.(storageKey);
+    } catch (err) {
+      console.debug('clear port preference failed', err);
+    }
+  }
+
   return {
     getPortInfo,
     normalizeFilter,
     persist,
-    read
+    read,
+    clear
   };
 }

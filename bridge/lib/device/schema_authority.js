@@ -1,14 +1,13 @@
 const fs = require('node:fs/promises');
-const fsSync = require('node:fs');
+const crypto = require('node:crypto');
 const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
 const SNAPSHOT_APP_ROOT = path.resolve(__dirname, '..', '..', '..', 'App');
-const PACKAGED_APP_ROOT = path.join(
+const PACKAGED_RUNTIME_ROOT = path.join(
   os.tmpdir(),
   'mn42-bridge-runtime',
-  'App-authority',
 );
 const DEFAULT_SLOT_TYPE_NAMES = [
   'OFF',
@@ -39,9 +38,9 @@ function clone(value) {
 let authorityPromise = null;
 let packagedAppRootPromise = null;
 
-async function copyAppRuntimeFile(relativePath) {
+async function copyAppRuntimeFile(relativePath, targetRoot) {
   const sourcePath = path.join(SNAPSHOT_APP_ROOT, relativePath);
-  const targetPath = path.join(PACKAGED_APP_ROOT, relativePath);
+  const targetPath = path.join(targetRoot, relativePath);
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
   const body = await fs.readFile(sourcePath, 'utf8');
   const output =
@@ -129,16 +128,20 @@ async function ensurePackagedAppRoot() {
   if (!process.pkg) return SNAPSHOT_APP_ROOT;
   if (!packagedAppRootPromise) {
     packagedAppRootPromise = (async () => {
-      if (
-        !fsSync.existsSync(path.join(PACKAGED_APP_ROOT, 'config_schema.json'))
-      ) {
-        await Promise.all(
-          APP_RUNTIME_FILES.map((relativePath) =>
-            copyAppRuntimeFile(relativePath),
-          ),
-        );
-      }
-      return PACKAGED_APP_ROOT;
+      const sourceFiles = await Promise.all(
+        APP_RUNTIME_FILES.map(async (relativePath) => [relativePath, await fs.readFile(path.join(SNAPSHOT_APP_ROOT, relativePath))]),
+      );
+      const digest = crypto
+        .createHash('sha256')
+        .update(sourceFiles.map(([relativePath, body]) => `${relativePath}\0${body}`).join('\0'))
+        .digest('hex');
+      const appRoot = path.join(PACKAGED_RUNTIME_ROOT, digest, 'App-authority');
+      // The digest makes staging version-specific and prevents a new package
+      // from loading stale authority or ABI-adjacent files left in /tmp.
+      await Promise.all(
+        APP_RUNTIME_FILES.map((relativePath) => copyAppRuntimeFile(relativePath, appRoot)),
+      );
+      return appRoot;
     })();
   }
   return packagedAppRootPromise;
@@ -200,6 +203,7 @@ async function loadSchemaAuthority() {
 
 module.exports = {
   APP_ROOT: SNAPSHOT_APP_ROOT,
+  PACKAGED_RUNTIME_ROOT,
   DEFAULT_SLOT_TYPE_NAMES,
   loadSchemaAuthority,
 };

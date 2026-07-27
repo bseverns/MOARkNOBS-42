@@ -4,6 +4,7 @@ const STORAGE_KEY = 'mn42-bridge-console';
 const MODE_KEY = 'mn42-bridge-console-mode';
 const RAW_LINE_LIMIT = 200;
 const STRUCTURED_EVENT_LIMIT = 120;
+const controlToken = new URL(window.location.href).searchParams.get('token') || '';
 
 const form = document.getElementById('bridge-form');
 const startButton = document.getElementById('start-bridge');
@@ -678,9 +679,14 @@ function renderMidiPorts({ inputs = [], outputs = [] } = {}) {
 }
 
 async function api(url, options = {}) {
+  const { headers: optionHeaders = {}, ...requestOptions } = options;
   const response = await fetch(url, {
-    headers: { 'content-type': 'application/json' },
-    ...options,
+    headers: {
+      'content-type': 'application/json',
+      ...(controlToken ? { authorization: `Bearer ${controlToken}` } : {}),
+      ...optionHeaders,
+    },
+    ...requestOptions,
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -848,12 +854,15 @@ function openConfigurator() {
   const target = new URL('/app/', window.location.href);
   target.searchParams.set('ws', wsUrl('/ws'));
   target.searchParams.set('bridgeTransport', 'session');
+  if (controlToken) target.searchParams.set('token', controlToken);
   window.open(target.toString(), '_blank', 'noopener');
 }
 
 function connectRawSocket() {
   if (rawSocket && rawSocket.readyState <= 1) return;
-  rawSocket = new WebSocket(wsUrl('/ws'));
+  const target = new URL(wsUrl('/ws'));
+  if (controlToken) target.searchParams.set('token', controlToken);
+  rawSocket = new WebSocket(target.toString());
   rawSocket.addEventListener('message', (event) => {
     const text = String(event.data || '').trim();
     if (!text) return;
@@ -867,7 +876,9 @@ function connectRawSocket() {
 
 function connectStructuredSocket() {
   if (eventSocket && eventSocket.readyState <= 1) return;
-  eventSocket = new WebSocket(wsUrl('/ws/events'));
+  const target = new URL(wsUrl('/ws/events'));
+  if (controlToken) target.searchParams.set('token', controlToken);
+  eventSocket = new WebSocket(target.toString());
   eventSocket.addEventListener('message', (event) => {
     try {
       const payload = JSON.parse(String(event.data || '').trim());

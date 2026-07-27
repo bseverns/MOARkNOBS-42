@@ -12,6 +12,7 @@ const ALLOWED_CONFIG_KEYS = new Set([
   'midiLabel',
   'httpPort',
   'httpHost',
+  'allowNetworkHttp',
   'allowFeedbackLoops',
   'feedbackWindowMs',
   'rtP95TargetMs',

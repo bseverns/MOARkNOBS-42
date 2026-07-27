@@ -68,6 +68,21 @@ function createMidiMessageHandler({
 
     const ccEvent = typedEvents.find((event) => event.kind === 'cc');
     if (!ccEvent) return;
+    // RPN/NRPN selectors and data-entry messages are control-sequence traffic,
+    // not implicit MN42 slot commands. Without this guard CC6/38 can change a
+    // slot while a host is merely completing a 14-bit parameter message.
+    if ([6, 38, 98, 99, 100, 101].includes(ccEvent.controller)) {
+      recordRoute({
+        flow: 'midi->serial',
+        kind: 'drop_parameter_control',
+        status: arr[0],
+        slot: ccEvent.controller,
+        value: ccEvent.value,
+        traceId: midiTraceId,
+        hostTimestampMs,
+      });
+      return;
+    }
     const cmd = buildSlotCommandFromCcEvent(ccEvent);
     if (!cmd) {
       bumpCounter('badMidiCmdDrops');
@@ -93,14 +108,19 @@ function createMidiMessageHandler({
       traceId: midiTraceId,
       hostTimestampMs,
     });
-    queuePendingCommand({
-      slot: cmd.slot,
-      value: cmd.value,
-      traceId: midiTraceId,
-      hostTimestampMs,
-      source: 'midi',
-    });
-    sendLine(formatLiveValueCommand(cmd));
+    try {
+      sendLine(formatLiveValueCommand(cmd));
+      queuePendingCommand({
+        slot: cmd.slot,
+        value: cmd.value,
+        traceId: midiTraceId,
+        hostTimestampMs,
+        source: 'midi',
+      });
+    } catch (err) {
+      bumpCounter('badMidiCmdDrops');
+      pushLog('warn', `MIDI command dropped: serial unavailable (${err.message || err})`);
+    }
   };
 }
 

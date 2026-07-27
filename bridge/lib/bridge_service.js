@@ -52,9 +52,10 @@ function preparePackagedSerialportBindings(pushLog) {
     'serialport-bindings-cpp',
   );
   const stagedPrebuilds = path.join(stagedRoot, 'prebuilds');
-  if (!fs.existsSync(stagedPrebuilds)) {
-    copyDirectoryRecursive(snapshotPrebuilds, stagedPrebuilds);
-  }
+  // Temp directories survive application upgrades; refresh native bindings so
+  // the current executable never loads an old ABI from a fixed staging path.
+  fs.rmSync(stagedPrebuilds, { recursive: true, force: true });
+  copyDirectoryRecursive(snapshotPrebuilds, stagedPrebuilds);
 
   // node-gyp-build resolves prebuild paths via "<PACKAGE_NAME>_PREBUILD".
   process.env['@SERIALPORT/BINDINGS_CPP_PREBUILD'] = stagedRoot;
@@ -660,15 +661,17 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   // Start all bridge transports and publish a fresh runtime snapshot.
   async function start() {
-    const startedState = await startBridgeRuntime({
-      isRunning: () => running,
-      getState,
-      loadDeps,
-      setRuntimeFlags: ({ running: r, stopping: s, manualStop: m }) => {
+    let startedState;
+    try {
+      startedState = await startBridgeRuntime({
+        isRunning: () => running,
+        getState,
+        loadDeps,
+        setRuntimeFlags: ({ running: r, stopping: s, manualStop: m }) => {
         if (typeof r === 'boolean') running = r;
         if (typeof s === 'boolean') stopping = s;
         if (typeof m === 'boolean') manualStop = m;
-      },
+        },
       resetTraceSeq: () => {
         traceSeq = 0;
       },
@@ -684,8 +687,15 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       clone,
       attachOsc,
       attachMidi,
-      attachSerial,
-    });
+        attachSerial,
+      });
+    } catch (error) {
+      // Attach order is necessarily incremental; compensate through the same
+      // teardown path used by an operator stop so no OSC/MIDI/serial fragment
+      // survives a failed startup.
+      await stop().catch(() => {});
+      throw error;
+    }
     emitStructuredEvent('bridge.performance', {
       performance: getState().performance,
     });
@@ -694,6 +704,9 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   // Tear down serial, OSC, and MIDI cleanly so the bridge can restart without zombie listeners.
   async function stop() {
+    // Cancel handshake/apply timers before closing transports; a stopped bridge
+    // must never retry HELLO into a serial lane that has already been released.
+    deviceSession.handleDisconnect('service_stop');
     return stopBridgeRuntime({
       setRuntimeFlags: ({ running: r, stopping: s, manualStop: m }) => {
         if (typeof r === 'boolean') running = r;

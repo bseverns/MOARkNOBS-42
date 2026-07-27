@@ -93,7 +93,7 @@ npm start
 
 By default the console is served at <http://127.0.0.1:8787/>.
 
-Security note: the HTTP console is local-only by default. Binding the bridge HTTP server or OSC listener to a public interface is unsupported unless you place it behind intentional network protection. Treat `/api/*`, `/ws`, and `/mn42/cmd` as trusted-local control surfaces.
+Security note: the HTTP console is loopback-only by default. Each launch creates a random control token and opens the console with it in the URL; privileged `POST` API requests require it as a Bearer token and both `/ws` and `/ws/events` require it as a query parameter. Treat that URL as a local credential. Binding the bridge HTTP server to a public interface requires the explicit `--unsafe-network-http` flag and intentional network protection.
 
 If you want stable settings across launches, copy [`settings.example.json`](settings.example.json) to your own file and start the bridge with `--config`:
 
@@ -378,6 +378,7 @@ The console accepts the same serial/OSC/MIDI settings as the CLI, plus:
 | ------------- | ----------- | ------------------------------------------------ |
 | `--http-host` | `127.0.0.1` | Host interface for the browser console           |
 | `--http-port` | `8787`      | Port for the browser console and `/ws` transport |
+| `--unsafe-network-http` | off | Permit a non-loopback HTTP host; requires network protection |
 
 ### Split send/receive ports
 

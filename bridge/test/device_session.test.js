@@ -96,6 +96,47 @@ async function run() {
   }
 
   {
+    const lines = [];
+    const alerts = [];
+    const session = createDeviceSession({
+      sendLine: (line) => lines.push(line),
+      onStructuredEvent: (event) => alerts.push(event),
+      handshakeTimeoutMs: 10,
+    });
+    await session.handleOpen();
+    await wait(45);
+    assert.equal(
+      lines.filter((line) => line === 'HELLO').length,
+      3,
+      'handshake retries only the missing HELLO request before timing out',
+    );
+    assert.equal(session.getState().handshakeState, 'timeout');
+    assert.equal(
+      alerts.some((entry) => entry.event === 'bridge.alert' && entry.payload?.code === 'handshake_timeout'),
+      true,
+    );
+  }
+
+  {
+    const harness = createHarness({
+      simulator: { schema: { required: ['slots', 'efSlots', 'filter', 'arg'] } },
+    });
+    await harness.session.handleOpen();
+    await wait(30);
+    const state = harness.session.getState();
+    assert.equal(state.ready, false, 'incompatible reported schemas must not make the session write-ready');
+    assert.equal(state.compatibility.status, 'incompatible');
+    const staged = clone(state.stagedConfig);
+    staged.slots[0].data1 = 17;
+    await harness.session.stageConfig(staged);
+    await assert.rejects(
+      () => harness.session.applyStagedConfig(),
+      (error) => error?.code === 'device_schema_incompatible',
+      'Apply must be blocked when device and bundled schema contracts disagree',
+    );
+  }
+
+  {
     const harness = createHarness();
     await harness.session.handleOpen();
     await waitFor(() => harness.session.getState().ready);
@@ -143,6 +184,28 @@ async function run() {
       harness.session.getState().dirty,
       false,
       'dirty should clear after the ACK promotes staged config to live',
+    );
+  }
+
+  {
+    const harness = createHarness({ simulator: { ackDelayMs: 30 } });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[4].data1 = 99;
+    await harness.session.stageConfig(staged);
+    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 5000 });
+    await wait(1);
+    await assert.rejects(
+      () => harness.session.rollback('operator_request'),
+      (error) => error?.code === 'apply_in_progress',
+      'rollback must reject while a transmitted apply is awaiting ACK',
+    );
+    await applyPromise;
+    assert.equal(
+      harness.session.getState().liveConfig.slots[4].data1,
+      99,
+      'ACK must promote the immutable transmitted staged snapshot',
     );
   }
 

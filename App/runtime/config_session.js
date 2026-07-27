@@ -371,16 +371,16 @@ export function createConfigSession({
     emit('rollback', {});
   }
 
-  function restoreLocalState() {
+  function restoreLocalState({ allowDifferentFirmware = false } = {}) {
     const snapshot = stateSnapshotStore.read?.();
     const identity = stateSnapshotStore.identityDecision?.(snapshot);
-    if (identity === 'different-firmware') {
+    if (identity === 'different-firmware' && !allowDifferentFirmware) {
       emit('snapshot-restore-required', { snapshot, identity });
       return false;
     }
     const staged =
       typeof stateSnapshotStore.readStagedConfig === 'function'
-        ? stateSnapshotStore.readStagedConfig()
+        ? stateSnapshotStore.readStagedConfig({ allowDifferentFirmware })
         : stateSnapshotStore.read()?.staged;
     if (!staged) return false;
     stage(() => staged);

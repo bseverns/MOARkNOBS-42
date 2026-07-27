@@ -4,7 +4,7 @@ const { loadBridgeSettingsFileSync } = require('./settings_file');
 function usageText() {
   return (
     'mn42_bridge.js - link MOARkNOBS-42 to OSC & MIDI\n' +
-    'Usage: node mn42_bridge.js [--config FILE] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
+    'Usage: node mn42_bridge.js [--config FILE] [--serial PORT] [--osc PORT] [--osc-listen PORT] [--host ADDR] [--bind ADDR] [--midi LABEL] [--unsafe-network-http] [--allow-feedback-loops] [--feedback-window-ms N] [--rt-p95-target-ms N] [--rt-jitter-p95-target-ms N] [--alert-suppression-ms N]'
   );
 }
 
@@ -147,6 +147,8 @@ function parseConfigFromArgv(argv = process.argv, defaults = {}) {
       fileConfig.httpPort ?? defaultHttpPort,
     ),
     httpHost: getArg(argv, '--http-host', fileConfig.httpHost ?? '127.0.0.1'),
+    allowNetworkHttp:
+      argv.includes('--unsafe-network-http') || Boolean(fileConfig.allowNetworkHttp),
     allowFeedbackLoops:
       argv.includes('--allow-feedback-loops') ||
       Boolean(fileConfig.allowFeedbackLoops),

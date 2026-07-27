@@ -741,6 +741,9 @@ const boot = () => {
     deviceMonitorController.renderTelemetry(frame);
     profileMacroScenePanel.onTelemetry(frame);
   });
+  runtime.on('telemetry-health', (health) => {
+    deviceMonitorController.renderTelemetryHealth(health);
+  });
   runtime.on('config', ({ staged, config, dirty }) => {
     // `staged` is the single source of truth for editor controls; keep all derived UI panes in
     // sync from this one event to avoid mixed snapshots.
@@ -816,6 +819,20 @@ const boot = () => {
         : 'Export your preset and update firmware/UI to continue.'
     }`;
     migrationDialog.showModal();
+  });
+  runtime.on('snapshot-restore-required', ({ snapshot }) => {
+    const savedAt = snapshot?.saved_at || (snapshot?.timestamp ? new Date(snapshot.timestamp).toISOString() : 'unknown time');
+    const firmware = snapshot?.device?.firmware_git_sha || 'unknown firmware';
+    const restore = window.confirm(
+      `A staged workspace from ${savedAt} targets ${firmware}, not this firmware. Restore it for review? It will remain staged and will not be applied automatically.`
+    );
+    if (restore) {
+      runtime.restoreLocalState({ allowDifferentFirmware: true });
+      setStatus('warn', 'Workspace restored for review', `Origin: ${firmware} • saved ${savedAt}`);
+    } else {
+      runtime.discardSavedWorkspace();
+      setStatus('warn', 'Old workspace discarded', `Origin: ${firmware} • saved ${savedAt}`);
+    }
   });
   runtime.on('connected', ({ manifest }) => {
     // Connection flips the entire toolbar/profile surface into interactive mode.

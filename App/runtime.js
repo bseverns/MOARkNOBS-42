@@ -102,7 +102,7 @@ export function createRuntime({
     typeof window !== 'undefined' && typeof window.location === 'object'
       ? window.location.href
       : undefined;
-  const { structuredBridgePreference, resolvedBridgeApiBaseUrl, websocketUrl, bridgeEventsUrl } =
+  const { structuredBridgePreference, resolvedBridgeApiBaseUrl, websocketUrl, bridgeEventsUrl, bridgeControlToken } =
     resolveTransportModeOptions({
       locationHref,
       bridgeApiBaseUrl,
@@ -175,12 +175,20 @@ export function createRuntime({
     });
   }
 
-  async function requestPort() {
+  async function requestPort({ ignorePreference = false } = {}) {
     if (useSimulator) return createSimulatorTransport();
     if (!navigator.serial?.requestPort) throw new Error('WebSerial unavailable');
-    const remembered = portPreferenceStore.read();
+    const remembered = ignorePreference ? null : portPreferenceStore.read();
     const filters = remembered ? [remembered] : undefined;
-    const port = await navigator.serial.requestPort(filters ? { filters } : {});
+    let port;
+    try {
+      port = await navigator.serial.requestPort(filters ? { filters } : {});
+    } catch (err) {
+      if (!filters) throw err;
+      // A remembered VID/PID may be stale after a boot-mode or firmware identity change.
+      portPreferenceStore.clear();
+      port = await navigator.serial.requestPort();
+    }
     portPreferenceStore.persist(port);
     return createTransportPort(port, {}, { makeEncoder: encoder, makeDecoder: decoder });
   }
@@ -310,7 +318,8 @@ export function createRuntime({
     createClient: ({ baseUrl, eventUrl }) =>
       createBridgeSessionClient({
         baseUrl,
-        eventUrl
+        eventUrl,
+        controlToken: bridgeControlToken
       }),
     compileSchema(nextSchema) {
       validator = ajv.compile(nextSchema);
@@ -553,6 +562,9 @@ export function createRuntime({
       throw new Error(`Apply is blocked until the device contract is verified (current: ${contractQuality}).`);
     }
     if (bridgeSessionActive) {
+      if (!bridgeSessionRuntime.isHealthy()) {
+        throw new Error('Apply is blocked while the Bridge session event authority is stale.');
+      }
       await bridgeSessionRuntime.flushStageSync({ active: bridgeSessionActive });
     }
     return configSession.apply();
@@ -569,6 +581,8 @@ export function createRuntime({
       transportMode: getTransportMode({ useSimulator, bridgeSessionActive, websocketUrl }),
       contractQuality,
       bridgeSessionActive,
+      bridgeSessionHealth: bridgeSessionRuntime.getHealth(),
+      telemetryHealth: telemetryRuntime.getHealth(),
       bridgeApiBaseUrl: resolvedBridgeApiBaseUrl
     };
   }
@@ -596,6 +610,7 @@ export function createRuntime({
     setLocalSlotMeta: configSession.setLocalSlotMeta,
     createThrottle,
     requestPort,
+    forgetRememberedPort: portPreferenceStore.clear,
     useSimulator(toggle) {
       useSimulator = toggle;
     }
