@@ -1,10 +1,78 @@
+function fnv1aUtf8(value) {
+  let hash = 2166136261;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+export function createChunkedReadAssembler() {
+  let pending = null;
+
+  function fail(message) {
+    pending = null;
+    return { error: message };
+  }
+
+  return {
+    consume(msg, { id, expectedCommand } = {}) {
+      if (msg?.type !== 'read_chunk' || msg.command !== expectedCommand) return null;
+      const index = Number(msg.index);
+      const total = Number(msg.total);
+      const checksum = Number(msg.checksum);
+      if (
+        !Number.isInteger(index) ||
+        !Number.isInteger(total) ||
+        !Number.isSafeInteger(checksum) ||
+        index < 0 ||
+        total < 1 ||
+        total > 16384 ||
+        index >= total ||
+        typeof msg.data !== 'string'
+      ) {
+        return fail('Malformed chunked device read');
+      }
+      if (!pending || pending.id !== id) {
+        pending = { id, expectedCommand, total, checksum: checksum >>> 0, chunks: new Array(total), count: 0 };
+      }
+      if (
+        pending.expectedCommand !== expectedCommand ||
+        pending.total !== total ||
+        pending.checksum !== (checksum >>> 0)
+      ) {
+        return fail('Inconsistent chunked device read');
+      }
+      if (pending.chunks[index] !== undefined && pending.chunks[index] !== msg.data) {
+        return fail('Conflicting duplicate chunked device read');
+      }
+      if (pending.chunks[index] === undefined) {
+        pending.chunks[index] = msg.data;
+        pending.count += 1;
+      }
+      if (pending.count !== pending.total) return { pending: true };
+
+      const payload = pending.chunks.join('');
+      const expectedChecksum = pending.checksum;
+      pending = null;
+      if (fnv1aUtf8(payload) !== expectedChecksum) return { error: 'Chunked device read checksum mismatch' };
+      try {
+        return { result: JSON.parse(payload) };
+      } catch {
+        return { error: 'Chunked device read contained invalid JSON' };
+      }
+    }
+  };
+}
+
 export function handleNativePendingResponse({
   msg,
   activePending,
   activePendingId,
   rpcKernel,
   isManifestPayload,
-  isConfigPayload
+  isConfigPayload,
+  chunkedReadAssembler
 } = {}) {
   if (activePending?.protocolMode !== 'native' || !activePending.nativeRequest) return false;
 
@@ -20,6 +88,40 @@ export function handleNativePendingResponse({
   }
 
   switch (activePending.nativeRequest.kind) {
+    case 'config_chunked':
+    case 'mod_matrix_chunked': {
+      const expectedCommand = activePending.nativeRequest.kind === 'config_chunked'
+        ? 'GET_CONFIG'
+        : 'GET_MOD_MATRIX';
+      const assembled = chunkedReadAssembler?.consume(msg, {
+        id: activePendingId,
+        expectedCommand
+      });
+      if (!assembled) break;
+      if (assembled.error) {
+        rpcKernel.handleRpcResponse({ id: activePendingId, error: { message: assembled.error } });
+      } else if (assembled.result) {
+        const valid = activePending.nativeRequest.kind === 'config_chunked'
+          ? isConfigPayload(assembled.result)
+          : (
+              assembled.result.command === 'GET_MOD_MATRIX' &&
+              Array.isArray(assembled.result.routes) &&
+              assembled.result.sources &&
+              typeof assembled.result.sources === 'object'
+            );
+        if (!valid) {
+          rpcKernel.handleRpcResponse({ id: activePendingId, error: { message: 'Chunked device read returned an invalid payload' } });
+        } else {
+          rpcKernel.handleRpcResponse({
+            id: activePendingId,
+            result: activePending.nativeRequest.kind === 'config_chunked'
+              ? { config: assembled.result }
+              : assembled.result
+          });
+        }
+      }
+      return true;
+    }
     case 'hello':
       if (msg.hello !== undefined) {
         rpcKernel.handleRpcResponse({

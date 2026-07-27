@@ -470,7 +470,12 @@ export function createRuntime({
     if (remoteManifest) remoteManifest.contract_quality = contractQuality;
     emit('contract-quality', { quality: contractQuality, applyAllowed: ['verified', 'simulator'].includes(contractQuality) });
     validator = ajv.compile(schema);
-    const configPayload = await sendRpc({ rpc: 'get_config' });
+    const supportsChunkedConfig = Boolean(
+      !useSimulator && remoteManifest?.capabilities?.chunked_reads?.config
+    );
+    const configPayload = await sendRpc({
+      rpc: supportsChunkedConfig ? 'get_config_chunked' : 'get_config'
+    });
     const config = configPayload?.config ?? configPayload;
     configSession.syncFromDevice(config);
     emit('schema', schema);

@@ -264,6 +264,10 @@ void handleGetConfigCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetConfigCommand(cmd.fullCommand());
 }
 
+void handleGetConfigChunkedCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetConfigChunkedCommand(cmd.fullCommand());
+}
+
 void handleGetEfCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetEfCommand(cmd.fullCommand());
 }
@@ -286,6 +290,10 @@ void handleGetDiagnosticsCommand(const ParsedCommand &cmd) {
 
 void handleGetModMatrixCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleGetModMatrixCommand(cmd.fullCommand());
+}
+
+void handleGetModMatrixChunkedCommand(const ParsedCommand &cmd) {
+    ProtocolSimpleHandlers::handleGetModMatrixChunkedCommand(cmd.fullCommand());
 }
 
 void handleGetNoteDynamicsCommand(const ParsedCommand &cmd) {

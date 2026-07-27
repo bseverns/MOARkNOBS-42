@@ -130,6 +130,10 @@ void writeManifestCapabilities(JsonObject object) {
     capabilities["usb_midi_toggle"] = HAS_USB_MIDI;
     capabilities["device_schema"] = true;
     capabilities["bulk_config"] = persistent;
+    JsonObject chunkedReads = capabilities.createNestedObject("chunked_reads");
+    chunkedReads["config"] = true;
+    chunkedReads["mod_matrix"] = true;
+    chunkedReads["payload_bytes"] = 20;
     capabilities["one_shot_config_boot"] = true;
 }
 

@@ -47,6 +47,36 @@ namespace {
 // the hot state we want to keep in RAM1. Park the scratch document in RAM2.
 DMAMEM StaticJsonDocument<65536> getConfigDoc;
 DMAMEM StaticJsonDocument<32768> modMatrixDoc;
+// Headers consume roughly 80 bytes and JSON escaping can double the payload.
+// Keep every response comfortably inside the native serial line guard.
+constexpr size_t kChunkedReadPayloadBytes = 20;
+
+uint32_t fnv1a(const String &value) {
+    uint32_t hash = 2166136261UL;
+    for (size_t i = 0; i < value.length(); ++i) {
+        hash ^= static_cast<uint8_t>(value[i]);
+        hash *= 16777619UL;
+    }
+    return hash;
+}
+
+void emitChunkedRead(const char *command, const String &payload) {
+    const size_t total = (payload.length() + kChunkedReadPayloadBytes - 1) / kChunkedReadPayloadBytes;
+    const uint32_t checksum = fnv1a(payload);
+    for (size_t index = 0; index < total; ++index) {
+        StaticJsonDocument<192> frame;
+        frame["type"] = "read_chunk";
+        frame["command"] = command;
+        frame["index"] = index;
+        frame["total"] = total;
+        frame["checksum"] = checksum;
+        frame["data"] = payload.substring(index * kChunkedReadPayloadBytes,
+                                            std::min(payload.length(), (index + 1) * kChunkedReadPayloadBytes));
+        String line;
+        serializeJson(frame, line);
+        LOG_PRINTLN(line);
+    }
+}
 
 struct MidiCcWriterBucket {
     uint8_t channel = 0;
@@ -818,6 +848,32 @@ void handleGetModMatrixCommand(const String &command) {
     LOG_PRINTLN(payload);
 }
 
+void handleGetModMatrixChunkedCommand(const String &command) {
+    (void)command;
+    // Preserve the legacy response shape inside the chunk stream.
+    auto &doc = modMatrixDoc;
+    doc.clear();
+    resetMidiCcWriterBuckets();
+    doc["type"] = "mod_matrix";
+    doc["command"] = "GET_MOD_MATRIX";
+    doc["contract_version"] = 1;
+    doc["fw_version"] = FW_VERSION_STR;
+    JsonObject sources = doc.createNestedObject("sources"); writeSourceLists(sources);
+    JsonObject limits = doc.createNestedObject("limits"); writeLfoRouteLimits(limits);
+    JsonArray routes = doc.createNestedArray("routes");
+    writePotRoutes(routes); writeEfRoutes(routes); writeLfoRoutes(routes);
+    JsonArray conflicts = doc.createNestedArray("conflicts");
+    writeMidiCcConflicts(conflicts); writeSlotValueConflicts(conflicts);
+    if (doc.overflowed()) {
+        DiagnosticRecord::recordProtocolError("json_overflow");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_MOD_MATRIX_CHUNKED\"}");
+        return;
+    }
+    String payload;
+    serializeJson(doc, payload);
+    emitChunkedRead("GET_MOD_MATRIX", payload);
+}
+
 // Full config export is intentionally the longest simple handler because it is
 // the canonical "describe the current machine state" reply used by hosts.
 void handleGetConfigCommand(const String &command) {
@@ -862,6 +918,32 @@ void handleGetConfigCommand(const String &command) {
     serializeJson(doc, payload);
     LOG_PRINTLN(payload);
     // Start high-rate WebSerial telemetry only after the configurator has successfully hydrated.
+    webSerialStreaming = true;
+}
+
+void handleGetConfigChunkedCommand(const String &command) {
+    (void)command;
+    auto &doc = getConfigDoc;
+    doc.clear();
+    doc["fw_version"] = FW_VERSION_STR;
+    doc["schema_version"] = CONFIG_VERSION;
+    JsonArray pots = doc.createNestedArray("pots"); writePotMappings(pots);
+    JsonArray slots = doc.createNestedArray("slots");
+    const auto &slotDefs = configManager.getSlots();
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) writeSlotConfig(slots, i, slotDefs[i]);
+    JsonArray efSlots = doc.createNestedArray("efSlots"); writeEfSlotMappings(efSlots);
+    JsonObject env = doc.createNestedObject("envelopes"); writeEnvelopeRuntime(env);
+    JsonObject rootFilter = doc.createNestedObject("filter"); writeEnvelopeFilterViews(env, rootFilter);
+    JsonObject rootArg = doc.createNestedObject("arg"); writeRootArgConfig(rootArg);
+    JsonObject led = doc.createNestedObject("led"); writeLedConfig(led);
+    if (doc.overflowed()) {
+        DiagnosticRecord::recordProtocolError("json_overflow");
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"json_overflow\",\"scope\":\"GET_CONFIG_CHUNKED\"}");
+        return;
+    }
+    String payload;
+    serializeJson(doc, payload);
+    emitChunkedRead("GET_CONFIG", payload);
     webSerialStreaming = true;
 }
 

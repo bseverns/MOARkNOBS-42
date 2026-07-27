@@ -1,4 +1,4 @@
-import { handleNativePendingResponse } from './native_response_router.js';
+import { createChunkedReadAssembler, handleNativePendingResponse } from './native_response_router.js';
 
 function nativeTextErrorForPending(line, activePending) {
   if (activePending?.protocolMode !== 'native' || !activePending.nativeRequest) return null;
@@ -32,6 +32,7 @@ export function createRuntimeLineHandler({
   extractSlotIndex,
   onTelemetry
 } = {}) {
+  const chunkedReadAssembler = createChunkedReadAssembler();
   return function handleLine(line) {
     // Dispatch order matters: scene/macro replies can look like normal JSON payloads, so route
     // their handlers first before generic RPC/telemetry parsing.
@@ -67,7 +68,8 @@ export function createRuntimeLineHandler({
         activePendingId,
         rpcKernel,
         isManifestPayload,
-        isConfigPayload
+        isConfigPayload,
+        chunkedReadAssembler
       })
     ) {
       return;

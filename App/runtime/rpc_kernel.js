@@ -52,6 +52,8 @@ export function createRpcKernel({
         return { kind: 'manifest', lines: ['GET_MANIFEST'] };
       case 'get_mod_matrix':
         return { kind: 'mod_matrix', lines: ['GET_MOD_MATRIX'] };
+      case 'get_mod_matrix_chunked':
+        return { kind: 'mod_matrix_chunked', lines: ['GET_MOD_MATRIX_CHUNKED'] };
       case 'get_arp':
         return { kind: 'arp_get', lines: ['GET_ARP'] };
       case 'get_profile':
@@ -75,6 +77,8 @@ export function createRpcKernel({
         return { kind: 'midi_test', lines: ['MIDI_TEST'] };
       case 'get_config':
         return { kind: 'config', lines: ['GET_CONFIG'] };
+      case 'get_config_chunked':
+        return { kind: 'config_chunked', lines: ['GET_CONFIG_CHUNKED'] };
       case 'get_schema':
         return { kind: 'schema', lines: ['GET_SCHEMA'] };
       case 'enter_config_mode':

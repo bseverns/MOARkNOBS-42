@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { handleNativePendingResponse } from '../runtime/native_response_router.js';
+import {
+  createChunkedReadAssembler,
+  handleNativePendingResponse
+} from '../runtime/native_response_router.js';
 
 function createHarness(kind) {
   const responses = [];
@@ -85,5 +88,59 @@ test('native response router maps generic native errors with code and message', 
   expect(handled).toBe(true);
   expect(responses).toEqual([
     { id: 42, error: { code: 'bad_state', message: 'Clock unavailable' } }
+  ]);
+});
+
+function fnv1a(value) {
+  let hash = 2166136261;
+  for (const byte of new TextEncoder().encode(value)) {
+    hash ^= byte;
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+test('native response router reassembles checksum-verified config chunks', () => {
+  const config = { pots: [], slots: [], led: {} };
+  const payload = JSON.stringify(config);
+  const harness = createHarness('config_chunked');
+  const common = {
+    activePending: harness.activePending,
+    activePendingId: harness.activePending.id,
+    rpcKernel: harness.rpcKernel,
+    isManifestPayload: () => false,
+    isConfigPayload: (value) => Array.isArray(value?.pots) && Array.isArray(value?.slots),
+    chunkedReadAssembler: createChunkedReadAssembler()
+  };
+
+  const first = handleNativePendingResponse({
+    ...common,
+    msg: { type: 'read_chunk', command: 'GET_CONFIG', index: 1, total: 2, checksum: fnv1a(payload), data: payload.slice(10) }
+  });
+  const second = handleNativePendingResponse({
+    ...common,
+    msg: { type: 'read_chunk', command: 'GET_CONFIG', index: 0, total: 2, checksum: fnv1a(payload), data: payload.slice(0, 10) }
+  });
+
+  expect(first).toBe(true);
+  expect(second).toBe(true);
+  expect(harness.responses).toEqual([{ id: 42, result: { config } }]);
+});
+
+test('native response router rejects corrupted chunked reads', () => {
+  const harness = createHarness('config_chunked');
+  const handled = handleNativePendingResponse({
+    msg: { type: 'read_chunk', command: 'GET_CONFIG', index: 0, total: 1, checksum: 1, data: '{"pots":[],"slots":[],"led":{}}' },
+    activePending: harness.activePending,
+    activePendingId: harness.activePending.id,
+    rpcKernel: harness.rpcKernel,
+    isManifestPayload: () => false,
+    isConfigPayload: () => true,
+    chunkedReadAssembler: createChunkedReadAssembler()
+  });
+
+  expect(handled).toBe(true);
+  expect(harness.responses).toEqual([
+    { id: 42, error: { message: 'Chunked device read checksum mismatch' } }
   ]);
 });

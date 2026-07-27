@@ -119,7 +119,7 @@ See [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md) for Setup, Stage,
 
 ### 4) Confirm it is live
 
-After startup, the bridge sends `HELLO`, `GET_MANIFEST`, `GET_SCHEMA`, and `GET_CONFIG` over serial, then waits for:
+After startup, the bridge sends `HELLO`, `GET_MANIFEST`, and `GET_SCHEMA`, then chooses `GET_CONFIG_CHUNKED` when the manifest advertises `capabilities.chunked_reads.config` (otherwise `GET_CONFIG`). Chunked responses are checksum-verified and reassembled before the config cache is updated.
 
 ```json
 { "hello": "mn42" }

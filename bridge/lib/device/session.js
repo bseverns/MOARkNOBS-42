@@ -57,6 +57,15 @@ function isConfigPayload(msg) {
   );
 }
 
+function fnv1aUtf8(value) {
+  let hash = 2166136261;
+  for (const byte of Buffer.from(value, 'utf8')) {
+    hash ^= byte;
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 function createSessionError(
   code,
   message,
@@ -145,6 +154,9 @@ function createDeviceSession({
   let applyPending = null;
   let handshakeTimer = null;
   let handshakeRetryCount = 0;
+  let configRequestCommand = 'GET_CONFIG';
+  let configRequested = false;
+  let chunkedConfigRead = null;
 
   function clearHandshakeTimer() {
     if (!handshakeTimer) return;
@@ -161,7 +173,7 @@ function createDeviceSession({
         'hello-wait': 'HELLO',
         'manifest-wait': 'GET_MANIFEST',
         'schema-wait': 'GET_SCHEMA',
-        'config-wait': 'GET_CONFIG',
+        'config-wait': configRequestCommand,
       };
       const retry = requestByState[waitingFor];
       if (retry && handshakeRetryCount < MAX_HANDSHAKE_RETRIES) {
@@ -295,7 +307,54 @@ function createDeviceSession({
     sendLine('HELLO');
     sendLine('GET_MANIFEST');
     sendLine('GET_SCHEMA');
-    sendLine('GET_CONFIG');
+  }
+
+  function requestInitialConfig() {
+    if (configRequested) return;
+    configRequested = true;
+    configRequestCommand = state.manifest?.capabilities?.chunked_reads?.config
+      ? 'GET_CONFIG_CHUNKED'
+      : 'GET_CONFIG';
+    state.handshakeState = 'config-wait';
+    sendLine(configRequestCommand);
+  }
+
+  function consumeChunkedConfig(msg) {
+    if (msg?.type !== 'read_chunk' || msg.command !== 'GET_CONFIG') return null;
+    const index = Number(msg.index);
+    const total = Number(msg.total);
+    const checksum = Number(msg.checksum);
+    if (
+      !Number.isInteger(index) || !Number.isInteger(total) || !Number.isSafeInteger(checksum) ||
+      index < 0 || total < 1 || total > 16384 || index >= total || typeof msg.data !== 'string'
+    ) {
+      return { error: 'Malformed chunked config response' };
+    }
+    if (!chunkedConfigRead) {
+      chunkedConfigRead = { total, checksum: checksum >>> 0, chunks: new Array(total), count: 0 };
+    }
+    if (chunkedConfigRead.total !== total || chunkedConfigRead.checksum !== (checksum >>> 0)) {
+      chunkedConfigRead = null;
+      return { error: 'Inconsistent chunked config response' };
+    }
+    if (chunkedConfigRead.chunks[index] !== undefined && chunkedConfigRead.chunks[index] !== msg.data) {
+      chunkedConfigRead = null;
+      return { error: 'Conflicting duplicate config chunk' };
+    }
+    if (chunkedConfigRead.chunks[index] === undefined) {
+      chunkedConfigRead.chunks[index] = msg.data;
+      chunkedConfigRead.count += 1;
+    }
+    if (chunkedConfigRead.count !== chunkedConfigRead.total) return { pending: true };
+    const payload = chunkedConfigRead.chunks.join('');
+    const expectedChecksum = chunkedConfigRead.checksum;
+    chunkedConfigRead = null;
+    if (fnv1aUtf8(payload) !== expectedChecksum) return { error: 'Chunked config checksum mismatch' };
+    try {
+      return { config: JSON.parse(payload) };
+    } catch {
+      return { error: 'Chunked config response contained invalid JSON' };
+    }
   }
 
   async function handleOpen() {
@@ -316,6 +375,9 @@ function createDeviceSession({
     state.dirty = false;
     state.lastApplyResult = null;
     state.lastError = null;
+    configRequestCommand = 'GET_CONFIG';
+    configRequested = false;
+    chunkedConfigRead = null;
     syncIdentityFromManifest();
     emitState();
     await startHandshake();
@@ -394,6 +456,21 @@ function createDeviceSession({
     if (!isObject(msg)) return;
     await ensureAuthority();
 
+    const chunkedConfig = consumeChunkedConfig(msg);
+    if (chunkedConfig?.error) {
+      state.lastError = chunkedConfig.error;
+      emitState();
+      emitStructured('bridge.alert', {
+        code: 'chunked_config_invalid', severity: 'error', message: chunkedConfig.error,
+      });
+      return;
+    }
+    if (chunkedConfig?.pending) return;
+    if (chunkedConfig?.config) {
+      await handleMessage(chunkedConfig.config, meta);
+      return;
+    }
+
     if (msg.hello === 'mn42') {
       state.handshakeState = state.manifest ? (state.schema ? 'config-wait' : 'schema-wait') : 'manifest-wait';
       state.helloSeen = true;
@@ -415,6 +492,7 @@ function createDeviceSession({
       state.handshakeState = state.schema ? 'config-wait' : 'schema-wait';
       state.manifest = clone(msg);
       syncIdentityFromManifest();
+      requestInitialConfig();
       const becameReady = updateReadyState();
       emitState();
       if (becameReady) {
@@ -432,6 +510,7 @@ function createDeviceSession({
     ) {
       state.manifest = clone(msg.result.manifest);
       syncIdentityFromManifest();
+      requestInitialConfig();
       const becameReady = updateReadyState();
       emitState();
       if (becameReady) {
