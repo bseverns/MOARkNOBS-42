@@ -12,6 +12,7 @@
 #include "version.h"
 
 #include <array>
+#include <cstring>
 
 // Serial debug wrappers. Flip `MIDI_DEBUG` at build time to spew or silence.
 #ifdef MIDI_DEBUG
