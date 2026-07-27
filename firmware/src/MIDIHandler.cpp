@@ -139,8 +139,13 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
 
 // Forward a SysEx blob when it passes length and pointer sanity checks.
 void MIDIHandler::sendSysEx(const uint8_t *data, uint16_t length) {
-    if (!data || length == 0 || length > 1024)
+    // DIN SysEx is blocking in the underlying MIDI library. Keep outbound
+    // packets within a bounded service-time budget; slot templates are 16 B.
+    if (!data || length < 2 || length > kMaxOutgoingSysExBytes || data[0] != 0xF0 ||
+        data[length - 1] != 0xF7) {
+        if (_diagnostics) ++_diagnostics->midiDropCount;
         return;
+    }
     _txCount++;
     MIDI.sendSysEx(length, data, true);
 #ifndef USB_MIDI_STUB

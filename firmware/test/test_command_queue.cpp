@@ -15,7 +15,7 @@ void expectQueueEntry(const char *expected) {
 
 } // namespace
 
-void test_command_queue_drops_oldest_on_overflow() {
+void test_command_queue_preserves_existing_frame_on_overflow() {
     testOnly_resetCommandQueue();
 
     char line[16];
@@ -24,8 +24,8 @@ void test_command_queue_drops_oldest_on_overflow() {
         testOnly_enqueueSerialCommand(line);
     }
 
-    expectQueueEntry("cmd02");
-    expectQueueEntry("cmd03");
+    expectQueueEntry("cmd00");
+    expectQueueEntry("cmd01");
 }
 
 void test_command_queue_ingests_newline_terminated_input() {

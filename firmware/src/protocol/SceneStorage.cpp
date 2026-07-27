@@ -266,6 +266,11 @@ ConfigState captureConfigState() {
 
 // 3. Full live-state apply.
 void applyConfigState(const ConfigState &state, bool persist) {
+    StorageBackend &storage = activeStorageBackend();
+    const bool transactionalPersist = persist && storage.supportsTransactions();
+    if (transactionalPersist && !storage.beginTransaction()) {
+        return;
+    }
     applySlotState(state);
     applyPotMappings(state, persist);
     const auto followerAssigned = rebuildFollowerAssignmentsFromSlots();
@@ -278,6 +283,9 @@ void applyConfigState(const ConfigState &state, bool persist) {
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
     }
     refreshEfVoicesFromConfig();
+    if (transactionalPersist && !storage.commitTransaction()) {
+        storage.abortTransaction();
+    }
 }
 
 // 4. Named scene slot helpers.
@@ -312,8 +320,23 @@ bool saveSceneSlot(uint8_t slot, const ConfigState &state, const char *name) {
     record.state = state;
     copySceneName(record.name, name);
     record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
+    StorageBackend &storage = activeStorageBackend();
+    if (storage.supportsTransactions() && !storage.beginTransaction()) {
+        return false;
+    }
     storagePut(sceneSlotAddress(slot), record);
-    return true;
+    SceneRecord verified{};
+    storageGet(sceneSlotAddress(slot), verified);
+    if (!recordValid(verified)) {
+        storage.abortTransaction();
+        return false;
+    }
+    if (!storage.supportsTransactions()) {
+        return true;
+    }
+    const bool committed = storage.commitTransaction();
+    if (!committed) storage.abortTransaction();
+    return committed;
 }
 
 bool loadSceneSlot(uint8_t slot, SceneEntry &entry) {
@@ -361,7 +384,22 @@ bool saveMacroSnapshot(const ConfigState &state) {
     record.occupied = 1;
     record.state = state;
     record.crc = computeCrc(record, sizeof(record.version) + sizeof(record.crc));
+    StorageBackend &storage = activeStorageBackend();
+    if (storage.supportsTransactions() && !storage.beginTransaction()) {
+        return false;
+    }
     storagePut(kMacroStorageAddress, record);
-    return true;
+    MacroRecord verified{};
+    storageGet(kMacroStorageAddress, verified);
+    if (!recordValid(verified)) {
+        storage.abortTransaction();
+        return false;
+    }
+    if (!storage.supportsTransactions()) {
+        return true;
+    }
+    const bool committed = storage.commitTransaction();
+    if (!committed) storage.abortTransaction();
+    return committed;
 }
 } // namespace SceneStorage

@@ -67,16 +67,18 @@ void queueMidiServiceRequest() {
     if (midiServiceRequestCount < kMaxMidiServiceRequestCount) {
         ++midiServiceRequestCount;
     }
+    ++g_systemDiagnostics.midiServiceRequests;
+    if (midiServiceRequestCount > g_systemDiagnostics.midiServiceMaxBacklog) {
+        g_systemDiagnostics.midiServiceMaxBacklog = midiServiceRequestCount;
+    }
 }
 
-// Consume the ISR-raised MIDI service flag from task context.
-bool consumeMidiServiceRequest() {
-    bool pending = false;
+// Consume and account for every ISR-raised request from task context.
+uint8_t consumeMidiServiceRequests() {
+    uint8_t pending = 0;
     noInterrupts();
-    if (midiServiceRequestCount > 0) {
-        pending = true;
-        midiServiceRequestCount = 0;
-    }
+    pending = midiServiceRequestCount;
+    midiServiceRequestCount = 0;
     interrupts();
     return pending;
 }
@@ -520,7 +522,11 @@ void processMIDI() {
     // The high-tier scheduler already paces this lane. Keep the Timer1 request as an interrupt
     // breadcrumb, but do not make USB/DIN polling depend on that interrupt firing; otherwise USB
     // clock can be visible to the host while the firmware never drains it.
-    (void)consumeMidiServiceRequest();
+    const uint8_t requests = consumeMidiServiceRequests();
+    ++g_systemDiagnostics.midiServiceExecutions;
+    if (requests > 1) {
+        g_systemDiagnostics.midiServiceCoalesced += requests - 1;
+    }
     midiHandler.processIncomingMIDI();
 
     static uint32_t lastDisplayTick = 0;
@@ -690,9 +696,11 @@ void processEnvelopes() {
 
             bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
             if (valueChanged) {
-                uint8_t ccNumber = potentiometerManager.getCCNumber(potIndex);
-                uint8_t channel = potentiometerManager.getChannel(potIndex);
-                midiHandler.sendControlChange(ccNumber, modulatedValue, channel);
+                // Envelope and LFO routes share the same slot renderer.  An
+                // EF assignment therefore honors Note, bend, program, SysEx,
+                // and other configured slot types instead of silently
+                // bypassing them as a pot CC.
+                emitSlotModulationValue(potIndex, modulatedValue);
                 lastEnvelopeMidiValues[potIndex] = modulatedValue;
             }
 

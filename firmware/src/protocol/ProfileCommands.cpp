@@ -63,8 +63,18 @@ void rebuildRuntimeFromProfile(const ProfileData &profile) {
 // When a slot was blank, we immediately persist the baseline so future loads see a concrete
 // profile.
 void persistMaterializedProfileSlot(uint8_t id, const ProfileData &profile) {
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (storage->supportsTransactions() && !storage->beginTransaction()) {
+        return;
+    }
     configManager.saveProfile(id);
-    configManager.saveProfileSettings(id, profile);
+    if (!configManager.saveProfileSettings(id, profile)) {
+        storage->abortTransaction();
+        return;
+    }
+    if (storage->supportsTransactions() && !storage->commitTransaction()) {
+        storage->abortTransaction();
+    }
 }
 } // namespace
 
@@ -74,10 +84,24 @@ bool saveCurrentProfileSlot(uint8_t id) {
         return false;
     }
 
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (storage->supportsTransactions() && !storage->beginTransaction()) {
+        return false;
+    }
+
     selectActiveProfileSlot(id);
     configManager.saveProfile(id);
     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-    return configManager.saveProfileSettings(id, captureProfileSnapshot());
+    if (!configManager.saveProfileSettings(id, captureProfileSnapshot())) {
+        storage->abortTransaction();
+        return false;
+    }
+    if (!storage->supportsTransactions()) {
+        return true;
+    }
+    const bool committed = storage->commitTransaction();
+    if (!committed) storage->abortTransaction();
+    return committed;
 }
 
 // Load one profile slot into the live runtime, falling back to a baseline if the slot is blank.

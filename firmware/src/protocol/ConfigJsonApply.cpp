@@ -30,6 +30,7 @@ Utility::BulkConfigAssembler bulkConfigAssembler;
 uint32_t lastAckSequence = 0;
 String lastAckChecksum;
 String lastAppliedChecksum;
+uint32_t lastStorageGeneration = 0;
 // Bulk SET_ALL parse state is large by design; keep the reusable document in
 // RAM2 so unit-test and runtime stacks keep more RAM1 headroom.
 DMAMEM StaticJsonDocument<Utility::kMaxBulkConfigSize> bulkApplyDoc;
@@ -39,16 +40,62 @@ struct BulkApplyIdentity {
     String configId;
 };
 
-// Device-owned digest of the normalized, applied state.  The host checksum is
-// retained as a correlation token, but must never be represented as proof of
-// what the firmware actually accepted.
-String appliedStateChecksum() {
-    const String canonical = configManager.serializeAll();
-    uint32_t hash = 2166136261UL; // FNV-1a, stable and small enough for Teensy.
-    for (size_t i = 0; i < canonical.length(); ++i) {
-        hash ^= static_cast<uint8_t>(canonical[i]);
-        hash *= 16777619UL;
+void hashByte(uint32_t &hash, uint8_t value) {
+    hash ^= value;
+    hash *= 16777619UL;
+}
+
+void hashU16(uint32_t &hash, uint16_t value) {
+    hashByte(hash, static_cast<uint8_t>(value));
+    hashByte(hash, static_cast<uint8_t>(value >> 8));
+}
+
+void hashFloat(uint32_t &hash, float value) {
+    // Canonicalize signed zero, then hash IEEE-754 bytes in a fixed order.
+    if (value == 0.0f) value = 0.0f;
+    uint32_t bits = 0;
+    std::memcpy(&bits, &value, sizeof(bits));
+    for (uint8_t shift = 0; shift < 32; shift += 8) {
+        hashByte(hash, static_cast<uint8_t>(bits >> shift));
     }
+}
+
+void hashSlot(uint32_t &hash, const MIDISlot &slot) {
+    hashByte(hash, static_cast<uint8_t>(slot.type));
+    hashByte(hash, slot.midiChannel); hashByte(hash, slot.data1); hashByte(hash, slot.active ? 1 : 0);
+    hashByte(hash, slot.arpNote); hashByte(hash, slot.sysexLength);
+    for (uint8_t value : slot.sysexTemplate) hashByte(hash, value);
+    const auto &ef = slot.efSettings;
+    hashByte(hash, static_cast<uint8_t>(ef.followerIndex)); hashByte(hash, ef.oversample);
+    hashByte(hash, static_cast<uint8_t>(ef.filterType)); hashByte(hash, ef.efMode);
+    hashByte(hash, ef.autoBaseline); hashByte(hash, ef.autoGain); hashByte(hash, ef.gateThreshold);
+    hashByte(hash, ef.gateHysteresis); hashByte(hash, ef.activityThreshold); hashByte(hash, ef.gainTarget);
+    hashByte(hash, ef.destinationMode); hashU16(hash, ef.attackMs); hashU16(hash, ef.releaseMs);
+    hashU16(hash, ef.rmsWindowMs); hashU16(hash, ef.baselineTauMs); hashU16(hash, ef.gainTauMs);
+    hashFloat(hash, ef.frequency); hashFloat(hash, ef.q); hashFloat(hash, ef.smoothing);
+    hashFloat(hash, ef.baseline); hashFloat(hash, ef.gain);
+    hashByte(hash, static_cast<uint8_t>(slot.arg.enabled));
+    hashByte(hash, static_cast<uint8_t>(slot.arg.method));
+    hashByte(hash, slot.arg.sourceA); hashByte(hash, slot.arg.sourceB);
+}
+
+// Device-owned digest over the full normalized slot arena and persisted profile
+// snapshot. The host checksum remains only a correlation token.
+String appliedStateChecksum() {
+    uint32_t hash = 2166136261UL; // FNV-1a, stable and small enough for Teensy.
+    for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
+        hashByte(hash, configManager.getPotChannel(i));
+        hashByte(hash, configManager.getPotCCNumber(i));
+    }
+    for (const MIDISlot &slot : configManager.getSlots()) hashSlot(hash, slot);
+    const ProfileData profile = captureProfileSnapshot();
+    hashByte(hash, profile.arp.lengthTicks); hashByte(hash, profile.arp.shape);
+    hashByte(hash, profile.arp.swingPercent); hashByte(hash, profile.arp.gatePercent);
+    hashByte(hash, profile.arp.octaveRange); hashByte(hash, profile.arp.patternLength);
+    hashByte(hash, profile.led.brightness); hashByte(hash, profile.led.r); hashByte(hash, profile.led.g); hashByte(hash, profile.led.b);
+    hashFloat(hash, profile.clock.tappedBpm); hashByte(hash, profile.clock.clockOutEnabled); hashByte(hash, profile.clock.followExternalClock);
+    hashByte(hash, static_cast<uint8_t>(profile.noteDynamics.velocityShift)); hashByte(hash, profile.noteDynamics.changeProbability);
+    hashFloat(hash, profile.jitter.depth); hashFloat(hash, profile.jitter.smoothness);
     char hex[9] = {0};
     snprintf(hex, sizeof(hex), "%08lx", static_cast<unsigned long>(hash));
     return String(hex);
@@ -890,7 +937,7 @@ bool emitDuplicateBulkAckIfNeeded(const BulkApplyIdentity &identity) {
     }
 
     LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence,
-                                   lastAppliedChecksum.c_str()));
+                                   lastAppliedChecksum.c_str(), lastStorageGeneration));
     bulkConfigAssembler.reset();
     return true;
 }
@@ -899,10 +946,11 @@ void commitBulkApplyAck(const BulkApplyIdentity &identity) {
     lastAckSequence = identity.sequence;
     lastAckChecksum = identity.configId;
     lastAppliedChecksum = appliedStateChecksum();
+    lastStorageGeneration = ConfigManager::getStorageBackend()->generation();
     DiagnosticRecord::recordConfigApplyResult(DiagnosticRecord::ConfigApplyStatus::Acked,
                                               identity.configId.c_str());
     LOG_PRINTLN(Utility::formatAck(identity.configId.c_str(), identity.sequence,
-                                   lastAppliedChecksum.c_str()));
+                                   lastAppliedChecksum.c_str(), lastStorageGeneration));
     bulkConfigAssembler.reset();
 }
 

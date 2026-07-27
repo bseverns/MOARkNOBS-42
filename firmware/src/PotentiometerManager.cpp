@@ -115,6 +115,9 @@ void PotentiometerManager::setCCNumberLive(int potIndex, uint8_t ccNumber) {
 
 // Resolve the current MIDI channel, preferring ConfigManager when attached.
 uint8_t PotentiometerManager::getChannel(int potIndex) {
+    if (potIndex < 0 || potIndex >= NUM_POTS) {
+        return 0;
+    }
     if (configManager) {
         return configManager->getPotChannel(static_cast<uint8_t>(potIndex));
     }
@@ -123,6 +126,9 @@ uint8_t PotentiometerManager::getChannel(int potIndex) {
 
 // Resolve the current CC number, preferring ConfigManager when attached.
 uint8_t PotentiometerManager::getCCNumber(int potIndex) {
+    if (potIndex < 0 || potIndex >= NUM_POTS) {
+        return 0;
+    }
     if (configManager) {
         return configManager->getPotCCNumber(static_cast<uint8_t>(potIndex));
     }

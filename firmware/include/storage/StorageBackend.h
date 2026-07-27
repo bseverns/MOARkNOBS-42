@@ -26,6 +26,7 @@ class StorageBackend {
     virtual bool beginTransaction() { return false; }
     virtual bool commitTransaction() { return false; }
     virtual void abortTransaction() {}
+    virtual uint32_t generation() const { return 0; }
 };
 
 #endif // STORAGE_BACKEND_H

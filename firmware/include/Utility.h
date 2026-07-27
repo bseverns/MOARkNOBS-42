@@ -192,7 +192,7 @@ class Utility {
 
     // Format the acknowledgement packet emitted after applying a config.
     static String formatAck(const char *checksum, uint32_t sequence,
-                            const char *appliedChecksum = nullptr);
+                            const char *appliedChecksum = nullptr, uint32_t storageGeneration = 0);
 
     // Sample the hardware VREF divider and return the measured voltage.
     static float readVrefADC(uint8_t pin = VREF_ADC_PIN);

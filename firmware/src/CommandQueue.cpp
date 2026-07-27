@@ -45,16 +45,6 @@ void sanitizeCommandQueueState() {
     resetCommandQueueState();
 }
 
-// Drop the oldest queued command so fresh operator input wins during overload.
-void dropOldestCommand() {
-    sanitizeCommandQueueState();
-    if (commandQueue.count == 0) {
-        return;
-    }
-    commandQueue.head = (commandQueue.head + 1) % kMaxCommandQueueSize;
-    --commandQueue.count;
-}
-
 // Push one complete serial line into the ring buffer.
 void enqueueSerialCommand(const char *line) {
     if (!line) {
@@ -62,10 +52,12 @@ void enqueueSerialCommand(const char *line) {
     }
     sanitizeCommandQueueState();
     if (commandQueue.count >= kMaxCommandQueueSize) {
-        // Keep newest commands under overload; interactive control is more useful than
-        // preserving stale backlog lines.
-        LOG_PRINTLN("Warning: Command queue overflow, dropping oldest command");
-        dropOldestCommand();
+        // Never discard an arbitrary earlier line: that can turn a framed
+        // SET_ALL transaction into a corrupted partial payload. Reject the
+        // new line and let the assembler time out/abort as one transaction.
+        LOG_PRINTLN("{\"type\":\"error\",\"code\":\"command_queue_overflow\","
+                    "\"message\":\"incoming command rejected; queued frame preserved\"}");
+        return;
     }
 
     char *slot = commandQueue.entries[commandQueue.tail];

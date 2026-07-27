@@ -21,6 +21,10 @@ class LittleFsStorageBackend final : public StorageBackend {
 
     bool ready() const { return ensureReady(); }
     bool supportsTransactions() const override { return ensureReady(); }
+    uint32_t generation() const override {
+        MetaRecord meta{};
+        return readMetaRecord(meta) ? meta.generation : 0;
+    }
 
     bool beginTransaction() override {
         if (!ensureReady() || transactionActive_) return false;
@@ -40,6 +44,14 @@ class LittleFsStorageBackend final : public StorageBackend {
         if (!fs_.rename(kStorageBlobPath, kPreviousBlobPath)) return false;
         if (!fs_.rename(kStagingBlobPath, kStorageBlobPath)) {
             fs_.rename(kPreviousBlobPath, kStorageBlobPath);
+            return false;
+        }
+        MetaRecord meta{};
+        if (!readMetaRecord(meta)) {
+            meta = MetaRecord{};
+        }
+        ++meta.generation;
+        if (!writeMetaRecord(meta)) {
             return false;
         }
         fs_.remove(kPreviousBlobPath);
@@ -139,13 +151,14 @@ class LittleFsStorageBackend final : public StorageBackend {
     static constexpr const char *kPreviousBlobPath = "/config_storage.previous.bin";
     static constexpr const char *kStorageMetaPath = "/config_storage.meta";
     static constexpr uint32_t kMetaMagic = 0x4D4B425A; // "MKBZ"
-    static constexpr uint16_t kMetaVersion = 1;
+    static constexpr uint16_t kMetaVersion = 2;
     static constexpr uint16_t kMetaFlagMigratedFromEeprom = 0x0001;
 
     struct MetaRecord {
         uint32_t magic = kMetaMagic;
         uint16_t version = kMetaVersion;
         uint16_t flags = 0;
+        uint32_t generation = 0;
     };
 
     bool addressInRange(int address) const {

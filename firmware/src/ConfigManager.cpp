@@ -462,7 +462,29 @@ bool ConfigManager::checkEEPROMHealth(bool backup, uint16_t base) {
 }
 
 bool ConfigManager::hasHealthyConfigurationCopy(bool backup, uint16_t base) const {
-    return const_cast<ConfigManager *>(this)->checkEEPROMHealth(backup, base);
+    if (!const_cast<ConfigManager *>(this)->checkEEPROMHealth(backup, base)) {
+        return false;
+    }
+    const int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
+    uint16_t version = 0;
+    uint16_t storedCrc = 0;
+    storageGet(offset + EEPROM_CONFIG_VERSION, version);
+    storageGet(offset + EEPROM_CONFIG_CRC, storedCrc);
+    if (version != CONFIG_VERSION) {
+        return false;
+    }
+    uint16_t calculated = 0xFFFF;
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        calculated = crc16_update(calculated, storageRead(offset + EEPROM_POT_CHANNELS + i));
+    }
+    for (uint8_t i = 0; i < _numPots; ++i) {
+        calculated = crc16_update(calculated, storageRead(offset + EEPROM_POT_CC + i));
+    }
+    if (base == EEPROM_PROFILE_START(0)) {
+        calculated = crc16_update(calculated, storageRead(offset + EEPROM_ACTIVE_PROFILE));
+        calculated = crc16_update(calculated, storageRead(offset + EEPROM_LED_MODE));
+    }
+    return calculated == storedCrc;
 }
 
 // Write magic number to EEPROM

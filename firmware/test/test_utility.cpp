@@ -110,10 +110,11 @@ void test_bulk_config_assembler_detects_overflow() {
 // ACKs double as human-facing breadcrumbs—verify we echo both checksum and
 // sequence markers for the host.
 void test_format_ack_includes_checksum_and_seq() {
-    String ack = Utility::formatAck("cafebabe", 42, "deadbeef");
+    String ack = Utility::formatAck("cafebabe", 42, "deadbeef", 7);
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"checksum\":\"cafebabe\""));
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"request_checksum\":\"cafebabe\""));
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"applied_checksum\":\"deadbeef\""));
+    TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"storage_generation\":7"));
     TEST_ASSERT_NOT_EQUAL(-1, ack.indexOf("\"seq\":42"));
 }
 

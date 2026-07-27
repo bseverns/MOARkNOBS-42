@@ -80,6 +80,12 @@ struct SystemDiagnostics {
     volatile uint32_t maxProcessMidiMicros =
         0; // Slowest MIDI service pass observed in microseconds
     volatile uint32_t lastProcessMidiMicros = 0; // Duration of the most recent MIDI service pass
+    volatile uint32_t midiServiceRequests = 0;   // Timer1 requests raised
+    volatile uint32_t midiServiceExecutions = 0; // task-context MIDI service passes
+    volatile uint32_t midiServiceCoalesced = 0;  // requests merged into an already-pending pass
+    volatile uint8_t midiServiceMaxBacklog = 0;  // high-water mark before a pass
+    volatile uint32_t schedulerMissedRuns = 0;   // periodic deadlines skipped by cooperative lanes
+    volatile uint32_t schedulerMaxTaskMicros = 0; // longest individual scheduler callback
 };
 
 extern SystemDiagnostics g_systemDiagnostics;

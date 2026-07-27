@@ -101,23 +101,35 @@ void writeManifestOperationalHealth(JsonObject object) {
     object["eeprom_primary_valid"] = configManager.hasHealthyConfigurationCopy(false);
     object["eeprom_backup_valid"] = configManager.hasHealthyConfigurationCopy(true);
     object["eeprom_last_load"] = describeEepromLoadSource(configManager.getLastLoadSource());
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    const uint16_t required = EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+    JsonObject persistence = object.createNestedObject("persistence");
+    persistence["backend"] = storage->supportsTransactions() ? "littlefs" : "unavailable";
+    persistence["capacity"] = storage->length();
+    persistence["layout_required"] = required;
+    persistence["generation"] = storage->generation();
+    persistence["status"] =
+        (storage->supportsTransactions() && storage->length() >= required) ? "ready" : "insufficient";
 }
 
 // Capability fields are the firmware's promise about which host controls are safe to expose.
 void writeManifestCapabilities(JsonObject object) {
     JsonObject capabilities = object.createNestedObject("capabilities");
-    capabilities["profile_save"] = true;
-    capabilities["profile_load"] = true;
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    const bool persistent = storage->supportsTransactions() &&
+                            storage->length() >= EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+    capabilities["profile_save"] = persistent;
+    capabilities["profile_load"] = persistent;
     capabilities["profile_reset"] = true;
-    capabilities["macro_snapshot"] = true;
-    capabilities["scenes"] = true;
+    capabilities["macro_snapshot"] = persistent;
+    capabilities["scenes"] = persistent;
     capabilities["arp_live"] = true;
     capabilities["clock_live"] = true;
     capabilities["note_dynamics_live"] = true;
     capabilities["jitter_live"] = true;
     capabilities["usb_midi_toggle"] = HAS_USB_MIDI;
     capabilities["device_schema"] = true;
-    capabilities["bulk_config"] = true;
+    capabilities["bulk_config"] = persistent;
     capabilities["one_shot_config_boot"] = true;
 }
 

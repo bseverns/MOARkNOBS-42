@@ -269,9 +269,8 @@ void test_clock_tick_stream_counts_cleanly() {
     TEST_ASSERT_TRUE(mh.isClockRunning());
 }
 
-// Guardrail for the transport logging: long payloads should survive the trip
-// without getting truncated unless we exceed the stub's capacity.
-void test_long_sysex_payload_round_trips() {
+// Outbound SysEx has a fixed real-time admission budget.
+void test_oversized_sysex_is_rejected() {
     UsbMidiGuard guard;
     resetMidiTransports();
 
@@ -286,16 +285,8 @@ void test_long_sysex_payload_round_trips() {
 
     mh.sendSysEx(payload.data(), static_cast<uint16_t>(payload.size()));
 
-    TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.lastSysExLength);
-    TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.lastSysExLength);
-    TEST_ASSERT_EQUAL_UINT16(payload.size(), MIDI.sysExTotal);
-    TEST_ASSERT_EQUAL_UINT16(payload.size(), usbMIDI.sysExTotal);
-    TEST_ASSERT_FALSE(MIDI.sysExOverflow);
-    TEST_ASSERT_FALSE(usbMIDI.sysExOverflow);
-    for (size_t i = 0; i < payload.size(); ++i) {
-        TEST_ASSERT_EQUAL_UINT8(payload[i], MIDI.lastSysEx[i]);
-        TEST_ASSERT_EQUAL_UINT8(payload[i], usbMIDI.lastSysEx[i]);
-    }
+    TEST_ASSERT_EQUAL_UINT16(0, MIDI.lastSysExLength);
+    TEST_ASSERT_EQUAL_UINT16(0, usbMIDI.lastSysExLength);
 }
 
 // While MIDI is streaming, flip a slot's mode and make sure we keep emitting

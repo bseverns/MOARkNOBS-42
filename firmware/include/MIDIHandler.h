@@ -31,6 +31,7 @@ Thin wrapper around the Arduino and USB MIDI libraries.
 */
 class MIDIHandler {
   public:
+    static constexpr uint16_t kMaxOutgoingSysExBytes = 64;
     // Assign a DisplayManager so MIDI traffic can be displayed.
     void setDisplayManager(DisplayManager *dm) { _displayManager = dm; }
 

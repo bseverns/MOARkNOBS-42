@@ -402,7 +402,7 @@ void Utility::BulkConfigAssembler::refreshHints() {
 }
 
 String Utility::formatAck(const char *checksumValue, uint32_t sequence,
-                          const char *appliedChecksum) {
+                          const char *appliedChecksum, uint32_t storageGeneration) {
     String out = "{\"type\":\"ack\"";
     if (sequence != 0) {
         out += ",\"seq\":";
@@ -422,6 +422,10 @@ String Utility::formatAck(const char *checksumValue, uint32_t sequence,
         out += ",\"applied_checksum\":\"";
         out += appliedChecksum;
         out += "\"";
+    }
+    if (storageGeneration != 0) {
+        out += ",\"storage_generation\":";
+        out += storageGeneration;
     }
     out += "}";
     return out;
@@ -448,6 +452,10 @@ void TaskScheduler::update() {
     for (size_t i = 0; i < tasks.size(); ++i) {
         ScheduledTask &task = tasks[i];
         if (now >= task.runAt) {
+            if (task.repeat && task.interval > 0 && now > task.runAt + task.interval) {
+                g_systemDiagnostics.schedulerMissedRuns +=
+                    static_cast<uint32_t>((now - task.runAt) / task.interval);
+            }
             dueTaskIndices.push_back(i);
             if (task.repeat) {
                 task.runAt = now + task.interval; // reschedule next run
@@ -460,7 +468,12 @@ void TaskScheduler::update() {
     // Run callbacks outside of the bookkeeping loop.
     for (size_t index : dueTaskIndices) {
         if (index < tasks.size()) {
+            const uint32_t started = micros();
             tasks[index].callback();
+            const uint32_t elapsed = micros() - started;
+            if (elapsed > g_systemDiagnostics.schedulerMaxTaskMicros) {
+                g_systemDiagnostics.schedulerMaxTaskMicros = elapsed;
+            }
         }
     }
 
