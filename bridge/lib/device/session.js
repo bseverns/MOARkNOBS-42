@@ -152,6 +152,7 @@ function createDeviceSession({
   let authority = null;
   let authorityPromise = null;
   let applyPending = null;
+  let uncertainApply = null;
   let handshakeTimer = null;
   let handshakeRetryCount = 0;
   let configRequestCommand = 'GET_CONFIG';
@@ -400,6 +401,21 @@ function createDeviceSession({
     });
   }
 
+  function markApplyUncertain(reason, pending, error) {
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    applyPending = null;
+    uncertainApply = { checksum: pending.checksum, seq: pending.seq, reason };
+    state.ready = false;
+    state.handshakeState = 'resynchronizing';
+    state.lastError = `Apply outcome uncertain: ${reason}; reading device state`;
+    setApplyResult({ status: 'uncertain', reason, checksum: pending.checksum, seq: pending.seq, at: new Date().toISOString() });
+    emitState();
+    emitStructured('device.apply.uncertain', { reason, checksum: pending.checksum, seq: pending.seq });
+    pending.reject(error);
+    sendLine(state.manifest?.capabilities?.chunked_reads?.config ? 'GET_CONFIG_CHUNKED' : 'GET_CONFIG');
+  }
+
   function rejectPendingApply(error) {
     if (!applyPending) return;
     const pending = applyPending;
@@ -596,6 +612,15 @@ function createDeviceSession({
         return;
       }
       replaceLiveAndStaged(normalized);
+      if (uncertainApply) {
+        const resolved = uncertainApply;
+        uncertainApply = null;
+        state.lastError = null;
+        setApplyResult({ status: 'resynchronized', ...resolved, at: new Date().toISOString() });
+        updateReadyState();
+        emitState();
+        emitStructured('device.apply.resynchronized', resolved);
+      }
     }
 
     if (
@@ -877,16 +902,12 @@ function createDeviceSession({
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         if (!applyPending || applyPending.checksum !== checksum) return;
-        finishRollback('timeout', { checksum, seq });
-        applyPending = null;
-        reject(
-          createSessionError(
+        markApplyUncertain('timeout', applyPending, createSessionError(
             'apply_timeout',
             'Timed out waiting for device apply ACK',
             { checksum, seq, timeoutMs },
             504,
-          ),
-        );
+          ));
       }, timeoutMs);
 
       applyPending = {
@@ -907,17 +928,12 @@ function createDeviceSession({
             }
           }
         } catch (error) {
-          clearTimeout(timer);
-          applyPending = null;
-          finishRollback('transport_error', { checksum, seq });
-          reject(
-            createSessionError(
+          markApplyUncertain('transport_error', applyPending, createSessionError(
               'apply_transport_error',
               error?.message || 'Failed to write staged apply payload',
               { checksum, seq },
               503,
-            ),
-          );
+            ));
         }
       })();
     });
