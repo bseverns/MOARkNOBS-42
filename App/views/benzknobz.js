@@ -814,6 +814,16 @@ const boot = () => {
     sessionLogController.recordEvent('APPLY', 'Resynchronized from device', '', 'ok');
     panicHelpController.render();
   });
+  runtime.on('config-conflict', ({ conflicts }) => {
+    const count = Array.isArray(conflicts) ? conflicts.length : 0;
+    setStatus(
+      'warn',
+      'Device edit conflicts with staged work',
+      `${count} field${count === 1 ? '' : 's'} kept as staged; review before Apply.`
+    );
+    sessionLogController.recordEvent('CONFIG', 'Device/staged conflict', `${count} leaf field(s)`, 'warn');
+    panicHelpController.render();
+  });
   runtime.on('migration-required', ({ from, to, canAdapt }) => {
     sessionLogController.recordEvent(
       'MIGRATION',
