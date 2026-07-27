@@ -206,7 +206,9 @@ async function testCounterIncrementPaths() {
   serial.parser.emit('data', 'x'.repeat(MAX_SERIAL_LINE_LEN + 1));
   serial.parser.emit('data', '{"broken":');
   udp.emit('message', { address: '/mn42/cmd', args: ['not-json'] });
-  context.midiIn.handler({ toArray: () => [0xb0, 99, 64] });
+  // CC 42 is valid MIDI but is outside the bridge's 0..41 live-slot lane.
+  // Do not use CC 99 here: it is an NRPN selector and is intentionally ignored.
+  context.midiIn.handler({ toArray: () => [0xb0, 42, 64] });
   await wait();
 
   const counters = service.getState().counters;

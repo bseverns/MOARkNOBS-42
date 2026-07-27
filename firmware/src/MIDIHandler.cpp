@@ -309,7 +309,7 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
             _clockRunning = false;
         }
         break;
-    case midi::ControlChange:
+    case midi::ControlChange: {
         // Peek for NRPN sequences; otherwise just log the CC
         if (g_seedboxInteropEnabled &&
             seedbox::interop::mn42::SeedBoxLink::instance().handleControlChange(channel, data1,
@@ -365,6 +365,7 @@ void MIDIHandler::handleMIDI(midi::MidiType type, uint8_t channel, uint8_t data1
             break;
         }
         break;
+    }
     case midi::NoteOn:
         handleNoteOn(channel, data1, data2);
         break;
