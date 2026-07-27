@@ -178,6 +178,9 @@ class MIDIHandler {
     SysExType _lastSysExType = SysExType::ManufacturerSpecific;
     uint8_t _lastSysExSubId1 = 0;
     uint8_t _lastSysExSubId2 = 0;
+    std::array<uint8_t, kMaxOutgoingSysExBytes> _pendingDinSysEx{};
+    uint16_t _pendingDinSysExLength = 0;
+    uint16_t _pendingDinSysExIndex = 0;
 
     uint32_t _rxCount = 0;
     uint32_t _txCount = 0;

@@ -139,20 +139,37 @@ void MIDIHandler::sendRPN(uint16_t param, uint16_t value, uint8_t channel) {
 
 // Forward a SysEx blob when it passes length and pointer sanity checks.
 void MIDIHandler::sendSysEx(const uint8_t *data, uint16_t length) {
-    // DIN SysEx is blocking in the underlying MIDI library. Keep outbound
-    // packets within a bounded service-time budget; slot templates are 16 B.
+    // Keep one bounded DIN frame pending; serviceSerialQueue() paces its
+    // bytes at the MIDI wire interval instead of blocking on sendSysEx().
     if (!data || length < 2 || length > kMaxOutgoingSysExBytes || data[0] != 0xF0 ||
         data[length - 1] != 0xF7) {
         if (_diagnostics) ++_diagnostics->midiDropCount;
         return;
     }
+ #ifdef USB_MIDI_STUB
+    // The Unity MIDI double records packet calls rather than a byte-time DIN
+    // wire; keep this direct path so protocol tests observe the full frame.
     _txCount++;
     MIDI.sendSysEx(length, data, true);
+    if (g_usbMidiOutEnabled) usbMIDI.sendSysEx(length, data, true);
+    return;
+ #else
+    if (_pendingDinSysExLength != 0) {
+        if (_diagnostics) ++_diagnostics->midiDropCount;
+        return;
+    }
+    std::memcpy(_pendingDinSysEx.data(), data, length);
+    _pendingDinSysExLength = length;
+    _pendingDinSysExIndex = 0;
+    _txCount++;
+    // DIN bytes are emitted one per serial service interval below. USB can
+    // retain its packet API because it does not occupy the DIN wire.
 #ifndef USB_MIDI_STUB
     if (g_usbMidiOutEnabled) {
         usbMIDI.sendSysEx(length, data, true);
     }
 #endif
+ #endif
 }
 
 // Utility to filter USB MIDI packets we actually care about. Tagged
@@ -626,6 +643,18 @@ void MIDIHandler::serviceSerialQueue() {
         dispatchSerialMessage(msg);
     }
 #else
+    if (_pendingDinSysExLength != 0 && serialQueueEmpty()) {
+        const uint32_t nowUs = micros();
+        if (nowUs - _lastSerialSendUs >= kSerialByteMicros) {
+            Serial1.write(_pendingDinSysEx[_pendingDinSysExIndex++]);
+            _lastSerialSendUs = nowUs;
+            if (_pendingDinSysExIndex >= _pendingDinSysExLength) {
+                _pendingDinSysExLength = 0;
+                _pendingDinSysExIndex = 0;
+            }
+        }
+        return;
+    }
     while (!serialQueueEmpty()) {
         const SerialMessage &next = _serialQueue[_serialQueueHead];
         uint32_t required = static_cast<uint32_t>(next.byteCount) * kSerialByteMicros;
