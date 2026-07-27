@@ -564,7 +564,9 @@ function createBrowserBridgeServer({
           : body;
         const result =
           typeof service.stageDeviceConfig === 'function'
-            ? await service.stageDeviceConfig(payload)
+            ? await service.stageDeviceConfig(payload, {
+                expectedSessionRevision: body?.expectedSessionRevision,
+              })
             : null;
         sendJson(res, 200, {
           result,
@@ -731,11 +733,24 @@ function createBrowserBridgeServer({
       const bootstrapMessages = [
         {
           version: 1,
+          event: 'device.session.snapshot',
+          at: new Date().toISOString(),
+          payload: {
+            sessionRevision: session?.sessionRevision ?? 0,
+            liveConfig: session?.liveConfig ?? null,
+            stagedConfig: session?.stagedConfig ?? null,
+            dirty: Boolean(session?.dirty),
+            lastApplyResult: session?.lastApplyResult ?? null,
+          },
+        },
+        {
+          version: 1,
           event: 'device.config.live',
           at: new Date().toISOString(),
           payload: {
             config: session?.liveConfig ?? null,
             lastApplyResult: session?.lastApplyResult ?? null,
+            sessionRevision: session?.sessionRevision ?? 0,
           },
         },
         {
@@ -744,6 +759,7 @@ function createBrowserBridgeServer({
           at: new Date().toISOString(),
           payload: {
             config: session?.stagedConfig ?? null,
+            sessionRevision: session?.sessionRevision ?? 0,
           },
         },
         {
@@ -752,6 +768,7 @@ function createBrowserBridgeServer({
           at: new Date().toISOString(),
           payload: {
             dirty: Boolean(session?.dirty),
+            sessionRevision: session?.sessionRevision ?? 0,
           },
         },
         {

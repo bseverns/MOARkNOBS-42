@@ -142,6 +142,7 @@ function createDeviceSession({
     compatibility: { status: 'pending', reason: null },
     stagedConfig: null,
     dirty: false,
+    sessionRevision: 0,
     lastApplyResult: null,
     powerSafety: extractPowerSafety(null),
     hardwareHealth: extractHardwareHealth(null),
@@ -268,16 +269,41 @@ function createDeviceSession({
   }
 
   function emitConfigState() {
+    state.sessionRevision += 1;
+    const snapshot = {
+      sessionRevision: state.sessionRevision,
+      liveConfig: state.liveConfig,
+      stagedConfig: state.stagedConfig,
+      dirty: state.dirty,
+      lastApplyResult: state.lastApplyResult,
+    };
+    // Consumers that understand revisions receive one atomic staging truth.
+    // The individual events remain for older App/Bridge consumers.
+    emitStructured('device.session.snapshot', snapshot);
     emitStructured('device.config.live', {
       config: state.liveConfig,
       lastApplyResult: state.lastApplyResult,
+      sessionRevision: state.sessionRevision,
     });
     emitStructured('device.config.staged', {
       config: state.stagedConfig,
+      sessionRevision: state.sessionRevision,
     });
     emitStructured('device.config.dirty', {
       dirty: state.dirty,
+      sessionRevision: state.sessionRevision,
     });
+  }
+
+  function requireSessionRevision(expectedSessionRevision) {
+    if (expectedSessionRevision === undefined || expectedSessionRevision === null) return;
+    if (Number(expectedSessionRevision) === state.sessionRevision) return;
+    throw createSessionError(
+      'stale_session_revision',
+      'Bridge staged configuration changed in another client; refresh before writing.',
+      { expectedSessionRevision: Number(expectedSessionRevision), sessionRevision: state.sessionRevision },
+      409,
+    );
   }
 
   function replaceLiveAndStaged(config) {
@@ -741,8 +767,9 @@ function createDeviceSession({
     }
   }
 
-  async function stageConfig(nextConfig) {
+  async function stageConfig(nextConfig, { expectedSessionRevision } = {}) {
     await ensureAuthority();
+    requireSessionRevision(expectedSessionRevision);
     if (!state.manifest) {
       throw createSessionError(
         'device_not_ready',
@@ -773,6 +800,7 @@ function createDeviceSession({
     return {
       staged: clone(state.stagedConfig),
       dirty: state.dirty,
+      sessionRevision: state.sessionRevision,
     };
   }
 
@@ -793,8 +821,9 @@ function createDeviceSession({
     };
   }
 
-  async function applyStagedConfig({ timeoutMs = APPLY_TIMEOUT_MS } = {}) {
+  async function applyStagedConfig({ timeoutMs = APPLY_TIMEOUT_MS, expectedSessionRevision } = {}) {
     await ensureAuthority();
+    requireSessionRevision(expectedSessionRevision);
     if (!state.connected) {
       throw createSessionError(
         'device_not_connected',

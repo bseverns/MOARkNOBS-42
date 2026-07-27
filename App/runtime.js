@@ -317,7 +317,9 @@ export function createRuntime({
     applyBridgeConfig: async () => {
       const client = bridgeSessionRuntime?.ensureClient();
       if (!client) throw new Error('Bridge session unavailable');
-      return client.applyConfig({});
+      return client.applyConfig({
+        expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision()
+      });
     },
     rollbackBridgeConfig: async (reason) => {
       const client = bridgeSessionRuntime?.ensureClient();
@@ -555,7 +557,8 @@ export function createRuntime({
     normalizeConfig,
     shallowEqual,
     getManifest: () => remoteManifest ?? localManifest ?? {},
-    broadcastConfig: configSession.broadcastConfig
+    broadcastConfig: configSession.broadcastConfig,
+    onConflict: (conflicts) => emit('config-conflict', { conflicts })
   });
 
   const applyPatch = (...args) => liveControlsRuntime.applyPatch(...args);

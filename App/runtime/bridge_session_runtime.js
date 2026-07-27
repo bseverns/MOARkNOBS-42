@@ -116,7 +116,21 @@ export function createBridgeSessionRuntime({
     if (bridgeStageSyncPromise) return bridgeStageSyncPromise;
     const stagedConfig = clone(configSession.getStagedConfig());
     bridgeStageSyncPromise = ensureClient()
-      .stageConfig(stagedConfig)
+      .stageConfig(stagedConfig, {
+        expectedSessionRevision: bridgeSessionCache?.sessionRevision
+      })
+      .then((result) => {
+        if (Number.isFinite(Number(result?.sessionRevision))) {
+          bridgeSessionCache = { ...(bridgeSessionCache ?? {}), sessionRevision: result.sessionRevision };
+        }
+        return result;
+      })
+      .catch(async (err) => {
+        if (err?.code === 'stale_session_revision') {
+          await refreshSessionSnapshot({ warm: false, emitConnectedConfig: false });
+        }
+        throw err;
+      })
       .finally(() => {
         bridgeStageSyncPromise = null;
       });
@@ -165,19 +179,44 @@ export function createBridgeSessionRuntime({
             );
             break;
           case 'device.config.live':
+            if (
+              payload.sessionRevision !== undefined &&
+              Number(payload.sessionRevision) <= Number(bridgeSessionCache?.sessionRevision)
+            ) break;
             bridgeSessionCache = bridgeSessionCache ?? {};
             bridgeSessionCache.liveConfig = payload.config ?? null;
             bridgeSessionCache.lastApplyResult = payload.lastApplyResult ?? null;
+            if (payload.sessionRevision !== undefined) bridgeSessionCache.sessionRevision = payload.sessionRevision;
+            syncCachedSession();
+            break;
+          case 'device.session.snapshot':
+            // A revisioned snapshot is the only event that may atomically move
+            // live, staged, and dirty state together.
+            if (
+              bridgeSessionCache?.sessionRevision !== undefined &&
+              Number(payload.sessionRevision) < Number(bridgeSessionCache.sessionRevision)
+            ) break;
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), ...clone(payload) };
             syncCachedSession();
             break;
           case 'device.config.staged':
+            if (
+              payload.sessionRevision !== undefined &&
+              Number(payload.sessionRevision) <= Number(bridgeSessionCache?.sessionRevision)
+            ) break;
             bridgeSessionCache = bridgeSessionCache ?? {};
             bridgeSessionCache.stagedConfig = payload.config ?? null;
+            if (payload.sessionRevision !== undefined) bridgeSessionCache.sessionRevision = payload.sessionRevision;
             syncCachedSession();
             break;
           case 'device.config.dirty':
+            if (
+              payload.sessionRevision !== undefined &&
+              Number(payload.sessionRevision) <= Number(bridgeSessionCache?.sessionRevision)
+            ) break;
             bridgeSessionCache = bridgeSessionCache ?? {};
             bridgeSessionCache.dirty = Boolean(payload.dirty);
+            if (payload.sessionRevision !== undefined) bridgeSessionCache.sessionRevision = payload.sessionRevision;
             syncCachedSession();
             break;
           case 'device.telemetry':
@@ -255,6 +294,7 @@ export function createBridgeSessionRuntime({
     closeEvents,
     reset,
     isHealthy: () => sessionHealth === 'healthy',
+    getSessionRevision: () => bridgeSessionCache?.sessionRevision ?? null,
     getHealth: () => ({ health: sessionHealth, lastEventAt })
   };
 }

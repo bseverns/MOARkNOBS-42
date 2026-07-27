@@ -158,6 +158,31 @@ function sameNumberArray(left, right) {
   return true;
 }
 
+function deepEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+// Merge one device patch against the old live base and an unsent local draft.
+// Conflicts keep the local value (never silently erase an operator edit), but
+// are returned to the caller so the UI can make that choice visible.
+function mergeThreeWay(base, device, staged, path, conflicts) {
+  const allObjects = [base, device, staged].every(
+    (value) => value && typeof value === 'object' && !Array.isArray(value)
+  );
+  if (allObjects) {
+    const merged = {};
+    const keys = new Set([...Object.keys(base), ...Object.keys(device), ...Object.keys(staged)]);
+    for (const key of keys) {
+      merged[key] = mergeThreeWay(base[key], device[key], staged[key], `${path}.${key}`, conflicts);
+    }
+    return merged;
+  }
+  if (deepEqual(device, base)) return staged;
+  if (deepEqual(staged, base) || deepEqual(staged, device)) return device;
+  conflicts.push({ path, base, device, staged });
+  return staged;
+}
+
 export function applyEfSlotPatch(target, patch, slotCount) {
   if (!Array.isArray(target)) target = [];
   const index = coerceIndex(patch.index);
@@ -225,7 +250,8 @@ export function createPatchReconciler({
   normalizeConfig,
   shallowEqual,
   getManifest,
-  broadcastConfig
+  broadcastConfig,
+  onConflict
 } = {}) {
   return function applyConfigPatch(patch) {
     if (!patch || typeof patch !== 'object' || !getLiveConfig?.()) return;
@@ -235,6 +261,7 @@ export function createPatchReconciler({
     let mutated = false;
     let filterMeta = null;
     let argMeta = null;
+    const conflicts = [];
 
     if (Array.isArray(patch.slots)) {
       const slotsSource = Array.isArray(nextLive.slots) ? [...nextLive.slots] : [];
@@ -336,6 +363,20 @@ export function createPatchReconciler({
           Object.keys(fields).forEach((key) => {
             const stagedValue = merged[key];
             const prevValue = prevSlot[key];
+            const nextValue = nextSlot[key];
+            if (
+              stagedValue && prevValue && nextValue &&
+              typeof stagedValue === 'object' && typeof prevValue === 'object' &&
+              typeof nextValue === 'object' &&
+              !Array.isArray(stagedValue) && !Array.isArray(prevValue) && !Array.isArray(nextValue)
+            ) {
+              const resolved = mergeThreeWay(prevValue, nextValue, stagedValue, `slots.${index}.${key}`, conflicts);
+              if (!deepEqual(merged[key], resolved)) {
+                merged[key] = resolved;
+                stagedChanged = true;
+              }
+              return;
+            }
             const stagedMatchesPrev =
               stagedValue === prevValue ||
               (stagedValue &&
@@ -422,6 +463,7 @@ export function createPatchReconciler({
         });
       }
     }
+    if (conflicts.length) onConflict?.(conflicts);
 
     const manifest = getManifest?.() ?? {};
     const normalizedLive = normalizeConfig(nextLive, manifest);

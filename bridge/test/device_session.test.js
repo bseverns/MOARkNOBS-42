@@ -96,6 +96,31 @@ async function run() {
   }
 
   {
+    const harness = createHarness();
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const initialRevision = harness.session.getState().sessionRevision;
+    const firstDraft = clone(harness.session.getState().stagedConfig);
+    firstDraft.slots[0].data1 = 71;
+    const first = await harness.session.stageConfig(firstDraft, {
+      expectedSessionRevision: initialRevision,
+    });
+    assert.equal(first.sessionRevision > initialRevision, true);
+    const staleDraft = clone(firstDraft);
+    staleDraft.slots[1].data1 = 72;
+    await assert.rejects(
+      () => harness.session.stageConfig(staleDraft, { expectedSessionRevision: initialRevision }),
+      (error) => error?.code === 'stale_session_revision',
+      'a second browser cannot overwrite a newer staged revision',
+    );
+    assert.equal(
+      harness.structuredEvents.some((entry) => entry.event === 'device.session.snapshot'),
+      true,
+      'staging publishes an atomic revisioned snapshot',
+    );
+  }
+
+  {
     const lines = [];
     const alerts = [];
     const session = createDeviceSession({

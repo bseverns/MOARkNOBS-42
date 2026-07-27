@@ -5,14 +5,38 @@ export function createWebSocketTransport(url) {
   let resolver = null;
   let buffer = '';
   let closed = false;
+  const maxQueuedLines = 512;
+  const maxQueuedBytes = 1024 * 1024;
+  let queuedBytes = 0;
+  let droppedLines = 0;
   const decoder = typeof TextDecoder === 'function' ? new TextDecoder() : null;
 
   const enqueueLine = (line) => {
+    const bytes = new TextEncoder().encode(line).byteLength;
+    const isTelemetry = (candidate) => {
+      try {
+        const message = JSON.parse(candidate);
+        return message?.type === 'telemetry' || message?.telemetry !== undefined;
+      } catch (_) { return false; }
+    };
+    while (queue.length >= maxQueuedLines || queuedBytes + bytes > maxQueuedBytes) {
+      const index = queue.findIndex(isTelemetry);
+      if (index < 0) break;
+      queuedBytes -= new TextEncoder().encode(queue[index]).byteLength;
+      queue.splice(index, 1);
+      droppedLines += 1;
+    }
+    if ((queue.length >= maxQueuedLines || queuedBytes + bytes > maxQueuedBytes) && isTelemetry(line)) {
+      droppedLines += 1;
+      return;
+    }
     queue.push(line);
+    queuedBytes += bytes;
     if (resolver) {
       const pending = resolver;
       resolver = null;
       const next = queue.shift();
+      queuedBytes -= new TextEncoder().encode(next).byteLength;
       pending.resolve(next);
     }
   };
@@ -75,6 +99,7 @@ export function createWebSocketTransport(url) {
     closed = false;
     buffer = '';
     queue = [];
+    queuedBytes = 0;
     socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';
     return new Promise((resolve, reject) => {
@@ -102,7 +127,9 @@ export function createWebSocketTransport(url) {
 
   function nextLine() {
     if (queue.length) {
-      return Promise.resolve(queue.shift());
+      const line = queue.shift();
+      queuedBytes -= new TextEncoder().encode(line).byteLength;
+      return Promise.resolve(line);
     }
     if (closed) {
       return Promise.reject(new Error('WebSocket closed'));
@@ -128,5 +155,6 @@ export function createWebSocketTransport(url) {
     close,
     rawPort: { getInfo: () => null },
     protocol: 'native'
+    ,getDropStats: () => ({ droppedLines, queuedLines: queue.length, queuedBytes })
   };
 }

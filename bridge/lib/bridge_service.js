@@ -780,8 +780,8 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     return getState();
   }
 
-  async function stageDeviceConfig(configPayload) {
-    return deviceSession.stageConfig(configPayload);
+  async function stageDeviceConfig(configPayload, options = {}) {
+    return deviceSession.stageConfig(configPayload, options);
   }
 
   async function applyDeviceConfig(options = {}) {
