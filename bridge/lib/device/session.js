@@ -3,41 +3,21 @@ const { EventEmitter } = require('node:events');
 
 const { loadSchemaAuthority } = require('./schema_authority');
 const { createStructuredEvent } = require('./transport_contract');
+const {
+  APPLY_WRITE_TIMEOUT_MS,
+  NATIVE_SET_ALL_LINE_PACE_MS,
+  createApplyTransactionWriter,
+} = require('./apply_transaction_writer');
 
 const APPLY_TIMEOUT_MS = 30000;
-const APPLY_WRITE_TIMEOUT_MS = 5000;
 const HANDSHAKE_TIMEOUT_MS = 8000;
 const MAX_HANDSHAKE_RETRIES = 2;
 const NATIVE_SET_ALL_CHUNK_SIZE = 96;
-const NATIVE_SET_ALL_LINE_PACE_MS = 4;
 const UNCERTAIN_READBACK_RETRY_MS = 1000;
 const MAX_UNCERTAIN_READBACK_RETRIES = 3;
 
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function withTimeout(operation, timeoutMs, message) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
-    timer.unref?.();
-    Promise.resolve()
-      .then(operation)
-      .then(
-        (value) => {
-          clearTimeout(timer);
-          resolve(value);
-        },
-        (error) => {
-          clearTimeout(timer);
-          reject(error);
-        },
-      );
-  });
 }
 
 function chunkString(text, chunkSize) {
@@ -191,6 +171,16 @@ function createDeviceSession({
   let chunkedConfigRead = null;
   let uncertainReadbackTimer = null;
   let uncertainReadbackAttempts = 0;
+  const applyWriter = createApplyTransactionWriter({
+    writeApplyLine,
+    abortBulkFrame,
+    createError: createSessionError,
+    onPendingStarted: (pending) => { applyPending = pending; },
+    onPendingCleared: (pending) => {
+      if (applyPending === pending) applyPending = null;
+    },
+    onUncertain: (reason, pending, error) => markApplyUncertain(reason, pending, error),
+  });
 
   function clearUncertainReadbackTimer() {
     if (!uncertainReadbackTimer) return;
@@ -496,9 +486,7 @@ function createDeviceSession({
 
   function markApplyUncertain(reason, pending, error, { attemptReadback = true } = {}) {
     if (!pending) return;
-    pending.cancelled = true;
-    clearTimeout(pending.timer);
-    applyPending = null;
+    if (!applyWriter.reject(pending, error)) return;
     uncertainApply = { checksum: pending.checksum, seq: pending.seq, reason };
     uncertainReadbackAttempts = 0;
     state.ready = false;
@@ -507,7 +495,6 @@ function createDeviceSession({
     setApplyResult({ status: 'uncertain', reason, checksum: pending.checksum, seq: pending.seq, at: new Date().toISOString() });
     emitState();
     emitStructured('device.apply.uncertain', { reason, checksum: pending.checksum, seq: pending.seq });
-    pending.reject(error);
     if (attemptReadback && state.connected) requestUncertainReadback();
     if (attemptReadback) scheduleUncertainReadbackRetry();
   }
@@ -515,10 +502,7 @@ function createDeviceSession({
   function rejectPendingApply(error) {
     if (!applyPending) return;
     const pending = applyPending;
-    applyPending = null;
-    pending.cancelled = true;
-    clearTimeout(pending.timer);
-    pending.reject(error);
+    applyWriter.reject(pending, error);
   }
 
   function handleDisconnect(reason = 'disconnect') {
@@ -571,16 +555,14 @@ function createDeviceSession({
       status: 'ack', checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
       storageGeneration: pending.storageGeneration ?? null, seq: pending.seq, at: appliedAt,
     });
-    applyPending = null;
-    clearTimeout(pending.timer);
+    applyWriter.complete(pending, { applied: true, checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
+      storageGeneration: pending.storageGeneration ?? null, seq: pending.seq });
     updateReadyState();
     emitState(); emitConfigState();
     emitStructured('device.apply.ack', {
       checksum: pending.checksum, applied_checksum: pending.appliedChecksum ?? null,
       storage_generation: pending.storageGeneration ?? null, seq: pending.seq, appliedAt,
     });
-    pending.resolve({ applied: true, checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
-      storageGeneration: pending.storageGeneration ?? null, seq: pending.seq });
   }
 
   async function handleMessage(msg, meta = {}) {
@@ -694,8 +676,7 @@ function createDeviceSession({
         if (JSON.stringify(normalized) !== JSON.stringify(pending.stagedConfig)) {
           const error = createSessionError('apply_readback_mismatch',
             'Committed device configuration differs from the staged configuration', null, 409);
-          applyPending = null;
-          clearTimeout(pending.timer);
+          applyWriter.reject(pending, error);
           state.liveConfig = clone(normalized);
           state.stagedConfig = clone(normalized);
           state.dirty = false;
@@ -706,7 +687,6 @@ function createDeviceSession({
             at: new Date().toISOString(),
           });
           emitState(); emitConfigState();
-          pending.reject(error);
           emitStructured('device.apply.device_different', {
             checksum: pending.checksum,
             seq: pending.seq,
@@ -801,8 +781,6 @@ function createDeviceSession({
         at: appliedAt,
       });
       const pending = applyPending;
-      applyPending = null;
-      clearTimeout(pending.timer);
       updateReadyState();
       emitState();
       emitConfigState();
@@ -813,7 +791,7 @@ function createDeviceSession({
         seq: msg.seq ?? pending.seq,
         appliedAt,
       });
-      pending.resolve({
+      applyWriter.complete(pending, {
         applied: true,
         checksum: msg.checksum,
         appliedChecksum: msg.applied_checksum ?? null,
@@ -1025,69 +1003,13 @@ function createDeviceSession({
     });
     emitState();
 
-    return new Promise((resolve, reject) => {
-      const pending = {
-        checksum,
-        seq,
-        stagedConfig: clone(state.stagedConfig),
-        timer: null,
-        cancelled: false,
-        resolve,
-        reject,
-      };
-      const timer = setTimeout(() => {
-        if (applyPending !== pending) return;
-        markApplyUncertain('timeout', pending, createSessionError(
-            'apply_timeout',
-            'Timed out waiting for device apply ACK',
-            { checksum, seq, timeoutMs },
-            504,
-          ));
-      }, timeoutMs);
-
-      pending.timer = timer;
-      applyPending = pending;
-
-      (async () => {
-        try {
-          for (let index = 0; index < lines.length; index += 1) {
-            await withTimeout(
-              () => writeApplyLine(lines[index]),
-              writeTimeoutMs,
-              `Timed out writing Apply frame after ${writeTimeoutMs}ms`,
-            );
-            if (pending.cancelled) {
-              throw new Error('Apply serial ownership ended before the payload write completed');
-            }
-            if (index + 1 < lines.length) {
-              await delay(NATIVE_SET_ALL_LINE_PACE_MS);
-              if (pending.cancelled) {
-                throw new Error('Apply serial ownership ended before the payload write completed');
-              }
-            }
-          }
-        } catch (error) {
-          // An expired writer retains its cancellation token even after public
-          // uncertainty is cleared. It must not abort or resume into a newer
-          // serial ownership epoch when its callback eventually settles.
-          if (pending.cancelled) return;
-          try {
-            // This is the owning Apply transaction releasing its own partial
-            // frame. Bridge implementations may bypass their public live
-            // command queue here without allowing another client to abort it.
-            await abortBulkFrame();
-          } catch {
-            // A disconnected transport cannot receive the abort; firmware's
-            // autonomous assembler timeout clears the partial frame.
-          }
-          markApplyUncertain('transport_error', pending, createSessionError(
-              'apply_transport_error',
-              error?.message || 'Failed to write staged apply payload',
-              { checksum, seq },
-              503,
-            ));
-        }
-      })();
+    return applyWriter.start({
+      checksum,
+      seq,
+      stagedConfig: clone(state.stagedConfig),
+      lines,
+      timeoutMs,
+      writeTimeoutMs,
     });
   }
 

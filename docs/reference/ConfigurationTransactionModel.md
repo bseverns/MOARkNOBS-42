@@ -45,6 +45,7 @@ stateDiagram-v2
 12. An expired Bridge writer remains permanently cancelled even after successful readback clears public uncertainty. A delayed serial callback cannot resume its old payload.
 13. An unsent browser draft survives structured-Bridge disconnect/reconnect and is reconciled only after remote live truth has been adopted.
 14. Simulator RPC support is declared as an explicit mapping to firmware native commands and is checked against the firmware dispatch and scene handlers in hosted contract checks.
+15. The Bridge keeps serial-write lifecycle ownership in a dedicated Apply transaction writer; device-session code owns authoritative state transitions, readback, and events.
 
 ## What “rollback” means
 
