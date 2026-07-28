@@ -59,8 +59,10 @@ export function createDiffStatusController({
     const applyAllowed = ['verified', 'simulator'].includes(
       runtime?.getState?.()?.contractQuality
     );
-    if (applyBtn) applyBtn.disabled = !isDirty || !applyAllowed;
-    if (rollbackBtn) rollbackBtn.disabled = !isDirty;
+    const transactionState = runtime?.getState?.()?.transactionState;
+    const transactionWritable = transactionState === 'dirty' || transactionState === 'verified' || transactionState === 'clean';
+    if (applyBtn) applyBtn.disabled = !isDirty || !applyAllowed || !transactionWritable;
+    if (rollbackBtn) rollbackBtn.disabled = !isDirty || !transactionWritable;
     onDirtyChanged(Boolean(isDirty));
   }
 

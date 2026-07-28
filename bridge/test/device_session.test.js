@@ -288,10 +288,10 @@ async function run() {
     );
     assert.equal(
       harness.structuredEvents.some(
-        (entry) => entry.event === 'device.apply.rollback',
+        (entry) => entry.event === 'device.apply.uncertain',
       ),
       true,
-      'bad ACK should emit a rollback event',
+      'bad ACK should enter uncertain state and read device truth back',
     );
   }
 

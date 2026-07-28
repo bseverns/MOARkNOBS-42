@@ -622,12 +622,24 @@ function createDeviceSession({
         if (JSON.stringify(normalized) !== JSON.stringify(pending.stagedConfig)) {
           const error = createSessionError('apply_readback_mismatch',
             'Committed device configuration differs from the staged configuration', null, 409);
-          finishRollback('readback_mismatch');
-          rejectPendingApply(error);
+          applyPending = null;
+          clearTimeout(pending.timer);
           state.liveConfig = clone(normalized);
           state.stagedConfig = clone(normalized);
           state.dirty = false;
+          setApplyResult({
+            status: 'verified_device_different',
+            checksum: pending.checksum,
+            seq: pending.seq,
+            at: new Date().toISOString(),
+          });
           emitState(); emitConfigState();
+          pending.reject(error);
+          emitStructured('device.apply.device_different', {
+            checksum: pending.checksum,
+            seq: pending.seq,
+            lastApplyResult: state.lastApplyResult,
+          });
           return;
         }
         completePendingApply(pending, normalized);
@@ -671,8 +683,7 @@ function createDeviceSession({
           },
           409,
         );
-        finishRollback('checksum_mismatch', mismatchError.details);
-        rejectPendingApply(mismatchError);
+        markApplyUncertain('checksum_mismatch', applyPending, mismatchError);
         emitStructured('bridge.alert', {
           code: mismatchError.code,
           severity: 'error',
@@ -689,8 +700,7 @@ function createDeviceSession({
           { checksum: msg.checksum, seq: msg.seq ?? null },
           409,
         );
-        finishRollback('integrity_receipt_missing', receiptError.details);
-        rejectPendingApply(receiptError);
+        markApplyUncertain('integrity_receipt_missing', applyPending, receiptError);
         emitStructured('bridge.alert', {
           code: receiptError.code,
           severity: 'error',
