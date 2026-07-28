@@ -38,7 +38,7 @@ stateDiagram-v2
 5. Profile, scene, macro, live-control, and read failures never discard unrelated staged configuration.
 6. Structured Bridge staging is revisioned. Apply uses the revision acknowledged for the newest local draft.
 7. Firmware/device state wins after readback. A differing readback is reported as `verified-device-different`, not rollback.
-8. Device authority and draft dirtiness are independent. The App exposes `deviceAuthority` (`verified`, `applying`, `uncertain`, `resynchronizing`, or `verified-device-different`) and `draftState` (`clean` or `dirty`). `transactionState` remains a compatibility projection for older UI consumers.
+8. Device authority and draft dirtiness are independent. The Bridge session and App expose `deviceAuthority` (`verified`, `applying`, `uncertain`, `resynchronizing`, or `verified-device-different`) and `draftState` (`clean` or `dirty`). `transactionState` remains an App compatibility projection for older UI consumers.
 9. Editing during `uncertain` or `resynchronizing` updates a separate next draft and must not change the authority state or clear the unresolved transaction token.
 10. Edits created while Apply is in flight remain a separate next draft; verification never promotes or discards that newer draft.
 11. A structured Bridge rejection is reconciled against the Bridge session's `lastApplyResult`; WebSocket-event and HTTP-response ordering must produce the same authority state.

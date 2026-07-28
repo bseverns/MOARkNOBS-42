@@ -115,6 +115,8 @@ async function run() {
     );
     assert.equal(Array.isArray(state.liveConfig?.slots), true);
     assert.equal(Array.isArray(state.stagedConfig?.slots), true);
+    assert.equal(state.deviceAuthority, 'verified');
+    assert.equal(state.draftState, 'clean');
     assert.deepEqual(harness.writtenLines.slice(0, 4), [
       'HELLO',
       'GET_MANIFEST',
@@ -134,6 +136,8 @@ async function run() {
       expectedSessionRevision: initialRevision,
     });
     assert.equal(first.sessionRevision > initialRevision, true);
+    assert.equal(harness.session.getState().deviceAuthority, 'verified');
+    assert.equal(harness.session.getState().draftState, 'dirty');
     const staleDraft = clone(firstDraft);
     staleDraft.slots[1].data1 = 72;
     await assert.rejects(
@@ -141,11 +145,11 @@ async function run() {
       (error) => error?.code === 'stale_session_revision',
       'a second browser cannot overwrite a newer staged revision',
     );
-    assert.equal(
-      harness.structuredEvents.some((entry) => entry.event === 'device.session.snapshot'),
-      true,
-      'staging publishes an atomic revisioned snapshot',
+    const snapshot = harness.structuredEvents.findLast(
+      (entry) => entry.event === 'device.session.snapshot',
     );
+    assert.equal(snapshot?.payload?.deviceAuthority, 'verified');
+    assert.equal(snapshot?.payload?.draftState, 'dirty');
   }
 
   {
@@ -227,6 +231,8 @@ async function run() {
     await harness.session.stageConfig(staged);
     const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 5000 });
     await wait(5);
+    assert.equal(harness.session.getState().deviceAuthority, 'applying');
+    assert.equal(harness.session.getState().draftState, 'dirty');
     assert.equal(
       harness.session.getState().dirty,
       true,
@@ -238,6 +244,8 @@ async function run() {
       false,
       'dirty should clear after the ACK promotes staged config to live',
     );
+    assert.equal(harness.session.getState().deviceAuthority, 'verified');
+    assert.equal(harness.session.getState().draftState, 'clean');
   }
 
   {

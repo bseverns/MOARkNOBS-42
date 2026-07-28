@@ -159,6 +159,28 @@ test('editing after failed resynchronization preserves uncertainty and the next 
   expect(state.draftState).toBe('dirty');
 });
 
+test('explicit Bridge authority is preferred over a stale apply receipt projection', () => {
+  const events = [];
+  const session = createSession(async () => ({}), events);
+  session.syncFromDevice(baseConfig());
+
+  session.syncFromSession({
+    liveConfig: baseConfig(),
+    stagedConfig: { ...baseConfig(), filter: { freq: 321 } },
+    dirty: true,
+    deviceAuthority: 'uncertain',
+    draftState: 'dirty',
+    // This can occur when individual structured events arrive around a
+    // snapshot; the explicit dimensions remain the session source of truth.
+    lastApplyResult: { status: 'ack', seq: 17 }
+  });
+
+  const state = session.getState();
+  expect(state.deviceAuthority).toBe('uncertain');
+  expect(state.draftState).toBe('dirty');
+  expect(state.transactionState).toBe('uncertain');
+});
+
 for (const ordering of ['event-before-rejection', 'rejection-before-event']) {
   test(`Bridge uncertainty survives ${ordering}`, async () => {
     const events = [];

@@ -254,6 +254,22 @@ export function createConfigSession({
     emit('config-transaction', { state: next, deviceAuthority, draftState, ...details });
   }
 
+  function setBridgeAuthority(authority, nextDraftState, details = {}) {
+    deviceAuthority = authority;
+    setDraftState(nextDraftState);
+    // Preserve the legacy single-state field as a projection, while callers
+    // which understand the two dimensions can use the explicit values.
+    transactionState = authority === 'verified'
+      ? (nextDraftState === 'dirty' ? 'dirty' : 'verified')
+      : authority;
+    emit('config-transaction', {
+      state: transactionState,
+      deviceAuthority,
+      draftState,
+      ...details
+    });
+  }
+
   function extractLocalSlotMetaFromConfig(config) {
     localSlotMetaManager.extractFromConfig(config);
   }
@@ -305,7 +321,10 @@ export function createConfigSession({
     } else {
       dirty = Boolean(sessionPayload.dirty);
     }
-    setDraftState(dirty ? 'dirty' : 'clean');
+    const explicitDraftState = ['clean', 'dirty'].includes(sessionPayload.draftState)
+      ? sessionPayload.draftState
+      : null;
+    setDraftState(nextDraft ? (dirty ? 'dirty' : 'clean') : (explicitDraftState ?? (dirty ? 'dirty' : 'clean')));
     const bridgeStatus = sessionPayload.lastApplyResult?.status;
     const bridgeTransactionState = {
       pending: 'applying',
@@ -315,13 +334,30 @@ export function createConfigSession({
       rollback: 'clean',
       ack: 'verified'
     }[bridgeStatus];
+    const explicitAuthority = [
+      'verified',
+      'applying',
+      'uncertain',
+      'resynchronizing',
+      'verified-device-different'
+    ].includes(sessionPayload.deviceAuthority)
+      ? sessionPayload.deviceAuthority
+      : null;
+    const bridgeAuthority = explicitAuthority ?? bridgeTransactionState;
     const bridgeAuthorityStates = new Set([
       'uncertain',
       'resynchronizing',
       'verified-device-different'
     ]);
-    if (!appliedCandidate || bridgeAuthorityStates.has(bridgeTransactionState)) {
-      setTransactionState(bridgeTransactionState ?? (dirty ? 'dirty' : 'verified'), {
+    if (!appliedCandidate || bridgeAuthorityStates.has(bridgeAuthority)) {
+      if (explicitAuthority) {
+        setBridgeAuthority(bridgeAuthority, draftState, {
+          source: 'bridge',
+          lastApplyResult: sessionPayload.lastApplyResult ?? null
+        });
+        return;
+      }
+      setTransactionState(bridgeAuthority ?? (dirty ? 'dirty' : 'verified'), {
         source: 'bridge',
         lastApplyResult: sessionPayload.lastApplyResult ?? null
       });

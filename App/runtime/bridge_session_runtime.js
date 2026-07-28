@@ -179,15 +179,15 @@ export function createBridgeSessionRuntime({
         const payload = message.payload ?? {};
         switch (message.event) {
           case 'device.apply.uncertain':
-            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), lastApplyResult: { status: 'uncertain', ...clone(payload) } };
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'uncertain', lastApplyResult: { status: 'uncertain', ...clone(payload) } };
             syncCachedSession();
             break;
           case 'device.apply.resynchronized':
-            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), lastApplyResult: { status: 'resynchronized', ...clone(payload) } };
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'verified', lastApplyResult: { status: 'resynchronized', ...clone(payload) } };
             syncCachedSession();
             break;
           case 'device.apply.device_different':
-            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), lastApplyResult: { status: 'verified_device_different', ...clone(payload) } };
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'verified-device-different', lastApplyResult: { status: 'verified_device_different', ...clone(payload) } };
             syncCachedSession();
             break;
           case 'device.ready':
@@ -214,6 +214,8 @@ export function createBridgeSessionRuntime({
             bridgeSessionCache = bridgeSessionCache ?? {};
             bridgeSessionCache.liveConfig = payload.config ?? null;
             bridgeSessionCache.lastApplyResult = payload.lastApplyResult ?? null;
+            bridgeSessionCache.deviceAuthority = payload.deviceAuthority ?? bridgeSessionCache.deviceAuthority;
+            bridgeSessionCache.draftState = payload.draftState ?? bridgeSessionCache.draftState;
             if (payload.sessionRevision !== undefined) bridgeSessionCache.sessionRevision = payload.sessionRevision;
             syncCachedSession();
             break;
@@ -234,6 +236,8 @@ export function createBridgeSessionRuntime({
             ) break;
             bridgeSessionCache = bridgeSessionCache ?? {};
             bridgeSessionCache.stagedConfig = payload.config ?? null;
+            bridgeSessionCache.deviceAuthority = payload.deviceAuthority ?? bridgeSessionCache.deviceAuthority;
+            bridgeSessionCache.draftState = payload.draftState ?? bridgeSessionCache.draftState;
             if (payload.sessionRevision !== undefined) bridgeSessionCache.sessionRevision = payload.sessionRevision;
             syncCachedSession();
             break;
@@ -244,6 +248,8 @@ export function createBridgeSessionRuntime({
             ) break;
             bridgeSessionCache = bridgeSessionCache ?? {};
             bridgeSessionCache.dirty = Boolean(payload.dirty);
+            bridgeSessionCache.deviceAuthority = payload.deviceAuthority ?? bridgeSessionCache.deviceAuthority;
+            bridgeSessionCache.draftState = payload.draftState ?? bridgeSessionCache.draftState;
             if (payload.sessionRevision !== undefined) bridgeSessionCache.sessionRevision = payload.sessionRevision;
             syncCachedSession();
             break;

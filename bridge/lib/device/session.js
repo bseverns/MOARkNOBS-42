@@ -152,6 +152,10 @@ function createDeviceSession({
     compatibility: { status: 'pending', reason: null },
     stagedConfig: null,
     dirty: false,
+    // Keep device truth separate from whether the staged editor image differs.
+    // This is the canonical Bridge form of the App's authority model.
+    deviceAuthority: 'verified',
+    draftState: 'clean',
     sessionRevision: 0,
     lastApplyResult: null,
     powerSafety: extractPowerSafety(null),
@@ -323,15 +327,33 @@ function createDeviceSession({
 
   function setApplyResult(result) {
     state.lastApplyResult = clone(result);
+    const authorityByStatus = {
+      pending: 'applying',
+      uncertain: 'uncertain',
+      unresolved: 'uncertain',
+      resynchronized: 'verified',
+      verified_device_different: 'verified-device-different',
+      rollback: 'verified',
+      ack: 'verified',
+    };
+    const authority = authorityByStatus[result?.status];
+    if (authority) state.deviceAuthority = authority;
+  }
+
+  function syncDraftState() {
+    state.draftState = state.dirty ? 'dirty' : 'clean';
   }
 
   function emitConfigState() {
+    syncDraftState();
     state.sessionRevision += 1;
     const snapshot = {
       sessionRevision: state.sessionRevision,
       liveConfig: state.liveConfig,
       stagedConfig: state.stagedConfig,
       dirty: state.dirty,
+      deviceAuthority: state.deviceAuthority,
+      draftState: state.draftState,
       lastApplyResult: state.lastApplyResult,
     };
     // Consumers that understand revisions receive one atomic staging truth.
@@ -339,15 +361,21 @@ function createDeviceSession({
     emitStructured('device.session.snapshot', snapshot);
     emitStructured('device.config.live', {
       config: state.liveConfig,
+      deviceAuthority: state.deviceAuthority,
+      draftState: state.draftState,
       lastApplyResult: state.lastApplyResult,
       sessionRevision: state.sessionRevision,
     });
     emitStructured('device.config.staged', {
       config: state.stagedConfig,
+      deviceAuthority: state.deviceAuthority,
+      draftState: state.draftState,
       sessionRevision: state.sessionRevision,
     });
     emitStructured('device.config.dirty', {
       dirty: state.dirty,
+      deviceAuthority: state.deviceAuthority,
+      draftState: state.draftState,
       sessionRevision: state.sessionRevision,
     });
   }
@@ -457,6 +485,8 @@ function createDeviceSession({
     state.liveConfig = null;
     state.stagedConfig = null;
     state.dirty = false;
+    state.deviceAuthority = 'verified';
+    state.draftState = 'clean';
     state.lastApplyResult = null;
     state.lastError = null;
     configRequestCommand = 'GET_CONFIG';
