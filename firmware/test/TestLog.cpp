@@ -1,3 +1,5 @@
+#if !defined(NATIVE_BIQUAD_TEST)
+
 #include "Log.h"
 
 #include <cstdarg>
@@ -34,3 +36,5 @@ void testLogPrintf(const char *format, ...) {
         g_testLogBuffer += buffer;
     }
 }
+
+#endif

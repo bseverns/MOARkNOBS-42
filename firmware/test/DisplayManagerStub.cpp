@@ -1,3 +1,5 @@
+#if !defined(NATIVE_BIQUAD_TEST)
+
 #include "DisplayManager.h"
 
 #include "ButtonManager.h"
@@ -189,3 +191,5 @@ void DisplayManager::setTestInitializationResult(bool present, bool ok) {
     _testInitOk = ok;
 }
 #endif
+
+#endif // !NATIVE_BIQUAD_TEST

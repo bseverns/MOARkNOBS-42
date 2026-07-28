@@ -1,3 +1,5 @@
+#if !defined(NATIVE_BIQUAD_TEST)
+
 #include "Globals.h"
 #include "ConfigManager.h"
 #include "PotentiometerManager.h"
@@ -281,4 +283,7 @@ uint8_t testOnly_buildSysExPayload(const MIDISlot &slot, uint16_t rawValue, uint
     }
     return renderFallbackSysEx(slot, rawValue, dest, capacity);
 }
+
 #endif
+
+#endif // !NATIVE_BIQUAD_TEST
