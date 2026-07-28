@@ -12,6 +12,8 @@ Canonical source: `hardware/README.md`
 - 6 envelope follower inputs
 - MIDI I/O over DIN and TRS Type-A
 
+![Control-surface map showing the six control buttons and their recovery, profile-memory, arpeggiator, reactive-control, and mapping shortcut families.](assets/workflows/combo-map-overview.png)
+
 ## Build and fabrication assets
 
 - Machine drawings: `hardware/MN42-machineDrawings/`

@@ -17,6 +17,8 @@ npm --prefix bridge ci
 node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --host 127.0.0.1 --bind 127.0.0.1 --midi "MN42 Bridge"
 ```
 
+![Simulated bridge console showing start and stop controls, a connected serial device, OSC input and output endpoints, virtual MIDI, and runtime health.](assets/ui/bridge-console-sim.png)
+
 ## Behavior summary
 
 - Reads JSON telemetry from serial.

@@ -18,6 +18,8 @@ Canonical source: `README.md`
 4. Bridge converts telemetry to OSC/MIDI and forwards external commands back to firmware.
 5. Web app stages config, validates schema, and applies updates via serial protocol.
 
+![WebSerial workflow showing connection, manifest and schema discovery, configuration read, local staging, validation, and the Apply or Rollback decision.](assets/workflows/webserial-workflow-overview.png)
+
 ## Firmware runtime organization
 
 - `SystemState`: shared object ownership and wiring
@@ -31,6 +33,8 @@ Canonical source: `README.md`
 - EEPROM stores config + profile snapshots
 - Recovery path supports backup block fallback
 - Profiles A-D contain modulation and routing state
+
+![Bridge routing overview showing the hardware serial connection entering the Node bridge and branching to OSC, virtual MIDI, and the browser configurator.](assets/workflows/bridge-routing-overview.png)
 
 ## Primary source references
 

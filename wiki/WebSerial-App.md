@@ -12,6 +12,8 @@ Canonical source: `App/README.md`
 - `App/config_schema.json` - configuration schema contract
 - `App/views/form_renderer.js` - schema-driven editor controls
 
+![Annotated top of the configurator showing transport quality, connection actions, profile controls, Apply and Rollback, recovery status, and power information.](assets/ui/configurator-top-annotated.png)
+
 ## Local run
 
 ```bash
@@ -29,6 +31,8 @@ Open `http://localhost:8000/`.
 5. Apply and confirm checksum/ACK.
 6. Roll back automatically on mismatch/failure.
 
+![Annotated configurator workbench showing the 42 live slots, selected-slot editor, Basic and Advanced mode switch, utility rail, and staged diff.](assets/ui/configurator-workbench-annotated.png)
+
 ## User-facing capabilities
 
 - Basic/Advanced modes
@@ -36,6 +40,8 @@ Open `http://localhost:8000/`.
 - Staged diff visibility
 - MIDI monitor and optional clock output
 - Simulator transport for hardware-free testing
+
+![Annotated slot tile showing its selected state, slot number, MIDI type, persistent-control badge, and immediate-mode badge.](assets/ui/slot-tile-annotated.png)
 
 ## Tests
 

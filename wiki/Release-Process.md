@@ -3,6 +3,8 @@
 Use this as the release checklist summary. Detailed runbooks remain in `docs/release/ReleaseGuide.md`.
 Canonical source: `docs/release/ReleaseGuide.md`
 
+![Release validation sequence showing software gates, device handshake, intended-path testing, bench behavior, stress and recovery, and final candidate status.](assets/workflows/validation-gates-overview.png)
+
 ## Firmware release steps
 
 1. Build and test:

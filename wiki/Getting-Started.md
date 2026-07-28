@@ -58,6 +58,8 @@ python3 -m http.server -d App
 
 Then visit `http://localhost:8000/`, click Connect, and confirm manifest data appears.
 
+![Annotated configurator overview identifying the transport and contract banner, connection controls, profile workspace, Apply and Rollback actions, and recovery status.](assets/ui/configurator-top-annotated.png)
+
 ## 5) Optional: run bridge
 
 ```bash
@@ -65,6 +67,8 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --
 ```
 
 Replace `/dev/ttyACM0` with your device path.
+
+![Simulated local bridge console showing a confirmed device handshake, serial connection, OSC endpoints, virtual MIDI label, and detected ports.](assets/ui/bridge-console-sim.png)
 
 ## Related docs
 

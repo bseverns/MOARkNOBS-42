@@ -5,6 +5,8 @@ MOARkNOBS-42 is an open hardware + firmware + software instrument stack built ar
 Use this wiki as the fast map. Canonical deep docs remain in the repository source tree.
 Canonical source: `README.md`
 
+![Connectivity decision map showing the direct browser configurator path beside the bridge path used for OSC, virtual MIDI, and DAW integration.](assets/workflows/connectivity-decision-overview.png)
+
 ## Start here
 
 - [Getting Started](Getting-Started.md)
