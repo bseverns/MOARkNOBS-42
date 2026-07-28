@@ -36,6 +36,21 @@ These fields are host-visible diagnostics, not a fabrication or release-readines
 | `eeprom_backup_valid`   | Whether the backup EEPROM copy passed validation.                                             |
 | `eeprom_last_load`      | Last EEPROM source used: `primary`, `backup`, `defaults`, or `unknown`.                       |
 
+The `eeprom_*` names are legacy compatibility diagnostics. They describe whether the current configuration manager recovered a valid primary or backup copy; they do not mean the schema-4 EEPROM layout is the active persistence backend.
+
+## Persistence and Capacity Fields
+
+| Field                         | Meaning                                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `persistence.backend`         | Active durable backend: `littlefs` when transactions are supported, otherwise `unavailable`.             |
+| `persistence.capacity`        | Total bytes exposed by the active storage backend.                                                       |
+| `persistence.layout_required` | Bytes required by the firmware's compiled configuration, profile, macro, and scene layout.               |
+| `persistence.generation`      | Active committed storage generation.                                                                    |
+| `persistence.status`          | `ready` when transactional storage exists and fits the required layout; otherwise `insufficient`.        |
+| `capabilities.scene_capacity` | Number of complete scene slots supported by the reported backend capacity.                               |
+
+The current commit and recovery guarantees are defined in the [Generation-Backed Persistence Contract](PersistenceContract.md). Hosts must not infer write readiness from the legacy `eeprom_*` fields.
+
 Display health is intentionally observable because OLED bring-up can fail on the bench without invalidating the core configurator contract. Host tools should treat `display_ok=false` as a degraded-mode warning, not as proof that protocol lanes are unavailable.
 
 ## Board Power Profiles

@@ -672,6 +672,14 @@ export function createTransportToolbarController({
     try {
       setStatus('warn', 'Applying…', 'Waiting for firmware ACK');
       const result = await runtime.apply();
+      if (result?.applied === false && result?.verifiedDeviceState) {
+        setStatus(
+          'warn',
+          'Device differs',
+          'Authoritative readback did not match the transmitted configuration; your draft remains staged.'
+        );
+        return;
+      }
       setStatus(
         'ok',
         'Synced',

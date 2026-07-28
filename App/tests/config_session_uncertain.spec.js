@@ -27,7 +27,8 @@ function createSession(sendRpc, events, overrides = {}) {
     getSchemaSource: () => 'device',
     getValidator: () => Object.assign(() => true, { errors: [] }),
     isBridgeSessionActive: overrides.isBridgeSessionActive,
-    applyBridgeConfig: overrides.applyBridgeConfig
+    applyBridgeConfig: overrides.applyBridgeConfig,
+    refreshBridgeSession: overrides.refreshBridgeSession
   });
 }
 
@@ -71,6 +72,112 @@ test('a successful resynchronization adopts device truth after an ambiguous Appl
   expect(state.live.filter.freq).toBe(321);
   expect(events).toContainEqual(expect.objectContaining({ type: 'resynchronized' }));
 });
+
+test('malformed ACK with successful readback returns a classified recovery result', async () => {
+  const events = [];
+  let calls = 0;
+  const deviceTruth = { ...baseConfig(), filter: { freq: 100 } };
+  const session = createSession(async () => {
+    calls += 1;
+    if (calls === 1) return { checksum: 'wrong-checksum' };
+    return { config: deviceTruth };
+  }, events);
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).resolves.toEqual({
+    applied: false,
+    verifiedDeviceState: true,
+    verifiedBy: 'readback',
+    receiptValid: false,
+    checksum: 'candidate-checksum'
+  });
+  expect(session.getState().live.filter.freq).toBe(100);
+  expect(session.getState().staged.filter.freq).toBe(321);
+  expect(session.getState().dirty).toBe(true);
+  expect(session.getState().transactionState).toBe('verified-device-different');
+});
+
+test('direct readback mismatch reports verified-device-different', async () => {
+  const events = [];
+  let calls = 0;
+  const session = createSession(async () => {
+    calls += 1;
+    if (calls === 1) {
+      return {
+        checksum: 'candidate-checksum',
+        applied_checksum: 'device-state-checksum',
+        storage_generation: 7
+      };
+    }
+    return { config: baseConfig() };
+  }, events, {
+    remoteManifest: { persistence: { backend: 'littlefs' } }
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toThrow(/readback differs/i);
+  expect(session.getState().transactionState).toBe('verified-device-different');
+  expect(session.getState().live.filter.freq).toBe(100);
+  expect(session.getState().staged.filter.freq).toBe(321);
+});
+
+test('editing after failed resynchronization preserves uncertainty and the next draft', async () => {
+  const events = [];
+  let deviceReadFails = true;
+  const deviceApplied = { ...baseConfig(), filter: { freq: 321 } };
+  const session = createSession(async (payload) => {
+    if (payload.rpc === 'set_config') throw new Error('RPC timeout');
+    if (deviceReadFails) throw new Error('readback unavailable');
+    return { config: deviceApplied };
+  }, events);
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toThrow(/firmware ACK/i);
+  expect(session.getState().transactionState).toBe('uncertain');
+
+  session.stage((draft) => ({ ...draft, filter: { freq: 654 } }));
+  expect(session.getState().transactionState).toBe('uncertain');
+  expect(session.getState().staged.filter.freq).toBe(654);
+  await expect(session.apply()).rejects.toThrow(/already in progress|resynchronized/i);
+
+  deviceReadFails = false;
+  await expect(session.resynchronize()).resolves.toEqual(deviceApplied);
+  const state = session.getState();
+  expect(state.live.filter.freq).toBe(321);
+  expect(state.staged.filter.freq).toBe(654);
+  expect(state.dirty).toBe(true);
+});
+
+for (const ordering of ['event-before-rejection', 'rejection-before-event']) {
+  test(`Bridge uncertainty survives ${ordering}`, async () => {
+    const events = [];
+    let session;
+    const uncertainSnapshot = {
+      liveConfig: baseConfig(),
+      stagedConfig: { ...baseConfig(), filter: { freq: 321 } },
+      dirty: true,
+      lastApplyResult: { status: 'uncertain', seq: 17, checksum: 'bridge-checksum' }
+    };
+    session = createSession(async () => ({}), events, {
+      isBridgeSessionActive: () => true,
+      applyBridgeConfig: async () => {
+        if (ordering === 'event-before-rejection') session.syncFromSession(uncertainSnapshot);
+        throw Object.assign(new Error('Bridge apply timed out'), { code: 'apply_timeout' });
+      },
+      refreshBridgeSession: async () => uncertainSnapshot
+    });
+    session.syncFromDevice(baseConfig());
+    session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+    await expect(session.apply()).rejects.toThrow(/timed out/i);
+    if (ordering === 'rejection-before-event') session.syncFromSession(uncertainSnapshot);
+    expect(session.getState().transactionState).toBe('uncertain');
+    await expect(session.apply()).rejects.toThrow(/already in progress|resynchronized/i);
+  });
+}
 
 test('Bridge Apply promotes its immutable candidate while retaining an edit made in flight', async () => {
   const events = [];

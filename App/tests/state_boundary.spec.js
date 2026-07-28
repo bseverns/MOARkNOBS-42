@@ -30,7 +30,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   expect(state.diff).toEqual([]);
 });
 
-test('failed Apply restores staged and live truth and updates error status UI', async ({
+test('readback divergence preserves staged and live truth and updates status UI', async ({
   page
 }) => {
   await page.addInitScript(() => {
@@ -86,6 +86,13 @@ test('failed Apply restores staged and live truth and updates error status UI', 
           }
         };
         let config = {
+          fw_version: manifest.fw_version,
+          schema_version: manifest.schema_version,
+          pots: Array.from({ length: 42 }, (_, index) => ({
+            index,
+            channel: (index % 16) + 1,
+            cc: index % 128
+          })),
           slots: Array.from({ length: 42 }, (_, index) => ({
             index,
             type: 'CC',
@@ -162,8 +169,8 @@ test('failed Apply restores staged and live truth and updates error status UI', 
 
   await expect(page.locator('#dirty-badge')).toBeVisible();
   await page.getByRole('button', { name: 'Apply' }).click();
-  await expect(page.locator('#status-label')).toHaveText('Apply failed');
-  await expect(page.locator('#status .status-message')).toContainText('ACK');
+  await expect(page.locator('#status-label')).toHaveText('Device differs');
+  await expect(page.locator('#status .status-message')).toContainText('readback');
   await expect(page.locator('#dirty-badge')).toBeVisible();
 
   const state = await page.evaluate(() => ({

@@ -25,6 +25,7 @@ function createHarness(options = {}) {
   const structuredEvents = [];
   const writtenLines = [];
   let setAllWriteCount = 0;
+  let resolveDelayedApplyWrite = null;
   let session = null;
 
   function deliverLine(line) {
@@ -35,18 +36,36 @@ function createHarness(options = {}) {
     }
   }
 
-  session = createDeviceSession({
-    sendLine(line) {
-      const normalized = String(line).trim();
-      writtenLines.push(normalized);
-      if (normalized.startsWith('SET_ALL ')) {
-        setAllWriteCount += 1;
-        if (setAllWriteCount === options.failSetAllWriteAt) {
-          throw new Error('serial write failed');
-        }
+  function sendLine(line) {
+    const normalized = String(line).trim();
+    writtenLines.push(normalized);
+    if (normalized.startsWith('SET_ALL ')) {
+      setAllWriteCount += 1;
+      if (setAllWriteCount === options.failSetAllWriteAt) {
+        throw new Error('serial write failed');
       }
-      simulator.receiveLine(line);
-    },
+    }
+    simulator.receiveLine(line);
+  }
+
+  session = createDeviceSession({
+    sendLine,
+    writeApplyLine: options.delayFirstApplyWrite
+      ? (line) => {
+          setAllWriteCount += 1;
+          writtenLines.push(String(line).trim());
+          if (setAllWriteCount !== 1) {
+            simulator.receiveLine(line);
+            return undefined;
+          }
+          return new Promise((resolve) => {
+            resolveDelayedApplyWrite = () => {
+              simulator.receiveLine(line);
+              resolve();
+            };
+          });
+        }
+      : sendLine,
     onStructuredEvent(event) {
       structuredEvents.push(event);
     },
@@ -66,6 +85,7 @@ function createHarness(options = {}) {
     session,
     structuredEvents,
     writtenLines,
+    resolveDelayedApplyWrite: () => resolveDelayedApplyWrite?.(),
   };
 }
 
@@ -279,6 +299,40 @@ async function run() {
       harness.session.getState().dirty,
       false,
       'timeout rollback should clear the dirty flag',
+    );
+  }
+
+  {
+    const harness = createHarness({ delayFirstApplyWrite: true });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[1].data1 = 78;
+    await harness.session.stageConfig(staged);
+
+    await assert.rejects(
+      () => harness.session.applyStagedConfig({
+        timeoutMs: 20,
+        writeTimeoutMs: 5000,
+      }),
+      (error) => error?.code === 'apply_timeout',
+      'the complete Apply timeout should expire a stalled serial writer',
+    );
+    await waitFor(
+      () => harness.session.getState().lastApplyResult?.status === 'resynchronized',
+    );
+    assert.equal(
+      harness.session.isApplyTransactionActive(),
+      false,
+      'successful readback should release public Apply exclusivity',
+    );
+
+    harness.resolveDelayedApplyWrite();
+    await wait(20);
+    assert.equal(
+      harness.writtenLines.filter((line) => line.startsWith('SET_ALL ')).length,
+      1,
+      'an expired writer must not transmit remaining frames after readback releases exclusivity',
     );
   }
 

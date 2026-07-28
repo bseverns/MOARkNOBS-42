@@ -42,6 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -51,6 +53,10 @@ jobs:
           pip install mkdocs-material
       - name: Build docs
         run: mkdocs build --strict
+      - name: Run documentation guards
+        run: |
+          python tools/doctor.py --docs
+          python tools/check_contract_ledger.py --root . --base HEAD^
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

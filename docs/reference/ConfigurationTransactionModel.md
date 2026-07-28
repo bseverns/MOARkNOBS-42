@@ -38,8 +38,11 @@ stateDiagram-v2
 5. Profile, scene, macro, live-control, and read failures never discard unrelated staged configuration.
 6. Structured Bridge staging is revisioned. Apply uses the revision acknowledged for the newest local draft.
 7. Firmware/device state wins after readback. A differing readback is reported as `verified-device-different`, not rollback.
-8. Edits created while Apply is in flight remain a separate next draft; verification never promotes or discards that newer draft.
-9. An unsent browser draft survives structured-Bridge disconnect/reconnect and is reconciled only after remote live truth has been adopted.
+8. Device authority and draft dirtiness are independent. Editing during `uncertain` or `resynchronizing` updates a separate next draft and must not change the authority state or clear the unresolved transaction token.
+9. Edits created while Apply is in flight remain a separate next draft; verification never promotes or discards that newer draft.
+10. A structured Bridge rejection is reconciled against the Bridge session's `lastApplyResult`; WebSocket-event and HTTP-response ordering must produce the same authority state.
+11. An expired Bridge writer remains permanently cancelled even after successful readback clears public uncertainty. A delayed serial callback cannot resume its old payload.
+12. An unsent browser draft survives structured-Bridge disconnect/reconnect and is reconciled only after remote live truth has been adopted.
 
 ## What “rollback” means
 

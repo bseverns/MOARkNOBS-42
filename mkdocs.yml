@@ -167,6 +167,7 @@ nav:
       - Bridge Write Lanes: bridge/BridgeWriteLanes.md
       - App Transport Truth Table: app/AppTransportTruthTable.md
       - Configuration Transaction Model: reference/ConfigurationTransactionModel.md
+      - Generation-Backed Persistence Contract: reference/PersistenceContract.md
       - Legacy EEPROM Layout — Schema 4: reference/EEPROMLayout.md
       - Host Compatibility: reference/HostCompatibility.md
       - Known Good Host Recipes: reference/KnownGoodHostRecipes.md

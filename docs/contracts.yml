@@ -26,8 +26,8 @@ contracts:
       - firmware/src/storage/**
     docs:
       - firmware/README.md
+      - docs/reference/PersistenceContract.md
       - docs/reference/ManifestContract.md
-      - docs/reference/EEPROMLayout.md
   firmware_protocol:
     source:
       - firmware/include/protocol/**

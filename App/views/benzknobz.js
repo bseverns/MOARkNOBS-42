@@ -965,10 +965,13 @@ const boot = () => {
     ].join(' • ');
   }
 
-  // Promote the latest manifest into the header and connection chrome.
+  // A manifest establishes device identity, not a write-ready session. Only
+  // the final connected event may promote the UI to live.
   function updateHeaderManifest(manifest) {
-    setConnectionPill('live', 'Connected');
-    setConnectionBanner('live', manifest);
+    if (connectionPill?.dataset.stage !== 'live') {
+      setConnectionPill('handshake', 'Manifest received');
+      setConnectionBanner('handshake', manifest);
+    }
     updatePowerSafetySummary(manifest);
     updateHeader(runtime.getState().live);
     updateStagePanel();

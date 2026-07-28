@@ -203,6 +203,7 @@ def main() -> None:
             [
                 ("markdown links", ["python3", "tools/check_markdown_links.py", "--root", "."]),
                 ("wiki contract", ["python3", "tools/check_wiki_contract.py", "--root", "."]),
+                ("contract ledger", ["python3", "tools/check_contract_ledger.py", "--root", "."]),
                 (
                     "schema keyword coverage",
                     ["python3", "tools/check_schema_keyword_coverage.py", "--root", "."],

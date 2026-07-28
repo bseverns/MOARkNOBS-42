@@ -327,6 +327,11 @@ export function createRuntime({
         authoritativeConfig: response?.session?.liveConfig ?? null
       };
     },
+    refreshBridgeSession: async () =>
+      bridgeSessionRuntime?.refreshSessionSnapshot({
+        warm: false,
+        emitConnectedConfig: false
+      }),
     rollbackBridgeConfig: async (reason) => {
       const client = bridgeSessionRuntime?.ensureClient();
       if (!client) return { rolledBack: false };

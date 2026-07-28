@@ -211,6 +211,7 @@ export function createConfigSession({
   isBridgeSessionActive = () => false,
   stageBridgeConfig = null,
   applyBridgeConfig = null,
+  refreshBridgeSession = null,
   rollbackBridgeConfig = null
 } = {}) {
   let liveConfig = null;
@@ -285,7 +286,12 @@ export function createConfigSession({
       rollback: 'clean',
       ack: 'verified'
     }[bridgeStatus];
-    if (!appliedCandidate) {
+    const bridgeAuthorityStates = new Set([
+      'uncertain',
+      'resynchronizing',
+      'verified-device-different'
+    ]);
+    if (!appliedCandidate || bridgeAuthorityStates.has(bridgeTransactionState)) {
       setTransactionState(bridgeTransactionState ?? (dirty ? 'dirty' : 'verified'), {
         source: 'bridge',
         lastApplyResult: sessionPayload.lastApplyResult ?? null
@@ -303,7 +309,7 @@ export function createConfigSession({
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
     dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
-    if (appliedCandidate) {
+    if (appliedCandidate || ['uncertain', 'resynchronizing'].includes(transactionState)) {
       nextDraft = clone(normalizedStaged);
     } else {
       setTransactionState(dirty ? 'dirty' : 'clean');
@@ -311,19 +317,25 @@ export function createConfigSession({
     broadcastConfig();
   }
 
-  function finishApply(authoritativeConfig, details = {}) {
+  function finishApply(
+    authoritativeConfig,
+    details = {},
+    stateOverride = null,
+    { preserveCandidate = false } = {}
+  ) {
     const normalized = normalizeConfig(authoritativeConfig, getManifest());
+    const retainedDraft = nextDraft ?? (preserveCandidate ? appliedCandidate : null);
     liveConfig = clone(normalized);
-    stagedConfig = clone(nextDraft ?? normalized);
+    stagedConfig = clone(retainedDraft ?? normalized);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     appliedCandidate = null;
     nextDraft = null;
-    setTransactionState(dirty ? 'dirty' : 'verified', details);
+    setTransactionState(stateOverride ?? (dirty ? 'dirty' : 'verified'), details);
   }
 
-  function abandonApply() {
+  function abandonApply({ retainNextDraft = false } = {}) {
     appliedCandidate = null;
-    nextDraft = null;
+    if (!retainNextDraft) nextDraft = null;
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     if (!['uncertain', 'resynchronizing'].includes(transactionState)) {
       setTransactionState(dirty ? 'dirty' : 'clean');
@@ -344,12 +356,22 @@ export function createConfigSession({
         { timeoutMs: applyRpcTimeoutMs }
       );
       const deviceConfig = normalizeConfig(response?.config ?? response, getManifest());
-      finishApply(deviceConfig, { reason: 'resynchronized', attemptedApply });
+      const candidateMatchesDevice =
+        !appliedCandidate ||
+        JSON.stringify(deviceConfig) ===
+          JSON.stringify(normalizeConfig(appliedCandidate, getManifest()));
+      finishApply(
+        deviceConfig,
+        { reason: 'resynchronized', attemptedApply },
+        candidateMatchesDevice ? null : 'verified-device-different',
+        { preserveCandidate: !candidateMatchesDevice }
+      );
       broadcastConfig();
       emit('resynchronized', { attemptedApply });
       return deviceConfig;
     } catch (resyncError) {
-      abandonApply();
+      // Keep the transmitted candidate as the unresolved transaction token.
+      // Operator edits are stored in nextDraft and cannot unlock another Apply.
       setTransactionState('uncertain', { reason, attemptedApply, resyncError });
       broadcastConfig({ persist: false });
       emit('apply-uncertain', { reason, attemptedApply, error: resyncError });
@@ -372,14 +394,23 @@ export function createConfigSession({
     return resynchronizeAfterUncertain(reason);
   }
 
+  function classifyReadbackRecovery(recovered, transmittedConfig, details = {}) {
+    const recoveredMatchesCandidate =
+      JSON.stringify(normalizeConfig(recovered, getManifest())) ===
+      JSON.stringify(normalizeConfig(transmittedConfig, getManifest()));
+    return recoveredMatchesCandidate
+      ? { applied: true, verifiedBy: 'readback', ...details }
+      : { applied: false, verifiedDeviceState: true, verifiedBy: 'readback', ...details };
+  }
+
   async function apply() {
-    if (!dirty) return { applied: false };
     if (appliedCandidate) {
       throw new Error('Apply is already in progress.');
     }
     if (['uncertain', 'resynchronizing'].includes(transactionState)) {
       throw new Error('Apply is blocked until the previous transmitted configuration is resynchronized.');
     }
+    if (!dirty) return { applied: false };
     const validator = getValidator();
     if (!validator(stagedConfig)) {
       const error = new Error('Schema validation failed');
@@ -415,7 +446,46 @@ export function createConfigSession({
         // draft solely because this request failed; the session refresh path
         // remains the authority for reconciliation.
         emit('bridge-apply-failed', { error: err, staged: clone(stagedConfig) });
-        abandonApply();
+        let authoritativeSession = null;
+        if (typeof refreshBridgeSession === 'function') {
+          try {
+            authoritativeSession = await refreshBridgeSession();
+            if (authoritativeSession) syncFromSession(authoritativeSession);
+          } catch (refreshError) {
+            emit('bridge-session-refresh-failed', { error: refreshError });
+          }
+        }
+        const bridgeStatus = authoritativeSession?.lastApplyResult?.status;
+        if (['uncertain', 'unresolved', 'pending'].includes(bridgeStatus)) {
+          setTransactionState(
+            bridgeStatus === 'pending' ? 'resynchronizing' : 'uncertain',
+            {
+              source: 'bridge',
+              lastApplyResult: authoritativeSession.lastApplyResult
+            }
+          );
+        } else if (
+          ['resynchronized', 'ack', 'verified_device_different'].includes(bridgeStatus) &&
+          authoritativeSession?.liveConfig
+        ) {
+          finishApply(
+            authoritativeSession.liveConfig,
+            {
+              source: 'bridge',
+              lastApplyResult: authoritativeSession.lastApplyResult
+            },
+            bridgeStatus === 'verified_device_different'
+              ? 'verified-device-different'
+              : null,
+            { preserveCandidate: bridgeStatus === 'verified_device_different' }
+          );
+          broadcastConfig();
+        } else {
+          // The Bridge supplied no transaction authority. Preserve the local
+          // draft, but release the candidate so a later session snapshot can
+          // establish the state.
+          abandonApply({ retainNextDraft: true });
+        }
         throw err;
       }
     }
@@ -447,12 +517,10 @@ export function createConfigSession({
     } catch (err) {
       const recovered = await markApplyUncertain('transport-failure', payload, checksum);
       if (recovered) {
-        return {
-          applied: true,
-          verifiedBy: 'readback',
+        return classifyReadbackRecovery(recovered, payload.config, {
           ackReceived: false,
           checksum
-        };
+        });
       }
       if (/RPC timeout/i.test(err?.message ?? '')) {
         throw new Error('Timed out waiting for firmware ACK; device state is being resynchronized.');
@@ -463,7 +531,13 @@ export function createConfigSession({
     const appliedChecksum = response?.applied_checksum ?? response?.result?.applied_checksum ?? null;
     const storageGeneration = response?.storage_generation ?? response?.result?.storage_generation ?? null;
     if (ackChecksum !== checksum) {
-      await markApplyUncertain('malformed-ack', payload, checksum);
+      const recovered = await markApplyUncertain('malformed-ack', payload, checksum);
+      if (recovered) {
+        return classifyReadbackRecovery(recovered, payload.config, {
+          receiptValid: false,
+          checksum
+        });
+      }
       throw new Error('Device failed to acknowledge apply');
     }
     // Hardware bulk Apply is durable only when firmware confirms its own
@@ -471,7 +545,13 @@ export function createConfigSession({
     // older manifests retain their compatibility path.
     const requiresHardwareIntegrity = remoteManifest?.persistence?.backend === 'littlefs';
     if (requiresHardwareIntegrity && (!appliedChecksum || storageGeneration === null)) {
-      await markApplyUncertain('missing-integrity-receipt', payload, checksum);
+      const recovered = await markApplyUncertain('missing-integrity-receipt', payload, checksum);
+      if (recovered) {
+        return classifyReadbackRecovery(recovered, payload.config, {
+          receiptValid: false,
+          checksum
+        });
+      }
       throw new Error('Device ACK omitted applied-state integrity receipt');
     }
     if (requiresHardwareIntegrity) {
@@ -495,10 +575,15 @@ export function createConfigSession({
         // The device is the authority after an ACK. Preserve its truth instead
         // of promoting an unverified browser-side candidate. Any newer local
         // draft remains staged separately for the operator's next Apply.
-        finishApply(readback, {
-          reason: 'readback-mismatch',
-          attemptedApply: { seq: payload.seq, checksum }
-        });
+        finishApply(
+          readback,
+          {
+            reason: 'readback-mismatch',
+            attemptedApply: { seq: payload.seq, checksum }
+          },
+          'verified-device-different',
+          { preserveCandidate: true }
+        );
         broadcastConfig();
         throw new Error('Device readback differs from the applied configuration');
       }

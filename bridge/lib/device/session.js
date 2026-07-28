@@ -5,6 +5,7 @@ const { loadSchemaAuthority } = require('./schema_authority');
 const { createStructuredEvent } = require('./transport_contract');
 
 const APPLY_TIMEOUT_MS = 30000;
+const APPLY_WRITE_TIMEOUT_MS = 5000;
 const HANDSHAKE_TIMEOUT_MS = 8000;
 const MAX_HANDSHAKE_RETRIES = 2;
 const NATIVE_SET_ALL_CHUNK_SIZE = 96;
@@ -18,6 +19,25 @@ function clone(value) {
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function withTimeout(operation, timeoutMs, message) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    timer.unref?.();
+    Promise.resolve()
+      .then(operation)
+      .then(
+        (value) => {
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error) => {
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+  });
 }
 
 function chunkString(text, chunkSize) {
@@ -476,6 +496,7 @@ function createDeviceSession({
 
   function markApplyUncertain(reason, pending, error, { attemptReadback = true } = {}) {
     if (!pending) return;
+    pending.cancelled = true;
     clearTimeout(pending.timer);
     applyPending = null;
     uncertainApply = { checksum: pending.checksum, seq: pending.seq, reason };
@@ -495,6 +516,7 @@ function createDeviceSession({
     if (!applyPending) return;
     const pending = applyPending;
     applyPending = null;
+    pending.cancelled = true;
     clearTimeout(pending.timer);
     pending.reject(error);
   }
@@ -892,7 +914,11 @@ function createDeviceSession({
     };
   }
 
-  async function applyStagedConfig({ timeoutMs = APPLY_TIMEOUT_MS, expectedSessionRevision } = {}) {
+  async function applyStagedConfig({
+    timeoutMs = APPLY_TIMEOUT_MS,
+    writeTimeoutMs = APPLY_WRITE_TIMEOUT_MS,
+    expectedSessionRevision
+  } = {}) {
     await ensureAuthority();
     requireSessionRevision(expectedSessionRevision);
     if (!state.connected) {
@@ -1000,9 +1026,18 @@ function createDeviceSession({
     emitState();
 
     return new Promise((resolve, reject) => {
+      const pending = {
+        checksum,
+        seq,
+        stagedConfig: clone(state.stagedConfig),
+        timer: null,
+        cancelled: false,
+        resolve,
+        reject,
+      };
       const timer = setTimeout(() => {
-        if (!applyPending || applyPending.checksum !== checksum) return;
-        markApplyUncertain('timeout', applyPending, createSessionError(
+        if (applyPending !== pending) return;
+        markApplyUncertain('timeout', pending, createSessionError(
             'apply_timeout',
             'Timed out waiting for device apply ACK',
             { checksum, seq, timeoutMs },
@@ -1010,27 +1045,32 @@ function createDeviceSession({
           ));
       }, timeoutMs);
 
-      applyPending = {
-        checksum,
-        seq,
-        stagedConfig: clone(state.stagedConfig),
-        timer,
-        resolve,
-        reject,
-      };
+      pending.timer = timer;
+      applyPending = pending;
 
       (async () => {
         try {
           for (let index = 0; index < lines.length; index += 1) {
-            await writeApplyLine(lines[index]);
-            if (uncertainApply?.seq === seq) {
+            await withTimeout(
+              () => writeApplyLine(lines[index]),
+              writeTimeoutMs,
+              `Timed out writing Apply frame after ${writeTimeoutMs}ms`,
+            );
+            if (pending.cancelled) {
               throw new Error('Apply serial ownership ended before the payload write completed');
             }
             if (index + 1 < lines.length) {
               await delay(NATIVE_SET_ALL_LINE_PACE_MS);
+              if (pending.cancelled) {
+                throw new Error('Apply serial ownership ended before the payload write completed');
+              }
             }
           }
         } catch (error) {
+          // An expired writer retains its cancellation token even after public
+          // uncertainty is cleared. It must not abort or resume into a newer
+          // serial ownership epoch when its callback eventually settles.
+          if (pending.cancelled) return;
           try {
             // This is the owning Apply transaction releasing its own partial
             // frame. Bridge implementations may bypass their public live
@@ -1040,7 +1080,7 @@ function createDeviceSession({
             // A disconnected transport cannot receive the abort; firmware's
             // autonomous assembler timeout clears the partial frame.
           }
-          markApplyUncertain('transport_error', applyPending, createSessionError(
+          markApplyUncertain('transport_error', pending, createSessionError(
               'apply_transport_error',
               error?.message || 'Failed to write staged apply payload',
               { checksum, seq },
