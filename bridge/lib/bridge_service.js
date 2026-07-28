@@ -229,10 +229,11 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   const deviceSession = createDeviceSession({
     sendLine: (line) => sendLine(line),
+    writeApplyLine: (line) => writeSerialLineAndDrain(line),
     // Only the device session's owning Apply transaction may use this path.
     // Public sendLine() retains its Apply-exclusivity guard, so an unrelated
     // client cannot inject ABORT_SET_ALL into another client's transaction.
-    abortBulkFrame: () => writeSerialImmediately('ABORT_SET_ALL'),
+    abortBulkFrame: () => writeSerialLineAndDrain('ABORT_SET_ALL'),
     pushLog,
     nextSeq: () => {
       deviceSeq += 1;
@@ -831,6 +832,46 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       throw error;
     }
     serial.write(normalized);
+    return normalized;
+  }
+
+  function writeWithCallback(method, args, fallbackArity) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const complete = (error) => {
+        if (settled) return;
+        settled = true;
+        if (error) reject(error);
+        else resolve();
+      };
+      let result;
+      try {
+        result = method(...args, complete);
+      } catch (error) {
+        complete(error);
+        return;
+      }
+      if (result && typeof result.then === 'function') {
+        result.then(() => complete(), complete);
+      } else if (method.length < fallbackArity) {
+        // Lightweight injected transports may expose synchronous write/drain
+        // methods and ignore Node-style callbacks.
+        complete();
+      }
+    });
+  }
+
+  async function writeSerialLineAndDrain(line) {
+    const normalized = `${String(line).trim()}\n`;
+    if (!serial || typeof serial.write !== 'function') {
+      const error = new Error('serial not connected');
+      setState({ lastError: error.message });
+      throw error;
+    }
+    await writeWithCallback(serial.write.bind(serial), [normalized], 2);
+    if (typeof serial.drain === 'function') {
+      await writeWithCallback(serial.drain.bind(serial), [], 1);
+    }
     return normalized;
   }
 

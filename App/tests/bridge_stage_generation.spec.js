@@ -55,3 +55,56 @@ test('Bridge staging submits the newest draft when an edit arrives during an in-
 
   await expect(flush).resolves.toEqual({ sessionRevision: 2 });
 });
+
+test('Bridge reconnect preserves an unsent local draft over the first remote snapshot', async () => {
+  let staged = { slots: [{ value: 2 }] };
+  const submissions = [];
+  const syncedSessions = [];
+  const client = {
+    closeEvents() {},
+    stageConfig(config) {
+      submissions.push(clone(config));
+      return Promise.resolve({ sessionRevision: 3 });
+    }
+  };
+  const configSession = {
+    getStagedConfig: () => staged,
+    syncFromSession(session) {
+      syncedSessions.push(clone(session));
+      staged = clone(session.stagedConfig);
+    },
+    broadcastConfig() {}
+  };
+  const runtime = createBridgeSessionRuntime({
+    baseUrl: 'http://bridge.test',
+    clone,
+    emit() {},
+    createClient: () => client,
+    compileSchema() {},
+    configSession,
+    localManifest: {},
+    currentSlotCount: () => 1,
+    localSlotMetaManager: { ensureCount() {} },
+    getConnectedPayload: () => ({}),
+    setRemoteManifest() {},
+    setSchema() {},
+    setSchemaSource() {},
+    onTelemetry() {}
+  });
+
+  runtime.scheduleStageSync({ active: true });
+  runtime.reset({ preserveLocalDraft: true });
+  runtime.applyAuthoritativeSession({
+    liveConfig: { slots: [{ value: 0 }] },
+    stagedConfig: { slots: [{ value: 1 }] },
+    dirty: true,
+    sessionRevision: 2
+  });
+
+  expect(syncedSessions.at(-1).liveConfig).toEqual({ slots: [{ value: 0 }] });
+  expect(syncedSessions.at(-1).stagedConfig).toEqual({ slots: [{ value: 2 }] });
+  await expect(runtime.flushStageSync({ active: true })).resolves.toEqual({
+    sessionRevision: 3
+  });
+  expect(submissions).toEqual([{ slots: [{ value: 2 }] }]);
+});

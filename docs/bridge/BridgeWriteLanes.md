@@ -34,6 +34,7 @@ The important rule is simple: live-control writes must not silently become stage
 - The bridge session tracks `liveConfig`, `stagedConfig`, `dirty`, and `lastApplyResult`.
 - `dirty` clears only after verified device truth or deliberate local-draft discard.
 - Once Apply bytes are transmitted, uncertainty is resolved by readback; it is not labeled rollback.
+- Each bulk frame awaits serial write acceptance and drain before the next frame is sent; delayed transport failures stop the frame sequence and invoke the owning transaction's abort path.
 - See [Configuration Transaction Model](../reference/ConfigurationTransactionModel.md).
 
 ### Live performance lanes

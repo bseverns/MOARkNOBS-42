@@ -219,6 +219,8 @@ export function createConfigSession({
   let lastKnownChecksum = null;
   let transactionState = 'clean';
   let attemptedApply = null;
+  let appliedCandidate = null;
+  let nextDraft = null;
 
   function setTransactionState(next, details = {}) {
     transactionState = next;
@@ -254,9 +256,9 @@ export function createConfigSession({
   function syncFromDevice(configPayload) {
     const normalized = normalizeConfig(configPayload, getManifest());
     liveConfig = clone(normalized);
-    stagedConfig = clone(normalized);
-    dirty = false;
-    setTransactionState('verified');
+    stagedConfig = clone(nextDraft ?? normalized);
+    dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    if (!appliedCandidate) setTransactionState(dirty ? 'dirty' : 'verified');
   }
 
   function syncFromSession(sessionPayload = {}) {
@@ -266,8 +268,10 @@ export function createConfigSession({
       getManifest()
     );
     liveConfig = clone(normalizedLive);
-    stagedConfig = clone(normalizedStaged);
-    if (sessionPayload.dirty === undefined) {
+    stagedConfig = clone(nextDraft ?? normalizedStaged);
+    if (nextDraft) {
+      dirty = shallowDiff(normalizedLive ?? {}, stagedConfig ?? {}).length > 0;
+    } else if (sessionPayload.dirty === undefined) {
       dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
     } else {
       dirty = Boolean(sessionPayload.dirty);
@@ -281,10 +285,12 @@ export function createConfigSession({
       rollback: 'clean',
       ack: 'verified'
     }[bridgeStatus];
-    setTransactionState(bridgeTransactionState ?? (dirty ? 'dirty' : 'verified'), {
-      source: 'bridge',
-      lastApplyResult: sessionPayload.lastApplyResult ?? null
-    });
+    if (!appliedCandidate) {
+      setTransactionState(bridgeTransactionState ?? (dirty ? 'dirty' : 'verified'), {
+        source: 'bridge',
+        lastApplyResult: sessionPayload.lastApplyResult ?? null
+      });
+    }
   }
 
   function stage(updater) {
@@ -297,8 +303,31 @@ export function createConfigSession({
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
     dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
-    setTransactionState(dirty ? 'dirty' : 'clean');
+    if (appliedCandidate) {
+      nextDraft = clone(normalizedStaged);
+    } else {
+      setTransactionState(dirty ? 'dirty' : 'clean');
+    }
     broadcastConfig();
+  }
+
+  function finishApply(authoritativeConfig, details = {}) {
+    const normalized = normalizeConfig(authoritativeConfig, getManifest());
+    liveConfig = clone(normalized);
+    stagedConfig = clone(nextDraft ?? normalized);
+    dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    appliedCandidate = null;
+    nextDraft = null;
+    setTransactionState(dirty ? 'dirty' : 'verified', details);
+  }
+
+  function abandonApply() {
+    appliedCandidate = null;
+    nextDraft = null;
+    dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    if (!['uncertain', 'resynchronizing'].includes(transactionState)) {
+      setTransactionState(dirty ? 'dirty' : 'clean');
+    }
   }
 
   async function resynchronizeAfterUncertain(reason) {
@@ -315,14 +344,12 @@ export function createConfigSession({
         { timeoutMs: applyRpcTimeoutMs }
       );
       const deviceConfig = normalizeConfig(response?.config ?? response, getManifest());
-      liveConfig = clone(deviceConfig);
-      stagedConfig = clone(deviceConfig);
-      dirty = false;
-      setTransactionState('verified', { reason: 'resynchronized', attemptedApply });
+      finishApply(deviceConfig, { reason: 'resynchronized', attemptedApply });
       broadcastConfig();
       emit('resynchronized', { attemptedApply });
       return deviceConfig;
     } catch (resyncError) {
+      abandonApply();
       setTransactionState('uncertain', { reason, attemptedApply, resyncError });
       broadcastConfig({ persist: false });
       emit('apply-uncertain', { reason, attemptedApply, error: resyncError });
@@ -347,6 +374,9 @@ export function createConfigSession({
 
   async function apply() {
     if (!dirty) return { applied: false };
+    if (appliedCandidate) {
+      throw new Error('Apply is already in progress.');
+    }
     if (['uncertain', 'resynchronizing'].includes(transactionState)) {
       throw new Error('Apply is blocked until the previous transmitted configuration is resynchronized.');
     }
@@ -357,17 +387,24 @@ export function createConfigSession({
       emit('validation-error', validator.errors);
       throw error;
     }
+    appliedCandidate = clone(stagedConfig);
+    nextDraft = null;
     if (isBridgeSessionActive()) {
+      setTransactionState('applying');
       try {
         const response =
           typeof applyBridgeConfig === 'function' ? await applyBridgeConfig() : { applied: false };
         const checksum = response?.checksum ?? response?.result?.checksum ?? null;
         if (response?.applied === false || response?.result?.applied === false) {
+          abandonApply();
           emit('bridge-apply-not-applied', { response });
           return { applied: false, reason: response?.reason ?? response?.result?.reason ?? 'bridge-not-applied' };
         }
-        liveConfig = clone(stagedConfig);
-        dirty = false;
+        const authoritativeConfig =
+          response?.authoritativeConfig ??
+          response?.result?.authoritativeConfig ??
+          appliedCandidate;
+        finishApply(authoritativeConfig, { source: 'bridge', checksum });
         lastKnownChecksum = checksum;
         broadcastConfig();
         emit('applied', { checksum });
@@ -378,6 +415,7 @@ export function createConfigSession({
         // draft solely because this request failed; the session refresh path
         // remains the authority for reconciliation.
         emit('bridge-apply-failed', { error: err, staged: clone(stagedConfig) });
+        abandonApply();
         throw err;
       }
     }
@@ -393,8 +431,8 @@ export function createConfigSession({
         build_time: remoteManifest?.build_time,
         schema_version: remoteManifest?.schema_version
       },
-      config: clone(stagedConfig),
-      deviceConfig: compactConfigForDevice(stagedConfig, liveConfig, {
+      config: clone(appliedCandidate),
+      deviceConfig: compactConfigForDevice(appliedCandidate, liveConfig, {
         clone,
         slotTypeNames
       })
@@ -452,23 +490,24 @@ export function createConfigSession({
         await markApplyUncertain('readback-failure', payload, checksum);
         throw new Error(`Device applied configuration but readback verification failed: ${err?.message ?? err}`);
       }
-      const expected = normalizeConfig(stagedConfig, getManifest());
+      const expected = normalizeConfig(appliedCandidate, getManifest());
       if (JSON.stringify(readback) !== JSON.stringify(expected)) {
         // The device is the authority after an ACK. Preserve its truth instead
-        // of promoting an unverified browser-side candidate.
-        liveConfig = clone(readback);
-        stagedConfig = clone(readback);
-        dirty = false;
-        setTransactionState('verified', { reason: 'readback-mismatch', attemptedApply: { seq: payload.seq, checksum } });
+        // of promoting an unverified browser-side candidate. Any newer local
+        // draft remains staged separately for the operator's next Apply.
+        finishApply(readback, {
+          reason: 'readback-mismatch',
+          attemptedApply: { seq: payload.seq, checksum }
+        });
         broadcastConfig();
         throw new Error('Device readback differs from the applied configuration');
       }
+      finishApply(readback, { seq: payload.seq, checksum });
+    } else {
+      finishApply(appliedCandidate, { seq: payload.seq, checksum });
     }
-    liveConfig = clone(stagedConfig);
-    dirty = false;
     lastKnownChecksum = checksum;
     attemptedApply = null;
-    setTransactionState('verified', { seq: payload.seq, checksum });
     broadcastConfig();
     emit('applied', { checksum, appliedChecksum, storageGeneration });
     return { applied: true, checksum, appliedChecksum, storageGeneration };

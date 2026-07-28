@@ -47,7 +47,7 @@ The bridge remains bidirectional:
 - MIDI in can rebroadcast as typed OSC events and still feed the firmware live-control lane.
 - OSC typed events can emit host MIDI messages.
 - A settings file can add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
-- The cached device session validates revisioned staged config before Apply and promotes it only after verified device truth.
+- The cached device session validates revisioned staged config before Apply, awaits serial write acceptance and drain for each bulk frame, and promotes it only after verified device truth.
 - Firmware telemetry is mirrored beyond raw slot/envelope values: current slot, LFOs, EF status, ARG chunks,
   diagnostics, clock state, note dynamics, jitter, and active profile are available over OSC and structured events.
 - Manifest-backed hardware health is cached in the session so the console can show OLED status, brownouts, EEPROM copy

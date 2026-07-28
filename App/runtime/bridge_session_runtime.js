@@ -306,14 +306,16 @@ export function createBridgeSessionRuntime({
     ensureClient()?.closeEvents();
   }
 
-  function reset() {
+  function reset({ preserveLocalDraft = false } = {}) {
     cancelStageSync();
     closeEvents();
     bridgeSessionCache = null;
-    newestLocalDraft = null;
-    localDraftGeneration = 0;
-    submittedGeneration = 0;
-    acknowledgedGeneration = 0;
+    if (!preserveLocalDraft) {
+      newestLocalDraft = null;
+      localDraftGeneration = 0;
+      submittedGeneration = 0;
+      acknowledgedGeneration = 0;
+    }
   }
 
   return {

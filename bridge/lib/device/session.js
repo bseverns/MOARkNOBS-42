@@ -120,6 +120,7 @@ function extractFirmwareIdentity(manifest) {
 
 function createDeviceSession({
   sendLine,
+  writeApplyLine = sendLine,
   abortBulkFrame = () => sendLine('ABORT_SET_ALL'),
   onStateChange = () => {},
   onStructuredEvent = () => {},
@@ -128,6 +129,9 @@ function createDeviceSession({
 } = {}) {
   if (typeof sendLine !== 'function') {
     throw new Error('device session requires sendLine');
+  }
+  if (typeof writeApplyLine !== 'function') {
+    throw new Error('device session writeApplyLine must be a function');
   }
   if (typeof abortBulkFrame !== 'function') {
     throw new Error('device session abortBulkFrame must be a function');
@@ -1018,7 +1022,10 @@ function createDeviceSession({
       (async () => {
         try {
           for (let index = 0; index < lines.length; index += 1) {
-            sendLine(lines[index]);
+            await writeApplyLine(lines[index]);
+            if (uncertainApply?.seq === seq) {
+              throw new Error('Apply serial ownership ended before the payload write completed');
+            }
             if (index + 1 < lines.length) {
               await delay(NATIVE_SET_ALL_LINE_PACE_MS);
             }
@@ -1028,7 +1035,7 @@ function createDeviceSession({
             // This is the owning Apply transaction releasing its own partial
             // frame. Bridge implementations may bypass their public live
             // command queue here without allowing another client to abort it.
-            abortBulkFrame();
+            await abortBulkFrame();
           } catch {
             // A disconnected transport cannot receive the abort; firmware's
             // autonomous assembler timeout clears the partial frame.

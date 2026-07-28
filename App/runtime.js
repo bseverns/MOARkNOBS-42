@@ -321,7 +321,11 @@ export function createRuntime({
         expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision()
       });
       if (response?.session) bridgeSessionRuntime?.applyAuthoritativeSession(response.session);
-      return response?.result ?? { applied: false, reason: 'missing-bridge-result' };
+      const result = response?.result ?? { applied: false, reason: 'missing-bridge-result' };
+      return {
+        ...result,
+        authoritativeConfig: response?.session?.liveConfig ?? null
+      };
     },
     rollbackBridgeConfig: async (reason) => {
       const client = bridgeSessionRuntime?.ensureClient();
@@ -444,7 +448,7 @@ export function createRuntime({
           return;
         } catch (err) {
           bridgeSessionActive = false;
-          bridgeSessionRuntime.reset();
+          bridgeSessionRuntime.reset({ preserveLocalDraft: true });
           emit('status', {
             stage: 'bridge-session',
             level: 'warn',
@@ -566,7 +570,7 @@ export function createRuntime({
   const applyPatch = (...args) => liveControlsRuntime.applyPatch(...args);
 
   async function disconnect() {
-    bridgeSessionRuntime.reset();
+    bridgeSessionRuntime.reset({ preserveLocalDraft: true });
     bridgeSessionActive = false;
     telemetryRuntime.reset();
     if (!transport) {

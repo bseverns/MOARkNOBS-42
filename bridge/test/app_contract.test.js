@@ -14,6 +14,7 @@ class FakeSerialPort extends EventEmitter {
     super();
     this.options = options;
     this.writes = [];
+    this.drainCalls = 0;
     this.parser = null;
     this.device = FakeSerialPort.device;
     FakeSerialPort.lastInstance = this;
@@ -28,7 +29,7 @@ class FakeSerialPort extends EventEmitter {
     return parser;
   }
 
-  write(data) {
+  write(data, callback) {
     const line = String(data);
     this.writes.push(line);
     if (line.startsWith('SET_ALL ')) {
@@ -36,8 +37,19 @@ class FakeSerialPort extends EventEmitter {
       if (FakeSerialPort.failSetAllWriteAt === FakeSerialPort.setAllWrites) {
         throw new Error('simulated partial SET_ALL write failure');
       }
+      if (FakeSerialPort.asyncFailSetAllWriteAt === FakeSerialPort.setAllWrites) {
+        setImmediate(() => callback?.(new Error('simulated delayed SET_ALL write failure')));
+        return false;
+      }
     }
     this.device.receiveLine(line);
+    setImmediate(() => callback?.());
+    return true;
+  }
+
+  drain(callback) {
+    this.drainCalls += 1;
+    setImmediate(() => callback?.());
   }
 
   close(cb) {
@@ -47,6 +59,7 @@ class FakeSerialPort extends EventEmitter {
   }
 }
 FakeSerialPort.failSetAllWriteAt = null;
+FakeSerialPort.asyncFailSetAllWriteAt = null;
 FakeSerialPort.setAllWrites = 0;
 FakeSerialPort.lastInstance = null;
 
@@ -231,19 +244,30 @@ async function run() {
   await service.stageDeviceConfig(partiallyWrittenDraft);
   const serial = FakeSerialPort.lastInstance;
   FakeSerialPort.setAllWrites = 0;
-  FakeSerialPort.failSetAllWriteAt = 2;
+  const drainsBeforeFailedApply = serial.drainCalls;
+  FakeSerialPort.asyncFailSetAllWriteAt = 2;
   await assert.rejects(
     () => service.applyDeviceConfig(),
     (error) => error?.code === 'apply_transport_error',
     'a partial Bridge SET_ALL write should reject as a transport error',
   );
-  FakeSerialPort.failSetAllWriteAt = null;
+  FakeSerialPort.asyncFailSetAllWriteAt = null;
   const abortIndex = serial.writes.lastIndexOf('ABORT_SET_ALL\n');
   const failedChunkIndex = serial.writes.findLastIndex((line) => line.startsWith('SET_ALL '));
   assert.equal(
     abortIndex > failedChunkIndex,
     true,
     'the owning Apply must write ABORT_SET_ALL immediately instead of deferring it',
+  );
+  assert.equal(
+    FakeSerialPort.setAllWrites,
+    2,
+    'a delayed serial write failure must stop later Apply chunks',
+  );
+  assert.equal(
+    serial.drainCalls > drainsBeforeFailedApply,
+    true,
+    'Apply writes and the owner abort must await serial drain completion',
   );
   await waitFor(() => !service.getState().deviceSession?.lastApplyResult ||
     service.getState().deviceSession.lastApplyResult.status !== 'pending');

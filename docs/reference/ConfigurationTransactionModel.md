@@ -38,8 +38,9 @@ stateDiagram-v2
 5. Profile, scene, macro, live-control, and read failures never discard unrelated staged configuration.
 6. Structured Bridge staging is revisioned. Apply uses the revision acknowledged for the newest local draft.
 7. Firmware/device state wins after readback. A differing readback is reported as `verified-device-different`, not rollback.
+8. Edits created while Apply is in flight remain a separate next draft; verification never promotes or discards that newer draft.
+9. An unsent browser draft survives structured-Bridge disconnect/reconnect and is reconciled only after remote live truth has been adopted.
 
 ## What “rollback” means
 
 Use **discard local draft** for a candidate that has not crossed the transport. Use **firmware rejection** only when the response contract guarantees rejection happened before commit. Do not use rollback to describe an unknown transmitted outcome.
-
