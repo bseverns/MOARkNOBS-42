@@ -86,6 +86,8 @@ Payload:
 ```json
 {
   "config": {},
+  "deviceAuthority": "verified",
+  "draftState": "clean",
   "lastApplyResult": {}
 }
 ```
@@ -96,7 +98,9 @@ Payload:
 
 ```json
 {
-  "config": {}
+  "config": {},
+  "deviceAuthority": "verified",
+  "draftState": "clean"
 }
 ```
 
@@ -106,7 +110,9 @@ Payload:
 
 ```json
 {
-  "dirty": true
+  "dirty": true,
+  "deviceAuthority": "verified",
+  "draftState": "dirty"
 }
 ```
 

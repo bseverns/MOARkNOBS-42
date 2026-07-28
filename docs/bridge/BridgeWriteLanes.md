@@ -31,7 +31,7 @@ The important rule is simple: live-control writes must not silently become stage
 
 - Use `/api/device/stage` to replace the bridge session's staged config.
 - Use `/api/device/apply` to send the staged config to firmware.
-- The bridge session tracks `liveConfig`, `stagedConfig`, `dirty`, and `lastApplyResult`.
+- The bridge session tracks `liveConfig`, `stagedConfig`, `dirty`, `deviceAuthority`, `draftState`, and `lastApplyResult`.
 - `dirty` clears only after verified device truth or deliberate local-draft discard.
 - Once Apply bytes are transmitted, uncertainty is resolved by readback; it is not labeled rollback.
 - Each bulk frame awaits serial write acceptance and drain before the next frame is sent; delayed transport failures stop the frame sequence and invoke the owning transaction's abort path.
