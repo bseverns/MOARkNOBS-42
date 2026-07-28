@@ -99,6 +99,18 @@ String appliedStateChecksum() {
     hashByte(hash, configManager.getEnvelopeB());
     hashByte(hash, configManager.getMode());
     hashByte(hash, configManager.getEfIdleFloor());
+    hashByte(hash, static_cast<uint8_t>(configManager.getLedMode()));
+    float filterFrequency = 0.0f;
+    float filterQ = 0.0f;
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    storage->readBytes(EEPROM_FILTER_FREQ, &filterFrequency, sizeof(filterFrequency));
+    storage->readBytes(EEPROM_FILTER_Q, &filterQ, sizeof(filterQ));
+    hashFloat(hash, filterFrequency);
+    hashFloat(hash, filterQ);
+    hashByte(hash, envelopeFollowers.empty()
+                       ? static_cast<uint8_t>(EnvelopeFollower::LINEAR)
+                       : static_cast<uint8_t>(envelopeFollowers.front().getFilterType()));
+    for (float baseline : envelopeConfig.baselines) hashFloat(hash, baseline);
     hashByte(hash, g_usbMidiOutEnabled ? 1 : 0);
     char hex[9] = {0};
     snprintf(hex, sizeof(hex), "%08lx", static_cast<unsigned long>(hash));
@@ -882,6 +894,8 @@ void emitBulkIngestError(const String &ingestError, uint32_t hint) {
         emitBulkError("overflow", "config payload too large", hint);
     } else if (ingestError == "orphan") {
         emitBulkError("orphan", "chunk missing frame start", hint);
+    } else if (ingestError == "timeout") {
+        emitBulkError("timeout", "incomplete config upload expired", hint);
     } else {
         emitBulkError("ingest", "failed to stage chunk", hint);
     }
@@ -1155,6 +1169,10 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
 }
 } // namespace
 
+#if defined(UNIT_TEST)
+String testOnlyAppliedStateChecksum() { return appliedStateChecksum(); }
+#endif
+
 bool parseSlotType(JsonVariantConst typeField, JsonVariantConst typeNameField,
                    MIDIMessageType &type) {
     auto assignFromIntegral = [&](long candidate) {
@@ -1206,11 +1224,7 @@ void handleSetAllBulkCommand(const String &command) {
         return;
     }
 
-    if (bulkConfigAssembler.expired(millis())) {
-        const uint32_t staleSequence = bulkConfigAssembler.sequenceHint();
-        bulkConfigAssembler.reset();
-        emitBulkIngestError("timeout", staleSequence);
-    }
+    serviceBulkConfigAssemblerTimeout();
 
     String ingestError;
     if (!bulkConfigAssembler.ingestChunk(chunk, ingestError)) {
@@ -1245,4 +1259,23 @@ void handleSetAllBulkCommand(const String &command) {
     }
 
     commitBulkApplyAck(identity);
+}
+
+void handleAbortSetAllBulkCommand(const String &command) {
+    (void)command;
+    const bool aborted = bulkConfigAssembler.inProgress();
+    const uint32_t sequence = bulkConfigAssembler.sequenceHint();
+    bulkConfigAssembler.reset();
+    LOG_PRINTF("{\"type\":\"response\",\"status\":\"ok\",\"command\":\"ABORT_SET_ALL\","
+               "\"aborted\":%s,\"seq\":%lu}\n",
+               aborted ? "true" : "false", static_cast<unsigned long>(sequence));
+}
+
+void serviceBulkConfigAssemblerTimeout() {
+    if (!bulkConfigAssembler.expired(millis())) {
+        return;
+    }
+    const uint32_t staleSequence = bulkConfigAssembler.sequenceHint();
+    bulkConfigAssembler.reset();
+    emitBulkIngestError("timeout", staleSequence);
 }

@@ -1009,6 +1009,12 @@ function createDeviceSession({
             }
           }
         } catch (error) {
+          try {
+            sendLine('ABORT_SET_ALL');
+          } catch {
+            // A disconnected transport cannot receive the abort; firmware's
+            // autonomous assembler timeout clears the partial frame.
+          }
           markApplyUncertain('transport_error', applyPending, createSessionError(
               'apply_transport_error',
               error?.message || 'Failed to write staged apply payload',

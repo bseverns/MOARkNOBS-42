@@ -13,6 +13,7 @@
 #include "LFO/LFOManager.h"
 #include "Modes.h"
 #include "Protocol.h"
+#include "protocol/ConfigJsonApply.h"
 #include "protocol/ProtocolSimpleHandlers.h"
 
 namespace {
@@ -223,6 +224,55 @@ void test_dispatch_set_led_clamps_without_persisting() {
     TEST_ASSERT_EQUAL_UINT8(colorBefore.r, color.r);
     TEST_ASSERT_EQUAL_UINT8(colorBefore.g, color.g);
     TEST_ASSERT_EQUAL_UINT8(colorBefore.b, color.b);
+}
+
+void test_dispatch_abort_set_all_clears_incomplete_upload() {
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL {\"seq\":73,"));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("ABORT_SET_ALL"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"command\":\"ABORT_SET_ALL\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"aborted\":true"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"seq\":73"));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ALL \"config\":{}"));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"code\":\"orphan\""));
+}
+
+void test_applied_checksum_covers_exported_filter_led_and_baseline_state() {
+    const LedMode priorMode = configManager.getLedMode();
+    const float priorBaseline = envelopeConfig.baselines[0];
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    const uint8_t priorFilterType = storage->read(EEPROM_ENVELOPE_TYPES);
+    float priorFrequency = 0.0f;
+    float priorQ = 0.0f;
+    storage->readBytes(EEPROM_FILTER_FREQ, &priorFrequency, sizeof(priorFrequency));
+    storage->readBytes(EEPROM_FILTER_Q, &priorQ, sizeof(priorQ));
+
+    const String before = testOnlyAppliedStateChecksum();
+    configManager.setLedMode(priorMode == LedMode::Static ? LedMode::PeakHold : LedMode::Static);
+    TEST_ASSERT_NOT_EQUAL(0, before.compareTo(testOnlyAppliedStateChecksum()));
+    configManager.setLedMode(priorMode);
+
+    envelopeConfig.baselines[0] = priorBaseline + 1.0f;
+    TEST_ASSERT_NOT_EQUAL(0, before.compareTo(testOnlyAppliedStateChecksum()));
+    envelopeConfig.baselines[0] = priorBaseline;
+
+    SlotEnvelopePayload changedFilter{};
+    changedFilter.filterType = priorFilterType;
+    changedFilter.frequency =
+        priorFrequency < 4999.0f ? priorFrequency + 1.0f : priorFrequency - 1.0f;
+    changedFilter.q = priorQ;
+    configManager.persistFilterTail(changedFilter);
+    TEST_ASSERT_NOT_EQUAL(0, before.compareTo(testOnlyAppliedStateChecksum()));
+
+    SlotEnvelopePayload restoredFilter{};
+    restoredFilter.filterType = priorFilterType;
+    restoredFilter.frequency = priorFrequency;
+    restoredFilter.q = priorQ;
+    configManager.persistFilterTail(restoredFilter);
 }
 
 void test_dispatch_handles_enter_config_mode_command() {

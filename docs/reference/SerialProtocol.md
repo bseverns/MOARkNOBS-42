@@ -39,6 +39,8 @@ SET_ALL <chunk>
 ```
 
 Firmware strips the `SET_ALL ` prefix and appends each chunk to `Utility::BulkConfigAssembler`.
+An incomplete frame expires after five seconds even if no later command arrives. A host that
+abandons an upload may release it immediately with `ABORT_SET_ALL`.
 
 | Limit                     |                                                              Value |
 | ------------------------- | -----------------------------------------------------------------: |
@@ -46,6 +48,7 @@ Firmware strips the `SET_ALL ` prefix and appends each chunk to `Utility::BulkCo
 | Firmware bulk payload cap |                                                      `32768` bytes |
 | Firmware completion rule  | One balanced top-level JSON object, respecting strings and escapes |
 | Required bulk identity    |                   `config_id` or `checksum` in the top-level frame |
+| Incomplete-frame timeout  |                                                          `5000 ms` |
 | Idempotency key           |  `seq` plus `config_id`/`checksum`; duplicate last ACK is replayed |
 
 Bulk frame shape:
@@ -63,10 +66,16 @@ Bulk frame shape:
 Successful ACK:
 
 ```json
-{ "type": "ack", "checksum": "sha256-or-build-id", "seq": 7 }
+{
+  "type": "ack",
+  "checksum": "sha256-or-build-id",
+  "seq": 7,
+  "applied_checksum": "device-state-fnv1a",
+  "storage_generation": 12
+}
 ```
 
-Bulk errors include `overflow`, `orphan`, `ingest`, `parse`, `checksum`, `config_missing`, `slots_missing`, `slots_size`, `slot_null`, `slot_type`, and `sysex_template`.
+Bulk errors include `overflow`, `orphan`, `timeout`, `ingest`, `parse`, `checksum`, `config_missing`, `slots_missing`, `slots_size`, `slot_null`, `slot_type`, and `sysex_template`.
 
 ## Commands
 
@@ -87,6 +96,7 @@ Bulk errors include `overflow`, `orphan`, `ingest`, `parse`, `checksum`, `config
 | `SAVE_MACRO_SLOT`   | `SAVE_MACRO_SLOT`                                             | `{"macro_saved":true,"macro_available":true}`                                          | Stores current macro snapshot.                                                   |
 | `RECALL_MACRO_SLOT` | `RECALL_MACRO_SLOT`                                           | `{"macro_recalled":true,"macro_available":true}`                                       | Restores stored macro snapshot.                                                  |
 | `SET_ALL`           | Chunked bulk JSON                                             | ACK or bulk error                                                                      | See chunking rules above.                                                        |
+| `ABORT_SET_ALL`     | `ABORT_SET_ALL`                                               | `{"type":"response","status":"ok","command":"ABORT_SET_ALL","aborted":<bool>}`          | Discards an incomplete bulk frame; safe and idempotent when no frame is active.  |
 | `SET_SLOT_VALUE`    | `SET_SLOT_VALUE,<slot>,<value>`                               | `{"type":"response","status":"ok"}`                                                    | Injects MIDI value `0..127` for slot `0..41`.                                    |
 | `SET_POT`           | `SET_POT,<pot>,<channel>,<cc>`                                | OK or error JSON                                                                       | `pot 0..41`, `channel 1..16`, `cc 0..127`.                                       |
 | `SET_LED`           | `SET_LED,<brightness>,<r>,<g>,<b>`                            | OK or error JSON                                                                       | Firmware clamps brightness to board profile cap. RGB fields are `0..255`.        |

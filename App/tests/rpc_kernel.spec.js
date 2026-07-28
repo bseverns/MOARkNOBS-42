@@ -106,3 +106,34 @@ test('native SET_ARP adds a valid pattern length but keeps the legacy form optio
   kernel.handleRpcResponse({ id: kernel.getActivePendingRpc().id, result: { status: 'ok' } });
   await legacy;
 });
+
+test('native SET_ALL write failure attempts to abort the partial firmware frame', async () => {
+  const writes = [];
+  const transport = {
+    writeLine: async (line) => {
+      writes.push(String(line));
+      if (String(line).startsWith('SET_ALL ') && writes.filter((value) => value.startsWith('SET_ALL ')).length === 2) {
+        throw new Error('serial write failed');
+      }
+    }
+  };
+  const kernel = createRpcKernel({
+    getTransport: () => transport,
+    isJsonRpcTransport: () => false,
+    chunkString,
+    nativeSetAllChunkSize: 24,
+    nativeSetAllLinePaceMs: 0,
+    rpcTimeoutMs: 1000,
+    rpcThrottleIntervalMs: 0
+  });
+
+  const request = kernel.sendRpc({
+    rpc: 'set_config',
+    seq: 9,
+    checksum: 'candidate',
+    config: { slots: [{ type: 'OFF' }, { type: 'CC' }] }
+  });
+
+  await expect(request).rejects.toThrow('serial write failed');
+  expect(writes.at(-1)).toBe('ABORT_SET_ALL');
+});

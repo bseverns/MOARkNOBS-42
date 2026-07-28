@@ -62,6 +62,7 @@ struct ParsedCommand {
 };
 
 void handleGetAllCommand(const ParsedCommand &cmd);
+void handleAbortSetAllCommand(const ParsedCommand &cmd);
 void handleArpStartCommand(const ParsedCommand &cmd);
 void handleArpStopCommand(const ParsedCommand &cmd);
 void handleGetArpCommand(const ParsedCommand &cmd);

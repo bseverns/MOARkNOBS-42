@@ -261,6 +261,16 @@ export function createRpcKernel({
             await transport.writeLine(JSON.stringify(message));
           }
         } catch (err) {
+          if (entry.protocolMode === 'native' && entry.nativeRequest?.kind === 'ack') {
+            // A transport can fail after only part of a chunked SET_ALL frame
+            // reached firmware. Best-effort abort prevents that partial frame
+            // from occupying the assembler until its timeout.
+            try {
+              await transport.writeLine('ABORT_SET_ALL');
+            } catch {
+              // The firmware timeout remains the recovery path for a dead port.
+            }
+          }
           if (activeRpcId === message.id) {
             activeRpcId = null;
           }

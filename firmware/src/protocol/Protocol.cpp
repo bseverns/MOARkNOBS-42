@@ -361,6 +361,10 @@ void handleSaveProfileCommand(const ParsedCommand &cmd) {
 
 void handleSetAllCommand(const ParsedCommand &cmd) { handleSetAllBulkCommand(cmd.fullCommand()); }
 
+void handleAbortSetAllCommand(const ParsedCommand &cmd) {
+    handleAbortSetAllBulkCommand(cmd.fullCommand());
+}
+
 void handleSetArgMethodCommand(const ParsedCommand &cmd) {
     ProtocolSimpleHandlers::handleSetArgMethodCommand(cmd.fullCommand());
 }

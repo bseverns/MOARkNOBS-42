@@ -23,6 +23,7 @@ struct CommandHandler {
 
 // Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
+    {"ABORT_SET_ALL", ProtocolDispatchHandlers::handleAbortSetAllCommand},
     {"ARP_START", ProtocolDispatchHandlers::handleArpStartCommand},
     {"ARP_STOP", ProtocolDispatchHandlers::handleArpStopCommand},
     {"ENTER_CONFIG_MODE", ProtocolDispatchHandlers::handleEnterConfigModeCommand},

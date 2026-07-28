@@ -208,6 +208,16 @@ void test_bulk_config_assembler_updates_sequence_hint_after_restart() {
     TEST_ASSERT_EQUAL_UINT32(42, assembler.sequenceHint());
 }
 
+void test_bulk_config_assembler_expires_abandoned_frame() {
+    Utility::BulkConfigAssembler assembler;
+    String error;
+    TEST_ASSERT_TRUE(assembler.ingestChunk("{\"seq\":7,", error));
+    TEST_ASSERT_TRUE(assembler.inProgress());
+    const uint32_t nowMs = millis();
+    TEST_ASSERT_FALSE(assembler.expired(nowMs, 5000));
+    TEST_ASSERT_TRUE(assembler.expired(nowMs + 5001, 5000));
+}
+
 void test_schedule_note_on_off_delivers_note_off_after_delay() {
     g_fakeNowMs = 0;
     Utility::schedulerHigh = TaskScheduler();

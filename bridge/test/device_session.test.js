@@ -24,6 +24,7 @@ function createHarness(options = {}) {
   const simulator = createSimulatedMn42Device(options.simulator);
   const structuredEvents = [];
   const writtenLines = [];
+  let setAllWriteCount = 0;
   let session = null;
 
   function deliverLine(line) {
@@ -36,7 +37,14 @@ function createHarness(options = {}) {
 
   session = createDeviceSession({
     sendLine(line) {
-      writtenLines.push(String(line).trim());
+      const normalized = String(line).trim();
+      writtenLines.push(normalized);
+      if (normalized.startsWith('SET_ALL ')) {
+        setAllWriteCount += 1;
+        if (setAllWriteCount === options.failSetAllWriteAt) {
+          throw new Error('serial write failed');
+        }
+      }
       simulator.receiveLine(line);
     },
     onStructuredEvent(event) {
@@ -292,6 +300,29 @@ async function run() {
       ),
       true,
       'bad ACK should enter uncertain state and read device truth back',
+    );
+  }
+
+  {
+    const harness = createHarness({ failSetAllWriteAt: 2 });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[2].data1 = 56;
+    await harness.session.stageConfig(staged);
+    await assert.rejects(
+      () => harness.session.applyStagedConfig(),
+      (error) => error?.code === 'apply_transport_error',
+      'partial SET_ALL write should reject as a transport error',
+    );
+    const abortIndex = harness.writtenLines.indexOf('ABORT_SET_ALL');
+    const failedChunkIndex = harness.writtenLines.findLastIndex((line) =>
+      line.startsWith('SET_ALL '),
+    );
+    assert.equal(
+      abortIndex > failedChunkIndex,
+      true,
+      'partial SET_ALL write should attempt to release firmware assembler state before readback',
     );
   }
 

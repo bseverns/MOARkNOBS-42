@@ -11,6 +11,7 @@
 #include "Utility.h"
 #include "Log.h"
 #include "interop/SeedBoxLink.h"
+#include "protocol/ConfigJsonApply.h"
 
 // Register the recurring task tiers that keep transport, DSP, UI, and interop in balance.
 void initializeSchedulers() {
@@ -122,6 +123,12 @@ void initializeSchedulers() {
     // Low-priority visual updates, diagnostics, and WebSerial telemetry.
     Utility::schedulerLow.addTask(
         []() { ProtocolSimpleHandlers::serviceChunkedReadOutput(); }, 1, true);
+
+    // Expire abandoned SET_ALL uploads even when the host never sends another
+    // fragment. This keeps a dropped final chunk from holding parser state
+    // indefinitely.
+    Utility::schedulerLow.addTask(
+        []() { serviceBulkConfigAssemblerTimeout(); }, 50, true);
 
     Utility::schedulerLow.addTask(
         []() {
