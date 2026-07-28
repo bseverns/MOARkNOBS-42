@@ -120,6 +120,7 @@ function extractFirmwareIdentity(manifest) {
 
 function createDeviceSession({
   sendLine,
+  abortBulkFrame = () => sendLine('ABORT_SET_ALL'),
   onStateChange = () => {},
   onStructuredEvent = () => {},
   nextSeq = () => 1,
@@ -127,6 +128,9 @@ function createDeviceSession({
 } = {}) {
   if (typeof sendLine !== 'function') {
     throw new Error('device session requires sendLine');
+  }
+  if (typeof abortBulkFrame !== 'function') {
+    throw new Error('device session abortBulkFrame must be a function');
   }
 
   const events = new EventEmitter();
@@ -819,6 +823,17 @@ function createDeviceSession({
   async function stageConfig(nextConfig, { expectedSessionRevision } = {}) {
     await ensureAuthority();
     requireSessionRevision(expectedSessionRevision);
+    if (applyPending || uncertainApply) {
+      throw createSessionError(
+        'apply_outcome_unresolved',
+        'Cannot replace the staged config until the transmitted Apply outcome has been resynchronized.',
+        {
+          checksum: applyPending?.checksum ?? uncertainApply?.checksum,
+          seq: applyPending?.seq ?? uncertainApply?.seq,
+        },
+        409,
+      );
+    }
     if (!state.manifest) {
       throw createSessionError(
         'device_not_ready',
@@ -1010,7 +1025,10 @@ function createDeviceSession({
           }
         } catch (error) {
           try {
-            sendLine('ABORT_SET_ALL');
+            // This is the owning Apply transaction releasing its own partial
+            // frame. Bridge implementations may bypass their public live
+            // command queue here without allowing another client to abort it.
+            abortBulkFrame();
           } catch {
             // A disconnected transport cannot receive the abort; firmware's
             // autonomous assembler timeout clears the partial frame.

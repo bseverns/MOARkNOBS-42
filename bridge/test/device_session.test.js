@@ -327,6 +327,25 @@ async function run() {
   }
 
   {
+    const harness = createHarness({ simulator: { ackDelayMs: 100 } });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[2].data1 = 116;
+    await harness.session.stageConfig(staged);
+    const applyPromise = harness.session.applyStagedConfig({ timeoutMs: 1000 });
+    await waitFor(
+      () => harness.session.getState().lastApplyResult?.status === 'pending',
+    );
+    await assert.rejects(
+      () => harness.session.stageConfig(staged),
+      (error) => error?.code === 'apply_outcome_unresolved',
+      'staging must not replace the draft while Apply owns it',
+    );
+    await applyPromise;
+  }
+
+  {
     const harness = createHarness({ simulator: { ackDelayMs: 30 } });
     await harness.session.handleOpen();
     await waitFor(() => harness.session.getState().ready);

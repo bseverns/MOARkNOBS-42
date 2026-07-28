@@ -229,6 +229,10 @@ function createBridgeService(initialConfig = {}, injected = {}) {
 
   const deviceSession = createDeviceSession({
     sendLine: (line) => sendLine(line),
+    // Only the device session's owning Apply transaction may use this path.
+    // Public sendLine() retains its Apply-exclusivity guard, so an unrelated
+    // client cannot inject ABORT_SET_ALL into another client's transaction.
+    abortBulkFrame: () => writeSerialImmediately('ABORT_SET_ALL'),
     pushLog,
     nextSeq: () => {
       deviceSeq += 1;
@@ -819,13 +823,19 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   }
 
   // Send one native line to firmware, surfacing an immediate error if serial is down.
-  function sendLine(line) {
+  function writeSerialImmediately(line) {
     const normalized = `${String(line).trim()}\n`;
     if (!serial || typeof serial.write !== 'function') {
       const error = new Error('serial not connected');
       setState({ lastError: error.message });
       throw error;
     }
+    serial.write(normalized);
+    return normalized;
+  }
+
+  function sendLine(line) {
+    const normalized = `${String(line).trim()}\n`;
     const command = normalized.trim();
     const safeRead = command.startsWith('GET_') || command === 'HELLO';
     const transactionFrame = command.startsWith('SET_ALL ');
@@ -836,8 +846,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       else pushLog('warn', 'dropping live serial command while Apply queue is full');
       return normalized;
     }
-    serial.write(normalized);
-    return normalized;
+    return writeSerialImmediately(command);
   }
 
   function flushDeferredLiveLines() {

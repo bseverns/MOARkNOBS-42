@@ -16,6 +16,7 @@ class FakeSerialPort extends EventEmitter {
     this.writes = [];
     this.parser = null;
     this.device = FakeSerialPort.device;
+    FakeSerialPort.lastInstance = this;
     this.unsubscribe = this.device.on('line', (line) => {
       if (this.parser) this.parser.emit('data', line);
     });
@@ -28,8 +29,15 @@ class FakeSerialPort extends EventEmitter {
   }
 
   write(data) {
-    this.writes.push(String(data));
-    this.device.receiveLine(String(data));
+    const line = String(data);
+    this.writes.push(line);
+    if (line.startsWith('SET_ALL ')) {
+      FakeSerialPort.setAllWrites += 1;
+      if (FakeSerialPort.failSetAllWriteAt === FakeSerialPort.setAllWrites) {
+        throw new Error('simulated partial SET_ALL write failure');
+      }
+    }
+    this.device.receiveLine(line);
   }
 
   close(cb) {
@@ -38,6 +46,9 @@ class FakeSerialPort extends EventEmitter {
     this.emit('close');
   }
 }
+FakeSerialPort.failSetAllWriteAt = null;
+FakeSerialPort.setAllWrites = 0;
+FakeSerialPort.lastInstance = null;
 
 class FakeUdpPort extends EventEmitter {
   constructor() {
@@ -212,6 +223,30 @@ async function run() {
     false,
     'device ACK should clear dirty state after apply',
   );
+
+  const partiallyWrittenDraft = JSON.parse(
+    JSON.stringify(service.getState().deviceSession.stagedConfig),
+  );
+  partiallyWrittenDraft.slots[1].data1 = 101;
+  await service.stageDeviceConfig(partiallyWrittenDraft);
+  const serial = FakeSerialPort.lastInstance;
+  FakeSerialPort.setAllWrites = 0;
+  FakeSerialPort.failSetAllWriteAt = 2;
+  await assert.rejects(
+    () => service.applyDeviceConfig(),
+    (error) => error?.code === 'apply_transport_error',
+    'a partial Bridge SET_ALL write should reject as a transport error',
+  );
+  FakeSerialPort.failSetAllWriteAt = null;
+  const abortIndex = serial.writes.lastIndexOf('ABORT_SET_ALL\n');
+  const failedChunkIndex = serial.writes.findLastIndex((line) => line.startsWith('SET_ALL '));
+  assert.equal(
+    abortIndex > failedChunkIndex,
+    true,
+    'the owning Apply must write ABORT_SET_ALL immediately instead of deferring it',
+  );
+  await waitFor(() => !service.getState().deviceSession?.lastApplyResult ||
+    service.getState().deviceSession.lastApplyResult.status !== 'pending');
 
   const nativeTransport = {
     protocol: 'native',

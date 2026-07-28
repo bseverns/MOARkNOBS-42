@@ -7,6 +7,7 @@ test('Bridge staging submits the newest draft when an edit arrives during an in-
   let staged = { slots: [{ value: 1 }] };
   const submissions = [];
   const resolvers = [];
+  const syncedSessions = [];
   const client = {
     stageConfig(config) {
       submissions.push(clone(config));
@@ -15,7 +16,7 @@ test('Bridge staging submits the newest draft when an edit arrives during an in-
   };
   const configSession = {
     getStagedConfig: () => staged,
-    syncFromSession() {},
+    syncFromSession(session) { syncedSessions.push(clone(session)); },
     broadcastConfig() {}
   };
   const runtime = createBridgeSessionRuntime({
@@ -41,6 +42,12 @@ test('Bridge staging submits the newest draft when an edit arrives during an in-
 
   staged = { slots: [{ value: 2 }] };
   runtime.scheduleStageSync({ active: true });
+  runtime.applyAuthoritativeSession({
+    liveConfig: { slots: [{ value: 0 }] },
+    stagedConfig: { slots: [{ value: 1 }] },
+    dirty: true
+  });
+  expect(syncedSessions.at(-1).stagedConfig).toEqual({ slots: [{ value: 2 }] });
   resolvers.shift()({ sessionRevision: 1 });
   await expect.poll(() => submissions.length).toBe(2);
   expect(submissions[1]).toEqual({ slots: [{ value: 2 }] });

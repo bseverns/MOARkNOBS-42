@@ -418,7 +418,7 @@ def webserial_workflow() -> None:
         ("Manifest", "identity + schema"),
         ("Config", "liveConfig + stagedConfig"),
         ("Stage", "validate + diff"),
-        ("Apply", "ACK or rollback"),
+        ("Apply", "ACK or resynchronize"),
     ]
     x = 60
     y = 190

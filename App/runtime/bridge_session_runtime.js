@@ -22,6 +22,7 @@ export function createBridgeSessionRuntime({
   let localDraftGeneration = 0;
   let submittedGeneration = 0;
   let acknowledgedGeneration = 0;
+  let newestLocalDraft = null;
   let eventReconnectTimer = null;
   let eventReconnectAttempt = 0;
   let eventsWanted = false;
@@ -48,11 +49,17 @@ export function createBridgeSessionRuntime({
   }
 
   function syncCachedSession() {
+    // Bridge snapshots can acknowledge an older draft while the browser has a
+    // newer edit queued. Keep that local intent intact until its generation
+    // has reached Bridge, while still accepting live-state/readback updates.
+    const preserveNewerLocalDraft = localDraftGeneration > acknowledgedGeneration;
     configSession.syncFromSession({
       ...bridgeSessionCache,
       liveConfig: bridgeSessionCache?.liveConfig,
-      stagedConfig: bridgeSessionCache?.stagedConfig,
-      dirty: bridgeSessionCache?.dirty
+      stagedConfig: preserveNewerLocalDraft
+        ? newestLocalDraft
+        : bridgeSessionCache?.stagedConfig,
+      dirty: preserveNewerLocalDraft ? true : bridgeSessionCache?.dirty
     });
     configSession.broadcastConfig({ persist: false });
   }
@@ -86,10 +93,7 @@ export function createBridgeSessionRuntime({
       setSchemaSource(sessionPayload.schemaSource);
     }
 
-    if (sessionPayload.liveConfig || sessionPayload.stagedConfig) {
-      configSession.syncFromSession(sessionPayload);
-      configSession.broadcastConfig({ persist: false });
-    }
+    if (sessionPayload.liveConfig || sessionPayload.stagedConfig) syncCachedSession();
 
     if (emitConnectedConfig) {
       emit('connected', getConnectedPayload());
@@ -125,13 +129,15 @@ export function createBridgeSessionRuntime({
       while (acknowledgedGeneration < localDraftGeneration) {
         const generation = localDraftGeneration;
         submittedGeneration = generation;
-        receipt = await ensureClient().stageConfig(clone(configSession.getStagedConfig()), {
+        const draft = clone(newestLocalDraft ?? configSession.getStagedConfig());
+        receipt = await ensureClient().stageConfig(draft, {
           expectedSessionRevision: bridgeSessionCache?.sessionRevision
         });
         if (Number.isFinite(Number(receipt?.sessionRevision))) {
           bridgeSessionCache = { ...(bridgeSessionCache ?? {}), sessionRevision: receipt.sessionRevision };
         }
         acknowledgedGeneration = generation;
+        if (acknowledgedGeneration === localDraftGeneration) newestLocalDraft = null;
       }
       return receipt;
     })()
@@ -148,6 +154,7 @@ export function createBridgeSessionRuntime({
   function scheduleStageSync({ active = false } = {}) {
     if (!active) return;
     localDraftGeneration += 1;
+    newestLocalDraft = clone(configSession.getStagedConfig());
     if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
     bridgeStageSyncTimer = setTimeout(() => {
       void flushStageSync({ active: true }).catch((err) => {
@@ -303,6 +310,10 @@ export function createBridgeSessionRuntime({
     cancelStageSync();
     closeEvents();
     bridgeSessionCache = null;
+    newestLocalDraft = null;
+    localDraftGeneration = 0;
+    submittedGeneration = 0;
+    acknowledgedGeneration = 0;
   }
 
   return {

@@ -3,7 +3,7 @@
 The browser configurator lives in `App/` and provides schema-validated editing against the firmware protocol.
 Canonical source: `App/README.md`
 
-![Workflow graphic showing the WebSerial app connect, manifest, config, stage, and apply or rollback steps.](assets/workflows/webserial-workflow-overview.png)
+![Workflow graphic showing the WebSerial app connect, manifest, config, stage, then Apply confirmation or resynchronization.](assets/workflows/webserial-workflow-overview.png)
 
 ## Architecture
 
@@ -29,7 +29,7 @@ Open `http://localhost:8000/`.
 3. Stage edits locally.
 4. Validate against schema.
 5. Apply and confirm checksum/ACK.
-6. Roll back automatically on mismatch/failure.
+6. Confirm the receipt and device readback; ambiguous outcomes enter resynchronization.
 
 ![Annotated configurator workbench showing the 42 live slots, selected-slot editor, Basic and Advanced mode switch, utility rail, and staged diff.](assets/ui/configurator-workbench-annotated.png)
 
