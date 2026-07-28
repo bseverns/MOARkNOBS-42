@@ -347,17 +347,6 @@ export function createConfigSession({
     }
     if (isBridgeSessionActive()) {
       try {
-        if (typeof stageBridgeConfig === 'function') {
-          await stageBridgeConfig(clone(stagedConfig));
-        }
-      } catch (err) {
-        if (err?.code === 'schema_validation_failed' && Array.isArray(err?.details?.errors)) {
-          err.validation = err.details.errors;
-          emit('validation-error', err.validation);
-        }
-        throw err;
-      }
-      try {
         const response =
           typeof applyBridgeConfig === 'function' ? await applyBridgeConfig() : { applied: false };
         const checksum = response?.checksum ?? response?.result?.checksum ?? null;
@@ -368,12 +357,11 @@ export function createConfigSession({
         emit('applied', { checksum });
         return { applied: true, checksum };
       } catch (err) {
-        if (err?.code !== 'schema_validation_failed') {
-          stagedConfig = clone(liveConfig);
-          dirty = false;
-          broadcastConfig();
-          emit('rollback', {});
-        }
+        // The Bridge may have staged/applied despite a lost HTTP response, or
+        // another client may have advanced its revision. Never erase a local
+        // draft solely because this request failed; the session refresh path
+        // remains the authority for reconciliation.
+        emit('bridge-apply-failed', { error: err, staged: clone(stagedConfig) });
         throw err;
       }
     }

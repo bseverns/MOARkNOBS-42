@@ -247,6 +247,15 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     },
     onStructuredEvent: (event) => {
       events.emit('structured-event', event);
+      if (
+        event?.event === 'device.apply.resynchronized' ||
+        event?.event === 'device.ready'
+      ) {
+        if (!deviceSession.isApplyTransactionActive()) {
+          applyExclusive = false;
+          flushDeferredLiveLines();
+        }
+      }
     },
   });
 
@@ -790,8 +799,13 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     try {
       return await deviceSession.applyStagedConfig(options);
     } finally {
-      applyExclusive = false;
-      flushDeferredLiveLines();
+      // An ambiguous write remains exclusive through its authoritative
+      // readback. Releasing on the HTTP rejection would let deferred live
+      // commands invalidate the snapshot being adopted.
+      if (!deviceSession.isApplyTransactionActive()) {
+        applyExclusive = false;
+        flushDeferredLiveLines();
+      }
     }
   }
 

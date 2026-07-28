@@ -454,18 +454,14 @@ function createDeviceSession({
     clearHandshakeTimer();
     handshakeRetryCount = 0;
     if (applyPending) {
-      finishRollback(reason, {
-        checksum: applyPending.checksum,
-        seq: applyPending.seq,
-      });
-      rejectPendingApply(
+      const pending = applyPending;
+      markApplyUncertain(reason, pending,
         createSessionError(
           'apply_interrupted',
           'Device disconnected during staged apply',
-          { reason },
+          { reason, checksum: pending.checksum, seq: pending.seq },
           503,
-        ),
-      );
+        ));
     }
     state.connected = false;
     state.handshakeState = 'disconnected';
@@ -988,6 +984,7 @@ function createDeviceSession({
     handleMalformedMessage,
     handleMessage,
     handleOpen,
+    isApplyTransactionActive: () => Boolean(applyPending || uncertainApply),
     on,
     rollback,
     stageConfig,
