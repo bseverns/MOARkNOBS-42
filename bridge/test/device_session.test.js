@@ -223,8 +223,8 @@ async function run() {
     await wait(1);
     await assert.rejects(
       () => harness.session.rollback('operator_request'),
-      (error) => error?.code === 'apply_in_progress',
-      'rollback must reject while a transmitted apply is awaiting ACK',
+      (error) => error?.code === 'apply_outcome_unresolved',
+      'rollback must reject while a transmitted apply outcome is unresolved',
     );
     await applyPromise;
     assert.equal(

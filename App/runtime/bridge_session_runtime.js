@@ -19,6 +19,9 @@ export function createBridgeSessionRuntime({
   let bridgeSessionCache = null;
   let bridgeStageSyncTimer = null;
   let bridgeStageSyncPromise = null;
+  let localDraftGeneration = 0;
+  let submittedGeneration = 0;
+  let acknowledgedGeneration = 0;
   let eventReconnectTimer = null;
   let eventReconnectAttempt = 0;
   let eventsWanted = false;
@@ -114,31 +117,37 @@ export function createBridgeSessionRuntime({
       bridgeStageSyncTimer = null;
     }
     if (bridgeStageSyncPromise) return bridgeStageSyncPromise;
-    const stagedConfig = clone(configSession.getStagedConfig());
-    bridgeStageSyncPromise = ensureClient()
-      .stageConfig(stagedConfig, {
-        expectedSessionRevision: bridgeSessionCache?.sessionRevision
-      })
-      .then((result) => {
-        if (Number.isFinite(Number(result?.sessionRevision))) {
-          bridgeSessionCache = { ...(bridgeSessionCache ?? {}), sessionRevision: result.sessionRevision };
+    bridgeStageSyncPromise = (async () => {
+      let receipt = null;
+      // A new edit may arrive while an HTTP stage request is in flight. Keep
+      // submitting snapshots until Bridge has acknowledged the newest local
+      // generation, rather than promoting an older staged image on Apply.
+      while (acknowledgedGeneration < localDraftGeneration) {
+        const generation = localDraftGeneration;
+        submittedGeneration = generation;
+        receipt = await ensureClient().stageConfig(clone(configSession.getStagedConfig()), {
+          expectedSessionRevision: bridgeSessionCache?.sessionRevision
+        });
+        if (Number.isFinite(Number(receipt?.sessionRevision))) {
+          bridgeSessionCache = { ...(bridgeSessionCache ?? {}), sessionRevision: receipt.sessionRevision };
         }
-        return result;
-      })
+        acknowledgedGeneration = generation;
+      }
+      return receipt;
+    })()
       .catch(async (err) => {
         if (err?.code === 'stale_session_revision') {
           await refreshSessionSnapshot({ warm: false, emitConnectedConfig: false });
         }
         throw err;
       })
-      .finally(() => {
-        bridgeStageSyncPromise = null;
-      });
+      .finally(() => { bridgeStageSyncPromise = null; });
     return bridgeStageSyncPromise;
   }
 
   function scheduleStageSync({ active = false } = {}) {
     if (!active) return;
+    localDraftGeneration += 1;
     if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
     bridgeStageSyncTimer = setTimeout(() => {
       void flushStageSync({ active: true }).catch((err) => {
@@ -162,6 +171,18 @@ export function createBridgeSessionRuntime({
         if (!message || typeof message !== 'object') return;
         const payload = message.payload ?? {};
         switch (message.event) {
+          case 'device.apply.uncertain':
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), lastApplyResult: { status: 'uncertain', ...clone(payload) } };
+            syncCachedSession();
+            break;
+          case 'device.apply.resynchronized':
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), lastApplyResult: { status: 'resynchronized', ...clone(payload) } };
+            syncCachedSession();
+            break;
+          case 'device.apply.device_different':
+            bridgeSessionCache = { ...(bridgeSessionCache ?? {}), lastApplyResult: { status: 'verified_device_different', ...clone(payload) } };
+            syncCachedSession();
+            break;
           case 'device.ready':
             if (payload.manifest && typeof payload.manifest === 'object') {
               const manifest = {
@@ -287,6 +308,7 @@ export function createBridgeSessionRuntime({
   return {
     ensureClient,
     refreshSessionSnapshot,
+    applyAuthoritativeSession: (session) => applySessionSnapshot(session, { emitConnectedConfig: false }),
     flushStageSync,
     scheduleStageSync,
     openStructuredEvents,

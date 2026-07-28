@@ -81,6 +81,7 @@ const boot = () => {
   const configModeBtn = document.getElementById('config-mode');
   const applyBtn = document.getElementById('apply');
   const rollbackBtn = document.getElementById('rollback');
+  const retryReadbackBtn = document.getElementById('retry-readback');
   const slotContainer = document.getElementById('slots');
   const envContainer = document.getElementById('envelopes');
   const diffPanel = document.getElementById('diff-panel');
@@ -805,11 +806,13 @@ const boot = () => {
     panicHelpController.render();
   });
   runtime.on('apply-uncertain', ({ reason }) => {
+    retryReadbackBtn?.removeAttribute('hidden');
     setStatus('warn', 'Apply outcome uncertain', 'Waiting for authoritative device configuration readback.');
     sessionLogController.recordEvent('APPLY', 'Outcome uncertain', String(reason ?? 'unknown'), 'warn');
     panicHelpController.render();
   });
   runtime.on('resynchronized', () => {
+    retryReadbackBtn?.setAttribute('hidden', '');
     setStatus('ok', 'Resynchronized', 'Browser state now matches the controller readback.');
     sessionLogController.recordEvent('APPLY', 'Resynchronized from device', '', 'ok');
     panicHelpController.render();
@@ -823,6 +826,19 @@ const boot = () => {
     );
     sessionLogController.recordEvent('CONFIG', 'Device/staged conflict', `${count} leaf field(s)`, 'warn');
     panicHelpController.render();
+  });
+  retryReadbackBtn?.addEventListener('click', async () => {
+    retryReadbackBtn.disabled = true;
+    try {
+      const result = await runtime.resynchronize();
+      if (!result) throw new Error('Device readback is still unavailable. Reconnect and retry.');
+      setStatus('ok', 'Resynchronized', 'Browser state now matches the controller readback.');
+      retryReadbackBtn.setAttribute('hidden', '');
+    } catch (err) {
+      setStatus('warn', 'Readback still unresolved', err.message || String(err));
+    } finally {
+      retryReadbackBtn.disabled = false;
+    }
   });
   runtime.on('migration-required', ({ from, to, canAdapt }) => {
     sessionLogController.recordEvent(

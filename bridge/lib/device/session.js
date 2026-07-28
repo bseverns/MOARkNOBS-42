@@ -9,6 +9,8 @@ const HANDSHAKE_TIMEOUT_MS = 8000;
 const MAX_HANDSHAKE_RETRIES = 2;
 const NATIVE_SET_ALL_CHUNK_SIZE = 96;
 const NATIVE_SET_ALL_LINE_PACE_MS = 4;
+const UNCERTAIN_READBACK_RETRY_MS = 1000;
+const MAX_UNCERTAIN_READBACK_RETRIES = 3;
 
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -159,6 +161,43 @@ function createDeviceSession({
   let configRequestCommand = 'GET_CONFIG';
   let configRequested = false;
   let chunkedConfigRead = null;
+  let uncertainReadbackTimer = null;
+  let uncertainReadbackAttempts = 0;
+
+  function clearUncertainReadbackTimer() {
+    if (!uncertainReadbackTimer) return;
+    clearTimeout(uncertainReadbackTimer);
+    uncertainReadbackTimer = null;
+  }
+
+  function requestUncertainReadback() {
+    if (!uncertainApply || !state.connected) return;
+    try {
+      sendLine(state.manifest?.capabilities?.chunked_reads?.config ? 'GET_CONFIG_CHUNKED' : 'GET_CONFIG');
+    } catch (error) {
+      state.lastError = `Apply outcome unresolved: ${error.message || String(error)}`;
+      emitState();
+    }
+  }
+
+  function scheduleUncertainReadbackRetry() {
+    clearUncertainReadbackTimer();
+    if (!uncertainApply || !state.connected) return;
+    if (uncertainReadbackAttempts >= MAX_UNCERTAIN_READBACK_RETRIES) {
+      state.handshakeState = 'unresolved';
+      state.lastError = 'Apply outcome unresolved after readback retries; reconnect or retry device readback.';
+      setApplyResult({ status: 'unresolved', ...uncertainApply, at: new Date().toISOString() });
+      emitState();
+      emitStructured('device.apply.unresolved', { ...uncertainApply, attempts: uncertainReadbackAttempts });
+      return;
+    }
+    uncertainReadbackTimer = setTimeout(() => {
+      uncertainReadbackTimer = null;
+      uncertainReadbackAttempts += 1;
+      requestUncertainReadback();
+      scheduleUncertainReadbackRetry();
+    }, UNCERTAIN_READBACK_RETRY_MS);
+  }
 
   function clearHandshakeTimer() {
     if (!handshakeTimer) return;
@@ -427,11 +466,12 @@ function createDeviceSession({
     });
   }
 
-  function markApplyUncertain(reason, pending, error) {
+  function markApplyUncertain(reason, pending, error, { attemptReadback = true } = {}) {
     if (!pending) return;
     clearTimeout(pending.timer);
     applyPending = null;
     uncertainApply = { checksum: pending.checksum, seq: pending.seq, reason };
+    uncertainReadbackAttempts = 0;
     state.ready = false;
     state.handshakeState = 'resynchronizing';
     state.lastError = `Apply outcome uncertain: ${reason}; reading device state`;
@@ -439,7 +479,8 @@ function createDeviceSession({
     emitState();
     emitStructured('device.apply.uncertain', { reason, checksum: pending.checksum, seq: pending.seq });
     pending.reject(error);
-    sendLine(state.manifest?.capabilities?.chunked_reads?.config ? 'GET_CONFIG_CHUNKED' : 'GET_CONFIG');
+    if (attemptReadback && state.connected) requestUncertainReadback();
+    if (attemptReadback) scheduleUncertainReadbackRetry();
   }
 
   function rejectPendingApply(error) {
@@ -451,6 +492,7 @@ function createDeviceSession({
   }
 
   function handleDisconnect(reason = 'disconnect') {
+    clearUncertainReadbackTimer();
     clearHandshakeTimer();
     handshakeRetryCount = 0;
     if (applyPending) {
@@ -461,7 +503,7 @@ function createDeviceSession({
           'Device disconnected during staged apply',
           { reason, checksum: pending.checksum, seq: pending.seq },
           503,
-        ));
+        ), { attemptReadback: false });
     }
     state.connected = false;
     state.handshakeState = 'disconnected';
@@ -647,6 +689,7 @@ function createDeviceSession({
       }
       replaceLiveAndStaged(normalized);
       if (uncertainApply) {
+        clearUncertainReadbackTimer();
         const resolved = uncertainApply;
         uncertainApply = null;
         state.lastError = null;
@@ -811,11 +854,14 @@ function createDeviceSession({
   }
 
   async function rollback(reason = 'operator_request') {
-    if (applyPending) {
+    if (applyPending || uncertainApply) {
       throw createSessionError(
-        'apply_in_progress',
-        'Cannot roll back while a transmitted apply is awaiting its ACK; the write is non-cancellable.',
-        { checksum: applyPending.checksum, seq: applyPending.seq },
+        'apply_outcome_unresolved',
+        'Cannot roll back until the transmitted Apply outcome has been resynchronized.',
+        {
+          checksum: applyPending?.checksum ?? uncertainApply?.checksum,
+          seq: applyPending?.seq ?? uncertainApply?.seq,
+        },
         409,
       );
     }

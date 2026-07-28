@@ -59,8 +59,16 @@ export function createStateSnapshotStore({
   function identityDecision(snapshot) {
     const current = getDeviceIdentity?.() ?? {};
     const saved = snapshot?.device ?? {};
-    if (!saved.firmware_git_sha || !current.firmware_git_sha) return 'compatible';
-    return saved.firmware_git_sha === current.firmware_git_sha ? 'same-device' : 'different-firmware';
+    if (saved.firmware_git_sha && current.firmware_git_sha) {
+      return saved.firmware_git_sha === current.firmware_git_sha ? 'same-device' : 'different-firmware';
+    }
+    const comparable = ['device_name', 'slot_count'];
+    if (comparable.every((key) => saved[key] != null && current[key] != null)) {
+      return comparable.every((key) => String(saved[key]) === String(current[key]))
+        ? 'compatible-fallback-identity'
+        : 'different-firmware';
+    }
+    return 'unknown-identity';
   }
 
   function persist(stagedConfig) {
@@ -129,7 +137,7 @@ export function createStateSnapshotStore({
   function readStagedConfig({ allowDifferentFirmware = false } = {}) {
     const snapshot = read();
     if (!isRestorableSnapshot(snapshot)) return null;
-    if (identityDecision(snapshot) === 'different-firmware' && !allowDifferentFirmware) return null;
+    if (['different-firmware', 'unknown-identity'].includes(identityDecision(snapshot)) && !allowDifferentFirmware) return null;
     return snapshot.staged;
   }
 

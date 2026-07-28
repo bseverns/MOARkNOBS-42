@@ -40,6 +40,10 @@ export function createTransportPort(port, options = {}, transportDeps = {}) {
         droppedLines += 1;
         return;
       }
+      // Critical messages have a reserved place only while the bounded queue
+      // can hold them. Do not turn a malfunctioning device into unbounded
+      // browser memory growth: fail the transport visibly instead.
+      throw new Error('Native transport critical receive queue exhausted');
     }
     lineQueue.push(line);
     queuedBytes += bytes;

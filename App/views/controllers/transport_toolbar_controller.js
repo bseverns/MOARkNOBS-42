@@ -671,8 +671,14 @@ export function createTransportToolbarController({
   async function apply() {
     try {
       setStatus('warn', 'Applying…', 'Waiting for firmware ACK');
-      await runtime.apply();
-      setStatus('ok', 'Synced', 'Device acknowledged the staged edits.');
+      const result = await runtime.apply();
+      setStatus(
+        'ok',
+        'Synced',
+        result?.verifiedBy === 'readback'
+          ? 'Device configuration was verified by readback after the ACK was lost.'
+          : 'Device acknowledged the staged edits.'
+      );
     } catch (err) {
       setStatus('err', 'Apply failed', err.message || String(err));
     }

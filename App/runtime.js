@@ -317,9 +317,11 @@ export function createRuntime({
     applyBridgeConfig: async () => {
       const client = bridgeSessionRuntime?.ensureClient();
       if (!client) throw new Error('Bridge session unavailable');
-      return client.applyConfig({
+      const response = await client.applyConfig({
         expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision()
       });
+      if (response?.session) bridgeSessionRuntime?.applyAuthoritativeSession(response.session);
+      return response?.result ?? { applied: false, reason: 'missing-bridge-result' };
     },
     rollbackBridgeConfig: async (reason) => {
       const client = bridgeSessionRuntime?.ensureClient();

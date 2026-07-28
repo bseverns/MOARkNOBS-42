@@ -87,7 +87,10 @@ export function createBridgeSessionClient({
       method: 'POST',
       body
     });
-    return payload.result ?? null;
+    return {
+      result: payload.result ?? null,
+      session: payload.state?.deviceSession ?? null
+    };
   }
 
   async function rollbackConfig(reason = 'operator_request') {

@@ -272,7 +272,19 @@ export function createConfigSession({
     } else {
       dirty = Boolean(sessionPayload.dirty);
     }
-    setTransactionState(dirty ? 'dirty' : 'verified');
+    const bridgeStatus = sessionPayload.lastApplyResult?.status;
+    const bridgeTransactionState = {
+      pending: 'applying',
+      uncertain: 'uncertain',
+      resynchronized: 'verified',
+      verified_device_different: 'verified-device-different',
+      rollback: 'clean',
+      ack: 'verified'
+    }[bridgeStatus];
+    setTransactionState(bridgeTransactionState ?? (dirty ? 'dirty' : 'verified'), {
+      source: 'bridge',
+      lastApplyResult: sessionPayload.lastApplyResult ?? null
+    });
   }
 
   function stage(updater) {
@@ -350,6 +362,10 @@ export function createConfigSession({
         const response =
           typeof applyBridgeConfig === 'function' ? await applyBridgeConfig() : { applied: false };
         const checksum = response?.checksum ?? response?.result?.checksum ?? null;
+        if (response?.applied === false || response?.result?.applied === false) {
+          emit('bridge-apply-not-applied', { response });
+          return { applied: false, reason: response?.reason ?? response?.result?.reason ?? 'bridge-not-applied' };
+        }
         liveConfig = clone(stagedConfig);
         dirty = false;
         lastKnownChecksum = checksum;
@@ -391,7 +407,15 @@ export function createConfigSession({
     try {
       response = await sendRpc(payload, { timeoutMs: applyRpcTimeoutMs });
     } catch (err) {
-      await markApplyUncertain('transport-failure', payload, checksum);
+      const recovered = await markApplyUncertain('transport-failure', payload, checksum);
+      if (recovered) {
+        return {
+          applied: true,
+          verifiedBy: 'readback',
+          ackReceived: false,
+          checksum
+        };
+      }
       if (/RPC timeout/i.test(err?.message ?? '')) {
         throw new Error('Timed out waiting for firmware ACK; device state is being resynchronized.');
       }
@@ -467,7 +491,7 @@ export function createConfigSession({
   function restoreLocalState({ allowDifferentFirmware = false } = {}) {
     const snapshot = stateSnapshotStore.read?.();
     const identity = stateSnapshotStore.identityDecision?.(snapshot);
-    if (identity === 'different-firmware' && !allowDifferentFirmware) {
+    if (['different-firmware', 'unknown-identity'].includes(identity) && !allowDifferentFirmware) {
       emit('snapshot-restore-required', { snapshot, identity });
       return false;
     }

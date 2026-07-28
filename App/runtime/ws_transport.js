@@ -30,6 +30,16 @@ export function createWebSocketTransport(url) {
       droppedLines += 1;
       return;
     }
+    if (queue.length >= maxQueuedLines || queuedBytes + bytes > maxQueuedBytes) {
+      closed = true;
+      socket?.close();
+      if (resolver) {
+        const pending = resolver;
+        resolver = null;
+        pending.reject(new Error('WebSocket critical receive queue exhausted'));
+      }
+      return;
+    }
     queue.push(line);
     queuedBytes += bytes;
     if (resolver) {
