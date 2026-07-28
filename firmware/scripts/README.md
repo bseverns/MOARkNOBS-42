@@ -52,3 +52,10 @@ pio test -d firmware -e teensy40_unity -vvv
 # or from firmware/
 pio test -e teensy40_unity -vvv
 ```
+
+## `native_biquad_test_filter.py`
+
+Loaded only by `[env:native_biquad]`. PlatformIO otherwise compiles every
+loose `test/*.cpp` file as shared support, which would pull the Arduino-only
+Unity fixtures into this host DSP test. The hook restricts the suite to
+`test/native_biquad/` before PlatformIO resolves test sources.
