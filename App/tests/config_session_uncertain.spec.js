@@ -43,6 +43,8 @@ test('a transmitted Apply timeout remains dirty and uncertain when readback cann
   await expect(session.apply()).rejects.toThrow(/firmware ACK/i);
   const state = session.getState();
   expect(state.transactionState).toBe('uncertain');
+  expect(state.deviceAuthority).toBe('uncertain');
+  expect(state.draftState).toBe('dirty');
   expect(state.dirty).toBe(true);
   expect(state.staged.filter.freq).toBe(321);
   expect(events).toContainEqual(expect.objectContaining({ type: 'apply-uncertain' }));
@@ -96,6 +98,8 @@ test('malformed ACK with successful readback returns a classified recovery resul
   expect(session.getState().staged.filter.freq).toBe(321);
   expect(session.getState().dirty).toBe(true);
   expect(session.getState().transactionState).toBe('verified-device-different');
+  expect(session.getState().deviceAuthority).toBe('verified-device-different');
+  expect(session.getState().draftState).toBe('dirty');
 });
 
 test('direct readback mismatch reports verified-device-different', async () => {
@@ -140,6 +144,8 @@ test('editing after failed resynchronization preserves uncertainty and the next 
 
   session.stage((draft) => ({ ...draft, filter: { freq: 654 } }));
   expect(session.getState().transactionState).toBe('uncertain');
+  expect(session.getState().deviceAuthority).toBe('uncertain');
+  expect(session.getState().draftState).toBe('dirty');
   expect(session.getState().staged.filter.freq).toBe(654);
   await expect(session.apply()).rejects.toThrow(/already in progress|resynchronized/i);
 
@@ -149,6 +155,8 @@ test('editing after failed resynchronization preserves uncertainty and the next 
   expect(state.live.filter.freq).toBe(321);
   expect(state.staged.filter.freq).toBe(654);
   expect(state.dirty).toBe(true);
+  expect(state.deviceAuthority).toBe('verified');
+  expect(state.draftState).toBe('dirty');
 });
 
 for (const ordering of ['event-before-rejection', 'rejection-before-event']) {

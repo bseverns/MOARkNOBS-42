@@ -217,15 +217,41 @@ export function createConfigSession({
   let liveConfig = null;
   let stagedConfig = null;
   let dirty = false;
+  // Device truth and local intent are deliberately independent. `transactionState`
+  // remains a compatibility projection for existing UI/event consumers.
+  let deviceAuthority = 'verified';
+  let draftState = 'clean';
   let lastKnownChecksum = null;
   let transactionState = 'clean';
   let attemptedApply = null;
   let appliedCandidate = null;
   let nextDraft = null;
 
+  function isDeviceAuthorityUnresolved() {
+    return ['applying', 'uncertain', 'resynchronizing'].includes(deviceAuthority);
+  }
+
+  function setDraftState(next) {
+    draftState = next;
+  }
+
   function setTransactionState(next, details = {}) {
+    if (next === 'dirty' || next === 'clean') {
+      setDraftState(next);
+      if (next === 'clean') {
+        deviceAuthority = 'verified';
+      }
+    } else if (next === 'verified') {
+      deviceAuthority = 'verified';
+      setDraftState(dirty ? 'dirty' : 'clean');
+    } else if (next === 'verified-device-different') {
+      deviceAuthority = next;
+      setDraftState(dirty ? 'dirty' : 'clean');
+    } else {
+      deviceAuthority = next;
+    }
     transactionState = next;
-    emit('config-transaction', { state: next, ...details });
+    emit('config-transaction', { state: next, deviceAuthority, draftState, ...details });
   }
 
   function extractLocalSlotMetaFromConfig(config) {
@@ -259,6 +285,8 @@ export function createConfigSession({
     liveConfig = clone(normalized);
     stagedConfig = clone(nextDraft ?? normalized);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    setDraftState(dirty ? 'dirty' : 'clean');
+    deviceAuthority = 'verified';
     if (!appliedCandidate) setTransactionState(dirty ? 'dirty' : 'verified');
   }
 
@@ -277,6 +305,7 @@ export function createConfigSession({
     } else {
       dirty = Boolean(sessionPayload.dirty);
     }
+    setDraftState(dirty ? 'dirty' : 'clean');
     const bridgeStatus = sessionPayload.lastApplyResult?.status;
     const bridgeTransactionState = {
       pending: 'applying',
@@ -309,7 +338,8 @@ export function createConfigSession({
     liveConfig = clone(normalizedLive);
     stagedConfig = clone(normalizedStaged);
     dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
-    if (appliedCandidate || ['uncertain', 'resynchronizing'].includes(transactionState)) {
+    setDraftState(dirty ? 'dirty' : 'clean');
+    if (appliedCandidate || isDeviceAuthorityUnresolved()) {
       nextDraft = clone(normalizedStaged);
     } else {
       setTransactionState(dirty ? 'dirty' : 'clean');
@@ -328,8 +358,12 @@ export function createConfigSession({
     liveConfig = clone(normalized);
     stagedConfig = clone(retainedDraft ?? normalized);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    setDraftState(dirty ? 'dirty' : 'clean');
     appliedCandidate = null;
     nextDraft = null;
+    // An authoritative completion resolves an applying/resynchronizing device
+    // even when a separate next draft remains dirty.
+    if (!stateOverride) deviceAuthority = 'verified';
     setTransactionState(stateOverride ?? (dirty ? 'dirty' : 'verified'), details);
   }
 
@@ -337,7 +371,8 @@ export function createConfigSession({
     appliedCandidate = null;
     if (!retainNextDraft) nextDraft = null;
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
-    if (!['uncertain', 'resynchronizing'].includes(transactionState)) {
+    setDraftState(dirty ? 'dirty' : 'clean');
+    if (!isDeviceAuthorityUnresolved()) {
       setTransactionState(dirty ? 'dirty' : 'clean');
     }
   }
@@ -407,7 +442,7 @@ export function createConfigSession({
     if (appliedCandidate) {
       throw new Error('Apply is already in progress.');
     }
-    if (['uncertain', 'resynchronizing'].includes(transactionState)) {
+    if (isDeviceAuthorityUnresolved()) {
       throw new Error('Apply is blocked until the previous transmitted configuration is resynchronized.');
     }
     if (!dirty) return { applied: false };
@@ -599,7 +634,7 @@ export function createConfigSession({
   }
 
   async function rollback() {
-    if (['uncertain', 'resynchronizing'].includes(transactionState)) {
+    if (isDeviceAuthorityUnresolved()) {
       throw new Error('Cannot discard a transmitted configuration while device state is uncertain. Resynchronize first.');
     }
     if (isBridgeSessionActive() && typeof rollbackBridgeConfig === 'function') {
@@ -607,6 +642,7 @@ export function createConfigSession({
     }
     stagedConfig = clone(liveConfig);
     dirty = false;
+    deviceAuthority = 'verified';
     setTransactionState('clean');
     broadcastConfig();
     emit('rollback', {});
@@ -655,6 +691,8 @@ export function createConfigSession({
       dirty,
       lastChecksum: lastKnownChecksum,
       transactionState,
+      deviceAuthority,
+      draftState,
       attemptedApply: attemptedApply ? clone(attemptedApply) : null
     };
   }
@@ -669,6 +707,8 @@ export function createConfigSession({
     liveConfig = clone(nextLive);
     stagedConfig = clone(nextStaged);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    setDraftState(dirty ? 'dirty' : 'clean');
+    deviceAuthority = 'verified';
     setTransactionState(dirty ? 'dirty' : 'verified');
   }
 
@@ -688,11 +728,13 @@ export function createConfigSession({
     setLiveConfig: (next) => {
       liveConfig = next;
       dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+      setDraftState(dirty ? 'dirty' : 'clean');
     },
     setLocalSlotMeta,
     setStagedConfig: (next) => {
       stagedConfig = next;
       dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+      setDraftState(dirty ? 'dirty' : 'clean');
     },
     resynchronize: () => resynchronizeAfterUncertain('operator-request'),
     stage,

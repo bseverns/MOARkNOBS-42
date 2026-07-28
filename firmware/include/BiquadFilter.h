@@ -1,7 +1,7 @@
 #ifndef BIQUAD_FILTER_H
 #define BIQUAD_FILTER_H
 
-#include <Arduino.h>
+#include <math.h>
 
 /*
 Lightweight biquad filter used by the envelope follower.
@@ -38,10 +38,13 @@ class BiquadFilter {
     - q: Resonance/Q value (default is 0.707).
     */
     void configure(FilterType type, float frequency, float sampleRate, float q = 0.707) {
-        // Constrain frequency to a valid range (e.g., 20 Hz to 20 kHz)
-        frequency = constrain(frequency, 20.0f, 20000.0f);
+        // Keep this DSP primitive independent of Arduino so its coefficient
+        // math can also be tested on a native host target.
+        if (frequency < 20.0f) frequency = 20.0f;
+        if (frequency > 20000.0f) frequency = 20000.0f;
 
-        float omega = 2.0f * PI * frequency / sampleRate;
+        constexpr float kPi = 3.14159265358979323846f;
+        float omega = 2.0f * kPi * frequency / sampleRate;
         float cos_omega = cosf(omega);
         float sin_omega = sinf(omega);
         float alpha = sin_omega / (2.0f * q);

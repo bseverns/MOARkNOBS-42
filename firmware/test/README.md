@@ -97,6 +97,20 @@ We finally caved and wired up a few automated checks in `test/test_*.cpp` for th
 pio test -d firmware -e teensy40_unity -vvv
 ```
 
+### Native-host seam
+
+`native_biquad` is the first hardware-free firmware lane. It tests the
+Arduino-independent `BiquadFilter` coefficient and response behavior on the
+CI host:
+
+```bash
+pio test -d firmware -e native_biquad -vvv
+```
+
+It complements, rather than replaces, the Teensy Unity/HIL environment. New
+native tests should stay behind a deliberate portable boundary; do not pull
+Arduino, display, SD, or USB transport dependencies into this lane.
+
  The `teensy40_unity` rig only flips on `UNIT_TEST`. If you also define `USB_MIDI_STUB`, `test/usb_midi.cpp` and pals hijack the usual Teensy globals and fake out `MIDI` and `usbMIDI`. Instead of playing macro shell games, we drop in a skinny `usb_midi_class` that exposes the same face as the real deal. Any code shouting for `usbMIDI` ends up talking to our stub, the core header never loads, and the linker goes back to sleep. A tiny `MIDI.h` shim rides shotgun so the `midi` namespace exists even when the heavyweight library sits out. Hardware builds leave that flag off so `MIDIHandler.cpp` sticks with the legit USB stack—no linker brawls, no ghosts.
 
   Tests never include `<Arduino.h>` directly anymore. Drop `#include "unity_config.h"` at the top and it drags in Arduino and our usbMIDI doppelganger. The `teensy40_unity` env rewrites the core's `usbMIDI` symbols at build time so the stub keeps center stage and the real header stays buried. Skip the shim and the compiler will howl about dueling `usb_midi_class` defs.

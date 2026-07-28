@@ -59,13 +59,12 @@ export function createDiffStatusController({
     const applyAllowed = ['verified', 'simulator'].includes(
       runtime?.getState?.()?.contractQuality
     );
-    const transactionState = runtime?.getState?.()?.transactionState;
-    const transactionWritable = [
-      'dirty',
-      'verified',
-      'verified-device-different',
-      'clean'
-    ].includes(transactionState);
+    const state = runtime?.getState?.() ?? {};
+    // Older runtime snapshots only expose the compatibility transactionState.
+    // Newer snapshots keep device authority separate from local draft dirtiness.
+    const transactionWritable = state.deviceAuthority
+      ? ['verified', 'verified-device-different'].includes(state.deviceAuthority)
+      : ['dirty', 'verified', 'verified-device-different', 'clean'].includes(state.transactionState);
     if (applyBtn) applyBtn.disabled = !isDirty || !applyAllowed || !transactionWritable;
     if (rollbackBtn) rollbackBtn.disabled = !isDirty || !transactionWritable;
     onDirtyChanged(Boolean(isDirty));
