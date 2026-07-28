@@ -489,7 +489,9 @@ export function createConfigSession({
   }
 
   function restoreLocalState({ allowDifferentFirmware = false } = {}) {
+    const canReadSnapshot = typeof stateSnapshotStore.read === 'function';
     const snapshot = stateSnapshotStore.read?.();
+    if (canReadSnapshot && !snapshot) return false;
     const identity = stateSnapshotStore.identityDecision?.(snapshot);
     if (['different-firmware', 'unknown-identity'].includes(identity) && !allowDifferentFirmware) {
       emit('snapshot-restore-required', { snapshot, identity });

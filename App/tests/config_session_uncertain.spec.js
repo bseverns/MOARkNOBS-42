@@ -57,7 +57,12 @@ test('a successful resynchronization adopts device truth after an ambiguous Appl
   session.syncFromDevice(baseConfig());
   session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
 
-  await expect(session.apply()).rejects.toThrow(/firmware ACK/i);
+  await expect(session.apply()).resolves.toEqual({
+    applied: true,
+    verifiedBy: 'readback',
+    ackReceived: false,
+    checksum: 'candidate-checksum'
+  });
   const state = session.getState();
   expect(state.transactionState).toBe('verified');
   expect(state.dirty).toBe(false);

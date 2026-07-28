@@ -18,6 +18,11 @@ test('state snapshot store persists and restores staged config for matching sche
     storage,
     storageKey: 'state',
     getSchemaVersion: () => 6,
+    getDeviceIdentity: () => ({
+      device_name: 'MOARkNOBS-42',
+      firmware_git_sha: 'test-sha',
+      slot_count: 42
+    }),
     now: () => 1000
   });
 
@@ -25,7 +30,7 @@ test('state snapshot store persists and restores staged config for matching sche
 
   expect(JSON.parse(storage.snapshot().state)).toEqual({
     schema_version: 6,
-    device: { device_name: null, firmware_git_sha: null, slot_count: null },
+    device: { device_name: 'MOARkNOBS-42', firmware_git_sha: 'test-sha', slot_count: 42 },
     staged: { slots: [{ value: 64 }] },
     timestamp: 1000,
     saved_at: '1970-01-01T00:00:01.000Z'
@@ -194,4 +199,39 @@ test('config session restores only validated staged snapshots', () => {
   } finally {
     console.debug = originalDebug;
   }
+});
+
+test('config session does not request review when no saved workspace exists', () => {
+  const emitted = [];
+  const session = createConfigSession({
+    normalizeConfig: (config) => config,
+    clone: (value) => JSON.parse(JSON.stringify(value)),
+    shallowDiff: () => [],
+    digest: async () => 'checksum',
+    emit: (event, payload) => emitted.push({ event, payload }),
+    sendRpc: async () => ({}),
+    nextSeq: () => 1,
+    applyRpcTimeoutMs: 1000,
+    slotTypeNames: [],
+    localSlotMetaManager: {
+      extractFromConfig: () => {},
+      mergeIntoConfig: (config) => config,
+      updateEntry: () => false
+    },
+    stateSnapshotStore: {
+      read: () => null,
+      identityDecision: () => 'unknown-identity',
+      readStagedConfig: () => null
+    },
+    getManifest: () => ({}),
+    getRemoteManifest: () => ({}),
+    getSchema: () => ({}),
+    getSchemaSource: () => 'test',
+    getValidator: () => () => true
+  });
+
+  expect(session.restoreLocalState()).toBe(false);
+  expect(emitted).not.toContainEqual(
+    expect.objectContaining({ event: 'snapshot-restore-required' })
+  );
 });
