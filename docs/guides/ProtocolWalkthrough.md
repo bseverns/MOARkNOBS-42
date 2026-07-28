@@ -95,11 +95,11 @@ This matters because the configurator is not a static settings form. It is a liv
 
 ![Screenshot of the browser configurator showing live slot controls, staged edits, and telemetry cards.](../assets/ui/profiles-ui.png)
 
-## Step 6: commit or roll back
+## Step 6: verify or resynchronize
 
 When the browser sends a larger apply, the firmware answers with a checksum-backed acknowledgement. That acknowledgement is what allows the browser to advance `liveConfig` to the newly staged state.
 
-If the acknowledgement does not match expectations, the runtime can roll back instead of pretending the write succeeded.
+If the acknowledgement is missing or does not match expectations, the runtime enters uncertainty and reads authoritative device configuration back. It does not claim rollback after transmission. See [Configuration Transaction Model](../reference/ConfigurationTransactionModel.md).
 
 That is a quiet but critical part of the contract. It keeps the UI from lying.
 

@@ -1,4 +1,6 @@
-# EEPROM Layout
+# Legacy EEPROM Layout — Schema 4
+
+> **Historical reference only.** This page documents the schema-4 emulated EEPROM layout. It is not the current persistence contract and must not be used to interpret schema-6 LittleFS generations. Current behavior is described by the firmware contract and manifest persistence fields.
 
 Schema version: `0x0004`
 

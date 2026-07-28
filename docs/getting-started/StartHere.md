@@ -21,7 +21,7 @@ flowchart TD
   C --> U[User layer<br>browser app, OSC bridge, performer workflow]
 ```
 
-If one layer lies to the next, the whole experience gets weird fast. That is why the docs keep returning to the same ideas: contract sync, test coverage, rollback, and traceability.
+If one layer lies to the next, the whole experience gets weird fast. That is why the docs keep returning to contract sync, test coverage, authoritative readback, and traceability.
 
 ## What you are looking at
 
@@ -33,7 +33,7 @@ If one layer lies to the next, the whole experience gets weird fast. That is why
 - a button grid and control buttons for direct interaction
 - LED output for visual feedback
 - envelope follower inputs for audio-reactive control
-- EEPROM-backed persistence so the machine remembers its state
+- generation-checked persistent storage so the machine remembers verified state
 
 ### In the browser
 
@@ -42,7 +42,7 @@ If one layer lies to the next, the whole experience gets weird fast. That is why
 - a runtime that connects over WebSerial
 - a schema-driven form system
 - staged edits that can be reviewed before they are applied
-- checksum-backed apply/rollback behavior so the UI does not lie about what the device accepted
+- checksum-backed Apply with explicit uncertainty and authoritative readback
 
 ## The first mental model to keep
 
@@ -55,9 +55,9 @@ The normal conversation is:
 3. compare schema versions
 4. fetch the config
 5. stage changes locally
-6. apply changes and wait for a confirmed ACK
+6. apply changes and wait for a verified receipt/readback outcome
 
-That is why the configurator can safely support staging, diff views, rollback, and migration warnings.
+That is why the configurator can safely support staging, diff views, local draft discard, uncertainty recovery, and migration warnings.
 
 ## The first practical walk
 
@@ -99,7 +99,7 @@ That page is where the repo stops being mystical about "tested" versus "not yet 
 
 You do **not** need to read these immediately unless you are debugging or extending the stack:
 
-- [EEPROM Layout](../reference/EEPROMLayout.md)
+- [Legacy EEPROM Layout — Schema 4](../reference/EEPROMLayout.md) — historical only
 - [Pin Map](../reference/PinMap.md)
 - [Assumption Ledger](../reference/assumption-ledger.md)
 

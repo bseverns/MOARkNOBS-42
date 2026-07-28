@@ -8,6 +8,24 @@ on:
       - ".github/workflows/docs-pages.yml"
       - "docs/**"
       - "mkdocs.yml"
+      - "README.md"
+      - "App/README.md"
+      - "bridge/README.md"
+      - "firmware/README.md"
+      - "hardware/CurrentBuild.md"
+      - "HARDWARE_TEST_README.md"
+      - "docs/contracts.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/docs-pages.yml"
+      - "docs/**"
+      - "mkdocs.yml"
+      - "README.md"
+      - "App/README.md"
+      - "bridge/README.md"
+      - "firmware/README.md"
+      - "hardware/CurrentBuild.md"
+      - "HARDWARE_TEST_README.md"
   workflow_dispatch:
 
 permissions:
@@ -39,6 +57,7 @@ jobs:
           path: site
 
   deploy:
+    if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
     environment:

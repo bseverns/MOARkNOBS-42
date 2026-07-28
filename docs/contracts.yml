@@ -1,0 +1,39 @@
+version: 1
+contracts:
+  app:
+    source:
+      - App/runtime/**
+      - App/views/**
+      - App/config_schema.json
+    docs:
+      - App/README.md
+      - docs/reference/ConfigurationTransactionModel.md
+      - docs/app/AppTransportTruthTable.md
+      - docs/guides/Configurator.md
+  bridge:
+    source:
+      - bridge/lib/**
+    docs:
+      - bridge/README.md
+      - docs/reference/ConfigurationTransactionModel.md
+      - docs/bridge/BridgeTransportContract.md
+      - docs/bridge/BridgeWriteLanes.md
+  persistence:
+    source:
+      - firmware/include/ConfigManager*
+      - firmware/include/storage/**
+      - firmware/src/protocol/ConfigJsonApply.cpp
+      - firmware/src/storage/**
+    docs:
+      - firmware/README.md
+      - docs/reference/ManifestContract.md
+      - docs/reference/EEPROMLayout.md
+  firmware_protocol:
+    source:
+      - firmware/include/protocol/**
+      - firmware/src/protocol/**
+    docs:
+      - firmware/README.md
+      - docs/reference/MN42LineProtocol.md
+      - docs/reference/SerialProtocol.md
+      - docs/reference/ManifestContract.md

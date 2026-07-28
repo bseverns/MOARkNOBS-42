@@ -15,7 +15,7 @@ The configurator keeps two versions of the world:
 - **live config** – what the device most recently confirmed
 - **staged config** – what the user is currently editing
 
-That split is the reason the UI can show meaningful diffs, preserve local work, and roll back cleanly when the device rejects or fails to acknowledge a write.
+That split lets the UI show meaningful diffs and preserve local work. After transmission, an ambiguous outcome is resolved by authoritative device readback; it is not described as rollback. See [Configuration Transaction Model](../reference/ConfigurationTransactionModel.md).
 
 ## Connect flow
 
@@ -89,15 +89,20 @@ If you want the human explanation for every shipped preset, read [Preset Library
 flowchart TD
   A[User presses Apply] --> B[Runtime validates staged config]
   B --> C[Runtime sends full staged payload with checksum]
-  C --> D{ACK checksum matches?}
-  D -- Yes --> E[promote staged to live]
-  D -- No --> F[rollback staged state]
+  C --> D{Receipt and integrity fields valid?}
+  D -- Yes --> E[read back and verify device config]
+  D -- No --> F[mark uncertain]
+  F --> G[resynchronize from device]
+  E --> H[verified]
+  G --> H
+  G --> I[verified-device-different]
 ```
 
 This is the important safety behavior:
 
-- a successful ACK means the browser can trust the device accepted the payload
-- a missing or mismatched ACK means the runtime rolls back instead of leaving the UI in a fantasy state
+- a valid receipt starts or completes verification
+- a missing or mismatched receipt means the outcome is uncertain
+- authoritative readback determines what the device actually contains
 
 ## What the configurator helps users learn
 
@@ -107,7 +112,7 @@ The app is useful because it turns protocol details into visible actions:
 - **schema versioning** becomes migration warnings
 - **config validity** becomes disabled Apply until the payload is legal
 - **device patches** become visible live updates instead of invisible background state changes
-- **transport uncertainty** becomes checksum-backed rollback instead of guesswork
+- **transport uncertainty** becomes an explicit resynchronization workflow
 
 ## Where to go next
 

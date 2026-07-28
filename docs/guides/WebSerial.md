@@ -296,12 +296,13 @@ These are the ground rules for keeping a responsive UI without bricking rigs on 
 - Treat the manifest response as sacred. Cache it per session and surface a status pill that shouts where you stand: `Disconnected → Handshake → Live`. Flip to `Dirty` whenever staged edits drift from what the device most recently confirmed.
 - If the schema diff fails, throw the migrate dialog mentioned above. The only destructive action allowed is a deliberate “Apply Migration” click.
 
-### Atomic Apply with Commit/Rollback
+### Apply with authoritative recovery
 
 - Stage every tweak locally (Redux store, Svelte store, whatever keeps you honest).
 - Clicking **Apply** should pack the pending diff into one message (`SET_ALL` payload or chunked frames with sequence IDs).
-- Firmware validates and replies with `{ "checksum": "deadbeef" }`. Only then do you commit locally.
-- When the checksum doesn’t match expectations, auto-rollback your local state and show a diff panel so the player knows what the device actually accepted.
+- Firmware validates and returns a correlated integrity receipt. Durable backends also report applied-state and storage-generation evidence.
+- A lost or malformed receipt enters `uncertain`; request device configuration and adopt authoritative readback.
+- Reserve local draft discard for work that was never transmitted. See [Configuration Transaction Model](../reference/ConfigurationTransactionModel.md).
 
 ### Bidirectional Throttling
 

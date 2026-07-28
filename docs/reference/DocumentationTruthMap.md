@@ -18,6 +18,7 @@ These pages define current behavior and support boundaries. They are the first p
 - [MN42 Line Protocol](MN42LineProtocol.md) and [Serial Protocol](SerialProtocol.md) for the line-level command/response contract
 - [Bridge Transport Contract](../bridge/BridgeTransportContract.md) for structured bridge event and API shapes
 - [Bridge Write Lanes](../bridge/BridgeWriteLanes.md) for staged config writes versus live bridge performance writes
+- [Configuration Transaction Model](ConfigurationTransactionModel.md) for Apply, uncertainty, resynchronization, verification, and local draft discard
 
 Rule: these pages describe what is true now, not what is planned later.
 
@@ -83,6 +84,8 @@ When two pages disagree, use this order:
 6. Historical or archived docs
 
 If code and docs disagree, update the docs or the code in the same change whenever practical.
+
+The machine-readable source-to-doc mapping lives in [`docs/contracts.yml`](../contracts.yml).
 
 ## Update triggers
 
