@@ -26,6 +26,10 @@ def configure_native_biquad_test(target_env):
         target_env.GetProjectConfig(),
     )
     runner.configure_build_env(target_env)
+    # Unity's runner prepends the repository test directory for its normal
+    # Arduino configuration. Put this suite's host configuration back first
+    # so UNITY_INCLUDE_CONFIG_H resolves native_biquad/unity_config.h.
+    target_env.Prepend(CPPPATH=["$PROJECT_TEST_DIR/native_biquad"])
 
 
 env.AddMethod(configure_native_biquad_test, "ConfigureTestTarget")
