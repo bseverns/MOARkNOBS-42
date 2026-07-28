@@ -44,6 +44,7 @@ stateDiagram-v2
 11. A structured Bridge rejection is reconciled against the Bridge session's `lastApplyResult`; WebSocket-event and HTTP-response ordering must produce the same authority state.
 12. An expired Bridge writer remains permanently cancelled even after successful readback clears public uncertainty. A delayed serial callback cannot resume its old payload.
 13. An unsent browser draft survives structured-Bridge disconnect/reconnect and is reconciled only after remote live truth has been adopted.
+14. Simulator RPC support is declared as an explicit mapping to firmware native commands and is checked against the firmware dispatch and scene handlers in hosted contract checks.
 
 ## What “rollback” means
 

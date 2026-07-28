@@ -7,7 +7,7 @@
     "node": ">=24 <25"
   },
   "scripts": {
-    "test:contract": "node ../tools/require_node_24.js && python3 ../tools/check_contract_sync.py --root ..",
+    "test:contract": "node ../tools/require_node_24.js && python3 ../tools/check_contract_sync.py --root .. && python3 ../tools/check_simulator_protocol_sync.py --root ..",
     "test": "node ../tools/require_node_24.js && playwright test",
     "test:report": "node ../tools/require_node_24.js && playwright show-report",
     "ci": "node ../tools/require_node_24.js && npm test && npm run test:contract"

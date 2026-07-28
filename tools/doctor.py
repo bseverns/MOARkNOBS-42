@@ -210,6 +210,10 @@ def main() -> None:
                 ),
                 ("comment style", ["python3", "tools/check_comment_style.py", "--root", "."]),
                 ("contract sync", ["python3", "tools/check_contract_sync.py", "--root", "."]),
+                (
+                    "simulator protocol sync",
+                    ["python3", "tools/check_simulator_protocol_sync.py", "--root", "."],
+                ),
                 ("control coverage", ["python3", "tools/check_control_coverage.py", "--root", "."]),
             ]
         )

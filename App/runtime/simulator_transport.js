@@ -1,4 +1,50 @@
 // Simulator transport used by tests and hardware-free UI rehearsal.
+// Keep this mapping in lockstep with the firmware dispatcher. The companion
+// protocol guard verifies every declared native command exists in firmware and
+// every simulator RPC case is intentionally mapped or marked simulator-only.
+export const SIMULATOR_FIRMWARE_COMMANDS = Object.freeze({
+  hello: 'HELLO',
+  get_manifest: 'GET_MANIFEST',
+  get_config: 'GET_CONFIG',
+  get_mod_matrix: 'GET_MOD_MATRIX',
+  get_profile: 'GET_PROFILE',
+  get_clock: 'GET_CLOCK',
+  get_arp: 'GET_ARP',
+  get_jitter: 'GET_JITTER',
+  get_note_dynamics: 'GET_NOTE_DYNAMICS',
+  get_usb_midi: 'GET_USB_MIDI',
+  set_config: 'SET_ALL',
+  set_profile: 'SET_PROFILE',
+  set_clock: 'SET_CLOCK',
+  set_arp: 'SET_ARP',
+  set_jitter: 'SET_JITTER',
+  set_note_dynamics: 'SET_NOTE_DYNAMICS',
+  set_usb_midi: 'SET_USB_MIDI',
+  save_profile: 'SAVE_PROFILE',
+  load_profile: 'LOAD_PROFILE',
+  reset_profile: 'RESET_PROFILE',
+  arp_start: 'ARP_START',
+  arp_stop: 'ARP_STOP'
+});
+
+export const SIMULATOR_MACRO_COMMANDS = Object.freeze([
+  'SAVE_MACRO_SLOT',
+  'RECALL_MACRO_SLOT'
+]);
+
+export const SIMULATOR_SCENE_COMMANDS = Object.freeze([
+  'GET_SCENES',
+  'SAVE_SCENE',
+  'RECALL_SCENE'
+]);
+
+export const SIMULATOR_ONLY_RPCS = Object.freeze([
+  'macro_command',
+  'scene_command',
+  'set_param',
+  'hang'
+]);
+
 export function createSimulator(simDeps = {}) {
   const {
     createManifest,
