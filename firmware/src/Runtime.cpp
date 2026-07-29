@@ -23,6 +23,7 @@
 #include "Protocol.h"
 #include "UI.h"
 #include "Scheduler.h"
+#include "bench_log_latency.h"
 #include "interop/SeedBoxLink.h"
 
 #include <TimerOne.h>
@@ -61,6 +62,7 @@ struct PendingNoteOff {
 
 constexpr size_t kPendingNoteOffCapacity = 64;
 std::array<PendingNoteOff, kPendingNoteOffCapacity> pendingNoteOffs{};
+std::array<uint32_t, NUM_ENVELOPES> envelopeFollowerSampledAtUs{};
 
 void queueMidiServiceRequest() {
     // ISR-safe flagging: keep the interrupt short and let `processMIDI()` grab the work later.
@@ -584,6 +586,7 @@ void processEnvelopeFollowers() {
         follower.update();
         envelopeFollowerLevels[idx] = follower.getEnvelopeLevel();
         envelopeFollowerReady[idx] = true;
+        envelopeFollowerSampledAtUs[idx] = micros();
     }
     nextFollowerIndex = (nextFollowerIndex + passes) % followerCount;
 }
@@ -706,6 +709,18 @@ void processEnvelopes() {
                 // and other configured slot types instead of silently
                 // bypassing them as a pot CC.
                 emitSlotModulationValue(potIndex, modulatedValue);
+#if BENCH_EF_LATENCY_LOG
+                static bool headerPrinted = false;
+                if (!headerPrinted) {
+                    benchEfLatencyHeader();
+                    headerPrinted = true;
+                }
+                benchEfLatencyLog(static_cast<uint8_t>(envelopeIndex),
+                                  static_cast<uint8_t>(potIndex),
+                                  rawFollowerLevels[envelopeIndex], modulatedValue,
+                                  envelopeFollowerSampledAtUs[envelopeIndex],
+                                  "midi_enqueue");
+#endif
                 lastEnvelopeMidiValues[potIndex] = modulatedValue;
             }
 

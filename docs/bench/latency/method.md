@@ -6,3 +6,15 @@
 - **Metric:** delta_ms = t_tx_us - t_scan_us printed by firmware
 - **Acceptance:** median 3–5 ms; p95 ≤ 10 ms
 - **Notes:** close DAWs; no other MIDI devices
+
+## EF sample-to-MIDI enqueue capture
+
+For the firmware portion of an envelope-follower route, flash
+`teensy40_ef_latency_bench` and run
+[`EfLatencyCsv.pde`](../../../tools/ef_latency_logger/EfLatencyCsv.pde) in
+Processing 4. It captures `ef_latency` records into a timestamped CSV.
+
+`device_latency_us` measures the last completed digital EF sample through
+translation and MIDI enqueue. It is not a claim about analog-front-end settling
+or physical host MIDI arrival; measure those with an external trigger and a
+scope or logic analyzer.
