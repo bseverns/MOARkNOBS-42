@@ -796,7 +796,15 @@ const boot = () => {
     panicHelpController.render();
   });
   runtime.on('applied', ({ checksum }) => {
-    diffStatusController.clearApplied(checksum);
+    if (runtime.getState().dirty) {
+      diffStatusController.setStatus(
+        'ok',
+        'Applied',
+        'Applied the captured configuration. Newer edits remain staged.'
+      );
+    } else {
+      diffStatusController.clearApplied(checksum);
+    }
     sessionLogController.recordEvent(
       'APPLY',
       'Device acknowledged staged edits',

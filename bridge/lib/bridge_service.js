@@ -254,6 +254,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
       events.emit('structured-event', event);
       if (
         event?.event === 'device.apply.resynchronized' ||
+        event?.event === 'device.apply.device_different' ||
         event?.event === 'device.ready'
       ) {
         if (!deviceSession.isApplyTransactionActive()) {

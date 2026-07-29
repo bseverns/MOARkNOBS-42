@@ -1,6 +1,7 @@
 #include "Scheduler.h"
 
 #include "CommandQueue.h"
+#include "EfFilterControl.h"
 #include "Arpeggiator.h"
 #include "FirmwareState.h"
 #include "MIDIHandler.h"
@@ -32,13 +33,14 @@ void initializeSchedulers() {
     Utility::schedulerHigh.addTask(processLFOs, 1, true);
 #endif
 
-    // Update a couple of followers per pass so the full bank refreshes every ~6ms without
-    // dropping a multi-millisecond slab onto one loop iteration.
+    // Update one follower per pass so the six-input bank refreshes every ~12ms
+    // without dropping a multi-millisecond slab onto one loop iteration.
 #if defined(MN42_DIAG_DISABLE_PROCESS_ENVELOPE_FOLLOWERS) &&                                       \
     (MN42_DIAG_DISABLE_PROCESS_ENVELOPE_FOLLOWERS != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"process_envelope_followers_disabled\"}");
 #else
-    Utility::schedulerHigh.addTask(processEnvelopeFollowers, 2, true);
+    Utility::schedulerHigh.addTask(processEnvelopeFollowers,
+                                   EF_FOLLOWER_SCHEDULER_PERIOD_MS, true);
 #endif
 
 #if defined(MN42_DIAG_DISABLE_PROCESS_PENDING_NOTEOFFS) &&                                         \

@@ -314,11 +314,17 @@ export function createRuntime({
       if (!client) throw new Error('Bridge session unavailable');
       return client.stageConfig(config);
     },
-    applyBridgeConfig: async () => {
+    applyBridgeConfig: async ({ candidate, identity } = {}) => {
       const client = bridgeSessionRuntime?.ensureClient();
       if (!client) throw new Error('Bridge session unavailable');
+      const stageReceipt = await client.stageConfig(candidate, {
+        expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
+        ...identity
+      });
+      bridgeSessionRuntime?.recordStageReceipt(stageReceipt);
       const response = await client.applyConfig({
-        expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision()
+        expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
+        ...identity
       });
       if (response?.session) bridgeSessionRuntime?.applyAuthoritativeSession(response.session);
       const result = response?.result ?? { applied: false, reason: 'missing-bridge-result' };

@@ -35,6 +35,17 @@ The full lane summary lives in [../docs/hardware-test/TestMatrix.md](../docs/har
 
 `GET_MANIFEST` reports the active board power profile, LED cap, and rail-verification bit from the selected env, so do not flash `teensy40_main_reworked` unless the physical board actually matches that claim.
 
+## Envelope Filter Timing
+
+Envelope filter configuration keeps the legacy `frequency` field for wire and
+preset compatibility, but the value is a shaping-control scale rather than a
+physical cutoff in hertz. The runtime samples one of six followers every 2 ms,
+giving each follower an effective rate of about 83.3 Hz. It translates the
+legacy control ratio onto that real cadence before configuring the biquad.
+Per-slot EF voices perform the same translation using the configured mid-tier
+envelope interval. The `native_biquad` step-response test locks this timing
+model without claiming analog-input-to-host latency.
+
 ## First Reading Path
 
 If you are learning this firmware by reading code, start with

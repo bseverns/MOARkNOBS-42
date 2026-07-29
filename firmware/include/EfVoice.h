@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "BiquadFilter.h"
+#include "EfFilterControl.h"
 #include "EnvelopeFollower.h"
 #include "EfSettingsUtils.h"
 #include "Globals.h"
@@ -48,6 +49,7 @@ struct EfVoice {
     bool hasFollower = false;
     uint8_t lastLevel = 0;
     bool hasLevel = false;
+    float controlRateHz = 200.0f;
     BiquadFilter filter;
 
     void resetFollower() {
@@ -69,6 +71,14 @@ struct EfVoice {
             hasLevel = false;
             filterDirty = true;
         }
+    }
+
+    void setControlRateHz(float nextRateHz) {
+        if (nextRateHz <= 0.0f || controlRateHz == nextRateHz) {
+            return;
+        }
+        controlRateHz = nextRateHz;
+        filterDirty = true;
     }
 
     void syncSettings(const EfSettings &settings) {
@@ -105,7 +115,9 @@ struct EfVoice {
         case EnvelopeFollower::HIGHPASS:
         case EnvelopeFollower::BANDPASS: {
             if (filterDirty) {
-                filter.configure(toBiquadType(filterType), frequency, 44100.0f, q);
+                filter.configure(toBiquadType(filterType),
+                                 efControlToCutoffHz(frequency, controlRateHz),
+                                 controlRateHz, q);
                 filterDirty = false;
             }
             float processed = filter.process(static_cast<float>(level));

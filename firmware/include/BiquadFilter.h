@@ -28,8 +28,8 @@ class BiquadFilter {
     Configure the filter coefficients.
 
     The coefficients are calculated according to the selected
-    filter type.  Frequency values outside of the audible range are
-    clamped before the coefficients are computed.  Calling this wipes
+    filter type. Frequency is clamped to the valid range for the supplied
+    sample rate before coefficients are computed. Calling this wipes
     any previously stored samples so the filter starts fresh.
 
     - type: Desired filter type.
@@ -40,8 +40,11 @@ class BiquadFilter {
     void configure(FilterType type, float frequency, float sampleRate, float q = 0.707) {
         // Keep this DSP primitive independent of Arduino so its coefficient
         // math can also be tested on a native host target.
-        if (frequency < 20.0f) frequency = 20.0f;
-        if (frequency > 20000.0f) frequency = 20000.0f;
+        if (sampleRate <= 0.0f) sampleRate = 1.0f;
+        const float minimumFrequency = sampleRate * 0.000001f;
+        const float maximumFrequency = sampleRate * 0.499f;
+        if (frequency < minimumFrequency) frequency = minimumFrequency;
+        if (frequency > maximumFrequency) frequency = maximumFrequency;
 
         constexpr float kPi = 3.14159265358979323846f;
         float omega = 2.0f * kPi * frequency / sampleRate;

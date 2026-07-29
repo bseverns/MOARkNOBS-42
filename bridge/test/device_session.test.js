@@ -305,8 +305,13 @@ async function run() {
     );
     assert.equal(
       harness.session.getState().dirty,
-      false,
-      'timeout rollback should clear the dirty flag',
+      true,
+      'readback that differs after a timeout must retain the attempted candidate',
+    );
+    assert.equal(harness.session.getState().stagedConfig.slots[1].data1, 77);
+    assert.equal(
+      harness.session.getState().lastApplyResult?.status,
+      'verified_device_different',
     );
   }
 
@@ -327,8 +332,14 @@ async function run() {
       'the complete Apply timeout should expire a stalled serial writer',
     );
     await waitFor(
-      () => harness.session.getState().lastApplyResult?.status === 'resynchronized',
+      () => harness.session.getState().lastApplyResult?.status === 'verified_device_different',
     );
+    assert.equal(
+      harness.session.getState().stagedConfig.slots[1].data1,
+      78,
+      'readback mismatch must preserve the exact attempted candidate as the dirty draft',
+    );
+    assert.equal(harness.session.getState().dirty, true);
     assert.equal(
       harness.session.isApplyTransactionActive(),
       false,
@@ -342,6 +353,44 @@ async function run() {
       1,
       'an expired writer must not transmit remaining frames after readback releases exclusivity',
     );
+  }
+
+  {
+    const harness = createHarness();
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[0].data1 = 101;
+    const stagedDigest = require('node:crypto')
+      .createHash('sha256')
+      .update(JSON.stringify(staged))
+      .digest('hex');
+    const receipt = await harness.session.stageConfig(staged, {
+      clientApplyId: 'client-apply-current',
+      stagedRevision: 41,
+      stagedDigest,
+    });
+    assert.equal(receipt.clientApplyId, 'client-apply-current');
+    assert.equal(receipt.stagedRevision, 41);
+    await assert.rejects(
+      () => harness.session.applyStagedConfig({
+        clientApplyId: 'client-apply-old',
+        stagedRevision: 40,
+        stagedDigest,
+      }),
+      (error) => error?.code === 'staged_apply_identity_mismatch',
+      'Apply cannot inherit a receipt from an older staged attempt',
+    );
+    const apply = harness.session.applyStagedConfig({
+      clientApplyId: receipt.clientApplyId,
+      stagedRevision: receipt.stagedRevision,
+      stagedDigest: receipt.stagedDigest,
+    });
+    await apply;
+    const result = harness.session.getState().lastApplyResult;
+    assert.equal(result.clientApplyId, 'client-apply-current');
+    assert.equal(result.stagedRevision, 41);
+    assert.equal(result.stagedDigest, stagedDigest);
   }
 
   {

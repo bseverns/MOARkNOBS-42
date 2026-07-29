@@ -74,10 +74,21 @@ export function createBridgeSessionClient({
     return payload.session ?? null;
   }
 
-  async function stageConfig(config, { expectedSessionRevision } = {}) {
+  async function stageConfig(config, {
+    expectedSessionRevision,
+    clientApplyId,
+    stagedRevision,
+    stagedDigest
+  } = {}) {
     const payload = await requestJson('/api/device/stage', {
       method: 'POST',
-      body: { config, expectedSessionRevision }
+      body: {
+        config,
+        expectedSessionRevision,
+        clientApplyId,
+        stagedRevision,
+        stagedDigest
+      }
     });
     return payload.result ?? null;
   }

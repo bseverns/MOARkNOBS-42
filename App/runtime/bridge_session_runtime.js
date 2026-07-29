@@ -304,6 +304,18 @@ export function createBridgeSessionRuntime({
     }
   }
 
+  function recordStageReceipt(receipt = {}) {
+    bridgeSessionCache = {
+      ...(bridgeSessionCache ?? {}),
+      ...(receipt.sessionRevision === undefined
+        ? {}
+        : { sessionRevision: receipt.sessionRevision }),
+      clientApplyId: receipt.clientApplyId ?? null,
+      stagedRevision: receipt.stagedRevision ?? null,
+      stagedDigest: receipt.stagedDigest ?? null
+    };
+  }
+
   function closeEvents() {
     eventsWanted = false;
     if (eventReconnectTimer) clearTimeout(eventReconnectTimer);
@@ -326,6 +338,7 @@ export function createBridgeSessionRuntime({
 
   return {
     ensureClient,
+    recordStageReceipt,
     refreshSessionSnapshot,
     applyAuthoritativeSession: (session) => applySessionSnapshot(session, { emitConnectedConfig: false }),
     flushStageSync,

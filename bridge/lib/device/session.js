@@ -157,6 +157,9 @@ function createDeviceSession({
     deviceAuthority: 'verified',
     draftState: 'clean',
     sessionRevision: 0,
+    clientApplyId: null,
+    stagedRevision: null,
+    stagedDigest: null,
     lastApplyResult: null,
     powerSafety: extractPowerSafety(null),
     hardwareHealth: extractHardwareHealth(null),
@@ -208,9 +211,16 @@ function createDeviceSession({
     if (uncertainReadbackAttempts >= MAX_UNCERTAIN_READBACK_RETRIES) {
       state.handshakeState = 'unresolved';
       state.lastError = 'Apply outcome unresolved after readback retries; reconnect or retry device readback.';
-      setApplyResult({ status: 'unresolved', ...uncertainApply, at: new Date().toISOString() });
+      const receipt = {
+        ...applyReceiptFields(uncertainApply),
+        reason: uncertainApply.reason,
+      };
+      setApplyResult({ status: 'unresolved', ...receipt, at: new Date().toISOString() });
       emitState();
-      emitStructured('device.apply.unresolved', { ...uncertainApply, attempts: uncertainReadbackAttempts });
+      emitStructured('device.apply.unresolved', {
+        ...receipt,
+        attempts: uncertainReadbackAttempts,
+      });
       return;
     }
     uncertainReadbackTimer = setTimeout(() => {
@@ -340,6 +350,16 @@ function createDeviceSession({
     if (authority) state.deviceAuthority = authority;
   }
 
+  function applyReceiptFields(transaction = {}) {
+    return {
+      checksum: transaction.checksum ?? null,
+      seq: transaction.seq ?? null,
+      clientApplyId: transaction.clientApplyId ?? null,
+      stagedRevision: transaction.stagedRevision ?? null,
+      stagedDigest: transaction.stagedDigest ?? null,
+    };
+  }
+
   function syncDraftState() {
     state.draftState = state.dirty ? 'dirty' : 'clean';
   }
@@ -355,6 +375,9 @@ function createDeviceSession({
       deviceAuthority: state.deviceAuthority,
       draftState: state.draftState,
       lastApplyResult: state.lastApplyResult,
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
     };
     // Consumers that understand revisions receive one atomic staging truth.
     // The individual events remain for older App/Bridge consumers.
@@ -488,6 +511,9 @@ function createDeviceSession({
     state.deviceAuthority = 'verified';
     state.draftState = 'clean';
     state.lastApplyResult = null;
+    state.clientApplyId = null;
+    state.stagedRevision = null;
+    state.stagedDigest = null;
     state.lastError = null;
     configRequestCommand = 'GET_CONFIG';
     configRequested = false;
@@ -517,14 +543,26 @@ function createDeviceSession({
   function markApplyUncertain(reason, pending, error, { attemptReadback = true } = {}) {
     if (!pending) return;
     if (!applyWriter.reject(pending, error)) return;
-    uncertainApply = { checksum: pending.checksum, seq: pending.seq, reason };
+    uncertainApply = {
+      ...applyReceiptFields(pending),
+      reason,
+      stagedConfig: clone(pending.stagedConfig),
+    };
     uncertainReadbackAttempts = 0;
     state.ready = false;
     state.handshakeState = 'resynchronizing';
     state.lastError = `Apply outcome uncertain: ${reason}; reading device state`;
-    setApplyResult({ status: 'uncertain', reason, checksum: pending.checksum, seq: pending.seq, at: new Date().toISOString() });
+    setApplyResult({
+      status: 'uncertain',
+      reason,
+      ...applyReceiptFields(pending),
+      at: new Date().toISOString(),
+    });
     emitState();
-    emitStructured('device.apply.uncertain', { reason, checksum: pending.checksum, seq: pending.seq });
+    emitStructured('device.apply.uncertain', {
+      reason,
+      ...applyReceiptFields(pending),
+    });
     if (attemptReadback && state.connected) requestUncertainReadback();
     if (attemptReadback) scheduleUncertainReadbackRetry();
   }
@@ -582,14 +620,15 @@ function createDeviceSession({
     state.stagedConfig = clone(verifiedConfig);
     state.dirty = false;
     setApplyResult({
-      status: 'ack', checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
+      status: 'ack', ...applyReceiptFields(pending), appliedChecksum: pending.appliedChecksum ?? null,
       storageGeneration: pending.storageGeneration ?? null, seq: pending.seq, at: appliedAt,
     });
     applyWriter.complete(pending, { applied: true, checksum: pending.checksum, appliedChecksum: pending.appliedChecksum ?? null,
-      storageGeneration: pending.storageGeneration ?? null, seq: pending.seq });
+      storageGeneration: pending.storageGeneration ?? null, ...applyReceiptFields(pending) });
     updateReadyState();
     emitState(); emitConfigState();
     emitStructured('device.apply.ack', {
+      ...applyReceiptFields(pending),
       checksum: pending.checksum, applied_checksum: pending.appliedChecksum ?? null,
       storage_generation: pending.storageGeneration ?? null, seq: pending.seq, appliedAt,
     });
@@ -708,18 +747,16 @@ function createDeviceSession({
             'Committed device configuration differs from the staged configuration', null, 409);
           applyWriter.reject(pending, error);
           state.liveConfig = clone(normalized);
-          state.stagedConfig = clone(normalized);
-          state.dirty = false;
+          state.stagedConfig = clone(pending.stagedConfig);
+          state.dirty = true;
           setApplyResult({
             status: 'verified_device_different',
-            checksum: pending.checksum,
-            seq: pending.seq,
+            ...applyReceiptFields(pending),
             at: new Date().toISOString(),
           });
           emitState(); emitConfigState();
           emitStructured('device.apply.device_different', {
-            checksum: pending.checksum,
-            seq: pending.seq,
+            ...applyReceiptFields(pending),
             lastApplyResult: state.lastApplyResult,
           });
           return;
@@ -727,16 +764,37 @@ function createDeviceSession({
         completePendingApply(pending, normalized);
         return;
       }
-      replaceLiveAndStaged(normalized);
       if (uncertainApply) {
         clearUncertainReadbackTimer();
         const resolved = uncertainApply;
         uncertainApply = null;
         state.lastError = null;
-        setApplyResult({ status: 'resynchronized', ...resolved, at: new Date().toISOString() });
+        const candidateMatchesReadback =
+          JSON.stringify(normalized) === JSON.stringify(resolved.stagedConfig);
+        state.liveConfig = clone(normalized);
+        state.stagedConfig = clone(candidateMatchesReadback ? normalized : resolved.stagedConfig);
+        state.dirty = !candidateMatchesReadback;
+        const receipt = {
+          ...applyReceiptFields(resolved),
+          reason: resolved.reason,
+        };
+        setApplyResult({
+          status: candidateMatchesReadback ? 'resynchronized' : 'verified_device_different',
+          ...receipt,
+          at: new Date().toISOString(),
+        });
         updateReadyState();
+        state.handshakeState = 'ready';
         emitState();
-        emitStructured('device.apply.resynchronized', resolved);
+        emitConfigState();
+        emitStructured(
+          candidateMatchesReadback
+            ? 'device.apply.resynchronized'
+            : 'device.apply.device_different',
+          receipt,
+        );
+      } else {
+        replaceLiveAndStaged(normalized);
       }
     }
 
@@ -804,6 +862,7 @@ function createDeviceSession({
       state.dirty = false;
       setApplyResult({
         status: 'ack',
+        ...applyReceiptFields(applyPending),
         checksum: msg.checksum,
         appliedChecksum: msg.applied_checksum ?? null,
         storageGeneration: msg.storage_generation ?? null,
@@ -815,6 +874,7 @@ function createDeviceSession({
       emitState();
       emitConfigState();
       emitStructured('device.apply.ack', {
+        ...applyReceiptFields(pending),
         checksum: msg.checksum,
         applied_checksum: msg.applied_checksum ?? null,
         storage_generation: msg.storage_generation ?? null,
@@ -823,6 +883,7 @@ function createDeviceSession({
       });
       applyWriter.complete(pending, {
         applied: true,
+        ...applyReceiptFields(pending),
         checksum: msg.checksum,
         appliedChecksum: msg.applied_checksum ?? null,
         storageGeneration: msg.storage_generation ?? null,
@@ -854,7 +915,12 @@ function createDeviceSession({
     }
   }
 
-  async function stageConfig(nextConfig, { expectedSessionRevision } = {}) {
+  async function stageConfig(nextConfig, {
+    expectedSessionRevision,
+    clientApplyId = null,
+    stagedRevision = null,
+    stagedDigest = null,
+  } = {}) {
     await ensureAuthority();
     requireSessionRevision(expectedSessionRevision);
     if (applyPending || uncertainApply) {
@@ -889,7 +955,23 @@ function createDeviceSession({
         422,
       );
     }
+    const computedDigest = crypto
+      .createHash('sha256')
+      .update(JSON.stringify(normalized))
+      .digest('hex');
+    if (stagedDigest != null && stagedDigest !== computedDigest) {
+      throw createSessionError(
+        'staged_digest_mismatch',
+        'Staged configuration digest did not match the normalized payload.',
+        { stagedDigest, computedDigest },
+        409,
+      );
+    }
     state.stagedConfig = clone(normalized);
+    state.clientApplyId = clientApplyId;
+    state.stagedRevision = stagedRevision;
+    state.stagedDigest = computedDigest;
+    state.lastApplyResult = null;
     state.dirty =
       JSON.stringify(state.liveConfig ?? null) !==
       JSON.stringify(state.stagedConfig ?? null);
@@ -899,6 +981,9 @@ function createDeviceSession({
       staged: clone(state.stagedConfig),
       dirty: state.dirty,
       sessionRevision: state.sessionRevision,
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
     };
   }
 
@@ -925,7 +1010,10 @@ function createDeviceSession({
   async function applyStagedConfig({
     timeoutMs = APPLY_TIMEOUT_MS,
     writeTimeoutMs = APPLY_WRITE_TIMEOUT_MS,
-    expectedSessionRevision
+    expectedSessionRevision,
+    clientApplyId = null,
+    stagedRevision = null,
+    stagedDigest = null,
   } = {}) {
     await ensureAuthority();
     requireSessionRevision(expectedSessionRevision);
@@ -970,6 +1058,29 @@ function createDeviceSession({
         'apply_in_progress',
         'A staged apply is already in progress',
         { checksum: applyPending.checksum, seq: applyPending.seq },
+        409,
+      );
+    }
+    const suppliedIdentity = clientApplyId != null || stagedRevision != null || stagedDigest != null;
+    if (
+      suppliedIdentity &&
+      (
+        clientApplyId !== state.clientApplyId ||
+        stagedRevision !== state.stagedRevision ||
+        stagedDigest !== state.stagedDigest
+      )
+    ) {
+      throw createSessionError(
+        'staged_apply_identity_mismatch',
+        'Apply request does not identify the currently staged configuration.',
+        {
+          expected: {
+            clientApplyId: state.clientApplyId,
+            stagedRevision: state.stagedRevision,
+            stagedDigest: state.stagedDigest,
+          },
+          received: { clientApplyId, stagedRevision, stagedDigest },
+        },
         409,
       );
     }
@@ -1029,6 +1140,9 @@ function createDeviceSession({
       status: 'pending',
       checksum,
       seq,
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
       at: new Date().toISOString(),
     });
     emitState();
@@ -1037,6 +1151,9 @@ function createDeviceSession({
       checksum,
       seq,
       stagedConfig: clone(state.stagedConfig),
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
       lines,
       timeoutMs,
       writeTimeoutMs,

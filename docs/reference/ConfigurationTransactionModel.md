@@ -46,6 +46,11 @@ stateDiagram-v2
 13. An unsent browser draft survives structured-Bridge disconnect/reconnect and is reconciled only after remote live truth has been adopted.
 14. Simulator RPC support is declared as an explicit mapping to firmware native commands and is checked against the firmware dispatch and scene handlers in hosted contract checks.
 15. The Bridge keeps serial-write lifecycle ownership in a dedicated Apply transaction writer; device-session code owns authoritative state transitions, readback, and events.
+16. An uncertain Bridge transaction retains the immutable transmitted candidate. Authoritative readback equal to that candidate becomes `resynchronized`; different readback becomes `verified-device-different`, with device truth live and the attempted candidate still staged and dirty.
+17. Structured stage and Apply requests bind a browser attempt with `clientApplyId`, `stagedRevision`, and `stagedDigest`. Receipts and session snapshots repeat that identity. A refreshed receipt may resolve a failed HTTP request only when all three fields match the captured candidate; an older or uncorrelated receipt leaves the current attempt uncertain.
+18. Writer completion is terminal. A serial promise that rejects after ACK completion cannot abort the lane, reject the completed transaction, or move verified authority back to uncertainty.
+19. Device patch reconciliation may update live and staged documents while Apply is unresolved, but it must preserve `applying`, `uncertain`, or `resynchronizing` authority.
+20. If Apply verifies its captured candidate while newer edits remain staged, the UI keeps the diff visible and reports that the captured configuration applied; it does not claim the whole editor is synced.
 
 ## What “rollback” means
 

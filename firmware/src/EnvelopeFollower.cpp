@@ -7,6 +7,7 @@
 #include "EnvelopeFollower.h"
 #include "BiquadFilter.h"
 #include "ConfigManager.h"
+#include "EfFilterControl.h"
 #include "Globals.h"
 #include "Hardware/IO.h"
 #include "PerlinNoise.h"
@@ -22,6 +23,15 @@
 Constructor
 */
 namespace {
+constexpr float kFollowerControlRateHz =
+    efControlRateHz(static_cast<float>(EF_FOLLOWER_SCHEDULER_PERIOD_MS),
+                    static_cast<float>(EF_FOLLOWERS_PER_PASS),
+                    static_cast<float>(NUM_ENVELOPES));
+
+float followerCutoffHz(float controlValue) {
+    return efControlToCutoffHz(controlValue, kFollowerControlRateHz);
+}
+
 // Normalize caller-provided envelope identifiers into actual analog pin numbers.
 int resolveEnvelopeInput(int candidate) {
     if (candidate < 0) {
@@ -93,8 +103,10 @@ EnvelopeFollower::EnvelopeFollower(int pin, PotentiometerManager *pm, uint8_t id
       isActive(false), filterType(LINEAR), mode(SEF), argMethod(PLUS),
       envelopeA(resolveEnvelopeInput(0)), envelopeB(resolveEnvelopeInput(1)), vref(g_vref),
       potManager(pm) {
-    // default low-pass at 1kHz
-    filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
+    // `shapingFreq` is a legacy response-control scale, not a physical Hz
+    // cutoff. Translate it onto the actual one-follower-per-2ms cadence.
+    filter.configure(BiquadFilter::LOWPASS, followerCutoffHz(1000.0f),
+                     kFollowerControlRateHz, 0.707);
     efSettings.mode = efMode;
 }
 
@@ -108,13 +120,16 @@ void EnvelopeFollower::configureFilter(float frequency, float q) {
 
     switch (filterType) {
     case LOWPASS:
-        filter.configure(BiquadFilter::LOWPASS, frequency, 44100, q);
+        filter.configure(BiquadFilter::LOWPASS, followerCutoffHz(frequency),
+                         kFollowerControlRateHz, q);
         break;
     case HIGHPASS:
-        filter.configure(BiquadFilter::HIGHPASS, frequency, 44100, q);
+        filter.configure(BiquadFilter::HIGHPASS, followerCutoffHz(frequency),
+                         kFollowerControlRateHz, q);
         break;
     case BANDPASS:
-        filter.configure(BiquadFilter::BANDPASS, frequency, 44100, q);
+        filter.configure(BiquadFilter::BANDPASS, followerCutoffHz(frequency),
+                         kFollowerControlRateHz, q);
         break;
     default:
         // parameters stored directly for other modes
@@ -280,13 +295,16 @@ void EnvelopeFollower::setFilterType(FilterType type) {
     // Reapply default config based on new filter type
     switch (type) {
     case LOWPASS:
-        filter.configure(BiquadFilter::LOWPASS, 1000, 44100, 0.707);
+        filter.configure(BiquadFilter::LOWPASS, followerCutoffHz(1000.0f),
+                         kFollowerControlRateHz, 0.707);
         break;
     case HIGHPASS:
-        filter.configure(BiquadFilter::HIGHPASS, 1000, 44100, 0.707);
+        filter.configure(BiquadFilter::HIGHPASS, followerCutoffHz(1000.0f),
+                         kFollowerControlRateHz, 0.707);
         break;
     case BANDPASS:
-        filter.configure(BiquadFilter::BANDPASS, 1000, 44100, 0.707);
+        filter.configure(BiquadFilter::BANDPASS, followerCutoffHz(1000.0f),
+                         kFollowerControlRateHz, 0.707);
         break;
     default:
         break;

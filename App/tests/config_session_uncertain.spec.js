@@ -181,6 +181,92 @@ test('explicit Bridge authority is preferred over a stale apply receipt projecti
   expect(state.transactionState).toBe('uncertain');
 });
 
+test('a device patch cannot erase unresolved Apply authority', () => {
+  const events = [];
+  const session = createSession(async () => ({}), events);
+  session.syncFromDevice(baseConfig());
+  session.syncFromSession({
+    liveConfig: baseConfig(),
+    stagedConfig: { ...baseConfig(), filter: { freq: 321 } },
+    dirty: true,
+    deviceAuthority: 'uncertain',
+    draftState: 'dirty',
+    lastApplyResult: { status: 'uncertain', seq: 17 }
+  });
+
+  session.reconcileDevicePatch(
+    { ...baseConfig(), filter: { freq: 200 } },
+    { ...baseConfig(), filter: { freq: 654 } }
+  );
+
+  expect(session.getState().deviceAuthority).toBe('uncertain');
+  expect(session.getState().transactionState).toBe('uncertain');
+  expect(session.getState().draftState).toBe('dirty');
+  expect(session.getState().live.filter.freq).toBe(200);
+  expect(session.getState().staged.filter.freq).toBe(654);
+});
+
+test('an old Bridge success receipt cannot resolve a newer failed Apply', async () => {
+  const events = [];
+  const oldReceipt = {
+    status: 'ack',
+    clientApplyId: 'old-attempt',
+    stagedRevision: 1,
+    stagedDigest: 'old-digest'
+  };
+  const session = createSession(async () => ({}), events, {
+    isBridgeSessionActive: () => true,
+    applyBridgeConfig: async () => {
+      throw new Error('Bridge request failed');
+    },
+    refreshBridgeSession: async () => ({
+      liveConfig: baseConfig(),
+      stagedConfig: baseConfig(),
+      dirty: false,
+      deviceAuthority: 'verified',
+      draftState: 'clean',
+      lastApplyResult: oldReceipt
+    })
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toThrow(/Bridge request failed/);
+  expect(session.getState().deviceAuthority).toBe('uncertain');
+  expect(session.getState().draftState).toBe('dirty');
+  expect(session.getState().staged.filter.freq).toBe(321);
+});
+
+test('a correlated refreshed Bridge receipt can resolve its failed HTTP request', async () => {
+  const events = [];
+  let capturedIdentity;
+  const session = createSession(async () => ({}), events, {
+    isBridgeSessionActive: () => true,
+    applyBridgeConfig: async ({ identity }) => {
+      capturedIdentity = identity;
+      throw new Error('Bridge response was lost');
+    },
+    refreshBridgeSession: async () => ({
+      liveConfig: { ...baseConfig(), filter: { freq: 321 } },
+      stagedConfig: { ...baseConfig(), filter: { freq: 321 } },
+      dirty: false,
+      deviceAuthority: 'verified',
+      draftState: 'clean',
+      lastApplyResult: {
+        status: 'ack',
+        ...capturedIdentity
+      }
+    })
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toThrow(/response was lost/);
+  expect(session.getState().deviceAuthority).toBe('verified');
+  expect(session.getState().dirty).toBe(false);
+  expect(session.getState().live.filter.freq).toBe(321);
+});
+
 for (const ordering of ['event-before-rejection', 'rejection-before-event']) {
   test(`Bridge uncertainty survives ${ordering}`, async () => {
     const events = [];

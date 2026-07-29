@@ -77,6 +77,36 @@ async function run() {
     );
   }
 
+  {
+    let pending = null;
+    let rejectFinalWrite;
+    let uncertainCalls = 0;
+    let abortCalls = 0;
+    const writer = createApplyTransactionWriter({
+      writeApplyLine: () => new Promise((_, reject) => { rejectFinalWrite = reject; }),
+      abortBulkFrame: async () => { abortCalls += 1; },
+      createError,
+      onPendingStarted: (next) => { pending = next; },
+      onUncertain: () => { uncertainCalls += 1; },
+    });
+    const apply = writer.start({
+      checksum: 'checksum',
+      seq: 3,
+      stagedConfig: {},
+      lines: ['SET_ALL final'],
+      timeoutMs: 100,
+      writeTimeoutMs: 1000,
+    });
+    await wait(1);
+    assert.equal(writer.complete(pending, { applied: true }), true);
+    assert.deepEqual(await apply, { applied: true });
+    assert.equal(writer.reject(pending, new Error('late reject')), false);
+    rejectFinalWrite(new Error('late serial failure'));
+    await wait(20);
+    assert.equal(uncertainCalls, 0, 'a completed writer cannot be reclassified as uncertain');
+    assert.equal(abortCalls, 0, 'a late failure from a completed writer cannot abort another owner');
+  }
+
   console.log('apply transaction writer owns completion and permanent cancellation');
 }
 

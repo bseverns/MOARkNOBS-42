@@ -10,6 +10,7 @@
 #include "ConfigManager.h"
 #include "DiagnosticRecord.h"
 #include "DisplayManager.h"
+#include "EfFilterControl.h"
 #include "LEDManager.h"
 #include "MIDIHandler.h"
 #include "PotentiometerManager.h"
@@ -566,7 +567,7 @@ void processMIDI() {
 void processEnvelopeFollowers() {
     // Fast follower pass runs in the high-tier scheduler; downstream MIDI mapping happens in
     // `processEnvelopes()` on the mid tier.
-    constexpr size_t kFollowersPerPass = 1;
+    constexpr size_t kFollowersPerPass = EF_FOLLOWERS_PER_PASS;
     static size_t nextFollowerIndex = 0;
     float gainTrim = 1.0f + g_lfoEfGainTrim;
     gainTrim = constrain(gainTrim, 0.0f, 2.0f);
@@ -689,6 +690,11 @@ void processEnvelopes() {
             // Per-slot EfVoice applies filter/ARG semantics before we fold into base pot value.
             EfVoice &voice = efVoices[potIndex];
             voice.assignFollower(envelopeIndex);
+            const float envelopeIntervalMs =
+                hwConfig.envelopeTaskInterval > 0
+                    ? static_cast<float>(hwConfig.envelopeTaskInterval)
+                    : 1.0f;
+            voice.setControlRateHz(1000.0f / envelopeIntervalMs);
             voice.syncSettings(slot.efSettings);
             voice.render(rawFollowerLevels[envelopeIndex]);
 

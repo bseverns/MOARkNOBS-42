@@ -275,7 +275,7 @@ export function createSlotEditorPanel({
         )
       );
       efFieldset.appendChild(
-        makeNumber('Tracking frequency (Hz)', ef.frequency ?? 1000, 0, 20000, 1, (value) =>
+        makeNumber('Tracking frequency control (legacy scale)', ef.frequency ?? 1000, 20, 5000, 1, (value) =>
           stageSlotEnvelopeField(slotState.selected, 'frequency', value)
         )
       );
@@ -659,7 +659,7 @@ export function createSlotEditorPanel({
     const freq = formatNumberField(ef.frequency, 1);
     const q = formatNumberField(ef.q, 2);
     if (freq === '—' && q === '—') return '—';
-    const freqLabel = freq === '—' ? '—' : `${freq} Hz`;
+    const freqLabel = freq === '—' ? '—' : `${freq} shaping`;
     return `${freqLabel} • Q ${q}`;
   }
 

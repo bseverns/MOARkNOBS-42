@@ -564,8 +564,11 @@ function createBrowserBridgeServer({
           : body;
         const result =
           typeof service.stageDeviceConfig === 'function'
-            ? await service.stageDeviceConfig(payload, {
+              ? await service.stageDeviceConfig(payload, {
                 expectedSessionRevision: body?.expectedSessionRevision,
+                clientApplyId: body?.clientApplyId,
+                stagedRevision: body?.stagedRevision,
+                stagedDigest: body?.stagedDigest,
               })
             : null;
         sendJson(res, 200, {

@@ -32,7 +32,7 @@ Perfect when you want a clean start, but don't expect continuity across reconfig
 #include "BiquadFilter.h"
 
 BiquadFilter filt;
-filt.configure(BiquadFilter::LOWPASS, 1000, 44100);
+filt.configure(BiquadFilter::LOWPASS, 10, 200);
 float out = filt.process(in);
 ```
 

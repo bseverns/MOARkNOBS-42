@@ -16,6 +16,12 @@ This circuit listens to a wiggly signal and turns it into a smooth â€œhow muchâ€
 
 EnvelopeFollower reads an analog pin, smooths the chaos with BiquadFilter, and tosses values to MIDIHandler, LEDManager, or even Arpeggiator for note voodoo.
 
+The persisted `frequency` field is a legacy filter-shaping scale, not a physical
+cutoff in hertz. Firmware translates that scale onto the real control cadence:
+one of six followers is sampled every 2 ms, so each follower runs at about
+83.3 samples per second. This keeps existing presets sounding the same while
+avoiding fictional 44.1 kHz timing in the coefficient configuration.
+
 ```
 [Audio/CV] --> EnvelopeFollower --> MIDI/LED/Arp
 ```

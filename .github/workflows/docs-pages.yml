@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -53,10 +53,31 @@ jobs:
           pip install mkdocs-material
       - name: Build docs
         run: mkdocs build --strict
+      - name: Resolve contract ledger base
+        id: contract-base
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_BASE_SHA" ]]; then
+            base="$PR_BASE_SHA"
+          elif [[ "$EVENT_NAME" == "push" && -n "$PUSH_BEFORE_SHA" && ! "$PUSH_BEFORE_SHA" =~ ^0+$ ]]; then
+            base="$PUSH_BEFORE_SHA"
+          else
+            base="$(git merge-base HEAD "origin/${DEFAULT_BRANCH}")"
+            if [[ "$base" == "$(git rev-parse HEAD)" ]]; then
+              base="$(git rev-parse HEAD^)"
+            fi
+          fi
+          echo "base=$base" >> "$GITHUB_OUTPUT"
       - name: Run documentation guards
         run: |
           python tools/doctor.py --docs
-          python tools/check_contract_ledger.py --root . --base HEAD^
+          python tools/check_contract_ledger.py --root . --base "${{ steps.contract-base.outputs.base }}"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

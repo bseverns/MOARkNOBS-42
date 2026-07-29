@@ -48,39 +48,49 @@ function createApplyTransactionWriter({
 
   let active = null;
 
-  function clear(pending, { cancelled = false } = {}) {
-    if (!pending) return false;
-    if (cancelled) pending.cancelled = true;
+  function clear(pending, { terminalState = 'cancelled' } = {}) {
+    if (!pending || active !== pending || pending.state !== 'active') return false;
+    pending.state = terminalState;
     clearTimeout(pending.timer);
-    if (active === pending) {
-      active = null;
-      onPendingCleared(pending);
-    }
+    active = null;
+    onPendingCleared(pending);
     return true;
   }
 
   function reject(pending, error) {
-    if (!clear(pending, { cancelled: true })) return false;
+    if (!clear(pending, { terminalState: 'cancelled' })) return false;
     pending.reject(error);
     return true;
   }
 
   function complete(pending, result) {
-    if (!pending || active !== pending) return false;
-    clear(pending);
+    if (!clear(pending, { terminalState: 'completed' })) return false;
     pending.resolve(result);
     return true;
   }
 
-  function start({ checksum, seq, stagedConfig, lines, timeoutMs, writeTimeoutMs = APPLY_WRITE_TIMEOUT_MS }) {
+  function start({
+    checksum,
+    seq,
+    stagedConfig,
+    clientApplyId = null,
+    stagedRevision = null,
+    stagedDigest = null,
+    lines,
+    timeoutMs,
+    writeTimeoutMs = APPLY_WRITE_TIMEOUT_MS,
+  }) {
     if (active) throw new Error('Apply transaction writer is already active');
     return new Promise((resolve, rejectPromise) => {
       const pending = {
         checksum,
         seq,
         stagedConfig,
+        clientApplyId,
+        stagedRevision,
+        stagedDigest,
         timer: null,
-        cancelled: false,
+        state: 'active',
         resolve,
         reject: rejectPromise,
       };
@@ -108,12 +118,12 @@ function createApplyTransactionWriter({
               writeTimeoutMs,
               `Timed out writing Apply frame after ${writeTimeoutMs}ms`,
             );
-            if (pending.cancelled) {
+            if (pending.state !== 'active') {
               throw new Error('Apply serial ownership ended before the payload write completed');
             }
             if (index + 1 < lines.length) {
               await delay(linePaceMs);
-              if (pending.cancelled) {
+              if (pending.state !== 'active') {
                 throw new Error('Apply serial ownership ended before the payload write completed');
               }
             }
@@ -121,7 +131,7 @@ function createApplyTransactionWriter({
         } catch (error) {
           // A cancelled write may settle long after readback releases public
           // exclusivity. It must not abort or write into the next transaction.
-          if (pending.cancelled) return;
+          if (pending.state !== 'active') return;
           try {
             await abortBulkFrame();
           } catch {

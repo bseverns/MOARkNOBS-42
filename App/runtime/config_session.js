@@ -214,6 +214,7 @@ export function createConfigSession({
   refreshBridgeSession = null,
   rollbackBridgeConfig = null
 } = {}) {
+  let clientApplyRevision = 0;
   let liveConfig = null;
   let stagedConfig = null;
   let dirty = false;
@@ -492,10 +493,23 @@ export function createConfigSession({
     appliedCandidate = clone(stagedConfig);
     nextDraft = null;
     if (isBridgeSessionActive()) {
+      clientApplyRevision += 1;
       setTransactionState('applying');
+      const applyIdentity = {
+        clientApplyId:
+          globalThis.crypto?.randomUUID?.() ??
+          `app-${Date.now()}-${clientApplyRevision}`,
+        stagedRevision: clientApplyRevision,
+        stagedDigest: await digest(JSON.stringify(appliedCandidate))
+      };
       try {
         const response =
-          typeof applyBridgeConfig === 'function' ? await applyBridgeConfig() : { applied: false };
+          typeof applyBridgeConfig === 'function'
+            ? await applyBridgeConfig({
+                candidate: clone(appliedCandidate),
+                identity: applyIdentity
+              })
+            : { applied: false };
         const checksum = response?.checksum ?? response?.result?.checksum ?? null;
         if (response?.applied === false || response?.result?.applied === false) {
           abandonApply();
@@ -521,12 +535,29 @@ export function createConfigSession({
         if (typeof refreshBridgeSession === 'function') {
           try {
             authoritativeSession = await refreshBridgeSession();
-            if (authoritativeSession) syncFromSession(authoritativeSession);
           } catch (refreshError) {
             emit('bridge-session-refresh-failed', { error: refreshError });
           }
         }
         const bridgeStatus = authoritativeSession?.lastApplyResult?.status;
+        const receipt = authoritativeSession?.lastApplyResult;
+        const receiptMatchesAttempt =
+          receipt?.clientApplyId === applyIdentity.clientApplyId &&
+          receipt?.stagedRevision === applyIdentity.stagedRevision &&
+          receipt?.stagedDigest === applyIdentity.stagedDigest;
+        if (!receiptMatchesAttempt) {
+          // A refreshed session may contain a perfectly valid receipt for an
+          // older browser attempt. It says nothing about this failed request.
+          setTransactionState('uncertain', {
+            source: 'bridge',
+            reason: 'uncorrelated-bridge-failure',
+            applyIdentity,
+            lastApplyResult: receipt ?? null
+          });
+          broadcastConfig({ persist: false });
+          throw err;
+        }
+        syncFromSession(authoritativeSession);
         if (['uncertain', 'unresolved', 'pending'].includes(bridgeStatus)) {
           setTransactionState(
             bridgeStatus === 'pending' ? 'resynchronizing' : 'uncertain',
@@ -740,10 +771,19 @@ export function createConfigSession({
   }
 
   function reconcileDevicePatch(nextLive, nextStaged) {
+    const unresolvedAuthority = isDeviceAuthorityUnresolved()
+      ? deviceAuthority
+      : null;
     liveConfig = clone(nextLive);
     stagedConfig = clone(nextStaged);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     setDraftState(dirty ? 'dirty' : 'clean');
+    if (unresolvedAuthority) {
+      setBridgeAuthority(unresolvedAuthority, draftState, {
+        source: 'device-patch'
+      });
+      return;
+    }
     deviceAuthority = 'verified';
     setTransactionState(dirty ? 'dirty' : 'verified');
   }
