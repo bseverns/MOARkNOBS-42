@@ -18,3 +18,8 @@ Processing 4. It captures `ef_latency` records into a timestamped CSV.
 translation and MIDI enqueue. It is not a claim about analog-front-end settling
 or physical host MIDI arrival; measure those with an external trigger and a
 scope or logic analyzer.
+
+To summarize a captured run, open
+[`EfStepResponseAnalyzer.pde`](../../../tools/ef_step_response_analyzer/EfStepResponseAnalyzer.pde)
+in Processing 4. It infers monotonic MIDI-output rises and releases by EF/slot
+and exports observed 10–90% duration, event cadence, and device latency.
