@@ -133,7 +133,31 @@ Payload:
 {
   "checksum": "sha256...",
   "seq": 7,
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256...",
   "appliedAt": "2026-05-24T12:00:01.000Z"
+}
+```
+
+### `device.apply.pending`
+
+Emitted when the dedicated serial Apply writer takes ownership, immediately
+before it begins writing the captured candidate. This is the boundary between
+App `preflighting` and `applying`.
+
+Payload:
+
+```json
+{
+  "checksum": "sha256...",
+  "seq": 7,
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256...",
+  "lastApplyResult": {
+    "status": "pending"
+  }
 }
 ```
 
@@ -143,10 +167,20 @@ Payload:
 
 ```json
 {
-  "reason": "checksum_mismatch",
-  "lastApplyResult": {}
+  "reason": "device_error",
+  "lastApplyResult": {
+    "status": "rollback",
+    "reason": "device_error",
+    "clientApplyId": "browser-attempt-id",
+    "stagedRevision": 12,
+    "stagedDigest": "sha256...",
+    "deviceError": {}
+  }
 }
 ```
+
+Receipt corruption such as `checksum_mismatch` does not prove rollback. It
+enters `uncertain` and is resolved by authoritative readback.
 
 ### `bridge.alert`
 
@@ -191,6 +225,12 @@ Response:
     "liveConfig": {},
     "stagedConfig": {},
     "dirty": false,
+    "deviceAuthority": "verified",
+    "draftState": "clean",
+    "clientApplyId": "browser-attempt-id",
+    "stagedRevision": 12,
+    "stagedDigest": "sha256...",
+    "sessionRevision": 34,
     "lastApplyResult": {},
     "powerSafety": {},
     "hardwareHealth": {},
@@ -210,7 +250,11 @@ Request body:
 
 ```json
 {
-  "config": {}
+  "config": {},
+  "expectedSessionRevision": 33,
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256..."
 }
 ```
 
@@ -220,7 +264,11 @@ Success response:
 {
   "result": {
     "staged": {},
-    "dirty": true
+    "dirty": true,
+    "sessionRevision": 34,
+    "clientApplyId": "browser-attempt-id",
+    "stagedRevision": 12,
+    "stagedDigest": "sha256..."
   },
   "state": {}
 }
@@ -233,6 +281,7 @@ Validation failure response:
   "error": {
     "code": "schema_validation_failed",
     "message": "Staged config failed schema validation",
+    "failureClass": "preflight-rejected",
     "details": {
       "errors": []
     }
@@ -246,7 +295,12 @@ Validation failure response:
 Request body:
 
 ```json
-{}
+{
+  "expectedSessionRevision": 34,
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256..."
+}
 ```
 
 Success response:
@@ -264,6 +318,10 @@ Success response:
 
 Possible error codes:
 
+- `stale_session_revision`
+- `staged_apply_identity_mismatch`
+- `staged_digest_mismatch`
+- `apply_in_progress`
 - `device_not_connected`
 - `device_not_ready`
 - `schema_validation_failed`
@@ -271,6 +329,18 @@ Possible error codes:
 - `apply_checksum_mismatch`
 - `apply_transport_error`
 - `device_<firmware error code>`
+
+Structured stage/apply error bodies include a server-owned `failureClass`:
+
+- `preflight-rejected`: serial Apply transmission did not begin; device
+  authority remains verified and the browser draft may be corrected and retried.
+- `device-rejected-before-commit`: firmware definitively rejected the correlated
+  candidate and kept the previous device configuration.
+- `transmission-unknown`: transmission may have begun, so the result must be
+  treated as uncertain until authoritative readback resolves it.
+
+Clients may infer a class from legacy error codes only when talking to an older
+Bridge that omits `failureClass`.
 
 ### `POST /api/device/rollback`
 

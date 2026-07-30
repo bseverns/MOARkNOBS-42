@@ -48,6 +48,28 @@ const DEFAULT_RAW_WEBSOCKET_MESSAGE_LIMIT_BYTES = MAX_SERIAL_LINE_LEN;
 const DEFAULT_MAX_BROWSER_WEBSOCKET_CLIENTS = 16;
 const WEBSOCKET_CLOSE_MESSAGE_TOO_BIG = 1009;
 const WEBSOCKET_CLOSE_PROTOCOL_ERROR = 1002;
+const APPLY_PREFLIGHT_ERROR_CODES = new Set([
+  'schema_validation_failed',
+  'stale_session_revision',
+  'staged_apply_identity_mismatch',
+  'staged_digest_mismatch',
+  'device_not_ready',
+  'device_not_connected',
+  'device_schema_incompatible',
+  'apply_in_progress',
+  'apply_outcome_unresolved',
+]);
+
+function classifyApplyFailure(err, { stageOnly = false } = {}) {
+  if (err?.failureClass) return err.failureClass;
+  if (stageOnly || APPLY_PREFLIGHT_ERROR_CODES.has(err?.code)) {
+    return 'preflight-rejected';
+  }
+  if (typeof err?.code === 'string' && err.code.startsWith('device_')) {
+    return 'device-rejected-before-commit';
+  }
+  return 'transmission-unknown';
+}
 
 // Parse user-provided port values from the browser console without crashing on junk input.
 function normalizePositiveInt(value, fallback) {
@@ -582,6 +604,7 @@ function createBrowserBridgeServer({
             code: err.code || 'bridge_error',
             message: err.message,
             details: err.details ?? null,
+            failureClass: classifyApplyFailure(err, { stageOnly: true }),
           },
           state: service.getState(),
         });
@@ -607,6 +630,7 @@ function createBrowserBridgeServer({
             code: err.code || 'bridge_error',
             message: err.message,
             details: err.details ?? null,
+            failureClass: classifyApplyFailure(err),
           },
           state: service.getState(),
         });

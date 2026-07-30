@@ -169,6 +169,24 @@ export function createBridgeSessionRuntime({
     }, 120);
   }
 
+  function retryUnacknowledgedStageSync({ active = true } = {}) {
+    if (
+      !active ||
+      stageSyncSuspended ||
+      acknowledgedGeneration >= localDraftGeneration ||
+      bridgeStageSyncTimer
+    ) return;
+    bridgeStageSyncTimer = setTimeout(() => {
+      void flushStageSync({ active: true }).catch((err) => {
+        emit('status', {
+          stage: 'bridge-session',
+          level: 'warn',
+          message: `Bridge stage sync failed: ${err.message || String(err)}`
+        });
+      });
+    }, 0);
+  }
+
   async function openStructuredEvents() {
     const client = ensureClient();
     if (!client) throw new Error('Bridge session unavailable');
@@ -180,6 +198,14 @@ export function createBridgeSessionRuntime({
         if (!message || typeof message !== 'object') return;
         const payload = message.payload ?? {};
         switch (message.event) {
+          case 'device.apply.pending':
+            bridgeSessionCache = {
+              ...(bridgeSessionCache ?? {}),
+              deviceAuthority: 'applying',
+              lastApplyResult: { status: 'pending', ...clone(payload.lastApplyResult ?? payload) }
+            };
+            syncCachedSession();
+            break;
           case 'device.apply.uncertain':
             bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'uncertain', lastApplyResult: { status: 'uncertain', ...clone(payload) } };
             syncCachedSession();
@@ -187,10 +213,12 @@ export function createBridgeSessionRuntime({
           case 'device.apply.resynchronized':
             bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'verified', lastApplyResult: { status: 'resynchronized', ...clone(payload) } };
             syncCachedSession();
+            retryUnacknowledgedStageSync();
             break;
           case 'device.apply.device_different':
             bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'verified-device-different', lastApplyResult: { status: 'verified_device_different', ...clone(payload) } };
             syncCachedSession();
+            retryUnacknowledgedStageSync();
             break;
           case 'device.ready':
             if (payload.manifest && typeof payload.manifest === 'object') {
@@ -313,17 +341,7 @@ export function createBridgeSessionRuntime({
 
   function resumeStageSync({ active = false } = {}) {
     stageSyncSuspended = false;
-    if (!active || acknowledgedGeneration >= localDraftGeneration) return;
-    if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
-    bridgeStageSyncTimer = setTimeout(() => {
-      void flushStageSync({ active: true }).catch((err) => {
-        emit('status', {
-          stage: 'bridge-session',
-          level: 'warn',
-          message: `Bridge stage sync failed: ${err.message || String(err)}`
-        });
-      });
-    }, 0);
+    retryUnacknowledgedStageSync({ active });
   }
 
   function recordStageReceipt(receipt = {}) {

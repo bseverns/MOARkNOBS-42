@@ -10,7 +10,9 @@ This page defines the authoritative meaning of configuration state in the App, B
 stateDiagram-v2
   [*] --> live
   live --> staged: operator edits
-  staged --> applying: Apply transmits bytes
+  staged --> preflighting: capture candidate and verify identity
+  preflighting --> staged: preflight rejected
+  preflighting --> applying: Apply request starts transmission
   staged --> live: discard local draft
   applying --> verified: receipt and readback agree
   applying --> uncertain: timeout, disconnect, malformed receipt
@@ -23,6 +25,8 @@ stateDiagram-v2
 - **live**: the most recently verified device configuration.
 - **staged**: the operator's local candidate. It may differ from live.
 - **applying**: configuration bytes have crossed the transport and a result is pending.
+- **preflighting**: the App has captured an immutable candidate and is completing
+  Bridge revision/identity checks; serial Apply transmission has not begun.
 - **uncertain**: transmission may have committed, but the receipt cannot prove the result.
 - **resynchronizing**: the App or Bridge is reading configuration from the device.
 - **verified**: authoritative device truth is known and agrees with the candidate.
@@ -34,11 +38,11 @@ stateDiagram-v2
 1. Before transmission, the operator may discard a local draft.
 2. After any Apply bytes are transmitted, timeout, disconnect, malformed ACK, or missing integrity fields do **not** prove rollback.
 3. Ambiguous outcomes enter `uncertain` and require authoritative device readback.
-4. Apply and local-draft discard remain disabled while a transaction is `applying`, `uncertain`, or `resynchronizing`.
+4. Apply and local-draft discard remain disabled while a transaction is `preflighting`, `applying`, `uncertain`, or `resynchronizing`.
 5. Profile, scene, macro, live-control, and read failures never discard unrelated staged configuration.
 6. Structured Bridge staging is revisioned. Apply uses the revision acknowledged for the newest local draft.
 7. Firmware/device state wins after readback. A differing readback is reported as `verified-device-different`, not rollback.
-8. Device authority and draft dirtiness are independent. The Bridge session and App expose `deviceAuthority` (`verified`, `applying`, `uncertain`, `resynchronizing`, or `verified-device-different`) and `draftState` (`clean` or `dirty`). `transactionState` remains an App compatibility projection for older UI consumers.
+8. Device authority and draft dirtiness are independent. The Bridge session and App expose `deviceAuthority` (`verified`, `preflighting`, `applying`, `uncertain`, `resynchronizing`, or `verified-device-different`) and `draftState` (`clean` or `dirty`). `transactionState` remains an App compatibility projection for older UI consumers.
 9. Editing during `uncertain` or `resynchronizing` updates a separate next draft and must not change the authority state or clear the unresolved transaction token.
 10. Edits created while Apply is in flight remain a separate next draft; verification never promotes or discards that newer draft.
 11. A structured Bridge rejection is reconciled against the Bridge session's `lastApplyResult`; WebSocket-event and HTTP-response ordering must produce the same authority state.
@@ -49,7 +53,7 @@ stateDiagram-v2
 16. An uncertain Bridge transaction retains the immutable transmitted candidate. Authoritative readback equal to that candidate becomes `resynchronized`; different readback becomes `verified-device-different`, with device truth live and the attempted candidate still staged and dirty.
 17. Structured stage and Apply requests bind a browser attempt with `clientApplyId`, `stagedRevision`, and `stagedDigest`. Receipts and session snapshots repeat that identity. A refreshed receipt may resolve a failed HTTP request only when all three fields match the captured candidate; an older or uncorrelated receipt leaves the current attempt uncertain.
 18. Writer completion is terminal. A serial promise that rejects after ACK completion cannot abort the lane, reject the completed transaction, or move verified authority back to uncertainty.
-19. Device patch reconciliation may update live and staged documents while Apply is unresolved, but it must preserve `applying`, `uncertain`, or `resynchronizing` authority.
+19. Device patch reconciliation may update live and staged documents while Apply is unresolved, but it must preserve `preflighting`, `applying`, `uncertain`, or `resynchronizing` authority.
 20. If Apply verifies its captured candidate while newer edits remain staged, the UI keeps the diff visible and reports that the captured configuration applied; it does not claim the whole editor is synced.
 21. Structured Apply failures are classified as `preflight-rejected`, `transmission-unknown`, or `device-rejected-before-commit`. Only `transmission-unknown` creates new uncertainty.
 22. Preflight rejection proves the current attempt did not enter the serial writer. Device authority remains verified, the local draft stays dirty, and correction/retry remains available.

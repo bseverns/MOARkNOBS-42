@@ -296,6 +296,48 @@ test('a Bridge preflight rejection keeps verified authority and the local draft'
   await expect(session.apply()).rejects.toThrow(/stale staged revision/);
 });
 
+for (const ordering of ['snapshot-before-rejection', 'rejection-before-snapshot']) {
+  test(`a stale-revision preflight rejection preserves candidate A with ${ordering}`, async () => {
+    const events = [];
+    let session;
+    const remoteSnapshotC = {
+      liveConfig: baseConfig(),
+      stagedConfig: { ...baseConfig(), filter: { freq: 777 } },
+      dirty: true,
+      deviceAuthority: 'verified',
+      draftState: 'dirty',
+      sessionRevision: 12
+    };
+    const error = Object.assign(new Error('stale staged revision'), {
+      code: 'stale_session_revision',
+      bridgeFailureClass: 'preflight-rejected'
+    });
+    session = createSession(async () => ({}), events, {
+      isBridgeSessionActive: () => true,
+      applyBridgeConfig: async () => {
+        if (ordering === 'snapshot-before-rejection') {
+          session.syncFromSession(remoteSnapshotC);
+        }
+        throw error;
+      }
+    });
+    session.syncFromDevice(baseConfig());
+    session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+    await expect(session.apply()).rejects.toThrow(/stale staged revision/);
+    if (ordering === 'rejection-before-snapshot') {
+      session.syncFromSession(remoteSnapshotC);
+    }
+
+    const state = session.getState();
+    expect(state.live.filter.freq).toBe(100);
+    expect(state.staged.filter.freq).toBe(321);
+    expect(state.dirty).toBe(true);
+    expect(state.deviceAuthority).toBe('verified');
+    expect(state.draftState).toBe('dirty');
+  });
+}
+
 test('a correlated firmware rejection restores verified truth and retains the candidate', async () => {
   const events = [];
   let capturedIdentity;
@@ -372,13 +414,24 @@ test('Bridge Apply promotes its immutable candidate while retaining an edit made
   });
   const session = createSession(async () => ({}), events, {
     isBridgeSessionActive: () => true,
-    applyBridgeConfig: () => bridgeApply
+    applyBridgeConfig: () => {
+      session.syncFromSession({
+        liveConfig: baseConfig(),
+        stagedConfig: { ...baseConfig(), filter: { freq: 321 } },
+        dirty: true,
+        deviceAuthority: 'applying',
+        draftState: 'dirty',
+        lastApplyResult: { status: 'pending' }
+      });
+      return bridgeApply;
+    }
   });
   session.syncFromDevice(baseConfig());
   session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
 
   const applyPromise = session.apply();
-  expect(session.getState().transactionState).toBe('applying');
+  expect(session.getState().transactionState).toBe('preflighting');
+  await expect.poll(() => session.getState().transactionState).toBe('applying');
   session.stage((draft) => ({ ...draft, filter: { freq: 654 } }));
   resolveApply({
     applied: true,

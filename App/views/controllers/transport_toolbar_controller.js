@@ -680,6 +680,14 @@ export function createTransportToolbarController({
         );
         return;
       }
+      if (runtime.getState().dirty) {
+        setStatus(
+          'warn',
+          'Applied captured configuration',
+          'Newer edits remain staged.'
+        );
+        return;
+      }
       setStatus(
         'ok',
         'Synced',
@@ -688,7 +696,37 @@ export function createTransportToolbarController({
           : 'Device acknowledged the staged edits.'
       );
     } catch (err) {
-      setStatus('err', 'Apply failed', err.message || String(err));
+      const state = runtime.getState();
+      if (err?.bridgeFailureClass === 'preflight-rejected') {
+        setStatus(
+          'warn',
+          'Apply rejected before transmission',
+          'Device authority remains verified; correct the staged draft and retry.'
+        );
+      } else if (err?.bridgeFailureClass === 'device-rejected-before-commit') {
+        setStatus(
+          'err',
+          'Firmware rejected configuration',
+          'The device kept its previous configuration; the rejected draft remains staged.'
+        );
+      } else if (state.deviceAuthority === 'verified-device-different') {
+        setStatus(
+          'warn',
+          'Device differs',
+          'Authoritative readback differs from the captured configuration; your draft remains staged.'
+        );
+      } else if (
+        err?.bridgeFailureClass === 'transmission-unknown' ||
+        ['uncertain', 'resynchronizing'].includes(state.deviceAuthority)
+      ) {
+        setStatus(
+          'warn',
+          'Apply outcome uncertain',
+          'Waiting for authoritative device configuration readback.'
+        );
+      } else {
+        setStatus('err', 'Apply failed', err.message || String(err));
+      }
     }
   }
 

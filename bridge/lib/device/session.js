@@ -182,7 +182,13 @@ function createDeviceSession({
     writeApplyLine,
     abortBulkFrame,
     createError: createSessionError,
-    onPendingStarted: (pending) => { applyPending = pending; },
+    onPendingStarted: (pending) => {
+      applyPending = pending;
+      emitStructured('device.apply.pending', {
+        ...applyReceiptFields(pending),
+        lastApplyResult: clone(state.lastApplyResult),
+      });
+    },
     onPendingCleared: (pending) => {
       if (applyPending === pending) applyPending = null;
     },

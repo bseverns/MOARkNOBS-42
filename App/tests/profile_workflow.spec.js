@@ -10,6 +10,8 @@ function createHarness({
   capabilities = { profileSave: true, profileLoad: true, profileReset: true },
   interactable = true,
   dirty = false,
+  applyResult = { applied: true },
+  dirtyAfterApply = false,
   rpcResponses = []
 } = {}) {
   const calls = [];
@@ -20,8 +22,8 @@ function createHarness({
     getState: () => ({ dirty }),
     apply: async () => {
       calls.push({ type: 'apply' });
-      dirty = false;
-      return { applied: true };
+      dirty = dirtyAfterApply;
+      return applyResult;
     },
     sendRpc: async (payload, options) => {
       calls.push({ type: 'sendRpc', payload, options });
@@ -139,6 +141,58 @@ test('profile workflow clears pending patches and refreshes config after loading
   ]);
   expect(calls[4]).toMatchObject({ payload: { rpc: 'get_config' }, options: { timeoutMs: 123 } });
   expect(calls[5]).toEqual({ type: 'hydrateAuthoritativeConfig', config });
+});
+
+for (const scenario of [
+  {
+    name: 'Apply reports verified device state without applying the draft',
+    applyResult: { applied: false, verifiedDeviceState: true },
+    dirtyAfterApply: true
+  },
+  {
+    name: 'Apply succeeds while a newer draft remains staged',
+    applyResult: { applied: true },
+    dirtyAfterApply: true
+  }
+]) {
+  test(`profile workflow does not save when ${scenario.name}`, async () => {
+    const { calls, statuses, workflow } = createHarness({
+      dirty: true,
+      applyResult: scenario.applyResult,
+      dirtyAfterApply: scenario.dirtyAfterApply
+    });
+
+    await expect(
+      workflow.runProfileRpc('save_profile', {
+        busyLabel: 'Saving profile...',
+        successLabel: 'Profile saved'
+      })
+    ).resolves.toMatchObject({ ok: false, reason: 'apply_failed' });
+
+    expect(calls.some((entry) => entry.type === 'sendRpc')).toBe(false);
+    expect(statuses.at(-1)).toEqual({
+      level: 'err',
+      label: 'Apply failed',
+      message: 'Profile save requires a successfully applied configuration with no newer staged edits.'
+    });
+  });
+}
+
+test('profile workflow saves after a clean Apply verified by readback', async () => {
+  const { calls, workflow } = createHarness({
+    dirty: true,
+    applyResult: { applied: true, verifiedBy: 'readback' },
+    dirtyAfterApply: false,
+    rpcResponses: [{ profile_saved: true, profile: 1 }]
+  });
+
+  await expect(
+    workflow.runProfileRpc('save_profile', {
+      busyLabel: 'Saving profile...',
+      successLabel: 'Profile saved'
+    })
+  ).resolves.toMatchObject({ ok: true });
+  expect(calls.some((entry) => entry.type === 'sendRpc')).toBe(true);
 });
 
 test('profile workflow fails closed for unsupported and offline actions', async () => {

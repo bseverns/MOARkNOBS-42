@@ -106,7 +106,12 @@ export function createProfileWorkflow({
       }
       if (method === 'save_profile' && dirtyBefore) {
         setStatus('warn', 'Applying staged edits…', `${describeSlot()} • syncing before save`);
-        await runtime.apply();
+        const result = await runtime.apply();
+        if (!result?.applied || runtime.getState().dirty) {
+          throw new Error(
+            'Profile save requires a successfully applied configuration with no newer staged edits.'
+          );
+        }
       }
     } catch (err) {
       setLocked(false);

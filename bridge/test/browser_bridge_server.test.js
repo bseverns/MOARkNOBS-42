@@ -806,6 +806,11 @@ async function run() {
     'device stage endpoint should expose machine-readable validation errors',
   );
   assert.equal(
+    invalidStagePayload.error?.failureClass,
+    'preflight-rejected',
+    'device stage endpoint should classify failures before serial transmission',
+  );
+  assert.equal(
     Array.isArray(invalidStagePayload.error?.details?.errors),
     true,
     'device stage endpoint should preserve validation error details',
@@ -827,6 +832,39 @@ async function run() {
     'mock-checksum',
     'device apply endpoint should expose structured apply results',
   );
+
+  const originalApplyDeviceConfig = service.applyDeviceConfig;
+  for (const [code, expectedFailureClass] of [
+    ['stale_session_revision', 'preflight-rejected'],
+    ['device_checksum', 'device-rejected-before-commit'],
+    ['apply_transport_error', 'transmission-unknown'],
+  ]) {
+    service.applyDeviceConfig = async () => {
+      const error = new Error(code);
+      error.code = code;
+      error.statusCode = 409;
+      throw error;
+    };
+    const rejectedApplyResponse = makeRes();
+    await server.requestHandler(
+      makeReq({
+        method: 'POST',
+        url: '/api/device/apply',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+      rejectedApplyResponse,
+    );
+    const rejectedApplyPayload = JSON.parse(
+      rejectedApplyResponse.body.toString('utf8'),
+    );
+    assert.equal(
+      rejectedApplyPayload.error?.failureClass,
+      expectedFailureClass,
+      `device apply endpoint should classify ${code}`,
+    );
+  }
+  service.applyDeviceConfig = originalApplyDeviceConfig;
 
   const rollbackResponse = makeRes();
   await server.requestHandler(

@@ -215,6 +215,13 @@ async function run() {
     assert.equal(harness.session.getState().dirty, false);
     assert.equal(
       harness.structuredEvents.some(
+        (entry) => entry.event === 'device.apply.pending',
+      ),
+      true,
+      'structured event stream should expose the serial writer ownership boundary',
+    );
+    assert.equal(
+      harness.structuredEvents.some(
         (entry) => entry.event === 'device.apply.ack',
       ),
       true,

@@ -22,7 +22,10 @@ function createBridgeError(payload, fallbackMessage) {
   const error = new Error(body.message ?? fallbackMessage ?? 'Bridge request failed');
   if (body.code !== undefined) error.code = body.code;
   if (body.details !== undefined) error.details = body.details;
-  error.bridgeFailureClass = classifyBridgeFailure(error.code);
+  // New Bridge versions own this classification. The code-based mapping is
+  // retained for compatibility with older runtimes.
+  error.bridgeFailureClass =
+    body.failureClass ?? classifyBridgeFailure(error.code);
   error.bridgeSession = payload?.state?.deviceSession ?? null;
   return error;
 }

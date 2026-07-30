@@ -229,7 +229,7 @@ export function createConfigSession({
   let nextDraft = null;
 
   function isDeviceAuthorityUnresolved() {
-    return ['applying', 'uncertain', 'resynchronizing'].includes(deviceAuthority);
+    return ['preflighting', 'applying', 'uncertain', 'resynchronizing'].includes(deviceAuthority);
   }
 
   function setDraftState(next) {
@@ -314,8 +314,9 @@ export function createConfigSession({
       getManifest()
     );
     liveConfig = clone(normalizedLive);
-    stagedConfig = clone(nextDraft ?? normalizedStaged);
-    if (nextDraft) {
+    const retainedLocalIntent = nextDraft ?? appliedCandidate;
+    stagedConfig = clone(retainedLocalIntent ?? normalizedStaged);
+    if (retainedLocalIntent) {
       dirty = shallowDiff(normalizedLive ?? {}, stagedConfig ?? {}).length > 0;
     } else if (sessionPayload.dirty === undefined) {
       dirty = shallowDiff(normalizedLive ?? {}, normalizedStaged ?? {}).length > 0;
@@ -325,7 +326,11 @@ export function createConfigSession({
     const explicitDraftState = ['clean', 'dirty'].includes(sessionPayload.draftState)
       ? sessionPayload.draftState
       : null;
-    setDraftState(nextDraft ? (dirty ? 'dirty' : 'clean') : (explicitDraftState ?? (dirty ? 'dirty' : 'clean')));
+    setDraftState(
+      retainedLocalIntent
+        ? (dirty ? 'dirty' : 'clean')
+        : (explicitDraftState ?? (dirty ? 'dirty' : 'clean'))
+    );
     const bridgeStatus = sessionPayload.lastApplyResult?.status;
     const bridgeTransactionState = {
       pending: 'applying',
@@ -337,6 +342,7 @@ export function createConfigSession({
     }[bridgeStatus];
     const explicitAuthority = [
       'verified',
+      'preflighting',
       'applying',
       'uncertain',
       'resynchronizing',
@@ -346,6 +352,7 @@ export function createConfigSession({
       : null;
     const bridgeAuthority = explicitAuthority ?? bridgeTransactionState;
     const bridgeAuthorityStates = new Set([
+      'applying',
       'uncertain',
       'resynchronizing',
       'verified-device-different'
@@ -379,6 +386,9 @@ export function createConfigSession({
     if (appliedCandidate || isDeviceAuthorityUnresolved()) {
       nextDraft = clone(normalizedStaged);
     } else {
+      // A preflight-rejected candidate remains local intent until it is
+      // successfully retried. Any later edit supersedes that retained draft.
+      if (nextDraft) nextDraft = clone(normalizedStaged);
       setTransactionState(dirty ? 'dirty' : 'clean');
     }
     broadcastConfig();
@@ -415,8 +425,12 @@ export function createConfigSession({
   }
 
   function finishPreflightRejection(error) {
+    const rejectedDraft = nextDraft ?? appliedCandidate ?? stagedConfig;
+    stagedConfig = clone(rejectedDraft);
     appliedCandidate = null;
-    nextDraft = null;
+    // Keep the rejected candidate independently of Bridge snapshots. It was
+    // never transmitted, so it remains an unacknowledged browser draft.
+    nextDraft = clone(rejectedDraft);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     setDraftState(dirty ? 'dirty' : 'clean');
     deviceAuthority = 'verified';
@@ -509,7 +523,7 @@ export function createConfigSession({
     nextDraft = null;
     if (isBridgeSessionActive()) {
       clientApplyRevision += 1;
-      setTransactionState('applying');
+      setTransactionState('preflighting');
       const applyIdentity = {
         clientApplyId:
           globalThis.crypto?.randomUUID?.() ??
