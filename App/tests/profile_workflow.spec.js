@@ -79,7 +79,7 @@ test('profile workflow derives capability gates from explicit manifest flags', (
     scenes: false
   });
   expect(supportsGuidedProfileFlow({ profileSave: true, profileLoad: false })).toBe(false);
-  expect(unsupportedProfileActionCopy('load_profile')).toContain('cannot switch EEPROM');
+  expect(unsupportedProfileActionCopy('load_profile')).toContain('cannot switch device profile slots');
 });
 
 test('profile workflow applies dirty staged edits before saving a profile', async () => {

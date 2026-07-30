@@ -698,10 +698,15 @@ export function createTransportToolbarController({
     } catch (err) {
       const state = runtime.getState();
       if (err?.bridgeFailureClass === 'preflight-rejected') {
+        const retryGuidance = {
+          schema_validation_failed: 'Correct the staged draft and retry.',
+          stale_session_revision: 'Refresh the Bridge session and retry.',
+          apply_in_progress: 'Wait for the active Apply to finish, then retry.'
+        }[err?.code] ?? 'Refresh the Bridge session or correct the staged draft, then retry.';
         setStatus(
           'warn',
           'Apply rejected before transmission',
-          'Device authority remains verified; correct the staged draft and retry.'
+          `Device authority remains verified. ${retryGuidance}`
         );
       } else if (err?.bridgeFailureClass === 'device-rejected-before-commit') {
         setStatus(

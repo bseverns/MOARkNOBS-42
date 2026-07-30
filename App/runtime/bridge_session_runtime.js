@@ -24,6 +24,7 @@ export function createBridgeSessionRuntime({
   let acknowledgedGeneration = 0;
   let newestLocalDraft = null;
   let stageSyncSuspended = false;
+  let stageRetryRequested = false;
   let eventReconnectTimer = null;
   let eventReconnectAttempt = 0;
   let eventsWanted = false;
@@ -148,7 +149,10 @@ export function createBridgeSessionRuntime({
         }
         throw err;
       })
-      .finally(() => { bridgeStageSyncPromise = null; });
+      .finally(() => {
+        bridgeStageSyncPromise = null;
+        if (stageRetryRequested) queueMicrotask(drainStageRetry);
+      });
     return bridgeStageSyncPromise;
   }
 
@@ -169,22 +173,36 @@ export function createBridgeSessionRuntime({
     }, 120);
   }
 
-  function retryUnacknowledgedStageSync({ active = true } = {}) {
+  function drainStageRetry() {
     if (
-      !active ||
+      !stageRetryRequested ||
       stageSyncSuspended ||
-      acknowledgedGeneration >= localDraftGeneration ||
-      bridgeStageSyncTimer
+      bridgeStageSyncPromise
     ) return;
-    bridgeStageSyncTimer = setTimeout(() => {
-      void flushStageSync({ active: true }).catch((err) => {
+
+    if (acknowledgedGeneration >= localDraftGeneration) {
+      stageRetryRequested = false;
+      return;
+    }
+
+    stageRetryRequested = false;
+    void flushStageSync({ active: true })
+      .catch((err) => {
         emit('status', {
           stage: 'bridge-session',
           level: 'warn',
           message: `Bridge stage sync failed: ${err.message || String(err)}`
         });
+      })
+      .finally(() => {
+        if (stageRetryRequested) drainStageRetry();
       });
-    }, 0);
+  }
+
+  function requestStageRetry({ active = true } = {}) {
+    if (!active || acknowledgedGeneration >= localDraftGeneration) return;
+    stageRetryRequested = true;
+    drainStageRetry();
   }
 
   async function openStructuredEvents() {
@@ -210,15 +228,36 @@ export function createBridgeSessionRuntime({
             bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'uncertain', lastApplyResult: { status: 'uncertain', ...clone(payload) } };
             syncCachedSession();
             break;
+          case 'device.apply.ack':
+            bridgeSessionCache = {
+              ...(bridgeSessionCache ?? {}),
+              deviceAuthority: 'verified',
+              lastApplyResult: { status: 'ack', ...clone(payload) }
+            };
+            syncCachedSession();
+            requestStageRetry();
+            break;
+          case 'device.apply.rollback':
+            bridgeSessionCache = {
+              ...(bridgeSessionCache ?? {}),
+              deviceAuthority: 'verified',
+              lastApplyResult: {
+                status: 'rollback',
+                ...clone(payload.lastApplyResult ?? payload)
+              }
+            };
+            syncCachedSession();
+            requestStageRetry();
+            break;
           case 'device.apply.resynchronized':
             bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'verified', lastApplyResult: { status: 'resynchronized', ...clone(payload) } };
             syncCachedSession();
-            retryUnacknowledgedStageSync();
+            requestStageRetry();
             break;
           case 'device.apply.device_different':
             bridgeSessionCache = { ...(bridgeSessionCache ?? {}), deviceAuthority: 'verified-device-different', lastApplyResult: { status: 'verified_device_different', ...clone(payload) } };
             syncCachedSession();
-            retryUnacknowledgedStageSync();
+            requestStageRetry();
             break;
           case 'device.ready':
             if (payload.manifest && typeof payload.manifest === 'object') {
@@ -341,7 +380,7 @@ export function createBridgeSessionRuntime({
 
   function resumeStageSync({ active = false } = {}) {
     stageSyncSuspended = false;
-    retryUnacknowledgedStageSync({ active });
+    requestStageRetry({ active });
   }
 
   function recordStageReceipt(receipt = {}) {
@@ -375,6 +414,7 @@ export function createBridgeSessionRuntime({
   function reset({ preserveLocalDraft = false } = {}) {
     cancelStageSync();
     stageSyncSuspended = false;
+    stageRetryRequested = false;
     closeEvents();
     bridgeSessionCache = null;
     if (!preserveLocalDraft) {

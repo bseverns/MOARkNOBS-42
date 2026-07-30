@@ -424,6 +424,21 @@ export function createConfigSession({
     }
   }
 
+  function finishBridgeNotApplied(response = {}) {
+    const retainedDraft = nextDraft ?? appliedCandidate ?? stagedConfig;
+    appliedCandidate = null;
+    nextDraft = null;
+    stagedConfig = clone(retainedDraft);
+    dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    setDraftState(dirty ? 'dirty' : 'clean');
+    deviceAuthority = 'verified';
+    setTransactionState(dirty ? 'dirty' : 'verified', {
+      source: 'bridge',
+      reason: response?.reason ?? 'not-applied'
+    });
+    broadcastConfig();
+  }
+
   function finishPreflightRejection(error) {
     const rejectedDraft = nextDraft ?? appliedCandidate ?? stagedConfig;
     stagedConfig = clone(rejectedDraft);
@@ -541,9 +556,13 @@ export function createConfigSession({
             : { applied: false };
         const checksum = response?.checksum ?? response?.result?.checksum ?? null;
         if (response?.applied === false || response?.result?.applied === false) {
-          abandonApply();
+          const notAppliedResult = response?.result ?? response;
+          finishBridgeNotApplied(notAppliedResult);
           emit('bridge-apply-not-applied', { response });
-          return { applied: false, reason: response?.reason ?? response?.result?.reason ?? 'bridge-not-applied' };
+          return {
+            applied: false,
+            reason: notAppliedResult?.reason ?? 'bridge-not-applied'
+          };
         }
         const authoritativeConfig =
           response?.authoritativeConfig ??

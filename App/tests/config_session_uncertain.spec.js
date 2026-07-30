@@ -296,6 +296,30 @@ test('a Bridge preflight rejection keeps verified authority and the local draft'
   await expect(session.apply()).rejects.toThrow(/stale staged revision/);
 });
 
+test('a normalized-clean Bridge Apply releases preflighting authority', async () => {
+  const events = [];
+  const session = createSession(async () => ({}), events, {
+    isBridgeSessionActive: () => true,
+    applyBridgeConfig: async () => ({
+      applied: false,
+      reason: 'clean'
+    })
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).resolves.toEqual({
+    applied: false,
+    reason: 'clean'
+  });
+
+  const state = session.getState();
+  expect(state.deviceAuthority).toBe('verified');
+  expect(state.transactionState).not.toBe('preflighting');
+  expect(state.transactionState).toBe('dirty');
+  expect(state.staged.filter.freq).toBe(321);
+});
+
 for (const ordering of ['snapshot-before-rejection', 'rejection-before-snapshot']) {
   test(`a stale-revision preflight rejection preserves candidate A with ${ordering}`, async () => {
     const events = [];

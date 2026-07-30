@@ -36,7 +36,7 @@ export function unsupportedProfileActionCopy(method) {
     case 'save_profile':
       return 'This firmware cannot archive the current deck state into slots A-D from the browser yet. Use Download profile for a file backup.';
     case 'load_profile':
-      return 'This firmware cannot switch EEPROM profile slots from the browser yet. Use the device controls, then reconnect to inspect the active state.';
+      return 'This firmware cannot switch device profile slots from the browser yet. Use the device controls, then reconnect to inspect the active state.';
     case 'reset_profile':
       return 'This firmware cannot wipe a device profile from the browser yet. Load a baseline backup file instead.';
     default:

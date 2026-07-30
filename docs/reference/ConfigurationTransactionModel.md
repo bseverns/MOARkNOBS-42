@@ -61,6 +61,14 @@ stateDiagram-v2
 24. Background stage synchronization is suspended after Apply captures its candidate and remains suspended until the identity-stage/Apply handoff finishes. Edits made during that interval queue as the next draft and stage afterward.
 25. The `/ws/events` bootstrap snapshot and individual config events expose authority, draft state, and correlation identity immediately; consumers do not need an HTTP refresh to complete the session contract.
 26. Browser data cannot mark itself authoritative. Explicit device readback and recall paths use `hydrateAuthoritativeConfig()`; imports and presets use `stage()`.
+27. A structured Bridge Apply result with `applied: false` is a definitive
+    pre-transmission completion. It releases `preflighting`, restores verified
+    authority, and retains any local draft still different from App live state.
+28. If a queued draft is rejected while a prior Apply remains unresolved, its
+    retry request persists across in-flight stage completion. Every terminal
+    Apply event (`ack`, `rollback`, `resynchronized`, or
+    `verified-device-different`) drains that retry after the active request
+    settles, regardless of event/HTTP ordering.
 
 ## What “rollback” means
 

@@ -154,63 +154,81 @@ test('Apply suspension queues newer edits until the identity-stage handoff finis
   expect(submissions[1]).toEqual({ slots: [{ value: 2 }] });
 });
 
-for (const event of ['device.apply.resynchronized', 'device.apply.device_different']) {
-  test(`${event} retries a local draft rejected while Apply authority was unresolved`, async () => {
-    let eventHandler;
-    let stageCalls = 0;
-    const staged = { slots: [{ value: 2 }] };
-    const client = {
-      stageConfig() {
-        stageCalls += 1;
-        if (stageCalls === 1) {
-          return Promise.reject(
-            Object.assign(new Error('Apply outcome unresolved'), {
-              code: 'apply_outcome_unresolved'
-            })
-          );
-        }
-        return Promise.resolve({ sessionRevision: 4 });
-      },
-      openEvents({ onEvent }) {
-        eventHandler = onEvent;
-        return Promise.resolve();
-      },
-      closeEvents() {}
-    };
-    const runtime = createBridgeSessionRuntime({
-      baseUrl: 'http://bridge.test',
-      eventUrl: 'ws://bridge.test/events',
-      clone,
-      emit() {},
-      createClient: () => client,
-      compileSchema() {},
-      configSession: {
-        getStagedConfig: () => staged,
-        syncFromSession() {},
-        broadcastConfig() {}
-      },
-      localManifest: {},
-      currentSlotCount: () => 1,
-      localSlotMetaManager: { ensureCount() {} },
-      getConnectedPayload: () => ({}),
-      setRemoteManifest() {},
-      setSchema() {},
-      setSchemaSource() {},
-      onTelemetry() {}
-    });
-    runtime.applyAuthoritativeSession({
-      liveConfig: { slots: [{ value: 1 }] },
-      stagedConfig: { slots: [{ value: 1 }] },
-      dirty: false,
-      sessionRevision: 2
-    });
-    await runtime.openStructuredEvents();
-    runtime.scheduleStageSync({ active: true });
-    await expect(runtime.flushStageSync({ active: true })).rejects.toThrow(
-      /outcome unresolved/i
-    );
+for (const event of [
+  'device.apply.ack',
+  'device.apply.rollback',
+  'device.apply.resynchronized',
+  'device.apply.device_different'
+]) {
+  for (const ordering of ['rejection-before-event', 'event-before-rejection']) {
+    test(`${event} retries an unresolved stage with ${ordering}`, async () => {
+      let eventHandler;
+      let stageCalls = 0;
+      let rejectFirstStage;
+      const staged = { slots: [{ value: 2 }] };
+      const client = {
+        stageConfig() {
+          stageCalls += 1;
+          if (stageCalls === 1) {
+            return new Promise((_, reject) => {
+              rejectFirstStage = () => reject(
+                Object.assign(new Error('Apply outcome unresolved'), {
+                  code: 'apply_outcome_unresolved'
+                })
+              );
+            });
+          }
+          return Promise.resolve({ sessionRevision: 4 });
+        },
+        openEvents({ onEvent }) {
+          eventHandler = onEvent;
+          return Promise.resolve();
+        },
+        closeEvents() {}
+      };
+      const runtime = createBridgeSessionRuntime({
+        baseUrl: 'http://bridge.test',
+        eventUrl: 'ws://bridge.test/events',
+        clone,
+        emit() {},
+        createClient: () => client,
+        compileSchema() {},
+        configSession: {
+          getStagedConfig: () => staged,
+          syncFromSession() {},
+          broadcastConfig() {}
+        },
+        localManifest: {},
+        currentSlotCount: () => 1,
+        localSlotMetaManager: { ensureCount() {} },
+        getConnectedPayload: () => ({}),
+        setRemoteManifest() {},
+        setSchema() {},
+        setSchemaSource() {},
+        onTelemetry() {}
+      });
+      runtime.applyAuthoritativeSession({
+        liveConfig: { slots: [{ value: 1 }] },
+        stagedConfig: { slots: [{ value: 1 }] },
+        dirty: false,
+        sessionRevision: 2
+      });
+      await runtime.openStructuredEvents();
+      runtime.scheduleStageSync({ active: true });
+      const firstFlush = runtime.flushStageSync({ active: true });
+      const firstRejection = expect(firstFlush).rejects.toThrow(
+        /outcome unresolved/i
+      );
 
-    eventHandler({ event, payload: { sessionRevision: 3 } });
-    await expect.poll(() => stageCalls).toBe(2);
-  });
+      if (ordering === 'event-before-rejection') {
+        eventHandler({ event, payload: { sessionRevision: 3 } });
+      }
+      rejectFirstStage();
+      await firstRejection;
+      if (ordering === 'rejection-before-event') {
+        eventHandler({ event, payload: { sessionRevision: 3 } });
+      }
+      await expect.poll(() => stageCalls).toBe(2);
+    });
+  }
 }
