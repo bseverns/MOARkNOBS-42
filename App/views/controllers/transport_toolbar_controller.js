@@ -3,6 +3,19 @@ import {
   explainTransportError
 } from '../../runtime/web_serial_diagnostics.js';
 
+export function describeNotAppliedStatus(result, dirty) {
+  return {
+    level: dirty ? 'warn' : 'ok',
+    label:
+      result?.reason === 'clean'
+        ? 'No device write needed'
+        : 'Configuration not applied',
+    message: dirty
+      ? 'The Bridge considered the normalized device state unchanged; your local draft remains staged.'
+      : 'The device configuration was already synchronized.'
+  };
+}
+
 export function createTransportToolbarController({
   runtime,
   runtimeOptions = {},
@@ -678,6 +691,14 @@ export function createTransportToolbarController({
           'Device differs',
           'Authoritative readback did not match the transmitted configuration; your draft remains staged.'
         );
+        return;
+      }
+      if (result?.applied === false) {
+        const status = describeNotAppliedStatus(
+          result,
+          Boolean(runtime.getState().dirty)
+        );
+        setStatus(status.level, status.label, status.message);
         return;
       }
       if (runtime.getState().dirty) {

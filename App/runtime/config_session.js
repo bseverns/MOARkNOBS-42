@@ -555,8 +555,22 @@ export function createConfigSession({
               })
             : { applied: false };
         const checksum = response?.checksum ?? response?.result?.checksum ?? null;
-        if (response?.applied === false || response?.result?.applied === false) {
-          const notAppliedResult = response?.result ?? response;
+        const bridgeApplyResult = response?.result ?? response;
+        if (
+          bridgeApplyResult?.applied !== true &&
+          !(
+            bridgeApplyResult?.applied === false &&
+            bridgeApplyResult?.reason === 'clean'
+          )
+        ) {
+          const error = new Error('Bridge Apply response omitted its transaction result.');
+          error.code = 'invalid_bridge_apply_response';
+          error.bridgeFailureClass = 'transmission-unknown';
+          error.bridgeSession = response?.session ?? null;
+          throw error;
+        }
+        if (bridgeApplyResult.applied === false) {
+          const notAppliedResult = bridgeApplyResult;
           finishBridgeNotApplied(notAppliedResult);
           emit('bridge-apply-not-applied', { response });
           return {

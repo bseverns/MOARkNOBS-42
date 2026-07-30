@@ -30,6 +30,21 @@ function createBridgeError(payload, fallbackMessage) {
   return error;
 }
 
+function createInvalidApplyResponseError(session = null) {
+  const error = new Error('Bridge Apply response omitted its transaction result.');
+  error.code = 'invalid_bridge_apply_response';
+  error.bridgeFailureClass = 'transmission-unknown';
+  error.bridgeSession = session;
+  return error;
+}
+
+function isRecognizedApplyResult(result) {
+  return (
+    result?.applied === true ||
+    (result?.applied === false && result?.reason === 'clean')
+  );
+}
+
 function resolveUrl(url, base) {
   if (!url) return null;
   try {
@@ -122,9 +137,13 @@ export function createBridgeSessionClient({
       method: 'POST',
       body
     });
+    const session = payload.state?.deviceSession ?? null;
+    if (!isRecognizedApplyResult(payload.result)) {
+      throw createInvalidApplyResponseError(session);
+    }
     return {
-      result: payload.result ?? null,
-      session: payload.state?.deviceSession ?? null
+      result: payload.result,
+      session
     };
   }
 

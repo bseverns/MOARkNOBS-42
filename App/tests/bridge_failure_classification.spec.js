@@ -12,6 +12,17 @@ function failingFetch(code, deviceSession = null, failureClass = undefined) {
   });
 }
 
+function successfulFetch(result, deviceSession = null) {
+  return async () => ({
+    ok: true,
+    status: 200,
+    text: async () => JSON.stringify({
+      result,
+      state: { deviceSession }
+    })
+  });
+}
+
 test('Bridge client classifies preflight, firmware, and unknown Apply failures', async () => {
   const cases = [
     ['stale_session_revision', 'preflight-rejected'],
@@ -51,4 +62,29 @@ test('Bridge client prefers the server-owned failure class', async () => {
     code: 'legacy_or_future_code',
     bridgeFailureClass: 'preflight-rejected'
   });
+});
+
+test('Bridge client accepts only explicit transaction completion results', async () => {
+  const cleanClient = createBridgeSessionClient({
+    baseUrl: 'http://bridge.test',
+    fetchImpl: successfulFetch(
+      { applied: false, reason: 'clean' },
+      { sessionRevision: 11 }
+    )
+  });
+  await expect(cleanClient.applyConfig({})).resolves.toMatchObject({
+    result: { applied: false, reason: 'clean' }
+  });
+
+  for (const malformedResult of [null, {}, { applied: false, reason: 'unknown' }]) {
+    const client = createBridgeSessionClient({
+      baseUrl: 'http://bridge.test',
+      fetchImpl: successfulFetch(malformedResult, { sessionRevision: 12 })
+    });
+    await expect(client.applyConfig({})).rejects.toMatchObject({
+      code: 'invalid_bridge_apply_response',
+      bridgeFailureClass: 'transmission-unknown',
+      bridgeSession: { sessionRevision: 12 }
+    });
+  }
 });

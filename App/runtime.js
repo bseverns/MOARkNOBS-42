@@ -351,8 +351,18 @@ export function createRuntime({
         }
         throw err;
       }
+      const result = response?.result;
+      if (
+        result?.applied !== true &&
+        !(result?.applied === false && result?.reason === 'clean')
+      ) {
+        const error = new Error('Bridge Apply response omitted its transaction result.');
+        error.code = 'invalid_bridge_apply_response';
+        error.bridgeFailureClass = 'transmission-unknown';
+        error.bridgeSession = response?.session ?? null;
+        throw error;
+      }
       if (response?.session) bridgeSessionRuntime?.applyAuthoritativeSession(response.session);
-      const result = response?.result ?? { applied: false, reason: 'missing-bridge-result' };
       return {
         ...result,
         authoritativeConfig: response?.session?.liveConfig ?? null

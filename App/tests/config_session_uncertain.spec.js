@@ -320,6 +320,27 @@ test('a normalized-clean Bridge Apply releases preflighting authority', async ()
   expect(state.staged.filter.freq).toBe(321);
 });
 
+test('a malformed successful Bridge response cannot prove a no-op', async () => {
+  const events = [];
+  const session = createSession(async () => ({}), events, {
+    isBridgeSessionActive: () => true,
+    applyBridgeConfig: async () => ({})
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toMatchObject({
+    code: 'invalid_bridge_apply_response',
+    bridgeFailureClass: 'transmission-unknown'
+  });
+
+  const state = session.getState();
+  expect(state.deviceAuthority).toBe('uncertain');
+  expect(state.transactionState).toBe('uncertain');
+  expect(state.dirty).toBe(true);
+  expect(state.staged.filter.freq).toBe(321);
+});
+
 for (const ordering of ['snapshot-before-rejection', 'rejection-before-snapshot']) {
   test(`a stale-revision preflight rejection preserves candidate A with ${ordering}`, async () => {
     const events = [];
