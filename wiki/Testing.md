@@ -3,6 +3,10 @@
 Testing is layered from fast firmware checks to full hardware + bridge exercises.
 Canonical source: `docs/validation/TESTING.md`
 
+If you are trying to recover tonight's instrument rather than validate a build,
+start with [Troubleshooting by Symptom](Troubleshooting.md). The commands below
+are contributor and bench-validation tools.
+
 ![Validation-gate diagram progressing from target selection and software checks through handshake, intended-path proof, bench behavior, stress and recovery, and final status.](assets/workflows/validation-gates-overview.png)
 
 ## Canonical command set

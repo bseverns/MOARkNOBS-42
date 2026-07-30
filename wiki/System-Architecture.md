@@ -30,9 +30,14 @@ Canonical source: `README.md`
 
 ## Persistent configuration
 
-- EEPROM stores config + profile snapshots
-- Recovery path supports backup block fallback
-- Profiles A-D contain modulation and routing state
+- Transactional, generation-backed LittleFS stores durable configuration,
+  profiles, macros, and scenes.
+- Two data generations plus redundant metadata keep an incomplete write from
+  becoming authoritative.
+- At boot, firmware selects the newest valid generation or falls back to
+  defaults when neither validates.
+- The old schema-4 EEPROM offset map is historical documentation, not the
+  current persistence contract.
 
 ![Bridge routing overview showing the hardware serial connection entering the Node bridge and branching to OSC, virtual MIDI, and the browser configurator.](assets/workflows/bridge-routing-overview.png)
 
@@ -42,3 +47,4 @@ Canonical source: `README.md`
 - `firmware/README.md` (runtime details)
 - `docs/guides/WebSerial.md` (host contract and message flow)
 - `docs/guides/OSCBridge.md` (bridge transport behavior)
+- `docs/reference/PersistenceContract.md` (current LittleFS commit model)

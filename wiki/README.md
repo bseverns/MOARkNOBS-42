@@ -6,6 +6,9 @@ This folder contains a ready-to-publish wiki for MOARkNOBS-42.
 
 - `Home.md`
 - `Getting-Started.md`
+- `Playable-Walkthrough.md`
+- `Troubleshooting.md`
+- `Developer-Setup.md`
 - `System-Architecture.md`
 - `Firmware.md`
 - `Hardware.md`
@@ -37,7 +40,12 @@ This folder contains a ready-to-publish wiki for MOARkNOBS-42.
 ## Maintenance model
 
 - Keep deep technical detail in canonical docs (`README.md`, `docs/`, `firmware/README.md`, `bridge/README.md`, `App/README.md`).
-- Keep the wiki as a navigation and onboarding layer that points contributors to those sources.
+- Keep the wiki as a navigation and onboarding layer for finished-instrument
+  users, builders, and contributors.
 - Keep generated visual aids reproducible. Signal-shape PNGs live under `wiki/assets/signal-shapes/` and are regenerated with `python3 tools/generate_signal_shape_pngs.py`. Workflow diagrams live under `wiki/assets/workflows/`, and annotated UI screenshots under `wiki/assets/ui/` are regenerated with `python3 tools/generate_workflow_graphics.py` from the checked-in UI source captures in `docs/assets/ui/` and `wiki/assets/ui/`.
-- Every top-level wiki page must include a `Canonical source: \`path\`` line near the top.
+- Every top-level content page must include a `Canonical source: \`path\`` line
+  near the top.
 - CI enforces both local markdown link integrity and canonical-source declarations.
+- The wiki contract also checks a small set of high-risk condensed claims, such
+  as the current LittleFS persistence model, so a valid source declaration
+  alone cannot preserve a known-stale foundational label.

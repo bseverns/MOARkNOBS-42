@@ -7,7 +7,7 @@ Canonical source: `hardware/README.md`
 
 - Teensy 4.0 controller
 - 42-button matrix via multiplexers
-- 3 physical pots with virtual slot architecture
+- 42 multiplexed physical potentiometer/control slots
 - 52 WS2812 LEDs
 - 6 envelope follower inputs
 - MIDI I/O over DIN and TRS Type-A

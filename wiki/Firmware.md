@@ -27,7 +27,8 @@ pio run -d firmware -e teensy40_main -t upload
 - `PotentiometerManager` - analog sampling and smoothing
 - `EnvelopeFollower` - modulation extraction and filter modes
 - `MIDIHandler` - USB/DIN/TRS message handling
-- `ConfigManager` - EEPROM persistence and recovery
+- `ConfigManager` - generation-backed LittleFS persistence, validation, and
+  recovery
 - `LEDManager` + `LedAnimator` - visual state
 - `Arpeggiator`, `LFOManager`, `ARGMixer` - modulation engines
 
@@ -55,4 +56,5 @@ Use this as a fast visual map only. The deeper learner-facing explanations live 
 - `firmware/include/*/README.md`
 - `docs/guides/WebSerial.md`
 - `docs/reference/PinMap.md`
-- `docs/reference/EEPROMLayout.md`
+- `docs/reference/PersistenceContract.md`
+- `docs/reference/EEPROMLayout.md` (legacy schema-4 layout only)

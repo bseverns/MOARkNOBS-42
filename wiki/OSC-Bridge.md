@@ -3,6 +3,10 @@
 The bridge (`bridge/`) is a Node.js CLI that connects firmware serial telemetry to OSC and virtual MIDI.
 Canonical source: `bridge/README.md`
 
+Use this path when the finished instrument needs a DAW-facing virtual MIDI
+route or OSC. For browser-only configuration, start with
+[Getting Started](Getting-Started.md) instead.
+
 ![Routing overview showing MN42 hardware feeding the Node bridge, then branching to OSC, virtual MIDI, and the browser app over the bridge path.](assets/workflows/bridge-routing-overview.png)
 
 ## Install
@@ -25,6 +29,18 @@ node bridge/mn42_bridge.js --serial /dev/ttyACM0 --osc 9000 --osc-listen 9000 --
 - Publishes slot/envelope updates to OSC.
 - Exposes virtual MIDI device for host DAW workflows.
 - Accepts inbound OSC/MIDI commands and forwards validated control commands to firmware.
+
+## DAW checkpoint
+
+1. Start the Bridge and wait for Bridge, Serial, and Device readiness.
+2. Enable the Bridge/IAC/loopback MIDI input named by your host recipe.
+3. Arm a receiving track and match its MIDI channel.
+4. Move one known CC-mapped control and confirm it in a MIDI monitor.
+5. MIDI-learn that CC to an audible destination.
+
+Use the exact first mapping in [First Playable Walkthrough](Playable-Walkthrough.md).
+If telemetry moves but the DAW does not, follow
+[MIDI is not reaching the DAW](Troubleshooting.md#midi-is-not-reaching-the-daw).
 
 ## OSC contract
 

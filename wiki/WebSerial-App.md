@@ -31,6 +31,10 @@ Open `http://localhost:8000/`.
 5. Apply and confirm checksum/ACK.
 6. Confirm the receipt and device readback; ambiguous outcomes enter resynchronization.
 
+For a finished instrument, start with [Getting Started](Getting-Started.md) or
+the [First Playable Walkthrough](Playable-Walkthrough.md) before reading the
+runtime architecture below.
+
 ![Annotated configurator workbench showing the 42 live slots, selected-slot editor, Basic and Advanced mode switch, utility rail, and staged diff.](assets/ui/configurator-workbench-annotated.png)
 
 ## User-facing capabilities
@@ -40,6 +44,22 @@ Open `http://localhost:8000/`.
 - Staged diff visibility
 - MIDI monitor and optional clock output
 - Simulator transport for hardware-free testing
+
+## Save, recall, and back up
+
+1. Apply the staged configuration and wait until device authority is verified.
+2. Save the clean live configuration into profile A-D.
+3. Load a profile to replace live state with that saved device state.
+4. Download a JSON copy when the setup also needs an off-device backup.
+
+Current profiles are stored through generation-backed LittleFS persistence.
+Preset selection is browser-side staging; it is not a saved device profile
+until Apply and profile save both complete.
+
+## If Apply or connection fails
+
+Do not interpret a missing receipt as rollback. Follow the status shown by the
+App, then use [Troubleshooting by Symptom](Troubleshooting.md).
 
 ![Annotated slot tile showing its selected state, slot number, MIDI type, persistent-control badge, and immediate-mode badge.](assets/ui/slot-tile-annotated.png)
 
@@ -53,3 +73,5 @@ npm --prefix App test
 
 - `App/README.md`
 - `docs/guides/WebSerial.md`
+- `docs/reference/ConfigurationTransactionModel.md`
+- `docs/reference/PersistenceContract.md`
