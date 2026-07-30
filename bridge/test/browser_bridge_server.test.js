@@ -91,6 +91,11 @@ function makeFakeService() {
       liveConfig: null,
       stagedConfig: null,
       dirty: false,
+      deviceAuthority: 'verified-device-different',
+      draftState: 'dirty',
+      clientApplyId: 'bootstrap-apply',
+      stagedRevision: 23,
+      stagedDigest: 'bootstrap-digest',
       lastApplyResult: null,
       powerSafety: {
         power_profile: 'POWER_CHOKED_V1',
@@ -699,6 +704,15 @@ async function run() {
     /HTTP\/1\.1 101 Switching Protocols/,
     'structured websocket upgrade should succeed',
   );
+  const bootstrapSnapshot = JSON.parse(
+    decodeServerFrame(eventSocket.writes[1]).payload,
+  );
+  assert.equal(bootstrapSnapshot.event, 'device.session.snapshot');
+  assert.equal(bootstrapSnapshot.payload.deviceAuthority, 'verified-device-different');
+  assert.equal(bootstrapSnapshot.payload.draftState, 'dirty');
+  assert.equal(bootstrapSnapshot.payload.clientApplyId, 'bootstrap-apply');
+  assert.equal(bootstrapSnapshot.payload.stagedRevision, 23);
+  assert.equal(bootstrapSnapshot.payload.stagedDigest, 'bootstrap-digest');
 
   const connectResponse = makeRes();
   await server.requestHandler(

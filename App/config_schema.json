@@ -103,7 +103,8 @@
               },
               "frequency": {
                 "type": "number",
-                "title": "Tracking frequency (Hz)",
+                "title": "Tracking response control",
+                "description": "Legacy 20–5000 shaping scale; not a physical cutoff frequency.",
                 "minimum": 20,
                 "maximum": 5000
               },
@@ -303,7 +304,8 @@
         },
         "freq": {
           "type": "number",
-          "title": "Cutoff frequency (Hz)",
+          "title": "Tracking response control",
+          "description": "Legacy 20–5000 shaping scale; not a physical cutoff frequency.",
           "minimum": 20,
           "maximum": 5000
         },

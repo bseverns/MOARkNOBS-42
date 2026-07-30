@@ -51,6 +51,12 @@ stateDiagram-v2
 18. Writer completion is terminal. A serial promise that rejects after ACK completion cannot abort the lane, reject the completed transaction, or move verified authority back to uncertainty.
 19. Device patch reconciliation may update live and staged documents while Apply is unresolved, but it must preserve `applying`, `uncertain`, or `resynchronizing` authority.
 20. If Apply verifies its captured candidate while newer edits remain staged, the UI keeps the diff visible and reports that the captured configuration applied; it does not claim the whole editor is synced.
+21. Structured Apply failures are classified as `preflight-rejected`, `transmission-unknown`, or `device-rejected-before-commit`. Only `transmission-unknown` creates new uncertainty.
+22. Preflight rejection proves the current attempt did not enter the serial writer. Device authority remains verified, the local draft stays dirty, and correction/retry remains available.
+23. A definitive firmware rejection receipt carries the same `clientApplyId`, `stagedRevision`, and `stagedDigest` as the rejected candidate so the App can correlate verified rollback without inventing uncertainty.
+24. Background stage synchronization is suspended after Apply captures its candidate and remains suspended until the identity-stage/Apply handoff finishes. Edits made during that interval queue as the next draft and stage afterward.
+25. The `/ws/events` bootstrap snapshot and individual config events expose authority, draft state, and correlation identity immediately; consumers do not need an HTTP refresh to complete the session contract.
+26. Browser data cannot mark itself authoritative. Explicit device readback and recall paths use `hydrateAuthoritativeConfig()`; imports and presets use `stage()`.
 
 ## What “rollback” means
 

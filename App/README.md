@@ -92,6 +92,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - Live runtime RPCs are separate from staged config writes: the configurator now uses `GET_NOTE_DYNAMICS` / `SET_NOTE_DYNAMICS`, `GET_JITTER` / `SET_JITTER`, `GET_CLOCK` / `SET_CLOCK`, and `GET_USB_MIDI` / `SET_USB_MIDI` for direct-control lanes.
 - For the bridge path, staged config writes versus live performance writes are documented in [../docs/bridge/BridgeWriteLanes.md](../docs/bridge/BridgeWriteLanes.md).
 - The runtime keeps separate `liveConfig` and `stagedConfig` snapshots. Apply captures an immutable candidate; edits made while it is in flight remain a separate next draft. Verification promotes device truth for that candidate to live state while retaining the newer draft as dirty.
+- Device readback and profile/scene recall paths hydrate verified truth through the explicitly named `hydrateAuthoritativeConfig()` boundary. Browser files and presets must use `stage()` and cannot mark themselves authoritative.
 - The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.
 - The runtime buffers inbound telemetry into approximately 50 ms state frames so frequent state messages do not turn the DOM into soup; visual panels may animate those snapshots independently.
 - Outbound pot changes are debounced to ≥24 ms through a shared utility so every control shares the same cadence.

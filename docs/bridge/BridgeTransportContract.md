@@ -88,6 +88,9 @@ Payload:
   "config": {},
   "deviceAuthority": "verified",
   "draftState": "clean",
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256...",
   "lastApplyResult": {}
 }
 ```
@@ -100,7 +103,10 @@ Payload:
 {
   "config": {},
   "deviceAuthority": "verified",
-  "draftState": "clean"
+  "draftState": "clean",
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256..."
 }
 ```
 
@@ -112,7 +118,10 @@ Payload:
 {
   "dirty": true,
   "deviceAuthority": "verified",
-  "draftState": "dirty"
+  "draftState": "dirty",
+  "clientApplyId": "browser-attempt-id",
+  "stagedRevision": 12,
+  "stagedDigest": "sha256..."
 }
 ```
 

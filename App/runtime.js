@@ -316,16 +316,41 @@ export function createRuntime({
     },
     applyBridgeConfig: async ({ candidate, identity } = {}) => {
       const client = bridgeSessionRuntime?.ensureClient();
-      if (!client) throw new Error('Bridge session unavailable');
-      const stageReceipt = await client.stageConfig(candidate, {
-        expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
-        ...identity
-      });
+      if (!client) {
+        const error = new Error('Bridge session unavailable');
+        error.bridgeFailureClass = 'preflight-rejected';
+        throw error;
+      }
+      let stageReceipt;
+      try {
+        stageReceipt = await client.stageConfig(candidate, {
+          expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
+          ...identity
+        });
+      } catch (err) {
+        // The serial Apply request is not sent until this identity-bearing
+        // stage request has returned successfully.
+        err.bridgeFailureClass = 'preflight-rejected';
+        bridgeSessionRuntime?.recordSessionRevision(
+          err.bridgeSession?.sessionRevision
+        );
+        throw err;
+      }
       bridgeSessionRuntime?.recordStageReceipt(stageReceipt);
-      const response = await client.applyConfig({
-        expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
-        ...identity
-      });
+      let response;
+      try {
+        response = await client.applyConfig({
+          expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
+          ...identity
+        });
+      } catch (err) {
+        if (err.bridgeFailureClass === 'preflight-rejected') {
+          bridgeSessionRuntime?.recordSessionRevision(
+            err.bridgeSession?.sessionRevision
+          );
+        }
+        throw err;
+      }
       if (response?.session) bridgeSessionRuntime?.applyAuthoritativeSession(response.session);
       const result = response?.result ?? { applied: false, reason: 'missing-bridge-result' };
       return {
@@ -617,6 +642,12 @@ export function createRuntime({
         throw new Error('Apply is blocked while the Bridge session event authority is stale.');
       }
       await bridgeSessionRuntime.flushStageSync({ active: bridgeSessionActive });
+      bridgeSessionRuntime.suspendStageSync();
+      try {
+        return await configSession.apply();
+      } finally {
+        bridgeSessionRuntime.resumeStageSync({ active: bridgeSessionActive });
+      }
     }
     return configSession.apply();
   }
@@ -661,7 +692,7 @@ export function createRuntime({
     applyPatch,
     restoreLocalState: configSession.restoreLocalState,
     discardSavedWorkspace: stateSnapshotStore.clear,
-    replaceConfig: configSession.replaceConfig,
+    hydrateAuthoritativeConfig: configSession.hydrateAuthoritativeConfig,
     setPotGuard,
     setLocalSlotMeta: configSession.setLocalSlotMeta,
     createThrottle,

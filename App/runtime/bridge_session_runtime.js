@@ -23,6 +23,7 @@ export function createBridgeSessionRuntime({
   let submittedGeneration = 0;
   let acknowledgedGeneration = 0;
   let newestLocalDraft = null;
+  let stageSyncSuspended = false;
   let eventReconnectTimer = null;
   let eventReconnectAttempt = 0;
   let eventsWanted = false;
@@ -115,7 +116,7 @@ export function createBridgeSessionRuntime({
   }
 
   async function flushStageSync({ active = false } = {}) {
-    if (!active || !ensureClient()) return null;
+    if (!active || stageSyncSuspended || !ensureClient()) return null;
     if (bridgeStageSyncTimer) {
       clearTimeout(bridgeStageSyncTimer);
       bridgeStageSyncTimer = null;
@@ -155,6 +156,7 @@ export function createBridgeSessionRuntime({
     if (!active) return;
     localDraftGeneration += 1;
     newestLocalDraft = clone(configSession.getStagedConfig());
+    if (stageSyncSuspended) return;
     if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
     bridgeStageSyncTimer = setTimeout(() => {
       void flushStageSync({ active: true }).catch((err) => {
@@ -304,6 +306,26 @@ export function createBridgeSessionRuntime({
     }
   }
 
+  function suspendStageSync() {
+    stageSyncSuspended = true;
+    cancelStageSync();
+  }
+
+  function resumeStageSync({ active = false } = {}) {
+    stageSyncSuspended = false;
+    if (!active || acknowledgedGeneration >= localDraftGeneration) return;
+    if (bridgeStageSyncTimer) clearTimeout(bridgeStageSyncTimer);
+    bridgeStageSyncTimer = setTimeout(() => {
+      void flushStageSync({ active: true }).catch((err) => {
+        emit('status', {
+          stage: 'bridge-session',
+          level: 'warn',
+          message: `Bridge stage sync failed: ${err.message || String(err)}`
+        });
+      });
+    }, 0);
+  }
+
   function recordStageReceipt(receipt = {}) {
     bridgeSessionCache = {
       ...(bridgeSessionCache ?? {}),
@@ -313,6 +335,14 @@ export function createBridgeSessionRuntime({
       clientApplyId: receipt.clientApplyId ?? null,
       stagedRevision: receipt.stagedRevision ?? null,
       stagedDigest: receipt.stagedDigest ?? null
+    };
+  }
+
+  function recordSessionRevision(sessionRevision) {
+    if (!Number.isFinite(Number(sessionRevision))) return;
+    bridgeSessionCache = {
+      ...(bridgeSessionCache ?? {}),
+      sessionRevision: Number(sessionRevision)
     };
   }
 
@@ -326,6 +356,7 @@ export function createBridgeSessionRuntime({
 
   function reset({ preserveLocalDraft = false } = {}) {
     cancelStageSync();
+    stageSyncSuspended = false;
     closeEvents();
     bridgeSessionCache = null;
     if (!preserveLocalDraft) {
@@ -339,10 +370,13 @@ export function createBridgeSessionRuntime({
   return {
     ensureClient,
     recordStageReceipt,
+    recordSessionRevision,
     refreshSessionSnapshot,
     applyAuthoritativeSession: (session) => applySessionSnapshot(session, { emitConnectedConfig: false }),
     flushStageSync,
     scheduleStageSync,
+    suspendStageSync,
+    resumeStageSync,
     openStructuredEvents,
     cancelStageSync,
     closeEvents,

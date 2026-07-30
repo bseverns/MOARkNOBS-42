@@ -415,6 +415,36 @@ async function run() {
   }
 
   {
+    const harness = createHarness({ simulator: { ackMode: 'error' } });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[2].data1 = 54;
+    const stagedDigest = require('node:crypto')
+      .createHash('sha256')
+      .update(JSON.stringify(staged))
+      .digest('hex');
+    await harness.session.stageConfig(staged, {
+      clientApplyId: 'firmware-rejection',
+      stagedRevision: 42,
+      stagedDigest,
+    });
+    await assert.rejects(
+      () => harness.session.applyStagedConfig({
+        clientApplyId: 'firmware-rejection',
+        stagedRevision: 42,
+        stagedDigest,
+      }),
+      (error) => error?.code === 'device_checksum',
+    );
+    const receipt = harness.session.getState().lastApplyResult;
+    assert.equal(receipt.status, 'rollback');
+    assert.equal(receipt.clientApplyId, 'firmware-rejection');
+    assert.equal(receipt.stagedRevision, 42);
+    assert.equal(receipt.stagedDigest, stagedDigest);
+  }
+
+  {
     const harness = createHarness({ failSetAllWriteAt: 2 });
     await harness.session.handleOpen();
     await waitFor(() => harness.session.getState().ready);

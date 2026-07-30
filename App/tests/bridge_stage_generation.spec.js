@@ -108,3 +108,48 @@ test('Bridge reconnect preserves an unsent local draft over the first remote sna
   });
   expect(submissions).toEqual([{ slots: [{ value: 2 }] }]);
 });
+
+test('Apply suspension queues newer edits until the identity-stage handoff finishes', async () => {
+  let staged = { slots: [{ value: 1 }] };
+  const submissions = [];
+  const client = {
+    stageConfig(config) {
+      submissions.push(clone(config));
+      return Promise.resolve({ sessionRevision: submissions.length });
+    }
+  };
+  const runtime = createBridgeSessionRuntime({
+    baseUrl: 'http://bridge.test',
+    clone,
+    emit() {},
+    createClient: () => client,
+    compileSchema() {},
+    configSession: {
+      getStagedConfig: () => staged,
+      syncFromSession() {},
+      broadcastConfig() {}
+    },
+    localManifest: {},
+    currentSlotCount: () => 1,
+    localSlotMetaManager: { ensureCount() {} },
+    getConnectedPayload: () => ({}),
+    setRemoteManifest() {},
+    setSchema() {},
+    setSchemaSource() {},
+    onTelemetry() {}
+  });
+
+  runtime.scheduleStageSync({ active: true });
+  await runtime.flushStageSync({ active: true });
+  expect(submissions).toEqual([{ slots: [{ value: 1 }] }]);
+
+  runtime.suspendStageSync();
+  staged = { slots: [{ value: 2 }] };
+  runtime.scheduleStageSync({ active: true });
+  await expect(runtime.flushStageSync({ active: true })).resolves.toBeNull();
+  expect(submissions).toHaveLength(1);
+
+  runtime.resumeStageSync({ active: true });
+  await expect.poll(() => submissions.length).toBe(2);
+  expect(submissions[1]).toEqual({ slots: [{ value: 2 }] });
+});

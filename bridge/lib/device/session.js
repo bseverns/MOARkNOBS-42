@@ -387,18 +387,27 @@ function createDeviceSession({
       deviceAuthority: state.deviceAuthority,
       draftState: state.draftState,
       lastApplyResult: state.lastApplyResult,
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
       sessionRevision: state.sessionRevision,
     });
     emitStructured('device.config.staged', {
       config: state.stagedConfig,
       deviceAuthority: state.deviceAuthority,
       draftState: state.draftState,
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
       sessionRevision: state.sessionRevision,
     });
     emitStructured('device.config.dirty', {
       dirty: state.dirty,
       deviceAuthority: state.deviceAuthority,
       draftState: state.draftState,
+      clientApplyId: state.clientApplyId,
+      stagedRevision: state.stagedRevision,
+      stagedDigest: state.stagedDigest,
       sessionRevision: state.sessionRevision,
     });
   }
@@ -900,8 +909,7 @@ function createDeviceSession({
         409,
       );
       finishRollback('device_error', {
-        checksum: applyPending.checksum,
-        seq: applyPending.seq,
+        ...applyReceiptFields(applyPending),
         deviceError: clone(msg),
       });
       rejectPendingApply(error);

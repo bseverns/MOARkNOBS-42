@@ -123,7 +123,7 @@ export function createProfileSceneControls({
         const configPayload = await runtime.sendRpc({ rpc: 'get_config' });
         const configData = configPayload?.config ?? configPayload;
         if (configData && typeof configData === 'object') {
-          runtime.replaceConfig(configData);
+          runtime.hydrateAuthoritativeConfig(configData);
         }
       } catch (refreshErr) {
         setStatus('warn', 'Config refresh failed', refreshErr.message || String(refreshErr));

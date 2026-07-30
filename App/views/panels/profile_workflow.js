@@ -135,7 +135,7 @@ export function createProfileWorkflow({
           payload = configPayload?.config ?? configPayload;
         }
         if (payload && typeof payload === 'object') {
-          runtime.replaceConfig(payload);
+          runtime.hydrateAuthoritativeConfig(payload);
         }
       }
 

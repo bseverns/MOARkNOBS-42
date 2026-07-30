@@ -55,7 +55,7 @@ test('schema controls preserve focused numeric draft during config refresh', asy
     const current = window.__MN42_RUNTIME.getState().staged;
     const next = structuredClone(current);
     next.filter = { ...(next.filter ?? {}), freq: 321 };
-    window.__MN42_RUNTIME.replaceConfig(next);
+    window.__MN42_RUNTIME.hydrateAuthoritativeConfig(next);
   });
 
   await expect(freqInput).toHaveValue('2345');

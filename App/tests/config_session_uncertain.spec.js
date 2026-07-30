@@ -267,6 +267,75 @@ test('a correlated refreshed Bridge receipt can resolve its failed HTTP request'
   expect(session.getState().live.filter.freq).toBe(321);
 });
 
+test('a Bridge preflight rejection keeps verified authority and the local draft', async () => {
+  const events = [];
+  let refreshCalls = 0;
+  const error = Object.assign(new Error('stale staged revision'), {
+    code: 'stale_session_revision',
+    bridgeFailureClass: 'preflight-rejected'
+  });
+  const session = createSession(async () => ({}), events, {
+    isBridgeSessionActive: () => true,
+    applyBridgeConfig: async () => {
+      throw error;
+    },
+    refreshBridgeSession: async () => {
+      refreshCalls += 1;
+      return null;
+    }
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toThrow(/stale staged revision/);
+  expect(refreshCalls).toBe(0);
+  expect(session.getState().deviceAuthority).toBe('verified');
+  expect(session.getState().draftState).toBe('dirty');
+  expect(session.getState().transactionState).toBe('dirty');
+  expect(session.getState().staged.filter.freq).toBe(321);
+  await expect(session.apply()).rejects.toThrow(/stale staged revision/);
+});
+
+test('a correlated firmware rejection restores verified truth and retains the candidate', async () => {
+  const events = [];
+  let capturedIdentity;
+  const error = Object.assign(new Error('firmware rejected config'), {
+    code: 'device_checksum',
+    bridgeFailureClass: 'device-rejected-before-commit'
+  });
+  const session = createSession(async () => ({}), events, {
+    isBridgeSessionActive: () => true,
+    applyBridgeConfig: async ({ identity }) => {
+      capturedIdentity = identity;
+      error.bridgeSession = {
+        liveConfig: baseConfig(),
+        stagedConfig: baseConfig(),
+        dirty: false,
+        deviceAuthority: 'verified',
+        draftState: 'clean',
+        lastApplyResult: {
+          status: 'rollback',
+          reason: 'device_error',
+          ...capturedIdentity
+        }
+      };
+      throw error;
+    },
+    refreshBridgeSession: async () => {
+      throw new Error('refresh unavailable');
+    }
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).rejects.toThrow(/firmware rejected config/);
+  expect(session.getState().deviceAuthority).toBe('verified');
+  expect(session.getState().draftState).toBe('dirty');
+  expect(session.getState().transactionState).toBe('dirty');
+  expect(session.getState().live.filter.freq).toBe(100);
+  expect(session.getState().staged.filter.freq).toBe(321);
+});
+
 for (const ordering of ['event-before-rejection', 'rejection-before-event']) {
   test(`Bridge uncertainty survives ${ordering}`, async () => {
     const events = [];

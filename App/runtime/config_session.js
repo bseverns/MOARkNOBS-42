@@ -414,6 +414,21 @@ export function createConfigSession({
     }
   }
 
+  function finishPreflightRejection(error) {
+    appliedCandidate = null;
+    nextDraft = null;
+    dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
+    setDraftState(dirty ? 'dirty' : 'clean');
+    deviceAuthority = 'verified';
+    setTransactionState(dirty ? 'dirty' : 'verified', {
+      source: 'bridge',
+      reason: 'preflight-rejected',
+      code: error?.code ?? null
+    });
+    broadcastConfig();
+    emit('bridge-apply-preflight-rejected', { error });
+  }
+
   async function resynchronizeAfterUncertain(reason) {
     setTransactionState('resynchronizing', { reason, attemptedApply });
     broadcastConfig({ persist: false });
@@ -531,10 +546,18 @@ export function createConfigSession({
         // draft solely because this request failed; the session refresh path
         // remains the authority for reconciliation.
         emit('bridge-apply-failed', { error: err, staged: clone(stagedConfig) });
-        let authoritativeSession = null;
+        const failureClass = err?.bridgeFailureClass ?? 'transmission-unknown';
+        if (failureClass === 'preflight-rejected') {
+          finishPreflightRejection(err);
+          throw err;
+        }
+        // HTTP error responses include the Bridge session snapshot. Keep it
+        // as a correlated fallback if the follow-up refresh is unavailable.
+        let authoritativeSession = err?.bridgeSession ?? null;
         if (typeof refreshBridgeSession === 'function') {
           try {
-            authoritativeSession = await refreshBridgeSession();
+            authoritativeSession =
+              (await refreshBridgeSession()) ?? authoritativeSession;
           } catch (refreshError) {
             emit('bridge-session-refresh-failed', { error: refreshError });
           }
@@ -582,6 +605,26 @@ export function createConfigSession({
             { preserveCandidate: bridgeStatus === 'verified_device_different' }
           );
           broadcastConfig();
+        } else if (
+          failureClass === 'device-rejected-before-commit' &&
+          bridgeStatus === 'rollback' &&
+          authoritativeSession?.liveConfig
+        ) {
+          finishApply(
+            authoritativeSession.liveConfig,
+            {
+              source: 'bridge',
+              reason: 'device-rejected-before-commit',
+              lastApplyResult: authoritativeSession.lastApplyResult
+            },
+            null,
+            { preserveCandidate: true }
+          );
+          broadcastConfig();
+          emit('bridge-apply-device-rejected', {
+            error: err,
+            lastApplyResult: authoritativeSession.lastApplyResult
+          });
         } else {
           // The Bridge supplied no transaction authority. Preserve the local
           // draft, but release the candidate so a later session snapshot can
@@ -733,7 +776,9 @@ export function createConfigSession({
     return true;
   }
 
-  function replaceConfig(configPayload) {
+  // Accept only configuration returned by an explicitly authoritative device
+  // readback/recall path. Browser imports and presets must continue to stage.
+  function hydrateAuthoritativeConfig(configPayload) {
     if (!configPayload || typeof configPayload !== 'object') return false;
     const normalized = normalizeConfig(configPayload, getManifest());
     liveConfig = clone(normalized);
@@ -797,7 +842,7 @@ export function createConfigSession({
     getState,
     isDirty: () => dirty,
     mergeLocalSlotMeta,
-    replaceConfig,
+    hydrateAuthoritativeConfig,
     reconcileDevicePatch,
     restoreLocalState,
     rollback,

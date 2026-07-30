@@ -30,7 +30,8 @@ function createHarness({
       if (response instanceof Error) throw response;
       return response;
     },
-    replaceConfig: (config) => calls.push({ type: 'replaceConfig', config })
+    hydrateAuthoritativeConfig: (config) =>
+      calls.push({ type: 'hydrateAuthoritativeConfig', config })
   };
   const formRenderer = {
     clearPendingPatches: () => calls.push({ type: 'clearPendingPatches' })
@@ -132,12 +133,12 @@ test('profile workflow clears pending patches and refreshes config after loading
     'sendRpc',
     'setActiveProfileSlot',
     'sendRpc',
-    'replaceConfig',
+    'hydrateAuthoritativeConfig',
     'refreshProfileControls',
     'refreshProfileUtilities'
   ]);
   expect(calls[4]).toMatchObject({ payload: { rpc: 'get_config' }, options: { timeoutMs: 123 } });
-  expect(calls[5]).toEqual({ type: 'replaceConfig', config });
+  expect(calls[5]).toEqual({ type: 'hydrateAuthoritativeConfig', config });
 });
 
 test('profile workflow fails closed for unsupported and offline actions', async () => {

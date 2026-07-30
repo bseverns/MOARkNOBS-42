@@ -224,6 +224,11 @@ async function run() {
   });
   const applyPromise = service.applyDeviceConfig();
   await wait(5);
+  await assert.rejects(
+    () => service.applyDeviceConfig(),
+    (error) => error?.code === 'apply_in_progress' && error?.statusCode === 409,
+    'a competing Apply is a definitive preflight rejection',
+  );
   assert.equal(
     service.getState().deviceSession?.dirty,
     true,

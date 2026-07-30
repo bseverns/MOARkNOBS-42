@@ -1,8 +1,29 @@
+const PREFLIGHT_REJECTION_CODES = new Set([
+  'schema_validation_failed',
+  'stale_session_revision',
+  'staged_apply_identity_mismatch',
+  'staged_digest_mismatch',
+  'device_not_ready',
+  'device_not_connected',
+  'device_schema_incompatible',
+  'apply_in_progress'
+]);
+
+function classifyBridgeFailure(code) {
+  if (PREFLIGHT_REJECTION_CODES.has(code)) return 'preflight-rejected';
+  if (typeof code === 'string' && code.startsWith('device_')) {
+    return 'device-rejected-before-commit';
+  }
+  return 'transmission-unknown';
+}
+
 function createBridgeError(payload, fallbackMessage) {
   const body = payload?.error ?? payload ?? {};
   const error = new Error(body.message ?? fallbackMessage ?? 'Bridge request failed');
   if (body.code !== undefined) error.code = body.code;
   if (body.details !== undefined) error.details = body.details;
+  error.bridgeFailureClass = classifyBridgeFailure(error.code);
+  error.bridgeSession = payload?.state?.deviceSession ?? null;
   return error;
 }
 

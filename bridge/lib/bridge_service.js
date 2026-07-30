@@ -800,7 +800,12 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   }
 
   async function applyDeviceConfig(options = {}) {
-    if (applyExclusive) throw new Error('configuration Apply already owns the outbound serial lane');
+    if (applyExclusive) {
+      const error = new Error('configuration Apply already owns the outbound serial lane');
+      error.code = 'apply_in_progress';
+      error.statusCode = 409;
+      throw error;
+    }
     applyExclusive = true;
     try {
       return await deviceSession.applyStagedConfig(options);
