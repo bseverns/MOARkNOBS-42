@@ -6,7 +6,9 @@ The modulation matrix answers one production question:
 
 > What is modulating what, by how much, and where does it leave the device?
 
-MN42 currently has several related modulation systems. The goal is to make them read as one map without pretending they are all implemented by one firmware subsystem.
+MN42 has several related modulation systems. Slot-targeted EF, ARG, and fixed
+LFO lanes now meet in one resolver; direct MIDI CC, internal-bus, and OSC LFO
+routes remain independent destinations.
 
 ## Sources
 
@@ -35,18 +37,21 @@ For now, read existing modulation depth conservatively:
 
 - EF routes are performance modulation of slot behavior.
 - ARG routes shape EF pair contribution before it reaches a destination.
-- LFO routes can target MIDI CC, slot values, internal buses, or OSC depending on configured route type.
+- Fixed LFO lanes compose into slot values after EF/ARG. Legacy `SlotValue`
+  routes remain compatible and are used only when the corresponding fixed lane
+  is disabled.
+- Other LFO routes can target MIDI CC, internal buses, or OSC.
 - Bridge live writes are runtime events, not automatically persisted profile edits.
 
 ## Collision Story
 
 Multiple sources can intentionally target the same destination. That can be musically useful, but it should be visible.
 
-The matrix should warn, not automatically block, when:
+Fixed EF/ARG/LFO slot combinations are composition, not collisions. The matrix
+should still warn, not automatically block, when independent output paths meet:
 
-- an EF and LFO both write the same slot value
-- two LFO routes hit the same slot or CC
-- a live pot movement and a slot-value LFO both emit messages
+- two legacy LFO routes hit the same slot or CC
+- a fixed slot lane and an independent direct MIDI route share a destination
 - EF and LFO CC routes share the same channel/CC
 - Bridge live input enters a lane already driven by local modulation
 

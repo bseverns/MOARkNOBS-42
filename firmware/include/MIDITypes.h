@@ -55,6 +55,61 @@ enum class EfDestinationMode : uint8_t {
     Centered,     // EF contribution is treated as a centered bipolar offset
 };
 
+// How one fixed per-slot LFO lane composes with the value produced before it.
+enum class ModCombineMode : uint8_t {
+    AddClamp = 0,
+    Subtract,
+    Replace,
+    Scale,
+    Centered,
+};
+
+struct __attribute__((packed)) SlotLfoLane {
+    static constexpr uint8_t kEnabledMask = 0x01;
+    static constexpr uint8_t kModeMask = 0x0E;
+    static constexpr uint8_t kModeShift = 1;
+
+    // Disabled by default, with Centered selected for the first enable.
+    uint8_t flags = static_cast<uint8_t>(ModCombineMode::Centered) << kModeShift;
+    int8_t amount = 0; // Signed modulation depth (-100..100 percent)
+
+    bool enabled() const { return (flags & kEnabledMask) != 0; }
+    ModCombineMode mode() const {
+        return static_cast<ModCombineMode>((flags & kModeMask) >> kModeShift);
+    }
+    void setEnabled(bool value) {
+        flags = value ? static_cast<uint8_t>(flags | kEnabledMask)
+                      : static_cast<uint8_t>(flags & ~kEnabledMask);
+    }
+    void setMode(ModCombineMode value) {
+        flags = static_cast<uint8_t>((flags & ~kModeMask) |
+                                     (static_cast<uint8_t>(value) << kModeShift));
+    }
+};
+
+struct __attribute__((packed)) SlotLfoConfig {
+    std::array<SlotLfoLane, 2> lfo{};
+};
+
+inline SlotLfoLane sanitizeSlotLfoLane(const SlotLfoLane &candidate) {
+    SlotLfoLane lane = candidate;
+    lane.flags &= static_cast<uint8_t>(SlotLfoLane::kEnabledMask | SlotLfoLane::kModeMask);
+    if (static_cast<uint8_t>(lane.mode()) > static_cast<uint8_t>(ModCombineMode::Centered)) {
+        lane.setMode(ModCombineMode::Centered);
+    }
+    if (lane.amount < -100) lane.amount = -100;
+    if (lane.amount > 100) lane.amount = 100;
+    return lane;
+}
+
+inline SlotLfoConfig sanitizeSlotLfoConfig(const SlotLfoConfig &candidate) {
+    SlotLfoConfig config = candidate;
+    for (SlotLfoLane &lane : config.lfo) {
+        lane = sanitizeSlotLfoLane(lane);
+    }
+    return config;
+}
+
 // Envelope follower payload persisted alongside the slot definition.
 struct SlotEnvelopePayload {
     uint8_t filterType = 0; // EnvelopeFollower::FilterType value
@@ -121,6 +176,7 @@ struct MIDISlot {
     };
     EfRuntime ef{};      // Live envelope follower assignment metadata
     SlotARGConfig arg{}; // Slot-local ARG mixer settings
+    SlotLfoConfig lfo{}; // Fixed slot-local lanes for LFO 1 and LFO 2
 
     // Update both persistent and runtime follower assignments in lockstep.
     void setEnvelopeFollowerIndex(int8_t index) {

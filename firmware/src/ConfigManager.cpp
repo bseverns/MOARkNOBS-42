@@ -918,6 +918,7 @@ void ConfigManager::loadSlot(uint8_t idx, MIDISlot &dest) {
     temp.ef = sanitizeEfRuntime(temp.ef);
     temp.setEnvelopeFollowerIndex(temp.ef.followerIndex);
     temp.arg = sanitizeSlotArg(temp.arg);
+    temp.lfo = sanitizeSlotLfoConfig(temp.lfo);
     dest = temp;
     if (dest.arpNote > 127)
         dest.arpNote = dest.data1;
@@ -935,6 +936,7 @@ void ConfigManager::saveSlot(uint8_t idx, const MIDISlot &src) {
     sanitized.ef = sanitizeEfRuntime(sanitized.ef);
     sanitized.setEnvelopeFollowerIndex(sanitized.ef.followerIndex);
     sanitized.arg = sanitizeSlotArg(sanitized.arg);
+    sanitized.lfo = sanitizeSlotLfoConfig(sanitized.lfo);
     const int address = static_cast<int>(EEPROM_SLOT_BASE + idx * SLOT_EEPROM_SIZE);
     storagePut(address, sanitized);
     slots[idx] = sanitized;
@@ -1228,7 +1230,7 @@ uint8_t ConfigManager::getEnvelopeB() const {
     return static_cast<uint8_t>(pin);
 }
 
-String ConfigManager::makeSchema() {
+FLASHMEM String ConfigManager::makeSchema() {
     String s;
     s.reserve(9400);
     s += "{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",";
@@ -1342,7 +1344,13 @@ String ConfigManager::makeSchema() {
     s += "},";
     s += "\"sourceB\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
     s += String(static_cast<int>(NUM_ENVELOPES - 1));
-    s += "}},\"additionalProperties\":false}";
+    s += "}},\"additionalProperties\":false},";
+    s += "\"lfo\":{\"type\":\"array\",\"title\":\"Per-slot LFO lanes\",\"minItems\":2,";
+    s += "\"maxItems\":2,\"items\":{\"type\":\"object\",\"required\":[\"enabled\",\"mode\",\"amount\"],";
+    s += "\"properties\":{\"enabled\":{\"type\":\"boolean\"},";
+    s += "\"mode\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":4},";
+    s += "\"amount\":{\"type\":\"integer\",\"minimum\":-100,\"maximum\":100}},";
+    s += "\"additionalProperties\":false}}";
     s += "},\"additionalProperties\":false}},"; // slot properties/items/slots
 
     s += "\"efSlots\":{\"type\":\"array\",\"title\":\"Envelope Assignments\",\"minItems\":";
@@ -1443,7 +1451,20 @@ String ConfigManager::serializeAll() const {
         output += arg.sourceA;
         output += ", \"sourceB\": ";
         output += arg.sourceB;
-        output += "}}";
+        output += "}, \"lfo\": [";
+        const SlotLfoConfig lfo = sanitizeSlotLfoConfig(slots[i].lfo);
+        for (uint8_t lfoIndex = 0; lfoIndex < lfo.lfo.size(); ++lfoIndex) {
+            const SlotLfoLane &lane = lfo.lfo[lfoIndex];
+            output += "{\"enabled\": ";
+            output += lane.enabled() ? "true" : "false";
+            output += ", \"mode\": ";
+            output += static_cast<uint8_t>(lane.mode());
+            output += ", \"amount\": ";
+            output += lane.amount;
+            output += "}";
+            if (lfoIndex + 1 < lfo.lfo.size()) output += ",";
+        }
+        output += "]}";
         if (i < NUM_SLOTS - 1) {
             output += ",";
         }

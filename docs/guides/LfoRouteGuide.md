@@ -4,6 +4,16 @@ The LFO system becomes much easier to understand once you stop thinking "there a
 
 This page explains those destinations in plain language.
 
+Every MIDI slot now also owns two fixed lanes: lane 0 always reads LFO 1 and
+lane 1 always reads LFO 2. A lane stores an enabled flag, a combine mode, and a
+signed amount from -100% to +100%. Fixed lanes compose after EF/ARG in the
+order LFO 1 then LFO 2; they do not send a second competing slot value.
+
+`Centered` is the default mode when a lane is first enabled. The physical knob
+therefore remains the center of gravity while the oscillator moves around it.
+`AddClamp`, `Subtract`, `Replace`, and `Scale` remain available for more
+deliberate transformations.
+
 ## Start here if you are new
 
 If you are new to routes, start with:

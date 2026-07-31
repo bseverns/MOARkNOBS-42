@@ -217,3 +217,78 @@ void test_profile_save_interruption_leaves_latest_copy_in_backup() {
 
     ConfigManager::setStorageBackend(nullptr);
 }
+
+void test_slot_lfo_lanes_round_trip_through_slot_storage() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    MIDISlot slot{};
+    slot.midiChannel = 3;
+    slot.lfo.lfo[0].setEnabled(true);
+    slot.lfo.lfo[0].setMode(ModCombineMode::Centered);
+    slot.lfo.lfo[0].amount = 35;
+    slot.lfo.lfo[1].setEnabled(true);
+    slot.lfo.lfo[1].setMode(ModCombineMode::Scale);
+    slot.lfo.lfo[1].amount = -12;
+    cfg.saveSlot(7, slot);
+
+    MIDISlot restored{};
+    cfg.loadSlot(7, restored);
+    TEST_ASSERT_TRUE(restored.lfo.lfo[0].enabled());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Centered),
+                            static_cast<uint8_t>(restored.lfo.lfo[0].mode()));
+    TEST_ASSERT_EQUAL_INT8(35, restored.lfo.lfo[0].amount);
+    TEST_ASSERT_TRUE(restored.lfo.lfo[1].enabled());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Scale),
+                            static_cast<uint8_t>(restored.lfo.lfo[1].mode()));
+    TEST_ASSERT_EQUAL_INT8(-12, restored.lfo.lfo[1].amount);
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_schema6_slot_migration_preserves_downstream_profile_bytes() {
+    struct LegacyMIDISlotV6 {
+        MIDIMessageType type = MIDIMessageType::OFF;
+        uint8_t midiChannel = 1;
+        uint8_t data1 = 0;
+        bool active = false;
+        uint8_t arpNote = 0;
+        uint8_t sysexLength = 0;
+        MIDISlot::EfSettings efSettings{};
+        std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+        MIDISlot::EfRuntime ef{};
+        SlotARGConfig arg{};
+    };
+
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    const uint16_t schema6 = 0x0006;
+    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema6, sizeof(schema6));
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        LegacyMIDISlotV6 legacy{};
+        legacy.data1 = i;
+        legacy.efSettings.followerIndex = -1;
+        legacy.ef.followerIndex = -1;
+        const int address = static_cast<int>(
+            EEPROM_SLOT_BASE + static_cast<size_t>(i) * sizeof(LegacyMIDISlotV6));
+        storage.writeBytes(address, &legacy, sizeof(legacy));
+    }
+
+    const size_t oldTail = EEPROM_SLOT_BASE + sizeof(LegacyMIDISlotV6) * NUM_SLOTS +
+                           sizeof(float) * 2 + sizeof(uint16_t);
+    const size_t oldProfileSettings = oldTail + NUM_PROFILES * EEPROM_PROFILE_BLOCK_SIZE;
+    storage.update(static_cast<int>(oldProfileSettings + 17), 0xA5);
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    TEST_ASSERT_EQUAL_UINT8(0xA5, storage.read(EEPROM_PROFILE_SETTINGS_BASE + 17));
+    TEST_ASSERT_EQUAL_UINT8(5, cfg.getSlot(5).data1);
+    TEST_ASSERT_FALSE(cfg.getSlot(5).lfo.lfo[0].enabled());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Centered),
+                            static_cast<uint8_t>(cfg.getSlot(5).lfo.lfo[0].mode()));
+
+    ConfigManager::setStorageBackend(nullptr);
+}

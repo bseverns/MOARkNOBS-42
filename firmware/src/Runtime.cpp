@@ -404,7 +404,11 @@ void initializeRuntime(bool baselinesLoaded) {
 
             // A modulated slot is emitted only by the control-rate resolver.
             // The pot manager still owns the physical baseline cache.
-            if (slot.getEnvelopeFollowerIndex() >= 0 || lfoManager.slotIsRouted(potIdx)) {
+            const bool hasFixedLfo = std::any_of(
+                slot.lfo.lfo.begin(), slot.lfo.lfo.end(),
+                [](const SlotLfoLane &lane) { return lane.enabled(); });
+            if (slot.getEnvelopeFollowerIndex() >= 0 || hasFixedLfo ||
+                lfoManager.slotIsRouted(potIdx)) {
                 return;
             }
 
@@ -749,7 +753,11 @@ void processSlotModulation() {
         SlotModulationFrame &frame = slotModulationFrames[slotIndex];
         const bool hasLfo = std::any_of(frame.lfoActive.begin(), frame.lfoActive.end(),
                                        [](bool active) { return active; });
-        if (!frame.efActive && !hasLfo) {
+        const MIDISlot &slot = configManager.getSlot(slotIndex);
+        const bool hasFixedLfo = std::any_of(
+            slot.lfo.lfo.begin(), slot.lfo.lfo.end(),
+            [](const SlotLfoLane &lane) { return lane.enabled(); });
+        if (!frame.efActive && !hasLfo && !hasFixedLfo) {
             // Forget the previous composed value once ownership returns to the
             // direct pot path. Re-adding a route must force a fresh emit even
             // when it resolves to the same value as the old route.
@@ -757,7 +765,6 @@ void processSlotModulation() {
             continue;
         }
 
-        const MIDISlot &slot = configManager.getSlot(slotIndex);
         if (!slot.active) {
             frame.lastEmittedValue = 0xFF;
             continue;
@@ -776,8 +783,23 @@ void processSlotModulation() {
                                static_cast<uint8_t>(EfDestinationMode::Centered)
                            ? static_cast<EfDestinationMode>(slot.efSettings.destinationMode)
                            : EfDestinationMode::AddClamp;
-        input.lfoActive = frame.lfoActive;
-        input.lfoValue = frame.lfoValue;
+        for (uint8_t lfoIndex = 0; lfoIndex < input.lfoActive.size(); ++lfoIndex) {
+            const SlotLfoLane lane = sanitizeSlotLfoLane(slot.lfo.lfo[lfoIndex]);
+            if (lane.enabled()) {
+                input.lfoActive[lfoIndex] = true;
+                input.lfoValue[lfoIndex] = lfoManager.signedValue(lfoIndex);
+                input.lfoLane[lfoIndex] = lane;
+            } else if (frame.lfoActive[lfoIndex]) {
+                // Compatibility for persisted SlotValue routes. Their mapped
+                // transport value is re-centered without changing its range.
+                input.lfoActive[lfoIndex] = true;
+                input.lfoValue[lfoIndex] =
+                    (static_cast<float>(frame.lfoValue[lfoIndex]) - 64.0f) / 127.0f;
+                input.lfoLane[lfoIndex].setEnabled(true);
+                input.lfoLane[lfoIndex].setMode(ModCombineMode::Centered);
+                input.lfoLane[lfoIndex].amount = 100;
+            }
+        }
         const uint8_t finalValue = resolveSlotModulation(input);
 
         if (finalValue == frame.lastEmittedValue ||

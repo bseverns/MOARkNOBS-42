@@ -664,6 +664,44 @@ SlotARGConfig parseSlotArgConfig(JsonObject slotArgObj, const SlotARGConfig &fal
     return sanitizeSlotArg(slotArgConfig);
 }
 
+ModCombineMode parseModCombineMode(JsonVariant value, ModCombineMode fallback) {
+    if (value.is<const char *>()) {
+        const String name = value.as<const char *>();
+        if (name.equalsIgnoreCase("add") || name.equalsIgnoreCase("add_clamp"))
+            return ModCombineMode::AddClamp;
+        if (name.equalsIgnoreCase("subtract")) return ModCombineMode::Subtract;
+        if (name.equalsIgnoreCase("replace")) return ModCombineMode::Replace;
+        if (name.equalsIgnoreCase("scale")) return ModCombineMode::Scale;
+        if (name.equalsIgnoreCase("centered")) return ModCombineMode::Centered;
+        return fallback;
+    }
+    const int raw = value.as<int>();
+    return static_cast<ModCombineMode>(
+        constrain(raw, 0, static_cast<int>(ModCombineMode::Centered)));
+}
+
+SlotLfoConfig parseSlotLfoConfig(JsonObject slotObj, const SlotLfoConfig &fallback) {
+    SlotLfoConfig config = sanitizeSlotLfoConfig(fallback);
+    JsonArray lanes = slotObj["lfo"].is<JsonArray>()
+                          ? slotObj["lfo"].as<JsonArray>()
+                          : slotObj["lfo_lanes"].as<JsonArray>();
+    if (lanes.isNull()) return config;
+    for (uint8_t i = 0; i < config.lfo.size() && i < lanes.size(); ++i) {
+        if (!lanes[i].is<JsonObject>()) continue;
+        JsonObject laneObj = lanes[i].as<JsonObject>();
+        SlotLfoLane lane = config.lfo[i];
+        if (laneObj.containsKey("enabled")) lane.setEnabled(laneObj["enabled"].as<bool>());
+        if (laneObj.containsKey("mode")) {
+            lane.setMode(parseModCombineMode(laneObj["mode"], lane.mode()));
+        }
+        if (laneObj.containsKey("amount")) {
+            lane.amount = static_cast<int8_t>(constrain(laneObj["amount"].as<int>(), -100, 100));
+        }
+        config.lfo[i] = sanitizeSlotLfoLane(lane);
+    }
+    return config;
+}
+
 bool applySlotSysExTemplate(JsonObject slotObj, MIDISlot &slot, uint32_t seq) {
     if (slot.type == MIDIMessageType::SysEx) {
         String templateError;
@@ -1019,6 +1057,7 @@ bool applySlotDefinitions(JsonArray slotsJson, uint32_t seq, bool &anySlotPayloa
             return false;
         }
         slot.arg = parseSlotArgConfig(slotArgObj, slot.arg, true);
+        slot.lfo = parseSlotLfoConfig(slotObj, slot.lfo);
         configManager.saveSlot(i, slot);
         applySlotEnvelopePayload(slotObj, i, anySlotPayloadSpecified);
         persistSlotPotRouting(i, midiChannel, data1);
@@ -1064,6 +1103,7 @@ bool validateSlotDefinitions(JsonArray slotsJson, uint32_t seq) {
         JsonObject slotArgObj =
             slotObj["arg"].is<JsonObject>() ? slotObj["arg"].as<JsonObject>() : JsonObject();
         candidate.arg = parseSlotArgConfig(slotArgObj, candidate.arg, true);
+        candidate.lfo = parseSlotLfoConfig(slotObj, candidate.lfo);
         if (!applySlotSysExTemplate(slotObj, candidate, seq)) {
             return false;
         }

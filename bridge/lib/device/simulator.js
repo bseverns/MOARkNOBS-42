@@ -10,7 +10,7 @@ function createDefaultManifest(overrides = {}) {
     fw_version: 'sim-fw',
     git_sha: 'simulated',
     build_time: '2026-05-24T00:00:00Z',
-    schema_version: 6,
+    schema_version: 7,
     slot_count: 42,
     pot_count: 42,
     envelope_count: 6,
@@ -44,7 +44,7 @@ function createDefaultManifest(overrides = {}) {
 function createDefaultSchema(overrides = {}) {
   return {
     type: 'object',
-    schema_version: 6,
+    schema_version: 7,
     required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
     properties: {
       slots: { type: 'array', items: { type: 'object' } },

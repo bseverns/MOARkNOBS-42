@@ -487,6 +487,8 @@ void writeLfoTransform(JsonObject routeObj, const LFO &lfo, const LFOManager::Ro
     routeObj["transform"] = transform;
 }
 
+const char *modCombineModeName(ModCombineMode mode);
+
 void writeLfoRoutes(JsonArray routes) {
     const size_t count = std::min(lfoManager.routeCount(), static_cast<size_t>(PROFILE_MAX_ROUTES));
     for (size_t routeIndex = 0; routeIndex < count; ++routeIndex) {
@@ -554,22 +556,62 @@ void writeLfoRoutes(JsonArray routes) {
         case LFOManager::Route::Type::SlotValue: {
             const uint8_t slotIndex = constrain(route.slotIndex, 0, NUM_SLOTS - 1);
             const MIDISlot &slot = configManager.getSlot(slotIndex);
+            const bool shadowed = route.lfoIndex < slot.lfo.lfo.size() &&
+                                  slot.lfo.lfo[route.lfoIndex].enabled();
             char destination[24];
             std::snprintf(destination, sizeof(destination), "slot%u.value",
                           static_cast<unsigned>(slotIndex));
             routeObj["destination"] = destination;
             routeObj["slot"] = slotIndex;
-            routeObj["mode"] = "replace";
+            routeObj["mode"] = shadowed ? "legacy_shadowed" : "legacy_centered";
             routeObj["exit"] = "midi";
-            routeObj["active"] = slot.active;
+            routeObj["active"] = slot.active && !shadowed;
             JsonObject midi = routeObj.createNestedObject("midi");
             writeSlotMidiDestination(midi, slot);
-            if (slot.active) {
+            if (slot.active && !shadowed) {
                 registerSlotWriter(slotIndex, id);
                 registerSlotCcWriter(slot, id);
             }
             break;
         }
+        }
+    }
+
+
+    // Fixed slot lanes are compositional inputs, not independent writers.
+    // They appear in the matrix without registering a collision against EF.
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        const MIDISlot &slot = configManager.getSlot(slotIndex);
+        const SlotLfoConfig config = sanitizeSlotLfoConfig(slot.lfo);
+        for (uint8_t lfoIndex = 0; lfoIndex < config.lfo.size(); ++lfoIndex) {
+            const SlotLfoLane &lane = config.lfo[lfoIndex];
+            if (!lane.enabled()) continue;
+            JsonObject routeObj = routes.createNestedObject();
+            char id[24];
+            std::snprintf(id, sizeof(id), "lfo%u_slot%u", static_cast<unsigned>(lfoIndex),
+                          static_cast<unsigned>(slotIndex));
+            char source[12];
+            std::snprintf(source, sizeof(source), "lfo%u", static_cast<unsigned>(lfoIndex));
+            char destination[24];
+            std::snprintf(destination, sizeof(destination), "slot%u.value",
+                          static_cast<unsigned>(slotIndex));
+            routeObj["id"] = id;
+            routeObj["source"] = source;
+            routeObj["source_type"] = "lfo";
+            routeObj["route_type"] = "slot_lane";
+            routeObj["destination"] = destination;
+            routeObj["slot"] = slotIndex;
+            routeObj["mode"] = modCombineModeName(lane.mode());
+            routeObj["amount"] = lane.amount;
+            routeObj["exit"] = "slot_resolver";
+            routeObj["persisted"] = true;
+            routeObj["active"] = slot.active;
+            routeObj["last_value"] = static_cast<int>(std::lround(
+                lfoManager.signedValue(lfoIndex) * (static_cast<float>(lane.amount) / 100.0f) *
+                127.0f));
+            writeRouteRange(routeObj);
+            JsonObject midi = routeObj.createNestedObject("midi");
+            writeSlotMidiDestination(midi, slot);
         }
     }
 }
@@ -665,6 +707,30 @@ void writeSlotArgConfig(JsonObject argObj, const MIDISlot &slot) {
     argObj["sourceB"] = arg.sourceB;
 }
 
+const char *modCombineModeName(ModCombineMode mode) {
+    switch (mode) {
+    case ModCombineMode::AddClamp: return "add_clamp";
+    case ModCombineMode::Subtract: return "subtract";
+    case ModCombineMode::Replace: return "replace";
+    case ModCombineMode::Scale: return "scale";
+    case ModCombineMode::Centered: return "centered";
+    }
+    return "centered";
+}
+
+void writeSlotLfoConfig(JsonArray lanes, const MIDISlot &slot) {
+    const SlotLfoConfig config = sanitizeSlotLfoConfig(slot.lfo);
+    for (uint8_t i = 0; i < config.lfo.size(); ++i) {
+        const SlotLfoLane &lane = config.lfo[i];
+        JsonObject laneObj = lanes.createNestedObject();
+        laneObj["lfo"] = i;
+        laneObj["enabled"] = lane.enabled();
+        laneObj["mode"] = static_cast<uint8_t>(lane.mode());
+        laneObj["mode_name"] = modCombineModeName(lane.mode());
+        laneObj["amount"] = lane.amount;
+    }
+}
+
 void writeSlotConfig(JsonArray slots, uint8_t slotIndex, const MIDISlot &slot) {
     JsonObject slotObj = slots.createNestedObject();
     slotObj["index"] = slotIndex;
@@ -683,6 +749,8 @@ void writeSlotConfig(JsonArray slots, uint8_t slotIndex, const MIDISlot &slot) {
     writeSlotEnvelopePayload(efPayload, slotIndex);
     JsonObject argObj = slotObj.createNestedObject("arg");
     writeSlotArgConfig(argObj, slot);
+    JsonArray lfoLanes = slotObj.createNestedArray("lfo");
+    writeSlotLfoConfig(lfoLanes, slot);
 }
 
 // EF slot mappings tell the host which knobs are currently feeding each follower voice.

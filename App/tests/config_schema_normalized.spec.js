@@ -44,7 +44,11 @@ function createDeviceConfig() {
         method_name: 'PLUS',
         sourceA: 0,
         sourceB: 1
-      }
+      },
+      lfo: [
+        { lfo: 0, enabled: index === 0, mode: 4, mode_name: 'centered', amount: 35 },
+        { lfo: 1, enabled: false, mode: 3, mode_name: 'scale', amount: -12 }
+      ]
     })),
     efSlots: Array.from({ length: 6 }, (_, index) => ({ slots: [index] })),
     filter: { type: 'LINEAR', freq: 1000, q: 1, idle_floor: 24 },
@@ -64,5 +68,9 @@ test('normalized device config with EF destination mode validates against App sc
   });
 
   expect(normalized.slots[0].ef.destination_mode).toBe('add_clamp');
+  expect(normalized.slots[0].lfo).toEqual([
+    { enabled: true, mode: 4, amount: 35 },
+    { enabled: false, mode: 3, amount: -12 }
+  ]);
   expect(validator(normalized), JSON.stringify(validator.errors ?? [], null, 2)).toBe(true);
 });

@@ -379,6 +379,9 @@ void test_dispatch_get_mod_matrix_reports_routes_and_conflicts() {
     efSlot.data1 = 11;
     efSlot.efSettings.destinationMode = static_cast<uint8_t>(EfDestinationMode::Replace);
     efSlot.setEnvelopeFollowerIndex(0);
+    efSlot.lfo.lfo[1].setEnabled(true);
+    efSlot.lfo.lfo[1].setMode(ModCombineMode::Scale);
+    efSlot.lfo.lfo[1].amount = -12;
     potToEnvelopeMap[3] = efSlot.efSettings;
 
     lfoManager.lfo(0).setShape(LFOShape::Triangle);
@@ -419,6 +422,12 @@ void test_dispatch_get_mod_matrix_reports_routes_and_conflicts() {
 
     const String efRoute = windowFrom(response, "\"id\":\"ef0_slot3\"");
     assertContains(efRoute, "\"mode\":\"replace\"");
+
+    const String fixedLfoRoute = windowFrom(response, "\"id\":\"lfo1_slot3\"");
+    assertContains(fixedLfoRoute, "\"route_type\":\"slot_lane\"");
+    assertContains(fixedLfoRoute, "\"mode\":\"scale\"");
+    assertContains(fixedLfoRoute, "\"amount\":-12");
+    assertContains(fixedLfoRoute, "\"exit\":\"slot_resolver\"");
 
     const String midiConflict = windowFrom(response, "\"target\":\"midi.cc\"");
     assertContains(midiConflict, "\"channel\":2");

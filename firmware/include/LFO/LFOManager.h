@@ -116,6 +116,9 @@ class LFOManager {
     const LFOBus &bus() const { return bus_; }
     // Read the last normalized output for a given LFO.
     float normalizedValue(uint8_t index) const;
+    // Read the oscillator as a centered, depth-scaled value (-1..1),
+    // independent of its transport polarity setting.
+    float signedValue(uint8_t index) const;
     // Return the number of configured routes.
     size_t routeCount() const { return routes_.size(); }
     // Fetch a route snapshot by index.
@@ -153,4 +156,5 @@ class LFOManager {
     unsigned long lastUpdateMs_ = 0;                // Last update timestamp (ms)
     LFOBus bus_{};                                  // Current internal bus values
     std::array<float, kMaxLFOs> lastNormalized_{};  // Last normalized outputs
+    std::array<float, kMaxLFOs> lastSigned_{};      // Centered outputs for slot lanes
 };

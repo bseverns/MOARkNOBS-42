@@ -300,6 +300,13 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
     if (sanitized.method != candidate.arg.method) {
         return false;
     }
+    const SlotLfoConfig sanitizedLfo = sanitizeSlotLfoConfig(candidate.lfo);
+    for (uint8_t i = 0; i < sanitizedLfo.lfo.size(); ++i) {
+        if (sanitizedLfo.lfo[i].flags != candidate.lfo.lfo[i].flags ||
+            sanitizedLfo.lfo[i].amount != candidate.lfo.lfo[i].amount) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -344,6 +351,7 @@ void ConfigManager::wipeSlotRegion() {
     blank.efSettings = sanitizeEfSettings(blank.efSettings);
     blank.ef = sanitizeEfRuntime(blank.ef);
     blank.arg = sanitizeSlotArg(blank.arg);
+    blank.lfo = sanitizeSlotLfoConfig(blank.lfo);
     slots.fill(blank);
 
     persistFilterTail(defaultPayload);
@@ -364,7 +372,8 @@ void ConfigManager::wipeSlotRegion() {
 }
 
 void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
-    if (storedVersion != kLegacyConfigVersion && storedVersion != 0x0004) {
+    if (storedVersion != kLegacyConfigVersion && storedVersion != 0x0004 &&
+        storedVersion != 0x0006) {
         wipeSlotRegion();
         wipeProfileBlocks();
         return;
@@ -384,7 +393,85 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     legacyArg.sourceA = defaults.sourceA;
     legacyArg.sourceB = defaults.sourceB;
 
-    if (storedVersion == kLegacyConfigVersion) {
+    if (storedVersion == 0x0006) {
+        struct LegacyMIDISlotV6 {
+            MIDIMessageType type = MIDIMessageType::OFF;
+            uint8_t midiChannel = 1;
+            uint8_t data1 = 0;
+            bool active = false;
+            uint8_t arpNote = 0;
+            uint8_t sysexLength = 0;
+            MIDISlot::EfSettings efSettings{};
+            std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+            MIDISlot::EfRuntime ef{};
+            SlotARGConfig arg{};
+        };
+        static_assert(offsetof(LegacyMIDISlotV6, efSettings) ==
+                          offsetof(MIDISlot, efSettings),
+                      "Legacy v6 EF layout drifted");
+        static_assert(offsetof(LegacyMIDISlotV6, arg) == offsetof(MIDISlot, arg),
+                      "Legacy v6 ARG layout drifted");
+
+        std::array<LegacyMIDISlotV6, NUM_SLOTS> legacySlots{};
+        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+            const int legacyAddress = static_cast<int>(
+                EEPROM_SLOT_BASE + static_cast<size_t>(i) * sizeof(LegacyMIDISlotV6));
+            storageGet(legacyAddress, legacySlots[i]);
+        }
+
+        // Appending four bytes to every slot shifts the filter tail and every
+        // profile/macro/scene region that follows it. Relocate that complete
+        // downstream tail from high addresses to low so overlap is safe.
+        constexpr size_t oldSlotRegionBytes = sizeof(LegacyMIDISlotV6) * NUM_SLOTS;
+        const size_t oldFilterFrequency = EEPROM_SLOT_BASE + oldSlotRegionBytes;
+        const size_t oldFilterQ = oldFilterFrequency + sizeof(float);
+        const size_t oldBrownout = oldFilterQ + sizeof(float);
+        const size_t oldConfigTail = oldBrownout + sizeof(uint16_t);
+        const size_t newConfigTail = EEPROM_CONFIG_TAIL;
+        const size_t tailShift = newConfigTail - oldConfigTail;
+
+        float legacyFilterFrequency = legacySlots[0].efSettings.frequency;
+        float legacyFilterQ = legacySlots[0].efSettings.q;
+        uint16_t legacyBrownoutCount = 0;
+        storageGet(static_cast<int>(oldFilterFrequency), legacyFilterFrequency);
+        storageGet(static_cast<int>(oldFilterQ), legacyFilterQ);
+        storageGet(static_cast<int>(oldBrownout), legacyBrownoutCount);
+
+        StorageBackend *storage = ConfigManager::getStorageBackend();
+        const size_t capacity = storage->length();
+        if (tailShift > 0 && oldConfigTail < capacity && tailShift < capacity) {
+            for (size_t source = capacity - tailShift; source-- > oldConfigTail;) {
+                storage->update(static_cast<int>(source + tailShift),
+                                storage->read(static_cast<int>(source)));
+            }
+        }
+        for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
+            const LegacyMIDISlotV6 &legacy = legacySlots[static_cast<size_t>(i)];
+            MIDISlot upgraded{};
+            upgraded.type = legacy.type;
+            upgraded.midiChannel = legacy.midiChannel;
+            upgraded.data1 = legacy.data1;
+            upgraded.active = legacy.active;
+            upgraded.arpNote = legacy.arpNote;
+            upgraded.sysexLength = legacy.sysexLength;
+            upgraded.efSettings = sanitizeEfSettings(legacy.efSettings);
+            upgraded.sysexTemplate = legacy.sysexTemplate;
+            upgraded.ef = sanitizeEfRuntime(legacy.ef);
+            upgraded.setEnvelopeFollowerIndex(upgraded.ef.followerIndex);
+            upgraded.arg = sanitizeSlotArg(legacy.arg);
+            upgraded.lfo = SlotLfoConfig{};
+            const int upgradedAddress = static_cast<int>(
+                EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
+            storagePut(upgradedAddress, upgraded);
+        }
+        SlotEnvelopePayload migratedFilter{};
+        migratedFilter.filterType =
+            static_cast<uint8_t>(legacySlots[0].efSettings.filterType);
+        migratedFilter.frequency = legacyFilterFrequency;
+        migratedFilter.q = legacyFilterQ;
+        persistFilterTail(migratedFilter);
+        storagePut(EEPROM_BROWNOUT_COUNT, legacyBrownoutCount);
+    } else if (storedVersion == kLegacyConfigVersion) {
         struct LegacyMIDISlotV3 {
             MIDIMessageType type;
             uint8_t midiChannel;

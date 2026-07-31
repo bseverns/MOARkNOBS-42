@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": 6,
+  "schema_version": 7,
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
   "required": ["slots", "efSlots", "filter", "arg", "led"],
@@ -246,6 +246,23 @@
               "sourceB": { "type": "integer", "title": "Follower B", "minimum": 0, "maximum": 5 }
             },
             "additionalProperties": false
+          },
+          "lfo": {
+            "type": "array",
+            "title": "Per-slot LFO lanes",
+            "description": "Fixed LFO 1 and LFO 2 contributions composed after EF/ARG.",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["enabled", "mode", "amount"],
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "mode": { "type": "integer", "minimum": 0, "maximum": 4 },
+                "amount": { "type": "integer", "minimum": -100, "maximum": 100 }
+              },
+              "additionalProperties": false
+            }
           }
         },
         "additionalProperties": false

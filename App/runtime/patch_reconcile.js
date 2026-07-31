@@ -113,6 +113,15 @@ export function normalizeSlotPatchEntry(entry) {
       fields.arg = arg;
     }
   }
+  if (Array.isArray(entry.lfo)) {
+    fields.lfo = entry.lfo.slice(0, 2).map((lane, laneIndex) => ({
+      lfo: laneIndex,
+      enabled: Boolean(lane?.enabled),
+      mode: clamp(Math.round(Number(lane?.mode) || 0), 0, 4),
+      mode_name: typeof lane?.mode_name === 'string' ? lane.mode_name : undefined,
+      amount: clamp(Math.round(Number(lane?.amount) || 0), -100, 100)
+    }));
+  }
   if (entry.active !== undefined) fields.active = Boolean(entry.active);
   const arpNoteValue = entry.arpNote ?? entry.arp_note;
   if (arpNoteValue !== undefined) {

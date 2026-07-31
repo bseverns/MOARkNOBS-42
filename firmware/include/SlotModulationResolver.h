@@ -14,7 +14,8 @@ struct SlotModulationInput {
     uint8_t efValue = 0;
     EfDestinationMode efMode = EfDestinationMode::AddClamp;
     std::array<bool, 2> lfoActive{};
-    std::array<uint8_t, 2> lfoValue{{64, 64}};
+    std::array<float, 2> lfoValue{}; // Signed oscillator value (-1..1)
+    std::array<SlotLfoLane, 2> lfoLane{};
 };
 
 // Compose sources in the fixed order baseline -> EF/ARG -> LFO 1 -> LFO 2.

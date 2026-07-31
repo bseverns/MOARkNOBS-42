@@ -146,6 +146,11 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
       clone
     );
   }
+  if (Array.isArray(slot?.lfo) && !equivalentJson(slot.lfo, previousSlot?.lfo)) {
+    out.lfo = slot.lfo.map((lane) =>
+      copyDefined(lane, ['enabled', 'mode', 'amount'], clone)
+    );
+  }
   return out;
 }
 

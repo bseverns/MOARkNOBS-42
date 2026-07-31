@@ -170,6 +170,10 @@ void LFOManager::update(unsigned long nowMs) {
             normalized = lfoValues[idx] * 0.5f + 0.5f;
         }
         lastNormalized_[idx] = std::clamp(normalized, 0.0f, 1.0f);
+        lastSigned_[idx] = std::clamp(lfoBipolar[idx]
+                                          ? lfoValues[idx]
+                                          : (2.0f * lfoValues[idx] - lfo.getDepth()),
+                                      -1.0f, 1.0f);
     }
 
     // Fan out each route using the latest LFO values.
@@ -215,6 +219,11 @@ float LFOManager::normalizedValue(uint8_t index) const {
     if (index >= lastNormalized_.size())
         return 0.0f;
     return lastNormalized_[index];
+}
+
+float LFOManager::signedValue(uint8_t index) const {
+    if (index >= lastSigned_.size()) return 0.0f;
+    return lastSigned_[index];
 }
 
 bool LFOManager::getRoute(size_t index, Route &route) const {

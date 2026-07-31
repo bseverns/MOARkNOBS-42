@@ -7,6 +7,7 @@ const EF_FILTER_Q_MIN = 0.5;
 const EF_FILTER_Q_MAX = 4.0;
 const EF_MODE_NAMES = ['PEAK', 'RMS', 'GATE', 'FOLLOWER'];
 const EF_DESTINATION_MODE_NAMES = ['add_clamp', 'subtract', 'replace', 'scale', 'centered'];
+const MOD_COMBINE_MODE_NAMES = ['add_clamp', 'subtract', 'replace', 'scale', 'centered'];
 const EF_IDLE_FLOOR_DEFAULT = 24;
 const LED_MODE_NAMES = ['STATIC', 'PEAK_HOLD', 'TRAIL', 'CLOCK_PULSE'];
 const LEGACY_ENVELOPE_ANALOG_PINS = [14, 15, 16, 17, 20, 21];
@@ -232,6 +233,31 @@ function normalizeSlotArg(slot, efLimit = 6) {
   return arg;
 }
 
+function normalizeSlotLfo(slot) {
+  const source = Array.isArray(slot?.lfo)
+    ? slot.lfo
+    : Array.isArray(slot?.lfo_lanes)
+      ? slot.lfo_lanes
+      : [];
+  return Array.from({ length: 2 }, (_, index) => {
+    const incoming = source[index] && typeof source[index] === 'object' ? source[index] : {};
+    let mode = Number(incoming.mode);
+    if (!Number.isFinite(mode) && typeof incoming.mode === 'string') {
+      mode = MOD_COMBINE_MODE_NAMES.indexOf(incoming.mode.toLowerCase());
+    }
+    if (!Number.isFinite(mode) && typeof incoming.mode_name === 'string') {
+      mode = MOD_COMBINE_MODE_NAMES.indexOf(incoming.mode_name.toLowerCase());
+    }
+    mode = clamp(Math.round(Number.isFinite(mode) ? mode : 4), 0, 4);
+    const amount = clamp(Math.round(Number(incoming.amount) || 0), -100, 100);
+    return {
+      enabled: Boolean(incoming.enabled),
+      mode,
+      amount
+    };
+  });
+}
+
 function normalizeSlotConfig(slot, efLimit = 6) {
   const source = slot && typeof slot === 'object' ? slot : {};
   const efMax = Math.max(
@@ -271,8 +297,9 @@ function normalizeSlotConfig(slot, efLimit = 6) {
   const active = typeof activeCandidate === 'boolean' ? activeCandidate : Boolean(activeCandidate);
 
   const arg = normalizeSlotArg(source, efLimit);
+  const lfo = normalizeSlotLfo(source);
 
-  const normalized = { type, midiChannel, data1, efIndex, ef, active, arg };
+  const normalized = { type, midiChannel, data1, efIndex, ef, active, arg, lfo };
 
   const arpNoteCandidate = Number(source.arpNote ?? source.arp_note);
   if (Number.isFinite(arpNoteCandidate)) {

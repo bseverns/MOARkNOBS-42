@@ -43,7 +43,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0006; // EEPROM schema version
+inline constexpr uint16_t CONFIG_VERSION = 0x0007; // EEPROM schema version
 
 inline constexpr uint16_t OLED_WIDTH = 128;          // OLED display width in pixels
 inline constexpr uint16_t OLED_HEIGHT = 64;          // OLED display height in pixels
