@@ -46,28 +46,11 @@ SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
     return sanitized;
 }
 
-// Compute one slot's effective ARG level from its chosen follower pair and operator.
-uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFollower> &followers) {
-    const SlotARGConfig &cfg = slot.arg;
-    auto fetchLevel = [&](uint8_t idx) -> int {
-        if (idx < followers.size()) {
-            return followers[idx].getEnvelopeLevel();
-        }
-        return 0;
-    };
-
-    // If ARG is disabled we fall back to the slot's linked follower. Think of
-    // this as "bypass"—the same wiring but no extra maths.
-    if (!cfg.enabled) {
-        const auto followerIndex = static_cast<size_t>(slot.ef.followerIndex);
-        if (slot.ef.followerIndex >= 0 && followerIndex < followers.size()) {
-            return static_cast<uint8_t>(followers[followerIndex].getEnvelopeLevel());
-        }
-        return 0;
-    }
-
-    const int A = fetchLevel(cfg.sourceA);
-    const int B = fetchLevel(cfg.sourceB);
+uint8_t computeArgLevel(const SlotARGConfig &config,
+                        const std::array<uint8_t, NUM_ENVELOPES> &levels) {
+    const SlotARGConfig cfg = sanitizeSlotArg(config);
+    const int A = levels[cfg.sourceA];
+    const int B = levels[cfg.sourceB];
     int result = 0;
 
     // Each operator is kept explicit so students can tinker without spelunking
@@ -119,4 +102,19 @@ uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFoll
     }
 
     return static_cast<uint8_t>(constrain(result, 0, 127));
+}
+
+// Compatibility adapter for callers that still own follower objects.
+uint8_t computeSlotArgLevel(const MIDISlot &slot, const std::vector<EnvelopeFollower> &followers) {
+    std::array<uint8_t, NUM_ENVELOPES> levels{};
+    for (size_t i = 0; i < levels.size() && i < followers.size(); ++i) {
+        levels[i] = static_cast<uint8_t>(constrain(followers[i].getEnvelopeLevel(), 0, 127));
+    }
+    if (!slot.arg.enabled) {
+        const int followerIndex = slot.getEnvelopeFollowerIndex();
+        return followerIndex >= 0 && followerIndex < static_cast<int>(levels.size())
+                   ? levels[static_cast<size_t>(followerIndex)]
+                   : 0;
+    }
+    return computeArgLevel(slot.arg, levels);
 }

@@ -24,6 +24,7 @@
 #include "Protocol.h"
 #include "UI.h"
 #include "Scheduler.h"
+#include "SlotModulationResolver.h"
 #include "bench_log_latency.h"
 #include "interop/SeedBoxLink.h"
 
@@ -64,6 +65,18 @@ struct PendingNoteOff {
 constexpr size_t kPendingNoteOffCapacity = 64;
 std::array<PendingNoteOff, kPendingNoteOffCapacity> pendingNoteOffs{};
 std::array<uint32_t, NUM_ENVELOPES> envelopeFollowerSampledAtUs{};
+
+struct SlotModulationFrame {
+    bool efActive = false;
+    uint8_t efValue = 0;
+    std::array<bool, LFOManager::kMaxLFOs> lfoActive{};
+    std::array<uint8_t, LFOManager::kMaxLFOs> lfoValue{{64, 64}};
+    uint8_t lastEmittedValue = 0xFF;
+    unsigned long lastEmitMs = 0;
+};
+
+std::array<SlotModulationFrame, NUM_SLOTS> slotModulationFrames{};
+constexpr unsigned long kSlotModulationMinSendIntervalMs = 9;
 
 void queueMidiServiceRequest() {
     // ISR-safe flagging: keep the interrupt short and let `processMIDI()` grab the work later.
@@ -119,29 +132,6 @@ bool externalClockDominant() {
 bool internalClockDominant() { return g_tappedBPM > 0.0f && !externalClockDominant(); }
 
 bool performanceClockActive() { return externalClockDominant() || internalClockDominant(); }
-
-uint8_t applyEfDestinationMode(uint8_t baseline, uint8_t contribution, EfDestinationMode mode) {
-    int value = baseline;
-    switch (mode) {
-    case EfDestinationMode::AddClamp:
-        value = static_cast<int>(baseline) + static_cast<int>(contribution);
-        break;
-    case EfDestinationMode::Subtract:
-        value = static_cast<int>(baseline) - static_cast<int>(contribution);
-        break;
-    case EfDestinationMode::Replace:
-        value = contribution;
-        break;
-    case EfDestinationMode::Scale:
-        value = static_cast<int>(std::lround(
-            (static_cast<float>(baseline) * static_cast<float>(contribution)) / 127.0f));
-        break;
-    case EfDestinationMode::Centered:
-        value = static_cast<int>(baseline) + static_cast<int>(contribution) - 64;
-        break;
-    }
-    return static_cast<uint8_t>(constrain(value, 0, 127));
-}
 
 uint8_t resolveSlotNoteVelocity(uint8_t slotIndex, const MIDISlot &slot) {
     uint8_t velo = 125;
@@ -391,8 +381,15 @@ void initializeRuntime(bool baselinesLoaded) {
         seedbox::interop::mn42::SeedBoxLink::instance().begin(&midiHandler);
     }
     lfoManager.attachMIDI(&midiHandler);
-    lfoManager.setSlotValueCallback(
-        [](uint8_t slotIndex, uint8_t value) { emitSlotModulationValue(slotIndex, value); });
+    lfoManager.setSlotValueCallback([](uint8_t lfoIndex, uint8_t slotIndex, uint8_t value) {
+        if (slotIndex >= slotModulationFrames.size() ||
+            lfoIndex >= slotModulationFrames[slotIndex].lfoActive.size()) {
+            return;
+        }
+        SlotModulationFrame &frame = slotModulationFrames[slotIndex];
+        frame.lfoActive[lfoIndex] = true;
+        frame.lfoValue[lfoIndex] = value;
+    });
     ledAnimator.setMode(configManager.getLedMode());
     statusLedBootDeadline = now() + kStatusLedBootHoldMs;
     statusLedPulseDeadline = 0;
@@ -404,6 +401,12 @@ void initializeRuntime(bool baselinesLoaded) {
             auto &slot = configManager.getSlot(potIdx);
             if (!slot.active)
                 return;
+
+            // A modulated slot is emitted only by the control-rate resolver.
+            // The pot manager still owns the physical baseline cache.
+            if (slot.getEnvelopeFollowerIndex() >= 0 || lfoManager.slotIsRouted(potIdx)) {
+                return;
+            }
 
             switch (slot.type) {
             case MIDIMessageType::CC:
@@ -594,6 +597,12 @@ void processEnvelopeFollowers() {
 
 // High-tier LFO update lane.
 void processLFOs() {
+    // Route callbacks repopulate these flags from the current route table.
+    // Clearing first also removes stale contributions immediately after a
+    // route is deleted or a profile is switched.
+    for (SlotModulationFrame &frame : slotModulationFrames) {
+        frame.lfoActive.fill(false);
+    }
     lfoManager.update(now());
     const LFOBus &bus = lfoManager.bus();
     g_lfoEfGainTrim = bus.efGainTrim;
@@ -641,18 +650,17 @@ void processPendingNoteOffs() {
 
 // Mid-tier envelope-to-MIDI modulation lane.
 void processEnvelopes() {
-    // Track last emitted values so EF modulation sends CC only on change.
-    static std::array<uint8_t, NUM_POTS> lastEnvelopeMidiValues;
-    static bool envelopeMidiInitialized = false;
-    if (!envelopeMidiInitialized) {
-        lastEnvelopeMidiValues.fill(0xFF);
-        envelopeMidiInitialized = true;
+    for (SlotModulationFrame &frame : slotModulationFrames) {
+        frame.efActive = false;
     }
 
     std::array<int, NUM_ENVELOPES> rawFollowerLevels{};
+    std::array<uint8_t, NUM_ENVELOPES> followerLevels{};
     std::array<bool, NUM_ENVELOPES> followerReady{};
     for (size_t idx = 0; idx < envelopeFollowers.size(); ++idx) {
         rawFollowerLevels[idx] = envelopeFollowerLevels[idx];
+        followerLevels[idx] =
+            static_cast<uint8_t>(constrain(rawFollowerLevels[idx], 0, 127));
         followerReady[idx] = envelopeFollowerReady[idx];
         if (followerReady[idx]) {
             ledAnimator.setEnvelopeTarget(static_cast<uint8_t>(idx),
@@ -671,23 +679,29 @@ void processEnvelopes() {
             if (currentPotReading < 0)
                 continue;
 
-            uint8_t baselineMidi = Utility::mapToMidiValue(currentPotReading);
-
             EnvelopeFollower *envelope = &envelopeFollowers[envelopeIndex];
             bool envelopeActive = envelope->getActiveState();
 
             if (!envelopeActive) {
-                lastEnvelopeMidiValues[potIndex] = baselineMidi;
                 continue;
             }
 
             if (!followerReady[envelopeIndex]) {
-                lastEnvelopeMidiValues[potIndex] = baselineMidi;
                 continue;
             }
 
             const MIDISlot &slot = configManager.getSlot(potIndex);
-            // Per-slot EfVoice applies filter/ARG semantics before we fold into base pot value.
+            uint8_t reactiveSource = followerLevels[envelopeIndex];
+            if (slot.arg.enabled) {
+                const SlotARGConfig arg = sanitizeSlotArg(slot.arg);
+                if (!followerReady[arg.sourceA] || !followerReady[arg.sourceB]) {
+                    continue;
+                }
+                reactiveSource = computeArgLevel(arg, followerLevels);
+            }
+
+            // ARG selects/computes the reactive input first; the slot-local
+            // voice then performs its filtering and shaping exactly once.
             EfVoice &voice = efVoices[potIndex];
             voice.assignFollower(envelopeIndex);
             const float envelopeIntervalMs =
@@ -696,41 +710,24 @@ void processEnvelopes() {
                     : 1.0f;
             voice.setControlRateHz(1000.0f / envelopeIntervalMs);
             voice.syncSettings(slot.efSettings);
-            voice.render(rawFollowerLevels[envelopeIndex]);
+            voice.render(reactiveSource);
 
             if (potIndex >= NUM_SLOTS)
                 continue;
-            uint8_t envelopeContribution = computeSlotArgLevel(slot, envelopeFollowers);
-            const auto destinationMode =
-                settings.destinationMode <= static_cast<uint8_t>(EfDestinationMode::Centered)
-                    ? static_cast<EfDestinationMode>(settings.destinationMode)
-                    : EfDestinationMode::AddClamp;
-            uint8_t modulatedValue =
-                applyEfDestinationMode(baselineMidi, envelopeContribution, destinationMode);
-
-            bool valueChanged = modulatedValue != lastEnvelopeMidiValues[potIndex];
-            if (valueChanged) {
-                // Envelope and LFO routes share the same slot renderer.  An
-                // EF assignment therefore honors Note, bend, program, SysEx,
-                // and other configured slot types instead of silently
-                // bypassing them as a pot CC.
-                emitSlotModulationValue(potIndex, modulatedValue);
+            SlotModulationFrame &frame = slotModulationFrames[potIndex];
+            frame.efActive = true;
+            frame.efValue = voice.latestLevel();
 #if BENCH_EF_LATENCY_LOG
-                static bool headerPrinted = false;
-                if (!headerPrinted) {
-                    benchEfLatencyHeader();
-                    headerPrinted = true;
-                }
-                benchEfLatencyLog(static_cast<uint8_t>(envelopeIndex),
-                                  static_cast<uint8_t>(potIndex),
-                                  rawFollowerLevels[envelopeIndex], modulatedValue,
-                                  envelopeFollowerSampledAtUs[envelopeIndex],
-                                  "midi_enqueue");
-#endif
-                lastEnvelopeMidiValues[potIndex] = modulatedValue;
+            static bool headerPrinted = false;
+            if (!headerPrinted) {
+                benchEfLatencyHeader();
+                headerPrinted = true;
             }
-
-            ledAnimator.setPotTarget(potIndex, modulatedValue);
+            benchEfLatencyLog(static_cast<uint8_t>(envelopeIndex),
+                              static_cast<uint8_t>(potIndex), reactiveSource,
+                              frame.efValue, envelopeFollowerSampledAtUs[envelopeIndex],
+                              "resolver_cache");
+#endif
         }
     }
 
@@ -741,6 +738,57 @@ void processEnvelopes() {
             for (uint8_t i = 0; i < POT_LED_COUNT; ++i) {
                 ledManager.setPotIndicator(i, potMidiValue);
             }
+        }
+    }
+}
+
+// Resolve and emit each modulated slot once per control-rate frame.
+void processSlotModulation() {
+    const unsigned long currentMs = now();
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        SlotModulationFrame &frame = slotModulationFrames[slotIndex];
+        const bool hasLfo = std::any_of(frame.lfoActive.begin(), frame.lfoActive.end(),
+                                       [](bool active) { return active; });
+        if (!frame.efActive && !hasLfo) {
+            // Forget the previous composed value once ownership returns to the
+            // direct pot path. Re-adding a route must force a fresh emit even
+            // when it resolves to the same value as the old route.
+            frame.lastEmittedValue = 0xFF;
+            continue;
+        }
+
+        const MIDISlot &slot = configManager.getSlot(slotIndex);
+        if (!slot.active) {
+            frame.lastEmittedValue = 0xFF;
+            continue;
+        }
+        int rawBaseline = slotIndex < NUM_POTS
+                              ? potentiometerManager.getLastValue(slotIndex)
+                              : -1;
+        const uint8_t baseline = rawBaseline >= 0
+                                     ? Utility::mapToMidiValue(rawBaseline)
+                                     : static_cast<uint8_t>(slot.data1 & 0x7F);
+        SlotModulationInput input{};
+        input.baseline = baseline;
+        input.efActive = frame.efActive;
+        input.efValue = frame.efValue;
+        input.efMode = slot.efSettings.destinationMode <=
+                               static_cast<uint8_t>(EfDestinationMode::Centered)
+                           ? static_cast<EfDestinationMode>(slot.efSettings.destinationMode)
+                           : EfDestinationMode::AddClamp;
+        input.lfoActive = frame.lfoActive;
+        input.lfoValue = frame.lfoValue;
+        const uint8_t finalValue = resolveSlotModulation(input);
+
+        if (finalValue == frame.lastEmittedValue ||
+            currentMs - frame.lastEmitMs < kSlotModulationMinSendIntervalMs) {
+            continue;
+        }
+        emitSlotModulationValue(slotIndex, finalValue);
+        frame.lastEmittedValue = finalValue;
+        frame.lastEmitMs = currentMs;
+        if (slotIndex < NUM_POTS) {
+            ledAnimator.setPotTarget(slotIndex, finalValue);
         }
     }
 }

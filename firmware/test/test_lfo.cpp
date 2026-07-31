@@ -209,9 +209,11 @@ void test_lfo_apply_profile_resets_sync_timing_baseline() {
 void test_lfo_slot_value_route_emits_slot_callback() {
     LFOManager manager;
     uint8_t observedSlot = 0xFF;
+    uint8_t observedLfo = 0xFF;
     uint8_t observedValue = 0;
     uint8_t callbackCount = 0;
-    manager.setSlotValueCallback([&](uint8_t slotIndex, uint8_t value) {
+    manager.setSlotValueCallback([&](uint8_t lfoIndex, uint8_t slotIndex, uint8_t value) {
+        observedLfo = lfoIndex;
         observedSlot = slotIndex;
         observedValue = value;
         callbackCount++;
@@ -228,6 +230,7 @@ void test_lfo_slot_value_route_emits_slot_callback() {
     manager.update(10);
 
     TEST_ASSERT_EQUAL_UINT8(1, callbackCount);
+    TEST_ASSERT_EQUAL_UINT8(0, observedLfo);
     TEST_ASSERT_EQUAL_UINT8(7, observedSlot);
     TEST_ASSERT_EQUAL_UINT8(127, observedValue);
 }
@@ -236,7 +239,9 @@ void test_lfo_slot_value_route_applies_signed_amount_and_range() {
     LFOManager manager;
     uint8_t observedValue = 0;
     manager.setSlotValueCallback(
-        [&](uint8_t /*slotIndex*/, uint8_t value) { observedValue = value; });
+        [&](uint8_t /*lfoIndex*/, uint8_t /*slotIndex*/, uint8_t value) {
+            observedValue = value;
+        });
 
     LFO &lfo = manager.lfo(0);
     lfo.setShape(LFOShape::Square);

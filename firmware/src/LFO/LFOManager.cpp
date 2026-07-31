@@ -47,8 +47,18 @@ void LFOManager::attachMIDI(MIDIHandler *midi) {
 }
 
 // Install a callback for slot-routed modulation values.
-void LFOManager::setSlotValueCallback(std::function<void(uint8_t, uint8_t)> cb) {
+void LFOManager::setSlotValueCallback(std::function<void(uint8_t, uint8_t, uint8_t)> cb) {
     slotValueCallback_ = cb;
+}
+
+void LFOManager::setSlotValueCallback(std::function<void(uint8_t, uint8_t)> cb) {
+    if (!cb) {
+        slotValueCallback_ = nullptr;
+        return;
+    }
+    slotValueCallback_ = [cb](uint8_t, uint8_t slotIndex, uint8_t value) {
+        cb(slotIndex, value);
+    };
 }
 
 // Install an OSC callback for external modulation mirrors.
@@ -216,6 +226,12 @@ bool LFOManager::getRoute(size_t index, Route &route) const {
     return true;
 }
 
+bool LFOManager::slotIsRouted(uint8_t slotIndex) const {
+    return std::any_of(routes_.begin(), routes_.end(), [slotIndex](const Route &route) {
+        return route.type == Route::Type::SlotValue && route.slotIndex == slotIndex;
+    });
+}
+
 void LFOManager::setRoutes(const Route *routes, size_t count) {
     // Replace the route table with a caller-provided snapshot.
     clearRoutes();
@@ -371,15 +387,12 @@ void LFOManager::maybeSendMidi(Route &route, float normalized, unsigned long now
 void LFOManager::maybeSendSlotValue(Route &route, float normalized, unsigned long nowMs) {
     if (!slotValueCallback_)
         return;
-    if (nowMs - route.lastSendMs < kMinSendIntervalMs)
-        return;
-
-    int midiValue = routeMidiValue7(route, normalized);
-    if (midiValue != route.lastValue) {
-        route.lastValue = midiValue;
-        route.lastSendMs = nowMs;
-        slotValueCallback_(route.slotIndex, static_cast<uint8_t>(midiValue));
-    }
+    (void)nowMs;
+    // Slot routes publish into the shared resolver on every LFO frame. Change
+    // detection and throttling happen once, after EF/ARG and all LFOs compose.
+    const int midiValue = routeMidiValue7(route, normalized);
+    route.lastValue = midiValue;
+    slotValueCallback_(route.lfoIndex, route.slotIndex, static_cast<uint8_t>(midiValue));
 }
 
 // Dispatch an OSC callback if configured.

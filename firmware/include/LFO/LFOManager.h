@@ -78,6 +78,9 @@ class LFOManager {
     // Attach MIDI handler for outbound CC routes.
     void attachMIDI(MIDIHandler *midi);
     // Provide a callback that emits a slot-routed LFO value.
+    void setSlotValueCallback(
+        std::function<void(uint8_t lfoIndex, uint8_t slotIndex, uint8_t value)> cb);
+    // Backward-compatible adapter for consumers that do not need source identity.
     void setSlotValueCallback(std::function<void(uint8_t slotIndex, uint8_t value)> cb);
     // Provide an OSC callback for external routing.
     void setOscCallback(void (*cb)(uint8_t index, float value));
@@ -117,6 +120,7 @@ class LFOManager {
     size_t routeCount() const { return routes_.size(); }
     // Fetch a route snapshot by index.
     bool getRoute(size_t index, Route &route) const;
+    bool slotIsRouted(uint8_t slotIndex) const;
     // Replace all routes with the provided list.
     void setRoutes(const Route *routes, size_t count);
     // Apply profile-derived snapshot data (LFO state + routes).
@@ -144,7 +148,7 @@ class LFOManager {
     std::vector<Route> routes_;        // Active routes
     LFOClock clock_;                   // Shared clock sync adapter
     MIDIHandler *midi_ = nullptr;      // MIDI output (not owned)
-    std::function<void(uint8_t, uint8_t)> slotValueCallback_ = nullptr;
+    std::function<void(uint8_t, uint8_t, uint8_t)> slotValueCallback_ = nullptr;
     void (*oscCallback_)(uint8_t, float) = nullptr; // OSC callback hook
     unsigned long lastUpdateMs_ = 0;                // Last update timestamp (ms)
     LFOBus bus_{};                                  // Current internal bus values

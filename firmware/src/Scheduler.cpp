@@ -104,6 +104,9 @@ void initializeSchedulers() {
 #else
     Utility::schedulerMid.addTask(processEnvelopes, hwConfig.envelopeTaskInterval, true);
 #endif
+    // Final slot values are resolved separately so LFO-only slots continue to
+    // work even when envelope acquisition is disabled for diagnostics.
+    Utility::schedulerMid.addTask(processSlotModulation, hwConfig.envelopeTaskInterval, true);
 
     // Scan one matrix row plus a pot slice per pass so the full panel still refreshes quickly
     // without monopolizing a single loop iteration.

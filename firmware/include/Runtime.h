@@ -22,6 +22,7 @@ void processLFOs();
 
 // Mid/low-tier musical processing and deferred cleanup.
 void processEnvelopes();
+void processSlotModulation();
 void processPendingNoteOffs();
 void processInternalClock();
 
