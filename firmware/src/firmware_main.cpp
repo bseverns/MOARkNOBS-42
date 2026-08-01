@@ -106,14 +106,19 @@ void loop() {
     Utility::schedulerLow.update();
     if (g_profileChangeRequested) {
         ProfileData profile{};
+        ProfileModulationExtension modulation{};
         if (configManager.loadProfileSettings(g_activeProfile, profile)) {
             applyProfileSnapshot(profile, true);
+        }
+        if (configManager.loadProfileModulation(g_activeProfile, modulation)) {
+            applyProfileModulation(modulation, true);
         }
         g_profileChangeRequested = false;
     }
     if (g_profileSaveRequested) {
         ProfileData profile = captureProfileSnapshot();
         configManager.saveProfileSettings(g_activeProfile, profile);
+        configManager.saveProfileModulation(g_activeProfile, captureProfileModulation());
         g_profileSaveRequested = false;
     }
     monitorSystemLoad();

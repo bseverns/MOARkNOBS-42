@@ -1,6 +1,6 @@
 const MN42_MANIFEST_CONTRACT = Object.freeze({
   device_name: 'MOARkNOBS-42',
-  schema_version: 7,
+  schema_version: 8,
   slot_count: 42,
   pot_count: 42,
   envelope_count: 6,

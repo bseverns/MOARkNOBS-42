@@ -11,6 +11,7 @@
 #include "LFO/LFOManager.h"
 #include "LEDManager.h"
 #include "EnvelopeFollower.h"
+#include "ProfileModulationStorage.h"
 
 // Modes.cpp is the bridge between persisted profile/config state and the live
 // runtime objects that actually make sound, light, and movement.
@@ -158,8 +159,30 @@ ProfileData captureProfileSnapshot() {
     return profile;
 }
 
+ProfileModulationExtension captureProfileModulation() {
+    ProfileModulationExtension extension{};
+    const auto &slots = configManager.getSlots();
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        extension.slots[i].argPacked = packProfileSlotArg(slots[i].arg);
+        for (uint8_t lane = 0; lane < PROFILE_LFO_COUNT; ++lane) {
+            extension.slots[i].lfo[lane] = slots[i].lfo.lfo[lane];
+        }
+    }
+    return sanitizeProfileModulation(extension);
+}
+
+ProfileModulationExtension defaultProfileModulationSnapshot() {
+    ProfileModulationExtension extension{};
+    const SlotARGConfig defaultArg{};
+    for (ProfileSlotModSettings &slot : extension.slots) {
+        slot.argPacked = packProfileSlotArg(defaultArg);
+    }
+    return sanitizeProfileModulation(extension);
+}
+
 bool persistActiveProfileSnapshot() {
-    return configManager.saveProfileSettings(g_activeProfile, captureProfileSnapshot());
+    return configManager.saveProfileSettings(g_activeProfile, captureProfileSnapshot()) &&
+           configManager.saveProfileModulation(g_activeProfile, captureProfileModulation());
 }
 
 // 3b. Restore a previously captured profile into the live engine state. Callers can choose
@@ -220,6 +243,19 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     }
 }
 
+void applyProfileModulation(const ProfileModulationExtension &candidate, bool persistSlots) {
+    const ProfileModulationExtension extension = sanitizeProfileModulation(candidate);
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        MIDISlot &slot = configManager.getSlot(i);
+        slot.arg = unpackProfileSlotArg(extension.slots[i].argPacked);
+        for (uint8_t lane = 0; lane < PROFILE_LFO_COUNT; ++lane) {
+            slot.lfo.lfo[lane] = extension.slots[i].lfo[lane];
+        }
+        slot.lfo = sanitizeSlotLfoConfig(slot.lfo);
+        if (persistSlots) configManager.saveSlot(i, slot);
+    }
+}
+
 // 4a. Seed the two onboard LFOs with a predictable default routing so a clean boot still has a
 // coherent modulation story before any profile or host edits arrive.
 void configureLFOs() {
@@ -264,6 +300,14 @@ void restoreActiveProfileRuntime(bool persistSnapshot) {
     if (configManager.loadProfileSettings(g_activeProfile, storedProfile)) {
         applyProfileSnapshot(storedProfile, persistSnapshot);
     }
+    ProfileModulationExtension modulation{};
+    if (!configManager.loadProfileModulation(g_activeProfile, modulation)) {
+        // Schema-7 profiles inherited the formerly global slot modulation on
+        // first load, preserving their audible behavior after the upgrade.
+        modulation = captureProfileModulation();
+        configManager.saveProfileModulation(g_activeProfile, modulation);
+    }
+    applyProfileModulation(modulation, persistSnapshot);
     refreshEfVoicesFromConfig();
 }
 

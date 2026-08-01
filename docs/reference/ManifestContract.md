@@ -9,7 +9,7 @@
 | Field                    | Current fallback  | Source                                                  |
 | ------------------------ | ----------------- | ------------------------------------------------------- |
 | `device_name`            | `MOARkNOBS-42`    | `firmware/include/protocol/ManifestContract.h`          |
-| `schema_version`         | `6`               | `firmware/include/Globals.h` `CONFIG_VERSION`           |
+| `schema_version`         | `8`               | `firmware/include/Globals.h` `CONFIG_VERSION`           |
 | `slot_count`             | `42`              | `firmware/include/MIDITypes.h` `NUM_SLOTS`              |
 | `pot_count`              | `42`              | `firmware/include/Globals.h` `NUM_POTS`                 |
 | `envelope_count`         | `6`               | `firmware/include/Globals.h` `NUM_ENVELOPES`            |

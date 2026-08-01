@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "schema_version": 7,
+  "schema_version": 8,
   "title": "MOARkNOBS Runtime Configuration",
   "type": "object",
   "required": ["slots", "efSlots", "filter", "arg", "led"],

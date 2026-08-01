@@ -7,6 +7,7 @@
 #include "ConfigManager.h"
 #include "BoardPowerProfile.h"
 #include "ProfileStorage.h"
+#include "ProfileModulationStorage.h"
 #include "EnvelopeFollower.h"
 #include "ARGMixer.h" // reuse the shared sanitizeSlotArg implementation
 #include "Arpeggiator.h"
@@ -880,6 +881,36 @@ bool ConfigManager::saveProfileSettings(uint8_t id, const ProfileData &profile) 
     storageGet(base, verified);
     return verified.version == PROFILE_SETTINGS_VERSION &&
            verified.crc == computeProfileCrc(verified);
+}
+
+FLASHMEM bool ConfigManager::loadProfileModulation(uint8_t id,
+                                          ProfileModulationExtension &extension) const {
+    if (id >= NUM_PROFILES) return false;
+    const uint16_t base = EEPROM_PROFILE_MODULATION_START(id);
+    if (!activeStorageBackend().contains(base, sizeof(ProfileModulationExtension))) return false;
+    ProfileModulationExtension stored{};
+    storageGet(base, stored);
+    if (stored.version != PROFILE_MODULATION_VERSION ||
+        stored.crc != computeProfileModulationCrc(stored)) {
+        return false;
+    }
+    extension = sanitizeProfileModulation(stored);
+    extension.crc = computeProfileModulationCrc(extension);
+    return true;
+}
+
+FLASHMEM bool ConfigManager::saveProfileModulation(
+    uint8_t id, const ProfileModulationExtension &extension) {
+    if (id >= NUM_PROFILES) return false;
+    ProfileModulationExtension sanitized = sanitizeProfileModulation(extension);
+    sanitized.crc = computeProfileModulationCrc(sanitized);
+    const uint16_t base = EEPROM_PROFILE_MODULATION_START(id);
+    if (!activeStorageBackend().contains(base, sizeof(sanitized))) return false;
+    storagePut(base, sanitized);
+    ProfileModulationExtension verified{};
+    storageGet(base, verified);
+    return verified.version == PROFILE_MODULATION_VERSION &&
+           verified.crc == computeProfileModulationCrc(verified);
 }
 
 void ConfigManager::setActiveProfile(uint8_t id) {

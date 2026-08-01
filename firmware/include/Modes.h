@@ -18,7 +18,10 @@ void applyEfSettingsToFollower(EnvelopeFollower &ef, const MIDISlot::EfSettings 
 
 // Profile snapshot capture and restore.
 ProfileData captureProfileSnapshot();
+ProfileModulationExtension captureProfileModulation();
+ProfileModulationExtension defaultProfileModulationSnapshot();
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots);
+void applyProfileModulation(const ProfileModulationExtension &extension, bool persistSlots);
 bool persistActiveProfileSnapshot();
 void restoreActiveProfileRuntime(bool persistSnapshot);
 

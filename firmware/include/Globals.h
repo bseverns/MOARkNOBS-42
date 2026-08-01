@@ -43,7 +43,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0007; // EEPROM schema version
+inline constexpr uint16_t CONFIG_VERSION = 0x0008; // EEPROM schema version
 
 inline constexpr uint16_t OLED_WIDTH = 128;          // OLED display width in pixels
 inline constexpr uint16_t OLED_HEIGHT = 64;          // OLED display height in pixels
@@ -203,6 +203,15 @@ inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_BASE =
 inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_START(uint8_t id) {
     return static_cast<uint16_t>(EEPROM_PROFILE_SETTINGS_BASE +
                                  id * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+}
+
+inline constexpr uint16_t EEPROM_PROFILE_MODULATION_BLOCK_SIZE = 512;
+inline constexpr uint16_t EEPROM_PROFILE_MODULATION_BASE =
+    EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+
+inline constexpr uint16_t EEPROM_PROFILE_MODULATION_START(uint8_t id) {
+    return static_cast<uint16_t>(EEPROM_PROFILE_MODULATION_BASE +
+                                 id * EEPROM_PROFILE_MODULATION_BLOCK_SIZE);
 }
 
 inline constexpr uint16_t EEPROM_SYSTEM_FLAGS_BASE =

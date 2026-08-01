@@ -55,21 +55,25 @@ void applyBaselinePotMappings() {
 
 // After profile/config state changes, rebuild the live runtime so the stored snapshot becomes
 // audible.
-void rebuildRuntimeFromProfile(const ProfileData &profile) {
+void rebuildRuntimeFromProfile(const ProfileData &profile,
+                               const ProfileModulationExtension &modulation) {
     syncPotentiometerMappingsFromConfig();
     applyProfileSnapshot(profile, true);
+    applyProfileModulation(modulation, true);
     refreshEfVoicesFromConfig();
 }
 
 // When a slot was blank, we immediately persist the baseline so future loads see a concrete
 // profile.
-void persistMaterializedProfileSlot(uint8_t id, const ProfileData &profile) {
+void persistMaterializedProfileSlot(uint8_t id, const ProfileData &profile,
+                                    const ProfileModulationExtension &modulation) {
     StorageBackend *storage = ConfigManager::getStorageBackend();
     if (storage->supportsTransactions() && !storage->beginTransaction()) {
         return;
     }
     configManager.saveProfile(id);
-    if (!configManager.saveProfileSettings(id, profile)) {
+    if (!configManager.saveProfileSettings(id, profile) ||
+        !configManager.saveProfileModulation(id, modulation)) {
         storage->abortTransaction();
         return;
     }
@@ -93,7 +97,8 @@ bool saveCurrentProfileSlot(uint8_t id) {
     selectActiveProfileSlot(id);
     configManager.saveProfile(id);
     configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
-    if (!configManager.saveProfileSettings(id, captureProfileSnapshot())) {
+    if (!configManager.saveProfileSettings(id, captureProfileSnapshot()) ||
+        !configManager.saveProfileModulation(id, captureProfileModulation())) {
         storage->abortTransaction();
         return false;
     }
@@ -113,19 +118,23 @@ bool loadProfileSlot(uint8_t id) {
 
     ProfileData profile{};
     const bool stored = configManager.loadProfileSettings(id, profile);
+    ProfileModulationExtension modulation{};
+    const bool modulationStored = configManager.loadProfileModulation(id, modulation);
     selectActiveProfileSlot(id);
 
     if (stored) {
         configManager.loadProfile(id);
+        if (!modulationStored) modulation = captureProfileModulation();
     } else {
         profile = defaultProfileSnapshot();
+        modulation = defaultProfileModulationSnapshot();
         applyBaselinePotMappings();
     }
 
-    rebuildRuntimeFromProfile(profile);
+    rebuildRuntimeFromProfile(profile, modulation);
 
-    if (!stored) {
-        persistMaterializedProfileSlot(id, profile);
+    if (!stored || !modulationStored) {
+        persistMaterializedProfileSlot(id, profile, modulation);
     }
     return true;
 }
@@ -137,6 +146,7 @@ bool resetProfileSlot(uint8_t id) {
     }
 
     const ProfileData profile = defaultProfileSnapshot();
+    const ProfileModulationExtension modulation = defaultProfileModulationSnapshot();
     const SceneStorage::ConfigState prior = SceneStorage::captureConfigState();
     StorageBackend *storage = ConfigManager::getStorageBackend();
     if (storage->supportsTransactions() && !storage->beginTransaction()) {
@@ -144,9 +154,10 @@ bool resetProfileSlot(uint8_t id) {
     }
     selectActiveProfileSlot(id);
     applyBaselinePotMappings();
-    rebuildRuntimeFromProfile(profile);
+    rebuildRuntimeFromProfile(profile, modulation);
     configManager.saveProfile(id);
-    if (!configManager.saveProfileSettings(id, profile)) {
+    if (!configManager.saveProfileSettings(id, profile) ||
+        !configManager.saveProfileModulation(id, modulation)) {
         storage->abortTransaction();
         SceneStorage::applyConfigState(prior, false);
         return false;

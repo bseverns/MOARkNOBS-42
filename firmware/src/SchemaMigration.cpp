@@ -371,9 +371,9 @@ void ConfigManager::wipeSlotRegion() {
     storageUpdate(EEPROM_ARG_ENV_B, legacyArg.sourceB);
 }
 
-void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
+FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     if (storedVersion != kLegacyConfigVersion && storedVersion != 0x0004 &&
-        storedVersion != 0x0006) {
+        storedVersion != 0x0006 && storedVersion != 0x0007) {
         wipeSlotRegion();
         wipeProfileBlocks();
         return;
@@ -393,7 +393,26 @@ void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     legacyArg.sourceA = defaults.sourceA;
     legacyArg.sourceB = defaults.sourceB;
 
-    if (storedVersion == 0x0006) {
+    if (storedVersion == 0x0007) {
+        // Schema 8 inserts one fixed-size modulation-extension block per
+        // profile between profile settings and macro/scene storage. Shift the
+        // complete downstream tail upward, copying high addresses first so
+        // the overlapping move is safe.
+        const size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
+        const size_t newMacroStorage = EEPROM_PROFILE_MODULATION_START(NUM_PROFILES);
+        const size_t tailShift = newMacroStorage - oldMacroStorage;
+        StorageBackend *storage = ConfigManager::getStorageBackend();
+        const size_t capacity = storage->length();
+        if (tailShift > 0 && oldMacroStorage < capacity && tailShift < capacity) {
+            for (size_t source = capacity - tailShift; source-- > oldMacroStorage;) {
+                storage->update(static_cast<int>(source + tailShift),
+                                storage->read(static_cast<int>(source)));
+            }
+            for (size_t address = oldMacroStorage; address < newMacroStorage; ++address) {
+                storage->update(static_cast<int>(address), 0x00);
+            }
+        }
+    } else if (storedVersion == 0x0006) {
         struct LegacyMIDISlotV6 {
             MIDIMessageType type = MIDIMessageType::OFF;
             uint8_t midiChannel = 1;
@@ -596,7 +615,7 @@ SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, 
     return sanitized;
 }
 
-void ConfigManager::wipeProfileBlocks() {
+FLASHMEM void ConfigManager::wipeProfileBlocks() {
     for (uint8_t id = 1; id < NUM_PROFILES; ++id) {
         const uint16_t base = EEPROM_PROFILE_START(id);
         for (uint16_t offset = 0; offset < EEPROM_PROFILE_BLOCK_SIZE; ++offset) {
@@ -606,6 +625,12 @@ void ConfigManager::wipeProfileBlocks() {
     for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
         const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
         for (uint16_t offset = 0; offset < EEPROM_PROFILE_SETTINGS_BLOCK_SIZE; ++offset) {
+            storageUpdate(static_cast<int>(base + offset), 0x00);
+        }
+    }
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        const uint16_t base = EEPROM_PROFILE_MODULATION_START(id);
+        for (uint16_t offset = 0; offset < EEPROM_PROFILE_MODULATION_BLOCK_SIZE; ++offset) {
             storageUpdate(static_cast<int>(base + offset), 0x00);
         }
     }

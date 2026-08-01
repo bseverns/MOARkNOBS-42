@@ -669,7 +669,15 @@ void applySlotProfilePatch(JsonObject root, ProfileData &profile, bool applyLive
 }
 
 bool persistPatchedProfile(uint8_t id, ProfileData &profile, bool &activeApplied) {
-    if (!configManager.saveProfileSettings(id, profile)) {
+    ProfileModulationExtension modulation{};
+    if (id == g_activeProfile) {
+        modulation = captureProfileModulation();
+    } else if (!configManager.loadProfileModulation(id, modulation)) {
+        // A profile created before schema 8 shared the live slot modulation.
+        modulation = captureProfileModulation();
+    }
+    if (!configManager.saveProfileSettings(id, profile) ||
+        !configManager.saveProfileModulation(id, modulation)) {
         return false;
     }
 
@@ -679,6 +687,7 @@ bool persistPatchedProfile(uint8_t id, ProfileData &profile, bool &activeApplied
     }
 
     applyProfileSnapshot(profile, true);
+    applyProfileModulation(modulation, true);
     activeApplied = true;
     return true;
 }

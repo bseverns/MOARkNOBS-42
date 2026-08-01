@@ -1,12 +1,18 @@
 # Legacy EEPROM Layout — Schema 4
 
-> **Historical reference only.** This page documents the schema-4 emulated EEPROM layout. It is not the current persistence contract and must not be used to interpret schema-7 LittleFS generations. Current behavior is described by the firmware contract and manifest persistence fields.
+> **Historical reference only.** This page documents the schema-4 emulated EEPROM layout. It is not the current persistence contract and must not be used to interpret schema-8 LittleFS generations. Current behavior is described by the firmware contract and manifest persistence fields.
 
 Schema version: `0x0004`
 
 Schema 7 appends two packed LFO lanes to each current `MIDISlot`. Firmware
 migrates schema-6 slot records explicitly, retaining MIDI, EF, ARG, SysEx, and
 arpeggiator data while initializing both new lanes disabled in `Centered` mode.
+
+Schema 8 adds a separate 512-byte modulation extension for each profile. Each
+extension stores the 42 slots' packed ARG configuration and two LFO lanes with
+its own version and CRC. During migration, macro and scene records are moved
+past the four new extension blocks; existing schema-7 profiles inherit the
+formerly global slot modulation when first loaded.
 
 | Offset (hex) | Type / Size    | Usage                          | Notes                                                                  |
 | ------------ | -------------- | ------------------------------ | ---------------------------------------------------------------------- |

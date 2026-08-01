@@ -2,6 +2,7 @@
 #include <unity.h>
 
 #include "ConfigManager.h"
+#include "ProfileModulationStorage.h"
 #include "storage/StorageBackend.h"
 
 #include <vector>
@@ -11,8 +12,7 @@ namespace {
 class MemoryStorageBackend final : public StorageBackend {
   public:
     MemoryStorageBackend()
-        : bytes_(EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES) + EEPROM_PROFILE_SETTINGS_BLOCK_SIZE +
-                     64U,
+        : bytes_(EEPROM_PROFILE_MODULATION_START(NUM_PROFILES) + 64U,
                  0x00) {}
 
     uint16_t length() const override { return static_cast<uint16_t>(bytes_.size()); }
@@ -243,6 +243,62 @@ void test_slot_lfo_lanes_round_trip_through_slot_storage() {
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Scale),
                             static_cast<uint8_t>(restored.lfo.lfo[1].mode()));
     TEST_ASSERT_EQUAL_INT8(-12, restored.lfo.lfo[1].amount);
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_profile_modulation_round_trip_preserves_arg_and_lfo_lanes() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+
+    ProfileModulationExtension saved{};
+    SlotARGConfig arg{};
+    arg.enabled = 1;
+    arg.method = ARGMethod::XORR;
+    arg.sourceA = 4;
+    arg.sourceB = 2;
+    saved.slots[9].argPacked = packProfileSlotArg(arg);
+    saved.slots[9].lfo[0].setEnabled(true);
+    saved.slots[9].lfo[0].setMode(ModCombineMode::Centered);
+    saved.slots[9].lfo[0].amount = 61;
+    saved.slots[9].lfo[1].setEnabled(true);
+    saved.slots[9].lfo[1].setMode(ModCombineMode::Scale);
+    saved.slots[9].lfo[1].amount = -37;
+
+    TEST_ASSERT_TRUE(cfg.saveProfileModulation(2, saved));
+    ProfileModulationExtension restored{};
+    TEST_ASSERT_TRUE(cfg.loadProfileModulation(2, restored));
+    const SlotARGConfig restoredArg = unpackProfileSlotArg(restored.slots[9].argPacked);
+    TEST_ASSERT_TRUE(restoredArg.enabled);
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ARGMethod::XORR),
+                            static_cast<uint8_t>(restoredArg.method));
+    TEST_ASSERT_EQUAL_UINT8(4, restoredArg.sourceA);
+    TEST_ASSERT_EQUAL_UINT8(2, restoredArg.sourceB);
+    TEST_ASSERT_EQUAL_INT8(61, restored.slots[9].lfo[0].amount);
+    TEST_ASSERT_EQUAL_INT8(-37, restored.slots[9].lfo[1].amount);
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_schema7_migration_relocates_macro_and_scene_tail() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    const uint16_t schema7 = 0x0007;
+    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema7, sizeof(schema7));
+    const size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
+    const size_t newMacroStorage = EEPROM_PROFILE_MODULATION_START(NUM_PROFILES);
+    storage.update(static_cast<int>(oldMacroStorage + 17), 0xA5);
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    TEST_ASSERT_EQUAL_UINT8(0xA5, storage.read(static_cast<int>(newMacroStorage + 17)));
+    TEST_ASSERT_EQUAL_UINT8(0x00, storage.read(static_cast<int>(oldMacroStorage + 17)));
+    uint16_t storedVersion = 0;
+    storage.readBytes(EEPROM_CONFIG_VERSION, &storedVersion, sizeof(storedVersion));
+    TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, storedVersion);
 
     ConfigManager::setStorageBackend(nullptr);
 }

@@ -187,6 +187,24 @@ struct __attribute__((packed)) ProfileData {
 static_assert(sizeof(ProfileData) <= EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
               "ProfileData exceeds the allotted EEPROM block size");
 
+inline constexpr uint16_t PROFILE_MODULATION_VERSION = 0x0001;
+
+struct __attribute__((packed)) ProfileSlotModSettings {
+    uint16_t argPacked = 0;
+    SlotLfoLane lfo[PROFILE_LFO_COUNT]{};
+};
+
+struct __attribute__((packed)) ProfileModulationExtension {
+    uint16_t version = PROFILE_MODULATION_VERSION;
+    uint16_t crc = 0;
+    ProfileSlotModSettings slots[NUM_SLOTS]{};
+};
+
+static_assert(sizeof(ProfileSlotModSettings) == 6,
+              "Profile slot modulation payload must stay compact");
+static_assert(sizeof(ProfileModulationExtension) <= EEPROM_PROFILE_MODULATION_BLOCK_SIZE,
+              "Profile modulation extension exceeds its storage block");
+
 /*
 Handles persistence of user configuration in EEPROM.
 
@@ -272,6 +290,9 @@ class ConfigManager {
 
     // Save the extended profile payload (EF/LFO/arp/LED/midi channel).
     bool saveProfileSettings(uint8_t id, const ProfileData &profile);
+
+    bool loadProfileModulation(uint8_t id, ProfileModulationExtension &extension) const;
+    bool saveProfileModulation(uint8_t id, const ProfileModulationExtension &extension);
 
     // Return the last stored active profile index.
     uint8_t getActiveProfile() const { return _stored.activeProfile; }

@@ -52,7 +52,7 @@ constexpr uint8_t kSceneSlotCount = 6;
 // record sizes include the ARM alignment padding used by the on-disk structs
 // in SceneStorage.cpp; the static_asserts beside those structs keep this
 // contract honest if ConfigState changes.
-constexpr size_t kMacroStorageAddress = EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
+constexpr size_t kMacroStorageAddress = EEPROM_PROFILE_MODULATION_START(NUM_PROFILES);
 constexpr size_t kMacroRecordBytes = sizeof(ConfigState) + 8;
 constexpr size_t kSceneStorageBase = kMacroStorageAddress + kMacroRecordBytes;
 constexpr size_t kSceneRecordBytes = sizeof(ConfigState) + 24;
