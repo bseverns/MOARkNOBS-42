@@ -116,6 +116,21 @@ token preservation:
 pio test -d firmware -e native_transport -vvv
 ```
 
+`native_modulation` executes slot-value composition without the Arduino HAL,
+including EF/LFO ordering, all lane modes, clamping, sanitization, and the
+legacy replacement curve:
+
+```bash
+pio test -d firmware -e native_modulation -vvv
+```
+
+`native_persistence` exercises the extracted storage-map and migration-layout
+arithmetic plus profile-modulation packing, sanitization, and CRC semantics:
+
+```bash
+pio test -d firmware -e native_persistence -vvv
+```
+
 It complements, rather than replaces, the Teensy Unity/HIL environment. New
 native tests should stay behind a deliberate portable boundary; do not pull
 Arduino, display, SD, or USB transport dependencies into this lane.

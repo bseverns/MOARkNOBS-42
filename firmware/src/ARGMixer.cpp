@@ -16,36 +16,6 @@
 #include "EnvelopeFollower.h"
 #include "Globals.h"
 
-// Clamp and normalize one slot's ARG configuration before runtime math touches it.
-SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
-    SlotARGConfig sanitized = candidate;
-    sanitized.enabled = candidate.enabled ? 1 : 0;
-
-    // `method` comes in as a raw integer from EEPROM or JSON. Clamping it here
-    // keeps us from indexing past the enum even if someone edits their config
-    // by hand at 2 a.m. while hopped up on solder fumes.
-
-    const uint8_t maxMethod = static_cast<uint8_t>(ARGMethod::XORR);
-    if (static_cast<uint8_t>(sanitized.method) > maxMethod) {
-        sanitized.method = ARGMethod::PLUS;
-    }
-
-    // Source indices are stored as raw bytes so the firmware can persist them
-    // without worrying about pointer lifetimes. We bounce them back into range
-    // before touching the envelope follower vector.
-    if (sanitized.sourceA >= NUM_ENVELOPES) {
-        sanitized.sourceA = 0;
-    }
-    if (sanitized.sourceB >= NUM_ENVELOPES) {
-        sanitized.sourceB = (sanitized.sourceA + 1) % NUM_ENVELOPES;
-    }
-    if (sanitized.sourceA == sanitized.sourceB) {
-        sanitized.sourceB = (sanitized.sourceA + 1) % NUM_ENVELOPES;
-    }
-
-    return sanitized;
-}
-
 uint8_t computeArgLevel(const SlotARGConfig &config,
                         const std::array<uint8_t, NUM_ENVELOPES> &levels) {
     const SlotARGConfig cfg = sanitizeSlotArg(config);

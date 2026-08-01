@@ -9,6 +9,7 @@
 
 #include "ConfigManager.h"
 #include "ProfileStorage.h"
+#include "SchemaMigrationLayout.h"
 #include "EnvelopeFollower.h"
 #include "ARGMixer.h"
 #include "protocol/SceneStorage.h"
@@ -611,9 +612,10 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         // profile between profile settings and macro/scene storage. Shift the
         // complete downstream tail upward, copying high addresses first so
         // the overlapping move is safe.
-        const size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
-        const size_t newMacroStorage = EEPROM_PROFILE_MODULATION_START(NUM_PROFILES);
-        const size_t tailShift = newMacroStorage - oldMacroStorage;
+        constexpr Schema7StorageLayout layout = schema7StorageLayout();
+        const size_t oldMacroStorage = layout.oldMacroStorage;
+        const size_t newMacroStorage = layout.newMacroStorage;
+        const size_t tailShift = layout.tailShift;
         constexpr size_t oldRequiredStorage =
             oldMacroStorage + SceneStorage::kMacroRecordBytes +
             static_cast<size_t>(SceneStorage::kSceneSlotCount) *
@@ -635,21 +637,13 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         // Appending four bytes to every slot shifts the filter tail and every
         // profile/macro/scene region that follows it. Relocate that complete
         // downstream tail from high addresses to low so overlap is safe.
-        constexpr size_t oldSlotRegionBytes = sizeof(LegacyMIDISlotV6) * NUM_SLOTS;
-        const size_t oldFilterFrequency = EEPROM_SLOT_BASE + oldSlotRegionBytes;
+        constexpr Schema6StorageLayout layout =
+            schema6StorageLayout(sizeof(LegacyMIDISlotV6), sizeof(LegacyMacroRecordV6),
+                                 sizeof(LegacySceneRecordV6), SceneStorage::kSceneSlotCount);
+        const size_t oldFilterFrequency =
+            EEPROM_SLOT_BASE + sizeof(LegacyMIDISlotV6) * NUM_SLOTS;
         const size_t oldFilterQ = oldFilterFrequency + sizeof(float);
         const size_t oldBrownout = oldFilterQ + sizeof(float);
-        constexpr size_t oldConfigTail = oldBrownout + sizeof(uint16_t);
-        constexpr size_t newConfigTail = EEPROM_CONFIG_TAIL;
-        constexpr size_t tailShift = newConfigTail - oldConfigTail;
-        constexpr size_t oldProfileSettings =
-            oldConfigTail + NUM_PROFILES * EEPROM_PROFILE_BLOCK_SIZE;
-        constexpr size_t oldMacroStorage =
-            oldProfileSettings + NUM_PROFILES * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE;
-        constexpr size_t oldSceneStorage = oldMacroStorage + sizeof(LegacyMacroRecordV6);
-        constexpr size_t oldRequiredStorage =
-            oldSceneStorage + static_cast<size_t>(SceneStorage::kSceneSlotCount) *
-                                  sizeof(LegacySceneRecordV6);
 
         float legacyFilterFrequency = legacySlots[0].efSettings.frequency;
         float legacyFilterQ = legacySlots[0].efSettings.q;
@@ -658,7 +652,8 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         storageGet(static_cast<int>(oldFilterQ), legacyFilterQ);
         storageGet(static_cast<int>(oldBrownout), legacyBrownoutCount);
 
-        relocateStorageRangeUp(oldConfigTail, oldRequiredStorage, tailShift);
+        relocateStorageRangeUp(layout.oldConfigTail, layout.oldRequiredStorage,
+                               layout.tailShift);
         for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
             const LegacyMIDISlotV6 &legacy = legacySlots[static_cast<size_t>(i)];
             const MIDISlot upgraded = upgradeLegacySlotV6(legacy);

@@ -34,6 +34,7 @@ Pin legends and memory map live in `docs/PinMap.md` and `docs/EEPROMLayout.md`.
 #include <cstddef>
 
 #include "MIDITypes.h"
+#include "StorageLayout.h"
 class ConfigManager;
 extern ConfigManager configManager;
 
@@ -128,6 +129,10 @@ inline uint16_t NUM_LEDS() {
 inline constexpr uint8_t NUM_POTS = 42;     // Analog pot count driving the ARG
 inline constexpr uint8_t NUM_BUTTONS = 6;   // Number of direct control buttons
 inline constexpr uint8_t NUM_ENVELOPES = 6; // Envelope followers stalking your signal
+static_assert(NUM_ENVELOPES == STORAGE_LAYOUT_NUM_ENVELOPES,
+              "Storage layout envelope count drifted from hardware");
+static_assert(NUM_ENVELOPES == SLOT_ARG_SOURCE_COUNT,
+              "ARG source count drifted from hardware");
 
 /*
 Baseline offsets for each envelope follower.  These numbers get learned
@@ -153,70 +158,6 @@ inline uint8_t &POT_LED_COUNT = hwConfig.potLedCount;
 constexpr float VadcScale = 3.3f / 1023.0f;
 // Global storage for measured VREF voltage
 extern float g_vref;
-
-// EEPROM storage constants
-inline constexpr std::size_t SLOT_EEPROM_SIZE = sizeof(MIDISlot); // bytes required per MIDISlot
-
-inline constexpr uint8_t NUM_PROFILES = 4; // Profiles A-D
-inline constexpr uint16_t EEPROM_PROFILE_BLOCK_SIZE = 256;
-inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_BLOCK_SIZE = 1024; // Extended profile payload
-inline constexpr uint16_t EEPROM_START_ADDRESS = 0;
-inline constexpr uint16_t EEPROM_MAGIC_ADDRESS =
-    EEPROM_START_ADDRESS + 200;                          // Reserve space for config + magic number
-inline constexpr uint16_t EEPROM_MAGIC_PRIMARY = 0xABCD; // Validates the main config block
-inline constexpr uint16_t EEPROM_MAGIC_BACKUP = 0xDCBA;  // Signals a sane backup image
-
-inline constexpr uint16_t EEPROM_EF_BASELINES = EEPROM_MAGIC_ADDRESS + 4;
-inline constexpr uint16_t EEPROM_EF_BASELINES_SIZE = NUM_ENVELOPES * sizeof(float);
-inline constexpr uint8_t EEPROM_BUFFER_SIZE = 22;
-
-inline constexpr uint16_t EEPROM_BACKUP_START =
-    EEPROM_EF_BASELINES + EEPROM_EF_BASELINES_SIZE + EEPROM_BUFFER_SIZE;
-inline constexpr uint16_t EEPROM_CONFIG_MIRROR_SIZE = EEPROM_BACKUP_START * 2;
-
-inline constexpr uint16_t EEPROM_SLOT_BASE = EEPROM_CONFIG_MIRROR_SIZE;
-inline constexpr uint16_t EEPROM_SLOT_REGION_SIZE =
-    static_cast<uint16_t>(SLOT_EEPROM_SIZE * NUM_SLOTS);
-
-inline constexpr uint16_t EEPROM_LEGACY_FILTER_FREQ = 1000;    // Pre-schema-4 filter freq slot
-inline constexpr uint16_t EEPROM_LEGACY_FILTER_Q = 1004;       // Pre-schema-4 filter Q slot
-inline constexpr uint16_t EEPROM_LEGACY_BROWNOUT_COUNT = 1008; // Old brownout counter slot
-
-inline constexpr uint16_t EEPROM_FILTER_FREQ =
-    static_cast<uint16_t>(EEPROM_SLOT_BASE + EEPROM_SLOT_REGION_SIZE);
-inline constexpr uint16_t EEPROM_FILTER_Q =
-    static_cast<uint16_t>(EEPROM_FILTER_FREQ + sizeof(float));
-inline constexpr uint16_t EEPROM_BROWNOUT_COUNT =
-    static_cast<uint16_t>(EEPROM_FILTER_Q + sizeof(float));
-inline constexpr uint16_t EEPROM_CONFIG_TAIL =
-    static_cast<uint16_t>(EEPROM_BROWNOUT_COUNT + sizeof(uint16_t));
-
-inline constexpr uint16_t EEPROM_PROFILE_START(uint8_t id) {
-    return (id == 0)
-               ? EEPROM_START_ADDRESS
-               : static_cast<uint16_t>(EEPROM_CONFIG_TAIL + (id - 1) * EEPROM_PROFILE_BLOCK_SIZE);
-}
-
-inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_BASE =
-    static_cast<uint16_t>(EEPROM_CONFIG_TAIL + NUM_PROFILES * EEPROM_PROFILE_BLOCK_SIZE);
-
-inline constexpr uint16_t EEPROM_PROFILE_SETTINGS_START(uint8_t id) {
-    return static_cast<uint16_t>(EEPROM_PROFILE_SETTINGS_BASE +
-                                 id * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
-}
-
-inline constexpr uint16_t EEPROM_PROFILE_MODULATION_BLOCK_SIZE = 512;
-inline constexpr uint16_t EEPROM_PROFILE_MODULATION_BASE =
-    EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES);
-
-inline constexpr uint16_t EEPROM_PROFILE_MODULATION_START(uint8_t id) {
-    return static_cast<uint16_t>(EEPROM_PROFILE_MODULATION_BASE +
-                                 id * EEPROM_PROFILE_MODULATION_BLOCK_SIZE);
-}
-
-inline constexpr uint16_t EEPROM_SYSTEM_FLAGS_BASE =
-    static_cast<uint16_t>(EEPROM_BACKUP_START - sizeof(uint32_t));
-inline constexpr uint16_t EEPROM_USB_CONFIG_BOOT_REQUEST = EEPROM_SYSTEM_FLAGS_BASE;
 
 // clock
 constexpr unsigned long CLOCK_TIMEOUT_MS = 2000; // 2 seconds without clock => fallback

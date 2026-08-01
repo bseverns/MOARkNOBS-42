@@ -1,7 +1,7 @@
 #ifndef PROFILE_MODULATION_STORAGE_H
 #define PROFILE_MODULATION_STORAGE_H
 
-#include "ConfigManager.h"
+#include "ProfileModulationTypes.h"
 
 uint16_t packProfileSlotArg(const SlotARGConfig &arg);
 SlotARGConfig unpackProfileSlotArg(uint16_t packed);

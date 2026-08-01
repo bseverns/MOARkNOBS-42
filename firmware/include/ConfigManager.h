@@ -8,6 +8,7 @@
 #include "Globals.h"
 #include "LedMode.h"
 #include "MIDITypes.h"
+#include "ProfileModulationTypes.h"
 #include "PotentiometerManager.h"
 #include "storage/StorageBackend.h"
 #include <Arduino.h>
@@ -16,8 +17,6 @@
 #include <vector>
 #include <array>
 #include <FastLED.h>
-
-SlotARGConfig sanitizeSlotArg(const SlotARGConfig &config);
 
 class MIDIHandler;
 
@@ -166,7 +165,6 @@ struct __attribute__((packed)) ProfileLfoRoute {
     uint8_t maxValue = 127; // Output ceiling for transport routes
 };
 
-inline constexpr uint8_t PROFILE_LFO_COUNT = 2;
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
 inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0006;
 
@@ -186,24 +184,6 @@ struct __attribute__((packed)) ProfileData {
 
 static_assert(sizeof(ProfileData) <= EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
               "ProfileData exceeds the allotted EEPROM block size");
-
-inline constexpr uint16_t PROFILE_MODULATION_VERSION = 0x0001;
-
-struct __attribute__((packed)) ProfileSlotModSettings {
-    uint16_t argPacked = 0;
-    SlotLfoLane lfo[PROFILE_LFO_COUNT]{};
-};
-
-struct __attribute__((packed)) ProfileModulationExtension {
-    uint16_t version = PROFILE_MODULATION_VERSION;
-    uint16_t crc = 0;
-    ProfileSlotModSettings slots[NUM_SLOTS]{};
-};
-
-static_assert(sizeof(ProfileSlotModSettings) == 6,
-              "Profile slot modulation payload must stay compact");
-static_assert(sizeof(ProfileModulationExtension) <= EEPROM_PROFILE_MODULATION_BLOCK_SIZE,
-              "Profile modulation extension exceeds its storage block");
 
 /*
 Handles persistence of user configuration in EEPROM.

@@ -68,6 +68,10 @@ jobs:
         run: pio test -d firmware -e teensy40_unity --without-uploading --without-testing
       - name: Run native modulation transport tests
         run: pio test -d firmware -e native_transport -vvv
+      - name: Run native modulation resolver tests
+        run: pio test -d firmware -e native_modulation -vvv
+      - name: Run native persistence layout tests
+        run: pio test -d firmware -e native_persistence -vvv
 
   bridge-preflight:
     runs-on: ubuntu-latest

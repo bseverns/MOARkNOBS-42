@@ -5,7 +5,7 @@
 #include <array>
 #include <cstdint>
 
-#include "SysExTemplate.h"
+#include "SysExTemplateTypes.h"
 
 // Supported MIDI message types for a slot.
 enum class MIDIMessageType : uint8_t {
@@ -129,6 +129,26 @@ struct SlotARGConfig {
     uint8_t sourceA = 0;                // Primary envelope index
     uint8_t sourceB = 1;                // Secondary envelope index
 };
+
+inline constexpr uint8_t SLOT_ARG_SOURCE_COUNT = 6;
+
+inline SlotARGConfig sanitizeSlotArg(const SlotARGConfig &candidate) {
+    SlotARGConfig sanitized = candidate;
+    sanitized.enabled = candidate.enabled ? 1 : 0;
+    if (static_cast<uint8_t>(sanitized.method) > static_cast<uint8_t>(ARGMethod::XORR)) {
+        sanitized.method = ARGMethod::PLUS;
+    }
+    if (sanitized.sourceA >= SLOT_ARG_SOURCE_COUNT) sanitized.sourceA = 0;
+    if (sanitized.sourceB >= SLOT_ARG_SOURCE_COUNT) {
+        sanitized.sourceB = static_cast<uint8_t>((sanitized.sourceA + 1U) %
+                                                 SLOT_ARG_SOURCE_COUNT);
+    }
+    if (sanitized.sourceA == sanitized.sourceB) {
+        sanitized.sourceB = static_cast<uint8_t>((sanitized.sourceA + 1U) %
+                                                 SLOT_ARG_SOURCE_COUNT);
+    }
+    return sanitized;
+}
 
 struct MIDISlot {
     // Envelope follower configuration scoped to this slot.

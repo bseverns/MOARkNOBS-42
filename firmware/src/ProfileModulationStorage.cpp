@@ -1,7 +1,10 @@
 #include "ProfileModulationStorage.h"
 
-#include "ARGMixer.h"
 #include <cstddef>
+
+#ifndef FLASHMEM
+#define FLASHMEM
+#endif
 
 namespace {
 uint16_t crc16Update(uint16_t crc, uint8_t data) {
