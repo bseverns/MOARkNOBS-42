@@ -87,9 +87,14 @@ struct __attribute__((packed)) SlotLfoLane {
     }
 };
 
-struct __attribute__((packed)) SlotLfoConfig {
+// std::array is not a POD type under GCC 15, so applying `packed` to this
+// wrapper is rejected. Its packed two-byte lane elements already give the
+// wrapper the required four-byte persistence layout without that attribute.
+struct SlotLfoConfig {
     std::array<SlotLfoLane, 2> lfo{};
 };
+
+static_assert(sizeof(SlotLfoConfig) == 4, "Slot LFO configuration layout drifted");
 
 inline SlotLfoLane sanitizeSlotLfoLane(const SlotLfoLane &candidate) {
     SlotLfoLane lane = candidate;

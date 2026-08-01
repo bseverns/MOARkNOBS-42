@@ -2,6 +2,7 @@ const { strict: assert } = require('node:assert');
 
 const { createDeviceSession } = require('../lib/device/session');
 const { createSimulatedMn42Device } = require('../lib/device/simulator');
+const { MN42_MANIFEST_CONTRACT } = require('../lib/manifest_contract');
 
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
@@ -102,7 +103,10 @@ async function run() {
     );
     assert.equal(state.helloSeen, true, 'session should cache HELLO state');
     assert.equal(state.manifest?.device_name, 'MOARkNOBS-42');
-    assert.equal(state.schema?.schema_version, 6);
+    assert.equal(
+      state.schema?.schema_version,
+      MN42_MANIFEST_CONTRACT.schema_version,
+    );
     assert.equal(
       state.hardwareHealth?.display_ok,
       true,

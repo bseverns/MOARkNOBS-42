@@ -8,6 +8,7 @@ For document tie-break rules, see [Documentation Truth Map](../docs/reference/Do
 
 Current support boundary:
 
+- the bundled fallback contract is schema 8, including two fixed per-slot LFO lanes and profile-local ARG/LFO persistence
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
 - strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 24 desktop host
 - package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first
