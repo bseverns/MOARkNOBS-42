@@ -787,14 +787,22 @@ void processSlotModulation() {
             const SlotLfoLane lane = sanitizeSlotLfoLane(slot.lfo.lfo[lfoIndex]);
             if (lane.enabled()) {
                 input.lfoActive[lfoIndex] = true;
-                input.lfoValue[lfoIndex] = lfoManager.signedValue(lfoIndex);
+                input.lfoNormalized[lfoIndex] = lfoManager.normalizedValue(lfoIndex);
+                input.lfoSigned[lfoIndex] = lfoManager.signedValue(lfoIndex);
                 input.lfoLane[lfoIndex] = lane;
             } else if (frame.lfoActive[lfoIndex]) {
                 // Compatibility for persisted SlotValue routes. Their mapped
                 // transport value is re-centered without changing its range.
                 input.lfoActive[lfoIndex] = true;
-                input.lfoValue[lfoIndex] =
-                    (static_cast<float>(frame.lfoValue[lfoIndex]) - 64.0f) / 127.0f;
+                input.lfoNormalized[lfoIndex] =
+                    static_cast<float>(frame.lfoValue[lfoIndex]) / 127.0f;
+                input.lfoSigned[lfoIndex] = frame.lfoValue[lfoIndex] < 64
+                                                ? (static_cast<float>(frame.lfoValue[lfoIndex]) -
+                                                   64.0f) /
+                                                      64.0f
+                                                : (static_cast<float>(frame.lfoValue[lfoIndex]) -
+                                                   64.0f) /
+                                                      63.0f;
                 input.lfoLane[lfoIndex].setEnabled(true);
                 input.lfoLane[lfoIndex].setMode(ModCombineMode::Centered);
                 input.lfoLane[lfoIndex].amount = 100;

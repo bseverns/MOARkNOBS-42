@@ -488,6 +488,7 @@ void writeLfoTransform(JsonObject routeObj, const LFO &lfo, const LFOManager::Ro
 }
 
 const char *modCombineModeName(ModCombineMode mode);
+int slotLfoMatrixValue(const SlotLfoLane &lane, uint8_t lfoIndex);
 
 void writeLfoRoutes(JsonArray routes) {
     const size_t count = std::min(lfoManager.routeCount(), static_cast<size_t>(PROFILE_MAX_ROUTES));
@@ -606,9 +607,7 @@ void writeLfoRoutes(JsonArray routes) {
             routeObj["exit"] = "slot_resolver";
             routeObj["persisted"] = true;
             routeObj["active"] = slot.active;
-            routeObj["last_value"] = static_cast<int>(std::lround(
-                lfoManager.signedValue(lfoIndex) * (static_cast<float>(lane.amount) / 100.0f) *
-                127.0f));
+            routeObj["last_value"] = slotLfoMatrixValue(lane, lfoIndex);
             writeRouteRange(routeObj);
             JsonObject midi = routeObj.createNestedObject("midi");
             writeSlotMidiDestination(midi, slot);
@@ -716,6 +715,28 @@ const char *modCombineModeName(ModCombineMode mode) {
     case ModCombineMode::Centered: return "centered";
     }
     return "centered";
+}
+
+int slotLfoMatrixValue(const SlotLfoLane &lane, uint8_t lfoIndex) {
+    const float amount = static_cast<float>(lane.amount) / 100.0f;
+    const float normalized = constrain(lfoManager.normalizedValue(lfoIndex), 0.0f, 1.0f);
+    const float signedValue = constrain(lfoManager.signedValue(lfoIndex), -1.0f, 1.0f);
+    const float bipolar = signedValue * amount;
+    const int centered = static_cast<int>(
+        std::lround(bipolar * (bipolar < 0.0f ? 64.0f : 63.0f)));
+    switch (lane.mode()) {
+    case ModCombineMode::AddClamp:
+        return static_cast<int>(std::lround(normalized * amount * 127.0f));
+    case ModCombineMode::Subtract:
+        return -static_cast<int>(std::lround(normalized * amount * 127.0f));
+    case ModCombineMode::Replace:
+        return 64 + centered;
+    case ModCombineMode::Scale:
+        return static_cast<int>(std::lround(bipolar * 100.0f));
+    case ModCombineMode::Centered:
+        return centered;
+    }
+    return 0;
 }
 
 void writeSlotLfoConfig(JsonArray lanes, const MIDISlot &slot) {

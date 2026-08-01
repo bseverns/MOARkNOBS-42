@@ -57,11 +57,11 @@ enum class EfDestinationMode : uint8_t {
 
 // How one fixed per-slot LFO lane composes with the value produced before it.
 enum class ModCombineMode : uint8_t {
-    AddClamp = 0,
-    Subtract,
-    Replace,
-    Scale,
-    Centered,
+    AddClamp = 0, // Add a unipolar 0..127 contribution, then clamp
+    Subtract,     // Subtract a unipolar 0..127 contribution, then clamp
+    Replace,      // Replace with a bipolar value centered at 64
+    Scale,        // Scale the preceding value with a bipolar factor
+    Centered,     // Add a bipolar -64..+63 offset
 };
 
 struct __attribute__((packed)) SlotLfoLane {

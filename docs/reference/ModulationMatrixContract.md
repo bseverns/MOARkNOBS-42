@@ -59,6 +59,10 @@ The response is JSON:
   the baseline pot MIDI value and clamped to `0..127`.
 - EF routes may also report `subtract`, `replace`, `scale`, or `centered`.
   These destination modes are persisted with the slot EF profile settings.
+- Fixed LFO lane `add_clamp` and `subtract` modes consume normalized `0..1`
+  oscillator values and contribute up to `0..127` at 100% amount. Fixed-lane
+  `centered` consumes the bipolar `-1..1` value and contributes `-64..+63`;
+  `replace` and `scale` also use the bipolar value.
 - `mode: "pre_add_arg"` means ARG math is shaping the EF contribution before the
   final EF add/clamp destination.
 - `mode: "add_bus"` means an LFO is summed into an internal runtime modulation

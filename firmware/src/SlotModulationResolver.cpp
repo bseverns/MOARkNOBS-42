@@ -20,6 +20,17 @@ int applyDestinationMode(int baseline, uint8_t contribution, EfDestinationMode m
     }
     return baseline;
 }
+
+int unipolarContribution(float normalizedLfo, float amount) {
+    return static_cast<int>(std::lround(constrain(normalizedLfo, 0.0f, 1.0f) * amount *
+                                        127.0f));
+}
+
+int centeredContribution(float signedLfo, float amount) {
+    const float modulation = constrain(signedLfo, -1.0f, 1.0f) * amount;
+    const float range = modulation < 0.0f ? 64.0f : 63.0f;
+    return static_cast<int>(std::lround(modulation * range));
+}
 } // namespace
 
 uint8_t resolveSlotModulation(const SlotModulationInput &input) {
@@ -32,19 +43,20 @@ uint8_t resolveSlotModulation(const SlotModulationInput &input) {
     for (size_t lfoIndex = 0; lfoIndex < input.lfoActive.size(); ++lfoIndex) {
         if (!input.lfoActive[lfoIndex]) continue;
         const SlotLfoLane lane = sanitizeSlotLfoLane(input.lfoLane[lfoIndex]);
-        const float signedLfo = constrain(input.lfoValue[lfoIndex], -1.0f, 1.0f);
+        const float signedLfo = constrain(input.lfoSigned[lfoIndex], -1.0f, 1.0f);
         const float amount = static_cast<float>(lane.amount) / 100.0f;
-        const int offset = static_cast<int>(std::lround(signedLfo * amount * 127.0f));
         switch (lane.mode()) {
         case ModCombineMode::AddClamp:
-        case ModCombineMode::Centered:
-            value += offset;
+            value += unipolarContribution(input.lfoNormalized[lfoIndex], amount);
             break;
         case ModCombineMode::Subtract:
-            value -= offset;
+            value -= unipolarContribution(input.lfoNormalized[lfoIndex], amount);
+            break;
+        case ModCombineMode::Centered:
+            value += centeredContribution(signedLfo, amount);
             break;
         case ModCombineMode::Replace:
-            value = static_cast<int>(std::lround(64.0f + signedLfo * amount * 63.0f));
+            value = 64 + centeredContribution(signedLfo, amount);
             break;
         case ModCombineMode::Scale:
             value = static_cast<int>(std::lround(

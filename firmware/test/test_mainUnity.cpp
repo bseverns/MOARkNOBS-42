@@ -152,6 +152,8 @@ void test_slot_modulation_supports_lfo_without_ef();
 void test_slot_modulation_clamps_after_each_lane();
 void test_slot_modulation_honors_ef_replace_before_lfo();
 void test_slot_modulation_applies_replace_and_scale_lane_modes();
+void test_slot_modulation_distinguishes_unipolar_add_from_centered();
+void test_slot_modulation_centered_full_amount_spans_midi_range();
 void test_peak_mode_rises_and_falls();
 void test_rms_mode_converges();
 void test_gate_mode_hysteresis();
@@ -281,6 +283,8 @@ void setup() {
     RUN_TEST(test_slot_modulation_clamps_after_each_lane);
     RUN_TEST(test_slot_modulation_honors_ef_replace_before_lfo);
     RUN_TEST(test_slot_modulation_applies_replace_and_scale_lane_modes);
+    RUN_TEST(test_slot_modulation_distinguishes_unipolar_add_from_centered);
+    RUN_TEST(test_slot_modulation_centered_full_amount_spans_midi_range);
     RUN_TEST(test_peak_mode_rises_and_falls);
     RUN_TEST(test_rms_mode_converges);
     RUN_TEST(test_gate_mode_hysteresis);

@@ -11,8 +11,14 @@ order LFO 1 then LFO 2; they do not send a second competing slot value.
 
 `Centered` is the default mode when a lane is first enabled. The physical knob
 therefore remains the center of gravity while the oscillator moves around it.
-`AddClamp`, `Subtract`, `Replace`, and `Scale` remain available for more
-deliberate transformations.
+At 100% amount, a bipolar LFO contributes `-64..+63`, allowing a baseline of 64
+to reach the complete MIDI range without making most of the waveform clip.
+
+`AddClamp` and `Subtract` instead consume the oscillator's normalized `0..1`
+value and add or subtract as much as `0..127` at 100% amount. They are
+unipolar operations, so zero is neutral. `Replace` maps the bipolar source
+around 64, while `Scale` applies a bipolar multiplier to the preceding value.
+A negative amount reverses the direction of any mode.
 
 ## Start here if you are new
 

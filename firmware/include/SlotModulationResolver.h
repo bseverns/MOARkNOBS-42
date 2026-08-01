@@ -14,13 +14,15 @@ struct SlotModulationInput {
     uint8_t efValue = 0;
     EfDestinationMode efMode = EfDestinationMode::AddClamp;
     std::array<bool, 2> lfoActive{};
-    std::array<float, 2> lfoValue{}; // Signed oscillator value (-1..1)
+    std::array<float, 2> lfoNormalized{}; // Unipolar oscillator value (0..1)
+    std::array<float, 2> lfoSigned{};     // Bipolar oscillator value (-1..1)
     std::array<SlotLfoLane, 2> lfoLane{};
 };
 
 // Compose sources in the fixed order baseline -> EF/ARG -> LFO 1 -> LFO 2.
-// Slot LFO route values are interpreted as centered offsets so the physical
-// control remains the center of gravity; 64 is neutral.
+// AddClamp/Subtract consume normalized LFO values; Centered, Replace, and
+// Scale consume signed values. Centered uses -64..+63 at full amount so the
+// physical control remains the center of gravity without excessive clipping.
 uint8_t resolveSlotModulation(const SlotModulationInput &input);
 
 #endif // SLOT_MODULATION_RESOLVER_H
