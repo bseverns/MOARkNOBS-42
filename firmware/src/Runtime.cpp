@@ -25,6 +25,7 @@
 #include "UI.h"
 #include "Scheduler.h"
 #include "SlotModulationResolver.h"
+#include "ModulationTransportPolicy.h"
 #include "bench_log_latency.h"
 #include "interop/SeedBoxLink.h"
 
@@ -77,12 +78,14 @@ struct SlotModulationFrame {
 
 std::array<SlotModulationFrame, NUM_SLOTS> slotModulationFrames{};
 constexpr unsigned long kSlotModulationMinSendIntervalMs = 9;
-constexpr uint16_t kModulationTransportInitialBytes = 15;
-constexpr uint16_t kModulationTransportCapacityBytes = MIDIHandler::kMaxOutgoingSysExBytes;
-constexpr uint8_t kModulationTransportBytesPerMs = 3;
-uint16_t modulationTransportBytes = kModulationTransportInitialBytes;
-unsigned long modulationTransportUpdatedAtMs = 0;
-uint8_t modulationTransportCursor = 0;
+using SlotTransportPolicy = ModulationTransportPolicy<NUM_SLOTS>;
+static_assert(SlotTransportPolicy::kCapacityBytes == MIDIHandler::kMaxOutgoingSysExBytes,
+              "Transport capacity must admit one maximum bounded SysEx frame");
+SlotTransportPolicy modulationTransport;
+
+void resetModulationTransport() {
+    modulationTransport.reset(now());
+}
 
 void queueMidiServiceRequest() {
     // ISR-safe flagging: keep the interrupt short and let `processMIDI()` grab the work later.
@@ -401,6 +404,7 @@ void checkDiagnosticsForAlerts() {
 // Wire the runtime managers together once globals, EEPROM, and UI state are ready.
 void initializeRuntime(bool baselinesLoaded) {
     // Initialize runtime services now that the UI and EEPROM-backed state are ready.
+    resetModulationTransport();
     pinMode(VREF_ADC_PIN, INPUT);
     for (int pin : ENVELOPE_ANALOG_PINS) {
 #if defined(INPUT_PULLDOWN)
@@ -786,26 +790,8 @@ void processEnvelopes() {
 // Resolve and emit each modulated slot once per control-rate frame.
 void processSlotModulation() {
     const unsigned long currentMs = now();
-    const unsigned long elapsedMs = currentMs - modulationTransportUpdatedAtMs;
-    if (elapsedMs > 0) {
-        if (elapsedMs >=
-            (kModulationTransportCapacityBytes / kModulationTransportBytesPerMs) + 1U) {
-            modulationTransportBytes = kModulationTransportCapacityBytes;
-        } else {
-            modulationTransportBytes = static_cast<uint16_t>(std::min<unsigned long>(
-                kModulationTransportCapacityBytes,
-                modulationTransportBytes + elapsedMs * kModulationTransportBytesPerMs));
-        }
-        modulationTransportUpdatedAtMs = currentMs;
-    }
-
-    struct Candidate {
-        bool pending = false;
-        bool note = false;
-        uint8_t value = 0;
-        uint8_t cost = 0;
-    };
-    std::array<Candidate, NUM_SLOTS> candidates{};
+    modulationTransport.refill(currentMs);
+    std::array<SlotTransportPolicy::Candidate, NUM_SLOTS> candidates{};
 
     // Resolve every slot first. Admission below operates on one latest value per slot, so a
     // deferred continuous destination is naturally coalesced instead of building a stale queue.
@@ -884,38 +870,26 @@ void processSlotModulation() {
         };
     }
 
-    auto findNextCandidate = [&](bool notesOnly) -> int {
-        for (uint8_t offset = 0; offset < NUM_SLOTS; ++offset) {
-            const uint8_t slotIndex =
-                static_cast<uint8_t>((modulationTransportCursor + offset) % NUM_SLOTS);
-            if (!candidates[slotIndex].pending) continue;
-            if (notesOnly && !candidates[slotIndex].note) continue;
-            return slotIndex;
-        }
-        return -1;
-    };
-
-    while (modulationTransportBytes > 0) {
-        int admittedIndex = findNextCandidate(true);
-        if (admittedIndex < 0) admittedIndex = findNextCandidate(false);
+    while (modulationTransport.availableBytes() > 0) {
+        int admittedIndex = modulationTransport.nextCandidate(candidates, true);
+        if (admittedIndex < 0) admittedIndex = modulationTransport.nextCandidate(candidates, false);
         if (admittedIndex < 0) break;
 
-        Candidate &candidate = candidates[static_cast<size_t>(admittedIndex)];
+        SlotTransportPolicy::Candidate &candidate =
+            candidates[static_cast<size_t>(admittedIndex)];
         // Stop rather than skipping an expensive head candidate. Tokens then accumulate and the
         // rotating cursor prevents NRPN/RPN or SysEx destinations from starving behind cheap CCs.
-        if (candidate.cost > modulationTransportBytes) break;
+        if (!modulationTransport.canAdmit(candidate.cost)) break;
 
         candidate.pending = false;
-        modulationTransportCursor =
-            static_cast<uint8_t>((static_cast<uint8_t>(admittedIndex) + 1U) % NUM_SLOTS);
+        modulationTransport.recordAttempt(static_cast<size_t>(admittedIndex));
         SlotModulationFrame &frame =
             slotModulationFrames[static_cast<size_t>(admittedIndex)];
         if (emitSlotModulationValue(static_cast<uint8_t>(admittedIndex), candidate.value)) {
-            modulationTransportBytes =
-                static_cast<uint16_t>(modulationTransportBytes - candidate.cost);
+            modulationTransport.recordSuccess(candidate.cost);
+            frame.lastEmittedValue = candidate.value;
+            frame.lastEmitMs = currentMs;
         }
-        frame.lastEmittedValue = candidate.value;
-        frame.lastEmitMs = currentMs;
     }
 }
 
@@ -1018,9 +992,7 @@ void testOnly_resetRuntimeState() {
     internalClockNextTick = 0;
     pendingNoteOffs = {};
     slotModulationFrames = {};
-    modulationTransportBytes = kModulationTransportInitialBytes;
-    modulationTransportUpdatedAtMs = now();
-    modulationTransportCursor = 0;
+    resetModulationTransport();
     statusLedPulseDeadline = 0;
     lastMidiDropAlertCount = 0;
     lastMidiTaskOverrunAlertCount = 0;
@@ -1028,4 +1000,27 @@ void testOnly_resetRuntimeState() {
 }
 
 void testOnly_emitClockedSlots(uint32_t quarterEvents) { emitClockedNoteSlots(quarterEvents); }
+
+uint16_t testOnly_modulationTransportBytes() { return modulationTransport.availableBytes(); }
+
+size_t testOnly_pendingNoteOffCount() {
+    return static_cast<size_t>(std::count_if(
+        pendingNoteOffs.begin(), pendingNoteOffs.end(),
+        [](const PendingNoteOff &entry) { return entry.active; }));
+}
+
+void testOnly_setSlotLfoFrame(uint8_t slotIndex, uint8_t lfoIndex, uint8_t value) {
+    if (slotIndex >= slotModulationFrames.size() ||
+        lfoIndex >= slotModulationFrames[slotIndex].lfoActive.size()) {
+        return;
+    }
+    slotModulationFrames[slotIndex].lfoActive[lfoIndex] = true;
+    slotModulationFrames[slotIndex].lfoValue[lfoIndex] = value;
+}
+
+uint8_t testOnly_slotLastEmittedValue(uint8_t slotIndex) {
+    return slotIndex < slotModulationFrames.size()
+               ? slotModulationFrames[slotIndex].lastEmittedValue
+               : 0xFF;
+}
 #endif

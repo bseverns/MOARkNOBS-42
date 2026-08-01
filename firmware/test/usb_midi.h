@@ -29,6 +29,7 @@
 // them *and* the USB_MIDI_STUB flag is set. The real Teensy core drags in its
 // own usbMIDI guts, so we bail out unless both flags are waving.
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
+#include <array>
 #include <cstdint>
 #include <Arduino.h>
 
@@ -84,9 +85,12 @@ struct MidiInterfaceStub {
     uint8_t lastNoteOn = 0;
     uint8_t lastNoteOnVelocity = 0;
     uint8_t lastNoteOnChannel = 0;
+    uint32_t noteOnTotal = 0;
+    std::array<uint32_t, 128> noteOnByNote{};
     uint8_t lastNoteOff = 0;
     uint8_t lastNoteOffVelocity = 0;
     uint8_t lastNoteOffChannel = 0;
+    uint32_t noteOffTotal = 0;
 
     struct CCEvent {
         uint8_t control;
@@ -96,6 +100,7 @@ struct MidiInterfaceStub {
     CCEvent ccLog[kCCLogCapacity];
     uint8_t ccCount = 0;
     uint32_t ccTotal = 0;
+    std::array<uint32_t, 128> ccByControl{};
     bool ccOverflow = false;
 
     uint8_t lastSysEx[kSysExCapacity];
@@ -147,6 +152,7 @@ extern usb_midi_class usbMIDI;
 #if defined(UNIT_TEST) && defined(USB_MIDI_STUB)
 inline void MidiInterfaceStub::sendControlChange(uint8_t control, uint8_t value, uint8_t channel) {
     ++ccTotal;
+    if (control < ccByControl.size()) ++ccByControl[control];
     if (ccCount < 8) {
         ccLog[ccCount++] = {control, value, channel};
     } else {
@@ -158,6 +164,8 @@ inline void MidiInterfaceStub::sendControlChange(uint8_t control, uint8_t value,
 }
 
 inline void MidiInterfaceStub::sendNoteOn(uint8_t note, uint8_t velocity, uint8_t channel) {
+    ++noteOnTotal;
+    if (note < noteOnByNote.size()) ++noteOnByNote[note];
     lastNoteOn = note;
     lastNoteOnVelocity = velocity;
     lastNoteOnChannel = channel;
@@ -167,6 +175,7 @@ inline void MidiInterfaceStub::sendNoteOn(uint8_t note, uint8_t velocity, uint8_
 }
 
 inline void MidiInterfaceStub::sendNoteOff(uint8_t note, uint8_t velocity, uint8_t channel) {
+    ++noteOffTotal;
     lastNoteOff = note;
     lastNoteOffVelocity = velocity;
     lastNoteOffChannel = channel;

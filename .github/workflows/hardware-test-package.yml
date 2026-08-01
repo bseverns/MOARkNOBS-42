@@ -48,6 +48,8 @@ jobs:
         run: pio test -d firmware -e teensy40_unity --without-uploading --without-testing
       - name: Run native firmware seam tests
         run: pio test -d firmware -e native_biquad -vvv
+      - name: Run native modulation transport tests
+        run: pio test -d firmware -e native_transport -vvv
       - name: Check markdown links
         run: python tools/check_markdown_links.py
       - name: Resolve contract ledger base

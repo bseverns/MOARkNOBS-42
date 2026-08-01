@@ -14,6 +14,7 @@
 #include "WebSerial.h"
 
 #include <ArduinoJson.h>
+#include <algorithm>
 #include <vector>
 
 namespace {
@@ -21,20 +22,28 @@ namespace {
 void resetMidiTransports() {
     MIDI.ccCount = 0;
     MIDI.ccTotal = 0;
+    MIDI.ccByControl = {};
     MIDI.ccOverflow = false;
     MIDI.lastNoteOff = 0;
     MIDI.lastNoteOffVelocity = 0;
     MIDI.lastNoteOffChannel = 0;
+    MIDI.noteOnTotal = 0;
+    MIDI.noteOffTotal = 0;
+    MIDI.noteOnByNote = {};
     MIDI.lastSysExLength = 0;
     MIDI.sysExTotal = 0;
     MIDI.sysExOverflow = false;
 
     usbMIDI.ccCount = 0;
     usbMIDI.ccTotal = 0;
+    usbMIDI.ccByControl = {};
     usbMIDI.ccOverflow = false;
     usbMIDI.lastNoteOff = 0;
     usbMIDI.lastNoteOffVelocity = 0;
     usbMIDI.lastNoteOffChannel = 0;
+    usbMIDI.noteOnTotal = 0;
+    usbMIDI.noteOffTotal = 0;
+    usbMIDI.noteOnByNote = {};
     usbMIDI.lastSysExLength = 0;
     usbMIDI.sysExTotal = 0;
     usbMIDI.sysExOverflow = false;
@@ -193,9 +202,12 @@ void test_runtime_note_admission_drops_note_when_release_queue_is_full() {
 }
 
 void test_runtime_modulation_transport_budget_spreads_42_slot_burst() {
-    g_fakeNowMs = 0;
+    // Simulate lengthy setup before the production/test reset. The first pass must still begin
+    // with the documented 15-byte allowance rather than refilling from timestamp zero.
+    g_fakeNowMs = 5000;
     resetMidiTransports();
     testOnly_resetRuntimeState();
+    TEST_ASSERT_EQUAL_UINT16(15, testOnly_modulationTransportBytes());
 
     for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
         MIDISlot &slot = configManager.getSlot(slotIndex);
@@ -209,7 +221,6 @@ void test_runtime_modulation_transport_budget_spreads_42_slot_burst() {
         slot.lfo.lfo[0].amount = 0;
     }
 
-    advanceMs(9);
     const uint32_t beforeTx = midiHandler.getTxCount();
     processSlotModulation();
     const uint32_t firstPass = midiHandler.getTxCount() - beforeTx;
@@ -240,27 +251,156 @@ void test_runtime_modulated_note_stress_preserves_note_off_capacity() {
         slot.midiChannel = 1;
         slot.data1 = slotIndex;
         slot.lfo = {};
-        slot.lfo.lfo[0].setEnabled(true);
-        slot.lfo.lfo[0].setMode(ModCombineMode::Centered);
-        slot.lfo.lfo[0].amount = 0;
     }
 
+    size_t maxPending = 0;
     for (uint8_t pass = 0; pass < 60; ++pass) {
         for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-            MIDISlot &slot = configManager.getSlot(slotIndex);
-            slot.data1 = static_cast<uint8_t>((slot.data1 + 1U) & 0x7FU);
+            testOnly_setSlotLfoFrame(slotIndex, 0, (pass % 2U) == 0U ? 20 : 108);
         }
         advanceMs(5);
         processPendingNoteOffs();
         processSlotModulation();
+        maxPending = std::max(maxPending, testOnly_pendingNoteOffCount());
     }
     TEST_ASSERT_EQUAL_UINT32(0, g_systemDiagnostics.midiDropCount);
+    TEST_ASSERT_GREATER_THAN_UINT32(NUM_SLOTS, MIDI.noteOnTotal);
+    TEST_ASSERT_GREATER_THAN_UINT32(0, MIDI.noteOffTotal);
+    TEST_ASSERT_LESS_OR_EQUAL_UINT32(64, maxPending);
+    for (uint8_t note = 0; note < NUM_SLOTS; ++note) {
+        TEST_ASSERT_GREATER_THAN_UINT32(0, MIDI.noteOnByNote[note]);
+    }
 
     advanceMs(100);
     processPendingNoteOffs();
+    TEST_ASSERT_EQUAL_UINT32(MIDI.noteOnTotal, MIDI.noteOffTotal);
+    TEST_ASSERT_EQUAL_UINT(0, testOnly_pendingNoteOffCount());
     for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
         configManager.getSlot(slotIndex).lfo = {};
     }
+    testOnly_resetRuntimeState();
+}
+
+void test_runtime_sustained_cc_modulation_coalesces_and_remains_fair() {
+    g_fakeNowMs = 0;
+    g_systemDiagnostics = {};
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.active = true;
+        slot.type = MIDIMessageType::CC;
+        slot.midiChannel = 1;
+        slot.data1 = slotIndex;
+        slot.lfo = {};
+    }
+
+    for (uint8_t pass = 0; pass < 40; ++pass) {
+        const uint8_t value = (pass % 2U) == 0U ? 18 : 109;
+        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+            testOnly_setSlotLfoFrame(slotIndex, 0, value);
+        }
+        advanceMs(9);
+        processSlotModulation();
+    }
+
+    // The token budget admits at most nine CCs per 9 ms pass. Deferred values are replaced by
+    // the newest frame, while the rotating cursor eventually services every slot.
+    TEST_ASSERT_LESS_OR_EQUAL_UINT32(365, MIDI.ccTotal);
+    for (uint8_t control = 0; control < NUM_SLOTS; ++control) {
+        TEST_ASSERT_GREATER_THAN_UINT32(0, MIDI.ccByControl[control]);
+    }
+    TEST_ASSERT_EQUAL_UINT32(0, g_systemDiagnostics.midiDropCount);
+    testOnly_resetRuntimeState();
+}
+
+void test_runtime_mixed_modulation_admission_reaches_every_slot() {
+    g_fakeNowMs = 0;
+    g_systemDiagnostics = {};
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.active = true;
+        slot.midiChannel = static_cast<uint8_t>((slotIndex % 16U) + 1U);
+        slot.data1 = slotIndex;
+        slot.lfo = {};
+        switch (slotIndex % 4U) {
+        case 0: slot.type = MIDIMessageType::CC; break;
+        case 1: slot.type = MIDIMessageType::Note; break;
+        case 2: slot.type = MIDIMessageType::NRPN; break;
+        default:
+            slot.type = MIDIMessageType::SysEx;
+            slot.sysexLength = 0; // Exercise the valid four-byte legacy fallback payload.
+            break;
+        }
+        testOnly_setSlotLfoFrame(slotIndex, 0, static_cast<uint8_t>(32U + slotIndex));
+    }
+
+    // Let tokens accumulate between passes until every initial candidate has been admitted.
+    for (uint8_t pass = 0; pass < 32; ++pass) {
+        advanceMs(22);
+        processPendingNoteOffs();
+        processSlotModulation();
+    }
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(32U + slotIndex),
+                                testOnly_slotLastEmittedValue(slotIndex));
+    }
+    TEST_ASSERT_GREATER_THAN_UINT32(0, MIDI.ccTotal);
+    TEST_ASSERT_GREATER_THAN_UINT32(0, MIDI.noteOnTotal);
+    TEST_ASSERT_GREATER_THAN_UINT16(0, MIDI.sysExTotal);
+    advanceMs(100);
+    processPendingNoteOffs();
+    TEST_ASSERT_EQUAL_UINT32(MIDI.noteOnTotal, MIDI.noteOffTotal);
+    TEST_ASSERT_EQUAL_UINT(0, testOnly_pendingNoteOffCount());
+    TEST_ASSERT_EQUAL_UINT32(0, g_systemDiagnostics.midiDropCount);
+    testOnly_resetRuntimeState();
+}
+
+void test_runtime_failed_modulated_note_retries_after_release_capacity_returns() {
+    g_fakeNowMs = 0;
+    g_systemDiagnostics = {};
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    TEST_ASSERT_TRUE(queuePendingNoteOff(0, 1, 10));
+    for (size_t idx = 1; idx < 64; ++idx) {
+        TEST_ASSERT_TRUE(queuePendingNoteOff(static_cast<uint8_t>(idx), 1, 1000));
+    }
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        configManager.getSlot(slotIndex).active = false;
+    }
+    MIDISlot &slot = configManager.getSlot(0);
+    slot.active = true;
+    slot.type = MIDIMessageType::Note;
+    slot.midiChannel = 1;
+    slot.data1 = 60;
+    slot.lfo = {};
+    testOnly_setSlotLfoFrame(0, 0, 96);
+
+    advanceMs(9);
+    processSlotModulation();
+    TEST_ASSERT_EQUAL_UINT32(0, MIDI.noteOnTotal);
+    TEST_ASSERT_EQUAL_UINT32(1, g_systemDiagnostics.midiDropCount);
+    TEST_ASSERT_EQUAL_UINT(64, testOnly_pendingNoteOffCount());
+
+    advanceMs(1);
+    processPendingNoteOffs();
+    TEST_ASSERT_EQUAL_UINT(63, testOnly_pendingNoteOffCount());
+    processSlotModulation();
+    TEST_ASSERT_EQUAL_UINT32(1, MIDI.noteOnTotal);
+    TEST_ASSERT_EQUAL_UINT(64, testOnly_pendingNoteOffCount());
+
+    processSlotModulation();
+    TEST_ASSERT_EQUAL_UINT32(1, MIDI.noteOnTotal);
+
+    advanceMs(1000);
+    processPendingNoteOffs();
+    slot.lfo = {};
     testOnly_resetRuntimeState();
 }
 

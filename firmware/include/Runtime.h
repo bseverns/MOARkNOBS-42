@@ -41,6 +41,10 @@ void checkDiagnosticsForAlerts();
 #if defined(UNIT_TEST)
 void testOnly_resetRuntimeState();
 void testOnly_emitClockedSlots(uint32_t quarterEvents);
+uint16_t testOnly_modulationTransportBytes();
+size_t testOnly_pendingNoteOffCount();
+void testOnly_setSlotLfoFrame(uint8_t slotIndex, uint8_t lfoIndex, uint8_t value);
+uint8_t testOnly_slotLastEmittedValue(uint8_t slotIndex);
 #endif
 
 #endif // RUNTIME_H

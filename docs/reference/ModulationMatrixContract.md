@@ -87,12 +87,19 @@ The per-route `rateLimitMs` remains the first control-rate guard. Changed slot
 outputs then pass through one global token bucket derived from the DIN MIDI byte
 rate. The bucket begins with 15 bytes, replenishes at 3 bytes per millisecond,
 and caps at 64 bytes so one bounded SysEx frame can eventually be admitted.
+Runtime initialization resets both the byte count and refill timestamp together,
+so time spent in earlier boot/setup work cannot turn the first modulation pass
+into an unintended 64-byte burst.
 
 Note Off events remain on the independent high-priority release queue. Among
 slot-modulation candidates, Note On is considered before continuous values.
 Deferred continuous values are not queued as historical samples: each slot is
 resolved again on the next pass, so only its latest value can be emitted. A
 rotating cursor prevents low-numbered slots from monopolizing admission.
+An emission that fails admission at the downstream Note Off reservation queue
+does not advance the slot's emitted-value timestamp. Its latest value therefore
+remains eligible for retry once release capacity returns; a successful retry is
+then subject to normal duplicate suppression.
 
 ## Conflicts
 

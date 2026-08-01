@@ -107,6 +107,15 @@ CI host:
 pio test -d firmware -e native_biquad -vvv
 ```
 
+`native_transport` executes the Arduino-independent modulation token-bucket
+policy on the CI host, including cold-reset timing, refill/capacity behavior,
+32-bit clock wraparound, Note priority, rotating fairness, and failed-attempt
+token preservation:
+
+```bash
+pio test -d firmware -e native_transport -vvv
+```
+
 It complements, rather than replaces, the Teensy Unity/HIL environment. New
 native tests should stay behind a deliberate portable boundary; do not pull
 Arduino, display, SD, or USB transport dependencies into this lane.
