@@ -1,4 +1,5 @@
 import { VirtualGrid, VirtualList } from '../virtualizers.js';
+import { describeSlotModulation, formatSlotModulationTitle } from '../slot_modulation_summary.js';
 
 function slotTypeCssToken(type) {
   if (typeof type !== 'string' || !type.trim()) return 'off';
@@ -138,6 +139,12 @@ export function createSlotWorkspaceController({
     state.textContent = slotTypeAbbreviations[slot?.type] ?? slot?.type ?? '—';
     state.title = slot?.type ?? 'Unassigned';
     el.dataset.slotType = slotTypeCssToken(slot?.type);
+    const modulation = document.createElement('span');
+    modulation.className = 'slot-modulation';
+    const badges = describeSlotModulation(slot);
+    modulation.textContent = badges.join(' ');
+    modulation.title = formatSlotModulationTitle(badges);
+    modulation.setAttribute('aria-hidden', 'true');
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'takeover';
@@ -151,7 +158,7 @@ export function createSlotWorkspaceController({
       runtime.setLocalSlotMeta(index, { takeover: next });
       runtime.setPotGuard([index], !next);
     };
-    el.append(label, state, toggle);
+    el.append(label, state, modulation, toggle);
     el.onclick = () => selectSlot(index);
     el.setAttribute('role', 'button');
     el.classList.toggle('selected', index === slotState.selected);

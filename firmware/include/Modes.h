@@ -22,6 +22,9 @@ ProfileModulationExtension captureProfileModulation();
 ProfileModulationExtension defaultProfileModulationSnapshot();
 void applyProfileSnapshot(const ProfileData &profile, bool persistSlots);
 void applyProfileModulation(const ProfileModulationExtension &extension, bool persistSlots);
+void applyCompleteProfile(const ProfileData &profile,
+                          const ProfileModulationExtension &extension,
+                          bool persistSlots);
 bool persistActiveProfileSnapshot();
 void restoreActiveProfileRuntime(bool persistSnapshot);
 

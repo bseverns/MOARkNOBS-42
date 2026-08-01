@@ -3,7 +3,7 @@ import { normalizeUIMode, persistUIMode } from '../state/ui_preferences.js';
 const ALL_UI_MODES = ['stage', 'basic', 'advanced'];
 
 function normalizeEditorTab(tab) {
-  return tab === 'envelope' || tab === 'arg' ? tab : 'mapping';
+  return tab === 'envelope' || tab === 'arg' || tab === 'lfo' ? tab : 'mapping';
 }
 
 function normalizeUtilityTab(tab) {

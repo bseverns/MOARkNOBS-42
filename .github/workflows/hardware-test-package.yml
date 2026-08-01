@@ -44,6 +44,8 @@ jobs:
           pip install -r requirements.txt
       - name: Build baseline firmware
         run: pio run -d firmware -e teensy40_main
+      - name: Compile and link Teensy Unity firmware
+        run: pio test -d firmware -e teensy40_unity --without-uploading --without-testing
       - name: Run native firmware seam tests
         run: pio test -d firmware -e native_biquad -vvv
       - name: Check markdown links

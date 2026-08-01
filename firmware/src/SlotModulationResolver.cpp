@@ -33,6 +33,12 @@ int centeredContribution(float signedLfo, float amount) {
 }
 } // namespace
 
+float signedSlotLfoFromMidiValue(uint8_t value) {
+    const uint8_t midiValue = constrain(value, 0, 127);
+    return midiValue < 64 ? (static_cast<float>(midiValue) - 64.0f) / 64.0f
+                          : (static_cast<float>(midiValue) - 64.0f) / 63.0f;
+}
+
 uint8_t resolveSlotModulation(const SlotModulationInput &input) {
     int value = input.baseline;
     if (input.efActive) {

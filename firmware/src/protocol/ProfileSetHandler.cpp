@@ -686,8 +686,7 @@ bool persistPatchedProfile(uint8_t id, ProfileData &profile, bool &activeApplied
         return true;
     }
 
-    applyProfileSnapshot(profile, true);
-    applyProfileModulation(modulation, true);
+    applyCompleteProfile(profile, modulation, true);
     activeApplied = true;
     return true;
 }

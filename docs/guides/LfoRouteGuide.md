@@ -20,6 +20,11 @@ unipolar operations, so zero is neutral. `Replace` maps the bipolar source
 around 64, while `Scale` applies a bipolar multiplier to the preceding value.
 A negative amount reverses the direction of any mode.
 
+Legacy global `SlotValue` routes retain their original replacement behavior:
+their mapped `0..127` result becomes the complete outgoing slot value and does
+not move around the physical knob baseline. If the corresponding fixed lane is
+enabled, it shadows the legacy route so only one path owns that LFO/slot pair.
+
 ## Start here if you are new
 
 If you are new to routes, start with:

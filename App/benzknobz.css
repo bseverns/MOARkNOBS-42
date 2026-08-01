@@ -1000,7 +1000,7 @@ main {
   grid-template-columns: auto 1fr;
   grid-template-areas:
     'label type'
-    'value value';
+    'value mods';
   gap: 3px 6px;
   width: 100%;
   min-height: 54px;
@@ -1094,6 +1094,16 @@ main {
   font-size: 0.76rem;
 }
 
+.stage-slot-modulation {
+  grid-area: mods;
+  justify-self: end;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .stage-envelope-list .meter {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr) 32px;
@@ -1182,11 +1192,11 @@ main {
 
 .slot-button {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
-    'label'
-    'state'
-    'toggle';
+    'label label'
+    'state mods'
+    'toggle toggle';
   align-items: start;
   justify-items: start;
   gap: 5px;
@@ -1265,6 +1275,16 @@ main {
   width: 100%;
   min-width: 0;
   line-height: 1.1;
+}
+
+.slot-modulation {
+  grid-area: mods;
+  justify-self: end;
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .slot-button .takeover {
@@ -2545,6 +2565,22 @@ label select:focus,
   align-items: center;
   gap: 10px;
   padding-top: 2px;
+}
+
+.slot-lfo-lane {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 12px;
+  border: 1px solid rgba(45, 226, 230, 0.2);
+  border-radius: var(--radius-xs);
+  background: rgba(45, 226, 230, 0.04);
+}
+
+.slot-lfo-lane h4 {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--color-accent);
 }
 
 .slot-editor .slot-hint {

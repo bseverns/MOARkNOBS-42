@@ -9,6 +9,7 @@ For document tie-break rules, see [Documentation Truth Map](../docs/reference/Do
 Current support boundary:
 
 - the bundled fallback contract is schema 8, including two fixed per-slot LFO lanes and profile-local ARG/LFO persistence
+- Advanced selected-slot editing exposes both fixed LFO lanes with enable, combine-mode, and signed-amount controls; these are staged and verified through the normal Apply transaction.
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
 - strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 24 desktop host
 - package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first
@@ -64,7 +65,7 @@ For the operator-facing explanation of `Immediate local response` versus the bro
 - **Schema-driven Forms** – Every control in the right-hand rail is rendered from `config_schema.json` (Filter, ARG, LEDs, EF assignments, and all slot knobs). The `FormRenderer` builds collapsible sections, clamps number fields to the schema’s bounds, and stages each edit immediately; hitting **Apply** batches the staged JSON through `set_config`, while field-level writes can still travel through `runtime.applyPatch(...)/set_param` when a control wants an immediate RPC. Profile save/load/reset and macro/scene actions travel on their own native command paths instead of pretending to be config diffs. Keybindings still apply: slot focus follows arrow keys; hold `Shift` for coarse/fine nudging; and the simulator status pill keeps status events in sync even when the board takes a coffee break.
 - **Browser-only Slot Notes** – `Slot label`, the MIDI badge, and `Take Control` now live outside the device schema. They are stored in local browser state so reconnects keep your operator hints and pickup guards without pretending the firmware persisted them.
 - **Local response modes** – The tiny slot badge in the live grid is an operator aid, not device config. `IM` means the browser responds immediately to local control input; `PK` means the browser waits for the control to catch the current value before activating it again. The deeper operator explanation lives in [Operator Tutorial](../docs/guides/OperatorTutorial.md).
-- **Stage / Basic / Advanced Mode** – New sessions start in **Basic** mode, keeping the panel focused on everyday knob-to-MIDI mapping. Pick **Stage** at a gig, or open with `?mode=stage`, for a read-only performer dashboard with connection, profile, power safety, slot activity, envelope levels, scene recall, and panic-combo help. Flip to **Advanced** to reveal EF/ARG/filter tuning, LED settings, scope tools, MIDI monitor, full device monitor, import/export, and debug surfaces. The choice is saved in `localStorage`, and glossary-style info badges explain jargon like EF and ARG in-place.
+- **Stage / Basic / Advanced Mode** – New sessions start in **Basic** mode, keeping the panel focused on everyday knob-to-MIDI mapping. Pick **Stage** at a gig, or open with `?mode=stage`, for a read-only performer dashboard with connection, profile, power safety, slot activity, envelope levels, scene recall, and panic-combo help. Flip to **Advanced** to reveal EF/ARG/fixed-LFO/filter tuning, LED settings, scope tools, MIDI monitor, full device monitor, import/export, and debug surfaces. The choice is saved in `localStorage`, and glossary-style info badges explain jargon like EF and ARG in-place.
 - **Compatibility Probe** – The transport bar now includes **Check compatibility**, which reports whether the current browser/session can use Web Serial and explains likely failure modes such as unsupported browsers, insecure origins, or cancelled device pickers.
 
 ## MIDI Monitor Panel
@@ -77,7 +78,8 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - EF assignment rows now use clickable slot chips per follower, so one follower can modulate multiple slots without typing comma-separated indices.
 - Live and Stage slot grids now color-code slot types so CC, Note, program-style, NRPN/RPN, and SysEx lanes are scannable at a glance.
 - ARG lives per-slot too. The **ARG Combiner** panel flips the enable flag, locks the math method, and routes sources A/B with the same coarse/fine nudging as the hardware encoders.
-- The slot details panel mirrors the new firmware schema: EF index, filter, dynamics, baseline/gain, plus the ARG mode and source map stream live next to the MIDI stats.
+- The slot details panel mirrors the new firmware schema: EF index, filter, dynamics, baseline/gain, ARG mode and source map, and both fixed LFO lanes stream live next to the MIDI stats.
+- Live and Stage slot grids show compact configured-source badges (`E#`, `A`, `L1`, and `L2`) so modulated slots remain apparent outside the editor. These badges describe configuration; the numeric slot readout remains the device-reported final value.
 - `runtime.js` normalises staged JSON so the firmware always gets properly-shaped `ef`/`arg` bundles, and it now digests live `slot_patch` frames from the bridge to keep the UI in sync when the hardware mutates slots.
 
 ## Accessibility & Controls

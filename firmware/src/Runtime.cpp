@@ -791,20 +791,16 @@ void processSlotModulation() {
                 input.lfoSigned[lfoIndex] = lfoManager.signedValue(lfoIndex);
                 input.lfoLane[lfoIndex] = lane;
             } else if (frame.lfoActive[lfoIndex]) {
-                // Compatibility for persisted SlotValue routes. Their mapped
-                // transport value is re-centered without changing its range.
+                // Persisted SlotValue routes historically emitted a complete
+                // mapped MIDI value. Replace preserves that audible curve and
+                // keeps it independent of the physical pot baseline.
                 input.lfoActive[lfoIndex] = true;
                 input.lfoNormalized[lfoIndex] =
                     static_cast<float>(frame.lfoValue[lfoIndex]) / 127.0f;
-                input.lfoSigned[lfoIndex] = frame.lfoValue[lfoIndex] < 64
-                                                ? (static_cast<float>(frame.lfoValue[lfoIndex]) -
-                                                   64.0f) /
-                                                      64.0f
-                                                : (static_cast<float>(frame.lfoValue[lfoIndex]) -
-                                                   64.0f) /
-                                                      63.0f;
+                input.lfoSigned[lfoIndex] =
+                    signedSlotLfoFromMidiValue(frame.lfoValue[lfoIndex]);
                 input.lfoLane[lfoIndex].setEnabled(true);
-                input.lfoLane[lfoIndex].setMode(ModCombineMode::Centered);
+                input.lfoLane[lfoIndex].setMode(ModCombineMode::Replace);
                 input.lfoLane[lfoIndex].amount = 100;
             }
         }

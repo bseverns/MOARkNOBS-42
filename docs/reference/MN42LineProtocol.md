@@ -104,10 +104,16 @@ Bulk errors include `overflow`, `orphan`, `timeout`, `ingest`, `parse`, `checksu
 | `SET_EF`            | `SET_EF,<slot>,<ef>`                                          | OK or error JSON                                                                       | Assigns slot to envelope follower.                                               |
 | `SET_EF_IDLE_FLOOR` | `SET_EF_IDLE_FLOOR,<value>`                                   | `{"type":"response","status":"ok","command":"SET_EF_IDLE_FLOOR","idle_floor":<value>}` | Clamped `0..127`.                                                                |
 | `SET_ARGMETHOD`     | `SET_ARGMETHOD<method>`                                       | OK or error JSON                                                                       | Legacy parser reads from character offset 14; prefer bulk config for new tools.  |
+
 | `ENTER_CONFIG_MODE` | `ENTER_CONFIG_MODE`                                           | `{"type":"response","status":"ok","command":"ENTER_CONFIG_MODE","rebooting":true}`     | Requests one-shot USB configurator boot then reboots outside unit tests.         |
 | JSON `GET_SCENES`   | `{"cmd":"GET_SCENES"}`                                        | `{"cmd":"GET_SCENES","scenes":[...]}`                                                  | JSON scene commands short-circuit before legacy dispatch.                        |
 | JSON `SAVE_SCENE`   | `{"cmd":"SAVE_SCENE","slot":0,"name":"Verse"}`                | Scene result JSON                                                                      | Scene slot range is firmware-defined by `SceneStorage::kSceneSlotCount`.         |
 | JSON `RECALL_SCENE` | `{"cmd":"RECALL_SCENE","slot":0}`                             | Scene result JSON                                                                      | Applies stored scene if available.                                               |
+
+In `GET_MOD_MATRIX`, an unshadowed persisted global `SlotValue` route reports
+`mode: "legacy_replace"`: its mapped `0..127` result is the complete slot
+output, independent of the physical pot baseline. A corresponding enabled
+fixed lane reports that global route as `legacy_shadowed`.
 
 ## Deprecated Commands
 

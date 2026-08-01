@@ -25,4 +25,9 @@ struct SlotModulationInput {
 // physical control remains the center of gravity without excessive clipping.
 uint8_t resolveSlotModulation(const SlotModulationInput &input);
 
+// Convert a complete 7-bit legacy SlotValue route output back into the
+// asymmetric bipolar range consumed by Replace. This preserves 0, 64, and 127
+// exactly and keeps legacy output independent of the physical pot baseline.
+float signedSlotLfoFromMidiValue(uint8_t value);
+
 #endif // SLOT_MODULATION_RESOLVER_H

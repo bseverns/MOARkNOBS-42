@@ -64,6 +64,8 @@ jobs:
         run: python3 tools/check_release_readiness.py --root . --stage hardware-test
       - name: Build baseline firmware
         run: pio run -d firmware -e teensy40_main
+      - name: Compile and link Teensy Unity firmware
+        run: pio test -d firmware -e teensy40_unity --without-uploading --without-testing
 
   bridge-preflight:
     runs-on: ubuntu-latest

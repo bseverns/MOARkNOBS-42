@@ -1,3 +1,5 @@
+import { describeSlotModulation, formatSlotModulationTitle } from '../slot_modulation_summary.js';
+
 const PROFILE_SLOT_LABELS = ['A', 'B', 'C', 'D'];
 
 function slotTypeCssToken(type) {
@@ -112,6 +114,14 @@ export function createPerformerPanelController({
         const slot = source[index];
         const state = cell.querySelector('.stage-slot-type');
         if (state) state.textContent = slotTypeAbbreviations[slot?.type] ?? slot?.type ?? '-';
+        const modulation = cell.querySelector('.stage-slot-modulation');
+        const badges = describeSlotModulation(slot);
+        if (modulation) {
+          modulation.textContent = badges.join(' ');
+          modulation.title = formatSlotModulationTitle(badges);
+          modulation.setAttribute('aria-hidden', 'true');
+        }
+        cell.title = formatSlotModulationTitle(badges);
         cell.dataset.slotType = slotTypeCssToken(slot?.type);
       });
       highlightSelectedSlot();
@@ -140,7 +150,15 @@ export function createPerformerPanelController({
       value.className = 'stage-slot-value';
       value.textContent = '--';
 
-      cell.append(label, type, value);
+      const modulation = document.createElement('span');
+      modulation.className = 'stage-slot-modulation';
+      const badges = describeSlotModulation(slot);
+      modulation.textContent = badges.join(' ');
+      modulation.title = formatSlotModulationTitle(badges);
+      modulation.setAttribute('aria-hidden', 'true');
+      cell.title = formatSlotModulationTitle(badges);
+
+      cell.append(label, type, value, modulation);
       slotGrid.appendChild(cell);
       return cell;
     });

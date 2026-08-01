@@ -111,3 +111,21 @@ void test_slot_modulation_centered_full_amount_spans_midi_range() {
     input.lfoSigned[0] = 1.0f;
     TEST_ASSERT_EQUAL_UINT8(127, resolveSlotModulation(input));
 }
+
+void test_slot_modulation_legacy_replace_preserves_output_curve() {
+    constexpr uint8_t legacyValues[] = {0, 1, 31, 63, 64, 65, 96, 126, 127};
+    constexpr uint8_t baselines[] = {0, 37, 64, 101, 127};
+    for (uint8_t baseline : baselines) {
+        for (uint8_t legacyValue : legacyValues) {
+            SlotModulationInput input{};
+            input.baseline = baseline;
+            input.lfoActive[0] = true;
+            input.lfoNormalized[0] = static_cast<float>(legacyValue) / 127.0f;
+            input.lfoSigned[0] = signedSlotLfoFromMidiValue(legacyValue);
+            input.lfoLane[0].setEnabled(true);
+            input.lfoLane[0].setMode(ModCombineMode::Replace);
+            input.lfoLane[0].amount = 100;
+            TEST_ASSERT_EQUAL_UINT8(legacyValue, resolveSlotModulation(input));
+        }
+    }
+}

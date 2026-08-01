@@ -107,10 +107,14 @@ void loop() {
     if (g_profileChangeRequested) {
         ProfileData profile{};
         ProfileModulationExtension modulation{};
-        if (configManager.loadProfileSettings(g_activeProfile, profile)) {
+        const bool profileStored = configManager.loadProfileSettings(g_activeProfile, profile);
+        const bool modulationStored =
+            configManager.loadProfileModulation(g_activeProfile, modulation);
+        if (profileStored && modulationStored) {
+            applyCompleteProfile(profile, modulation, true);
+        } else if (profileStored) {
             applyProfileSnapshot(profile, true);
-        }
-        if (configManager.loadProfileModulation(g_activeProfile, modulation)) {
+        } else if (modulationStored) {
             applyProfileModulation(modulation, true);
         }
         g_profileChangeRequested = false;

@@ -58,8 +58,7 @@ void applyBaselinePotMappings() {
 void rebuildRuntimeFromProfile(const ProfileData &profile,
                                const ProfileModulationExtension &modulation) {
     syncPotentiometerMappingsFromConfig();
-    applyProfileSnapshot(profile, true);
-    applyProfileModulation(modulation, true);
+    applyCompleteProfile(profile, modulation, true);
     refreshEfVoicesFromConfig();
 }
 

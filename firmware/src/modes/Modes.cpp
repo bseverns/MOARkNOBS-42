@@ -256,6 +256,22 @@ void applyProfileModulation(const ProfileModulationExtension &candidate, bool pe
     }
 }
 
+void applyCompleteProfile(const ProfileData &profile,
+                          const ProfileModulationExtension &extension,
+                          bool persistSlots) {
+    // Compose both halves in memory before persistence so a profile transition writes each slot
+    // once and storage never observes an intermediate MIDI/EF-only slot snapshot.
+    applyProfileSnapshot(profile, false);
+    applyProfileModulation(extension, false);
+    if (!persistSlots) return;
+
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        configManager.saveSlot(i, configManager.getSlot(i));
+    }
+    configManager.saveLEDSettings(ledManager.getBrightness(), ledManager.getColor());
+    configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);
+}
+
 // 4a. Seed the two onboard LFOs with a predictable default routing so a clean boot still has a
 // coherent modulation story before any profile or host edits arrive.
 void configureLFOs() {
@@ -297,9 +313,7 @@ void restoreActiveProfileRuntime(bool persistSnapshot) {
     }
 
     ProfileData storedProfile{};
-    if (configManager.loadProfileSettings(g_activeProfile, storedProfile)) {
-        applyProfileSnapshot(storedProfile, persistSnapshot);
-    }
+    const bool profileStored = configManager.loadProfileSettings(g_activeProfile, storedProfile);
     ProfileModulationExtension modulation{};
     if (!configManager.loadProfileModulation(g_activeProfile, modulation)) {
         // Schema-7 profiles inherited the formerly global slot modulation on
@@ -307,7 +321,11 @@ void restoreActiveProfileRuntime(bool persistSnapshot) {
         modulation = captureProfileModulation();
         configManager.saveProfileModulation(g_activeProfile, modulation);
     }
-    applyProfileModulation(modulation, persistSnapshot);
+    if (profileStored) {
+        applyCompleteProfile(storedProfile, modulation, persistSnapshot);
+    } else {
+        applyProfileModulation(modulation, persistSnapshot);
+    }
     refreshEfVoicesFromConfig();
 }
 

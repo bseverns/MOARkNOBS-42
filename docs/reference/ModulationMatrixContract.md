@@ -63,6 +63,9 @@ The response is JSON:
   oscillator values and contribute up to `0..127` at 100% amount. Fixed-lane
   `centered` consumes the bipolar `-1..1` value and contributes `-64..+63`;
   `replace` and `scale` also use the bipolar value.
+- A persisted global `SlotValue` route reports `legacy_replace` and preserves
+  its historical baseline-independent `0..127` output. It reports
+  `legacy_shadowed` when the corresponding fixed lane owns that LFO/slot pair.
 - `mode: "pre_add_arg"` means ARG math is shaping the EF contribution before the
   final EF add/clamp destination.
 - `mode: "add_bus"` means an LFO is summed into an internal runtime modulation

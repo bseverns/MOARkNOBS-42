@@ -564,7 +564,7 @@ void writeLfoRoutes(JsonArray routes) {
                           static_cast<unsigned>(slotIndex));
             routeObj["destination"] = destination;
             routeObj["slot"] = slotIndex;
-            routeObj["mode"] = shadowed ? "legacy_shadowed" : "legacy_centered";
+            routeObj["mode"] = shadowed ? "legacy_shadowed" : "legacy_replace";
             routeObj["exit"] = "midi";
             routeObj["active"] = slot.active && !shadowed;
             JsonObject midi = routeObj.createNestedObject("midi");

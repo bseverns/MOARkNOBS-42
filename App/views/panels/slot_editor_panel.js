@@ -29,6 +29,7 @@ export function createSlotEditorPanel({
     slotDetailEfBaseline = null,
     slotDetailArg = null,
     slotDetailArgSources = null,
+    slotDetailLfo = null,
     slotDetailValue = null
   } = detailElements;
   const efModeNames = ['PEAK', 'RMS', 'GATE', 'FOLLOWER'];
@@ -46,6 +47,14 @@ export function createSlotEditorPanel({
     { value: 'centered', label: 'Centered' }
   ];
   const efDestinationValues = efDestinationOptions.map((option) => option.value);
+  const lfoModeOptions = [
+    { value: 0, label: 'Add', description: 'Add the unipolar 0…1 LFO value.' },
+    { value: 1, label: 'Subtract', description: 'Subtract the unipolar 0…1 LFO value.' },
+    { value: 2, label: 'Replace', description: 'Replace the slot value around MIDI center 64.' },
+    { value: 3, label: 'Scale', description: 'Scale the preceding value with bipolar motion.' },
+    { value: 4, label: 'Centered', description: 'Move around the knob baseline by −64…+63.' }
+  ];
+  const lfoModeValues = lfoModeOptions.map((option) => option.value);
   let slotEditorRenderPending = false;
   let slotEditorFocusGuardBound = false;
 
@@ -96,6 +105,7 @@ export function createSlotEditorPanel({
     const arg = normalizeArg(slot);
     if (slotDetailArg) slotDetailArg.textContent = formatArgMode(arg);
     if (slotDetailArgSources) slotDetailArgSources.textContent = formatArgSources(arg);
+    if (slotDetailLfo) slotDetailLfo.textContent = formatSlotLfoSummary(slot);
     const value = Array.isArray(telemetry.slots) ? telemetry.slots[slotState.selected] : null;
     if (slotDetailValue) slotDetailValue.textContent = value ?? '—';
     renderSlotEditor();
@@ -125,7 +135,7 @@ export function createSlotEditorPanel({
 
     const basics = makeFieldset(
       'Knob -> MIDI Mapping',
-      'Pick what this knob sends. Switch to Advanced mode for EF/ARG modulation and deep filter controls.'
+      'Pick what this knob sends. Switch to Advanced mode for EF, ARG, fixed LFO modulation, and deep filter controls.'
     );
     basics.appendChild(
       makeSelect(
@@ -227,7 +237,7 @@ export function createSlotEditorPanel({
     if (activeUiMode !== 'advanced') {
       const hint = document.createElement('p');
       hint.className = 'slot-hint';
-      hint.textContent = 'Need EF or ARG modulation? Switch to Advanced mode.';
+      hint.textContent = 'Need EF, ARG, or fixed LFO modulation? Switch to Advanced mode.';
       basics.appendChild(hint);
     }
     if (activeUiMode !== 'advanced' || activeEditorTab === 'mapping') {
@@ -441,6 +451,57 @@ export function createSlotEditorPanel({
       if (activeEditorTab === 'arg') {
         form.appendChild(argFieldset);
       }
+
+      const lfoFieldset = makeFieldset(
+        'Fixed LFO Lanes',
+        'LFO 1 and LFO 2 compose after EF/ARG. Centered keeps the knob as the midpoint.'
+      );
+      normalizeSlotLfo(slot).forEach((lane, laneIndex) => {
+        const card = document.createElement('section');
+        card.className = 'slot-lfo-lane';
+        const heading = document.createElement('h4');
+        heading.textContent = `LFO ${laneIndex + 1}`;
+        card.appendChild(heading);
+        card.appendChild(
+          makeToggle(
+            `Enable LFO ${laneIndex + 1}`,
+            lane.enabled,
+            (value) => stageSlotLfoField(slotState.selected, laneIndex, 'enabled', value),
+            { help: `Fixed lane ${laneIndex + 1} always reads LFO ${laneIndex + 1}.` }
+          )
+        );
+        card.appendChild(
+          makeSelect(
+            `LFO ${laneIndex + 1} combine mode`,
+            lfoModeValues,
+            lane.mode,
+            (value) =>
+              stageSlotLfoField(slotState.selected, laneIndex, 'mode', Number(value)),
+            {
+              help: 'Choose how this lane composes with the value produced before it.',
+              formatOptionLabel: (value) =>
+                lfoModeOptions.find((option) => option.value === value)?.label ?? value,
+              describeOption: (value) =>
+                lfoModeOptions.find((option) => option.value === value)?.description ?? ''
+            }
+          )
+        );
+        card.appendChild(
+          makeNumber(
+            `LFO ${laneIndex + 1} amount (%)`,
+            lane.amount,
+            -100,
+            100,
+            1,
+            (value) => stageSlotLfoField(slotState.selected, laneIndex, 'amount', value),
+            { help: 'Signed depth. Negative values reverse the selected operation.' }
+          )
+        );
+        lfoFieldset.appendChild(card);
+      });
+      if (activeEditorTab === 'lfo') {
+        form.appendChild(lfoFieldset);
+      }
     }
 
     if (!form.childElementCount) {
@@ -625,6 +686,21 @@ export function createSlotEditorPanel({
     });
   }
 
+  // Stage one field in one of the two fixed slot-local LFO lanes.
+  function stageSlotLfoField(index, laneIndex, key, value) {
+    runtime.stage((draft) => {
+      draft.slots = draft.slots || [];
+      if (!draft.slots[index]) draft.slots[index] = {};
+      const lanes = Array.isArray(draft.slots[index].lfo)
+        ? draft.slots[index].lfo.map((lane) => ({ ...lane }))
+        : [];
+      while (lanes.length < 2) lanes.push({ enabled: false, mode: 4, amount: 0 });
+      lanes[laneIndex] = { ...lanes[laneIndex], [key]: value };
+      draft.slots[index].lfo = lanes.slice(0, 2);
+      return draft;
+    });
+  }
+
   // Format numbers for compact read-only detail labels.
   function formatNumberField(value, fractionDigits = 2) {
     if (value === null || value === undefined) return '—';
@@ -725,6 +801,33 @@ export function createSlotEditorPanel({
     const sourceB = formatEfRoute(arg.sourceB);
     if (sourceA === '—' && sourceB === '—') return '—';
     return `A → ${sourceA} • B → ${sourceB}`;
+  }
+
+  function normalizeSlotLfo(slot) {
+    const lanes = Array.isArray(slot?.lfo) ? slot.lfo : [];
+    return Array.from({ length: 2 }, (_, laneIndex) => {
+      const source = lanes[laneIndex] && typeof lanes[laneIndex] === 'object'
+        ? lanes[laneIndex]
+        : {};
+      const mode = Number(source.mode);
+      const amount = Number(source.amount);
+      return {
+        enabled: Boolean(source.enabled),
+        mode: Number.isFinite(mode) ? Math.max(0, Math.min(4, Math.round(mode))) : 4,
+        amount: Number.isFinite(amount) ? Math.max(-100, Math.min(100, Math.round(amount))) : 0
+      };
+    });
+  }
+
+  function formatSlotLfoSummary(slot) {
+    return normalizeSlotLfo(slot)
+      .map((lane, laneIndex) => {
+        if (!lane.enabled) return `L${laneIndex + 1} Off`;
+        const mode = lfoModeOptions.find((option) => option.value === lane.mode)?.label ?? 'Mode';
+        const amount = lane.amount > 0 ? `+${lane.amount}` : String(lane.amount);
+        return `L${laneIndex + 1} ${mode} ${amount}%`;
+      })
+      .join(' · ');
   }
 
   // Fill in missing EF defaults and normalize mixed legacy/current field shapes.
