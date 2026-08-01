@@ -192,6 +192,78 @@ void test_runtime_note_admission_drops_note_when_release_queue_is_full() {
     TEST_ASSERT_EQUAL_UINT32(1, g_systemDiagnostics.midiDropCount);
 }
 
+void test_runtime_modulation_transport_budget_spreads_42_slot_burst() {
+    g_fakeNowMs = 0;
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.active = true;
+        slot.type = MIDIMessageType::CC;
+        slot.midiChannel = 1;
+        slot.data1 = slotIndex;
+        slot.lfo = {};
+        slot.lfo.lfo[0].setEnabled(true);
+        slot.lfo.lfo[0].setMode(ModCombineMode::Centered);
+        slot.lfo.lfo[0].amount = 0;
+    }
+
+    advanceMs(9);
+    const uint32_t beforeTx = midiHandler.getTxCount();
+    processSlotModulation();
+    const uint32_t firstPass = midiHandler.getTxCount() - beforeTx;
+    TEST_ASSERT_EQUAL_UINT32(5, firstPass);
+
+    for (uint8_t pass = 0; pass < 10; ++pass) {
+        advanceMs(5);
+        processSlotModulation();
+    }
+    TEST_ASSERT_EQUAL_UINT32(NUM_SLOTS, midiHandler.getTxCount() - beforeTx);
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        configManager.getSlot(slotIndex).lfo = {};
+    }
+    testOnly_resetRuntimeState();
+}
+
+void test_runtime_modulated_note_stress_preserves_note_off_capacity() {
+    g_fakeNowMs = 0;
+    g_systemDiagnostics = {};
+    resetMidiTransports();
+    testOnly_resetRuntimeState();
+
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        MIDISlot &slot = configManager.getSlot(slotIndex);
+        slot.active = true;
+        slot.type = MIDIMessageType::Note;
+        slot.midiChannel = 1;
+        slot.data1 = slotIndex;
+        slot.lfo = {};
+        slot.lfo.lfo[0].setEnabled(true);
+        slot.lfo.lfo[0].setMode(ModCombineMode::Centered);
+        slot.lfo.lfo[0].amount = 0;
+    }
+
+    for (uint8_t pass = 0; pass < 60; ++pass) {
+        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+            MIDISlot &slot = configManager.getSlot(slotIndex);
+            slot.data1 = static_cast<uint8_t>((slot.data1 + 1U) & 0x7FU);
+        }
+        advanceMs(5);
+        processPendingNoteOffs();
+        processSlotModulation();
+    }
+    TEST_ASSERT_EQUAL_UINT32(0, g_systemDiagnostics.midiDropCount);
+
+    advanceMs(100);
+    processPendingNoteOffs();
+    for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
+        configManager.getSlot(slotIndex).lfo = {};
+    }
+    testOnly_resetRuntimeState();
+}
+
 void test_runtime_diagnostics_log_only_on_counter_changes() {
     g_systemDiagnostics = {};
     testOnly_resetRuntimeState();

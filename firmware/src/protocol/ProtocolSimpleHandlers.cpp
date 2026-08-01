@@ -957,6 +957,13 @@ void handleGetModMatrixCommand(const String &command) {
     writeSourceLists(sources);
     JsonObject limits = doc.createNestedObject("limits");
     writeLfoRouteLimits(limits);
+    JsonObject transport = doc.createNestedObject("transport");
+    transport["policy"] = "slot_token_bucket";
+    transport["din_bytes_per_ms"] = 3;
+    transport["initial_bytes"] = 15;
+    transport["capacity_bytes"] = 64;
+    transport["note_on_priority"] = true;
+    transport["continuous_coalescing"] = "latest_per_slot";
 
     JsonArray routes = doc.createNestedArray("routes");
     writePotRoutes(routes);
@@ -990,6 +997,13 @@ void handleGetModMatrixChunkedCommand(const String &command) {
     doc["fw_version"] = FW_VERSION_STR;
     JsonObject sources = doc.createNestedObject("sources"); writeSourceLists(sources);
     JsonObject limits = doc.createNestedObject("limits"); writeLfoRouteLimits(limits);
+    JsonObject transport = doc.createNestedObject("transport");
+    transport["policy"] = "slot_token_bucket";
+    transport["din_bytes_per_ms"] = 3;
+    transport["initial_bytes"] = 15;
+    transport["capacity_bytes"] = 64;
+    transport["note_on_priority"] = true;
+    transport["continuous_coalescing"] = "latest_per_slot";
     JsonArray routes = doc.createNestedArray("routes");
     writePotRoutes(routes); writeEfRoutes(routes); writeLfoRoutes(routes);
     JsonArray conflicts = doc.createNestedArray("conflicts");

@@ -25,6 +25,14 @@ The response is JSON:
     "lfo_route_reported": 3,
     "lfo_route_truncated": false
   },
+  "transport": {
+    "policy": "slot_token_bucket",
+    "din_bytes_per_ms": 3,
+    "initial_bytes": 15,
+    "capacity_bytes": 64,
+    "note_on_priority": true,
+    "continuous_coalescing": "latest_per_slot"
+  },
   "sources": {
     "ef": [0, 1, 2, 3, 4, 5],
     "lfo": [0, 1],
@@ -72,6 +80,19 @@ The response is JSON:
   bus such as EF gain trim, arp swing, velocity shift, probability, gate, or
   jitter tuning.
 - `rateLimitMs` is present for LFO routes that emit transport-facing values.
+
+## Aggregate Transport Admission
+
+The per-route `rateLimitMs` remains the first control-rate guard. Changed slot
+outputs then pass through one global token bucket derived from the DIN MIDI byte
+rate. The bucket begins with 15 bytes, replenishes at 3 bytes per millisecond,
+and caps at 64 bytes so one bounded SysEx frame can eventually be admitted.
+
+Note Off events remain on the independent high-priority release queue. Among
+slot-modulation candidates, Note On is considered before continuous values.
+Deferred continuous values are not queued as historical samples: each slot is
+resolved again on the next pass, so only its latest value can be emitted. A
+rotating cursor prevents low-numbered slots from monopolizing admission.
 
 ## Conflicts
 

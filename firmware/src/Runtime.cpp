@@ -77,6 +77,12 @@ struct SlotModulationFrame {
 
 std::array<SlotModulationFrame, NUM_SLOTS> slotModulationFrames{};
 constexpr unsigned long kSlotModulationMinSendIntervalMs = 9;
+constexpr uint16_t kModulationTransportInitialBytes = 15;
+constexpr uint16_t kModulationTransportCapacityBytes = MIDIHandler::kMaxOutgoingSysExBytes;
+constexpr uint8_t kModulationTransportBytesPerMs = 3;
+uint16_t modulationTransportBytes = kModulationTransportInitialBytes;
+unsigned long modulationTransportUpdatedAtMs = 0;
+uint8_t modulationTransportCursor = 0;
 
 void queueMidiServiceRequest() {
     // ISR-safe flagging: keep the interrupt short and let `processMIDI()` grab the work later.
@@ -188,15 +194,40 @@ int16_t midiValueToPitchBend(uint8_t value) {
     return static_cast<int16_t>(constrain(bend, -8192, 8191));
 }
 
-void emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
+uint8_t slotModulationTransportCost(const MIDISlot &slot, uint8_t value) {
+    switch (slot.type) {
+    case MIDIMessageType::CC:
+    case MIDIMessageType::PitchBend:
+    case MIDIMessageType::ModWheel:
+        return 3;
+    case MIDIMessageType::Note:
+        return 6; // Account for both the admitted Note On and its reserved Note Off.
+    case MIDIMessageType::ProgramChange:
+    case MIDIMessageType::Aftertouch:
+        return 2;
+    case MIDIMessageType::NRPN:
+    case MIDIMessageType::RPN:
+        return 12;
+    case MIDIMessageType::SysEx: {
+        std::array<uint8_t, SysExTemplate::kMaxLength> msg{};
+        return buildSysExPayload(slot, midiValueToRawAdc(value), msg.data(), msg.size());
+    }
+    case MIDIMessageType::OFF:
+    default:
+        return 0;
+    }
+}
+
+bool emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
     if (slotIndex >= NUM_SLOTS) {
-        return;
+        return false;
     }
     MIDISlot &slot = configManager.getSlot(slotIndex);
     if (!slot.active) {
-        return;
+        return false;
     }
 
+    bool emitted = true;
     switch (slot.type) {
     case MIDIMessageType::CC:
         midiHandler.sendControlChange(slot.data1, value, slot.midiChannel);
@@ -205,6 +236,8 @@ void emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
         const uint8_t note = static_cast<uint8_t>(slot.data1 % 128);
         if (queuePendingNoteOff(note, slot.midiChannel, 100)) {
             midiHandler.sendNoteOn(note, value, slot.midiChannel);
+        } else {
+            emitted = false;
         }
         break;
     }
@@ -237,17 +270,21 @@ void emitSlotModulationValue(uint8_t slotIndex, uint8_t value) {
         uint8_t length = buildSysExPayload(slot, midiValueToRawAdc(value), msg.data(), msg.size());
         if (length > 0) {
             midiHandler.sendSysEx(msg.data(), length);
+        } else {
+            emitted = false;
         }
         break;
     }
     case MIDIMessageType::OFF:
     default:
+        emitted = false;
         break;
     }
 
-    if (slotIndex < NUM_POTS) {
+    if (emitted && slotIndex < NUM_POTS) {
         ledAnimator.setPotTarget(slotIndex, value);
     }
+    return emitted;
 }
 
 bool isUnconfiguredClockedSlot(const MIDISlot &slot) {
@@ -749,6 +786,29 @@ void processEnvelopes() {
 // Resolve and emit each modulated slot once per control-rate frame.
 void processSlotModulation() {
     const unsigned long currentMs = now();
+    const unsigned long elapsedMs = currentMs - modulationTransportUpdatedAtMs;
+    if (elapsedMs > 0) {
+        if (elapsedMs >=
+            (kModulationTransportCapacityBytes / kModulationTransportBytesPerMs) + 1U) {
+            modulationTransportBytes = kModulationTransportCapacityBytes;
+        } else {
+            modulationTransportBytes = static_cast<uint16_t>(std::min<unsigned long>(
+                kModulationTransportCapacityBytes,
+                modulationTransportBytes + elapsedMs * kModulationTransportBytesPerMs));
+        }
+        modulationTransportUpdatedAtMs = currentMs;
+    }
+
+    struct Candidate {
+        bool pending = false;
+        bool note = false;
+        uint8_t value = 0;
+        uint8_t cost = 0;
+    };
+    std::array<Candidate, NUM_SLOTS> candidates{};
+
+    // Resolve every slot first. Admission below operates on one latest value per slot, so a
+    // deferred continuous destination is naturally coalesced instead of building a stale queue.
     for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
         SlotModulationFrame &frame = slotModulationFrames[slotIndex];
         const bool hasLfo = std::any_of(frame.lfoActive.begin(), frame.lfoActive.end(),
@@ -810,12 +870,52 @@ void processSlotModulation() {
             currentMs - frame.lastEmitMs < kSlotModulationMinSendIntervalMs) {
             continue;
         }
-        emitSlotModulationValue(slotIndex, finalValue);
-        frame.lastEmittedValue = finalValue;
-        frame.lastEmitMs = currentMs;
-        if (slotIndex < NUM_POTS) {
-            ledAnimator.setPotTarget(slotIndex, finalValue);
+        const uint8_t cost = slotModulationTransportCost(slot, finalValue);
+        if (cost == 0) {
+            frame.lastEmittedValue = finalValue;
+            frame.lastEmitMs = currentMs;
+            continue;
         }
+        candidates[slotIndex] = {
+            true,
+            slot.type == MIDIMessageType::Note,
+            finalValue,
+            cost,
+        };
+    }
+
+    auto findNextCandidate = [&](bool notesOnly) -> int {
+        for (uint8_t offset = 0; offset < NUM_SLOTS; ++offset) {
+            const uint8_t slotIndex =
+                static_cast<uint8_t>((modulationTransportCursor + offset) % NUM_SLOTS);
+            if (!candidates[slotIndex].pending) continue;
+            if (notesOnly && !candidates[slotIndex].note) continue;
+            return slotIndex;
+        }
+        return -1;
+    };
+
+    while (modulationTransportBytes > 0) {
+        int admittedIndex = findNextCandidate(true);
+        if (admittedIndex < 0) admittedIndex = findNextCandidate(false);
+        if (admittedIndex < 0) break;
+
+        Candidate &candidate = candidates[static_cast<size_t>(admittedIndex)];
+        // Stop rather than skipping an expensive head candidate. Tokens then accumulate and the
+        // rotating cursor prevents NRPN/RPN or SysEx destinations from starving behind cheap CCs.
+        if (candidate.cost > modulationTransportBytes) break;
+
+        candidate.pending = false;
+        modulationTransportCursor =
+            static_cast<uint8_t>((static_cast<uint8_t>(admittedIndex) + 1U) % NUM_SLOTS);
+        SlotModulationFrame &frame =
+            slotModulationFrames[static_cast<size_t>(admittedIndex)];
+        if (emitSlotModulationValue(static_cast<uint8_t>(admittedIndex), candidate.value)) {
+            modulationTransportBytes =
+                static_cast<uint16_t>(modulationTransportBytes - candidate.cost);
+        }
+        frame.lastEmittedValue = candidate.value;
+        frame.lastEmitMs = currentMs;
     }
 }
 
@@ -917,6 +1017,10 @@ void testOnly_resetRuntimeState() {
     midiServiceRequestCount = 0;
     internalClockNextTick = 0;
     pendingNoteOffs = {};
+    slotModulationFrames = {};
+    modulationTransportBytes = kModulationTransportInitialBytes;
+    modulationTransportUpdatedAtMs = now();
+    modulationTransportCursor = 0;
     statusLedPulseDeadline = 0;
     lastMidiDropAlertCount = 0;
     lastMidiTaskOverrunAlertCount = 0;

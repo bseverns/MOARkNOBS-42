@@ -115,6 +115,12 @@ In `GET_MOD_MATRIX`, an unshadowed persisted global `SlotValue` route reports
 output, independent of the physical pot baseline. A corresponding enabled
 fixed lane reports that global route as `legacy_shadowed`.
 
+The response also includes a `transport` object describing aggregate slot
+admission: a `slot_token_bucket` with a 3-byte/ms DIN-derived refill, 15
+initial and 64 maximum bytes, Note On priority, and `latest_per_slot`
+continuous-value coalescing. Note Offs remain on their independent
+high-priority release queue.
+
 ## Deprecated Commands
 
 These remain accepted for older tools but should not be used for new App or Bridge work.

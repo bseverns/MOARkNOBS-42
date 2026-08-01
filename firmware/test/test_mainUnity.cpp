@@ -119,6 +119,8 @@ void test_scheduler_initializes_recurring_task_layout();
 void test_runtime_pending_note_off_fires_when_due();
 void test_runtime_pending_note_off_overflow_tracks_drop();
 void test_runtime_note_admission_drops_note_when_release_queue_is_full();
+void test_runtime_modulation_transport_budget_spreads_42_slot_burst();
+void test_runtime_modulated_note_stress_preserves_note_off_capacity();
 void test_runtime_diagnostics_log_only_on_counter_changes();
 void test_process_midi_polls_usb_clock_without_timer_isr_gate();
 void test_internal_clock_ticks_continue_without_timeout_gap();
@@ -251,6 +253,8 @@ void setup() {
     RUN_TEST(test_runtime_pending_note_off_fires_when_due);
     RUN_TEST(test_runtime_pending_note_off_overflow_tracks_drop);
     RUN_TEST(test_runtime_note_admission_drops_note_when_release_queue_is_full);
+    RUN_TEST(test_runtime_modulation_transport_budget_spreads_42_slot_burst);
+    RUN_TEST(test_runtime_modulated_note_stress_preserves_note_off_capacity);
     RUN_TEST(test_runtime_diagnostics_log_only_on_counter_changes);
     RUN_TEST(test_process_midi_polls_usb_clock_without_timer_isr_gate);
     RUN_TEST(test_internal_clock_ticks_continue_without_timeout_gap);
