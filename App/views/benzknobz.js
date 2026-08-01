@@ -117,6 +117,20 @@ const boot = () => {
   const editorTabButtons = Array.from(document.querySelectorAll('[data-editor-tab]'));
   const utilityTabButtons = Array.from(document.querySelectorAll('[data-utility-tab]'));
   const utilityPanels = Array.from(document.querySelectorAll('[data-utility-panel]'));
+  const performanceTabButtons = Array.from(document.querySelectorAll('[data-performance-tab]'));
+  const performancePanels = Array.from(document.querySelectorAll('[data-performance-panel]'));
+  const performancePanelHost = document.getElementById('profile-performance-panels');
+  performancePanels.forEach((panel) => performancePanelHost?.append(panel));
+  const setPerformanceTab = (tab) => {
+    performanceTabButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', button.dataset.performanceTab === tab ? 'true' : 'false');
+    });
+    performancePanels.forEach((panel) => {
+      const visible = panel.dataset.performancePanel === tab;
+      panel.classList.toggle('performance-panel-active', visible);
+      panel.toggleAttribute('hidden', !visible);
+    });
+  };
   const diffEmpty = document.getElementById('diff-empty');
   const schemaSections = Array.from(document.querySelectorAll('[data-schema-target]')).map(
     (element) => ({
@@ -725,9 +739,13 @@ const boot = () => {
   performerPanelController.bind();
   slotWorkspaceController.bind();
   uiModeController.bind();
+  performanceTabButtons.forEach((button) => {
+    button.addEventListener('click', () => setPerformanceTab(button.dataset.performanceTab));
+  });
   uiModeController.setUIMode(initialUiMode, { persist: Boolean(requestedUiMode) });
   uiModeController.setEditorTab(uiModeController.getEditorTab());
   uiModeController.setUtilityTab('console');
+  setPerformanceTab('arp');
 
   runtime.on('status', ({ level, message }) => {
     // Normalize transport/runtime status levels onto the small UI state palette.

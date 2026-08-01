@@ -1389,7 +1389,7 @@ export function createProfileMacroScenePanel({
     if (lfoRefreshBtn) lfoRefreshBtn.disabled = !canInteract;
     if (lfoSaveBtn) {
       lfoSaveBtn.disabled = !canInteract || !lfoDraftDirty;
-      lfoSaveBtn.textContent = lfoDraftDirty ? 'Push & save LFO changes' : 'Save slot LFOs';
+      lfoSaveBtn.textContent = lfoDraftDirty ? 'Push & save LFO changes' : 'Save profile LFOs';
       lfoSaveBtn.title = lfoDraftDirty
         ? `Apply local LFO edits live and persist them to ${describeSlot()}.`
         : `No unsaved LFO edits for ${describeSlot()}.`;
@@ -1559,8 +1559,8 @@ export function createProfileMacroScenePanel({
 
   async function refreshProfileUtilities({ silent = false, focus = 'all' } = {}) {
     if (!profileInteractable) {
-      setArpStatus('muted', 'Connect to inspect the selected profile slot.');
-      setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
+      setArpStatus('muted', 'Connect to inspect the selected profile A–D entry.');
+      setLfoStatus('muted', 'Connect to inspect the selected profile A–D entry.');
       return;
     }
     if (profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
@@ -1971,10 +1971,10 @@ export function createProfileMacroScenePanel({
     setMacroStatus('muted', 'Awaiting the first snapshot.');
     setArpDraft(createDefaultArpDraft());
     setLfoDraft(createDefaultLfoDraft());
-    setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    setArpStatus('muted', 'Connect to inspect the selected profile A–D entry.');
     setLiveArpDraft(liveArpDraft);
     setLiveArpStatus('muted', 'Connect to inspect live arpeggiator state.');
-    setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
+    setLfoStatus('muted', 'Connect to inspect the selected profile A–D entry.');
     [
       arpLengthInput,
       arpShapeSelect,
@@ -2108,9 +2108,9 @@ export function createProfileMacroScenePanel({
     renderLfoEditor();
     renderModMatrix();
     syncRecoverySupportCopy();
-    setArpStatus('muted', 'Connect to inspect the selected profile slot.');
+    setArpStatus('muted', 'Connect to inspect the selected profile A–D entry.');
     setLiveArpStatus('muted', 'Connect to inspect live arpeggiator state.');
-    setLfoStatus('muted', 'Connect to inspect the selected profile slot.');
+    setLfoStatus('muted', 'Connect to inspect the selected profile A–D entry.');
     setModMatrixStatus('muted', 'Connect to inspect modulation routes.');
   }
 

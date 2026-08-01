@@ -14,7 +14,7 @@ async function bootAdvancedSimulator(page) {
 
 test('fixed slot LFO lanes can be staged, applied, and read back', async ({ page }) => {
   await bootAdvancedSimulator(page);
-  await page.locator('#editor-panel').getByRole('button', { name: 'LFO', exact: true }).click();
+  await page.locator('#editor-panel').getByRole('button', { name: 'Slot LFO', exact: true }).click();
 
   const lane = page.locator('.slot-lfo-lane').first();
   await expect(lane.getByRole('heading', { name: 'LFO 1' })).toBeVisible();
@@ -37,7 +37,7 @@ test('fixed slot LFO lanes can be staged, applied, and read back', async ({ page
 
 test('fixed slot LFO lane edits survive profile save and reload', async ({ page }) => {
   await bootAdvancedSimulator(page);
-  await page.locator('#editor-panel').getByRole('button', { name: 'LFO', exact: true }).click();
+  await page.locator('#editor-panel').getByRole('button', { name: 'Slot LFO', exact: true }).click();
   const amount = page.locator('.slot-lfo-lane').nth(1).getByLabel('LFO 2 amount (%)');
   await page.locator('.slot-lfo-lane').nth(1).getByLabel('Enable LFO 2').check();
   await amount.fill('-24');

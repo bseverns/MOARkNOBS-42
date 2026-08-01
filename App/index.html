@@ -275,7 +275,7 @@
               <button type="button" class="editor-tab" data-editor-tab="arg" aria-pressed="false"
                 data-ui-tier="advanced">ARG</button>
               <button type="button" class="editor-tab" data-editor-tab="lfo" aria-pressed="false"
-                data-ui-tier="advanced">LFO</button>
+                data-ui-tier="advanced">Slot LFO</button>
             </div>
           </header>
           <div id="form">
@@ -314,6 +314,23 @@
                 aria-label="No ARG controls reported by current schema."></div>
             </fieldset>
           </div>
+          <section id="profile-performance-workspace" class="profile-performance-workspace"
+            aria-labelledby="profile-performance-title" data-ui-tier="advanced">
+            <header class="profile-performance-header">
+              <div>
+                <h2 id="profile-performance-title">Profile Performance</h2>
+                <p class="microcopy">Edit profile-wide arpeggiator behavior, LFO generators, and route assignments. Per-slot roots and fixed LFO lanes stay in Selected Slot.</p>
+              </div>
+              <span class="lane-tag" data-runtime-lane="staged">Profile A–D</span>
+            </header>
+            <div class="performance-tabbar" role="tablist" aria-label="Profile performance sections">
+              <button type="button" class="performance-tab" data-performance-tab="arp"
+                aria-pressed="true">Profile Arp</button>
+              <button type="button" class="performance-tab" data-performance-tab="lfo"
+                aria-pressed="false">Profile LFO &amp; Routes</button>
+            </div>
+            <div id="profile-performance-panels"></div>
+          </section>
         </section>
       </section>
 
@@ -334,10 +351,6 @@
           <button type="button" class="utility-tab" data-utility-tab="midi" aria-pressed="false" data-ui-modes="advanced">MIDI</button>
           <button type="button" class="utility-tab" data-utility-tab="scope" aria-pressed="false"
             data-ui-tier="advanced">Scope</button>
-          <button type="button" class="utility-tab" data-utility-tab="arp" aria-pressed="false"
-            data-ui-tier="advanced">Arp</button>
-          <button type="button" class="utility-tab" data-utility-tab="lfo" aria-pressed="false"
-            data-ui-tier="advanced">LFO</button>
         </div>
 
         <div class="utility-panel utility-panel-active" data-utility-panel="console">
@@ -507,12 +520,12 @@
             </div>
           </section>
         </div>
-        <div class="utility-panel" data-utility-panel="arp" data-ui-tier="advanced">
+        <div class="performance-panel performance-panel-active" data-performance-panel="arp" data-ui-tier="advanced">
           <div class="macro-card arp-card" id="arp-profile-card" aria-label="Arpeggiator profile controls"
             style="height: auto; min-height: 0;">
             <div class="macro-card-header">
-              <strong>Arpeggiator</strong>
-              <p class="microcopy">Edit saved arp timing and shape for the selected profile slot. Use the Selected Slot
+              <strong>Profile Arpeggiator</strong>
+              <p class="microcopy">Edit saved arp timing and shape for the selected profile A–D entry. Use the Selected Slot
                 editor for each slot&apos;s arp root note.</p>
             </div>
             <div class="arp-form-grid">
@@ -629,24 +642,24 @@
               </p>
             </section>
             <div class="arp-actions" role="group" aria-label="Arpeggiator profile actions">
-              <button id="arp-refresh" type="button" disabled>Load slot arp</button>
-              <button id="arp-save" type="button" disabled>Save slot arp</button>
+              <button id="arp-refresh" type="button" disabled>Load profile arp</button>
+              <button id="arp-save" type="button" disabled>Save profile arp</button>
             </div>
             <p class="microcopy macro-status" id="arp-status" data-state="muted" aria-live="polite">
-              Connect to inspect the selected profile slot&apos;s arp settings.
+              Connect to inspect the selected profile&apos;s arp settings.
             </p>
           </div>
         </div>
 
-        <div class="utility-panel" data-utility-panel="lfo" data-ui-tier="advanced">
+        <div class="performance-panel" data-performance-panel="lfo" data-ui-tier="advanced">
           <div class="macro-card lfo-card" id="lfo-profile-card" aria-label="LFO profile controls">
             <div class="macro-card-header">
-              <strong>LFOs &amp; Assignments</strong>
-              <p class="microcopy">Edit the two saved LFOs and assign their routes for the selected profile slot.</p>
+              <strong>Profile LFOs &amp; Routes</strong>
+              <p class="microcopy">Edit the two profile-wide LFO generators and assign their routes for the selected profile A–D entry. Fixed per-slot lanes remain in Selected Slot.</p>
             </div>
             <div class="arp-actions" role="group" aria-label="LFO profile load save actions">
-              <button id="lfo-refresh" type="button" disabled>Load slot LFOs</button>
-              <button id="lfo-save" type="button" disabled>Save slot LFOs</button>
+              <button id="lfo-refresh" type="button" disabled>Load profile LFOs</button>
+              <button id="lfo-save" type="button" disabled>Save profile LFOs</button>
             </div>
             <div id="lfo-editor" class="lfo-editor" aria-live="polite"></div>
             <div class="arp-actions" role="group" aria-label="LFO profile actions">
@@ -654,7 +667,7 @@
               <button id="lfo-routes-clear" type="button" disabled>Clear routes</button>
             </div>
             <p class="microcopy macro-status" id="lfo-status" data-state="muted" aria-live="polite">
-              Connect to inspect the selected profile slot&apos;s LFO settings.
+              Connect to inspect the selected profile&apos;s LFO settings.
             </p>
             <section class="mod-matrix-card" aria-labelledby="mod-matrix-title">
               <header class="live-toggle-card-header">

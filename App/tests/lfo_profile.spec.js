@@ -5,6 +5,31 @@ async function bootWithSimulator(page) {
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
 }
 
+test('profile performance controls live in the center workspace, not the utility rail', async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/benzknobz.html');
+  await bootWithSimulator(page);
+
+  const workspace = page.locator('#profile-performance-workspace');
+  await expect(workspace).toBeVisible();
+  await expect(workspace.locator('[data-performance-panel="arp"]')).toBeVisible();
+  await expect(page.locator('#connect-card [data-performance-panel]')).toHaveCount(0);
+  await expect(page.locator('#connect-card [data-utility-tab]')).toHaveText([
+    'Console',
+    'Diff',
+    'MIDI',
+    'Scope'
+  ]);
+  await expect(page.locator('[data-editor-tab="lfo"]')).toHaveText('Slot LFO');
+});
+
 test('LFO edits expose a save action and persist through set_profile', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
@@ -17,12 +42,12 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await page.locator('[data-utility-tab="lfo"]').click();
-  await expect(page.locator('[data-utility-panel="lfo"]')).toBeVisible();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#lfo-status')).toContainText('2 LFOs');
 
   const save = page.locator('#lfo-save');
-  await expect(save).toHaveText('Save slot LFOs');
+  await expect(save).toHaveText('Save profile LFOs');
   await expect(save).toBeDisabled();
 
   const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
@@ -35,7 +60,7 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
 
   await save.click();
   await expect(page.locator('#lfo-status')).toContainText('saved');
-  await expect(save).toHaveText('Save slot LFOs');
+  await expect(save).toHaveText('Save profile LFOs');
   await expect(save).toBeDisabled();
 
   const profile = await page.evaluate(() =>
@@ -74,7 +99,7 @@ test('failed LFO profile save preserves unrelated staged configuration', async (
   });
   expect(stagedDiff.length).toBeGreaterThan(0);
 
-  await page.locator('[data-utility-tab="lfo"]').click();
+  await page.locator('[data-performance-tab="lfo"]').click();
   const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
   await firstDepth.fill('0.42');
   await firstDepth.dispatchEvent('change');
@@ -105,8 +130,8 @@ test('inactive slot LFO save keeps the edited slot visible', async ({ page }) =>
     drawer.open = true;
   });
   await page.locator('[data-profile-slot="1"]').click();
-  await page.locator('[data-utility-tab="lfo"]').click();
-  await expect(page.locator('[data-utility-panel="lfo"]')).toBeVisible();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
   await expect(page.locator('#profile-slot-status')).toContainText('Slot B');
   await expect(page.locator('#profile-slot-status')).toContainText('board active A');
 
@@ -159,8 +184,8 @@ test('active slot LFO save does not warn to switch to itself', async ({ page }) 
     };
   });
 
-  await page.locator('[data-utility-tab="lfo"]').click();
-  await expect(page.locator('[data-utility-panel="lfo"]')).toBeVisible();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
 
   const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
   await firstDepth.fill('0.33');

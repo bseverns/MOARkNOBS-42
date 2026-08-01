@@ -175,8 +175,8 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await page.locator('[data-utility-tab="arp"]').click();
-  await expect(page.locator('[data-utility-panel="arp"]')).toBeVisible();
+  await page.locator('[data-performance-tab="arp"]').click();
+  await expect(page.locator('[data-performance-panel="arp"]')).toBeVisible();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 
   await page.locator('#live-arp-slot').fill('7');
@@ -212,7 +212,7 @@ test('profile arp GET and SET round-trip pattern length in the App payload', asy
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await page.locator('[data-utility-tab="arp"]').click();
+  await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#arp-save')).toBeEnabled();
   await page.locator('#arp-pattern-length').fill('9');
   await page.locator('#arp-save').click();
@@ -231,7 +231,7 @@ test('live arp controls use native runtime commands without config boot', async 
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
-  await page.locator('[data-utility-tab="arp"]').click();
+  await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 
   await page.locator('#live-arp-slot').fill('7');

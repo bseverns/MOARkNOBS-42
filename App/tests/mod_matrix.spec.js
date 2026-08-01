@@ -15,8 +15,8 @@ async function bootWithSimulator(page) {
 }
 
 async function openMatrixPanel(page) {
-  await page.locator('[data-utility-tab="lfo"]').click();
-  await expect(page.locator('[data-utility-panel="lfo"]')).toBeVisible();
+  await page.locator('[data-performance-tab="lfo"]').click();
+  await expect(page.locator('[data-performance-panel="lfo"]')).toBeVisible();
 }
 
 test('matrix LFO rows select the matching route card', async ({ page }) => {
