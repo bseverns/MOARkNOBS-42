@@ -953,6 +953,15 @@ const boot = () => {
     runtime,
     manifest: localManifest
   });
+  if (connectBtn) {
+    connectBtn.disabled = false;
+    connectBtn.removeAttribute('aria-busy');
+  }
+  if (stageConnectBtn) {
+    stageConnectBtn.disabled = false;
+    stageConnectBtn.removeAttribute('aria-busy');
+  }
+  if (docRoot) docRoot.dataset.mn42Ready = 'true';
 
   function updatePowerSafetySummary(manifest) {
     powerSafetySummary.render(manifest);

@@ -9,6 +9,7 @@ For document tie-break rules, see [Documentation Truth Map](../docs/reference/Do
 Current support boundary:
 
 - the bundled fallback contract is schema 8, including two fixed per-slot LFO lanes and profile-local ARG/LFO persistence
+- Connect controls remain disabled and marked busy until the operator shell has bound its transport handlers and runtime subscriptions; this also makes the legacy `benzknobz.html` redirect safe against early clicks.
 - Advanced selected-slot editing exposes both fixed LFO lanes with enable, combine-mode, and signed-amount controls; these are staged and verified through the normal Apply transaction.
 - strongest repo evidence for the direct-browser path: Chromium-based WebSerial
 - strongest repo evidence for the non-WebSerial path: the bridge-served `/app/` configurator on a Node 24 desktop host
