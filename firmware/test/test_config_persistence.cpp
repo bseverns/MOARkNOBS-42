@@ -2,6 +2,7 @@
 #include <unity.h>
 
 #include "ConfigManager.h"
+#include "LFO/LFOManager.h"
 #include "ProfileModulationStorage.h"
 #include "protocol/SceneStorage.h"
 #include "storage/StorageBackend.h"
@@ -446,11 +447,20 @@ void test_schema6_direct_migration_preserves_profiles_macro_and_scenes() {
         ProfileData profile{};
         profile.led.brightness = static_cast<uint8_t>(40 + id);
         profile.slots[id].midiChannel = static_cast<uint8_t>(id + 1);
+        profile.routeCount = 1;
+        profile.routes[0].type =
+            static_cast<uint8_t>(LFOManager::Route::Type::SlotValue);
+        profile.routes[0].lfoIndex = static_cast<uint8_t>(id % PROFILE_LFO_COUNT);
+        profile.routes[0].depth = 0.25f + static_cast<float>(id) * 0.1f;
+        profile.routes[0].target = static_cast<uint8_t>(10 + id);
+        profile.routes[0].amount = static_cast<int8_t>(60 - id);
         TEST_ASSERT_TRUE(cfg.saveProfileSettings(id, profile));
         storage.readBytes(EEPROM_PROFILE_SETTINGS_START(id),
                           profileBlocks.data() +
                               static_cast<size_t>(id) * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
                           EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+        profileBlocks[(static_cast<size_t>(id) + 1) * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE - 1] =
+            static_cast<uint8_t>(0xC0 + id);
     }
 
     // Remove the current-address copies so the assertions below can only pass
@@ -508,6 +518,14 @@ void test_schema6_direct_migration_preserves_profiles_macro_and_scenes() {
         delete scene;
     }
 
+    // Guard the first bytes outside the current schema-8 layout. A migration
+    // must relocate only known records and leave unrelated storage untouched.
+    constexpr size_t guardBytes = 32;
+    for (size_t offset = 0; offset < guardBytes; ++offset) {
+        storage.update(static_cast<int>(SceneStorage::kRequiredStorageBytes + offset),
+                       static_cast<uint8_t>(0x80 + offset));
+    }
+
     const uint16_t schema6 = 0x0006;
     storage.writeBytes(EEPROM_CONFIG_VERSION, &schema6, sizeof(schema6));
     std::vector<uint8_t> pots;
@@ -519,8 +537,21 @@ void test_schema6_direct_migration_preserves_profiles_macro_and_scenes() {
         TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(40 + id), restored.led.brightness);
         TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(id + 1),
                                 restored.slots[id].midiChannel);
+        TEST_ASSERT_EQUAL_UINT8(1, restored.routeCount);
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(id % PROFILE_LFO_COUNT),
+                                restored.routes[0].lfoIndex);
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(10 + id), restored.routes[0].target);
+        TEST_ASSERT_EQUAL_INT8(static_cast<int8_t>(60 - id), restored.routes[0].amount);
+        TEST_ASSERT_EQUAL_UINT8(
+            static_cast<uint8_t>(0xC0 + id),
+            storage.read(EEPROM_PROFILE_SETTINGS_START(id) +
+                         EEPROM_PROFILE_SETTINGS_BLOCK_SIZE - 1));
         ProfileModulationExtension modulation{};
         TEST_ASSERT_FALSE(cfg.loadProfileModulation(id, modulation));
+        TEST_ASSERT_EQUAL_UINT8(0, storage.read(EEPROM_PROFILE_MODULATION_START(id)));
+        TEST_ASSERT_EQUAL_UINT8(
+            0, storage.read(EEPROM_PROFILE_MODULATION_START(id) +
+                            EEPROM_PROFILE_MODULATION_BLOCK_SIZE - 1));
     }
 
     SceneStorage::ConfigState restoredMacro{};
@@ -535,6 +566,45 @@ void test_schema6_direct_migration_preserves_profiles_macro_and_scenes() {
         TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(70 + slot),
                                 restored.state.slots[2].data1);
         TEST_ASSERT_FALSE(restored.state.slots[2].lfo.lfo[0].enabled());
+    }
+
+    TEST_ASSERT_EQUAL_UINT32(EEPROM_PROFILE_MODULATION_BASE,
+                             EEPROM_PROFILE_SETTINGS_START(NUM_PROFILES));
+    TEST_ASSERT_EQUAL_UINT32(SceneStorage::kMacroStorageAddress,
+                             EEPROM_PROFILE_MODULATION_START(NUM_PROFILES));
+    TEST_ASSERT_EQUAL_UINT32(SceneStorage::kSceneStorageBase,
+                             SceneStorage::kMacroStorageAddress +
+                                 SceneStorage::kMacroRecordBytes);
+    TEST_ASSERT_EQUAL_UINT32(
+        SceneStorage::kRequiredStorageBytes,
+        SceneStorage::kSceneStorageBase +
+            static_cast<size_t>(SceneStorage::kSceneSlotCount) *
+                SceneStorage::kSceneRecordBytes);
+
+    // Exercise the last profile blocks adjacent to macro storage, then prove
+    // those writes cannot invalidate the migrated macro or any scene.
+    ProfileData rewritten{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(NUM_PROFILES - 1, rewritten));
+    rewritten.led.brightness = 33;
+    TEST_ASSERT_TRUE(cfg.saveProfileSettings(NUM_PROFILES - 1, rewritten));
+    ProfileModulationExtension newModulation{};
+    newModulation.slots[NUM_SLOTS - 1].argPacked = 0x1234;
+    newModulation.slots[NUM_SLOTS - 1].lfo[1].setEnabled(true);
+    newModulation.slots[NUM_SLOTS - 1].lfo[1].amount = -41;
+    TEST_ASSERT_TRUE(cfg.saveProfileModulation(NUM_PROFILES - 1, newModulation));
+
+    TEST_ASSERT_TRUE(SceneStorage::loadMacroSnapshot(restoredMacro));
+    TEST_ASSERT_EQUAL_UINT8(91, restoredMacro.slots[2].data1);
+    for (uint8_t slot = 0; slot < SceneStorage::kSceneSlotCount; ++slot) {
+        SceneStorage::SceneEntry restored{};
+        TEST_ASSERT_TRUE(SceneStorage::loadSceneSlot(slot, restored));
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(70 + slot),
+                                restored.state.slots[2].data1);
+    }
+    for (size_t offset = 0; offset < guardBytes; ++offset) {
+        TEST_ASSERT_EQUAL_UINT8(
+            static_cast<uint8_t>(0x80 + offset),
+            storage.read(static_cast<int>(SceneStorage::kRequiredStorageBytes + offset)));
     }
 
     uint16_t storedVersion = 0;

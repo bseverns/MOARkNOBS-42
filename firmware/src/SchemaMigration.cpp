@@ -194,6 +194,18 @@ void clearStorageRange(size_t address, size_t length) {
     }
 }
 
+bool relocateStorageRangeUp(size_t sourceBegin, size_t sourceEnd, size_t shift) {
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (sourceBegin > sourceEnd || sourceEnd + shift > storage->length()) {
+        return false;
+    }
+    for (size_t source = sourceEnd; source-- > sourceBegin;) {
+        storage->update(static_cast<int>(source + shift),
+                        storage->read(static_cast<int>(source)));
+    }
+    return true;
+}
+
 void migrateSchema6SceneStorage() {
     constexpr size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
     constexpr size_t oldMacroBytes = sizeof(LegacyMacroRecordV6);
@@ -602,15 +614,14 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         const size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
         const size_t newMacroStorage = EEPROM_PROFILE_MODULATION_START(NUM_PROFILES);
         const size_t tailShift = newMacroStorage - oldMacroStorage;
-        StorageBackend *storage = ConfigManager::getStorageBackend();
-        const size_t capacity = storage->length();
-        if (tailShift > 0 && oldMacroStorage < capacity && tailShift < capacity) {
-            for (size_t source = capacity - tailShift; source-- > oldMacroStorage;) {
-                storage->update(static_cast<int>(source + tailShift),
-                                storage->read(static_cast<int>(source)));
-            }
+        constexpr size_t oldRequiredStorage =
+            oldMacroStorage + SceneStorage::kMacroRecordBytes +
+            static_cast<size_t>(SceneStorage::kSceneSlotCount) *
+                SceneStorage::kSceneRecordBytes;
+        if (tailShift > 0 &&
+            relocateStorageRangeUp(oldMacroStorage, oldRequiredStorage, tailShift)) {
             for (size_t address = oldMacroStorage; address < newMacroStorage; ++address) {
-                storage->update(static_cast<int>(address), 0x00);
+                storageUpdate(static_cast<int>(address), 0x00);
             }
         }
     } else if (storedVersion == 0x0006) {
@@ -628,9 +639,17 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         const size_t oldFilterFrequency = EEPROM_SLOT_BASE + oldSlotRegionBytes;
         const size_t oldFilterQ = oldFilterFrequency + sizeof(float);
         const size_t oldBrownout = oldFilterQ + sizeof(float);
-        const size_t oldConfigTail = oldBrownout + sizeof(uint16_t);
-        const size_t newConfigTail = EEPROM_CONFIG_TAIL;
-        const size_t tailShift = newConfigTail - oldConfigTail;
+        constexpr size_t oldConfigTail = oldBrownout + sizeof(uint16_t);
+        constexpr size_t newConfigTail = EEPROM_CONFIG_TAIL;
+        constexpr size_t tailShift = newConfigTail - oldConfigTail;
+        constexpr size_t oldProfileSettings =
+            oldConfigTail + NUM_PROFILES * EEPROM_PROFILE_BLOCK_SIZE;
+        constexpr size_t oldMacroStorage =
+            oldProfileSettings + NUM_PROFILES * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE;
+        constexpr size_t oldSceneStorage = oldMacroStorage + sizeof(LegacyMacroRecordV6);
+        constexpr size_t oldRequiredStorage =
+            oldSceneStorage + static_cast<size_t>(SceneStorage::kSceneSlotCount) *
+                                  sizeof(LegacySceneRecordV6);
 
         float legacyFilterFrequency = legacySlots[0].efSettings.frequency;
         float legacyFilterQ = legacySlots[0].efSettings.q;
@@ -639,14 +658,7 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         storageGet(static_cast<int>(oldFilterQ), legacyFilterQ);
         storageGet(static_cast<int>(oldBrownout), legacyBrownoutCount);
 
-        StorageBackend *storage = ConfigManager::getStorageBackend();
-        const size_t capacity = storage->length();
-        if (tailShift > 0 && oldConfigTail < capacity && tailShift < capacity) {
-            for (size_t source = capacity - tailShift; source-- > oldConfigTail;) {
-                storage->update(static_cast<int>(source + tailShift),
-                                storage->read(static_cast<int>(source)));
-            }
-        }
+        relocateStorageRangeUp(oldConfigTail, oldRequiredStorage, tailShift);
         for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
             const LegacyMIDISlotV6 &legacy = legacySlots[static_cast<size_t>(i)];
             const MIDISlot upgraded = upgradeLegacySlotV6(legacy);
