@@ -275,6 +275,36 @@ void test_applied_checksum_covers_exported_filter_led_and_baseline_state() {
     configManager.persistFilterTail(restoredFilter);
 }
 
+void test_applied_checksum_covers_slot_arg_and_lfo_modulation() {
+    MIDISlot &slot = configManager.getSlot(3);
+    const MIDISlot original = slot;
+    slot.arg = SlotARGConfig{};
+    slot.lfo = SlotLfoConfig{};
+    const String baseline = testOnlyAppliedStateChecksum();
+
+    slot.lfo.lfo[0].setEnabled(true);
+    const String enabled = testOnlyAppliedStateChecksum();
+    TEST_ASSERT_NOT_EQUAL(0, baseline.compareTo(enabled));
+    slot.lfo.lfo[0].setEnabled(false);
+    TEST_ASSERT_NOT_EQUAL(0, enabled.compareTo(testOnlyAppliedStateChecksum()));
+
+    slot.lfo.lfo[0].amount = 37;
+    TEST_ASSERT_NOT_EQUAL(0, baseline.compareTo(testOnlyAppliedStateChecksum()));
+    slot.lfo.lfo[0].amount = 0;
+
+    slot.lfo.lfo[0].setMode(ModCombineMode::Scale);
+    TEST_ASSERT_NOT_EQUAL(0, baseline.compareTo(testOnlyAppliedStateChecksum()));
+    slot.lfo = SlotLfoConfig{};
+
+    slot.arg.enabled = 1;
+    slot.arg.method = ARGMethod::AVG;
+    slot.arg.sourceA = 2;
+    slot.arg.sourceB = 5;
+    TEST_ASSERT_NOT_EQUAL(0, baseline.compareTo(testOnlyAppliedStateChecksum()));
+
+    slot = original;
+}
+
 void test_dispatch_handles_enter_config_mode_command() {
     clearUsbConfiguratorBootRequest();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("ENTER_CONFIG_MODE"));

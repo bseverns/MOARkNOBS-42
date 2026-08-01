@@ -74,14 +74,25 @@ void hashSlot(uint32_t &hash, const MIDISlot &slot) {
     hashU16(hash, ef.rmsWindowMs); hashU16(hash, ef.baselineTauMs); hashU16(hash, ef.gainTauMs);
     hashFloat(hash, ef.frequency); hashFloat(hash, ef.q); hashFloat(hash, ef.smoothing);
     hashFloat(hash, ef.baseline); hashFloat(hash, ef.gain);
-    hashByte(hash, static_cast<uint8_t>(slot.arg.enabled));
-    hashByte(hash, static_cast<uint8_t>(slot.arg.method));
-    hashByte(hash, slot.arg.sourceA); hashByte(hash, slot.arg.sourceB);
 }
 
-// Device-owned digest over the normalized slot arena and every byte of the
-// profile snapshot written by persistActiveProfileSnapshot(). The host
-// checksum remains only a correlation token.
+void hashProfileModulation(uint32_t &hash,
+                           const ProfileModulationExtension &modulation) {
+    // Hash the sanitized semantic payload in its persistence order. The CRC
+    // is derived data and raw struct bytes could include layout padding.
+    hashU16(hash, modulation.version);
+    for (const ProfileSlotModSettings &slot : modulation.slots) {
+        hashU16(hash, slot.argPacked);
+        for (const SlotLfoLane &lane : slot.lfo) {
+            hashByte(hash, lane.flags);
+            hashByte(hash, static_cast<uint8_t>(lane.amount));
+        }
+    }
+}
+
+// Device-owned digest over the normalized slot arena and the semantic profile
+// snapshots written by persistActiveProfileSnapshot(). The host checksum
+// remains only a correlation token.
 String appliedStateChecksum() {
     uint32_t hash = 2166136261UL; // FNV-1a, stable and small enough for Teensy.
     for (uint8_t i = 0; i < configManager.getNumPots(); ++i) {
@@ -92,6 +103,7 @@ String appliedStateChecksum() {
     const ProfileData profile = captureProfileSnapshot();
     const auto *profileBytes = reinterpret_cast<const uint8_t *>(&profile);
     for (size_t i = 0; i < sizeof(profile); ++i) hashByte(hash, profileBytes[i]);
+    hashProfileModulation(hash, captureProfileModulation());
     hashByte(hash, g_activeProfile);
     hashByte(hash, configManager.getARGEnable());
     hashByte(hash, configManager.getARGMethod());

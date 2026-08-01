@@ -11,10 +11,13 @@
 #include "ProfileStorage.h"
 #include "EnvelopeFollower.h"
 #include "ARGMixer.h"
+#include "protocol/SceneStorage.h"
 #include "storage/EepromStorageBackend.h"
 #include "storage/LittleFsStorageBackend.h"
+#include <array>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include "Log.h"
 
 // ---------- storage access shorthand (mirrors ConfigManager.cpp) ----------
@@ -39,6 +42,204 @@ constexpr float kMinFilterFrequency = 20.0f;
 constexpr float kMaxFilterFrequency = 5000.0f;
 constexpr float kMinFilterQ = 0.5f;
 constexpr float kMaxFilterQ = 4.0f;
+
+struct LegacyMIDISlotV6 {
+    MIDIMessageType type = MIDIMessageType::OFF;
+    uint8_t midiChannel = 1;
+    uint8_t data1 = 0;
+    bool active = false;
+    uint8_t arpNote = 0;
+    uint8_t sysexLength = 0;
+    MIDISlot::EfSettings efSettings{};
+    std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+    MIDISlot::EfRuntime ef{};
+    SlotARGConfig arg{};
+};
+
+static_assert(sizeof(MIDISlot) == sizeof(LegacyMIDISlotV6) + sizeof(SlotLfoConfig),
+              "Schema-6 slot size no longer matches the migration contract");
+static_assert(offsetof(LegacyMIDISlotV6, efSettings) == offsetof(MIDISlot, efSettings),
+              "Legacy v6 EF layout drifted");
+static_assert(offsetof(LegacyMIDISlotV6, arg) == offsetof(MIDISlot, arg),
+              "Legacy v6 ARG layout drifted");
+
+struct LegacyConfigStateV6 {
+    uint16_t version = 1;
+    std::array<uint8_t, NUM_POTS> potChannels{};
+    std::array<uint8_t, NUM_POTS> potCCNumbers{};
+    std::array<LegacyMIDISlotV6, NUM_SLOTS> slots{};
+    uint8_t argEnabled = 0;
+    uint8_t argMethod = 0;
+    uint8_t argSourceA = 0;
+    uint8_t argSourceB = 1;
+    uint8_t envelopeMode = 0;
+    uint8_t ledBrightness = 255;
+    uint8_t ledMode = 0;
+    uint8_t ledR = 0;
+    uint8_t ledG = 0;
+    uint8_t ledB = 0;
+    uint8_t filterType = 0;
+    float filterFrequency = 20.0f;
+    float filterQ = 1.0f;
+    std::array<float, NUM_ENVELOPES> baselines{};
+};
+
+struct LegacyMacroRecordV6 {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    LegacyConfigStateV6 state{};
+};
+
+struct LegacySceneRecordV6 {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    char name[16] = {0};
+    LegacyConfigStateV6 state{};
+};
+
+struct MigratedMacroRecord {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    SceneStorage::ConfigState state{};
+};
+
+struct MigratedSceneRecord {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    char name[16] = {0};
+    SceneStorage::ConfigState state{};
+};
+
+static_assert(sizeof(MigratedMacroRecord) == SceneStorage::kMacroRecordBytes,
+              "Migrated macro layout drifted from SceneStorage");
+static_assert(sizeof(MigratedSceneRecord) == SceneStorage::kSceneRecordBytes,
+              "Migrated scene layout drifted from SceneStorage");
+
+uint16_t sceneCrcUpdate(uint16_t crc, uint8_t data) {
+    crc ^= static_cast<uint16_t>(data) << 8;
+    for (uint8_t i = 0; i < 8; ++i) {
+        crc = (crc & 0x8000) ? static_cast<uint16_t>((crc << 1) ^ 0x1021)
+                             : static_cast<uint16_t>(crc << 1);
+    }
+    return crc;
+}
+
+template <typename T> uint16_t sceneRecordCrc(const T &record) {
+    const auto *bytes = reinterpret_cast<const uint8_t *>(&record);
+    uint16_t crc = 0xFFFF;
+    constexpr size_t payloadOffset = sizeof(record.version) + sizeof(record.crc);
+    for (size_t i = payloadOffset; i < sizeof(T); ++i) {
+        crc = sceneCrcUpdate(crc, bytes[i]);
+    }
+    return crc;
+}
+
+template <typename T> bool legacySceneRecordValid(const T &record) {
+    return record.version == 1 && record.occupied != 0 &&
+           record.crc == sceneRecordCrc(record);
+}
+
+MIDISlot::EfSettings sanitizeEfSettings(const MIDISlot::EfSettings &settings);
+MIDISlot::EfRuntime sanitizeEfRuntime(const MIDISlot::EfRuntime &runtime);
+
+MIDISlot upgradeLegacySlotV6(const LegacyMIDISlotV6 &legacy) {
+    MIDISlot upgraded{};
+    upgraded.type = legacy.type;
+    upgraded.midiChannel = legacy.midiChannel;
+    upgraded.data1 = legacy.data1;
+    upgraded.active = legacy.active;
+    upgraded.arpNote = legacy.arpNote;
+    upgraded.sysexLength = legacy.sysexLength;
+    upgraded.efSettings = sanitizeEfSettings(legacy.efSettings);
+    upgraded.sysexTemplate = legacy.sysexTemplate;
+    upgraded.ef = sanitizeEfRuntime(legacy.ef);
+    upgraded.setEnvelopeFollowerIndex(upgraded.ef.followerIndex);
+    upgraded.arg = sanitizeSlotArg(legacy.arg);
+    upgraded.lfo = SlotLfoConfig{};
+    return upgraded;
+}
+
+SceneStorage::ConfigState upgradeLegacyConfigStateV6(const LegacyConfigStateV6 &legacy) {
+    SceneStorage::ConfigState upgraded{};
+    upgraded.version = legacy.version;
+    upgraded.potChannels = legacy.potChannels;
+    upgraded.potCCNumbers = legacy.potCCNumbers;
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        upgraded.slots[i] = upgradeLegacySlotV6(legacy.slots[i]);
+    }
+    upgraded.argEnabled = legacy.argEnabled;
+    upgraded.argMethod = legacy.argMethod;
+    upgraded.argSourceA = legacy.argSourceA;
+    upgraded.argSourceB = legacy.argSourceB;
+    upgraded.envelopeMode = legacy.envelopeMode;
+    upgraded.ledBrightness = legacy.ledBrightness;
+    upgraded.ledMode = legacy.ledMode;
+    upgraded.ledR = legacy.ledR;
+    upgraded.ledG = legacy.ledG;
+    upgraded.ledB = legacy.ledB;
+    upgraded.filterType = legacy.filterType;
+    upgraded.filterFrequency = legacy.filterFrequency;
+    upgraded.filterQ = legacy.filterQ;
+    upgraded.baselines = legacy.baselines;
+    return upgraded;
+}
+
+void clearStorageRange(size_t address, size_t length) {
+    for (size_t offset = 0; offset < length; ++offset) {
+        storageUpdate(static_cast<int>(address + offset), 0x00);
+    }
+}
+
+void migrateSchema6SceneStorage() {
+    constexpr size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
+    constexpr size_t oldMacroBytes = sizeof(LegacyMacroRecordV6);
+    constexpr size_t oldSceneStorage = oldMacroStorage + oldMacroBytes;
+
+    // Destinations are higher and records grow with MIDISlot, so migrate the
+    // six scene records from high to low before converting the macro record.
+    for (int slot = static_cast<int>(SceneStorage::kSceneSlotCount) - 1; slot >= 0; --slot) {
+        LegacySceneRecordV6 legacy{};
+        const size_t source = oldSceneStorage + static_cast<size_t>(slot) *
+                                                    sizeof(LegacySceneRecordV6);
+        storageGet(static_cast<int>(source), legacy);
+        const size_t destination = SceneStorage::kSceneStorageBase +
+                                   static_cast<size_t>(slot) * SceneStorage::kSceneRecordBytes;
+        if (!legacySceneRecordValid(legacy)) {
+            clearStorageRange(destination, SceneStorage::kSceneRecordBytes);
+            continue;
+        }
+        MigratedSceneRecord migrated{};
+        migrated.version = legacy.version;
+        migrated.occupied = legacy.occupied;
+        std::memcpy(migrated.name, legacy.name, sizeof(migrated.name));
+        migrated.state = upgradeLegacyConfigStateV6(legacy.state);
+        migrated.crc = sceneRecordCrc(migrated);
+        storagePut(static_cast<int>(destination), migrated);
+    }
+
+    LegacyMacroRecordV6 legacyMacro{};
+    storageGet(static_cast<int>(oldMacroStorage), legacyMacro);
+    if (legacySceneRecordValid(legacyMacro)) {
+        MigratedMacroRecord migrated{};
+        migrated.version = legacyMacro.version;
+        migrated.occupied = legacyMacro.occupied;
+        migrated.state = upgradeLegacyConfigStateV6(legacyMacro.state);
+        migrated.crc = sceneRecordCrc(migrated);
+        storagePut(static_cast<int>(SceneStorage::kMacroStorageAddress), migrated);
+    } else {
+        clearStorageRange(SceneStorage::kMacroStorageAddress,
+                          SceneStorage::kMacroRecordBytes);
+    }
+
+    // The former macro/scene prefix is now the four empty per-profile
+    // modulation-extension blocks.
+    clearStorageRange(EEPROM_PROFILE_MODULATION_BASE,
+                      EEPROM_PROFILE_MODULATION_BLOCK_SIZE * NUM_PROFILES);
+}
 
 // Reject obviously corrupt legacy filter coefficients before reuse.
 bool filterCoefficientsLookSane(float freq, float q) {
@@ -413,24 +614,6 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             }
         }
     } else if (storedVersion == 0x0006) {
-        struct LegacyMIDISlotV6 {
-            MIDIMessageType type = MIDIMessageType::OFF;
-            uint8_t midiChannel = 1;
-            uint8_t data1 = 0;
-            bool active = false;
-            uint8_t arpNote = 0;
-            uint8_t sysexLength = 0;
-            MIDISlot::EfSettings efSettings{};
-            std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
-            MIDISlot::EfRuntime ef{};
-            SlotARGConfig arg{};
-        };
-        static_assert(offsetof(LegacyMIDISlotV6, efSettings) ==
-                          offsetof(MIDISlot, efSettings),
-                      "Legacy v6 EF layout drifted");
-        static_assert(offsetof(LegacyMIDISlotV6, arg) == offsetof(MIDISlot, arg),
-                      "Legacy v6 ARG layout drifted");
-
         std::array<LegacyMIDISlotV6, NUM_SLOTS> legacySlots{};
         for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
             const int legacyAddress = static_cast<int>(
@@ -466,19 +649,7 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         }
         for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
             const LegacyMIDISlotV6 &legacy = legacySlots[static_cast<size_t>(i)];
-            MIDISlot upgraded{};
-            upgraded.type = legacy.type;
-            upgraded.midiChannel = legacy.midiChannel;
-            upgraded.data1 = legacy.data1;
-            upgraded.active = legacy.active;
-            upgraded.arpNote = legacy.arpNote;
-            upgraded.sysexLength = legacy.sysexLength;
-            upgraded.efSettings = sanitizeEfSettings(legacy.efSettings);
-            upgraded.sysexTemplate = legacy.sysexTemplate;
-            upgraded.ef = sanitizeEfRuntime(legacy.ef);
-            upgraded.setEnvelopeFollowerIndex(upgraded.ef.followerIndex);
-            upgraded.arg = sanitizeSlotArg(legacy.arg);
-            upgraded.lfo = SlotLfoConfig{};
+            const MIDISlot upgraded = upgradeLegacySlotV6(legacy);
             const int upgradedAddress = static_cast<int>(
                 EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
             storagePut(upgradedAddress, upgraded);
@@ -490,6 +661,7 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         migratedFilter.q = legacyFilterQ;
         persistFilterTail(migratedFilter);
         storagePut(EEPROM_BROWNOUT_COUNT, legacyBrownoutCount);
+        migrateSchema6SceneStorage();
     } else if (storedVersion == kLegacyConfigVersion) {
         struct LegacyMIDISlotV3 {
             MIDIMessageType type;

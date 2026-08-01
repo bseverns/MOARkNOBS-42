@@ -608,7 +608,8 @@ bool ConfigManager::loadBackupConfiguration(std::vector<uint8_t> &potChannels, u
 // Internal read from EEPROM
 void ConfigManager::readEEPROM(bool backup, uint16_t base) {
     int offset = base + (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS);
-    for (uint8_t i = 0; i < _numPots; i++) {
+    for (uint8_t i = 0; i < NUM_POTS; i++) {
+        if (i >= _numPots) break;
         _stored.potChannels[i] = storageRead(offset + EEPROM_POT_CHANNELS + i);
         _stored.potCCNumbers[i] = storageRead(offset + EEPROM_POT_CC + i);
     }
@@ -1183,7 +1184,8 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
         _lastLoadSource = LoadSource::kDefaults;
     }
     potChannels.clear();
-    for (uint8_t i = 0; i < _numPots; i++) {
+    for (uint8_t i = 0; i < NUM_POTS; i++) {
+        if (i >= _numPots) break;
         setPotChannel(i, 1);  // Default to channel 1
         setPotCCNumber(i, 0); // Default to CC 0
     }

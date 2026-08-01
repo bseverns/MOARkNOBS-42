@@ -75,6 +75,8 @@ Successful ACK:
 }
 ```
 
+`applied_checksum` covers the applied semantic configuration, including each slot's ARG settings and both fixed LFO lanes. It changes when an LFO lane's enable state, mode, or signed amount changes; storage CRC fields and compiler padding are not part of the digest.
+
 Bulk errors include `overflow`, `orphan`, `timeout`, `ingest`, `parse`, `checksum`, `config_missing`, `slots_missing`, `slots_size`, `slot_null`, `slot_type`, and `sysex_template`.
 
 ## Commands

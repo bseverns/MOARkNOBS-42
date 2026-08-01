@@ -3,8 +3,11 @@
 
 #include "ConfigManager.h"
 #include "ProfileModulationStorage.h"
+#include "protocol/SceneStorage.h"
 #include "storage/StorageBackend.h"
 
+#include <array>
+#include <cstring>
 #include <vector>
 
 namespace {
@@ -12,8 +15,7 @@ namespace {
 class MemoryStorageBackend final : public StorageBackend {
   public:
     MemoryStorageBackend()
-        : bytes_(EEPROM_PROFILE_MODULATION_START(NUM_PROFILES) + 64U,
-                 0x00) {}
+        : bytes_(SceneStorage::kRequiredStorageBytes + 64U, 0x00) {}
 
     uint16_t length() const override { return static_cast<uint16_t>(bytes_.size()); }
 
@@ -101,6 +103,88 @@ class MemoryStorageBackend final : public StorageBackend {
 void configureStoredValues(ConfigManager &cfg, uint8_t channel, uint8_t cc) {
     cfg.setPotChannel(0, channel);
     cfg.setPotCCNumber(0, cc);
+}
+
+struct LegacyMIDISlotV6Fixture {
+    MIDIMessageType type = MIDIMessageType::OFF;
+    uint8_t midiChannel = 1;
+    uint8_t data1 = 0;
+    bool active = false;
+    uint8_t arpNote = 0;
+    uint8_t sysexLength = 0;
+    MIDISlot::EfSettings efSettings{};
+    std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate{};
+    MIDISlot::EfRuntime ef{};
+    SlotARGConfig arg{};
+};
+
+struct LegacyConfigStateV6Fixture {
+    uint16_t version = 1;
+    std::array<uint8_t, NUM_POTS> potChannels{};
+    std::array<uint8_t, NUM_POTS> potCCNumbers{};
+    std::array<LegacyMIDISlotV6Fixture, NUM_SLOTS> slots{};
+    uint8_t argEnabled = 0;
+    uint8_t argMethod = 0;
+    uint8_t argSourceA = 0;
+    uint8_t argSourceB = 1;
+    uint8_t envelopeMode = 0;
+    uint8_t ledBrightness = 255;
+    uint8_t ledMode = 0;
+    uint8_t ledR = 0;
+    uint8_t ledG = 0;
+    uint8_t ledB = 0;
+    uint8_t filterType = 0;
+    float filterFrequency = 20.0f;
+    float filterQ = 1.0f;
+    std::array<float, NUM_ENVELOPES> baselines{};
+};
+
+struct LegacyMacroRecordV6Fixture {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    LegacyConfigStateV6Fixture state{};
+};
+
+struct LegacySceneRecordV6Fixture {
+    uint16_t version = 1;
+    uint16_t crc = 0;
+    uint8_t occupied = 0;
+    char name[16] = {0};
+    LegacyConfigStateV6Fixture state{};
+};
+
+uint16_t fixtureSceneCrcUpdate(uint16_t crc, uint8_t data) {
+    crc ^= static_cast<uint16_t>(data) << 8;
+    for (uint8_t i = 0; i < 8; ++i) {
+        crc = (crc & 0x8000) ? static_cast<uint16_t>((crc << 1) ^ 0x1021)
+                             : static_cast<uint16_t>(crc << 1);
+    }
+    return crc;
+}
+
+template <typename T> uint16_t fixtureSceneRecordCrc(const T &record) {
+    const auto *bytes = reinterpret_cast<const uint8_t *>(&record);
+    uint16_t crc = 0xFFFF;
+    constexpr size_t payloadOffset = sizeof(record.version) + sizeof(record.crc);
+    for (size_t i = payloadOffset; i < sizeof(T); ++i) {
+        crc = fixtureSceneCrcUpdate(crc, bytes[i]);
+    }
+    return crc;
+}
+
+LegacyConfigStateV6Fixture legacySceneState(uint8_t marker) {
+    LegacyConfigStateV6Fixture state{};
+    state.potChannels[0] = static_cast<uint8_t>((marker % 16) + 1);
+    state.potCCNumbers[0] = marker;
+    state.slots[2].type = MIDIMessageType::CC;
+    state.slots[2].active = true;
+    state.slots[2].data1 = marker;
+    state.slots[2].efSettings.followerIndex = -1;
+    state.slots[2].ef.followerIndex = -1;
+    state.ledBrightness = marker;
+    state.filterFrequency = 1000.0f + marker;
+    return state;
 }
 
 } // namespace
@@ -346,5 +430,115 @@ void test_schema6_slot_migration_preserves_downstream_profile_bytes() {
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Centered),
                             static_cast<uint8_t>(cfg.getSlot(5).lfo.lfo[0].mode()));
 
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_schema6_direct_migration_preserves_profiles_macro_and_scenes() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+
+    // Produce four valid profile payloads with the current profile codec, then
+    // place their bytes at the schema-6 addresses used before slot expansion.
+    std::vector<uint8_t> profileBlocks(
+        static_cast<size_t>(NUM_PROFILES) * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        ProfileData profile{};
+        profile.led.brightness = static_cast<uint8_t>(40 + id);
+        profile.slots[id].midiChannel = static_cast<uint8_t>(id + 1);
+        TEST_ASSERT_TRUE(cfg.saveProfileSettings(id, profile));
+        storage.readBytes(EEPROM_PROFILE_SETTINGS_START(id),
+                          profileBlocks.data() +
+                              static_cast<size_t>(id) * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
+                          EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+    }
+
+    // Remove the current-address copies so the assertions below can only pass
+    // if migration relocates the schema-6 source blocks successfully.
+    std::vector<uint8_t> emptyProfileBlocks(profileBlocks.size(), 0x00);
+    storage.writeBytes(EEPROM_PROFILE_SETTINGS_START(0), emptyProfileBlocks.data(),
+                       emptyProfileBlocks.size());
+
+    constexpr size_t oldSlotRegionBytes = sizeof(LegacyMIDISlotV6Fixture) * NUM_SLOTS;
+    const size_t oldConfigTail = EEPROM_SLOT_BASE + oldSlotRegionBytes + sizeof(float) * 2 +
+                                 sizeof(uint16_t);
+    const size_t oldProfileSettings = oldConfigTail +
+                                      NUM_PROFILES * EEPROM_PROFILE_BLOCK_SIZE;
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        storage.writeBytes(static_cast<int>(oldProfileSettings +
+                                            id * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE),
+                           profileBlocks.data() +
+                               static_cast<size_t>(id) * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
+                           EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+    }
+
+    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
+        LegacyMIDISlotV6Fixture legacy{};
+        legacy.data1 = i;
+        legacy.efSettings.followerIndex = -1;
+        legacy.ef.followerIndex = -1;
+        storage.writeBytes(static_cast<int>(EEPROM_SLOT_BASE +
+                                            static_cast<size_t>(i) * sizeof(legacy)),
+                           &legacy, sizeof(legacy));
+    }
+
+    const size_t oldMacroStorage = oldProfileSettings +
+                                   NUM_PROFILES * EEPROM_PROFILE_SETTINGS_BLOCK_SIZE;
+    auto *macro = new LegacyMacroRecordV6Fixture{};
+    TEST_ASSERT_NOT_NULL(macro);
+    macro->occupied = 1;
+    macro->state = legacySceneState(91);
+    macro->crc = fixtureSceneRecordCrc(*macro);
+    storage.writeBytes(static_cast<int>(oldMacroStorage), macro, sizeof(*macro));
+
+    const size_t oldSceneStorage = oldMacroStorage + sizeof(*macro);
+    delete macro;
+    for (uint8_t slot = 0; slot < SceneStorage::kSceneSlotCount; ++slot) {
+        auto *scene = new LegacySceneRecordV6Fixture{};
+        TEST_ASSERT_NOT_NULL(scene);
+        scene->occupied = 1;
+        const char name[] = "Schema6";
+        std::memcpy(scene->name, name, sizeof(name));
+        scene->name[7] = static_cast<char>('0' + slot);
+        scene->state = legacySceneState(static_cast<uint8_t>(70 + slot));
+        scene->crc = fixtureSceneRecordCrc(*scene);
+        storage.writeBytes(static_cast<int>(oldSceneStorage +
+                                            static_cast<size_t>(slot) * sizeof(*scene)),
+                           scene, sizeof(*scene));
+        delete scene;
+    }
+
+    const uint16_t schema6 = 0x0006;
+    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema6, sizeof(schema6));
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        ProfileData restored{};
+        TEST_ASSERT_TRUE(cfg.loadProfileSettings(id, restored));
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(40 + id), restored.led.brightness);
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(id + 1),
+                                restored.slots[id].midiChannel);
+        ProfileModulationExtension modulation{};
+        TEST_ASSERT_FALSE(cfg.loadProfileModulation(id, modulation));
+    }
+
+    SceneStorage::ConfigState restoredMacro{};
+    TEST_ASSERT_TRUE(SceneStorage::loadMacroSnapshot(restoredMacro));
+    TEST_ASSERT_EQUAL_UINT8(91, restoredMacro.slots[2].data1);
+    TEST_ASSERT_FALSE(restoredMacro.slots[2].lfo.lfo[0].enabled());
+
+    for (uint8_t slot = 0; slot < SceneStorage::kSceneSlotCount; ++slot) {
+        SceneStorage::SceneEntry restored{};
+        TEST_ASSERT_TRUE(SceneStorage::loadSceneSlot(slot, restored));
+        TEST_ASSERT_EQUAL_CHAR(static_cast<char>('0' + slot), restored.name[7]);
+        TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(70 + slot),
+                                restored.state.slots[2].data1);
+        TEST_ASSERT_FALSE(restored.state.slots[2].lfo.lfo[0].enabled());
+    }
+
+    uint16_t storedVersion = 0;
+    storage.readBytes(EEPROM_CONFIG_VERSION, &storedVersion, sizeof(storedVersion));
+    TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, storedVersion);
     ConfigManager::setStorageBackend(nullptr);
 }
