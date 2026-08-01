@@ -4,6 +4,7 @@
 #include "ConfigManager.h"
 #include "LFO/LFOManager.h"
 #include "ProfileModulationStorage.h"
+#include "SchemaMigrationLayout.h"
 #include "protocol/SceneStorage.h"
 #include "storage/StorageBackend.h"
 
@@ -34,6 +35,7 @@ class MemoryStorageBackend final : public StorageBackend {
         if (dropPrimaryWrites_ && isBlockedPrimaryAddress(address)) {
             return false;
         }
+        if (address == failedWriteAddress_) return false;
         bytes_[static_cast<size_t>(address)] = value;
         return true;
     }
@@ -82,6 +84,8 @@ class MemoryStorageBackend final : public StorageBackend {
         dropPrimaryWrites_ = enabled;
     }
 
+    void setFailedWriteAddress(int address) { failedWriteAddress_ = address; }
+
   private:
     bool isBlockedPrimaryAddress(int address) const {
         const int base = static_cast<int>(blockedPrimaryBase_);
@@ -99,6 +103,7 @@ class MemoryStorageBackend final : public StorageBackend {
     std::vector<uint8_t> bytes_;
     uint16_t blockedPrimaryBase_ = EEPROM_PROFILE_START(0);
     bool dropPrimaryWrites_ = false;
+    int failedWriteAddress_ = -1;
 };
 
 void configureStoredValues(ConfigManager &cfg, uint8_t channel, uint8_t cc) {
@@ -388,6 +393,28 @@ void test_schema7_migration_relocates_macro_and_scene_tail() {
     ConfigManager::setStorageBackend(nullptr);
 }
 
+void test_schema7_migration_failure_does_not_promote_config_version() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    const uint16_t schema7 = 0x0007;
+    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema7, sizeof(schema7));
+    constexpr Schema7StorageLayout layout = schema7StorageLayout();
+    storage.setFailedWriteAddress(static_cast<int>(layout.newMacroStorage + 17U));
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    uint16_t storedVersion = 0;
+    storage.readBytes(EEPROM_CONFIG_VERSION, &storedVersion, sizeof(storedVersion));
+    TEST_ASSERT_EQUAL_UINT16(schema7, storedVersion);
+    TEST_ASSERT_EQUAL_UINT8(
+        static_cast<uint8_t>(ConfigManager::MigrationResult::WriteFailure),
+        static_cast<uint8_t>(cfg.getLastMigrationResult()));
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
 void test_schema6_slot_migration_preserves_downstream_profile_bytes() {
     struct LegacyMIDISlotV6 {
         MIDIMessageType type = MIDIMessageType::OFF;
@@ -430,6 +457,30 @@ void test_schema6_slot_migration_preserves_downstream_profile_bytes() {
     TEST_ASSERT_FALSE(cfg.getSlot(5).lfo.lfo[0].enabled());
     TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Centered),
                             static_cast<uint8_t>(cfg.getSlot(5).lfo.lfo[0].mode()));
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
+void test_schema6_relocation_failure_does_not_promote_config_version() {
+    MemoryStorageBackend storage;
+    ConfigManager::setStorageBackend(&storage);
+    const uint16_t schema6 = 0x0006;
+    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema6, sizeof(schema6));
+    constexpr Schema6StorageLayout layout = schema6StorageLayout(
+        sizeof(LegacyMIDISlotV6Fixture), sizeof(LegacyMacroRecordV6Fixture),
+        sizeof(LegacySceneRecordV6Fixture), SceneStorage::kSceneSlotCount);
+    storage.setFailedWriteAddress(static_cast<int>(layout.newConfigTail + 17U));
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    std::vector<uint8_t> pots;
+    cfg.begin(pots);
+
+    uint16_t storedVersion = 0;
+    storage.readBytes(EEPROM_CONFIG_VERSION, &storedVersion, sizeof(storedVersion));
+    TEST_ASSERT_EQUAL_UINT16(schema6, storedVersion);
+    TEST_ASSERT_EQUAL_UINT8(
+        static_cast<uint8_t>(ConfigManager::MigrationResult::WriteFailure),
+        static_cast<uint8_t>(cfg.getLastMigrationResult()));
 
     ConfigManager::setStorageBackend(nullptr);
 }

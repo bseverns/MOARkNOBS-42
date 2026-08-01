@@ -4,6 +4,15 @@
 set -euo pipefail  # nuke on first failure, unset var, or pipe mischief
 mkdir -p logs  # stash outputs where CI can snarf them
 
+# Hardware-free firmware gates always run. These are the same portable seams
+# and production build exercised by push/PR CI, so ./test.sh remains a real
+# preflight even when no Teensy is connected.
+pio test -d firmware -e native_biquad -vvv | tee logs/native-biquad-test.log
+pio test -d firmware -e native_transport -vvv | tee logs/native-transport-test.log
+pio test -d firmware -e native_modulation -vvv | tee logs/native-modulation-test.log
+pio test -d firmware -e native_persistence -vvv | tee logs/native-persistence-test.log
+pio run -d firmware -e teensy40_main | tee logs/firmware-main-build.log
+
 REQUIRE_HIL="${REQUIRE_HIL:-0}"
 for arg in "$@"; do
   case "$arg" in

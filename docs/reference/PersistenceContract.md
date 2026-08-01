@@ -30,6 +30,8 @@ Schema migration is cumulative. In particular, a direct schema-6 to schema-8 boo
 
 The storage-region map and schema-6/schema-7 tail-relocation arithmetic are shared with the hardware-free `native_persistence` test lane. That lane also executes profile-modulation ARG/LFO sanitization, compact packing, and CRC coverage over semantic slot bytes. These executable calculations guard current layout drift, but they do not replace the separate requirement for a frozen byte image captured from genuine schema-6 firmware.
 
+Legacy migration reports an explicit result for capacity, read, write, and verification failures. On the production backend it runs against the inactive transactional generation and commits only after relocation, conversion, clearing, and verified semantic writes all succeed. `CONFIG_VERSION` is promoted last; a failure aborts the inactive generation and leaves the historical committed image available for a later retry rather than treating a partial conversion as current.
+
 Profile loads compose the ordinary profile snapshot and its schema-8 modulation extension in memory before persistence. Each resulting slot is saved once, preventing an intermediate MIDI/EF-only slot image and avoiding the former double-write pass across all 42 slots.
 
 The historical schema-4 emulated EEPROM offsets are documented separately in [Legacy EEPROM Layout](EEPROMLayout.md) and are not the current persistence contract.

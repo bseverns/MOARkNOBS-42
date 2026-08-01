@@ -326,6 +326,16 @@ class ConfigManager {
         kDefaults,
     };
 
+    enum class MigrationResult {
+        Success,
+        InsufficientStorage,
+        ReadFailure,
+        WriteFailure,
+        VerificationFailure,
+    };
+
+    MigrationResult getLastMigrationResult() const { return _lastMigrationResult; }
+
     // Reset configuration to factory defaults.
     void resetConfiguration(std::vector<uint8_t> &potChannels, bool recordRecoveryEvent = false);
 
@@ -461,7 +471,7 @@ class ConfigManager {
     void wipeSlotRegion();
     void wipeProfileBlocks();
     static bool slotLooksSane(const MIDISlot &candidate);
-    void migrateLegacySlotPayloads(uint16_t storedVersion);
+    MigrationResult migrateLegacySlotPayloads(uint16_t storedVersion);
     SlotEnvelopePayload seedSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
     static SlotEnvelopePayload sanitizeEnvelopePayload(const SlotEnvelopePayload &payload);
     struct LegacyARGSettings {
@@ -473,6 +483,7 @@ class ConfigManager {
     } legacyArg{};
     RecoveryEvent _lastRecoveryEvent = RecoveryEvent::kNone;
     LoadSource _lastLoadSource = LoadSource::kUnknown;
+    MigrationResult _lastMigrationResult = MigrationResult::Success;
     void loadLegacyARGSettings();
     void migrateLegacyARGSettings();
 };

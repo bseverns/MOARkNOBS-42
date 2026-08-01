@@ -34,8 +34,25 @@ template <typename T> void storageGet(int address, T &value) {
     ConfigManager::getStorageBackend()->readBytes(address, &value, sizeof(T));
 }
 
-template <typename T> void storagePut(int address, const T &value) {
-    ConfigManager::getStorageBackend()->writeBytes(address, &value, sizeof(T));
+template <typename T> bool storagePut(int address, const T &value) {
+    return ConfigManager::getStorageBackend()->writeBytes(address, &value, sizeof(T));
+}
+
+template <typename T> bool storagePutVerified(int address, const T &value) {
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (!storage->contains(address, sizeof(T)) ||
+        !storage->writeBytes(address, &value, sizeof(T))) {
+        return false;
+    }
+    T restored{};
+    storage->readBytes(address, &restored, sizeof(T));
+    return std::memcmp(&restored, &value, sizeof(T)) == 0;
+}
+
+bool storageUpdateVerified(int address, uint8_t value) {
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    return storage->contains(address) && storage->update(address, value) &&
+           storage->read(address) == value;
 }
 
 constexpr uint16_t kLegacyConfigVersion = 0x0003;
@@ -189,25 +206,36 @@ SceneStorage::ConfigState upgradeLegacyConfigStateV6(const LegacyConfigStateV6 &
     return upgraded;
 }
 
-void clearStorageRange(size_t address, size_t length) {
-    for (size_t offset = 0; offset < length; ++offset) {
-        storageUpdate(static_cast<int>(address + offset), 0x00);
-    }
-}
-
-bool relocateStorageRangeUp(size_t sourceBegin, size_t sourceEnd, size_t shift) {
+bool clearStorageRange(size_t address, size_t length) {
     StorageBackend *storage = ConfigManager::getStorageBackend();
-    if (sourceBegin > sourceEnd || sourceEnd + shift > storage->length()) {
-        return false;
-    }
-    for (size_t source = sourceEnd; source-- > sourceBegin;) {
-        storage->update(static_cast<int>(source + shift),
-                        storage->read(static_cast<int>(source)));
+    if (!storage->contains(static_cast<int>(address), length)) return false;
+    for (size_t offset = 0; offset < length; ++offset) {
+        const int target = static_cast<int>(address + offset);
+        if (!storage->update(target, 0x00) || storage->read(target) != 0x00) return false;
     }
     return true;
 }
 
-void migrateSchema6SceneStorage() {
+ConfigManager::MigrationResult relocateStorageRangeUp(size_t sourceBegin, size_t sourceEnd,
+                                                      size_t shift) {
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    if (sourceBegin > sourceEnd || sourceEnd + shift > storage->length()) {
+        return ConfigManager::MigrationResult::InsufficientStorage;
+    }
+    for (size_t source = sourceEnd; source-- > sourceBegin;) {
+        const uint8_t value = storage->read(static_cast<int>(source));
+        const int destination = static_cast<int>(source + shift);
+        if (!storage->update(destination, value)) {
+            return ConfigManager::MigrationResult::WriteFailure;
+        }
+        if (storage->read(destination) != value) {
+            return ConfigManager::MigrationResult::VerificationFailure;
+        }
+    }
+    return ConfigManager::MigrationResult::Success;
+}
+
+ConfigManager::MigrationResult migrateSchema6SceneStorage() {
     constexpr size_t oldMacroStorage = EEPROM_PROFILE_MODULATION_BASE;
     constexpr size_t oldMacroBytes = sizeof(LegacyMacroRecordV6);
     constexpr size_t oldSceneStorage = oldMacroStorage + oldMacroBytes;
@@ -222,7 +250,9 @@ void migrateSchema6SceneStorage() {
         const size_t destination = SceneStorage::kSceneStorageBase +
                                    static_cast<size_t>(slot) * SceneStorage::kSceneRecordBytes;
         if (!legacySceneRecordValid(legacy)) {
-            clearStorageRange(destination, SceneStorage::kSceneRecordBytes);
+            if (!clearStorageRange(destination, SceneStorage::kSceneRecordBytes)) {
+                return ConfigManager::MigrationResult::WriteFailure;
+            }
             continue;
         }
         MigratedSceneRecord migrated{};
@@ -231,7 +261,9 @@ void migrateSchema6SceneStorage() {
         std::memcpy(migrated.name, legacy.name, sizeof(migrated.name));
         migrated.state = upgradeLegacyConfigStateV6(legacy.state);
         migrated.crc = sceneRecordCrc(migrated);
-        storagePut(static_cast<int>(destination), migrated);
+        if (!storagePutVerified(static_cast<int>(destination), migrated)) {
+            return ConfigManager::MigrationResult::VerificationFailure;
+        }
     }
 
     LegacyMacroRecordV6 legacyMacro{};
@@ -242,16 +274,23 @@ void migrateSchema6SceneStorage() {
         migrated.occupied = legacyMacro.occupied;
         migrated.state = upgradeLegacyConfigStateV6(legacyMacro.state);
         migrated.crc = sceneRecordCrc(migrated);
-        storagePut(static_cast<int>(SceneStorage::kMacroStorageAddress), migrated);
+        if (!storagePutVerified(static_cast<int>(SceneStorage::kMacroStorageAddress), migrated)) {
+            return ConfigManager::MigrationResult::VerificationFailure;
+        }
     } else {
-        clearStorageRange(SceneStorage::kMacroStorageAddress,
-                          SceneStorage::kMacroRecordBytes);
+        if (!clearStorageRange(SceneStorage::kMacroStorageAddress,
+                               SceneStorage::kMacroRecordBytes)) {
+            return ConfigManager::MigrationResult::WriteFailure;
+        }
     }
 
     // The former macro/scene prefix is now the four empty per-profile
     // modulation-extension blocks.
-    clearStorageRange(EEPROM_PROFILE_MODULATION_BASE,
-                      EEPROM_PROFILE_MODULATION_BLOCK_SIZE * NUM_PROFILES);
+    if (!clearStorageRange(EEPROM_PROFILE_MODULATION_BASE,
+                           EEPROM_PROFILE_MODULATION_BLOCK_SIZE * NUM_PROFILES)) {
+        return ConfigManager::MigrationResult::WriteFailure;
+    }
+    return ConfigManager::MigrationResult::Success;
 }
 
 // Reject obviously corrupt legacy filter coefficients before reuse.
@@ -303,6 +342,13 @@ SlotEnvelopePayload persistFilterTailImpl(const SlotEnvelopePayload &payload) {
     storagePut(EEPROM_FILTER_FREQ, sanitized.frequency);
     storagePut(EEPROM_FILTER_Q, sanitized.q);
     return sanitized;
+}
+
+bool persistFilterTailVerified(const SlotEnvelopePayload &payload) {
+    const SlotEnvelopePayload sanitized = sanitizeEnvelopePayloadImpl(payload);
+    return storageUpdateVerified(EEPROM_ENVELOPE_TYPES, sanitized.filterType) &&
+           storagePutVerified(EEPROM_FILTER_FREQ, sanitized.frequency) &&
+           storagePutVerified(EEPROM_FILTER_Q, sanitized.q);
 }
 
 void maybeRescueFilterTailFromLegacy() {
@@ -423,62 +469,6 @@ void ConfigManager::migrateLegacyARGSettings() {
     storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
     storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
     setEnvelopePair(legacyArg.sourceA, legacyArg.sourceB);
-
-    uint16_t storedVersion = 0;
-    storageGet(EEPROM_CONFIG_VERSION, storedVersion);
-
-    if (storedVersion == CONFIG_VERSION) {
-        return;
-    }
-
-    if (storedVersion == 0x0003) {
-        struct LegacyMIDISlotV3 {
-            MIDIMessageType type;
-            uint8_t midiChannel;
-            uint8_t data1;
-            uint8_t efIndex;
-            uint8_t active;
-            uint8_t arpNote;
-            uint8_t sysexLength;
-            std::array<uint8_t, SysExTemplate::kMaxLength> sysexTemplate;
-        };
-        static_assert(sizeof(LegacyMIDISlotV3) == 23, "Legacy MIDISlot size mismatch");
-
-        std::array<LegacyMIDISlotV3, NUM_SLOTS> legacySlots{};
-        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-            const int legacyAddress =
-                static_cast<int>(EEPROM_SLOT_BASE + i * sizeof(LegacyMIDISlotV3));
-            storageGet(legacyAddress, legacySlots[i]);
-        }
-
-        SlotARGConfig defaults{};
-        defaults.enabled = legacyArg.enable;
-        defaults.method = static_cast<ARGMethod>(legacyArg.method);
-        defaults.sourceA = legacyArg.sourceA;
-        defaults.sourceB = legacyArg.sourceB;
-        defaults = sanitizeSlotArg(defaults);
-
-        legacyArg.enable = defaults.enabled;
-        legacyArg.method = static_cast<uint8_t>(defaults.method);
-        legacyArg.sourceA = defaults.sourceA;
-        legacyArg.sourceB = defaults.sourceB;
-
-        for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-            MIDISlot upgraded{};
-            upgraded.type = legacySlots[i].type;
-            upgraded.midiChannel = legacySlots[i].midiChannel;
-            upgraded.data1 = legacySlots[i].data1;
-            upgraded.ef.followerIndex = static_cast<int8_t>(legacySlots[i].efIndex);
-            upgraded.active = legacySlots[i].active != 0;
-            upgraded.arpNote = legacySlots[i].arpNote;
-            upgraded.sysexLength = legacySlots[i].sysexLength;
-            upgraded.sysexTemplate = legacySlots[i].sysexTemplate;
-            upgraded.arg = defaults;
-            saveSlot(i, upgraded);
-        }
-
-        storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
-    }
 }
 
 bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
@@ -525,15 +515,12 @@ bool ConfigManager::slotLooksSane(const MIDISlot &candidate) {
 }
 
 void ConfigManager::sanitizeSlotArena() {
-    migrateLegacyARGSettings();
-    loadLegacyARGSettings();
-
+    _lastMigrationResult = MigrationResult::Success;
     uint16_t storedVersion = 0;
     storageGet(EEPROM_CONFIG_VERSION, storedVersion);
 
-    migrateLegacyARGSettings();
-
     if (storedVersion == CONFIG_VERSION) {
+        migrateLegacyARGSettings();
         maybeRescueFilterTailFromLegacy();
         MIDISlot candidate{};
         storageGet(static_cast<int>(EEPROM_SLOT_BASE), candidate);
@@ -551,7 +538,23 @@ void ConfigManager::sanitizeSlotArena() {
         return;
     }
 
-    migrateLegacySlotPayloads(storedVersion);
+    StorageBackend *storage = getStorageBackend();
+    const bool transactional = storage->supportsTransactions();
+    if (transactional && !storage->beginTransaction()) {
+        _lastMigrationResult = MigrationResult::WriteFailure;
+        return;
+    }
+
+    _lastMigrationResult = migrateLegacySlotPayloads(storedVersion);
+    if (!transactional) return;
+    if (_lastMigrationResult != MigrationResult::Success) {
+        storage->abortTransaction();
+        return;
+    }
+    if (!storage->commitTransaction()) {
+        storage->abortTransaction();
+        _lastMigrationResult = MigrationResult::VerificationFailure;
+    }
 }
 
 void ConfigManager::wipeSlotRegion() {
@@ -585,12 +588,13 @@ void ConfigManager::wipeSlotRegion() {
     storageUpdate(EEPROM_ARG_ENV_B, legacyArg.sourceB);
 }
 
-FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
+FLASHMEM ConfigManager::MigrationResult
+ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
     if (storedVersion != kLegacyConfigVersion && storedVersion != 0x0004 &&
         storedVersion != 0x0006 && storedVersion != 0x0007) {
         wipeSlotRegion();
         wipeProfileBlocks();
-        return;
+        return MigrationResult::VerificationFailure;
     }
 
     loadLegacyARGSettings();
@@ -620,11 +624,12 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
             oldMacroStorage + SceneStorage::kMacroRecordBytes +
             static_cast<size_t>(SceneStorage::kSceneSlotCount) *
                 SceneStorage::kSceneRecordBytes;
-        if (tailShift > 0 &&
-            relocateStorageRangeUp(oldMacroStorage, oldRequiredStorage, tailShift)) {
-            for (size_t address = oldMacroStorage; address < newMacroStorage; ++address) {
-                storageUpdate(static_cast<int>(address), 0x00);
-            }
+        if (tailShift == 0) return MigrationResult::VerificationFailure;
+        const MigrationResult relocation =
+            relocateStorageRangeUp(oldMacroStorage, oldRequiredStorage, tailShift);
+        if (relocation != MigrationResult::Success) return relocation;
+        if (!clearStorageRange(oldMacroStorage, newMacroStorage - oldMacroStorage)) {
+            return MigrationResult::WriteFailure;
         }
     } else if (storedVersion == 0x0006) {
         std::array<LegacyMIDISlotV6, NUM_SLOTS> legacySlots{};
@@ -652,23 +657,29 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         storageGet(static_cast<int>(oldFilterQ), legacyFilterQ);
         storageGet(static_cast<int>(oldBrownout), legacyBrownoutCount);
 
-        relocateStorageRangeUp(layout.oldConfigTail, layout.oldRequiredStorage,
-                               layout.tailShift);
+        const MigrationResult relocation = relocateStorageRangeUp(
+            layout.oldConfigTail, layout.oldRequiredStorage, layout.tailShift);
+        if (relocation != MigrationResult::Success) return relocation;
         for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
             const LegacyMIDISlotV6 &legacy = legacySlots[static_cast<size_t>(i)];
             const MIDISlot upgraded = upgradeLegacySlotV6(legacy);
             const int upgradedAddress = static_cast<int>(
                 EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
-            storagePut(upgradedAddress, upgraded);
+            if (!storagePutVerified(upgradedAddress, upgraded)) {
+                return MigrationResult::VerificationFailure;
+            }
         }
         SlotEnvelopePayload migratedFilter{};
         migratedFilter.filterType =
             static_cast<uint8_t>(legacySlots[0].efSettings.filterType);
         migratedFilter.frequency = legacyFilterFrequency;
         migratedFilter.q = legacyFilterQ;
-        persistFilterTail(migratedFilter);
-        storagePut(EEPROM_BROWNOUT_COUNT, legacyBrownoutCount);
-        migrateSchema6SceneStorage();
+        if (!persistFilterTailVerified(migratedFilter) ||
+            !storagePutVerified(EEPROM_BROWNOUT_COUNT, legacyBrownoutCount)) {
+            return MigrationResult::VerificationFailure;
+        }
+        const MigrationResult sceneMigration = migrateSchema6SceneStorage();
+        if (sceneMigration != MigrationResult::Success) return sceneMigration;
     } else if (storedVersion == kLegacyConfigVersion) {
         struct LegacyMIDISlotV3 {
             MIDIMessageType type;
@@ -688,7 +699,9 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         storageGet(EEPROM_LEGACY_FILTER_Q, legacyPayload.q);
         SlotEnvelopePayload sanitizedPayload = sanitizeEnvelopePayload(legacyPayload);
 
-        persistFilterTail(sanitizedPayload);
+        if (!persistFilterTailVerified(sanitizedPayload)) {
+            return MigrationResult::VerificationFailure;
+        }
 
         for (int i = static_cast<int>(NUM_SLOTS) - 1; i >= 0; --i) {
             LegacyMIDISlotV3 legacy{};
@@ -713,7 +726,9 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
             const int upgradedAddress =
                 static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
-            storagePut(upgradedAddress, upgraded);
+            if (!storagePutVerified(upgradedAddress, upgraded)) {
+                return MigrationResult::VerificationFailure;
+            }
         }
     } else { // storedVersion == 0x0004
         struct LegacyMIDISlotV4 {
@@ -757,21 +772,31 @@ FLASHMEM void ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
 
             const int upgradedAddress =
                 static_cast<int>(EEPROM_SLOT_BASE + static_cast<size_t>(i) * SLOT_EEPROM_SIZE);
-            storagePut(upgradedAddress, upgraded);
+            if (!storagePutVerified(upgradedAddress, upgraded)) {
+                return MigrationResult::VerificationFailure;
+            }
         }
 
         MIDISlot first{};
         loadSlot(0, first);
-        persistFilterTail(settingsToPayload(first.efSettings));
+        if (!persistFilterTailVerified(settingsToPayload(first.efSettings))) {
+            return MigrationResult::VerificationFailure;
+        }
     }
 
-    storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
-    storageUpdate(EEPROM_ARG_METHOD, legacyArg.method);
-    storageUpdate(EEPROM_ARG_ENV_A, legacyArg.sourceA);
-    storageUpdate(EEPROM_ARG_ENV_B, legacyArg.sourceB);
-    storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+    if (!storageUpdateVerified(EEPROM_ARG_ENABLE, legacyArg.enable) ||
+        !storageUpdateVerified(EEPROM_ARG_METHOD, legacyArg.method) ||
+        !storageUpdateVerified(EEPROM_ARG_ENV_A, legacyArg.sourceA) ||
+        !storageUpdateVerified(EEPROM_ARG_ENV_B, legacyArg.sourceB)) {
+        return MigrationResult::WriteFailure;
+    }
+    const uint16_t currentVersion = CONFIG_VERSION;
+    if (!storagePutVerified(EEPROM_CONFIG_VERSION, currentVersion)) {
+        return MigrationResult::VerificationFailure;
+    }
 
     slots.fill({});
+    return MigrationResult::Success;
 }
 
 SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, float freq,
