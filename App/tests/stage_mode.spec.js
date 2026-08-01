@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
 test.describe('Stage mode', () => {
   test('renders without editor and lab panels', async ({ page }) => {
@@ -58,7 +59,7 @@ test.describe('Stage mode', () => {
   test('shows release-boundary mismatch warning without dirtying config hydration', async ({
     page
   }) => {
-    await page.addInitScript(() => {
+    await page.addInitScript(({ schemaVersion }) => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
       window.__MN42_TEST_HOOKS = {
         mutateTransport(transport) {
@@ -68,7 +69,7 @@ test.describe('Stage mode', () => {
             fw_version: 'sim-fw',
             git_sha: 'mismatch01',
             build_time: '2026-05-30T12:00:00Z',
-            schema_version: 6,
+            schema_version: schemaVersion,
             slot_count: 42,
             pot_count: 42,
             envelope_count: 6,
@@ -86,7 +87,7 @@ test.describe('Stage mode', () => {
             }
           };
           const schema = {
-            schema_version: 6,
+            schema_version: schemaVersion,
             type: 'object',
             required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
             properties: {
@@ -98,7 +99,7 @@ test.describe('Stage mode', () => {
             }
           };
           const config = {
-            schema_version: 6,
+            schema_version: schemaVersion,
             pots: Array.from({ length: 42 }, (_, idx) => ({ index: idx, channel: 1, cc: idx })),
             slots: Array.from({ length: 42 }, (_, idx) => ({
               index: idx,
@@ -152,7 +153,7 @@ test.describe('Stage mode', () => {
           };
         }
       };
-    });
+    }, { schemaVersion: MN42_SCHEMA_VERSION });
     await page.goto('/?mode=stage');
 
     await page.locator('#stage-connect').click();

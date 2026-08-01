@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
-function installNativeHarness() {
+function installNativeHarness({ schemaVersion }) {
   window.localStorage?.clear?.();
   window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
   window.__nativeWrites = [];
@@ -24,7 +25,7 @@ function installNativeHarness() {
         fw_version: 'native-fw',
         git_sha: 'abc12345',
         build_time: '2026-06-03T12:00:00Z',
-        schema_version: 6,
+        schema_version: schemaVersion,
         slot_count: 42,
         pot_count: 42,
         envelope_count: 6,
@@ -46,7 +47,7 @@ function installNativeHarness() {
         }
       };
       const config = {
-        schema_version: 6,
+        schema_version: schemaVersion,
         pots: Array.from({ length: 42 }, (_, index) => ({
           index,
           channel: (index % 16) + 1,
@@ -122,7 +123,7 @@ function installNativeHarness() {
 }
 
 test('push note dynamics sends only the live native note dynamics command', async ({ page }) => {
-  await page.addInitScript(installNativeHarness);
+  await page.addInitScript(installNativeHarness, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: /simulator/i }).click();

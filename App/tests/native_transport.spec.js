@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
 async function openRecoveryDrawer(page) {
   await page.locator('#recovery-drawer').evaluate((element) => {
@@ -9,7 +10,7 @@ async function openRecoveryDrawer(page) {
 test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', async ({
   page
 }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__nativeWrites = [];
@@ -36,7 +37,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
           fw_version: 'native-fw',
           git_sha: 'abc12345',
           build_time: '2026-03-28T12:00:00Z',
-          schema_version: 6,
+          schema_version: schemaVersion,
           slot_count: 42,
           pot_count: 42,
           envelope_count: 6,
@@ -53,7 +54,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
           }
         };
         const schema = {
-          schema_version: 6,
+          schema_version: schemaVersion,
           type: 'object',
           required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
           properties: {
@@ -203,7 +204,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
         };
       }
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: /simulator/i }).click();
@@ -262,7 +263,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
 });
 
 test('native transport disables unsupported profile and recovery controls', async ({ page }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
@@ -274,7 +275,7 @@ test('native transport disables unsupported profile and recovery controls', asyn
           fw_version: 'native-fw',
           git_sha: 'abc12345',
           build_time: '2026-03-28T12:00:00Z',
-          schema_version: 6,
+          schema_version: schemaVersion,
           slot_count: 42,
           pot_count: 42,
           envelope_count: 6,
@@ -302,7 +303,7 @@ test('native transport disables unsupported profile and recovery controls', asyn
           }
         };
         const config = {
-          schema_version: 6,
+          schema_version: schemaVersion,
           pots: Array.from({ length: 42 }, (_, idx) => ({ index: idx, channel: 1, cc: idx })),
           slots: Array.from({ length: 42 }, (_, idx) => ({
             index: idx,
@@ -358,7 +359,7 @@ test('native transport disables unsupported profile and recovery controls', asyn
         };
       }
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: /simulator/i }).click();
@@ -383,7 +384,7 @@ test('native transport disables unsupported profile and recovery controls', asyn
 test('native transport falls back to bundled schema when device schema is incompatible', async ({
   page
 }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
@@ -395,7 +396,7 @@ test('native transport falls back to bundled schema when device schema is incomp
           fw_version: 'native-fw',
           git_sha: 'abc12345',
           build_time: '2026-03-28T12:00:00Z',
-          schema_version: 6,
+          schema_version: schemaVersion,
           slot_count: 42,
           pot_count: 42,
           envelope_count: 6,
@@ -421,7 +422,7 @@ test('native transport falls back to bundled schema when device schema is incomp
           }
         };
         const config = {
-          schema_version: 6,
+          schema_version: schemaVersion,
           pots: Array.from({ length: 42 }, (_, idx) => ({ index: idx, channel: 1, cc: idx })),
           slots: Array.from({ length: 42 }, (_, idx) => ({
             index: idx,
@@ -477,7 +478,7 @@ test('native transport falls back to bundled schema when device schema is incomp
         };
       }
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: /simulator/i }).click();
@@ -500,7 +501,7 @@ test('native transport falls back to bundled schema when device schema is incomp
 test('native transport supports profile, macro, and scene actions when firmware advertises them', async ({
   page
 }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__nativeWrites = [];
@@ -526,7 +527,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
           fw_version: 'native-fw',
           git_sha: 'abc12345',
           build_time: '2026-03-28T12:00:00Z',
-          schema_version: 6,
+          schema_version: schemaVersion,
           slot_count: 42,
           pot_count: 42,
           envelope_count: 6,
@@ -554,7 +555,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
           }
         };
         const baseConfig = {
-          schema_version: 6,
+          schema_version: schemaVersion,
           pots: Array.from({ length: 42 }, (_, idx) => ({ index: idx, channel: 1, cc: idx })),
           slots: Array.from({ length: 42 }, (_, idx) => ({
             index: idx,
@@ -759,7 +760,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
         };
       }
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: /simulator/i }).click();

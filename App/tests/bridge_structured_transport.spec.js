@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
 test('bridge-served app prefers the structured bridge session and promotes staged config only after ACK', async ({
   page
 }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
 
@@ -28,7 +29,7 @@ test('bridge-served app prefers the structured bridge session and promotes stage
         fw_version: 'bridge-fw',
         git_sha: 'bridge123',
         build_time: '2026-05-25T12:00:00Z',
-        schema_version: 6,
+        schema_version: schemaVersion,
         slot_count: 42,
         pot_count: 42,
         envelope_count: 6,
@@ -46,7 +47,7 @@ test('bridge-served app prefers the structured bridge session and promotes stage
         }
       },
       schema: {
-        schema_version: 6,
+        schema_version: schemaVersion,
         type: 'object',
         required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
         properties: {
@@ -95,7 +96,7 @@ test('bridge-served app prefers the structured bridge session and promotes stage
       firmwareIdentity: {
         device_name: 'MOARkNOBS-42',
         fw_version: 'bridge-fw',
-        schema_version: 6
+        schema_version: schemaVersion
       },
       lastError: null
     };
@@ -343,7 +344,7 @@ test('bridge-served app prefers the structured bridge session and promotes stage
       bridgeApiBaseUrl: BRIDGE_HTTP,
       bridgeTransportMode: 'session'
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/index.html');
   await page.waitForLoadState('load');
@@ -412,7 +413,7 @@ test('bridge-served app prefers the structured bridge session and promotes stage
 test('raw bridge fallback preserves staged and live config discipline without bridge-session writes', async ({
   page
 }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
 
@@ -427,7 +428,7 @@ test('raw bridge fallback preserves staged and live config discipline without br
       fw_version: 'raw-bridge-fw',
       git_sha: 'raw12345',
       build_time: '2026-05-25T13:00:00Z',
-      schema_version: 6,
+      schema_version: schemaVersion,
       slot_count: 42,
       pot_count: 42,
       envelope_count: 6,
@@ -441,7 +442,7 @@ test('raw bridge fallback preserves staged and live config discipline without br
       }
     };
     const schema = {
-      schema_version: 6,
+      schema_version: schemaVersion,
       type: 'object',
       required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
       properties: {
@@ -572,7 +573,7 @@ test('raw bridge fallback preserves staged and live config discipline without br
       bridgeApiBaseUrl: BRIDGE_HTTP,
       bridgeTransportMode: 'session'
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/index.html');
   await page.waitForLoadState('load');

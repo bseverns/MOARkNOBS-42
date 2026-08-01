@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
-function installNativeArpHarness() {
+function installNativeArpHarness({ schemaVersion }) {
   window.localStorage?.clear?.();
   window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
   window.__nativeWrites = [];
@@ -37,7 +38,7 @@ function installNativeArpHarness() {
         fw_version: 'native-fw',
         git_sha: 'abc12345',
         build_time: '2026-06-03T12:00:00Z',
-        schema_version: 6,
+        schema_version: schemaVersion,
         slot_count: 42,
         pot_count: 42,
         envelope_count: 6,
@@ -59,7 +60,7 @@ function installNativeArpHarness() {
         }
       };
       const config = {
-        schema_version: 6,
+        schema_version: schemaVersion,
         pots: Array.from({ length: 42 }, (_, index) => ({
           index,
           channel: (index % 16) + 1,
@@ -223,7 +224,7 @@ test('profile arp GET and SET round-trip pattern length in the App payload', asy
 });
 
 test('live arp controls use native runtime commands without config boot', async ({ page }) => {
-  await page.addInitScript(installNativeArpHarness);
+  await page.addInitScript(installNativeArpHarness, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await page.getByRole('button', { name: /simulator/i }).click();

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
 
 test('live runtime controls do not dirty staged config or require Apply', async ({ page }) => {
   await page.addInitScript(() => {
@@ -33,7 +34,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
 test('readback divergence preserves staged and live truth and updates status UI', async ({
   page
 }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ schemaVersion }) => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
     window.__nativeWrites = [];
@@ -59,7 +60,7 @@ test('readback divergence preserves staged and live truth and updates status UI'
           fw_version: 'native-fw',
           git_sha: 'abc12345',
           build_time: '2026-03-28T12:00:00Z',
-          schema_version: 6,
+          schema_version: schemaVersion,
           slot_count: 42,
           pot_count: 42,
           envelope_count: 6,
@@ -74,7 +75,7 @@ test('readback divergence preserves staged and live truth and updates status UI'
           }
         };
         const schema = {
-          schema_version: 6,
+          schema_version: schemaVersion,
           type: 'object',
           required: ['slots', 'efSlots', 'filter', 'arg', 'led'],
           properties: {
@@ -153,7 +154,7 @@ test('readback divergence preserves staged and live truth and updates status UI'
         };
       }
     };
-  });
+  }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
@@ -168,7 +169,7 @@ test('readback divergence preserves staged and live truth and updates status UI'
   });
 
   await expect(page.locator('#dirty-badge')).toBeVisible();
-  await page.getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(page.locator('#status-label')).toHaveText('Device differs');
   await expect(page.locator('#status .status-message')).toContainText('readback');
   await expect(page.locator('#dirty-badge')).toBeVisible();
