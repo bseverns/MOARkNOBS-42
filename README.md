@@ -12,6 +12,9 @@ browser configurator, Bridge, and validation docs moving together toward a suppo
 Start with [HARDWARE_TEST_README.md](HARDWARE_TEST_README.md) for the current hardware-test flow.
 For a repo-level contents map, see [docs/project/RepositoryContents.md](docs/project/RepositoryContents.md).
 
+[Try the browser configurator in simulator mode](https://bseverns.github.io/MN42/) without hardware, or see the
+[latest GitHub release](https://github.com/bseverns/MOARkNOBS-42/releases/latest) for the current published snapshot.
+
 ## Current Hardware-Test Status
 
 The prototype PCB run has moved MN42 from design-file speculation into physical bring-up evidence. Current boards have
@@ -108,6 +111,7 @@ physical target for:
 - **Using the controller musically:** start with
   [docs/getting-started/QuickstartForPerformers.md](docs/getting-started/QuickstartForPerformers.md), then use
   [docs/getting-started/GuidedRoutes.md](docs/getting-started/GuidedRoutes.md) when you want the broader docs map.
+- **Trying the software without hardware:** open the [hosted configurator](https://bseverns.github.io/MN42/), switch to Advanced, and select **Start simulator**.
 - **Configuring over USB, OSC, or a DAW:** compare the direct and Bridge paths in
   [docs/getting-started/ConnectivityGuide.md](docs/getting-started/ConnectivityGuide.md), then use the
   [App README](App/README.md) or [Bridge README](bridge/README.md) for the chosen lane.
@@ -144,3 +148,11 @@ These match the current hardware status page in [hardware/CurrentBuild.md](hardw
 
 No current BOM file is tracked in `hardware/fabrication/`, and no verified Gerber / NC-drill archive is present or
 claimed. Use the files above as bench-validation references only.
+
+## Contact And Feedback
+
+- Public questions and reproducible bugs: [GitHub Issues](https://github.com/bseverns/MOARkNOBS-42/issues).
+- Security-sensitive reports: follow the [private reporting policy](SECURITY.md).
+- Pilot-run inquiries: [severns3@gmail.com](mailto:severns3@gmail.com).
+
+Never put credentials, private device data, or other secrets in a public issue.

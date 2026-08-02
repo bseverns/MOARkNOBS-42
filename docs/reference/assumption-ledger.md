@@ -1,6 +1,6 @@
 # MOARkNOBS-42 — Assumption Ledger
 
-_Current snapshot · Last updated: 2026-03-13_
+_Current snapshot · Last updated: 2026-08-01_
 
 > What we currently believe is true, what evidence we actually have, and where the remaining unknowns still need bench time.
 
@@ -8,11 +8,11 @@ This is a living status sheet split between source-confirmed assumptions and ben
 
 ## Source-confirmed assumptions
 
-### 1) Firmware/App contract is locked to schema v6
+### 1) Firmware/App contract is locked to schema v8
 
-- **Claim:** The current stack is built around schema version `6`.
+- **Claim:** The current stack is built around schema version `8`.
 - **Why it matters:** App/firmware drift is the fastest way to turn a safe editor into a liar.
-- **Evidence:** [firmware/include/Globals.h](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Globals.h) defines `CONFIG_VERSION = 0x0006`, and [App/manifest_contract.js](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/manifest_contract.js) advertises schema version `6`.
+- **Evidence:** [firmware/include/Globals.h](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/Globals.h) defines `CONFIG_VERSION = 0x0008`, and [App/manifest_contract.js](https://github.com/bseverns/MOARkNOBS-42/blob/main/App/manifest_contract.js) advertises schema version `8`.
 - **Current status:** Confirmed in source.
 - **If false:** Treat it as a release blocker. Fix the contract or add an explicit migration path before shipping.
 

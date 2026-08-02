@@ -176,7 +176,7 @@ Handshake and manifest:
 > HELLO
 < {"hello":"mn42"}
 > GET_MANIFEST
-< {"device_name":"MOARkNOBS-42","schema_version":6,"slot_count":42,"pot_count":42,"envelope_count":6,"arg_method_count":14,"led_count":52,"power_profile":"POWER_CHOKED_V1","led_brightness_cap":26,"rail_topology_verified":false}
+< {"device_name":"MOARkNOBS-42","schema_version":8,"slot_count":42,"pot_count":42,"envelope_count":6,"arg_method_count":14,"led_count":52,"power_profile":"POWER_CHOKED_V1","led_brightness_cap":26,"rail_topology_verified":false}
 ```
 
 Set one live value:

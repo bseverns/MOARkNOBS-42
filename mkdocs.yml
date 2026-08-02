@@ -138,6 +138,7 @@ nav:
       - Musician-First Guide: getting-started/MusicianFirstGuide.md
       - Preset Library: guides/PresetLibrary.md
       - Combo Guide: guides/ComboGuide.md
+      - Max and Pure Data Examples: examples/README.md
   - Build:
       - Quickstart for Builders: getting-started/QuickstartForBuilders.md
       - Hardware Story: getting-started/HardwareStory.md
@@ -200,6 +201,5 @@ nav:
           - System Flow: sketch/systemFlow/README.md
           - Hardware System Flow: sketch/systemFlow/hw/README.md
           - Sketchbook: sketchbook/index.md
-          - Examples: examples/README.md
           - Thermal Notes: thermal/README.md
           - SeedBox Link Notes: interop/seedbox.md

@@ -4,6 +4,16 @@
 
 Pick the sentence that sounds most like you. Do that path first. Ignore the rest until you have momentum.
 
+## Explore Without Hardware
+
+**Who this is for:** curious visitors who want to understand the configurator before finding or building an instrument.
+
+1. Open the [hosted configurator](https://bseverns.github.io/MN42/).
+2. Switch to **Advanced**, then select **Start simulator** instead of connecting a serial device.
+3. Change one slot, inspect the staged diff, and apply it to the simulated device.
+
+The simulator proves the browser workflow, not physical controls, timing, MIDI wiring, or electrical behavior.
+
 ## Play It
 
 **Who this is for:** performers who want one playable setup before reading the whole repo.

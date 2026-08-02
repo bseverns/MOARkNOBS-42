@@ -13,6 +13,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Changelog now separates post-`beta0.6.0` documentation edits from the current manifest-backed `dist/` artifact truth.
 
+## [v0.9.6] - 2026-06-01
+
+### Changed
+- Hardened App and Bridge flows, refreshed OSC routing and the Bridge operator tour, and expanded verification/release automation across the `beta4..beta5` commit range.
+- Published GitHub source tag `beta5` as release `v0.9.6`.
+
+### Release Boundary
+- The GitHub release has no attached binary assets or release notes. Treat it as a source snapshot, not an installer or HIL-verified artifact bundle; use repository manifests and checksums for any generated `dist/` set.
+
 ## [beta0.6.0] - 2026-04-20
 
 ### Release/Dist Truth
@@ -151,3 +160,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [0.2.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.2.0
 [0.1.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.1.0
+[v0.9.6]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/beta5

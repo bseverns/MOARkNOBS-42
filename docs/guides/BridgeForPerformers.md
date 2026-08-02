@@ -74,4 +74,5 @@ Bridge MIDI mapping:
 - OSC quickstart: [`docs/guides/OSCBridge.md`](OSCBridge.md)
 - Packaging roadmap: [`docs/release/BridgePackaging.md`](../release/BridgePackaging.md)
 - Profile/preset behavior: [`docs/guides/ProfileWorkflow.md`](ProfileWorkflow.md)
+- Max and Pure Data starter patches: [Example Patches](../examples/README.md)
 - Fast recovery cases: [`docs/validation/FailureFirst.md`](../validation/FailureFirst.md)

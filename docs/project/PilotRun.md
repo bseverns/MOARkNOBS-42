@@ -2,9 +2,7 @@
 
 This page explains what a pilot run means in the context of MOARkNOBS-42.
 
-It is not a pricing page and it is not a promise of public order timing. If a public signup or interest-list URL exists later, it should be added here explicitly.
-
-As of this repo pass, no public interest-list or order URL is published here.
+It is not a pricing page or a promise of public order timing. To express interest or ask whether a setup fits the pilot-run boundary, email [severns3@gmail.com](mailto:severns3@gmail.com). No payment or preorder is requested through this page.
 
 ## What a pilot run means here
 

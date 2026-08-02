@@ -20,7 +20,8 @@ For the whole object-to-software picture in one glance, read the [System Map](ge
 Teaching a newcomer? Throw them into [Learner Paths](learn/LearnerPaths.md) so they can chase one signal at a time.
 
 <div class="mn42-cta-row">
-  <a class="md-button md-button--primary" href="project/PilotRun/">Read pilot-run framing</a>
+  <a class="md-button md-button--primary" href="https://bseverns.github.io/MN42/">Try the configurator</a>
+  <a class="md-button" href="project/PilotRun/">Read pilot-run framing</a>
   <a class="md-button" href="#core-features">See features</a>
   <a class="md-button" href="getting-started/StartHere/">Start here / learn how it works</a>
 </div>
@@ -254,7 +255,7 @@ The browser configurator is the main setup and monitoring surface. It loads mani
 <details markdown="1">
   <summary>What support is included?</summary>
 
-The main support surface is the documentation itself: quickstarts, connectivity guidance, validation flow, troubleshooting, and license/support boundaries. See [License and Support](project/LicenseAndSupport.md) and [Pilot Run](project/PilotRun.md) for the practical limits.
+The main support surface is the documentation itself: quickstarts, connectivity guidance, validation flow, troubleshooting, and license/support boundaries. Use [GitHub Issues](https://github.com/bseverns/MOARkNOBS-42/issues) for public questions or reproducible bugs. See [License and Support](project/LicenseAndSupport.md) and [Pilot Run](project/PilotRun.md) for the practical limits and private contact path.
 
 </details>
 

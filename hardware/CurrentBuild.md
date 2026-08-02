@@ -28,6 +28,7 @@ Board photos currently present:
 - assembled bench-context photo: `docs/assets/board/bench.jpg`
 - powered bring-up context photo: `docs/assets/board/bringup.jpg`
 - early Teensy breadboard harness photo: `docs/assets/board/test.jpg`
+- raw historical assembly-photo archive: `hardware/archive/T-3D5W706139A/`
 
 These images are public breadcrumbs for the prototype story. They do not replace measured inspection notes, serial logs,
 or dated bench receipts.

@@ -403,6 +403,23 @@ def main() -> None:
     firmware_schema = materialize_firmware_schema(config_manager_cpp, schema_constants)
 
     errors: list[str] = []
+    documented_schema_patterns = {
+        "docs/reference/assumption-ledger.md": r"contract is locked to schema v(\d+)",
+        "docs/reference/MN42LineProtocol.md": r'"schema_version":(\d+)',
+        "docs/reference/SerialProtocol.md": r'"schema_version":(\d+)',
+        "docs/guides/WebSerial.md": r'"schema_version":\s*(\d+)',
+    }
+    for relative_path, pattern in documented_schema_patterns.items():
+        documented = parse_int_constant(
+            pattern,
+            (root / relative_path).read_text(encoding="utf-8"),
+        )
+        if documented != firmware["schema_version"]:
+            errors.append(
+                f"{relative_path}: documented schema {documented} "
+                f"!= firmware {firmware['schema_version']}"
+            )
+
     if firmware["led_count"] != derived_led_count:
         errors.append(
             "led_count: ManifestContract "

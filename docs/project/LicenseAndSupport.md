@@ -50,3 +50,11 @@ What the repo does not promise:
 - Use the docs as the first support layer.
 - Treat hardware substitutions, fabrication package status, and real-board bring-up as things that may still require bench validation.
 - If a file is not present in the repo, do not assume an older doc reference still describes the current recommended build.
+
+## Ask For Help Or Report A Problem
+
+- Use [GitHub Issues](https://github.com/bseverns/MOARkNOBS-42/issues) for public questions and reproducible bugs.
+- Include firmware version, operating system/browser, App or Bridge path, exact error, and whether physical hardware is involved.
+- Follow the [security policy](https://github.com/bseverns/MOARkNOBS-42/blob/main/SECURITY.md) for private vulnerability reports.
+
+Do not post credentials, private device data, or other secrets in a public issue. These contact paths do not promise a response time.

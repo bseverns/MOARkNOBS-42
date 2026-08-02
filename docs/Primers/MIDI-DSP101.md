@@ -40,7 +40,7 @@ Registered Parameter Numbers (RPN) and Non-Registered Parameter Numbers (NRPN) c
 4. Optionally send CC96/97 for increment/decrement.
 5. Send RPN null (`CC101=127`, `CC100=127`) or NRPN null (same pair) to stop targeting that parameter.
 
-We do not generate RPN/NRPN in firmware yet, but the CC parser keeps the sequences intact so external rigs stay happy.
+MN42 slots can generate RPN and NRPN sequences; the parser also keeps inbound sequences intact so external rigs stay coherent.
 
 **Curated resources**
 

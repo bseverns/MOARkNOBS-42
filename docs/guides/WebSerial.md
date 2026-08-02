@@ -21,19 +21,22 @@ The direct USB lane is line-oriented and intentionally pragmatic: newline-delimi
      "fw_version": "1.3.0",
      "git_sha": "012dead",
      "build_time": "2024-05-10 21:37:02",
-     "schema_version": 6,
+     "schema_version": 8,
      "slot_count": 42,
      "pot_count": 42,
      "envelope_count": 6,
      "arg_method_count": 14,
-     "led_count": 51,
+     "led_count": 52,
+     "power_profile": "POWER_CHOKED_V1",
+     "led_brightness_cap": 26,
+     "rail_topology_verified": false,
      "free_ram": 642112,
      "free_flash": 1185792
    }
    ```
 5. The UI diffs that manifest against its baked-in schema definition. When anything smells off, pop a non-destructive migrate dialog:
    - Offer to export the user’s current JSON before touching a byte.
-   - Run any adapters registered in the App runtime `migrations` map (keyed like `"5->6"`) before allowing writes.
+   - Run any adapters registered in the App runtime `migrations` map (keyed like `"<remote>-><local>"`) before allowing writes.
    - Render the proposed patch for review; no silent rewrites.
 6. Streaming begins only after both sides agree on versions. Bail out by closing the port or if the manifest validation fails.
 
