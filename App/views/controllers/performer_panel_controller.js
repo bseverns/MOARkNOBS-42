@@ -57,7 +57,9 @@ export function createPerformerPanelController({
     deviceName = null,
     fwVersion = null,
     profileSummary = null,
-    lastEvent = null,
+    clockState = null,
+    midiOutput = null,
+    slotFocus = null,
     profileSelect = null,
     profileLoadBtn = null,
     sceneSelect = null,
@@ -69,6 +71,27 @@ export function createPerformerPanelController({
 
   let slotCells = [];
   let envMeters = [];
+  let renderedSlots = [];
+  let latestTelemetry = null;
+
+  function refreshSlotFocus() {
+    if (!slotFocus) return;
+    const index = Math.max(0, Number(getSelectedSlot()) || 0);
+    const slot = renderedSlots[index] ?? {};
+    const value = latestTelemetry?.slots?.[index];
+    const type = slotTypeAbbreviations[slot?.type] ?? slot?.type ?? 'OFF';
+    const channel = Number(slot?.midiChannel ?? slot?.channel);
+    const channelText = Number.isFinite(channel) ? `Ch ${channel}` : 'No channel';
+    const valueText = Number.isFinite(Number(value)) ? `Value ${Number(value)}` : 'Value --';
+    const modulation = describeSlotModulation(slot);
+    slotFocus.textContent = [
+      `Slot ${index + 1}`,
+      type,
+      channelText,
+      valueText,
+      modulation.length ? modulation.join(' + ') : 'No modulation'
+    ].join(' · ');
+  }
 
   function highlightSelectedSlot() {
     const selected = Math.max(0, Number(getSelectedSlot()) || 0);
@@ -77,6 +100,7 @@ export function createPerformerPanelController({
       cell.classList.toggle('selected', isSelected);
       cell.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     });
+    refreshSlotFocus();
   }
 
   function bind() {
@@ -109,6 +133,7 @@ export function createPerformerPanelController({
   function renderSlots(slots) {
     if (!slotGrid) return;
     const source = Array.isArray(slots) ? slots : [];
+    renderedSlots = source;
     if (slotCells.length === source.length && slotCells.length) {
       slotCells.forEach((cell, index) => {
         const slot = source[index];
@@ -167,6 +192,7 @@ export function createPerformerPanelController({
 
   function paintTelemetry(frame) {
     if (!Array.isArray(frame?.slots)) return;
+    latestTelemetry = frame;
 
     frame.envelopes?.forEach((value, idx) => {
       const entry = envMeters[idx];
@@ -185,12 +211,18 @@ export function createPerformerPanelController({
       if (valueEl) valueEl.textContent = Number.isFinite(numeric) ? String(numeric) : '--';
     });
 
-    if (lastEvent) {
-      const currentSlot = Number.isFinite(Number(frame.currentSlot))
-        ? `S${String(Number(frame.currentSlot) + 1).padStart(2, '0')}`
-        : 'Telemetry';
-      lastEvent.textContent = `${currentSlot} - ${new Date().toLocaleTimeString()}`;
+    if (clockState) {
+      const running = frame?.clock?.running ?? frame?.clock_running;
+      const bpm = Number(frame?.clock?.bpm ?? frame?.clock_bpm);
+      clockState.textContent = running
+        ? `Running${Number.isFinite(bpm) ? ` · ${bpm} BPM` : ''}`
+        : 'Stopped';
     }
+    if (midiOutput) {
+      const enabled = frame?.usb_midi_enabled ?? frame?.midi_output_enabled;
+      if (typeof enabled === 'boolean') midiOutput.textContent = enabled ? 'Enabled' : 'Muted';
+    }
+    refreshSlotFocus();
   }
 
   function refresh({
@@ -215,6 +247,12 @@ export function createPerformerPanelController({
     if (deviceName) deviceName.textContent = resolveDeviceName?.(manifest) ?? '-';
     if (fwVersion) fwVersion.textContent = resolveFirmwareVersion?.(manifest) ?? 'unknown';
     if (profileSummary) profileSummary.textContent = getProfileText();
+    if (midiOutput) {
+      if (!connected) midiOutput.textContent = 'Offline';
+      else if (!['Enabled', 'Muted'].includes(midiOutput.textContent)) {
+        midiOutput.textContent = 'Connected';
+      }
+    }
     if (profileSelect) {
       profileSelect.value = String(getActiveProfileSlot());
     }

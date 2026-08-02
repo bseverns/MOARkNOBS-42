@@ -13,15 +13,22 @@
     <header class="hero compact-hero">
       <div class="hero-top workspace-top">
         <div class="workspace-identity">
-          <p class="workspace-kicker">MOARkNOBS-42 Browser Configurator</p>
+          <p class="workspace-kicker">MOARkNOBS-42</p>
           <h1>Control Deck</h1>
-          <p class="workspace-subtitle">Slot-first workstation for live editing, recovery, and telemetry.</p>
         </div>
+        <nav class="global-mode-switch" aria-label="Workspace mode">
+          <button type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
+          <button type="button" data-ui-mode-btn="basic" aria-pressed="false">Configure</button>
+          <button type="button" data-ui-mode-btn="advanced" aria-pressed="false">Lab</button>
+        </nav>
         <div class="workspace-toolbar">
           <div class="workspace-status-line">
-            <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
-            <span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span>
-            <span id="dirty-badge" role="status" hidden>Dirty · staged edits</span>
+            <details class="connection-details">
+              <summary><span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span></summary>
+              <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
+            </details>
+            <span class="active-profile-pill" id="header-profile-status">Profile A</span>
+            <span id="dirty-badge" role="status" hidden>Staged changes</span>
           </div>
           <div class="connect-actions compact-connect-actions" data-ui-modes="basic advanced">
             <button id="connect" type="button" disabled aria-busy="true">Connect</button>
@@ -39,12 +46,7 @@
           </div>
         </div>
       </div>
-      <div class="hero-badges" role="list">
-        <span class="badge" role="listitem">Web Serial Powered</span>
-        <span class="badge" role="listitem">Real-time Slot Telemetry</span>
-        <span class="badge" role="listitem">Patch-safe Writing</span>
-      </div>
-      <div class="runtime-lane-strip" aria-label="Runtime lanes">
+      <div class="runtime-lane-strip" aria-label="Runtime lanes" data-ui-modes="advanced">
         <span class="runtime-lane-chip" id="transport-lane-chip" role="status">Transport · Direct USB</span>
         <span class="runtime-lane-chip" id="contract-quality-chip" role="status">Contract · Unknown</span>
         <span class="runtime-lane-chip" data-runtime-lane="staged">Staged config · Apply required</span>
@@ -145,11 +147,6 @@
             <p class="microcopy">Performance-safe status and recovery. No staged editors or Apply controls here.</p>
           </div>
           <div class="performer-header-controls">
-            <div class="performer-mode-switch" role="group" aria-label="Stage mode switch">
-              <button type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
-              <button type="button" data-ui-mode-btn="basic" aria-pressed="false">Basic</button>
-              <button type="button" data-ui-mode-btn="advanced" aria-pressed="false">Advanced</button>
-            </div>
             <div class="performer-status-strip" aria-live="polite">
               <span class="pill" id="stage-connection-state">Disconnected</span>
               <span class="pill" id="stage-dirty-state">Clean</span>
@@ -161,18 +158,19 @@
           <div class="performer-metric">
             <span>Device</span>
             <strong id="stage-device-name">MOARkNOBS-42</strong>
-          </div>
-          <div class="performer-metric">
-            <span>Firmware</span>
-            <strong id="stage-fw-version">unknown</strong>
+            <small class="stage-device-detail">Firmware <span id="stage-fw-version">unknown</span></small>
           </div>
           <div class="performer-metric">
             <span>Profile</span>
             <strong id="stage-profile-summary">Slot A • local target</strong>
           </div>
           <div class="performer-metric">
-            <span>Last Event</span>
-            <strong id="stage-last-event">Waiting</strong>
+            <span>Clock</span>
+            <strong id="stage-clock-state">Waiting</strong>
+          </div>
+          <div class="performer-metric">
+            <span>MIDI / connection</span>
+            <strong id="stage-midi-output">Offline</strong>
           </div>
         </div>
 
@@ -216,6 +214,9 @@
               <p class="microcopy">42 slots</p>
             </header>
             <div id="stage-slots" class="stage-slot-grid" aria-label="Stage slot activity"></div>
+            <div id="stage-slot-focus" class="stage-slot-focus" role="status" aria-live="polite">
+              Select a slot to inspect its performance state.
+            </div>
             <div class="slot-type-legend" aria-label="Slot type legend">
               <span class="slot-type-key" data-slot-type="off">OFF</span>
               <span class="slot-type-key" data-slot-type="cc">CC</span>
@@ -261,7 +262,7 @@
         <section id="editor-panel" data-ui-modes="basic advanced">
           <header class="editor-shell-header">
             <div>
-              <h2>Selected Slot</h2>
+              <h2><span class="configure-editor-title">Slot Mapping</span><span class="lab-editor-title">Selected Slot</span></h2>
               <p class="microcopy">Keep the slot grid visible while editing one target at a time.</p>
             </div>
             <div class="section-lane-tags" aria-label="Selected slot boundaries">
@@ -335,16 +336,11 @@
       </section>
 
       <aside id="connect-card" data-ui-modes="basic advanced">
-        <div class="mode-switch" role="group" aria-label="UI mode">
-          <span class="mode-switch-label">UI mode</span>
-          <div class="mode-switch-buttons">
-            <button id="ui-mode-stage" type="button" data-ui-mode-btn="stage" aria-pressed="false">Stage</button>
-            <button id="ui-mode-basic" type="button" data-ui-mode-btn="basic" aria-pressed="false">Basic</button>
-            <button id="ui-mode-advanced" type="button" data-ui-mode-btn="advanced"
-              aria-pressed="false">Advanced</button>
-          </div>
-        </div>
-        <p class="microcopy" id="ui-mode-hint">Basic mode keeps common knob-to-MIDI mapping controls visible.</p>
+        <header class="session-rail-header">
+          <p class="workspace-kicker">Session</p>
+          <h2>Session</h2>
+          <p class="microcopy" id="ui-mode-hint">Configure keeps everyday mapping and profile work close at hand.</p>
+        </header>
         <div class="utility-tabbar" role="tablist" aria-label="Utility panels" data-ui-modes="advanced">
           <button type="button" class="utility-tab" data-utility-tab="console" aria-pressed="true" data-ui-modes="advanced">Console</button>
           <button type="button" class="utility-tab" data-utility-tab="diff" aria-pressed="false" data-ui-modes="advanced">Diff</button>
@@ -521,14 +517,15 @@
           </section>
         </div>
         <div class="performance-panel performance-panel-active" data-performance-panel="arp" data-ui-tier="advanced">
-          <div class="macro-card arp-card" id="arp-profile-card" aria-label="Arpeggiator profile controls"
+          <div class="macro-card arp-card saved-live-workspace" id="arp-profile-card" aria-label="Arpeggiator profile controls"
             style="height: auto; min-height: 0;">
-            <div class="macro-card-header">
+            <div class="macro-card-header saved-profile-zone">
+              <span class="zone-eyebrow">Saved in profile</span>
               <strong>Profile Arpeggiator</strong>
               <p class="microcopy">Edit saved arp timing and shape for the selected profile A–D entry. Use the Selected Slot
                 editor for each slot&apos;s arp root note.</p>
             </div>
-            <div class="arp-form-grid">
+            <div class="arp-form-grid saved-profile-zone">
               <label>
                 <span>Length ticks</span>
                 <input id="arp-length" type="number" min="1" max="24" step="1" />
@@ -561,9 +558,10 @@
                 <input id="arp-pattern-length" type="number" min="2" max="16" step="1" />
               </label>
             </div>
-            <section class="live-toggle-card" aria-labelledby="live-arp-title">
+            <section class="live-toggle-card live-override-zone" aria-labelledby="live-arp-title">
               <header class="live-toggle-card-header">
                 <div>
+                  <span class="zone-eyebrow">Live override</span>
                   <h3 id="live-arp-title">Live Arp</h3>
                   <p class="microcopy">Inspect and push the arpeggiator runtime controls without saving a profile.</p>
                 </div>
@@ -616,9 +614,10 @@
                 Connect to inspect live arpeggiator state.
               </p>
             </section>
-            <section class="live-toggle-card" aria-labelledby="jitter-title">
+            <section class="live-toggle-card live-override-zone" aria-labelledby="jitter-title">
               <header class="live-toggle-card-header">
                 <div>
+                  <span class="zone-eyebrow">Live override</span>
                   <h3 id="jitter-title">Jitter</h3>
                   <p class="microcopy">Live Perlin jitter tuning shared by random EF shapes and the Random arpeggiator shape.</p>
                 </div>
@@ -641,11 +640,11 @@
                 Connect to inspect live jitter tuning.
               </p>
             </section>
-            <div class="arp-actions" role="group" aria-label="Arpeggiator profile actions">
+            <div class="arp-actions saved-profile-actions" role="group" aria-label="Arpeggiator profile actions">
               <button id="arp-refresh" type="button" disabled>Load profile arp</button>
               <button id="arp-save" type="button" disabled>Save profile arp</button>
             </div>
-            <p class="microcopy macro-status" id="arp-status" data-state="muted" aria-live="polite">
+            <p class="microcopy macro-status saved-profile-status" id="arp-status" data-state="muted" aria-live="polite">
               Connect to inspect the selected profile&apos;s arp settings.
             </p>
           </div>
@@ -790,6 +789,24 @@
         <pre id="log" aria-live="off"></pre>
       </details>
     </main>
+    <div id="change-bar" class="change-bar" data-ui-modes="basic advanced" hidden role="region" aria-label="Staged changes">
+      <strong id="change-count">0 staged changes</strong>
+      <div class="change-bar-actions">
+        <button id="change-review" type="button">Review</button>
+        <button id="change-discard" type="button">Discard</button>
+        <button id="change-apply" type="button" aria-label="Commit staged changes" disabled>Apply changes</button>
+      </div>
+    </div>
+    <dialog id="change-review-dialog" class="change-review-dialog" aria-labelledby="change-review-title">
+      <header>
+        <div>
+          <p class="workspace-kicker">Staged transaction</p>
+          <h2 id="change-review-title">Review changes</h2>
+        </div>
+        <button id="change-review-close" type="button">Close</button>
+      </header>
+      <pre id="change-review-output"></pre>
+    </dialog>
     <dialog id="migration-dialog">
       <h2 id="migration-title">Migration Needed</h2>
       <p>

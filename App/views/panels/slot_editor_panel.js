@@ -135,7 +135,7 @@ export function createSlotEditorPanel({
 
     const basics = makeFieldset(
       'Knob -> MIDI Mapping',
-      'Pick what this knob sends. Switch to Advanced mode for EF, ARG, fixed LFO modulation, and deep filter controls.'
+      'Pick what this knob sends. Switch to Lab for EF, ARG, fixed LFO modulation, and deep filter controls.'
     );
     basics.appendChild(
       makeSelect(
@@ -237,7 +237,7 @@ export function createSlotEditorPanel({
     if (activeUiMode !== 'advanced') {
       const hint = document.createElement('p');
       hint.className = 'slot-hint';
-      hint.textContent = 'Need EF, ARG, or fixed LFO modulation? Switch to Advanced mode.';
+      hint.textContent = 'Need EF, ARG, or fixed LFO modulation? Switch to Lab.';
       basics.appendChild(hint);
     }
     if (activeUiMode !== 'advanced' || activeEditorTab === 'mapping') {

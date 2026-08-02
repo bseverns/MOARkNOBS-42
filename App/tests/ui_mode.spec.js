@@ -4,19 +4,21 @@ test.describe('UI mode', () => {
   test('basic mode hides advanced sections and mode persists', async ({ page }) => {
     await page.goto('/benzknobz.html');
 
-    const basicButton = page.getByRole('button', { name: 'Basic' });
-    const advancedButton = page.getByRole('button', { name: 'Advanced' });
+    const basicButton = page.getByRole('button', { name: 'Configure' });
+    const advancedButton = page.getByRole('button', { name: 'Lab' });
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#performer-panel')).toBeVisible();
+    await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Direct USB');
     await expect(page.locator('#connection-banner')).not.toContainText('Bridge');
     await expect
       .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
       .toBe('direct-webserial');
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeVisible();
-    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeVisible();
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeHidden();
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="live"]')).toBeHidden();
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="browser"]')).toBeHidden();
+    await expect(page.locator('.editor-tabbar')).toBeHidden();
+    await expect(page.locator('#editor-panel')).toContainText('Slot Mapping');
     await expect(page.locator('#check-compatibility')).toBeHidden();
     await expect(page.locator('#config-mode')).toBeHidden();
     await expect(page.locator('#rollback')).toBeHidden();
@@ -36,7 +38,8 @@ test.describe('UI mode', () => {
 
     await advancedButton.click();
     await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
-    await expect(page.locator('#performer-panel')).toBeVisible();
+    await expect(page.locator('#performer-panel')).toBeHidden();
+    await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
@@ -75,10 +78,17 @@ test.describe('UI mode', () => {
     await ccInput.dispatchEvent('change');
 
     await expect(page.locator('#dirty-badge')).toBeVisible();
+    await expect(page.locator('#change-bar')).toBeVisible();
+    await expect(page.locator('#change-count')).toHaveText('1 staged change');
+    await page.locator('#change-review').click();
+    await expect(page.locator('#change-review-dialog')).toHaveAttribute('open', '');
+    await expect(page.locator('#change-review-output')).toContainText('1 staged change');
+    await page.locator('#change-review-close').click();
     const apply = page.getByRole('button', { name: 'Apply' });
     await expect(apply).toBeEnabled();
     await apply.click();
     await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
+    await expect(page.locator('#change-bar')).toBeHidden();
   });
 });

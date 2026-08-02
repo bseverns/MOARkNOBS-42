@@ -132,7 +132,7 @@ export function createUiModeController({
     if (!isEditorTabAllowed(activeEditorTab)) activeEditorTab = firstAvailableEditorTab();
     if (!isUtilityTabAllowed(activeUtilityTab)) activeUtilityTab = firstAvailableUtilityTab();
 
-    setPerformerVisible(true);
+    setPerformerVisible(activeUiMode === 'stage');
     refreshEditorTabs();
     refreshUtilityTabs();
     if (getSlotCount() > 0) renderSlotEditor();

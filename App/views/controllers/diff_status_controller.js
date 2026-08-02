@@ -43,7 +43,11 @@ export function createDiffStatusController({
     diffEmpty = null,
     dirtyBadge = null,
     applyBtn = null,
-    rollbackBtn = null
+    rollbackBtn = null,
+    changeBar = null,
+    changeCount = null,
+    changeApplyBtn = null,
+    changeDiscardBtn = null
   } = elements;
 
   function setStatus(state, label, message) {
@@ -56,6 +60,7 @@ export function createDiffStatusController({
   function markDirty(isDirty) {
     console.debug('[UI] markDirty', isDirty);
     if (dirtyBadge) dirtyBadge.toggleAttribute('hidden', !isDirty);
+    if (changeBar) changeBar.toggleAttribute('hidden', !isDirty);
     const applyAllowed = ['verified', 'simulator'].includes(
       runtime?.getState?.()?.contractQuality
     );
@@ -67,12 +72,19 @@ export function createDiffStatusController({
       : ['dirty', 'verified', 'verified-device-different', 'clean'].includes(state.transactionState);
     if (applyBtn) applyBtn.disabled = !isDirty || !applyAllowed || !transactionWritable;
     if (rollbackBtn) rollbackBtn.disabled = !isDirty || !transactionWritable;
+    if (changeApplyBtn) {
+      changeApplyBtn.disabled = !isDirty || !applyAllowed || !transactionWritable;
+    }
+    if (changeDiscardBtn) changeDiscardBtn.disabled = !isDirty || !transactionWritable;
     onDirtyChanged(Boolean(isDirty));
   }
 
   function updateDiff(isDirty) {
     if (!diffPanel || !diffOutput) return;
     const changes = runtime.diff();
+    if (changeCount) {
+      changeCount.textContent = `${changes.length} staged change${changes.length === 1 ? '' : 's'}`;
+    }
     if (!isDirty || !changes.length) {
       diffPanel.setAttribute('hidden', '');
       diffOutput.textContent = '';

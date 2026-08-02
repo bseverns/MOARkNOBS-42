@@ -14,6 +14,7 @@ test('panic help dialog surfaces recovery actions and firmware lanes on demand',
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
+  await page.getByRole('button', { name: 'Stage', exact: true }).click();
   await page.getByRole('button', { name: 'Panic Help' }).click();
   await expect(page.locator('#panic-help-dialog')).toHaveAttribute('open', '');
   await expect(page.locator('#panic-help-context')).toContainText('Simulator is active');

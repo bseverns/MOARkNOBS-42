@@ -87,6 +87,15 @@ const boot = () => {
   const diffPanel = document.getElementById('diff-panel');
   const diffOutput = document.getElementById('diff-output');
   const dirtyBadge = document.getElementById('dirty-badge');
+  const headerProfileStatus = document.getElementById('header-profile-status');
+  const changeBar = document.getElementById('change-bar');
+  const changeCount = document.getElementById('change-count');
+  const changeReviewBtn = document.getElementById('change-review');
+  const changeDiscardBtn = document.getElementById('change-discard');
+  const changeApplyBtn = document.getElementById('change-apply');
+  const changeReviewDialog = document.getElementById('change-review-dialog');
+  const changeReviewCloseBtn = document.getElementById('change-review-close');
+  const changeReviewOutput = document.getElementById('change-review-output');
   const connectionPill = document.getElementById('connection-pill');
   const connectionBanner = document.getElementById('connection-banner');
   const transportLaneChip = document.getElementById('transport-lane-chip');
@@ -164,7 +173,9 @@ const boot = () => {
   const stageDeviceName = document.getElementById('stage-device-name');
   const stageFwVersion = document.getElementById('stage-fw-version');
   const stageProfileSummary = document.getElementById('stage-profile-summary');
-  const stageLastEvent = document.getElementById('stage-last-event');
+  const stageClockState = document.getElementById('stage-clock-state');
+  const stageMidiOutput = document.getElementById('stage-midi-output');
+  const stageSlotFocus = document.getElementById('stage-slot-focus');
   const stagePowerSummary = document.getElementById('stage-power-summary');
   const stageProfileSelect = document.getElementById('stage-profile-select');
   const stageProfileLoadBtn = document.getElementById('stage-profile-load');
@@ -253,9 +264,9 @@ const boot = () => {
     stage:
       'Stage mode keeps only stage-safe connect, profile, scene, power, slot, envelope, and panic controls.',
     basic:
-      'Basic mode keeps common connect, slot mapping, apply, import/export, and profile controls.',
+      'Configure keeps everyday slot mapping, profile, import/export, and Apply controls visible.',
     advanced:
-      'Advanced mode unlocks diagnostics, live-only control lanes, modulation tools, and recovery extras.'
+      'Lab opens diagnostics, live firmware lanes, modulation tools, and recovery extras.'
   };
   const GLOSSARY = {
     mapping:
@@ -306,9 +317,22 @@ const boot = () => {
       diffEmpty,
       dirtyBadge,
       applyBtn,
-      rollbackBtn
+      rollbackBtn,
+      changeBar,
+      changeCount,
+      changeApplyBtn,
+      changeDiscardBtn
     }
   });
+  changeReviewBtn?.addEventListener('click', () => {
+    if (changeReviewOutput) {
+      changeReviewOutput.textContent = diffOutput?.textContent || 'No staged changes.';
+    }
+    changeReviewDialog?.showModal?.();
+  });
+  changeReviewCloseBtn?.addEventListener('click', () => changeReviewDialog?.close?.());
+  changeDiscardBtn?.addEventListener('click', () => rollbackBtn?.click());
+  changeApplyBtn?.addEventListener('click', () => applyBtn?.click());
   const baseSetStatus = diffStatusController.setStatus;
   const sessionLogController = createSessionLogController({
     logEl,
@@ -415,7 +439,9 @@ const boot = () => {
       deviceName: stageDeviceName,
       fwVersion: stageFwVersion,
       profileSummary: stageProfileSummary,
-      lastEvent: stageLastEvent,
+      clockState: stageClockState,
+      midiOutput: stageMidiOutput,
+      slotFocus: stageSlotFocus,
       profileSelect: stageProfileSelect,
       profileLoadBtn: stageProfileLoadBtn,
       sceneSelect: stageSceneSelect,
@@ -1022,6 +1048,12 @@ const boot = () => {
       profileLoadDisabled: Boolean(profileLoadBtn?.disabled),
       sceneRecallDisabled: !recallButton || Boolean(recallButton.disabled)
     });
+    if (headerProfileStatus) {
+      headerProfileStatus.textContent = (profileSlotStatus?.textContent || 'Profile A')
+        .replace(/^Slot\s+/i, 'Profile ')
+        .split('•')[0]
+        .trim();
+    }
   }
 
   // Change which slot is focused in the inspector/editor pane.
