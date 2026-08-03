@@ -11,12 +11,12 @@ For transport and support-boundary tie-breaks, see [Bridge README](https://githu
 - Open `http://127.0.0.1:8787/`.
 - Use Node `24.x` only; the Bridge package still pins `>=24 <25`.
 
-Screenshot note: the images below were captured from the real local Bridge console on this host with the attached board connected and the Bridge session ready. They show the actual operator labels and a real cached session, not mock data.
+Screenshot note: the images below were recaptured on 2026-08-03 from the local Bridge console against the repository's MN42 device simulator. They show the current operator labels and a complete cached Bridge session, but are UI documentation—not hardware validation evidence.
 
-Live session example from this capture:
+Simulator session example from this capture:
 
-- serial path: `/dev/cu.usbmodem192460701`
-- firmware identity: `MOARkNOBS-42` / schema `6` / git `f15aa3a`
+- serial path: `/dev/simulated-mn42`
+- firmware identity: `MOARkNOBS-42` / schema `8` / git `simulated`
 - power boundary: `POWER_CHOKED_V1`
 - LED cap: `26`
 - rail state: `unverified`
@@ -27,7 +27,7 @@ Live session example from this capture:
 
 Setup mode is where a non-developer operator should start.
 
-This capture shows a complete setup path: detected serial hardware, a real host MIDI loopback label, and the top-line `Bridge live and cached device session ready.` status after the operator has already started the Bridge successfully.
+This capture shows a complete setup path, including the simulator serial path, a simulator MIDI label, and the top-line `Bridge live and cached device session ready.` status after the operator has started the Bridge.
 
 - `Serial port` is the firmware USB path. Pick a detected entry from the list or type it manually if the detector missed it.
 - `MIDI port label` should match the host loopback port you intend to use.
@@ -50,7 +50,7 @@ The serial chooser is intentionally simple:
 
 Stage mode is the compact operator view. It is meant to answer “is the Bridge healthy?” without exposing raw debugging detail.
 
-In the screenshot above, the board is already connected, `Device` is `ready`, and the cached session is showing the firmware-reported `POWER_CHOKED_V1` boundary with `LED cap 26` and `rail state unverified`.
+In the screenshot above, the simulated device is connected, `Device` is `ready`, and the cached session shows the simulator's `POWER_CHOKED_V1` boundary with `LED cap 26` and `rail state unverified`.
 
 - `Bridge`, `Serial`, and `Device` show whether the desktop runtime is running, whether the serial link is up, and whether the device session is actually ready.
 - `Telemetry`, `RT p95`, and `Jitter p95` summarize whether the runtime is seeing fresh traffic and whether round-trip timing is staying inside configured targets.
@@ -71,7 +71,7 @@ The console reports the session as ready only after the Bridge has cached all of
 
 Until then, Stage mode may show `awaiting HELLO`, `awaiting handshake`, or empty cached-session fields. That is expected during startup or after a reconnect.
 
-In the live screenshots for this tour, `ready` means the Bridge has already cached the board identity, schema authority, live config snapshot, and the conservative power boundary fields that the release docs currently treat as the safe default for unverified Rev A hardware.
+In the screenshots for this tour, `ready` means the Bridge has already cached device identity, schema authority, a live config snapshot, and conservative power-boundary fields. Confirm those values on attached hardware before relying on them for a release or performance decision.
 
 ### App Launch
 
@@ -89,10 +89,10 @@ That means:
 
 Advanced mode is the diagnostic view. It is still operator-usable, but it assumes you need evidence rather than a quiet status board.
 
-This live capture shows three useful student-facing examples at once:
+This simulator capture shows three useful student-facing examples at once:
 
-- route traces are being logged
-- the raw serial/debug lane is receiving real firmware output
+- the runtime and cached session are present
+- the raw serial/debug lane and route trace surfaces are available for diagnosis
 - the state JSON includes the same cached power and firmware identity fields shown in Stage mode
 
 - `Runtime status` expands the performance and error counters: OSC/MIDI endpoints, last route, source timestamp/skew, round-trip samples, parse drops, command drops, and feedback suppression counts.
