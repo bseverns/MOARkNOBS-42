@@ -36,6 +36,8 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#preset-picker')).toBeHidden();
     await expect(page.locator('#apply-save-profile')).toBeHidden();
     await expect(page.locator('#status')).toBeHidden();
+    await expect(page.locator('#stage-power-summary')).toContainText('Power status unavailable');
+    await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
   });
 
   test('shows simulator manifest power fields in the performer panel', async ({ page }) => {
@@ -52,6 +54,9 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-power-summary')).toContainText('POWER_CHOKED_V1');
     await expect(page.locator('#stage-power-summary')).toContainText('LED cap: 26/255');
     await expect(page.locator('#stage-power-summary')).toContainText('Rail: UNVERIFIED');
+    await expect(page.locator('#stage-power-summary .power-safety-warning')).toContainText(
+      'Power-limited hardware reported'
+    );
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
     await expect(page.locator('#stage-envelopes .meter')).toHaveCount(6);
     await expect(page.locator('#stage-slot-focus')).toContainText('Slot 1 · CC · Ch 1 · Value');
@@ -59,7 +64,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-slot-focus')).toContainText('Slot 17');
   });
 
-  test('shows release-boundary mismatch warning without dirtying config hydration', async ({
+  test('shows split-rail metadata without a power warning or dirtying config hydration', async ({
     page
   }) => {
     await page.addInitScript(({ schemaVersion }) => {
@@ -165,13 +170,13 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-dirty-state')).toHaveText('Clean');
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
-    await expect(page.locator('#stage-power-summary')).toContainText('Release boundary mismatch');
     await expect(page.locator('#stage-power-summary')).toContainText('SPLIT_RAIL_REWORK');
-    await expect(page.locator('#stage-power-summary')).toContainText('26/255');
+    await expect(page.locator('#stage-power-summary')).toContainText('255/255');
+    await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Lab' }).click();
     await expect(page.locator('#performer-panel')).toBeHidden();
-    await expect(page.locator('#stage-power-summary')).toContainText('Release boundary mismatch');
+    await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
   });
 
   test('switching from Stage to Lab restores bench tools', async ({ page }) => {

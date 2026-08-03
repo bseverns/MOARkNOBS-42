@@ -15,7 +15,7 @@ async function bootSimulator(page) {
 
 async function expectBrowserOnlyStateClean(page) {
   await expect(page.locator('#dirty-badge')).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
+  await expect(page.locator('#apply')).toBeDisabled();
   const state = await page.evaluate(() => ({
     dirty: window.__MN42_RUNTIME.getState().dirty,
     diff: window.__MN42_RUNTIME.diff()

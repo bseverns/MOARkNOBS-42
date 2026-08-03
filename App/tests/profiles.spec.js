@@ -38,17 +38,20 @@ test.describe('Profiles toolbar', () => {
     await freqInput.dispatchEvent('change');
     await expect(page.locator('#dirty-badge')).toBeVisible();
 
-    const applyButton = page.getByRole('button', { name: 'Apply' });
+    const applyButton = page.locator('#apply');
     await applyButton.click();
     await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
 
-    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await page.locator('#profile-save').click();
     await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
 
     await freqInput.fill('200');
     await freqInput.dispatchEvent('change');
-    await page.getByRole('button', { name: 'Switch profile', exact: true }).click();
+    await page.locator('#profile-load').click();
+    await expect(page.locator('#status-label')).toHaveText('Draft protected');
+    await page.locator('#change-discard').click();
+    await page.locator('#profile-load').click();
     await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 5000 });
     await expect(freqInput).toHaveValue('123');
     await expect(page.locator('#dirty-badge')).toBeHidden();
@@ -62,7 +65,7 @@ test.describe('Profiles toolbar', () => {
     await freqInput.dispatchEvent('change');
     await expect(page.locator('#dirty-badge')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+    await page.locator('#profile-save').click();
     await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
   });
@@ -72,9 +75,9 @@ test.describe('Profiles toolbar', () => {
 
     await page.selectOption('#preset-picker', 'demo-profile-a');
     await expect(page.locator('#dirty-badge')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save staged edits' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Apply and save to Profile A' })).toBeEnabled();
 
-    await page.getByRole('button', { name: 'Save staged edits' }).click();
+    await page.getByRole('button', { name: 'Apply and save to Profile A' }).click();
     await expect(page.locator('#status-label')).toHaveText('Profile saved', { timeout: 5000 });
     await expect(page.locator('#dirty-badge')).toBeHidden();
   });

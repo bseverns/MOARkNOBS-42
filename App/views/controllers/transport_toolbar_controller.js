@@ -24,6 +24,7 @@ export function createTransportToolbarController({
   resolveFirmwareVersion,
   setStatus,
   syncConfigFileButtons = () => {},
+  canReplaceStaged = () => true,
   onConnectionPillChanged = () => {}
 } = {}) {
   const {
@@ -112,18 +113,21 @@ export function createTransportToolbarController({
           ? ' via Bridge raw transport'
           : '';
     if (stage === 'live') {
+      connectionBanner.removeAttribute('hidden');
       const deviceName = resolveDeviceName(manifest);
       const fwVersion = resolveFirmwareVersion(manifest);
       connectionBanner.textContent = `Connected to: ${deviceName} (FW ${fwVersion})${transportLabel}`;
       return;
     }
     if (stage === 'handshake') {
+      connectionBanner.removeAttribute('hidden');
       connectionBanner.textContent = `Connecting to: ${resolveDeviceName(
         manifest
       )}${transportLabel}`;
       return;
     }
-    connectionBanner.textContent = 'Connected to: —';
+    connectionBanner.textContent = '';
+    connectionBanner.setAttribute('hidden', '');
   }
 
   function updateTransportLaneChip() {
@@ -770,6 +774,7 @@ export function createTransportToolbarController({
     if (simulatorToggle.dataset.booted) return;
     simulatorToggle.dataset.booted = 'true';
     simulatorToggle.addEventListener('click', () => {
+      if (!canReplaceStaged('Change transport')) return;
       const toggled = simulatorToggle.classList.toggle('active');
       runtime.useSimulator(toggled);
       simulatorToggle.textContent = toggled ? 'Stop simulator' : 'Start simulator';

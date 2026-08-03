@@ -46,7 +46,7 @@ test('ef assignment editor stages multi-slot follower routes', async ({ page }) 
     const efSlots = runtime?.getState?.().staged?.efSlots;
     return Array.isArray(efSlots) && efSlots.length > 0 && Array.isArray(efSlots[0]?.slots);
   });
-  await page.getByRole('button', { name: 'Envelope' }).click();
+  await page.getByRole('tab', { name: 'Envelope' }).click();
 
   const efRow = page.locator('#ef-assignment-card .ef-row').first();
   await expect(efRow).toBeVisible();

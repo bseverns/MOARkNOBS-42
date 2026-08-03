@@ -256,8 +256,14 @@ export function createPerformerPanelController({
     if (profileSelect) {
       profileSelect.value = String(getActiveProfileSlot());
     }
-    if (profileLoadBtn) profileLoadBtn.disabled = Boolean(profileLoadDisabled);
-    if (sceneRecallBtn) sceneRecallBtn.disabled = Boolean(sceneRecallDisabled);
+    if (profileLoadBtn) {
+      profileLoadBtn.disabled = Boolean(profileLoadDisabled);
+      profileLoadBtn.textContent = `Recall Profile ${slotLabel(getActiveProfileSlot())} now`;
+    }
+    if (sceneRecallBtn) {
+      sceneRecallBtn.disabled = Boolean(sceneRecallDisabled);
+      sceneRecallBtn.textContent = `Recall Scene ${Number(sceneSelect?.value ?? 0) + 1} now`;
+    }
   }
 
   function slotLabel(index) {

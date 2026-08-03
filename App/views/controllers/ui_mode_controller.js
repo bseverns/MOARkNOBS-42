@@ -65,7 +65,45 @@ export function createUiModeController({
   let activeUtilityTab = 'console';
   const managedNodes = Array.from(new Set([...uiModeNodes, ...advancedTierNodes]));
 
+  function initializeTabGroup(buttons, prefix, controlsForButton) {
+    buttons.forEach((button, index) => {
+      button.setAttribute('role', 'tab');
+      button.id ||= `${prefix}-tab-${index}`;
+      const controls = controlsForButton(button, index);
+      if (controls) button.setAttribute('aria-controls', controls);
+      button.addEventListener('keydown', (event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        const visible = buttons.filter(
+          (candidate) => isModeAllowed(candidate, activeUiMode) && !candidate.classList.contains('ui-tier-hidden')
+        );
+        if (!visible.length) return;
+        const current = Math.max(0, visible.indexOf(button));
+        const nextIndex =
+          event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? visible.length - 1
+              : (current + (event.key === 'ArrowRight' ? 1 : -1) + visible.length) % visible.length;
+        event.preventDefault();
+        visible[nextIndex].focus();
+        visible[nextIndex].click();
+      });
+    });
+  }
+
   function bind() {
+    initializeTabGroup(editorTabButtons, 'editor', () => 'form');
+    initializeTabGroup(utilityTabButtons, 'utility', (button) => {
+      const tab = normalizeUtilityTab(button.dataset.utilityTab);
+      const panel = utilityPanels.find(
+        (candidate) => normalizeUtilityTab(candidate.dataset.utilityPanel) === tab
+      );
+      if (!panel) return '';
+      panel.id ||= `utility-panel-${tab}`;
+      panel.setAttribute('role', 'tabpanel');
+      panel.setAttribute('aria-labelledby', button.id);
+      return panel.id;
+    });
     uiModeButtons.forEach((button) => {
       button.addEventListener('click', () => {
         setUIMode(button.dataset.uiModeBtn);
@@ -148,6 +186,8 @@ export function createUiModeController({
       const buttonTab = normalizeEditorTab(button.dataset.editorTab);
       const allowed = isModeAllowed(button, activeUiMode);
       button.setAttribute('aria-pressed', allowed && buttonTab === effectiveTab ? 'true' : 'false');
+      button.setAttribute('aria-selected', allowed && buttonTab === effectiveTab ? 'true' : 'false');
+      button.tabIndex = allowed && buttonTab === effectiveTab ? 0 : -1;
     });
     if (efAssignmentCard) {
       efAssignmentCard.toggleAttribute(
@@ -166,6 +206,8 @@ export function createUiModeController({
       const buttonTab = normalizeUtilityTab(button.dataset.utilityTab);
       const allowed = isModeAllowed(button, activeUiMode);
       button.setAttribute('aria-pressed', allowed && buttonTab === effectiveTab ? 'true' : 'false');
+      button.setAttribute('aria-selected', allowed && buttonTab === effectiveTab ? 'true' : 'false');
+      button.tabIndex = allowed && buttonTab === effectiveTab ? 0 : -1;
     });
     utilityPanels.forEach((panel) => {
       const panelTab = normalizeUtilityTab(panel.dataset.utilityPanel);

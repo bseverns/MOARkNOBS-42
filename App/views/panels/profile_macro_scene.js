@@ -142,7 +142,9 @@ export function createProfileMacroScenePanel({
   localManifest,
   setStatus,
   elements = {},
-  getSelectedSlot = () => 0
+  getSelectedSlot = () => 0,
+  confirmReplaceStaged = () => true,
+  onImportedDraft = () => {}
 } = {}) {
   const {
     profileSlotButtons = [],
@@ -247,7 +249,8 @@ export function createProfileMacroScenePanel({
     getActiveProfileSlot: () => activeProfileSlot,
     slotLabel,
     describeSlot,
-    setActiveProfileSlot
+    setActiveProfileSlot,
+    onImportedDraft
   });
   const sceneControls = createProfileSceneControls({
     runtime,
@@ -256,7 +259,8 @@ export function createProfileMacroScenePanel({
     sceneStatusEl,
     sceneSlotCount: SCENE_SLOT_COUNT,
     isInteractable: () => profileInteractable,
-    supportsScenes: () => deviceCapabilities.scenes
+    supportsScenes: () => deviceCapabilities.scenes,
+    confirmReplaceStaged
   });
   const profileWorkflow = createProfileWorkflow({
     runtime,
@@ -1305,6 +1309,11 @@ export function createProfileMacroScenePanel({
     if (profileSlotStatus) {
       profileSlotStatus.textContent = `${describeSlot(bounded)} • ${profileSlotModeCopy()}`;
     }
+    const label = slotLabel(bounded);
+    if (profileSaveBtn) profileSaveBtn.textContent = `Save to Profile ${label}`;
+    if (profileLoadBtn) profileLoadBtn.textContent = `Switch to Profile ${label} now`;
+    if (profileResetBtn) profileResetBtn.textContent = `Reset Profile ${label}`;
+    if (applySaveProfileBtn) applySaveProfileBtn.textContent = `Apply and save to Profile ${label}`;
     if (persist) {
       persistProfileSlot(bounded, { slotCount: PROFILE_LABELS.length });
     }
@@ -1338,7 +1347,10 @@ export function createProfileMacroScenePanel({
     const canInteract =
       profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && !arpBusy;
     if (arpRefreshBtn) arpRefreshBtn.disabled = !canInteract;
-    if (arpSaveBtn) arpSaveBtn.disabled = !canInteract;
+    if (arpSaveBtn) {
+      arpSaveBtn.disabled = !canInteract;
+      arpSaveBtn.textContent = `Save to Profile ${slotLabel(activeProfileSlot)}`;
+    }
     [
       arpLengthInput,
       arpShapeSelect,
@@ -1389,7 +1401,9 @@ export function createProfileMacroScenePanel({
     if (lfoRefreshBtn) lfoRefreshBtn.disabled = !canInteract;
     if (lfoSaveBtn) {
       lfoSaveBtn.disabled = !canInteract || !lfoDraftDirty;
-      lfoSaveBtn.textContent = lfoDraftDirty ? 'Push & save LFO changes' : 'Save profile LFOs';
+      lfoSaveBtn.textContent = lfoDraftDirty
+        ? `Push live and save to Profile ${slotLabel(activeProfileSlot)}`
+        : `Save to Profile ${slotLabel(activeProfileSlot)}`;
       lfoSaveBtn.title = lfoDraftDirty
         ? `Apply local LFO edits live and persist them to ${describeSlot()}.`
         : `No unsaved LFO edits for ${describeSlot()}.`;
@@ -1858,6 +1872,7 @@ export function createProfileMacroScenePanel({
   async function handleWizardSwitchProfile() {
     // Step 1: bind the UI to the selected slot and pull that slot's config into staged/live state.
     if (!profileInteractable || profileWorkflow.isLocked() || profileWizardBusy) return;
+    if (!confirmReplaceStaged(`Switch to Profile ${slotLabel(profileWizardTargetSlot)}`)) return;
     profileWizardBusy = true;
     refreshProfileControls();
     try {
@@ -1967,7 +1982,10 @@ export function createProfileMacroScenePanel({
       if (!confirmation) return;
       runMacroCommand(MACRO_SAVE_COMMAND);
     });
-    macroRecallBtn?.addEventListener('click', () => runMacroCommand(MACRO_RECALL_COMMAND));
+    macroRecallBtn?.addEventListener('click', () => {
+      if (!confirmReplaceStaged('Recall macro snapshot now')) return;
+      runMacroCommand(MACRO_RECALL_COMMAND);
+    });
     setMacroStatus('muted', 'Awaiting the first snapshot.');
     setArpDraft(createDefaultArpDraft());
     setLfoDraft(createDefaultLfoDraft());
@@ -2030,22 +2048,24 @@ export function createProfileMacroScenePanel({
         successCopy: `${describeSlot()} archived`
       })
     );
-    profileLoadBtn?.addEventListener('click', () =>
+    profileLoadBtn?.addEventListener('click', () => {
+      if (!confirmReplaceStaged(`Switch to Profile ${slotLabel(activeProfileSlot)}`)) return;
       runProfileRpc('load_profile', {
         busyLabel: 'Switching profile…',
         successLabel: 'Profile switched',
         successCopy: `${describeSlot()} active`,
         expectConfig: true
-      })
-    );
-    profileResetBtn?.addEventListener('click', () =>
+      });
+    });
+    profileResetBtn?.addEventListener('click', () => {
+      if (!confirmReplaceStaged(`Reset Profile ${slotLabel(activeProfileSlot)}`)) return;
       runProfileRpc('reset_profile', {
         busyLabel: 'Resetting profile…',
         successLabel: 'Profile reset',
         successCopy: `${describeSlot()} restored`,
         expectConfig: true
-      })
-    );
+      });
+    });
     profileDownloadBtn?.addEventListener('click', () => profileFileIO.handleProfileDownload());
     profileUploadBtn?.addEventListener('click', () => profileFileIO.handleProfileUpload());
     applySaveProfileBtn?.addEventListener('click', () =>

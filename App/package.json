@@ -10,7 +10,9 @@
     "test:contract": "node ../tools/require_node_24.js && python3 ../tools/check_contract_sync.py --root .. && python3 ../tools/check_simulator_protocol_sync.py --root ..",
     "test": "node ../tools/require_node_24.js && playwright test",
     "test:report": "node ../tools/require_node_24.js && playwright show-report",
-    "ci": "node ../tools/require_node_24.js && npm test && npm run test:contract"
+    "build:deploy": "node ../tools/require_node_24.js && node ./scripts/build-deploy.mjs",
+    "test:deploy": "node ../tools/require_node_24.js && npm run build:deploy && node ./scripts/smoke-deploy.mjs",
+    "ci": "node ../tools/require_node_24.js && npm test && npm run test:contract && npm run test:deploy"
   },
   "devDependencies": {
     "@playwright/test": "^1.44.1"

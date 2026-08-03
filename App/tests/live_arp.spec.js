@@ -198,7 +198,7 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await page.locator('#live-arp-stop').click();
   await expect(page.locator('#live-arp-status')).toContainText('Idle');
   await expect(page.locator('#dirty-badge')).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
+  await expect(page.locator('#apply')).toBeDisabled();
 });
 
 test('profile arp GET and SET round-trip pattern length in the App payload', async ({ page }) => {

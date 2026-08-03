@@ -21,7 +21,7 @@ test('live runtime controls do not dirty staged config or require Apply', async 
   await expect(page.locator('#status-label')).toHaveText('Note dynamics updated');
 
   await expect(page.locator('#dirty-badge')).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Apply' })).toBeDisabled();
+  await expect(page.locator('#apply')).toBeDisabled();
 
   const state = await page.evaluate(() => ({
     dirty: window.__MN42_RUNTIME.getState().dirty,
@@ -169,7 +169,7 @@ test('readback divergence preserves staged and live truth and updates status UI'
   });
 
   await expect(page.locator('#dirty-badge')).toBeVisible();
-  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await page.locator('#apply').click();
   await expect(page.locator('#status-label')).toHaveText('Device differs');
   await expect(page.locator('#status .status-message')).toContainText('readback');
   await expect(page.locator('#dirty-badge')).toBeVisible();

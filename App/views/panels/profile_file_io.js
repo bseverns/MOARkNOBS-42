@@ -6,7 +6,8 @@ export function createProfileFileIO({
   getActiveProfileSlot,
   slotLabel,
   describeSlot,
-  setActiveProfileSlot
+  setActiveProfileSlot,
+  onImportedDraft = () => {}
 } = {}) {
   // Export the currently targeted profile slot as a standalone JSON file backup.
   function handleProfileDownload() {
@@ -58,6 +59,7 @@ export function createProfileFileIO({
         }
         // Import is staged-only by design so users can inspect diffs before pushing to hardware.
         runtime.stage(() => configData);
+        onImportedDraft();
         setStatus(
           'warn',
           'Profile imported',

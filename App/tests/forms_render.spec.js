@@ -22,7 +22,7 @@ test('a real staged firmware config edit enables Apply and clears only after ACK
   await freqInput.dispatchEvent('change');
 
   await expect(page.locator('#dirty-badge')).toBeVisible();
-  const apply = page.getByRole('button', { name: 'Apply' });
+  const apply = page.locator('#apply');
   await expect(apply).toBeEnabled();
   const diffBeforeApply = await page.evaluate(() => window.__MN42_RUNTIME.diff());
   expect(diffBeforeApply.length).toBeGreaterThan(0);

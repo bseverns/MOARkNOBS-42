@@ -367,9 +367,9 @@ test('native transport disables unsupported profile and recovery controls', asyn
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await openRecoveryDrawer(page);
 
-  await expect(page.getByRole('button', { name: 'Save profile', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeDisabled();
-  await expect(page.getByRole('button', { name: 'Reset profile', exact: true })).toBeDisabled();
+  await expect(page.locator('#profile-save')).toBeDisabled();
+  await expect(page.locator('#profile-load')).toBeDisabled();
+  await expect(page.locator('#profile-reset')).toBeDisabled();
   await expect(page.getByRole('button', { name: '1. Switch target', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: '3. Save profile', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Save Macro Snapshot' })).toBeDisabled();
@@ -768,17 +768,17 @@ test('native transport supports profile, macro, and scene actions when firmware 
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await openRecoveryDrawer(page);
 
-  await expect(page.getByRole('button', { name: 'Save profile', exact: true })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Switch profile', exact: true })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Reset profile', exact: true })).toBeEnabled();
+  await expect(page.locator('#profile-save')).toBeEnabled();
+  await expect(page.locator('#profile-load')).toBeEnabled();
+  await expect(page.locator('#profile-reset')).toBeEnabled();
   await expect(page.getByRole('button', { name: 'Save Macro Snapshot' })).toBeEnabled();
   await expect(page.locator('.scene-save').first()).toBeEnabled();
 
-  await page.getByRole('button', { name: 'Save profile', exact: true }).click();
+  await page.locator('#profile-save').click();
   await expect(page.locator('#status-label')).toHaveText('Profile saved');
-  await page.getByRole('button', { name: 'Switch profile', exact: true }).click();
+  await page.locator('#profile-load').click();
   await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 10000 });
-  await page.getByRole('button', { name: 'Reset profile', exact: true }).click();
+  await page.locator('#profile-reset').click();
   await expect(page.locator('#status-label')).toHaveText('Profile reset');
 
   await page.evaluate(async () => {

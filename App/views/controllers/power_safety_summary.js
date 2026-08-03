@@ -1,12 +1,6 @@
-import {
-  MN42_LED_BRIGHTNESS_CAP,
-  MN42_POWER_PROFILE,
-  MN42_RAIL_TOPOLOGY_VERIFIED
-} from '../../manifest_contract.js';
-
 function formatBrightnessCap(value) {
   const numeric = Number(value);
-  return Number.isFinite(numeric) ? `${numeric}/255` : '-';
+  return Number.isFinite(numeric) ? `${numeric}/255` : 'unavailable';
 }
 
 function formatRailState(value) {
@@ -15,37 +9,28 @@ function formatRailState(value) {
   return 'unknown';
 }
 
-function buildReleaseBoundaryMismatch(manifest = {}) {
-  const reportedProfile =
-    typeof manifest?.power_profile === 'string' ? manifest.power_profile : null;
-  const reportedRailVerified = manifest?.rail_topology_verified;
-  const reportedCap = Number(manifest?.led_brightness_cap);
-  const profileMismatch = reportedProfile === 'SPLIT_RAIL_REWORK';
-  const railMismatch = reportedRailVerified === true;
+export function renderPowerSummary(container, manifest = {}, { connected = false } = {}) {
+  if (!container) return;
+  container.innerHTML = '';
+  container.dataset.powerWarning = 'false';
+  container.dataset.powerAvailable = connected ? 'true' : 'false';
 
-  if (!profileMismatch && !railMismatch) {
-    return null;
+  if (!connected) {
+    const unavailable = document.createElement('span');
+    unavailable.className = 'power-status-unavailable';
+    unavailable.textContent = 'Power status unavailable';
+    container.append(unavailable);
+    return;
   }
 
-  return {
-    reportedProfile: reportedProfile || '-',
-    reportedCap: Number.isFinite(reportedCap) ? `${reportedCap}/255` : '-',
-    reportedRail: formatRailState(reportedRailVerified).toUpperCase(),
-    expectedProfile: MN42_POWER_PROFILE,
-    expectedCap: `${MN42_LED_BRIGHTNESS_CAP}/255`,
-    expectedRail: formatRailState(MN42_RAIL_TOPOLOGY_VERIFIED).toUpperCase()
-  };
-}
-
-export function renderPowerSummary(container, manifest = {}) {
-  if (!container) return;
+  const profile =
+    typeof manifest?.power_profile === 'string' && manifest.power_profile.trim()
+      ? manifest.power_profile.trim()
+      : 'unavailable';
   const railState = formatRailState(manifest?.rail_topology_verified);
-  const mismatch = buildReleaseBoundaryMismatch(manifest);
-  container.innerHTML = '';
-  container.dataset.powerMismatch = mismatch ? 'true' : 'false';
 
   const power = document.createElement('span');
-  power.textContent = `Power: ${manifest?.power_profile || '-'}`;
+  power.textContent = `Power: ${profile}`;
 
   const cap = document.createElement('span');
   cap.textContent = `LED cap: ${formatBrightnessCap(manifest?.led_brightness_cap)}`;
@@ -56,24 +41,20 @@ export function renderPowerSummary(container, manifest = {}) {
 
   container.append(power, cap, rail);
 
-  if (!mismatch) {
-    return;
-  }
+  if (profile !== 'POWER_CHOKED_V1') return;
 
+  container.dataset.powerWarning = 'true';
   const warning = document.createElement('div');
   warning.className = 'power-safety-warning';
-  warning.dataset.powerMismatch = 'true';
+  warning.dataset.powerWarning = 'true';
   warning.textContent =
-    `Release boundary mismatch: firmware reports ${mismatch.reportedProfile}, LED cap ${mismatch.reportedCap}, ` +
-    `rail ${mismatch.reportedRail}. Current repo-safe expectation is ${mismatch.expectedProfile}, ` +
-    `LED cap ${mismatch.expectedCap}, rail ${mismatch.expectedRail} for Rev A or otherwise undocumented ` +
-    `topology. Avoid full-brightness LED tests until rail topology is documented.`;
+    'Power-limited hardware reported. Keep LED brightness within the device-reported cap and avoid full-brightness LED tests.';
   container.append(warning);
 }
 
 export function createPowerSafetySummary({ containers = [] } = {}) {
-  function render(manifest = {}) {
-    containers.forEach((container) => renderPowerSummary(container, manifest));
+  function render(manifest = {}, options = {}) {
+    containers.forEach((container) => renderPowerSummary(container, manifest, options));
   }
 
   return { render };

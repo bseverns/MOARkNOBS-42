@@ -40,10 +40,12 @@ test.describe('UI mode', () => {
     await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#performer-panel')).toBeHidden();
     await expect(page.locator('.runtime-lane-chip[data-runtime-lane="staged"]')).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Console' })).toHaveAttribute('aria-selected', 'true');
     await expect(page.locator('#filter-settings')).toBeVisible();
     await expect(page.locator('#arg-settings')).toBeVisible();
     await expect(page.locator('#device-monitor-section')).toBeVisible();
-    await page.getByRole('button', { name: 'Scope' }).click();
+    await page.getByRole('tab', { name: 'Console' }).press('End');
+    await expect(page.getByRole('tab', { name: 'Scope' })).toBeFocused();
     await expect(page.locator('#scope-panel')).toBeVisible();
 
     await page.reload();
@@ -80,11 +82,21 @@ test.describe('UI mode', () => {
     await expect(page.locator('#dirty-badge')).toBeVisible();
     await expect(page.locator('#change-bar')).toBeVisible();
     await expect(page.locator('#change-count')).toHaveText('1 staged change');
+    await expect(page.locator('#change-bar')).toHaveCSS('position', 'fixed');
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const barBox = await page.locator('#change-bar').boundingBox();
+    const viewport = page.viewportSize();
+    expect(barBox).not.toBeNull();
+    expect(viewport).not.toBeNull();
+    expect(barBox.y + barBox.height).toBeLessThanOrEqual(viewport.height);
     await page.locator('#change-review').click();
     await expect(page.locator('#change-review-dialog')).toHaveAttribute('open', '');
     await expect(page.locator('#change-review-output')).toContainText('1 staged change');
+    await expect(page.locator('.change-review-group')).toHaveCount(1);
+    await expect(page.locator('.change-review-values')).toContainText('Live');
+    await expect(page.locator('.change-review-values')).toContainText('Staged');
     await page.locator('#change-review-close').click();
-    const apply = page.getByRole('button', { name: 'Apply' });
+    const apply = page.locator('#apply');
     await expect(apply).toBeEnabled();
     await apply.click();
     await expect(page.locator('#status-label')).toHaveText('Synced', { timeout: 5000 });

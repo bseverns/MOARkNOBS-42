@@ -24,8 +24,11 @@
         <div class="workspace-toolbar">
           <div class="workspace-status-line">
             <details class="connection-details">
-              <summary><span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span></summary>
-              <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
+              <summary aria-label="Connection details: expand firmware, schema, and memory information"><span class="pill" id="connection-pill" data-stage="disconnected" role="status">Disconnected</span></summary>
+              <div class="connection-detail-card">
+                <div class="status-pill" id="header-status" aria-live="polite">fw – schema – memory</div>
+                <small id="app-source-identity">App source: development</small>
+              </div>
             </details>
             <span class="active-profile-pill" id="header-profile-status">Profile A</span>
             <span id="dirty-badge" role="status" hidden>Staged changes</span>
@@ -34,11 +37,10 @@
             <button id="connect" type="button" disabled aria-busy="true">Connect</button>
             <button id="check-compatibility" type="button" data-ui-modes="advanced">Check compatibility</button>
             <button id="config-mode" type="button" data-ui-modes="advanced">Config boot</button>
-            <button id="apply" type="button" disabled>Apply</button>
             <button id="rollback" type="button" disabled data-ui-modes="advanced">Rollback</button>
             <button id="retry-readback" type="button" hidden>Retry device readback</button>
           </div>
-          <span class="connection-banner" id="connection-banner" role="status">Connected to: —</span>
+          <span class="connection-banner" id="connection-banner" role="status" hidden></span>
           <div class="power-safety-pill" id="power-safety-pill" role="status" aria-live="polite" data-ui-modes="basic">
             <span>Power: —</span>
             <span>LED cap: —</span>
@@ -69,9 +71,9 @@
             </div>
           </div>
           <div class="profile-actions" role="group" aria-label="Device profile actions">
-            <button id="profile-save" type="button" disabled>Save profile</button>
-            <button id="profile-load" type="button" disabled>Switch profile</button>
-            <button id="profile-reset" type="button" disabled>Reset profile</button>
+            <button id="profile-save" class="action-primary" type="button" disabled>Save to Profile A</button>
+            <button id="profile-load" class="action-live" type="button" disabled>Switch to Profile A now</button>
+            <button id="profile-reset" class="action-destructive" type="button" disabled>Reset Profile A</button>
           </div>
           <div class="profile-wizard" id="profile-wizard" aria-label="Guided profile save" data-ui-modes="advanced">
             <strong>Guided profile save</strong>
@@ -139,6 +141,11 @@
       </details>
     </header>
     <main>
+      <section id="workspace-empty-state" class="workspace-empty-state" data-ui-modes="basic advanced">
+        <p class="workspace-kicker">Ready when you are</p>
+        <h2>Connect a controller or start the simulator to inspect 42 slots.</h2>
+        <p class="microcopy">Configure is the default path: connect, choose a slot, map it, review, and apply.</p>
+      </section>
       <section id="performer-panel" aria-labelledby="performer-title" hidden>
         <header class="performer-header">
           <div>
@@ -191,7 +198,7 @@
               <option value="3">Profile D</option>
             </select>
           </label>
-          <button id="stage-profile-load" type="button" disabled>Load Profile</button>
+          <button id="stage-profile-load" class="action-live" type="button" disabled>Recall Profile A now</button>
           <label data-ui-modes="stage advanced">
             <span>Recall Scene</span>
             <select id="stage-scene-select">
@@ -203,8 +210,8 @@
               <option value="5">Scene 6</option>
             </select>
           </label>
-          <button id="stage-scene-recall" type="button" disabled data-ui-modes="stage advanced">Recall Scene</button>
-          <button id="stage-panic-help" type="button" data-ui-modes="stage advanced">Panic Help</button>
+          <button id="stage-scene-recall" class="action-live" type="button" disabled data-ui-modes="stage advanced">Recall Scene 1 now</button>
+          <button id="stage-panic-help" class="action-warning" type="button" data-ui-modes="stage advanced">Panic Help</button>
         </div>
 
         <div class="performer-grid">
@@ -384,10 +391,10 @@
             <select id="preset-picker">
               <option value="">Select a preset…</option>
             </select>
-            <button id="apply-save-profile" type="button" disabled>Save staged edits</button>
+            <button id="apply-save-profile" class="action-primary" type="button" disabled>Apply and save to Profile A</button>
             <button id="simulator-toggle" type="button" data-ui-modes="advanced">Start simulator</button>
           </div>
-          <section class="live-toggle-card" aria-labelledby="usb-midi-toggle-title" data-ui-modes="advanced">
+          <section class="live-toggle-card live-boundary" aria-labelledby="usb-midi-toggle-title" data-ui-modes="advanced">
             <header class="live-toggle-card-header">
               <div>
                 <h3 id="usb-midi-toggle-title">USB MIDI Output</h3>
@@ -403,7 +410,7 @@
               Connect to inspect USB MIDI output state.
             </p>
           </section>
-          <fieldset id="led-settings" class="schema-section" data-schema-section="led" data-ui-modes="advanced">
+          <fieldset id="led-settings" class="schema-section staged-boundary" data-schema-section="led" data-ui-modes="advanced">
             <legend>LED Colors</legend>
             <div class="schema-section-body" data-schema-target="led"></div>
             <div id="led-grid" aria-live="polite"></div>
@@ -449,7 +456,7 @@
                 </label>
                 <button id="midi-clock-toggle" type="button" disabled>Start clock</button>
               </div>
-              <section class="live-toggle-card" aria-labelledby="device-clock-title">
+              <section class="live-toggle-card live-boundary" aria-labelledby="device-clock-title">
                 <header class="live-toggle-card-header">
                   <div>
                     <h3 id="device-clock-title">Device Clock</h3>
@@ -478,7 +485,7 @@
                   </label>
                 </div>
                 <div class="live-toggle-actions">
-                  <button id="device-clock-apply" type="button" disabled>Push clock settings</button>
+                  <button id="device-clock-apply" class="action-live" type="button" disabled>Push live override</button>
                 </div>
                 <p class="microcopy macro-status" id="device-clock-status" data-state="muted" aria-live="polite">
                   Connect to inspect live device clock state.
@@ -606,7 +613,7 @@
               </div>
               <div class="live-toggle-actions">
                 <button id="live-arp-refresh" type="button" disabled>Refresh live arp</button>
-                <button id="live-arp-apply" type="button" disabled>Push live arp</button>
+                <button id="live-arp-apply" class="action-live" type="button" disabled>Push live override</button>
                 <button id="live-arp-start" type="button" disabled>Start slot</button>
                 <button id="live-arp-stop" type="button" disabled>Stop arp</button>
               </div>
@@ -634,7 +641,7 @@
                 </label>
               </div>
               <div class="live-toggle-actions">
-                <button id="jitter-apply" type="button" disabled>Push jitter</button>
+                <button id="jitter-apply" class="action-live" type="button" disabled>Push live override</button>
               </div>
               <p class="microcopy macro-status" id="jitter-status" data-state="muted" aria-live="polite">
                 Connect to inspect live jitter tuning.
@@ -651,7 +658,7 @@
         </div>
 
         <div class="performance-panel" data-performance-panel="lfo" data-ui-tier="advanced">
-          <div class="macro-card lfo-card" id="lfo-profile-card" aria-label="LFO profile controls">
+          <div class="macro-card lfo-card saved-boundary" id="lfo-profile-card" aria-label="LFO profile controls">
             <div class="macro-card-header">
               <strong>Profile LFOs &amp; Routes</strong>
               <p class="microcopy">Edit the two profile-wide LFO generators and assign their routes for the selected profile A–D entry. Fixed per-slot lanes remain in Selected Slot.</p>
@@ -710,13 +717,13 @@
         </div>
       </aside>
 
-      <section id="slot-detail-panel" aria-labelledby="slot-detail-heading" data-ui-modes="advanced">
-        <header class="slot-detail-panel-header">
+      <details id="slot-detail-panel" aria-labelledby="slot-detail-heading" data-ui-modes="advanced">
+        <summary class="slot-detail-panel-header">
           <div>
-            <h2 id="slot-detail-heading">Slot Details</h2>
-            <p class="microcopy">Focused snapshot of the currently selected slot without repeating the live slot wall.</p>
+            <h2 id="slot-detail-heading">Diagnostic Slot Inspector</h2>
+            <p class="microcopy">Expand a compact read-only snapshot of the selected slot.</p>
           </div>
-        </header>
+        </summary>
         <dl id="slot-details" aria-live="polite">
           <div>
             <dt>Slot</dt>
@@ -775,7 +782,7 @@
             <dd id="slot-detail-value">—</dd>
           </div>
         </dl>
-      </section>
+      </details>
 
       <details class="debug-log-bridge" data-ui-tier="advanced">
         <summary>Debug Log</summary>
@@ -789,12 +796,12 @@
         <pre id="log" aria-live="off"></pre>
       </details>
     </main>
-    <div id="change-bar" class="change-bar" data-ui-modes="basic advanced" hidden role="region" aria-label="Staged changes">
+    <div id="change-bar" class="change-bar" data-ui-modes="basic advanced" hidden tabindex="-1" role="region" aria-label="Staged changes">
       <strong id="change-count">0 staged changes</strong>
       <div class="change-bar-actions">
         <button id="change-review" type="button">Review</button>
-        <button id="change-discard" type="button">Discard</button>
-        <button id="change-apply" type="button" aria-label="Commit staged changes" disabled>Apply changes</button>
+        <button id="change-discard" class="action-destructive" type="button">Discard draft</button>
+        <button id="apply" class="action-primary" type="button" disabled>Apply staged changes</button>
       </div>
     </div>
     <dialog id="change-review-dialog" class="change-review-dialog" aria-labelledby="change-review-title">
@@ -805,7 +812,7 @@
         </div>
         <button id="change-review-close" type="button">Close</button>
       </header>
-      <pre id="change-review-output"></pre>
+      <div id="change-review-output" class="change-review-output"></div>
     </dialog>
     <dialog id="migration-dialog">
       <h2 id="migration-title">Migration Needed</h2>
@@ -855,7 +862,7 @@
     </footer>
   </div>
   <div id="note-dynamics-parking" hidden data-ui-modes="advanced">
-    <section class="live-toggle-card slot-note-dynamics-card" id="note-dynamics-card"
+    <section class="live-toggle-card live-boundary slot-note-dynamics-card" id="note-dynamics-card"
       aria-labelledby="note-dynamics-title" hidden data-ui-modes="advanced">
       <header class="live-toggle-card-header">
         <div>
@@ -875,7 +882,7 @@
         </label>
       </div>
       <div class="live-toggle-actions">
-        <button id="note-dynamics-apply" type="button" disabled>Push note dynamics</button>
+        <button id="note-dynamics-apply" class="action-live" type="button" disabled>Push live override</button>
       </div>
       <p class="microcopy macro-status" id="note-dynamics-status" data-state="muted" aria-live="polite">
         Select a Note slot to tune live note dynamics.

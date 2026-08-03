@@ -7,7 +7,8 @@ export function createProfileSceneControls({
   sceneStatusEl = null,
   sceneSlotCount = DEFAULT_SCENE_SLOT_COUNT,
   isInteractable = () => false,
-  supportsScenes = () => false
+  supportsScenes = () => false,
+  confirmReplaceStaged = () => true
 } = {}) {
   const sceneSlotState = Array.from({ length: sceneSlotCount }, () => ({
     name: '',
@@ -113,6 +114,7 @@ export function createProfileSceneControls({
       return;
     }
     if (!isInteractable() || sceneBusy) return;
+    if (!confirmReplaceStaged(`Recall Scene ${slotIndex + 1} now`)) return;
     sceneBusy = true;
     updateControls();
     setSceneStatus('busy', `Recalling scene ${slotIndex + 1}…`);
@@ -151,7 +153,7 @@ export function createProfileSceneControls({
         <input class="scene-name-input" type="text" maxlength="15" placeholder="Name (optional)" />
         <div class="scene-actions">
           <button class="scene-save" type="button" title="Save current state to this slot.">Save</button>
-          <button class="scene-recall" type="button" title="Recall this scene snapshot.">Recall</button>
+          <button class="scene-recall action-live" type="button" title="Recall this scene snapshot.">Recall Scene ${slotIndex + 1} now</button>
         </div>`;
       sceneGrid.appendChild(slotEl);
       const slotInfo = {

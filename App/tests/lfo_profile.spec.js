@@ -47,7 +47,7 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   await expect(page.locator('#lfo-status')).toContainText('2 LFOs');
 
   const save = page.locator('#lfo-save');
-  await expect(save).toHaveText('Save profile LFOs');
+  await expect(save).toHaveText('Save to Profile A');
   await expect(save).toBeDisabled();
 
   const firstDepth = page.locator('#lfo-editor .lfo-section').first().getByLabel('Depth');
@@ -55,12 +55,12 @@ test('LFO edits expose a save action and persist through set_profile', async ({ 
   await firstDepth.dispatchEvent('change');
 
   await expect(page.locator('#lfo-status')).toContainText('edited locally');
-  await expect(save).toHaveText('Push & save LFO changes');
+  await expect(save).toHaveText('Push live and save to Profile A');
   await expect(save).toBeEnabled();
 
   await save.click();
   await expect(page.locator('#lfo-status')).toContainText('saved');
-  await expect(save).toHaveText('Save profile LFOs');
+  await expect(save).toHaveText('Save to Profile A');
   await expect(save).toBeDisabled();
 
   const profile = await page.evaluate(() =>

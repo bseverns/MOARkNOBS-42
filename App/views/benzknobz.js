@@ -92,7 +92,6 @@ const boot = () => {
   const changeCount = document.getElementById('change-count');
   const changeReviewBtn = document.getElementById('change-review');
   const changeDiscardBtn = document.getElementById('change-discard');
-  const changeApplyBtn = document.getElementById('change-apply');
   const changeReviewDialog = document.getElementById('change-review-dialog');
   const changeReviewCloseBtn = document.getElementById('change-review-close');
   const changeReviewOutput = document.getElementById('change-review-output');
@@ -129,10 +128,42 @@ const boot = () => {
   const performanceTabButtons = Array.from(document.querySelectorAll('[data-performance-tab]'));
   const performancePanels = Array.from(document.querySelectorAll('[data-performance-panel]'));
   const performancePanelHost = document.getElementById('profile-performance-panels');
-  performancePanels.forEach((panel) => performancePanelHost?.append(panel));
+  performancePanels.forEach((panel) => {
+    const tab = panel.dataset.performancePanel;
+    panel.id ||= `performance-panel-${tab}`;
+    panel.setAttribute('role', 'tabpanel');
+    performancePanelHost?.append(panel);
+  });
+  performanceTabButtons.forEach((button, index) => {
+    const tab = button.dataset.performanceTab;
+    const panel = performancePanels.find((candidate) => candidate.dataset.performancePanel === tab);
+    button.id ||= `performance-tab-${tab || index}`;
+    button.setAttribute('role', 'tab');
+    if (panel) {
+      button.setAttribute('aria-controls', panel.id);
+      panel.setAttribute('aria-labelledby', button.id);
+    }
+    button.addEventListener('keydown', (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+      const current = Math.max(0, performanceTabButtons.indexOf(button));
+      const nextIndex =
+        event.key === 'Home'
+          ? 0
+          : event.key === 'End'
+            ? performanceTabButtons.length - 1
+            : (current + (event.key === 'ArrowRight' ? 1 : -1) + performanceTabButtons.length) %
+              performanceTabButtons.length;
+      event.preventDefault();
+      performanceTabButtons[nextIndex].focus();
+      performanceTabButtons[nextIndex].click();
+    });
+  });
   const setPerformanceTab = (tab) => {
     performanceTabButtons.forEach((button) => {
-      button.setAttribute('aria-pressed', button.dataset.performanceTab === tab ? 'true' : 'false');
+      const selected = button.dataset.performanceTab === tab;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+      button.tabIndex = selected ? 0 : -1;
     });
     performancePanels.forEach((panel) => {
       const visible = panel.dataset.performancePanel === tab;
@@ -318,21 +349,29 @@ const boot = () => {
       dirtyBadge,
       applyBtn,
       rollbackBtn,
+      docRoot,
       changeBar,
       changeCount,
-      changeApplyBtn,
       changeDiscardBtn
     }
   });
   changeReviewBtn?.addEventListener('click', () => {
-    if (changeReviewOutput) {
-      changeReviewOutput.textContent = diffOutput?.textContent || 'No staged changes.';
-    }
+    diffStatusController.renderReview(changeReviewOutput, {
+      onNavigate: (path) => focusChangedPath(path)
+    });
     changeReviewDialog?.showModal?.();
+    changeReviewCloseBtn?.focus();
   });
   changeReviewCloseBtn?.addEventListener('click', () => changeReviewDialog?.close?.());
-  changeDiscardBtn?.addEventListener('click', () => rollbackBtn?.click());
-  changeApplyBtn?.addEventListener('click', () => applyBtn?.click());
+  changeDiscardBtn?.addEventListener('click', () => {
+    if (
+      diffStatusController.shouldConfirmDiscard() &&
+      !window.confirm('Discard this staged draft? These changes cannot be recovered from the device.')
+    ) {
+      return;
+    }
+    rollbackBtn?.click();
+  });
   const baseSetStatus = diffStatusController.setStatus;
   const sessionLogController = createSessionLogController({
     logEl,
@@ -385,6 +424,17 @@ const boot = () => {
     sessionLogController.recordStatus(state, label, message);
     baseSetStatus(state, label, message);
     panicHelpController.render();
+  }
+
+  function confirmReplaceStaged(actionLabel = 'Continue') {
+    if (!runtime.getState().dirty) return true;
+    setStatus(
+      'warn',
+      'Draft protected',
+      `${actionLabel} could replace staged work. Apply staged changes or Discard draft first.`
+    );
+    changeBar?.focus?.();
+    return false;
   }
   sessionLogController.bind();
   panicHelpController.bind();
@@ -458,6 +508,7 @@ const boot = () => {
     resolveFirmwareVersion,
     setStatus,
     syncConfigFileButtons,
+    canReplaceStaged: confirmReplaceStaged,
     onConnectionPillChanged: updateStagePanel,
     elements: {
       docRoot,
@@ -557,6 +608,7 @@ const boot = () => {
     try {
       const json = JSON.parse(text);
       runtime.stage(() => json);
+      if (docRoot) docRoot.dataset.importedDraft = 'true';
       syncConfigFileButtons();
       setStatus(
         'warn',
@@ -648,6 +700,10 @@ const boot = () => {
     formRenderer,
     localManifest,
     setStatus,
+    confirmReplaceStaged,
+    onImportedDraft: () => {
+      if (docRoot) docRoot.dataset.importedDraft = 'true';
+    },
     elements: {
       profileSlotButtons,
       profileSlotStatus,
@@ -807,6 +863,9 @@ const boot = () => {
     updateStagePanel();
     panicHelpController.render();
   });
+  runtime.on('config-transaction', ({ state, deviceAuthority }) => {
+    diffStatusController.setTransactionState(deviceAuthority || state);
+  });
   runtime.on('manifest', (manifest) => {
     updateHeaderManifest(manifest);
     deviceMonitorController.renderManifest(manifest);
@@ -842,6 +901,7 @@ const boot = () => {
     panicHelpController.render();
   });
   runtime.on('applied', ({ checksum }) => {
+    if (docRoot) delete docRoot.dataset.importedDraft;
     if (runtime.getState().dirty) {
       diffStatusController.setStatus(
         'ok',
@@ -944,6 +1004,7 @@ const boot = () => {
     );
     profileMacroScenePanel.onConnected();
     transportToolbarController.onConnected();
+    updatePowerSafetySummary(manifest, true);
     updateStagePanel();
     panicHelpController.render();
   });
@@ -958,6 +1019,7 @@ const boot = () => {
     sessionLogController.recordEvent('CONNECTION', 'Disconnected', '', 'warn');
     profileMacroScenePanel.onDisconnected();
     transportToolbarController.onDisconnected();
+    updatePowerSafetySummary({}, false);
     updateStagePanel();
     panicHelpController.render();
   });
@@ -970,6 +1032,7 @@ const boot = () => {
     sessionLogController.recordEvent('RUNTIME', 'Error', err.message || String(err), 'err');
     profileMacroScenePanel.onRuntimeError();
     transportToolbarController.onDisconnected();
+    updatePowerSafetySummary({}, false);
     updateStagePanel();
     panicHelpController.render();
   });
@@ -979,6 +1042,7 @@ const boot = () => {
     updateStagePanel();
   });
   runtime.on('rollback', () => {
+    if (docRoot) delete docRoot.dataset.importedDraft;
     diffStatusController.updateDiff(false);
     diffStatusController.markDirty(false);
     setStatus('warn', 'Rollback', 'Local edits were discarded.');
@@ -986,11 +1050,16 @@ const boot = () => {
   });
 
   runtime.restoreLocalState();
-  updatePowerSafetySummary(runtime.getState().manifest ?? localManifest);
+  updatePowerSafetySummary({}, false);
   updateStagePanel();
   syncConfigFileButtons();
   panicHelpController.render();
   primeCompatibilityStatus();
+  window.addEventListener('beforeunload', (event) => {
+    if (!runtime.getState().dirty) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
   new MidiMonitor({ container: document.getElementById('midi-panel') });
   new ScopePanel({
     container: document.getElementById('scope-panel'),
@@ -1007,8 +1076,11 @@ const boot = () => {
   }
   if (docRoot) docRoot.dataset.mn42Ready = 'true';
 
-  function updatePowerSafetySummary(manifest) {
-    powerSafetySummary.render(manifest);
+  function updatePowerSafetySummary(
+    manifest,
+    connected = connectionPill?.dataset.stage === 'live'
+  ) {
+    powerSafetySummary.render(manifest, { connected });
   }
 
   // Refresh the compact firmware/schema/memory summary in the page header.
@@ -1059,6 +1131,23 @@ const boot = () => {
   // Change which slot is focused in the inspector/editor pane.
   function selectSlot(index) {
     slotWorkspaceController.selectSlot(index);
+  }
+
+  function focusChangedPath(path) {
+    const slotMatch = String(path ?? '').match(/^slots[.\[]+(\d+)/);
+    if (slotMatch) {
+      selectSlot(Number(slotMatch[1]));
+      changeReviewDialog?.close?.();
+      document.getElementById('editor-panel')?.scrollIntoView?.({ block: 'start' });
+      return;
+    }
+    const subsystem = String(path ?? '').split(/[.[]/, 1)[0];
+    const target = document.querySelector(`[data-schema-section="${subsystem}"]`);
+    if (target) {
+      changeReviewDialog?.close?.();
+      target.scrollIntoView?.({ block: 'center' });
+      target.querySelector('input, select, button')?.focus?.();
+    }
   }
 
   // Fill the slot detail card from the selected slot plus latest telemetry.

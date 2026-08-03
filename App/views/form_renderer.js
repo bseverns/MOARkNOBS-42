@@ -74,6 +74,7 @@ function createHelpBadge(message) {
   badge.dataset.tooltip = message;
   badge.setAttribute('aria-label', message);
   badge.setAttribute('role', 'note');
+  badge.tabIndex = 0;
   return badge;
 }
 

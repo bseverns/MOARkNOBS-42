@@ -13,7 +13,7 @@ test('slot editor preserves focused number input during live telemetry refresh',
   await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
   await page.locator('#connect').click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
-  await page.getByRole('button', { name: 'Envelope' }).click();
+  await page.getByRole('tab', { name: 'Envelope' }).click();
 
   const frequencyInput = page
     .locator('.slot-editor label:has-text("Tracking frequency") input')

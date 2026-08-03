@@ -612,6 +612,7 @@ export function createSlotEditorPanel({
     badge.dataset.tooltip = helpText;
     badge.setAttribute('aria-label', helpText);
     badge.setAttribute('role', 'note');
+    badge.tabIndex = 0;
     container.appendChild(badge);
   }
 
