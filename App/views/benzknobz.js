@@ -375,6 +375,9 @@ const boot = () => {
     }
     changeDiscardBtn.disabled = true;
     try {
+      // A debounced field patch must not resurrect the draft after the operator
+      // has explicitly discarded it.
+      formRenderer.clearPendingPatches();
       await runtime.rollback();
     } catch (err) {
       setStatus('err', 'Discard failed', err.message || String(err));

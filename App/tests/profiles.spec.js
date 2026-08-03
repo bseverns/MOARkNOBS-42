@@ -48,9 +48,12 @@ test.describe('Profiles toolbar', () => {
 
     await freqInput.fill('200');
     await freqInput.dispatchEvent('change');
+    await expect(page.locator('#dirty-badge')).toBeVisible();
     await page.locator('#profile-load').click();
     await expect(page.locator('#status-label')).toHaveText('Draft protected');
     await page.locator('#change-discard').click();
+    await expect(page.locator('#dirty-badge')).toBeHidden();
+    await page.waitForTimeout(250);
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await page.locator('#profile-load').click();
     await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 5000 });
