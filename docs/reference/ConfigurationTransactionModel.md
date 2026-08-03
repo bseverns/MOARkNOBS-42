@@ -71,6 +71,9 @@ stateDiagram-v2
     Apply event (`ack`, `rollback`, `resynchronized`, or
     `verified-device-different`) drains that retry after the active request
     settles, regardless of event/HTTP ordering.
+29. Discarding a local draft cancels pending debounced form patches before live
+    state replaces the draft. A delayed UI timer cannot recreate work the
+    operator explicitly discarded.
 
 ## What “rollback” means
 
