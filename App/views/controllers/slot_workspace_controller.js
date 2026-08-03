@@ -87,6 +87,7 @@ export function createSlotWorkspaceController({
     }
     slotVirtualizer.setData(slotState.slots);
     slotVirtualizer.highlight(slotState.selected);
+    updateTakeoverTabStops();
     efVirtualizer.setData(slotState.efSlots);
     onSlotsChanged(slotState.slots);
   }
@@ -96,6 +97,7 @@ export function createSlotWorkspaceController({
     slotState.selected = Math.min(Math.max(0, index), maxIndex);
     slotVirtualizer.highlight(slotState.selected);
     slotVirtualizer.scrollToIndex(slotState.selected);
+    updateTakeoverTabStops();
     performerPanel?.highlightSelectedSlot?.();
     onSelectSlot(slotState.selected);
   }
@@ -126,6 +128,14 @@ export function createSlotWorkspaceController({
     if (guardOff.length) runtime.setPotGuard(guardOff, false);
   }
 
+  function updateTakeoverTabStops() {
+    slotContainer?.querySelectorAll('.slot-button').forEach((slotButton) => {
+      const toggle = slotButton.querySelector('.takeover');
+      if (!toggle) return;
+      toggle.tabIndex = Number(slotButton.dataset.index) === slotState.selected ? 0 : -1;
+    });
+  }
+
   function renderSlotButton(el, index, slot) {
     el.className = 'slot-button';
     el.tabIndex = -1;
@@ -148,6 +158,7 @@ export function createSlotWorkspaceController({
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'takeover';
+    toggle.tabIndex = index === slotState.selected ? 0 : -1;
     toggle.textContent = slot?.takeover ? 'PK' : 'IM';
     toggle.title = slot?.takeover
       ? 'Browser-only pickup guard enabled'

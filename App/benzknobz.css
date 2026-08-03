@@ -19,7 +19,6 @@
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
   --text-label: #97a1b8;
   --text-value: #f7f9ff;
-  --page-scale: 1;
   --slot-row-height: 82px;
   --slot-grid-rows: 7;
   --ef-row-height: 108px;
@@ -58,8 +57,6 @@ body {
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(12px, 2vh, 24px) clamp(16px, 3vw, 32px);
-  transform-origin: top center;
-  transform: scale(var(--page-scale));
 }
 
 .hero {
@@ -3536,6 +3533,17 @@ footer {
 }
 
 @media (max-width: 520px) {
+  .connection-details {
+    flex: 1 1 100%;
+  }
+
+  .connection-detail-card {
+    position: static;
+    width: 100%;
+    max-width: none;
+    margin-top: 8px;
+  }
+
   .performer-summary-grid {
     grid-template-columns: 1fr;
   }

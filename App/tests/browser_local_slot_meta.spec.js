@@ -60,3 +60,25 @@ test('changing browser-only Take Control metadata does not require Apply', async
   ).toBeChecked();
   await expectBrowserOnlyStateClean(page);
 });
+
+test('only the selected slot takeover shortcut participates in keyboard order', async ({ page }) => {
+  await bootSimulator(page);
+
+  await expect(page.locator('#slots .takeover[tabindex="0"]')).toHaveCount(1);
+  await expect(page.locator('.slot-button[data-index="0"] .takeover')).toHaveAttribute(
+    'tabindex',
+    '0'
+  );
+
+  await page.locator('.slot-button[data-index="5"]').click();
+
+  await expect(page.locator('#slots .takeover[tabindex="0"]')).toHaveCount(1);
+  await expect(page.locator('.slot-button[data-index="0"] .takeover')).toHaveAttribute(
+    'tabindex',
+    '-1'
+  );
+  await expect(page.locator('.slot-button[data-index="5"] .takeover')).toHaveAttribute(
+    'tabindex',
+    '0'
+  );
+});

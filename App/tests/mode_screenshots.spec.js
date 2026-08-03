@@ -66,10 +66,21 @@ test.describe('Mode screenshots', () => {
       expect(pageErrors).toEqual([]);
 
       await page.locator('.connection-details > summary').click();
-      const detailBox = await page.locator('#header-status').boundingBox();
+      const detailBox = await page.locator('.connection-detail-card').boundingBox();
       expect(detailBox).not.toBeNull();
       expect(detailBox.x).toBeGreaterThanOrEqual(0);
       expect(detailBox.x + detailBox.width).toBeLessThanOrEqual(viewport.width);
+
+      if (viewport.width <= 520) {
+        const bannerBox = await page.locator('#connection-banner').boundingBox();
+        expect(bannerBox).not.toBeNull();
+        const overlapsBanner =
+          detailBox.x < bannerBox.x + bannerBox.width &&
+          detailBox.x + detailBox.width > bannerBox.x &&
+          detailBox.y < bannerBox.y + bannerBox.height &&
+          detailBox.y + detailBox.height > bannerBox.y;
+        expect(overlapsBanner).toBe(false);
+      }
 
       if (viewport.mode === 'stage') {
         const summaryColumns = await page.locator('.performer-summary-grid').evaluate(

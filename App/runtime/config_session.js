@@ -11,28 +11,6 @@ function equivalentJson(a, b) {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
-function isDefaultSlotEfForDevice(ef, efIndex) {
-  if (!ef || typeof ef !== 'object') return true;
-  const expectedIndex = Number.isFinite(Number(efIndex)) ? Math.round(Number(efIndex)) : -1;
-  const expected = {
-    index: expectedIndex,
-    filter_index: 0,
-    filter_name: 'LINEAR',
-    frequency: 1000,
-    q: 0.707,
-    oversample: 4,
-    smoothing: 0.2,
-    baseline: 0,
-    gain: 1,
-    destination_mode: 'add_clamp'
-  };
-  return Object.entries(expected).every(([key, value]) => {
-    if (ef[key] === undefined) return true;
-    if (typeof value === 'number') return Math.abs(Number(ef[key]) - value) < 0.00001;
-    return ef[key] === value;
-  });
-}
-
 function slotTypeForDevice(slot, slotTypeNames) {
   if (typeof slot?.type_name === 'string' && slotTypeNames.includes(slot.type_name)) {
     return slot.type_name;
@@ -78,11 +56,9 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
   if (slot?.sysexTemplate !== undefined && slot?.sysexTemplate !== previousSlot?.sysexTemplate) {
     out.sysexTemplate = clone(slot.sysexTemplate);
   }
-  const efIndexForDevice = out.ef_index ?? slot?.efIndex ?? slot?.ef_index ?? slot?.ef?.index;
   if (
     slot?.ef &&
     typeof slot.ef === 'object' &&
-    !isDefaultSlotEfForDevice(slot.ef, efIndexForDevice) &&
     !equivalentJson(slot.ef, previousSlot?.ef)
   ) {
     out.ef = copyDefined(

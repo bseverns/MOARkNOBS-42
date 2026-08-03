@@ -71,6 +71,7 @@ test.describe('UI mode', () => {
   });
 
   test('basic mode still supports staged edits and apply', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 633 });
     await page.addInitScript(() => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
@@ -100,6 +101,12 @@ test.describe('UI mode', () => {
     await expect(page.locator('#change-bar')).toBeVisible();
     await expect(page.locator('#change-count')).toHaveText('1 staged change');
     await expect(page.locator('#change-bar')).toHaveCSS('position', 'fixed');
+    const initialBarBox = await page.locator('#change-bar').boundingBox();
+    const initialViewport = page.viewportSize();
+    expect(initialBarBox).not.toBeNull();
+    expect(initialViewport).not.toBeNull();
+    expect(initialBarBox.y).toBeGreaterThanOrEqual(0);
+    expect(initialBarBox.y + initialBarBox.height).toBeLessThanOrEqual(initialViewport.height);
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const barBox = await page.locator('#change-bar').boundingBox();
     const viewport = page.viewportSize();
