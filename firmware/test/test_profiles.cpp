@@ -32,6 +32,29 @@ struct __attribute__((packed)) LegacyProfileDataV5Fixture {
     ProfileSlotSettings slots[NUM_SLOTS]{};
 };
 
+struct __attribute__((packed)) LegacyProfileArpSettingsV6Fixture {
+    uint8_t lengthTicks = 12;
+    uint8_t shape = 0;
+    uint8_t swingPercent = 0;
+    uint8_t gatePercent = 50;
+    uint8_t octaveRange = 0;
+    uint8_t patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH;
+};
+
+struct __attribute__((packed)) LegacyProfileDataV6Fixture {
+    uint16_t version = 0x0006;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettingsV6Fixture arp{};
+    ProfileLedSettings led{};
+    ProfileClockSettings clock{};
+    ProfileNoteDynamicsSettings noteDynamics{};
+    ProfileJitterSettings jitter{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
+    ProfileSlotSettings slots[NUM_SLOTS]{};
+};
+
 uint16_t legacyV5Crc(const LegacyProfileDataV5Fixture &profile) {
     const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
     uint16_t crc = 0xFFFF;
@@ -45,6 +68,26 @@ uint16_t legacyV5Crc(const LegacyProfileDataV5Fixture &profile) {
 }
 
 void writeLegacyV5Profile(uint8_t id, const LegacyProfileDataV5Fixture &profile) {
+    const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    for (size_t i = 0; i < sizeof(profile); ++i) {
+        EEPROM.update(static_cast<int>(base + i), bytes[i]);
+    }
+}
+
+uint16_t legacyV6Crc(const LegacyProfileDataV6Fixture &profile) {
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = offsetof(LegacyProfileDataV6Fixture, routeCount); i < sizeof(profile); ++i) {
+        crc ^= bytes[i];
+        for (uint8_t bit = 0; bit < 8; ++bit) {
+            crc = (crc & 1) ? static_cast<uint16_t>((crc >> 1) ^ 0xA001) : crc >> 1;
+        }
+    }
+    return crc;
+}
+
+void writeLegacyV6Profile(uint8_t id, const LegacyProfileDataV6Fixture &profile) {
     const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
     const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
     for (size_t i = 0; i < sizeof(profile); ++i) {
@@ -69,6 +112,8 @@ ProfileData makePopulatedProfile() {
     profile.arp.gatePercent = 68;
     profile.arp.octaveRange = 2;
     profile.arp.patternLength = 11;
+    profile.arp.assignedSlots[0] = static_cast<uint8_t>(1U << 2U);
+    profile.arp.assignedSlots[2] = static_cast<uint8_t>(1U << 1U);
     profile.led.brightness = BoardPowerProfile::kLedBrightnessCap;
     profile.led.r = 12;
     profile.led.g = 34;
@@ -209,6 +254,8 @@ void test_profile_round_trip_preserves_profile_payload() {
     TEST_ASSERT_EQUAL_UINT8(saved.arp.gatePercent, loaded.arp.gatePercent);
     TEST_ASSERT_EQUAL_UINT8(saved.arp.octaveRange, loaded.arp.octaveRange);
     TEST_ASSERT_EQUAL_UINT8(saved.arp.patternLength, loaded.arp.patternLength);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(saved.arp.assignedSlots, loaded.arp.assignedSlots,
+                                  Arpeggiator::ASSIGNMENT_BYTES);
     TEST_ASSERT_EQUAL_UINT8(saved.led.brightness, loaded.led.brightness);
     TEST_ASSERT_EQUAL_UINT8(saved.led.r, loaded.led.r);
     TEST_ASSERT_EQUAL_UINT8(saved.led.g, loaded.led.g);
@@ -277,6 +324,10 @@ void test_profile_v5_migration_preserves_state_and_defaults_pattern_length() {
     TEST_ASSERT_EQUAL_UINT8(legacy.arp.gatePercent, loaded.arp.gatePercent);
     TEST_ASSERT_EQUAL_UINT8(legacy.arp.octaveRange, loaded.arp.octaveRange);
     TEST_ASSERT_EQUAL_UINT8(Arpeggiator::DEFAULT_PATTERN_LENGTH, loaded.arp.patternLength);
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        TEST_ASSERT_NOT_EQUAL(0,
+                              loaded.arp.assignedSlots[slot / 8U] & (1U << (slot % 8U)));
+    }
     TEST_ASSERT_EQUAL_UINT8(legacy.led.r, loaded.led.r);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, legacy.clock.tappedBpm, loaded.clock.tappedBpm);
     TEST_ASSERT_EQUAL_INT8(legacy.noteDynamics.velocityShift, loaded.noteDynamics.velocityShift);
@@ -286,4 +337,25 @@ void test_profile_v5_migration_preserves_state_and_defaults_pattern_length() {
     TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].midiChannel, loaded.slots[0].midiChannel);
     TEST_ASSERT_EQUAL_INT8(legacy.slots[0].followerIndex, loaded.slots[0].followerIndex);
     TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].ef.gateThreshold, loaded.slots[0].ef.gateThreshold);
+}
+
+void test_profile_v6_migration_preserves_pattern_and_explicitly_assigns_legacy_slots() {
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    clearProfileSettingsBlock(3);
+
+    LegacyProfileDataV6Fixture legacy{};
+    legacy.arp.lengthTicks = 18;
+    legacy.arp.patternLength = 13;
+    legacy.crc = legacyV6Crc(legacy);
+    writeLegacyV6Profile(3, legacy);
+
+    ProfileData loaded{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(3, loaded));
+    TEST_ASSERT_EQUAL_UINT16(PROFILE_SETTINGS_VERSION, loaded.version);
+    TEST_ASSERT_EQUAL_UINT8(legacy.arp.lengthTicks, loaded.arp.lengthTicks);
+    TEST_ASSERT_EQUAL_UINT8(legacy.arp.patternLength, loaded.arp.patternLength);
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        TEST_ASSERT_NOT_EQUAL(0,
+                              loaded.arp.assignedSlots[slot / 8U] & (1U << (slot % 8U)));
+    }
 }

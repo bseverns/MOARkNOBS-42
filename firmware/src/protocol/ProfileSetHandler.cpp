@@ -352,6 +352,19 @@ void applyArpProfilePatch(JsonObject root, ProfileData &profile) {
             clampedU8(arp, "pattern_length", Arpeggiator::MIN_PATTERN_LENGTH,
                       Arpeggiator::MAX_PATTERN_LENGTH, profile.arp.patternLength);
     }
+    if (arp.containsKey("assigned_slots") && arp["assigned_slots"].is<JsonArray>()) {
+        for (size_t i = 0; i < Arpeggiator::ASSIGNMENT_BYTES; ++i) {
+            profile.arp.assignedSlots[i] = 0;
+        }
+        JsonArray assignedSlots = arp["assigned_slots"].as<JsonArray>();
+        for (JsonVariant value : assignedSlots) {
+            const int slot = value.as<int>();
+            if (slot >= 0 && slot < NUM_SLOTS) {
+                profile.arp.assignedSlots[slot / 8U] |=
+                    static_cast<uint8_t>(1U << (slot % 8U));
+            }
+        }
+    }
 }
 
 void applyLedProfilePatch(JsonObject root, ProfileData &profile) {

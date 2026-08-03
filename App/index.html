@@ -566,6 +566,20 @@
                 <input id="arp-pattern-length" type="number" min="2" max="16" step="1" />
               </label>
             </div>
+            <section class="arp-assignment-editor saved-profile-zone" aria-labelledby="arp-assignment-title">
+              <div>
+                <strong id="arp-assignment-title">Assigned slots</strong>
+                <p class="microcopy">Assignments arm the hardware Ctrl2 + Ctrl4 toggle when this profile is recalled. Recall never starts notes; no assignments keeps the profile arp inert.</p>
+              </div>
+              <div class="arp-assignment-add-row">
+                <label>
+                  <span>Slot</span>
+                  <select id="arp-assignment-slot" aria-label="Arpeggiator assignment slot"></select>
+                </label>
+                <button id="arp-assignment-add" type="button">Add assignment</button>
+              </div>
+              <div id="arp-assignment-list" class="arp-assignment-list" aria-live="polite"></div>
+            </section>
             <section class="live-toggle-card live-override-zone" aria-labelledby="live-arp-title">
               <header class="live-toggle-card-header">
                 <div>

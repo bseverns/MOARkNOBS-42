@@ -81,6 +81,7 @@ async function run() {
       macro_snapshot: false,
       scenes: false,
       arp_live: true,
+      arp_profile_assignments: true,
     },
     'simulator capabilities should describe only implemented feature protocols',
   );

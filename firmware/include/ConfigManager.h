@@ -118,6 +118,7 @@ struct __attribute__((packed)) ProfileArpSettings {
     uint8_t gatePercent = 50;                                    // Gate percent (5..100)
     uint8_t octaveRange = 0;                                     // Extra octaves (0..3)
     uint8_t patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH; // Pattern steps (2..16)
+    uint8_t assignedSlots[Arpeggiator::ASSIGNMENT_BYTES]{};      // Hardware-toggle slot mask
 };
 
 struct __attribute__((packed)) ProfileLedSettings {
@@ -166,7 +167,7 @@ struct __attribute__((packed)) ProfileLfoRoute {
 };
 
 inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0006;
+inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0007;
 
 struct __attribute__((packed)) ProfileData {
     uint16_t version = PROFILE_SETTINGS_VERSION;  // Profile payload version

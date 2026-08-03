@@ -97,7 +97,7 @@ When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) w
 | Ctrl2 + Ctrl5         | Set slot to NRPN                 |
 | Ctrl1 + Ctrl3         | Set slot to RPN                  |
 | Ctrl0 + Ctrl3         | Set slot to SysEx                |
-| Ctrl2 + Ctrl4         | Toggle Arpeggiator mode (short), Arp Edit (long press) |
+| Ctrl2 + Ctrl4         | Toggle Arpeggiator for a profile-assigned slot (short), Arp Edit (long press) |
 | Ctrl2 + Ctrl3         | Bump arpeggiator base note (short), Swing preset (long press) |
 | Ctrl1 + Ctrl2         | Cycle configuration profiles (A-D) |
 

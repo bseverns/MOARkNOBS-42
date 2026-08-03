@@ -182,7 +182,8 @@ export function createSimulator(simDeps = {}) {
       swing_percent: 0,
       gate_percent: 50,
       octave_range: 0,
-      pattern_length: 4
+      pattern_length: 4,
+      assigned_slots: []
     },
     lfos: [
       {

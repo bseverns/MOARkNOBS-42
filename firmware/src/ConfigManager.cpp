@@ -94,6 +94,7 @@ constexpr uint16_t kProfileSettingsVersionV2 = 0x0002;
 constexpr uint16_t kProfileSettingsVersionV3 = 0x0003;
 constexpr uint16_t kProfileSettingsVersionV4 = 0x0004;
 constexpr uint16_t kProfileSettingsVersionV5 = 0x0005;
+constexpr uint16_t kProfileSettingsVersionV6 = 0x0006;
 
 struct __attribute__((packed)) LegacyProfileArpSettings {
     uint8_t lengthTicks = 12;
@@ -101,6 +102,15 @@ struct __attribute__((packed)) LegacyProfileArpSettings {
     uint8_t swingPercent = 0;
     uint8_t gatePercent = 50;
     uint8_t octaveRange = 0;
+};
+
+struct __attribute__((packed)) LegacyProfileArpSettingsV6 {
+    uint8_t lengthTicks = 12;
+    uint8_t shape = 0;
+    uint8_t swingPercent = 0;
+    uint8_t gatePercent = 50;
+    uint8_t octaveRange = 0;
+    uint8_t patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH;
 };
 
 struct __attribute__((packed)) LegacyProfileEfSettings {
@@ -197,6 +207,20 @@ struct __attribute__((packed)) LegacyProfileDataV5 {
     ProfileSlotSettings slots[NUM_SLOTS]{};
 };
 
+struct __attribute__((packed)) LegacyProfileDataV6 {
+    uint16_t version = kProfileSettingsVersionV6;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettingsV6 arp{};
+    ProfileLedSettings led{};
+    ProfileClockSettings clock{};
+    ProfileNoteDynamicsSettings noteDynamics{};
+    ProfileJitterSettings jitter{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
+    ProfileSlotSettings slots[NUM_SLOTS]{};
+};
+
 template <typename T, size_t N> void copyFixedArray(T (&dest)[N], const T (&source)[N]) {
     for (size_t i = 0; i < N; ++i) {
         dest[i] = source[i];
@@ -268,6 +292,22 @@ uint16_t computeLegacyProfileCrc(const LegacyProfileDataV5 &profile) {
     return crc;
 }
 
+uint16_t computeLegacyProfileCrc(const LegacyProfileDataV6 &profile) {
+    constexpr size_t kCrcStart = offsetof(LegacyProfileDataV6, routeCount);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = kCrcStart; i < sizeof(LegacyProfileDataV6); ++i) {
+        crc = crc16_update(crc, bytes[i]);
+    }
+    return crc;
+}
+
+void assignAllLegacyArpSlots(ProfileArpSettings &arp) {
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        arp.assignedSlots[slot / 8U] |= static_cast<uint8_t>(1U << (slot % 8U));
+    }
+}
+
 ProfileArpSettings migrateLegacyArp(const LegacyProfileArpSettings &legacy) {
     ProfileArpSettings arp{};
     arp.lengthTicks = legacy.lengthTicks;
@@ -276,6 +316,19 @@ ProfileArpSettings migrateLegacyArp(const LegacyProfileArpSettings &legacy) {
     arp.gatePercent = legacy.gatePercent;
     arp.octaveRange = legacy.octaveRange;
     arp.patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH;
+    assignAllLegacyArpSlots(arp);
+    return arp;
+}
+
+ProfileArpSettings migrateLegacyArp(const LegacyProfileArpSettingsV6 &legacy) {
+    ProfileArpSettings arp{};
+    arp.lengthTicks = legacy.lengthTicks;
+    arp.shape = legacy.shape;
+    arp.swingPercent = legacy.swingPercent;
+    arp.gatePercent = legacy.gatePercent;
+    arp.octaveRange = legacy.octaveRange;
+    arp.patternLength = legacy.patternLength;
+    assignAllLegacyArpSlots(arp);
     return arp;
 }
 
@@ -738,6 +791,29 @@ bool ConfigManager::loadProfileSettings(uint8_t id, ProfileData &profile) const 
         }
         // Sanitize on load so bad data never reaches runtime.
         profile = sanitizeProfileData(stored);
+        profile.crc = computeProfileCrc(profile);
+        return true;
+    }
+
+    if (stored.version == kProfileSettingsVersionV6) {
+        LegacyProfileDataV6 legacy{};
+        storageGet(base, legacy);
+        uint16_t crc = computeLegacyProfileCrc(legacy);
+        if (crc != legacy.crc) {
+            return false;
+        }
+        ProfileData migrated{};
+        migrated.version = PROFILE_SETTINGS_VERSION;
+        migrated.routeCount = legacy.routeCount;
+        migrated.arp = migrateLegacyArp(legacy.arp);
+        migrated.led = legacy.led;
+        migrated.clock = legacy.clock;
+        migrated.noteDynamics = legacy.noteDynamics;
+        migrated.jitter = legacy.jitter;
+        copyFixedArray(migrated.lfos, legacy.lfos);
+        copyFixedArray(migrated.routes, legacy.routes);
+        copyFixedArray(migrated.slots, legacy.slots);
+        profile = sanitizeProfileData(migrated);
         profile.crc = computeProfileCrc(profile);
         return true;
     }

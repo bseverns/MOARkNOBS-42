@@ -36,6 +36,7 @@ class Arpeggiator {
     static constexpr uint8_t MIN_PATTERN_LENGTH = 2;
     static constexpr uint8_t MAX_PATTERN_LENGTH = 16;
     static constexpr uint8_t DEFAULT_PATTERN_LENGTH = 4;
+    static constexpr size_t ASSIGNMENT_BYTES = (NUM_SLOTS + 7U) / 8U;
     // Bound historical step emissions from one slot update after a delayed main loop.
     static constexpr uint8_t MAX_CATCH_UP_EMISSIONS_PER_UPDATE = 8;
 
@@ -49,6 +50,8 @@ class Arpeggiator {
                    through that slot's pitches until `stop()` is invoked.
     */
     void start(uint8_t slotIdx);
+    // Start from the profile-owned hardware path only when the slot is assigned.
+    bool startIfAssigned(uint8_t slotIdx);
     /*
     Slam the brakes and silence any further steps.
     Calling this halts the groove immediately and prevents more MIDI events
@@ -63,6 +66,12 @@ class Arpeggiator {
     bool isActive(uint8_t slotIdx) const;
     // Return the slot currently being arpeggiated.
     uint8_t getSlot() const;
+    // Profile-owned slot assignments arm hardware toggles without starting notes.
+    void clearAssignments();
+    void setAssigned(uint8_t slotIdx, bool assigned);
+    bool isAssigned(uint8_t slotIdx) const;
+    uint8_t getAssignmentByte(size_t index) const;
+    void setAssignmentByte(size_t index, uint8_t value);
 
     /*
     Set the gap between note triggers in global MIDI clock ticks.
@@ -184,6 +193,7 @@ class Arpeggiator {
     bool _baseNoteIsSet;                     // True once setBaseNote() has been called
     std::function<uint8_t()> _baseNoteCb;    // Optional external hook for fresh roots
     std::array<SlotState, NUM_SLOTS> _slots; // Per-slot transport/step state
+    std::array<uint8_t, ASSIGNMENT_BYTES> _assignedSlots{};
     std::array<PendingEvent, kPendingEventCapacity> _pendingEvents{};
     uint8_t _primarySlot;                    // Last slot armed for arp; used for overlays
 };

@@ -25,7 +25,7 @@ constexpr uint8_t MAX_LENGTH = Arpeggiator::MAX_LENGTH;
 Arpeggiator::Arpeggiator()
     : _lengthTicks(12), _shape(UP), _patternLength(DEFAULT_PATTERN_LENGTH), _swingPercent(0.0f),
       _gatePercent(50.0f), _octaveRange(0), _baseNote(0), _baseNoteSrc(BaseNoteSource::Pot),
-      _baseNoteIsSet(false), _baseNoteCb(nullptr), _slots{}, _primarySlot(0) {}
+      _baseNoteIsSet(false), _baseNoteCb(nullptr), _slots{}, _assignedSlots{}, _primarySlot(0) {}
 
 // Begin generating an arpeggio for the given slot. The slot index refers to the
 // entry stored by ConfigManager and determines both MIDI type and channel.
@@ -42,6 +42,47 @@ void Arpeggiator::start(uint8_t slotIdx) {
     state.rngState = 0x12345678u ^ static_cast<uint32_t>(slotIdx);
     state.drunkPosition = 0;
     _primarySlot = slotIdx;
+}
+
+bool Arpeggiator::startIfAssigned(uint8_t slotIdx) {
+    if (!isAssigned(slotIdx)) {
+        return false;
+    }
+    start(slotIdx);
+    return true;
+}
+
+void Arpeggiator::clearAssignments() { _assignedSlots.fill(0); }
+
+void Arpeggiator::setAssigned(uint8_t slotIdx, bool assigned) {
+    if (slotIdx >= NUM_SLOTS) {
+        return;
+    }
+    const uint8_t mask = static_cast<uint8_t>(1U << (slotIdx % 8U));
+    uint8_t &value = _assignedSlots[slotIdx / 8U];
+    value = assigned ? static_cast<uint8_t>(value | mask)
+                     : static_cast<uint8_t>(value & static_cast<uint8_t>(~mask));
+}
+
+bool Arpeggiator::isAssigned(uint8_t slotIdx) const {
+    if (slotIdx >= NUM_SLOTS) {
+        return false;
+    }
+    return (_assignedSlots[slotIdx / 8U] & (1U << (slotIdx % 8U))) != 0;
+}
+
+uint8_t Arpeggiator::getAssignmentByte(size_t index) const {
+    return index < ASSIGNMENT_BYTES ? _assignedSlots[index] : 0;
+}
+
+void Arpeggiator::setAssignmentByte(size_t index, uint8_t value) {
+    if (index >= ASSIGNMENT_BYTES) {
+        return;
+    }
+    _assignedSlots[index] = value;
+    if (index == ASSIGNMENT_BYTES - 1U && NUM_SLOTS % 8U != 0U) {
+        _assignedSlots[index] &= static_cast<uint8_t>((1U << (NUM_SLOTS % 8U)) - 1U);
+    }
 }
 
 // Stop arpeggiation immediately. update() will simply return once inactive.

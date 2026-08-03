@@ -48,6 +48,7 @@ The `eeprom_*` names are legacy compatibility diagnostics. They describe whether
 | `persistence.generation`      | Active committed storage generation.                                                                    |
 | `persistence.status`          | `ready` when transactional storage exists and fits the required layout; otherwise `insufficient`.        |
 | `capabilities.scene_capacity` | Number of complete scene slots supported by the reported backend capacity.                               |
+| `capabilities.arp_profile_assignments` | Profile arp payloads persist explicit slot assignments; profile recall arms them without starting note output. |
 
 The current commit and recovery guarantees are defined in the [Generation-Backed Persistence Contract](PersistenceContract.md). Hosts must not infer write readiness from the legacy `eeprom_*` fields.
 

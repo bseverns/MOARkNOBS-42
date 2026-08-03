@@ -703,6 +703,31 @@ void test_dispatch_set_profile_arp_pattern_length_applies_and_persists() {
     TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"pattern_length\":16"));
 }
 
+void test_dispatch_profile_arp_assignments_arm_without_starting() {
+    const uint8_t profileId = 2;
+    configManager.setActiveProfile(profileId);
+    g_activeProfile = profileId;
+    arpeggiator.stop();
+    arpeggiator.clearAssignments();
+
+    clearTestLogBuffer();
+    const String payload = "{\"arp\":{\"assigned_slots\":[2,17,17,99]}}";
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_PROFILE," + String(profileId) + "," + payload));
+    TEST_ASSERT_TRUE(arpeggiator.isAssigned(2));
+    TEST_ASSERT_TRUE(arpeggiator.isAssigned(17));
+    TEST_ASSERT_FALSE(arpeggiator.isAssigned(3));
+    TEST_ASSERT_FALSE(arpeggiator.isActive());
+
+    ProfileData stored{};
+    TEST_ASSERT_TRUE(configManager.loadProfileSettings(profileId, stored));
+    TEST_ASSERT_NOT_EQUAL(0, stored.arp.assignedSlots[0] & (1U << 2U));
+    TEST_ASSERT_NOT_EQUAL(0, stored.arp.assignedSlots[2] & (1U << 1U));
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_PROFILE," + String(profileId)));
+    TEST_ASSERT_NOT_EQUAL(-1, latestLogLine().indexOf("\"assigned_slots\":[2,17]"));
+}
+
 void test_dispatch_set_clock_updates_live_state_without_persisting() {
     const uint8_t profileId = 2;
     configManager.setActiveProfile(profileId);

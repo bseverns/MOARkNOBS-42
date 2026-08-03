@@ -9,6 +9,7 @@
 // point you at the right subsystem.
 
 void test_start_stop_cycle();
+void test_profile_assignments_gate_hardware_start_but_not_explicit_start();
 void test_pot_root_drives_default();
 void test_note_dynamics_shape_arp_note_velocity_and_probability();
 void test_slot_root_wins_over_pot();
@@ -29,6 +30,7 @@ void test_profile_crc_rejects_corruption();
 void test_profile_bounds_clamp();
 void test_profile_round_trip_preserves_profile_payload();
 void test_profile_v5_migration_preserves_state_and_defaults_pattern_length();
+void test_profile_v6_migration_preserves_pattern_and_explicitly_assigns_legacy_slots();
 void test_config_load_prefers_primary_when_backup_copy_is_invalid();
 void test_config_load_restores_from_backup_and_repairs_primary();
 void test_config_load_restores_from_backup_when_primary_crc_is_invalid();
@@ -55,6 +57,7 @@ void test_dispatch_active_profile_lfo_patch_applies_live();
 void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot();
 void test_dispatch_set_arp_updates_live_state_without_persisting();
 void test_dispatch_set_profile_arp_pattern_length_applies_and_persists();
+void test_dispatch_profile_arp_assignments_arm_without_starting();
 void test_dispatch_set_clock_updates_live_state_without_persisting();
 void test_dispatch_set_jitter_updates_live_state_without_persisting();
 void test_dispatch_set_note_dynamics_updates_live_state_without_persisting();
@@ -311,6 +314,7 @@ void setup() {
     RUN_TEST(test_envelope_stats_idle_noise);
     RUN_TEST(test_no_heap_growth_over_fake_runtime);
     RUN_TEST(test_start_stop_cycle);
+    RUN_TEST(test_profile_assignments_gate_hardware_start_but_not_explicit_start);
     RUN_TEST(test_pot_root_drives_default);
     RUN_TEST(test_note_dynamics_shape_arp_note_velocity_and_probability);
     RUN_TEST(test_slot_root_wins_over_pot);
@@ -331,6 +335,7 @@ void setup() {
     RUN_TEST(test_profile_bounds_clamp);
     RUN_TEST(test_profile_round_trip_preserves_profile_payload);
     RUN_TEST(test_profile_v5_migration_preserves_state_and_defaults_pattern_length);
+    RUN_TEST(test_profile_v6_migration_preserves_pattern_and_explicitly_assigns_legacy_slots);
     RUN_TEST(test_config_load_prefers_primary_when_backup_copy_is_invalid);
     RUN_TEST(test_config_load_restores_from_backup_and_repairs_primary);
     RUN_TEST(test_config_load_restores_from_backup_when_primary_crc_is_invalid);
@@ -357,6 +362,7 @@ void setup() {
     RUN_TEST(test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot);
     RUN_TEST(test_dispatch_set_arp_updates_live_state_without_persisting);
     RUN_TEST(test_dispatch_set_profile_arp_pattern_length_applies_and_persists);
+    RUN_TEST(test_dispatch_profile_arp_assignments_arm_without_starting);
     RUN_TEST(test_dispatch_set_clock_updates_live_state_without_persisting);
     RUN_TEST(test_dispatch_set_jitter_updates_live_state_without_persisting);
     RUN_TEST(test_dispatch_set_note_dynamics_updates_live_state_without_persisting);

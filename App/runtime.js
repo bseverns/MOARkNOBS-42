@@ -174,6 +174,7 @@ export function createRuntime({
             macro_snapshot: true,
             scenes: true,
             arp_live: true,
+            arp_profile_assignments: true,
             clock_live: true,
             usb_midi_toggle: true,
             note_dynamics_live: true,

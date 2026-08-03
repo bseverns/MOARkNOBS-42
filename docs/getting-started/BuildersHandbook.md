@@ -95,7 +95,7 @@ The same LFO state lives inside each profile snapshot. `GET_PROFILE` returns the
 
 The arpeggiator can run UP, DOWN, UP-DOWN, RAND, DRUNK, or EUCL patterns, synced to MIDI clock (24 PPQN) or the internal tapped BPM fallback. Step length stays in ticks, while swing and gate length are percent-based so timing scales with tempo.
 
-- **Toggle:** `Ctrl2 + Ctrl4` turns the arp on/off for the active slot.
+- **Toggle:** `Ctrl2 + Ctrl4` turns the arp on/off for the active slot when that slot is assigned by the active profile.
 - **Edit (hold):** Long-press `Ctrl2 + Ctrl4` to enter Arp Edit while held; Control pot 1 sets gate length %, Control pot 2 sets octave range (0–3).
 - **Swing presets:** Long-press `Ctrl2 + Ctrl3` to cycle 0%, 8%, 16%, 30%.
 - **Base note:** Short press `Ctrl2 + Ctrl3` bumps the base note.

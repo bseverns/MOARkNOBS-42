@@ -96,6 +96,23 @@ void test_start_stop_cycle() {
     TEST_ASSERT_FALSE(arp.isActive());
 }
 
+void test_profile_assignments_gate_hardware_start_but_not_explicit_start() {
+    Arpeggiator arp;
+    TEST_ASSERT_FALSE(arp.isAssigned(7));
+    TEST_ASSERT_FALSE(arp.startIfAssigned(7));
+    TEST_ASSERT_FALSE(arp.isActive(7));
+
+    arp.setAssigned(7, true);
+    TEST_ASSERT_TRUE(arp.isAssigned(7));
+    TEST_ASSERT_TRUE(arp.startIfAssigned(7));
+    TEST_ASSERT_TRUE(arp.isActive(7));
+
+    arp.stop(7);
+    arp.setAssigned(7, false);
+    arp.start(7);
+    TEST_ASSERT_TRUE(arp.isActive(7));
+}
+
 void test_pot_root_drives_default() {
     MidiUsbGuard guard;
     Arpeggiator arp;

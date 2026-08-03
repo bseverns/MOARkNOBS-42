@@ -79,6 +79,10 @@ ProfileData sanitizeProfileData(const ProfileData &profile) {
     if (sanitized.arp.lengthTicks == 0) {
         sanitized.arp.lengthTicks = 12;
     }
+    if (NUM_SLOTS % 8U != 0U) {
+        sanitized.arp.assignedSlots[Arpeggiator::ASSIGNMENT_BYTES - 1U] &=
+            static_cast<uint8_t>((1U << (NUM_SLOTS % 8U)) - 1U);
+    }
     // LED
     sanitized.led.brightness =
         constrain(sanitized.led.brightness, 0, BoardPowerProfile::kLedBrightnessCap);

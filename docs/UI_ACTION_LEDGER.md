@@ -115,7 +115,7 @@ This document captures every user gesture, its conditions, resulting actions, OL
 | Ctrl1+4+5   | Always      | Toggle clock source          | `CLK SRC EXT` / `CLK SRC INT` (1.2s)                  | None                | No                      | No                          |
 | Ctrl0+1+3   | Always      | Toggle LFO quick-tune mode   | `LFO Tune ON` / `LFO Tune OFF` (1s)                   | None                | No                      | No                          |
 | Ctrl2+3     | ARP active  | Increment ARP base note      | `ARP NOTE N` (1s)                                     | None                | Yes (arpNote)           | `slot_patch`                |
-| Ctrl2+4     | Always      | Toggle ARP on/off            | `ARP ON` / `ARP OFF` (1s)                             | None                | No                      | No                          |
+| Ctrl2+4     | Assigned slot or active ARP | Toggle ARP on/off | `ARP ON` / `ARP OFF` / `ARP UNASSIGNED` | None | No | No |
 | Ctrl2+5     | Always      | Set slot to NRPN             | `Slot N => NRPN` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |
 | Ctrl3+4     | Always      | Cycle LED modes              | `LightMode=N` (1.5s)                                  | Changes LED pattern | Yes (LED mode)          | No                          |
 | Ctrl3+5     | Always      | Set slot to Program Change   | `Slot N => PROG` (1.5s)                               | None                | Yes (slot type)         | `slot_patch`                |

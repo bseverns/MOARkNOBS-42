@@ -602,6 +602,41 @@ body {
   width: 100%;
 }
 
+.arp-assignment-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.arp-assignment-add-row {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.arp-assignment-add-row label {
+  display: grid;
+  gap: 6px;
+  min-width: 120px;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.arp-assignment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.arp-assignment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .arp-actions,
 .slot-action-row {
   display: flex;

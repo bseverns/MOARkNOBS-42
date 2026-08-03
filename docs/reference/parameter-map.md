@@ -20,6 +20,6 @@
 ## Arpeggiator Controls
 
 - **Ctrl pot 1/2 (arp active):** Step length (ticks) and shape: UP, DOWN, UPDN, RAND, DRUNK, EUCL.
-- **Ctrl2 + Ctrl4:** Toggle arpeggiator; long-press enters Arp Edit while held.
+- **Ctrl2 + Ctrl4:** Toggle arpeggiator for a slot assigned by the active profile; long-press enters Arp Edit while held.
 - **Ctrl2 + Ctrl3:** Bump base note; long-press cycles swing presets (0%, 8%, 16%, 30%).
 - **Arp Edit (hold Ctrl2 + Ctrl4):** Ctrl pot 1 = gate length %, Ctrl pot 2 = octave range (0–3).

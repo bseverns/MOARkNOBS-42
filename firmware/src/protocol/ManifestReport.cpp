@@ -130,6 +130,7 @@ void writeManifestCapabilities(JsonObject object) {
     capabilities["scenes"] = completeScenes;
     capabilities["scene_capacity"] = sceneCapacity;
     capabilities["arp_live"] = true;
+    capabilities["arp_profile_assignments"] = true;
     capabilities["clock_live"] = true;
     capabilities["note_dynamics_live"] = true;
     capabilities["jitter_live"] = true;

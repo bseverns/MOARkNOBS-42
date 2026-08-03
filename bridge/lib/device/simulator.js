@@ -36,6 +36,7 @@ function createDefaultManifest(overrides = {}) {
       macro_snapshot: false,
       scenes: false,
       arp_live: true,
+      arp_profile_assignments: true,
     },
     ...overrides,
   };
@@ -144,6 +145,7 @@ function createSimulatedMn42Device(options = {}) {
     gate_percent: 50,
     octave_range: 0,
     pattern_length: 4,
+    assigned_slots: [],
   };
   const defaultProfile = {
     arp: clone(defaultArp),

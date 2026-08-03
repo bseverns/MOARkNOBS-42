@@ -15,6 +15,7 @@ const DEFAULT_CAPABILITIES = {
   macro_snapshot: false,
   scenes: false,
   arp_live: false,
+  arp_profile_assignments: false,
   clock_live: false,
   note_dynamics_live: false,
   jitter_live: false,

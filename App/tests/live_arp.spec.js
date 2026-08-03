@@ -201,7 +201,9 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await expect(page.locator('#apply')).toBeDisabled();
 });
 
-test('profile arp GET and SET round-trip pattern length in the App payload', async ({ page }) => {
+test('profile arp round-trips generator settings and explicit assignments without auto-starting', async ({
+  page
+}) => {
   await page.addInitScript(() => {
     window.localStorage?.clear?.();
     window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
@@ -215,12 +217,25 @@ test('profile arp GET and SET round-trip pattern length in the App payload', asy
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#arp-save')).toBeEnabled();
   await page.locator('#arp-pattern-length').fill('9');
+  await page.locator('#arp-assignment-slot').selectOption('2');
+  await page.locator('#arp-assignment-add').click();
+  await page.locator('#arp-assignment-slot').selectOption('17');
+  await page.locator('#arp-assignment-add').click();
+  await expect(page.locator('#arp-assignment-list')).toContainText('S03');
+  await expect(page.locator('#arp-assignment-list')).toContainText('S18');
   await page.locator('#arp-save').click();
   await expect(page.locator('#status-label')).toHaveText('Arp profile saved');
+  await expect(page.locator('#arp-status')).toContainText('Recall arms them without starting notes');
 
   await page.locator('#arp-pattern-length').fill('2');
+  await page.getByRole('button', { name: 'Remove arp assignment S03' }).click();
   await page.locator('#arp-refresh').click();
   await expect(page.locator('#arp-pattern-length')).toHaveValue('9');
+  await expect(page.locator('#arp-assignment-list')).toContainText('S03');
+  await expect(page.locator('#arp-assignment-list')).toContainText('S18');
+
+  await page.locator('#live-arp-refresh').click();
+  await expect(page.locator('#live-arp-status')).toContainText('Idle');
 });
 
 test('live arp controls use native runtime commands without config boot', async ({ page }) => {

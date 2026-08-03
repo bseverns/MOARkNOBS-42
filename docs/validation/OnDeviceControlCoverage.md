@@ -31,7 +31,7 @@ This matrix tracks whether each major runtime feature has an on-device control p
 | LFO         | Sync ratio                   | LFO tune mode + `CtrlPot2` (sync ON)                     | persistent LFO tune view + short status text    | Yes      |
 | LFO         | Bipolar / unipolar           | LFO tune mode + `CtrlPot2` (sync OFF)                    | persistent LFO tune view + short status text    | Yes      |
 | Jitter      | Depth/smoothness base        | hold `Ctrl0+Ctrl3+Ctrl4` + `CtrlPot0/1`                  | persistent jitter tune view + short status text | Yes      |
-| Arp         | Enable/disable               | `Ctrl2+Ctrl4`                                            | status text (`ARP ON/OFF`)                      | Yes      |
+| Arp         | Enable/disable assigned slot | `Ctrl2+Ctrl4`                                            | status text (`ARP ON/OFF/UNASSIGNED`)           | Yes      |
 | Arp         | Base note bump               | `Ctrl2+Ctrl3`                                            | status text (`Arp Base ...`)                    | Yes      |
 | Arp         | Swing presets                | hold `Ctrl2+Ctrl3`                                       | status text (`Swing: N%`)                       | Yes      |
 | Arp         | Gate/octave edit             | hold `Ctrl2+Ctrl4` + `CtrlPot1/2`                        | control overlay (`Arp`)                         | Yes      |

@@ -103,6 +103,9 @@ ProfileData captureProfileSnapshot() {
         static_cast<uint8_t>(constrain(arpeggiator.getGatePercent(), 5.0f, 100.0f));
     profile.arp.octaveRange = arpeggiator.getOctaveRange();
     profile.arp.patternLength = arpeggiator.getPatternLength();
+    for (size_t i = 0; i < Arpeggiator::ASSIGNMENT_BYTES; ++i) {
+        profile.arp.assignedSlots[i] = arpeggiator.getAssignmentByte(i);
+    }
 
     profile.led.brightness = ledManager.getBrightness();
     CRGB color = ledManager.getColor();
@@ -196,6 +199,10 @@ void applyProfileSnapshot(const ProfileData &profile, bool persistSlots) {
     arpeggiator.setGatePercent(profile.arp.gatePercent);
     arpeggiator.setOctaveRange(profile.arp.octaveRange);
     arpeggiator.setPatternLength(profile.arp.patternLength);
+    arpeggiator.clearAssignments();
+    for (size_t i = 0; i < Arpeggiator::ASSIGNMENT_BYTES; ++i) {
+        arpeggiator.setAssignmentByte(i, profile.arp.assignedSlots[i]);
+    }
 
     ledManager.setBrightness(profile.led.brightness);
     ledManager.setColor(CRGB(profile.led.r, profile.led.g, profile.led.b));

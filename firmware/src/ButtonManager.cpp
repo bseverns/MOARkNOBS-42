@@ -1274,8 +1274,11 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
             arpeggiator.stop(context.activePot);
             context.displayManager.displayStatus("ARP OFF", 1000);
         } else {
-            arpeggiator.start(context.activePot);
-            context.displayManager.displayStatus("ARP ON", 1000);
+            if (arpeggiator.startIfAssigned(context.activePot)) {
+                context.displayManager.displayStatus("ARP ON", 1000);
+            } else {
+                context.displayManager.displayStatus("ARP UNASSIGNED", 1200);
+            }
         }
     }
     // (15) Ctrl2 + Ctrl3: Increment arpeggiator base note

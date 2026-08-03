@@ -254,6 +254,9 @@ const boot = () => {
   const arpGateInput = document.getElementById('arp-gate');
   const arpOctaveInput = document.getElementById('arp-octave');
   const arpPatternLengthInput = document.getElementById('arp-pattern-length');
+  const arpAssignmentSlotSelect = document.getElementById('arp-assignment-slot');
+  const arpAssignmentAddBtn = document.getElementById('arp-assignment-add');
+  const arpAssignmentList = document.getElementById('arp-assignment-list');
   const liveArpSlotInput = document.getElementById('live-arp-slot');
   const liveArpLengthInput = document.getElementById('live-arp-length');
   const liveArpShapeSelect = document.getElementById('live-arp-shape');
@@ -739,6 +742,9 @@ const boot = () => {
       arpGateInput,
       arpOctaveInput,
       arpPatternLengthInput,
+      arpAssignmentSlotSelect,
+      arpAssignmentAddBtn,
+      arpAssignmentList,
       liveArpSlotInput,
       liveArpLengthInput,
       liveArpShapeSelect,

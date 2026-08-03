@@ -42,8 +42,20 @@ function createDefaultArpDraft() {
     swing_percent: 0,
     gate_percent: 50,
     octave_range: 0,
-    pattern_length: 4
+    pattern_length: 4,
+    assigned_slots: []
   };
+}
+
+function normalizeAssignedSlots(values) {
+  if (!Array.isArray(values)) return [];
+  return Array.from(
+    new Set(
+      values
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value >= 0 && value < SLOT_COUNT)
+    )
+  ).sort((a, b) => a - b);
 }
 
 function clampInteger(value, min, max, fallback) {
@@ -174,6 +186,9 @@ export function createProfileMacroScenePanel({
     arpGateInput = null,
     arpOctaveInput = null,
     arpPatternLengthInput = null,
+    arpAssignmentSlotSelect = null,
+    arpAssignmentAddBtn = null,
+    arpAssignmentList = null,
     liveArpSlotInput = null,
     liveArpLengthInput = null,
     liveArpShapeSelect = null,
@@ -728,6 +743,50 @@ export function createProfileMacroScenePanel({
     if (arpGateInput) arpGateInput.value = String(arpDraft.gate_percent);
     if (arpOctaveInput) arpOctaveInput.value = String(arpDraft.octave_range);
     if (arpPatternLengthInput) arpPatternLengthInput.value = String(arpDraft.pattern_length);
+    renderArpAssignments();
+  }
+
+  function formatArpSlot(slot) {
+    return `S${String(slot + 1).padStart(2, '0')}`;
+  }
+
+  function renderArpAssignments() {
+    if (!arpAssignmentList) return;
+    arpAssignmentList.replaceChildren();
+    if (!deviceCapabilities.arpProfileAssignments) {
+      const unsupported = document.createElement('span');
+      unsupported.className = 'microcopy';
+      unsupported.textContent = 'Update firmware to assign profile arp slots.';
+      arpAssignmentList.appendChild(unsupported);
+      return;
+    }
+    if (!arpDraft.assigned_slots.length) {
+      const empty = document.createElement('span');
+      empty.className = 'microcopy';
+      empty.textContent = 'No assigned slots — profile arp is inert.';
+      arpAssignmentList.appendChild(empty);
+      return;
+    }
+    arpDraft.assigned_slots.forEach((slot) => {
+      const chip = document.createElement('span');
+      chip.className = 'arp-assignment-chip';
+      const label = document.createElement('span');
+      label.textContent = formatArpSlot(slot);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove arp assignment ${formatArpSlot(slot)}`);
+      remove.disabled =
+        !profileInteractable || profileWorkflow.isLocked() || profileWizardBusy || arpBusy;
+      remove.addEventListener('click', () => {
+        setArpDraft({
+          ...arpDraft,
+          assigned_slots: arpDraft.assigned_slots.filter((assigned) => assigned !== slot)
+        });
+      });
+      chip.append(label, remove);
+      arpAssignmentList.appendChild(chip);
+    });
   }
 
   function setArpDraft(nextDraft = {}) {
@@ -737,7 +796,8 @@ export function createProfileMacroScenePanel({
       swing_percent: clampInteger(nextDraft.swing_percent, 0, 80, arpDraft.swing_percent),
       gate_percent: clampInteger(nextDraft.gate_percent, 5, 100, arpDraft.gate_percent),
       octave_range: clampInteger(nextDraft.octave_range, 0, 3, arpDraft.octave_range),
-      pattern_length: clampInteger(nextDraft.pattern_length, 2, 16, arpDraft.pattern_length)
+      pattern_length: clampInteger(nextDraft.pattern_length, 2, 16, arpDraft.pattern_length),
+      assigned_slots: normalizeAssignedSlots(nextDraft.assigned_slots)
     };
     syncArpForm();
   }
@@ -749,7 +809,8 @@ export function createProfileMacroScenePanel({
       swing_percent: arpSwingInput?.value ?? arpDraft.swing_percent,
       gate_percent: arpGateInput?.value ?? arpDraft.gate_percent,
       octave_range: arpOctaveInput?.value ?? arpDraft.octave_range,
-      pattern_length: arpPatternLengthInput?.value ?? arpDraft.pattern_length
+      pattern_length: arpPatternLengthInput?.value ?? arpDraft.pattern_length,
+      assigned_slots: arpDraft.assigned_slots
     });
   }
 
@@ -1361,6 +1422,10 @@ export function createProfileMacroScenePanel({
     ].forEach((control) => {
       if (control) control.disabled = !canInteract;
     });
+    const canAssign = canInteract && deviceCapabilities.arpProfileAssignments;
+    if (arpAssignmentSlotSelect) arpAssignmentSlotSelect.disabled = !canAssign;
+    if (arpAssignmentAddBtn) arpAssignmentAddBtn.disabled = !canAssign;
+    renderArpAssignments();
     if (arpCard) {
       arpCard.dataset.state = canInteract ? 'ready' : 'muted';
     }
@@ -1599,7 +1664,13 @@ export function createProfileMacroScenePanel({
       syncDeviceActiveProfile(response);
       applyProfileUtilityDrafts(response);
       const shapeLabel = ARP_SHAPE_OPTIONS[arpDraft.shape] ?? `Shape ${arpDraft.shape}`;
-      setArpStatus('ok', `${describeSlot()} • ${shapeLabel} • ${arpDraft.length_ticks} ticks`);
+      const assignmentCopy = arpDraft.assigned_slots.length
+        ? `${arpDraft.assigned_slots.length} assigned`
+        : 'inert';
+      setArpStatus(
+        'ok',
+        `${describeSlot()} • ${shapeLabel} • ${arpDraft.length_ticks} ticks • ${assignmentCopy}`
+      );
       setLfoStatus('ok', summarizeLfoDraft());
     } catch (err) {
       const message = err.message || String(err);
@@ -1626,13 +1697,19 @@ export function createProfileMacroScenePanel({
     refreshProfileControls();
     setArpStatus('busy', `Saving arp settings to ${describeSlot()}…`);
     try {
+      const arpPayload = { ...arpDraft };
+      if (!deviceCapabilities.arpProfileAssignments) delete arpPayload.assigned_slots;
       await runtime.sendRpc(
-        { rpc: 'set_profile', slot: activeProfileSlot, profile: { arp: arpDraft } },
+        { rpc: 'set_profile', slot: activeProfileSlot, profile: { arp: arpPayload } },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
       setArpStatus(
         'ok',
-        `${describeSlot()} saved. If this slot is active, the runtime updates now.`
+        deviceCapabilities.arpProfileAssignments
+          ? `${describeSlot()} saved with ${arpDraft.assigned_slots.length} assignment${
+              arpDraft.assigned_slots.length === 1 ? '' : 's'
+            }. Recall arms them without starting notes.`
+          : `${describeSlot()} arp generator saved.`
       );
       setStatus('ok', 'Arp profile saved', describeSlot());
     } catch (err) {
@@ -1988,6 +2065,14 @@ export function createProfileMacroScenePanel({
     });
     setMacroStatus('muted', 'Awaiting the first snapshot.');
     setArpDraft(createDefaultArpDraft());
+    if (arpAssignmentSlotSelect && !arpAssignmentSlotSelect.options.length) {
+      for (let slot = 0; slot < SLOT_COUNT; slot += 1) {
+        const option = document.createElement('option');
+        option.value = String(slot);
+        option.textContent = formatArpSlot(slot);
+        arpAssignmentSlotSelect.appendChild(option);
+      }
+    }
     setLfoDraft(createDefaultLfoDraft());
     setArpStatus('muted', 'Connect to inspect the selected profile A–D entry.');
     setLiveArpDraft(liveArpDraft);
@@ -2012,6 +2097,10 @@ export function createProfileMacroScenePanel({
     ].forEach((control) => control?.addEventListener('change', () => readLiveArpFormIntoDraft()));
     arpRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'arp' }));
     arpSaveBtn?.addEventListener('click', () => saveArpProfile());
+    arpAssignmentAddBtn?.addEventListener('click', () => {
+      const slot = clampInteger(arpAssignmentSlotSelect?.value, 0, SLOT_COUNT - 1, 0);
+      setArpDraft({ ...arpDraft, assigned_slots: [...arpDraft.assigned_slots, slot] });
+    });
     liveArpRefreshBtn?.addEventListener('click', () => refreshLiveArp());
     liveArpApplyBtn?.addEventListener('click', () => pushLiveArp());
     liveArpStartBtn?.addEventListener('click', () => startLiveArp());

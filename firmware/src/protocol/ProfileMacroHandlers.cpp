@@ -125,6 +125,12 @@ void writeProfileArp(JsonObject arp, const ProfileData &profile) {
     arp["gate_percent"] = profile.arp.gatePercent;
     arp["octave_range"] = profile.arp.octaveRange;
     arp["pattern_length"] = profile.arp.patternLength;
+    JsonArray assignedSlots = arp.createNestedArray("assigned_slots");
+    for (uint8_t slot = 0; slot < NUM_SLOTS; ++slot) {
+        if ((profile.arp.assignedSlots[slot / 8U] & (1U << (slot % 8U))) != 0) {
+            assignedSlots.add(slot);
+        }
+    }
 }
 
 void writeProfileLed(JsonObject led, const ProfileData &profile) {
