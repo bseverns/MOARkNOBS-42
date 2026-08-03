@@ -44,7 +44,7 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
 
   await page.evaluate(() => {

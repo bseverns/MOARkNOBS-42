@@ -18,7 +18,7 @@ test('rpc hello handshake exposes status stream', async ({ page }) => {
     });
   });
 
-  const simulatorToggle = page.getByRole('button', { name: /simulator/i });
+  const simulatorToggle = page.locator('#simulator-toggle');
   await expect(simulatorToggle).toHaveText(/Start simulator/i);
   await simulatorToggle.click();
   await expect(simulatorToggle).toHaveText(/Stop simulator/i);

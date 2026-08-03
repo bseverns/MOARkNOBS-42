@@ -10,7 +10,7 @@ test('schema bounds clamp numeric inputs', async ({ page }) => {
   });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
 
   const freqInput = page.locator('[data-schema-target="filter"] input[type="number"]').first();

@@ -33,8 +33,8 @@ export function createTransportToolbarController({
     checkCompatibilityBtn = null,
     configModeBtn = null,
     applyBtn = null,
-    rollbackBtn = null,
     simulatorToggle = null,
+    emptySimulatorBtn = null,
     connectionPill = null,
     connectionBanner = null,
     transportLaneChip = null,
@@ -760,31 +760,46 @@ export function createTransportToolbarController({
     }
   }
 
-  async function rollback() {
-    await runtime.rollback();
-    setStatus('warn', 'Rolled back', 'Local edits were discarded.');
+  function setSimulatorEnabled(enabled) {
+    simulatorToggle?.classList.toggle('active', enabled);
+    if (simulatorToggle) {
+      simulatorToggle.textContent = enabled ? 'Stop simulator' : 'Start simulator';
+      simulatorToggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    }
+    runtime.useSimulator(enabled);
+    updateTransportLaneChip();
   }
 
   function initializeSimulatorToggle() {
-    if (!simulatorToggle) return;
-    simulatorToggle.setAttribute(
-      'aria-pressed',
-      simulatorToggle.classList.contains('active') ? 'true' : 'false'
-    );
-    if (simulatorToggle.dataset.booted) return;
-    simulatorToggle.dataset.booted = 'true';
-    simulatorToggle.addEventListener('click', () => {
-      if (!canReplaceStaged('Change transport')) return;
-      const toggled = simulatorToggle.classList.toggle('active');
-      runtime.useSimulator(toggled);
-      simulatorToggle.textContent = toggled ? 'Stop simulator' : 'Start simulator';
-      simulatorToggle.setAttribute('aria-pressed', toggled ? 'true' : 'false');
-      updateTransportLaneChip();
-      setStatus(
-        toggled ? 'ok' : 'warn',
-        toggled ? 'Simulator armed' : 'Simulator idle',
-        toggled ? 'Replay frames without hardware.' : 'Connect to the physical deck.'
+    if (simulatorToggle) {
+      simulatorToggle.setAttribute(
+        'aria-pressed',
+        simulatorToggle.classList.contains('active') ? 'true' : 'false'
       );
+    }
+    if (simulatorToggle && !simulatorToggle.dataset.booted) {
+      simulatorToggle.dataset.booted = 'true';
+      simulatorToggle.addEventListener('click', () => {
+        if (!canReplaceStaged('Change transport')) return;
+        const toggled = !simulatorToggle.classList.contains('active');
+        setSimulatorEnabled(toggled);
+        setStatus(
+          toggled ? 'ok' : 'warn',
+          toggled ? 'Simulator armed' : 'Simulator idle',
+          toggled ? 'Replay frames without hardware.' : 'Connect to the physical deck.'
+        );
+      });
+    }
+    emptySimulatorBtn?.addEventListener('click', async () => {
+      if (!canReplaceStaged('Change transport')) return;
+      emptySimulatorBtn.disabled = true;
+      emptySimulatorBtn.textContent = 'Starting simulator…';
+      setSimulatorEnabled(true);
+      await connect();
+      if (connectionPill?.dataset.stage !== 'live') {
+        emptySimulatorBtn.disabled = false;
+        emptySimulatorBtn.textContent = 'Start simulator';
+      }
     });
   }
 
@@ -793,7 +808,6 @@ export function createTransportToolbarController({
     checkCompatibilityBtn?.addEventListener('click', () => runCompatibilityCheck());
     configModeBtn?.addEventListener('click', () => requestConfigBoot());
     applyBtn?.addEventListener('click', () => apply());
-    rollbackBtn?.addEventListener('click', () => rollback());
     usbMidiToggleBtn?.addEventListener('click', () => toggleUsbMidi());
     usbMidiTestBtn?.addEventListener('click', () => runMidiTest());
     noteDynamicsApplyBtn?.addEventListener('click', () => applyNoteDynamics());

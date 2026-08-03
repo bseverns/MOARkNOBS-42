@@ -38,6 +38,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#status')).toBeHidden();
     await expect(page.locator('#stage-power-summary')).toContainText('Power status unavailable');
     await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
+    await expect(page.locator('#global-power-warning')).toBeHidden();
   });
 
   test('shows simulator manifest power fields in the performer panel', async ({ page }) => {
@@ -54,7 +55,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-power-summary')).toContainText('POWER_CHOKED_V1');
     await expect(page.locator('#stage-power-summary')).toContainText('LED cap: 26/255');
     await expect(page.locator('#stage-power-summary')).toContainText('Rail: UNVERIFIED');
-    await expect(page.locator('#stage-power-summary .power-safety-warning')).toContainText(
+    await expect(page.locator('#global-power-warning')).toContainText(
       'Power-limited hardware reported'
     );
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
@@ -173,6 +174,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-power-summary')).toContainText('SPLIT_RAIL_REWORK');
     await expect(page.locator('#stage-power-summary')).toContainText('255/255');
     await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
+    await expect(page.locator('#global-power-warning')).toBeHidden();
 
     await page.getByRole('button', { name: 'Lab' }).click();
     await expect(page.locator('#performer-panel')).toBeHidden();
@@ -216,7 +218,7 @@ test.describe('Stage mode', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/benzknobz.html');
-    await page.getByRole('button', { name: /simulator/i }).click();
+    await page.locator('#simulator-toggle').click();
     await page.getByRole('button', { name: 'Connect' }).click();
 
     await expect(page.locator('#device-monitor')).toContainText('OLED present');
@@ -275,7 +277,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-dirty-state')).toHaveText('Dirty');
     await expect(page.locator('#dirty-badge')).toBeVisible();
     await expect(page.locator('#apply')).toBeHidden();
-    await expect(page.locator('#rollback')).toBeHidden();
+    await expect(page.locator('#rollback')).toHaveCount(0);
     await expect(page.locator('#editor-panel')).toBeHidden();
     await expect(page.locator('.slot-editor')).toBeHidden();
     await expect(page.locator('#led-settings')).toBeHidden();

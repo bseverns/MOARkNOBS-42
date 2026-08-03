@@ -72,7 +72,6 @@ export function createDiffStatusController({
     diffEmpty = null,
     dirtyBadge = null,
     applyBtn = null,
-    rollbackBtn = null,
     changeBar = null,
     changeCount = null,
     changeDiscardBtn = null,
@@ -112,7 +111,6 @@ export function createDiffStatusController({
     if (applyBtn) {
       applyBtn.disabled = !isDirty || !applyAllowed || !transactionWritable || transactionBusy;
     }
-    if (rollbackBtn) rollbackBtn.disabled = !isDirty || !transactionWritable;
     if (changeDiscardBtn) changeDiscardBtn.disabled = !isDirty || !transactionWritable;
     onDirtyChanged(Boolean(isDirty));
   }

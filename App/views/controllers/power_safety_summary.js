@@ -9,13 +9,19 @@ function formatRailState(value) {
   return 'unknown';
 }
 
-export function renderPowerSummary(container, manifest = {}, { connected = false } = {}) {
+export function renderPowerSummary(
+  container,
+  manifest = {},
+  { connected = false, warningOnly = false, includeWarning = true } = {}
+) {
   if (!container) return;
   container.innerHTML = '';
   container.dataset.powerWarning = 'false';
   container.dataset.powerAvailable = connected ? 'true' : 'false';
+  if (warningOnly) container.setAttribute('hidden', '');
 
   if (!connected) {
+    if (warningOnly) return;
     const unavailable = document.createElement('span');
     unavailable.className = 'power-status-unavailable';
     unavailable.textContent = 'Power status unavailable';
@@ -29,6 +35,15 @@ export function renderPowerSummary(container, manifest = {}, { connected = false
       : 'unavailable';
   const railState = formatRailState(manifest?.rail_topology_verified);
 
+  if (warningOnly) {
+    if (profile !== 'POWER_CHOKED_V1') return;
+    container.dataset.powerWarning = 'true';
+    container.removeAttribute('hidden');
+    container.textContent =
+      'Power-limited hardware reported. Keep LED brightness within the device-reported cap and avoid full-brightness LED tests.';
+    return;
+  }
+
   const power = document.createElement('span');
   power.textContent = `Power: ${profile}`;
 
@@ -41,7 +56,7 @@ export function renderPowerSummary(container, manifest = {}, { connected = false
 
   container.append(power, cap, rail);
 
-  if (profile !== 'POWER_CHOKED_V1') return;
+  if (profile !== 'POWER_CHOKED_V1' || !includeWarning) return;
 
   container.dataset.powerWarning = 'true';
   const warning = document.createElement('div');
@@ -52,9 +67,14 @@ export function renderPowerSummary(container, manifest = {}, { connected = false
   container.append(warning);
 }
 
-export function createPowerSafetySummary({ containers = [] } = {}) {
+export function createPowerSafetySummary({ containers = [], warningContainers = [] } = {}) {
   function render(manifest = {}, options = {}) {
-    containers.forEach((container) => renderPowerSummary(container, manifest, options));
+    containers.forEach((container) =>
+      renderPowerSummary(container, manifest, { ...options, includeWarning: false })
+    );
+    warningContainers.forEach((container) =>
+      renderPowerSummary(container, manifest, { ...options, warningOnly: true })
+    );
   }
 
   return { render };

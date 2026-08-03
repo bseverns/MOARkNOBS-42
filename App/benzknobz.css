@@ -1947,6 +1947,18 @@ button:not(:disabled):focus-visible {
   line-height: 1.45;
 }
 
+.global-power-warning {
+  width: min(1440px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 206, 107, 0.52);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 206, 107, 0.13);
+  color: var(--color-text);
+  font-size: 0.84rem;
+  box-shadow: var(--shadow-soft);
+}
+
 .utility-panel {
   display: none;
   gap: 12px;
@@ -2298,6 +2310,11 @@ html[data-ui-mode='advanced'][data-dirty='true'] #page-shell {
   margin: 0;
 }
 
+#empty-start-simulator {
+  margin-top: 8px;
+  min-width: 180px;
+}
+
 html[data-connected='true'] .workspace-empty-state {
   display: none;
 }
@@ -2382,7 +2399,6 @@ html[data-ui-mode='stage'] [data-utility-panel='midi'],
 html[data-ui-mode='stage'] [data-utility-panel='scope'],
 html[data-ui-mode='stage'] .debug-log-bridge,
 html[data-ui-mode='stage'] #apply,
-html[data-ui-mode='stage'] #rollback,
 html[data-ui-mode='stage'][data-connected='true'] #check-compatibility {
   display: none !important;
 }

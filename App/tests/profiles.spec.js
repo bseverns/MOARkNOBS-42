@@ -20,7 +20,7 @@ test.describe('Profiles toolbar', () => {
       'aria-pressed',
       'true'
     );
-    const simulatorToggle = page.getByRole('button', { name: /simulator/i });
+    const simulatorToggle = page.locator('#simulator-toggle');
     await simulatorToggle.click();
     await expect(page.locator('#transport-lane-chip')).toHaveText('Transport · Simulator');
     await page.getByRole('button', { name: 'Connect' }).click();

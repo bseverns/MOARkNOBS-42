@@ -126,7 +126,7 @@ test('push note dynamics sends only the live native note dynamics command', asyn
   await page.addInitScript(installNativeHarness, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 

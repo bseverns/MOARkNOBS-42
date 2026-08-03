@@ -15,7 +15,7 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   });
 
   await page.goto('/benzknobz.html');
-  const simulatorToggle = page.getByRole('button', { name: /simulator/i });
+  const simulatorToggle = page.locator('#simulator-toggle');
   await simulatorToggle.click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await page.getByRole('tab', { name: 'Scope' }).click();

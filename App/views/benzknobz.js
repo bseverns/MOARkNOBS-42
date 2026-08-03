@@ -80,7 +80,6 @@ const boot = () => {
   const checkCompatibilityBtn = document.getElementById('check-compatibility');
   const configModeBtn = document.getElementById('config-mode');
   const applyBtn = document.getElementById('apply');
-  const rollbackBtn = document.getElementById('rollback');
   const retryReadbackBtn = document.getElementById('retry-readback');
   const slotContainer = document.getElementById('slots');
   const envContainer = document.getElementById('envelopes');
@@ -106,6 +105,7 @@ const boot = () => {
   const presetPicker = document.getElementById('preset-picker');
   const applySaveProfileBtn = document.getElementById('apply-save-profile');
   const simulatorToggle = document.getElementById('simulator-toggle');
+  const emptySimulatorBtn = document.getElementById('empty-start-simulator');
   const usbMidiToggleBtn = document.getElementById('usb-midi-toggle');
   const usbMidiTestBtn = document.getElementById('usb-midi-test');
   const usbMidiStatusEl = document.getElementById('usb-midi-status');
@@ -197,6 +197,7 @@ const boot = () => {
   const slotDetailValue = document.getElementById('slot-detail-value');
   const deviceMonitor = document.getElementById('device-monitor');
   const powerSafetyPill = document.getElementById('power-safety-pill');
+  const globalPowerWarning = document.getElementById('global-power-warning');
   const performerPanel = document.getElementById('performer-panel');
   const stageConnectBtn = document.getElementById('stage-connect');
   const stageConnectionState = document.getElementById('stage-connection-state');
@@ -348,7 +349,6 @@ const boot = () => {
       diffEmpty,
       dirtyBadge,
       applyBtn,
-      rollbackBtn,
       docRoot,
       changeBar,
       changeCount,
@@ -363,14 +363,20 @@ const boot = () => {
     changeReviewCloseBtn?.focus();
   });
   changeReviewCloseBtn?.addEventListener('click', () => changeReviewDialog?.close?.());
-  changeDiscardBtn?.addEventListener('click', () => {
+  changeDiscardBtn?.addEventListener('click', async () => {
     if (
       diffStatusController.shouldConfirmDiscard() &&
       !window.confirm('Discard this staged draft? These changes cannot be recovered from the device.')
     ) {
       return;
     }
-    rollbackBtn?.click();
+    changeDiscardBtn.disabled = true;
+    try {
+      await runtime.rollback();
+    } catch (err) {
+      setStatus('err', 'Discard failed', err.message || String(err));
+      diffStatusController.markDirty(Boolean(runtime.getState().dirty));
+    }
   });
   const baseSetStatus = diffStatusController.setStatus;
   const sessionLogController = createSessionLogController({
@@ -444,7 +450,8 @@ const boot = () => {
     resolveDeviceName
   });
   const powerSafetySummary = createPowerSafetySummary({
-    containers: [powerSafetyPill, stagePowerSummary]
+    containers: [powerSafetyPill, stagePowerSummary],
+    warningContainers: [globalPowerWarning]
   });
   const performerPanelController = createPerformerPanelController({
     runtime,
@@ -516,8 +523,8 @@ const boot = () => {
       checkCompatibilityBtn,
       configModeBtn,
       applyBtn,
-      rollbackBtn,
       simulatorToggle,
+      emptySimulatorBtn,
       connectionPill,
       connectionBanner,
       transportLaneChip,
@@ -991,7 +998,6 @@ const boot = () => {
     setConnectionBanner('live', manifest);
     connectFailHelp?.removeAttribute('open');
     if (applyBtn) applyBtn.disabled = true;
-    if (rollbackBtn) rollbackBtn.disabled = true;
     syncConfigFileButtons();
     setStatus('ok', 'Connected', 'Schema synced. Stage edits before applying.');
     sessionLogController.recordEvent(
@@ -1013,7 +1019,6 @@ const boot = () => {
     setConnectionPill('disconnected', 'Disconnected');
     setConnectionBanner('disconnected', runtime.getState().manifest);
     if (applyBtn) applyBtn.disabled = true;
-    if (rollbackBtn) rollbackBtn.disabled = true;
     syncConfigFileButtons();
     setStatus('warn', 'Disconnected', 'Reconnect to continue editing.');
     sessionLogController.recordEvent('CONNECTION', 'Disconnected', '', 'warn');

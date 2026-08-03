@@ -37,7 +37,6 @@
             <button id="connect" type="button" disabled aria-busy="true">Connect</button>
             <button id="check-compatibility" type="button" data-ui-modes="advanced">Check compatibility</button>
             <button id="config-mode" type="button" data-ui-modes="advanced">Config boot</button>
-            <button id="rollback" type="button" disabled data-ui-modes="advanced">Rollback</button>
             <button id="retry-readback" type="button" hidden>Retry device readback</button>
           </div>
           <span class="connection-banner" id="connection-banner" role="status" hidden></span>
@@ -140,11 +139,13 @@
         </div>
       </details>
     </header>
+    <div id="global-power-warning" class="global-power-warning" role="alert" hidden></div>
     <main>
       <section id="workspace-empty-state" class="workspace-empty-state" data-ui-modes="basic advanced">
         <p class="workspace-kicker">Ready when you are</p>
         <h2>Connect a controller or start the simulator to inspect 42 slots.</h2>
         <p class="microcopy">Configure is the default path: connect, choose a slot, map it, review, and apply.</p>
+        <button id="empty-start-simulator" class="action-primary" type="button" data-ui-modes="basic">Start simulator</button>
       </section>
       <section id="performer-panel" aria-labelledby="performer-title" hidden>
         <header class="performer-header">

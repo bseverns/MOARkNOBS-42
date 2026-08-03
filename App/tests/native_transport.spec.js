@@ -207,7 +207,7 @@ test('native transport adapter speaks HELLO/GET_*/SET_ALL instead of JSON-RPC', 
   }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
@@ -362,7 +362,7 @@ test('native transport disables unsupported profile and recovery controls', asyn
   }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await openRecoveryDrawer(page);
@@ -481,7 +481,7 @@ test('native transport falls back to bundled schema when device schema is incomp
   }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
@@ -763,7 +763,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
   }, { schemaVersion: MN42_SCHEMA_VERSION });
 
   await page.goto('/benzknobz.html');
-  await page.getByRole('button', { name: /simulator/i }).click();
+  await page.locator('#simulator-toggle').click();
   await page.getByRole('button', { name: 'Connect' }).click();
   await expect(page.locator('#connection-pill')).toContainText('Connected');
   await openRecoveryDrawer(page);

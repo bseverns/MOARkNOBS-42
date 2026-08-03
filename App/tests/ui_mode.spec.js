@@ -21,7 +21,7 @@ test.describe('UI mode', () => {
     await expect(page.locator('#editor-panel')).toContainText('Slot Mapping');
     await expect(page.locator('#check-compatibility')).toBeHidden();
     await expect(page.locator('#config-mode')).toBeHidden();
-    await expect(page.locator('#rollback')).toBeHidden();
+    await expect(page.locator('#rollback')).toHaveCount(0);
     await expect(page.locator('#profile-wizard')).toBeHidden();
     await expect(page.locator('#macro-card')).toBeHidden();
     await expect(page.locator('#scene-card')).toBeHidden();
@@ -51,6 +51,23 @@ test.describe('UI mode', () => {
     await page.reload();
     await expect(advancedButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#filter-settings')).toBeVisible();
+  });
+
+  test('Configure empty state starts and connects the simulator', async ({ page }) => {
+    await page.goto('/benzknobz.html');
+
+    await expect(page.locator('#workspace-empty-state')).toBeVisible();
+    await expect(page.locator('#empty-start-simulator')).toBeVisible();
+    await expect(page.locator('#simulator-toggle')).toBeHidden();
+
+    await page.locator('#empty-start-simulator').click();
+
+    await expect(page.locator('#connection-pill')).toHaveText('Connected');
+    await expect(page.locator('#workspace-empty-state')).toBeHidden();
+    await expect(page.locator('.slot-editor')).toBeVisible();
+    await expect
+      .poll(async () => page.evaluate(() => window.__MN42_RUNTIME.getState().transportMode))
+      .toBe('simulator');
   });
 
   test('basic mode still supports staged edits and apply', async ({ page }) => {
