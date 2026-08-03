@@ -12,6 +12,7 @@ Use the browser configurator first if you only need direct USB setup and profile
 Current support boundary:
 
 - the Bridge fallback manifest and simulator advertise schema 8 to match current firmware and App profile modulation persistence
+- the Bridge simulator advertises `arp_profile_assignments` and preserves profile arp `assigned_slots`; recalling a profile arms those slots without implying live arp startup
 - strongest repo evidence for this tool: Node.js 24 desktop host plus the browser console or CLI
 - documented but still setup-specific: OSC-host and DAW routing behavior after the bridge is running
 - package scripts intentionally pin Node to `>=24 <25`; widening that floor needs explicit test evidence first

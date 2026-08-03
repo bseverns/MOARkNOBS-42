@@ -86,6 +86,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 ## Accessibility & Controls
 
 - Every control carries a label and large hit target. Slot focus follows arrow keys; hold `Shift` for coarse/fine changes on numeric inputs just like the hardware.
+- Only the selected slot's browser-only **Take Control** toggle participates in sequential keyboard navigation; selecting another slot moves that single tab stop with it.
 - The connection pill announces changes through an ARIA live region, and telemetry painting is throttled to animation frames so assistive tech stays responsive.
 - Selecting a SysEx slot reveals a hex template field. Enter space-separated bytes plus `XX`/`MSB`/`LSB` placeholders—the UI normalises the case and the firmware swaps in live values on send.
 
@@ -104,6 +105,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - `runtime.applyPatch(path, value)` stages a field locally first, then routes a `{rpc:"set_param"}` call through the same RPC lane. The simulator applies it immediately; native firmware defers those fine-grained writes until the next full Apply because the production contract is config-oriented. If live preview fails, the intentional edit remains staged and the failure is reported.
 - Full Apply sends `set_config` with schema version, manifest metadata, an immutable staged candidate, and a SHA-256 checksum. Once any Apply bytes have been transmitted, a missing or malformed receipt enters an uncertain/resynchronizing state and reads device configuration back; it never claims a local rollback restored hardware. An unsent structured-Bridge draft survives disconnect/reconnect and is reconciled after the first authoritative session snapshot.
 - Browser-only slot metadata (`label`, pickup guard, and the MIDI badge) is stored separately in `localStorage`, merged back into the UI on read, and never included in `Apply` or schema diffing.
+- Device serialization includes every changed per-slot EF payload, including advanced-only fields and intentional resets back to default values; default-looking data is not discarded when it differs from verified device truth.
 - Schema mismatches put the device contract into `migration-required` and block Apply. The App currently supports export and inspection only; do not register or advertise migration adapters until their transform, validation, diff, and operator-confirmation flow is implemented.
 - Last-used USB IDs and the last staged snapshot are remembered in `localStorage`; on load the app nudges you to reconnect but never reopens without a user gesture (WebSerial rules).
 
