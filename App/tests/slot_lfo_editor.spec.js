@@ -56,6 +56,7 @@ test('fixed slot LFO lane edits survive profile save and reload', async ({ page 
   await page.getByRole('button', { name: 'Switch to Profile A now', exact: true }).click();
   await expect(page.locator('#status-label')).toHaveText('Draft protected');
   await page.locator('#change-discard').click();
+  await expect(page.locator('#dirty-badge')).toBeHidden();
   await page.getByRole('button', { name: 'Switch to Profile A now', exact: true }).click();
   await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 5000 });
   await expect(amount).toHaveValue('-24');

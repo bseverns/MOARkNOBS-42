@@ -51,6 +51,7 @@ test.describe('Profiles toolbar', () => {
     await page.locator('#profile-load').click();
     await expect(page.locator('#status-label')).toHaveText('Draft protected');
     await page.locator('#change-discard').click();
+    await expect(page.locator('#dirty-badge')).toBeHidden();
     await page.locator('#profile-load').click();
     await expect(page.locator('#status-label')).toHaveText('Profile switched', { timeout: 5000 });
     await expect(freqInput).toHaveValue('123');
