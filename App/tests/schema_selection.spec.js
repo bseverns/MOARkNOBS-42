@@ -66,3 +66,23 @@ test('the bundled firmware schema metadata is accepted by the device-schema gate
   });
   expect(selection).toMatchObject({ source: 'device', quality: 'verified' });
 });
+
+test('firmware x_mn42 authority metadata does not downgrade a compatible device schema', async () => {
+  const deviceSchema = {
+    ...compatibleSchema,
+    schema_version: 8,
+    x_mn42: {
+      authority: 'device',
+      configurator: 'convenience editor for staged user input',
+      bridge: 'required when USB/WebSerial transport is unavailable'
+    }
+  };
+
+  expect(findUnsupportedSchemaKeywords(deviceSchema)).toEqual([]);
+  const selection = await selectSchemaForHydration({
+    sendRpc: async () => ({ schema: deviceSchema }),
+    schemaUrl: 'unused',
+    fetchJson: async () => compatibleSchema
+  });
+  expect(selection).toMatchObject({ source: 'device', quality: 'verified' });
+});

@@ -18,7 +18,7 @@ const MINI_AJV_KEYWORDS = new Set([
   // particular schema_version is part of the firmware contract and must not
   // make an otherwise compatible device schema look unsupported.
   '$schema', '$id', '$comment', 'title', 'description', 'default', 'examples', 'deprecated', 'readOnly', 'writeOnly',
-  'schema_version',
+  'schema_version', 'x_mn42',
   'type', 'enum', 'minimum', 'maximum', 'maxLength', 'pattern', 'required', 'additionalProperties',
   'properties', 'anyOf', 'minItems', 'maxItems', 'items', 'uniqueItems'
 ]);
