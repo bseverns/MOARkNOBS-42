@@ -17,6 +17,11 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function stableFloat(value, digits = 6) {
+  if (!Number.isFinite(value)) return value;
+  return Number(value.toFixed(digits));
+}
+
 function normalizeEnvelopeSelector(value, followerCount, fallback = 0) {
   const resolvedCount = Math.max(1, Math.floor(Number(followerCount) || 0));
   const maxIndex = Math.max(0, resolvedCount - 1);
@@ -145,16 +150,20 @@ function normalizeSlotEnvelope(slot) {
     ef.filter_name = EF_FILTER_NAMES[ef.filter_index] || defaults.filter_name;
   }
   ef.frequency = Number.isFinite(Number(ef.frequency))
-    ? clamp(Number(ef.frequency), EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX)
+    ? stableFloat(clamp(Number(ef.frequency), EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX))
     : defaults.frequency;
   ef.q = Number.isFinite(Number(ef.q))
-    ? clamp(Number(ef.q), EF_FILTER_Q_MIN, EF_FILTER_Q_MAX)
+    ? stableFloat(clamp(Number(ef.q), EF_FILTER_Q_MIN, EF_FILTER_Q_MAX))
     : defaults.q;
   ef.oversample = clamp(Math.round(Number(ef.oversample) || defaults.oversample), 1, 32);
   const smoothing = Number(ef.smoothing);
-  ef.smoothing = Number.isFinite(smoothing) ? clamp(smoothing, 0, 1) : defaults.smoothing;
-  ef.baseline = Number.isFinite(Number(ef.baseline)) ? Number(ef.baseline) : defaults.baseline;
-  ef.gain = Number.isFinite(Number(ef.gain)) ? Number(ef.gain) : defaults.gain;
+  ef.smoothing = Number.isFinite(smoothing)
+    ? stableFloat(clamp(smoothing, 0, 1))
+    : defaults.smoothing;
+  ef.baseline = Number.isFinite(Number(ef.baseline))
+    ? stableFloat(Number(ef.baseline))
+    : defaults.baseline;
+  ef.gain = Number.isFinite(Number(ef.gain)) ? stableFloat(Number(ef.gain)) : defaults.gain;
   if (typeof ef.mode === 'string') {
     const index = EF_MODE_NAMES.indexOf(ef.mode.toUpperCase());
     ef.mode = index >= 0 ? index : defaults.mode;
@@ -270,7 +279,20 @@ function normalizeSlotConfig(slot, efLimit = 6) {
       : typeof source.type_name === 'string'
         ? source.type_name
         : null;
-  const type = SLOT_TYPE_NAMES.includes(typeCandidate) ? typeCandidate : 'OFF';
+  const canonicalTypeAliases = {
+    NOTE: 'Note',
+    PITCH_BEND: 'PitchBend',
+    PITCHBEND: 'PitchBend',
+    PROGRAM: 'ProgramChange',
+    PROGRAM_CHANGE: 'ProgramChange',
+    AFTERTOUCH: 'Aftertouch',
+    MOD_WHEEL: 'ModWheel',
+    MODWHEEL: 'ModWheel',
+    SYSEX: 'SysEx',
+    SYS_EX: 'SysEx'
+  };
+  const canonicalType = canonicalTypeAliases[typeCandidate] ?? typeCandidate;
+  const type = SLOT_TYPE_NAMES.includes(canonicalType) ? canonicalType : 'OFF';
 
   const midiChannelCandidate = Number(source.midiChannel ?? source.channel);
   const midiChannel = Number.isFinite(midiChannelCandidate)
@@ -302,15 +324,15 @@ function normalizeSlotConfig(slot, efLimit = 6) {
   const normalized = { type, midiChannel, data1, efIndex, ef, active, arg, lfo };
 
   const arpNoteCandidate = Number(source.arpNote ?? source.arp_note);
-  if (Number.isFinite(arpNoteCandidate)) {
-    normalized.arpNote = clamp(Math.round(arpNoteCandidate), 0, 127);
-  }
+  normalized.arpNote = Number.isFinite(arpNoteCandidate)
+    ? clamp(Math.round(arpNoteCandidate), 0, 127)
+    : type === 'Note'
+      ? data1
+      : 0;
 
   let sysexTemplate = source.sysexTemplate ?? source.sysex_template;
-  if (typeof sysexTemplate === 'string') {
-    sysexTemplate = sysexTemplate.trim().slice(0, 128);
-    normalized.sysexTemplate = sysexTemplate;
-  }
+  normalized.sysexTemplate =
+    typeof sysexTemplate === 'string' ? sysexTemplate.trim().slice(0, 128) : '';
 
   return normalized;
 }
@@ -379,21 +401,23 @@ export function normalizeConfig(config, manifest = {}) {
   const filter = {};
   const freqCandidate = Number(filterSource.freq ?? filterSource.frequency);
   if (Number.isFinite(freqCandidate)) {
-    filter.freq = clamp(freqCandidate, EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX);
+    filter.freq = stableFloat(clamp(freqCandidate, EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX));
   } else {
     const envFreq = Number(envFilter.frequency ?? envFilter.freq);
     if (Number.isFinite(envFreq)) {
-      filter.freq = clamp(envFreq, EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX);
+      filter.freq = stableFloat(clamp(envFreq, EF_FILTER_FREQ_MIN, EF_FILTER_FREQ_MAX));
     }
   }
   if (!Number.isFinite(filter.freq)) filter.freq = EF_FILTER_FREQ_MIN;
 
   const qCandidate = Number(filterSource.q);
   if (Number.isFinite(qCandidate)) {
-    filter.q = clamp(qCandidate, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX);
+    filter.q = stableFloat(clamp(qCandidate, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX));
   } else {
     const envQ = Number(envFilter.q);
-    if (Number.isFinite(envQ)) filter.q = clamp(envQ, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX);
+    if (Number.isFinite(envQ)) {
+      filter.q = stableFloat(clamp(envQ, EF_FILTER_Q_MIN, EF_FILTER_Q_MAX));
+    }
   }
   if (!Number.isFinite(filter.q)) filter.q = 1;
 
@@ -495,7 +519,13 @@ export function normalizeConfig(config, manifest = {}) {
   if (config.led && typeof config.led === 'object') {
     const ledCandidate = { ...config.led };
     const brightness = Number(ledCandidate.brightness);
-    const parsed = Number.isFinite(brightness) ? clamp(Math.round(brightness), 0, 255) : 0;
+    const manifestBrightnessCap = Number(manifest?.led_brightness_cap);
+    const brightnessMax = Number.isFinite(manifestBrightnessCap)
+      ? clamp(Math.round(manifestBrightnessCap), 0, 255)
+      : 255;
+    const parsed = Number.isFinite(brightness)
+      ? clamp(Math.round(brightness), 0, brightnessMax)
+      : 0;
     let color = ledCandidate.color;
     if (typeof color !== 'string' || !/^#([0-9a-fA-F]{6})$/.test(color)) {
       if (typeof ledCandidate.hex === 'string' && /^#([0-9a-fA-F]{6})$/.test(ledCandidate.hex)) {

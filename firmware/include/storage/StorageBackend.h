@@ -27,6 +27,7 @@ class StorageBackend {
     virtual bool commitTransaction() { return false; }
     virtual void abortTransaction() {}
     virtual uint32_t generation() const { return 0; }
+    virtual const char *statusDetail() const { return "transactions_not_supported"; }
 };
 
 #endif // STORAGE_BACKEND_H

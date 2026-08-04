@@ -621,7 +621,7 @@ MIDISlot::EfSettings readSlotEfSettings(JsonObject slotObj, const MIDISlot &slot
         slotObj["ef"].is<JsonObject>() ? slotObj["ef"].as<JsonObject>() : JsonObject();
     if (!efObj.isNull()) {
         parseEfSettings(efObj, settings, settings);
-        rawEfIndex = settings.followerIndex;
+        if (efObj.containsKey("index")) rawEfIndex = efObj["index"].as<int>();
     }
 
     if (rawEfIndex >= 0 && rawEfIndex < static_cast<int>(envelopeFollowers.size())) {
@@ -891,7 +891,12 @@ void applyGlobalArgFollowerModes(const SlotARGConfig &defaultArg) {
 
 void applyEnvelopeModeLabel(JsonObject config) {
     if (config.containsKey("envelopeMode")) {
-        updateEnvelopeModeLabel(config["envelopeMode"].as<const char *>());
+        const char *label = config["envelopeMode"].as<const char *>();
+        uint8_t mode = 0;
+        if (label && equalsIgnoreCase(label, "EXPONENTIAL")) mode = 1;
+        else if (label && equalsIgnoreCase(label, "LOG")) mode = 2;
+        configManager.setMode(mode);
+        updateEnvelopeModeLabel(label);
     }
 }
 
@@ -1205,13 +1210,25 @@ bool applyConfigObject(JsonObject config, uint32_t seq) {
         rollbackRuntimeFromActiveGeneration();
         return false;
     }
+    for (JsonVariant slotVariant : slotsJson) {
+        JsonObject slotObj = slotVariant.as<JsonObject>();
+        if (slotObj.containsKey("ef") && slotObj["ef"].is<JsonObject>()) {
+            anySlotPayloadSpecified = true;
+            break;
+        }
+    }
 
     configManager.saveConfiguration();
     applyEfSlotMappingsFromConfig(config);
     applyGlobalFilterState(config, anySlotPayloadSpecified);
     applyGlobalArgAndModeState(config, defaultArg);
     applyLedStateFromConfig(config);
-    if (!persistActiveProfileSnapshot() || !storage->commitTransaction()) {
+    if (!persistActiveProfileSnapshot()) {
+        rollbackRuntimeFromActiveGeneration();
+        emitBulkError("profile_snapshot", "active profile snapshot could not be staged", seq);
+        return false;
+    }
+    if (!storage->commitTransaction()) {
         rollbackRuntimeFromActiveGeneration();
         emitBulkError("storage_commit", "configuration generation was not activated", seq);
         return false;

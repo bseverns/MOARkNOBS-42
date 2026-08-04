@@ -864,8 +864,12 @@ void writeRootArgConfig(JsonObject rootArg) {
 }
 
 void writeLedConfig(JsonObject led) {
-    led["brightness"] = ledManager.getBrightness();
-    CRGB color = ledManager.getColor();
+    // The first pixel is animated live state, not configuration authority.
+    // Export the persisted base settings so Apply readback remains stable.
+    uint8_t brightness = 0;
+    CRGB color;
+    configManager.loadLEDSettings(brightness, color);
+    led["brightness"] = brightness;
     JsonObject colorObj = led.createNestedObject("rgb");
     colorObj["r"] = color.r;
     colorObj["g"] = color.g;

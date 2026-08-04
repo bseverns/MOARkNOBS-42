@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <cstring>
 
 // A/B persistence backend. The data blobs are permanent; a pair of small,
@@ -25,6 +24,7 @@ class LittleFsStorageBackend final : public StorageBackend {
     uint16_t length() const override { return kVirtualAddressSpace; }
     bool ready() const { return ensureReady(); }
     bool supportsTransactions() const override { return ensureReady(); }
+    const char *statusDetail() const override { ensureReady(); return statusDetail_; }
     uint32_t generation() const override {
         MetaRecord meta{};
         return activeMeta(meta, nullptr) ? meta.generation : 0;
@@ -35,8 +35,9 @@ class LittleFsStorageBackend final : public StorageBackend {
         MetaRecord meta{};
         if (!activeMeta(meta, nullptr)) return false;
         transactionBlob_ = static_cast<uint8_t>(1U - meta.activeBlob);
-        transactionBuffer_ = static_cast<uint8_t *>(std::malloc(kVirtualAddressSpace));
-        if (!transactionBuffer_) return false;
+        if (transactionStorageClaimed_) return false;
+        transactionStorageClaimed_ = true;
+        transactionBuffer_ = transactionStorage_;
         File source = fs_.open(blobPath(meta.activeBlob), FILE_READ);
         if (!source || source.read(transactionBuffer_, kVirtualAddressSpace) != kVirtualAddressSpace) {
             if (source) source.close();
@@ -52,38 +53,64 @@ class LittleFsStorageBackend final : public StorageBackend {
     bool commitTransaction() override {
         if (!transactionActive_) return false;
         File target = fs_.open(blobPath(transactionBlob_), FILE_WRITE);
-        const bool blobWritten = target && target.truncate(0) &&
-                                 target.write(transactionBuffer_, kVirtualAddressSpace) ==
-                                     kVirtualAddressSpace;
+        bool blobWritten = target && target.truncate(0) && target.seek(0, SeekSet);
+        // LittleFS_Program does not guarantee that a single 48 KiB write is
+        // accepted in one call. Stream the staged generation in bounded
+        // blocks, just as migration/copy paths do.
+        constexpr size_t kCommitChunkSize = 256;
+        size_t written = 0;
+        while (blobWritten && written < kVirtualAddressSpace) {
+            const size_t count =
+                std::min(kCommitChunkSize, static_cast<size_t>(kVirtualAddressSpace - written));
+            blobWritten = target.write(transactionBuffer_ + written, count) == count;
+            written += blobWritten ? count : 0;
+        }
         if (target) {
             target.flush();
             target.close();
         }
         transactionActive_ = false;
         releaseTransactionBuffer();
-        if (!blobWritten || transactionWriteFailed_ ||
-            !fileHasExpectedSize(blobPath(transactionBlob_)))
+        if (!blobWritten || written != kVirtualAddressSpace) {
+            statusDetail_ = "commit_blob_write_failed";
             return false;
+        }
+        if (transactionWriteFailed_) {
+            statusDetail_ = "commit_staged_write_failed";
+            return false;
+        }
+        if (!fileHasExpectedSize(blobPath(transactionBlob_))) {
+            statusDetail_ = "commit_blob_size_failed";
+            return false;
+        }
 
         MetaRecord current{};
         uint8_t currentSlot = 0;
-        if (!activeMeta(current, &currentSlot)) return false;
+        if (!activeMeta(current, &currentSlot)) {
+            statusDetail_ = "commit_active_meta_failed";
+            return false;
+        }
         MetaRecord next{};
         next.flags = current.flags;
         next.generation = current.generation + 1;
         next.activeBlob = transactionBlob_;
         next.blobChecksum = fileChecksum(blobPath(transactionBlob_));
-        if (!writeMetaSlot(static_cast<uint8_t>(1U - currentSlot), next)) return false;
+        if (!writeMetaSlot(static_cast<uint8_t>(1U - currentSlot), next)) {
+            statusDetail_ = "commit_meta_write_failed";
+            return false;
+        }
 
         MetaRecord verified{};
         if (!readMetaSlot(static_cast<uint8_t>(1U - currentSlot), verified) ||
             verified.generation != next.generation || verified.activeBlob != next.activeBlob ||
             verified.blobChecksum != next.blobChecksum ||
             fileChecksum(blobPath(verified.activeBlob)) != verified.blobChecksum) {
+            statusDetail_ = "commit_verify_failed";
             return false;
         }
         cacheActiveMeta(verified, static_cast<uint8_t>(1U - currentSlot));
         transactionWriteFailed_ = false;
+        statusDetail_ = "ready";
         return true;
     }
 
@@ -170,14 +197,20 @@ class LittleFsStorageBackend final : public StorageBackend {
     static const char *metaPath(uint8_t index) { return index == 0 ? kMetaAPath : kMetaBPath; }
     bool failWrite() { if (transactionActive_) transactionWriteFailed_ = true; return false; }
     void releaseTransactionBuffer() const {
-        std::free(transactionBuffer_);
+        if (transactionBuffer_ == transactionStorage_) transactionStorageClaimed_ = false;
         transactionBuffer_ = nullptr;
     }
 
     bool ensureReady() const {
         if (readyChecked_) return littlefsReady_;
         readyChecked_ = true;
-        littlefsReady_ = ensureMounted() && ensureStorageFiles();
+        if (!ensureMounted()) {
+            statusDetail_ = "mount_failed";
+            littlefsReady_ = false;
+            return false;
+        }
+        littlefsReady_ = ensureStorageFiles();
+        if (littlefsReady_) statusDetail_ = "ready";
         return littlefsReady_;
     }
 
@@ -190,17 +223,38 @@ class LittleFsStorageBackend final : public StorageBackend {
 
     bool ensureStorageFiles() const {
         if (!fileHasExpectedSize(kBlobAPath)) {
-            if (!migrateLegacyBlob() && !createBlankBlob(kBlobAPath)) return false;
+            if (!migrateLegacyBlob() && !createBlankBlob(kBlobAPath)) {
+                statusDetail_ = "blob_a_create_failed";
+                return false;
+            }
         }
         bool hasData = false;
-        if (!blobHasNonFFData(kBlobAPath, hasData)) return false;
-        if (!hasData && !migrateFromEeprom()) return false;
-        if (!fileHasExpectedSize(kBlobBPath) && !copyFile(kBlobAPath, kBlobBPath)) return false;
+        if (!blobHasNonFFData(kBlobAPath, hasData)) {
+            statusDetail_ = "blob_a_read_failed";
+            return false;
+        }
+        if (!hasData && !migrateFromEeprom()) {
+            statusDetail_ = "eeprom_migration_failed";
+            return false;
+        }
+        if (!fileHasExpectedSize(kBlobBPath)) {
+            // A failed/interrupted commit can leave the inactive file entry in
+            // a shape that cannot be truncated reliably. It is not authority,
+            // so recreate it from the intact active A generation.
+            fs_.remove(kBlobBPath);
+            if (!copyFile(kBlobAPath, kBlobBPath)) {
+                statusDetail_ = "blob_b_copy_failed";
+                return false;
+            }
+        }
 
         MetaRecord meta{};
         if (activeMeta(meta, nullptr)) return true;
         meta.blobChecksum = fileChecksum(kBlobAPath);
-        if (!writeMetaSlot(0, meta)) return false;
+        if (!writeMetaSlot(0, meta)) {
+            statusDetail_ = "metadata_repair_failed";
+            return false;
+        }
         cacheActiveMeta(meta, 0);
         return true;
     }
@@ -246,9 +300,17 @@ class LittleFsStorageBackend final : public StorageBackend {
 
     bool migrateFromEeprom() const {
         File file = fs_.open(kBlobAPath, FILE_WRITE);
-        if (!file || !file.seek(0, SeekSet)) { if (file) file.close(); return false; }
+        if (!file || !file.truncate(0)) { if (file) file.close(); return false; }
         const uint16_t count = std::min<uint16_t>(fallback_.length(), kVirtualAddressSpace);
-        for (uint16_t i = 0; i < count; ++i) if (file.write(fallback_.read(i)) != 1) { file.close(); return false; }
+        uint8_t chunk[128];
+        uint16_t copied = 0;
+        while (copied < count) {
+            const size_t size = std::min(sizeof(chunk), static_cast<size_t>(count - copied));
+            for (size_t i = 0; i < size; ++i) chunk[i] = fallback_.read(copied + i);
+            if (file.write(chunk, size) != size) { file.close(); return false; }
+            copied = static_cast<uint16_t>(copied + size);
+        }
+        if (!fillToExpectedSize(file, copied)) { file.close(); return false; }
         file.flush(); file.close();
         return copyFile(kBlobAPath, kBlobBPath);
     }
@@ -299,8 +361,14 @@ class LittleFsStorageBackend final : public StorageBackend {
             if (slotOut) *slotOut = cachedActiveMetaSlot_;
             return true;
         }
-        MetaRecord a{}, b{}; const bool validA = readMetaSlot(0, a) && fileChecksum(blobPath(a.activeBlob)) == a.blobChecksum;
-        const bool validB = readMetaSlot(1, b) && fileChecksum(blobPath(b.activeBlob)) == b.blobChecksum;
+        // Ordinary compatibility writes can update the active virtual EEPROM
+        // outside a bulk transaction. LittleFS already checks file integrity;
+        // requiring the old whole-blob digest here would invalidate otherwise
+        // healthy metadata on the next boot. New inactive generations are
+        // still checksum-verified before their metadata slot is activated.
+        MetaRecord a{}, b{};
+        const bool validA = readMetaSlot(0, a) && fileHasExpectedSize(blobPath(a.activeBlob));
+        const bool validB = readMetaSlot(1, b) && fileHasExpectedSize(blobPath(b.activeBlob));
         if (!validA && !validB) return false;
         const bool useB = validB && (!validA || b.generation > a.generation);
         out = useB ? b : a;
@@ -338,12 +406,17 @@ class LittleFsStorageBackend final : public StorageBackend {
     mutable EepromStorageBackend fallback_;
     mutable LittleFS_Program fs_;
     mutable bool readyChecked_ = false, littlefsReady_ = false, mountAttempted_ = false, mounted_ = false;
+    mutable const char *statusDetail_ = "not_checked";
     mutable bool activeMetaCached_ = false;
     mutable MetaRecord cachedActiveMeta_{};
     mutable uint8_t cachedActiveMetaSlot_ = 0;
     mutable bool transactionActive_ = false, transactionWriteFailed_ = false;
     mutable uint8_t *transactionBuffer_ = nullptr;
     mutable uint8_t transactionBlob_ = 0;
+    // A bulk request remains resident while its JsonDocument is applied. Keep
+    // the 48 KiB transaction image out of the scarce malloc/RAM1 pool.
+    DMAMEM inline static uint8_t transactionStorage_[kVirtualAddressSpace] = {};
+    inline static bool transactionStorageClaimed_ = false;
 };
 
 #endif

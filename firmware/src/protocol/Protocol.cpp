@@ -201,7 +201,13 @@ const char *argMethodName(uint8_t method) {
     return "UNKNOWN";
 }
 
-const char *envelopeModeName(uint8_t mode) { return (mode != 0) ? "ARG" : "SEF"; }
+const char *envelopeModeName(uint8_t mode) {
+    switch (mode) {
+    case 1: return "EXPONENTIAL";
+    case 2: return "LOG";
+    default: return "LINEAR";
+    }
+}
 
 EnvelopeFollower::ARG_Method toFollowerArgMethod(ARGMethod method) {
     return static_cast<EnvelopeFollower::ARG_Method>(static_cast<uint8_t>(method));

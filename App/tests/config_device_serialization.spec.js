@@ -57,3 +57,9 @@ test('device serialization includes resetting a non-default EF to defaults', () 
     autoGain: false
   });
 });
+
+test('device serialization makes omitted arp state deterministic', () => {
+  const current = configWithEf(clone(defaultEf));
+
+  expect(serialize(current, current).slots[0].arpNote).toBe(0);
+});

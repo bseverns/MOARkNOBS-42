@@ -50,7 +50,9 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
   else if (slot?.midiChannel !== undefined) out.channel = clone(slot.midiChannel);
   if (slot?.data1 !== undefined) out.data1 = clone(slot.data1);
   else if (slot?.cc !== undefined) out.data1 = clone(slot.cc);
-  if (slot?.arpNote !== undefined) out.arpNote = clone(slot.arpNote);
+  // Always make hidden per-slot state explicit. Firmware otherwise retains a
+  // previous arp note, which makes an omitted browser default fail readback.
+  out.arpNote = clone(slot?.arpNote ?? (out.type === 'Note' ? out.data1 ?? 0 : 0));
   out.active = Boolean(slot?.active);
   out.ef_index = resolveEfIndexForDevice(slot);
   if (slot?.sysexTemplate !== undefined && slot?.sysexTemplate !== previousSlot?.sysexTemplate) {

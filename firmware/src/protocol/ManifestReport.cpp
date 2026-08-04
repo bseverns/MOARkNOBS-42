@@ -111,6 +111,7 @@ void writeManifestOperationalHealth(JsonObject object) {
     persistence["generation"] = storage->generation();
     persistence["status"] =
         (storage->supportsTransactions() && storage->length() >= required) ? "ready" : "insufficient";
+    persistence["detail"] = storage->statusDetail();
 }
 
 // Capability fields are the firmware's promise about which host controls are safe to expose.

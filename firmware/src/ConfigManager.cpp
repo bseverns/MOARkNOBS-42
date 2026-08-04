@@ -59,11 +59,10 @@ StorageBackend &activeStorageBackend() {
     }
 #if defined(CONFIG_STORAGE_LITTLEFS)
     static LittleFsStorageBackend littleFsBackend;
-    static EepromStorageBackend eepromFallbackBackend;
-    if (littleFsBackend.ready()) {
-        return littleFsBackend;
-    }
-    return eepromFallbackBackend;
+    // LittleFsStorageBackend already delegates reads/writes to EEPROM when it
+    // cannot initialize. Returning it consistently preserves that fallback
+    // while keeping its readiness detail visible to diagnostics and hosts.
+    return littleFsBackend;
 #else
     static EepromStorageBackend defaultBackend;
     return defaultBackend;
