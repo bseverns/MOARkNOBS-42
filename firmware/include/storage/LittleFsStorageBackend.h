@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 
 // A/B persistence backend. The data blobs are permanent; a pair of small,
@@ -34,7 +35,15 @@ class LittleFsStorageBackend final : public StorageBackend {
         MetaRecord meta{};
         if (!activeMeta(meta, nullptr)) return false;
         transactionBlob_ = static_cast<uint8_t>(1U - meta.activeBlob);
-        if (!copyFile(blobPath(meta.activeBlob), blobPath(transactionBlob_))) return false;
+        transactionBuffer_ = static_cast<uint8_t *>(std::malloc(kVirtualAddressSpace));
+        if (!transactionBuffer_) return false;
+        File source = fs_.open(blobPath(meta.activeBlob), FILE_READ);
+        if (!source || source.read(transactionBuffer_, kVirtualAddressSpace) != kVirtualAddressSpace) {
+            if (source) source.close();
+            releaseTransactionBuffer();
+            return false;
+        }
+        source.close();
         transactionWriteFailed_ = false;
         transactionActive_ = true;
         return true;
@@ -42,8 +51,19 @@ class LittleFsStorageBackend final : public StorageBackend {
 
     bool commitTransaction() override {
         if (!transactionActive_) return false;
+        File target = fs_.open(blobPath(transactionBlob_), FILE_WRITE);
+        const bool blobWritten = target && target.truncate(0) &&
+                                 target.write(transactionBuffer_, kVirtualAddressSpace) ==
+                                     kVirtualAddressSpace;
+        if (target) {
+            target.flush();
+            target.close();
+        }
         transactionActive_ = false;
-        if (transactionWriteFailed_ || !fileHasExpectedSize(blobPath(transactionBlob_))) return false;
+        releaseTransactionBuffer();
+        if (!blobWritten || transactionWriteFailed_ ||
+            !fileHasExpectedSize(blobPath(transactionBlob_)))
+            return false;
 
         MetaRecord current{};
         uint8_t currentSlot = 0;
@@ -62,6 +82,7 @@ class LittleFsStorageBackend final : public StorageBackend {
             fileChecksum(blobPath(verified.activeBlob)) != verified.blobChecksum) {
             return false;
         }
+        cacheActiveMeta(verified, static_cast<uint8_t>(1U - currentSlot));
         transactionWriteFailed_ = false;
         return true;
     }
@@ -69,6 +90,7 @@ class LittleFsStorageBackend final : public StorageBackend {
     void abortTransaction() override {
         transactionActive_ = false;
         transactionWriteFailed_ = false;
+        releaseTransactionBuffer();
     }
 
     uint8_t read(int address) const override {
@@ -92,6 +114,10 @@ class LittleFsStorageBackend final : public StorageBackend {
             return;
         }
         if (!contains(address, len)) return;
+        if (transactionActive_ && transactionBuffer_) {
+            std::memcpy(dest, transactionBuffer_ + address, len);
+            return;
+        }
         File file = fs_.open(currentBlobPath(), FILE_READ);
         if (!file || !file.seek(static_cast<uint64_t>(address), SeekSet) ||
             file.read(static_cast<uint8_t *>(dest), len) != len) {
@@ -105,6 +131,10 @@ class LittleFsStorageBackend final : public StorageBackend {
         if (!src || !len) return failWrite();
         if (!ensureReady()) return fallback_.writeBytes(address, src, len);
         if (!contains(address, len)) return failWrite();
+        if (transactionActive_ && transactionBuffer_) {
+            std::memcpy(transactionBuffer_ + address, src, len);
+            return true;
+        }
         File file = fs_.open(currentBlobPath(), FILE_WRITE);
         if (!file || !file.seek(static_cast<uint64_t>(address), SeekSet)) {
             if (file) file.close();
@@ -139,6 +169,10 @@ class LittleFsStorageBackend final : public StorageBackend {
     static const char *blobPath(uint8_t index) { return index == 0 ? kBlobAPath : kBlobBPath; }
     static const char *metaPath(uint8_t index) { return index == 0 ? kMetaAPath : kMetaBPath; }
     bool failWrite() { if (transactionActive_) transactionWriteFailed_ = true; return false; }
+    void releaseTransactionBuffer() const {
+        std::free(transactionBuffer_);
+        transactionBuffer_ = nullptr;
+    }
 
     bool ensureReady() const {
         if (readyChecked_) return littlefsReady_;
@@ -166,7 +200,9 @@ class LittleFsStorageBackend final : public StorageBackend {
         MetaRecord meta{};
         if (activeMeta(meta, nullptr)) return true;
         meta.blobChecksum = fileChecksum(kBlobAPath);
-        return writeMetaSlot(0, meta);
+        if (!writeMetaSlot(0, meta)) return false;
+        cacheActiveMeta(meta, 0);
+        return true;
     }
 
     bool migrateLegacyBlob() const {
@@ -253,11 +289,30 @@ class LittleFsStorageBackend final : public StorageBackend {
         return ok;
     }
     bool activeMeta(MetaRecord &out, uint8_t *slotOut) const {
+        // Validating a metadata slot includes hashing its entire 48 KiB blob.
+        // Configuration hydration performs many small reads, so repeating that
+        // validation for every read can hold startup in flash scans for minutes.
+        // The active blob cannot change behind this backend; validate once at
+        // mount and refresh the cache only after a verified transaction commit.
+        if (activeMetaCached_) {
+            out = cachedActiveMeta_;
+            if (slotOut) *slotOut = cachedActiveMetaSlot_;
+            return true;
+        }
         MetaRecord a{}, b{}; const bool validA = readMetaSlot(0, a) && fileChecksum(blobPath(a.activeBlob)) == a.blobChecksum;
         const bool validB = readMetaSlot(1, b) && fileChecksum(blobPath(b.activeBlob)) == b.blobChecksum;
         if (!validA && !validB) return false;
         const bool useB = validB && (!validA || b.generation > a.generation);
-        out = useB ? b : a; if (slotOut) *slotOut = useB ? 1 : 0; return true;
+        out = useB ? b : a;
+        const uint8_t activeSlot = useB ? 1 : 0;
+        cacheActiveMeta(out, activeSlot);
+        if (slotOut) *slotOut = activeSlot;
+        return true;
+    }
+    void cacheActiveMeta(const MetaRecord &meta, uint8_t slot) const {
+        cachedActiveMeta_ = meta;
+        cachedActiveMetaSlot_ = slot;
+        activeMetaCached_ = true;
     }
     const char *currentBlobPath() const {
         if (transactionActive_) return blobPath(transactionBlob_);
@@ -283,7 +338,11 @@ class LittleFsStorageBackend final : public StorageBackend {
     mutable EepromStorageBackend fallback_;
     mutable LittleFS_Program fs_;
     mutable bool readyChecked_ = false, littlefsReady_ = false, mountAttempted_ = false, mounted_ = false;
+    mutable bool activeMetaCached_ = false;
+    mutable MetaRecord cachedActiveMeta_{};
+    mutable uint8_t cachedActiveMetaSlot_ = 0;
     mutable bool transactionActive_ = false, transactionWriteFailed_ = false;
+    mutable uint8_t *transactionBuffer_ = nullptr;
     mutable uint8_t transactionBlob_ = 0;
 };
 

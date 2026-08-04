@@ -129,7 +129,12 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     bootMs = millis();
     Serial.begin(kBaud);
-    delay(250);
+    // Give a reconnecting host a bounded window to attach so one-shot retained
+    // CrashReport output is not consumed before Device Monitor can see it.
+    const uint32_t serialAttachDeadline = millis() + 5000;
+    while (!Serial && static_cast<int32_t>(millis() - serialAttachDeadline) < 0) {
+        delay(10);
+    }
 
     Serial.println(F("MN42 USB DIAG boot"));
     Serial.print(F("Reset cause: 0x"));

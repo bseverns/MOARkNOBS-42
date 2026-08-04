@@ -15,6 +15,7 @@
 #include "protocol/SceneStorage.h"
 #include "storage/EepromStorageBackend.h"
 #include "storage/LittleFsStorageBackend.h"
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -519,22 +520,37 @@ void ConfigManager::sanitizeSlotArena() {
     uint16_t storedVersion = 0;
     storageGet(EEPROM_CONFIG_VERSION, storedVersion);
 
+    auto rewriteInvalidArena = [this](bool writeCurrentVersion) {
+        StorageBackend *storage = getStorageBackend();
+        const bool transactional = storage->supportsTransactions();
+        if (transactional && !storage->beginTransaction()) {
+            _lastMigrationResult = MigrationResult::WriteFailure;
+            return;
+        }
+        wipeSlotRegion();
+        wipeProfileBlocks();
+        if (writeCurrentVersion) {
+            storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+        }
+        if (transactional && !storage->commitTransaction()) {
+            storage->abortTransaction();
+            _lastMigrationResult = MigrationResult::VerificationFailure;
+        }
+    };
+
     if (storedVersion == CONFIG_VERSION) {
         migrateLegacyARGSettings();
         maybeRescueFilterTailFromLegacy();
         MIDISlot candidate{};
         storageGet(static_cast<int>(EEPROM_SLOT_BASE), candidate);
         if (!slotLooksSane(candidate)) {
-            wipeSlotRegion();
-            wipeProfileBlocks();
+            rewriteInvalidArena(false);
         }
         return;
     }
 
     if (storedVersion == 0 || storedVersion > CONFIG_VERSION) {
-        wipeSlotRegion();
-        wipeProfileBlocks();
-        storagePut(EEPROM_CONFIG_VERSION, static_cast<uint16_t>(CONFIG_VERSION));
+        rewriteInvalidArena(true);
         return;
     }
 
@@ -820,22 +836,35 @@ SlotEnvelopePayload ConfigManager::seedSlotEnvelopePayloads(uint8_t filterType, 
 }
 
 FLASHMEM void ConfigManager::wipeProfileBlocks() {
+    // Program-flash LittleFS turns each tiny write into filesystem work. Clear
+    // migration regions in block-sized chunks so first boot after an invalid or
+    // legacy payload remains bounded instead of issuing thousands of 1-byte
+    // flash updates.
+    constexpr size_t kClearChunkSize = 256;
+    const std::array<uint8_t, kClearChunkSize> zeros{};
+    auto clearBlock = [&zeros](uint16_t base, uint16_t size) {
+        StorageBackend *storage = ConfigManager::getStorageBackend();
+        uint16_t offset = 0;
+        while (offset < size) {
+            const size_t count =
+                std::min<size_t>(zeros.size(), static_cast<size_t>(size - offset));
+            if (!storage->writeBytes(static_cast<int>(base + offset), zeros.data(), count)) {
+                return false;
+            }
+            offset = static_cast<uint16_t>(offset + count);
+        }
+        return true;
+    };
     for (uint8_t id = 1; id < NUM_PROFILES; ++id) {
-        const uint16_t base = EEPROM_PROFILE_START(id);
-        for (uint16_t offset = 0; offset < EEPROM_PROFILE_BLOCK_SIZE; ++offset) {
-            storageUpdate(static_cast<int>(base + offset), 0x00);
-        }
+        if (!clearBlock(EEPROM_PROFILE_START(id), EEPROM_PROFILE_BLOCK_SIZE)) return;
     }
     for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
-        const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
-        for (uint16_t offset = 0; offset < EEPROM_PROFILE_SETTINGS_BLOCK_SIZE; ++offset) {
-            storageUpdate(static_cast<int>(base + offset), 0x00);
-        }
+        if (!clearBlock(EEPROM_PROFILE_SETTINGS_START(id), EEPROM_PROFILE_SETTINGS_BLOCK_SIZE))
+            return;
     }
     for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
-        const uint16_t base = EEPROM_PROFILE_MODULATION_START(id);
-        for (uint16_t offset = 0; offset < EEPROM_PROFILE_MODULATION_BLOCK_SIZE; ++offset) {
-            storageUpdate(static_cast<int>(base + offset), 0x00);
-        }
+        if (!clearBlock(EEPROM_PROFILE_MODULATION_START(id),
+                        EEPROM_PROFILE_MODULATION_BLOCK_SIZE))
+            return;
     }
 }

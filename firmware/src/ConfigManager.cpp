@@ -1255,6 +1255,9 @@ void ConfigManager::setUsbMidiOutEnabledLive(bool enabled) { g_usbMidiOutEnabled
 // Reset configuration to defaults
 void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
                                        bool recordRecoveryEvent) {
+    StorageBackend *storage = getStorageBackend();
+    const bool transactional = storage->supportsTransactions();
+    const bool transactionStarted = transactional && storage->beginTransaction();
     if (recordRecoveryEvent) {
         _lastRecoveryEvent = RecoveryEvent::kDefaultsLoaded;
         _lastLoadSource = LoadSource::kDefaults;
@@ -1272,6 +1275,9 @@ void ConfigManager::resetConfiguration(std::vector<uint8_t> &potChannels,
     g_efIdleFloor = EF_IDLE_FLOOR_DEFAULT;
     g_usbMidiOutEnabled = true;
     saveConfiguration();
+    if (transactionStarted && !storage->commitTransaction()) {
+        storage->abortTransaction();
+    }
 }
 
 ConfigManager::RecoveryEvent ConfigManager::consumeRecoveryEvent() {
