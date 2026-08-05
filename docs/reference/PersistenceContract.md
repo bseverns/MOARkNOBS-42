@@ -10,6 +10,17 @@ Durable configuration uses two permanent data blobs and two metadata records. A 
 
 At boot, firmware selects the newest valid metadata record whose referenced blob passes validation. If neither generation is valid, firmware falls back to defaults and reports the compatibility health fields described in the [Manifest Contract](ManifestContract.md).
 
+The transaction image uses a single reserved DMA-memory buffer; concurrent
+transactions are rejected rather than allocating from the general heap. The
+inactive blob is written in bounded chunks and must have the expected size
+before metadata is activated. A malformed inactive blob is non-authoritative
+and is recreated from the intact active generation during startup repair.
+
+Compatibility writes may update the active virtual EEPROM region outside a
+bulk transaction. Metadata selection therefore requires a valid metadata
+record and correctly sized blob; the checksum remains mandatory when a newly
+staged inactive generation is verified before activation.
+
 ## Capacity Contract
 
 The compiled layout includes configuration, profiles, macros, and scene slots. Firmware has a compile-time assertion that the complete scene layout fits the storage backend. Runtime capability reporting is conservative:
@@ -17,8 +28,15 @@ The compiled layout includes configuration, profiles, macros, and scene slots. F
 - `persistence.capacity` reports available bytes.
 - `persistence.layout_required` reports bytes required by the compiled layout.
 - `persistence.status` is `ready` only when transactional storage is present and large enough.
+- `persistence.detail` is a stable machine-readable readiness or failure code.
 - `capabilities.scene_capacity` reports the number of complete scene slots that fit.
 - `capabilities.scenes` is true only when the full compiled scene count fits.
+
+`persistence.detail` is `ready` after initialization or a successful commit.
+Failure values identify the failed phase (for example `mount_failed`,
+`eeprom_migration_failed`, `commit_blob_write_failed`,
+`commit_meta_write_failed`, or `commit_verify_failed`). It is diagnostic data:
+hosts must continue to use `persistence.status` as the write-safety gate.
 
 ## Apply Receipt
 

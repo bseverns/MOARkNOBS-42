@@ -75,6 +75,21 @@ stateDiagram-v2
     state replaces the draft. A delayed UI timer cannot recreate work the
     operator explicitly discarded.
 
+## Canonical configuration serialization
+
+Before staging or sending a configuration, the App canonicalizes device-owned
+values so an unchanged draft has a stable readback shape. Filter and envelope
+floating-point values are rounded to six fractional digits after range
+clamping. MIDI type aliases such as `NOTE`, `PITCH_BEND`, and `PROGRAM_CHANGE`
+are accepted on import and emitted as the canonical device names.
+
+Every serialized slot carries `arpNote`: it is the supplied value when valid,
+otherwise the slot's `data1` for a `Note` slot and `0` for every other type.
+It also carries `sysexTemplate` as a trimmed string (or an empty string). These
+explicit defaults prevent stale hidden values on firmware that preserves an
+omitted field. The App applies the manifest's `led_brightness_cap` while
+normalizing LED brightness; if unavailable, the conservative maximum is 255.
+
 ## What “rollback” means
 
 Use **discard local draft** for a candidate that has not crossed the transport. Use **firmware rejection** only when the response contract guarantees rejection happened before commit. Do not use rollback to describe an unknown transmitted outcome.

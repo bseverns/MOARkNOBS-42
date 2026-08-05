@@ -47,6 +47,7 @@ The `eeprom_*` names are legacy compatibility diagnostics. They describe whether
 | `persistence.layout_required` | Bytes required by the firmware's compiled configuration, profile, macro, and scene layout.               |
 | `persistence.generation`      | Active committed storage generation.                                                                    |
 | `persistence.status`          | `ready` when transactional storage exists and fits the required layout; otherwise `insufficient`.        |
+| `persistence.detail`          | Additive backend readiness or failure code; useful for diagnostics, never a substitute for `status`.     |
 | `capabilities.scene_capacity` | Number of complete scene slots supported by the reported backend capacity.                               |
 | `capabilities.arp_profile_assignments` | Profile arp payloads persist explicit slot assignments; profile recall arms them without starting note output. |
 
