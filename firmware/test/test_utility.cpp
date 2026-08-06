@@ -242,6 +242,24 @@ void test_schedule_note_on_off_delivers_note_off_after_delay() {
     TEST_ASSERT_EQUAL_UINT8(2, usbMIDI.lastNoteOffChannel);
 }
 
+void test_scheduler_waits_for_wrapped_deadline() {
+    g_fakeNowMs = static_cast<unsigned long>(UINT32_MAX - 9U);
+    TaskScheduler scheduler;
+    uint8_t fired = 0;
+
+    scheduler.addTask([&]() { ++fired; }, 20, false);
+    scheduler.update();
+    TEST_ASSERT_EQUAL_UINT8(0, fired);
+
+    advanceMs(19);
+    scheduler.update();
+    TEST_ASSERT_EQUAL_UINT8(0, fired);
+
+    advanceMs(1);
+    scheduler.update();
+    TEST_ASSERT_EQUAL_UINT8(1, fired);
+}
+
 void test_exponential_moving_average_clamps_alpha_bounds() {
     TEST_ASSERT_EQUAL_INT(42, Utility::exponentialMovingAverage(120, 42, -0.25f));
     TEST_ASSERT_EQUAL_INT(120, Utility::exponentialMovingAverage(120, 42, 1.25f));

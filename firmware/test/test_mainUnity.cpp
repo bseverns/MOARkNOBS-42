@@ -214,6 +214,7 @@ void test_clock_tick_stream_counts_cleanly();
 void test_clock_ppqn_start_stop_continue();
 void test_clock_ppqn_timing_accuracy_with_tempo_jump();
 void test_schedule_note_on_off_delivers_note_off_after_delay();
+void test_scheduler_waits_for_wrapped_deadline();
 #endif
 
 void setup() {
@@ -412,6 +413,7 @@ void setup() {
     RUN_TEST(test_clock_ppqn_start_stop_continue);
     RUN_TEST(test_clock_ppqn_timing_accuracy_with_tempo_jump);
     RUN_TEST(test_schedule_note_on_off_delivers_note_off_after_delay);
+    RUN_TEST(test_scheduler_waits_for_wrapped_deadline);
     RUN_TEST(test_config_manager_wipes_legacy_slot_stride);
     RUN_TEST(test_slot_lfo_lanes_round_trip_through_slot_storage);
     RUN_TEST(test_schema6_slot_migration_preserves_downstream_profile_bytes);
