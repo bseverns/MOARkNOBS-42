@@ -1386,18 +1386,21 @@ FLASHMEM String ConfigManager::makeSchema() {
     s += ",\"maxItems\":";
     s += String(static_cast<int>(NUM_SLOTS));
     s += ",\"items\":{\"type\":\"object\",";
-    s += "\"required\":[\"type\",\"midiChannel\",\"data1\",\"efIndex\",\"active\"],";
+    // GET_CONFIG keeps its established numeric compatibility shape.
+    s += "\"required\":[\"type\",\"channel\",\"data1\",\"ef_index\",\"active\"],";
     s += "\"properties\":{";
-    s += "\"type\":{\"type\":\"string\",\"title\":\"Knob -> MIDI message\",";
-    s += "\"enum\":[\"OFF\",\"CC\",\"Note\",\"PitchBend\",\"ProgramChange\",\"Aftertouch\",";
-    s += "\"ModWheel\",\"NRPN\",\"RPN\",\"SysEx\"]},";
-    s += "\"midiChannel\":{\"type\":\"integer\",\"title\":\"MIDI "
+    s += "\"index\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
+    s += String(static_cast<int>(NUM_SLOTS - 1));
+    s += "},";
+    s += "\"type\":{\"type\":\"integer\",\"title\":\"Knob -> MIDI message\",\"minimum\":0,\"maximum\":9},";
+    s += "\"type_name\":{\"type\":\"string\"},";
+    s += "\"channel\":{\"type\":\"integer\",\"title\":\"MIDI "
          "channel\",\"minimum\":1,\"maximum\":16},";
     s += "\"data1\":{\"type\":\"integer\",\"title\":\"CC/Note "
          "number\",\"minimum\":0,\"maximum\":127},";
     s += "\"arpNote\":{\"type\":\"integer\",\"title\":\"Arp root "
          "note\",\"minimum\":0,\"maximum\":127},";
-    s += "\"efIndex\":{\"type\":\"integer\",\"title\":\"Envelope follower "
+    s += "\"ef_index\":{\"type\":\"integer\",\"title\":\"Envelope follower "
          "index\",\"minimum\":-1,\"maximum\":";
     s += String(static_cast<int>(NUM_ENVELOPES - 1));
     s += "},";
@@ -1461,8 +1464,9 @@ FLASHMEM String ConfigManager::makeSchema() {
     s += "\"gainTarget\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127},";
     s += "\"destination_mode\":{\"type\":\"string\",\"enum\":[\"add_clamp\",\"subtract\",";
     s += "\"replace\",\"scale\",\"centered\"],\"default\":\"add_clamp\"}},";
-    s += "\"additionalProperties\":false},";
+    s += "\"additionalProperties\":true},";
     s += "\"active\":{\"type\":\"boolean\",\"title\":\"Enabled\"},";
+    s += "\"arp_note\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":127},";
     s += "\"sysexTemplate\":{\"type\":\"string\",\"title\":\"SysEx template\",\"maxLength\":128},";
     s += "\"arg\":{\"type\":\"object\",\"title\":\"Follower Combiner (ARG)\",";
     s += "\"required\":[\"enabled\",\"method\",\"method_name\",\"sourceA\",\"sourceB\"],";
@@ -1479,14 +1483,14 @@ FLASHMEM String ConfigManager::makeSchema() {
     s += "},";
     s += "\"sourceB\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":";
     s += String(static_cast<int>(NUM_ENVELOPES - 1));
-    s += "}},\"additionalProperties\":false},";
+    s += "}},\"additionalProperties\":true},";
     s += "\"lfo\":{\"type\":\"array\",\"title\":\"Per-slot LFO lanes\",\"minItems\":2,";
     s += "\"maxItems\":2,\"items\":{\"type\":\"object\",\"required\":[\"enabled\",\"mode\",\"amount\"],";
     s += "\"properties\":{\"enabled\":{\"type\":\"boolean\"},";
     s += "\"mode\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":4},";
     s += "\"amount\":{\"type\":\"integer\",\"minimum\":-100,\"maximum\":100}},";
-    s += "\"additionalProperties\":false}}";
-    s += "},\"additionalProperties\":false}},"; // slot properties/items/slots
+    s += "\"additionalProperties\":true}}";
+    s += "},\"additionalProperties\":true}},"; // slot properties/items/slots
 
     s += "\"efSlots\":{\"type\":\"array\",\"title\":\"Envelope Assignments\",\"minItems\":";
     s += String(static_cast<int>(NUM_ENVELOPES));
@@ -1500,7 +1504,7 @@ FLASHMEM String ConfigManager::makeSchema() {
     s += String(static_cast<int>(NUM_SLOTS - 1));
     s += "},\"uniqueItems\":true}},";
     s += "\"anyOf\":[{\"required\":[\"slot\"]},{\"required\":[\"slots\"]}],";
-    s += "\"additionalProperties\":false}},";
+    s += "\"additionalProperties\":true}},";
 
     s += "\"filter\":{\"type\":\"object\",\"title\":\"Follower "
          "Filter\",\"required\":[\"type\",\"freq\",\"q\"],";
@@ -1520,7 +1524,7 @@ FLASHMEM String ConfigManager::makeSchema() {
     s += "\"description\":\"Envelope levels at or below this MIDI value are clamped to zero.\",";
     s += "\"minimum\":0,\"maximum\":127,\"default\":";
     s += String(static_cast<int>(EF_IDLE_FLOOR_DEFAULT));
-    s += "}},\"additionalProperties\":false},";
+    s += "}},\"additionalProperties\":true},";
 
     s += "\"arg\":{\"type\":\"object\",\"title\":\"Follower Combiner (ARG)\",";
     s += "\"required\":[\"method\",\"a\",\"b\"],\"properties\":{";
@@ -1532,17 +1536,17 @@ FLASHMEM String ConfigManager::makeSchema() {
     s += "\"b\":{\"type\":\"number\",\"minimum\":0,\"maximum\":";
     s += String(static_cast<int>(NUM_ENVELOPES - 1));
     s += "},";
-    s += "\"enable\":{\"type\":\"boolean\"}},\"additionalProperties\":false},";
+    s += "\"enable\":{\"type\":\"boolean\"}},\"additionalProperties\":true},";
 
     s += "\"led\":{\"type\":\"object\",\"title\":\"LED "
          "Colors\",\"required\":[\"brightness\",\"color\"],";
     s += "\"properties\":{\"brightness\":{\"type\":\"integer\",\"minimum\":0,\"maximum\":255},";
     s += "\"color\":{\"type\":\"string\",\"pattern\":\"^#([0-9a-fA-F]{6})$\"},";
     s += "\"mode\":{\"type\":\"string\",\"enum\":[\"STATIC\",\"PEAK_HOLD\",\"TRAIL\",";
-    s += "\"CLOCK_PULSE\"],\"default\":\"STATIC\"}},\"additionalProperties\":false},";
+    s += "\"CLOCK_PULSE\"],\"default\":\"STATIC\"}},\"additionalProperties\":true},";
     s += "\"envelopeMode\":{\"type\":\"string\",\"enum\":[\"LINEAR\",\"EXPONENTIAL\",\"LOG\"],";
     s += "\"default\":\"LINEAR\"}";
-    s += "},\"additionalProperties\":false}";
+    s += "},\"additionalProperties\":true}";
     return s;
 }
 
