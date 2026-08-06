@@ -66,6 +66,8 @@ jobs:
         run: pio run -d firmware -e teensy40_main
       - name: Compile and link Teensy Unity firmware
         run: pio test -d firmware -e teensy40_unity --without-uploading --without-testing
+      - name: Run native biquad tests
+        run: pio test -d firmware -e native_biquad -vvv
       - name: Run native modulation transport tests
         run: pio test -d firmware -e native_transport -vvv
       - name: Run native modulation resolver tests

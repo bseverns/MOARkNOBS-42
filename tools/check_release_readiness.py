@@ -219,6 +219,24 @@ def windows_path_issues(path: str) -> list[str]:
     return issues
 
 
+def unregistered_unity_tests(root: pathlib.Path) -> list[str]:
+    """Return Unity test functions defined in the shared suite but never run."""
+    test_dir = root / "firmware" / "test"
+    runner = test_dir / "test_mainUnity.cpp"
+    if not runner.is_file():
+        return ["missing firmware/test/test_mainUnity.cpp"]
+
+    definition_re = re.compile(r"^\s*void\s+(test_[A-Za-z0-9_]+)\s*\(", re.MULTILINE)
+    registered_re = re.compile(r"RUN_TEST\(\s*(test_[A-Za-z0-9_]+)\s*\)")
+    defined: set[str] = set()
+    for path in test_dir.glob("test_*.cpp"):
+        if path == runner:
+            continue
+        defined.update(definition_re.findall(path.read_text(encoding="utf-8")))
+    registered = set(registered_re.findall(runner.read_text(encoding="utf-8")))
+    return sorted(defined - registered)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="Repository root")
@@ -252,6 +270,13 @@ def main() -> None:
     if bad_windows_paths:
         for issue in bad_windows_paths:
             blockers.append(f"windows checkout hazard: {issue}")
+
+    missing_unity_tests = unregistered_unity_tests(root)
+    if missing_unity_tests:
+        blockers.append(
+            "Unity test functions defined but not registered in test_mainUnity.cpp: "
+            + ", ".join(missing_unity_tests)
+        )
 
     board_power_h = (root / "firmware/include/BoardPowerProfile.h").read_text(encoding="utf-8")
     power_profiles = parse_power_profiles(board_power_h)

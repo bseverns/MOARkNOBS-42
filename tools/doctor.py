@@ -148,7 +148,7 @@ def main() -> None:
     parser.add_argument(
         "--firmware",
         action="store_true",
-        help="Run firmware main build and Unity tests from the firmware project",
+        help="Run firmware build, compile-only Unity gate, and all native seams",
     )
     parser.add_argument(
         "--release",
@@ -232,9 +232,23 @@ def main() -> None:
             [
                 ("firmware main build", ["pio", "run", "-d", "firmware", "-e", "teensy40_main"]),
                 (
-                    "firmware Unity tests",
-                    ["pio", "test", "-d", "firmware", "-e", "teensy40_unity", "-vvv"],
+                    "firmware Unity compile/link gate",
+                    [
+                        "pio",
+                        "test",
+                        "-d",
+                        "firmware",
+                        "-e",
+                        "teensy40_unity",
+                        "--without-uploading",
+                        "--without-testing",
+                        "-vvv",
+                    ],
                 ),
+                ("native biquad tests", ["pio", "test", "-d", "firmware", "-e", "native_biquad", "-vvv"]),
+                ("native transport tests", ["pio", "test", "-d", "firmware", "-e", "native_transport", "-vvv"]),
+                ("native modulation tests", ["pio", "test", "-d", "firmware", "-e", "native_modulation", "-vvv"]),
+                ("native persistence tests", ["pio", "test", "-d", "firmware", "-e", "native_persistence", "-vvv"]),
             ]
         )
 
