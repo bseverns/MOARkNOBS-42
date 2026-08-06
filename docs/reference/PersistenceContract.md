@@ -21,6 +21,11 @@ bulk transaction. Metadata selection therefore requires a valid metadata
 record and correctly sized blob; the checksum remains mandatory when a newly
 staged inactive generation is verified before activation.
 
+Runtime-only restoration is explicitly write-free. A failed transaction may
+restore its prior live slots, ARG/envelope settings, filter tail, LED settings,
+and mappings, but that restoration must not write either durable generation or
+advance `storage_generation`.
+
 ## Capacity Contract
 
 The compiled layout includes configuration, profiles, macros, and scene slots. Firmware has a compile-time assertion that the complete scene layout fits the storage backend. Runtime capability reporting is conservative:

@@ -1,6 +1,6 @@
 # Vendored libraries, no apologies
 
-This folder isn't a dumping ground—it's a curated stash of third‑party code we drag in‑house so builds stay fast, deterministic, and completely offline. PlatformIO slurps everything under `firmware/lib/` into the build, so we keep our dependencies here where we can keep an eye on them.
+This folder isn't a dumping ground—it's a curated stash of third‑party code we drag in‑house so builds stay fast and deterministic. PlatformIO slurps everything under `firmware/lib/` into the build, so we keep our dependencies here where we can keep an eye on them. Registry dependencies that are not vendored are exact-pinned in `platformio.ini`; a clean build may still need to download those pinned packages once.
 
 ## What's bundled and why
 

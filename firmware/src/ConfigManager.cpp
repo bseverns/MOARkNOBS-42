@@ -720,34 +720,43 @@ uint16_t ConfigManager::calculateCRC(bool includeProfile) const {
 }
 
 // Load a profile block into the current working config
-void ConfigManager::loadProfile(uint8_t id) {
+bool ConfigManager::loadProfile(uint8_t id) {
     // Clamp to valid profile slots so EEPROM reads stay in range.
     if (id >= NUM_PROFILES) {
         id = 0;
     }
     uint16_t base = EEPROM_PROFILE_START(id);
     const bool includeProfileFields = (base == EEPROM_PROFILE_START(0));
-    if (checkEEPROMHealth(false, base)) {
-        readEEPROM(false, base);
-        if (_stored.version != CONFIG_VERSION ||
-            _stored.crc != calculateCRC(includeProfileFields)) {
-            LOG_PRINTLN(
-                "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, "
-                "using defaults.\"}");
+    const StoredConfig prior = _stored;
+    const uint8_t priorIdleFloor = g_efIdleFloor;
+    const bool priorUsbMidiOutEnabled = g_usbMidiOutEnabled;
+
+    const auto restorePrior = [&]() {
+        _stored = prior;
+        g_efIdleFloor = priorIdleFloor;
+        g_usbMidiOutEnabled = priorUsbMidiOutEnabled;
+    };
+    const auto loadValidated = [&](bool backup) {
+        if (!checkEEPROMHealth(backup, base)) {
+            return false;
         }
-    } else if (checkEEPROMHealth(true, base)) {
-        readEEPROM(true, base);
-        if (_stored.version != CONFIG_VERSION ||
-            _stored.crc != calculateCRC(includeProfileFields)) {
-            LOG_PRINTLN(
-                "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, "
-                "using defaults.\"}");
-        }
-    } else {
-        LOG_PRINTLN(
-            "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, using "
-            "defaults.\"}");
+        readEEPROM(backup, base);
+        return _stored.version == CONFIG_VERSION &&
+               _stored.crc == calculateCRC(includeProfileFields);
+    };
+
+    if (loadValidated(false)) {
+        return true;
     }
+    restorePrior();
+    if (loadValidated(true)) {
+        return true;
+    }
+    restorePrior();
+    LOG_PRINTLN(
+        "{\"type\":\"status\",\"level\":\"warn\",\"message\":\"Profile slot corrupted, using "
+        "current configuration.\"}");
+    return false;
 }
 
 // Save the current config into the given profile block

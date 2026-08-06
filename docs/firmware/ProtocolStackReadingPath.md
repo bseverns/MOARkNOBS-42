@@ -76,7 +76,8 @@ Question answered: how does one complete line get routed?
 This is the command-router submachine:
 
 - `ParsedCommand` measures command name versus payload
-- the sorted handler table maps names to handler families
+- the compact handler table maps names to handler families; lookup scans the
+  table so a handler remains reachable even if a future edit changes its order
 - unknown commands fall back to the legacy `ConfigManager` lane only after the
   named command table misses
 
@@ -192,7 +193,9 @@ Read these in order:
 1. `SceneCommands`
    JSON front door for `GET_SCENES`, `SAVE_SCENE`, `RECALL_SCENE`
 2. `SceneStorage`
-   whole-machine snapshot capture/apply plus scene and macro persistence
+   whole-machine snapshot capture/apply plus scene and macro persistence.
+   Runtime-only restoration during a failed durable apply is write-free: it
+   restores live state without mutating storage.
 
 ## A Useful Mental Split
 

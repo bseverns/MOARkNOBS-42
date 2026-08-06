@@ -263,7 +263,9 @@ class ConfigManager {
                            uint16_t base = EEPROM_PROFILE_START(0));
 
     // Load a saved profile from one of the reserved EEPROM blocks.
-    void loadProfile(uint8_t id);
+    // Load a validated profile into the live config. Returns false without
+    // changing live state when neither durable copy is valid.
+    bool loadProfile(uint8_t id);
 
     // Save the current in-RAM settings to a profile block.
     void saveProfile(uint8_t id);
