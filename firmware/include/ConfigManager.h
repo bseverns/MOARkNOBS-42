@@ -229,6 +229,8 @@ class ConfigManager {
         slots[idx].data1 = v;
         saveSlot(idx, slots[idx]);
     }
+    // Apply a complete slot without mutating persistent storage.
+    void setSlotLive(uint8_t idx, const MIDISlot &slot);
 
     // Accessors -----------------------------------------------------------
 
@@ -291,6 +293,7 @@ class ConfigManager {
 
     // Persist which animation mode the LEDs should run in.
     void setLedMode(LedMode mode);
+    void setLedModeLive(LedMode mode);
 
     // Retrieve the currently stored LED animation mode.
     LedMode getLedMode() const;
@@ -371,6 +374,7 @@ class ConfigManager {
 
     // Store whether the system is in SEF or ARG envelope mode (legacy compatibility).
     void setMode(uint8_t mode);
+    void setModeLive(uint8_t mode);
 
     // Retrieve the stored envelope follower mode (legacy compatibility).
     uint8_t getMode() const;
@@ -384,12 +388,14 @@ class ConfigManager {
 
     // Flip the legacy ARG engine on or off.
     void setARGEnable(uint8_t enable);
+    void setARGEnableLive(uint8_t enable);
 
     // Retrieve whether the legacy ARG path is currently enabled.
     uint8_t getARGEnable() const;
 
     // Persist which two envelope inputs are used for the legacy ARG calculations.
     void setEnvelopePair(uint8_t envA, uint8_t envB);
+    void setEnvelopePairLive(uint8_t envA, uint8_t envB);
 
     // Retrieve the first envelope pin used by the legacy ARG tuple.
     uint8_t getEnvelopeA() const;
@@ -435,6 +441,8 @@ class ConfigManager {
     and does not override active slot-specific filter configurations.
     */
     SlotEnvelopePayload persistFilterTail(const SlotEnvelopePayload &payload);
+    // Validate filter state for a runtime-only application without writing it.
+    static SlotEnvelopePayload sanitizeFilterTail(const SlotEnvelopePayload &payload);
 
     // Read a single MIDISlot from EEPROM into the provided struct.
     void loadSlot(uint8_t idx, MIDISlot &dest);

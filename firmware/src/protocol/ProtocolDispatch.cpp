@@ -9,7 +9,7 @@
 //
 // It should stay mechanically simple:
 // - parse the command name once
-// - binary-search the sorted handler table
+// - linearly scan the compact handler table
 // - hand the request to the owning protocol submachine
 // - fall back to ConfigManager's legacy command lane only if no named handler matches
 
@@ -21,7 +21,6 @@ struct CommandHandler {
     void (*handler)(const ParsedCommand &cmd);
 };
 
-// Keep this table lexicographically sorted; `findCommandHandler()` does a binary search.
 const CommandHandler kCommandHandlers[] = {
     {"ABORT_SET_ALL", ProtocolDispatchHandlers::handleAbortSetAllCommand},
     {"ARP_START", ProtocolDispatchHandlers::handleArpStartCommand},
@@ -71,18 +70,9 @@ const CommandHandler kCommandHandlers[] = {
 constexpr size_t kCommandHandlerCount = sizeof(kCommandHandlers) / sizeof(kCommandHandlers[0]);
 
 const CommandHandler *findCommandHandler(const ParsedCommand &cmd) {
-    size_t low = 0;
-    size_t high = kCommandHandlerCount;
-    while (low < high) {
-        size_t mid = low + (high - low) / 2;
-        int comparison = cmd.compareName(kCommandHandlers[mid].name);
-        if (comparison == 0) {
-            return &kCommandHandlers[mid];
-        }
-        if (comparison < 0) {
-            high = mid;
-        } else {
-            low = mid + 1;
+    for (size_t i = 0; i < kCommandHandlerCount; ++i) {
+        if (cmd.compareName(kCommandHandlers[i].name) == 0) {
+            return &kCommandHandlers[i];
         }
     }
     return nullptr;

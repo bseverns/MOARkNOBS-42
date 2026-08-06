@@ -10,7 +10,6 @@ class HardwareSerial;
 #endif
 #include <array>
 #include <cstdint>
-#include "DisplayManager.h"
 #include "MIDITypes.h"
 #include <MIDI.h>
 #include "MidiTypeShim.h"
@@ -25,6 +24,7 @@ inline constexpr bool HAS_USB_MIDI = false;
 #endif
 
 struct SystemDiagnostics;
+class DisplayManager;
 
 /*
 Thin wrapper around the Arduino and USB MIDI libraries.

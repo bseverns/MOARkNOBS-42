@@ -1223,8 +1223,12 @@ void ConfigManager::saveLEDSettings(uint8_t brightness, CRGB color) {
 }
 
 void ConfigManager::setLedMode(LedMode mode) {
-    _stored.ledMode = static_cast<uint8_t>(sanitizeLedMode(mode));
+    setLedModeLive(mode);
     storageUpdate(EEPROM_LED_MODE, _stored.ledMode);
+}
+
+void ConfigManager::setLedModeLive(LedMode mode) {
+    _stored.ledMode = static_cast<uint8_t>(sanitizeLedMode(mode));
 }
 
 LedMode ConfigManager::getLedMode() const {
@@ -1287,9 +1291,11 @@ ConfigManager::RecoveryEvent ConfigManager::consumeRecoveryEvent() {
 
 // Mode and ARG methods
 void ConfigManager::setMode(uint8_t mode) {
-    legacyArg.mode = mode;
+    setModeLive(mode);
     storageUpdate(EEPROM_ARG_MODE, legacyArg.mode);
 }
+
+void ConfigManager::setModeLive(uint8_t mode) { legacyArg.mode = mode; }
 
 uint8_t ConfigManager::getMode() const { return legacyArg.mode; }
 
@@ -1312,13 +1318,21 @@ void ConfigManager::setARGMethodLive(uint8_t method) {
 uint8_t ConfigManager::getARGMethod() const { return legacyArg.method; }
 
 void ConfigManager::setARGEnable(uint8_t enable) {
-    legacyArg.enable = enable ? 1 : 0;
+    setARGEnableLive(enable);
     storageUpdate(EEPROM_ARG_ENABLE, legacyArg.enable);
 }
+
+void ConfigManager::setARGEnableLive(uint8_t enable) { legacyArg.enable = enable ? 1 : 0; }
 
 uint8_t ConfigManager::getARGEnable() const { return legacyArg.enable; }
 
 void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
+    setEnvelopePairLive(envA, envB);
+    storageUpdate(EEPROM_ARG_ENV_A, legacyArg.sourceA);
+    storageUpdate(EEPROM_ARG_ENV_B, legacyArg.sourceB);
+}
+
+void ConfigManager::setEnvelopePairLive(uint8_t envA, uint8_t envB) {
     uint8_t safeA = static_cast<uint8_t>(constrain(static_cast<int>(envA), 0, NUM_ENVELOPES - 1));
     uint8_t safeB = static_cast<uint8_t>(constrain(static_cast<int>(envB), 0, NUM_ENVELOPES - 1));
     if (NUM_ENVELOPES > 1 && safeA == safeB) {
@@ -1326,8 +1340,6 @@ void ConfigManager::setEnvelopePair(uint8_t envA, uint8_t envB) {
     }
     legacyArg.sourceA = safeA;
     legacyArg.sourceB = safeB;
-    storageUpdate(EEPROM_ARG_ENV_A, safeA);
-    storageUpdate(EEPROM_ARG_ENV_B, safeB);
 }
 
 uint8_t ConfigManager::getEnvelopeA() const {
@@ -1632,8 +1644,31 @@ void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayloa
     saveSlot(idx, slots[idx]);
 }
 
+void ConfigManager::setSlotLive(uint8_t idx, const MIDISlot &slot) {
+    if (idx >= slots.size()) {
+        return;
+    }
+    MIDISlot sanitized = slot;
+    if (sanitized.sysexLength > SysExTemplate::kMaxLength) {
+        sanitized.sysexLength = SysExTemplate::kMaxLength;
+    }
+    for (uint8_t i = sanitized.sysexLength; i < SysExTemplate::kMaxLength; ++i) {
+        sanitized.sysexTemplate[i] = 0;
+    }
+    sanitized.efSettings = sanitizeEfSettings(sanitized.efSettings);
+    sanitized.ef = sanitizeEfRuntime(sanitized.ef);
+    sanitized.setEnvelopeFollowerIndex(sanitized.ef.followerIndex);
+    sanitized.arg = sanitizeSlotArg(sanitized.arg);
+    sanitized.lfo = sanitizeSlotLfoConfig(sanitized.lfo);
+    slots[idx] = sanitized;
+}
+
 SlotEnvelopePayload ConfigManager::sanitizeEnvelopePayload(const SlotEnvelopePayload &payload) {
     return sanitizeEnvelopePayloadImpl(payload);
+}
+
+SlotEnvelopePayload ConfigManager::sanitizeFilterTail(const SlotEnvelopePayload &payload) {
+    return sanitizeEnvelopePayload(payload);
 }
 
 SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &payload) {

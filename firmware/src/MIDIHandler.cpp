@@ -4,6 +4,8 @@
 // Perfect fodder for explaining transport layers to curious builders.
 
 #include "MIDIHandler.h"
+
+#include "DisplayManager.h"
 #include "Globals.h"
 #include "TimeUtils.h"
 #include "Log.h"
@@ -536,6 +538,33 @@ bool MIDIHandler::enqueueSerialMessage(const SerialMessage &msg) {
 
     if (_serialQueueFull) {
         if (!tryCoalesceSerialMessage(msg)) {
+            // Releases must never be discarded behind best-effort traffic: a
+            // lost Note Off leaves the DIN instrument sustaining indefinitely.
+            if (msg.type == SerialMessageType::NoteOff) {
+                const size_t count = serialQueueSize();
+                std::array<SerialMessage, kSerialQueueSize> compact{};
+                size_t compactCount = 0;
+                bool evicted = false;
+                for (size_t i = 0; i < count; ++i) {
+                    const SerialMessage candidate =
+                        _serialQueue[(_serialQueueHead + i) % kSerialQueueSize];
+                    if (!evicted && candidate.type != SerialMessageType::NoteOff) {
+                        evicted = true;
+                        continue;
+                    }
+                    compact[compactCount++] = candidate;
+                }
+                if (evicted) {
+                    compact[compactCount++] = msg;
+                    for (size_t i = 0; i < compactCount; ++i) {
+                        _serialQueue[i] = compact[i];
+                    }
+                    _serialQueueHead = 0;
+                    _serialQueueTail = compactCount % kSerialQueueSize;
+                    _serialQueueFull = (compactCount == kSerialQueueSize);
+                    return true;
+                }
+            }
             // Queue overflow: count the drop for diagnostics.
             if (_diagnostics) {
                 ++_diagnostics->midiDropCount;

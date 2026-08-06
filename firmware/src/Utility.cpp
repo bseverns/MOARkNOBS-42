@@ -453,10 +453,11 @@ void TaskScheduler::update() {
 
     for (size_t i = 0; i < tasks.size(); ++i) {
         ScheduledTask &task = tasks[i];
-        if (now >= task.runAt) {
-            if (task.repeat && task.interval > 0 && now > task.runAt + task.interval) {
+        const int32_t lateness = static_cast<int32_t>(now - task.runAt);
+        if (lateness >= 0) {
+            if (task.repeat && task.interval > 0 && lateness > static_cast<int32_t>(task.interval)) {
                 g_systemDiagnostics.schedulerMissedRuns +=
-                    static_cast<uint32_t>((now - task.runAt) / task.interval);
+                    static_cast<uint32_t>(lateness / static_cast<int32_t>(task.interval));
             }
             dueTaskIndices.push_back(i);
             if (task.repeat) {

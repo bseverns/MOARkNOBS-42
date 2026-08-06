@@ -60,7 +60,7 @@ std::array<int, NUM_ENVELOPES> envelopeFollowerLevels{};
 std::array<bool, NUM_ENVELOPES> envelopeFollowerReady{};
 
 // 5. On-device UI and runtime control state shared across OLED, buttons, and host telemetry.
-uint8_t activePot = 0xFF;
+uint8_t activePot = 0;
 uint8_t activeChannel = 1;
 bool envelopeFollowMode = false;
 String g_envelopeModeLabel = "LINEAR";

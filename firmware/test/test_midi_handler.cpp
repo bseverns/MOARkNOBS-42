@@ -506,6 +506,38 @@ void test_serial_queue_coalesces_latest_value() {
     TEST_ASSERT_EQUAL_UINT8(0x7F, mh._serialQueue[2].data2);
 }
 
+void test_serial_queue_admits_note_off_when_full() {
+    MIDIHandler mh;
+    const auto cc = mh.makeControlChange(1, 74, 64);
+    const auto existingOff = mh.makeNoteOff(2, 60, 0);
+    const auto incomingOff = mh.makeNoteOff(3, 61, 0);
+
+    for (size_t i = 0; i < MIDIHandler::kSerialQueueSize; ++i) {
+        mh._serialQueue[i] = cc;
+    }
+    mh._serialQueue[2] = existingOff;
+    mh._serialQueueHead = 0;
+    mh._serialQueueTail = 0;
+    mh._serialQueueFull = true;
+
+    TEST_ASSERT_TRUE(mh.enqueueSerialMessage(incomingOff));
+    TEST_ASSERT_EQUAL_UINT32(MIDIHandler::kSerialQueueSize, mh.serialQueueSize());
+
+    bool sawExistingOff = false;
+    bool sawIncomingOff = false;
+    MIDIHandler::SerialMessage message{};
+    while (mh.dequeueSerialMessage(message)) {
+        if (message.type == MIDIHandler::SerialMessageType::NoteOff && message.channel == 2) {
+            sawExistingOff = true;
+        }
+        if (message.type == MIDIHandler::SerialMessageType::NoteOff && message.channel == 3) {
+            sawIncomingOff = true;
+        }
+    }
+    TEST_ASSERT_TRUE(sawExistingOff);
+    TEST_ASSERT_TRUE(sawIncomingOff);
+}
+
 // DIN pacing can hold a message back for a few hundred microseconds; make sure
 // the idle polling path keeps draining the queue even without new traffic.
 void test_process_pumps_serial_queue() {

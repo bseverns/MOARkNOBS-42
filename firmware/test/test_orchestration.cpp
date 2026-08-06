@@ -117,9 +117,9 @@ void test_scheduler_initializes_recurring_task_layout() {
 
     initializeSchedulers();
 
-    TEST_ASSERT_EQUAL_UINT(6, Utility::schedulerHigh.taskCountForTest());
-    TEST_ASSERT_EQUAL_UINT(3, Utility::schedulerMid.taskCountForTest());
-    TEST_ASSERT_EQUAL_UINT(4, Utility::schedulerLow.taskCountForTest());
+    TEST_ASSERT_EQUAL_UINT(8, Utility::schedulerHigh.taskCountForTest());
+    TEST_ASSERT_EQUAL_UINT(5, Utility::schedulerMid.taskCountForTest());
+    TEST_ASSERT_EQUAL_UINT(8, Utility::schedulerLow.taskCountForTest());
 
     for (size_t idx = 0; idx < Utility::schedulerHigh.taskCountForTest(); ++idx) {
         TEST_ASSERT_TRUE(Utility::schedulerHigh.taskRepeatsForTest(idx));
@@ -133,17 +133,25 @@ void test_scheduler_initializes_recurring_task_layout() {
 
     TEST_ASSERT_EQUAL_UINT(7, Utility::schedulerHigh.taskIntervalForTest(0));
     TEST_ASSERT_EQUAL_UINT(1, Utility::schedulerHigh.taskIntervalForTest(1));
-    TEST_ASSERT_EQUAL_UINT(1, Utility::schedulerHigh.taskIntervalForTest(2));
+    TEST_ASSERT_EQUAL_UINT(2, Utility::schedulerHigh.taskIntervalForTest(2));
     TEST_ASSERT_EQUAL_UINT(1, Utility::schedulerHigh.taskIntervalForTest(3));
-    TEST_ASSERT_EQUAL_UINT(7, Utility::schedulerHigh.taskIntervalForTest(4));
-    TEST_ASSERT_EQUAL_UINT(7, Utility::schedulerHigh.taskIntervalForTest(5));
+    TEST_ASSERT_EQUAL_UINT(5, Utility::schedulerHigh.taskIntervalForTest(4));
+    TEST_ASSERT_EQUAL_UINT(1, Utility::schedulerHigh.taskIntervalForTest(5));
+    TEST_ASSERT_EQUAL_UINT(7, Utility::schedulerHigh.taskIntervalForTest(6));
+    TEST_ASSERT_EQUAL_UINT(7, Utility::schedulerHigh.taskIntervalForTest(7));
     TEST_ASSERT_EQUAL_UINT(11, Utility::schedulerMid.taskIntervalForTest(0));
     TEST_ASSERT_EQUAL_UINT(11, Utility::schedulerMid.taskIntervalForTest(1));
     TEST_ASSERT_EQUAL_UINT(13, Utility::schedulerMid.taskIntervalForTest(2));
-    TEST_ASSERT_EQUAL_UINT(17, Utility::schedulerLow.taskIntervalForTest(0));
+    TEST_ASSERT_EQUAL_UINT(13, Utility::schedulerMid.taskIntervalForTest(3));
+    TEST_ASSERT_EQUAL_UINT(2, Utility::schedulerMid.taskIntervalForTest(4));
+    TEST_ASSERT_EQUAL_UINT(1, Utility::schedulerLow.taskIntervalForTest(0));
     TEST_ASSERT_EQUAL_UINT(50, Utility::schedulerLow.taskIntervalForTest(1));
-    TEST_ASSERT_EQUAL_UINT(500, Utility::schedulerLow.taskIntervalForTest(2));
-    TEST_ASSERT_EQUAL_UINT(100, Utility::schedulerLow.taskIntervalForTest(3));
+    TEST_ASSERT_EQUAL_UINT(17, Utility::schedulerLow.taskIntervalForTest(2));
+    TEST_ASSERT_EQUAL_UINT(50, Utility::schedulerLow.taskIntervalForTest(3));
+    TEST_ASSERT_EQUAL_UINT(100, Utility::schedulerLow.taskIntervalForTest(4));
+    TEST_ASSERT_EQUAL_UINT(500, Utility::schedulerLow.taskIntervalForTest(5));
+    TEST_ASSERT_EQUAL_UINT(50, Utility::schedulerLow.taskIntervalForTest(6));
+    TEST_ASSERT_EQUAL_UINT(500, Utility::schedulerLow.taskIntervalForTest(7));
 }
 
 void test_runtime_pending_note_off_fires_when_due() {

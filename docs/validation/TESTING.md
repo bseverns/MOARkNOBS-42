@@ -209,7 +209,7 @@ After a successful swing you’ll have:
 ### When things explode
 
 - **“Skipping Unity tests”** – no Teensy port was found. Flash the board, double-check cables, or pass `TEST_PORT` explicitly.
-- **“Autogen Unity transport detected”** – PlatformIO regenerated its default Unity transport. Clean your `.pio` tree (`pio run -d firmware -t clean`) and make sure you didn’t delete `firmware/test/unity_output.cpp` or `firmware/test/unittest_transport.cpp`.
+- **“Autogen Unity transport detected”** – PlatformIO regenerated its default Unity transport. Clean your `.pio` tree (`pio run -d firmware -t clean`) and make sure `firmware/test/unity_output.cpp` is present.
 - **Unity timeouts** – usually the board wasn’t flashed with the Unity firmware. Run `pio test -d firmware -e teensy40_unity` without `--without-uploading` once to seed it.
 - **Bridge test failures** – run `npm --prefix bridge test -- --watch` locally and fix whatever CLI regression the suite is screaming about.
 

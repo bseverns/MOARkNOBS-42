@@ -156,13 +156,17 @@ void captureFilterAndBaselineState(SceneStorage::ConfigState &snapshot) {
     }
 }
 
-void applySlotState(const SceneStorage::ConfigState &state) {
+void applySlotState(const SceneStorage::ConfigState &state, bool persist) {
     const auto slotsState = state.slots;
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         MIDISlot slot = slotsState[i];
         slot.midiChannel = constrain(slot.midiChannel, 1, 16);
         slot.data1 = constrain(slot.data1, 0, 127);
-        configManager.saveSlot(i, slot);
+        if (persist) {
+            configManager.saveSlot(i, slot);
+        } else {
+            configManager.setSlotLive(i, slot);
+        }
     }
 }
 
@@ -204,26 +208,34 @@ std::array<bool, NUM_ENVELOPES> rebuildFollowerAssignmentsFromSlots() {
     return followerAssigned;
 }
 
-void applyArgAndEnvelopeModeState(const SceneStorage::ConfigState &state) {
+void applyArgAndEnvelopeModeState(const SceneStorage::ConfigState &state, bool persist) {
     const uint8_t argMethod =
         static_cast<uint8_t>(constrain(state.argMethod, 0, static_cast<int>(ARGMethod::XORR)));
     const bool argEnabled = state.argEnabled != 0;
     envelopeFollowMode = argEnabled;
-    configManager.setMode(state.envelopeMode);
-    configManager.setARGEnable(argEnabled ? 1 : 0);
-    configManager.setARGMethod(argMethod);
-    configManager.setEnvelopePair(state.argSourceA, state.argSourceB);
+    if (persist) {
+        configManager.setMode(state.envelopeMode);
+        configManager.setARGEnable(argEnabled ? 1 : 0);
+        configManager.setARGMethod(argMethod);
+        configManager.setEnvelopePair(state.argSourceA, state.argSourceB);
+    } else {
+        configManager.setModeLive(state.envelopeMode);
+        configManager.setARGEnableLive(argEnabled ? 1 : 0);
+        configManager.setARGMethodLive(argMethod);
+        configManager.setEnvelopePairLive(state.argSourceA, state.argSourceB);
+    }
     potentiometerManager.setArgEnvelopePair(state.argSourceA, state.argSourceB);
     updateEnvelopeModeLabel(envelopeModeName(state.envelopeMode));
 }
 
-SlotEnvelopePayload applyGlobalFollowerFilterState(const SceneStorage::ConfigState &state) {
+SlotEnvelopePayload applyGlobalFollowerFilterState(const SceneStorage::ConfigState &state, bool persist) {
     SlotEnvelopePayload tailPayload{};
     tailPayload.filterType = static_cast<uint8_t>(
         constrain(state.filterType, 0, static_cast<int>(EnvelopeFollower::BANDPASS)));
     tailPayload.frequency = constrain(state.filterFrequency, 20.0f, 5000.0f);
     tailPayload.q = constrain(state.filterQ, 0.5f, 4.0f);
-    return configManager.persistFilterTail(tailPayload);
+    return persist ? configManager.persistFilterTail(tailPayload)
+                   : ConfigManager::sanitizeFilterTail(tailPayload);
 }
 
 void applyFollowerRuntimeState(const SceneStorage::ConfigState &state,
@@ -245,13 +257,17 @@ void applyFollowerRuntimeState(const SceneStorage::ConfigState &state,
     }
 }
 
-void applyLedState(const SceneStorage::ConfigState &state) {
+void applyLedState(const SceneStorage::ConfigState &state, bool persist) {
     const CRGB color(state.ledR, state.ledG, state.ledB);
     ledManager.setBrightness(state.ledBrightness);
     ledManager.setColor(color);
-    configManager.saveLEDSettings(state.ledBrightness, color);
     LedMode ledMode = static_cast<LedMode>(state.ledMode);
-    configManager.setLedMode(ledMode);
+    if (persist) {
+        configManager.saveLEDSettings(state.ledBrightness, color);
+        configManager.setLedMode(ledMode);
+    } else {
+        configManager.setLedModeLive(ledMode);
+    }
     ledAnimator.setMode(ledMode);
 }
 
@@ -277,13 +293,13 @@ bool applyConfigState(const ConfigState &state, bool persist) {
         return false;
     }
     const ConfigState prior = captureConfigState();
-    applySlotState(state);
+    applySlotState(state, persist);
     applyPotMappings(state, persist);
     const auto followerAssigned = rebuildFollowerAssignmentsFromSlots();
-    applyArgAndEnvelopeModeState(state);
-    const SlotEnvelopePayload sanitizedTail = applyGlobalFollowerFilterState(state);
+    applyArgAndEnvelopeModeState(state, persist);
+    const SlotEnvelopePayload sanitizedTail = applyGlobalFollowerFilterState(state, persist);
     applyFollowerRuntimeState(state, followerAssigned, sanitizedTail);
-    applyLedState(state);
+    applyLedState(state, persist);
 
     if (persist) {
         configManager.saveEnvelopeSettings(potToEnvelopeMap, envelopeFollowers);

@@ -108,7 +108,6 @@ def check_repo_contract(root: pathlib.Path, errors: list[str], notes: list[str])
         notes.append("root PlatformIO guard: enabled")
 
     require_file(root / "firmware" / "test" / "unity_output.cpp", errors, "custom unity output")
-    require_file(root / "firmware" / "test" / "unittest_transport.cpp", errors, "unity transport shim")
     require_file(root / "tools" / "check_contract_sync.py", errors, "contract sync check")
     require_file(
         root / "tools" / "check_schema_keyword_coverage.py",

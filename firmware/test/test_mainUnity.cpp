@@ -119,6 +119,9 @@ void test_command_queue_discards_overlong_input_until_newline();
 void test_command_queue_initialize_clears_stale_dmame_state();
 void test_command_queue_dequeue_sanitizes_invalid_dmame_state();
 void test_scheduler_initializes_recurring_task_layout();
+void test_envelope_apply_to_cc_clamps_upper_bound();
+void test_envelope_apply_to_cc_clamps_lower_bound();
+void test_envelope_apply_to_cc_is_noop_when_inactive();
 void test_runtime_pending_note_off_fires_when_due();
 void test_runtime_pending_note_off_overflow_tracks_drop();
 void test_runtime_note_admission_drops_note_when_release_queue_is_full();
@@ -189,6 +192,11 @@ void test_drop_unsupported_usb_type();
 void test_usb_clock_tick_advances_counter();
 void test_generate_clock_tick_advances_counter();
 void test_handle_sysex_drops_oversize();
+void test_sysex_identity_request_reply();
+void test_handle_sysex_rejects_bad_framing();
+void test_serial_queue_coalesces_latest_value();
+void test_serial_queue_admits_note_off_when_full();
+void test_process_pumps_serial_queue();
 void test_config_manager_wipes_legacy_slot_stride();
 void test_slot_lfo_lanes_round_trip_through_slot_storage();
 void test_schema6_slot_migration_preserves_downstream_profile_bytes();
@@ -205,6 +213,7 @@ void test_clock_start_stop_flags();
 void test_clock_tick_stream_counts_cleanly();
 void test_clock_ppqn_start_stop_continue();
 void test_clock_ppqn_timing_accuracy_with_tempo_jump();
+void test_schedule_note_on_off_delivers_note_off_after_delay();
 #endif
 
 void setup() {
@@ -258,6 +267,9 @@ void setup() {
     RUN_TEST(test_command_queue_initialize_clears_stale_dmame_state);
     RUN_TEST(test_command_queue_dequeue_sanitizes_invalid_dmame_state);
     RUN_TEST(test_scheduler_initializes_recurring_task_layout);
+    RUN_TEST(test_envelope_apply_to_cc_clamps_upper_bound);
+    RUN_TEST(test_envelope_apply_to_cc_clamps_lower_bound);
+    RUN_TEST(test_envelope_apply_to_cc_is_noop_when_inactive);
     RUN_TEST(test_runtime_pending_note_off_fires_when_due);
     RUN_TEST(test_runtime_pending_note_off_overflow_tracks_drop);
     RUN_TEST(test_runtime_note_admission_drops_note_when_release_queue_is_full);
@@ -388,12 +400,18 @@ void setup() {
     RUN_TEST(test_oversized_sysex_is_rejected);
     RUN_TEST(test_drop_unsupported_usb_type);
     RUN_TEST(test_handle_sysex_drops_oversize);
+    RUN_TEST(test_sysex_identity_request_reply);
+    RUN_TEST(test_handle_sysex_rejects_bad_framing);
+    RUN_TEST(test_serial_queue_coalesces_latest_value);
+    RUN_TEST(test_serial_queue_admits_note_off_when_full);
+    RUN_TEST(test_process_pumps_serial_queue);
     RUN_TEST(test_usb_clock_tick_advances_counter);
     RUN_TEST(test_generate_clock_tick_advances_counter);
     RUN_TEST(test_clock_start_stop_flags);
     RUN_TEST(test_clock_tick_stream_counts_cleanly);
     RUN_TEST(test_clock_ppqn_start_stop_continue);
     RUN_TEST(test_clock_ppqn_timing_accuracy_with_tempo_jump);
+    RUN_TEST(test_schedule_note_on_off_delivers_note_off_after_delay);
     RUN_TEST(test_config_manager_wipes_legacy_slot_stride);
     RUN_TEST(test_slot_lfo_lanes_round_trip_through_slot_storage);
     RUN_TEST(test_schema6_slot_migration_preserves_downstream_profile_bytes);
