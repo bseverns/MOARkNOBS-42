@@ -105,6 +105,11 @@ void setFilterPotsForPayload(float frequency, float q) {
 
 } // namespace
 
+void test_active_pot_starts_in_valid_slot() {
+    TEST_ASSERT_EQUAL_UINT8(0, activePot);
+    TEST_ASSERT_LESS_THAN_UINT8(NUM_SLOTS, activePot);
+}
+
 void test_scheduler_initializes_recurring_task_layout() {
     Utility::schedulerHigh = TaskScheduler();
     Utility::schedulerMid = TaskScheduler();

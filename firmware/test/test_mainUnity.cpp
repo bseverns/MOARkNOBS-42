@@ -9,6 +9,7 @@
 // point you at the right subsystem.
 
 void test_start_stop_cycle();
+void test_active_pot_starts_in_valid_slot();
 void test_profile_assignments_gate_hardware_start_but_not_explicit_start();
 void test_pot_root_drives_default();
 void test_note_dynamics_shape_arp_note_velocity_and_probability();
@@ -219,6 +220,7 @@ void test_scheduler_waits_for_wrapped_deadline();
 
 void setup() {
     UNITY_BEGIN();
+    RUN_TEST(test_active_pot_starts_in_valid_slot);
     RUN_TEST(test_scoped_analog_provider_nesting);
     RUN_TEST(test_sequence_provider_cycles_values);
     RUN_TEST(test_set_provider_returns_previous);
