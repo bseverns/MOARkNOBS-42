@@ -25,9 +25,9 @@ Last edited: 2026-02-14
 
 ## Public README Photo Backlog
 
-- [ ] Assembled front panel with knobs, buttons, OLED, and LEDs installed.
-- [ ] Bench setup during first-power and rail-topology validation.
-- [ ] MIDI, USB, and WebSerial/bridge test session with the board connected.
+- [x] Assembled front panel with knobs, buttons, OLED, and LEDs installed.
+- [x] Bench setup during first-power and rail-topology validation.
+- [x] MIDI, USB, and WebSerial/bridge test session with the board connected.
 - [ ] Required rework close-up, or a clear "no rework required" board close-up after validation.
 
 ---
@@ -65,7 +65,7 @@ Last edited: 2026-02-14
 **One “hero edit” we will demo (pick exactly one):**
 
 - [x] Change a slot’s Type (CC/Note/NRPN/etc)
-- [ ] Change a slot’s CC number or channel
+- [x] Change a slot’s CC number or channel
 - [x] Change an EF parameter (mode/gate/attack/release) and see effect
 
 ---
@@ -89,13 +89,13 @@ Last edited: 2026-02-14
 
 ### 1.3 Arp demo: “it feels alive, and it follows the rig”
 
-- [ ] **VERIFY:** Arp enable/disable is reliable and obvious
+- [x] **VERIFY:** Arp enable/disable is reliable and obvious
   - Acceptance: no stuck notes; OLED/LED indicates arp state.
-- [ ] **VERIFY:** Pattern shapes are selectable and audibly/visibly distinct
+- [x] **VERIFY:** Pattern shapes are selectable and audibly/visibly distinct
   - Acceptance: you can switch shape live and the pattern changes immediately.
-- [ ] **VERIFY:** Swing is controllable and demonstrable
+- [x] **VERIFY:** Swing is controllable and demonstrable
   - Acceptance: show 50% vs a swung preset (e.g. 58–65%) and feel changes.
-- [ ] **VERIFY:** Arp behaves when clock source changes (INT ↔ EXT)
+- [x] **VERIFY:** Arp behaves when clock source changes (INT ↔ EXT)
   - Acceptance: no runaway timing or lockups.
 
 **Arp “one sentence explanation” (write it now):**
@@ -157,9 +157,9 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
 
 - [x] **VERIFY:** External MIDI clock can be followed (choose one path: USB OR DIN)
   - Acceptance: bpm follows DAW clock; timing doesn’t visibly drift during demo window.
-- [ ] **VERIFY:** Start/Stop works (Continue optional)
+- [x] **VERIFY:** Start/Stop works (Continue optional)
   - Acceptance: Start resets pattern coherently; Stop halts without stuck notes.
-- [ ] **VERIFY:** Clock status is visible somewhere (diagnostic page OK)
+- [x] **VERIFY:** Clock status is visible somewhere (diagnostic page OK)
   - Acceptance: you can point and say “INT / EXT / LOST”.
 
 **Clock “one sentence explanation” (write it now):**
@@ -174,7 +174,7 @@ pair (A,B) from the six EF inputs, then combine/compare them using **14 math met
   - Acceptance: a mapping or behavior changes immediately and visibly.
 - [x] **VERIFY:** Save profile works (from device or app, whichever is canonical)
   - Acceptance: after save + power cycle (or reload), the change persists.
-- [ ] **VERIFY:** Profile identity is visible (index/name)
+- [x] **VERIFY:** Profile identity is visible (index/name)
   - Acceptance: you can say “Profile 2 is the Bridge demo layout” and it’s shown.
 
 **Profiles “one sentence explanation” (write it now):**
