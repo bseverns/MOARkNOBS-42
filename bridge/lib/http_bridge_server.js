@@ -767,6 +767,10 @@ function createBrowserBridgeServer({
             liveConfig: session?.liveConfig ?? null,
             stagedConfig: session?.stagedConfig ?? null,
             dirty: Boolean(session?.dirty),
+            configValidation: session?.configValidation ?? {
+              status: 'pending',
+              errors: [],
+            },
             deviceAuthority: session?.deviceAuthority ?? 'verified',
             draftState: session?.draftState ?? (session?.dirty ? 'dirty' : 'clean'),
             clientApplyId: session?.clientApplyId ?? null,

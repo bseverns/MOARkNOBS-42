@@ -2,6 +2,7 @@ const { strict: assert } = require('node:assert');
 
 const { createDeviceSession } = require('../lib/device/session');
 const { createSimulatedMn42Device } = require('../lib/device/simulator');
+const { loadSchemaAuthority } = require('../lib/device/schema_authority');
 const { MN42_MANIFEST_CONTRACT } = require('../lib/manifest_contract');
 
 function clone(value) {
@@ -77,6 +78,7 @@ function createHarness(options = {}) {
         return seq;
       };
     })(),
+    loadAuthority: options.loadAuthority,
   });
 
   simulator.on('line', deliverLine);
@@ -120,6 +122,7 @@ async function run() {
     assert.equal(Array.isArray(state.liveConfig?.slots), true);
     assert.equal(Array.isArray(state.stagedConfig?.slots), true);
     assert.equal(state.deviceAuthority, 'verified');
+    assert.equal(state.configValidation.status, 'verified');
     assert.equal(state.draftState, 'clean');
     assert.deepEqual(harness.writtenLines.slice(0, 4), [
       'HELLO',
@@ -127,6 +130,33 @@ async function run() {
       'GET_SCHEMA',
       'GET_CONFIG',
     ]);
+  }
+
+  {
+    const authority = await loadSchemaAuthority();
+    const harness = createHarness({
+      loadAuthority: async () => ({
+        ...authority,
+        validateConfig: () => ({
+          valid: false,
+          errors: [{ instancePath: '/slots', message: 'forced contract failure' }],
+        }),
+      }),
+    });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().configValidation.status === 'invalid');
+    const state = harness.session.getState();
+    assert.equal(state.ready, false);
+    assert.equal(state.handshakeState, 'degraded');
+    assert.equal(state.liveConfig, null, 'an invalid device export must never become live truth');
+    assert.equal(
+      harness.structuredEvents.some(
+        (entry) =>
+          entry.event === 'bridge.alert' &&
+          entry.payload?.code === 'device_config_schema_invalid',
+      ),
+      true,
+    );
   }
 
   {

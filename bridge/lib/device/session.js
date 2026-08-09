@@ -126,6 +126,7 @@ function createDeviceSession({
   onStructuredEvent = () => {},
   nextSeq = () => 1,
   handshakeTimeoutMs = HANDSHAKE_TIMEOUT_MS,
+  loadAuthority = loadSchemaAuthority,
 } = {}) {
   if (typeof sendLine !== 'function') {
     throw new Error('device session requires sendLine');
@@ -149,6 +150,7 @@ function createDeviceSession({
     schema: null,
     liveConfig: null,
     validationAuthority: null,
+    configValidation: { status: 'pending', errors: [] },
     compatibility: { status: 'pending', reason: null },
     stagedConfig: null,
     dirty: false,
@@ -318,7 +320,7 @@ function createDeviceSession({
   async function ensureAuthority() {
     if (authority) return authority;
     if (!authorityPromise) {
-      authorityPromise = loadSchemaAuthority();
+      authorityPromise = loadAuthority();
     }
     authority = await authorityPromise;
     state.validationAuthority = {
@@ -520,6 +522,7 @@ function createDeviceSession({
     state.schema = null;
     state.schemaSource = 'pending';
     state.compatibility = { status: 'pending', reason: null };
+    state.configValidation = { status: 'pending', errors: [] };
     state.liveConfig = null;
     state.stagedConfig = null;
     state.dirty = false;
@@ -755,6 +758,34 @@ function createDeviceSession({
         clone(msg),
         state.manifest ?? {},
       );
+      const validation = authority.validateConfig(normalized);
+      state.configValidation = {
+        status: validation.valid ? 'verified' : 'invalid',
+        errors: clone(validation.errors || []),
+      };
+      if (!validation.valid) {
+        const error = createSessionError(
+          'device_config_schema_invalid',
+          'Device configuration export failed bundled schema validation',
+          { errors: state.configValidation.errors },
+          422,
+        );
+        clearHandshakeTimer();
+        state.ready = false;
+        state.handshakeState = 'degraded';
+        state.lastError = error.message;
+        if (applyPending) {
+          markApplyUncertain('schema_invalid', applyPending, error);
+        }
+        emitState();
+        emitStructured('bridge.alert', {
+          code: error.code,
+          severity: 'error',
+          message: error.message,
+          details: error.details,
+        });
+        return;
+      }
       if (applyPending?.awaitingReadback) {
         const pending = applyPending;
         if (JSON.stringify(normalized) !== JSON.stringify(pending.stagedConfig)) {

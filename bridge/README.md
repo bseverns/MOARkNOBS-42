@@ -49,7 +49,7 @@ The bridge remains bidirectional:
 - MIDI in can rebroadcast as typed OSC events and still feed the firmware live-control lane.
 - OSC typed events can emit host MIDI messages.
 - A settings file can add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
-- The cached device session validates revisioned staged config before Apply, awaits serial write acceptance and drain for each bulk frame, and promotes it only after verified device truth.
+- The cached device session validates both incoming device exports and revisioned staged config against the bundled App schema, awaits serial write acceptance and drain for each bulk frame, and promotes it only after verified device truth.
 - Firmware telemetry is mirrored beyond raw slot/envelope values: current slot, LFOs, EF status, ARG chunks,
   diagnostics, clock state, note dynamics, jitter, and active profile are available over OSC and structured events.
 - Manifest-backed hardware health is cached in the session so the console can show OLED status, brownouts, EEPROM copy
@@ -127,8 +127,8 @@ After startup, the bridge sends `HELLO`, `GET_MANIFEST`, and `GET_SCHEMA`, then 
 { "hello": "mn42" }
 ```
 
-When `HELLO`, manifest, schema, and config are cached, the browser console reports the device session as ready.
-The session snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus live/staged config state and the last apply result.
+When `HELLO`, manifest, and schema are cached and the normalized config export passes the bundled App schema, the browser console reports the device session as ready. A failed export remains outside `liveConfig`, degrades the handshake, and emits a `device_config_schema_invalid` alert.
+The session snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus `configValidation`, live/staged config state, and the last apply result.
 
 ## Quick start (CLI)
 
