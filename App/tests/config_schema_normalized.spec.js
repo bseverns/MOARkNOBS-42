@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import MiniAjv from '../lib/mini-ajv.js';
 import { normalizeConfig } from '../runtime/config_normalize.js';
+import { compactConfigForDevice } from '../runtime/config_session.js';
+import { clone } from '../runtime/runtime_utils.js';
 
 function createDeviceConfig() {
   return {
@@ -73,6 +75,26 @@ test('normalized device config with EF destination mode validates against App sc
     { enabled: false, mode: 3, amount: -12 }
   ]);
   expect(validator(normalized), JSON.stringify(validator.errors ?? [], null, 2)).toBe(true);
+});
+
+test('firmware-shaped export stays schema-valid across device serialization round trip', () => {
+  const schemaPath = path.resolve(process.cwd(), 'config_schema.json');
+  const schema = JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  const ajv = new MiniAjv({ allErrors: true });
+  const validator = ajv.compile(schema);
+  const manifest = { slot_count: 42, envelope_count: 6 };
+  const exported = normalizeConfig(createDeviceConfig(), manifest);
+
+  expect(validator(exported), JSON.stringify(validator.errors ?? [], null, 2)).toBe(true);
+
+  const devicePayload = compactConfigForDevice(exported, null, {
+    clone,
+    slotTypeNames: schema.properties.slots.items.properties.type.enum
+  });
+  const readback = normalizeConfig(devicePayload, manifest);
+
+  expect(validator(readback), JSON.stringify(validator.errors ?? [], null, 2)).toBe(true);
+  expect(readback).toEqual(exported);
 });
 
 test('normalization canonicalizes firmware floats, optional slot defaults, and power cap', () => {
