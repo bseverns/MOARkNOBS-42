@@ -29,6 +29,7 @@ before wandering file-by-file.
  - **MIDIHandler.h** – thin wrapper for USB, DIN, and TRS MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
 - **MIDITypes.h** – enums and structs defining slot data.
 - **PotentiometerManager.h** – reads analog pots via multiplexers ([PotentiometerManager.cpp](../src/PotentiometerManager.cpp)).
+- **ProfileRuntimeRequests.h** – explicit reload/save mailbox shared by button contexts and the main-loop profile lifecycle.
 - **TestHelpers.h** – small helpers used by the manual test firmware.
   - Defines the test-only `webSerialStreaming` stub that keeps the linker cool while we run isolated system suites.
 - **Utility.h** – math mischief like `scale()` for warping ranges and a lightweight task scheduler ([Utility.cpp](../src/Utility.cpp)).

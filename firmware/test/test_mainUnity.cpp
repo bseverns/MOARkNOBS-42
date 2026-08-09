@@ -80,6 +80,8 @@ void test_digital_provider_overrides_matrix_reads();
 void test_runtime_hardware_tuning_preserves_structural_config();
 void test_runtime_hardware_tuning_rejects_zero_intervals();
 void test_select_boot_slot_usbconfig();
+void test_profile_runtime_requests_preserve_independent_pending_work();
+void test_profile_runtime_requests_take_consumes_once();
 void test_parse_basic_sysex_template();
 void test_parse_14bit_sysex_template();
 void test_parse_rejects_bad_template();
@@ -233,6 +235,8 @@ void setup() {
     RUN_TEST(test_runtime_hardware_tuning_preserves_structural_config);
     RUN_TEST(test_runtime_hardware_tuning_rejects_zero_intervals);
     RUN_TEST(test_select_boot_slot_usbconfig);
+    RUN_TEST(test_profile_runtime_requests_preserve_independent_pending_work);
+    RUN_TEST(test_profile_runtime_requests_take_consumes_once);
     RUN_TEST(test_parse_basic_sysex_template);
     RUN_TEST(test_parse_14bit_sysex_template);
     RUN_TEST(test_parse_rejects_bad_template);

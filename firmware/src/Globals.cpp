@@ -86,8 +86,6 @@ bool g_jitterDepthLatched = false;
 bool g_jitterSmoothnessLatched = false;
 bool g_arpEditActive = false;                  // Arp edit mode held by combo in ButtonManager
 uint8_t g_activeProfile = 0;                   // Active profile index (persisted in EEPROM)
-bool g_profileChangeRequested = false;         // Flag for main loop profile reload
-bool g_profileSaveRequested = false;           // Flag for main loop profile save
 uint8_t g_efIdleFloor = EF_IDLE_FLOOR_DEFAULT; // Clamp disconnected/idle EF readings to zero
 
 // Envelope follower calibration stash

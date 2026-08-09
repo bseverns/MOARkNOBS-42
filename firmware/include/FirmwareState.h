@@ -9,6 +9,7 @@
 #include "Globals.h"
 #include "MIDITypes.h"
 #include "EfVoice.h"
+#include "ProfileRuntimeRequests.h"
 
 // FirmwareState.h is the "living machine" header.
 //
@@ -76,6 +77,7 @@ extern int NORMAL_DISPLAY_TIME;
 extern int SHORT_DISPLAY_TIME;
 extern bool diagnosticMode;
 extern uint8_t diagnosticPage;
+extern ProfileRuntimeRequests profileRuntimeRequests;
 extern ButtonManagerContext buttonContext;
 
 // Diagnostics view: copy the live counters into a stable snapshot for UI/reporting code.

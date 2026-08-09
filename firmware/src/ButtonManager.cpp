@@ -313,7 +313,7 @@ void ButtonManager::exitOnDeviceConfigMode(ButtonManagerContext &context, bool a
     if (autosave && _onDeviceConfigModeDirty) {
         context.configManager.saveProfile(g_activeProfile);
         context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
-        g_profileSaveRequested = true;
+        context.profileRequests.requestSave();
         saved = true;
     }
     _onDeviceConfigModeActive = false;
@@ -552,7 +552,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
                 for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
                     context.potChannels.push_back(context.configManager.getPotChannel(i));
                 }
-                g_profileChangeRequested = true;
+                context.profileRequests.requestReload();
                 context.displayManager.displayStatus("Profile Reset!", 1500);
             }
             break;
@@ -573,7 +573,7 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
         case 4: { // Save configuration to the active profile
             context.configManager.saveProfile(g_activeProfile);
             context.configManager.saveEnvelopeSettings(context.potToEnvelopeMap, context.envelopes);
-            g_profileSaveRequested = true;
+            context.profileRequests.requestSave();
             context.displayManager.displayStatus("Config Saved", 1500);
             break;
         }
@@ -1084,7 +1084,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         for (uint8_t i = 0; i < context.configManager.getNumPots(); ++i) {
             context.potChannels.push_back(context.configManager.getPotChannel(i));
         }
-        g_profileChangeRequested = true;
+        context.profileRequests.requestReload();
         context.displayManager.displayStatus("Panic: Baseline", 1500);
     }
     // (0.75) Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5: on-device config mode toggle.
@@ -1303,7 +1303,7 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
         char buf[32];
         snprintf(buf, sizeof(buf), "PROFILE %c", static_cast<char>('A' + g_activeProfile));
         context.displayManager.displayStatus(buf, 1500);
-        g_profileChangeRequested = true;
+        context.profileRequests.requestReload();
     }
 }
 

@@ -412,7 +412,7 @@ void testControlSuite() {
     bool lfoTargetCycled = false;
     bool lfoExited = false;
 
-    g_profileSaveRequested = false;
+    profileRuntimeRequests.clear();
 
     drawInstruction("Control Suite", "Ctrl0+2+3+5", "Enter Config");
     unsigned long deadline = millis() + kControlSuiteTimeoutMs;
@@ -450,8 +450,8 @@ void testControlSuite() {
             }
         }
         Serial.printf("Config mode exit: %s\n", configExited ? "PASS" : "FAIL");
-        Serial.printf("Config autosave flag: %s\n",
-                      (configEdited && g_profileSaveRequested) ? "PASS" : "FAIL");
+        Serial.printf("Config autosave request: %s\n",
+                      (configEdited && profileRuntimeRequests.savePending()) ? "PASS" : "FAIL");
     }
 
     drawInstruction("Clock Source", "Ctrl1+4+5", "Toggle source");

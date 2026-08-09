@@ -104,6 +104,7 @@
 #include "Utility.h"
 #include "PotentiometerManager.h"
 #include "Globals.h"
+#include "ProfileRuntimeRequests.h"
 #include "Log.h"
 #include "LEDManager.h"
 
@@ -173,6 +174,7 @@ struct ButtonManagerContext {
     std::map<int, MIDISlot::EfSettings> &potToEnvelopeMap; // Associative map: pot -> EF settings
     bool &diagnosticMode;                                  // Self-test mode flag
     uint8_t &diagnosticPage;                               // Which diagnostic page to show
+    ProfileRuntimeRequests &profileRequests; // Explicit main-loop reload/save mailbox
 };
 
 /*

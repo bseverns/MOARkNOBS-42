@@ -78,7 +78,8 @@ void test_long_press_detection() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
     fakeMillis = 0;
     bm.updateButtonStateMachine(0, true, ctx); // press
@@ -112,7 +113,8 @@ void test_long_press_requires_confirm() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
     // Long press triggers confirm but no action yet
     fakeMillis = 0;
@@ -148,7 +150,8 @@ void test_double_press_ctrl2_cycles_midi_type() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
     MIDISlot &slot = cfg.getSlot(0);
     slot.type = MIDIMessageType::CC;
@@ -183,7 +186,8 @@ void test_jitter_combo_updates_settings() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
     g_jitterSettings.depth = 0.0f;
     g_jitterSettings.smoothness = 1.0f;
@@ -227,16 +231,17 @@ void test_config_mode_combo_autosaves_dirty_changes() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
-    g_profileSaveRequested = false;
+    profileRuntimeRequests.clear();
     const uint8_t ccBefore = cfg.getPotCCNumber(activePot);
     constexpr uint8_t kConfigMask =
         static_cast<uint8_t>((1u << 0) | (1u << 2) | (1u << 3) | (1u << 5));
 
     bm.handleMultiButtonPress(kConfigMask, ctx);
     TEST_ASSERT_TRUE(bm.isOnDeviceConfigModeActive());
-    TEST_ASSERT_FALSE(g_profileSaveRequested);
+    TEST_ASSERT_FALSE(profileRuntimeRequests.savePending());
 
     bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 4, ctx); // change CC/data1 + dirty
     TEST_ASSERT_TRUE(bm._onDeviceConfigModeDirty);
@@ -245,7 +250,7 @@ void test_config_mode_combo_autosaves_dirty_changes() {
     bm.handleSingleButtonPress(NUM_VIRTUAL_BUTTONS + 5, ctx); // exit + autosave
     TEST_ASSERT_FALSE(bm.isOnDeviceConfigModeActive());
     TEST_ASSERT_FALSE(bm._onDeviceConfigModeDirty);
-    TEST_ASSERT_TRUE(g_profileSaveRequested);
+    TEST_ASSERT_TRUE(profileRuntimeRequests.savePending());
 }
 
 void test_clock_source_combo_toggles_follow_external() {
@@ -265,7 +270,8 @@ void test_clock_source_combo_toggles_follow_external() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
     constexpr uint8_t kClockMask = static_cast<uint8_t>((1u << 1) | (1u << 4) | (1u << 5));
     const bool startFollow = g_followExternalClock;
@@ -294,7 +300,8 @@ void test_lfo_tuning_combo_and_route_cycle() {
     bool diag = false;
     uint8_t diagPage = 0;
     ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
-                             led,   disp,      envs,     map,     diag,   diagPage};
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
 
     constexpr uint8_t kLfoMask = static_cast<uint8_t>((1u << 0) | (1u << 1) | (1u << 3));
 

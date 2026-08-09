@@ -69,6 +69,7 @@ int NORMAL_DISPLAY_TIME = 30000;
 int SHORT_DISPLAY_TIME = 10000;
 bool diagnosticMode = false;
 uint8_t diagnosticPage = 0;
+ProfileRuntimeRequests profileRuntimeRequests;
 
 // 6. Timing scratch values used by runtime diagnostics and load monitoring.
 unsigned long lastMIDIProcess = 0;
@@ -82,7 +83,8 @@ unsigned long lastDisplayUpdate = 0;
 ButtonManagerContext buttonContext = {potChannels,        activePot,      activeChannel,
                                       envelopeFollowMode, envelopeMode,   configManager,
                                       ledManager,         displayManager, envelopeFollowers,
-                                      potToEnvelopeMap,   diagnosticMode, diagnosticPage};
+                                      potToEnvelopeMap,   diagnosticMode, diagnosticPage,
+                                      profileRuntimeRequests};
 
 // 8. Diagnostics snapshot helper used by UI/reporting code so it can inspect counters without
 // racing the ISR and service loops that update them.

@@ -58,8 +58,6 @@ bool g_jitterDepthLatched = false;
 bool g_jitterSmoothnessLatched = false;
 bool g_arpEditActive = false; // Test shim for arp edit toggle
 uint8_t g_activeProfile = 0;
-bool g_profileChangeRequested = false;
-bool g_profileSaveRequested = false;
 uint8_t g_efIdleFloor = EF_IDLE_FLOOR_DEFAULT;
 bool webSerialStreaming = false;
 

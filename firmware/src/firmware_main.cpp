@@ -104,7 +104,7 @@ void loop() {
     Utility::schedulerHigh.update();
     Utility::schedulerMid.update();
     Utility::schedulerLow.update();
-    if (g_profileChangeRequested) {
+    if (profileRuntimeRequests.takeReload()) {
         ProfileData profile{};
         ProfileModulationExtension modulation{};
         const bool profileStored = configManager.loadProfileSettings(g_activeProfile, profile);
@@ -117,13 +117,11 @@ void loop() {
         } else if (modulationStored) {
             applyProfileModulation(modulation, true);
         }
-        g_profileChangeRequested = false;
     }
-    if (g_profileSaveRequested) {
+    if (profileRuntimeRequests.takeSave()) {
         ProfileData profile = captureProfileSnapshot();
         configManager.saveProfileSettings(g_activeProfile, profile);
         configManager.saveProfileModulation(g_activeProfile, captureProfileModulation());
-        g_profileSaveRequested = false;
     }
     monitorSystemLoad();
 }

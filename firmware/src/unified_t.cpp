@@ -228,6 +228,7 @@ std::vector<EnvelopeFollower> envelopeFollowers = createEnvelopeFollowers(&poten
 
 Arpeggiator arpeggiator; // Test stub
 LFOManager lfoManager;   // ButtonManager's LFO quick-tune path depends on this symbol.
+ProfileRuntimeRequests profileRuntimeRequests;
 
 // ———————— Helpers ——————————————
 
@@ -409,7 +410,8 @@ void testPots() {
     uint8_t diagPage = 0;
     ButtonManagerContext bmCtx = {potChannels,       dummyPot,      dummyChannel, dummyEnvFollow,
                                   dummyEnvMode,      configManager, ledManager,   displayManager,
-                                  envelopeFollowers, dummyMap,      diag,         diagPage};
+                                  envelopeFollowers, dummyMap,      diag,         diagPage,
+                                  profileRuntimeRequests};
 
     char label[24];
     char result[64];
@@ -564,7 +566,8 @@ void testControlSuite() {
     ButtonManagerContext context = {potChannels,        activePot,      activeChannel,
                                     envelopeFollowMode, envelopeMode,   configManager,
                                     ledManager,         displayManager, envelopeFollowers,
-                                    potToEnvelopeMap,   diagnosticMode, diagnosticPage};
+                                    potToEnvelopeMap,   diagnosticMode, diagnosticPage,
+                                    profileRuntimeRequests};
 
     auto serviceUi = [&]() {
         buttonManager.processButtons(context);
@@ -587,7 +590,7 @@ void testControlSuite() {
     bool lfoTargetCycled = false;
     bool lfoExited = false;
 
-    g_profileSaveRequested = false;
+    profileRuntimeRequests.clear();
 
     drawInstruction("Control Suite", "Ctrl0+2+3+5", "Enter Config");
     unsigned long deadline = millis() + kControlSuiteTimeoutMs;
@@ -625,8 +628,8 @@ void testControlSuite() {
             }
         }
         Serial.printf("Config mode exit: %s\n", configExited ? "PASS" : "FAIL");
-        Serial.printf("Config autosave flag: %s\n",
-                      (configEdited && g_profileSaveRequested) ? "PASS" : "FAIL");
+        Serial.printf("Config autosave request: %s\n",
+                      (configEdited && profileRuntimeRequests.savePending()) ? "PASS" : "FAIL");
     }
 
     drawInstruction("Clock Source", "Ctrl1+4+5", "Toggle source");
