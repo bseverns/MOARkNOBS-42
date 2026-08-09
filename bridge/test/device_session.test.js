@@ -157,6 +157,30 @@ async function run() {
   }
 
   {
+    const harness = createHarness();
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[0].data1 = 73;
+    await harness.session.stageConfig(staged);
+    const writesBeforeRollback = [...harness.writtenLines];
+
+    const result = await harness.session.rollback('operator_request');
+
+    assert.equal(result.rolledBack, true);
+    assert.deepEqual(
+      harness.writtenLines,
+      writesBeforeRollback,
+      'rolling back an untransmitted draft must not write to the device',
+    );
+    assert.deepEqual(
+      harness.session.getState().stagedConfig,
+      harness.session.getState().liveConfig,
+    );
+    assert.equal(harness.session.getState().dirty, false);
+  }
+
+  {
     const lines = [];
     const alerts = [];
     const session = createDeviceSession({
