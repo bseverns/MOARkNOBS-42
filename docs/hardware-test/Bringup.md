@@ -2,6 +2,8 @@
 
 This checklist is for the current MOARkNOBS-42 prototype hardware-test package.
 
+For staged boot and runtime fault isolation, use the documented [diagnostic firmware build variants](DiagnosticBuildVariants.md). Those environments are bench bisects only; use `teensy40_main` for normal Rev A validation.
+
 ## External Power Requirement
 
 Use a regulated `5 V DC` external supply.
