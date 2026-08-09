@@ -14,7 +14,6 @@
 #include "ARGMixer.h"
 #include "protocol/SceneStorage.h"
 #include "storage/EepromStorageBackend.h"
-#include "storage/LittleFsStorageBackend.h"
 #include <algorithm>
 #include <array>
 #include <cmath>

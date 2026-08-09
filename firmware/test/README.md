@@ -141,7 +141,7 @@ Arduino, display, SD, or USB transport dependencies into this lane.
 
 ### Serial? fake it.
 
-Vendor libs love to yammer over `Serial` even when there's no UART in sight. Host-side builds don't drag in the Arduino core, so `test/SerialStub.h` fakes just enough of `Print` and `HardwareSerial` to keep `Adafruit BusIO` and friends from choking. When you compile for a Teensy, the stub backs off and the real UARTs take over.
+Vendor libs love to yammer over `Serial` even when there's no UART in sight. Host-side builds don't drag in the Arduino core, so `test/SerialStub.h` fakes the small `Print` and `HardwareSerial` surface used by native seams. The Teensy Unity graph keeps the OLED, BusIO, FastLED/OctoWS2811, and LittleFS libraries out entirely: test-local Adafruit/FastLED headers provide only the interface types exercised by software tests. Hardware builds still resolve the real libraries.
 
 Unity is fussy and demands a `unity_config.h` to map its battle cries.
 There's a lean version in `test/unity_config.h` that just sprays bytes

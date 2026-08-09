@@ -13,7 +13,9 @@
 #include "Arpeggiator.h"
 #include "LFO/LFOManager.h"
 #include "storage/EepromStorageBackend.h"
+#if defined(CONFIG_STORAGE_LITTLEFS)
 #include "storage/LittleFsStorageBackend.h"
+#endif
 #include <algorithm>
 #include <cmath>
 #include <cstddef>

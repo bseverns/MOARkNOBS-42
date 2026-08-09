@@ -27,7 +27,7 @@ const char *displayInitResultCode(DisplayInitResult result) {
 } // namespace
 
 DisplayManager::DisplayManager(uint8_t i2cAddress, uint16_t screenWidth, uint16_t screenHeight)
-    : _display(screenWidth, screenHeight, &Wire), _i2cAddress(i2cAddress) {
+    : _display(screenWidth, screenHeight, nullptr), _i2cAddress(i2cAddress) {
     _statusTimeout = 0;
     _isDrawing = false;
     _updateIntervalMs = 33;
