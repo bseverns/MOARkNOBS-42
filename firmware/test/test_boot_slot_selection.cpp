@@ -3,7 +3,8 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 #include "BootMode.h"
-#include "../src/BootConstants.h"
+#include "../include/StorageLayout.h"
+
 
 // The EEPROM simulator that unit tests provide has these symbols.
 void test_select_boot_slot_usbconfig() {

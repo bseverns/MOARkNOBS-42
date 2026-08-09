@@ -1,9 +1,10 @@
 #include "BootMode.h"
-#include "BootConstants.h"
-
 #include <EEPROM.h>
 
-#include "Globals.h"
+
+#include "../include/StorageLayout.h"
+
+// requestUsbConfiguratorBoot() etc
 
 namespace {
 constexpr uint32_t kUsbConfiguratorBootMagic = 0x4D4E4346; // "MNCF"
