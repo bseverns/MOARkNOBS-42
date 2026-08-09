@@ -392,7 +392,7 @@ void setup() {
     waitForSerialWindow();
 
     readBootHealth();
-    loadHardwareConfig();
+    loadHardwareRuntimeTuning();
     pinMode(hwConfig.statusLedPin, OUTPUT);
     digitalWrite(hwConfig.statusLedPin, LOW);
 

@@ -41,7 +41,7 @@ void setup() {
 #if defined(MN42_DIAG_BOOT_MARKERS) && (MN42_DIAG_BOOT_MARKERS != 0)
     LOG_PRINTLN("{\"type\":\"diag\",\"code\":\"setup_before_load_hardware\"}");
 #endif
-    loadHardwareConfig();
+    loadHardwareRuntimeTuning();
     if (gBootMode == BootMode::UsbConfigurator) {
         restoreActiveProfileRuntime(false);
         LOG_PRINTLN("{\"type\":\"boot_mode\",\"mode\":\"usb_configurator\"}");

@@ -24,7 +24,7 @@ before wandering file-by-file.
 - **Globals.h** – compile-time constants and forward declarations ([Globals.cpp](../src/Globals.cpp)).
   - Hosts cross-cutting toggles like `webSerialStreaming` so both the main firmware and the test harness agree on when to shout telemetry over USB.
 - **FirmwareState.h** – the runtime cast list: which shared managers, followers, caches, and UI flags are alive once the board boots ([SystemState.cpp](../src/SystemState.cpp)).
-- **hardware_config.h** – empty stage where `applyHardwareConfigOverrides()` can thrash default pins and ticks into your rig's groove.
+- **hardware_config.h** – optional `applyHardwareRuntimeTuningOverrides()` hook for scheduler cadence. Structural wiring is fixed at build time because managers capture it before `setup()`.
 - **LEDManager.h** – drives the 52-piece addressable LED circus: slot halos, envelope meters, pot glows and the control-button beacon ([LEDManager.cpp](../src/LEDManager.cpp)).
  - **MIDIHandler.h** – thin wrapper for USB, DIN, and TRS MIDI I/O ([MIDIHandler.cpp](../src/MIDIHandler.cpp)).
 - **MIDITypes.h** – enums and structs defining slot data.

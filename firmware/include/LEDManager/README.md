@@ -49,7 +49,7 @@ The active profile is reported through `GET_MANIFEST` as `power_profile`,
 #include "Globals.h"
 #include "LEDManager.h"
 
-// `hwConfig` gets filled at boot with pin numbers and LED counts.
+// `hwConfig` contains the fixed board topology established before setup().
 LEDManager leds(hwConfig);
 
 void setup() {
@@ -65,7 +65,9 @@ void loop() {
 ## HardwareConfig: the Puppet Master
 
 Tired of magic numbers? `HardwareConfig` (defined in [`Globals.h`](../Globals.h)) still
-tracks the board's pins and timing knobs. `LEDManager` leans on it for odds and
+tracks the board's pins and timing knobs. Boot-time overrides may tune scheduler
+intervals, but pins and LED/mux structure require a rebuild because the global
+hardware managers already exist before `setup()`. `LEDManager` leans on it for odds and
 ends like the status LED, but the strip's data pin is now a compile-time rebel:
 `LED_DATA_PIN` in `platformio.ini` decides where the bits fly. Want to reroute
 the glow? Change that flag and rebuild—runtime config won't save you.

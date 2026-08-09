@@ -1,8 +1,7 @@
 // Globals.cpp is the wiring diagram the compiler can read. It corrals all the
 // cross-module shared state—hardware pin maps, runtime knobs, and helper
-// lookups—so we have one canonical source of truth. The comments aim to demystify
-// global data by explaining why each variable lives at this scope and how you
-// can override it safely via JSON or header hooks.
+// lookups—so we have one canonical source of truth. Structural wiring is fixed
+// before setup; only scheduler timing can be adjusted by boot-time overrides.
 
 #include "Globals.h"
 #include <Arduino.h>
@@ -114,9 +113,10 @@ constexpr std::array<std::pair<uint8_t, uint8_t>, ARG_PAIR_COUNT> buildArgPairs(
     return pairs;
 }
 
-// Let an SD card override a handful of hardware pins/timings without forcing a
-// custom compile. This keeps bring-up tweaks in data when possible.
-void loadFromJson(HardwareConfig &cfg) {
+// Scheduler cadence is consumed after setup starts, so it is safe to tune from
+// SD. Pins, counts, and mux topology are deliberately ignored: global managers
+// have already captured or derived state from them before this function runs.
+void loadFromJson(HardwareRuntimeTuning &tuning) {
 #if __has_include(<ArduinoJson.h>)
     if (!kHasSD)
         return;
@@ -135,20 +135,19 @@ void loadFromJson(HardwareConfig &cfg) {
         f.close();
         return;
     }
-    if (doc.containsKey("LED_PIN"))
-        cfg.ledPin = doc["LED_PIN"];
-    if (doc.containsKey("STATUS_LED_PIN"))
-        cfg.statusLedPin = doc["STATUS_LED_PIN"];
-    if (doc.containsKey("PIN_ROW_DRV"))
-        cfg.rowDriverPin = doc["PIN_ROW_DRV"];
     if (doc.containsKey("MIDI_TASK_INTERVAL"))
-        cfg.midiTaskInterval = doc["MIDI_TASK_INTERVAL"];
+        tuning.midiTaskInterval = doc["MIDI_TASK_INTERVAL"];
     if (doc.containsKey("SERIAL_TASK_INTERVAL"))
-        cfg.serialTaskInterval = doc["SERIAL_TASK_INTERVAL"];
+        tuning.serialTaskInterval = doc["SERIAL_TASK_INTERVAL"];
     if (doc.containsKey("LED_TASK_INTERVAL"))
-        cfg.ledTaskInterval = doc["LED_TASK_INTERVAL"];
+        tuning.ledTaskInterval = doc["LED_TASK_INTERVAL"];
     if (doc.containsKey("ENVELOPE_TASK_INTERVAL"))
-        cfg.envelopeTaskInterval = doc["ENVELOPE_TASK_INTERVAL"];
+        tuning.envelopeTaskInterval = doc["ENVELOPE_TASK_INTERVAL"];
+
+    if (doc.containsKey("LED_PIN") || doc.containsKey("STATUS_LED_PIN") ||
+        doc.containsKey("PIN_ROW_DRV")) {
+        Serial.println("hardware_config.json structural overrides ignored; rebuild for this board");
+    }
     f.close();
 #endif
 }
@@ -182,11 +181,14 @@ int envelopeIndexFromAnalogPin(int analogPin) {
 #include "hardware_config.h"
 #endif
 
-// Apply compile-time and optional SD-card hardware overrides in one place
-// before any hardware manager captures the shared config.
-void loadHardwareConfig() {
+// Apply build-local and optional SD-card scheduler tuning. Hardware managers
+// are global objects and already exist here, so this path cannot mutate their
+// pins, LED counts, or mux topology safely.
+void loadHardwareRuntimeTuning() {
+    HardwareRuntimeTuning tuning = hardwareRuntimeTuningFrom(hwConfig);
 #if __has_include("hardware_config.h")
-    applyHardwareConfigOverrides(hwConfig);
+    applyHardwareRuntimeTuningOverrides(tuning);
 #endif
-    loadFromJson(hwConfig);
+    loadFromJson(tuning);
+    applyHardwareRuntimeTuning(hwConfig, tuning);
 }

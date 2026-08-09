@@ -93,30 +93,54 @@ struct SystemDiagnostics {
 extern SystemDiagnostics g_systemDiagnostics;
 
 /*
-Bundle every pin and scheduler tick that describes the hardware.
-Defaults live in Globals.cpp but can be patched at build or run time.
+Bundle the fixed board topology and the scheduler cadence used by the runtime.
+The topology is established before setup() by the long-lived hardware managers;
+only the task intervals may be tuned during boot.
 */
 struct HardwareConfig {
-    uint8_t ledPin;
-    uint8_t statusLedPin;
-    uint8_t rowDriverPin;
-    uint16_t slotLedCount;
-    uint8_t efLedCount;
-    uint8_t potLedCount;
-    uint8_t numButtons;
+    const uint8_t ledPin;
+    const uint8_t statusLedPin;
+    const uint8_t rowDriverPin;
+    const uint16_t slotLedCount;
+    const uint8_t efLedCount;
+    const uint8_t potLedCount;
+    const uint8_t numButtons;
     uint8_t midiTaskInterval;
     uint8_t serialTaskInterval;
     uint8_t ledTaskInterval;
     uint8_t envelopeTaskInterval;
-    uint8_t muxrPins[4];
-    uint8_t muxcPins[4];
-    uint8_t buttonMuxAnalogPin;
-    uint8_t potMuxAnalogPin;
-    uint8_t vrefAdcPin;
+    const uint8_t muxrPins[4];
+    const uint8_t muxcPins[4];
+    const uint8_t buttonMuxAnalogPin;
+    const uint8_t potMuxAnalogPin;
+    const uint8_t vrefAdcPin;
 };
 
+struct HardwareRuntimeTuning {
+    uint8_t midiTaskInterval;
+    uint8_t serialTaskInterval;
+    uint8_t ledTaskInterval;
+    uint8_t envelopeTaskInterval;
+};
+
+inline HardwareRuntimeTuning hardwareRuntimeTuningFrom(const HardwareConfig &cfg) {
+    return {cfg.midiTaskInterval, cfg.serialTaskInterval, cfg.ledTaskInterval,
+            cfg.envelopeTaskInterval};
+}
+
+// Apply only values that are safe to change after global hardware managers have
+// been constructed. A zero interval would create an always-due scheduler task,
+// so malformed overrides fall back to the minimum supported cadence.
+inline void applyHardwareRuntimeTuning(HardwareConfig &cfg, HardwareRuntimeTuning tuning) {
+    cfg.midiTaskInterval = tuning.midiTaskInterval == 0 ? 1 : tuning.midiTaskInterval;
+    cfg.serialTaskInterval = tuning.serialTaskInterval == 0 ? 1 : tuning.serialTaskInterval;
+    cfg.ledTaskInterval = tuning.ledTaskInterval == 0 ? 1 : tuning.ledTaskInterval;
+    cfg.envelopeTaskInterval =
+        tuning.envelopeTaskInterval == 0 ? 1 : tuning.envelopeTaskInterval;
+}
+
 extern HardwareConfig hwConfig;
-void loadHardwareConfig();
+void loadHardwareRuntimeTuning();
 
 // Derived LED indices
 inline uint16_t EF_LED_OFFSET() { return hwConfig.slotLedCount; }
@@ -147,12 +171,12 @@ extern EnvelopeConfig envelopeConfig;
 // Legacy aliases for modules awaiting full refactors
 inline const uint8_t (&primaryMuxPins)[4] = hwConfig.muxrPins;
 inline const uint8_t (&secondaryMuxPins)[4] = hwConfig.muxcPins;
-inline uint8_t &buttonMuxAnalogPin = hwConfig.buttonMuxAnalogPin;
-inline uint8_t &potMuxAnalogPin = hwConfig.potMuxAnalogPin;
-inline uint8_t &VREF_ADC_PIN = hwConfig.vrefAdcPin;
-inline uint16_t &SLOT_LED_COUNT = hwConfig.slotLedCount;
-inline uint8_t &EF_LED_COUNT = hwConfig.efLedCount;
-inline uint8_t &POT_LED_COUNT = hwConfig.potLedCount;
+inline const uint8_t &buttonMuxAnalogPin = hwConfig.buttonMuxAnalogPin;
+inline const uint8_t &potMuxAnalogPin = hwConfig.potMuxAnalogPin;
+inline const uint8_t &VREF_ADC_PIN = hwConfig.vrefAdcPin;
+inline const uint16_t &SLOT_LED_COUNT = hwConfig.slotLedCount;
+inline const uint8_t &EF_LED_COUNT = hwConfig.efLedCount;
+inline const uint8_t &POT_LED_COUNT = hwConfig.potLedCount;
 
 // ADC scaling from raw reading to volts (3.3V reference, 10-bit ADC)
 constexpr float VadcScale = 3.3f / 1023.0f;

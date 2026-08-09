@@ -104,6 +104,43 @@ void test_digital_provider_overrides_matrix_reads() {
     TEST_ASSERT_FALSE(manager.readControlButtonForTest(1));
 }
 
+// Boot-time tuning must not rewrite topology already captured by global
+// managers. Keep this contract explicit as new hardware fields are added.
+void test_runtime_hardware_tuning_preserves_structural_config() {
+    HardwareConfig config = hwConfig;
+    const HardwareConfig original = config;
+    const HardwareRuntimeTuning tuning = {7, 11, 13, 17};
+
+    applyHardwareRuntimeTuning(config, tuning);
+
+    TEST_ASSERT_EQUAL_UINT8(original.ledPin, config.ledPin);
+    TEST_ASSERT_EQUAL_UINT8(original.statusLedPin, config.statusLedPin);
+    TEST_ASSERT_EQUAL_UINT8(original.rowDriverPin, config.rowDriverPin);
+    TEST_ASSERT_EQUAL_UINT16(original.slotLedCount, config.slotLedCount);
+    TEST_ASSERT_EQUAL_UINT8(original.efLedCount, config.efLedCount);
+    TEST_ASSERT_EQUAL_UINT8(original.potLedCount, config.potLedCount);
+    TEST_ASSERT_EQUAL_UINT8(original.numButtons, config.numButtons);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(original.muxrPins, config.muxrPins, 4);
+    TEST_ASSERT_EQUAL_UINT8_ARRAY(original.muxcPins, config.muxcPins, 4);
+    TEST_ASSERT_EQUAL_UINT8(original.buttonMuxAnalogPin, config.buttonMuxAnalogPin);
+    TEST_ASSERT_EQUAL_UINT8(original.potMuxAnalogPin, config.potMuxAnalogPin);
+    TEST_ASSERT_EQUAL_UINT8(original.vrefAdcPin, config.vrefAdcPin);
+    TEST_ASSERT_EQUAL_UINT8(7, config.midiTaskInterval);
+    TEST_ASSERT_EQUAL_UINT8(11, config.serialTaskInterval);
+    TEST_ASSERT_EQUAL_UINT8(13, config.ledTaskInterval);
+    TEST_ASSERT_EQUAL_UINT8(17, config.envelopeTaskInterval);
+}
+
+void test_runtime_hardware_tuning_rejects_zero_intervals() {
+    HardwareConfig config = hwConfig;
+    applyHardwareRuntimeTuning(config, {0, 0, 0, 0});
+
+    TEST_ASSERT_EQUAL_UINT8(1, config.midiTaskInterval);
+    TEST_ASSERT_EQUAL_UINT8(1, config.serialTaskInterval);
+    TEST_ASSERT_EQUAL_UINT8(1, config.ledTaskInterval);
+    TEST_ASSERT_EQUAL_UINT8(1, config.envelopeTaskInterval);
+}
+
 #if defined(UNIT_TEST) && !defined(UNIT_TEST_PROTOCOL_IMPL)
 
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,

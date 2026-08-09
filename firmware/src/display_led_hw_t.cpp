@@ -278,7 +278,7 @@ void serviceStatusLed() {
 unsigned long now() { return millis(); }
 
 void setup() {
-    loadHardwareConfig();
+    loadHardwareRuntimeTuning();
     pinMode(hwConfig.statusLedPin, OUTPUT);
     pinMode(kPhaseButtonPin, INPUT_PULLUP);
     digitalWrite(hwConfig.statusLedPin, LOW);

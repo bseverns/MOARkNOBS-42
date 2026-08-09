@@ -69,7 +69,7 @@ Question answered: which physical and persisted facts shape the machine?
 This is the firmware's "world contract":
 
 - hardware counts like `NUM_POTS`, `NUM_SLOTS`, `NUM_ENVELOPES`
-- pin and timing defaults in `HardwareConfig`
+- fixed pin/topology defaults plus boot-tunable scheduler intervals in `HardwareConfig`
 - EEPROM layout and schema version
 - cross-cutting state such as `g_brownoutCount`, `g_tappedBPM`, and
   `webSerialStreaming`

@@ -20,7 +20,7 @@
 HardwareConfig hwConfig = {0,  0,  0, 16, 6, 8, NUM_BUTTONS, 1, 1, 1, 1, {2, 3, 4, 5}, {6, 7, 8, 9},
                            A0, A1, A2};
 
-void loadHardwareConfig() {}
+void loadHardwareRuntimeTuning() {}
 
 // Globals that the firmware normally defines in Globals.cpp.
 uint32_t g_resetCause = 0;
