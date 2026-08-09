@@ -1,4 +1,5 @@
 #include "BootMode.h"
+#include "BootConstants.h"
 
 #include <EEPROM.h>
 

@@ -1,10 +1,11 @@
 #include "unity_config.h"
 #include <unity.h>
+#include <Arduino.h>
+#include <EEPROM.h>
 #include "BootMode.h"
+#include "../src/BootConstants.h"
 
 // The EEPROM simulator that unit tests provide has these symbols.
-extern unsigned long ::now();
-
 void test_select_boot_slot_usbconfig() {
     // Arrange – ensure EEPROM memory is valid and set the boot selector flag
     const uint32_t empty = 0xFFFFFFFF;
