@@ -281,6 +281,21 @@ void test_config_load_resets_to_defaults_when_primary_and_backup_are_both_corrup
     ConfigManager::setStorageBackend(nullptr);
 }
 
+void test_profile_load_retains_current_config_when_both_copies_are_corrupt() {
+    MemoryStorageBackend storage;
+    storage.fill(0x00);
+    ConfigManager::setStorageBackend(&storage);
+
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    configureStoredValues(cfg, 11, 93);
+
+    TEST_ASSERT_FALSE(cfg.loadProfile(2));
+    TEST_ASSERT_EQUAL_UINT8(11, cfg.getPotChannel(0));
+    TEST_ASSERT_EQUAL_UINT8(93, cfg.getPotCCNumber(0));
+
+    ConfigManager::setStorageBackend(nullptr);
+}
+
 void test_profile_save_interruption_leaves_latest_copy_in_backup() {
     MemoryStorageBackend storage;
     ConfigManager::setStorageBackend(&storage);

@@ -174,7 +174,8 @@ ProfileData makePopulatedProfile() {
 } // namespace
 
 void test_profile_crc_rejects_corruption() {
-    // Corrupt a byte after saving and verify the CRC check fails.
+    // Corrupt a byte after saving and verify the CRC check fails without
+    // replacing a snapshot the caller may still need as its live fallback.
     ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
     clearProfileSettingsBlock(0);
 
@@ -187,8 +188,10 @@ void test_profile_crc_rejects_corruption() {
     uint8_t byte = EEPROM.read(base + sizeof(uint16_t));
     EEPROM.update(base + sizeof(uint16_t), static_cast<uint8_t>(byte ^ 0xFF));
 
-    ProfileData loaded{};
+    ProfileData loaded = makePopulatedProfile();
+    const ProfileData retained = loaded;
     TEST_ASSERT_FALSE(cfg.loadProfileSettings(0, loaded));
+    TEST_ASSERT_EQUAL_MEMORY(&retained, &loaded, sizeof(ProfileData));
 }
 
 void test_profile_bounds_clamp() {

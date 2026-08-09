@@ -149,6 +149,13 @@ void test_dispatch_handles_known_command() {
     TEST_ASSERT_TRUE(webSerialStreaming);
 }
 
+void test_dispatch_get_argmethod_uses_direct_handler() {
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_ARGMETHOD"));
+    TEST_ASSERT_NOT_EQUAL(
+        -1, latestLogLine().indexOf("\"message\":\"get_arg_method deprecated\""));
+}
+
 void test_dispatch_handles_documented_query_commands() {
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MANIFEST"));
