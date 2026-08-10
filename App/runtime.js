@@ -657,8 +657,6 @@ export function createRuntime({
   }
 
   const requestConfiguratorBoot = () => liveControlsRuntime.requestConfiguratorBoot();
-  const setPotGuard = (...args) => liveControlsRuntime.setPotGuard(...args);
-
   function stage(updater) {
     configSession.stage(updater);
     bridgeSessionRuntime.scheduleStageSync({ active: bridgeSessionActive });
@@ -724,7 +722,6 @@ export function createRuntime({
     restoreLocalState: configSession.restoreLocalState,
     discardSavedWorkspace: stateSnapshotStore.clear,
     hydrateAuthoritativeConfig: configSession.hydrateAuthoritativeConfig,
-    setPotGuard,
     setLocalSlotMeta: configSession.setLocalSlotMeta,
     createThrottle,
     requestPort,

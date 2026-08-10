@@ -38,47 +38,11 @@ test('changing a browser-only slot label does not dirty staged firmware config',
   await expectBrowserOnlyStateClean(page);
 });
 
-test('changing browser-only Take Control metadata does not require Apply', async ({ page }) => {
+test('slot UI does not advertise unsupported browser pickup behavior', async ({ page }) => {
   await bootSimulator(page);
 
-  const takeoverToggle = page
-    .locator('.slot-editor label:has-text("Take Control (browser only)") input')
-    .first();
-  await takeoverToggle.check();
-
-  await expectBrowserOnlyStateClean(page);
-
-  await page.evaluate(async () => {
-    await window.__MN42_RUNTIME.disconnect();
-  });
-  await expect(page.locator('#connection-pill')).toContainText('Disconnected');
-
-  await page.getByRole('button', { name: 'Connect' }).click();
-  await expect(page.locator('#connection-pill')).toContainText('Connected');
-  await expect(
-    page.locator('.slot-editor label:has-text("Take Control (browser only)") input').first()
-  ).toBeChecked();
-  await expectBrowserOnlyStateClean(page);
-});
-
-test('only the selected slot takeover shortcut participates in keyboard order', async ({ page }) => {
-  await bootSimulator(page);
-
-  await expect(page.locator('#slots .takeover[tabindex="0"]')).toHaveCount(1);
-  await expect(page.locator('.slot-button[data-index="0"] .takeover')).toHaveAttribute(
-    'tabindex',
-    '0'
-  );
-
-  await page.locator('.slot-button[data-index="5"]').click();
-
-  await expect(page.locator('#slots .takeover[tabindex="0"]')).toHaveCount(1);
-  await expect(page.locator('.slot-button[data-index="0"] .takeover')).toHaveAttribute(
-    'tabindex',
-    '-1'
-  );
-  await expect(page.locator('.slot-button[data-index="5"] .takeover')).toHaveAttribute(
-    'tabindex',
-    '0'
-  );
+  await expect(page.getByText('Take Control', { exact: false })).toHaveCount(0);
+  await expect(page.locator('#slots .takeover')).toHaveCount(0);
+  await expect(page.locator('#slots .slot-button button')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__MN42_RUNTIME.setPotGuard)).toBeUndefined();
 });

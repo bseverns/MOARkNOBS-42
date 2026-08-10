@@ -8,7 +8,6 @@ The browser configurator is not just a settings page. It is the live operating s
 - staging edits without lying to yourself
 - deciding when to apply those edits to the device
 - managing profiles and backups
-- protecting live controls from sudden jumps
 
 ![Annotated configurator screenshot showing the connection banner, apply and rollback controls, and the recovery and profile area.](../assets/ui/configurator-top-annotated.png)
 
@@ -40,7 +39,6 @@ This is local helper information that belongs to the operator, not the firmware.
 
 - slot labels
 - the MIDI badge
-- the pickup guard / immediate response switch
 
 These do **not** get written to the board.
 
@@ -61,83 +59,6 @@ Use this as the basic rehearsal flow.
 5. Watch the staged diff change.
 6. Press **Apply** only when the staged change is intentional.
 7. Save a profile only after the live device state is the state you want to keep.
-
-## What the live slot switch means
-
-Each slot tile has a tiny mode badge:
-
-- `IM` = **Immediate local response**
-- `PK` = **Browser-only pickup guard**
-
-These are not sound engines or firmware modes. They are browser-side control behaviors for how the configurator responds when local control input becomes active.
-
-## Immediate local response (`IM`)
-
-Immediate mode means the configurator treats the slot as ready to respond right away.
-
-Use it when:
-
-- you are editing calmly at the bench
-- the physical control position already matches what you expect
-- you want the fastest local response with no guard behavior
-
-What it means in practice:
-
-- local control input is accepted immediately
-- there is no “wait until the knob catches the stored value” safety step
-- if the physical control and current slot value disagree, the result can jump quickly
-
-This is fine when you want speed and you trust the current physical position.
-
-## Browser-only pickup guard (`PK`)
-
-Pickup mode adds a local safety gate.
-
-The configurator waits until the physical control passes through the current effective value before it starts treating the control as active again.
-
-Use it when:
-
-- you are reconnecting in the middle of a session
-- the physical control might not match the current stored/live value
-- you want to avoid sudden jumps while rehearsing or performing
-
-What it means in practice:
-
-- the browser remembers that this slot should be guarded
-- local response is delayed until the control “catches” the current value
-- once it catches, adjustment proceeds normally
-
-This is especially useful after reconnecting, switching profiles, loading a backup, or changing a slot in the app while the physical control has not moved yet.
-
-## Why pickup guard is browser-only
-
-The pickup guard is an operator convenience, not device configuration.
-
-That is why it is browser-only:
-
-- the firmware does not persist it
-- another browser or computer will not know your local guard choices
-- enabling it should not dirty the config or imply a hardware write
-
-Think of it as part of your local cockpit, not part of the instrument’s saved patch.
-
-## When to choose `IM` versus `PK`
-
-Use `IM` when:
-
-- you want direct response
-- you are bench testing
-- you just moved the relevant physical control and know it is in the right neighborhood
-
-Use `PK` when:
-
-- you are about to touch a control after reconnecting
-- you are in rehearsal or performance mode
-- you are worried about abrupt jumps more than raw speed
-
-If you are unsure, default to `PK` for live work and `IM` for deliberate setup work.
-
-![Annotated live-slot tile close-up showing the selected tile border, slot ID, type code, and the browser-only PK and IM badges.](../assets/ui/slot-tile-annotated.png)
 
 ## Editing safely
 
@@ -195,21 +116,20 @@ Before rehearsal:
 
 1. connect and confirm identity
 2. load the intended profile
-3. enable `PK` on slots where sudden jumps would be risky
-4. make any needed staging edits
-5. apply
-6. save the updated profile only if you want the board to keep it
+3. make any needed staging edits
+4. apply
+5. save the updated profile only if you want the board to keep it
 
 During rehearsal:
 
 1. keep an eye on the connection/status surface
-2. use the slot labels and browser-local guards as operator aids
+2. use the slot labels and MIDI badges as operator aids
 3. avoid profile reset unless you are intentionally restoring a baseline
 
 After rehearsal:
 
 1. export a backup if the session produced a good state
-2. note any browser-local guard/label decisions you want to recreate elsewhere
+2. note any browser-local labels you want to recreate elsewhere
 
 ## Read next
 

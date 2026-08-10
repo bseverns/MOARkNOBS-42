@@ -15,7 +15,6 @@ export function createLiveControlsRuntime({
   let macroPending = null;
   let macroAvailability = true;
   let scenePending = null;
-  const potGuard = new Set();
 
   function settleMacroPending(pending, { error, response } = {}) {
     if (!pending) return;
@@ -205,14 +204,6 @@ export function createLiveControlsRuntime({
     }
   }
 
-  function setPotGuard(indices, enabled) {
-    indices.forEach((idx) => {
-      if (enabled) potGuard.add(idx);
-      else potGuard.delete(idx);
-    });
-    emit('pot-guard', { guards: new Set(potGuard) });
-  }
-
   return {
     onFatalError,
     sendMacroCommand,
@@ -221,7 +212,6 @@ export function createLiveControlsRuntime({
     handleSceneLine,
     requestScenes,
     applyPatch,
-    requestConfiguratorBoot,
-    setPotGuard
+    requestConfiguratorBoot
   };
 }

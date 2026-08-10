@@ -50,27 +50,6 @@ Most controls do **not** immediately rewrite device state.
 
 Some controls can also issue field-level writes through the runtime patch lane, but even then the runtime stages locally first so the UI never loses track of intent. On native WebSerial, the production contract is still full Apply with verified ACK.
 
-## Browser-local slot behavior: `IM` and `PK`
-
-The live slot tiles include a tiny mode badge:
-
-- `IM` means **Immediate local response**
-- `PK` means **Browser-only pickup guard**
-
-This is operator-side behavior, not firmware-backed config.
-
-That means:
-
-- changing it does not require **Apply**
-- changing it does not save anything into device profiles
-- it is remembered by the browser, not by the board
-
-`IM` is the direct mode. If local control input becomes active, the configurator responds immediately.
-
-`PK` is the guarded mode. The configurator waits until the physical control passes through the current effective value before treating it as active again, which helps prevent sudden jumps after reconnects, profile switches, or other state changes.
-
-If you want the operator explanation instead of the contract explanation, read [Operator Tutorial](OperatorTutorial.md).
-
 ## Presets are starting points, profiles are memory
 
 The preset picker is there to help users learn the instrument on purpose instead of by superstition.

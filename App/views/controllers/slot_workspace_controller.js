@@ -87,7 +87,6 @@ export function createSlotWorkspaceController({
     }
     slotVirtualizer.setData(slotState.slots);
     slotVirtualizer.highlight(slotState.selected);
-    updateTakeoverTabStops();
     efVirtualizer.setData(slotState.efSlots);
     onSlotsChanged(slotState.slots);
   }
@@ -97,7 +96,6 @@ export function createSlotWorkspaceController({
     slotState.selected = Math.min(Math.max(0, index), maxIndex);
     slotVirtualizer.highlight(slotState.selected);
     slotVirtualizer.scrollToIndex(slotState.selected);
-    updateTakeoverTabStops();
     performerPanel?.highlightSelectedSlot?.();
     onSelectSlot(slotState.selected);
   }
@@ -114,26 +112,6 @@ export function createSlotWorkspaceController({
     });
     performerPanel?.paintTelemetry?.(frame);
     onTelemetryPainted(frame);
-  }
-
-  function updateTakeoverGuards(slots) {
-    if (!Array.isArray(slots)) return;
-    const guardOn = [];
-    const guardOff = [];
-    slots.forEach((slot, idx) => {
-      if (slot?.takeover) guardOff.push(idx);
-      else guardOn.push(idx);
-    });
-    if (guardOn.length) runtime.setPotGuard(guardOn, true);
-    if (guardOff.length) runtime.setPotGuard(guardOff, false);
-  }
-
-  function updateTakeoverTabStops() {
-    slotContainer?.querySelectorAll('.slot-button').forEach((slotButton) => {
-      const toggle = slotButton.querySelector('.takeover');
-      if (!toggle) return;
-      toggle.tabIndex = Number(slotButton.dataset.index) === slotState.selected ? 0 : -1;
-    });
   }
 
   function renderSlotButton(el, index, slot) {
@@ -155,21 +133,7 @@ export function createSlotWorkspaceController({
     modulation.textContent = badges.join(' ');
     modulation.title = formatSlotModulationTitle(badges);
     modulation.setAttribute('aria-hidden', 'true');
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'takeover';
-    toggle.tabIndex = index === slotState.selected ? 0 : -1;
-    toggle.textContent = slot?.takeover ? 'PK' : 'IM';
-    toggle.title = slot?.takeover
-      ? 'Browser-only pickup guard enabled'
-      : 'Immediate local response';
-    toggle.setAttribute('aria-label', slot?.takeover ? 'Pickup mode' : 'Immediate mode');
-    toggle.onclick = () => {
-      const next = !slot?.takeover;
-      runtime.setLocalSlotMeta(index, { takeover: next });
-      runtime.setPotGuard([index], !next);
-    };
-    el.append(label, state, modulation, toggle);
+    el.append(label, state, modulation);
     el.onclick = () => selectSlot(index);
     el.setAttribute('role', 'button');
     el.classList.toggle('selected', index === slotState.selected);
@@ -253,7 +217,6 @@ export function createSlotWorkspaceController({
     rebuildMeters,
     syncConfig,
     selectSlot,
-    paintTelemetry,
-    updateTakeoverGuards
+    paintTelemetry
   };
 }

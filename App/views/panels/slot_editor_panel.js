@@ -205,16 +205,6 @@ export function createSlotEditorPanel({
         { help: glossary.browserLocal }
       )
     );
-    const takeover = makeToggle(
-      'Take Control (browser only)',
-      !!slot.takeover,
-      (value) => {
-        runtime.setLocalSlotMeta(slotState.selected, { takeover: value });
-        runtime.setPotGuard([slotState.selected], !value);
-      },
-      { help: `${glossary.takeover} ${glossary.browserLocal}` }
-    );
-    basics.appendChild(takeover);
     if (slot.type === 'SysEx') {
       basics.appendChild(
         makeText(

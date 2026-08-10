@@ -26,7 +26,7 @@ Current source inspected: `App/index.html`, `App/views/`, `App/runtime/`, `App/t
 
 **Browser-only controls**
 
-- Mode switch buttons. Stage displays browser-rendered status, but browser-only slot label/takeover editing is hidden.
+- Mode switch buttons. Stage displays browser-rendered status, but browser-only slot-label editing is hidden.
 
 **Possible confusion risks**
 
@@ -58,7 +58,7 @@ Current source inspected: `App/index.html`, `App/views/`, `App/runtime/`, `App/t
 
 **Browser-only controls**
 
-- Slot labels, MIDI badges, and Take Control/pickup guards remain local browser state and do not require Apply.
+- Slot labels and MIDI badges remain local browser state and do not require Apply.
 
 **Possible confusion risks**
 
@@ -84,7 +84,7 @@ Current source inspected: `App/index.html`, `App/views/`, `App/runtime/`, `App/t
 
 **Browser-only controls**
 
-- Slot labels, MIDI badges, Take Control/pickup guards, debug/session log actions, screenshots/exports, and local mode preference.
+- Slot labels, MIDI badges, debug/session log actions, screenshots/exports, and local mode preference.
 
 **Possible confusion risks**
 

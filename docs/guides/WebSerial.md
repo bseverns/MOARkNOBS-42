@@ -332,11 +332,6 @@ For the human-facing explanation of the shipped preset collection, see [Preset L
 - Inline validators clamp ranges, show friendly tooltips, and link to the tables in `docs/` (filters, ARG, MIDI types) for context.
 - Surface a read-only **Device Monitor** sidebar that streams the manifest, firmware build info, free RAM/flash, and current profile.
 
-### Safe Writes for Pots vs. Encoders
-
-- Encoders nudge values in real time—write as the player twists.
-- Potentiometers snap. Keep their live writes behind an explicit **Take Control** toggle so you don’t surprise someone mid-set.
-
 ### Teaching + QA Mode
 
 - Ship a WebSerial simulator that mimics the Teensy protocol for classrooms, CI screenshots, and unit tests.

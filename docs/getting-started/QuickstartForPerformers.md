@@ -31,7 +31,7 @@ Use **Advanced** tools for debugging. Treat those as bench/lab surfaces, not the
 Start here:
 
 - [Configurator Tour](../guides/Configurator.md) for the current configurator workflow
-- [Operator Tutorial](../guides/OperatorTutorial.md) for the practical operating model, including `IM` vs `PK`
+- [Operator Tutorial](../guides/OperatorTutorial.md) for the practical operating model
 - [Connectivity Guide](ConnectivityGuide.md) if you are not sure whether you need the bridge
 
 ## 3. Connect in the configurator

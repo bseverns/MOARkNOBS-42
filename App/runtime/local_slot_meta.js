@@ -7,8 +7,7 @@ function resolveStorage(explicitStorage) {
 export function normalizeLocalSlotMetaEntry(entry = {}) {
   return {
     pot: entry?.pot === undefined ? true : Boolean(entry.pot),
-    label: typeof entry?.label === 'string' ? entry.label : '',
-    takeover: Boolean(entry?.takeover)
+    label: typeof entry?.label === 'string' ? entry.label : ''
   };
 }
 
@@ -111,7 +110,6 @@ export function createLocalSlotMetaManager({
       const nextEntry = { ...localSlotMeta[index] };
       if (slot.pot !== undefined) nextEntry.pot = Boolean(slot.pot);
       if (slot.label !== undefined && typeof slot.label === 'string') nextEntry.label = slot.label;
-      if (slot.takeover !== undefined) nextEntry.takeover = Boolean(slot.takeover);
       const normalized = normalizeLocalSlotMetaEntry(nextEntry);
       if (!compare(localSlotMeta[index], normalized)) {
         localSlotMeta[index] = normalized;

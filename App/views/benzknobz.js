@@ -307,7 +307,6 @@ const boot = () => {
   const GLOSSARY = {
     mapping:
       'Knob to MIDI mapping: choose the message type, channel, and number your synth or DAW expects.',
-    takeover: 'Take Control waits for the knob to pass the current value so tweaks do not jump.',
     browserLocal:
       'Stored in this browser only. It is not sent to firmware and will not come back from the device on reconnect.',
     ef: 'EF (Envelope Follower) tracks input level to drive dynamic modulation.',
@@ -874,7 +873,6 @@ const boot = () => {
     diffStatusController.markDirty(dirty);
     populateDetail();
     ledControlsController.render(staged);
-    slotWorkspaceController.updateTakeoverGuards(slotState.slots);
     formRenderer.updateValues();
     syncConfigFileButtons();
     profileMacroScenePanel.onConfigChanged();
