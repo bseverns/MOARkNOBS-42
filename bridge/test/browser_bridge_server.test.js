@@ -91,6 +91,7 @@ function makeFakeService() {
       liveConfig: null,
       stagedConfig: null,
       dirty: false,
+      configValidation: { status: 'verified', errors: [] },
       deviceAuthority: 'verified-device-different',
       draftState: 'dirty',
       clientApplyId: 'bootstrap-apply',
@@ -959,6 +960,16 @@ async function run() {
     consoleHtml,
     /Advanced setup: guard and timing controls/,
     'console should keep guard and timing controls available behind advanced setup',
+  );
+  assert.match(
+    consoleHtml,
+    /Config export[\s\S]*Device truth[\s\S]*Draft state/,
+    'Stage should expose validation and authority state in operator language',
+  );
+  assert.match(
+    consoleHtml,
+    /operator-state\.js[\s\S]*bridge-ui\.js/,
+    'console should load tested operator-state classification before its UI runtime',
   );
 
   const snapshotResponse = makeRes();

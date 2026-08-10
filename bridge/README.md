@@ -127,8 +127,8 @@ After startup, the bridge sends `HELLO`, `GET_MANIFEST`, and `GET_SCHEMA`, then 
 { "hello": "mn42" }
 ```
 
-When `HELLO`, manifest, and schema are cached and the normalized config export passes the bundled App schema, the browser console reports the device session as ready. A failed export remains outside `liveConfig`, degrades the handshake, and emits a `device_config_schema_invalid` alert.
-The session snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus `configValidation`, live/staged config state, and the last apply result.
+When `HELLO`, manifest, and schema are cached and the normalized config export passes the bundled App schema, the browser console reports the device session as ready. A failed export remains outside `liveConfig`, degrades the handshake, emits a `device_config_schema_invalid` alert, and is shown as an invalid config export in Stage mode.
+The Stage snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus plain-language config-validation, device-authority, draft, telemetry-freshness, and last-apply state. Only currently active alerts appear in its Active alerts list; cleared alert history remains available in snapshots and diagnostic state.
 
 ## Quick start (CLI)
 

@@ -53,12 +53,14 @@ Stage mode is the compact operator view. It is meant to answer “is the Bridge 
 In the screenshot above, the simulated device is connected, `Device` is `ready`, and the cached session shows the simulator's `POWER_CHOKED_V1` boundary with `LED cap 26` and `rail state unverified`.
 
 - `Bridge`, `Serial`, and `Device` show whether the desktop runtime is running, whether the serial link is up, and whether the device session is actually ready.
-- `Telemetry`, `RT p95`, and `Jitter p95` summarize whether the runtime is seeing fresh traffic and whether round-trip timing is staying inside configured targets.
-- `Cached device session` shows the last known firmware identity, schema version/source, power profile, LED cap, rail state, dirty state, and last apply result.
+- `Telemetry` reports `live`, `delayed`, `stale`, or the relevant stopped/disconnected state instead of presenting an old timestamp as current activity. `RT p95` and `Jitter p95` summarize whether round-trip timing is staying inside configured targets.
+- `Cached device session` shows the last known firmware identity, schema version/source, power profile, LED cap, rail state, config-export validation, device truth, draft state, and last apply result.
 - `Operator actions` keeps only the show-safe actions visible:
   - `Open configurator`
   - `Download snapshot`
   - `Refresh state`
+
+When validation fails, a draft is staged, or device authority differs from the candidate, Stage changes the App action to `Open App to resolve` and explains why the cached state needs attention.
 
 ### What “Session Ready” Means
 
@@ -122,14 +124,16 @@ That sequence keeps the lesson anchored on operator decisions first, then on low
 Warnings surface in two places:
 
 - the top summary line and status cards
-- the `Active alerts` list in Stage mode
+- the `Active alerts` list in Stage mode, which contains only unresolved alerts rather than cleared alert history
 
 Use `Clear alerts` when you intentionally want a fresh operator slate after acknowledging an issue. Do not clear alerts just to hide an unresolved fault.
 
 Typical meanings:
 
 - `awaiting handshake` or `awaiting HELLO`: serial link exists, but the device session is not ready yet
-- `dirty: true`: staged Bridge config differs from live config and has not been promoted by a verified ACK
+- `Draft state: draft staged`: staged Bridge config differs from live config and has not been promoted by a verified ACK
+- `Config export: invalid`: the normalized device export failed the bundled App schema and was not accepted as live truth
+- `Device truth: device differs from draft` or `apply outcome uncertain`: the operator must not infer that the candidate became live state
 - `RT health` degraded or alert count rising: route timing or command health is outside the configured target window
 
 ## Snapshot, Disconnect, And Recovery Actions

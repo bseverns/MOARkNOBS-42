@@ -404,6 +404,20 @@ dt {
   color: var(--error);
 }
 
+.status-muted {
+  color: var(--muted);
+}
+
+.operator-warning {
+  margin: 0.85rem 0 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid rgba(154, 100, 18, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(154, 100, 18, 0.1);
+  color: var(--warn);
+  font-weight: 700;
+}
+
 .alerts-list {
   margin: 0.75rem 0 0;
   padding-left: 1.2rem;

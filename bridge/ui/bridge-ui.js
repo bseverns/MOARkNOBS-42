@@ -5,6 +5,13 @@ const MODE_KEY = 'mn42-bridge-console-mode';
 const RAW_LINE_LIMIT = 200;
 const STRUCTURED_EVENT_LIMIT = 120;
 const controlToken = new URL(window.location.href).searchParams.get('token') || '';
+const {
+  activeAlerts: selectActiveAlerts,
+  describeAuthority,
+  describeConfigValidation,
+  describeDraft,
+  formatTelemetryFreshness,
+} = window.MN42BridgeOperatorState;
 
 const form = document.getElementById('bridge-form');
 const startButton = document.getElementById('start-bridge');
@@ -37,6 +44,7 @@ const stageDownloadSnapshotButton = document.getElementById(
   'stage-download-snapshot',
 );
 const stageRefreshStateButton = document.getElementById('stage-refresh-state');
+const stageRecoveryNeeded = document.getElementById('stage-recovery-needed');
 const addMappingForm = document.getElementById('add-mapping-form');
 const mappingListBody = document.getElementById('mapping-list-body');
 
@@ -84,7 +92,9 @@ const sessionNodes = {
   brownouts: document.getElementById('device-brownouts'),
   eeprom: document.getElementById('device-eeprom'),
   freeRam: document.getElementById('device-free-ram'),
-  dirty: document.getElementById('device-dirty'),
+  configValidation: document.getElementById('device-config-validation'),
+  authority: document.getElementById('device-authority'),
+  draftState: document.getElementById('device-draft-state'),
   lastApply: document.getElementById('device-last-apply'),
 };
 
@@ -208,6 +218,13 @@ function formatBooleanStatus(value, trueLabel = 'ok', falseLabel = 'warn') {
   if (value === true) return trueLabel;
   if (value === false) return falseLabel;
   return '-';
+}
+
+function renderOperatorStatus(node, description) {
+  if (!node) return;
+  node.textContent = description?.label || '-';
+  node.classList.remove('status-ok', 'status-warn', 'status-error', 'status-muted');
+  if (description?.status) node.classList.add(`status-${description.status}`);
 }
 
 function formatJson(value) {
@@ -334,17 +351,17 @@ function updateButtons(state) {
   }
 }
 
-function renderAlertHistory(recentAlerts = []) {
+function renderAlertHistory(alerts = []) {
   if (!alertHistory) return;
   alertHistory.textContent = '';
-  if (!Array.isArray(recentAlerts) || !recentAlerts.length) {
+  if (!Array.isArray(alerts) || !alerts.length) {
     const item = document.createElement('li');
     item.className = 'alerts-empty';
-    item.textContent = 'No alerts yet.';
+    item.textContent = 'No active alerts.';
     alertHistory.appendChild(item);
     return;
   }
-  recentAlerts
+  alerts
     .slice(-12)
     .reverse()
     .forEach((alert) => {
@@ -418,7 +435,26 @@ function updateSession(session = {}) {
       ? health.eeprom_last_load || '-'
       : `${primary}, ${backup}`;
   sessionNodes.freeRam.textContent = health.free_ram ?? '-';
-  sessionNodes.dirty.textContent = String(Boolean(session?.dirty));
+  const validation = describeConfigValidation(session?.configValidation);
+  const authority = describeAuthority(session);
+  const draft = describeDraft(session);
+  renderOperatorStatus(sessionNodes.configValidation, validation);
+  renderOperatorStatus(sessionNodes.authority, authority);
+  renderOperatorStatus(sessionNodes.draftState, draft);
+  const recoveryRequired = validation.recoveryRequired || draft.recoveryRequired;
+  if (stageRecoveryNeeded) {
+    stageRecoveryNeeded.hidden = !recoveryRequired;
+    stageRecoveryNeeded.textContent = validation.recoveryRequired
+      ? 'Device configuration export failed validation. Open the App to inspect the contract failure before relying on cached state.'
+      : recoveryRequired
+        ? `${draft.label}. Open the App to resolve staged or uncertain configuration state.`
+        : '';
+  }
+  if (stageOpenConfiguratorButton) {
+    stageOpenConfiguratorButton.textContent = recoveryRequired
+      ? 'Open App to resolve'
+      : 'Open configurator';
+  }
   const lastApply = session?.lastApplyResult;
   sessionNodes.lastApply.textContent = lastApply
     ? `${lastApply.status || 'unknown'}${
@@ -438,9 +474,11 @@ function updateStatus(state) {
   const timing = state?.timing || {};
   const roundTrip = state?.performance?.roundTrip || {};
   const performanceHealth = state?.performance?.health || {};
-  const activeAlerts = Array.isArray(state?.alerts?.active)
-    ? state.alerts.active
-    : [];
+  const activeAlerts = selectActiveAlerts(state);
+  const telemetryFreshness = formatTelemetryFreshness(state);
+  const configValidation = describeConfigValidation(
+    state?.deviceSession?.configValidation,
+  );
 
   statusNodes.running.textContent = state?.running ? 'running' : 'stopped';
   statusNodes.serial.textContent = state?.serialConnected
@@ -454,7 +492,7 @@ function updateStatus(state) {
     config.oscListen || 9000
   }`;
   statusNodes.midi.textContent = config.midiLabel || 'MN42 Bridge';
-  statusNodes.telemetry.textContent = formatWhen(state?.lastTelemetryAt);
+  renderOperatorStatus(statusNodes.telemetry, telemetryFreshness);
   statusNodes.lastRoute.textContent = formatWhen(state?.lastRouteAt);
   statusNodes.lastTrace.textContent = state?.lastRouteTraceId || 'none';
   statusNodes.sourceTs.textContent = formatTimestampMs(
@@ -493,13 +531,15 @@ function updateStatus(state) {
   );
 
   summaryStatus.textContent = state?.running
-    ? state?.ready
-      ? 'Bridge live and cached device session ready.'
-      : 'Bridge running. Waiting for handshake/schema/config cache.'
+    ? configValidation.recoveryRequired
+      ? 'Bridge running, but the device configuration export failed validation.'
+      : state?.ready
+        ? 'Bridge live and cached device session ready.'
+        : 'Bridge running. Waiting for handshake/schema/config cache.'
     : 'Bridge idle.';
 
   logOutput.textContent = logsToText(state?.logs);
-  renderAlertHistory(state?.alerts?.recent);
+  renderAlertHistory(activeAlerts);
   updateButtons(state);
   updateSession(state?.deviceSession || {});
   renderRouteOutput(state?.routes || []);

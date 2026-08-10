@@ -289,8 +289,16 @@
               <dd id="device-free-ram">-</dd>
             </div>
             <div>
-              <dt>Dirty</dt>
-              <dd id="device-dirty">false</dd>
+              <dt>Config export</dt>
+              <dd id="device-config-validation">pending</dd>
+            </div>
+            <div>
+              <dt>Device truth</dt>
+              <dd id="device-authority">pending</dd>
+            </div>
+            <div>
+              <dt>Draft state</dt>
+              <dd id="device-draft-state">clean</dd>
             </div>
             <div>
               <dt>Last apply</dt>
@@ -310,6 +318,7 @@
             <button id="stage-download-snapshot" type="button">Download snapshot</button>
             <button id="stage-refresh-state" type="button">Refresh state</button>
           </div>
+          <p id="stage-recovery-needed" class="operator-warning" role="status" aria-live="polite" hidden></p>
           <p class="hint">
             Use the configurator if you need staged edits, recovery guidance, or deep profile work. This bridge console
             stays focused on desktop routing and session health.
@@ -432,6 +441,7 @@
       </section>
     </section>
   </main>
+  <script src="./operator-state.js"></script>
   <script type="module" src="./bridge-ui.js"></script>
 </body>
 
