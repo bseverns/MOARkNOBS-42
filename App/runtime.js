@@ -78,8 +78,9 @@ export function createRuntime({
   const { emit, on } = makeEmitter();
 
   let transport = null;
-  let readLoopActive = false;
+  let readLoopTransport = null;
   let closingTransport = false;
+  let connectPromise = null;
   let remoteManifest = null;
   let schema = null;
   let schemaSource = 'bundled';
@@ -444,8 +445,24 @@ export function createRuntime({
     liveControlsRuntime?.onFatalError(reason);
   }
 
-  async function connect(existingPort) {
+  function connect(existingPort) {
+    if (connectPromise) return connectPromise;
+    const attempt = connectOnce(existingPort);
+    connectPromise = attempt;
+    attempt.then(
+      () => {
+        if (connectPromise === attempt) connectPromise = null;
+      },
+      () => {
+        if (connectPromise === attempt) connectPromise = null;
+      }
+    );
+    return attempt;
+  }
+
+  async function connectOnce(existingPort) {
     try {
+      if (transport) await disconnect();
       telemetryRuntime.reset();
       emit('status', { stage: 'handshake', level: 'info', message: 'Negotiating manifest…' });
       let candidate = existingPort ?? null;
@@ -566,22 +583,24 @@ export function createRuntime({
   }
 
   function startReadLoop() {
-    if (readLoopActive) return;
-    readLoopActive = true;
+    const source = transport;
+    if (!source || readLoopTransport === source) return;
+    readLoopTransport = source;
     const pump = async () => {
-      while (transport) {
+      while (transport === source) {
         try {
-          const line = await transport.nextLine();
+          const line = await source.nextLine();
+          if (transport !== source) break;
           if (line) handleLine(line);
         } catch (err) {
-          if (!closingTransport) {
+          if (!closingTransport && transport === source) {
             emit('error', err);
             await disconnect();
           }
           break;
         }
       }
-      readLoopActive = false;
+      if (readLoopTransport === source) readLoopTransport = null;
     };
     pump();
   }
@@ -624,12 +643,13 @@ export function createRuntime({
       emit('disconnected');
       return;
     }
+    const activeTransport = transport;
     closingTransport = true;
     try {
-      await transport.close();
+      await activeTransport.close();
     } finally {
-      transport = null;
-      readLoopActive = false;
+      if (transport === activeTransport) transport = null;
+      if (readLoopTransport === activeTransport) readLoopTransport = null;
       closingTransport = false;
       flushRpcPending(new Error('Disconnected'));
       emit('disconnected');

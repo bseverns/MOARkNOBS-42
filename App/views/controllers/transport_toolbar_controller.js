@@ -162,6 +162,9 @@ export function createTransportToolbarController({
     if (!connectionPill) return;
     connectionPill.dataset.stage = stage;
     connectionPill.textContent = text;
+    if (connectBtn) {
+      connectBtn.textContent = stage === 'live' ? 'Reconnect' : 'Connect';
+    }
     if (docRoot) docRoot.dataset.connected = stage === 'live' ? 'true' : 'false';
     onConnectionPillChanged();
     updateTransportLaneChip();
