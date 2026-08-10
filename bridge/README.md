@@ -367,7 +367,7 @@ The browser console uses the same bridge core and adds:
 The console form also surfaces loop-guard controls (`allowFeedbackLoops`, `feedbackWindowMs`), alert cooldown tuning (`alertSuppressionMs`), and runtime counter diagnostics.
 It now also surfaces recent route/timing fields (`Last route`, `Last trace`, `Source timestamp`, and `Clock skew`) so drift and trace continuity are visible during runs.
 It now surfaces live round-trip diagnostics (`RT samples`, `RT pending`, `RT last`, `RT p50`, `RT p95`, `RT jitter p95`, `RT health`) derived from command→telemetry acknowledgments.
-It also surfaces active alert count and top alert message, plus a one-click clear action for operator triage.
+It also surfaces active alert count and top alert message. Diagnostic reset/acknowledgement actions stay in Advanced mode, and clearing active alerts requires confirmation because unresolved conditions may raise again. Stop remains available in every mode, but is visually distinct and requires confirmation before routing disconnects.
 
 Operator API add-on:
 

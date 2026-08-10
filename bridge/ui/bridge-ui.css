@@ -73,6 +73,21 @@ button:disabled {
   opacity: 0.55;
 }
 
+[data-console-modes][hidden] {
+  display: none;
+}
+
+.action-danger {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.action-danger:hover,
+.action-danger:focus-visible {
+  background: rgba(162, 28, 28, 0.1);
+  border-color: var(--error);
+}
+
 input {
   width: 100%;
   min-height: 42px;

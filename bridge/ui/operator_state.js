@@ -142,6 +142,22 @@
     return observed;
   }
 
+  function isActionVisibleInMode(modeList, mode) {
+    return String(modeList || '')
+      .split(/\s+/)
+      .filter(Boolean)
+      .includes(mode);
+  }
+
+  function operatorConfirmationMessage(action) {
+    const messages = {
+      stop: 'Stop the Bridge? OSC/MIDI routing and the device session will disconnect.',
+      clearAlerts:
+        'Clear active alerts? This acknowledges the current list; unresolved conditions may raise again.',
+    };
+    return messages[action] || '';
+  }
+
   return {
     activeAlerts,
     changedSlotIndices,
@@ -150,7 +166,9 @@
     describeDraft,
     describeRouteHeartbeats,
     formatTelemetryFreshness,
+    isActionVisibleInMode,
     observedSoundcheckLanes,
+    operatorConfirmationMessage,
     parseSlotTelemetryLine,
   };
 });

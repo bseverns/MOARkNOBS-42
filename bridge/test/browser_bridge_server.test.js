@@ -981,6 +981,16 @@ async function run() {
     /Start passive soundcheck/,
     'Stage should expose a write-free guided soundcheck',
   );
+  assert.match(
+    consoleHtml,
+    /id="stop-bridge" class="action-danger" data-console-modes="setup mappings stage advanced"/,
+    'Stop should remain available in every mode while looking destructive',
+  );
+  assert.match(
+    consoleHtml,
+    /id="reset-metrics" data-console-modes="advanced"[\s\S]*id="clear-alerts" data-console-modes="advanced"/,
+    'diagnostic reset and acknowledgement actions should stay in Advanced',
+  );
 
   const snapshotResponse = makeRes();
   await server.requestHandler(

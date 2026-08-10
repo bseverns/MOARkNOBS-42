@@ -8,7 +8,9 @@ const {
   describeDraft,
   describeRouteHeartbeats,
   formatTelemetryFreshness,
+  isActionVisibleInMode,
   observedSoundcheckLanes,
+  operatorConfirmationMessage,
   parseSlotTelemetryLine,
 } = require('../ui/operator_state');
 
@@ -99,8 +101,12 @@ function run() {
     [...observedSoundcheckLanes(routes, { traceId: 'movement-1' })].sort(),
     ['deviceMidi', 'deviceOsc'],
   );
+  assert.equal(isActionVisibleInMode('setup mappings advanced', 'mappings'), true);
+  assert.equal(isActionVisibleInMode('setup mappings advanced', 'stage'), false);
+  assert.match(operatorConfirmationMessage('stop'), /routing.*disconnect/i);
+  assert.match(operatorConfirmationMessage('clearAlerts'), /unresolved conditions.*raise again/i);
 
-  console.log('Bridge operator state covers truth, route heartbeat, and passive soundcheck');
+  console.log('Bridge operator state covers truth, route heartbeat, soundcheck, and show safety');
 }
 
 run();

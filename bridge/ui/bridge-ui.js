@@ -12,7 +12,9 @@ const {
   describeDraft,
   describeRouteHeartbeats,
   formatTelemetryFreshness,
+  isActionVisibleInMode,
   observedSoundcheckLanes,
+  operatorConfirmationMessage,
   parseSlotTelemetryLine,
   changedSlotIndices,
 } = window.MN42BridgeOperatorState;
@@ -63,6 +65,7 @@ const routeHeartbeatNodes = {
 
 const modeTabs = [...document.querySelectorAll('.mode-tab')];
 const modeViews = [...document.querySelectorAll('[data-mode-view]')];
+const modeScopedActions = [...document.querySelectorAll('[data-console-modes]')];
 
 const statusNodes = {
   running: document.getElementById('status-running'),
@@ -491,6 +494,9 @@ function updateMode(mode) {
     const active = view.dataset.modeView === mode;
     view.classList.toggle('is-active', active);
     view.hidden = !active;
+  });
+  modeScopedActions.forEach((action) => {
+    action.hidden = !isActionVisibleInMode(action.dataset.consoleModes, mode);
   });
   saveMode(mode);
 }
@@ -1078,6 +1084,7 @@ function bindEvents() {
   });
 
   stopButton.addEventListener('click', async () => {
+    if (!window.confirm(operatorConfirmationMessage('stop'))) return;
     summaryStatus.textContent = 'Stopping bridge...';
     try {
       await stopBridge();
@@ -1108,6 +1115,7 @@ function bindEvents() {
   });
 
   clearAlertsButton.addEventListener('click', async () => {
+    if (!window.confirm(operatorConfirmationMessage('clearAlerts'))) return;
     try {
       await clearAlerts();
       summaryStatus.textContent = 'Active alerts cleared.';

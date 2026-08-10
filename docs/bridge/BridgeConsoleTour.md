@@ -34,7 +34,7 @@ This capture shows a complete setup path, including the simulator serial path, a
 - `OSC host`, `OSC send port`, `OSC listen port`, and `OSC bind address` define where the Bridge publishes and listens.
 - `Feedback guard` and `alert suppression` tune operator safety and log noise; leave them at defaults unless you have a documented host reason to change them.
 - `Known-good recipe` prefills documented host settings and shows a short checklist. It is the fastest safe path for an operator who is not debugging custom routing.
-- `Start bridge` launches the desktop runtime. `Stop bridge` disconnects the serial/MIDI/OSC runtime cleanly. `Refresh ports` rescans serial and MIDI devices.
+- `Start bridge` launches the desktop runtime. `Stop bridge` remains available in every mode, is visually marked as destructive, and asks for confirmation before disconnecting the serial/MIDI/OSC runtime. `Refresh ports` rescans serial and MIDI devices.
 
 ### Serial Port Selection
 
@@ -133,7 +133,7 @@ Warnings surface in two places:
 - the top summary line and status cards
 - the `Active alerts` list in Stage mode, which contains only unresolved alerts rather than cleared alert history
 
-Use `Clear alerts` when you intentionally want a fresh operator slate after acknowledging an issue. Do not clear alerts just to hide an unresolved fault.
+Use Advanced mode's `Clear alerts` when you intentionally want a fresh operator slate after acknowledging an issue. It asks for confirmation and warns that unresolved conditions may raise again. Do not clear alerts just to hide an unresolved fault.
 
 Typical meanings:
 
@@ -147,10 +147,11 @@ Typical meanings:
 
 The Bridge console exposes these operator actions today:
 
-- `Stop bridge`: the practical disconnect action for the desktop runtime
-- `Download snapshot`: saves the current Bridge/session state for evidence or support review
+- `Stop bridge`: the practical disconnect action for the desktop runtime; it remains visible in all modes and requires confirmation
+- `Download snapshot`: saves the current Bridge/session state for evidence or support review; Stage provides its own contextual copy
 - `Refresh state`: re-reads current Bridge state into the console
-- `Reset metrics`: clears accumulated round-trip metrics so you can measure a fresh run
+- `Reset metrics`: an Advanced-only action that clears accumulated round-trip metrics so you can measure a fresh run
+- `Clear alerts`: an Advanced-only acknowledgement action that requires confirmation
 
 There is no dedicated Bridge-console `panic` button today. If you need deeper recovery guidance or staged-config recovery tools, use `Open configurator` and work from the App’s recovery surfaces.
 

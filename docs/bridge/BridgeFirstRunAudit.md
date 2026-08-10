@@ -16,7 +16,9 @@ Inspected surfaces: `bridge/README.md`, `bridge/ui/`, `bridge/lib/http_bridge_se
 
 ## Controls Visible Before Connection
 
-- Start bridge, Stop bridge, Refresh ports, Reset metrics, Clear alerts, Download snapshot, Open configurator.
+- Setup shows Start bridge, Stop bridge, Refresh ports, Download snapshot, and Open configurator.
+- Stop bridge remains visible in every mode, is visually distinct, and requires confirmation before disconnecting routing.
+- Reset metrics and Clear alerts are Advanced-only; clearing alerts requires confirmation.
 - Setup tabs: Setup, Mappings, Stage, Advanced.
 - Connection setup: serial port, MIDI port label, OSC host, OSC send/listen ports, OSC bind.
 - Known-good recipe picker, requirements, and validation checklist.

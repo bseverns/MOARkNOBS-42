@@ -30,13 +30,14 @@
         host/network unless you have deliberate network protection.
       </p>
       <div class="actions">
-        <button id="start-bridge" type="button">Start bridge</button>
-        <button id="stop-bridge" type="button">Stop bridge</button>
-        <button id="refresh-ports" type="button">Refresh ports</button>
-        <button id="reset-metrics" type="button">Reset metrics</button>
-        <button id="clear-alerts" type="button">Clear alerts</button>
-        <button id="download-snapshot" type="button">Download snapshot</button>
-        <button id="open-configurator" type="button">Open configurator</button>
+        <button id="start-bridge" data-console-modes="setup" type="button">Start bridge</button>
+        <button id="stop-bridge" class="action-danger" data-console-modes="setup mappings stage advanced"
+          type="button">Stop bridge</button>
+        <button id="refresh-ports" data-console-modes="setup" type="button">Refresh ports</button>
+        <button id="reset-metrics" data-console-modes="advanced" type="button">Reset metrics</button>
+        <button id="clear-alerts" data-console-modes="advanced" type="button">Clear alerts</button>
+        <button id="download-snapshot" data-console-modes="setup mappings advanced" type="button">Download snapshot</button>
+        <button id="open-configurator" data-console-modes="setup mappings advanced" type="button">Open configurator</button>
       </div>
       <p class="status-line" id="summary-status" aria-live="polite">Bridge idle.</p>
       <nav class="mode-tabs" aria-label="Console modes">
