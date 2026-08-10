@@ -991,6 +991,11 @@ async function run() {
   );
   assert.match(
     consoleHtml,
+    /My host setups[\s\S]*Saved only in this browser[\s\S]*Save current[\s\S]*Load selected[\s\S]*Export JSON[\s\S]*Import JSON/,
+    'Setup should expose browser-local named host setups with portable JSON',
+  );
+  assert.match(
+    consoleHtml,
     /id="stop-bridge" class="action-danger" data-console-modes="setup mappings stage advanced"/,
     'Stop should remain available in every mode while looking destructive',
   );

@@ -60,6 +60,27 @@ button {
     background 160ms ease;
 }
 
+.button-label {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.38);
+  cursor: pointer;
+  padding: 0.68rem 0.95rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.button-label:hover,
+.button-label:focus-within {
+  background: var(--accent-soft);
+  border-color: var(--edge-strong);
+  box-shadow: var(--shadow-soft);
+}
+
 button:hover,
 button:focus-visible {
   background: var(--accent-soft);
@@ -259,6 +280,18 @@ dt {
   border-left: 3px solid var(--accent);
   background: var(--accent-soft);
   font-family: var(--font-mono);
+}
+
+.custom-setups {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--edge);
+}
+
+.custom-setup-actions button,
+.custom-setup-actions .button-label {
+  padding: 0.55rem 0.7rem;
+  font-size: 0.72rem;
 }
 
 .stacked-actions {

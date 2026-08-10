@@ -34,7 +34,10 @@ This capture shows a complete setup path, including the simulator serial path, a
 - `OSC host`, `OSC send port`, `OSC listen port`, and `OSC bind address` define where the Bridge publishes and listens.
 - `Feedback guard` and `alert suppression` tune operator safety and log noise; leave them at defaults unless you have a documented host reason to change them.
 - `Known-good recipe` prefills documented host settings and shows a short checklist. It is the fastest safe path for an operator who is not debugging custom routing.
+- `My host setups` saves named copies of the current host form and MIDI-to-OSC mappings in this browser. Loading a setup only fills the form; it never starts or restarts routing. Use JSON export/import to back up the collection or move it to another browser.
 - `Start bridge` launches the desktop runtime. `Stop bridge` remains available in every mode, is visually marked as destructive, and asks for confirmation before disconnecting the serial/MIDI/OSC runtime. `Refresh ports` rescans serial and MIDI devices.
+
+Custom host setups are personal operator convenience, not known-good recipes or host-validation evidence. When routing is already running, stop and start the Bridge deliberately after loading a setup whose MIDI or OSC transport values should take effect.
 
 ### Serial Port Selection
 

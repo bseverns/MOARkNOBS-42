@@ -7,12 +7,16 @@ const {
   describeConfigValidation,
   describeDraft,
   describeRouteHeartbeats,
+  createHostSetupEnvelope,
   formatTelemetryFreshness,
+  hostSetupConfigFingerprint,
   isActionVisibleInMode,
   latestLearnableMidiCc,
+  normalizeHostSetupConfig,
   observedSoundcheckLanes,
   operatorConfirmationMessage,
   parseSlotTelemetryLine,
+  parseHostSetupEnvelope,
   recentOscAddresses,
 } = require('../ui/operator_state');
 
@@ -144,7 +148,60 @@ function run() {
     'OSC suggestions should be recent, unique custom outbound destinations',
   );
 
-  console.log('Bridge operator state covers truth, soundcheck, show safety, and mapping learn');
+  const hostConfig = {
+    serialName: '/dev/cu.usbmodem123',
+    midiLabel: 'Friday IAC',
+    oscHost: '127.0.0.1',
+    oscPort: 9000,
+    oscListen: 9001,
+    oscBind: '127.0.0.1',
+    feedbackWindowMs: 120,
+    rtP95TargetMs: 10,
+    rtJitterP95TargetMs: 5,
+    alertSuppressionMs: 3000,
+    allowFeedbackLoops: false,
+    midiToOscMappings: [
+      {
+        id: '<b>filter</b>',
+        controller: 21,
+        channel: 3,
+        address: '/show/filter',
+        valueMode: 'normalized',
+      },
+      { controller: 999, address: '/invalid' },
+    ],
+  };
+  const normalizedHostConfig = normalizeHostSetupConfig(hostConfig);
+  assert.equal(normalizedHostConfig.midiToOscMappings.length, 1);
+  assert.equal(normalizedHostConfig.midiToOscMappings[0].id, '<b>filter</b>');
+  const envelope = createHostSetupEnvelope(
+    [
+      {
+        id: 'friday-show',
+        name: 'Friday show',
+        createdAt: '2026-08-09T18:00:00.000Z',
+        updatedAt: '2026-08-09T18:00:00.000Z',
+        config: hostConfig,
+      },
+      { id: 'broken', name: '', config: {} },
+    ],
+    '2026-08-09T18:00:00.000Z',
+  );
+  assert.equal(envelope.format, 'mn42-bridge-host-setups');
+  assert.equal(envelope.version, 1);
+  assert.equal(envelope.setups.length, 1);
+  assert.deepEqual(parseHostSetupEnvelope(envelope), {
+    setups: envelope.setups,
+    rejected: 0,
+    valid: true,
+  });
+  assert.equal(parseHostSetupEnvelope({ version: 1 }).valid, false);
+  assert.equal(
+    hostSetupConfigFingerprint(hostConfig),
+    hostSetupConfigFingerprint(normalizedHostConfig),
+  );
+
+  console.log('Bridge operator state covers mapping learn and versioned local host setups');
 }
 
 run();

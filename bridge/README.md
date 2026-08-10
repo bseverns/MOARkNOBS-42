@@ -118,6 +118,8 @@ Use the browser page to:
 - launch the full configurator over the bridge transport.
 
 The configurator opened from this page uses the bridge session (`/api/device/*` and `/ws/events`) instead of WebSerial, retaining raw `/ws` for compatibility and live RPCs while OSC and MIDI routing stay active.
+
+The Setup screen also supports named browser-local host setups. A setup captures the host transport form, guard/timing values, and custom MIDI-to-OSC mappings. Loading one only stages those values in the form; it never starts or restarts routing. Collections use the versioned `mn42-bridge-host-setups` JSON format for browser-to-browser export/import. These personal setups are not known-good recipe or host-validation evidence.
 See [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md) for Setup, Stage, and Advanced console screenshots captured from a real ready-session host, with operator-oriented explanations.
 
 ### 4) Confirm it is live

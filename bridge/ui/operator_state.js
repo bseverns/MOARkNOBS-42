@@ -9,6 +9,139 @@
     'osc->serial': 'oscDevice',
     'midi->serial': 'midiDevice',
   });
+  const HOST_SETUP_FORMAT = 'mn42-bridge-host-setups';
+  const HOST_SETUP_VERSION = 1;
+
+  function shortString(value, maxLength = 256) {
+    return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+  }
+
+  function integerInRange(value, min, max, fallback = null) {
+    const number = Number(value);
+    return Number.isInteger(number) && number >= min && number <= max
+      ? number
+      : fallback;
+  }
+
+  function positiveNumber(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? number : fallback;
+  }
+
+  function normalizeHostMapping(mapping, index) {
+    if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) {
+      return null;
+    }
+    const controller = integerInRange(
+      mapping.controller ?? mapping.cc,
+      0,
+      127,
+    );
+    const channel =
+      mapping.channel === null || mapping.channel === ''
+        ? null
+        : integerInRange(mapping.channel, 1, 16);
+    const address = shortString(mapping.address, 256);
+    const invalidChannel =
+      channel === null && mapping.channel != null && mapping.channel !== '';
+    if (controller === null || invalidChannel || !address.startsWith('/')) {
+      return null;
+    }
+    return {
+      id: shortString(mapping.id, 80) || `mapping-${index + 1}`,
+      kind: 'cc',
+      controller,
+      channel,
+      address,
+      valueMode: mapping.valueMode === 'normalized' ? 'normalized' : 'raw',
+      scale: Number.isFinite(Number(mapping.scale)) ? Number(mapping.scale) : 1,
+      offset: Number.isFinite(Number(mapping.offset)) ? Number(mapping.offset) : 0,
+      argType: mapping.argType === 'int' ? 'int' : 'float',
+    };
+  }
+
+  function normalizeHostSetupConfig(config) {
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      return null;
+    }
+    const oscHost = shortString(config.oscHost, 256);
+    const oscBind = shortString(config.oscBind, 256);
+    const oscPort = integerInRange(config.oscPort, 1, 65535);
+    const oscListen = integerInRange(config.oscListen, 1, 65535);
+    if (!oscHost || !oscBind || oscPort === null || oscListen === null) {
+      return null;
+    }
+    const rawMappings = Array.isArray(config.midiToOscMappings)
+      ? config.midiToOscMappings.slice(0, 128)
+      : [];
+    return {
+      serialName: shortString(config.serialName, 256),
+      midiLabel: shortString(config.midiLabel, 256),
+      oscHost,
+      oscPort,
+      oscListen,
+      oscBind,
+      feedbackWindowMs: positiveNumber(config.feedbackWindowMs, 120),
+      rtP95TargetMs: positiveNumber(config.rtP95TargetMs, 10),
+      rtJitterP95TargetMs: positiveNumber(config.rtJitterP95TargetMs, 5),
+      alertSuppressionMs: positiveNumber(config.alertSuppressionMs, 3000),
+      allowFeedbackLoops: Boolean(config.allowFeedbackLoops),
+      midiToOscMappings: rawMappings
+        .map(normalizeHostMapping)
+        .filter(Boolean),
+    };
+  }
+
+  function normalizeHostSetup(setup) {
+    if (!setup || typeof setup !== 'object' || Array.isArray(setup)) return null;
+    const id = shortString(setup.id, 96);
+    const name = shortString(setup.name, 80);
+    const config = normalizeHostSetupConfig(setup.config);
+    if (!id || !name || !config) return null;
+    return {
+      id,
+      name,
+      createdAt: shortString(setup.createdAt, 64) || null,
+      updatedAt: shortString(setup.updatedAt, 64) || null,
+      config,
+    };
+  }
+
+  function parseHostSetupEnvelope(value) {
+    if (
+      !value ||
+      typeof value !== 'object' ||
+      value.format !== HOST_SETUP_FORMAT ||
+      value.version !== HOST_SETUP_VERSION ||
+      !Array.isArray(value.setups)
+    ) {
+      return { setups: [], rejected: 0, valid: false };
+    }
+    const source = value.setups.slice(0, 50);
+    const setups = source.map(normalizeHostSetup).filter(Boolean);
+    return {
+      setups,
+      rejected: value.setups.length - setups.length,
+      valid: true,
+    };
+  }
+
+  function createHostSetupEnvelope(
+    setups = [],
+    exportedAt = new Date().toISOString(),
+  ) {
+    return {
+      format: HOST_SETUP_FORMAT,
+      version: HOST_SETUP_VERSION,
+      exportedAt,
+      setups: setups.slice(0, 50).map(normalizeHostSetup).filter(Boolean),
+    };
+  }
+
+  function hostSetupConfigFingerprint(config) {
+    const normalized = normalizeHostSetupConfig(config);
+    return normalized ? JSON.stringify(normalized) : '';
+  }
 
   function ageSeconds(isoString, nowMs) {
     const timestamp = new Date(isoString).getTime();
@@ -221,12 +354,16 @@
     describeConfigValidation,
     describeDraft,
     describeRouteHeartbeats,
+    createHostSetupEnvelope,
     formatTelemetryFreshness,
+    hostSetupConfigFingerprint,
     isActionVisibleInMode,
     latestLearnableMidiCc,
+    normalizeHostSetupConfig,
     observedSoundcheckLanes,
     operatorConfirmationMessage,
     parseSlotTelemetryLine,
+    parseHostSetupEnvelope,
     recentOscAddresses,
   };
 });

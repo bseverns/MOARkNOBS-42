@@ -2,6 +2,7 @@
 
 const STORAGE_KEY = 'mn42-bridge-console';
 const MODE_KEY = 'mn42-bridge-console-mode';
+const CUSTOM_SETUPS_KEY = 'mn42-bridge-custom-host-setups-v1';
 const RAW_LINE_LIMIT = 200;
 const STRUCTURED_EVENT_LIMIT = 120;
 const controlToken = new URL(window.location.href).searchParams.get('token') || '';
@@ -11,11 +12,15 @@ const {
   describeConfigValidation,
   describeDraft,
   describeRouteHeartbeats,
+  createHostSetupEnvelope,
   formatTelemetryFreshness,
+  hostSetupConfigFingerprint,
   isActionVisibleInMode,
   latestLearnableMidiCc,
+  normalizeHostSetupConfig,
   observedSoundcheckLanes,
   operatorConfirmationMessage,
+  parseHostSetupEnvelope,
   parseSlotTelemetryLine,
   recentOscAddresses,
   changedSlotIndices,
@@ -61,6 +66,19 @@ const startMappingLearnButton = document.getElementById('start-mapping-learn');
 const mappingLearnStatus = document.getElementById('mapping-learn-status');
 const recentOscAddressSelect = document.getElementById('recent-osc-address');
 const mappingPreview = document.getElementById('mapping-preview');
+const customSetupSelect = document.getElementById('custom-setup-select');
+const customSetupName = document.getElementById('custom-setup-name');
+const customSetupStatus = document.getElementById('custom-setup-status');
+const newCustomSetupButton = document.getElementById('new-custom-setup');
+const saveCustomSetupButton = document.getElementById('save-custom-setup');
+const loadCustomSetupButton = document.getElementById('load-custom-setup');
+const deleteCustomSetupButton = document.getElementById('delete-custom-setup');
+const exportCustomSetupsButton = document.getElementById(
+  'export-custom-setups',
+);
+const importCustomSetupsInput = document.getElementById(
+  'import-custom-setups',
+);
 
 const routeHeartbeatNodes = {
   deviceOsc: document.getElementById('route-device-osc'),
@@ -127,6 +145,8 @@ const consoleState = {
   presets: [],
   activePresetId: '',
   midiToOscMappings: [],
+  customSetups: [],
+  activeCustomSetupId: '',
 };
 window.__MN42_BRIDGE_CONSOLE_STATE = consoleState;
 
@@ -136,6 +156,8 @@ let rawSocket = null;
 let eventSocket = null;
 let soundcheck = null;
 let mappingLearn = null;
+let hostFormDirty = false;
+let customSetupNotice = '';
 const SOUNDCHECK_WINDOW_MS = 15_000;
 const MAPPING_LEARN_WINDOW_MS = 10_000;
 
@@ -168,6 +190,222 @@ function loadMode() {
     return localStorage.getItem(MODE_KEY) || 'setup';
   } catch (_) {
     return 'setup';
+  }
+}
+
+function selectedCustomSetup() {
+  return consoleState.customSetups.find(
+    (setup) => setup.id === consoleState.activeCustomSetupId,
+  );
+}
+
+function loadCustomSetups() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CUSTOM_SETUPS_KEY) || 'null');
+    const parsed = parseHostSetupEnvelope(raw);
+    return parsed.valid ? parsed.setups : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function persistCustomSetups() {
+  try {
+    const envelope = createHostSetupEnvelope(consoleState.customSetups);
+    localStorage.setItem(CUSTOM_SETUPS_KEY, JSON.stringify(envelope));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function renderCustomSetupStatus() {
+  const selected = selectedCustomSetup();
+  loadCustomSetupButton.disabled = !selected;
+  deleteCustomSetupButton.disabled = !selected;
+  if (!selected) {
+    customSetupStatus.textContent =
+      customSetupNotice || 'No custom setup selected.';
+    return;
+  }
+  const changed =
+    hostSetupConfigFingerprint(formValues()) !==
+    hostSetupConfigFingerprint(selected.config);
+  customSetupStatus.textContent = changed
+    ? `${selected.name} selected · current form differs from the saved setup.`
+    : customSetupNotice || `${selected.name} selected · no unsaved setup changes.`;
+}
+
+function renderCustomSetups({ syncName = false } = {}) {
+  customSetupSelect.textContent = '';
+  const empty = document.createElement('option');
+  empty.value = '';
+  empty.textContent = 'New setup';
+  customSetupSelect.appendChild(empty);
+  [...consoleState.customSetups]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .forEach((setup) => {
+      const option = document.createElement('option');
+      option.value = setup.id;
+      option.textContent = setup.name;
+      customSetupSelect.appendChild(option);
+    });
+  if (selectedCustomSetup()) {
+    customSetupSelect.value = consoleState.activeCustomSetupId;
+    if (syncName) customSetupName.value = selectedCustomSetup().name;
+  } else {
+    consoleState.activeCustomSetupId = '';
+    customSetupSelect.value = '';
+    if (syncName) customSetupName.value = '';
+  }
+  exportCustomSetupsButton.disabled = !consoleState.customSetups.length;
+  renderCustomSetupStatus();
+}
+
+function beginNewCustomSetup() {
+  consoleState.activeCustomSetupId = '';
+  customSetupName.value = '';
+  customSetupNotice = 'Enter a name, then save the current host form.';
+  renderCustomSetups();
+  customSetupName.focus();
+}
+
+function customSetupId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `setup-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function saveCurrentCustomSetup() {
+  const name = customSetupName.value.trim().slice(0, 80);
+  const config = normalizeHostSetupConfig(formValues());
+  if (!name || !config) {
+    customSetupNotice =
+      'Name the setup and provide valid OSC host, bind, and port values.';
+    renderCustomSetupStatus();
+    return;
+  }
+  const current = selectedCustomSetup();
+  if (
+    current &&
+    !window.confirm(`Replace saved setup “${current.name}” with the current form?`)
+  ) {
+    return;
+  }
+  const now = new Date().toISOString();
+  const setup = {
+    id: current?.id || customSetupId(),
+    name,
+    createdAt: current?.createdAt || now,
+    updatedAt: now,
+    config,
+  };
+  const previousSetups = consoleState.customSetups;
+  const previousActiveId = consoleState.activeCustomSetupId;
+  consoleState.customSetups = current
+    ? consoleState.customSetups.map((entry) =>
+        entry.id === current.id ? setup : entry,
+      )
+    : [...consoleState.customSetups, setup];
+  consoleState.activeCustomSetupId = setup.id;
+  if (!persistCustomSetups()) {
+    consoleState.customSetups = previousSetups;
+    consoleState.activeCustomSetupId = previousActiveId;
+    customSetupNotice = 'Browser storage rejected the setup; export existing setups before retrying.';
+    renderCustomSetups();
+    return;
+  }
+  customSetupNotice = `Saved “${name}” in this browser.`;
+  renderCustomSetups({ syncName: true });
+}
+
+function loadSelectedCustomSetup() {
+  const setup = selectedCustomSetup();
+  if (!setup) return;
+  populateForm(setup.config);
+  hostFormDirty = true;
+  saveConfig(formValues());
+  customSetupNotice = consoleState.bridge?.running
+    ? `Loaded “${setup.name}” into the form. Stop and start the Bridge to apply transport changes.`
+    : `Loaded “${setup.name}” into the form. Start the Bridge when ready.`;
+  renderCustomSetupStatus();
+}
+
+function deleteSelectedCustomSetup() {
+  const setup = selectedCustomSetup();
+  if (!setup || !window.confirm(`Delete browser-local setup “${setup.name}”?`)) {
+    return;
+  }
+  const previousSetups = consoleState.customSetups;
+  consoleState.customSetups = consoleState.customSetups.filter(
+    (entry) => entry.id !== setup.id,
+  );
+  consoleState.activeCustomSetupId = '';
+  if (!persistCustomSetups()) {
+    consoleState.customSetups = previousSetups;
+    consoleState.activeCustomSetupId = setup.id;
+    customSetupNotice = 'Browser storage rejected the deletion.';
+    renderCustomSetups({ syncName: true });
+    return;
+  }
+  customSetupNotice = `Deleted “${setup.name}”.`;
+  renderCustomSetups({ syncName: true });
+}
+
+function exportCustomSetups() {
+  if (!consoleState.customSetups.length) return;
+  const envelope = createHostSetupEnvelope(consoleState.customSetups);
+  const blob = new Blob([`${JSON.stringify(envelope, null, 2)}\n`], {
+    type: 'application/json',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'mn42-bridge-host-setups.json';
+  anchor.click();
+  URL.revokeObjectURL(url);
+  customSetupNotice = `Exported ${envelope.setups.length} browser-local setup${
+    envelope.setups.length === 1 ? '' : 's'
+  }.`;
+  renderCustomSetupStatus();
+}
+
+async function importCustomSetups(file) {
+  try {
+    if (Number(file?.size) > 1024 * 1024) {
+      throw new Error('Setup import exceeds the 1 MiB limit.');
+    }
+    const parsed = parseHostSetupEnvelope(JSON.parse(await file.text()));
+    if (!parsed.valid || !parsed.setups.length) {
+      throw new Error('No valid version 1 MN42 host setups found.');
+    }
+    if (
+      !window.confirm(
+        `Import ${parsed.setups.length} setup${
+          parsed.setups.length === 1 ? '' : 's'
+        }? Matching setup IDs will be replaced.`,
+      )
+    ) {
+      return;
+    }
+    const merged = new Map(
+      consoleState.customSetups.map((setup) => [setup.id, setup]),
+    );
+    parsed.setups.forEach((setup) => merged.set(setup.id, setup));
+    const previousSetups = consoleState.customSetups;
+    consoleState.customSetups = [...merged.values()];
+    if (!persistCustomSetups()) {
+      consoleState.customSetups = previousSetups;
+      throw new Error('Browser storage rejected the imported setups.');
+    }
+    customSetupNotice = `Imported ${parsed.setups.length} setup${
+      parsed.setups.length === 1 ? '' : 's'
+    }${parsed.rejected ? `; rejected ${parsed.rejected} invalid entries` : ''}.`;
+    renderCustomSetups();
+  } catch (error) {
+    customSetupNotice = `Import failed: ${error.message}`;
+    renderCustomSetupStatus();
+  } finally {
+    importCustomSetupsInput.value = '';
   }
 }
 
@@ -406,7 +644,8 @@ function renderMappingOutput(state = {}) {
     feedbackWindowMs: config.feedbackWindowMs ?? null,
     allowFeedbackLoops: Boolean(config.allowFeedbackLoops),
     midiLabel: config.midiLabel ?? null,
-    midiToOscMappings: consoleState.midiToOscMappings || [],
+    activeMidiToOscMappings: config.midiToOscMappings || [],
+    formMidiToOscMappings: consoleState.midiToOscMappings || [],
   });
 }
 
@@ -514,6 +753,7 @@ async function commitMappings(mappings) {
   renderMappingList();
   renderMappingOutput(payload.state || {});
   saveConfig(formValues());
+  renderCustomSetupStatus();
   return consoleState.midiToOscMappings;
 }
 
@@ -533,17 +773,28 @@ function renderMappingList() {
   }
   mappings.forEach((mapping, index) => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${mapping.id || `mapping-${index + 1}`}</td>
-      <td>CC ${mapping.controller}${
+    const values = [
+      mapping.id || `mapping-${index + 1}`,
+      `CC ${mapping.controller}${
         mapping.channel ? ` (Ch ${mapping.channel})` : ''
-      }</td>
-      <td>${mapping.address}</td>
-      <td>${mapping.valueMode}</td>
-      <td class="actions">
-        <button class="remove-mapping" data-index="${index}" type="button">Remove</button>
-      </td>
-    `;
+      }`,
+      mapping.address,
+      mapping.valueMode,
+    ];
+    values.forEach((value) => {
+      const cell = document.createElement('td');
+      cell.textContent = String(value ?? '');
+      row.appendChild(cell);
+    });
+    const actions = document.createElement('td');
+    actions.className = 'actions';
+    const remove = document.createElement('button');
+    remove.className = 'remove-mapping';
+    remove.dataset.index = String(index);
+    remove.type = 'button';
+    remove.textContent = 'Remove';
+    actions.appendChild(remove);
+    row.appendChild(actions);
     mappingListBody.appendChild(row);
   });
 
@@ -1031,6 +1282,9 @@ function applyPreset(preset) {
     renderMappingList();
     renderMappingOutput(consoleState.bridge || {});
   }
+  hostFormDirty = true;
+  customSetupNotice = 'Bundled recipe loaded into the form; routing was not restarted.';
+  renderCustomSetupStatus();
   saveConfig(formValues());
 }
 
@@ -1059,27 +1313,29 @@ async function refreshPresets() {
 
 async function refreshState() {
   const payload = await api('/api/state', { method: 'GET' });
-  populateForm(payload.state?.config);
-  applyPreferredSerialPort();
+  if (!hostFormDirty) {
+    populateForm(payload.state?.config);
+    applyPreferredSerialPort();
+    consoleState.midiToOscMappings = clone(
+      payload.state?.config?.midiToOscMappings || [],
+    );
+    renderMappingList();
+  }
   updateStatus(payload.state);
-  consoleState.midiToOscMappings = clone(
-    payload.state?.config?.midiToOscMappings || [],
-  );
-  renderMappingList();
   return payload.state;
 }
 
 async function refreshPorts() {
   const payload = await api('/api/ports', { method: 'GET' });
   renderPorts(payload.ports);
-  applyPreferredSerialPort(payload.ports);
+  if (!hostFormDirty) applyPreferredSerialPort(payload.ports);
   return payload.ports;
 }
 
 async function refreshMidiPorts() {
   const payload = await api('/api/midi-ports', { method: 'GET' });
   renderMidiPorts(payload);
-  applyPreferredMidiPort(payload);
+  if (!hostFormDirty) applyPreferredMidiPort(payload);
   return payload;
 }
 
@@ -1093,6 +1349,10 @@ async function startBridge() {
     body: JSON.stringify(values),
   });
   updateStatus(payload.state);
+  populateForm(payload.state?.config);
+  hostFormDirty = false;
+  customSetupNotice = 'Current host form applied to the Bridge.';
+  renderCustomSetupStatus();
 }
 
 async function stopBridge() {
@@ -1305,7 +1565,28 @@ function bindEvents() {
   addMappingForm.addEventListener('input', renderMappingPreview);
 
   form.addEventListener('input', () => {
+    hostFormDirty = true;
+    customSetupNotice = '';
     saveConfig(formValues());
+    renderCustomSetupStatus();
+  });
+
+  customSetupSelect?.addEventListener('change', () => {
+    consoleState.activeCustomSetupId = customSetupSelect.value;
+    customSetupNotice = selectedCustomSetup()
+      ? 'Selected only; choose Load selected to fill the form.'
+      : 'Enter a name, then save the current host form.';
+    if (selectedCustomSetup()) customSetupName.value = selectedCustomSetup().name;
+    renderCustomSetupStatus();
+  });
+  newCustomSetupButton?.addEventListener('click', beginNewCustomSetup);
+  saveCustomSetupButton?.addEventListener('click', saveCurrentCustomSetup);
+  loadCustomSetupButton?.addEventListener('click', loadSelectedCustomSetup);
+  deleteCustomSetupButton?.addEventListener('click', deleteSelectedCustomSetup);
+  exportCustomSetupsButton?.addEventListener('click', exportCustomSetups);
+  importCustomSetupsInput?.addEventListener('change', () => {
+    const file = importCustomSetupsInput.files?.[0];
+    if (file) importCustomSetups(file);
   });
 
   presetSelect?.addEventListener('change', () => {
@@ -1323,6 +1604,8 @@ function bindEvents() {
 }
 
 async function boot() {
+  consoleState.customSetups = loadCustomSetups();
+  renderCustomSetups();
   populateForm(loadSavedConfig());
   updateMode(loadMode());
   bindEvents();

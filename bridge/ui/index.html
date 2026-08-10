@@ -125,6 +125,29 @@
             <h3>Validation checklist</h3>
             <ul id="recipe-checklist" class="ports-list"></ul>
           </div>
+          <div class="recipe-block custom-setups" aria-labelledby="custom-setups-heading">
+            <h3 id="custom-setups-heading">My host setups</h3>
+            <p class="hint">Saved only in this browser. Loading fills the form but never starts or restarts routing.</p>
+
+            <label for="custom-setup-select">Saved setup</label>
+            <select id="custom-setup-select">
+              <option value="">New setup</option>
+            </select>
+
+            <label for="custom-setup-name">Setup name</label>
+            <input id="custom-setup-name" maxlength="80" placeholder="e.g. Friday show — Ableton" />
+
+            <div class="actions custom-setup-actions">
+              <button id="new-custom-setup" type="button">New</button>
+              <button id="save-custom-setup" type="button">Save current</button>
+              <button id="load-custom-setup" type="button">Load selected</button>
+              <button id="delete-custom-setup" class="action-danger" type="button">Delete</button>
+              <button id="export-custom-setups" type="button">Export JSON</button>
+              <label class="button-label" for="import-custom-setups">Import JSON</label>
+              <input id="import-custom-setups" class="sr-only" type="file" accept="application/json,.json" />
+            </div>
+            <p id="custom-setup-status" class="hint" aria-live="polite">No custom setup selected.</p>
+          </div>
         </section>
       </section>
 
@@ -177,7 +200,7 @@
       </section>
       <section class="panel-grid">
         <section class="panel" aria-labelledby="mapping-list-heading">
-          <h2 id="mapping-list-heading">Active MIDI-to-OSC Mappings</h2>
+          <h2 id="mapping-list-heading">Current mapping draft</h2>
           <table class="mapping-table">
             <thead>
               <tr>
@@ -192,8 +215,9 @@
               <!-- Dynamically populated -->
             </tbody>
           </table>
-          <p class="hint">These mappings translate inbound MIDI CC events from host loopback ports into outbound OSC
-            messages. They are additive: the CC still follows its existing typed OSC and device-control lanes.</p>
+          <p class="hint">Add/remove actions apply live. Mappings loaded from a host setup remain a form draft until
+            the Bridge is started with that setup. They are additive: the CC still follows its existing typed OSC and
+            device-control lanes.</p>
         </section>
 
         <section class="panel" aria-labelledby="add-mapping-heading">

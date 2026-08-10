@@ -22,6 +22,7 @@ Inspected surfaces: `bridge/README.md`, `bridge/ui/`, `bridge/lib/http_bridge_se
 - Setup tabs: Setup, Mappings, Stage, Advanced.
 - Connection setup: serial port, MIDI port label, OSC host, OSC send/listen ports, OSC bind.
 - Known-good recipe picker, requirements, and validation checklist.
+- Browser-local named host setups with explicit load, overwrite/delete confirmation, and versioned JSON import/export.
 - Detected serial and MIDI port lists.
 
 ## Controls That Should Be Advanced-Only
@@ -58,3 +59,4 @@ The source already keeps most diagnostics in Advanced mode. The setup form still
   5. Download snapshot if something fails.
 - Added local-only security copy to the default screen.
 - Moved setup guard/timing fields into an `Advanced setup` disclosure so the simple path is dominant while advanced controls remain available.
+- Added browser-local named host setups. Loading remains write-free until the operator deliberately starts the Bridge, and custom setups remain distinct from evidence-backed bundled recipes.
