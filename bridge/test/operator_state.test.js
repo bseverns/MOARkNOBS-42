@@ -2,10 +2,14 @@ const { strict: assert } = require('node:assert');
 
 const {
   activeAlerts,
+  changedSlotIndices,
   describeAuthority,
   describeConfigValidation,
   describeDraft,
+  describeRouteHeartbeats,
   formatTelemetryFreshness,
+  observedSoundcheckLanes,
+  parseSlotTelemetryLine,
 } = require('../ui/operator_state');
 
 function run() {
@@ -65,7 +69,38 @@ function run() {
     'Stage must render active alerts rather than alert history',
   );
 
-  console.log('Bridge operator state distinguishes live truth, recovery, and alert history');
+  const routes = [
+    {
+      flow: 'serial->osc',
+      traceId: 'movement-1',
+      hostTimestampMs: now - 1000,
+    },
+    {
+      flow: 'serial->midi',
+      traceId: 'movement-1',
+      hostTimestampMs: now - 800,
+    },
+    { flow: 'osc->serial', hostTimestampMs: now - 12_000 },
+  ];
+  assert.deepEqual(describeRouteHeartbeats(routes, now), {
+    deviceOsc: { label: 'active now', status: 'ok', recent: true },
+    deviceMidi: { label: 'active now', status: 'ok', recent: true },
+    oscDevice: { label: 'seen 12s ago', status: 'muted', recent: false },
+    midiDevice: { label: 'not seen', status: 'muted', recent: false },
+  });
+  assert.deepEqual(
+    parseSlotTelemetryLine(
+      JSON.stringify({ type: 'telemetry', traceId: 'movement-1', slots: [10, 64] }),
+    ),
+    { traceId: 'movement-1', slots: [10, 64] },
+  );
+  assert.deepEqual(changedSlotIndices([10, 64], [10, 65]), [1]);
+  assert.deepEqual(
+    [...observedSoundcheckLanes(routes, { traceId: 'movement-1' })].sort(),
+    ['deviceMidi', 'deviceOsc'],
+  );
+
+  console.log('Bridge operator state covers truth, route heartbeat, and passive soundcheck');
 }
 
 run();

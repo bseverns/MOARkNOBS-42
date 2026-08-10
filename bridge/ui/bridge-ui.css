@@ -347,6 +347,44 @@ dt {
   font-size: 1rem;
 }
 
+.route-heartbeat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.route-heartbeat {
+  padding: 0.75rem;
+  border: 1px solid rgba(56, 42, 26, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.38);
+  transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.route-heartbeat span,
+.route-heartbeat strong {
+  display: block;
+}
+
+.route-heartbeat span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.route-heartbeat strong {
+  margin-top: 0.3rem;
+}
+
+.route-heartbeat.is-recent {
+  border-color: rgba(31, 122, 74, 0.48);
+  background: rgba(31, 122, 74, 0.1);
+  box-shadow: 0 0 14px rgba(31, 122, 74, 0.18);
+}
+
 .stage-label {
   font-size: 0.72rem;
   font-weight: 700;
@@ -451,7 +489,8 @@ dt {
   .grid-two,
   .midi-port-grid,
   .status-grid,
-  .stage-card-grid {
+  .stage-card-grid,
+  .route-heartbeat-grid {
     grid-template-columns: 1fr;
   }
 }

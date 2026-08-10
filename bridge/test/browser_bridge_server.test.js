@@ -971,6 +971,16 @@ async function run() {
     /operator-state\.js[\s\S]*bridge-ui\.js/,
     'console should load tested operator-state classification before its UI runtime',
   );
+  assert.match(
+    consoleHtml,
+    /Routing heartbeat[\s\S]*Device → OSC[\s\S]*Device → MIDI[\s\S]*OSC → Device[\s\S]*MIDI → Device/,
+    'Stage should expose passive routing heartbeat lanes',
+  );
+  assert.match(
+    consoleHtml,
+    /Start passive soundcheck/,
+    'Stage should expose a write-free guided soundcheck',
+  );
 
   const snapshotResponse = makeRes();
   await server.requestHandler(

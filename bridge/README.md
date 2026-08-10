@@ -113,6 +113,7 @@ Use the browser page to:
 - set the MIDI port label,
 - start or stop the bridge,
 - inspect cached session health in Stage mode,
+- watch recent Device/OSC/MIDI route heartbeats and run a passive, write-free control soundcheck,
 - keep raw serial, route traces, and state JSON in Advanced mode,
 - launch the full configurator over the bridge transport.
 
@@ -128,7 +129,7 @@ After startup, the bridge sends `HELLO`, `GET_MANIFEST`, and `GET_SCHEMA`, then 
 ```
 
 When `HELLO`, manifest, and schema are cached and the normalized config export passes the bundled App schema, the browser console reports the device session as ready. A failed export remains outside `liveConfig`, degrades the handshake, emits a `device_config_schema_invalid` alert, and is shown as an invalid config export in Stage mode.
-The Stage snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus plain-language config-validation, device-authority, draft, telemetry-freshness, and last-apply state. Only currently active alerts appear in its Active alerts list; cleared alert history remains available in snapshots and diagnostic state.
+The Stage snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus plain-language config-validation, device-authority, draft, telemetry-freshness, routing-heartbeat, and last-apply state. Only currently active alerts appear in its Active alerts list; cleared alert history remains available in snapshots and diagnostic state. Its passive soundcheck waits for a slot-value change in raw device telemetry and then confirms which existing OSC/MIDI egress routes carried that same trace; it never sends a test command or changes device state. Use a stable, unmodulated slot because modulation can also produce a legitimate slot-value change.
 
 ## Quick start (CLI)
 

@@ -241,6 +241,32 @@
             still healthy without reading a cockpit during a show.</p>
         </section>
 
+        <section class="panel" aria-labelledby="routing-heartbeat-heading">
+          <h2 id="routing-heartbeat-heading">Routing heartbeat</h2>
+          <div class="route-heartbeat-grid">
+            <article class="route-heartbeat" id="route-device-osc">
+              <span>Device → OSC</span>
+              <strong>not seen</strong>
+            </article>
+            <article class="route-heartbeat" id="route-device-midi">
+              <span>Device → MIDI</span>
+              <strong>not seen</strong>
+            </article>
+            <article class="route-heartbeat" id="route-osc-device">
+              <span>OSC → Device</span>
+              <strong>not seen</strong>
+            </article>
+            <article class="route-heartbeat" id="route-midi-device">
+              <span>MIDI → Device</span>
+              <strong>not seen</strong>
+            </article>
+          </div>
+          <button id="start-soundcheck" type="button" disabled>Start passive soundcheck</button>
+          <p id="soundcheck-status" class="hint" role="status" aria-live="polite">
+            Start a write-free check, then move one stable, unmodulated hardware control.
+          </p>
+        </section>
+
         <section class="panel" aria-labelledby="device-session-heading">
           <h2 id="device-session-heading">Cached device session</h2>
           <dl class="status-grid compact-grid" id="device-session-grid">

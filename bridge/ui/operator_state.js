@@ -3,6 +3,13 @@
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.MN42BridgeOperatorState = api;
 })(typeof globalThis === 'object' ? globalThis : this, () => {
+  const ROUTE_LANES = Object.freeze({
+    'serial->osc': 'deviceOsc',
+    'serial->midi': 'deviceMidi',
+    'osc->serial': 'oscDevice',
+    'midi->serial': 'midiDevice',
+  });
+
   function ageSeconds(isoString, nowMs) {
     const timestamp = new Date(isoString).getTime();
     if (!Number.isFinite(timestamp)) return null;
@@ -71,11 +78,79 @@
     return Array.isArray(state?.alerts?.active) ? state.alerts.active : [];
   }
 
+  function describeRouteHeartbeats(routes = [], nowMs = Date.now()) {
+    const latest = {};
+    routes.forEach((route) => {
+      const lane = ROUTE_LANES[route?.flow];
+      if (!lane) return;
+      const timestamp = Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
+      if (!Number.isFinite(timestamp)) return;
+      if (!latest[lane] || timestamp > latest[lane].timestamp) {
+        latest[lane] = { route, timestamp };
+      }
+    });
+    return Object.fromEntries(
+      Object.values(ROUTE_LANES).map((lane) => {
+        const entry = latest[lane];
+        if (!entry) return [lane, { label: 'not seen', status: 'muted', recent: false }];
+        const age = Math.max(0, Math.floor((nowMs - entry.timestamp) / 1000));
+        if (age <= 3) return [lane, { label: 'active now', status: 'ok', recent: true }];
+        if (age < 60) return [lane, { label: `seen ${age}s ago`, status: 'muted', recent: false }];
+        return [
+          lane,
+          { label: `seen ${Math.floor(age / 60)}m ago`, status: 'muted', recent: false },
+        ];
+      }),
+    );
+  }
+
+  function parseSlotTelemetryLine(line) {
+    try {
+      const payload = JSON.parse(String(line || '').trim());
+      if (!Array.isArray(payload?.slots)) return null;
+      return {
+        slots: payload.slots.map((value) => Number(value)),
+        traceId: payload.traceId || payload.trace_id || null,
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function changedSlotIndices(previous = [], current = []) {
+    if (!Array.isArray(previous) || !Array.isArray(current)) return [];
+    const count = Math.min(previous.length, current.length);
+    const changed = [];
+    for (let index = 0; index < count; index += 1) {
+      const before = Number(previous[index]);
+      const after = Number(current[index]);
+      if (Number.isFinite(before) && Number.isFinite(after) && before !== after) changed.push(index);
+    }
+    return changed;
+  }
+
+  function observedSoundcheckLanes(routes = [], detection = {}) {
+    const observed = new Set();
+    routes.forEach((route) => {
+      if (!['serial->osc', 'serial->midi'].includes(route?.flow)) return;
+      const traceMatches = detection.traceId && route?.traceId === detection.traceId;
+      const timestamp = Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
+      const timeMatches = !detection.traceId && Number.isFinite(timestamp) &&
+        timestamp >= Number(detection.detectedAt || detection.startedAt || 0) - 1000;
+      if (traceMatches || timeMatches) observed.add(ROUTE_LANES[route.flow]);
+    });
+    return observed;
+  }
+
   return {
     activeAlerts,
+    changedSlotIndices,
     describeAuthority,
     describeConfigValidation,
     describeDraft,
+    describeRouteHeartbeats,
     formatTelemetryFreshness,
+    observedSoundcheckLanes,
+    parseSlotTelemetryLine,
   };
 });

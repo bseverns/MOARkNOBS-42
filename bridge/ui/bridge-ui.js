@@ -10,7 +10,11 @@ const {
   describeAuthority,
   describeConfigValidation,
   describeDraft,
+  describeRouteHeartbeats,
   formatTelemetryFreshness,
+  observedSoundcheckLanes,
+  parseSlotTelemetryLine,
+  changedSlotIndices,
 } = window.MN42BridgeOperatorState;
 
 const form = document.getElementById('bridge-form');
@@ -47,6 +51,15 @@ const stageRefreshStateButton = document.getElementById('stage-refresh-state');
 const stageRecoveryNeeded = document.getElementById('stage-recovery-needed');
 const addMappingForm = document.getElementById('add-mapping-form');
 const mappingListBody = document.getElementById('mapping-list-body');
+const startSoundcheckButton = document.getElementById('start-soundcheck');
+const soundcheckStatus = document.getElementById('soundcheck-status');
+
+const routeHeartbeatNodes = {
+  deviceOsc: document.getElementById('route-device-osc'),
+  deviceMidi: document.getElementById('route-device-midi'),
+  oscDevice: document.getElementById('route-osc-device'),
+  midiDevice: document.getElementById('route-midi-device'),
+};
 
 const modeTabs = [...document.querySelectorAll('.mode-tab')];
 const modeViews = [...document.querySelectorAll('[data-mode-view]')];
@@ -112,6 +125,8 @@ let latestPorts = [];
 let latestMidiPorts = { inputs: [], outputs: [] };
 let rawSocket = null;
 let eventSocket = null;
+let soundcheck = null;
+const SOUNDCHECK_WINDOW_MS = 15_000;
 
 function loadSavedConfig() {
   try {
@@ -269,6 +284,95 @@ function renderRouteOutput(routes = []) {
     .join('\n');
 }
 
+function finishSoundcheck() {
+  if (!soundcheck) return;
+  window.clearTimeout(soundcheck.timer);
+  const observed = soundcheck.observed;
+  if (!soundcheck.detection) {
+    soundcheckStatus.textContent =
+      'No slot-value change detected. Confirm live telemetry and try again.';
+  } else if (observed.has('deviceOsc') && observed.has('deviceMidi')) {
+    soundcheckStatus.textContent =
+      'Soundcheck complete: the detected slot change reached both OSC and MIDI.';
+  } else {
+    const seen = [
+      observed.has('deviceOsc') ? 'OSC observed' : 'OSC not observed',
+      observed.has('deviceMidi') ? 'MIDI observed' : 'MIDI not observed',
+    ];
+    soundcheckStatus.textContent = `Soundcheck finished: ${seen.join('; ')}.`;
+  }
+  soundcheck = null;
+  startSoundcheckButton.textContent = 'Start passive soundcheck';
+  updateButtons(consoleState.bridge || {});
+}
+
+function renderRoutingHeartbeat(routes = []) {
+  const heartbeat = describeRouteHeartbeats(routes);
+  Object.entries(routeHeartbeatNodes).forEach(([lane, card]) => {
+    if (!card) return;
+    const description = heartbeat[lane];
+    renderOperatorStatus(card.querySelector('strong'), description);
+    card.classList.toggle('is-recent', Boolean(description?.recent));
+  });
+
+  if (!soundcheck?.detection) return;
+  soundcheck.observed = observedSoundcheckLanes(routes, soundcheck.detection);
+  if (
+    soundcheck.observed.has('deviceOsc') &&
+    soundcheck.observed.has('deviceMidi')
+  ) {
+    finishSoundcheck();
+  }
+}
+
+function latestSlotTelemetry() {
+  for (let index = consoleState.rawLines.length - 1; index >= 0; index -= 1) {
+    const telemetry = parseSlotTelemetryLine(consoleState.rawLines[index]);
+    if (telemetry) return telemetry;
+  }
+  return null;
+}
+
+function observeSoundcheckTelemetry(line) {
+  if (!soundcheck || soundcheck.detection) return;
+  const telemetry = parseSlotTelemetryLine(line);
+  if (!telemetry) return;
+  if (!soundcheck.baseline) {
+    soundcheck.baseline = telemetry.slots;
+    soundcheckStatus.textContent =
+      'Telemetry baseline captured. Move one stable, unmodulated hardware control now.';
+    return;
+  }
+  const changed = changedSlotIndices(soundcheck.baseline, telemetry.slots);
+  soundcheck.baseline = telemetry.slots;
+  if (!changed.length) return;
+  soundcheck.detection = {
+    traceId: telemetry.traceId,
+    detectedAt: Date.now(),
+    startedAt: soundcheck.startedAt,
+  };
+  soundcheckStatus.textContent = `Slot ${changed[0] + 1} telemetry changed. Confirming OSC and MIDI routes…`;
+  renderRoutingHeartbeat(consoleState.bridge?.routes || []);
+}
+
+function startPassiveSoundcheck() {
+  if (soundcheck) return;
+  const baseline = latestSlotTelemetry();
+  soundcheck = {
+    active: true,
+    startedAt: Date.now(),
+    baseline: baseline?.slots || null,
+    detection: null,
+    observed: new Set(),
+    timer: window.setTimeout(finishSoundcheck, SOUNDCHECK_WINDOW_MS),
+  };
+  startSoundcheckButton.textContent = 'Soundcheck listening…';
+  soundcheckStatus.textContent = baseline
+    ? 'Listening. Move one stable, unmodulated hardware control now.'
+    : 'Waiting for a telemetry baseline. Keep the device connected.';
+  updateButtons(consoleState.bridge || {});
+}
+
 function renderRawSerialOutput() {
   if (!rawSerialOutput) return;
   rawSerialOutput.textContent = consoleState.rawLines.length
@@ -348,6 +452,10 @@ function updateButtons(state) {
   openConfiguratorButton.disabled = !running;
   if (stageOpenConfiguratorButton) {
     stageOpenConfiguratorButton.disabled = !running;
+  }
+  if (startSoundcheckButton) {
+    startSoundcheckButton.disabled =
+      !running || !state?.serialConnected || Boolean(soundcheck);
   }
 }
 
@@ -543,6 +651,7 @@ function updateStatus(state) {
   updateButtons(state);
   updateSession(state?.deviceSession || {});
   renderRouteOutput(state?.routes || []);
+  renderRoutingHeartbeat(state?.routes || []);
   renderRawSerialOutput();
   renderStateJson(state);
   renderMappingOutput(state);
@@ -907,6 +1016,7 @@ function connectRawSocket() {
     const text = String(event.data || '').trim();
     if (!text) return;
     pushLimited(consoleState.rawLines, text, RAW_LINE_LIMIT);
+    observeSoundcheckTelemetry(text);
     renderRawSerialOutput();
   });
   rawSocket.addEventListener('close', () => {
@@ -1023,6 +1133,7 @@ function bindEvents() {
   });
   openConfiguratorButton.addEventListener('click', openConfigurator);
   stageOpenConfiguratorButton?.addEventListener('click', openConfigurator);
+  startSoundcheckButton?.addEventListener('click', startPassiveSoundcheck);
 
   form.addEventListener('input', () => {
     saveConfig(formValues());

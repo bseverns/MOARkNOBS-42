@@ -54,6 +54,7 @@ In the screenshot above, the simulated device is connected, `Device` is `ready`,
 
 - `Bridge`, `Serial`, and `Device` show whether the desktop runtime is running, whether the serial link is up, and whether the device session is actually ready.
 - `Telemetry` reports `live`, `delayed`, `stale`, or the relevant stopped/disconnected state instead of presenting an old timestamp as current activity. `RT p95` and `Jitter p95` summarize whether round-trip timing is staying inside configured targets.
+- `Routing heartbeat` shows the most recent Device → OSC, Device → MIDI, OSC → Device, and MIDI → Device routes. Recently observed lanes pulse; older lanes report how long ago they were seen.
 - `Cached device session` shows the last known firmware identity, schema version/source, power profile, LED cap, rail state, config-export validation, device truth, draft state, and last apply result.
 - `Operator actions` keeps only the show-safe actions visible:
   - `Open configurator`
@@ -61,6 +62,12 @@ In the screenshot above, the simulated device is connected, `Device` is `ready`,
   - `Refresh state`
 
 When validation fails, a draft is staged, or device authority differs from the candidate, Stage changes the App action to `Open App to resolve` and explains why the cached state needs attention.
+
+### Passive Soundcheck
+
+`Start passive soundcheck` is write-free. It captures a live slot-telemetry baseline, asks the performer to move one stable, unmodulated hardware control, detects the next slot-value change, and checks whether matching route traces reached OSC and MIDI. It does not generate MIDI notes, OSC commands, slot writes, or synthetic device movement. LFO or envelope modulation can also change slot telemetry, so use a stable slot when you want the result to correspond to a deliberate physical move.
+
+The result reports OSC and MIDI independently. A missing lane means only that the Bridge did not observe that route during the check; confirm the selected host recipe, destination availability, and Advanced route trace before treating it as a hardware fault.
 
 ### What “Session Ready” Means
 
