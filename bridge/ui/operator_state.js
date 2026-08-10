@@ -158,6 +158,62 @@
     return messages[action] || '';
   }
 
+  function latestLearnableMidiCc(routes = [], afterMs = 0) {
+    for (let index = routes.length - 1; index >= 0; index -= 1) {
+      const route = routes[index];
+      if (route?.flow !== 'midi->serial') continue;
+      if (
+        !['command', 'drop_invalid', 'drop_parameter_control'].includes(
+          route?.kind,
+        )
+      ) {
+        continue;
+      }
+      const observedAt =
+        Number(route?.hostTimestampMs) || new Date(route?.at).getTime();
+      if (!Number.isFinite(observedAt) || observedAt < afterMs) continue;
+      const status = Number(route?.status);
+      const controller = Number(route?.slot);
+      const value = Number(route?.value);
+      if (!Number.isInteger(status) || (status & 0xf0) !== 0xb0) continue;
+      if (
+        !Number.isInteger(controller) ||
+        controller < 0 ||
+        controller > 127
+      ) {
+        continue;
+      }
+      return {
+        channel: (status & 0x0f) + 1,
+        controller,
+        value: Number.isFinite(value) ? value : null,
+        observedAt,
+      };
+    }
+    return null;
+  }
+
+  function recentOscAddresses(routes = [], limit = 8) {
+    const addresses = [];
+    const seen = new Set();
+    for (let index = routes.length - 1; index >= 0; index -= 1) {
+      const route = routes[index];
+      if (!String(route?.flow || '').endsWith('->osc')) continue;
+      const address = String(route?.address || '').trim();
+      if (
+        !address.startsWith('/') ||
+        address.startsWith('/mn42/') ||
+        seen.has(address)
+      ) {
+        continue;
+      }
+      seen.add(address);
+      addresses.push(address);
+      if (addresses.length >= limit) break;
+    }
+    return addresses;
+  }
+
   return {
     activeAlerts,
     changedSlotIndices,
@@ -167,8 +223,10 @@
     describeRouteHeartbeats,
     formatTelemetryFreshness,
     isActionVisibleInMode,
+    latestLearnableMidiCc,
     observedSoundcheckLanes,
     operatorConfirmationMessage,
     parseSlotTelemetryLine,
+    recentOscAddresses,
   };
 });

@@ -9,9 +9,11 @@ const {
   describeRouteHeartbeats,
   formatTelemetryFreshness,
   isActionVisibleInMode,
+  latestLearnableMidiCc,
   observedSoundcheckLanes,
   operatorConfirmationMessage,
   parseSlotTelemetryLine,
+  recentOscAddresses,
 } = require('../ui/operator_state');
 
 function run() {
@@ -105,8 +107,44 @@ function run() {
   assert.equal(isActionVisibleInMode('setup mappings advanced', 'stage'), false);
   assert.match(operatorConfirmationMessage('stop'), /routing.*disconnect/i);
   assert.match(operatorConfirmationMessage('clearAlerts'), /unresolved conditions.*raise again/i);
+  assert.deepEqual(
+    latestLearnableMidiCc(
+      [
+        {
+          flow: 'midi->serial',
+          kind: 'drop_feedback',
+          status: 0xb0,
+          slot: 4,
+          value: 60,
+          hostTimestampMs: now - 100,
+        },
+        {
+          flow: 'midi->serial',
+          kind: 'command',
+          status: 0xb2,
+          slot: 21,
+          value: 91,
+          hostTimestampMs: now,
+        },
+      ],
+      now - 1000,
+    ),
+    { channel: 3, controller: 21, value: 91, observedAt: now },
+    'MIDI learn should capture intentional CC input and ignore feedback drops',
+  );
+  assert.equal(latestLearnableMidiCc(routes, now + 1), null);
+  assert.deepEqual(
+    recentOscAddresses([
+      { flow: 'serial->osc', address: '/mn42/slots' },
+      { flow: 'midi->osc', address: '/show/filter' },
+      { flow: 'serial->osc', address: '/mn42/slots' },
+      { flow: 'osc->serial', address: '/mn42/cmd' },
+    ]),
+    ['/show/filter'],
+    'OSC suggestions should be recent, unique custom outbound destinations',
+  );
 
-  console.log('Bridge operator state covers truth, route heartbeat, soundcheck, and show safety');
+  console.log('Bridge operator state covers truth, soundcheck, show safety, and mapping learn');
 }
 
 run();

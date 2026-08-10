@@ -152,6 +152,29 @@
 
     <section class="mode-view" data-mode-view="mappings" aria-labelledby="mappings-heading" hidden>
       <h2 id="mappings-heading" class="sr-only">Mappings mode</h2>
+      <section class="panel mapping-learn-panel" aria-labelledby="mapping-learn-heading">
+        <h2 id="mapping-learn-heading">Learn a MIDI → OSC mapping</h2>
+        <p class="hint">This listener is passive: it observes the next inbound MIDI CC and recent OSC output
+          addresses. It does not send a MIDI, OSC, or device command.</p>
+        <div class="mapping-learn-grid">
+          <div>
+            <h3>1. Move a MIDI control</h3>
+            <button id="start-mapping-learn" type="button">Listen for MIDI CC</button>
+            <p id="mapping-learn-status" class="hint" aria-live="polite">Start the Bridge, then listen and move
+              one knob, fader, or pedal.</p>
+          </div>
+          <div>
+            <h3>2. Choose the OSC destination</h3>
+            <label for="recent-osc-address">Recently observed custom address</label>
+            <select id="recent-osc-address">
+              <option value="">No OSC addresses observed yet</option>
+            </select>
+            <p class="hint">Choose a custom address already seen on the outbound OSC lane, or type one below.
+              Built-in /mn42/* addresses are reserved for their documented payloads.</p>
+          </div>
+        </div>
+        <p id="mapping-preview" class="mapping-preview" aria-live="polite">No mapping ready yet.</p>
+      </section>
       <section class="panel-grid">
         <section class="panel" aria-labelledby="mapping-list-heading">
           <h2 id="mapping-list-heading">Active MIDI-to-OSC Mappings</h2>
@@ -170,11 +193,11 @@
             </tbody>
           </table>
           <p class="hint">These mappings translate inbound MIDI CC events from host loopback ports into outbound OSC
-            messages.</p>
+            messages. They are additive: the CC still follows its existing typed OSC and device-control lanes.</p>
         </section>
 
         <section class="panel" aria-labelledby="add-mapping-heading">
-          <h2 id="add-mapping-heading">Add Mapping</h2>
+          <h2 id="add-mapping-heading">Review and add mapping</h2>
           <form id="add-mapping-form">
             <label for="map-id">Mapping ID</label>
             <input id="map-id" name="id" placeholder="e.g. master-filter" required />
@@ -200,7 +223,7 @@
             </select>
 
             <div class="actions">
-              <button type="submit">Add mapping</button>
+              <button type="submit">Confirm and add mapping</button>
             </div>
           </form>
         </section>

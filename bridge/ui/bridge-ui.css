@@ -236,6 +236,31 @@ dt {
   margin: 0.4rem 0 0;
 }
 
+.mapping-learn-panel {
+  margin-bottom: 1rem;
+}
+
+.mapping-learn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.mapping-learn-grid > div {
+  padding: 0.9rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+.mapping-preview {
+  margin-bottom: 0;
+  padding: 0.8rem;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  font-family: var(--font-mono);
+}
+
 .stacked-actions {
   margin-top: 0;
 }

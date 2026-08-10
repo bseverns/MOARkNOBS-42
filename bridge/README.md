@@ -201,6 +201,8 @@ Current custom mapping support is intentionally narrow:
 - `address` is the outbound OSC address to emit
 - `valueMode` is `raw` (`0..127`) or `normalized` (`0.0..1.0`)
 
+The browser console's Mappings mode can learn the next inbound MIDI CC, suggest recently observed custom outbound OSC addresses, and preview the result before confirmation. It excludes reserved `/mn42/*` addresses from suggestions. The learn listener is passive, while the confirmed mapping is additive to the CC's existing typed OSC and device-control lanes. Confirmed mapping additions and removals use `POST /api/mappings` to update live Bridge routing without restarting the serial, MIDI, or OSC transports.
+
 ## Everyday workflows
 
 ### OSC workflow (TouchOSC, Max, Pd, custom apps)
@@ -373,6 +375,7 @@ Operator API add-on:
 
 - `POST /api/performance/reset` clears rolling round-trip samples/counters without disconnecting transports.
 - `POST /api/alerts/clear` clears currently active alerts without touching metrics history.
+- `POST /api/mappings` replaces the custom MIDI-to-OSC mapping list without restarting live transports.
 - `GET /api/state/snapshot` downloads a timestamped JSON snapshot of runtime metadata + current bridge state.
 
 The console accepts the same serial/OSC/MIDI settings as the CLI, plus:

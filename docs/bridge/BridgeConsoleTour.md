@@ -44,6 +44,17 @@ The serial chooser is intentionally simple:
 - If the board appears as `/dev/tty.*` on macOS, the console will prefer the matching `/dev/cu.*` path for you.
 - If nothing is detected, you can still type the port path manually and start the Bridge.
 
+## Mappings Mode
+
+Mappings mode provides a guided, passive MIDI-learn path for custom MIDI CC → OSC routing:
+
+1. Start the Bridge and select `Listen for MIDI CC`.
+2. Move one knob, fader, or pedal. The console captures its channel and CC number from the inbound route trace; feedback-suppressed echoes are ignored.
+3. Choose a recently observed custom outbound OSC address or type the destination required by your host patch. The learner excludes the reserved `/mn42/*` namespace because those addresses have documented payload contracts.
+4. Review the inline mapping summary and select `Confirm and add mapping`.
+
+Learning does not emit MIDI, OSC, or device writes. Adding or removing a confirmed mapping updates the live Bridge routing configuration without restarting transports. A custom mapping is additive: its inbound CC still follows the existing typed OSC and device-control lanes. Custom mappings remain intentionally limited to MIDI CC input and OSC output; use the Advanced route trace when you need to verify a more complex typed-event path.
+
 ## Stage Mode
 
 ![Bridge console Stage mode with connection-health cards, cached device session, and operator actions](../images/bridge-stage-mode.png)

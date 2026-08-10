@@ -6,6 +6,7 @@ const { createBrowserBridgeServer } = require('../lib/http_bridge_server');
 
 function makeFakeService() {
   const events = new EventEmitter();
+  const configureCalls = [];
   const state = {
     running: false,
     serialConnected: false,
@@ -125,6 +126,7 @@ function makeFakeService() {
   };
   const sentLines = [];
   return {
+    configureCalls,
     sentLines,
     async listSerialPorts() {
       return [
@@ -154,7 +156,8 @@ function makeFakeService() {
         ],
       };
     },
-    async configure(nextConfig = {}) {
+    async configure(nextConfig = {}, options = {}) {
+      configureCalls.push({ nextConfig, options });
       state.config = { ...state.config, ...nextConfig };
       events.emit('state', this.getState());
       return this.getState();
@@ -983,6 +986,11 @@ async function run() {
   );
   assert.match(
     consoleHtml,
+    /Learn a MIDI → OSC mapping[\s\S]*Listen for MIDI CC[\s\S]*Recently observed custom address[\s\S]*Confirm and add mapping/,
+    'Mappings should expose a guided passive learn and explicit review flow',
+  );
+  assert.match(
+    consoleHtml,
     /id="stop-bridge" class="action-danger" data-console-modes="setup mappings stage advanced"/,
     'Stop should remain available in every mode while looking destructive',
   );
@@ -991,6 +999,53 @@ async function run() {
     /id="reset-metrics" data-console-modes="advanced"[\s\S]*id="clear-alerts" data-console-modes="advanced"/,
     'diagnostic reset and acknowledgement actions should stay in Advanced',
   );
+
+  const mappingResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/mappings',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        midiToOscMappings: [
+          {
+            id: 'learned-filter',
+            controller: 21,
+            channel: 3,
+            address: '/show/filter',
+            valueMode: 'normalized',
+          },
+        ],
+      }),
+    }),
+    mappingResponse,
+  );
+  assert.equal(mappingResponse.statusCode, 200);
+  assert.deepEqual(service.configureCalls.at(-1)?.options, { restart: false });
+  assert.deepEqual(
+    service.getState().config.midiToOscMappings,
+    [
+      {
+        id: 'learned-filter',
+        controller: 21,
+        channel: 3,
+        address: '/show/filter',
+        valueMode: 'normalized',
+      },
+    ],
+    'mapping edits should become live Bridge config without restarting transports',
+  );
+  const invalidMappingResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/mappings',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ midiToOscMappings: 'not-an-array' }),
+    }),
+    invalidMappingResponse,
+  );
+  assert.equal(invalidMappingResponse.statusCode, 400);
 
   const snapshotResponse = makeRes();
   await server.requestHandler(

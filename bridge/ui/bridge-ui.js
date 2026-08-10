@@ -13,9 +13,11 @@ const {
   describeRouteHeartbeats,
   formatTelemetryFreshness,
   isActionVisibleInMode,
+  latestLearnableMidiCc,
   observedSoundcheckLanes,
   operatorConfirmationMessage,
   parseSlotTelemetryLine,
+  recentOscAddresses,
   changedSlotIndices,
 } = window.MN42BridgeOperatorState;
 
@@ -55,6 +57,10 @@ const addMappingForm = document.getElementById('add-mapping-form');
 const mappingListBody = document.getElementById('mapping-list-body');
 const startSoundcheckButton = document.getElementById('start-soundcheck');
 const soundcheckStatus = document.getElementById('soundcheck-status');
+const startMappingLearnButton = document.getElementById('start-mapping-learn');
+const mappingLearnStatus = document.getElementById('mapping-learn-status');
+const recentOscAddressSelect = document.getElementById('recent-osc-address');
+const mappingPreview = document.getElementById('mapping-preview');
 
 const routeHeartbeatNodes = {
   deviceOsc: document.getElementById('route-device-osc'),
@@ -129,7 +135,9 @@ let latestMidiPorts = { inputs: [], outputs: [] };
 let rawSocket = null;
 let eventSocket = null;
 let soundcheck = null;
+let mappingLearn = null;
 const SOUNDCHECK_WINDOW_MS = 15_000;
+const MAPPING_LEARN_WINDOW_MS = 10_000;
 
 function loadSavedConfig() {
   try {
@@ -402,6 +410,113 @@ function renderMappingOutput(state = {}) {
   });
 }
 
+function mappingFormValue() {
+  const data = new FormData(addMappingForm);
+  return {
+    id: String(data.get('id') || '').trim(),
+    controller: Number.parseInt(data.get('controller'), 10),
+    channel: data.get('channel')
+      ? Number.parseInt(data.get('channel'), 10)
+      : null,
+    address: String(data.get('address') || '').trim(),
+    valueMode: data.get('valueMode') || 'raw',
+  };
+}
+
+function renderMappingPreview() {
+  if (!mappingPreview) return;
+  const mapping = mappingFormValue();
+  if (!mapping.id || !Number.isInteger(mapping.controller) || !mapping.address) {
+    mappingPreview.textContent = 'No mapping ready yet.';
+    return;
+  }
+  mappingPreview.textContent = `${mapping.id}: MIDI Ch ${
+    mapping.channel || 'any'
+  } CC ${mapping.controller} → ${mapping.address} (${mapping.valueMode})`;
+}
+
+function renderRecentOscAddresses(routes = []) {
+  if (!recentOscAddressSelect) return;
+  const selected = recentOscAddressSelect.value;
+  const addresses = recentOscAddresses(routes);
+  recentOscAddressSelect.textContent = '';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = addresses.length
+    ? 'Choose a recent OSC address'
+    : 'No OSC addresses observed yet';
+  recentOscAddressSelect.appendChild(placeholder);
+  addresses.forEach((address) => {
+    const option = document.createElement('option');
+    option.value = address;
+    option.textContent = address;
+    recentOscAddressSelect.appendChild(option);
+  });
+  if (addresses.includes(selected)) recentOscAddressSelect.value = selected;
+}
+
+function finishMappingLearn(message) {
+  if (!mappingLearn) return;
+  window.clearTimeout(mappingLearn.timer);
+  mappingLearn = null;
+  startMappingLearnButton.textContent = 'Listen for MIDI CC';
+  mappingLearnStatus.textContent = message;
+  updateButtons(consoleState.bridge || {});
+}
+
+function observeMappingLearnRoutes(routes = []) {
+  if (!mappingLearn) return;
+  const learned = latestLearnableMidiCc(routes, mappingLearn.startedAt);
+  if (!learned) return;
+  addMappingForm.elements.namedItem('controller').value = String(
+    learned.controller,
+  );
+  addMappingForm.elements.namedItem('channel').value = String(learned.channel);
+  const idField = addMappingForm.elements.namedItem('id');
+  if (!idField.value.trim()) {
+    idField.value = `cc-${learned.controller}-ch-${learned.channel}`;
+  }
+  renderMappingPreview();
+  finishMappingLearn(
+    `Captured channel ${learned.channel}, CC ${learned.controller}, value ${
+      learned.value ?? 'unknown'
+    }. Choose or type an OSC address, then review the mapping.`,
+  );
+}
+
+function startMappingLearn() {
+  if (mappingLearn) return;
+  mappingLearn = {
+    startedAt: Date.now(),
+    timer: window.setTimeout(
+      () =>
+        finishMappingLearn(
+          'No inbound MIDI CC detected. Check the selected MIDI input and try again.',
+        ),
+      MAPPING_LEARN_WINDOW_MS,
+    ),
+  };
+  startMappingLearnButton.textContent = 'Listening for MIDI…';
+  mappingLearnStatus.textContent =
+    'Listening. Move one MIDI knob, fader, or pedal now.';
+  updateButtons(consoleState.bridge || {});
+}
+
+async function commitMappings(mappings) {
+  const payload = await api('/api/mappings', {
+    method: 'POST',
+    body: JSON.stringify({ midiToOscMappings: mappings }),
+  });
+  updateStatus(payload.state);
+  consoleState.midiToOscMappings = clone(
+    payload.state?.config?.midiToOscMappings || [],
+  );
+  renderMappingList();
+  renderMappingOutput(payload.state || {});
+  saveConfig(formValues());
+  return consoleState.midiToOscMappings;
+}
+
 function renderMappingList() {
   if (!mappingListBody) return;
   mappingListBody.textContent = '';
@@ -433,12 +548,23 @@ function renderMappingList() {
   });
 
   mappingListBody.querySelectorAll('.remove-mapping').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const index = parseInt(btn.dataset.index, 10);
-      consoleState.midiToOscMappings.splice(index, 1);
-      renderMappingList();
-      renderMappingOutput(consoleState.bridge || {});
-      saveConfig(formValues());
+      const mapping = consoleState.midiToOscMappings[index];
+      if (!window.confirm(`Remove mapping “${mapping?.id || index + 1}”?`)) {
+        return;
+      }
+      try {
+        await commitMappings(
+          consoleState.midiToOscMappings.filter(
+            (_, entryIndex) => entryIndex !== index,
+          ),
+        );
+        summaryStatus.textContent =
+          'Mapping removed without restarting routing.';
+      } catch (error) {
+        summaryStatus.textContent = `Mapping removal failed: ${error.message}`;
+      }
     });
   });
 }
@@ -459,6 +585,9 @@ function updateButtons(state) {
   if (startSoundcheckButton) {
     startSoundcheckButton.disabled =
       !running || !state?.serialConnected || Boolean(soundcheck);
+  }
+  if (startMappingLearnButton) {
+    startMappingLearnButton.disabled = !running || Boolean(mappingLearn);
   }
 }
 
@@ -658,6 +787,8 @@ function updateStatus(state) {
   updateSession(state?.deviceSession || {});
   renderRouteOutput(state?.routes || []);
   renderRoutingHeartbeat(state?.routes || []);
+  renderRecentOscAddresses(state?.routes || []);
+  observeMappingLearnRoutes(state?.routes || []);
   renderRawSerialOutput();
   renderStateJson(state);
   renderMappingOutput(state);
@@ -1043,6 +1174,9 @@ function connectStructuredSocket() {
         payload,
         STRUCTURED_EVENT_LIMIT,
       );
+      if (payload?.event === 'route') {
+        observeMappingLearnRoutes([payload.payload]);
+      }
       renderStateJson(consoleState.bridge);
     } catch (_) {
       // ignore malformed structured frames in the UI
@@ -1054,24 +1188,41 @@ function connectStructuredSocket() {
 }
 
 function bindEvents() {
-  addMappingForm.addEventListener('submit', (e) => {
+  addMappingForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = new FormData(addMappingForm);
-    const mapping = {
-      id: String(data.get('id') || '').trim(),
-      controller: parseInt(data.get('controller'), 10),
-      channel: data.get('channel') ? parseInt(data.get('channel'), 10) : null,
-      address: String(data.get('address') || '').trim(),
-      valueMode: data.get('valueMode') || 'raw',
-    };
-    if (!mapping.id || Number.isNaN(mapping.controller) || !mapping.address) {
+    const mapping = mappingFormValue();
+    if (
+      !mapping.id ||
+      !Number.isInteger(mapping.controller) ||
+      mapping.controller < 0 ||
+      mapping.controller > 127 ||
+      !mapping.address.startsWith('/') ||
+      mapping.address.startsWith('/mn42/')
+    ) {
+      mappingLearnStatus.textContent =
+        'Enter an ID, a CC from 0–127, and a custom OSC address beginning with / but outside reserved /mn42/*.';
       return;
     }
-    consoleState.midiToOscMappings.push(mapping);
-    renderMappingList();
-    renderMappingOutput(consoleState.bridge || {});
-    saveConfig(formValues());
-    addMappingForm.reset();
+    const preview = `${mapping.id}: MIDI Ch ${mapping.channel || 'any'} CC ${
+      mapping.controller
+    } → ${mapping.address} (${mapping.valueMode})`;
+    if (
+      !window.confirm(
+        `Add this live mapping without restarting routing?\n\n${preview}`,
+      )
+    ) {
+      return;
+    }
+    try {
+      await commitMappings([...consoleState.midiToOscMappings, mapping]);
+      addMappingForm.reset();
+      renderMappingPreview();
+      mappingLearnStatus.textContent =
+        'Mapping added and active. Routing was not restarted.';
+      summaryStatus.textContent = 'MIDI-to-OSC mapping added live.';
+    } catch (error) {
+      mappingLearnStatus.textContent = `Mapping add failed: ${error.message}`;
+    }
   });
 
   startButton.addEventListener('click', async () => {
@@ -1142,6 +1293,16 @@ function bindEvents() {
   openConfiguratorButton.addEventListener('click', openConfigurator);
   stageOpenConfiguratorButton?.addEventListener('click', openConfigurator);
   startSoundcheckButton?.addEventListener('click', startPassiveSoundcheck);
+  startMappingLearnButton?.addEventListener('click', startMappingLearn);
+
+  recentOscAddressSelect?.addEventListener('change', () => {
+    if (!recentOscAddressSelect.value) return;
+    addMappingForm.elements.namedItem('address').value =
+      recentOscAddressSelect.value;
+    renderMappingPreview();
+  });
+
+  addMappingForm.addEventListener('input', renderMappingPreview);
 
   form.addEventListener('input', () => {
     saveConfig(formValues());

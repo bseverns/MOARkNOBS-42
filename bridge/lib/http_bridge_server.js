@@ -578,6 +578,28 @@ function createBrowserBridgeServer({
       return true;
     }
 
+    if (pathname === '/api/mappings' && req.method === 'POST') {
+      try {
+        const body = await readJson(req, { maxBytes: jsonApiBodyLimit });
+        if (!Array.isArray(body?.midiToOscMappings)) {
+          sendJson(res, 400, {
+            error: 'midiToOscMappings must be an array',
+            state: service.getState(),
+          });
+          return true;
+        }
+        const nextConfig = normalizeConfig({
+          midiToOscMappings: body?.midiToOscMappings,
+        });
+        await service.configure(nextConfig, { restart: false });
+        sendJson(res, 200, { state: service.getState() });
+      } catch (err) {
+        if (sendBodyLimitError(res, err)) return true;
+        sendJson(res, 500, { error: err.message, state: service.getState() });
+      }
+      return true;
+    }
+
     if (pathname === '/api/device/stage' && req.method === 'POST') {
       try {
         const body = await readJson(req, { maxBytes: jsonApiBodyLimit });

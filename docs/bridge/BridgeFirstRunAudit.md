@@ -30,7 +30,7 @@ Inspected surfaces: `bridge/README.md`, `bridge/ui/`, `bridge/lib/http_bridge_se
 - Alert suppression window.
 - Allow feedback loops.
 - RT p95 target and RT jitter p95 target.
-- Mappings tab for custom MIDI-to-OSC mappings.
+- Raw mapping fields remain a power-user surface, while Mappings mode now leads with passive MIDI learn, recent OSC destinations, and an explicit preview/confirmation step.
 - Raw serial/debug lane, route traces, state JSON, and detailed runtime counters.
 
 The source already keeps most diagnostics in Advanced mode. The setup form still exposed guard/timing controls before the operator had even started; that was the biggest first-run friction.
