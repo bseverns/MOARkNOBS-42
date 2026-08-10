@@ -213,6 +213,7 @@ const boot = () => {
   const stageProfileLoadBtn = document.getElementById('stage-profile-load');
   const stageSceneSelect = document.getElementById('stage-scene-select');
   const stageSceneRecallBtn = document.getElementById('stage-scene-recall');
+  const stageDraftBlockedNotice = document.getElementById('stage-draft-blocked');
   const stagePanicHelpBtn = document.getElementById('stage-panic-help');
   const stageSlotGrid = document.getElementById('stage-slots');
   const stageEnvelopeContainer = document.getElementById('stage-envelopes');
@@ -509,6 +510,7 @@ const boot = () => {
       profileLoadBtn: stageProfileLoadBtn,
       sceneSelect: stageSceneSelect,
       sceneRecallBtn: stageSceneRecallBtn,
+      draftBlockedNotice: stageDraftBlockedNotice,
       panicHelpBtn: stagePanicHelpBtn,
       slotGrid: stageSlotGrid,
       envelopeContainer: stageEnvelopeContainer

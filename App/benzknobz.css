@@ -1111,6 +1111,16 @@ main {
   min-height: 42px;
 }
 
+.stage-draft-blocked {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 206, 107, 0.55);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 206, 107, 0.08);
+  color: var(--color-warn);
+  font-weight: 700;
+}
+
 .performer-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);

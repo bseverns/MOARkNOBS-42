@@ -275,6 +275,12 @@ test.describe('Stage mode', () => {
     await page.waitForFunction(() => window.__MN42_RUNTIME?.getState?.().dirty === true);
 
     await expect(page.locator('#stage-dirty-state')).toHaveText('Dirty');
+    await expect(page.locator('#stage-profile-load')).toBeDisabled();
+    await expect(page.locator('#stage-scene-recall')).toBeDisabled();
+    await expect(page.locator('#stage-draft-blocked')).toBeVisible();
+    await expect(page.locator('#stage-draft-blocked')).toContainText(
+      'resolve it in Configure with Apply or Discard'
+    );
     await expect(page.locator('#dirty-badge')).toBeVisible();
     await expect(page.locator('#apply')).toBeHidden();
     await expect(page.locator('#rollback')).toHaveCount(0);

@@ -64,6 +64,7 @@ export function createPerformerPanelController({
     profileLoadBtn = null,
     sceneSelect = null,
     sceneRecallBtn = null,
+    draftBlockedNotice = null,
     panicHelpBtn = null,
     slotGrid = null,
     envelopeContainer = null
@@ -244,6 +245,7 @@ export function createPerformerPanelController({
       dirtyState.textContent = dirtyNow ? 'Dirty' : 'Clean';
       dirtyState.dataset.state = dirtyNow ? 'dirty' : 'clean';
     }
+    if (draftBlockedNotice) draftBlockedNotice.hidden = !dirtyNow;
     if (deviceName) deviceName.textContent = resolveDeviceName?.(manifest) ?? '-';
     if (fwVersion) fwVersion.textContent = resolveFirmwareVersion?.(manifest) ?? 'unknown';
     if (profileSummary) profileSummary.textContent = getProfileText();
@@ -257,11 +259,11 @@ export function createPerformerPanelController({
       profileSelect.value = String(getActiveProfileSlot());
     }
     if (profileLoadBtn) {
-      profileLoadBtn.disabled = Boolean(profileLoadDisabled);
+      profileLoadBtn.disabled = dirtyNow || Boolean(profileLoadDisabled);
       profileLoadBtn.textContent = `Recall Profile ${slotLabel(getActiveProfileSlot())} now`;
     }
     if (sceneRecallBtn) {
-      sceneRecallBtn.disabled = Boolean(sceneRecallDisabled);
+      sceneRecallBtn.disabled = dirtyNow || Boolean(sceneRecallDisabled);
       sceneRecallBtn.textContent = `Recall Scene ${Number(sceneSelect?.value ?? 0) + 1} now`;
     }
   }
