@@ -92,6 +92,10 @@ export function createSimulator(simDeps = {}) {
     profile_count: 4,
     active_profile: activeProfile
   };
+  const slotValues = Array.from(
+    { length: manifest.slot_count },
+    (_, slotIndex) => (slotIndex * 3) % 128
+  );
 
   let config = {
     fw_version: manifest.fw_version,
@@ -270,9 +274,15 @@ export function createSimulator(simDeps = {}) {
       sync_ratio_name: lfoSyncRatioNames[entry.sync_ratio] ?? '-'
     }));
 
+  const nextSlotValues = () => {
+    const activeSlot = index % manifest.slot_count;
+    slotValues[activeSlot] = (slotValues[activeSlot] + 1) % 128;
+    return [...slotValues];
+  };
+
   const telemetry = () => ({
     active_profile: activeProfile,
-    slots: Array.from({ length: manifest.slot_count }, () => Math.floor(Math.random() * 127)),
+    slots: nextSlotValues(),
     slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
       enabled: idx % 2 === 0,
       method: idx % argMethodNames.length,

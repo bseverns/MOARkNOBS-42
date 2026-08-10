@@ -1,6 +1,7 @@
 import { describeSlotModulation, formatSlotModulationTitle } from '../slot_modulation_summary.js';
 
 const PROFILE_SLOT_LABELS = ['A', 'B', 'C', 'D'];
+const SLOT_ACTIVITY_DECAY_MS = 280;
 
 function slotTypeCssToken(type) {
   if (typeof type !== 'string' || !type.trim()) return 'off';
@@ -74,6 +75,24 @@ export function createPerformerPanelController({
   let envMeters = [];
   let renderedSlots = [];
   let latestTelemetry = null;
+  let previousSlotValues = [];
+  let slotActivityTimers = [];
+
+  function resetSlotActivity() {
+    slotActivityTimers.forEach((timer) => clearTimeout(timer));
+    slotActivityTimers = [];
+    previousSlotValues = [];
+    slotCells.forEach((cell) => cell.classList.remove('active'));
+  }
+
+  function pulseSlotActivity(cell, index) {
+    cell.classList.add('active');
+    clearTimeout(slotActivityTimers[index]);
+    slotActivityTimers[index] = setTimeout(() => {
+      cell.classList.remove('active');
+      slotActivityTimers[index] = null;
+    }, SLOT_ACTIVITY_DECAY_MS);
+  }
 
   function refreshSlotFocus() {
     if (!slotFocus) return;
@@ -154,6 +173,7 @@ export function createPerformerPanelController({
       return;
     }
 
+    resetSlotActivity();
     slotGrid.innerHTML = '';
     slotCells = source.map((slot, index) => {
       const cell = document.createElement('button');
@@ -206,10 +226,14 @@ export function createPerformerPanelController({
       const cell = slotCells[idx];
       if (!cell) return;
       const numeric = Number(value);
-      const active = Number.isFinite(numeric) && numeric > 0;
-      cell.classList.toggle('active', active);
+      const previous = previousSlotValues[idx];
+      const valid = Number.isFinite(numeric);
+      if (valid && Number.isFinite(previous) && numeric !== previous) {
+        pulseSlotActivity(cell, idx);
+      }
+      previousSlotValues[idx] = valid ? numeric : null;
       const valueEl = cell.querySelector('.stage-slot-value');
-      if (valueEl) valueEl.textContent = Number.isFinite(numeric) ? String(numeric) : '--';
+      if (valueEl) valueEl.textContent = valid ? String(numeric) : '--';
     });
 
     if (clockState) {

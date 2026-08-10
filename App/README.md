@@ -74,6 +74,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - Every slot now exposes its per-slot envelope follower payload. The editor’s **Envelope Follower** block lets you park a follower index, pick a filter shape, and dial in frequency, Q, oversample count, smoothing, baseline, and gain without leaving the browser.
 - EF assignment rows now use clickable slot chips per follower, so one follower can modulate multiple slots without typing comma-separated indices.
 - Live and Stage slot grids now color-code slot types so CC, Note, program-style, NRPN/RPN, and SysEx lanes are scannable at a glance.
+- Stage slot highlights pulse briefly when telemetry changes; a stationary nonzero value remains readable without looking continuously active.
 - ARG lives per-slot too. The **ARG Combiner** panel flips the enable flag, locks the math method, and routes sources A/B with the same coarse/fine nudging as the hardware encoders.
 - The slot details panel mirrors the new firmware schema: EF index, filter, dynamics, baseline/gain, ARG mode and source map, and both fixed LFO lanes stream live next to the MIDI stats.
 - Live and Stage slot grids show compact configured-source badges (`E#`, `A`, `L1`, and `L2`) so modulated slots remain apparent outside the editor. These badges describe configuration; the numeric slot readout remains the device-reported final value.
