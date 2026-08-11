@@ -217,6 +217,7 @@ const boot = () => {
   const stagePanicHelpBtn = document.getElementById('stage-panic-help');
   const stageSlotGrid = document.getElementById('stage-slots');
   const stageEnvelopeContainer = document.getElementById('stage-envelopes');
+  const stageEnvelopeCount = document.getElementById('stage-envelope-count');
   const logEl = document.getElementById('log');
   const sessionLogCount = document.getElementById('session-log-count');
   const sessionLogExportBtn = document.getElementById('session-log-export');
@@ -512,7 +513,8 @@ const boot = () => {
       draftBlockedNotice: stageDraftBlockedNotice,
       panicHelpBtn: stagePanicHelpBtn,
       slotGrid: stageSlotGrid,
-      envelopeContainer: stageEnvelopeContainer
+      envelopeContainer: stageEnvelopeContainer,
+      envelopeCount: stageEnvelopeCount
     }
   });
   const transportToolbarController = createTransportToolbarController({

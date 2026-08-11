@@ -1263,6 +1263,8 @@ main {
 .stage-slot-modulation {
   grid-area: mods;
   justify-self: end;
+  display: inline-flex;
+  gap: 4px;
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -1281,10 +1283,39 @@ main {
 
 .stage-envelope-list .meter {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr) 32px;
+  grid-template-columns: minmax(92px, auto) minmax(0, 1fr) 32px;
   gap: 10px;
   align-items: center;
   padding: 8px 0;
+}
+
+.stage-envelope-list .meter-label {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.stage-envelope-list .meter-label strong {
+  color: var(--modulation-color, var(--color-accent));
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+}
+
+.stage-envelope-list .meter-label small {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stage-envelope-list .meter[data-state='active'] .meter-state {
+  color: var(--modulation-color, var(--color-accent));
+}
+
+.stage-envelope-list .meter[data-state='inactive'] progress {
+  opacity: 0.42;
 }
 
 .stage-envelope-list progress {
@@ -1454,11 +1485,21 @@ main {
 .slot-modulation {
   grid-area: mods;
   justify-self: end;
+  display: inline-flex;
+  gap: 3px;
   color: var(--color-accent);
   font-family: var(--font-mono);
   font-size: 0.52rem;
   letter-spacing: 0.04em;
   white-space: nowrap;
+}
+
+.modulation-badge {
+  color: var(--modulation-color, var(--color-accent));
+}
+
+.ef-row-label[data-modulation-kind='ef'] {
+  color: var(--modulation-color, var(--color-accent));
 }
 
 .slot-type-legend {
@@ -1555,15 +1596,21 @@ main {
 }
 
 #envelopes progress::-webkit-progress-value {
-  background: var(--color-accent);
+  background: var(--modulation-color, var(--color-accent));
   border-radius: var(--radius-meter);
   transition: width 150ms ease-out, background-color 150ms ease-out;
 }
 
 .stage-envelope-list progress::-webkit-progress-value {
-  background: var(--color-accent);
+  background: var(--modulation-color, var(--color-accent));
   border-radius: var(--radius-meter);
   transition: width 150ms ease-out, background-color 150ms ease-out;
+}
+
+#envelopes progress::-moz-progress-bar,
+.stage-envelope-list progress::-moz-progress-bar {
+  background: var(--modulation-color, var(--color-accent));
+  border-radius: var(--radius-meter);
 }
 
 #slot-details {
@@ -3262,14 +3309,41 @@ label select:focus,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .scope-panel-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
+}
+
+.scope-view-controls {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.scope-view-controls button {
+  min-height: 30px;
+  padding: 5px 9px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+
+.scope-view-controls button[aria-pressed='true'] {
+  border-color: rgba(45, 226, 230, 0.38);
+  background: rgba(45, 226, 230, 0.12);
+  color: var(--color-accent);
 }
 
 .scope-panel canvas {
@@ -3296,6 +3370,10 @@ label select:focus,
   min-width: 0;
 }
 
+.scope-ef-legend {
+  display: contents;
+}
+
 .scope-legend-item {
   min-width: 0;
   padding: 1px 0;
@@ -3305,6 +3383,32 @@ label select:focus,
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+button.scope-legend-item {
+  min-height: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--modulation-color, var(--color-accent));
+  cursor: pointer;
+}
+
+button.scope-legend-item:hover,
+button.scope-legend-item:focus-visible,
+button.scope-legend-item[aria-pressed='true'] {
+  border-color: var(--modulation-color, var(--color-accent));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+button.scope-legend-item[data-state='inactive'] {
+  opacity: 0.48;
+}
+
+button.scope-legend-item[data-state='active']::before {
+  content: '●';
+  margin-right: 4px;
+  font-size: 0.55rem;
 }
 
 .scope-legend-item:not(:last-child)::after {
@@ -3322,16 +3426,12 @@ label select:focus,
   text-align: right;
 }
 
-.scope-legend-item.ef {
-  color: var(--color-accent);
-}
-
 .scope-legend-item.lfo-one {
-  color: rgb(255, 150, 190);
+  color: rgb(255, 95, 150);
 }
 
 .scope-legend-item.lfo-two {
-  color: rgba(255, 255, 255, 0.82);
+  color: rgb(232, 238, 255);
 }
 
 .scope-legend-item.clock[data-state='running'] {
@@ -3345,6 +3445,15 @@ label select:focus,
 }
 
 @media (max-width: 740px) {
+  .scope-panel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scope-panel-actions {
+    justify-content: flex-start;
+  }
+
   .scope-panel-footer {
     grid-template-columns: 1fr;
     align-items: start;

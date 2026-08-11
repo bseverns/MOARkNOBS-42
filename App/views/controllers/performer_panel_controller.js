@@ -1,4 +1,9 @@
-import { describeSlotModulation, formatSlotModulationTitle } from '../slot_modulation_summary.js';
+import {
+  describeSlotModulation,
+  formatSlotModulationTitle,
+  renderSlotModulationBadges
+} from '../slot_modulation_summary.js';
+import { applyModulationIdentity } from '../modulation_identity.js';
 
 const PROFILE_SLOT_LABELS = ['A', 'B', 'C', 'D'];
 const SLOT_ACTIVITY_DECAY_MS = 280;
@@ -15,17 +20,28 @@ function initializeMeters(container, count, labelPrefix) {
   for (let i = 0; i < count; i += 1) {
     const wrap = document.createElement('div');
     wrap.className = 'meter';
+    applyModulationIdentity(wrap, 'ef', i);
     const label = document.createElement('span');
-    label.textContent = `${labelPrefix} ${String(i + 1).padStart(2, '0')}`;
+    label.className = 'meter-label';
+    const name = document.createElement('strong');
+    name.textContent = `${labelPrefix} ${String(i + 1).padStart(2, '0')}`;
+    const state = document.createElement('small');
+    state.className = 'meter-state';
+    state.textContent = 'STATUS --';
+    const routes = document.createElement('small');
+    routes.className = 'meter-routes';
+    routes.textContent = 'No routes';
+    label.append(name, state, routes);
     const progress = document.createElement('progress');
     progress.max = 127;
     progress.value = 0;
+    progress.setAttribute('aria-label', `${labelPrefix} ${i + 1} level`);
     const value = document.createElement('span');
     value.className = 'meter-value';
     value.textContent = '00';
     wrap.append(label, progress, value);
     container.appendChild(wrap);
-    meters.push({ wrap, progress, value });
+    meters.push({ wrap, progress, value, state, routes });
   }
   return meters;
 }
@@ -68,7 +84,8 @@ export function createPerformerPanelController({
     draftBlockedNotice = null,
     panicHelpBtn = null,
     slotGrid = null,
-    envelopeContainer = null
+    envelopeContainer = null,
+    envelopeCount = null
   } = elements;
 
   let slotCells = [];
@@ -99,17 +116,44 @@ export function createPerformerPanelController({
     const index = Math.max(0, Number(getSelectedSlot()) || 0);
     const slot = renderedSlots[index] ?? {};
     const value = latestTelemetry?.slots?.[index];
-    const type = slotTypeAbbreviations[slot?.type] ?? slot?.type ?? 'OFF';
+    const type = slotTypeAbbreviations[slot?.type] ?? slot?.type_name ?? slot?.type ?? 'OFF';
+    const data1 = Number(slot?.data1 ?? slot?.cc ?? slot?.note);
+    const destination = Number.isFinite(data1) && !['OFF', 'PB'].includes(String(type).toUpperCase())
+      ? `${type}${data1}`
+      : type;
     const channel = Number(slot?.midiChannel ?? slot?.channel);
     const channelText = Number.isFinite(channel) ? `Ch ${channel}` : 'No channel';
-    const valueText = Number.isFinite(Number(value)) ? `Value ${Number(value)}` : 'Value --';
+    const valueText = Number.isFinite(Number(value)) ? `OUT ${Number(value)}` : 'OUT --';
     const modulation = describeSlotModulation(slot);
+    const sourceValues = modulation.flatMap((badge) => {
+      const efMatch = badge.match(/^E(\d+)$/);
+      if (efMatch) {
+        const sourceValue = latestTelemetry?.envelopes?.[Number(efMatch[1]) - 1];
+        return [
+          Number.isFinite(Number(sourceValue))
+            ? `${badge} ${Math.round(Number(sourceValue))}`
+            : badge
+        ];
+      }
+      const lfoMatch = badge.match(/^L(\d+)$/);
+      if (lfoMatch) {
+        const sourceValue = latestTelemetry?.lfos?.[Number(lfoMatch[1]) - 1];
+        return [
+          Number.isFinite(Number(sourceValue))
+            ? `${badge} ${Number(sourceValue).toFixed(2)}`
+            : badge
+        ];
+      }
+      return [badge === 'A' ? 'A enabled' : badge];
+    });
     slotFocus.textContent = [
       `Slot ${index + 1}`,
-      type,
+      destination,
       channelText,
       valueText,
-      modulation.length ? modulation.join(' + ') : 'No modulation'
+      ...(sourceValues.length
+        ? sourceValues
+        : [modulation.length ? modulation.join(' + ') : 'No modulation'])
     ].join(' · ');
   }
 
@@ -148,6 +192,34 @@ export function createPerformerPanelController({
 
   function rebuildMeters(count) {
     envMeters = initializeMeters(envelopeContainer, count, 'EF');
+    if (envelopeCount) {
+      envelopeCount.textContent = `${count} ${count === 1 ? 'follower' : 'followers'}`;
+    }
+    refreshEnvelopeRoutes();
+  }
+
+  function refreshEnvelopeRoutes() {
+    const state = runtime?.getState?.() ?? {};
+    const config = state.staged ?? state.live ?? {};
+    const efSlots = Array.isArray(config?.efSlots) ? config.efSlots : [];
+    const slots = Array.isArray(config?.slots) ? config.slots : [];
+    envMeters.forEach((entry, idx) => {
+      const routeEntry = efSlots.find(
+        (candidate, entryIndex) => Number(candidate?.index ?? entryIndex) === idx
+      );
+      const assigned = Array.isArray(routeEntry?.slots)
+        ? new Set(routeEntry.slots.map(Number).filter(Number.isFinite)).size
+        : slots.filter((slot) => {
+            const efIndex = Number(slot?.efIndex ?? slot?.ef_index ?? slot?.ef?.index);
+            return Number.isFinite(efIndex) && Math.round(efIndex) === idx;
+          }).length;
+      entry.routes.textContent = assigned
+        ? `→ ${assigned} ${assigned === 1 ? 'slot' : 'slots'}`
+        : 'No routes';
+      entry.wrap.title = assigned
+        ? `Envelope follower ${idx + 1} routes to ${assigned} ${assigned === 1 ? 'slot' : 'slots'}`
+        : `Envelope follower ${idx + 1} has no configured routes`;
+    });
   }
 
   function renderSlots(slots) {
@@ -162,7 +234,7 @@ export function createPerformerPanelController({
         const modulation = cell.querySelector('.stage-slot-modulation');
         const badges = describeSlotModulation(slot);
         if (modulation) {
-          modulation.textContent = badges.join(' ');
+          renderSlotModulationBadges(modulation, badges);
           modulation.title = formatSlotModulationTitle(badges);
           modulation.setAttribute('aria-hidden', 'true');
         }
@@ -199,7 +271,7 @@ export function createPerformerPanelController({
       const modulation = document.createElement('span');
       modulation.className = 'stage-slot-modulation';
       const badges = describeSlotModulation(slot);
-      modulation.textContent = badges.join(' ');
+      renderSlotModulationBadges(modulation, badges);
       modulation.title = formatSlotModulationTitle(badges);
       modulation.setAttribute('aria-hidden', 'true');
       cell.title = formatSlotModulationTitle(badges);
@@ -212,17 +284,32 @@ export function createPerformerPanelController({
   }
 
   function paintTelemetry(frame) {
-    if (!Array.isArray(frame?.slots)) return;
-    latestTelemetry = frame;
+    if (!frame || typeof frame !== 'object') return;
+    latestTelemetry = {
+      ...(latestTelemetry ?? {}),
+      ...frame,
+      slots: Array.isArray(frame.slots) ? frame.slots : latestTelemetry?.slots,
+      envelopes: Array.isArray(frame.envelopes) ? frame.envelopes : latestTelemetry?.envelopes,
+      efStatus: Array.isArray(frame.efStatus) ? frame.efStatus : latestTelemetry?.efStatus,
+      lfos: Array.isArray(frame.lfos) ? frame.lfos : latestTelemetry?.lfos,
+      clock: frame.clock && typeof frame.clock === 'object' ? frame.clock : latestTelemetry?.clock
+    };
 
-    frame.envelopes?.forEach((value, idx) => {
+    latestTelemetry.envelopes?.forEach((value, idx) => {
       const entry = envMeters[idx];
       if (!entry) return;
       entry.progress.value = value;
       entry.value.textContent = String(value).padStart(2, '0');
     });
+    latestTelemetry.efStatus?.forEach((active, idx) => {
+      const entry = envMeters[idx];
+      if (!entry) return;
+      const isActive = Boolean(Number(active));
+      entry.wrap.dataset.state = isActive ? 'active' : 'inactive';
+      entry.state.textContent = isActive ? 'ACTIVE' : 'IDLE';
+    });
 
-    frame.slots.forEach((value, idx) => {
+    frame.slots?.forEach((value, idx) => {
       const cell = slotCells[idx];
       if (!cell) return;
       const numeric = Number(value);
@@ -237,11 +324,24 @@ export function createPerformerPanelController({
     });
 
     if (clockState) {
-      const running = frame?.clock?.running ?? frame?.clock_running;
-      const bpm = Number(frame?.clock?.bpm ?? frame?.clock_bpm);
-      clockState.textContent = running
-        ? `Running${Number.isFinite(bpm) ? ` · ${bpm} BPM` : ''}`
-        : 'Stopped';
+      const clock = latestTelemetry.clock;
+      const running = clock?.running ?? latestTelemetry.clock_running;
+      const source = String(clock?.source ?? '').toLowerCase();
+      const sourceLabel = source === 'external' ? 'EXT' : source === 'internal' ? 'INT' : 'CLOCK';
+      const bpm = Number(
+        source === 'external'
+          ? clock?.external_bpm ?? clock?.bpm ?? latestTelemetry.clock_bpm
+          : clock?.tapped_bpm ?? clock?.bpm ?? latestTelemetry.clock_bpm
+      );
+      clockState.textContent = clock
+        ? [
+            sourceLabel,
+            Number.isFinite(bpm) && bpm > 0 ? `${bpm.toFixed(1)} BPM` : null,
+            running ? 'Running' : 'Stopped'
+          ]
+            .filter(Boolean)
+            .join(' · ')
+        : 'Waiting';
     }
     if (midiOutput) {
       const enabled = frame?.usb_midi_enabled ?? frame?.midi_output_enabled;
@@ -290,6 +390,7 @@ export function createPerformerPanelController({
       sceneRecallBtn.disabled = dirtyNow || Boolean(sceneRecallDisabled);
       sceneRecallBtn.textContent = `Recall Scene ${Number(sceneSelect?.value ?? 0) + 1} now`;
     }
+    refreshEnvelopeRoutes();
   }
 
   function slotLabel(index) {

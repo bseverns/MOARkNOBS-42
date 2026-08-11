@@ -1,5 +1,9 @@
-// Tiny oscilloscope for firmware telemetry. The device sends normalized EF/LFO
-// values; this file just keeps enough history to make the wobble visible.
+import { modulationIdentity } from './modulation_identity.js';
+
+// Tiny oscilloscope for firmware telemetry. The device sends EF values in
+// 0..127 space and normalized LFO values; this file keeps enough history to
+// make every modulation lane's movement visible.
+const DEFAULT_EF_COUNT = 6;
 const DEFAULT_LFO_COUNT = 2;
 const MIN_HISTORY = 64;
 const TARGET_FPS = 30;
@@ -30,6 +34,8 @@ export class ScopePanel {
     this.fpsLabel = container.querySelector('#scope-fps');
     this.refreshButton = container.querySelector('#scope-refresh');
     this.snapshotButton = container.querySelector('#scope-snapshot');
+    this.efLegend = container.querySelector('#scope-ef-legend');
+    this.viewModeButtons = Array.from(container.querySelectorAll('[data-scope-view]'));
     this.lfoValueLabels = [
       container.querySelector('#scope-lfo-1'),
       container.querySelector('#scope-lfo-2')
@@ -40,7 +46,11 @@ export class ScopePanel {
     this.ctx = this.canvas.getContext('2d');
     this.runtime = runtime;
     this.historyLength = Math.max(MIN_HISTORY, Math.round(this.canvas.width || MIN_HISTORY));
-    this.efHistory = new Float32Array(this.historyLength);
+    this.efCount = DEFAULT_EF_COUNT;
+    this.efHistory = Array.from(
+      { length: this.efCount },
+      () => new Float32Array(this.historyLength)
+    );
     this.lfoCount = DEFAULT_LFO_COUNT;
     this.lfoHistory = Array.from(
       { length: this.lfoCount },
@@ -49,6 +59,11 @@ export class ScopePanel {
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
+    this.lastEfValues = Array.from({ length: this.efCount }, () => 0);
+    this.lastEfActive = Array.from({ length: this.efCount }, () => false);
+    this.hasEfStatus = false;
+    this.viewMode = 'active';
+    this.soloEfIndex = null;
     this.hasTelemetry = false;
     this.lastTelemetryTimestamp = null;
     this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
@@ -61,6 +76,9 @@ export class ScopePanel {
 
     this.refreshButton?.addEventListener('click', () => this.refreshScope());
     this.snapshotButton?.addEventListener('click', () => this.captureSnapshot());
+    this.viewModeButtons.forEach((button) => {
+      button.addEventListener('click', () => this.setViewMode(button.dataset.scopeView));
+    });
 
     this.telemetrySubscription = runtime?.on('telemetry', (frame) => this.handleTelemetry(frame));
     this.manifestSubscription = runtime?.on('manifest', (payload) => this.applyManifest(payload));
@@ -78,29 +96,50 @@ export class ScopePanel {
     this.startRenderLoop();
   }
 
-  // Resize LFO history buffers to match the manifest's advertised modulation lanes.
+  // Resize history buffers to match the manifest's advertised modulation lanes.
   applyManifest(manifest = {}) {
+    const efCountCandidate = Number(manifest?.envelope_count);
+    const efCount = Number.isFinite(efCountCandidate)
+      ? Math.max(0, Math.floor(efCountCandidate))
+      : DEFAULT_EF_COUNT;
     const lfoCountCandidate = Number(manifest?.lfo_count);
     const lfoCount = Number.isFinite(lfoCountCandidate)
-      ? Math.max(0, Math.floor(lfoCountCandidate))
+      ? Math.max(DEFAULT_LFO_COUNT, Math.floor(lfoCountCandidate))
       : DEFAULT_LFO_COUNT;
-    if (lfoCount === this.lfoCount) return;
-    this.lfoCount = Math.max(DEFAULT_LFO_COUNT, lfoCount);
+    if (efCount === this.efCount && lfoCount === this.lfoCount) {
+      this.renderEfLegend();
+      this.syncViewControls();
+      return;
+    }
+    this.efCount = efCount;
+    this.lfoCount = lfoCount;
+    if (this.soloEfIndex !== null && this.soloEfIndex >= this.efCount) {
+      this.soloEfIndex = null;
+    }
     this.initializeBuffers();
+    this.renderEfLegend();
+    this.syncViewControls();
   }
 
   // Rebuild all rolling buffers after a scope-size or manifest change.
   initializeBuffers() {
-    this.efHistory = new Float32Array(this.historyLength);
+    this.efHistory = Array.from(
+      { length: this.efCount },
+      () => new Float32Array(this.historyLength)
+    );
     this.lfoHistory = Array.from(
       { length: this.lfoCount },
       () => new Float32Array(this.historyLength)
     );
+    this.lastEfValues = Array.from({ length: this.efCount }, () => 0);
+    this.lastEfActive = Array.from({ length: this.efCount }, () => false);
+    this.hasEfStatus = false;
     this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
     this.lastLfoConfigs = Array.from({ length: this.lfoCount }, () => null);
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
+    this.syncEfLegend();
   }
 
   // Clear the rolling traces without tearing down the live telemetry subscription.
@@ -143,8 +182,14 @@ export class ScopePanel {
   // Ingest one telemetry frame into the rolling EF/LFO history buffers.
   handleTelemetry(frame = {}) {
     if (!this.ctx) return;
-    const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : [];
+    const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : null;
     const lfos = Array.isArray(frame.lfos) ? frame.lfos : null;
+    if (Array.isArray(frame.efStatus)) {
+      this.hasEfStatus = true;
+      frame.efStatus.forEach((value, idx) => {
+        if (idx < this.lastEfActive.length) this.lastEfActive[idx] = Boolean(Number(value));
+      });
+    }
     if (Array.isArray(frame.lfo_config)) {
       frame.lfo_config.forEach((entry, idx) => {
         const index = Number.isFinite(Number(entry?.index)) ? Number(entry.index) : idx;
@@ -153,11 +198,16 @@ export class ScopePanel {
         }
       });
     }
-    const aggregated = envelopes.length
-      ? Math.max(...envelopes.map((value) => clamp01((Number(value) || 0) / 127)))
-      : 0;
-    this.efHistory[this.cursor] = aggregated;
-    this.peakLevel = Math.max(this.peakLevel, aggregated);
+    this.efHistory.forEach((buffer, idx) => {
+      const candidate = envelopes?.[idx];
+      const hasEfValue = Number.isFinite(Number(candidate));
+      const value = hasEfValue
+        ? clamp01(Number(candidate) / 127)
+        : this.lastEfValues[idx] ?? 0;
+      buffer[this.cursor] = value;
+      this.lastEfValues[idx] = value;
+      this.peakLevel = Math.max(this.peakLevel, value);
+    });
     this.lfoHistory.forEach((buffer, idx) => {
       const candidate = lfos?.[idx];
       const hasLfoValue = Number.isFinite(Number(candidate));
@@ -172,6 +222,7 @@ export class ScopePanel {
     this.samples = Math.min(this.samples + 1, this.historyLength);
     this.hasTelemetry = true;
     this.lastTelemetryTimestamp = now();
+    this.syncEfLegend();
   }
 
   // Kick off the scope repaint loop once the panel is live.
@@ -189,7 +240,7 @@ export class ScopePanel {
     this.updateFps(timestamp);
   }
 
-  // Draw the background grid, EF trace, LFO traces, and peak hold marker.
+  // Draw the background grid, selected EF traces, LFO traces, and peak marker.
   draw() {
     if (!this.ctx || !this.renderWidth || !this.renderHeight) return;
     const ctx = this.ctx;
@@ -208,27 +259,34 @@ export class ScopePanel {
       ctx.stroke();
     });
 
-    const efColor = 'rgba(45, 226, 230, 0.8)';
-    const lfoColors = ['rgba(255, 95, 150, 0.85)', 'rgba(255, 255, 255, 0.72)'];
-    this.drawLine(ctx, this.efHistory, efColor, w, h);
+    const visibleEfIndices = this.visibleEfIndices();
+    visibleEfIndices.forEach((idx) => {
+      const identity = modulationIdentity('ef', idx);
+      this.drawLine(ctx, this.efHistory[idx], identity.rgba(0.88), w, h, {
+        lineWidth: 2.2
+      });
+    });
     this.lfoHistory.forEach((buffer, idx) => {
-      const color = lfoColors[idx % lfoColors.length];
-      this.drawLine(ctx, buffer, color, w, h);
+      const identity = modulationIdentity('lfo', idx);
+      this.drawLine(ctx, buffer, identity.rgba(0.7), w, h, {
+        lineWidth: 1.35,
+        lineDash: [6, 4]
+      });
     });
     this.drawTraceLabels(
       ctx,
       [
-        {
-          label: 'EF',
-          value: this.efHistory[(this.cursor - 1 + this.historyLength) % this.historyLength],
-          color: efColor
-        },
+        ...visibleEfIndices.map((idx) => ({
+          label: `EF ${idx + 1}`,
+          value: this.lastEfValues[idx],
+          color: modulationIdentity('ef', idx).color
+        })),
         ...this.lastLfoValues.map((value, idx) => ({
           label: `LFO ${idx + 1} ${this.formatLfoConfig(this.lastLfoConfigs[idx], {
             compact: true
           })}`,
           value,
-          color: lfoColors[idx % lfoColors.length]
+          color: modulationIdentity('lfo', idx).color
         }))
       ],
       h
@@ -250,13 +308,15 @@ export class ScopePanel {
   }
 
   // Stroke one normalized history buffer across the current canvas dimensions.
-  drawLine(ctx, buffer, color, width, height) {
+  drawLine(ctx, buffer, color, width, height, { lineWidth = 2, lineDash = [] } = {}) {
+    if (!buffer) return;
     const sampleCount = Math.min(this.samples, this.historyLength);
     if (sampleCount < 2) return;
     const step = width / Math.max(this.historyLength, 1);
     const offsetX = Math.max(0, width - sampleCount * step);
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = lineWidth;
+    ctx.setLineDash(lineDash);
     ctx.beginPath();
     for (let idx = 0; idx < sampleCount; idx += 1) {
       const bufferIndex =
@@ -271,6 +331,7 @@ export class ScopePanel {
       }
     }
     ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   // Decide whether the peak-hold marker should be shown this frame.
@@ -290,6 +351,85 @@ export class ScopePanel {
       ctx.fillText(`${trace.label} ${value.toFixed(2)}`, 10, y);
     });
     ctx.restore();
+  }
+
+  visibleEfIndices() {
+    if (this.soloEfIndex !== null) return [this.soloEfIndex];
+    const all = Array.from({ length: this.efCount }, (_, idx) => idx);
+    if (this.viewMode === 'all' || !this.hasEfStatus) return all;
+    return all.filter((idx) => this.lastEfActive[idx]);
+  }
+
+  setViewMode(mode) {
+    if (!['active', 'all'].includes(mode)) return;
+    this.viewMode = mode;
+    this.soloEfIndex = null;
+    this.syncViewControls();
+    this.syncEfLegend();
+    this.draw();
+  }
+
+  setSoloEf(index) {
+    const candidate = Number(index);
+    if (!Number.isInteger(candidate) || candidate < 0 || candidate >= this.efCount) return;
+    this.soloEfIndex = this.soloEfIndex === candidate ? null : candidate;
+    this.syncViewControls();
+    this.syncEfLegend();
+    this.draw();
+  }
+
+  syncViewControls() {
+    this.viewModeButtons.forEach((button) => {
+      const selected = this.soloEfIndex === null && button.dataset.scopeView === this.viewMode;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+  }
+
+  renderEfLegend() {
+    if (!this.efLegend) return;
+    this.efLegend.replaceChildren(
+      ...Array.from({ length: this.efCount }, (_, idx) => {
+        const identity = modulationIdentity('ef', idx);
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'scope-legend-item ef';
+        button.dataset.efIndex = String(idx);
+        button.style.setProperty('--modulation-color', identity.color);
+        button.addEventListener('click', () => this.setSoloEf(idx));
+        const label = document.createElement('span');
+        label.textContent = identity.label;
+        const value = document.createElement('b');
+        value.textContent = '--';
+        button.append(label, value);
+        return button;
+      })
+    );
+    this.syncEfLegend();
+  }
+
+  syncEfLegend() {
+    if (!this.efLegend) return;
+    this.efLegend.querySelectorAll('[data-ef-index]').forEach((button) => {
+      const idx = Number(button.dataset.efIndex);
+      const rawValue = Math.round(clamp01(this.lastEfValues[idx]) * 127);
+      const state = this.hasEfStatus
+        ? this.lastEfActive[idx]
+          ? 'active'
+          : 'inactive'
+        : 'unknown';
+      const selected = this.soloEfIndex === idx;
+      const valueLabel = button.querySelector('b');
+      if (valueLabel) valueLabel.textContent = this.hasTelemetry ? String(rawValue) : '--';
+      button.dataset.state = state;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      button.setAttribute(
+        'aria-label',
+        `EF ${idx + 1}, ${state}, ${this.hasTelemetry ? rawValue : 'no value'}; ${
+          selected ? 'leave solo view' : 'solo this follower'
+        }`
+      );
+      button.title = `EF ${idx + 1}: ${state}; click to ${selected ? 'leave solo' : 'solo'}`;
+    });
   }
 
   updateReadouts() {

@@ -75,6 +75,9 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - EF assignment rows now use clickable slot chips per follower, so one follower can modulate multiple slots without typing comma-separated indices.
 - Live and Stage slot grids now color-code slot types so CC, Note, program-style, NRPN/RPN, and SysEx lanes are scannable at a glance.
 - Stage slot highlights pulse briefly when telemetry changes; a stationary nonzero value remains readable without looking continuously active.
+- The Lab Scope keeps a separate rolling history for every manifest-advertised envelope follower. **Active EFs** uses firmware `efStatus[]`, **All EFs** reveals every trace, and clicking an EF legend item toggles a solo view; inactive histories continue recording so a newly active follower arrives with context. LFO traces remain visually secondary with dashed lines.
+- EF1–EF6 keep stable colors across Scope traces, Stage meters, assignment labels, and slot modulation badges; LFO1–LFO2 use the same shared identity palette in Scope and slot badges.
+- Stage envelope meters report firmware active/idle state and configured route counts. Selected-slot status keeps the last reported output while showing current EF/LFO source values, and the clock summary identifies internal/external source plus the applicable BPM.
 - ARG lives per-slot too. The **ARG Combiner** panel flips the enable flag, locks the math method, and routes sources A/B with the same coarse/fine nudging as the hardware encoders.
 - The slot details panel mirrors the new firmware schema: EF index, filter, dynamics, baseline/gain, ARG mode and source map, and both fixed LFO lanes stream live next to the MIDI stats.
 - Live and Stage slot grids show compact configured-source badges (`E#`, `A`, `L1`, and `L2`) so modulated slots remain apparent outside the editor. These badges describe configuration; the numeric slot readout remains the device-reported final value.

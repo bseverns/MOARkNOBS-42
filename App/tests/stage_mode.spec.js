@@ -60,7 +60,12 @@ test.describe('Stage mode', () => {
     );
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
     await expect(page.locator('#stage-envelopes .meter')).toHaveCount(6);
-    await expect(page.locator('#stage-slot-focus')).toContainText('Slot 1 · CC · Ch 1 · Value');
+    await expect(page.locator('#stage-slot-focus')).toHaveText(/Slot 1 · CC\d+ · Ch 1 · OUT/);
+    await expect(page.locator('#stage-slot-focus')).toContainText('E1');
+    await expect(page.locator('#stage-clock-state')).toHaveText(/^(EXT|INT) · \d+\.\d BPM · Running$/);
+    await expect(page.locator('#stage-envelopes .meter[data-state="active"]')).toHaveCount(3);
+    await expect(page.locator('#stage-envelopes .meter').first()).toContainText('ACTIVE');
+    await expect(page.locator('#stage-envelopes .meter').first()).toContainText('No routes');
     await page.locator('#stage-slots .stage-slot-cell').nth(16).click();
     await expect(page.locator('#stage-slot-focus')).toContainText('Slot 17');
   });

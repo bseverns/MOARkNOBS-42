@@ -40,3 +40,121 @@ test('Stage slot activity pulses on change and decays while a value remains stea
     decayed: false
   });
 });
+
+test('Stage preserves slot output while envelope-only frames update source context', async ({
+  page
+}) => {
+  await page.goto('/views/controllers/performer_panel_controller.js');
+
+  const state = await page.evaluate(async () => {
+    const { createPerformerPanelController } = await import(
+      '/views/controllers/performer_panel_controller.js'
+    );
+    document.body.innerHTML = `
+      <div id="slots"></div>
+      <div id="envelopes"></div>
+      <div id="focus"></div>
+      <div id="clock"></div>
+    `;
+    const runtimeState = {
+      staged: {
+        efSlots: [
+          { index: 0, slots: [0] },
+          { index: 1, slots: [] }
+        ]
+      }
+    };
+    const controller = createPerformerPanelController({
+      runtime: { getState: () => runtimeState },
+      elements: {
+        slotGrid: document.getElementById('slots'),
+        envelopeContainer: document.getElementById('envelopes'),
+        slotFocus: document.getElementById('focus'),
+        clockState: document.getElementById('clock')
+      },
+      slotTypeAbbreviations: { CC: 'CC' }
+    });
+    controller.rebuildMeters(2);
+    controller.renderSlots([
+      {
+        type: 'CC',
+        channel: 3,
+        data1: 74,
+        ef_index: 0,
+        lfo: [{ enabled: true }, { enabled: false }]
+      }
+    ]);
+    controller.paintTelemetry({
+      slots: [91],
+      envelopes: [68, 4],
+      efStatus: [1, 0],
+      lfos: [0.73, 0.2],
+      clock: {
+        source: 'external',
+        external_bpm: 123.8,
+        running: true
+      }
+    });
+    controller.paintTelemetry({ envelopes: [72, 5], efStatus: [1, 0] });
+
+    return {
+      focus: document.getElementById('focus').textContent,
+      clock: document.getElementById('clock').textContent,
+      meterStates: Array.from(document.querySelectorAll('#envelopes .meter')).map(
+        (meter) => meter.dataset.state
+      ),
+      meterText: document.querySelector('#envelopes .meter')?.textContent,
+      modulationColors: Array.from(document.querySelectorAll('.modulation-badge')).map((badge) =>
+        badge.style.getPropertyValue('--modulation-color')
+      )
+    };
+  });
+
+  expect(state.focus).toBe('Slot 1 · CC74 · Ch 3 · OUT 91 · E1 72 · L1 0.73');
+  expect(state.clock).toBe('EXT · 123.8 BPM · Running');
+  expect(state.meterStates).toEqual(['active', 'inactive']);
+  expect(state.meterText).toContain('ACTIVE');
+  expect(state.meterText).toContain('→ 1 slot');
+  expect(state.modulationColors).toHaveLength(2);
+  expect(state.modulationColors[0]).not.toBe(state.modulationColors[1]);
+});
+
+test('slot workspace forwards partial telemetry frames and preserves its merged snapshot', async ({
+  page
+}) => {
+  await page.goto('/views/controllers/slot_workspace_controller.js');
+
+  const state = await page.evaluate(async () => {
+    const { createSlotWorkspaceController } = await import(
+      '/views/controllers/slot_workspace_controller.js'
+    );
+    const slotState = { selected: 0, slots: [], efSlots: [], telemetry: null };
+    const forwarded = [];
+    const controller = createSlotWorkspaceController({
+      runtime: {},
+      slotState,
+      performerPanel: {
+        paintTelemetry(frame) {
+          forwarded.push(frame);
+        }
+      }
+    });
+
+    controller.paintTelemetry({ slots: [91], envelopes: [68, 4], lfos: [0.73, 0.2] });
+    controller.paintTelemetry({ envelopes: [72, 5], efStatus: [1, 0] });
+
+    return {
+      forwarded,
+      telemetry: slotState.telemetry
+    };
+  });
+
+  expect(state.forwarded).toHaveLength(2);
+  expect(state.forwarded[1]).toEqual({ envelopes: [72, 5], efStatus: [1, 0] });
+  expect(state.telemetry).toMatchObject({
+    slots: [91],
+    envelopes: [72, 5],
+    efStatus: [1, 0],
+    lfos: [0.73, 0.2]
+  });
+});

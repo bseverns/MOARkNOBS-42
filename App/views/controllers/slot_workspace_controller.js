@@ -1,5 +1,10 @@
 import { VirtualGrid, VirtualList } from '../virtualizers.js';
-import { describeSlotModulation, formatSlotModulationTitle } from '../slot_modulation_summary.js';
+import {
+  describeSlotModulation,
+  formatSlotModulationTitle,
+  renderSlotModulationBadges
+} from '../slot_modulation_summary.js';
+import { applyModulationIdentity } from '../modulation_identity.js';
 
 function slotTypeCssToken(type) {
   if (typeof type !== 'string' || !type.trim()) return 'off';
@@ -13,6 +18,7 @@ function initializeMeters(container, count, labelPrefix) {
   for (let i = 0; i < count; i += 1) {
     const wrap = document.createElement('div');
     wrap.className = 'meter';
+    applyModulationIdentity(wrap, 'ef', i);
     const label = document.createElement('span');
     label.textContent = `${labelPrefix} ${String(i + 1).padStart(2, '0')}`;
     const progress = document.createElement('progress');
@@ -101,9 +107,18 @@ export function createSlotWorkspaceController({
   }
 
   function paintTelemetry(frame) {
-    if (!Array.isArray(frame?.slots)) return;
-    slotState.telemetry = frame;
-    slotVirtualizer.updateTelemetry(frame.slots);
+    if (!frame || typeof frame !== 'object') return;
+    slotState.telemetry = {
+      ...(slotState.telemetry ?? {}),
+      ...frame,
+      slots: Array.isArray(frame.slots) ? frame.slots : slotState.telemetry?.slots,
+      envelopes: Array.isArray(frame.envelopes)
+        ? frame.envelopes
+        : slotState.telemetry?.envelopes,
+      efStatus: Array.isArray(frame.efStatus) ? frame.efStatus : slotState.telemetry?.efStatus,
+      lfos: Array.isArray(frame.lfos) ? frame.lfos : slotState.telemetry?.lfos
+    };
+    if (Array.isArray(frame.slots)) slotVirtualizer.updateTelemetry(frame.slots);
     frame.envelopes?.forEach((value, idx) => {
       const entry = envMeters[idx];
       if (!entry) return;
@@ -130,7 +145,7 @@ export function createSlotWorkspaceController({
     const modulation = document.createElement('span');
     modulation.className = 'slot-modulation';
     const badges = describeSlotModulation(slot);
-    modulation.textContent = badges.join(' ');
+    renderSlotModulationBadges(modulation, badges);
     modulation.title = formatSlotModulationTitle(badges);
     modulation.setAttribute('aria-hidden', 'true');
     el.append(label, state, modulation);
@@ -185,6 +200,7 @@ export function createSlotWorkspaceController({
     const label = document.createElement('span');
     label.className = 'ef-row-label';
     label.textContent = `EF ${index + 1}`;
+    applyModulationIdentity(label, 'ef', index);
     const summary = document.createElement('span');
     summary.className = 'ef-row-summary';
     summary.textContent = normalizedSlots.length

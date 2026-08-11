@@ -28,6 +28,23 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   await expect(page.locator('#scope-lfo-1')).not.toHaveText('--');
   await expect(page.locator('#scope-lfo-2')).not.toHaveText('--');
   await expect(page.locator('#scope-clock')).toHaveText(/Clock (external|internal)/);
+  await expect(page.locator('#scope-ef-legend [data-ef-index]')).toHaveCount(6);
+  await expect(page.locator('#scope-ef-legend [data-state="active"]')).toHaveCount(3);
+  await expect(page.getByRole('button', { name: 'Active EFs' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+
+  await page.getByRole('button', { name: 'All EFs' }).click();
+  await expect(page.getByRole('button', { name: 'All EFs' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await page.locator('#scope-ef-legend [data-ef-index="1"]').click();
+  await expect(page.locator('#scope-ef-legend [data-ef-index="1"]')).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
 
   await page.getByRole('button', { name: 'Refresh scope' }).click();
   await expect(page.locator('#scope-status')).toHaveText(/Waiting for telemetry|Telemetry/i);
@@ -53,7 +70,10 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
         <button id="scope-refresh">Refresh scope</button>
         <span id="scope-status"></span>
         <span id="scope-fps"></span>
+        <button data-scope-view="active" aria-pressed="true">Active EFs</button>
+        <button data-scope-view="all" aria-pressed="false">All EFs</button>
         <canvas id="scope-canvas" style="width: 420px; height: 180px"></canvas>
+        <div id="scope-ef-legend"></div>
         <span class="scope-legend-item lfo-one">LFO 1 <b id="scope-lfo-1"></b></span>
         <span class="scope-legend-item lfo-two">LFO 2 <b id="scope-lfo-2"></b></span>
         <span id="scope-clock"></span>
@@ -67,7 +87,7 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
         return () => listeners.delete(event);
       },
       getState() {
-        return { manifest: { lfo_count: 2 } };
+        return { manifest: { envelope_count: 3, lfo_count: 2 } };
       }
     };
 
@@ -78,7 +98,8 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
     const pushTelemetry = listeners.get('telemetry');
 
     pushTelemetry({
-      envelopes: [0],
+      envelopes: [10, 80, 30],
+      efStatus: [1, 0, 1],
       lfos: [0.75, 0.25],
       lfo_config: [
         {
@@ -102,14 +123,33 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
       lfo1Legend: document.querySelector('.scope-legend-item.lfo-one').textContent
     };
 
-    pushTelemetry({ envelopes: [80] });
+    const activeEfIndices = panel.visibleEfIndices();
+    pushTelemetry({ envelopes: [20] });
     panel.draw();
     const afterPartial = {
       lfo1: document.getElementById('scope-lfo-1').textContent,
       lfo2: document.getElementById('scope-lfo-2').textContent
     };
 
-    return { first, afterPartial };
+    const lastHistoryIndex = (panel.cursor - 1 + panel.historyLength) % panel.historyLength;
+    const inactiveHistoryWasPreserved = Math.round(panel.efHistory[1][lastHistoryIndex] * 127);
+    document.querySelector('[data-ef-index="1"]').click();
+    const soloEfIndices = panel.visibleEfIndices();
+    document.querySelector('[data-ef-index="1"]').click();
+    document.querySelector('[data-scope-view="all"]').click();
+    const allEfIndices = panel.visibleEfIndices();
+
+    return {
+      first,
+      afterPartial,
+      activeEfIndices,
+      soloEfIndices,
+      allEfIndices,
+      inactiveHistoryWasPreserved,
+      efLegendStates: Array.from(document.querySelectorAll('[data-ef-index]')).map(
+        (element) => element.dataset.state
+      )
+    };
   });
 
   expect(readouts.first.lfo1).toBe('0.75');
@@ -117,4 +157,9 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
   expect(readouts.first.lfo1Legend).toContain('Saw');
   expect(readouts.first.lfo1Legend).toContain('1/8');
   expect(readouts.afterPartial).toEqual({ lfo1: '0.75', lfo2: '0.25' });
+  expect(readouts.activeEfIndices).toEqual([0, 2]);
+  expect(readouts.soloEfIndices).toEqual([1]);
+  expect(readouts.allEfIndices).toEqual([0, 1, 2]);
+  expect(readouts.inactiveHistoryWasPreserved).toBe(80);
+  expect(readouts.efLegendStates).toEqual(['active', 'inactive', 'active']);
 });
