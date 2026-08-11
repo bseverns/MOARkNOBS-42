@@ -1087,8 +1087,27 @@ main {
 }
 
 .stage-device-detail {
+  display: block;
+  margin-top: 7px;
   color: var(--color-muted);
   font-size: 0.72rem;
+}
+
+.stage-device-details {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.68rem;
+}
+
+.stage-device-details summary {
+  width: max-content;
+  cursor: pointer;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stage-device-details .performer-power-row {
+  margin-top: 7px;
 }
 
 .performer-power-row {
@@ -1155,7 +1174,8 @@ main {
   grid-template-columns: auto 1fr;
   grid-template-areas:
     'label type'
-    'value mods';
+    'value mods'
+    'name name';
   gap: 3px 6px;
   width: 100%;
   min-height: 68px;
@@ -1272,6 +1292,18 @@ main {
   white-space: nowrap;
 }
 
+.stage-slot-name {
+  grid-area: name;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stage-slot-focus {
   padding: 12px 14px;
   border-left: 3px solid var(--color-accent);
@@ -1308,6 +1340,39 @@ main {
   font-size: 0.58rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.stage-envelope-list .meter-routes {
+  width: max-content;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stage-envelope-list .meter-routes:not(:disabled) {
+  color: var(--modulation-color, var(--color-accent));
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+}
+
+.stage-envelope-list .meter-routes:not(:disabled):hover,
+.stage-envelope-list .meter-routes:not(:disabled):focus-visible {
+  text-decoration-color: currentColor;
+}
+
+.stage-envelope-list .meter-destinations {
+  max-width: 18ch;
+  color: var(--color-text);
+  line-height: 1.35;
+  text-transform: none;
 }
 
 .stage-envelope-list .meter[data-state='active'] .meter-state {

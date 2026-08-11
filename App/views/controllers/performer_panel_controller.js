@@ -28,10 +28,21 @@ function initializeMeters(container, count, labelPrefix) {
     const state = document.createElement('small');
     state.className = 'meter-state';
     state.textContent = 'STATUS --';
-    const routes = document.createElement('small');
+    const routes = document.createElement('button');
+    routes.type = 'button';
     routes.className = 'meter-routes';
     routes.textContent = 'No routes';
-    label.append(name, state, routes);
+    routes.disabled = true;
+    routes.setAttribute('aria-expanded', 'false');
+    const destinations = document.createElement('small');
+    destinations.className = 'meter-destinations';
+    destinations.hidden = true;
+    routes.addEventListener('click', () => {
+      const expanded = routes.getAttribute('aria-expanded') === 'true';
+      routes.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+      destinations.hidden = expanded;
+    });
+    label.append(name, state, routes, destinations);
     const progress = document.createElement('progress');
     progress.max = 127;
     progress.value = 0;
@@ -41,7 +52,7 @@ function initializeMeters(container, count, labelPrefix) {
     value.textContent = '00';
     wrap.append(label, progress, value);
     container.appendChild(wrap);
-    meters.push({ wrap, progress, value, state, routes });
+    meters.push({ wrap, progress, value, state, routes, destinations });
   }
   return meters;
 }
@@ -146,8 +157,9 @@ export function createPerformerPanelController({
       }
       return [badge === 'A' ? 'A enabled' : badge];
     });
+    const slotName = typeof slot?.label === 'string' ? slot.label.trim() : '';
     slotFocus.textContent = [
-      `Slot ${index + 1}`,
+      slotName ? `${slotName} · S${index + 1}` : `Slot ${index + 1}`,
       destination,
       channelText,
       valueText,
@@ -207,17 +219,46 @@ export function createPerformerPanelController({
       const routeEntry = efSlots.find(
         (candidate, entryIndex) => Number(candidate?.index ?? entryIndex) === idx
       );
-      const assigned = Array.isArray(routeEntry?.slots)
-        ? new Set(routeEntry.slots.map(Number).filter(Number.isFinite)).size
-        : slots.filter((slot) => {
+      const assignedIndices = Array.isArray(routeEntry?.slots)
+        ? Array.from(
+            new Set(
+              routeEntry.slots
+                .map(Number)
+                .filter(
+                  (slotIndex) =>
+                    Number.isInteger(slotIndex) && slotIndex >= 0 && slotIndex < slots.length
+                )
+            )
+          )
+        : slots.flatMap((slot, slotIndex) => {
             const efIndex = Number(slot?.efIndex ?? slot?.ef_index ?? slot?.ef?.index);
-            return Number.isFinite(efIndex) && Math.round(efIndex) === idx;
-          }).length;
+            return Number.isFinite(efIndex) && Math.round(efIndex) === idx ? [slotIndex] : [];
+          });
+      const destinations = assignedIndices
+        .sort((left, right) => left - right)
+        .map((slotIndex) => {
+          const slotLabel =
+            typeof slots[slotIndex]?.label === 'string' ? slots[slotIndex].label.trim() : '';
+          return slotLabel ? `${slotLabel} (S${slotIndex + 1})` : `S${slotIndex + 1}`;
+        });
+      const assigned = destinations.length;
       entry.routes.textContent = assigned
         ? `→ ${assigned} ${assigned === 1 ? 'slot' : 'slots'}`
         : 'No routes';
+      entry.routes.disabled = !assigned;
+      entry.routes.setAttribute(
+        'aria-label',
+        assigned
+          ? `Show EF ${idx + 1} destinations`
+          : `EF ${idx + 1} has no route destinations`
+      );
+      entry.destinations.textContent = destinations.join(' · ');
+      if (!assigned) {
+        entry.destinations.hidden = true;
+        entry.routes.setAttribute('aria-expanded', 'false');
+      }
       entry.wrap.title = assigned
-        ? `Envelope follower ${idx + 1} routes to ${assigned} ${assigned === 1 ? 'slot' : 'slots'}`
+        ? `Envelope follower ${idx + 1} → ${destinations.join(', ')}`
         : `Envelope follower ${idx + 1} has no configured routes`;
     });
   }
@@ -232,13 +273,23 @@ export function createPerformerPanelController({
         const state = cell.querySelector('.stage-slot-type');
         if (state) state.textContent = slotTypeAbbreviations[slot?.type] ?? slot?.type ?? '-';
         const modulation = cell.querySelector('.stage-slot-modulation');
+        const name = cell.querySelector('.stage-slot-name');
+        const slotName = typeof slot?.label === 'string' ? slot.label.trim() : '';
+        if (name) {
+          name.textContent = slotName;
+          name.hidden = !slotName;
+        }
+        cell.setAttribute(
+          'aria-label',
+          slotName ? `${slotName}, slot ${index + 1}` : `Slot ${index + 1}`
+        );
         const badges = describeSlotModulation(slot);
         if (modulation) {
           renderSlotModulationBadges(modulation, badges);
           modulation.title = formatSlotModulationTitle(badges);
           modulation.setAttribute('aria-hidden', 'true');
         }
-        cell.title = formatSlotModulationTitle(badges);
+        cell.title = [slotName, formatSlotModulationTitle(badges)].filter(Boolean).join(' · ');
         cell.dataset.slotType = slotTypeCssToken(slot?.type);
       });
       highlightSelectedSlot();
@@ -274,9 +325,19 @@ export function createPerformerPanelController({
       renderSlotModulationBadges(modulation, badges);
       modulation.title = formatSlotModulationTitle(badges);
       modulation.setAttribute('aria-hidden', 'true');
-      cell.title = formatSlotModulationTitle(badges);
+      const name = document.createElement('span');
+      name.className = 'stage-slot-name';
+      name.textContent = typeof slot?.label === 'string' ? slot.label.trim() : '';
+      name.hidden = !name.textContent;
+      cell.setAttribute(
+        'aria-label',
+        name.textContent ? `${name.textContent}, slot ${index + 1}` : `Slot ${index + 1}`
+      );
+      cell.title = [name.textContent, formatSlotModulationTitle(badges)]
+        .filter(Boolean)
+        .join(' · ');
 
-      cell.append(label, type, value, modulation);
+      cell.append(label, type, value, modulation, name);
       slotGrid.appendChild(cell);
       return cell;
     });

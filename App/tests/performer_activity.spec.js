@@ -58,6 +58,7 @@ test('Stage preserves slot output while envelope-only frames update source conte
     `;
     const runtimeState = {
       staged: {
+        slots: [{ label: 'Filter cutoff' }],
         efSlots: [
           { index: 0, slots: [0] },
           { index: 1, slots: [] }
@@ -78,6 +79,7 @@ test('Stage preserves slot output while envelope-only frames update source conte
     controller.renderSlots([
       {
         type: 'CC',
+        label: 'Filter cutoff',
         channel: 3,
         data1: 74,
         ef_index: 0,
@@ -96,6 +98,8 @@ test('Stage preserves slot output while envelope-only frames update source conte
       }
     });
     controller.paintTelemetry({ envelopes: [72, 5], efStatus: [1, 0] });
+    const routeButton = document.querySelector('#envelopes .meter-routes');
+    routeButton.click();
 
     return {
       focus: document.getElementById('focus').textContent,
@@ -104,17 +108,25 @@ test('Stage preserves slot output while envelope-only frames update source conte
         (meter) => meter.dataset.state
       ),
       meterText: document.querySelector('#envelopes .meter')?.textContent,
+      routeExpanded: routeButton.getAttribute('aria-expanded'),
+      routeDestinations: document.querySelector('#envelopes .meter-destinations')?.textContent,
+      slotName: document.querySelector('.stage-slot-name')?.textContent,
+      slotAriaLabel: document.querySelector('.stage-slot-cell')?.getAttribute('aria-label'),
       modulationColors: Array.from(document.querySelectorAll('.modulation-badge')).map((badge) =>
         badge.style.getPropertyValue('--modulation-color')
       )
     };
   });
 
-  expect(state.focus).toBe('Slot 1 · CC74 · Ch 3 · OUT 91 · E1 72 · L1 0.73');
+  expect(state.focus).toBe('Filter cutoff · S1 · CC74 · Ch 3 · OUT 91 · E1 72 · L1 0.73');
   expect(state.clock).toBe('EXT · 123.8 BPM · Running');
   expect(state.meterStates).toEqual(['active', 'inactive']);
   expect(state.meterText).toContain('ACTIVE');
   expect(state.meterText).toContain('→ 1 slot');
+  expect(state.routeExpanded).toBe('true');
+  expect(state.routeDestinations).toBe('Filter cutoff (S1)');
+  expect(state.slotName).toBe('Filter cutoff');
+  expect(state.slotAriaLabel).toBe('Filter cutoff, slot 1');
   expect(state.modulationColors).toHaveLength(2);
   expect(state.modulationColors[0]).not.toBe(state.modulationColors[1]);
 });

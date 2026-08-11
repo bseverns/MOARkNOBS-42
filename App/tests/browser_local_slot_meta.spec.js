@@ -36,6 +36,13 @@ test('changing a browser-only slot label does not dirty staged firmware config',
   await labelInput.dispatchEvent('change');
 
   await expectBrowserOnlyStateClean(page);
+  await page.getByRole('button', { name: 'Stage', exact: true }).click();
+  await expect(page.locator('#stage-slots .stage-slot-cell').first()).toContainText('Verse cue');
+  await expect(page.locator('#stage-slots .stage-slot-cell').first()).toHaveAttribute(
+    'aria-label',
+    'Verse cue, slot 1'
+  );
+  await expect(page.locator('#stage-slot-focus')).toContainText('Verse cue · S1');
 });
 
 test('slot UI does not advertise unsupported browser pickup behavior', async ({ page }) => {

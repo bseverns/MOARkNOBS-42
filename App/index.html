@@ -166,7 +166,15 @@
           <div class="performer-metric">
             <span>Device</span>
             <strong id="stage-device-name">MOARkNOBS-42</strong>
-            <small class="stage-device-detail">Firmware <span id="stage-fw-version">unknown</span></small>
+            <details class="stage-device-details">
+              <summary>Device details</summary>
+              <small class="stage-device-detail">Firmware <span id="stage-fw-version">unknown</span></small>
+              <div class="performer-power-row" id="stage-power-summary" aria-live="polite">
+                <span>Power: —</span>
+                <span>LED cap: —</span>
+                <span data-rail-state="unknown">Rail: —</span>
+              </div>
+            </details>
           </div>
           <div class="performer-metric">
             <span>Profile</span>
@@ -180,12 +188,6 @@
             <span>MIDI / connection</span>
             <strong id="stage-midi-output">Offline</strong>
           </div>
-        </div>
-
-        <div class="performer-power-row" id="stage-power-summary" aria-live="polite" data-ui-modes="stage advanced">
-          <span>Power: —</span>
-          <span>LED cap: —</span>
-          <span data-rail-state="unknown">Rail: —</span>
         </div>
 
         <div class="performer-actions" aria-label="Stage-safe controls">

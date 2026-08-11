@@ -58,6 +58,10 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#global-power-warning')).toContainText(
       'Power-limited hardware reported'
     );
+    await expect(page.locator('.stage-device-details')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#stage-power-summary')).toBeHidden();
+    await page.locator('.stage-device-details > summary').click();
+    await expect(page.locator('#stage-power-summary')).toBeVisible();
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
     await expect(page.locator('#stage-envelopes .meter')).toHaveCount(6);
     await expect(page.locator('#stage-slot-focus')).toHaveText(/Slot 1 · CC\d+ · Ch 1 · OUT/);
@@ -176,6 +180,10 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-dirty-state')).toHaveText('Clean');
     await expect(page.locator('#dirty-badge')).toBeHidden();
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
+    await expect(page.locator('.stage-device-details')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#stage-power-summary')).toBeHidden();
+    await page.locator('.stage-device-details > summary').click();
+    await expect(page.locator('#stage-power-summary')).toBeVisible();
     await expect(page.locator('#stage-power-summary')).toContainText('SPLIT_RAIL_REWORK');
     await expect(page.locator('#stage-power-summary')).toContainText('255/255');
     await expect(page.locator('#stage-power-summary .power-safety-warning')).toHaveCount(0);
