@@ -9,6 +9,8 @@ const MIN_HISTORY = 64;
 const TARGET_FPS = 30;
 const PEAK_DECAY = 0.003;
 const DEFAULT_ACTIVITY_HOLD_MS = 1500;
+const DEFAULT_TIME_WINDOW_SECONDS = 5;
+const TIME_WINDOW_OPTIONS = Object.freeze([2, 5, 10]);
 
 // Scope math stays in normalized 0..1 space regardless of the source lane.
 const clamp01 = (value) => {
@@ -32,6 +34,7 @@ export class ScopePanel {
     manifest,
     renderToggle = null,
     activityHoldMs = DEFAULT_ACTIVITY_HOLD_MS,
+    timeWindowSeconds = DEFAULT_TIME_WINDOW_SECONDS,
     nowFn = now
   } = {}) {
     this.container = container;
@@ -49,6 +52,7 @@ export class ScopePanel {
     this.viewStateLabel = findElement('view-state');
     this.leaveSoloButton = findElement('leave-solo');
     this.viewModeButtons = Array.from(container.querySelectorAll('[data-scope-view]'));
+    this.timeWindowButtons = Array.from(container.querySelectorAll('[data-scope-window]'));
     const roleLfoLabels = Array.from(container.querySelectorAll('[data-scope-lfo-index]')).sort(
       (left, right) => Number(left.dataset.scopeLfoIndex) - Number(right.dataset.scopeLfoIndex)
     );
@@ -63,6 +67,9 @@ export class ScopePanel {
     this.ctx = this.canvas.getContext('2d');
     this.runtime = runtime;
     this.activityHoldMs = Math.max(0, Number(activityHoldMs) || 0);
+    this.timeWindowSeconds = TIME_WINDOW_OPTIONS.includes(Number(timeWindowSeconds))
+      ? Number(timeWindowSeconds)
+      : DEFAULT_TIME_WINDOW_SECONDS;
     this.now = typeof nowFn === 'function' ? nowFn : now;
     this.historyLength = Math.max(MIN_HISTORY, Math.round(this.canvas.width || MIN_HISTORY));
     this.efCount = DEFAULT_EF_COUNT;
@@ -75,6 +82,7 @@ export class ScopePanel {
       { length: this.lfoCount },
       () => new Float32Array(this.historyLength)
     );
+    this.timestampHistory = new Float64Array(this.historyLength);
     this.cursor = 0;
     this.samples = 0;
     this.peakLevel = 0;
@@ -100,6 +108,10 @@ export class ScopePanel {
     this.viewModeButtons.forEach((button) => {
       button.addEventListener('click', () => this.setViewMode(button.dataset.scopeView));
     });
+    this.timeWindowButtons.forEach((button) => {
+      button.addEventListener('click', () => this.setTimeWindow(button.dataset.scopeWindow));
+    });
+    this.syncTimeWindowControls();
     this.handleRenderToggle = () => {
       if (this.renderToggle && !this.renderToggle.open) {
         this.stopRenderLoop();
@@ -162,6 +174,7 @@ export class ScopePanel {
       { length: this.lfoCount },
       () => new Float32Array(this.historyLength)
     );
+    this.timestampHistory = new Float64Array(this.historyLength);
     this.lastEfValues = Array.from({ length: this.efCount }, () => 0);
     this.lastEfActive = Array.from({ length: this.efCount }, () => false);
     this.efLastActiveAt = Array.from({ length: this.efCount }, () => null);
@@ -222,8 +235,8 @@ export class ScopePanel {
     const previousLength = this.historyLength;
     const previousCursor = this.cursor;
     const copyCount = Math.min(this.samples, desired);
-    const copyBuffer = (source) => {
-      const target = new Float32Array(desired);
+    const copyBuffer = (source, BufferType = Float32Array) => {
+      const target = new BufferType(desired);
       for (let idx = 0; idx < copyCount; idx += 1) {
         const sourceIndex =
           (previousCursor - copyCount + idx + previousLength) % previousLength;
@@ -231,8 +244,9 @@ export class ScopePanel {
       }
       return target;
     };
-    this.efHistory = this.efHistory.map(copyBuffer);
-    this.lfoHistory = this.lfoHistory.map(copyBuffer);
+    this.efHistory = this.efHistory.map((buffer) => copyBuffer(buffer));
+    this.lfoHistory = this.lfoHistory.map((buffer) => copyBuffer(buffer));
+    this.timestampHistory = copyBuffer(this.timestampHistory, Float64Array);
     this.historyLength = desired;
     this.samples = copyCount;
     this.cursor = copyCount % desired;
@@ -278,6 +292,7 @@ export class ScopePanel {
       buffer[this.cursor] = value;
       this.lastLfoValues[idx] = value;
     });
+    this.timestampHistory[this.cursor] = receivedAt;
     if (frame.clock && typeof frame.clock === 'object') {
       this.lastClock = frame.clock;
     }
@@ -343,6 +358,13 @@ export class ScopePanel {
       ctx.lineTo(w, y);
       ctx.stroke();
     });
+    [0.25, 0.5, 0.75].forEach((factor) => {
+      const x = factor * w;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    });
 
     const timestamp = this.now();
     const visibleEfIndices = this.visibleEfIndices(timestamp);
@@ -354,14 +376,15 @@ export class ScopePanel {
         identity.rgba(this.efTraceOpacity(idx, timestamp)),
         w,
         h,
-        { lineWidth: 2.2 }
+        { lineWidth: 2.2, timestamp }
       );
     });
     this.lfoHistory.forEach((buffer, idx) => {
       const identity = modulationIdentity('lfo', idx);
       this.drawLine(ctx, buffer, identity.rgba(0.7), w, h, {
         lineWidth: 1.35,
-        lineDash: [6, 4]
+        lineDash: [6, 4],
+        timestamp
       });
     });
     if (
@@ -384,6 +407,7 @@ export class ScopePanel {
       ctx.stroke();
       this.peakLevel = Math.max(0, this.peakLevel - PEAK_DECAY);
     }
+    this.drawTimeAxis(ctx, w, h);
 
     this.updateStatus();
     this.updateReadouts();
@@ -392,30 +416,64 @@ export class ScopePanel {
   }
 
   // Stroke one normalized history buffer across the current canvas dimensions.
-  drawLine(ctx, buffer, color, width, height, { lineWidth = 2, lineDash = [] } = {}) {
+  drawLine(
+    ctx,
+    buffer,
+    color,
+    width,
+    height,
+    { lineWidth = 2, lineDash = [], timestamp = this.now() } = {}
+  ) {
     if (!buffer) return;
-    const sampleCount = Math.min(this.samples, this.historyLength);
-    if (sampleCount < 2) return;
-    const step = width / Math.max(this.historyLength, 1);
-    const offsetX = Math.max(0, width - sampleCount * step);
+    const sampleIndices = this.visibleSampleIndices(timestamp);
+    if (sampleIndices.length < 2) return;
+    const windowMs = this.timeWindowSeconds * 1000;
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     ctx.setLineDash(lineDash);
     ctx.beginPath();
-    for (let idx = 0; idx < sampleCount; idx += 1) {
-      const bufferIndex =
-        (this.cursor - sampleCount + idx + this.historyLength) % this.historyLength;
+    let started = false;
+    for (const bufferIndex of sampleIndices) {
+      const sampleTimestamp = this.timestampHistory[bufferIndex];
+      const ageMs = Math.max(0, timestamp - sampleTimestamp);
       const value = clamp01(buffer[bufferIndex]);
-      const x = offsetX + idx * step;
+      const x = width - (ageMs / windowMs) * width;
       const y = height - value * height;
-      if (idx === 0) {
+      if (!started) {
         ctx.moveTo(x, y);
+        started = true;
       } else {
         ctx.lineTo(x, y);
       }
     }
     ctx.stroke();
     ctx.setLineDash([]);
+  }
+
+  visibleSampleIndices(timestamp = this.now()) {
+    const sampleCount = Math.min(this.samples, this.historyLength);
+    const windowMs = this.timeWindowSeconds * 1000;
+    const indices = [];
+    for (let idx = 0; idx < sampleCount; idx += 1) {
+      const bufferIndex =
+        (this.cursor - sampleCount + idx + this.historyLength) % this.historyLength;
+      const sampleTimestamp = this.timestampHistory[bufferIndex];
+      if (!Number.isFinite(sampleTimestamp) || sampleTimestamp <= 0) continue;
+      if (Math.max(0, timestamp - sampleTimestamp) <= windowMs) indices.push(bufferIndex);
+    }
+    return indices;
+  }
+
+  drawTimeAxis(ctx, width, height) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(232, 238, 255, 0.5)';
+    ctx.font = '10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    ctx.textBaseline = 'bottom';
+    ctx.textAlign = 'left';
+    ctx.fillText(`-${this.timeWindowSeconds}s`, 7, height - 5);
+    ctx.textAlign = 'right';
+    ctx.fillText('now', width - 7, height - 5);
+    ctx.restore();
   }
 
   // Decide whether the peak-hold marker should be shown this frame.
@@ -478,6 +536,21 @@ export class ScopePanel {
     this.syncViewControls();
     this.syncEfLegend();
     this.draw();
+  }
+
+  setTimeWindow(seconds) {
+    const candidate = Number(seconds);
+    if (!TIME_WINDOW_OPTIONS.includes(candidate)) return;
+    this.timeWindowSeconds = candidate;
+    this.syncTimeWindowControls();
+    this.draw();
+  }
+
+  syncTimeWindowControls() {
+    this.timeWindowButtons.forEach((button) => {
+      const selected = Number(button.dataset.scopeWindow) === this.timeWindowSeconds;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
   }
 
   setSoloEf(index) {
@@ -590,8 +663,8 @@ export class ScopePanel {
       this.canvas.setAttribute(
         'aria-label',
         empty
-          ? 'Envelope follower and LFO scope. No active envelope followers; histories are still recording and LFOs remain visible.'
-          : `Envelope follower and LFO scope. ${viewText}`
+          ? `Envelope follower and LFO scope over ${this.timeWindowSeconds} seconds. No active envelope followers; histories are still recording and LFOs remain visible.`
+          : `Envelope follower and LFO scope over ${this.timeWindowSeconds} seconds. ${viewText}`
       );
     }
 

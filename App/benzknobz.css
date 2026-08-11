@@ -3543,6 +3543,7 @@ label select:focus,
 
 .scope-state-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -3555,6 +3556,10 @@ label select:focus,
   text-transform: uppercase;
 }
 
+.scope-state-bar > strong {
+  flex: 1 1 260px;
+}
+
 .scope-state-bar button {
   min-height: 28px;
   padding: 4px 8px;
@@ -3562,6 +3567,37 @@ label select:focus,
   background: rgba(45, 226, 230, 0.1);
   color: var(--color-accent);
   font-size: 0.66rem;
+}
+
+.scope-time-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.scope-time-controls > span {
+  padding: 0 5px;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.scope-time-controls button {
+  min-height: 24px;
+  padding: 3px 6px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.scope-time-controls button[aria-pressed='true'] {
+  border-color: rgba(45, 226, 230, 0.38);
+  background: rgba(45, 226, 230, 0.12);
+  color: var(--color-accent);
 }
 
 .scope-panel-footer {

@@ -279,6 +279,12 @@
             </header>
             <div class="scope-state-bar">
               <strong data-scope-role="view-state" aria-live="polite">VIEW: ACTIVE · Waiting for telemetry</strong>
+              <div class="scope-time-controls" role="group" aria-label="Stage scope time window">
+                <span>Window</span>
+                <button type="button" data-scope-window="2" aria-pressed="false">2s</button>
+                <button type="button" data-scope-window="5" aria-pressed="true">5s</button>
+                <button type="button" data-scope-window="10" aria-pressed="false">10s</button>
+              </div>
               <button type="button" data-scope-role="leave-solo" hidden>Leave solo</button>
             </div>
             <canvas data-scope-role="canvas" width="600" height="180"
@@ -572,6 +578,12 @@
             </header>
             <div class="scope-state-bar">
               <strong data-scope-role="view-state" aria-live="polite">VIEW: ACTIVE · Waiting for telemetry</strong>
+              <div class="scope-time-controls" role="group" aria-label="Scope time window">
+                <span>Window</span>
+                <button type="button" data-scope-window="2" aria-pressed="false">2s</button>
+                <button type="button" data-scope-window="5" aria-pressed="true">5s</button>
+                <button type="button" data-scope-window="10" aria-pressed="false">10s</button>
+              </div>
               <button type="button" data-scope-role="leave-solo" hidden>Leave solo</button>
             </div>
             <canvas id="scope-canvas" data-scope-role="canvas" width="600" height="220" aria-label="Envelope follower and LFO scope display"></canvas>

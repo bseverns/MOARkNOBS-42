@@ -282,9 +282,15 @@ export function createSimulator(simDeps = {}) {
 
   const telemetry = () => {
     const slots = nextSlotValues();
-    const envelopes = Array.from({ length: manifest.envelope_count }, () =>
-      Math.floor(Math.random() * 127)
-    );
+    // Give the rehearsal scope musical, correlated movement instead of
+    // frame-to-frame noise. Each follower gets a distinct slow phase and a
+    // smaller secondary ripple while remaining deterministic for screenshots.
+    const envelopes = Array.from({ length: manifest.envelope_count }, (_, efIndex) => {
+      const primary = Math.sin(index / (7 + efIndex * 1.4) + efIndex * 0.9);
+      const secondary = Math.sin(index / (2.8 + efIndex * 0.35) + efIndex * 1.7);
+      const normalized = Math.max(0, Math.min(1, 0.5 + primary * 0.34 + secondary * 0.1));
+      return Math.round(normalized * 127);
+    });
     const lfos = [((index % 40) / 39).toFixed(3), (((index + 20) % 40) / 39).toFixed(3)].map(Number);
     const efStatus = Array.from(
       { length: manifest.envelope_count },

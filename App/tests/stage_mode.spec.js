@@ -116,6 +116,16 @@ test.describe('Stage mode', () => {
     await expect(panel.locator('[data-scope-role="view-state"]')).toHaveText(
       /VIEW: ACTIVE · 3\/6 EFs · 2 LFOs always visible/
     );
+    await expect(panel.locator('[data-scope-window="5"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await panel.locator('[data-scope-window="2"]').click();
+    await expect(panel.locator('[data-scope-window="2"]')).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await expect(panel.locator('canvas')).toHaveAttribute('aria-label', /over 2 seconds/);
 
     await panel.getByRole('button', { name: 'All', exact: true }).click();
     await expect(panel.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
