@@ -3508,6 +3508,16 @@ label select:focus,
   background: rgba(255, 255, 255, 0.04);
 }
 
+.scope-view-label {
+  align-self: center;
+  padding: 0 6px;
+  color: var(--color-muted);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .scope-view-controls button {
   min-height: 30px;
   padding: 5px 9px;
@@ -3529,6 +3539,29 @@ label select:focus,
   border-radius: var(--radius-sm);
   background: rgba(8, 12, 19, 0.95);
   display: block;
+}
+
+.scope-state-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+  margin: 0 16px;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scope-state-bar button {
+  min-height: 28px;
+  padding: 4px 8px;
+  border-color: rgba(45, 226, 230, 0.38);
+  background: rgba(45, 226, 230, 0.1);
+  color: var(--color-accent);
+  font-size: 0.66rem;
 }
 
 .scope-panel-footer {
@@ -3582,10 +3615,29 @@ button.scope-legend-item[data-state='inactive'] {
   opacity: 0.48;
 }
 
+button.scope-legend-item[data-state='recent'] {
+  opacity: 0.74;
+}
+
 button.scope-legend-item[data-state='active']::before {
   content: '●';
   margin-right: 4px;
   font-size: 0.55rem;
+}
+
+button.scope-legend-item[data-state='recent']::before {
+  content: '◐';
+  margin-right: 4px;
+  font-size: 0.58rem;
+}
+
+.scope-legend-label {
+  align-self: center;
+  color: var(--color-muted);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .scope-legend-item:not(:last-child)::after {

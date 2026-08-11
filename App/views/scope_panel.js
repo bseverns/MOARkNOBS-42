@@ -8,6 +8,7 @@ const DEFAULT_LFO_COUNT = 2;
 const MIN_HISTORY = 64;
 const TARGET_FPS = 30;
 const PEAK_DECAY = 0.003;
+const DEFAULT_ACTIVITY_HOLD_MS = 1500;
 
 // Scope math stays in normalized 0..1 space regardless of the source lane.
 const clamp01 = (value) => {
@@ -25,7 +26,14 @@ const now = () =>
 // Canvas painter, not a data owner. Runtime pushes frames; the panel stores the
 // last screenful and redraws at a boring fixed cadence.
 export class ScopePanel {
-  constructor({ container, runtime, manifest, renderToggle = null } = {}) {
+  constructor({
+    container,
+    runtime,
+    manifest,
+    renderToggle = null,
+    activityHoldMs = DEFAULT_ACTIVITY_HOLD_MS,
+    nowFn = now
+  } = {}) {
     this.container = container;
     if (!container || typeof window === 'undefined') return;
 
@@ -38,6 +46,8 @@ export class ScopePanel {
     this.refreshButton = findElement('refresh', 'scope-refresh');
     this.snapshotButton = findElement('snapshot', 'scope-snapshot');
     this.efLegend = findElement('ef-legend', 'scope-ef-legend');
+    this.viewStateLabel = findElement('view-state');
+    this.leaveSoloButton = findElement('leave-solo');
     this.viewModeButtons = Array.from(container.querySelectorAll('[data-scope-view]'));
     const roleLfoLabels = Array.from(container.querySelectorAll('[data-scope-lfo-index]')).sort(
       (left, right) => Number(left.dataset.scopeLfoIndex) - Number(right.dataset.scopeLfoIndex)
@@ -47,10 +57,13 @@ export class ScopePanel {
       : [container.querySelector('#scope-lfo-1'), container.querySelector('#scope-lfo-2')];
     this.clockLabel = findElement('clock', 'scope-clock');
     this.renderToggle = renderToggle;
+    this.stageSummary = renderToggle?.querySelector?.('[data-scope-summary]') ?? null;
     if (!this.canvas || !this.canvas.getContext) return;
 
     this.ctx = this.canvas.getContext('2d');
     this.runtime = runtime;
+    this.activityHoldMs = Math.max(0, Number(activityHoldMs) || 0);
+    this.now = typeof nowFn === 'function' ? nowFn : now;
     this.historyLength = Math.max(MIN_HISTORY, Math.round(this.canvas.width || MIN_HISTORY));
     this.efCount = DEFAULT_EF_COUNT;
     this.efHistory = Array.from(
@@ -67,6 +80,7 @@ export class ScopePanel {
     this.peakLevel = 0;
     this.lastEfValues = Array.from({ length: this.efCount }, () => 0);
     this.lastEfActive = Array.from({ length: this.efCount }, () => false);
+    this.efLastActiveAt = Array.from({ length: this.efCount }, () => null);
     this.hasEfStatus = false;
     this.viewMode = 'active';
     this.soloEfIndex = null;
@@ -77,11 +91,12 @@ export class ScopePanel {
     this.lastClock = null;
     this.frameRequest = null;
     this.lastRender = 0;
-    this.fpsWindowStart = now();
+    this.fpsWindowStart = this.now();
     this.fpsFrameCount = 0;
 
     this.refreshButton?.addEventListener('click', () => this.refreshScope());
     this.snapshotButton?.addEventListener('click', () => this.captureSnapshot());
+    this.leaveSoloButton?.addEventListener('click', () => this.leaveSolo());
     this.viewModeButtons.forEach((button) => {
       button.addEventListener('click', () => this.setViewMode(button.dataset.scopeView));
     });
@@ -149,6 +164,7 @@ export class ScopePanel {
     );
     this.lastEfValues = Array.from({ length: this.efCount }, () => 0);
     this.lastEfActive = Array.from({ length: this.efCount }, () => false);
+    this.efLastActiveAt = Array.from({ length: this.efCount }, () => null);
     this.hasEfStatus = false;
     this.lastLfoValues = Array.from({ length: this.lfoCount }, () => 0);
     this.lastLfoConfigs = Array.from({ length: this.lfoCount }, () => null);
@@ -156,6 +172,7 @@ export class ScopePanel {
     this.samples = 0;
     this.peakLevel = 0;
     this.syncEfLegend();
+    this.syncScopeState();
   }
 
   // Clear the rolling traces without tearing down the live telemetry subscription.
@@ -167,6 +184,7 @@ export class ScopePanel {
     if (this.statusLabel) {
       this.statusLabel.textContent = 'Waiting for telemetry…';
     }
+    this.syncScopeState();
     this.updateReadouts();
     this.draw();
   }
@@ -223,12 +241,16 @@ export class ScopePanel {
   // Ingest one telemetry frame into the rolling EF/LFO history buffers.
   handleTelemetry(frame = {}) {
     if (!this.ctx) return;
+    const receivedAt = this.now();
     const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : null;
     const lfos = Array.isArray(frame.lfos) ? frame.lfos : null;
     if (Array.isArray(frame.efStatus)) {
       this.hasEfStatus = true;
       frame.efStatus.forEach((value, idx) => {
-        if (idx < this.lastEfActive.length) this.lastEfActive[idx] = Boolean(Number(value));
+        if (idx >= this.lastEfActive.length) return;
+        const active = Boolean(Number(value));
+        this.lastEfActive[idx] = active;
+        if (active) this.efLastActiveAt[idx] = receivedAt;
       });
     }
     if (Array.isArray(frame.lfo_config)) {
@@ -262,8 +284,9 @@ export class ScopePanel {
     this.cursor = (this.cursor + 1) % this.historyLength;
     this.samples = Math.min(this.samples + 1, this.historyLength);
     this.hasTelemetry = true;
-    this.lastTelemetryTimestamp = now();
+    this.lastTelemetryTimestamp = receivedAt;
     this.syncEfLegend();
+    this.syncScopeState(receivedAt);
   }
 
   // Kick off the scope repaint loop once the panel is live.
@@ -321,12 +344,18 @@ export class ScopePanel {
       ctx.stroke();
     });
 
-    const visibleEfIndices = this.visibleEfIndices();
+    const timestamp = this.now();
+    const visibleEfIndices = this.visibleEfIndices(timestamp);
     visibleEfIndices.forEach((idx) => {
       const identity = modulationIdentity('ef', idx);
-      this.drawLine(ctx, this.efHistory[idx], identity.rgba(0.88), w, h, {
-        lineWidth: 2.2
-      });
+      this.drawLine(
+        ctx,
+        this.efHistory[idx],
+        identity.rgba(this.efTraceOpacity(idx, timestamp)),
+        w,
+        h,
+        { lineWidth: 2.2 }
+      );
     });
     this.lfoHistory.forEach((buffer, idx) => {
       const identity = modulationIdentity('lfo', idx);
@@ -335,24 +364,15 @@ export class ScopePanel {
         lineDash: [6, 4]
       });
     });
-    this.drawTraceLabels(
-      ctx,
-      [
-        ...visibleEfIndices.map((idx) => ({
-          label: `EF ${idx + 1}`,
-          value: this.lastEfValues[idx],
-          color: modulationIdentity('ef', idx).color
-        })),
-        ...this.lastLfoValues.map((value, idx) => ({
-          label: `LFO ${idx + 1} ${this.formatLfoConfig(this.lastLfoConfigs[idx], {
-            compact: true
-          })}`,
-          value,
-          color: modulationIdentity('lfo', idx).color
-        }))
-      ],
-      h
-    );
+    if (
+      this.hasTelemetry &&
+      this.hasEfStatus &&
+      this.viewMode === 'active' &&
+      this.soloEfIndex === null &&
+      visibleEfIndices.length === 0
+    ) {
+      this.drawNoActiveEfState(ctx, w, h);
+    }
 
     if (this.peekPeakLine(w, h)) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
@@ -367,6 +387,8 @@ export class ScopePanel {
 
     this.updateStatus();
     this.updateReadouts();
+    this.syncEfLegend(timestamp);
+    this.syncScopeState(timestamp);
   }
 
   // Stroke one normalized history buffer across the current canvas dimensions.
@@ -402,24 +424,51 @@ export class ScopePanel {
     return true;
   }
 
-  drawTraceLabels(ctx, traces, height) {
+  drawNoActiveEfState(ctx, width, height) {
     ctx.save();
-    ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    traces.forEach((trace, idx) => {
-      const value = clamp01(trace.value);
-      const y = Math.min(height - 12, 14 + idx * 15);
-      ctx.fillStyle = trace.color;
-      ctx.fillText(`${trace.label} ${value.toFixed(2)}`, 10, y);
-    });
+    ctx.fillStyle = 'rgba(8, 12, 19, 0.78)';
+    ctx.fillRect(Math.max(12, width / 2 - 150), height / 2 - 30, Math.min(300, width - 24), 60);
+    ctx.fillStyle = 'rgba(232, 238, 255, 0.82)';
+    ctx.font = '600 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    ctx.fillText('Waiting for envelope activity', width / 2, height / 2 - 8);
+    ctx.fillStyle = 'rgba(232, 238, 255, 0.56)';
+    ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    ctx.fillText('EF histories are still being recorded.', width / 2, height / 2 + 12);
     ctx.restore();
   }
 
-  visibleEfIndices() {
+  efActivityState(index, timestamp = this.now()) {
+    if (!this.hasEfStatus) return 'unknown';
+    if (this.lastEfActive[index]) return 'active';
+    const lastActiveAt = this.efLastActiveAt[index];
+    if (
+      Number.isFinite(lastActiveAt) &&
+      Math.max(0, timestamp - lastActiveAt) < this.activityHoldMs
+    ) {
+      return 'recent';
+    }
+    return 'inactive';
+  }
+
+  efTraceOpacity(index, timestamp = this.now()) {
+    if (this.soloEfIndex === index || !this.hasEfStatus) return 0.88;
+    const state = this.efActivityState(index, timestamp);
+    if (state === 'active') return 0.88;
+    if (state === 'inactive') return 0.38;
+    const elapsed = Math.max(0, timestamp - this.efLastActiveAt[index]);
+    const remaining = this.activityHoldMs
+      ? Math.max(0, 1 - elapsed / this.activityHoldMs)
+      : 0;
+    return 0.38 + remaining * 0.5;
+  }
+
+  visibleEfIndices(timestamp = this.now()) {
     if (this.soloEfIndex !== null) return [this.soloEfIndex];
     const all = Array.from({ length: this.efCount }, (_, idx) => idx);
     if (this.viewMode === 'all' || !this.hasEfStatus) return all;
-    return all.filter((idx) => this.lastEfActive[idx]);
+    return all.filter((idx) => ['active', 'recent'].includes(this.efActivityState(idx, timestamp)));
   }
 
   setViewMode(mode) {
@@ -435,6 +484,14 @@ export class ScopePanel {
     const candidate = Number(index);
     if (!Number.isInteger(candidate) || candidate < 0 || candidate >= this.efCount) return;
     this.soloEfIndex = this.soloEfIndex === candidate ? null : candidate;
+    this.syncViewControls();
+    this.syncEfLegend();
+    this.draw();
+  }
+
+  leaveSolo() {
+    if (this.soloEfIndex === null) return;
+    this.soloEfIndex = null;
     this.syncViewControls();
     this.syncEfLegend();
     this.draw();
@@ -469,20 +526,17 @@ export class ScopePanel {
     this.syncEfLegend();
   }
 
-  syncEfLegend() {
+  syncEfLegend(timestamp = this.now()) {
     if (!this.efLegend) return;
     this.efLegend.querySelectorAll('[data-ef-index]').forEach((button) => {
       const idx = Number(button.dataset.efIndex);
       const rawValue = Math.round(clamp01(this.lastEfValues[idx]) * 127);
-      const state = this.hasEfStatus
-        ? this.lastEfActive[idx]
-          ? 'active'
-          : 'inactive'
-        : 'unknown';
+      const state = this.efActivityState(idx, timestamp);
       const selected = this.soloEfIndex === idx;
       const valueLabel = button.querySelector('b');
       if (valueLabel) valueLabel.textContent = this.hasTelemetry ? String(rawValue) : '--';
       button.dataset.state = state;
+      button.dataset.focus = selected ? 'soloed' : 'none';
       button.setAttribute('aria-pressed', selected ? 'true' : 'false');
       button.setAttribute(
         'aria-label',
@@ -492,6 +546,76 @@ export class ScopePanel {
       );
       button.title = `EF ${idx + 1}: ${state}; click to ${selected ? 'leave solo' : 'solo'}`;
     });
+  }
+
+  syncScopeState(timestamp = this.now()) {
+    const states = Array.from({ length: this.efCount }, (_, idx) =>
+      this.efActivityState(idx, timestamp)
+    );
+    const activeCount = states.filter((state) => state === 'active').length;
+    const recentCount = states.filter((state) => state === 'recent').length;
+    const visibleCount = this.visibleEfIndices(timestamp).length;
+    const lfoLabel = `${this.lfoCount} ${this.lfoCount === 1 ? 'LFO' : 'LFOs'}`;
+    let viewText;
+
+    if (!this.hasTelemetry) {
+      viewText = `VIEW: ${this.viewMode.toUpperCase()} · Waiting for telemetry`;
+    } else if (this.soloEfIndex !== null) {
+      const rawValue = Math.round(clamp01(this.lastEfValues[this.soloEfIndex]) * 127);
+      viewText = `VIEW: ${this.viewMode.toUpperCase()} · FOCUS: EF ${this.soloEfIndex + 1} · ${rawValue}`;
+    } else if (!this.hasEfStatus) {
+      viewText = `VIEW: ${this.viewMode.toUpperCase()} · EF activity unknown · ${lfoLabel} always visible`;
+    } else if (this.viewMode === 'all') {
+      viewText = `VIEW: ALL · ${this.efCount}/${this.efCount} EFs · ${lfoLabel} always visible`;
+    } else if (recentCount) {
+      viewText = `VIEW: ACTIVE · ${visibleCount}/${this.efCount} EFs (${activeCount} active, ${recentCount} recent) · ${lfoLabel} always visible`;
+    } else if (activeCount) {
+      viewText = `VIEW: ACTIVE · ${activeCount}/${this.efCount} EFs · ${lfoLabel} always visible`;
+    } else {
+      viewText = `VIEW: ACTIVE · No active EFs · ${lfoLabel} still running`;
+    }
+
+    if (this.viewStateLabel && this.viewStateLabel.textContent !== viewText) {
+      this.viewStateLabel.textContent = viewText;
+    }
+    if (this.leaveSoloButton) this.leaveSoloButton.hidden = this.soloEfIndex === null;
+    if (this.canvas) {
+      const empty =
+        this.hasTelemetry &&
+        this.hasEfStatus &&
+        this.viewMode === 'active' &&
+        this.soloEfIndex === null &&
+        visibleCount === 0;
+      this.canvas.dataset.efEmpty = empty ? 'true' : 'false';
+      this.canvas.setAttribute(
+        'aria-label',
+        empty
+          ? 'Envelope follower and LFO scope. No active envelope followers; histories are still recording and LFOs remain visible.'
+          : `Envelope follower and LFO scope. ${viewText}`
+      );
+    }
+
+    if (!this.stageSummary) return;
+    let stageText;
+    if (!this.hasTelemetry) {
+      stageText = 'Waiting for modulation';
+    } else if (this.soloEfIndex !== null) {
+      const rawValue = Math.round(clamp01(this.lastEfValues[this.soloEfIndex]) * 127);
+      stageText = `EF ${this.soloEfIndex + 1} solo · ${rawValue}`;
+    } else if (this.viewMode === 'all') {
+      stageText = `All ${this.efCount} EFs · ${lfoLabel}`;
+    } else if (!this.hasEfStatus) {
+      stageText = `EF activity pending · ${lfoLabel}`;
+    } else if (activeCount && recentCount) {
+      stageText = `${activeCount} active + ${recentCount} recent · ${lfoLabel}`;
+    } else if (activeCount) {
+      stageText = `${activeCount} ${activeCount === 1 ? 'EF' : 'EFs'} active · ${lfoLabel}`;
+    } else if (recentCount) {
+      stageText = `${recentCount} ${recentCount === 1 ? 'EF' : 'EFs'} recently active · ${lfoLabel}`;
+    } else {
+      stageText = `No active EFs · ${lfoLabel} still running`;
+    }
+    if (this.stageSummary.textContent !== stageText) this.stageSummary.textContent = stageText;
   }
 
   updateReadouts() {

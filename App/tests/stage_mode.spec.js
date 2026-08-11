@@ -112,12 +112,17 @@ test.describe('Stage mode', () => {
     await expect(panel.locator('[data-scope-role="snapshot"]')).toHaveCount(0);
     await expect(panel.locator('[data-scope-role="refresh"]')).toHaveCount(0);
     await expect(panel.locator('[data-scope-role="fps"]')).toHaveCount(0);
+    await expect(drawer.locator('[data-scope-summary]')).toHaveText(/3 EFs active · 2 LFOs/);
+    await expect(panel.locator('[data-scope-role="view-state"]')).toHaveText(
+      /VIEW: ACTIVE · 3\/6 EFs · 2 LFOs always visible/
+    );
 
-    await panel.getByRole('button', { name: 'All EFs' }).click();
-    await expect(panel.getByRole('button', { name: 'All EFs' })).toHaveAttribute(
+    await panel.getByRole('button', { name: 'All', exact: true }).click();
+    await expect(panel.getByRole('button', { name: 'All', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
+    await expect(drawer.locator('[data-scope-summary]')).toHaveText('All 6 EFs · 2 LFOs');
     await drawer.locator(':scope > summary').click();
     await expect(panel).toHaveAttribute('data-scope-rendering', 'false');
 

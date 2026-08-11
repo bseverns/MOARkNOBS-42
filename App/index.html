@@ -265,17 +265,22 @@
               <strong>Motion</strong>
               <small>Read-only envelope and LFO scope</small>
             </span>
-            <span class="stage-motion-summary-state">Active EFs + LFOs</span>
+            <span class="stage-motion-summary-state" data-scope-summary>Waiting for modulation</span>
           </summary>
           <section id="stage-motion-panel" class="scope-panel stage-motion-panel"
             aria-label="Stage modulation motion scope">
             <header class="scope-panel-header">
               <p class="microcopy">See what is moving together. This surface never edits the instrument.</p>
               <div class="scope-view-controls" role="group" aria-label="Stage envelope trace visibility">
-                <button type="button" data-scope-view="active" aria-pressed="true">Active EFs</button>
-                <button type="button" data-scope-view="all" aria-pressed="false">All EFs</button>
+                <span class="scope-view-label">EF traces</span>
+                <button type="button" data-scope-view="active" aria-pressed="true">Active</button>
+                <button type="button" data-scope-view="all" aria-pressed="false">All</button>
               </div>
             </header>
+            <div class="scope-state-bar">
+              <strong data-scope-role="view-state" aria-live="polite">VIEW: ACTIVE · Waiting for telemetry</strong>
+              <button type="button" data-scope-role="leave-solo" hidden>Leave solo</button>
+            </div>
             <canvas data-scope-role="canvas" width="600" height="180"
               aria-label="Stage envelope follower and LFO motion display"></canvas>
             <div class="scope-panel-footer">
@@ -283,6 +288,7 @@
               <div class="scope-legend">
                 <div data-scope-role="ef-legend" class="scope-ef-legend"
                   aria-label="Stage envelope follower traces"></div>
+                <span class="scope-legend-label">LFOs always visible</span>
                 <span class="scope-legend-item lfo-one">LFO 1 <b data-scope-lfo-index="0">--</b></span>
                 <span class="scope-legend-item lfo-two">LFO 2 <b data-scope-lfo-index="1">--</b></span>
                 <span class="scope-legend-item clock" data-scope-role="clock">Clock --</span>
@@ -555,19 +561,25 @@
               </div>
               <div class="scope-panel-actions">
                 <div class="scope-view-controls" role="group" aria-label="Envelope trace visibility">
-                  <button type="button" data-scope-view="active" aria-pressed="true">Active EFs</button>
-                  <button type="button" data-scope-view="all" aria-pressed="false">All EFs</button>
+                  <span class="scope-view-label">EF traces</span>
+                  <button type="button" data-scope-view="active" aria-pressed="true">Active</button>
+                  <button type="button" data-scope-view="all" aria-pressed="false">All</button>
                 </div>
                 <span id="scope-fps" data-scope-role="fps" class="microcopy">0 fps</span>
                 <button id="scope-refresh" data-scope-role="refresh" type="button">Refresh scope</button>
                 <button id="scope-snapshot" data-scope-role="snapshot" type="button">PNG snapshot</button>
               </div>
             </header>
+            <div class="scope-state-bar">
+              <strong data-scope-role="view-state" aria-live="polite">VIEW: ACTIVE · Waiting for telemetry</strong>
+              <button type="button" data-scope-role="leave-solo" hidden>Leave solo</button>
+            </div>
             <canvas id="scope-canvas" data-scope-role="canvas" width="600" height="220" aria-label="Envelope follower and LFO scope display"></canvas>
             <div class="scope-panel-footer">
               <span id="scope-status" data-scope-role="status" class="microcopy">Waiting for telemetry…</span>
               <div class="scope-legend">
                 <div id="scope-ef-legend" data-scope-role="ef-legend" class="scope-ef-legend" aria-label="Envelope follower traces"></div>
+                <span class="scope-legend-label">LFOs always visible</span>
                 <span class="scope-legend-item lfo-one">LFO 1 <b id="scope-lfo-1" data-scope-lfo-index="0">--</b></span>
                 <span class="scope-legend-item lfo-two">LFO 2 <b id="scope-lfo-2" data-scope-lfo-index="1">--</b></span>
                 <span class="scope-legend-item clock" id="scope-clock" data-scope-role="clock">Clock --</span>

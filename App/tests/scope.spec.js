@@ -30,18 +30,33 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   await expect(page.locator('#scope-clock')).toHaveText(/Clock (external|internal)/);
   await expect(page.locator('#scope-ef-legend [data-ef-index]')).toHaveCount(6);
   await expect(page.locator('#scope-ef-legend [data-state="active"]')).toHaveCount(3);
-  await expect(page.getByRole('button', { name: 'Active EFs' })).toHaveAttribute(
+  await expect(page.locator('#scope-panel [data-scope-role="view-state"]')).toHaveText(
+    /VIEW: ACTIVE · 3\/6 EFs · 2 LFOs always visible/
+  );
+  await expect(page.locator('#scope-panel [data-scope-view="active"]')).toHaveAttribute(
     'aria-pressed',
     'true'
   );
 
-  await page.getByRole('button', { name: 'All EFs' }).click();
-  await expect(page.getByRole('button', { name: 'All EFs' })).toHaveAttribute(
+  await page.locator('#scope-panel [data-scope-view="all"]').click();
+  await expect(page.locator('#scope-panel [data-scope-view="all"]')).toHaveAttribute(
     'aria-pressed',
     'true'
   );
   await page.locator('#scope-ef-legend [data-ef-index="1"]').click();
   await expect(page.locator('#scope-ef-legend [data-ef-index="1"]')).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await expect(page.locator('#scope-panel [data-scope-role="view-state"]')).toHaveText(
+    /VIEW: ALL · FOCUS: EF 2 · \d+/
+  );
+  await expect(page.locator('#scope-panel [data-scope-view="all"]')).toHaveAttribute(
+    'aria-pressed',
+    'false'
+  );
+  await page.locator('#scope-panel [data-scope-role="leave-solo"]').click();
+  await expect(page.locator('#scope-panel [data-scope-view="all"]')).toHaveAttribute(
     'aria-pressed',
     'true'
   );
@@ -70,6 +85,8 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
         <button id="scope-refresh">Refresh scope</button>
         <span id="scope-status"></span>
         <span id="scope-fps"></span>
+        <strong data-scope-role="view-state"></strong>
+        <button data-scope-role="leave-solo" hidden>Leave solo</button>
         <button data-scope-view="active" aria-pressed="true">Active EFs</button>
         <button data-scope-view="all" aria-pressed="false">All EFs</button>
         <canvas id="scope-canvas" style="width: 420px; height: 180px"></canvas>
@@ -135,7 +152,9 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
     const inactiveHistoryWasPreserved = Math.round(panel.efHistory[1][lastHistoryIndex] * 127);
     document.querySelector('[data-ef-index="1"]').click();
     const soloEfIndices = panel.visibleEfIndices();
-    document.querySelector('[data-ef-index="1"]').click();
+    const soloState = document.querySelector('[data-scope-role="view-state"]').textContent;
+    const soloFocus = document.querySelector('[data-ef-index="1"]').dataset.focus;
+    document.querySelector('[data-scope-role="leave-solo"]').click();
     document.querySelector('[data-scope-view="all"]').click();
     const allEfIndices = panel.visibleEfIndices();
 
@@ -144,6 +163,8 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
       afterPartial,
       activeEfIndices,
       soloEfIndices,
+      soloState,
+      soloFocus,
       allEfIndices,
       inactiveHistoryWasPreserved,
       efLegendStates: Array.from(document.querySelectorAll('[data-ef-index]')).map(
@@ -159,9 +180,90 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
   expect(readouts.afterPartial).toEqual({ lfo1: '0.75', lfo2: '0.25' });
   expect(readouts.activeEfIndices).toEqual([0, 2]);
   expect(readouts.soloEfIndices).toEqual([1]);
+  expect(readouts.soloState).toContain('VIEW: ACTIVE · FOCUS: EF 2 · 80');
+  expect(readouts.soloFocus).toBe('soloed');
   expect(readouts.allEfIndices).toEqual([0, 1, 2]);
   expect(readouts.inactiveHistoryWasPreserved).toBe(80);
   expect(readouts.efLegendStates).toEqual(['active', 'inactive', 'active']);
+});
+
+test('active EF view holds recent activity before showing its intentional empty state', async ({
+  page
+}) => {
+  await page.goto('/views/scope_panel.js');
+
+  const states = await page.evaluate(async () => {
+    const { ScopePanel } = await import('/views/scope_panel.js');
+    document.body.innerHTML = `
+      <details id="scope-drawer">
+        <summary>Motion · <span data-scope-summary></span></summary>
+        <section id="scope-panel" style="width: 420px">
+          <strong data-scope-role="view-state"></strong>
+          <button data-scope-role="leave-solo" hidden>Leave solo</button>
+          <button data-scope-view="active" aria-pressed="true">Active</button>
+          <button data-scope-view="all" aria-pressed="false">All</button>
+          <canvas data-scope-role="canvas" width="420" height="180"
+            style="width: 420px; height: 180px"></canvas>
+          <div data-scope-role="ef-legend"></div>
+        </section>
+      </details>
+    `;
+    let clock = 1000;
+    const listeners = new Map();
+    const runtime = {
+      on(event, callback) {
+        listeners.set(event, callback);
+        return () => listeners.delete(event);
+      },
+      getState() {
+        return { manifest: { envelope_count: 2, lfo_count: 2 } };
+      }
+    };
+    const container = document.getElementById('scope-panel');
+    const panel = new ScopePanel({
+      container,
+      runtime,
+      renderToggle: document.getElementById('scope-drawer'),
+      activityHoldMs: 1500,
+      nowFn: () => clock
+    });
+    const pushTelemetry = listeners.get('telemetry');
+    pushTelemetry({ envelopes: [90, 10], efStatus: [1, 0], lfos: [0.2, 0.8] });
+    clock = 1100;
+    pushTelemetry({ envelopes: [70, 10], efStatus: [0, 0], lfos: [0.3, 0.7] });
+    const recent = {
+      visible: panel.visibleEfIndices(),
+      opacity: panel.efTraceOpacity(0),
+      legendState: container.querySelector('[data-ef-index="0"]').dataset.state,
+      summary: container.querySelector('[data-scope-role="view-state"]').textContent,
+      stageSummary: document.querySelector('[data-scope-summary]').textContent
+    };
+    clock = 2601;
+    panel.draw();
+    const expired = {
+      visible: panel.visibleEfIndices(),
+      opacity: panel.efTraceOpacity(0),
+      legendState: container.querySelector('[data-ef-index="0"]').dataset.state,
+      summary: container.querySelector('[data-scope-role="view-state"]').textContent,
+      stageSummary: document.querySelector('[data-scope-summary]').textContent,
+      empty: container.querySelector('canvas').dataset.efEmpty,
+      ariaLabel: container.querySelector('canvas').getAttribute('aria-label')
+    };
+    panel.destroy();
+    return { recent, expired };
+  });
+
+  expect(states.recent.visible).toEqual([0]);
+  expect(states.recent.opacity).toBeGreaterThan(states.expired.opacity);
+  expect(states.recent.legendState).toBe('recent');
+  expect(states.recent.summary).toContain('1/2 EFs (0 active, 1 recent)');
+  expect(states.recent.stageSummary).toBe('1 EF recently active · 2 LFOs');
+  expect(states.expired.visible).toEqual([]);
+  expect(states.expired.legendState).toBe('inactive');
+  expect(states.expired.summary).toContain('No active EFs · 2 LFOs still running');
+  expect(states.expired.stageSummary).toBe('No active EFs · 2 LFOs still running');
+  expect(states.expired.empty).toBe('true');
+  expect(states.expired.ariaLabel).toContain('histories are still recording');
 });
 
 test('role-based scope records while closed and only renders when its drawer is open', async ({
