@@ -131,6 +131,61 @@ test('Stage preserves slot output while envelope-only frames update source conte
   expect(state.modulationColors[0]).not.toBe(state.modulationColors[1]);
 });
 
+test('Stage clock distinguishes external lock from explicit internal fallback', async ({ page }) => {
+  await page.goto('/views/controllers/performer_panel_controller.js');
+
+  const states = await page.evaluate(async () => {
+    const { createPerformerPanelController } = await import(
+      '/views/controllers/performer_panel_controller.js'
+    );
+    document.body.innerHTML = '<strong id="clock"></strong>';
+    const clock = document.getElementById('clock');
+    const controller = createPerformerPanelController({
+      runtime: { getState: () => ({}) },
+      elements: { clockState: clock }
+    });
+
+    controller.paintTelemetry({
+      clock: {
+        follow_external: true,
+        source: 'internal',
+        tapped_bpm: 120,
+        external_bpm: 0,
+        external_signal: false,
+        running: true
+      }
+    });
+    const waiting = { text: clock.textContent, health: clock.dataset.clockHealth };
+
+    controller.paintTelemetry({ clock: { running: false } });
+    const partial = { text: clock.textContent, health: clock.dataset.clockHealth };
+
+    controller.paintTelemetry({
+      clock: {
+        source: 'external',
+        external_bpm: 128.25,
+        external_signal: true,
+        running: true
+      }
+    });
+    const locked = { text: clock.textContent, health: clock.dataset.clockHealth };
+
+    return { waiting, partial, locked };
+  });
+
+  expect(states).toEqual({
+    waiting: {
+      text: 'INT fallback · 120.0 BPM · Waiting for EXT',
+      health: 'waiting-external'
+    },
+    partial: {
+      text: 'INT fallback · 120.0 BPM · Waiting for EXT',
+      health: 'waiting-external'
+    },
+    locked: { text: 'EXT · 128.3 BPM · Running', health: 'external' }
+  });
+});
+
 test('slot workspace forwards partial telemetry frames and preserves its merged snapshot', async ({
   page
 }) => {

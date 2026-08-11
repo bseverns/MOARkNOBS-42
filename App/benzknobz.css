@@ -1108,6 +1108,10 @@ main {
   font-size: 0.95rem;
 }
 
+#stage-clock-state[data-clock-health='waiting-external'] {
+  color: var(--color-warning);
+}
+
 .stage-device-detail {
   display: block;
   margin-top: 7px;

@@ -8,6 +8,38 @@ import { applyModulationIdentity } from '../modulation_identity.js';
 const PROFILE_SLOT_LABELS = ['A', 'B', 'C', 'D'];
 const SLOT_ACTIVITY_DECAY_MS = 280;
 
+export function formatStageClockState(clock, legacyFrame = {}) {
+  if (!clock || typeof clock !== 'object') return { text: 'Waiting', health: 'unknown' };
+  const source = String(clock.source ?? '').toLowerCase();
+  const followsExternal = clock.follow_external === true;
+  const externalMissing = followsExternal && clock.external_signal === false;
+  const sourceLabel = source === 'external' ? 'EXT' : source === 'internal' ? 'INT' : 'CLOCK';
+  const bpm = Number(
+    source === 'external'
+      ? clock.external_bpm ?? clock.bpm ?? legacyFrame.clock_bpm
+      : clock.tapped_bpm ?? clock.bpm ?? legacyFrame.clock_bpm
+  );
+  const bpmText = Number.isFinite(bpm) && bpm > 0 ? `${bpm.toFixed(1)} BPM` : null;
+  const runningText = typeof clock.running === 'boolean'
+    ? clock.running
+      ? 'Running'
+      : 'Stopped'
+    : null;
+
+  if (externalMissing) {
+    const fallbackLabel = source === 'internal' ? 'INT fallback' : 'CLOCK';
+    return {
+      text: [fallbackLabel, bpmText, 'Waiting for EXT'].filter(Boolean).join(' · '),
+      health: 'waiting-external'
+    };
+  }
+
+  return {
+    text: [sourceLabel, bpmText, runningText].filter(Boolean).join(' · ') || 'Waiting',
+    health: source === 'external' ? 'external' : source === 'internal' ? 'internal' : 'idle'
+  };
+}
+
 function slotTypeCssToken(type) {
   if (typeof type !== 'string' || !type.trim()) return 'off';
   return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -357,7 +389,10 @@ export function createPerformerPanelController({
       envelopes: Array.isArray(frame.envelopes) ? frame.envelopes : latestTelemetry?.envelopes,
       efStatus: Array.isArray(frame.efStatus) ? frame.efStatus : latestTelemetry?.efStatus,
       lfos: Array.isArray(frame.lfos) ? frame.lfos : latestTelemetry?.lfos,
-      clock: frame.clock && typeof frame.clock === 'object' ? frame.clock : latestTelemetry?.clock
+      clock:
+        frame.clock && typeof frame.clock === 'object'
+          ? { ...(latestTelemetry?.clock ?? {}), ...frame.clock }
+          : latestTelemetry?.clock
     };
 
     latestTelemetry.envelopes?.forEach((value, idx) => {
@@ -390,23 +425,20 @@ export function createPerformerPanelController({
 
     if (clockState) {
       const clock = latestTelemetry.clock;
-      const running = clock?.running ?? latestTelemetry.clock_running;
-      const source = String(clock?.source ?? '').toLowerCase();
-      const sourceLabel = source === 'external' ? 'EXT' : source === 'internal' ? 'INT' : 'CLOCK';
-      const bpm = Number(
-        source === 'external'
-          ? clock?.external_bpm ?? clock?.bpm ?? latestTelemetry.clock_bpm
-          : clock?.tapped_bpm ?? clock?.bpm ?? latestTelemetry.clock_bpm
+      const described = formatStageClockState(
+        clock
+          ? {
+              ...clock,
+              running:
+                typeof clock.running === 'boolean'
+                  ? clock.running
+                  : latestTelemetry.clock_running
+            }
+          : null,
+        latestTelemetry
       );
-      clockState.textContent = clock
-        ? [
-            sourceLabel,
-            Number.isFinite(bpm) && bpm > 0 ? `${bpm.toFixed(1)} BPM` : null,
-            running ? 'Running' : 'Stopped'
-          ]
-            .filter(Boolean)
-            .join(' · ')
-        : 'Waiting';
+      clockState.textContent = described.text;
+      clockState.dataset.clockHealth = described.health;
     }
     if (midiOutput) {
       const enabled = frame?.usb_midi_enabled ?? frame?.midi_output_enabled;
