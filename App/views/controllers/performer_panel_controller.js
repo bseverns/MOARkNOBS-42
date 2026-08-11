@@ -40,6 +40,23 @@ export function formatStageClockState(clock, legacyFrame = {}) {
   };
 }
 
+export function formatStageTelemetryHealth(health = {}, { connected = false } = {}) {
+  if (!connected) return { text: 'Telemetry offline', freshness: 'offline' };
+  const freshness = ['live', 'delayed', 'stale'].includes(health?.freshness)
+    ? health.freshness
+    : 'stale';
+  if (freshness === 'stale' && health?.receivedAt === null) {
+    return { text: 'Telemetry waiting', freshness: 'waiting' };
+  }
+  if (freshness === 'live') return { text: 'Telemetry live', freshness };
+  const ageMs = Number(health?.ageMs);
+  const ageText = Number.isFinite(ageMs) ? ` · ${(Math.max(0, ageMs) / 1000).toFixed(1)}s` : '';
+  return {
+    text: `Telemetry ${freshness}${ageText}`,
+    freshness
+  };
+}
+
 function slotTypeCssToken(type) {
   if (typeof type !== 'string' || !type.trim()) return 'off';
   return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -116,6 +133,7 @@ export function createPerformerPanelController({
     panel = null,
     connectBtn = null,
     connectionState = null,
+    telemetryState = null,
     dirtyState = null,
     deviceName = null,
     fwVersion = null,
@@ -459,6 +477,14 @@ export function createPerformerPanelController({
       connectionState.textContent = getConnectionText();
       connectionState.dataset.stage = getConnectionStage();
     }
+    const telemetry = formatStageTelemetryHealth(runtime?.getState?.().telemetryHealth, {
+      connected
+    });
+    if (telemetryState) {
+      telemetryState.textContent = telemetry.text;
+      telemetryState.dataset.freshness = telemetry.freshness;
+    }
+    if (panel) panel.dataset.telemetryFreshness = telemetry.freshness;
     if (connectBtn) {
       connectBtn.textContent = connected ? 'Reconnect' : 'Connect';
     }

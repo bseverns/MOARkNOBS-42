@@ -201,6 +201,7 @@ const boot = () => {
   const performerPanel = document.getElementById('performer-panel');
   const stageConnectBtn = document.getElementById('stage-connect');
   const stageConnectionState = document.getElementById('stage-connection-state');
+  const stageTelemetryState = document.getElementById('stage-telemetry-state');
   const stageDirtyState = document.getElementById('stage-dirty-state');
   const stageDeviceName = document.getElementById('stage-device-name');
   const stageFwVersion = document.getElementById('stage-fw-version');
@@ -509,6 +510,7 @@ const boot = () => {
       panel: performerPanel,
       connectBtn: stageConnectBtn,
       connectionState: stageConnectionState,
+      telemetryState: stageTelemetryState,
       dirtyState: stageDirtyState,
       deviceName: stageDeviceName,
       fwVersion: stageFwVersion,
@@ -903,6 +905,7 @@ const boot = () => {
   });
   runtime.on('telemetry-health', (health) => {
     deviceMonitorController.renderTelemetryHealth(health);
+    updateStagePanel();
   });
   runtime.on('config', ({ staged, config, dirty }) => {
     // `staged` is the single source of truth for editor controls; keep all derived UI panes in

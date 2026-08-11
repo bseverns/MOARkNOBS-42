@@ -18,6 +18,7 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-profile-summary')).toBeVisible();
     await expect(page.locator('#stage-profile-summary')).toHaveText('Unavailable');
     await expect(page.locator('#stage-scene-summary')).toHaveText('No browser recall');
+    await expect(page.locator('#stage-telemetry-state')).toHaveText('Telemetry offline');
     await expect(page.locator('#stage-profile-load')).toBeVisible();
     await expect(page.locator('#stage-scene-recall')).toBeVisible();
     await expect(page.locator('#stage-panic-help')).toBeVisible();
@@ -55,6 +56,11 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-device-name')).toHaveText('MOARkNOBS-42');
     await expect(page.locator('#stage-fw-version')).toHaveText('sim-fw');
     await expect(page.locator('#stage-profile-summary')).toHaveText('Profile A');
+    await expect(page.locator('#stage-telemetry-state')).toHaveText('Telemetry live');
+    await expect(page.locator('#performer-panel')).toHaveAttribute(
+      'data-telemetry-freshness',
+      'live'
+    );
     await expect(page.locator('#stage-power-summary')).toContainText('POWER_CHOKED_V1');
     await expect(page.locator('#stage-power-summary')).toContainText('LED cap: 26/255');
     await expect(page.locator('#stage-power-summary')).toContainText('Rail: UNVERIFIED');

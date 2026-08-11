@@ -186,6 +186,43 @@ test('Stage clock distinguishes external lock from explicit internal fallback', 
   });
 });
 
+test('Stage telemetry health distinguishes waiting and last-known readings', async ({ page }) => {
+  await page.goto('/views/controllers/performer_panel_controller.js');
+
+  const states = await page.evaluate(async () => {
+    const { formatStageTelemetryHealth } = await import(
+      '/views/controllers/performer_panel_controller.js'
+    );
+    return {
+      offline: formatStageTelemetryHealth({ freshness: 'live', ageMs: 10 }, { connected: false }),
+      waiting: formatStageTelemetryHealth(
+        { freshness: 'stale', receivedAt: null, ageMs: null },
+        { connected: true }
+      ),
+      live: formatStageTelemetryHealth(
+        { freshness: 'live', receivedAt: 1000, ageMs: 20 },
+        { connected: true }
+      ),
+      delayed: formatStageTelemetryHealth(
+        { freshness: 'delayed', receivedAt: 1000, ageMs: 1520 },
+        { connected: true }
+      ),
+      stale: formatStageTelemetryHealth(
+        { freshness: 'stale', receivedAt: 1000, ageMs: 3260 },
+        { connected: true }
+      )
+    };
+  });
+
+  expect(states).toEqual({
+    offline: { text: 'Telemetry offline', freshness: 'offline' },
+    waiting: { text: 'Telemetry waiting', freshness: 'waiting' },
+    live: { text: 'Telemetry live', freshness: 'live' },
+    delayed: { text: 'Telemetry delayed · 1.5s', freshness: 'delayed' },
+    stale: { text: 'Telemetry stale · 3.3s', freshness: 'stale' }
+  });
+});
+
 test('slot workspace forwards partial telemetry frames and preserves its merged snapshot', async ({
   page
 }) => {

@@ -1109,7 +1109,30 @@ main {
 }
 
 #stage-clock-state[data-clock-health='waiting-external'] {
-  color: var(--color-warning);
+  color: var(--color-warn);
+}
+
+#stage-telemetry-state[data-freshness='waiting'],
+#stage-telemetry-state[data-freshness='delayed'] {
+  border-color: rgba(255, 206, 107, 0.55);
+  color: var(--color-warn);
+}
+
+#stage-telemetry-state[data-freshness='stale'] {
+  border-color: rgba(255, 95, 150, 0.62);
+  color: var(--color-hot);
+}
+
+#performer-panel[data-telemetry-freshness='delayed'] .stage-slot-value,
+#performer-panel[data-telemetry-freshness='delayed'] .stage-envelope-list progress,
+#performer-panel[data-telemetry-freshness='delayed'] #stage-clock-state {
+  opacity: 0.72;
+}
+
+#performer-panel[data-telemetry-freshness='stale'] .stage-slot-value,
+#performer-panel[data-telemetry-freshness='stale'] .stage-envelope-list progress,
+#performer-panel[data-telemetry-freshness='stale'] #stage-clock-state {
+  opacity: 0.48;
 }
 
 .stage-device-detail {
