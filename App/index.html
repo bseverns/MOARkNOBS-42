@@ -248,6 +248,38 @@
             <div id="stage-envelopes" class="stage-envelope-list"></div>
           </section>
         </div>
+
+        <details id="stage-motion" class="stage-motion">
+          <summary>
+            <span>
+              <strong>Motion</strong>
+              <small>Read-only envelope and LFO scope</small>
+            </span>
+            <span class="stage-motion-summary-state">Active EFs + LFOs</span>
+          </summary>
+          <section id="stage-motion-panel" class="scope-panel stage-motion-panel"
+            aria-label="Stage modulation motion scope">
+            <header class="scope-panel-header">
+              <p class="microcopy">See what is moving together. This surface never edits the instrument.</p>
+              <div class="scope-view-controls" role="group" aria-label="Stage envelope trace visibility">
+                <button type="button" data-scope-view="active" aria-pressed="true">Active EFs</button>
+                <button type="button" data-scope-view="all" aria-pressed="false">All EFs</button>
+              </div>
+            </header>
+            <canvas data-scope-role="canvas" width="600" height="180"
+              aria-label="Stage envelope follower and LFO motion display"></canvas>
+            <div class="scope-panel-footer">
+              <span data-scope-role="status" class="microcopy">Waiting for telemetry…</span>
+              <div class="scope-legend">
+                <div data-scope-role="ef-legend" class="scope-ef-legend"
+                  aria-label="Stage envelope follower traces"></div>
+                <span class="scope-legend-item lfo-one">LFO 1 <b data-scope-lfo-index="0">--</b></span>
+                <span class="scope-legend-item lfo-two">LFO 2 <b data-scope-lfo-index="1">--</b></span>
+                <span class="scope-legend-item clock" data-scope-role="clock">Clock --</span>
+              </div>
+            </div>
+          </section>
+        </details>
       </section>
 
       <section id="stage-panel" data-ui-modes="basic advanced">
@@ -516,19 +548,19 @@
                   <button type="button" data-scope-view="active" aria-pressed="true">Active EFs</button>
                   <button type="button" data-scope-view="all" aria-pressed="false">All EFs</button>
                 </div>
-                <span id="scope-fps" class="microcopy">0 fps</span>
-                <button id="scope-refresh" type="button">Refresh scope</button>
-                <button id="scope-snapshot" type="button">PNG snapshot</button>
+                <span id="scope-fps" data-scope-role="fps" class="microcopy">0 fps</span>
+                <button id="scope-refresh" data-scope-role="refresh" type="button">Refresh scope</button>
+                <button id="scope-snapshot" data-scope-role="snapshot" type="button">PNG snapshot</button>
               </div>
             </header>
-            <canvas id="scope-canvas" width="600" height="220" aria-label="Envelope follower and LFO scope display"></canvas>
+            <canvas id="scope-canvas" data-scope-role="canvas" width="600" height="220" aria-label="Envelope follower and LFO scope display"></canvas>
             <div class="scope-panel-footer">
-              <span id="scope-status" class="microcopy">Waiting for telemetry…</span>
+              <span id="scope-status" data-scope-role="status" class="microcopy">Waiting for telemetry…</span>
               <div class="scope-legend">
-                <div id="scope-ef-legend" class="scope-ef-legend" aria-label="Envelope follower traces"></div>
-                <span class="scope-legend-item lfo-one">LFO 1 <b id="scope-lfo-1">--</b></span>
-                <span class="scope-legend-item lfo-two">LFO 2 <b id="scope-lfo-2">--</b></span>
-                <span class="scope-legend-item clock" id="scope-clock">Clock --</span>
+                <div id="scope-ef-legend" data-scope-role="ef-legend" class="scope-ef-legend" aria-label="Envelope follower traces"></div>
+                <span class="scope-legend-item lfo-one">LFO 1 <b id="scope-lfo-1" data-scope-lfo-index="0">--</b></span>
+                <span class="scope-legend-item lfo-two">LFO 2 <b id="scope-lfo-2" data-scope-lfo-index="1">--</b></span>
+                <span class="scope-legend-item clock" id="scope-clock" data-scope-role="clock">Clock --</span>
               </div>
             </div>
           </section>

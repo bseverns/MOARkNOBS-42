@@ -218,6 +218,7 @@ const boot = () => {
   const stageSlotGrid = document.getElementById('stage-slots');
   const stageEnvelopeContainer = document.getElementById('stage-envelopes');
   const stageEnvelopeCount = document.getElementById('stage-envelope-count');
+  const stageMotion = document.getElementById('stage-motion');
   const logEl = document.getElementById('log');
   const sessionLogCount = document.getElementById('session-log-count');
   const sessionLogExportBtn = document.getElementById('session-log-export');
@@ -577,7 +578,10 @@ const boot = () => {
     hints: UI_MODE_HINTS,
     getSlotCount: () => slotState.slots.length,
     renderSlotEditor,
-    setPerformerVisible: (visible) => performerPanelController.setVisible(visible),
+    setPerformerVisible: (visible) => {
+      performerPanelController.setVisible(visible);
+      if (!visible && stageMotion?.open) stageMotion.open = false;
+    },
     onModeChanged: updateStagePanel,
     elements: {
       uiModeButtons,
@@ -1081,6 +1085,12 @@ const boot = () => {
     container: document.getElementById('scope-panel'),
     runtime,
     manifest: localManifest
+  });
+  new ScopePanel({
+    container: document.getElementById('stage-motion-panel'),
+    runtime,
+    manifest: localManifest,
+    renderToggle: stageMotion
   });
   if (connectBtn) {
     connectBtn.disabled = false;

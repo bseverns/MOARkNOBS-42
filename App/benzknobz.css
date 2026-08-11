@@ -1147,6 +1147,69 @@ main {
   align-items: start;
 }
 
+.stage-motion {
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.stage-motion > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.stage-motion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.stage-motion > summary > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.stage-motion > summary strong {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stage-motion > summary small,
+.stage-motion-summary-state {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stage-motion-summary-state::after {
+  content: ' · Open';
+  color: var(--color-accent);
+}
+
+.stage-motion[open] .stage-motion-summary-state::after {
+  content: ' · Close';
+}
+
+.stage-motion-panel {
+  margin-top: 12px;
+}
+
+.stage-motion-panel .scope-panel-header {
+  padding: 12px 14px;
+}
+
+.stage-motion-panel .scope-panel-header > p {
+  margin: 0;
+}
+
+.stage-motion-panel canvas {
+  height: 180px;
+}
+
 .performer-block {
   display: grid;
   gap: 12px;

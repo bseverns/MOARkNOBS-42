@@ -45,6 +45,20 @@ test.describe('Mode screenshots', () => {
     });
   }
 
+  test('stage Motion drawer screenshot artifact', async ({ page }) => {
+    await openMode(page, 'stage');
+    await page.locator('#stage-motion > summary').click();
+    await expect(page.locator('#stage-motion-panel')).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    const screenshotDir = path.resolve('test-results/screenshots');
+    await fs.mkdir(screenshotDir, { recursive: true });
+    await page.screenshot({
+      path: path.join(screenshotDir, 'stage-motion-open.png'),
+      fullPage: true
+    });
+  });
+
   const viewportMatrix = [
     { name: 'phone', width: 390, height: 844, mode: 'stage' },
     { name: 'tablet-portrait', width: 768, height: 1024, mode: 'stage' },

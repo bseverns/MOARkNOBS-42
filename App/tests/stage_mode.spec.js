@@ -74,6 +74,50 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-slot-focus')).toContainText('Slot 17');
   });
 
+  test('Motion drawer is read-only, records while closed, and exposes per-source traces', async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+    });
+    await page.goto('/?mode=stage');
+    await page.locator('#stage-connect').click();
+    await expect(page.locator('#connection-pill')).toHaveText('Connected');
+
+    const drawer = page.locator('#stage-motion');
+    const panel = page.locator('#stage-motion-panel');
+    await expect(drawer).toBeVisible();
+    await expect(drawer).not.toHaveAttribute('open', '');
+    await expect(panel).toBeHidden();
+    await expect(panel).toHaveAttribute('data-scope-rendering', 'false');
+    await expect(panel.locator('[data-ef-index]')).toHaveCount(6);
+
+    await drawer.locator(':scope > summary').click();
+    await expect(panel).toBeVisible();
+    await expect(panel).toHaveAttribute('data-scope-rendering', 'true');
+    await expect(panel.locator('[data-scope-role="status"]')).toHaveText(/Telemetry/i);
+    await expect(panel.locator('[data-scope-lfo-index="0"]')).not.toHaveText('--');
+    await expect(panel.locator('[data-scope-lfo-index="1"]')).not.toHaveText('--');
+    await expect(panel.locator('[data-state="active"]')).toHaveCount(3);
+    await expect(panel.locator('[data-scope-role="snapshot"]')).toHaveCount(0);
+    await expect(panel.locator('[data-scope-role="refresh"]')).toHaveCount(0);
+    await expect(panel.locator('[data-scope-role="fps"]')).toHaveCount(0);
+
+    await panel.getByRole('button', { name: 'All EFs' }).click();
+    await expect(panel.getByRole('button', { name: 'All EFs' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await drawer.locator(':scope > summary').click();
+    await expect(panel).toHaveAttribute('data-scope-rendering', 'false');
+
+    await drawer.locator(':scope > summary').click();
+    await expect(panel).toHaveAttribute('data-scope-rendering', 'true');
+    await page.getByRole('button', { name: 'Configure', exact: true }).click();
+    await expect(drawer).not.toHaveAttribute('open', '');
+    await expect(panel).toHaveAttribute('data-scope-rendering', 'false');
+  });
+
   test('shows split-rail metadata without a power warning or dirtying config hydration', async ({
     page
   }) => {

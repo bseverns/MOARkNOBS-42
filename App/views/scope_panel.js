@@ -25,22 +25,28 @@ const now = () =>
 // Canvas painter, not a data owner. Runtime pushes frames; the panel stores the
 // last screenful and redraws at a boring fixed cadence.
 export class ScopePanel {
-  constructor({ container, runtime, manifest } = {}) {
+  constructor({ container, runtime, manifest, renderToggle = null } = {}) {
     this.container = container;
     if (!container || typeof window === 'undefined') return;
 
-    this.canvas = container.querySelector('#scope-canvas');
-    this.statusLabel = container.querySelector('#scope-status');
-    this.fpsLabel = container.querySelector('#scope-fps');
-    this.refreshButton = container.querySelector('#scope-refresh');
-    this.snapshotButton = container.querySelector('#scope-snapshot');
-    this.efLegend = container.querySelector('#scope-ef-legend');
+    const findElement = (role, fallbackId) =>
+      container.querySelector(`[data-scope-role="${role}"]`) ??
+      (fallbackId ? container.querySelector(`#${fallbackId}`) : null);
+    this.canvas = findElement('canvas', 'scope-canvas');
+    this.statusLabel = findElement('status', 'scope-status');
+    this.fpsLabel = findElement('fps', 'scope-fps');
+    this.refreshButton = findElement('refresh', 'scope-refresh');
+    this.snapshotButton = findElement('snapshot', 'scope-snapshot');
+    this.efLegend = findElement('ef-legend', 'scope-ef-legend');
     this.viewModeButtons = Array.from(container.querySelectorAll('[data-scope-view]'));
-    this.lfoValueLabels = [
-      container.querySelector('#scope-lfo-1'),
-      container.querySelector('#scope-lfo-2')
-    ];
-    this.clockLabel = container.querySelector('#scope-clock');
+    const roleLfoLabels = Array.from(container.querySelectorAll('[data-scope-lfo-index]')).sort(
+      (left, right) => Number(left.dataset.scopeLfoIndex) - Number(right.dataset.scopeLfoIndex)
+    );
+    this.lfoValueLabels = roleLfoLabels.length
+      ? roleLfoLabels
+      : [container.querySelector('#scope-lfo-1'), container.querySelector('#scope-lfo-2')];
+    this.clockLabel = findElement('clock', 'scope-clock');
+    this.renderToggle = renderToggle;
     if (!this.canvas || !this.canvas.getContext) return;
 
     this.ctx = this.canvas.getContext('2d');
@@ -79,6 +85,16 @@ export class ScopePanel {
     this.viewModeButtons.forEach((button) => {
       button.addEventListener('click', () => this.setViewMode(button.dataset.scopeView));
     });
+    this.handleRenderToggle = () => {
+      if (this.renderToggle && !this.renderToggle.open) {
+        this.stopRenderLoop();
+        return;
+      }
+      this.resizeCanvas();
+      this.draw();
+      this.startRenderLoop();
+    };
+    this.renderToggle?.addEventListener('toggle', this.handleRenderToggle);
 
     this.telemetrySubscription = runtime?.on('telemetry', (frame) => this.handleTelemetry(frame));
     this.manifestSubscription = runtime?.on('manifest', (payload) => this.applyManifest(payload));
@@ -93,7 +109,7 @@ export class ScopePanel {
     this.resizeObserver?.observe(this.container);
 
     this.resizeCanvas();
-    this.startRenderLoop();
+    this.handleRenderToggle();
   }
 
   // Resize history buffers to match the manifest's advertised modulation lanes.
@@ -159,9 +175,11 @@ export class ScopePanel {
   resizeCanvas() {
     if (!this.canvas || !this.ctx) return;
     const rect = this.canvas.getBoundingClientRect();
-    const width = Math.max(MIN_HISTORY, Math.round(rect.width));
-    const height = Math.max(80, Math.round(rect.height));
-    if (!width || !height) return;
+    const measuredWidth = Math.round(rect.width);
+    const measuredHeight = Math.round(rect.height);
+    if (measuredWidth <= 0 || measuredHeight <= 0) return;
+    const width = Math.max(MIN_HISTORY, measuredWidth);
+    const height = Math.max(80, measuredHeight);
     const dpr = window.devicePixelRatio || 1;
     const pixelWidth = Math.round(width * dpr);
     const pixelHeight = Math.round(height * dpr);
@@ -174,9 +192,32 @@ export class ScopePanel {
     this.renderHeight = height;
     const desiredHistory = Math.max(MIN_HISTORY, Math.round(width));
     if (desiredHistory !== this.historyLength) {
-      this.historyLength = desiredHistory;
-      this.initializeBuffers();
+      this.resizeHistoryBuffers(desiredHistory);
     }
+  }
+
+  // Preserve the newest samples when a hidden or resized scope gets a new
+  // backing width. Opening the Stage drawer therefore reveals its pre-open
+  // context instead of starting with an empty graph.
+  resizeHistoryBuffers(nextLength) {
+    const desired = Math.max(MIN_HISTORY, Math.round(Number(nextLength) || MIN_HISTORY));
+    const previousLength = this.historyLength;
+    const previousCursor = this.cursor;
+    const copyCount = Math.min(this.samples, desired);
+    const copyBuffer = (source) => {
+      const target = new Float32Array(desired);
+      for (let idx = 0; idx < copyCount; idx += 1) {
+        const sourceIndex =
+          (previousCursor - copyCount + idx + previousLength) % previousLength;
+        target[idx] = source?.[sourceIndex] ?? 0;
+      }
+      return target;
+    };
+    this.efHistory = this.efHistory.map(copyBuffer);
+    this.lfoHistory = this.lfoHistory.map(copyBuffer);
+    this.historyLength = desired;
+    this.samples = copyCount;
+    this.cursor = copyCount % desired;
   }
 
   // Ingest one telemetry frame into the rolling EF/LFO history buffers.
@@ -227,17 +268,38 @@ export class ScopePanel {
 
   // Kick off the scope repaint loop once the panel is live.
   startRenderLoop() {
-    if (this.frameRequest) return;
+    if (this.frameRequest !== null) return;
+    if (this.renderToggle && !this.renderToggle.open) return;
+    this.container.dataset.scopeRendering = 'true';
     this.frameRequest = requestAnimationFrame((timestamp) => this.renderFrame(timestamp));
+  }
+
+  stopRenderLoop() {
+    if (this.frameRequest !== null) cancelAnimationFrame(this.frameRequest);
+    this.frameRequest = null;
+    if (this.container) this.container.dataset.scopeRendering = 'false';
   }
 
   // Frame limiter that keeps the scope readable without hogging the browser.
   renderFrame(timestamp) {
+    this.frameRequest = null;
+    if (this.renderToggle && !this.renderToggle.open) {
+      this.stopRenderLoop();
+      return;
+    }
     this.frameRequest = requestAnimationFrame((next) => this.renderFrame(next));
     if (timestamp - this.lastRender < 1000 / TARGET_FPS) return;
     this.lastRender = timestamp;
     this.draw();
     this.updateFps(timestamp);
+  }
+
+  destroy() {
+    this.stopRenderLoop();
+    this.telemetrySubscription?.();
+    this.manifestSubscription?.();
+    this.resizeObserver?.disconnect?.();
+    this.renderToggle?.removeEventListener('toggle', this.handleRenderToggle);
   }
 
   // Draw the background grid, selected EF traces, LFO traces, and peak marker.

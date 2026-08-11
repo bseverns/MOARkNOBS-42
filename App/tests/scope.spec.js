@@ -163,3 +163,77 @@ test('scope panel keeps LFO readouts across partial telemetry frames', async ({ 
   expect(readouts.inactiveHistoryWasPreserved).toBe(80);
   expect(readouts.efLegendStates).toEqual(['active', 'inactive', 'active']);
 });
+
+test('role-based scope records while closed and only renders when its drawer is open', async ({
+  page
+}) => {
+  await page.goto('/views/scope_panel.js');
+
+  const state = await page.evaluate(async () => {
+    const { ScopePanel } = await import('/views/scope_panel.js');
+    document.body.innerHTML = `
+      <details id="drawer">
+        <summary>Motion</summary>
+        <section id="motion-panel">
+          <button data-scope-view="active" aria-pressed="true">Active EFs</button>
+          <button data-scope-view="all" aria-pressed="false">All EFs</button>
+          <canvas data-scope-role="canvas" width="420" height="180"
+            style="width: 420px; height: 180px"></canvas>
+          <span data-scope-role="status"></span>
+          <div data-scope-role="ef-legend"></div>
+          <span class="scope-legend-item">LFO 1 <b data-scope-lfo-index="0"></b></span>
+          <span class="scope-legend-item">LFO 2 <b data-scope-lfo-index="1"></b></span>
+          <span data-scope-role="clock"></span>
+        </section>
+      </details>
+    `;
+    const listeners = new Map();
+    const runtime = {
+      on(event, callback) {
+        listeners.set(event, callback);
+        return () => listeners.delete(event);
+      },
+      getState() {
+        return { manifest: { envelope_count: 2, lfo_count: 2 } };
+      }
+    };
+    const drawer = document.getElementById('drawer');
+    const container = document.getElementById('motion-panel');
+    const panel = new ScopePanel({ container, runtime, renderToggle: drawer });
+    const pushTelemetry = listeners.get('telemetry');
+    pushTelemetry({ envelopes: [10, 80], efStatus: [1, 0], lfos: [0.2, 0.8] });
+    pushTelemetry({ envelopes: [20, 70], efStatus: [1, 0], lfos: [0.3, 0.7] });
+    pushTelemetry({ envelopes: [30, 60], efStatus: [1, 0], lfos: [0.4, 0.6] });
+    const closed = {
+      rendering: container.dataset.scopeRendering,
+      samples: panel.samples,
+      frameRequest: panel.frameRequest
+    };
+
+    drawer.open = true;
+    drawer.dispatchEvent(new Event('toggle'));
+    const opened = {
+      rendering: container.dataset.scopeRendering,
+      samples: panel.samples,
+      lfo1: container.querySelector('[data-scope-lfo-index="0"]').textContent,
+      efCount: container.querySelectorAll('[data-ef-index]').length
+    };
+
+    drawer.open = false;
+    drawer.dispatchEvent(new Event('toggle'));
+    const closedAgain = {
+      rendering: container.dataset.scopeRendering,
+      samples: panel.samples,
+      frameRequest: panel.frameRequest
+    };
+    panel.destroy();
+    return { closed, opened, closedAgain };
+  });
+
+  expect(state.closed).toEqual({ rendering: 'false', samples: 3, frameRequest: null });
+  expect(state.opened.rendering).toBe('true');
+  expect(state.opened.samples).toBe(3);
+  expect(state.opened.lfo1).toBe('0.40');
+  expect(state.opened.efCount).toBe(2);
+  expect(state.closedAgain).toEqual({ rendering: 'false', samples: 3, frameRequest: null });
+});
