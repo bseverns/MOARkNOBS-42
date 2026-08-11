@@ -789,6 +789,17 @@ test('native transport supports profile, macro, and scene actions when firmware 
     await window.__MN42_RUNTIME.sendSceneCommand({ cmd: 'RECALL_SCENE', slot: 1 });
   });
 
+  await expect(page.locator('[data-scene-slot="1"] .scene-slot-status')).toHaveText('Verse');
+  await expect(page.locator('[data-scene-slot="1"] .scene-recall')).toHaveText(
+    'Recall Verse now'
+  );
+  await expect(page.locator('#stage-scene-select option[value="1"]')).toHaveText(
+    'Verse · Scene 2'
+  );
+  await page.getByRole('button', { name: 'Stage', exact: true }).click();
+  await page.locator('#stage-scene-select').selectOption('1');
+  await expect(page.locator('#stage-scene-recall')).toHaveText('Recall Verse (Scene 2) now');
+
   const writes = await page.evaluate(() => window.__nativeWrites);
   expect(writes).toContain('SAVE_PROFILE,0');
   expect(writes).toContain('LOAD_PROFILE,0');

@@ -233,6 +233,7 @@ const boot = () => {
   const panicHelpConfigBootBtn = document.getElementById('panic-help-config-boot');
   const profileSlotButtons = Array.from(document.querySelectorAll('[data-profile-slot]'));
   const profileSlotStatus = document.getElementById('profile-slot-status');
+  const profileNameInput = document.getElementById('profile-name');
   const profileSaveBtn = document.getElementById('profile-save');
   const profileLoadBtn = document.getElementById('profile-load');
   const profileResetBtn = document.getElementById('profile-reset');
@@ -461,6 +462,8 @@ const boot = () => {
     containers: [powerSafetyPill, stagePowerSummary],
     warningContainers: [globalPowerWarning]
   });
+  let profileNames = ['', '', '', ''];
+  let sceneStates = Array.from({ length: 6 }, () => ({ name: '', available: false }));
   const performerPanelController = createPerformerPanelController({
     runtime,
     localManifest,
@@ -477,6 +480,8 @@ const boot = () => {
       );
       return Number(activeButton?.dataset.profileSlot ?? 0);
     },
+    getProfileName: (slot) => profileNames[Number(slot)] ?? '',
+    getSceneState: (slot) => sceneStates[Number(slot)] ?? null,
     setActiveProfileSlot: (slot) => {
       const selected = Number(slot);
       const button = profileSlotButtons.find(
@@ -724,9 +729,18 @@ const boot = () => {
     onImportedDraft: () => {
       if (docRoot) docRoot.dataset.importedDraft = 'true';
     },
+    onProfileNamesChanged: (names) => {
+      profileNames = Array.isArray(names) ? [...names] : profileNames;
+      updateStagePanel();
+    },
+    onScenesChanged: (scenes) => {
+      sceneStates = Array.isArray(scenes) ? scenes.map((scene) => ({ ...scene })) : sceneStates;
+      updateStagePanel();
+    },
     elements: {
       profileSlotButtons,
       profileSlotStatus,
+      profileNameInput,
       profileSaveBtn,
       profileLoadBtn,
       profileResetBtn,
@@ -1147,10 +1161,11 @@ const boot = () => {
       sceneRecallDisabled: !recallButton || Boolean(recallButton.disabled)
     });
     if (headerProfileStatus) {
-      headerProfileStatus.textContent = (profileSlotStatus?.textContent || 'Profile A')
-        .replace(/^Slot\s+/i, 'Profile ')
-        .split('•')[0]
-        .trim();
+      const active = performerPanelController.slotLabel
+        ? Number(stageProfileSelect?.value ?? 0)
+        : 0;
+      const name = profileNames[active]?.trim?.() ?? '';
+      headerProfileStatus.textContent = name || `Profile ${performerPanelController.slotLabel(active)}`;
     }
   }
 

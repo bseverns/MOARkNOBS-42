@@ -374,6 +374,28 @@ body {
   border-color: rgba(45, 226, 230, 0.8);
 }
 
+.profile-name-field {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-name-field input {
+  min-width: 0;
+  width: 100%;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.profile-name-field small {
+  letter-spacing: normal;
+  text-transform: none;
+}
+
 .profile-slot-meta {
   margin: 0;
   font-size: 0.78rem;

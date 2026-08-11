@@ -3,6 +3,7 @@ import {
   persistProfileSlot,
   readProfileSlotPreference
 } from '../state/ui_preferences.js';
+import { createLocalProfileNames } from '../../runtime/local_profile_names.js';
 import { createProfileFileIO } from './profile_file_io.js';
 import { createProfileSceneControls } from './profile_scene_controls.js';
 import {
@@ -156,11 +157,14 @@ export function createProfileMacroScenePanel({
   elements = {},
   getSelectedSlot = () => 0,
   confirmReplaceStaged = () => true,
-  onImportedDraft = () => {}
+  onImportedDraft = () => {},
+  onProfileNamesChanged = () => {},
+  onScenesChanged = () => {}
 } = {}) {
   const {
     profileSlotButtons = [],
     profileSlotStatus = null,
+    profileNameInput = null,
     profileSaveBtn = null,
     profileLoadBtn = null,
     profileResetBtn = null,
@@ -256,6 +260,8 @@ export function createProfileMacroScenePanel({
   let profileWizardTargetSlot = activeProfileSlot;
   let deviceCapabilities = resolveProfileCapabilities(localManifest);
   let bound = false;
+  const localProfileNames = createLocalProfileNames({ profileCount: PROFILE_LABELS.length });
+  localProfileNames.read();
   const profileFileIO = createProfileFileIO({
     runtime,
     setStatus,
@@ -275,7 +281,8 @@ export function createProfileMacroScenePanel({
     sceneSlotCount: SCENE_SLOT_COUNT,
     isInteractable: () => profileInteractable,
     supportsScenes: () => deviceCapabilities.scenes,
-    confirmReplaceStaged
+    confirmReplaceStaged,
+    onScenesChanged
   });
   const profileWorkflow = createProfileWorkflow({
     runtime,
@@ -1317,9 +1324,35 @@ export function createProfileMacroScenePanel({
     return PROFILE_LABELS[index] ?? PROFILE_LABELS[0];
   }
 
+  function profileName(index = activeProfileSlot) {
+    return localProfileNames.get(clampProfileSlot(index, PROFILE_LABELS.length));
+  }
+
+  function profileActionTarget(index = activeProfileSlot) {
+    const label = slotLabel(index);
+    const name = profileName(index);
+    return name ? `${name} (Profile ${label})` : `Profile ${label}`;
+  }
+
   // User-facing description for the currently targeted profile slot.
   function describeSlot(index = activeProfileSlot) {
-    return `Slot ${slotLabel(index)}`;
+    const name = profileName(index);
+    return name ? `${name} • Profile ${slotLabel(index)}` : `Slot ${slotLabel(index)}`;
+  }
+
+  function syncProfileNamePresentation() {
+    profileSlotButtons.forEach((button) => {
+      const index = clampProfileSlot(Number(button.dataset.profileSlot), PROFILE_LABELS.length);
+      const name = profileName(index);
+      button.title = name ? `${name} · Profile ${slotLabel(index)}` : `Profile ${slotLabel(index)}`;
+      button.setAttribute('aria-label', button.title);
+    });
+    Array.from(profileWizardTarget?.options ?? []).forEach((option) => {
+      const index = clampProfileSlot(Number(option.value), PROFILE_LABELS.length);
+      option.textContent = profileName(index)
+        ? `${profileName(index)} · ${slotLabel(index)}`
+        : slotLabel(index);
+    });
   }
 
   function describeBoardActiveSlot() {
@@ -1370,14 +1403,16 @@ export function createProfileMacroScenePanel({
     if (profileSlotStatus) {
       profileSlotStatus.textContent = `${describeSlot(bounded)} • ${profileSlotModeCopy()}`;
     }
-    const label = slotLabel(bounded);
-    if (profileSaveBtn) profileSaveBtn.textContent = `Save to Profile ${label}`;
-    if (profileLoadBtn) profileLoadBtn.textContent = `Switch to Profile ${label} now`;
-    if (profileResetBtn) profileResetBtn.textContent = `Reset Profile ${label}`;
-    if (applySaveProfileBtn) applySaveProfileBtn.textContent = `Apply and save to Profile ${label}`;
+    const actionTarget = profileActionTarget(bounded);
+    if (profileNameInput) profileNameInput.value = profileName(bounded);
+    if (profileSaveBtn) profileSaveBtn.textContent = `Save to ${actionTarget}`;
+    if (profileLoadBtn) profileLoadBtn.textContent = `Switch to ${actionTarget} now`;
+    if (profileResetBtn) profileResetBtn.textContent = `Reset ${actionTarget}`;
+    if (applySaveProfileBtn) applySaveProfileBtn.textContent = `Apply and save to ${actionTarget}`;
     if (persist) {
       persistProfileSlot(bounded, { slotCount: PROFILE_LABELS.length });
     }
+    onProfileNamesChanged(localProfileNames.all());
   }
 
   // Recompute enabled/disabled state for all profile/macro/scene controls.
@@ -2025,6 +2060,8 @@ export function createProfileMacroScenePanel({
     bound = true;
     sceneControls.bind();
 
+    syncProfileNamePresentation();
+
     profileSlotButtons.forEach((button) => {
       button.addEventListener('click', () => {
         const slotIndex = clampProfileSlot(
@@ -2034,6 +2071,11 @@ export function createProfileMacroScenePanel({
         setActiveProfileSlot(slotIndex);
         void refreshProfileUtilities({ silent: true });
       });
+    });
+    profileNameInput?.addEventListener('change', () => {
+      if (!localProfileNames.update(activeProfileSlot, profileNameInput.value)) return;
+      syncProfileNamePresentation();
+      setActiveProfileSlot(activeProfileSlot, { persist: false });
     });
     if (profileWizardTarget) {
       profileWizardTarget.value = String(profileWizardTargetSlot);

@@ -69,6 +69,8 @@ export function createPerformerPanelController({
   getConnectionText = () => 'Disconnected',
   getProfileText = () => 'Slot A - local target',
   getActiveProfileSlot = () => 0,
+  getProfileName = () => '',
+  getSceneState = () => null,
   setActiveProfileSlot = () => {},
   loadProfile = () => {},
   recallScene = () => {},
@@ -442,14 +444,34 @@ export function createPerformerPanelController({
     }
     if (profileSelect) {
       profileSelect.value = String(getActiveProfileSlot());
+      Array.from(profileSelect.options).forEach((option) => {
+        const index = Number(option.value);
+        const label = slotLabel(index);
+        const name = getProfileName(index)?.trim?.() ?? '';
+        option.textContent = name ? `${name} · Profile ${label}` : `Profile ${label}`;
+      });
     }
     if (profileLoadBtn) {
       profileLoadBtn.disabled = dirtyNow || Boolean(profileLoadDisabled);
-      profileLoadBtn.textContent = `Recall Profile ${slotLabel(getActiveProfileSlot())} now`;
+      const index = getActiveProfileSlot();
+      const fallback = `Profile ${slotLabel(index)}`;
+      const name = getProfileName(index)?.trim?.() ?? '';
+      profileLoadBtn.textContent = `Recall ${name ? `${name} (${fallback})` : fallback} now`;
     }
+    Array.from(sceneSelect?.options ?? []).forEach((option) => {
+      const index = Number(option.value);
+      const state = getSceneState(index);
+      option.textContent = state?.available && state?.name
+        ? `${state.name} · Scene ${index + 1}`
+        : `Scene ${index + 1}`;
+    });
     if (sceneRecallBtn) {
       sceneRecallBtn.disabled = dirtyNow || Boolean(sceneRecallDisabled);
-      sceneRecallBtn.textContent = `Recall Scene ${Number(sceneSelect?.value ?? 0) + 1} now`;
+      const index = Number(sceneSelect?.value ?? 0);
+      const state = getSceneState(index);
+      const fallback = `Scene ${index + 1}`;
+      const target = state?.available && state?.name ? `${state.name} (${fallback})` : fallback;
+      sceneRecallBtn.textContent = `Recall ${target} now`;
     }
     refreshEnvelopeRoutes();
   }
