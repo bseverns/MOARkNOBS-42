@@ -19,7 +19,7 @@ test('browser-local profile names persist and never dirty firmware config', asyn
 
   await expect(input).toHaveValue('Ambient Set');
   await expect(page.locator('#profile-slot-status')).toContainText('Ambient Set • Profile A');
-  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set');
+  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A target');
   await expect(page.locator('#profile-save')).toHaveText('Save to Ambient Set (Profile A)');
   await expect(page.locator('#apply')).toBeDisabled();
 
@@ -39,10 +39,23 @@ test('browser-local profile names persist and never dirty firmware config', asyn
   );
 
   await page.reload();
-  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set');
+  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A target');
   await expect(page.locator('#stage-profile-select option[value="0"]')).toHaveText(
     'Ambient Set · Profile A'
   );
+
+  await page.getByRole('button', { name: 'Lab', exact: true }).click();
+  await page.locator('#simulator-toggle').click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await page.getByRole('button', { name: 'Stage', exact: true }).click();
+  await expect(page.locator('#stage-profile-summary')).toHaveText('Ambient Set · Profile A');
+  await expect(page.locator('#header-profile-status')).toHaveText('Ambient Set · Profile A');
+
+  await page.locator('#stage-profile-select').selectOption('1');
+  await expect(page.locator('#stage-profile-summary')).toHaveText('Ambient Set · Profile A');
+  await page.locator('#stage-profile-load').click();
+  await expect(page.locator('#stage-profile-summary')).toHaveText('Profile B');
+  await expect(page.locator('#header-profile-status')).toHaveText('Profile B');
 });
 
 test('each profile slot keeps an independent local name', async ({ page }) => {

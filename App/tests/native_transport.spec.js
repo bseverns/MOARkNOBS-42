@@ -799,6 +799,7 @@ test('native transport supports profile, macro, and scene actions when firmware 
   await page.getByRole('button', { name: 'Stage', exact: true }).click();
   await page.locator('#stage-scene-select').selectOption('1');
   await expect(page.locator('#stage-scene-recall')).toHaveText('Recall Verse (Scene 2) now');
+  await expect(page.locator('#stage-scene-summary')).toHaveText('Verse · Scene 2');
 
   const writes = await page.evaluate(() => window.__nativeWrites);
   expect(writes).toContain('SAVE_PROFILE,0');

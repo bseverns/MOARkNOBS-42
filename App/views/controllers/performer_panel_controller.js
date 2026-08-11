@@ -67,10 +67,11 @@ export function createPerformerPanelController({
   connect = () => {},
   getConnectionStage = () => 'disconnected',
   getConnectionText = () => 'Disconnected',
-  getProfileText = () => 'Slot A - local target',
   getActiveProfileSlot = () => 0,
+  getDeviceActiveProfileSlot = () => null,
   getProfileName = () => '',
   getSceneState = () => null,
+  getLastRecalledScene = () => null,
   setActiveProfileSlot = () => {},
   loadProfile = () => {},
   recallScene = () => {},
@@ -87,6 +88,7 @@ export function createPerformerPanelController({
     deviceName = null,
     fwVersion = null,
     profileSummary = null,
+    sceneSummary = null,
     clockState = null,
     midiOutput = null,
     slotFocus = null,
@@ -435,7 +437,28 @@ export function createPerformerPanelController({
     if (draftBlockedNotice) draftBlockedNotice.hidden = !dirtyNow;
     if (deviceName) deviceName.textContent = resolveDeviceName?.(manifest) ?? '-';
     if (fwVersion) fwVersion.textContent = resolveFirmwareVersion?.(manifest) ?? 'unknown';
-    if (profileSummary) profileSummary.textContent = getProfileText();
+    if (profileSummary) {
+      const active = getDeviceActiveProfileSlot();
+      if (!connected || !Number.isInteger(Number(active))) {
+        profileSummary.textContent = 'Unavailable';
+      } else {
+        const index = Number(active);
+        const fallback = `Profile ${slotLabel(index)}`;
+        const name = getProfileName(index)?.trim?.() ?? '';
+        profileSummary.textContent = name ? `${name} · ${fallback}` : fallback;
+      }
+    }
+    if (sceneSummary) {
+      const recalled = getLastRecalledScene();
+      if (!recalled || !Number.isInteger(Number(recalled.slot))) {
+        sceneSummary.textContent = 'No browser recall';
+      } else {
+        const index = Number(recalled.slot);
+        const fallback = `Scene ${index + 1}`;
+        const name = recalled.name?.trim?.() ?? '';
+        sceneSummary.textContent = name ? `${name} · ${fallback}` : fallback;
+      }
+    }
     if (midiOutput) {
       if (!connected) midiOutput.textContent = 'Offline';
       else if (!['Enabled', 'Muted'].includes(midiOutput.textContent)) {

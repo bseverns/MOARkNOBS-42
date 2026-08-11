@@ -205,6 +205,7 @@ const boot = () => {
   const stageDeviceName = document.getElementById('stage-device-name');
   const stageFwVersion = document.getElementById('stage-fw-version');
   const stageProfileSummary = document.getElementById('stage-profile-summary');
+  const stageSceneSummary = document.getElementById('stage-scene-summary');
   const stageClockState = document.getElementById('stage-clock-state');
   const stageMidiOutput = document.getElementById('stage-midi-output');
   const stageSlotFocus = document.getElementById('stage-slot-focus');
@@ -464,6 +465,8 @@ const boot = () => {
   });
   let profileNames = ['', '', '', ''];
   let sceneStates = Array.from({ length: 6 }, () => ({ name: '', available: false }));
+  let deviceActiveProfileSlot = null;
+  let lastRecalledScene = null;
   const performerPanelController = createPerformerPanelController({
     runtime,
     localManifest,
@@ -473,15 +476,16 @@ const boot = () => {
     connect: () => connectBtn?.click(),
     getConnectionStage: () => connectionPill?.dataset.stage || 'disconnected',
     getConnectionText: () => connectionPill?.textContent || 'Disconnected',
-    getProfileText: () => profileSlotStatus?.textContent || 'Slot A - local target',
     getActiveProfileSlot: () => {
       const activeButton = profileSlotButtons.find(
         (button) => button.getAttribute('aria-pressed') === 'true'
       );
       return Number(activeButton?.dataset.profileSlot ?? 0);
     },
+    getDeviceActiveProfileSlot: () => deviceActiveProfileSlot,
     getProfileName: (slot) => profileNames[Number(slot)] ?? '',
     getSceneState: (slot) => sceneStates[Number(slot)] ?? null,
+    getLastRecalledScene: () => lastRecalledScene,
     setActiveProfileSlot: (slot) => {
       const selected = Number(slot);
       const button = profileSlotButtons.find(
@@ -509,6 +513,7 @@ const boot = () => {
       deviceName: stageDeviceName,
       fwVersion: stageFwVersion,
       profileSummary: stageProfileSummary,
+      sceneSummary: stageSceneSummary,
       clockState: stageClockState,
       midiOutput: stageMidiOutput,
       slotFocus: stageSlotFocus,
@@ -735,6 +740,21 @@ const boot = () => {
     },
     onScenesChanged: (scenes) => {
       sceneStates = Array.isArray(scenes) ? scenes.map((scene) => ({ ...scene })) : sceneStates;
+      updateStagePanel();
+    },
+    onDeviceActiveProfileChanged: (slot) => {
+      const next = slot !== null && slot !== undefined && Number.isInteger(Number(slot))
+        ? Number(slot)
+        : null;
+      if (next !== deviceActiveProfileSlot) lastRecalledScene = null;
+      deviceActiveProfileSlot = next;
+      updateStagePanel();
+    },
+    onSceneRecalled: (slot, scene) => {
+      lastRecalledScene = {
+        slot: Number(slot),
+        name: typeof scene?.name === 'string' ? scene.name : ''
+      };
       updateStagePanel();
     },
     elements: {
@@ -1161,11 +1181,18 @@ const boot = () => {
       sceneRecallDisabled: !recallButton || Boolean(recallButton.disabled)
     });
     if (headerProfileStatus) {
-      const active = performerPanelController.slotLabel
-        ? Number(stageProfileSelect?.value ?? 0)
-        : 0;
-      const name = profileNames[active]?.trim?.() ?? '';
-      headerProfileStatus.textContent = name || `Profile ${performerPanelController.slotLabel(active)}`;
+      const connected = connectionPill?.dataset.stage === 'live';
+      const active = deviceActiveProfileSlot;
+      if (connected && Number.isInteger(active)) {
+        const name = profileNames[active]?.trim?.() ?? '';
+        const fallback = `Profile ${performerPanelController.slotLabel(active)}`;
+        headerProfileStatus.textContent = name ? `${name} · ${fallback}` : fallback;
+      } else {
+        const target = Number(stageProfileSelect?.value ?? 0);
+        const name = profileNames[target]?.trim?.() ?? '';
+        const fallback = `Profile ${performerPanelController.slotLabel(target)}`;
+        headerProfileStatus.textContent = `${name ? `${name} · ${fallback}` : fallback} target`;
+      }
     }
   }
 

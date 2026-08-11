@@ -159,7 +159,9 @@ export function createProfileMacroScenePanel({
   confirmReplaceStaged = () => true,
   onImportedDraft = () => {},
   onProfileNamesChanged = () => {},
-  onScenesChanged = () => {}
+  onScenesChanged = () => {},
+  onDeviceActiveProfileChanged = () => {},
+  onSceneRecalled = () => {}
 } = {}) {
   const {
     profileSlotButtons = [],
@@ -282,7 +284,8 @@ export function createProfileMacroScenePanel({
     isInteractable: () => profileInteractable,
     supportsScenes: () => deviceCapabilities.scenes,
     confirmReplaceStaged,
-    onScenesChanged
+    onScenesChanged,
+    onSceneRecalled
   });
   const profileWorkflow = createProfileWorkflow({
     runtime,
@@ -299,7 +302,11 @@ export function createProfileMacroScenePanel({
     refreshProfileUtilities,
     timeoutMs: PROFILE_RPC_TIMEOUT_MS
   });
-  const runProfileRpc = (...args) => profileWorkflow.runProfileRpc(...args);
+  const runProfileRpc = async (...args) => {
+    const result = await profileWorkflow.runProfileRpc(...args);
+    if (result?.ok) syncDeviceActiveProfile(result.response);
+    return result;
+  };
 
   // Some UI paths only need to know whether any device-backed profile action exists.
   function supportsAnyProfileAction() {
@@ -1370,6 +1377,7 @@ export function createProfileMacroScenePanel({
     if (nextActive === null) return false;
     const changed = nextActive !== deviceActiveProfileSlot;
     deviceActiveProfileSlot = nextActive;
+    onDeviceActiveProfileChanged(nextActive);
     if (alignTarget && nextActive !== activeProfileSlot) {
       setActiveProfileSlot(nextActive, { persist: false });
     } else if (changed && profileSlotStatus) {
@@ -2254,6 +2262,7 @@ export function createProfileMacroScenePanel({
     modMatrixBusy = false;
     modMatrixReport = null;
     liveArpBusy = false;
+    onDeviceActiveProfileChanged(null);
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     renderLfoEditor();
@@ -2275,6 +2284,7 @@ export function createProfileMacroScenePanel({
     modMatrixBusy = false;
     modMatrixReport = null;
     liveArpBusy = false;
+    onDeviceActiveProfileChanged(null);
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
     renderLfoEditor();

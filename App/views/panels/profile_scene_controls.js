@@ -9,7 +9,8 @@ export function createProfileSceneControls({
   isInteractable = () => false,
   supportsScenes = () => false,
   confirmReplaceStaged = () => true,
-  onScenesChanged = () => {}
+  onScenesChanged = () => {},
+  onSceneRecalled = () => {}
 } = {}) {
   const sceneSlotState = Array.from({ length: sceneSlotCount }, () => ({
     name: '',
@@ -207,10 +208,18 @@ export function createProfileSceneControls({
       });
     }
     if (payload.type === 'recalled' && typeof payload.slot === 'number') {
+      if (payload.raw?.scene_recalled === false) return;
+      const current = sceneSlotState[payload.slot] ?? { name: '', available: false };
+      const reportsAvailability = Object.prototype.hasOwnProperty.call(
+        payload.raw ?? payload,
+        'scene_available'
+      );
       updateSceneSlot(payload.slot, {
-        name: payload.name ?? '',
-        available: payload.available
+        name: payload.name || current.name,
+        available: reportsAvailability ? payload.available : current.available
       });
+      const state = sceneSlotState[payload.slot] ?? { name: '', available: false };
+      onSceneRecalled(payload.slot, { ...state });
     }
   }
 
