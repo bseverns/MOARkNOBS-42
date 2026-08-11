@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "FirmwareState.h"
+#include "SlotModulationResolver.h"
 
 // Runtime.h is the "repeating work" header.
 //
@@ -37,6 +38,9 @@ bool queuePendingNoteOff(uint8_t note, uint8_t channel, unsigned long delayMs);
 void requestStatusLEDPulse(uint16_t durationMs = 200);
 void serviceStatusLEDPulse();
 void checkDiagnosticsForAlerts();
+
+// Copy the most recent control-rate resolver trace for host telemetry.
+bool getSlotModulationResult(uint8_t slotIndex, SlotModulationResult &result);
 
 #if defined(UNIT_TEST)
 void testOnly_resetRuntimeState();

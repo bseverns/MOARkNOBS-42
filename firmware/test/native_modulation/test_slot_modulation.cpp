@@ -16,7 +16,18 @@ void test_native_modulation_composes_sources_in_contract_order() {
         lane.amount = 100;
     }
 
-    TEST_ASSERT_EQUAL_UINT8(67, resolveSlotModulation(input));
+    const SlotModulationResult result = resolveSlotModulationWithContributions(input);
+    TEST_ASSERT_EQUAL_UINT8(50, result.baseline);
+    TEST_ASSERT_EQUAL_INT16(20, result.efDelta);
+    TEST_ASSERT_EQUAL_INT16(-5, result.lfoDelta[0]);
+    TEST_ASSERT_EQUAL_INT16(2, result.lfoDelta[1]);
+    TEST_ASSERT_TRUE(result.efApplied);
+    TEST_ASSERT_TRUE(result.lfoApplied[0]);
+    TEST_ASSERT_TRUE(result.lfoApplied[1]);
+    TEST_ASSERT_EQUAL_UINT8(67, result.finalValue);
+    TEST_ASSERT_EQUAL_INT(
+        result.finalValue,
+        result.baseline + result.efDelta + result.lfoDelta[0] + result.lfoDelta[1]);
 }
 
 void test_native_modulation_supports_every_lfo_mode() {

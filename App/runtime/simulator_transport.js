@@ -280,9 +280,67 @@ export function createSimulator(simDeps = {}) {
     return [...slotValues];
   };
 
-  const telemetry = () => ({
+  const telemetry = () => {
+    const slots = nextSlotValues();
+    const envelopes = Array.from({ length: manifest.envelope_count }, () =>
+      Math.floor(Math.random() * 127)
+    );
+    const lfos = [((index % 40) / 39).toFixed(3), (((index + 20) % 40) / 39).toFixed(3)].map(Number);
+    const efStatus = Array.from(
+      { length: manifest.envelope_count },
+      (_, idx) => (idx % 2 === 0 ? 1 : 0)
+    );
+    const slotOutputs = [...slots];
+    const slotContributions = [];
+
+    config.slots.forEach((slot, slotIndex) => {
+      if (!slot?.active) return;
+      let value = slots[slotIndex] ?? 0;
+      const baseline = value;
+      let efDelta = 0;
+      const lfoDeltas = [0, 0];
+      let activeMask = 0;
+      const efIndex = Number(slot.ef_index ?? slot.ef?.index);
+      if (Number.isInteger(efIndex) && efStatus[efIndex]) {
+        const before = value;
+        const contribution = envelopes[efIndex] ?? 0;
+        const mode = String(slot.ef?.destination_mode ?? 'add_clamp').toLowerCase();
+        if (mode === 'subtract') value -= contribution;
+        else if (mode === 'replace') value = contribution;
+        else if (mode === 'scale') value = Math.round((value * contribution) / 127);
+        else if (mode === 'centered') value += contribution - 64;
+        else value += contribution;
+        value = Math.max(0, Math.min(127, value));
+        efDelta = value - before;
+        activeMask |= 0x01;
+      }
+
+      // The simulator's persisted rehearsal profile owns one LFO route to S7.
+      if (slotIndex === 6) {
+        const before = value;
+        value = Math.max(0, Math.min(127, Math.round(64 + (lfos[0] * 2 - 1) * 50)));
+        lfoDeltas[0] = value - before;
+        activeMask |= 0x02;
+      }
+
+      slotOutputs[slotIndex] = value;
+      if (activeMask) {
+        slotContributions.push({
+          index: slotIndex,
+          baseline,
+          ef: efDelta,
+          lfos: lfoDeltas,
+          output: value,
+          activeMask
+        });
+      }
+    });
+
+    return {
     active_profile: activeProfile,
-    slots: nextSlotValues(),
+    slots,
+    slotOutputs,
+    slotContributions,
     slotArgs: Array.from({ length: manifest.slot_count }, (_, idx) => ({
       enabled: idx % 2 === 0,
       method: idx % argMethodNames.length,
@@ -290,15 +348,13 @@ export function createSimulator(simDeps = {}) {
       sourceA: idx % manifest.envelope_count,
       sourceB: (idx + 1) % manifest.envelope_count
     })),
-    envelopes: Array.from({ length: manifest.envelope_count }, () =>
-      Math.floor(Math.random() * 127)
-    ),
-    lfos: [((index % 40) / 39).toFixed(3), (((index + 20) % 40) / 39).toFixed(3)].map(Number),
+    envelopes,
+    lfos,
     lfo_config: currentLfoConfig(),
     currentSlot: index++ % manifest.slot_count,
     argPair: [0, 1],
     argEnabled: true,
-    efStatus: Array.from({ length: manifest.envelope_count }, (_, idx) => (idx % 2 === 0 ? 1 : 0)),
+    efStatus,
     diagnostics: {
       loop_max_us: 702,
       loop_last_us: 512,
@@ -326,7 +382,8 @@ export function createSimulator(simDeps = {}) {
       running: true,
       source: followExternalClock ? 'external' : 'internal'
     }
-  });
+    };
+  };
 
   async function open() {
     opened = true;

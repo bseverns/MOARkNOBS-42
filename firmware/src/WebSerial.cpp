@@ -11,6 +11,7 @@
 #include "Globals.h"
 #include "LFO/LFOManager.h"
 #include "MIDIHandler.h"
+#include "Runtime.h"
 #include <ArduinoJson.h>
 
 namespace {
@@ -219,17 +220,54 @@ void WebSerial::sendStateSnapshot(const PotentiometerManager &pots,
 
     // Chunk 1: Slot summary (Pots & active slot)
     {
-        StaticJsonDocument<1536> doc;
+        StaticJsonDocument<2048> doc;
         applyFrameMeta(doc, meta);
         doc["type"] = "telemetry";
         doc["scope"] = "state_slots";
         JsonArray slots = doc.createNestedArray("slots");
+        JsonArray slotOutputs = doc.createNestedArray("slotOutputs");
         for (uint8_t i = 0; i < NUM_POTS; ++i) {
-            slots.add(Utility::mapToMidiValue(pots.getLastValue(i)));
+            const uint8_t baseline = Utility::mapToMidiValue(pots.getLastValue(i));
+            slots.add(baseline);
+            SlotModulationResult result{};
+            slotOutputs.add(getSlotModulationResult(i, result) ? result.finalValue : baseline);
         }
         doc["currentSlot"] = (currentSlot < NUM_POTS) ? static_cast<int>(currentSlot) : -1;
         emitJson(doc, "state_slots");
     }
+
+    // Chunk 1b: exact ordered resolver contributions. Only slots with a lane
+    // applied in this control-rate snapshot need an object; three bounded
+    // ranges keep the worst-case all-42-slots payload below document limits.
+    auto emitModulationChunk = [&](uint8_t startIdx, uint8_t count, const char *scope) {
+        StaticJsonDocument<3072> doc;
+        applyFrameMeta(doc, meta);
+        doc["type"] = "telemetry";
+        doc["scope"] = scope;
+        JsonArray contributions = doc.createNestedArray("slotContributions");
+        for (uint8_t i = startIdx; i < startIdx + count && i < NUM_SLOTS; ++i) {
+            SlotModulationResult result{};
+            if (!getSlotModulationResult(i, result)) continue;
+            uint8_t activeMask = result.efApplied ? 0x01 : 0x00;
+            if (result.lfoApplied[0]) activeMask |= 0x02;
+            if (result.lfoApplied[1]) activeMask |= 0x04;
+            if (activeMask == 0) continue;
+            JsonObject entry = contributions.createNestedObject();
+            entry["index"] = i;
+            entry["baseline"] = result.baseline;
+            entry["ef"] = result.efDelta;
+            JsonArray lfos = entry.createNestedArray("lfos");
+            lfos.add(result.lfoDelta[0]);
+            lfos.add(result.lfoDelta[1]);
+            entry["output"] = result.finalValue;
+            entry["activeMask"] = activeMask;
+        }
+        emitJson(doc, scope);
+    };
+
+    emitModulationChunk(0, 14, "state_modulation_0_13");
+    emitModulationChunk(14, 14, "state_modulation_14_27");
+    emitModulationChunk(28, 14, "state_modulation_28_41");
 
     // Chunk 2: ARGs (Split into 3 blocks of 14 to avoid 2048b JSON overflow)
     auto emitArgsChunk = [&](uint8_t startIdx, uint8_t count, const char *scope) {

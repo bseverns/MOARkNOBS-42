@@ -17,7 +17,18 @@ void test_slot_modulation_composes_ef_then_lfos() {
         lane.amount = 100;
     }
 
-    TEST_ASSERT_EQUAL_UINT8(67, resolveSlotModulation(input));
+    const SlotModulationResult result = resolveSlotModulationWithContributions(input);
+    TEST_ASSERT_EQUAL_UINT8(67, result.finalValue);
+    TEST_ASSERT_EQUAL_UINT8(50, result.baseline);
+    TEST_ASSERT_EQUAL_INT16(20, result.efDelta);
+    TEST_ASSERT_EQUAL_INT16(-5, result.lfoDelta[0]);
+    TEST_ASSERT_EQUAL_INT16(2, result.lfoDelta[1]);
+    TEST_ASSERT_TRUE(result.efApplied);
+    TEST_ASSERT_TRUE(result.lfoApplied[0]);
+    TEST_ASSERT_TRUE(result.lfoApplied[1]);
+    TEST_ASSERT_EQUAL_INT16(
+        result.finalValue,
+        result.baseline + result.efDelta + result.lfoDelta[0] + result.lfoDelta[1]);
 }
 
 void test_slot_modulation_supports_lfo_without_ef() {
@@ -44,7 +55,10 @@ void test_slot_modulation_clamps_after_each_lane() {
     input.lfoLane[0].setEnabled(true);
     input.lfoLane[0].amount = 100;
 
-    TEST_ASSERT_EQUAL_UINT8(95, resolveSlotModulation(input));
+    const SlotModulationResult result = resolveSlotModulationWithContributions(input);
+    TEST_ASSERT_EQUAL_UINT8(95, result.finalValue);
+    TEST_ASSERT_EQUAL_INT16(7, result.efDelta);
+    TEST_ASSERT_EQUAL_INT16(-32, result.lfoDelta[0]);
 }
 
 void test_slot_modulation_honors_ef_replace_before_lfo() {
@@ -79,7 +93,10 @@ void test_slot_modulation_applies_replace_and_scale_lane_modes() {
     input.lfoLane[1].amount = 50;
 
     // Replace produces 80, then Scale applies 0.75.
-    TEST_ASSERT_EQUAL_UINT8(60, resolveSlotModulation(input));
+    const SlotModulationResult result = resolveSlotModulationWithContributions(input);
+    TEST_ASSERT_EQUAL_UINT8(60, result.finalValue);
+    TEST_ASSERT_EQUAL_INT16(0, result.lfoDelta[0]);
+    TEST_ASSERT_EQUAL_INT16(-20, result.lfoDelta[1]);
 }
 
 void test_slot_modulation_distinguishes_unipolar_add_from_centered() {

@@ -73,8 +73,9 @@ test.describe('Stage mode', () => {
     await expect(page.locator('#stage-power-summary')).toBeVisible();
     await expect(page.locator('#stage-slots .stage-slot-cell')).toHaveCount(42);
     await expect(page.locator('#stage-envelopes .meter')).toHaveCount(6);
-    await expect(page.locator('#stage-slot-focus')).toHaveText(/Slot 1 · CC\d+ · Ch 1 · OUT/);
-    await expect(page.locator('#stage-slot-focus')).toContainText('E1');
+    await expect(page.locator('#stage-slot-focus')).toHaveText(
+      /Slot 1 · CC\d+ · Ch 1 · BASE \d+ · ARG→EF [+-]\d+ · OUT \d+/
+    );
     await expect(page.locator('#stage-clock-state')).toHaveText(/^(EXT|INT) · \d+\.\d BPM · Running$/);
     await expect(page.locator('#stage-envelopes .meter[data-state="active"]')).toHaveCount(3);
     await expect(page.locator('#stage-envelopes .meter').first()).toContainText('ACTIVE');

@@ -61,7 +61,38 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
         traceId: 'fw-123',
         scope: 'state_slots',
         slots: [1, 2, 3],
+        slotOutputs: [4, 5, 6],
         currentSlot: 0
+      })
+    );
+    window.__pushLine(
+      JSON.stringify({
+        type: 'telemetry',
+        traceId: 'fw-123',
+        scope: 'state_modulation_0_13',
+        slotContributions: [
+          { index: 0, baseline: 1, ef: 3, lfos: [0, 0], output: 4, activeMask: 1 }
+        ]
+      })
+    );
+    window.__pushLine(
+      JSON.stringify({
+        type: 'telemetry',
+        traceId: 'fw-123',
+        scope: 'state_modulation_14_27',
+        slotContributions: [
+          { index: 14, baseline: 8, ef: 0, lfos: [-2, 0], output: 6, activeMask: 2 }
+        ]
+      })
+    );
+    window.__pushLine(
+      JSON.stringify({
+        type: 'telemetry',
+        traceId: 'fw-123',
+        scope: 'state_modulation_28_41',
+        slotContributions: [
+          { index: 28, baseline: 9, ef: 0, lfos: [0, 1], output: 10, activeMask: 4 }
+        ]
       })
     );
     window.__pushLine(
@@ -107,6 +138,9 @@ test('app telemetry chunks are correctly merged by traceId with delayed dispatch
   const payload = frames[0];
 
   expect(payload.slots).toEqual([1, 2, 3]);
+  expect(payload.slotOutputs).toEqual([4, 5, 6]);
+  expect(payload.slotContributions.map((entry) => entry.index)).toEqual([0, 14, 28]);
+  expect(payload.slotContributions[0].output).toBe(4);
   expect(payload.slotArgs).toHaveLength(42);
   expect(payload.slotArgs[0].index).toBe(0);
   expect(payload.slotArgs[14].index).toBe(14);

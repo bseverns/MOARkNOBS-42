@@ -88,6 +88,10 @@ test('Stage preserves slot output while envelope-only frames update source conte
     ]);
     controller.paintTelemetry({
       slots: [91],
+      slotOutputs: [67],
+      slotContributions: [
+        { index: 0, baseline: 50, ef: 20, lfos: [-3, 0], output: 67, activeMask: 3 }
+      ],
       envelopes: [68, 4],
       efStatus: [1, 0],
       lfos: [0.73, 0.2],
@@ -118,7 +122,9 @@ test('Stage preserves slot output while envelope-only frames update source conte
     };
   });
 
-  expect(state.focus).toBe('Filter cutoff · S1 · CC74 · Ch 3 · OUT 91 · E1 72 · L1 0.73');
+  expect(state.focus).toBe(
+    'Filter cutoff · S1 · CC74 · Ch 3 · BASE 50 · E1 +20 (src 72) · L1 -3 (src 0.73) · OUT 67'
+  );
   expect(state.clock).toBe('EXT · 123.8 BPM · Running');
   expect(state.meterStates).toEqual(['active', 'inactive']);
   expect(state.meterText).toContain('ACTIVE');

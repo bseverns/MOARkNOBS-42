@@ -231,7 +231,9 @@ Use these RPCs to implement Load/Save/Reset buttons in your UI, and remember tha
 
 The same `led` object that shows up in `GET_CONFIG` (brightness, RGB, and hex) also rides along with profile payloads. Use `SET_LED` and `GET_LED` to control the strip’s global color/brightness bond; `SET_ALL` respects `{"led":{"color":"#RRGGBB"}}` fragments so you can push a whole palette from one payload.
 
-The status LED and WS2812 strip now stay diagnostic-first; internal LFO routes focus on musical modulation lanes (arp swing/gate, EF trim, velocity shift, note chance, jitter depth/smoothness). Watch the 0..1 values from the `lfos` field in each state message and feed them into your UI scope or animators so the desktop mirrors exactly what the firmware is outputting.
+The status LED and WS2812 strip now stay diagnostic-first; internal LFO routes focus on musical modulation lanes (arp swing/gate, EF trim, velocity shift, note chance, jitter depth/smoothness). Watch the 0..1 values from the `lfos` field in scope/state messages and feed them into UI scopes or animators.
+
+For slot readouts, `slots` is the raw mapped-pot baseline and `slotOutputs` is the resolved value after EF and both fixed LFO lanes. The three `state_modulation_*` chunks contain sparse, indexed `slotContributions` records with the baseline, the ordered EF/LFO deltas, an active-lane mask, and the resolved output. Those deltas are captured after each mode operation and clamp; they therefore remain exact for nonlinear replace/scale modes and clipping. They describe resolver output before MIDI transport admission, so they should not be interpreted as proof that every control-rate sample reached an external device.
 
 ### Paint the LEDs
 

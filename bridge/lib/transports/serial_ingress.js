@@ -74,6 +74,28 @@ function createSerialLineHandler({
       sendJsonOsc('/mn42/telemetry/slot-args', payload, routeMeta);
     }
 
+    if (isNumericVector(data.slotOutputs)) {
+      sendOscTelemetry('/mn42/slot-outputs', data.slotOutputs, routeMeta);
+      sendOscTelemetry(
+        '/mn42/telemetry/slot-outputs',
+        data.slotOutputs,
+        routeMeta,
+      );
+    }
+
+    if (Array.isArray(data.slotContributions)) {
+      const payload = {
+        scope: typeof data.scope === 'string' ? data.scope : null,
+        slotContributions: data.slotContributions,
+      };
+      sendJsonOsc('/mn42/slot-contributions', payload, routeMeta);
+      sendJsonOsc(
+        '/mn42/telemetry/slot-contributions',
+        payload,
+        routeMeta,
+      );
+    }
+
     if (Array.isArray(data.argPair)) {
       sendOscTelemetry('/mn42/arg/pair', data.argPair, routeMeta);
       sendOscTelemetry('/mn42/telemetry/arg-pair', data.argPair, routeMeta);

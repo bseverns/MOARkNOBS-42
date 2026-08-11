@@ -144,20 +144,31 @@ These remain accepted for older tools but should not be used for new App or Brid
 
 ## Telemetry
 
-Telemetry starts after `HELLO` and runs from the low-priority scheduler every `100 ms` while streaming is enabled.
+Telemetry starts after `HELLO` and runs from the low-priority scheduler while streaming is enabled. Scope frames run every `50 ms`; the larger state snapshot runs every `500 ms`.
 
-Each snapshot uses one shared `timestamp`, `timestampMs`, and `traceId`, then emits six JSON lines:
+Each state snapshot uses one shared `timestamp`, `timestampMs`, and `traceId`, then emits nine JSON lines:
 
-| Scope               | Contents                                       | JSON document capacity |
-| ------------------- | ---------------------------------------------- | ---------------------: |
-| `state_slots`       | 42 slot values plus `currentSlot`              |           `1024` bytes |
-| `state_args_0_13`   | ARG config for slots 0-13                      |           `2048` bytes |
-| `state_args_14_27`  | ARG config for slots 14-27                     |           `2048` bytes |
-| `state_args_28_41`  | ARG config for slots 28-41                     |           `2048` bytes |
-| `state_diagnostics` | Global ARG settings and diagnostic counters    |            `512` bytes |
-| `state_envelopes`   | Six EF levels, two LFO values, EF active flags |           `1024` bytes |
+| Scope                       | Contents                                                    | JSON document capacity |
+| --------------------------- | ----------------------------------------------------------- | ---------------------: |
+| `state_slots`               | 42 raw `slots`, 42 resolved `slotOutputs`, and `currentSlot` |           `2048` bytes |
+| `state_modulation_0_13`     | Applied resolver contributions for slots 0-13               |           `3072` bytes |
+| `state_modulation_14_27`    | Applied resolver contributions for slots 14-27              |           `3072` bytes |
+| `state_modulation_28_41`    | Applied resolver contributions for slots 28-41              |           `3072` bytes |
+| `state_args_0_13`           | ARG config for slots 0-13                                   |           `2048` bytes |
+| `state_args_14_27`          | ARG config for slots 14-27                                  |           `2048` bytes |
+| `state_args_28_41`          | ARG config for slots 28-41                                  |           `2048` bytes |
+| `state_diagnostics`         | Global ARG settings and diagnostic counters                 |            `768` bytes |
+| `state_envelopes`           | Six EF levels, two LFO values, EF active flags              |           `1024` bytes |
 
-Worst-case scheduled flow is 10 snapshots/s, 6 lines/snapshot, and up to `8704` serialized JSON bytes per snapshot by document capacity. That is `60` telemetry lines/s and `87040` bytes/s of worst-case JSON budget before USB framing. Typical payloads are smaller.
+`slotContributions` contains only slots whose EF or LFO lane was applied in that control-rate frame. Each record is `{index, baseline, ef, lfos:[lfo1,lfo2], output, activeMask}`. Mask bits `1`, `2`, and `4` mean EF, LFO1, and LFO2 respectively. Deltas are measured after each ordered operation and clamp, so this invariant also holds for replace, scale, centered, and clipped modes:
+
+```text
+baseline + ef + lfos[0] + lfos[1] == output
+```
+
+These values describe the resolver result before MIDI transport token admission and coalescing. They are exact modulation-stage attribution, not a claim that every resolved sample was emitted on the wire. `slots` remains the raw mapped-pot baseline for compatibility; consumers that display the performed value should prefer `slotOutputs`.
+
+Worst-case scheduled flow is two nine-line state snapshots plus twenty one-line scope snapshots per second. By JSON document capacity that is `38` lines/s and `64000` serialized bytes/s before USB framing. Typical payloads—especially sparse contribution chunks—are smaller.
 
 Patch events are event-driven and separate from the 100 ms telemetry stream:
 

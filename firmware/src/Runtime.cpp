@@ -74,6 +74,8 @@ struct SlotModulationFrame {
     std::array<uint8_t, LFOManager::kMaxLFOs> lfoValue{{64, 64}};
     uint8_t lastEmittedValue = 0xFF;
     unsigned long lastEmitMs = 0;
+    SlotModulationResult result{};
+    bool resultValid = false;
 };
 
 std::array<SlotModulationFrame, NUM_SLOTS> slotModulationFrames{};
@@ -803,24 +805,32 @@ void processSlotModulation() {
         const bool hasFixedLfo = std::any_of(
             slot.lfo.lfo.begin(), slot.lfo.lfo.end(),
             [](const SlotLfoLane &lane) { return lane.enabled(); });
-        if (!frame.efActive && !hasLfo && !hasFixedLfo) {
-            // Forget the previous composed value once ownership returns to the
-            // direct pot path. Re-adding a route must force a fresh emit even
-            // when it resolves to the same value as the old route.
-            frame.lastEmittedValue = 0xFF;
-            continue;
-        }
-
-        if (!slot.active) {
-            frame.lastEmittedValue = 0xFF;
-            continue;
-        }
         int rawBaseline = slotIndex < NUM_POTS
                               ? potentiometerManager.getLastValue(slotIndex)
                               : -1;
         const uint8_t baseline = rawBaseline >= 0
                                      ? Utility::mapToMidiValue(rawBaseline)
                                      : static_cast<uint8_t>(slot.data1 & 0x7F);
+        if (!frame.efActive && !hasLfo && !hasFixedLfo) {
+            // Forget the previous composed value once ownership returns to the
+            // direct pot path. Re-adding a route must force a fresh emit even
+            // when it resolves to the same value as the old route.
+            frame.lastEmittedValue = 0xFF;
+            frame.result = {};
+            frame.result.baseline = baseline;
+            frame.result.finalValue = baseline;
+            frame.resultValid = true;
+            continue;
+        }
+
+        if (!slot.active) {
+            frame.lastEmittedValue = 0xFF;
+            frame.result = {};
+            frame.result.baseline = baseline;
+            frame.result.finalValue = baseline;
+            frame.resultValid = true;
+            continue;
+        }
         SlotModulationInput input{};
         input.baseline = baseline;
         input.efActive = frame.efActive;
@@ -850,7 +860,9 @@ void processSlotModulation() {
                 input.lfoLane[lfoIndex].amount = 100;
             }
         }
-        const uint8_t finalValue = resolveSlotModulation(input);
+        frame.result = resolveSlotModulationWithContributions(input);
+        frame.resultValid = true;
+        const uint8_t finalValue = frame.result.finalValue;
 
         if (finalValue == frame.lastEmittedValue ||
             currentMs - frame.lastEmitMs < kSlotModulationMinSendIntervalMs) {
@@ -891,6 +903,15 @@ void processSlotModulation() {
             frame.lastEmitMs = currentMs;
         }
     }
+}
+
+bool getSlotModulationResult(uint8_t slotIndex, SlotModulationResult &result) {
+    if (slotIndex >= slotModulationFrames.size() ||
+        !slotModulationFrames[slotIndex].resultValid) {
+        return false;
+    }
+    result = slotModulationFrames[slotIndex].result;
+    return true;
 }
 
 // Internal transport clock lane when the device is not following external MIDI clock.

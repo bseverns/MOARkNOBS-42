@@ -50,8 +50,7 @@ The bridge remains bidirectional:
 - OSC typed events can emit host MIDI messages.
 - A settings file can add custom inbound MIDI CC -> OSC address mappings for host-specific patches.
 - The cached device session validates both incoming device exports and revisioned staged config against the bundled App schema, awaits serial write acceptance and drain for each bulk frame, and promotes it only after verified device truth.
-- Firmware telemetry is mirrored beyond raw slot/envelope values: current slot, LFOs, EF status, ARG chunks,
-  diagnostics, clock state, note dynamics, jitter, and active profile are available over OSC and structured events.
+- Firmware telemetry is mirrored beyond raw slot/envelope values: resolved slot outputs, exact resolver contribution chunks, current slot, LFOs, EF status, ARG chunks, diagnostics, clock state, note dynamics, jitter, and active profile are available over OSC and structured events.
 - Manifest-backed hardware health is cached in the session so the console can show OLED status, brownouts, EEPROM copy
   state, memory headroom, and power-safety identity without making the operator parse raw JSON.
 
@@ -264,6 +263,10 @@ To prevent MIDI feedback loops by default, the bridge suppresses inbound CC even
   - index 0 maps to slot 0, index 41 maps to slot 41
 - `/mn42/telemetry/slots`
   - Same payload as `/mn42/slots` with a telemetry namespace for patchers that separate control from monitoring.
+- `/mn42/slot-outputs` and `/mn42/telemetry/slot-outputs`
+  - OSC args: 42 resolved slot values after EF/LFO composition. Legacy `/mn42/slots` remains the raw mapped-pot baseline.
+- `/mn42/slot-contributions` and `/mn42/telemetry/slot-contributions`
+  - JSON string in arg 0 containing the firmware chunk `scope` and its indexed `slotContributions` records. Each record carries the baseline, ordered EF/LFO deltas, resolved output, and active-lane mask.
 - `/mn42/envelopes`
   - OSC args: 6 integers, each `0..127`
 - `/mn42/telemetry/envelopes`

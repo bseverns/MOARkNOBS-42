@@ -107,6 +107,7 @@ function run() {
         timestampMs: 42,
         traceId: 'fw-42-1',
         slots: [1, 2, 3],
+        slotOutputs: [4, 5, 6],
         currentSlot: 2,
       }),
     );
@@ -119,6 +120,11 @@ function run() {
       harness.osc.some((entry) => entry.address === '/mn42/current-slot'),
       true,
       'state_slots should route active slot to OSC',
+    );
+    assert.equal(
+      harness.osc.some((entry) => entry.address === '/mn42/slot-outputs'),
+      true,
+      'state_slots should route resolved slot outputs to OSC',
     );
     assert.equal(
       harness.midi.some((entry) => entry.channelBase === 0xb0),
@@ -151,6 +157,25 @@ function run() {
         `state_envelopes should route ${address}`,
       );
     }
+  }
+
+
+  {
+    const harness = createHarness();
+    harness.handler(
+      JSON.stringify({
+        type: 'telemetry',
+        scope: 'state_modulation_0_13',
+        slotContributions: [
+          { index: 0, baseline: 50, ef: 20, lfos: [-3, 0], output: 67, activeMask: 3 },
+        ],
+      }),
+    );
+    const entry = harness.osc.find(
+      (candidate) => candidate.address === '/mn42/slot-contributions',
+    );
+    assert.ok(entry, 'modulation chunks should route exact contribution records to OSC');
+    assert.equal(JSON.parse(entry.args[0]).slotContributions[0].output, 67);
   }
 
   {

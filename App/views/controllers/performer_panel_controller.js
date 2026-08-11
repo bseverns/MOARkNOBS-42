@@ -62,6 +62,11 @@ function slotTypeCssToken(type) {
   return type.toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
+function formatSignedDelta(value) {
+  const numeric = Math.round(Number(value) || 0);
+  return numeric >= 0 ? `+${numeric}` : String(numeric);
+}
+
 function initializeMeters(container, count, labelPrefix) {
   if (!container) return [];
   container.innerHTML = '';
@@ -180,7 +185,7 @@ export function createPerformerPanelController({
     if (!slotFocus) return;
     const index = Math.max(0, Number(getSelectedSlot()) || 0);
     const slot = renderedSlots[index] ?? {};
-    const value = latestTelemetry?.slots?.[index];
+    const value = latestTelemetry?.slotOutputs?.[index] ?? latestTelemetry?.slots?.[index];
     const type = slotTypeAbbreviations[slot?.type] ?? slot?.type_name ?? slot?.type ?? 'OFF';
     const data1 = Number(slot?.data1 ?? slot?.cc ?? slot?.note);
     const destination = Number.isFinite(data1) && !['OFF', 'PB'].includes(String(type).toUpperCase())
@@ -190,6 +195,9 @@ export function createPerformerPanelController({
     const channelText = Number.isFinite(channel) ? `Ch ${channel}` : 'No channel';
     const valueText = Number.isFinite(Number(value)) ? `OUT ${Number(value)}` : 'OUT --';
     const modulation = describeSlotModulation(slot);
+    const contribution = latestTelemetry?.slotContributions?.find(
+      (entry) => Number(entry?.index) === index
+    );
     const sourceValues = modulation.flatMap((badge) => {
       const efMatch = badge.match(/^E(\d+)$/);
       if (efMatch) {
@@ -212,14 +220,39 @@ export function createPerformerPanelController({
       return [badge === 'A' ? 'A enabled' : badge];
     });
     const slotName = typeof slot?.label === 'string' ? slot.label.trim() : '';
+    const activeMask = Number(contribution?.activeMask) || 0;
+    const sourceContext = (badge) => {
+      const match = sourceValues.find((entry) => entry.startsWith(`${badge} `));
+      return match ? ` (src ${match.slice(badge.length + 1)})` : '';
+    };
+    const efBadge = modulation.find((badge) => /^E\d+$/.test(badge)) || 'EF';
+    const contributionParts = contribution
+      ? [
+          `BASE ${Math.round(Number(contribution.baseline) || 0)}`,
+          ...(activeMask & 0x01
+            ? [
+                `${slot?.arg?.enabled ? 'ARG→EF' : efBadge} ${formatSignedDelta(contribution.ef)}${slot?.arg?.enabled ? '' : sourceContext(efBadge)}`
+              ]
+            : []),
+          ...(activeMask & 0x02
+            ? [`L1 ${formatSignedDelta(contribution?.lfos?.[0])}${sourceContext('L1')}`]
+            : []),
+          ...(activeMask & 0x04
+            ? [`L2 ${formatSignedDelta(contribution?.lfos?.[1])}${sourceContext('L2')}`]
+            : []),
+          valueText
+        ]
+      : null;
     slotFocus.textContent = [
       slotName ? `${slotName} · S${index + 1}` : `Slot ${index + 1}`,
       destination,
       channelText,
-      valueText,
-      ...(sourceValues.length
-        ? sourceValues
-        : [modulation.length ? modulation.join(' + ') : 'No modulation'])
+      ...(contributionParts ?? [
+        valueText,
+        ...(sourceValues.length
+          ? sourceValues
+          : [modulation.length ? modulation.join(' + ') : 'No modulation'])
+      ])
     ].join(' · ');
   }
 
@@ -404,6 +437,12 @@ export function createPerformerPanelController({
       ...(latestTelemetry ?? {}),
       ...frame,
       slots: Array.isArray(frame.slots) ? frame.slots : latestTelemetry?.slots,
+      slotOutputs: Array.isArray(frame.slotOutputs)
+        ? frame.slotOutputs
+        : latestTelemetry?.slotOutputs,
+      slotContributions: Array.isArray(frame.slotContributions)
+        ? frame.slotContributions
+        : latestTelemetry?.slotContributions,
       envelopes: Array.isArray(frame.envelopes) ? frame.envelopes : latestTelemetry?.envelopes,
       efStatus: Array.isArray(frame.efStatus) ? frame.efStatus : latestTelemetry?.efStatus,
       lfos: Array.isArray(frame.lfos) ? frame.lfos : latestTelemetry?.lfos,
@@ -427,7 +466,8 @@ export function createPerformerPanelController({
       entry.state.textContent = isActive ? 'ACTIVE' : 'IDLE';
     });
 
-    frame.slots?.forEach((value, idx) => {
+    const outputValues = Array.isArray(frame.slotOutputs) ? frame.slotOutputs : frame.slots;
+    outputValues?.forEach((value, idx) => {
       const cell = slotCells[idx];
       if (!cell) return;
       const numeric = Number(value);

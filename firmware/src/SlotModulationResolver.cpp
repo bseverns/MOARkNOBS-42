@@ -39,15 +39,22 @@ float signedSlotLfoFromMidiValue(uint8_t value) {
                           : (static_cast<float>(midiValue) - 64.0f) / 63.0f;
 }
 
-uint8_t resolveSlotModulation(const SlotModulationInput &input) {
+SlotModulationResult resolveSlotModulationWithContributions(const SlotModulationInput &input) {
+    SlotModulationResult result{};
+    result.baseline = input.baseline;
     int value = input.baseline;
     if (input.efActive) {
+        const int before = value;
         value = applyDestinationMode(value, input.efValue, input.efMode);
+        value = std::clamp(value, 0, 127);
+        result.efApplied = true;
+        result.efDelta = static_cast<int16_t>(value - before);
     }
     value = std::clamp(value, 0, 127);
 
     for (size_t lfoIndex = 0; lfoIndex < input.lfoActive.size(); ++lfoIndex) {
         if (!input.lfoActive[lfoIndex]) continue;
+        const int before = value;
         const SlotLfoLane lane = sanitizeSlotLfoLane(input.lfoLane[lfoIndex]);
         const float signedLfo = std::clamp(input.lfoSigned[lfoIndex], -1.0f, 1.0f);
         const float amount = static_cast<float>(lane.amount) / 100.0f;
@@ -70,6 +77,13 @@ uint8_t resolveSlotModulation(const SlotModulationInput &input) {
             break;
         }
         value = std::clamp(value, 0, 127);
+        result.lfoApplied[lfoIndex] = true;
+        result.lfoDelta[lfoIndex] = static_cast<int16_t>(value - before);
     }
-    return static_cast<uint8_t>(value);
+    result.finalValue = static_cast<uint8_t>(value);
+    return result;
+}
+
+uint8_t resolveSlotModulation(const SlotModulationInput &input) {
+    return resolveSlotModulationWithContributions(input).finalValue;
 }

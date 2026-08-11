@@ -49,6 +49,22 @@ export function createTelemetryRuntime({
       next.slotArgs = [...byIndex.entries()].sort(([a], [b]) => a - b).map(([, arg]) => arg);
     }
 
+    if (Array.isArray(msg.slotContributions)) {
+      const byIndex = new Map();
+
+      for (const entry of current?.slotContributions || []) {
+        if (Number.isInteger(entry?.index)) byIndex.set(entry.index, entry);
+      }
+
+      for (const entry of msg.slotContributions) {
+        if (Number.isInteger(entry?.index)) byIndex.set(entry.index, entry);
+      }
+
+      next.slotContributions = [...byIndex.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([, entry]) => entry);
+    }
+
     next.scopes = [...(current?.scopes || []), msg.scope].filter(Boolean);
     return next;
   }

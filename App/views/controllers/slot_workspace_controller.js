@@ -112,13 +112,20 @@ export function createSlotWorkspaceController({
       ...(slotState.telemetry ?? {}),
       ...frame,
       slots: Array.isArray(frame.slots) ? frame.slots : slotState.telemetry?.slots,
+      slotOutputs: Array.isArray(frame.slotOutputs)
+        ? frame.slotOutputs
+        : slotState.telemetry?.slotOutputs,
+      slotContributions: Array.isArray(frame.slotContributions)
+        ? frame.slotContributions
+        : slotState.telemetry?.slotContributions,
       envelopes: Array.isArray(frame.envelopes)
         ? frame.envelopes
         : slotState.telemetry?.envelopes,
       efStatus: Array.isArray(frame.efStatus) ? frame.efStatus : slotState.telemetry?.efStatus,
       lfos: Array.isArray(frame.lfos) ? frame.lfos : slotState.telemetry?.lfos
     };
-    if (Array.isArray(frame.slots)) slotVirtualizer.updateTelemetry(frame.slots);
+    const outputValues = Array.isArray(frame.slotOutputs) ? frame.slotOutputs : frame.slots;
+    if (Array.isArray(outputValues)) slotVirtualizer.updateTelemetry(outputValues);
     frame.envelopes?.forEach((value, idx) => {
       const entry = envMeters[idx];
       if (!entry) return;
