@@ -452,7 +452,7 @@ The release workflow now also boots the packaged console binary and checks:
 - `/` serves the bridge browser console,
 - `/app/` serves the packaged App shell,
 - `/api/presets` returns the bundled host recipes,
-- `/api/device/session?warm=1` can load the bundled App-derived schema authority,
+- `/api/device/session?warm=1` can expose the bundled App-derived schema authority without claiming a device manifest, live config, or ready device session,
 - `/api/device/stage` rejects bad requests with a machine-readable error body.
 
 Without a real device handshake, the packaged smoke test only proves warmed schema authority and fail-closed staged-write behavior. Accepting a valid staged config still requires a cached device manifest and live config from hardware.

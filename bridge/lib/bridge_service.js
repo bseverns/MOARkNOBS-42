@@ -854,8 +854,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   }
 
   async function prewarmDeviceSession() {
-    await deviceSession.ensureAuthority();
-    return deviceSession.getState();
+    return deviceSession.prewarmAuthority();
   }
 
   // Send one native line to firmware, surfacing an immediate error if serial is down.

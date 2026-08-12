@@ -95,6 +95,16 @@ function createHarness(options = {}) {
 async function run() {
   {
     const harness = createHarness();
+    const state = await harness.session.prewarmAuthority();
+    assert.equal(state.schema?.type, 'object');
+    assert.equal(state.schemaSource, 'bundled');
+    assert.equal(state.manifest, null);
+    assert.equal(state.liveConfig, null);
+    assert.equal(state.ready, false);
+  }
+
+  {
+    const harness = createHarness();
     await harness.session.handleOpen();
     await waitFor(() => harness.session.getState().ready);
     const state = harness.session.getState();

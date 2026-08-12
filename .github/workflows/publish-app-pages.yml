@@ -1,0 +1,65 @@
+name: Publish MN42 App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'App/**'
+      - '.github/workflows/publish-app-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-mn42-app
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: App/package-lock.json
+
+      - name: Install App dependencies
+        run: npm --prefix App ci
+
+      - name: Validate and build publishable App artifact
+        env:
+          APP_SOURCE_SHA: ${{ github.sha }}
+        run: npm --prefix App run test:deploy
+
+      - name: Require a clean publishable manifest
+        run: |
+          test "$(node -p "require('./dist/app/deploy-manifest.json').publishable")" = true
+
+      - name: Check out the Pages repository
+        uses: actions/checkout@v5
+        with:
+          repository: bseverns/bseverns.github.io
+          ref: main
+          ssh-key: ${{ secrets.MN42_PAGES_DEPLOY_KEY }}
+          path: pages
+
+      - name: Publish the generated MN42 surface
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          rm -rf pages/MN42
+          mkdir -p pages/MN42
+          cp -R dist/app/. pages/MN42/
+          touch pages/MN42/.nojekyll
+
+          cd pages
+          git config user.name "MN42 deploy bot"
+          git config user.email "mn42-deploy@users.noreply.github.com"
+          git add MN42
+          git diff --cached --quiet || git commit -m "Deploy MN42 App ${SOURCE_SHA}"
+          git push origin HEAD:main
