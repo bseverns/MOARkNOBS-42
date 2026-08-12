@@ -77,7 +77,9 @@ test.describe('Stage mode', () => {
       /Slot 1 · CC\d+ · Ch 1 · BASE \d+ · ARG→EF [+-]\d+ · OUT \d+/
     );
     await expect(page.locator('#stage-clock-state')).toHaveText(/^(EXT|INT) · \d+\.\d BPM · Running$/);
-    await expect(page.locator('#stage-envelopes .meter[data-state="active"]')).toHaveCount(3);
+    await expect
+      .poll(() => page.locator('#stage-envelopes .meter[data-state="active"]').count())
+      .toBeGreaterThan(0);
     await expect(page.locator('#stage-envelopes .meter').first()).toContainText('ACTIVE');
     await expect(page.locator('#stage-envelopes .meter').first()).toContainText('No routes');
     await page.locator('#stage-slots .stage-slot-cell').nth(16).click();
@@ -108,13 +110,15 @@ test.describe('Stage mode', () => {
     await expect(panel.locator('[data-scope-role="status"]')).toHaveText(/Telemetry/i);
     await expect(panel.locator('[data-scope-lfo-index="0"]')).not.toHaveText('--');
     await expect(panel.locator('[data-scope-lfo-index="1"]')).not.toHaveText('--');
-    await expect(panel.locator('[data-state="active"]')).toHaveCount(3);
+    await expect.poll(() => panel.locator('[data-state="active"]').count()).toBeGreaterThan(0);
     await expect(panel.locator('[data-scope-role="snapshot"]')).toHaveCount(0);
     await expect(panel.locator('[data-scope-role="refresh"]')).toHaveCount(0);
     await expect(panel.locator('[data-scope-role="fps"]')).toHaveCount(0);
-    await expect(drawer.locator('[data-scope-summary]')).toHaveText(/3 EFs active · 2 LFOs/);
+    await expect(drawer.locator('[data-scope-summary]')).toHaveText(
+      /(\d+ EFs? active|\d+ active \+ \d+ recent) · 2 LFOs/
+    );
     await expect(panel.locator('[data-scope-role="view-state"]')).toHaveText(
-      /VIEW: ACTIVE · 3\/6 EFs · 2 LFOs always visible/
+      /VIEW: ACTIVE · \d+\/6 EFs(?: \([^)]*\))? · 2 LFOs always visible/
     );
     await expect(panel.locator('[data-scope-window="5"]')).toHaveAttribute(
       'aria-pressed',

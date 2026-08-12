@@ -29,9 +29,11 @@ test('scope panel streams telemetry and emits snapshots', async ({ page }) => {
   await expect(page.locator('#scope-lfo-2')).not.toHaveText('--');
   await expect(page.locator('#scope-clock')).toHaveText(/Clock (external|internal)/);
   await expect(page.locator('#scope-ef-legend [data-ef-index]')).toHaveCount(6);
-  await expect(page.locator('#scope-ef-legend [data-state="active"]')).toHaveCount(3);
+  await expect
+    .poll(() => page.locator('#scope-ef-legend [data-state="active"]').count())
+    .toBeGreaterThan(0);
   await expect(page.locator('#scope-panel [data-scope-role="view-state"]')).toHaveText(
-    /VIEW: ACTIVE · 3\/6 EFs · 2 LFOs always visible/
+    /VIEW: ACTIVE · \d+\/6 EFs(?: \([^)]*\))? · 2 LFOs always visible/
   );
   await expect(page.locator('#scope-panel [data-scope-window="5"]')).toHaveAttribute(
     'aria-pressed',
@@ -334,7 +336,7 @@ test('scope X zoom uses elapsed time rather than a fixed sample fraction', async
   expect(windows.ariaLabel).toContain('over 10 seconds');
 });
 
-test('simulator EF rehearsal signals move smoothly instead of producing random noise', async ({
+test('simulator EF rehearsal signals move smoothly and derive musical activity state', async ({
   page
 }) => {
   await page.goto('/runtime/simulator_transport.js');
@@ -350,17 +352,118 @@ test('simulator EF rehearsal signals move smoothly instead of producing random n
       telemetryFrameMs: 0
     });
     await simulator.open();
-    const values = [];
-    for (let idx = 0; idx < 8; idx += 1) {
-      values.push(JSON.parse(await simulator.nextLine()).envelopes[0]);
+    const frames = [];
+    for (let idx = 0; idx < 48; idx += 1) {
+      const frame = JSON.parse(await simulator.nextLine());
+      frames.push({ envelopes: frame.envelopes, efStatus: frame.efStatus });
     }
     await simulator.close();
-    return values;
+    return frames;
   });
 
-  const deltas = samples.slice(1).map((value, idx) => Math.abs(value - samples[idx]));
+  const values = samples.map((frame) => frame.envelopes[0]);
+  const deltas = values.slice(1).map((value, idx) => Math.abs(value - values[idx]));
   expect(Math.max(...deltas)).toBeLessThan(24);
   expect(Math.max(...deltas)).toBeGreaterThan(0);
+  expect(samples.every((frame) => frame.envelopes[1] <= 13 && frame.efStatus[1] === 0)).toBe(true);
+  expect(samples.some((frame) => frame.efStatus[2] === 1)).toBe(true);
+  expect(samples.some((frame) => frame.efStatus[2] === 0)).toBe(true);
+  expect(
+    samples.every((frame) => frame.efStatus[2] === (frame.envelopes[2] >= 42 ? 1 : 0))
+  ).toBe(true);
+});
+
+test('timestamp history preserves chronological order across ring wrap and resize', async ({
+  page
+}) => {
+  await page.goto('/views/scope_panel.js');
+
+  const history = await page.evaluate(async () => {
+    const { ScopePanel } = await import('/views/scope_panel.js');
+    document.body.innerHTML = `
+      <section id="scope-panel" style="width: 64px">
+        <canvas data-scope-role="canvas" width="64" height="100"
+          style="width: 64px; height: 100px"></canvas>
+      </section>
+    `;
+    let clock = 1000;
+    const listeners = new Map();
+    const runtime = {
+      on(event, callback) {
+        listeners.set(event, callback);
+        return () => listeners.delete(event);
+      },
+      getState() {
+        return { manifest: { envelope_count: 1, lfo_count: 2 } };
+      }
+    };
+    const panel = new ScopePanel({
+      container: document.getElementById('scope-panel'),
+      runtime,
+      nowFn: () => clock,
+      timeWindowSeconds: 10
+    });
+    const pushTelemetry = listeners.get('telemetry');
+    const orderedTimestamps = () => {
+      const count = Math.min(panel.samples, panel.historyLength);
+      return Array.from({ length: count }, (_, idx) => {
+        const bufferIndex =
+          (panel.cursor - count + idx + panel.historyLength) % panel.historyLength;
+        return panel.timestampHistory[bufferIndex];
+      });
+    };
+
+    for (let idx = 0; idx < 80; idx += 1) {
+      clock = 1000 + idx * 100;
+      pushTelemetry({ envelopes: [idx], lfos: [0.2, 0.8] });
+    }
+    const wrapped = {
+      length: panel.historyLength,
+      samples: panel.samples,
+      timestamps: orderedTimestamps()
+    };
+
+    panel.resizeHistoryBuffers(96);
+    const grown = {
+      length: panel.historyLength,
+      samples: panel.samples,
+      timestamps: orderedTimestamps()
+    };
+    for (let idx = 80; idx < 120; idx += 1) {
+      clock = 1000 + idx * 100;
+      pushTelemetry({ envelopes: [idx], lfos: [0.2, 0.8] });
+    }
+    const grownAndWrapped = {
+      samples: panel.samples,
+      timestamps: orderedTimestamps()
+    };
+    panel.resizeHistoryBuffers(64);
+    const shrunk = {
+      length: panel.historyLength,
+      samples: panel.samples,
+      timestamps: orderedTimestamps()
+    };
+    panel.destroy();
+    return { wrapped, grown, grownAndWrapped, shrunk };
+  });
+
+  expect(history.wrapped.length).toBe(64);
+  expect(history.wrapped.samples).toBe(64);
+  expect(history.wrapped.timestamps).toEqual(
+    Array.from({ length: 64 }, (_, idx) => 2600 + idx * 100)
+  );
+  expect(history.grown.length).toBe(96);
+  expect(history.grown.samples).toBe(64);
+  expect(history.grown.timestamps).toEqual(history.wrapped.timestamps);
+  expect(history.grownAndWrapped.samples).toBe(96);
+  expect(history.grownAndWrapped.timestamps).toEqual(
+    Array.from({ length: 96 }, (_, idx) => 3400 + idx * 100)
+  );
+  expect(history.shrunk.length).toBe(64);
+  expect(history.shrunk.samples).toBe(64);
+  expect(history.shrunk.timestamps).toEqual(
+    Array.from({ length: 64 }, (_, idx) => 6600 + idx * 100)
+  );
 });
 
 test('role-based scope records while closed and only renders when its drawer is open', async ({
