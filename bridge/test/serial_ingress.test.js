@@ -55,8 +55,8 @@ function createHarness() {
       sendOscTelemetry(address, args, routeMeta) {
         osc.push({ address, args, routeMeta });
       },
-      sendMidiTelemetry(channelBase, values, routeMeta) {
-        midi.push({ channelBase, values, routeMeta });
+      sendMidiTelemetry(source, channelBase, values, routeMeta) {
+        midi.push({ source, channelBase, values, routeMeta });
       },
       now() {
         return 1234;
@@ -131,6 +131,7 @@ function run() {
       true,
       'state_slots should route slot telemetry to MIDI CCs',
     );
+    assert.equal(harness.midi[0].source, 'slots');
   }
 
   {

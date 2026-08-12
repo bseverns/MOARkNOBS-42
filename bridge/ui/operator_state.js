@@ -60,6 +60,24 @@
     };
   }
 
+  function normalizeOutboundMidiMapping(mapping, index) {
+    if (!mapping || typeof mapping !== 'object' || Array.isArray(mapping)) return null;
+    const source = shortString(mapping.source, 32).toLowerCase();
+    const sourceIndex = integerInRange(mapping.sourceIndex ?? mapping.index, 0, 127);
+    const channel = integerInRange(mapping.channel, 1, 16);
+    const controller = integerInRange(mapping.controller ?? mapping.cc, 0, 127);
+    if (!['slots', 'envelopes'].includes(source) || sourceIndex === null || channel === null || controller === null) {
+      return null;
+    }
+    return {
+      id: shortString(mapping.id, 80) || `outbound-${index + 1}`,
+      source,
+      sourceIndex,
+      channel,
+      controller,
+    };
+  }
+
   function normalizeHostSetupConfig(config) {
     if (!config || typeof config !== 'object' || Array.isArray(config)) {
       return null;
@@ -74,11 +92,18 @@
     const rawMappings = Array.isArray(config.midiToOscMappings)
       ? config.midiToOscMappings.slice(0, 128)
       : [];
+    const rawOutboundMappings = Array.isArray(config.outboundMidiMappings)
+      ? config.outboundMidiMappings.slice(0, 128)
+      : [];
     return {
       serialName: shortString(config.serialName, 256),
       midiLabel: shortString(config.midiLabel, 256),
+      midiDestinationName:
+        shortString(config.midiDestinationName, 80) || 'MIDI destination',
       oscHost,
       oscPort,
+      oscDestinationName:
+        shortString(config.oscDestinationName, 80) || 'OSC destination',
       oscListen,
       oscBind,
       feedbackWindowMs: positiveNumber(config.feedbackWindowMs, 120),
@@ -88,6 +113,10 @@
       allowFeedbackLoops: Boolean(config.allowFeedbackLoops),
       midiToOscMappings: rawMappings
         .map(normalizeHostMapping)
+        .filter(Boolean),
+      midiTelemetryMode: config.midiTelemetryMode === 'mapped' ? 'mapped' : 'legacy',
+      outboundMidiMappings: rawOutboundMappings
+        .map(normalizeOutboundMidiMapping)
         .filter(Boolean),
     };
   }
@@ -101,6 +130,9 @@
     return {
       id,
       name,
+      notes: shortString(setup.notes, 500) || null,
+      suggestedDeviceProfile:
+        shortString(setup.suggestedDeviceProfile, 80) || null,
       createdAt: shortString(setup.createdAt, 64) || null,
       updatedAt: shortString(setup.updatedAt, 64) || null,
       config,
@@ -237,6 +269,20 @@
     );
   }
 
+  function describeRoutingDestinations(config = {}) {
+    const oscName = shortString(config.oscDestinationName, 80) || 'OSC destination';
+    const midiName = shortString(config.midiDestinationName, 80) || 'MIDI destination';
+    const oscHost = shortString(config.oscHost, 256) || '127.0.0.1';
+    const oscPort = integerInRange(config.oscPort, 1, 65535, 9000);
+    const midiPort = shortString(config.midiLabel, 256) || 'MN42 Bridge';
+    return {
+      deviceOsc: `${oscName} · OSC ${oscHost}:${oscPort}`,
+      deviceMidi: `${midiName} · MIDI ${midiPort}`,
+      oscDevice: `${oscName} · OSC input`,
+      midiDevice: `${midiName} · MIDI input`,
+    };
+  }
+
   function parseSlotTelemetryLine(line) {
     try {
       const payload = JSON.parse(String(line || '').trim());
@@ -354,6 +400,7 @@
     describeConfigValidation,
     describeDraft,
     describeRouteHeartbeats,
+    describeRoutingDestinations,
     createHostSetupEnvelope,
     formatTelemetryFreshness,
     hostSetupConfigFingerprint,

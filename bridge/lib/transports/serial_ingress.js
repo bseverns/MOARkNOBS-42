@@ -214,7 +214,7 @@ function createSerialLineHandler({
       sendOscTelemetry('/mn42/telemetry/slots', data.slots, {
         ...telemetryRouteMeta,
       });
-      sendMidiTelemetry(0xb0, data.slots, {
+      sendMidiTelemetry('slots', 0xb0, data.slots, {
         ...telemetryRouteMeta,
       });
     }
@@ -225,7 +225,7 @@ function createSerialLineHandler({
       sendOscTelemetry('/mn42/telemetry/envelopes', data.envelopes, {
         ...telemetryRouteMeta,
       });
-      sendMidiTelemetry(0xb1, data.envelopes, {
+      sendMidiTelemetry('envelopes', 0xb1, data.envelopes, {
         ...telemetryRouteMeta,
       });
     }

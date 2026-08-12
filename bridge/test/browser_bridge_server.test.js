@@ -76,6 +76,8 @@ function makeFakeService() {
       oscHost: '127.0.0.1',
       oscBind: '127.0.0.1',
       midiLabel: 'MN42 Bridge',
+      midiDestinationName: 'Ableton',
+      oscDestinationName: 'TouchDesigner',
       allowFeedbackLoops: false,
       feedbackWindowMs: 120,
       rtP95TargetMs: 10,
@@ -271,6 +273,13 @@ function makeFakeService() {
     async clearAlerts() {
       state.alerts.active = [];
       return this.getState();
+    },
+    setAppDisplayMetadata(metadata) {
+      state.appDisplayMetadata = {
+        authority: 'advisory-browser-metadata',
+        ...JSON.parse(JSON.stringify(metadata)),
+      };
+      return state.appDisplayMetadata;
     },
     seedAlert(alert) {
       state.alerts.active.push(JSON.parse(JSON.stringify(alert)));
@@ -976,8 +985,8 @@ async function run() {
   );
   assert.match(
     consoleHtml,
-    /Routing heartbeat[\s\S]*Device → OSC[\s\S]*Device → MIDI[\s\S]*OSC → Device[\s\S]*MIDI → Device/,
-    'Stage should expose passive routing heartbeat lanes',
+    /Routing heartbeat[\s\S]*Performance setup:[\s\S]*OSC destination · OSC[\s\S]*MIDI destination · MIDI/,
+    'Stage should expose named passive routing destinations',
   );
   assert.match(
     consoleHtml,
@@ -991,8 +1000,8 @@ async function run() {
   );
   assert.match(
     consoleHtml,
-    /My host setups[\s\S]*Saved only in this browser[\s\S]*Save current[\s\S]*Load selected[\s\S]*Export JSON[\s\S]*Import JSON/,
-    'Setup should expose browser-local named host setups with portable JSON',
+    /My Performance Setups[\s\S]*separate from firmware[\s\S]*Suggested device profile[\s\S]*Save current[\s\S]*Load selected[\s\S]*Export JSON[\s\S]*Import JSON/,
+    'Setup should expose browser-local Performance Setups with portable JSON',
   );
   assert.match(
     consoleHtml,
@@ -1051,6 +1060,26 @@ async function run() {
     invalidMappingResponse,
   );
   assert.equal(invalidMappingResponse.statusCode, 400);
+
+  const displayMetadataResponse = makeRes();
+  await server.requestHandler(
+    makeReq({
+      method: 'POST',
+      url: '/api/display-metadata',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        profileLabels: ['Rehearsal'],
+        activeProfile: 0,
+        slots: [{ index: 3, label: 'Lighting wash' }],
+      }),
+    }),
+    displayMetadataResponse,
+  );
+  assert.equal(displayMetadataResponse.statusCode, 200);
+  assert.equal(
+    JSON.parse(displayMetadataResponse.body.toString('utf8')).metadata.authority,
+    'advisory-browser-metadata',
+  );
 
   const snapshotResponse = makeRes();
   await server.requestHandler(

@@ -466,6 +466,39 @@ test('timestamp history preserves chronological order across ring wrap and resiz
   );
 });
 
+test('scope prefers propagated host-observed receipt time', async ({ page }) => {
+  await page.goto('/views/scope_panel.js');
+  const timestamp = await page.evaluate(async () => {
+    const { ScopePanel } = await import('/views/scope_panel.js');
+    document.body.innerHTML = `
+      <section id="scope-panel">
+        <canvas data-scope-role="canvas" width="64" height="100"></canvas>
+      </section>
+    `;
+    const listeners = new Map();
+    const runtime = {
+      on(event, callback) {
+        listeners.set(event, callback);
+        return () => listeners.delete(event);
+      },
+      getState() {
+        return { manifest: { envelope_count: 1, lfo_count: 0 } };
+      }
+    };
+    const panel = new ScopePanel({
+      container: document.getElementById('scope-panel'),
+      runtime,
+      nowFn: () => 9999
+    });
+    listeners.get('telemetry')({ envelopes: [64], receivedAt: 4321 });
+    const recorded =
+      panel.timestampHistory[(panel.cursor - 1 + panel.historyLength) % panel.historyLength];
+    panel.destroy();
+    return recorded;
+  });
+  expect(timestamp).toBe(4321);
+});
+
 test('role-based scope records while closed and only renders when its drawer is open', async ({
   page
 }) => {

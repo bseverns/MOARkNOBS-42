@@ -24,6 +24,7 @@ function createBridgeStateStore({
       logs: clone(state.logs),
       routes: clone(state.routes),
       counters: clone(state.counters),
+      appDisplayMetadata: clone(state.appDisplayMetadata),
       config: clone(getConfig()),
     };
   }

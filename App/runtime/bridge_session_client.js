@@ -155,6 +155,14 @@ export function createBridgeSessionClient({
     return payload.result ?? null;
   }
 
+  async function publishDisplayMetadata(metadata = {}) {
+    const payload = await requestJson('/api/display-metadata', {
+      method: 'POST',
+      body: metadata
+    });
+    return payload.metadata ?? null;
+  }
+
   function closeEvents() {
     socketClosed = true;
     if (!socket) return;
@@ -251,6 +259,7 @@ export function createBridgeSessionClient({
     stageConfig,
     applyConfig,
     rollbackConfig,
+    publishDisplayMetadata,
     openEvents,
     closeEvents
   };

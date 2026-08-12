@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { normalizeMidiToOscMappings } = require('./midi_osc_mappings');
+const { normalizeOutboundMidiMappings } = require('./outbound_midi_mappings');
 
 const ALLOWED_CONFIG_KEYS = new Set([
   'serialName',
@@ -10,6 +11,8 @@ const ALLOWED_CONFIG_KEYS = new Set([
   'oscHost',
   'oscBind',
   'midiLabel',
+  'midiDestinationName',
+  'oscDestinationName',
   'httpPort',
   'httpHost',
   'allowNetworkHttp',
@@ -19,6 +22,8 @@ const ALLOWED_CONFIG_KEYS = new Set([
   'rtJitterP95TargetMs',
   'alertSuppressionMs',
   'midiToOscMappings',
+  'midiTelemetryMode',
+  'outboundMidiMappings',
 ]);
 
 function resolveConfigPath(rawPath, cwd = process.cwd()) {
@@ -36,6 +41,12 @@ function pickAllowedKeys(raw = {}) {
   }
   if (next.midiToOscMappings !== undefined) {
     next.midiToOscMappings = normalizeMidiToOscMappings(next.midiToOscMappings);
+  }
+  if (next.outboundMidiMappings !== undefined) {
+    next.outboundMidiMappings = normalizeOutboundMidiMappings(next.outboundMidiMappings);
+  }
+  if (next.midiTelemetryMode !== undefined) {
+    next.midiTelemetryMode = next.midiTelemetryMode === 'mapped' ? 'mapped' : 'legacy';
   }
   return next;
 }

@@ -30,12 +30,16 @@ const PUBLIC_CONFIG_KEYS = [
   'oscHost',
   'oscBind',
   'midiLabel',
+  'midiDestinationName',
+  'oscDestinationName',
   'allowFeedbackLoops',
   'feedbackWindowMs',
   'rtP95TargetMs',
   'rtJitterP95TargetMs',
   'alertSuppressionMs',
   'midiToOscMappings',
+  'midiTelemetryMode',
+  'outboundMidiMappings',
 ];
 
 // Browser-originated config/session payloads are normally far smaller than this,
@@ -596,6 +600,18 @@ function createBrowserBridgeServer({
       } catch (err) {
         if (sendBodyLimitError(res, err)) return true;
         sendJson(res, 500, { error: err.message, state: service.getState() });
+      }
+      return true;
+    }
+
+    if (pathname === '/api/display-metadata' && req.method === 'POST') {
+      try {
+        const body = await readJson(req, { maxBytes: jsonApiBodyLimit });
+        const metadata = service.setAppDisplayMetadata(body);
+        sendJson(res, 200, { metadata, state: service.getState() });
+      } catch (err) {
+        if (sendBodyLimitError(res, err)) return true;
+        sendJson(res, err.statusCode || 400, { error: err.message });
       }
       return true;
     }

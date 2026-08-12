@@ -138,6 +138,8 @@ function parseConfigFromArgv(argv = process.argv, defaults = {}) {
       '--midi',
       getArg(argv, '-m', fileConfig.midiLabel ?? 'MN42 Bridge'),
     ),
+    midiDestinationName: fileConfig.midiDestinationName ?? 'MIDI destination',
+    oscDestinationName: fileConfig.oscDestinationName ?? 'OSC destination',
     httpPort: parsePositiveInt(
       getArg(
         argv,
@@ -157,6 +159,8 @@ function parseConfigFromArgv(argv = process.argv, defaults = {}) {
     rtJitterP95TargetMs,
     alertSuppressionMs,
     midiToOscMappings: fileConfig.midiToOscMappings ?? [],
+    midiTelemetryMode: fileConfig.midiTelemetryMode ?? 'legacy',
+    outboundMidiMappings: fileConfig.outboundMidiMappings ?? [],
   };
 }
 

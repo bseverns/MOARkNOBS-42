@@ -128,6 +128,8 @@ const {
 const { createBridgeStateStore } = require('./runtime/state_store');
 const { createDeviceSession } = require('./device/session');
 const { createStructuredEvent } = require('./device/transport_contract');
+const { normalizeOutboundMidiMappings } = require('./config/outbound_midi_mappings');
+const { normalizeAppDisplayMetadata } = require('./config/app_display_metadata');
 
 // Translate CLI flags into the bridge's runtime config object.
 function parseConfigFromArgv(argv = process.argv) {
@@ -160,16 +162,24 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     oscHost: '127.0.0.1',
     oscBind: '127.0.0.1',
     midiLabel: 'MN42 Bridge',
+    midiDestinationName: 'MIDI destination',
+    oscDestinationName: 'OSC destination',
     allowFeedbackLoops: false,
     feedbackWindowMs: DEFAULT_FEEDBACK_WINDOW_MS,
     rtP95TargetMs: DEFAULT_RT_P95_TARGET_MS,
     rtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
     alertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
     midiToOscMappings: [],
+    midiTelemetryMode: 'legacy',
+    outboundMidiMappings: [],
     ...initialConfig,
   };
   config.midiToOscMappings = normalizeMidiToOscMappings(
     config.midiToOscMappings,
+  );
+  config.midiTelemetryMode = config.midiTelemetryMode === 'mapped' ? 'mapped' : 'legacy';
+  config.outboundMidiMappings = normalizeOutboundMidiMappings(
+    config.outboundMidiMappings,
   );
 
   let depsLoaded = false;
@@ -211,6 +221,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     }),
     alerts: createAlertState(),
     counters: createCounterState(),
+    appDisplayMetadata: null,
     config: clone(config),
   };
 
@@ -300,6 +311,17 @@ function createBridgeService(initialConfig = {}, injected = {}) {
   function clearAlerts(options = {}) {
     routeAlertPolicy.clearAlerts(options);
     return getState();
+  }
+
+  function setAppDisplayMetadata(metadata) {
+    const normalized = normalizeAppDisplayMetadata(metadata);
+    if (!normalized) {
+      const error = new Error('App display metadata must be an object');
+      error.statusCode = 400;
+      throw error;
+    }
+    setState({ appDisplayMetadata: normalized });
+    return normalized;
   }
 
   const feedbackGuard = createFeedbackGuard({
@@ -418,6 +440,8 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     getMidiOut: () => midiOut,
     getOscTarget: () => ({ host: config.oscHost, port: config.oscPort }),
     getMidiToOscMappings: () => config.midiToOscMappings,
+    getMidiTelemetryMode: () => config.midiTelemetryMode,
+    getOutboundMidiMappings: () => config.outboundMidiMappings,
     markTelemetryMidi,
     recordRoute,
     pushLog,
@@ -427,8 +451,8 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     bridgeEgress.sendOscTelemetry(address, args, routeMeta);
   }
 
-  function sendMidiTelemetry(channelBase, values, routeMeta = {}) {
-    bridgeEgress.sendMidiTelemetry(channelBase, values, routeMeta);
+  function sendMidiTelemetry(source, channelBase, values, routeMeta = {}) {
+    bridgeEgress.sendMidiTelemetry(source, channelBase, values, routeMeta);
   }
 
   function sendTypedEventToOsc(event, routeMeta = {}) {
@@ -778,6 +802,11 @@ function createBridgeService(initialConfig = {}, injected = {}) {
             defaultRtJitterP95TargetMs: DEFAULT_RT_JITTER_P95_TARGET_MS,
             defaultAlertSuppressionMs: DEFAULT_ALERT_SUPPRESSION_MS,
           });
+          mutableConfig.midiTelemetryMode =
+            mutableConfig.midiTelemetryMode === 'mapped' ? 'mapped' : 'legacy';
+          mutableConfig.outboundMidiMappings = normalizeOutboundMidiMappings(
+            mutableConfig.outboundMidiMappings,
+          );
           mutableConfig.midiToOscMappings = normalizeMidiToOscMappings(
             mutableConfig.midiToOscMappings,
           );
@@ -911,6 +940,7 @@ function createBridgeService(initialConfig = {}, injected = {}) {
     applyDeviceConfig,
     start,
     stageDeviceConfig,
+    setAppDisplayMetadata,
     stop,
     configure,
     prewarmDeviceSession,

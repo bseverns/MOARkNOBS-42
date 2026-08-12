@@ -85,7 +85,10 @@ export function createTelemetryRuntime({
 
   function queueTelemetryFrame(msg) {
     if (!msg || typeof msg !== 'object') return;
-    receivedAt = now();
+    const observedTimestampMs = Number(msg.observedTimestampMs);
+    receivedAt = Number.isFinite(observedTimestampMs)
+      ? observedTimestampMs
+      : now();
     updateFreshness();
 
     const traceId = msg.traceId || null;

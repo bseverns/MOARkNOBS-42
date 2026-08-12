@@ -79,6 +79,11 @@ Payload:
 }
 ```
 
+`hostTimestampMs` is the Bridge's receipt time for the device frame. The App
+propagates it as `observedTimestampMs` and uses the assembled frame's
+`receivedAt` for musical visualization. It is host-observed arrival time, not
+firmware-source time and not a latency-grade measurement.
+
 ### `device.config.live`
 
 Payload:

@@ -7,6 +7,7 @@ const {
   describeConfigValidation,
   describeDraft,
   describeRouteHeartbeats,
+  describeRoutingDestinations,
   createHostSetupEnvelope,
   formatTelemetryFreshness,
   hostSetupConfigFingerprint,
@@ -97,6 +98,21 @@ function run() {
     midiDevice: { label: 'not seen', status: 'muted', recent: false },
   });
   assert.deepEqual(
+    describeRoutingDestinations({
+      oscDestinationName: 'TouchDesigner',
+      oscHost: '192.168.1.20',
+      oscPort: 9000,
+      midiDestinationName: 'Ableton',
+      midiLabel: 'MN42 IAC',
+    }),
+    {
+      deviceOsc: 'TouchDesigner · OSC 192.168.1.20:9000',
+      deviceMidi: 'Ableton · MIDI MN42 IAC',
+      oscDevice: 'TouchDesigner · OSC input',
+      midiDevice: 'Ableton · MIDI input',
+    },
+  );
+  assert.deepEqual(
     parseSlotTelemetryLine(
       JSON.stringify({ type: 'telemetry', traceId: 'movement-1', slots: [10, 64] }),
     ),
@@ -151,8 +167,10 @@ function run() {
   const hostConfig = {
     serialName: '/dev/cu.usbmodem123',
     midiLabel: 'Friday IAC',
+    midiDestinationName: 'Ableton',
     oscHost: '127.0.0.1',
     oscPort: 9000,
+    oscDestinationName: 'TouchDesigner',
     oscListen: 9001,
     oscBind: '127.0.0.1',
     feedbackWindowMs: 120,
@@ -179,6 +197,8 @@ function run() {
       {
         id: 'friday-show',
         name: 'Friday show',
+        notes: 'Launch visuals before routing.',
+        suggestedDeviceProfile: 'Performance A',
         createdAt: '2026-08-09T18:00:00.000Z',
         updatedAt: '2026-08-09T18:00:00.000Z',
         config: hostConfig,
@@ -190,6 +210,7 @@ function run() {
   assert.equal(envelope.format, 'mn42-bridge-host-setups');
   assert.equal(envelope.version, 1);
   assert.equal(envelope.setups.length, 1);
+  assert.equal(envelope.setups[0].suggestedDeviceProfile, 'Performance A');
   assert.deepEqual(parseHostSetupEnvelope(envelope), {
     setups: envelope.setups,
     rejected: 0,
@@ -201,7 +222,7 @@ function run() {
     hostSetupConfigFingerprint(normalizedHostConfig),
   );
 
-  console.log('Bridge operator state covers mapping learn and versioned local host setups');
+  console.log('Bridge operator state covers mapping learn and versioned Performance Setups');
 }
 
 run();

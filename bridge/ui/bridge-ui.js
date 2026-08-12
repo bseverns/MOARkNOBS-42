@@ -12,6 +12,7 @@ const {
   describeConfigValidation,
   describeDraft,
   describeRouteHeartbeats,
+  describeRoutingDestinations,
   createHostSetupEnvelope,
   formatTelemetryFreshness,
   hostSetupConfigFingerprint,
@@ -68,7 +69,10 @@ const recentOscAddressSelect = document.getElementById('recent-osc-address');
 const mappingPreview = document.getElementById('mapping-preview');
 const customSetupSelect = document.getElementById('custom-setup-select');
 const customSetupName = document.getElementById('custom-setup-name');
+const customSetupProfile = document.getElementById('custom-setup-profile');
+const customSetupNotes = document.getElementById('custom-setup-notes');
 const customSetupStatus = document.getElementById('custom-setup-status');
+const stagePerformanceSetup = document.getElementById('stage-performance-setup');
 const newCustomSetupButton = document.getElementById('new-custom-setup');
 const saveCustomSetupButton = document.getElementById('save-custom-setup');
 const loadCustomSetupButton = document.getElementById('load-custom-setup');
@@ -79,6 +83,9 @@ const exportCustomSetupsButton = document.getElementById(
 const importCustomSetupsInput = document.getElementById(
   'import-custom-setups',
 );
+const outboundMidiMappingsInput = document.getElementById('outbound-midi-mappings');
+const outboundMidiMappingStatus = document.getElementById('outbound-midi-mapping-status');
+const midiTelemetryModeSelect = document.getElementById('midi-telemetry-mode');
 
 const routeHeartbeatNodes = {
   deviceOsc: document.getElementById('route-device-osc'),
@@ -145,8 +152,10 @@ const consoleState = {
   presets: [],
   activePresetId: '',
   midiToOscMappings: [],
+  outboundMidiMappings: [],
   customSetups: [],
   activeCustomSetupId: '',
+  loadedCustomSetupId: '',
 };
 window.__MN42_BRIDGE_CONSOLE_STATE = consoleState;
 
@@ -199,6 +208,12 @@ function selectedCustomSetup() {
   );
 }
 
+function loadedCustomSetup() {
+  return consoleState.customSetups.find(
+    (setup) => setup.id === consoleState.loadedCustomSetupId,
+  );
+}
+
 function loadCustomSetups() {
   try {
     const raw = JSON.parse(localStorage.getItem(CUSTOM_SETUPS_KEY) || 'null');
@@ -230,7 +245,10 @@ function renderCustomSetupStatus() {
   }
   const changed =
     hostSetupConfigFingerprint(formValues()) !==
-    hostSetupConfigFingerprint(selected.config);
+      hostSetupConfigFingerprint(selected.config) ||
+    customSetupName.value.trim() !== selected.name ||
+    customSetupProfile.value.trim() !== (selected.suggestedDeviceProfile || '') ||
+    customSetupNotes.value.trim() !== (selected.notes || '');
   customSetupStatus.textContent = changed
     ? `${selected.name} selected · current form differs from the saved setup.`
     : customSetupNotice || `${selected.name} selected · no unsaved setup changes.`;
@@ -252,11 +270,19 @@ function renderCustomSetups({ syncName = false } = {}) {
     });
   if (selectedCustomSetup()) {
     customSetupSelect.value = consoleState.activeCustomSetupId;
-    if (syncName) customSetupName.value = selectedCustomSetup().name;
+    if (syncName) {
+      customSetupName.value = selectedCustomSetup().name;
+      customSetupProfile.value = selectedCustomSetup().suggestedDeviceProfile || '';
+      customSetupNotes.value = selectedCustomSetup().notes || '';
+    }
   } else {
     consoleState.activeCustomSetupId = '';
     customSetupSelect.value = '';
-    if (syncName) customSetupName.value = '';
+    if (syncName) {
+      customSetupName.value = '';
+      customSetupProfile.value = '';
+      customSetupNotes.value = '';
+    }
   }
   exportCustomSetupsButton.disabled = !consoleState.customSetups.length;
   renderCustomSetupStatus();
@@ -265,7 +291,9 @@ function renderCustomSetups({ syncName = false } = {}) {
 function beginNewCustomSetup() {
   consoleState.activeCustomSetupId = '';
   customSetupName.value = '';
-  customSetupNotice = 'Enter a name, then save the current host form.';
+  customSetupProfile.value = '';
+  customSetupNotes.value = '';
+  customSetupNotice = 'Enter a name, then save the current performance setup.';
   renderCustomSetups();
   customSetupName.focus();
 }
@@ -295,6 +323,8 @@ function saveCurrentCustomSetup() {
   const setup = {
     id: current?.id || customSetupId(),
     name,
+    suggestedDeviceProfile: customSetupProfile.value.trim().slice(0, 80) || null,
+    notes: customSetupNotes.value.trim().slice(0, 500) || null,
     createdAt: current?.createdAt || now,
     updatedAt: now,
     config,
@@ -322,6 +352,9 @@ function loadSelectedCustomSetup() {
   const setup = selectedCustomSetup();
   if (!setup) return;
   populateForm(setup.config);
+  consoleState.loadedCustomSetupId = setup.id;
+  customSetupProfile.value = setup.suggestedDeviceProfile || '';
+  customSetupNotes.value = setup.notes || '';
   hostFormDirty = true;
   saveConfig(formValues());
   customSetupNotice = consoleState.bridge?.running
@@ -336,13 +369,18 @@ function deleteSelectedCustomSetup() {
     return;
   }
   const previousSetups = consoleState.customSetups;
+  const previousLoadedId = consoleState.loadedCustomSetupId;
   consoleState.customSetups = consoleState.customSetups.filter(
     (entry) => entry.id !== setup.id,
   );
   consoleState.activeCustomSetupId = '';
+  if (consoleState.loadedCustomSetupId === setup.id) {
+    consoleState.loadedCustomSetupId = '';
+  }
   if (!persistCustomSetups()) {
     consoleState.customSetups = previousSetups;
     consoleState.activeCustomSetupId = setup.id;
+    consoleState.loadedCustomSetupId = previousLoadedId;
     customSetupNotice = 'Browser storage rejected the deletion.';
     renderCustomSetups({ syncName: true });
     return;
@@ -360,7 +398,7 @@ function exportCustomSetups() {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'mn42-bridge-host-setups.json';
+  anchor.download = 'mn42-bridge-performance-setups.json';
   anchor.click();
   URL.revokeObjectURL(url);
   customSetupNotice = `Exported ${envelope.setups.length} browser-local setup${
@@ -376,7 +414,7 @@ async function importCustomSetups(file) {
     }
     const parsed = parseHostSetupEnvelope(JSON.parse(await file.text()));
     if (!parsed.valid || !parsed.setups.length) {
-      throw new Error('No valid version 1 MN42 host setups found.');
+      throw new Error('No valid version 1 MN42 Performance Setups found.');
     }
     if (
       !window.confirm(
@@ -426,8 +464,10 @@ function formValues() {
   return {
     serialName: String(data.get('serialName') || '').trim(),
     midiLabel: String(data.get('midiLabel') || '').trim(),
+    midiDestinationName: String(data.get('midiDestinationName') || '').trim(),
     oscHost: String(data.get('oscHost') || '').trim(),
     oscPort: Number(data.get('oscPort') || 9000),
+    oscDestinationName: String(data.get('oscDestinationName') || '').trim(),
     oscListen: Number(data.get('oscListen') || 9000),
     oscBind: String(data.get('oscBind') || '').trim(),
     feedbackWindowMs: Number(data.get('feedbackWindowMs') || 120),
@@ -438,6 +478,8 @@ function formValues() {
       Boolean(allowFeedbackLoopsField) &&
       Boolean(allowFeedbackLoopsField.checked),
     midiToOscMappings: clone(consoleState.midiToOscMappings),
+    midiTelemetryMode: String(data.get('midiTelemetryMode') || 'legacy'),
+    outboundMidiMappings: clone(consoleState.outboundMidiMappings),
   };
 }
 
@@ -456,6 +498,12 @@ function populateForm(values) {
     consoleState.midiToOscMappings = clone(values.midiToOscMappings);
     renderMappingList();
     renderMappingOutput(consoleState.bridge || {});
+  }
+  if (Array.isArray(values.outboundMidiMappings)) {
+    consoleState.outboundMidiMappings = clone(values.outboundMidiMappings);
+    if (outboundMidiMappingsInput) {
+      outboundMidiMappingsInput.value = JSON.stringify(values.outboundMidiMappings, null, 2);
+    }
   }
 }
 
@@ -515,7 +563,12 @@ function formatRoute(route) {
   const head = `${route.hostTimestampMs || ''} ${route.flow || 'route'} ${
     route.kind || ''
   }`;
-  const tail = [route.traceId, route.source, route.destination]
+  const slotIndex = Number(route.slot);
+  const slotMetadata = Number.isInteger(slotIndex)
+    ? consoleState.bridge?.appDisplayMetadata?.slots?.find((entry) => entry.index === slotIndex)
+    : null;
+  const advisoryLabel = slotMetadata?.routeDescription || slotMetadata?.label || '';
+  const tail = [route.traceId, advisoryLabel, route.source, route.destination]
     .filter(Boolean)
     .join(' · ');
   return [head, tail].filter(Boolean).join(' — ');
@@ -557,9 +610,14 @@ function finishSoundcheck() {
 
 function renderRoutingHeartbeat(routes = []) {
   const heartbeat = describeRouteHeartbeats(routes);
+  const destinations = describeRoutingDestinations(
+    consoleState.bridge?.config || formValues(),
+  );
   Object.entries(routeHeartbeatNodes).forEach(([lane, card]) => {
     if (!card) return;
     const description = heartbeat[lane];
+    const label = card.querySelector('span');
+    if (label) label.textContent = destinations[lane];
     renderOperatorStatus(card.querySelector('strong'), description);
     card.classList.toggle('is-recent', Boolean(description?.recent));
   });
@@ -635,6 +693,23 @@ function renderStateJson(state) {
     bridge: state,
     structuredEvents: consoleState.structuredEvents.slice(-12),
   });
+
+  if (stagePerformanceSetup) {
+    const setup = loadedCustomSetup();
+    const details = setup
+      ? [
+          `Performance setup: ${setup.name}`,
+          setup.suggestedDeviceProfile
+            ? `suggested device profile: ${setup.suggestedDeviceProfile}`
+            : '',
+          setup.notes || '',
+        ].filter(Boolean)
+      : ['Performance setup: unsaved current routing'];
+    const metadata = consoleState.bridge?.appDisplayMetadata;
+    const activeProfileLabel = metadata?.profileLabels?.[metadata?.activeProfile];
+    if (activeProfileLabel) details.push(`App profile: ${activeProfileLabel}`);
+    stagePerformanceSetup.textContent = details.join(' · ');
+  }
 }
 
 function renderMappingOutput(state = {}) {
@@ -646,6 +721,8 @@ function renderMappingOutput(state = {}) {
     midiLabel: config.midiLabel ?? null,
     activeMidiToOscMappings: config.midiToOscMappings || [],
     formMidiToOscMappings: consoleState.midiToOscMappings || [],
+    midiTelemetryMode: config.midiTelemetryMode || 'legacy',
+    outboundMidiMappings: config.outboundMidiMappings || [],
   });
 }
 
@@ -1272,8 +1349,10 @@ function applyPreset(preset) {
       preset.ports.serialNameHint ||
       form.elements.namedItem('serialName')?.value,
     midiLabel: preset.ports.midiLabel,
+    midiDestinationName: preset.host || preset.label || 'MIDI destination',
     oscHost: preset.ports.oscHost,
     oscPort: preset.ports.oscPort,
+    oscDestinationName: preset.host || preset.label || 'OSC destination',
     oscListen: preset.ports.oscListen,
     oscBind: preset.ports.oscBind,
   });
@@ -1566,9 +1645,39 @@ function bindEvents() {
 
   form.addEventListener('input', () => {
     hostFormDirty = true;
+    consoleState.loadedCustomSetupId = '';
     customSetupNotice = '';
     saveConfig(formValues());
     renderCustomSetupStatus();
+  });
+
+  outboundMidiMappingsInput?.addEventListener('input', () => {
+    try {
+      const parsed = JSON.parse(outboundMidiMappingsInput.value || '[]');
+      const normalized = normalizeHostSetupConfig({
+        ...formValues(),
+        outboundMidiMappings: parsed,
+      });
+      consoleState.outboundMidiMappings = normalized?.outboundMidiMappings || [];
+      outboundMidiMappingStatus.textContent = `${consoleState.outboundMidiMappings.length} valid outbound mapping${consoleState.outboundMidiMappings.length === 1 ? '' : 's'} staged.`;
+      hostFormDirty = true;
+      saveConfig(formValues());
+    } catch (error) {
+      outboundMidiMappingStatus.textContent = `Mapping JSON is not valid: ${error.message}`;
+    }
+  });
+  midiTelemetryModeSelect?.addEventListener('change', () => {
+    hostFormDirty = true;
+    consoleState.loadedCustomSetupId = '';
+    saveConfig(formValues());
+    renderCustomSetupStatus();
+  });
+
+  [customSetupName, customSetupProfile, customSetupNotes].forEach((field) => {
+    field?.addEventListener('input', () => {
+      customSetupNotice = '';
+      renderCustomSetupStatus();
+    });
   });
 
   customSetupSelect?.addEventListener('change', () => {
@@ -1576,7 +1685,11 @@ function bindEvents() {
     customSetupNotice = selectedCustomSetup()
       ? 'Selected only; choose Load selected to fill the form.'
       : 'Enter a name, then save the current host form.';
-    if (selectedCustomSetup()) customSetupName.value = selectedCustomSetup().name;
+    if (selectedCustomSetup()) {
+      customSetupName.value = selectedCustomSetup().name;
+      customSetupProfile.value = selectedCustomSetup().suggestedDeviceProfile || '';
+      customSetupNotes.value = selectedCustomSetup().notes || '';
+    }
     renderCustomSetupStatus();
   });
   newCustomSetupButton?.addEventListener('click', beginNewCustomSetup);
@@ -1590,6 +1703,7 @@ function bindEvents() {
   });
 
   presetSelect?.addEventListener('change', () => {
+    consoleState.loadedCustomSetupId = '';
     consoleState.activePresetId = presetSelect.value;
     const selected = consoleState.presets.find(
       (entry) => entry.id === presetSelect.value,

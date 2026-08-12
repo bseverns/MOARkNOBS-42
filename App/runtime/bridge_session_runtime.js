@@ -324,7 +324,10 @@ export function createBridgeSessionRuntime({
             break;
           case 'device.telemetry':
             if (payload.telemetry && typeof payload.telemetry === 'object') {
-              onTelemetry(payload.telemetry);
+              onTelemetry({
+                ...payload.telemetry,
+                observedTimestampMs: payload.hostTimestampMs ?? undefined
+              });
             }
             break;
           default:

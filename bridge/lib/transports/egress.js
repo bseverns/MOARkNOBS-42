@@ -10,12 +10,15 @@ const {
   eventMatchesMidiToOscMapping,
   buildMappedOscArgs,
 } = require('../config/midi_osc_mappings');
+const { mappedMidiPackets } = require('../config/outbound_midi_mappings');
 
 function createBridgeEgress({
   getUdp,
   getMidiOut,
   getOscTarget,
   getMidiToOscMappings,
+  getMidiTelemetryMode,
+  getOutboundMidiMappings,
   markTelemetryMidi,
   recordRoute,
   pushLog,
@@ -41,14 +44,21 @@ function createBridgeEgress({
     }
   }
 
-  function sendMidiTelemetry(channelBase, values, routeMeta = {}) {
+  function sendMidiTelemetry(source, channelBase, values, routeMeta = {}) {
     const midiOut = getMidiOut?.();
     if (!midiOut || !Array.isArray(values)) return;
+    const mappedMode = getMidiTelemetryMode?.() === 'mapped';
+    const messages = mappedMode
+      ? mappedMidiPackets(source, values, getOutboundMidiMappings?.() || [])
+      : values.map((value, index) => ({
+          id: null,
+          packet: [channelBase, index, value],
+        }));
     let sentCount = 0;
-    values.forEach((value, index) => {
+    messages.forEach(({ packet }) => {
       try {
-        markTelemetryMidi(channelBase, index, value);
-        midiOut.send([channelBase, index, value]);
+        markTelemetryMidi(packet[0], packet[1], packet[2]);
+        midiOut.send(packet);
         sentCount += 1;
       } catch (err) {
         pushLog('error', `MIDI out error: ${err.message}`);
@@ -58,11 +68,12 @@ function createBridgeEgress({
       recordRoute({
         flow: 'serial->midi',
         kind: 'telemetry',
-        status: channelBase,
+        status: mappedMode ? null : channelBase,
         count: sentCount,
         traceId: routeMeta.traceId,
         sourceTimestampMs: routeMeta.sourceTimestampMs,
         hostTimestampMs: routeMeta.hostTimestampMs,
+        reason: mappedMode ? 'configured_mapping' : 'legacy_compatibility',
       });
     }
   }

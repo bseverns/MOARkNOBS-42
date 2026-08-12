@@ -465,6 +465,23 @@ const boot = () => {
     warningContainers: [globalPowerWarning]
   });
   let profileNames = ['', '', '', ''];
+
+  function publishBridgeDisplayMetadata() {
+    const state = runtime.getState();
+    const slots = Array.isArray(state?.staged?.slots)
+      ? state.staged.slots.flatMap((slot, index) => {
+          const label = typeof slot?.label === 'string' ? slot.label.trim() : '';
+          return label ? [{ index, label }] : [];
+        })
+      : [];
+    Promise.resolve(
+      runtime.publishBridgeDisplayMetadata?.({
+        profileLabels: profileNames,
+        activeProfile: deviceActiveProfileSlot,
+        slots
+      })
+    ).catch(() => {});
+  }
   let sceneStates = Array.from({ length: 6 }, () => ({ name: '', available: false }));
   let deviceActiveProfileSlot = null;
   let lastRecalledScene = null;
@@ -739,6 +756,7 @@ const boot = () => {
     onProfileNamesChanged: (names) => {
       profileNames = Array.isArray(names) ? [...names] : profileNames;
       updateStagePanel();
+      publishBridgeDisplayMetadata();
     },
     onScenesChanged: (scenes) => {
       sceneStates = Array.isArray(scenes) ? scenes.map((scene) => ({ ...scene })) : sceneStates;
@@ -751,6 +769,7 @@ const boot = () => {
       if (next !== deviceActiveProfileSlot) lastRecalledScene = null;
       deviceActiveProfileSlot = next;
       updateStagePanel();
+      publishBridgeDisplayMetadata();
     },
     onSceneRecalled: (slot, scene) => {
       lastRecalledScene = {
@@ -921,6 +940,7 @@ const boot = () => {
     profileMacroScenePanel.onConfigChanged();
     updateStagePanel();
     panicHelpController.render();
+    publishBridgeDisplayMetadata();
   });
   runtime.on('config-transaction', ({ state, deviceAuthority }) => {
     diffStatusController.setTransactionState(deviceAuthority || state);

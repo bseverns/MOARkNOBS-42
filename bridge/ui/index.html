@@ -64,8 +64,16 @@
             <datalist id="midi-port-list"></datalist>
             <p class="hint">Match the host loopback port you actually intend to use.</p>
 
+            <label for="midi-destination-name">MIDI destination name</label>
+            <input id="midi-destination-name" name="midiDestinationName" value="MIDI destination"
+              maxlength="80" placeholder="e.g. Ableton" />
+
             <label for="osc-host">OSC host</label>
             <input id="osc-host" name="oscHost" value="127.0.0.1" autocomplete="off" />
+
+            <label for="osc-destination-name">OSC destination name</label>
+            <input id="osc-destination-name" name="oscDestinationName" value="OSC destination"
+              maxlength="80" placeholder="e.g. TouchDesigner" />
 
             <div class="grid-two">
               <div>
@@ -126,16 +134,24 @@
             <ul id="recipe-checklist" class="ports-list"></ul>
           </div>
           <div class="recipe-block custom-setups" aria-labelledby="custom-setups-heading">
-            <h3 id="custom-setups-heading">My host setups</h3>
-            <p class="hint">Saved only in this browser. Loading fills the form but never starts or restarts routing.</p>
+            <h3 id="custom-setups-heading">My Performance Setups</h3>
+            <p class="hint">A Performance Setup describes this computer and rig. It stays separate from firmware
+              profiles, is saved only in this browser, and never starts or restarts routing when loaded.</p>
 
-            <label for="custom-setup-select">Saved setup</label>
+            <label for="custom-setup-select">Saved Performance Setup</label>
             <select id="custom-setup-select">
               <option value="">New setup</option>
             </select>
 
-            <label for="custom-setup-name">Setup name</label>
+            <label for="custom-setup-name">Performance Setup name</label>
             <input id="custom-setup-name" maxlength="80" placeholder="e.g. Friday show — Ableton" />
+
+            <label for="custom-setup-profile">Suggested device profile (optional)</label>
+            <input id="custom-setup-profile" maxlength="80" placeholder="e.g. Performance A" />
+
+            <label for="custom-setup-notes">Setup notes (optional)</label>
+            <textarea id="custom-setup-notes" maxlength="500"
+              placeholder="Host launch order, patch name, or rehearsal reminder"></textarea>
 
             <div class="actions custom-setup-actions">
               <button id="new-custom-setup" type="button">New</button>
@@ -175,6 +191,21 @@
 
     <section class="mode-view" data-mode-view="mappings" aria-labelledby="mappings-heading" hidden>
       <h2 id="mappings-heading" class="sr-only">Mappings mode</h2>
+      <section class="panel" aria-labelledby="outbound-midi-heading">
+        <h2 id="outbound-midi-heading">Device telemetry → MIDI</h2>
+        <p class="hint">Legacy compatibility emits slots as channel 1 CCs and envelopes as channel 2 CCs. Mapped
+          mode is opt-in and emits only the explicit routes below.</p>
+        <label for="midi-telemetry-mode">Outbound MIDI mode</label>
+        <select id="midi-telemetry-mode" name="midiTelemetryMode" form="bridge-form">
+          <option value="legacy">Legacy compatibility</option>
+          <option value="mapped">Configured mappings</option>
+        </select>
+        <label for="outbound-midi-mappings">Outbound mapping JSON</label>
+        <textarea id="outbound-midi-mappings" rows="8" spellcheck="false">[]</textarea>
+        <p class="hint">Each mapping uses <code>source</code> (<code>slots</code> or <code>envelopes</code>),
+          zero-based <code>sourceIndex</code>, MIDI <code>channel</code> 1–16, and <code>controller</code> 0–127.</p>
+        <p id="outbound-midi-mapping-status" class="hint" aria-live="polite">No custom outbound mappings staged.</p>
+      </section>
       <section class="panel mapping-learn-panel" aria-labelledby="mapping-learn-heading">
         <h2 id="mapping-learn-heading">Learn a MIDI → OSC mapping</h2>
         <p class="hint">This listener is passive: it observes the next inbound MIDI CC and recent OSC output
@@ -215,7 +246,7 @@
               <!-- Dynamically populated -->
             </tbody>
           </table>
-          <p class="hint">Add/remove actions apply live. Mappings loaded from a host setup remain a form draft until
+          <p class="hint">Add/remove actions apply live. Mappings loaded from a Performance Setup remain a form draft until
             the Bridge is started with that setup. They are additive: the CC still follows its existing typed OSC and
             device-control lanes.</p>
         </section>
@@ -291,21 +322,22 @@
 
         <section class="panel" aria-labelledby="routing-heartbeat-heading">
           <h2 id="routing-heartbeat-heading">Routing heartbeat</h2>
+          <p id="stage-performance-setup" class="hint">Performance setup: unsaved current routing</p>
           <div class="route-heartbeat-grid">
             <article class="route-heartbeat" id="route-device-osc">
-              <span>Device → OSC</span>
+              <span>OSC destination · OSC 127.0.0.1:9000</span>
               <strong>not seen</strong>
             </article>
             <article class="route-heartbeat" id="route-device-midi">
-              <span>Device → MIDI</span>
+              <span>MIDI destination · MIDI MN42 Bridge</span>
               <strong>not seen</strong>
             </article>
             <article class="route-heartbeat" id="route-osc-device">
-              <span>OSC → Device</span>
+              <span>OSC destination · OSC input</span>
               <strong>not seen</strong>
             </article>
             <article class="route-heartbeat" id="route-midi-device">
-              <span>MIDI → Device</span>
+              <span>MIDI destination · MIDI input</span>
               <strong>not seen</strong>
             </article>
           </div>

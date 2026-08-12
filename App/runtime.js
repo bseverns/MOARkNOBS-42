@@ -702,6 +702,12 @@ export function createRuntime({
     };
   }
 
+  async function publishBridgeDisplayMetadata(metadata = {}) {
+    if (!bridgeSessionActive) return null;
+    const client = bridgeSessionRuntime?.ensureClient();
+    return client?.publishDisplayMetadata?.(metadata) ?? null;
+  }
+
   return {
     connect,
     disconnect,
@@ -723,6 +729,7 @@ export function createRuntime({
     discardSavedWorkspace: stateSnapshotStore.clear,
     hydrateAuthoritativeConfig: configSession.hydrateAuthoritativeConfig,
     setLocalSlotMeta: configSession.setLocalSlotMeta,
+    publishBridgeDisplayMetadata,
     createThrottle,
     requestPort,
     forgetRememberedPort: portPreferenceStore.clear,

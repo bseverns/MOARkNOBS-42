@@ -118,7 +118,7 @@ Use the browser page to:
 
 The configurator opened from this page uses the bridge session (`/api/device/*` and `/ws/events`) instead of WebSerial, retaining raw `/ws` for compatibility and live RPCs while OSC and MIDI routing stay active.
 
-The Setup screen also supports named browser-local host setups. A setup captures the host transport form, guard/timing values, and custom MIDI-to-OSC mappings. Loading one only stages those values in the form; it never starts or restarts routing. Collections use the versioned `mn42-bridge-host-setups` JSON format for browser-to-browser export/import. These personal setups are not known-good recipe or host-validation evidence.
+The Setup screen also supports named browser-local **Performance Setups**. A Performance Setup captures the computer/rig transport form, named OSC and MIDI destinations, guard/timing values, optional notes and a suggested device profile, plus custom mappings. Loading one only stages those values in the form; it never starts or restarts routing, and its suggested profile never changes firmware state. Collections retain the versioned `mn42-bridge-host-setups` JSON format for backward-compatible browser-to-browser import/export. These personal setups are not known-good recipe or host-validation evidence.
 See [Bridge Console Tour](../docs/bridge/BridgeConsoleTour.md) for Setup, Stage, and Advanced console screenshots captured from a real ready-session host, with operator-oriented explanations.
 
 ### 4) Confirm it is live
@@ -130,7 +130,7 @@ After startup, the bridge sends `HELLO`, `GET_MANIFEST`, and `GET_SCHEMA`, then 
 ```
 
 When `HELLO`, manifest, and schema are cached and the normalized config export passes the bundled App schema, the browser console reports the device session as ready. A failed export remains outside `liveConfig`, degrades the handshake, emits a `device_config_schema_invalid` alert, and is shown as an invalid config export in Stage mode.
-The Stage snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus plain-language config-validation, device-authority, draft, telemetry-freshness, routing-heartbeat, and last-apply state. Only currently active alerts appear in its Active alerts list; cleared alert history remains available in snapshots and diagnostic state. Its passive soundcheck waits for a slot-value change in raw device telemetry and then confirms which existing OSC/MIDI egress routes carried that same trace; it never sends a test command or changes device state. Use a stable, unmodulated slot because modulation can also produce a legitimate slot-value change.
+The Stage snapshot keeps firmware identity, power-safety fields such as `power_profile`, `led_brightness_cap`, and `rail_topology_verified`, plus plain-language config-validation, device-authority, draft, telemetry-freshness, named routing destinations, and last-apply state. Optional App profile/slot labels are accepted through `POST /api/display-metadata`; they are marked `advisory-browser-metadata`, remain outside device configuration, and cannot affect routing authority. Only currently active alerts appear in its Active alerts list; cleared alert history remains available in snapshots and diagnostic state. Its passive soundcheck waits for a slot-value change in raw device telemetry and then confirms which existing OSC/MIDI egress routes carried that same trace; it never sends a test command or changes device state. Use a stable, unmodulated slot because modulation can also produce a legitimate slot-value change.
 
 ## Quick start (CLI)
 
@@ -203,6 +203,8 @@ Current custom mapping support is intentionally narrow:
 - `valueMode` is `raw` (`0..127`) or `normalized` (`0.0..1.0`)
 
 The browser console's Mappings mode can learn the next inbound MIDI CC, suggest recently observed custom outbound OSC addresses, and preview the result before confirmation. It excludes reserved `/mn42/*` addresses from suggestions. The learn listener is passive, while the confirmed mapping is additive to the CC's existing typed OSC and device-control lanes. Confirmed mapping additions and removals use `POST /api/mappings` to update live Bridge routing without restarting the serial, MIDI, or OSC transports.
+
+Outbound device telemetry defaults to `midiTelemetryMode: "legacy"`: slots are channel 1 CCs and envelope followers are channel 2 CCs, preserving the original Bridge contract. `midiTelemetryMode: "mapped"` is opt-in and sends only entries from `outboundMidiMappings`. Each entry names `source` (`slots` or `envelopes`), a zero-based `sourceIndex`, MIDI `channel` (1–16), and `controller` (0–127).
 
 ## Everyday workflows
 

@@ -255,7 +255,10 @@ export class ScopePanel {
   // Ingest one telemetry frame into the rolling EF/LFO history buffers.
   handleTelemetry(frame = {}) {
     if (!this.ctx) return;
-    const receivedAt = this.now();
+    const observedTimestampMs = Number(frame.receivedAt);
+    const receivedAt = Number.isFinite(observedTimestampMs)
+      ? observedTimestampMs
+      : this.now();
     const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : null;
     const lfos = Array.isArray(frame.lfos) ? frame.lfos : null;
     if (Array.isArray(frame.efStatus)) {
