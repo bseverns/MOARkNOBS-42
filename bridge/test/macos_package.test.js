@@ -26,7 +26,8 @@ try {
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 
   const app = path.join(outputDir, 'MN42 Bridge.app');
-  const dmg = path.join(outputDir, 'MN42-Bridge-1.2.3-x64.dmg');
+  const architecture = process.arch === 'arm64' ? 'arm64' : 'x64';
+  const dmg = path.join(outputDir, `MN42-Bridge-1.2.3-${architecture}.dmg`);
   assert.equal(
     fs.existsSync(path.join(app, 'Contents', 'MacOS', 'MN42 Bridge')),
     true,

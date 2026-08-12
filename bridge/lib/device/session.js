@@ -330,6 +330,19 @@ function createDeviceSession({
     return authority;
   }
 
+  // Warm the bundled schema for browser/App clients before a device is
+  // connected. This exposes validation metadata without implying that any
+  // device manifest, live config, or device authority has been established.
+  async function prewarmAuthority() {
+    const bundledAuthority = await ensureAuthority();
+    if (!state.schema) {
+      state.schema = clone(bundledAuthority.schema);
+      state.schemaSource = 'bundled';
+      emitState();
+    }
+    return getState();
+  }
+
   function evaluateSchemaCompatibility(reportedSchema) {
     const requiredRoots = ['slots', 'efSlots', 'filter', 'arg', 'led'];
     const hasRoots = requiredRoots.every(
@@ -1227,6 +1240,7 @@ function createDeviceSession({
     handleOpen,
     isApplyTransactionActive: () => Boolean(applyPending || uncertainApply),
     on,
+    prewarmAuthority,
     rollback,
     stageConfig,
   };
