@@ -39,11 +39,38 @@ runtime architecture below.
 
 ## User-facing capabilities
 
-- Basic/Advanced modes
+- **Stage**: a performance-safe dashboard with live profile/scene recall, slot
+  activity, envelope levels, clock and connection state, and panic help. It
+  deliberately has no staged editors or Apply controls.
+- **Configure**: the everyday mapping workspace for Basic editing.
+- **Lab**: the advanced workspace for EF/ARG/fixed-LFO, scope, diagnostics,
+  import/export, and other technical controls.
 - Profile load/save/reset flow
 - Staged diff visibility
 - MIDI monitor and optional clock output
 - Simulator transport for hardware-free testing
+
+![Simulator-backed Stage dashboard showing live connection and telemetry health, profile and scene recall, the 42-slot activity grid, envelope levels, and the read-only Motion disclosure.](assets/ui/stage-dashboard-simulator.png)
+
+## Stage during a performance
+
+Choose **Stage** in the top mode switch (or open with `?mode=stage`) when the
+instrument is already configured and the priority is safe observation and
+recall. Its values are telemetry, not a promise of source-device timing or a
+latency measurement. A delayed or stale value remains visible but is
+de-emphasized; do not treat it as live.
+
+Stage blocks profile and scene recall while a staged draft exists. Return to
+Configure or Lab to **Apply** or **Discard draft**, then recall the intended
+profile or scene. Browser-local profile names are operator hints; they do not
+modify the firmware profile.
+
+The collapsed **Motion** panel is read-only. It retains envelope/LFO history
+while closed, offers Active/All EF trace visibility and a 2/5/10-second view,
+and pauses its canvas animation until opened. LFO traces remain visible in both
+EF views.
+
+![Simulator-backed Stage dashboard with the Motion panel open, showing the read-only envelope/LFO scope, EF visibility controls, time window, and telemetry-state legend.](assets/ui/stage-motion-simulator.png)
 
 ## Save, recall, and back up
 
@@ -68,6 +95,10 @@ App, then use [Troubleshooting by Symptom](Troubleshooting.md).
 ```bash
 npm --prefix App test
 ```
+
+The current Stage captures are produced by the checked-in Playwright simulator
+test `App/tests/mode_screenshots.spec.js`. Regenerate the artifacts before
+replacing these images; do not present simulator values as hardware evidence.
 
 ## Reference docs
 

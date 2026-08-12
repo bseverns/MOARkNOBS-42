@@ -6,7 +6,7 @@ Canonical source: `docs/getting-started/MusicianFirstGuide.md`
 
 ## What to use
 
-- MOARkNOBS-42 with schema-6 firmware
+- MOARkNOBS-42 with the current schema-8 firmware contract
 - USB data cable
 - configurator, direct or through Bridge
 - one MIDI synth or DAW instrument

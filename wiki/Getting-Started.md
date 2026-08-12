@@ -46,11 +46,17 @@ report ready, then choose **Open configurator**.
 
 ![Annotated configurator overview identifying the transport and contract banner, connection controls, profile workspace, Apply and Rollback actions, and recovery status.](assets/ui/configurator-top-annotated.png)
 
+For an already-configured instrument at a performance, select **Stage** in the
+top mode switch. It shows connection/telemetry health, profile and scene
+recall, slot activity, envelope levels, and panic help without exposing staged
+editors or Apply controls. If the dashboard says a draft is staged, resolve it
+in Configure or Lab before any profile or scene recall.
+
 ## 4. Load one known starting point
 
 For the shortest first pass:
 
-1. switch the configurator to **Basic** or **Advanced**
+1. switch the configurator to **Configure** or **Lab**
 2. choose `DEMO_A - Reactive Stack` from the preset picker
 3. confirm the staged-diff area becomes visible
 4. click **Apply**
