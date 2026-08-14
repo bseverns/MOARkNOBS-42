@@ -138,13 +138,13 @@ pio run -d firmware -e teensy40_main
 
 These match the current hardware status page in [hardware/CurrentBuild.md](hardware/CurrentBuild.md).
 
-| Item                   | Path                                                              | Status    | Use in this package                                         |
-| ---------------------- | ----------------------------------------------------------------- | --------- | ----------------------------------------------------------- |
-| Schematic reference    | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present   | Current schematic reference for bench validation            |
-| PCB overview PDF       | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`     | present   | Current board drawing overview for bench validation         |
-| PCB drawing detail set | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03/`        | present   | Reference PDFs for inspection and review, not fab outputs   |
-| Fabrication directory  | `hardware/fabrication/README.md` only                             | note only | States that no orderable fabrication package is enclosed    |
-| Physical board photos  | `docs/assets/board/`                                              | present   | Public breadcrumb images for current prototype board review |
+| Item | Path | Status | Use in this package |
+| --- | --- | --- | --- |
+| Power/button/LED schematic | [sheet 1](hardware/MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | present | Power, button-matrix, and LED bench reference |
+| Interface/MIDI/control schematic | [sheet 2](hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | present | Teensy interface, MIDI, OLED, and direct-control reference |
+| Envelope schematic | [sheet 3](hardware/MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | present | Six-channel envelope-input reference |
+| Fabrication directory | [boundary note](hardware/fabrication/README.md) | note only | No orderable fabrication package is enclosed |
+| Physical board photos | [top](docs/assets/board/prodTOP.jpg), [bottom](docs/assets/board/prodBTM.jpg), [trace](docs/assets/board/trace.jpg), [bench](docs/assets/board/bench.jpg), [bring-up](docs/assets/board/bringup.jpg) | present | Current prototype review images |
 
 No current BOM file is tracked in `hardware/fabrication/`, and no verified Gerber / NC-drill archive is present or
 claimed. Use the files above as bench-validation references only.

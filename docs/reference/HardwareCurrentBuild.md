@@ -12,14 +12,14 @@ The repo-root canonical source remains `hardware/CurrentBuild.md`. Use that file
 
 ## Current Status Summary
 
-Last mirrored from the canonical hardware page: 2026-07-08.
+Last mirrored from the canonical hardware page: 2026-08-13.
 
 | Item                      | Version / date cue                                    | Status               | Notes                                                                                                                                  |
 | ------------------------- | ----------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | Physical prototype boards | received, photos present under `docs/assets/board/`   | `bring-up`           | Boards are in the hardware-test loop; current findings are treated as design/integration issues unless evidence points to fabrication. |
-| Schematic reference       | `SCH_MOAR_Schematic_2025-08-30.pdf`                   | `current reference`  | Bench-validation reference.                                                                                                            |
-| PCB overview PDF          | `PCB_MOAR_Board_2025-09-03.pdf`                       | `current reference`  | Board drawing overview for bench validation.                                                                                           |
-| PCB drawing detail set    | `PCB_MOAR_Board_2025-09-03/`                          | `reference only`     | Assembly, hole, drill-drawing, and trace-reference PDFs for inspection and review; not a Gerber / NC-drill manufacturing archive.      |
+| Power/button/LED schematic | [sheet 1](../../hardware/MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | `current reference` | Power, button-matrix, and LED bench reference. |
+| Interface/MIDI/control schematic | [sheet 2](../../hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | `current reference` | Teensy interface, MIDI, OLED, and direct-control reference. |
+| Envelope schematic | [sheet 3](../../hardware/MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | `current reference` | Six-channel envelope-input reference. |
 | Fabrication directory     | tracked contents are `hardware/fabrication/README.md` | `boundary note only` | States that no orderable fabrication package is enclosed.                                                                              |
 | BOM export                | none tracked in `hardware/fabrication/`               | `absent`             | No current BOM file is present in this checkout; do not rely on older BOM names.                                                       |
 | Gerber / NC-drill archive | none tracked in `hardware/fabrication/`               | `absent`             | No verified fabrication bundle is present or claimed.                                                                                  |

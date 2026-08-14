@@ -49,10 +49,12 @@ Power estimates and quick current math live in [PowerBudget.md](../docs/referenc
 
 ## Current Bench-Validation References
 
-- schematic PDF: `MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf`
-- PCB overview PDF: `MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf`
-- PCB drawing detail set: `MN42-machineDrawings/PCB_MOAR_Board_2025-09-03/`
-- fabrication boundary note: `fabrication/README.md`
+- [Power, button, and LED schematic](MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png)
+- [Interface, MIDI, and control schematic](MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png)
+- [Six-channel envelope schematic](MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png)
+- [top-side board photo](../docs/assets/board/prodTOP.jpg) and [bottom-side board photo](../docs/assets/board/prodBTM.jpg)
+- [trace-inspection photo](../docs/assets/board/trace.jpg), [bench context](../docs/assets/board/bench.jpg), and [powered bring-up](../docs/assets/board/bringup.jpg)
+- [fabrication boundary note](fabrication/README.md)
 
 These files are included to support bench validation and wiring review. No current BOM, Gerber, or NC-drill release bundle is tracked in `fabrication/`.
 
@@ -65,7 +67,7 @@ These files are included to support bench validation and wiring review. No curre
 
 ## Status Boundary
 
-- current schematic and drawing PDFs are present and usable as hardware references
+- current schematic PNG sheets and board photos are present and usable as hardware references
 - no current BOM export is tracked in `fabrication/`
 - no verified fabrication-ready Gerber and NC-drill bundle is claimed by this package
 - the fabrication folder is a boundary note until verified manufacturing files are added

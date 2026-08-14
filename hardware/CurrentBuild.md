@@ -37,17 +37,17 @@ or dated bench receipts.
 
 | Item | Path | Status | Use in this package |
 | --- | --- | --- | --- |
-| Schematic reference | `hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2025-08-30.pdf` | present | Current schematic reference for bench validation |
-| PCB overview PDF | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03.pdf` | present | Current board drawing overview for bench validation |
-| PCB drawing detail set | `hardware/MN42-machineDrawings/PCB_MOAR_Board_2025-09-03/` | present | Assembly, hole, drill-drawing, and trace-reference PDFs for inspection and review; not a Gerber / NC-drill manufacturing archive |
+| Power/button/LED schematic | [sheet 1](MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | present | Power, button-matrix, and LED reference for bench validation |
+| Interface/MIDI/control schematic | [sheet 2](MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | present | Teensy interface, MIDI, OLED, and direct-control reference |
+| Envelope schematic | [sheet 3](MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | present | Six-channel envelope-input reference |
 | Fabrication directory contents | `hardware/fabrication/README.md` only | boundary note only | States that no orderable fabrication package is enclosed |
 | Prototype BOM export | none tracked in `hardware/fabrication/` | absent | No current BOM file is present in this checkout; do not rely on older BOM names |
 | Gerber / NC-drill archive | none tracked in `hardware/fabrication/` | absent | No verified fabrication bundle is present or claimed |
-| Physical board photos | `docs/assets/board/` | present | Public breadcrumb images for current prototype board review |
+| Physical board photos | [top](../docs/assets/board/prodTOP.jpg), [bottom](../docs/assets/board/prodBTM.jpg), [trace](../docs/assets/board/trace.jpg), [bench](../docs/assets/board/bench.jpg), [bring-up](../docs/assets/board/bringup.jpg) | present | Public breadcrumb images for current prototype board review |
 
 ## How To Use This Folder
 
-1. Use the schematic PDF, PCB overview PDF, and PCB drawing detail set to confirm the assembled prototype matches the expected wiring and layout.
+1. Use the three current schematic sheets and linked board photos to confirm the assembled prototype matches the expected wiring and layout.
 2. Use [Parts.md](Parts.md) and [Substitutions.md](Substitutions.md) to review parts and likely substitutions before bench work.
 3. If you are preparing manufacturing files, stop. This package does not certify a fabrication-ready output set.
 
