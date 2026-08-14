@@ -48,7 +48,7 @@ If telemetry moves but the DAW does not, follow
   - `/mn42/slots` (42 values)
   - `/mn42/envelopes` (6 values)
 - Inbound:
-  - `/mn42/cmd` with `{ "cmd":"SET_POT", "slot":n, "value":v }`
+  - `/mn42/cmd` with `{ "cmd":"SET_SLOT_VALUE", "slot":n, "value":v }`
 
 ## Tests
 

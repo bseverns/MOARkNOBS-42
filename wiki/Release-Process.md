@@ -5,6 +5,12 @@ Canonical source: `docs/release/ReleaseGuide.md`
 
 ![Release validation sequence showing software gates, device handshake, intended-path testing, bench behavior, stress and recovery, and final candidate status.](assets/workflows/validation-gates-overview.png)
 
+## Current boundary
+
+The current safe claim is **hardware-test package**, not beta, public, or fabrication-ready. A passing software suite or generated artifact does not widen that claim. Beta and public releases additionally require the dated hardware, host, recovery, packaging/signing, and support evidence listed in `docs/release/ReleaseBoundaryIndex.md` and `docs/release/ReleaseCriteria.md`.
+
+Use the steps below to prepare and verify a candidate inside that boundary. Do not describe it as beta or public unless those wider gates have dated evidence.
+
 ## Firmware release steps
 
 1. Build and test:
@@ -36,5 +42,7 @@ When shipping non-CLI bridge artifacts:
 ## Reference docs
 
 - `docs/release/ReleaseGuide.md`
+- `docs/release/ReleaseBoundaryIndex.md`
+- `docs/release/ReleaseCriteria.md`
 - `docs/release/bridge-artifacts-checklist.md`
 - `CHANGELOG.md`

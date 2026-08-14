@@ -31,6 +31,10 @@ Canonical source: `hardware/README.md`
 
 ## Electrical and safety notes
 
+- Use a regulated `5 V DC` supply: `5 V / 4 A` minimum, or `5 V / 5 A` for LED-heavy tests.
+- Do not feed `9 V` or `12 V` into the board's VIN path unless a documented regulator or buck stage has been added.
+- Keep logic, LED, MIDI, and envelope-follower grounds common.
+- Before full-strip white, blast, or burn-in testing, meter whether `F1` and `F2` are parallel branches. If `F2` is downstream of `F1`, the `0.5 A` PTC limits the whole machine; firmware brightness caps do not correct that topology.
 - Keep LED power rails wide (>= 0.5mm traces in PCB CAD revisions).
 - Respect fused rails and common ground wiring practices.
 - Verify power polarity before first boot and rework.
