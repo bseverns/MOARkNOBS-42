@@ -140,9 +140,9 @@ These match the current hardware status page in [hardware/CurrentBuild.md](hardw
 
 | Item | Path | Status | Use in this package |
 | --- | --- | --- | --- |
-| Power/button/LED schematic | [sheet 1](hardware/MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | present | Power, button-matrix, and LED bench reference |
-| Interface/MIDI/control schematic | [sheet 2](hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | present | Teensy interface, MIDI, OLED, and direct-control reference |
-| Envelope schematic | [sheet 3](hardware/MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | present | Six-channel envelope-input reference |
+| Power/button/LED schematic | [sheet 1](docs/assets/board/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | present | Power, button-matrix, and LED bench reference |
+| Interface/MIDI/control schematic | [sheet 2](docs/assets/board/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | present | Teensy interface, MIDI, OLED, and direct-control reference |
+| Envelope schematic | [sheet 3](docs/assets/board/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | present | Six-channel envelope-input reference |
 | Fabrication directory | [boundary note](hardware/fabrication/README.md) | note only | No orderable fabrication package is enclosed |
 | Physical board photos | [top](docs/assets/board/prodTOP.jpg), [bottom](docs/assets/board/prodBTM.jpg), [trace](docs/assets/board/trace.jpg), [bench](docs/assets/board/bench.jpg), [bring-up](docs/assets/board/bringup.jpg) | present | Current prototype review images |
 

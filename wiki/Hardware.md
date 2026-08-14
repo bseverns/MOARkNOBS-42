@@ -16,9 +16,9 @@ Canonical source: `hardware/README.md`
 
 ## Build and fabrication assets
 
-- [Power, button, and LED schematic](../hardware/MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png)
-- [Interface, MIDI, and control schematic](../hardware/MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png)
-- [Six-channel envelope schematic](../hardware/MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png)
+- [Power, button, and LED schematic](../docs/assets/board/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png)
+- [Interface, MIDI, and control schematic](../docs/assets/board/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png)
+- [Six-channel envelope schematic](../docs/assets/board/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png)
 - [Top](../docs/assets/board/prodTOP.jpg), [bottom](../docs/assets/board/prodBTM.jpg), and [trace-inspection](../docs/assets/board/trace.jpg) board photos
 - [Fabrication boundary note](../hardware/fabrication/README.md) (no orderable Gerber/BOM package is currently enclosed)
 

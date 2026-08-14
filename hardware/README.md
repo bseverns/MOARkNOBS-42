@@ -49,9 +49,9 @@ Power estimates and quick current math live in [PowerBudget.md](../docs/referenc
 
 ## Current Bench-Validation References
 
-- [Power, button, and LED schematic](MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png)
-- [Interface, MIDI, and control schematic](MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png)
-- [Six-channel envelope schematic](MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png)
+- [Power, button, and LED schematic](../docs/assets/board/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png)
+- [Interface, MIDI, and control schematic](../docs/assets/board/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png)
+- [Six-channel envelope schematic](../docs/assets/board/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png)
 - [top-side board photo](../docs/assets/board/prodTOP.jpg) and [bottom-side board photo](../docs/assets/board/prodBTM.jpg)
 - [trace-inspection photo](../docs/assets/board/trace.jpg), [bench context](../docs/assets/board/bench.jpg), and [powered bring-up](../docs/assets/board/bringup.jpg)
 - [fabrication boundary note](fabrication/README.md)

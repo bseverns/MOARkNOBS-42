@@ -37,9 +37,9 @@ or dated bench receipts.
 
 | Item | Path | Status | Use in this package |
 | --- | --- | --- | --- |
-| Power/button/LED schematic | [sheet 1](MN42-machineDrawings/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | present | Power, button-matrix, and LED reference for bench validation |
-| Interface/MIDI/control schematic | [sheet 2](MN42-machineDrawings/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | present | Teensy interface, MIDI, OLED, and direct-control reference |
-| Envelope schematic | [sheet 3](MN42-machineDrawings/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | present | Six-channel envelope-input reference |
+| Power/button/LED schematic | [sheet 1](../docs/assets/board/SCH_MOAR_Schematic_1-PWR-BUTTON-LED_2026-08-13.png) | present | Power, button-matrix, and LED reference for bench validation |
+| Interface/MIDI/control schematic | [sheet 2](../docs/assets/board/SCH_MOAR_Schematic_2-INTERFACE-MIDI-CNTRL_2026-08-13.png) | present | Teensy interface, MIDI, OLED, and direct-control reference |
+| Envelope schematic | [sheet 3](../docs/assets/board/SCH_MOAR_Schematic_3-ENVELOPE_2026-08-13.png) | present | Six-channel envelope-input reference |
 | Fabrication directory contents | `hardware/fabrication/README.md` only | boundary note only | States that no orderable fabrication package is enclosed |
 | Prototype BOM export | none tracked in `hardware/fabrication/` | absent | No current BOM file is present in this checkout; do not rely on older BOM names |
 | Gerber / NC-drill archive | none tracked in `hardware/fabrication/` | absent | No verified fabrication bundle is present or claimed |
