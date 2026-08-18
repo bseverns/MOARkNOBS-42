@@ -169,6 +169,100 @@ void test_double_press_ctrl2_cycles_midi_type() {
     TEST_ASSERT_EQUAL(MIDIMessageType::Note, slot.type);
 }
 
+void test_double_press_ctrl3_to_ctrl5_live_controls() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 1);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 1;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
+
+    MIDISlot &slot = cfg.getSlot(activePot);
+    slot.type = MIDIMessageType::CC;
+    slot.midiChannel = 1;
+    slot.data1 = 10;
+    slot.active = true;
+    slot.setEnvelopeFollowerIndex(0);
+    slot.efSettings.oversample = 4;
+    map[activePot] = slot.efSettings;
+
+    auto doubleTap = [&](uint8_t controlIndex, unsigned long startedAt) {
+        const uint8_t index = NUM_VIRTUAL_BUTTONS + controlIndex;
+        fakeMillis = startedAt;
+        bm.updateButtonStateMachine(index, true, ctx);
+        fakeMillis = startedAt + 50;
+        bm.updateButtonStateMachine(index, false, ctx);
+        fakeMillis = startedAt + 120;
+        bm.updateButtonStateMachine(index, true, ctx);
+        fakeMillis = startedAt + 170;
+        bm.updateButtonStateMachine(index, false, ctx);
+    };
+
+    doubleTap(3, 1000);
+    TEST_ASSERT_EQUAL_UINT8(8, cfg.getSlot(activePot).efSettings.oversample);
+    TEST_ASSERT_EQUAL_UINT8(8, envs[0].getOversampleCount());
+    TEST_ASSERT_EQUAL_UINT8(1, cfg.getPotChannel(activePot));
+
+    doubleTap(4, 1500);
+    TEST_ASSERT_EQUAL_UINT8(1, cfg.getSlot(activePot).arg.enabled);
+    TEST_ASSERT_EQUAL_UINT8(10, cfg.getSlotData1(activePot));
+
+    doubleTap(5, 2000);
+    const SlotLfoLane &enabledLane = cfg.getSlot(activePot).lfo.lfo[0];
+    TEST_ASSERT_TRUE(enabledLane.enabled());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ModCombineMode::Centered),
+                            static_cast<uint8_t>(enabledLane.mode()));
+    TEST_ASSERT_EQUAL_INT(100, enabledLane.amount);
+
+    doubleTap(5, 2500);
+    TEST_ASSERT_FALSE(cfg.getSlot(activePot).lfo.lfo[0].enabled());
+    TEST_ASSERT_EQUAL_INT(100, cfg.getSlot(activePot).lfo.lfo[0].amount);
+}
+
+void test_ctrl3_single_waits_out_double_press_window() {
+    auto pm = createPotentiometerManager();
+    auto bm = createButtonManager(&pm);
+
+    auto cfg = createConfigManager();
+    auto led = createLEDManager();
+    auto disp = createDisplayManager();
+    auto envs = createEnvelopeFollowers(&pm);
+    std::vector<uint8_t> potCh(NUM_POTS, 1);
+    uint8_t activePot = 0;
+    uint8_t activeCh = 1;
+    bool envMode = false;
+    const char *envStr = "";
+    std::map<int, MIDISlot::EfSettings> map;
+    bool diag = false;
+    uint8_t diagPage = 0;
+    ButtonManagerContext ctx{potCh, activePot, activeCh, envMode, envStr, cfg,
+                             led,   disp,      envs,     map,     diag,   diagPage,
+                             profileRuntimeRequests};
+
+    const uint8_t index = NUM_VIRTUAL_BUTTONS + 3;
+    fakeMillis = 1000;
+    bm.updateButtonStateMachine(index, true, ctx);
+    fakeMillis = 1050;
+    bm.updateButtonStateMachine(index, false, ctx);
+    TEST_ASSERT_EQUAL_UINT8(1, cfg.getPotChannel(activePot));
+
+    fakeMillis = 1350;
+    bm.flushDeferredControlPresses(ctx);
+    TEST_ASSERT_EQUAL_UINT8(2, cfg.getPotChannel(activePot));
+}
+
 void test_jitter_combo_updates_settings() {
     auto pm = createPotentiometerManager();
     auto bm = createButtonManager(&pm);

@@ -291,6 +291,7 @@ void ButtonManager::initButtons() {
         _buttonMachines[i].releaseTimestamp = 0;
         _buttonMachines[i].longPressFired = false;
         _buttonMachines[i].lastShortRelease = 0;
+        _buttonMachines[i].shortPressPending = false;
     }
 }
 
@@ -386,16 +387,16 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
         bool stableReading = Utility::debounce(buttonStates[i], lastRawButtonStates[i], rawState,
                                                lastDebounceTimes[i], now, DEBOUNCE_DELAY);
 
-        if (stableReading) {
-            bool pressed = (buttonStates[i] == HIGH);
-            updateButtonStateMachine(i, pressed, context);
-        }
+        (void)stableReading;
+        bool pressed = (buttonStates[i] == HIGH);
+        updateButtonStateMachine(i, pressed, context);
     }
 
     currentRow = static_cast<uint8_t>((currentRow + 1) % BUTTON_ROWS);
 
     // Control buttons & pots via spare mux channels
     scanControlInputs(context);
+    flushDeferredControlPresses(context);
 
 #ifdef BUTTON_MANAGER_PROFILE
     uint32_t tElapsed = micros() - tStart;
@@ -450,10 +451,13 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
 
     case ButtonState::PRESSED:
         if (!pressed) {
-            // short release
-            sm.state = ButtonState::RELEASED;
+            // Dispatch the release immediately. The scanner calls this state
+            // machine continuously, but tests and alternate hardware paths may
+            // only report edges.
             sm.releaseTimestamp = now;
             context.displayManager.registerInteraction();
+            sm.state = ButtonState::IDLE;
+            onRelease(index, context);
         } else {
             // still pressed, check for long press
             if (!_onDeviceConfigModeActive && !_lfoTuningActive && !sm.longPressFired &&
@@ -469,9 +473,10 @@ void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
         // remains pressed
         if (!pressed) {
             // user just released after a long press
-            sm.state = ButtonState::RELEASED;
+            sm.state = ButtonState::IDLE;
             sm.releaseTimestamp = now;
             context.displayManager.registerInteraction();
+            onRelease(index, context);
         }
         break;
 
@@ -604,6 +609,16 @@ press.
 void ButtonManager::onRelease(uint8_t index, ButtonManagerContext &context) {
     auto &sm = _buttonMachines[index];
     if (!sm.longPressFired) {
+        if (index >= NUM_VIRTUAL_BUTTONS) {
+            const uint8_t controlIndex = index - NUM_VIRTUAL_BUTTONS;
+            const uint8_t controlMask = static_cast<uint8_t>(1U << controlIndex);
+            if ((_consumedControlMask & controlMask) != 0) {
+                _consumedControlMask &= static_cast<uint8_t>(~controlMask);
+                sm.shortPressPending = false;
+                sm.lastShortRelease = 0;
+                return;
+            }
+        }
         // It's a short press
         handleShortPress(index, context);
     } else {
@@ -640,13 +655,45 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
         return;
     }
 
-    // Double-press detection
-    if ((now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
+    // Ctrl3-Ctrl5 use exclusive double gestures: their single action waits
+    // until the double-press window closes, so a double never also changes
+    // channel/data1 or records a tempo tap.
+    const bool deferredControl = index >= NUM_VIRTUAL_BUTTONS + 3;
+    if (deferredControl) {
+        if (sm.shortPressPending && (now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
+            handleDoublePress(index, context);
+            sm.shortPressPending = false;
+            sm.lastShortRelease = 0;
+        } else {
+            if (sm.shortPressPending) {
+                doSinglePressAction(index, context);
+            }
+            sm.shortPressPending = true;
+            sm.lastShortRelease = now;
+        }
+        return;
+    }
+
+    // Legacy double-press detection for slot buttons and Ctrl0-Ctrl2.
+    if (sm.lastShortRelease != 0 && (now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
         handleDoublePress(index, context);
         sm.lastShortRelease = 0;
     } else {
         doSinglePressAction(index, context);
         sm.lastShortRelease = now;
+    }
+}
+
+void ButtonManager::flushDeferredControlPresses(ButtonManagerContext &context) {
+    const unsigned long current = ::now();
+    for (uint8_t controlIndex = 3; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
+        const uint8_t index = NUM_VIRTUAL_BUTTONS + controlIndex;
+        ButtonStateMachine &sm = _buttonMachines[index];
+        if (sm.shortPressPending && (current - sm.lastShortRelease) >= DOUBLE_PRESS_DELAY) {
+            sm.shortPressPending = false;
+            sm.lastShortRelease = 0;
+            doSinglePressAction(index, context);
+        }
     }
 }
 
@@ -712,10 +759,70 @@ void ButtonManager::handleDoublePress(uint8_t index, ButtonManagerContext &conte
         streamSlotPatch(context.configManager, context.activePot);
         break;
     }
-    case 4:
-    case 5:
-        context.displayManager.displayStatus("No Double Action", 1000);
+    case 3: {
+        // Double Press (Ctrl #3): step through useful ADC oversampling presets.
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        MIDISlot::EfSettings settings = slot.efSettings;
+        auto it = context.potToEnvelopeMap.find(context.activePot);
+        if (it != context.potToEnvelopeMap.end()) {
+            settings = it->second;
+        }
+
+        if (settings.oversample < 2) {
+            settings.oversample = 2;
+        } else if (settings.oversample < 4) {
+            settings.oversample = 4;
+        } else if (settings.oversample < 8) {
+            settings.oversample = 8;
+        } else if (settings.oversample < 16) {
+            settings.oversample = 16;
+        } else if (settings.oversample < 32) {
+            settings.oversample = 32;
+        } else {
+            settings.oversample = 1;
+        }
+
+        commitEfSettings(context, context.activePot, settings);
+        char buf[32];
+        snprintf(buf, sizeof(buf), "Slot %d EF OS %ux", context.activePot,
+                 static_cast<unsigned>(settings.oversample));
+        context.displayManager.displayStatus(buf, 1500);
+        streamSlotPatch(context.configManager, context.activePot);
         break;
+    }
+    case 4: {
+        // Double Press (Ctrl #4): toggle the slot-local ARG combiner live.
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        slot.arg.enabled = slot.arg.enabled ? 0 : 1;
+        context.configManager.saveSlot(context.activePot, slot);
+        context.configManager.setARGEnable(slot.arg.enabled);
+        context.configManager.setARGMethod(static_cast<uint8_t>(slot.arg.method));
+        context.configManager.setEnvelopePair(slot.arg.sourceA, slot.arg.sourceB);
+
+        context.displayManager.displayStatus(slot.arg.enabled ? "ARG ON" : "ARG OFF", 1200);
+        streamSlotPatch(context.configManager, context.activePot);
+        streamArgPatch(context.configManager);
+        break;
+    }
+    case 5: {
+        // Double Press (Ctrl #5): make LFO 1 a live source for the active slot.
+        // A never-configured lane starts centered at full depth so enabling it
+        // has an audible effect; later toggles preserve user tuning.
+        MIDISlot &slot = context.configManager.getSlot(context.activePot);
+        SlotLfoLane &lane = slot.lfo.lfo[0];
+        const bool enable = !lane.enabled();
+        if (enable && lane.amount == 0) {
+            lane.setMode(ModCombineMode::Centered);
+            lane.amount = 100;
+        }
+        lane.setEnabled(enable);
+        slot.lfo = sanitizeSlotLfoConfig(slot.lfo);
+        context.configManager.saveSlot(context.activePot, slot);
+
+        context.displayManager.displayStatus(enable ? "LFO1 LIVE ON" : "LFO1 LIVE OFF", 1200);
+        streamSlotPatch(context.configManager, context.activePot);
+        break;
+    }
     default:
         context.displayManager.displayStatus("Unknown double press", 1000);
         break;
@@ -1355,9 +1462,8 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         bool stable = Utility::debounce(
             buttonStates[NUM_VIRTUAL_BUTTONS + idx], lastRawButtonStates[NUM_VIRTUAL_BUTTONS + idx],
             pressed, lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now, DEBOUNCE_DELAY);
-        if (stable) {
-            updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
-        }
+        (void)stable;
+        updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
     }
 
     // After updating each control button, check for multi-button combos
@@ -1377,6 +1483,17 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     bool multiPressed = (mask && (mask & (mask - 1)));
     bool longPressCombo = !_onDeviceConfigModeActive && !_lfoTuningActive &&
                           (mask == arpEditMask || mask == swingMask);
+
+    if (multiPressed) {
+        _consumedControlMask |= mask;
+        for (uint8_t controlIndex = 0; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
+            if ((mask & (1U << controlIndex)) != 0) {
+                ButtonStateMachine &sm = _buttonMachines[NUM_VIRTUAL_BUTTONS + controlIndex];
+                sm.shortPressPending = false;
+                sm.lastShortRelease = 0;
+            }
+        }
+    }
 
     // Combo transitions: handle short-press fallbacks and release behavior.
     if (mask != _comboHoldMask) {
@@ -1404,6 +1521,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         (now - _comboHoldTimestamp >= LONG_PRESS_DELAY)) {
         _comboLongPressFired = true;
         if (mask == arpEditMask) {
+            _consumedControlMask |= mask;
             if (arpeggiator.isActive(context.activePot)) {
                 g_arpEditActive = true;
                 context.displayManager.displayStatus("Arp Edit", 1000);
@@ -1411,6 +1529,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
                 context.displayManager.displayStatus("Arp Off", 1000);
             }
         } else if (mask == swingMask) {
+            _consumedControlMask |= mask;
             // Cycle through swing presets for fast access.
             static uint8_t swingPreset = 0;
             static const uint8_t swingPresets[] = {0, 8, 16, 30};

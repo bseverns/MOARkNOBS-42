@@ -35,6 +35,7 @@
 //     - Long+Confirm (with Ctrl3): Cycle swing presets
 //   Ctrl3 (Channel / Panic):
 //     - Short: Cycle MIDI channel 1-16
+//     - Double: Cycle EF oversampling (1x -> 2x -> 4x -> 8x -> 16x -> 32x)
 //     - Long+Confirm: EEPROM reset (destructive)
 //     - Combo (Ctrl0+3): Set slot to SysEx
 //     - Combo (Ctrl1+3): Set slot to RPN
@@ -43,6 +44,7 @@
 //     - Combo (Ctrl3+5): Set slot to Program Change
 //   Ctrl4 (CC / Light):
 //     - Short: Cycle CC/NRPN number
+//     - Double: Toggle the active slot's ARG combiner
 //     - Long+Confirm: Save config to profile
 //     - Combo (Ctrl0+4): Randomize EF assignment
 //     - Combo (Ctrl1+4): Set slot to Aftertouch
@@ -51,6 +53,7 @@
 //     - Combo (Ctrl4+5): Set slot to Note mode
 //   Ctrl5 (BPM / Diag):
 //     - Short: Tap BPM (or exit diagnostic mode)
+//     - Double: Toggle live LFO 1 modulation for the active slot
 //     - Long+Confirm: Enter/cycle diagnostic pages
 //     - Combo (Ctrl0+5): Set slot to Pitch Bend
 //     - Combo (Ctrl1+5): Toggle MIDI clock out
@@ -151,6 +154,7 @@ struct ButtonStateMachine {
     unsigned long releaseTimestamp = 0; // When button released
     bool longPressFired = false;        // Ensures long-press event only fires once
     unsigned long lastShortRelease = 0; // Timestamp of last release for double-press detection
+    bool shortPressPending = false;     // Defers singles that share a double-press gesture
 };
 
 /*
@@ -287,6 +291,7 @@ class ButtonManager {
     // Detect and dispatch short vs double presses based on timing.
     void handleShortPress(uint8_t index, ButtonManagerContext &context);
     void handleDoublePress(uint8_t index, ButtonManagerContext &context);
+    void flushDeferredControlPresses(ButtonManagerContext &context);
 
     // Perform the mapped action for a simple press.
     void doSinglePressAction(uint8_t index, ButtonManagerContext &context);
@@ -313,6 +318,7 @@ class ButtonManager {
     bool _comboLongPressFired = false;      // True once the combo long-press action fired
     uint8_t _comboCandidateMask = 0;        // Candidate short-combo mask while settling
     unsigned long _comboCandidateSince = 0; // Timestamp when current short-combo candidate started
+    uint8_t _consumedControlMask = 0;        // Prevent chord releases from firing solo actions
 
     // Long‑press confirmation tracking
     static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net

@@ -17,6 +17,8 @@ void test_random_mode_respects_jitter_depth();
 void test_channel_and_cc();
 void test_long_press_requires_confirm();
 void test_double_press_ctrl2_cycles_midi_type();
+void test_double_press_ctrl3_to_ctrl5_live_controls();
+void test_ctrl3_single_waits_out_double_press_window();
 void test_jitter_combo_updates_settings();
 void test_config_mode_combo_autosaves_dirty_changes();
 void test_clock_source_combo_toggles_follow_external();
@@ -28,6 +30,8 @@ SystemTestSummary runSystemTests() {
     RUN_TEST(test_long_press_detection);
     RUN_TEST(test_long_press_requires_confirm);
     RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
+    RUN_TEST(test_double_press_ctrl3_to_ctrl5_live_controls);
+    RUN_TEST(test_ctrl3_single_waits_out_double_press_window);
     RUN_TEST(test_jitter_combo_updates_settings);
     RUN_TEST(test_config_mode_combo_autosaves_dirty_changes);
     RUN_TEST(test_clock_source_combo_toggles_follow_external);
@@ -49,6 +53,8 @@ void setup() {
     RUN_TEST(test_long_press_detection);
     RUN_TEST(test_long_press_requires_confirm);
     RUN_TEST(test_double_press_ctrl2_cycles_midi_type);
+    RUN_TEST(test_double_press_ctrl3_to_ctrl5_live_controls);
+    RUN_TEST(test_ctrl3_single_waits_out_double_press_window);
     RUN_TEST(test_jitter_combo_updates_settings);
     RUN_TEST(test_config_mode_combo_autosaves_dirty_changes);
     RUN_TEST(test_clock_source_combo_toggles_follow_external);

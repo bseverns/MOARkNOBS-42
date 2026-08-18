@@ -63,9 +63,9 @@ _Long-press stunts ask for a quick confirm tap after you let go—no more accide
 | Ctrl0  | Toggle EF                           | Calibrate EF baseline      | Cycle EF filter forward                                                     |
 | Ctrl1  | Next Slot                           | Reload profile from EEPROM | Cycle EF filter backward                                                    |
 | Ctrl2  | Cycle EF assignment                 | Toggle Slot Active         | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
-| Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM               | —                                                                           |
-| Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                | —                                                                           |
-| Ctrl5  | Tap BPM (exit diagnostics if active) | Enter diagnostics / cycle pages | —                          |
+| Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM               | Cycle EF oversampling (1x/2x/4x/8x/16x/32x)                                |
+| Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                | Toggle the active slot's ARG combiner                                       |
+| Ctrl5  | Tap BPM (exit diagnostics if active) | Enter diagnostics / cycle pages | Toggle live LFO 1 modulation for the active slot                    |
                           |
 When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) with a long press, the LED strip throws a full-strip warning animation. Red-and-white strobes scream "factory reset" while a teal shimmer covers diagnostics, buying you the confirmation window to bail if needed.
 
