@@ -58,15 +58,18 @@ Need the cheat sheet for the six front-panel punks? Here it is.
 
 _Long-press stunts ask for a quick confirm tap after you let go—no more accidental nukes._
 
-| Button | Short Press                         | Long Press                 | Double Press                                                                |
-| ------ | ----------------------------------- | -------------------------- | --------------------------------------------------------------------------- |
-| Ctrl0  | Toggle EF                           | Calibrate EF baseline      | Cycle EF filter forward                                                     |
-| Ctrl1  | Next Slot                           | Reload profile from EEPROM | Cycle EF filter backward                                                    |
-| Ctrl2  | Cycle EF assignment                 | Toggle Slot Active         | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
-| Ctrl3  | Cycle MIDI Channel                  | Reset EEPROM               | Cycle EF oversampling (1x/2x/4x/8x/16x/32x)                                |
-| Ctrl4  | Cycle registry number (CC/NRPN/RPN) | Save config                | Toggle the active slot's ARG combiner                                       |
-| Ctrl5  | Tap BPM (exit diagnostics if active) | Enter diagnostics / cycle pages | Toggle live LFO 1 modulation for the active slot                    |
-                          |
+| Button | Short Press                          | Long Press                      | Double Press                                                                |
+| ------ | ------------------------------------ | ------------------------------- | --------------------------------------------------------------------------- |
+| Ctrl0  | Toggle EF                            | Calibrate EF baseline           | Cycle EF filter forward                                                     |
+| Ctrl1  | Next Slot                            | Reload profile from EEPROM      | Cycle EF filter backward                                                    |
+| Ctrl2  | Cycle EF assignment                  | Toggle Slot Active              | Cycle MIDI type (CC→Note→PitchBend→ProgramChange→Aftertouch→NRPN→RPN→SysEx) |
+| Ctrl3  | Cycle MIDI Channel                   | Reset EEPROM                    | Cycle EF oversampling (1x/2x/4x/8x/16x/32x)                                |
+| Ctrl4  | Cycle registry number (CC/NRPN/RPN)  | Save config                     | Toggle the active slot's ARG combiner                                       |
+| Ctrl5  | Tap BPM (exit diagnostics if active) | Enter diagnostics / cycle pages | Toggle live LFO 1 modulation for the active slot                            |
+
+Ctrl3–Ctrl5 use exclusive double presses. Their normal short-press action waits for the 300 ms double-press window to close, so changing oversampling does not also change the MIDI channel, toggling ARG does not increment `data1`, and toggling LFO 1 does not register a tempo tap. A chord consumes its participating button releases, preventing combo gestures from leaking these solo actions.
+
+The Ctrl5 double press edits the active slot's fixed LFO 1 lane. A lane that has never been tuned starts in **Centered** mode at **100%** so enabling it immediately produces live modulation. Turning it off preserves mode and amount for the next enable. All three new double-press edits are saved to the slot and emitted as `slot_patch` updates so an attached configurator follows the hardware state.
 When you arm the EEPROM reset (**Ctrl3**) or the diagnostic toggle (**Ctrl5**) with a long press, the LED strip throws a full-strip warning animation. Red-and-white strobes scream "factory reset" while a teal shimmer covers diagnostics, buying you the confirmation window to bail if needed.
 
 ### Slot Buttons

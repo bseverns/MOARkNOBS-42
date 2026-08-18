@@ -72,6 +72,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 ## Slot Architecture Cheat Sheet
 
 - Every slot now exposes its per-slot envelope follower payload. The editor’s **Envelope Follower** block lets you park a follower index, pick a filter shape, and dial in frequency, Q, oversample count, smoothing, baseline, and gain without leaving the browser.
+- Hardware double presses now mirror three selected-slot edits into the configurator through live `slot_patch` frames: `Ctrl3` cycles EF oversampling presets, `Ctrl4` toggles ARG, and `Ctrl5` toggles the fixed LFO 1 lane. First-time LFO enable uses Centered mode at 100%; later off/on gestures preserve the configured mode and amount.
 - EF assignment rows now use clickable slot chips per follower, so one follower can modulate multiple slots without typing comma-separated indices.
 - Live and Stage slot grids now color-code slot types so CC, Note, program-style, NRPN/RPN, and SysEx lanes are scannable at a glance.
 - Stage slot highlights pulse briefly when telemetry changes; a stationary nonzero value remains readable without looking continuously active.

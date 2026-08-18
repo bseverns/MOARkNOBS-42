@@ -45,6 +45,16 @@ Hold `Ctrl0 + Ctrl3 + Ctrl4` and turn control pots to tune Perlin jitter:
 - Pot 0: depth (`Jitter: 0.35`)
 - Pot 1: smoothness (`Smooth: 0.42`)
 
+## Live Double-press Shortcuts
+
+Outside config and LFO-tune modes, double-press the last three control buttons to edit the active slot live:
+
+- `Ctrl3`: cycle EF oversampling through 1x/2x/4x/8x/16x/32x.
+- `Ctrl4`: toggle ARG on/off while retaining its selected method and sources.
+- `Ctrl5`: toggle fixed LFO 1 modulation. A new lane starts Centered at 100%; disabling it retains that tuning.
+
+These are exclusive double gestures with a 300 ms window. The corresponding channel, registry-number, and tap-tempo single actions run only after that window closes. See the [ButtonManager field guide](../include/ButtonManager/README.md) for the complete map.
+
 ## MIDI Nerd Notes
 
 `MIDIHandler.cpp` now speaks RPN and can sniff out universal SysEx packets. If you're poking at the MIDI spec, this is your playground to see how the fancy stuff maps to code.

@@ -46,6 +46,18 @@ Per-slot EF voices perform the same translation using the configured mid-tier
 envelope interval. The `native_biquad` step-response test locks this timing
 model without claiming analog-input-to-host latency.
 
+## On-device Double-press Editing
+
+The performance surface can now reach three formerly configurator-heavy slot settings without entering config mode:
+
+| Gesture | Active-slot edit | Live behavior |
+| ------- | ---------------- | ------------- |
+| Double-press `Ctrl3` | Cycle EF oversampling through 1x, 2x, 4x, 8x, 16x, and 32x | Reconfigures the assigned follower immediately |
+| Double-press `Ctrl4` | Toggle the slot-local ARG combiner | Switches the configured ARG method and source pair in or out |
+| Double-press `Ctrl5` | Toggle the fixed LFO 1 lane | Enables live centered modulation at 100% for an untuned lane and preserves later tuning |
+
+Ctrl3–Ctrl5 defer their ordinary single action until the 300 ms double-press window expires. Double presses therefore do not also change channel/data1 or register a BPM tap. The edits persist with the slot and stream `slot_patch` readback to an attached configurator. The complete short/long/double/combo map lives in [include/ButtonManager/README.md](include/ButtonManager/README.md).
+
 ## First Reading Path
 
 If you are learning this firmware by reading code, start with

@@ -57,6 +57,8 @@ void loop() {
 latency. Crank the sample count for cleaner reads, bump the alpha for snappier
 response. The defaults (4 samples, 0.2f) play nice with most rigs.
 
+For live hardware editing, select a slot and double-press `Ctrl3` to cycle its EF oversampling through 1x, 2x, 4x, 8x, 16x, and 32x. The assigned follower is reconfigured immediately, the choice is saved with the slot, and an attached configurator receives the updated slot patch. The ordinary Ctrl3 channel-cycle waits until the 300 ms double-press window has expired.
+
 Scope its internals in [EnvelopeFollower.h](../EnvelopeFollower.h).
 
 ## Filter Types
