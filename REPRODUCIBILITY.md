@@ -2,10 +2,9 @@
 
 > No magic smoke. No shrug emoji. Just a cranky, repeatable build pipeline you can audit and rerun.
 
-MOARkNOBS-42 publishes binaries *and* receipts. This guide walks through the exact commands we use to
-rebuild a release, prove the toolchain version, and verify the artifacts with hashes. Follow it and you’ll
-end up with the same `firmware.hex`, the same `hardware_reference.zip`, and a `manifest.json` that records every
-step we took.
+MOARkNOBS-42 publishes hardware-test artifacts *and* receipts. This guide walks through the exact commands used to
+rebuild a prerelease bundle, record the toolchain version, and verify the artifacts with hashes. For version `<tag>`,
+the outputs use the `mn42_<tag>_hardware-test_*` names defined by `release_build.sh`.
 
 ```mermaid
 flowchart LR
@@ -37,7 +36,7 @@ FW_VERSION=v0.0.0 ./release.sh v0.0.0
 
 # 4. Inspect the receipts
 ls dist
-jq '.' dist/manifest.json
+jq '.' dist/mn42_v0.0.0_hardware-test_manifest.json
 ```
 
 Everything lands in `dist/`: the versioned firmware hex, hardware reference bundle, deterministic source export zip,
@@ -77,12 +76,12 @@ The script does the following in order:
    - `REQUIRE_HIL=1` fails hard if no hardware port is available;
 3. cleans the Teensy build output (`pio run -t clean -e teensy40_main`);
 4. rebuilds the firmware (`pio run -e teensy40_main`);
-5. copies `mn42_<version>.hex` into `dist/`;
-6. packs `hardware/fabrication/` into a deterministic `hardware_reference.zip` (timestamps frozen at 1980-01-01,
-   permissions fixed at 0644, and entries sorted);
+5. copies `mn42_<version>_hardware-test_firmware.hex` into `dist/`;
+6. creates `mn42_<version>_hardware-test_hardware-reference.zip` with an explicit prototype/reference boundary,
+   the tracked fabrication boundary note, current hardware notes, and available local machine drawings;
 7. creates a deterministic source export zip from tracked files only;
 8. copies license docs;
-9. copies `release_verification.json` into `dist/`; and
+9. copies `mn42_<version>_hardware-test_verification.json` into `dist/`; and
 10. calls `tools/generate_release_manifest.py` to capture hashes, git metadata, PlatformIO info, the
     verification summary, and the exact commands executed.
 
@@ -96,27 +95,27 @@ Swap `v0.0.0` for whatever tag you intend to cut.
 
 ### 3. Audit the manifest
 
-`dist/manifest.json` is the reproducibility ledger. It contains:
+`dist/mn42_<version>_hardware-test_manifest.json` is the reproducibility ledger. It contains:
 
 - git commit + branch + dirtiness
 - PlatformIO core/Python versions from `pio system info`
 - the command strings for clean/build
 - the firmware version string that was injected at build time
-- verification truth from `dist/release_verification.json` (what ran vs what was skipped)
+- verification truth from `dist/mn42_<version>_hardware-test_verification.json` (what ran vs what was skipped)
 - SHA-256 hashes and byte sizes for the release artifacts
 - the raw output of `pio pkg list` so you know which packages were installed
 
 Peek at the interesting bits:
 
 ```bash
-jq '{version, git, platformio: {system_info, home}, artifacts}' dist/manifest.json
+jq '{version, git, platformio: {system_info, home}, artifacts}' dist/mn42_v0.0.0_hardware-test_manifest.json
 ```
 
 Re-run the hash check and compare to the manifest:
 
 ```bash
-sha256sum dist/mn42_v0.0.0.hex
-sha256sum dist/hardware_reference.zip
+sha256sum dist/mn42_v0.0.0_hardware-test_firmware.hex
+sha256sum dist/mn42_v0.0.0_hardware-test_hardware-reference.zip
 ```
 
 Both digests should match the `artifacts` block in the manifest exactly.
@@ -126,30 +125,30 @@ Both digests should match the `artifacts` block in the manifest exactly.
 With the manifest and hashes in hand you can:
 
 - flash the board locally using `pio run -d firmware -t upload -e teensy40_main`
-- stash the `hardware_reference.zip` on the release page alongside the firmware so builders can send boards to
-  fab without spelunking the repo
-- archive `manifest.json` anywhere that expects a software BOM or build log
+- attach the versioned hardware-reference ZIP for schematic tracing and bench review, while keeping its embedded
+  warning that it is not an orderable fabrication package
+- archive the versioned manifest anywhere that expects a software BOM or build log
 
 ## How CI mirrors this
 
 `.github/workflows/release.yml` runs `./release.sh` from tagged/manual inputs, plus a bridge packaging
 matrix (`pkg`) for:
 
-- `node22-macos-x64`
-- `node22-macos-arm64`
-- `node22-linux-x64`
-- `node22-win-x64`
+- `node24-macos-x64`
+- `node24-macos-arm64`
+- `node24-linux-x64`
+- `node24-win-x64`
 
 That keeps firmware artifacts on the same scripted path as local releases while adding deterministic bridge outputs.
 The workflow always stores bundles as workflow artifacts and uploads assets to a GitHub release only when that tag's
 release already exists. Core uploaded assets are:
 
-- `mn42_<tag>.hex`
-- `hardware_reference.zip`
-- `mn42_<tag>_source.zip`
-- `release_verification.json`
-- `manifest.json`
-- `SHA256SUMS.txt`
+- `mn42_<tag>_hardware-test_firmware.hex`
+- `mn42_<tag>_hardware-test_hardware-reference.zip`
+- `mn42_<tag>_hardware-test_source.zip`
+- `mn42_<tag>_hardware-test_verification.json`
+- `mn42_<tag>_hardware-test_manifest.json`
+- `mn42_<tag>_hardware-test_SHA256SUMS.txt`
 - the bundled license docs (`THIRD_PARTY_LICENSES.md` and the `LICENSES/` directory)
 
 Bridge uploads (when release exists) include:
@@ -163,8 +162,8 @@ Unsigned bridge workflow artifacts are internal evidence only. For beta/public b
 `REQUIRE_BRIDGE_SIGNING=1` and provide signing/notarization credentials or hooks before attaching assets outward.
 
 Important: the hosted CI release lane uses `REQUIRE_HIL=0` by default, so HIL may be skipped unless a
-runner has `TEST_PORT` configured. That skip/execute state is recorded in `release_verification.json`
-and mirrored into `manifest.json`.
+runner has `TEST_PORT` configured. That skip/execute state is recorded in the versioned verification receipt
+and mirrored into the versioned manifest.
 
 Inspect the manifest in CI logs or download it from workflow artifacts or the release page to verify the run.
 
@@ -174,7 +173,7 @@ Inspect the manifest in CI logs or download it from workflow artifacts or the re
   your Python install path probably isn’t on `PATH`.
 - **Firmware reports `0.0.0` after a release build** — you probably forgot to export `FW_VERSION=<tag>`
   before running `./release.sh`. Re-run with the version env var set so the build helper emits the right flag.
-- **Verification is skipped** — check `dist/release_verification.json` and `manifest.tests`.
+- **Verification is skipped** — check the versioned `dist/mn42_<tag>_hardware-test_verification.json` and manifest test records.
   If you need hard hardware proof, rerun with `REQUIRE_HIL=1 TEST_PORT=<device>`.
 - **Hash mismatch** — ensure you didn’t edit artifacts after the fact. Re-run `./release.sh` to regenerate
   clean copies.

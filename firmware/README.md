@@ -3,14 +3,14 @@
 > **Doc class:** Contract doc. This is the firmware build/test boundary for the current hardware-test package; release and hardware-readiness claims still require the validation docs.
 
 This `firmware/` directory is the real PlatformIO project for the current MOARkNOBS-42 hardware-test package.
-Run PlatformIO here, not from the repo root.
+The commands below are safe to copy from the repository root because they pass `-d firmware` explicitly.
 
 For document tie-break rules, see [Documentation Truth Map](../docs/reference/DocumentationTruthMap.md).
 
 ## Baseline Build
 
 ```bash
-pio run -e teensy40_main
+pio run -d firmware -e teensy40_main
 ```
 
 The repo-root `platformio.ini` is only a guard that rejects accidental root-level builds.
@@ -70,43 +70,43 @@ That path is the repo's intended "top-down" introduction to the machine.
 Firmware build:
 
 ```bash
-pio run -e teensy40_main
+pio run -d firmware -e teensy40_main
 ```
 
 Unity smoke suite:
 
 ```bash
-pio test -e teensy40_unity -vvv
+pio test -d firmware -e teensy40_unity -vvv
 ```
 
 Unified bench sketch:
 
 ```bash
-pio run -e teensy40_unified_test -t upload
+pio run -d firmware -e teensy40_unified_test -t upload
 ```
 
 LED surface stress sketch:
 
 ```bash
-pio run -e teensy40_led_demo -t upload
+pio run -d firmware -e teensy40_led_demo -t upload
 ```
 
 Full bridge/system lane:
 
 ```bash
-pio run -e teensy40_full_system -t upload
+pio run -d firmware -e teensy40_full_system -t upload
 ```
 
 Production boot contract proof:
 
 ```bash
-node system_test/mn42_boot_contract_runner.js --serial /dev/cu.usbmodemXXXX --flash --report ../logs/boot-contract.json
+node firmware/system_test/mn42_boot_contract_runner.js --serial /dev/cu.usbmodemXXXX --flash --report logs/boot-contract.json
 ```
 
 Attach-live hardware proof when the board is already running firmware and you only need the real configurator/apply lane:
 
 ```bash
-node system_test/mn42_boot_contract_runner.js --serial /dev/cu.usbmodemXXXX --attach-live --report ../logs/boot-contract-attach-live.json
+node firmware/system_test/mn42_boot_contract_runner.js --serial /dev/cu.usbmodemXXXX --attach-live --report logs/boot-contract-attach-live.json
 ```
 
 Request one-shot configurator boot from a running firmware image:

@@ -25,7 +25,7 @@ same configuration is available from the preset picker as
 | Physical pot/slot 2 | MIDI channel 2, CC 3, active | MIDI monitor and learned destination move from 0–127 |
 | Envelope input 1 | Targets slot 1, MIDI channel 1, note 48 | A strong envelope produces the note/slot response |
 | ARG | Enabled, `AVG`, weights A `2.0`, B `1.0` | Reactive movement follows the averaged weighted sources |
-| LED | Brightness `64`, color `#90FFC0` | Mint LED identity appears after verified Apply |
+| LED | Requests brightness `64`, color `#90FFC0` | Mint identity appears at the active firmware cap (`26` on default `teensy40_main`) |
 | Filter/response | `HIGHPASS`, response control `1680`, Q `1.1`, linear envelope mode | Envelope response is visually distinct in telemetry |
 
 The preset contains 42 complete slots. The table names only the checkpoints
@@ -48,7 +48,7 @@ certification claim.
 2. Import or select the configuration.
 3. Review the staged diff.
 4. Click **Apply** and wait for verified success.
-5. Confirm the LED changes to mint at brightness 64.
+5. Confirm the LED changes to mint. The preset requests brightness `64`, but the default safe firmware caps effective output at `26`; only a separately validated reworked build can emit the full request.
 6. Move physical pot/slot 2. Confirm channel-2 CC 3 in the MIDI monitor and hear
    the learned parameter move.
 7. Feed a clear dynamic signal into envelope input 1. Confirm envelope
