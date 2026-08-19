@@ -1,4 +1,11 @@
-import { ARG_METHOD_NAMES, formatArgMethodLabel, describeArgMethod } from '../lib/constants.js';
+import {
+  ARG_METHOD_NAMES,
+  EF_FILTER_NAMES,
+  describeArgMethod,
+  describeEfFilter,
+  formatArgMethodLabel,
+  formatEfFilterLabel
+} from '../lib/tuning_catalog.js';
 
 // Schema-to-controls glue. The JSON schema is the boss; this file just turns it
 // into boring inputs and sends tiny patches back to the runtime.
@@ -241,9 +248,15 @@ export class FormRenderer {
       schema.enum.forEach((opt) => {
         const option = document.createElement('option');
         option.value = opt;
-        const isArgMethod = ARG_METHOD_NAMES.includes(opt);
-        option.textContent = isArgMethod ? formatArgMethodLabel(opt) : opt;
+        const isArgMethod = path === 'arg.method' && ARG_METHOD_NAMES.includes(opt);
+        const isEfFilter = path === 'filter.type' && EF_FILTER_NAMES.includes(opt);
+        option.textContent = isArgMethod
+          ? formatArgMethodLabel(opt)
+          : isEfFilter
+            ? formatEfFilterLabel(opt)
+            : opt;
         if (isArgMethod) option.title = describeArgMethod(opt);
+        if (isEfFilter) option.title = describeEfFilter(opt);
         if (value === opt) option.selected = true;
         select.appendChild(option);
       });

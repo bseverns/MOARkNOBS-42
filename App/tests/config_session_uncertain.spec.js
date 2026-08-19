@@ -75,6 +75,58 @@ test('a successful resynchronization adopts device truth after an ambiguous Appl
   expect(events).toContainEqual(expect.objectContaining({ type: 'resynchronized' }));
 });
 
+test('a verified Apply can stage its previous confirmed state without writing immediately', async () => {
+  const events = [];
+  const session = createSession(async () => ({ checksum: 'candidate-checksum' }), events);
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).resolves.toMatchObject({ applied: true });
+  expect(session.getState()).toMatchObject({
+    dirty: false,
+    canStagePreviousApply: true,
+    live: { filter: { freq: 321 } }
+  });
+
+  expect(session.stagePreviousApply()).toBe(true);
+  expect(session.getState()).toMatchObject({
+    dirty: true,
+    canStagePreviousApply: false,
+    live: { filter: { freq: 321 } },
+    staged: { filter: { freq: 100 } }
+  });
+  expect(events).toContainEqual(expect.objectContaining({ type: 'previous-apply-staged' }));
+});
+
+test('a later device patch invalidates the pre-Apply return snapshot', async () => {
+  const events = [];
+  const session = createSession(async () => ({ checksum: 'candidate-checksum' }), events);
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+  await session.apply();
+  expect(session.getState().canStagePreviousApply).toBe(true);
+
+  const deviceState = { ...baseConfig(), filter: { freq: 444 } };
+  session.reconcileDevicePatch(deviceState, deviceState);
+
+  expect(session.getState().canStagePreviousApply).toBe(false);
+  expect(session.stagePreviousApply()).toBe(false);
+});
+
+test('pre-Apply return never overwrites a newer unsent draft', async () => {
+  const events = [];
+  const session = createSession(async () => ({ checksum: 'candidate-checksum' }), events);
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+  await session.apply();
+
+  session.stage((draft) => ({ ...draft, filter: { freq: 654 } }));
+
+  expect(session.getState().canStagePreviousApply).toBe(false);
+  expect(session.stagePreviousApply()).toBe(false);
+  expect(session.getState().staged.filter.freq).toBe(654);
+});
+
 test('malformed ACK with successful readback returns a classified recovery result', async () => {
   const events = [];
   let calls = 0;

@@ -2,7 +2,7 @@
   "combos": [
     { "id": "panic_baseline", "control": "Ctrl0+Ctrl1+Ctrl2" },
     { "id": "profile_reload", "control": "long-press Ctrl1" },
-    { "id": "eeprom_reset", "control": "long-press Ctrl3" },
+    { "id": "config_reload", "control": "long-press Ctrl3" },
     { "id": "profile_cycle", "control": "Ctrl1+Ctrl2" },
     { "id": "profile_save", "control": "long-press Ctrl4" },
     { "id": "arp_toggle", "control": "Ctrl2+Ctrl4" },

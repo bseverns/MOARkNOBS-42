@@ -210,6 +210,9 @@ export function createConfigSession({
   let attemptedApply = null;
   let appliedCandidate = null;
   let nextDraft = null;
+  let preApplyLive = null;
+  let previousAppliedLive = null;
+  let appliedLiveSnapshot = null;
 
   function isDeviceAuthorityUnresolved() {
     return ['preflighting', 'applying', 'uncertain', 'resynchronizing'].includes(deviceAuthority);
@@ -282,6 +285,8 @@ export function createConfigSession({
 
   function syncFromDevice(configPayload) {
     const normalized = normalizeConfig(configPayload, getManifest());
+    previousAppliedLive = null;
+    appliedLiveSnapshot = null;
     liveConfig = clone(normalized);
     stagedConfig = clone(nextDraft ?? normalized);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
@@ -384,6 +389,19 @@ export function createConfigSession({
     { preserveCandidate = false } = {}
   ) {
     const normalized = normalizeConfig(authoritativeConfig, getManifest());
+    const candidateMatchesDevice =
+      appliedCandidate &&
+      stateOverride !== 'verified-device-different' &&
+      JSON.stringify(normalized) ===
+        JSON.stringify(normalizeConfig(appliedCandidate, getManifest()));
+    if (candidateMatchesDevice && preApplyLive) {
+      previousAppliedLive = clone(preApplyLive);
+      appliedLiveSnapshot = clone(normalized);
+    } else {
+      previousAppliedLive = null;
+      appliedLiveSnapshot = null;
+    }
+    preApplyLive = null;
     const retainedDraft = nextDraft ?? (preserveCandidate ? appliedCandidate : null);
     liveConfig = clone(normalized);
     stagedConfig = clone(retainedDraft ?? normalized);
@@ -399,6 +417,7 @@ export function createConfigSession({
 
   function abandonApply({ retainNextDraft = false } = {}) {
     appliedCandidate = null;
+    preApplyLive = null;
     if (!retainNextDraft) nextDraft = null;
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
     setDraftState(dirty ? 'dirty' : 'clean');
@@ -410,6 +429,7 @@ export function createConfigSession({
   function finishBridgeNotApplied(response = {}) {
     const retainedDraft = nextDraft ?? appliedCandidate ?? stagedConfig;
     appliedCandidate = null;
+    preApplyLive = null;
     nextDraft = null;
     stagedConfig = clone(retainedDraft);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
@@ -426,6 +446,7 @@ export function createConfigSession({
     const rejectedDraft = nextDraft ?? appliedCandidate ?? stagedConfig;
     stagedConfig = clone(rejectedDraft);
     appliedCandidate = null;
+    preApplyLive = null;
     // Keep the rejected candidate independently of Bridge snapshots. It was
     // never transmitted, so it remains an unacknowledged browser draft.
     nextDraft = clone(rejectedDraft);
@@ -517,6 +538,9 @@ export function createConfigSession({
       emit('validation-error', validator.errors);
       throw error;
     }
+    previousAppliedLive = null;
+    appliedLiveSnapshot = null;
+    preApplyLive = clone(liveConfig);
     appliedCandidate = clone(stagedConfig);
     nextDraft = null;
     if (isBridgeSessionActive()) {
@@ -788,6 +812,24 @@ export function createConfigSession({
     emit('rollback', {});
   }
 
+  function stagePreviousApply() {
+    if (
+      isDeviceAuthorityUnresolved() ||
+      dirty ||
+      !previousAppliedLive ||
+      !appliedLiveSnapshot ||
+      JSON.stringify(liveConfig) !== JSON.stringify(appliedLiveSnapshot)
+    ) {
+      return false;
+    }
+    const previous = clone(previousAppliedLive);
+    previousAppliedLive = null;
+    appliedLiveSnapshot = null;
+    stage(() => previous);
+    emit('previous-apply-staged', {});
+    return true;
+  }
+
   function restoreLocalState({ allowDifferentFirmware = false } = {}) {
     const canReadSnapshot = typeof stateSnapshotStore.read === 'function';
     const snapshot = stateSnapshotStore.read?.();
@@ -811,6 +853,8 @@ export function createConfigSession({
   function hydrateAuthoritativeConfig(configPayload) {
     if (!configPayload || typeof configPayload !== 'object') return false;
     const normalized = normalizeConfig(configPayload, getManifest());
+    previousAppliedLive = null;
+    appliedLiveSnapshot = null;
     liveConfig = clone(normalized);
     stagedConfig = clone(normalized);
     dirty = false;
@@ -835,6 +879,12 @@ export function createConfigSession({
       transactionState,
       deviceAuthority,
       draftState,
+      canStagePreviousApply:
+        !isDeviceAuthorityUnresolved() &&
+        !dirty &&
+        Boolean(previousAppliedLive) &&
+        Boolean(appliedLiveSnapshot) &&
+        JSON.stringify(liveConfig) === JSON.stringify(appliedLiveSnapshot),
       attemptedApply: attemptedApply ? clone(attemptedApply) : null
     };
   }
@@ -849,6 +899,8 @@ export function createConfigSession({
     const unresolvedAuthority = isDeviceAuthorityUnresolved()
       ? deviceAuthority
       : null;
+    previousAppliedLive = null;
+    appliedLiveSnapshot = null;
     liveConfig = clone(nextLive);
     stagedConfig = clone(nextStaged);
     dirty = shallowDiff(liveConfig ?? {}, stagedConfig ?? {}).length > 0;
@@ -889,6 +941,7 @@ export function createConfigSession({
     },
     resynchronize: () => resynchronizeAfterUncertain('operator-request'),
     stage,
+    stagePreviousApply,
     syncFromSession,
     syncFromDevice
   };

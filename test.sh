@@ -7,6 +7,11 @@ mkdir -p logs  # stash outputs where CI can snarf them
 # Hardware-free firmware gates always run. These are the same portable seams
 # and production build exercised by push/PR CI, so ./test.sh remains a real
 # preflight even when no Teensy is connected.
+GESTURE_TEST_BIN="$(mktemp -t mn42-button-gestures.XXXXXX)"
+trap 'rm -f "$GESTURE_TEST_BIN"' EXIT
+"${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -I firmware/include \
+  tools/button_gesture_timing_test.cpp -o "$GESTURE_TEST_BIN"
+"$GESTURE_TEST_BIN" | tee logs/button-gesture-test.log
 pio test -d firmware -e native_biquad -vvv | tee logs/native-biquad-test.log
 pio test -d firmware -e native_transport -vvv | tee logs/native-transport-test.log
 pio test -d firmware -e native_modulation -vvv | tee logs/native-modulation-test.log

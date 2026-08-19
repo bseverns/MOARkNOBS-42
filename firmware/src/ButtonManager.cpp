@@ -39,7 +39,6 @@ extern LFOManager lfoManager;
 // Verbose logging rides on BUTTON_MANAGER_DEBUG. See ButtonManager.h for macros.
 
 static const unsigned long LONG_PRESS_DELAY = 500;
-static const unsigned long DOUBLE_PRESS_DELAY = 300;
 
 // Mirror the global ARG pair count so our math stays synced without recomputing.
 static const int NUM_ARG_PAIRS = ARG_PAIRS_LEN;
@@ -614,8 +613,7 @@ void ButtonManager::onRelease(uint8_t index, ButtonManagerContext &context) {
             const uint8_t controlMask = static_cast<uint8_t>(1U << controlIndex);
             if ((_consumedControlMask & controlMask) != 0) {
                 _consumedControlMask &= static_cast<uint8_t>(~controlMask);
-                sm.shortPressPending = false;
-                sm.lastShortRelease = 0;
+                consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
                 return;
             }
         }
@@ -646,12 +644,12 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
 
     if (_onDeviceConfigModeActive) {
         doSinglePressAction(index, context);
-        sm.lastShortRelease = 0;
+        consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
         return;
     }
     if (_lfoTuningActive) {
         doSinglePressAction(index, context);
-        sm.lastShortRelease = 0;
+        consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
         return;
     }
 
@@ -660,17 +658,10 @@ void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &contex
     // channel/data1 or records a tempo tap.
     const bool deferredControl = index >= NUM_VIRTUAL_BUTTONS + 3;
     if (deferredControl) {
-        if (sm.shortPressPending && (now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
-            handleDoublePress(index, context);
-            sm.shortPressPending = false;
-            sm.lastShortRelease = 0;
-        } else {
-            if (sm.shortPressPending) {
-                doSinglePressAction(index, context);
-            }
-            sm.shortPressPending = true;
-            sm.lastShortRelease = now;
-        }
+        const DeferredPressDecision decision =
+            registerDeferredRelease(sm.shortPressPending, sm.lastShortRelease, now);
+        if (decision.fireSingle) doSinglePressAction(index, context);
+        if (decision.fireDouble) handleDoublePress(index, context);
         return;
     }
 
@@ -689,9 +680,7 @@ void ButtonManager::flushDeferredControlPresses(ButtonManagerContext &context) {
     for (uint8_t controlIndex = 3; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
         const uint8_t index = NUM_VIRTUAL_BUTTONS + controlIndex;
         ButtonStateMachine &sm = _buttonMachines[index];
-        if (sm.shortPressPending && (current - sm.lastShortRelease) >= DOUBLE_PRESS_DELAY) {
-            sm.shortPressPending = false;
-            sm.lastShortRelease = 0;
+        if (flushDeferredPress(sm.shortPressPending, sm.lastShortRelease, current)) {
             doSinglePressAction(index, context);
         }
     }
@@ -1151,8 +1140,8 @@ void ButtonManager::handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerCo
         static unsigned long lastTap = 0;
         unsigned long now = ::now();
         if (lastTap != 0) {
-            float intervalMs = (float)(now - lastTap);
-            float newBPM = 60000.0f / intervalMs;
+            float newBPM = tappedBpmFromInterval(now - lastTap);
+            g_tappedBPM = newBPM;
             char buf[32];
             snprintf(buf, sizeof(buf), "Tapped BPM=%.1f", newBPM);
             context.displayManager.displayStatus(buf, 1500);
@@ -1489,8 +1478,7 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
         for (uint8_t controlIndex = 0; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
             if ((mask & (1U << controlIndex)) != 0) {
                 ButtonStateMachine &sm = _buttonMachines[NUM_VIRTUAL_BUTTONS + controlIndex];
-                sm.shortPressPending = false;
-                sm.lastShortRelease = 0;
+                consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
             }
         }
     }

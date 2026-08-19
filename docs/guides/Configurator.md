@@ -50,6 +50,42 @@ Most controls do **not** immediately rewrite device state.
 
 Some controls can also issue field-level writes through the runtime patch lane, but even then the runtime stages locally first so the UI never loses track of intent. On native WebSerial, the production contract is still full Apply with verified ACK.
 
+## Selected-slot tuning translates Lab; it does not replace it
+
+Configure now adds a musician-facing tuning surface beside the selected slot. It follows this progression:
+
+```text
+recipe -> musical feel -> translated summary -> exact Lab parameters
+```
+
+The App's `tuning_catalog.js` is presentation metadata only. It supplies musician-first labels, explanations, and deterministic recipe patches. `config_schema.json` still decides whether a configuration is structurally valid, and firmware/readback still decides what the device actually contains. The catalog is tested against the schema enum lists so it cannot silently add or omit a firmware value.
+
+Configure exposes:
+
+- **Source** — the exact EF assignment for this slot
+- **Character** — small selected-slot EF recipes such as Clean / Neutral, Smooth, Punchy, Gate, and Experimental
+- **Response** — a readable summary derived from the exact smoothing, detector, attack, and release values; it is not a new firmware parameter
+- **Amount** — a summary of auto-gain target or manual gain; Configure does not pretend those different mechanisms are one universal strength knob
+- **Direction** — a direct translation of the firmware destination mode, such as **Louder -> more · ADD_CLAMP** or **Signal replaces value · REPLACE**
+
+Lab keeps every underlying control. Enum choices lead with musical language while retaining the exact token, for example **Smooth · LOWPASS**, **Punchy · EXPONENTIAL**, **Average Together · AVG**, and **Strongest Wins · MAXX**.
+
+### Recipe boundaries
+
+Recipes use the same staged config path as manual edits. They do not write immediately.
+
+| Recipe family | Changes | Deliberately preserves |
+| --- | --- | --- |
+| EF character | selected slot's EF response fields | EF source, calibration baseline, gain, direction, every other slot |
+| ARG | selected slot's enable + method | source A/B and every other slot |
+| Fixed LFO | one selected slot-local lane | the other lane and every other slot |
+
+After a recipe, Configure names the exact changed paths and the normal Review dialog remains the complete diff. **Customize in Lab** opens the exact controls rather than creating a second hidden configuration system.
+
+The compact evidence line reuses the App's current telemetry snapshot: EF identity, active/recent/inactive state, current level, resolved slot output, EF contribution when reported, and gate threshold when relevant. It is host-observed visualization, not physical-device validation or latency measurement.
+
+When firmware sends a `slot_patch`, the App says **Device reported** because the frame proves device state but does not reliably prove whether the originating action was a deck press or another device-side path. Clean editor state follows that truth without becoming a false browser draft; unrelated staged intent is preserved and conflicts remain visible.
+
 ## Presets are starting points, profiles are memory
 
 The preset picker is there to help users learn the instrument on purpose instead of by superstition.
@@ -82,6 +118,8 @@ This is the important safety behavior:
 - a valid receipt starts or completes verification
 - a missing or mismatched receipt means the outcome is uncertain
 - authoritative readback determines what the device actually contains
+
+After a verified Apply, Configure may offer **Return to pre-Apply state**. This action stages the previously confirmed snapshot for review; it does not write to the device. The operator must Apply again. A later device patch or authoritative hydration invalidates that snapshot so the App does not offer a stale return path.
 
 ## What the configurator helps users learn
 

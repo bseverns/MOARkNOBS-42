@@ -1,3 +1,12 @@
+import {
+  EF_DESTINATION_PRESENTATION,
+  SLOT_TUNING_RECIPES,
+  applySlotTuningRecipe,
+  describeEfFilter,
+  formatEfDestinationLabel,
+  formatEfFilterLabel
+} from '../../lib/tuning_catalog.js';
+
 export function createSlotEditorPanel({
   runtime,
   localManifest,
@@ -14,7 +23,8 @@ export function createSlotEditorPanel({
   describeArgMethod,
   setStatus = () => {},
   getUiMode = () => 'basic',
-  getEditorTab = () => 'mapping'
+  getEditorTab = () => 'mapping',
+  openLabTab = () => {}
 } = {}) {
   const {
     slotDetailIndex = null,
@@ -57,6 +67,8 @@ export function createSlotEditorPanel({
   const lfoModeValues = lfoModeOptions.map((option) => option.value);
   let slotEditorRenderPending = false;
   let slotEditorFocusGuardBound = false;
+  let lastRecipeResult = '';
+  const efLastActiveAt = new Map();
 
   function bindSlotEditorFocusGuard() {
     if (!formContainer || slotEditorFocusGuardBound) return;
@@ -77,7 +89,7 @@ export function createSlotEditorPanel({
   }
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
-  function populateDetail() {
+  function populateDetail({ renderEditor = true } = {}) {
     const slot = slotState.slots[slotState.selected];
     const telemetry = slotState.telemetry || {};
     if (slotDetailIndex)
@@ -108,7 +120,8 @@ export function createSlotEditorPanel({
     if (slotDetailLfo) slotDetailLfo.textContent = formatSlotLfoSummary(slot);
     const value = Array.isArray(telemetry.slots) ? telemetry.slots[slotState.selected] : null;
     if (slotDetailValue) slotDetailValue.textContent = value ?? '—';
-    renderSlotEditor();
+    if (renderEditor) renderSlotEditor();
+    else updateSelectedTuningEvidence();
   }
 
   // Rebuild the right-hand slot editor for the current selection and UI tier.
@@ -227,11 +240,15 @@ export function createSlotEditorPanel({
     if (activeUiMode !== 'advanced') {
       const hint = document.createElement('p');
       hint.className = 'slot-hint';
-      hint.textContent = 'Need EF, ARG, or fixed LFO modulation? Switch to Lab.';
+      hint.textContent = 'Configure translates common musical choices; Lab keeps every exact parameter.';
       basics.appendChild(hint);
     }
     if (activeUiMode !== 'advanced' || activeEditorTab === 'mapping') {
       form.appendChild(basics);
+    }
+
+    if (activeUiMode === 'basic') {
+      form.appendChild(makeConfigureTuningSurface(slot));
     }
 
     if (activeUiMode === 'advanced') {
@@ -271,7 +288,11 @@ export function createSlotEditorPanel({
             stageSlotEnvelopeField(slotState.selected, 'filter_name', value);
             stageSlotEnvelopeField(slotState.selected, 'filter_index', idx);
           },
-          { help: glossary.filter }
+          {
+            help: glossary.filter,
+            formatOptionLabel: formatEfFilterLabel,
+            describeOption: describeEfFilter
+          }
         )
       );
       efFieldset.appendChild(
@@ -289,6 +310,7 @@ export function createSlotEditorPanel({
           stageSlotEnvelopeField(slotState.selected, 'oversample', value)
         )
       );
+      efFieldset.appendChild(makeDeckShortcut('Ctrl3 double', 'Cycle EF oversampling'));
       efFieldset.appendChild(
         makeNumber('Smoothing', ef.smoothing ?? 0.2, 0, 1, 0.01, (value) =>
           stageSlotEnvelopeField(slotState.selected, 'smoothing', value)
@@ -428,6 +450,8 @@ export function createSlotEditorPanel({
           }
         )
       );
+      argFieldset.appendChild(makeRecipeButtons('arg'));
+      argFieldset.appendChild(makeDeckShortcut('Ctrl4 double', 'Toggle this slot’s ARG combiner'));
       argFieldset.appendChild(
         makeNumber('Follower A', arg.sourceA ?? 0, 0, Math.max(0, efSlots - 1), 1, (value) =>
           stageSlotArgField(slotState.selected, 'sourceA', value)
@@ -487,6 +511,10 @@ export function createSlotEditorPanel({
             { help: 'Signed depth. Negative values reverse the selected operation.' }
           )
         );
+        card.appendChild(makeRecipeButtons('lfo', laneIndex));
+        if (laneIndex === 0) {
+          card.appendChild(makeDeckShortcut('Ctrl5 double', 'Toggle this slot’s fixed LFO 1 lane'));
+        }
         lfoFieldset.appendChild(card);
       });
       if (activeEditorTab === 'lfo') {
@@ -502,6 +530,224 @@ export function createSlotEditorPanel({
     }
 
     formContainer.appendChild(form);
+  }
+
+  function makeConfigureTuningSurface(slot) {
+    const ef = normalizeEf(slot);
+    const manifest = runtime.getState().manifest ?? localManifest;
+    const followerCount = Math.max(0, Number(manifest?.envelope_count) || 0);
+    const fieldset = makeFieldset(
+      'Tune This Slot',
+      'Choose a source and a starting character. These actions stage exact Lab parameters for review before Apply.'
+    );
+    fieldset.classList.add('configure-tuning');
+
+    const sourceOptions = [-1, ...Array.from({ length: followerCount }, (_, index) => index)];
+    fieldset.appendChild(
+      makeSelect(
+        'Source',
+        sourceOptions,
+        Number(ef.index),
+        (value) => {
+          const next = Number(value);
+          stageSlotField(slotState.selected, 'efIndex', next);
+          stageSlotEnvelopeField(slotState.selected, 'index', next);
+        },
+        {
+          help: 'Select which envelope follower moves this slot. Unassigned leaves EF modulation disconnected.',
+          formatOptionLabel: (value) => Number(value) < 0 ? 'Unassigned' : `EF ${Number(value) + 1}`
+        }
+      )
+    );
+
+    const character = document.createElement('section');
+    character.className = 'tuning-character';
+    const characterLabel = document.createElement('strong');
+    characterLabel.textContent = 'Character';
+    const current = document.createElement('p');
+    current.className = 'tuning-character-current';
+    current.textContent = formatEfFilterLabel(ef.filter_name ?? 'LINEAR');
+    character.append(characterLabel, current, makeRecipeButtons('ef'));
+    fieldset.appendChild(character);
+
+    const response = document.createElement('p');
+    response.className = 'tuning-response-summary';
+    response.textContent = formatResponseSummary(ef);
+    fieldset.appendChild(response);
+
+    const amount = document.createElement('p');
+    amount.className = 'tuning-amount-summary';
+    amount.textContent = formatAmountSummary(ef);
+    fieldset.appendChild(amount);
+
+    fieldset.appendChild(
+      makeSelect(
+        'Direction',
+        Object.keys(EF_DESTINATION_PRESENTATION),
+        resolveEfDestinationMode(ef),
+        (value) => stageSlotEnvelopeField(slotState.selected, 'destination_mode', value),
+        {
+          help: 'Direction maps directly to the firmware destination mode shown after the musical label.',
+          formatOptionLabel: formatEfDestinationLabel
+        }
+      )
+    );
+
+    fieldset.appendChild(makeSelectedTuningEvidence(ef));
+
+    const recipeResult = document.createElement('p');
+    recipeResult.className = 'tuning-recipe-result';
+    recipeResult.setAttribute('aria-live', 'polite');
+    recipeResult.textContent = lastRecipeResult;
+    fieldset.appendChild(recipeResult);
+
+    if (runtime.getState().canStagePreviousApply) {
+      const returnButton = document.createElement('button');
+      returnButton.type = 'button';
+      returnButton.textContent = 'Return to pre-Apply state';
+      returnButton.title = 'Stage the last confirmed state from immediately before Apply. Review and Apply again to send it.';
+      returnButton.addEventListener('click', () => {
+        returnButton.blur();
+        if (!runtime.stagePreviousApply()) return;
+        setStatus(
+          'warn',
+          'Previous state staged',
+          'Nothing was written yet. Review the diff, then Apply to return the device.'
+        );
+      });
+      fieldset.appendChild(returnButton);
+    }
+
+    const customize = document.createElement('button');
+    customize.type = 'button';
+    customize.className = 'tuning-customize';
+    customize.textContent = 'Customize in Lab';
+    customize.addEventListener('click', () => {
+      customize.blur();
+      openLabTab('envelope');
+    });
+    fieldset.appendChild(customize);
+    return fieldset;
+  }
+
+  function makeRecipeButtons(target, laneIndex = 0) {
+    const container = document.createElement('div');
+    container.className = 'tuning-recipes';
+    container.setAttribute('role', 'group');
+    container.setAttribute('aria-label', `${target.toUpperCase()} tuning recipes`);
+    SLOT_TUNING_RECIPES.filter((recipe) => recipe.target === target).forEach((recipe) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.recipeId = recipe.id;
+      button.textContent = recipe.label;
+      button.title = recipe.explanation;
+      button.addEventListener('click', () => {
+        button.blur();
+        stageTuningRecipe(recipe.id, laneIndex);
+      });
+      container.appendChild(button);
+    });
+    return container;
+  }
+
+  function stageTuningRecipe(recipeId, laneIndex = 0) {
+    let stagedResult = null;
+    runtime.stage((draft) => {
+      draft.slots = draft.slots || [];
+      const current = draft.slots[slotState.selected] || {};
+      stagedResult = applySlotTuningRecipe(current, recipeId, { laneIndex });
+      draft.slots[slotState.selected] = stagedResult.slot;
+      lastRecipeResult = formatRecipeResult(stagedResult);
+      return draft;
+    });
+    if (!stagedResult) return;
+    const detail = stagedResult.changedPaths.length
+      ? `${stagedResult.changedPaths.length} exact field${stagedResult.changedPaths.length === 1 ? '' : 's'} changed.`
+      : 'This slot already matched the recipe.';
+    setStatus('warn', `${stagedResult.recipe.label} staged`, `${detail} Review before Apply.`);
+  }
+
+  function formatRecipeResult(result) {
+    if (!result.changedPaths.length) return `${result.recipe.label}: already matched.`;
+    const values = result.changedPaths.map((path) => {
+      const value = path.split('.').reduce((cursor, segment) => cursor?.[segment], result.slot);
+      return `${path} → ${String(value)}`;
+    });
+    return `Staged ${result.recipe.label}: ${values.join(' · ')}`;
+  }
+
+  function formatResponseSummary(ef) {
+    const smoothing = Number(ef.smoothing);
+    const mode = resolveEfModeName(ef);
+    const feel = mode === 'GATE'
+      ? 'Gate'
+      : smoothing >= 0.4
+        ? 'Tight'
+        : smoothing <= 0.15
+          ? 'Flowing'
+          : 'Balanced';
+    return `Response · ${feel} · smoothing ${formatNumberField(ef.smoothing, 2)} · attack ${formatNumberField(ef.attackMs, 0)} ms · release ${formatNumberField(ef.releaseMs, 0)} ms`;
+  }
+
+  function formatAmountSummary(ef) {
+    if (ef.autoGain) {
+      return `Amount · Adaptive · auto-gain target ${formatNumberField(ef.gainTarget, 0)}`;
+    }
+    const gain = Number(ef.gain);
+    const feel = gain < 0.8 ? 'Subtle' : gain > 1.5 ? 'Strong' : 'Moderate';
+    return `Amount · ${feel} · gain ×${formatNumberField(ef.gain, 2)}`;
+  }
+
+  function makeSelectedTuningEvidence(ef) {
+    const evidence = document.createElement('section');
+    evidence.className = 'selected-tuning-evidence';
+    evidence.setAttribute('aria-label', 'Live tuning evidence');
+    renderSelectedTuningEvidence(evidence, ef);
+    return evidence;
+  }
+
+  function updateSelectedTuningEvidence() {
+    const evidence = formContainer?.querySelector('.selected-tuning-evidence');
+    const slot = slotState.slots[slotState.selected];
+    if (!evidence || !slot) return;
+    renderSelectedTuningEvidence(evidence, normalizeEf(slot));
+  }
+
+  function renderSelectedTuningEvidence(evidence, ef) {
+    const telemetry = slotState.telemetry || {};
+    const efIndex = Number(ef.index);
+    const observedAt = Date.now();
+    const active = efIndex >= 0 && Boolean(Number(telemetry.efStatus?.[efIndex]));
+    if (active) efLastActiveAt.set(efIndex, observedAt);
+    const recent = !active && efIndex >= 0 && observedAt - (efLastActiveAt.get(efIndex) ?? 0) <= 1500;
+    const state = active ? 'Active' : recent ? 'Recent' : 'Inactive';
+    const currentValue = efIndex >= 0 ? telemetry.envelopes?.[efIndex] : null;
+    const output = telemetry.slotOutputs?.[slotState.selected] ?? telemetry.slots?.[slotState.selected];
+    const contribution = Array.isArray(telemetry.slotContributions)
+      ? telemetry.slotContributions.find((entry) => Number(entry?.index) === slotState.selected)
+      : null;
+    const parts = [
+      efIndex >= 0 ? `EF ${efIndex + 1}` : 'No EF source',
+      state,
+      `Current ${currentValue ?? '—'}`,
+      `Slot output ${output ?? '—'}`
+    ];
+    if (contribution && Number.isFinite(Number(contribution.ef))) {
+      const delta = Number(contribution.ef);
+      parts.push(`EF contribution ${delta > 0 ? '+' : ''}${delta}`);
+    }
+    if (resolveEfModeName(ef) === 'GATE') {
+      parts.push(`Threshold ${formatNumberField(ef.gateThreshold, 0)}`);
+    }
+    evidence.textContent = parts.join(' · ');
+    evidence.dataset.state = state.toLowerCase();
+  }
+
+  function makeDeckShortcut(combo, action) {
+    const hint = document.createElement('p');
+    hint.className = 'slot-hint deck-shortcut';
+    hint.textContent = `Deck shortcut: ${combo} · ${action}`;
+    return hint;
   }
 
   // Build a labeled `<select>` control with optional inline help.

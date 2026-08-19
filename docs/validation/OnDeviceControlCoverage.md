@@ -10,9 +10,9 @@ This matrix tracks whether each major runtime feature has an on-device control p
 | Clock       | Clock out enable             | `Ctrl1+Ctrl5`                                            | status text (`CLK OUT ...`)                     | Yes      |
 | Profile     | Cycle profile A-D            | `Ctrl1+Ctrl2`                                            | status text (`PROFILE X`)                       | Yes      |
 | Profile     | Save profile state           | long-press `Ctrl4` confirm, or config-mode exit autosave | status text (`Config Saved`)                    | Yes      |
-| Profile     | Reload profile               | long-press `Ctrl1` confirm                               | status text (`Profile Reset!`)                  | Yes      |
+| Profile     | Reload active profile        | long-press `Ctrl1` confirm                               | status text (`Profile Reset!`)                  | Yes      |
 | Recovery    | Panic baseline reset         | `Ctrl0+Ctrl1+Ctrl2`                                      | status text (`Panic: Baseline`)                 | Yes      |
-| Recovery    | EEPROM reset                 | long-press `Ctrl3` confirm                               | status text (`Reset EEPROM`)                    | Yes      |
+| Recovery    | Reload persisted config      | long-press `Ctrl3` confirm                               | status text (`Config Reloaded`)                 | Yes      |
 | Config mode | Slot/type/channel/data edits | `Ctrl0+Ctrl2+Ctrl3+Ctrl5` then `Ctrl0..5`                | persistent config mode view                     | Yes      |
 | Mapping     | Set slot to Note             | `Ctrl4+Ctrl5`                                            | status text (`Slot N: NOTE`)                    | Yes      |
 | Mapping     | Set slot to Program Change   | `Ctrl3+Ctrl5`                                            | status text (`Slot N: PROG`)                    | Yes      |

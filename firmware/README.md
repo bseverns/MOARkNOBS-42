@@ -58,6 +58,8 @@ The performance surface can now reach three formerly configurator-heavy slot set
 
 Ctrl3–Ctrl5 defer their ordinary single action until the 300 ms double-press window expires. Double presses therefore do not also change channel/data1 or register a BPM tap. The edits persist with the slot and stream `slot_patch` readback to an attached configurator. The complete short/long/double/combo map lives in [include/ButtonManager/README.md](include/ButtonManager/README.md).
 
+The timing audit is explicit about the remaining musical collision: 240 BPM taps are 250 ms apart and classify as Ctrl5 doubles; 200 BPM sits exactly on the boundary; 180 BPM has only about 33 ms of margin before debounce and human timing variation. The current behavior is retained for compatibility while the Ctrl5 vocabulary is reviewed. Use the App/device-clock lane for fast tempo entry rather than treating this build as proof that rapid deck tapping is unambiguous. Confirmed Ctrl5 singles now update `g_tappedBPM`; the previous handler only displayed the calculated value.
+
 ## First Reading Path
 
 If you are learning this firmware by reading code, start with

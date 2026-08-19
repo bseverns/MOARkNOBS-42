@@ -260,7 +260,8 @@ export function createPatchReconciler({
   shallowEqual,
   getManifest,
   broadcastConfig,
-  onConflict
+  onConflict,
+  onDevicePatch
 } = {}) {
   return function applyConfigPatch(patch) {
     if (!patch || typeof patch !== 'object' || !getLiveConfig?.()) return;
@@ -386,18 +387,10 @@ export function createPatchReconciler({
               }
               return;
             }
-            const stagedMatchesPrev =
-              stagedValue === prevValue ||
-              (stagedValue &&
-                prevValue &&
-                typeof stagedValue === 'object' &&
-                typeof prevValue === 'object' &&
-                !Array.isArray(stagedValue) &&
-                !Array.isArray(prevValue) &&
-                shallowEqual(stagedValue, prevValue));
+            const stagedMatchesPrev = deepEqual(stagedValue, prevValue);
             if (stagedValue === undefined || stagedMatchesPrev) {
-              if (merged[key] !== nextSlot[key]) {
-                merged[key] = nextSlot[key];
+              if (!deepEqual(merged[key], nextSlot[key])) {
+                merged[key] = clone(nextSlot[key]);
                 stagedChanged = true;
               }
             }
@@ -484,5 +477,11 @@ export function createPatchReconciler({
       setStagedConfig(clone(normalizedStaged));
     }
     broadcastConfig?.();
+    onDevicePatch?.({
+      patch: clone(patch),
+      conflicts: clone(conflicts),
+      previous: clone(prevLive),
+      live: clone(normalizedLive)
+    });
   };
 }

@@ -134,11 +134,11 @@ Need a crash course in front‑panel mayhem? Here's how the six control buttons 
 | Button | Short Press                         | Long Press                 | Double Press                  |
 | ------ | ----------------------------------- | -------------------------- | ----------------------------- |
 | #0     | Toggle EF                           | Calibrate EF baseline      | Cycle EF filter forward       |
-| #1     | Next Slot                           | Reload profile from EEPROM | Cycle EF filter backward      |
+| #1     | Next Slot                           | Reload active profile      | Cycle EF filter backward      |
 | #2     | Cycle EF assignment                 | Toggle Slot Active         | Cycle MIDI Type (CC/Note/etc) |
-| #3     | Cycle MIDI Channel                  | Reset EEPROM               | —                             |
-| #4     | Cycle registry number (CC/NRPN/RPN) | Save config                | —                             |
-| #5     | Tap BPM                             | —                          | —                             |
+| #3     | Cycle MIDI Channel                  | Reload persisted config    | Cycle EF oversampling         |
+| #4     | Cycle registry number (CC/NRPN/RPN) | Save active profile/config | Toggle active-slot ARG        |
+| #5     | Tap BPM                             | Diagnostics/pages          | Toggle active-slot LFO 1 lane |
 
 **Slot Buttons (0–41):**
 Short press selects the slot. Long press assigns or cycles the Envelope Follower and flips it on; once it’s awake, jab Control 0‑5 to lock to a specific EF.

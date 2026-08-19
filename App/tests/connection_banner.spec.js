@@ -29,7 +29,7 @@ test('connection banner shows device identity and firmware version', async ({ pa
     'Power-limited hardware reported'
   );
 
-  await page.getByRole('button', { name: 'Lab' }).click();
+  await page.getByRole('button', { name: 'Lab', exact: true }).click();
   await expect(page.locator('#power-safety-pill')).toBeHidden();
   await expect(page.locator('#global-power-warning')).toBeVisible();
   await expect(page.locator('#device-monitor')).toContainText('Power profile');

@@ -100,6 +100,7 @@
 #include <Arduino.h>
 #include <vector>
 #include <map>
+#include "ButtonGestureTiming.h"
 #include "DisplayManager.h"
 #include "MIDITypes.h"
 #include "EnvelopeFollower.h"

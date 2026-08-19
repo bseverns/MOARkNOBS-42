@@ -36,9 +36,15 @@ See: [WebSerial Walkthrough](../guides/ProtocolWalkthrough.md)
 
 ### Rollback
 
-The browser-side recovery path when an Apply fails or the acknowledgement does not match expectations. The UI returns to known-good state instead of pretending the device accepted the change.
+Rollback or **Discard draft** abandons an untransmitted staged draft and returns the editor to current verified device truth. It does not describe a transmitted Apply failure. Once Apply bytes may have reached the device, the outcome is uncertain until authoritative readback resolves it.
 
 See: [Failure-First Guide](../validation/FailureFirst.md)
+
+### Recipe
+
+An App-side, deterministic patch for one selected slot or modulation subtree. Recipes stage existing schema fields; they are not whole-instrument presets, device profiles, new firmware parameters, or an alternate validation schema.
+
+See: [Configurator Tour](../guides/Configurator.md#selected-slot-tuning-translates-lab-it-does-not-replace-it)
 
 ## Contract terms
 

@@ -5,7 +5,7 @@ test.describe('UI mode', () => {
     await page.goto('/benzknobz.html');
 
     const basicButton = page.getByRole('button', { name: 'Configure' });
-    const advancedButton = page.getByRole('button', { name: 'Lab' });
+    const advancedButton = page.getByRole('button', { name: 'Lab', exact: true });
 
     await expect(basicButton).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#performer-panel')).toBeHidden();

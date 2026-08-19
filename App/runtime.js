@@ -630,7 +630,8 @@ export function createRuntime({
     shallowEqual,
     getManifest: () => remoteManifest ?? localManifest ?? {},
     broadcastConfig: configSession.broadcastConfig,
-    onConflict: (conflicts) => emit('config-conflict', { conflicts })
+    onConflict: (conflicts) => emit('config-conflict', { conflicts }),
+    onDevicePatch: (payload) => emit('device-config-patch', payload)
   });
 
   const applyPatch = (...args) => liveControlsRuntime.applyPatch(...args);
@@ -660,6 +661,12 @@ export function createRuntime({
   function stage(updater) {
     configSession.stage(updater);
     bridgeSessionRuntime.scheduleStageSync({ active: bridgeSessionActive });
+  }
+
+  function stagePreviousApply() {
+    const staged = configSession.stagePreviousApply();
+    if (staged) bridgeSessionRuntime.scheduleStageSync({ active: bridgeSessionActive });
+    return staged;
   }
 
   async function apply() {
@@ -712,6 +719,7 @@ export function createRuntime({
     connect,
     disconnect,
     stage,
+    stagePreviousApply,
     apply,
     rollback,
     resynchronize,

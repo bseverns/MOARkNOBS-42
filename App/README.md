@@ -72,6 +72,8 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 ## Slot Architecture Cheat Sheet
 
 - Every slot now exposes its per-slot envelope follower payload. The editor’s **Envelope Follower** block lets you park a follower index, pick a filter shape, and dial in frequency, Q, oversample count, smoothing, baseline, and gain without leaving the browser.
+- Configure now translates selected-slot tuning through App-only presentation metadata and deterministic subtree recipes. Musician labels lead while exact firmware tokens remain visible; Lab still exposes every underlying EF, ARG, and fixed-LFO field.
+- The selected-slot tuning surface places current EF state/value and resolved slot evidence beside recipes. It can stage the last verified pre-Apply snapshot for review, but never writes that return state until the operator presses Apply again.
 - Hardware double presses now mirror three selected-slot edits into the configurator through live `slot_patch` frames: `Ctrl3` cycles EF oversampling presets, `Ctrl4` toggles ARG, and `Ctrl5` toggles the fixed LFO 1 lane. First-time LFO enable uses Centered mode at 100%; later off/on gestures preserve the configured mode and amount.
 - EF assignment rows now use clickable slot chips per follower, so one follower can modulate multiple slots without typing comma-separated indices.
 - Live and Stage slot grids now color-code slot types so CC, Note, program-style, NRPN/RPN, and SysEx lanes are scannable at a glance.
@@ -102,6 +104,7 @@ A new MIDI Monitor panel sits beside the transport controls. Toggle it open, gra
 - For the bridge path, staged config writes versus live performance writes are documented in [../docs/bridge/BridgeWriteLanes.md](../docs/bridge/BridgeWriteLanes.md).
 - The runtime keeps separate `liveConfig` and `stagedConfig` snapshots. Apply captures an immutable candidate; edits made while it is in flight remain a separate next draft. Verification promotes device truth for that candidate to live state while retaining the newer draft as dirty.
 - Device readback and profile/scene recall paths hydrate verified truth through the explicitly named `hydrateAuthoritativeConfig()` boundary. Browser files and presets must use `stage()` and cannot mark themselves authoritative.
+- Tuning recipes use `stage()` and change only their declared selected-slot subtree. `config_schema.json` remains validation truth; `tuning_catalog.js` is presentation metadata guarded against schema enum drift.
 - The diff panel is computed from `liveConfig` vs `stagedConfig`, which is why it can remain truthful even while device patches are streaming in.
 - The runtime buffers inbound telemetry into approximately 50 ms state frames so frequent state messages do not turn the DOM into soup; visual panels may animate those snapshots independently.
 - Outbound pot changes are debounced to ≥24 ms through a shared utility so every control shares the same cadence.

@@ -3326,6 +3326,74 @@ label select:focus,
   color: var(--color-muted);
 }
 
+.configure-tuning {
+  border-color: rgba(45, 226, 230, 0.28);
+  background: rgba(45, 226, 230, 0.035);
+}
+
+.tuning-character,
+.selected-tuning-evidence,
+.tuning-response-summary,
+.tuning-amount-summary,
+.tuning-recipe-result {
+  grid-column: 1 / -1;
+}
+
+.tuning-character-current,
+.tuning-response-summary,
+.tuning-amount-summary,
+.tuning-recipe-result {
+  margin: 4px 0 0;
+}
+
+.tuning-character-current {
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.tuning-recipes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tuning-recipes button,
+.tuning-customize {
+  min-height: 40px;
+}
+
+.selected-tuning-evidence {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 3px solid var(--color-muted);
+  border-radius: var(--radius-xs);
+  background: rgba(0, 0, 0, 0.24);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.selected-tuning-evidence[data-state='active'] {
+  border-left-color: var(--color-accent);
+}
+
+.selected-tuning-evidence[data-state='recent'] {
+  border-left-color: var(--color-warn);
+}
+
+.tuning-recipe-result {
+  min-height: 1.2em;
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.slot-editor .deck-shortcut {
+  margin-top: 0;
+}
+
 .debug-log-bridge {
   grid-column: 1 / -1;
   width: min(1080px, calc(100% - 220px));

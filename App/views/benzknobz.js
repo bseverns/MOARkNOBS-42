@@ -23,6 +23,7 @@ import {
   formatArgMethodLabel,
   describeArgMethod
 } from '../lib/constants.js';
+import { describeDeviceConfigPatch } from '../lib/tuning_catalog.js';
 import { createLocalManifest } from '../manifest_contract.js';
 
 // BenzKnobz skin over the shared runtime. Runtime owns the protocol; this file
@@ -875,7 +876,11 @@ const boot = () => {
     describeArgMethod,
     setStatus,
     getUiMode: () => uiModeController.getUiMode(),
-    getEditorTab: () => uiModeController.getEditorTab()
+    getEditorTab: () => uiModeController.getEditorTab(),
+    openLabTab: (tab) => {
+      uiModeController.setUIMode('advanced');
+      uiModeController.setEditorTab(tab);
+    }
   });
   const slotWorkspaceController = createSlotWorkspaceController({
     runtime,
@@ -886,7 +891,7 @@ const boot = () => {
     slotTypeAbbreviations: SLOT_TYPE_ABBREVIATIONS,
     performerPanel: performerPanelController,
     onSelectSlot: () => populateDetail(),
-    onTelemetryPainted: () => populateDetail(),
+    onTelemetryPainted: () => populateDetail({ renderEditor: false }),
     onSlotsChanged: () => performerPanelController.renderSlots(slotState.slots)
   });
   const rebuildMeters = (count) => {
@@ -1019,6 +1024,23 @@ const boot = () => {
     );
     sessionLogController.recordEvent('CONFIG', 'Device/staged conflict', `${count} leaf field(s)`, 'warn');
     panicHelpController.render();
+  });
+  runtime.on('device-config-patch', ({ patch, conflicts, previous, live }) => {
+    const detail = describeDeviceConfigPatch(patch, previous, live);
+    const hasConflicts = Array.isArray(conflicts) && conflicts.length > 0;
+    setStatus(
+      hasConflicts ? 'warn' : 'ok',
+      'Device reported',
+      hasConflicts
+        ? `${detail}. Local conflicting fields remain staged for review.`
+        : `${detail}. Editor controls now follow device truth.`
+    );
+    sessionLogController.recordEvent(
+      'CONFIG',
+      'Device-reported configuration change',
+      detail,
+      hasConflicts ? 'warn' : 'ok'
+    );
   });
   retryReadbackBtn?.addEventListener('click', async () => {
     retryReadbackBtn.disabled = true;
@@ -1242,9 +1264,9 @@ const boot = () => {
   }
 
   // Fill the slot detail card from the selected slot plus latest telemetry.
-  function populateDetail() {
+  function populateDetail(options) {
     profileMacroScenePanel.setLiveArpSlot(slotState.selected);
-    slotEditorPanel.populateDetail();
+    slotEditorPanel.populateDetail(options);
   }
 
   // Rebuild the right-hand slot editor for the current selection and UI tier.

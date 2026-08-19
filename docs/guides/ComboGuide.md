@@ -119,11 +119,11 @@ LFO quick-tune control-pot map:
 
 These are useful, but most players do not need them on day one.
 
-## Dangerous or destructive actions
+## Actions that can replace current runtime state
 
-These deserve extra respect:
+These deserve confirmation:
 
-- long-press `Ctrl3` for EEPROM reset
+- long-press `Ctrl3` reloads persisted configuration and can replace unsaved runtime edits
 - anything that rewrites slot type while you are not sure what the active slot is
 
 If in doubt, reload a profile instead of escalating immediately.

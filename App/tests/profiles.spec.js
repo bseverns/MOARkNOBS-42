@@ -16,7 +16,7 @@ test.describe('Profiles toolbar', () => {
       window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
     });
     await page.goto('/benzknobz.html');
-    await expect(page.getByRole('button', { name: 'Lab' })).toHaveAttribute(
+    await expect(page.getByRole('button', { name: 'Lab', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
     );
