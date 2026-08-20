@@ -184,12 +184,10 @@ nav:
       - Pilot Run / Artist Edition: project/PilotRun.md
       - License and Support: project/LicenseAndSupport.md
       - Process Overview: project/ProcessOverview.md
+      - Changelog: https://github.com/bseverns/MOARkNOBS-42/blob/main/CHANGELOG.md
       - History: project/HISTORY.md
       - Lineage: project/lineage.md
   - Archive:
-      - Agent Reports:
-          - Landing Audit Archive: agents/_reports/mkdocs-landing-audit.md
-          - Changed Files Report: agents/_reports/changed-files.md
       - Old Audits:
           - Repo Health Audit 2026-03: validation/repo-health-audit-2026-03.md
       - Planning Notes:
