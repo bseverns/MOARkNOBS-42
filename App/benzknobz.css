@@ -600,6 +600,28 @@ body {
   gap: 14px;
 }
 
+#arp-profile-card > * {
+  order: initial;
+}
+
+.arp-engine-context-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+[data-arp-engine-context-panel][hidden] {
+  display: none !important;
+}
+
+.selected-slot-arp {
+  border-left: 3px solid var(--color-warn);
+}
+
+.arp-assignment-editor > summary {
+  cursor: pointer;
+}
+
 .lfo-card {
   gap: 14px;
 }

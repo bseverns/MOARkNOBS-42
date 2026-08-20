@@ -600,75 +600,29 @@
           </section>
         </div>
         <div class="performance-panel performance-panel-active" data-performance-panel="arp" data-ui-tier="advanced">
-          <div class="macro-card arp-card saved-live-workspace" id="arp-profile-card" aria-label="Arpeggiator profile controls"
+          <div class="macro-card arp-card saved-live-workspace" id="arp-profile-card" aria-label="Shared arpeggiator controls"
             style="height: auto; min-height: 0;">
-            <div class="macro-card-header saved-profile-zone">
-              <span class="zone-eyebrow">Saved in profile</span>
-              <strong>Profile Arpeggiator</strong>
-              <p class="microcopy">Edit saved arp timing and shape for the selected profile A–D entry. Use the Selected Slot
-                editor for each slot&apos;s arp root note.</p>
+            <div class="macro-card-header">
+              <span class="zone-eyebrow">One shared generator</span>
+              <h3>Shared Arp Engine</h3>
+              <p class="microcopy">Length, shape, swing, gate, octaves, and pattern length are shared by every running arp slot.</p>
             </div>
-            <div class="arp-form-grid saved-profile-zone">
-              <label>
-                <span>Length ticks</span>
-                <input id="arp-length" type="number" min="1" max="24" step="1" />
-              </label>
-              <label>
-                <span>Shape</span>
-                <select id="arp-shape">
-                  <option value="0">Up</option>
-                  <option value="1">Down</option>
-                  <option value="2">Up/Down</option>
-                  <option value="3">Random</option>
-                  <option value="4">Drunk</option>
-                  <option value="5">Euclidean</option>
-                </select>
-              </label>
-              <label>
-                <span>Swing %</span>
-                <input id="arp-swing" type="number" min="0" max="80" step="1" />
-              </label>
-              <label>
-                <span>Gate %</span>
-                <input id="arp-gate" type="number" min="5" max="100" step="1" />
-              </label>
-              <label>
-                <span>Octaves</span>
-                <input id="arp-octave" type="number" min="0" max="3" step="1" />
-              </label>
-              <label>
-                <span>Pattern length</span>
-                <input id="arp-pattern-length" type="number" min="2" max="16" step="1" />
-              </label>
+            <div class="arp-engine-context-switch" role="group" aria-label="Arp engine authority">
+              <button type="button" data-arp-engine-context="live" aria-pressed="true">Live Engine</button>
+              <button type="button" data-arp-engine-context="profile" aria-pressed="false">Profile A Defaults</button>
             </div>
-            <section class="arp-assignment-editor saved-profile-zone" aria-labelledby="arp-assignment-title">
-              <div>
-                <strong id="arp-assignment-title">Assigned slots</strong>
-                <p class="microcopy">Assignments arm the hardware Ctrl2 + Ctrl4 toggle when this profile is recalled. Recall never starts notes; no assignments keeps the profile arp inert.</p>
-              </div>
-              <div class="arp-assignment-add-row">
-                <label>
-                  <span>Slot</span>
-                  <select id="arp-assignment-slot" aria-label="Arpeggiator assignment slot"></select>
-                </label>
-                <button id="arp-assignment-add" type="button">Add assignment</button>
-              </div>
-              <div id="arp-assignment-list" class="arp-assignment-list" aria-live="polite"></div>
-            </section>
-            <section class="live-toggle-card live-override-zone" aria-labelledby="live-arp-title">
+
+            <section class="live-toggle-card live-override-zone" data-arp-engine-context-panel="live" aria-label="Live arp engine">
               <header class="live-toggle-card-header">
                 <div>
-                  <span class="zone-eyebrow">Live override</span>
-                  <h3 id="live-arp-title">Live Arp</h3>
-                  <p class="microcopy">Inspect and push the arpeggiator runtime controls without saving a profile.</p>
+                  <span class="zone-eyebrow">Immediate runtime control</span>
+                  <h4>Live Engine</h4>
+                  <p class="microcopy">Pushes the shared generator through SET_ARP. It does not save profile defaults.</p>
                 </div>
                 <span class="lane-tag" data-runtime-lane="live">Live firmware</span>
               </header>
+              <input id="live-arp-slot" type="hidden" value="0" />
               <div class="live-control-grid">
-                <label>
-                  <span>Slot</span>
-                  <input id="live-arp-slot" type="number" min="0" max="41" step="1" disabled />
-                </label>
                 <label>
                   <span>Length ticks</span>
                   <input id="live-arp-length" type="number" min="1" max="24" step="1" disabled />
@@ -704,13 +658,65 @@
               <div class="live-toggle-actions">
                 <button id="live-arp-refresh" type="button" disabled>Refresh live arp</button>
                 <button id="live-arp-apply" class="action-live" type="button" disabled>Push live override</button>
-                <button id="live-arp-start" type="button" disabled>Start slot</button>
-                <button id="live-arp-stop" type="button" disabled>Stop arp</button>
               </div>
               <p class="microcopy macro-status" id="live-arp-status" data-state="muted" aria-live="polite">
                 Connect to inspect live arpeggiator state.
               </p>
             </section>
+
+            <section class="saved-profile-zone" data-arp-engine-context-panel="profile" aria-label="Profile arp defaults" hidden>
+              <p class="microcopy">Edits saved defaults for the selected profile. Loading or saving this context does not start notes.</p>
+              <div class="arp-form-grid">
+                <label><span>Length ticks</span><input id="arp-length" type="number" min="1" max="24" step="1" /></label>
+                <label>
+                  <span>Shape</span>
+                  <select id="arp-shape">
+                    <option value="0">Up</option><option value="1">Down</option><option value="2">Up/Down</option>
+                    <option value="3">Random</option><option value="4">Drunk</option><option value="5">Euclidean</option>
+                  </select>
+                </label>
+                <label><span>Swing %</span><input id="arp-swing" type="number" min="0" max="80" step="1" /></label>
+                <label><span>Gate %</span><input id="arp-gate" type="number" min="5" max="100" step="1" /></label>
+                <label><span>Octaves</span><input id="arp-octave" type="number" min="0" max="3" step="1" /></label>
+                <label><span>Pattern length</span><input id="arp-pattern-length" type="number" min="2" max="16" step="1" /></label>
+              </div>
+              <div class="arp-actions saved-profile-actions" role="group" aria-label="Arpeggiator profile actions">
+                <button id="arp-refresh" type="button" disabled>Load profile arp defaults</button>
+                <button id="arp-save" type="button" disabled>Save profile arp defaults</button>
+              </div>
+              <p class="microcopy macro-status saved-profile-status" id="arp-status" data-state="muted" aria-live="polite">
+                Connect to inspect the selected profile&apos;s arp defaults.
+              </p>
+            </section>
+
+            <section class="live-toggle-card selected-slot-arp" aria-labelledby="selected-arp-title">
+              <header class="live-toggle-card-header">
+                <div>
+                  <span class="zone-eyebrow">Selected slot</span>
+                  <h4 id="selected-arp-title">Selected Slot Arp</h4>
+                  <p class="microcopy">Root note remains staged in Selected Slot. These controls arm the profile or start/stop this slot live.</p>
+                </div>
+              </header>
+              <p id="selected-arp-slot" class="microcopy">Slot 1</p>
+              <p id="selected-arp-armed" class="microcopy">Armed in Profile A: No</p>
+              <p id="selected-arp-running" class="microcopy">Running: No</p>
+              <div class="live-toggle-actions">
+                <button id="selected-arp-assignment-toggle" type="button" disabled>Arm in Profile A</button>
+                <button id="live-arp-start" type="button" disabled>Start selected slot</button>
+                <button id="live-arp-stop" type="button" disabled>Stop selected slot</button>
+              </div>
+            </section>
+
+            <details class="arp-assignment-editor saved-profile-zone">
+              <summary><strong id="arp-assignment-title">All profile assignments</strong></summary>
+              <p class="microcopy">Assignments arm the hardware Ctrl2 + Ctrl4 toggle after profile recall; recall never starts notes.</p>
+              <div class="arp-assignment-add-row">
+                <label><span>Slot</span><select id="arp-assignment-slot" aria-label="Arpeggiator assignment slot"></select></label>
+                <button id="arp-assignment-add" type="button">Add assignment</button>
+              </div>
+              <div id="arp-assignment-list" class="arp-assignment-list" aria-live="polite"></div>
+            </details>
+
             <section class="live-toggle-card live-override-zone" aria-labelledby="jitter-title">
               <header class="live-toggle-card-header">
                 <div>
@@ -737,13 +743,6 @@
                 Connect to inspect live jitter tuning.
               </p>
             </section>
-            <div class="arp-actions saved-profile-actions" role="group" aria-label="Arpeggiator profile actions">
-              <button id="arp-refresh" type="button" disabled>Load profile arp</button>
-              <button id="arp-save" type="button" disabled>Save profile arp</button>
-            </div>
-            <p class="microcopy macro-status saved-profile-status" id="arp-status" data-state="muted" aria-live="polite">
-              Connect to inspect the selected profile&apos;s arp settings.
-            </p>
           </div>
         </div>
 

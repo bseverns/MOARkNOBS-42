@@ -143,9 +143,9 @@ function installNativeArpHarness({ schemaVersion }) {
           pushLine(JSON.stringify({ arp_started: true, slot: 7, active: true }));
           return;
         }
-        if (trimmed === 'ARP_STOP') {
+        if (trimmed === 'ARP_STOP,7') {
           liveArp = { ...liveArp, active: false };
-          pushLine(JSON.stringify({ arp_stopped: true, active: false }));
+          pushLine(JSON.stringify({ arp_stopped: true, slot: 7, active: false }));
           return;
         }
         throw new Error(`Unexpected native line: ${trimmed}`);
@@ -177,9 +177,26 @@ test('live arp controls push runtime shape and start stop state without dirtying
 
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('[data-performance-panel="arp"]')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Shared Arp Engine' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Live Engine', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  );
+  await expect(page.locator('[data-arp-engine-context-panel="profile"]')).toBeHidden();
+  await expect(page.locator('[data-arp-engine-context-panel="live"]')).toBeVisible();
+  await expect(page.locator('#live-arp-slot')).toBeHidden();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 
-  await page.locator('#live-arp-slot').fill('7');
+  await page.locator('#slots [data-index="7"]').click();
+  await expect(page.locator('#selected-arp-slot')).toContainText('Slot 8');
+  await expect(page.locator('#selected-arp-armed')).toContainText('No');
+  await page.locator('#selected-arp-assignment-toggle').click();
+  await expect(page.locator('#selected-arp-armed')).toContainText('Yes');
+  await expect(page.locator('#arp-status')).toContainText('changed locally');
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await page.evaluate(() => document.querySelector('[data-profile-slot="1"]').click());
+  await expect(page.locator('#selected-arp-armed')).toContainText('Yes');
+  await expect(page.getByRole('button', { name: 'Profile A Defaults' })).toBeVisible();
   await page.locator('#live-arp-length').fill('6');
   await page.locator('#live-arp-shape').selectOption('4');
   await page.locator('#live-arp-swing').fill('30');
@@ -192,7 +209,7 @@ test('live arp controls push runtime shape and start stop state without dirtying
   await expect(page.locator('#live-arp-status')).toContainText('6 ticks');
 
   await page.locator('#live-arp-start').click();
-  await expect(page.locator('#live-arp-status')).toContainText('Slot 7');
+  await expect(page.locator('#live-arp-status')).toContainText('Slot 8');
   await expect(page.locator('#live-arp-stop')).toBeEnabled();
 
   await page.locator('#live-arp-stop').click();
@@ -215,8 +232,12 @@ test('profile arp round-trips generator settings and explicit assignments withou
   await expect(page.locator('#connection-pill')).toContainText('Connected');
 
   await page.locator('[data-performance-tab="arp"]').click();
+  await page.getByRole('button', { name: /Profile .* Defaults/ }).click();
+  await expect(page.locator('[data-arp-engine-context-panel="profile"]')).toBeVisible();
+  await expect(page.locator('[data-arp-engine-context-panel="live"]')).toBeHidden();
   await expect(page.locator('#arp-save')).toBeEnabled();
   await page.locator('#arp-pattern-length').fill('9');
+  await page.getByText('All profile assignments', { exact: true }).click();
   await page.locator('#arp-assignment-slot').selectOption('2');
   await page.locator('#arp-assignment-add').click();
   await page.locator('#arp-assignment-slot').selectOption('17');
@@ -229,11 +250,13 @@ test('profile arp round-trips generator settings and explicit assignments withou
 
   await page.locator('#arp-pattern-length').fill('2');
   await page.getByRole('button', { name: 'Remove arp assignment S03' }).click();
+  page.once('dialog', (dialog) => dialog.accept());
   await page.locator('#arp-refresh').click();
   await expect(page.locator('#arp-pattern-length')).toHaveValue('9');
   await expect(page.locator('#arp-assignment-list')).toContainText('S03');
   await expect(page.locator('#arp-assignment-list')).toContainText('S18');
 
+  await page.getByRole('button', { name: 'Live Engine', exact: true }).click();
   await page.locator('#live-arp-refresh').click();
   await expect(page.locator('#live-arp-status')).toContainText('Idle');
 });
@@ -249,7 +272,7 @@ test('live arp controls use native runtime commands without config boot', async 
   await page.locator('[data-performance-tab="arp"]').click();
   await expect(page.locator('#live-arp-apply')).toBeEnabled();
 
-  await page.locator('#live-arp-slot').fill('7');
+  await page.locator('#slots [data-index="7"]').click();
   await page.locator('#live-arp-length').fill('6');
   await page.locator('#live-arp-shape').selectOption('4');
   await page.locator('#live-arp-swing').fill('30');
@@ -260,7 +283,7 @@ test('live arp controls use native runtime commands without config boot', async 
   await expect(page.locator('#status-label')).toHaveText('Live arp updated');
 
   await page.locator('#live-arp-start').click();
-  await expect(page.locator('#live-arp-status')).toContainText('Slot 7');
+  await expect(page.locator('#live-arp-status')).toContainText('Slot 8');
   await page.locator('#live-arp-stop').click();
   await expect(page.locator('#live-arp-status')).toContainText('Idle');
 
@@ -268,6 +291,6 @@ test('live arp controls use native runtime commands without config boot', async 
   expect(writes).toContain('GET_ARP');
   expect(writes).toContain('SET_ARP,6,4,30,75,2,8');
   expect(writes).toContain('ARP_START,7');
-  expect(writes).toContain('ARP_STOP');
+  expect(writes).toContain('ARP_STOP,7');
   expect(writes).not.toContain('ENTER_CONFIG_MODE');
 });

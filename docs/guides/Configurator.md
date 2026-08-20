@@ -84,7 +84,15 @@ After a recipe, Configure names the exact changed paths and the normal Review di
 
 The compact evidence line reuses the App's current telemetry snapshot: EF identity, active/recent/inactive state, current level, resolved slot output, EF contribution when reported, and gate threshold when relevant. It is host-observed visualization, not physical-device validation or latency measurement.
 
+Simulator modulation is behavioral rehearsal, not analog calibration or hardware-validation evidence. Its deterministic LFO traces follow the declared shape, and its EF model intentionally maps only enough existing tuning fields to make recipe differences visible without claiming circuit fidelity.
+
 When firmware sends a `slot_patch`, the App says **Device reported** because the frame proves device state but does not reliably prove whether the originating action was a deck press or another device-side path. Clean editor state follows that truth without becoming a false browser draft; unrelated staged intent is preserved and conflicts remain visible.
+
+## Live controls remain a separate authority lane
+
+Jitter, Device Clock, Note Dynamics, and the Live Arp Engine use immediate runtime RPCs. They do not join the main staged configuration Apply. Multi-field Jitter and Clock forms protect unfinished local input from telemetry until **Push live override** succeeds; disconnect deliberately clears that pending local draft.
+
+Lab presents one **Shared Arp Engine**, not two arpeggiators. The context switch chooses either current live engine state (`SET_ARP`) or one profile's saved defaults (`SET_PROFILE`). Selected Slot carries its staged root note plus profile assignment and live start/stop actions. The profile assignment disclosure remains the bulk inspection path. Shape and timing are shared by every running arp slot; firmware changes are not required for this information architecture.
 
 ## Presets are starting points, profiles are memory
 

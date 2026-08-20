@@ -69,10 +69,12 @@ export function createTransportToolbarController({
   let changeProbability = 100;
   let jitterSupported = false;
   let jitterBusy = false;
+  let jitterDraftDirty = false;
   let jitterDepth = 1;
   let jitterSmoothness = 0.5;
   let clockSupported = false;
   let clockBusy = false;
+  let clockDraftDirty = false;
   let clockFollowExternal = true;
   let clockOutEnabled = false;
   let clockTappedBpm = 120;
@@ -292,8 +294,10 @@ export function createTransportToolbarController({
     if (jitterDepthInput) jitterDepthInput.disabled = disabled;
     if (jitterSmoothnessInput) jitterSmoothnessInput.disabled = disabled;
     if (jitterApplyBtn) jitterApplyBtn.disabled = disabled;
-    syncInputValue(jitterDepthInput, jitterDepth.toFixed(2));
-    syncInputValue(jitterSmoothnessInput, jitterSmoothness.toFixed(2));
+    if (!jitterDraftDirty) {
+      syncInputValue(jitterDepthInput, jitterDepth.toFixed(2));
+      syncInputValue(jitterSmoothnessInput, jitterSmoothness.toFixed(2));
+    }
   }
 
   function updateClockControls() {
@@ -303,12 +307,14 @@ export function createTransportToolbarController({
     if (deviceClockBpmInput) deviceClockBpmInput.disabled = disabled;
     if (deviceClockOutSelect) deviceClockOutSelect.disabled = disabled;
     if (deviceClockApplyBtn) deviceClockApplyBtn.disabled = disabled;
-    if (deviceClockSourceSelect && document.activeElement !== deviceClockSourceSelect) {
-      deviceClockSourceSelect.value = clockFollowExternal ? 'external' : 'internal';
-    }
-    syncInputValue(deviceClockBpmInput, clockTappedBpm.toFixed(1));
-    if (deviceClockOutSelect && document.activeElement !== deviceClockOutSelect) {
-      deviceClockOutSelect.value = clockOutEnabled ? 'on' : 'off';
+    if (!clockDraftDirty) {
+      if (deviceClockSourceSelect && document.activeElement !== deviceClockSourceSelect) {
+        deviceClockSourceSelect.value = clockFollowExternal ? 'external' : 'internal';
+      }
+      syncInputValue(deviceClockBpmInput, clockTappedBpm.toFixed(1));
+      if (deviceClockOutSelect && document.activeElement !== deviceClockOutSelect) {
+        deviceClockOutSelect.value = clockOutEnabled ? 'on' : 'off';
+      }
     }
   }
 
@@ -585,6 +591,7 @@ export function createTransportToolbarController({
       );
       jitterDepth = Math.max(0, Math.min(1, Number(response?.depth) || 0));
       jitterSmoothness = Math.max(0, Math.min(1, Number(response?.smoothness) || 0));
+      jitterDraftDirty = false;
       setJitterStatus(
         'ok',
         `Depth ${jitterDepth.toFixed(2)} • Smoothness ${jitterSmoothness.toFixed(2)}`
@@ -629,6 +636,7 @@ export function createTransportToolbarController({
             : 'internal';
       clockRunning = Boolean(response?.running);
       clockExternalSignal = Boolean(response?.external_signal);
+      clockDraftDirty = false;
       setClockStatus('ok', formatClockStatus());
       setStatus('ok', 'Clock updated', 'Live device clock settings updated.');
     } catch (err) {
@@ -823,7 +831,21 @@ export function createTransportToolbarController({
       updateNoteDynamicsControls();
     });
     jitterApplyBtn?.addEventListener('click', () => applyJitter());
+    jitterDepthInput?.addEventListener('input', () => {
+      jitterDraftDirty = true;
+      setJitterStatus('warn', 'Pending local jitter edit · Push live override to send it.');
+    });
+    jitterSmoothnessInput?.addEventListener('input', () => {
+      jitterDraftDirty = true;
+      setJitterStatus('warn', 'Pending local jitter edit · Push live override to send it.');
+    });
     deviceClockApplyBtn?.addEventListener('click', () => applyClockSettings());
+    [deviceClockSourceSelect, deviceClockBpmInput, deviceClockOutSelect].forEach((control) => {
+      control?.addEventListener('input', () => {
+        clockDraftDirty = true;
+        setClockStatus('warn', 'Pending local clock edit · Push live clock to send it.');
+      });
+    });
     initializeSimulatorToggle();
     updateUsbMidiControls();
     updateNoteDynamicsControls();
@@ -880,7 +902,16 @@ export function createTransportToolbarController({
     noteDynamicsBusy = false;
     noteDynamicsDraftDirty = false;
     jitterBusy = false;
+    jitterDraftDirty = false;
     clockBusy = false;
+    clockDraftDirty = false;
+    if (jitterDepthInput) jitterDepthInput.value = jitterDepth.toFixed(2);
+    if (jitterSmoothnessInput) jitterSmoothnessInput.value = jitterSmoothness.toFixed(2);
+    if (deviceClockSourceSelect) {
+      deviceClockSourceSelect.value = clockFollowExternal ? 'external' : 'internal';
+    }
+    if (deviceClockBpmInput) deviceClockBpmInput.value = clockTappedBpm.toFixed(1);
+    if (deviceClockOutSelect) deviceClockOutSelect.value = clockOutEnabled ? 'on' : 'off';
     setUsbMidiStatus('muted', 'Connect to inspect USB MIDI output state.');
     setNoteDynamicsStatus('muted', 'Connect to inspect live note dynamics.');
     setJitterStatus('muted', 'Connect to inspect live jitter tuning.');
@@ -917,9 +948,16 @@ export function createTransportToolbarController({
       updateNoteDynamicsControls();
     }
     if (frame?.jitter && typeof frame.jitter === 'object') {
-      jitterDepth = Math.max(0, Math.min(1, Number(frame.jitter.depth) || 0));
-      jitterSmoothness = Math.max(0, Math.min(1, Number(frame.jitter.smoothness) || 0));
-      if (!jitterBusy && jitterSupported && connectionPill?.dataset.stage === 'live') {
+      if (!jitterDraftDirty) {
+        jitterDepth = Math.max(0, Math.min(1, Number(frame.jitter.depth) || 0));
+        jitterSmoothness = Math.max(0, Math.min(1, Number(frame.jitter.smoothness) || 0));
+      }
+      if (
+        !jitterBusy &&
+        !jitterDraftDirty &&
+        jitterSupported &&
+        connectionPill?.dataset.stage === 'live'
+      ) {
         setJitterStatus(
           'ok',
           `Depth ${jitterDepth.toFixed(2)} • Smoothness ${jitterSmoothness.toFixed(2)}`
@@ -928,19 +966,26 @@ export function createTransportToolbarController({
       updateJitterControls();
     }
     if (frame?.clock && typeof frame.clock === 'object') {
-      clockFollowExternal = Boolean(frame.clock.follow_external);
-      clockOutEnabled = Boolean(frame.clock.clock_out_enabled);
-      clockTappedBpm = Math.max(20, Math.min(300, Number(frame.clock.tapped_bpm) || 120));
-      clockExternalBpm = Math.max(0, Number(frame.clock.external_bpm) || 0);
-      clockSource =
-        typeof frame.clock.source === 'string'
-          ? frame.clock.source
-          : clockFollowExternal
-            ? 'external'
-            : 'internal';
-      clockRunning = Boolean(frame.clock.running);
-      clockExternalSignal = Boolean(frame.clock.external_signal);
-      if (!clockBusy && clockSupported && connectionPill?.dataset.stage === 'live') {
+      if (!clockDraftDirty) {
+        clockFollowExternal = Boolean(frame.clock.follow_external);
+        clockOutEnabled = Boolean(frame.clock.clock_out_enabled);
+        clockTappedBpm = Math.max(20, Math.min(300, Number(frame.clock.tapped_bpm) || 120));
+        clockExternalBpm = Math.max(0, Number(frame.clock.external_bpm) || 0);
+        clockSource =
+          typeof frame.clock.source === 'string'
+            ? frame.clock.source
+            : clockFollowExternal
+              ? 'external'
+              : 'internal';
+        clockRunning = Boolean(frame.clock.running);
+        clockExternalSignal = Boolean(frame.clock.external_signal);
+      }
+      if (
+        !clockBusy &&
+        !clockDraftDirty &&
+        clockSupported &&
+        connectionPill?.dataset.stage === 'live'
+      ) {
         setClockStatus('ok', formatClockStatus());
       }
       updateClockControls();

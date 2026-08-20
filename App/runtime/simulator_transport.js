@@ -45,6 +45,88 @@ export const SIMULATOR_ONLY_RPCS = Object.freeze([
   'hang'
 ]);
 
+function deterministicUnit(seed, step) {
+  let value = (Math.trunc(seed) ^ Math.imul(Math.trunc(step) + 1, 0x9e3779b1)) >>> 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 0x7feb352d) >>> 0;
+  value ^= value >>> 15;
+  value = Math.imul(value, 0x846ca68b) >>> 0;
+  value ^= value >>> 16;
+  return (value >>> 0) / 0xffffffff;
+}
+
+// Deterministic visual rehearsal only. These helpers keep declared shapes and
+// musician-facing EF recipes perceptibly distinct without pretending to model
+// the analog front end, component tolerances, calibration, or hardware timing.
+export function simulateLfoValue(
+  config = {},
+  sampleIndex = 0,
+  { frameMs = 16, seed = 1, bpm = 120 } = {}
+) {
+  const shape = Math.max(0, Math.min(5, Math.round(Number(config.shape) || 0)));
+  const syncTicksPerCycle = [24, 48, 96, 192, 384, 768, 12, 6];
+  const syncRatio = Math.max(0, Math.min(7, Math.round(Number(config.sync_ratio) || 0)));
+  const frequency = config.sync
+    ? (Math.max(20, Math.min(300, Number(bpm) || 120)) / 60 * 24) /
+      syncTicksPerCycle[syncRatio]
+    : Math.max(0.01, Number(config.frequency_hz) || 1);
+  const elapsedSeconds = Math.max(16, Number(frameMs) || 0) * Math.max(0, sampleIndex) / 1000;
+  const phase = (elapsedSeconds * frequency) % 1;
+  let value;
+  if (shape === 0) value = (Math.sin(phase * Math.PI * 2) + 1) / 2;
+  else if (shape === 1) value = phase < 0.5 ? phase * 2 : 2 - phase * 2;
+  else if (shape === 2) value = phase;
+  else if (shape === 3) value = phase < 0.5 ? 1 : 0;
+  else {
+    const segmentPosition = elapsedSeconds * frequency;
+    const segment = Math.floor(segmentPosition);
+    const current = deterministicUnit(seed, segment);
+    if (shape === 4) value = current;
+    else {
+      const next = deterministicUnit(seed, segment + 1);
+      const mix = segmentPosition - segment;
+      const eased = mix * mix * (3 - 2 * mix);
+      value = current + (next - current) * eased;
+    }
+  }
+  const depth = Math.max(0, Math.min(1, Number(config.depth) || 0));
+  return config.bipolar
+    ? Math.max(0, Math.min(1, 0.5 + (value - 0.5) * depth))
+    : Math.max(0, Math.min(1, value * depth));
+}
+
+export function simulateEfResponse(
+  sourceValue,
+  settings = {},
+  previousValue = 0,
+  sampleIndex = 0,
+  seed = 1
+) {
+  const source = Math.max(0, Math.min(127, Number(sourceValue) || 0));
+  const mode = Math.max(0, Math.min(3, Math.round(Number(settings.mode) || 0)));
+  const filter = String(settings.filter_name ?? 'LINEAR').toUpperCase();
+  let target = source;
+  if (mode === 2) {
+    const threshold = Math.max(0, Math.min(127, Number(settings.gateThreshold) || 16));
+    target = source >= threshold ? 127 : 0;
+  } else if (filter === 'OPPOSITE_LINEAR') target = 127 - source;
+  else if (filter === 'EXPONENTIAL') {
+    target = Math.min(127, Math.pow(source / 127, 1.7) * 160);
+  } else if (filter === 'RANDOM') {
+    const range = Math.max(8, Math.min(48, Number(settings.q) * 12 || 16));
+    target = source + (deterministicUnit(seed, sampleIndex) * 2 - 1) * range;
+  } else if (filter === 'HIGHPASS') {
+    target = 64 + (source - previousValue) * 2;
+  } else if (filter === 'BANDPASS') {
+    target = 64 + Math.sin((source / 127) * Math.PI * 2) * 50;
+  }
+  target = Math.max(0, Math.min(127, target));
+  let alpha = Math.max(0.02, Math.min(1, Number(settings.smoothing) || 0.2));
+  if (filter === 'LOWPASS') alpha = Math.min(alpha, 0.12);
+  if (mode === 2) alpha = 1;
+  return Math.round(previousValue + (target - previousValue) * alpha);
+}
+
 export function createSimulator(simDeps = {}) {
   const {
     createManifest,
@@ -92,6 +174,8 @@ export function createSimulator(simDeps = {}) {
     profile_count: 4,
     active_profile: activeProfile
   };
+  const simulatedEfValues = Array.from({ length: manifest.envelope_count }, () => 0);
+  const simulatedSlotEfValues = Array.from({ length: manifest.slot_count }, () => 0);
   const slotValues = Array.from(
     { length: manifest.slot_count },
     (_, slotIndex) => (slotIndex * 3) % 128
@@ -288,22 +372,39 @@ export function createSimulator(simDeps = {}) {
     const envelopeSignals = Array.from({ length: manifest.envelope_count }, (_, efIndex) => {
       const family = efIndex % 3;
       const phase = efIndex * 0.83;
+      let sourceValue;
       if (family === 1) {
-        const value = Math.round(7 + (Math.sin(index / 9 + phase) + 1) * 3);
-        return { value, active: false };
-      }
-      if (family === 2) {
+        sourceValue = Math.round(7 + (Math.sin(index / 9 + phase) + 1) * 3);
+      } else if (family === 2) {
         const pulse = Math.max(0, Math.sin(index / (5.2 + efIndex * 0.2) + phase));
-        const value = Math.round(10 + Math.pow(pulse, 1.6) * 108);
-        return { value, active: value >= 42 };
+        sourceValue = Math.round(10 + Math.pow(pulse, 1.6) * 108);
+      } else {
+        const phrase = (Math.sin(index / (8 + efIndex * 0.35) + phase) + 1) / 2;
+        const ripple = (Math.sin(index / 3.5 + phase * 1.7) + 1) / 2;
+        sourceValue = Math.round(10 + Math.pow(phrase, 1.35) * 100 + ripple * 8);
       }
-      const phrase = (Math.sin(index / (8 + efIndex * 0.35) + phase) + 1) / 2;
-      const ripple = (Math.sin(index / 3.5 + phase * 1.7) + 1) / 2;
-      const value = Math.round(10 + Math.pow(phrase, 1.35) * 100 + ripple * 8);
-      return { value, active: value >= 36 };
+      const settings = config.slots.find((slot) =>
+        Number(slot?.ef_index ?? slot?.ef?.index) === efIndex
+      )?.ef ?? {};
+      const value = simulateEfResponse(
+        sourceValue,
+        settings,
+        simulatedEfValues[efIndex] ?? 0,
+        index,
+        efIndex + 1
+      );
+      simulatedEfValues[efIndex] = value;
+      const activityFloor = family === 1 ? 14 : family === 2 ? 42 : 36;
+      return { sourceValue, value, active: value >= activityFloor };
     });
     const envelopes = envelopeSignals.map((signal) => signal.value);
-    const lfos = [((index % 40) / 39).toFixed(3), (((index + 20) % 40) / 39).toFixed(3)].map(Number);
+    const lfos = profileSettingsSlots[activeProfile].lfos.map((lfo, lfoIndex) =>
+      Number(simulateLfoValue(lfo, index, {
+        frameMs: telemetryFrameMs * 4,
+        seed: lfoIndex + 101,
+        bpm: tappedBpm
+      }).toFixed(3))
+    );
     const efStatus = envelopeSignals.map((signal) => (signal.active ? 1 : 0));
     const slotOutputs = [...slots];
     const slotContributions = [];
@@ -316,18 +417,28 @@ export function createSimulator(simDeps = {}) {
       const lfoDeltas = [0, 0];
       let activeMask = 0;
       const efIndex = Number(slot.ef_index ?? slot.ef?.index);
-      if (Number.isInteger(efIndex) && efStatus[efIndex]) {
+      if (Number.isInteger(efIndex) && envelopeSignals[efIndex]) {
         const before = value;
-        const contribution = envelopes[efIndex] ?? 0;
-        const mode = String(slot.ef?.destination_mode ?? 'add_clamp').toLowerCase();
-        if (mode === 'subtract') value -= contribution;
-        else if (mode === 'replace') value = contribution;
-        else if (mode === 'scale') value = Math.round((value * contribution) / 127);
-        else if (mode === 'centered') value += contribution - 64;
-        else value += contribution;
-        value = Math.max(0, Math.min(127, value));
-        efDelta = value - before;
-        activeMask |= 0x01;
+        const contribution = simulateEfResponse(
+          envelopeSignals[efIndex].sourceValue,
+          slot.ef ?? {},
+          simulatedSlotEfValues[slotIndex] ?? 0,
+          index,
+          slotIndex + 1001
+        );
+        simulatedSlotEfValues[slotIndex] = contribution;
+        const activityThreshold = Math.max(4, Number(slot.ef?.activityThreshold) || 0);
+        if (contribution >= activityThreshold) {
+          const mode = String(slot.ef?.destination_mode ?? 'add_clamp').toLowerCase();
+          if (mode === 'subtract') value -= contribution;
+          else if (mode === 'replace') value = contribution;
+          else if (mode === 'scale') value = Math.round((value * contribution) / 127);
+          else if (mode === 'centered') value += contribution - 64;
+          else value += contribution;
+          value = Math.max(0, Math.min(127, value));
+          efDelta = value - before;
+          activeMask |= 0x01;
+        }
       }
 
       // The simulator's persisted rehearsal profile owns one LFO route to S7.

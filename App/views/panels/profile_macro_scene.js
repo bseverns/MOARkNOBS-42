@@ -227,6 +227,18 @@ export function createProfileMacroScenePanel({
     sceneStatusEl = null
   } = elements;
 
+  const arpEngineContextButtons = Array.from(
+    arpCard?.querySelectorAll?.('[data-arp-engine-context]') ?? []
+  );
+  const arpEngineContextPanels = Array.from(
+    arpCard?.querySelectorAll?.('[data-arp-engine-context-panel]') ?? []
+  );
+  const selectedArpSlotEl = arpCard?.querySelector?.('#selected-arp-slot') ?? null;
+  const selectedArpArmedEl = arpCard?.querySelector?.('#selected-arp-armed') ?? null;
+  const selectedArpRunningEl = arpCard?.querySelector?.('#selected-arp-running') ?? null;
+  const selectedArpAssignmentToggle =
+    arpCard?.querySelector?.('#selected-arp-assignment-toggle') ?? null;
+
   let profileInteractable = false;
   let profileWizardBusy = false;
   let macroBusy = false;
@@ -244,9 +256,13 @@ export function createProfileMacroScenePanel({
     pattern_length: 4
   };
   let liveArpSlotFollowsSelection = true;
+  let arpEngineContext = 'live';
+  let reportedArpActive = false;
+  let reportedArpSlot = 0;
   let lfoBusy = false;
   let modMatrixBusy = false;
   let modMatrixReport = null;
+  let arpAssignmentsRenderKey = '';
   let modMatrixFilters = {
     conflictsOnly: false,
     lfoOnly: false,
@@ -254,6 +270,7 @@ export function createProfileMacroScenePanel({
     activeOnly: false
   };
   let arpDraft = createDefaultArpDraft();
+  let arpDraftDirty = false;
   let lfoDraft = createDefaultLfoDraft();
   let lfoDraftDirty = false;
   let selectedLfoRouteIndex = null;
@@ -766,6 +783,14 @@ export function createProfileMacroScenePanel({
 
   function renderArpAssignments() {
     if (!arpAssignmentList) return;
+    const renderKey = JSON.stringify({
+      supported: deviceCapabilities.arpProfileAssignments,
+      removable:
+        profileInteractable && !profileWorkflow.isLocked() && !profileWizardBusy && !arpBusy,
+      slots: arpDraft.assigned_slots
+    });
+    if (renderKey === arpAssignmentsRenderKey) return;
+    arpAssignmentsRenderKey = renderKey;
     arpAssignmentList.replaceChildren();
     if (!deviceCapabilities.arpProfileAssignments) {
       const unsupported = document.createElement('span');
@@ -796,14 +821,14 @@ export function createProfileMacroScenePanel({
         setArpDraft({
           ...arpDraft,
           assigned_slots: arpDraft.assigned_slots.filter((assigned) => assigned !== slot)
-        });
+        }, { markDirty: true });
       });
       chip.append(label, remove);
       arpAssignmentList.appendChild(chip);
     });
   }
 
-  function setArpDraft(nextDraft = {}) {
+  function setArpDraft(nextDraft = {}, { markDirty = false } = {}) {
     arpDraft = {
       length_ticks: clampInteger(nextDraft.length_ticks, 1, 24, arpDraft.length_ticks),
       shape: clampInteger(nextDraft.shape, 0, ARP_SHAPE_OPTIONS.length - 1, arpDraft.shape),
@@ -813,7 +838,9 @@ export function createProfileMacroScenePanel({
       pattern_length: clampInteger(nextDraft.pattern_length, 2, 16, arpDraft.pattern_length),
       assigned_slots: normalizeAssignedSlots(nextDraft.assigned_slots)
     };
+    arpDraftDirty = markDirty;
     syncArpForm();
+    updateSelectedArpContext();
   }
 
   function readArpFormIntoDraft() {
@@ -825,7 +852,7 @@ export function createProfileMacroScenePanel({
       octave_range: arpOctaveInput?.value ?? arpDraft.octave_range,
       pattern_length: arpPatternLengthInput?.value ?? arpDraft.pattern_length,
       assigned_slots: arpDraft.assigned_slots
-    });
+    }, { markDirty: true });
   }
 
   function syncLiveArpForm() {
@@ -854,19 +881,63 @@ export function createProfileMacroScenePanel({
     syncLiveArpForm();
   }
 
+  function setArpEngineContext(context) {
+    arpEngineContext = context === 'profile' ? 'profile' : 'live';
+    arpEngineContextButtons.forEach((button) => {
+      const selected = button.dataset.arpEngineContext === arpEngineContext;
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+      if (button.dataset.arpEngineContext === 'profile') {
+        button.textContent = `Profile ${slotLabel(activeProfileSlot)} Defaults`;
+      }
+    });
+    arpEngineContextPanels.forEach((panel) => {
+      panel.toggleAttribute('hidden', panel.dataset.arpEngineContextPanel !== arpEngineContext);
+    });
+  }
+
+  function confirmDiscardArpDraft(action) {
+    if (!arpDraftDirty) return true;
+    if (typeof window === 'undefined' || typeof window.confirm !== 'function') return false;
+    return window.confirm(
+      `${action} will discard unsaved Profile ${slotLabel(activeProfileSlot)} arp defaults. Continue?`
+    );
+  }
+
+  function updateSelectedArpContext() {
+    const selected = clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, 0);
+    const assigned = arpDraft.assigned_slots.includes(selected);
+    const arpRoot = runtime.getState().staged?.slots?.[selected]?.arpNote;
+    if (selectedArpSlotEl) {
+      selectedArpSlotEl.textContent = `Slot ${selected + 1} · ${formatArpSlot(selected)} · Root ${Number.isFinite(Number(arpRoot)) ? Math.round(Number(arpRoot)) : '—'} (staged in Selected Slot)`;
+    }
+    if (selectedArpArmedEl) {
+      selectedArpArmedEl.textContent = `Armed in Profile ${slotLabel(activeProfileSlot)}: ${assigned ? 'Yes' : 'No'}`;
+    }
+    if (selectedArpRunningEl) {
+      selectedArpRunningEl.textContent = !reportedArpActive
+        ? 'Running: No'
+        : reportedArpSlot < 0
+          ? 'Running: Another slot remains active; the current protocol does not list all running slots'
+          : reportedArpSlot === selected
+          ? 'Running: Device reports this slot'
+          : `Running: Device reports slot ${reportedArpSlot + 1}; other simultaneous slots are not listed`;
+    }
+    if (selectedArpAssignmentToggle) {
+      selectedArpAssignmentToggle.textContent = assigned
+        ? `Disarm from Profile ${slotLabel(activeProfileSlot)}`
+        : `Arm in Profile ${slotLabel(activeProfileSlot)}`;
+    }
+    if (liveArpSlotInput) liveArpSlotInput.value = String(selected);
+  }
+
   function setLiveArpSlot(slotIndex = getSelectedSlot()) {
-    if (liveArpDraft.active) {
-      refreshProfileControls();
-      return;
-    }
-    if (!liveArpSlotFollowsSelection) {
-      refreshProfileControls();
-      return;
-    }
     const nextSlot = clampInteger(slotIndex, 0, SLOT_COUNT - 1, liveArpDraft.slot);
-    if (nextSlot === liveArpDraft.slot) return;
-    setLiveArpDraft({ ...liveArpDraft, slot: nextSlot });
-    setLiveArpStatus('muted', `Selected slot ${nextSlot}. Push or start live arp from here.`);
+    liveArpSlotFollowsSelection = true;
+    if (nextSlot !== liveArpDraft.slot) {
+      setLiveArpDraft({ ...liveArpDraft, slot: nextSlot });
+      setLiveArpStatus('muted', `Selected slot ${nextSlot + 1}. Push or start live arp from here.`);
+    }
+    updateSelectedArpContext();
     refreshProfileControls();
   }
 
@@ -1445,6 +1516,8 @@ export function createProfileMacroScenePanel({
     updateModMatrixControls();
     sceneControls.updateControls();
     updateProfileHint();
+    setArpEngineContext(arpEngineContext);
+    updateSelectedArpContext();
   }
 
   function updateArpControls() {
@@ -1468,6 +1541,7 @@ export function createProfileMacroScenePanel({
     const canAssign = canInteract && deviceCapabilities.arpProfileAssignments;
     if (arpAssignmentSlotSelect) arpAssignmentSlotSelect.disabled = !canAssign;
     if (arpAssignmentAddBtn) arpAssignmentAddBtn.disabled = !canAssign;
+    if (selectedArpAssignmentToggle) selectedArpAssignmentToggle.disabled = !canAssign;
     renderArpAssignments();
     if (arpCard) {
       arpCard.dataset.state = canInteract ? 'ready' : 'muted';
@@ -1496,12 +1570,15 @@ export function createProfileMacroScenePanel({
     if (liveArpApplyBtn) liveArpApplyBtn.disabled = !canInteract;
     if (liveArpStartBtn) {
       liveArpStartBtn.disabled = !canInteract;
-      liveArpStartBtn.setAttribute('aria-pressed', liveArpDraft.active ? 'true' : 'false');
-      liveArpStartBtn.textContent = liveArpDraft.active
-        ? `Running slot ${liveArpDraft.slot}`
-        : `Start slot ${liveArpDraft.slot}`;
+      const selected = clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, liveArpDraft.slot);
+      const selectedRunning = reportedArpActive && reportedArpSlot === selected;
+      liveArpStartBtn.setAttribute('aria-pressed', selectedRunning ? 'true' : 'false');
+      liveArpStartBtn.textContent = selectedRunning ? 'Selected slot running' : 'Start selected slot';
     }
-    if (liveArpStopBtn) liveArpStopBtn.disabled = !canInteract || !liveArpDraft.active;
+    if (liveArpStopBtn) {
+      const selected = clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, liveArpDraft.slot);
+      liveArpStopBtn.disabled = !canInteract || !reportedArpActive || reportedArpSlot !== selected;
+    }
   }
 
   function updateLfoControls() {
@@ -1685,6 +1762,10 @@ export function createProfileMacroScenePanel({
       setLfoStatus('muted', 'Connect to inspect the selected profile A–D entry.');
       return;
     }
+    if (arpDraftDirty && focus !== 'lfo') {
+      if (silent || !confirmDiscardArpDraft('Refreshing profile modulation')) return;
+      arpDraftDirty = false;
+    }
     if (profileWorkflow.isLocked() || arpBusy || lfoBusy) return;
     arpBusy = true;
     lfoBusy = true;
@@ -1746,6 +1827,7 @@ export function createProfileMacroScenePanel({
         { rpc: 'set_profile', slot: activeProfileSlot, profile: { arp: arpPayload } },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
+      arpDraftDirty = false;
       setArpStatus(
         'ok',
         deviceCapabilities.arpProfileAssignments
@@ -1766,7 +1848,7 @@ export function createProfileMacroScenePanel({
 
   function summarizeLiveArp() {
     const shapeLabel = ARP_SHAPE_OPTIONS[liveArpDraft.shape] ?? `Shape ${liveArpDraft.shape}`;
-    const active = liveArpDraft.active ? `Slot ${liveArpDraft.slot}` : 'Idle';
+    const active = liveArpDraft.active ? `Slot ${liveArpDraft.slot + 1}` : 'Idle';
     return `${active} • ${shapeLabel} • ${liveArpDraft.length_ticks} ticks`;
   }
 
@@ -1780,6 +1862,8 @@ export function createProfileMacroScenePanel({
         { rpc: 'get_arp' },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
+      reportedArpActive = Boolean(response?.active);
+      reportedArpSlot = clampInteger(response?.slot, 0, SLOT_COUNT - 1, reportedArpSlot);
       setLiveArpDraft({
         ...response,
         slot: response?.active
@@ -1816,6 +1900,8 @@ export function createProfileMacroScenePanel({
         },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
+      reportedArpActive = Boolean(response?.active);
+      reportedArpSlot = clampInteger(response?.slot, 0, SLOT_COUNT - 1, reportedArpSlot);
       setLiveArpDraft({ ...response, slot: liveArpDraft.slot });
       setLiveArpStatus('ok', summarizeLiveArp());
       setStatus('ok', 'Live arp updated', summarizeLiveArp());
@@ -1830,16 +1916,19 @@ export function createProfileMacroScenePanel({
 
   async function startLiveArp() {
     if (!profileInteractable || !deviceCapabilities.arpLive || liveArpBusy) return;
-    readLiveArpFormIntoDraft();
+    const selected = clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, 0);
+    setLiveArpDraft({ ...liveArpDraft, slot: selected });
     liveArpBusy = true;
     refreshProfileControls();
-    setLiveArpStatus('busy', `Starting arp on slot ${liveArpDraft.slot}…`);
+    setLiveArpStatus('busy', `Starting arp on slot ${selected + 1}…`);
     try {
       await runtime.sendRpc(
-        { rpc: 'arp_start', slot: liveArpDraft.slot },
+        { rpc: 'arp_start', slot: selected },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
-      setLiveArpDraft({ ...liveArpDraft, active: true });
+      reportedArpActive = true;
+      reportedArpSlot = selected;
+      setLiveArpDraft({ ...liveArpDraft, active: true, slot: selected });
       setLiveArpStatus('ok', summarizeLiveArp());
     } catch (err) {
       setLiveArpStatus('err', `Arp start failed: ${err.message || String(err)}`);
@@ -1852,20 +1941,26 @@ export function createProfileMacroScenePanel({
 
   async function stopLiveArp() {
     if (!profileInteractable || !deviceCapabilities.arpLive || liveArpBusy) return;
+    const selected = clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, 0);
     liveArpBusy = true;
     refreshProfileControls();
     setLiveArpStatus('busy', 'Stopping arp…');
     try {
-      await runtime.sendRpc(
-        { rpc: 'arp_stop' },
+      const response = await runtime.sendRpc(
+        { rpc: 'arp_stop', slot: selected },
         { timeoutMs: PROFILE_RPC_TIMEOUT_MS, rollbackPolicy: 'none' }
       );
+      reportedArpActive = Boolean(response?.active);
+      reportedArpSlot = reportedArpActive ? -1 : selected;
       setLiveArpDraft({
         ...liveArpDraft,
-        active: false,
-        slot: liveArpSlotFollowsSelection ? getSelectedSlot() : liveArpDraft.slot
+        active: reportedArpActive,
+        slot: selected
       });
-      setLiveArpStatus('ok', summarizeLiveArp());
+      setLiveArpStatus(
+        'ok',
+        reportedArpActive ? 'Selected slot stopped · other arp slot(s) remain active' : summarizeLiveArp()
+      );
     } catch (err) {
       setLiveArpStatus('err', `Arp stop failed: ${err.message || String(err)}`);
       setStatus('err', 'Arp stop failed', err.message || String(err));
@@ -2076,6 +2171,13 @@ export function createProfileMacroScenePanel({
           Number(button.dataset.profileSlot),
           PROFILE_LABELS.length
         );
+        if (
+          slotIndex !== activeProfileSlot &&
+          !confirmDiscardArpDraft(`Switching to Profile ${slotLabel(slotIndex)}`)
+        ) {
+          return;
+        }
+        if (slotIndex !== activeProfileSlot) arpDraftDirty = false;
         setActiveProfileSlot(slotIndex);
         void refreshProfileUtilities({ silent: true });
       });
@@ -2100,6 +2202,9 @@ export function createProfileMacroScenePanel({
     profileWizardSaveBtn?.addEventListener('click', () => handleWizardSaveProfile());
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
+    arpEngineContextButtons.forEach((button) => {
+      button.addEventListener('click', () => setArpEngineContext(button.dataset.arpEngineContext));
+    });
 
     macroSaveBtn?.addEventListener('click', () => {
       const confirmation =
@@ -2145,11 +2250,32 @@ export function createProfileMacroScenePanel({
       liveArpOctaveInput,
       liveArpPatternLengthInput
     ].forEach((control) => control?.addEventListener('change', () => readLiveArpFormIntoDraft()));
-    arpRefreshBtn?.addEventListener('click', () => refreshProfileUtilities({ focus: 'arp' }));
+    arpRefreshBtn?.addEventListener('click', () => {
+      if (!confirmDiscardArpDraft('Loading profile arp defaults')) return;
+      arpDraftDirty = false;
+      refreshProfileUtilities({ focus: 'arp' });
+    });
     arpSaveBtn?.addEventListener('click', () => saveArpProfile());
     arpAssignmentAddBtn?.addEventListener('click', () => {
       const slot = clampInteger(arpAssignmentSlotSelect?.value, 0, SLOT_COUNT - 1, 0);
-      setArpDraft({ ...arpDraft, assigned_slots: [...arpDraft.assigned_slots, slot] });
+      setArpDraft(
+        { ...arpDraft, assigned_slots: [...arpDraft.assigned_slots, slot] },
+        { markDirty: true }
+      );
+    });
+    selectedArpAssignmentToggle?.addEventListener('click', () => {
+      const selected = clampInteger(getSelectedSlot(), 0, SLOT_COUNT - 1, 0);
+      const assigned = arpDraft.assigned_slots.includes(selected);
+      setArpDraft({
+        ...arpDraft,
+        assigned_slots: assigned
+          ? arpDraft.assigned_slots.filter((slot) => slot !== selected)
+          : [...arpDraft.assigned_slots, selected]
+      }, { markDirty: true });
+      setArpStatus(
+        'warn',
+        `Profile ${slotLabel(activeProfileSlot)} assignment changed locally. Save profile arp defaults to persist it.`
+      );
     });
     liveArpRefreshBtn?.addEventListener('click', () => refreshLiveArp());
     liveArpApplyBtn?.addEventListener('click', () => pushLiveArp());
@@ -2255,6 +2381,7 @@ export function createProfileMacroScenePanel({
   function onDisconnected() {
     deviceCapabilities = resolveProfileCapabilities(localManifest);
     profileInteractable = false;
+    arpDraftDirty = false;
     profileWorkflow.reset();
     macroAvailable = false;
     arpBusy = false;
@@ -2262,6 +2389,8 @@ export function createProfileMacroScenePanel({
     modMatrixBusy = false;
     modMatrixReport = null;
     liveArpBusy = false;
+    reportedArpActive = false;
+    reportedArpSlot = 0;
     onDeviceActiveProfileChanged(null);
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();
@@ -2277,6 +2406,7 @@ export function createProfileMacroScenePanel({
   function onRuntimeError() {
     deviceCapabilities = resolveProfileCapabilities(localManifest);
     profileInteractable = false;
+    arpDraftDirty = false;
     profileWorkflow.reset();
     macroAvailable = false;
     arpBusy = false;
@@ -2284,6 +2414,8 @@ export function createProfileMacroScenePanel({
     modMatrixBusy = false;
     modMatrixReport = null;
     liveArpBusy = false;
+    reportedArpActive = false;
+    reportedArpSlot = 0;
     onDeviceActiveProfileChanged(null);
     setActiveProfileSlot(activeProfileSlot, { persist: false });
     refreshProfileControls();

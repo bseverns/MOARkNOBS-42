@@ -336,6 +336,71 @@ test('scope X zoom uses elapsed time rather than a fixed sample fraction', async
   expect(windows.ariaLabel).toContain('over 10 seconds');
 });
 
+test('scope timeline geometry is independent from the render clock domain', async ({ page }) => {
+  await page.goto('/views/scope_panel.js');
+
+  const geometry = await page.evaluate(async () => {
+    const { ScopePanel } = await import('/views/scope_panel.js');
+    document.body.innerHTML = `
+      <section id="scope-panel" style="width: 500px">
+        <span data-scope-role="status"></span>
+        <canvas data-scope-role="canvas" width="500" height="180"
+          style="width: 500px; height: 180px"></canvas>
+      </section>
+    `;
+    let timeline = 1_700_000_000_000;
+    let renderClock = 250;
+    const listeners = new Map();
+    const runtime = {
+      on(event, callback) {
+        listeners.set(event, callback);
+        return () => listeners.delete(event);
+      },
+      getState() {
+        return { manifest: { envelope_count: 1, lfo_count: 2 } };
+      }
+    };
+    const panel = new ScopePanel({
+      container: document.getElementById('scope-panel'),
+      runtime,
+      timelineNowFn: () => timeline,
+      renderNowFn: () => renderClock,
+      timeWindowSeconds: 5
+    });
+    const pushTelemetry = listeners.get('telemetry');
+    for (const [elapsed, value] of [[0, 10], [1000, 40], [2500, 90]]) {
+      timeline = 1_700_000_000_000 + elapsed;
+      renderClock += 16;
+      pushTelemetry({ envelopes: [value], lfos: [0.1, 0.9], receivedAt: timeline });
+    }
+    const positions = panel.sampleXPositions(timeline, 500);
+    const visible = panel.visibleSampleIndices(timeline).map((idx) => panel.timestampHistory[idx]);
+    const activityAt1499 = (() => {
+      pushTelemetry({ envelopes: [70], efStatus: [1], receivedAt: timeline });
+      pushTelemetry({ envelopes: [60], efStatus: [0], receivedAt: timeline + 1 });
+      return panel.efActivityState(0, timeline + 1499);
+    })();
+    const activityAt1500 = panel.efActivityState(0, timeline + 1500);
+    timeline = 1_700_000_004_000;
+    renderClock = 999_999;
+    panel.updateStatus();
+    const status = document.querySelector('[data-scope-role="status"]').textContent;
+    panel.destroy();
+    return { positions, visible, activityAt1499, activityAt1500, status };
+  });
+
+  expect(geometry.visible).toEqual([
+    1_700_000_000_000,
+    1_700_000_001_000,
+    1_700_000_002_500
+  ]);
+  expect(geometry.positions.map((entry) => Math.round(entry.x))).toEqual([250, 350, 500]);
+  expect(new Set(geometry.positions.map((entry) => entry.x)).size).toBe(3);
+  expect(geometry.activityAt1499).toBe('recent');
+  expect(geometry.activityAt1500).toBe('inactive');
+  expect(geometry.status).toBe('Telemetry 1499 ms ago');
+});
+
 test('simulator EF rehearsal signals move smoothly and derive musical activity state', async ({
   page
 }) => {

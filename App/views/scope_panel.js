@@ -35,7 +35,9 @@ export class ScopePanel {
     renderToggle = null,
     activityHoldMs = DEFAULT_ACTIVITY_HOLD_MS,
     timeWindowSeconds = DEFAULT_TIME_WINDOW_SECONDS,
-    nowFn = now
+    nowFn = null,
+    timelineNowFn = null,
+    renderNowFn = null
   } = {}) {
     this.container = container;
     if (!container || typeof window === 'undefined') return;
@@ -70,7 +72,13 @@ export class ScopePanel {
     this.timeWindowSeconds = TIME_WINDOW_OPTIONS.includes(Number(timeWindowSeconds))
       ? Number(timeWindowSeconds)
       : DEFAULT_TIME_WINDOW_SECONDS;
-    this.now = typeof nowFn === 'function' ? nowFn : now;
+    const compatibilityNow = typeof nowFn === 'function' ? nowFn : null;
+    this.timelineNow =
+      typeof timelineNowFn === 'function'
+        ? timelineNowFn
+        : compatibilityNow ?? (() => Date.now());
+    this.renderNow =
+      typeof renderNowFn === 'function' ? renderNowFn : compatibilityNow ?? now;
     this.historyLength = Math.max(MIN_HISTORY, Math.round(this.canvas.width || MIN_HISTORY));
     this.efCount = DEFAULT_EF_COUNT;
     this.efHistory = Array.from(
@@ -99,7 +107,7 @@ export class ScopePanel {
     this.lastClock = null;
     this.frameRequest = null;
     this.lastRender = 0;
-    this.fpsWindowStart = this.now();
+    this.fpsWindowStart = this.renderNow();
     this.fpsFrameCount = 0;
 
     this.refreshButton?.addEventListener('click', () => this.refreshScope());
@@ -258,7 +266,7 @@ export class ScopePanel {
     const observedTimestampMs = Number(frame.receivedAt);
     const receivedAt = Number.isFinite(observedTimestampMs)
       ? observedTimestampMs
-      : this.now();
+      : this.timelineNow();
     const envelopes = Array.isArray(frame.envelopes) ? frame.envelopes : null;
     const lfos = Array.isArray(frame.lfos) ? frame.lfos : null;
     if (Array.isArray(frame.efStatus)) {
@@ -369,7 +377,7 @@ export class ScopePanel {
       ctx.stroke();
     });
 
-    const timestamp = this.now();
+    const timestamp = this.timelineNow();
     const visibleEfIndices = this.visibleEfIndices(timestamp);
     visibleEfIndices.forEach((idx) => {
       const identity = modulationIdentity('ef', idx);
@@ -425,22 +433,18 @@ export class ScopePanel {
     color,
     width,
     height,
-    { lineWidth = 2, lineDash = [], timestamp = this.now() } = {}
+    { lineWidth = 2, lineDash = [], timestamp = this.timelineNow() } = {}
   ) {
     if (!buffer) return;
-    const sampleIndices = this.visibleSampleIndices(timestamp);
-    if (sampleIndices.length < 2) return;
-    const windowMs = this.timeWindowSeconds * 1000;
+    const positions = this.sampleXPositions(timestamp, width);
+    if (positions.length < 2) return;
     ctx.strokeStyle = color;
     ctx.lineWidth = lineWidth;
     ctx.setLineDash(lineDash);
     ctx.beginPath();
     let started = false;
-    for (const bufferIndex of sampleIndices) {
-      const sampleTimestamp = this.timestampHistory[bufferIndex];
-      const ageMs = Math.max(0, timestamp - sampleTimestamp);
+    for (const { bufferIndex, x } of positions) {
       const value = clamp01(buffer[bufferIndex]);
-      const x = width - (ageMs / windowMs) * width;
       const y = height - value * height;
       if (!started) {
         ctx.moveTo(x, y);
@@ -453,7 +457,7 @@ export class ScopePanel {
     ctx.setLineDash([]);
   }
 
-  visibleSampleIndices(timestamp = this.now()) {
+  visibleSampleIndices(timestamp = this.timelineNow()) {
     const sampleCount = Math.min(this.samples, this.historyLength);
     const windowMs = this.timeWindowSeconds * 1000;
     const indices = [];
@@ -465,6 +469,19 @@ export class ScopePanel {
       if (Math.max(0, timestamp - sampleTimestamp) <= windowMs) indices.push(bufferIndex);
     }
     return indices;
+  }
+
+  sampleXPositions(timestamp = this.timelineNow(), width = this.renderWidth ?? 0) {
+    const windowMs = this.timeWindowSeconds * 1000;
+    return this.visibleSampleIndices(timestamp).map((bufferIndex) => {
+      const sampleTimestamp = this.timestampHistory[bufferIndex];
+      const ageMs = Math.max(0, timestamp - sampleTimestamp);
+      return {
+        bufferIndex,
+        ageMs,
+        x: width - (ageMs / windowMs) * width
+      };
+    });
   }
 
   drawTimeAxis(ctx, width, height) {
@@ -500,7 +517,7 @@ export class ScopePanel {
     ctx.restore();
   }
 
-  efActivityState(index, timestamp = this.now()) {
+  efActivityState(index, timestamp = this.timelineNow()) {
     if (!this.hasEfStatus) return 'unknown';
     if (this.lastEfActive[index]) return 'active';
     const lastActiveAt = this.efLastActiveAt[index];
@@ -513,7 +530,7 @@ export class ScopePanel {
     return 'inactive';
   }
 
-  efTraceOpacity(index, timestamp = this.now()) {
+  efTraceOpacity(index, timestamp = this.timelineNow()) {
     if (this.soloEfIndex === index || !this.hasEfStatus) return 0.88;
     const state = this.efActivityState(index, timestamp);
     if (state === 'active') return 0.88;
@@ -525,7 +542,7 @@ export class ScopePanel {
     return 0.38 + remaining * 0.5;
   }
 
-  visibleEfIndices(timestamp = this.now()) {
+  visibleEfIndices(timestamp = this.timelineNow()) {
     if (this.soloEfIndex !== null) return [this.soloEfIndex];
     const all = Array.from({ length: this.efCount }, (_, idx) => idx);
     if (this.viewMode === 'all' || !this.hasEfStatus) return all;
@@ -602,7 +619,7 @@ export class ScopePanel {
     this.syncEfLegend();
   }
 
-  syncEfLegend(timestamp = this.now()) {
+  syncEfLegend(timestamp = this.timelineNow()) {
     if (!this.efLegend) return;
     this.efLegend.querySelectorAll('[data-ef-index]').forEach((button) => {
       const idx = Number(button.dataset.efIndex);
@@ -624,7 +641,7 @@ export class ScopePanel {
     });
   }
 
-  syncScopeState(timestamp = this.now()) {
+  syncScopeState(timestamp = this.timelineNow()) {
     const states = Array.from({ length: this.efCount }, (_, idx) =>
       this.efActivityState(idx, timestamp)
     );
@@ -759,7 +776,7 @@ export class ScopePanel {
     }
     if (this.snapshotButton) this.snapshotButton.disabled = false;
     const age = this.lastTelemetryTimestamp
-      ? Math.max(0, Math.round(now() - this.lastTelemetryTimestamp))
+      ? Math.max(0, Math.round(this.timelineNow() - this.lastTelemetryTimestamp))
       : 0;
     this.statusLabel.textContent = age ? `Telemetry ${age} ms ago` : 'Telemetry streaming…';
   }
