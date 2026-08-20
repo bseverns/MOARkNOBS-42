@@ -26,7 +26,7 @@ Use these categories when deciding where a doc belongs:
 | Prove     | tests, validation, release readiness, receipts  | [TESTING](../validation/TESTING.md), [Release Criteria](../release/ReleaseCriteria.md)                        |
 | Reference | protocol, contracts, compatibility, pin maps    | [MN42 Line Protocol](../reference/MN42LineProtocol.md), [Manifest Contract](../reference/ManifestContract.md) |
 | Project   | support, process, history, pilot-run framing    | [License and Support](LicenseAndSupport.md), [Pilot Run](PilotRun.md)                                         |
-| Archive   | old audits, generated reports, historical plans | [Changed Files Report](../agents/_reports/changed-files.md)                                                   |
+                                                 |
 
 ## Which Docs Are Canonical?
 
