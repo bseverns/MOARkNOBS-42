@@ -174,7 +174,6 @@ export function createSimulator(simDeps = {}) {
     profile_count: 4,
     active_profile: activeProfile
   };
-  const simulatedEfValues = Array.from({ length: manifest.envelope_count }, () => 0);
   const simulatedSlotEfValues = Array.from({ length: manifest.slot_count }, () => 0);
   const slotValues = Array.from(
     { length: manifest.slot_count },
@@ -383,19 +382,11 @@ export function createSimulator(simDeps = {}) {
         const ripple = (Math.sin(index / 3.5 + phase * 1.7) + 1) / 2;
         sourceValue = Math.round(10 + Math.pow(phrase, 1.35) * 100 + ripple * 8);
       }
-      const settings = config.slots.find((slot) =>
-        Number(slot?.ef_index ?? slot?.ef?.index) === efIndex
-      )?.ef ?? {};
-      const value = simulateEfResponse(
-        sourceValue,
-        settings,
-        simulatedEfValues[efIndex] ?? 0,
-        index,
-        efIndex + 1
-      );
-      simulatedEfValues[efIndex] = value;
       const activityFloor = family === 1 ? 14 : family === 2 ? 42 : 36;
-      return { sourceValue, value, active: value >= activityFloor };
+      // Global EF traces represent the deterministic synthetic physical-source
+      // signal only. Slot EF settings intentionally apply later, per slot, so
+      // a slot's position in config.slots cannot affect shared Scope telemetry.
+      return { sourceValue, value: sourceValue, active: sourceValue >= activityFloor };
     });
     const envelopes = envelopeSignals.map((signal) => signal.value);
     const lfos = profileSettingsSlots[activeProfile].lfos.map((lfo, lfoIndex) =>

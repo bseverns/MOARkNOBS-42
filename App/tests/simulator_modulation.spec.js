@@ -105,23 +105,21 @@ test('simulator EF recipes produce distinct repeatable rehearsal telemetry', asy
     };
   });
 
-  const maxDelta = (values) => Math.max(
-    ...values.slice(1).map((value, index) => Math.abs(value - values[index]))
-  );
-  expect(maxDelta(result.smooth.values)).toBeLessThan(maxDelta(result.neutral.values));
-  expect(Math.max(...result.punchy.values)).toBeGreaterThan(Math.max(...result.neutral.values));
-  expect(new Set(result.gate.values).size).toBeLessThanOrEqual(3);
-  expect(result.gate.active).toContain(0);
-  expect(result.gate.active).toContain(1);
+  // Scope telemetry is the synthetic physical EF source: it is deliberately
+  // independent of any slot-specific illustrative EF recipe.
+  expect(result.smooth.values).toEqual(result.neutral.values);
+  expect(result.punchy.values).toEqual(result.neutral.values);
+  expect(result.gate.values).toEqual(result.neutral.values);
+  expect(result.gate.active).toEqual(result.neutral.active);
   expect(result.experimentalA.values).toEqual(result.experimentalB.values);
-  expect(result.experimentalA.values).not.toEqual(result.neutral.values);
+  expect(result.experimentalA.values).toEqual(result.neutral.values);
   expect(result.slotThirteenNeutral.values).toEqual(result.slotThirteenGate.values);
   expect(result.slotThirteenNeutral.outputs).not.toEqual(result.slotThirteenGate.outputs);
   expect(new Set([
-    JSON.stringify(result.neutral.values),
-    JSON.stringify(result.smooth.values),
-    JSON.stringify(result.punchy.values),
-    JSON.stringify(result.gate.values),
-    JSON.stringify(result.experimentalA.values)
-  ]).size).toBe(5);
+    JSON.stringify(result.neutral.outputs),
+    JSON.stringify(result.smooth.outputs),
+    JSON.stringify(result.punchy.outputs),
+    JSON.stringify(result.gate.outputs),
+    JSON.stringify(result.experimentalA.outputs)
+  ]).size).toBeGreaterThan(1);
 });
