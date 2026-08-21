@@ -117,6 +117,8 @@ not_in_nav: |
   /sketch/systemFlow/hw/*.md
   /tools/*report-template.md
   /validation/DemoPolish.md
+  /validation/HeapAllocationAudit.md
+  /validation/ConfigManagerBoundaryAssessment.md
   /validation/OledDominanceChecklist.md
   /validation/OnDeviceControlCoverage.md
   /validation/Troubleshooting.md
