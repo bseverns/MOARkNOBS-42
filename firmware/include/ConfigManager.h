@@ -205,9 +205,6 @@ class ConfigManager {
     // Generate the JSON configuration schema string.
     static String makeSchema();
 
-    // Serialize the entire configuration to a JSON-like string.
-    String serializeAll() const;
-
     /*
     Initialise the subsystem and load settings from EEPROM. Populates
     potChannels with the stored pot→MIDI-channel map.
@@ -413,18 +410,6 @@ class ConfigManager {
     // Load MIDISlot structures from EEPROM into the provided buffer.
     void loadMIDISlots(MIDISlot *slots, size_t count);
 
-    /*
-    Parse a WebSerial command. Returns true if the command was
-    recognised and handled.
-    */
-    bool handleCommand(const String &command);
-
-    // Determine if the display should switch to the screensaver.
-    bool shouldRunScreensaver() const;
-
-    // Execute the idle screensaver animation.
-    void runIdleScreensaver();
-
     // Accessor so the rest of your code can see the live slots.
     const std::array<MIDISlot, NUM_SLOTS> &getSlots() const { return slots; }
 
@@ -436,6 +421,9 @@ class ConfigManager {
 
     // Replace the stored envelope payload for a slot and persist it.
     void setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayload &payload);
+
+    // Apply one legacy global filter payload to every persisted slot.
+    SlotEnvelopePayload setAllSlotEnvelopePayloads(uint8_t filterType, float freq, float q);
 
     // Mirror the most recent global filter tuning into the EEPROM tail.
     /*

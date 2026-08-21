@@ -61,7 +61,7 @@ The next useful result is an evidence table naming allocation site, execution fr
 and whether it runs during steady-state performance. Convert code only where that evidence shows meaningful runtime risk.
 
 That source/build inventory is now captured in
-[Firmware Heap Allocation Audit](docs/validation/HeapAllocationAudit.md). It identifies connected WebSerial telemetry as
+[Firmware Heap Allocation Audit](HeapAllocationAudit.md). It identifies connected WebSerial telemetry as
 the first bounded hardening target, followed by chunked-read and bulk-Apply burst allocation.
 
 ## 3. Persistence safety
@@ -106,14 +106,14 @@ Migration and profile-sanitization helpers remain separated into:
 - `firmware/src/SchemaMigration.cpp`
 - `firmware/src/ProfileStorage.cpp`
 
-As of this snapshot they are approximately 1,878, 869, and 181 lines. Those counts have grown since the original split;
-the split is still real, but `ConfigManager.cpp` and `SchemaMigration.cpp` should be reassessed by responsibility before
-adding more behavior. A line-count-only extraction is not recommended.
+After the first boundary cleanup they are approximately 1,635, 869, and 181 lines. The split is real, but
+`ConfigManager.cpp` and `SchemaMigration.cpp` should continue to be changed by responsibility rather than line count.
 
 The responsibility and dependency analysis is now recorded in
-[ConfigManager Boundary Assessment](docs/validation/ConfigManagerBoundaryAssessment.md). It recommends keeping the
-persistence façade while extracting deprecated protocol handling first, then schema generation, profile types, and
-legacy profile decoding in independently verified increments.
+[ConfigManager Boundary Assessment](ConfigManagerBoundaryAssessment.md). The deprecated protocol handler has now moved
+to `protocol/LegacyConfigCommands.*`; unused/dead APIs and embedded system-test bodies are removed from the production
+class, and explicit legacy profile fixtures now cover versions 1–6. Schema generation, profile types, and legacy profile
+decoding remain independently verified follow-up boundaries.
 
 ### Completed: shared PlatformIO module filters
 
@@ -129,7 +129,8 @@ The file has grown as environments were added; total line count does not mean th
    frequency show a real fragmentation risk.
 3. **Prove persistence write discipline:** Add a call-site ledger, observable write counts, and a stress/bench receipt.
 4. **~~Reassess ConfigManager boundaries~~ (DONE):** The boundary assessment identifies protocol handling as the first
-   safe extraction and legacy profile decoding as the highest-value structural extraction after fixture coverage.
+   safe extraction; that extraction and its prerequisite v1–v4 fixture coverage are complete. Schema generation and
+   legacy profile decoding remain the next implementation increments.
 
 The scheduler and serial command queue items are closed. Reopening them requires new failing evidence, not their obsolete
 descriptions from earlier evaluation snapshots.

@@ -158,9 +158,9 @@ Acceptance boundaries:
 - corrupt CRC, unsupported version, undersized storage, and high-index profile behavior stay covered;
 - no migration path writes storage during a read-only load unless that behavior is already contractual.
 
-Current fixture coverage is not yet sufficient for this extraction. The Unity profile suite has explicit current-version
-and legacy v5/v6 fixtures, while the loader still contains v1–v4 decoders. Add byte-layout and checksum fixtures for
-v1–v4 before moving the decoder; otherwise a clean refactor could silently retire an older stored profile path.
+The Unity profile suite now has explicit byte-layout and checksum fixtures for legacy versions 1–6, plus current-version
+coverage. The prerequisite coverage for extracting the decoder is therefore in place; the extraction itself remains a
+separate persistence-sensitive change.
 
 ### 4. Test bodies — relocate independently
 
@@ -191,15 +191,17 @@ them prematurely would require friendship, broad mutable state exposure, or call
 
 Answer these through tests and failure-reporting needs, not file size.
 
-## First implementation increment
+## First implementation increment — completed
 
-The safest structural increment is:
+Completed on 2026-08-21:
 
-1. add focused coverage for all commands currently handled by `ConfigManager::handleCommand()`;
-2. move that handler into `protocol/LegacyConfigCommands.*`;
-3. remove `handleCommand()` from the public manager API;
-4. remove the two dead screensaver declarations;
-5. run Unity, main firmware build, contract sync, and control coverage.
+1. added focused coverage for every command formerly handled by `ConfigManager::handleCommand()`;
+2. moved that handler into `protocol/LegacyConfigCommands.*`;
+3. removed `handleCommand()`, unused `serializeAll()`, and the two dead screensaver declarations from the public API;
+4. moved the embedded persistence tests into `firmware/system_test/test_config_manager.cpp` and registered the orphaned
+   high-index envelope assignment test;
+5. added profile migration fixtures for versions 1–4, completing explicit legacy fixture coverage through version 6.
 
-This creates a real dependency improvement with no persistence-layout change. Profile migration extraction should follow
-only after legacy-version fixtures are confirmed complete.
+The production and full-system images compile with no persistence-layout change. The Unity image also compiles and links;
+executing it still requires a connected Teensy. Schema generation and profile migration extraction remain the next two
+structural boundaries.

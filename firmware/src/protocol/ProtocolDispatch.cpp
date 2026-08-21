@@ -4,6 +4,7 @@
 #include "DiagnosticRecord.h"
 #include "Log.h"
 #include "Protocol.h"
+#include "protocol/LegacyConfigCommands.h"
 
 // ProtocolDispatch.cpp is the routing table for one fully assembled host line.
 //
@@ -99,7 +100,7 @@ bool dispatchCommand(const String &command) {
         handler->handler(parsed);
         return true;
     }
-    if (configManager.handleCommand(command)) {
+    if (handleLegacyConfigCommand(command, configManager)) {
         return true;
     }
     logUnknownCommand(command);

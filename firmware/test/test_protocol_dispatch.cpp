@@ -156,6 +156,54 @@ void test_dispatch_get_argmethod_uses_direct_handler() {
         -1, latestLogLine().indexOf("\"message\":\"get_arg_method deprecated\""));
 }
 
+void test_dispatch_preserves_legacy_config_command_lane() {
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("CAL_ENVS"));
+    assertContains(latestLogLine(), "\"status\":\"ok\"");
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_FILTER"));
+    assertContains(latestLogLine(), "GET_FILTER deprecated");
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_FILTER4,250,2"));
+    assertContains(latestLogLine(), "\"status\":\"ok\"");
+    SlotEnvelopePayload payload = configManager.getSlotEnvelopePayload(0);
+    TEST_ASSERT_EQUAL_UINT8(4, payload.filterType);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 250.0f, payload.frequency);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 2.0f, payload.q);
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_SLOT_FILTER 2"));
+    assertContains(latestLogLine(), "GET_SLOT_FILTER deprecated");
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_SLOT_FILTER 2,5,333,3"));
+    assertContains(latestLogLine(), "\"status\":\"ok\"");
+    payload = configManager.getSlotEnvelopePayload(2);
+    TEST_ASSERT_EQUAL_UINT8(5, payload.filterType);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 333.0f, payload.frequency);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 3.0f, payload.q);
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_ARGPAIR"));
+    assertContains(latestLogLine(), "GET_ARGPAIR deprecated");
+
+    clearTestLogBuffer();
+    TEST_ASSERT_TRUE(testOnly_dispatchCommand("SET_ARGPAIR1,0,1"));
+    assertContains(latestLogLine(), "\"status\":\"ok\"");
+    TEST_ASSERT_EQUAL_UINT8(1, configManager.getARGEnable());
+    TEST_ASSERT_EQUAL_UINT8(0, configManager.getSlot(0).arg.sourceA);
+    TEST_ASSERT_EQUAL_UINT8(1, configManager.getSlot(0).arg.sourceB);
+
+    const char *malformed[] = {"SET_FILTER", "SET_SLOT_FILTER", "SET_ARGPAIR"};
+    for (const char *command : malformed) {
+        clearTestLogBuffer();
+        TEST_ASSERT_TRUE(testOnly_dispatchCommand(command));
+        assertContains(latestLogLine(), "\"status\":\"error\"");
+    }
+}
+
 void test_dispatch_handles_documented_query_commands() {
     clearTestLogBuffer();
     TEST_ASSERT_TRUE(testOnly_dispatchCommand("GET_MANIFEST"));

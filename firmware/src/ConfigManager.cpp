@@ -22,7 +22,6 @@
 #include <vector>
 #include "Log.h"
 
-extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ConfigManager configManager;
 
 // Weak hook lets test firmware skip the heavyweight EF voice refresh logic.
@@ -1548,68 +1547,6 @@ FLASHMEM String ConfigManager::makeSchema() {
     return s;
 }
 
-String ConfigManager::serializeAll() const {
-    String output = "{ \"pots\": [";
-
-    for (uint8_t i = 0; i < _numPots; ++i) {
-        output += "{";
-        output += "\"channel\": ";
-        output += _stored.potChannels.at(i);
-        output += ", \"cc\": ";
-        output += _stored.potCCNumbers.at(i);
-        output += "}";
-
-        if (i < _numPots - 1) {
-            output += ",";
-        }
-    }
-
-    output += "], \"slots\": [";
-    for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
-        SlotEnvelopePayload payload =
-            sanitizeEnvelopePayload(settingsToPayload(slots[i].efSettings));
-        output += "{";
-        output += "\"index\": ";
-        output += i;
-        output += ", \"ef_payload\": {";
-        output += "\"type\": ";
-        output += payload.filterType;
-        output += ", \"freq\": ";
-        output += String(payload.frequency, 2);
-        output += ", \"q\": ";
-        output += String(payload.q, 2);
-        output += "}, \"arg\": {";
-        SlotARGConfig arg = sanitizeSlotArg(slots[i].arg);
-        output += "\"enabled\": ";
-        output += arg.enabled;
-        output += ", \"method\": ";
-        output += static_cast<uint8_t>(arg.method);
-        output += ", \"sourceA\": ";
-        output += arg.sourceA;
-        output += ", \"sourceB\": ";
-        output += arg.sourceB;
-        output += "}, \"lfo\": [";
-        const SlotLfoConfig lfo = sanitizeSlotLfoConfig(slots[i].lfo);
-        for (uint8_t lfoIndex = 0; lfoIndex < lfo.lfo.size(); ++lfoIndex) {
-            const SlotLfoLane &lane = lfo.lfo[lfoIndex];
-            output += "{\"enabled\": ";
-            output += lane.enabled() ? "true" : "false";
-            output += ", \"mode\": ";
-            output += static_cast<uint8_t>(lane.mode());
-            output += ", \"amount\": ";
-            output += lane.amount;
-            output += "}";
-            if (lfoIndex + 1 < lfo.lfo.size()) output += ",";
-        }
-        output += "]}";
-        if (i < NUM_SLOTS - 1) {
-            output += ",";
-        }
-    }
-    output += "] }";
-    return output;
-}
-
 void ConfigManager::saveMIDISlots(const MIDISlot *slots, size_t count) {
     if (slots == nullptr || count == 0) {
         return;
@@ -1655,6 +1592,11 @@ void ConfigManager::setSlotEnvelopePayload(uint8_t idx, const SlotEnvelopePayloa
     saveSlot(idx, slots[idx]);
 }
 
+SlotEnvelopePayload ConfigManager::setAllSlotEnvelopePayloads(uint8_t filterType, float freq,
+                                                              float q) {
+    return seedSlotEnvelopePayloads(filterType, freq, q);
+}
+
 void ConfigManager::setSlotLive(uint8_t idx, const MIDISlot &slot) {
     if (idx >= slots.size()) {
         return;
@@ -1690,189 +1632,3 @@ SlotEnvelopePayload ConfigManager::persistFilterTail(const SlotEnvelopePayload &
 // sanitizeSlotArena, wipeSlotRegion, migrateLegacySlotPayloads,
 // seedSlotEnvelopePayloads, sanitizeEnvelopePayload, and wipeProfileBlocks
 // are now implemented in SchemaMigration.cpp.
-
-bool ConfigManager::handleCommand(const String &command) {
-    if (command.startsWith("CAL_ENVS")) {
-        for (auto &ef : envelopeFollowers) {
-            ef.calibrate();
-        }
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
-        return true;
-    } else if (command.startsWith("GET_FILTER")) {
-        const uint8_t efType = storageRead(EEPROM_ENVELOPE_TYPES);
-        (void)efType; // keep the compiler chill
-        float freq, q;
-        storageGet(EEPROM_FILTER_FREQ, freq);
-        storageGet(EEPROM_FILTER_Q, q);
-        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_FILTER deprecated\"}");
-        return true;
-    } else if (command.startsWith("SET_FILTER")) {
-        int firstComma = command.indexOf(',');
-        int secondComma = command.indexOf(',', firstComma + 1);
-        if (firstComma == -1 || secondComma == -1) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
-            return true;
-        }
-        uint8_t efType = command.substring(10, firstComma).toInt();
-        float freq = command.substring(firstComma + 1, secondComma).toFloat();
-        float q = command.substring(secondComma + 1).toFloat();
-        seedSlotEnvelopePayloads(efType, freq, q);
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
-        return true;
-    } else if (command.startsWith("GET_SLOT_FILTER")) {
-        int slotIndex = command.substring(16).toInt();
-        if (slotIndex < 0 || slotIndex >= static_cast<int>(NUM_SLOTS)) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
-            return true;
-        }
-        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_SLOT_FILTER deprecated\"}");
-        return true;
-    } else if (command.startsWith("SET_SLOT_FILTER")) {
-        int first = command.indexOf(',');
-        int second = command.indexOf(',', first + 1);
-        int third = command.indexOf(',', second + 1);
-        if (first == -1 || second == -1 || third == -1) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
-            return true;
-        }
-        int slotIndex = command.substring(16, first).toInt();
-        int rawType = command.substring(first + 1, second).toInt();
-        float freq = command.substring(second + 1, third).toFloat();
-        float q = command.substring(third + 1).toFloat();
-        if (slotIndex < 0 || slotIndex >= static_cast<int>(NUM_SLOTS)) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
-            return true;
-        }
-        SlotEnvelopePayload payload = getSlotEnvelopePayload(static_cast<uint8_t>(slotIndex));
-        payload.filterType = static_cast<uint8_t>(rawType);
-        payload.frequency = freq;
-        payload.q = q;
-        setSlotEnvelopePayload(static_cast<uint8_t>(slotIndex), payload);
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
-        return true;
-    } else if (command.startsWith("GET_ARGPAIR")) {
-        LOG_PRINTLN("{\"type\":\"response\",\"message\":\"GET_ARGPAIR deprecated\"}");
-        return true;
-    } else if (command.startsWith("SET_ARGPAIR")) {
-        int first = command.indexOf(',');
-        int second = command.indexOf(',', first + 1);
-        if (first == -1 || second == -1) {
-            LOG_PRINTLN("{\"type\":\"response\",\"status\":\"error\"}");
-            return true;
-        }
-        uint8_t enable = command.substring(11, first).toInt();
-        uint8_t envA = command.substring(first + 1, second).toInt();
-        uint8_t envB = command.substring(second + 1).toInt();
-        setARGEnable(enable);
-        setEnvelopePair(envA, envB);
-
-        int idxA = envelopeIndexFromAnalogPin(envA);
-        if (idxA < 0)
-            idxA = constrain(envA, 0, NUM_ENVELOPES - 1);
-        int idxB = envelopeIndexFromAnalogPin(envB);
-        if (idxB < 0)
-            idxB = constrain(envB, 0, NUM_ENVELOPES - 1);
-
-        for (uint8_t slotIndex = 0; slotIndex < NUM_SLOTS; ++slotIndex) {
-            MIDISlot &slot = getSlot(slotIndex);
-            slot.arg.enabled = enable ? 1 : 0;
-            slot.arg.sourceA = static_cast<uint8_t>(idxA);
-            slot.arg.sourceB = static_cast<uint8_t>(idxB);
-            saveSlot(slotIndex, slot);
-        }
-        LOG_PRINTLN("{\"type\":\"response\",\"status\":\"ok\"}");
-        return true;
-    }
-    return false;
-}
-
-#if defined(UNIT_TEST) || defined(FULL_SYSTEM_COMBINED)
-#include "SystemTestShim.h"
-#include "TestHelpers.h"
-
-// Ensure the manager can resurrect configuration from the backup copy
-// after the primary EEPROM header gets nuked.
-void test_eeprom_recovery_after_power_cycle() {
-    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-    cfg.setPotChannel(0, 9);
-    cfg.setPotCCNumber(0, 77);
-    cfg.saveConfiguration();
-
-    // Mirror primary data into the backup region and wreck the primary header
-    storageUpdate(EEPROM_MAGIC_ADDRESS + 2, (EEPROM_MAGIC_BACKUP >> 8) & 0xFF);
-    storageUpdate(EEPROM_MAGIC_ADDRESS + 3, EEPROM_MAGIC_BACKUP & 0xFF);
-    storageUpdate(EEPROM_BACKUP_START + EEPROM_POT_CHANNELS, 9);
-    storageUpdate(EEPROM_BACKUP_START + EEPROM_POT_CC, 77);
-    storageUpdate(EEPROM_MAGIC_ADDRESS, 0x00);
-    storageUpdate(EEPROM_MAGIC_ADDRESS + 1, 0x00);
-
-    ConfigManager rebooted(NUM_POTS, NUM_BUTTONS);
-    std::vector<uint8_t> pots;
-    bool ok = rebooted.loadConfiguration(pots);
-    TEST_ASSERT_TRUE(ok);
-    TEST_ASSERT_EQUAL_UINT8(9, pots[0]);
-    TEST_ASSERT_EQUAL_UINT8(77, rebooted.getPotCCNumber(0));
-}
-
-// Baseline calibration should make it through a simulated reboot.
-void test_calibration_offsets_survive_power_cycle() {
-    auto pm = createPotentiometerManager();
-    std::vector<EnvelopeFollower> envs = {EnvelopeFollower(A0, &pm, 0)};
-    std::map<int, MIDISlot::EfSettings> mapping;
-    MIDISlot::EfSettings settings;
-    settings.followerIndex = 0;
-    mapping.emplace(0, settings);
-
-    envs[0].setBaseline(0.42f);
-    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-    cfg.saveEnvelopeSettings(mapping, envs);
-
-    // Pretend the board restarted – wipe RAM and reload from EEPROM
-    for (int i = 0; i < NUM_ENVELOPES; ++i) {
-        envelopeConfig.baselines[i] = 0.0f;
-    }
-    std::vector<EnvelopeFollower> fresh = {EnvelopeFollower(A0, &pm, 0)};
-    std::map<int, MIDISlot::EfSettings> mapping2;
-    bool ok = cfg.loadEnvelopeSettings(mapping2, fresh);
-
-    TEST_ASSERT_TRUE(ok);
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.42f, fresh[0].getBaseline());
-    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.42f, envelopeConfig.baselines[0]);
-}
-
-void test_high_index_envelope_assignment_survives_reload() {
-    auto pm = createPotentiometerManager();
-    auto envs = createEnvelopeFollowers(&pm);
-
-    for (size_t i = 0; i < envs.size(); ++i) {
-        envs[i].setBaseline(0.1f * static_cast<float>(i + 1));
-    }
-
-    std::map<int, MIDISlot::EfSettings> mapping;
-    const int highPot = NUM_POTS - 1;
-    const int assignedEnv = static_cast<int>(envs.size()) - 1;
-    MIDISlot::EfSettings assignedSettings{};
-    assignedSettings.followerIndex = static_cast<int8_t>(assignedEnv);
-    mapping.emplace(highPot, assignedSettings);
-
-    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
-    cfg.saveEnvelopeSettings(mapping, envs);
-
-    mapping.clear();
-    auto reloaded = createEnvelopeFollowers(&pm);
-    bool ok = cfg.loadEnvelopeSettings(mapping, reloaded);
-
-    TEST_ASSERT_TRUE(ok);
-    TEST_ASSERT_EQUAL_UINT(1u, mapping.size());
-
-    auto highPotIt = mapping.find(highPot);
-    TEST_ASSERT_TRUE(highPotIt != mapping.end());
-    TEST_ASSERT_EQUAL_INT(assignedEnv, highPotIt->second.followerIndex);
-
-    if (NUM_POTS > 1) {
-        int unassignedPot = (highPot == 0) ? 1 : 0;
-        auto unassignedIt = mapping.find(unassignedPot);
-        TEST_ASSERT_TRUE(unassignedIt == mapping.end());
-    }
-}
-#endif

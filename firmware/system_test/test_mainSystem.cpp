@@ -10,6 +10,7 @@ void corrupt_primary_valid_backup();
 void corrupted_primary_and_backup();
 void test_eeprom_recovery_after_power_cycle();
 void test_calibration_offsets_survive_power_cycle();
+void test_high_index_envelope_assignment_survives_reload();
 void test_brightness_and_color();
 void test_update_interval_round_trip();
 void test_filter_type_switching();
@@ -40,6 +41,7 @@ SystemTestSummary runSystemTests() {
     RUN_TEST(corrupted_primary_and_backup);
     RUN_TEST(test_eeprom_recovery_after_power_cycle);
     RUN_TEST(test_calibration_offsets_survive_power_cycle);
+    RUN_TEST(test_high_index_envelope_assignment_survives_reload);
     RUN_TEST(test_brightness_and_color);
     RUN_TEST(test_update_interval_round_trip);
     RUN_TEST(test_filter_type_switching);
@@ -63,6 +65,7 @@ void setup() {
     RUN_TEST(corrupted_primary_and_backup);
     RUN_TEST(test_eeprom_recovery_after_power_cycle);
     RUN_TEST(test_calibration_offsets_survive_power_cycle);
+    RUN_TEST(test_high_index_envelope_assignment_survives_reload);
     RUN_TEST(test_brightness_and_color);
     RUN_TEST(test_update_interval_round_trip);
     RUN_TEST(test_filter_type_switching);

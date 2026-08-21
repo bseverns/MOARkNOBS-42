@@ -46,6 +46,16 @@ Per-slot EF voices perform the same translation using the configured mid-tier
 envelope interval. The `native_biquad` step-response test locks this timing
 model without claiming analog-input-to-host latency.
 
+## Legacy Command Boundary
+
+The compatibility commands `CAL_ENVS`, `GET_FILTER`, `SET_FILTER`,
+`GET_SLOT_FILTER`, `SET_SLOT_FILTER`, `GET_ARGPAIR`, and `SET_ARGPAIR` are
+handled by `src/protocol/LegacyConfigCommands.cpp`. Their command spellings,
+responses, and persistence behavior are unchanged; `ConfigManager` now exposes
+configuration operations without parsing transport text. This refactor does
+not alter the durable layout. Migration fixtures explicitly cover stored
+profile versions 1–6 before any legacy profile decoder extraction.
+
 ## On-device Double-press Editing
 
 The performance surface can now reach three formerly configurator-heavy slot settings without entering config mode:

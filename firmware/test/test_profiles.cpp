@@ -10,6 +10,94 @@
 #include <cstddef>
 
 namespace {
+struct __attribute__((packed)) LegacyProfileArpSettingsV1Fixture {
+    uint8_t lengthTicks = 12;
+    uint8_t shape = 0;
+    uint8_t swingPercent = 0;
+    uint8_t gatePercent = 50;
+    uint8_t octaveRange = 0;
+};
+
+struct __attribute__((packed)) LegacyProfileEfSettingsFixture {
+    uint8_t mode = 0;
+    uint8_t autoBaseline = 1;
+    uint8_t autoGain = 1;
+    uint8_t gateThreshold = 16;
+    uint8_t gateHysteresis = 4;
+    uint8_t activityThreshold = 4;
+    uint8_t gainTarget = 102;
+    uint16_t attackMs = 5;
+    uint16_t releaseMs = 20;
+    uint16_t rmsWindowMs = 50;
+    uint16_t baselineTauMs = 2000;
+    uint16_t gainTauMs = 3000;
+};
+
+struct __attribute__((packed)) LegacyProfileLfoRouteFixture {
+    uint8_t type = 0;
+    uint8_t lfoIndex = 0;
+    float depth = 1.0f;
+    uint8_t target = 0;
+    uint8_t channel = 1;
+    uint8_t ccMsb = 0;
+    uint8_t ccLsb = 32;
+};
+
+struct __attribute__((packed)) LegacyProfileSlotSettingsV1Fixture {
+    uint8_t midiChannel = 1;
+    LegacyProfileEfSettingsFixture ef{};
+};
+
+struct __attribute__((packed)) LegacyProfileSlotSettingsV2Fixture {
+    uint8_t midiChannel = 1;
+    int8_t followerIndex = -1;
+    LegacyProfileEfSettingsFixture ef{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV1Fixture {
+    uint16_t version = 0x0001;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettingsV1Fixture arp{};
+    ProfileLedSettings led{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    LegacyProfileLfoRouteFixture routes[PROFILE_MAX_ROUTES]{};
+    LegacyProfileSlotSettingsV1Fixture slots[NUM_SLOTS]{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV2Fixture {
+    uint16_t version = 0x0002;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettingsV1Fixture arp{};
+    ProfileLedSettings led{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    LegacyProfileLfoRouteFixture routes[PROFILE_MAX_ROUTES]{};
+    LegacyProfileSlotSettingsV2Fixture slots[NUM_SLOTS]{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV3Fixture {
+    uint16_t version = 0x0003;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettingsV1Fixture arp{};
+    ProfileLedSettings led{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
+    LegacyProfileSlotSettingsV2Fixture slots[NUM_SLOTS]{};
+};
+
+struct __attribute__((packed)) LegacyProfileDataV4Fixture {
+    uint16_t version = 0x0004;
+    uint16_t crc = 0;
+    uint8_t routeCount = 0;
+    LegacyProfileArpSettingsV1Fixture arp{};
+    ProfileLedSettings led{};
+    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{};
+    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
+    ProfileSlotSettings slots[NUM_SLOTS]{};
+};
+
 struct __attribute__((packed)) LegacyProfileArpSettingsV5 {
     uint8_t lengthTicks = 12;
     uint8_t shape = 0;
@@ -54,6 +142,27 @@ struct __attribute__((packed)) LegacyProfileDataV6Fixture {
     ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{};
     ProfileSlotSettings slots[NUM_SLOTS]{};
 };
+
+template <typename LegacyProfile> uint16_t legacyProfileCrc(const LegacyProfile &profile) {
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    uint16_t crc = 0xFFFF;
+    for (size_t i = offsetof(LegacyProfile, routeCount); i < sizeof(profile); ++i) {
+        crc ^= bytes[i];
+        for (uint8_t bit = 0; bit < 8; ++bit) {
+            crc = (crc & 1) ? static_cast<uint16_t>((crc >> 1) ^ 0xA001) : crc >> 1;
+        }
+    }
+    return crc;
+}
+
+template <typename LegacyProfile>
+void writeLegacyProfile(uint8_t id, const LegacyProfile &profile) {
+    const uint16_t base = EEPROM_PROFILE_SETTINGS_START(id);
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
+    for (size_t i = 0; i < sizeof(profile); ++i) {
+        EEPROM.update(static_cast<int>(base + i), bytes[i]);
+    }
+}
 
 uint16_t legacyV5Crc(const LegacyProfileDataV5Fixture &profile) {
     const uint8_t *bytes = reinterpret_cast<const uint8_t *>(&profile);
@@ -290,6 +399,118 @@ void test_profile_round_trip_preserves_profile_payload() {
                             loaded.slots[NUM_SLOTS - 1].midiChannel);
     TEST_ASSERT_EQUAL_UINT16(saved.slots[NUM_SLOTS - 1].ef.releaseMs,
                              loaded.slots[NUM_SLOTS - 1].ef.releaseMs);
+}
+
+void test_profile_v1_migration_preserves_legacy_fields_and_live_follower() {
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    clearProfileSettingsBlock(3);
+    cfg.getSlot(0).setEnvelopeFollowerIndex(2);
+
+    LegacyProfileDataV1Fixture legacy{};
+    legacy.routeCount = 1;
+    legacy.arp.lengthTicks = 21;
+    legacy.led.g = 52;
+    legacy.lfos[0].frequencyHz = 1.75f;
+    legacy.routes[0].type = 1;
+    legacy.routes[0].channel = 6;
+    legacy.routes[0].ccMsb = 71;
+    legacy.slots[0].midiChannel = 9;
+    legacy.slots[0].ef.gateThreshold = 31;
+    legacy.crc = legacyProfileCrc(legacy);
+    writeLegacyProfile(3, legacy);
+
+    ProfileData loaded{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(3, loaded));
+    TEST_ASSERT_EQUAL_UINT16(PROFILE_SETTINGS_VERSION, loaded.version);
+    TEST_ASSERT_EQUAL_UINT8(legacy.arp.lengthTicks, loaded.arp.lengthTicks);
+    TEST_ASSERT_EQUAL_UINT8(legacy.led.g, loaded.led.g);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, legacy.lfos[0].frequencyHz,
+                             loaded.lfos[0].frequencyHz);
+    TEST_ASSERT_EQUAL_UINT8(legacy.routes[0].ccMsb, loaded.routes[0].ccMsb);
+    TEST_ASSERT_EQUAL_INT8(100, loaded.routes[0].amount);
+    TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].midiChannel, loaded.slots[0].midiChannel);
+    TEST_ASSERT_EQUAL_INT8(2, loaded.slots[0].followerIndex);
+    TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].ef.gateThreshold,
+                            loaded.slots[0].ef.gateThreshold);
+}
+
+void test_profile_v2_migration_preserves_follower_and_expands_routes() {
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    clearProfileSettingsBlock(3);
+
+    LegacyProfileDataV2Fixture legacy{};
+    legacy.routeCount = 1;
+    legacy.routes[0].type = 2;
+    legacy.routes[0].depth = 0.45f;
+    legacy.routes[0].ccLsb = 37;
+    legacy.slots[0].midiChannel = 11;
+    legacy.slots[0].followerIndex = 3;
+    legacy.slots[0].ef.releaseMs = 87;
+    legacy.crc = legacyProfileCrc(legacy);
+    writeLegacyProfile(3, legacy);
+
+    ProfileData loaded{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(3, loaded));
+    TEST_ASSERT_EQUAL_UINT8(legacy.routes[0].type, loaded.routes[0].type);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, legacy.routes[0].depth, loaded.routes[0].depth);
+    TEST_ASSERT_EQUAL_UINT8(legacy.routes[0].ccLsb, loaded.routes[0].ccLsb);
+    TEST_ASSERT_EQUAL_INT8(100, loaded.routes[0].amount);
+    TEST_ASSERT_EQUAL_UINT8(0, loaded.routes[0].minValue);
+    TEST_ASSERT_EQUAL_UINT8(127, loaded.routes[0].maxValue);
+    TEST_ASSERT_EQUAL_INT8(legacy.slots[0].followerIndex, loaded.slots[0].followerIndex);
+    TEST_ASSERT_EQUAL_UINT16(legacy.slots[0].ef.releaseMs, loaded.slots[0].ef.releaseMs);
+}
+
+void test_profile_v3_migration_preserves_expanded_route_and_legacy_slot() {
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    clearProfileSettingsBlock(3);
+
+    LegacyProfileDataV3Fixture legacy{};
+    legacy.routeCount = 1;
+    legacy.routes[0].type = 1;
+    legacy.routes[0].amount = -43;
+    legacy.routes[0].minValue = 14;
+    legacy.routes[0].maxValue = 101;
+    legacy.slots[0].midiChannel = 4;
+    legacy.slots[0].followerIndex = 1;
+    legacy.slots[0].ef.attackMs = 42;
+    legacy.crc = legacyProfileCrc(legacy);
+    writeLegacyProfile(3, legacy);
+
+    ProfileData loaded{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(3, loaded));
+    TEST_ASSERT_EQUAL_INT8(legacy.routes[0].amount, loaded.routes[0].amount);
+    TEST_ASSERT_EQUAL_UINT8(legacy.routes[0].minValue, loaded.routes[0].minValue);
+    TEST_ASSERT_EQUAL_UINT8(legacy.routes[0].maxValue, loaded.routes[0].maxValue);
+    TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].midiChannel, loaded.slots[0].midiChannel);
+    TEST_ASSERT_EQUAL_INT8(legacy.slots[0].followerIndex, loaded.slots[0].followerIndex);
+    TEST_ASSERT_EQUAL_UINT16(legacy.slots[0].ef.attackMs, loaded.slots[0].ef.attackMs);
+}
+
+void test_profile_v4_migration_preserves_slots_and_defaults_new_runtime_fields() {
+    ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+    clearProfileSettingsBlock(3);
+
+    LegacyProfileDataV4Fixture legacy{};
+    legacy.arp.gatePercent = 64;
+    legacy.slots[0].midiChannel = 13;
+    legacy.slots[0].followerIndex = 2;
+    legacy.slots[0].ef.destinationMode = static_cast<uint8_t>(EfDestinationMode::Centered);
+    legacy.slots[0].ef.gainTarget = 83;
+    legacy.crc = legacyProfileCrc(legacy);
+    writeLegacyProfile(3, legacy);
+
+    ProfileData loaded{};
+    TEST_ASSERT_TRUE(cfg.loadProfileSettings(3, loaded));
+    TEST_ASSERT_EQUAL_UINT8(legacy.arp.gatePercent, loaded.arp.gatePercent);
+    TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].midiChannel, loaded.slots[0].midiChannel);
+    TEST_ASSERT_EQUAL_INT8(legacy.slots[0].followerIndex, loaded.slots[0].followerIndex);
+    TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].ef.destinationMode,
+                            loaded.slots[0].ef.destinationMode);
+    TEST_ASSERT_EQUAL_UINT8(legacy.slots[0].ef.gainTarget, loaded.slots[0].ef.gainTarget);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 120.0f, loaded.clock.tappedBpm);
+    TEST_ASSERT_EQUAL_INT8(0, loaded.noteDynamics.velocityShift);
+    TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.0f, loaded.jitter.depth);
 }
 
 void test_profile_v5_migration_preserves_state_and_defaults_pattern_length() {
