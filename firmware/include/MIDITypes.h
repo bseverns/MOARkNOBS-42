@@ -6,6 +6,7 @@
 #include <cstdint>
 
 #include "SysExTemplateTypes.h"
+#include "protocol/ManifestContract.h"
 
 // Supported MIDI message types for a slot.
 enum class MIDIMessageType : uint8_t {
@@ -213,7 +214,7 @@ struct MIDISlot {
     int8_t getEnvelopeFollowerIndex() const { return ef.followerIndex; }
 };
 
-constexpr uint8_t NUM_SLOTS = 42;
+constexpr uint8_t NUM_SLOTS = ManifestContract::kSlotCount;
 inline constexpr uint8_t EF_OVERSAMPLE_MIN = 1;
 inline constexpr uint8_t EF_OVERSAMPLE_MAX = 32;
 inline constexpr uint16_t EF_TIME_MIN_MS = 1;

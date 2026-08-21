@@ -8,16 +8,16 @@
 
 | Field                    | Current fallback  | Source                                                  |
 | ------------------------ | ----------------- | ------------------------------------------------------- |
-| `device_name`            | `MOARkNOBS-42`    | `firmware/include/protocol/ManifestContract.h`          |
-| `schema_version`         | `8`               | `firmware/include/Globals.h` `CONFIG_VERSION`           |
-| `slot_count`             | `42`              | `firmware/include/MIDITypes.h` `NUM_SLOTS`              |
-| `pot_count`              | `42`              | `firmware/include/Globals.h` `NUM_POTS`                 |
-| `envelope_count`         | `6`               | `firmware/include/Globals.h` `NUM_ENVELOPES`            |
+| `device_name`            | `MOARkNOBS-42`    | `interop/mn42_contract.json`                            |
+| `schema_version`         | `8`               | `interop/mn42_contract.json`                            |
+| `slot_count`             | `42`              | `interop/mn42_contract.json`                            |
+| `pot_count`              | `42`              | `interop/mn42_contract.json`                            |
+| `envelope_count`         | `6`               | `interop/mn42_contract.json`                            |
 | `arg_method_count`       | `14`              | `ARGMethod::XORR + 1`                                   |
-| `led_count`              | `52`              | `slotLedCount + efLedCount + control LED + potLedCount` |
-| `power_profile`          | `POWER_CHOKED_V1` | `firmware/include/BoardPowerProfile.h`                  |
-| `led_brightness_cap`     | `26`              | Active board power profile                              |
-| `rail_topology_verified` | `false`           | Active board power profile                              |
+| `led_count`              | `52`              | `interop/mn42_contract.json`                            |
+| `power_profile`          | `POWER_CHOKED_V1` | Canonical fallback; firmware reports active profile     |
+| `led_brightness_cap`     | `26`              | Canonical fallback; firmware reports active profile     |
+| `rail_topology_verified` | `false`           | Canonical fallback; firmware reports active profile     |
 
 ## Operational Health Fields
 
@@ -74,7 +74,21 @@ The firmware clamps runtime LED brightness through `LEDManager` regardless of Ap
 
 ## Host Fallbacks
 
-The App fallback constants live in `App/manifest_contract.js`. Bridge fallback/documented constants live in `bridge/lib/manifest_contract.js`. `tools/check_contract_sync.py` compares those host fallbacks against firmware constants, the Globals-derived LED count, and the shared firmware/App schema semantics that the configurator and bridge depend on.
+`interop/mn42_contract.json` is the machine-readable manifest authority and
+`App/config_schema.json` is the canonical configuration schema. The generator
+produces the App and Bridge fallback modules, the firmware manifest constants,
+and the firmware `GET_SCHEMA` payload. The device projection intentionally
+excludes the App-only `scenes` editor extension.
+
+Regenerate after changing either canonical input:
+
+```bash
+python3 tools/generate_contract_artifacts.py --root .
+```
+
+Generated files carry a warning and must not be edited directly.
+`tools/check_contract_sync.py` compares them byte-for-byte with generator
+output; it no longer parses C++ expressions or reconstructs Arduino strings.
 
 Run it from the repo root:
 

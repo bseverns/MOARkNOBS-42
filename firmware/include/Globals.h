@@ -44,7 +44,7 @@ extern MIDIHandler midiHandler;
 class Arpeggiator;
 extern Arpeggiator arpeggiator;
 
-inline constexpr uint16_t CONFIG_VERSION = 0x0008; // EEPROM schema version
+inline constexpr uint16_t CONFIG_VERSION = ManifestContract::kSchemaVersion; // EEPROM schema version
 
 inline constexpr uint16_t OLED_WIDTH = 128;          // OLED display width in pixels
 inline constexpr uint16_t OLED_HEIGHT = 64;          // OLED display height in pixels
@@ -150,9 +150,10 @@ inline uint16_t NUM_LEDS() {
     return hwConfig.slotLedCount + hwConfig.efLedCount + 1 + hwConfig.potLedCount;
 }
 
-inline constexpr uint8_t NUM_POTS = 42;     // Analog pot count driving the ARG
+inline constexpr uint8_t NUM_POTS = ManifestContract::kPotCount; // Analog pot count driving the ARG
 inline constexpr uint8_t NUM_BUTTONS = 6;   // Number of direct control buttons
-inline constexpr uint8_t NUM_ENVELOPES = 6; // Envelope followers stalking your signal
+inline constexpr uint8_t NUM_ENVELOPES =
+    ManifestContract::kEnvelopeCount; // Envelope followers stalking your signal
 static_assert(NUM_ENVELOPES == STORAGE_LAYOUT_NUM_ENVELOPES,
               "Storage layout envelope count drifted from hardware");
 static_assert(NUM_ENVELOPES == SLOT_ARG_SOURCE_COUNT,

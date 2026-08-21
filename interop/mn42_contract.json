@@ -1,0 +1,42 @@
+{
+  "contract_version": 1,
+  "schema_source": "App/config_schema.json",
+  "manifest": {
+    "device_name": "MOARkNOBS-42",
+    "schema_version": 8,
+    "slot_count": 42,
+    "pot_count": 42,
+    "envelope_count": 6,
+    "led_count": 52,
+    "power_profile": "POWER_CHOKED_V1",
+    "led_brightness_cap": 26,
+    "rail_topology_verified": false
+  },
+  "app_capability_defaults": {
+    "profile_save": false,
+    "profile_load": false,
+    "profile_reset": false,
+    "macro_snapshot": false,
+    "scenes": false,
+    "arp_live": false,
+    "arp_profile_assignments": false,
+    "clock_live": false,
+    "note_dynamics_live": false,
+    "jitter_live": false,
+    "usb_midi_toggle": false,
+    "device_schema": false,
+    "bulk_config": false,
+    "verified_apply": false,
+    "apply_integrity_receipt": false,
+    "authoritative_readback": false,
+    "one_shot_config_boot": false
+  },
+  "device_schema": {
+    "exclude_properties": ["scenes"],
+    "authority": {
+      "authority": "device",
+      "configurator": "convenience editor for staged user input",
+      "bridge": "required when USB/WebSerial transport is unavailable or host integration needs it"
+    }
+  }
+}

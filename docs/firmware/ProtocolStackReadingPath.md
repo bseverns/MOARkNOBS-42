@@ -121,7 +121,10 @@ This family is best read in its own internal order:
 
 This is where most narrow `GET_*` and `SET_*` commands live.
 `GET_SCHEMA` delegates its host-contract construction to
-`protocol/ConfigSchema.cpp`; schema generation is not a persistence concern.
+`protocol/ConfigSchema.cpp`. That adapter returns the generated device
+projection in `protocol/GeneratedConfigSchema.h`; the machine source is
+`App/config_schema.json` plus the projection rules in
+`interop/mn42_contract.json`. Schema generation is not a persistence concern.
 
 ### 4. `ProtocolErrors`
 

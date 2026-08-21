@@ -26,9 +26,10 @@ HardwareConfig hwConfig = {
     .ledPin = 6,                // WS2812 data pin (docs/PinMap.md: LED_PIN)
     .statusLedPin = 23,         // status LED indicator (docs/PinMap.md: STATUS_LED_PIN)
     .rowDriverPin = 7,          // button matrix row driver (docs/PinMap.md: PIN_ROW_DRV)
-    .slotLedCount = 42,         // total WS2812s in slot ring
-    .efLedCount = 6,            // envelope follower LEDs riding the strip
-    .potLedCount = 3,           // pot position LEDs
+    .slotLedCount = ManifestContract::kSlotCount, // total WS2812s in slot ring
+    .efLedCount = ManifestContract::kEnvelopeCount, // envelope follower LEDs riding the strip
+    .potLedCount = ManifestContract::kDefaultLedCount - ManifestContract::kSlotCount -
+                   ManifestContract::kEnvelopeCount - 1, // pot position LEDs
     .numButtons = NUM_BUTTONS,  // direct-control buttons on deck
     .midiTaskInterval = 1,      // ms between MIDI service loops
     .serialTaskInterval = 10,   // ms between serial pokes
