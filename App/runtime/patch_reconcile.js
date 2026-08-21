@@ -1,3 +1,5 @@
+import { equivalentConfig } from './config_identity.js';
+
 function clamp(value, min, max) {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, value));
@@ -167,10 +169,6 @@ function sameNumberArray(left, right) {
   return true;
 }
 
-function deepEqual(left, right) {
-  return JSON.stringify(left) === JSON.stringify(right);
-}
-
 // Merge one device patch against the old live base and an unsent local draft.
 // Conflicts keep the local value (never silently erase an operator edit), but
 // are returned to the caller so the UI can make that choice visible.
@@ -186,8 +184,8 @@ function mergeThreeWay(base, device, staged, path, conflicts) {
     }
     return merged;
   }
-  if (deepEqual(device, base)) return staged;
-  if (deepEqual(staged, base) || deepEqual(staged, device)) return device;
+  if (equivalentConfig(device, base)) return staged;
+  if (equivalentConfig(staged, base) || equivalentConfig(staged, device)) return device;
   conflicts.push({ path, base, device, staged });
   return staged;
 }
@@ -333,7 +331,7 @@ export function createPatchReconciler({
     if (patch.filter && typeof patch.filter === 'object') {
       const prevFilter = prevLive.filter ?? {};
       const nextFilter = { ...(nextLive.filter ?? {}), ...patch.filter };
-      if (JSON.stringify(nextFilter) !== JSON.stringify(nextLive.filter ?? {})) {
+      if (!equivalentConfig(nextFilter, nextLive.filter ?? {})) {
         nextLive.filter = nextFilter;
         mutated = true;
         filterMeta = { prev: prevFilter, next: nextFilter };
@@ -343,7 +341,7 @@ export function createPatchReconciler({
     if (patch.arg && typeof patch.arg === 'object') {
       const prevArg = prevLive.arg ?? {};
       const nextArg = { ...(nextLive.arg ?? {}), ...patch.arg };
-      if (JSON.stringify(nextArg) !== JSON.stringify(nextLive.arg ?? {})) {
+      if (!equivalentConfig(nextArg, nextLive.arg ?? {})) {
         nextLive.arg = nextArg;
         mutated = true;
         argMeta = { prev: prevArg, next: nextArg };
@@ -381,15 +379,15 @@ export function createPatchReconciler({
               !Array.isArray(stagedValue) && !Array.isArray(prevValue) && !Array.isArray(nextValue)
             ) {
               const resolved = mergeThreeWay(prevValue, nextValue, stagedValue, `slots.${index}.${key}`, conflicts);
-              if (!deepEqual(merged[key], resolved)) {
+              if (!equivalentConfig(merged[key], resolved)) {
                 merged[key] = resolved;
                 stagedChanged = true;
               }
               return;
             }
-            const stagedMatchesPrev = deepEqual(stagedValue, prevValue);
+            const stagedMatchesPrev = equivalentConfig(stagedValue, prevValue);
             if (stagedValue === undefined || stagedMatchesPrev) {
-              if (!deepEqual(merged[key], nextSlot[key])) {
+              if (!equivalentConfig(merged[key], nextSlot[key])) {
                 merged[key] = clone(nextSlot[key]);
                 stagedChanged = true;
               }

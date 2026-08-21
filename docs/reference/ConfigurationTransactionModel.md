@@ -90,6 +90,18 @@ explicit defaults prevent stale hidden values on firmware that preserves an
 omitted field. The App applies the manifest's `led_brightness_cap` while
 normalizing LED brightness; if unavailable, the conservative maximum is 255.
 
+After schema normalization, host configuration identity uses canonical JSON
+version 1: object keys are sorted recursively, array order is preserved, and
+JSON serialization rules define the supported value domain. `stagedDigest` is
+the lowercase SHA-256 digest of that canonical JSON. App and Bridge load the
+same implementation and verify it against the shared machine-readable vectors
+in `tools/config_identity_vectors.json`.
+
+This host digest identifies a normalized candidate for Bridge correlation. It
+is distinct from the raw request checksum used to correlate firmware ACKs and
+from firmware's device-owned `applied_checksum`, which covers applied and
+persisted device state.
+
 ## What “rollback” means
 
 Use **discard local draft** for a candidate that has not crossed the transport. Use **firmware rejection** only when the response contract guarantees rejection happened before commit. Do not use rollback to describe an unknown transmitted outcome.

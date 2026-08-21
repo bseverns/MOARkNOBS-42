@@ -1,3 +1,5 @@
+import { configDigest, equivalentConfig } from './config_identity.js';
+
 function copyDefined(source, keys, clone) {
   if (!source || typeof source !== 'object') return {};
   const out = {};
@@ -5,10 +7,6 @@ function copyDefined(source, keys, clone) {
     if (source[key] !== undefined) out[key] = clone(source[key]);
   }
   return out;
-}
-
-function equivalentJson(a, b) {
-  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
 function resolveApplyCapabilities(manifest) {
@@ -82,7 +80,7 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
   if (
     slot?.ef &&
     typeof slot.ef === 'object' &&
-    !equivalentJson(slot.ef, previousSlot?.ef)
+    !equivalentConfig(slot.ef, previousSlot?.ef)
   ) {
     out.ef = copyDefined(
       slot.ef,
@@ -130,7 +128,7 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
   if (
     slot?.ef_payload &&
     typeof slot.ef_payload === 'object' &&
-    !equivalentJson(slot.ef_payload, previousSlot?.ef_payload)
+    !equivalentConfig(slot.ef_payload, previousSlot?.ef_payload)
   ) {
     out.ef_payload = copyDefined(
       slot.ef_payload,
@@ -138,14 +136,14 @@ function compactSlotForDevice(slot, previousSlot, { clone, slotTypeNames }) {
       clone
     );
   }
-  if (slot?.arg && typeof slot.arg === 'object' && !equivalentJson(slot.arg, previousSlot?.arg)) {
+  if (slot?.arg && typeof slot.arg === 'object' && !equivalentConfig(slot.arg, previousSlot?.arg)) {
     out.arg = copyDefined(
       slot.arg,
       ['enable', 'enabled', 'method', 'method_name', 'a', 'b', 'sourceA', 'sourceB'],
       clone
     );
   }
-  if (Array.isArray(slot?.lfo) && !equivalentJson(slot.lfo, previousSlot?.lfo)) {
+  if (Array.isArray(slot?.lfo) && !equivalentConfig(slot.lfo, previousSlot?.lfo)) {
     out.lfo = slot.lfo.map((lane) =>
       copyDefined(lane, ['enabled', 'mode', 'amount'], clone)
     );
@@ -162,33 +160,33 @@ export function compactConfigForDevice(config, previousConfig, options) {
       compactSlotForDevice(slot, previousConfig?.slots?.[index], options)
     );
   }
-  if (Array.isArray(config.efSlots) && !equivalentJson(config.efSlots, previousConfig?.efSlots)) {
+  if (Array.isArray(config.efSlots) && !equivalentConfig(config.efSlots, previousConfig?.efSlots)) {
     out.efSlots = clone(config.efSlots);
   }
   if (
     config.filter &&
     typeof config.filter === 'object' &&
-    !equivalentJson(config.filter, previousConfig?.filter)
+    !equivalentConfig(config.filter, previousConfig?.filter)
   ) {
     out.filter = clone(config.filter);
   }
   if (
     config.arg &&
     typeof config.arg === 'object' &&
-    !equivalentJson(config.arg, previousConfig?.arg)
+    !equivalentConfig(config.arg, previousConfig?.arg)
   ) {
     out.arg = clone(config.arg);
   }
   if (
     config.led &&
     typeof config.led === 'object' &&
-    !equivalentJson(config.led, previousConfig?.led)
+    !equivalentConfig(config.led, previousConfig?.led)
   ) {
     out.led = clone(config.led);
   }
   if (
     config.envelopeMode !== undefined &&
-    !equivalentJson(config.envelopeMode, previousConfig?.envelopeMode)
+    !equivalentConfig(config.envelopeMode, previousConfig?.envelopeMode)
   ) {
     out.envelopeMode = clone(config.envelopeMode);
   }
@@ -413,8 +411,7 @@ export function createConfigSession({
     const candidateMatchesDevice =
       appliedCandidate &&
       stateOverride !== 'verified-device-different' &&
-      JSON.stringify(normalized) ===
-        JSON.stringify(normalizeConfig(appliedCandidate, getManifest()));
+      equivalentConfig(normalized, normalizeConfig(appliedCandidate, getManifest()));
     if (candidateMatchesDevice && preApplyLive) {
       previousAppliedLive = clone(preApplyLive);
       appliedLiveSnapshot = clone(normalized);
@@ -499,8 +496,7 @@ export function createConfigSession({
       const deviceConfig = normalizeConfig(response?.config ?? response, getManifest());
       const candidateMatchesDevice =
         !appliedCandidate ||
-        JSON.stringify(deviceConfig) ===
-          JSON.stringify(normalizeConfig(appliedCandidate, getManifest()));
+        equivalentConfig(deviceConfig, normalizeConfig(appliedCandidate, getManifest()));
       finishApply(
         deviceConfig,
         { reason: 'resynchronized', attemptedApply },
@@ -537,8 +533,10 @@ export function createConfigSession({
 
   function classifyReadbackRecovery(recovered, transmittedConfig, details = {}) {
     const recoveredMatchesCandidate =
-      JSON.stringify(normalizeConfig(recovered, getManifest())) ===
-      JSON.stringify(normalizeConfig(transmittedConfig, getManifest()));
+      equivalentConfig(
+        normalizeConfig(recovered, getManifest()),
+        normalizeConfig(transmittedConfig, getManifest())
+      );
     return recoveredMatchesCandidate
       ? { applied: true, verifiedBy: 'readback', ...details }
       : { applied: false, verifiedDeviceState: true, verifiedBy: 'readback', ...details };
@@ -572,7 +570,7 @@ export function createConfigSession({
           globalThis.crypto?.randomUUID?.() ??
           `app-${Date.now()}-${clientApplyRevision}`,
         stagedRevision: clientApplyRevision,
-        stagedDigest: await digest(JSON.stringify(appliedCandidate))
+        stagedDigest: await configDigest(appliedCandidate)
       };
       try {
         const response =
@@ -793,7 +791,7 @@ export function createConfigSession({
         throw new Error(`Device applied configuration but readback verification failed: ${err?.message ?? err}`);
       }
       const expected = normalizeConfig(appliedCandidate, getManifest());
-      if (JSON.stringify(readback) !== JSON.stringify(expected)) {
+      if (!equivalentConfig(readback, expected)) {
         // The device is the authority after an ACK. Preserve its truth instead
         // of promoting an unverified browser-side candidate. Any newer local
         // draft remains staged separately for the operator's next Apply.
@@ -841,7 +839,7 @@ export function createConfigSession({
       dirty ||
       !previousAppliedLive ||
       !appliedLiveSnapshot ||
-      JSON.stringify(liveConfig) !== JSON.stringify(appliedLiveSnapshot)
+      !equivalentConfig(liveConfig, appliedLiveSnapshot)
     ) {
       return false;
     }
@@ -907,7 +905,7 @@ export function createConfigSession({
         !dirty &&
         Boolean(previousAppliedLive) &&
         Boolean(appliedLiveSnapshot) &&
-        JSON.stringify(liveConfig) === JSON.stringify(appliedLiveSnapshot),
+        equivalentConfig(liveConfig, appliedLiveSnapshot),
       attemptedApply: attemptedApply ? clone(attemptedApply) : null
     };
   }

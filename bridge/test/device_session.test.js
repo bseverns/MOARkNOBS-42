@@ -9,6 +9,10 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+async function configDigest(value) {
+  return (await loadSchemaAuthority()).configDigest(value);
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -493,10 +497,7 @@ async function run() {
     await waitFor(() => harness.session.getState().ready);
     const staged = clone(harness.session.getState().stagedConfig);
     staged.slots[0].data1 = 101;
-    const stagedDigest = require('node:crypto')
-      .createHash('sha256')
-      .update(JSON.stringify(staged))
-      .digest('hex');
+    const stagedDigest = await configDigest(staged);
     const receipt = await harness.session.stageConfig(staged, {
       clientApplyId: 'client-apply-current',
       stagedRevision: 41,
@@ -552,10 +553,7 @@ async function run() {
     await waitFor(() => harness.session.getState().ready);
     const staged = clone(harness.session.getState().stagedConfig);
     staged.slots[2].data1 = 54;
-    const stagedDigest = require('node:crypto')
-      .createHash('sha256')
-      .update(JSON.stringify(staged))
-      .digest('hex');
+    const stagedDigest = await configDigest(staged);
     await harness.session.stageConfig(staged, {
       clientApplyId: 'firmware-rejection',
       stagedRevision: 42,

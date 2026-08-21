@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "vectors": [
+    {
+      "name": "nested-property-order",
+      "left": {
+        "schema_version": 8,
+        "slots": [
+          {
+            "index": 0,
+            "type": "CC",
+            "ef": {
+              "q": 0.7,
+              "frequency": 1000
+            }
+          }
+        ],
+        "arg": {
+          "b": 1,
+          "a": 0
+        }
+      },
+      "right": {
+        "arg": {
+          "a": 0,
+          "b": 1
+        },
+        "slots": [
+          {
+            "ef": {
+              "frequency": 1000,
+              "q": 0.7
+            },
+            "type": "CC",
+            "index": 0
+          }
+        ],
+        "schema_version": 8
+      },
+      "canonical_json": "{\"arg\":{\"a\":0,\"b\":1},\"schema_version\":8,\"slots\":[{\"ef\":{\"frequency\":1000,\"q\":0.7},\"index\":0,\"type\":\"CC\"}]}",
+      "sha256": "5119107416380cc3dc5a3558abbb632b092f3cdbe29214a61a5678c92cc7c517"
+    }
+  ]
+}

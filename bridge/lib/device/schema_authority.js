@@ -27,6 +27,7 @@ const APP_RUNTIME_FILES = [
   path.join('lib', 'add-formats.js'),
   path.join('lib', 'constants.js'),
   path.join('runtime', 'config_normalize.js'),
+  path.join('runtime', 'config_identity.js'),
   path.join('runtime', 'patch_reconcile.js'),
   path.join('runtime', 'config_session.js'),
 ];
@@ -157,12 +158,14 @@ async function loadSchemaAuthority() {
       miniAjvModule,
       addFormatsModule,
       normalizeModule,
+      identityModule,
       sessionModule,
     ] = await Promise.all([
       fs.readFile(schemaPath, 'utf8'),
       loadAppModule(appRoot, 'lib', 'mini-ajv.js'),
       loadAppModule(appRoot, 'lib', 'add-formats.js'),
       loadAppModule(appRoot, 'runtime', 'config_normalize.js'),
+      loadAppModule(appRoot, 'runtime', 'config_identity.js'),
       loadAppModule(appRoot, 'runtime', 'config_session.js'),
     ]);
 
@@ -188,6 +191,11 @@ async function loadSchemaAuthority() {
         null,
       slotTypeNames: clone(slotTypeNames),
       normalizeConfig,
+      canonicalConfig: identityModule.canonicalConfig,
+      canonicalConfigJson: identityModule.canonicalConfigJson,
+      equivalentConfig: identityModule.equivalentConfig,
+      configDigest: identityModule.configDigest,
+      configIdentityVersion: identityModule.CONFIG_IDENTITY_VERSION,
       compactConfigForDevice,
       validateConfig(config) {
         const valid = validator(config);

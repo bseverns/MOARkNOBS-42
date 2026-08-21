@@ -54,6 +54,9 @@ function assertCombinedWriterKeys(source, writers, value, label) {
 
 async function run() {
   const root = path.resolve(__dirname, '..', '..');
+  const identityVectors = JSON.parse(
+    fs.readFileSync(path.join(root, 'tools', 'config_identity_vectors.json'), 'utf8'),
+  );
   const firmwareSource = fs.readFileSync(
     path.join(root, 'firmware', 'src', 'protocol', 'ProtocolSimpleHandlers.cpp'),
     'utf8',
@@ -107,6 +110,14 @@ async function run() {
   assertWriterKeys(firmwareSource, 'writeLedConfig', 'colorObj', exported.led.rgb);
 
   const authority = await loadSchemaAuthority();
+  assert.equal(authority.configIdentityVersion, identityVectors.version);
+  for (const vector of identityVectors.vectors) {
+    assert.equal(authority.canonicalConfigJson(vector.left), vector.canonical_json, vector.name);
+    assert.equal(authority.canonicalConfigJson(vector.right), vector.canonical_json, vector.name);
+    assert.equal(authority.equivalentConfig(vector.left, vector.right), true, vector.name);
+    assert.equal(await authority.configDigest(vector.left), vector.sha256, vector.name);
+    assert.equal(await authority.configDigest(vector.right), vector.sha256, vector.name);
+  }
   const normalized = authority.normalizeConfig(exported, manifest);
   const initialValidation = authority.validateConfig(normalized);
   assert.equal(

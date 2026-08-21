@@ -822,7 +822,7 @@ function createDeviceSession({
       }
       if (applyPending?.awaitingReadback) {
         const pending = applyPending;
-        if (JSON.stringify(normalized) !== JSON.stringify(pending.stagedConfig)) {
+        if (!authority.equivalentConfig(normalized, pending.stagedConfig)) {
           const error = createSessionError('apply_readback_mismatch',
             'Committed device configuration differs from the staged configuration', null, 409);
           applyWriter.reject(pending, error);
@@ -849,8 +849,10 @@ function createDeviceSession({
         const resolved = uncertainApply;
         uncertainApply = null;
         state.lastError = null;
-        const candidateMatchesReadback =
-          JSON.stringify(normalized) === JSON.stringify(resolved.stagedConfig);
+        const candidateMatchesReadback = authority.equivalentConfig(
+          normalized,
+          resolved.stagedConfig,
+        );
         state.liveConfig = clone(normalized);
         state.stagedConfig = clone(candidateMatchesReadback ? normalized : resolved.stagedConfig);
         state.dirty = !candidateMatchesReadback;
@@ -1037,10 +1039,7 @@ function createDeviceSession({
         422,
       );
     }
-    const computedDigest = crypto
-      .createHash('sha256')
-      .update(JSON.stringify(normalized))
-      .digest('hex');
+    const computedDigest = await authority.configDigest(normalized);
     if (stagedDigest != null && stagedDigest !== computedDigest) {
       throw createSessionError(
         'staged_digest_mismatch',
@@ -1054,9 +1053,10 @@ function createDeviceSession({
     state.stagedRevision = stagedRevision;
     state.stagedDigest = computedDigest;
     state.lastApplyResult = null;
-    state.dirty =
-      JSON.stringify(state.liveConfig ?? null) !==
-      JSON.stringify(state.stagedConfig ?? null);
+    state.dirty = !authority.equivalentConfig(
+      state.liveConfig ?? null,
+      state.stagedConfig ?? null,
+    );
     emitState();
     emitConfigState();
     return {
