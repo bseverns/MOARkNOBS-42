@@ -4,6 +4,21 @@ This plan is a non-destructive first pass. It changes the reader experience befo
 
 The goal is not fewer documents today. The goal is fewer first doors.
 
+## Implementation Status
+
+The first-door pass is now implemented:
+
+- the root README introduces the complete instrument before hardware-test evidence
+- performers, builders, contributors, and evaluators each have one designated landing page
+- the visible Learn syllabus is five pages; deeper learning guides remain linked through progressive disclosure
+- generated MkDocs path breadcrumbs orient readers in deep sections
+- hardware-test status and board photos live in `HARDWARE_TEST_README.md`
+- App and Bridge READMEs are operational quickstarts backed by focused behavior, transport, and operator references
+- the wiki source pack is frozen and clearly labeled as historical
+
+This remains a non-destructive compaction: deep guides, contracts, and evidence were demoted from the first door rather
+than deleted. Future consolidation should be driven by observed navigation problems and content overlap.
+
 ## Current Diagnosis
 
 MOARkNOBS-42 has useful docs, but too many pages are equally visible. A new reader sees learning guides, firmware contracts, release caveats, bench receipts, bridge internals, hardware sketches, and historical reports as peers.

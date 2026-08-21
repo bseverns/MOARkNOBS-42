@@ -10,7 +10,8 @@ The Bridge docs are intentionally split because the Bridge serves several audien
 | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | I need the rig working before rehearsal | [Bridge for Performers](../guides/BridgeForPerformers.md)                                                                          | One-page show/rehearsal checklist.                                        |
 | I am operating the browser console      | [Bridge Console Tour](BridgeConsoleTour.md)                                                                                        | Explains Setup, Stage, Advanced, snapshots, and recovery actions.         |
-| I need the full Bridge runbook          | [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md)                                            | Canonical Bridge behavior, support boundary, install/run/package details. |
+| I need to start the Bridge              | [bridge/README.md](https://github.com/bseverns/MOARkNOBS-42/blob/main/bridge/README.md)                                            | Concise install, start, workflow, and troubleshooting guide.              |
+| I need settings, OSC, MIDI, or CLI detail | [Bridge Operator Reference](BridgeOperatorReference.md)                                                                          | Full operator and routing lookup without crowding the quickstart.         |
 | I am wiring App-over-Bridge behavior    | [Bridge Transport Contract](BridgeTransportContract.md)                                                                            | HTTP/WebSocket surfaces and structured session behavior.                  |
 | I am debugging writes or dirty state    | [Bridge Write Lanes](BridgeWriteLanes.md)                                                                                          | Staged config writes versus live performance writes.                      |
 | I am preparing release artifacts        | [Bridge Signing Plan](../release/BridgeSigningPlan.md)                                                                             | Signing, notarization, and unsigned-artifact boundaries.                  |
@@ -20,7 +21,7 @@ The Bridge docs are intentionally split because the Bridge serves several audien
 
 - **Performer docs** answer what to run and what to check before a set.
 - **Console docs** explain the desktop UI and operator state.
-- **Contract docs** define transport surfaces and write lanes.
+- **Contract docs** define transport surfaces and write lanes; the operator reference collects CLI and routing lookup.
 - **Packaging docs** explain artifacts, signing, and release boundaries.
 - **Evidence docs** record what was actually observed on a host, browser, Bridge, or board.
 

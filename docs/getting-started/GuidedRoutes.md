@@ -36,7 +36,7 @@ Go deeper:
 
 Primary links:
 
-1. [Start Here](StartHere.md)
+1. [System Map](SystemMap.md)
 2. [Why MN42](WhyMN42.md)
 3. [One Signal Path](../learn/OneSignalPath.md)
 4. [Glossary](../reference/Glossary.md)
