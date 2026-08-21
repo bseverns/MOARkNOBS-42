@@ -11,6 +11,7 @@ contracts:
       - docs/reference/ConfigurationTransactionModel.md
       - docs/reference/ManifestContract.md
       - docs/app/AppTransportTruthTable.md
+      - docs/bridge/BridgeTransportContract.md
       - docs/guides/Configurator.md
   bridge:
     source:

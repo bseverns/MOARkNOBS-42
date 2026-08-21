@@ -120,7 +120,11 @@ test('bridge-served app prefers the structured bridge session and promotes stage
 
     window.fetch = async (input, init = {}) => {
       const url = new URL(typeof input === 'string' ? input : input.url, window.location.href);
-      if (url.origin !== BRIDGE_HTTP || !url.pathname.startsWith('/api/device/')) {
+      if (
+        url.origin !== BRIDGE_HTTP ||
+        (url.pathname !== '/api/contract' &&
+          !url.pathname.startsWith('/api/device/'))
+      ) {
         return originalFetch(input, init);
       }
 
@@ -128,6 +132,26 @@ test('bridge-served app prefers the structured bridge session and promotes stage
         method: init.method || 'GET',
         path: `${url.pathname}${url.search}`
       });
+
+      if (url.pathname === '/api/contract') {
+        return new Response(
+          JSON.stringify({
+            contract: {
+              bridge_api_version: 1,
+              event_contract_version: 1,
+              bridge_version: '1.0.0-test',
+              bridge_source_sha: 'structured-test-sha',
+              supported_schema_versions: [schemaVersion],
+              verified_apply: true,
+              structured_session: true
+            }
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+          }
+        );
+      }
 
       if (url.pathname === '/api/device/session') {
         return new Response(JSON.stringify({ session: sessionState }), {
@@ -405,6 +429,9 @@ test('bridge-served app prefers the structured bridge session and promotes stage
   expect(bridgeState.writes).not.toContain('GET_MANIFEST');
   expect(bridgeState.writes).not.toContain('GET_SCHEMA');
   expect(bridgeState.writes).not.toContain('GET_CONFIG');
+  expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain(
+    '/api/contract'
+  );
   expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/device/session?warm=1');
   expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/device/stage');
   expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/device/apply');
@@ -475,6 +502,29 @@ test('raw bridge fallback preserves staged and live config discipline without br
 
     window.fetch = async (input, init = {}) => {
       const url = new URL(typeof input === 'string' ? input : input.url, window.location.href);
+      if (url.origin === BRIDGE_HTTP && url.pathname === '/api/contract') {
+        window.__bridgeApiCalls.push({
+          method: init.method || 'GET',
+          path: url.pathname
+        });
+        return new Response(
+          JSON.stringify({
+            contract: {
+              bridge_api_version: 1,
+              event_contract_version: 1,
+              bridge_version: '1.0.0-test',
+              bridge_source_sha: 'fallback-test-sha',
+              supported_schema_versions: [schemaVersion],
+              verified_apply: true,
+              structured_session: true
+            }
+          }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' }
+          }
+        );
+      }
       if (url.origin === BRIDGE_HTTP && url.pathname === '/api/device/session') {
         window.__bridgeApiCalls.push({
           method: init.method || 'GET',
@@ -621,6 +671,7 @@ test('raw bridge fallback preserves staged and live config discipline without br
     diff: window.__MN42_RUNTIME.diff()
   }));
   expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/device/session?warm=1');
+  expect(bridgeState.apiCalls.map((entry) => entry.path)).toContain('/api/contract');
   expect(bridgeState.writes).toContain('HELLO');
   expect(bridgeState.writes).toContain('GET_MANIFEST');
   expect(bridgeState.writes).toContain('GET_SCHEMA');

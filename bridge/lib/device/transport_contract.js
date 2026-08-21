@@ -1,10 +1,12 @@
+const { EVENT_CONTRACT_VERSION } = require('../bridge_contract');
+
 function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
 function createStructuredEvent(event, payload = {}) {
   return {
-    version: 1,
+    version: EVENT_CONTRACT_VERSION,
     event,
     at: new Date().toISOString(),
     payload: clone(payload),
@@ -40,6 +42,7 @@ function validateStructuredEventShape(message) {
 }
 
 module.exports = {
+  EVENT_CONTRACT_VERSION,
   createStructuredEvent,
   validateStructuredEventShape,
 };

@@ -3,6 +3,7 @@ const { EventEmitter } = require('node:events');
 const { Readable } = require('node:stream');
 
 const { createBrowserBridgeServer } = require('../lib/http_bridge_server');
+const { createBridgeContract } = require('../lib/bridge_contract');
 
 function makeFakeService() {
   const events = new EventEmitter();
@@ -571,15 +572,35 @@ async function assertControlTokenBoundary() {
 async function run() {
   const service = makeFakeService();
   const { httpApi, server } = makeFakeHttpApi();
+  const bridgeContract = createBridgeContract({
+    sourceSha: 'browser-server-test-sha',
+  });
   const browserServer = createBrowserBridgeServer({
     service,
     host: '127.0.0.1',
     port: 0,
     httpApi,
     requireControlToken: false,
+    bridgeContract,
   });
   const address = await browserServer.start();
   assert.equal(address.port, 12345);
+
+  const contractResponse = makeRes();
+  await server.requestHandler(
+    makeReq({ method: 'GET', url: '/api/contract' }),
+    contractResponse,
+  );
+  const contractPayload = JSON.parse(contractResponse.body.toString('utf8'));
+  assert.deepEqual(contractPayload.contract, {
+    bridge_api_version: 1,
+    event_contract_version: 1,
+    bridge_version: '1.0.0',
+    bridge_source_sha: 'browser-server-test-sha',
+    supported_schema_versions: [8],
+    verified_apply: true,
+    structured_session: true,
+  });
 
   const stateResponse = makeRes();
   await server.requestHandler(
@@ -587,6 +608,11 @@ async function run() {
     stateResponse,
   );
   const statePayload = JSON.parse(stateResponse.body.toString('utf8'));
+  assert.deepEqual(
+    statePayload.contract,
+    contractPayload.contract,
+    'state endpoint should carry the same negotiated Bridge contract',
+  );
   assert.equal(
     statePayload.state.running,
     false,
@@ -619,6 +645,11 @@ async function run() {
     sessionResponse,
   );
   const sessionPayload = JSON.parse(sessionResponse.body.toString('utf8'));
+  assert.deepEqual(
+    sessionPayload.contract,
+    contractPayload.contract,
+    'session endpoint should carry the same negotiated Bridge contract',
+  );
   assert.equal(
     sessionPayload.session?.firmwareIdentity?.device_name,
     'MOARkNOBS-42',

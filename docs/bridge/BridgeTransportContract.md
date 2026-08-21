@@ -6,6 +6,9 @@ This document describes the desktop-side transport surfaces exposed by `bridge/`
 
 ## Surfaces
 
+- `Contract negotiation`
+  `/api/contract`
+  Version and capability metadata for every structured HTTP and event client.
 - `Raw debug transport`
   `/ws`
   Newline-delimited firmware lines. This is the compatibility/debug lane and the fallback App-over-bridge path.
@@ -21,6 +24,39 @@ This document describes the desktop-side transport surfaces exposed by `bridge/`
 
 The App now prefers `/api/device/session` plus `/ws/events` when it is opened from the bridge. Raw `/ws` remains available both for compatibility and for the current live-control RPC lane.
 For the App-side meaning of `Direct USB`, `Bridge session`, `Bridge raw`, and `Simulator`, see [App Transport Truth Table](../app/AppTransportTruthTable.md).
+
+## Contract negotiation
+
+Clients must read `GET /api/contract` before using the structured session API
+or `/ws/events`. The current response is:
+
+```json
+{
+  "contract": {
+    "bridge_api_version": 1,
+    "event_contract_version": 1,
+    "bridge_version": "1.0.0",
+    "bridge_source_sha": null,
+    "supported_schema_versions": [8],
+    "verified_apply": true,
+    "structured_session": true
+  }
+}
+```
+
+`bridge_source_sha` comes from `MN42_BRIDGE_SOURCE_SHA` or `GITHUB_SHA` when
+the launch/build environment supplies one; otherwise it is `null` rather than
+claiming unknown provenance. The App accepts only API/event version `1`,
+requires its current schema version to appear in `supported_schema_versions`,
+and requires both advertised capabilities. A failed negotiation disables the
+structured session lane; the existing raw Bridge transport remains the
+compatibility fallback.
+
+The unprefixed HTTP routes are the version-1 compatibility routes. A future
+major contract may add version-prefixed routes, but version negotiation does
+not require renaming the current surface. `/api/state`, `/api/device/session`,
+and downloadable state snapshots also carry the same contract metadata so
+diagnostics remain self-identifying.
 
 ## Structured event envelope
 

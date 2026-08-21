@@ -1,3 +1,8 @@
+import { MN42_SCHEMA_VERSION } from '../manifest_contract.js';
+
+export const SUPPORTED_BRIDGE_API_VERSIONS = Object.freeze([1]);
+export const SUPPORTED_BRIDGE_EVENT_CONTRACT_VERSIONS = Object.freeze([1]);
+
 const PREFLIGHT_REJECTION_CODES = new Set([
   'schema_validation_failed',
   'stale_session_revision',
@@ -54,6 +59,82 @@ function resolveUrl(url, base) {
   }
 }
 
+function createContractError(code, message, contract = null) {
+  const error = new Error(message);
+  error.code = code;
+  error.bridgeContract = contract;
+  return error;
+}
+
+export function validateBridgeContract(contract) {
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    throw createContractError(
+      'invalid_bridge_contract',
+      'Bridge contract metadata is missing or malformed.',
+      contract
+    );
+  }
+  if (!SUPPORTED_BRIDGE_API_VERSIONS.includes(contract.bridge_api_version)) {
+    throw createContractError(
+      'unsupported_bridge_api_version',
+      `Unsupported Bridge API version: ${String(contract.bridge_api_version)}`,
+      contract
+    );
+  }
+  if (
+    !SUPPORTED_BRIDGE_EVENT_CONTRACT_VERSIONS.includes(
+      contract.event_contract_version
+    )
+  ) {
+    throw createContractError(
+      'unsupported_bridge_event_contract_version',
+      `Unsupported Bridge event contract version: ${String(
+        contract.event_contract_version
+      )}`,
+      contract
+    );
+  }
+  if (
+    !Array.isArray(contract.supported_schema_versions) ||
+    !contract.supported_schema_versions.includes(MN42_SCHEMA_VERSION)
+  ) {
+    throw createContractError(
+      'unsupported_bridge_schema_version',
+      `Bridge does not support App schema version ${MN42_SCHEMA_VERSION}.`,
+      contract
+    );
+  }
+  if (contract.verified_apply !== true || contract.structured_session !== true) {
+    throw createContractError(
+      'unsupported_bridge_capabilities',
+      'Bridge does not advertise the verified structured-session contract.',
+      contract
+    );
+  }
+  if (
+    typeof contract.bridge_version !== 'string' ||
+    !contract.bridge_version.trim()
+  ) {
+    throw createContractError(
+      'invalid_bridge_contract',
+      'Bridge contract metadata omitted bridge_version.',
+      contract
+    );
+  }
+  if (
+    contract.bridge_source_sha !== null &&
+    (typeof contract.bridge_source_sha !== 'string' ||
+      !contract.bridge_source_sha.trim())
+  ) {
+    throw createContractError(
+      'invalid_bridge_contract',
+      'Bridge contract bridge_source_sha must be a non-empty string or null.',
+      contract
+    );
+  }
+  return contract;
+}
+
 export function createBridgeSessionClient({
   baseUrl,
   eventUrl,
@@ -76,6 +157,8 @@ export function createBridgeSessionClient({
   let socket = null;
   let socketClosed = false;
   let buffer = '';
+  let negotiatedContract = null;
+  let contractPromise = null;
   const decoder = typeof TextDecoder === 'function' ? new TextDecoder() : null;
 
   async function requestJson(path, { method = 'GET', body } = {}) {
@@ -107,7 +190,22 @@ export function createBridgeSessionClient({
     return payload ?? {};
   }
 
+  async function getContract({ force = false } = {}) {
+    if (!force && negotiatedContract) return negotiatedContract;
+    if (!force && contractPromise) return contractPromise;
+    contractPromise = requestJson('/api/contract')
+      .then((payload) => {
+        negotiatedContract = validateBridgeContract(payload.contract);
+        return negotiatedContract;
+      })
+      .finally(() => {
+        contractPromise = null;
+      });
+    return contractPromise;
+  }
+
   async function getSession({ warm = false } = {}) {
+    await getContract();
     const suffix = warm ? '?warm=1' : '';
     const payload = await requestJson(`/api/device/session${suffix}`);
     return payload.session ?? null;
@@ -119,6 +217,7 @@ export function createBridgeSessionClient({
     stagedRevision,
     stagedDigest
   } = {}) {
+    await getContract();
     const payload = await requestJson('/api/device/stage', {
       method: 'POST',
       body: {
@@ -133,6 +232,7 @@ export function createBridgeSessionClient({
   }
 
   async function applyConfig(body = {}) {
+    await getContract();
     const payload = await requestJson('/api/device/apply', {
       method: 'POST',
       body
@@ -148,6 +248,7 @@ export function createBridgeSessionClient({
   }
 
   async function rollbackConfig(reason = 'operator_request') {
+    await getContract();
     const payload = await requestJson('/api/device/rollback', {
       method: 'POST',
       body: { reason }
@@ -156,6 +257,7 @@ export function createBridgeSessionClient({
   }
 
   async function publishDisplayMetadata(metadata = {}) {
+    await getContract();
     const payload = await requestJson('/api/display-metadata', {
       method: 'POST',
       body: metadata
@@ -174,7 +276,8 @@ export function createBridgeSessionClient({
     socket = null;
   }
 
-  function openEvents({ onEvent, onClose, onError } = {}) {
+  async function openEvents({ onEvent, onClose, onError } = {}) {
+    const contract = await getContract();
     if (!resolvedEventUrl) {
       return Promise.reject(new Error('Bridge eventUrl is required'));
     }
@@ -192,12 +295,26 @@ export function createBridgeSessionClient({
     socket = new WebSocketImpl(socketUrl.toString());
     socket.binaryType = 'arraybuffer';
 
+    const deliverEvent = (message) => {
+      if (message?.version !== contract.event_contract_version) {
+        onError?.(
+          createContractError(
+            'unsupported_bridge_event_contract_version',
+            `Bridge event used unsupported contract version: ${String(message?.version)}`,
+            contract
+          )
+        );
+        return;
+      }
+      onEvent?.(message);
+    };
+
     const flushBufferedEvent = () => {
       const trimmed = buffer.trim();
       buffer = '';
       if (!trimmed) return;
       try {
-        onEvent?.(JSON.parse(trimmed));
+        deliverEvent(JSON.parse(trimmed));
       } catch (err) {
         onError?.(err);
       }
@@ -214,7 +331,7 @@ export function createBridgeSessionClient({
         buffer = buffer.slice(index + 1);
         if (!segment) continue;
         try {
-          onEvent?.(JSON.parse(segment));
+          deliverEvent(JSON.parse(segment));
         } catch (err) {
           onError?.(err);
         }
@@ -255,6 +372,7 @@ export function createBridgeSessionClient({
   }
 
   return {
+    getContract,
     getSession,
     stageConfig,
     applyConfig,

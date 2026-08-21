@@ -59,6 +59,11 @@ for saved settings; explicit CLI flags override the file.
 - Revisioned staged configuration through `/api/device/*` and `/ws/events`.
 - Raw newline-oriented serial compatibility through `/ws`.
 
+Clients negotiate the structured interface through `GET /api/contract` before
+using it. Existing `/api/*` paths remain the version-1 compatibility surface;
+the response advertises API/event versions, Bridge version/source identity,
+supported device schema versions, and verified Apply/session capabilities.
+
 Live `SET_SLOT_VALUE` and typed MIDI/OSC events are performance writes, not staged configuration. Configuration changes
 use stage/apply endpoints and preserve uncertainty until authoritative readback resolves device truth.
 

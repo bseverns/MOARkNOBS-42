@@ -4,6 +4,10 @@ const http = require('node:http');
 const path = require('node:path');
 
 const { DEFAULT_HTTP_PORT, MAX_SERIAL_LINE_LEN } = require('./bridge_service');
+const {
+  EVENT_CONTRACT_VERSION,
+  createBridgeContract,
+} = require('./bridge_contract');
 
 const MIME_TYPES = {
   '.css': 'text/css; charset=utf-8',
@@ -324,6 +328,7 @@ function createBrowserBridgeServer({
   controlToken = crypto.randomBytes(32).toString('base64url'),
   requireControlToken = true,
   allowNetworkHost = false,
+  bridgeContract = createBridgeContract(),
 } = {}) {
   if (!service || typeof service.getState !== 'function') {
     throw new Error('bridge service is required');
@@ -427,8 +432,13 @@ function createBrowserBridgeServer({
 
   // Handle the small REST surface that starts/stops the bridge and exposes status.
   async function handleApi(req, res, pathname) {
+    if (pathname === '/api/contract' && req.method === 'GET') {
+      sendJson(res, 200, { contract: bridgeContract });
+      return true;
+    }
+
     if (pathname === '/api/state' && req.method === 'GET') {
-      sendJson(res, 200, { state: service.getState() });
+      sendJson(res, 200, { contract: bridgeContract, state: service.getState() });
       return true;
     }
 
@@ -455,7 +465,7 @@ function createBrowserBridgeServer({
         typeof service.getDeviceSessionState === 'function'
           ? service.getDeviceSessionState()
           : service.getState()?.deviceSession ?? null;
-      sendJson(res, 200, { session });
+      sendJson(res, 200, { contract: bridgeContract, session });
       return true;
     }
 
@@ -465,6 +475,7 @@ function createBrowserBridgeServer({
       const manifest = state?.manifest || {};
       const payload = {
         generatedAt,
+        contract: bridgeContract,
         runtime: {
           pid: process.pid,
           uptimeSeconds: Math.floor(process.uptime()),
@@ -797,7 +808,7 @@ function createBrowserBridgeServer({
           : null);
       const bootstrapMessages = [
         {
-          version: 1,
+          version: EVENT_CONTRACT_VERSION,
           event: 'device.session.snapshot',
           at: new Date().toISOString(),
           payload: {
@@ -818,7 +829,7 @@ function createBrowserBridgeServer({
           },
         },
         {
-          version: 1,
+          version: EVENT_CONTRACT_VERSION,
           event: 'device.config.live',
           at: new Date().toISOString(),
           payload: {
@@ -833,7 +844,7 @@ function createBrowserBridgeServer({
           },
         },
         {
-          version: 1,
+          version: EVENT_CONTRACT_VERSION,
           event: 'device.config.staged',
           at: new Date().toISOString(),
           payload: {
@@ -847,7 +858,7 @@ function createBrowserBridgeServer({
           },
         },
         {
-          version: 1,
+          version: EVENT_CONTRACT_VERSION,
           event: 'device.config.dirty',
           at: new Date().toISOString(),
           payload: {
@@ -861,7 +872,7 @@ function createBrowserBridgeServer({
           },
         },
         {
-          version: 1,
+          version: EVENT_CONTRACT_VERSION,
           event: 'bridge.performance',
           at: new Date().toISOString(),
           payload: {
@@ -871,7 +882,7 @@ function createBrowserBridgeServer({
       ];
       if (session?.ready) {
         bootstrapMessages.push({
-          version: 1,
+          version: EVENT_CONTRACT_VERSION,
           event: 'device.ready',
           at: new Date().toISOString(),
           payload: {
