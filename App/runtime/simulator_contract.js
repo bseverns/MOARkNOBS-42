@@ -1,0 +1,20 @@
+export const SIMULATOR_CAPABILITIES = Object.freeze({
+  profile_save: true,
+  profile_load: true,
+  profile_reset: true,
+  macro_snapshot: true,
+  scenes: true,
+  arp_live: true,
+  arp_profile_assignments: true,
+  clock_live: true,
+  usb_midi_toggle: true,
+  note_dynamics_live: true,
+  jitter_live: true,
+  device_schema: true,
+  bulk_config: true,
+  verified_apply: true,
+  apply_integrity_receipt: true,
+  authoritative_readback: true,
+  one_shot_config_boot: false
+});
+

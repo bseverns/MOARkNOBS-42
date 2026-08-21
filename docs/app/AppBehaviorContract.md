@@ -4,9 +4,12 @@
 
 ## Runtime ownership
 
-- `App/runtime.js` owns transports, manifest/schema negotiation, state normalization, validation, staged diffs,
-  checksummed Apply, uncertainty/resynchronization, telemetry coalescing, and the simulator transport.
-- `App/views/benzknobz.js` renders the MN42 layout and binds operator controls to the runtime API.
+- `App/runtime.js` is the runtime composition root. It wires transport, contract, configuration-session, telemetry, and
+  live-control services, but does not define their schema, transaction, or device-policy rules.
+- `App/views/benzknobz.js` is the view composition root. It assembles panels/controllers and binds operator controls to
+  the public runtime API; device truth and write policy must remain behind those dependencies.
+- `App/runtime/` owns manifest/schema negotiation, state normalization, validation, staged diffs, checksummed Apply,
+  uncertainty/resynchronization, telemetry coalescing, and transport-specific behavior.
 - `App/config_schema.json` is the bundled schema 8 fallback. A compatible device-provided schema takes precedence.
 - `App/benzknobz.css` defines shared visual tokens and mode presentation.
 
@@ -86,8 +89,11 @@ Run:
 
 ```bash
 npm --prefix App test
+npm --prefix App run test:architecture
 ```
 
 Playwright exercises the real runtime/view modules through the stable `benzknobz.html` harness, including simulator,
 schema validation, staged diff, Apply/receipt failures, uncertainty recovery, migration blocking, profiles, and the
-mode surfaces. Operator-facing hardware claims additionally require receipts under `docs/bench/app/`.
+mode surfaces. The architecture guard rejects coordinator imports that bypass the public layers and policy-shaped code
+that would pull schema constraints, transaction semantics, or device capability decisions back into the two composition
+roots. Operator-facing hardware claims additionally require receipts under `docs/bench/app/`.

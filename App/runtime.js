@@ -22,6 +22,17 @@ import { createBridgeSessionRuntime } from './runtime/bridge_session_runtime.js'
 import { createLiveControlsRuntime } from './runtime/live_controls_runtime.js';
 import { createTelemetryRuntime } from './runtime/telemetry_runtime.js';
 import {
+  contractQualityStatus,
+  initialContractQuality,
+  resolveHydratedContractQuality,
+  resolveStructuredContractQuality,
+  selectConfigReadRpc
+} from './runtime/contract_policy.js';
+import { SIMULATOR_CAPABILITIES } from './runtime/simulator_contract.js';
+import { createRpcSender } from './runtime/rpc_sender.js';
+import { createBridgeConfigLane } from './runtime/bridge_config_lane.js';
+import { createApplyCoordinator } from './runtime/apply_coordinator.js';
+import {
   getTransportMode,
   resolveTransportModeOptions,
   wantsStructuredBridgeSession
@@ -84,7 +95,7 @@ export function createRuntime({
   let remoteManifest = null;
   let schema = null;
   let schemaSource = 'bundled';
-  let contractQuality = useSimulator ? 'simulator' : 'incompatible';
+  let contractQuality = initialContractQuality({ useSimulator });
   let validator = null;
   let seq = 0;
   const statusListeners = new Set();
@@ -126,17 +137,6 @@ export function createRuntime({
     );
   }
 
-  function schemaMigrationRequired() {
-    if (useSimulator) return false;
-    const deviceVersion = remoteManifest?.schema_version;
-    const appVersion = localManifest?.schema_version;
-    return (
-      deviceVersion !== null && deviceVersion !== undefined &&
-      appVersion !== null && appVersion !== undefined &&
-      String(deviceVersion) !== String(appVersion)
-    );
-  }
-
   const localSlotMetaManager = createLocalSlotMetaManager({
     storageKey: LOCAL_SLOT_META_STORAGE_KEY,
     initialSlotCount: localManifest?.slot_count ?? 0,
@@ -168,25 +168,7 @@ export function createRuntime({
         createLocalManifest({
           uiVersion: 'simulator',
           argMethodCount: ARG_METHOD_NAMES.length,
-          capabilities: {
-            profile_save: true,
-            profile_load: true,
-            profile_reset: true,
-            macro_snapshot: true,
-            scenes: true,
-            arp_live: true,
-            arp_profile_assignments: true,
-            clock_live: true,
-            usb_midi_toggle: true,
-            note_dynamics_live: true,
-            jitter_live: true,
-            device_schema: true,
-            bulk_config: true,
-            verified_apply: true,
-            apply_integrity_receipt: true,
-            authoritative_readback: true,
-            one_shot_config_boot: false
-          }
+          capabilities: SIMULATOR_CAPABILITIES
         }),
       argMethodNames: ARG_METHOD_NAMES,
       efFilterNames: EF_FILTER_NAMES,
@@ -278,23 +260,11 @@ export function createRuntime({
     }
   });
 
-  function sendRpc(payload, { timeoutMs, rollbackPolicy = 'none' } = {}) {
-    if (!['none', 'staged-config'].includes(rollbackPolicy)) {
-      throw new Error(`Unsupported RPC rollback policy: ${rollbackPolicy}`);
-    }
-    const request = rpcKernel.sendRpc(payload, { timeoutMs });
-    if (rollbackPolicy === 'none') return request;
-    // Staged-config rollback is deliberately opt-in. Profile, live-control, and read RPCs
-    // must not discard unrelated configuration edits when they fail.
-    return request.catch(async (err) => {
-      try {
-        await configSession?.rollback();
-      } catch (rollbackErr) {
-        console.debug('rollback failed', rollbackErr);
-      }
-      throw err;
-    });
-  }
+  const sendRpc = createRpcSender({ rpcKernel, getConfigSession: () => configSession });
+
+  const bridgeConfigLane = createBridgeConfigLane({
+    getBridgeSessionRuntime: () => bridgeSessionRuntime
+  });
 
   configSession = createConfigSession({
     normalizeConfig,
@@ -314,75 +284,10 @@ export function createRuntime({
     getSchemaSource: () => schemaSource,
     getValidator: () => validator,
     isBridgeSessionActive: () => bridgeSessionActive,
-    stageBridgeConfig: async (config) => {
-      const client = bridgeSessionRuntime?.ensureClient();
-      if (!client) throw new Error('Bridge session unavailable');
-      return client.stageConfig(config);
-    },
-    applyBridgeConfig: async ({ candidate, identity } = {}) => {
-      const client = bridgeSessionRuntime?.ensureClient();
-      if (!client) {
-        const error = new Error('Bridge session unavailable');
-        error.bridgeFailureClass = 'preflight-rejected';
-        throw error;
-      }
-      let stageReceipt;
-      try {
-        stageReceipt = await client.stageConfig(candidate, {
-          expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
-          ...identity
-        });
-      } catch (err) {
-        // The serial Apply request is not sent until this identity-bearing
-        // stage request has returned successfully.
-        err.bridgeFailureClass = 'preflight-rejected';
-        bridgeSessionRuntime?.recordSessionRevision(
-          err.bridgeSession?.sessionRevision
-        );
-        throw err;
-      }
-      bridgeSessionRuntime?.recordStageReceipt(stageReceipt);
-      let response;
-      try {
-        response = await client.applyConfig({
-          expectedSessionRevision: bridgeSessionRuntime?.getSessionRevision(),
-          ...identity
-        });
-      } catch (err) {
-        if (err.bridgeFailureClass === 'preflight-rejected') {
-          bridgeSessionRuntime?.recordSessionRevision(
-            err.bridgeSession?.sessionRevision
-          );
-        }
-        throw err;
-      }
-      const result = response?.result;
-      if (
-        result?.applied !== true &&
-        !(result?.applied === false && result?.reason === 'clean')
-      ) {
-        const error = new Error('Bridge Apply response omitted its transaction result.');
-        error.code = 'invalid_bridge_apply_response';
-        error.bridgeFailureClass = 'transmission-unknown';
-        error.bridgeSession = response?.session ?? null;
-        throw error;
-      }
-      if (response?.session) bridgeSessionRuntime?.applyAuthoritativeSession(response.session);
-      return {
-        ...result,
-        authoritativeConfig: response?.session?.liveConfig ?? null
-      };
-    },
-    refreshBridgeSession: async () =>
-      bridgeSessionRuntime?.refreshSessionSnapshot({
-        warm: false,
-        emitConnectedConfig: false
-      }),
-    rollbackBridgeConfig: async (reason) => {
-      const client = bridgeSessionRuntime?.ensureClient();
-      if (!client) return { rolledBack: false };
-      return client.rollbackConfig(reason);
-    }
+    stageBridgeConfig: bridgeConfigLane.stageConfig,
+    applyBridgeConfig: bridgeConfigLane.applyConfig,
+    refreshBridgeSession: bridgeConfigLane.refreshSession,
+    rollbackBridgeConfig: bridgeConfigLane.rollbackConfig
   });
 
   bridgeSessionRuntime = createBridgeSessionRuntime({
@@ -492,15 +397,13 @@ export function createRuntime({
           });
           await bridgeSessionRuntime.openStructuredEvents();
           bridgeSessionActive = true;
-          contractQuality = schemaMigrationRequired()
-            ? 'migration-required'
-            : schemaSource === 'device'
-              ? 'verified'
-              : 'fallback-schema';
-          emit('contract-quality', {
-            quality: contractQuality,
-            applyAllowed: contractQuality === 'verified'
+          contractQuality = resolveStructuredContractQuality({
+            useSimulator,
+            remoteManifest,
+            localManifest,
+            schemaSource
           });
+          emit('contract-quality', contractQualityStatus(contractQuality));
           emit('status', {
             stage: 'bridge-session',
             level: 'ok',
@@ -559,21 +462,18 @@ export function createRuntime({
     });
     schema = schemaSelection.schema;
     schemaSource = schemaSelection.source;
-    contractQuality = useSimulator
-      ? 'simulator'
-      : schemaMigrationRequired()
-        ? 'migration-required'
-        : handshakeQuality !== 'verified'
-          ? handshakeQuality
-          : schemaSelection.quality;
+    contractQuality = resolveHydratedContractQuality({
+      useSimulator,
+      remoteManifest,
+      localManifest,
+      handshakeQuality,
+      schemaQuality: schemaSelection.quality
+    });
     if (remoteManifest) remoteManifest.contract_quality = contractQuality;
-    emit('contract-quality', { quality: contractQuality, applyAllowed: ['verified', 'simulator'].includes(contractQuality) });
+    emit('contract-quality', contractQualityStatus(contractQuality));
     validator = ajv.compile(schema);
-    const supportsChunkedConfig = Boolean(
-      !useSimulator && remoteManifest?.capabilities?.chunked_reads?.config
-    );
     const configPayload = await sendRpc({
-      rpc: supportsChunkedConfig ? 'get_config_chunked' : 'get_config'
+      rpc: selectConfigReadRpc({ useSimulator, remoteManifest })
     });
     const config = configPayload?.config ?? configPayload;
     configSession.syncFromDevice(config);
@@ -672,33 +572,12 @@ export function createRuntime({
     return staged;
   }
 
-  async function apply() {
-    if (!['verified', 'simulator'].includes(contractQuality)) {
-      throw new Error(`Apply is blocked until the device contract is verified (current: ${contractQuality}).`);
-    }
-    if (bridgeSessionActive) {
-      if (!bridgeSessionRuntime.isHealthy()) {
-        throw new Error('Apply is blocked while the Bridge session event authority is stale.');
-      }
-      await bridgeSessionRuntime.flushStageSync({ active: bridgeSessionActive });
-      bridgeSessionRuntime.suspendStageSync();
-      try {
-        return await configSession.apply();
-      } finally {
-        bridgeSessionRuntime.resumeStageSync({ active: bridgeSessionActive });
-      }
-    }
-    return configSession.apply();
-  }
-
-  async function rollback() {
-    bridgeSessionRuntime.cancelStageSync();
-    return configSession.rollback();
-  }
-
-  async function resynchronize() {
-    return configSession.resynchronize();
-  }
+  const applyCoordinator = createApplyCoordinator({
+    configSession,
+    bridgeSessionRuntime,
+    isBridgeSessionActive: () => bridgeSessionActive,
+    getContractQuality: () => contractQuality
+  });
 
   function getState() {
     return {
@@ -723,9 +602,9 @@ export function createRuntime({
     disconnect,
     stage,
     stagePreviousApply,
-    apply,
-    rollback,
-    resynchronize,
+    apply: applyCoordinator.apply,
+    rollback: applyCoordinator.rollback,
+    resynchronize: applyCoordinator.resynchronize,
     diff: configSession.diff,
     getState,
     on,
