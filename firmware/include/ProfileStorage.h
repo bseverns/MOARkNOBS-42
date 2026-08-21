@@ -7,7 +7,7 @@
 #ifndef PROFILE_STORAGE_H
 #define PROFILE_STORAGE_H
 
-#include "ConfigManager.h"
+#include "ProfileTypes.h"
 
 /// Sanitize the EF subset within a profile slot.
 ProfileEfSettings sanitizeProfileEfSettings(const ProfileEfSettings &settings);

@@ -12,7 +12,7 @@
 // - parse the command name once
 // - linearly scan the compact handler table
 // - hand the request to the owning protocol submachine
-// - fall back to ConfigManager's legacy command lane only if no named handler matches
+// - fall back to LegacyConfigCommands only if no named handler matches
 
 namespace {
 using ProtocolDispatchHandlers::ParsedCommand;

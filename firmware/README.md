@@ -46,15 +46,22 @@ Per-slot EF voices perform the same translation using the configured mid-tier
 envelope interval. The `native_biquad` step-response test locks this timing
 model without claiming analog-input-to-host latency.
 
-## Legacy Command Boundary
+## Configuration and Profile Boundaries
 
 The compatibility commands `CAL_ENVS`, `GET_FILTER`, `SET_FILTER`,
 `GET_SLOT_FILTER`, `SET_SLOT_FILTER`, `GET_ARGPAIR`, and `SET_ARGPAIR` are
 handled by `src/protocol/LegacyConfigCommands.cpp`. Their command spellings,
 responses, and persistence behavior are unchanged; `ConfigManager` now exposes
 configuration operations without parsing transport text. This refactor does
-not alter the durable layout. Migration fixtures explicitly cover stored
-profile versions 1–6 before any legacy profile decoder extraction.
+not alter the durable layout or wire protocol.
+
+`src/protocol/ConfigSchema.cpp` owns `GET_SCHEMA` construction, while
+`ProfileTypes.h` owns the current packed profile payload independently of the
+manager class. `ProfileMigration.cpp` performs read-only decoding and
+sanitization for stored profile versions 1–7; `ConfigManager` retains profile
+ID/address validation and the public load/save façade. Migration fixtures cover
+versions 1–6, current-version coverage protects version 7, and decoder failure
+tests verify that invalid records do not mutate the caller's output.
 
 ## On-device Double-press Editing
 

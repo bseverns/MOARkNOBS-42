@@ -57,4 +57,13 @@ Legacy migration reports an explicit result for capacity, read, write, and verif
 
 Profile loads compose the ordinary profile snapshot and its schema-8 modulation extension in memory before persistence. Each resulting slot is saved once, preventing an intermediate MIDI/EF-only slot image and avoiding the former double-write pass across all 42 slots.
 
+Stored profile decoding is a read-only operation owned by `ProfileMigration.cpp`.
+It recognizes profile payload versions 1–7, validates the version-specific CRC,
+sanitizes the migrated result, and reports insufficient storage, unsupported
+versions, and checksum failures explicitly. `ConfigManager` validates the
+profile ID/address and preserves its boolean public API. A failed decode leaves
+the caller's output unchanged. Version 1 predates persisted follower indices,
+so its migration deliberately retains the historical behavior of inheriting
+those indices from the live slots supplied by the manager.
+
 The historical schema-4 emulated EEPROM offsets are documented separately in [Legacy EEPROM Layout](EEPROMLayout.md) and are not the current persistence contract.

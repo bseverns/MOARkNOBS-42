@@ -12,6 +12,11 @@
 #include <cmath>
 #include <cstddef>
 
+static_assert(PROFILE_ARP_DEFAULT_PATTERN_LENGTH == Arpeggiator::DEFAULT_PATTERN_LENGTH,
+              "Profile arp default must match the runtime default");
+static_assert(PROFILE_ARP_ASSIGNMENT_BYTES == Arpeggiator::ASSIGNMENT_BYTES,
+              "Profile arp assignment storage must match the runtime bitmap");
+
 namespace {
 
 // CRC-16 with the Modbus-flavored 0xA001 polynomial. Shared with

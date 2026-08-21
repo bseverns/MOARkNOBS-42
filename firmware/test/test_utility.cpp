@@ -6,6 +6,7 @@
 #include "MIDITypes.h"
 #include "MIDIHandler.h"
 #include "TimeStub.h"
+#include "protocol/ConfigSchema.h"
 #include <ArduinoJson.h>
 #include <limits>
 
@@ -119,7 +120,7 @@ void test_format_ack_includes_checksum_and_seq() {
 }
 
 void test_device_schema_advertises_runtime_controls() {
-    String schema = ConfigManager::makeSchema();
+    String schema = buildConfigSchema();
     StaticJsonDocument<12288> doc;
     DeserializationError err = deserializeJson(doc, schema);
     TEST_ASSERT_FALSE(err);

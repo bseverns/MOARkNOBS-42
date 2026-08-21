@@ -4,11 +4,11 @@
 #ifndef CONFIGMANAGER_H
 #define CONFIGMANAGER_H
 
-#include "Arpeggiator.h"
 #include "Globals.h"
 #include "LedMode.h"
 #include "MIDITypes.h"
 #include "ProfileModulationTypes.h"
+#include "ProfileTypes.h"
 #include "PotentiometerManager.h"
 #include "storage/StorageBackend.h"
 #include <Arduino.h>
@@ -85,108 +85,6 @@ inline constexpr uint16_t EEPROM_USB_MIDI_OUT_CHECK = EEPROM_USB_MIDI_OUT + 1;
 class EnvelopeFollower;
 
 /*
-Profile payload chunks used for multi-profile persistence.
-These structs are packed so EEPROM writes stay compact and predictable.
-*/
-struct __attribute__((packed)) ProfileEfSettings {
-    uint8_t mode = 0;              // EnvelopeFollower::EFMode
-    uint8_t autoBaseline = 1;      // Auto-baseline flag (0/1)
-    uint8_t autoGain = 1;          // Auto-gain flag (0/1)
-    uint8_t gateThreshold = 16;    // Gate threshold (0-127)
-    uint8_t gateHysteresis = 4;    // Gate hysteresis (0-127)
-    uint8_t activityThreshold = 4; // Activity threshold (0-127)
-    uint8_t gainTarget = 102;      // Auto-gain target (0-127)
-    uint8_t destinationMode =
-        static_cast<uint8_t>(EfDestinationMode::AddClamp); // EfDestinationMode value
-    uint16_t attackMs = 5;                                 // Attack time (ms)
-    uint16_t releaseMs = 20;                               // Release time (ms)
-    uint16_t rmsWindowMs = 50;                             // RMS window (ms)
-    uint16_t baselineTauMs = 2000;                         // Baseline time constant (ms)
-    uint16_t gainTauMs = 3000;                             // Gain time constant (ms)
-};
-
-struct __attribute__((packed)) ProfileSlotSettings {
-    uint8_t midiChannel = 1;   // Per-slot MIDI channel
-    int8_t followerIndex = -1; // Saved EF follower assignment for this slot
-    ProfileEfSettings ef{};    // Per-slot EF mode settings
-};
-
-struct __attribute__((packed)) ProfileArpSettings {
-    uint8_t lengthTicks = 12;                                    // Step length in MIDI ticks
-    uint8_t shape = 0;                                           // Arpeggiator::Shape
-    uint8_t swingPercent = 0;                                    // Swing percent (0..80)
-    uint8_t gatePercent = 50;                                    // Gate percent (5..100)
-    uint8_t octaveRange = 0;                                     // Extra octaves (0..3)
-    uint8_t patternLength = Arpeggiator::DEFAULT_PATTERN_LENGTH; // Pattern steps (2..16)
-    uint8_t assignedSlots[Arpeggiator::ASSIGNMENT_BYTES]{};      // Hardware-toggle slot mask
-};
-
-struct __attribute__((packed)) ProfileLedSettings {
-    uint8_t brightness = 128; // Base LED brightness
-    uint8_t r = 0;            // LED color R
-    uint8_t g = 0;            // LED color G
-    uint8_t b = 0;            // LED color B
-};
-
-struct __attribute__((packed)) ProfileClockSettings {
-    float tappedBpm = 120.0f;        // Internal tapped tempo used when not following external clock
-    uint8_t clockOutEnabled = 0;     // MIDI clock output gate (0/1)
-    uint8_t followExternalClock = 1; // External clock follow flag (0/1)
-};
-
-struct __attribute__((packed)) ProfileNoteDynamicsSettings {
-    int8_t velocityShift = 0;        // -64..+63 note velocity offset
-    uint8_t changeProbability = 100; // 0..100% note trigger probability
-};
-
-struct __attribute__((packed)) ProfileJitterSettings {
-    float depth = 1.0f;      // 0..1 jitter depth
-    float smoothness = 0.5f; // 0..1 jitter smoothness
-};
-
-struct __attribute__((packed)) ProfileLfoSettings {
-    uint8_t shape = 0;        // LFOShape value
-    float frequencyHz = 1.0f; // Free-run frequency
-    float depth = 0.0f;       // LFO depth (0..1)
-    uint8_t bipolar = 1;      // Bipolar flag (0/1)
-    uint8_t syncEnabled = 0;  // Sync flag (0/1)
-    uint8_t syncRatio = 0;    // LFOSyncRatio value
-};
-
-struct __attribute__((packed)) ProfileLfoRoute {
-    uint8_t type = 0;       // LFOManager::Route::Type
-    uint8_t lfoIndex = 0;   // LFO index
-    float depth = 1.0f;     // Route depth
-    uint8_t target = 0;     // LFOInternalTarget
-    uint8_t channel = 1;    // MIDI channel
-    uint8_t ccMsb = 0;      // CC MSB
-    uint8_t ccLsb = 32;     // CC LSB
-    int8_t amount = 100;    // Signed route amount (-100..100)
-    uint8_t minValue = 0;   // Output floor for transport routes
-    uint8_t maxValue = 127; // Output ceiling for transport routes
-};
-
-inline constexpr uint8_t PROFILE_MAX_ROUTES = 8;
-inline constexpr uint16_t PROFILE_SETTINGS_VERSION = 0x0007;
-
-struct __attribute__((packed)) ProfileData {
-    uint16_t version = PROFILE_SETTINGS_VERSION;  // Profile payload version
-    uint16_t crc = 0;                             // CRC over payload bytes
-    uint8_t routeCount = 0;                       // Active route count
-    ProfileArpSettings arp{};                     // Arp settings snapshot
-    ProfileLedSettings led{};                     // LED brightness/color
-    ProfileClockSettings clock{};                 // Clock source/output snapshot
-    ProfileNoteDynamicsSettings noteDynamics{};   // Live note dynamics snapshot
-    ProfileJitterSettings jitter{};               // Live jitter snapshot
-    ProfileLfoSettings lfos[PROFILE_LFO_COUNT]{}; // LFO state snapshot
-    ProfileLfoRoute routes[PROFILE_MAX_ROUTES]{}; // LFO route table
-    ProfileSlotSettings slots[NUM_SLOTS]{};       // Per-slot MIDI/EF settings
-};
-
-static_assert(sizeof(ProfileData) <= EEPROM_PROFILE_SETTINGS_BLOCK_SIZE,
-              "ProfileData exceeds the allotted EEPROM block size");
-
-/*
 Handles persistence of user configuration in EEPROM.
 
 ConfigManager provides helpers for saving and loading all
@@ -201,9 +99,6 @@ class ConfigManager {
     buttons. No EEPROM access occurs here.
     */
     ConfigManager(uint8_t numPots, uint8_t numButtons);
-
-    // Generate the JSON configuration schema string.
-    static String makeSchema();
 
     /*
     Initialise the subsystem and load settings from EEPROM. Populates

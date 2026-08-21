@@ -28,6 +28,7 @@ void test_swing_delays_offbeat_notes();
 void test_stop_cancels_delayed_note_on();
 void test_tempo_change_updates_tick_ms();
 void test_profile_crc_rejects_corruption();
+void test_profile_decoder_reports_failures_without_mutating_output();
 void test_profile_bounds_clamp();
 void test_profile_round_trip_preserves_profile_payload();
 void test_profile_v1_migration_preserves_legacy_fields_and_live_follower();
@@ -364,6 +365,7 @@ void setup() {
     RUN_TEST(test_stop_cancels_delayed_note_on);
     RUN_TEST(test_tempo_change_updates_tick_ms);
     RUN_TEST(test_profile_crc_rejects_corruption);
+    RUN_TEST(test_profile_decoder_reports_failures_without_mutating_output);
     RUN_TEST(test_profile_bounds_clamp);
     RUN_TEST(test_profile_round_trip_preserves_profile_payload);
     RUN_TEST(test_profile_v1_migration_preserves_legacy_fields_and_live_follower);

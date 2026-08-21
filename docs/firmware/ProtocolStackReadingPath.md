@@ -51,6 +51,7 @@ flowchart TD
   Protocol --> Dispatch[ProtocolDispatch]
   Protocol --> SceneJson[SceneCommands]
   Dispatch --> Simple[ProtocolSimpleHandlers]
+  Simple --> Schema[ConfigSchema]
   Dispatch --> Bulk[ConfigJsonApply]
   Dispatch --> Manifest[ManifestReport]
   Dispatch --> Profile[Profile command family]
@@ -59,8 +60,8 @@ flowchart TD
 
 _Alt text: Flowchart showing host traffic entering the command queue, passing
 through Protocol.cpp, and then fanning into dispatch, scene JSON handling,
-simple handlers, bulk config apply, manifest reporting, profile commands, and
-scene storage._
+simple handlers, schema construction, bulk config apply, manifest reporting,
+profile commands, and scene storage._
 
 ## Read The Submachines In This Order
 
@@ -78,8 +79,8 @@ This is the command-router submachine:
 - `ParsedCommand` measures command name versus payload
 - the compact handler table maps names to handler families; lookup scans the
   table so a handler remains reachable even if a future edit changes its order
-- unknown commands fall back to the legacy `ConfigManager` lane only after the
-  named command table misses
+- unknown commands fall back to the focused `LegacyConfigCommands` compatibility
+  handler only after the named command table misses
 
 Read this before the deeper handlers so you know the routing policy first.
 
@@ -119,6 +120,8 @@ This family is best read in its own internal order:
 4. direct live-control writes
 
 This is where most narrow `GET_*` and `SET_*` commands live.
+`GET_SCHEMA` delegates its host-contract construction to
+`protocol/ConfigSchema.cpp`; schema generation is not a persistence concern.
 
 ### 4. `ProtocolErrors`
 

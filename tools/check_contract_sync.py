@@ -181,14 +181,14 @@ def evaluate_schema_append(expr: str, constants: dict[str, float | int]) -> str:
     return decode_cpp_string_literals(rhs)
 
 
-def materialize_firmware_schema(config_manager_cpp: str, constants: dict[str, float | int]) -> dict[str, Any]:
+def materialize_firmware_schema(config_schema_cpp: str, constants: dict[str, float | int]) -> dict[str, Any]:
     match = re.search(
-        r"String ConfigManager::makeSchema\(\)\s*\{(?P<body>.*?)return s;",
-        config_manager_cpp,
+        r"String buildConfigSchema\(\)\s*\{(?P<body>.*?)return s;",
+        config_schema_cpp,
         re.DOTALL,
     )
     if not match:
-        raise ValueError("missing ConfigManager::makeSchema() body")
+        raise ValueError("missing buildConfigSchema() body")
 
     body = match.group("body")
     chunks: list[str] = []
@@ -319,7 +319,7 @@ def main() -> None:
         encoding="utf-8"
     )
     board_power_h = (root / "firmware/include/BoardPowerProfile.h").read_text(encoding="utf-8")
-    config_manager_cpp = (root / "firmware/src/ConfigManager.cpp").read_text(encoding="utf-8")
+    config_schema_cpp = (root / "firmware/src/protocol/ConfigSchema.cpp").read_text(encoding="utf-8")
     app_contract_js = (root / "App/manifest_contract.js").read_text(encoding="utf-8")
     bridge_contract_js = (root / "bridge/lib/manifest_contract.js").read_text(encoding="utf-8")
     app_schema = json.loads((root / "App/config_schema.json").read_text(encoding="utf-8"))
@@ -400,7 +400,7 @@ def main() -> None:
         "EF_FILTER_Q_MAX": parse_float_constant(r"EF_FILTER_Q_MAX = ([0-9.]+)f;", midi_types_h),
         "EF_IDLE_FLOOR_DEFAULT": parse_int_constant(r"EF_IDLE_FLOOR_DEFAULT = (\d+);", globals_h),
     }
-    firmware_schema = materialize_firmware_schema(config_manager_cpp, schema_constants)
+    firmware_schema = materialize_firmware_schema(config_schema_cpp, schema_constants)
 
     errors: list[str] = []
     documented_schema_patterns = {
@@ -453,7 +453,7 @@ def main() -> None:
     for schema_name, schema, allowed_metadata in (
         ("App/config_schema.json", app_schema, NON_VALIDATION_SCHEMA_KEYWORDS),
         (
-            "firmware ConfigManager::makeSchema()",
+            "firmware buildConfigSchema()",
             firmware_schema,
             NON_VALIDATION_SCHEMA_KEYWORDS | {"x_mn42"},
         ),

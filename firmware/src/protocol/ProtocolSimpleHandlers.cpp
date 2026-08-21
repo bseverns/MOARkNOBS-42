@@ -1,4 +1,5 @@
 #include "protocol/ProtocolSimpleHandlers.h"
+#include "protocol/ConfigSchema.h"
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
@@ -926,7 +927,7 @@ void handleGetManifestCommand(const String &command) {
 
 void handleGetSchemaCommand(const String &command) {
     (void)command;
-    LOG_PRINTLN(ConfigManager::makeSchema());
+    LOG_PRINTLN(buildConfigSchema());
 }
 
 void handleGetDiagnosticsCommand(const String &command) {

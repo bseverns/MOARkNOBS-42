@@ -6,10 +6,45 @@
 #include "Arpeggiator.h"
 #include "ConfigManager.h"
 #include "EnvelopeFollower.h"
+#include "ProfileMigration.h"
 #include <EEPROM.h>
+#include <array>
 #include <cstddef>
 
 namespace {
+class ProfileDecodeTestStorage final : public StorageBackend {
+  public:
+    explicit ProfileDecodeTestStorage(uint16_t exposedLength) : exposedLength_(exposedLength) {}
+
+    uint16_t length() const override { return exposedLength_; }
+    uint8_t read(int address) const override {
+        if (address < 0 || address >= exposedLength_) return 0;
+        return bytes_[static_cast<size_t>(address)];
+    }
+    bool update(int address, uint8_t value) override {
+        if (address < 0 || address >= exposedLength_) return false;
+        bytes_[static_cast<size_t>(address)] = value;
+        return true;
+    }
+    void readBytes(int address, void *dest, size_t len) const override {
+        auto *out = static_cast<uint8_t *>(dest);
+        for (size_t i = 0; i < len; ++i) out[i] = read(address + static_cast<int>(i));
+    }
+    bool writeBytes(int address, const void *src, size_t len) override {
+        const auto *input = static_cast<const uint8_t *>(src);
+        bool ok = true;
+        for (size_t i = 0; i < len; ++i) {
+            ok = update(address + static_cast<int>(i), input[i]) && ok;
+        }
+        return ok;
+    }
+    void expose(uint16_t length) { exposedLength_ = length; }
+
+  private:
+    std::array<uint8_t, EEPROM_PROFILE_SETTINGS_BLOCK_SIZE> bytes_{};
+    uint16_t exposedLength_;
+};
+
 struct __attribute__((packed)) LegacyProfileArpSettingsV1Fixture {
     uint8_t lengthTicks = 12;
     uint8_t shape = 0;
@@ -301,6 +336,33 @@ void test_profile_crc_rejects_corruption() {
     const ProfileData retained = loaded;
     TEST_ASSERT_FALSE(cfg.loadProfileSettings(0, loaded));
     TEST_ASSERT_EQUAL_MEMORY(&retained, &loaded, sizeof(ProfileData));
+}
+
+void test_profile_decoder_reports_failures_without_mutating_output() {
+    ProfileDecodeTestStorage storage(static_cast<uint16_t>(sizeof(ProfileData) - 1U));
+    std::array<MIDISlot, NUM_SLOTS> liveSlots{};
+    ProfileData output = makePopulatedProfile();
+    const ProfileData retained = output;
+
+    TEST_ASSERT_EQUAL_INT(
+        static_cast<int>(ProfileDecodeResult::InsufficientStorage),
+        static_cast<int>(decodeStoredProfile(storage, 0, liveSlots, output)));
+    TEST_ASSERT_EQUAL_MEMORY(&retained, &output, sizeof(ProfileData));
+
+    storage.expose(EEPROM_PROFILE_SETTINGS_BLOCK_SIZE);
+    const uint16_t unsupportedVersion = 0x7FFF;
+    TEST_ASSERT_TRUE(storage.writeBytes(0, &unsupportedVersion, sizeof(unsupportedVersion)));
+    TEST_ASSERT_EQUAL_INT(
+        static_cast<int>(ProfileDecodeResult::UnsupportedVersion),
+        static_cast<int>(decodeStoredProfile(storage, 0, liveSlots, output)));
+    TEST_ASSERT_EQUAL_MEMORY(&retained, &output, sizeof(ProfileData));
+
+    const uint16_t currentVersion = PROFILE_SETTINGS_VERSION;
+    TEST_ASSERT_TRUE(storage.writeBytes(0, &currentVersion, sizeof(currentVersion)));
+    TEST_ASSERT_EQUAL_INT(
+        static_cast<int>(ProfileDecodeResult::ChecksumMismatch),
+        static_cast<int>(decodeStoredProfile(storage, 0, liveSlots, output)));
+    TEST_ASSERT_EQUAL_MEMORY(&retained, &output, sizeof(ProfileData));
 }
 
 void test_profile_bounds_clamp() {
