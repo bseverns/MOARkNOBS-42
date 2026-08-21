@@ -36,6 +36,28 @@ receipts.
 
 ![Powered MOARkNOBS-42 prototype board during bring-up with button caps installed and status LEDs visible.](docs/assets/board/bringup.jpg)
 
+### Fabrication and inspection views
+
+![Top side of the MOARkNOBS-42 prototype PCB from the current fabrication run.](docs/assets/board/prodTOP.jpg)
+
+![Bottom side of the MOARkNOBS-42 prototype PCB from the current fabrication run.](docs/assets/board/prodBTM.jpg)
+
+![Close-up trace inspection photo from the MOARkNOBS-42 prototype PCB bring-up work.](docs/assets/board/trace.jpg)
+
+## Current Review Snapshot
+
+| Area | Current observation | Status | Next evidence needed |
+| --- | --- | --- | --- |
+| PCB fabrication quality | Boards arrived cleanly enough for probing, assembly review, and trace inspection; 0.5 mm test pads are usable. | Useful prototype run | Dated inspection notes and rail measurements |
+| Power rails | Bring-up is in progress; current testing indicates an input-fuse routing problem. | Under review | Voltage, current, and thermal receipt after power-path correction |
+| OLED/display | Dedicated hardware validation depends on the corrected power path. | Under review | Display bring-up pass/fail receipt |
+| Controls and MIDI | The board is suitable for button, pot, DIN, and USB-MIDI validation. | Under review | Filmed control-scan and MIDI receipt |
+| LEDs and reactive inputs | LED load and envelope-follower behavior still need bench evidence. | Under review | Load/current and EF baseline receipts |
+| Fabrication readiness | No verified Gerber, NC-drill, or release BOM bundle is enclosed. | Not ready | Verified, revision-matched fabrication release bundle |
+
+The canonical hardware status is [hardware/CurrentBuild.md](hardware/CurrentBuild.md). This table is an orientation
+summary, not a substitute for dated measurements or bench receipts.
+
 ## Package Layout
 
 - `firmware/` contains the real PlatformIO project and all kept firmware test lanes.

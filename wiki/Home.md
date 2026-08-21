@@ -1,10 +1,13 @@
 # MOARkNOBS-42 Wiki
 
+> **Archived:** This wiki is a historical snapshot and is not maintained. Start with the canonical
+> [repository README](https://github.com/bseverns/MOARkNOBS-42/blob/main/README.md) or
+> [documentation site](https://bseverns.github.io/MOARkNOBS-42/).
+
 MOARkNOBS-42 is an open hardware, firmware, and software instrument built around
 a Teensy 4.0 reactive MIDI/OSC controller.
 
-Use this wiki as the fast field map. Canonical technical detail remains in the
-repository source tree.
+The links below are retained for old bookmarks. Current technical detail remains in the repository source tree.
 Canonical source: `README.md`
 
 ![Connectivity decision map showing the direct browser configurator path beside the bridge path used for OSC, virtual MIDI, and DAW integration.](assets/workflows/connectivity-decision-overview.png)

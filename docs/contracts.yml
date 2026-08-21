@@ -7,6 +7,7 @@ contracts:
       - App/config_schema.json
     docs:
       - App/README.md
+      - docs/app/AppBehaviorContract.md
       - docs/reference/ConfigurationTransactionModel.md
       - docs/app/AppTransportTruthTable.md
       - docs/guides/Configurator.md
@@ -15,6 +16,7 @@ contracts:
       - bridge/lib/**
     docs:
       - bridge/README.md
+      - docs/bridge/BridgeOperatorReference.md
       - docs/reference/ConfigurationTransactionModel.md
       - docs/bridge/BridgeTransportContract.md
       - docs/bridge/BridgeWriteLanes.md

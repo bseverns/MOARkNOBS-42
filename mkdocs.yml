@@ -17,6 +17,7 @@ theme:
     - navigation.tabs
     - navigation.top
     - navigation.footer
+    - navigation.path
     - content.action.edit
     - toc.follow
     - search.suggest
@@ -76,6 +77,11 @@ not_in_nav: |
   /UI_ACTION_LEDGER.md
   /vscode-intellisense.md
   /Primers/*.md
+  /getting-started/ConfigureWithoutRecompiling.md
+  /getting-started/GuidedRoutes.md
+  /getting-started/ObjectCard.md
+  /getting-started/WhyMN42.md
+  /learn/LearnerPaths.md
   /bench/app/*.md
   /bench/bridge/*.md
   /bench/bridge-host-recipes/*.md
@@ -83,14 +89,21 @@ not_in_nav: |
   /bench/latency/*.md
   /bench/noise/*.md
   /app/AppModeAudit.md
+  /app/AppBehaviorContract.md
   /bridge/BridgeFirstRunAudit.md
   /bridge/BridgeConsoleTour.md
+  /bridge/BridgeOperatorReference.md
   /examples/max/*.md
   /examples/puredata/*.md
   /firmware/*.md
   /guides/OSCBridge.md
   /guides/OperatorTutorial.md
   /guides/ProtocolWalkthrough.md
+  /guides/ARGGuide.md
+  /guides/FilterFeelGuide.md
+  /guides/LfoRouteGuide.md
+  /guides/ReactiveControlGuide.md
+  /guides/ReactiveModulationMatrix.md
   /guides/WebSerial.md
   /hardware-test/PackageManifest.md
   /reference/EF_Frontend_v2.md
@@ -114,19 +127,9 @@ nav:
   - Learn:
       - Start Here: getting-started/StartHere.md
       - First Five Minutes: getting-started/FirstFiveMinutes.md
-      - Object Card: getting-started/ObjectCard.md
       - System Map: getting-started/SystemMap.md
-      - Why MN42: getting-started/WhyMN42.md
-      - Guided Routes: getting-started/GuidedRoutes.md
-      - Glossary: reference/Glossary.md
       - One Signal Path: learn/OneSignalPath.md
-      - Learner Paths: learn/LearnerPaths.md
-      - Configure Without Recompiling: getting-started/ConfigureWithoutRecompiling.md
-      - Reactive Modulation Matrix: guides/ReactiveModulationMatrix.md
-      - Reactive Control Guide: guides/ReactiveControlGuide.md
-      - ARG Guide: guides/ARGGuide.md
-      - Filter Feel Guide: guides/FilterFeelGuide.md
-      - LFO Route Guide: guides/LfoRouteGuide.md
+      - Glossary: reference/Glossary.md
   - Use:
       - Quickstart for Performers: getting-started/QuickstartForPerformers.md
       - Configurator Tour: guides/Configurator.md

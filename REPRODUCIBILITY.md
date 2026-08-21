@@ -44,6 +44,21 @@ release verification summary, license docs, and a manifest that ties all of it t
 
 _A simple file-tree image of `dist/` would help here, because the artifact bundle is easier to understand visually than as a sentence._
 
+## Historical `beta0.6.0` artifact provenance
+
+The 2026-04-20 `beta0.6.0` distribution predates the current versioned hardware-test naming convention. Its
+`dist/manifest.json` named `mn42_beta0.6.0.hex`, `mn42_beta0.6.0_source.zip`, `hardware_reference.zip`,
+`THIRD_PARTY_LICENSES.md`, and `release_verification.json`; artifact consumers must pair it with
+`dist/SHA256SUMS.txt`.
+
+That verification receipt recorded `optional_skipped_no_port`: `TEST_PORT` was unset, and HIL Unity, App, Bridge, and
+full-stack system suites were not run for that package. The manifest also recorded commit
+`5ce01706482a59838e2f1dc390cbdb3b72287577` with `dirty: true` because `.release_verification.json` was untracked at
+packaging time. It is documented provenance, not a clean tagged or HIL-verified release claim.
+
+The old `hardware_reference.zip` remains a bench/reference bundle, not an orderable fabrication package. Historical or
+local `dist/` files that are absent from the matching manifest and checksum list are not release artifacts.
+
 ## Step-by-step with commentary
 
 ### 1. Reset the playing field

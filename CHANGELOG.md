@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Root README now includes a "Choose Your Path" entry point so prototype validators, firmware contributors, performers, and release-readiness reviewers land on the right docs before diving into the hardware-test package.
+- Root README now introduces MN42 as a complete instrument ecosystem and routes performers, builders, contributors, and evaluators to one landing page each.
+- Documentation navigation now provides a five-page Learn syllabus and generated path breadcrumbs.
+- The retained wiki source pack is explicitly archived in favor of canonical repository documentation.
+- App and Bridge entry pages are now concise operational guides backed by focused behavior and operator references.
 
 ### Changed
-- Changelog now separates post-`beta0.6.0` documentation edits from the current manifest-backed `dist/` artifact truth.
+- Hardware-test status and fabrication photos now live in `HARDWARE_TEST_README.md` instead of dominating the project landing page.
+- Contribution guidance now front-loads the required readiness checklist and `tools/doctor.py --full` gate.
 
 ## [v0.9.6] - 2026-06-01
 
@@ -23,12 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The GitHub release has no attached binary assets or release notes. Treat it as a source snapshot, not an installer or HIL-verified artifact bundle; use repository manifests and checksums for any generated `dist/` set.
 
 ## [beta0.6.0] - 2026-04-20
-
-### Release/Dist Truth
-- `dist/manifest.json` identifies the current package version as `beta0.6.0`, generated on 2026-04-20. It names `mn42_beta0.6.0.hex`, `mn42_beta0.6.0_source.zip`, `hardware_reference.zip`, `THIRD_PARTY_LICENSES.md`, and `release_verification.json`; pair it with `dist/SHA256SUMS.txt` for artifact hashes.
-- `dist/release_verification.json` records `optional_skipped_no_port`: `TEST_PORT` was unset, HIL Unity was skipped, and the App, bridge, and full-stack system suites were not run for that package. Do not describe this dist set as HIL/system verified.
-- The manifest records branch `main` at commit `5ce01706482a59838e2f1dc390cbdb3b72287577` with `dirty: true` because `.release_verification.json` was untracked at packaging time. Treat the provenance as documented but not a clean tagged release build.
-- `dist/hardware_reference.zip` is a reference bundle for review and bench validation, not an order-ready fabrication package. Other `dist/` firmware/source files and `dist/fabrication.zip` are historical or local artifacts unless a current manifest and checksum file name them explicitly.
 
 ### Added
 - Firmware now exposes real device-backed profile save/load/reset flows plus EEPROM-backed macro snapshot and scene storage, with manifest capability reporting so the App can tell the truth about what the board supports.
@@ -161,3 +159,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.2.0
 [0.1.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/v0.1.0
 [v0.9.6]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/beta5
+[beta0.6.0]: https://github.com/bseverns/MOARkNOBS-42/releases/tag/beta0.6.0
+[Unreleased]: https://github.com/bseverns/MOARkNOBS-42/compare/beta5...HEAD
