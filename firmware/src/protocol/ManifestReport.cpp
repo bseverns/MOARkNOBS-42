@@ -138,6 +138,12 @@ void writeManifestCapabilities(JsonObject object) {
     capabilities["usb_midi_toggle"] = HAS_USB_MIDI;
     capabilities["device_schema"] = true;
     capabilities["bulk_config"] = profiles;
+    // Apply guarantees are protocol semantics, not properties of the current
+    // storage implementation. Hosts may use the persistence object for
+    // diagnostics, but must negotiate these promises explicitly.
+    capabilities["verified_apply"] = true;
+    capabilities["apply_integrity_receipt"] = true;
+    capabilities["authoritative_readback"] = true;
     JsonObject chunkedReads = capabilities.createNestedObject("chunked_reads");
     chunkedReads["config"] = true;
     chunkedReads["mod_matrix"] = true;

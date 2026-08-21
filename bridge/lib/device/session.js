@@ -20,6 +20,27 @@ function clone(value) {
   return value == null ? value : JSON.parse(JSON.stringify(value));
 }
 
+function resolveApplyCapabilities(manifest) {
+  const capabilities = manifest?.capabilities ?? {};
+  const explicitKeys = [
+    'verified_apply',
+    'apply_integrity_receipt',
+    'authoritative_readback',
+  ];
+  const hasExplicitContract = explicitKeys.some((key) =>
+    Object.prototype.hasOwnProperty.call(capabilities, key)
+  );
+  const legacyVerifiedApply =
+    !hasExplicitContract && manifest?.persistence?.backend === 'littlefs';
+  return {
+    verifiedApply: capabilities.verified_apply === true || legacyVerifiedApply,
+    integrityReceipt:
+      capabilities.apply_integrity_receipt === true || legacyVerifiedApply,
+    authoritativeReadback:
+      capabilities.authoritative_readback === true || legacyVerifiedApply,
+  };
+}
+
 function chunkString(text, chunkSize) {
   const chunks = [];
   for (let index = 0; index < text.length; index += chunkSize) {
@@ -892,8 +913,11 @@ function createDeviceSession({
         });
         return;
       }
-      const requiresIntegrityReceipt = state.manifest?.persistence?.backend === 'littlefs';
-      if (requiresIntegrityReceipt && (!msg.applied_checksum || msg.storage_generation === undefined)) {
+      const applyCapabilities = resolveApplyCapabilities(state.manifest);
+      if (
+        applyCapabilities.integrityReceipt &&
+        (!msg.applied_checksum || msg.storage_generation === undefined)
+      ) {
         const receiptError = createSessionError(
           'apply_integrity_receipt_missing',
           'Device ACK omitted the applied-state checksum or storage generation',
@@ -909,7 +933,7 @@ function createDeviceSession({
         });
         return;
       }
-      if (requiresIntegrityReceipt) {
+      if (applyCapabilities.authoritativeReadback) {
         applyPending.awaitingReadback = true;
         applyPending.appliedChecksum = msg.applied_checksum;
         applyPending.storageGeneration = msg.storage_generation;

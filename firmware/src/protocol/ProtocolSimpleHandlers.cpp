@@ -911,7 +911,7 @@ void handleHelloCommand(const String &command) {
 
 void handleGetManifestCommand(const String &command) {
     (void)command;
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<1536> doc;
     writeManifestFields(doc.to<JsonObject>());
 
     if (doc.overflowed()) {

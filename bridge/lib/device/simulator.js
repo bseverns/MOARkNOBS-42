@@ -37,6 +37,9 @@ function createDefaultManifest(overrides = {}) {
       scenes: false,
       arp_live: true,
       arp_profile_assignments: true,
+      verified_apply: true,
+      apply_integrity_receipt: true,
+      authoritative_readback: true,
     },
     ...overrides,
   };
@@ -178,6 +181,7 @@ function createSimulatedMn42Device(options = {}) {
   let config = clone(options.config ?? createDefaultConfig(manifest));
   let ackMode = options.ackMode ?? 'good';
   let ackDelayMs = Number(options.ackDelayMs ?? 0);
+  let storageGeneration = 0;
   let setAllBuffer = '';
   const defaultArp = {
     active: false,
@@ -399,6 +403,7 @@ function createSimulatedMn42Device(options = {}) {
         ...config,
         ...payload.config,
       });
+      storageGeneration += 1;
       setTimeout(() => {
         if (!connected) return;
         if (ackMode === 'timeout') return;
@@ -422,6 +427,8 @@ function createSimulatedMn42Device(options = {}) {
         emitJson({
           type: 'ack',
           checksum: payload.checksum,
+          applied_checksum: `sim-state-${storageGeneration}`,
+          storage_generation: storageGeneration,
           seq: payload.seq,
         });
       }, ackDelayMs);

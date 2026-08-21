@@ -152,6 +152,7 @@ export function createSimulator(simDeps = {}) {
   const lines = [];
   let resolver;
   let activeProfile = 0;
+  let storageGeneration = 0;
 
   const manifest = {
     ...createManifest(),
@@ -768,7 +769,12 @@ export function createSimulator(simDeps = {}) {
         if (request.config && typeof request.config === 'object') {
           config = { ...config, ...request.config };
         }
-        respond({ checksum: request.checksum ?? 'sim-checksum' });
+        storageGeneration += 1;
+        respond({
+          checksum: request.checksum ?? 'sim-checksum',
+          applied_checksum: `sim-state-${storageGeneration}`,
+          storage_generation: storageGeneration
+        });
         break;
       case 'set_profile': {
         const slot = clampSlot(request.slot ?? request.id ?? 0);

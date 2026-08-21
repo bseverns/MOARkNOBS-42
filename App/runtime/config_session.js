@@ -11,6 +11,27 @@ function equivalentJson(a, b) {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 }
 
+function resolveApplyCapabilities(manifest) {
+  const capabilities = manifest?.capabilities ?? {};
+  const explicitKeys = [
+    'verified_apply',
+    'apply_integrity_receipt',
+    'authoritative_readback'
+  ];
+  const hasExplicitContract = explicitKeys.some((key) =>
+    Object.prototype.hasOwnProperty.call(capabilities, key)
+  );
+  const legacyVerifiedApply =
+    !hasExplicitContract && manifest?.persistence?.backend === 'littlefs';
+  return {
+    verifiedApply: capabilities.verified_apply === true || legacyVerifiedApply,
+    integrityReceipt:
+      capabilities.apply_integrity_receipt === true || legacyVerifiedApply,
+    authoritativeReadback:
+      capabilities.authoritative_readback === true || legacyVerifiedApply
+  };
+}
+
 function slotTypeForDevice(slot, slotTypeNames) {
   if (typeof slot?.type_name === 'string' && slotTypeNames.includes(slot.type_name)) {
     return slot.type_name;
@@ -739,11 +760,13 @@ export function createConfigSession({
       }
       throw new Error('Device failed to acknowledge apply');
     }
-    // Hardware bulk Apply is durable only when firmware confirms its own
-    // applied-state digest and committed storage generation. Simulators and
-    // older manifests retain their compatibility path.
-    const requiresHardwareIntegrity = remoteManifest?.persistence?.backend === 'littlefs';
-    if (requiresHardwareIntegrity && (!appliedChecksum || storageGeneration === null)) {
+    // Verified Apply is negotiated independently from the storage backend.
+    // Older LittleFS manifests retain the legacy compatibility path.
+    const applyCapabilities = resolveApplyCapabilities(remoteManifest);
+    if (
+      applyCapabilities.integrityReceipt &&
+      (!appliedChecksum || storageGeneration === null)
+    ) {
       const recovered = await markApplyUncertain('missing-integrity-receipt', payload, checksum);
       if (recovered) {
         return classifyReadbackRecovery(recovered, payload.config, {
@@ -753,7 +776,7 @@ export function createConfigSession({
       }
       throw new Error('Device ACK omitted applied-state integrity receipt');
     }
-    if (requiresHardwareIntegrity) {
+    if (applyCapabilities.authoritativeReadback) {
       let readback;
       try {
         const readbackResponse = await sendRpc(

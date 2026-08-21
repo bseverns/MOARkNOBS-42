@@ -16,6 +16,9 @@ const FIRMWARE_CAPABILITY_KEYS = [
   'usb_midi_toggle',
   'device_schema',
   'bulk_config',
+  'verified_apply',
+  'apply_integrity_receipt',
+  'authoritative_readback',
   'one_shot_config_boot'
 ];
 
@@ -84,6 +87,9 @@ test('simulator manifest advertises the firmware lanes it emulates', async ({ pa
     usb_midi_toggle: true,
     device_schema: true,
     bulk_config: true,
+    verified_apply: true,
+    apply_integrity_receipt: true,
+    authoritative_readback: true,
     one_shot_config_boot: false
   });
 });

@@ -168,7 +168,13 @@ test('direct readback mismatch reports verified-device-different', async () => {
     }
     return { config: baseConfig() };
   }, events, {
-    remoteManifest: { persistence: { backend: 'littlefs' } }
+    remoteManifest: {
+      capabilities: {
+        verified_apply: true,
+        apply_integrity_receipt: true,
+        authoritative_readback: true
+      }
+    }
   });
   session.syncFromDevice(baseConfig());
   session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
@@ -177,6 +183,30 @@ test('direct readback mismatch reports verified-device-different', async () => {
   expect(session.getState().transactionState).toBe('verified-device-different');
   expect(session.getState().live.filter.freq).toBe(100);
   expect(session.getState().staged.filter.freq).toBe(321);
+});
+
+test('explicit Apply capability values override the legacy LittleFS inference', async () => {
+  const events = [];
+  let calls = 0;
+  const session = createSession(async () => {
+    calls += 1;
+    return { checksum: 'candidate-checksum' };
+  }, events, {
+    remoteManifest: {
+      persistence: { backend: 'littlefs' },
+      capabilities: {
+        verified_apply: false,
+        apply_integrity_receipt: false,
+        authoritative_readback: false
+      }
+    }
+  });
+  session.syncFromDevice(baseConfig());
+  session.stage((draft) => ({ ...draft, filter: { freq: 321 } }));
+
+  await expect(session.apply()).resolves.toMatchObject({ applied: true });
+  expect(calls).toBe(1);
+  expect(session.getState().live.filter.freq).toBe(321);
 });
 
 test('editing after failed resynchronization preserves uncertainty and the next draft', async () => {

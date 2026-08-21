@@ -218,6 +218,11 @@ void test_dispatch_handles_documented_query_commands() {
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_primary_valid\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_backup_valid\""));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"eeprom_last_load\""));
+    TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"verified_apply\":true"));
+    TEST_ASSERT_NOT_EQUAL(-1,
+                          peekTestLogBuffer().indexOf("\"apply_integrity_receipt\":true"));
+    TEST_ASSERT_NOT_EQUAL(-1,
+                          peekTestLogBuffer().indexOf("\"authoritative_readback\":true"));
     TEST_ASSERT_NOT_EQUAL(-1, peekTestLogBuffer().indexOf("\"chunked_reads\""));
 
     clearTestLogBuffer();

@@ -9,6 +9,7 @@ contracts:
       - App/README.md
       - docs/app/AppBehaviorContract.md
       - docs/reference/ConfigurationTransactionModel.md
+      - docs/reference/ManifestContract.md
       - docs/app/AppTransportTruthTable.md
       - docs/guides/Configurator.md
   bridge:
@@ -18,6 +19,7 @@ contracts:
       - bridge/README.md
       - docs/bridge/BridgeOperatorReference.md
       - docs/reference/ConfigurationTransactionModel.md
+      - docs/reference/ManifestContract.md
       - docs/bridge/BridgeTransportContract.md
       - docs/bridge/BridgeWriteLanes.md
   persistence:

@@ -32,11 +32,10 @@ async function run() {
     7,
     'simulator should support schema-mismatch manifest scenarios',
   );
-  assert.equal(
-    Boolean(lines.find((entry) => entry.type === 'ack')),
-    true,
-    'simulator should emit delayed ACKs for SET_ALL payloads',
-  );
+  const applyAck = lines.find((entry) => entry.type === 'ack');
+  assert.equal(Boolean(applyAck), true, 'simulator should emit delayed ACKs for SET_ALL payloads');
+  assert.equal(applyAck?.applied_checksum, 'sim-state-1');
+  assert.equal(applyAck?.storage_generation, 1);
 
   lines.length = 0;
   simulator.setAckMode('bad-ack');
@@ -82,6 +81,9 @@ async function run() {
       scenes: false,
       arp_live: true,
       arp_profile_assignments: true,
+      verified_apply: true,
+      apply_integrity_receipt: true,
+      authoritative_readback: true,
     },
     'simulator capabilities should describe only implemented feature protocols',
   );

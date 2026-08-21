@@ -115,6 +115,9 @@ async function run() {
     );
     assert.equal(state.helloSeen, true, 'session should cache HELLO state');
     assert.equal(state.manifest?.device_name, 'MOARkNOBS-42');
+    assert.equal(state.manifest?.capabilities?.verified_apply, true);
+    assert.equal(state.manifest?.capabilities?.apply_integrity_receipt, true);
+    assert.equal(state.manifest?.capabilities?.authoritative_readback, true);
     assert.equal(
       state.schema?.schema_version,
       MN42_MANIFEST_CONTRACT.schema_version,
@@ -294,6 +297,60 @@ async function run() {
       ),
       true,
       'structured event stream should expose apply ACKs',
+    );
+  }
+
+  {
+    const harness = createHarness({
+      simulator: {
+        manifest: {
+          persistence: { backend: 'littlefs' },
+          capabilities: {
+            verified_apply: false,
+            apply_integrity_receipt: false,
+            authoritative_readback: false,
+          },
+        },
+      },
+    });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const initialReadbacks = harness.writtenLines.filter(
+      (line) => line === 'GET_CONFIG',
+    ).length;
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[0].data1 = 102;
+    await harness.session.stageConfig(staged);
+    await harness.session.applyStagedConfig();
+    assert.equal(
+      harness.writtenLines.filter((line) => line === 'GET_CONFIG').length,
+      initialReadbacks,
+      'explicit false Apply capabilities must override legacy LittleFS inference',
+    );
+  }
+
+  {
+    const harness = createHarness({
+      simulator: {
+        manifest: {
+          persistence: { backend: 'littlefs' },
+          capabilities: {},
+        },
+      },
+    });
+    await harness.session.handleOpen();
+    await waitFor(() => harness.session.getState().ready);
+    const initialReadbacks = harness.writtenLines.filter(
+      (line) => line === 'GET_CONFIG',
+    ).length;
+    const staged = clone(harness.session.getState().stagedConfig);
+    staged.slots[0].data1 = 103;
+    await harness.session.stageConfig(staged);
+    await harness.session.applyStagedConfig();
+    assert.equal(
+      harness.writtenLines.filter((line) => line === 'GET_CONFIG').length,
+      initialReadbacks + 1,
+      'legacy LittleFS manifests must retain authoritative Apply readback',
     );
   }
 

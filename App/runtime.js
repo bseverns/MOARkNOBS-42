@@ -182,6 +182,9 @@ export function createRuntime({
             jitter_live: true,
             device_schema: true,
             bulk_config: true,
+            verified_apply: true,
+            apply_integrity_receipt: true,
+            authoritative_readback: true,
             one_shot_config_boot: false
           }
         }),

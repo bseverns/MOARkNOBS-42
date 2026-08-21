@@ -22,6 +22,9 @@ const DEFAULT_CAPABILITIES = {
   usb_midi_toggle: false,
   device_schema: false,
   bulk_config: false,
+  verified_apply: false,
+  apply_integrity_receipt: false,
+  authoritative_readback: false,
   one_shot_config_boot: false
 };
 
