@@ -1,10 +1,9 @@
-// Handles all button scanning and debouncing.
-// Works with DisplayManager and ConfigManager to drive UI actions.
+// Interprets stable physical button states as gestures and instrument commands.
+// ButtonScanner owns mux I/O and debounce; ButtonManager coordinates the
+// resulting actions with DisplayManager, ConfigManager, and runtime state.
 //
-// The button matrix gets hammered one row/column at a time through the
-// multiplexers. A full 7x6 sweep runs every loop, and the 50 ms
-// DEBOUNCE_DELAY keeps the ghosts at bay and sets how fast a press can
-// register.
+// The scanner samples one 7x6 matrix row per processButtons() pass. Its 50 ms
+// debounce boundary keeps electrical bounce out of this gesture state machine.
 //
 // Each switch feeds a tiny state machine. Short taps bubble through
 // handleShortPress() → doSinglePressAction(), rapid doubles detour into
@@ -101,6 +100,7 @@
 #include <vector>
 #include <map>
 #include "ButtonGestureTiming.h"
+#include "ButtonScanner.h"
 #include "DisplayManager.h"
 #include "MIDITypes.h"
 #include "EnvelopeFollower.h"
@@ -123,18 +123,6 @@
 #define BM_DBG_PRINT(...)
 #define BM_DBG_PRINTLN(...)
 #endif
-
-// Total number of multiplexed "virtual" buttons
-inline constexpr uint8_t NUM_VIRTUAL_BUTTONS = 42;
-// Total number of direct hardware control buttons
-inline constexpr uint8_t NUM_CONTROL_BUTTONS = 6;
-// Debounce period in milliseconds
-inline constexpr unsigned long DEBOUNCE_DELAY = 50;
-// Button matrix layout (rows x columns)
-inline constexpr uint8_t BUTTON_ROWS = 7;
-inline constexpr uint8_t BUTTON_COLS = 6;
-// Analog read threshold for detecting a pressed button
-inline constexpr int BUTTON_PRESS_THRESHOLD = 512;
 
 /*
 States for each button in the debounce & press state machine.
@@ -233,7 +221,9 @@ class ButtonManager {
     specs can assert on the currently installed digital provider. Wrapped in
     UNIT_TEST to avoid expanding the runtime API footprint.
     */
-    bool readControlButtonForTest(uint8_t buttonIndex) { return readControlButton(buttonIndex); }
+    bool readControlButtonForTest(uint8_t buttonIndex) {
+        return _scanner.readDirectControlButton(buttonIndex);
+    }
 
     // Test-only seam for directly seeding the smoothed control-pot cache.
     void setControlPotValueForTest(uint8_t idx, int value) {
@@ -244,32 +234,15 @@ class ButtonManager {
 #endif
 
   private:
-    // Mux select pins & analog input for virtual buttons scan
-    const HardwareConfig &_cfg;
-    // Direct control button pins
-    const uint8_t *_controlPins; // direct GPIOs (legacy, unused with mux scan)
+    ButtonScanner _scanner;
     // Link to PotentiometerManager for mode switching
     PotentiometerManager *_potentiometerManager;
-
-    // Debounce & last-press tracking for all buttons
-    bool buttonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {false};
-    bool lastRawButtonStates[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {false};
-    unsigned long lastDebounceTimes[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS] = {0};
 
     // Current UI mode (e.g., CC vs ENV vs ARG)
     uint8_t activeMode = 0;
 
     // State machines for each button detection
     ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
-
-    // Set the multiplexer address lines so a given row/column can be read.
-    void selectMux(uint8_t row, uint8_t col);
-
-    // Return the digital state for a multiplexed button.
-    uint8_t readMuxButton(uint8_t buttonIndex) const;
-
-    // Read a direct control button pin (legacy non-mux input).
-    bool readControlButton(uint8_t buttonIndex);
 
     // Handle the action for a single short press after debouncing.
     void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context);

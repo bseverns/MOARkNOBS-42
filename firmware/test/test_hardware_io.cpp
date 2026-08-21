@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ButtonManager.h"
+#include "ButtonScanner.h"
 #include "Hardware/IO.h"
 #include "Globals.h"
 
@@ -104,6 +105,40 @@ void test_digital_provider_overrides_matrix_reads() {
     TEST_ASSERT_FALSE(manager.readControlButtonForTest(1));
 }
 
+void test_button_scanner_debounces_one_matrix_row_per_pass() {
+    const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
+    ButtonScanner scanner(hwConfig, controlPins);
+    ScopedSequence pressed{0};
+
+    for (uint8_t row = 0; row < BUTTON_ROWS; ++row) {
+        const MatrixScanRange range = scanner.scanNextMatrixRow(0);
+        TEST_ASSERT_EQUAL_UINT8(row * BUTTON_COLS, range.begin);
+        TEST_ASSERT_EQUAL_UINT8((row + 1) * BUTTON_COLS, range.end);
+    }
+    TEST_ASSERT_FALSE(scanner.isPressed(0));
+
+    for (uint8_t row = 0; row < BUTTON_ROWS; ++row) {
+        scanner.scanNextMatrixRow(DEBOUNCE_DELAY + 1);
+    }
+    TEST_ASSERT_TRUE(scanner.isPressed(0));
+    TEST_ASSERT_TRUE(scanner.isPressed(NUM_VIRTUAL_BUTTONS - 1));
+}
+
+void test_button_scanner_reports_debounced_control_mask_and_raw_pots() {
+    const uint8_t controlPins[NUM_CONTROL_BUTTONS] = {0, 1, 2, 3, 4, 5};
+    ButtonScanner scanner(hwConfig, controlPins);
+    ScopedSequence values{0, 0, 0, 0, 0, 0, 101, 202, 303};
+
+    scanner.scanControlBank(0);
+    TEST_ASSERT_EQUAL_HEX8(0, scanner.controlMask());
+    scanner.scanControlBank(DEBOUNCE_DELAY + 1);
+
+    TEST_ASSERT_EQUAL_HEX8(0x3F, scanner.controlMask());
+    TEST_ASSERT_EQUAL_INT(101, scanner.controlPotRaw(0));
+    TEST_ASSERT_EQUAL_INT(202, scanner.controlPotRaw(1));
+    TEST_ASSERT_EQUAL_INT(303, scanner.controlPotRaw(2));
+}
+
 // Boot-time tuning must not rewrite topology already captured by global
 // managers. Keep this contract explicit as new hardware fields are added.
 void test_runtime_hardware_tuning_preserves_structural_config() {
@@ -145,16 +180,7 @@ void test_runtime_hardware_tuning_rejects_zero_intervals() {
 
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                              PotentiometerManager *potentiometerManager)
-    : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
-      activeMode(0), _pendingEfSlot(-1), _efAssignDeadline(0) {
-    for (size_t i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; ++i) {
-        buttonStates[i] = false;
-        lastDebounceTimes[i] = 0;
-    }
-}
-
-bool ButtonManager::readControlButton(uint8_t buttonIndex) {
-    return hardware::readDigital(_controlPins[buttonIndex]) == LOW;
-}
+    : _scanner(config, controlPins), _potentiometerManager(potentiometerManager), activeMode(0),
+      _pendingEfSlot(-1), _efAssignDeadline(0) {}
 
 #endif // defined(UNIT_TEST)

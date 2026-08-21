@@ -1,15 +1,13 @@
-// ButtonManager is where human hands meet firmware logic. Think of this file as
-// the field manual for diode-matrix scanning, timing thresholds, and how we map
-// physical gestures onto virtual slots. Comments call out why the mux waits,
-// how we debounce without hiding latency, and why we stream context back to the
-// WebSerial educator in the loop. Read it like a lab notebook.
+// ButtonManager is the interaction coordinator between stable physical input
+// and instrument behavior. ButtonScanner owns mux/debounce mechanics; this file
+// owns gesture timing, command dispatch, and the presentation notifications
+// emitted after an on-device action.
 
 #include "ButtonManager.h"
 #include "EnvelopeFollower.h"
 #include "Globals.h"
 #include "ConfigManager.h"
 #include "MIDITypes.h"
-#include "Hardware/IO.h"
 #include "Utility.h"
 #include "TimeUtils.h"
 #include "Arpeggiator.h"
@@ -21,15 +19,9 @@
 #include <map>
 #include <cmath>
 
-// Scans the button matrix and direct control buttons. Results are fed into
-// DisplayManager, ConfigManager, EnvelopeFollower assignments and the
-// Arpeggiator. This class ties user interaction to the rest of the system.
-
-// The BTN_42 PCB connects 42 pushbuttons in a 7×6 diode matrix. Each row and
-// column is wired to one channel of two CD74HC4067 analog multiplexers. The
-// select lines for the row mux are labeled `MUXR1..4` and the column mux uses
-// `MUXC1..4`. The firmware cycles these select lines and reads the shared
-// analog node to detect button presses.
+// Stable press states are fed into DisplayManager, ConfigManager,
+// EnvelopeFollower assignments, and the Arpeggiator. Electrical topology stays
+// behind ButtonScanner.
 
 extern std::vector<EnvelopeFollower> envelopeFollowers;
 extern ButtonManagerContext buttonContext;
@@ -75,28 +67,6 @@ constexpr uint8_t configModeMask = maskCtrl0 | maskCtrl2 | maskCtrl3 | maskCtrl5
 constexpr uint8_t clockSourceMask = maskCtrl1 | maskCtrl4 | maskCtrl5;
 constexpr uint8_t lfoTuningMask = maskCtrl0 | maskCtrl1 | maskCtrl3;
 constexpr unsigned long kTuningStatusMs = 600;
-
-constexpr uint32_t MUX_SETTLE_US = 5;
-
-inline void waitForMuxSettle() {
-    uint32_t start = micros();
-    while (micros() - start < MUX_SETTLE_US) {
-        yield();
-    }
-}
-
-// Fast LUT-based mux writer used in the tight matrix scan loop.
-inline void setMuxFast(const uint8_t selPins[4], uint8_t index) {
-    static const uint8_t lut[16][4] = {{0, 0, 0, 0}, {1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 0, 0},
-                                       {0, 0, 1, 0}, {1, 0, 1, 0}, {0, 1, 1, 0}, {1, 1, 1, 0},
-                                       {0, 0, 0, 1}, {1, 0, 0, 1}, {0, 1, 0, 1}, {1, 1, 0, 1},
-                                       {0, 0, 1, 1}, {1, 0, 1, 1}, {0, 1, 1, 1}, {1, 1, 1, 1}};
-    const uint8_t *bits = lut[index & 0x0F];
-    digitalWriteFast(selPins[0], bits[0]);
-    digitalWriteFast(selPins[1], bits[1]);
-    digitalWriteFast(selPins[2], bits[2]);
-    digitalWriteFast(selPins[3], bits[3]);
-}
 
 // Emit one slot patch so the browser can follow on-device edits.
 inline void streamSlotPatch(ConfigManager &config, uint8_t slotIndex) {
@@ -261,27 +231,13 @@ inline void commitEfSettings(ButtonManagerContext &context, int slotIndex,
 // Constructor
 ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *controlPins,
                              PotentiometerManager *potentiometerManager)
-    : _cfg(config), _controlPins(controlPins), _potentiometerManager(potentiometerManager),
-      activeMode(0), _pendingEfSlot(-1), _efAssignDeadline(0) {
-    for (int i = 0; i < NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS; i++) {
-        buttonStates[i] = false;
-        lastRawButtonStates[i] = false;
-        lastDebounceTimes[i] = 0;
-    }
-}
+    : _scanner(config, controlPins), _potentiometerManager(potentiometerManager), activeMode(0),
+      _pendingEfSlot(-1), _efAssignDeadline(0) {}
 
 // Called during setup to configure the multiplexers and reset the internal
 // state machines that track button presses.
 void ButtonManager::initButtons() {
-    for (int i = 0; i < PRIMARY_MUX_PINS; i++) {
-        pinMode(_cfg.muxrPins[i], OUTPUT);
-    }
-    for (int i = 0; i < SECONDARY_MUX_PINS; i++) {
-        pinMode(_cfg.muxcPins[i], OUTPUT);
-    }
-    pinMode(_cfg.buttonMuxAnalogPin, INPUT);
-    pinMode(_cfg.rowDriverPin, OUTPUT);
-    digitalWrite(_cfg.rowDriverPin, LOW);
+    _scanner.initHardware();
 
     // optional: initialize each state machine for each button
     for (int i = 0; i < (NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS); i++) {
@@ -351,8 +307,6 @@ One unified processButtons loop:
 */
 void ButtonManager::processButtons(ButtonManagerContext &context) {
     unsigned long now = ::now();
-    static uint8_t rawStates[NUM_VIRTUAL_BUTTONS] = {LOW};
-    static uint8_t currentRow = 0;
 
     // Drop pending EF assignment if the window expired
     if (_pendingEfSlot >= 0 && now > _efAssignDeadline) {
@@ -366,32 +320,10 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
 
     // Scan one matrix row per pass. This keeps button latency under control while shaving the
     // worst-case loop time enough that other schedulers can still run on schedule.
-    digitalWrite(_cfg.rowDriverPin, HIGH);
-    setMuxFast(_cfg.muxrPins, currentRow);
-    waitForMuxSettle();
-    for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-        setMuxFast(_cfg.muxcPins, c);
-        waitForMuxSettle();
-        int v = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
-        rawStates[currentRow * BUTTON_COLS + c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
+    const MatrixScanRange scanned = _scanner.scanNextMatrixRow(now);
+    for (uint8_t i = scanned.begin; i < scanned.end; ++i) {
+        updateButtonStateMachine(i, _scanner.isPressed(i), context);
     }
-    digitalWrite(_cfg.rowDriverPin, LOW);
-
-    // Process only the freshly scanned row; remaining rows retain their previous debounced state
-    // until their turn comes around.
-    const uint8_t rowStart = currentRow * BUTTON_COLS;
-    const uint8_t rowEnd = rowStart + BUTTON_COLS;
-    for (uint8_t i = rowStart; i < rowEnd; ++i) {
-        uint8_t rawState = rawStates[i];
-        bool stableReading = Utility::debounce(buttonStates[i], lastRawButtonStates[i], rawState,
-                                               lastDebounceTimes[i], now, DEBOUNCE_DELAY);
-
-        (void)stableReading;
-        bool pressed = (buttonStates[i] == HIGH);
-        updateButtonStateMachine(i, pressed, context);
-    }
-
-    currentRow = static_cast<uint8_t>((currentRow + 1) % BUTTON_ROWS);
 
     // Control buttons & pots via spare mux channels
     scanControlInputs(context);
@@ -1403,65 +1335,15 @@ void ButtonManager::handleMultiButtonPress(uint8_t pressedButtons, ButtonManager
     }
 }
 
-/*
-Read a single button using the row-driven scanning method.
-Caches the most recently scanned row so repeated calls within the
-same row do not trigger additional ADC reads.
-*/
-uint8_t ButtonManager::readMuxButton(uint8_t buttonIndex) const {
-    static uint8_t lastRow = 0xFF;
-    static uint8_t rowValues[BUTTON_COLS] = {0};
-
-    uint8_t row = buttonIndex / BUTTON_COLS;
-    uint8_t col = buttonIndex % BUTTON_COLS;
-
-    if (row != lastRow) {
-        digitalWrite(_cfg.rowDriverPin, HIGH);
-        setMuxFast(_cfg.muxrPins, row);
-        waitForMuxSettle();
-        for (uint8_t c = 0; c < BUTTON_COLS; ++c) {
-            setMuxFast(_cfg.muxcPins, c);
-            waitForMuxSettle();
-            int v = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
-            rowValues[c] = (v < BUTTON_PRESS_THRESHOLD) ? HIGH : LOW;
-        }
-        digitalWrite(_cfg.rowDriverPin, LOW);
-        lastRow = row;
-    }
-
-    return rowValues[col];
-}
-
-/*
-Read a direct-wired control button. These inputs are active LOW and bypass
-the multiplexer used for slot buttons.
-*/
-bool ButtonManager::readControlButton(uint8_t buttonIndex) {
-    return (hardware::readDigital(_controlPins[buttonIndex]) == LOW);
-}
-
 void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     unsigned long now = ::now();
-    for (uint8_t ch = 6; ch < 12; ++ch) {
-        selectMux(0, ch);
-        waitForMuxSettle();
-        int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
-        bool pressed = (val < BUTTON_PRESS_THRESHOLD);
-        uint8_t idx = ch - 6;
-        bool stable = Utility::debounce(
-            buttonStates[NUM_VIRTUAL_BUTTONS + idx], lastRawButtonStates[NUM_VIRTUAL_BUTTONS + idx],
-            pressed, lastDebounceTimes[NUM_VIRTUAL_BUTTONS + idx], now, DEBOUNCE_DELAY);
-        (void)stable;
-        updateCtrlButton(idx, buttonStates[NUM_VIRTUAL_BUTTONS + idx], context);
+    _scanner.scanControlBank(now);
+    for (uint8_t idx = 0; idx < NUM_CONTROL_BUTTONS; ++idx) {
+        updateCtrlButton(idx, _scanner.isPressed(NUM_VIRTUAL_BUTTONS + idx), context);
     }
 
     // After updating each control button, check for multi-button combos
-    uint8_t mask = 0;
-    for (uint8_t i = 0; i < NUM_CONTROL_BUTTONS; ++i) {
-        if (buttonStates[NUM_VIRTUAL_BUTTONS + i]) {
-            mask |= (1 << i);
-        }
-    }
+    const uint8_t mask = _scanner.controlMask();
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
     const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
     const uint8_t swingMask = maskCtrl2 | maskCtrl3;
@@ -1548,11 +1430,8 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     }
 
     for (uint8_t i = 0; i < 3; ++i) {
-        uint8_t ch = 12 + i;
-        selectMux(0, ch);
-        waitForMuxSettle();
-        int val = hardware::readAnalog(_cfg.buttonMuxAnalogPin);
-        _ctrlPotValues[i] = Utility::exponentialMovingAverage(val, _ctrlPotValues[i], 0.1f);
+        _ctrlPotValues[i] =
+            Utility::exponentialMovingAverage(_scanner.controlPotRaw(i), _ctrlPotValues[i], 0.1f);
     }
 
     if (_onDeviceConfigModeActive) {
@@ -1711,12 +1590,6 @@ void ButtonManager::startWarningForIndex(uint8_t index, ButtonManagerContext &co
     }
 }
 
-void ButtonManager::selectMux(uint8_t row, uint8_t col) {
-    setMuxFast(_cfg.muxrPins, row);
-    setMuxFast(_cfg.muxcPins, col);
-}
-
 bool ButtonManager::isMuxButtonPressed(uint8_t index) const {
-    // Matrix scan normalizes pressed buttons to HIGH (see processButtons/readMuxButton).
-    return readMuxButton(index) == HIGH;
+    return _scanner.readMatrixButton(index) == HIGH;
 }

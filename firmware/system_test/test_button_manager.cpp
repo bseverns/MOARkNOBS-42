@@ -289,12 +289,12 @@ void test_jitter_combo_updates_settings() {
 
     const int pressed = 0;
     const int released = 1023;
-    bm.buttonStates[NUM_VIRTUAL_BUTTONS + 0] = true;
-    bm.buttonStates[NUM_VIRTUAL_BUTTONS + 1] = false;
-    bm.buttonStates[NUM_VIRTUAL_BUTTONS + 2] = false;
-    bm.buttonStates[NUM_VIRTUAL_BUTTONS + 3] = true;
-    bm.buttonStates[NUM_VIRTUAL_BUTTONS + 4] = true;
-    bm.buttonStates[NUM_VIRTUAL_BUTTONS + 5] = false;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 0] = true;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 1] = false;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 2] = false;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 3] = true;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 4] = true;
+    bm._scanner._stableStates[NUM_VIRTUAL_BUTTONS + 5] = false;
     ScopedSequence values{
         pressed, released, released, pressed, pressed, released, // ctrl 0..5
         1023,    0,        512                                   // control pots

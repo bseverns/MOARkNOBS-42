@@ -2,16 +2,16 @@
 
 Part of the firmware `include` jungle. The [include README](../README.md) explains how button rage propagates; the [main firmware README](../../README.md) zooms out to the whole machine.
 
-Scans the 7×6 button grid, smacks bounce in the teeth, and spits out events.
+Turns stable states from the 7×6 button grid into gestures and instrument actions.
 
 ![Button matrix wiring diagram](../../../docs/sketch/ButtonMatrix.png)
 
 ## Where it fits
 
-ButtonManager owns the gesture map for the multiplexed button grid, updates slot/profile state through ConfigManager, feeds MIDIHandler, and flashes clues through LEDManager.
+`ButtonScanner` owns the electrical boundary for the multiplexed button grid: mux addressing, settling, ADC/GPIO reads, debounce state, and stable physical states. `ButtonManager` consumes those states, owns the gesture/command map, updates slot/profile state through ConfigManager, feeds MIDIHandler, and flashes clues through LEDManager.
 
 ```
-[Muxed buttons] --> ButtonManager --> MIDIHandler
+[Muxed buttons] --> ButtonScanner --> ButtonManager --> MIDIHandler
                                 \-> LEDManager
 ```
 
@@ -19,7 +19,8 @@ See the big picture in the [main firmware README](../../README.md).
 
 ## Key Methods
 
-- `initButtons()` – wire up mux pins and ready the machines.
+- `ButtonScanner::initHardware()` – wire up mux pins and reset physical scan state.
+- `ButtonManager::initButtons()` – initialize the scanner and ready the gesture machines.
 - `processButtons(ctx)` – poll the matrix and trigger actions.
 - `isMuxButtonPressed(idx)` – peek a raw button for tests; works on `const`
   managers too.
@@ -44,7 +45,7 @@ That `hwConfig` bundle wrangles mux pins, LED counts, and timing so the tests an
 
 ## Faster, non-blocking scans
 
-`ButtonManager` used to pause for raw `delayMicroseconds()` calls every time it poked the mux. That was lazy. Now a tiny `waitForMuxSettle()` helper watches `micros()` and yields while the CD74HC4067 settles. The main loop keeps breathing and we still catch every click.
+`ButtonScanner` uses a bounded `micros()`/`yield()` settling loop whenever it changes the CD74HC4067 address. The main loop keeps breathing and the scanner still catches every click.
 
 Mux select lines get smashed via a pre-baked lookup table and `digitalWriteFast()`, ditching the bit‑twiddling on every pass. Flip `BUTTON_MANAGER_PROFILE` in the build and you'll get Serial spam with average and max scan times—handy to prove we're not dropping states while chasing speed.
 
