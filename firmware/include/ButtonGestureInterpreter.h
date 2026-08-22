@@ -88,6 +88,7 @@ class ButtonGestureInterpreter {
     uint8_t _comboCandidateMask = 0;
     unsigned long _comboCandidateSince = 0;
     uint8_t _lastComboMask = 0;
+    bool _suppressComboSubsetsUntilRelease = false;
 
     void resolveRelease(uint8_t index, unsigned long now, ButtonGestureMode mode,
                         ButtonGestureEvents &events);

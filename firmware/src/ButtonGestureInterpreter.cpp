@@ -13,6 +13,7 @@ void ButtonGestureInterpreter::reset() {
     _comboCandidateMask = 0;
     _comboCandidateSince = 0;
     _lastComboMask = 0;
+    _suppressComboSubsetsUntilRelease = false;
 }
 
 bool ButtonGestureInterpreter::cancelConfirmation() {
@@ -169,12 +170,36 @@ ButtonGestureEvents ButtonGestureInterpreter::updateControlMask(uint8_t mask, un
 
     if (multiPressed) consumeChordMembers(mask);
 
+    // Once a settled ordinary chord fires, rolling fingers off it must not
+    // reinterpret any remaining subset as a fresh chord. Re-arm only after
+    // every control member has been released.
+    if (_suppressComboSubsetsUntilRelease) {
+        if (mask == 0) {
+            _suppressComboSubsetsUntilRelease = false;
+            _comboHoldMask = 0;
+            _comboCandidateMask = 0;
+            _comboCandidateSince = 0;
+            _lastComboMask = 0;
+        }
+        return events;
+    }
+
     if (mask != _comboHoldMask) {
-        if (isLongControlCombo(_comboHoldMask)) {
-            if (!_comboLongPressFired) {
-                events.add(ButtonGestureEventType::ComboPress, _comboHoldMask);
+        const bool heldSpecialCombo = isLongControlCombo(_comboHoldMask);
+        if (heldSpecialCombo) {
+            const bool allHeldMembersRemainDown =
+                (mask & _comboHoldMask) == _comboHoldMask;
+            if (!allHeldMembersRemainDown) {
+                if (!_comboLongPressFired) {
+                    events.add(ButtonGestureEventType::ComboPress, _comboHoldMask);
+                }
+                events.add(ButtonGestureEventType::ComboRelease, _comboHoldMask);
             }
-            events.add(ButtonGestureEventType::ComboRelease, _comboHoldMask);
+            if (allHeldMembersRemainDown && _comboLongPressFired) {
+                // The long action is already active. Keep tracking its members
+                // through added fingers so its eventual release still arrives.
+                return events;
+            }
         }
         _comboHoldMask = longCombo ? mask : 0;
         _comboHoldTimestamp = now;
@@ -196,6 +221,7 @@ ButtonGestureEvents ButtonGestureInterpreter::updateControlMask(uint8_t mask, un
         if (mask != _lastComboMask && (now - _comboCandidateSince >= BUTTON_COMBO_SETTLE_MS)) {
             events.add(ButtonGestureEventType::ComboPress, mask);
             _lastComboMask = mask;
+            _suppressComboSubsetsUntilRelease = true;
         }
     } else {
         _comboCandidateMask = 0;
@@ -204,4 +230,3 @@ ButtonGestureEvents ButtonGestureInterpreter::updateControlMask(uint8_t mask, un
     }
     return events;
 }
-

@@ -111,6 +111,12 @@ These change broader operating behavior.
 | `Ctrl0 + Ctrl1 + Ctrl3`         | toggle LFO quick-tune mode    |
 | `Ctrl0 + Ctrl2 + Ctrl3 + Ctrl5` | enter on-device config mode   |
 
+You can roll into or out of the Config Mode chord in any finger order. Its
+temporary `Ctrl2+Ctrl3` subset is suppressed, so entering or leaving the mode
+does not also bump the arpeggiator base note.
+Release all controls before intentionally playing one of its sub-combos; the
+all-up state re-arms both short and long forms immediately.
+
 LFO quick-tune control-pot map:
 
 - `CtrlPot0`: frequency

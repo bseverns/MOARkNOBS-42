@@ -109,6 +109,15 @@ When you arm the persisted-config reload (**Ctrl3**) or diagnostic toggle (**Ctr
 
 The ARG combos (`Ctrl0+Ctrl1` / `Ctrl0+Ctrl2`) edit the active slot's ARG method or source pair and enable its ARG lane immediately. They do not require that slot to own a separate EF assignment.
 
+Chord recognition is finger-roll safe: adding fingers to reach a larger combo
+silently supersedes an unfired two-button special chord, and releasing a fired
+larger combo does not reinterpret its remaining buttons as a new subset chord.
+In particular, every press and release order for
+`Ctrl0+Ctrl2+Ctrl3+Ctrl5` enters or exits config mode without triggering the
+short `Ctrl2+Ctrl3` arpeggiator-note action.
+The suppression ends at the all-controls-up boundary; fresh short, long, and
+ordinary sub-combos re-arm immediately after that neutral state.
+
 On-device config mode remaps control buttons while active:
 
 | Control | Action |
