@@ -18,7 +18,8 @@ before wandering file-by-file.
 - **Arpeggiator.h** – simple timed note repeater for any slot ([Arpeggiator.cpp](../src/Arpeggiator.cpp)).
 - **BiquadFilter.h** – lightweight filter used by the envelope followers.
 - **ButtonScanner.h** – owns mux addressing, physical reads, and debounce state ([ButtonScanner.cpp](../src/ButtonScanner.cpp)).
-- **ButtonManager.h** – interprets stable button states as gestures and instrument commands ([ButtonManager.cpp](../src/ButtonManager.cpp)).
+- **ButtonGestureInterpreter.h** – pure press/double/long-confirm/chord event machine ([ButtonGestureInterpreter.cpp](../src/ButtonGestureInterpreter.cpp)).
+- **ButtonManager.h** – coordinates semantic gesture events with instrument commands ([ButtonManager.cpp](../src/ButtonManager.cpp)).
 - **ConfigManager.h** – reads/writes configuration to EEPROM ([ConfigManager.cpp](../src/ConfigManager.cpp)).
 - **DisplayManager.h** – wrappers around the SSD1306 OLED display ([DisplayManager.cpp](../src/DisplayManager.cpp)).
 - **EnvelopeFollower.h** – tracks audio or CV to modulate slots ([EnvelopeFollower.cpp](../src/EnvelopeFollower.cpp)).
@@ -43,7 +44,7 @@ before wandering file-by-file.
 
 ```mermaid
 flowchart LR
-    ButtonScanner --> ButtonManager
+    ButtonScanner --> ButtonGestureInterpreter --> ButtonManager
     ButtonManager --> ConfigManager
     PotentiometerManager --> ConfigManager
     ConfigManager --> LEDManager
@@ -54,7 +55,7 @@ flowchart LR
     ButtonManager --> DisplayManager --> LEDManager
 ```
 
-- `ButtonScanner` turns mux readings into debounced physical states. `ButtonManager` interprets them, `LEDManager` answers with a light show, and `DisplayManager` scribbles the result on the OLED.
+- `ButtonScanner` turns mux readings into debounced physical states. `ButtonGestureInterpreter` classifies the timing and chords without hardware dependencies. `ButtonManager` maps those events to commands, `LEDManager` answers with a light show, and `DisplayManager` scribbles the result on the OLED.
 - `PotentiometerManager` pours raw knob juice into `ConfigManager`, which then nudges `LEDManager` and `DisplayManager` so your fingers see what your ears are about to hear.
 - `MIDIHandler` routes incoming notes and clock, letting `Arpeggiator` and `EnvelopeFollower` sync their mischief; `BiquadFilter` keeps the follower's wiggles smooth.
 - `WebSerial` taps `ConfigManager` to fling slot snapshots over USB for external editors or debugging.
@@ -64,7 +65,8 @@ flowchart LR
 | Module | Hardware hookup |
 | --- | --- |
 | **ButtonScanner** | 42 matrix buttons plus 6 control-button mux channels |
-| **ButtonManager** | Gesture and command mapping for the scanned button surface |
+| **ButtonGestureInterpreter** | Hardware-independent gesture grammar for the 48 stable input states |
+| **ButtonManager** | Command mapping and side-effect coordination for semantic gestures |
 | **PotentiometerManager** | 42 analog slots fed through muxes |
 | **LEDManager** | 52 WS2812 rebels (42 slot halos, 6 EF meters, 1 control-actuated beacon, 3 pot indicators) |
 | **EnvelopeFollower** | 6 envelope-sniffing inputs |

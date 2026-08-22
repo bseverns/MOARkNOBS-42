@@ -8,11 +8,11 @@ Turns stable states from the 7×6 button grid into gestures and instrument actio
 
 ## Where it fits
 
-`ButtonScanner` owns the electrical boundary for the multiplexed button grid: mux addressing, settling, ADC/GPIO reads, debounce state, and stable physical states. `ButtonManager` consumes those states, owns the gesture/command map, updates slot/profile state through ConfigManager, feeds MIDIHandler, and flashes clues through LEDManager.
+`ButtonScanner` owns the electrical boundary for the multiplexed button grid: mux addressing, settling, ADC/GPIO reads, debounce state, and stable physical states. `ButtonGestureInterpreter` is the Arduino-independent event machine for press/hold/release timing, exclusive double presses, long-press confirmation, chord settling, and chord consumption. `ButtonManager` consumes those semantic events, owns the command map, updates slot/profile state through ConfigManager, feeds MIDIHandler, and flashes clues through LEDManager.
 
 ```
-[Muxed buttons] --> ButtonScanner --> ButtonManager --> MIDIHandler
-                                \-> LEDManager
+[Muxed buttons] --> ButtonScanner --> ButtonGestureInterpreter --> ButtonManager --> MIDIHandler
+                                                                        \-> LEDManager
 ```
 
 See the big picture in the [main firmware README](../../README.md).
@@ -20,8 +20,10 @@ See the big picture in the [main firmware README](../../README.md).
 ## Key Methods
 
 - `ButtonScanner::initHardware()` – wire up mux pins and reset physical scan state.
+- `ButtonGestureInterpreter::updateButton()` – translate one stable state into semantic button events.
+- `ButtonGestureInterpreter::updateControlMask()` – settle and classify control-button chords.
 - `ButtonManager::initButtons()` – initialize the scanner and ready the gesture machines.
-- `processButtons(ctx)` – poll the matrix and trigger actions.
+- `ButtonManager::processButtons(ctx)` – poll the surface and dispatch interpreted events.
 - `isMuxButtonPressed(idx)` – peek a raw button for tests; works on `const`
   managers too.
 
@@ -45,7 +47,7 @@ That `hwConfig` bundle wrangles mux pins, LED counts, and timing so the tests an
 
 ## Faster, non-blocking scans
 
-`ButtonScanner` uses a bounded `micros()`/`yield()` settling loop whenever it changes the CD74HC4067 address. The main loop keeps breathing and the scanner still catches every click.
+`ButtonScanner` uses a bounded `micros()`/`yield()` settling loop whenever it changes the CD74HC4067 address. The main loop keeps breathing and the scanner still catches every click. The interpreter contains no GPIO, display, persistence, or runtime dependencies, so its gesture grammar can also run as a native host test.
 
 Mux select lines get smashed via a pre-baked lookup table and `digitalWriteFast()`, ditching the bit‑twiddling on every pass. Flip `BUTTON_MANAGER_PROFILE` in the build and you'll get Serial spam with average and max scan times—handy to prove we're not dropping states while chasing speed.
 

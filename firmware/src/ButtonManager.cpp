@@ -1,7 +1,7 @@
-// ButtonManager is the interaction coordinator between stable physical input
-// and instrument behavior. ButtonScanner owns mux/debounce mechanics; this file
-// owns gesture timing, command dispatch, and the presentation notifications
-// emitted after an on-device action.
+// ButtonManager is the interaction coordinator between semantic gestures and
+// instrument behavior. ButtonScanner owns mux/debounce mechanics and
+// ButtonGestureInterpreter owns timing/grammar; this file owns command dispatch
+// and the presentation notifications emitted after an on-device action.
 
 #include "ButtonManager.h"
 #include "EnvelopeFollower.h"
@@ -29,8 +29,6 @@ extern ConfigManager configManager;
 extern LFOManager lfoManager;
 
 // Verbose logging rides on BUTTON_MANAGER_DEBUG. See ButtonManager.h for macros.
-
-static const unsigned long LONG_PRESS_DELAY = 500;
 
 // Mirror the global ARG pair count so our math stays synced without recomputing.
 static const int NUM_ARG_PAIRS = ARG_PAIRS_LEN;
@@ -234,20 +232,10 @@ ButtonManager::ButtonManager(const HardwareConfig &config, const uint8_t *contro
     : _scanner(config, controlPins), _potentiometerManager(potentiometerManager), activeMode(0),
       _pendingEfSlot(-1), _efAssignDeadline(0) {}
 
-// Called during setup to configure the multiplexers and reset the internal
-// state machines that track button presses.
+// Called during setup to configure the multiplexers and reset gesture state.
 void ButtonManager::initButtons() {
     _scanner.initHardware();
-
-    // optional: initialize each state machine for each button
-    for (int i = 0; i < (NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS); i++) {
-        _buttonMachines[i].state = ButtonState::IDLE;
-        _buttonMachines[i].pressTimestamp = 0;
-        _buttonMachines[i].releaseTimestamp = 0;
-        _buttonMachines[i].longPressFired = false;
-        _buttonMachines[i].lastShortRelease = 0;
-        _buttonMachines[i].shortPressPending = false;
-    }
+    _gesture.reset();
 }
 
 void ButtonManager::enterOnDeviceConfigMode(ButtonManagerContext &context) {
@@ -298,13 +286,8 @@ void ButtonManager::exitLfoTuningMode(ButtonManagerContext &context) {
     context.displayManager.displayStatus("LFO Tune OFF", 1000);
 }
 
-/*
-One unified processButtons loop:
- - For each virtual (mux) button, read & debounce
-   -> update state machine
- - For each control (direct) button, read & debounce
-   -> update state machine
-*/
+// One unified loop scans stable states, interprets gestures, and dispatches
+// resulting actions. The electrical and gesture boundaries remain separate.
 void ButtonManager::processButtons(ButtonManagerContext &context) {
     unsigned long now = ::now();
 
@@ -350,82 +333,12 @@ void ButtonManager::processButtons(ButtonManagerContext &context) {
 #endif
 }
 
-/*
-The new state machine approach for short vs. long press.
-*/
 void ButtonManager::updateButtonStateMachine(uint8_t index, bool pressed,
                                              ButtonManagerContext &context) {
-    ButtonStateMachine &sm = _buttonMachines[index];
-    unsigned long now = ::now();
-
-    // Kill any pending confirm if time ran out
-    if (_confirmIndex >= 0 && now > _confirmDeadline) {
-        cancelPendingConfirm(context);
-    }
-
-    // Smack pending confirm if some other button gets poked
-    if (_confirmIndex >= 0 && index != _confirmIndex && pressed) {
-        cancelPendingConfirm(context);
-    }
-
-    switch (sm.state) {
-    case ButtonState::IDLE:
-        if (pressed) {
-            sm.state = ButtonState::PRESSED;
-            sm.pressTimestamp = now;
-            sm.longPressFired = false;
-            if (index >= NUM_VIRTUAL_BUTTONS) {
-                context.ledManager.triggerControlButton();
-            }
-        }
-        break;
-
-    case ButtonState::PRESSED:
-        if (!pressed) {
-            // Dispatch the release immediately. The scanner calls this state
-            // machine continuously, but tests and alternate hardware paths may
-            // only report edges.
-            sm.releaseTimestamp = now;
-            context.displayManager.registerInteraction();
-            sm.state = ButtonState::IDLE;
-            onRelease(index, context);
-        } else {
-            // still pressed, check for long press
-            if (!_onDeviceConfigModeActive && !_lfoTuningActive && !sm.longPressFired &&
-                (now - sm.pressTimestamp >= LONG_PRESS_DELAY)) {
-                sm.state = ButtonState::LONG_PRESS;
-                sm.longPressFired = true;
-                onLongPress(index, context); // arm the action, wait for confirm
-            }
-        }
-        break;
-
-    case ButtonState::LONG_PRESS:
-        // remains pressed
-        if (!pressed) {
-            // user just released after a long press
-            sm.state = ButtonState::IDLE;
-            sm.releaseTimestamp = now;
-            context.displayManager.registerInteraction();
-            onRelease(index, context);
-        }
-        break;
-
-    case ButtonState::RELEASED:
-        onRelease(index, context);
-        sm.state = ButtonState::IDLE;
-        break;
-    }
-}
-
-/*
-Called when a long press crosses the threshold; we just arm it.
-*/
-void ButtonManager::onLongPress(uint8_t index, ButtonManagerContext &context) {
-    _confirmIndex = index;
-    _confirmDeadline = ::now() + CONFIRM_WINDOW_MS;
-    context.displayManager.displayStatus("CONFIRM\nTap again", 1000);
-    startWarningForIndex(index, context);
+    ButtonGestureMode mode;
+    mode.immediateShortPresses = _onDeviceConfigModeActive || _lfoTuningActive;
+    mode.longPressesEnabled = !mode.immediateShortPresses;
+    dispatchGestureEvents(_gesture.updateButton(index, pressed, ::now(), mode), context);
 }
 
 /*
@@ -533,88 +446,83 @@ void ButtonManager::performLongPressAction(uint8_t index, ButtonManagerContext &
     }
 }
 
-/*
-Called after the user releases (short or long). If it wasn't a long press, we treat it as short
-press.
-*/
-void ButtonManager::onRelease(uint8_t index, ButtonManagerContext &context) {
-    auto &sm = _buttonMachines[index];
-    if (!sm.longPressFired) {
-        if (index >= NUM_VIRTUAL_BUTTONS) {
-            const uint8_t controlIndex = index - NUM_VIRTUAL_BUTTONS;
-            const uint8_t controlMask = static_cast<uint8_t>(1U << controlIndex);
-            if ((_consumedControlMask & controlMask) != 0) {
-                _consumedControlMask &= static_cast<uint8_t>(~controlMask);
-                consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
-                return;
-            }
-        }
-        // It's a short press
-        handleShortPress(index, context);
-    } else {
-        // We had a long press
-        // If you want a separate 'long press release' action, do it here.
-    }
-}
-
-/*
-If short press, we see if it's a double press or single press.
-*/
-void ButtonManager::handleShortPress(uint8_t index, ButtonManagerContext &context) {
-    auto &sm = _buttonMachines[index];
-    unsigned long now = ::now();
-
-    if (_confirmIndex == index) {
-        // Second tap confirms the long‑press move
-        bool withinWindow = (now <= _confirmDeadline);
-        cancelPendingConfirm(context);
-        if (withinWindow) {
-            performLongPressAction(index, context);
-        }
-        return;
-    }
-
-    if (_onDeviceConfigModeActive) {
-        doSinglePressAction(index, context);
-        consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
-        return;
-    }
-    if (_lfoTuningActive) {
-        doSinglePressAction(index, context);
-        consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
-        return;
-    }
-
-    // Ctrl3-Ctrl5 use exclusive double gestures: their single action waits
-    // until the double-press window closes, so a double never also changes
-    // channel/data1 or records a tempo tap.
-    const bool deferredControl = index >= NUM_VIRTUAL_BUTTONS + 3;
-    if (deferredControl) {
-        const DeferredPressDecision decision =
-            registerDeferredRelease(sm.shortPressPending, sm.lastShortRelease, now);
-        if (decision.fireSingle) doSinglePressAction(index, context);
-        if (decision.fireDouble) handleDoublePress(index, context);
-        return;
-    }
-
-    // Legacy double-press detection for slot buttons and Ctrl0-Ctrl2.
-    if (sm.lastShortRelease != 0 && (now - sm.lastShortRelease) < DOUBLE_PRESS_DELAY) {
-        handleDoublePress(index, context);
-        sm.lastShortRelease = 0;
-    } else {
-        doSinglePressAction(index, context);
-        sm.lastShortRelease = now;
-    }
-}
-
 void ButtonManager::flushDeferredControlPresses(ButtonManagerContext &context) {
-    const unsigned long current = ::now();
-    for (uint8_t controlIndex = 3; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
-        const uint8_t index = NUM_VIRTUAL_BUTTONS + controlIndex;
-        ButtonStateMachine &sm = _buttonMachines[index];
-        if (flushDeferredPress(sm.shortPressPending, sm.lastShortRelease, current)) {
-            doSinglePressAction(index, context);
+    dispatchGestureEvents(_gesture.flushDeferred(::now()), context);
+}
+
+void ButtonManager::dispatchGestureEvents(const ButtonGestureEvents &events,
+                                          ButtonManagerContext &context) {
+    for (uint8_t eventIndex = 0; eventIndex < events.count; ++eventIndex) {
+        const ButtonGestureEvent &event = events.items[eventIndex];
+        switch (event.type) {
+        case ButtonGestureEventType::PhysicalPress:
+            if (event.value >= NUM_VIRTUAL_BUTTONS) {
+                context.ledManager.triggerControlButton();
+            }
+            break;
+        case ButtonGestureEventType::PhysicalRelease:
+            context.displayManager.registerInteraction();
+            break;
+        case ButtonGestureEventType::SinglePress:
+            doSinglePressAction(event.value, context);
+            break;
+        case ButtonGestureEventType::DoublePress:
+            handleDoublePress(event.value, context);
+            break;
+        case ButtonGestureEventType::LongPressArmed:
+            context.displayManager.displayStatus("CONFIRM\nTap again", 1000);
+            startWarningForIndex(event.value, context);
+            break;
+        case ButtonGestureEventType::LongPressConfirmed:
+            performLongPressAction(event.value, context);
+            break;
+        case ButtonGestureEventType::ConfirmationCancelled:
+            if (context.ledManager.isWarningActive()) {
+                context.ledManager.clearWarningAnimation();
+            }
+            break;
+        case ButtonGestureEventType::ComboPress:
+            handleMultiButtonPress(event.value, context);
+            break;
+        case ButtonGestureEventType::ComboLongPress:
+            handleLongControlChord(event.value, context);
+            break;
+        case ButtonGestureEventType::ComboRelease:
+            handleControlChordRelease(event.value, context);
+            break;
         }
+    }
+}
+
+void ButtonManager::handleLongControlChord(uint8_t mask, ButtonManagerContext &context) {
+    const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
+    const uint8_t swingMask = maskCtrl2 | maskCtrl3;
+    if (mask == arpEditMask) {
+        if (arpeggiator.isActive(context.activePot)) {
+            g_arpEditActive = true;
+            context.displayManager.displayStatus("Arp Edit", 1000);
+        } else {
+            context.displayManager.displayStatus("Arp Off", 1000);
+        }
+        return;
+    }
+    if (mask == swingMask) {
+        static uint8_t swingPreset = 0;
+        static const uint8_t swingPresets[] = {0, 8, 16, 30};
+        swingPreset = static_cast<uint8_t>((swingPreset + 1) %
+                                           (sizeof(swingPresets) / sizeof(swingPresets[0])));
+        const uint8_t value = swingPresets[swingPreset];
+        arpeggiator.setSwingPercent(static_cast<float>(value));
+        char buf[24];
+        snprintf(buf, sizeof(buf), "Swing: %u%%", value);
+        context.displayManager.displayStatus(buf, 1000);
+    }
+}
+
+void ButtonManager::handleControlChordRelease(uint8_t mask, ButtonManagerContext &context) {
+    if (mask == (maskCtrl2 | maskCtrl4) && g_arpEditActive) {
+        g_arpEditActive = false;
+        context.displayManager.displayStatus("Arp Edit Off", 1000);
     }
 }
 
@@ -1345,89 +1253,11 @@ void ButtonManager::scanControlInputs(ButtonManagerContext &context) {
     // After updating each control button, check for multi-button combos
     const uint8_t mask = _scanner.controlMask();
     const uint8_t jitterMask = maskCtrl0 | maskCtrl3 | maskCtrl4;
-    const uint8_t arpEditMask = maskCtrl2 | maskCtrl4;
-    const uint8_t swingMask = maskCtrl2 | maskCtrl3;
     bool jitterActive = (mask == jitterMask) && !_onDeviceConfigModeActive && !_lfoTuningActive;
     g_jitterTuningActive = jitterActive;
-    static uint8_t lastMask = 0;
-    // Track combos that have long-press behaviors (arp edit, swing presets).
-    bool multiPressed = (mask && (mask & (mask - 1)));
-    bool longPressCombo = !_onDeviceConfigModeActive && !_lfoTuningActive &&
-                          (mask == arpEditMask || mask == swingMask);
-
-    if (multiPressed) {
-        _consumedControlMask |= mask;
-        for (uint8_t controlIndex = 0; controlIndex < NUM_CONTROL_BUTTONS; ++controlIndex) {
-            if ((mask & (1U << controlIndex)) != 0) {
-                ButtonStateMachine &sm = _buttonMachines[NUM_VIRTUAL_BUTTONS + controlIndex];
-                consumeDeferredPress(sm.shortPressPending, sm.lastShortRelease);
-            }
-        }
-    }
-
-    // Combo transitions: handle short-press fallbacks and release behavior.
-    if (mask != _comboHoldMask) {
-        if (_comboHoldMask == arpEditMask) {
-            if (!_comboLongPressFired) {
-                handleMultiButtonPress(_comboHoldMask, context);
-            }
-            // Arp edit only stays active while the combo is held.
-            if (g_arpEditActive) {
-                g_arpEditActive = false;
-                context.displayManager.displayStatus("Arp Edit Off", 1000);
-            }
-        } else if (_comboHoldMask == swingMask) {
-            if (!_comboLongPressFired) {
-                handleMultiButtonPress(_comboHoldMask, context);
-            }
-        }
-        _comboHoldMask = longPressCombo ? mask : 0;
-        _comboHoldTimestamp = now;
-        _comboLongPressFired = false;
-    }
-
-    // Fire long-press actions once the combo crosses the hold threshold.
-    if (longPressCombo && !_comboLongPressFired &&
-        (now - _comboHoldTimestamp >= LONG_PRESS_DELAY)) {
-        _comboLongPressFired = true;
-        if (mask == arpEditMask) {
-            _consumedControlMask |= mask;
-            if (arpeggiator.isActive(context.activePot)) {
-                g_arpEditActive = true;
-                context.displayManager.displayStatus("Arp Edit", 1000);
-            } else {
-                context.displayManager.displayStatus("Arp Off", 1000);
-            }
-        } else if (mask == swingMask) {
-            _consumedControlMask |= mask;
-            // Cycle through swing presets for fast access.
-            static uint8_t swingPreset = 0;
-            static const uint8_t swingPresets[] = {0, 8, 16, 30};
-            swingPreset = static_cast<uint8_t>((swingPreset + 1) %
-                                               (sizeof(swingPresets) / sizeof(swingPresets[0])));
-            uint8_t value = swingPresets[swingPreset];
-            arpeggiator.setSwingPercent(static_cast<float>(value));
-            char buf[24];
-            snprintf(buf, sizeof(buf), "Swing: %u%%", value);
-            context.displayManager.displayStatus(buf, 1000);
-        }
-    }
-    if (multiPressed && !longPressCombo) {
-        if (mask != _comboCandidateMask) {
-            _comboCandidateMask = mask;
-            _comboCandidateSince = now;
-        }
-        if ((mask != lastMask) && (now - _comboCandidateSince >= COMBO_SETTLE_MS)) {
-            handleMultiButtonPress(mask, context);
-            lastMask = mask;
-        }
-    } else {
-        _comboCandidateMask = 0;
-        _comboCandidateSince = 0;
-        if (mask != lastMask) {
-            lastMask = mask;
-        }
-    }
+    dispatchGestureEvents(
+        _gesture.updateControlMask(mask, now, !_onDeviceConfigModeActive && !_lfoTuningActive),
+        context);
 
     for (uint8_t i = 0; i < 3; ++i) {
         _ctrlPotValues[i] =
@@ -1558,9 +1388,7 @@ void ButtonManager::updateCtrlButton(uint8_t index, bool pressed, ButtonManagerC
 }
 
 void ButtonManager::cancelPendingConfirm(ButtonManagerContext &context) {
-    if (_confirmIndex >= 0) {
-        _confirmIndex = -1;
-    }
+    _gesture.cancelConfirmation();
     if (context.ledManager.isWarningActive()) {
         context.ledManager.clearWarningAnimation();
     }

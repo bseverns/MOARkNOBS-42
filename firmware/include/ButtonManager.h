@@ -5,11 +5,9 @@
 // The scanner samples one 7x6 matrix row per processButtons() pass. Its 50 ms
 // debounce boundary keeps electrical bounce out of this gesture state machine.
 //
-// Each switch feeds a tiny state machine. Short taps bubble through
-// handleShortPress() → doSinglePressAction(), rapid doubles detour into
-// handleDoublePress(), and sustained holds fire onLongPress() once before
-// onRelease() cleans house. Those callbacks are how the rest of the firmware
-// plugs in.
+// ButtonGestureInterpreter turns those stable states into single, double,
+// long-confirm, and chord events. This coordinator maps the events to device
+// commands and presentation updates.
 //
 // UI ACTION LEDGER — Button Actions Reference
 // ===========================================
@@ -100,6 +98,7 @@
 #include <vector>
 #include <map>
 #include "ButtonGestureTiming.h"
+#include "ButtonGestureInterpreter.h"
 #include "ButtonScanner.h"
 #include "DisplayManager.h"
 #include "MIDITypes.h"
@@ -123,28 +122,6 @@
 #define BM_DBG_PRINT(...)
 #define BM_DBG_PRINTLN(...)
 #endif
-
-/*
-States for each button in the debounce & press state machine.
-*/
-enum class ButtonState {
-    IDLE,       // No press detected
-    PRESSED,    // Button is pressed but not yet long-pressed
-    LONG_PRESS, // Long press threshold reached
-    RELEASED    // Button has been released
-};
-
-/*
-Per-button state machine data.
-*/
-struct ButtonStateMachine {
-    ButtonState state = ButtonState::IDLE;
-    unsigned long pressTimestamp = 0;   // When button first pressed
-    unsigned long releaseTimestamp = 0; // When button released
-    bool longPressFired = false;        // Ensures long-press event only fires once
-    unsigned long lastShortRelease = 0; // Timestamp of last release for double-press detection
-    bool shortPressPending = false;     // Defers singles that share a double-press gesture
-};
 
 /*
 Aggregated references passed to ::processButtons().
@@ -171,11 +148,11 @@ struct ButtonManagerContext {
 };
 
 /*
-Handles scanning and interpreting all physical and virtual buttons.
+Coordinates semantic events for all physical and virtual buttons.
 
-The manager abstracts away the multiplexing hardware and exposes a
-high level event interface.  Use ::processButtons regularly in the
-main loop to update the state machines for every button.
+ButtonScanner abstracts the multiplexing hardware and ButtonGestureInterpreter
+classifies stable states. Use ::processButtons regularly in the main loop to
+dispatch the resulting actions.
 */
 class ButtonManager {
   public:
@@ -235,14 +212,12 @@ class ButtonManager {
 
   private:
     ButtonScanner _scanner;
+    ButtonGestureInterpreter _gesture;
     // Link to PotentiometerManager for mode switching
     PotentiometerManager *_potentiometerManager;
 
     // Current UI mode (e.g., CC vs ENV vs ARG)
     uint8_t activeMode = 0;
-
-    // State machines for each button detection
-    ButtonStateMachine _buttonMachines[NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS];
 
     // Handle the action for a single short press after debouncing.
     void handleSingleButtonPress(uint8_t buttonIndex, ButtonManagerContext &context);
@@ -250,22 +225,16 @@ class ButtonManager {
     // Optional hook for combination presses (e.g. SHIFT + button).
     void handleMultiButtonPress(uint8_t pressedButtons, ButtonManagerContext &context);
 
-    // Internal state machine driving press/hold/release detection.
+    // Feed one stable state into the gesture interpreter and dispatch its events.
     void updateButtonStateMachine(uint8_t index, bool pressed, ButtonManagerContext &context);
-
-    // Arm a long‑press action and wait for a confirm tap.
-    void onLongPress(uint8_t index, ButtonManagerContext &context);
 
     // Actually perform the long‑press action once confirmed.
     void performLongPressAction(uint8_t index, ButtonManagerContext &context);
-
-    // Called when the button is released after press or long-press.
-    void onRelease(uint8_t index, ButtonManagerContext &context);
-
-    // Detect and dispatch short vs double presses based on timing.
-    void handleShortPress(uint8_t index, ButtonManagerContext &context);
     void handleDoublePress(uint8_t index, ButtonManagerContext &context);
     void flushDeferredControlPresses(ButtonManagerContext &context);
+    void dispatchGestureEvents(const ButtonGestureEvents &events, ButtonManagerContext &context);
+    void handleLongControlChord(uint8_t mask, ButtonManagerContext &context);
+    void handleControlChordRelease(uint8_t mask, ButtonManagerContext &context);
 
     // Perform the mapped action for a simple press.
     void doSinglePressAction(uint8_t index, ButtonManagerContext &context);
@@ -284,21 +253,6 @@ class ButtonManager {
     float _lastJitterDepth = -1.0f;
     float _lastJitterSmoothness = -1.0f;
     int16_t _lastConfigFloorPotBucket = -1;
-    // Chord settle window: allows human fingers to land on multi-button combos reliably.
-    // 80ms accommodates typical finger spread variance without introducing noticeable lag.
-    static constexpr unsigned long COMBO_SETTLE_MS = 80;
-    uint8_t _comboHoldMask = 0;             // Active combo mask for long-press tracking
-    unsigned long _comboHoldTimestamp = 0;  // When the current combo started
-    bool _comboLongPressFired = false;      // True once the combo long-press action fired
-    uint8_t _comboCandidateMask = 0;        // Candidate short-combo mask while settling
-    unsigned long _comboCandidateSince = 0; // Timestamp when current short-combo candidate started
-    uint8_t _consumedControlMask = 0;        // Prevent chord releases from firing solo actions
-
-    // Long‑press confirmation tracking
-    static constexpr unsigned long CONFIRM_WINDOW_MS = 2000; // fat‑finger safety net
-    int8_t _confirmIndex = -1;                               // which button waits for confirmation
-    unsigned long _confirmDeadline = 0;                      // when the confirm window expires
-
     // Pending envelope follower assignment after a slot long press
     static constexpr unsigned long EF_ASSIGN_WINDOW_MS = 3000; // window to pick EF 0-5
     int _pendingEfSlot = -1;                                   // slot waiting for EF selection

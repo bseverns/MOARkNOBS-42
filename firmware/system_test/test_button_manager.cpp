@@ -85,13 +85,13 @@ void test_long_press_detection() {
     bm.updateButtonStateMachine(0, true, ctx); // press
     fakeMillis = 499;                          // just shy of the 500 ms threshold
     bm.updateButtonStateMachine(0, true, ctx);
-    TEST_ASSERT_EQUAL(ButtonState::PRESSED, bm._buttonMachines[0].state);
-    TEST_ASSERT_FALSE(bm._buttonMachines[0].longPressFired);
+    TEST_ASSERT_EQUAL(ButtonState::PRESSED, bm._gesture.state(0));
+    TEST_ASSERT_FALSE(bm._gesture.longPressFired(0));
 
     fakeMillis = 501; // crossed the line
     bm.updateButtonStateMachine(0, true, ctx);
-    TEST_ASSERT_EQUAL(ButtonState::LONG_PRESS, bm._buttonMachines[0].state);
-    TEST_ASSERT_TRUE(bm._buttonMachines[0].longPressFired);
+    TEST_ASSERT_EQUAL(ButtonState::LONG_PRESS, bm._gesture.state(0));
+    TEST_ASSERT_TRUE(bm._gesture.longPressFired(0));
 }
 
 // A long-press shouldn't trigger the destructive action until the user taps a
@@ -122,14 +122,14 @@ void test_long_press_requires_confirm() {
     fakeMillis = 600;
     bm.updateButtonStateMachine(0, true, ctx);  // hold past threshold
     bm.updateButtonStateMachine(0, false, ctx); // release
-    TEST_ASSERT_EQUAL(0, bm._confirmIndex);
+    TEST_ASSERT_EQUAL(0, bm._gesture.pendingConfirmationIndex());
     TEST_ASSERT_TRUE(ctx.potToEnvelopeMap.empty());
 
     // Second tap within window commits the move
     fakeMillis = 800;
     bm.updateButtonStateMachine(0, true, ctx);
     bm.updateButtonStateMachine(0, false, ctx);
-    TEST_ASSERT_EQUAL(-1, bm._confirmIndex);
+    TEST_ASSERT_EQUAL(-1, bm._gesture.pendingConfirmationIndex());
     TEST_ASSERT_FALSE(ctx.potToEnvelopeMap.empty());
 }
 

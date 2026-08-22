@@ -3,14 +3,9 @@
 
 #include <Arduino.h>
 
-struct HardwareConfig;
+#include "ButtonInputConstants.h"
 
-inline constexpr uint8_t NUM_VIRTUAL_BUTTONS = 42;
-inline constexpr uint8_t NUM_CONTROL_BUTTONS = 6;
-inline constexpr unsigned long DEBOUNCE_DELAY = 50;
-inline constexpr uint8_t BUTTON_ROWS = 7;
-inline constexpr uint8_t BUTTON_COLS = 6;
-inline constexpr int BUTTON_PRESS_THRESHOLD = 512;
+struct HardwareConfig;
 
 struct MatrixScanRange {
     uint8_t begin;
@@ -38,7 +33,7 @@ class ButtonScanner {
   private:
     static constexpr uint8_t kMuxSelectPins = 4;
     static constexpr uint32_t kMuxSettleUs = 5;
-    static constexpr uint8_t kTotalButtons = NUM_VIRTUAL_BUTTONS + NUM_CONTROL_BUTTONS;
+    static constexpr uint8_t kTotalButtons = NUM_BUTTON_INPUTS;
 
     const HardwareConfig &_config;
     const uint8_t *_controlPins;
