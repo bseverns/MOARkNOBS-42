@@ -24,12 +24,12 @@ readback, test coverage, and evidence-backed support boundaries.
 
 ## Choose your path
 
-| You are... | Start here | You will learn... |
+| Interest | Start here | You will learn... |
 | --- | --- | --- |
-| A performer | [Quickstart for Performers](docs/getting-started/QuickstartForPerformers.md) | How to connect, configure, recall profiles, and prepare a rig. |
-| A builder | [Quickstart for Builders](docs/getting-started/QuickstartForBuilders.md) | How to inspect, flash, bring up, and validate a board. |
-| A contributor | [Contributing](CONTRIBUTING.md) | The build, test, documentation, and review gates. |
-| An evaluator | [Hardware-Test Readme](HARDWARE_TEST_README.md) | What the current prototype evidence proves—and does not prove. |
+| Performer | [Quickstart for Performers](docs/getting-started/QuickstartForPerformers.md) | How to connect, configure, recall profiles, and prepare a rig. |
+| Builder | [Quickstart for Builders](docs/getting-started/QuickstartForBuilders.md) | How to inspect, flash, bring up, and validate a board. |
+| Contributor | [Contributing](CONTRIBUTING.md) | The build, test, documentation, and review gates. |
+| Technical Evaluator | [Hardware-Test Readme](HARDWARE_TEST_README.md) | What the current prototype evidence proves—and does not prove. |
 
 For a conceptual tour, use [Start Here](docs/getting-started/StartHere.md). For a complete source-tree map, use
 [Repository Contents](docs/project/RepositoryContents.md).
