@@ -1,6 +1,7 @@
 #include "ButtonGestureInterpreter.h"
 
 #include <cassert>
+#include <array>
 #include <cstdint>
 
 namespace {
@@ -10,6 +11,34 @@ bool hasEvent(const ButtonGestureEvents &events, ButtonGestureEventType type,
         if (events.items[index].type == type && events.items[index].value == value) return true;
     }
     return false;
+}
+
+struct EventCounts {
+    uint16_t comboPress = 0;
+    uint16_t comboRelease = 0;
+    uint16_t singlePress = 0;
+    uint16_t doublePress = 0;
+
+    void add(const ButtonGestureEvents &events, uint8_t expectedMask) {
+        for (uint8_t index = 0; index < events.count; ++index) {
+            const ButtonGestureEvent &event = events.items[index];
+            if (event.type == ButtonGestureEventType::ComboPress) {
+                assert(event.value == expectedMask);
+                ++comboPress;
+            } else if (event.type == ButtonGestureEventType::ComboRelease) {
+                assert(event.value == expectedMask);
+                ++comboRelease;
+            } else if (event.type == ButtonGestureEventType::SinglePress) {
+                ++singlePress;
+            } else if (event.type == ButtonGestureEventType::DoublePress) {
+                ++doublePress;
+            }
+        }
+    }
+};
+
+constexpr uint8_t controlButton(uint8_t controlIndex) {
+    return static_cast<uint8_t>(NUM_VIRTUAL_BUTTONS + controlIndex);
 }
 
 void testLegacySingleAndDoublePresses() {
@@ -94,6 +123,97 @@ void testSettledChordConsumesSoloReleases() {
     assert(!hasEvent(release1, ButtonGestureEventType::SinglePress, control1));
 }
 
+void testEveryTwoButtonPressAndReleaseOrder() {
+    constexpr uint8_t arpChord = (1U << 2) | (1U << 4);
+    constexpr uint8_t swingChord = (1U << 2) | (1U << 3);
+
+    for (uint8_t first = 0; first < NUM_CONTROL_BUTTONS; ++first) {
+        for (uint8_t second = static_cast<uint8_t>(first + 1);
+             second < NUM_CONTROL_BUTTONS; ++second) {
+            const uint8_t chord = static_cast<uint8_t>((1U << first) | (1U << second));
+            const bool specialChord = chord == arpChord || chord == swingChord;
+            for (uint8_t pressOrder = 0; pressOrder < 2; ++pressOrder) {
+                for (uint8_t releaseOrder = 0; releaseOrder < 2; ++releaseOrder) {
+                    const uint8_t pressedFirst = pressOrder == 0 ? first : second;
+                    const uint8_t pressedSecond = pressOrder == 0 ? second : first;
+                    const uint8_t releasedFirst = releaseOrder == 0 ? first : second;
+                    const uint8_t releasedSecond = releaseOrder == 0 ? second : first;
+                    ButtonGestureInterpreter gestures;
+                    EventCounts counts;
+                    gestures.reset();
+
+                    counts.add(gestures.updateButton(controlButton(pressedFirst), true, 10), chord);
+                    counts.add(gestures.updateControlMask(1U << pressedFirst, 10), chord);
+                    counts.add(gestures.updateButton(controlButton(pressedSecond), true, 30), chord);
+                    counts.add(gestures.updateControlMask(chord, 30), chord);
+                    counts.add(gestures.updateControlMask(chord, 109), chord);
+                    assert(counts.comboPress == 0);
+                    if (!specialChord) {
+                        counts.add(gestures.updateControlMask(chord, 110), chord);
+                        assert(counts.comboPress == 1);
+                    }
+
+                    counts.add(gestures.updateButton(controlButton(releasedFirst), false, 140), chord);
+                    counts.add(gestures.updateControlMask(1U << releasedSecond, 140), chord);
+                    counts.add(gestures.updateButton(controlButton(releasedSecond), false, 150), chord);
+                    counts.add(gestures.updateControlMask(0, 150), chord);
+
+                    assert(counts.comboPress == 1);
+                    assert(counts.comboRelease == (specialChord ? 1 : 0));
+                    assert(counts.singlePress == 0);
+                    assert(counts.doublePress == 0);
+                }
+            }
+        }
+    }
+}
+
+void testEveryThreeButtonRollingPressAndReleaseOrder() {
+    constexpr std::array<std::array<uint8_t, 3>, 6> permutations = {{{0, 1, 2},
+                                                                      {0, 2, 1},
+                                                                      {1, 0, 2},
+                                                                      {1, 2, 0},
+                                                                      {2, 0, 1},
+                                                                      {2, 1, 0}}};
+    constexpr uint8_t chord = (1U << 0) | (1U << 1) | (1U << 2);
+
+    for (const auto &pressOrder : permutations) {
+        for (const auto &releaseOrder : permutations) {
+            ButtonGestureInterpreter gestures;
+            EventCounts counts;
+            uint8_t mask = 0;
+            unsigned long now = 10;
+            gestures.reset();
+
+            for (uint8_t control : pressOrder) {
+                mask = static_cast<uint8_t>(mask | (1U << control));
+                counts.add(gestures.updateButton(controlButton(control), true, now), chord);
+                counts.add(gestures.updateControlMask(mask, now), chord);
+                now += 20;
+            }
+
+            counts.add(gestures.updateControlMask(chord, 129), chord);
+            assert(counts.comboPress == 0);
+            counts.add(gestures.updateControlMask(chord, 130), chord);
+            assert(counts.comboPress == 1);
+
+            now = 150;
+            mask = chord;
+            for (uint8_t control : releaseOrder) {
+                mask = static_cast<uint8_t>(mask & ~(1U << control));
+                counts.add(gestures.updateButton(controlButton(control), false, now), chord);
+                counts.add(gestures.updateControlMask(mask, now), chord);
+                now += 10;
+            }
+
+            assert(counts.comboPress == 1);
+            assert(counts.comboRelease == 0);
+            assert(counts.singlePress == 0);
+            assert(counts.doublePress == 0);
+        }
+    }
+}
+
 void testShortAndLongSpecialChords() {
     constexpr uint8_t arpChord = (1U << 2) | (1U << 4);
     ButtonGestureInterpreter gestures;
@@ -119,6 +239,8 @@ int main() {
     testExclusiveControlDoublePresses();
     testLongPressConfirmation();
     testSettledChordConsumesSoloReleases();
+    testEveryTwoButtonPressAndReleaseOrder();
+    testEveryThreeButtonRollingPressAndReleaseOrder();
     testShortAndLongSpecialChords();
     return 0;
 }

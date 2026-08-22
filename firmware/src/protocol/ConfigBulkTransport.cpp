@@ -98,6 +98,15 @@ void commitBulkApplyAck(const BulkApplyIdentity &identity) {
                                    lastAppliedChecksum.c_str(), lastStorageGeneration));
     bulkConfigAssembler.reset();
 }
+
+void serviceBulkConfigAssemblerTimeoutAt(uint32_t nowMs) {
+    if (!bulkConfigAssembler.expired(nowMs)) {
+        return;
+    }
+    const uint32_t staleSequence = bulkConfigAssembler.sequenceHint();
+    bulkConfigAssembler.reset();
+    emitBulkIngestError("timeout", staleSequence);
+}
 } // namespace
 
 void handleSetAllBulkCommand(const String &command) {
@@ -156,10 +165,29 @@ void handleAbortSetAllBulkCommand(const String &command) {
 }
 
 void serviceBulkConfigAssemblerTimeout() {
-    if (!bulkConfigAssembler.expired(millis())) {
-        return;
-    }
-    const uint32_t staleSequence = bulkConfigAssembler.sequenceHint();
-    bulkConfigAssembler.reset();
-    emitBulkIngestError("timeout", staleSequence);
+    serviceBulkConfigAssemblerTimeoutAt(millis());
 }
+
+#if defined(UNIT_TEST)
+void testOnlyResetConfigBulkTransport() {
+    bulkConfigAssembler.reset();
+    lastAckSequence = 0;
+    lastAckChecksum = "";
+    lastAppliedChecksum = "";
+    lastStorageGeneration = 0;
+}
+
+bool testOnlyConfigBulkTransportInProgress() { return bulkConfigAssembler.inProgress(); }
+
+void testOnlySeedConfigBulkAck(uint32_t sequence, const String &configId,
+                               const String &appliedChecksum, uint32_t storageGeneration) {
+    lastAckSequence = sequence;
+    lastAckChecksum = configId;
+    lastAppliedChecksum = appliedChecksum;
+    lastStorageGeneration = storageGeneration;
+}
+
+void testOnlyForceConfigBulkTimeout() {
+    serviceBulkConfigAssemblerTimeoutAt(millis() + 5001U);
+}
+#endif

@@ -2,7 +2,9 @@
 
 This is the hardware status page for the hardware-test package.
 
-Last audited against repo contents: 2026-07-08.
+Last audited against repo contents: 2026-08-22.
+
+Audit status: prototype bring-up references are present and current for the hardware-test package; no verified fabrication bundle or current fabrication BOM is tracked.
 
 ## Package Scope
 

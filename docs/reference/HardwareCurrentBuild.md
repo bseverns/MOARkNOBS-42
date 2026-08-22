@@ -12,7 +12,7 @@ The repo-root canonical source remains `hardware/CurrentBuild.md`. Use that file
 
 ## Current Status Summary
 
-Last mirrored from the canonical hardware page: 2026-08-13.
+Last mirrored from the canonical hardware page: 2026-08-22.
 
 | Item                      | Version / date cue                                    | Status               | Notes                                                                                                                                  |
 | ------------------------- | ----------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |

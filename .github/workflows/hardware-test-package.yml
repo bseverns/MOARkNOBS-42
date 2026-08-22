@@ -46,6 +46,12 @@ jobs:
         run: pio run -d firmware -e teensy40_main
       - name: Compile and link Teensy Unity firmware
         run: pio test -d firmware -e teensy40_unity --without-uploading --without-testing
+      - name: Run native button interpreter tests
+        run: |
+          ${CXX:-c++} -std=c++17 -Wall -Wextra -Werror -I firmware/include \
+            firmware/src/ButtonGestureInterpreter.cpp tools/button_gesture_interpreter_test.cpp \
+            -o /tmp/mn42-button-interpreter
+          /tmp/mn42-button-interpreter
       - name: Run native firmware seam tests
         run: pio test -d firmware -e native_biquad -vvv
       - name: Run native modulation transport tests
