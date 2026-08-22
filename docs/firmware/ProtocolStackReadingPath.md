@@ -56,6 +56,8 @@ flowchart TD
   Dispatch --> BulkTransport[ConfigBulkTransport]
   BulkTransport --> BulkApply[ConfigJsonApply]
   BulkApply --> Digest[ConfigApplyDigest]
+  Simple --> ChunkedRead[ChunkedReadTransport]
+  Simple --> ModMatrix[ModMatrixReport]
   Dispatch --> Manifest[ManifestReport]
   Dispatch --> Profile[Profile command family]
   Dispatch --> Scenes[SceneStorage]
@@ -119,6 +121,10 @@ Files:
 - [`firmware/src/protocol/ProtocolSimpleHandlers.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolSimpleHandlers.cpp)
 - [`firmware/include/protocol/ProtocolLiveControlHandlers.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ProtocolLiveControlHandlers.h)
 - [`firmware/src/protocol/ProtocolLiveControlHandlers.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ProtocolLiveControlHandlers.cpp)
+- [`firmware/include/protocol/ChunkedReadTransport.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ChunkedReadTransport.h)
+- [`firmware/src/protocol/ChunkedReadTransport.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ChunkedReadTransport.cpp)
+- [`firmware/include/protocol/ModMatrixReport.h`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/include/protocol/ModMatrixReport.h)
+- [`firmware/src/protocol/ModMatrixReport.cpp`](https://github.com/bseverns/MOARkNOBS-42/blob/main/firmware/src/protocol/ModMatrixReport.cpp)
 
 Question answered: which host requests are direct reads?
 
@@ -130,6 +136,10 @@ This family is best read in its own internal order:
 This is where the narrow `GET_*` commands live. Direct, non-persistent `SET_*`
 commands live in `ProtocolLiveControlHandlers`, keeping mutation dependencies
 out of the read-model builder.
+`ChunkedReadTransport` owns the pending payload, checksum, frame numbering, and
+bounded two-frame service budget shared by chunked config and modulation reads.
+`ModMatrixReport` owns the modulation graph, conflict detection, and legacy
+response shape; it is a cold diagnostic path placed in flash rather than RAM1.
 `GET_SCHEMA` delegates its host-contract construction to
 `protocol/ConfigSchema.cpp`. That adapter returns the generated device
 projection in `protocol/GeneratedConfigSchema.h`; the machine source is

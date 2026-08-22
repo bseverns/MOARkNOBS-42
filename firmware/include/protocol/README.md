@@ -14,10 +14,12 @@ The fastest header-first route is:
 4. [ConfigJsonApply.h](ConfigJsonApply.h)
 5. [ConfigApplyDigest.h](ConfigApplyDigest.h)
 6. [ProtocolSimpleHandlers.h](ProtocolSimpleHandlers.h)
-7. [ProtocolLiveControlHandlers.h](ProtocolLiveControlHandlers.h)
-8. [ManifestReport.h](ManifestReport.h)
-9. [ProtocolErrors.h](ProtocolErrors.h)
-10. the profile / scene / SysEx helper headers as needed
+7. [ChunkedReadTransport.h](ChunkedReadTransport.h)
+8. [ModMatrixReport.h](ModMatrixReport.h)
+9. [ProtocolLiveControlHandlers.h](ProtocolLiveControlHandlers.h)
+10. [ManifestReport.h](ManifestReport.h)
+11. [ProtocolErrors.h](ProtocolErrors.h)
+12. the profile / scene / SysEx helper headers as needed
 
 Use this folder together with
 [../../src/protocol/README.md](../../src/protocol/README.md) if you want to

@@ -66,11 +66,17 @@ tests verify that invalid records do not mutate the caller's output.
 The `SET_ALL` implementation is separated into `ConfigBulkTransport` for chunk
 staging, timeout/idempotency, and ACKs; `ConfigJsonApply` for complete validation
 and atomic runtime/persistence mutation; and `ConfigApplyDigest` for the
-device-owned normalized-state checksum. Direct reads remain in
-`ProtocolSimpleHandlers`, while non-persistent live `SET_*` mutations live in
-`ProtocolLiveControlHandlers`. These are ownership boundaries only: command
-names, response shapes, persistence semantics, and the durable layout are
-unchanged.
+device-owned normalized-state checksum. Parse, identity, abort, and timeout
+failures discard staged transport state; retrying the last acknowledged
+sequence plus config identity replays the same applied checksum and storage
+generation without applying again.
+
+Direct read commands remain fronted by `ProtocolSimpleHandlers`, but bounded
+read-chunk framing and pending-output state live in `ChunkedReadTransport`, and
+`GET_MOD_MATRIX` construction lives in the flash-resident `ModMatrixReport`.
+Non-persistent live `SET_*` mutations live in `ProtocolLiveControlHandlers`.
+These are ownership boundaries only: command names, response shapes,
+persistence semantics, and the durable layout are unchanged.
 
 ## On-device Double-press Editing
 
