@@ -614,8 +614,33 @@ ConfigManager::migrateLegacySlotPayloads(uint16_t storedVersion) {
         storageGet(static_cast<int>(EEPROM_SLOT_BASE), first);
         if (!slotLooksSane(first)) return MigrationResult::VerificationFailure;
 
+        // Match current-schema boot housekeeping before publishing any schema-9
+        // headers, so the first post-upgrade runtime observes hydrated ARG and
+        // rescued filter-tail state immediately.
+        migrateLegacyARGSettings();
+        maybeRescueFilterTailFromLegacy();
+
         const uint16_t currentVersion = CONFIG_VERSION;
-        if (!storagePutVerified(EEPROM_CONFIG_VERSION, currentVersion)) {
+        const auto promoteCopy = [&](uint16_t base, bool backup) {
+            const int address = static_cast<int>(base) +
+                                (backup ? EEPROM_BACKUP_START : EEPROM_START_ADDRESS) +
+                                EEPROM_CONFIG_VERSION;
+            uint16_t copyVersion = 0;
+            storageGet(address, copyVersion);
+            return copyVersion != storedVersion ||
+                   storagePutVerified(address, currentVersion);
+        };
+
+        // Promote secondary profile copies first. Profile A primary is the
+        // arena-wide schema marker and therefore remains the final write.
+        for (uint8_t id = 1; id < NUM_PROFILES; ++id) {
+            const uint16_t base = EEPROM_PROFILE_START(id);
+            if (!promoteCopy(base, false) || !promoteCopy(base, true)) {
+                return MigrationResult::VerificationFailure;
+            }
+        }
+        if (!promoteCopy(EEPROM_PROFILE_START(0), true) ||
+            !promoteCopy(EEPROM_PROFILE_START(0), false)) {
             return MigrationResult::VerificationFailure;
         }
         slots.fill({});

@@ -119,10 +119,11 @@ bool loadProfileSlot(uint8_t id) {
     const bool stored = configManager.loadProfileSettings(id, profile);
     ProfileModulationExtension modulation{};
     const bool modulationStored = configManager.loadProfileModulation(id, modulation);
-    selectActiveProfileSlot(id);
 
     if (stored) {
-        configManager.loadProfile(id);
+        // Extended profile state is not sufficient on its own: reject the
+        // transition if neither legacy pot/CC mapping copy validates.
+        if (!configManager.loadProfile(id)) return false;
         if (!modulationStored) modulation = captureProfileModulation();
     } else {
         profile = defaultProfileSnapshot();
@@ -130,6 +131,7 @@ bool loadProfileSlot(uint8_t id) {
         applyBaselinePotMappings();
     }
 
+    selectActiveProfileSlot(id);
     rebuildRuntimeFromProfile(profile, modulation);
 
     if (!stored || !modulationStored) {

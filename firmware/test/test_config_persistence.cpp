@@ -466,10 +466,19 @@ void test_schema7_migration_failure_does_not_promote_config_version() {
     ConfigManager::setStorageBackend(nullptr);
 }
 
-void test_schema8_migration_preserves_slots_profiles_modulation_and_downstream_data() {
+FLASHMEM void test_schema8_migration_preserves_slots_profiles_modulation_and_downstream_data() {
     MemoryStorageBackend storage;
     ConfigManager::setStorageBackend(&storage);
     ConfigManager cfg(NUM_POTS, NUM_BUTTONS);
+
+    configureStoredValues(cfg, 5, 71);
+    cfg.setARGEnable(1);
+    cfg.setARGMethod(static_cast<uint8_t>(ARGMethod::XORR));
+    cfg.setEnvelopePair(4, 2);
+    cfg.setActiveProfile(1);
+
+    configureStoredValues(cfg, 11, 93);
+    cfg.saveProfile(1);
 
     MIDISlot savedSlot{};
     savedSlot.type = MIDIMessageType::CC;
@@ -501,28 +510,56 @@ void test_schema8_migration_preserves_slots_profiles_modulation_and_downstream_d
     constexpr size_t sentinelAddress = SceneStorage::kRequiredStorageBytes + 23U;
     storage.update(static_cast<int>(sentinelAddress), 0xD7);
     const uint16_t schema8 = 0x0008;
-    storage.writeBytes(EEPROM_CONFIG_VERSION, &schema8, sizeof(schema8));
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        const uint16_t base = EEPROM_PROFILE_START(id);
+        storage.writeBytes(base + EEPROM_CONFIG_VERSION, &schema8, sizeof(schema8));
+        storage.writeBytes(base + EEPROM_BACKUP_START + EEPROM_CONFIG_VERSION, &schema8,
+                           sizeof(schema8));
+    }
 
     std::vector<uint8_t> pots;
-    cfg.begin(pots);
+    ConfigManager rebooted(NUM_POTS, NUM_BUTTONS);
+    rebooted.begin(pots);
 
     TEST_ASSERT_EQUAL_UINT8(
         static_cast<uint8_t>(ConfigManager::MigrationResult::Success),
-        static_cast<uint8_t>(cfg.getLastMigrationResult()));
-    uint16_t storedVersion = 0;
-    storage.readBytes(EEPROM_CONFIG_VERSION, &storedVersion, sizeof(storedVersion));
-    TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, storedVersion);
-    TEST_ASSERT_EQUAL_UINT8(7, cfg.getSlot(0).midiChannel);
-    TEST_ASSERT_EQUAL_UINT8(74, cfg.getSlot(0).data1);
-    TEST_ASSERT_TRUE(cfg.getSlot(0).active);
+        static_cast<uint8_t>(rebooted.getLastMigrationResult()));
+    for (uint8_t id = 0; id < NUM_PROFILES; ++id) {
+        const uint16_t base = EEPROM_PROFILE_START(id);
+        uint16_t primaryVersion = 0;
+        uint16_t backupVersion = 0;
+        storage.readBytes(base + EEPROM_CONFIG_VERSION, &primaryVersion,
+                          sizeof(primaryVersion));
+        storage.readBytes(base + EEPROM_BACKUP_START + EEPROM_CONFIG_VERSION, &backupVersion,
+                          sizeof(backupVersion));
+        TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, primaryVersion);
+        TEST_ASSERT_EQUAL_UINT16(CONFIG_VERSION, backupVersion);
+    }
+    TEST_ASSERT_EQUAL_UINT8(1, rebooted.getActiveProfile());
+    TEST_ASSERT_EQUAL_UINT8(static_cast<uint8_t>(ARGMethod::XORR), rebooted.getARGMethod());
+    TEST_ASSERT_EQUAL_UINT8(1, rebooted.getARGEnable());
+    TEST_ASSERT_EQUAL_UINT8(7, rebooted.getSlot(0).midiChannel);
+    TEST_ASSERT_EQUAL_UINT8(74, rebooted.getSlot(0).data1);
+    TEST_ASSERT_TRUE(rebooted.getSlot(0).active);
+
+    TEST_ASSERT_TRUE(rebooted.loadProfile(1));
+    TEST_ASSERT_EQUAL_UINT8(11, rebooted.getPotChannel(0));
+    TEST_ASSERT_EQUAL_UINT8(93, rebooted.getPotCCNumber(0));
+
+    storage.corruptPrimaryPotCc(EEPROM_PROFILE_START(1), 0, 12);
+    rebooted.setPotChannelLive(0, 2);
+    rebooted.setPotCCNumberLive(0, 3);
+    TEST_ASSERT_TRUE(rebooted.loadProfile(1));
+    TEST_ASSERT_EQUAL_UINT8(11, rebooted.getPotChannel(0));
+    TEST_ASSERT_EQUAL_UINT8(93, rebooted.getPotCCNumber(0));
 
     ProfileData restoredProfile{};
-    TEST_ASSERT_TRUE(cfg.loadProfileSettings(2, restoredProfile));
+    TEST_ASSERT_TRUE(rebooted.loadProfileSettings(2, restoredProfile));
     TEST_ASSERT_EQUAL_UINT8(93, restoredProfile.led.brightness);
     TEST_ASSERT_EQUAL_UINT8(12, restoredProfile.slots[5].midiChannel);
 
     ProfileModulationExtension restoredModulation{};
-    TEST_ASSERT_TRUE(cfg.loadProfileModulation(2, restoredModulation));
+    TEST_ASSERT_TRUE(rebooted.loadProfileModulation(2, restoredModulation));
     const SlotARGConfig restoredArg =
         unpackProfileSlotArg(restoredModulation.slots[5].argPacked);
     TEST_ASSERT_TRUE(restoredArg.enabled);

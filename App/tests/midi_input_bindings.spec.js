@@ -70,3 +70,29 @@ test('removing a MIDI input binding cancels its pending field edit', async ({ pa
     .poll(() => page.evaluate(() => window.__MN42_RUNTIME.getState().staged.midiInputBindings))
     .toEqual([]);
 });
+
+test('rerendering an array preserves a synchronously staged select edit', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage?.clear?.();
+    window.localStorage?.setItem?.('moarknobs:ui-mode', 'advanced');
+    window.__MN42_RUNTIME_OPTIONS = { useSimulator: true };
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Connect' }).click();
+
+  const inputSection = page.locator('[data-schema-target="midiInputBindings"]');
+  await inputSection.locator('.schema-array-add').click();
+  const binding = inputSection.locator('details').first();
+
+  await binding.evaluate((detail) => {
+    const port = detail.querySelector('select');
+    port.value = 'usb';
+    port.dispatchEvent(new Event('input', { bubbles: true }));
+    detail.closest('[data-schema-target]').querySelector('.schema-array-add').click();
+  });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__MN42_RUNTIME.getState().staged.midiInputBindings))
+    .toMatchObject([{ source: { port: 'usb' } }, { source: { port: 'any' } }]);
+});

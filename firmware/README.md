@@ -62,6 +62,8 @@ sanitization for stored profile versions 1–7; `ConfigManager` retains profile
 ID/address validation and the public load/save façade. Migration fixtures cover
 versions 1–6, current-version coverage protects version 7, and decoder failure
 tests verify that invalid records do not mutate the caller's output.
+Activating a stored profile also requires one valid legacy pot/CC mapping copy;
+an extended profile payload alone cannot produce a partial profile transition.
 
 The `SET_ALL` implementation is separated into `ConfigBulkTransport` for chunk
 staging, timeout/idempotency, and ACKs; `ConfigJsonApply` for complete validation

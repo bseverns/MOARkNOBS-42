@@ -14,6 +14,7 @@
 #include "Modes.h"
 #include "Protocol.h"
 #include "protocol/ConfigJsonApply.h"
+#include "protocol/ProfileCommands.h"
 #include "protocol/ProtocolSimpleHandlers.h"
 
 namespace {
@@ -567,6 +568,32 @@ void test_dispatch_handles_profile_save_load_reset_commands() {
     TEST_ASSERT_EQUAL_UINT8(2, configManager.getActiveProfile());
     TEST_ASSERT_EQUAL_UINT8(1, configManager.getPotChannel(0));
     TEST_ASSERT_EQUAL_UINT8(0, configManager.getPotCCNumber(0));
+}
+
+FLASHMEM void test_profile_slot_load_rejects_extended_state_without_valid_pot_mapping_copy() {
+    const uint8_t profileId = 3;
+    ProfileData profile{};
+    profile.led.brightness = 91;
+    seedStoredProfile(profileId, profile);
+
+    StorageBackend *storage = ConfigManager::getStorageBackend();
+    const uint16_t base = EEPROM_PROFILE_START(profileId);
+    storage->update(base + EEPROM_MAGIC_ADDRESS, 0x00);
+    storage->update(base + EEPROM_MAGIC_ADDRESS + 1, 0x00);
+    storage->update(base + EEPROM_MAGIC_ADDRESS + 2, 0x00);
+    storage->update(base + EEPROM_MAGIC_ADDRESS + 3, 0x00);
+
+    g_activeProfile = 0;
+    configManager.setActiveProfile(0);
+    configManager.setPotChannelLive(0, 6);
+    configManager.setPotCCNumberLive(0, 66);
+    const uint8_t priorBrightness = ledManager.getBrightness();
+
+    TEST_ASSERT_FALSE(loadProfileSlot(profileId));
+    TEST_ASSERT_EQUAL_UINT8(0, g_activeProfile);
+    TEST_ASSERT_EQUAL_UINT8(6, configManager.getPotChannel(0));
+    TEST_ASSERT_EQUAL_UINT8(66, configManager.getPotCCNumber(0));
+    TEST_ASSERT_EQUAL_UINT8(priorBrightness, ledManager.getBrightness());
 }
 
 void test_dispatch_reassembles_chunked_profile_patch() {

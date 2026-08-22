@@ -61,6 +61,7 @@ void test_dispatch_handles_live_arp_runtime_commands();
 void test_dispatch_get_mod_matrix_reports_routes_and_conflicts();
 void test_dispatch_get_mod_matrix_reports_lfo_route_truncation();
 void test_dispatch_handles_profile_save_load_reset_commands();
+void test_profile_slot_load_rejects_extended_state_without_valid_pot_mapping_copy();
 void test_dispatch_reassembles_chunked_profile_patch();
 void test_dispatch_active_profile_lfo_patch_applies_live();
 void test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot();
@@ -414,6 +415,7 @@ void setup() {
     RUN_TEST(test_dispatch_get_mod_matrix_reports_routes_and_conflicts);
     RUN_TEST(test_dispatch_get_mod_matrix_reports_lfo_route_truncation);
     RUN_TEST(test_dispatch_handles_profile_save_load_reset_commands);
+    RUN_TEST(test_profile_slot_load_rejects_extended_state_without_valid_pot_mapping_copy);
     RUN_TEST(test_dispatch_reassembles_chunked_profile_patch);
     RUN_TEST(test_dispatch_active_profile_lfo_patch_applies_live);
     RUN_TEST(test_restore_active_profile_runtime_rehydrates_saved_modulation_snapshot);

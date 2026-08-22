@@ -604,15 +604,21 @@ void ConfigManager::setActiveProfile(uint8_t id) {
 // Initialize configuration
 void ConfigManager::begin(std::vector<uint8_t> &potChannels) {
     sanitizeSlotArena();
-    // 1) Load every MIDISlot from EEPROM into our in-RAM array
+    // Hydrate profile-A configuration before boot code asks which persisted
+    // profile is active. Blank storage still follows the existing later reset
+    // path; any stamped copy is validated through primary/backup recovery.
+    if (checkEEPROMHealth(false, EEPROM_PROFILE_START(0)) ||
+        checkEEPROMHealth(true, EEPROM_PROFILE_START(0))) {
+        loadConfiguration(potChannels);
+    } else {
+        potChannels.clear();
+        for (uint8_t i = 0; i < _numPots; ++i) {
+            potChannels.push_back(_stored.potChannels[i]);
+        }
+    }
+    // Load every MIDISlot from EEPROM into our in-RAM array.
     for (uint8_t i = 0; i < NUM_SLOTS; ++i) {
         loadSlot(i, slots[i]);
-    }
-    // 2) Pull out the existing pot → MIDI channel assignments
-    //    (assuming _stored.potChannels was filled by readEEPROM)
-    potChannels.clear();
-    for (uint8_t i = 0; i < _numPots; ++i) {
-        potChannels.push_back(_stored.potChannels[i]);
     }
 }
 

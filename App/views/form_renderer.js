@@ -241,7 +241,8 @@ export class FormRenderer {
         remove.className = 'schema-array-remove';
         remove.textContent = `Remove ${baseLabel} ${index + 1}`;
         remove.addEventListener('click', () => {
-          const next = items.slice();
+          const stagedItems = getValueAt(this.runtime.getState().staged, basePath);
+          const next = Array.isArray(stagedItems) ? stagedItems.slice() : [];
           next.splice(index, 1);
           this.stageValue(basePath, next);
           this.renderSections();
@@ -258,7 +259,8 @@ export class FormRenderer {
       add.className = 'schema-array-add';
       add.textContent = `Add ${schema.title ?? titleize(basePath.split('.').pop() ?? basePath)}`;
       add.addEventListener('click', () => {
-        const next = items.slice();
+        const stagedItems = getValueAt(this.runtime.getState().staged, basePath);
+        const next = Array.isArray(stagedItems) ? stagedItems.slice() : [];
         next.push(defaultValueForSchema(schema.items ?? {}));
         this.stageValue(basePath, next);
         this.renderSections();
@@ -391,13 +393,14 @@ export class FormRenderer {
 
   bindInput(path, schema, getter, setter, element) {
     const control = element ?? document.createElement('div');
-    // Debounce each field so rapid UI gestures stage safely before unit RPCs fire.
-    const update = debounce((nextValue) => {
-      const parsed = this.parseValue(schema, nextValue);
+    // Browser intent is staged synchronously. Only the outbound live patch is
+    // debounced, so destroying a control can neither resurrect nor discard an edit.
+    const sendPatch = debounce((nextValue) => this.schedulePatch(path, nextValue), this.debounceMs);
+    const listener = () => {
+      const parsed = this.parseValue(schema, getter());
       this.stageValue(path, parsed);
-      this.schedulePatch(path, parsed);
-    }, this.debounceMs);
-    const listener = () => update(getter());
+      sendPatch(parsed);
+    };
     if (element) {
       element.addEventListener('change', listener);
       element.addEventListener('input', listener);
@@ -405,7 +408,7 @@ export class FormRenderer {
       control.addEventListener('change', listener);
       control.addEventListener('input', listener);
     }
-    this.fields.set(path, { element, set: setter || (() => {}), cancel: update.cancel });
+    this.fields.set(path, { element, set: setter || (() => {}), cancel: sendPatch.cancel });
   }
 
   cancelRenderedFieldDebounces() {
